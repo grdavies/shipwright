@@ -3,8 +3,8 @@
   "defaultBaseBranch": "main",
   "stateFile": ".git/phase-flow.json",
   "agentsFile": "AGENTS.md",
-  "prdsDir": "docs/plans",
-  "tasksDir": "docs/plans",
+  "prdsDir": "prds",
+  "tasksDir": "prds",
   "verify": {
     "lint": "echo 'configure verify.lint for your repo'",
     "typecheck": "echo 'configure verify.typecheck for your repo'",
