@@ -2,6 +2,11 @@
 # Fixture tests for loop-improvement program (plan 2026-06-23-001).
 set -euo pipefail
 
+bash -n "${BASH_SOURCE[0]}" || {
+  echo "FAIL fixture runner bash syntax"
+  exit 1
+}
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 STABILIZE="$ROOT/commands/pf-stabilize.md"
 RCA="$ROOT/skills/rca-core/SKILL.md"
@@ -170,6 +175,37 @@ if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.verdict == "verified"' >/dev/null;
   echo "OK  verify-evidence: all passing → verified"
 else
   echo "FAIL verify-evidence verified case (ec=$EC)"
+  FAIL=1
+fi
+
+# Fresh failing gate vs passing baseline → not-verified
+set +e
+OUT=$(bash "$VERIFY_EVIDENCE" \
+  --verify-status "$FIXTURES/verify-pass.json" \
+  --gate-json "$FIXTURES/gate-red.json" \
+  --baseline-gate "$FIXTURES/gate-green.json" \
+  --require-gate 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 20 ]] && echo "$OUT" | jq -e '.verdict == "not-verified"' >/dev/null; then
+  echo "OK  verify-evidence: fresh gate failure → not-verified"
+else
+  echo "FAIL verify-evidence fresh gate failure case (ec=$EC)"
+  FAIL=1
+fi
+
+# Gate fail + no baseline → inconclusive
+set +e
+OUT=$(bash "$VERIFY_EVIDENCE" \
+  --verify-status "$FIXTURES/verify-pass.json" \
+  --gate-json "$FIXTURES/gate-red.json" \
+  --require-gate 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive"' >/dev/null; then
+  echo "OK  verify-evidence: gate fail no baseline → inconclusive"
+else
+  echo "FAIL verify-evidence gate fail no-baseline case (ec=$EC)"
   FAIL=1
 fi
 
@@ -726,10 +762,22 @@ set +e
 OUT=$(bash "$VERIFY_E2E" --config "$FIX_E2E/config-stub.json" 2>/dev/null)
 EC=$?
 set -e
-if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.status == "complete" and .provider == "stub"' >/dev/null; then
+if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.status == "complete" and .provider == "stub" and .logPath != null and .logPath != ""' >/dev/null && \
+   [[ -f "$(echo "$OUT" | jq -r .logPath)" ]]; then
   echo "OK  verify-e2e: stub provider → complete"
 else
   echo "FAIL verify-e2e stub case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$VERIFY_E2E" --config "$FIX_E2E/config-failstub.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 1 ]] && echo "$OUT" | jq -e '.status == "failed" and .provider == "failstub"' >/dev/null; then
+  echo "OK  verify-e2e: failing adapter emits JSON before exit"
+else
+  echo "FAIL verify-e2e failstub case (ec=$EC)"
   FAIL=1
 fi
 
@@ -741,16 +789,6 @@ if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.skipped == true' >/dev/null; then
   echo "OK  verify-e2e: disabled → skipped"
 else
   echo "FAIL verify-e2e disabled case (ec=$EC)"
-  FAIL=1
-fi
-
-set +e
-OUT=$(bash "$VERIFY_E2E" --config "$FIX_E2E/config-stub.json" 2>/dev/null)
-set -e
-if echo "$OUT" | jq -e '.logPath != null and .logPath != ""' >/dev/null && [[ -f "$(echo "$OUT" | jq -r .logPath)" ]]; then
-  echo "OK  verify-e2e stub emits logPath"
-else
-  echo "FAIL verify-e2e logPath"
   FAIL=1
 fi
 

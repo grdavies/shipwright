@@ -1,0 +1,7 @@
+{
+  "verifyE2e": {
+    "enabled": true,
+    "provider": "failstub",
+    "routes": []
+  }
+}
