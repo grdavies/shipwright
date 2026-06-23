@@ -6,7 +6,8 @@ origin: docs/brainstorms/2026-06-22-unified-dev-workflow-plugin-requirements.md
 status: implemented
 completed: 2026-06-23
 branch: feat/implementation-workstream
-pr: null
+commit: 0ff1d25
+pr: https://github.com/grdavies/currsor-phase-flow-2/pull/3
 ---
 
 # feat: phase-flow v2 implementation workstream (worktrees + phase loop + ship gate + compounding)
@@ -29,7 +30,7 @@ pr: null
 
 **Verification:** `bash scripts/test/run-impl-fixtures.sh` — 13/13; plus doc + gate fixture suites green.
 
-**Merge state:** implemented on `feat/implementation-workstream`; **not yet merged** to `main` (no PR open).
+**Shipped:** [PR #3](https://github.com/grdavies/currsor-phase-flow-2/pull/3) open (`0ff1d25` on `feat/implementation-workstream`); merge to `main` pending.
 
 **Follow-ups (not blocking merge):** executable shared-migration preflight for U6 (`parallel-preflight.sh` or extend `worktree.sh`).
 
