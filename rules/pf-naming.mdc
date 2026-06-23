@@ -11,10 +11,20 @@ v1 (unprefixed) and compound-engineering (`ce-`).
 
 ## Orchestrators vs atomic commands
 
-- **Orchestrators** chain multiple phases (e.g. `/pf-ship` — deferred to the implementation workstream).
+- **Orchestrators** chain multiple phases:
+  - `/pf-doc` — brainstorm → PRD → persona panel → freeze → tasks (tier-gated; see documentation workstream).
+  - `/pf-ship` — implementation phase loop (deferred to implementation workstream).
   Their descriptions must state the full chain and which atomic commands they subsume.
-- **Atomic commands** perform one bounded step (e.g. `/pf-watch-ci`, `/pf-memory-sync`). Their descriptions
+- **Atomic commands** perform one bounded step (e.g. `/pf-watch-ci`, `/pf-memory-sync`, `/pf-triage`). Their descriptions
   must state what they do **and what they do not do** (e.g. "polls CI; does not merge or fix failures").
+
+## Triage boundary
+
+`/pf-triage` classifies tier only — it does not draft docs, freeze artifacts, or start implementation. Routing after triage is explicit in the triage output.
+
+## Documentation orchestrator boundary
+
+`/pf-doc` delegates to atomic doc commands; it does not reimplement their procedures. Each atomic (`/pf-brainstorm`, `/pf-prd`, `/pf-doc-review`, `/pf-freeze`, `/pf-tasks`) remains independently runnable.
 
 ## Naming rules
 
