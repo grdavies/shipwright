@@ -28,7 +28,12 @@
         "provider": {
           "type": "string",
           "default": "coderabbit",
-          "description": "Active review adapter id (must match providers/review/<name>.md and providers/review/<name>.sh)."
+          "description": "Active review adapter id (must match providers/review/<name>.md and providers/review/<name>.sh). Use \"none\" to disable review gating for repos not onboarded to any provider."
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "When false, review gating is disabled: the gate skips the adapter (state \"disabled\", non-blocking) and /pf-review reports review is off. Equivalent to provider:\"none\"."
         }
       },
       "required": ["provider"]
@@ -113,10 +118,20 @@
           "additionalProperties": false,
           "description": "Fail-closed guardrail hook policy.",
           "properties": {
-            "allowEmptyRules": {
+            "enforceBeforeSubmit": {
+              "type": "boolean",
+              "default": true,
+              "description": "When false, beforeSubmitPrompt guardrail enforcement is disabled for this repo."
+            },
+            "requireRuleClass": {
               "type": "boolean",
               "default": false,
-              "description": "Bootstrap only: allow beforeSubmitPrompt when provider returns zero rules."
+              "description": "When true, block until at least one allowlisted rule-class memory exists. Default false — empty memory is normal for new repos."
+            },
+            "allowEmptyRules": {
+              "type": "boolean",
+              "default": true,
+              "description": "Deprecated — use requireRuleClass (inverted). When false, equivalent to requireRuleClass:true."
             }
           }
         }

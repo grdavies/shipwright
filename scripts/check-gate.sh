@@ -92,26 +92,35 @@ if [ -n "$OWNER" ] && [ -n "$REPO" ]; then
 fi
 
 # --- review per-head state (executable adapter seam) --------------------------
-ADAPTER="$PLUGIN_ROOT/providers/review/${REVIEW_PROVIDER}.sh"
-if [ ! -f "$ADAPTER" ]; then
-  echo "{\"verdict\":\"blocked\",\"reason\":\"unknown review provider: $REVIEW_PROVIDER\"}"
-  exit 30
-fi
-export PF_PR="$PR" PF_HEAD_SHA="$HEAD_SHA" PF_OWNER="$OWNER" PF_REPO="$REPO"
-export PF_OWNER_REPO="$OWNER_REPO" PF_CHECKS_FILE="$CHECKS" PF_ISSUE_COMMENTS_FILE="$ISSUE_COMMENTS"
-export PF_GRACE_MIN="$GRACE_MIN"
-REVIEW_JSON="$(bash "$ADAPTER")"
-HAS_PER_HEAD="$(echo "$REVIEW_JSON" | jq -r '.capabilities.perHeadState // false')"
-CR_STATE="$(echo "$REVIEW_JSON" | jq -r '.perHeadState // "in-flight"')"
-CR_LANDED="$(echo "$REVIEW_JSON" | jq -r '.perHeadLanded // false')"
-CR_REVIEWED_HEAD="$(echo "$REVIEW_JSON" | jq -r '.reviewedHead // ""')"
-CR_STATUS="$(echo "$REVIEW_JSON" | jq -r '.statusContext // "absent"')"
-CR_MARKER="$(echo "$REVIEW_JSON" | jq -r 'if .inProgressMarker then 1 else 0 end')"
-CR_SKIP="$(echo "$REVIEW_JSON" | jq -r 'if .skipped then 1 else 0 end')"
-MINS_SINCE="$(echo "$REVIEW_JSON" | jq -r '.minutesSinceHeadPush // 0')"
-if [ "$HAS_PER_HEAD" != "true" ]; then
-  CR_STATE="in-flight"
-  CR_LANDED=false
+# Opt-out: review.provider="none" or review.enabled=false disables review gating.
+REVIEW_ENABLED="$(cfg '.review.enabled' 'true')"
+if [ "$REVIEW_PROVIDER" = "none" ] || [ "$REVIEW_ENABLED" = "false" ]; then
+  HAS_PER_HEAD=true
+  CR_STATE="disabled"; CR_LANDED=true
+  CR_REVIEWED_HEAD=""; CR_STATUS="disabled"
+  CR_MARKER=0; CR_SKIP=0; MINS_SINCE=0
+else
+  ADAPTER="$PLUGIN_ROOT/providers/review/${REVIEW_PROVIDER}.sh"
+  if [ ! -f "$ADAPTER" ]; then
+    echo "{\"verdict\":\"blocked\",\"reason\":\"unknown review provider: $REVIEW_PROVIDER\"}"
+    exit 30
+  fi
+  export PF_PR="$PR" PF_HEAD_SHA="$HEAD_SHA" PF_OWNER="$OWNER" PF_REPO="$REPO"
+  export PF_OWNER_REPO="$OWNER_REPO" PF_CHECKS_FILE="$CHECKS" PF_ISSUE_COMMENTS_FILE="$ISSUE_COMMENTS"
+  export PF_GRACE_MIN="$GRACE_MIN"
+  REVIEW_JSON="$(bash "$ADAPTER")"
+  HAS_PER_HEAD="$(echo "$REVIEW_JSON" | jq -r '.capabilities.perHeadState // false')"
+  CR_STATE="$(echo "$REVIEW_JSON" | jq -r '.perHeadState // "in-flight"')"
+  CR_LANDED="$(echo "$REVIEW_JSON" | jq -r '.perHeadLanded // false')"
+  CR_REVIEWED_HEAD="$(echo "$REVIEW_JSON" | jq -r '.reviewedHead // ""')"
+  CR_STATUS="$(echo "$REVIEW_JSON" | jq -r '.statusContext // "absent"')"
+  CR_MARKER="$(echo "$REVIEW_JSON" | jq -r 'if .inProgressMarker then 1 else 0 end')"
+  CR_SKIP="$(echo "$REVIEW_JSON" | jq -r 'if .skipped then 1 else 0 end')"
+  MINS_SINCE="$(echo "$REVIEW_JSON" | jq -r '.minutesSinceHeadPush // 0')"
+  if [ "$HAS_PER_HEAD" != "true" ]; then
+    CR_STATE="in-flight"
+    CR_LANDED=false
+  fi
 fi
 
 # --- verdict ------------------------------------------------------------------
@@ -131,7 +140,14 @@ case "$VERDICT" in
   yellow)  [ "$CR_LANDED" != "true" ] && REASON="review not yet landed for head ${HEAD_SHA:0:8} (state=$CR_STATE provider=$REVIEW_PROVIDER)" || REASON="checks pending: $(jq -r 'join(",")' <<<"$PENDING")" ;;
   red)     REASON="failing checks: $(jq -r 'join(",")' <<<"$FAILING")" ;;
   blocked) [ "$ACTIONABLE" -gt 0 ] && REASON="$ACTIONABLE unresolved actionable review thread(s)" || REASON="blocking/neutral or empty check set" ;;
-  green)   [ "$CR_STATE" = "skipped" ] && REASON="all checks pass; review skipped head ${HEAD_SHA:0:8}; 0 actionable threads" || REASON="all checks pass; review landed for head ${HEAD_SHA:0:8}; 0 actionable threads" ;;
+  green)
+    case "$CR_STATE" in
+      disabled)     REASON="all checks pass; review gating disabled; 0 actionable threads" ;;
+      unconfigured) REASON="all checks pass; no $REVIEW_PROVIDER review signal for head ${HEAD_SHA:0:8} (repo may not be onboarded); 0 actionable threads" ;;
+      skipped)      REASON="all checks pass; review skipped head ${HEAD_SHA:0:8}; 0 actionable threads" ;;
+      *)            REASON="all checks pass; review landed for head ${HEAD_SHA:0:8}; 0 actionable threads" ;;
+    esac
+    ;;
 esac
 
 CR_MARKER_BOOL=false; [ "$CR_MARKER" -eq 1 ] && CR_MARKER_BOOL=true

@@ -15,10 +15,12 @@ sys.path.insert(0, str(_HERE))
 
 from pf_hook_util import (  # noqa: E402
     filter_rules_by_allowlist,
-    guardrails_allow_empty,
+    guardrails_enforce_before_submit,
+    guardrails_require_rule_class,
     load_allowlist,
     load_config,
     read_stdin_json,
+    workflow_config_path,
     workspace_root,
 )
 
@@ -73,7 +75,16 @@ def _block(message: str) -> None:
 def main() -> None:
     payload = read_stdin_json()
     root = workspace_root(payload)
+    if workflow_config_path(root) is None:
+        # Repo has not opted into phase-flow — do not block prompts.
+        print(json.dumps({"continue": True}))
+        return
+
     config = load_config(root)
+    if not guardrails_enforce_before_submit(config):
+        print(json.dumps({"continue": True}))
+        return
+
     ok, rules = _fetch_rules(root)
     if not ok:
         _block(
@@ -93,12 +104,12 @@ def main() -> None:
 
     rules = filter_rules_by_allowlist(rules, allowlist_status, allowlist)
 
-    if not rules and not guardrails_allow_empty(config):
+    if not rules and guardrails_require_rule_class(config):
         _block(
-            "phase-flow v2: no rule-class guardrails confirmed for this repo "
-            "(provider reachable but zero allowlisted rules). "
-            "Promote rules via /pf-memory-audit, update the allowlist, or set "
-            "memory.guardrails.allowEmptyRules for bootstrap only."
+            "phase-flow v2: this repo requires at least one allowlisted rule-class guardrail "
+            "(memory.guardrails.requireRuleClass is true) but none are confirmed. "
+            "Promote rules via /pf-memory-audit and update .cursor/pf-memory-rule-allowlist.json, "
+            "or set requireRuleClass to false for greenfield/bootstrap repos."
         )
         return
 

@@ -49,6 +49,8 @@ run_case yellow-pending yellow-pending 10 yellow || FAIL=1
 run_case red-fail red-fail 20 red || FAIL=1
 run_case blocked-empty blocked-empty 30 blocked || FAIL=1
 run_case blocked-threads blocked-threads 30 blocked || FAIL=1
+# repo not onboarded to the review provider: no signal past grace -> non-blocking green
+run_case unconfigured unconfigured 0 green || FAIL=1
 
 # nocap provider must never green
 if [ -f "$CONFIG_PATH" ]; then
@@ -76,6 +78,28 @@ if [ "$EC" -eq 10 ] && [ "$VERDICT" = "yellow" ]; then
   echo "OK  nocap-stub exit=10 verdict=yellow (never green)"
 else
   echo "FAIL nocap-stub expected exit=10 verdict=yellow got exit=$EC verdict=$VERDICT"
+  FAIL=1
+fi
+
+# review.provider:none opts out of review gating -> green on a clean check fixture
+cat > "$CONFIG_PATH" <<'CFG'
+{
+  "review": { "provider": "none" },
+  "coderabbit": { "reviewGraceMinutes": 15 },
+  "checks": { "treatNeutralAsPass": true, "neutralAllowlist": [] }
+}
+CFG
+export PF_GATE_FIXTURE=unconfigured
+export PF_GATE_NOW=1577838000
+unset EC
+OUT=$(bash "$GATE" 42 2>/dev/null) || EC=$?
+EC=${EC:-$?}
+VERDICT=$(echo "$OUT" | jq -r .verdict)
+CRSTATE=$(echo "$OUT" | jq -r .coderabbitState)
+if [ "$EC" -eq 0 ] && [ "$VERDICT" = "green" ] && [ "$CRSTATE" = "disabled" ]; then
+  echo "OK  review-disabled exit=0 verdict=green state=disabled"
+else
+  echo "FAIL review-disabled expected exit=0 verdict=green state=disabled got exit=$EC verdict=$VERDICT state=$CRSTATE"
   FAIL=1
 fi
 

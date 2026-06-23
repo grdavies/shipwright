@@ -15,6 +15,9 @@ Local pre-commit review over the uncommitted delta. Routes through `review.provi
 ## Procedure
 
 1. Resolve provider from `workflow.config.json` → `review.provider`; read `providers/review/<provider>.md`.
+   If `review.provider` is `none` or `review.enabled` is `false`, report that review is disabled for this
+   repo and stop — do **not** invoke the provider CLI. (Use this for repos not onboarded to the provider;
+   the CLI would hang or fail.)
 2. Gather delta: `git diff --cached --stat` and `git diff --stat`.
 3. Stage new files (`??`) before `coderabbit review -t uncommitted` — untracked paths are invisible.
 4. `memory-preflight` read for bot false-positives and file learnings.

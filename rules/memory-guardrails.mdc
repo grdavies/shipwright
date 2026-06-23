@@ -7,7 +7,24 @@ alwaysApply: false
 
 ## Fail-closed enforcement (A1)
 
-Rule-class guardrails are enforced at `beforeSubmitPrompt` — unreachable provider blocks the first prompt.
+Three layers — do not conflate them:
+
+| Layer | What | Greenfield (zero memories) |
+| --- | --- | --- |
+| **Static** | `.cursor/rules/pf-guardrails.mdc` (`alwaysApply`) | Always on — baseline plugin guardrails without Recallium |
+| **Dynamic** | Rule-class memories from the provider, filtered by allowlist | Empty is **normal** for a new repo / new `memory.project` |
+| **Hook** | `beforeSubmitPrompt` fail-closed check | Blocks only when the provider is **unreachable** (cannot confirm state) |
+
+Repos **without** `workflow.config.json` are not gated (global plugin install must not block unrelated workspaces).
+
+When opted in (`workflow.config.json` present) and `memory.guardrails.enforceBeforeSubmit` is true (default):
+
+- Provider unreachable → **block** (A1 / R44 — cannot confirm guardrail state).
+- Provider reachable, zero rule-class memories → **pass** (confirmed empty; not a failure).
+- `memory.guardrails.requireRuleClass: true` → **block** until at least one allowlisted rule-class memory exists (strict / mature repos only).
+
+Set `memory.guardrails.enforceBeforeSubmit: false` to disable the hook entirely (plugin development, temporary bypass).
+
 `sessionStart` injection is best-effort (fail-open).
 
 ## Redaction chokepoint (R41)

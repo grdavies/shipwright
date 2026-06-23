@@ -29,14 +29,25 @@ def workspace_root(payload: dict) -> Path:
     return Path.cwd()
 
 
+_CONFIG_PATHS = (".cursor/workflow.config.json", "workflow.config.json")
+
+
+def workflow_config_path(root: Path) -> Path | None:
+    for rel in _CONFIG_PATHS:
+        path = root / rel
+        if path.is_file():
+            return path
+    return None
+
+
 def load_config(root: Path) -> dict:
-    for path in (root / ".cursor" / "workflow.config.json", root / "workflow.config.json"):
-        try:
-            if path.is_file():
-                return json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            continue
-    return {}
+    path = workflow_config_path(root)
+    if path is None:
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
 
 
 def load_allowlist(root: Path) -> tuple[str, set[str] | None]:
@@ -63,7 +74,25 @@ def filter_rules_by_allowlist(rules: list[dict], allowlist_status: str, allowlis
     ]
 
 
-def guardrails_allow_empty(config: dict) -> bool:
+def guardrails_require_rule_class(config: dict) -> bool:
+    """When true, block until at least one allowlisted rule-class memory exists (mature repos)."""
     memory = config.get("memory", {}) if isinstance(config, dict) else {}
     guardrails = memory.get("guardrails", {}) if isinstance(memory, dict) else {}
-    return bool(guardrails.get("allowEmptyRules", False))
+    if "requireRuleClass" in guardrails:
+        return bool(guardrails["requireRuleClass"])
+    # Legacy: explicit allowEmptyRules:false implied strict empty blocking.
+    if guardrails.get("allowEmptyRules") is False:
+        return True
+    return False
+
+
+def guardrails_allow_empty(config: dict) -> bool:
+    """Deprecated alias — prefer requireRuleClass:false (default)."""
+    return not guardrails_require_rule_class(config)
+
+
+def guardrails_enforce_before_submit(config: dict) -> bool:
+    """When false, beforeSubmitPrompt guardrail hook is a no-op (continue always)."""
+    memory = config.get("memory", {}) if isinstance(config, dict) else {}
+    guardrails = memory.get("guardrails", {}) if isinstance(memory, dict) else {}
+    return guardrails.get("enforceBeforeSubmit", True)
