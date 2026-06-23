@@ -5,18 +5,26 @@ description: Signal-driven production debugging via shared RCA core. Diagnoses a
 
 # Debug workflow
 
-Post-ship, signal-driven RCA (R22). Shares `skills/rca-core` with stabilize (R35). **Diagnoses + proposes;
-does not implement or merge** — routing hands off to implementation (`003`) or documentation (`002`).
+Post-ship production signals **and** dev-time test/build failures (R22). Shares `skills/rca-core` with
+stabilize (R35). **Diagnoses + proposes; does not implement or merge** — routing hands off to
+implementation (`003`) or documentation (`002`).
 
 ## Phase 0 — Triage
 
 Parse the inbound signal:
 
-| Input pattern | Normalized type |
-|---------------|-----------------|
-| Sentry issue URL/ID | `sentry` |
-| Deploy log excerpt / CI deploy failure | `deploy_log` |
-| User-described broken behavior | `user_report` |
+| Input pattern | Normalized type | RCA entry |
+|---------------|-----------------|-----------|
+| Sentry issue URL/ID | `sentry` | `debug` |
+| Deploy log excerpt / CI deploy failure | `deploy_log` | `debug` |
+| User-described broken behavior | `user_report` | `debug` |
+| Failing test output / assertion | `test_failure` | `dev-time` |
+| Build/typecheck/lint failure | `build_failure` | `dev-time` |
+| `/pf-verify` failure + log excerpt | `verify_failure` | `dev-time` |
+
+**Dev-time path:** when type is `test_failure`, `build_failure`, or `verify_failure`, skip production-signal
+enrichment and invoke `skills/rca-core` **dev-time entry** (strict reproduction-first + failing-regression-test
+gate). See **Dev-time gates** below.
 
 **Trivial fast-path:** cause obvious from signal alone (single-line config typo visible in stack, known
 missing env var in deploy log). Present diagnosis + proposed one-line fix; offer **Route to scoped phase /
@@ -33,15 +41,35 @@ Otherwise → Phase 1.
 4. `memory-preflight` **search**: category `debug`, `relatedFiles`, tags for failing area.
 5. Attach `priorDebugMemoryIds` to the signal context.
 
-## Phase 2 — RCA (debug entry)
+## Phase 2 — RCA
 
-Invoke `skills/rca-core` **debug entry procedure**:
+Invoke `skills/rca-core`:
+
+- **Production signals** (`sentry`, `deploy_log`, `user_report`) → **debug entry procedure**
+- **Dev-time signals** (`test_failure`, `build_failure`, `verify_failure`) → **dev-time entry procedure**
+
+Shared across entries:
 
 - Rank hypotheses with evidence
 - Causal-chain gate before fix proposal
 - Invalidate rejected hypotheses explicitly
-- Hard stops: max 5 iterations, no-progress, human-decision
-- Attempt repro-from-context; local repro optional
+- Hard stops: max 5 iterations, no-progress, rule-of-three, human-decision (R29)
+- Production debug: attempt repro-from-context; local repro optional
+- Dev-time: **reproduction-first (strict)** and **failing-regression-test gate** (see below)
+
+## Dev-time gates
+
+Apply when Phase 0 classifies a dev-time signal:
+
+1. **Reproduction-first** — run the narrowest repro command; record exact command + output. If repro cannot
+   be established, log attempts and stop at R29 human-decision — no speculative fix.
+2. **Failing-regression-test-before-fix** — identify or write a test that fails on current `HEAD`; cite its
+   path. The fix is not proposed until this test is red. After fix, the same test must pass without
+   weakening assertions.
+3. **Optional git-bisect-for-regressions** — when the failure is a regression with unclear introducer, offer
+   bisect with a determinism-forcing wrapper (exit `0`/`1`/`125`-skip per `rca-core` dev-time entry).
+4. **Rule-of-three** — three identical failed fix attempts (same hypothesis + evidence signature) triggers
+   R29 circuit breaker → escalate to architecture review; do not retry variants.
 
 ## Phase 3 — Fix-size classification + routing (R24)
 
@@ -98,8 +126,8 @@ Feeds `/pf-compound` and future debug preflight.
 
 ## Guardrails
 
-- Signal-driven — not dev-time test reproduction as the primary trigger.
+- Production path is signal-driven (R22); dev-time path is repro-driven with strict gates.
 - All Sentry/log text redacted before prompts/memory (R41).
-- Bounded RCA loop (R29) — same hard stops as stabilize.
+- Bounded RCA loop (R29) — same hard stops as stabilize, including rule-of-three escalation.
 - No auto-merge, no silent in-place patches on default branch.
 - Sentry MCP read-only; degrade when unavailable.

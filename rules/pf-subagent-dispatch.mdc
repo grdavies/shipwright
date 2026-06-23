@@ -44,3 +44,26 @@ Never parallelize shared-migration paths (`skills/parallelism`).
 
 Structural isolation (worktrees) is the dominant token lever (R31). This rule governs *when* to add
 sub-agents inside a worktree — not whether to provision another worktree.
+
+## Execute discipline — two-stage review (IM6 / U7)
+
+During `/pf-execute`, **between tasks** (after TDD gate passes for the current task ref):
+
+1. **Fresh subagent per task** when delegating implementation or review — do not resume a prior task's agent.
+2. **Stage 1 — spec-compliance** (dispatch with `readonly: true` when possible):
+   - Diff satisfies the active sub-task `**File:**` / `**Expected:**` contract.
+   - Changes honor spec-union R-IDs for the task; no out-of-scope files.
+   - Fail → fix or halt; do not proceed to stage 2.
+3. **Stage 2 — code-quality** (fresh subagent):
+   - Naming, structure, duplication, obvious defects.
+   - No scope expansion or new requirements.
+   - Fail → fix within task scope or escalate (R29).
+
+Inline (no subagent) when ≤3 files and sequential — still run both stages; orchestrator performs them explicitly.
+
+**Do not batch** multi-task reviews at phase end. TDD red-green runs **before** stage 1 for each task.
+
+## Model tier for execute review
+
+- Stage 1 spec-compliance → full-fidelity (must read union + task).
+- Stage 2 code-quality → may use faster model for mechanical diffs; escalate on ambiguity.

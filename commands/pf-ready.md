@@ -29,3 +29,5 @@ Confirm merge-readiness via `scripts/check-gate.sh` — terminal report only.
 
 - Never merge, push, or resolve threads here.
 - Gate script exit code is the verdict — not a CI glance.
+- **Does not run verification-gate** — post-push merge readiness uses `check-gate.sh` only; local `/tmp`
+  evidence may be stale at this boundary.

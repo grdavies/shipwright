@@ -1,0 +1,5 @@
+{
+  "taskRef": "9.9",
+  "skipped": true,
+  "skipReason": "config-only change — no test scenario"
+}

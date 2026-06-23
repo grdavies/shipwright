@@ -1,0 +1,6 @@
+{
+  "verifyE2e": {
+    "enabled": false,
+    "provider": "none"
+  }
+}

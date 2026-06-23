@@ -10,6 +10,7 @@ Catches planned vs actual before commit.
 ## Inputs
 
 - **Plan:** task checklist for `phaseSlug` in `tasksDir` + spec union (`scripts/spec-union.sh <prd>`).
+- **Backlog:** open rows from `bash scripts/feedback-backlog.sh list --open-only` (`skills/feedback-closure/SKILL.md`) — map against diff when PR-linked.
 - **Actual:** diff against per-worktree `parentBranch`:
 
 ```bash
@@ -20,7 +21,7 @@ git diff "$PARENT"...HEAD
 
 ## Procedure
 
-1. Load config + plan + diff.
+1. Load config + plan + diff + open backlog items.
 2. Read-only subagent maps each checklist item → `done` | `partial` | `missing` + unplanned hunks.
 3. Gap report table.
 4. In-scope gaps → bounded closer subagents (one gap each); re-verify.

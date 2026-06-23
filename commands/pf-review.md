@@ -25,10 +25,19 @@ Local pre-commit review over the uncommitted delta. Routes through `review.provi
 
    ```bash
    LOG_FILE="/tmp/pf-review-$(date +%Y%m%d%H%M%S)-$$.log"
+   STATUS_FILE=/tmp/pf-review.status.json
    coderabbit review -t uncommitted > "$LOG_FILE" 2>&1
+   REVIEW_EC=$?
+   REVIEW_STATUS="pass"
+   [[ "$REVIEW_EC" -ne 0 ]] && REVIEW_STATUS="fail"
+   jq -n --argjson ec "$REVIEW_EC" --arg st "$REVIEW_STATUS" --arg log "$LOG_FILE" \
+     '{exitCode: $ec, status: $st, logPath: $log, provider: "coderabbit"}' > "$STATUS_FILE"
    ```
 
-6. Fix actionable findings; re-run at most once if substantive fixes applied.
+   The verification-gate consumes `$STATUS_FILE` (stable path). When review is disabled (step 1), do not
+   write the status file — the gate treats review evidence as absent.
+6. Fix actionable findings; re-run at most once if substantive fixes applied; refresh `$STATUS_FILE` if
+   re-run.
 7. `memory-preflight` write for durable review learnings only (no raw bot dumps).
 
 ## Guardrails
@@ -36,3 +45,4 @@ Local pre-commit review over the uncommitted delta. Routes through `review.provi
 - Load `agentsFile` before review.
 - API keys from environment only.
 - Do not use `--base` (branch review is a separate surface).
+- Emit `/tmp/pf-review.status.json` at the stable path when review runs — verification-gate depends on it.
