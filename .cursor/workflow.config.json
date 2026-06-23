@@ -6,12 +6,12 @@
   "prdsDir": "docs/plans",
   "tasksDir": "docs/plans",
   "verify": {
-    "lint": "echo 'configure verify.lint for your repo'",
-    "typecheck": "echo 'configure verify.typecheck for your repo'",
-    "test": "echo 'configure verify.test for your repo'"
+    "lint": "echo 'no lint configured'",
+    "typecheck": "echo 'no typecheck configured'",
+    "test": "bash scripts/test/run-gate-fixtures.sh"
   },
   "review": {
-    "provider": "coderabbit"
+    "provider": "none"
   },
   "coderabbit": {
     "noDefer": true,
@@ -28,7 +28,7 @@
   },
   "memory": {
     "provider": "recallium",
-    "project": "my-project",
+    "project": "currsor-phase-flow-2",
     "defaultScope": "project",
     "connection": {
       "restBaseUrl": "http://localhost:8001"

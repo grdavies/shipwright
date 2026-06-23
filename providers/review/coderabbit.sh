@@ -62,7 +62,10 @@ if [ "$CR_INSTALLED" != "true" ]; then
   if [ "$MINS_SINCE" -lt "$GRACE_MIN" ]; then
     CR_STATE="in-flight"; CR_LANDED=false
   else
-    CR_STATE="absent"; CR_LANDED=true
+    # No CodeRabbit signal at all past the grace window — the repo is most likely
+    # not onboarded to CodeRabbit. Non-blocking, but labeled distinctly from a
+    # review that genuinely landed.
+    CR_STATE="unconfigured"; CR_LANDED=true
   fi
 elif [ "$CR_MARKER" -eq 1 ] || [ "$CR_STATUS" = "PENDING" ] || [ "$CR_STATUS" = "IN_PROGRESS" ]; then
   CR_STATE="in-flight"; CR_LANDED=false

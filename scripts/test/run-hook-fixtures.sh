@@ -14,9 +14,14 @@ run_hook() {
   local rules_script="$1"
   local expect_continue="$2"
   local label="$3"
+  local workspace="${4:-}"
   export PF_RULES_SCRIPT="$rules_script"
+  local stdin_payload='{}'
+  if [ -n "$workspace" ]; then
+    stdin_payload='{"workspace_roots":["'"$workspace"'"]}'
+  fi
   local out
-  out=$(echo '{}' | python3 "$HOOK")
+  out=$(echo "$stdin_payload" | python3 "$HOOK")
   local cont
   cont=$(echo "$out" | jq -r '.continue')
   if [ "$cont" = "$expect_continue" ]; then
@@ -37,22 +42,52 @@ run_hook() {
 FAIL=0
 chmod +x "$FIX"/rules-*.sh
 
-run_hook "$FIX/rules-fail.sh" false "provider-unreachable" || FAIL=1
-run_hook "$FIX/rules-empty.sh" false "empty-rules-default" || FAIL=1
-
 mkdir -p "$TMP_WS/.cursor"
-echo '{"memory":{"guardrails":{"allowEmptyRules":true}}}' > "$TMP_WS/.cursor/workflow.config.json"
-export PF_WORKSPACE_ROOT="$TMP_WS"
-# rules script reads PF_WORKSPACE_ROOT via subprocess env in hook - need workspace_roots in stdin
+echo '{"memory":{"guardrails":{"enforceBeforeSubmit":true}}}' > "$TMP_WS/.cursor/workflow.config.json"
+
+run_hook "$FIX/rules-fail.sh" false "provider-unreachable" "$TMP_WS" || FAIL=1
+
 out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
 cont=$(echo "$out" | jq -r '.continue')
 if [ "$cont" = "true" ]; then
-  echo "OK  bootstrap-empty-rules continue=true"
+  echo "OK  greenfield-empty-rules continue=true"
 else
-  echo "FAIL bootstrap-empty-rules expected continue=true got=$cont"
+  echo "FAIL greenfield-empty-rules expected continue=true got=$cont"
   FAIL=1
 fi
 
+echo '{"memory":{"guardrails":{"requireRuleClass":true,"enforceBeforeSubmit":true}}}' > "$TMP_WS/.cursor/workflow.config.json"
+out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
+cont=$(echo "$out" | jq -r '.continue')
+if [ "$cont" = "false" ]; then
+  echo "OK  strict-require-rule-class continue=false"
+else
+  echo "FAIL strict-require-rule-class expected continue=false got=$cont"
+  FAIL=1
+fi
+
+UNCONFIGURED_WS="$(mktemp -d "${TMPDIR:-/tmp}/pf-hook-unconf.XXXXXX")"
+out=$(echo '{"workspace_roots":["'"$UNCONFIGURED_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
+cont=$(echo "$out" | jq -r '.continue')
+if [ "$cont" = "true" ]; then
+  echo "OK  unconfigured-repo continue=true"
+else
+  echo "FAIL unconfigured-repo expected continue=true got=$cont"
+  FAIL=1
+fi
+rm -rf "$UNCONFIGURED_WS"
+
+echo '{"memory":{"guardrails":{"enforceBeforeSubmit":false}}}' > "$TMP_WS/.cursor/workflow.config.json"
+out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
+cont=$(echo "$out" | jq -r '.continue')
+if [ "$cont" = "true" ]; then
+  echo "OK  enforce-disabled continue=true"
+else
+  echo "FAIL enforce-disabled expected continue=true got=$cont"
+  FAIL=1
+fi
+
+echo '{"memory":{"guardrails":{"enforceBeforeSubmit":true}}}' > "$TMP_WS/.cursor/workflow.config.json"
 out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-ok.sh" python3 "$HOOK")
 cont=$(echo "$out" | jq -r '.continue')
 if [ "$cont" = "true" ]; then
@@ -62,7 +97,6 @@ else
   FAIL=1
 fi
 
-# corrupt allowlist
 echo 'not-json' > "$TMP_WS/.cursor/pf-memory-rule-allowlist.json"
 out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-ok.sh" python3 "$HOOK")
 cont=$(echo "$out" | jq -r '.continue')
