@@ -17,7 +17,7 @@
   "verify": {
     "lint": "echo 'no lint configured'",
     "typecheck": "echo 'no typecheck configured'",
-    "test": "bash scripts/test/run-gate-fixtures.sh && bash scripts/test/run-doc-fixtures.sh"
+    "test": "bash scripts/test/run-gate-fixtures.sh && bash scripts/test/run-doc-fixtures.sh && bash scripts/test/run-impl-fixtures.sh && bash scripts/test/run-debug-fixtures.sh && bash scripts/test/run-feedback-fixtures.sh"
   },
   "review": {
     "provider": "none"

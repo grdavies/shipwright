@@ -21,6 +21,35 @@ REDACTIONS = [
         "[REDACTED:PEM_PRIVATE_KEY]",
     ),
     (re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"), "[REDACTED:EMAIL]"),
+    (re.compile(r"(?i)(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?)://\S+"), "[REDACTED:DB_URL]"),
+    (re.compile(r"whsec_[A-Za-z0-9]+"), "[REDACTED:WEBHOOK_SECRET]"),
+    (re.compile(r"sk_(?:live|test)_[A-Za-z0-9]+"), "[REDACTED:API_SECRET]"),
+    (re.compile(r"rk_(?:live|test)_[A-Za-z0-9]+"), "[REDACTED:API_RESTRICTED_KEY]"),
+    (
+        re.compile(
+            r"(?i)(?:password|secret|token|api[_-]?key)\s*[=:]\s*['\"]?[^\s'\"]{20,}['\"]?"
+        ),
+        "[REDACTED:HIGH_ENTROPY_SECRET]",
+    ),
+    (
+        re.compile(
+            r"\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
+            r"172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|"
+            r"192\.168\.\d{1,3}\.\d{1,3})\b"
+        ),
+        "[REDACTED:INTERNAL_IP]",
+    ),
+    (re.compile(r"(?i)\b[\w.-]+\.(?:internal|local|localhost)\b"), "[REDACTED:INTERNAL_HOST]"),
+    (
+        re.compile(
+            r'(?i)"(?:user[_-]?id|username|ip_address)"\s*:\s*"(?:[^"\\]|\\.)*"'
+        ),
+        '"[REDACTED:SENTRY_PII]"',
+    ),
+    (
+        re.compile(r"(?i)(?:user[_-]?id|username|ip_address)\s*[=:]\s*\S+"),
+        "[REDACTED:SENTRY_PII]",
+    ),
 ]
 
 

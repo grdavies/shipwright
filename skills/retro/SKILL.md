@@ -15,6 +15,8 @@ Run after a human merge (or at end of `/pf-ship` merge gate when user merges).
 4. Output **distilled learning candidates** for `/pf-compound` — no raw transcripts.
 5. Run output through `scripts/memory-redact.sh` before any persistence.
 
+Structured output for `/pf-feedback` must conform to `references/output-contract.md`.
+
 ## Guardrails
 
 - Report-only — no `agentsFile`/doctrine edits without approval.
