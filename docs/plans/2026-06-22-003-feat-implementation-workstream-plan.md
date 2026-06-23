@@ -3,9 +3,35 @@ title: "feat: phase-flow v2 implementation workstream (worktrees + phase loop + 
 type: feat
 date: 2026-06-22
 origin: docs/brainstorms/2026-06-22-unified-dev-workflow-plugin-requirements.md
+status: implemented
+completed: 2026-06-23
+branch: feat/implementation-workstream
+pr: null
 ---
 
 # feat: phase-flow v2 implementation workstream (worktrees + phase loop + ship gate + compounding)
+
+## Implementation status
+
+| Unit | Status | Notes |
+|------|--------|-------|
+| U0 | **Done** | `scripts/memory_redact.py` + `memory-redact.sh`; memory write contract + `/pf-memory-sync` chokepoint |
+| U1 | **Done** | `/pf-worktree`, `skills/worktree/`, `scripts/worktree.sh` (provision/teardown/ceiling) |
+| U2 | **Done** | `skills/phase-state/`, `scripts/phase-state.sh` (per-worktree gitdir state + index) |
+| U3 | **Done** | `/pf-start` … `/pf-ready`, `rules/pf-workflow-sequencing.mdc` (spec-union consumers) |
+| U4 | **Done** | `/pf-ship` orchestrator (stale-green re-verify, CI budget, never-merge) |
+| U5 | **Done** | `/pf-gaps`, `skills/gap-check/` |
+| U6 | **Done (policy)** | `skills/parallelism/` — ceiling + recombination documented; no executable migration-preflight script yet |
+| U7 | **Done** | `rules/pf-subagent-dispatch.mdc` |
+| U8 | **Done** | `/pf-retro`, `skills/retro/` |
+| U9 | **Done** | `/pf-compound`, `skills/compound/` |
+| U10 | **Done** | `/pf-status`, `skills/living-status/`, `scripts/reconcile-status.sh` (R14: branch `pf/<slug>-*`, `prd:<slug>`, task checkboxes as inputs) |
+
+**Verification:** `bash scripts/test/run-impl-fixtures.sh` — 13/13; plus doc + gate fixture suites green.
+
+**Merge state:** implemented on `feat/implementation-workstream`; **not yet merged** to `main` (no PR open).
+
+**Follow-ups (not blocking merge):** executable shared-migration preflight for U6 (`parallel-preflight.sh` or extend `worktree.sh`).
 
 ## Summary
 

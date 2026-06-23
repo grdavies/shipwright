@@ -39,6 +39,21 @@ Per-command read templates:
 Memory is an input, not an authority: git state, the per-repo `stateFile`, `agentsFile`, and repo
 doctrine remain the sources of truth.
 
+## Redaction chokepoint (R41 — mandatory before persist/re-inject)
+
+Before **any** `store`, transcript distillation (`/pf-memory-sync`), or compounding write, pipe content
+through the executable filter:
+
+```bash
+bash scripts/memory-redact.sh <<'EOF'
+<payload>
+EOF
+```
+
+Or: `bash scripts/memory-redact.sh path/to/file`. The filter is deterministic (same input → same output),
+runs offline, and scrubs the named corpus in `rules/memory-guardrails.mdc` (AWS keys, GitHub PATs, JWTs,
+`Bearer` tokens, PEM private keys, emails). Never persist or re-inject unredacted content.
+
 ## Write mode (after substantive work)
 
 Store distilled memories per the write contract in `CAPABILITIES.md`:
@@ -46,6 +61,7 @@ Store distilled memories per the write contract in `CAPABILITIES.md`:
 - pick the canonical category (decision / learning / debug / design / code-context / research /
   discussion); never a generic catch-all,
 - set `relatedFiles` + stable tags (`prd-<n>`, `task-<n>`, `surface:<cmd>`),
+- **run `scripts/memory-redact.sh` on the payload first** (R41 chokepoint),
 - search before store; `modify` a near-duplicate instead of adding a second,
 - project scope by default; global only on explicit user direction,
 - store the distilled substance, never a raw transcript dump.

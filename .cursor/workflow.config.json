@@ -2,6 +2,15 @@
   "$schema": "../docs/config.schema.json",
   "defaultBaseBranch": "main",
   "stateFile": ".git/phase-flow.json",
+  "worktree": {
+    "parallelCeiling": 4,
+    "scaffold": {
+      "portRangeStart": 9100,
+      "portRangeEnd": 9199,
+      "dbStrategy": "schema-prefix",
+      "dbTemplate": ""
+    }
+  },
   "agentsFile": "AGENTS.md",
   "prdsDir": "prds",
   "tasksDir": "prds",

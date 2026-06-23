@@ -81,6 +81,35 @@
         }
       }
     },
+    "worktree": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Per-work-item worktree scaffold and parallelism ceiling.",
+      "properties": {
+        "parallelCeiling": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 4,
+          "description": "Max active worktrees before recombination is required."
+        },
+        "scaffold": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "portRangeStart": { "type": "integer", "default": 9100 },
+            "portRangeEnd": { "type": "integer", "default": 9199 },
+            "dbStrategy": {
+              "enum": ["schema-prefix", "isolated-db", "shared"],
+              "default": "schema-prefix"
+            },
+            "dbTemplate": {
+              "type": "string",
+              "description": "Optional DSN/template for isolated-db strategy."
+            }
+          }
+        }
+      }
+    },
     "memory": {
       "type": "object",
       "additionalProperties": false,

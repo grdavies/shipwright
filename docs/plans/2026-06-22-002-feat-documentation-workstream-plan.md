@@ -3,9 +3,33 @@ title: "feat: phase-flow v2 documentation workstream (triage + doc pipeline + fr
 type: feat
 date: 2026-06-22
 origin: docs/brainstorms/2026-06-22-unified-dev-workflow-plugin-requirements.md
+status: done
+completed: 2026-06-23
+branch: feat/doc-workstream
+commit: e4b8f38
+pr: https://github.com/grdavies/currsor-phase-flow-2/pull/2
 ---
 
 # feat: phase-flow v2 documentation workstream (triage + doc pipeline + freeze/amendments)
+
+## Implementation status
+
+| Unit | Status | Notes |
+|------|--------|-------|
+| U1 | **Done** | `docs/layout.md`, seeded `prds/INDEX.md` / `COMPLETION-LOG.md` / `GAP-BACKLOG.md`, config `prdsDir`/`tasksDir` |
+| U2 | **Done** | `/pf-triage`, `skills/triage/SKILL.md` |
+| U3 | **Done** | `/pf-brainstorm`, brainstorm skill + requirements sections |
+| U4 | **Done** | `/pf-prd`, PRD skill |
+| U5 | **Done** | `/pf-doc-review`, seven `pf-*-reviewer` agents, findings schema + synthesis |
+| U6 | **Done** | `/pf-freeze`, hooks, `check-frozen.sh`, CI workflow `frozen` |
+| U7 | **Done** | `/pf-amend` |
+| U8 | **Done** | `skills/spec-union`, `scripts/spec-union.sh` |
+| U9 | **Done** | `/pf-tasks`, tasks skill, INDEX registration on freeze |
+| U10 | **Done** | `/pf-doc` orchestrator, `pf-naming` boundary, PROVENANCE |
+
+**Verification:** `bash scripts/test/run-doc-fixtures.sh` — 6/6 passing (spec-union, check-frozen, amendment ordering).
+
+**Shipped:** merged to `main` via [PR #2](https://github.com/grdavies/currsor-phase-flow-2/pull/2) (`e4b8f38`).
 
 ## Summary
 
