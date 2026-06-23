@@ -19,8 +19,9 @@ Parse the inbound signal:
 | User-described broken behavior | `user_report` |
 
 **Trivial fast-path:** cause obvious from signal alone (single-line config typo visible in stack, known
-missing env var in deploy log). Present diagnosis + proposed one-line fix; run **Fix it now / Diagnosis only**
-before any edit. Fast-path saves ceremony, not the user's choice. Diagnosis-only → skip to Phase 4.
+missing env var in deploy log). Present diagnosis + proposed one-line fix; offer **Route to scoped phase /
+Diagnosis only** — never edit on bare `main`. If the user chooses scoped phase, skip to Phase 3 routing with
+the one-line fix as the proposal. Diagnosis-only → skip to Phase 4.
 
 Otherwise → Phase 1.
 
@@ -49,8 +50,8 @@ rubrics on the **proposed fix scope** (estimated file count, risk triggers, work
 
 | Outcome | Route | Handoff |
 |---------|-------|---------|
-| **Small** — Quick-tier fix (0–1 files, no architectural mismatch, not workaround-only) | Scoped implementation | `/pf-worktree provision debug-<slug>` → `/pf-start` with RCA output as phase brief |
-| **Substantial** — wrong interface/requirements, 6+ files, risk-floor triggers, or every fix is a workaround | Documentation | `/pf-brainstorm` (new) or amend frozen PRD via doc workstream |
+| **Small** — Quick or Standard tier (≤5 files, no risk-floor triggers), no architectural mismatch, not workaround-only | Scoped implementation | `/pf-worktree provision debug-<slug>` → `/pf-start` with RCA output as phase brief |
+| **Substantial** — Full tier, wrong interface/requirements, risk-floor triggers, or every fix is a workaround | Documentation | `/pf-brainstorm` (new) or `/pf-amend` + freeze for frozen PRD scope changes |
 
 **Never** patch in place on `main` without worktree + phase loop.
 

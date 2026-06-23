@@ -30,7 +30,7 @@ Read `.cursor/workflow.config.json` for `prdsDir`, `agentsFile`, `memory` provid
 5. **RCA** — `skills/rca-core` debug entry (hypotheses → causal-chain gate → root cause + proposed fix).
 6. **Route** — classify fix size via triage rubric; hand off:
    - **Small** → `/pf-worktree provision` + `/pf-start` with RCA brief in worktree
-   - **Substantial** → `/pf-brainstorm` or PRD amendment (doc workstream)
+   - **Substantial** → `/pf-brainstorm` or `/pf-amend` (frozen PRD scope change) per doc workstream
 7. **Record** route + originating signal via `memory-preflight` write (redacted) for compounding.
 8. Return structured handoff summary (root cause, proposed fix, route, next command).
 

@@ -28,6 +28,7 @@ mode is ON for this chat until the user says **stop caveman** or **normal mode**
 - Implementation: `/pf-worktree` -> `/pf-start` -> `/pf-execute` -> `/pf-gaps` -> `/pf-verify` ->
   `/pf-review` -> `/pf-commit` -> `/pf-pr` -> `/pf-watch-ci` -> `/pf-stabilize` -> `/pf-ready`.
 - `/pf-ship` drives the chain on green and stops at the human merge gate (never merges).
+- Post-ship debug: `/pf-debug` (signal-driven RCA from Sentry/deploy/user reports; routes to worktree loop or doc pipeline — does not implement or merge).
 - Phase state is per-worktree (`scripts/phase-state.sh`); repo index is read-time derived.
 
 ## Memory

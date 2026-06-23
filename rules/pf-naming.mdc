@@ -29,7 +29,7 @@ v1 (unprefixed) and compound-engineering (`ce-`).
 
 ## Debug orchestrator boundary
 
-`/pf-debug` diagnoses via `skills/rca-core` (debug entry) and routes — it does not run `/pf-execute`, `/pf-ship`, or patch on bare `main`. Small fixes hand off to `/pf-worktree` + `/pf-start`; substantial fixes hand off to `/pf-brainstorm` or PRD amendment. `/pf-stabilize` remains the in-loop PR blocker surface.
+`/pf-debug` diagnoses via `skills/rca-core` (debug entry) and routes — it does not run `/pf-execute`, `/pf-ship`, or patch on bare `main`. Small fixes hand off to `/pf-worktree` + `/pf-start`; substantial fixes hand off to `/pf-brainstorm` or `/pf-amend`. `/pf-stabilize` remains the in-loop PR blocker surface.
 
 ## Naming rules
 
