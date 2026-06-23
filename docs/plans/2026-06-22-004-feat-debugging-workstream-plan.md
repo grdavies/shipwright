@@ -3,9 +3,28 @@ title: "feat: phase-flow v2 debugging workstream (signal-driven RCA + Sentry MCP
 type: feat
 date: 2026-06-22
 origin: docs/brainstorms/2026-06-22-unified-dev-workflow-plugin-requirements.md
+status: in_review
+branch: feat/debug-workstream
+commit: 69641e3
+pr: https://github.com/grdavies/currsor-phase-flow-2/pull/4
 ---
 
 # feat: phase-flow v2 debugging workstream (signal-driven RCA + Sentry MCP)
+
+## Implementation status
+
+| Unit | Status | Notes |
+|------|--------|-------|
+| U1 | **Done** | `skills/rca-core/SKILL.md` debug entry; `references/debug-inputs.md`; stabilize entry preserved |
+| U2 | **Done** | `skills/debug/references/sentry.md` — MCP schema discovery, R41 redaction, graceful degradation |
+| U3 | **Done** | `/pf-debug`, `skills/debug/SKILL.md`; memory preflight + trivial fast-path |
+| U4 | **Done** | Fix-size routing → `/pf-worktree` + `/pf-start` or `/pf-brainstorm`/amendment; `surface:debug-route` compounding record |
+
+**Verification:** `bash scripts/test/run-debug-fixtures.sh` — 9/9; plus impl, doc, and gate fixture suites green.
+
+**Shipped:** open at [PR #4](https://github.com/grdavies/currsor-phase-flow-2/pull/4) (`69641e3`).
+
+**Open questions (partially resolved):** Sentry recipe uses runtime tool-schema discovery instead of hard-coded tool names; fix-size threshold reuses `002` triage rubric — calibration deferred until real signals flow.
 
 ## Summary
 
