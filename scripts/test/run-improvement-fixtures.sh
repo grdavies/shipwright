@@ -590,6 +590,107 @@ else
   FAIL=1
 fi
 
+# --- U9: feedback closure loop (IM8) ---
+FEEDBACK_CLOSURE="$ROOT/skills/feedback-closure/SKILL.md"
+BACKLOG_SH="$ROOT/scripts/feedback-backlog.sh"
+CLOSURE_GATE="$ROOT/scripts/feedback-closure-gate.sh"
+PF_FEEDBACK_CLOSE="$ROOT/commands/pf-feedback-close.md"
+GAP_CHECK="$ROOT/skills/gap-check/SKILL.md"
+PF_EXECUTE="$ROOT/commands/pf-execute.md"
+FIX_BACKLOG="$ROOT/scripts/test/fixtures/feedback-backlog"
+FIX_CLOSURE="$ROOT/scripts/test/fixtures/feedback-closure"
+
+if [[ -f "$FEEDBACK_CLOSURE" ]] && [[ -x "$BACKLOG_SH" ]] && [[ -x "$CLOSURE_GATE" ]] && \
+   grep -qi 'GAP-BACKLOG' "$FEEDBACK_CLOSURE" && \
+   grep -qi 'human confirmation' "$FEEDBACK_CLOSURE" && \
+   grep -q 'feedback-closure-gate.sh' "$FEEDBACK_CLOSURE"; then
+  echo "OK  feedback-closure skill documents backlog consume + human-gated close"
+else
+  echo "FAIL feedback-closure skill missing"
+  FAIL=1
+fi
+
+if grep -q 'feedback-backlog.sh' "$GAP_CHECK" && \
+   grep -q 'feedback-backlog.sh' "$PF_EXECUTE" && \
+   grep -q 'pf-feedback-close' "$PF_SHIP"; then
+  echo "OK  gap-check + pf-execute + pf-ship consume/close backlog"
+else
+  echo "FAIL feedback backlog wiring"
+  FAIL=1
+fi
+
+if grep -q 'feedback-closure-gate.sh' "$PF_FEEDBACK_CLOSE" && \
+   grep -qi 'human confirm' "$PF_FEEDBACK_CLOSE"; then
+  echo "OK  pf-feedback-close command + gate"
+else
+  echo "FAIL pf-feedback-close command"
+  FAIL=1
+fi
+
+OPEN_COUNT=$(bash "$BACKLOG_SH" list --open-only --backlog "$FIX_BACKLOG/open.md" | jq 'length')
+if [[ "$OPEN_COUNT" -eq 2 ]]; then
+  echo "OK  feedback-backlog list: two open items"
+else
+  echo "FAIL feedback-backlog list count=$OPEN_COUNT"
+  FAIL=1
+fi
+
+CLOSE_TMP=$(mktemp)
+cp "$FIX_BACKLOG/open.md" "$CLOSE_TMP"
+set +e
+bash "$BACKLOG_SH" close --signal-id fb-fixture-001 --backlog "$CLOSE_TMP" --date 2026-06-23 >/dev/null
+EC=$?
+set -e
+if [[ "$EC" -eq 0 ]] && grep -q '\[x\].*fb-fixture-001' "$CLOSE_TMP"; then
+  echo "OK  feedback-backlog close marks item done"
+else
+  echo "FAIL feedback-backlog close (ec=$EC)"
+  FAIL=1
+fi
+rm -f "$CLOSE_TMP"
+
+set +e
+OUT=$(bash "$CLOSURE_GATE" \
+  --backlog "$FIX_BACKLOG/open.md" \
+  --signal-id fb-fixture-001 \
+  --verify-status "$FIX_CLOSURE/verify-pass.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.verdict == "closable"' >/dev/null; then
+  echo "OK  feedback-closure-gate: open + verify pass → closable"
+else
+  echo "FAIL feedback-closure-gate closable case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$CLOSURE_GATE" \
+  --backlog "$FIX_BACKLOG/open.md" \
+  --signal-id fb-fixture-missing \
+  --verify-status "$FIX_CLOSURE/verify-pass.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 20 ]] && echo "$OUT" | jq -e '.verdict == "not-closable"' >/dev/null; then
+  echo "OK  feedback-closure-gate: unknown signal → not-closable"
+else
+  echo "FAIL feedback-closure-gate not-closable case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$CLOSURE_GATE" \
+  --backlog "$FIX_BACKLOG/open.md" \
+  --signal-id fb-fixture-001 \
+  --verify-status "$FIX_CLOSURE/does-not-exist.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive"' >/dev/null; then
+  echo "OK  feedback-closure-gate: missing verify → inconclusive"
+else
+  echo "FAIL feedback-closure-gate inconclusive case (ec=$EC)"
+  FAIL=1
+fi
+
 if [[ $FAIL -eq 0 ]]; then
   echo "ALL improvement fixtures passed"
 else
