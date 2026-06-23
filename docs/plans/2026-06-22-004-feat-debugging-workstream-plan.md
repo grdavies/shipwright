@@ -3,9 +3,10 @@ title: "feat: phase-flow v2 debugging workstream (signal-driven RCA + Sentry MCP
 type: feat
 date: 2026-06-22
 origin: docs/brainstorms/2026-06-22-unified-dev-workflow-plugin-requirements.md
-status: in_review
+status: done
+completed: 2026-06-23
 branch: feat/debug-workstream
-commit: 69641e3
+commit: e8e3895
 pr: https://github.com/grdavies/currsor-phase-flow-2/pull/4
 ---
 
@@ -22,7 +23,7 @@ pr: https://github.com/grdavies/currsor-phase-flow-2/pull/4
 
 **Verification:** `bash scripts/test/run-debug-fixtures.sh` — 9/9; plus impl, doc, and gate fixture suites green.
 
-**Shipped:** open at [PR #4](https://github.com/grdavies/currsor-phase-flow-2/pull/4) (`69641e3`).
+**Shipped:** merged to `main` via [PR #4](https://github.com/grdavies/currsor-phase-flow-2/pull/4) (`e8e3895`; includes review fix `1d12971` for routing tiers and orchestrator boundaries).
 
 **Open questions (partially resolved):** Sentry recipe uses runtime tool-schema discovery instead of hard-coded tool names; fix-size threshold reuses `002` triage rubric — calibration deferred until real signals flow.
 
