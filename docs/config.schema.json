@@ -20,6 +20,28 @@
       "additionalProperties": { "type": "string" },
       "description": "Shell commands run during /pf-phase-verify (repo-specific)."
     },
+    "verifyE2e": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional smoke/E2E verify adapter (providers/verify/). Runs only when enabled.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, /pf-verify invokes scripts/verify-e2e.sh after static verify.* commands."
+        },
+        "provider": {
+          "type": "string",
+          "default": "none",
+          "description": "Adapter id under providers/verify/<id>.sh. Use \"none\" to skip."
+        },
+        "routes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional affected routes hint for smoke scoping (adapter-specific)."
+        }
+      }
+    },
     "review": {
       "type": "object",
       "additionalProperties": false,

@@ -691,6 +691,69 @@ else
   FAIL=1
 fi
 
+# --- U10: E2E / smoke verify adapter (IM9) ---
+VERIFY_E2E="$ROOT/scripts/verify-e2e.sh"
+VERIFY_CAPS="$ROOT/providers/verify/CAPABILITIES.md"
+CONFIG_SCHEMA="$ROOT/docs/config.schema.json"
+FIX_E2E="$ROOT/scripts/test/fixtures/verify-e2e"
+
+if [[ -f "$VERIFY_CAPS" ]] && [[ -x "$VERIFY_E2E" ]] && \
+   [[ -f "$ROOT/providers/verify/stub.sh" ]] && \
+   [[ -f "$ROOT/providers/verify/playwright.sh" ]] && \
+   grep -q 'verifyE2e' "$VERIFY_CAPS"; then
+  echo "OK  verify E2E providers + CAPABILITIES contract"
+else
+  echo "FAIL verify E2E provider artifacts"
+  FAIL=1
+fi
+
+if grep -q 'verify-e2e.sh' "$PF_VERIFY" && \
+   grep -q 'verifyE2e' "$PF_VERIFY"; then
+  echo "OK  pf-verify wires verify-e2e adapter selector"
+else
+  echo "FAIL pf-verify e2e wiring"
+  FAIL=1
+fi
+
+if grep -q 'verifyE2e' "$CONFIG_SCHEMA"; then
+  echo "OK  config.schema documents verifyE2e"
+else
+  echo "FAIL config.schema verifyE2e"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$VERIFY_E2E" --config "$FIX_E2E/config-stub.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.status == "complete" and .provider == "stub"' >/dev/null; then
+  echo "OK  verify-e2e: stub provider → complete"
+else
+  echo "FAIL verify-e2e stub case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$VERIFY_E2E" --config "$FIX_E2E/config-disabled.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.skipped == true' >/dev/null; then
+  echo "OK  verify-e2e: disabled → skipped"
+else
+  echo "FAIL verify-e2e disabled case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$VERIFY_E2E" --config "$FIX_E2E/config-stub.json" 2>/dev/null)
+set -e
+if echo "$OUT" | jq -e '.logPath != null and .logPath != ""' >/dev/null && [[ -f "$(echo "$OUT" | jq -r .logPath)" ]]; then
+  echo "OK  verify-e2e stub emits logPath"
+else
+  echo "FAIL verify-e2e logPath"
+  FAIL=1
+fi
+
 if [[ $FAIL -eq 0 ]]; then
   echo "ALL improvement fixtures passed"
 else
