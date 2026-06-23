@@ -29,6 +29,7 @@ mode is ON for this chat until the user says **stop caveman** or **normal mode**
   `/pf-review` -> `/pf-commit` -> `/pf-pr` -> `/pf-watch-ci` -> `/pf-stabilize` -> `/pf-ready`.
 - `/pf-ship` drives the chain on green and stops at the human merge gate (never merges).
 - Post-ship debug: `/pf-debug` (signal-driven RCA from Sentry/deploy/user reports; routes to worktree loop or doc pipeline — does not implement or merge).
+- Post-ship feedback: `/pf-feedback` (unified intake for production/review/retro signals; routes to debug, gap-capture, or brainstorm — does not analyze or author).
 - Phase state is per-worktree (`scripts/phase-state.sh`); repo index is read-time derived.
 
 ## Memory

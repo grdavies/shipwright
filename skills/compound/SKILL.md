@@ -9,7 +9,7 @@ Adapted from compound-engineering — writes through the memory seam only (not `
 
 ## Procedure
 
-1. Inputs: `/pf-retro` candidates or explicit feedback items.
+1. Inputs: `/pf-retro` candidates, `/pf-feedback` route records (`surface:feedback-route`), or explicit feedback items.
 2. **Redact** each payload: `bash scripts/memory-redact.sh`.
 3. `memory-preflight` **search** before store — `modify` near-duplicates.
 4. Store with canonical category (`decision` / `learning` / `debug` / `design`), `relatedFiles`, tags
