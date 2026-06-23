@@ -1,0 +1,29 @@
+---
+description: pf- command namespace, orchestrator vs atomic boundaries, and naming conventions for phase-flow v2.
+alwaysApply: true
+---
+
+# pf- naming and command boundaries
+
+All plugin commands, skills exposed as commands, and user-facing workflow entry points use the **`pf-`**
+prefix (e.g. `/pf-review`, `/pf-stabilize`, `/pf-memory-sync`). This namespace is distinct from phase-flow
+v1 (unprefixed) and compound-engineering (`ce-`).
+
+## Orchestrators vs atomic commands
+
+- **Orchestrators** chain multiple phases (e.g. `/pf-ship` — deferred to the implementation workstream).
+  Their descriptions must state the full chain and which atomic commands they subsume.
+- **Atomic commands** perform one bounded step (e.g. `/pf-watch-ci`, `/pf-memory-sync`). Their descriptions
+  must state what they do **and what they do not do** (e.g. "polls CI; does not merge or fix failures").
+
+## Naming rules
+
+1. Prefix every command file with `pf-` (e.g. `commands/pf-review.md`).
+2. Skill directories use descriptive kebab-case without the prefix (e.g. `skills/checks-gate/`).
+3. Rules use `pf-` when they encode plugin-specific guardrails (e.g. `pf-naming.mdc`, `pf-guardrails.mdc`).
+4. Provider adapters live under `providers/`; executable adapters use `.sh` (e.g. `providers/review/coderabbit.sh`).
+
+## Description contract
+
+Every command frontmatter `description` must be one sentence on scope plus one on explicit non-goals when
+ambiguity is likely.
