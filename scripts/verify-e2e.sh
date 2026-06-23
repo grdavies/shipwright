@@ -66,7 +66,13 @@ export PF_CHANGED_FILES="${CHANGED//,/$'\n'}"
 export PF_E2E_ROUTES="$(cfg '.verifyE2e.routes' '[]')"
 export PF_E2E_CONFIG="${CONFIG:-}"
 
+set +e
 OUT="$(bash "$ADAPTER")"
+ADAPTER_EC=$?
+set -e
 echo "$OUT"
-EC="$(echo "$OUT" | jq -r '.exitCode // 1')"
-exit "${EC:-1}"
+EC="$(echo "$OUT" | jq -r '.exitCode // empty')"
+if [[ -z "$EC" || "$EC" == "null" ]]; then
+  EC="${ADAPTER_EC:-1}"
+fi
+exit "$EC"
