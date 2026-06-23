@@ -1,0 +1,9 @@
+{
+  "rid": "R1",
+  "taskRef": "1.1",
+  "testScenario": "tdd-gate fail fixture",
+  "red": { "observed": false, "exitCode": 0 },
+  "green": { "observed": true, "exitCode": 0 },
+  "testWeakened": false,
+  "skipped": false
+}
