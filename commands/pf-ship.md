@@ -10,9 +10,12 @@ Orchestrates the atomic phase loop inside the worktree. Delegates to each comman
 ## Chain
 
 ```
-pf-execute → pf-verify → pf-review → gap-check → pf-commit → pf-pr → pf-watch-ci → pf-stabilize → pf-ready [PAUSE]
+pf-execute → pf-verify → verification-gate → pf-review → gap-check → pf-commit → pf-pr → pf-watch-ci → pf-stabilize → pf-ready [PAUSE]
 ```
 
+- **verification-gate** — `Load skills/verification-gate/SKILL.md`; run `scripts/verify-evidence.sh` on
+  structured status files. **Halt** on `not-verified`; **log and continue** on `inconclusive` (no mid-chain
+  pause). Does not override `check-gate.sh`.
 - `pf-review` in configured mode; `review.noDefer` honored.
 - `gap-check` default-on (`skills/gap-check`); `--fast` skips.
 - `pf-stabilize` uses `stabilize-loop` when present.
@@ -51,6 +54,7 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/pf-ready` and stop.
 ## Stop conditions
 
 - Step failure or stabilize hard stop.
+- **verification-gate** returns `not-verified` (fresh attributable failure).
 - User ambiguity (branch/scope/config).
 - CI budget exhausted while `yellow`.
 - Merge gate reached on live green.
@@ -60,4 +64,5 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/pf-ready` and stop.
 - Never merge or force-push.
 - Advance only on green; never skip steps.
 - Delegate — do not bypass command guardrails.
-- All gate truth from `check-gate.sh`.
+- All **merge-gate** truth from `check-gate.sh` — verification-gate is pre-CI local evidence only.
+- `inconclusive` from verification-gate never halts the ship chain (log only).
