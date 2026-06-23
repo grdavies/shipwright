@@ -13,8 +13,8 @@
       "description": "Per-worktree workflow state file path (lives in the worktree gitdir)."
     },
     "agentsFile": { "type": "string", "default": "AGENTS.md" },
-    "prdsDir": { "type": "string", "default": "docs/plans" },
-    "tasksDir": { "type": "string", "default": "docs/plans" },
+    "prdsDir": { "type": "string", "default": "prds" },
+    "tasksDir": { "type": "string", "default": "prds" },
     "verify": {
       "type": "object",
       "additionalProperties": { "type": "string" },

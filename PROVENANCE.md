@@ -16,7 +16,11 @@ follow-up plan; this file is seeded during foundation build and updated as units
 | Stabilize loop | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | U6 | |
 | RCA core shape | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | U6 | Factored from stabilize; debug entry stubbed |
 | Session/stop hooks | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | U7 | Fail-closed moved to `beforeSubmitPrompt` per A1 |
-| Persona panel review pattern | [compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin) | cache `2648200ed2352b6e19a93dcfffc764efe70b6a1b` | deferred | Adapted in documentation workstream (`pf-doc-review`) |
+| Persona panel review pattern | [compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin) | cache `2648200ed2352b6e19a93dcfffc764efe70b6a1b` | doc U5 | `pf-doc-review` + seven `pf-*-reviewer` agents; findings schema + synthesis |
+| Brainstorm dialogue pattern | [compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin) | cache `2648200ed2352b6e19a93dcfffc764efe70b6a1b` | doc U3 | `pf-brainstorm`; one-question dialogue + synthesis checkpoint |
+| PRD + tasks pipeline | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | doc U4/U9 | `pf-prd`, `pf-tasks`; Go gate preserved; freeze separated |
+| Doc orchestrator pattern | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | doc U10 | `pf-doc` delegates-to-atomics like v1 `/ship` |
+| Doc-freeze CI check | — | — | doc U6 | `check-frozen.sh` + `.github/workflows/check-frozen.yml`; local `pre-commit-frozen.sh` is bypassable early warning |
 
 ## Update policy
 

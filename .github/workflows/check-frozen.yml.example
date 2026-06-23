@@ -1,0 +1,30 @@
+# Frozen artifact CI check
+
+Add `scripts/check-frozen.sh` as a required GitHub Actions check on PRs.
+
+## Example workflow
+
+```yaml
+name: check-frozen
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  frozen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check frozen artifacts
+        run: bash scripts/check-frozen.sh origin/${{ github.base_ref }}
+```
+
+## Authority
+
+This CI check is the **only non-bypassable** freeze guarantee. Local pre-commit is convenience only.
+
+## Pass/fail
+
+- **Pass:** diff adds new files only, or modifies no file that was frozen at base.
+- **Fail:** any modification to a file with `frozen: true` at the merge base.

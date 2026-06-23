@@ -3,12 +3,12 @@
   "defaultBaseBranch": "main",
   "stateFile": ".git/phase-flow.json",
   "agentsFile": "AGENTS.md",
-  "prdsDir": "docs/plans",
-  "tasksDir": "docs/plans",
+  "prdsDir": "prds",
+  "tasksDir": "prds",
   "verify": {
     "lint": "echo 'no lint configured'",
     "typecheck": "echo 'no typecheck configured'",
-    "test": "bash scripts/test/run-gate-fixtures.sh"
+    "test": "bash scripts/test/run-gate-fixtures.sh && bash scripts/test/run-doc-fixtures.sh"
   },
   "review": {
     "provider": "none"
