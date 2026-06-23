@@ -2,10 +2,30 @@
 date: 2026-06-22
 type: feat
 origin: docs/brainstorms/2026-06-22-unified-dev-workflow-plugin-requirements.md
-status: ready
+status: done
+completed: 2026-06-22
+branch: feat/plugin-foundation
+commit: c02b087
+pr: https://github.com/grdavies/currsor-phase-flow-2/pull/1
 ---
 
 # feat: phase-flow v2 plugin foundation & ported infrastructure
+
+## Implementation status
+
+| Unit | Status | Notes |
+|------|--------|-------|
+| U1 | **Done** | Manifest, README, PROVENANCE, config schema/example, `sync-local-install.sh`, `pf-naming` rule |
+| U2 | **Done** | Gate ported; clock injection (`PF_GATE_NOW`); golden fixture harness |
+| U3 | **Done** | Review seam + `coderabbit` / `nocap-stub` executable adapters; `pf-review` |
+| U4 | **Done** | Memory skill/spec, Recallium adapter, `pf-memory-*` commands |
+| U5 | **Done (docs + policy)** | Guardrails rule, promotion/redaction/trust docs; executable redaction filter deferred |
+| U6 | **Done** | Stabilize loop + RCA core (`debug` entry stubbed); `pf-stabilize`, `pf-watch-ci` |
+| U7 | **Done** | Hooks (sessionStart fail-open, `beforeSubmitPrompt` fail-closed per A1), per-worktree state |
+
+**Verification:** `bash scripts/test/run-gate-fixtures.sh` — 11/11 passing (gate verdicts, hook guardrails, URL validation).
+
+**Follow-ups (not blocking merge):** neutral-check fixtures; `gh` timeouts in gate; rename gate JSON fields to neutral `review*` keys; executable redaction chokepoint (U5 doc-only today).
 
 ## Summary
 
@@ -17,7 +37,7 @@ feedback) will sit on; those workstreams are planned separately. Where review su
 gaps, the ported seams land in their hardened form (per-head review-state as a required adapter capability,
 fail-closed rule-class memory injection, ingestion-edge redaction, human-gated guardrail promotion).
 
-This plan covers HOW to build the foundation. It does not implement code.
+This plan covered HOW to build the foundation. **Implementation landed** on `feat/plugin-foundation` ([PR #1](https://github.com/grdavies/currsor-phase-flow-2/pull/1)); see **Implementation status** above for per-unit outcomes.
 
 ---
 
@@ -239,6 +259,7 @@ currsor-phase-flow-2/
 
 ### U1. Plugin scaffold, packaging, and provenance
 
+- **Status:** Done (`c02b087`).
 - **Goal:** A loadable, self-contained `pf-` plugin skeleton with manifest, README, config schema/example,
   local-install helper, provenance manifest, and the namespace/naming rule — no behavior yet.
 - **Requirements:** R1, R2, R3, R34, R40.
@@ -272,6 +293,7 @@ currsor-phase-flow-2/
 
 ### U2. Port the all-checks CI gate
 
+- **Status:** Done — gate + fixtures; `mktemp`, empty-metadata blocked, `review.provider` sanitized.
 - **Goal:** The deterministic gate (verdict + exit codes) ported intact and `pf-`namespaced, decoupled from
   any single review tool at the boundary it will later consume (U3).
 - **Requirements:** R4, R16 (gate half), origin Success Criteria (no false greens).
@@ -304,6 +326,7 @@ currsor-phase-flow-2/
 
 ### U3. Swappable AI code-review provider seam
 
+- **Status:** Done — executable adapters wired; gate sources `providers/review/<provider>.sh`.
 - **Goal:** A review-provider seam mirroring the memory seam — capability spec + CodeRabbit adapter + a
   `review.provider` config key — with the gate consuming normalized per-head review state through it.
 - **Requirements:** R36, R16.
@@ -340,6 +363,7 @@ currsor-phase-flow-2/
 
 ### U4. Swappable memory seam
 
+- **Status:** Done — preflight skill, Recallium adapter, four `pf-memory-*` commands.
 - **Goal:** The provider-agnostic memory layer ported intact — preflight skill, capability spec, Recallium
   adapter, neutral JSONL export/import, and the four memory commands — with relationships and rule-class
   as first-class types.
@@ -371,6 +395,7 @@ currsor-phase-flow-2/
 
 ### U5. Memory safety and resilience
 
+- **Status:** Done (policy + docs) — guardrails rule, audit allowlist contract, trust boundary; **executable redaction filter not built** (documented chokepoint only).
 - **Goal:** Harden the memory seam per review: ingestion-edge redaction, human-gated rule-class promotion
   with provenance + audit allowlist, an explicit provider trust boundary, and fail-closed rule-class
   injection semantics defined at the seam.
@@ -407,6 +432,7 @@ currsor-phase-flow-2/
 
 ### U6. Stabilize loop and shared RCA core
 
+- **Status:** Done — stabilize wired to gate + review seam; `debug` entry stubbed; `pf-stabilize` mandates `check-gate.sh`.
 - **Goal:** Port the bounded stabilize loop and introduce the single hypothesis-driven RCA core skill with
   the **stabilize** entry point wired; the **debug** entry point is scaffolded and explicitly deferred.
 - **Requirements:** R4 (stabilize-loop port), R16, R35 (core + stabilize entry).
@@ -433,6 +459,7 @@ currsor-phase-flow-2/
 
 ### U7. Session/stop hooks and per-worktree state model
 
+- **Status:** Done — A1 fail-closed at `beforeSubmitPrompt`; shared `pf_hook_util` / `pf_recallium_url`; localhost-only `restBaseUrl`; `memory.guardrails.allowEmptyRules` bootstrap; `lastCompletedGenerationId` fix in stop hook.
 - **Goal:** Port the hooks with the hardened fail-open `sessionStart` + fail-closed `beforeSubmitPrompt`
   guardrail enforcement (per amendment A1), the tiered caveman directive, and a per-worktree state model
   with a non-colliding repo-level aggregating index.
