@@ -10,12 +10,14 @@ Orchestrates the atomic phase loop inside the worktree. Delegates to each comman
 ## Chain
 
 ```
-pf-execute → pf-verify → verification-gate → pf-review → gap-check → pf-commit → pf-pr → pf-watch-ci → pf-stabilize → pf-ready [PAUSE]
+pf-execute → pf-verify → verification-gate → pf-review → pf-simplify → gap-check → pf-commit → pf-pr → pf-watch-ci → pf-stabilize → pf-ready [PAUSE]
 ```
 
 - **verification-gate** — `Load skills/verification-gate/SKILL.md`; run `scripts/verify-evidence.sh` on
   structured status files. **Halt** on `not-verified`; **log and continue** on `inconclusive` (no mid-chain
   pause). Does not override `check-gate.sh`.
+- **pf-simplify** — behavior-preserving deslop after review; re-runs verify + `simplify-gate.sh`. **Halt** on
+  `regressed`; **log and continue** on `inconclusive`. Skipped by `--fast` / `--skip-simplify`.
 - `pf-review` in configured mode; `review.noDefer` honored.
 - `gap-check` default-on (`skills/gap-check`); `--fast` skips.
 - `pf-stabilize` uses `stabilize-loop` when present.
@@ -23,7 +25,8 @@ pf-execute → pf-verify → verification-gate → pf-review → gap-check → p
 
 ## Flags
 
-- `--fast` — skip gap-check.
+- `--fast` — skip gap-check and pf-simplify.
+- `--skip-simplify` — skip pf-simplify only (gap-check still runs unless `--fast`).
 - `--from <step>` — resume mid-chain.
 - `--dry-run` — print plan; no mutations.
 
@@ -55,6 +58,7 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/pf-ready` and stop.
 
 - Step failure or stabilize hard stop.
 - **verification-gate** returns `not-verified` (fresh attributable failure).
+- **pf-simplify** / `simplify-gate.sh` returns `regressed` (post-cleanup verify failure).
 - User ambiguity (branch/scope/config).
 - CI budget exhausted while `yellow`.
 - Merge gate reached on live green.

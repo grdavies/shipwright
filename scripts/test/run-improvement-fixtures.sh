@@ -508,6 +508,88 @@ else
   FAIL=1
 fi
 
+# --- U8: simplification / deslop pass (IM7) ---
+SIMPLIFY_SKILL="$ROOT/skills/simplify/SKILL.md"
+SIMPLIFY_GATE="$ROOT/scripts/simplify-gate.sh"
+PF_SIMPLIFY="$ROOT/commands/pf-simplify.md"
+PF_SHIP="$ROOT/commands/pf-ship.md"
+WORKFLOW_SEQ="$ROOT/rules/pf-workflow-sequencing.mdc"
+FIX_SIMPLIFY="$ROOT/scripts/test/fixtures/simplify-gate"
+
+if [[ -f "$SIMPLIFY_SKILL" ]] && [[ -x "$SIMPLIFY_GATE" ]] && \
+   grep -qi 'behavior-preserving' "$SIMPLIFY_SKILL" && \
+   grep -qi 'AI slop' "$SIMPLIFY_SKILL" && \
+   grep -q 'simplify-gate.sh' "$SIMPLIFY_SKILL"; then
+  echo "OK  simplify skill documents behavior-preserving deslop + gate"
+else
+  echo "FAIL simplify skill missing"
+  FAIL=1
+fi
+
+if grep -q 'pf-simplify' "$PF_SHIP" && \
+   grep -q 'simplify-gate' "$PF_SHIP" && \
+   grep -qi 'regressed' "$PF_SHIP"; then
+  echo "OK  pf-ship chain includes pf-simplify with regressed halt"
+else
+  echo "FAIL pf-ship simplify wiring"
+  FAIL=1
+fi
+
+if grep -q 'pf-simplify' "$PF_SIMPLIFY" && \
+   grep -q 'simplify-gate.sh' "$PF_SIMPLIFY" && \
+   grep -qi 'does not commit' "$PF_SIMPLIFY"; then
+  echo "OK  pf-simplify command scope + gate"
+else
+  echo "FAIL pf-simplify command"
+  FAIL=1
+fi
+
+if grep -q '/pf-simplify' "$WORKFLOW_SEQ"; then
+  echo "OK  pf-workflow-sequencing lists pf-simplify"
+else
+  echo "FAIL workflow sequencing missing pf-simplify"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$SIMPLIFY_GATE" \
+  --baseline-verify "$FIX_SIMPLIFY/baseline-pass.json" \
+  --post-verify "$FIX_SIMPLIFY/post-pass.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.verdict == "preserved"' >/dev/null; then
+  echo "OK  simplify-gate: pass→pass → preserved"
+else
+  echo "FAIL simplify-gate preserved case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$SIMPLIFY_GATE" \
+  --baseline-verify "$FIX_SIMPLIFY/baseline-pass.json" \
+  --post-verify "$FIX_SIMPLIFY/post-fail.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 20 ]] && echo "$OUT" | jq -e '.verdict == "regressed"' >/dev/null; then
+  echo "OK  simplify-gate: pass→fail → regressed"
+else
+  echo "FAIL simplify-gate regressed case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$SIMPLIFY_GATE" \
+  --baseline-verify "$FIX_SIMPLIFY/does-not-exist.json" \
+  --post-verify "$FIX_SIMPLIFY/post-pass.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive"' >/dev/null; then
+  echo "OK  simplify-gate: missing baseline → inconclusive"
+else
+  echo "FAIL simplify-gate inconclusive case (ec=$EC)"
+  FAIL=1
+fi
+
 if [[ $FAIL -eq 0 ]]; then
   echo "ALL improvement fixtures passed"
 else

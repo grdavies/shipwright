@@ -8,7 +8,7 @@ alwaysApply: false
 ## The phase loop
 
 ```
-/pf-doc → /pf-start → /pf-execute → /pf-gaps → /pf-verify → /pf-review → /pf-commit → /pf-pr → /pf-watch-ci → /pf-stabilize → /pf-ready
+/pf-doc → /pf-start → /pf-execute → /pf-gaps → /pf-verify → /pf-review → /pf-simplify → /pf-commit → /pf-pr → /pf-watch-ci → /pf-stabilize → /pf-ready
 ```
 
 `/pf-ship` drives this chain on green and stops at the human merge gate (never merges).
@@ -43,6 +43,7 @@ Repo-level index: `scripts/phase-state.sh index` (read-time aggregate — never 
 | `/pf-gaps` | plan vs diff | merge |
 | `/pf-verify` | run checks | fix, commit |
 | `/pf-review` | local review | gate, stabilize |
+| `/pf-simplify` | behavior-preserving deslop | commit, merge |
 | `/pf-commit` | commit phase | push, PR |
 | `/pf-pr` | push + PR | commit, merge |
 | `/pf-watch-ci` | gate verdict | fix |
