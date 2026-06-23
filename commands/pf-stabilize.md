@@ -51,11 +51,24 @@ Stop if no PR exists. Build the blocker surface for **this** `HEAD_SHA` before c
    keyed by `path:line` + the suggested change. Treat each as a first-class blocker — identical priority
    to an inline thread — the **only** difference is there is no reply/resolve handle (see the ledger).
 3. Compute the check gate with **`scripts/check-gate.sh`** (canonical — do not hand-roll `gh` verdicts).
-   Consume its JSON + exit code via the **`checks-gate`** skill (all checks, neutral allowlist applied).
-   Pull failure logs for failing checks.
+   Tee stdout to `/tmp/pf-stabilize-gate.json` for the RCA pass. Consume its JSON + exit code via the
+   **`checks-gate`** skill (all checks, neutral allowlist applied). Pull failure logs for failing checks.
 4. Run a `memory-preflight` read: known CI failures, review-bot false positives, prior stabilization
    decisions, and file-linked context for the PR paths. Memory informs triage; it never replaces
    verification against current code.
+
+## RCA pass (R35)
+
+After harvest, before the blocker ledger, run **one** bounded analysis step via
+`skills/rca-core/SKILL.md` (**stabilize entry**). It consumes the artifacts above — it does **not**
+re-fetch threads, reviews, or the gate.
+
+- Inputs: `/tmp/pf-stabilize-threads.json`, `/tmp/pf-stabilize-noninline.md`, `/tmp/pf-stabilize-gate.json`
+- Output: ranked hypotheses + causal chain for **`fix-now`** candidates only
+- **Not a nested loop** — `stabilize-loop` owns the R29 iteration budget; this pass runs once per
+  `/pf-stabilize` invocation
+- **Bypass:** `resolve-with-evidence`, `already-fixed-with-evidence`, and defer buckets skip the
+  causal-chain gate — classify them straight into the ledger
 
 ## Blocker ledger
 
@@ -87,31 +100,33 @@ or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve
 
 ## Procedure
 
-1. Triage all **unresolved** threads, all **non-inline findings** (`/tmp/pf-stabilize-noninline.md`), and
-   all **failing** checks (under the gate).
-2. **Verify** every item you intend to resolve against current code — no exceptions. Unverified items
+1. **RCA pass** — `Load skills/rca-core/SKILL.md` (stabilize entry) on the harvested artifacts; use its
+   output to inform triage. Then classify every item into the ledger (below).
+2. Triage all **unresolved** threads, all **non-inline findings** (`/tmp/pf-stabilize-noninline.md`), and
+   all **failing** checks (under the gate) into exactly one ledger bucket.
+3. **Verify** every item you intend to resolve against current code — no exceptions. Unverified items
    stay unresolved.
-3. Implement `fix-now` items for this pass only. Do not expand scope to "finish the bot."
-4. When deferrals are allowed and an item is `defer-issue`: search existing issues
+4. Implement `fix-now` items for this pass only. Do not expand scope to "finish the bot."
+5. When deferrals are allowed and an item is `defer-issue`: search existing issues
    (`gh issue list --search`), then create one with a `## Relationships` section (`Blocked by:` /
    `Blocks:` / `Related:`, using `none` where empty) and mirror the dependency on referenced issues.
    Add the issue number to the ledger before replying to those threads.
-5. **Threads (strict):** reply before resolve, with specific evidence (commit SHA, file paths, behavior).
+6. **Threads (strict):** reply before resolve, with specific evidence (commit SHA, file paths, behavior).
    Use thread-level GraphQL only: `addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId, body })`
    then `resolveReviewThread(input: { threadId })`. Resolve **only** verified `resolve-with-evidence`,
    `already-fixed-with-evidence`, or (when allowed) `defer-inline`/`defer-issue` items. Never mass-resolve.
    For multi-line reply bodies, pass the body via a file — inline shell heredocs with backticks break
    `gh api graphql`.
-6. **Non-inline findings:** apply the `fix-now` code changes the same as for threads. There is no
+7. **Non-inline findings:** apply the `fix-now` code changes the same as for threads. There is no
    reply/resolve API, so do **not** attempt one — instead record each finding's disposition in the pass
    summary (and `memory-preflight` write where durable). Their "resolution" is the verified code change
    landing on `HEAD`; the next pass re-harvests the bodies and confirms the section no longer recurs.
-7. Re-run `verify` commands from config across the touched surface; log to `/tmp/pf-stabilize-verify.log`.
-8. If fixes were made: stage, create **one** focused commit for this pass, push once.
-9. Store concise `memory-preflight` writes for durable learnings (recurring bot false positives, accepted
+8. Re-run `verify` commands from config across the touched surface; log to `/tmp/pf-stabilize-verify.log`.
+9. If fixes were made: stage, create **one** focused commit for this pass, push once.
+10. Store concise `memory-preflight` writes for durable learnings (recurring bot false positives, accepted
    review patterns, non-obvious CI fixes, file-specific debug context) with `relatedFiles`. No raw thread
    dumps, secrets, or routine pass/fail logs.
-10. Return the PR URL, the ledger summary (counts of still-unresolved threads **and** still-open
+11. Return the PR URL, the ledger summary (counts of still-unresolved threads **and** still-open
     non-inline findings, and — when deferrals are allowed — `defer-inline` vs `defer-issue` with issue
     links), the gate verdict, and hand off to `/pf-watch-ci`.
 
