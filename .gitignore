@@ -1,0 +1,6 @@
+# Phase-flow local hook state (machine-local, not shared)
+.cursor/hooks/state/phase-flow-memory-sync-scheduler.json
+
+# Python
+__pycache__/
+*.pyc

@@ -1,0 +1,31 @@
+---
+description: Memory guardrails — fail-closed injection, redaction chokepoint, human-gated rule-class promotion, provider trust boundary.
+alwaysApply: false
+---
+
+# Memory guardrails (phase-flow v2)
+
+## Fail-closed enforcement (A1)
+
+Rule-class guardrails are enforced at `beforeSubmitPrompt` — unreachable provider blocks the first prompt.
+`sessionStart` injection is best-effort (fail-open).
+
+## Redaction chokepoint (R41)
+
+Before any memory persist or re-injection, run the shared redaction filter on:
+
+- transcript deltas (`/pf-memory-sync`)
+- deploy-log edges (deferred workstream)
+- Sentry payload edges (deferred workstream)
+
+Named patterns: AWS `AKIA…`, `ghp_…`/PATs, JWTs, `Bearer` headers, PEM private keys, email addresses.
+
+## Rule-class promotion (R42)
+
+`category: rule` requires human confirmation + provenance metadata. Auto-distilled candidates cannot
+promote without `/pf-memory-audit` approval. Active rules must appear in `.cursor/pf-memory-rule-allowlist.json`.
+
+## Trust boundary (R43)
+
+Memory provider holds project-scoped operational data. Least-privilege API credentials via environment only.
+Compromised provider → rotate credentials, audit allowlist, re-export neutral JSONL.

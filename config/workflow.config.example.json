@@ -1,0 +1,45 @@
+{
+  "$schema": "../docs/config.schema.json",
+  "defaultBaseBranch": "main",
+  "stateFile": ".git/phase-flow.json",
+  "agentsFile": "AGENTS.md",
+  "prdsDir": "docs/plans",
+  "tasksDir": "docs/plans",
+  "verify": {
+    "lint": "echo 'configure verify.lint for your repo'",
+    "typecheck": "echo 'configure verify.typecheck for your repo'",
+    "test": "echo 'configure verify.test for your repo'"
+  },
+  "review": {
+    "provider": "coderabbit"
+  },
+  "coderabbit": {
+    "noDefer": true,
+    "reviewGraceMinutes": 15
+  },
+  "checks": {
+    "policy": "all",
+    "treatNeutralAsPass": true,
+    "neutralAllowlist": [],
+    "watch": {
+      "maxWaitMinutes": 20,
+      "pollSeconds": 45
+    }
+  },
+  "memory": {
+    "provider": "recallium",
+    "project": "my-project",
+    "defaultScope": "project",
+    "connection": {
+      "restBaseUrl": "http://localhost:8001"
+    },
+    "autoSync": {
+      "enabled": true,
+      "minTurns": 10,
+      "minMinutes": 120
+    },
+    "guardrails": {
+      "allowEmptyRules": false
+    }
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/grdavies/currsor-phase-flow-2/docs/config.schema.json",
+  "title": "phase-flow-v2 workflow.config.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "defaultBaseBranch": { "type": "string", "default": "main" },
+    "stateFile": {
+      "type": "string",
+      "default": ".git/phase-flow.json",
+      "description": "Per-worktree workflow state file path (lives in the worktree gitdir)."
+    },
+    "agentsFile": { "type": "string", "default": "AGENTS.md" },
+    "prdsDir": { "type": "string", "default": "docs/plans" },
+    "tasksDir": { "type": "string", "default": "docs/plans" },
+    "verify": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Shell commands run during /pf-phase-verify (repo-specific)."
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "AI code-review provider selection. Credentials are never stored here — use env/secret store at runtime.",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "default": "coderabbit",
+          "description": "Active review adapter id (must match providers/review/<name>.md and providers/review/<name>.sh)."
+        }
+      },
+      "required": ["provider"]
+    },
+    "coderabbit": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "CodeRabbit-specific settings for the gate and review adapter. API keys are env-sourced only.",
+      "properties": {
+        "noDefer": { "type": "boolean", "default": true },
+        "reviewGraceMinutes": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 15,
+          "description": "Minutes after push before treating absent review signal as settled (gate grace window)."
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "policy": {
+          "enum": ["all", "required"],
+          "default": "all",
+          "description": "Whether the gate evaluates all checks or required checks only."
+        },
+        "treatNeutralAsPass": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, NEUTRAL check conclusions count as pass unless the check name is on neutralAllowlist."
+        },
+        "neutralAllowlist": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Check names that remain blocking even when treatNeutralAsPass is true."
+        },
+        "watch": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxWaitMinutes": { "type": "integer", "minimum": 1, "default": 20 },
+            "pollSeconds": { "type": "integer", "minimum": 1, "default": 45 }
+          }
+        }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Durable memory provider selection and project binding. API credentials are env-sourced only.",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "default": "recallium",
+          "description": "Active memory adapter id (must match providers/<name>.md and providers/<name>-rules.sh)."
+        },
+        "project": {
+          "type": "string",
+          "description": "Memory project scope key (e.g. repo name)."
+        },
+        "defaultScope": { "enum": ["project", "global"], "default": "project" },
+        "connection": {
+          "type": "object",
+          "description": "Non-secret connection hints. For recallium, restBaseUrl points at the local REST API.",
+          "properties": {
+            "restBaseUrl": { "type": "string", "default": "http://localhost:8001" }
+          }
+        },
+        "autoSync": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Controls the stop hook that schedules /pf-memory-sync distillation runs.",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "minTurns": { "type": "integer", "minimum": 1, "default": 10 },
+            "minMinutes": { "type": "integer", "minimum": 1, "default": 120 }
+          }
+        },
+        "guardrails": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Fail-closed guardrail hook policy.",
+          "properties": {
+            "allowEmptyRules": {
+              "type": "boolean",
+              "default": false,
+              "description": "Bootstrap only: allow beforeSubmitPrompt when provider returns zero rules."
+            }
+          }
+        }
+      },
+      "required": ["provider", "project"]
+    }
+  }
+}

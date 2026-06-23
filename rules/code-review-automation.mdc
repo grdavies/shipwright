@@ -1,0 +1,34 @@
+---
+description: USE WHEN reviewing code, handling review feedback, or running /pf-review and /pf-stabilize.
+alwaysApply: false
+globs:
+---
+
+# Code review & automation (phase-flow v2)
+
+Review provider selected by `review.provider` (default `coderabbit`). Gate per-head state via
+`scripts/check-gate.sh` + `providers/review/<provider>.sh`.
+
+## Review priorities (in order)
+
+1. Correctness 2. Security 3. Type safety 4. Error handling 5. Tests 6. Performance 7. A11y 8. Conventions
+
+## Local review (`/pf-review`)
+
+`coderabbit review -t uncommitted` mirrors Git tracked diff — stage `??` files first.
+
+## Non-inline findings
+
+Harvest from review summary + walkthrough bodies, not only `reviewThreads`. Same triage priority as inline.
+
+## Thread resolution
+
+Reply before resolve (mandatory). Thread-level GraphQL only. Paginate threads before asserting counts.
+
+## No-defer mode
+
+When `coderabbit.noDefer` is true, deliver code/test fix or verified resolve-with-evidence.
+
+## Stabilization bar (`/pf-stabilize`)
+
+Recompute unresolved actionable count at HEAD. Run `scripts/check-gate.sh` for verdict — never hand-roll green.
