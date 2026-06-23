@@ -1,0 +1,46 @@
+---
+description: Heuristic-gated sub-agent dispatch and loop hard stops for phase-flow v2.
+alwaysApply: false
+---
+
+# Sub-agent dispatch policy
+
+## Delegate when
+
+- Work spans **~8+ files** (count planned touch paths).
+- Heavy/throwaway exploration whose reads would bloat orchestrator context.
+- Subtasks are **independently parallelizable** (disjoint file sets).
+
+## Stay inline when
+
+- Single-file or ≤3 files with clear scope.
+- Sequential dependencies between edits.
+- User interaction mid-flight required.
+
+## Model tier (R30)
+
+- Delegated **mechanical** work (mapping diffs, fixture runs, grep-heavy research) → cheaper/faster models.
+- Reasoning-heavy design, stabilize RCA, gate triage → full-fidelity model.
+
+## Hard stops (R29)
+
+Every loop documents max iterations + no-progress detection:
+
+| Loop | Hard stop |
+| --- | --- |
+| `/pf-ship` CI wait | `checks.watch.maxWaitMinutes` |
+| `/pf-stabilize` | stabilize-loop max iterations + no-progress |
+| gap-check closers | one re-map pass; escalate residuals |
+| parallel dispatch | `worktree.parallelCeiling` |
+
+Circuit breaker: three identical failures without diff change → escalate to user.
+
+## Parallel safety
+
+Before parallel subagents on shared directory: disjoint file sets required, or worktree isolation.
+Never parallelize shared-migration paths (`skills/parallelism`).
+
+## Authority
+
+Structural isolation (worktrees) is the dominant token lever (R31). This rule governs *when* to add
+sub-agents inside a worktree — not whether to provision another worktree.

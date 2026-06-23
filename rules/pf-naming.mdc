@@ -13,7 +13,7 @@ v1 (unprefixed) and compound-engineering (`ce-`).
 
 - **Orchestrators** chain multiple phases:
   - `/pf-doc` — brainstorm → PRD → persona panel → freeze → tasks (tier-gated; see documentation workstream).
-  - `/pf-ship` — implementation phase loop (deferred to implementation workstream).
+  - `/pf-ship` — execute → verify → review → gaps → commit → pr → watch-ci → stabilize → ready (halts at merge gate).
   Their descriptions must state the full chain and which atomic commands they subsume.
 - **Atomic commands** perform one bounded step (e.g. `/pf-watch-ci`, `/pf-memory-sync`, `/pf-triage`). Their descriptions
   must state what they do **and what they do not do** (e.g. "polls CI; does not merge or fix failures").

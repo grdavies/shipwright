@@ -30,11 +30,13 @@ source. `/pf-memory-sync` only writes the *distilled* sink into the memory provi
    bug root-causes, design choices, notable review/CI patterns, distilled session recaps.
 4. Filter aggressively. Skip routine, recoverable, or already-stored content. Search-before-store: if a
    near-duplicate memory exists, `modify` it (or skip) rather than adding another.
-5. Store each kept item via the adapter `store` op with the right canonical category, `relatedFiles`,
+5. **Redact** each payload before store: pipe distilled text through `bash scripts/memory-redact.sh`
+   (R41 chokepoint — same filter as `/pf-compound`).
+6. Store each kept item via the adapter `store` op with the right canonical category, `relatedFiles`,
    stable tags (`surface:sync`, plus `prd-<n>`/`task-<n>` when inferable), and a deliberate importance.
    Project scope by default; global only on explicit user direction.
-6. Update the marker (`processedMtimeMs`, `lastDistilledAt`) for each processed transcript.
-7. Report: transcripts scanned, memories created/updated/skipped, and any items deferred for review.
+7. Update the marker (`processedMtimeMs`, `lastDistilledAt`) for each processed transcript.
+8. Report: transcripts scanned, memories created/updated/skipped, and any items deferred for review.
 
 ## Guardrails
 

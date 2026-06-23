@@ -21,6 +21,12 @@ follow-up plan; this file is seeded during foundation build and updated as units
 | PRD + tasks pipeline | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | doc U4/U9 | `pf-prd`, `pf-tasks`; Go gate preserved; freeze separated |
 | Doc orchestrator pattern | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | doc U10 | `pf-doc` delegates-to-atomics like v1 `/ship` |
 | Doc-freeze CI check | — | — | doc U6 | `check-frozen.sh` + `.github/workflows/check-frozen.yml`; local `pre-commit-frozen.sh` is bypassable early warning |
+| R41 redaction filter | — | — | impl U0 | `scripts/memory-redact.sh`; memory write contract |
+| Phase loop + ship | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | impl U3/U4 | `pf-start`…`pf-ready`, `pf-ship`; state re-homed per-worktree |
+| Gap-check | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | impl U5 | `pf-gaps` + spec-union plan source |
+| Retro + compounding | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) + [compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin) | cache `2648200ed2352b6e19a93dcfffc764efe70b6a1b` | impl U8/U9 | `pf-retro`, `pf-compound` via memory seam |
+| Worktree scaffold | — | — | impl U1/U6 | `scripts/worktree.sh`; native git worktree + port/DB schema |
+| Living status | — | — | impl U10 | `scripts/reconcile-status.sh`; git-derived INDEX reconciliation |
 
 ## Update policy
 

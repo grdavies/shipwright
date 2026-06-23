@@ -26,6 +26,15 @@
       "pollSeconds": 45
     }
   },
+  "worktree": {
+    "parallelCeiling": 4,
+    "scaffold": {
+      "portRangeStart": 9100,
+      "portRangeEnd": 9199,
+      "dbStrategy": "schema-prefix",
+      "dbTemplate": ""
+    }
+  },
   "memory": {
     "provider": "recallium",
     "project": "my-project",

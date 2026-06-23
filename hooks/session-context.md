@@ -24,11 +24,11 @@ mode is ON for this chat until the user says **stop caveman** or **normal mode**
 
 ## Workflow
 
-- Phase loop: `/spec-prd` → `/spec-tasks` → `/phase-start` → `/phase-execute` → `/phase-verify` →
-  `/coderabbit` → `/phase-commit` → `/phase-pr` → `/pf-watch-ci` → `/pf-stabilize` → `/pf-phase-ready`.
-- `/ship` drives the chain on green and stops at the human merge gate (it never merges).
-- Authoritative phase state lives in the per-repo `stateFile` (from `workflow.config.json`), inside
-  `.git/`. There is no global state file.
+- Doc chain: `/pf-doc` (or atomic `/pf-brainstorm` -> `/pf-prd` -> `/pf-freeze` -> `/pf-tasks`).
+- Implementation: `/pf-worktree` -> `/pf-start` -> `/pf-execute` -> `/pf-gaps` -> `/pf-verify` ->
+  `/pf-review` -> `/pf-commit` -> `/pf-pr` -> `/pf-watch-ci` -> `/pf-stabilize` -> `/pf-ready`.
+- `/pf-ship` drives the chain on green and stops at the human merge gate (never merges).
+- Phase state is per-worktree (`scripts/phase-state.sh`); repo index is read-time derived.
 
 ## Memory
 
