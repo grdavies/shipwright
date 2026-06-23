@@ -20,11 +20,13 @@ Task list from frozen PRD + amendment union.
 3. Read effective requirements via `scripts/spec-union.sh <prd-path>`.
 4. Draft parent tasks; **pause for "Go"** before sub-task expansion.
 5. After user confirms "Go", expand sub-tasks, Relevant Files, Notes.
-6. Save; run `/pf-freeze` on task list.
-7. Update `prds/INDEX.md` entry (status `not-started`).
+6. Add **`## Traceability`** table: every union R-ID → task ref → named test scenario (see `skills/spec-rigor/SKILL.md`).
+7. Save; run spec-rigor + traceability gates, then `/pf-freeze` on task list.
+8. Update `prds/INDEX.md` entry (status `not-started`).
 
 ## Guardrails
 
 - Go gate is mandatory — no sub-tasks until user confirms.
 - Task list reflects union, not bare parent alone.
+- Traceability table required — `traceability-check.sh` blocks freeze on uncovered R-IDs.
 - Git-derived index reconciliation is owned by `003`.

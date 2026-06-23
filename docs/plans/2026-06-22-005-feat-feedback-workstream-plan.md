@@ -3,9 +3,28 @@ title: "feat: phase-flow v2 feedback workstream (unified intake + routing)"
 type: feat
 date: 2026-06-22
 origin: docs/brainstorms/2026-06-22-unified-dev-workflow-plugin-requirements.md
+status: done
+completed: 2026-06-23
+branch: feat/feedback-workstream
+commit: e920d8b
+pr: https://github.com/grdavies/currsor-phase-flow-2/pull/5
 ---
 
 # feat: phase-flow v2 feedback workstream (unified intake + routing)
+
+## Implementation status
+
+| Unit | Status | Notes |
+|------|--------|-------|
+| U1 | **Done** | `/pf-feedback`, `skills/feedback/`, `signal-schema.md`; R41 extensions in `memory_redact.py` (DB URLs, webhooks, internal IPs/hosts, Sentry JSON PII, high-entropy secrets) |
+| U2 | **Done** | Routing rubric in `skills/feedback/SKILL.md`; `route-record.md` for compounding; conservative prod vs review/retro defaults |
+| U3 | **Done** | Gap-capture split (`/pf-amend` vs `prds/GAP-BACKLOG.md`); retro output contract pinned under `skills/retro/references/` |
+
+**Verification:** `bash scripts/test/run-feedback-fixtures.sh` — 15/15; plus impl, debug, doc, and gate fixture suites green (`verify.test`).
+
+**Shipped:** merged to `main` via [PR #5](https://github.com/grdavies/currsor-phase-flow-2/pull/5) (`e920d8b`; feature `98d45c6`).
+
+**Follow-ups (not blocking merge):** document review-provider normalized-findings → signal field mapping in `signal-schema.md`; optional behavioral fixtures for dedup drop and routing decision matrix.
 
 ## Summary
 

@@ -16,7 +16,13 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is aut
 ## Procedure
 
 1. Verify artifact exists and does **not** already have `frozen: true`.
-2. Stamp frontmatter:
+2. **Spec-rigor gate** (`skills/spec-rigor/SKILL.md`) — halt on `fail` (exit `20`):
+   - **PRD / brainstorm / amendment:** `bash scripts/spec-rigor-check.sh --artifact prd --path <file> --tier <full|standard>`
+     (tier from triage or `--tier`; default `standard` when unknown).
+   - **Task list:** `bash scripts/spec-rigor-check.sh --artifact tasks --path <file> --prd <frozen-prd>` then
+     `bash scripts/traceability-check.sh --prd <frozen-prd> --tasks <file>` — both must pass before freeze.
+   - `warn` (exit `10`) may proceed with logged findings.
+3. Stamp frontmatter:
    ```yaml
    frozen: true
    frozen_at: YYYY-MM-DD

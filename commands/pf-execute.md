@@ -1,11 +1,12 @@
 ---
-description: Execute one phase-sized slice on the current branch using the spec union. Does not commit, push, or open a PR.
+description: Execute one phase-sized slice on the current branch using the spec union and per-task execute discipline. Does not commit, push, or open a PR.
 alwaysApply: false
 ---
 
 # `/pf-execute`
 
-Implement exactly one planned phase on the current branch inside the worktree.
+Implement exactly one planned phase on the current branch inside the worktree. Uses **per-task execute
+discipline** (`skills/execute-discipline/SKILL.md`): plan self-review → TDD red-green → two-stage review.
 
 ## Procedure
 
@@ -15,19 +16,32 @@ Implement exactly one planned phase on the current branch inside the worktree.
    bash scripts/spec-union.sh <frozen-prd-path>
    ```
 
-   Load `skills/spec-union/SKILL.md`. Amended/superseded requirements win over bare parent PRD.
+   Load `skills/spec-union/SKILL.md`. Parse `## Traceability` for R-ID → test scenario per task ref.
+   Load open `prds/GAP-BACKLOG.md` items (`bash scripts/feedback-backlog.sh list --open-only`) linked to
+   this PR/PRD as supplemental scope (`skills/feedback-closure/SKILL.md`).
 2. Verify branch matches `scripts/phase-state.sh read` → `currentBranch`.
 3. `memory-preflight` read: PRD/task, target files, prior learnings.
-4. Load `agentsFile` + applicable doctrine.
+4. Load `agentsFile` + applicable doctrine + `skills/execute-discipline/SKILL.md`.
 5. `TodoWrite` for the phase checklist items.
-6. Implement the slice; keep todos and task file checkboxes current.
+6. **Per task ref** (sub-task granularity, e.g. `1.1`, `1.2`):
+   1. `bash scripts/plan-self-review.sh --tasks <task-file> --task-ref <ref>` — halt on `fail`.
+   2. **TDD red** — run traced test from traceability; write `/tmp/pf-tdd.status.json` with `red` observed failing.
+   3. Implement the slice; keep todos and checkboxes current.
+   4. **TDD green** — re-run test; update status with `green` passing.
+   5. `bash scripts/tdd-gate.sh --status /tmp/pf-tdd.status.json` — halt on `fail` (`20`).
+   6. **Two-stage review** (fresh subagent when delegated — `rules/pf-subagent-dispatch.mdc`):
+      - Stage 1: spec-compliance (task + union R-IDs)
+      - Stage 2: code-quality (no scope expansion)
 7. Optional issue comments when `issueNumbers` set (`gh issue comment`).
 8. `memory-preflight` write for durable decisions only (redact via `scripts/memory-redact.sh` first).
-9. Subagents per `rules/pf-subagent-dispatch.mdc` for independent parallel work.
+9. Subagents per `rules/pf-subagent-dispatch.mdc` for independent parallel work **within** a task only when
+   file sets are disjoint; never skip the per-task TDD + two-stage sequence.
 10. Leave uncommitted for `/pf-verify`, `/pf-review`, `/pf-commit`.
 
 ## Guardrails
 
 - One phase per invocation; read spec union, not bare parent PRD alone.
+- Per-task TDD gate consumes U6 traceability — no implementation without observed red (or logged `skipped`).
+- Do not weaken tests to force green; `testWeakened: true` fails the gate.
 - Per-worktree state is authoritative for parent/phase context.
 - Does not push or open PR.

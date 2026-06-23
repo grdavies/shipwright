@@ -41,7 +41,7 @@ Scan `prds/` for highest `<n>`, increment, zero-pad to 3 digits.
 
 ## Handoff
 
-→ `/pf-doc-review` (not `/pf-freeze` or `/pf-tasks`).
+→ `/pf-doc-review` (not `/pf-freeze` or `/pf-tasks`). Resolve Open Questions before freeze (spec-rigor clarify gate on Full tier).
 
 ## Open questions
 

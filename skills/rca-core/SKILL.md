@@ -1,37 +1,63 @@
 ---
 name: rca-core
-description: Shared hypothesis-driven root cause analysis core for stabilize and debug entry points.
+description: Shared hypothesis-driven root cause analysis core for stabilize, debug, and dev-time entry points.
 ---
 
 # RCA core (shared)
 
-Single analysis discipline with two entry points (R35). Both use the same hypothesis ranking, causal-chain
-gate, explicit invalidation, and hard stops — different inputs and downstream routing only.
+Single analysis discipline with three entry points (R35). All use the same hypothesis ranking, causal-chain
+gate, explicit invalidation, reproduction-first where applicable, and hard stops — different inputs and
+downstream routing only.
 
 | Entry | Inputs | Downstream |
 |-------|--------|------------|
 | `stabilize` | Gate failures + normalized review findings | `/pf-stabilize` → push → `/pf-watch-ci` |
 | `debug` | Production signals (Sentry / deploy log / user report) | `/pf-debug` routing → `003` or `002` |
+| `dev-time` | Local test/build/verify failures | `/pf-debug` → worktree + `/pf-start` or escalate |
 
 ## Shared discipline
 
 1. **Rank hypotheses** — most likely first; evidence for and against each.
-2. **Causal-chain gate** — do not propose a fix until trigger → symptom chain is complete, or the user
+2. **Reproduction-first gate** — before a scoped fix, establish a reliable repro **or** log inability to
+   reproduce with evidence (what was tried, what blocked). Dev-time entry treats this as **strict**;
+   debug entry attempts repro-from-context but may proceed when blocked; stabilize uses failing checks as
+   repro.
+3. **Causal-chain gate** — do not propose a fix until trigger → symptom chain is complete, or the user
    explicitly authorizes a best-available hypothesis.
-3. **Invalidate explicitly** — a rejected hypothesis is marked invalid; do not retry variants of it.
-4. **Hard stops (R29)** — stop when any applies:
+4. **Failing-regression-test gate (dev-time + scoped fixes)** — when the failure is test-shaped, require a
+   test that **fails before** the fix and **passes after**; do not rewrite the test to match broken behavior.
+5. **Invalidate explicitly** — a rejected hypothesis is marked invalid; do not retry variants of it.
+6. **Hard stops (R29)** — stop when any applies:
    - `maxIterations` (default **5**) reached
    - **No progress** — same top hypothesis + same evidence set on two consecutive iterations
+   - **Rule-of-three** — three identical failed fix attempts (same hypothesis + same evidence signature) →
+     escalate to architecture review; maps to the R29 circuit breaker
    - **Human decision** — scope/architecture ambiguity blocks a minimal fix
-5. **Output shape** — see below; debug adds `routingHint` after U4 classifies fix size.
+7. **Output shape** — see below; debug adds `routingHint` after fix-size classification.
 
 ## Stabilize entry procedure
 
-1. Collect failing check names + logs from gate JSON (`scripts/check-gate.sh`).
-2. Collect normalized findings from `review.provider` adapter (inline threads + non-inline bodies).
-3. Run the **shared discipline** (hypotheses → gate → fix proposal).
-4. Propose minimal fix per top surviving hypothesis; verify against frozen spec / PRD amendments union.
-5. Stop when gate returns `green` or stabilize loop hard-stop triggers.
+**Single pass only** — runs once per `/pf-stabilize` invocation. Does not iterate; `stabilize-loop`
+owns the R29 budget (`maxIterations`, no-progress, human decision). Do not re-run this entry in a loop
+inside one stabilize pass.
+
+**Consume harvested artifacts** (collection happens in `/pf-stabilize` preconditions — do not re-fetch):
+
+| Artifact | Path |
+| --- | --- |
+| Review threads | `/tmp/pf-stabilize-threads.json` |
+| Non-inline findings | `/tmp/pf-stabilize-noninline.md` |
+| Gate verdict | `/tmp/pf-stabilize-gate.json` (`scripts/check-gate.sh` stdout) |
+
+1. Parse failing check names + logs from `/tmp/pf-stabilize-gate.json`.
+2. Parse normalized findings from threads JSON + non-inline markdown.
+3. Run the **shared discipline** (hypotheses → causal-chain gate) on **`fix-now` candidates only**.
+   Items destined for `resolve-with-evidence`, `already-fixed-with-evidence`, or defer buckets **bypass**
+   the causal-chain gate — classify them straight into the ledger without forcing a trigger→symptom chain.
+4. Propose minimal fix per top surviving `fix-now` hypothesis; verify against frozen spec / PRD amendments
+   union.
+5. Hand off to `/pf-stabilize` ledger + fix procedure. Gate green is determined by `check-gate.sh` on the
+   next pass — this entry does not declare success alone.
 
 ## Debug entry procedure
 
@@ -45,13 +71,36 @@ Inputs: normalized signal per `references/debug-inputs.md` + optional repo conte
 6. Emit root cause + proposed fix + verification plan.
 7. **Do not implement or merge** — hand off to `/pf-debug` routing (scoped phase vs brainstorm/amendment).
 
-### Debug vs stabilize
+## Dev-time entry procedure
 
-| | Stabilize | Debug |
-|---|-----------|-------|
-| Trigger | In-loop CI/review on a PR | Post-ship production signal |
-| Repro | Required via failing checks/tests | Attempted from context; not required |
-| Fix execution | In-loop commit/push | Routed to `003`/`002`; never auto-merged |
+Inputs: failing test output, build error, or `/tmp/pf-verify.status.json` + relevant log excerpt from local
+dev (not production signals).
+
+1. **Redact** failure text through `bash scripts/memory-redact.sh`.
+2. `memory-preflight` read for prior `debug` / `learning` memories on the failing area.
+3. **Reproduction-first (strict)** — reproduce via the narrowest command (single test, build target, or
+   verify key). If blocked, log what was tried and stop at human-decision hard stop — do not guess-fix.
+4. Form ranked hypotheses from stack trace / assertion / build output.
+5. Run **shared discipline** including **failing-regression-test gate** before fix proposal.
+6. Optional **git bisect** for regressions when history is suspected:
+
+   ```bash
+   # Wrapper: exit 0=good, 1=bad, 125=skip (git bisect convention)
+   git bisect run bash -c '<repro command>; ec=$?; [[ $ec -eq 0 ]] && exit 0 || exit 1'
+   ```
+
+7. Emit root cause + proposed fix + verification plan (test command that must flip red→green).
+8. Hand off to `/pf-debug` dev-time routing → `/pf-worktree` + `/pf-start` when fix is small; escalate on
+   rule-of-three or substantial scope.
+
+### Entry comparison
+
+| | Stabilize | Debug | Dev-time |
+|---|-----------|-------|----------|
+| Trigger | In-loop CI/review on a PR | Post-ship production signal | Local test/build/verify failure |
+| Repro | Via failing checks/tests | Attempted; optional if blocked | **Required** or logged inability |
+| Regression test | Via verify re-run | N/A at RCA stage | **Required** before fix |
+| Fix execution | In-loop commit/push | Routed to `003`/`002` | Routed to worktree + phase loop |
 
 ## Output shape
 
