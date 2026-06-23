@@ -29,6 +29,7 @@ follow-up plan; this file is seeded during foundation build and updated as units
 | Living status | — | — | impl U10 | `scripts/reconcile-status.sh`; git-derived INDEX reconciliation |
 | Debug RCA + routing | [compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin) | cache `2648200ed2352b6e19a93dcfffc764efe70b6a1b` | debug U1/U3/U4 | `ce-debug` phased RCA + fix-vs-rethink; `pf-debug` routes to `003`/`002` |
 | Sentry MCP recipe | — | — | debug U2 | `skills/debug/references/sentry.md`; R41 redaction at ingestion |
+| Feedback intake + routing | — | — | feedback U1–U3 | `/pf-feedback`; signal schema + gap backlog routing |
 
 ## Update policy
 
