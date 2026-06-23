@@ -10,6 +10,11 @@
     "typecheck": "echo 'configure verify.typecheck for your repo'",
     "test": "echo 'configure verify.test for your repo'"
   },
+  "verifyE2e": {
+    "enabled": false,
+    "provider": "none",
+    "routes": []
+  },
   "review": {
     "provider": "coderabbit"
   },
