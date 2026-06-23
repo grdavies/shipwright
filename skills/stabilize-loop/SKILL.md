@@ -41,9 +41,10 @@ the loop is not done while reproducible findings remain unresolved.
 ## Loop
 
 1. Resolve PR + config (`checks`, `coderabbit`, `verify`, `memory`). Record the starting head SHA.
-2. Run one `/pf-stabilize` pass (its full procedure + guardrails): build the blocker ledger, fix the
-   `fix-now` batch, verify with the configured `verify` commands, reply+resolve only verified threads,
-   make one focused commit, push once.
+2. Run one `/pf-stabilize` pass (its full procedure + guardrails, including the **rca-core stabilize
+   entry** RCA pass before the blocker ledger): build the blocker ledger, fix the `fix-now` batch,
+   verify with the configured `verify` commands, reply+resolve only verified threads, make one focused
+   commit, push once.
 3. If nothing changed and the gate was already green → success.
 4. Arm the wake (see below) and wait for CI to settle and for new comments.
 5. Recompute the verdict via `scripts/check-gate.sh` (it folds in the per-head CodeRabbit barrier,
@@ -75,7 +76,8 @@ loops; track the PID so the loop can be stopped on request.
 ## Guardrails
 
 - Opt-in. Never convert a plain `/pf-stabilize` into a loop without the user asking (or `/ship` driving).
-- Preserve every `/pf-stabilize` guardrail — this wrapper adds iteration, not new resolve powers.
+- Preserve every `/pf-stabilize` guardrail — this wrapper adds iteration, not new resolve powers. Each
+  pass includes one rca-core stabilize entry (single analysis step; R29 budget stays here, not nested).
 - One focused commit per pass; never batch "do everything" into one inflated commit.
 - Never merge, force-push, rerun unrelated workflows, or edit CI definitions to go green.
 - Always enforce the no-progress stop — a loop that cannot improve must escalate, not churn.

@@ -27,11 +27,27 @@ gate, explicit invalidation, and hard stops — different inputs and downstream 
 
 ## Stabilize entry procedure
 
-1. Collect failing check names + logs from gate JSON (`scripts/check-gate.sh`).
-2. Collect normalized findings from `review.provider` adapter (inline threads + non-inline bodies).
-3. Run the **shared discipline** (hypotheses → gate → fix proposal).
-4. Propose minimal fix per top surviving hypothesis; verify against frozen spec / PRD amendments union.
-5. Stop when gate returns `green` or stabilize loop hard-stop triggers.
+**Single pass only** — runs once per `/pf-stabilize` invocation. Does not iterate; `stabilize-loop`
+owns the R29 budget (`maxIterations`, no-progress, human decision). Do not re-run this entry in a loop
+inside one stabilize pass.
+
+**Consume harvested artifacts** (collection happens in `/pf-stabilize` preconditions — do not re-fetch):
+
+| Artifact | Path |
+| --- | --- |
+| Review threads | `/tmp/pf-stabilize-threads.json` |
+| Non-inline findings | `/tmp/pf-stabilize-noninline.md` |
+| Gate verdict | `/tmp/pf-stabilize-gate.json` (`scripts/check-gate.sh` stdout) |
+
+1. Parse failing check names + logs from `/tmp/pf-stabilize-gate.json`.
+2. Parse normalized findings from threads JSON + non-inline markdown.
+3. Run the **shared discipline** (hypotheses → causal-chain gate) on **`fix-now` candidates only**.
+   Items destined for `resolve-with-evidence`, `already-fixed-with-evidence`, or defer buckets **bypass**
+   the causal-chain gate — classify them straight into the ledger without forcing a trigger→symptom chain.
+4. Propose minimal fix per top surviving `fix-now` hypothesis; verify against frozen spec / PRD amendments
+   union.
+5. Hand off to `/pf-stabilize` ledger + fix procedure. Gate green is determined by `check-gate.sh` on the
+   next pass — this entry does not declare success alone.
 
 ## Debug entry procedure
 
