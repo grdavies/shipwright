@@ -74,6 +74,11 @@ repo docs, referenced by pointer, not copied into memory).
    "what happened" recaps.
 4. `expand` only the handful of ids that look relevant.
 
+## Redaction chokepoint (R41 — live)
+
+`scripts/memory-redact.sh` is the single deterministic filter every ingestion edge invokes before
+`store`, re-injection, or compounding. Same input → same redacted output; offline; no provider calls.
+
 ## Neutral interchange format (export/import)
 
 One JSON object per line:
