@@ -49,6 +49,7 @@ Repo-level index: `scripts/phase-state.sh index` (read-time aggregate — never 
 | `/pf-stabilize` | fix blockers | merge |
 | `/pf-ready` | readiness report | push, merge |
 | `/pf-ship` | orchestrate chain | merge |
+| `/pf-compound-ship` | post-merge compounding chain | merge, auto-promote rules |
 
 ## Parallelism
 
@@ -57,6 +58,7 @@ shared migrations.
 
 ## Post-merge
 
-Human merges → `/pf-retro` → `/pf-compound` → `/pf-status reconcile` + `append-log`.
+Human merges → `/pf-compound-ship` (or atomically: `/pf-retro` → `/pf-compound` → optional
+`/pf-memory-sync` → `/pf-status reconcile` + `append-log`).
 
 Stacking: after merge-ready merge, update parent, `/pf-start` for next phase.
