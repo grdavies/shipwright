@@ -65,6 +65,47 @@ else
   FAIL=1
 fi
 
+# --- U4: rca-core three entries + debug hardening gates ---
+DEBUG_SKILL="$ROOT/skills/debug/SKILL.md"
+PF_DEBUG="$ROOT/commands/pf-debug.md"
+
+if grep -qi 'stabilize' "$RCA" && \
+   grep -qi 'debug' "$RCA" && \
+   grep -qi 'dev-time' "$RCA" && \
+   grep -q '## Dev-time entry procedure' "$RCA" && \
+   grep -q '## Debug entry procedure' "$RCA" && \
+   grep -q '## Stabilize entry procedure' "$RCA"; then
+  echo "OK  rca-core documents three entries (stabilize, debug, dev-time)"
+else
+  echo "FAIL rca-core three-entry documentation"
+  FAIL=1
+fi
+
+if grep -qi 'reproduction-first' "$DEBUG_SKILL" && \
+   grep -qi 'failing-regression-test' "$DEBUG_SKILL"; then
+  echo "OK  debug skill states reproduction-first + failing-regression-test gates"
+else
+  echo "FAIL debug skill gate documentation"
+  FAIL=1
+fi
+
+if grep -qi 'rule-of-three' "$RCA" && grep -q 'R29' "$RCA" && \
+   grep -qi 'rule-of-three' "$DEBUG_SKILL" && grep -q 'R29' "$DEBUG_SKILL"; then
+  echo "OK  rule-of-three escalation references R29 hard stops"
+else
+  echo "FAIL rule-of-three / R29 wiring"
+  FAIL=1
+fi
+
+if grep -qi 'dev-time' "$PF_DEBUG" && \
+   grep -qi 'dev-time entry' "$PF_DEBUG" && \
+   grep -qi 'test failure\|build failure\|verify failure' "$PF_DEBUG"; then
+  echo "OK  pf-debug surfaces dev-time entry route"
+else
+  echo "FAIL pf-debug dev-time route"
+  FAIL=1
+fi
+
 # --- U5: pf-compound-ship orchestrator exists with correct chain order ---
 if [[ -f "$COMPOUND_SHIP" ]]; then
   echo "OK  pf-compound-ship command exists"
