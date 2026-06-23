@@ -1,0 +1,69 @@
+---
+name: memory-preflight
+description: Provider-agnostic durable-memory access for the phase-flow workflow. Use at the start of any phase command (execute, coderabbit, stabilize, watch-ci) to load relevant memories and rules, and at the end to store distilled memories. Routes through the configured memory provider adapter so no command names a provider directly.
+---
+
+# memory-preflight
+
+The single entry point every `phase-flow` command uses to read and write durable memory. It hides the
+provider behind the capability spec in [`CAPABILITIES.md`](CAPABILITIES.md), so swapping providers is a
+config change, never a command edit.
+
+## Resolve the provider (first step, always)
+
+1. Read `.cursor/workflow.config.json` → `memory.provider`, `memory.project`, `memory.defaultScope`.
+   Fall back to documented defaults (`provider: recallium`, `defaultScope: project`).
+2. Load the adapter at `providers/<memory.provider>.md` from the plugin. It defines the concrete tool
+   calls and declares capability flags.
+3. If the provider is unreachable, degrade: continue using `agentsFile` + repo docs, and tell the user
+   memory is offline. Never block the workflow on a memory outage.
+
+## Read mode (preflight)
+
+Run before doing the command's real work. Follow the read recipe in `CAPABILITIES.md`:
+
+- recency OFF unless the task is explicitly "recent",
+- scoped searches (file-path + semantic + optional category), not one broad query,
+- `expand` only the few relevant hits.
+
+Per-command read templates:
+
+| Command | What to retrieve |
+| --- | --- |
+| `/phase-execute` | PRD/task memories; `code-context` for the target files (file-path search); domain `decision`/`learning`. |
+| `/coderabbit` | known false-positives; review patterns; `code-context` for changed paths. |
+| `/stabilize-pr` | prior CI-failure `debug`; bot-pattern `learning`; changed-path context. |
+| `/watch-ci` | lazy — only search on a red run, scoped to the failing job/check. |
+| `/phase-start` | only on a non-routine branch decision (parent ambiguity, prior workflow correction). |
+
+Memory is an input, not an authority: git state, the per-repo `stateFile`, `agentsFile`, and repo
+doctrine remain the sources of truth.
+
+## Write mode (after substantive work)
+
+Store distilled memories per the write contract in `CAPABILITIES.md`:
+
+- pick the canonical category (decision / learning / debug / design / code-context / research /
+  discussion); never a generic catch-all,
+- set `relatedFiles` + stable tags (`prd-<n>`, `task-<n>`, `surface:<cmd>`),
+- search before store; `modify` a near-duplicate instead of adding a second,
+- project scope by default; global only on explicit user direction,
+- store the distilled substance, never a raw transcript dump.
+
+Store on: a decision with rationale, a non-obvious lesson, a bug root-cause+fix, an architecture choice,
+a notable review/CI pattern, or a distilled session recap. Do not store routine, recoverable steps.
+
+## Capability degradation
+
+Check the adapter's flags and adjust:
+
+- no `tasks` → the phase board uses the local registry fallback,
+- no `filePathSearch` → semantic search on the path string,
+- no `categoryFilter` → skip category narrowing / post-filter,
+- no `export` → provider swap relies on re-distillation from raw transcripts.
+
+## Boundaries
+
+- Never call a provider tool directly from a command; always go through this skill + the adapter.
+- Never write `rule`-category memories unless the user explicitly asks ("remember this", "add a rule").
+- Never store secrets, credentials, tokens, or raw transcript content.
