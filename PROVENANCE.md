@@ -27,6 +27,8 @@ follow-up plan; this file is seeded during foundation build and updated as units
 | Retro + compounding | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) + [compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin) | cache `2648200ed2352b6e19a93dcfffc764efe70b6a1b` | impl U8/U9 | `pf-retro`, `pf-compound` via memory seam |
 | Worktree scaffold | — | — | impl U1/U6 | `scripts/worktree.sh`; native git worktree + port/DB schema |
 | Living status | — | — | impl U10 | `scripts/reconcile-status.sh`; git-derived INDEX reconciliation |
+| Debug RCA + routing | [compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin) | cache `2648200ed2352b6e19a93dcfffc764efe70b6a1b` | debug U1/U3/U4 | `ce-debug` phased RCA + fix-vs-rethink; `pf-debug` routes to `003`/`002` |
+| Sentry MCP recipe | — | — | debug U2 | `skills/debug/references/sentry.md`; R41 redaction at ingestion |
 
 ## Update policy
 

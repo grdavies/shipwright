@@ -14,6 +14,7 @@ v1 (unprefixed) and compound-engineering (`ce-`).
 - **Orchestrators** chain multiple phases:
   - `/pf-doc` — brainstorm → PRD → persona panel → freeze → tasks (tier-gated; see documentation workstream).
   - `/pf-ship` — execute → verify → review → gaps → commit → pr → watch-ci → stabilize → ready (halts at merge gate).
+  - `/pf-debug` — triage signal → Sentry enrich (optional) → RCA core (debug entry) → route by fix size; does not implement or merge.
   Their descriptions must state the full chain and which atomic commands they subsume.
 - **Atomic commands** perform one bounded step (e.g. `/pf-watch-ci`, `/pf-memory-sync`, `/pf-triage`). Their descriptions
   must state what they do **and what they do not do** (e.g. "polls CI; does not merge or fix failures").
@@ -25,6 +26,10 @@ v1 (unprefixed) and compound-engineering (`ce-`).
 ## Documentation orchestrator boundary
 
 `/pf-doc` delegates to atomic doc commands; it does not reimplement their procedures. Each atomic (`/pf-brainstorm`, `/pf-prd`, `/pf-doc-review`, `/pf-freeze`, `/pf-tasks`) remains independently runnable.
+
+## Debug orchestrator boundary
+
+`/pf-debug` diagnoses via `skills/rca-core` (debug entry) and routes — it does not run `/pf-execute`, `/pf-ship`, or patch on bare `main`. Small fixes hand off to `/pf-worktree` + `/pf-start`; substantial fixes hand off to `/pf-brainstorm` or PRD amendment. `/pf-stabilize` remains the in-loop PR blocker surface.
 
 ## Naming rules
 
