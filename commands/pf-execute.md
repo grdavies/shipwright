@@ -17,6 +17,8 @@ discipline** (`skills/execute-discipline/SKILL.md`): plan self-review → TDD re
    ```
 
    Load `skills/spec-union/SKILL.md`. Parse `## Traceability` for R-ID → test scenario per task ref.
+   Load open `prds/GAP-BACKLOG.md` items (`bash scripts/feedback-backlog.sh list --open-only`) linked to
+   this PR/PRD as supplemental scope (`skills/feedback-closure/SKILL.md`).
 2. Verify branch matches `scripts/phase-state.sh read` → `currentBranch`.
 3. `memory-preflight` read: PRD/task, target files, prior learnings.
 4. Load `agentsFile` + applicable doctrine + `skills/execute-discipline/SKILL.md`.

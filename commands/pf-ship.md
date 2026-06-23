@@ -27,6 +27,7 @@ pf-execute → pf-verify → verification-gate → pf-review → pf-simplify →
 
 - `--fast` — skip gap-check and pf-simplify.
 - `--skip-simplify` — skip pf-simplify only (gap-check still runs unless `--fast`).
+- `--signal-id <id>` — after merge-ready pause, offer `/pf-feedback-close` for this backlog signal.
 - `--from <step>` — resume mid-chain.
 - `--dry-run` — print plan; no mutations.
 
@@ -53,6 +54,9 @@ echo "$OUT" | jq .
 ```
 
 Persist terminal green only on live `GATE_EC == 0`. Then `/pf-ready` and stop.
+
+**Feedback closure (optional):** when `--signal-id <id>` is set and human has confirmed closure, run
+`/pf-feedback-close` after live green — requires `/tmp/pf-verify.status.json` (and gate JSON when PR exists).
 
 ## Stop conditions
 
