@@ -397,6 +397,117 @@ else
   FAIL=1
 fi
 
+# --- U7: execute discipline — TDD gate + two-stage review + executable plan (IM5+IM6) ---
+EXEC_DISC="$ROOT/skills/execute-discipline/SKILL.md"
+TDD_GATE="$ROOT/scripts/tdd-gate.sh"
+PLAN_REVIEW="$ROOT/scripts/plan-self-review.sh"
+PF_EXECUTE="$ROOT/commands/pf-execute.md"
+SUBAGENT="$ROOT/rules/pf-subagent-dispatch.mdc"
+TASKS_SKILL="$ROOT/skills/tasks/SKILL.md"
+FIX_TDD="$ROOT/scripts/test/fixtures/tdd-gate"
+FIX_PLAN="$ROOT/scripts/test/fixtures/plan-self-review"
+
+if [[ -f "$EXEC_DISC" ]] && [[ -x "$TDD_GATE" ]] && [[ -x "$PLAN_REVIEW" ]] && \
+   grep -qi 'TDD red' "$EXEC_DISC" && grep -qi 'two-stage' "$EXEC_DISC"; then
+  echo "OK  execute-discipline skill documents TDD + two-stage review"
+else
+  echo "FAIL execute-discipline skill missing"
+  FAIL=1
+fi
+
+if grep -q 'execute-discipline' "$PF_EXECUTE" && \
+   grep -q 'tdd-gate.sh' "$PF_EXECUTE" && \
+   grep -q 'plan-self-review.sh' "$PF_EXECUTE" && \
+   grep -qi 'two-stage' "$PF_EXECUTE"; then
+  echo "OK  pf-execute wires per-task TDD + plan self-review + two-stage review"
+else
+  echo "FAIL pf-execute execute-discipline wiring"
+  FAIL=1
+fi
+
+if grep -qi 'two-stage review' "$SUBAGENT" && \
+   grep -qi 'spec-compliance' "$SUBAGENT" && \
+   grep -qi 'code-quality' "$SUBAGENT" && \
+   grep -qi 'fresh subagent' "$SUBAGENT"; then
+  echo "OK  pf-subagent-dispatch documents two-stage execute review"
+else
+  echo "FAIL pf-subagent-dispatch two-stage review"
+  FAIL=1
+fi
+
+if grep -q '\*\*File:\*\*' "$TASKS_SKILL" && grep -q '\*\*Expected:\*\*' "$TASKS_SKILL"; then
+  echo "OK  tasks skill documents executable sub-task shape"
+else
+  echo "FAIL tasks executable shape"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$TDD_GATE" --status "$FIX_TDD/pass.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.verdict == "pass"' >/dev/null; then
+  echo "OK  tdd-gate: red then green → pass"
+else
+  echo "FAIL tdd-gate pass case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$TDD_GATE" --status "$FIX_TDD/skipped.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "skipped"' >/dev/null; then
+  echo "OK  tdd-gate: explicit skip → skipped"
+else
+  echo "FAIL tdd-gate skipped case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$TDD_GATE" --status "$FIX_TDD/fail-no-red.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 20 ]] && echo "$OUT" | jq -e '.verdict == "fail"' >/dev/null; then
+  echo "OK  tdd-gate: green without red → fail"
+else
+  echo "FAIL tdd-gate fail-no-red case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$TDD_GATE" --status "$FIX_TDD/fail-weakened.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 20 ]] && echo "$OUT" | jq -e '.verdict == "fail"' >/dev/null; then
+  echo "OK  tdd-gate: test weakened → fail"
+else
+  echo "FAIL tdd-gate weakened case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$PLAN_REVIEW" --tasks "$FIX_PLAN/tasks-executable.md" --task-ref 1.1 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.verdict == "pass"' >/dev/null; then
+  echo "OK  plan-self-review: executable sub-task → pass"
+else
+  echo "FAIL plan-self-review pass case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$PLAN_REVIEW" --tasks "$FIX_PLAN/tasks-placeholder.md" --task-ref 1.1 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 20 ]] && echo "$OUT" | jq -e '.verdict == "fail"' >/dev/null; then
+  echo "OK  plan-self-review: placeholder markers → fail"
+else
+  echo "FAIL plan-self-review fail case (ec=$EC)"
+  FAIL=1
+fi
+
 if [[ $FAIL -eq 0 ]]; then
   echo "ALL improvement fixtures passed"
 else
