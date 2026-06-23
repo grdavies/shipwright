@@ -10,7 +10,7 @@ Documentation orchestrator. Delegates to atomic `pf-` doc commands; does not rei
 ## Chain (tier-gated)
 
 ```
-/pf-triage → [Full: /pf-brainstorm] → /pf-prd → /pf-doc-review → /pf-freeze → /pf-tasks
+/pf-triage → [Full: /pf-brainstorm] → /pf-prd → /pf-doc-review → spec-rigor → /pf-freeze → /pf-tasks → spec-rigor + traceability → /pf-freeze
 ```
 
 | Tier | Stages run |
@@ -33,9 +33,10 @@ Each remains independently runnable.
 4. `/pf-prd` per tier rules.
 5. `/pf-doc-review` per tier scaling.
 6. Halt on `manual` or `gated_auto` trade-offs — do not auto-decide.
-7. `/pf-freeze` on PRD (and brainstorm if applicable).
-8. `/pf-tasks` with Go gate.
-9. Report artifact paths and handoff to implementation.
+7. Run spec-rigor PRD gates (`skills/spec-rigor/SKILL.md`); halt on `fail`.
+8. `/pf-freeze` on PRD (and brainstorm if applicable).
+9. `/pf-tasks` with Go gate; traceability + analyze gates before task freeze.
+10. Report artifact paths and handoff to implementation.
 
 ## Flags
 

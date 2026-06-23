@@ -18,8 +18,9 @@ Port of v1 `spec-tasks` under `pf-`. Reads U8 union so amended requirements are 
 3. Identify parent tasks (phases): numbered, scoped, dependency-ordered, S/M/L sizing.
 4. **Pause:** "Respond with 'Go' to generate sub-tasks." — mandatory.
 5. After "Go", expand each parent into `- [ ]` sub-tasks + Relevant Files + Notes.
-6. Save task file; freeze via `/pf-freeze`.
-7. Register/refresh PRD entry in `prds/INDEX.md` with status `not-started`.
+6. Add `## Traceability` table mapping each union R-ID → task ref → named test scenario.
+7. Save task file; run `spec-rigor-check.sh` (tasks) + `traceability-check.sh`; freeze via `/pf-freeze`.
+8. Register/refresh PRD entry in `prds/INDEX.md` with status `not-started`.
 
 ## Collision policy
 

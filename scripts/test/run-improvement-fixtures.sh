@@ -301,6 +301,102 @@ else
   FAIL=1
 fi
 
+# --- U6: spec-rigor gates + traceability (IM4) ---
+SPEC_RIGOR="$ROOT/skills/spec-rigor/SKILL.md"
+SPEC_RIGOR_CHECK="$ROOT/scripts/spec-rigor-check.sh"
+TRACE_CHECK="$ROOT/scripts/traceability-check.sh"
+PF_FREEZE="$ROOT/commands/pf-freeze.md"
+PF_TASKS="$ROOT/commands/pf-tasks.md"
+PF_DOC="$ROOT/commands/pf-doc.md"
+FIX_SPEC_RIGOR="$ROOT/scripts/test/fixtures/spec-rigor"
+FIX_TRACE="$ROOT/scripts/test/fixtures/traceability"
+
+if [[ -f "$SPEC_RIGOR" ]] && [[ -x "$SPEC_RIGOR_CHECK" ]] && [[ -x "$TRACE_CHECK" ]] && \
+   grep -qi 'clarify' "$SPEC_RIGOR" && grep -qi 'checklist' "$SPEC_RIGOR" && \
+   grep -qi 'analyze' "$SPEC_RIGOR" && grep -qi 'traceability' "$SPEC_RIGOR"; then
+  echo "OK  spec-rigor skill documents clarify/checklist/analyze/traceability"
+else
+  echo "FAIL spec-rigor skill missing"
+  FAIL=1
+fi
+
+if grep -q 'spec-rigor-check.sh' "$PF_FREEZE" && grep -q 'traceability-check.sh' "$PF_FREEZE"; then
+  echo "OK  pf-freeze wires spec-rigor + traceability gates"
+else
+  echo "FAIL pf-freeze spec-rigor wiring"
+  FAIL=1
+fi
+
+if grep -q 'Traceability' "$PF_TASKS" && grep -q 'traceability-check.sh' "$PF_TASKS"; then
+  echo "OK  pf-tasks requires traceability table"
+else
+  echo "FAIL pf-tasks traceability wiring"
+  FAIL=1
+fi
+
+if grep -qi 'spec-rigor' "$PF_DOC"; then
+  echo "OK  pf-doc chain includes spec-rigor"
+else
+  echo "FAIL pf-doc spec-rigor chain"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$SPEC_RIGOR_CHECK" --artifact prd --path "$FIX_SPEC_RIGOR/prd-pass.md" --tier full 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.verdict == "pass"' >/dev/null; then
+  echo "OK  spec-rigor-check: clean PRD → pass"
+else
+  echo "FAIL spec-rigor-check pass case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$SPEC_RIGOR_CHECK" --artifact prd --path "$FIX_SPEC_RIGOR/prd-fail-clarify.md" --tier full 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 20 ]] && echo "$OUT" | jq -e '.verdict == "fail"' >/dev/null; then
+  echo "OK  spec-rigor-check: open questions → fail"
+else
+  echo "FAIL spec-rigor-check fail case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$TRACE_CHECK" --prd "$FIX_TRACE/prd.md" --tasks "$FIX_TRACE/tasks-complete.md" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.verdict == "complete"' >/dev/null; then
+  echo "OK  traceability-check: full coverage → complete"
+else
+  echo "FAIL traceability-check complete case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$TRACE_CHECK" --prd "$FIX_TRACE/prd.md" --tasks "$FIX_TRACE/tasks-gaps.md" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 20 ]] && echo "$OUT" | jq -e '.verdict == "gaps"' >/dev/null && \
+   echo "$OUT" | jq -e '(.uncovered | index("R2")) != null' >/dev/null; then
+  echo "OK  traceability-check: missing R2 → gaps"
+else
+  echo "FAIL traceability-check gaps case (ec=$EC)"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$SPEC_RIGOR_CHECK" --artifact tasks --path "$FIX_TRACE/tasks-complete.md" --prd "$FIX_TRACE/prd.md" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.verdict == "pass"' >/dev/null; then
+  echo "OK  spec-rigor-check: tasks analyze → pass"
+else
+  echo "FAIL spec-rigor-check tasks case (ec=$EC)"
+  FAIL=1
+fi
+
 if [[ $FAIL -eq 0 ]]; then
   echo "ALL improvement fixtures passed"
 else
