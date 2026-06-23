@@ -102,6 +102,10 @@ fi
 VERIFY_EVIDENCE="$ROOT/scripts/verify-evidence.sh"
 VERIFY_GATE_SKILL="$ROOT/skills/verification-gate/SKILL.md"
 PF_VERIFY="$ROOT/commands/pf-verify.md"
+PF_COMMIT="$ROOT/commands/pf-commit.md"
+PF_SHIP="$ROOT/commands/pf-ship.md"
+PF_READY="$ROOT/commands/pf-ready.md"
+PF_REVIEW="$ROOT/commands/pf-review.md"
 FIXTURES="$ROOT/scripts/test/fixtures/verify-evidence"
 
 if [[ -f "$VERIFY_GATE_SKILL" ]] && [[ -x "$VERIFY_EVIDENCE" ]] && \
@@ -204,6 +208,55 @@ if [[ "$RUN1" == "$RUN2" ]]; then
   echo "OK  verify-evidence: deterministic output"
 else
   echo "FAIL verify-evidence determinism"
+  FAIL=1
+fi
+
+# --- U2: wire verification gate into commit / ship (not pf-ready) ---
+if grep -q 'verification-gate' "$PF_COMMIT" && \
+   grep -q 'verify-evidence.sh' "$PF_COMMIT" && \
+   grep -qi 'auditable override' "$PF_COMMIT" && \
+   grep -qi 'check-gate' "$PF_COMMIT"; then
+  echo "OK  pf-commit verification-gate precondition + bounded override"
+else
+  echo "FAIL pf-commit verification-gate wiring"
+  FAIL=1
+fi
+
+if CHAIN_LINE=$(grep 'pf-verify' "$PF_SHIP" | grep 'verification-gate' | grep 'pf-commit' | head -1) && \
+   [[ -n "$CHAIN_LINE" ]] && \
+   echo "$CHAIN_LINE" | grep -qE 'pf-verify.*verification-gate.*pf-commit'; then
+  echo "OK  pf-ship chain lists verification-gate between verify and commit"
+else
+  echo "FAIL pf-ship chain missing verification-gate step"
+  FAIL=1
+fi
+
+if grep -qi 'inconclusive' "$PF_SHIP" && grep -qi 'log and continue' "$PF_SHIP"; then
+  echo "OK  pf-ship continues on inconclusive"
+else
+  echo "FAIL pf-ship inconclusive policy"
+  FAIL=1
+fi
+
+if grep -qi 'not-verified' "$PF_SHIP" && grep -qi 'halt' "$PF_SHIP"; then
+  echo "OK  pf-ship halts on not-verified"
+else
+  echo "FAIL pf-ship not-verified halt"
+  FAIL=1
+fi
+
+if grep -q 'pf-review.status.json' "$PF_REVIEW"; then
+  echo "OK  pf-review emits stable review status file"
+else
+  echo "FAIL pf-review status emission"
+  FAIL=1
+fi
+
+if grep -qi 'does not run verification-gate' "$PF_READY" && \
+   grep -q 'check-gate.sh' "$PF_READY"; then
+  echo "OK  pf-ready uses check-gate only (no verification-gate)"
+else
+  echo "FAIL pf-ready gate authority"
   FAIL=1
 fi
 
