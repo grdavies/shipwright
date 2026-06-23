@@ -98,6 +98,115 @@ else
   FAIL=1
 fi
 
+# --- U1: verification-gate skill + verify-evidence.sh ---
+VERIFY_EVIDENCE="$ROOT/scripts/verify-evidence.sh"
+VERIFY_GATE_SKILL="$ROOT/skills/verification-gate/SKILL.md"
+PF_VERIFY="$ROOT/commands/pf-verify.md"
+FIXTURES="$ROOT/scripts/test/fixtures/verify-evidence"
+
+if [[ -f "$VERIFY_GATE_SKILL" ]] && [[ -x "$VERIFY_EVIDENCE" ]] && \
+   grep -q 'pf-verify.status.json' "$PF_VERIFY" && \
+   grep -q 'verify-evidence.sh' "$VERIFY_GATE_SKILL"; then
+  echo "OK  verification-gate skill + script + pf-verify status emission"
+else
+  echo "FAIL verification-gate artifacts missing"
+  FAIL=1
+fi
+
+# All required evidence passing → verified
+set +e
+OUT=$(bash "$VERIFY_EVIDENCE" \
+  --verify-status "$FIXTURES/verify-pass.json" \
+  --gate-json "$FIXTURES/gate-green.json" \
+  --require-gate 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.verdict == "verified"' >/dev/null; then
+  echo "OK  verify-evidence: all passing → verified"
+else
+  echo "FAIL verify-evidence verified case (ec=$EC)"
+  FAIL=1
+fi
+
+# Fresh failing verify vs passing baseline → not-verified
+set +e
+OUT=$(bash "$VERIFY_EVIDENCE" \
+  --verify-status "$FIXTURES/verify-fail.json" \
+  --baseline-verify "$FIXTURES/verify-pass.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 20 ]] && echo "$OUT" | jq -e '.verdict == "not-verified"' >/dev/null; then
+  echo "OK  verify-evidence: fresh failure → not-verified"
+else
+  echo "FAIL verify-evidence fresh failure case (ec=$EC)"
+  FAIL=1
+fi
+
+# Missing required verify status → inconclusive
+set +e
+OUT=$(bash "$VERIFY_EVIDENCE" \
+  --verify-status "$FIXTURES/does-not-exist.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive"' >/dev/null; then
+  echo "OK  verify-evidence: missing evidence → inconclusive"
+else
+  echo "FAIL verify-evidence missing evidence case (ec=$EC)"
+  FAIL=1
+fi
+
+# No baseline + failing head → inconclusive (never not-verified)
+set +e
+OUT=$(bash "$VERIFY_EVIDENCE" \
+  --verify-status "$FIXTURES/verify-fail.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive"' >/dev/null; then
+  echo "OK  verify-evidence: no baseline + fail → inconclusive"
+else
+  echo "FAIL verify-evidence no-baseline case (ec=$EC)"
+  FAIL=1
+fi
+
+# Pre-existing unchanged failure → inconclusive
+set +e
+OUT=$(bash "$VERIFY_EVIDENCE" \
+  --verify-status "$FIXTURES/verify-fail.json" \
+  --baseline-verify "$FIXTURES/verify-fail.json" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive"' >/dev/null; then
+  echo "OK  verify-evidence: pre-existing failure → inconclusive"
+else
+  echo "FAIL verify-evidence pre-existing case (ec=$EC)"
+  FAIL=1
+fi
+
+# Review absent + verify/gate pass → verified
+set +e
+OUT=$(bash "$VERIFY_EVIDENCE" \
+  --verify-status "$FIXTURES/verify-pass.json" \
+  --gate-json "$FIXTURES/gate-green.json" \
+  --require-gate 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.evidence.review.status == "absent"' >/dev/null; then
+  echo "OK  verify-evidence: review-disabled path → verified"
+else
+  echo "FAIL verify-evidence review-disabled case (ec=$EC)"
+  FAIL=1
+fi
+
+# Determinism
+RUN1=$(bash "$VERIFY_EVIDENCE" --verify-status "$FIXTURES/verify-pass.json" 2>/dev/null | jq -c .)
+RUN2=$(bash "$VERIFY_EVIDENCE" --verify-status "$FIXTURES/verify-pass.json" 2>/dev/null | jq -c .)
+if [[ "$RUN1" == "$RUN2" ]]; then
+  echo "OK  verify-evidence: deterministic output"
+else
+  echo "FAIL verify-evidence determinism"
+  FAIL=1
+fi
+
 if [[ $FAIL -eq 0 ]]; then
   echo "ALL improvement fixtures passed"
 else
