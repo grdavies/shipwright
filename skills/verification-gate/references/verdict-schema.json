@@ -11,6 +11,10 @@
     "reason": {
       "type": "string"
     },
+    "inconclusiveClass": {
+      "type": "string",
+      "enum": ["missing-required", "no-baseline", "unattributed"]
+    },
     "evidence": {
       "type": "object",
       "required": ["verify"],

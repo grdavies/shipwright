@@ -19,15 +19,24 @@ gate verdict.
 
 **No baseline → never `not-verified`.** A failing head without baseline degrades to `inconclusive`.
 
+### `inconclusiveClass` (when verdict is `inconclusive`)
+
+| Class | Semantics | Consumer policy |
+| --- | --- | --- |
+| `missing-required` | Required verify/gate missing, invalid, or rejected by `safe_read` — **suspicious** | **Block** (`pf-commit`) / **halt** (`pf-ship`) |
+| `no-baseline` | Head fails but no baseline to attribute — **benign** | Logged override required (`pf-commit`); log+continue (`pf-ship`) |
+| `unattributed` | Pre-existing unchanged or undetermined — **neutral** | Logged override required (`pf-commit`); log+continue (`pf-ship`) |
+
 ## Evidence typing
 
 | Source | Path (default) | Required? |
 | --- | --- | --- |
-| Verify aggregate | `/tmp/pf-verify.status.json` | **Yes** — emitted by `/pf-verify` |
-| Gate JSON | `/tmp/pf-gate.json` (or caller-supplied) | **When PR exists** (`--require-gate`) |
-| Review status | `/tmp/pf-review.status.json` | **Optional** — absent-aware (review-disabled repos still reach `verified`) |
+| Verify aggregate | `$RUN_DIR/pf-verify.status.json` (`pf-tmp.sh resolve`, else `/tmp`) | **Yes** — emitted by `/pf-verify` |
+| Gate JSON | caller-supplied | **When PR context** (`--pr-context on/auto` or `--require-gate`) |
+| Review status | `$RUN_DIR/pf-review.status.json` | **Optional** — absent-aware (review-disabled repos still reach `verified`) |
 
-Producers must write stable, deterministic JSON — not raw command tee output.
+Producers write into the private run dir (`scripts/pf-tmp.sh init` at ship start; mode `0700`, files `600`).
+`safe_read` rejects symlinks, foreign-owned, or group/world-writable evidence files.
 
 ### Verify status shape
 
@@ -49,32 +58,58 @@ Same as verify status. When the file is absent, review evidence is treated as `a
 
 ```bash
 bash scripts/verify-evidence.sh \
-  --verify-status /tmp/pf-verify.status.json \
-  [--gate-json /tmp/pf-gate.json --require-gate] \
-  [--review-status /tmp/pf-review.status.json] \
+  --verify-status "$RUN_DIR/pf-verify.status.json" \
+  [--gate-json /path/to/gate.json --require-gate] \
+  [--pr-context on|off|auto] \
+  [--review-status "$RUN_DIR/pf-review.status.json"] \
   [--baseline-verify /path/to/baseline.verify.json] \
   [--baseline-gate /path/to/baseline.gate.json]
 ```
 
-Prints verdict JSON to stdout. Exit code mirrors verdict (`0` / `10` / `20`).
+`--pr-context auto` (default) derives gate requirement from offline signals: upstream divergence, CI env
+(`GITHUB_HEAD_REF`, PR number), phase-state PR field, or a supplied gate path. Pin `--pr-context off` in
+fixtures for determinism.
+
+Prints verdict JSON to stdout. Exit code mirrors verdict (`0` / `10` / `20`). Schema:
+`references/verdict-schema.json`.
 
 ## Baseline contract
 
-Capture baseline **before** the change (merge base or pre-change head):
+Capture baseline **before** the change (merge base or pre-change head) at a **caller-owned canonical path**
+(longer-lived than the per-run dir):
 
-- `--baseline-verify` — prior verify status file
-- `--baseline-gate` — prior gate JSON
+```bash
+bash scripts/verify-baseline.sh capture \
+  --from "$RUN_DIR/pf-verify.status.json" \
+  --to .phase-flow/baseline.verify.json \
+  [--gate-from gate.json --gate-to .phase-flow/baseline.gate.json]
+```
 
-New-vs-pre-existing attribution compares failure fingerprints (`exitCode` + `status` for verify; `verdict` +
-`failingChecks` for gate). Unchanged failures → `inconclusive`, not `not-verified`.
+Attribution compares per-command identity sets when `commands[]` is present (sorted `{name, status}`); legacy
+files without `commands[]` fall back to `{exitCode, status}`. Gate dimension uses `verdict` + `failingChecks`.
+Rejected baseline reads → `missing-required`, never silent downgrade.
+
+## Consumer contract
+
+- **`pf-ship`** — halt on `not-verified` and `missing-required`; log+continue on `no-baseline` / `unattributed`.
+- **`pf-commit`** — proceed on `verified`; block on `missing-required`; logged override on `no-baseline` /
+  `unattributed`.
+
+### Override record
+
+Append via `scripts/phase-state.sh override-add` (never shallow `write` — it clobbers `overrides[]`):
+
+`{who: git user.email, when: ISO-8601, verdictOverridden, inconclusiveClass, reason}` — `reason` redacted via
+`scripts/memory-redact.sh`; duplicate fields in commit trailer `Verification-Override:`. Override never
+suppresses red `check-gate.sh`/CI.
 
 ## Reuse points
 
-- `/pf-commit` / `/pf-ship` (U2) — pre-CI boundary gate
-- `/pf-debug` / feedback closure (U9) — confirm fix verified
+- `/pf-commit` / `/pf-ship` — pre-CI boundary gate
+- `/pf-debug` / feedback closure — confirm fix verified
 
 ## Guardrails
 
-- Never override `scripts/check-gate.sh` — advisory at merge gate; blocking only on fresh `not-verified` at pre-CI boundary (wired in U2).
+- Never override `scripts/check-gate.sh` — advisory at merge gate; blocking only on fresh `not-verified` at pre-CI boundary.
 - Redact any persisted evidence summary via `scripts/memory-redact.sh` (R41) before memory store.
-- Deterministic: same inputs → identical verdict JSON.
+- Deterministic: same inputs → identical verdict JSON (document env/state as inputs when using `--pr-context auto`).

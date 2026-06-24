@@ -10,12 +10,17 @@ Orchestrates the atomic phase loop inside the worktree. Delegates to each comman
 ## Chain
 
 ```
-pf-execute → pf-verify → verification-gate → pf-review → pf-simplify → gap-check → pf-commit → pf-pr → pf-watch-ci → pf-stabilize → pf-ready [PAUSE]
+pf-tmp init → pf-execute → pf-verify → verification-gate → pf-review → pf-simplify → gap-check → pf-commit → pf-pr → pf-watch-ci → pf-stabilize → pf-ready [PAUSE] → pf-tmp clean
 ```
 
+- **pf-tmp** — at chain start: `bash scripts/pf-tmp.sh clean` then `bash scripts/pf-tmp.sh init` (records
+  `runDir` in phase-state). At chain end: `bash scripts/pf-tmp.sh clean`. No `trap … EXIT` (markdown-orchestrated
+  chain).
 - **verification-gate** — `Load skills/verification-gate/SKILL.md`; run `scripts/verify-evidence.sh` on
-  structured status files. **Halt** on `not-verified`; **log and continue** on `inconclusive` (no mid-chain
-  pause). Does not override `check-gate.sh`.
+  structured status files under the resolved run dir. Policy by `inconclusiveClass`:
+  - **Halt** on `not-verified` or `missing-required`.
+  - **`no-baseline` / `unattributed`** — log loudly and **continue** into `pf-commit` (which owns the logged
+    decision prompt). Does not override `check-gate.sh`.
 - **pf-simplify** — behavior-preserving deslop after review; re-runs verify + `simplify-gate.sh`. **Halt** on
   `regressed`; **log and continue** on `inconclusive`. Skipped by `--fast` / `--skip-simplify`.
 - `pf-review` in configured mode; `review.noDefer` honored.
@@ -33,7 +38,7 @@ pf-execute → pf-verify → verification-gate → pf-review → pf-simplify →
 
 ## State (per-worktree)
 
-Via `scripts/phase-state.sh`: `shipStartedAt`, `lastCommand`, `phaseStatus`, `iteration`.
+Via `scripts/phase-state.sh`: `shipStartedAt`, `lastCommand`, `phaseStatus`, `iteration`, `runDir`.
 
 Resume: `--from` › `lastCommand` (next step) › chain start.
 
@@ -56,12 +61,13 @@ echo "$OUT" | jq .
 Persist terminal green only on live `GATE_EC == 0`. Then `/pf-ready` and stop.
 
 **Feedback closure (optional):** when `--signal-id <id>` is set and human has confirmed closure, run
-`/pf-feedback-close` after live green — requires `/tmp/pf-verify.status.json` (and gate JSON when PR exists).
+`/pf-feedback-close` after live green — requires verify status (and gate JSON when PR exists).
 
 ## Stop conditions
 
 - Step failure or stabilize hard stop.
 - **verification-gate** returns `not-verified` (fresh attributable failure).
+- **verification-gate** returns `inconclusive` with `inconclusiveClass: missing-required`.
 - **pf-simplify** / `simplify-gate.sh` returns `regressed` (post-cleanup verify failure).
 - **Local review gate** — when `review.local.gate.haltOn` includes validated P0/P1 and
   `/tmp/pf-local-review-gate-result.json` reports `verdict: halt`, stop for human triage (surface-only
@@ -76,4 +82,4 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/pf-ready` and stop.
 - Advance only on green; never skip steps.
 - Delegate — do not bypass command guardrails.
 - All **merge-gate** truth from `check-gate.sh` — verification-gate is pre-CI local evidence only.
-- `inconclusive` from verification-gate never halts the ship chain (log only).
+- `inconclusive` with `no-baseline` / `unattributed` logs and continues; `missing-required` halts the ship chain.

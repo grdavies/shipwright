@@ -33,6 +33,19 @@ done
 
 [[ -n "$BACKLOG" && -n "$SIGNAL_ID" && -n "$VERIFY_STATUS" ]] || usage
 
+# shellcheck source=evidence-read.sh
+source "$ROOT/scripts/evidence-read.sh"
+if [[ ! -f "$VERIFY_STATUS" ]] || ! safe_read_check "$VERIFY_STATUS"; then
+  jq -n --arg id "$SIGNAL_ID" '{verdict:"inconclusive",reason:"verify status missing or rejected by safe_read",signalId:$id}'
+  exit 10
+fi
+if [[ "$REQUIRE_GATE" -eq 1 && -n "$GATE_JSON" ]]; then
+  if [[ ! -f "$GATE_JSON" ]] || ! safe_read_check "$GATE_JSON"; then
+    jq -n --arg id "$SIGNAL_ID" '{verdict:"inconclusive",reason:"gate json missing or rejected by safe_read",signalId:$id}'
+    exit 10
+  fi
+fi
+
 exec python3 - "$ROOT" "$BACKLOG" "$SIGNAL_ID" "$VERIFY_STATUS" "$GATE_JSON" "$REQUIRE_GATE" <<'PY'
 import json, subprocess, sys
 from pathlib import Path

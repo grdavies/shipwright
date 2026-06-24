@@ -23,17 +23,23 @@ Run the smallest reliable verification for the current phase.
 
    Selector reads `verifyE2e.provider` → `providers/verify/<id>.sh` (`providers/verify/CAPABILITIES.md`).
    Skipped when `enabled: false` or `provider: "none"` — non-blocking.
-6. After all commands complete, write the aggregate to a stable status file:
+6. After all commands complete, resolve the run dir and write the aggregate status file:
 
    ```bash
-   STATUS_FILE=/tmp/pf-verify.status.json
+   RUN_DIR=$(bash scripts/pf-tmp.sh resolve)
+   if [[ -z "$RUN_DIR" ]]; then
+     RUN_DIR=/tmp
+   fi
+   STATUS_FILE="$RUN_DIR/pf-verify.status.json"
    # Aggregate: exitCode 0 + status "pass" only when every verify.* command succeeded.
    jq -n --argjson ec "$AGG_EXIT" --arg st "$AGG_STATUS" \
      '{exitCode: $ec, status: $st, commands: $COMMANDS_ARRAY}' > "$STATUS_FILE"
+   chmod 600 "$STATUS_FILE"
    ```
 
    Shape: `{ "exitCode": 0|N, "status": "pass"|"fail", "commands": [{ "name", "exitCode", "status", ... }] }`.
    Include the `e2e` entry when the adapter ran. The verification-gate (`scripts/verify-evidence.sh`) consumes this file — not the raw logs.
+   Optional baseline capture (off by default): `bash scripts/verify-baseline.sh capture --from "$STATUS_FILE" --to <caller-owned-baseline>`.
 7. Prefer scoped checks; broaden when shared config changed.
 8. Report pass/fail with log paths and `$STATUS_FILE`.
 9. On durable failure pattern → `memory-preflight` write (redact first). Stop before `/pf-commit` on fail.
