@@ -13,6 +13,14 @@ Documentation orchestrator. Delegates to atomic `pf-` doc commands; does not rei
 /pf-triage → [Full: /pf-brainstorm] → /pf-prd → /pf-doc-review → spec-rigor → /pf-freeze → /pf-tasks → spec-rigor + traceability → /pf-freeze
 ```
 
+**Decision record entry** (cross-cutting, up-front):
+
+```
+/pf-prd --type decision → /pf-doc-review → spec-rigor → /pf-freeze
+```
+
+No brainstorm required; no task generation after freeze.
+
 | Tier | Stages run |
 |------|------------|
 | Full | brainstorm → PRD → panel (signal-driven) → freeze → tasks |

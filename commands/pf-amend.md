@@ -5,31 +5,38 @@ alwaysApply: false
 
 # `/pf-amend`
 
-Post-freeze correction path. Parent PRD stays byte-stable.
+Post-freeze correction path. Parent stays byte-stable.
 
 ## Scope
 
-- Input: frozen parent PRD path + delta description.
-- Output: `prds/<n>-<slug>/amendments/A<k>-<short>.md`.
+- Input: frozen parent PRD or decision record path + delta description.
+- Output:
+  - PRD: `prds/<n>-<slug>/amendments/A<k>-<short>.md`
+  - Decision: `decisions/<n>-<slug>.amendments/A<k>-<short>.md` (sibling layout)
 - Does **not** modify the parent file.
 
 ## Procedure
 
-1. Read frozen parent; extract highest R-ID and existing amendments.
-2. Assign next amendment number `A<k>` in `amendments/`.
-3. Draft delta-only body with R-IDs continuing parent namespace.
+1. Read frozen parent; extract highest R-ID or D-ID and existing amendments.
+2. Assign next amendment number `A<k>` in the parent's amendment directory.
+3. Draft delta-only body with IDs continuing parent namespace (R-IDs for PRDs, D-IDs for decisions).
 4. Optional frontmatter directives:
-   - `supersedes: [R<n>, ...]` — new continued R-ID replaces parent requirement.
-   - `retracts: [R<n>, ...]` — parent requirement dropped (record rationale in body).
-5. Run `/pf-doc-review` — coherence + scope-guardian verify targets exist, aren't retracted, rationale present.
+   - `supersedes: [R<n>|D<n>, ...]` — inline replacement (PRD) or record-level drop (decision).
+   - `retracts: [R<n>|D<n>, ...]` — parent requirement dropped (record rationale in body).
+   - `replacement: <path>` — **decision record-level supersede only**: forward pointer to frozen
+     replacement record (target must have `frozen: true`; blocks at author time if missing or unfrozen).
+5. Run `/pf-doc-review` — floor per doc type (PRD amendment: coherence + scope-guardian; decision amendment:
+   raised floor per `skills/doc-review/SKILL.md`).
 6. Freeze amendment via `/pf-freeze`.
-7. Update `prds/INDEX.md` amendment links.
+7. Update `prds/INDEX.md` or `decisions/INDEX.md` amendment links.
+8. On decision record-level supersede: append superseded parent path to `decisions/SUPERSEDED.log`.
 
 ## Guardrails
 
 - Parent file is never written.
 - Undeclared contradiction with parent → failure mode; declared supersede/retract → sanctioned.
-- Amendment review scales to tier; coherence + scope-guardian always run against parent.
+- Record-level decision supersede does **not** inline replacement content — pointer only (KTD3).
+- Forward-pointer target must be `frozen: true`.
 
 ## Exemplar
 

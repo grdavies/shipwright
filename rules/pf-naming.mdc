@@ -47,3 +47,10 @@ v1 (unprefixed) and compound-engineering (`ce-`).
 
 Every command frontmatter `description` must be one sentence on scope plus one on explicit non-goals when
 ambiguity is likely.
+
+## Model tier floor (R9)
+
+Semantic tiers (`cheap`/`build`/`deep`) live in `workflow.config.json` `models.tiers` only — not in agent
+`model:` frontmatter. Reviewer agents use `model: inherit` or a concrete platform ID. Validated by
+`scripts/model-tier-check.sh` (config + concrete models); runtime R9 for `inherit` reviewers is enforced at
+dispatch by `/pf-doc-review` and `rules/pf-subagent-dispatch.mdc`. See `docs/models-tiering.md`.

@@ -17,10 +17,11 @@ alwaysApply: false
 - Sequential dependencies between edits.
 - User interaction mid-flight required.
 
-## Model tier (R30)
+## Model tier (R30 / R9)
 
-- Delegated **mechanical** work (mapping diffs, fixture runs, grep-heavy research) → cheaper/faster models.
-- Reasoning-heavy design, stabilize RCA, gate triage → full-fidelity model.
+- Delegated **mechanical** work (mapping diffs, fixture runs, grep-heavy research) → cheaper/faster parent or subagent models (`models.tiers.cheap`).
+- Reasoning-heavy design, stabilize RCA, gate triage, doc-review orchestration → **`models.roles.builder` tier or higher** (`models.tiers.build` / `deep`).
+- **R9 runtime contract:** when dispatching `pf-*-reviewer` subagents (especially `model: inherit` reviewers from `/pf-doc-review`), the **parent agent's model must be at the builder tier or above** per `workflow.config.json` `models.roles.builder`. Do not run persona panels from a sub-build parent — log a warning and ask the user to switch model or override explicitly.
 
 ## Hard stops (R29)
 
