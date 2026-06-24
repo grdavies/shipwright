@@ -10,7 +10,9 @@ discipline** (`skills/execute-discipline/SKILL.md`): plan self-review → TDD re
 
 ## Procedure
 
-1. Load the task file from `tasksDir` for this phase; resolve requirements via **spec union**:
+1. **Worktree guard** — run `bash scripts/sw-assert-worktree.sh` before any implementation write. Exit `1` → halt
+   (bare default branch without linked worktree). Exit `2` → configuration error; halt.
+2. Load the task file from `tasksDir` for this phase; resolve requirements via **spec union**:
 
    ```bash
    bash scripts/spec-union.sh <frozen-prd-path>
@@ -19,11 +21,11 @@ discipline** (`skills/execute-discipline/SKILL.md`): plan self-review → TDD re
    Load `skills/spec-union/SKILL.md`. Parse `## Traceability` for R-ID → test scenario per task ref.
    Load open `docs/prds/GAP-BACKLOG.md` items (`bash scripts/feedback-backlog.sh list --open-only`) linked to
    this PR/PRD as supplemental scope (`skills/feedback-closure/SKILL.md`).
-2. Verify branch matches `scripts/shipwright-state.sh read` → `currentBranch`.
-3. `memory-preflight` read: PRD/task, target files, prior learnings.
-4. Load `agentsFile` + applicable doctrine + `skills/execute-discipline/SKILL.md`.
-5. `TodoWrite` for the phase checklist items.
-6. **Per task ref** (sub-task granularity, e.g. `1.1`, `1.2`):
+3. Verify branch matches `scripts/shipwright-state.sh read` → `currentBranch`.
+4. `memory-preflight` read: PRD/task, target files, prior learnings.
+5. Load `agentsFile` + applicable doctrine + `skills/execute-discipline/SKILL.md`.
+6. `TodoWrite` for the phase checklist items.
+7. **Per task ref** (sub-task granularity, e.g. `1.1`, `1.2`):
    1. `bash scripts/plan-self-review.sh --tasks <task-file> --task-ref <ref>` — halt on `fail`.
    2. **TDD red** — run traced test from traceability; write `/tmp/sw-tdd.status.json` with `red` observed failing.
    3. Implement the slice; keep todos and checkboxes current.
@@ -32,11 +34,11 @@ discipline** (`skills/execute-discipline/SKILL.md`): plan self-review → TDD re
    6. **Two-stage review** (fresh subagent when delegated — `rules/sw-subagent-dispatch.mdc`):
       - Stage 1: spec-compliance (task + union R-IDs)
       - Stage 2: code-quality (no scope expansion)
-7. Optional issue comments when `issueNumbers` set (`gh issue comment`).
-8. `memory-preflight` write for durable decisions only (redact via `scripts/memory-redact.sh` first).
-9. Subagents per `rules/sw-subagent-dispatch.mdc` for independent parallel work **within** a task only when
+8. Optional issue comments when `issueNumbers` set (`gh issue comment`).
+9. `memory-preflight` write for durable decisions only (redact via `scripts/memory-redact.sh` first).
+10. Subagents per `rules/sw-subagent-dispatch.mdc` for independent parallel work **within** a task only when
    file sets are disjoint; never skip the per-task TDD + two-stage sequence.
-10. Leave uncommitted for `/sw-verify`, `/sw-review`, `/sw-commit`.
+11. Leave uncommitted for `/sw-verify`, `/sw-review`, `/sw-commit`.
 
 ## Guardrails
 
