@@ -1,0 +1,290 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/grdavies/currsor-phase-flow-2/.pf/config.schema.json",
+  "title": "phase-flow-v2 workflow.config.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "defaultBaseBranch": { "type": "string", "default": "main" },
+    "stateFile": {
+      "type": "string",
+      "default": ".git/phase-flow.json",
+      "description": "Per-worktree workflow state file path (lives in the worktree gitdir)."
+    },
+    "agentsFile": { "type": "string", "default": "AGENTS.md" },
+    "prdsDir": { "type": "string", "default": "docs/prds" },
+    "decisionsDir": { "type": "string", "default": "docs/decisions" },
+    "tasksDir": { "type": "string", "default": "docs/prds" },
+    "verify": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Shell commands run during /pf-phase-verify (repo-specific)."
+    },
+    "verifyE2e": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional smoke/E2E verify adapter (providers/verify/). Runs only when enabled.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, /pf-verify invokes scripts/verify-e2e.sh after static verify.* commands."
+        },
+        "provider": {
+          "type": "string",
+          "default": "none",
+          "description": "Adapter id under providers/verify/<id>.sh. Use \"none\" to skip."
+        },
+        "routes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional affected routes hint for smoke scoping (adapter-specific)."
+        }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "AI code-review provider selection. Credentials are never stored here — use env/secret store at runtime.",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "default": "coderabbit",
+          "description": "Active review adapter id (must match providers/review/<name>.md and providers/review/<name>.sh). Use \"none\" to disable review gating for repos not onboarded to any provider."
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "When false, review gating is disabled: the gate skips the adapter (state \"disabled\", non-blocking) and /pf-review reports review is off. Equivalent to provider:\"none\"."
+        },
+        "local": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Local multi-agent code review (phase 1 of /pf-review) before external provider.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "When false, skip local review phase and proceed to external provider only."
+            },
+            "provider": {
+              "type": "string",
+              "enum": ["ce-code-review", "native", "none"],
+              "default": "ce-code-review",
+              "description": "Local adapter id under providers/code-review/<id>.md. Use \"none\" to disable."
+            },
+            "grouping": {
+              "type": "string",
+              "enum": ["auto", "off"],
+              "default": "auto",
+              "description": "Passed to ce-code-review as grouping:auto|off."
+            },
+            "gate": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Severity gate for validated local findings. Default rollout is surface-only (haltOn empty).",
+              "properties": {
+                "surface": {
+                  "type": "array",
+                  "items": { "enum": ["P0", "P1", "P2", "P3"] },
+                  "default": ["P0", "P1", "P2", "P3"],
+                  "description": "Severities to log/surface before phase 2."
+                },
+                "haltOn": {
+                  "type": "array",
+                  "items": { "enum": ["P0", "P1", "P2", "P3"] },
+                  "default": [],
+                  "description": "Validated severities that halt /pf-ship. Empty = surface-only rollout."
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": ["provider"]
+    },
+    "coderabbit": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "CodeRabbit-specific settings for the gate and review adapter. API keys are env-sourced only.",
+      "properties": {
+        "noDefer": { "type": "boolean", "default": true },
+        "reviewGraceMinutes": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 15,
+          "description": "Minutes after push before treating absent review signal as settled (gate grace window)."
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "policy": {
+          "enum": ["all", "required"],
+          "default": "all",
+          "description": "Whether the gate evaluates all checks or required checks only."
+        },
+        "treatNeutralAsPass": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, NEUTRAL check conclusions count as pass unless the check name is on neutralAllowlist."
+        },
+        "neutralAllowlist": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Check names that remain blocking even when treatNeutralAsPass is true."
+        },
+        "watch": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxWaitMinutes": { "type": "integer", "minimum": 1, "default": 20 },
+            "pollSeconds": { "type": "integer", "minimum": 1, "default": 45 }
+          }
+        }
+      }
+    },
+    "worktree": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Per-work-item worktree scaffold and parallelism ceiling.",
+      "properties": {
+        "parallelCeiling": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 4,
+          "description": "Max active worktrees before recombination is required."
+        },
+        "scaffold": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "portRangeStart": { "type": "integer", "default": 9100 },
+            "portRangeEnd": { "type": "integer", "default": 9199 },
+            "dbStrategy": {
+              "enum": ["schema-prefix", "isolated-db", "shared"],
+              "default": "schema-prefix"
+            },
+            "dbTemplate": {
+              "type": "string",
+              "description": "Optional DSN/template for isolated-db strategy."
+            }
+          }
+        }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Durable memory provider selection and project binding. API credentials are env-sourced only.",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["recallium", "in-repo"],
+          "default": "in-repo",
+          "description": "Active memory adapter id (must match providers/<name>.md and providers/<name>-rules.sh)."
+        },
+        "inRepo": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "In-repo markdown store settings (when memory.provider is in-repo).",
+          "properties": {
+            "storeDir": {
+              "type": "string",
+              "default": ".cursor/pf-memory",
+              "description": "Committed store root (memories/ and rules/ live beneath)."
+            },
+            "commitMode": {
+              "type": "string",
+              "enum": ["committed", "local"],
+              "default": "committed",
+              "description": "Where non-rule memories write. Rule-class files are always committed under storeDir/rules/."
+            }
+          }
+        },
+        "project": {
+          "type": "string",
+          "description": "Memory project scope key (e.g. repo name)."
+        },
+        "defaultScope": { "enum": ["project", "global"], "default": "project" },
+        "connection": {
+          "type": "object",
+          "description": "Non-secret connection hints. For recallium, restBaseUrl points at the local REST API.",
+          "properties": {
+            "restBaseUrl": { "type": "string", "default": "http://localhost:8001" }
+          }
+        },
+        "autoSync": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Controls the stop hook that schedules /pf-memory-sync distillation runs.",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "minTurns": { "type": "integer", "minimum": 1, "default": 10 },
+            "minMinutes": { "type": "integer", "minimum": 1, "default": 120 }
+          }
+        },
+        "guardrails": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Fail-closed guardrail hook policy.",
+          "properties": {
+            "enforceBeforeSubmit": {
+              "type": "boolean",
+              "default": true,
+              "description": "When false, beforeSubmitPrompt guardrail enforcement is disabled for this repo."
+            },
+            "requireRuleClass": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, block until at least one allowlisted rule-class memory exists. Default false — empty memory is normal for new repos."
+            },
+            "allowEmptyRules": {
+              "type": "boolean",
+              "default": true,
+              "description": "Deprecated — use requireRuleClass (inverted). When false, equivalent to requireRuleClass:true."
+            }
+          }
+        }
+      },
+      "required": ["provider", "project"]
+    },
+    "models": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Per-tier model map and role assignment. Policy tiers (cheap/build/deep) map to concrete platform model IDs; agent frontmatter uses inherit or dispatch IDs only. Validated by scripts/model-tier-check.sh.",
+      "properties": {
+        "tiers": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Tier name → concrete model id (e.g. deep, build, cheap)."
+        },
+        "aliases": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Frontmatter alias → tier name (e.g. fast → cheap)."
+        },
+        "roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "builder": { "type": "string", "description": "Tier name for builder role." },
+            "reviewer": { "type": "string", "description": "Tier name for reviewer role floor." }
+          }
+        }
+      }
+    },
+    "invariantsFile": {
+      "type": "string",
+      "description": "Optional path to non-negotiable repo constraints surfaced to reviewers (ref-relative)."
+    },
+    "invariantsOptional": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, missing/unreadable invariants on a ref logs override instead of blocking that review."
+    }
+  }
+}

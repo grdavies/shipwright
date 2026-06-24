@@ -25,15 +25,15 @@ bash scripts/reconcile-status.sh append-log <prd> <phase> "<notes>"
 
 ## INDEX reconciliation
 
-Updates **Status** column only in `prds/INDEX.md`. Frozen PRD/amendment bodies untouched.
+Updates **Status** column only in `docs/prds/INDEX.md`. Frozen PRD/amendment bodies untouched.
 
 ## Completion log
 
-Append-only rows in `prds/COMPLETION-LOG.md` on shipped phases.
+Append-only rows in `docs/prds/COMPLETION-LOG.md` on shipped phases.
 
 ## GAP-BACKLOG
 
-Surface `prds/GAP-BACKLOG.md` in status view (read-only — hand-maintained by feedback workstream).
+Surface `docs/prds/GAP-BACKLOG.md` in status view (read-only — hand-maintained by feedback workstream).
 
 ## Guardrails
 

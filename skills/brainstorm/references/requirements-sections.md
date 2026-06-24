@@ -31,7 +31,7 @@ Add `frozen: true` and `frozen_at: YYYY-MM-DD` only via `/pf-freeze` — not dur
 
 ## Path
 
-`docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md` per `docs/layout.md`.
+`docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md` per `.pf/layout.md`.
 
 ## Exemplar
 

@@ -7,7 +7,7 @@ NORMALIZE="$ROOT/scripts/code-review-normalize.sh"
 GATE="$ROOT/scripts/code-review-gate.sh"
 APPLY_CHECK="$ROOT/scripts/code-review-apply-check.sh"
 FIX="$ROOT/scripts/test/fixtures/code-review"
-SCHEMA="$ROOT/docs/config.schema.json"
+SCHEMA="$ROOT/.pf/config.schema.json"
 PF_REVIEW="$ROOT/commands/pf-review.md"
 PF_SHIP="$ROOT/commands/pf-ship.md"
 CODE_REVIEW_RULES="$ROOT/rules/code-review-automation.mdc"
@@ -91,7 +91,7 @@ else
 fi
 
 # --- U2: schema validation ---
-EXAMPLE="$ROOT/config/workflow.config.example.json"
+EXAMPLE="$ROOT/.pf/workflow.config.example.json"
 if jq -e '.review.local.enabled == true and .review.local.provider == "ce-code-review"' "$EXAMPLE" >/dev/null && \
    grep -q '"local"' "$SCHEMA"; then
   echo "OK  review.local in schema + example"

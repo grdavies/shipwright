@@ -25,15 +25,15 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
    - Resolve tier:
      - **Full:** require brainstorm doc; refuse if missing (ordering guard).
      - **Standard:** accept triaged request directly.
-   - Assign PRD number per collision policy in `docs/layout.md` (scan `prds/`).
+   - Assign PRD number per collision policy in `.pf/layout.md` (scan `docs/prds/`).
    - Draft all required PRD sections; carry forward brainstorm R-IDs where present.
-   - Save to `prds/<n>-<slug>/<n>-prd-<slug>.md`.
+   - Save to `docs/prds/<n>-<slug>/<n>-prd-<slug>.md`.
 4. **Decision record (`--type decision`):**
    - Brainstorm optional — decisions are authored up-front; **do not** apply the "no doc without brainstorm" guard.
-   - Assign decision number per collision policy (scan `decisions/` — separate counter from `prds/`).
+   - Assign decision number per collision policy (scan `docs/decisions/` — separate counter from `docs/prds/`).
    - Draft all required decision sections with stable D-IDs.
    - Refuse to overwrite an existing frozen decision record without explicit user confirmation.
-   - Save to `decisions/<n>-<slug>.md`.
+   - Save to `docs/decisions/<n>-<slug>.md`.
 5. `memory-preflight` read for prior decisions in the feature domain.
 6. Ask clarifying questions if scope ambiguous; proceed when input provides enough context.
 7. Self-audit for consistency, edge cases, gaps.

@@ -11,8 +11,8 @@ Port of v1 `spec-prd` under `pf-`. Freeze and task generation are separate steps
 
 | `--type` | Path | ID namespace | Brainstorm guard |
 |----------|------|--------------|------------------|
-| `prd` (default) | `prds/<n>-<slug>/<n>-prd-<slug>.md` | R-IDs | Full tier requires brainstorm |
-| `decision` | `decisions/<n>-<slug>.md` | D-IDs | optional (up-front decisions) |
+| `prd` (default) | `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` | R-IDs | Full tier requires brainstorm |
+| `decision` | `docs/decisions/<n>-<slug>.md` | D-IDs | optional (up-front decisions) |
 
 ## PRD sections (required, `--type prd`)
 
@@ -39,8 +39,8 @@ The decision section contract must stay in lockstep with `scripts/spec-rigor-che
 
 ## Path
 
-- PRD: `prds/<n>-<slug>/<n>-prd-<slug>.md` per `docs/layout.md`.
-- Decision: `decisions/<n>-<slug>.md` per `docs/layout.md`.
+- PRD: `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` per `.pf/layout.md`.
+- Decision: `docs/decisions/<n>-<slug>.md` per `.pf/layout.md`.
 
 ## Tier routing (PRD only)
 
@@ -56,8 +56,8 @@ The decision section contract must stay in lockstep with `scripts/spec-rigor-che
 
 ## Numbering
 
-- PRD: scan `prds/` for highest `<n>`, increment, zero-pad to 3 digits.
-- Decision: scan `decisions/` for highest `<n>`, increment, zero-pad to 3 digits — **separate counter**.
+- PRD: scan `docs/prds/` for highest `<n>`, increment, zero-pad to 3 digits.
+- Decision: scan `docs/decisions/` for highest `<n>`, increment, zero-pad to 3 digits — **separate counter**.
 
 ## Handoff
 

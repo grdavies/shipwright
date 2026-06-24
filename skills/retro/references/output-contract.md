@@ -13,7 +13,7 @@ Minimal shape `/pf-feedback` reads when `sourceClass == retro`. Distilled only â
       "summary": "one-line distilled observation",
       "relatedFiles": ["optional/paths"],
       "extendsPriorPr": true,
-      "prdRef": "prds/NN-slug/PRD.md or null",
+      "prdRef": "docs/prds/NN-slug/PRD.md or null",
       "newScope": false
     }
   ]

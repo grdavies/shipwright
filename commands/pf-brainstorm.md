@@ -17,7 +17,7 @@ Full-tier brainstorm stage. Produces `docs/brainstorms/...-requirements.md` with
 
 1. Load `skills/brainstorm/SKILL.md` and follow its phases.
 2. One question per turn; synthesis checkpoint before any file write.
-3. Write requirements doc to path in `docs/layout.md`.
+3. Write requirements doc to path in `.pf/layout.md`.
 4. Report output path; next step is `/pf-prd` (not `/pf-tasks`).
 
 ## Guardrails
