@@ -156,6 +156,9 @@ class ClaudeCodeEmitter(EmitterBase):
         adapter_src = repo_root / "platforms" / "claude-code" / "hook_adapter.py"
         hooks_dir = dest / "hooks"
         hooks_dir.mkdir(parents=True, exist_ok=True)
+        template_src = repo_root / "core" / "hooks" / "session-context.md"
+        if template_src.is_file():
+            shutil.copy2(template_src, hooks_dir / "session-context.md")
         if adapter_src.is_file():
             shutil.copy2(adapter_src, hooks_dir / "hook_adapter.py")
         wrapper = '''#!/usr/bin/env python3

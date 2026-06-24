@@ -36,7 +36,7 @@ fi
 
 # dist/cursor matches golden manifest; root layout is no longer the install source post-flip.
 if bash "$COMPARE" "$ROOT/dist/cursor" "$GOLDEN"; then
-  echo "OK  root-layout parity unchanged"
+  echo "OK  dist/cursor parity matches golden manifest"
 else
   echo "FAIL dist/cursor parity"
   FAIL=1

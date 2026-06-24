@@ -10,7 +10,8 @@
 #   dest defaults to ~/.cursor/plugins/local/phase-flow-v2
 set -euo pipefail
 
-SRC="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/dist/cursor}"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SRC="$REPO/dist/cursor"
 DEST="${1:-$HOME/.cursor/plugins/local/phase-flow-v2}"
 
 if [ -L "$DEST" ]; then
