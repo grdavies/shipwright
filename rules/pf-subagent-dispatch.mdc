@@ -35,6 +35,14 @@ Every loop documents max iterations + no-progress detection:
 
 Circuit breaker: three identical failures without diff change → escalate to user.
 
+## Local review apply loop (`/pf-review` phase 1)
+
+After auto-applying eligible P2/P3 fixes from local review:
+
+- **One** bounded re-verify (`pf-verify`) pass — not a nested loop.
+- Circuit breaker: three identical verify failures without diff change → escalate to user (R29).
+- Never let `ce-code-review` commit into the worktree; pf edit machinery only.
+
 ## Parallel safety
 
 Before parallel subagents on shared directory: disjoint file sets required, or worktree isolation.

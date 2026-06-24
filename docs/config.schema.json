@@ -56,6 +56,49 @@
           "type": "boolean",
           "default": true,
           "description": "When false, review gating is disabled: the gate skips the adapter (state \"disabled\", non-blocking) and /pf-review reports review is off. Equivalent to provider:\"none\"."
+        },
+        "local": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Local multi-agent code review (phase 1 of /pf-review) before external provider.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "When false, skip local review phase and proceed to external provider only."
+            },
+            "provider": {
+              "type": "string",
+              "enum": ["ce-code-review", "native", "none"],
+              "default": "ce-code-review",
+              "description": "Local adapter id under providers/code-review/<id>.md. Use \"none\" to disable."
+            },
+            "grouping": {
+              "type": "string",
+              "enum": ["auto", "off"],
+              "default": "auto",
+              "description": "Passed to ce-code-review as grouping:auto|off."
+            },
+            "gate": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Severity gate for validated local findings. Default rollout is surface-only (haltOn empty).",
+              "properties": {
+                "surface": {
+                  "type": "array",
+                  "items": { "enum": ["P0", "P1", "P2", "P3"] },
+                  "default": ["P0", "P1", "P2", "P3"],
+                  "description": "Severities to log/surface before phase 2."
+                },
+                "haltOn": {
+                  "type": "array",
+                  "items": { "enum": ["P0", "P1", "P2", "P3"] },
+                  "default": [],
+                  "description": "Validated severities that halt /pf-ship. Empty = surface-only rollout."
+                }
+              }
+            }
+          }
         }
       },
       "required": ["provider"]

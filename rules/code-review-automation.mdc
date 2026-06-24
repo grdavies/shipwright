@@ -9,11 +9,28 @@ globs:
 Review provider selected by `review.provider` (default `coderabbit`). Gate per-head state via
 `scripts/check-gate.sh` + `providers/review/<provider>.sh`.
 
+## Two-phase `/pf-review` (local → provider)
+
+1. **Phase 1 — local** (`review.local`, default `ce-code-review`): multi-agent report-only review via
+   compound-engineering skill. Normalized contract in `providers/code-review/CAPABILITIES.md`. Soft dependency —
+   when skill absent, skip with message (fail-closed), proceed to phase 2.
+2. **Phase 2 — external** (`review.provider`): CodeRabbit over uncommitted delta (unchanged). Emits
+   `/tmp/pf-review.status.json` for verification-gate.
+
+`gap-check` owns requirements completeness. Local adapter post-filters requirement-stage findings.
+
+### Local apply + gate
+
+- pf auto-applies eligible P2/P3 only (concrete fix, `requires_verification: false`, in-repo, bounded,
+  non-security-sensitive). P0/P1 never auto-fixed.
+- Severity gate: surface-only default (`haltOn: []`); promoted halting on validated P0/P1 halts `/pf-ship`.
+- `check-gate.sh` remains sole CI oracle.
+
 ## Review priorities (in order)
 
 1. Correctness 2. Security 3. Type safety 4. Error handling 5. Tests 6. Performance 7. A11y 8. Conventions
 
-## Local review (`/pf-review`)
+## Local provider review (phase 2 — CodeRabbit)
 
 `coderabbit review -t uncommitted` mirrors Git tracked diff — stage `??` files first.
 
