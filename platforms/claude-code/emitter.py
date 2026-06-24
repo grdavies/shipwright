@@ -7,7 +7,7 @@ import re
 import shutil
 from pathlib import Path
 
-from emitter_base import EmitterBase, EmitterError, ensure_clean_dir
+from emitter_base import EmitterBase, EmitterError, ensure_clean_dir, read_version
 
 SUPPORTED = {
     "hooks": {"native"},
@@ -47,7 +47,7 @@ class ClaudeCodeEmitter(EmitterBase):
         self.copy_emittable_content(core_root, dest)
         self._apply_use_when_to_skills(core_root, dest)
         self._copy_runtime_support(core_root, repo_root, dest)
-        self._emit_plugin_manifest(dest)
+        self._emit_plugin_manifest(repo_root, dest)
         self._emit_hooks(repo_root, dest)
         self._emit_claude_md(core_root, dest)
 
@@ -139,12 +139,12 @@ class ClaudeCodeEmitter(EmitterBase):
             plat_dir.mkdir(parents=True, exist_ok=True)
             shutil.copy2(adapter_src, plat_dir / "hook_adapter.py")
 
-    def _emit_plugin_manifest(self, dest: Path) -> None:
+    def _emit_plugin_manifest(self, repo_root: Path, dest: Path) -> None:
         manifest_dir = dest / ".claude-plugin"
         manifest_dir.mkdir(parents=True, exist_ok=True)
         plugin = {
             "name": "phase-flow-v2",
-            "version": "0.1.0",
+            "version": read_version(repo_root),
             "description": "phase-flow v2 for Claude Code (generated)",
         }
         (manifest_dir / "plugin.json").write_text(

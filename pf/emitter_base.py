@@ -25,6 +25,17 @@ class EmitterError(Exception):
     """Raised when generation cannot satisfy the platform descriptor."""
 
 
+def read_version(repo_root: Path) -> str:
+    """Read the bare semver string from repo-root version.txt."""
+    path = repo_root / "version.txt"
+    if not path.is_file():
+        raise EmitterError(f"missing version source: {path}")
+    version = path.read_text(encoding="utf-8").strip()
+    if not version:
+        raise EmitterError(f"empty version source: {path}")
+    return version
+
+
 class EmitterBase(ABC):
     """Copy emittable core/ content and apply platform-specific wiring."""
 
