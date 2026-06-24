@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# Tests for before-submit-guardrails.py fail-closed behavior.
+# Tests for submit/session guardrail hooks (Cursor + Claude Code adapters).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HOOK="$ROOT/hooks/before-submit-guardrails.py"
+CLAUDE_SUBMIT="$ROOT/scripts/test/claude-submit-case.py"
+CLAUDE_SESSION="$ROOT/scripts/test/claude-session-case.py"
 FIX="$ROOT/scripts/test/fixtures"
 TMP_WS="$(mktemp -d "${TMPDIR:-/tmp}/pf-hook-ws.XXXXXX")"
 trap 'rm -rf "$TMP_WS"' EXIT
 
-export PYTHONPATH="$ROOT/hooks${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$ROOT/core/hooks:$ROOT/platforms/cursor:$ROOT/platforms/claude-code${PYTHONPATH:+:$PYTHONPATH}"
 
 run_hook() {
   local rules_script="$1"
@@ -16,6 +18,7 @@ run_hook() {
   local label="$3"
   local workspace="${4:-}"
   export PF_RULES_SCRIPT="$rules_script"
+  unset PF_TEST_SUBMIT_RAISE
   local stdin_payload='{}'
   if [ -n "$workspace" ]; then
     stdin_payload='{"workspace_roots":["'"$workspace"'"]}'
@@ -39,13 +42,45 @@ run_hook() {
   fi
 }
 
+run_claude_submit() {
+  local rules_script="$1"
+  local expect_block="$2"
+  local label="$3"
+  local workspace="${4:-}"
+  export PF_RULES_SCRIPT="$rules_script"
+  set +e
+  out=$(python3 "$CLAUDE_SUBMIT" "$workspace")
+  ec=$?
+  set -e
+  decision=$(echo "$out" | jq -r '.decision // empty')
+  if [ "$expect_block" = "true" ]; then
+    if [ "$ec" -eq 2 ] && [ "$decision" = "block" ]; then
+      echo "OK  $label claude-block ec=$ec"
+    else
+      echo "FAIL $label expected claude block ec=2 decision=block got ec=$ec decision=$decision"
+      echo "$out" | jq . 2>/dev/null || echo "$out"
+      return 1
+    fi
+  else
+    if [ "$ec" -eq 0 ] && [ "$decision" != "block" ]; then
+      echo "OK  $label claude-allow ec=$ec"
+    else
+      echo "FAIL $label expected claude allow ec=0 got ec=$ec decision=$decision"
+      echo "$out" | jq . 2>/dev/null || echo "$out"
+      return 1
+    fi
+  fi
+}
+
 FAIL=0
 chmod +x "$FIX"/rules-*.sh
+chmod +x "$CLAUDE_SUBMIT" "$CLAUDE_SESSION"
 
 mkdir -p "$TMP_WS/.cursor"
 echo '{"memory":{"guardrails":{"enforceBeforeSubmit":true}}}' > "$TMP_WS/.cursor/workflow.config.json"
 
 run_hook "$FIX/rules-fail.sh" false "provider-unreachable" "$TMP_WS" || FAIL=1
+run_claude_submit "$FIX/rules-fail.sh" true "claude-provider-unreachable" "$TMP_WS" || FAIL=1
 
 out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
 cont=$(echo "$out" | jq -r '.continue')
@@ -55,6 +90,7 @@ else
   echo "FAIL greenfield-empty-rules expected continue=true got=$cont"
   FAIL=1
 fi
+run_claude_submit "$FIX/rules-empty.sh" false "claude-greenfield-empty-rules" "$TMP_WS" || FAIL=1
 
 echo '{"memory":{"guardrails":{"requireRuleClass":true,"enforceBeforeSubmit":true}}}' > "$TMP_WS/.cursor/workflow.config.json"
 out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
@@ -96,6 +132,7 @@ else
   echo "FAIL rules-present expected continue=true got=$cont"
   FAIL=1
 fi
+run_claude_submit "$FIX/rules-ok.sh" false "claude-rules-present" "$TMP_WS" || FAIL=1
 
 echo 'not-json' > "$TMP_WS/.cursor/pf-memory-rule-allowlist.json"
 out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-ok.sh" python3 "$HOOK")
@@ -104,6 +141,28 @@ if [ "$cont" = "false" ]; then
   echo "OK  corrupt-allowlist continue=false"
 else
   echo "FAIL corrupt-allowlist expected continue=false got=$cont"
+  FAIL=1
+fi
+
+out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_TEST_SUBMIT_RAISE=1 python3 "$HOOK")
+cont=$(echo "$out" | jq -r '.continue')
+if [ "$cont" = "false" ]; then
+  echo "OK  catch-all-exception cursor continue=false"
+else
+  echo "FAIL catch-all-exception cursor expected continue=false got=$cont"
+  FAIL=1
+fi
+
+export PF_TEST_SUBMIT_RAISE=1
+run_claude_submit "$FIX/rules-ok.sh" true "claude-catch-all-exception" "$TMP_WS" || FAIL=1
+unset PF_TEST_SUBMIT_RAISE
+
+session_out=$(python3 "$CLAUDE_SESSION" "$TMP_WS")
+if echo "$session_out" | jq -e '.hookSpecificOutput.additionalContext | length > 0' >/dev/null; then
+  echo "OK  claude-session-start additionalContext"
+else
+  echo "FAIL claude-session-start missing additionalContext"
+  echo "$session_out" | jq . 2>/dev/null || echo "$session_out"
   FAIL=1
 fi
 
