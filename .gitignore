@@ -11,3 +11,6 @@ __pycache__/
 
 # Emitter test fixture output (generated locally)
 scripts/test/fixtures/emitter-fixture/out/
+
+# Internal planning artifacts (brainstorms, plans, PRDs, decisions)
+docs/
