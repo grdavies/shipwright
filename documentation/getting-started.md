@@ -1,7 +1,12 @@
 # Getting started with Shipwright
 
 Shipwright is a Cursor and Claude Code plugin that structures agentic development: traceable specs, a gated
-ship loop, and compounding memory. This guide covers three common paths after you install the plugin.
+ship loop, and compounding memory.
+
+**Start here:** [README](../README.md) for prerequisites, installation (Cursor and Claude Code), `/sw-setup`,
+and expanded workstreams with sample prompts.
+
+This guide covers three persona paths after setup.
 
 ## Two places, two jobs
 
@@ -14,9 +19,9 @@ The plugin lives globally; configuration and artifacts live in the **target repo
 
 ## Prerequisites
 
-- **git** — branches, worktrees, commits
-- **GitHub CLI (`gh`)** — for `/sw-pr` and CI watch flows (auth with `gh auth login`)
-- **Optional:** CodeRabbit (AI review), Recallium (external memory), Sentry (production signals)
+See [README — Prerequisites](../README.md#prerequisites) for install-time tools (git, bash, rsync, Python 3,
+`gh`). Optional integrations (CodeRabbit, Recallium, Sentry) are covered in
+[plugin setup](../README.md#plugin-setup-and-configuration).
 
 ## Path 1: New feature (Standard or Full tier)
 
@@ -72,6 +77,6 @@ commands. Command boundaries differ — Shipwright orchestrators (`/sw-doc`, `/s
 
 ## Next steps
 
-- [Command reference](commands.md) — orchestrators and entry points
-- [README](../README.md) — install and configuration summary
+- [README — Workstreams](../README.md#workstreams) — use cases, sample prompts, command tables
+- [Command reference](commands.md) — full taxonomy
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — developing Shipwright itself
