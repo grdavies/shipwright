@@ -49,3 +49,13 @@ When `coderabbit.noDefer` is true, deliver code/test fix or verified resolve-wit
 ## Stabilization bar (`/pf-stabilize`)
 
 Recompute unresolved actionable count at HEAD. Run `scripts/check-gate.sh` for verdict — never hand-roll green.
+
+## Native code-review panel (deferred — binding standard)
+
+When a `native` local code-review provider is built under `providers/code-review/`, its persona panel **MUST**
+use **always-on core + deterministic signal-gated specialists** — same shape as doc review (`skills/doc-review/SKILL.md`):
+a fixed core roster plus specialists that fire only on auditable signals (file globs, risk keywords, structural
+markers). Same inputs → same panel; no judgment-based or load-all path.
+
+- `ce-code-review` (current default local adapter) already conforms via diff-conditional selection — **no change**.
+- This rule holds regardless of local-code-review workstream (plan 003) landing status.
