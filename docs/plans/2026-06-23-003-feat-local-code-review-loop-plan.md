@@ -3,11 +3,11 @@ title: "feat: Local code review in the ship loop (two-phase /pf-review)"
 type: feat
 date: 2026-06-23
 origin: docs/brainstorms/2026-06-23-local-code-review-loop-integration-requirements.md
-status: planned
+status: done
 depth: deep
-branch: ""
-commit: ""
-pr: ""
+branch: feat/local-code-review-loop
+commit: a789e02
+pr: https://github.com/grdavies/currsor-phase-flow-2/pull/8
 ---
 
 # feat: Local code review in the ship loop (two-phase /pf-review)
@@ -22,12 +22,12 @@ severity gate. `gap-check` keeps sole requirements authority. The `native` no-de
 
 | Unit | Status | Summary |
 | --- | --- | --- |
-| U1 | planned | `ce-code-review` adapter under `providers/code-review/` + normalized findings contract |
-| U2 | planned | `review.local` config block: schema + example + defaults |
-| U3 | planned | Two-phase `/pf-review` procedure (local → provider) with fail-closed skips |
-| U4 | planned | pf-owned apply + validated severity gate + bounded re-verify + `/pf-ship` halt |
-| U5 | planned | Golden-schema contract test + behavioral fixtures |
-| U6 | planned | Docs/rules: local-first review + updated `/pf-review` boundary |
+| U1 | done | `ce-code-review` adapter under `providers/code-review/` + normalized findings contract |
+| U2 | done | `review.local` config block: schema + example + defaults |
+| U3 | done | Two-phase `/pf-review` procedure (local → provider) with fail-closed skips |
+| U4 | done | pf-owned apply + validated severity gate + bounded re-verify + `/pf-ship` halt |
+| U5 | done | Golden-schema contract test + behavioral fixtures |
+| U6 | done | Docs/rules: local-first review + updated `/pf-review` boundary |
 
 **Soft dependency:** `ce-code-review` (compound-engineering skill). When absent, phase 1 skips with a clear
 message (fail-closed) and the loop proceeds to phase 2 — the local-review guarantee is conditional on it being
