@@ -20,9 +20,9 @@ fi
 is_frozen_at_ref() {
   local file="$1" ref="$2"
   git show "$ref:$file" 2>/dev/null | awk '
-    /^---$/ { fm=1; next }
+    NR == 1 && /^---$/ { fm = 1; next }
     fm && /^---$/ { exit }
-    fm && /^frozen:[[:space:]]*true/ { found=1; exit }
+    fm && /^frozen:[[:space:]]*true/ { found = 1; exit }
     END { exit !found }
   '
 }
@@ -38,6 +38,9 @@ fi
 
 while IFS=$'\t' read -r status path; do
   [ -z "$path" ] && continue
+  case "$path" in
+    docs/plans/*) continue ;;
+  esac
   case "$status" in
     A) continue ;;
     D|M|R*)

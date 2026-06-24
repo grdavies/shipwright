@@ -5,17 +5,27 @@ description: Review PRD drafts with parallel persona sub-agents and a synthesize
 
 # Document review (`/pf-doc-review`)
 
-Multi-persona PRD review. Pattern borrowed from compound-engineering `ce-doc-review` (slim vendored adaptation).
+Multi-persona review for PRDs and decision records. Pattern borrowed from compound-engineering `ce-doc-review` (slim vendored adaptation).
+
+## Doc types
+
+| Doc type | Path pattern | Panel |
+|----------|--------------|-------|
+| PRD draft | `prds/<n>-<slug>/<n>-prd-<slug>.md` | Signal-driven (see Selection) |
+| Decision-record draft | `decisions/<n>-<slug>.md` | **Full** — all seven personas |
+| PRD amendment | `prds/<n>-<slug>/amendments/A<k>-*.md` | Coherence + scope-guardian |
+| Decision amendment | `decisions/<n>-<slug>.amendments/A<k>-*.md` | Raised floor (see Decision amendment review) |
 
 ## Tier gate (review runs or not)
 
 | Tier | Panel |
 |------|-------|
 | Quick | None — do not invoke |
-| Standard / Full | Signal-driven panel (see Selection) |
+| Standard / Full | Per doc type above |
 
-**Tier no longer selects personas** — only whether review runs. Quick skips; any non-Quick review uses the
-same signal-driven panel. There is no `Full = all seven` path.
+**PRD tier no longer selects personas** — only whether review runs. Quick skips; PRD reviews use signal-driven
+selection. **Decision-record drafts always use the Full panel** (all seven) regardless of tier, because they
+govern multiple plans by definition.
 
 ## Selection
 
@@ -84,18 +94,55 @@ Persona activation:
 
 ## Dispatch
 
-1. If input is an amendment draft (`amendments/A<k>-*.md`), run **coherence** + **scope-guardian** only per
+1. Detect doc type from path (see Doc types).
+2. **Decision-record draft** (`decisions/<n>-<slug>.md`): run all seven personas (`--all` equivalent); record
+   `override: decision-record full panel` in the activation record.
+3. **Decision amendment** (`decisions/...amendments/A<k>-*.md`): run Decision amendment review floor — skip
+   full selection unless `--personas` / `--all` override.
+4. **PRD amendment** (`prds/.../amendments/A<k>-*.md`): run **coherence** + **scope-guardian** only per
    Amendment review (U7) — skip the full selection algorithm unless `--personas` / `--all` override.
-2. Resolve tier — if Quick, report "no panel for Quick" and stop.
-3. Run selection algorithm; announce activation record (core + any fired gates + matched signals).
-4. Read full PRD (no section splitting) — each selected persona is a parallel sub-agent (R28/R31).
-5. Each agent returns JSON per `references/findings-schema.json`.
-6. Synthesizer follows `references/synthesis.md`.
-7. Apply `safe_auto` silently; gate `gated_auto` and `manual`.
+5. Resolve tier — if Quick, report "no panel for Quick" and stop.
+6. **PRD draft:** run selection algorithm; announce activation record (core + any fired gates + matched signals).
+7. Read full document (no section splitting) — each selected persona is a parallel sub-agent (R28/R31).
+8. Each agent returns JSON per `references/findings-schema.json`.
+9. Synthesizer follows `references/synthesis.md`.
+10. Apply `safe_auto` silently; gate `gated_auto` and `manual`.
+
+## Invariants (non-negotiable constraint class)
+
+When `invariantsFile` is configured:
+
+- Load the file relative to the **ref under review** (not always `main`).
+- Pass content to every dispatched persona as a flagged non-negotiable block.
+- Findings that violate an invariant are **hard** issues, not advisory.
+- Missing/unreadable on the ref → block **this review only** with a config error (fail-closed).
+- `--no-invariants` or `invariantsOptional: true` logs an override so fix-PRs are not deadlocked.
+
+## Decision-record draft review
+
+When reviewing `decisions/<n>-<slug>.md` drafts (pre-freeze, not under `.amendments/`):
+
+- Dispatch **all seven** personas: coherence, feasibility, scope-guardian, product, adversarial, security, design.
+- Treat as top blast-radius by definition — floor-only relative to PRD signal-driven selection; never subtracts
+  personas plan 004 would add on a PRD.
+- Quick tier: no panel (parity with PRD Quick behavior).
+
+## Decision amendment review
+
+When reviewing `decisions/<n>-<slug>.amendments/A<k>-*.md` drafts:
+
+- **Always run:** coherence, scope-guardian, adversarial, feasibility against the frozen parent (read-only).
+- **Additionally run security** when the decision touches auth, data, or migrations (same security signal
+  enumeration as PRD selection).
+- This is a **raised floor** above the generic PRD amendment path (coherence + scope-guardian only) — applies
+  **only** when the frozen parent lives under `decisions/`.
+- Verify every `supersedes`/`retracts` target exists; record-level supersede must carry a `replacement:` forward
+  pointer to a frozen target.
+- Never edit the parent file — fixes apply only to the amendment draft.
 
 ## Amendment review (U7)
 
-When reviewing `amendments/A<k>-*.md` drafts:
+When reviewing `prds/<n>-<slug>/amendments/A<k>-*.md` drafts:
 
 - **coherence** + **scope-guardian** always run against the frozen parent (read-only) — not the full
   signal-driven panel.

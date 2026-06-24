@@ -1,34 +1,47 @@
 ---
-description: Generate a PRD draft from a brainstorm doc (Full) or triaged request (Standard). Does not freeze, run persona review, or generate tasks.
+description: Generate a PRD or decision-record draft (Full/Standard). Does not freeze, run persona review, or generate tasks.
 alwaysApply: false
 ---
 
 # `/pf-prd`
 
-PRD draft stage. Writes to `prds/<n>-<slug>/<n>-prd-<slug>.md`.
+Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type decision` writes a decision record.
 
 ## Scope
 
-- Input: brainstorm doc path (Full) or Standard-tier feature description.
-- Output: PRD draft with required sections and stable R-IDs.
+- Input: brainstorm doc path (Full PRD) or triaged request (Standard PRD); decision records accept optional brainstorm.
+- Output: PRD draft (`--type prd`, default) or decision record (`--type decision`).
 - Does **not** freeze, run `/pf-doc-review`, or generate tasks.
+
+## Flags
+
+- `--type prd|decision` — deliverable family (default: `prd`).
 
 ## Procedure
 
-1. Read `workflow.config.json` (`prdsDir`); load `skills/prd/SKILL.md`.
-2. Resolve tier:
-   - **Full:** require brainstorm doc; refuse if missing (ordering guard).
-   - **Standard:** accept triaged request directly.
-3. `memory-preflight` read for prior decisions in the feature domain.
-4. Ask clarifying questions if scope ambiguous; proceed when brainstorm provides enough context.
-5. Assign PRD number per collision policy in `docs/layout.md`.
-6. Draft all required sections; carry forward brainstorm R-IDs where present.
+1. Read `workflow.config.json` (`prdsDir`, `decisionsDir`); load `skills/prd/SKILL.md`.
+2. Resolve `--type` (default `prd`) and section contract from the skill.
+3. **PRD (`--type prd`, default):**
+   - Resolve tier:
+     - **Full:** require brainstorm doc; refuse if missing (ordering guard).
+     - **Standard:** accept triaged request directly.
+   - Assign PRD number per collision policy in `docs/layout.md` (scan `prds/`).
+   - Draft all required PRD sections; carry forward brainstorm R-IDs where present.
+   - Save to `prds/<n>-<slug>/<n>-prd-<slug>.md`.
+4. **Decision record (`--type decision`):**
+   - Brainstorm optional — decisions are authored up-front; **do not** apply the "no doc without brainstorm" guard.
+   - Assign decision number per collision policy (scan `decisions/` — separate counter from `prds/`).
+   - Draft all required decision sections with stable D-IDs.
+   - Refuse to overwrite an existing frozen decision record without explicit user confirmation.
+   - Save to `decisions/<n>-<slug>.md`.
+5. `memory-preflight` read for prior decisions in the feature domain.
+6. Ask clarifying questions if scope ambiguous; proceed when input provides enough context.
 7. Self-audit for consistency, edge cases, gaps.
-8. Save to `prds/<n>-<slug>/<n>-prd-<slug>.md`.
-9. Report path; next step `/pf-doc-review`.
+8. Report path; next step `/pf-doc-review`.
 
 ## Guardrails
 
-- Full path: no PRD without brainstorm doc.
+- PRD Full path: no PRD without brainstorm doc (`--type prd` only).
 - No `frozen: true` in this step — freeze is `/pf-freeze`.
 - No GitHub tracking issue by default (deferred to `003`).
+- Default `--type prd` behavior unchanged from prior `pf-prd` contract.

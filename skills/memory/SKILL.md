@@ -104,6 +104,27 @@ Then `expand` by reading `memories/<id>.md` (or `rules/<id>.md` for rule categor
 5. **`category: rule` always writes to `.cursor/pf-memory/rules/`** — offline hook reads committed rules.
 6. Never auto-seed starter rules; store starts empty.
 
+## Decision records (file-linked deliverables)
+
+**Boundary rule (R32 / KTD3):**
+
+| Artifact | Role | Mutable | CI freeze |
+|----------|------|---------|-----------|
+| Decision record (`decisions/<n>-<slug>.md`) | Up-front, reviewed-before-build deliverable | Only via amendment | Yes |
+| `decision`-class memory | Retrospective knowledge distillation | Yes | No |
+
+When a frozen decision record exists for a cross-cutting decision:
+
+- Read: load the record from git; memory may point at it via `relatedFiles` but is not authoritative.
+- Write: store a pointer (`relatedFiles: [decisions/...]`), never the record body.
+- Flag content-bearing `decision` memories that duplicate an existing record — they should become pointers.
+
+**Supersede reconciliation (`decisions/SUPERSEDED.log`):**
+
+On record-level supersede, the superseded path is appended to the committed manifest. `/pf-memory-sync`
+reconciles `decision`-class memories still linking a `SUPERSEDED.log` path — best-effort re-point to the
+replacement record. Pointer freshness is **auditable, not transactional** (provider out of CI reach).
+
 ## Boundaries
 
 - Never call a provider tool directly from a command; always go through this skill + the adapter.
