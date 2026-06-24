@@ -3,8 +3,12 @@ title: "fix: Verification-gate hardening (attribution, fail-open, substrate, aud
 type: fix
 date: 2026-06-23
 origin: docs/brainstorms/2026-06-23-verification-gate-hardening-requirements.md
-status: planned
+status: in_review
+completed: 2026-06-24
 depth: deep
+branch: feat/verification-gate-hardening
+commit: 4710da3
+pr: https://github.com/grdavies/currsor-phase-flow-2/pull/11
 ---
 
 # fix: Verification-gate hardening (attribution, fail-open, substrate, audit)
@@ -16,6 +20,26 @@ pass (R2), give the baseline an owner and a loud no-baseline state (R3), secure 
 (R4), make the PR-gate requirement self-verifying (R5), and consume the hardened verdict in the loop behind a
 single audited override (R6). `scripts/check-gate.sh` stays the sole green oracle throughout — none of this
 work lets the gate override CI.
+
+## Implementation Units
+
+| Unit | Status | Summary |
+| --- | --- | --- |
+| U1 | done | Per-command `{name, status}` fingerprints; legacy `{exitCode, status}` fallback; attribution fixtures |
+| U2 | done | `inconclusiveClass` on all `inconclusive` paths; verdict-schema enum; fixture class assertions |
+| U3 | done | `verify-baseline.sh capture`; baseline `safe_read`; loud `no-baseline` via U2 classes |
+| U4 | done | `pf-tmp.sh` init/resolve/clean; `evidence-read.sh` `safe_read`; producers → run dir; `validate_run_dir` on resolve |
+| U5 | done | `--pr-context on\|off\|auto`; offline PR signals; fixtures pin `--pr-context off` for determinism |
+| U6 | done | `pf-ship`/`pf-commit` policy split; `phase-state.sh override-add`; hardening + wiring fixtures |
+
+**Delivery:** U1–U6 landed in `4710da3` on [PR #11](https://github.com/grdavies/currsor-phase-flow-2/pull/11).
+Post-review fixes in the same commit: reject top-level pass when `commands[]` has failures; missing baseline
+path → `missing-required`; per-dimension `no-baseline` when partial baselines cannot attribute a failing
+dimension. `bash scripts/test/run-improvement-fixtures.sh` green.
+
+**Follow-up (post-review, not blocking merge):** fd-level `fstat` after open (full TOCTOU close on legacy paths);
+single-open-per-file in `verify-evidence.sh`; remove `/tmp` fallback when `pf-tmp resolve` is empty; symlink
+and invalid-run-dir substrate fixtures; optional `override-add` schema validation inside the accessor.
 
 ---
 
@@ -444,6 +468,19 @@ parallel; U3 builds on U2's class; U6 consumes U2 (and benefits from U4/U5) and 
 - Content-signature / per-run nonce integrity for evidence files (R4 option B) — revisit if the threat model
   expands to a compromised local account.
 - A mandatory automated baseline producer (R3) — only if the loud no-baseline state proves insufficient in use.
+- **Substrate hardening phase 2 (post-review):** fd `fstat` after open (close path-stat-then-open TOCTOU on
+  legacy `/tmp` paths); single fd per evidence file per `verify-evidence.sh` evaluation; fail closed when
+  `pf-tmp resolve` is empty (remove `/tmp` fixed-path fallback); symlink + invalid-run-dir fixture coverage.
+- **`override-add` accessor hardening:** validate entry schema and run `memory-redact.sh` on `reason` inside
+  the accessor (caller redaction remains; accessor is defense-in-depth).
+
+### Resolved at implementation
+
+- **Run-dir migration staging (U4).** Single unit: `pf-tmp.sh` + producer doc updates + compat `/tmp` fallback
+  when resolve is empty (deprecation of fallback deferred to substrate phase 2 above).
+- **`auto` PR signals (U5).** Precedence implemented: explicit `--require-gate` / `--pr-context on` >
+  `--pr-context off` > `auto` (upstream divergence, then `GITHUB_*` / phase-state PR field, then supplied
+  gate path). Documented as verdict inputs in the skill.
 
 ### Outside this plan
 
@@ -451,16 +488,6 @@ parallel; U3 builds on U2's class; U6 consumes U2 (and benefits from U4/U5) and 
 - Any change that lets the gate override `check-gate.sh` / CI — it stays complementary, never authoritative.
 - E2E/smoke provider behavior (`providers/verify/`, plan 001 U10) beyond the evidence it emits.
 - Process retrospectives TB6/TB7 — recorded in plan 001, not gate code.
-
----
-
-## Open Questions
-
-- **Run-dir migration staging (U4).** The shared resolver (`$PF_RUN_DIR` → phase-state `runDir` → legacy) and
-  compat fallback are decided; the remaining choice is whether all producers/readers migrate in one unit or
-  legacy readers follow in a fast-follow. Leaning single staged unit; resolve at U4 execution.
-- **`auto` PR signals (U5).** Exact precedence among committed repo-state, CI env, phase-state PR field, and a
-  supplied gate path — finalize the signal list at U5 execution (repo-state preferred per KTD6).
 
 ---
 
