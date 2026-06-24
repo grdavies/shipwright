@@ -19,7 +19,11 @@ from pf_hook_util import (  # noqa: E402
     filter_rules_by_allowlist,
     load_allowlist,
     load_config,
+    memory_provider_marker_path,
     read_stdin_json,
+    resolve_memory_provider,
+    rules_script_for_provider,
+    workflow_config_path,
     workspace_root,
 )
 
@@ -27,16 +31,19 @@ from pf_hook_util import (  # noqa: E402
 def memory_binding(config: dict, root: Path) -> dict:
     memory = config.get("memory", {}) if isinstance(config, dict) else {}
     if not isinstance(memory, dict):
-        return {}
+        memory = {}
     resolved = dict(memory)
-    if resolved.get("provider", "recallium") == "recallium" and not resolved.get("project"):
+    provider = resolve_memory_provider(root, config)
+    if provider:
+        resolved["provider"] = provider
+    if not resolved.get("project"):
         resolved["project"] = root.name
         resolved["_projectInferredFromWorkspace"] = True
     return resolved
 
 
 def _memory_line(memory: dict) -> str:
-    provider = memory.get("provider", "recallium")
+    provider = memory.get("provider") or "recallium"
     project = memory.get("project", "(unset — set memory.project in workflow.config.json)")
     scope = memory.get("defaultScope", "project")
     source = " (inferred from workspace root)" if memory.get("_projectInferredFromWorkspace") else ""
@@ -48,8 +55,33 @@ def _memory_line(memory: dict) -> str:
     )
 
 
-def _fetch_rules(root: Path) -> list[str]:
-    script = Path(os.environ.get("PF_RULES_SCRIPT", str(_DEFAULT_RULES_SCRIPT)))
+def _setup_hint(root: Path) -> str | None:
+    if workflow_config_path(root) is not None:
+        return None
+    if memory_provider_marker_path(root) is not None:
+        return (
+            "\n> **Tip:** This repo uses the in-repo memory marker. Run `/pf-setup` to customize "
+            "providers, guardrails, and review settings."
+        )
+    return (
+        "\n> **Tip:** Run `/pf-setup` to configure phase-flow providers, guardrails, and memory for this repo."
+    )
+
+
+def _rules_script(root: Path, config: dict) -> Path:
+    override = os.environ.get("PF_RULES_SCRIPT", "").strip()
+    if override:
+        return Path(override)
+    provider = resolve_memory_provider(root, config)
+    if provider:
+        script = rules_script_for_provider(_PLUGIN_ROOT, provider)
+        if script is not None:
+            return script
+    return _DEFAULT_RULES_SCRIPT
+
+
+def _fetch_rules(root: Path, config: dict) -> list[str]:
+    script = _rules_script(root, config)
     if not script.is_file():
         return []
     env = os.environ.copy()
@@ -100,16 +132,22 @@ def main() -> None:
     except OSError:
         parts.append("This repo uses the phase-flow v2 workflow plugin.")
 
-    memory = memory_binding(load_config(root), root)
+    config = load_config(root)
+    memory = memory_binding(config, root)
     parts.append("\n## Resolved memory binding\n\n" + _memory_line(memory))
 
-    rules = _fetch_rules(root)
+    hint = _setup_hint(root)
+    if hint:
+        parts.append(hint)
+
+    provider = memory.get("provider", "in-repo")
+    rules = _fetch_rules(root, config)
     if rules:
         block = "\n\n".join(rules)
         parts.append(
             "\n## Standing memory rules (auto-injected)\n\n"
             "Provider-sourced guardrails (allowlist-filtered). Git state and frozen specs outrank memory.\n\n"
-            "<pf-guardrails provider=\"recallium\">\n"
+            f"<pf-guardrails provider=\"{provider}\">\n"
             + block
             + "\n</pf-guardrails>"
         )

@@ -139,8 +139,27 @@
       "properties": {
         "provider": {
           "type": "string",
-          "default": "recallium",
+          "enum": ["recallium", "in-repo"],
+          "default": "in-repo",
           "description": "Active memory adapter id (must match providers/<name>.md and providers/<name>-rules.sh)."
+        },
+        "inRepo": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "In-repo markdown store settings (when memory.provider is in-repo).",
+          "properties": {
+            "storeDir": {
+              "type": "string",
+              "default": ".cursor/pf-memory",
+              "description": "Committed store root (memories/ and rules/ live beneath)."
+            },
+            "commitMode": {
+              "type": "string",
+              "enum": ["committed", "local"],
+              "default": "committed",
+              "description": "Where non-rule memories write. Rule-class files are always committed under storeDir/rules/."
+            }
+          }
         },
         "project": {
           "type": "string",

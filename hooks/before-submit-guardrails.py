@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""phase-flow v2 beforeSubmitPrompt hook — fail-closed rule-class guardrail enforcement (A1)."""
+"""before-submit-guardrails.py — extended for provider dispatch + marker (plan 002 U3/U4)."""
 
 from __future__ import annotations
 
@@ -20,6 +20,9 @@ from pf_hook_util import (  # noqa: E402
     load_allowlist,
     load_config,
     read_stdin_json,
+    resolve_memory_provider,
+    rules_script_for_provider,
+    synthetic_config_from_marker,
     workflow_config_path,
     workspace_root,
 )
@@ -27,16 +30,19 @@ from pf_hook_util import (  # noqa: E402
 _DEFAULT_RULES_SCRIPT = _PLUGIN_ROOT / "providers" / "recallium-rules.sh"
 
 
-def _rules_script() -> Path:
+def _rules_script(root: Path, config: dict) -> Path | None:
     override = os.environ.get("PF_RULES_SCRIPT", "").strip()
     if override:
         return Path(override)
-    return _DEFAULT_RULES_SCRIPT
+    provider = resolve_memory_provider(root, config)
+    if not provider:
+        return None
+    return rules_script_for_provider(_PLUGIN_ROOT, provider)
 
 
-def _fetch_rules(root: Path) -> tuple[bool, list[dict]]:
-    script = _rules_script()
-    if not script.is_file():
+def _fetch_rules(root: Path, config: dict) -> tuple[bool, list[dict]]:
+    script = _rules_script(root, config)
+    if script is None or not script.is_file():
         return False, []
     env = os.environ.copy()
     env["PF_WORKSPACE_ROOT"] = str(root)
@@ -72,26 +78,47 @@ def _block(message: str) -> None:
     print(json.dumps({"continue": False, "user_message": message}))
 
 
+def _provider_unreachable_message(provider: str | None) -> str:
+    name = provider or "memory"
+    if provider == "recallium":
+        return (
+            "phase-flow v2: cannot reach Recallium to load rule-class guardrails. "
+            "Fix Recallium connectivity or set memory.connection.restBaseUrl (localhost only), then retry. "
+            "(Credentials are env-sourced — never committed config.)"
+        )
+    if provider == "in-repo":
+        return (
+            "phase-flow v2: in-repo rules adapter failed to load rule-class guardrails from disk. "
+            "Check .cursor/pf-memory/rules/ and run /pf-setup to validate the store."
+        )
+    return (
+        f"phase-flow v2: cannot load rule-class guardrails for provider '{name}'. "
+        "Fix memory provider configuration or run /pf-setup, then retry."
+    )
+
+
 def main() -> None:
     payload = read_stdin_json()
     root = workspace_root(payload)
-    if workflow_config_path(root) is None:
-        # Repo has not opted into phase-flow — do not block prompts.
-        print(json.dumps({"continue": True}))
-        return
+    config_path = workflow_config_path(root)
 
-    config = load_config(root)
+    if config_path is None:
+        synthetic = synthetic_config_from_marker(root)
+        if synthetic is None:
+            print(json.dumps({"continue": True}))
+            return
+        config = synthetic
+    else:
+        config = load_config(root)
+
     if not guardrails_enforce_before_submit(config):
         print(json.dumps({"continue": True}))
         return
 
-    ok, rules = _fetch_rules(root)
+    provider = resolve_memory_provider(root, config)
+    ok, rules = _fetch_rules(root, config)
     if not ok:
-        _block(
-            "phase-flow v2: cannot reach memory provider to load rule-class guardrails. "
-            "Fix Recallium connectivity or set memory.connection.restBaseUrl (localhost only), then retry. "
-            "(Credentials are env-sourced — never committed config.)"
-        )
+        _block(_provider_unreachable_message(provider))
         return
 
     allowlist_status, allowlist = load_allowlist(root)

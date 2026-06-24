@@ -24,6 +24,10 @@ alwaysApply: false
 Use `memory-preflight` only — never a provider tool directly. Redact via `scripts/memory-redact.sh`
 before any persist.
 
+**Onboarding:** run `/pf-setup` to scaffold repo-local `workflow.config.json`, choose memory/review
+providers, and validate the in-repo store. Fresh installs can commit `.cursor/pf-memory.provider` alone for
+zero-config in-repo memory.
+
 ## State management
 
 Per-worktree gitdir: `scripts/phase-state.sh` → `<git-dir>/phase-flow.json`.
@@ -51,6 +55,7 @@ Repo-level index: `scripts/phase-state.sh index` (read-time aggregate — never 
 | `/pf-ready` | readiness report | push, merge |
 | `/pf-ship` | orchestrate chain | merge |
 | `/pf-compound-ship` | post-merge compounding chain | merge, auto-promote rules |
+| `/pf-setup` | scaffold config + doctor | scaffold CI, migrate memories |
 
 ## Parallelism
 
