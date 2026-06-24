@@ -3,11 +3,12 @@ title: "feat: Conditional (signal-driven) review-persona selection"
 type: feat
 date: 2026-06-23
 origin: docs/brainstorms/2026-06-23-conditional-review-personas-requirements.md
-status: planned
+status: done
+completed: 2026-06-23
 depth: standard
-branch: ""
-commit: ""
-pr: ""
+branch: feat/conditional-review-personas
+commit: f12889a
+pr: https://github.com/grdavies/currsor-phase-flow-2/pull/9
 ---
 
 # feat: Conditional (signal-driven) review-persona selection
@@ -22,11 +23,11 @@ records the always-on-core + signal-gated rule as binding on the future `native`
 
 | Unit | Status | Summary |
 | --- | --- | --- |
-| U1 | planned | Rewrite `skills/doc-review` selection: 5-persona core + `security`/`design` gates + activation log + override |
-| U2 | planned | Update `commands/pf-doc-review.md` to match (tier no longer picks personas) |
-| U3 | planned | Extend `skills/triage` risk list as the single security-signal source; define `design` signal precision |
-| U4 | planned | Record always-on-core + signal-gated rule as binding on the future `native` code panel |
-| U5 | planned | Structural fixtures: core always present, gates fire/skip, override logged, Quick still skips |
+| U1 | done | Rewrite `skills/doc-review` selection: 5-persona core + `security`/`design` gates + activation log + override |
+| U2 | done | Update `commands/pf-doc-review.md` to match (tier no longer picks personas); `commands/pf-doc.md` orchestrator aligned in review follow-up |
+| U3 | done | Extend `skills/triage` risk list as the single security-signal source; define `design` signal precision |
+| U4 | done | Record always-on-core + signal-gated rule as binding on the future `native` code panel |
+| U5 | done | Structural fixtures: core always present, gates fire/skip, override logged, Quick still skips |
 
 **Verification:** structural fixtures under `scripts/test/` (persona-selection cases), registered into
 `.cursor/workflow.config.json` → `verify.test`.
@@ -329,26 +330,21 @@ rule) → U5 (fixtures)**. U3 first so U1's `security` gate references the singl
 
 ## Open Questions
 
-- **Design-signal precision (U1/U3).** The exact unambiguous-UI-term set and the structural-UI-signal
-  definition (per KTD5) — tune against both positive (UI) and negative (backend) fixtures so polysemous tokens
-  don't over-fire and synonym-heavy UI docs don't under-fire.
-- **Activation-record surface (U1).** Whether the activation log is inline in the review report only, or also
-  persisted (e.g. to phase state) for later audit — tie to the existing review-report format.
+Resolved at implementation (`f12889a`, PR #9):
 
-### From 2026-06-23 doc review
+- **Design-signal precision (U1/U3).** Shipped KTD5 set: unambiguous UI terms + structural UI signals;
+  whole-token matching (`webhooks` ≠ `webhook`); polysemous-only negative fixtures in
+  `scripts/test/fixtures/persona-selection/`.
+- **Activation-record surface (U1).** Inline in the review report only (not persisted to phase state).
+- **Security false-negative backstop (KTD4 / Risks).** Accepted as deliberate cost of determinism; skill
+  documents `--personas security` override for audits.
+- **Selection mechanism: prose vs executable matcher (U1/U5).** Prose selector in SKILL.md; U5 fixtures assert
+  documentation, keyword-sync, and marker presence — no executable matcher script.
 
-- **Security false-negative backstop (KTD4 / Risks).** A keyword-gated `security` persona silently never fires
-  on security-relevant docs whose wording dodges the list (injection/XSS, CSRF/SSRF, RBAC/access-control,
-  rate-limiting, secret rotation, "store the user's password"). The only backstop is the author remembering to
-  type `--personas` — the exact judgment the deterministic gate was meant to replace, and the author least
-  likely to recognize a novel-phrasing threat. Decide: accept the false-negative as the deliberate cost of
-  determinism (document it as accepted), or add an automatic structural backstop (e.g. always-run `security`
-  when the doc has a "Security"/"Threat model" heading, or a low-cost always-on lightweight security pass).
-- **Selection mechanism: prose vs executable matcher (U1/U5).** U5's behavioral scenarios ("security fires on
-  the subset; design fires on one UI term or structural signal") imply a runnable selector, but selection
-  currently lives only as agent-interpreted SKILL.md prose and no unit builds a matcher script. Decide whether
-  selection stays prose (fixtures assert documentation + keyword-sync only) or gains a small deterministic
-  matcher script (enabling true behavioral fixtures) — this determines what U5 can actually verify.
+**Deferred (not built):**
+
+- Logged down-scope / leaner-than-core non-Quick override (see Risks — common-path cost).
+- Executable persona-selection matcher for true behavioral fixtures (future hardening).
 
 ---
 
@@ -374,9 +370,11 @@ rule) → U5 (fixtures)**. U3 first so U1's `security` gate references the singl
 
 - Origin: `docs/brainstorms/2026-06-23-conditional-review-personas-requirements.md` (Q1–Q5, selection model,
   always-on-core resolution).
-- Repo grounding (this session): `skills/doc-review/SKILL.md` (tier scaling + `Full = all seven`),
+- Repo grounding (pre-ship): `skills/doc-review/SKILL.md` (tier scaling + `Full = all seven`),
   `commands/pf-doc-review.md` (tier-based guardrails), `skills/triage/SKILL.md` (deterministic risk-trigger
   list), `agents/pf-*-reviewer.md` (the seven doc personas).
+- Shipped: `f12889a` — signal-driven selection in `skills/doc-review/SKILL.md`, tagged triage keywords,
+  `scripts/test/run-persona-selection-fixtures.sh`, native-panel binding in `rules/code-review-automation.mdc`.
 - Related plan: `docs/plans/2026-06-23-003-feat-local-code-review-loop-plan.md` (the `native` panel deferral
   this rule binds).
 - compound-engineering: `ce-doc-review` (always-on coherence+feasibility + content-conditional lenses),
