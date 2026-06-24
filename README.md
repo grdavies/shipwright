@@ -1,88 +1,119 @@
 # Shipwright
 
-Self-contained multi-platform agentic dev-lifecycle plugin (Cursor + Claude Code). Commands use the
-`sw-` prefix. Infrastructure seams (CI gate, memory, AI review, stabilize loop, hooks) are vendored in-tree
-from upstream sources documented in [`PROVENANCE.md`](PROVENANCE.md) — no runtime dependency on sibling plugins.
+**Gated agentic dev lifecycle for Cursor and Claude Code** — traceable specs, a verify-review-ship loop, and
+compounding memory. Commands use the `sw-` prefix.
 
-> **Install migration:** Remove any other workflow plugin directories under `~/.cursor/plugins/local/`
-> before installing Shipwright, or duplicate `sw-` commands may appear alongside
-> `~/.cursor/plugins/local/shipwright`.
+Orchestrators advance on green and **halt at human gates** (freeze, merge, feedback routing). Shipwright
+**never auto-merges**.
 
-## Install
+- **Traceable specs** — frozen PRDs, tasks, and amendments in your repo
+- **Gated ship loop** — verify, review, CI truth, stabilize; you merge
+- **Compounding memory** — post-ship retro and durable project learnings
 
-`dist/cursor/` is generated and committed, so cloning the repo is enough to install:
+## Prerequisites
+
+git · GitHub CLI (`gh`) for PR flows · optional CodeRabbit, Recallium, Sentry
+
+## Install the plugin
+
+Remove other workflow plugins under `~/.cursor/plugins/local/` first — duplicates can shadow `sw-` commands.
 
 ```bash
 git clone https://github.com/grdavies/shipwright
 cd shipwright
-./scripts/install.sh   # copies dist/cursor/ → ~/.cursor/plugins/local/shipwright
+./scripts/install.sh
 ```
 
-Then **Developer: Reload Window** in Cursor.
+**Developer: Reload Window** in Cursor. Default path: `~/.cursor/plugins/local/shipwright`
 
-Default install path: `~/.cursor/plugins/local/shipwright`
+For Claude Code, point your plugin path at `dist/claude-code/`.
 
-### Development workflow
+## Configure your project
 
-Authoring lives under `core/`; installable trees are generated with:
+Shipwright configures **per target repo**, not at install time.
 
-```bash
-python3 -m sw generate --all            # regenerate dist/ after editing core/
-./scripts/install.sh                    # install separately
-# or in one step:
-python3 -m sw generate --all --install  # generate + install
+**Fast path:** run `/sw-setup` in your project for guided scaffolding.
+
+**Zero-config memory:** commit `.cursor/sw-memory.provider` (`in-repo`) and empty
+`.cursor/sw-memory/{memories,rules}/` — no `workflow.config.json` until you need more.
+
+See [configuration summary](#configuration) below or `core/sw-reference/config.schema.json` for all keys.
+
+## When to use what
+
+| Goal | Start with |
+|------|------------|
+| New feature with spec | `/sw-doc` |
+| Ship a phase / PR | `/sw-ship` |
+| Production or user signal | `/sw-feedback` or `/sw-debug` |
+| After merge | `/sw-compound-ship` |
+| Classify scope only | `/sw-triage` |
+
+## Tiers
+
+| Tier | Doc chain | Typical use |
+|------|-----------|-------------|
+| **Quick** | Skipped → implementation | 0–1 files, no risk keywords |
+| **Standard** | PRD → review → freeze → tasks | Bounded multi-file features |
+| **Full** | Brainstorm → PRD → … | Ambiguous or large scope |
+
+## Workstreams
+
+```mermaid
+flowchart LR
+  subgraph doc["Documentation"]
+    T["/sw-triage"] --> D["/sw-doc"]
+  end
+  subgraph ship["Implementation"]
+    S["/sw-ship"]
+  end
+  subgraph ops["Operations"]
+    F["/sw-feedback"] --> G["/sw-debug"]
+  end
+  D --> S
+  G -.->|small fix| S
+  T -.->|Quick tier| S
+  S --> C["/sw-compound-ship"]
 ```
 
-For Claude Code, point your plugin path at `dist/claude-code/` (or copy it to your Claude plugins directory).
+Quick tier bypasses `/sw-doc` and routes directly to the ship loop.
 
 ## Configuration
 
-Copy the example config into your target repo, or run `/sw-setup` for guided scaffolding:
+Copy the example or use `/sw-setup`:
 
 ```bash
 mkdir -p .cursor
 cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
-# edit memory.project, verify.*, and provider selection
 ```
-
-Fresh installs can use **zero-config in-repo memory**: commit `.cursor/sw-memory.provider` (containing
-`in-repo`) plus empty `.cursor/sw-memory/{memories,rules}/` — no `workflow.config.json` required until you
-run `/sw-setup`.
-
-Provider **selection** lives in config; API credentials are sourced from the environment / secret store at
-runtime — never commit secrets.
 
 | Key | Purpose |
 |-----|---------|
-| `memory.provider` | Active memory adapter (`in-repo` default in example; `recallium` also supported) |
-| `review.provider` | Active AI review adapter (`coderabbit` default) |
-| `coderabbit.reviewGraceMinutes` | Gate grace window before absent review = settled |
-| `checks.treatNeutralAsPass` | NEUTRAL checks count as pass unless allowlisted |
-| `checks.neutralAllowlist` | Check names that stay blocking |
-| `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
+| `memory.provider` | `in-repo` (default) or `recallium` |
+| `review.provider` | AI review adapter (`coderabbit` default) |
+| `checks.treatNeutralAsPass` | NEUTRAL CI checks as pass unless allowlisted |
 
-See `core/sw-reference/config.schema.json` for the full schema.
+Provider credentials come from the environment — never commit secrets.
 
-## Components (foundation)
+## Learn more
 
-| Area | Path | Status |
-|------|------|--------|
-| Authoring | `core/` | portability M1+ |
-| Cursor install tree | `dist/cursor/` (generated) | portability U6 |
-| Claude install tree | `dist/claude-code/` (generated) | portability U7 |
-| Generate entrypoint | `python3 -m sw generate` | portability U5 |
-| CI gate | `core/scripts/check-gate.sh`, `core/skills/checks-gate/` | U2–U3 |
-| Memory seam | `core/skills/memory/`, `core/providers/` | U4–U5 |
-| Review seam | `core/providers/review/` | U3 |
-| Stabilize / RCA | `core/skills/stabilize-loop/`, `core/skills/rca-core/` | U6 |
-| Hooks | `core/hooks/` + platform adapters | U4/U7 |
-| Provenance | `PROVENANCE.md` | U1+ |
+| Doc | Audience |
+|-----|----------|
+| [documentation/getting-started.md](documentation/getting-started.md) | Using Shipwright in your repo |
+| [documentation/commands.md](documentation/commands.md) | Command taxonomy |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Developing the plugin |
+| [PROVENANCE.md](PROVENANCE.md) | Upstream sources |
 
-Workstreams (documentation, implementation, debugging, feedback) are planned separately.
+## Developing Shipwright
 
-## Provenance
+Authoring lives in `core/`; install trees are generated:
 
-External upstream repos and runtime dependencies are tracked in [`PROVENANCE.md`](PROVENANCE.md).
+```bash
+python3 -m sw generate --all --install
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Internal planning artifacts live in gitignored `docs/`; user docs live
+in `documentation/`.
 
 ## License
 
