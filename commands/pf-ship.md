@@ -63,6 +63,9 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/pf-ready` and stop.
 - Step failure or stabilize hard stop.
 - **verification-gate** returns `not-verified` (fresh attributable failure).
 - **pf-simplify** / `simplify-gate.sh` returns `regressed` (post-cleanup verify failure).
+- **Local review gate** — when `review.local.gate.haltOn` includes validated P0/P1 and
+  `/tmp/pf-local-review-gate-result.json` reports `verdict: halt`, stop for human triage (surface-only
+  default logs and continues). Never overrides `check-gate.sh`.
 - User ambiguity (branch/scope/config).
 - CI budget exhausted while `yellow`.
 - Merge gate reached on live green.

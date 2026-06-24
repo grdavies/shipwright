@@ -16,7 +16,16 @@
     "routes": []
   },
   "review": {
-    "provider": "coderabbit"
+    "provider": "coderabbit",
+    "local": {
+      "enabled": true,
+      "provider": "ce-code-review",
+      "grouping": "auto",
+      "gate": {
+        "surface": ["P0", "P1", "P2", "P3"],
+        "haltOn": []
+      }
+    }
   },
   "coderabbit": {
     "noDefer": true,

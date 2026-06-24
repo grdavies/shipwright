@@ -1,0 +1,30 @@
+{
+  "required_top_level_keys": [
+    "status",
+    "verdict",
+    "scope",
+    "intent",
+    "intent_confidence",
+    "reviewers",
+    "findings",
+    "actionable_findings",
+    "artifact_path",
+    "run_id"
+  ],
+  "required_finding_keys": [
+    "title",
+    "severity",
+    "file",
+    "line",
+    "confidence",
+    "requires_verification"
+  ],
+  "status_values": ["complete", "skipped", "failed", "degraded"],
+  "verdict_values": [
+    "Ready to merge",
+    "Ready with fixes",
+    "Not ready"
+  ],
+  "schema_version": "ce-code-review-mode-agent-2026-06",
+  "source": "compound-engineering ce-code-review SKILL.md JSON output format"
+}

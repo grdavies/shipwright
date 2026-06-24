@@ -1,0 +1,51 @@
+{
+  "status": "complete",
+  "verdict": "Ready with fixes",
+  "scope": {
+    "base": "abc123",
+    "branch": "feat/example",
+    "head_sha": "def456",
+    "pr_url": null,
+    "files_changed": 3
+  },
+  "intent": "Add local review adapter",
+  "intent_confidence": "explicit",
+  "reviewers": ["correctness", "security"],
+  "findings": [
+    {
+      "#": 1,
+      "title": "Missing null guard on token parse",
+      "severity": "P2",
+      "file": "src/auth.ts",
+      "line": 42,
+      "confidence": 0.85,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "suggested_fix": "if (!token) return null;",
+      "why_it_matters": "Undefined access on empty header",
+      "evidence": "parseToken called without guard",
+      "reviewers": ["correctness"]
+    },
+    {
+      "#": 2,
+      "title": "Unaddressed requirement R3 from plan",
+      "severity": "P1",
+      "file": "src/auth.ts",
+      "line": 1,
+      "confidence": 0.9,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "suggested_fix": "",
+      "why_it_matters": "Requirements completeness — R3 not implemented",
+      "evidence": "plan docs/plans/example.md",
+      "reviewers": ["requirements"]
+    }
+  ],
+  "actionable_findings": [],
+  "triage_groups": [],
+  "requirements_completeness": null,
+  "artifact_path": "/tmp/compound-engineering/ce-code-review/fixture-run/",
+  "run_id": "fixture-run"
+}

@@ -1,0 +1,24 @@
+{
+  "status": "complete",
+  "verdict": "Ready to merge",
+  "findings": [
+    {
+      "severity": "P1",
+      "file": "src/foo.ts",
+      "line": 10,
+      "title": "Validated P1 finding for gate test",
+      "suggested_fix": "",
+      "confidence": 0.9,
+      "requires_verification": true
+    },
+    {
+      "severity": "P3",
+      "file": "src/bar.ts",
+      "line": 5,
+      "title": "Minor style nit",
+      "suggested_fix": "rename x to y",
+      "confidence": 0.6,
+      "requires_verification": false
+    }
+  ]
+}
