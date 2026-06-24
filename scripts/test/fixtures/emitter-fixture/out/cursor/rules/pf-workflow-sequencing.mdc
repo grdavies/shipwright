@@ -1,0 +1,70 @@
+---
+description: USE WHEN following the phase-flow v2 workflow — command ordering, worktree isolation, and per-worktree state.
+alwaysApply: false
+---
+
+# Workflow phase sequencing (v2)
+
+## The phase loop
+
+```
+/pf-doc → /pf-start → /pf-execute → /pf-gaps → /pf-verify → /pf-review → /pf-simplify → /pf-commit → /pf-pr → /pf-watch-ci → /pf-stabilize → /pf-ready
+```
+
+`/pf-ship` drives this chain on green and stops at the human merge gate (never merges).
+
+- **Doc chain (new features):** `/pf-doc` produces frozen PRD + tasks.
+- **Worktree:** `/pf-worktree provision` before implementation on bare main (R18).
+- **Phase loop:** start → execute → gaps → verify → review → commit → pr → watch-ci → stabilize → ready.
+- **`/pf-ready`:** empty `reviewDecision` is not blocking — only `CHANGES_REQUESTED`. CI truth =
+  `scripts/check-gate.sh` (all checks).
+
+## Memory in the phase loop
+
+Use `memory-preflight` only — never a provider tool directly. Redact via `scripts/memory-redact.sh`
+before any persist.
+
+**Onboarding:** run `/pf-setup` to scaffold repo-local `workflow.config.json`, choose memory/review
+providers, and validate the in-repo store. Fresh installs can commit `.cursor/pf-memory.provider` alone for
+zero-config in-repo memory.
+
+## State management
+
+Per-worktree gitdir: `scripts/phase-state.sh` → `<git-dir>/phase-flow.json`.
+
+Fields: `parentBranch`, `currentBranch`, `phaseSlug`, `branchPrefix`, `startedAt`, `issueNumbers`,
+`lastCommand`, `phaseStatus`, `iteration`, `shipStartedAt`, `tier`, `workstream`, `scaffold`.
+
+Repo-level index: `scripts/phase-state.sh index` (read-time aggregate — never a shared writable file).
+
+## Command boundaries
+
+| Command | Does | Does NOT |
+| --- | --- | --- |
+| `/pf-worktree` | provision/teardown/list | commit, merge |
+| `/pf-start` | branch + state | commit, push, PR |
+| `/pf-execute` | implement slice (spec union) | commit, push, PR |
+| `/pf-gaps` | plan vs diff | merge |
+| `/pf-verify` | run checks | fix, commit |
+| `/pf-review` | local-then-provider review | gate, stabilize |
+| `/pf-simplify` | behavior-preserving deslop | commit, merge |
+| `/pf-commit` | commit phase | push, PR |
+| `/pf-pr` | push + PR | commit, merge |
+| `/pf-watch-ci` | gate verdict | fix |
+| `/pf-stabilize` | fix blockers | merge |
+| `/pf-ready` | readiness report | push, merge |
+| `/pf-ship` | orchestrate chain | merge |
+| `/pf-compound-ship` | post-merge compounding chain | merge, auto-promote rules |
+| `/pf-setup` | scaffold config + doctor | scaffold CI, migrate memories |
+
+## Parallelism
+
+`worktree.parallelCeiling` (~4). Beyond ceiling → recombination (`skills/parallelism`). Never parallelize
+shared migrations.
+
+## Post-merge
+
+Human merges → `/pf-compound-ship` (or atomically: `/pf-retro` → `/pf-compound` → optional
+`/pf-memory-sync` → `/pf-status reconcile` + `append-log`).
+
+Stacking: after merge-ready merge, update parent, `/pf-start` for next phase.

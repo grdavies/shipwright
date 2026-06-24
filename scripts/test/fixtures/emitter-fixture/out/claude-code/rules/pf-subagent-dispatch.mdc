@@ -1,0 +1,78 @@
+---
+description: Heuristic-gated sub-agent dispatch and loop hard stops for phase-flow v2.
+alwaysApply: false
+---
+
+# Sub-agent dispatch policy
+
+## Delegate when
+
+- Work spans **~8+ files** (count planned touch paths).
+- Heavy/throwaway exploration whose reads would bloat orchestrator context.
+- Subtasks are **independently parallelizable** (disjoint file sets).
+
+## Stay inline when
+
+- Single-file or ≤3 files with clear scope.
+- Sequential dependencies between edits.
+- User interaction mid-flight required.
+
+## Model tier (R30 / R9)
+
+- Delegated **mechanical** work (mapping diffs, fixture runs, grep-heavy research) → cheaper/faster parent or subagent models (`models.tiers.cheap`).
+- Reasoning-heavy design, stabilize RCA, gate triage, doc-review orchestration → **`models.roles.builder` tier or higher** (`models.tiers.build` / `deep`).
+- **R9 runtime contract:** when dispatching `pf-*-reviewer` subagents (especially `model: inherit` reviewers from `/pf-doc-review`), the **parent agent's model must be at the builder tier or above** per `workflow.config.json` `models.roles.builder`. Do not run persona panels from a sub-build parent — log a warning and ask the user to switch model or override explicitly.
+
+## Hard stops (R29)
+
+Every loop documents max iterations + no-progress detection:
+
+| Loop | Hard stop |
+| --- | --- |
+| `/pf-ship` CI wait | `checks.watch.maxWaitMinutes` |
+| `/pf-stabilize` | stabilize-loop max iterations + no-progress |
+| gap-check closers | one re-map pass; escalate residuals |
+| parallel dispatch | `worktree.parallelCeiling` |
+
+Circuit breaker: three identical failures without diff change → escalate to user.
+
+## Local review apply loop (`/pf-review` phase 1)
+
+After auto-applying eligible P2/P3 fixes from local review:
+
+- **One** bounded re-verify (`pf-verify`) pass — not a nested loop.
+- Circuit breaker: three identical verify failures without diff change → escalate to user (R29).
+- Never let `ce-code-review` commit into the worktree; pf edit machinery only.
+
+## Parallel safety
+
+Before parallel subagents on shared directory: disjoint file sets required, or worktree isolation.
+Never parallelize shared-migration paths (`skills/parallelism`).
+
+## Authority
+
+Structural isolation (worktrees) is the dominant token lever (R31). This rule governs *when* to add
+sub-agents inside a worktree — not whether to provision another worktree.
+
+## Execute discipline — two-stage review (IM6 / U7)
+
+During `/pf-execute`, **between tasks** (after TDD gate passes for the current task ref):
+
+1. **Fresh subagent per task** when delegating implementation or review — do not resume a prior task's agent.
+2. **Stage 1 — spec-compliance** (dispatch with `readonly: true` when possible):
+   - Diff satisfies the active sub-task `**File:**` / `**Expected:**` contract.
+   - Changes honor spec-union R-IDs for the task; no out-of-scope files.
+   - Fail → fix or halt; do not proceed to stage 2.
+3. **Stage 2 — code-quality** (fresh subagent):
+   - Naming, structure, duplication, obvious defects.
+   - No scope expansion or new requirements.
+   - Fail → fix within task scope or escalate (R29).
+
+Inline (no subagent) when ≤3 files and sequential — still run both stages; orchestrator performs them explicitly.
+
+**Do not batch** multi-task reviews at phase end. TDD red-green runs **before** stage 1 for each task.
+
+## Model tier for execute review
+
+- Stage 1 spec-compliance → full-fidelity (must read union + task).
+- Stage 2 code-quality → may use faster model for mechanical diffs; escalate on ambiguity.
