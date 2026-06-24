@@ -10,6 +10,7 @@ Usage:
   phase-state.sh path              Print resolved state file path for current checkout
   phase-state.sh read              Print state JSON (empty object if missing)
   phase-state.sh write <json|-)>   Merge JSON object into state file (- = stdin)
+  phase-state.sh override-add <json|-)>  Append one override record (read-modify-write)
   phase-state.sh init <json|-)>    Replace state file with JSON object (- = stdin)
   phase-state.sh index             Aggregate state from all linked worktrees (read-only)
 EOF
@@ -68,6 +69,33 @@ current = {}
 if path.exists():
     current = json.loads(path.read_text(encoding="utf-8"))
 current.update(patch)
+path.write_text(json.dumps(current, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+  echo "$state"
+}
+
+cmd_override_add() {
+  local entry
+  entry="$(read_json_arg "${1:-}")"
+  local state
+  state="$(resolve_state_path)"
+  mkdir -p "$(dirname "$state")"
+  ENTRY_JSON="$entry" python3 - "$state" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+entry = json.loads(os.environ["ENTRY_JSON"])
+current = {}
+if path.exists():
+    current = json.loads(path.read_text(encoding="utf-8"))
+overrides = current.get("overrides")
+if not isinstance(overrides, list):
+    overrides = []
+overrides.append(entry)
+current["overrides"] = overrides
 path.write_text(json.dumps(current, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
   echo "$state"
@@ -158,6 +186,10 @@ main() {
     write)
       [[ $# -ge 1 ]] || { usage >&2; exit 1; }
       cmd_write "$1"
+      ;;
+    override-add)
+      [[ $# -ge 1 ]] || { usage >&2; exit 1; }
+      cmd_override_add "$1"
       ;;
     init)
       [[ $# -ge 1 ]] || { usage >&2; exit 1; }
