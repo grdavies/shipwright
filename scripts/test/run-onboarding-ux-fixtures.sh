@@ -44,6 +44,13 @@ bash "$ROOT/scripts/test/run-gate-fixtures.sh" || FAIL=1
 # --- tasks single-pass (phase 3) ---
 bash "$ROOT/scripts/test/fixtures/onboarding-ux/tasks-single-pass.sh" || FAIL=1
 
+# --- doc boundary modes (phase 4) ---
+bash "$ROOT/scripts/test/fixtures/onboarding-ux/boundary-stop.sh" || FAIL=1
+bash "$ROOT/scripts/test/fixtures/onboarding-ux/boundary-confirm.sh" || FAIL=1
+bash "$ROOT/scripts/test/fixtures/onboarding-ux/boundary-auto.sh" || FAIL=1
+bash "$ROOT/scripts/test/fixtures/onboarding-ux/boundary-no-inline.sh" || FAIL=1
+bash "$ROOT/scripts/test/fixtures/onboarding-ux/boundary-guard-wire.sh" || FAIL=1
+
 # --- worktree guard (phase 2) ---
 if [[ -x "$ROOT/scripts/sw-assert-worktree.sh" ]]; then
   bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-negative.sh" || FAIL=1
