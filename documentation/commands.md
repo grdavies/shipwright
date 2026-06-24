@@ -1,49 +1,71 @@
-# Shipwright commands reference
+# Shipwright commands
 
-User-facing summary of key `sw-` commands. Full procedure text lives in `core/commands/` (installed via `dist/`).
+Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** chain phases; **atomics** do one
+bounded step. For full procedure text, open the linked command file under `core/commands/`.
 
-## Setup and config
+## Orchestrators
 
-| Command | Purpose |
-|---------|---------|
-| `/sw-setup` | Scaffold or doctor `.cursor/workflow.config.json` — writes `doc.afterTasks` (default `confirm`) and review choice (`coderabbit` \| `none`, default **`none`**). |
-| `/sw-triage` | Classify work tier; does not start implementation. |
+| Command | Scope | Does not |
+|---------|-------|----------|
+| [`/sw-doc`](../core/commands/sw-doc.md) | Doc pipeline: triage → brainstorm (Full) → PRD → review → freeze → **single-pass** `/sw-tasks`; then `doc.afterTasks` (`stop` \| `confirm` \| `auto`) | Implement, merge, or skip human gates |
+| [`/sw-ship`](../core/commands/sw-ship.md) | Phase loop: execute → verify → review → commit → PR → CI → stabilize → ready; accepts `--after-tasks=<mode>` at frozen-task boundary | Merge (halts at merge gate) |
+| [`/sw-debug`](../core/commands/sw-debug.md) | Production/dev RCA and route by fix size | Implement, commit, or merge |
+| [`/sw-feedback`](../core/commands/sw-feedback.md) | Normalize inbound signals and route to debug, gaps, or brainstorm | Analyze, author, or dispatch without confirmation |
+| [`/sw-compound-ship`](../core/commands/sw-compound-ship.md) | Post-merge: retro → compound → optional memory-sync | Merge or auto-promote rules |
 
-## Documentation pipeline
+## Entry points
 
-| Command | Purpose |
-|---------|---------|
-| `/sw-doc` | Doc orchestrator: brainstorm → PRD → review → freeze → **single-pass** `/sw-tasks`; then `doc.afterTasks` (`stop` \| `confirm` \| `auto`). |
-| `/sw-tasks` | Generate the complete frozen task list in **one pass** (no Go gate); standalone run stops without implementation prompt. |
-| `/sw-freeze` | Freeze PRD/amendment artifacts. |
+| Command | When to use | Does not |
+|---------|-------------|----------|
+| [`/sw-triage`](../core/commands/sw-triage.md) | Classify Quick / Standard / Full before doc or impl | Draft docs or implement |
+| [`/sw-setup`](../core/commands/sw-setup.md) | First run in a target repo — providers, `doc.afterTasks`, memory store, doctor | Scaffold CI or migrate memories |
+| [`/sw-worktree`](../core/commands/sw-worktree.md) | Isolate work in a per-item worktree (required before impl on bare `main`) | Run phase loop or merge |
+| [`/sw-start`](../core/commands/sw-start.md) | Open a phase branch inside the active worktree; worktree guard runs before writes | Push or open PR |
+
+## Doc pipeline atomics
+
+| Command | Role |
+|---------|------|
+| [`/sw-brainstorm`](../core/commands/sw-brainstorm.md) | Requirements exploration (Full tier) |
+| [`/sw-prd`](../core/commands/sw-prd.md) | PRD or decision-record draft |
+| [`/sw-doc-review`](../core/commands/sw-doc-review.md) | Persona panel on spec drafts |
+| [`/sw-freeze`](../core/commands/sw-freeze.md) | Irreversible artifact freeze |
+| [`/sw-tasks`](../core/commands/sw-tasks.md) | Complete frozen task list in **one pass** (no Go gate); standalone run stops without implementation prompt |
+| [`/sw-amend`](../core/commands/sw-amend.md) | Post-freeze PRD amendment |
 
 `doc.afterTasks` is the sole human checkpoint between PRD freeze and implementation when using `/sw-doc`.
 
-## Implementation loop
+## Ship loop atomics (selected)
 
-| Command | Purpose |
-|---------|---------|
-| `/sw-worktree` | Provision an isolated worktree (required before impl on bare `main`). |
-| `/sw-start` | Create a phase branch; invokes worktree guard before writes. |
-| `/sw-execute` | Implement one phase; worktree guard runs before implementation writes. |
-| `/sw-ship` | Full ship chain; accepts `--after-tasks=<mode>` at the frozen-task-list boundary. |
+| Command | Role |
+|---------|------|
+| [`/sw-execute`](../core/commands/sw-execute.md) | One phase-sized implementation slice; worktree guard before writes |
+| [`/sw-verify`](../core/commands/sw-verify.md) | Scoped local verification |
+| [`/sw-review`](../core/commands/sw-review.md) | Local then provider code review (`review.provider`; default **`none`**) |
+| [`/sw-commit`](../core/commands/sw-commit.md) | Commit after verify + review |
+| [`/sw-pr`](../core/commands/sw-pr.md) | Push and open/update PR |
+| [`/sw-watch-ci`](../core/commands/sw-watch-ci.md) | Poll PR checks via `check-gate.sh` |
+| [`/sw-stabilize`](../core/commands/sw-stabilize.md) | Clear CI + review blockers |
+| [`/sw-ready`](../core/commands/sw-ready.md) | Terminal readiness report; echoes `review: off` or `review: not configured` from gate JSON |
 
 **Worktree invariant:** never write implementation files on bare `main` — use a worktree + phase branch.
-
-## Merge readiness
-
-| Command | Purpose |
-|---------|---------|
-| `/sw-verify` | Run local verification commands from config. |
-| `/sw-review` | Local + optional external review (`review.provider`; default **`none`**). |
-| `/sw-watch-ci` | Poll PR checks via `check-gate.sh`. |
-| `/sw-ready` | Terminal merge-readiness report; echoes `review: off` or `review: not configured` from gate JSON. |
-| `/sw-stabilize` | Fix CI/review blockers on the current PR. |
 
 ## Review providers
 
 - **Default:** `review.provider: "none"` — review gating off; CI can still pass without external review.
 - **Opt-in:** `review.provider: "coderabbit"` — enable CodeRabbit for phase-2 `/sw-review` and CI review barrier.
 - **Canonical opt-out:** `review.provider: "none"` (single supported disable path; `review.enabled: false` is deprecated).
+
+## Memory and compounding
+
+| Command | Role |
+|---------|------|
+| [`/sw-memory-sync`](../core/commands/sw-memory-sync.md) | Distill transcript deltas to durable memory |
+| [`/sw-memory-audit`](../core/commands/sw-memory-audit.md) | Read-only memory hygiene audit |
+| [`/sw-compound`](../core/commands/sw-compound.md) | Distill retro into memories |
+| [`/sw-retro`](../core/commands/sw-retro.md) | Post-ship retrospective (report-only) |
+
+> **Depth:** 34 commands exist today. This table lists orchestrators and common atomics only. Grep
+> `core/commands/sw-*.md` for the complete set.
 
 See [Getting started](getting-started.md) for boundary modes and worktree rules.

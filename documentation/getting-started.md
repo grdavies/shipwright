@@ -1,15 +1,27 @@
 # Getting started with Shipwright
 
-Shipwright is a multi-platform (`sw-`) workflow plugin for Cursor and Claude Code. This guide covers
-first-run setup and the doc → implementation boundary introduced in the onboarding UX workstream.
+Shipwright is a Cursor and Claude Code plugin that structures agentic development: traceable specs, a gated
+ship loop, and compounding memory.
 
-## Quick start
+**Start here:** [README](../README.md) for prerequisites, installation (Cursor and Claude Code), `/sw-setup`,
+and expanded workstreams with sample prompts.
 
-1. Install the plugin (`./scripts/install.sh` from the repo, or use committed `dist/cursor/`).
-2. In your **target repo**, run `/sw-setup` to scaffold `.cursor/workflow.config.json` (or commit the
-   zero-config in-repo memory marker — see [README](../README.md)).
-3. Provision a **worktree** before implementation: `/sw-worktree` then `/sw-start` on a phase branch.
-4. Run the doc pipeline: `/sw-doc` (or atomic `/sw-brainstorm` → `/sw-prd` → `/sw-freeze` → `/sw-tasks`).
+This guide covers three persona paths after setup, plus onboarding defaults for the doc → implementation boundary.
+
+## Two places, two jobs
+
+| Where | What you do |
+|-------|-------------|
+| **This machine (once)** | Clone Shipwright, run `./scripts/install.sh`, reload Cursor |
+| **Each project repo** | Run `/sw-setup` (or zero-config memory markers) so commands know your providers and guardrails |
+
+The plugin lives globally; configuration and artifacts live in the **target repository** you are building in.
+
+## Prerequisites
+
+See [README — Prerequisites](../README.md#prerequisites) for install-time tools (git, bash, rsync, Python 3,
+`gh`). Optional integrations (CodeRabbit, Recallium, Sentry) are covered in
+[plugin setup](../README.md#plugin-setup-and-configuration).
 
 ## Doc → implementation boundary (`doc.afterTasks`)
 
@@ -44,7 +56,61 @@ The schema default for `review.provider` is **`none`** (review gating off). Code
 `/sw-setup` writes these defaults; `/sw-ready` and `/sw-status` echo `review: off` or `review: not configured`
 from the CI gate when reporting merge readiness.
 
+## Path 1: New feature (Standard or Full tier)
+
+Use when scope spans multiple files or needs a written spec.
+
+1. Install the plugin (see [README](../README.md#install)).
+2. Open your **target repo** in Cursor and run `/sw-setup`.
+3. Run `/sw-doc` — triage classifies tier; Full tier includes brainstorm before PRD.
+4. After frozen tasks exist, respond to the `doc.afterTasks` checkpoint (or use `auto` mode).
+5. Run `/sw-worktree provision` then `/sw-start` with prefix `feat/` (if not already provisioned by `auto`).
+6. Run `/sw-ship` — executes, verifies, reviews, opens PR, watches CI, halts at **merge-ready** (never auto-merges).
+
+**Done when:** PR is green and `/sw-ready` reports merge-ready; you merge manually.
+
+## Path 2: Quick fix (Quick tier)
+
+Use for bounded, low-risk changes that skip the doc pipeline.
+
+1. Install the plugin and ensure target repo has `/sw-setup` or zero-config memory.
+2. Run `/sw-triage` — expect **Quick** for 0–1 file scope without risk keywords.
+3. Run `/sw-worktree provision` → `/sw-start` with prefix `fix/`.
+4. Run `/sw-execute` for the slice, then `/sw-ship` (or atomic commit → pr → stabilize).
+
+**Done when:** Small PR is green; merge manually.
+
+Quick tier **does not** enter `/sw-doc` — no brainstorm, PRD, or task freeze.
+
+## Path 3: Production incident
+
+Use when a production signal (Sentry, deploy log, user report) needs diagnosis.
+
+1. In the target repo, run `/sw-feedback` with the signal (or `/sw-debug` directly).
+2. `/sw-feedback` normalizes and routes — confirm the suggested route before dispatch.
+3. `/sw-debug` runs RCA and routes: small fix → worktree + `/sw-ship`; large fix → `/sw-amend` or `/sw-brainstorm`.
+
+**Done when:** Fix is shipped and `/sw-feedback-close` closes the signal (if tracked).
+
+## Post-merge
+
+After you merge, run `/sw-compound-ship` in the target repo to capture retro learnings and sync memory.
+
+## Migration notes
+
+### Duplicate plugins
+
+Remove other workflow plugin directories under `~/.cursor/plugins/local/` before installing Shipwright.
+Duplicate installs can surface two commands with the same `sw-` name.
+
+### From compound-engineering (`ce-`)
+
+Shipwright uses the `sw-` prefix exclusively. Remove co-installed workflow plugins that register overlapping
+commands. Shipwright orchestrators (`/sw-doc`, `/sw-ship`, `/sw-debug`,
+`/sw-feedback`) replace ad-hoc chains; see [commands.md](commands.md) for the full taxonomy.
+
 ## Next steps
 
-- [Commands reference](commands.md) — orchestrators and atomic `sw-` commands.
-- [README](../README.md) — install, config keys, development workflow.
+- [README — Workstreams](../README.md#workstreams) — use cases, sample prompts, command tables
+- [Command reference](commands.md) — full taxonomy
+- [CONTRIBUTING.md](../CONTRIBUTING.md) — developing Shipwright itself
