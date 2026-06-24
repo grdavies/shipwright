@@ -18,21 +18,14 @@ fi
 while IFS=$'\t' read -r path hash; do
   [ -n "$path" ] || continue
   core_file="$CORE/$path"
-  root_file="$ROOT/$path"
   if [ ! -f "$core_file" ]; then
     echo "FAIL relocation-coverage missing core/$path"
     FAIL=1
     continue
   fi
-  if [ ! -f "$root_file" ]; then
-    echo "FAIL relocation-coverage root missing $path"
-    FAIL=1
-    continue
-  fi
   core_hash="$(shasum -a 256 "$core_file" | awk '{print $1}')"
-  root_hash="$(shasum -a 256 "$root_file" | awk '{print $1}')"
-  if [ "$core_hash" != "$root_hash" ]; then
-    echo "FAIL relocation-hash core/$path differs from root"
+  if [ "$core_hash" != "$hash" ]; then
+    echo "FAIL relocation-hash core/$path differs from golden manifest"
     FAIL=1
   fi
 done <"$GOLDEN"
@@ -41,11 +34,11 @@ if [ "$FAIL" -eq 0 ]; then
   echo "OK  relocation-coverage all golden paths present in core/ with matching hashes"
 fi
 
-# Root layout still matches golden manifest (live plugin unchanged).
-if bash "$COMPARE" "$ROOT" "$GOLDEN"; then
+# dist/cursor matches golden manifest; root layout is no longer the install source post-flip.
+if bash "$COMPARE" "$ROOT/dist/cursor" "$GOLDEN"; then
   echo "OK  root-layout parity unchanged"
 else
-  echo "FAIL root-layout parity"
+  echo "FAIL dist/cursor parity"
   FAIL=1
 fi
 

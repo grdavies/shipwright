@@ -67,12 +67,12 @@ else
 fi
 rm -f "$TMP_MANIFEST" "${TMP_MANIFEST}.2"
 
-# Live repo golden manifest matches current emittable tree
+# Live repo golden manifest matches dist/cursor/ (post-flip install source).
 if [ ! -f "$GOLDEN" ]; then
   echo "FAIL cursor-golden.manifest missing at $GOLDEN"
   FAIL=1
 else
-  run_expect cursor-golden-vs-repo 0 "$COMPARE" "$ROOT" "$GOLDEN"
+  run_expect cursor-golden-vs-dist 0 "$COMPARE" "$ROOT/dist/cursor" "$GOLDEN"
 fi
 
 exit "$FAIL"

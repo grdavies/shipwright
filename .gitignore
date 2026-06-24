@@ -8,3 +8,6 @@ __pycache__/
 
 # Per-work-item worktrees (local only)
 .pf-worktrees/
+
+# Emitter test fixture output (generated locally)
+scripts/test/fixtures/emitter-fixture/out/

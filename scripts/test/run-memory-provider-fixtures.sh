@@ -3,20 +3,30 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=../pf-resolve-plugin-root.sh
+source "$ROOT/scripts/pf-resolve-plugin-root.sh"
+CONTENT="$(pf_resolve_plugin_root "$ROOT/scripts")"
+CURSOR_DIST="$ROOT/dist/cursor"
 SEARCH="$ROOT/scripts/in-repo-memory-search.sh"
-IN_REPO_RULES="$ROOT/providers/in-repo-rules.sh"
-HOOK="$ROOT/hooks/before-submit-guardrails.py"
+IN_REPO_RULES="$CONTENT/providers/in-repo-rules.sh"
+HOOK="$CURSOR_DIST/hooks/before-submit-guardrails.py"
 FIX="$ROOT/scripts/test/fixtures/in-repo-memory"
 FIX_RULES="$ROOT/scripts/test/fixtures/in-repo-rules"
 FIX_MARKER="$ROOT/scripts/test/fixtures/marker"
-SCHEMA="$ROOT/.pf/config.schema.json"
-PF_SETUP="$ROOT/commands/pf-setup.md"
-IN_REPO_MD="$ROOT/providers/in-repo.md"
-CAPS="$ROOT/skills/memory/CAPABILITIES.md"
+if [ -f "$ROOT/.pf/config.schema.json" ]; then
+  SCHEMA="$ROOT/.pf/config.schema.json"
+elif [ -f "$CONTENT/pf-reference/config.schema.json" ]; then
+  SCHEMA="$CONTENT/pf-reference/config.schema.json"
+else
+  SCHEMA="$ROOT/.pf/config.schema.json"
+fi
+PF_SETUP="$CONTENT/commands/pf-setup.md"
+IN_REPO_MD="$CONTENT/providers/in-repo.md"
+CAPS="$CONTENT/skills/memory/CAPABILITIES.md"
 REDACT="$ROOT/scripts/memory-redact.sh"
 FAIL=0
 
-export PYTHONPATH="$ROOT/hooks${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$CURSOR_DIST/hooks${PYTHONPATH:+:$PYTHONPATH}"
 chmod +x "$SEARCH" "$IN_REPO_RULES" 2>/dev/null || true
 
 # --- U1: provider doc + semanticSearch flag ---
@@ -95,7 +105,7 @@ fi
 rm -rf "$TMP_WRITE"
 
 # Lazy create (mkdir semantics documented in SKILL)
-if grep -q 'mkdir -p' "$ROOT/skills/memory/SKILL.md" && grep -qi 'lazy' "$IN_REPO_MD"; then
+if grep -q 'mkdir -p' "$CONTENT/skills/memory/SKILL.md" && grep -qi 'lazy' "$IN_REPO_MD"; then
   echo "OK  lazy store create documented"
 else
   echo "FAIL U2 lazy create docs"
@@ -136,8 +146,9 @@ else
 fi
 rm -rf "$MARKER_WS"
 
-# Hook dispatches in-repo-rules (structural grep)
-if grep -q 'rules_script_for_provider' "$HOOK" && grep -q 'in-repo' "$HOOK"; then
+# Hook dispatches in-repo-rules (structural grep on shared guardrail core)
+GUARDRAIL_CORE="$ROOT/core/hooks/guardrail_core.py"
+if grep -q 'rules_script_for_provider' "$GUARDRAIL_CORE" && grep -q 'in-repo' "$GUARDRAIL_CORE"; then
   echo "OK  hook provider dispatch wiring"
 else
   echo "FAIL U3 hook dispatch structure"
@@ -184,8 +195,8 @@ else
 fi
 rm -rf "$UNCONF"
 
-# Session-start hints /pf-setup
-if grep -q '/pf-setup' "$ROOT/hooks/session-start.py"; then
+# Session-start hints /pf-setup (shared guardrail core builds session context)
+if grep -q '/pf-setup' "$GUARDRAIL_CORE"; then
   echo "OK  session-start nudges /pf-setup"
 else
   echo "FAIL U4 session-start hint"
@@ -201,7 +212,7 @@ else
   FAIL=1
 fi
 
-if grep -q '/pf-setup' "$ROOT/rules/pf-workflow-sequencing.mdc"; then
+if grep -q '/pf-setup' "$CONTENT/rules/pf-workflow-sequencing.mdc"; then
   echo "OK  workflow sequencing references /pf-setup"
 else
   echo "FAIL U5 sequencing reference"
@@ -244,7 +255,7 @@ fi
 
 # --- U7: runner registered ---
 WF_CFG="$ROOT/.cursor/workflow.config.json"
-if grep -q 'run-memory-provider-fixtures.sh' "$WF_CFG" 2>/dev/null || grep -q 'run-memory-provider-fixtures' "$ROOT/.pf/workflow.config.example.json" 2>/dev/null; then
+if grep -q 'run-memory-provider-fixtures.sh' "$WF_CFG" 2>/dev/null || grep -q 'run-memory-provider-fixtures' "$CONTENT/pf-reference/workflow.config.example.json" 2>/dev/null; then
   echo "OK  verify.test registration present or pending"
 else
   # Will register below — check after update
