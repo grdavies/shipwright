@@ -25,12 +25,12 @@ Use `memory-preflight` only — never a provider tool directly. Redact via `scri
 before any persist.
 
 **Onboarding:** run `/sw-setup` to scaffold repo-local `workflow.config.json`, choose memory/review
-providers, and validate the in-repo store. Fresh installs can commit `.cursor/pf-memory.provider` alone for
+providers, and validate the in-repo store. Fresh installs can commit `.cursor/sw-memory.provider` alone for
 zero-config in-repo memory.
 
 ## State management
 
-Per-worktree gitdir: `scripts/phase-state.sh` → `<git-dir>/phase-flow.json`.
+Per-worktree gitdir: `scripts/phase-state.sh` → `<git-dir>/shipwright.json`.
 
 Fields: `parentBranch`, `currentBranch`, `phaseSlug`, `branchPrefix`, `startedAt`, `issueNumbers`,
 `lastCommand`, `phaseStatus`, `iteration`, `shipStartedAt`, `tier`, `workstream`, `scaffold`.

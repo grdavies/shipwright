@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # Minimal gh stub for check-gate fixture tests. Place ahead of real gh on PATH.
-# Select fixture set via PF_GATE_FIXTURE (green|yellow-pending|red-fail|blocked-empty).
+# Select fixture set via SW_GATE_FIXTURE (green|yellow-pending|red-fail|blocked-empty).
 set -euo pipefail
 
-FIXTURE="${PF_GATE_FIXTURE:-green}"
+FIXTURE="${SW_GATE_FIXTURE:-green}"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/fixtures" && pwd)"
 
 cmd="${1:-}"
 shift || true
 
-pf_jq_filter() {
+sw_jq_filter() {
   local out="$1"
   shift
   local args=("$@")
@@ -42,7 +42,7 @@ case "$cmd" in
                 '{number:$n, headRefOid:$h}')
               ;;
           esac
-          pf_jq_filter "$out" "${rest[@]}"
+          sw_jq_filter "$out" "${rest[@]}"
         fi
         ;;
       checks)
@@ -58,7 +58,7 @@ case "$cmd" in
     joined="${rest[*]}"
     if [ "$sub" = "view" ] && [[ "$joined" == *"--json"* ]]; then
       out='{"nameWithOwner":"owner/repo"}'
-      pf_jq_filter "$out" "${rest[@]}"
+      sw_jq_filter "$out" "${rest[@]}"
     fi
     ;;
   api)
@@ -71,14 +71,14 @@ case "$cmd" in
       else
         out=$(cat "$DIR/reviews-${FIXTURE}.json" 2>/dev/null || echo '{"data":{"repository":{"pullRequest":{"reviews":{"nodes":[]}}}}}')
       fi
-      pf_jq_filter "$out" "${rest[@]}"
+      sw_jq_filter "$out" "${rest[@]}"
     elif [[ "$endpoint" == repos/* ]]; then
       if [[ "$endpoint" == */commits/* ]]; then
         out='{"commit":{"committer":{"date":"2020-01-01T00:00:00Z"}}}'
-        pf_jq_filter "$out" "${rest[@]}"
+        sw_jq_filter "$out" "${rest[@]}"
       else
         out=$(cat "$DIR/comments-${FIXTURE}.json" 2>/dev/null || echo '[]')
-        pf_jq_filter "$out" "${rest[@]}"
+        sw_jq_filter "$out" "${rest[@]}"
       fi
     fi
     ;;

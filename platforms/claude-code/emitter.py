@@ -145,7 +145,7 @@ class ClaudeCodeEmitter(EmitterBase):
         plugin = {
             "name": "shipwright",
             "version": read_version(repo_root),
-            "description": "phase-flow v2 for Claude Code (generated)",
+            "description": "Shipwright for Claude Code (generated)",
         }
         (manifest_dir / "plugin.json").write_text(
             json.dumps(plugin, indent=2) + "\n",
@@ -194,7 +194,7 @@ if __name__ == "__main__":
         rules_dir = core_root / "rules"
         if not rules_dir.is_dir():
             return
-        chunks: list[str] = ["# phase-flow v2\n"]
+        chunks: list[str] = ["# Shipwright\n"]
         for path in sorted(rules_dir.glob("*.mdc")):
             text = path.read_text(encoding="utf-8")
             if "alwaysApply: true" in text or "alwaysApply:true" in text:

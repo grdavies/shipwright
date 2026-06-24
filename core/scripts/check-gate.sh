@@ -8,7 +8,7 @@
 #
 # Usage: check-gate.sh [PR_NUMBER]
 # Config: .cursor/workflow.config.json or workflow.config.json
-# Env: PF_GATE_NOW — unix seconds override for deterministic tests (grace window)
+# Env: SW_GATE_NOW — unix seconds override for deterministic tests (grace window)
 set -uo pipefail
 
 CHECKS="$(mktemp "${TMPDIR:-/tmp}/sw-gate-checks.XXXXXX")"
@@ -17,9 +17,9 @@ trap 'rm -f "$CHECKS" "$ISSUE_COMMENTS"' EXIT
 
 # --- repo + config ------------------------------------------------------------
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-# shellcheck source=pf-resolve-plugin-root.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/pf-resolve-plugin-root.sh"
-PLUGIN_ROOT="$(pf_resolve_plugin_root "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+# shellcheck source=sw-resolve-plugin-root.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sw-resolve-plugin-root.sh"
+PLUGIN_ROOT="$(sw_resolve_plugin_root "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
 CONFIG=""
 for p in "$ROOT/.cursor/workflow.config.json" "$ROOT/workflow.config.json"; do
   [ -f "$p" ] && CONFIG="$p" && break
@@ -107,9 +107,9 @@ else
     echo "{\"verdict\":\"blocked\",\"reason\":\"unknown review provider: $REVIEW_PROVIDER\"}"
     exit 30
   fi
-  export PF_PR="$PR" PF_HEAD_SHA="$HEAD_SHA" PF_OWNER="$OWNER" PF_REPO="$REPO"
-  export PF_OWNER_REPO="$OWNER_REPO" PF_CHECKS_FILE="$CHECKS" PF_ISSUE_COMMENTS_FILE="$ISSUE_COMMENTS"
-  export PF_GRACE_MIN="$GRACE_MIN"
+  export SW_PR="$PR" SW_HEAD_SHA="$HEAD_SHA" SW_OWNER="$OWNER" SW_REPO="$REPO"
+  export SW_OWNER_REPO="$OWNER_REPO" SW_CHECKS_FILE="$CHECKS" SW_ISSUE_COMMENTS_FILE="$ISSUE_COMMENTS"
+  export SW_GRACE_MIN="$GRACE_MIN"
   REVIEW_JSON="$(bash "$ADAPTER")"
   HAS_PER_HEAD="$(echo "$REVIEW_JSON" | jq -r '.capabilities.perHeadState // false')"
   CR_STATE="$(echo "$REVIEW_JSON" | jq -r '.perHeadState // "in-flight"')"

@@ -3,9 +3,9 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-# shellcheck source=../pf-resolve-plugin-root.sh
-source "$ROOT/scripts/pf-resolve-plugin-root.sh"
-CONTENT="$(pf_resolve_plugin_root "$ROOT/scripts")"
+# shellcheck source=../sw-resolve-plugin-root.sh
+source "$ROOT/scripts/sw-resolve-plugin-root.sh"
+CONTENT="$(sw_resolve_plugin_root "$ROOT/scripts")"
 CURSOR_DIST="$ROOT/dist/cursor"
 SEARCH="$ROOT/scripts/in-repo-memory-search.sh"
 IN_REPO_RULES="$CONTENT/providers/in-repo-rules.sh"
@@ -20,7 +20,7 @@ elif [ -f "$CONTENT/sw-reference/config.schema.json" ]; then
 else
   SCHEMA="$ROOT/.sw/config.schema.json"
 fi
-PF_SETUP="$CONTENT/commands/sw-setup.md"
+SW_SETUP="$CONTENT/commands/sw-setup.md"
 IN_REPO_MD="$CONTENT/providers/in-repo.md"
 CAPS="$CONTENT/skills/memory/CAPABILITIES.md"
 REDACT="$ROOT/scripts/memory-redact.sh"
@@ -114,10 +114,10 @@ fi
 
 # --- U3: in-repo rules adapter ---
 RULES_WS=$(mktemp -d)
-mkdir -p "$RULES_WS/.cursor/pf-memory/rules"
-cp "$FIX_RULES/store/rules/"*.md "$RULES_WS/.cursor/pf-memory/rules/"
-echo '{"memory":{"provider":"in-repo","inRepo":{"storeDir":".cursor/pf-memory"}}}' > "$RULES_WS/.cursor/workflow.config.json"
-export PF_WORKSPACE_ROOT="$RULES_WS"
+mkdir -p "$RULES_WS/.cursor/sw-memory/rules"
+cp "$FIX_RULES/store/rules/"*.md "$RULES_WS/.cursor/sw-memory/rules/"
+echo '{"memory":{"provider":"in-repo","inRepo":{"storeDir":".cursor/sw-memory"}}}' > "$RULES_WS/.cursor/workflow.config.json"
+export SW_WORKSPACE_ROOT="$RULES_WS"
 OUT_RULES=$(bash "$IN_REPO_RULES")
 if echo "$OUT_RULES" | jq -e '.ok == true and (.rules | map(select(.id=="allowlisted-rule")) | length) == 1' >/dev/null && \
    echo "$OUT_RULES" | jq -e '(.rules | map(select(.id=="unlisted-rule")) | length) == 1' >/dev/null && \
@@ -129,13 +129,13 @@ else
   echo "$OUT_RULES" | jq . 2>/dev/null || echo "$OUT_RULES"
   FAIL=1
 fi
-unset PF_WORKSPACE_ROOT
+unset SW_WORKSPACE_ROOT
 rm -rf "$RULES_WS"
 
 # Hook offline in-repo (marker + empty rules, greenfield)
 MARKER_WS=$(mktemp -d)
 cp -R "$FIX_MARKER/with-marker/.cursor" "$MARKER_WS/"
-mkdir -p "$MARKER_WS/.cursor/pf-memory/rules"
+mkdir -p "$MARKER_WS/.cursor/sw-memory/rules"
 OUT_HOOK=$(echo "{\"workspace_roots\":[\"$MARKER_WS\"]}" | python3 "$HOOK")
 if echo "$OUT_HOOK" | jq -e '.continue == true' >/dev/null; then
   echo "OK  hook offline in-repo marker continue=true"
@@ -159,8 +159,8 @@ fi
 REC_WS=$(mktemp -d)
 mkdir -p "$REC_WS/.cursor"
 echo '{"memory":{"provider":"recallium","project":"t","guardrails":{"enforceBeforeSubmit":true}}}' > "$REC_WS/.cursor/workflow.config.json"
-# Use rules-empty fixture via PF_RULES_SCRIPT for deterministic test
-OUT_REC=$(echo "{\"workspace_roots\":[\"$REC_WS\"]}" | PF_RULES_SCRIPT="$ROOT/scripts/test/fixtures/rules-empty.sh" python3 "$HOOK")
+# Use rules-empty fixture via SW_RULES_SCRIPT for deterministic test
+OUT_REC=$(echo "{\"workspace_roots\":[\"$REC_WS\"]}" | SW_RULES_SCRIPT="$ROOT/scripts/test/fixtures/rules-empty.sh" python3 "$HOOK")
 if echo "$OUT_REC" | jq -e '.continue == true' >/dev/null; then
   echo "OK  recallium config path preserved"
 else
@@ -172,10 +172,10 @@ rm -rf "$REC_WS"
 # --- U4: marker precedence ---
 PREC_WS=$(mktemp -d)
 mkdir -p "$PREC_WS/.cursor"
-echo 'in-repo' > "$PREC_WS/.cursor/pf-memory.provider"
+echo 'in-repo' > "$PREC_WS/.cursor/sw-memory.provider"
 echo '{"memory":{"provider":"recallium","project":"x","guardrails":{"enforceBeforeSubmit":true}}}' > "$PREC_WS/.cursor/workflow.config.json"
-mkdir -p "$PREC_WS/.cursor/pf-memory/rules"
-OUT_PREC=$(echo "{\"workspace_roots\":[\"$PREC_WS\"]}" | PF_RULES_SCRIPT="$ROOT/scripts/test/fixtures/rules-empty.sh" python3 "$HOOK")
+mkdir -p "$PREC_WS/.cursor/sw-memory/rules"
+OUT_PREC=$(echo "{\"workspace_roots\":[\"$PREC_WS\"]}" | SW_RULES_SCRIPT="$ROOT/scripts/test/fixtures/rules-empty.sh" python3 "$HOOK")
 if echo "$OUT_PREC" | jq -e '.continue == true' >/dev/null; then
   echo "OK  explicit config overrides marker (recallium path)"
 else
@@ -204,8 +204,8 @@ else
 fi
 
 # --- U5: sw-setup command ---
-if [[ -f "$PF_SETUP" ]] && grep -qi 'doctor' "$PF_SETUP" && grep -qi 'does not scaffold CI' "$PF_SETUP" && \
-   grep -qi 'does not' "$PF_SETUP" && grep -qi 'migrate' "$PF_SETUP"; then
+if [[ -f "$SW_SETUP" ]] && grep -qi 'doctor' "$SW_SETUP" && grep -qi 'does not scaffold CI' "$SW_SETUP" && \
+   grep -qi 'does not' "$SW_SETUP" && grep -qi 'migrate' "$SW_SETUP"; then
   echo "OK  sw-setup command scope + doctor mode"
 else
   echo "FAIL U5 sw-setup command"

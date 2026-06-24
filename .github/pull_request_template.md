@@ -6,7 +6,7 @@
 
 - [ ] PR **title** follows [Conventional Commits](https://www.conventionalcommits.org/) (becomes the squash commit subject)
 - [ ] Breaking changes use `!` in the title (e.g. `feat!: …`)
-- [ ] `core/` edits include regenerated `dist/` (`python3 -m pf generate --all`)
+- [ ] `core/` edits include regenerated `dist/` (`python3 -m sw generate --all`)
 - [ ] Fixture suites pass locally (or will pass in CI once enabled)
 
 ## Test plan

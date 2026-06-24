@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "platforms/descriptor.schema.json",
-  "title": "phase-flow platform capability descriptor (M0–M3)",
+  "title": "Shipwright platform capability descriptor (M0–M3)",
   "description": "M1-scoped capability vocabulary. Tier-2/transport values (wrapper, emulated, http, cli, etc.) are forward-declared in M4, not admitted here.",
   "type": "object",
   "additionalProperties": false,

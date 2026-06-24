@@ -1,7 +1,7 @@
 {
   "$schema": "../../../.sw/config.schema.json",
   "defaultBaseBranch": "main",
-  "stateFile": ".git/phase-flow.json",
+  "stateFile": ".git/shipwright.json",
   "agentsFile": "AGENTS.md",
   "prdsDir": "docs/prds",
   "tasksDir": "docs/prds",
@@ -16,7 +16,7 @@
     "project": "fixture-repo",
     "defaultScope": "project",
     "inRepo": {
-      "storeDir": ".cursor/pf-memory",
+      "storeDir": ".cursor/sw-memory",
       "commitMode": "committed"
     },
     "guardrails": {

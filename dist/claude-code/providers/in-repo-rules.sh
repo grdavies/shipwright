@@ -2,7 +2,7 @@
 # Executable in-repo rule-fetcher for hooks. Emits JSON to stdout.
 set -euo pipefail
 
-ROOT="${PF_WORKSPACE_ROOT:-$(pwd)}"
+ROOT="${SW_WORKSPACE_ROOT:-$(pwd)}"
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MAX_RULE_CHARS=2000
 
@@ -12,10 +12,10 @@ for p in "$ROOT/.cursor/workflow.config.json" "$ROOT/workflow.config.json"; do
 done
 
 provider="in-repo"
-store_dir=".cursor/pf-memory"
+store_dir=".cursor/sw-memory"
 if [ -n "$CONFIG" ] && jq -e . "$CONFIG" >/dev/null 2>&1; then
   provider="$(jq -r '.memory.provider // "in-repo"' "$CONFIG")"
-  store_dir="$(jq -r '.memory.inRepo.storeDir // ".cursor/pf-memory"' "$CONFIG")"
+  store_dir="$(jq -r '.memory.inRepo.storeDir // ".cursor/sw-memory"' "$CONFIG")"
 fi
 
 if [ "$provider" != "in-repo" ]; then

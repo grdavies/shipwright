@@ -1,4 +1,4 @@
-"""Capability-driven emitter base for phase-flow v2 platform trees."""
+"""Capability-driven emitter base for Shipwright platform trees."""
 
 from __future__ import annotations
 

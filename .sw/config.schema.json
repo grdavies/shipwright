@@ -9,7 +9,7 @@
     "defaultBaseBranch": { "type": "string", "default": "main" },
     "stateFile": {
       "type": "string",
-      "default": ".git/phase-flow.json",
+      "default": ".git/shipwright.json",
       "description": "Per-worktree workflow state file path (lives in the worktree gitdir)."
     },
     "agentsFile": { "type": "string", "default": "AGENTS.md" },
@@ -194,7 +194,7 @@
           "properties": {
             "storeDir": {
               "type": "string",
-              "default": ".cursor/pf-memory",
+              "default": ".cursor/sw-memory",
               "description": "Committed store root (memories/ and rules/ live beneath)."
             },
             "commitMode": {

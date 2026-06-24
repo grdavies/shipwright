@@ -10,7 +10,7 @@ bash -n "${BASH_SOURCE[0]}" || {
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TRIAGE="$ROOT/skills/triage/SKILL.md"
 DOC_REVIEW="$ROOT/skills/doc-review/SKILL.md"
-PF_DOC_REVIEW="$ROOT/commands/sw-doc-review.md"
+SW_DOC_REVIEW="$ROOT/commands/sw-doc-review.md"
 CODE_REVIEW_RULES="$ROOT/rules/code-review-automation.mdc"
 FIXTURES="$ROOT/scripts/test/fixtures/persona-selection"
 WORKFLOW_CONFIG="$ROOT/.cursor/workflow.config.json"
@@ -47,13 +47,13 @@ else
 fi
 
 # --- U2: sw-doc-review command matches signal-driven model ---
-if grep -qi 'signal-driven' "$PF_DOC_REVIEW" && \
-   grep -qi 'activation record' "$PF_DOC_REVIEW" && \
-   grep -qi 'five-persona always-on core' "$PF_DOC_REVIEW" && \
-   grep -q '\-\-personas' "$PF_DOC_REVIEW" && \
-   grep -q '\-\-all' "$PF_DOC_REVIEW" && \
-   ! grep -qi 'seven personas in parallel' "$PF_DOC_REVIEW" && \
-   ! grep -qi 'coherence \+ scope-guardian minimum' "$PF_DOC_REVIEW"; then
+if grep -qi 'signal-driven' "$SW_DOC_REVIEW" && \
+   grep -qi 'activation record' "$SW_DOC_REVIEW" && \
+   grep -qi 'five-persona always-on core' "$SW_DOC_REVIEW" && \
+   grep -q '\-\-personas' "$SW_DOC_REVIEW" && \
+   grep -q '\-\-all' "$SW_DOC_REVIEW" && \
+   ! grep -qi 'seven personas in parallel' "$SW_DOC_REVIEW" && \
+   ! grep -qi 'coherence \+ scope-guardian minimum' "$SW_DOC_REVIEW"; then
   echo "OK  sw-doc-review: core + signal-gated model (no tier persona counts)"
 else
   echo "FAIL sw-doc-review command wording"

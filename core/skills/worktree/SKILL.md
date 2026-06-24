@@ -21,7 +21,7 @@ pool, records scaffold + tier in per-worktree state (`skills/phase-state`).
 ```bash
 bash scripts/worktree.sh list
 bash scripts/worktree.sh list --json   # includes per-worktree state snapshot
-bash scripts/worktree.sh ceiling-check  # pfWorktrees count (main excluded) + verdict
+bash scripts/worktree.sh ceiling-check  # swWorktrees count (main excluded) + verdict
 ```
 
 ## Teardown (safe-by-construction)

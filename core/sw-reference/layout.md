@@ -127,7 +127,7 @@ Amendment body is **delta-only** — parent file is never edited.
 - **Frozen:** brainstorms, PRDs, task lists, amendments — immutable after `/sw-freeze`; change only via new amendments.
 - **Living:** `INDEX.md`, `COMPLETION-LOG.md` — updated as work progresses; never frozen.
 - **Gap backlog:** `GAP-BACKLOG.md` — committed, append-only, hand-appendable; not frozen, not git-derived.
-- **Generated install trees:** `dist/cursor/` and `dist/claude-code/` — committed outputs of `python3 -m pf generate`; edit `core/` then regenerate (freshness gate in `scripts/test/run-emitter-fixtures.sh`). Not hand-edited except via emitter changes.
+- **Generated install trees:** `dist/cursor/` and `dist/claude-code/` — committed outputs of `python3 -m sw generate`; edit `core/` then regenerate (freshness gate in `scripts/test/run-emitter-fixtures.sh`). Not hand-edited except via emitter changes.
 
 ## Config keys
 

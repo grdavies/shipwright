@@ -125,8 +125,8 @@ fi
 # --- spec-rigor: decision record pass ---
 SPEC_RIGOR_CHECK="$ROOT/scripts/spec-rigor-check.sh"
 FIX_DECISION="$ROOT/scripts/test/fixtures"
-PF_FREEZE="$ROOT/commands/sw-freeze.md"
-PF_PRD="$ROOT/commands/sw-prd.md"
+SW_FREEZE="$ROOT/commands/sw-freeze.md"
+SW_PRD="$ROOT/commands/sw-prd.md"
 
 set +e
 OUT_DEC=$(bash "$SPEC_RIGOR_CHECK" --artifact decision --path "$FIX_DECISION/decision-record-pass.md" --tier full 2>/dev/null)
@@ -151,15 +151,15 @@ else
 fi
 
 # --- U1: sw-prd --type decision + sw-freeze routing ---
-if grep -q '\-\-type decision' "$PF_PRD" && grep -q 'docs/decisions/<n>-<slug>.md' "$PF_PRD"; then
+if grep -q '\-\-type decision' "$SW_PRD" && grep -q 'docs/decisions/<n>-<slug>.md' "$SW_PRD"; then
   echo "OK  sw-prd documents --type decision path"
 else
   echo "FAIL sw-prd missing --type decision contract"
   FAIL=1
 fi
 
-if grep -q '\-\-artifact decision' "$PF_FREEZE" && grep -q 'docs/decisions/INDEX.md' "$PF_FREEZE" && \
-   grep -q 'No task list generation' "$PF_FREEZE"; then
+if grep -q '\-\-artifact decision' "$SW_FREEZE" && grep -q 'docs/decisions/INDEX.md' "$SW_FREEZE" && \
+   grep -q 'No task list generation' "$SW_FREEZE"; then
   echo "OK  sw-freeze routes decision rigor + INDEX (no tasks)"
 else
   echo "FAIL sw-freeze decision freeze contract"
@@ -211,10 +211,10 @@ else
 fi
 
 # --- U2: decision-record doc-review routing ---
-PF_DOC_REVIEW="$ROOT/commands/sw-doc-review.md"
+SW_DOC_REVIEW="$ROOT/commands/sw-doc-review.md"
 DOC_REVIEW_SKILL="$ROOT/skills/doc-review/SKILL.md"
 
-if grep -q 'docs/decisions/<n>-<slug>.md' "$PF_DOC_REVIEW" && grep -q 'all seven' "$PF_DOC_REVIEW"; then
+if grep -q 'docs/decisions/<n>-<slug>.md' "$SW_DOC_REVIEW" && grep -q 'all seven' "$SW_DOC_REVIEW"; then
   echo "OK  sw-doc-review routes decision drafts to Full panel"
 else
   echo "FAIL sw-doc-review decision draft routing"

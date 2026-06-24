@@ -17,8 +17,8 @@ run_hook() {
   local expect_continue="$2"
   local label="$3"
   local workspace="${4:-}"
-  export PF_RULES_SCRIPT="$rules_script"
-  unset PF_TEST_SUBMIT_RAISE
+  export SW_RULES_SCRIPT="$rules_script"
+  unset SW_TEST_SUBMIT_RAISE
   local stdin_payload='{}'
   if [ -n "$workspace" ]; then
     stdin_payload='{"workspace_roots":["'"$workspace"'"]}'
@@ -47,7 +47,7 @@ run_claude_submit() {
   local expect_block="$2"
   local label="$3"
   local workspace="${4:-}"
-  export PF_RULES_SCRIPT="$rules_script"
+  export SW_RULES_SCRIPT="$rules_script"
   set +e
   out=$(python3 "$CLAUDE_SUBMIT" "$workspace")
   ec=$?
@@ -82,7 +82,7 @@ echo '{"memory":{"guardrails":{"enforceBeforeSubmit":true}}}' > "$TMP_WS/.cursor
 run_hook "$FIX/rules-fail.sh" false "provider-unreachable" "$TMP_WS" || FAIL=1
 run_claude_submit "$FIX/rules-fail.sh" true "claude-provider-unreachable" "$TMP_WS" || FAIL=1
 
-out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
+out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | SW_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
 cont=$(echo "$out" | jq -r '.continue')
 if [ "$cont" = "true" ]; then
   echo "OK  greenfield-empty-rules continue=true"
@@ -93,7 +93,7 @@ fi
 run_claude_submit "$FIX/rules-empty.sh" false "claude-greenfield-empty-rules" "$TMP_WS" || FAIL=1
 
 echo '{"memory":{"guardrails":{"requireRuleClass":true,"enforceBeforeSubmit":true}}}' > "$TMP_WS/.cursor/workflow.config.json"
-out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
+out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | SW_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
 cont=$(echo "$out" | jq -r '.continue')
 if [ "$cont" = "false" ]; then
   echo "OK  strict-require-rule-class continue=false"
@@ -103,7 +103,7 @@ else
 fi
 
 UNCONFIGURED_WS="$(mktemp -d "${TMPDIR:-/tmp}/sw-hook-unconf.XXXXXX")"
-out=$(echo '{"workspace_roots":["'"$UNCONFIGURED_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
+out=$(echo '{"workspace_roots":["'"$UNCONFIGURED_WS"'"]}' | SW_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
 cont=$(echo "$out" | jq -r '.continue')
 if [ "$cont" = "true" ]; then
   echo "OK  unconfigured-repo continue=true"
@@ -114,7 +114,7 @@ fi
 rm -rf "$UNCONFIGURED_WS"
 
 echo '{"memory":{"guardrails":{"enforceBeforeSubmit":false}}}' > "$TMP_WS/.cursor/workflow.config.json"
-out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
+out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | SW_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
 cont=$(echo "$out" | jq -r '.continue')
 if [ "$cont" = "true" ]; then
   echo "OK  enforce-disabled continue=true"
@@ -124,7 +124,7 @@ else
 fi
 
 echo '{"memory":{"guardrails":{"enforceBeforeSubmit":true}}}' > "$TMP_WS/.cursor/workflow.config.json"
-out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-ok.sh" python3 "$HOOK")
+out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | SW_RULES_SCRIPT="$FIX/rules-ok.sh" python3 "$HOOK")
 cont=$(echo "$out" | jq -r '.continue')
 if [ "$cont" = "true" ]; then
   echo "OK  rules-present continue=true"
@@ -134,8 +134,8 @@ else
 fi
 run_claude_submit "$FIX/rules-ok.sh" false "claude-rules-present" "$TMP_WS" || FAIL=1
 
-echo 'not-json' > "$TMP_WS/.cursor/pf-memory-rule-allowlist.json"
-out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-ok.sh" python3 "$HOOK")
+echo 'not-json' > "$TMP_WS/.cursor/sw-memory-rule-allowlist.json"
+out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | SW_RULES_SCRIPT="$FIX/rules-ok.sh" python3 "$HOOK")
 cont=$(echo "$out" | jq -r '.continue')
 if [ "$cont" = "false" ]; then
   echo "OK  corrupt-allowlist continue=false"
@@ -144,7 +144,7 @@ else
   FAIL=1
 fi
 
-out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | PF_TEST_SUBMIT_RAISE=1 python3 "$HOOK")
+out=$(echo '{"workspace_roots":["'"$TMP_WS"'"]}' | SW_TEST_SUBMIT_RAISE=1 python3 "$HOOK")
 cont=$(echo "$out" | jq -r '.continue')
 if [ "$cont" = "false" ]; then
   echo "OK  catch-all-exception cursor continue=false"
@@ -153,9 +153,9 @@ else
   FAIL=1
 fi
 
-export PF_TEST_SUBMIT_RAISE=1
+export SW_TEST_SUBMIT_RAISE=1
 run_claude_submit "$FIX/rules-ok.sh" true "claude-catch-all-exception" "$TMP_WS" || FAIL=1
-unset PF_TEST_SUBMIT_RAISE
+unset SW_TEST_SUBMIT_RAISE
 
 session_out=$(python3 "$CLAUDE_SESSION" "$TMP_WS")
 if echo "$session_out" | jq -e '.hookSpecificOutput.additionalContext | length > 0' >/dev/null; then

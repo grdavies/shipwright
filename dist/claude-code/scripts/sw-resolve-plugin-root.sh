@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Resolve plugin content root for workflow scripts (dist install, core authoring, legacy root).
-pf_resolve_plugin_root() {
+sw_resolve_plugin_root() {
   local script_dir="${1:?script_dir required}"
   local parent
   parent="$(cd "$script_dir/.." && pwd)"

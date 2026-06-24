@@ -19,8 +19,8 @@ restore_config() {
 
 run_case() {
   local name="$1" fixture="$2" expect_ec="$3" expect_verdict="$4"
-  export PF_GATE_FIXTURE="$fixture"
-  export PF_GATE_NOW=1577838000
+  export SW_GATE_FIXTURE="$fixture"
+  export SW_GATE_NOW=1577838000
   set +e
   OUT=$(PATH="$(dirname "$STUB"):$PATH" bash "$GATE" 42 2>/dev/null)
   EC=$?
@@ -69,8 +69,8 @@ cat > "$CONFIG_PATH" <<'CFG'
   "checks": { "treatNeutralAsPass": true, "neutralAllowlist": [] }
 }
 CFG
-export PF_GATE_FIXTURE=green
-export PF_GATE_NOW=1577838000
+export SW_GATE_FIXTURE=green
+export SW_GATE_NOW=1577838000
 OUT=$(bash "$GATE" 42 2>/dev/null) || EC=$?
 EC=${EC:-$?}
 VERDICT=$(echo "$OUT" | jq -r .verdict)
@@ -89,8 +89,8 @@ cat > "$CONFIG_PATH" <<'CFG'
   "checks": { "treatNeutralAsPass": true, "neutralAllowlist": [] }
 }
 CFG
-export PF_GATE_FIXTURE=unconfigured
-export PF_GATE_NOW=1577838000
+export SW_GATE_FIXTURE=unconfigured
+export SW_GATE_NOW=1577838000
 unset EC
 OUT=$(bash "$GATE" 42 2>/dev/null) || EC=$?
 EC=${EC:-$?}

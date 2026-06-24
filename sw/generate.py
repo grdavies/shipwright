@@ -1,4 +1,4 @@
-"""pf CLI — minimal generation entrypoint (M0–M3)."""
+"""sw CLI — minimal generation entrypoint (M0–M3)."""
 
 from __future__ import annotations
 
@@ -26,13 +26,13 @@ def _discover_platforms() -> list[str]:
 def _load_emitter_module(platform: str):
     emitter_path = PLATFORMS_ROOT / platform / "emitter.py"
     if not emitter_path.is_file():
-        raise SystemExit(f"pf generate: no emitter for platform '{platform}' at {emitter_path}")
-    spec = importlib.util.spec_from_file_location(f"pf_emitter_{platform}", emitter_path)
+        raise SystemExit(f"sw generate: no emitter for platform '{platform}' at {emitter_path}")
+    spec = importlib.util.spec_from_file_location(f"sw_emitter_{platform}", emitter_path)
     if spec is None or spec.loader is None:
-        raise SystemExit(f"pf generate: failed to load emitter module for {platform}")
+        raise SystemExit(f"sw generate: failed to load emitter module for {platform}")
     mod = importlib.util.module_from_spec(spec)
     sys.path.insert(0, str(emitter_path.parent))
-    sys.path.insert(0, str(REPO_ROOT / "pf"))
+    sys.path.insert(0, str(REPO_ROOT / "sw"))
     spec.loader.exec_module(mod)
     return mod
 
@@ -42,13 +42,13 @@ def generate_platform(platform: str, *, core_root: Path | None = None, dest_root
     dest = (dest_root or DIST_ROOT) / platform
     mod = _load_emitter_module(platform)
     if not hasattr(mod, "emit"):
-        raise SystemExit(f"pf generate: emitter for {platform} missing emit()")
+        raise SystemExit(f"sw generate: emitter for {platform} missing emit()")
     mod.emit(core, REPO_ROOT, dest)
     return dest
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="pf", description="phase-flow v2 platform generator")
+    parser = argparse.ArgumentParser(prog="sw", description="Shipwright platform generator")
     sub = parser.add_subparsers(dest="command", required=True)
     gen = sub.add_parser("generate", help="Emit dist/<platform>/ from core/")
     gen.add_argument("platform", nargs="?", help="Platform id (e.g. cursor, claude-code)")
@@ -64,7 +64,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.all:
         platforms = _discover_platforms()
         if not platforms:
-            print("pf generate --all: no platform emitters found", file=sys.stderr)
+            print("sw generate --all: no platform emitters found", file=sys.stderr)
             return 1
     elif args.platform:
         platforms = [args.platform]
@@ -74,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
 
     for platform in platforms:
         out = generate_platform(platform, core_root=args.core, dest_root=args.dest)
-        print(f"pf generate: wrote {out}")
+        print(f"sw generate: wrote {out}")
     return 0
 
 

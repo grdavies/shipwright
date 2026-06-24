@@ -8,8 +8,8 @@ GATE="$ROOT/scripts/code-review-gate.sh"
 APPLY_CHECK="$ROOT/scripts/code-review-apply-check.sh"
 FIX="$ROOT/scripts/test/fixtures/code-review"
 SCHEMA="$ROOT/.sw/config.schema.json"
-PF_REVIEW="$ROOT/commands/sw-review.md"
-PF_SHIP="$ROOT/commands/sw-ship.md"
+SW_REVIEW="$ROOT/commands/sw-review.md"
+SW_SHIP="$ROOT/commands/sw-ship.md"
 CODE_REVIEW_RULES="$ROOT/rules/code-review-automation.mdc"
 SEQUENCING="$ROOT/rules/sw-workflow-sequencing.mdc"
 CE_ADAPTER="$ROOT/providers/code-review/ce-code-review.md"
@@ -130,18 +130,18 @@ else
 fi
 
 # --- U3: two-phase sw-review procedure ---
-if grep -qi 'phase 1' "$PF_REVIEW" && grep -qi 'phase 2' "$PF_REVIEW" && \
-   grep -q 'review.local' "$PF_REVIEW" && grep -q 'ce-code-review' "$PF_REVIEW" && \
-   grep -q 'sw-review.status.json' "$PF_REVIEW" && \
-   grep -qi 'CI gate' "$PF_REVIEW" && \
-   grep -q 'rm -rf' "$PF_REVIEW" && grep -q 'memory-redact.sh' "$PF_REVIEW"; then
+if grep -qi 'phase 1' "$SW_REVIEW" && grep -qi 'phase 2' "$SW_REVIEW" && \
+   grep -q 'review.local' "$SW_REVIEW" && grep -q 'ce-code-review' "$SW_REVIEW" && \
+   grep -q 'sw-review.status.json' "$SW_REVIEW" && \
+   grep -qi 'CI gate' "$SW_REVIEW" && \
+   grep -q 'rm -rf' "$SW_REVIEW" && grep -q 'memory-redact.sh' "$SW_REVIEW"; then
   echo "OK  sw-review two-phase + persist edges"
 else
   echo "FAIL U3 sw-review procedure"
   FAIL=1
 fi
 
-if grep -qi 'skill not available' "$PF_REVIEW" && grep -qi 'fail-closed' "$CAPS"; then
+if grep -qi 'skill not available' "$SW_REVIEW" && grep -qi 'fail-closed' "$CAPS"; then
   echo "OK  soft-dependency skip documented"
 else
   echo "FAIL U3 skip path"
@@ -223,7 +223,7 @@ else
   FAIL=1
 fi
 
-if grep -q 'sw-local-review-gate-result' "$PF_SHIP" && grep -qi 'halt' "$PF_SHIP"; then
+if grep -q 'sw-local-review-gate-result' "$SW_SHIP" && grep -qi 'halt' "$SW_SHIP"; then
   echo "OK  sw-ship local review halt stop condition"
 else
   echo "FAIL U4 sw-ship halt"

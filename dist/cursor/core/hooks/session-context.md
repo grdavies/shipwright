@@ -5,7 +5,7 @@ adapter.
 
 ## Per-worktree state (R38)
 
-Workflow state lives in each worktree's gitdir (`.git/worktrees/<name>/phase-flow.json` for linked
+Workflow state lives in each worktree's gitdir (`.git/worktrees/<name>/shipwright.json` for linked
 worktrees). Repo-level index is derived at read-time via `git worktree list` — no shared mutable index file.
 
 ## Communication style (always active)

@@ -40,14 +40,14 @@ Offer:
 
 For **in-repo**:
 
-- Write `.cursor/pf-memory.provider` containing `in-repo` (per-repo marker for zero-config guardrails).
+- Write `.cursor/sw-memory.provider` containing `in-repo` (per-repo marker for zero-config guardrails).
 - Ensure store layout exists (empty — no auto-seed):
 
   ```bash
-  mkdir -p .cursor/pf-memory/memories .cursor/pf-memory/rules
+  mkdir -p .cursor/sw-memory/memories .cursor/sw-memory/rules
   ```
 
-- Ask **commit mode**: `committed` (default, PR-reviewable) or `local` (gitignore `.cursor/pf-memory-local/`).
+- Ask **commit mode**: `committed` (default, PR-reviewable) or `local` (gitignore `.cursor/sw-memory-local/`).
 
 For **recallium**: verify reachability (`curl -fsS --max-time 3 <restBaseUrl>/health` or equivalent); warn if
 unreachable but still allow save.
@@ -81,7 +81,7 @@ Detect and recommend (never hard-fail scaffold):
 
 **Doctor repair examples:**
 
-- Missing `.cursor/pf-memory/memories` → create dirs.
+- Missing `.cursor/sw-memory/memories` → create dirs.
 - Stale `memory.provider` with unreachable Recallium → suggest switch to in-repo or fix URL.
 - Invalid unknown keys → strip or fix per schema.
 
@@ -113,7 +113,7 @@ Print tip: "Tip: add docs/ to .gitignore to keep workflow artifacts local (brain
 - Never auto-seed `category: rule` files (R42).
 - Rule-class promotion remains human-gated via `/sw-memory-audit` + allowlist.
 - Redaction chokepoint (`scripts/memory-redact.sh`) applies to all in-repo writes — setup does not bypass it.
-- Per-repo marker (`.cursor/pf-memory.provider`) is committed; global installs on unrelated workspaces without
+- Per-repo marker (`.cursor/sw-memory.provider`) is committed; global installs on unrelated workspaces without
   marker still pass through guardrails unchanged.
 
 ## Fresh-install zero-config path
@@ -121,9 +121,9 @@ Print tip: "Tip: add docs/ to .gitignore to keep workflow artifacts local (brain
 A repo can commit only:
 
 ```
-.cursor/pf-memory.provider   # contains: in-repo
-.cursor/pf-memory/memories/  # empty
-.cursor/pf-memory/rules/     # empty
+.cursor/sw-memory.provider   # contains: in-repo
+.cursor/sw-memory/memories/  # empty
+.cursor/sw-memory/rules/     # empty
 ```
 
 …without `workflow.config.json`. The fail-closed hook engages via the marker; run `/sw-setup` to customize.

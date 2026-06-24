@@ -11,8 +11,8 @@ Phase context lives in the **worktree gitdir**, not a shared repo-global file.
 
 | Checkout | State path |
 | --- | --- |
-| Linked worktree | `.git/worktrees/<name>/phase-flow.json` (via `git rev-parse --git-dir`) |
-| Main / bare | `<git-dir>/phase-flow.json` |
+| Linked worktree | `.git/worktrees/<name>/shipwright.json` (via `git rev-parse --git-dir`) |
+| Main / bare | `<git-dir>/shipwright.json` |
 
 Resolve with:
 
@@ -50,5 +50,5 @@ bash scripts/phase-state.sh index   # read-only aggregate — never write a shar
 ## Guardrails
 
 - Commands read/write state only through this contract.
-- Never commit `phase-flow.json` or memory-sync markers.
+- Never commit `shipwright.json` or memory-sync markers.
 - Two worktrees must never share or overwrite each other's state file.

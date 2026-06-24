@@ -3,20 +3,20 @@
 # Reads context from env (set by check-gate.sh); prints normalized JSON to stdout.
 set -euo pipefail
 
-: "${PF_PR:?}"
-: "${PF_HEAD_SHA:?}"
-: "${PF_OWNER_REPO:?}"
-: "${PF_CHECKS_FILE:?}"
-: "${PF_ISSUE_COMMENTS_FILE:?}"
-: "${PF_GRACE_MIN:=15}"
+: "${SW_PR:?}"
+: "${SW_HEAD_SHA:?}"
+: "${SW_OWNER_REPO:?}"
+: "${SW_CHECKS_FILE:?}"
+: "${SW_ISSUE_COMMENTS_FILE:?}"
+: "${SW_GRACE_MIN:=15}"
 
-OWNER="${PF_OWNER:-${PF_OWNER_REPO%/*}}"
-REPO="${PF_REPO:-${PF_OWNER_REPO#*/}}"
-PR="$PF_PR"
-HEAD_SHA="$PF_HEAD_SHA"
-CHECKS="$PF_CHECKS_FILE"
-ISSUE_COMMENTS="$PF_ISSUE_COMMENTS_FILE"
-GRACE_MIN="$PF_GRACE_MIN"
+OWNER="${SW_OWNER:-${SW_OWNER_REPO%/*}}"
+REPO="${SW_REPO:-${SW_OWNER_REPO#*/}}"
+PR="$SW_PR"
+HEAD_SHA="$SW_HEAD_SHA"
+CHECKS="$SW_CHECKS_FILE"
+ISSUE_COMMENTS="$SW_ISSUE_COMMENTS_FILE"
+GRACE_MIN="$SW_GRACE_MIN"
 
 CR_STATUS="$(jq -r 'first(.[]|select(.name|test("coderabbit";"i"))|.state) // "absent"' "$CHECKS" 2>/dev/null || echo absent)"
 
@@ -27,7 +27,7 @@ if [ -n "$OWNER" ] && [ -n "$REPO" ]; then
   CR_REVIEWED_HEAD="$(jq -r '[.data.repository.pullRequest.reviews.nodes[]?|select(.author.login|test("coderabbit";"i"))]|(sort_by(.submittedAt)|last|.commit.oid // "")' <<<"$REVIEWS" 2>/dev/null || echo "")"
 fi
 
-gh api "repos/$PF_OWNER_REPO/issues/$PR/comments" --paginate > "$ISSUE_COMMENTS" 2>/dev/null || true
+gh api "repos/$SW_OWNER_REPO/issues/$PR/comments" --paginate > "$ISSUE_COMMENTS" 2>/dev/null || true
 [ -s "$ISSUE_COMMENTS" ] || echo '[]' > "$ISSUE_COMMENTS"
 CR_MARKER=0
 CR_SKIP=0
@@ -51,8 +51,8 @@ CR_INSTALLED=false
 [ "$CR_SKIP" -eq 1 ] && CR_INSTALLED=true
 [ "$CR_DONE" -eq 1 ] && CR_INSTALLED=true
 
-HEAD_TIME="$(gh api "repos/$PF_OWNER_REPO/commits/$HEAD_SHA" --jq '.commit.committer.date' 2>/dev/null | { read -r d; [ -n "$d" ] && { date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$d" +%s 2>/dev/null || date -u -d "$d" +%s 2>/dev/null; } || echo 0; })"
-NOW="${PF_GATE_NOW:-$(date +%s)}"
+HEAD_TIME="$(gh api "repos/$SW_OWNER_REPO/commits/$HEAD_SHA" --jq '.commit.committer.date' 2>/dev/null | { read -r d; [ -n "$d" ] && { date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$d" +%s 2>/dev/null || date -u -d "$d" +%s 2>/dev/null; } || echo 0; })"
+NOW="${SW_GATE_NOW:-$(date +%s)}"
 MINS_SINCE=0
 [ "${HEAD_TIME:-0}" -gt 0 ] && MINS_SINCE=$(( (NOW - HEAD_TIME) / 60 ))
 

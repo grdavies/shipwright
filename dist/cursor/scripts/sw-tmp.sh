@@ -3,7 +3,7 @@
 #
 # Usage:
 #   sw-tmp.sh init              Create 0700 run dir; record in phase-state; print path
-#   sw-tmp.sh resolve           Print run dir ($PF_RUN_DIR → phase-state → empty)
+#   sw-tmp.sh resolve           Print run dir ($SW_RUN_DIR → phase-state → empty)
 #   sw-tmp.sh clean [max_age_s] Remove stale caller-owned sw-run.* dirs (default 86400)
 set -euo pipefail
 
@@ -43,8 +43,8 @@ cmd_init() {
 
 cmd_resolve() {
   local dir=""
-  if [[ -n "${PF_RUN_DIR:-}" ]]; then
-    dir="$PF_RUN_DIR"
+  if [[ -n "${SW_RUN_DIR:-}" ]]; then
+    dir="$SW_RUN_DIR"
   else
     dir="$("$PHASE_STATE" read 2>/dev/null | jq -r '.runDir // empty' 2>/dev/null || true)"
   fi

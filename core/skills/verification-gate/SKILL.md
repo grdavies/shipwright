@@ -81,8 +81,8 @@ Capture baseline **before** the change (merge base or pre-change head) at a **ca
 ```bash
 bash scripts/verify-baseline.sh capture \
   --from "$RUN_DIR/sw-verify.status.json" \
-  --to .phase-flow/baseline.verify.json \
-  [--gate-from gate.json --gate-to .phase-flow/baseline.gate.json]
+  --to .shipwright/baseline.verify.json \
+  [--gate-from gate.json --gate-to .shipwright/baseline.gate.json]
 ```
 
 Attribution compares per-command identity sets when `commands[]` is present (sorted `{name, status}`); legacy

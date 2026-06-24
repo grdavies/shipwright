@@ -2,7 +2,7 @@
 # Playwright E2E verify adapter — runs when playwright config exists.
 set -euo pipefail
 
-ROOT="${PF_VERIFY_ROOT:-.}"
+ROOT="${SW_VERIFY_ROOT:-.}"
 LOG="${TMPDIR:-/tmp}/sw-verify.e2e.log"
 cd "$ROOT"
 
@@ -24,7 +24,7 @@ if ! $has_pw; then
   exit 0
 fi
 
-ROUTES="${PF_E2E_ROUTES:-[]}"
+ROUTES="${SW_E2E_ROUTES:-[]}"
 CMD=(npx playwright test)
 FIRST_ROUTE="$(echo "$ROUTES" | jq -r '.[0] // empty' 2>/dev/null || true)"
 if [[ -n "$FIRST_ROUTE" ]]; then

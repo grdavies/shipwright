@@ -12,7 +12,7 @@ from guardrail_core import (
     evaluate_stop_sync,
     evaluate_submit_guard,
 )
-from pf_hook_util import read_stdin_json, workspace_root
+from sw_hook_util import read_stdin_json, workspace_root
 
 
 def plugin_root(repo_root: Path) -> Path:
@@ -30,7 +30,7 @@ def run_session_start(repo_root: Path) -> int:
         print(json.dumps({"additional_context": context}, ensure_ascii=False))
         return 0
     except Exception as exc:  # noqa: BLE001 — session hook is fail-open
-        print(json.dumps({"additional_context": f"(phase-flow v2 hook degraded: {exc})"}))
+        print(json.dumps({"additional_context": f"(Shipwright hook degraded: {exc})"}))
         return 0
 
 
@@ -43,7 +43,7 @@ def run_before_submit(repo_root: Path) -> int:
         return 0
     except Exception as exc:  # noqa: BLE001 — submit hook is fail-closed
         _emit_submit_result(
-            SubmitGuardResult(allow=False, message=f"phase-flow v2 guardrail hook error: {exc}")
+            SubmitGuardResult(allow=False, message=f"Shipwright guardrail hook error: {exc}")
         )
         return 0
 
@@ -77,7 +77,7 @@ def run_before_submit_from_payload(repo_root: Path, payload: dict) -> SubmitGuar
     try:
         return evaluate_submit_guard(root, plugin_root(repo_root))
     except Exception as exc:  # noqa: BLE001
-        return SubmitGuardResult(allow=False, message=f"phase-flow v2 guardrail hook error: {exc}")
+        return SubmitGuardResult(allow=False, message=f"Shipwright guardrail hook error: {exc}")
 
 
 def emit_before_submit_stdout(result: SubmitGuardResult) -> str:

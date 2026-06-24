@@ -1,7 +1,7 @@
 {
   "$schema": "config.schema.json",
   "defaultBaseBranch": "main",
-  "stateFile": ".git/phase-flow.json",
+  "stateFile": ".git/shipwright.json",
   "agentsFile": "AGENTS.md",
   "prdsDir": "docs/prds",
   "decisionsDir": "docs/decisions",
@@ -70,7 +70,7 @@
     "project": "my-project",
     "defaultScope": "project",
     "inRepo": {
-      "storeDir": ".cursor/pf-memory",
+      "storeDir": ".cursor/sw-memory",
       "commitMode": "committed"
     },
     "connection": {
