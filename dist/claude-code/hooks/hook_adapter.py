@@ -24,10 +24,17 @@ def _hook_event(payload: dict) -> str:
     return str(name)
 
 
+def _session_context_template(repo_root: Path) -> Path:
+    template = repo_root / "hooks" / "session-context.md"
+    if template.is_file():
+        return template
+    return repo_root / "core" / "hooks" / "session-context.md"
+
+
 def run_session_start(repo_root: Path) -> int:
     payload = read_stdin_json()
     root = workspace_root(payload)
-    template = repo_root / "hooks" / "session-context.md"
+    template = _session_context_template(repo_root)
     try:
         context = build_session_context(root, plugin_root(repo_root), template)
         print(
@@ -99,7 +106,7 @@ def dispatch(repo_root: Path) -> int:
 
 def _run_session_with_payload(repo_root: Path, payload: dict) -> int:
     root = workspace_root(payload)
-    template = repo_root / "hooks" / "session-context.md"
+    template = _session_context_template(repo_root)
     try:
         context = build_session_context(root, plugin_root(repo_root), template)
         print(
