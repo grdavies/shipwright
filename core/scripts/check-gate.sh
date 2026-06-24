@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deterministic phase-flow v2 CI readiness gate.
+# Deterministic Shipwright CI readiness gate.
 #
 # Prints a single JSON verdict to stdout and never mutates anything. Canonical computation behind the
 # `checks-gate` skill — `/sw-watch-ci` and stabilize invoke it instead of ad-hoc `gh` calls.

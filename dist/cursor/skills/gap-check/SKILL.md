@@ -14,7 +14,7 @@ Catches planned vs actual before commit.
 - **Actual:** diff against per-worktree `parentBranch`:
 
 ```bash
-PARENT=$(bash scripts/phase-state.sh read | jq -r .parentBranch)
+PARENT=$(bash scripts/shipwright-state.sh read | jq -r .parentBranch)
 git diff --stat "$PARENT"...HEAD
 git diff "$PARENT"...HEAD
 ```

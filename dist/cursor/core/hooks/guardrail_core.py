@@ -1,4 +1,4 @@
-"""Platform-neutral guardrail decisions for phase-flow v2 hooks."""
+"""Platform-neutral guardrail decisions for Shipwright hooks."""
 
 from __future__ import annotations
 
@@ -100,17 +100,17 @@ def provider_unreachable_message(provider: str | None) -> str:
     name = provider or "memory"
     if provider == "recallium":
         return (
-            "phase-flow v2: cannot reach Recallium to load rule-class guardrails. "
+            "Shipwright: cannot reach Recallium to load rule-class guardrails. "
             "Fix Recallium connectivity or set memory.connection.restBaseUrl (localhost only), then retry. "
             "(Credentials are env-sourced — never committed config.)"
         )
     if provider == "in-repo":
         return (
-            "phase-flow v2: in-repo rules adapter failed to load rule-class guardrails from disk. "
+            "Shipwright: in-repo rules adapter failed to load rule-class guardrails from disk. "
             "Check .cursor/sw-memory/rules/ and run /sw-setup to validate the store."
         )
     return (
-        f"phase-flow v2: cannot load rule-class guardrails for provider '{name}'. "
+        f"Shipwright: cannot load rule-class guardrails for provider '{name}'. "
         "Fix memory provider configuration or run /sw-setup, then retry."
     )
 
@@ -143,7 +143,7 @@ def evaluate_submit_guard(root: Path, plugin_root: Path) -> SubmitGuardResult:
         return SubmitGuardResult(
             allow=False,
             message=(
-                "phase-flow v2: sw-memory-rule-allowlist.json is corrupt. "
+                "Shipwright: sw-memory-rule-allowlist.json is corrupt. "
                 "Fix or remove the file, then retry."
             ),
         )
@@ -154,7 +154,7 @@ def evaluate_submit_guard(root: Path, plugin_root: Path) -> SubmitGuardResult:
         return SubmitGuardResult(
             allow=False,
             message=(
-                "phase-flow v2: this repo requires at least one allowlisted rule-class guardrail "
+                "Shipwright: this repo requires at least one allowlisted rule-class guardrail "
                 "(memory.guardrails.requireRuleClass is true) but none are confirmed. "
                 "Promote rules via /sw-memory-audit and update .cursor/sw-memory-rule-allowlist.json, "
                 "or set requireRuleClass to false for greenfield/bootstrap repos."
@@ -200,7 +200,7 @@ def _setup_hint(root: Path) -> str | None:
             "providers, guardrails, and review settings."
         )
     return (
-        "\n> **Tip:** Run `/sw-setup` to configure phase-flow providers, guardrails, and memory for this repo."
+        "\n> **Tip:** Run `/sw-setup` to configure Shipwright providers, guardrails, and memory for this repo."
     )
 
 
@@ -235,7 +235,7 @@ def build_session_context(root: Path, plugin_root: Path, context_template: Path)
     try:
         parts.append(context_template.read_text(encoding="utf-8").strip())
     except OSError:
-        parts.append("This repo uses the phase-flow v2 workflow plugin.")
+        parts.append("This repo uses the Shipwright workflow plugin.")
 
     config = load_config(root)
     memory = memory_binding(config, root)

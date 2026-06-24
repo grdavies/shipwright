@@ -30,15 +30,15 @@ There is **no unfreeze** command.
 ## sw-naming
 
 ---
-description: sw- command namespace, orchestrator vs atomic boundaries, and naming conventions for phase-flow v2.
+description: sw- command namespace, orchestrator vs atomic boundaries, and naming conventions for Shipwright.
 alwaysApply: true
 ---
 
 # sw- naming and command boundaries
 
 All plugin commands, skills exposed as commands, and user-facing workflow entry points use the **`sw-`**
-prefix (e.g. `/sw-review`, `/sw-stabilize`, `/sw-memory-sync`). This namespace is distinct from phase-flow
-v1 (unprefixed) and compound-engineering (`ce-`).
+prefix (e.g. `/sw-review`, `/sw-stabilize`, `/sw-memory-sync`). This namespace is distinct from unprefixed
+legacy commands and compound-engineering (`ce-`).
 
 ## Orchestrators vs atomic commands
 

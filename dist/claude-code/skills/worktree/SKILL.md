@@ -1,6 +1,6 @@
 ---
 name: sw-worktree
-description: USE WHEN following the phase-flow v2 workflow — command ordering, worktree isolation, and per-worktree state. Provision per-work-item git worktrees with env scaffold (ports, DB strategy) and safe teardown. Enforces parallelism ceiling.---
+description: USE WHEN following the Shipwright workflow — command ordering, worktree isolation, and per-worktree state. Provision per-work-item git worktrees with env scaffold (ports, DB strategy) and safe teardown. Enforces parallelism ceiling.---
 
 # Worktree provisioning
 
@@ -13,7 +13,7 @@ bash scripts/worktree.sh provision <name> [--base <ref>] [--branch <branch>] [--
 ```
 
 Creates `.sw-worktrees/<name>`, branches `pf/<name>` by default, allocates a unique port from the configured
-pool, records scaffold + tier in per-worktree state (`skills/phase-state`).
+pool, records scaffold + tier in per-worktree state (`skills/shipwright-state`).
 
 ## List / index
 

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STATE_HELPER="$ROOT/scripts/phase-state.sh"
+STATE_HELPER="$ROOT/scripts/shipwright-state.sh"
 
 usage() {
   cat <<'EOF'

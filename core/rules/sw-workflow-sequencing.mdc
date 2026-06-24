@@ -1,5 +1,5 @@
 ---
-description: USE WHEN following the phase-flow v2 workflow — command ordering, worktree isolation, and per-worktree state.
+description: USE WHEN following the Shipwright workflow — command ordering, worktree isolation, and per-worktree state.
 alwaysApply: false
 ---
 
@@ -30,12 +30,12 @@ zero-config in-repo memory.
 
 ## State management
 
-Per-worktree gitdir: `scripts/phase-state.sh` → `<git-dir>/shipwright.json`.
+Per-worktree gitdir: `scripts/shipwright-state.sh` → `<git-dir>/shipwright.json`.
 
 Fields: `parentBranch`, `currentBranch`, `phaseSlug`, `branchPrefix`, `startedAt`, `issueNumbers`,
 `lastCommand`, `phaseStatus`, `iteration`, `shipStartedAt`, `tier`, `workstream`, `scaffold`.
 
-Repo-level index: `scripts/phase-state.sh index` (read-time aggregate — never a shared writable file).
+Repo-level index: `scripts/shipwright-state.sh index` (read-time aggregate — never a shared writable file).
 
 ## Command boundaries
 

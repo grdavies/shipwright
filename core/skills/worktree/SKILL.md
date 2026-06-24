@@ -14,7 +14,7 @@ bash scripts/worktree.sh provision <name> [--base <ref>] [--branch <branch>] [--
 ```
 
 Creates `.sw-worktrees/<name>`, branches `pf/<name>` by default, allocates a unique port from the configured
-pool, records scaffold + tier in per-worktree state (`skills/phase-state`).
+pool, records scaffold + tier in per-worktree state (`skills/shipwright-state`).
 
 ## List / index
 

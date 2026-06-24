@@ -14,7 +14,7 @@ sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review →
 ```
 
 - **sw-tmp** — at chain start: `bash scripts/sw-tmp.sh clean` then `bash scripts/sw-tmp.sh init` (records
-  `runDir` in phase-state). At chain end: `bash scripts/sw-tmp.sh clean`. No `trap … EXIT` (markdown-orchestrated
+  `runDir` in shipwright-state). At chain end: `bash scripts/sw-tmp.sh clean`. No `trap … EXIT` (markdown-orchestrated
   chain).
 - **verification-gate** — `Load skills/verification-gate/SKILL.md`; run `scripts/verify-evidence.sh` on
   structured status files under the resolved run dir. Policy by `inconclusiveClass`:
@@ -38,7 +38,7 @@ sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review →
 
 ## State (per-worktree)
 
-Via `scripts/phase-state.sh`: `shipStartedAt`, `lastCommand`, `phaseStatus`, `iteration`, `runDir`.
+Via `scripts/shipwright-state.sh`: `shipStartedAt`, `lastCommand`, `phaseStatus`, `iteration`, `runDir`.
 
 Resume: `--from` › `lastCommand` (next step) › chain start.
 

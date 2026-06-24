@@ -1,6 +1,5 @@
 # Shipwright local hook state (machine-local, not shared)
 .cursor/hooks/state/shipwright-memory-sync-scheduler.json
-.cursor/hooks/state/phase-flow-memory-sync-scheduler.json
 .cursor/sw-wave-plan.json
 
 # Python

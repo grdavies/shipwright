@@ -1,12 +1,12 @@
 ---
-description: The phase-flow v2 CI readiness gate evaluates all checks, not just required ones.
+description: The Shipwright CI readiness gate evaluates all checks, not just required ones.
 alwaysApply: false
 globs:
 ---
 
 # All-checks readiness gate
 
-When judging PR readiness in the phase-flow v2 workflow, evaluate **every** check, not only required ones.
+When judging PR readiness in the Shipwright workflow, evaluate **every** check, not only required ones.
 A non-required job that fails still blocks merge-ready.
 
 - Canonical algorithm: `checks-gate` skill (`skills/checks-gate/SKILL.md`). `/sw-watch-ci` and

@@ -157,7 +157,7 @@ detect_pr_context() {
     return 0
   fi
   local pr_field
-  pr_field="$("$ROOT/scripts/phase-state.sh" read 2>/dev/null | jq -r '.pr.number // .prNumber // empty' 2>/dev/null || true)"
+  pr_field="$("$ROOT/scripts/shipwright-state.sh" read 2>/dev/null | jq -r '.pr.number // .prNumber // empty' 2>/dev/null || true)"
   if [[ -n "$pr_field" ]]; then
     return 0
   fi

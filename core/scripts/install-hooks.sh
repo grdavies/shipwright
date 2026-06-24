@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bootstrap git hooks for phase-flow v2 doc-freeze local warning.
+# Bootstrap git hooks for Shipwright doc-freeze local warning.
 # Sets core.hooksPath to plugin hooks/ (relative to repo root).
 set -euo pipefail
 

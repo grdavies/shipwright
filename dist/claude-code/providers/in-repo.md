@@ -1,6 +1,6 @@
 # Provider adapter: in-repo
 
-Maps the `phase-flow` memory capability spec ([`skills/memory/CAPABILITIES.md`](../skills/memory/CAPABILITIES.md))
+Maps the Shipwright memory capability spec ([`skills/memory/CAPABILITIES.md`](../skills/memory/CAPABILITIES.md))
 onto committed markdown files with YAML frontmatter. Selected when `workflow.config.json` → `memory.provider`
 is `in-repo`, or when `.cursor/sw-memory.provider` marks the repo (zero-config fresh install).
 

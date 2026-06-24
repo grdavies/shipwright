@@ -18,13 +18,13 @@ Phase-scoped commit after `/sw-verify` (and `/sw-review` when configured).
    - **`missing-required`** — **block** (do not commit).
    - **`no-baseline` / `unattributed`** — require a **logged auditable override** before proceeding (loud
      prompt → user reason → persist record).
-3. **Override record** (when inconclusive is overridden) — append via `scripts/phase-state.sh override-add`:
+3. **Override record** (when inconclusive is overridden) — append via `scripts/shipwright-state.sh override-add`:
 
    ```bash
    REASON_REDACTED=$(printf '%s' "$USER_REASON" | bash scripts/memory-redact.sh)
    WHO=$(git config user.email)
    WHEN=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-   bash scripts/phase-state.sh override-add "$(jq -n \
+   bash scripts/shipwright-state.sh override-add "$(jq -n \
      --arg who "$WHO" --arg when "$WHEN" --arg ic "$INCONCLUSIVE_CLASS" \
      --arg reason "$REASON_REDACTED" --arg vo "inconclusive" \
      '{who:$who,when:$when,verdictOverridden:$vo,inconclusiveClass:$ic,reason:$reason}')"

@@ -296,7 +296,7 @@ fi
 # --- Plan 005 hardening (R1–R6) ---
 VERIFY_BASELINE="$ROOT/scripts/verify-baseline.sh"
 SW_TMP="$ROOT/scripts/sw-tmp.sh"
-PHASE_STATE="$ROOT/scripts/phase-state.sh"
+SHIPWRIGHT_STATE="$ROOT/scripts/shipwright-state.sh"
 VERDICT_SCHEMA="$ROOT/skills/verification-gate/references/verdict-schema.json"
 MEMORY_REDACT="$ROOT/scripts/memory-redact.sh"
 
@@ -428,22 +428,22 @@ else
   FAIL=1
 fi
 
-# R6: phase-state override-add appends without clobber
-if [[ -x "$PHASE_STATE" ]]; then
-  STATE_FILE=$(bash "$PHASE_STATE" path)
-  bash "$PHASE_STATE" init '{}' >/dev/null
-  bash "$PHASE_STATE" override-add '{"who":"a@test","when":"t1","verdictOverridden":"inconclusive","inconclusiveClass":"no-baseline","reason":"one"}' >/dev/null
-  bash "$PHASE_STATE" override-add '{"who":"b@test","when":"t2","verdictOverridden":"inconclusive","inconclusiveClass":"unattributed","reason":"two"}' >/dev/null
-  COUNT=$(bash "$PHASE_STATE" read | jq '.overrides | length')
+# R6: shipwright-state override-add appends without clobber
+if [[ -x "$SHIPWRIGHT_STATE" ]]; then
+  STATE_FILE=$(bash "$SHIPWRIGHT_STATE" path)
+  bash "$SHIPWRIGHT_STATE" init '{}' >/dev/null
+  bash "$SHIPWRIGHT_STATE" override-add '{"who":"a@test","when":"t1","verdictOverridden":"inconclusive","inconclusiveClass":"no-baseline","reason":"one"}' >/dev/null
+  bash "$SHIPWRIGHT_STATE" override-add '{"who":"b@test","when":"t2","verdictOverridden":"inconclusive","inconclusiveClass":"unattributed","reason":"two"}' >/dev/null
+  COUNT=$(bash "$SHIPWRIGHT_STATE" read | jq '.overrides | length')
   rm -f "$STATE_FILE"
   if [[ "$COUNT" == "2" ]]; then
-    echo "OK  phase-state: override-add appends two records"
+    echo "OK  shipwright-state: override-add appends two records"
   else
-    echo "FAIL phase-state override-add (count=$COUNT)"
+    echo "FAIL shipwright-state override-add (count=$COUNT)"
     FAIL=1
   fi
 else
-  echo "FAIL phase-state.sh missing"
+  echo "FAIL shipwright-state.sh missing"
   FAIL=1
 fi
 

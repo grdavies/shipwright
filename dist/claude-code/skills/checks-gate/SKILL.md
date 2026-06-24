@@ -1,6 +1,6 @@
 ---
 name: checks-gate
-description: Evaluate the pass/fail/pending state of a PR's CI checks under the phase-flow v2 all-checks policy. Use from /sw-watch-ci and /sw-stabilize to compute a single gate verdict (green/red/yellow/blocked) over every check, honoring the configured neutral allowlist and the review-provider per-head state.
+description: Evaluate the pass/fail/pending state of a PR's CI checks under the Shipwright all-checks policy. Use from /sw-watch-ci and /sw-stabilize to compute a single gate verdict (green/red/yellow/blocked) over every check, honoring the configured neutral allowlist and the review-provider per-head state.
 ---
 
 # checks-gate
