@@ -122,4 +122,112 @@ else
   FAIL=1
 fi
 
+# --- spec-rigor: decision record pass ---
+SPEC_RIGOR_CHECK="$ROOT/scripts/spec-rigor-check.sh"
+FIX_DECISION="$ROOT/scripts/test/fixtures"
+PF_FREEZE="$ROOT/commands/pf-freeze.md"
+PF_PRD="$ROOT/commands/pf-prd.md"
+
+set +e
+OUT_DEC=$(bash "$SPEC_RIGOR_CHECK" --artifact decision --path "$FIX_DECISION/decision-record-pass.md" --tier full 2>/dev/null)
+EC_DEC=$?
+set -e
+if [[ "$EC_DEC" -eq 0 ]] && echo "$OUT_DEC" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('verdict')=='pass' and d.get('artifact')=='decision' else 1)"; then
+  echo "OK  spec-rigor-check: decision record → pass"
+else
+  echo "FAIL spec-rigor-check decision pass case (ec=$EC_DEC)"
+  FAIL=1
+fi
+
+set +e
+OUT_DEC_FAIL=$(bash "$SPEC_RIGOR_CHECK" --artifact decision --path "$FIX_DECISION/decision-record-fail.md" --tier full 2>/dev/null)
+EC_DEC_FAIL=$?
+set -e
+if [[ "$EC_DEC_FAIL" -eq 20 ]] && echo "$OUT_DEC_FAIL" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('verdict')=='fail' else 1)"; then
+  echo "OK  spec-rigor-check: incomplete decision → fail"
+else
+  echo "FAIL spec-rigor-check decision fail case (ec=$EC_DEC_FAIL)"
+  FAIL=1
+fi
+
+# --- U1: pf-prd --type decision + pf-freeze routing ---
+if grep -q '\-\-type decision' "$PF_PRD" && grep -q 'decisions/<n>-<slug>.md' "$PF_PRD"; then
+  echo "OK  pf-prd documents --type decision path"
+else
+  echo "FAIL pf-prd missing --type decision contract"
+  FAIL=1
+fi
+
+if grep -q '\-\-artifact decision' "$PF_FREEZE" && grep -q 'decisions/INDEX.md' "$PF_FREEZE" && \
+   grep -q 'No task list generation' "$PF_FREEZE"; then
+  echo "OK  pf-freeze routes decision rigor + INDEX (no tasks)"
+else
+  echo "FAIL pf-freeze decision freeze contract"
+  FAIL=1
+fi
+
+if [[ -f "$ROOT/decisions/INDEX.md" ]] && ! grep -q 'frozen: true' "$ROOT/decisions/INDEX.md"; then
+  echo "OK  decisions/INDEX.md exists (living, not frozen)"
+else
+  echo "FAIL decisions/INDEX.md missing or frozen"
+  FAIL=1
+fi
+
+if grep -q 'decisions/' "$ROOT/docs/layout.md" && grep -q 'Decision record numbering' "$ROOT/docs/layout.md"; then
+  echo "OK  layout.md documents decisions/ tree"
+else
+  echo "FAIL layout.md missing decisions/ contract"
+  FAIL=1
+fi
+
+# --- U3: decision record-level supersede + sibling amend dir ---
+DECISION_PARENT="$ROOT/scripts/test/fixtures/spec-union/parent-decision.md"
+OUT_DEC_UNION=$(bash "$UNION" "$DECISION_PARENT")
+if echo "$OUT_DEC_UNION" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+ids=[r['id'] for r in d['requirements']]
+assert 'D1' not in ids and 'D2' in ids
+assert d['superseded'].get('D1',{}).get('replacement','').endswith('replacement-decision.md')
+"; then
+  echo "OK  spec-union decision record-level supersede"
+else
+  echo "FAIL spec-union decision record-level supersede"
+  FAIL=1
+fi
+
+# --- U3: PRD path byte-identical regression (golden shape) ---
+OUT_PRD_GOLDEN=$(bash "$UNION" "$FIX/parent-prd.md")
+if echo "$OUT_PRD_GOLDEN" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert all(isinstance(v,str) for v in d.get('superseded',{}).values())
+assert 'replacement' not in json.dumps(d)
+"; then
+  echo "OK  spec-union PRD superseded map unchanged (string values only)"
+else
+  echo "FAIL spec-union PRD regression shape"
+  FAIL=1
+fi
+
+# --- U2: decision-record doc-review routing ---
+PF_DOC_REVIEW="$ROOT/commands/pf-doc-review.md"
+DOC_REVIEW_SKILL="$ROOT/skills/doc-review/SKILL.md"
+
+if grep -q 'decisions/<n>-<slug>.md' "$PF_DOC_REVIEW" && grep -q 'all seven' "$PF_DOC_REVIEW"; then
+  echo "OK  pf-doc-review routes decision drafts to Full panel"
+else
+  echo "FAIL pf-doc-review decision draft routing"
+  FAIL=1
+fi
+
+if grep -q 'Decision amendment review' "$DOC_REVIEW_SKILL" && \
+   grep -q 'adversarial, feasibility' "$DOC_REVIEW_SKILL" && \
+   grep -q 'prds/<n>-<slug>/amendments' "$DOC_REVIEW_SKILL"; then
+  echo "OK  doc-review skill: decision amendment raised floor + PRD amendment unchanged"
+else
+  echo "FAIL doc-review decision amendment floor"
+  FAIL=1
+fi
+
 exit $FAIL

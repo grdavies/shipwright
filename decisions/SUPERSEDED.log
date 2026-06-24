@@ -1,0 +1,4 @@
+# Superseded decision records (append-only manifest)
+# One path per line — written on record-level supersede (U3 amendment step).
+# `/pf-memory-sync` reconciles decision-class memories against this manifest.
+decisions/007-persona-panel-full-tier.md
