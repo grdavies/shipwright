@@ -7,8 +7,8 @@ trigger: "/pf-debug"
 # `/pf-debug`
 
 Production-signal and dev-time debugging orchestrator (R22). Runs bounded RCA via `skills/rca-core`
-(**debug** or **dev-time** entry) and routes by fix size (R24). **Diagnoses and proposes; does not
-implement, commit, push, or merge** — scoped fixes go to the implementation worktree loop; substantial
+(**debug** or **dev-time** entry) and routes by fix size (R24). **Diagnoses and proposes; does not implement,
+commit, push, or merge** — scoped fixes go to the implementation worktree loop; substantial
 fixes go to brainstorm/PRD amendment.
 
 ## Signal forms
