@@ -53,7 +53,7 @@ poll until green, red, or budget exhausted. After `pf-stabilize` push, re-arm Co
 Gate (authoritative):
 
 ```bash
-GATE="${CURSOR_PLUGIN_ROOT:-$PWD}/scripts/check-gate.sh"
+GATE="${CLAUDE_PLUGIN_ROOT:-$PWD}/scripts/check-gate.sh"
 if OUT=$(bash "$GATE"); then GATE_EC=0; else GATE_EC=$?; fi
 echo "$OUT" | jq .
 ```

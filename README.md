@@ -6,13 +6,18 @@ from phase-flow v1 and compound-engineering patterns — no runtime dependency o
 
 ## Install (local development)
 
+Authoring lives under `core/`; installable trees are **generated** and committed under `dist/`.
+
 ```bash
-./scripts/sync-local-install.sh
+python3 -m pf generate --all   # after editing core/
+./scripts/sync-local-install.sh   # rsync dist/cursor/ → ~/.cursor/plugins/local/phase-flow-v2
 ```
 
 Then **Developer: Reload Window** in Cursor.
 
 Default install path: `~/.cursor/plugins/local/phase-flow-v2`
+
+For Claude Code, point your plugin path at `dist/claude-code/` (or copy it to your Claude plugins directory).
 
 ## Configuration
 
@@ -20,7 +25,7 @@ Copy the example config into your target repo, or run `/pf-setup` for guided sca
 
 ```bash
 mkdir -p .cursor
-cp .pf/workflow.config.example.json .cursor/workflow.config.json
+cp core/pf-reference/workflow.config.example.json .cursor/workflow.config.json
 # edit memory.project, verify.*, and provider selection
 ```
 
@@ -40,18 +45,21 @@ runtime — never commit secrets.
 | `checks.neutralAllowlist` | Check names that stay blocking |
 | `memory.autoSync` | Stop-hook thresholds for `/pf-memory-sync` scheduling |
 
-See `.pf/config.schema.json` for the full schema.
+See `core/pf-reference/config.schema.json` for the full schema.
 
 ## Components (foundation)
 
 | Area | Path | Status |
 |------|------|--------|
-| Manifest | `.cursor-plugin/plugin.json` | U1 |
-| CI gate | `scripts/check-gate.sh`, `skills/checks-gate/` | U2–U3 |
-| Memory seam | `skills/memory/`, `providers/in-repo.md`, `providers/recallium.md` | U4–U5 |
-| Review seam | `providers/review/` | U3 |
-| Stabilize / RCA | `skills/stabilize-loop/`, `skills/rca-core/` | U6 |
-| Hooks | `hooks/` | U7 |
+| Authoring | `core/` | portability M1+ |
+| Cursor install tree | `dist/cursor/` (generated) | portability U6 |
+| Claude install tree | `dist/claude-code/` (generated) | portability U7 |
+| Generate entrypoint | `python3 -m pf generate` | portability U5 |
+| CI gate | `core/scripts/check-gate.sh`, `core/skills/checks-gate/` | U2–U3 |
+| Memory seam | `core/skills/memory/`, `core/providers/` | U4–U5 |
+| Review seam | `core/providers/review/` | U3 |
+| Stabilize / RCA | `core/skills/stabilize-loop/`, `core/skills/rca-core/` | U6 |
+| Hooks | `core/hooks/` + platform adapters | U4/U7 |
 | Provenance | `PROVENANCE.md` | U1+ |
 
 Workstreams (documentation, implementation, debugging, feedback) are planned separately.

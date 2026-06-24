@@ -80,7 +80,11 @@ class EmitterBase(ABC):
         target = self.plugin_root_env_name()
         if target == "CURSOR_PLUGIN_ROOT":
             return text
-        text = text.replace(CURSOR_PLUGIN_ROOT, f"${{{target}}}")
+        text = re.sub(
+            r"\$\{CURSOR_PLUGIN_ROOT(:-[^}]+)?\}",
+            lambda m: f"${{{target}{m.group(1) or ''}}}",
+            text,
+        )
         text = CURSOR_FALLBACK_RE.sub(
             "$HOME/.claude/plugins/local/phase-flow-v2",
             text,

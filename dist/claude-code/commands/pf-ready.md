@@ -16,7 +16,7 @@ Confirm merge-readiness via `scripts/check-gate.sh` — terminal report only.
 5. **Authoritative gate** — do not hand-roll:
 
    ```bash
-   GATE="${CURSOR_PLUGIN_ROOT:-$PWD}/scripts/check-gate.sh"
+   GATE="${CLAUDE_PLUGIN_ROOT:-$PWD}/scripts/check-gate.sh"
    if OUT=$(bash "$GATE"); then GATE_EC=0; else GATE_EC=$?; fi
    echo "$OUT" | jq .
    ```

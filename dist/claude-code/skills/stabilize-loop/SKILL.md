@@ -1,7 +1,6 @@
 ---
 name: stabilize-loop
-description: Opt-in goal-driven loop that keeps running /pf-stabilize and /pf-watch-ci until the all-checks gate is green and no actionable review threads remain. Use when the user asks to stabilize until green, or from /ship. Single-pass /pf-stabilize remains the default; this only adds the loop wrapper with hard stops.
----
+description: USE WHEN reviewing code, handling review feedback, or running /pf-review and /pf-stabilize. Opt-in goal-driven loop that keeps running /pf-stabilize and /pf-watch-ci until the all-checks gate is green and no actionable review threads remain. Use when the user asks to stabilize until green, or from /ship. Single-pass /pf-stabilize remains the default; this only adds the loop wrapper with hard stops.---
 
 # stabilize-loop
 
