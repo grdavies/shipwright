@@ -8,10 +8,12 @@ bash -n "${BASH_SOURCE[0]}" || {
 }
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-TRIAGE="$ROOT/skills/triage/SKILL.md"
-DOC_REVIEW="$ROOT/skills/doc-review/SKILL.md"
-SW_DOC_REVIEW="$ROOT/commands/sw-doc-review.md"
-CODE_REVIEW_RULES="$ROOT/rules/code-review-automation.mdc"
+# shellcheck source=scripts/test/fixture-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/fixture-lib.sh"
+TRIAGE="$(content_path skills/triage/SKILL.md)"
+DOC_REVIEW="$(content_path skills/doc-review/SKILL.md)"
+SW_DOC_REVIEW="$(content_path commands/sw-doc-review.md)"
+CODE_REVIEW_RULES="$(content_path rules/code-review-automation.mdc)"
 FIXTURES="$ROOT/scripts/test/fixtures/persona-selection"
 WORKFLOW_CONFIG="$ROOT/.cursor/workflow.config.json"
 FAIL=0

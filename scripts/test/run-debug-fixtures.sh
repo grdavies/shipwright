@@ -3,8 +3,10 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/test/fixture-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/fixture-lib.sh"
 REDACT="$ROOT/scripts/memory-redact.sh"
-RCA="$ROOT/skills/rca-core/SKILL.md"
+RCA="$(content_path skills/rca-core/SKILL.md)"
 FAIL=0
 
 # --- U1: debug entry implemented (not deferred stub) ---
@@ -18,8 +20,9 @@ else
   FAIL=1
 fi
 
-if [[ -f "$ROOT/skills/rca-core/references/debug-inputs.md" ]] && \
-   grep -q 'sentry' "$ROOT/skills/rca-core/references/debug-inputs.md"; then
+DEBUG_INPUTS="$(content_path skills/rca-core/references/debug-inputs.md)"
+if [[ -f "$DEBUG_INPUTS" ]] && \
+   grep -q 'sentry' "$DEBUG_INPUTS"; then
   echo "OK  debug-inputs reference"
 else
   echo "FAIL debug-inputs.md"
@@ -35,9 +38,10 @@ else
 fi
 
 # --- U2: sentry recipe exists ---
-if [[ -f "$ROOT/skills/debug/references/sentry.md" ]] && \
-   grep -q 'memory-redact' "$ROOT/skills/debug/references/sentry.md" && \
-   grep -qi 'degrad' "$ROOT/skills/debug/references/sentry.md"; then
+SENTRY_MD="$(content_path skills/debug/references/sentry.md)"
+if [[ -f "$SENTRY_MD" ]] && \
+   grep -q 'memory-redact' "$SENTRY_MD" && \
+   grep -qi 'degrad' "$SENTRY_MD"; then
   echo "OK  sentry MCP recipe + degradation"
 else
   echo "FAIL sentry.md"
@@ -55,18 +59,20 @@ else
 fi
 
 # --- U3: sw-debug command + skill ---
-if [[ -f "$ROOT/commands/sw-debug.md" ]] && \
-   grep -qi 'not implement' "$ROOT/commands/sw-debug.md" && \
-   grep -q 'memory-preflight' "$ROOT/commands/sw-debug.md"; then
+SW_DEBUG="$(content_path commands/sw-debug.md)"
+if [[ -f "$SW_DEBUG" ]] && \
+   grep -qi 'not implement' "$SW_DEBUG" && \
+   grep -q 'memory-preflight' "$SW_DEBUG"; then
   echo "OK  sw-debug command boundary"
 else
   echo "FAIL sw-debug.md"
   FAIL=1
 fi
 
-if [[ -f "$ROOT/skills/debug/SKILL.md" ]] && \
-   grep -q 'rca-core' "$ROOT/skills/debug/SKILL.md" && \
-   grep -qi 'trivial fast-path' "$ROOT/skills/debug/SKILL.md"; then
+DEBUG_SKILL="$(content_path skills/debug/SKILL.md)"
+if [[ -f "$DEBUG_SKILL" ]] && \
+   grep -q 'rca-core' "$DEBUG_SKILL" && \
+   grep -qi 'trivial fast-path' "$DEBUG_SKILL"; then
   echo "OK  debug skill orchestrator"
 else
   echo "FAIL skills/debug/SKILL.md"
@@ -74,9 +80,9 @@ else
 fi
 
 # --- U4: routing to 003/002 ---
-if grep -q '/sw-worktree' "$ROOT/skills/debug/SKILL.md" && \
-   grep -q '/sw-brainstorm' "$ROOT/skills/debug/SKILL.md" && \
-   grep -q 'surface:debug-route' "$ROOT/skills/debug/SKILL.md"; then
+if grep -q '/sw-worktree' "$DEBUG_SKILL" && \
+   grep -q '/sw-brainstorm' "$DEBUG_SKILL" && \
+   grep -q 'surface:debug-route' "$DEBUG_SKILL"; then
   echo "OK  debug downstream routing"
 else
   echo "FAIL debug routing sections"
@@ -84,8 +90,9 @@ else
 fi
 
 # --- sw-naming debug boundary ---
-if grep -q '/sw-debug' "$ROOT/rules/sw-naming.mdc" && \
-   grep -q 'Debug orchestrator boundary' "$ROOT/rules/sw-naming.mdc"; then
+SW_NAMING="$(content_path rules/sw-naming.mdc)"
+if grep -q '/sw-debug' "$SW_NAMING" && \
+   grep -q 'Debug orchestrator boundary' "$SW_NAMING"; then
   echo "OK  sw-naming debug boundary"
 else
   echo "FAIL sw-naming debug boundary"

@@ -7,6 +7,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG="${ROOT}/.cursor/workflow.config.json"
 AGENTS_DIR="${ROOT}/agents"
+if [[ ! -d "$AGENTS_DIR" ]] && [[ -d "${ROOT}/core/agents" ]]; then
+  AGENTS_DIR="${ROOT}/core/agents"
+fi
 
 while [[ $# -gt 0 ]]; do
   case "$1" in

@@ -3,23 +3,25 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/test/fixture-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/fixture-lib.sh"
 REDACT="$ROOT/scripts/memory-redact.sh"
 FAIL=0
 
 # --- U1: command + skill + schema ---
-if [[ -f "$ROOT/commands/sw-feedback.md" ]] && \
-   grep -qi 'does not' "$ROOT/commands/sw-feedback.md" && \
-   grep -q 'untrusted_payload' "$ROOT/skills/feedback/references/signal-schema.md"; then
+if [[ -f "$(content_path commands/sw-feedback.md)" ]] && \
+   grep -qi 'does not' "$(content_path commands/sw-feedback.md)" && \
+   grep -q 'untrusted_payload' "$(content_path skills/feedback/references/signal-schema.md)"; then
   echo "OK  sw-feedback intake + untrusted envelope"
 else
   echo "FAIL sw-feedback intake files"
   FAIL=1
 fi
 
-if grep -q 'dedupKey' "$ROOT/skills/feedback/references/signal-schema.md" && \
-   grep -q 'production' "$ROOT/skills/feedback/references/signal-schema.md" && \
-   grep -q 'review' "$ROOT/skills/feedback/references/signal-schema.md" && \
-   grep -q 'retro' "$ROOT/skills/feedback/references/signal-schema.md"; then
+if grep -q 'dedupKey' "$(content_path skills/feedback/references/signal-schema.md)" && \
+   grep -q 'production' "$(content_path skills/feedback/references/signal-schema.md)" && \
+   grep -q 'review' "$(content_path skills/feedback/references/signal-schema.md)" && \
+   grep -q 'retro' "$(content_path skills/feedback/references/signal-schema.md)"; then
   echo "OK  signal schema three classes"
 else
   echo "FAIL signal-schema.md classes"
@@ -82,8 +84,8 @@ else
 fi
 
 # --- U1: untrusted_payload envelope ---
-if grep -q 'UNTRUSTED_PAYLOAD_START' "$ROOT/skills/feedback/references/signal-schema.md" && \
-   grep -q 'does not' "$ROOT/commands/sw-feedback.md"; then
+if grep -q 'UNTRUSTED_PAYLOAD_START' "$(content_path skills/feedback/references/signal-schema.md)" && \
+   grep -q 'does not' "$(content_path commands/sw-feedback.md)"; then
   echo "OK  untrusted_payload envelope + no RCA in command"
 else
   echo "FAIL untrusted_payload / command boundary"
@@ -91,19 +93,19 @@ else
 fi
 
 # --- U2: routing rubric ---
-if grep -q '/sw-debug' "$ROOT/skills/feedback/SKILL.md" && \
-   grep -q '/sw-brainstorm' "$ROOT/skills/feedback/SKILL.md" && \
-   grep -q 'gap-capture' "$ROOT/skills/feedback/SKILL.md" && \
-   grep -q 'surface:feedback-route' "$ROOT/skills/feedback/references/route-record.md"; then
+if grep -q '/sw-debug' "$(content_path skills/feedback/SKILL.md)" && \
+   grep -q '/sw-brainstorm' "$(content_path skills/feedback/SKILL.md)" && \
+   grep -q 'gap-capture' "$(content_path skills/feedback/SKILL.md)" && \
+   grep -q 'surface:feedback-route' "$(content_path skills/feedback/references/route-record.md)"; then
   echo "OK  feedback routing + route record"
 else
   echo "FAIL feedback routing sections"
   FAIL=1
 fi
 
-if grep -q 'Conservative defaults' "$ROOT/skills/feedback/SKILL.md" && \
-   grep -q 'review' "$ROOT/skills/feedback/SKILL.md" && \
-   grep -q 'not.*debug' "$ROOT/skills/feedback/SKILL.md"; then
+if grep -q 'Conservative defaults' "$(content_path skills/feedback/SKILL.md)" && \
+   grep -q 'review' "$(content_path skills/feedback/SKILL.md)" && \
+   grep -q 'not.*debug' "$(content_path skills/feedback/SKILL.md)"; then
   echo "OK  review/retro not default to debug"
 else
   echo "FAIL review-class routing default"
@@ -111,9 +113,9 @@ else
 fi
 
 # --- U3: gap-capture split ---
-if grep -q '/sw-amend' "$ROOT/skills/feedback/SKILL.md" && \
-   grep -q 'GAP-BACKLOG' "$ROOT/skills/feedback/SKILL.md" && \
-   grep -q 'source:feedback' "$ROOT/skills/feedback/SKILL.md"; then
+if grep -q '/sw-amend' "$(content_path skills/feedback/SKILL.md)" && \
+   grep -q 'GAP-BACKLOG' "$(content_path skills/feedback/SKILL.md)" && \
+   grep -q 'source:feedback' "$(content_path skills/feedback/SKILL.md)"; then
   echo "OK  gap-capture amend vs backlog"
 else
   echo "FAIL gap-capture split"
@@ -121,8 +123,8 @@ else
 fi
 
 # --- retro output contract pinned ---
-if [[ -f "$ROOT/skills/retro/references/output-contract.md" ]] && \
-   grep -q 'runId' "$ROOT/skills/retro/references/output-contract.md"; then
+if [[ -f "$(content_path skills/retro/references/output-contract.md)" ]] && \
+   grep -q 'runId' "$(content_path skills/retro/references/output-contract.md)"; then
   echo "OK  retro output contract"
 else
   echo "FAIL retro output-contract.md"
@@ -130,7 +132,7 @@ else
 fi
 
 # --- sw-naming feedback boundary ---
-if grep -q 'Feedback orchestrator boundary' "$ROOT/rules/sw-naming.mdc"; then
+if grep -q 'Feedback orchestrator boundary' "$(content_path rules/sw-naming.mdc)"; then
   echo "OK  sw-naming feedback boundary"
 else
   echo "FAIL sw-naming feedback boundary"

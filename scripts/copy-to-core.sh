@@ -23,6 +23,9 @@ rsync -a --delete \
 
 if [ -d "$ROOT/.pf" ]; then
   mkdir -p "$CORE/sw-reference"
+  rsync -a --delete "$ROOT/.pf/" "$CORE/sw-reference/"
+elif [ -d "$ROOT/.sw" ]; then
+  mkdir -p "$CORE/sw-reference"
   rsync -a --delete "$ROOT/.sw/" "$CORE/sw-reference/"
 fi
 

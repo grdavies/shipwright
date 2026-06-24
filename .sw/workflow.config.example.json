@@ -6,6 +6,9 @@
   "prdsDir": "docs/prds",
   "decisionsDir": "docs/decisions",
   "tasksDir": "docs/prds",
+  "doc": {
+    "afterTasks": "confirm"
+  },
   "verify": {
     "lint": "echo 'configure verify.lint for your repo'",
     "typecheck": "echo 'configure verify.typecheck for your repo'",
@@ -17,7 +20,7 @@
     "routes": []
   },
   "review": {
-    "provider": "coderabbit",
+    "provider": "none",
     "local": {
       "enabled": true,
       "provider": "ce-code-review",
