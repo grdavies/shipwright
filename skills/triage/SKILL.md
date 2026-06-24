@@ -19,12 +19,38 @@ Collect before scoring:
 
 ## Risk triggers (hard floor → ≥ Standard)
 
-Any match forces **at least Standard** regardless of file count:
+Each keyword is **tagged**. **Any tag match** forces at least Standard regardless of file count. Doc-review's
+`security` persona gate fires only on **`security`-tagged** entries (see `skills/doc-review/SKILL.md`).
 
-- `auth`, `authentication`, `authorization`, `login`, `session`, `oauth`, `jwt`
-- `payment`, `payments`, `billing`, `stripe`, `paddle`, `subscription`
-- `migration`, `data migration`, `schema migration`, `backfill`
-- `public api`, `public endpoint`, `external api`, `webhook`
+| Keyword | Category |
+| --- | --- |
+| `auth` | security |
+| `authn` | security |
+| `authz` | security |
+| `authentication` | security |
+| `authorization` | security |
+| `login` | security |
+| `session` | security |
+| `oauth` | security |
+| `jwt` | security |
+| `payment` | security |
+| `payments` | security |
+| `billing` | security |
+| `PII` | security |
+| `credentials` | security |
+| `token` | security |
+| `encryption` | security |
+| `public api` | security |
+| `public endpoint` | security |
+| `external api` | security |
+| `webhook` | security |
+| `stripe` | billing-routing |
+| `paddle` | billing-routing |
+| `subscription` | billing-routing |
+| `migration` | data-migration |
+| `data migration` | data-migration |
+| `schema migration` | data-migration |
+| `backfill` | data-migration |
 
 ## Ambiguity markers (bias upward)
 
@@ -46,7 +72,7 @@ Any match adds +1 to the score:
 
 ```
 1. If override flag set → use override tier; record "override: <tier>".
-2. If any risk trigger matches → floor = Standard.
+2. If any risk trigger matches (any category) → floor = Standard.
 3. Compute base tier from file count.
 4. If ambiguity markers present → bump one tier (Quick→Standard, Standard→Full).
 5. If mixed/insufficient signals (no file count, empty description) → Standard (conservative).
@@ -90,6 +116,8 @@ When implementation reveals scope growth on a Quick-classified item:
 | Trivial | 1 file, no risk keyword | Quick |
 | Bounded feature | 4 files, no risk | Standard |
 | Risk floor | 1 file + "auth" | Standard (not Quick) |
+| Billing floor only | 1 file + "stripe" | Standard (not Quick); does not fire security persona |
+| Migration floor only | 1 file + "migration" | Standard (not Quick); does not fire security persona |
 | Ambiguous | 2 files + "maybe refactor" | Standard or Full |
 | Conservative default | empty file count | Standard |
 | Override | `--tier full` on 1-file change | Full + override recorded |
