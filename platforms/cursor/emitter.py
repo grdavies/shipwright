@@ -6,7 +6,7 @@ import json
 import shutil
 from pathlib import Path
 
-from emitter_base import EmitterBase, EmitterError, ensure_clean_dir
+from emitter_base import EmitterBase, EmitterError, ensure_clean_dir, read_version
 
 SUPPORTED = {
     "hooks": {"native"},
@@ -76,7 +76,7 @@ class CursorEmitter(EmitterBase):
         ensure_clean_dir(dest)
         self.copy_emittable_content(core_root, dest)
         self._copy_runtime_support(core_root, repo_root, dest)
-        self._emit_plugin_manifest(dest)
+        self._emit_plugin_manifest(repo_root, dest)
         self._emit_hooks(repo_root, dest)
 
     def _copy_runtime_support(self, core_root: Path, repo_root: Path, dest: Path) -> None:
@@ -91,12 +91,12 @@ class CursorEmitter(EmitterBase):
             plat_dir.mkdir(parents=True, exist_ok=True)
             shutil.copy2(adapter_src, plat_dir / "hook_adapter.py")
 
-    def _emit_plugin_manifest(self, dest: Path) -> None:
+    def _emit_plugin_manifest(self, repo_root: Path, dest: Path) -> None:
         manifest_dir = dest / ".cursor-plugin"
         manifest_dir.mkdir(parents=True, exist_ok=True)
         plugin = {
             "name": "phase-flow-v2",
-            "version": "0.1.0",
+            "version": read_version(repo_root),
             "description": "phase-flow v2 (generated)",
             "commands": "./commands/",
             "skills": "./skills/",

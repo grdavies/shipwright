@@ -1,0 +1,48 @@
+name: Release dist regen
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  regen-dist:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'release-please--branches--main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Regenerate dist/
+        run: python3 -m pf generate --all
+
+      - name: Assert breaking release targets 1.0.0
+        run: |
+          VERSION="$(tr -d '[:space:]' < version.txt)"
+          if grep -qi 'breaking' CHANGELOG.md && [ "$VERSION" != "1.0.0" ]; then
+            echo "Breaking release must compute exactly 1.0.0, got ${VERSION}"
+            exit 1
+          fi
+
+      - name: Commit refreshed dist/
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist/
+          if git diff --cached --quiet; then
+            echo "dist/ already up to date"
+            exit 0
+          fi
+          git commit -m "chore: regenerate dist/ for release"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}

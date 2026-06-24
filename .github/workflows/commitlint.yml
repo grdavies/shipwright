@@ -1,0 +1,22 @@
+name: commitlint
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  commitlint:
+    if: github.event.pull_request.head.ref != 'release-please--branches--main'
+    runs-on: ubuntu-latest
+    env:
+      PR_TITLE: ${{ github.event.pull_request.title }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate PR title
+        run: |
+          npx --yes -p @commitlint/cli@21.1.0 -p @commitlint/config-conventional@21.1.0 \
+            commitlint --config commitlint.config.mjs <<< "$PR_TITLE"

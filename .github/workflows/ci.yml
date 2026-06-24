@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  fixtures:
+    name: fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Emitter fixtures
+        run: bash scripts/test/run-emitter-fixtures.sh
+
+      - name: Parity fixtures
+        run: bash scripts/test/run-parity-fixtures.sh
+
+      - name: Claude golden fixtures
+        run: bash scripts/test/run-claude-golden-fixtures.sh
+
+      - name: Gate fixtures
+        run: bash scripts/test/run-gate-fixtures.sh
