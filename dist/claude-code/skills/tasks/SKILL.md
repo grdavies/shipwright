@@ -1,15 +1,15 @@
 ---
-name: pf-tasks
+name: sw-tasks
 description: Generate a frozen task list from a frozen PRD using the spec union, with mandatory Go gate before sub-task expansion.
 ---
 
-# Task list generation (`/pf-tasks`)
+# Task list generation (`/sw-tasks`)
 
-Port of v1 `spec-tasks` under `pf-`. Reads U8 union so amended requirements are reflected.
+Port of v1 `spec-tasks` under `sw-`. Reads U8 union so amended requirements are reflected.
 
 ## Path
 
-`docs/prds/<n>-<slug>/tasks-<n>-<slug>.md` per `.pf/layout.md`.
+`docs/prds/<n>-<slug>/tasks-<n>-<slug>.md` per `.sw/layout.md`.
 
 ## Procedure
 
@@ -23,7 +23,7 @@ Port of v1 `spec-tasks` under `pf-`. Reads U8 union so amended requirements are 
    - **R-IDs:** requirement IDs covered
    - Relevant Files + Notes as needed
 6. Add `## Traceability` table mapping each union R-ID → task ref → named test scenario.
-7. Save task file; run `spec-rigor-check.sh` (tasks) + `traceability-check.sh`; freeze via `/pf-freeze`.
+7. Save task file; run `spec-rigor-check.sh` (tasks) + `traceability-check.sh`; freeze via `/sw-freeze`.
 8. Register/refresh PRD entry in `docs/prds/INDEX.md` with status `not-started`.
 
 ## Executable sub-task shape
@@ -36,7 +36,7 @@ Port of v1 `spec-tasks` under `pf-`. Reads U8 union so amended requirements are 
 ```
 
 Parent phase items (`1.`, `2.`) may remain summary-level; **numbered sub-tasks** (`1.1`, `1.2`) carry File +
-Expected for `/pf-execute` plan-self-review.
+Expected for `/sw-execute` plan-self-review.
 
 ## Collision policy
 
@@ -46,4 +46,4 @@ Expected for `/pf-execute` plan-self-review.
 
 ## Handoff
 
-→ implementation workstream (`/pf-execute` when available).
+→ implementation workstream (`/sw-execute` when available).

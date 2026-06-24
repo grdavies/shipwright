@@ -1,7 +1,7 @@
 # Local code-review provider capabilities
 
 Neutral contract for **local** multi-agent code-review adapters (`review.local.provider`). Agent-mediated
-consumers (`/pf-review` phase 1) read the markdown adapter (`providers/code-review/<id>.md`). Deterministic
+consumers (`/sw-review` phase 1) read the markdown adapter (`providers/code-review/<id>.md`). Deterministic
 fixtures and gates call `scripts/code-review-normalize.sh` and `scripts/code-review-gate.sh`.
 
 External provider review (CodeRabbit, phase 2) remains under `providers/review/` — different seam.
@@ -13,7 +13,7 @@ Disable local review via `workflow.config.json`:
 - `review.local.provider: "none"`, or
 - `review.local.enabled: false`
 
-When opted out, `/pf-review` skips phase 1 and proceeds directly to the external provider (phase 2).
+When opted out, `/sw-review` skips phase 1 and proceeds directly to the external provider (phase 2).
 
 ## Soft dependency
 
@@ -73,7 +73,7 @@ requirements-*aware* (intent summary in) but emits **no completeness verdict**.
 | Mode | Config | Behavior |
 |------|--------|----------|
 | Surface-only (default rollout) | `surface: ["P0","P1","P2","P3"]`, `haltOn: []` | Log validated severities; continue to phase 2 |
-| Halting (promoted) | `haltOn: ["P0","P1"]` | Validated P0/P1 halt `/pf-ship`; P2/P3 surface and continue |
+| Halting (promoted) | `haltOn: ["P0","P1"]` | Validated P0/P1 halt `/sw-ship`; P2/P3 surface and continue |
 
 Only **validated** P0/P1 (post `ce-code-review` Stage 5b) are halt-eligible. `check-gate.sh` remains the sole
 CI oracle — this gate is additive.

@@ -54,13 +54,13 @@ else
   FAIL=1
 fi
 
-# --- U3: pf-debug command + skill ---
-if [[ -f "$ROOT/commands/pf-debug.md" ]] && \
-   grep -qi 'not implement' "$ROOT/commands/pf-debug.md" && \
-   grep -q 'memory-preflight' "$ROOT/commands/pf-debug.md"; then
-  echo "OK  pf-debug command boundary"
+# --- U3: sw-debug command + skill ---
+if [[ -f "$ROOT/commands/sw-debug.md" ]] && \
+   grep -qi 'not implement' "$ROOT/commands/sw-debug.md" && \
+   grep -q 'memory-preflight' "$ROOT/commands/sw-debug.md"; then
+  echo "OK  sw-debug command boundary"
 else
-  echo "FAIL pf-debug.md"
+  echo "FAIL sw-debug.md"
   FAIL=1
 fi
 
@@ -74,8 +74,8 @@ else
 fi
 
 # --- U4: routing to 003/002 ---
-if grep -q '/pf-worktree' "$ROOT/skills/debug/SKILL.md" && \
-   grep -q '/pf-brainstorm' "$ROOT/skills/debug/SKILL.md" && \
+if grep -q '/sw-worktree' "$ROOT/skills/debug/SKILL.md" && \
+   grep -q '/sw-brainstorm' "$ROOT/skills/debug/SKILL.md" && \
    grep -q 'surface:debug-route' "$ROOT/skills/debug/SKILL.md"; then
   echo "OK  debug downstream routing"
 else
@@ -83,12 +83,12 @@ else
   FAIL=1
 fi
 
-# --- pf-naming debug boundary ---
-if grep -q '/pf-debug' "$ROOT/rules/pf-naming.mdc" && \
-   grep -q 'Debug orchestrator boundary' "$ROOT/rules/pf-naming.mdc"; then
-  echo "OK  pf-naming debug boundary"
+# --- sw-naming debug boundary ---
+if grep -q '/sw-debug' "$ROOT/rules/sw-naming.mdc" && \
+   grep -q 'Debug orchestrator boundary' "$ROOT/rules/sw-naming.mdc"; then
+  echo "OK  sw-naming debug boundary"
 else
-  echo "FAIL pf-naming debug boundary"
+  echo "FAIL sw-naming debug boundary"
   FAIL=1
 fi
 

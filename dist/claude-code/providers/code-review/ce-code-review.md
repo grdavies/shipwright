@@ -1,7 +1,7 @@
 # ce-code-review local adapter (agent-mediated)
 
-Markdown companion for phase 1 of `/pf-review`. Invokes compound-engineering `ce-code-review` in **report-only**
-mode, normalizes output via `scripts/code-review-normalize.sh`, and hands findings to pf-owned apply + gate.
+Markdown companion for phase 1 of `/sw-review`. Invokes compound-engineering `ce-code-review` in **report-only**
+mode, normalizes output via `scripts/code-review-normalize.sh`, and hands findings to sw-owned apply + gate.
 
 ## Soft dependency
 
@@ -28,7 +28,7 @@ ce-code-review mode:agent base:<parentBranch> grouping:auto
 3. Normalize:
 
    ```bash
-   scripts/code-review-normalize.sh --input /tmp/pf-local-review-raw.json --repo-root "$PWD"
+   scripts/code-review-normalize.sh --input /tmp/sw-local-review-raw.json --repo-root "$PWD"
    ```
 
 4. `status: skipped|failed|degraded` (no findings) → surface `reason` + skip phase 1 (fail-closed).
@@ -49,7 +49,7 @@ ce-code-review mode:agent base:<parentBranch> grouping:auto
 (`full.diff`, evidence, `review.json`, `report.md`). After parsing normalized JSON:
 
 ```bash
-RUN_DIR="$(jq -r '.artifact_path // empty' /tmp/pf-local-review-raw.json)"
+RUN_DIR="$(jq -r '.artifact_path // empty' /tmp/sw-local-review-raw.json)"
 [[ -n "$RUN_DIR" && -d "$RUN_DIR" ]] && rm -rf "$RUN_DIR"
 ```
 
@@ -60,7 +60,7 @@ Scrub **before** any `memory-preflight` write. Durable learnings only via redact
 Normalized JSON flows to:
 
 1. **Apply** — auto-apply eligible P2/P3 via pf edit machinery after `code-review-apply-check.sh`.
-2. **Re-verify** — one bounded `pf-verify` pass after applies; circuit-breaker on 3 identical failures.
+2. **Re-verify** — one bounded `sw-verify` pass after applies; circuit-breaker on 3 identical failures.
 3. **Gate** — `code-review-gate.sh` with `review.local.gate` config (surface-only default).
 
 Untrusted-output validation (mandatory before apply):

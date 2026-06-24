@@ -1,8 +1,11 @@
-# phase-flow v2 (`shipwright`)
+# Shipwright
 
-Self-contained Cursor plugin for the unified phase-flow v2 development workflow. All commands use the
-`pf-` prefix. Infrastructure seams (CI gate, memory, AI review, stabilize loop, hooks) are vendored in-tree
+Self-contained multi-platform agentic dev-lifecycle plugin (Cursor + Claude Code). Commands use the
+`sw-` prefix. Infrastructure seams (CI gate, memory, AI review, stabilize loop, hooks) are vendored in-tree
 from phase-flow v1 and compound-engineering patterns — no runtime dependency on sibling plugins.
+
+> **Install migration:** remove `~/.cursor/plugins/local/phase-flow-v2` before installing Shipwright, or a
+> zombie plugin may duplicate commands alongside `~/.cursor/plugins/local/shipwright`.
 
 ## Install (local development)
 
@@ -10,28 +13,28 @@ Authoring lives under `core/`; installable trees are **generated** and committed
 
 ```bash
 python3 -m pf generate --all   # after editing core/
-./scripts/sync-local-install.sh   # rsync dist/cursor/ → ~/.cursor/plugins/local/phase-flow-v2
+./scripts/sync-local-install.sh   # rsync dist/cursor/ → ~/.cursor/plugins/local/shipwright
 ```
 
 Then **Developer: Reload Window** in Cursor.
 
-Default install path: `~/.cursor/plugins/local/phase-flow-v2`
+Default install path: `~/.cursor/plugins/local/shipwright`
 
 For Claude Code, point your plugin path at `dist/claude-code/` (or copy it to your Claude plugins directory).
 
 ## Configuration
 
-Copy the example config into your target repo, or run `/pf-setup` for guided scaffolding:
+Copy the example config into your target repo, or run `/sw-setup` for guided scaffolding:
 
 ```bash
 mkdir -p .cursor
-cp core/pf-reference/workflow.config.example.json .cursor/workflow.config.json
+cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 # edit memory.project, verify.*, and provider selection
 ```
 
 Fresh installs can use **zero-config in-repo memory**: commit `.cursor/pf-memory.provider` (containing
 `in-repo`) plus empty `.cursor/pf-memory/{memories,rules}/` — no `workflow.config.json` required until you
-run `/pf-setup`.
+run `/sw-setup`.
 
 Provider **selection** lives in config; API credentials are sourced from the environment / secret store at
 runtime — never commit secrets.
@@ -43,9 +46,9 @@ runtime — never commit secrets.
 | `coderabbit.reviewGraceMinutes` | Gate grace window before absent review = settled |
 | `checks.treatNeutralAsPass` | NEUTRAL checks count as pass unless allowlisted |
 | `checks.neutralAllowlist` | Check names that stay blocking |
-| `memory.autoSync` | Stop-hook thresholds for `/pf-memory-sync` scheduling |
+| `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
 
-See `core/pf-reference/config.schema.json` for the full schema.
+See `core/sw-reference/config.schema.json` for the full schema.
 
 ## Components (foundation)
 

@@ -103,7 +103,7 @@ def resolve_dispatch_to_tier(dispatch_value: str):
 
 
 inherit_count = 0
-for agent in sorted(agents_path.glob("pf-*-reviewer.md")):
+for agent in sorted(agents_path.glob("sw-*-reviewer.md")):
     text = agent.read_text()
     m = re.search(r"^model:\s*(\S+)", text, re.M)
     if not m:

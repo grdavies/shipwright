@@ -1,11 +1,11 @@
 ---
 name: checks-gate
-description: Evaluate the pass/fail/pending state of a PR's CI checks under the phase-flow v2 all-checks policy. Use from /pf-watch-ci and /pf-stabilize to compute a single gate verdict (green/red/yellow/blocked) over every check, honoring the configured neutral allowlist and the review-provider per-head state.
+description: Evaluate the pass/fail/pending state of a PR's CI checks under the phase-flow v2 all-checks policy. Use from /sw-watch-ci and /sw-stabilize to compute a single gate verdict (green/red/yellow/blocked) over every check, honoring the configured neutral allowlist and the review-provider per-head state.
 ---
 
 # checks-gate
 
-Shared predicate for PR CI readiness. `/pf-watch-ci` and `/pf-stabilize` both use it so the gate is
+Shared predicate for PR CI readiness. `/sw-watch-ci` and `/sw-stabilize` both use it so the gate is
 identical on both sides. Default policy is **all checks**, not just required.
 
 ## Policy (`workflow.config.json` → `checks`)
@@ -23,7 +23,7 @@ Review per-head state comes from `review.provider` (default `coderabbit`) via `s
 Do **not** free-hand the verdict from ad-hoc `gh` calls. Run the shipped script:
 
 ```bash
-GATE="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/plugins/local/phase-flow-v2}/scripts/check-gate.sh"
+GATE="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/plugins/local/shipwright}/scripts/check-gate.sh"
 if OUT=$(bash "$GATE"); then GATE_EC=0; else GATE_EC=$?; fi
 echo "$OUT" | jq .
 ```
@@ -50,9 +50,9 @@ Set `PF_GATE_NOW` (unix seconds) to fix the grace-window clock. Fixture harness:
 
 ## Handoff
 
-- `green` → ready to merge gate (implementation workstream `/pf-phase-ready`)
-- `red` / `blocked` → `/pf-stabilize`
-- `yellow` → keep waiting (`/pf-watch-ci`)
+- `green` → ready to merge gate (implementation workstream `/sw-phase-ready`)
+- `red` / `blocked` → `/sw-stabilize`
+- `yellow` → keep waiting (`/sw-watch-ci`)
 
 ## Guardrails
 

@@ -1,6 +1,6 @@
 # CodeRabbit review adapter (agent-mediated)
 
-Markdown companion to `coderabbit.sh` (gate path). Route local review via `/pf-review`; gate per-head state via
+Markdown companion to `coderabbit.sh` (gate path). Route local review via `/sw-review`; gate per-head state via
 the executable adapter.
 
 ## Per-head signals (gate)
@@ -8,7 +8,7 @@ the executable adapter.
 See `skills/checks-gate/SKILL.md` — status context, review→commit association, summary-comment markers,
 grace window (`coderabbit.reviewGraceMinutes`).
 
-## Local delta review (`/pf-review`)
+## Local delta review (`/sw-review`)
 
 ```bash
 coderabbit review -t uncommitted

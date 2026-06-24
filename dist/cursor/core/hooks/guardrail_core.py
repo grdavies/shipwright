@@ -26,7 +26,7 @@ _STATE_RELPATH = Path(".cursor") / "hooks" / "state" / "phase-flow-memory-sync-s
 _DEFAULT_MIN_TURNS = 10
 _DEFAULT_MIN_MINUTES = 120
 _FOLLOWUP = (
-    "Run `/pf-memory-sync` now to distill new agent-transcript deltas into durable memories "
+    "Run `/sw-memory-sync` now to distill new agent-transcript deltas into durable memories "
     "via the configured memory provider. Read the delta only; store high-signal substance "
     "(decisions, hard-won learnings, bug root-causes, design choices, notable review/CI "
     "patterns) with the right category, tags, and related files; search-before-store to "
@@ -107,11 +107,11 @@ def provider_unreachable_message(provider: str | None) -> str:
     if provider == "in-repo":
         return (
             "phase-flow v2: in-repo rules adapter failed to load rule-class guardrails from disk. "
-            "Check .cursor/pf-memory/rules/ and run /pf-setup to validate the store."
+            "Check .cursor/pf-memory/rules/ and run /sw-setup to validate the store."
         )
     return (
         f"phase-flow v2: cannot load rule-class guardrails for provider '{name}'. "
-        "Fix memory provider configuration or run /pf-setup, then retry."
+        "Fix memory provider configuration or run /sw-setup, then retry."
     )
 
 
@@ -156,7 +156,7 @@ def evaluate_submit_guard(root: Path, plugin_root: Path) -> SubmitGuardResult:
             message=(
                 "phase-flow v2: this repo requires at least one allowlisted rule-class guardrail "
                 "(memory.guardrails.requireRuleClass is true) but none are confirmed. "
-                "Promote rules via /pf-memory-audit and update .cursor/pf-memory-rule-allowlist.json, "
+                "Promote rules via /sw-memory-audit and update .cursor/pf-memory-rule-allowlist.json, "
                 "or set requireRuleClass to false for greenfield/bootstrap repos."
             ),
         )
@@ -196,11 +196,11 @@ def _setup_hint(root: Path) -> str | None:
         return None
     if memory_provider_marker_path(root) is not None:
         return (
-            "\n> **Tip:** This repo uses the in-repo memory marker. Run `/pf-setup` to customize "
+            "\n> **Tip:** This repo uses the in-repo memory marker. Run `/sw-setup` to customize "
             "providers, guardrails, and review settings."
         )
     return (
-        "\n> **Tip:** Run `/pf-setup` to configure phase-flow providers, guardrails, and memory for this repo."
+        "\n> **Tip:** Run `/sw-setup` to configure phase-flow providers, guardrails, and memory for this repo."
     )
 
 
@@ -252,9 +252,9 @@ def build_session_context(root: Path, plugin_root: Path, context_template: Path)
         parts.append(
             "\n## Standing memory rules (auto-injected)\n\n"
             "Provider-sourced guardrails (allowlist-filtered). Git state and frozen specs outrank memory.\n\n"
-            f"<pf-guardrails provider=\"{provider}\">\n"
+            f"<sw-guardrails provider=\"{provider}\">\n"
             + block
-            + "\n</pf-guardrails>"
+            + "\n</sw-guardrails>"
         )
 
     return "\n".join(parts)

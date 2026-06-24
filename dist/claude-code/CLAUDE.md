@@ -1,10 +1,10 @@
 # phase-flow v2
 
 
-## pf-freeze-guardrail
+## sw-freeze-guardrail
 
 ---
-description: Never edit a file with frozen: true in frontmatter. Post-freeze changes use /pf-amend only.
+description: Never edit a file with frozen: true in frontmatter. Post-freeze changes use /sw-amend only.
 alwaysApply: true
 ---
 
@@ -14,9 +14,9 @@ Files with `frozen: true` in YAML frontmatter are **immutable**. Do not edit, re
 
 ## If change needed
 
-1. Run `/pf-amend` to create a sibling amendment file.
-2. Review via `/pf-doc-review` (coherence + scope-guardian always run against parent).
-3. Freeze the amendment via `/pf-freeze`.
+1. Run `/sw-amend` to create a sibling amendment file.
+2. Review via `/sw-doc-review` (coherence + scope-guardian always run against parent).
+3. Freeze the amendment via `/sw-freeze`.
 
 ## Enforcement layers
 
@@ -27,51 +27,51 @@ Files with `frozen: true` in YAML frontmatter are **immutable**. Do not edit, re
 There is **no unfreeze** command.
 
 
-## pf-naming
+## sw-naming
 
 ---
-description: pf- command namespace, orchestrator vs atomic boundaries, and naming conventions for phase-flow v2.
+description: sw- command namespace, orchestrator vs atomic boundaries, and naming conventions for phase-flow v2.
 alwaysApply: true
 ---
 
-# pf- naming and command boundaries
+# sw- naming and command boundaries
 
-All plugin commands, skills exposed as commands, and user-facing workflow entry points use the **`pf-`**
-prefix (e.g. `/pf-review`, `/pf-stabilize`, `/pf-memory-sync`). This namespace is distinct from phase-flow
+All plugin commands, skills exposed as commands, and user-facing workflow entry points use the **`sw-`**
+prefix (e.g. `/sw-review`, `/sw-stabilize`, `/sw-memory-sync`). This namespace is distinct from phase-flow
 v1 (unprefixed) and compound-engineering (`ce-`).
 
 ## Orchestrators vs atomic commands
 
 - **Orchestrators** chain multiple phases:
-  - `/pf-doc` — brainstorm → PRD → persona panel → freeze → tasks (tier-gated; see documentation workstream).
-  - `/pf-ship` — execute → verify → review → gaps → commit → pr → watch-ci → stabilize → ready (halts at merge gate).
-  - `/pf-debug` — triage signal → Sentry enrich (optional) → RCA core (debug entry) → route by fix size; does not implement or merge.
-  - `/pf-feedback` — normalize + redact inbound signals → route to debug, gap-capture, or brainstorm; does not analyze or author.
+  - `/sw-doc` — brainstorm → PRD → persona panel → freeze → tasks (tier-gated; see documentation workstream).
+  - `/sw-ship` — execute → verify → review → gaps → commit → pr → watch-ci → stabilize → ready (halts at merge gate).
+  - `/sw-debug` — triage signal → Sentry enrich (optional) → RCA core (debug entry) → route by fix size; does not implement or merge.
+  - `/sw-feedback` — normalize + redact inbound signals → route to debug, gap-capture, or brainstorm; does not analyze or author.
   Their descriptions must state the full chain and which atomic commands they subsume.
-- **Atomic commands** perform one bounded step (e.g. `/pf-watch-ci`, `/pf-memory-sync`, `/pf-triage`). Their descriptions
+- **Atomic commands** perform one bounded step (e.g. `/sw-watch-ci`, `/sw-memory-sync`, `/sw-triage`). Their descriptions
   must state what they do **and what they do not do** (e.g. "polls CI; does not merge or fix failures").
 
 ## Triage boundary
 
-`/pf-triage` classifies tier only — it does not draft docs, freeze artifacts, or start implementation. Routing after triage is explicit in the triage output.
+`/sw-triage` classifies tier only — it does not draft docs, freeze artifacts, or start implementation. Routing after triage is explicit in the triage output.
 
 ## Documentation orchestrator boundary
 
-`/pf-doc` delegates to atomic doc commands; it does not reimplement their procedures. Each atomic (`/pf-brainstorm`, `/pf-prd`, `/pf-doc-review`, `/pf-freeze`, `/pf-tasks`) remains independently runnable.
+`/sw-doc` delegates to atomic doc commands; it does not reimplement their procedures. Each atomic (`/sw-brainstorm`, `/sw-prd`, `/sw-doc-review`, `/sw-freeze`, `/sw-tasks`) remains independently runnable.
 
 ## Debug orchestrator boundary
 
-`/pf-debug` diagnoses via `skills/rca-core` (debug entry) and routes — it does not run `/pf-execute`, `/pf-ship`, or patch on bare `main`. Small fixes hand off to `/pf-worktree` + `/pf-start`; substantial fixes hand off to `/pf-brainstorm` or `/pf-amend`. `/pf-stabilize` remains the in-loop PR blocker surface.
+`/sw-debug` diagnoses via `skills/rca-core` (debug entry) and routes — it does not run `/sw-execute`, `/sw-ship`, or patch on bare `main`. Small fixes hand off to `/sw-worktree` + `/sw-start`; substantial fixes hand off to `/sw-brainstorm` or `/sw-amend`. `/sw-stabilize` remains the in-loop PR blocker surface.
 
 ## Feedback orchestrator boundary
 
-`/pf-feedback` normalizes and routes inbound signals — it does not run `/pf-debug` analysis, `/pf-amend` authoring, or task execution. Production signals with error/crash/regression markers dispatch to `/pf-debug`; PR-extending work splits to `/pf-amend` or `docs/prds/GAP-BACKLOG.md`; new scope dispatches to `/pf-brainstorm`. Human confirmation required before dispatching any route (including agent callers).
+`/sw-feedback` normalizes and routes inbound signals — it does not run `/sw-debug` analysis, `/sw-amend` authoring, or task execution. Production signals with error/crash/regression markers dispatch to `/sw-debug`; PR-extending work splits to `/sw-amend` or `docs/prds/GAP-BACKLOG.md`; new scope dispatches to `/sw-brainstorm`. Human confirmation required before dispatching any route (including agent callers).
 
 ## Naming rules
 
-1. Prefix every command file with `pf-` (e.g. `commands/pf-review.md`).
+1. Prefix every command file with `sw-` (e.g. `commands/sw-review.md`).
 2. Skill directories use descriptive kebab-case without the prefix (e.g. `skills/checks-gate/`).
-3. Rules use `pf-` when they encode plugin-specific guardrails (e.g. `pf-naming.mdc`, `pf-guardrails.mdc`).
+3. Rules use `sw-` when they encode plugin-specific guardrails (e.g. `sw-naming.mdc`, `sw-guardrails.mdc`).
 4. Provider adapters live under `providers/`; executable adapters use `.sh` (e.g. `providers/review/coderabbit.sh`).
 
 ## Description contract
@@ -84,5 +84,5 @@ ambiguity is likely.
 Semantic tiers (`cheap`/`build`/`deep`) live in `workflow.config.json` `models.tiers` only — not in agent
 `model:` frontmatter. Reviewer agents use `model: inherit` or a concrete platform ID. Validated by
 `scripts/model-tier-check.sh` (config + concrete models); runtime R9 for `inherit` reviewers is enforced at
-dispatch by `/pf-doc-review` and `rules/pf-subagent-dispatch.mdc`. See `.pf/models-tiering.md`.
+dispatch by `/sw-doc-review` and `rules/sw-subagent-dispatch.mdc`. See `.sw/models-tiering.md`.
 

@@ -1,6 +1,6 @@
 ---
-name: pf-gap-check
-description: Compare phase plan (spec union + task checklist) against git diff; bounded closers for in-scope gaps. Default-on in /pf-ship.
+name: sw-gap-check
+description: Compare phase plan (spec union + task checklist) against git diff; bounded closers for in-scope gaps. Default-on in /sw-ship.
 ---
 
 # gap-check
@@ -30,8 +30,8 @@ git diff "$PARENT"...HEAD
 
 ## Modes
 
-- **Default (`/pf-ship`):** after execute; `--fast` skips.
-- **Standalone (`/pf-gaps`):** same; `--report-only` never mutates.
+- **Default (`/sw-ship`):** after execute; `--fast` skips.
+- **Standalone (`/sw-gaps`):** same; `--report-only` never mutates.
 
 ## Guardrails
 

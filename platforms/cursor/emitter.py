@@ -95,7 +95,7 @@ class CursorEmitter(EmitterBase):
         manifest_dir = dest / ".cursor-plugin"
         manifest_dir.mkdir(parents=True, exist_ok=True)
         plugin = {
-            "name": "phase-flow-v2",
+            "name": "shipwright",
             "version": read_version(repo_root),
             "description": "phase-flow v2 (generated)",
             "commands": "./commands/",

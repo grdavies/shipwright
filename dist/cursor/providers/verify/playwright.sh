@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="${PF_VERIFY_ROOT:-.}"
-LOG="${TMPDIR:-/tmp}/pf-verify.e2e.log"
+LOG="${TMPDIR:-/tmp}/sw-verify.e2e.log"
 cd "$ROOT"
 
 has_pw=false

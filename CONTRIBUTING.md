@@ -10,7 +10,7 @@ Authoring lives under `core/`; installable plugin trees are **generated** and co
 # After editing core/, regenerate install trees
 python3 -m pf generate --all
 
-# Sync to local Cursor plugin directory (default: ~/.cursor/plugins/local/phase-flow-v2)
+# Sync to local Cursor plugin directory (default: ~/.cursor/plugins/local/shipwright)
 ./scripts/sync-local-install.sh
 ```
 
@@ -51,7 +51,7 @@ individually as needed.
 ## Code style
 
 - Match existing patterns in the area you are editing.
-- Keep user-facing command names under the `pf-` prefix until the planned `sw-` rename lands.
+- Keep user-facing command names under the `sw-` prefix.
 - Do not commit secrets, API keys, or raw session transcripts.
 
 ## Questions

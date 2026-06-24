@@ -7,12 +7,12 @@
 # changing the plugin, then "Developer: Reload Window" in Cursor.
 #
 # Usage: scripts/sync-local-install.sh [dest]
-#   dest defaults to ~/.cursor/plugins/local/phase-flow-v2
+#   dest defaults to ~/.cursor/plugins/local/shipwright
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="$REPO/dist/cursor"
-DEST="${1:-$HOME/.cursor/plugins/local/phase-flow-v2}"
+DEST="${1:-$HOME/.cursor/plugins/local/shipwright}"
 
 if [ -L "$DEST" ]; then
   echo "Removing stale symlink at $DEST"
@@ -26,5 +26,5 @@ rsync -a --delete \
   --exclude 'scripts/sync-local-install.sh' \
   "$SRC/" "$DEST/"
 
-echo "Synced phase-flow-v2 -> $DEST"
+echo "Synced shipwright -> $DEST"
 echo "Now run 'Developer: Reload Window' in Cursor to pick up changes."

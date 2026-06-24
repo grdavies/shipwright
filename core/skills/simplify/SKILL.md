@@ -6,14 +6,14 @@ description: Behavior-preserving cleanup pass (reuse, quality, efficiency, AI-sl
 # Simplification / deslop pass (IM7)
 
 Post-review, pre-commit cleanup on the uncommitted delta. **Behavior-preserving only** — no new features, no
-scope expansion, no weakened tests. Complements `/pf-review` (findings) and `gap-check` (requirements); does
+scope expansion, no weakened tests. Complements `/sw-review` (findings) and `gap-check` (requirements); does
 not replace either.
 
 ## When it runs
 
-- Default-on in `/pf-ship` after `/pf-review`, before `gap-check`.
-- Standalone: `/pf-simplify` anytime on uncommitted work.
-- Skip: `/pf-ship --fast` (with gap-check) or explicit `--skip-simplify`.
+- Default-on in `/sw-ship` after `/sw-review`, before `gap-check`.
+- Standalone: `/sw-simplify` anytime on uncommitted work.
+- Skip: `/sw-ship --fast` (with gap-check) or explicit `--skip-simplify`.
 
 ## Pass categories
 
@@ -28,15 +28,15 @@ Apply only when removal/simplification cannot change observable behavior:
 
 ## Procedure
 
-1. **Baseline evidence** — copy `/tmp/pf-verify.status.json` → `/tmp/pf-verify.pre-simplify.json` when present.
+1. **Baseline evidence** — copy `/tmp/sw-verify.status.json` → `/tmp/sw-verify.pre-simplify.json` when present.
 2. **Scope** — `git diff` + `git diff --cached`; if empty, report `skipped` and stop.
 3. **Simplify** — edit delta only; honor `agentsFile` doctrine; no test assertion weakening.
-4. **Re-verify** — run `/pf-verify` (or equivalent config commands); refresh `/tmp/pf-verify.status.json`.
+4. **Re-verify** — run `/sw-verify` (or equivalent config commands); refresh `/tmp/sw-verify.status.json`.
 5. **Behavior gate** — `bash scripts/simplify-gate.sh`:
-   - `--baseline-verify /tmp/pf-verify.pre-simplify.json`
-   - `--post-verify /tmp/pf-verify.status.json`
-6. Emit `/tmp/pf-simplify.status.json` with `{verdict, baseline, post, findings}`.
-7. Hand off to `gap-check` / `/pf-commit` on `preserved` or `inconclusive`; **halt** on `regressed`.
+   - `--baseline-verify /tmp/sw-verify.pre-simplify.json`
+   - `--post-verify /tmp/sw-verify.status.json`
+6. Emit `/tmp/sw-simplify.status.json` with `{verdict, baseline, post, findings}`.
+7. Hand off to `gap-check` / `/sw-commit` on `preserved` or `inconclusive`; **halt** on `regressed`.
 
 ## Verdict contract (`scripts/simplify-gate.sh`)
 

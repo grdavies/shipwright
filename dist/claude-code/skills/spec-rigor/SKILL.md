@@ -6,7 +6,7 @@ description: Pre-freeze spec quality gates (clarify, checklist, analyze) and R-I
 # Spec-rigor gates (IM4)
 
 Pre-freeze quality and traceability discipline for the doc workstream. Complements `skills/doc-review` (persona
-panel) — structural gates run **after** panel synthesis and **before** `/pf-freeze`.
+panel) — structural gates run **after** panel synthesis and **before** `/sw-freeze`.
 
 ## Tier policy
 
@@ -16,7 +16,7 @@ panel) — structural gates run **after** panel synthesis and **before** `/pf-fr
 | **Standard** | checklist only | analyze + traceability |
 | **Quick** | — (doc chain not entered) | — |
 
-**Clarify** is Full-only because `/pf-brainstorm` + `/pf-prd` dialogue already reduces ambiguity on Standard.
+**Clarify** is Full-only because `/sw-brainstorm` + `/sw-prd` dialogue already reduces ambiguity on Standard.
 **Analyze** and **traceability** always run before task-list freeze — every tier that reaches tasks needs
 spec↔task consistency and R-ID→test coverage.
 
@@ -96,9 +96,9 @@ Task items cite R-IDs inline: `- [ ] 1.2 Implement gate (R1)`.
 
 | Command | When |
 | --- | --- |
-| `/pf-freeze` | PRD → spec-rigor PRD gates; task list → analyze + traceability |
-| `/pf-tasks` | Generate traceability table during expansion; run checks before freeze |
-| `/pf-doc` | Chain includes spec-rigor before each freeze step |
+| `/sw-freeze` | PRD → spec-rigor PRD gates; task list → analyze + traceability |
+| `/sw-tasks` | Generate traceability table during expansion; run checks before freeze |
+| `/sw-doc` | Chain includes spec-rigor before each freeze step |
 
 ## Guardrails
 

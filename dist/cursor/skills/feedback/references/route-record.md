@@ -1,6 +1,6 @@
 # Feedback route record (compounding contract)
 
-Written after routing via `memory-preflight` (redacted). Consumed by `/pf-compound` (R42 human-gated).
+Written after routing via `memory-preflight` (redacted). Consumed by `/sw-compound` (R42 human-gated).
 
 ```json
 {
@@ -10,7 +10,7 @@ Written after routing via `memory-preflight` (redacted). Consumed by `/pf-compou
   "signalId": "<from normalized signal>",
   "sourceClass": "production | review | retro",
   "dedupKey": "<class-tagged key>",
-  "target": "/pf-debug | /pf-amend | /pf-brainstorm | docs/prds/GAP-BACKLOG.md",
+  "target": "/sw-debug | /sw-amend | /sw-brainstorm | docs/prds/GAP-BACKLOG.md",
   "originatingSignalRef": "redacted one-line summary — no secrets",
   "relatedFiles": []
 }

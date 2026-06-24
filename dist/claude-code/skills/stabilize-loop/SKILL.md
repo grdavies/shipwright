@@ -1,11 +1,11 @@
 ---
 name: stabilize-loop
-description: USE WHEN reviewing code, handling review feedback, or running /pf-review and /pf-stabilize. Opt-in goal-driven loop that keeps running /pf-stabilize and /pf-watch-ci until the all-checks gate is green and no actionable review threads remain. Use when the user asks to stabilize until green, or from /ship. Single-pass /pf-stabilize remains the default; this only adds the loop wrapper with hard stops.---
+description: USE WHEN reviewing code, handling review feedback, or running /sw-review and /sw-stabilize. Opt-in goal-driven loop that keeps running /sw-stabilize and /sw-watch-ci until the all-checks gate is green and no actionable review threads remain. Use when the user asks to stabilize until green, or from /ship. Single-pass /sw-stabilize remains the default; this only adds the loop wrapper with hard stops.---
 
 # stabilize-loop
 
 Drives the current PR to a green gate by repeating the stabilize→verify→push→watch cycle, waking on CI
-completion and new review comments. **Opt-in only** — the default for `/pf-stabilize` is a single pass.
+completion and new review comments. **Opt-in only** — the default for `/sw-stabilize` is a single pass.
 This wrapper never changes stabilize's discipline (reply-before-resolve, verify-before-resolve, no
 mass-resolve); it just repeats it under hard stops.
 
@@ -40,7 +40,7 @@ the loop is not done while reproducible findings remain unresolved.
 ## Loop
 
 1. Resolve PR + config (`checks`, `coderabbit`, `verify`, `memory`). Record the starting head SHA.
-2. Run one `/pf-stabilize` pass (its full procedure + guardrails, including the **rca-core stabilize
+2. Run one `/sw-stabilize` pass (its full procedure + guardrails, including the **rca-core stabilize
    entry** RCA pass before the blocker ledger): build the blocker ledger, fix the `fix-now` batch,
    verify with the configured `verify` commands, reply+resolve only verified threads, make one focused
    commit, push once.
@@ -74,8 +74,8 @@ loops; track the PID so the loop can be stopped on request.
 
 ## Guardrails
 
-- Opt-in. Never convert a plain `/pf-stabilize` into a loop without the user asking (or `/ship` driving).
-- Preserve every `/pf-stabilize` guardrail — this wrapper adds iteration, not new resolve powers. Each
+- Opt-in. Never convert a plain `/sw-stabilize` into a loop without the user asking (or `/ship` driving).
+- Preserve every `/sw-stabilize` guardrail — this wrapper adds iteration, not new resolve powers. Each
   pass includes one rca-core stabilize entry (single analysis step; R29 budget stays here, not nested).
 - One focused commit per pass; never batch "do everything" into one inflated commit.
 - Never merge, force-push, rerun unrelated workflows, or edit CI definitions to go green.

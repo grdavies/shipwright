@@ -9,9 +9,9 @@ globs:
 When judging PR readiness in the phase-flow v2 workflow, evaluate **every** check, not only required ones.
 A non-required job that fails still blocks merge-ready.
 
-- Canonical algorithm: `checks-gate` skill (`skills/checks-gate/SKILL.md`). `/pf-watch-ci` and
-  `/pf-stabilize` both use it.
+- Canonical algorithm: `checks-gate` skill (`skills/checks-gate/SKILL.md`). `/sw-watch-ci` and
+  `/sw-stabilize` both use it.
 - Policy: `workflow.config.json` → `checks` (`policy`, `treatNeutralAsPass`, `neutralAllowlist`).
 - Review barrier: `review.provider` per-head state via `scripts/check-gate.sh`.
 - `NEUTRAL` passes only when `treatNeutralAsPass` is true or the check is in `neutralAllowlist`.
-- Verdicts: `green` → ready; `red`/`blocked` → `/pf-stabilize`; `yellow` → keep waiting.
+- Verdicts: `green` → ready; `red`/`blocked` → `/sw-stabilize`; `yellow` → keep waiting.

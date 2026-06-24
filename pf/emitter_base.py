@@ -17,7 +17,7 @@ EXCLUDE_SUFFIXES = (".pyc",)
 CURSOR_PLUGIN_ROOT = "${CURSOR_PLUGIN_ROOT}"
 CLAUDE_PLUGIN_ROOT = "${CLAUDE_PLUGIN_ROOT}"
 CURSOR_FALLBACK_RE = re.compile(
-    r"\$HOME/\.cursor/plugins/local/phase-flow-v2"
+    r"\$HOME/\.cursor/plugins/local/shipwright"
 )
 
 
@@ -97,7 +97,7 @@ class EmitterBase(ABC):
             text,
         )
         text = CURSOR_FALLBACK_RE.sub(
-            "$HOME/.claude/plugins/local/phase-flow-v2",
+            "$HOME/.claude/plugins/local/shipwright",
             text,
         )
         return text

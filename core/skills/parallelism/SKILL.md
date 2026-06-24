@@ -1,5 +1,5 @@
 ---
-name: pf-parallelism
+name: sw-parallelism
 description: Bounded parallel worktrees (~2-4 ceiling), cross-branch recombination, merge pre-flight, shared-migration refusal.
 ---
 
@@ -40,5 +40,5 @@ If overlap → serialize; do not parallelize.
 
 ## Integration
 
-- `/pf-worktree provision` enforces ceiling.
-- `/pf-ship` and gap-closers respect dispatch policy (`rules/pf-subagent-dispatch.mdc`).
+- `/sw-worktree provision` enforces ceiling.
+- `/sw-ship` and gap-closers respect dispatch policy (`rules/sw-subagent-dispatch.mdc`).

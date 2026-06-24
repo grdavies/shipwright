@@ -1,11 +1,11 @@
 ---
 name: execute-discipline
-description: Per-task TDD gate, two-stage subagent review, and executable-plan self-review for /pf-execute. Consumes U6 traceability.
+description: Per-task TDD gate, two-stage subagent review, and executable-plan self-review for /sw-execute. Consumes U6 traceability.
 ---
 
 # Execute discipline (IM5 + IM6)
 
-Bounded implementation loop inside `/pf-execute`. One **task ref** at a time (e.g. `1.2`); each task runs
+Bounded implementation loop inside `/sw-execute`. One **task ref** at a time (e.g. `1.2`); each task runs
 plan self-review → TDD red → implement → TDD green → two-stage review before the next task.
 
 ## Per-task loop
@@ -17,19 +17,19 @@ plan-self-review → TDD red → implement → TDD green → tdd-gate → stage-
 1. **Plan self-review** — `bash scripts/plan-self-review.sh --tasks <file> [--task-ref <ref>]`
    Validates executable steps (`**File:**`, `**Expected:**`) and scans for placeholders.
 2. **Resolve traceability** — from `## Traceability` (U6), load `testScenario` + `rid` for this task ref.
-3. **TDD red** — run the traced test command; record failure in `/tmp/pf-tdd.status.json` (`red.observed: true`,
+3. **TDD red** — run the traced test command; record failure in `/tmp/sw-tdd.status.json` (`red.observed: true`,
    `red.exitCode != 0`). If no test scenario exists, record `skipped: true` with reason — gate returns `skipped`.
 4. **Implement** — minimal change for the task; do not weaken assertions to force green.
 5. **TDD green** — re-run the same test; record pass (`green.observed: true`, `green.exitCode: 0`).
-6. **TDD gate** — `bash scripts/tdd-gate.sh --status /tmp/pf-tdd.status.json` must return `pass` or `skipped`.
-7. **Two-stage review** (fresh subagent per task when delegated — see `rules/pf-subagent-dispatch.mdc`):
+6. **TDD gate** — `bash scripts/tdd-gate.sh --status /tmp/sw-tdd.status.json` must return `pass` or `skipped`.
+7. **Two-stage review** (fresh subagent per task when delegated — see `rules/sw-subagent-dispatch.mdc`):
    - **Stage 1 — spec-compliance:** diff satisfies task + union R-IDs; no out-of-scope edits.
    - **Stage 2 — code-quality:** naming, structure, obvious bugs; no scope expansion.
-8. Halt on stage failure; fix or escalate (R29). Leave work uncommitted for `/pf-verify`.
+8. Halt on stage failure; fix or escalate (R29). Leave work uncommitted for `/sw-verify`.
 
 ## TDD status shape
 
-Emit `/tmp/pf-tdd.status.json` before calling the gate:
+Emit `/tmp/sw-tdd.status.json` before calling the gate:
 
 ```json
 {
@@ -56,7 +56,7 @@ Complements `skills/verification-gate` — TDD gate is **per-task pre-verify**; 
 
 ## Executable plan shape (task sub-items)
 
-After `/pf-tasks` Go expansion, each implementable sub-task includes:
+After `/sw-tasks` Go expansion, each implementable sub-task includes:
 
 ```markdown
 - [ ] 1.1 Add tdd-gate script (R1)
@@ -80,5 +80,5 @@ Parent phase items may stay checklist-only; **sub-tasks** under active phase car
 
 - Do not rewrite tests to match broken behavior (pairs with U4 dev-time gate).
 - Two-stage review is **between tasks**, not batched at phase end.
-- Subagent dispatch for implement + review follows R37 + `pf-subagent-dispatch.mdc`.
-- No commit/push/PR from this skill — `/pf-execute` boundary unchanged.
+- Subagent dispatch for implement + review follows R37 + `sw-subagent-dispatch.mdc`.
+- No commit/push/PR from this skill — `/sw-execute` boundary unchanged.

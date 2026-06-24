@@ -1,0 +1,14 @@
+---
+description: Always-on phase-flow v2 guardrail fallback when sessionStart additional_context injection drops (Cursor platform bug mitigation).
+alwaysApply: true
+---
+
+# phase-flow v2 guardrails (static fallback)
+
+This rule mirrors critical guardrails when hook injection is unreliable. Fail-closed enforcement lives in
+the `beforeSubmitPrompt` hook (`before-submit-guardrails.py`).
+
+- Route memory ops through `memory-preflight` / `providers/<memory.provider>.md` — never call Recallium directly.
+- Never store raw transcripts or secrets in memory.
+- CI readiness: run `scripts/check-gate.sh` — never hand-roll a green verdict.
+- `sw-` commands only for this plugin's workflow surface.

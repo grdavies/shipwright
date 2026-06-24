@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Fixture tests for in-repo memory provider + /pf-setup (plan 2026-06-23-002).
+# Fixture tests for in-repo memory provider + /sw-setup (plan 2026-06-23-002).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-# shellcheck source=../pf-resolve-plugin-root.sh
-source "$ROOT/scripts/pf-resolve-plugin-root.sh"
+# shellcheck source=../sw-resolve-plugin-root.sh
+source "$ROOT/scripts/sw-resolve-plugin-root.sh"
 CONTENT="$(pf_resolve_plugin_root "$ROOT/scripts")"
 CURSOR_DIST="$ROOT/dist/cursor"
 SEARCH="$ROOT/scripts/in-repo-memory-search.sh"
@@ -13,14 +13,14 @@ HOOK="$CURSOR_DIST/hooks/before-submit-guardrails.py"
 FIX="$ROOT/scripts/test/fixtures/in-repo-memory"
 FIX_RULES="$ROOT/scripts/test/fixtures/in-repo-rules"
 FIX_MARKER="$ROOT/scripts/test/fixtures/marker"
-if [ -f "$ROOT/.pf/config.schema.json" ]; then
-  SCHEMA="$ROOT/.pf/config.schema.json"
-elif [ -f "$CONTENT/pf-reference/config.schema.json" ]; then
-  SCHEMA="$CONTENT/pf-reference/config.schema.json"
+if [ -f "$ROOT/.sw/config.schema.json" ]; then
+  SCHEMA="$ROOT/.sw/config.schema.json"
+elif [ -f "$CONTENT/sw-reference/config.schema.json" ]; then
+  SCHEMA="$CONTENT/sw-reference/config.schema.json"
 else
-  SCHEMA="$ROOT/.pf/config.schema.json"
+  SCHEMA="$ROOT/.sw/config.schema.json"
 fi
-PF_SETUP="$CONTENT/commands/pf-setup.md"
+PF_SETUP="$CONTENT/commands/sw-setup.md"
 IN_REPO_MD="$CONTENT/providers/in-repo.md"
 CAPS="$CONTENT/skills/memory/CAPABILITIES.md"
 REDACT="$ROOT/scripts/memory-redact.sh"
@@ -195,25 +195,25 @@ else
 fi
 rm -rf "$UNCONF"
 
-# Session-start hints /pf-setup (shared guardrail core builds session context)
-if grep -q '/pf-setup' "$GUARDRAIL_CORE"; then
-  echo "OK  session-start nudges /pf-setup"
+# Session-start hints /sw-setup (shared guardrail core builds session context)
+if grep -q '/sw-setup' "$GUARDRAIL_CORE"; then
+  echo "OK  session-start nudges /sw-setup"
 else
   echo "FAIL U4 session-start hint"
   FAIL=1
 fi
 
-# --- U5: pf-setup command ---
+# --- U5: sw-setup command ---
 if [[ -f "$PF_SETUP" ]] && grep -qi 'doctor' "$PF_SETUP" && grep -qi 'does not scaffold CI' "$PF_SETUP" && \
    grep -qi 'does not' "$PF_SETUP" && grep -qi 'migrate' "$PF_SETUP"; then
-  echo "OK  pf-setup command scope + doctor mode"
+  echo "OK  sw-setup command scope + doctor mode"
 else
-  echo "FAIL U5 pf-setup command"
+  echo "FAIL U5 sw-setup command"
   FAIL=1
 fi
 
-if grep -q '/pf-setup' "$CONTENT/rules/pf-workflow-sequencing.mdc"; then
-  echo "OK  workflow sequencing references /pf-setup"
+if grep -q '/sw-setup' "$CONTENT/rules/sw-workflow-sequencing.mdc"; then
+  echo "OK  workflow sequencing references /sw-setup"
 else
   echo "FAIL U5 sequencing reference"
   FAIL=1
@@ -228,7 +228,7 @@ except ImportError:
     print("SKIP U6 jsonschema not installed — structural check only")
     sys.exit(0)
 root = pathlib.Path("$ROOT")
-schema = json.loads((root / ".pf/config.schema.json").read_text())
+schema = json.loads((root / ".sw/config.schema.json").read_text())
 valid = json.loads((root / "scripts/test/fixtures/in-repo-memory/config-in-repo.json").read_text())
 jsonschema.validate(valid, schema)
 invalid = dict(valid)
@@ -255,7 +255,7 @@ fi
 
 # --- U7: runner registered ---
 WF_CFG="$ROOT/.cursor/workflow.config.json"
-if grep -q 'run-memory-provider-fixtures.sh' "$WF_CFG" 2>/dev/null || grep -q 'run-memory-provider-fixtures' "$CONTENT/pf-reference/workflow.config.example.json" 2>/dev/null; then
+if grep -q 'run-memory-provider-fixtures.sh' "$WF_CFG" 2>/dev/null || grep -q 'run-memory-provider-fixtures' "$CONTENT/sw-reference/workflow.config.example.json" 2>/dev/null; then
   echo "OK  verify.test registration present or pending"
 else
   # Will register below — check after update

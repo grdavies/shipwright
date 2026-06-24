@@ -2,7 +2,7 @@
 # Deterministic phase-flow v2 CI readiness gate.
 #
 # Prints a single JSON verdict to stdout and never mutates anything. Canonical computation behind the
-# `checks-gate` skill — `/pf-watch-ci` and stabilize invoke it instead of ad-hoc `gh` calls.
+# `checks-gate` skill — `/sw-watch-ci` and stabilize invoke it instead of ad-hoc `gh` calls.
 #
 # Per-head review state comes from providers/review/<provider>.sh (executable adapter seam).
 #
@@ -11,14 +11,14 @@
 # Env: PF_GATE_NOW — unix seconds override for deterministic tests (grace window)
 set -uo pipefail
 
-CHECKS="$(mktemp "${TMPDIR:-/tmp}/pf-gate-checks.XXXXXX")"
-ISSUE_COMMENTS="$(mktemp "${TMPDIR:-/tmp}/pf-gate-comments.XXXXXX")"
+CHECKS="$(mktemp "${TMPDIR:-/tmp}/sw-gate-checks.XXXXXX")"
+ISSUE_COMMENTS="$(mktemp "${TMPDIR:-/tmp}/sw-gate-comments.XXXXXX")"
 trap 'rm -f "$CHECKS" "$ISSUE_COMMENTS"' EXIT
 
 # --- repo + config ------------------------------------------------------------
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-# shellcheck source=pf-resolve-plugin-root.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/pf-resolve-plugin-root.sh"
+# shellcheck source=sw-resolve-plugin-root.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sw-resolve-plugin-root.sh"
 PLUGIN_ROOT="$(pf_resolve_plugin_root "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
 CONFIG=""
 for p in "$ROOT/.cursor/workflow.config.json" "$ROOT/workflow.config.json"; do

@@ -1,5 +1,5 @@
 ---
-name: pf-phase-state
+name: sw-phase-state
 description: Per-worktree phase-flow state read/write contract. Resolves state path in the worktree gitdir; aggregates a read-only repo index from all worktrees.
 ---
 
@@ -36,7 +36,7 @@ bash scripts/phase-state.sh path
 | `shipStartedAt` | Orchestrator start |
 | `tier` | Work tier (quick/standard/heavy) |
 | `workstream` | e.g. `implementation` |
-| `scaffold` | Port/DB/deps from `/pf-worktree` |
+| `scaffold` | Port/DB/deps from `/sw-worktree` |
 | `worktreeName` / `worktreePath` | Provisioning metadata |
 
 ## Operations

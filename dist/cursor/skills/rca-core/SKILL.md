@@ -11,9 +11,9 @@ downstream routing only.
 
 | Entry | Inputs | Downstream |
 |-------|--------|------------|
-| `stabilize` | Gate failures + normalized review findings | `/pf-stabilize` → push → `/pf-watch-ci` |
-| `debug` | Production signals (Sentry / deploy log / user report) | `/pf-debug` routing → `003` or `002` |
-| `dev-time` | Local test/build/verify failures | `/pf-debug` → worktree + `/pf-start` or escalate |
+| `stabilize` | Gate failures + normalized review findings | `/sw-stabilize` → push → `/sw-watch-ci` |
+| `debug` | Production signals (Sentry / deploy log / user report) | `/sw-debug` routing → `003` or `002` |
+| `dev-time` | Local test/build/verify failures | `/sw-debug` → worktree + `/sw-start` or escalate |
 
 ## Shared discipline
 
@@ -37,26 +37,26 @@ downstream routing only.
 
 ## Stabilize entry procedure
 
-**Single pass only** — runs once per `/pf-stabilize` invocation. Does not iterate; `stabilize-loop`
+**Single pass only** — runs once per `/sw-stabilize` invocation. Does not iterate; `stabilize-loop`
 owns the R29 budget (`maxIterations`, no-progress, human decision). Do not re-run this entry in a loop
 inside one stabilize pass.
 
-**Consume harvested artifacts** (collection happens in `/pf-stabilize` preconditions — do not re-fetch):
+**Consume harvested artifacts** (collection happens in `/sw-stabilize` preconditions — do not re-fetch):
 
 | Artifact | Path |
 | --- | --- |
-| Review threads | `/tmp/pf-stabilize-threads.json` |
-| Non-inline findings | `/tmp/pf-stabilize-noninline.md` |
-| Gate verdict | `/tmp/pf-stabilize-gate.json` (`scripts/check-gate.sh` stdout) |
+| Review threads | `/tmp/sw-stabilize-threads.json` |
+| Non-inline findings | `/tmp/sw-stabilize-noninline.md` |
+| Gate verdict | `/tmp/sw-stabilize-gate.json` (`scripts/check-gate.sh` stdout) |
 
-1. Parse failing check names + logs from `/tmp/pf-stabilize-gate.json`.
+1. Parse failing check names + logs from `/tmp/sw-stabilize-gate.json`.
 2. Parse normalized findings from threads JSON + non-inline markdown.
 3. Run the **shared discipline** (hypotheses → causal-chain gate) on **`fix-now` candidates only**.
    Items destined for `resolve-with-evidence`, `already-fixed-with-evidence`, or defer buckets **bypass**
    the causal-chain gate — classify them straight into the ledger without forcing a trigger→symptom chain.
 4. Propose minimal fix per top surviving `fix-now` hypothesis; verify against frozen spec / PRD amendments
    union.
-5. Hand off to `/pf-stabilize` ledger + fix procedure. Gate green is determined by `check-gate.sh` on the
+5. Hand off to `/sw-stabilize` ledger + fix procedure. Gate green is determined by `check-gate.sh` on the
    next pass — this entry does not declare success alone.
 
 ## Debug entry procedure
@@ -69,11 +69,11 @@ Inputs: normalized signal per `references/debug-inputs.md` + optional repo conte
 4. Form ranked hypotheses from signal evidence (stack, breadcrumbs, log excerpt, user report).
 5. Run the **shared discipline** — attempt repro-from-context but proceed without local repro if blocked.
 6. Emit root cause + proposed fix + verification plan.
-7. **Do not implement or merge** — hand off to `/pf-debug` routing (scoped phase vs brainstorm/amendment).
+7. **Do not implement or merge** — hand off to `/sw-debug` routing (scoped phase vs brainstorm/amendment).
 
 ## Dev-time entry procedure
 
-Inputs: failing test output, build error, or `/tmp/pf-verify.status.json` + relevant log excerpt from local
+Inputs: failing test output, build error, or `/tmp/sw-verify.status.json` + relevant log excerpt from local
 dev (not production signals).
 
 1. **Redact** failure text through `bash scripts/memory-redact.sh`.
@@ -90,7 +90,7 @@ dev (not production signals).
    ```
 
 7. Emit root cause + proposed fix + verification plan (test command that must flip red→green).
-8. Hand off to `/pf-debug` dev-time routing → `/pf-worktree` + `/pf-start` when fix is small; escalate on
+8. Hand off to `/sw-debug` dev-time routing → `/sw-worktree` + `/sw-start` when fix is small; escalate on
    rule-of-three or substantial scope.
 
 ### Entry comparison

@@ -5,7 +5,7 @@ description: Consume GAP-BACKLOG into implementation loop and close routed signa
 
 # Feedback closure loop (IM8)
 
-Closes the loop from `/pf-feedback` trivial-gap routing → `docs/prds/GAP-BACKLOG.md` → implementation → verified
+Closes the loop from `/sw-feedback` trivial-gap routing → `docs/prds/GAP-BACKLOG.md` → implementation → verified
 ship. Complements `skills/feedback` (intake/route) and `skills/gap-check` (plan vs diff).
 
 ## Backlog entry format
@@ -24,7 +24,7 @@ Closed:
 
 | Surface | When |
 | --- | --- |
-| `/pf-execute` | Load open items via `feedback-backlog.sh list`; treat PR/PRD-linked items as supplemental scope |
+| `/sw-execute` | Load open items via `feedback-backlog.sh list`; treat PR/PRD-linked items as supplemental scope |
 | `gap-check` | Include open backlog rows in plan mapping (alongside task checklist) |
 | `living-status` | Already surfaces backlog read-only |
 
@@ -36,7 +36,7 @@ bash scripts/feedback-backlog.sh list --open-only --backlog docs/prds/GAP-BACKLO
 
 Runs when local evidence shows the fix is verified **and** the backlog item is still open:
 
-1. **Human confirmation** — same bar as `/pf-feedback` dispatch; never auto-close without explicit user OK.
+1. **Human confirmation** — same bar as `/sw-feedback` dispatch; never auto-close without explicit user OK.
 2. **Eligibility gate** — `bash scripts/feedback-closure-gate.sh`:
    - `--backlog`, `--signal-id`, `--verify-status` (required)
    - Optional `--gate-json` + `--require-gate` when a PR exists
@@ -57,9 +57,9 @@ Reuses `skills/verification-gate` evidence shapes — does not override `check-g
 
 | Command | Role |
 | --- | --- |
-| `/pf-feedback-close` | Atomic closure after human confirm |
-| `/pf-ship` | Offers closure step after `pf-ready` on live green (optional `--signal-id`) |
-| `/pf-execute`, `gap-check` | Consume open backlog |
+| `/sw-feedback-close` | Atomic closure after human confirm |
+| `/sw-ship` | Offers closure step after `sw-ready` on live green (optional `--signal-id`) |
+| `/sw-execute`, `gap-check` | Consume open backlog |
 
 ## Guardrails
 

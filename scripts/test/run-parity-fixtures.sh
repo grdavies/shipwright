@@ -11,7 +11,7 @@ GOLDEN="$FIX/cursor-golden.manifest"
 chmod +x "$SNAPSHOT" "$COMPARE"
 
 FAIL=0
-TMP_BASE="$(mktemp -d "${TMPDIR:-/tmp}/pf-parity-fix.XXXXXX")"
+TMP_BASE="$(mktemp -d "${TMPDIR:-/tmp}/sw-parity-fix.XXXXXX")"
 trap 'rm -rf "$TMP_BASE"' EXIT
 
 run_expect() {
@@ -33,9 +33,9 @@ run_expect() {
 # Fixture tree: happy match
 HAPPY="$TMP_BASE/happy-tree"
 mkdir -p "$HAPPY/commands"
-echo 'cmd body' >"$HAPPY/commands/pf-test.md"
+echo 'cmd body' >"$HAPPY/commands/sw-test.md"
 MANIFEST_HAPPY="$TMP_BASE/happy.manifest"
-printf 'commands/pf-test.md\t%s\n' "$(shasum -a 256 "$HAPPY/commands/pf-test.md" | awk '{print $1}')" >"$MANIFEST_HAPPY"
+printf 'commands/sw-test.md\t%s\n' "$(shasum -a 256 "$HAPPY/commands/sw-test.md" | awk '{print $1}')" >"$MANIFEST_HAPPY"
 run_expect happy-match 0 "$COMPARE" "$HAPPY" "$MANIFEST_HAPPY"
 
 # Missing file
@@ -52,7 +52,7 @@ run_expect extra-file 1 "$COMPARE" "$EXTRA" "$MANIFEST_HAPPY"
 # Hash diff
 DIFF="$TMP_BASE/diff-tree"
 cp -R "$HAPPY" "$DIFF"
-echo 'changed' >"$DIFF/commands/pf-test.md"
+echo 'changed' >"$DIFF/commands/sw-test.md"
 run_expect hash-diff 1 "$COMPARE" "$DIFF" "$MANIFEST_HAPPY"
 
 # Deterministic re-snapshot

@@ -11,7 +11,7 @@ Three layers — do not conflate them:
 
 | Layer | What | Greenfield (zero memories) |
 | --- | --- | --- |
-| **Static** | `.cursor/rules/pf-guardrails.mdc` (`alwaysApply`) | Always on — baseline plugin guardrails without Recallium |
+| **Static** | `.cursor/rules/sw-guardrails.mdc` (`alwaysApply`) | Always on — baseline plugin guardrails without Recallium |
 | **Dynamic** | Rule-class memories from the provider, filtered by allowlist | Empty is **normal** for a new repo / new `memory.project` |
 | **Hook** | `beforeSubmitPrompt` fail-closed check | Blocks only when the provider is **unreachable** (cannot confirm state) |
 
@@ -31,7 +31,7 @@ Set `memory.guardrails.enforceBeforeSubmit: false` to disable the hook entirely 
 
 Before any memory persist or re-injection, run the shared redaction filter on:
 
-- transcript deltas (`/pf-memory-sync`)
+- transcript deltas (`/sw-memory-sync`)
 - deploy-log edges (deferred workstream)
 - Sentry payload edges (deferred workstream)
 
@@ -40,7 +40,7 @@ Named patterns: AWS `AKIA…`, `ghp_…`/PATs, JWTs, `Bearer` headers, PEM priva
 ## Rule-class promotion (R42)
 
 `category: rule` requires human confirmation + provenance metadata. Auto-distilled candidates cannot
-promote without `/pf-memory-audit` approval. Active rules must appear in `.cursor/pf-memory-rule-allowlist.json`.
+promote without `/sw-memory-audit` approval. Active rules must appear in `.cursor/pf-memory-rule-allowlist.json`.
 
 ## Trust boundary (R43)
 

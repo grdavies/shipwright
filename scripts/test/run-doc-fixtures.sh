@@ -125,8 +125,8 @@ fi
 # --- spec-rigor: decision record pass ---
 SPEC_RIGOR_CHECK="$ROOT/scripts/spec-rigor-check.sh"
 FIX_DECISION="$ROOT/scripts/test/fixtures"
-PF_FREEZE="$ROOT/commands/pf-freeze.md"
-PF_PRD="$ROOT/commands/pf-prd.md"
+PF_FREEZE="$ROOT/commands/sw-freeze.md"
+PF_PRD="$ROOT/commands/sw-prd.md"
 
 set +e
 OUT_DEC=$(bash "$SPEC_RIGOR_CHECK" --artifact decision --path "$FIX_DECISION/decision-record-pass.md" --tier full 2>/dev/null)
@@ -150,19 +150,19 @@ else
   FAIL=1
 fi
 
-# --- U1: pf-prd --type decision + pf-freeze routing ---
+# --- U1: sw-prd --type decision + sw-freeze routing ---
 if grep -q '\-\-type decision' "$PF_PRD" && grep -q 'docs/decisions/<n>-<slug>.md' "$PF_PRD"; then
-  echo "OK  pf-prd documents --type decision path"
+  echo "OK  sw-prd documents --type decision path"
 else
-  echo "FAIL pf-prd missing --type decision contract"
+  echo "FAIL sw-prd missing --type decision contract"
   FAIL=1
 fi
 
 if grep -q '\-\-artifact decision' "$PF_FREEZE" && grep -q 'docs/decisions/INDEX.md' "$PF_FREEZE" && \
    grep -q 'No task list generation' "$PF_FREEZE"; then
-  echo "OK  pf-freeze routes decision rigor + INDEX (no tasks)"
+  echo "OK  sw-freeze routes decision rigor + INDEX (no tasks)"
 else
-  echo "FAIL pf-freeze decision freeze contract"
+  echo "FAIL sw-freeze decision freeze contract"
   FAIL=1
 fi
 
@@ -173,10 +173,10 @@ else
   FAIL=1
 fi
 
-if grep -q 'docs/decisions/' "$ROOT/.pf/layout.md" && grep -q 'Decision record numbering' "$ROOT/.pf/layout.md"; then
-  echo "OK  .pf/layout.md documents docs/decisions/ tree"
+if grep -q 'docs/decisions/' "$ROOT/.sw/layout.md" && grep -q 'Decision record numbering' "$ROOT/.sw/layout.md"; then
+  echo "OK  .sw/layout.md documents docs/decisions/ tree"
 else
-  echo "FAIL .pf/layout.md missing docs/decisions/ contract"
+  echo "FAIL .sw/layout.md missing docs/decisions/ contract"
   FAIL=1
 fi
 
@@ -211,13 +211,13 @@ else
 fi
 
 # --- U2: decision-record doc-review routing ---
-PF_DOC_REVIEW="$ROOT/commands/pf-doc-review.md"
+PF_DOC_REVIEW="$ROOT/commands/sw-doc-review.md"
 DOC_REVIEW_SKILL="$ROOT/skills/doc-review/SKILL.md"
 
 if grep -q 'docs/decisions/<n>-<slug>.md' "$PF_DOC_REVIEW" && grep -q 'all seven' "$PF_DOC_REVIEW"; then
-  echo "OK  pf-doc-review routes decision drafts to Full panel"
+  echo "OK  sw-doc-review routes decision drafts to Full panel"
 else
-  echo "FAIL pf-doc-review decision draft routing"
+  echo "FAIL sw-doc-review decision draft routing"
   FAIL=1
 fi
 

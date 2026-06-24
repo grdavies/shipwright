@@ -76,7 +76,7 @@ if cmd == "plan":
         "waves": waves,
         "contention": {"serialized": ["docs/prds/INDEX.md", "docs/decisions/INDEX.md", "doc-numbering"]},
     }
-    plan_path = Path(root) / ".cursor" / "pf-wave-plan.json"
+    plan_path = Path(root) / ".cursor" / "sw-wave-plan.json"
     plan_path.parent.mkdir(parents=True, exist_ok=True)
     plan_path.write_text(json.dumps(out, indent=2) + "\n")
     print(json.dumps(out, ensure_ascii=False))

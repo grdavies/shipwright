@@ -1,5 +1,5 @@
 ---
-name: pf-debug
+name: sw-debug
 description: Signal-driven production debugging via shared RCA core. Diagnoses and routes; does not implement or merge fixes.
 ---
 
@@ -20,7 +20,7 @@ Parse the inbound signal:
 | User-described broken behavior | `user_report` | `debug` |
 | Failing test output / assertion | `test_failure` | `dev-time` |
 | Build/typecheck/lint failure | `build_failure` | `dev-time` |
-| `/pf-verify` failure + log excerpt | `verify_failure` | `dev-time` |
+| `/sw-verify` failure + log excerpt | `verify_failure` | `dev-time` |
 
 **Dev-time path:** when type is `test_failure`, `build_failure`, or `verify_failure`, skip production-signal
 enrichment and invoke `skills/rca-core` **dev-time entry** (strict reproduction-first + failing-regression-test
@@ -78,8 +78,8 @@ rubrics on the **proposed fix scope** (estimated file count, risk triggers, work
 
 | Outcome | Route | Handoff |
 |---------|-------|---------|
-| **Small** — Quick or Standard tier (≤5 files, no risk-floor triggers), no architectural mismatch, not workaround-only | Scoped implementation | `/pf-worktree provision debug-<slug>` → `/pf-start` with RCA output as phase brief |
-| **Substantial** — Full tier, wrong interface/requirements, risk-floor triggers, or every fix is a workaround | Documentation | `/pf-brainstorm` (new) or `/pf-amend` + freeze for frozen PRD scope changes |
+| **Small** — Quick or Standard tier (≤5 files, no risk-floor triggers), no architectural mismatch, not workaround-only | Scoped implementation | `/sw-worktree provision debug-<slug>` → `/sw-start` with RCA output as phase brief |
+| **Substantial** — Full tier, wrong interface/requirements, risk-floor triggers, or every fix is a workaround | Documentation | `/sw-brainstorm` (new) or `/sw-amend` + freeze for frozen PRD scope changes |
 
 **Never** patch in place on `main` without worktree + phase loop.
 
@@ -103,7 +103,7 @@ After routing decision, `memory-preflight` **write** (redacted):
 }
 ```
 
-Feeds `/pf-compound` and future debug preflight.
+Feeds `/sw-compound` and future debug preflight.
 
 ## Phase 4 — Handoff summary
 
@@ -121,7 +121,7 @@ Feeds `/pf-compound` and future debug preflight.
 <scoped phase | brainstorm | amendment> — rationale
 
 ## Next command
-/pf-worktree … + /pf-start  OR  /pf-brainstorm / amendment path
+/sw-worktree … + /sw-start  OR  /sw-brainstorm / amendment path
 ```
 
 ## Guardrails

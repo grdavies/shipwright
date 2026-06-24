@@ -1,13 +1,13 @@
 # Provenance manifest (R40)
 
-Tracks source and version of vendored/borrowed components. Refresh via `/pf-upstream` is deferred to a
+Tracks source and version of vendored/borrowed components. Refresh via `/sw-upstream` is deferred to a
 follow-up plan; this file is seeded during foundation build and updated as units land.
 
 | Component | Source repo | Derived-from commit / ref | Ported in unit | Notes |
 |-----------|-------------|---------------------------|----------------|-------|
 | Plugin manifest shape | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | U1 | `.cursor-plugin/plugin.json` structure |
 | Config schema + example | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | U1 | Extended with `review.provider`, `reviewGraceMinutes` |
-| Local install sync script | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | U1 | Dest renamed to `phase-flow-v2` |
+| Local install sync script | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | U1 | Dest renamed to `shipwright` |
 | CI gate (`check-gate.sh`) | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | U2 | #322/#330 false-green fixes preserved |
 | Checks-gate skill + rule | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | U2 | |
 | Review seam + CodeRabbit adapter | [cursor-phase-flow](https://github.com/grdavies/cursor-phase-flow) | `64f6e4ea9df5e232736bd064da899e316ed4f1da` | U3 | Generalized from inline gate logic |
@@ -29,7 +29,7 @@ follow-up plan; this file is seeded during foundation build and updated as units
 | Living status | — | — | impl U10 | `scripts/reconcile-status.sh`; git-derived INDEX reconciliation |
 | Debug RCA + routing | [compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin) | cache `2648200ed2352b6e19a93dcfffc764efe70b6a1b` | debug U1/U3/U4 | `ce-debug` phased RCA + fix-vs-rethink; `pf-debug` routes to `003`/`002` |
 | Sentry MCP recipe | — | — | debug U2 | `skills/debug/references/sentry.md`; R41 redaction at ingestion |
-| Feedback intake + routing | — | — | feedback U1–U3 | `/pf-feedback`; signal schema + gap backlog routing |
+| Feedback intake + routing | — | — | feedback U1–U3 | `/sw-feedback`; signal schema + gap backlog routing |
 | Cursor platform emitter | — | — | portability U6 | `platforms/cursor/emitter.py` → committed `dist/cursor/` |
 | Claude Code platform emitter | — | — | portability U7 | `platforms/claude-code/emitter.py` → committed `dist/claude-code/` |
 | Shared guardrail hook core | — | — | portability U4 | `core/hooks/guardrail_core.py` + per-platform adapters |

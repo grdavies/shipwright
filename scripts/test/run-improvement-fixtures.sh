@@ -8,20 +8,20 @@ bash -n "${BASH_SOURCE[0]}" || {
 }
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-STABILIZE="$ROOT/commands/pf-stabilize.md"
+STABILIZE="$ROOT/commands/sw-stabilize.md"
 RCA="$ROOT/skills/rca-core/SKILL.md"
 LOOP="$ROOT/skills/stabilize-loop/SKILL.md"
-COMPOUND_SHIP="$ROOT/commands/pf-compound-ship.md"
-SEQUENCING="$ROOT/rules/pf-workflow-sequencing.mdc"
+COMPOUND_SHIP="$ROOT/commands/sw-compound-ship.md"
+SEQUENCING="$ROOT/rules/sw-workflow-sequencing.mdc"
 FAIL=0
 
-# --- U3: pf-stabilize routes through rca-core stabilize entry ---
+# --- U3: sw-stabilize routes through rca-core stabilize entry ---
 if grep -q 'skills/rca-core/SKILL.md' "$STABILIZE" && \
    grep -qi 'stabilize entry' "$STABILIZE" && \
-   grep -q '/tmp/pf-stabilize-gate.json' "$STABILIZE"; then
-  echo "OK  pf-stabilize references rca-core stabilize entry"
+   grep -q '/tmp/sw-stabilize-gate.json' "$STABILIZE"; then
+  echo "OK  sw-stabilize references rca-core stabilize entry"
 else
-  echo "FAIL pf-stabilize missing rca-core stabilize wiring"
+  echo "FAIL sw-stabilize missing rca-core stabilize wiring"
   FAIL=1
 fi
 
@@ -29,9 +29,9 @@ fi
 if grep -q 'reply before resolve' "$STABILIZE" && \
    grep -q 'headRefOid' "$STABILIZE" && \
    grep -q 'HEAD_SHA' "$STABILIZE"; then
-  echo "OK  pf-stabilize reply-before-resolve + per-head guardrails retained"
+  echo "OK  sw-stabilize reply-before-resolve + per-head guardrails retained"
 else
-  echo "FAIL pf-stabilize guardrails regressed"
+  echo "FAIL sw-stabilize guardrails regressed"
   FAIL=1
 fi
 
@@ -60,9 +60,9 @@ else
 fi
 
 # --- U3: rca-core consumes harvested artifacts (no re-collect) ---
-if grep -q '/tmp/pf-stabilize-threads.json' "$RCA" && \
-   grep -q '/tmp/pf-stabilize-noninline.md' "$RCA" && \
-   grep -q '/tmp/pf-stabilize-gate.json' "$RCA" && \
+if grep -q '/tmp/sw-stabilize-threads.json' "$RCA" && \
+   grep -q '/tmp/sw-stabilize-noninline.md' "$RCA" && \
+   grep -q '/tmp/sw-stabilize-gate.json' "$RCA" && \
    grep -qi 'do not re-fetch' "$RCA"; then
   echo "OK  rca-core stabilize entry consumes harvested artifacts"
 else
@@ -72,7 +72,7 @@ fi
 
 # --- U4: rca-core three entries + debug hardening gates ---
 DEBUG_SKILL="$ROOT/skills/debug/SKILL.md"
-PF_DEBUG="$ROOT/commands/pf-debug.md"
+PF_DEBUG="$ROOT/commands/sw-debug.md"
 
 if grep -qi 'stabilize' "$RCA" && \
    grep -qi 'debug' "$RCA" && \
@@ -105,23 +105,23 @@ fi
 if grep -qi 'dev-time' "$PF_DEBUG" && \
    grep -qi 'dev-time entry' "$PF_DEBUG" && \
    grep -qi 'test failure\|build failure\|verify failure' "$PF_DEBUG"; then
-  echo "OK  pf-debug surfaces dev-time entry route"
+  echo "OK  sw-debug surfaces dev-time entry route"
 else
-  echo "FAIL pf-debug dev-time route"
+  echo "FAIL sw-debug dev-time route"
   FAIL=1
 fi
 
-# --- U5: pf-compound-ship orchestrator exists with correct chain order ---
+# --- U5: sw-compound-ship orchestrator exists with correct chain order ---
 if [[ -f "$COMPOUND_SHIP" ]]; then
-  echo "OK  pf-compound-ship command exists"
+  echo "OK  sw-compound-ship command exists"
 else
-  echo "FAIL pf-compound-ship.md missing"
+  echo "FAIL sw-compound-ship.md missing"
   FAIL=1
 fi
 
-if CHAIN_LINE=$(grep 'pf-retro' "$COMPOUND_SHIP" | grep 'pf-compound' | grep 'pf-status' | head -1) && \
+if CHAIN_LINE=$(grep 'sw-retro' "$COMPOUND_SHIP" | grep 'sw-compound' | grep 'sw-status' | head -1) && \
    [[ -n "$CHAIN_LINE" ]] && \
-   echo "$CHAIN_LINE" | grep -qE 'pf-retro.*pf-compound.*pf-status'; then
+   echo "$CHAIN_LINE" | grep -qE 'sw-retro.*sw-compound.*sw-status'; then
   echo "OK  compound-ship chain order retro → compound → status"
 else
   echo "FAIL compound-ship chain order"
@@ -137,28 +137,28 @@ else
   FAIL=1
 fi
 
-if grep -q 'pf-compound-ship' "$SEQUENCING"; then
-  echo "OK  pf-workflow-sequencing references pf-compound-ship"
+if grep -q 'sw-compound-ship' "$SEQUENCING"; then
+  echo "OK  sw-workflow-sequencing references sw-compound-ship"
 else
-  echo "FAIL pf-workflow-sequencing missing pf-compound-ship"
+  echo "FAIL sw-workflow-sequencing missing sw-compound-ship"
   FAIL=1
 fi
 
 # --- U1: verification-gate skill + verify-evidence.sh ---
 VERIFY_EVIDENCE="$ROOT/scripts/verify-evidence.sh"
 VERIFY_GATE_SKILL="$ROOT/skills/verification-gate/SKILL.md"
-PF_VERIFY="$ROOT/commands/pf-verify.md"
-PF_COMMIT="$ROOT/commands/pf-commit.md"
-PF_SHIP="$ROOT/commands/pf-ship.md"
-PF_READY="$ROOT/commands/pf-ready.md"
-PF_REVIEW="$ROOT/commands/pf-review.md"
+PF_VERIFY="$ROOT/commands/sw-verify.md"
+PF_COMMIT="$ROOT/commands/sw-commit.md"
+PF_SHIP="$ROOT/commands/sw-ship.md"
+PF_READY="$ROOT/commands/sw-ready.md"
+PF_REVIEW="$ROOT/commands/sw-review.md"
 FIXTURES="$ROOT/scripts/test/fixtures/verify-evidence"
 VERIFY_PR_CTX="--pr-context off"
 
 if [[ -f "$VERIFY_GATE_SKILL" ]] && [[ -x "$VERIFY_EVIDENCE" ]] && \
-   grep -q 'pf-verify.status.json' "$PF_VERIFY" && \
+   grep -q 'sw-verify.status.json' "$PF_VERIFY" && \
    grep -q 'verify-evidence.sh' "$VERIFY_GATE_SKILL"; then
-  echo "OK  verification-gate skill + script + pf-verify status emission"
+  echo "OK  verification-gate skill + script + sw-verify status emission"
 else
   echo "FAIL verification-gate artifacts missing"
   FAIL=1
@@ -295,7 +295,7 @@ fi
 
 # --- Plan 005 hardening (R1–R6) ---
 VERIFY_BASELINE="$ROOT/scripts/verify-baseline.sh"
-PF_TMP="$ROOT/scripts/pf-tmp.sh"
+PF_TMP="$ROOT/scripts/sw-tmp.sh"
 PHASE_STATE="$ROOT/scripts/phase-state.sh"
 VERDICT_SCHEMA="$ROOT/skills/verification-gate/references/verdict-schema.json"
 MEMORY_REDACT="$ROOT/scripts/memory-redact.sh"
@@ -360,7 +360,7 @@ else
 fi
 
 # R4: group-writable evidence rejected
-UNSAFE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/pf-fixture-unsafe.XXXXXX")
+UNSAFE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/sw-fixture-unsafe.XXXXXX")
 UNSAFE_FILE="$UNSAFE_DIR/evidence.json"
 cp "$FIXTURES/verify-pass.json" "$UNSAFE_FILE"
 chmod 662 "$UNSAFE_FILE"
@@ -380,7 +380,7 @@ fi
 
 # R3: verify-baseline capture
 if [[ -x "$VERIFY_BASELINE" ]]; then
-  CAP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/pf-baseline-cap.XXXXXX")
+  CAP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/sw-baseline-cap.XXXXXX")
   BASE_OUT="$CAP_DIR/baseline.json"
   if bash "$VERIFY_BASELINE" capture --from "$FIXTURES/verify-pass.json" --to "$BASE_OUT" >/dev/null 2>&1 && \
      diff -q <(jq -S . "$FIXTURES/verify-pass.json") <(jq -S . "$BASE_OUT") >/dev/null; then
@@ -395,19 +395,19 @@ else
   FAIL=1
 fi
 
-# R4: pf-tmp init creates 0700 dir
+# R4: sw-tmp init creates 0700 dir
 if [[ -x "$PF_TMP" ]]; then
   RUN_DIR=$(bash "$PF_TMP" init 2>/dev/null | tail -1)
   PERMS=$(stat -f '%Lp' "$RUN_DIR" 2>/dev/null || stat -c '%a' "$RUN_DIR" 2>/dev/null)
   rm -rf "$RUN_DIR"
   if [[ "$PERMS" == "700" ]]; then
-    echo "OK  pf-tmp: init creates mode 0700 dir"
+    echo "OK  sw-tmp: init creates mode 0700 dir"
   else
-    echo "FAIL pf-tmp init perms (got $PERMS)"
+    echo "FAIL sw-tmp init perms (got $PERMS)"
     FAIL=1
   fi
 else
-  echo "FAIL pf-tmp.sh missing or not executable"
+  echo "FAIL sw-tmp.sh missing or not executable"
   FAIL=1
 fi
 
@@ -461,54 +461,54 @@ else
   FAIL=1
 fi
 
-# --- U2: wire verification gate into commit / ship (not pf-ready) ---
+# --- U2: wire verification gate into commit / ship (not sw-ready) ---
 if grep -q 'verification-gate' "$PF_COMMIT" && \
    grep -q 'verify-evidence.sh' "$PF_COMMIT" && \
    grep -q 'override-add' "$PF_COMMIT" && \
    grep -qi 'missing-required' "$PF_COMMIT" && \
    grep -qi 'check-gate' "$PF_COMMIT"; then
-  echo "OK  pf-commit verification-gate precondition + bounded override"
+  echo "OK  sw-commit verification-gate precondition + bounded override"
 else
-  echo "FAIL pf-commit verification-gate wiring"
+  echo "FAIL sw-commit verification-gate wiring"
   FAIL=1
 fi
 
-if CHAIN_LINE=$(grep 'pf-verify' "$PF_SHIP" | grep 'verification-gate' | grep 'pf-commit' | head -1) && \
+if CHAIN_LINE=$(grep 'sw-verify' "$PF_SHIP" | grep 'verification-gate' | grep 'sw-commit' | head -1) && \
    [[ -n "$CHAIN_LINE" ]] && \
-   echo "$CHAIN_LINE" | grep -qE 'pf-verify.*verification-gate.*pf-commit'; then
-  echo "OK  pf-ship chain lists verification-gate between verify and commit"
+   echo "$CHAIN_LINE" | grep -qE 'sw-verify.*verification-gate.*sw-commit'; then
+  echo "OK  sw-ship chain lists verification-gate between verify and commit"
 else
-  echo "FAIL pf-ship chain missing verification-gate step"
+  echo "FAIL sw-ship chain missing verification-gate step"
   FAIL=1
 fi
 
 if grep -qi 'inconclusive' "$PF_SHIP" && grep -qi 'log and continue' "$PF_SHIP" && \
    grep -qi 'missing-required' "$PF_SHIP" && grep -qi 'halt' "$PF_SHIP"; then
-  echo "OK  pf-ship inconclusive policy (halt missing-required; log+continue benign)"
+  echo "OK  sw-ship inconclusive policy (halt missing-required; log+continue benign)"
 else
-  echo "FAIL pf-ship inconclusive policy"
+  echo "FAIL sw-ship inconclusive policy"
   FAIL=1
 fi
 
 if grep -qi 'not-verified' "$PF_SHIP" && grep -qi 'halt' "$PF_SHIP"; then
-  echo "OK  pf-ship halts on not-verified"
+  echo "OK  sw-ship halts on not-verified"
 else
-  echo "FAIL pf-ship not-verified halt"
+  echo "FAIL sw-ship not-verified halt"
   FAIL=1
 fi
 
-if grep -q 'pf-review.status.json' "$PF_REVIEW"; then
-  echo "OK  pf-review emits stable review status file"
+if grep -q 'sw-review.status.json' "$PF_REVIEW"; then
+  echo "OK  sw-review emits stable review status file"
 else
-  echo "FAIL pf-review status emission"
+  echo "FAIL sw-review status emission"
   FAIL=1
 fi
 
 if grep -qi 'does not run verification-gate' "$PF_READY" && \
    grep -q 'check-gate.sh' "$PF_READY"; then
-  echo "OK  pf-ready uses check-gate only (no verification-gate)"
+  echo "OK  sw-ready uses check-gate only (no verification-gate)"
 else
-  echo "FAIL pf-ready gate authority"
+  echo "FAIL sw-ready gate authority"
   FAIL=1
 fi
 
@@ -516,9 +516,9 @@ fi
 SPEC_RIGOR="$ROOT/skills/spec-rigor/SKILL.md"
 SPEC_RIGOR_CHECK="$ROOT/scripts/spec-rigor-check.sh"
 TRACE_CHECK="$ROOT/scripts/traceability-check.sh"
-PF_FREEZE="$ROOT/commands/pf-freeze.md"
-PF_TASKS="$ROOT/commands/pf-tasks.md"
-PF_DOC="$ROOT/commands/pf-doc.md"
+PF_FREEZE="$ROOT/commands/sw-freeze.md"
+PF_TASKS="$ROOT/commands/sw-tasks.md"
+PF_DOC="$ROOT/commands/sw-doc.md"
 FIX_SPEC_RIGOR="$ROOT/scripts/test/fixtures/spec-rigor"
 FIX_TRACE="$ROOT/scripts/test/fixtures/traceability"
 
@@ -532,23 +532,23 @@ else
 fi
 
 if grep -q 'spec-rigor-check.sh' "$PF_FREEZE" && grep -q 'traceability-check.sh' "$PF_FREEZE"; then
-  echo "OK  pf-freeze wires spec-rigor + traceability gates"
+  echo "OK  sw-freeze wires spec-rigor + traceability gates"
 else
-  echo "FAIL pf-freeze spec-rigor wiring"
+  echo "FAIL sw-freeze spec-rigor wiring"
   FAIL=1
 fi
 
 if grep -q 'Traceability' "$PF_TASKS" && grep -q 'traceability-check.sh' "$PF_TASKS"; then
-  echo "OK  pf-tasks requires traceability table"
+  echo "OK  sw-tasks requires traceability table"
 else
-  echo "FAIL pf-tasks traceability wiring"
+  echo "FAIL sw-tasks traceability wiring"
   FAIL=1
 fi
 
 if grep -qi 'spec-rigor' "$PF_DOC"; then
-  echo "OK  pf-doc chain includes spec-rigor"
+  echo "OK  sw-doc chain includes spec-rigor"
 else
-  echo "FAIL pf-doc spec-rigor chain"
+  echo "FAIL sw-doc spec-rigor chain"
   FAIL=1
 fi
 
@@ -612,8 +612,8 @@ fi
 EXEC_DISC="$ROOT/skills/execute-discipline/SKILL.md"
 TDD_GATE="$ROOT/scripts/tdd-gate.sh"
 PLAN_REVIEW="$ROOT/scripts/plan-self-review.sh"
-PF_EXECUTE="$ROOT/commands/pf-execute.md"
-SUBAGENT="$ROOT/rules/pf-subagent-dispatch.mdc"
+PF_EXECUTE="$ROOT/commands/sw-execute.md"
+SUBAGENT="$ROOT/rules/sw-subagent-dispatch.mdc"
 TASKS_SKILL="$ROOT/skills/tasks/SKILL.md"
 FIX_TDD="$ROOT/scripts/test/fixtures/tdd-gate"
 FIX_PLAN="$ROOT/scripts/test/fixtures/plan-self-review"
@@ -630,9 +630,9 @@ if grep -q 'execute-discipline' "$PF_EXECUTE" && \
    grep -q 'tdd-gate.sh' "$PF_EXECUTE" && \
    grep -q 'plan-self-review.sh' "$PF_EXECUTE" && \
    grep -qi 'two-stage' "$PF_EXECUTE"; then
-  echo "OK  pf-execute wires per-task TDD + plan self-review + two-stage review"
+  echo "OK  sw-execute wires per-task TDD + plan self-review + two-stage review"
 else
-  echo "FAIL pf-execute execute-discipline wiring"
+  echo "FAIL sw-execute execute-discipline wiring"
   FAIL=1
 fi
 
@@ -640,9 +640,9 @@ if grep -qi 'two-stage review' "$SUBAGENT" && \
    grep -qi 'spec-compliance' "$SUBAGENT" && \
    grep -qi 'code-quality' "$SUBAGENT" && \
    grep -qi 'fresh subagent' "$SUBAGENT"; then
-  echo "OK  pf-subagent-dispatch documents two-stage execute review"
+  echo "OK  sw-subagent-dispatch documents two-stage execute review"
 else
-  echo "FAIL pf-subagent-dispatch two-stage review"
+  echo "FAIL sw-subagent-dispatch two-stage review"
   FAIL=1
 fi
 
@@ -722,9 +722,9 @@ fi
 # --- U8: simplification / deslop pass (IM7) ---
 SIMPLIFY_SKILL="$ROOT/skills/simplify/SKILL.md"
 SIMPLIFY_GATE="$ROOT/scripts/simplify-gate.sh"
-PF_SIMPLIFY="$ROOT/commands/pf-simplify.md"
-PF_SHIP="$ROOT/commands/pf-ship.md"
-WORKFLOW_SEQ="$ROOT/rules/pf-workflow-sequencing.mdc"
+PF_SIMPLIFY="$ROOT/commands/sw-simplify.md"
+PF_SHIP="$ROOT/commands/sw-ship.md"
+WORKFLOW_SEQ="$ROOT/rules/sw-workflow-sequencing.mdc"
 FIX_SIMPLIFY="$ROOT/scripts/test/fixtures/simplify-gate"
 
 if [[ -f "$SIMPLIFY_SKILL" ]] && [[ -x "$SIMPLIFY_GATE" ]] && \
@@ -737,28 +737,28 @@ else
   FAIL=1
 fi
 
-if grep -q 'pf-simplify' "$PF_SHIP" && \
+if grep -q 'sw-simplify' "$PF_SHIP" && \
    grep -q 'simplify-gate' "$PF_SHIP" && \
    grep -qi 'regressed' "$PF_SHIP"; then
-  echo "OK  pf-ship chain includes pf-simplify with regressed halt"
+  echo "OK  sw-ship chain includes sw-simplify with regressed halt"
 else
-  echo "FAIL pf-ship simplify wiring"
+  echo "FAIL sw-ship simplify wiring"
   FAIL=1
 fi
 
-if grep -q 'pf-simplify' "$PF_SIMPLIFY" && \
+if grep -q 'sw-simplify' "$PF_SIMPLIFY" && \
    grep -q 'simplify-gate.sh' "$PF_SIMPLIFY" && \
    grep -qi 'does not commit' "$PF_SIMPLIFY"; then
-  echo "OK  pf-simplify command scope + gate"
+  echo "OK  sw-simplify command scope + gate"
 else
-  echo "FAIL pf-simplify command"
+  echo "FAIL sw-simplify command"
   FAIL=1
 fi
 
-if grep -q '/pf-simplify' "$WORKFLOW_SEQ"; then
-  echo "OK  pf-workflow-sequencing lists pf-simplify"
+if grep -q '/sw-simplify' "$WORKFLOW_SEQ"; then
+  echo "OK  sw-workflow-sequencing lists sw-simplify"
 else
-  echo "FAIL workflow sequencing missing pf-simplify"
+  echo "FAIL workflow sequencing missing sw-simplify"
   FAIL=1
 fi
 
@@ -805,9 +805,9 @@ fi
 FEEDBACK_CLOSURE="$ROOT/skills/feedback-closure/SKILL.md"
 BACKLOG_SH="$ROOT/scripts/feedback-backlog.sh"
 CLOSURE_GATE="$ROOT/scripts/feedback-closure-gate.sh"
-PF_FEEDBACK_CLOSE="$ROOT/commands/pf-feedback-close.md"
+PF_FEEDBACK_CLOSE="$ROOT/commands/sw-feedback-close.md"
 GAP_CHECK="$ROOT/skills/gap-check/SKILL.md"
-PF_EXECUTE="$ROOT/commands/pf-execute.md"
+PF_EXECUTE="$ROOT/commands/sw-execute.md"
 FIX_BACKLOG="$ROOT/scripts/test/fixtures/feedback-backlog"
 FIX_CLOSURE="$ROOT/scripts/test/fixtures/feedback-closure"
 
@@ -823,8 +823,8 @@ fi
 
 if grep -q 'feedback-backlog.sh' "$GAP_CHECK" && \
    grep -q 'feedback-backlog.sh' "$PF_EXECUTE" && \
-   grep -q 'pf-feedback-close' "$PF_SHIP"; then
-  echo "OK  gap-check + pf-execute + pf-ship consume/close backlog"
+   grep -q 'sw-feedback-close' "$PF_SHIP"; then
+  echo "OK  gap-check + sw-execute + sw-ship consume/close backlog"
 else
   echo "FAIL feedback backlog wiring"
   FAIL=1
@@ -832,9 +832,9 @@ fi
 
 if grep -q 'feedback-closure-gate.sh' "$PF_FEEDBACK_CLOSE" && \
    grep -qi 'human confirm' "$PF_FEEDBACK_CLOSE"; then
-  echo "OK  pf-feedback-close command + gate"
+  echo "OK  sw-feedback-close command + gate"
 else
-  echo "FAIL pf-feedback-close command"
+  echo "FAIL sw-feedback-close command"
   FAIL=1
 fi
 
@@ -905,7 +905,7 @@ fi
 # --- U10: E2E / smoke verify adapter (IM9) ---
 VERIFY_E2E="$ROOT/scripts/verify-e2e.sh"
 VERIFY_CAPS="$ROOT/providers/verify/CAPABILITIES.md"
-CONFIG_SCHEMA="$ROOT/.pf/config.schema.json"
+CONFIG_SCHEMA="$ROOT/.sw/config.schema.json"
 FIX_E2E="$ROOT/scripts/test/fixtures/verify-e2e"
 
 if [[ -f "$VERIFY_CAPS" ]] && [[ -x "$VERIFY_E2E" ]] && \
@@ -920,9 +920,9 @@ fi
 
 if grep -q 'verify-e2e.sh' "$PF_VERIFY" && \
    grep -q 'verifyE2e' "$PF_VERIFY"; then
-  echo "OK  pf-verify wires verify-e2e adapter selector"
+  echo "OK  sw-verify wires verify-e2e adapter selector"
 else
-  echo "FAIL pf-verify e2e wiring"
+  echo "FAIL sw-verify e2e wiring"
   FAIL=1
 fi
 

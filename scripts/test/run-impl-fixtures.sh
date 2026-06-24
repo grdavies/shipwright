@@ -175,26 +175,26 @@ else
 fi
 
 # --- subagent dispatch rule exists ---
-if [[ -f "$ROOT/rules/pf-subagent-dispatch.mdc" ]] && grep -q '8+' "$ROOT/rules/pf-subagent-dispatch.mdc"; then
+if [[ -f "$ROOT/rules/sw-subagent-dispatch.mdc" ]] && grep -q '8+' "$ROOT/rules/sw-subagent-dispatch.mdc"; then
   echo "OK  subagent dispatch rule"
 else
-  echo "FAIL pf-subagent-dispatch.mdc missing thresholds"
+  echo "FAIL sw-subagent-dispatch.mdc missing thresholds"
   FAIL=1
 fi
 
-# --- workflow sequencing lists pf-ship ---
-if grep -q '/pf-ship' "$ROOT/rules/pf-workflow-sequencing.mdc"; then
-  echo "OK  workflow sequencing pf-ship"
+# --- workflow sequencing lists sw-ship ---
+if grep -q '/sw-ship' "$ROOT/rules/sw-workflow-sequencing.mdc"; then
+  echo "OK  workflow sequencing sw-ship"
 else
-  echo "FAIL pf-workflow-sequencing missing pf-ship"
+  echo "FAIL sw-workflow-sequencing missing sw-ship"
   FAIL=1
 fi
 
 # --- U6/U7: model tier map + check ---
 MODEL_CHECK="$ROOT/scripts/model-tier-check.sh"
-EXAMPLE_CONFIG="$ROOT/.pf/workflow.config.example.json"
+EXAMPLE_CONFIG="$ROOT/.sw/workflow.config.example.json"
 
-if grep -q '"models"' "$ROOT/.pf/config.schema.json"; then
+if grep -q '"models"' "$ROOT/.sw/config.schema.json"; then
   echo "OK  config.schema documents models"
 else
   echo "FAIL config.schema missing models"
@@ -214,8 +214,8 @@ fi
 
 # Negative: concrete model below builder floor
 TMP_AGENTS=$(mktemp -d)
-cp "$ROOT/agents/pf-coherence-reviewer.md" "$TMP_AGENTS/"
-printf '%s\n' '---' 'name: pf-coherence-reviewer' 'description: test' 'model: fast' '---' > "$TMP_AGENTS/pf-coherence-reviewer.md"
+cp "$ROOT/agents/sw-coherence-reviewer.md" "$TMP_AGENTS/"
+printf '%s\n' '---' 'name: sw-coherence-reviewer' 'description: test' 'model: fast' '---' > "$TMP_AGENTS/sw-coherence-reviewer.md"
 set +e
 OUT=$(bash "$MODEL_CHECK" --config "$EXAMPLE_CONFIG" --agents-dir "$TMP_AGENTS" 2>/dev/null)
 EC=$?
@@ -228,15 +228,15 @@ else
   FAIL=1
 fi
 
-if grep -q 'inherit' "$ROOT/.pf/models-tiering.md" && grep -q 'R9 runtime contract' "$ROOT/rules/pf-subagent-dispatch.mdc"; then
+if grep -q 'inherit' "$ROOT/.sw/models-tiering.md" && grep -q 'R9 runtime contract' "$ROOT/rules/sw-subagent-dispatch.mdc"; then
   echo "OK  models-tiering doc + runtime R9 dispatch rule"
 else
   echo "FAIL models-tiering / runtime R9 wiring"
   FAIL=1
 fi
 
-if grep -q 'invariantsFile' "$ROOT/.pf/config.schema.json" && \
-   grep -q 'invariantsFile' "$ROOT/commands/pf-doc-review.md"; then
+if grep -q 'invariantsFile' "$ROOT/.sw/config.schema.json" && \
+   grep -q 'invariantsFile' "$ROOT/commands/sw-doc-review.md"; then
   echo "OK  invariantsFile wired to doc-review"
 else
   echo "FAIL invariantsFile wiring"

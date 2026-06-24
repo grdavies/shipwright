@@ -1,5 +1,5 @@
 ---
-name: pf-spec-union
+name: sw-spec-union
 description: Resolve a frozen PRD or decision record plus amendments into one effective spec — adds, supersedes, retracts in amendment order. Read-only on parent.
 ---
 
@@ -49,7 +49,7 @@ coverage) is a hard error.
 
 ## Consumers
 
-- **Agent:** load this skill when reading spec for `/pf-execute` or gap-check.
+- **Agent:** load this skill when reading spec for `/sw-execute` or gap-check.
 - **Deterministic:** `scripts/spec-union.sh <doc-path>` → JSON effective requirements.
 
 ## Interface stability

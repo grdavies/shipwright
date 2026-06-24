@@ -31,8 +31,8 @@ run_expect() {
 
 # Happy path: fixture core -> cursor dist
 run_expect fixture-cursor-generate 0 $GEN generate cursor --core "$CORE" --dest "$OUT"
-if [ -f "$OUT/cursor/commands/pf-ship.md" ]; then
-  if grep -q 'CURSOR_PLUGIN_ROOT' "$OUT/cursor/commands/pf-ship.md"; then
+if [ -f "$OUT/cursor/commands/sw-ship.md" ]; then
+  if grep -q 'CURSOR_PLUGIN_ROOT' "$OUT/cursor/commands/sw-ship.md"; then
     echo "OK  fixture-cursor retains CURSOR_PLUGIN_ROOT"
   else
     echo "FAIL fixture-cursor missing CURSOR_PLUGIN_ROOT"
@@ -45,13 +45,13 @@ fi
 
 # Claude env substitution
 run_expect fixture-claude-generate 0 $GEN generate claude-code --core "$CORE" --dest "$OUT"
-if grep -q 'CLAUDE_PLUGIN_ROOT' "$OUT/claude-code/commands/pf-ship.md" 2>/dev/null; then
+if grep -q 'CLAUDE_PLUGIN_ROOT' "$OUT/claude-code/commands/sw-ship.md" 2>/dev/null; then
   echo "OK  fixture-claude env substitution"
 else
-  echo "FAIL fixture-claude expected CLAUDE_PLUGIN_ROOT in pf-ship.md"
+  echo "FAIL fixture-claude expected CLAUDE_PLUGIN_ROOT in sw-ship.md"
   FAIL=1
 fi
-if ! grep -q 'CURSOR_PLUGIN_ROOT' "$OUT/claude-code/commands/pf-ship.md" 2>/dev/null; then
+if ! grep -q 'CURSOR_PLUGIN_ROOT' "$OUT/claude-code/commands/sw-ship.md" 2>/dev/null; then
   echo "OK  fixture-claude removed CURSOR_PLUGIN_ROOT"
 else
   echo "FAIL fixture-claude still contains CURSOR_PLUGIN_ROOT"

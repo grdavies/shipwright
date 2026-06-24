@@ -1,0 +1,56 @@
+---
+description: sw- command namespace, orchestrator vs atomic boundaries, and naming conventions for phase-flow v2.
+alwaysApply: true
+---
+
+# sw- naming and command boundaries
+
+All plugin commands, skills exposed as commands, and user-facing workflow entry points use the **`sw-`**
+prefix (e.g. `/sw-review`, `/sw-stabilize`, `/sw-memory-sync`). This namespace is distinct from phase-flow
+v1 (unprefixed) and compound-engineering (`ce-`).
+
+## Orchestrators vs atomic commands
+
+- **Orchestrators** chain multiple phases:
+  - `/sw-doc` — brainstorm → PRD → persona panel → freeze → tasks (tier-gated; see documentation workstream).
+  - `/sw-ship` — execute → verify → review → gaps → commit → pr → watch-ci → stabilize → ready (halts at merge gate).
+  - `/sw-debug` — triage signal → Sentry enrich (optional) → RCA core (debug entry) → route by fix size; does not implement or merge.
+  - `/sw-feedback` — normalize + redact inbound signals → route to debug, gap-capture, or brainstorm; does not analyze or author.
+  Their descriptions must state the full chain and which atomic commands they subsume.
+- **Atomic commands** perform one bounded step (e.g. `/sw-watch-ci`, `/sw-memory-sync`, `/sw-triage`). Their descriptions
+  must state what they do **and what they do not do** (e.g. "polls CI; does not merge or fix failures").
+
+## Triage boundary
+
+`/sw-triage` classifies tier only — it does not draft docs, freeze artifacts, or start implementation. Routing after triage is explicit in the triage output.
+
+## Documentation orchestrator boundary
+
+`/sw-doc` delegates to atomic doc commands; it does not reimplement their procedures. Each atomic (`/sw-brainstorm`, `/sw-prd`, `/sw-doc-review`, `/sw-freeze`, `/sw-tasks`) remains independently runnable.
+
+## Debug orchestrator boundary
+
+`/sw-debug` diagnoses via `skills/rca-core` (debug entry) and routes — it does not run `/sw-execute`, `/sw-ship`, or patch on bare `main`. Small fixes hand off to `/sw-worktree` + `/sw-start`; substantial fixes hand off to `/sw-brainstorm` or `/sw-amend`. `/sw-stabilize` remains the in-loop PR blocker surface.
+
+## Feedback orchestrator boundary
+
+`/sw-feedback` normalizes and routes inbound signals — it does not run `/sw-debug` analysis, `/sw-amend` authoring, or task execution. Production signals with error/crash/regression markers dispatch to `/sw-debug`; PR-extending work splits to `/sw-amend` or `docs/prds/GAP-BACKLOG.md`; new scope dispatches to `/sw-brainstorm`. Human confirmation required before dispatching any route (including agent callers).
+
+## Naming rules
+
+1. Prefix every command file with `sw-` (e.g. `commands/sw-review.md`).
+2. Skill directories use descriptive kebab-case without the prefix (e.g. `skills/checks-gate/`).
+3. Rules use `sw-` when they encode plugin-specific guardrails (e.g. `sw-naming.mdc`, `sw-guardrails.mdc`).
+4. Provider adapters live under `providers/`; executable adapters use `.sh` (e.g. `providers/review/coderabbit.sh`).
+
+## Description contract
+
+Every command frontmatter `description` must be one sentence on scope plus one on explicit non-goals when
+ambiguity is likely.
+
+## Model tier floor (R9)
+
+Semantic tiers (`cheap`/`build`/`deep`) live in `workflow.config.json` `models.tiers` only — not in agent
+`model:` frontmatter. Reviewer agents use `model: inherit` or a concrete platform ID. Validated by
+`scripts/model-tier-check.sh` (config + concrete models); runtime R9 for `inherit` reviewers is enforced at
+dispatch by `/sw-doc-review` and `rules/sw-subagent-dispatch.mdc`. See `.sw/models-tiering.md`.

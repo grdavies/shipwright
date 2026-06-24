@@ -1,15 +1,15 @@
 ---
-name: pf-wave
+name: sw-wave
 description: Dependency-ordered build waves with dependent-branch stacking and integration branch lifecycle.
 ---
 
 # Wave orchestration
 
-Layer above `/pf-ship` for multi-item rounds. Reuses `scripts/worktree.sh` and `skills/parallelism/` wholesale.
+Layer above `/sw-ship` for multi-item rounds. Reuses `scripts/worktree.sh` and `skills/parallelism/` wholesale.
 
 ## Wave plan representation
 
-Path: `.cursor/pf-wave-plan.json` (machine-readable; see `.pf/layout.md`).
+Path: `.cursor/sw-wave-plan.json` (machine-readable; see `.sw/layout.md`).
 
 ```json
 {

@@ -1,6 +1,6 @@
 # Requirements document sections
 
-Output shape for `/pf-brainstorm`. Full fidelity authoring (R30/R31) — no terse compression.
+Output shape for `/sw-brainstorm`. Full fidelity authoring (R30/R31) — no terse compression.
 
 ## Frontmatter
 
@@ -11,7 +11,7 @@ topic: <kebab-topic>
 ---
 ```
 
-Add `frozen: true` and `frozen_at: YYYY-MM-DD` only via `/pf-freeze` — not during brainstorm.
+Add `frozen: true` and `frozen_at: YYYY-MM-DD` only via `/sw-freeze` — not during brainstorm.
 
 ## Required sections
 
@@ -31,7 +31,7 @@ Add `frozen: true` and `frozen_at: YYYY-MM-DD` only via `/pf-freeze` — not dur
 
 ## Path
 
-`docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md` per `.pf/layout.md`.
+`docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md` per `.sw/layout.md`.
 
 ## Exemplar
 
