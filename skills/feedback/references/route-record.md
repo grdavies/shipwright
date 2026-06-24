@@ -10,7 +10,7 @@ Written after routing via `memory-preflight` (redacted). Consumed by `/pf-compou
   "signalId": "<from normalized signal>",
   "sourceClass": "production | review | retro",
   "dedupKey": "<class-tagged key>",
-  "target": "/pf-debug | /pf-amend | /pf-brainstorm | prds/GAP-BACKLOG.md",
+  "target": "/pf-debug | /pf-amend | /pf-brainstorm | docs/prds/GAP-BACKLOG.md",
   "originatingSignalRef": "redacted one-line summary — no secrets",
   "relatedFiles": []
 }

@@ -10,7 +10,7 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is aut
 ## Scope
 
 - Input: path to brainstorm, PRD, decision record, task list, or amendment draft.
-- Output: `frozen: true` + `frozen_at` frontmatter; `prds/INDEX.md` or `decisions/INDEX.md` entry.
+- Output: `frozen: true` + `frozen_at` frontmatter; `docs/prds/INDEX.md` or `docs/decisions/INDEX.md` entry.
 - Does **not** unfreeze, edit parents, or generate tasks (decision records never generate tasks).
 
 ## Procedure
@@ -20,7 +20,7 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is aut
    - **PRD / brainstorm / amendment:** `bash scripts/spec-rigor-check.sh --artifact prd --path <file> --tier <full|standard>`
      (tier from triage or `--tier`; default `standard` when unknown).
    - **Decision record / decision amendment:** `bash scripts/spec-rigor-check.sh --artifact decision --path <file> --tier <full|standard>`
-     (route by path under `decisions/` or explicit `--artifact decision`).
+     (route by path under `docs/decisions/` or explicit `--artifact decision`).
    - **Task list:** `bash scripts/spec-rigor-check.sh --artifact tasks --path <file> --prd <frozen-prd>` then
      `bash scripts/traceability-check.sh --prd <frozen-prd> --tasks <file>` — both must pass before freeze.
    - `warn` (exit `10`) may proceed with logged findings.
@@ -30,8 +30,8 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is aut
    frozen_at: YYYY-MM-DD
    ```
 4. Register in the appropriate living index:
-   - **PRDs / task lists:** add or refresh entry in `prds/INDEX.md` (path, amendments, status `not-started`).
-   - **Decision records:** add or refresh entry in `decisions/INDEX.md` (path, amendments, status `not-started`).
+   - **PRDs / task lists:** add or refresh entry in `docs/prds/INDEX.md` (path, amendments, status `not-started`).
+   - **Decision records:** add or refresh entry in `docs/decisions/INDEX.md` (path, amendments, status `not-started`).
      **No task list generation and no `COMPLETION-LOG` row** for decisions.
 5. Report freeze complete; next step `/pf-tasks` for PRDs only.
 

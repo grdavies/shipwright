@@ -31,7 +31,7 @@ Read `.cursor/workflow.config.json` for `memory`, `review.provider`, `prdsDir`.
    - Prod fault → `/pf-debug`
    - Extends prior PR → gap-capture (Phase 3)
    - New scope → `/pf-brainstorm`
-5. **Gap split** — substantial → `/pf-amend`; trivial → append `prds/GAP-BACKLOG.md` with
+5. **Gap split** — substantial → `/pf-amend`; trivial → append `docs/prds/GAP-BACKLOG.md` with
    `source:feedback` (create file with checklist header if absent).
 6. **Record** route per `skills/feedback/references/route-record.md` — redact serialized JSON via
    `bash scripts/memory-redact.sh` before `memory-preflight` write.

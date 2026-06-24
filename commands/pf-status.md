@@ -5,7 +5,7 @@ alwaysApply: false
 
 # `/pf-status`
 
-Git-derived living status over `prds/INDEX.md` and `prds/COMPLETION-LOG.md`.
+Git-derived living status over `docs/prds/INDEX.md` and `docs/prds/COMPLETION-LOG.md`.
 
 Load `skills/living-status/SKILL.md`.
 

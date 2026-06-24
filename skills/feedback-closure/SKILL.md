@@ -5,7 +5,7 @@ description: Consume GAP-BACKLOG into implementation loop and close routed signa
 
 # Feedback closure loop (IM8)
 
-Closes the loop from `/pf-feedback` trivial-gap routing → `prds/GAP-BACKLOG.md` → implementation → verified
+Closes the loop from `/pf-feedback` trivial-gap routing → `docs/prds/GAP-BACKLOG.md` → implementation → verified
 ship. Complements `skills/feedback` (intake/route) and `skills/gap-check` (plan vs diff).
 
 ## Backlog entry format
@@ -29,7 +29,7 @@ Closed:
 | `living-status` | Already surfaces backlog read-only |
 
 ```bash
-bash scripts/feedback-backlog.sh list --open-only --backlog prds/GAP-BACKLOG.md
+bash scripts/feedback-backlog.sh list --open-only --backlog docs/prds/GAP-BACKLOG.md
 ```
 
 ## Closure (post-verify ship)

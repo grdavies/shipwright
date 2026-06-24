@@ -11,8 +11,8 @@ Single read-time view of frozen doc + amendments (R12). Parent is never mutated.
 
 | Type | Path | ID grammar | Amendment dir |
 |------|------|------------|---------------|
-| PRD | `prds/<n>-<slug>/<n>-prd-<slug>.md` | `R\d+` | `parent/amendments/` |
-| Decision | `decisions/<n>-<slug>.md` | `D\d+` | sibling `<stem>.amendments/` |
+| PRD | `docs/docs/prds/<n>-<slug>/<n>-prd-<slug>.md` | `R\d+` | `parent/amendments/` |
+| Decision | `docs/docs/decisions/<n>-<slug>.md` | `D\d+` | sibling `<stem>.amendments/` |
 
 ## Resolution rules
 
@@ -31,7 +31,7 @@ Later amendments can supersede earlier amendment requirements.
 ### Record-level supersede output
 
 ```json
-"superseded": { "D5": { "replacement": "decisions/009-foo.md" } }
+"superseded": { "D5": { "replacement": "docs/decisions/009-foo.md" } }
 ```
 
 PRD inline supersede keeps the `old → new_id` string map. Record-level object values appear only for
@@ -60,6 +60,6 @@ path is additive.
 ## Examples
 
 ```bash
-bash scripts/spec-union.sh prds/001-feature/001-prd-feature.md
-bash scripts/spec-union.sh decisions/001-my-decision.md
+bash scripts/spec-union.sh docs/prds/001-feature/001-prd-feature.md
+bash scripts/spec-union.sh docs/decisions/001-my-decision.md
 ```

@@ -5,7 +5,7 @@ alwaysApply: false
 
 # `/pf-feedback-close`
 
-Closure step for trivial-gap backlog items (IM8). Marks an open `prds/GAP-BACKLOG.md` entry closed when
+Closure step for trivial-gap backlog items (IM8). Marks an open `docs/prds/GAP-BACKLOG.md` entry closed when
 verify evidence passes. **Requires explicit human confirmation** before mutating the backlog.
 
 ## Scope
@@ -22,7 +22,7 @@ verify evidence passes. **Requires explicit human confirmation** before mutating
 
    ```bash
    bash scripts/feedback-closure-gate.sh \
-     --backlog prds/GAP-BACKLOG.md \
+     --backlog docs/prds/GAP-BACKLOG.md \
      --signal-id <id> \
      --verify-status /tmp/pf-verify.status.json \
      [--gate-json /tmp/pf-gate.json --require-gate]
@@ -32,7 +32,7 @@ verify evidence passes. **Requires explicit human confirmation** before mutating
 5. On `closable`, close backlog entry:
 
    ```bash
-   bash scripts/feedback-backlog.sh close --signal-id <id> --backlog prds/GAP-BACKLOG.md
+   bash scripts/feedback-backlog.sh close --signal-id <id> --backlog docs/prds/GAP-BACKLOG.md
    ```
 
 6. `memory-preflight` write closure record (redacted summary; tag `surface:feedback-closure`).

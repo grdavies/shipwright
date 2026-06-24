@@ -11,8 +11,8 @@ Post-freeze correction path. Parent stays byte-stable.
 
 - Input: frozen parent PRD or decision record path + delta description.
 - Output:
-  - PRD: `prds/<n>-<slug>/amendments/A<k>-<short>.md`
-  - Decision: `decisions/<n>-<slug>.amendments/A<k>-<short>.md` (sibling layout)
+  - PRD: `docs/prds/<n>-<slug>/amendments/A<k>-<short>.md`
+  - Decision: `docs/decisions/<n>-<slug>.amendments/A<k>-<short>.md` (sibling layout)
 - Does **not** modify the parent file.
 
 ## Procedure
@@ -28,8 +28,8 @@ Post-freeze correction path. Parent stays byte-stable.
 5. Run `/pf-doc-review` — floor per doc type (PRD amendment: coherence + scope-guardian; decision amendment:
    raised floor per `skills/doc-review/SKILL.md`).
 6. Freeze amendment via `/pf-freeze`.
-7. Update `prds/INDEX.md` or `decisions/INDEX.md` amendment links.
-8. On decision record-level supersede: append superseded parent path to `decisions/SUPERSEDED.log`.
+7. Update `docs/prds/INDEX.md` or `docs/decisions/INDEX.md` amendment links.
+8. On decision record-level supersede: append superseded parent path to `docs/decisions/SUPERSEDED.log`.
 
 ## Guardrails
 
