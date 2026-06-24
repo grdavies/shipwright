@@ -153,6 +153,7 @@ PF_SHIP="$ROOT/commands/pf-ship.md"
 PF_READY="$ROOT/commands/pf-ready.md"
 PF_REVIEW="$ROOT/commands/pf-review.md"
 FIXTURES="$ROOT/scripts/test/fixtures/verify-evidence"
+VERIFY_PR_CTX="--pr-context off"
 
 if [[ -f "$VERIFY_GATE_SKILL" ]] && [[ -x "$VERIFY_EVIDENCE" ]] && \
    grep -q 'pf-verify.status.json' "$PF_VERIFY" && \
@@ -168,7 +169,7 @@ set +e
 OUT=$(bash "$VERIFY_EVIDENCE" \
   --verify-status "$FIXTURES/verify-pass.json" \
   --gate-json "$FIXTURES/gate-green.json" \
-  --require-gate 2>/dev/null)
+  --require-gate $VERIFY_PR_CTX 2>/dev/null)
 EC=$?
 set -e
 if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.verdict == "verified"' >/dev/null; then
@@ -184,7 +185,7 @@ OUT=$(bash "$VERIFY_EVIDENCE" \
   --verify-status "$FIXTURES/verify-pass.json" \
   --gate-json "$FIXTURES/gate-red.json" \
   --baseline-gate "$FIXTURES/gate-green.json" \
-  --require-gate 2>/dev/null)
+  --require-gate $VERIFY_PR_CTX 2>/dev/null)
 EC=$?
 set -e
 if [[ "$EC" -eq 20 ]] && echo "$OUT" | jq -e '.verdict == "not-verified"' >/dev/null; then
@@ -199,10 +200,10 @@ set +e
 OUT=$(bash "$VERIFY_EVIDENCE" \
   --verify-status "$FIXTURES/verify-pass.json" \
   --gate-json "$FIXTURES/gate-red.json" \
-  --require-gate 2>/dev/null)
+  --require-gate $VERIFY_PR_CTX 2>/dev/null)
 EC=$?
 set -e
-if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive"' >/dev/null; then
+if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive" and .inconclusiveClass == "no-baseline"' >/dev/null; then
   echo "OK  verify-evidence: gate fail no baseline → inconclusive"
 else
   echo "FAIL verify-evidence gate fail no-baseline case (ec=$EC)"
@@ -213,7 +214,8 @@ fi
 set +e
 OUT=$(bash "$VERIFY_EVIDENCE" \
   --verify-status "$FIXTURES/verify-fail.json" \
-  --baseline-verify "$FIXTURES/verify-pass.json" 2>/dev/null)
+  --baseline-verify "$FIXTURES/verify-pass.json" \
+  $VERIFY_PR_CTX 2>/dev/null)
 EC=$?
 set -e
 if [[ "$EC" -eq 20 ]] && echo "$OUT" | jq -e '.verdict == "not-verified"' >/dev/null; then
@@ -226,10 +228,11 @@ fi
 # Missing required verify status → inconclusive
 set +e
 OUT=$(bash "$VERIFY_EVIDENCE" \
-  --verify-status "$FIXTURES/does-not-exist.json" 2>/dev/null)
+  --verify-status "$FIXTURES/does-not-exist.json" \
+  $VERIFY_PR_CTX 2>/dev/null)
 EC=$?
 set -e
-if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive"' >/dev/null; then
+if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive" and .inconclusiveClass == "missing-required"' >/dev/null; then
   echo "OK  verify-evidence: missing evidence → inconclusive"
 else
   echo "FAIL verify-evidence missing evidence case (ec=$EC)"
@@ -239,10 +242,11 @@ fi
 # No baseline + failing head → inconclusive (never not-verified)
 set +e
 OUT=$(bash "$VERIFY_EVIDENCE" \
-  --verify-status "$FIXTURES/verify-fail.json" 2>/dev/null)
+  --verify-status "$FIXTURES/verify-fail.json" \
+  $VERIFY_PR_CTX 2>/dev/null)
 EC=$?
 set -e
-if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive"' >/dev/null; then
+if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive" and .inconclusiveClass == "no-baseline"' >/dev/null; then
   echo "OK  verify-evidence: no baseline + fail → inconclusive"
 else
   echo "FAIL verify-evidence no-baseline case (ec=$EC)"
@@ -253,10 +257,11 @@ fi
 set +e
 OUT=$(bash "$VERIFY_EVIDENCE" \
   --verify-status "$FIXTURES/verify-fail.json" \
-  --baseline-verify "$FIXTURES/verify-fail.json" 2>/dev/null)
+  --baseline-verify "$FIXTURES/verify-fail.json" \
+  $VERIFY_PR_CTX 2>/dev/null)
 EC=$?
 set -e
-if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive"' >/dev/null; then
+if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive" and .inconclusiveClass == "unattributed"' >/dev/null; then
   echo "OK  verify-evidence: pre-existing failure → inconclusive"
 else
   echo "FAIL verify-evidence pre-existing case (ec=$EC)"
@@ -268,7 +273,7 @@ set +e
 OUT=$(bash "$VERIFY_EVIDENCE" \
   --verify-status "$FIXTURES/verify-pass.json" \
   --gate-json "$FIXTURES/gate-green.json" \
-  --require-gate 2>/dev/null)
+  --require-gate $VERIFY_PR_CTX 2>/dev/null)
 EC=$?
 set -e
 if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.evidence.review.status == "absent"' >/dev/null; then
@@ -279,8 +284,8 @@ else
 fi
 
 # Determinism
-RUN1=$(bash "$VERIFY_EVIDENCE" --verify-status "$FIXTURES/verify-pass.json" 2>/dev/null | jq -c .)
-RUN2=$(bash "$VERIFY_EVIDENCE" --verify-status "$FIXTURES/verify-pass.json" 2>/dev/null | jq -c .)
+RUN1=$(bash "$VERIFY_EVIDENCE" --verify-status "$FIXTURES/verify-pass.json" $VERIFY_PR_CTX 2>/dev/null | jq -c .)
+RUN2=$(bash "$VERIFY_EVIDENCE" --verify-status "$FIXTURES/verify-pass.json" $VERIFY_PR_CTX 2>/dev/null | jq -c .)
 if [[ "$RUN1" == "$RUN2" ]]; then
   echo "OK  verify-evidence: deterministic output"
 else
@@ -288,10 +293,179 @@ else
   FAIL=1
 fi
 
+# --- Plan 005 hardening (R1–R6) ---
+VERIFY_BASELINE="$ROOT/scripts/verify-baseline.sh"
+PF_TMP="$ROOT/scripts/pf-tmp.sh"
+PHASE_STATE="$ROOT/scripts/phase-state.sh"
+VERDICT_SCHEMA="$ROOT/skills/verification-gate/references/verdict-schema.json"
+MEMORY_REDACT="$ROOT/scripts/memory-redact.sh"
+
+# R1: per-command attribution — swapped failure → not-verified
+set +e
+OUT=$(bash "$VERIFY_EVIDENCE" \
+  --verify-status "$FIXTURES/verify-ab-swapped.json" \
+  --baseline-verify "$FIXTURES/verify-ab-baseline.json" \
+  --baseline-gate "$FIXTURES/gate-green.json" \
+  $VERIFY_PR_CTX 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 20 ]] && echo "$OUT" | jq -e '.verdict == "not-verified"' >/dev/null; then
+  echo "OK  verify-evidence: per-command swapped failure → not-verified"
+else
+  echo "FAIL verify-evidence attribution swapped case (ec=$EC)"
+  FAIL=1
+fi
+
+# R1: legacy no commands[] — same inconclusive as pre-U1 for unchanged fail
+set +e
+OUT=$(bash "$VERIFY_EVIDENCE" \
+  --verify-status "$FIXTURES/verify-legacy-nocommands.json" \
+  --baseline-verify "$FIXTURES/verify-legacy-nocommands.json" \
+  $VERIFY_PR_CTX 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.verdict == "inconclusive" and .inconclusiveClass == "unattributed"' >/dev/null; then
+  echo "OK  verify-evidence: legacy nocommands unchanged → inconclusive"
+else
+  echo "FAIL verify-evidence legacy nocommands case (ec=$EC)"
+  FAIL=1
+fi
+
+# R5: pr-context on + gate missing → missing-required
+set +e
+OUT=$(bash "$VERIFY_EVIDENCE" \
+  --verify-status "$FIXTURES/verify-pass.json" \
+  --pr-context on 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.inconclusiveClass == "missing-required"' >/dev/null; then
+  echo "OK  verify-evidence: pr-context on without gate → missing-required"
+else
+  echo "FAIL verify-evidence pr-context on case (ec=$EC)"
+  FAIL=1
+fi
+
+# R5: pr-context off preserves gate-less verified
+set +e
+OUT=$(bash "$VERIFY_EVIDENCE" \
+  --verify-status "$FIXTURES/verify-pass.json" \
+  --pr-context off 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 0 ]] && echo "$OUT" | jq -e '.verdict == "verified"' >/dev/null; then
+  echo "OK  verify-evidence: pr-context off gate-less → verified"
+else
+  echo "FAIL verify-evidence pr-context off case (ec=$EC)"
+  FAIL=1
+fi
+
+# R4: group-writable evidence rejected
+UNSAFE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/pf-fixture-unsafe.XXXXXX")
+UNSAFE_FILE="$UNSAFE_DIR/evidence.json"
+cp "$FIXTURES/verify-pass.json" "$UNSAFE_FILE"
+chmod 662 "$UNSAFE_FILE"
+set +e
+OUT=$(bash "$VERIFY_EVIDENCE" \
+  --verify-status "$UNSAFE_FILE" \
+  $VERIFY_PR_CTX 2>/dev/null)
+EC=$?
+set -e
+rm -rf "$UNSAFE_DIR"
+if [[ "$EC" -eq 10 ]] && echo "$OUT" | jq -e '.inconclusiveClass == "missing-required"' >/dev/null; then
+  echo "OK  verify-evidence: group-writable file rejected"
+else
+  echo "FAIL verify-evidence safe_read group-writable case (ec=$EC)"
+  FAIL=1
+fi
+
+# R3: verify-baseline capture
+if [[ -x "$VERIFY_BASELINE" ]]; then
+  CAP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/pf-baseline-cap.XXXXXX")
+  BASE_OUT="$CAP_DIR/baseline.json"
+  if bash "$VERIFY_BASELINE" capture --from "$FIXTURES/verify-pass.json" --to "$BASE_OUT" >/dev/null 2>&1 && \
+     diff -q <(jq -S . "$FIXTURES/verify-pass.json") <(jq -S . "$BASE_OUT") >/dev/null; then
+    echo "OK  verify-baseline: capture copies source"
+  else
+    echo "FAIL verify-baseline capture"
+    FAIL=1
+  fi
+  rm -rf "$CAP_DIR"
+else
+  echo "FAIL verify-baseline.sh missing or not executable"
+  FAIL=1
+fi
+
+# R4: pf-tmp init creates 0700 dir
+if [[ -x "$PF_TMP" ]]; then
+  RUN_DIR=$(bash "$PF_TMP" init 2>/dev/null | tail -1)
+  PERMS=$(stat -f '%Lp' "$RUN_DIR" 2>/dev/null || stat -c '%a' "$RUN_DIR" 2>/dev/null)
+  rm -rf "$RUN_DIR"
+  if [[ "$PERMS" == "700" ]]; then
+    echo "OK  pf-tmp: init creates mode 0700 dir"
+  else
+    echo "FAIL pf-tmp init perms (got $PERMS)"
+    FAIL=1
+  fi
+else
+  echo "FAIL pf-tmp.sh missing or not executable"
+  FAIL=1
+fi
+
+# R2: inconclusive output validates against schema when class present
+if [[ -f "$VERDICT_SCHEMA" ]]; then
+  set +e
+  SAMPLE=$(bash "$VERIFY_EVIDENCE" --verify-status "$FIXTURES/does-not-exist.json" $VERIFY_PR_CTX 2>/dev/null)
+  set -e
+  if echo "$SAMPLE" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null && \
+     echo "$SAMPLE" | jq -e '.inconclusiveClass' >/dev/null; then
+    echo "OK  verify-evidence: inconclusiveClass present on inconclusive verdict"
+  else
+    echo "FAIL verify-evidence inconclusiveClass schema case"
+    FAIL=1
+  fi
+else
+  echo "FAIL verdict-schema.json missing"
+  FAIL=1
+fi
+
+# R6: phase-state override-add appends without clobber
+if [[ -x "$PHASE_STATE" ]]; then
+  STATE_FILE=$(bash "$PHASE_STATE" path)
+  bash "$PHASE_STATE" init '{}' >/dev/null
+  bash "$PHASE_STATE" override-add '{"who":"a@test","when":"t1","verdictOverridden":"inconclusive","inconclusiveClass":"no-baseline","reason":"one"}' >/dev/null
+  bash "$PHASE_STATE" override-add '{"who":"b@test","when":"t2","verdictOverridden":"inconclusive","inconclusiveClass":"unattributed","reason":"two"}' >/dev/null
+  COUNT=$(bash "$PHASE_STATE" read | jq '.overrides | length')
+  rm -f "$STATE_FILE"
+  if [[ "$COUNT" == "2" ]]; then
+    echo "OK  phase-state: override-add appends two records"
+  else
+    echo "FAIL phase-state override-add (count=$COUNT)"
+    FAIL=1
+  fi
+else
+  echo "FAIL phase-state.sh missing"
+  FAIL=1
+fi
+
+# R6: override reason redaction retains who
+if [[ -x "$MEMORY_REDACT" ]]; then
+  REDACTED=$(printf 'ghp_abcdefghijklmnopqrstuvwxyz1234567890AB' | bash "$MEMORY_REDACT")
+  if [[ "$REDACTED" != *"ghp_"* ]]; then
+    echo "OK  memory-redact: secret-shaped token redacted"
+  else
+    echo "FAIL memory-redact secret leak"
+    FAIL=1
+  fi
+else
+  echo "FAIL memory-redact.sh missing"
+  FAIL=1
+fi
+
 # --- U2: wire verification gate into commit / ship (not pf-ready) ---
 if grep -q 'verification-gate' "$PF_COMMIT" && \
    grep -q 'verify-evidence.sh' "$PF_COMMIT" && \
-   grep -qi 'auditable override' "$PF_COMMIT" && \
+   grep -q 'override-add' "$PF_COMMIT" && \
+   grep -qi 'missing-required' "$PF_COMMIT" && \
    grep -qi 'check-gate' "$PF_COMMIT"; then
   echo "OK  pf-commit verification-gate precondition + bounded override"
 else
@@ -308,8 +482,9 @@ else
   FAIL=1
 fi
 
-if grep -qi 'inconclusive' "$PF_SHIP" && grep -qi 'log and continue' "$PF_SHIP"; then
-  echo "OK  pf-ship continues on inconclusive"
+if grep -qi 'inconclusive' "$PF_SHIP" && grep -qi 'log and continue' "$PF_SHIP" && \
+   grep -qi 'missing-required' "$PF_SHIP" && grep -qi 'halt' "$PF_SHIP"; then
+  echo "OK  pf-ship inconclusive policy (halt missing-required; log+continue benign)"
 else
   echo "FAIL pf-ship inconclusive policy"
   FAIL=1

@@ -1,0 +1,1 @@
+{"exitCode": 1, "status": "fail", "commands": [{"name": "A", "exitCode": 1, "status": "fail"}, {"name": "B", "exitCode": 0, "status": "pass"}]}

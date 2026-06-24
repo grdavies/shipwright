@@ -95,14 +95,19 @@ Unchanged from prior single-phase flow:
 5. Run provider local review (CodeRabbit):
 
    ```bash
-   LOG_FILE="/tmp/pf-review-$(date +%Y%m%d%H%M%S)-$$.log"
-   STATUS_FILE=/tmp/pf-review.status.json
+   RUN_DIR=$(bash scripts/pf-tmp.sh resolve)
+   if [[ -z "$RUN_DIR" ]]; then
+     RUN_DIR=/tmp
+   fi
+   LOG_FILE="$RUN_DIR/pf-review-$(date +%Y%m%d%H%M%S)-$$.log"
+   STATUS_FILE="$RUN_DIR/pf-review.status.json"
    coderabbit review -t uncommitted > "$LOG_FILE" 2>&1
    REVIEW_EC=$?
    REVIEW_STATUS="pass"
    [[ "$REVIEW_EC" -ne 0 ]] && REVIEW_STATUS="fail"
    jq -n --argjson ec "$REVIEW_EC" --arg st "$REVIEW_STATUS" --arg log "$LOG_FILE" \
      '{exitCode: $ec, status: $st, logPath: $log, provider: "coderabbit"}' > "$STATUS_FILE"
+   chmod 600 "$STATUS_FILE"
    ```
 
    The verification-gate consumes `$STATUS_FILE` (stable path). When review is disabled (step 1), do not
@@ -116,6 +121,6 @@ Unchanged from prior single-phase flow:
 - Load `agentsFile` before review.
 - API keys from environment only.
 - Do not use `--base` on CodeRabbit (branch review is a separate surface).
-- Emit `/tmp/pf-review.status.json` at the stable path when phase 2 runs — verification-gate depends on it.
+- Emit `pf-review.status.json` under the resolved run dir when phase 2 runs — verification-gate depends on it.
 - Phase 1 does not replace phase-2 status signal.
 - `check-gate.sh` remains sole CI oracle — local severity gate is additive.

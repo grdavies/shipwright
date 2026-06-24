@@ -8,6 +8,10 @@
 #  20  regressed
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=evidence-read.sh
+source "$ROOT/scripts/evidence-read.sh"
+
 BASELINE=""
 POST=""
 
@@ -33,13 +37,17 @@ read_verify_pass() {
     echo "missing"
     return
   fi
-  if ! jq -e . "$f" >/dev/null 2>&1; then
+  if ! safe_read_check "$f"; then
+    echo "invalid"
+    return
+  fi
+  if ! safe_jq "$f" '.' >/dev/null 2>&1; then
     echo "invalid"
     return
   fi
   local ec status
-  ec="$(jq -r 'if .exitCode != null then .exitCode elif .overall.exitCode != null then .overall.exitCode else 1 end' "$f")"
-  status="$(jq -r 'if .status != null then .status elif .overall.status != null then .overall.status else "fail" end' "$f")"
+  ec="$(safe_jq_r "$f" 'if .exitCode != null then .exitCode elif .overall.exitCode != null then .overall.exitCode else 1 end' 2>/dev/null || echo "1")"
+  status="$(safe_jq_r "$f" 'if .status != null then .status elif .overall.status != null then .overall.status else "fail" end' 2>/dev/null || echo "fail")"
   if [[ "$ec" == "0" && "$status" == "pass" ]]; then
     echo "pass"
   else
