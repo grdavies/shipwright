@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-HOOK="$ROOT/hooks/before-submit-guardrails.py"
+HOOK="$ROOT/dist/cursor/hooks/before-submit-guardrails.py"
 CLAUDE_SUBMIT="$ROOT/scripts/test/claude-submit-case.py"
 CLAUDE_SESSION="$ROOT/scripts/test/claude-session-case.py"
 FIX="$ROOT/scripts/test/fixtures"

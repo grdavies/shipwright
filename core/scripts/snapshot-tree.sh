@@ -13,6 +13,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="${1:--}"
 
+if [ -d "$ROOT/dist/cursor/providers" ] || [ -d "$ROOT/dist/cursor/commands" ]; then
+  SNAPSHOT_ROOT="$ROOT/dist/cursor"
+elif [ -d "$ROOT/core/providers" ] || [ -d "$ROOT/core/commands" ]; then
+  SNAPSHOT_ROOT="$ROOT/core"
+else
+  SNAPSHOT_ROOT="$ROOT"
+fi
+
 EMITTABLE_DIRS=(commands skills rules agents providers)
 
 should_skip_relpath() {
@@ -30,19 +38,19 @@ should_skip_relpath() {
 collect_emittable_relpaths() {
   local dir rel f
   for dir in "${EMITTABLE_DIRS[@]}"; do
-    [ -d "$ROOT/$dir" ] || continue
+    [ -d "$SNAPSHOT_ROOT/$dir" ] || continue
     while IFS= read -r -d '' f; do
-      rel="${f#"$ROOT"/}"
+      rel="${f#"$SNAPSHOT_ROOT"/}"
       should_skip_relpath "$rel" && continue
       printf '%s\n' "$rel"
-    done < <(find "$ROOT/$dir" -type f -print0)
+    done < <(find "$SNAPSHOT_ROOT/$dir" -type f -print0)
   done
-  if [ -d "$ROOT/scripts" ]; then
+  if [ -d "$SNAPSHOT_ROOT/scripts" ]; then
     while IFS= read -r -d '' f; do
-      rel="${f#"$ROOT"/}"
+      rel="${f#"$SNAPSHOT_ROOT"/}"
       should_skip_relpath "$rel" && continue
       printf '%s\n' "$rel"
-    done < <(find "$ROOT/scripts" -type f -print0)
+    done < <(find "$SNAPSHOT_ROOT/scripts" -type f -print0)
   fi
 }
 
@@ -50,7 +58,7 @@ write_manifest() {
   local rel hash
   while IFS= read -r rel; do
     [ -n "$rel" ] || continue
-    hash="$(shasum -a 256 "$ROOT/$rel" | awk '{print $1}')"
+    hash="$(shasum -a 256 "$SNAPSHOT_ROOT/$rel" | awk '{print $1}')"
     printf '%s\t%s\n' "$rel" "$hash"
   done < <(collect_emittable_relpaths | LC_ALL=C sort -u)
 }

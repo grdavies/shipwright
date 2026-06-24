@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Additively copy emittable workflow content into core/ (root layout stays authoritative).
+# Refresh core/ workflow copies from repo-root scripts (content dirs live only under core/ post-U6).
 #
 # Usage: scripts/copy-to-core.sh
-# Idempotent: re-run refreshes core/ copies from the live root layout.
+# Idempotent: re-run refreshes core/scripts from root harness scripts.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

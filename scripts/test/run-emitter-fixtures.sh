@@ -105,4 +105,16 @@ fi
 run_expect real-cursor-smoke 0 $GEN generate cursor --dest "$OUT"
 run_expect real-claude-smoke 0 $GEN generate claude-code --dest "$OUT"
 
+# Freshness gate: committed dist/ matches generate(core/)
+if [ -d "$ROOT/dist/cursor" ] && [ -d "$ROOT/dist/claude-code" ]; then
+  run_expect freshness-generate 0 $GEN generate --all
+  if git -C "$ROOT" diff --exit-code -- dist/cursor dist/claude-code >/dev/null 2>&1; then
+    echo "OK  freshness dist matches generate(core/)"
+  else
+    echo "FAIL freshness dist/ drift from generate(core/)"
+    git -C "$ROOT" diff --stat -- dist/cursor dist/claude-code || true
+    FAIL=1
+  fi
+fi
+
 exit "$FAIL"
