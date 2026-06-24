@@ -1,5 +1,5 @@
 ---
-description: Generate a frozen task list from a frozen PRD with mandatory Go gate before sub-task expansion. Does not start implementation.
+description: Generate a frozen task list from a frozen PRD in a single pass. Does not start implementation.
 alwaysApply: false
 ---
 
@@ -18,15 +18,19 @@ Task list from frozen PRD + amendment union.
 1. Verify PRD has `frozen: true`.
 2. Load `skills/tasks/SKILL.md`.
 3. Read effective requirements via `scripts/spec-union.sh <prd-path>`.
-4. Draft parent tasks; **pause for "Go"** before sub-task expansion.
-5. After user confirms "Go", expand sub-tasks, Relevant Files, Notes.
-6. Add **`## Traceability`** table: every union R-ID → task ref → named test scenario (see `skills/spec-rigor/SKILL.md`).
-7. Save; run spec-rigor + traceability gates, then `/sw-freeze` on task list.
-8. Update `docs/prds/INDEX.md` entry (status `not-started`).
+4. In **one pass**, draft parent tasks (phases), expand executable sub-tasks, Relevant Files, and Notes.
+5. Add **`## Traceability`** table: every union R-ID → task ref → named test scenario (see `skills/spec-rigor/SKILL.md`).
+6. Save; run spec-rigor + traceability gates, then `/sw-freeze` on task list.
+7. Update `docs/prds/INDEX.md` entry (status `not-started`).
+8. **Stop** — standalone runs end here without implementation. The human checkpoint between documentation
+   and implementation is `doc.afterTasks` on `/sw-doc` (or `--after-tasks` on `/sw-ship`), not a gate inside
+   `/sw-tasks`.
 
 ## Guardrails
 
-- Go gate is mandatory — no sub-tasks until user confirms.
+- Single-pass generation — complete list (parent phases, executable sub-tasks, traceability) with no
+  user-intervention gate.
+- Overwrite of an existing **frozen** task list still requires explicit confirmation before replacing.
 - Task list reflects union, not bare parent alone.
 - Traceability table required — `traceability-check.sh` blocks freeze on uncovered R-IDs.
-- Git-derived index reconciliation is owned by `003`.
+- Does not provision worktrees or run `/sw-execute`.

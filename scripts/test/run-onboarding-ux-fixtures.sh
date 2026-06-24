@@ -41,6 +41,9 @@ fi
 # --- gate fixtures (delegates to run-gate-fixtures) ---
 bash "$ROOT/scripts/test/run-gate-fixtures.sh" || FAIL=1
 
+# --- tasks single-pass (phase 3) ---
+bash "$ROOT/scripts/test/fixtures/onboarding-ux/tasks-single-pass.sh" || FAIL=1
+
 # --- worktree guard (phase 2) ---
 if [[ -x "$ROOT/scripts/sw-assert-worktree.sh" ]]; then
   bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-negative.sh" || FAIL=1
