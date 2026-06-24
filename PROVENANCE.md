@@ -30,6 +30,18 @@ follow-up plan; this file is seeded during foundation build and updated as units
 | Debug RCA + routing | [compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin) | cache `2648200ed2352b6e19a93dcfffc764efe70b6a1b` | debug U1/U3/U4 | `ce-debug` phased RCA + fix-vs-rethink; `pf-debug` routes to `003`/`002` |
 | Sentry MCP recipe | — | — | debug U2 | `skills/debug/references/sentry.md`; R41 redaction at ingestion |
 | Feedback intake + routing | — | — | feedback U1–U3 | `/pf-feedback`; signal schema + gap backlog routing |
+| Cursor platform emitter | — | — | portability U6 | `platforms/cursor/emitter.py` → committed `dist/cursor/` |
+| Claude Code platform emitter | — | — | portability U7 | `platforms/claude-code/emitter.py` → committed `dist/claude-code/` |
+| Shared guardrail hook core | — | — | portability U4 | `core/hooks/guardrail_core.py` + per-platform adapters |
+
+## Generated install trees (`dist/`)
+
+| Emitted path | Authoring source | Emitter | Notes |
+|--------------|------------------|---------|-------|
+| `dist/cursor/` | `core/` | `platforms/cursor/emitter.py` | Committed; byte-parity golden in `scripts/test/fixtures/parity/cursor-golden.manifest` |
+| `dist/claude-code/` | `core/` | `platforms/claude-code/emitter.py` | Committed; `alwaysApply` rules → `CLAUDE.md`; conditional rules → skill descriptions |
+
+Regenerate after `core/` edits: `python3 -m pf generate --all` (freshness gate in `run-emitter-fixtures.sh`).
 
 ## Update policy
 

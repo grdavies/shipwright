@@ -1,0 +1,10 @@
+{
+  "platform": "claude-code",
+  "hooks": "native",
+  "skills": "native",
+  "commands": "slash-md",
+  "rules": "claude-md",
+  "subagents": "native",
+  "mcp": "yes",
+  "memoryXport": "mcp"
+}

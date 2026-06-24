@@ -1,0 +1,10 @@
+{
+  "platform": "codex",
+  "hooks": "wrapper",
+  "skills": "native",
+  "commands": "slash-md",
+  "rules": "mdc",
+  "subagents": "native",
+  "mcp": "yes",
+  "memoryXport": "mcp"
+}

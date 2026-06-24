@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "verification-gate verdict",
+  "type": "object",
+  "required": ["verdict", "reason", "evidence"],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["verified", "not-verified", "inconclusive"]
+    },
+    "reason": {
+      "type": "string"
+    },
+    "inconclusiveClass": {
+      "type": "string",
+      "enum": ["missing-required", "no-baseline", "unattributed"]
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["verify"],
+      "properties": {
+        "verify": {
+          "type": "object",
+          "required": ["path", "present", "status"],
+          "properties": {
+            "path": { "type": "string" },
+            "present": { "type": "boolean" },
+            "status": { "type": "string", "enum": ["pass", "fail", "missing", "invalid"] }
+          }
+        },
+        "gate": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string" },
+            "present": { "type": "boolean" },
+            "status": { "type": "string", "enum": ["pass", "fail", "missing", "invalid", "not-required"] }
+          }
+        },
+        "review": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string" },
+            "present": { "type": "boolean" },
+            "status": { "type": "string", "enum": ["pass", "fail", "missing", "invalid", "absent"] }
+          }
+        },
+        "baseline": {
+          "type": "object",
+          "properties": {
+            "present": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}
