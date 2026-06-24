@@ -15,7 +15,7 @@ source. `/sw-memory-sync` only writes the *distilled* sink into the memory provi
 
 ## Marker (incremental, per-repo, local)
 
-- Marker file: `<stateDir>/phase-flow-memory-sync.json` where `<stateDir>` is the directory of the
+- Marker file: `<stateDir>/shipwright-memory-sync.json` where `<stateDir>` is the directory of the
   configured `stateFile` (default `.git/`). Local-only, never committed — like the state file.
 - Shape: `{ "<transcript-id>": { "processedMtimeMs": <number>, "lastDistilledAt": "<iso>" } }`.
 - A transcript is a candidate when it is new or its `mtimeMs` exceeds the recorded `processedMtimeMs`.

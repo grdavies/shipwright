@@ -9,7 +9,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from pf_hook_util import (
+from sw_hook_util import (
     filter_rules_by_allowlist,
     guardrails_enforce_before_submit,
     guardrails_require_rule_class,
@@ -22,7 +22,7 @@ from pf_hook_util import (
     workflow_config_path,
 )
 
-_STATE_RELPATH = Path(".cursor") / "hooks" / "state" / "phase-flow-memory-sync-scheduler.json"
+_STATE_RELPATH = Path(".cursor") / "hooks" / "state" / "shipwright-memory-sync-scheduler.json"
 _DEFAULT_MIN_TURNS = 10
 _DEFAULT_MIN_MINUTES = 120
 _FOLLOWUP = (
@@ -47,7 +47,7 @@ class StopSyncResult:
 
 
 def _rules_script(root: Path, plugin_root: Path, config: dict) -> Path | None:
-    override = os.environ.get("PF_RULES_SCRIPT", "").strip()
+    override = os.environ.get("SW_RULES_SCRIPT", "").strip()
     if override:
         return Path(override)
     provider = resolve_memory_provider(root, config)
@@ -67,7 +67,7 @@ def fetch_rules(
     if script is None or not script.is_file():
         return False, []
     env = os.environ.copy()
-    env["PF_WORKSPACE_ROOT"] = str(root)
+    env["SW_WORKSPACE_ROOT"] = str(root)
     env["PYTHONPATH"] = os.pathsep.join(
         [str(plugin_root), env.get("PYTHONPATH", "")]
     ).strip(os.pathsep)
@@ -107,7 +107,7 @@ def provider_unreachable_message(provider: str | None) -> str:
     if provider == "in-repo":
         return (
             "phase-flow v2: in-repo rules adapter failed to load rule-class guardrails from disk. "
-            "Check .cursor/pf-memory/rules/ and run /sw-setup to validate the store."
+            "Check .cursor/sw-memory/rules/ and run /sw-setup to validate the store."
         )
     return (
         f"phase-flow v2: cannot load rule-class guardrails for provider '{name}'. "
@@ -123,7 +123,7 @@ def resolve_submit_config(root: Path) -> dict | None:
 
 
 def evaluate_submit_guard(root: Path, plugin_root: Path) -> SubmitGuardResult:
-    if os.environ.get("PF_TEST_SUBMIT_RAISE", "").strip() == "1":
+    if os.environ.get("SW_TEST_SUBMIT_RAISE", "").strip() == "1":
         raise RuntimeError("injected test failure")
 
     config = resolve_submit_config(root)
@@ -143,7 +143,7 @@ def evaluate_submit_guard(root: Path, plugin_root: Path) -> SubmitGuardResult:
         return SubmitGuardResult(
             allow=False,
             message=(
-                "phase-flow v2: pf-memory-rule-allowlist.json is corrupt. "
+                "phase-flow v2: sw-memory-rule-allowlist.json is corrupt. "
                 "Fix or remove the file, then retry."
             ),
         )
@@ -156,7 +156,7 @@ def evaluate_submit_guard(root: Path, plugin_root: Path) -> SubmitGuardResult:
             message=(
                 "phase-flow v2: this repo requires at least one allowlisted rule-class guardrail "
                 "(memory.guardrails.requireRuleClass is true) but none are confirmed. "
-                "Promote rules via /sw-memory-audit and update .cursor/pf-memory-rule-allowlist.json, "
+                "Promote rules via /sw-memory-audit and update .cursor/sw-memory-rule-allowlist.json, "
                 "or set requireRuleClass to false for greenfield/bootstrap repos."
             ),
         )
@@ -205,7 +205,7 @@ def _setup_hint(root: Path) -> str | None:
 
 
 def fetch_rule_summaries(root: Path, plugin_root: Path, config: dict) -> list[str]:
-    override = os.environ.get("PF_RULES_SCRIPT", "").strip()
+    override = os.environ.get("SW_RULES_SCRIPT", "").strip()
     if override:
         script: Path | None = Path(override)
     else:

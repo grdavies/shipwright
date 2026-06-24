@@ -12,7 +12,7 @@ from guardrail_core import (
     evaluate_stop_sync,
     evaluate_submit_guard,
 )
-from pf_hook_util import read_stdin_json, workspace_root
+from sw_hook_util import read_stdin_json, workspace_root
 
 
 def plugin_root(repo_root: Path) -> Path:
@@ -53,7 +53,7 @@ def run_session_start(repo_root: Path) -> int:
             json.dumps(
                 {
                     "hookSpecificOutput": {
-                        "additionalContext": f"(phase-flow v2 hook degraded: {exc})",
+                        "additionalContext": f"(Shipwright hook degraded: {exc})",
                     }
                 }
             )
@@ -69,7 +69,7 @@ def run_user_prompt_submit(repo_root: Path) -> int:
         return _emit_submit_result(result)
     except Exception as exc:  # noqa: BLE001 — submit hook is fail-closed
         return _emit_submit_result(
-            SubmitGuardResult(allow=False, message=f"phase-flow v2 guardrail hook error: {exc}")
+            SubmitGuardResult(allow=False, message=f"Shipwright guardrail hook error: {exc}")
         )
 
 
@@ -119,7 +119,7 @@ def _run_session_with_payload(repo_root: Path, payload: dict) -> int:
     except Exception as exc:  # noqa: BLE001
         print(
             json.dumps(
-                {"hookSpecificOutput": {"additionalContext": f"(phase-flow v2 hook degraded: {exc})"}}
+                {"hookSpecificOutput": {"additionalContext": f"(Shipwright hook degraded: {exc})"}}
             )
         )
         return 0
@@ -132,7 +132,7 @@ def _run_submit_with_payload(repo_root: Path, payload: dict) -> int:
         return _emit_submit_result(result)
     except Exception as exc:  # noqa: BLE001
         return _emit_submit_result(
-            SubmitGuardResult(allow=False, message=f"phase-flow v2 guardrail hook error: {exc}")
+            SubmitGuardResult(allow=False, message=f"Shipwright guardrail hook error: {exc}")
         )
 
 
@@ -165,7 +165,7 @@ def run_user_prompt_submit_from_payload(repo_root: Path, payload: dict) -> tuple
     try:
         result = evaluate_submit_guard(root, plugin_root(repo_root))
     except Exception as exc:  # noqa: BLE001
-        result = SubmitGuardResult(allow=False, message=f"phase-flow v2 guardrail hook error: {exc}")
+        result = SubmitGuardResult(allow=False, message=f"Shipwright guardrail hook error: {exc}")
     if result.allow:
         return 0, json.dumps({"decision": "approve"})
     return 2, json.dumps({"decision": "block", "reason": result.message})

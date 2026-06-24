@@ -2,7 +2,7 @@
 # Executable Recallium rule-fetcher for hooks. Emits JSON to stdout; never prints credentials.
 set -euo pipefail
 
-ROOT="${PF_WORKSPACE_ROOT:-$(pwd)}"
+ROOT="${SW_WORKSPACE_ROOT:-$(pwd)}"
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG=""
 for p in "$ROOT/.cursor/workflow.config.json" "$ROOT/workflow.config.json"; do
@@ -24,7 +24,7 @@ if [ "$provider" != "recallium" ]; then
   exit 1
 fi
 
-if ! PYTHONPATH="$PLUGIN_ROOT" python3 -c "from hooks.pf_recallium_url import is_allowed_recallium_base; import sys; sys.exit(0 if is_allowed_recallium_base(sys.argv[1]) else 1)" "$base"; then
+if ! PYTHONPATH="$PLUGIN_ROOT" python3 -c "from hooks.sw_recallium_url import is_allowed_recallium_base; import sys; sys.exit(0 if is_allowed_recallium_base(sys.argv[1]) else 1)" "$base"; then
   jq -n --arg u "$base" '{ok:false, error:"restBaseUrl must be localhost-only", rules:[]}'
   exit 1
 fi

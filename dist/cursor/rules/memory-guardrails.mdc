@@ -40,7 +40,7 @@ Named patterns: AWS `AKIA…`, `ghp_…`/PATs, JWTs, `Bearer` headers, PEM priva
 ## Rule-class promotion (R42)
 
 `category: rule` requires human confirmation + provenance metadata. Auto-distilled candidates cannot
-promote without `/sw-memory-audit` approval. Active rules must appear in `.cursor/pf-memory-rule-allowlist.json`.
+promote without `/sw-memory-audit` approval. Active rules must appear in `.cursor/sw-memory-rule-allowlist.json`.
 
 ## Trust boundary (R43)
 

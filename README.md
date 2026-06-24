@@ -12,7 +12,7 @@ from phase-flow v1 and compound-engineering patterns — no runtime dependency o
 Authoring lives under `core/`; installable trees are **generated** and committed under `dist/`.
 
 ```bash
-python3 -m pf generate --all   # after editing core/
+python3 -m sw generate --all   # after editing core/
 ./scripts/sync-local-install.sh   # rsync dist/cursor/ → ~/.cursor/plugins/local/shipwright
 ```
 
@@ -32,8 +32,8 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 # edit memory.project, verify.*, and provider selection
 ```
 
-Fresh installs can use **zero-config in-repo memory**: commit `.cursor/pf-memory.provider` (containing
-`in-repo`) plus empty `.cursor/pf-memory/{memories,rules}/` — no `workflow.config.json` required until you
+Fresh installs can use **zero-config in-repo memory**: commit `.cursor/sw-memory.provider` (containing
+`in-repo`) plus empty `.cursor/sw-memory/{memories,rules}/` — no `workflow.config.json` required until you
 run `/sw-setup`.
 
 Provider **selection** lives in config; API credentials are sourced from the environment / secret store at
@@ -57,7 +57,7 @@ See `core/sw-reference/config.schema.json` for the full schema.
 | Authoring | `core/` | portability M1+ |
 | Cursor install tree | `dist/cursor/` (generated) | portability U6 |
 | Claude install tree | `dist/claude-code/` (generated) | portability U7 |
-| Generate entrypoint | `python3 -m pf generate` | portability U5 |
+| Generate entrypoint | `python3 -m sw generate` | portability U5 |
 | CI gate | `core/scripts/check-gate.sh`, `core/skills/checks-gate/` | U2–U3 |
 | Memory seam | `core/skills/memory/`, `core/providers/` | U4–U5 |
 | Review seam | `core/providers/review/` | U3 |

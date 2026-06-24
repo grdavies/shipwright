@@ -1,7 +1,7 @@
 {
   "name": "shipwright",
   "version": "0.1.0",
-  "description": "phase-flow v2 (generated)",
+  "description": "Shipwright (generated)",
   "commands": "./commands/",
   "skills": "./skills/",
   "agents": "./agents/",

@@ -1,7 +1,7 @@
 {
   "$schema": "../.sw/config.schema.json",
   "defaultBaseBranch": "main",
-  "stateFile": ".git/phase-flow.json",
+  "stateFile": ".git/shipwright.json",
   "worktree": {
     "parallelCeiling": 4,
     "scaffold": {

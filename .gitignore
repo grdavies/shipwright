@@ -1,13 +1,14 @@
-# Phase-flow local hook state (machine-local, not shared)
+# Shipwright local hook state (machine-local, not shared)
+.cursor/hooks/state/shipwright-memory-sync-scheduler.json
 .cursor/hooks/state/phase-flow-memory-sync-scheduler.json
-.cursor/pf-wave-plan.json
+.cursor/sw-wave-plan.json
 
 # Python
 __pycache__/
 *.pyc
 
 # Per-work-item worktrees (local only)
-.pf-worktrees/
+.sw-worktrees/
 
 # Emitter test fixture output (generated locally)
 scripts/test/fixtures/emitter-fixture/out/

@@ -2,17 +2,17 @@
 
 Maps the `phase-flow` memory capability spec ([`skills/memory/CAPABILITIES.md`](../skills/memory/CAPABILITIES.md))
 onto committed markdown files with YAML frontmatter. Selected when `workflow.config.json` → `memory.provider`
-is `in-repo`, or when `.cursor/pf-memory.provider` marks the repo (zero-config fresh install).
+is `in-repo`, or when `.cursor/sw-memory.provider` marks the repo (zero-config fresh install).
 
 `<project>` below is `memory.project` from config, or the workspace directory basename when unset.
 Global scope uses a dedicated `global/` subfolder under the store (rare; explicit user direction only).
 
 ## Store layout
 
-Default committed store: `.cursor/pf-memory/`
+Default committed store: `.cursor/sw-memory/`
 
 ```
-.cursor/pf-memory/
+.cursor/sw-memory/
   memories/          # non-rule memories (committed by default)
     <id>.md          # one file per memory; filename stem = memory id
   rules/             # category:rule files (always committed — offline hook reads these)
@@ -20,8 +20,8 @@ Default committed store: `.cursor/pf-memory/`
 ```
 
 Per-user-local opt-out (`memory.inRepo.commitMode: local`): non-rule writes land in
-`.cursor/pf-memory-local/memories/` (gitignored by `/sw-setup`). **Rule-class files always write to
-`.cursor/pf-memory/rules/`** regardless of commit mode.
+`.cursor/sw-memory-local/memories/` (gitignored by `/sw-setup`). **Rule-class files always write to
+`.cursor/sw-memory/rules/`** regardless of commit mode.
 
 Per-memory file shape: YAML frontmatter = neutral interchange fields; distilled note in the body.
 
@@ -115,9 +115,9 @@ Identical inputs → identical ranked output (deterministic).
 
 1. **Lazy store create:** `mkdir -p` the store dirs on first write — no `/sw-setup` required.
 2. **Redaction (R41):** pipe every payload through `scripts/memory-redact.sh` before writing.
-3. **Commit mode:** `memory.inRepo.commitMode: committed` (default) writes under `.cursor/pf-memory/memories/`.
-   `local` writes non-rule memories under `.cursor/pf-memory-local/memories/` (gitignored).
-4. **Rules always committed:** `category: rule` always writes to `.cursor/pf-memory/rules/` regardless of
+3. **Commit mode:** `memory.inRepo.commitMode: committed` (default) writes under `.cursor/sw-memory/memories/`.
+   `local` writes non-rule memories under `.cursor/sw-memory-local/memories/` (gitignored).
+4. **Rules always committed:** `category: rule` always writes to `.cursor/sw-memory/rules/` regardless of
    commit mode.
 5. **No auto-seed:** store starts empty; never create starter rule files.
 6. Search before store; on near-duplicate, `modify` instead of a second file.
@@ -127,6 +127,6 @@ Identical inputs → identical ranked output (deterministic).
 
 - Edge-degraded: `links[]` are stored in frontmatter but not traversed for graph queries.
 - Offline-first: no network required for read, write, or guardrail rule injection.
-- Fresh-install marker: `.cursor/pf-memory.provider` containing `in-repo` opts the repo into fail-closed
+- Fresh-install marker: `.cursor/sw-memory.provider` containing `in-repo` opts the repo into fail-closed
   guardrails without hand-authored `workflow.config.json`.
 - Rule trust: committed rule files are untrusted until allowlisted + schema-validated (R42).

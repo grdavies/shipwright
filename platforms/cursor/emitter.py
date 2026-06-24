@@ -97,7 +97,7 @@ class CursorEmitter(EmitterBase):
         plugin = {
             "name": "shipwright",
             "version": read_version(repo_root),
-            "description": "phase-flow v2 (generated)",
+            "description": "Shipwright (generated)",
             "commands": "./commands/",
             "skills": "./skills/",
             "agents": "./agents/",
@@ -119,7 +119,7 @@ class CursorEmitter(EmitterBase):
             path = hooks_dir / name
             path.write_text(body, encoding="utf-8")
             path.chmod(0o755)
-        for extra in ("pf_recallium_url.py", "pre-commit", "pre-commit-frozen.sh"):
+        for extra in ("sw_recallium_url.py", "pre-commit", "pre-commit-frozen.sh"):
             src = repo_root / "hooks" / extra
             if not src.is_file():
                 src = repo_root / "core" / "hooks" / extra

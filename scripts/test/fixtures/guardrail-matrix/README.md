@@ -1,7 +1,7 @@
 # Guardrail matrix fixtures
 
 Shared scenarios exercised against both Cursor and Claude Code hook adapters through
-`guardrail_core.py`. Each scenario stubs the memory rules provider via `PF_RULES_SCRIPT`.
+`guardrail_core.py`. Each scenario stubs the memory rules provider via `SW_RULES_SCRIPT`.
 
 | Scenario | Cursor expect | Claude expect |
 |----------|---------------|---------------|

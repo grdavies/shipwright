@@ -37,7 +37,7 @@ Phase-scoped commit after `/sw-verify` (and `/sw-review` when configured).
    review or fixes changed the delta materially.
 5. `memory-preflight` checkpoint for durable learnings (redact before store).
 6. Review delta; stage only phase files.
-7. **Exclude** per-worktree state (`phase-flow.json`), memory-sync markers, provider cache.
+7. **Exclude** per-worktree state (`shipwright.json`), memory-sync markers, provider cache.
 8. Commit with heredoc message matching repo style (include override trailer when applicable).
 9. Hand off to `/sw-pr`.
 
@@ -46,5 +46,5 @@ Phase-scoped commit after `/sw-verify` (and `/sw-review` when configured).
 - Verification gate override is auditable only — cannot suppress red `check-gate.sh`/CI.
 - Block on `missing-required`; logged decision required on `no-baseline` / `unattributed`.
 - No unrelated dirty-tree files.
-- Never commit `phase-flow.json` or `.git/phase-flow-memory-sync.json`.
+- Never commit `shipwright.json` or `.git/shipwright-memory-sync.json`.
 - Does not push or open PR.

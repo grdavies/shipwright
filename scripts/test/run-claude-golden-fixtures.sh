@@ -37,7 +37,7 @@ assert_not_grep() {
 }
 
 if [ ! -d "$DIST" ]; then
-  echo "FAIL dist/claude-code missing — run: python3 -m pf generate claude-code"
+  echo "FAIL dist/claude-code missing — run: python3 -m sw generate claude-code"
   exit 1
 fi
 

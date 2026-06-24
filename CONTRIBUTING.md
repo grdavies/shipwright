@@ -8,7 +8,7 @@ Authoring lives under `core/`; installable plugin trees are **generated** and co
 
 ```bash
 # After editing core/, regenerate install trees
-python3 -m pf generate --all
+python3 -m sw generate --all
 
 # Sync to local Cursor plugin directory (default: ~/.cursor/plugins/local/shipwright)
 ./scripts/sync-local-install.sh

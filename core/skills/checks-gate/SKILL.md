@@ -45,7 +45,7 @@ JSON includes `verdict`, `head`, `reviewProvider`, `coderabbitState` (`landed`/`
 
 ## Deterministic tests
 
-Set `PF_GATE_NOW` (unix seconds) to fix the grace-window clock. Fixture harness:
+Set `SW_GATE_NOW` (unix seconds) to fix the grace-window clock. Fixture harness:
 `scripts/test/run-gate-fixtures.sh` (uses a PATH `gh` stub).
 
 ## Handoff

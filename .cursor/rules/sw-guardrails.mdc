@@ -1,9 +1,9 @@
 ---
-description: Always-on phase-flow v2 guardrail fallback when sessionStart additional_context injection drops (Cursor platform bug mitigation).
+description: Always-on Shipwright guardrail fallback when sessionStart additional_context injection drops (Cursor platform bug mitigation).
 alwaysApply: true
 ---
 
-# phase-flow v2 guardrails (static fallback)
+# Shipwright guardrails (static fallback)
 
 This rule mirrors critical guardrails when hook injection is unreliable. Fail-closed enforcement lives in
 the `beforeSubmitPrompt` hook (`before-submit-guardrails.py`).

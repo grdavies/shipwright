@@ -43,10 +43,10 @@ Invoked by `scripts/verify-e2e.sh` during `/sw-verify` — runs **only when enab
 
 | Var | Content |
 | --- | --- |
-| `PF_VERIFY_ROOT` | Repo root |
-| `PF_CHANGED_FILES` | Newline-separated changed paths |
-| `PF_E2E_ROUTES` | JSON array from config |
-| `PF_E2E_CONFIG` | Path to workflow.config.json |
+| `SW_VERIFY_ROOT` | Repo root |
+| `SW_CHANGED_FILES` | Newline-separated changed paths |
+| `SW_E2E_ROUTES` | JSON array from config |
+| `SW_E2E_CONFIG` | Path to workflow.config.json |
 
 ## Providers
 

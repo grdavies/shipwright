@@ -57,8 +57,8 @@ for name in wt-a wt-b; do
 done
 GA=$(git -C "$TMP/wt-a" rev-parse --absolute-git-dir)
 GB=$(git -C "$TMP/wt-b" rev-parse --absolute-git-dir)
-echo '{"phaseSlug":"a"}' >"$GA/phase-flow.json"
-echo '{"phaseSlug":"b"}' >"$GB/phase-flow.json"
+echo '{"phaseSlug":"a"}' >"$GA/shipwright.json"
+echo '{"phaseSlug":"b"}' >"$GB/shipwright.json"
 A=$(cd "$TMP/wt-a" && bash "$STATE" read | python3 -c "import json,sys; print(json.load(sys.stdin)['phaseSlug'])")
 B=$(cd "$TMP/wt-b" && bash "$STATE" read | python3 -c "import json,sys; print(json.load(sys.stdin)['phaseSlug'])")
 if [[ "$A" == "a" && "$B" == "b" ]]; then
@@ -99,11 +99,11 @@ fi
 
 # --- worktree: ceiling excludes main checkout ---
 CEIL=$(bash "$ROOT/scripts/worktree.sh" ceiling-check 2>/dev/null || true)
-PF_COUNT=$(echo "$CEIL" | python3 -c "import json,sys; print(json.load(sys.stdin).get('pfWorktrees', -1))" 2>/dev/null || echo "-1")
-if [[ "$PF_COUNT" == "0" ]]; then
-  echo "OK  worktree ceiling pfWorktrees=0 (main excluded)"
+SW_COUNT=$(echo "$CEIL" | python3 -c "import json,sys; print(json.load(sys.stdin).get('swWorktrees', -1))" 2>/dev/null || echo "-1")
+if [[ "$SW_COUNT" == "0" ]]; then
+  echo "OK  worktree ceiling swWorktrees=0 (main excluded)"
 else
-  echo "FAIL worktree ceiling expected pfWorktrees=0 got: $PF_COUNT ($CEIL)"
+  echo "FAIL worktree ceiling expected swWorktrees=0 got: $SW_COUNT ($CEIL)"
   FAIL=1
 fi
 
@@ -149,7 +149,7 @@ wt = tmp / "repo"
 wt.mkdir()
 gitdir = wt / ".git"
 gitdir.mkdir()
-(gitdir / "phase-flow.json").write_text(json.dumps({"scaffold": {"port": 9100}}))
+(gitdir / "shipwright.json").write_text(json.dumps({"scaffold": {"port": 9100}}))
 
 def resolve_state_path(worktree: str, gitdir: str):
     if not gitdir:
@@ -159,7 +159,7 @@ def resolve_state_path(worktree: str, gitdir: str):
         gd = (Path(worktree) / gd).resolve()
     else:
         gd = gd.resolve()
-    return gd / "phase-flow.json"
+    return gd / "shipwright.json"
 
 sp = resolve_state_path(str(wt), ".git")
 data = json.loads(sp.read_text())

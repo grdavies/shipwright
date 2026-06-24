@@ -1,4 +1,4 @@
-# phase-flow v2 artifact layout
+# Shipwright artifact layout
 
 Single-source path contract for the documentation pipeline and downstream implementation workstream.
 All `sw-` doc commands resolve paths from this document — do not re-decide locations in commands.

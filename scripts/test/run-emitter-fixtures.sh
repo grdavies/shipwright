@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Golden tests for pf generate / emitter framework.
+# Golden tests for sw generate / emitter framework.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FIX="$ROOT/scripts/test/fixtures/emitter-fixture"
 CORE="$FIX/core"
 OUT="$FIX/out"
-GEN="python3 -m pf"
+GEN="python3 -m sw"
 
 FAIL=0
 
@@ -64,7 +64,7 @@ run_expect r4-unsupported-hooks 0 python3 -c "
 import json, sys, importlib.util
 from pathlib import Path
 ROOT = Path('$ROOT')
-sys.path.insert(0, str(ROOT / 'pf'))
+sys.path.insert(0, str(ROOT / 'sw'))
 spec = importlib.util.spec_from_file_location('cursor_emitter', ROOT / 'platforms/cursor/emitter.py')
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)

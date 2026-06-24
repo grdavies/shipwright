@@ -25,7 +25,7 @@ resolve_state_path() {
   if [[ "$git_dir" != /* ]]; then
     git_dir="$(cd "$git_dir" && pwd)"
   fi
-  echo "${git_dir}/phase-flow.json"
+  echo "${git_dir}/shipwright.json"
 }
 
 read_json_arg() {
@@ -129,7 +129,7 @@ def resolve_state_path(worktree: str, gitdir: str):
         gd = (Path(worktree) / gd).resolve()
     else:
         gd = gd.resolve()
-    return gd / "phase-flow.json"
+    return gd / "shipwright.json"
 
 
 try:

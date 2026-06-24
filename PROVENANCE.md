@@ -41,7 +41,7 @@ follow-up plan; this file is seeded during foundation build and updated as units
 | `dist/cursor/` | `core/` | `platforms/cursor/emitter.py` | Committed; byte-parity golden in `scripts/test/fixtures/parity/cursor-golden.manifest` |
 | `dist/claude-code/` | `core/` | `platforms/claude-code/emitter.py` | Committed; `alwaysApply` rules → `CLAUDE.md`; conditional rules → skill descriptions |
 
-Regenerate after `core/` edits: `python3 -m pf generate --all` (freshness gate in `run-emitter-fixtures.sh`).
+Regenerate after `core/` edits: `python3 -m sw generate --all` (freshness gate in `run-emitter-fixtures.sh`).
 
 ## Update policy
 

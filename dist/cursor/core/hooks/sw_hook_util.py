@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-_ALLOWLIST_REL = (".cursor/pf-memory-rule-allowlist.json", "pf-memory-rule-allowlist.json")
+_ALLOWLIST_REL = (".cursor/sw-memory-rule-allowlist.json", "sw-memory-rule-allowlist.json")
 
 
 def read_stdin_json() -> dict:
@@ -35,8 +35,8 @@ def workspace_root(payload: dict) -> Path:
 
 
 _CONFIG_PATHS = (".cursor/workflow.config.json", "workflow.config.json")
-_MARKER_PATHS = (".cursor/pf-memory.provider", "pf-memory.provider")
-_DEFAULT_IN_REPO_STORE = ".cursor/pf-memory"
+_MARKER_PATHS = (".cursor/sw-memory.provider", "sw-memory.provider")
+_DEFAULT_IN_REPO_STORE = ".cursor/sw-memory"
 _KNOWN_MEMORY_PROVIDERS = frozenset({"recallium", "in-repo"})
 
 
@@ -77,7 +77,7 @@ def resolve_memory_provider(root: Path, config: dict | None = None) -> str | Non
 def in_repo_store_dir(config: dict, root: Path) -> Path:
     memory = config.get("memory", {}) if isinstance(config, dict) else {}
     in_repo = memory.get("inRepo", {}) if isinstance(memory, dict) else {}
-    rel = ".cursor/pf-memory"
+    rel = ".cursor/sw-memory"
     if isinstance(in_repo, dict) and in_repo.get("storeDir"):
         rel = str(in_repo["storeDir"])
     return root / rel

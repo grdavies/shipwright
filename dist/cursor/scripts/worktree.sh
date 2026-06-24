@@ -91,7 +91,7 @@ def resolve_state_path(worktree: str, gitdir: str):
         gd = (Path(worktree) / gd).resolve()
     else:
         gd = gd.resolve()
-    return gd / "phase-flow.json"
+    return gd / "shipwright.json"
 
 block: dict[str, str] = {}
 for line in out.splitlines():
@@ -152,7 +152,7 @@ count = int(sys.argv[1])
 ceiling = int(sys.argv[2])
 # ceiling applies to .sw-worktrees slots only (main checkout excluded from count)
 verdict = "ok" if count < ceiling else "at-ceiling"
-print(json.dumps({"pfWorktrees": count, "ceiling": ceiling, "verdict": verdict}))
+print(json.dumps({"swWorktrees": count, "ceiling": ceiling, "verdict": verdict}))
 sys.exit(0 if verdict == "ok" else 10)
 PY
 }
