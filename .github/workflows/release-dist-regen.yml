@@ -30,7 +30,8 @@ jobs:
       - name: Assert breaking release targets 1.0.0
         run: |
           VERSION="$(tr -d '[:space:]' < version.txt)"
-          if grep -qi 'breaking' CHANGELOG.md && [ "$VERSION" != "1.0.0" ]; then
+          CURRENT_SECTION="$(awk '/^## \[/ { if (++n > 1) exit } { print }' CHANGELOG.md)"
+          if echo "$CURRENT_SECTION" | grep -qi 'breaking' && [ "$VERSION" != "1.0.0" ]; then
             echo "Breaking release must compute exactly 1.0.0, got ${VERSION}"
             exit 1
           fi
