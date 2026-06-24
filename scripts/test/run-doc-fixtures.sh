@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$(dirname "${BASH_SOURCE[0]}")/fixture-lib.sh"
 SRC_FIX="$ROOT/scripts/test/fixtures/spec-union"
 UNION="$ROOT/scripts/spec-union.sh"
-FROZEN="$ROOT/core/scripts/check-frozen.sh"
+FROZEN="$ROOT/scripts/check-frozen.sh"
 FAIL=0
 
 FIX=$(mktemp -d)
@@ -64,7 +64,7 @@ EOF
   echo "edit" >> docs/prds/test/frozen-prd.md
   git add docs/prds/test/frozen-prd.md
   git commit -m "modify frozen" --quiet
-  OUT=$(bash "$ROOT/core/scripts/check-frozen.sh" HEAD~1 2>/dev/null || true)
+  OUT=$(bash "$ROOT/scripts/check-frozen.sh" HEAD~1 2>/dev/null || true)
   if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('verdict')=='fail' else 1)"; then
     echo "OK  check-frozen rejects frozen modification"
   else

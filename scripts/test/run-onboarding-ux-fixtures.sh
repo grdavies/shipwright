@@ -59,6 +59,9 @@ bash "$ROOT/scripts/test/fixtures/onboarding-ux/sw-review-opt-in.sh" || FAIL=1
 # --- ready + living-status review echo (phase 6) ---
 bash "$ROOT/scripts/test/fixtures/onboarding-ux/ready-review-echo.sh" || FAIL=1
 
+# --- build chain regen (phase 7) ---
+bash "$ROOT/scripts/test/fixtures/onboarding-ux/build-chain-regen.sh" || FAIL=1
+
 # --- worktree guard (phase 2) ---
 if [[ -x "$ROOT/scripts/sw-assert-worktree.sh" ]]; then
   bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-negative.sh" || FAIL=1
