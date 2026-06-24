@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0](https://github.com/grdavies/shipwright/compare/v1.1.0...v1.2.0) (2026-06-24)
+
+
+### Features
+
+* **onboarding:** first-run onboarding UX (PRD 002) ([ad196d7](https://github.com/grdavies/shipwright/commit/ad196d72b43f0538d61bb629cf7682b33b488b45))
+
+
+### Documentation
+
+* add user-facing README and documentation guides ([#28](https://github.com/grdavies/shipwright/issues/28)) ([f2d7bd0](https://github.com/grdavies/shipwright/commit/f2d7bd0a8433c491c514037f2ac2e9fb0761426f))
+
 ## [1.1.0](https://github.com/grdavies/shipwright/compare/v1.0.0...v1.1.0) (2026-06-24)
 
 
