@@ -3,11 +3,12 @@ title: "fix: Verification-gate hardening (attribution, fail-open, substrate, aud
 type: fix
 date: 2026-06-23
 origin: docs/brainstorms/2026-06-23-verification-gate-hardening-requirements.md
-status: in_review
+status: done
 completed: 2026-06-24
 depth: deep
 branch: feat/verification-gate-hardening
 commit: 4710da3
+merge: 681bcab
 pr: https://github.com/grdavies/currsor-phase-flow-2/pull/11
 ---
 
@@ -32,12 +33,17 @@ work lets the gate override CI.
 | U5 | done | `--pr-context on\|off\|auto`; offline PR signals; fixtures pin `--pr-context off` for determinism |
 | U6 | done | `pf-ship`/`pf-commit` policy split; `phase-state.sh override-add`; hardening + wiring fixtures |
 
-**Delivery:** U1–U6 landed in `4710da3` on [PR #11](https://github.com/grdavies/currsor-phase-flow-2/pull/11).
-Post-review fixes in the same commit: reject top-level pass when `commands[]` has failures; missing baseline
-path → `missing-required`; per-dimension `no-baseline` when partial baselines cannot attribute a failing
-dimension. `bash scripts/test/run-improvement-fixtures.sh` green.
+**Shipped in:** [PR #11](https://github.com/grdavies/currsor-phase-flow-2/pull/11) merged to `main` as `681bcab`
+(2026-06-24). Feature commit `4710da3`; plan status doc `6aec743`.
 
-**Follow-up (post-review, not blocking merge):** fd-level `fstat` after open (full TOCTOU close on legacy paths);
+**Verification:** `bash scripts/test/run-improvement-fixtures.sh` — verify-evidence hardening block green at
+merge.
+
+**Post-review fixes (in `4710da3`):** reject top-level pass when `commands[]` has failures; missing baseline
+path → `missing-required`; per-dimension `no-baseline` when partial baselines cannot attribute a failing
+dimension.
+
+**Post-merge follow-up:** fd-level `fstat` after open (full TOCTOU close on legacy paths);
 single-open-per-file in `verify-evidence.sh`; remove `/tmp` fallback when `pf-tmp resolve` is empty; symlink
 and invalid-run-dir substrate fixtures; optional `override-add` schema validation inside the accessor.
 
@@ -468,7 +474,7 @@ parallel; U3 builds on U2's class; U6 consumes U2 (and benefits from U4/U5) and 
 - Content-signature / per-run nonce integrity for evidence files (R4 option B) — revisit if the threat model
   expands to a compromised local account.
 - A mandatory automated baseline producer (R3) — only if the loud no-baseline state proves insufficient in use.
-- **Substrate hardening phase 2 (post-review):** fd `fstat` after open (close path-stat-then-open TOCTOU on
+- **Substrate hardening phase 2 (post-merge):** fd `fstat` after open (close path-stat-then-open TOCTOU on
   legacy `/tmp` paths); single fd per evidence file per `verify-evidence.sh` evaluation; fail closed when
   `pf-tmp resolve` is empty (remove `/tmp` fixed-path fallback); symlink + invalid-run-dir fixture coverage.
 - **`override-add` accessor hardening:** validate entry schema and run `memory-redact.sh` on `reason` inside
