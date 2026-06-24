@@ -4,8 +4,9 @@ Self-contained multi-platform agentic dev-lifecycle plugin (Cursor + Claude Code
 `sw-` prefix. Infrastructure seams (CI gate, memory, AI review, stabilize loop, hooks) are vendored in-tree
 from upstream sources documented in [`PROVENANCE.md`](PROVENANCE.md) — no runtime dependency on sibling plugins.
 
-> **Install migration:** remove `~/.cursor/plugins/local/phase-flow-v2` before installing Shipwright, or a
-> zombie plugin may duplicate commands alongside `~/.cursor/plugins/local/shipwright`.
+> **Install migration:** Remove any other workflow plugin directories under `~/.cursor/plugins/local/`
+> before installing Shipwright, or duplicate `sw-` commands may appear alongside
+> `~/.cursor/plugins/local/shipwright`.
 
 ## Install (local development)
 
@@ -69,7 +70,7 @@ Workstreams (documentation, implementation, debugging, feedback) are planned sep
 
 ## Provenance
 
-Vendored components are tracked in [`PROVENANCE.md`](PROVENANCE.md) with source repo and commit.
+External upstream repos and runtime dependencies are tracked in [`PROVENANCE.md`](PROVENANCE.md).
 
 ## License
 
