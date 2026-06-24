@@ -12,7 +12,7 @@ docs/
     └── YYYY-MM-DD-<topic>-requirements.amendments/
         └── A<k>-<short>.md
 
-prds/
+docs/prds/
 ├── INDEX.md
 ├── COMPLETION-LOG.md
 ├── GAP-BACKLOG.md
@@ -22,7 +22,7 @@ prds/
     └── amendments/
         └── A<k>-<short>.md
 
-decisions/
+docs/decisions/
 ├── INDEX.md
 ├── SUPERSEDED.log          # append-only manifest (written on record-level supersede)
 ├── <n>-<slug>.md
@@ -39,26 +39,26 @@ decisions/
 |----------|--------------|------------|--------|
 | Brainstorm requirements | `docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md` | `/pf-brainstorm` | `/pf-freeze` |
 | Brainstorm amendment | `docs/brainstorms/...-requirements.amendments/A<k>-<short>.md` | manual / future | `/pf-freeze` |
-| PRD | `prds/<n>-<slug>/<n>-prd-<slug>.md` | `/pf-prd` | `/pf-freeze` |
-| Task list | `prds/<n>-<slug>/tasks-<n>-<slug>.md` | `/pf-tasks` | `/pf-freeze` |
-| PRD amendment | `prds/<n>-<slug>/amendments/A<k>-<short>.md` | `/pf-amend` | `/pf-freeze` |
-| Decision record | `decisions/<n>-<slug>.md` | `/pf-prd --type decision` | `/pf-freeze` |
-| Decision amendment | `decisions/<n>-<slug>.amendments/A<k>-<short>.md` | `/pf-amend` | `/pf-freeze` |
-| Living index | `prds/INDEX.md` | `/pf-freeze`, `/pf-tasks` | never |
-| Decision index | `decisions/INDEX.md` | `/pf-freeze` | never |
-| Completion log | `prds/COMPLETION-LOG.md` | implementation workstream | never |
-| Gap backlog | `prds/GAP-BACKLOG.md` | `/pf-feedback` (Phase 2) | never |
+| PRD | `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` | `/pf-prd` | `/pf-freeze` |
+| Task list | `docs/prds/<n>-<slug>/tasks-<n>-<slug>.md` | `/pf-tasks` | `/pf-freeze` |
+| PRD amendment | `docs/prds/<n>-<slug>/amendments/A<k>-<short>.md` | `/pf-amend` | `/pf-freeze` |
+| Decision record | `docs/decisions/<n>-<slug>.md` | `/pf-prd --type decision` | `/pf-freeze` |
+| Decision amendment | `docs/decisions/<n>-<slug>.amendments/A<k>-<short>.md` | `/pf-amend` | `/pf-freeze` |
+| Living index | `docs/prds/INDEX.md` | `/pf-freeze`, `/pf-tasks` | never |
+| Decision index | `docs/decisions/INDEX.md` | `/pf-freeze` | never |
+| Completion log | `docs/prds/COMPLETION-LOG.md` | implementation workstream | never |
+| Gap backlog | `docs/prds/GAP-BACKLOG.md` | `/pf-feedback` (Phase 2) | never |
 
 ### PRD numbering (`<n>`)
 
 - Zero-padded monotonic integer (`001`, `002`, …).
-- Assign by scanning `prds/` for the highest existing `<n>` and incrementing.
+- Assign by scanning `docs/prds/` for the highest existing `<n>` and incrementing.
 - Collision policy: same feature re-run → new `<n>` + distinct slug; never overwrite without explicit confirmation.
 
 ### Decision record numbering (`<n>`)
 
 - Zero-padded monotonic integer (`001`, `002`, …).
-- Assign by scanning `decisions/` for the highest existing `<n>` and incrementing — **separate counter from `prds/`**.
+- Assign by scanning `docs/decisions/` for the highest existing `<n>` and incrementing — **separate counter from `docs/prds/`**.
 - Collision policy: same topic re-run → new `<n>` + distinct slug; never overwrite without explicit confirmation.
 
 ### Slug (`<slug>`)
@@ -114,12 +114,12 @@ Amendment body is **delta-only** — parent file is never edited.
 |---------|-------|--------|
 | `/pf-triage` | user input, file list | tier decision (no files) |
 | `/pf-brainstorm` | user dialogue | `docs/brainstorms/...-requirements.md` |
-| `/pf-prd` | brainstorm (Full) or triaged request (Standard) | `prds/<n>-<slug>/<n>-prd-<slug>.md` |
-| `/pf-prd --type decision` | optional brainstorm; up-front cross-cutting decision | `decisions/<n>-<slug>.md` |
+| `/pf-prd` | brainstorm (Full) or triaged request (Standard) | `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` |
+| `/pf-prd --type decision` | optional brainstorm; up-front cross-cutting decision | `docs/decisions/<n>-<slug>.md` |
 | `/pf-doc-review` | PRD or decision-record draft | in-place edits (pre-freeze only) |
-| `/pf-freeze` | target artifact | `frozen: true` frontmatter; `prds/INDEX.md` or `decisions/INDEX.md` entry |
-| `/pf-amend` | frozen parent PRD | `prds/<n>-<slug>/amendments/A<k>-<short>.md` |
-| `/pf-tasks` | frozen PRD + union | `prds/<n>-<slug>/tasks-<n>-<slug>.md`, `INDEX.md` |
+| `/pf-freeze` | target artifact | `frozen: true` frontmatter; `docs/prds/INDEX.md` or `docs/decisions/INDEX.md` entry |
+| `/pf-amend` | frozen parent PRD | `docs/prds/<n>-<slug>/amendments/A<k>-<short>.md` |
+| `/pf-tasks` | frozen PRD + union | `docs/prds/<n>-<slug>/tasks-<n>-<slug>.md`, `INDEX.md` |
 | `/pf-doc` | tier from triage | delegates to above |
 
 ## Living vs frozen layers
@@ -132,6 +132,6 @@ Amendment body is **delta-only** — parent file is never edited.
 
 `workflow.config.json`:
 
-- `prdsDir`: `"prds"` — PRD root (per-PRD subdirs live beneath).
-- `tasksDir`: `"prds"` — task lists co-locate with their PRD (`prds/<n>-<slug>/tasks-...`).
-- `decisionsDir`: `"decisions"` — decision-record root (flat files + sibling `.amendments/` dirs).
+- `prdsDir`: `"docs/prds"` — PRD root (per-PRD subdirs live beneath).
+- `tasksDir`: `"docs/prds"` — task lists co-locate with their PRD (`docs/prds/<n>-<slug>/tasks-...`).
+- `decisionsDir`: `"docs/decisions"` — decision-record root (flat files + sibling `.amendments/` dirs).
