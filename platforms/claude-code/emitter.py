@@ -1,8 +1,9 @@
-"""Claude Code platform emitter — produces dist/claude-code/ (expanded in U7)."""
+"""Claude Code platform emitter — produces dist/claude-code/."""
 
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -16,6 +17,14 @@ SUPPORTED = {
     "subagents": {"native"},
     "mcp": {"yes"},
     "memoryXport": {"mcp"},
+}
+
+RULE_SKILL_ALIASES = {
+    "code-review-automation": "stabilize-loop",
+    "pf-workflow-sequencing": "worktree",
+    "memory-guardrails": "memory",
+    "checks-gate": "checks-gate",
+    "pf-subagent-dispatch": "parallelism",
 }
 
 
@@ -36,10 +45,89 @@ class ClaudeCodeEmitter(EmitterBase):
         self.validate_descriptor()
         ensure_clean_dir(dest)
         self.copy_emittable_content(core_root, dest)
+        self._apply_use_when_to_skills(core_root, dest)
         self._copy_runtime_support(core_root, repo_root, dest)
         self._emit_plugin_manifest(dest)
         self._emit_hooks(repo_root, dest)
         self._emit_claude_md(core_root, dest)
+
+    @staticmethod
+    def _rule_use_when_description(rule_text: str) -> str | None:
+        if "alwaysApply: true" in rule_text or "alwaysApply:true" in rule_text:
+            return None
+        match = re.search(r"^description:\s*(.+)$", rule_text, re.MULTILINE)
+        if not match:
+            return None
+        desc = match.group(1).strip().strip('"').strip("'")
+        if "USE WHEN" not in desc.upper():
+            return None
+        return desc
+
+    @staticmethod
+    def _skill_path_for_rule(
+        rule_path: Path, rule_text: str, core_root: Path, dest: Path
+    ) -> Path | None:
+        stem = rule_path.stem
+        skill_name = RULE_SKILL_ALIASES.get(stem, stem)
+        candidate = dest / "skills" / skill_name / "SKILL.md"
+        if candidate.is_file():
+            return candidate
+        ref = re.search(r"skills/([a-z0-9-]+)/", rule_text)
+        if ref:
+            candidate = dest / "skills" / ref.group(1) / "SKILL.md"
+            if candidate.is_file():
+                return candidate
+        if (core_root / "skills" / skill_name).is_dir():
+            return dest / "skills" / skill_name / "SKILL.md"
+        return None
+
+    @staticmethod
+    def _prepend_use_when_to_skill(skill_text: str, use_when: str) -> str:
+        if use_when in skill_text:
+            return skill_text
+        if not skill_text.startswith("---"):
+            return skill_text
+        end = skill_text.find("\n---", 3)
+        if end == -1:
+            return skill_text
+        frontmatter = skill_text[3:end]
+        body = skill_text[end + 4 :]
+        if re.search(r"^description:\s*", frontmatter, re.MULTILINE):
+
+            def _merge(match: re.Match[str]) -> str:
+                existing = match.group(2).strip()
+                if use_when in existing:
+                    return match.group(0)
+                return f"{match.group(1)}{use_when} {existing}"
+
+            frontmatter = re.sub(
+                r"^(description:\s*)(.+)$",
+                _merge,
+                frontmatter,
+                count=1,
+                flags=re.MULTILINE,
+            )
+        else:
+            frontmatter = f"description: {use_when}\n{frontmatter}"
+        return f"---{frontmatter}---{body}"
+
+    def _apply_use_when_to_skills(self, core_root: Path, dest: Path) -> None:
+        rules_dir = core_root / "rules"
+        if not rules_dir.is_dir():
+            return
+        for rule_path in sorted(rules_dir.glob("*.mdc")):
+            rule_text = rule_path.read_text(encoding="utf-8")
+            use_when = self._rule_use_when_description(rule_text)
+            if not use_when:
+                continue
+            skill_path = self._skill_path_for_rule(rule_path, rule_text, core_root, dest)
+            if skill_path is None or not skill_path.is_file():
+                continue
+            updated = self._prepend_use_when_to_skill(
+                skill_path.read_text(encoding="utf-8"),
+                use_when,
+            )
+            skill_path.write_text(updated, encoding="utf-8")
 
     def _copy_runtime_support(self, core_root: Path, repo_root: Path, dest: Path) -> None:
         hooks_src = core_root / "hooks"

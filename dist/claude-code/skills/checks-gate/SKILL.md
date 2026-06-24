@@ -23,7 +23,7 @@ Review per-head state comes from `review.provider` (default `coderabbit`) via `s
 Do **not** free-hand the verdict from ad-hoc `gh` calls. Run the shipped script:
 
 ```bash
-GATE="${CURSOR_PLUGIN_ROOT:-$HOME/.claude/plugins/local/phase-flow-v2}/scripts/check-gate.sh"
+GATE="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/plugins/local/phase-flow-v2}/scripts/check-gate.sh"
 if OUT=$(bash "$GATE"); then GATE_EC=0; else GATE_EC=$?; fi
 echo "$OUT" | jq .
 ```

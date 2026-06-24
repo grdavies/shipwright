@@ -34,7 +34,7 @@ printf '%s\n' "$PR_JSON"
    counted only already-posted inline comments and missed a re-review that had not posted yet). Run:
 
 ```bash
-GATE="${CURSOR_PLUGIN_ROOT:-$HOME/.claude/plugins/local/phase-flow-v2}/scripts/check-gate.sh"
+GATE="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/plugins/local/phase-flow-v2}/scripts/check-gate.sh"
 bash "$GATE" > /tmp/pf-watch-ci-gate.json
 cat /tmp/pf-watch-ci-gate.json
 ```
