@@ -3,9 +3,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/test/fixture-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/fixture-lib.sh"
 SRC_FIX="$ROOT/scripts/test/fixtures/spec-union"
 UNION="$ROOT/scripts/spec-union.sh"
-FROZEN="$ROOT/core/scripts/check-frozen.sh"
+FROZEN="$ROOT/scripts/check-frozen.sh"
 FAIL=0
 
 FIX=$(mktemp -d)
@@ -62,7 +64,7 @@ EOF
   echo "edit" >> docs/prds/test/frozen-prd.md
   git add docs/prds/test/frozen-prd.md
   git commit -m "modify frozen" --quiet
-  OUT=$(bash "$ROOT/core/scripts/check-frozen.sh" HEAD~1 2>/dev/null || true)
+  OUT=$(bash "$ROOT/scripts/check-frozen.sh" HEAD~1 2>/dev/null || true)
   if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('verdict')=='fail' else 1)"; then
     echo "OK  check-frozen rejects frozen modification"
   else
@@ -125,8 +127,8 @@ fi
 # --- spec-rigor: decision record pass ---
 SPEC_RIGOR_CHECK="$ROOT/scripts/spec-rigor-check.sh"
 FIX_DECISION="$ROOT/scripts/test/fixtures"
-SW_FREEZE="$ROOT/commands/sw-freeze.md"
-SW_PRD="$ROOT/commands/sw-prd.md"
+SW_FREEZE="$(content_path commands/sw-freeze.md)"
+SW_PRD="$(content_path commands/sw-prd.md)"
 
 set +e
 OUT_DEC=$(bash "$SPEC_RIGOR_CHECK" --artifact decision --path "$FIX_DECISION/decision-record-pass.md" --tier full 2>/dev/null)
@@ -211,8 +213,8 @@ else
 fi
 
 # --- U2: decision-record doc-review routing ---
-SW_DOC_REVIEW="$ROOT/commands/sw-doc-review.md"
-DOC_REVIEW_SKILL="$ROOT/skills/doc-review/SKILL.md"
+SW_DOC_REVIEW="$(content_path commands/sw-doc-review.md)"
+DOC_REVIEW_SKILL="$(content_path skills/doc-review/SKILL.md)"
 
 if grep -q 'docs/decisions/<n>-<slug>.md' "$SW_DOC_REVIEW" && grep -q 'all seven' "$SW_DOC_REVIEW"; then
   echo "OK  sw-doc-review routes decision drafts to Full panel"

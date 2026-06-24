@@ -7,8 +7,8 @@ bounded step. For full procedure text, open the linked command file under `core/
 
 | Command | Scope | Does not |
 |---------|-------|----------|
-| [`/sw-doc`](../core/commands/sw-doc.md) | Doc pipeline: triage → brainstorm (Full) → PRD → review → freeze → tasks | Implement, merge, or skip human gates |
-| [`/sw-ship`](../core/commands/sw-ship.md) | Phase loop: execute → verify → review → commit → PR → CI → stabilize → ready | Merge (halts at merge gate) |
+| [`/sw-doc`](../core/commands/sw-doc.md) | Doc pipeline: triage → brainstorm (Full) → PRD → review → freeze → **single-pass** `/sw-tasks`; then `doc.afterTasks` (`stop` \| `confirm` \| `auto`) | Implement, merge, or skip human gates |
+| [`/sw-ship`](../core/commands/sw-ship.md) | Phase loop: execute → verify → review → commit → PR → CI → stabilize → ready; accepts `--after-tasks=<mode>` at frozen-task boundary | Merge (halts at merge gate) |
 | [`/sw-debug`](../core/commands/sw-debug.md) | Production/dev RCA and route by fix size | Implement, commit, or merge |
 | [`/sw-feedback`](../core/commands/sw-feedback.md) | Normalize inbound signals and route to debug, gaps, or brainstorm | Analyze, author, or dispatch without confirmation |
 | [`/sw-compound-ship`](../core/commands/sw-compound-ship.md) | Post-merge: retro → compound → optional memory-sync | Merge or auto-promote rules |
@@ -18,9 +18,9 @@ bounded step. For full procedure text, open the linked command file under `core/
 | Command | When to use | Does not |
 |---------|-------------|----------|
 | [`/sw-triage`](../core/commands/sw-triage.md) | Classify Quick / Standard / Full before doc or impl | Draft docs or implement |
-| [`/sw-setup`](../core/commands/sw-setup.md) | First run in a target repo — providers, memory store, doctor | Scaffold CI or migrate memories |
-| [`/sw-worktree`](../core/commands/sw-worktree.md) | Isolate work in a per-item worktree | Run phase loop or merge |
-| [`/sw-start`](../core/commands/sw-start.md) | Open a phase branch inside the active worktree | Push or open PR |
+| [`/sw-setup`](../core/commands/sw-setup.md) | First run in a target repo — providers, `doc.afterTasks`, memory store, doctor | Scaffold CI or migrate memories |
+| [`/sw-worktree`](../core/commands/sw-worktree.md) | Isolate work in a per-item worktree (required before impl on bare `main`) | Run phase loop or merge |
+| [`/sw-start`](../core/commands/sw-start.md) | Open a phase branch inside the active worktree; worktree guard runs before writes | Push or open PR |
 
 ## Doc pipeline atomics
 
@@ -30,21 +30,31 @@ bounded step. For full procedure text, open the linked command file under `core/
 | [`/sw-prd`](../core/commands/sw-prd.md) | PRD or decision-record draft |
 | [`/sw-doc-review`](../core/commands/sw-doc-review.md) | Persona panel on spec drafts |
 | [`/sw-freeze`](../core/commands/sw-freeze.md) | Irreversible artifact freeze |
-| [`/sw-tasks`](../core/commands/sw-tasks.md) | Task list from frozen PRD |
+| [`/sw-tasks`](../core/commands/sw-tasks.md) | Complete frozen task list in **one pass** (no Go gate); standalone run stops without implementation prompt |
 | [`/sw-amend`](../core/commands/sw-amend.md) | Post-freeze PRD amendment |
+
+`doc.afterTasks` is the sole human checkpoint between PRD freeze and implementation when using `/sw-doc`.
 
 ## Ship loop atomics (selected)
 
 | Command | Role |
 |---------|------|
-| [`/sw-execute`](../core/commands/sw-execute.md) | One phase-sized implementation slice |
+| [`/sw-execute`](../core/commands/sw-execute.md) | One phase-sized implementation slice; worktree guard before writes |
 | [`/sw-verify`](../core/commands/sw-verify.md) | Scoped local verification |
-| [`/sw-review`](../core/commands/sw-review.md) | Local then provider code review |
+| [`/sw-review`](../core/commands/sw-review.md) | Local then provider code review (`review.provider`; default **`none`**) |
 | [`/sw-commit`](../core/commands/sw-commit.md) | Commit after verify + review |
 | [`/sw-pr`](../core/commands/sw-pr.md) | Push and open/update PR |
-| [`/sw-watch-ci`](../core/commands/sw-watch-ci.md) | Poll PR checks |
+| [`/sw-watch-ci`](../core/commands/sw-watch-ci.md) | Poll PR checks via `check-gate.sh` |
 | [`/sw-stabilize`](../core/commands/sw-stabilize.md) | Clear CI + review blockers |
-| [`/sw-ready`](../core/commands/sw-ready.md) | Terminal readiness report |
+| [`/sw-ready`](../core/commands/sw-ready.md) | Terminal readiness report; echoes `review: off` or `review: not configured` from gate JSON |
+
+**Worktree invariant:** never write implementation files on bare `main` — use a worktree + phase branch.
+
+## Review providers
+
+- **Default:** `review.provider: "none"` — review gating off; CI can still pass without external review.
+- **Opt-in:** `review.provider: "coderabbit"` — enable CodeRabbit for phase-2 `/sw-review` and CI review barrier.
+- **Canonical opt-out:** `review.provider: "none"` (single supported disable path; `review.enabled: false` is deprecated).
 
 ## Memory and compounding
 
@@ -57,3 +67,5 @@ bounded step. For full procedure text, open the linked command file under `core/
 
 > **Depth:** 34 commands exist today. This table lists orchestrators and common atomics only. Grep
 > `core/commands/sw-*.md` for the complete set.
+
+See [Getting started](getting-started.md) for boundary modes and worktree rules.

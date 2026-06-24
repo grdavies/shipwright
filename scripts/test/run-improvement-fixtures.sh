@@ -8,11 +8,13 @@ bash -n "${BASH_SOURCE[0]}" || {
 }
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-STABILIZE="$ROOT/commands/sw-stabilize.md"
-RCA="$ROOT/skills/rca-core/SKILL.md"
-LOOP="$ROOT/skills/stabilize-loop/SKILL.md"
-COMPOUND_SHIP="$ROOT/commands/sw-compound-ship.md"
-SEQUENCING="$ROOT/rules/sw-workflow-sequencing.mdc"
+# shellcheck source=scripts/test/fixture-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/fixture-lib.sh"
+STABILIZE="$(content_path commands/sw-stabilize.md)"
+RCA="$(content_path skills/rca-core/SKILL.md)"
+LOOP="$(content_path skills/stabilize-loop/SKILL.md)"
+COMPOUND_SHIP="$(content_path commands/sw-compound-ship.md)"
+SEQUENCING="$(content_path rules/sw-workflow-sequencing.mdc)"
 FAIL=0
 
 # --- U3: sw-stabilize routes through rca-core stabilize entry ---
@@ -71,8 +73,8 @@ else
 fi
 
 # --- U4: rca-core three entries + debug hardening gates ---
-DEBUG_SKILL="$ROOT/skills/debug/SKILL.md"
-SW_DEBUG="$ROOT/commands/sw-debug.md"
+DEBUG_SKILL="$(content_path skills/debug/SKILL.md)"
+SW_DEBUG="$(content_path commands/sw-debug.md)"
 
 if grep -qi 'stabilize' "$RCA" && \
    grep -qi 'debug' "$RCA" && \
@@ -146,12 +148,12 @@ fi
 
 # --- U1: verification-gate skill + verify-evidence.sh ---
 VERIFY_EVIDENCE="$ROOT/scripts/verify-evidence.sh"
-VERIFY_GATE_SKILL="$ROOT/skills/verification-gate/SKILL.md"
-SW_VERIFY="$ROOT/commands/sw-verify.md"
-SW_COMMIT="$ROOT/commands/sw-commit.md"
-SW_SHIP="$ROOT/commands/sw-ship.md"
-SW_READY="$ROOT/commands/sw-ready.md"
-SW_REVIEW="$ROOT/commands/sw-review.md"
+VERIFY_GATE_SKILL="$(content_path skills/verification-gate/SKILL.md)"
+SW_VERIFY="$(content_path commands/sw-verify.md)"
+SW_COMMIT="$(content_path commands/sw-commit.md)"
+SW_SHIP="$(content_path commands/sw-ship.md)"
+SW_READY="$(content_path commands/sw-ready.md)"
+SW_REVIEW="$(content_path commands/sw-review.md)"
 FIXTURES="$ROOT/scripts/test/fixtures/verify-evidence"
 VERIFY_PR_CTX="--pr-context off"
 
@@ -297,7 +299,7 @@ fi
 VERIFY_BASELINE="$ROOT/scripts/verify-baseline.sh"
 SW_TMP="$ROOT/scripts/sw-tmp.sh"
 SHIPWRIGHT_STATE="$ROOT/scripts/shipwright-state.sh"
-VERDICT_SCHEMA="$ROOT/skills/verification-gate/references/verdict-schema.json"
+VERDICT_SCHEMA="$(content_path skills/verification-gate/references/verdict-schema.json)"
 MEMORY_REDACT="$ROOT/scripts/memory-redact.sh"
 
 # R1: per-command attribution — swapped failure → not-verified
@@ -513,12 +515,12 @@ else
 fi
 
 # --- U6: spec-rigor gates + traceability (IM4) ---
-SPEC_RIGOR="$ROOT/skills/spec-rigor/SKILL.md"
+SPEC_RIGOR="$(content_path skills/spec-rigor/SKILL.md)"
 SPEC_RIGOR_CHECK="$ROOT/scripts/spec-rigor-check.sh"
 TRACE_CHECK="$ROOT/scripts/traceability-check.sh"
-SW_FREEZE="$ROOT/commands/sw-freeze.md"
-SW_TASKS="$ROOT/commands/sw-tasks.md"
-SW_DOC="$ROOT/commands/sw-doc.md"
+SW_FREEZE="$(content_path commands/sw-freeze.md)"
+SW_TASKS="$(content_path commands/sw-tasks.md)"
+SW_DOC="$(content_path commands/sw-doc.md)"
 FIX_SPEC_RIGOR="$ROOT/scripts/test/fixtures/spec-rigor"
 FIX_TRACE="$ROOT/scripts/test/fixtures/traceability"
 
@@ -609,12 +611,12 @@ else
 fi
 
 # --- U7: execute discipline — TDD gate + two-stage review + executable plan (IM5+IM6) ---
-EXEC_DISC="$ROOT/skills/execute-discipline/SKILL.md"
+EXEC_DISC="$(content_path skills/execute-discipline/SKILL.md)"
 TDD_GATE="$ROOT/scripts/tdd-gate.sh"
 PLAN_REVIEW="$ROOT/scripts/plan-self-review.sh"
-SW_EXECUTE="$ROOT/commands/sw-execute.md"
-SUBAGENT="$ROOT/rules/sw-subagent-dispatch.mdc"
-TASKS_SKILL="$ROOT/skills/tasks/SKILL.md"
+SW_EXECUTE="$(content_path commands/sw-execute.md)"
+SUBAGENT="$(content_path rules/sw-subagent-dispatch.mdc)"
+TASKS_SKILL="$(content_path skills/tasks/SKILL.md)"
 FIX_TDD="$ROOT/scripts/test/fixtures/tdd-gate"
 FIX_PLAN="$ROOT/scripts/test/fixtures/plan-self-review"
 
@@ -720,11 +722,11 @@ else
 fi
 
 # --- U8: simplification / deslop pass (IM7) ---
-SIMPLIFY_SKILL="$ROOT/skills/simplify/SKILL.md"
+SIMPLIFY_SKILL="$(content_path skills/simplify/SKILL.md)"
 SIMPLIFY_GATE="$ROOT/scripts/simplify-gate.sh"
-SW_SIMPLIFY="$ROOT/commands/sw-simplify.md"
-SW_SHIP="$ROOT/commands/sw-ship.md"
-WORKFLOW_SEQ="$ROOT/rules/sw-workflow-sequencing.mdc"
+SW_SIMPLIFY="$(content_path commands/sw-simplify.md)"
+SW_SHIP="$(content_path commands/sw-ship.md)"
+WORKFLOW_SEQ="$(content_path rules/sw-workflow-sequencing.mdc)"
 FIX_SIMPLIFY="$ROOT/scripts/test/fixtures/simplify-gate"
 
 if [[ -f "$SIMPLIFY_SKILL" ]] && [[ -x "$SIMPLIFY_GATE" ]] && \
@@ -802,12 +804,12 @@ else
 fi
 
 # --- U9: feedback closure loop (IM8) ---
-FEEDBACK_CLOSURE="$ROOT/skills/feedback-closure/SKILL.md"
+FEEDBACK_CLOSURE="$(content_path skills/feedback-closure/SKILL.md)"
 BACKLOG_SH="$ROOT/scripts/feedback-backlog.sh"
 CLOSURE_GATE="$ROOT/scripts/feedback-closure-gate.sh"
-SW_FEEDBACK_CLOSE="$ROOT/commands/sw-feedback-close.md"
-GAP_CHECK="$ROOT/skills/gap-check/SKILL.md"
-SW_EXECUTE="$ROOT/commands/sw-execute.md"
+SW_FEEDBACK_CLOSE="$(content_path commands/sw-feedback-close.md)"
+GAP_CHECK="$(content_path skills/gap-check/SKILL.md)"
+SW_EXECUTE="$(content_path commands/sw-execute.md)"
 FIX_BACKLOG="$ROOT/scripts/test/fixtures/feedback-backlog"
 FIX_CLOSURE="$ROOT/scripts/test/fixtures/feedback-closure"
 
@@ -904,13 +906,15 @@ fi
 
 # --- U10: E2E / smoke verify adapter (IM9) ---
 VERIFY_E2E="$ROOT/scripts/verify-e2e.sh"
-VERIFY_CAPS="$ROOT/providers/verify/CAPABILITIES.md"
+VERIFY_CAPS="$(content_path providers/verify/CAPABILITIES.md)"
 CONFIG_SCHEMA="$ROOT/.sw/config.schema.json"
 FIX_E2E="$ROOT/scripts/test/fixtures/verify-e2e"
 
+VERIFY_STUB="$(content_path providers/verify/stub.sh)"
+VERIFY_PW="$(content_path providers/verify/playwright.sh)"
 if [[ -f "$VERIFY_CAPS" ]] && [[ -x "$VERIFY_E2E" ]] && \
-   [[ -f "$ROOT/providers/verify/stub.sh" ]] && \
-   [[ -f "$ROOT/providers/verify/playwright.sh" ]] && \
+   [[ -f "$VERIFY_STUB" ]] && \
+   [[ -f "$VERIFY_PW" ]] && \
    grep -q 'verifyE2e' "$VERIFY_CAPS"; then
   echo "OK  verify E2E providers + CAPABILITIES contract"
 else

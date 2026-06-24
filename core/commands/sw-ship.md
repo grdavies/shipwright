@@ -35,6 +35,10 @@ sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review →
 - `--signal-id <id>` — after merge-ready pause, offer `/sw-feedback-close` for this backlog signal.
 - `--from <step>` — resume mid-chain.
 - `--dry-run` — print plan; no mutations.
+- `--after-tasks <stop|confirm|auto>` — when `/sw-ship` is entered from the doc chain with a frozen task list,
+  overrides `doc.afterTasks` for the **frozen-task-list → implementation-loop** boundary (same semantics as
+  `/sw-doc --after-tasks`). When an agent supplies `--after-tasks=auto`, record the choice in the per-worktree
+  run record via `scripts/shipwright-state.sh` before the implementation loop begins.
 
 ## State (per-worktree)
 

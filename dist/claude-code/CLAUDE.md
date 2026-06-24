@@ -57,7 +57,7 @@ legacy commands and compound-engineering (`ce-`).
 
 ## Documentation orchestrator boundary
 
-`/sw-doc` delegates to atomic doc commands; it does not reimplement their procedures. Each atomic (`/sw-brainstorm`, `/sw-prd`, `/sw-doc-review`, `/sw-freeze`, `/sw-tasks`) remains independently runnable.
+`/sw-doc` delegates to atomic doc commands; it does not reimplement their procedures. Each atomic (`/sw-brainstorm`, `/sw-prd`, `/sw-doc-review`, `/sw-freeze`, `/sw-tasks`) remains independently runnable. After task freeze, `doc.afterTasks` (`stop` | `confirm` | `auto`) is the sole checkpoint before implementation: `auto` may **provision a worktree and dispatch** `/sw-worktree` → `/sw-start` → `/sw-execute` or `/sw-ship`, but the doc orchestrator **never inlines implementation** in any mode.
 
 ## Debug orchestrator boundary
 

@@ -3,6 +3,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/test/fixture-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/fixture-lib.sh"
 REDACT="$ROOT/scripts/memory-redact.sh"
 STATE="$ROOT/scripts/shipwright-state.sh"
 FAIL=0
@@ -100,7 +102,18 @@ fi
 # --- worktree: ceiling excludes main checkout ---
 CEIL=$(bash "$ROOT/scripts/worktree.sh" ceiling-check 2>/dev/null || true)
 SW_COUNT=$(echo "$CEIL" | python3 -c "import json,sys; print(json.load(sys.stdin).get('swWorktrees', -1))" 2>/dev/null || echo "-1")
-if [[ "$SW_COUNT" == "0" ]]; then
+IS_LINKED_WT=false
+if [[ -f "$ROOT/.git" ]] && head -1 "$ROOT/.git" 2>/dev/null | grep -q '^gitdir:'; then
+  IS_LINKED_WT=true
+fi
+if [[ "$IS_LINKED_WT" == true ]]; then
+  if [[ "$SW_COUNT" -ge 1 ]]; then
+    echo "OK  worktree ceiling inside linked worktree (swWorktrees=$SW_COUNT)"
+  else
+    echo "FAIL worktree ceiling expected swWorktrees>=1 in worktree got: $SW_COUNT ($CEIL)"
+    FAIL=1
+  fi
+elif [[ "$SW_COUNT" == "0" ]]; then
   echo "OK  worktree ceiling swWorktrees=0 (main excluded)"
 else
   echo "FAIL worktree ceiling expected swWorktrees=0 got: $SW_COUNT ($CEIL)"
@@ -175,7 +188,7 @@ else
 fi
 
 # --- subagent dispatch rule exists ---
-if [[ -f "$ROOT/rules/sw-subagent-dispatch.mdc" ]] && grep -q '8+' "$ROOT/rules/sw-subagent-dispatch.mdc"; then
+if [[ -f "$(content_path rules/sw-subagent-dispatch.mdc)" ]] && grep -q '8+' "$(content_path rules/sw-subagent-dispatch.mdc)"; then
   echo "OK  subagent dispatch rule"
 else
   echo "FAIL sw-subagent-dispatch.mdc missing thresholds"
@@ -183,7 +196,7 @@ else
 fi
 
 # --- workflow sequencing lists sw-ship ---
-if grep -q '/sw-ship' "$ROOT/rules/sw-workflow-sequencing.mdc"; then
+if grep -q '/sw-ship' "$(content_path rules/sw-workflow-sequencing.mdc)"; then
   echo "OK  workflow sequencing sw-ship"
 else
   echo "FAIL sw-workflow-sequencing missing sw-ship"
@@ -214,7 +227,7 @@ fi
 
 # Negative: concrete model below builder floor
 TMP_AGENTS=$(mktemp -d)
-cp "$ROOT/agents/sw-coherence-reviewer.md" "$TMP_AGENTS/"
+cp "$(content_path agents/sw-coherence-reviewer.md)" "$TMP_AGENTS/"
 printf '%s\n' '---' 'name: sw-coherence-reviewer' 'description: test' 'model: fast' '---' > "$TMP_AGENTS/sw-coherence-reviewer.md"
 set +e
 OUT=$(bash "$MODEL_CHECK" --config "$EXAMPLE_CONFIG" --agents-dir "$TMP_AGENTS" 2>/dev/null)
@@ -228,7 +241,7 @@ else
   FAIL=1
 fi
 
-if grep -q 'inherit' "$ROOT/.sw/models-tiering.md" && grep -q 'R9 runtime contract' "$ROOT/rules/sw-subagent-dispatch.mdc"; then
+if grep -q 'inherit' "$ROOT/.sw/models-tiering.md" && grep -q 'R9 runtime contract' "$(content_path rules/sw-subagent-dispatch.mdc)"; then
   echo "OK  models-tiering doc + runtime R9 dispatch rule"
 else
   echo "FAIL models-tiering / runtime R9 wiring"
@@ -236,7 +249,7 @@ else
 fi
 
 if grep -q 'invariantsFile' "$ROOT/.sw/config.schema.json" && \
-   grep -q 'invariantsFile' "$ROOT/commands/sw-doc-review.md"; then
+   grep -q 'invariantsFile' "$(content_path commands/sw-doc-review.md)"; then
   echo "OK  invariantsFile wired to doc-review"
 else
   echo "FAIL invariantsFile wiring"

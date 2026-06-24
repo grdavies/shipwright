@@ -54,7 +54,16 @@ unreachable but still allow save.
 
 ### 3. Review provider
 
-Offer: `coderabbit` | `none` | `disabled` (maps to `review.provider` + `review.enabled` per schema).
+Offer: `coderabbit` | `none` (default **`none`**). Canonical opt-out is `review.provider: "none"`.
+
+Do **not** offer a separate `disabled` choice — `review.enabled: false` is deprecated (honored with a warning;
+point users to `review.provider: "none"`).
+
+### 3b. Doc→implementation boundary
+
+Write `doc.afterTasks` (default **`confirm`**): `stop` | `confirm` | `auto`. Explain: `confirm` shows the frozen
+task list and requires `proceed`/`yes` before dispatch; `auto` dispatches the implementation loop on a
+worktree without a second prompt.
 
 ### 4. Guardrail knobs
 
@@ -74,6 +83,9 @@ Explain `requireRuleClass:true` for mature repos that must have allowlisted rule
 Detect and recommend (never hard-fail scaffold):
 
 - CodeRabbit CLI on `PATH` when `review.provider` is `coderabbit`.
+- CodeRabbit CLI present but `review.provider` unset → surface migration notice (implicit default flipped to
+  `none`; set `review.provider` explicitly if review gating is desired).
+- `review.enabled: false` in existing config → warn deprecated; suggest `review.provider: "none"`.
 - Recallium reachable when `memory.provider` is `recallium`.
 - `verify.*` commands still placeholders → recommend configuring them.
 - Missing in-repo store dir → offer `mkdir -p` repair.

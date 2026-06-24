@@ -23,7 +23,8 @@ Shape: `<prefix>/<stem>-phase-<slug>` — no nested refs (`feat/foo/phase-bar` w
 ## Procedure
 
 1. Read `workflow.config.json`; resolve state via `skills/shipwright-state`.
-2. Confirm you are in a worktree (not bare main for implementation work). If not, `/sw-worktree provision` first.
+2. Run `bash scripts/sw-assert-worktree.sh` — exit `1` blocks phase start on bare default branch without a
+   linked worktree; exit `2` is a configuration error. If blocked, `/sw-worktree provision` first.
 3. `git branch --show-current` — stop on detached HEAD.
 4. `memory-preflight` read only on non-routine parent/prefix decisions.
 5. Load `agentsFile` before choosing prefix.

@@ -6,7 +6,7 @@ ship loop, and compounding memory.
 **Start here:** [README](../README.md) for prerequisites, installation (Cursor and Claude Code), `/sw-setup`,
 and expanded workstreams with sample prompts.
 
-This guide covers three persona paths after setup.
+This guide covers three persona paths after setup, plus onboarding defaults for the doc → implementation boundary.
 
 ## Two places, two jobs
 
@@ -23,6 +23,39 @@ See [README — Prerequisites](../README.md#prerequisites) for install-time tool
 `gh`). Optional integrations (CodeRabbit, Recallium, Sentry) are covered in
 [plugin setup](../README.md#plugin-setup-and-configuration).
 
+## Doc → implementation boundary (`doc.afterTasks`)
+
+After `/sw-tasks` freezes the task list, `doc.afterTasks` controls what happens next (default **`confirm`**):
+
+| Mode | Behavior |
+|------|----------|
+| `stop` | Halt after the frozen task list; hand off to `/sw-worktree` + `/sw-start` manually. |
+| `confirm` | Show the full task list; require `proceed` or `yes` before dispatching implementation. |
+| `auto` | Provision a worktree/branch and dispatch the implementation loop without a second prompt. |
+
+Override per run: `/sw-doc --after-tasks=<mode>` or `/sw-ship --after-tasks=<mode>` at the frozen-task-list
+boundary.
+
+## Worktree invariant
+
+**No implementation files are written on bare `main`.** Use a linked worktree and phase branch (`/sw-worktree`,
+`/sw-start`). `scripts/sw-assert-worktree.sh` enforces this at implementation entry (`/sw-execute`, `/sw-start`).
+
+## Single-pass `/sw-tasks`
+
+`/sw-tasks` generates the **complete** frozen task list in one pass (parent phases, executable sub-tasks, and
+`## Traceability`) — there is no "Go" gate or mid-generation pause. Run standalone, it outputs the list and stops
+without prompting for implementation.
+
+## Review gating (default off)
+
+The schema default for `review.provider` is **`none`** (review gating off). CodeRabbit is **opt-in** — set
+`review.provider: "coderabbit"` explicitly to enable external review. The canonical opt-out is
+`review.provider: "none"` (not a separate `disabled` flag; `review.enabled: false` is deprecated).
+
+`/sw-setup` writes these defaults; `/sw-ready` and `/sw-status` echo `review: off` or `review: not configured`
+from the CI gate when reporting merge readiness.
+
 ## Path 1: New feature (Standard or Full tier)
 
 Use when scope spans multiple files or needs a written spec.
@@ -30,8 +63,9 @@ Use when scope spans multiple files or needs a written spec.
 1. Install the plugin (see [README](../README.md#install)).
 2. Open your **target repo** in Cursor and run `/sw-setup`.
 3. Run `/sw-doc` — triage classifies tier; Full tier includes brainstorm before PRD.
-4. After frozen tasks exist, run `/sw-worktree provision` then `/sw-start` with prefix `feat/`.
-5. Run `/sw-ship` — executes, verifies, reviews, opens PR, watches CI, halts at **merge-ready** (never auto-merges).
+4. After frozen tasks exist, respond to the `doc.afterTasks` checkpoint (or use `auto` mode).
+5. Run `/sw-worktree provision` then `/sw-start` with prefix `feat/` (if not already provisioned by `auto`).
+6. Run `/sw-ship` — executes, verifies, reviews, opens PR, watches CI, halts at **merge-ready** (never auto-merges).
 
 **Done when:** PR is green and `/sw-ready` reports merge-ready; you merge manually.
 
@@ -72,7 +106,7 @@ Duplicate installs can surface two commands with the same `sw-` name.
 ### From compound-engineering (`ce-`)
 
 Shipwright uses the `sw-` prefix exclusively. Remove co-installed workflow plugins that register overlapping
-commands. Command boundaries differ — Shipwright orchestrators (`/sw-doc`, `/sw-ship`, `/sw-debug`,
+commands. Shipwright orchestrators (`/sw-doc`, `/sw-ship`, `/sw-debug`,
 `/sw-feedback`) replace ad-hoc chains; see [commands.md](commands.md) for the full taxonomy.
 
 ## Next steps

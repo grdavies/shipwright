@@ -113,23 +113,34 @@ For **recallium:** requires a reachable REST base URL (`memory.connection.restBa
 
 | Question | Choices | Default | Writes |
 |----------|---------|---------|--------|
-| External AI review on PRs? | **coderabbit** · none · disabled | **coderabbit** | `review.provider`, `review.enabled` |
+| External AI review on PRs? | **coderabbit** · none | **none** | `review.provider` |
 
-**Step 3 — Guardrails**
+Canonical opt-out: `review.provider: "none"`. Do not use `review.enabled: false` (deprecated).
+
+**Step 3 — Doc→implementation boundary**
+
+| Question | Choices | Default | Writes |
+|----------|---------|---------|--------|
+| After frozen tasks? | **stop** · confirm · auto | **confirm** | `doc.afterTasks` |
+
+`confirm` shows the full task list and requires `proceed` or `yes` before dispatch. `auto` provisions a worktree
+and dispatches without a second prompt.
+
+**Step 4 — Guardrails**
 
 | Setting | Default | Meaning |
 |---------|---------|---------|
 | `guardrails.enforceBeforeSubmit` | `true` | Memory guardrails run before prompts submit |
 | `guardrails.requireRuleClass` | `false` | Set `true` in mature repos that require allowlisted rules |
 
-**Step 4 — Environment doctor** (warnings only, never hard-fails scaffold)
+**Step 5 — Environment doctor** (warnings only, never hard-fails scaffold)
 
 - CodeRabbit CLI on `PATH` when review provider is `coderabbit`
 - Recallium reachable when memory provider is `recallium`
 - Placeholder `verify.*` commands → recommends configuring real lint/typecheck/test commands
 - Missing memory dirs → offers `mkdir -p` repair
 
-**Step 5 — Write config**
+**Step 6 — Write config**
 
 Validates against `core/sw-reference/config.schema.json`, then writes `.cursor/workflow.config.json`.
 
@@ -145,12 +156,27 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 
 | Key | Purpose |
 |-----|---------|
+| `doc.afterTasks` | After frozen tasks: `stop` \| `confirm` (default) \| `auto` — see [getting started](documentation/getting-started.md) |
 | `memory.provider` | `in-repo` (default) or `recallium` |
-| `review.provider` | `coderabbit` (default), `none`, or `disabled` |
+| `review.provider` | AI review adapter — default **`none`** (off); `coderabbit` is opt-in |
 | `verify.lint` / `verify.typecheck` / `verify.test` | Commands `/sw-verify` runs in your repo |
+| `coderabbit.reviewGraceMinutes` | Gate grace window before absent review = settled |
 | `checks.treatNeutralAsPass` | NEUTRAL CI checks count as pass unless allowlisted |
+| `checks.neutralAllowlist` | Check names that stay blocking |
+| `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
+
+Canonical opt-out for review: `review.provider: "none"`.
 
 Provider **credentials** come from the environment or your secret store — never commit secrets.
+
+See `core/sw-reference/config.schema.json` for the full schema. User guides: [getting started](documentation/getting-started.md), [commands](documentation/commands.md).
+
+## First-run workflow (summary)
+
+1. `/sw-setup` — config + `doc.afterTasks` + review choice (`none` default).
+2. `/sw-doc` — doc chain; **single-pass** `/sw-tasks`; boundary modes control dispatch after freeze.
+3. `/sw-worktree` + `/sw-start` — implementation only inside a worktree (never bare `main`).
+4. `/sw-ship` or atomic execute → verify → PR → watch-ci → ready.
 
 ### Optional integrations
 
@@ -206,7 +232,7 @@ flowchart TB
 | **Doc pipeline** | **Skipped** — route straight to implementation | PRD → review → freeze → tasks | Brainstorm → PRD → review → freeze → tasks |
 | **Persona review** | None | Signal-driven panel on PRD | Signal-driven panel on PRD |
 | **Artifacts produced** | None (implement from prompt) | `docs/prds/<n>-*/` PRD + frozen tasks | `docs/brainstorms/` + PRD + frozen tasks |
-| **Human gates** | Merge gate only | Go gate on tasks; freeze; merge | Go gate; brainstorm checkpoint; freeze; merge |
+| **Human gates** | Merge gate only | `doc.afterTasks` confirm; freeze; merge | `doc.afterTasks`; brainstorm checkpoint; freeze; merge |
 | **Best for** | Hotfixes, typos, single-file tweaks | Most features with clear acceptance criteria | New domains, spikes, “figure out” scope |
 | **Entry command** | `/sw-triage` then `/sw-worktree` + `/sw-ship` | `/sw-doc` or `/sw-prd` | `/sw-doc` (includes brainstorm) |
 
@@ -279,8 +305,8 @@ flowchart TB
   REV --> SR1[spec-rigor]
   SR1 --> FZ1["/sw-freeze PRD"]
   FZ1 --> TS["/sw-tasks"]
-  TS --> GO{Go gate}
-  GO --> SR2[traceability + spec-rigor]
+  TS --> BT{doc.afterTasks}
+  BT --> SR2[traceability + spec-rigor]
   SR2 --> FZ2["/sw-freeze tasks"]
   FZ2 --> WT["/sw-worktree → /sw-start"]
   WT --> SH["/sw-ship loop"]
@@ -308,8 +334,8 @@ flowchart TB
   REV --> SR1[spec-rigor]
   SR1 --> FZ1["/sw-freeze brainstorm + PRD"]
   FZ1 --> TS["/sw-tasks"]
-  TS --> GO{Go gate}
-  GO --> SR2[traceability + spec-rigor]
+  TS --> BT{doc.afterTasks}
+  BT --> SR2[traceability + spec-rigor]
   SR2 --> FZ2["/sw-freeze tasks"]
   FZ2 --> WT["/sw-worktree → /sw-start"]
   WT --> SH["/sw-ship loop"]
@@ -339,8 +365,8 @@ flowchart LR
   DR --> RIG[spec-rigor]
   RIG --> FZ["/sw-freeze"]
   FZ --> TK["/sw-tasks"]
-  TK --> GO{Go}
-  GO --> FZT["/sw-freeze tasks"]
+  TK --> BT{doc.afterTasks}
+  BT --> FZT["/sw-freeze tasks"]
 ```
 
 **Full doc pipeline** (brainstorm first):
@@ -353,8 +379,8 @@ flowchart LR
   DR --> RIG[spec-rigor]
   RIG --> FZ["/sw-freeze"]
   FZ --> TK["/sw-tasks"]
-  TK --> GO{Go}
-  GO --> FZT["/sw-freeze tasks"]
+  TK --> BT{doc.afterTasks}
+  BT --> FZT["/sw-freeze tasks"]
 ```
 
 Or run `/sw-doc` to orchestrate either chain end-to-end.
@@ -363,7 +389,7 @@ Or run `/sw-doc` to orchestrate either chain end-to-end.
 
 1. `/sw-triage` — classify tier (or pass `--tier` to `/sw-doc`)
 2. `/sw-doc` — runs the tier-appropriate doc chain
-3. Human **Go** gate on task list expansion
+3. Human **`doc.afterTasks`** checkpoint after single-pass task freeze (default `confirm`)
 4. Frozen PRD + tasks become the spec for `/sw-ship`
 
 **Sample prompts**

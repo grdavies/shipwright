@@ -35,6 +35,20 @@ Append-only rows in `docs/prds/COMPLETION-LOG.md` on shipped phases.
 
 Surface `docs/prds/GAP-BACKLOG.md` in status view (read-only — hand-maintained by feedback workstream).
 
+## Active PR review echo (R29)
+
+When `/sw-status` or any living-status summary covers an open PR, run `scripts/check-gate.sh` and echo review
+state from `coderabbitState` in the human summary:
+
+| `coderabbitState` | Echo |
+| --- | --- |
+| `off` | `review: off` |
+| `unconfigured` | `review: not configured` |
+| other | `review: <state>` |
+
+Goal: a green gate with no external review is not mistaken for a reviewed change. `/sw-ready` uses the same
+mapping in its terminal report.
+
 ## Guardrails
 
 - Never modify frozen PRD/amendment files.

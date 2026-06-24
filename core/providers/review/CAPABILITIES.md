@@ -19,7 +19,7 @@ this are **gate-incompatible** — the gate stays `yellow` (never `green`).
 | `absent` | Alias for `clean` in gate output | `true` |
 | `unconfigured` | No provider signal past grace — repo likely not onboarded | `true` |
 | `in-flight` | Review pending for current head | `false` |
-| `disabled` | Gate-only state when review gating is opted out (not adapter-emitted) | `true` |
+| `off` | Gate-only state when review gating is explicitly opted out (not adapter-emitted) | `true` |
 
 `unconfigured` is non-blocking (the gate will not hang waiting for a review that may never arrive) but is
 reported distinctly so the verdict reason is honest. Within the grace window the state is `in-flight`
@@ -32,9 +32,10 @@ A repo can disable review gating entirely via `workflow.config.json`:
 - `review.provider: "none"`, or
 - `review.enabled: false`
 
-When opted out the gate skips the adapter, sets state `disabled` (non-blocking), and `/sw-review` reports
+When opted out the gate skips the adapter, sets state `off` (non-blocking), and `/sw-review` reports
 review is disabled rather than invoking the provider CLI. Use this for repos not onboarded to any review
-provider.
+provider. When `review.provider` is unset (never configured), the gate reports `unconfigured` with an honest
+reason distinct from explicit opt-out.
 
 ### Executable adapter JSON (stdout)
 
