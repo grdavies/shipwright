@@ -35,6 +35,7 @@ Each adapter declares these so commands can degrade gracefully:
 | `tasks` | native task board | use local registry fallback for the phase board |
 | `export` / `import` | neutral interchange | provider swap requires manual re-distillation from raw transcripts |
 | `softDelete` | inactivate vs hard delete | treat modify-inactivate as best effort |
+| `semanticSearch` | vector / embedding search | use keyword + frontmatter filtering (`scripts/in-repo-memory-search.sh` for in-repo) |
 
 ## Canonical category map (write contract)
 
