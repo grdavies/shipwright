@@ -3,9 +3,40 @@ title: "feat: Cross-platform portability M0–M3 (parity harness, core/ extracti
 type: feat
 date: 2026-06-24
 origin: docs/brainstorms/2026-06-23-universal-cross-platform-portability-requirements.md
+status: done
+completed: 2026-06-24
+branch: feat/portability-m0-m3
+commit: be2743e
+pr: https://github.com/grdavies/currsor-phase-flow-2/pull/13
 ---
 
 # feat: Cross-platform portability M0–M3
+
+## Implementation status
+
+| Unit | Phase | Deliverable | Status | Commit |
+| --- | --- | --- | --- | --- |
+| U1 | M0 | Byte-parity harness + golden manifest | done | `16bc680` |
+| U2 | M1 | Capability descriptor schema + Tier-1 descriptors | done | `73c7964` |
+| U3 | M1 | Additive `core/` extraction | done | `ebfc230` |
+| U4 | M1 | Shared `guardrail_core` + hook adapters | done | `5d2cfb3` |
+| U5 | M1 | Emitter framework + `pf generate` | done | `83d569c` |
+| U6 | M2 | Cursor flip + `dist/cursor/` + root-layout removal | done | `f788cf3` |
+| U7 | M3 | Claude Code emitter + `dist/claude-code/` | done | `23ce6b0` |
+| U8 | M3 | Guardrail matrix fixtures (Cursor + Claude) | done | `23ce6b0` |
+| U9 | M3 | Provenance + generated-source docs | done | `23ce6b0` |
+
+**Post-review fix** (code review on branch): `be2743e` — Claude `session-context.md` path on installed
+trees; `sync-local-install.sh` custom dest no longer overwrites source.
+
+**Verification (branch head):** `run-parity-fixtures.sh`, `run-capability-fixtures.sh`,
+`run-relocation-fixtures.sh`, `run-hook-fixtures.sh`, `run-guardrail-matrix-fixtures.sh`,
+`run-emitter-fixtures.sh` (includes dist freshness gate), `run-claude-golden-fixtures.sh`,
+`run-gate-fixtures.sh`, `run-memory-provider-fixtures.sh`.
+
+**Implementation landed** on `feat/portability-m0-m3` ([PR #13](https://github.com/grdavies/currsor-phase-flow-2/pull/13)).
+
+---
 
 ## Summary
 
@@ -154,7 +185,37 @@ auto-attach, which Claude Code has no native equivalent for and which this plan 
 
 ## High-Level Technical Design
 
-Target layout after M3 (new directories in **bold**):
+Target layout after M3 (as implemented):
+
+```text
+core/                         # platform-agnostic source of truth (R1)
+  commands/ skills/ rules/ agents/ scripts/ providers/
+  hooks/
+    guardrail_core.py         # shared decision logic
+    pf_hook_util.py           # shared config/provider/allowlist resolution
+    session-context.md        # session hook template (also copied into dist hooks/)
+  pf-reference/               # .pf contracts (layout, config schema, models tiering)
+platforms/
+  cursor/      { descriptor.json, emitter.py, hook_adapter.py }
+  claude-code/ { descriptor.json, emitter.py, hook_adapter.py }
+pf/                           # generation entrypoint: python3 -m pf generate [--all]
+dist/
+  cursor/                     # generated + committed; byte-parity golden (134 emittable paths)
+  claude-code/                # generated + committed; run-claude-golden-fixtures.sh
+scripts/
+  test/                       # harness (parity, schema, emitter, hook, guardrail-matrix, …)
+  pf-resolve-plugin-root.sh   # resolves core/ vs dist install root for workflow scripts
+  copy-to-core.sh             # syncs core/scripts from root scripts (post-flip maintenance)
+  sync-local-install.sh       # rsync dist/cursor/ → ~/.cursor/plugins/local/phase-flow-v2
+PROVENANCE.md  README.md
+```
+
+**Post-flip repo root:** legacy `commands/`, `skills/`, `rules/`, `agents/`, `providers/`, `hooks/`,
+and `.cursor-plugin/` are **removed**. Workflow scripts remain at repo `scripts/` (mirrored into
+`core/scripts/` via `copy-to-core.sh`) so the test harness and local gate runners keep stable paths;
+`pf-resolve-plugin-root.sh` points runtime scripts at `core/` when root providers are absent.
+
+Original target layout (pre-implementation reference):
 
 ```text
 core/                         # platform-agnostic source of truth (R1)
@@ -232,6 +293,8 @@ Units are grouped by migration phase. Cursor parity (U1's golden manifest) gates
   - Edge: manifest ordering is deterministic across two runs (re-snapshot yields an identical manifest).
 - **Verification:** `run-parity-fixtures.sh` passes; the committed manifest reflects the current tree.
 
+- **Status:** done (`16bc680`). Golden manifest: 134 emittable paths; `snapshot-tree.sh` prefers `dist/cursor/` when present.
+
 ### Phase M1 — Extract core/ and the abstraction seam
 
 ### U2. Capability descriptor schema and Tier-1 descriptors
@@ -259,6 +322,8 @@ Units are grouped by migration phase. Cursor parity (U1's golden manifest) gates
   - Error: a descriptor with an unknown flag value fails conformance with a named error.
   - Error: a descriptor missing a schema-required flag fails conformance.
 - **Verification:** `run-capability-fixtures.sh` passes; both descriptors validate.
+
+- **Status:** done (`73c7964`).
 
 ### U3. Extract platform-agnostic content into core/
 
@@ -290,6 +355,8 @@ Units are grouped by migration phase. Cursor parity (U1's golden manifest) gates
     fixtures still pass after the copy (no regression to the live plugin during M1).
 - **Verification:** relocation-coverage check passes; `core/` copies are byte-identical to root; the
   live root-loaded plugin still passes its existing fixtures.
+
+- **Status:** done (`ebfc230`). Root duplication removed in U6 (`f788cf3`).
 
 ### U4. Refactor hooks into shared guardrail core + per-platform adapter
 
@@ -330,6 +397,8 @@ Units are grouped by migration phase. Cursor parity (U1's golden manifest) gates
 - **Verification:** extended `run-hook-fixtures.sh` passes for both adapters; Cursor stdout is
   byte-identical to the characterization golden.
 
+- **Status:** done (`5d2cfb3`). Fixtures target `dist/cursor/hooks/` post-flip.
+
 ### U5. Emitter framework and minimal generation entrypoint
 
 - **Goal:** Provide the capability-driven emitter base and a generation-only `generate` entrypoint that
@@ -367,6 +436,8 @@ Units are grouped by migration phase. Cursor parity (U1's golden manifest) gates
 - **Verification:** `run-emitter-fixtures.sh` passes; entrypoint is idempotent; the freshness gate is
   green against the committed `dist/` trees.
 
+- **Status:** done (`83d569c`). Entrypoint: `python3 -m pf generate [platform] [--all]`.
+
 ### Phase M2 — Flip Cursor to generated source
 
 ### U6. Cursor emitter, parity-gated flip, and root-layout removal
@@ -402,6 +473,9 @@ Units are grouped by migration phase. Cursor parity (U1's golden manifest) gates
     fails closed).
 - **Verification:** parity test green against `dist/cursor/`; Cursor loads the generated plugin after a
   reload with no behavioral change.
+
+- **Status:** done (`f788cf3`). Also added `pf-resolve-plugin-root.sh`, emitter freshness gate, `.gitignore`
+  for `scripts/test/fixtures/emitter-fixture/out/`.
 
 ### Phase M3 — Add Claude Code (second Tier-1)
 
@@ -439,6 +513,10 @@ Units are grouped by migration phase. Cursor parity (U1's golden manifest) gates
     refuses.
 - **Verification:** `dist/claude-code/` golden test passes; manifest and hook wiring are well-formed.
 
+- **Status:** done (`23ce6b0`, follow-up `be2743e`). Golden driver:
+  `scripts/test/run-claude-golden-fixtures.sh` (manifest, hooks, `CLAUDE.md`, env substitution, USE WHEN
+  skill downgrade). Env substitution handles `${CURSOR_PLUGIN_ROOT:-...}` bash-default syntax.
+
 ### U8. Claude Code guardrail-enforcement test
 
 - **Goal:** Prove the emitted Claude Code hooks enforce fail-closed at submit and inject at session
@@ -462,6 +540,9 @@ Units are grouped by migration phase. Cursor parity (U1's golden manifest) gates
   - Integration: the same unreachable-provider scenario blocks on both the Cursor and Claude Code
     adapters (parity of enforcement through one code path).
 - **Verification:** `run-guardrail-matrix-fixtures.sh` passes for both platforms.
+
+- **Status:** done (`23ce6b0`). Matrix driver delegates to `run-hook-fixtures.sh`; scenario catalog in
+  `scripts/test/fixtures/guardrail-matrix/README.md`.
 
 ### U9. Provenance and generated-source documentation
 
