@@ -6,7 +6,9 @@ alwaysApply: false
 # `/sw-review`
 
 Two-phase local review over the uncommitted delta: **phase 1** = local multi-agent adapter
-(`review.local`); **phase 2** = external provider (`review.provider`, CodeRabbit default).
+(`review.local`); **phase 2** = external provider (`review.provider`). The schema default is **`none`**
+(review gating off). **CodeRabbit is opt-in** — set `review.provider: "coderabbit"` explicitly to enable
+phase 2.
 
 ## Scope
 
@@ -87,8 +89,10 @@ Two-phase local review over the uncommitted delta: **phase 1** = local multi-age
 Unchanged from prior single-phase flow:
 
 1. Resolve provider from `workflow.config.json` → `review.provider`; read `providers/review/<provider>.md`.
-   If `review.provider` is `none` or `review.enabled` is `false`, report that review is disabled for this
-   repo and stop — do **not** invoke the provider CLI.
+   Canonical opt-out is `review.provider: "none"` (review gating off). If `review.provider` is `none` or
+   `review.enabled` is `false` (deprecated), report that external review is off for this repo and stop — do
+   **not** invoke the provider CLI. To use CodeRabbit, set `review.provider: "coderabbit"` in config or via
+   `/sw-setup`.
 2. Gather delta: `git diff --cached --stat` and `git diff --stat`.
 3. Stage new files (`??`) before `coderabbit review -t uncommitted` — untracked paths are invisible.
 4. `memory-preflight` read for bot false-positives and file learnings.
@@ -110,7 +114,7 @@ Unchanged from prior single-phase flow:
    chmod 600 "$STATUS_FILE"
    ```
 
-   The verification-gate consumes `$STATUS_FILE` (stable path). When review is disabled (step 1), do not
+   The verification-gate consumes `$STATUS_FILE` (stable path). When external review is off (step 1), do not
    write the status file — the gate treats review evidence as absent.
 6. Fix actionable findings; re-run at most once if substantive fixes applied; refresh `$STATUS_FILE` if
    re-run.
