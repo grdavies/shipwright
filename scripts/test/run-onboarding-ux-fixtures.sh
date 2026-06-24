@@ -62,6 +62,9 @@ bash "$ROOT/scripts/test/fixtures/onboarding-ux/ready-review-echo.sh" || FAIL=1
 # --- build chain regen (phase 7) ---
 bash "$ROOT/scripts/test/fixtures/onboarding-ux/build-chain-regen.sh" || FAIL=1
 
+# --- user-facing docs (phase 8) ---
+bash "$ROOT/scripts/test/fixtures/onboarding-ux/user-docs-onboarding.sh" || FAIL=1
+
 # --- worktree guard (phase 2) ---
 if [[ -x "$ROOT/scripts/sw-assert-worktree.sh" ]]; then
   bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-negative.sh" || FAIL=1

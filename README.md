@@ -54,14 +54,24 @@ runtime — never commit secrets.
 
 | Key | Purpose |
 |-----|---------|
+| `doc.afterTasks` | After frozen tasks: `stop` \| `confirm` (default) \| `auto` — see [getting started](documentation/getting-started.md) |
 | `memory.provider` | Active memory adapter (`in-repo` default in example; `recallium` also supported) |
-| `review.provider` | Active AI review adapter (`coderabbit` default) |
+| `review.provider` | AI review adapter — default **`none`** (off); `coderabbit` is opt-in |
 | `coderabbit.reviewGraceMinutes` | Gate grace window before absent review = settled |
 | `checks.treatNeutralAsPass` | NEUTRAL checks count as pass unless allowlisted |
 | `checks.neutralAllowlist` | Check names that stay blocking |
 | `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
 
-See `core/sw-reference/config.schema.json` for the full schema.
+Canonical opt-out for review: `review.provider: "none"`.
+
+See `core/sw-reference/config.schema.json` for the full schema. User guides: [getting started](documentation/getting-started.md), [commands](documentation/commands.md).
+
+## First-run workflow (summary)
+
+1. `/sw-setup` — config + `doc.afterTasks` + review choice (`none` default).
+2. `/sw-doc` — doc chain; **single-pass** `/sw-tasks`; boundary modes control dispatch after freeze.
+3. `/sw-worktree` + `/sw-start` — implementation only inside a worktree (never bare `main`).
+4. `/sw-ship` or atomic execute → verify → PR → watch-ci → ready.
 
 ## Components (foundation)
 
