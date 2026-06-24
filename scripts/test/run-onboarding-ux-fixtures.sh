@@ -51,6 +51,11 @@ bash "$ROOT/scripts/test/fixtures/onboarding-ux/boundary-auto.sh" || FAIL=1
 bash "$ROOT/scripts/test/fixtures/onboarding-ux/boundary-no-inline.sh" || FAIL=1
 bash "$ROOT/scripts/test/fixtures/onboarding-ux/boundary-guard-wire.sh" || FAIL=1
 
+# --- setup + review docs (phase 5) ---
+bash "$ROOT/scripts/test/fixtures/onboarding-ux/setup-review-choice.sh" || FAIL=1
+bash "$ROOT/scripts/test/fixtures/onboarding-ux/setup-doctor-implicit-coderabbit.sh" || FAIL=1
+bash "$ROOT/scripts/test/fixtures/onboarding-ux/sw-review-opt-in.sh" || FAIL=1
+
 # --- worktree guard (phase 2) ---
 if [[ -x "$ROOT/scripts/sw-assert-worktree.sh" ]]; then
   bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-negative.sh" || FAIL=1
