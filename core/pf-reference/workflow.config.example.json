@@ -1,0 +1,89 @@
+{
+  "$schema": "config.schema.json",
+  "defaultBaseBranch": "main",
+  "stateFile": ".git/phase-flow.json",
+  "agentsFile": "AGENTS.md",
+  "prdsDir": "docs/prds",
+  "decisionsDir": "docs/decisions",
+  "tasksDir": "docs/prds",
+  "verify": {
+    "lint": "echo 'configure verify.lint for your repo'",
+    "typecheck": "echo 'configure verify.typecheck for your repo'",
+    "test": "echo 'configure verify.test for your repo'"
+  },
+  "verifyE2e": {
+    "enabled": false,
+    "provider": "none",
+    "routes": []
+  },
+  "review": {
+    "provider": "coderabbit",
+    "local": {
+      "enabled": true,
+      "provider": "ce-code-review",
+      "grouping": "auto",
+      "gate": {
+        "surface": ["P0", "P1", "P2", "P3"],
+        "haltOn": []
+      }
+    }
+  },
+  "coderabbit": {
+    "noDefer": true,
+    "reviewGraceMinutes": 15
+  },
+  "checks": {
+    "policy": "all",
+    "treatNeutralAsPass": true,
+    "neutralAllowlist": [],
+    "watch": {
+      "maxWaitMinutes": 20,
+      "pollSeconds": 45
+    }
+  },
+  "worktree": {
+    "parallelCeiling": 4,
+    "scaffold": {
+      "portRangeStart": 9100,
+      "portRangeEnd": 9199,
+      "dbStrategy": "schema-prefix",
+      "dbTemplate": ""
+    }
+  },
+  "models": {
+    "tiers": {
+      "deep": "gpt-5.5",
+      "build": "composer-2",
+      "cheap": "composer-2-fast"
+    },
+    "aliases": {
+      "fast": "cheap"
+    },
+    "roles": {
+      "builder": "build",
+      "reviewer": "build"
+    }
+  },
+  "invariantsFile": "INVARIANTS.md",
+  "memory": {
+    "provider": "in-repo",
+    "project": "my-project",
+    "defaultScope": "project",
+    "inRepo": {
+      "storeDir": ".cursor/pf-memory",
+      "commitMode": "committed"
+    },
+    "connection": {
+      "restBaseUrl": "http://localhost:8001"
+    },
+    "autoSync": {
+      "enabled": true,
+      "minTurns": 10,
+      "minMinutes": 120
+    },
+    "guardrails": {
+      "enforceBeforeSubmit": true,
+      "requireRuleClass": false
+    }
+  }
+}
