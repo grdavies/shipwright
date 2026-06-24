@@ -8,7 +8,7 @@ usage() {
   cat <<'EOF'
 Usage:
   reconcile-status.sh derive [--json]     Compute status per PRD from git facts
-  reconcile-status.sh reconcile [--dry-run]  Update prds/INDEX.md Status column
+  reconcile-status.sh reconcile [--dry-run]  Update docs/prds/INDEX.md Status column
   reconcile-status.sh append-log <prd> <phase> <notes>  Append COMPLETION-LOG entry
 EOF
 }

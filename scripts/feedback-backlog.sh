@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Parse and mutate prds/GAP-BACKLOG.md (IM8 / U9).
+# Parse and mutate docs/prds/GAP-BACKLOG.md (IM8 / U9).
 #
 # Usage:
 #   feedback-backlog.sh list [--open-only] [--backlog PATH]

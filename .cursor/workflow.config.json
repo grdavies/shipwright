@@ -13,6 +13,7 @@
   },
   "agentsFile": "AGENTS.md",
   "prdsDir": "docs/prds",
+  "decisionsDir": "docs/decisions",
   "tasksDir": "docs/prds",
   "verify": {
     "lint": "echo 'no lint configured'",

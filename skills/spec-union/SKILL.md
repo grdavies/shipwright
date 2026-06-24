@@ -11,8 +11,8 @@ Single read-time view of frozen doc + amendments (R12). Parent is never mutated.
 
 | Type | Path | ID grammar | Amendment dir |
 |------|------|------------|---------------|
-| PRD | `docs/docs/prds/<n>-<slug>/<n>-prd-<slug>.md` | `R\d+` | `parent/amendments/` |
-| Decision | `docs/docs/decisions/<n>-<slug>.md` | `D\d+` | sibling `<stem>.amendments/` |
+| PRD | `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` | `R\d+` | `parent/amendments/` |
+| Decision | `docs/decisions/<n>-<slug>.md` | `D\d+` | sibling `<stem>.amendments/` |
 
 ## Resolution rules
 

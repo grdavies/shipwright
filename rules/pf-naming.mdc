@@ -34,7 +34,7 @@ v1 (unprefixed) and compound-engineering (`ce-`).
 
 ## Feedback orchestrator boundary
 
-`/pf-feedback` normalizes and routes inbound signals — it does not run `/pf-debug` analysis, `/pf-amend` authoring, or task execution. Production signals with error/crash/regression markers dispatch to `/pf-debug`; PR-extending work splits to `/pf-amend` or `prds/GAP-BACKLOG.md`; new scope dispatches to `/pf-brainstorm`. Human confirmation required before dispatching any route (including agent callers).
+`/pf-feedback` normalizes and routes inbound signals — it does not run `/pf-debug` analysis, `/pf-amend` authoring, or task execution. Production signals with error/crash/regression markers dispatch to `/pf-debug`; PR-extending work splits to `/pf-amend` or `docs/prds/GAP-BACKLOG.md`; new scope dispatches to `/pf-brainstorm`. Human confirmation required before dispatching any route (including agent callers).
 
 ## Naming rules
 
