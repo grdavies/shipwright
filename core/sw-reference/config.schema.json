@@ -16,6 +16,19 @@
     "prdsDir": { "type": "string", "default": "docs/prds" },
     "decisionsDir": { "type": "string", "default": "docs/decisions" },
     "tasksDir": { "type": "string", "default": "docs/prds" },
+    "doc": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Documentation pipeline behavior after task-list freeze.",
+      "properties": {
+        "afterTasks": {
+          "type": "string",
+          "enum": ["stop", "confirm", "auto"],
+          "default": "confirm",
+          "description": "Doc→implementation boundary after /sw-tasks freeze: stop halts; confirm prompts before dispatch; auto dispatches the implementation loop."
+        }
+      }
+    },
     "verify": {
       "type": "object",
       "additionalProperties": { "type": "string" },
@@ -50,13 +63,13 @@
       "properties": {
         "provider": {
           "type": "string",
-          "default": "coderabbit",
-          "description": "Active review adapter id (must match providers/review/<name>.md and providers/review/<name>.sh). Use \"none\" to disable review gating for repos not onboarded to any provider."
+          "default": "none",
+          "description": "Active review adapter id (must match providers/review/<name>.md and providers/review/<name>.sh). Use \"none\" to disable review gating. CodeRabbit is opt-in."
         },
         "enabled": {
           "type": "boolean",
           "default": true,
-          "description": "When false, review gating is disabled: the gate skips the adapter (state \"disabled\", non-blocking) and /sw-review reports review is off. Equivalent to provider:\"none\"."
+          "description": "Deprecated — use review.provider:\"none\" instead. When false, review gating is disabled (gate state off, non-blocking). Equivalent to provider:\"none\"."
         },
         "local": {
           "type": "object",

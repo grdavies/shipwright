@@ -3,17 +3,19 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/test/fixture-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/fixture-lib.sh"
 NORMALIZE="$ROOT/scripts/code-review-normalize.sh"
 GATE="$ROOT/scripts/code-review-gate.sh"
 APPLY_CHECK="$ROOT/scripts/code-review-apply-check.sh"
 FIX="$ROOT/scripts/test/fixtures/code-review"
 SCHEMA="$ROOT/.sw/config.schema.json"
-SW_REVIEW="$ROOT/commands/sw-review.md"
-SW_SHIP="$ROOT/commands/sw-ship.md"
-CODE_REVIEW_RULES="$ROOT/rules/code-review-automation.mdc"
-SEQUENCING="$ROOT/rules/sw-workflow-sequencing.mdc"
-CE_ADAPTER="$ROOT/providers/code-review/ce-code-review.md"
-CAPS="$ROOT/providers/code-review/CAPABILITIES.md"
+SW_REVIEW="$(content_path commands/sw-review.md)"
+SW_SHIP="$(content_path commands/sw-ship.md)"
+CODE_REVIEW_RULES="$(content_path rules/code-review-automation.mdc)"
+SEQUENCING="$(content_path rules/sw-workflow-sequencing.mdc)"
+CE_ADAPTER="$(content_path providers/code-review/ce-code-review.md)"
+CAPS="$(content_path providers/code-review/CAPABILITIES.md)"
 FAIL=0
 
 chmod +x "$NORMALIZE" "$GATE" "$APPLY_CHECK" 2>/dev/null || true
@@ -230,7 +232,8 @@ else
   FAIL=1
 fi
 
-if grep -q 'Local review apply loop' "$ROOT/rules/sw-subagent-dispatch.mdc"; then
+SUBAGENT_DISPATCH="$(content_path rules/sw-subagent-dispatch.mdc)"
+if grep -q 'Local review apply loop' "$SUBAGENT_DISPATCH"; then
   echo "OK  subagent-dispatch bounded apply/re-verify"
 else
   echo "FAIL U4 circuit breaker doc"

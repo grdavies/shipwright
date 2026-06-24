@@ -3,6 +3,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/test/fixture-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/fixture-lib.sh"
 SRC_FIX="$ROOT/scripts/test/fixtures/spec-union"
 UNION="$ROOT/scripts/spec-union.sh"
 FROZEN="$ROOT/core/scripts/check-frozen.sh"
@@ -125,8 +127,8 @@ fi
 # --- spec-rigor: decision record pass ---
 SPEC_RIGOR_CHECK="$ROOT/scripts/spec-rigor-check.sh"
 FIX_DECISION="$ROOT/scripts/test/fixtures"
-SW_FREEZE="$ROOT/commands/sw-freeze.md"
-SW_PRD="$ROOT/commands/sw-prd.md"
+SW_FREEZE="$(content_path commands/sw-freeze.md)"
+SW_PRD="$(content_path commands/sw-prd.md)"
 
 set +e
 OUT_DEC=$(bash "$SPEC_RIGOR_CHECK" --artifact decision --path "$FIX_DECISION/decision-record-pass.md" --tier full 2>/dev/null)
@@ -211,8 +213,8 @@ else
 fi
 
 # --- U2: decision-record doc-review routing ---
-SW_DOC_REVIEW="$ROOT/commands/sw-doc-review.md"
-DOC_REVIEW_SKILL="$ROOT/skills/doc-review/SKILL.md"
+SW_DOC_REVIEW="$(content_path commands/sw-doc-review.md)"
+DOC_REVIEW_SKILL="$(content_path skills/doc-review/SKILL.md)"
 
 if grep -q 'docs/decisions/<n>-<slug>.md' "$SW_DOC_REVIEW" && grep -q 'all seven' "$SW_DOC_REVIEW"; then
   echo "OK  sw-doc-review routes decision drafts to Full panel"

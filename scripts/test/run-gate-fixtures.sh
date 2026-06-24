@@ -96,10 +96,59 @@ OUT=$(bash "$GATE" 42 2>/dev/null) || EC=$?
 EC=${EC:-$?}
 VERDICT=$(echo "$OUT" | jq -r .verdict)
 CRSTATE=$(echo "$OUT" | jq -r .coderabbitState)
-if [ "$EC" -eq 0 ] && [ "$VERDICT" = "green" ] && [ "$CRSTATE" = "disabled" ]; then
-  echo "OK  review-disabled exit=0 verdict=green state=disabled"
+if [ "$EC" -eq 0 ] && [ "$VERDICT" = "green" ] && [ "$CRSTATE" = "off" ]; then
+  echo "OK  review-opt-out exit=0 verdict=green state=off"
 else
-  echo "FAIL review-disabled expected exit=0 verdict=green state=disabled got exit=$EC verdict=$VERDICT state=$CRSTATE"
+  echo "FAIL review-opt-out expected exit=0 verdict=green state=off got exit=$EC verdict=$VERDICT state=$CRSTATE"
+  FAIL=1
+fi
+
+# never-configured (no review.provider key) -> unconfigured state
+cat > "$CONFIG_PATH" <<'CFG'
+{
+  "coderabbit": { "reviewGraceMinutes": 15 },
+  "checks": { "treatNeutralAsPass": true, "neutralAllowlist": [] }
+}
+CFG
+export SW_GATE_FIXTURE=green
+export SW_GATE_NOW=1577838000
+unset EC
+OUT=$(bash "$GATE" 42 2>/dev/null) || EC=$?
+EC=${EC:-$?}
+VERDICT=$(echo "$OUT" | jq -r .verdict)
+CRSTATE=$(echo "$OUT" | jq -r .coderabbitState)
+REASON=$(echo "$OUT" | jq -r .reason)
+if [ "$EC" -eq 0 ] && [ "$VERDICT" = "green" ] && [ "$CRSTATE" = "unconfigured" ] && \
+   echo "$REASON" | grep -q 'never configured'; then
+  echo "OK  review-never-configured exit=0 verdict=green state=unconfigured"
+else
+  echo "FAIL review-never-configured expected unconfigured+never-configured reason got exit=$EC state=$CRSTATE"
+  echo "$OUT" | jq . 2>/dev/null || echo "$OUT"
+  FAIL=1
+fi
+
+# review.enabled:false opts out with deprecation on stderr
+cat > "$CONFIG_PATH" <<'CFG'
+{
+  "review": { "enabled": false },
+  "coderabbit": { "reviewGraceMinutes": 15 },
+  "checks": { "treatNeutralAsPass": true, "neutralAllowlist": [] }
+}
+CFG
+export SW_GATE_FIXTURE=green
+ERR=$(bash "$GATE" 42 2>&1 >/dev/null) || EC=$?
+EC=${EC:-$?}
+OUT=$(bash "$GATE" 42 2>/dev/null)
+VERDICT=$(echo "$OUT" | jq -r .verdict)
+CRSTATE=$(echo "$OUT" | jq -r .coderabbitState)
+if [ "$EC" -eq 0 ] && [ "$VERDICT" = "green" ] && [ "$CRSTATE" = "off" ] && \
+   echo "$ERR" | grep -q 'review.enabled is deprecated' && \
+   echo "$OUT" | jq -e '.deprecations | length > 0' >/dev/null; then
+  echo "OK  review-enabled-deprecated exit=0 state=off deprecations+stderr"
+else
+  echo "FAIL review-enabled-deprecated"
+  echo "stderr: $ERR"
+  echo "$OUT" | jq . 2>/dev/null || echo "$OUT"
   FAIL=1
 fi
 
