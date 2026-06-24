@@ -7,7 +7,7 @@ ROOT="$(git rev-parse --show-toplevel)"
 CHECK="$ROOT/scripts/check-frozen.sh"
 
 if [ ! -x "$CHECK" ]; then
-  echo "pf-freeze: check-frozen.sh missing or not executable; refusing commit" >&2
+  echo "sw-freeze: check-frozen.sh missing or not executable; refusing commit" >&2
   exit 1
 fi
 
@@ -41,9 +41,9 @@ while IFS= read -r path; do
 done <<< "$STAGED"
 
 if [ "${#VIOLATIONS[@]}" -gt 0 ]; then
-  echo "pf-freeze: refusing commit — frozen artifact(s) modified:" >&2
+  echo "sw-freeze: refusing commit — frozen artifact(s) modified:" >&2
   printf '  %s\n' "${VIOLATIONS[@]}" >&2
-  echo "Use /pf-amend for post-freeze changes. Bypass with --no-verify (CI will still block)." >&2
+  echo "Use /sw-amend for post-freeze changes. Bypass with --no-verify (CI will still block)." >&2
   exit 1
 fi
 

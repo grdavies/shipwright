@@ -1,5 +1,5 @@
 ---
-description: USE WHEN reviewing code, handling review feedback, or running /pf-review and /pf-stabilize.
+description: USE WHEN reviewing code, handling review feedback, or running /sw-review and /sw-stabilize.
 alwaysApply: false
 globs:
 ---
@@ -9,13 +9,13 @@ globs:
 Review provider selected by `review.provider` (default `coderabbit`). Gate per-head state via
 `scripts/check-gate.sh` + `providers/review/<provider>.sh`.
 
-## Two-phase `/pf-review` (local → provider)
+## Two-phase `/sw-review` (local → provider)
 
 1. **Phase 1 — local** (`review.local`, default `ce-code-review`): multi-agent report-only review via
    compound-engineering skill. Normalized contract in `providers/code-review/CAPABILITIES.md`. Soft dependency —
    when skill absent, skip with message (fail-closed), proceed to phase 2.
 2. **Phase 2 — external** (`review.provider`): CodeRabbit over uncommitted delta (unchanged). Emits
-   `/tmp/pf-review.status.json` for verification-gate.
+   `/tmp/sw-review.status.json` for verification-gate.
 
 `gap-check` owns requirements completeness. Local adapter post-filters requirement-stage findings.
 
@@ -23,7 +23,7 @@ Review provider selected by `review.provider` (default `coderabbit`). Gate per-h
 
 - pf auto-applies eligible P2/P3 only (concrete fix, `requires_verification: false`, in-repo, bounded,
   non-security-sensitive). P0/P1 never auto-fixed.
-- Severity gate: surface-only default (`haltOn: []`); promoted halting on validated P0/P1 halts `/pf-ship`.
+- Severity gate: surface-only default (`haltOn: []`); promoted halting on validated P0/P1 halts `/sw-ship`.
 - `check-gate.sh` remains sole CI oracle.
 
 ## Review priorities (in order)
@@ -46,7 +46,7 @@ Reply before resolve (mandatory). Thread-level GraphQL only. Paginate threads be
 
 When `coderabbit.noDefer` is true, deliver code/test fix or verified resolve-with-evidence.
 
-## Stabilization bar (`/pf-stabilize`)
+## Stabilization bar (`/sw-stabilize`)
 
 Recompute unresolved actionable count at HEAD. Run `scripts/check-gate.sh` for verdict — never hand-roll green.
 

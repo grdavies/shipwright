@@ -2,7 +2,7 @@
 # Deterministic phase-flow v2 CI readiness gate.
 #
 # Prints a single JSON verdict to stdout and never mutates anything. Canonical computation behind the
-# `checks-gate` skill — `/pf-watch-ci` and stabilize invoke it instead of ad-hoc `gh` calls.
+# `checks-gate` skill — `/sw-watch-ci` and stabilize invoke it instead of ad-hoc `gh` calls.
 #
 # Per-head review state comes from providers/review/<provider>.sh (executable adapter seam).
 #
@@ -11,8 +11,8 @@
 # Env: PF_GATE_NOW — unix seconds override for deterministic tests (grace window)
 set -uo pipefail
 
-CHECKS="$(mktemp "${TMPDIR:-/tmp}/pf-gate-checks.XXXXXX")"
-ISSUE_COMMENTS="$(mktemp "${TMPDIR:-/tmp}/pf-gate-comments.XXXXXX")"
+CHECKS="$(mktemp "${TMPDIR:-/tmp}/sw-gate-checks.XXXXXX")"
+ISSUE_COMMENTS="$(mktemp "${TMPDIR:-/tmp}/sw-gate-comments.XXXXXX")"
 trap 'rm -f "$CHECKS" "$ISSUE_COMMENTS"' EXIT
 
 # --- repo + config ------------------------------------------------------------

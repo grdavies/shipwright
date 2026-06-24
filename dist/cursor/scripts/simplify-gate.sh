@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Behavior-preservation gate after /pf-simplify (IM7 / U8).
+# Behavior-preservation gate after /sw-simplify (IM7 / U8).
 # Compares pre-simplify vs post-simplify verify status files.
 #
 # Exit codes:

@@ -1,6 +1,6 @@
 # phase-flow v2 session context
 
-This repository uses the **phase-flow v2** (`pf-`) workflow. Route memory through the configured provider
+This repository uses the **phase-flow v2** (`sw-`) workflow. Route memory through the configured provider
 adapter.
 
 ## Per-worktree state (R38)
@@ -24,12 +24,12 @@ mode is ON for this chat until the user says **stop caveman** or **normal mode**
 
 ## Workflow
 
-- Doc chain: `/pf-doc` (or atomic `/pf-brainstorm` -> `/pf-prd` -> `/pf-freeze` -> `/pf-tasks`).
-- Implementation: `/pf-worktree` -> `/pf-start` -> `/pf-execute` -> `/pf-gaps` -> `/pf-verify` ->
-  `/pf-review` -> `/pf-commit` -> `/pf-pr` -> `/pf-watch-ci` -> `/pf-stabilize` -> `/pf-ready`.
-- `/pf-ship` drives the chain on green and stops at the human merge gate (never merges).
-- Post-ship debug: `/pf-debug` (signal-driven RCA from Sentry/deploy/user reports; routes to worktree loop or doc pipeline — does not implement or merge).
-- Post-ship feedback: `/pf-feedback` (unified intake for production/review/retro signals; routes to debug, gap-capture, or brainstorm — does not analyze or author).
+- Doc chain: `/sw-doc` (or atomic `/sw-brainstorm` -> `/sw-prd` -> `/sw-freeze` -> `/sw-tasks`).
+- Implementation: `/sw-worktree` -> `/sw-start` -> `/sw-execute` -> `/sw-gaps` -> `/sw-verify` ->
+  `/sw-review` -> `/sw-commit` -> `/sw-pr` -> `/sw-watch-ci` -> `/sw-stabilize` -> `/sw-ready`.
+- `/sw-ship` drives the chain on green and stops at the human merge gate (never merges).
+- Post-ship debug: `/sw-debug` (signal-driven RCA from Sentry/deploy/user reports; routes to worktree loop or doc pipeline — does not implement or merge).
+- Post-ship feedback: `/sw-feedback` (unified intake for production/review/retro signals; routes to debug, gap-capture, or brainstorm — does not analyze or author).
 - Phase state is per-worktree (`scripts/phase-state.sh`); repo index is read-time derived.
 
 ## Memory

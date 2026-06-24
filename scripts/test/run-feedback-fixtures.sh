@@ -7,12 +7,12 @@ REDACT="$ROOT/scripts/memory-redact.sh"
 FAIL=0
 
 # --- U1: command + skill + schema ---
-if [[ -f "$ROOT/commands/pf-feedback.md" ]] && \
-   grep -qi 'does not' "$ROOT/commands/pf-feedback.md" && \
+if [[ -f "$ROOT/commands/sw-feedback.md" ]] && \
+   grep -qi 'does not' "$ROOT/commands/sw-feedback.md" && \
    grep -q 'untrusted_payload' "$ROOT/skills/feedback/references/signal-schema.md"; then
-  echo "OK  pf-feedback intake + untrusted envelope"
+  echo "OK  sw-feedback intake + untrusted envelope"
 else
-  echo "FAIL pf-feedback intake files"
+  echo "FAIL sw-feedback intake files"
   FAIL=1
 fi
 
@@ -83,7 +83,7 @@ fi
 
 # --- U1: untrusted_payload envelope ---
 if grep -q 'UNTRUSTED_PAYLOAD_START' "$ROOT/skills/feedback/references/signal-schema.md" && \
-   grep -q 'does not' "$ROOT/commands/pf-feedback.md"; then
+   grep -q 'does not' "$ROOT/commands/sw-feedback.md"; then
   echo "OK  untrusted_payload envelope + no RCA in command"
 else
   echo "FAIL untrusted_payload / command boundary"
@@ -91,8 +91,8 @@ else
 fi
 
 # --- U2: routing rubric ---
-if grep -q '/pf-debug' "$ROOT/skills/feedback/SKILL.md" && \
-   grep -q '/pf-brainstorm' "$ROOT/skills/feedback/SKILL.md" && \
+if grep -q '/sw-debug' "$ROOT/skills/feedback/SKILL.md" && \
+   grep -q '/sw-brainstorm' "$ROOT/skills/feedback/SKILL.md" && \
    grep -q 'gap-capture' "$ROOT/skills/feedback/SKILL.md" && \
    grep -q 'surface:feedback-route' "$ROOT/skills/feedback/references/route-record.md"; then
   echo "OK  feedback routing + route record"
@@ -111,7 +111,7 @@ else
 fi
 
 # --- U3: gap-capture split ---
-if grep -q '/pf-amend' "$ROOT/skills/feedback/SKILL.md" && \
+if grep -q '/sw-amend' "$ROOT/skills/feedback/SKILL.md" && \
    grep -q 'GAP-BACKLOG' "$ROOT/skills/feedback/SKILL.md" && \
    grep -q 'source:feedback' "$ROOT/skills/feedback/SKILL.md"; then
   echo "OK  gap-capture amend vs backlog"
@@ -129,11 +129,11 @@ else
   FAIL=1
 fi
 
-# --- pf-naming feedback boundary ---
-if grep -q 'Feedback orchestrator boundary' "$ROOT/rules/pf-naming.mdc"; then
-  echo "OK  pf-naming feedback boundary"
+# --- sw-naming feedback boundary ---
+if grep -q 'Feedback orchestrator boundary' "$ROOT/rules/sw-naming.mdc"; then
+  echo "OK  sw-naming feedback boundary"
 else
-  echo "FAIL pf-naming feedback boundary"
+  echo "FAIL sw-naming feedback boundary"
   FAIL=1
 fi
 

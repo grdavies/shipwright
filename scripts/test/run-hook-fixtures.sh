@@ -7,7 +7,7 @@ HOOK="$ROOT/dist/cursor/hooks/before-submit-guardrails.py"
 CLAUDE_SUBMIT="$ROOT/scripts/test/claude-submit-case.py"
 CLAUDE_SESSION="$ROOT/scripts/test/claude-session-case.py"
 FIX="$ROOT/scripts/test/fixtures"
-TMP_WS="$(mktemp -d "${TMPDIR:-/tmp}/pf-hook-ws.XXXXXX")"
+TMP_WS="$(mktemp -d "${TMPDIR:-/tmp}/sw-hook-ws.XXXXXX")"
 trap 'rm -rf "$TMP_WS"' EXIT
 
 export PYTHONPATH="$ROOT/core/hooks:$ROOT/platforms/cursor:$ROOT/platforms/claude-code${PYTHONPATH:+:$PYTHONPATH}"
@@ -102,7 +102,7 @@ else
   FAIL=1
 fi
 
-UNCONFIGURED_WS="$(mktemp -d "${TMPDIR:-/tmp}/pf-hook-unconf.XXXXXX")"
+UNCONFIGURED_WS="$(mktemp -d "${TMPDIR:-/tmp}/sw-hook-unconf.XXXXXX")"
 out=$(echo '{"workspace_roots":["'"$UNCONFIGURED_WS"'"]}' | PF_RULES_SCRIPT="$FIX/rules-empty.sh" python3 "$HOOK")
 cont=$(echo "$out" | jq -r '.continue')
 if [ "$cont" = "true" ]; then

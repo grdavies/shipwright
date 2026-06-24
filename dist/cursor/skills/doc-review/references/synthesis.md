@@ -1,6 +1,6 @@
 # Synthesis pipeline
 
-Post-persona merge for `/pf-doc-review`.
+Post-persona merge for `/sw-doc-review`.
 
 ## Steps
 

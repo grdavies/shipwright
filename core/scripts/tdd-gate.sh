@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Per-task TDD red-green gate (IM5 / U7). Consumes structured /tmp/pf-tdd.status.json.
+# Per-task TDD red-green gate (IM5 / U7). Consumes structured /tmp/sw-tdd.status.json.
 #
 # Exit codes:
 #   0  pass

@@ -12,7 +12,7 @@ Cross-cutting workflow decisions need an addressable frozen deliverable.
 ## Decision
 
 - **D1** Decision records live under `decisions/<n>-<slug>.md` with a distinct D-ID namespace
-- **D2** Authoring reuses `/pf-prd --type decision` rather than a dedicated command
+- **D2** Authoring reuses `/sw-prd --type decision` rather than a dedicated command
 
 ## Rationale
 
@@ -20,7 +20,7 @@ Reuses freeze/review/amend machinery without duplicating authoring surfaces.
 
 ## Alternatives
 
-- Dedicated `/pf-decision` command — rejected as tooling duplication
+- Dedicated `/sw-decision` command — rejected as tooling duplication
 - Memory-native storage — rejected (no CI freeze)
 
 ## Consequences

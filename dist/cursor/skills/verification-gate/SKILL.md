@@ -23,19 +23,19 @@ gate verdict.
 
 | Class | Semantics | Consumer policy |
 | --- | --- | --- |
-| `missing-required` | Required verify/gate missing, invalid, or rejected by `safe_read` — **suspicious** | **Block** (`pf-commit`) / **halt** (`pf-ship`) |
-| `no-baseline` | Head fails but no baseline to attribute — **benign** | Logged override required (`pf-commit`); log+continue (`pf-ship`) |
-| `unattributed` | Pre-existing unchanged or undetermined — **neutral** | Logged override required (`pf-commit`); log+continue (`pf-ship`) |
+| `missing-required` | Required verify/gate missing, invalid, or rejected by `safe_read` — **suspicious** | **Block** (`sw-commit`) / **halt** (`sw-ship`) |
+| `no-baseline` | Head fails but no baseline to attribute — **benign** | Logged override required (`sw-commit`); log+continue (`sw-ship`) |
+| `unattributed` | Pre-existing unchanged or undetermined — **neutral** | Logged override required (`sw-commit`); log+continue (`sw-ship`) |
 
 ## Evidence typing
 
 | Source | Path (default) | Required? |
 | --- | --- | --- |
-| Verify aggregate | `$RUN_DIR/pf-verify.status.json` (`pf-tmp.sh resolve`, else `/tmp`) | **Yes** — emitted by `/pf-verify` |
+| Verify aggregate | `$RUN_DIR/sw-verify.status.json` (`sw-tmp.sh resolve`, else `/tmp`) | **Yes** — emitted by `/sw-verify` |
 | Gate JSON | caller-supplied | **When PR context** (`--pr-context on/auto` or `--require-gate`) |
-| Review status | `$RUN_DIR/pf-review.status.json` | **Optional** — absent-aware (review-disabled repos still reach `verified`) |
+| Review status | `$RUN_DIR/sw-review.status.json` | **Optional** — absent-aware (review-disabled repos still reach `verified`) |
 
-Producers write into the private run dir (`scripts/pf-tmp.sh init` at ship start; mode `0700`, files `600`).
+Producers write into the private run dir (`scripts/sw-tmp.sh init` at ship start; mode `0700`, files `600`).
 `safe_read` rejects symlinks, foreign-owned, or group/world-writable evidence files.
 
 ### Verify status shape
@@ -58,10 +58,10 @@ Same as verify status. When the file is absent, review evidence is treated as `a
 
 ```bash
 bash scripts/verify-evidence.sh \
-  --verify-status "$RUN_DIR/pf-verify.status.json" \
+  --verify-status "$RUN_DIR/sw-verify.status.json" \
   [--gate-json /path/to/gate.json --require-gate] \
   [--pr-context on|off|auto] \
-  [--review-status "$RUN_DIR/pf-review.status.json"] \
+  [--review-status "$RUN_DIR/sw-review.status.json"] \
   [--baseline-verify /path/to/baseline.verify.json] \
   [--baseline-gate /path/to/baseline.gate.json]
 ```
@@ -80,7 +80,7 @@ Capture baseline **before** the change (merge base or pre-change head) at a **ca
 
 ```bash
 bash scripts/verify-baseline.sh capture \
-  --from "$RUN_DIR/pf-verify.status.json" \
+  --from "$RUN_DIR/sw-verify.status.json" \
   --to .phase-flow/baseline.verify.json \
   [--gate-from gate.json --gate-to .phase-flow/baseline.gate.json]
 ```
@@ -91,8 +91,8 @@ Rejected baseline reads → `missing-required`, never silent downgrade.
 
 ## Consumer contract
 
-- **`pf-ship`** — halt on `not-verified` and `missing-required`; log+continue on `no-baseline` / `unattributed`.
-- **`pf-commit`** — proceed on `verified`; block on `missing-required`; logged override on `no-baseline` /
+- **`sw-ship`** — halt on `not-verified` and `missing-required`; log+continue on `no-baseline` / `unattributed`.
+- **`sw-commit`** — proceed on `verified`; block on `missing-required`; logged override on `no-baseline` /
   `unattributed`.
 
 ### Override record
@@ -105,8 +105,8 @@ suppresses red `check-gate.sh`/CI.
 
 ## Reuse points
 
-- `/pf-commit` / `/pf-ship` — pre-CI boundary gate
-- `/pf-debug` / feedback closure — confirm fix verified
+- `/sw-commit` / `/sw-ship` — pre-CI boundary gate
+- `/sw-debug` / feedback closure — confirm fix verified
 
 ## Guardrails
 

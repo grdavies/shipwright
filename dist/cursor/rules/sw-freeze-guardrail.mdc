@@ -1,0 +1,22 @@
+---
+description: Never edit a file with frozen: true in frontmatter. Post-freeze changes use /sw-amend only.
+alwaysApply: true
+---
+
+# Frozen artifact guardrail
+
+Files with `frozen: true` in YAML frontmatter are **immutable**. Do not edit, rename, or delete them.
+
+## If change needed
+
+1. Run `/sw-amend` to create a sibling amendment file.
+2. Review via `/sw-doc-review` (coherence + scope-guardian always run against parent).
+3. Freeze the amendment via `/sw-freeze`.
+
+## Enforcement layers
+
+- This rule — agent instruction (early warning).
+- `hooks/pre-commit-frozen.sh` — local commit block (bypassable with `--no-verify`).
+- `scripts/check-frozen.sh` — CI required-check (authoritative; not bypassable).
+
+There is **no unfreeze** command.

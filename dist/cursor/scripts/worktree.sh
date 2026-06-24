@@ -49,7 +49,7 @@ for line in out.splitlines():
     if not line.strip():
         if block:
             wt = block.get("worktree", "")
-            if "/.pf-worktrees/" in wt:
+            if "/.sw-worktrees/" in wt:
                 count += 1
             block = {}
         continue
@@ -57,7 +57,7 @@ for line in out.splitlines():
     block[key] = val
 if block:
     wt = block.get("worktree", "")
-    if "/.pf-worktrees/" in wt:
+    if "/.sw-worktrees/" in wt:
         count += 1
 print(count)
 PY
@@ -150,7 +150,7 @@ import sys
 
 count = int(sys.argv[1])
 ceiling = int(sys.argv[2])
-# ceiling applies to .pf-worktrees slots only (main checkout excluded from count)
+# ceiling applies to .sw-worktrees slots only (main checkout excluded from count)
 verdict = "ok" if count < ceiling else "at-ceiling"
 print(json.dumps({"pfWorktrees": count, "ceiling": ceiling, "verdict": verdict}))
 sys.exit(0 if verdict == "ok" else 10)
@@ -189,7 +189,7 @@ cmd_provision() {
 
   local parent="${base:-$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('defaultBaseBranch','main'))" "$cfg")}"
   local wt_root
-  wt_root="$(git rev-parse --show-toplevel)/.pf-worktrees"
+  wt_root="$(git rev-parse --show-toplevel)/.sw-worktrees"
   mkdir -p "$wt_root"
   local path="$wt_root/$name"
   [[ -e "$path" ]] && {
@@ -281,7 +281,7 @@ cmd_teardown() {
   local path="$target"
   if [[ ! -d "$path" ]]; then
     local wt_root
-    wt_root="$(git rev-parse --show-toplevel)/.pf-worktrees"
+    wt_root="$(git rev-parse --show-toplevel)/.sw-worktrees"
     path="$wt_root/$target"
   fi
   [[ -d "$path" ]] || {

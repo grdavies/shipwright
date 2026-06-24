@@ -10,7 +10,7 @@ bash -n "${BASH_SOURCE[0]}" || {
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TRIAGE="$ROOT/skills/triage/SKILL.md"
 DOC_REVIEW="$ROOT/skills/doc-review/SKILL.md"
-PF_DOC_REVIEW="$ROOT/commands/pf-doc-review.md"
+PF_DOC_REVIEW="$ROOT/commands/sw-doc-review.md"
 CODE_REVIEW_RULES="$ROOT/rules/code-review-automation.mdc"
 FIXTURES="$ROOT/scripts/test/fixtures/persona-selection"
 WORKFLOW_CONFIG="$ROOT/.cursor/workflow.config.json"
@@ -19,13 +19,13 @@ FAIL=0
 # --- U1: doc-review signal-driven model (no tier scaling / Full=all seven) ---
 if grep -qi 'Tier no longer selects personas' "$DOC_REVIEW" && \
    grep -qi 'always-on core' "$DOC_REVIEW" && \
-   grep -q 'pf-coherence-reviewer' "$DOC_REVIEW" && \
-   grep -q 'pf-feasibility-reviewer' "$DOC_REVIEW" && \
-   grep -q 'pf-scope-guardian-reviewer' "$DOC_REVIEW" && \
-   grep -q 'pf-product-reviewer' "$DOC_REVIEW" && \
-   grep -q 'pf-adversarial-reviewer' "$DOC_REVIEW" && \
-   grep -q 'pf-security-reviewer' "$DOC_REVIEW" && \
-   grep -q 'pf-design-reviewer' "$DOC_REVIEW" && \
+   grep -q 'sw-coherence-reviewer' "$DOC_REVIEW" && \
+   grep -q 'sw-feasibility-reviewer' "$DOC_REVIEW" && \
+   grep -q 'sw-scope-guardian-reviewer' "$DOC_REVIEW" && \
+   grep -q 'sw-product-reviewer' "$DOC_REVIEW" && \
+   grep -q 'sw-adversarial-reviewer' "$DOC_REVIEW" && \
+   grep -q 'sw-security-reviewer' "$DOC_REVIEW" && \
+   grep -q 'sw-design-reviewer' "$DOC_REVIEW" && \
    grep -qi 'activation record' "$DOC_REVIEW" && \
    grep -q '\-\-personas' "$DOC_REVIEW" && \
    grep -q '\-\-all' "$DOC_REVIEW" && \
@@ -46,7 +46,7 @@ else
   FAIL=1
 fi
 
-# --- U2: pf-doc-review command matches signal-driven model ---
+# --- U2: sw-doc-review command matches signal-driven model ---
 if grep -qi 'signal-driven' "$PF_DOC_REVIEW" && \
    grep -qi 'activation record' "$PF_DOC_REVIEW" && \
    grep -qi 'five-persona always-on core' "$PF_DOC_REVIEW" && \
@@ -54,9 +54,9 @@ if grep -qi 'signal-driven' "$PF_DOC_REVIEW" && \
    grep -q '\-\-all' "$PF_DOC_REVIEW" && \
    ! grep -qi 'seven personas in parallel' "$PF_DOC_REVIEW" && \
    ! grep -qi 'coherence \+ scope-guardian minimum' "$PF_DOC_REVIEW"; then
-  echo "OK  pf-doc-review: core + signal-gated model (no tier persona counts)"
+  echo "OK  sw-doc-review: core + signal-gated model (no tier persona counts)"
 else
-  echo "FAIL pf-doc-review command wording"
+  echo "FAIL sw-doc-review command wording"
   FAIL=1
 fi
 

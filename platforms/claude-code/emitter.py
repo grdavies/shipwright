@@ -21,10 +21,10 @@ SUPPORTED = {
 
 RULE_SKILL_ALIASES = {
     "code-review-automation": "stabilize-loop",
-    "pf-workflow-sequencing": "worktree",
+    "sw-workflow-sequencing": "worktree",
     "memory-guardrails": "memory",
     "checks-gate": "checks-gate",
-    "pf-subagent-dispatch": "parallelism",
+    "sw-subagent-dispatch": "parallelism",
 }
 
 
@@ -143,7 +143,7 @@ class ClaudeCodeEmitter(EmitterBase):
         manifest_dir = dest / ".claude-plugin"
         manifest_dir.mkdir(parents=True, exist_ok=True)
         plugin = {
-            "name": "phase-flow-v2",
+            "name": "shipwright",
             "version": read_version(repo_root),
             "description": "phase-flow v2 for Claude Code (generated)",
         }

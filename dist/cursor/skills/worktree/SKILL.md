@@ -1,5 +1,5 @@
 ---
-name: pf-worktree
+name: sw-worktree
 description: Provision per-work-item git worktrees with env scaffold (ports, DB strategy) and safe teardown. Enforces parallelism ceiling.
 ---
 
@@ -13,7 +13,7 @@ Every work item runs in its own worktree (R18). Bare `main` is not an implementa
 bash scripts/worktree.sh provision <name> [--base <ref>] [--branch <branch>] [--tier T] [--workstream W]
 ```
 
-Creates `.pf-worktrees/<name>`, branches `pf/<name>` by default, allocates a unique port from the configured
+Creates `.sw-worktrees/<name>`, branches `pf/<name>` by default, allocates a unique port from the configured
 pool, records scaffold + tier in per-worktree state (`skills/phase-state`).
 
 ## List / index

@@ -20,7 +20,7 @@ Default committed store: `.cursor/pf-memory/`
 ```
 
 Per-user-local opt-out (`memory.inRepo.commitMode: local`): non-rule writes land in
-`.cursor/pf-memory-local/memories/` (gitignored by `/pf-setup`). **Rule-class files always write to
+`.cursor/pf-memory-local/memories/` (gitignored by `/sw-setup`). **Rule-class files always write to
 `.cursor/pf-memory/rules/`** regardless of commit mode.
 
 Per-memory file shape: YAML frontmatter = neutral interchange fields; distilled note in the body.
@@ -113,7 +113,7 @@ Identical inputs → identical ranked output (deterministic).
 
 ## Write recipe specifics
 
-1. **Lazy store create:** `mkdir -p` the store dirs on first write — no `/pf-setup` required.
+1. **Lazy store create:** `mkdir -p` the store dirs on first write — no `/sw-setup` required.
 2. **Redaction (R41):** pipe every payload through `scripts/memory-redact.sh` before writing.
 3. **Commit mode:** `memory.inRepo.commitMode: committed` (default) writes under `.cursor/pf-memory/memories/`.
    `local` writes non-rule memories under `.cursor/pf-memory-local/memories/` (gitignored).

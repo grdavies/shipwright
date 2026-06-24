@@ -1,5 +1,5 @@
 {
-  "$schema": "../../../.pf/config.schema.json",
+  "$schema": "../../../.sw/config.schema.json",
   "defaultBaseBranch": "main",
   "stateFile": ".git/phase-flow.json",
   "agentsFile": "AGENTS.md",

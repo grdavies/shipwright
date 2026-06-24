@@ -7,11 +7,11 @@ NORMALIZE="$ROOT/scripts/code-review-normalize.sh"
 GATE="$ROOT/scripts/code-review-gate.sh"
 APPLY_CHECK="$ROOT/scripts/code-review-apply-check.sh"
 FIX="$ROOT/scripts/test/fixtures/code-review"
-SCHEMA="$ROOT/.pf/config.schema.json"
-PF_REVIEW="$ROOT/commands/pf-review.md"
-PF_SHIP="$ROOT/commands/pf-ship.md"
+SCHEMA="$ROOT/.sw/config.schema.json"
+PF_REVIEW="$ROOT/commands/sw-review.md"
+PF_SHIP="$ROOT/commands/sw-ship.md"
 CODE_REVIEW_RULES="$ROOT/rules/code-review-automation.mdc"
-SEQUENCING="$ROOT/rules/pf-workflow-sequencing.mdc"
+SEQUENCING="$ROOT/rules/sw-workflow-sequencing.mdc"
 CE_ADAPTER="$ROOT/providers/code-review/ce-code-review.md"
 CAPS="$ROOT/providers/code-review/CAPABILITIES.md"
 FAIL=0
@@ -91,7 +91,7 @@ else
 fi
 
 # --- U2: schema validation ---
-EXAMPLE="$ROOT/.pf/workflow.config.example.json"
+EXAMPLE="$ROOT/.sw/workflow.config.example.json"
 if jq -e '.review.local.enabled == true and .review.local.provider == "ce-code-review"' "$EXAMPLE" >/dev/null && \
    grep -q '"local"' "$SCHEMA"; then
   echo "OK  review.local in schema + example"
@@ -129,15 +129,15 @@ else
   FAIL=1
 fi
 
-# --- U3: two-phase pf-review procedure ---
+# --- U3: two-phase sw-review procedure ---
 if grep -qi 'phase 1' "$PF_REVIEW" && grep -qi 'phase 2' "$PF_REVIEW" && \
    grep -q 'review.local' "$PF_REVIEW" && grep -q 'ce-code-review' "$PF_REVIEW" && \
-   grep -q 'pf-review.status.json' "$PF_REVIEW" && \
+   grep -q 'sw-review.status.json' "$PF_REVIEW" && \
    grep -qi 'CI gate' "$PF_REVIEW" && \
    grep -q 'rm -rf' "$PF_REVIEW" && grep -q 'memory-redact.sh' "$PF_REVIEW"; then
-  echo "OK  pf-review two-phase + persist edges"
+  echo "OK  sw-review two-phase + persist edges"
 else
-  echo "FAIL U3 pf-review procedure"
+  echo "FAIL U3 sw-review procedure"
   FAIL=1
 fi
 
@@ -223,14 +223,14 @@ else
   FAIL=1
 fi
 
-if grep -q 'pf-local-review-gate-result' "$PF_SHIP" && grep -qi 'halt' "$PF_SHIP"; then
-  echo "OK  pf-ship local review halt stop condition"
+if grep -q 'sw-local-review-gate-result' "$PF_SHIP" && grep -qi 'halt' "$PF_SHIP"; then
+  echo "OK  sw-ship local review halt stop condition"
 else
-  echo "FAIL U4 pf-ship halt"
+  echo "FAIL U4 sw-ship halt"
   FAIL=1
 fi
 
-if grep -q 'Local review apply loop' "$ROOT/rules/pf-subagent-dispatch.mdc"; then
+if grep -q 'Local review apply loop' "$ROOT/rules/sw-subagent-dispatch.mdc"; then
   echo "OK  subagent-dispatch bounded apply/re-verify"
 else
   echo "FAIL U4 circuit breaker doc"

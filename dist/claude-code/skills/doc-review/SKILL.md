@@ -1,9 +1,9 @@
 ---
-name: pf-doc-review
+name: sw-doc-review
 description: Review PRD drafts with parallel persona sub-agents and a synthesizer that auto-applies safe fixes. Signal-driven panel (five-persona core + gated security/design); Quick tier skips review.
 ---
 
-# Document review (`/pf-doc-review`)
+# Document review (`/sw-doc-review`)
 
 Multi-persona review for PRDs and decision records. Pattern borrowed from compound-engineering `ce-doc-review` (slim vendored adaptation).
 
@@ -35,18 +35,18 @@ Deterministic — same inputs → same panel. Not model judgment.
 
 These five personas run on every non-Quick review:
 
-- `pf-coherence-reviewer`
-- `pf-feasibility-reviewer`
-- `pf-scope-guardian-reviewer`
-- `pf-product-reviewer`
-- `pf-adversarial-reviewer`
+- `sw-coherence-reviewer`
+- `sw-feasibility-reviewer`
+- `sw-scope-guardian-reviewer`
+- `sw-product-reviewer`
+- `sw-adversarial-reviewer`
 
 ### Signal-gated specialists
 
 | Persona | Fires when |
 | --- | --- |
-| `pf-security-reviewer` | Any **`security`-tagged** keyword from `skills/triage/SKILL.md` "Risk triggers" matches the PRD (case-insensitive). Tags `data-migration` and `billing-routing` floor triage tier but do **not** fire security. |
-| `pf-design-reviewer` | **Either** (a) one **unambiguous** UI term is present (`UI`, `UX`, `wireframe`, `modal`, `button`, `navigation`, `responsive`, `accessibility`, `user flow`), **or** (b) a **structural UI signal** exists: a `UI` / `UX` / `Screens` / `Mockups` section heading, a design-tool link (e.g. Figma), or an explicit interaction-state enumeration. Bare polysemous tokens (`component`, `view`, `page`, `form`) do **not** count alone. |
+| `sw-security-reviewer` | Any **`security`-tagged** keyword from `skills/triage/SKILL.md` "Risk triggers" matches the PRD (case-insensitive). Tags `data-migration` and `billing-routing` floor triage tier but do **not** fire security. |
+| `sw-design-reviewer` | **Either** (a) one **unambiguous** UI term is present (`UI`, `UX`, `wireframe`, `modal`, `button`, `navigation`, `responsive`, `accessibility`, `user flow`), **or** (b) a **structural UI signal** exists: a `UI` / `UX` / `Screens` / `Mockups` section heading, a design-tool link (e.g. Figma), or an explicit interaction-state enumeration. Bare polysemous tokens (`component`, `view`, `page`, `form`) do **not** count alone. |
 
 **Security signal enumeration** (authoritative; must stay in sync with triage `security` tags):
 
@@ -76,7 +76,7 @@ audits when wording dodges the list.
   `override: personas <list>` with reason.
 - `--all` — run all seven personas (deep audit). Record `override: all`.
 
-Mirrors `pf-triage` `--tier` override recording.
+Mirrors `sw-triage` `--tier` override recording.
 
 ### Activation record
 
@@ -153,4 +153,4 @@ When reviewing `docs/prds/<n>-<slug>/amendments/A<k>-*.md` drafts:
 
 ## Handoff
 
-→ `/pf-freeze` when no blocking manual trade-offs remain.
+→ `/sw-freeze` when no blocking manual trade-offs remain.

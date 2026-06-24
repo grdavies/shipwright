@@ -1,11 +1,11 @@
 ---
-name: pf-prd
+name: sw-prd
 description: Generate a PRD or decision-record draft (Full/Standard). Does not freeze, run persona review, or generate tasks.
 ---
 
-# PRD / decision-record draft (`/pf-prd`)
+# PRD / decision-record draft (`/sw-prd`)
 
-Port of v1 `spec-prd` under `pf-`. Freeze and task generation are separate steps. Generalized into a typed frozen-deliverable author via `--type`.
+Port of v1 `spec-prd` under `sw-`. Freeze and task generation are separate steps. Generalized into a typed frozen-deliverable author via `--type`.
 
 ## Deliverable types
 
@@ -39,8 +39,8 @@ The decision section contract must stay in lockstep with `scripts/spec-rigor-che
 
 ## Path
 
-- PRD: `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` per `.pf/layout.md`.
-- Decision: `docs/decisions/<n>-<slug>.md` per `.pf/layout.md`.
+- PRD: `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` per `.sw/layout.md`.
+- Decision: `docs/decisions/<n>-<slug>.md` per `.sw/layout.md`.
 
 ## Tier routing (PRD only)
 
@@ -61,7 +61,7 @@ The decision section contract must stay in lockstep with `scripts/spec-rigor-che
 
 ## Handoff
 
-→ `/pf-doc-review` (not `/pf-freeze` or `/pf-tasks`). Resolve Open Questions before freeze (spec-rigor clarify gate on Full tier PRDs).
+→ `/sw-doc-review` (not `/sw-freeze` or `/sw-tasks`). Resolve Open Questions before freeze (spec-rigor clarify gate on Full tier PRDs).
 
 ## Open questions
 

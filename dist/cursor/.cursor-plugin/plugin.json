@@ -1,5 +1,5 @@
 {
-  "name": "phase-flow-v2",
+  "name": "shipwright",
   "version": "0.1.0",
   "description": "phase-flow v2 (generated)",
   "commands": "./commands/",

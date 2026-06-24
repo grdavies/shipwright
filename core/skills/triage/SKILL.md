@@ -1,9 +1,9 @@
 ---
-name: pf-triage
+name: sw-triage
 description: Classify work into Quick, Standard, or Full tiers from deterministic signals. Does not run the doc pipeline or implementation phases.
 ---
 
-# Triage rubric (`/pf-triage`)
+# Triage rubric (`/sw-triage`)
 
 Deterministic tier classifier. Auditable — same inputs → same tier. Not model judgment.
 
@@ -97,15 +97,15 @@ Next: <route>
 
 Routes:
 
-- **Quick** → implementation workstream (`/pf-execute` when available); no doc artifacts.
-- **Standard** → `/pf-prd` (skip brainstorm) or `/pf-doc`.
-- **Full** → `/pf-brainstorm` or `/pf-doc`.
+- **Quick** → implementation workstream (`/sw-execute` when available); no doc artifacts.
+- **Standard** → `/sw-prd` (skip brainstorm) or `/sw-doc`.
+- **Full** → `/sw-brainstorm` or `/sw-doc`.
 
 ## Misroute re-entry
 
 When implementation reveals scope growth on a Quick-classified item:
 
-1. Re-run `/pf-triage --re-score` with updated file list and description.
+1. Re-run `/sw-triage --re-score` with updated file list and description.
 2. If new tier > Quick, route into Standard/Full pipeline.
 3. Record prior Quick classification in the output for audit.
 

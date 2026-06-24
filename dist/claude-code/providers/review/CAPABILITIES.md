@@ -1,7 +1,7 @@
 # Review provider capabilities (R36)
 
 Neutral contract for AI code-review adapters. Deterministic consumers (`scripts/check-gate.sh`) call the
-**executable** adapter (`providers/review/<id>.sh`). Agent-mediated consumers (`/pf-review`, stabilize) read
+**executable** adapter (`providers/review/<id>.sh`). Agent-mediated consumers (`/sw-review`, stabilize) read
 the markdown adapter (`providers/review/<id>.md`).
 
 ## Required capability: per-head review state
@@ -32,7 +32,7 @@ A repo can disable review gating entirely via `workflow.config.json`:
 - `review.provider: "none"`, or
 - `review.enabled: false`
 
-When opted out the gate skips the adapter, sets state `disabled` (non-blocking), and `/pf-review` reports
+When opted out the gate skips the adapter, sets state `disabled` (non-blocking), and `/sw-review` reports
 review is disabled rather than invoking the provider CLI. Use this for repos not onboarded to any review
 provider.
 

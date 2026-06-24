@@ -1,7 +1,7 @@
 # Verify E2E / smoke adapter capabilities (IM9 / U10)
 
 Provider-style smoke/E2E verification. Selected by `verifyE2e.provider` in `workflow.config.json`.
-Invoked by `scripts/verify-e2e.sh` during `/pf-verify` — runs **only when enabled**.
+Invoked by `scripts/verify-e2e.sh` during `/sw-verify` — runs **only when enabled**.
 
 ## Config
 
@@ -27,7 +27,7 @@ Invoked by `scripts/verify-e2e.sh` during `/pf-verify` — runs **only when enab
   "exitCode": 0,
   "name": "e2e",
   "provider": "stub",
-  "logPath": "/tmp/pf-verify.e2e.log",
+  "logPath": "/tmp/sw-verify.e2e.log",
   "skipped": false,
   "reason": ""
 }

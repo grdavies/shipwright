@@ -22,8 +22,8 @@ rsync -a --delete \
   "$ROOT/scripts/" "$CORE/scripts/"
 
 if [ -d "$ROOT/.pf" ]; then
-  mkdir -p "$CORE/pf-reference"
-  rsync -a --delete "$ROOT/.pf/" "$CORE/pf-reference/"
+  mkdir -p "$CORE/sw-reference"
+  rsync -a --delete "$ROOT/.sw/" "$CORE/sw-reference/"
 fi
 
 echo "copy-to-core: synced emittable content -> $CORE"

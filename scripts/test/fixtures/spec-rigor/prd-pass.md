@@ -34,7 +34,7 @@ Golden fixtures in scripts/test/fixtures.
 
 ## Rollout Plan
 
-Wire into pf-freeze and pf-tasks.
+Wire into sw-freeze and sw-tasks.
 
 ## Decision Log
 

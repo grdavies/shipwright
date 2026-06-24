@@ -43,7 +43,7 @@ doctrine remain the sources of truth.
 
 ## Redaction chokepoint (R41 — mandatory before persist/re-inject)
 
-Before **any** `store`, transcript distillation (`/pf-memory-sync`), or compounding write, pipe content
+Before **any** `store`, transcript distillation (`/sw-memory-sync`), or compounding write, pipe content
 through the executable filter:
 
 ```bash
@@ -121,7 +121,7 @@ When a frozen decision record exists for a cross-cutting decision:
 
 **Supersede reconciliation (`docs/decisions/SUPERSEDED.log`):**
 
-On record-level supersede, the superseded path is appended to the committed manifest. `/pf-memory-sync`
+On record-level supersede, the superseded path is appended to the committed manifest. `/sw-memory-sync`
 reconciles `decision`-class memories still linking a `SUPERSEDED.log` path — best-effort re-point to the
 replacement record. Pointer freshness is **auditable, not transactional** (provider out of CI reach).
 

@@ -1,6 +1,6 @@
 # Sentry MCP — debug context recipe
 
-Read-only issue/event retrieval for `/pf-debug` (R23). **No Sentry mutations** from this workflow.
+Read-only issue/event retrieval for `/sw-debug` (R23). **No Sentry mutations** from this workflow.
 
 ## Prerequisites
 

@@ -1,5 +1,5 @@
 ---
-name: pf-living-status
+name: sw-living-status
 description: Derive PRD status from git (merged PRs, branches, task checkboxes); reconcile INDEX; append-only completion log.
 ---
 

@@ -22,8 +22,8 @@ onto the Recallium MCP tools. Selected when `workflow.config.json` → `memory.p
 }
 ```
 
-`export`/`import` are `false`: Recallium exposes no neutral dump tool. `phase-flow`'s `/pf-memory-export`
-synthesizes the neutral JSONL by paging `search_memories` and emitting one line per memory; `/pf-memory-import`
+`export`/`import` are `false`: Recallium exposes no neutral dump tool. `phase-flow`'s `/sw-memory-export`
+synthesizes the neutral JSONL by paging `search_memories` and emitting one line per memory; `/sw-memory-import`
 replays via `store_memory`. Treat these as plugin-side, not native.
 
 ## Operation mapping
@@ -81,7 +81,7 @@ genuine shippable-capability recaps if ever needed (not a default).
 - `related_files` is required for `code-snippet`/`debug` (and any file-scoped memory) — it builds the
   bidirectional file↔memory graph that powers `file_path` search.
 - For cross-cutting decisions with a frozen decision record, link `related_files: ["docs/decisions/<n>-<slug>.md"]`
-  — pointer only; never store the record body (R32). Re-point on supersede via `/pf-memory-sync` +
+  — pointer only; never store the record body (R32). Re-point on supersede via `/sw-memory-sync` +
   `docs/decisions/SUPERSEDED.log` reconciliation.
 - Pass `tags` (`prd-<n>`, `task-<n>`, `surface:<cmd>`); Recallium merges them with auto-tags.
 - `importance_score` is 0.0–1.0.
