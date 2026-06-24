@@ -11,7 +11,7 @@ from pathlib import Path
 EMITTABLE_DIRS = ("commands", "skills", "rules", "agents", "providers", "scripts")
 
 EXCLUDE_DIR_NAMES = {"__pycache__", "test", ".git", "node_modules"}
-EXCLUDE_FILE_NAMES = {"install.sh"}
+EXCLUDE_REL_PATHS = frozenset({"scripts/install.sh"})
 EXCLUDE_SUFFIXES = (".pyc",)
 
 CURSOR_PLUGIN_ROOT = "${CURSOR_PLUGIN_ROOT}"
@@ -67,13 +67,13 @@ class EmitterBase(ABC):
                 parts = rel.parts
                 if any(p in EXCLUDE_DIR_NAMES for p in parts):
                     continue
-                if path.name in EXCLUDE_FILE_NAMES:
+                out_rel = f"{dirname}/{rel.as_posix()}"
+                if out_rel in EXCLUDE_REL_PATHS:
                     continue
                 if path.suffix in EXCLUDE_SUFFIXES:
                     continue
                 if dirname == "scripts" and parts and parts[0] == "test":
                     continue
-                out_rel = f"{dirname}/{rel.as_posix()}"
                 out_path = dest / out_rel
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 content = path.read_bytes()

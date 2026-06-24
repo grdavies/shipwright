@@ -14,7 +14,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SRC="$REPO/dist/cursor"
+SRC="${SW_INSTALL_SRC:-$REPO/dist/cursor}"
 DEST="${1:-$HOME/.cursor/plugins/local/shipwright}"
 
 # Pre-flight: source tree must exist

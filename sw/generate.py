@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -93,9 +94,16 @@ def main(argv: list[str] | None = None) -> int:
         cmd: list[str] = ["bash", str(install_script)]
         if args.install:
             cmd.append(args.install)
-        result = subprocess.run(cmd, check=False)
+        dest_root = args.dest or DIST_ROOT
+        env = {**os.environ, "SW_INSTALL_SRC": str(dest_root / "cursor")}
+        result = subprocess.run(cmd, check=False, env=env)
         if result.returncode != 0:
             return result.returncode
+    elif args.install is not None:
+        print(
+            "sw generate: --install: skipped (cursor platform not in this generate run)",
+            file=sys.stderr,
+        )
 
     return 0
 
