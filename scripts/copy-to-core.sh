@@ -19,7 +19,10 @@ done
 mkdir -p "$CORE/scripts"
 rsync -a --delete \
   --exclude 'test/' \
+  --exclude 'check-frozen.sh' \
   "$ROOT/scripts/" "$CORE/scripts/"
+# Harness-only: CI freeze check stays at repo root, not emitted via core/dist.
+rm -f "$CORE/scripts/check-frozen.sh"
 
 if [ -d "$ROOT/.pf" ]; then
   mkdir -p "$CORE/sw-reference"
