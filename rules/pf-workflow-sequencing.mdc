@@ -46,7 +46,7 @@ Repo-level index: `scripts/phase-state.sh index` (read-time aggregate — never 
 | `/pf-execute` | implement slice (spec union) | commit, push, PR |
 | `/pf-gaps` | plan vs diff | merge |
 | `/pf-verify` | run checks | fix, commit |
-| `/pf-review` | local review | gate, stabilize |
+| `/pf-review` | local-then-provider review | gate, stabilize |
 | `/pf-simplify` | behavior-preserving deslop | commit, merge |
 | `/pf-commit` | commit phase | push, PR |
 | `/pf-pr` | push + PR | commit, merge |
