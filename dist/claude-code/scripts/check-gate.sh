@@ -29,7 +29,13 @@ cfg() {
 }
 NEUTRAL_PASS="$(cfg '.checks.treatNeutralAsPass' 'true')"
 GRACE_MIN="$(cfg '.coderabbit.reviewGraceMinutes' '15')"
-REVIEW_PROVIDER="$(cfg '.review.provider' 'coderabbit')"
+REVIEW_PROVIDER="$(cfg '.review.provider' 'none')"
+REVIEW_PROVIDER_SET=false
+REVIEW_PROVIDER_RAW=""
+if [ -n "$CONFIG" ] && jq -e '.review.provider' "$CONFIG" >/dev/null 2>&1; then
+  REVIEW_PROVIDER_SET=true
+  REVIEW_PROVIDER_RAW="$(jq -r '.review.provider' "$CONFIG")"
+fi
 case "$REVIEW_PROVIDER" in
   [a-z0-9-]*) ;;
   *)
@@ -94,12 +100,32 @@ if [ -n "$OWNER" ] && [ -n "$REPO" ]; then
 fi
 
 # --- review per-head state (executable adapter seam) --------------------------
-# Opt-out: review.provider="none" or review.enabled=false disables review gating.
-REVIEW_ENABLED="$(cfg '.review.enabled' 'true')"
-if [ "$REVIEW_PROVIDER" = "none" ] || [ "$REVIEW_ENABLED" = "false" ]; then
+# Opt-out: review.provider="none" (explicit) or review.enabled=false (deprecated).
+# Never-configured (provider key absent) → unconfigured; explicit opt-out → off.
+REVIEW_ENABLED="true"
+if [ -n "$CONFIG" ]; then
+  REVIEW_ENABLED="$(jq -r 'if .review and (.review|has("enabled")) then (.review.enabled|tostring) else "true" end' "$CONFIG" 2>/dev/null || echo true)"
+fi
+GATE_DEPRECATIONS='[]'
+if [ "$REVIEW_ENABLED" = "false" ]; then
+  GATE_DEPRECATIONS='["review.enabled is deprecated; use review.provider:\"none\""]'
+  echo "warning: review.enabled is deprecated; use review.provider:\"none\"" >&2
+fi
+
+if [ "$REVIEW_ENABLED" = "false" ] || { [ "$REVIEW_PROVIDER_SET" = true ] && [ "$REVIEW_PROVIDER_RAW" = "none" ]; }; then
   HAS_PER_HEAD=true
-  CR_STATE="disabled"; CR_LANDED=true
-  CR_REVIEWED_HEAD=""; CR_STATUS="disabled"
+  CR_STATE="off"; CR_LANDED=true
+  CR_REVIEWED_HEAD=""; CR_STATUS="off"
+  CR_MARKER=0; CR_SKIP=0; MINS_SINCE=0
+elif [ "$REVIEW_PROVIDER_SET" = false ]; then
+  HAS_PER_HEAD=true
+  CR_STATE="unconfigured"; CR_LANDED=true
+  CR_REVIEWED_HEAD=""; CR_STATUS="unconfigured"
+  CR_MARKER=0; CR_SKIP=0; MINS_SINCE=0
+elif [ "$REVIEW_PROVIDER" = "none" ]; then
+  HAS_PER_HEAD=true
+  CR_STATE="off"; CR_LANDED=true
+  CR_REVIEWED_HEAD=""; CR_STATUS="off"
   CR_MARKER=0; CR_SKIP=0; MINS_SINCE=0
 else
   ADAPTER="$PLUGIN_ROOT/providers/review/${REVIEW_PROVIDER}.sh"
@@ -144,8 +170,8 @@ case "$VERDICT" in
   blocked) [ "$ACTIONABLE" -gt 0 ] && REASON="$ACTIONABLE unresolved actionable review thread(s)" || REASON="blocking/neutral or empty check set" ;;
   green)
     case "$CR_STATE" in
-      disabled)     REASON="all checks pass; review gating disabled; 0 actionable threads" ;;
-      unconfigured) REASON="all checks pass; no $REVIEW_PROVIDER review signal for head ${HEAD_SHA:0:8} (repo may not be onboarded); 0 actionable threads" ;;
+      off)            REASON="all checks pass; review gating off; 0 actionable threads" ;;
+      unconfigured) REASON="all checks pass; review off by default — never configured; 0 actionable threads" ;;
       skipped)      REASON="all checks pass; review skipped head ${HEAD_SHA:0:8}; 0 actionable threads" ;;
       *)            REASON="all checks pass; review landed for head ${HEAD_SHA:0:8}; 0 actionable threads" ;;
     esac
@@ -173,12 +199,14 @@ jq -n \
   --argjson blocking "$BLOCKING" \
   --argjson checkCount "${CHECK_COUNT:-0}" \
   --arg pr "$PR" \
+  --argjson deprecations "$GATE_DEPRECATIONS" \
   '{
     verdict: $verdict,
     reason: $reason,
     pr: ($pr|tonumber),
     head: $head,
     reviewProvider: $reviewProvider,
+    deprecations: $deprecations,
     coderabbitReviewedHead: (if $crHead=="" then null else $crHead end),
     coderabbitReviewedCurrentHead: ($crHead==$head and $crHead!=""),
     coderabbitStatus: $crStatus,
