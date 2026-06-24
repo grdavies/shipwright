@@ -15,6 +15,11 @@ Load `skills/living-status/SKILL.md`.
 2. On user request or post-merge: `reconcile` to update INDEX Status column.
 3. After shipped phase: `append-log` for completion log entry.
 4. Include GAP-BACKLOG summary (read-only).
+5. **Review echo (R29)** — when the current branch has an open PR, run `scripts/check-gate.sh` and include in
+   the status summary:
+   - `coderabbitState: off` → `review: off`
+   - `coderabbitState: unconfigured` → `review: not configured`
+   - otherwise → `review: <coderabbitState>` (per `skills/living-status/SKILL.md`).
 
 ## Guardrails
 

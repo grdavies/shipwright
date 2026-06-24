@@ -23,7 +23,13 @@ Confirm merge-readiness via `scripts/check-gate.sh` — terminal report only.
 
 6. `merge-ready` only when `GATE_EC == 0` / `verdict == "green"`.
 7. `yellow` → `/sw-watch-ci`; `red`/`blocked` → `/sw-stabilize`.
-8. Report: `merge-ready` | `ready for next stacked phase` | `not ready` (one blocker).
+8. **Review echo (R29)** — from gate JSON `coderabbitState` (same `OUT` as step 5):
+   - `off` → summary line `review: off` (explicit `review.provider: "none"` opt-out)
+   - `unconfigured` → summary line `review: not configured` (never onboarded to a review provider)
+   - Other states (`landed`, `skipped`, `in-flight`, `absent`) → echo `review: <coderabbitState>` so a green
+     gate with no external review is never mistaken for a reviewed change.
+9. Report: `merge-ready` | `ready for next stacked phase` | `not ready` (one blocker) — always include the
+   review echo line from step 8.
 
 ## Guardrails
 
