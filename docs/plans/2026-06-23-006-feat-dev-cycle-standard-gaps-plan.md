@@ -3,10 +3,14 @@ title: "feat: Dev-cycle Standard gaps — decision records, model tiering, invar
 type: feat
 date: 2026-06-23
 origin: docs/brainstorms/2026-06-23-dev-cycle-standard-gap-analysis-requirements.md
-status: planned
+status: done
+completed: 2026-06-24
 depth: deep
 frozen: true
 frozen_at: 2026-06-23
+branch: feat/dev-cycle-standard-gaps
+commit: e104674
+pr: https://github.com/grdavies/currsor-phase-flow-2/pull/10
 ---
 
 # feat: Dev-cycle Standard gaps — decision records, model tiering, invariants, build waves
@@ -21,6 +25,27 @@ slot surfaced to reviewers (R10). A one-time backfill migrates the founding brai
 Decisions (the fan-out subset, plus the revised founding KD-R7) into decision records, deferring inert ones to
 on-touch migration. Delivered in three dependency-ordered phases. The human merge gate and CI-enforced
 freeze are preserved throughout — nothing here lets work reach `main` ahead of the gate.
+
+## Implementation Units
+
+| Unit | Status | Summary |
+| --- | --- | --- |
+| U1 | done | `--type decision` on `/pf-prd`; `decisions/` tree; rigor gate; freeze → `decisions/INDEX` |
+| U2 | done | Decision drafts → Full panel; raised amendment floor for `decisions/` parents |
+| U3 | done | `spec-union.sh` generalized (`[RD]\d+`, sibling `.amendments/`, record-level supersede + chain guard) |
+| U4 | done | Memory boundary (R32): `SUPERSEDED.log`, compound/memory skills, recallium note |
+| U5 | done | Seven founding decision records backfilled; KD-R7 supersede → `001-conditional-review-personas` |
+| U6 | done | `models` + `invariantsFile` in schema and example config |
+| U7 | done | Three-layer tiering: `model: inherit` agents, `model-tier-check.sh`, runtime R9 in orchestrator rules |
+| U8 | done | `invariantsFile` wired into `/pf-doc-review` and `/pf-review` |
+| U9 | done | `/pf-wave plan`, `wave.sh plan`, `.cursor/pf-wave-plan.json` artifact |
+| U10 | **deferred** | Dependent-branch stacking (`pf-wave run`) — procedural only; no `wave.sh run` |
+| U11 | **deferred** | Integration branch lifecycle — `wave.sh integration` stub only |
+
+**Verification:** `scripts/test/run-doc-fixtures.sh` and `scripts/test/run-impl-fixtures.sh` (decision rigor,
+spec-union supersede, model-tier-check pass/fail, invariants wiring, wave plan topo-sort).
+
+**Shipped in:** [PR #10](https://github.com/grdavies/currsor-phase-flow-2/pull/10) (`e104674`).
 
 ---
 
@@ -767,16 +792,12 @@ agents/
 
 ## Phased Delivery
 
-- **Phase 1 (U1–U5) — Decision records + backfill.** The headline; delivers the addressable, reviewed,
-  forward-pointered decision record and migrates the fan-out founding decisions (plus founding KD-R7).
-  Standalone value.
-- **Phase 2 (U6–U8) — Config wins.** Model-tier map, reviewer-tier floor, invariants slot. Low-risk config
-  and agent edits; independent of Phase 1 except the shared test harness.
-- **Phase 3 (U9–U11) — Wave orchestration.** The largest cluster; layered on the existing worktree/parallelism
-  substrate. Functionally independent of Phases 1–2 with **one shared contract**: U9's wave contention set
-  includes the living `INDEX.md` files and the doc-numbering counters that Phase 1 introduces for `decisions/`
-  (and the existing `prds/` ones), so if both phases ship, the numbering/INDEX merge policy is the coordination
-  point — not a code dependency, but a shared invariant.
+- **Phase 1 (U1–U5) — Decision records + backfill.** **Done** — addressable decision records, seven founding
+  KDs migrated, KD-R7 record-level supersede with forward pointer.
+- **Phase 2 (U6–U8) — Config wins.** **Done** — `models` map, three-layer R9 enforcement, `invariantsFile`
+  slot.
+- **Phase 3 (U9–U11) — Wave orchestration.** **Partial** — U9 wave-plan artifact shipped; U10 dependent-branch
+  stacking and U11 integration-branch promotion **deferred** to a follow-up (see Scope Boundaries).
 
 Phases are dependency-ordered for value and risk, not hard prerequisites: Phase 2 and Phase 3 could proceed in
 parallel worktrees once Phase 1's mechanism is stable, subject to the parallel ceiling and the shared
@@ -788,6 +809,10 @@ doc-numbering/INDEX contract above.
 
 ### Deferred to Follow-Up Work
 
+- **U10 / U11 — wave run and integration promotion.** `commands/pf-wave.md` documents `run` and `promote`
+  procedurally; `scripts/wave.sh` implements `plan` only plus an `integration` JSON stub. Dependent-branch
+  stacking (`worktree.sh --base <dep-branch>`) and the full integration-branch lifecycle (merge green leaves,
+  per-candidate pre-merge validation, rollback) remain for a follow-up plan or amendment.
 - Parallel execution of Phase 2 and Phase 3 as separate worktree streams (sequencing optimization, not a scope
   change).
 
@@ -812,14 +837,21 @@ doc-numbering/INDEX contract above.
 
 ### Deferred to implementation
 
-- The concrete tier→model values for the `models` map (which Cursor model ID is `deep`/`build`/`cheap`) ship
-  in `config/workflow.config.example.json` — per-project overrides in `.cursor/workflow.config.json`; agent
-  frontmatter stays `inherit` or platform dispatch ids, not semantic tier names.
-- The exact on-disk wave-plan representation (a standalone artifact vs. an extension of the task list) and its
-  path in `docs/layout.md` — pinned during U9.
-- The `integration/<stamp>` stamp scheme and teardown cadence — pinned during U11.
+- The `integration/<stamp>` stamp scheme and teardown cadence — pinned during U11 (**deferred** with U11).
 - Whether decision-record amendments need their own INDEX column or reuse the PRD amendment-link convention —
-  decided during U3.
+  **resolved during U3:** sibling `.amendments/` layout; INDEX uses the same living-index pattern as PRDs.
+
+### Resolved during implementation
+
+- **Concrete tier→model values:** `config/workflow.config.example.json` ships `cheap: composer-2-fast`,
+  `build: composer-2`, `deep: gpt-5.5`, with `aliases.fast → cheap`.
+- **Wave-plan on-disk representation:** `scripts/wave.sh plan` writes `.cursor/pf-wave-plan.json` (JSON with
+  `waves`, `edges`, `contention` map including `prds/INDEX.md`, `decisions/INDEX.md`, `doc-numbering`).
+- **spec-union hardening (code review):** frontmatter parser reads only the first `---` block (body `---` no
+  longer injects directives); `replacement:` paths resolve relative to repo root; record supersede without
+  `replacement:` still emits empty pointer — **follow-up** to fail closed.
+- **model-tier-check tier ordering:** ranks use canonical `cheap < build < deep` regardless of JSON key order;
+  custom tier names outside `tiers` fail the role validation path.
 
 ### Resolved during planning
 
