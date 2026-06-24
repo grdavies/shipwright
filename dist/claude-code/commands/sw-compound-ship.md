@@ -34,7 +34,7 @@ sw-retro → sw-compound → [sw-memory-sync] → sw-status reconcile → sw-sta
 
 ## State (per-worktree)
 
-Via `scripts/phase-state.sh`: record `lastCommand: sw-compound-ship` and the completed sub-step when
+Via `scripts/shipwright-state.sh`: record `lastCommand: sw-compound-ship` and the completed sub-step when
 resuming with `--from`.
 
 ## Procedure

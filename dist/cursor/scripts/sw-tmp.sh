@@ -2,13 +2,13 @@
 # Per-run private temp dir for evidence files (plan 005 U4).
 #
 # Usage:
-#   sw-tmp.sh init              Create 0700 run dir; record in phase-state; print path
-#   sw-tmp.sh resolve           Print run dir ($SW_RUN_DIR → phase-state → empty)
+#   sw-tmp.sh init              Create 0700 run dir; record in shipwright-state; print path
+#   sw-tmp.sh resolve           Print run dir ($SW_RUN_DIR → shipwright-state → empty)
 #   sw-tmp.sh clean [max_age_s] Remove stale caller-owned sw-run.* dirs (default 86400)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PHASE_STATE="$ROOT/scripts/phase-state.sh"
+SHIPWRIGHT_STATE="$ROOT/scripts/shipwright-state.sh"
 # shellcheck source=evidence-read.sh
 source "$ROOT/scripts/evidence-read.sh"
 MAX_AGE="${2:-86400}"
@@ -37,7 +37,7 @@ cmd_init() {
     echo '{"error":"invalid run dir"}' >&2
     exit 2
   }
-  "$PHASE_STATE" write "$(jq -n --arg runDir "$dir" '{runDir: $runDir}')" >/dev/null
+  "$SHIPWRIGHT_STATE" write "$(jq -n --arg runDir "$dir" '{runDir: $runDir}')" >/dev/null
   printf '%s\n' "$dir"
 }
 
@@ -46,7 +46,7 @@ cmd_resolve() {
   if [[ -n "${SW_RUN_DIR:-}" ]]; then
     dir="$SW_RUN_DIR"
   else
-    dir="$("$PHASE_STATE" read 2>/dev/null | jq -r '.runDir // empty' 2>/dev/null || true)"
+    dir="$("$SHIPWRIGHT_STATE" read 2>/dev/null | jq -r '.runDir // empty' 2>/dev/null || true)"
   fi
   if [[ -n "$dir" && -d "$dir" ]]; then
     if validate_run_dir "$dir"; then

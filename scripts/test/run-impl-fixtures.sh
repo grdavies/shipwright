@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REDACT="$ROOT/scripts/memory-redact.sh"
-STATE="$ROOT/scripts/phase-state.sh"
+STATE="$ROOT/scripts/shipwright-state.sh"
 FAIL=0
 
 # --- memory-redact: AWS key ---
@@ -48,7 +48,7 @@ else
   FAIL=1
 fi
 
-# --- phase-state: independent gitdirs ---
+# --- shipwright-state: independent gitdirs ---
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 for name in wt-a wt-b; do
@@ -62,29 +62,29 @@ echo '{"phaseSlug":"b"}' >"$GB/shipwright.json"
 A=$(cd "$TMP/wt-a" && bash "$STATE" read | python3 -c "import json,sys; print(json.load(sys.stdin)['phaseSlug'])")
 B=$(cd "$TMP/wt-b" && bash "$STATE" read | python3 -c "import json,sys; print(json.load(sys.stdin)['phaseSlug'])")
 if [[ "$A" == "a" && "$B" == "b" ]]; then
-  echo "OK  phase-state isolation"
+  echo "OK  shipwright-state isolation"
 else
-  echo "FAIL phase-state isolation a=$A b=$B"
+  echo "FAIL shipwright-state isolation a=$A b=$B"
   FAIL=1
 fi
 
-# --- phase-state: write merge (inline json) ---
+# --- shipwright-state: write merge (inline json) ---
 (cd "$TMP/wt-a" && bash "$STATE" write '{"iteration":2}' >/dev/null)
 MERGED=$(cd "$TMP/wt-a" && bash "$STATE" read | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('phaseSlug'), d.get('iteration'))")
 if [[ "$MERGED" == "a 2" ]]; then
-  echo "OK  phase-state write merge"
+  echo "OK  shipwright-state write merge"
 else
-  echo "FAIL phase-state write merge got: $MERGED"
+  echo "FAIL shipwright-state write merge got: $MERGED"
   FAIL=1
 fi
 
-# --- phase-state: write via stdin with embedded quotes ---
+# --- shipwright-state: write via stdin with embedded quotes ---
 printf '%s' '{"note":"it'\''s fine","phaseSlug":"a"}' | (cd "$TMP/wt-a" && bash "$STATE" write - >/dev/null)
 QUOTED=$(cd "$TMP/wt-a" && bash "$STATE" read | python3 -c "import json,sys; print(json.load(sys.stdin).get('note',''))")
 if [[ "$QUOTED" == "it's fine" ]]; then
-  echo "OK  phase-state write stdin quotes"
+  echo "OK  shipwright-state write stdin quotes"
 else
-  echo "FAIL phase-state write stdin quotes got: $QUOTED"
+  echo "FAIL shipwright-state write stdin quotes got: $QUOTED"
   FAIL=1
 fi
 

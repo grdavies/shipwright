@@ -23,7 +23,7 @@ Load `skills/worktree/SKILL.md` for scaffold schema and guardrails.
 1. Read `workflow.config.json` → `worktree`, `defaultBaseBranch`.
 2. Run `ceiling-check`; if at ceiling, hand off to recombination (`skills/parallelism`) — do not fan out.
 3. Provision via `scripts/worktree.sh provision`.
-4. `cd` into the new worktree path; confirm state via `scripts/phase-state.sh read`.
+4. `cd` into the new worktree path; confirm state via `scripts/shipwright-state.sh read`.
 5. Next step: `/sw-start` inside the worktree.
 
 ## Procedure (teardown)

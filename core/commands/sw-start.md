@@ -6,7 +6,7 @@ alwaysApply: false
 # `/sw-start`
 
 Create a phase child branch from the current branch **inside the active worktree** and record context in
-per-worktree state (`scripts/phase-state.sh`).
+per-worktree state (`scripts/shipwright-state.sh`).
 
 ## Branch prefix
 
@@ -22,7 +22,7 @@ Shape: `<prefix>/<stem>-phase-<slug>` — no nested refs (`feat/foo/phase-bar` w
 
 ## Procedure
 
-1. Read `workflow.config.json`; resolve state via `skills/phase-state`.
+1. Read `workflow.config.json`; resolve state via `skills/shipwright-state`.
 2. Confirm you are in a worktree (not bare main for implementation work). If not, `/sw-worktree provision` first.
 3. `git branch --show-current` — stop on detached HEAD.
 4. `memory-preflight` read only on non-routine parent/prefix decisions.
@@ -30,7 +30,7 @@ Shape: `<prefix>/<stem>-phase-<slug>` — no nested refs (`feat/foo/phase-bar` w
 6. Parent = current branch. For non-hotfix/release on `main`, suggest `defaultBaseBranch` first.
 7. Confirm dirty tree belongs on the new phase branch.
 8. `git checkout -b <prefix>/<stem>-phase-<slug>`.
-9. `bash scripts/phase-state.sh write` with `parentBranch`, `currentBranch`, `phaseSlug`, `branchPrefix`, `startedAt`, optional `issueNumbers`.
+9. `bash scripts/shipwright-state.sh write` with `parentBranch`, `currentBranch`, `phaseSlug`, `branchPrefix`, `startedAt`, optional `issueNumbers`.
 10. Report branch + next `/sw-execute`.
 
 ## Guardrails

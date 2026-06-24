@@ -1,9 +1,9 @@
 ---
-name: sw-phase-state
+name: sw-shipwright-state
 description: Per-worktree Shipwright state read/write contract. Resolves state path in the worktree gitdir; aggregates a read-only repo index from all worktrees.
 ---
 
-# Per-worktree phase state
+# Per-worktree Shipwright state
 
 Phase context lives in the **worktree gitdir**, not a shared repo-global file.
 
@@ -17,7 +17,7 @@ Phase context lives in the **worktree gitdir**, not a shared repo-global file.
 Resolve with:
 
 ```bash
-bash scripts/phase-state.sh path
+bash scripts/shipwright-state.sh path
 ```
 
 ## Fields
@@ -42,9 +42,9 @@ bash scripts/phase-state.sh path
 ## Operations
 
 ```bash
-bash scripts/phase-state.sh read
-bash scripts/phase-state.sh write '{"phaseSlug":"auth-api","parentBranch":"main"}'
-bash scripts/phase-state.sh index   # read-only aggregate — never write a shared index file
+bash scripts/shipwright-state.sh read
+bash scripts/shipwright-state.sh write '{"phaseSlug":"auth-api","parentBranch":"main"}'
+bash scripts/shipwright-state.sh index   # read-only aggregate — never write a shared index file
 ```
 
 ## Guardrails

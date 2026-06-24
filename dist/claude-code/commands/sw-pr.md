@@ -10,7 +10,7 @@ Push after `/sw-commit`; create/update PR against the real parent branch.
 ## Parent resolution
 
 1. `gh pr view --json number,url,baseRefName,headRefName,isDraft,state` on current branch.
-2. If no PR → `scripts/phase-state.sh read` → `parentBranch`.
+2. If no PR → `scripts/shipwright-state.sh read` → `parentBranch`.
 3. Never guess from `main` or merge-base.
 
 ## Procedure

@@ -67,7 +67,7 @@ bash scripts/verify-evidence.sh \
 ```
 
 `--pr-context auto` (default) derives gate requirement from offline signals: upstream divergence, CI env
-(`GITHUB_HEAD_REF`, PR number), phase-state PR field, or a supplied gate path. Pin `--pr-context off` in
+(`GITHUB_HEAD_REF`, PR number), shipwright-state PR field, or a supplied gate path. Pin `--pr-context off` in
 fixtures for determinism.
 
 Prints verdict JSON to stdout. Exit code mirrors verdict (`0` / `10` / `20`). Schema:
@@ -97,7 +97,7 @@ Rejected baseline reads → `missing-required`, never silent downgrade.
 
 ### Override record
 
-Append via `scripts/phase-state.sh override-add` (never shallow `write` — it clobbers `overrides[]`):
+Append via `scripts/shipwright-state.sh override-add` (never shallow `write` — it clobbers `overrides[]`):
 
 `{who: git user.email, when: ISO-8601, verdictOverridden, inconclusiveClass, reason}` — `reason` redacted via
 `scripts/memory-redact.sh`; duplicate fields in commit trailer `Verification-Override:`. Override never

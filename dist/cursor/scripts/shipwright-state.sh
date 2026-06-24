@@ -7,12 +7,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  phase-state.sh path              Print resolved state file path for current checkout
-  phase-state.sh read              Print state JSON (empty object if missing)
-  phase-state.sh write <json|-)>   Merge JSON object into state file (- = stdin)
-  phase-state.sh override-add <json|-)>  Append one override record (read-modify-write)
-  phase-state.sh init <json|-)>    Replace state file with JSON object (- = stdin)
-  phase-state.sh index             Aggregate state from all linked worktrees (read-only)
+  shipwright-state.sh path              Print resolved state file path for current checkout
+  shipwright-state.sh read              Print state JSON (empty object if missing)
+  shipwright-state.sh write <json|-)>   Merge JSON object into state file (- = stdin)
+  shipwright-state.sh override-add <json|-)>  Append one override record (read-modify-write)
+  shipwright-state.sh init <json|-)>    Replace state file with JSON object (- = stdin)
+  shipwright-state.sh index             Aggregate state from all linked worktrees (read-only)
 EOF
 }
 
