@@ -3,35 +3,41 @@ title: "feat: Loop improvement program (cross-loop quality gates + skill adoptio
 type: feat
 date: 2026-06-23
 origin: docs/brainstorms/2026-06-23-loop-improvement-program-requirements.md
-status: planned
+status: done
 depth: deep
-branch: ""
-commit: ""
-pr: ""
+branch: feat/loop-improvement-wave1
+commit: 26101191a413c9273ba09f2bbdad22cae8cc85d2
+pr: 6
 ---
 
 # feat: Loop improvement program (cross-loop quality gates + skill adoption)
 
 Nine improvements (IM1–IM9) across the document, implementation, and debugging loops, delivered in three
-dependency-ordered phases. Wave 1 (foundations) is planned to full implementation-unit depth; Waves 2–3 are
-planned as directional units whose execution-time specifics are deferred until their dependencies land.
+dependency-ordered waves. **All ten units (U1–U10) shipped** and merged via PR #6
+(`feat/loop-improvement-wave1`) at merge commit `2610119` on 2026-06-23 — including the Wave 2–3 units that
+were originally planned at a directional altitude, which were carried to full implementation in the same
+program. The directional framing in the unit bodies below reflects the *plan-time* commitment level and is
+retained for historical context; see the status table for what actually landed.
 
 ## Implementation Status
 
-| Unit | IM | Wave | Status | Notes |
-| --- | --- | --- | --- | --- |
-| U1 | IM1 | 1 | planned | Verification-gate skill + `scripts/verify-evidence.sh` + fixtures |
-| U2 | IM1 | 1 | planned | Wire verification gate into commit/ship/ready |
-| U3 | IM2 | 1 | planned | Route `/pf-stabilize` through `rca-core` stabilize entry |
-| U4 | IM2 | 1 | planned | Debugging hardening: dev-time entry, repro-first, rule-of-three, regression test, bisect |
-| U5 | IM3 | 1 | planned | Post-merge compound orchestrator command |
-| U6 | IM4 | 2 | conditional | Spec-rigor gates + R-ID→task→test traceability (benefits from conditional-personas spec) |
-| U7 | IM5+IM6 | 2 | directional | Execute discipline: TDD gate + subagent two-stage review + executable-plan granularity (extends existing `/pf-execute`) |
-| U8 | IM7 | 3 | conditional | Simplification / deslop pass (depends on local-code-review spec) |
-| U9 | IM8 | 3 | directional | Feedback closure loop |
-| U10 | IM9 | 3 | directional | E2E / smoke verify adapter |
+**Program status: ✅ done** — merged via [PR #6](https://github.com/grdavies/currsor-phase-flow-2/pull/6)
+(`feat/loop-improvement-wave1`), merge commit `2610119`, 2026-06-23.
 
-**Verification:** `scripts/test/run-improvement-fixtures.sh` (created in U1, extended through U5), registered in
+| Unit | IM | Wave | Status | Commit | Notes |
+| --- | --- | --- | --- | --- | --- |
+| U1 | IM1 | 1 | ✅ done | `98557be` | Verification-gate skill + `scripts/verify-evidence.sh` + fixtures |
+| U2 | IM1 | 1 | ✅ done | `56521be` | Gate wired into commit/ship/review; `pf-ready` intentionally gate-free (CI-only) |
+| U3 | IM2 | 1 | ✅ done | `89fca89` | Route `/pf-stabilize` through `rca-core` stabilize entry |
+| U4 | IM2 | 1 | ✅ done | `6b9a2e6` | Debugging hardening: dev-time entry, repro-first, rule-of-three, regression test, bisect |
+| U5 | IM3 | 1 | ✅ done | `7d3dc25` | Post-merge compound orchestrator command |
+| U6 | IM4 | 2 | ✅ done | `6dfe44d` | Spec-rigor gates + R-ID→task→test traceability |
+| U7 | IM5+IM6 | 2 | ✅ done | `c519da4` | Execute discipline: TDD gate + subagent two-stage review (extends `/pf-execute`) |
+| U8 | IM7 | 3 | ✅ done | `f4b768d` | Simplification / deslop pass |
+| U9 | IM8 | 3 | ✅ done | `f2e41d3` | Feedback closure loop (`prds/GAP-BACKLOG.md` consumption) |
+| U10 | IM9 | 3 | ✅ done | `fdeaab3` | E2E / smoke verify adapter (`providers/verify/`); hardened in `449b65f` |
+
+**Verification:** `scripts/test/run-improvement-fixtures.sh` (created in U1, extended through U10), registered in
 `.cursor/workflow.config.json` → `verify.test`.
 
 ---
@@ -40,9 +46,10 @@ planned as directional units whose execution-time specifics are deferred until t
 
 phase-flow v2 has a complete loop graph but unevenly gated steps. This plan closes the highest-leverage gaps
 identified in the origin brainstorm: an evidence-over-claims verification gate, a unified root-cause
-discipline, a post-merge compounding orchestrator, plus directional plans for spec rigor, execute discipline,
-simplification, feedback closure, and E2E verification. Wave 1 is build-ready and self-contained; Waves 2–3
-build on Wave 1 primitives and two in-flight specs and are therefore planned at a directional altitude.
+discipline, a post-merge compounding orchestrator, plus spec rigor, execute discipline, simplification,
+feedback closure, and E2E verification. Wave 1 landed the self-contained foundations; Waves 2–3, originally
+scoped at a directional altitude on Wave-1 primitives and two in-flight specs, were carried to full
+implementation in the same program (see Implementation Status).
 
 The plan honors the plugin's frozen requirements and guardrails: `pf-` naming, R41 redaction at ingestion
 edges, checks-gate authority (`scripts/check-gate.sh` is the only green oracle), R29 loop hard stops, R42
@@ -63,8 +70,8 @@ Two grounding corrections from repo research shaped this plan:
 
 - `commands/pf-execute.md` is **already implemented** (impl plan 003, U3 Done) — IM5/IM6 *extend* it, they do
   not build it.
-- `commands/pf-stabilize.md` currently has **zero** references to `skills/rca-core/SKILL.md`, confirming the
-  broken R35 promise IM2 repairs.
+- `commands/pf-stabilize.md` had **zero** references to `skills/rca-core/SKILL.md` at plan time, confirming
+  the broken R35 promise IM2 repaired (fixed in U3).
 
 ---
 
@@ -127,11 +134,16 @@ U5 creates `commands/pf-compound-ship.md` that delegates to existing `pf-retro` 
 (optional `pf-memory-sync`) → `pf-status reconcile`/`append-log` atomics. It never reimplements them, never
 auto-promotes rule-class memories (R42), and fires only after the human merge gate.
 
-**KTD5 — Waves 2–3 extend existing surfaces and are planned directionally.** `pf-execute` already exists, so
-IM5/IM6 attach to its steps; IM9 adds a *new* verify-provider selector modeled on `check-gate.sh`'s
-adapter-exec pattern (not a structural copy of `pf-verify`, which has no dispatch logic to mirror). The
-local-code-review spec is an external **dependency** for U8; the conditional-personas spec is a non-blocking
-**input** that U6 benefits from. Both live in their own docs and are not re-planned here.
+**KTD5 — Waves 2–3 extend existing surfaces (planned directionally; carried to implementation — see Status).**
+`pf-execute` already exists, so IM5/IM6 attach to its steps; IM9 adds a *new* verify-provider selector modeled
+on `check-gate.sh`'s adapter-exec pattern (not a structural copy of `pf-verify`, which has no dispatch logic to
+mirror). The local-code-review spec was scoped as an external integration point for U8 and the
+conditional-personas spec as a non-blocking input for U6; in the end both units shipped without waiting on
+those specs, which remain separate follow-ups (see "Related external specs" below).
+
+**KTD6 — Tests follow the established workstream convention.** `scripts/test/run-improvement-fixtures.sh`
+(created in U1, extended through U10) uses golden fixtures for the executable verdict helper and structural
+greps for markdown wiring, then registers into `.cursor/workflow.config.json` → `verify.test`.
 
 **KTD7 — Cumulative gate friction is bounded by a program-level principle.** The program stacks several gates
 (verification, spec-rigor, TDD, simplification, E2E) on a captive internal user. To avoid over-gating the loop
@@ -139,10 +151,6 @@ local-code-review spec is an external **dependency** for U8; the conditional-per
 **default-on for risky changes with a lightweight path for trivial ones**, and gates stay additive/advisory
 unless a block is clearly earned by a fresh attributable failure. Any human override is a single, logged,
 auditable decision (R42-style human-gating); it can never suppress a red `check-gate.sh`/CI verdict.
-
-**KTD6 — Tests follow the established workstream convention.** `scripts/test/run-improvement-fixtures.sh`
-(created in U1, extended through U5) uses golden fixtures for the executable verdict helper and structural
-greps for markdown wiring, then registers into `.cursor/workflow.config.json` → `verify.test`.
 
 ---
 
@@ -162,12 +170,12 @@ flowchart TB
     U1 --> U2
     U3 --> U4
   end
-  subgraph W2[Wave 2 — doc + execute rigor - directional]
+  subgraph W2[Wave 2 — doc + execute rigor - shipped]
     U6[U6 spec-rigor gates + R-ID->task->test traceability]
     U7[U7 execute discipline: TDD + subagent two-stage review]
     U6 --> U7
   end
-  subgraph W3[Wave 3 — quality + lifecycle - directional]
+  subgraph W3[Wave 3 — quality + lifecycle - shipped]
     U8[U8 simplify / deslop pass]
     U9[U9 feedback closure loop]
     U10[U10 E2E / smoke verify adapter]
@@ -415,26 +423,27 @@ U2 (needs U1) and U4 (needs U3): `U3 ∥ U5 ∥ U1 → U2, U4` (Wave 1). Then U6
 
 ### In scope
 
-The nine improvements (IM1–IM9) are addressed, but at honestly different commitment levels — the "all nine"
-claim is conditional, not a promise of nine shippable units today:
+The nine improvements (IM1–IM9) were addressed in full. The plan-time commitment levels (below) were all
+resolved upward — every unit shipped via PR #6, including the units originally scoped as conditional or
+directional:
 
-- **Committed / build-ready:** U1–U5 (IM1–IM3), planned to full depth.
-- **Conditional on external specs:** U6 (benefits from conditional-personas), U8 (depends on local-code-review).
-- **Provisional / directional:** U7, U9, U10 — execution-time specifics deferred until Wave 1 primitives land.
+- **Committed / build-ready (shipped):** U1–U5 (IM1–IM3), planned and delivered to full depth.
+- **Conditional on external specs (shipped):** U6, U8 — built without waiting on the external specs they were
+  scoped to benefit from / depend on.
+- **Provisional / directional (shipped):** U7, U9, U10 — carried from directional altitude to implementation
+  in the same program.
 
-If an external dependency never lands, its dependent unit is re-scoped, not built on unstable ground (see Risks).
+The "re-scope rather than build on unstable ground" contingency below was not exercised — all units landed.
 
 ### Deferred to Follow-Up Work
 
-- Full per-unit depth for Waves 2–3 — re-plan each to implementation depth when its dependencies (Wave 1
-  primitives + the in-flight specs) land.
 - `ce-sessions` prior-attempt retrieval (origin item J) — re-evaluate after Wave 1.
 - git-bisect tooling beyond the optional step documented in U4.
 
-### External prerequisites (not planned here)
+### Related external specs (separate follow-ups)
 
-- Local multi-agent code review in `/pf-review` — `docs/brainstorms/2026-06-23-local-code-review-loop-integration-requirements.md` (U8 depends on it).
-- Conditional doc-persona selection — `docs/brainstorms/2026-06-23-conditional-review-personas-requirements.md` (U6 benefits from it).
+- Local multi-agent code review in `/pf-review` — `docs/brainstorms/2026-06-23-local-code-review-loop-integration-requirements.md` (U8 was scoped to integrate with it but shipped independently; spec remains a separate follow-up).
+- Conditional doc-persona selection — `docs/brainstorms/2026-06-23-conditional-review-personas-requirements.md` (U6 was scoped to benefit from it but shipped independently; spec remains a separate follow-up).
 
 ### Outside this plan
 
@@ -443,26 +452,67 @@ If an external dependency never lands, its dependent unit is re-scoped, not buil
 
 ---
 
-## Open Questions
+## Resolved Questions
 
-- **U1 verdict helper surface** — shell script vs. agent-only evaluation. Leaning shell for testability;
-  resolve in U1 execution.
-- **U6 gate weight** — clarify/checklist/analyze always-on vs. tier-gated; interacts with the conditional-
-  personas spec. Deferred to U6 depth-planning.
-- **U7 TDD shape** — gate vs. execute mode; resolve when U7 is planned to depth.
+These plan-time open questions were settled during implementation (all units shipped via PR #6):
+
+- **U1 verdict helper surface** — resolved to a shell helper (`scripts/verify-evidence.sh`) for testability,
+  as leaned toward at plan time.
+- **U6 gate weight** — clarify/checklist/analyze weight resolved during U6 implementation (`6dfe44d`).
+- **U7 TDD shape** — gate vs. execute mode resolved during U7 implementation (`c519da4`).
 
 ---
 
 ## Risks & Dependencies
 
-- **Wave 2–3 dependency slip.** U6/U7/U8 lean on Wave 1 primitives and the two in-flight specs. If those slip,
-  re-scope the directional units rather than building on unstable ground.
+- **Wave 2–3 dependency slip (did not materialize).** U6/U7/U8 were scoped to lean on Wave-1 primitives and
+  two in-flight specs; the re-scope contingency was not needed — all units landed in the same program.
 - **Stabilize regression risk (U3).** Routing through `rca-core` must not drop reply-before-resolve, per-head
   recompute, or checks-gate authority — covered by structural tests.
 - **No-auto-fix discipline.** None of these units may auto-apply fixes or hand-roll a green verdict; the
   verification gate is additive to `check-gate.sh`, never an override.
 - **Redaction at new edges (R41).** Any evidence summary or closure record persisted to memory runs through
   `scripts/memory-redact.sh`.
+
+---
+
+## Post-Ship Review Findings
+
+A multi-persona `ce-doc-review` of this as-built plan (2026-06-23) surfaced the following follow-ups against
+the shipped verification-gate primitive and the program's ship-all-at-once execution. They are recorded here as
+backlog, not as changes to what shipped; the gate-hardening items (TB1–TB5) are tracked for a dedicated
+follow-up brainstorm.
+
+- **TB1 (high) — Verdict attribution too coarse to catch regressions.** `scripts/verify-evidence.sh`
+  fingerprints only `{exitCode, status}` and discards the per-command names the schema carries, so a head that
+  fixes one test while breaking another produces an identical fingerprint and is classed "pre-existing
+  unchanged" — a real regression can reach `verified`/`inconclusive` and pass the pre-CI gate.
+- **TB2 (high) — The gate is fail-open by construction.** `not-verified` is only reachable with a pre-captured
+  baseline that has no producer/owner, and a producer that simply does not run degrades to
+  `inconclusive`→continue (more lenient than running-and-failing). Skipping a step is therefore the cheapest
+  pass, and evidence suppression equals gate bypass.
+- **TB3 (high) — Evidence substrate is untrusted.** Fixed-path `/tmp` status files have no
+  permission/ownership/integrity model (verdict forgery / TOCTOU on shared runners); R41 redaction is bound
+  only to the memory edge, so raw logs/diffs sit in `/tmp` in plaintext with no TTL/cleanup; the
+  symlink-to-latest-review-log option adds a symlink-follow vector.
+- **TB4 (medium) — Override / lightweight-path audit trail underspecified.** The R42 "auditable" override
+  never specifies record location, fields, or tamper-resistance, and KTD7's "lightweight path for trivial
+  changes" is an undefined, unowned, unlogged escape hatch — strictly more attractive than the audited
+  override.
+- **TB5 (medium) — "Gate required when a PR exists" is caller-asserted.** `--require-gate` has no PR detection
+  in the helper; a forgotten flag silently drops the CI-gate evidence requirement.
+- **TB6 (high) — `done` may overstate completion for U6–U10.** The status flip retained directional unit
+  bodies (acceptance bar never written; open decisions resolved only implicitly) with likely structural-grep
+  test coverage for the directional half — a traceability gap that undercuts the program's own IM4 thesis.
+- **TB7 (medium) — Ship-all-at-once reversed the plan's own risk posture.** All ten units merged in one PR
+  despite the documented "re-scope rather than build on unstable ground" stance, without recording why it was
+  safe; U8 shipped `done` while its stated hard dependency (local code review) is still unbuilt — a
+  false-green, the exact pattern IM1 exists to prevent. A staged "ship Wave 1 → validate the friction bet →
+  Waves 2–3" sequence was the lower-risk alternative.
+- **TB8 (fyi) — The friction bet is unobservable.** Workaround risk (routing around gates with raw git) is
+  named but has no usage signal; cumulative friction is argued per-gate but never summed across the five
+  stacked gates; the friction-bounding classifier is deferred, so the "default-on for risky / lightweight for
+  trivial" bound could silently collapse.
 
 ---
 
