@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "platforms/descriptor.schema.json",
+  "title": "phase-flow platform capability descriptor (M0–M3)",
+  "description": "M1-scoped capability vocabulary. Tier-2/transport values (wrapper, emulated, http, cli, etc.) are forward-declared in M4, not admitted here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "platform",
+    "hooks",
+    "skills",
+    "commands",
+    "rules",
+    "subagents",
+    "mcp",
+    "memoryXport"
+  ],
+  "properties": {
+    "platform": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Platform id (e.g. cursor, claude-code)."
+    },
+    "hooks": {
+      "type": "string",
+      "enum": ["native", "none"]
+    },
+    "skills": {
+      "type": "string",
+      "enum": ["native", "none"]
+    },
+    "commands": {
+      "type": "string",
+      "enum": ["slash-md", "none"]
+    },
+    "rules": {
+      "type": "string",
+      "enum": ["mdc", "claude-md", "none"]
+    },
+    "subagents": {
+      "type": "string",
+      "enum": ["native", "none"]
+    },
+    "mcp": {
+      "type": "string",
+      "enum": ["yes", "no"]
+    },
+    "memoryXport": {
+      "type": "string",
+      "enum": ["mcp"]
+    }
+  }
+}
