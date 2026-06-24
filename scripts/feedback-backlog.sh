@@ -10,7 +10,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CMD="${1:-}"
 shift || true
 
-BACKLOG="${BACKLOG:-$ROOT/prds/GAP-BACKLOG.md}"
+BACKLOG="${BACKLOG:-$ROOT/docs/prds/GAP-BACKLOG.md}"
 OPEN_ONLY=0
 SIGNAL_ID=""
 CLOSE_DATE=""
