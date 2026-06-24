@@ -2,6 +2,7 @@
 # Pre-freeze spec-rigor gate: clarify + checklist (PRD) or analyze (tasks).
 # Usage:
 #   spec-rigor-check.sh --artifact prd --path FILE [--tier full|standard]
+#   spec-rigor-check.sh --artifact decision --path FILE [--tier full|standard]
 #   spec-rigor-check.sh --artifact tasks --path FILE --prd PRD_PATH
 # Exit: 0 pass, 10 warn, 20 fail
 set -euo pipefail
@@ -19,7 +20,7 @@ while [[ $# -gt 0 ]]; do
     --tier) TIER="${2:-}"; shift 2 ;;
     --prd) PRD_PATH="${2:-}"; shift 2 ;;
     -h|--help)
-      echo "usage: spec-rigor-check.sh --artifact prd|tasks --path FILE [--tier full|standard] [--prd PRD]"
+      echo "usage: spec-rigor-check.sh --artifact prd|decision|tasks --path FILE [--tier full|standard] [--prd PRD]"
       exit 0
       ;;
     *) echo '{"verdict":"fail","error":"unknown argument"}' >&2; exit 2 ;;
@@ -47,6 +48,7 @@ findings = []
 AMBIGUITY = re.compile(r"\b(TBD|TODO|FIXME|\?\?\?|to be determined)\b", re.I)
 RID_LINE = re.compile(r"^- \*\*(R\d+)\*\*\s*(.*)$", re.M)
 RID_INLINE = re.compile(r"\bR\d+\b")
+DID_LINE = re.compile(r"^- \*\*(D\d+)\*\*\s*(.*)$", re.M)
 
 def add(gate, severity, message, rid=None):
     f = {"gate": gate, "severity": severity, "message": message}
@@ -98,6 +100,37 @@ if artifact == "prd":
         worst = "warn"
 
     out = {"verdict": worst, "artifact": "prd", "tier": tier, "findings": findings}
+    print(json.dumps(out, ensure_ascii=False))
+    sys.exit(0 if worst == "pass" else 10 if worst == "warn" else 20)
+
+elif artifact == "decision":
+    dids = []
+    for m in DID_LINE.finditer(text):
+        did, body = m.group(1), m.group(2).strip()
+        dids.append(did)
+        if AMBIGUITY.search(body):
+            add("checklist", "error", f"ambiguity marker in {did}", did)
+        if len(body) < 12:
+            add("checklist", "warn", f"requirement text very short in {did}", did)
+
+    if not dids:
+        add("checklist", "error", "no D-IDs found in Decision bullets")
+
+    dupes = {d for d in dids if dids.count(d) > 1}
+    for d in sorted(dupes):
+        add("checklist", "error", f"duplicate D-ID {d}", d)
+
+    for sec in ("Context", "Decision", "Rationale", "Alternatives", "Consequences"):
+        if not re.search(rf"^##\s+{re.escape(sec)}\s*$", text, re.M | re.I):
+            add("checklist", "error", f"missing section: {sec}")
+
+    worst = "pass"
+    if any(f["severity"] == "error" for f in findings):
+        worst = "fail"
+    elif any(f["severity"] == "warn" for f in findings):
+        worst = "warn"
+
+    out = {"verdict": worst, "artifact": "decision", "tier": tier, "findings": findings}
     print(json.dumps(out, ensure_ascii=False))
     sys.exit(0 if worst == "pass" else 10 if worst == "warn" else 20)
 

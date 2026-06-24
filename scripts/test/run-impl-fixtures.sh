@@ -190,6 +190,59 @@ else
   FAIL=1
 fi
 
+# --- U6/U7: model tier map + check ---
+MODEL_CHECK="$ROOT/scripts/model-tier-check.sh"
+EXAMPLE_CONFIG="$ROOT/config/workflow.config.example.json"
+
+if grep -q '"models"' "$ROOT/docs/config.schema.json"; then
+  echo "OK  config.schema documents models"
+else
+  echo "FAIL config.schema missing models"
+  FAIL=1
+fi
+
+set +e
+OUT=$(bash "$MODEL_CHECK" --config "$EXAMPLE_CONFIG" 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 0 ]] && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('verdict')=='pass' and d.get('inheritReviewers',0)>=7 else 1)"; then
+  echo "OK  model-tier-check: example config + inherit reviewers pass"
+else
+  echo "FAIL model-tier-check example (ec=$EC)"
+  FAIL=1
+fi
+
+# Negative: concrete model below builder floor
+TMP_AGENTS=$(mktemp -d)
+cp "$ROOT/agents/pf-coherence-reviewer.md" "$TMP_AGENTS/"
+printf '%s\n' '---' 'name: pf-coherence-reviewer' 'description: test' 'model: fast' '---' > "$TMP_AGENTS/pf-coherence-reviewer.md"
+set +e
+OUT=$(bash "$MODEL_CHECK" --config "$EXAMPLE_CONFIG" --agents-dir "$TMP_AGENTS" 2>/dev/null)
+EC=$?
+set -e
+rm -rf "$TMP_AGENTS"
+if [[ "$EC" -eq 20 ]] && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('verdict')=='fail' else 1)"; then
+  echo "OK  model-tier-check: fast reviewer below build floor → fail"
+else
+  echo "FAIL model-tier-check sub-floor case (ec=$EC)"
+  FAIL=1
+fi
+
+if grep -q 'inherit' "$ROOT/docs/models-tiering.md" && grep -q 'R9 runtime contract' "$ROOT/rules/pf-subagent-dispatch.mdc"; then
+  echo "OK  models-tiering doc + runtime R9 dispatch rule"
+else
+  echo "FAIL models-tiering / runtime R9 wiring"
+  FAIL=1
+fi
+
+if grep -q 'invariantsFile' "$ROOT/docs/config.schema.json" && \
+   grep -q 'invariantsFile' "$ROOT/commands/pf-doc-review.md"; then
+  echo "OK  invariantsFile wired to doc-review"
+else
+  echo "FAIL invariantsFile wiring"
+  FAIL=1
+fi
+
 if [[ $FAIL -eq 0 ]]; then
   echo "ALL implementation fixtures passed"
 else

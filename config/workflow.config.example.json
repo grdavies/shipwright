@@ -4,6 +4,7 @@
   "stateFile": ".git/phase-flow.json",
   "agentsFile": "AGENTS.md",
   "prdsDir": "prds",
+  "decisionsDir": "decisions",
   "tasksDir": "prds",
   "verify": {
     "lint": "echo 'configure verify.lint for your repo'",
@@ -49,6 +50,21 @@
       "dbTemplate": ""
     }
   },
+  "models": {
+    "tiers": {
+      "deep": "gpt-5.5",
+      "build": "composer-2",
+      "cheap": "composer-2-fast"
+    },
+    "aliases": {
+      "fast": "cheap"
+    },
+    "roles": {
+      "builder": "build",
+      "reviewer": "build"
+    }
+  },
+  "invariantsFile": "INVARIANTS.md",
   "memory": {
     "provider": "in-repo",
     "project": "my-project",

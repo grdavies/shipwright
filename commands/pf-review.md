@@ -25,7 +25,10 @@ Two-phase local review over the uncommitted delta: **phase 1** = local multi-age
    `Local review skipped — ce-code-review skill not available.` and skip to phase 2 (fail-closed;
    **never** treat as clean pass). No `native` fallback (deferred YAGNI).
 4. `memory-preflight` read for known false-positives and file learnings.
-5. Compute `base` = per-worktree `parentBranch` from phase state.
+5. **Invariants (optional):** when `invariantsFile` is set, resolve relative to the review ref (PR head /
+   worktree base). Surface to local review agents as non-negotiable constraints. Missing/unreadable blocks this
+   review unless `invariantsOptional: true` or `--no-invariants` (logged).
+6. Compute `base` = per-worktree `parentBranch` from phase state.
 6. Invoke adapter per `providers/code-review/ce-code-review.md`:
 
    ```

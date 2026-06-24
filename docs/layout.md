@@ -21,6 +21,16 @@ prds/
     ├── tasks-<n>-<slug>.md
     └── amendments/
         └── A<k>-<short>.md
+
+decisions/
+├── INDEX.md
+├── SUPERSEDED.log          # append-only manifest (written on record-level supersede)
+├── <n>-<slug>.md
+└── <n>-<slug>.amendments/
+    └── A<k>-<short>.md
+
+.cursor/
+└── pf-wave-plan.json       # wave plan artifact (living, written by /pf-wave plan)
 ```
 
 ## Naming conventions
@@ -32,7 +42,10 @@ prds/
 | PRD | `prds/<n>-<slug>/<n>-prd-<slug>.md` | `/pf-prd` | `/pf-freeze` |
 | Task list | `prds/<n>-<slug>/tasks-<n>-<slug>.md` | `/pf-tasks` | `/pf-freeze` |
 | PRD amendment | `prds/<n>-<slug>/amendments/A<k>-<short>.md` | `/pf-amend` | `/pf-freeze` |
+| Decision record | `decisions/<n>-<slug>.md` | `/pf-prd --type decision` | `/pf-freeze` |
+| Decision amendment | `decisions/<n>-<slug>.amendments/A<k>-<short>.md` | `/pf-amend` | `/pf-freeze` |
 | Living index | `prds/INDEX.md` | `/pf-freeze`, `/pf-tasks` | never |
+| Decision index | `decisions/INDEX.md` | `/pf-freeze` | never |
 | Completion log | `prds/COMPLETION-LOG.md` | implementation workstream | never |
 | Gap backlog | `prds/GAP-BACKLOG.md` | `/pf-feedback` (Phase 2) | never |
 
@@ -41,6 +54,12 @@ prds/
 - Zero-padded monotonic integer (`001`, `002`, …).
 - Assign by scanning `prds/` for the highest existing `<n>` and incrementing.
 - Collision policy: same feature re-run → new `<n>` + distinct slug; never overwrite without explicit confirmation.
+
+### Decision record numbering (`<n>`)
+
+- Zero-padded monotonic integer (`001`, `002`, …).
+- Assign by scanning `decisions/` for the highest existing `<n>` and incrementing — **separate counter from `prds/`**.
+- Collision policy: same topic re-run → new `<n>` + distinct slug; never overwrite without explicit confirmation.
 
 ### Slug (`<slug>`)
 
@@ -96,8 +115,9 @@ Amendment body is **delta-only** — parent file is never edited.
 | `/pf-triage` | user input, file list | tier decision (no files) |
 | `/pf-brainstorm` | user dialogue | `docs/brainstorms/...-requirements.md` |
 | `/pf-prd` | brainstorm (Full) or triaged request (Standard) | `prds/<n>-<slug>/<n>-prd-<slug>.md` |
-| `/pf-doc-review` | PRD draft | in-place edits (pre-freeze only) |
-| `/pf-freeze` | target artifact | `frozen: true` frontmatter, `prds/INDEX.md` entry |
+| `/pf-prd --type decision` | optional brainstorm; up-front cross-cutting decision | `decisions/<n>-<slug>.md` |
+| `/pf-doc-review` | PRD or decision-record draft | in-place edits (pre-freeze only) |
+| `/pf-freeze` | target artifact | `frozen: true` frontmatter; `prds/INDEX.md` or `decisions/INDEX.md` entry |
 | `/pf-amend` | frozen parent PRD | `prds/<n>-<slug>/amendments/A<k>-<short>.md` |
 | `/pf-tasks` | frozen PRD + union | `prds/<n>-<slug>/tasks-<n>-<slug>.md`, `INDEX.md` |
 | `/pf-doc` | tier from triage | delegates to above |
@@ -114,3 +134,4 @@ Amendment body is **delta-only** — parent file is never edited.
 
 - `prdsDir`: `"prds"` — PRD root (per-PRD subdirs live beneath).
 - `tasksDir`: `"prds"` — task lists co-locate with their PRD (`prds/<n>-<slug>/tasks-...`).
+- `decisionsDir`: `"decisions"` — decision-record root (flat files + sibling `.amendments/` dirs).
