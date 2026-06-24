@@ -1,10 +1,10 @@
 {
-  "$schema": "../../../docs/config.schema.json",
+  "$schema": "../../../.pf/config.schema.json",
   "defaultBaseBranch": "main",
   "stateFile": ".git/phase-flow.json",
   "agentsFile": "AGENTS.md",
-  "prdsDir": "prds",
-  "tasksDir": "prds",
+  "prdsDir": "docs/prds",
+  "tasksDir": "docs/prds",
   "verify": {
     "test": "echo ok"
   },

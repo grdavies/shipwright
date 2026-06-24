@@ -905,7 +905,7 @@ fi
 # --- U10: E2E / smoke verify adapter (IM9) ---
 VERIFY_E2E="$ROOT/scripts/verify-e2e.sh"
 VERIFY_CAPS="$ROOT/providers/verify/CAPABILITIES.md"
-CONFIG_SCHEMA="$ROOT/docs/config.schema.json"
+CONFIG_SCHEMA="$ROOT/.pf/config.schema.json"
 FIX_E2E="$ROOT/scripts/test/fixtures/verify-e2e"
 
 if [[ -f "$VERIFY_CAPS" ]] && [[ -x "$VERIFY_E2E" ]] && \

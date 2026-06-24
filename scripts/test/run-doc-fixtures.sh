@@ -50,17 +50,17 @@ git init -q "$TMPGIT"
   cd "$TMPGIT"
   git config user.email "test@example.com"
   git config user.name "Test"
-  mkdir -p prds/test
-  cat > prds/test/frozen-prd.md <<'EOF'
+  mkdir -p docs/prds/test
+  cat > docs/prds/test/frozen-prd.md <<'EOF'
 ---
 frozen: true
 ---
 # Frozen
 EOF
-  git add prds/test/frozen-prd.md
+  git add docs/prds/test/frozen-prd.md
   git commit -m "add frozen" --quiet
-  echo "edit" >> prds/test/frozen-prd.md
-  git add prds/test/frozen-prd.md
+  echo "edit" >> docs/prds/test/frozen-prd.md
+  git add docs/prds/test/frozen-prd.md
   git commit -m "modify frozen" --quiet
   OUT=$(bash "$ROOT/scripts/check-frozen.sh" HEAD~1 2>/dev/null || true)
   if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('verdict')=='fail' else 1)"; then
@@ -151,14 +151,14 @@ else
 fi
 
 # --- U1: pf-prd --type decision + pf-freeze routing ---
-if grep -q '\-\-type decision' "$PF_PRD" && grep -q 'decisions/<n>-<slug>.md' "$PF_PRD"; then
+if grep -q '\-\-type decision' "$PF_PRD" && grep -q 'docs/decisions/<n>-<slug>.md' "$PF_PRD"; then
   echo "OK  pf-prd documents --type decision path"
 else
   echo "FAIL pf-prd missing --type decision contract"
   FAIL=1
 fi
 
-if grep -q '\-\-artifact decision' "$PF_FREEZE" && grep -q 'decisions/INDEX.md' "$PF_FREEZE" && \
+if grep -q '\-\-artifact decision' "$PF_FREEZE" && grep -q 'docs/decisions/INDEX.md' "$PF_FREEZE" && \
    grep -q 'No task list generation' "$PF_FREEZE"; then
   echo "OK  pf-freeze routes decision rigor + INDEX (no tasks)"
 else
@@ -166,17 +166,17 @@ else
   FAIL=1
 fi
 
-if [[ -f "$ROOT/decisions/INDEX.md" ]] && ! grep -q 'frozen: true' "$ROOT/decisions/INDEX.md"; then
-  echo "OK  decisions/INDEX.md exists (living, not frozen)"
+if [[ -f "$ROOT/docs/decisions/INDEX.md" ]] && ! grep -q 'frozen: true' "$ROOT/docs/decisions/INDEX.md"; then
+  echo "OK  docs/decisions/INDEX.md exists (living, not frozen)"
 else
-  echo "FAIL decisions/INDEX.md missing or frozen"
+  echo "FAIL docs/decisions/INDEX.md missing or frozen"
   FAIL=1
 fi
 
-if grep -q 'decisions/' "$ROOT/docs/layout.md" && grep -q 'Decision record numbering' "$ROOT/docs/layout.md"; then
-  echo "OK  layout.md documents decisions/ tree"
+if grep -q 'docs/decisions/' "$ROOT/.pf/layout.md" && grep -q 'Decision record numbering' "$ROOT/.pf/layout.md"; then
+  echo "OK  .pf/layout.md documents docs/decisions/ tree"
 else
-  echo "FAIL layout.md missing decisions/ contract"
+  echo "FAIL .pf/layout.md missing docs/decisions/ contract"
   FAIL=1
 fi
 
@@ -214,7 +214,7 @@ fi
 PF_DOC_REVIEW="$ROOT/commands/pf-doc-review.md"
 DOC_REVIEW_SKILL="$ROOT/skills/doc-review/SKILL.md"
 
-if grep -q 'decisions/<n>-<slug>.md' "$PF_DOC_REVIEW" && grep -q 'all seven' "$PF_DOC_REVIEW"; then
+if grep -q 'docs/decisions/<n>-<slug>.md' "$PF_DOC_REVIEW" && grep -q 'all seven' "$PF_DOC_REVIEW"; then
   echo "OK  pf-doc-review routes decision drafts to Full panel"
 else
   echo "FAIL pf-doc-review decision draft routing"
