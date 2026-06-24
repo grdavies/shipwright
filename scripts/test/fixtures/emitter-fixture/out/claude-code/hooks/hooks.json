@@ -1,0 +1,19 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
+      }
+    ],
+    "Stop": [
+      {
+        "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
+      }
+    ]
+  }
+}

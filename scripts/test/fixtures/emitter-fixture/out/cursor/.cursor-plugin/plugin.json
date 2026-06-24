@@ -1,0 +1,10 @@
+{
+  "name": "phase-flow-v2",
+  "version": "0.1.0",
+  "description": "phase-flow v2 (generated)",
+  "commands": "./commands/",
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "rules": "./rules/",
+  "hooks": "./hooks/hooks.json"
+}

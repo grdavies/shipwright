@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Document Review Findings",
+  "description": "Structured output schema for pf-doc-review persona agents",
+  "type": "object",
+  "required": ["reviewer", "findings", "residual_risks", "deferred_questions"],
+  "properties": {
+    "reviewer": {
+      "type": "string",
+      "description": "Persona name (e.g., coherence, feasibility, scope-guardian)"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "title",
+          "severity",
+          "section",
+          "why_it_matters",
+          "finding_type",
+          "autofix_class",
+          "confidence",
+          "evidence"
+        ],
+        "properties": {
+          "title": { "type": "string", "maxLength": 100 },
+          "severity": { "type": "string", "enum": ["P0", "P1", "P2", "P3"] },
+          "section": { "type": "string" },
+          "why_it_matters": { "type": "string" },
+          "autofix_class": {
+            "type": "string",
+            "enum": ["safe_auto", "gated_auto", "manual"]
+          },
+          "finding_type": { "type": "string", "enum": ["error", "omission"] },
+          "suggested_fix": { "type": ["string", "null"] },
+          "confidence": { "type": "integer", "enum": [0, 25, 50, 75, 100] },
+          "evidence": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "residual_risks": { "type": "array", "items": { "type": "string" } },
+    "deferred_questions": { "type": "array", "items": { "type": "string" } }
+  }
+}
