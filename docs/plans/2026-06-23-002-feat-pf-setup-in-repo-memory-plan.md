@@ -3,11 +3,12 @@ title: "feat: /pf-setup + in-repo memory provider (zero-dependency default)"
 type: feat
 date: 2026-06-23
 origin: docs/brainstorms/2026-06-22-pf-setup-and-in-repo-memory-requirements.md
-status: planned
+status: done
+completed: 2026-06-24
 depth: deep
-branch: ""
-commit: ""
-pr: ""
+branch: feat/pf-setup-in-repo-memory
+commit: e1e289c
+pr: https://github.com/grdavies/currsor-phase-flow-2/pull/7
 ---
 
 # feat: /pf-setup + in-repo memory provider (zero-dependency default)
@@ -23,21 +24,22 @@ so this plan treats it as a satisfied precondition and ensures the committed in-
 
 | Unit | Deliverable | Status | Summary |
 | --- | --- | --- | --- |
-| U1 | in-repo provider | planned | Provider description doc + store layout + capability flags (`semanticSearch`) |
-| U2 | in-repo provider | planned | Read/write mechanics: keyword+frontmatter search, lazy store create, committed/per-user-local |
-| U3 | in-repo provider | planned | Provider-dispatched rules adapter + offline fail-closed hook dispatch |
-| U4 | in-repo provider | planned | Zero-config per-repo default marker + default flip + session-start hint |
-| U5 | /pf-setup | planned | `/pf-setup` command: scaffold + initialize + environment doctor + re-runnable validator |
-| U6 | shared | planned | Config schema + example: `in-repo` provider, store/commit-mode knobs |
-| U7 | shared | planned | Fixtures + docs: rules adapter, provider dispatch, search degradation, setup doctor |
+| U1 | in-repo provider | done | Provider description doc + store layout + capability flags (`semanticSearch`) |
+| U2 | in-repo provider | done | Read/write mechanics: keyword+frontmatter search, lazy store create, committed/per-user-local |
+| U3 | in-repo provider | done | Provider-dispatched rules adapter + offline fail-closed hook dispatch |
+| U4 | in-repo provider | done | Zero-config per-repo default marker + default flip + session-start hint |
+| U5 | /pf-setup | done | `/pf-setup` command: scaffold + initialize + environment doctor + re-runnable validator |
+| U6 | shared | done | Config schema + example: `in-repo` provider, store/commit-mode knobs |
+| U7 | shared | done | Fixtures + docs: rules adapter, provider dispatch, search degradation, setup doctor |
 
 **Precondition (already met):** the R41 redaction chokepoint is live (`scripts/memory-redact.sh`,
 `skills/memory/CAPABILITIES.md` → "Redaction chokepoint (R41 — live)"). No redaction unit is built here; U2
 only verifies the committed in-repo write path invokes it.
 
-**Verification:** structural + behavioral fixtures under `scripts/test/` (rules-adapter golden cases, hook
-provider-dispatch, search degradation, setup doctor), registered into `.cursor/workflow.config.json` →
-`verify.test`.
+**Verification:** `scripts/test/run-memory-provider-fixtures.sh` — all fixtures passing; registered into
+`.cursor/workflow.config.json` → `verify.test`.
+
+**Implementation landed** on `feat/pf-setup-in-repo-memory` ([PR #7](https://github.com/grdavies/currsor-phase-flow-2/pull/7), merge `e1e289c`).
 
 ---
 
@@ -498,15 +500,16 @@ alongside U1 if convenient (it is dependency-light), but U5 needs it.
 
 ---
 
-## Open Questions
+## Resolved decisions (was Open Questions)
 
-- **Store layout (U1).** Directory name, per-memory filename scheme (e.g. `<category>-<slug>-<date>.md` vs
-  id-based), and `rules/` subfolder shape. Resolve at U1; keep frontmatter = interchange regardless.
-- **Marker shape (U4).** A minimal committed file (e.g. `.cursor/pf-memory.provider`) vs marker-by-store-
-  presence. Must be per-repo, committed, and cheaply readable by the hook offline.
-- **Keyword search mechanics (U2).** ripgrep invocation details and whether a frontmatter index is worth it
-  over a scan at expected store sizes.
-- **Session-start hint (U4).** Wording and trigger conditions for nudging `/pf-setup` without nagging.
+- **Store layout (U1).** Committed store at `.cursor/pf-memory/` with `memories/` and `rules/` subfolders;
+  one `<id>.md` file per memory (filename stem = memory id); frontmatter = neutral interchange schema.
+- **Marker shape (U4).** `.cursor/pf-memory.provider` (committed, per-repo); explicit `workflow.config.json`
+  overrides marker; no config and no marker → pass-through unchanged.
+- **Keyword search mechanics (U2).** `scripts/in-repo-memory-search.sh` — ripgrep body match + frontmatter
+  field filters; no separate index at expected store sizes.
+- **Session-start hint (U4).** `hooks/session-start.py` surfaces a one-line `/pf-setup` nudge when the repo
+  has the marker but no `workflow.config.json` yet.
 
 ---
 
