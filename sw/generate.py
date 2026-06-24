@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -55,6 +56,14 @@ def main(argv: list[str] | None = None) -> int:
     gen.add_argument("--all", action="store_true", help="Generate all platforms with emitters")
     gen.add_argument("--core", type=Path, default=None, help="Override core/ root (fixtures)")
     gen.add_argument("--dest", type=Path, default=None, help="Override dist output root")
+    gen.add_argument(
+        "--install",
+        metavar="DEST",
+        nargs="?",
+        const="",
+        default=None,
+        help="After generating, run scripts/install.sh [DEST] for the cursor platform",
+    )
 
     args = parser.parse_args(argv)
     if args.command != "generate":
@@ -75,6 +84,19 @@ def main(argv: list[str] | None = None) -> int:
     for platform in platforms:
         out = generate_platform(platform, core_root=args.core, dest_root=args.dest)
         print(f"sw generate: wrote {out}")
+
+    if args.install is not None and "cursor" in platforms:
+        install_script = REPO_ROOT / "scripts" / "install.sh"
+        if not install_script.is_file():
+            print(f"sw generate: --install: script not found at {install_script}", file=sys.stderr)
+            return 1
+        cmd: list[str] = ["bash", str(install_script)]
+        if args.install:
+            cmd.append(args.install)
+        result = subprocess.run(cmd, check=False)
+        if result.returncode != 0:
+            return result.returncode
+
     return 0
 
 

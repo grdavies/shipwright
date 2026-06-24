@@ -11,7 +11,7 @@ from pathlib import Path
 EMITTABLE_DIRS = ("commands", "skills", "rules", "agents", "providers", "scripts")
 
 EXCLUDE_DIR_NAMES = {"__pycache__", "test", ".git", "node_modules"}
-EXCLUDE_FILE_NAMES = {"sync-local-install.sh"}
+EXCLUDE_FILE_NAMES = {"install.sh"}
 EXCLUDE_SUFFIXES = (".pyc",)
 
 CURSOR_PLUGIN_ROOT = "${CURSOR_PLUGIN_ROOT}"
