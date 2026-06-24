@@ -6,8 +6,6 @@ origin: docs/brainstorms/2026-06-23-dev-cycle-standard-gap-analysis-requirements
 status: done
 completed: 2026-06-24
 depth: deep
-frozen: true
-frozen_at: 2026-06-23
 branch: feat/dev-cycle-standard-gaps
 commit: e104674
 pr: https://github.com/grdavies/currsor-phase-flow-2/pull/10
