@@ -85,7 +85,7 @@ def run_stop(repo_root: Path) -> int:
         return 0
     except Exception as exc:  # noqa: BLE001 — stop hook is fail-open
         print(json.dumps({}))
-        print(f"phase-flow memory-sync-stop hook degraded: {exc}", file=sys.stderr)
+        print(f"Shipwright memory-sync-stop hook degraded: {exc}", file=sys.stderr)
         return 0
 
 
@@ -147,7 +147,7 @@ def _run_stop_with_payload(repo_root: Path, payload: dict) -> int:
         return 0
     except Exception as exc:  # noqa: BLE001
         print(json.dumps({}))
-        print(f"phase-flow memory-sync-stop hook degraded: {exc}", file=sys.stderr)
+        print(f"Shipwright memory-sync-stop hook degraded: {exc}", file=sys.stderr)
         return 0
 
 

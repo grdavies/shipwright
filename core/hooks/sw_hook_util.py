@@ -1,4 +1,4 @@
-"""Shared helpers for phase-flow v2 guardrail hooks."""
+"""Shared helpers for Shipwright guardrail hooks."""
 
 from __future__ import annotations
 

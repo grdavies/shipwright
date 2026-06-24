@@ -1,5 +1,5 @@
 ---
-description: Heuristic-gated sub-agent dispatch and loop hard stops for phase-flow v2.
+description: Heuristic-gated sub-agent dispatch and loop hard stops for Shipwright.
 alwaysApply: false
 ---
 

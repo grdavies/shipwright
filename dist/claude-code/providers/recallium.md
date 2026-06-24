@@ -1,6 +1,6 @@
 # Provider adapter: Recallium
 
-Maps the `phase-flow` memory capability spec ([`skills/memory/CAPABILITIES.md`](../skills/memory/CAPABILITIES.md))
+Maps the Shipwright memory capability spec ([`skills/memory/CAPABILITIES.md`](../skills/memory/CAPABILITIES.md))
 onto the Recallium MCP tools. Selected when `workflow.config.json` → `memory.provider` is `recallium`.
 
 `<project>` below is `memory.project` from the config. Global scope uses the literal `__global__`.
@@ -22,7 +22,7 @@ onto the Recallium MCP tools. Selected when `workflow.config.json` → `memory.p
 }
 ```
 
-`export`/`import` are `false`: Recallium exposes no neutral dump tool. `phase-flow`'s `/sw-memory-export`
+`export`/`import` are `false`: Recallium exposes no neutral dump tool. Shipwright's `/sw-memory-export`
 synthesizes the neutral JSONL by paging `search_memories` and emitting one line per memory; `/sw-memory-import`
 replays via `store_memory`. Treat these as plugin-side, not native.
 

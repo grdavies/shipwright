@@ -4,7 +4,7 @@ alwaysApply: false
 globs:
 ---
 
-# Code review & automation (phase-flow v2)
+# Code review & automation (Shipwright)
 
 Review provider selected by `review.provider` (default `coderabbit`). Gate per-head state via
 `scripts/check-gate.sh` + `providers/review/<provider>.sh`.

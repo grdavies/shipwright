@@ -1,6 +1,6 @@
-# phase-flow v2 session context
+# Shipwright session context
 
-This repository uses the **phase-flow v2** (`sw-`) workflow. Route memory through the configured provider
+This repository uses the **Shipwright** (`sw-`) workflow. Route memory through the configured provider
 adapter.
 
 ## Per-worktree state (R38)

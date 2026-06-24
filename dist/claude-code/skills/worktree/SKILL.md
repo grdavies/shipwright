@@ -1,6 +1,6 @@
 ---
 name: sw-worktree
-description: USE WHEN following the phase-flow v2 workflow — command ordering, worktree isolation, and per-worktree state. Provision per-work-item git worktrees with env scaffold (ports, DB strategy) and safe teardown. Enforces parallelism ceiling.---
+description: USE WHEN following the Shipwright workflow — command ordering, worktree isolation, and per-worktree state. Provision per-work-item git worktrees with env scaffold (ports, DB strategy) and safe teardown. Enforces parallelism ceiling.---
 
 # Worktree provisioning
 

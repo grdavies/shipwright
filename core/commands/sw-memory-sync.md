@@ -7,7 +7,7 @@ trigger: "/sw-memory-sync" or "distill transcripts into memory"
 # `/sw-memory-sync`
 
 Mine new conversation-transcript deltas and store the high-signal substance as distilled memories.
-This is `phase-flow`'s own distillation flow; it replaces any inherited
+This is Shipwright's own distillation flow; it replaces any inherited
 `continual-learning-index.json` + `agents-memory-updater` mechanism in the consumer repo.
 
 Raw transcripts stay where they are (`agent-transcripts/*.jsonl`) and are the canonical, re-distillable

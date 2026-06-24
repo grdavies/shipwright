@@ -3,7 +3,7 @@ description: Memory guardrails — fail-closed injection, redaction chokepoint, 
 alwaysApply: false
 ---
 
-# Memory guardrails (phase-flow v2)
+# Memory guardrails (Shipwright)
 
 ## Fail-closed enforcement (A1)
 

@@ -1,11 +1,11 @@
 ---
 name: memory-preflight
-description: Provider-agnostic durable-memory access for the phase-flow workflow. Use at the start of any phase command (execute, coderabbit, stabilize, watch-ci) to load relevant memories and rules, and at the end to store distilled memories. Routes through the configured memory provider adapter so no command names a provider directly.
+description: Provider-agnostic durable-memory access for the Shipwright workflow. Use at the start of any phase command (execute, coderabbit, stabilize, watch-ci) to load relevant memories and rules, and at the end to store distilled memories. Routes through the configured memory provider adapter so no command names a provider directly.
 ---
 
 # memory-preflight
 
-The single entry point every `phase-flow` command uses to read and write durable memory. It hides the
+The single entry point every Shipwright command uses to read and write durable memory. It hides the
 provider behind the capability spec in [`CAPABILITIES.md`](CAPABILITIES.md), so swapping providers is a
 config change, never a command edit.
 

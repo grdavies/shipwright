@@ -1,6 +1,6 @@
 # Memory provider capability spec
 
-This is the provider-agnostic contract for durable memory in `phase-flow`. Commands and skills speak
+This is the provider-agnostic contract for durable memory in Shipwright. Commands and skills speak
 **only** this vocabulary. A provider adapter (`providers/<name>.md`) maps each abstract operation to
 concrete tool calls. To support a new provider, add an adapter that implements these operations and
 declares its capability flags — change no command.

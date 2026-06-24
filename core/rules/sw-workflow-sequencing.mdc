@@ -1,5 +1,5 @@
 ---
-description: USE WHEN following the phase-flow v2 workflow — command ordering, worktree isolation, and per-worktree state.
+description: USE WHEN following the Shipwright workflow — command ordering, worktree isolation, and per-worktree state.
 alwaysApply: false
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: Scaffold and validate repo-local phase-flow config — providers, guardrails, memory store, and environment doctor. Does not scaffold CI or migrate existing memories.
+description: Scaffold and validate repo-local Shipwright config — providers, guardrails, memory store, and environment doctor. Does not scaffold CI or migrate existing memories.
 alwaysApply: false
 ---
 

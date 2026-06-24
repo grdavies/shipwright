@@ -1,6 +1,6 @@
 ---
 name: sw-phase-state
-description: Per-worktree phase-flow state read/write contract. Resolves state path in the worktree gitdir; aggregates a read-only repo index from all worktrees.
+description: Per-worktree Shipwright state read/write contract. Resolves state path in the worktree gitdir; aggregates a read-only repo index from all worktrees.
 ---
 
 # Per-worktree phase state

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Per-worktree phase-flow state — resolve path, read, write, aggregate index.
+# Per-worktree Shipwright state — resolve path, read, write, aggregate index.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
