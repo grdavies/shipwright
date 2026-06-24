@@ -1,4 +1,4 @@
-# phase-flow v2 (`currsor-phase-flow-2`)
+# phase-flow v2 (`shipwright`)
 
 Self-contained Cursor plugin for the unified phase-flow v2 development workflow. All commands use the
 `pf-` prefix. Infrastructure seams (CI gate, memory, AI review, stabilize loop, hooks) are vendored in-tree

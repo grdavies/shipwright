@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/grdavies/currsor-phase-flow-2/.pf/config.schema.json",
+  "$id": "https://github.com/grdavies/shipwright/.pf/config.schema.json",
   "title": "phase-flow-v2 workflow.config.json",
   "type": "object",
   "additionalProperties": false,
