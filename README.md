@@ -20,7 +20,7 @@ Copy the example config into your target repo, or run `/pf-setup` for guided sca
 
 ```bash
 mkdir -p .cursor
-cp config/workflow.config.example.json .cursor/workflow.config.json
+cp .pf/workflow.config.example.json .cursor/workflow.config.json
 # edit memory.project, verify.*, and provider selection
 ```
 
@@ -40,7 +40,7 @@ runtime — never commit secrets.
 | `checks.neutralAllowlist` | Check names that stay blocking |
 | `memory.autoSync` | Stop-hook thresholds for `/pf-memory-sync` scheduling |
 
-See `docs/config.schema.json` for the full schema.
+See `.pf/config.schema.json` for the full schema.
 
 ## Components (foundation)
 

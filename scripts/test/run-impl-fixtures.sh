@@ -192,9 +192,9 @@ fi
 
 # --- U6/U7: model tier map + check ---
 MODEL_CHECK="$ROOT/scripts/model-tier-check.sh"
-EXAMPLE_CONFIG="$ROOT/config/workflow.config.example.json"
+EXAMPLE_CONFIG="$ROOT/.pf/workflow.config.example.json"
 
-if grep -q '"models"' "$ROOT/docs/config.schema.json"; then
+if grep -q '"models"' "$ROOT/.pf/config.schema.json"; then
   echo "OK  config.schema documents models"
 else
   echo "FAIL config.schema missing models"
@@ -228,14 +228,14 @@ else
   FAIL=1
 fi
 
-if grep -q 'inherit' "$ROOT/docs/models-tiering.md" && grep -q 'R9 runtime contract' "$ROOT/rules/pf-subagent-dispatch.mdc"; then
+if grep -q 'inherit' "$ROOT/.pf/models-tiering.md" && grep -q 'R9 runtime contract' "$ROOT/rules/pf-subagent-dispatch.mdc"; then
   echo "OK  models-tiering doc + runtime R9 dispatch rule"
 else
   echo "FAIL models-tiering / runtime R9 wiring"
   FAIL=1
 fi
 
-if grep -q 'invariantsFile' "$ROOT/docs/config.schema.json" && \
+if grep -q 'invariantsFile' "$ROOT/.pf/config.schema.json" && \
    grep -q 'invariantsFile' "$ROOT/commands/pf-doc-review.md"; then
   echo "OK  invariantsFile wired to doc-review"
 else

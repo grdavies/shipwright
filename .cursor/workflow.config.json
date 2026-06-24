@@ -1,5 +1,5 @@
 {
-  "$schema": "../docs/config.schema.json",
+  "$schema": "../.pf/config.schema.json",
   "defaultBaseBranch": "main",
   "stateFile": ".git/phase-flow.json",
   "worktree": {
@@ -12,8 +12,8 @@
     }
   },
   "agentsFile": "AGENTS.md",
-  "prdsDir": "prds",
-  "tasksDir": "prds",
+  "prdsDir": "docs/prds",
+  "tasksDir": "docs/prds",
   "verify": {
     "lint": "echo 'no lint configured'",
     "typecheck": "echo 'no typecheck configured'",
