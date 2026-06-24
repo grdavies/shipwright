@@ -38,7 +38,7 @@
   },
   "memory": {
     "provider": "recallium",
-    "project": "currsor-phase-flow-2",
+    "project": "shipwright",
     "defaultScope": "project",
     "connection": {
       "restBaseUrl": "http://localhost:8001"
