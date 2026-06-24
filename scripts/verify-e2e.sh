@@ -5,8 +5,8 @@
 # Prints adapter JSON to stdout; exit code mirrors adapter exitCode (skipped → 0).
 set -euo pipefail
 
-# shellcheck source=sw-resolve-plugin-root.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sw-resolve-plugin-root.sh"
+# shellcheck source=pf-resolve-plugin-root.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/pf-resolve-plugin-root.sh"
 PLUGIN_ROOT="$(pf_resolve_plugin_root "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 CONFIG=""

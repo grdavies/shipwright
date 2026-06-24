@@ -3,8 +3,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-# shellcheck source=../sw-resolve-plugin-root.sh
-source "$ROOT/scripts/sw-resolve-plugin-root.sh"
+# shellcheck source=../pf-resolve-plugin-root.sh
+source "$ROOT/scripts/pf-resolve-plugin-root.sh"
 CONTENT="$(pf_resolve_plugin_root "$ROOT/scripts")"
 CURSOR_DIST="$ROOT/dist/cursor"
 SEARCH="$ROOT/scripts/in-repo-memory-search.sh"

@@ -17,8 +17,8 @@ trap 'rm -f "$CHECKS" "$ISSUE_COMMENTS"' EXIT
 
 # --- repo + config ------------------------------------------------------------
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-# shellcheck source=sw-resolve-plugin-root.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sw-resolve-plugin-root.sh"
+# shellcheck source=pf-resolve-plugin-root.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/pf-resolve-plugin-root.sh"
 PLUGIN_ROOT="$(pf_resolve_plugin_root "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
 CONFIG=""
 for p in "$ROOT/.cursor/workflow.config.json" "$ROOT/workflow.config.json"; do
