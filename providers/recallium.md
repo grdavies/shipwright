@@ -80,9 +80,9 @@ genuine shippable-capability recaps if ever needed (not a default).
 
 - `related_files` is required for `code-snippet`/`debug` (and any file-scoped memory) — it builds the
   bidirectional file↔memory graph that powers `file_path` search.
-- For cross-cutting decisions with a frozen decision record, link `related_files: ["decisions/<n>-<slug>.md"]`
+- For cross-cutting decisions with a frozen decision record, link `related_files: ["docs/decisions/<n>-<slug>.md"]`
   — pointer only; never store the record body (R32). Re-point on supersede via `/pf-memory-sync` +
-  `decisions/SUPERSEDED.log` reconciliation.
+  `docs/decisions/SUPERSEDED.log` reconciliation.
 - Pass `tags` (`prd-<n>`, `task-<n>`, `surface:<cmd>`); Recallium merges them with auto-tags.
 - `importance_score` is 0.0–1.0.
 - Search before store; on a near-duplicate use `modify_memory` with `action: "update"`.

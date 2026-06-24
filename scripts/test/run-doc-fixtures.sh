@@ -223,7 +223,7 @@ fi
 
 if grep -q 'Decision amendment review' "$DOC_REVIEW_SKILL" && \
    grep -q 'adversarial, feasibility' "$DOC_REVIEW_SKILL" && \
-   grep -q 'prds/<n>-<slug>/amendments' "$DOC_REVIEW_SKILL"; then
+   grep -q 'docs/prds/<n>-<slug>/amendments' "$DOC_REVIEW_SKILL"; then
   echo "OK  doc-review skill: decision amendment raised floor + PRD amendment unchanged"
 else
   echo "FAIL doc-review decision amendment floor"
