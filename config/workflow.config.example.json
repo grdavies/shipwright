@@ -41,9 +41,13 @@
     }
   },
   "memory": {
-    "provider": "recallium",
+    "provider": "in-repo",
     "project": "my-project",
     "defaultScope": "project",
+    "inRepo": {
+      "storeDir": ".cursor/pf-memory",
+      "commitMode": "committed"
+    },
     "connection": {
       "restBaseUrl": "http://localhost:8001"
     },

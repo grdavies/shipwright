@@ -12,7 +12,9 @@ config change, never a command edit.
 ## Resolve the provider (first step, always)
 
 1. Read `.cursor/workflow.config.json` → `memory.provider`, `memory.project`, `memory.defaultScope`.
-   Fall back to documented defaults (`provider: recallium`, `defaultScope: project`).
+   When no config exists, check `.cursor/pf-memory.provider` (per-repo marker) — if present, provider is
+   `in-repo` with project = workspace basename. Fall back to documented defaults (`provider: in-repo` when
+   marker present, else `recallium`, `defaultScope: project`).
 2. Load the adapter at `providers/<memory.provider>.md` from the plugin. It defines the concrete tool
    calls and declares capability flags.
 3. If the provider is unreachable, degrade: continue using `agentsFile` + repo docs, and tell the user
@@ -73,10 +75,34 @@ a notable review/CI pattern, or a distilled session recap. Do not store routine,
 
 Check the adapter's flags and adjust:
 
+- no `semanticSearch` → run `scripts/in-repo-memory-search.sh` (keyword + frontmatter filters) instead of
+  vector search; results feed `expand`,
 - no `tasks` → the phase board uses the local registry fallback,
 - no `filePathSearch` → semantic search on the path string,
 - no `categoryFilter` → skip category narrowing / post-filter,
 - no `export` → provider swap relies on re-distillation from raw transcripts.
+
+## In-repo provider specifics (`memory.provider: in-repo`)
+
+**Read:** when `semanticSearch:false`, call:
+
+```bash
+bash scripts/in-repo-memory-search.sh \
+  --store .cursor/pf-memory \
+  --query "<terms>" \
+  [--category decision] [--tag prd-1] [--file-glob src/auth.ts]
+```
+
+Then `expand` by reading `memories/<id>.md` (or `rules/<id>.md` for rule category).
+
+**Write:**
+
+1. Lazy-create store dirs on first write: `mkdir -p .cursor/pf-memory/memories .cursor/pf-memory/rules`.
+2. Pipe payload through `scripts/memory-redact.sh` (R41) before any file write.
+3. Default `commitMode: committed` → write non-rule files under `.cursor/pf-memory/memories/`.
+4. `commitMode: local` → non-rule files under `.cursor/pf-memory-local/memories/` (gitignored).
+5. **`category: rule` always writes to `.cursor/pf-memory/rules/`** — offline hook reads committed rules.
+6. Never auto-seed starter rules; store starts empty.
 
 ## Boundaries
 

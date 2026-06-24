@@ -17,7 +17,8 @@ onto the Recallium MCP tools. Selected when `workflow.config.json` → `memory.p
   "tasks": true,
   "export": false,
   "import": false,
-  "softDelete": true
+  "softDelete": true,
+  "semanticSearch": true
 }
 ```
 

@@ -16,7 +16,7 @@ Default install path: `~/.cursor/plugins/local/phase-flow-v2`
 
 ## Configuration
 
-Copy the example config into your target repo:
+Copy the example config into your target repo, or run `/pf-setup` for guided scaffolding:
 
 ```bash
 mkdir -p .cursor
@@ -24,12 +24,16 @@ cp config/workflow.config.example.json .cursor/workflow.config.json
 # edit memory.project, verify.*, and provider selection
 ```
 
+Fresh installs can use **zero-config in-repo memory**: commit `.cursor/pf-memory.provider` (containing
+`in-repo`) plus empty `.cursor/pf-memory/{memories,rules}/` — no `workflow.config.json` required until you
+run `/pf-setup`.
+
 Provider **selection** lives in config; API credentials are sourced from the environment / secret store at
 runtime — never commit secrets.
 
 | Key | Purpose |
 |-----|---------|
-| `memory.provider` | Active memory adapter (`recallium` default) |
+| `memory.provider` | Active memory adapter (`in-repo` default in example; `recallium` also supported) |
 | `review.provider` | Active AI review adapter (`coderabbit` default) |
 | `coderabbit.reviewGraceMinutes` | Gate grace window before absent review = settled |
 | `checks.treatNeutralAsPass` | NEUTRAL checks count as pass unless allowlisted |
@@ -44,7 +48,7 @@ See `docs/config.schema.json` for the full schema.
 |------|------|--------|
 | Manifest | `.cursor-plugin/plugin.json` | U1 |
 | CI gate | `scripts/check-gate.sh`, `skills/checks-gate/` | U2–U3 |
-| Memory seam | `skills/memory/`, `providers/recallium.md` | U4–U5 |
+| Memory seam | `skills/memory/`, `providers/in-repo.md`, `providers/recallium.md` | U4–U5 |
 | Review seam | `providers/review/` | U3 |
 | Stabilize / RCA | `skills/stabilize-loop/`, `skills/rca-core/` | U6 |
 | Hooks | `hooks/` | U7 |
