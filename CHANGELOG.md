@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0](https://github.com/grdavies/shipwright/compare/v1.0.0...v1.1.0) (2026-06-24)
+
+
+### Features
+
+* rename install script and harden install experience ([#22](https://github.com/grdavies/shipwright/issues/22)) ([8e518da](https://github.com/grdavies/shipwright/commit/8e518dab9a791823ea3125dfdaf9ba3ade4a86d6))
+
+
+### Bug Fixes
+
+* **ci:** match BREAKING CHANGES section header only ([#26](https://github.com/grdavies/shipwright/issues/26)) ([1d656e3](https://github.com/grdavies/shipwright/commit/1d656e39242371ed56edb527c2d7c55ac6c80405))
+* **ci:** scope breaking-release check to current changelog section ([#24](https://github.com/grdavies/shipwright/issues/24)) ([99b80ef](https://github.com/grdavies/shipwright/commit/99b80ef19489f801c7ab1e8b01909f365be2d335))
+
 ## [1.0.0](https://github.com/grdavies/shipwright/compare/v0.1.0...v1.0.0) (2026-06-24)
 
 
