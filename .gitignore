@@ -1,5 +1,6 @@
 # Phase-flow local hook state (machine-local, not shared)
 .cursor/hooks/state/phase-flow-memory-sync-scheduler.json
+.cursor/pf-wave-plan.json
 
 # Python
 __pycache__/
