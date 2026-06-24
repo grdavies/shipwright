@@ -2,7 +2,16 @@
 date: 2026-06-23
 topic: universal-cross-platform-portability
 frozen: false
+reviewed: 2026-06-24
 ---
+
+> **Review note (2026-06-24).** Re-checked against `main` after the bulk of phase-flow v2 landed.
+> The portability architecture itself (`core/`, `platforms/`, `pf/`, `dist/`) is still entirely
+> unbuilt — these decisions stand unchanged. What landed that touches this doc is the *artifact
+> consolidation* (PR #12): config and reference files moved out of `config/` into `.pf/`, workflow
+> artifacts consolidated under `docs/`, and a `docs/decisions/` record surface now exists. Path
+> references, the `core/` extraction boundary, and the final Outstanding Question are updated below to
+> reflect this; the architecture and migration plan are otherwise intact.
 
 # Universal Cross-Platform Portability
 
@@ -146,6 +155,16 @@ flowchart TB
   RUN --> MEM[(memory: MCP | HTTP | CLI)]
   T1 -.native hook.-> MEM
 ```
+
+**Current repo state (2026-06-24) already prefigures the `core/`-vs-wiring split.** The artifact
+consolidation moved all platform-agnostic *contracts and reference* into `.pf/` (`layout.md` — the
+single-source path contract every `pf-` command resolves from; `config.schema.json`;
+`models-tiering.md`; `workflow.config.example.json`) and all workflow *artifacts* under `docs/`
+(`brainstorms/`, `prds/`, `decisions/`), while Cursor-specific *wiring* stays in `.cursor-plugin/`,
+`hooks/`, and the consumer-repo runtime config `.cursor/workflow.config.json`. The neutral-contract /
+native-wiring boundary this design needs at M1 is therefore partly drawn already: `.pf/` and `docs/`
+are strong `core/` candidates, and `.cursor-*` is the Cursor emitter's output. This de-risks M1 but
+does not change the target architecture — `core/`, `platforms/`, `pf/`, and `dist/` remain unbuilt.
 
 ---
 
@@ -352,16 +371,28 @@ here is dropped; it is sequencing guidance.
 - Per-platform mapping tables: where each platform expects its manifest, hooks, commands, skills, and rules
   on disk, and the `AGENTS.md` section contract for guardrail-text injection.
 - The `core/` extraction boundary: precisely which current files are portable bodies vs Cursor-specific
-  wiring, and how rule frontmatter (`.mdc`) is represented neutrally and re-emitted per platform.
+  wiring, and how rule frontmatter (`.mdc`) is represented neutrally and re-emitted per platform. The
+  2026-06-24 consolidation already isolated a platform-agnostic reference tree in `.pf/` (`layout.md`,
+  `config.schema.json`, `models-tiering.md`, `workflow.config.example.json`) and workflow artifacts
+  under `docs/` — open question is whether `.pf/` becomes part of `core/` (regenerated/linked per
+  platform) or stays a repo-level shared contract that emitters merely point at, and how the
+  consumer-repo runtime config `.cursor/workflow.config.json` is templated per platform.
 - The memory transport interface contract (request/response shape) shared by MCP / HTTP / CLI, and how the
   HTTP transport authenticates if a future provider is not a local, credential-free service.
 - Whether `dist/<platform>` trees are committed or built on install (committed for Cursor per M2; open for
   the rest), and the implications for review and diff noise.
 - The `pf run` hand-off mechanics per Tier-2 platform (how guardrail context is actually injected into each
   agent's prompt, and how post-run memory-sync scheduling is triggered without a native stop hook).
-- How this portability work relates to the missing forward-supersession-pointer gap recorded in the
+- ~~How this portability work relates to the missing forward-supersession-pointer gap recorded in the
   dev-cycle-standard gap analysis — i.e., whether founding decisions like the two-tier model need an
-  explicit decision-record surface with forward links.
+  explicit decision-record surface with forward links.~~ **Resolved 2026-06-24:** the decision-record
+  surface now exists (`docs/decisions/` with `INDEX.md`, append-only `SUPERSEDED.log`, numbered records
+  001–007, and sibling `.amendments/` dirs), authored via `/pf-prd --type decision` and frozen by
+  `/pf-freeze`. The remaining (now-narrowed) decision: whether the load-bearing founding decisions here
+  — two-tier fidelity (Key Decision 1), the capability-flag model (Key Decision 3), and the A+C blend
+  (Key Decision 4) — should be promoted into `docs/decisions/` records (next free number is 008) so
+  they get forward-supersession links, rather than living only inside this brainstorm. Recommended at
+  the point this work is planned, not now.
 
 ---
 
@@ -372,6 +403,14 @@ Internal:
 - The current phase-flow v2 Cursor plugin: `.cursor-plugin/plugin.json`, `hooks/hooks.json` and the Python
   hooks (`session-start.py`, `before-submit-guardrails.py`, `memory-sync-stop.py`), `skills/memory/` +
   `providers/recallium.md`, `scripts/check-gate.sh`, and the `scripts/test/` fixture harness.
+- The `.pf/` reference tree introduced by the 2026-06-24 consolidation (`.pf/layout.md` path contract,
+  `.pf/config.schema.json`, `.pf/workflow.config.example.json`, `.pf/models-tiering.md`) and the
+  runtime config at `.cursor/workflow.config.json` — the platform-agnostic contracts that the `core/`
+  extraction boundary must classify.
+- `docs/brainstorms/2026-06-24-artifact-consolidation-under-docs-requirements.md` — the consolidation
+  that relocated config/reference into `.pf/` and workflow artifacts under `docs/`.
+- `docs/decisions/` (INDEX.md, SUPERSEDED.log, records 001–007) — the decision-record surface that
+  resolves this doc's final Outstanding Question.
 - `docs/brainstorms/2026-06-22-unified-dev-workflow-plugin-requirements.md` — the founding requirements
   (R1–R43), in particular R32/R39 (fail-closed guardrails), R36 (swappable provider seam), and R40
   (provenance / upstream refresh) that this design extends to a cross-platform setting.
