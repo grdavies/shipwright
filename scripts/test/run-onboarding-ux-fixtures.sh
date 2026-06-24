@@ -41,6 +41,22 @@ fi
 # --- gate fixtures (delegates to run-gate-fixtures) ---
 bash "$ROOT/scripts/test/run-gate-fixtures.sh" || FAIL=1
 
+# --- worktree guard (phase 2) ---
+if [[ -x "$ROOT/scripts/sw-assert-worktree.sh" ]]; then
+  bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-negative.sh" || FAIL=1
+  bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-positive-linked.sh" || FAIL=1
+  bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-positive-hotfix.sh" || FAIL=1
+  if bash "$ROOT/scripts/sw-assert-worktree.sh" >/dev/null 2>&1; then
+    echo "OK  worktree-guard: active worktree checkout passes"
+  else
+    echo "FAIL worktree-guard active worktree should pass"
+    FAIL=1
+  fi
+else
+  echo "FAIL sw-assert-worktree.sh missing or not executable"
+  FAIL=1
+fi
+
 # --- verify.test registration ---
 WF="$ROOT/.cursor/workflow.config.json"
 if grep -q 'run-onboarding-ux-fixtures.sh' "$WF" 2>/dev/null; then
