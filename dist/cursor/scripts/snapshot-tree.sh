@@ -3,7 +3,7 @@
 #
 # Captures the verbatim-copied subset the Cursor emitter will reproduce: commands/,
 # skills/, rules/, agents/, providers/, and workflow scripts/ (excluding test harness
-# and sync-local-install.sh). Hooks, docs/, and build tooling are out of scope.
+# and install.sh). Hooks, docs/, and build tooling are out of scope.
 #
 # Usage:
 #   scripts/snapshot-tree.sh [output-manifest]
@@ -29,7 +29,7 @@ should_skip_relpath() {
     */__pycache__/* | */__pycache__ | *.pyc) return 0 ;;
     */.git/* | */node_modules/*) return 0 ;;
     scripts/test/* | scripts/test) return 0 ;;
-    scripts/sync-local-install.sh) return 0 ;;
+    scripts/install.sh) return 0 ;;
     hooks/* | hooks) return 0 ;;
   esac
   return 1

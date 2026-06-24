@@ -53,8 +53,8 @@
   "models": {
     "tiers": {
       "deep": "gpt-5.5",
-      "build": "composer-2",
-      "cheap": "composer-2-fast"
+      "build": "composer-2.5",
+      "cheap": "composer-2.5-fast"
     },
     "aliases": {
       "fast": "cheap"

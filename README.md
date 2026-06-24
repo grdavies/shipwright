@@ -8,18 +8,30 @@ from upstream sources documented in [`PROVENANCE.md`](PROVENANCE.md) — no runt
 > before installing Shipwright, or duplicate `sw-` commands may appear alongside
 > `~/.cursor/plugins/local/shipwright`.
 
-## Install (local development)
+## Install
 
-Authoring lives under `core/`; installable trees are **generated** and committed under `dist/`.
+`dist/cursor/` is generated and committed, so cloning the repo is enough to install:
 
 ```bash
-python3 -m sw generate --all   # after editing core/
-./scripts/sync-local-install.sh   # rsync dist/cursor/ → ~/.cursor/plugins/local/shipwright
+git clone https://github.com/grdavies/shipwright
+cd shipwright
+./scripts/install.sh   # copies dist/cursor/ → ~/.cursor/plugins/local/shipwright
 ```
 
 Then **Developer: Reload Window** in Cursor.
 
 Default install path: `~/.cursor/plugins/local/shipwright`
+
+### Development workflow
+
+Authoring lives under `core/`; installable trees are generated with:
+
+```bash
+python3 -m sw generate --all            # regenerate dist/ after editing core/
+./scripts/install.sh                    # install separately
+# or in one step:
+python3 -m sw generate --all --install  # generate + install
+```
 
 For Claude Code, point your plugin path at `dist/claude-code/` (or copy it to your Claude plugins directory).
 

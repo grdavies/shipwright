@@ -49,7 +49,7 @@ should_skip_relpath() {
   case "$relpath" in
     */__pycache__/* | */__pycache__ | *.pyc) return 0 ;;
     scripts/test/* | scripts/test) return 0 ;;
-    scripts/sync-local-install.sh) return 0 ;;
+    scripts/install.sh) return 0 ;;
     hooks/* | hooks) return 0 ;;
   esac
   return 1

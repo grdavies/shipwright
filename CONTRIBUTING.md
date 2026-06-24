@@ -10,8 +10,11 @@ Authoring lives under `core/`; installable plugin trees are **generated** and co
 # After editing core/, regenerate install trees
 python3 -m sw generate --all
 
-# Sync to local Cursor plugin directory (default: ~/.cursor/plugins/local/shipwright)
-./scripts/sync-local-install.sh
+# Install to local Cursor plugin directory (default: ~/.cursor/plugins/local/shipwright)
+./scripts/install.sh
+
+# Or do both in one step
+python3 -m sw generate --all --install
 ```
 
 Then run **Developer: Reload Window** in Cursor.

@@ -9,8 +9,8 @@ Semantic tiers map to **concrete platform model IDs** per project:
 ```json
 "models": {
   "tiers": {
-    "cheap": "composer-2-fast",
-    "build": "composer-2",
+    "cheap": "composer-2.5-fast",
+    "build": "composer-2.5",
     "deep": "gpt-5.5"
   },
   "aliases": {
