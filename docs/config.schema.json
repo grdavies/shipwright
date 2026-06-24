@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/grdavies/currsor-phase-flow-2/docs/config.schema.json",
+  "$id": "https://github.com/grdavies/currsor-phase-flow-2/.pf/config.schema.json",
   "title": "phase-flow-v2 workflow.config.json",
   "type": "object",
   "additionalProperties": false,
@@ -13,9 +13,9 @@
       "description": "Per-worktree workflow state file path (lives in the worktree gitdir)."
     },
     "agentsFile": { "type": "string", "default": "AGENTS.md" },
-    "prdsDir": { "type": "string", "default": "prds" },
-    "decisionsDir": { "type": "string", "default": "decisions" },
-    "tasksDir": { "type": "string", "default": "prds" },
+    "prdsDir": { "type": "string", "default": "docs/prds" },
+    "decisionsDir": { "type": "string", "default": "docs/decisions" },
+    "tasksDir": { "type": "string", "default": "docs/prds" },
     "verify": {
       "type": "object",
       "additionalProperties": { "type": "string" },
