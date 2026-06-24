@@ -10,7 +10,7 @@ Task list from frozen PRD + amendment union.
 ## Scope
 
 - Input: frozen PRD path.
-- Output: `prds/<n>-<slug>/tasks-<n>-<slug>.md` (frozen via `/pf-freeze`).
+- Output: `docs/prds/<n>-<slug>/tasks-<n>-<slug>.md` (frozen via `/pf-freeze`).
 - Does **not** start implementation or reconcile git-derived index status.
 
 ## Procedure
@@ -22,7 +22,7 @@ Task list from frozen PRD + amendment union.
 5. After user confirms "Go", expand sub-tasks, Relevant Files, Notes.
 6. Add **`## Traceability`** table: every union R-ID → task ref → named test scenario (see `skills/spec-rigor/SKILL.md`).
 7. Save; run spec-rigor + traceability gates, then `/pf-freeze` on task list.
-8. Update `prds/INDEX.md` entry (status `not-started`).
+8. Update `docs/prds/INDEX.md` entry (status `not-started`).
 
 ## Guardrails
 

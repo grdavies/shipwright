@@ -19,7 +19,7 @@ Full-tier requirements exploration. Produces a brainstorm doc for `/pf-prd`. Doe
 
 ### Phase 1: Assess and explore
 
-1. Read `docs/layout.md` for output path.
+1. Read `.pf/layout.md` for output path.
 2. If input is vague, ask one clarifying question (blocking tool preferred).
 3. Explore alternatives; challenge assumptions; resolve product decisions here.
 4. Run synthesis checkpoint: restate scope, tier, key decisions; confirm with user before write.

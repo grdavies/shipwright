@@ -60,11 +60,11 @@ Via `scripts/traceability-check.sh`:
 
 ```bash
 # Pre-PRD-freeze (pass --tier full|standard)
-bash scripts/spec-rigor-check.sh --artifact prd --path prds/.../prd.md --tier full
+bash scripts/spec-rigor-check.sh --artifact prd --path docs/prds/.../prd.md --tier full
 
 # Pre-task-freeze
-bash scripts/spec-rigor-check.sh --artifact tasks --path prds/.../tasks.md --prd prds/.../prd.md
-bash scripts/traceability-check.sh --prd prds/.../prd.md --tasks prds/.../tasks.md
+bash scripts/spec-rigor-check.sh --artifact tasks --path docs/prds/.../tasks.md --prd docs/prds/.../prd.md
+bash scripts/traceability-check.sh --prd docs/prds/.../prd.md --tasks docs/prds/.../tasks.md
 ```
 
 ### Verdict contract

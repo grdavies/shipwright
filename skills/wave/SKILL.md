@@ -9,7 +9,7 @@ Layer above `/pf-ship` for multi-item rounds. Reuses `scripts/worktree.sh` and `
 
 ## Wave plan representation
 
-Path: `.cursor/pf-wave-plan.json` (machine-readable; see `docs/layout.md`).
+Path: `.cursor/pf-wave-plan.json` (machine-readable; see `.pf/layout.md`).
 
 ```json
 {
@@ -60,4 +60,4 @@ For each leaf in dependency order:
 
 ## High-contention surfaces
 
-Living `prds/INDEX.md`, `decisions/INDEX.md`, and doc-numbering counters are shared mutable state — serialize doc-creation across a wave or late-bind numbering at integration.
+Living `docs/prds/INDEX.md`, `docs/decisions/INDEX.md`, and doc-numbering counters are shared mutable state — serialize doc-creation across a wave or late-bind numbering at integration.

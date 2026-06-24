@@ -77,7 +77,7 @@ Detect and recommend (never hard-fail scaffold):
 - Recallium reachable when `memory.provider` is `recallium`.
 - `verify.*` commands still placeholders → recommend configuring them.
 - Missing in-repo store dir → offer `mkdir -p` repair.
-- Config drift vs `docs/config.schema.json` → list validation errors.
+- Config drift vs `.pf/config.schema.json` → list validation errors.
 
 **Doctor repair examples:**
 
@@ -87,13 +87,13 @@ Detect and recommend (never hard-fail scaffold):
 
 ### 6. Write config
 
-Assemble and validate against `docs/config.schema.json` before write:
+Assemble and validate against `.pf/config.schema.json` before write:
 
 ```bash
 # Validate (python example)
 python3 -c "
 import json, jsonschema, pathlib
-schema = json.loads(pathlib.Path('docs/config.schema.json').read_text())
+schema = json.loads(pathlib.Path('.pf/config.schema.json').read_text())
 cfg = json.loads(pathlib.Path('/tmp/pf-setup-draft.json').read_text())
 jsonschema.validate(cfg, schema)
 print('schema ok')
@@ -105,6 +105,8 @@ Write `.cursor/workflow.config.json` (repo-local). Include `memory.inRepo` block
 ### 7. Report
 
 Print summary: providers chosen, store path, guardrail mode, environment warnings, config path.
+
+Print tip: "Tip: add docs/ to .gitignore to keep workflow artifacts local (brainstorms, PRDs, decisions)."
 
 ## Guardrails
 
