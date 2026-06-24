@@ -8,7 +8,7 @@ usage() {
   cat <<'EOF'
 Usage:
   reconcile-status.sh derive [--json]     Compute status per PRD from git facts
-  reconcile-status.sh reconcile [--dry-run]  Update prds/INDEX.md Status column
+  reconcile-status.sh reconcile [--dry-run]  Update docs/prds/INDEX.md Status column
   reconcile-status.sh append-log <prd> <phase> <notes>  Append COMPLETION-LOG entry
 EOF
 }
@@ -25,7 +25,7 @@ for candidate in (root / ".cursor/workflow.config.json", root / "workflow.config
         print(candidate.read_text(encoding="utf-8"))
         break
 else:
-    print('{"prdsDir":"prds","tasksDir":"prds","defaultBaseBranch":"main"}')
+    print('{"prdsDir":"docs/prds","tasksDir":"docs/prds","defaultBaseBranch":"main"}')
 PY
 }
 
@@ -155,7 +155,7 @@ from pathlib import Path
 root = Path(sys.argv[1])
 data = json.loads(sys.argv[2])
 dry = bool(sys.argv[3])
-index_path = root / "prds" / "INDEX.md"
+index_path = root / "docs" / "prds" / "INDEX.md"
 text = index_path.read_text(encoding="utf-8")
 status_map = {r["prd"]: r["status"] for r in data.get("prds", [])}
 lines = []
@@ -178,7 +178,7 @@ PY
 cmd_append_log() {
   local prd="${1:-}" phase="${2:-}" notes="${3:-}"
   [[ -n "$prd" && -n "$phase" ]] || { usage >&2; exit 1; }
-  local log="$ROOT/prds/COMPLETION-LOG.md"
+  local log="$ROOT/docs/prds/COMPLETION-LOG.md"
   local date
   date="$(date -u +%Y-%m-%d)"
   python3 - "$log" "$date" "$prd" "$phase" "$notes" <<'PY'

@@ -48,5 +48,5 @@ Do **not** put `cheap`/`build`/`deep` or vendor aliases like `sonnet` in shipped
 ## Validate
 
 ```bash
-bash scripts/model-tier-check.sh --config config/workflow.config.example.json
+bash scripts/model-tier-check.sh --config .pf/workflow.config.example.json
 ```

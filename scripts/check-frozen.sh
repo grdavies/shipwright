@@ -43,7 +43,8 @@ while IFS=$'\t' read -r status path; do
   esac
   case "$status" in
     A) continue ;;
-    D|M|R*)
+    R*) continue ;;
+    D|M)
       if git cat-file -e "$BASE:$path" 2>/dev/null; then
         if is_frozen_at_ref "$path" "$BASE"; then
           VIOLATIONS+=("$path")

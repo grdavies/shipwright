@@ -59,7 +59,7 @@ Classify **destination** (not `002` ceremony tier):
 | debug | `/pf-debug` | production signal ref or excerpt |
 | brainstorm | `/pf-brainstorm` | redacted summary + `untrusted_payload` envelope |
 | gap-amend | `/pf-amend` | PRD ref + redacted delta summary |
-| gap-task | append | `prds/GAP-BACKLOG.md` (U3) |
+| gap-task | append | `docs/prds/GAP-BACKLOG.md` (U3) |
 
 Record route per `references/route-record.md` via `memory-preflight` write. Serialize the route record,
 run `bash scripts/memory-redact.sh` on the JSON, then write — never persist raw `untrusted_payload`.
@@ -71,15 +71,15 @@ When destination is **gap-capture**, decide on the **freeze axis** (not ceremony
 | Outcome | When | Handoff |
 |---------|------|---------|
 | **Substantial** | Adds/edits/retracts R-ID, changes documented behavior, touches frozen PRD scope, or material shipped behavior with no PRD | `/pf-amend` |
-| **Trivial in-scope** | Small gap, no requirement/behavior change | Append to `prds/GAP-BACKLOG.md` |
+| **Trivial in-scope** | Small gap, no requirement/behavior change | Append to `docs/prds/GAP-BACKLOG.md` |
 
-Create `prds/GAP-BACKLOG.md` with a checklist header if missing before first append.
+Create `docs/prds/GAP-BACKLOG.md` with a checklist header if missing before first append.
 
 **Bias:** ambiguous → **substantial** (amendment), never silent task edit.
 
 ### Gap backlog entry format
 
-Append to `prds/GAP-BACKLOG.md` table + checklist:
+Append to `docs/prds/GAP-BACKLOG.md` table + checklist:
 
 ```markdown
 - [ ] source:feedback pr:#<n> signal:<signalId> — <redacted one-line gap>
@@ -93,7 +93,7 @@ Return: normalized signal id, route, target command/path, dedup status, next ste
 
 **Agent callers:** set `invocation: human` when acting on an explicit user instruction. Surface the
 handoff summary and **await explicit user confirmation** before invoking `/pf-debug`, `/pf-amend`,
-`/pf-brainstorm`, or appending to `prds/GAP-BACKLOG.md` — even when the user invoked `/pf-feedback`
+`/pf-brainstorm`, or appending to `docs/prds/GAP-BACKLOG.md` — even when the user invoked `/pf-feedback`
 in chat (the hook/monitor auto-dispatch ban applies to all non-confirmed dispatches).
 
 ## Guardrails

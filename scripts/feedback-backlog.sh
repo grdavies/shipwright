@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Parse and mutate prds/GAP-BACKLOG.md (IM8 / U9).
+# Parse and mutate docs/prds/GAP-BACKLOG.md (IM8 / U9).
 #
 # Usage:
 #   feedback-backlog.sh list [--open-only] [--backlog PATH]
@@ -10,7 +10,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CMD="${1:-}"
 shift || true
 
-BACKLOG="${BACKLOG:-$ROOT/prds/GAP-BACKLOG.md}"
+BACKLOG="${BACKLOG:-$ROOT/docs/prds/GAP-BACKLOG.md}"
 OPEN_ONLY=0
 SIGNAL_ID=""
 CLOSE_DATE=""

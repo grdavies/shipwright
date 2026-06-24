@@ -1,11 +1,11 @@
 {
-  "$schema": "../docs/config.schema.json",
+  "$schema": "config.schema.json",
   "defaultBaseBranch": "main",
   "stateFile": ".git/phase-flow.json",
   "agentsFile": "AGENTS.md",
-  "prdsDir": "prds",
-  "decisionsDir": "decisions",
-  "tasksDir": "prds",
+  "prdsDir": "docs/prds",
+  "decisionsDir": "docs/decisions",
+  "tasksDir": "docs/prds",
   "verify": {
     "lint": "echo 'configure verify.lint for your repo'",
     "typecheck": "echo 'configure verify.typecheck for your repo'",

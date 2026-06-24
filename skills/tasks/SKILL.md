@@ -9,7 +9,7 @@ Port of v1 `spec-tasks` under `pf-`. Reads U8 union so amended requirements are 
 
 ## Path
 
-`prds/<n>-<slug>/tasks-<n>-<slug>.md` per `docs/layout.md`.
+`docs/prds/<n>-<slug>/tasks-<n>-<slug>.md` per `.pf/layout.md`.
 
 ## Procedure
 
@@ -24,7 +24,7 @@ Port of v1 `spec-tasks` under `pf-`. Reads U8 union so amended requirements are 
    - Relevant Files + Notes as needed
 6. Add `## Traceability` table mapping each union R-ID → task ref → named test scenario.
 7. Save task file; run `spec-rigor-check.sh` (tasks) + `traceability-check.sh`; freeze via `/pf-freeze`.
-8. Register/refresh PRD entry in `prds/INDEX.md` with status `not-started`.
+8. Register/refresh PRD entry in `docs/prds/INDEX.md` with status `not-started`.
 
 ## Executable sub-task shape
 

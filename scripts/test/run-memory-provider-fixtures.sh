@@ -9,7 +9,7 @@ HOOK="$ROOT/hooks/before-submit-guardrails.py"
 FIX="$ROOT/scripts/test/fixtures/in-repo-memory"
 FIX_RULES="$ROOT/scripts/test/fixtures/in-repo-rules"
 FIX_MARKER="$ROOT/scripts/test/fixtures/marker"
-SCHEMA="$ROOT/docs/config.schema.json"
+SCHEMA="$ROOT/.pf/config.schema.json"
 PF_SETUP="$ROOT/commands/pf-setup.md"
 IN_REPO_MD="$ROOT/providers/in-repo.md"
 CAPS="$ROOT/skills/memory/CAPABILITIES.md"
@@ -217,7 +217,7 @@ except ImportError:
     print("SKIP U6 jsonschema not installed — structural check only")
     sys.exit(0)
 root = pathlib.Path("$ROOT")
-schema = json.loads((root / "docs/config.schema.json").read_text())
+schema = json.loads((root / ".pf/config.schema.json").read_text())
 valid = json.loads((root / "scripts/test/fixtures/in-repo-memory/config-in-repo.json").read_text())
 jsonschema.validate(valid, schema)
 invalid = dict(valid)
@@ -244,7 +244,7 @@ fi
 
 # --- U7: runner registered ---
 WF_CFG="$ROOT/.cursor/workflow.config.json"
-if grep -q 'run-memory-provider-fixtures.sh' "$WF_CFG" 2>/dev/null || grep -q 'run-memory-provider-fixtures' "$ROOT/config/workflow.config.example.json" 2>/dev/null; then
+if grep -q 'run-memory-provider-fixtures.sh' "$WF_CFG" 2>/dev/null || grep -q 'run-memory-provider-fixtures' "$ROOT/.pf/workflow.config.example.json" 2>/dev/null; then
   echo "OK  verify.test registration present or pending"
 else
   # Will register below — check after update

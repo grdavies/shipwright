@@ -110,16 +110,16 @@ Then `expand` by reading `memories/<id>.md` (or `rules/<id>.md` for rule categor
 
 | Artifact | Role | Mutable | CI freeze |
 |----------|------|---------|-----------|
-| Decision record (`decisions/<n>-<slug>.md`) | Up-front, reviewed-before-build deliverable | Only via amendment | Yes |
+| Decision record (`docs/decisions/<n>-<slug>.md`) | Up-front, reviewed-before-build deliverable | Only via amendment | Yes |
 | `decision`-class memory | Retrospective knowledge distillation | Yes | No |
 
 When a frozen decision record exists for a cross-cutting decision:
 
 - Read: load the record from git; memory may point at it via `relatedFiles` but is not authoritative.
-- Write: store a pointer (`relatedFiles: [decisions/...]`), never the record body.
+- Write: store a pointer (`relatedFiles: [docs/decisions/...]`), never the record body.
 - Flag content-bearing `decision` memories that duplicate an existing record — they should become pointers.
 
-**Supersede reconciliation (`decisions/SUPERSEDED.log`):**
+**Supersede reconciliation (`docs/decisions/SUPERSEDED.log`):**
 
 On record-level supersede, the superseded path is appended to the committed manifest. `/pf-memory-sync`
 reconciles `decision`-class memories still linking a `SUPERSEDED.log` path — best-effort re-point to the

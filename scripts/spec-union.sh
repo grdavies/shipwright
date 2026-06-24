@@ -110,6 +110,10 @@ def resolve_terminal_replacement(replacement: str, visited_paths: set, depth: in
     rep_path = Path(replacement)
     if not rep_path.is_absolute():
         rep_path = root / rep_path
+    if not rep_path.is_file() and "/" in replacement and not replacement.startswith("docs/"):
+        legacy = root / "docs" / replacement
+        if legacy.is_file():
+            rep_path = legacy
     if not rep_path.is_file():
         return replacement
     key = str(rep_path.resolve())

@@ -74,7 +74,7 @@ if cmd == "plan":
         "items": [{"id": i, "branch": f"pf/{i}"} for i in items],
         "edges": edges,
         "waves": waves,
-        "contention": {"serialized": ["prds/INDEX.md", "decisions/INDEX.md", "doc-numbering"]},
+        "contention": {"serialized": ["docs/prds/INDEX.md", "docs/decisions/INDEX.md", "doc-numbering"]},
     }
     plan_path = Path(root) / ".cursor" / "pf-wave-plan.json"
     plan_path.parent.mkdir(parents=True, exist_ok=True)
