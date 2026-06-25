@@ -19,6 +19,7 @@
 #   wave.sh verify run|run-after-merge ...
 #   wave.sh blast-radius apply|dependents ...
 #   wave.sh report blockers
+#   wave.sh watchdog check
 #   wave.sh revert phase ...
 #   wave.sh terminal pr prepare|gate|status
 #   wave.sh terminal deny ...
@@ -40,6 +41,9 @@ case "${1:-}" in
     ;;
   deliver-loop)
     exec python3 "$ROOT/scripts/wave_deliver_loop.py" "$ROOT" deliver-loop "${@:2}"
+    ;;
+  watchdog)
+    exec python3 "$ROOT/scripts/wave_deliver_loop.py" "$ROOT" watchdog "${@:2}"
     ;;
   state|lock|journal|log|ledger)
     exec python3 "$ROOT/scripts/wave_state.py" "$ROOT" "$@"

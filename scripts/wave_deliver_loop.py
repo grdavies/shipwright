@@ -523,11 +523,19 @@ def persist_cursor(root: Path, state: dict[str, Any], action: str, **extra: Any)
 def write_blocker_report(root: Path, state: dict[str, Any], cause: str) -> Path:
     ec, report_payload = run_wave(root, "report", "blockers")
     report = report_payload.get("report") or {}
+    if "resumeCommand" not in report:
+        task_list = state.get("source_task_list")
+        report["resumeCommand"] = (
+            f"bash scripts/wave.sh deliver-loop --task-list {task_list}"
+            if task_list
+            else "bash scripts/wave.sh deliver-loop"
+        )
     out = {
         "verdict": "halt",
         "cause": cause,
         "generatedAt": utc_now(),
         "report": report,
+        "resumeCommand": report.get("resumeCommand"),
         "remediationAttempts": state.get("remediationAttempts") or {},
     }
     path = root / BLOCKER_PATH
@@ -686,6 +694,14 @@ def execute_mechanical(
 
     if action == "halt-blocked":
         cause = str(step.get("cause", "blocked"))
+        if cause.startswith("phase-timeout:"):
+            pid = cause.split(":", 1)[1]
+            phases = state.setdefault("phases", {})
+            meta = phases.get(pid)
+            if isinstance(meta, dict) and meta.get("status") == "in-flight":
+                meta["status"] = "blocked"
+                meta["cause"] = cause
+                meta["updatedAt"] = utc_now()
         state["verdict"] = "blocked"
         state["cause"] = cause
         path = write_blocker_report(root, state, cause)
@@ -693,6 +709,46 @@ def execute_mechanical(
         return {"executed": "halt-blocked", "cause": cause, "blockerReport": str(path)}
 
     fail(f"unknown mechanical action: {action}")
+
+
+def cmd_watchdog_check(root: Path, _args: list[str]) -> None:
+    state = load_state(root)
+    cause = check_watchdog(root, state)
+    timeout_min = phase_timeout_minutes(root)
+    in_flight: list[dict[str, Any]] = []
+    for pid, meta in (state.get("phases") or {}).items():
+        if not isinstance(meta, dict) or meta.get("status") != "in-flight":
+            continue
+        slug = meta.get("slug", pid)
+        status_path = status_file_for(root, slug, None, state)
+        in_flight.append(
+            {
+                "phaseId": pid,
+                "phaseSlug": slug,
+                "startedAt": meta.get("startedAt"),
+                "hasStatusJson": status_path.is_file(),
+            }
+        )
+    if cause:
+        emit(
+            {
+                "verdict": "fail",
+                "action": "watchdog-check",
+                "cause": cause,
+                "phaseTimeoutMinutes": timeout_min,
+                "inFlight": in_flight,
+                "recommendedCommand": "bash scripts/wave.sh deliver-loop",
+            },
+            exit_code=20,
+        )
+    emit(
+        {
+            "verdict": "pass",
+            "action": "watchdog-check",
+            "phaseTimeoutMinutes": timeout_min,
+            "inFlight": in_flight,
+        }
+    )
 
 
 def cmd_deliver_loop(root: Path, args: list[str]) -> None:
@@ -827,6 +883,10 @@ def main() -> None:
                 "next": compute_next_action(root, state, plan),
             }
         )
+    elif cmd == "watchdog":
+        if not args or args[0] != "check":
+            fail("watchdog subcommand required: check")
+        cmd_watchdog_check(root, args[1:])
     else:
         fail(f"unknown command: {cmd}")
 

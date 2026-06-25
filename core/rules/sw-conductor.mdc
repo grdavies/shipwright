@@ -23,8 +23,8 @@ Load `skills/conductor/SKILL.md` for the full contract. These rules are the alwa
 ## Legitimate halts only (R10–R12)
 
 Do not end the turn or ask the human to "continue" for routine driver progression. Halt only on the
-legitimate set defined in `skills/conductor/SKILL.md` and emit `scripts/wave.sh report terminal` output —
-never a bare continuation prompt.
+legitimate set in `skills/conductor/SKILL.md` and emit `scripts/wave.sh report blockers` or
+`report terminal` — never a bare continuation prompt. Every halt must include `resumeCommand`.
 
 ## Push and merge boundaries
 

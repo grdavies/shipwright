@@ -163,24 +163,67 @@ Where the harness cannot auto-resume on `notify_on_output` (cloud/headless agent
 Detect unavailable self-wake when background shell + `notify_on_output` is not offered by the runtime;
 default to poll-then-halt rather than indefinite yield.
 
-## Legitimate-halt set (R10 — summary)
+## Legitimate-halt set (R10)
 
-Halt for human input **only** when:
+Halt for human input **only** when one of these applies:
 
-1. Final merge to `main` (terminal gate — never auto-merged).
-2. Phase remediation budget exhausted (`deliver.remediation.maxAttempts`).
-3. Ambiguous merge conflict or destructive/irreversible action requiring explicit consent.
-4. User-configured checkpoint (`doc.afterTasks: confirm`, `deliver.phaseAckCadence: K>0`,
-   `deliver.autonomy.mode: supervised`).
-5. Phase liveness timeout without terminal `status.json` (R37).
-6. External wait exhausted (`checks.watch.maxWaitMinutes`) without a wake signal (R40).
-7. Run-level autonomy budget exceeded (`deliver.autonomy.maxRunMinutes` / `maxIterations`) (R42).
+| # | Condition | Detection |
+| --- | --- | --- |
+| 1 | Final merge to `main` | Terminal gate (`report terminal`); never auto-merged |
+| 2 | Remediation budget exhausted | `remediationAttempts[phaseId] >= deliver.remediation.maxAttempts` |
+| 3 | Ambiguous merge / destructive action | Merge conflict, explicit revert, or irreversible git op |
+| 4 | Configured checkpoint | `doc.afterTasks: confirm`, `deliver.phaseAckCadence: K>0`, `deliver.autonomy.mode: supervised` |
+| 5 | Phase liveness timeout (R37) | `phase-timeout:<id>` — in-flight phase exceeds `deliver.watchdog.phaseTimeoutMinutes` without terminal `status.json` |
+| 6 | External wait exhausted (R40) | CI/self-wake hits `checks.watch.maxWaitMinutes` without signal |
+| 7 | Run-level autonomy budget (R42) | `deliver.autonomy.maxRunMinutes` or `maxIterations` exceeded |
+| 8 | No-progress circuit breaker (R38) | 3× identical `nextAction` + unchanged state signature |
 
-**No routine halts (R11):** per-phase progression, status collection, wave advancement, and release
-bookkeeping do not pause for the user.
+Anything not in this table is **not** a legitimate halt.
 
-Every halt emits one consolidated report via `scripts/wave.sh report terminal` — what is blocked, why, and
-the exact resume command (R12). Never emit a bare "continue?" prompt.
+## No routine halts (R11)
+
+The conductor **must not** pause or ask the user to continue for:
+
+- Per-phase `/sw-ship` dispatch or completion
+- `status collect`, `merge enqueue`, `merge run-next`, wave advancement
+- Release bookkeeping (`bookkeeping record`)
+- Mechanical `deliver-loop` steps with `awaitAgent: false`
+
+These advance in-turn via `deliver-loop` re-invocation. User-facing text like "continue deliver?" is
+forbidden when the driver can proceed.
+
+## Consolidated halt report (R12)
+
+Every legitimate halt emits **one** actionable artifact — never a bare "continue?" prompt.
+
+```bash
+# Blocker / mid-run halt (blocked phase, watchdog, budget exhausted):
+bash scripts/wave.sh report blockers
+# Written to .cursor/sw-deliver-runs/blockers.json by deliver-loop halt-blocked
+
+# All phases green — terminal human gate:
+bash scripts/wave.sh report terminal
+```
+
+Each report includes `resumeCommand` (e.g. `bash scripts/wave.sh deliver-loop --task-list <path>`),
+`blockers` with `recommendedCommand` (`/sw-stabilize` when applicable), and `cause`. Surface all three to
+the user in one message.
+
+## Phase liveness watchdog (R37)
+
+Config: `deliver.watchdog.phaseTimeoutMinutes` (default **240**).
+
+```bash
+bash scripts/wave.sh watchdog check          # exit 20 when stale/timeout
+bash scripts/wave.sh state heartbeat         # refresh driverHeartbeatAt during long agent work
+```
+
+`deliver-loop` `compute-next` calls the watchdog internally: an in-flight phase past timeout without
+terminal `status.json` routes to `halt-blocked` (`cause: phase-timeout:<id>`), marks the phase `blocked`, and
+writes the consolidated blocker report.
+
+Driver heartbeat staleness (`driver-heartbeat-stale`) uses `SW_DRIVER_STALE_SECONDS` (default 4h) — refresh
+with `state heartbeat` during long in-turn agent work.
 
 ## Parallel dispatch (R14–R20 — summary)
 
