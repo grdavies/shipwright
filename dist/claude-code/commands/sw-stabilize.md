@@ -1,5 +1,5 @@
 ---
-description: Consume the current PR blocker surface (all failing checks + unresolved threads) before the next push
+description: Sync merge-base when the PR conflicts, then consume failing checks and unresolved threads before the next push. Does not merge the PR to main.
 alwaysApply: false
 trigger: "/sw-stabilize" or "stabilize the current PR"
 ---
@@ -7,7 +7,8 @@ trigger: "/sw-stabilize" or "stabilize the current PR"
 # `/sw-stabilize`
 
 Post-PR stabilization for the current branch. Prefer honest incremental progress over "clearing" large
-automated-review thread lists. Failing checks and unresolved review threads are **one** surface.
+automated-review thread lists. **Merge conflicts, failing checks, and unresolved review threads** are
+**one** triangulation surface — conflicts are evaluated first because they block CI from running.
 
 This is the single-pass stabilizer. The opt-in goal-loop wrapper (keep stabilizing until the gate is
 green) is the `stabilize-loop` skill, added in a later phase.
@@ -30,7 +31,36 @@ PR_NUMBER=$(jq -r .number <<<"$PR_JSON")
 HEAD_SHA=$(jq -r .headRefOid <<<"$PR_JSON")
 ```
 
-Stop if no PR exists. Build the blocker surface for **this** `HEAD_SHA` before changing code.
+Stop if no PR exists.
+
+### 0. Merge-base sync (pre-CI)
+
+GitHub will not run required checks while `mergeable == CONFLICTING`. Resolve this **before** harvesting
+threads or interpreting a vacuous gate.
+
+```bash
+bash scripts/stabilize-merge-sync.sh fetch-base
+STATUS=$(bash scripts/stabilize-merge-sync.sh status)
+echo "$STATUS" | jq .
+```
+
+When `verdict` is `conflicting`:
+
+1. Classify every path in `conflictingFiles` as ledger bucket **`fix-now`** (blocks all other work).
+2. Merge the PR base into the current branch — default `git merge origin/<baseRefName>` (preserve branch
+   history; do not rebase unless repo policy requires it).
+3. Resolve conflicts with minimal, correctness-first edits:
+   - **`docs/prds/INDEX.md`** — union PRD rows from both sides; never drop a numbered entry.
+   - **`core/**` command/skill/rule sources** — keep both sides' intent; prefer the branch's feature work
+     plus main's additive changes.
+   - **`dist/**`** — do not hand-merge emitted copies; resolve `core/` then run
+     `bash scripts/copy-to-core.sh` and `python3 -m sw generate --all`.
+4. Re-run scoped `verify` on the touched surface; one focused commit; `bash scripts/git-push.sh` once.
+5. Re-run `stabilize-merge-sync.sh status` — must be `mergeable` before step 1 below.
+
+When `verdict` is `mergeable`, continue to harvest.
+
+Build the blocker surface for **this** `HEAD_SHA` before changing code (after any merge-base sync).
 
 1. Fetch **all** review-thread pages to `/tmp/sw-stabilize-threads.json` via `gh api graphql`
    (paginate `reviewThreads` with `after` until `hasNextPage` is false). Write each GraphQL response to
@@ -100,6 +130,8 @@ or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve
 
 ## Procedure
 
+0. **Merge-base sync** — `stabilize-merge-sync.sh status`; when `conflicting`, merge base, resolve,
+   verify, push, re-probe. Do not harvest checks/threads until `mergeable`.
 1. **RCA pass** — `Load skills/rca-core/SKILL.md` (stabilize entry) on the harvested artifacts; use its
    output to inform triage. Then classify every item into the ledger (below).
 2. Triage all **unresolved** threads, all **non-inline findings** (`/tmp/sw-stabilize-noninline.md`), and
@@ -133,8 +165,10 @@ or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve
 
 ## Guardrails
 
-- Failing checks, unresolved threads, and non-inline review findings are **one** surface, not separate
-  loops. A pass that fixes threads but ignores "Outside diff range comments" is incomplete.
+- Merge conflicts are **fix-now** and block check/thread triage until `mergeable` — never interpret
+  "checks awaiting conflict resolution" as green or yellow.
+- Failing checks, unresolved threads, non-inline review findings, and merge conflicts are **one**
+  triangulation surface, evaluated in that order.
 - Non-inline findings have no reply/resolve API — never invent one; their resolution is the verified code
   change on `HEAD`, confirmed by re-harvesting the review bodies on the next pass.
 - When `coderabbit.noDefer` is true, do not defer — resolve with evidence or fix.

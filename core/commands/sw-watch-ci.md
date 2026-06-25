@@ -16,6 +16,9 @@ Watch the active PR after `/phase-pr` or any follow-up push, and report a single
 
 If no PR exists, stop and send the workflow back to `/phase-pr`.
 
+When `gh pr view` reports `mergeable: CONFLICTING`, stop and hand off to `/sw-stabilize` (merge-base
+sync). Do not busy-poll checks that cannot run until conflicts are resolved.
+
 ## Procedure
 
 1. Read `.cursor/workflow.config.json` → `checks` (policy, `treatNeutralAsPass`, `neutralAllowlist`) and
