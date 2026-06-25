@@ -62,7 +62,7 @@ Each remains independently runnable.
          `<type>/<slug>` (never onto `main`):
          `git checkout -B <type>/<slug> && git add docs/prds/<n>-<slug>/ && git commit -m "docs: freeze PRD and tasks for <slug>"`
          (skip commit when already committed — idempotent).
-      4. The exact next command: `/sw-deliver run <frozen-task-list-path>`.
+      4. The exact next command: `bash scripts/wave.sh deliver-loop --task-list <frozen-task-list-path>`.
       Do **not** recommend `/sw-worktree` → `/sw-start` → `/sw-execute` or standalone `/sw-ship` as the
       primary path.
     - **`confirm`** — present the full frozen task list, then ask explicitly whether to begin implementation
@@ -72,14 +72,14 @@ Each remains independently runnable.
       1. **Seed commit** — on `<type>/<slug>`, commit only tracked files under `docs/prds/<n>-<slug>/` (PRD,
          frozen tasks, amendments). Exclude `docs/brainstorms/**` and any untracked or ignored path. Idempotent
          (no-op when already committed). Docs-only message.
-      2. **Dispatch** `/sw-deliver run <frozen-task-list-path>`.
+      2. **Dispatch** `bash scripts/wave.sh deliver-loop --task-list <frozen-task-list-path>`.
     - **`auto`** — emit one line: `implementing on branch <type>/<slug>`, then seed commit (same as confirm
-      step 1), then **dispatch** `/sw-deliver run <frozen-task-list-path>`. No second prompt. When an **agent**
-      (not a human) invoked `/sw-doc --after-tasks=auto`, record the override via
+      step 1), then **dispatch** `bash scripts/wave.sh deliver-loop --task-list <frozen-task-list-path>`.
+      No second prompt. When an **agent** (not a human) invoked `/sw-doc --after-tasks=auto`, record the override via
       `scripts/shipwright-state.sh override-add` (who/when/mode) and record the seed commit (branch + SHA) via
       `scripts/shipwright-state.sh write` **before** dispatch.
 14. On `confirm`/`auto` dispatch paths only: never write implementation files inline — hand off to
-    `/sw-deliver run` (phase worktrees + `/sw-ship` per phase).
+    `deliver-loop` (phase worktrees + `/sw-ship` per phase).
 
 ## Flags
 

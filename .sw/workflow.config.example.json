@@ -10,7 +10,13 @@
     "afterTasks": "confirm"
   },
   "deliver": {
-    "phaseAckCadence": 0
+    "phaseAckCadence": 0,
+    "remediation": {
+      "maxAttempts": 2
+    },
+    "watchdog": {
+      "phaseTimeoutMinutes": 240
+    }
   },
   "verify": {
     "lint": "echo 'configure verify.lint for your repo'",

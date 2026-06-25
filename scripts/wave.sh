@@ -30,10 +30,14 @@
 #   wave.sh lock acquire|release|status ...
 #   wave.sh journal begin|complete|status ...
 #   wave.sh log tail [--lines N]
+#   wave.sh deliver-loop --task-list docs/prds/.../tasks-....md [--dry-run] [--max-steps N]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 case "${1:-}" in
+  deliver-loop)
+    exec python3 "$ROOT/scripts/wave_deliver_loop.py" "$ROOT" deliver-loop "${@:2}"
+    ;;
   state|lock|journal|log)
     exec python3 "$ROOT/scripts/wave_state.py" "$ROOT" "$@"
     ;;

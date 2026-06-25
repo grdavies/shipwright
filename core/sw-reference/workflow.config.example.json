@@ -10,7 +10,13 @@
     "afterTasks": "confirm"
   },
   "deliver": {
-    "phaseAckCadence": 0
+    "phaseAckCadence": 0,
+    "remediation": {
+      "maxAttempts": 2
+    },
+    "watchdog": {
+      "phaseTimeoutMinutes": 240
+    }
   },
   "verify": {
     "lint": "echo 'configure verify.lint for your repo'",
@@ -26,8 +32,12 @@
     "provider": "none",
     "local": {
       "enabled": true,
-      "provider": "ce-code-review",
+      "provider": "native",
+      "apply": "auto",
       "grouping": "auto",
+      "ui": {
+        "enrich": "off"
+      },
       "gate": {
         "surface": ["P0", "P1", "P2", "P3"],
         "haltOn": []

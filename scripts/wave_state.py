@@ -166,6 +166,11 @@ def cmd_state_init(root: Path, args: list[str]) -> None:
         "phases": phases,
         "mergeJournal": None,
         "completedMerges": [],
+        "currentWave": 1,
+        "nextAction": "lock-acquire",
+        "remediationAttempts": {},
+        "phaseWorktrees": {},
+        "driverHeartbeatAt": utc_now(),
         "updatedAt": utc_now(),
     }
     write_json(paths(root)["state"], state)

@@ -67,15 +67,25 @@ Initialized from the phase-mode plan via `scripts/wave.sh state init --plan .cur
     }
   },
   "mergeJournal": null,
+  "completedMerges": [],
+  "currentWave": 1,
+  "nextAction": "lock-acquire",
+  "remediationAttempts": {},
+  "driverHeartbeatAt": "2026-06-25T00:00:00Z",
   "updatedAt": "2026-06-25T00:00:00Z"
 }
 ```
+
+**Driver cursor (R1/R2):** `currentWave`, `nextAction`, `remediationAttempts`, and `driverHeartbeatAt` are
+written by `scripts/wave.sh deliver-loop` on every transition. A fresh agent resumes from this state alone.
 
 **Phase status vocabulary:** `pending` | `in-flight` | `green-merged` | `blocked` | `rejected`.
 
 **Helpers:**
 
 ```bash
+scripts/wave.sh deliver-loop --task-list docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
+scripts/wave.sh deliver-loop --dry-run
 scripts/wave.sh state init --plan .cursor/sw-deliver-plan.json
 scripts/wave.sh state phase --id 1 --status in-flight
 scripts/wave.sh state phase --slug rename-deliver --status green-merged
