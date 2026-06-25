@@ -1,0 +1,106 @@
+# Configuration
+
+Shipwright configures **per target repo** — open your project and run `/sw-setup`.
+
+## `/sw-setup`
+
+Run `/sw-setup` in your **target project repo**. It walks through four questions and writes
+`.cursor/workflow.config.json`. Re-run at any time — it acts as a **doctor** against an existing
+config, validating, reporting drift, and offering targeted repair without a full rescaffold.
+
+### Step 1 — Memory provider
+
+| Choice | `memory.provider` | Notes |
+|--------|-------------------|-------|
+| **in-repo** (default) | `in-repo` | Committed markdown store; zero external dependency |
+| recallium | `recallium` | External REST store; requires a reachable `memory.connection.restBaseUrl` |
+
+For **in-repo**, choose commit mode:
+- `committed` (default) — store lives in `.cursor/sw-memory/`; PR-reviewable
+- `local` — gitignored at `.cursor/sw-memory-local/`
+
+For **recallium**: setup warns if the health check fails but still allows save.
+
+### Step 2 — Review provider
+
+| Choice | `review.provider` | Notes |
+|--------|-------------------|-------|
+| **none** (default) | `none` | Review gating off; CI can still pass without external review |
+| coderabbit | `coderabbit` | AI review on PRs; install CodeRabbit CLI for local flows |
+
+Canonical opt-out: `review.provider: "none"`. Do not use `review.enabled: false` (deprecated).
+
+### Step 3 — Doc→implementation boundary
+
+| Mode | `doc.afterTasks` | Behavior |
+|------|-----------------|----------|
+| **confirm** (default) | `confirm` | Show frozen task list; require `proceed` or `yes` before dispatch |
+| stop | `stop` | Halt after frozen tasks; hand off to `/sw-worktree` + `/sw-start` manually |
+| auto | `auto` | Provision a worktree and dispatch `/sw-deliver run` without a second prompt |
+
+### Step 4 — Guardrails
+
+| Setting | Default | Meaning |
+|---------|---------|---------|
+| `guardrails.enforceBeforeSubmit` | `true` | Memory guardrails run before prompts submit |
+| `guardrails.requireRuleClass` | `false` | Set `true` in mature repos requiring allowlisted rules |
+
+### Step 5 — Environment doctor (warnings only)
+
+- CodeRabbit CLI on `PATH` when `review.provider` is `coderabbit`
+- Recallium reachable when `memory.provider` is `recallium`
+- Placeholder `verify.*` commands → recommends configuring real lint/typecheck/test commands
+- Missing memory dirs → offers `mkdir -p` repair
+
+### Step 6 — Write config
+
+Validates against `core/sw-reference/config.schema.json`, then writes `.cursor/workflow.config.json`.
+
+## Manual config
+
+```bash
+mkdir -p .cursor
+cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
+# edit memory.project, verify.*, providers
+```
+
+## All config keys
+
+| Key | Purpose |
+|-----|---------|
+| `doc.afterTasks` | After frozen tasks: `stop` \| `confirm` (default) \| `auto` |
+| `memory.provider` | `in-repo` (default) or `recallium` |
+| `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
+| `review.provider` | AI review adapter — default **`none`**; `coderabbit` opt-in |
+| `verify.lint` | Command `/sw-verify` runs for linting |
+| `verify.typecheck` | Command `/sw-verify` runs for type checking |
+| `verify.test` | Command `/sw-verify` runs for tests |
+| `coderabbit.reviewGraceMinutes` | Gate grace window before absent review = settled |
+| `checks.treatNeutralAsPass` | NEUTRAL CI checks count as pass unless allowlisted |
+| `checks.neutralAllowlist` | Check names that stay blocking even if neutral |
+| `guardrails.enforceBeforeSubmit` | Memory guardrails run before prompts submit |
+| `guardrails.requireRuleClass` | Require allowlisted rules before prompts proceed |
+
+See `core/sw-reference/config.schema.json` for the full schema.
+
+## Zero-config fast path
+
+A repo can work without `workflow.config.json` if you commit:
+
+```text
+.cursor/sw-memory.provider    # file containing: in-repo
+.cursor/sw-memory/memories/   # empty
+.cursor/sw-memory/rules/      # empty
+```
+
+The fail-closed hook engages via the marker. Run `/sw-setup` when you want full config.
+
+## Optional integrations
+
+| Integration | Config | When to enable |
+|-------------|--------|----------------|
+| **CodeRabbit** | `review.provider: "coderabbit"` | AI review on PRs |
+| **Recallium** | `memory.provider: "recallium"` | External memory store instead of in-repo markdown |
+| **Sentry** | Production signals via `/sw-feedback` or `/sw-debug` | Route production errors into the debug workstream |
+
+Provider **credentials** come from the environment or your secret store — never commit secrets.
