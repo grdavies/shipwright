@@ -37,9 +37,11 @@ MECHANICAL_ACTIONS = frozenset(
         "advance-wave",
         "write-blocker-report",
         "all-phases-complete",
+        "finalize-completion",
+        "suggest-cleanup",
     }
 )
-AGENT_ACTIONS = frozenset({"dispatch-ship", "remediate", "terminal-ship"})
+AGENT_ACTIONS = frozenset({"dispatch-ship", "remediate", "terminal-ship", "compound-ship"})
 TERMINAL_ACTIONS = frozenset({"halt-blocked", "complete", "terminal"})
 
 DRIVER_STALE_SECONDS = int(os.environ.get("SW_DRIVER_STALE_SECONDS", "7200"))
@@ -215,6 +217,24 @@ def task_list_from(state: dict[str, Any], plan: dict[str, Any]) -> str | None:
     return str(raw) if raw else None
 
 
+def _target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT_DIR / "wave_compound.py"), str(root), "completion", "check-merge"],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    try:
+        data = json.loads(proc.stdout or "{}")
+        return {
+            "merged": bool(data.get("merged")),
+            "status": data.get("status"),
+            "detail": data.get("detail"),
+        }
+    except json.JSONDecodeError:
+        return {"merged": False, "reason": "check-merge-failed"}
+
+
 def tasks_currency_ok(
     root: Path, state: dict[str, Any], plan: dict[str, Any]
 ) -> tuple[bool, str | None]:
@@ -275,13 +295,31 @@ def compute_next_action(
     if not target:
         fail("plan/state missing target branch")
 
+    if all_phases_merged(state):
+        completion = state.get("completion") or {}
+        compound = state.get("compoundShip") or {}
+        if completion.get("status") == "completed-pending-merge":
+            merge_info = _target_merge_detected(root, state)
+            if merge_info.get("merged"):
+                return {
+                    "action": "finalize-completion",
+                    "cleanupSuggestion": "Run `/sw-cleanup` to prune merged branches and stale worktrees.",
+                    "resume": True,
+                }
+            if compound.get("premergeDone"):
+                return {
+                    "action": "terminal-ship",
+                    "note": "awaiting human merge — completion pending until merged",
+                    "resume": True,
+                }
+        if not compound.get("premergeDone"):
+            return {"action": "compound-ship", "resume": True}
+        return {"action": "terminal-ship", "resume": True}
+
     if not state.get("orchestratorWorktree"):
         if state.get("nextAction") in (None, "plan", "state-init"):
             return {"action": "lock-acquire", "target": target, "resume": True}
         return {"action": "orchestrator-provision", "target": target, "resume": True}
-
-    if all_phases_merged(state):
-        return {"action": "all-phases-complete", "resume": True}
 
     statuses = phase_status_map(state)
     wave_num = int(state.get("currentWave") or 1)
@@ -584,8 +622,25 @@ def execute_mechanical(
         return {"executed": "advance-wave", "currentWave": wave_num}
 
     if action == "all-phases-complete":
-        persist_cursor(root, state, "terminal-ship")
-        return {"executed": "all-phases-complete", "next": "terminal-ship"}
+        persist_cursor(root, state, "compound-ship")
+        return {"executed": "all-phases-complete", "next": "compound-ship"}
+
+    if action == "finalize-completion":
+        ec, data = run_wave(root, "completion", "finalize-if-merged")
+        if ec != 0:
+            fail(data.get("error") or "finalize completion failed", exit_code=ec, **data)
+        state.update(load_state(root))
+        persist_cursor(root, state, "suggest-cleanup")
+        return {
+            "executed": "finalize-completion",
+            "cleanupSuggestion": data.get("cleanupSuggestion"),
+            **data,
+        }
+
+    if action == "suggest-cleanup":
+        suggestion = str(step.get("cleanupSuggestion") or "Run `/sw-cleanup` to prune merged branches and stale worktrees.")
+        persist_cursor(root, state, "terminal")
+        return {"executed": "suggest-cleanup", "cleanupSuggestion": suggestion}
 
     if action == "halt-blocked":
         cause = str(step.get("cause", "blocked"))

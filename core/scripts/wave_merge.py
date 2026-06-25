@@ -759,6 +759,8 @@ def cmd_report_terminal(root: Path, args: list[str]) -> None:
         for p in phases.values()
         if p.get("status") not in ("green-merged", "blocked", "rejected")
     ]
+    completion = state.get("completion") or {}
+    completion_pending = completion.get("status") == "completed-pending-merge"
     all_merged = len(pending) == 0 and len(blocked) == 0 and len(phases) > 0
 
     phase_prs: list[dict[str, Any]] = []
@@ -776,13 +778,18 @@ def cmd_report_terminal(root: Path, args: list[str]) -> None:
         )
 
     report: dict[str, Any] = {
-        "verdict": "complete" if all_merged else ("blocked" if blocked else "running"),
+        "verdict": "complete" if all_merged and not completion_pending else ("blocked" if blocked else "running"),
         "targetBranch": target,
         "phasePrs": phase_prs,
         "blockedPhases": [{"slug": p.get("slug"), "cause": p.get("cause")} for p in blocked],
         "conventionalCommitTypes": ["feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"],
     }
-    if all_merged and not state.get("terminalRejected"):
+    if completion_pending:
+        report["completionPendingMerge"] = True
+        report["note"] = (
+            "Pre-merge compounding recorded; awaiting human merge — not complete until merged (R53)"
+        )
+    if all_merged and not state.get("terminalRejected") and not completion_pending:
         report["terminalGate"] = "ready to merge — your call"
         report["note"] = "Open or update single <type>/<slug> → main PR; halt without merging"
         terminal = state.get("terminalPr") or {}
