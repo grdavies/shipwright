@@ -21,36 +21,36 @@ documented behavior exists.
 
 ### 1. Primitive reliability hardening (M)
 
-- [ ] 1.1 `spec-seed` idempotent state record (R25)
+- [x] 1.1 `spec-seed` idempotent state record (R25)
   - **File:** `scripts/wave_deliver_loop.py`, `scripts/wave.sh`
   - **Expected:** the idempotent-skip path sets `state.specSeed`; `compute_next_action` never returns
     `spec-seed` again once the seed commit exists
-- [ ] 1.2 Merge post-verify routing without silent revert (R26)
+- [x] 1.2 Merge post-verify routing without silent revert (R26)
   - **File:** `scripts/wave_merge.py`, `scripts/wave_failure.py`
   - **Expected:** a post-merge verify failure routes to `/sw-stabilize` and marks the phase `blocked`; the
     default path issues no `git revert`; state stays re-drivable; any revert is explicit + logged
-- [ ] 1.3 `wave.sh` dispatcher argument hygiene (R27)
+- [x] 1.3 `wave.sh` dispatcher argument hygiene (R27)
   - **File:** `scripts/wave.sh`
   - **Expected:** `status`, `merge`, and `report` dispatchers forward `${@:2}`; `wave.sh status collect`,
     `wave.sh merge run-next`, and `wave.sh report terminal` succeed end-to-end via the shell entrypoint
-- [ ] 1.4 Structured driver error paths (`fail()` keyword-collision) (R28)
+- [x] 1.4 Structured driver error paths (`fail()` keyword-collision) (R28)
   - **File:** `scripts/wave_deliver_loop.py`, `scripts/wave_deliver.py`
   - **Expected:** colliding `error` key stripped before `**data` splat; any sub-step failure emits
     `{"verdict":"fail", …}` JSON and exits cleanly with no `TypeError`/stack trace
-- [ ] 1.5 Phase status-vocabulary guard (R29)
+- [x] 1.5 Phase status-vocabulary guard (R29)
   - **File:** `scripts/wave_state.py`, `scripts/wave_merge.py`
   - **Expected:** a guard rejects any status write outside `pending | in-flight | green-merged | blocked |
     rejected`; the merge primitive continues to set `green-merged`
-- [ ] 1.6 Stale-state guard with resume discrimination (R30, R43)
+- [x] 1.6 Stale-state guard with resume discrimination (R30, R43)
   - **File:** `scripts/wave_deliver_loop.py`
   - **Expected:** loop entry compares requested run identity (canonical task-list path / run-id) to state; a
     match resumes, a true mismatch aborts with a consolidated halt or clears under `--reset`; relative/relocated
     same-run paths do not false-abort
-- [ ] 1.7 Detached-head-safe orchestrator provision (R31)
+- [x] 1.7 Detached-head-safe orchestrator provision (R31)
   - **File:** `scripts/wave_lifecycle.py`
   - **Expected:** clean primary-on-target-branch is auto-handled (detach / checkout `origin/HEAD`); a dirty
     primary on the target still fails closed with remediation
-- [ ] 1.8 Wire R25–R31 regression fixtures into the gate (R32)
+- [x] 1.8 Wire R25–R31 regression fixtures into the gate (R32)
   - **File:** `scripts/test/run-deliver-fixtures.sh`, `scripts/test/run-deliver-loop-fixtures.sh`, `scripts/test/run-state-fixtures.sh`
   - **Expected:** each of R25–R31 has a failing-before / passing-after fixture invoked by `verify.test`
 
