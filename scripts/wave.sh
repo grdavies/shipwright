@@ -5,7 +5,7 @@
 #   wave.sh plan --items 'A,B,C' --edges 'C:A'
 #   wave.sh preflight-base --target feat/<slug>
 #   wave.sh memory learnings distill|prepare ...
-#   wave.sh schedule --plan .cursor/sw-deliver-plan.json [--ceiling N]
+#   wave.sh schedule --plan .cursor/sw-deliver-plan.json [--ceiling N]  # parallel batches (R14/R44)
 #   wave.sh orchestrator provision|status ...
 #   wave.sh phase provision --phase-id N [--plan ...] [--base <type>/<slug>]
 #   wave.sh forward-merge --worktree <path> --base <type>/<slug>

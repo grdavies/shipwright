@@ -166,6 +166,22 @@ Schedule JSON shape:
 When a wave exceeds the ceiling, `batches` splits into sequential chunks (e.g. ceiling 2 with
 phases `["2","3","4"]` → `[["2","3"],["4"]]`).
 
+## Conductor parallel dispatch (R14–R16)
+
+The mechanical driver provisions one phase per `deliver-loop` step; the **conductor** achieves parallelism by:
+
+1. `bash scripts/wave.sh schedule --plan .cursor/sw-deliver-plan.json`
+2. For each `batches[].parallel` set, dispatch background `Task` sub-agents (one per phase worktree).
+3. Wait for durable `status.json` per **Parallel-wave completion wait** in `skills/conductor/SKILL.md`.
+4. Serialize merges via `merge enqueue` → `merge run-next` (conductor only).
+
+On `status collect` with `blocked`, `blast-radius apply` blocks transitive dependents only (R24):
+
+```bash
+scripts/wave.sh status collect --phase-slug <phase-slug>
+scripts/wave.sh blast-radius apply --phase-slug <upstream-slug>
+```
+
 ## Branch topology (R35/R53)
 
 | Role | Branch | Worktree path |

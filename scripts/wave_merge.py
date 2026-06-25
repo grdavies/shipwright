@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Merge queue, review barrier, status collection, and terminal report for /sw-deliver."""
+"""Merge queue, review barrier, status collection, and terminal report for /sw-deliver.
+
+Concurrency contract (R21/R22/R41): only the conductor calls `merge enqueue` / `merge run-next`.
+`merge run-next` authorizes via gate + review barrier, merges onto `<type>/<slug>` never `main`,
+and runs single-flight via merge journal + orchestrator lock (`wave_state.py` O_EXCL acquire).
+
+Status collect (R19/R24): reads durable `status.json` only; `blocked` triggers blast-radius apply
+on transitive dependents — green siblings in the same wave continue.
+"""
 from __future__ import annotations
 
 import json
