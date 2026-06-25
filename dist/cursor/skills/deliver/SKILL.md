@@ -15,12 +15,20 @@ Path: `.cursor/sw-deliver-plan.json` (machine-readable; see `.sw/layout.md`).
 
 ```json
 {
-  "items": [{"id": "A", "branch": "pf/A"}, ...],
-  "edges": [{"from": "A", "to": "C"}],
-  "waves": [["A", "B"], ["C"]],
-  "contention": {"serialized": ["doc-numbering"], "notes": "..."}
+  "verdict": "pass",
+  "mode": "phase",
+  "source_task_list": "docs/prds/<n>-<slug>/tasks-<n>-<slug>.md",
+  "prd_number": "004",
+  "target": {"type": "feat", "slug": "<slug>", "branch": "feat/<slug>"},
+  "items": [{"id": "1", "slug": "<phase-slug>", "title": "...", "branch": "feat/<slug>-phase-<phase-slug>"}],
+  "edges": [{"from": "1", "to": "2"}],
+  "waves": [["1"], ["2", "3"]],
+  "contention": {"serialized": ["doc-numbering"], "notes": "..."},
+  "notices": []
 }
 ```
+
+Multi-feature mode uses `"mode": "multi-feature"` with `pf/<id>` branches (unchanged).
 
 - **waves:** ordered batches; no intra-wave dependencies.
 - **contention:** shared-migration refusal + living INDEX/numbering counters force serialization.
