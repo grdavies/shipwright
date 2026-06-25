@@ -42,6 +42,8 @@ batch is identifiable and re-runnable.
 
 **Communication intensity:** ultra
 
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-memory-import`.
+
 ## Guardrails
 
 - Idempotent and dry-run-first. Never write without showing the intended batch and getting approval.

@@ -7,6 +7,9 @@ description: Explore requirements through one-question-at-a-time dialogue, then 
 
 Full-tier requirements exploration. Produces a brainstorm doc for `/sw-prd`. Does **not** draft a PRD.
 
+
+**Model tier:** deep — resolve via `bash scripts/resolve-model-tier.sh --skill brainstorm`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Core principles
 
 1. **One question per turn** — prefer single-select blocking questions.

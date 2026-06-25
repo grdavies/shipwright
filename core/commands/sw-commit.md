@@ -45,6 +45,8 @@ Phase-scoped commit after `/sw-verify` (and `/sw-review` when configured).
 
 **Communication intensity:** ultra
 
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-commit`.
+
 ## Guardrails
 
 - Verification gate override is auditable only — cannot suppress red `check-gate.sh`/CI.

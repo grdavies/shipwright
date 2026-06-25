@@ -11,6 +11,8 @@ Load `skills/retro/SKILL.md`. Produce learning candidates for `/sw-compound`.
 
 **Communication intensity:** lite
 
+**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --command sw-retro`.
+
 ## Guardrails
 
 - No doctrine/memory writes without explicit user direction.

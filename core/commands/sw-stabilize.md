@@ -165,6 +165,8 @@ or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve
 
 **Communication intensity:** full
 
+**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --command sw-stabilize`.
+
 ## Guardrails
 
 - Merge conflicts are **fix-now** and block check/thread triage until `mergeable` — never interpret

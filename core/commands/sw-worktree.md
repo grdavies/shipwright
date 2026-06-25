@@ -34,6 +34,8 @@ Load `skills/worktree/SKILL.md` for scaffold schema and guardrails.
 
 **Communication intensity:** ultra
 
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-worktree`.
+
 ## Guardrails
 
 - Never implement in bare `main` — provision a worktree first.

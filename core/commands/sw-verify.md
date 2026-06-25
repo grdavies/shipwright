@@ -46,6 +46,8 @@ Run the smallest reliable verification for the current phase.
 
 **Communication intensity:** ultra
 
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-verify`.
+
 ## Guardrails
 
 - Logs go to `/tmp` only — never repo root.

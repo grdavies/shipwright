@@ -80,6 +80,8 @@ writes `.cursor/workflow.config.json`:
    require `proceed` before dispatch) · `stop` · `auto`.
 4. **Guardrails** — `enforceBeforeSubmit` (default on) and `requireRuleClass` (default off; enable
    in mature repos).
+5. **Model tier defaults** — four-tier `models` block (`cheap` / `build` / `mid` / `deep`) plus per-command
+   routing from bundled defaults; platform-detected catalog (Cursor vs Claude Code).
 
 Re-run `/sw-setup` at any time — it acts as a **doctor** against an existing config, validating,
 reporting drift, and offering targeted repair without a full rescaffold.

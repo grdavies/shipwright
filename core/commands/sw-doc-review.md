@@ -49,6 +49,8 @@ Decision-record routing is **floor-only** — it never subtracts a persona signa
 
 **Communication intensity:** normal
 
+**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --command sw-doc-review`.
+
 ## Guardrails
 
 - PRD non-Quick: five-persona always-on core + signal-gated `security` / `design`.

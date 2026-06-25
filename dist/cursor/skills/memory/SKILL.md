@@ -9,6 +9,9 @@ The single entry point every Shipwright command uses to read and write durable m
 provider behind the capability spec in [`CAPABILITIES.md`](CAPABILITIES.md), so swapping providers is a
 config change, never a command edit.
 
+
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill memory`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Resolve the provider (first step, always)
 
 1. Read `.cursor/workflow.config.json` → `memory.provider`, `memory.project`, `memory.defaultScope`.

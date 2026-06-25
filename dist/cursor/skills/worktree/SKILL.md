@@ -7,6 +7,9 @@ description: Provision per-work-item git worktrees with env scaffold (ports, DB 
 
 Every work item runs in its own worktree (R18). Bare `main` is not an implementation surface.
 
+
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill worktree`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Provision
 
 ```bash

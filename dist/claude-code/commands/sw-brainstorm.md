@@ -22,6 +22,8 @@ Full-tier brainstorm stage. Produces `docs/brainstorms/...-requirements.md` with
 
 **Communication intensity:** lite
 
+**Model tier:** deep — resolve via `bash scripts/resolve-model-tier.sh --command sw-brainstorm`.
+
 ## Guardrails
 
 - Pipeline-order guard: refuse to draft a PRD in this command.

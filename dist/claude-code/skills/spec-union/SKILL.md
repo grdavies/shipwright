@@ -7,6 +7,9 @@ description: Resolve a frozen PRD or decision record plus amendments into one ef
 
 Single read-time view of frozen doc + amendments (R12). Parent is never mutated.
 
+
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill spec-union`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Supported doc types
 
 | Type | Path | ID grammar | Amendment dir |

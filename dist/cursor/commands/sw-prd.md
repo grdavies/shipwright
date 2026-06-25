@@ -41,6 +41,8 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
 
 **Communication intensity:** lite
 
+**Model tier:** deep — resolve via `bash scripts/resolve-model-tier.sh --command sw-prd`.
+
 ## Guardrails
 
 - PRD Full path: no PRD without brainstorm doc (`--type prd` only).

@@ -90,6 +90,8 @@ Each remains independently runnable.
 
 **Communication intensity:** inherit
 
+**Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-doc`.
+
 ## Guardrails
 
 - `doc.afterTasks` is the **sole human checkpoint** between documentation freeze and implementation; `/sw-tasks` introduces no additional blocking prompt.

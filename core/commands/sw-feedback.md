@@ -47,6 +47,8 @@ Read `.cursor/workflow.config.json` for `memory`, `review.provider`, `prdsDir`.
 
 **Communication intensity:** inherit
 
+**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --command sw-feedback`.
+
 ## Guardrails
 
 - All payloads through R41 redaction before persist or downstream handoff.

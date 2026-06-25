@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+
+### Features
+
+
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

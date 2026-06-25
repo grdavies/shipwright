@@ -120,6 +120,8 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/sw-ready` and stop.
 
 **Communication intensity:** inherit
 
+**Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-ship`.
+
 ## Guardrails
 
 - Never merge or force-push.

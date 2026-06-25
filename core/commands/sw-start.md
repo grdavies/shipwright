@@ -36,6 +36,8 @@ Shape: `<prefix>/<stem>-phase-<slug>` — no nested refs (`feat/foo/phase-bar` w
 
 **Communication intensity:** ultra
 
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-start`.
+
 ## Guardrails
 
 - Branch from current branch within the worktree only.

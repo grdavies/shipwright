@@ -38,6 +38,8 @@ precedes new writes.
 
 **Communication intensity:** ultra
 
+**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --command sw-memory-audit`.
+
 ## Guardrails
 
 - Default is propose-only. Never mutate memory without explicit approval.

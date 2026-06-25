@@ -75,6 +75,8 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
 
 **Communication intensity:** full
 
+**Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-compound-ship`.
+
 ## Guardrails
 
 - **Never merge** or force-push.

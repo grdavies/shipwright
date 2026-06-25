@@ -25,3 +25,5 @@ No args: print the current resolved intensity (routing default, active command, 
 - Wenyan intensities are rejected.
 
 **Communication intensity:** full (override command; does not inherit)
+
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-caveman`.

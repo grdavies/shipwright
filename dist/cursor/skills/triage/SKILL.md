@@ -7,6 +7,9 @@ description: Classify work into Quick, Standard, or Full tiers from deterministi
 
 Deterministic tier classifier. Auditable — same inputs → same tier. Not model judgment.
 
+
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill triage`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Inputs
 
 Collect before scoring:

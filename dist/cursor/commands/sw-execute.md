@@ -42,6 +42,8 @@ discipline** (`skills/execute-discipline/SKILL.md`): plan self-review → TDD re
 
 **Communication intensity:** full
 
+**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --command sw-execute`.
+
 ## Guardrails
 
 - One phase per invocation; read spec union, not bare parent PRD alone.

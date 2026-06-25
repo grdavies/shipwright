@@ -9,6 +9,9 @@ Post-ship production signals **and** dev-time test/build failures (R22). Shares 
 stabilize (R35). **Diagnoses + proposes; does not implement or merge** — routing hands off to
 implementation (`003`) or documentation (`002`).
 
+
+**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill debug`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Phase 0 — Triage
 
 Parse the inbound signal:

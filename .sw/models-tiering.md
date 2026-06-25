@@ -1,46 +1,87 @@
 # Model tiering (R8 / R9 / R30)
 
-Three layers — policy, dispatch, enforcement. See plan 006 KTD5.
+Three layers — policy, dispatch, enforcement. PRD 008 adds **four semantic tiers** and per-command/skill
+routing defaults.
 
 ## Layer 1 — Policy (`workflow.config.json`)
 
-Semantic tiers map to **concrete platform model IDs** per project:
+Semantic tiers map to **concrete platform model IDs** per project. `/sw-setup` seeds the block from the
+detected platform catalog plus `core/sw-reference/model-routing.defaults.json`.
 
 ```json
 "models": {
   "tiers": {
     "cheap": "composer-2.5-fast",
     "build": "composer-2.5",
-    "deep": "gpt-5.5"
+    "mid": "gpt-5.5-medium",
+    "deep": "claude-opus-4-8-thinking-high"
   },
-  "aliases": {
-    "fast": "cheap"
-  },
-  "roles": {
-    "builder": "build",
-    "reviewer": "build"
+  "aliases": { "fast": "cheap" },
+  "roles": { "builder": "build", "reviewer": "build" },
+  "routing": {
+    "commands": { "sw-prd": "deep", "sw-doc": "inherit" },
+    "skills": { "prd": "deep" }
   }
 }
 ```
 
-- **`cheap` / `build` / `deep`** — policy vocabulary only; not valid in agent `model:` frontmatter.
+### Four tiers
+
+| Tier | Typical use |
+| --- | --- |
+| `cheap` | Mechanical ops — triage, verify, commit, status |
+| `build` | Implementation, debug, review orchestration (`models.roles.builder`) |
+| `mid` | Medium reasoning — gaps, simplify, memory-sync, non-high-stakes panel specialists |
+| `deep` | Doc authoring, high-stakes review, adversarial/security personas |
+
+- **`cheap` / `build` / `mid` / `deep`** — policy vocabulary only; not valid in agent `model:` frontmatter.
+- **`inherit`** — routing sentinel only (orchestrators `sw-doc`, `sw-ship`, `sw-deliver`, `sw-compound-ship`);
+  resolve delegated children via `resolve-model-tier.sh --delegate`.
 - **Tier values** — Cursor/Claude dispatch IDs ([Cursor subagents](https://cursor.com/docs/subagents#model-configuration)).
 - **`roles`** — builder vs reviewer floor; `roles.reviewer` tier must be ≥ `roles.builder`.
 
-## Layer 2 — Dispatch (`agents/*.md`)
+### Platform catalogs (`scripts/seed-model-config.sh`)
 
-| Agent kind | Recommended `model:` |
-|------------|----------------------|
-| `sw-*-reviewer` | `inherit` — matches parent capability (CE pattern) |
-| Specialist (must always run hot) | Concrete platform ID from `models.tiers` |
+| Tier | Cursor | Claude Code |
+| --- | --- | --- |
+| `cheap` | `composer-2.5-fast` | `claude-4.5-haiku-thinking` |
+| `build` | `composer-2.5` | `claude-4.6-sonnet-medium-thinking` |
+| `mid` | `gpt-5.5-medium` | `claude-4.6-sonnet-medium-thinking` |
+| `deep` | `claude-opus-4-8-thinking-high` | `claude-opus-4-8-thinking-high` |
 
-Do **not** put `cheap`/`build`/`deep` or vendor aliases like `sonnet` in shipped reviewer agents.
+**Claude mid collapse:** on `claude-code`, `mid` and `build` share the same Sonnet ID — semantic `mid` still
+exists in routing for cross-platform parity; only the concrete ID collapses.
+
+### Routing resolution
+
+```bash
+bash scripts/resolve-model-tier.sh --command sw-prd
+bash scripts/resolve-model-tier.sh --skill prd
+bash scripts/resolve-model-tier.sh --command sw-doc --delegate sw-prd
+bash scripts/resolve-model-tier.sh --tier deep
+```
+
+Config `models.routing` overrides bundled defaults; missing keys fall back to
+`core/sw-reference/model-routing.defaults.json`.
+
+## Layer 2 — Dispatch (`commands/`, `skills/`, `agents/`)
+
+| Surface | Tier documentation |
+| --- | --- |
+| `core/commands/sw-*.md` | `**Model tier:**` line + resolver hint |
+| `core/skills/*/SKILL.md` | tier + subagent dispatch tier when Task tool used |
+| `agents/sw-*-reviewer` | `model: inherit` — matches parent capability (CE pattern) |
+| Specialist agents | Concrete platform ID from `models.tiers` when hot path required |
+
+Do **not** put `cheap`/`build`/`mid`/`deep` or vendor aliases like `sonnet` in shipped reviewer agents.
 
 ## Layer 3 — Enforcement
 
 | Check | What |
-|-------|------|
-| `scripts/model-tier-check.sh` | Config `roles.reviewer` ≥ `roles.builder`; concrete agent models resolve via aliases to tier ≥ builder; `inherit` passes static check |
+| --- | --- |
+| `scripts/model-tier-check.sh` | Four-tier order; `roles.reviewer` ≥ `roles.builder`; concrete agent models ≥ builder; `inherit` passes static check |
+| `scripts/model-routing-check.sh` | Defaults cover all shipped commands/skills; valid tier keys; R27 parity with communication defaults when present |
+| `scripts/resolve-model-tier.sh` | Runtime tier → concrete ID; `inherit` → `modelId: null` exit 0 |
 | `/sw-doc-review`, `sw-subagent-dispatch` | **Runtime R9:** parent model tier ≥ builder when dispatching `inherit` reviewers |
 
 `inherit` reviewers cannot be fully R9-verified in CI — orchestrator must not run doc-review on a sub-`build` parent.
@@ -49,4 +90,6 @@ Do **not** put `cheap`/`build`/`deep` or vendor aliases like `sonnet` in shipped
 
 ```bash
 bash scripts/model-tier-check.sh --config .sw/workflow.config.example.json
+bash scripts/model-routing-check.sh
+bash scripts/test/fixtures/model-tier-routing.sh
 ```

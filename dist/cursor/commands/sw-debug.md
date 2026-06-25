@@ -54,6 +54,8 @@ Read `.cursor/workflow.config.json` for `prdsDir`, `agentsFile`, `memory` provid
 
 **Communication intensity:** inherit
 
+**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --command sw-debug`.
+
 ## Guardrails
 
 - Every ingestion edge through `bash scripts/memory-redact.sh` (R41).

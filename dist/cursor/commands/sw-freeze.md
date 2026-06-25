@@ -48,6 +48,8 @@ Bootstrap local hook: `bash scripts/install-hooks.sh`.
 
 **Communication intensity:** normal
 
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-freeze`.
+
 ## Guardrails
 
 - No unfreeze path exists.

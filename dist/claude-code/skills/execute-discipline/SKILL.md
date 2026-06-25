@@ -8,6 +8,9 @@ description: Per-task TDD gate, two-stage subagent review, and executable-plan s
 Bounded implementation loop inside `/sw-execute`. One **task ref** at a time (e.g. `1.2`); each task runs
 plan self-review → TDD red → implement → TDD green → two-stage review before the next task.
 
+
+**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill execute-discipline`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Per-task loop
 
 ```

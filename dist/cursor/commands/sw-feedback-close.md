@@ -40,6 +40,8 @@ verify evidence passes. **Requires explicit human confirmation** before mutating
 
 **Communication intensity:** ultra
 
+**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --command sw-feedback-close`.
+
 ## Guardrails
 
 - Never auto-close from hooks/monitors without human confirmation.

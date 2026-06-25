@@ -95,6 +95,8 @@ Per the `checks-gate` skill:
 
 **Communication intensity:** ultra
 
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-watch-ci`.
+
 ## Guardrails
 
 - Watch the PR tied to the current branch only.
