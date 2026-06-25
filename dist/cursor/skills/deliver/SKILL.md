@@ -40,7 +40,75 @@ Multi-feature mode uses `"mode": "multi-feature"` with `pf/<id>` branches (uncha
 | Plan | `.cursor/sw-deliver-plan.json` |
 | Run state | `.cursor/sw-deliver-state.json` |
 | Orchestrator lock | `.cursor/sw-deliver.lock` |
-| Per-phase status | `.cursor/sw-deliver-runs/<phase>/status.json` |
+| Per-phase `/sw-ship` status | `.cursor/sw-deliver-runs/<phase-slug>/status.json` |
+| Append-only progress log | `.cursor/sw-deliver-runs/run.log` |
+
+Living artifacts under `.cursor/` are **never committed** (`/sw-commit` excludes them).
+
+### Run-state schema (`.cursor/sw-deliver-state.json`)
+
+Initialized from the phase-mode plan via `scripts/wave.sh state init --plan .cursor/sw-deliver-plan.json`:
+
+```json
+{
+  "verdict": "running",
+  "target": {"type": "feat", "slug": "<slug>", "branch": "feat/<slug>"},
+  "source_task_list": "docs/prds/<n>-<slug>/tasks-<n>-<slug>.md",
+  "prd_number": "004",
+  "phases": {
+    "1": {
+      "id": "1",
+      "slug": "<phase-slug>",
+      "title": "...",
+      "branch": "feat/<slug>-phase-<phase-slug>",
+      "status": "pending",
+      "updatedAt": "2026-06-25T00:00:00Z"
+    }
+  },
+  "mergeJournal": null,
+  "updatedAt": "2026-06-25T00:00:00Z"
+}
+```
+
+**Phase status vocabulary:** `pending` | `in-flight` | `green-merged` | `blocked` | `rejected`.
+
+**Helpers:**
+
+```bash
+scripts/wave.sh state init --plan .cursor/sw-deliver-plan.json
+scripts/wave.sh state phase --id 1 --status in-flight
+scripts/wave.sh state phase --slug rename-deliver --status green-merged
+scripts/wave.sh state get
+scripts/wave.sh state terminal --verdict complete
+```
+
+Per-phase `/sw-ship` outcomes live in `sw-deliver-runs/<phase>/status.json` (`merge-ready-green` |
+`blocked`); `scripts/ship-phase-status.sh` syncs `blocked` into run-state when present.
+
+### Orchestrator lock + merge journal (R51)
+
+```bash
+scripts/wave.sh lock acquire --target feat/<slug> --nonblock   # exit 20 if held
+scripts/wave.sh lock release
+scripts/wave.sh journal begin --phase <phase-slug> [--head <sha>]
+scripts/wave.sh journal complete --phase <phase-slug>
+```
+
+- **Lock:** atomic create on `.cursor/sw-deliver.lock` keyed by `<type>/<slug>` metadata; second
+  invocation refuses (`exit 20`) until `lock release`.
+- **Merge journal:** open entry before phase → `<type>/<slug>` merge; cleared after push + state commit.
+  Resume detects interrupted merge via `journal status`.
+
+### Progress log (R54)
+
+Append-only JSON lines at `.cursor/sw-deliver-runs/run.log` on run init, phase transitions, lock
+acquire/release, merge journal events, and terminal halt.
+
+```bash
+scripts/wave.sh log tail --lines 20
+```
+
+Each line: `{ "event": "phase-transition", "phaseId": "1", "from": "pending", "to": "in-flight", "at": "..." }`.
 
 ## Stacking
 
