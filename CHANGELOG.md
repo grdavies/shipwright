@@ -4,8 +4,8 @@
 
 
 ### Features
-
 * merge phase per-orchestrator-audit-adoption-enumeration-s-m into feat/autonomous-orchestration-conductor (08cf681) <!-- sw-deliver:per-orchestrator-audit-adoption-enumeration-s-m -->
+* merge phase brainstorm-prd-frontmatter-traceability-s-m into feat/autonomous-orchestration-conductor (84e09d0) <!-- sw-deliver:brainstorm-prd-frontmatter-traceability-s-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
