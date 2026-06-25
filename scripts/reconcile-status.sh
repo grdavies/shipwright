@@ -83,11 +83,13 @@ def merged_prs_for_slug(slug: str):
     feature_complete = False
     slug_esc = re.escape(slug)
     slug_lower = slug.lower()
-    branch_prefixes = ("pf", "docs", "feat", "fix", "chore", "perf", "refactor", "test")
+    branch_prefixes = ("docs", "feat", "fix", "chore", "perf", "refactor", "revert", "test")
     branch_pats = [
         re.compile(rf"^{prefix}/{slug_esc}([/-]|$)", re.IGNORECASE) for prefix in branch_prefixes
     ]
-    integration_pat = re.compile(rf"^pf/{slug_esc}$", re.IGNORECASE)
+    integration_pat = re.compile(
+        rf"^(?:feat|fix|perf|revert|docs|chore|refactor|test)/{slug_esc}$", re.IGNORECASE
+    )
     prd_pat = re.compile(rf"prd:\s*{re.escape(slug_lower)}\b", re.IGNORECASE)
     prd_path_pat = re.compile(rf"prd/{re.escape(slug_lower)}\b", re.IGNORECASE)
     prd_num_pat = re.compile(rf"\bPRD\s+{re.escape(slug_lower)}\b", re.IGNORECASE)
