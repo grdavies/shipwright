@@ -17,6 +17,13 @@ STATE_PATH_NAME = "sw-deliver-state.json"
 CONTENTION_DEFAULT = {
     "serialized": ["docs/prds/INDEX.md", "docs/decisions/INDEX.md", "doc-numbering"],
 }
+MIGRATION_DIRS = (
+    "db/migrate/",
+    "supabase/migrations/",
+    "prisma/migrations/",
+)
+RELEASE_BOOKKEEPING = ("CHANGELOG.md", "version.txt")
+INDEX_PATHS = ("docs/prds/INDEX.md", "docs/decisions/INDEX.md")
 
 
 def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | None:
@@ -96,6 +103,225 @@ def parse_phase_dependencies(content: str) -> list[dict[str, str]] | None:
     return rows if rows else None
 
 
+def normalize_file_path(raw: str) -> str:
+    path = raw.strip().strip("`").strip()
+    path = re.sub(r"\s*→\s*.*$", "", path).strip()
+    return path
+
+
+def parse_phase_files(content: str) -> dict[str, list[str]]:
+    """Map phase id -> normalized **File:** paths under that phase section."""
+    sections: dict[str, str] = {}
+    parts = re.split(r"^###\s+(\d+)\.\s+", content, flags=re.MULTILINE)
+    i = 1
+    while i + 1 < len(parts):
+        sections[parts[i]] = parts[i + 1]
+        i += 2
+
+    out: dict[str, list[str]] = {}
+    for phase_id, body in sections.items():
+        section_body = re.split(
+            r"^###\s+\d+\.|^##\s+", body, maxsplit=1, flags=re.MULTILINE
+        )[0]
+        paths: list[str] = []
+        for m in re.finditer(r"\*\*File:\*\*\s*(.+)$", section_body, re.MULTILINE):
+            raw = m.group(1).strip()
+            for part in re.split(r"[,]|(?:\s+and\s+)", raw):
+                part = part.strip().strip("`").strip()
+                if not part:
+                    continue
+                paths.append(normalize_file_path(part))
+        out[phase_id] = paths
+    return out
+
+
+def migration_dir(path: str) -> str | None:
+    for prefix in MIGRATION_DIRS:
+        if path.startswith(prefix) or f"/{prefix}" in path:
+            return prefix
+    return None
+
+
+def phase_touches_doc_numbering(paths: list[str]) -> bool:
+    for path in paths:
+        if path.startswith("docs/prds/") or path.startswith("docs/decisions/"):
+            if not path.endswith("INDEX.md"):
+                return True
+    return False
+
+
+def paths_contend(
+    left: str, right: str, serialized: list[str]
+) -> tuple[bool, str]:
+    if left == right:
+        return True, left
+    left_m, right_m = migration_dir(left), migration_dir(right)
+    if left_m and right_m and left_m == right_m:
+        return True, left_m
+    for book in RELEASE_BOOKKEEPING:
+        left_hit = left == book or left.endswith(f"/{book}")
+        right_hit = right == book or right.endswith(f"/{book}")
+        if left_hit and right_hit:
+            return True, book
+    for index in INDEX_PATHS:
+        if index in left and index in right:
+            return True, index
+    if "doc-numbering" in serialized:
+        if phase_touches_doc_numbering([left]) and phase_touches_doc_numbering([right]):
+            return True, "doc-numbering"
+    return False, ""
+
+
+def has_path(edges: list[dict[str, str]], src: str, dst: str) -> bool:
+    adj: dict[str, list[str]] = defaultdict(list)
+    for edge in edges:
+        adj[edge["from"]].append(edge["to"])
+    seen: set[str] = set()
+    stack = [src]
+    while stack:
+        node = stack.pop()
+        if node == dst:
+            return True
+        if node in seen:
+            continue
+        seen.add(node)
+        stack.extend(adj.get(node, []))
+    return False
+
+
+def graph_has_cycle(items: list[str], edges: list[dict[str, str]]) -> bool:
+    indeg = {i: 0 for i in items}
+    adj: dict[str, list[str]] = defaultdict(list)
+    for edge in edges:
+        adj[edge["from"]].append(edge["to"])
+        indeg[edge["to"]] += 1
+    q = deque([i for i in items if indeg[i] == 0])
+    order: list[str] = []
+    while q:
+        node = q.popleft()
+        order.append(node)
+        for nxt in adj[node]:
+            indeg[nxt] -= 1
+            if indeg[nxt] == 0:
+                q.append(nxt)
+    return len(order) != len(items)
+
+
+def inject_contention_edges(
+    phase_ids: list[str],
+    declared_edges: list[dict[str, str]],
+    phase_files: dict[str, list[str]],
+    contention: dict[str, Any],
+) -> tuple[list[dict[str, str]], list[dict[str, str]], list[str]]:
+    serialized = list(contention.get("serialized", CONTENTION_DEFAULT["serialized"]))
+    notices: list[str] = []
+    injected: list[dict[str, str]] = []
+    existing = {(e["from"], e["to"]) for e in declared_edges}
+    all_edges = [dict(e) for e in declared_edges]
+
+    declared_waves = assign_waves(phase_ids, declared_edges)
+
+    for wave in declared_waves:
+        if len(wave) < 2:
+            continue
+        for left in wave:
+            for right in wave:
+                if int(left) >= int(right):
+                    continue
+                files_left = phase_files.get(left, [])
+                files_right = phase_files.get(right, [])
+                overlap = ""
+                contend = False
+                for fl in files_left:
+                    for fr in files_right:
+                        hit, detail = paths_contend(fl, fr, serialized)
+                        if hit:
+                            contend = True
+                            overlap = detail or f"{fl} ⟷ {fr}"
+                            break
+                    if contend:
+                        break
+                if not contend:
+                    continue
+                if has_path(declared_edges, right, left):
+                    fail(
+                        "contention-cycle: shared-file overlap opposes declared ordering",
+                        exit_code=20,
+                        halt="contention-cycle",
+                        phases=[left, right],
+                        overlap=overlap,
+                    )
+                if (left, right) in existing or has_path(all_edges, left, right):
+                    continue
+                edge = {"from": left, "to": right, "kind": "contention"}
+                injected.append(edge)
+                all_edges.append(edge)
+                existing.add((left, right))
+                notices.append(
+                    f"contention: phases {left} and {right} serialized ({overlap})"
+                )
+
+    if graph_has_cycle(phase_ids, all_edges):
+        fail(
+            "contention-cycle: combined declared + contention graph has a cycle",
+            exit_code=20,
+            halt="contention-cycle",
+        )
+    return all_edges, injected, notices
+
+
+def apply_contention(
+    content: str,
+    phases: list[dict[str, str]],
+    declared_edges: list[dict[str, str]],
+    contention: dict[str, Any],
+) -> tuple[list[list[str]], list[dict[str, str]], list[dict[str, str]], list[str], dict[str, list[str]]]:
+    phase_ids = [p["id"] for p in phases]
+    phase_files = parse_phase_files(content)
+    edges, injected, contention_notices = inject_contention_edges(
+        phase_ids, declared_edges, phase_files, contention
+    )
+    waves = assign_waves(phase_ids, edges)
+    return waves, edges, injected, contention_notices, phase_files
+
+
+def load_workflow_config(root: Path) -> dict[str, Any]:
+    for rel in (
+        ".cursor/workflow.config.json",
+        "workflow.config.json",
+        ".sw/workflow.config.example.json",
+    ):
+        path = root / rel
+        if path.is_file():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+    return {}
+
+
+def load_parallel_ceiling(root: Path, args: list[str]) -> int:
+    explicit = parse_kv(args, "--ceiling")
+    if explicit is not None:
+        return int(explicit)
+    cfg = load_workflow_config(root)
+    worktree = cfg.get("worktree") or {}
+    return int(worktree.get("parallelCeiling", 4))
+
+
+def greedy_wave_batches(phase_ids: list[str], ceiling: int) -> list[list[str]]:
+    if ceiling < 1:
+        fail("parallelCeiling must be >= 1", exit_code=2)
+    if not phase_ids:
+        return []
+    batches: list[list[str]] = []
+    index = 0
+    while index < len(phase_ids):
+        batches.append(phase_ids[index : index + ceiling])
+        index += ceiling
+    return batches
+
+
 def deps_to_edges(
     phases: list[dict[str, str]], dep_rows: list[dict[str, str]] | None
 ) -> tuple[list[dict[str, str]], list[str]]:
@@ -126,37 +352,26 @@ def deps_to_edges(
     return edges, notices
 
 
-def build_waves(items: list[str], edges: list[dict[str, str]]) -> list[list[str]]:
-    item_set = set(items)
+def assign_waves(items: list[str], edges: list[dict[str, str]]) -> list[list[str]]:
     deps = {i: {e["from"] for e in edges if e["to"] == i} for i in items}
-
-    # cycle check (Kahn)
-    indeg = {i: 0 for i in items}
-    adj: dict[str, list[str]] = defaultdict(list)
-    for e in edges:
-        adj[e["from"]].append(e["to"])
-        indeg[e["to"]] += 1
-    q = deque([i for i in items if indeg[i] == 0])
-    order: list[str] = []
-    while q:
-        n = q.popleft()
-        order.append(n)
-        for m in adj[n]:
-            indeg[m] -= 1
-            if indeg[m] == 0:
-                q.append(m)
-    if len(order) != len(items):
+    if graph_has_cycle(items, edges):
         fail("dependency cycle detected", exit_code=20)
-
     waves: list[list[str]] = []
     remaining = set(items)
     while remaining:
-        wave = sorted([i for i in remaining if not (deps[i] & remaining)])
+        wave = sorted(
+            [i for i in remaining if not (deps[i] & remaining)],
+            key=lambda x: (0, int(x)) if str(x).isdigit() else (1, str(x)),
+        )
         if not wave:
             fail("unable to assign wave", exit_code=20)
         waves.append(wave)
         remaining -= set(wave)
     return waves
+
+
+def build_waves(items: list[str], edges: list[dict[str, str]]) -> list[list[str]]:
+    return assign_waves(items, edges)
 
 
 def resolve_type(args: list[str], frontmatter: dict[str, str]) -> str:
@@ -249,14 +464,22 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
             fail("no phases found in task list (### N. headings)")
         dep_rows = parse_phase_dependencies(content)
         edges, notices = deps_to_edges(phases, dep_rows)
-        phase_ids = [p["id"] for p in phases]
-        waves = build_waves(phase_ids, edges)
+        contention = CONTENTION_DEFAULT.copy()
+        waves, edges, injected, contention_notices, phase_files = apply_contention(
+            content, phases, edges, contention
+        )
+        notices.extend(contention_notices)
         result.update(
             {
                 "target": {"type": branch_type, "slug": slug, "branch": branch},
                 "waves": waves,
                 "phaseCount": len(phases),
                 "notices": notices,
+                "contention": {
+                    **contention,
+                    "injectedEdges": injected,
+                    "phaseFiles": phase_files,
+                },
             }
         )
         print(
@@ -313,7 +536,11 @@ def cmd_plan(root: Path, args: list[str]) -> None:
         dep_rows = parse_phase_dependencies(content)
         edges, notices = deps_to_edges(phases, dep_rows)
         phase_ids = [p["id"] for p in phases]
-        waves = build_waves(phase_ids, edges)
+        contention = CONTENTION_DEFAULT.copy()
+        waves, edges, injected, contention_notices, phase_files = apply_contention(
+            content, phases, edges, contention
+        )
+        notices.extend(contention_notices)
 
         if from_phase:
             if from_phase not in phase_ids:
@@ -344,6 +571,7 @@ def cmd_plan(root: Path, args: list[str]) -> None:
                     "slug": p["slug"],
                     "title": p["title"],
                     "branch": phase_branch,
+                    "files": phase_files.get(p["id"], []),
                 }
             )
 
@@ -356,7 +584,10 @@ def cmd_plan(root: Path, args: list[str]) -> None:
             "items": items_out,
             "edges": edges,
             "waves": waves,
-            "contention": CONTENTION_DEFAULT.copy(),
+            "contention": {
+                **contention,
+                "injectedEdges": injected,
+            },
             "notices": notices,
         }
         if dry_run:
@@ -405,6 +636,54 @@ def cmd_plan(root: Path, args: list[str]) -> None:
     emit(out, 0)
 
 
+def cmd_schedule(root: Path, args: list[str]) -> None:
+    plan_rel = parse_kv(args, "--plan", ".cursor/sw-deliver-plan.json")
+    assert plan_rel
+    plan_path = (root / plan_rel).resolve()
+    if not plan_path.is_file():
+        fail(f"plan not found: {plan_rel}")
+    try:
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        fail(f"invalid plan JSON: {exc}")
+
+    ceiling = load_parallel_ceiling(root, args)
+    waves = plan.get("waves") or []
+    schedule: list[dict[str, Any]] = []
+    for wave_index, wave in enumerate(waves, start=1):
+        batches = greedy_wave_batches(list(wave), ceiling)
+        schedule.append(
+            {
+                "wave": wave_index,
+                "phases": wave,
+                "batches": [
+                    {
+                        "parallel": batch,
+                        "slotCount": len(batch),
+                        "remainderQueued": index + 1 < len(batches),
+                    }
+                    for index, batch in enumerate(batches)
+                ],
+                "countsTowardCeiling": True,
+            }
+        )
+
+    notices = [
+        "wave-level /sw-ship phase worktrees count against worktree.parallelCeiling",
+        "internal sub-agent dispatch within a phase does not consume ceiling slots",
+        "scheduler never unwinds a running phase to admit a queued one",
+    ]
+    emit(
+        {
+            "verdict": "pass",
+            "parallelCeiling": ceiling,
+            "schedule": schedule,
+            "notices": notices,
+        },
+        0,
+    )
+
+
 def cmd_integration(root: Path, args: list[str]) -> None:
     stamp = parse_kv(args, "--stamp")
     branches_raw = parse_kv(args, "--branches", "")
@@ -432,6 +711,8 @@ def main() -> None:
         cmd_plan(root, args)
     elif cmd == "preflight":
         cmd_preflight(root, args)
+    elif cmd == "schedule":
+        cmd_schedule(root, args)
     elif cmd == "integration":
         cmd_integration(root, args)
     else:

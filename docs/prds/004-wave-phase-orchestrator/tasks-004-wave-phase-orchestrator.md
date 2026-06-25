@@ -128,12 +128,12 @@ frozen_at: 2026-06-24
 
 ### 6. Contention preflight and parallel scheduling (M)
 
-- [ ] 6.1 Shared-file safety net + combined-graph cycle recheck (R11, R12)
+- [x] 6.1 Shared-file safety net + combined-graph cycle recheck (R11, R12)
   - **File:** `scripts/wave.sh`, `skills/parallelism/`
   - **Expected:** pre-flight serializes overlapping `**File:**` paths (migrations, shared config, INDEX counters, CHANGELOG/version contention); emits contention notice; injected edges respect declared order; combined graph cycle → refuse
   - **R-IDs:** R11, R12
 
-- [ ] 6.2 Greedy parallel scheduler with ceiling accounting (R14, R15, R44)
+- [x] 6.2 Greedy parallel scheduler with ceiling accounting (R14, R15, R44)
   - **File:** `core/skills/deliver/SKILL.md`, `scripts/wave.sh`
   - **Expected:** wave-level `/sw-ship` worktrees count against `worktree.parallelCeiling`; internal sub-agent dispatch within a phase does not; never exceeds ceiling or unwinds running phase; obeys `sw-subagent-dispatch.mdc`
   - **R-IDs:** R14, R15, R44

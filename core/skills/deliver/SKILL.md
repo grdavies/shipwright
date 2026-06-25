@@ -31,7 +31,8 @@ Path: `.cursor/sw-deliver-plan.json` (machine-readable; see `.sw/layout.md`).
 Multi-feature mode uses `"mode": "multi-feature"` with `pf/<id>` branches (unchanged).
 
 - **waves:** ordered batches; no intra-wave dependencies.
-- **contention:** shared-migration refusal + living INDEX/numbering counters force serialization.
+- **contention:** shared-migration refusal + living INDEX/numbering counters force serialization;
+  `injectedEdges` records contention-forced edges merged into `edges` / `waves`.
 
 ## Run-state artifacts
 
@@ -109,6 +110,44 @@ scripts/wave.sh log tail --lines 20
 ```
 
 Each line: `{ "event": "phase-transition", "phaseId": "1", "from": "pending", "to": "in-flight", "at": "..." }`.
+
+## Parallel scheduler (R14/R44)
+
+After `plan`, compute ceiling-bounded dispatch batches:
+
+```bash
+scripts/wave.sh schedule --plan .cursor/sw-deliver-plan.json
+# optional override: --ceiling 2
+```
+
+- Reads `worktree.parallelCeiling` from `.cursor/workflow.config.json` (default **4**).
+- Each **wave** may require multiple **batches** when `len(wave) > parallelCeiling`.
+- Batches are greedy left-to-right chunks; the scheduler **never unwinds** a running phase to
+  admit a queued one.
+- **Ceiling accounting (R44):** only wave-level `/sw-ship` phase worktrees count toward the ceiling.
+  Internal sub-agent dispatch *within* a phase's `/sw-ship` (`rules/sw-subagent-dispatch.mdc`) does
+  **not** consume slots. The orchestrator merge queue progresses without holding a phase slot.
+
+Schedule JSON shape:
+
+```json
+{
+  "parallelCeiling": 4,
+  "schedule": [
+    {
+      "wave": 2,
+      "phases": ["2", "3", "4", "5"],
+      "batches": [
+        {"parallel": ["2", "3", "4", "5"], "slotCount": 4, "remainderQueued": false}
+      ],
+      "countsTowardCeiling": true
+    }
+  ]
+}
+```
+
+When a wave exceeds the ceiling, `batches` splits into sequential chunks (e.g. ceiling 2 with
+phases `["2","3","4"]` → `[["2","3"],["4"]]`).
 
 ## Stacking
 

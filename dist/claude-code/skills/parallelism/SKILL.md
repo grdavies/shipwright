@@ -28,8 +28,22 @@ Before parallel provision/dispatch, check for overlapping:
 
 - `db/migrate/*`, `supabase/migrations/*`, `prisma/migrations/*`
 - Same files touched on multiple active phase branches
+- Living `docs/prds/INDEX.md`, `docs/decisions/INDEX.md`, doc-numbering counters
+- `CHANGELOG.md` and `version.txt` (orchestrator bookkeeping contention)
 
 If overlap → serialize; do not parallelize.
+
+Phase-mode `/sw-deliver` runs this net automatically during `wave.sh plan` / `preflight`:
+
+- Parses each phase's `**File:**` paths from the frozen task list
+- Injects serialization edges (lower phase number first) for declared-parallel pairs that overlap
+- Re-runs cycle detection on declared + injected edges; refuses with `contention-cycle` on conflict
+- Emits a `contention:` notice per forced serialization
+
+```bash
+scripts/wave.sh plan --task-list docs/prds/<n>-<slug>/tasks-<n>-<slug>.md --dry-run
+# inspect notices + contention.injectedEdges in JSON
+```
 
 ## Pre-flight checklist
 
