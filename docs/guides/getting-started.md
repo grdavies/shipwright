@@ -49,6 +49,17 @@ The schema default for `review.provider` is **`none`** (review gating off). Code
 `/sw-setup` writes these defaults; `/sw-ready` and `/sw-status` echo `review: off` from the CI gate
 when reporting merge readiness.
 
+## Deliver autonomy and living docs (PRD 009)
+
+- **`deliver.autonomy`** — default `autonomous`; runs `/sw-deliver` to the terminal gate without routine
+  re-prompts. Set `supervised` for extra acknowledgement halts.
+- **Legitimate halts** — only terminal `main` merge, exhausted remediation, destructive git, configured
+  checkpoints, phase timeout, external-wait exhaustion, or run-level budget.
+- **Living-doc currency** — `INDEX.md`, `COMPLETION-LOG.md`, and `GAP-BACKLOG.md` stay accurate on the
+  feature branch; terminal merge is blocked on drift.
+- **Frontmatter traceability** — Full-tier PRDs carry `brainstorm:`; `/sw-prd` and `/sw-freeze` enforce
+  resolvable `brainstorm:` / `prd:` links.
+
 ## Path 1: New feature (Standard or Full tier)
 
 Use when scope spans multiple files or needs a written spec.

@@ -296,6 +296,9 @@ merge if checkboxes diverge from the durable ledger.
 **Living-doc currency:** INDEX status, COMPLETION-LOG, and GAP-BACKLOG reconcile in-loop on the
 feature branch; `docs-currency` hard-blocks the terminal gate on drift for the current PRD.
 
+**Doc frontmatter traceability:** Full-tier PRDs carry `brainstorm:` in frontmatter; writable brainstorms
+may gain `prd:` forward links. `/sw-freeze` verifies resolvable linkage before freeze.
+
 **Branch policy:** workflow-created branches use conforming type prefixes (`feat/`, `fix/`, …) from
 `release-please-config.json` — never `pf/`.
 

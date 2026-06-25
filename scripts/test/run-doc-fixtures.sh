@@ -301,4 +301,7 @@ done
 # --- PRD 006: communication routing ---
 bash "$ROOT/scripts/test/fixtures/communication-routing.sh" || FAIL=1
 
+# --- PRD 009 A2: user docs presence (R56–R57) ---
+bash "$ROOT/scripts/docs-presence-check.sh" || FAIL=1
+
 exit $FAIL

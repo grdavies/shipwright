@@ -60,6 +60,24 @@ Scaffold writes the full block from `scripts/seed-model-config.sh` and
 `core/sw-reference/model-routing.defaults.json`. Doctor offers add/repair without overwriting user-edited tiers
 unless confirmed. See `.sw/models-tiering.md` for platform catalogs and resolver usage.
 
+### Deliver autonomy (`deliver.autonomy`)
+
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `deliver.autonomy.mode` | `autonomous` | `autonomous` — minimal legitimate-halt set; `supervised` — adds per-phase acknowledgement halts |
+| `deliver.autonomy.maxRunMinutes` | unset | Run-level wall-clock ceiling → consolidated halt |
+| `deliver.autonomy.maxIterations` | `500` | In-turn `deliver-loop` hard stop |
+
+**Legitimate halts:** terminal merge to `main`; remediation budget exhausted; merge conflict /
+destructive git; `doc.afterTasks: confirm` or supervised mode; phase liveness timeout; CI/external wait
+exhausted; run-level budget. Every halt emits one report with an exact resume command.
+
+**Living-doc currency:** mechanical reconcile of `docs/prds/INDEX.md`, `COMPLETION-LOG.md`, and
+`GAP-BACKLOG.md` on the feature branch; `docs-currency` gate hard-blocks terminal merge on drift.
+
+**PRD frontmatter:** Full-tier PRDs require resolvable `brainstorm:`; `/sw-freeze` verifies linkage.
+Writable brainstorms may carry forward `prd:` references.
+
 ### Step 5 — Environment doctor (warnings only)
 
 - CodeRabbit CLI on `PATH` when `review.provider` is `coderabbit`
