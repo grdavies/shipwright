@@ -118,3 +118,5 @@ branch.
 > `core/commands/sw-*.md` for the complete set.
 
 See [Getting started](getting-started.md) for boundary modes and worktree rules.
+
+**Review opt-out:** the canonical way to disable external review is `review.provider: "none"` (schema default). CodeRabbit is opt-in only.

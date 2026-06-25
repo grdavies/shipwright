@@ -40,6 +40,8 @@ discipline** (`skills/execute-discipline/SKILL.md`): plan self-review → TDD re
    file sets are disjoint; never skip the per-task TDD + two-stage sequence.
 11. Leave uncommitted for `/sw-verify`, `/sw-review`, `/sw-commit`.
 
+**Communication intensity:** full
+
 ## Guardrails
 
 - One phase per invocation; read spec union, not bare parent PRD alone.

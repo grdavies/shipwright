@@ -32,6 +32,8 @@ Load `skills/worktree/SKILL.md` for scaffold schema and guardrails.
 2. `bash scripts/worktree.sh teardown <name>` — never `rm` the directory.
 3. Report disk reclaimed from script output.
 
+**Communication intensity:** ultra
+
 ## Guardrails
 
 - Never implement in bare `main` — provision a worktree first.

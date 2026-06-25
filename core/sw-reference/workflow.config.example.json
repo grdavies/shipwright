@@ -80,6 +80,18 @@
       "reviewer": "build"
     }
   },
+  "communication": {
+    "defaultIntensity": "full",
+    "routing": {
+      "commands": {
+        "sw-prd": "lite",
+        "sw-triage": "ultra",
+        "sw-doc-review": "normal",
+        "sw-execute": "full"
+      },
+      "skills": {}
+    }
+  },
   "invariantsFile": "INVARIANTS.md",
   "memory": {
     "provider": "in-repo",

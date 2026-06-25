@@ -31,6 +31,8 @@ Confirm merge-readiness via `scripts/check-gate.sh` — terminal report only.
 9. Report: `merge-ready` | `ready for next stacked phase` | `not ready` (one blocker) — always include the
    review echo line from step 8.
 
+**Communication intensity:** normal
+
 ## Guardrails
 
 - Never merge, push, or resolve threads here.

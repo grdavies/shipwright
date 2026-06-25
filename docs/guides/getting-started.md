@@ -44,7 +44,7 @@ it outputs the list and stops without prompting for implementation.
 ## Review gating (default off)
 
 The schema default for `review.provider` is **`none`** (review gating off). CodeRabbit is **opt-in**
-— set `review.provider: "coderabbit"` explicitly to enable external review on PRs.
+— set `review.provider: "coderabbit"` explicitly to enable external review on PRs. The **canonical way to disable** external AI review is `review.provider: "none"`.
 
 `/sw-setup` writes these defaults; `/sw-ready` and `/sw-status` echo `review: off` from the CI gate
 when reporting merge readiness.

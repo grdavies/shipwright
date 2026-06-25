@@ -163,6 +163,8 @@ or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve
     non-inline findings, and — when deferrals are allowed — `defer-inline` vs `defer-issue` with issue
     links), the gate verdict, and hand off to `/sw-watch-ci`.
 
+**Communication intensity:** full
+
 ## Guardrails
 
 - Merge conflicts are **fix-now** and block check/thread triage until `mergeable` — never interpret

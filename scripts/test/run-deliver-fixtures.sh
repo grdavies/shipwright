@@ -652,8 +652,14 @@ BK_FIX=$(mktemp -d)
   git init -q
   git config user.email test@test.com
   git config user.name Test
-  cp "$ROOT/CHANGELOG.md" CHANGELOG.md 2>/dev/null || echo -e "# Changelog\n" >CHANGELOG.md
-  cp "$ROOT/version.txt" version.txt 2>/dev/null || echo "1.2.2" >version.txt
+  cat > CHANGELOG.md <<'EOF'
+# Changelog
+
+## [Unreleased]
+
+## [1.2.2] - 2025-01-01
+EOF
+  echo "1.2.2" > version.txt
   git add CHANGELOG.md version.txt && git commit -q -m init
   mkdir -p .cursor
   echo '{"target":{"branch":"feat/demo"},"mergedPhases":[],"orchestratorWorktree":{"path":"'"$BK_FIX"'"}}' \

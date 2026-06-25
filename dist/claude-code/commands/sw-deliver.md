@@ -65,6 +65,8 @@ bash scripts/wave.sh deliver-loop --dry-run
 - **Single leaf reproduces failure** → that leaf re-enters `/sw-stabilize`; siblings untouched.
 - **Emergent cross-leaf failure** → delta-debug minimal failing subset + escalate to human gate; max re-route forces escalation.
 
+**Communication intensity:** inherit
+
 ## Guardrails
 
 - Promotion validates each candidate on a disposable PR head **before** merge to `main`.

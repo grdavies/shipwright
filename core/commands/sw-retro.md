@@ -9,6 +9,8 @@ Lightweight retro after a shipped phase.
 
 Load `skills/retro/SKILL.md`. Produce learning candidates for `/sw-compound`.
 
+**Communication intensity:** lite
+
 ## Guardrails
 
 - No doctrine/memory writes without explicit user direction.

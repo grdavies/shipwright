@@ -36,6 +36,8 @@ behavior**. Default-on in `/sw-ship` after `/sw-review`.
 
 - `--report-only` — audit slop candidates; no edits; no gate.
 
+**Communication intensity:** full
+
 ## Guardrails
 
 - No test assertion weakening or deletion to force green.

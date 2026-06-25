@@ -9,6 +9,8 @@ Compounding step after `/sw-retro` or explicit feedback.
 
 Load `skills/compound/SKILL.md`. Route all writes through `memory-preflight` + `scripts/memory-redact.sh`.
 
+**Communication intensity:** full
+
 ## Guardrails
 
 - No rule-class writes without user confirmation + audit allowlist.

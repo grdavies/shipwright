@@ -73,6 +73,8 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
 - Memory provider unreachable (fail-closed per R19/R44).
 - `reconcile-status.sh` errors on frozen PRD guard.
 
+**Communication intensity:** full
+
 ## Guardrails
 
 - **Never merge** or force-push.

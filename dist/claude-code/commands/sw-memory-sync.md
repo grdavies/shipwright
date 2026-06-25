@@ -38,6 +38,8 @@ source. `/sw-memory-sync` only writes the *distilled* sink into the memory provi
 7. Update the marker (`processedMtimeMs`, `lastDistilledAt`) for each processed transcript.
 8. Report: transcripts scanned, memories created/updated/skipped, and any items deferred for review.
 
+**Communication intensity:** ultra
+
 ## Guardrails
 
 - Never store raw transcript text — only distilled substance. No secrets, tokens, or credentials.

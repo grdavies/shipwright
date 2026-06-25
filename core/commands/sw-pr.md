@@ -23,6 +23,8 @@ Push after `/sw-commit`; create/update PR against the real parent branch.
 5. PR body may include `prd:<slug>` for living-status linkage (R14).
 6. Return PR URL → `/sw-watch-ci`.
 
+**Communication intensity:** ultra
+
 ## Guardrails
 
 - Does not commit, merge, or fix code.

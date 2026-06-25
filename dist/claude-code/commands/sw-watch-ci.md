@@ -93,6 +93,8 @@ Per the `checks-gate` skill:
 - `yellow` — any check pending **or** CodeRabbit review still in-flight → keep waiting (re-watch; under `/ship` the loop continues automatically within `checks.watch.maxWaitMinutes` — `yellow` is **not** a terminal state)
 - `blocked` — unconfigured/neutral-blocking checks, or unresolved actionable threads → `/sw-stabilize`
 
+**Communication intensity:** ultra
+
 ## Guardrails
 
 - Watch the PR tied to the current branch only.

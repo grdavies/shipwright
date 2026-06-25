@@ -34,6 +34,8 @@ Shape: `<prefix>/<stem>-phase-<slug>` — no nested refs (`feat/foo/phase-bar` w
 9. `bash scripts/shipwright-state.sh write` with `parentBranch`, `currentBranch`, `phaseSlug`, `branchPrefix`, `startedAt`, optional `issueNumbers`.
 10. Report branch + next `/sw-execute`.
 
+**Communication intensity:** ultra
+
 ## Guardrails
 
 - Branch from current branch within the worktree only.

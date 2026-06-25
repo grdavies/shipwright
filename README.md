@@ -84,6 +84,10 @@ writes `.cursor/workflow.config.json`:
 Re-run `/sw-setup` at any time — it acts as a **doctor** against an existing config, validating,
 reporting drift, and offering targeted repair without a full rescaffold.
 
+**Worktree invariant:** implementation never starts on bare `main` — use `/sw-worktree` and a feature branch.
+**Single-pass `/sw-tasks`:** one pass produces the complete frozen checklist; no implementation dispatch in the doc chain.
+**Review:** `review.provider` defaults to **`none`**; the canonical way to disable external review is `review.provider: "none"` (CodeRabbit is opt-in).
+
 Configure `verify.lint` / `verify.typecheck` / `verify.test` so `/sw-verify` runs real checks.
 Full walkthrough and schema: **[configuration](docs/guides/configuration.md)**.
 
@@ -107,7 +111,9 @@ Four lifecycle workstreams sit on the foundation. Each has an **orchestrator** t
 | **Feedback** | `/sw-feedback` | normalize + redact → route to debug / gaps / brainstorm | analyze or dispatch without confirmation |
 
 **`/sw-deliver` is the default implementation path** once `/sw-doc` produces a frozen task list — the
-"play button" that drives every phase of a feature to one human merge gate. Run the manual `/sw-ship`
+"play button" that drives every phase of a feature to one human merge gate. Mode auto-detect picks
+phase-mode from `--task-list` vs multi-feature from `--items`/`--edges`. Use `--dry-run` for plan-only
+output; re-run `run` to **resume** after interrupt. Run the manual `/sw-ship`
 atomics directly only for Quick-tier hotfixes, debugging, or single-phase reruns.
 
 → Full per-tier flows, diagrams, and sample prompts: **[workflow guide](docs/guides/workflows.md)**.
