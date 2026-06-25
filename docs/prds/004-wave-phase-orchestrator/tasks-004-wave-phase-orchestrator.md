@@ -140,17 +140,17 @@ frozen_at: 2026-06-24
 
 ### 7. Orchestrator worktree, branches, and lifecycle (M)
 
-- [ ] 7.1 Branch topology and orchestrator worktree (R16, R35, R53)
+- [x] 7.1 Branch topology and orchestrator worktree (R16, R35, R53)
   - **File:** `scripts/wave.sh`, `core/skills/deliver/SKILL.md`
   - **Expected:** `<type>/<slug>` base; per-phase `<type>/<slug>-phase-<phase-slug>`; dedicated orchestrator worktree for merge queue; orchestrator worktree does not consume ceiling slot
   - **R-IDs:** R16, R35, R53
 
-- [ ] 7.2 Dependent forward-merge and worktree teardown (R20, R21, R40)
+- [x] 7.2 Dependent forward-merge and worktree teardown (R20, R21, R40)
   - **File:** `scripts/wave.sh`
   - **Expected:** after merge, dependents advance to new `<type>/<slug>` tip; mid-flight forward-merge via merge (not rebase) in dependent worktree; conflicts → `blocked`; teardown via `git worktree remove` + prune only
   - **R-IDs:** R20, R21, R40
 
-- [ ] 7.3 Bare-main guard at implementation entry (R16)
+- [x] 7.3 Bare-main guard at implementation entry (R16)
   - **File:** `core/commands/sw-deliver.md`, integration with `scripts/sw-assert-worktree.sh` or minimal guard
   - **Expected:** no phase implementation on bare `main`; guard invoked before phase `/sw-ship` writes
   - **R-IDs:** R16

@@ -35,12 +35,22 @@ dependents on green unmerged branches, and halts at the human merge gate.
 
 ## Procedure (`run`)
 
+0. **Entry guard (R16):** `bash scripts/wave.sh assert-entry` (wraps `sw-assert-worktree.sh`) — refuse
+   phase implementation on bare default branch without a linked worktree.
 1. Load deliver plan; respect `worktree.parallelCeiling`.
-2. Wave 1: provision independent leaves in parallel worktrees.
-3. Run `/sw-ship` per item; advance only on green.
-4. Wave N: provision dependents with `scripts/worktree.sh provision --base <dep-branch>`.
-5. On all green: `scripts/wave.sh integration` merges leaves into `integration/<stamp>` and runs whole-suite check.
-6. Halt at human gate for dependency-ordered promotion (`promote`).
+2. **Orchestrator worktree (R53):** `bash scripts/wave.sh orchestrator provision --plan .cursor/sw-deliver-plan.json`
+   on `<type>/<slug>` — hosts the serialized merge queue and R40 forward-merges. Does **not** count toward
+   `worktree.parallelCeiling`.
+3. Wave 1: provision independent phase worktrees via `scripts/wave.sh phase provision --phase-id <id>`.
+4. Run `/sw-ship` per item; advance only on green.
+5. After each merge into `<type>/<slug>`, advance dependents with
+   `scripts/wave.sh forward-merge --worktree <phase-wt> --base <type>/<slug>` (merge, not rebase); conflicts →
+   `blocked`.
+6. Teardown completed phases with `scripts/wave.sh phase-teardown --name <worktree-name>` (`git worktree remove`
+   + prune only).
+7. On all green: `scripts/wave.sh integration` merges leaves into `integration/<stamp>` (multi-feature) or
+   open terminal `<type>/<slug> → main` PR (phase-mode).
+8. Halt at human gate for dependency-ordered promotion (`promote`) or terminal merge (phase-mode).
 
 ## Red integration routing
 

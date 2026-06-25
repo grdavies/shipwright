@@ -44,3 +44,7 @@ Declare in `workflow.config.json` → `worktree.scaffold`:
 
 `worktree.parallelCeiling` (default 4). Beyond ceiling → run recombination (`skills/parallelism`) before
 provisioning another worktree.
+
+**Orchestrator exclusion (R53):** worktrees with `worktreeRole: orchestrator` (or
+`countsTowardCeiling: false`) are excluded from `ceiling-check` counts — only phase `/sw-ship` slots
+count toward the ceiling.

@@ -384,4 +384,110 @@ else
   FAIL=1
 fi
 
+# --- orchestrator worktree + lifecycle (R16/R20/R21/R40/R53) ---
+LIFE_FIX=$(mktemp -d)
+LCY="$ROOT/scripts/wave_lifecycle.py"
+(
+  cd "$LIFE_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  echo base >README.md
+  git add README.md
+  git commit -q -m init
+  git branch -m main
+  git checkout -q -b feat/demo
+  echo feature >>README.md
+  git add README.md
+  git commit -q -m feat
+  mkdir -p .cursor
+  echo '{"mode":"phase","target":{"branch":"feat/demo","slug":"demo"},"items":[{"id":"1","slug":"alpha","title":"A","branch":"feat/demo-phase-alpha"}]}' \
+    >.cursor/sw-deliver-plan.json
+  if OUT=$(python3 "$LCY" "$LIFE_FIX" orchestrator provision --target feat/demo 2>/dev/null) && \
+     echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['countsTowardCeiling'] is False
+assert 'orchestrator' in d['path']
+"; then
+    echo "OK  deliver-phase-orchestrator-worktree"
+  else
+    echo "FAIL deliver-phase-orchestrator-worktree"
+    exit 1
+  fi
+  if python3 "$LCY" "$LIFE_FIX" orchestrator status 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['provisioned'] is True
+"; then
+    echo "OK  deliver-phase-orchestrator-status"
+  else
+    echo "FAIL deliver-phase-orchestrator-status"
+    exit 1
+  fi
+) || FAIL=1
+
+MERGE_FIX=$(mktemp -d)
+(
+  cd "$MERGE_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  echo line1 >shared.txt
+  git add shared.txt && git commit -q -m init
+  git branch -m main
+  git checkout -q -b feat/demo
+  echo demo >>shared.txt && git add shared.txt && git commit -q -m demo
+  git worktree add -q -b feat/demo-phase-alpha "$MERGE_FIX/phase-wt" feat/demo
+  echo phase >>"$MERGE_FIX/phase-wt/shared.txt"
+  git -C "$MERGE_FIX/phase-wt" add shared.txt
+  git -C "$MERGE_FIX/phase-wt" commit -q -m phase
+  printf 'line1\ndemo\nconflict\n' >shared.txt && git add shared.txt && git commit -q -m advance-base
+  set +e
+  python3 "$LCY" "$MERGE_FIX" forward-merge --worktree "$MERGE_FIX/phase-wt" --base feat/demo 2>/dev/null
+  EC=$?
+  set -e
+  if [[ "$EC" -eq 20 ]]; then
+    echo "OK  deliver-phase-forward-merge-blocked"
+  else
+    echo "FAIL deliver-phase-forward-merge-blocked ec=$EC"
+    exit 1
+  fi
+  git -C "$MERGE_FIX/phase-wt" reset -q --hard feat/demo
+  echo phase2 >>"$MERGE_FIX/phase-wt/shared.txt"
+  git -C "$MERGE_FIX/phase-wt" commit -q -am phase2
+  if OUT=$(python3 "$LCY" "$MERGE_FIX" forward-merge --worktree "$MERGE_FIX/phase-wt" --base feat/demo 2>/dev/null) && \
+     echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='pass'"; then
+    echo "OK  deliver-phase-forward-merge-pass"
+  else
+    echo "FAIL deliver-phase-forward-merge-pass"
+    exit 1
+  fi
+  git worktree add -q -b feat/demo-phase-beta "$MERGE_FIX/beta-wt" feat/demo
+  if OUT=$(python3 "$LCY" "$MERGE_FIX" phase-teardown --worktree "$MERGE_FIX/beta-wt" 2>/dev/null) && \
+     [[ ! -d "$MERGE_FIX/beta-wt" ]]; then
+    echo "OK  deliver-phase-teardown"
+  else
+    echo "FAIL deliver-phase-teardown"
+    exit 1
+  fi
+) || FAIL=1
+rm -rf "$LIFE_FIX" "$MERGE_FIX"
+
+SW_DELIVER="$ROOT/core/commands/sw-deliver.md"
+if grep -q 'assert-entry' "$SW_DELIVER" && grep -q 'orchestrator provision' "$SW_DELIVER"; then
+  echo "OK  deliver-phase-assert-entry"
+else
+  echo "FAIL deliver-phase-assert-entry"
+  FAIL=1
+fi
+
+if grep -q 'countsTowardCeiling' "$ROOT/core/skills/deliver/SKILL.md" && \
+   grep -q 'forward-merge' "$ROOT/core/skills/deliver/SKILL.md"; then
+  echo "OK  deliver-phase-lifecycle-docs"
+else
+  echo "FAIL deliver-phase-lifecycle-docs"
+  FAIL=1
+fi
+
 exit "$FAIL"
