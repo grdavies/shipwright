@@ -64,10 +64,9 @@ Use when scope spans multiple files or needs a written spec.
 2. Open your **target repo** in Cursor and run `/sw-setup`.
 3. Run `/sw-doc` — triage classifies tier; Full tier includes brainstorm before PRD.
 4. After frozen tasks exist, respond to the `doc.afterTasks` checkpoint (or use `auto` mode).
-5. Run `/sw-worktree provision` then `/sw-start` with prefix `feat/` (if not already provisioned by `auto`).
-6. Run `/sw-ship` — executes, verifies, reviews, opens PR, watches CI, halts at **merge-ready** (never auto-merges).
-
-**Done when:** PR is green and `/sw-ready` reports merge-ready; you merge manually.
+5. Run `/sw-deliver run docs/prds/<n>-<slug>/tasks-<n>-<slug>.md` to orchestrate all remaining phases to one
+   terminal merge gate — or `/sw-worktree provision` then `/sw-start` and `/sw-ship` per phase manually.
+6. When `/sw-ready` reports merge-ready on the terminal PR, merge manually.
 
 ## Path 2: Quick fix (Quick tier)
 

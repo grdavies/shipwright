@@ -257,22 +257,22 @@ frozen_at: 2026-06-24
 
 ### 13. Fixtures, build chain, and user documentation (M)
 
-- [ ] 13.1 Deliver phase-mode fixture suite (R34)
+- [x] 13.1 Deliver phase-mode fixture suite (R34)
   - **File:** `scripts/test/fixtures/deliver-phase-*`, `scripts/test/run-deliver-fixtures.sh`
   - **Expected:** fixtures per Testing Strategy table (plan, sequential fallback, contention, auto-merge, blast-radius, resume, frozen guard, mode-detect, deny, revert, interrupt-lock, async-review, base-preflight, noninteractive, merge-method, contention-cycle, branch-type, changelog, version); wired into `verify.test`
   - **R-IDs:** R34
 
-- [ ] 13.2 Multi-feature regression baseline fixtures (R1, R34)
+- [x] 13.2 Multi-feature regression baseline fixtures (R1, R34)
   - **File:** `scripts/test/fixtures/deliver-phase-*` or `wave-*` baseline, `scripts/test/run-deliver-fixtures.sh`
   - **Expected:** existing multi-feature `wave.sh plan`/`integration` behavior has baseline fixtures and stays green
   - **R-IDs:** R1, R34
 
-- [ ] 13.3 Regenerate `core/` + `dist/` + update layout reference (R33, R31)
+- [x] 13.3 Regenerate `core/` + `dist/` + update layout reference (R33, R31)
   - **File:** run `scripts/copy-to-core.sh`, `python3 -m sw generate --all`; `.sw/layout.md`, `core/sw-reference/layout.md`
   - **Expected:** `sw-deliver` artifacts in dist; layout documents `sw-deliver-plan.json`; emitter/parity fixtures green; no hand-edits under `dist/`
   - **R-IDs:** R33, R31
 
-- [ ] 13.4 User-facing documentation for phase-mode play button (R31)
+- [x] 13.4 User-facing documentation for phase-mode play button (R31)
   - **File:** `README.md`, `documentation/commands.md`
   - **Expected:** documents `/sw-deliver run <frozen-tasks>`, mode auto-detect, single terminal merge gate, resumption, `--dry-run`
   - **R-IDs:** R31

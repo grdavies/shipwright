@@ -4,9 +4,13 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WAVE="$ROOT/scripts/wave.sh"
-FIX="$ROOT/scripts/test/fixtures/deliver-phase"
+FIX="$ROOT/scripts/test/fixtures/deliver-phase-mode/tasks"
+MANIFEST="$ROOT/scripts/test/fixtures/deliver-phase-mode/manifest.txt"
+MULTI_FIX="$ROOT/scripts/test/fixtures/deliver-multi-feature"
 TASK_FROZEN="$ROOT/docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md"
 FAIL=0
+
+mkdir -p "$FIX"
 
 run_json() {
   local name="$1" expect_ec="$2"
@@ -140,8 +144,41 @@ trap 'rm -rf "$DRYDIR"' EXIT
   test ! -f .cursor/sw-deliver-plan.json
 ) && echo "OK  deliver-phase-dry-run" || { echo "FAIL deliver-phase-dry-run"; FAIL=1; }
 
-# --- multi-feature baseline unchanged ---
+# --- multi-feature regression baseline (R1, R34) ---
 run_json deliver-multi-feature-baseline 0 "$WAVE" plan --items 'A,B,C' --edges 'C:A'
+if OUT=$("$WAVE" plan --items 'A,B,C' --edges 'C:A' 2>/dev/null) && \
+   echo "$OUT" | python3 -c "
+import json,sys
+from pathlib import Path
+baseline=json.loads(Path('$MULTI_FIX/baseline.json').read_text())
+d=json.load(sys.stdin)
+assert d['mode']==baseline['expectedMode']
+assert d['waves']==baseline['expectedWaves']
+"; then
+  echo "OK  deliver-multi-feature-waves"
+else
+  echo "FAIL deliver-multi-feature-waves"
+  FAIL=1
+fi
+run_json deliver-multi-feature-cycle 20 "$WAVE" plan --items 'X,Y' --edges 'X:Y,Y:X'
+if OUT=$("$WAVE" plan --items 'A,B' --edges 'B:A' --dry-run 2>/dev/null) && \
+   echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('dry_run') is True and d['mode']=='multi-feature'
+"; then
+  echo "OK  deliver-multi-feature-dry-run"
+else
+  echo "FAIL deliver-multi-feature-dry-run"
+  FAIL=1
+fi
+if grep -q 'integration/' "$ROOT/core/skills/deliver/SKILL.md" && \
+   grep -q 'multi-feature' "$ROOT/core/skills/deliver/SKILL.md"; then
+  echo "OK  deliver-multi-feature-docs"
+else
+  echo "FAIL deliver-multi-feature-docs"
+  FAIL=1
+fi
 
 # --- phase-mode /sw-ship contract (R48/R18) ---
 SW_SHIP="$(cd "$ROOT" && bash -c 'source scripts/test/fixture-lib.sh 2>/dev/null; content_path commands/sw-ship.md' 2>/dev/null || echo "$ROOT/core/commands/sw-ship.md")"
@@ -986,6 +1023,45 @@ if grep -q 'base-branch preflight' "$ROOT/core/skills/deliver/SKILL.md" && \
   echo "OK  deliver-phase-preflight-memory-docs"
 else
   echo "FAIL deliver-phase-preflight-memory-docs"
+  FAIL=1
+fi
+
+# --- manifest coverage (R34) ---
+while IFS= read -r line || [[ -n "$line" ]]; do
+  [[ -z "$line" || "$line" =~ ^# ]] && continue
+  scenario="${line#*:}"
+  if rg -q "${scenario}" "$ROOT/scripts/test/run-deliver-fixtures.sh"; then
+    echo "OK  deliver-phase-manifest:$scenario"
+  else
+    echo "FAIL deliver-phase-manifest:$scenario"
+    FAIL=1
+  fi
+done <"$MANIFEST"
+
+# --- user docs: phase-mode play button (R31) ---
+if grep -q '/sw-deliver run' "$ROOT/README.md" && \
+   grep -iq 'mode auto-detect' "$ROOT/README.md" && \
+   grep -q '\-\-dry-run' "$ROOT/README.md" && \
+   grep -iq 'resume' "$ROOT/README.md"; then
+  echo "OK  deliver-phase-user-docs-readme"
+else
+  echo "FAIL deliver-phase-user-docs-readme"
+  FAIL=1
+fi
+if grep -q '/sw-deliver run' "$ROOT/documentation/commands.md" && \
+   grep -q 'terminal merge gate' "$ROOT/documentation/commands.md"; then
+  echo "OK  deliver-phase-user-docs-commands"
+else
+  echo "FAIL deliver-phase-user-docs-commands"
+  FAIL=1
+fi
+
+# --- layout reference includes deliver artifacts (R33) ---
+if grep -q 'sw-deliver-plan.json' "$ROOT/.sw/layout.md" && \
+   grep -q 'sw-deliver-plan.json' "$ROOT/core/sw-reference/layout.md"; then
+  echo "OK  deliver-phase-layout-reference"
+else
+  echo "FAIL deliver-phase-layout-reference"
   FAIL=1
 fi
 

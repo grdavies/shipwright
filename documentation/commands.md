@@ -14,6 +14,25 @@ bounded step. For full procedure text, open the linked command file under `core/
 | [`/sw-feedback`](../core/commands/sw-feedback.md) | Normalize inbound signals and route to debug, gaps, or brainstorm | Analyze, author, or dispatch without confirmation |
 | [`/sw-compound-ship`](../core/commands/sw-compound-ship.md) | Post-merge: retro → compound → optional memory-sync | Merge or auto-promote rules |
 
+### `/sw-deliver` — phase-mode and multi-feature
+
+**Phase-mode (default after `/sw-doc`):**
+
+```text
+/sw-deliver run docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
+```
+
+- **Mode auto-detect:** `--task-list` → phase-mode; `--items`/`--edges` → multi-feature; both → halt.
+- **Single terminal merge gate:** per-phase PRs auto-merge into `<type>/<slug>` on green; one human-gated
+  `<type>/<slug> → main` PR at the end.
+- **Resumption:** re-run `run` after interrupt; `plan --from <phase>` when resuming mid-wave.
+- **Dry-run:** `scripts/wave.sh plan --task-list <path> --dry-run` — plan JSON only, no artifact write.
+
+**Multi-feature mode:** `plan`/`run` with `--items` and `--edges`; integration surface at
+`integration/<stamp>`; promotion via `promote` (human-gated).
+
+See [`core/commands/sw-deliver.md`](../core/commands/sw-deliver.md) and [`skills/deliver/SKILL.md`](../core/skills/deliver/SKILL.md).
+
 ## Entry points
 
 | Command | When to use | Does not |

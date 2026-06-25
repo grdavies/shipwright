@@ -459,7 +459,38 @@ Context: 3–4 files, no auth changes. Skip brainstorm.
 
 Use when you have frozen tasks (Standard/Full) or a Quick-tier slice and want a verified PR.
 
-**`/sw-ship` chain:**
+#### `/sw-deliver run` — phase-mode play button (default)
+
+When `/sw-doc` has produced a **frozen** task list (`tasks-<n>-<slug>.md`), `/sw-deliver` is the default
+implementation orchestrator. Mode auto-detect from input:
+
+| Input | Mode |
+|-------|------|
+| `--task-list docs/prds/<n>-<slug>/tasks-....md` | **phase-mode** — one feature, many phases |
+| `--items A,B` + `--edges C:A` | **multi-feature** — independent features + integration branch |
+
+**Typical phase-mode flow:**
+
+```text
+/sw-deliver run docs/prds/004-my-feature/tasks-004-my-feature.md
+```
+
+1. `preflight` + `plan` — validates frozen tasks, CI/review base-branch preflight (R49), writes
+   `.cursor/sw-deliver-plan.json`.
+2. Provisions orchestrator + per-phase worktrees; dispatches full `/sw-ship` per phase (no bypass).
+3. Auto-merges each green phase into `<type>/<slug>`; siblings continue on blast-radius block.
+4. Opens a **single terminal** `<type>/<slug> → main` PR when all phases are `green-merged` — the only human
+   merge gate for the feature.
+
+**Resumption:** re-run the same `run` command after interrupt; `resume reconcile` skips `green-merged` phases
+and reconciles against the remote tip. Use `plan --from <phase>` when upstream phases are already merged.
+
+**Dry-run:** `scripts/wave.sh plan --task-list <path> --dry-run` emits the plan JSON without writing
+`.cursor/sw-deliver-plan.json`.
+
+Manual per-phase control remains available: `/sw-worktree` + `/sw-start` → `/sw-ship` for each phase.
+
+#### `/sw-ship` — single phase loop
 
 ```mermaid
 flowchart LR
@@ -508,7 +539,8 @@ Task: 2.1 from tasks-003-user-profile.md — add settings form component
 
 | Command | Use when |
 |---------|----------|
-| `/sw-ship` | Full phase loop; halts at merge gate |
+| `/sw-deliver run <frozen-tasks>` | Orchestrate all phases to one terminal merge gate (phase-mode default) |
+| `/sw-ship` | Full single-phase loop; halts at merge gate |
 | `/sw-worktree` | Create or tear down per-item worktree |
 | `/sw-start` | Open phase branch inside worktree |
 | `/sw-execute` | One bounded implementation slice |
