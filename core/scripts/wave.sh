@@ -77,7 +77,7 @@ case "${1:-}" in
     if [[ "${2:-}" == "deny" ]]; then
       exec python3 "$ROOT/scripts/wave_failure.py" "$ROOT" terminal "${@:2}"
     fi
-    exec python3 "$ROOT/scripts/wave_terminal.py" "$ROOT" terminal "$@"
+    exec python3 "$ROOT/scripts/wave_terminal.py" "$ROOT" terminal "${@:2}"
     ;;
 esac
 exec python3 "$ROOT/scripts/wave_deliver.py" "$ROOT" "$@"

@@ -1,6 +1,15 @@
 # Shipwright local hook state (machine-local, not shared)
 .cursor/hooks/state/
 
+# /sw-deliver runtime artifacts (living, per-worktree — not committed)
+.cursor/sw-deliver-plan.json
+.cursor/sw-deliver-state.json
+.cursor/sw-deliver.lock
+.cursor/sw-deliver-runs/
+
+# Generated deliver-phase fixture temps (superseded by deliver-phase-mode/tasks/)
+scripts/test/fixtures/deliver-phase/
+
 # Python
 __pycache__/
 *.pyc
