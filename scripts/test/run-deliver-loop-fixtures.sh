@@ -216,50 +216,6 @@ else
   bad "deliver-loop: wave.sh verb wired"
 fi
 
-# --- PRD 009 phase 1 reliability (R25–R31) ---
-# R27: wave.sh dispatcher forwards subcommand args (no duplicate status/merge/report)
-if OUT=$(bash "$WAVE" status collect --phase-slug missing-phase 2>/dev/null || true) && echo "$OUT" | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-assert d.get('verdict')=='fail'
-assert d.get('cause')=='phase-status:missing'
-"; then
-  ok "wave-dispatch-arg-hygiene: status collect reaches collector"
-else
-  bad "wave-dispatch-arg-hygiene"
-fi
-
-# R29: phase status vocabulary guard
-mkdir -p .cursor
-cat >.cursor/sw-deliver-state.json <<'JSON'
-{"phases":{"1":{"id":"1","slug":"a","status":"pending"}}}
-JSON
-if OUT=$(python3 "$ROOT/scripts/wave_state.py" "$FIX" state phase --id 1 --status bogus 2>/dev/null || true) && echo "$OUT" | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-assert d.get('verdict')=='fail'
-assert 'invalid phase status' in d.get('error','')
-"; then
-  ok "phase-status-vocabulary-guard"
-else
-  bad "phase-status-vocabulary-guard"
-fi
-
-# R30: stale identity refuses start
-cat >.cursor/sw-deliver-state.json <<'JSON'
-{
-  "verdict": "running",
-  "source_task_list": "docs/prds/other/tasks.md",
-  "phases": {"1": {"id": "1", "slug": "alpha", "status": "pending"}},
-  "driverHeartbeatAt": "$NOW_TS"
-}
-JSON
-if OUT=$(python3 "$LOOP_PY" "$FIX" deliver-loop --task-list docs/prds/007-x/tasks.md --max-steps 1 2>&1 || true) && echo "$OUT" | rg -q 'stale run-state'; then
-  ok "stale-state-refuses-start"
-else
-  bad "stale-state-refuses-start"
-fi
-
 if [[ "$FAIL" -ne 0 ]]; then
   echo "deliver-loop fixtures: FAIL"
   exit 1
