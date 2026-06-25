@@ -59,6 +59,7 @@ def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
 
 
 def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
+    extra.pop("error", None)
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 
@@ -215,6 +216,41 @@ def item_for_phase(plan: dict[str, Any], phase_id: str) -> dict[str, Any] | None
 def task_list_from(state: dict[str, Any], plan: dict[str, Any]) -> str | None:
     raw = state.get("source_task_list") or plan.get("source_task_list")
     return str(raw) if raw else None
+
+
+def canonical_task_list_path(root: Path, raw: str) -> str:
+    path = Path(raw)
+    if not path.is_absolute():
+        path = (root / path).resolve()
+    else:
+        path = path.resolve()
+    try:
+        return str(path.relative_to(root.resolve()))
+    except ValueError:
+        return str(path)
+
+
+def assert_run_identity(
+    root: Path, state: dict[str, Any], task_list: str | None, loop_args: list[str]
+) -> None:
+    """Refuse a new run when durable state belongs to a different task list (R30, R43)."""
+    if not task_list or not state.get("phases"):
+        return
+    if state.get("verdict") not in (None, "running"):
+        return
+    existing = state.get("source_task_list")
+    if not existing:
+        return
+    if canonical_task_list_path(root, str(existing)) == canonical_task_list_path(root, task_list):
+        return
+    if has_flag(loop_args, "--reset"):
+        return
+    fail(
+        "stale run-state from a different source_task_list/prd_number",
+        exit_code=20,
+        halt="stale-state",
+        remediation="bash scripts/wave.sh deliver-loop --reset --task-list <path> or remove .cursor/sw-deliver-state.json",
+    )
 
 
 def _target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
@@ -536,13 +572,13 @@ def execute_mechanical(
         if ec != 0:
             fail(data.get("error") or "spec-seed failed", exit_code=ec, **data)
         state.update(load_state(root))
-        if not data.get("skipped"):
-            state["specSeed"] = {
-                "branch": data.get("branch"),
-                "commit": data.get("commit"),
-                "at": utc_now(),
-            }
-            save_state(root, state)
+        state["specSeed"] = {
+            "branch": data.get("branch"),
+            "commit": data.get("commit"),
+            "skipped": bool(data.get("skipped")),
+            "at": utc_now(),
+        }
+        save_state(root, state)
         persist_cursor(root, state, "lock-acquire")
         return {"executed": "spec-seed", **data}
 
@@ -661,6 +697,8 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     state = load_state(root)
     plan = load_plan(root)
     resumed = bool(state.get("verdict") == "running" and state.get("phases"))
+
+    assert_run_identity(root, state, task_list, args)
 
     if task_list and not state.get("source_task_list"):
         state["source_task_list"] = task_list
