@@ -56,10 +56,10 @@ documented behavior exists.
 
 ### 2. Per-orchestrator audit + adoption enumeration (S/M)
 
-- [ ] 2.1 Audit `/sw-doc`, `/sw-ship`, `/sw-debug`, `/sw-feedback` for turn-yield + missed parallelism (R33)
+- [x] 2.1 Audit `/sw-doc`, `/sw-ship`, `/sw-debug`, `/sw-feedback` for turn-yield + missed parallelism (R33)
   - **File:** `docs/prds/009-autonomous-orchestration-conductor/orchestrator-adoption-audit.md`
   - **Expected:** each orchestrator's unnecessary turn-yields and unparallelized independent work enumerated
-- [ ] 2.2 Enumerate sequenced adoption requirements referencing the shared contract (R35)
+- [x] 2.2 Enumerate sequenced adoption requirements referencing the shared contract (R35)
   - **File:** `docs/prds/009-autonomous-orchestration-conductor/orchestrator-adoption-audit.md`
   - **Expected:** per-orchestrator adoption requirements, sequenced after the pilot, each referencing (not
     duplicating) the conductor contract
