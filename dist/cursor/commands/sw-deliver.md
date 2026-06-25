@@ -26,7 +26,7 @@ dependents on green unmerged branches, and halts at the human merge gate.
 
 ## Procedure (`plan`)
 
-1. Load `skills/deliver/SKILL.md`.
+1. Load `skills/deliver/SKILL.md` and `skills/conductor/SKILL.md` (conductor contract — R1/R3).
 2. Auto-detect mode: frozen `--task-list` → **phase-mode**; `--items`/`--edges` → **multi-feature**; both → disambiguation halt.
 3. Phase-mode: validate `frozen: true`, resolve `<type>/<slug>`, parse `## Phase Dependencies` (or R8 sequential fallback).
 4. Run `scripts/wave.sh preflight` to echo mode, target branch, and waves (includes CI/review
@@ -38,7 +38,10 @@ dependents on green unmerged branches, and halts at the human merge gate.
 ## Procedure (`deliver-loop` / `run`)
 
 Phase-mode runs MUST enter through the durable driver — never a manual worktree handoff while progress is
-possible (R4).
+possible (R4). The **conductor** (`skills/conductor/SKILL.md`) drives the in-turn loop: default
+`deliver.autonomy.mode: autonomous` delivers a frozen task list end-to-end to the terminal-PR gate with
+zero re-prompts (R13); `supervised` adds acknowledgement halts per `deliver.phaseAckCadence` and
+`doc.afterTasks`.
 
 ```bash
 bash scripts/wave.sh deliver-loop --task-list <frozen-task-list-path>
@@ -47,18 +50,62 @@ bash scripts/wave.sh deliver-loop --dry-run
 ```
 
 0. **Entry guard (R16):** `bash scripts/wave.sh assert-entry` when not resuming from durable state.
-1. Driver loads plan from state or runs `plan`; auto-detects in-progress runs on entry (R3).
-2. **Orchestrator worktree (R53):** `orchestrator provision` on `<type>/<slug>`.
-3. Per wave: `phase provision` → `phase dispatch-env` → full `/sw-ship --phase-mode` in phase worktree
+1. Load `skills/conductor/SKILL.md`; enforce `rules/sw-conductor.mdc`.
+2. Driver loads plan from state or runs `plan`; auto-detects in-progress runs on entry (R3).
+3. **Orchestrator worktree (R53):** `orchestrator provision` on `<type>/<slug>`.
+4. Per wave: `phase provision` → `phase dispatch-env` → full `/sw-ship --phase-mode` in phase worktree
    (agent step; orchestrator never bypasses `/sw-ship`).
-4. `status collect` from durable path; advance only from `status.json` (R7).
-5. On `merge-ready-green`: `merge enqueue` → `merge run-next` when gate + review barrier settle.
-6. On blocker: bounded remediation (`deliver.remediation.maxAttempts`, default **2**), blast-radius for
+5. `status collect` from durable path; advance only from `status.json` (R7).
+6. On `merge-ready-green`: `merge enqueue` → `merge run-next` when gate + review barrier settle.
+7. On blocker: bounded remediation (`deliver.remediation.maxAttempts`, default **2**), blast-radius for
    siblings, consolidated blocker report on halt (R8–R12).
-7. When all phases `green-merged`: `resume reconcile`, terminal PR, compounding (later phases).
-8. Halt at human merge gate — never in-flux.
+8. When all phases `green-merged`: `resume reconcile`, terminal PR, compounding (later phases).
+9. Halt at human merge gate — never in-flux.
+
+When the driver returns `awaitAgent: true`, the conductor performs the agent work and immediately
+re-invokes `bash scripts/wave.sh deliver-loop` within the same turn until a legitimate halt (R6/R7 — see
+`skills/conductor/SKILL.md` **In-turn self-continuation loop**). A fresh agent resumes from
+`.cursor/sw-deliver-state.json` + plan + run log alone (R4).
+
+## Conductor in-turn loop (`run` / `deliver-loop`)
+
+After every `deliver-loop` JSON response:
+
+| Response | Conductor action (same turn) |
+| --- | --- |
+| `awaitAgent: false` | Re-invoke `bash scripts/wave.sh deliver-loop` immediately |
+| `awaitAgent: true` | Run agent step for `next.action` (table in conductor skill), then re-invoke `deliver-loop` |
+| `halt: true` | Emit consolidated report; stop — legitimate halt only |
+| `terminal: true` | Terminal gate; arm self-wake for CI if needed (conductor skill **Self-wake sentinel**) |
+
+**Never** end the turn with only "continue deliver" or "re-run deliver-loop" as the user-facing outcome while
+`verdict: running` and no legitimate halt applies (R13).
+
+Hard stops: `deliver.autonomy.maxIterations` (default 500) and no-progress circuit breaker (3× identical
+`nextAction` + state signature) — see `rules/sw-subagent-dispatch.mdc` and conductor skill (R38).
+
+**Halts (R10–R12):** only legitimate conditions; emit `bash scripts/wave.sh report blockers` (mid-run) or
+`report terminal` (all phases merged) with `resumeCommand` — never "continue deliver?".
+
+**Liveness (R37):** `bash scripts/wave.sh state heartbeat` during long agent steps;
+`bash scripts/wave.sh watchdog check` probes phase timeout / stale driver heartbeat.
 
 `run` is an alias for `deliver-loop --task-list <path>`.
+
+## Autonomy and parallelism (user surface — R36)
+
+| Knob / concept | Default | User-visible behavior |
+| --- | --- | --- |
+| `deliver.autonomy.mode` | `autonomous` | Runs to terminal gate without per-phase re-prompts; `supervised` adds acknowledgement halts |
+| `deliver.autonomy.maxRunMinutes` | unset | Run-level wall-clock ceiling → consolidated halt |
+| `deliver.autonomy.maxIterations` | 500 | In-turn loop hard stop |
+| `worktree.parallelCeiling` | 4 | Max concurrent phase worktrees per wave batch |
+| Conductor contract | `skills/conductor/SKILL.md` | Single source for loop, halts, parallel dispatch — referenced, not duplicated |
+
+**Parallel waves:** when the plan places multiple phases in one wave, the conductor dispatches each as a
+background sub-agent (peak concurrency ≥2 on parallelizable task lists). **Legitimate halts only:** terminal
+`main` merge, exhausted remediation, destructive/ambiguous git, configured checkpoints, phase timeout,
+external-wait exhaustion, run-level budget — see conductor skill **Legitimate-halt set**.
 
 ## Red integration routing
 

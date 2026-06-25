@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Wave / deliver planning engine — multi-feature and phase-mode."""
+"""Wave / deliver planning engine — multi-feature and phase-mode.
+
+Contention serialization (R20/R39): `inject_contention_edges` runs at plan time from phase
+`**File:**` touch paths (migrations, INDEX, CHANGELOG/version, doc-numbering). Ambiguous overlap
+fails safe to sequential waves.
+
+Blast-radius (R24): transitive dependent blocking uses plan `edges` from this module's plan
+output; applied at `status collect` via `wave_failure.py blast-radius apply` — siblings in the
+same wave without a dependency path continue.
+"""
 from __future__ import annotations
 
 import json
@@ -40,7 +49,13 @@ def _load_valid_types() -> frozenset[str]:
 
 VALID_TYPES = _load_valid_types()
 CONTENTION_DEFAULT = {
-    "serialized": ["docs/prds/INDEX.md", "docs/decisions/INDEX.md", "doc-numbering"],
+    "serialized": [
+        "docs/prds/INDEX.md",
+        "docs/decisions/INDEX.md",
+        "CHANGELOG.md",
+        "version.txt",
+        "doc-numbering",
+    ],
 }
 MIGRATION_DIRS = (
     "db/migrate/",

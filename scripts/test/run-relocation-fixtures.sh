@@ -14,6 +14,13 @@ if [ ! -d "$CORE" ]; then
   exit 1
 fi
 
+if bash "$ROOT/scripts/test/run-core-scripts-parity-fixtures.sh"; then
+  echo "OK  core-scripts-parity wired"
+else
+  echo "FAIL core-scripts-parity"
+  FAIL=1
+fi
+
 # Every golden manifest path must exist under core/ with identical hash.
 while IFS=$'\t' read -r path hash; do
   [ -n "$path" ] || continue

@@ -29,7 +29,11 @@ if [ -d "$ROOT/.pf" ]; then
   rsync -a --delete "$ROOT/.pf/" "$CORE/sw-reference/"
 elif [ -d "$ROOT/.sw" ]; then
   mkdir -p "$CORE/sw-reference"
-  rsync -a --delete "$ROOT/.sw/" "$CORE/sw-reference/"
+  # Preserve JSON defaults authored only under core/sw-reference/ (PRD 006/008).
+  rsync -a --delete \
+    --exclude 'model-routing.defaults.json' \
+    --exclude 'communication-routing.defaults.json' \
+    "$ROOT/.sw/" "$CORE/sw-reference/"
 fi
 
 echo "copy-to-core: synced emittable content -> $CORE"

@@ -5,7 +5,7 @@
 #   wave.sh plan --items 'A,B,C' --edges 'C:A'
 #   wave.sh preflight-base --target feat/<slug>
 #   wave.sh memory learnings distill|prepare ...
-#   wave.sh schedule --plan .cursor/sw-deliver-plan.json [--ceiling N]
+#   wave.sh schedule --plan .cursor/sw-deliver-plan.json [--ceiling N]  # parallel batches (R14/R44)
 #   wave.sh orchestrator provision|status ...
 #   wave.sh phase provision --phase-id N [--plan ...] [--base <type>/<slug>]
 #   wave.sh forward-merge --worktree <path> --base <type>/<slug>
@@ -19,6 +19,7 @@
 #   wave.sh verify run|run-after-merge ...
 #   wave.sh blast-radius apply|dependents ...
 #   wave.sh report blockers
+#   wave.sh watchdog check
 #   wave.sh revert phase ...
 #   wave.sh terminal pr prepare|gate|status
 #   wave.sh terminal deny ...
@@ -41,11 +42,20 @@ case "${1:-}" in
   deliver-loop)
     exec python3 "$ROOT/scripts/wave_deliver_loop.py" "$ROOT" deliver-loop "${@:2}"
     ;;
+  watchdog)
+    exec python3 "$ROOT/scripts/wave_deliver_loop.py" "$ROOT" watchdog "${@:2}"
+    ;;
   state|lock|journal|log|ledger)
     exec python3 "$ROOT/scripts/wave_state.py" "$ROOT" "$@"
     ;;
   tasks-currency)
     exec bash "$ROOT/scripts/tasks-currency-gate.sh" "${@:2}"
+    ;;
+  docs-currency)
+    exec bash "$ROOT/scripts/docs-currency-gate.sh" "${@:2}"
+    ;;
+  living-docs)
+    exec python3 "$ROOT/scripts/wave_living_docs.py" "$ROOT" "${@:2}"
     ;;
   compound-ship|completion)
     exec python3 "$ROOT/scripts/wave_compound.py" "$ROOT" "$@"
@@ -60,16 +70,16 @@ case "${1:-}" in
     exec python3 "$ROOT/scripts/wave_lifecycle.py" "$ROOT" phase "${@:2}"
     ;;
   status)
-    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" status "$@"
+    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" status "${@:2}"
     ;;
   report)
     if [[ "${2:-}" == "blockers" ]]; then
       exec python3 "$ROOT/scripts/wave_failure.py" "$ROOT" report blockers "${@:3}"
     fi
-    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" report "$@"
+    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" report "${@:2}"
     ;;
   merge)
-    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" merge "$@"
+    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" merge "${@:2}"
     ;;
   bookkeeping)
     exec python3 "$ROOT/scripts/wave_bookkeeping.py" "$ROOT" "${@:2}"

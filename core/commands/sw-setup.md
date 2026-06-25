@@ -65,6 +65,23 @@ Write `doc.afterTasks` (default **`confirm`**): `stop` | `confirm` | `auto`. Exp
 task list and requires `proceed`/`yes` before dispatch; `auto` dispatches the implementation loop on a
 worktree without a second prompt.
 
+### 3c. Deliver autonomy (conductor)
+
+Seed `deliver.autonomy` (default **`autonomous`** hands-off to terminal-PR gate; `supervised` adds
+acknowledgement halts). Include run-level budgets:
+
+```json
+"deliver": {
+  "autonomy": {
+    "mode": "autonomous",
+    "maxRunMinutes": 1440,
+    "maxIterations": 500
+  }
+}
+```
+
+`maxRunMinutes` / `maxIterations` convert a runaway unattended run into a clean consolidated halt (R42).
+
 ### 4. Guardrail knobs
 
 Defaults (greenfield-friendly):

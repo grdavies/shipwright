@@ -50,8 +50,19 @@ Every loop documents max iterations + no-progress detection:
 | `/sw-stabilize` | stabilize-loop max iterations + no-progress |
 | gap-check closers | one re-map pass; escalate residuals |
 | parallel dispatch | `worktree.parallelCeiling` |
+| `/sw-deliver` conductor in-turn loop | `deliver.autonomy.maxIterations` (default **500**) |
+| `/sw-deliver` no-progress breaker | **3** identical `nextAction` + unchanged durable-state signature → consolidated halt (`cause: conductor:no-progress`) |
 
 Circuit breaker: three identical failures without diff change → escalate to user.
+
+## Conductor deliver-loop (R38)
+
+When driving `bash scripts/wave.sh deliver-loop` in-turn (see `skills/conductor/SKILL.md`):
+
+- Count each `deliver-loop` invocation toward `deliver.autonomy.maxIterations`.
+- Track `(nextAction, stateSignature)`; on **3** consecutive repeats without signature change, halt with
+  `scripts/wave.sh report terminal` — do not churn merge-enqueue or provision loops.
+- State signature excludes heartbeat timestamps; see conductor skill for canonical fields.
 
 ## Reviewer dispatch backpressure (R28, R61)
 
@@ -80,6 +91,19 @@ After auto-applying eligible fixes from local review:
 
 Before parallel subagents on shared directory: disjoint file sets required, or worktree isolation.
 Never parallelize shared-migration paths (`skills/parallelism`).
+
+## Parallel phase dispatch (R17, R18, R45)
+
+**Ceiling accounting:** only wave-level phase worktrees (each running `/sw-ship --phase-mode`) count toward
+`worktree.parallelCeiling`. Intra-phase Task/review sub-agents never consume slots.
+
+**Background phase sub-agents** (conductor dispatches phase as parallel Task): intra-phase sub-agent dispatch
+is **disabled** — run inline two-stage review only (R45). Log the decision in the phase run record.
+
+**Inline phase** (conductor runs `/sw-ship` in-turn): normal delegate-when heuristics apply; still no ceiling
+slot for intra-phase agents.
+
+**Conductor-only merge:** phase sub-agents must not call `merge run-next` or `lock acquire` (R41).
 
 ## Authority
 

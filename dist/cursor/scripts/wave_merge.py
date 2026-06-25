@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Merge queue, review barrier, status collection, and terminal report for /sw-deliver."""
+"""Merge queue, review barrier, status collection, and terminal report for /sw-deliver.
+
+Concurrency contract (R21/R22/R41): only the conductor calls `merge enqueue` / `merge run-next`.
+`merge run-next` authorizes via gate + review barrier, merges onto `<type>/<slug>` never `main`,
+and runs single-flight via merge journal + orchestrator lock (`wave_state.py` O_EXCL acquire).
+
+Status collect (R19/R24): reads durable `status.json` only; `blocked` triggers blast-radius apply
+on transitive dependents — green siblings in the same wave continue.
+"""
 from __future__ import annotations
 
 import json
@@ -15,6 +23,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from wave_json_io import StateCorruptError, read_json, write_json
+from wave_state import assert_phase_status
 
 VALID_STATUS_VERDICTS = frozenset({"merge-ready-green", "blocked"})
 
@@ -29,7 +38,14 @@ def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
 
 
 def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
+    extra.pop("error", None)
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
+
+
+def fail_payload(data: dict[str, Any], default: str, exit_code: int, **extra: Any) -> None:
+    reserved = {"error", *extra.keys()}
+    payload = {k: v for k, v in data.items() if k not in reserved}
+    fail(data.get("error") or default, exit_code=exit_code, **extra, **payload)
 
 
 def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | None:
@@ -616,7 +632,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
                 err = json.loads(proc.stdout)
             except json.JSONDecodeError:
                 err = {"error": proc.stderr or proc.stdout}
-            fail(err.get("error", "merge failed"), exit_code=proc.returncode, **err)
+            fail_payload(err, "merge failed", proc.returncode)
 
         merge_out = json.loads(proc.stdout)
         merge_commit = merge_out.get("mergeCommit")
@@ -649,6 +665,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
         )
         state["mergedPhases"] = merged
         if phase_id and phase_id in state.get("phases", {}):
+            assert_phase_status("green-merged")
             state["phases"][phase_id]["status"] = "green-merged"
             state["phases"][phase_id]["updatedAt"] = utc_now()
             state["phases"][phase_id]["mergeCommit"] = merge_commit
@@ -694,6 +711,33 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
             )
         bookkeeping = json.loads(bk_proc.stdout)
 
+        living_args = [
+            sys.executable,
+            str(SCRIPT_DIR / "wave_living_docs.py"),
+            str(root),
+            "reconcile",
+            "--commit",
+        ]
+        if orch:
+            living_args.extend(["--worktree", orch])
+        living_proc = subprocess.run(living_args, cwd=str(root), text=True, capture_output=True)
+        living_docs = {}
+        if living_proc.stdout.strip():
+            try:
+                living_docs = json.loads(living_proc.stdout)
+            except json.JSONDecodeError:
+                living_docs = {"raw": living_proc.stdout}
+        if living_proc.returncode != 0:
+            try:
+                err = json.loads(living_proc.stdout)
+            except json.JSONDecodeError:
+                err = {"error": living_proc.stderr or living_proc.stdout}
+            fail(
+                err.get("error", "living-docs reconcile failed"),
+                exit_code=living_proc.returncode,
+                **{k: v for k, v in err.items() if k != "error"},
+            )
+
         verify_args = [
             sys.executable,
             str(SCRIPT_DIR / "wave_failure.py"),
@@ -711,12 +755,12 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
                 err = json.loads(verify_proc.stdout)
             except json.JSONDecodeError:
                 err = {"error": verify_proc.stderr or verify_proc.stdout}
-            fail(
-                err.get("error", "incremental verify failed after merge"),
-                exit_code=verify_proc.returncode or 20,
+            fail_payload(
+                err,
+                "incremental verify failed after merge",
+                verify_proc.returncode or 20,
                 halt="blocked",
                 cause="verify:failed",
-                **{k: v for k, v in err.items() if k != "error"},
             )
         verify_out = json.loads(verify_proc.stdout)
 
@@ -736,6 +780,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
                 "mergeCommit": merge_commit,
                 "remaining": len(state["mergeQueue"]),
                 "bookkeeping": bookkeeping,
+                "livingDocs": living_docs,
                 "verify": verify_out,
                 "ack": ack_out,
                 "authPath": auth_path,

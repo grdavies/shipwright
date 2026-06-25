@@ -59,7 +59,14 @@ def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
 
 
 def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
+    extra.pop("error", None)
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
+
+
+def fail_payload(data: dict[str, Any], default: str, exit_code: int, **extra: Any) -> None:
+    reserved = {"error", *extra.keys()}
+    payload = {k: v for k, v in data.items() if k not in reserved}
+    fail(data.get("error") or default, exit_code=exit_code, **extra, **payload)
 
 
 def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | None:
@@ -215,6 +222,41 @@ def item_for_phase(plan: dict[str, Any], phase_id: str) -> dict[str, Any] | None
 def task_list_from(state: dict[str, Any], plan: dict[str, Any]) -> str | None:
     raw = state.get("source_task_list") or plan.get("source_task_list")
     return str(raw) if raw else None
+
+
+def canonical_task_list_path(root: Path, raw: str) -> str:
+    path = Path(raw)
+    if not path.is_absolute():
+        path = (root / path).resolve()
+    else:
+        path = path.resolve()
+    try:
+        return str(path.relative_to(root.resolve()))
+    except ValueError:
+        return str(path)
+
+
+def assert_run_identity(
+    root: Path, state: dict[str, Any], task_list: str | None, loop_args: list[str]
+) -> None:
+    """Refuse a new run when durable state belongs to a different task list (R30, R43)."""
+    if not task_list or not state.get("phases"):
+        return
+    if state.get("verdict") not in (None, "running"):
+        return
+    existing = state.get("source_task_list")
+    if not existing:
+        return
+    if canonical_task_list_path(root, str(existing)) == canonical_task_list_path(root, task_list):
+        return
+    if has_flag(loop_args, "--reset"):
+        return
+    fail(
+        "stale run-state from a different source_task_list/prd_number",
+        exit_code=20,
+        halt="stale-state",
+        remediation="bash scripts/wave.sh deliver-loop --reset --task-list <path> or remove .cursor/sw-deliver-state.json",
+    )
 
 
 def _target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
@@ -481,11 +523,19 @@ def persist_cursor(root: Path, state: dict[str, Any], action: str, **extra: Any)
 def write_blocker_report(root: Path, state: dict[str, Any], cause: str) -> Path:
     ec, report_payload = run_wave(root, "report", "blockers")
     report = report_payload.get("report") or {}
+    if "resumeCommand" not in report:
+        task_list = state.get("source_task_list")
+        report["resumeCommand"] = (
+            f"bash scripts/wave.sh deliver-loop --task-list {task_list}"
+            if task_list
+            else "bash scripts/wave.sh deliver-loop"
+        )
     out = {
         "verdict": "halt",
         "cause": cause,
         "generatedAt": utc_now(),
         "report": report,
+        "resumeCommand": report.get("resumeCommand"),
         "remediationAttempts": state.get("remediationAttempts") or {},
     }
     path = root / BLOCKER_PATH
@@ -514,7 +564,7 @@ def execute_mechanical(
             plan_args.append("--skip-base-check")
         ec, data = run_wave(root, *plan_args)
         if ec != 0:
-            fail(data.get("error") or "plan failed", exit_code=ec, **data)
+            fail_payload(data, "plan failed", ec)
         plan = load_plan(root)
         persist_cursor(root, state, "state-init")
         return {"executed": "plan", "plan": plan.get("target")}
@@ -522,7 +572,7 @@ def execute_mechanical(
     if action == "state-init":
         ec, data = run_wave(root, "state", "init", "--plan", str(PLAN_PATH))
         if ec != 0:
-            fail(data.get("error") or "state init failed", exit_code=ec, **data)
+            fail_payload(data, "state init failed", ec)
         state.update(load_state(root))
         ensure_driver_fields(state)
         persist_cursor(root, state, "spec-seed")
@@ -534,15 +584,15 @@ def execute_mechanical(
             fail("spec-seed requires task list")
         ec, data = run_wave(root, "spec-seed", "--task-list", str(tl))
         if ec != 0:
-            fail(data.get("error") or "spec-seed failed", exit_code=ec, **data)
+            fail_payload(data, "spec-seed failed", ec)
         state.update(load_state(root))
-        if not data.get("skipped"):
-            state["specSeed"] = {
-                "branch": data.get("branch"),
-                "commit": data.get("commit"),
-                "at": utc_now(),
-            }
-            save_state(root, state)
+        state["specSeed"] = {
+            "branch": data.get("branch"),
+            "commit": data.get("commit"),
+            "skipped": bool(data.get("skipped")),
+            "at": utc_now(),
+        }
+        save_state(root, state)
         persist_cursor(root, state, "lock-acquire")
         return {"executed": "spec-seed", **data}
 
@@ -550,7 +600,7 @@ def execute_mechanical(
         target = step.get("target") or (plan.get("target") or {}).get("branch")
         ec, data = run_wave(root, "lock", "acquire", "--target", str(target), "--nonblock")
         if ec not in (0, 20):
-            fail(data.get("error") or "lock acquire failed", exit_code=ec, **data)
+            fail_payload(data, "lock acquire failed", ec)
         if ec == 20:
             fail("orchestrator lock held", exit_code=20, holder=data.get("holder"))
         persist_cursor(root, state, "orchestrator-provision")
@@ -561,7 +611,7 @@ def execute_mechanical(
             root, "orchestrator", "provision", "--plan", str(PLAN_PATH)
         )
         if ec != 0:
-            fail(data.get("error") or "orchestrator provision failed", exit_code=ec, **data)
+            fail_payload(data, "orchestrator provision failed", ec)
         state.update(load_state(root))
         persist_cursor(root, state, "provision-phase")
         return {"executed": "orchestrator-provision"}
@@ -578,7 +628,7 @@ def execute_mechanical(
             str(PLAN_PATH),
         )
         if ec != 0:
-            fail(data.get("error") or "phase provision failed", exit_code=ec, **data)
+            fail_payload(data, "phase provision failed", ec)
         worktrees = state.setdefault("phaseWorktrees", {})
         worktrees[pid] = {
             "name": data.get("name") or data.get("worktreeName"),
@@ -595,7 +645,7 @@ def execute_mechanical(
         slug = str(step.get("phaseSlug", ""))
         ec, data = run_wave(root, "status", "collect", "--phase-slug", slug)
         if ec != 0:
-            fail(data.get("error") or "status collect failed", exit_code=ec, **data)
+            fail_payload(data, "status collect failed", ec)
         state.update(load_state(root))
         persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
         return {"executed": "collect-status", "phaseSlug": slug, **data}
@@ -604,14 +654,14 @@ def execute_mechanical(
         slug = str(step.get("phaseSlug", ""))
         ec, data = run_wave(root, "merge", "enqueue", "--phase-slug", slug)
         if ec != 0:
-            fail(data.get("error") or "merge enqueue failed", exit_code=ec, **data)
+            fail_payload(data, "merge enqueue failed", ec)
         persist_cursor(root, state, "merge-run-next")
         return {"executed": "merge-enqueue", "phaseSlug": slug}
 
     if action == "merge-run-next":
         ec, data = run_wave(root, "merge", "run-next")
         if ec not in (0, 10):
-            fail(data.get("error") or "merge run-next failed", exit_code=ec, **data)
+            fail_payload(data, "merge run-next failed", ec)
         state.update(load_state(root))
         persist_cursor(root, state, "provision-phase")
         return {"executed": "merge-run-next", **data}
@@ -628,7 +678,7 @@ def execute_mechanical(
     if action == "finalize-completion":
         ec, data = run_wave(root, "completion", "finalize-if-merged")
         if ec != 0:
-            fail(data.get("error") or "finalize completion failed", exit_code=ec, **data)
+            fail_payload(data, "finalize completion failed", ec)
         state.update(load_state(root))
         persist_cursor(root, state, "suggest-cleanup")
         return {
@@ -644,6 +694,14 @@ def execute_mechanical(
 
     if action == "halt-blocked":
         cause = str(step.get("cause", "blocked"))
+        if cause.startswith("phase-timeout:"):
+            pid = cause.split(":", 1)[1]
+            phases = state.setdefault("phases", {})
+            meta = phases.get(pid)
+            if isinstance(meta, dict) and meta.get("status") == "in-flight":
+                meta["status"] = "blocked"
+                meta["cause"] = cause
+                meta["updatedAt"] = utc_now()
         state["verdict"] = "blocked"
         state["cause"] = cause
         path = write_blocker_report(root, state, cause)
@@ -651,6 +709,46 @@ def execute_mechanical(
         return {"executed": "halt-blocked", "cause": cause, "blockerReport": str(path)}
 
     fail(f"unknown mechanical action: {action}")
+
+
+def cmd_watchdog_check(root: Path, _args: list[str]) -> None:
+    state = load_state(root)
+    cause = check_watchdog(root, state)
+    timeout_min = phase_timeout_minutes(root)
+    in_flight: list[dict[str, Any]] = []
+    for pid, meta in (state.get("phases") or {}).items():
+        if not isinstance(meta, dict) or meta.get("status") != "in-flight":
+            continue
+        slug = meta.get("slug", pid)
+        status_path = status_file_for(root, slug, None, state)
+        in_flight.append(
+            {
+                "phaseId": pid,
+                "phaseSlug": slug,
+                "startedAt": meta.get("startedAt"),
+                "hasStatusJson": status_path.is_file(),
+            }
+        )
+    if cause:
+        emit(
+            {
+                "verdict": "fail",
+                "action": "watchdog-check",
+                "cause": cause,
+                "phaseTimeoutMinutes": timeout_min,
+                "inFlight": in_flight,
+                "recommendedCommand": "bash scripts/wave.sh deliver-loop",
+            },
+            exit_code=20,
+        )
+    emit(
+        {
+            "verdict": "pass",
+            "action": "watchdog-check",
+            "phaseTimeoutMinutes": timeout_min,
+            "inFlight": in_flight,
+        }
+    )
 
 
 def cmd_deliver_loop(root: Path, args: list[str]) -> None:
@@ -661,6 +759,8 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     state = load_state(root)
     plan = load_plan(root)
     resumed = bool(state.get("verdict") == "running" and state.get("phases"))
+
+    assert_run_identity(root, state, task_list, args)
 
     if task_list and not state.get("source_task_list"):
         state["source_task_list"] = task_list
@@ -783,6 +883,10 @@ def main() -> None:
                 "next": compute_next_action(root, state, plan),
             }
         )
+    elif cmd == "watchdog":
+        if not args or args[0] != "check":
+            fail("watchdog subcommand required: check")
+        cmd_watchdog_check(root, args[1:])
     else:
         fail(f"unknown command: {cmd}")
 

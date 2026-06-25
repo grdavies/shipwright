@@ -50,6 +50,18 @@ The decision section contract must stay in lockstep with `scripts/spec-rigor-che
 - **Full:** require brainstorm doc path as input; refuse to draft without it (R6 ordering).
 - **Standard:** accept triaged request directly (no brainstorm required).
 
+## Frontmatter traceability (Full tier — R52/R53)
+
+At save time on the Full path:
+
+1. Write `brainstorm: <repo-relative-path>` on the PRD via
+   `python3 scripts/doc_link.py write-backref --brainstorm <brainstorm> --prd <prd>`.
+2. When the brainstorm is not frozen, write the forward `prd:` reference via
+   `python3 scripts/doc_link.py write-forwardref --brainstorm <brainstorm> --prd <prd>`.
+
+`/sw-freeze` re-verifies linkage (`doc-link-check.sh`, R55) and may write the forward ref if still writable (R53).
+Fields are documented in `.sw/layout.md`.
+
 ## Collision policy
 
 - Same feature/topic, new run: increment `<n>`, distinct slug; do not overwrite.

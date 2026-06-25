@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -129,6 +130,46 @@ def collect_pre_push_diff(root: Path) -> str:
     return git_out("diff", "--cached", cwd=root) + git_out("diff", cwd=root)
 
 
+def iter_diff_file_chunks(diff: str) -> Iterator[tuple[str, str]]:
+    """Yield (repo-relative path, chunk) per file in a unified diff for path allowlisting."""
+    current_path: str | None = None
+    current_lines: list[str] = []
+
+    def flush() -> Iterator[tuple[str, str]]:
+        nonlocal current_path, current_lines
+        if current_path is not None and current_lines:
+            yield current_path, "".join(current_lines)
+        current_path = None
+        current_lines = []
+
+    for line in diff.splitlines(keepends=True):
+        if line.startswith("diff --git "):
+            yield from flush()
+            parts = line.split()
+            b_path = None
+            for part in reversed(parts):
+                if part.startswith("b/"):
+                    b_path = part[2:]
+                    break
+            current_path = b_path or "unknown"
+            current_lines = [line]
+        elif current_path is not None:
+            current_lines.append(line)
+    yield from flush()
+
+
+def scan_diff(diff: str, *, allowlist: dict[str, list[str]]) -> list[Finding]:
+    if not diff.strip():
+        return []
+    chunks = list(iter_diff_file_chunks(diff))
+    if not chunks:
+        return scan_text(diff, allowlist=allowlist, path=None)
+    findings: list[Finding] = []
+    for path, chunk in chunks:
+        findings.extend(scan_text(chunk, allowlist=allowlist, path=path))
+    return findings
+
+
 def report_findings(findings: list[Finding]) -> None:
     print("secret-scan: deny pattern match — push blocked", file=sys.stderr)
     for f in findings[:20]:
@@ -145,7 +186,7 @@ def report_findings(findings: list[Finding]) -> None:
 
 def cmd_pre_push(root: Path, allowlist: dict[str, list[str]]) -> int:
     diff = collect_pre_push_diff(root)
-    findings = scan_text(diff, allowlist=allowlist, path="git-diff")
+    findings = scan_diff(diff, allowlist=allowlist)
     if findings:
         report_findings(findings)
         return EXIT_DENY

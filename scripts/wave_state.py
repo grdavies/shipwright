@@ -30,7 +30,18 @@ def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
 
 
 def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
+    extra.pop("error", None)
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
+
+
+def assert_phase_status(status: str) -> None:
+    if status not in VALID_PHASE_STATUSES:
+        fail(
+            f"invalid phase status {status!r}; allowed: {sorted(VALID_PHASE_STATUSES)}",
+            exit_code=20,
+            halt="blocked",
+            cause="phase-status:invalid",
+        )
 
 
 def fail_corrupt(path: Path, exc: StateCorruptError) -> None:
@@ -201,8 +212,9 @@ def find_phase(state: dict[str, Any], phase_id: str | None, slug: str | None) ->
 
 def cmd_state_phase(root: Path, args: list[str]) -> None:
     status = parse_kv(args, "--status")
-    if not status or status not in VALID_PHASE_STATUSES:
+    if not status:
         fail(f"--status required; one of {sorted(VALID_PHASE_STATUSES)}")
+    assert_phase_status(status)
     state_path = paths(root)["state"]
     state = load_state_file(state_path)
     if not state:
@@ -225,6 +237,19 @@ def cmd_state_phase(root: Path, args: list[str]) -> None:
         },
     )
     emit({"verdict": "pass", "action": "state-phase", "phaseId": pid, "status": status})
+
+
+def cmd_state_heartbeat(root: Path, _args: list[str]) -> None:
+    """Refresh driverHeartbeatAt for liveness / watchdog (R37)."""
+    state_path = paths(root)["state"]
+    state = load_state_file(state_path)
+    if not state:
+        fail("run state missing; run state init first", exit_code=2)
+    now = utc_now()
+    state["driverHeartbeatAt"] = now
+    state["updatedAt"] = now
+    write_json(state_path, state)
+    emit({"verdict": "pass", "action": "state-heartbeat", "driverHeartbeatAt": now})
 
 
 def cmd_state_get(root: Path, _args: list[str]) -> None:
@@ -254,6 +279,7 @@ def cmd_state_terminal(root: Path, args: list[str]) -> None:
 
 
 def cmd_lock_acquire(root: Path, args: list[str]) -> None:
+    """Atomic orchestrator lock (R41): O_CREAT|O_EXCL — concurrent acquire yields exit 20."""
     target = parse_kv(args, "--target")
     if not target:
         fail("--target required (e.g. feat/my-slug)")
@@ -553,7 +579,7 @@ def main() -> None:
 
     if domain == "state":
         if not args:
-            fail("state subcommand required: init|get|phase|terminal")
+            fail("state subcommand required: init|get|phase|terminal|heartbeat")
         sub = args[0]
         rest = args[1:]
         if sub == "init":
@@ -564,6 +590,8 @@ def main() -> None:
             cmd_state_phase(root, rest)
         elif sub == "terminal":
             cmd_state_terminal(root, rest)
+        elif sub == "heartbeat":
+            cmd_state_heartbeat(root, rest)
         else:
             fail(f"unknown state subcommand: {sub}")
     elif domain == "lock":

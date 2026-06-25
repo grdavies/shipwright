@@ -261,6 +261,25 @@ without restarting from plan, and never emits manual “next steps” prose whil
 advancement keys off durable `status.json` in each **phase-worktree** (`status collect` — not chat).
 Per-phase `/sw-ship` persists step-level state (`ship-steps.json`) for mid-chain resume.
 
+**Autonomous conductor (PRD 009):** `/sw-deliver` loads `skills/conductor/SKILL.md` and runs an
+**in-turn self-continuation loop** — after each `deliver-loop` step the conductor re-invokes the driver
+until a **legitimate halt** (terminal merge gate, exhausted remediation, ambiguous/destructive action,
+configured checkpoint, phase timeout, external-wait exhaustion, or run-level budget). Routine steps
+(status collect, merge enqueue, bookkeeping, living-doc reconcile) never pause for user input.
+
+**Parallel dispatch:** dependency-ready phases within a wave dispatch as background sub-agents in
+disjoint worktrees, bounded by `worktree.parallelCeiling` (default 4). Peak concurrency ≥2 when the
+plan has parallelizable waves. Outcomes are read only from durable `status.json` — never chat logs.
+Merge is single-flight (conductor-serialized queue + lock).
+
+**Legitimate halts (summary):** final merge to `main`; remediation budget exhausted; merge conflict /
+destructive git; `deliver.autonomy.mode: supervised` or `doc.afterTasks: confirm`; phase liveness
+timeout; CI/external wait exhausted; run-level `deliver.autonomy.maxRunMinutes` / `maxIterations`.
+Every halt emits one consolidated report with an exact `resumeCommand` — not “continue?”.
+
+See `configuration.md` for `deliver.autonomy` defaults and `skills/conductor/SKILL.md` for the full
+contract.
+
 **Merge queue:** phases with no per-phase PR use a local-evidence merge path; phases with a PR use
 `check-gate.sh`. `status.json` binds to the phase head SHA — stale status cannot authorize a merge.
 The orchestrator worktree owns a non-detached `<type>/<slug>` checkout; phase merges advance that ref
@@ -273,6 +292,12 @@ is recorded as `completed-pending-merge` until the human merges; the loop then s
 
 **Task currency:** frozen task checkboxes may be toggled in-loop; a currency gate blocks the terminal
 merge if checkboxes diverge from the durable ledger.
+
+**Living-doc currency:** INDEX status, COMPLETION-LOG, and GAP-BACKLOG reconcile in-loop on the
+feature branch; `docs-currency` hard-blocks the terminal gate on drift for the current PRD.
+
+**Doc frontmatter traceability:** Full-tier PRDs carry `brainstorm:` in frontmatter; writable brainstorms
+may gain `prd:` forward links. `/sw-freeze` verifies resolvable linkage before freeze.
 
 **Branch policy:** workflow-created branches use conforming type prefixes (`feat/`, `fix/`, …) from
 `release-please-config.json` — never `pf/`.

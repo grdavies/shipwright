@@ -115,6 +115,29 @@ def is_ancestor(ancestor: str, descendant: str, cwd: Path) -> bool:
     return proc.returncode == 0
 
 
+def run_docs_currency_gate(root: Path) -> None:
+    """Hard-block terminal gate on living-doc drift for the current run (R50)."""
+    script = SCRIPT_DIR / "docs-currency-gate.sh"
+    proc = subprocess.run(
+        ["bash", str(script), "--state-root", str(root)],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0:
+        try:
+            err = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            err = {"error": proc.stderr.strip() or proc.stdout.strip() or "docs-currency gate failed"}
+        fail(
+            err.get("error", "living-doc currency drift"),
+            exit_code=proc.returncode or 1,
+            halt="blocked",
+            cause="docs-currency:drift",
+            **{k: v for k, v in err.items() if k != "error"},
+        )
+
+
 def run_check_gate(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
     script = SCRIPT_DIR / "check-gate.sh"
     cmd = ["bash", str(script)]
@@ -298,6 +321,27 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
     if not all_phases_green(state):
         fail("terminal PR only when all phases are green-merged (R22)", exit_code=20)
 
+    if not dry_run:
+        append_proc = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT_DIR / "wave_living_docs.py"),
+                str(root),
+                "append-terminal",
+                "--commit",
+            ],
+            cwd=str(root),
+            text=True,
+            capture_output=True,
+        )
+        if append_proc.returncode not in (0, 10):
+            try:
+                err = json.loads(append_proc.stdout)
+            except json.JSONDecodeError:
+                err = {"error": append_proc.stderr or append_proc.stdout}
+            fail(err.get("error", "living-docs append-terminal failed"), exit_code=append_proc.returncode)
+        run_docs_currency_gate(root)
+
     title = parse_kv(args, "--title") or f"{commit_type}({slug}): deliver wave"
     body = terminal_pr_body(state)
 
@@ -391,6 +435,7 @@ def cmd_terminal_pr_gate(root: Path, args: list[str]) -> None:
     pr = parse_kv(args, "--pr") or (str(terminal.get("number")) if terminal.get("number") else None)
     if not pr:
         fail("terminal PR not prepared; run terminal pr prepare first")
+    run_docs_currency_gate(root)
     gate_ec, gate = run_check_gate(root, pr)
     ready = gate_ec == 0 and gate.get("verdict") == "green"
     payload: dict[str, Any] = {
