@@ -11,6 +11,8 @@ Load `skills/compound/SKILL.md`. Route all writes through `memory-preflight` + `
 
 **Communication intensity:** full
 
+**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --command sw-compound`.
+
 ## Guardrails
 
 - No rule-class writes without user confirmation + audit allowlist.

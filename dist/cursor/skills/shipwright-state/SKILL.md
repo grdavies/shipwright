@@ -7,6 +7,9 @@ description: Per-worktree Shipwright state read/write contract. Resolves state p
 
 Phase context lives in the **worktree gitdir**, not a shared repo-global file.
 
+
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill shipwright-state`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Location
 
 | Checkout | State path |

@@ -19,9 +19,26 @@ alwaysApply: false
 
 ## Model tier (R30 / R9)
 
-- Delegated **mechanical** work (mapping diffs, fixture runs, grep-heavy research) → cheaper/faster parent or subagent models (`models.tiers.cheap`).
-- Reasoning-heavy design, stabilize RCA, gate triage, doc-review orchestration → **`models.roles.builder` tier or higher** (`models.tiers.build` / `deep`).
-- **R9 runtime contract:** when dispatching `sw-*-reviewer` subagents (especially `model: inherit` reviewers from `/sw-doc-review`), the **parent agent's model must be at the builder tier or above** per `workflow.config.json` `models.roles.builder`. Do not run persona panels from a sub-build parent — log a warning and ask the user to switch model or override explicitly.
+Resolve command and skill tiers from `models.routing` in `workflow.config.json` (seeded by `/sw-setup` from
+`core/sw-reference/model-routing.defaults.json`):
+
+```bash
+bash scripts/resolve-model-tier.sh --command <slug>
+bash scripts/resolve-model-tier.sh --skill <name>
+```
+
+- Delegated **mechanical** work → `models.tiers.cheap` (`resolve-model-tier.sh --tier cheap`).
+- Implementation, RCA, review orchestration → `models.tiers.build` (`models.roles.builder`).
+- Medium-effort reasoning (gaps, simplify, memory-sync, native panel non-high-stakes specialists) →
+  `models.tiers.mid`.
+- Doc authoring, high-stakes review, native panel correctness/security/adversarial → `models.tiers.deep`.
+- Orchestrators at routing tier `inherit` (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-compound-ship`) MUST resolve
+  delegated atomics via `--command <child-slug>` — never downgrade the child (KD8).
+- **R9 runtime contract:** when dispatching `sw-*-reviewer` subagents (`model: inherit`), the **parent agent's
+  model must be at the builder tier or above** per `models.roles.builder`. Do not run persona panels from a
+  sub-build parent — log a warning and ask the user to switch model or override explicitly.
+- Native panel (PRD 005): high-stakes specialists → `deep`; other specialists → `mid` — resolve concrete IDs
+  from `models.tiers`, not session inheritance alone.
 
 ## Hard stops (R29)
 
@@ -89,5 +106,5 @@ Inline (no subagent) when ≤3 files and sequential — still run both stages; o
 
 ## Model tier for execute review
 
-- Stage 1 spec-compliance → full-fidelity (must read union + task).
-- Stage 2 code-quality → may use faster model for mechanical diffs; escalate on ambiguity.
+- Stage 1 spec-compliance → `build` tier (`resolve-model-tier.sh --tier build`); must read union + task.
+- Stage 2 code-quality → `mid` tier when delegating; escalate to `build` on ambiguity.

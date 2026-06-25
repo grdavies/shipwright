@@ -40,6 +40,8 @@ source. `/sw-memory-sync` only writes the *distilled* sink into the memory provi
 
 **Communication intensity:** ultra
 
+**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --command sw-memory-sync`.
+
 ## Guardrails
 
 - Never store raw transcript text — only distilled substance. No secrets, tokens, or credentials.

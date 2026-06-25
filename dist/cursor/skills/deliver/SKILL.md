@@ -9,6 +9,9 @@ Layer above `/sw-ship` for **phase-mode** (frozen task-list phases stacking onto
 **multi-feature mode** (independent features promoting via `integration/<stamp>`). Reuses `scripts/worktree.sh`
 and `skills/parallelism/` wholesale.
 
+
+**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill deliver`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Deliver plan representation
 
 Path: `.cursor/sw-deliver-plan.json` (machine-readable; see `.sw/layout.md`).

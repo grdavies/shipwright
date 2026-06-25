@@ -7,6 +7,9 @@ description: Compare phase plan (spec union + task checklist) against git diff; 
 
 Catches planned vs actual before commit.
 
+
+**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --skill gap-check`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Inputs
 
 - **Plan:** task checklist for `phaseSlug` in `tasksDir` + spec union (`scripts/spec-union.sh <prd>`).

@@ -11,6 +11,9 @@ existing workflows. **Does not perform RCA, amendment authoring, or implementati
 Human-invoked by default (`invocation: human`). Automated capture (hook/monitor) may normalize signals
 later but must never auto-dispatch a route without human confirmation.
 
+
+**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill feedback`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Phase 1 — Normalize + redact (U1)
 
 1. Classify input into `sourceClass`: `production` | `review` | `retro`.

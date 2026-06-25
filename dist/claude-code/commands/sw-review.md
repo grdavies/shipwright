@@ -215,6 +215,8 @@ Unchanged from prior single-phase flow:
 
 **Communication intensity:** full
 
+**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --command sw-review`.
+
 ## Guardrails
 
 - Load `agentsFile` before review.

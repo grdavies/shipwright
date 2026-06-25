@@ -10,6 +10,9 @@ completion and new review comments. **Opt-in only** — the default for `/sw-sta
 This wrapper never changes stabilize's discipline (reply-before-resolve, verify-before-resolve, no
 mass-resolve); it just repeats it under hard stops.
 
+
+**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill stabilize-loop`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Success predicate
 
 Stop with success when the `checks-gate` verdict (from `scripts/check-gate.sh`) is **green**:

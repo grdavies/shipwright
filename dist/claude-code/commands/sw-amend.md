@@ -33,6 +33,8 @@ Post-freeze correction path. Parent stays byte-stable.
 
 **Communication intensity:** lite
 
+**Model tier:** deep — resolve via `bash scripts/resolve-model-tier.sh --command sw-amend`.
+
 ## Guardrails
 
 - Parent file is never written.

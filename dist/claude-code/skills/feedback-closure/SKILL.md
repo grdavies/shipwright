@@ -8,6 +8,9 @@ description: Consume GAP-BACKLOG into implementation loop and close routed signa
 Closes the loop from `/sw-feedback` trivial-gap routing → `docs/prds/GAP-BACKLOG.md` → implementation → verified
 ship. Complements `skills/feedback` (intake/route) and `skills/gap-check` (plan vs diff).
 
+
+**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --skill feedback-closure`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Backlog entry format
 
 ```markdown

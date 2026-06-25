@@ -8,6 +8,9 @@ description: Evaluate the pass/fail/pending state of a PR's CI checks under the 
 Shared predicate for PR CI readiness. `/sw-watch-ci` and `/sw-stabilize` both use it so the gate is
 identical on both sides. Default policy is **all checks**, not just required.
 
+
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill checks-gate`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Policy (`workflow.config.json` → `checks`)
 
 | Key | Default | Effect |

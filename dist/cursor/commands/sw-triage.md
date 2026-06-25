@@ -23,6 +23,8 @@ Deterministic tier classifier for the documentation pipeline. Routes work before
 
 **Communication intensity:** ultra
 
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-triage`.
+
 ## Guardrails
 
 - Risk triggers are a **hard floor** — auth/payments/migration/public-API work never lands Quick.

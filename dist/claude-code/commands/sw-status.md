@@ -23,6 +23,8 @@ Load `skills/living-status/SKILL.md`.
 
 **Communication intensity:** ultra
 
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-status`.
+
 ## Guardrails
 
 - Frozen artifacts never modified.

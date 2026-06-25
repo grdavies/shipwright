@@ -33,6 +33,8 @@ Confirm merge-readiness via `scripts/check-gate.sh` — terminal report only.
 
 **Communication intensity:** normal
 
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-ready`.
+
 ## Guardrails
 
 - Never merge, push, or resolve threads here.

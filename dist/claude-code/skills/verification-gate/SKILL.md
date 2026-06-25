@@ -9,6 +9,9 @@ Reusable local verification gate (IM1). Consumes **structured** evidence pointer
 Complementary to `skills/checks-gate` (CI truth via `scripts/check-gate.sh`); never overrides a red/green
 gate verdict.
 
+
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill verification-gate`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Three-state contract
 
 | Verdict | Meaning | Typical exit |

@@ -38,6 +38,8 @@ behavior**. Default-on in `/sw-ship` after `/sw-review`.
 
 **Communication intensity:** full
 
+**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --command sw-simplify`.
+
 ## Guardrails
 
 - No test assertion weakening or deletion to force green.

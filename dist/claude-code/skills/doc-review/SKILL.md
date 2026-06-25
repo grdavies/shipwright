@@ -7,6 +7,9 @@ description: Review PRD drafts with parallel persona sub-agents and a synthesize
 
 Multi-persona review for PRDs and decision records. Pattern borrowed from compound-engineering `ce-doc-review` (slim vendored adaptation).
 
+
+**Model tier:** inherit — runtime parent floor (R9); `resolve-model-tier.sh --skill doc-review` returns inherit with `modelId: null`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Doc types
 
 | Doc type | Path pattern | Panel |

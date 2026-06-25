@@ -7,6 +7,9 @@ description: Distill retro/feedback into typed memories via memory-preflight; hu
 
 Adapted from compound-engineering — writes through the memory seam only (not `docs/solutions/`).
 
+
+**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --skill compound`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Procedure
 
 1. Inputs: `/sw-retro` candidates, `/sw-feedback` route records (`surface:feedback-route`), or explicit feedback items.

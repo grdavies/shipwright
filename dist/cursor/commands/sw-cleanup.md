@@ -47,6 +47,8 @@ Branches are classified via, in order:
 - `gh pr list --state merged` when `gh` is available
 - otherwise **indeterminate** → protected (no delete)
 
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-cleanup`.
+
 ## Guardrails
 
 - Protects: current branch, default branch, unmerged branches, indeterminate merges, cwd worktree,

@@ -7,6 +7,9 @@ description: Generate a frozen task list from a frozen PRD using the spec union 
 
 Port of v1 `spec-tasks` under `sw-`. Reads U8 union so amended requirements are reflected.
 
+
+**Model tier:** deep — resolve via `bash scripts/resolve-model-tier.sh --skill tasks`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Path
 
 `docs/prds/<n>-<slug>/tasks-<n>-<slug>.md` per `.sw/layout.md`.
