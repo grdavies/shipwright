@@ -34,6 +34,11 @@ def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 
+def fail_payload(data: dict[str, Any], default: str, exit_code: int) -> None:
+    payload = {k: v for k, v in data.items() if k != "error"}
+    fail(data.get("error") or default, exit_code=exit_code, **payload)
+
+
 def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | None:
     if flag in args:
         i = args.index(flag)
@@ -618,7 +623,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
                 err = json.loads(proc.stdout)
             except json.JSONDecodeError:
                 err = {"error": proc.stderr or proc.stdout}
-            fail(err.get("error", "merge failed"), exit_code=proc.returncode, **err)
+            fail_payload(err, "merge failed", proc.returncode)
 
         merge_out = json.loads(proc.stdout)
         merge_commit = merge_out.get("mergeCommit")

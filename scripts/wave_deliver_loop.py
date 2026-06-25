@@ -63,6 +63,11 @@ def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 
+def fail_payload(data: dict[str, Any], default: str, exit_code: int) -> None:
+    payload = {k: v for k, v in data.items() if k != "error"}
+    fail(data.get("error") or default, exit_code=exit_code, **payload)
+
+
 def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | None:
     if flag in args:
         i = args.index(flag)
@@ -550,7 +555,7 @@ def execute_mechanical(
             plan_args.append("--skip-base-check")
         ec, data = run_wave(root, *plan_args)
         if ec != 0:
-            fail(data.get("error") or "plan failed", exit_code=ec, **data)
+            fail_payload(data, "plan failed", ec)
         plan = load_plan(root)
         persist_cursor(root, state, "state-init")
         return {"executed": "plan", "plan": plan.get("target")}
@@ -558,7 +563,7 @@ def execute_mechanical(
     if action == "state-init":
         ec, data = run_wave(root, "state", "init", "--plan", str(PLAN_PATH))
         if ec != 0:
-            fail(data.get("error") or "state init failed", exit_code=ec, **data)
+            fail_payload(data, "state init failed", ec)
         state.update(load_state(root))
         ensure_driver_fields(state)
         persist_cursor(root, state, "spec-seed")
@@ -570,7 +575,7 @@ def execute_mechanical(
             fail("spec-seed requires task list")
         ec, data = run_wave(root, "spec-seed", "--task-list", str(tl))
         if ec != 0:
-            fail(data.get("error") or "spec-seed failed", exit_code=ec, **data)
+            fail_payload(data, "spec-seed failed", ec)
         state.update(load_state(root))
         state["specSeed"] = {
             "branch": data.get("branch"),
@@ -586,7 +591,7 @@ def execute_mechanical(
         target = step.get("target") or (plan.get("target") or {}).get("branch")
         ec, data = run_wave(root, "lock", "acquire", "--target", str(target), "--nonblock")
         if ec not in (0, 20):
-            fail(data.get("error") or "lock acquire failed", exit_code=ec, **data)
+            fail_payload(data, "lock acquire failed", ec)
         if ec == 20:
             fail("orchestrator lock held", exit_code=20, holder=data.get("holder"))
         persist_cursor(root, state, "orchestrator-provision")
@@ -597,7 +602,7 @@ def execute_mechanical(
             root, "orchestrator", "provision", "--plan", str(PLAN_PATH)
         )
         if ec != 0:
-            fail(data.get("error") or "orchestrator provision failed", exit_code=ec, **data)
+            fail_payload(data, "orchestrator provision failed", ec)
         state.update(load_state(root))
         persist_cursor(root, state, "provision-phase")
         return {"executed": "orchestrator-provision"}
@@ -614,7 +619,7 @@ def execute_mechanical(
             str(PLAN_PATH),
         )
         if ec != 0:
-            fail(data.get("error") or "phase provision failed", exit_code=ec, **data)
+            fail_payload(data, "phase provision failed", ec)
         worktrees = state.setdefault("phaseWorktrees", {})
         worktrees[pid] = {
             "name": data.get("name") or data.get("worktreeName"),
@@ -631,7 +636,7 @@ def execute_mechanical(
         slug = str(step.get("phaseSlug", ""))
         ec, data = run_wave(root, "status", "collect", "--phase-slug", slug)
         if ec != 0:
-            fail(data.get("error") or "status collect failed", exit_code=ec, **data)
+            fail_payload(data, "status collect failed", ec)
         state.update(load_state(root))
         persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
         return {"executed": "collect-status", "phaseSlug": slug, **data}
@@ -640,14 +645,14 @@ def execute_mechanical(
         slug = str(step.get("phaseSlug", ""))
         ec, data = run_wave(root, "merge", "enqueue", "--phase-slug", slug)
         if ec != 0:
-            fail(data.get("error") or "merge enqueue failed", exit_code=ec, **data)
+            fail_payload(data, "merge enqueue failed", ec)
         persist_cursor(root, state, "merge-run-next")
         return {"executed": "merge-enqueue", "phaseSlug": slug}
 
     if action == "merge-run-next":
         ec, data = run_wave(root, "merge", "run-next")
         if ec not in (0, 10):
-            fail(data.get("error") or "merge run-next failed", exit_code=ec, **data)
+            fail_payload(data, "merge run-next failed", ec)
         state.update(load_state(root))
         persist_cursor(root, state, "provision-phase")
         return {"executed": "merge-run-next", **data}
@@ -664,7 +669,7 @@ def execute_mechanical(
     if action == "finalize-completion":
         ec, data = run_wave(root, "completion", "finalize-if-merged")
         if ec != 0:
-            fail(data.get("error") or "finalize completion failed", exit_code=ec, **data)
+            fail_payload(data, "finalize completion failed", ec)
         state.update(load_state(root))
         persist_cursor(root, state, "suggest-cleanup")
         return {
