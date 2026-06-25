@@ -62,6 +62,35 @@ else
   bad "secret-patterns-single-source-allowlist: patterns-check failed ec=$EC_PAT"
 fi
 
+# path-aware pre-push diff + config namespace not treated as internal host
+set +e
+PYTHONPATH="$ROOT/scripts" python3 - <<'PY' >/dev/null 2>&1
+import subprocess
+from pathlib import Path
+
+from secret_scan import load_allowlist, scan_diff, scan_text
+
+root = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
+allowlist = load_allowlist(root)
+
+doc = "Resolve `review.local` from workflow.config.json"
+assert not scan_text(doc, allowlist=allowlist, path="docs/guide.md"), "review.local should not match INTERNAL_HOST"
+
+fixture_diff = """diff --git a/scripts/test/run-secret-scan-fixtures.sh b/scripts/test/run-secret-scan-fixtures.sh
+--- a/scripts/test/run-secret-scan-fixtures.sh
++++ b/scripts/test/run-secret-scan-fixtures.sh
++echo 'api_key=ghp_deadbeefdeadbeefdeadbeefdeadbeefdead' > leak.txt
+"""
+assert not scan_diff(fixture_diff, allowlist=allowlist), "fixture path allowlist should apply per diff file"
+PY
+EC_PATH=$?
+set -e
+if [[ "$EC_PATH" -eq 0 ]]; then
+  ok "secret-scan-path-aware-diff: review.local + fixture path allowlist"
+else
+  bad "secret-scan-path-aware-diff: path-aware scan regression ec=$EC_PATH"
+fi
+
 # fail-closed on corrupt allowlist
 echo 'not-json' > .cursor/sw-secret-scan-allowlist.json
 set +e
