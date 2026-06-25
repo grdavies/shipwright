@@ -11,6 +11,10 @@ from pathlib import Path
 from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from wave_json_io import StateCorruptError, read_json, write_json
 
 VALID_STATUS_VERDICTS = frozenset({"merge-ready-green", "blocked"})
 
@@ -35,33 +39,77 @@ def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | No
     return default
 
 
-def read_json(path: Path) -> dict[str, Any]:
-    if not path.is_file():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
-    except json.JSONDecodeError:
-        return {}
-
-
-def write_json(path: Path, data: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    os.chmod(path, 0o600)
-
-
 def state_path(root: Path) -> Path:
     return root / ".cursor" / "sw-deliver-state.json"
 
 
 def load_state(root: Path) -> dict[str, Any]:
-    return read_json(state_path(root))
+    path = state_path(root)
+    try:
+        return read_json(path)
+    except StateCorruptError as exc:
+        fail(
+            f"corrupt durable state: {exc}",
+            exit_code=20,
+            halt="blocked",
+            cause="state:corrupt",
+            path=str(path),
+        )
+        return {}
 
 
 def save_state(root: Path, state: dict[str, Any]) -> None:
     state["updatedAt"] = utc_now()
     write_json(state_path(root), state)
+
+
+def phase_already_merged(top: Path, phase_branch: str, target: str) -> bool:
+    try:
+        phase_sha = git_run(["rev-parse", phase_branch], cwd=top, check=True).stdout.strip()
+        target_sha = git_run(["rev-parse", target], cwd=top, check=True).stdout.strip()
+        proc = git_run(
+            ["merge-base", "--is-ancestor", phase_sha, target_sha],
+            cwd=top,
+            check=False,
+        )
+        return proc.returncode == 0
+    except subprocess.CalledProcessError:
+        return False
+
+
+def clear_open_journal_if_merged(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """Idempotent crash recovery: open journal + phase already on target → clear journal (R45)."""
+    journal = state.get("mergeJournal")
+    if not journal:
+        return state
+    phase_slug = journal.get("phase", "")
+    phases = state.get("phases") or {}
+    phase_branch = None
+    for meta in phases.values():
+        if meta.get("slug") == phase_slug:
+            phase_branch = meta.get("branch")
+            break
+    target = (state.get("target") or {}).get("branch")
+    if not phase_branch or not target:
+        return state
+    top = root
+    if phase_already_merged(top, phase_branch, target):
+        key = journal.get("key") or phase_slug
+        done = list(state.get("completedMerges") or [])
+        if not any(isinstance(c, dict) and c.get("key") == key for c in done):
+            done.append(
+                {
+                    "key": key,
+                    "phase": phase_slug,
+                    "head": journal.get("head"),
+                    "completedAt": utc_now(),
+                    "recovered": True,
+                }
+            )
+        state["completedMerges"] = done
+        state["mergeJournal"] = None
+        save_state(root, state)
+    return state
 
 
 def git_run(
@@ -99,17 +147,151 @@ def merge_authorizing(gate_ec: int, gate: dict[str, Any]) -> bool:
     return True
 
 
-def status_file_for(root: Path, phase_slug: str, explicit: str | None) -> Path:
+def status_file_for(
+    root: Path,
+    phase_slug: str,
+    explicit: str | None,
+    state: dict[str, Any] | None = None,
+) -> Path:
     if explicit:
         return Path(explicit).resolve()
+    if state is None and state_path(root).is_file():
+        state = load_state(root)
+    wt = resolve_phase_worktree(root, phase_slug, state or {})
+    if wt is not None:
+        candidate = wt / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json"
+        if candidate.is_file():
+            return candidate
     return root / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json"
+
+
+def resolve_phase_worktree(
+    root: Path, phase_slug: str, state: dict[str, Any]
+) -> Path | None:
+    phases = state.get("phases") or {}
+    phase_id: str | None = None
+    for pid, meta in phases.items():
+        if isinstance(meta, dict) and meta.get("slug") == phase_slug:
+            phase_id = str(pid)
+            break
+    if not phase_id:
+        return None
+    wt_info = (state.get("phaseWorktrees") or {}).get(phase_id) or {}
+    if not isinstance(wt_info, dict):
+        return None
+    raw = wt_info.get("path")
+    if not raw:
+        return None
+    path = Path(str(raw))
+    if not path.is_absolute():
+        path = (root / path).resolve()
+    return path if path.is_dir() else None
+
+
+def phase_meta_for_slug(state: dict[str, Any], phase_slug: str) -> tuple[str | None, dict[str, Any]]:
+    for pid, meta in (state.get("phases") or {}).items():
+        if isinstance(meta, dict) and meta.get("slug") == phase_slug:
+            return str(pid), meta
+    return None, {}
+
+
+def phase_branch_head(root: Path, state: dict[str, Any], phase_slug: str, phase_branch: str) -> str:
+    head = phase_branch_head_optional(root, state, phase_slug, phase_branch)
+    if not head:
+        fail(f"could not resolve head for {phase_branch!r}", phase=phase_slug)
+    return head
+
+
+def phase_branch_head_optional(
+    root: Path, state: dict[str, Any], phase_slug: str, phase_branch: str
+) -> str | None:
+    wt = resolve_phase_worktree(root, phase_slug, state)
+    for cwd in (wt, root):
+        if cwd is None:
+            continue
+        proc = git_run(["rev-parse", phase_branch], cwd=cwd, check=False)
+        head = proc.stdout.strip()
+        if proc.returncode == 0 and head:
+            return head
+    return None
+
+
+def check_status_sha(status: dict[str, Any], expected_head: str) -> tuple[bool, str | None]:
+    recorded = status.get("head")
+    if not recorded:
+        return False, "phase-status:missing-head"
+    if str(recorded) != expected_head:
+        return False, "phase-status:stale"
+    return True, None
+
+
+def validate_status_sha(status: dict[str, Any], expected_head: str, phase_slug: str) -> None:
+    ok, cause = check_status_sha(status, expected_head)
+    if not ok:
+        fail(
+            "stale phase status: head SHA does not match branch tip"
+            if cause == "phase-status:stale"
+            else "status missing head SHA binding",
+            exit_code=20,
+            halt="blocked",
+            cause=cause,
+            phase=phase_slug,
+            statusHead=status.get("head"),
+            branchHead=expected_head,
+        )
+
+
+def local_evidence_authorizing(status: dict[str, Any], expected_head: str) -> bool:
+    """No-PR path: merge-ready-green + head binding + optional embedded gate evidence (R39/R54)."""
+    if status.get("verdict") != "merge-ready-green":
+        return False
+    if str(status.get("head") or "") != expected_head:
+        return False
+    gate = status.get("gate")
+    if gate is None:
+        return True
+    if not isinstance(gate, dict):
+        return False
+    if gate.get("verdict") != "green":
+        return False
+    if gate.get("coderabbitLanded") is False:
+        return False
+    return True
+
+
+def authorize_merge(
+    root: Path,
+    state: dict[str, Any],
+    phase_slug: str,
+    entry: dict[str, Any],
+    status: dict[str, Any],
+    phase_branch: str,
+) -> tuple[bool, dict[str, Any], str]:
+    expected_head = phase_branch_head(root, state, phase_slug, phase_branch)
+    validate_status_sha(status, expected_head, phase_slug)
+
+    pr = entry.get("pr")
+    if pr is not None and str(pr).strip() not in ("", "null", "None"):
+        gate_ec, gate = run_check_gate(root, str(pr))
+        return merge_authorizing(gate_ec, gate), gate, "pr"
+
+    local_ok = local_evidence_authorizing(status, expected_head)
+    evidence = {
+        "verdict": "green" if local_ok else "blocked",
+        "source": "local-evidence",
+        "statusHead": status.get("head"),
+        "branchHead": expected_head,
+        "embeddedGate": status.get("gate"),
+    }
+    return local_ok, evidence, "local"
 
 
 def cmd_status_collect(root: Path, args: list[str]) -> None:
     phase_slug = parse_kv(args, "--phase-slug") or parse_kv(args, "--phase")
     if not phase_slug:
         fail("--phase-slug required")
-    path = status_file_for(root, phase_slug, parse_kv(args, "--path"))
+    state = load_state(root) if state_path(root).is_file() else {}
+    path = status_file_for(root, phase_slug, parse_kv(args, "--path"), state)
     if not path.is_file():
         fail(
             f"phase status not found: {path}",
@@ -126,6 +308,12 @@ def cmd_status_collect(root: Path, args: list[str]) -> None:
             exit_code=20,
             phase=phase_slug,
         )
+    _, meta = phase_meta_for_slug(state, phase_slug)
+    phase_branch = meta.get("branch")
+    if phase_branch and verdict == "merge-ready-green":
+        expected = phase_branch_head_optional(root, state, phase_slug, str(phase_branch))
+        if expected:
+            validate_status_sha(status, expected, phase_slug)
     if verdict == "blocked":
         state = load_state(root)
         phases = state.get("phases") or {}
@@ -153,7 +341,15 @@ def cmd_status_collect(root: Path, args: list[str]) -> None:
             text=True,
             capture_output=True,
         )
-    emit({"verdict": "pass", "action": "status-collect", "phase": phase_slug, "status": status})
+    emit(
+        {
+            "verdict": "pass",
+            "action": "status-collect",
+            "phase": phase_slug,
+            "statusPath": str(path),
+            "status": status,
+        }
+    )
 
 
 def cmd_phase_dispatch_env(root: Path, args: list[str]) -> None:
@@ -197,7 +393,8 @@ def cmd_merge_enqueue(root: Path, args: list[str]) -> None:
     phase_slug = parse_kv(args, "--phase-slug") or parse_kv(args, "--phase")
     if not phase_slug:
         fail("--phase-slug required")
-    status_path = status_file_for(root, phase_slug, parse_kv(args, "--status-path"))
+    state = load_state(root)
+    status_path = status_file_for(root, phase_slug, parse_kv(args, "--status-path"), state)
     status = read_json(status_path)
     if status.get("verdict") != "merge-ready-green":
         fail(
@@ -205,7 +402,12 @@ def cmd_merge_enqueue(root: Path, args: list[str]) -> None:
             exit_code=20,
             status=status,
         )
-    state = load_state(root)
+    _, meta = phase_meta_for_slug(state, phase_slug)
+    phase_branch = meta.get("branch")
+    if phase_branch:
+        expected = phase_branch_head_optional(root, state, phase_slug, str(phase_branch))
+        if expected:
+            validate_status_sha(status, expected, phase_slug)
     queue = list(state.get("mergeQueue") or [])
     if any(item.get("phaseSlug") == phase_slug for item in queue):
         emit({"verdict": "pass", "action": "merge-enqueue", "note": "already queued", "phase": phase_slug})
@@ -317,6 +519,7 @@ def cmd_merge_ancestry_check(root: Path, args: list[str]) -> None:
 def cmd_merge_run_next(root: Path, args: list[str]) -> None:
     dry_run = "--dry-run" in args
     state = load_state(root)
+    state = clear_open_journal_if_merged(root, state)
     if state.get("mergeJournal"):
         fail("merge already in flight", exit_code=20, journal=state["mergeJournal"])
     queue = list(state.get("mergeQueue") or [])
@@ -326,16 +529,6 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
     phase_slug = entry.get("phaseSlug", "")
     pr = entry.get("pr")
     pr_str = str(pr) if pr is not None else None
-
-    gate_ec, gate = run_check_gate(root, pr_str)
-    if not merge_authorizing(gate_ec, gate):
-        fail(
-            "review barrier / gate not satisfied",
-            exit_code=10,
-            halt="wait",
-            gate=gate,
-            phase=phase_slug,
-        )
 
     phases = state.get("phases") or {}
     phase_branch = None
@@ -349,6 +542,30 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
     if not phase_branch or not target:
         fail("missing phase branch or target in run-state")
 
+    status_path = status_file_for(root, phase_slug, None, state)
+    if not status_path.is_file():
+        fail(
+            "phase status missing for merge",
+            exit_code=20,
+            halt="blocked",
+            cause="phase-status:missing",
+            phase=phase_slug,
+            statusPath=str(status_path),
+        )
+    status = read_json(status_path)
+    authorized, gate, auth_path = authorize_merge(
+        root, state, phase_slug, entry, status, str(phase_branch)
+    )
+    if not authorized:
+        fail(
+            "review barrier / gate not satisfied",
+            exit_code=10,
+            halt="wait" if auth_path == "pr" else "blocked",
+            gate=gate,
+            phase=phase_slug,
+            authPath=auth_path,
+        )
+
     if dry_run:
         emit(
             {
@@ -359,10 +576,16 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
                 "phaseBranch": phase_branch,
                 "target": target,
                 "gate": gate,
+                "authPath": auth_path,
             }
         )
 
-    journal = {"phase": phase_slug, "startedAt": utc_now()}
+    journal = {
+        "phase": phase_slug,
+        "head": status.get("head"),
+        "startedAt": utc_now(),
+        "key": phase_slug,
+    }
     state["mergeJournal"] = journal
     save_state(root, state)
 
@@ -401,6 +624,19 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
         state = load_state(root)
         state["mergeQueue"] = queue[1:]
         state["mergeJournal"] = None
+        done = list(state.get("completedMerges") or [])
+        key = phase_slug
+        if not any(isinstance(c, dict) and c.get("key") == key for c in done):
+            done.append(
+                {
+                    "key": key,
+                    "phase": phase_slug,
+                    "head": None,
+                    "completedAt": utc_now(),
+                    "mergeCommit": merge_commit,
+                }
+            )
+        state["completedMerges"] = done
         merged = list(state.get("mergedPhases") or [])
         merged.append(
             {
@@ -502,6 +738,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
                 "bookkeeping": bookkeeping,
                 "verify": verify_out,
                 "ack": ack_out,
+                "authPath": auth_path,
             }
         )
     except Exception:
@@ -522,6 +759,8 @@ def cmd_report_terminal(root: Path, args: list[str]) -> None:
         for p in phases.values()
         if p.get("status") not in ("green-merged", "blocked", "rejected")
     ]
+    completion = state.get("completion") or {}
+    completion_pending = completion.get("status") == "completed-pending-merge"
     all_merged = len(pending) == 0 and len(blocked) == 0 and len(phases) > 0
 
     phase_prs: list[dict[str, Any]] = []
@@ -539,13 +778,18 @@ def cmd_report_terminal(root: Path, args: list[str]) -> None:
         )
 
     report: dict[str, Any] = {
-        "verdict": "complete" if all_merged else ("blocked" if blocked else "running"),
+        "verdict": "complete" if all_merged and not completion_pending else ("blocked" if blocked else "running"),
         "targetBranch": target,
         "phasePrs": phase_prs,
         "blockedPhases": [{"slug": p.get("slug"), "cause": p.get("cause")} for p in blocked],
         "conventionalCommitTypes": ["feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"],
     }
-    if all_merged and not state.get("terminalRejected"):
+    if completion_pending:
+        report["completionPendingMerge"] = True
+        report["note"] = (
+            "Pre-merge compounding recorded; awaiting human merge — not complete until merged (R53)"
+        )
+    if all_merged and not state.get("terminalRejected") and not completion_pending:
         report["terminalGate"] = "ready to merge — your call"
         report["note"] = "Open or update single <type>/<slug> → main PR; halt without merging"
         terminal = state.get("terminalPr") or {}

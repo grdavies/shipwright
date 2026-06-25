@@ -120,6 +120,37 @@ else
   ok "merge-run-next-pr-vs-local: pr path attempted (gate may wait without gh)"
 fi
 
+# --- primary-ref-autosync (R40) ---
+MERGE_FIX=$(mktemp -d)
+(
+  cd "$MERGE_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  echo base >f.txt && git add f.txt && git commit -q -m init
+  git branch -m feat/demo
+  git checkout -q -b feat/demo-phase-alpha
+  echo phase >>f.txt && git add f.txt && git commit -q -m phase
+  PHASE_HEAD=$(git rev-parse HEAD)
+  git checkout -q feat/demo
+  mkdir -p .cursor/sw-deliver-runs/alpha
+  echo "{\"verdict\":\"merge-ready-green\",\"phase\":\"alpha\",\"head\":\"$PHASE_HEAD\",\"gate\":{\"verdict\":\"green\"}}" \
+    > .cursor/sw-deliver-runs/alpha/status.json
+  echo '{"target":{"branch":"feat/demo"},"orchestratorWorktree":{"path":"'"$MERGE_FIX"'"},"phases":{"1":{"slug":"alpha","branch":"feat/demo-phase-alpha"}},"phaseWorktrees":{"1":{"path":"'"$MERGE_FIX"'"}},"mergeQueue":[]}' \
+    > .cursor/sw-deliver-state.json
+  BEFORE=$(git rev-parse HEAD)
+  python3 "$WM" "$MERGE_FIX" merge enqueue --phase-slug alpha >/dev/null
+  python3 "$WM" "$MERGE_FIX" merge run-next >/dev/null
+  AFTER=$(git rev-parse HEAD)
+  if [[ "$BEFORE" != "$AFTER" ]] && git merge-base --is-ancestor "$PHASE_HEAD" HEAD; then
+    echo "OK  primary-ref-autosync: orchestrator ref advanced with phase merge"
+  else
+    echo "FAIL primary-ref-autosync"
+    exit 1
+  fi
+) || FAIL=1
+rm -rf "$MERGE_FIX"
+
 if [[ "$FAIL" -eq 0 ]]; then
   echo "merge-queue fixtures: all passed"
   exit 0

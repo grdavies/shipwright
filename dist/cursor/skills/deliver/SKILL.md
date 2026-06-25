@@ -67,15 +67,25 @@ Initialized from the phase-mode plan via `scripts/wave.sh state init --plan .cur
     }
   },
   "mergeJournal": null,
+  "completedMerges": [],
+  "currentWave": 1,
+  "nextAction": "lock-acquire",
+  "remediationAttempts": {},
+  "driverHeartbeatAt": "2026-06-25T00:00:00Z",
   "updatedAt": "2026-06-25T00:00:00Z"
 }
 ```
+
+**Driver cursor (R1/R2):** `currentWave`, `nextAction`, `remediationAttempts`, and `driverHeartbeatAt` are
+written by `scripts/wave.sh deliver-loop` on every transition. A fresh agent resumes from this state alone.
 
 **Phase status vocabulary:** `pending` | `in-flight` | `green-merged` | `blocked` | `rejected`.
 
 **Helpers:**
 
 ```bash
+scripts/wave.sh deliver-loop --task-list docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
+scripts/wave.sh deliver-loop --dry-run
 scripts/wave.sh state init --plan .cursor/sw-deliver-plan.json
 scripts/wave.sh state phase --id 1 --status in-flight
 scripts/wave.sh state phase --slug rename-deliver --status green-merged
@@ -278,6 +288,11 @@ scripts/wave.sh merge ancestry-check --phase-branch feat/<slug>-phase-<phase> --
   `coderabbitLanded` is not `false` (pending async review is non-green for auto-merge).
 - **Journal:** `merge run-next` opens `mergeJournal` before merge and clears on success (coordinates with
   `wave.sh journal` helpers).
+- **No-PR path:** when a phase has no open PR, `merge run-next` uses local-evidence from durable
+  `status.json` (merge-ready-green + head SHA binding) plus post-merge incremental verify; remote
+  `check-gate.sh` authority applies at the terminal PR only.
+- **Push chokepoint:** workflow pushes use `scripts/git-push.sh` → `scripts/secret-scan.sh` before
+  `git push` (including `sw-pr` and stabilize re-pushes).
 
 ## Terminal report (R24/R55/R57)
 

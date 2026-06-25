@@ -92,6 +92,43 @@ else
   bad "deliver-loop-no-manual-handoff"
 fi
 
+# --- deliver-advance-from-status-only (R7) ---
+STATUS_DIR="$FIX/.cursor/sw-deliver-runs/alpha"
+mkdir -p "$STATUS_DIR"
+PHASE_HEAD=$(git -C "$FIX" rev-parse HEAD 2>/dev/null || echo abc)
+cat >"$STATUS_DIR/status.json" <<JSON
+{"verdict":"merge-ready-green","phase":"alpha","head":"$PHASE_HEAD","gate":{"verdict":"green"}}
+JSON
+python3 -c "
+import json
+from pathlib import Path
+s=json.loads(Path('.cursor/sw-deliver-state.json').read_text())
+s['phases']['1']['status']='in-flight'
+s['phases']['1']['branch']='feat/demo-phase-alpha'
+s['phaseWorktrees']={'1': {'path': '$FIX', 'name': 'alpha-wt'}}
+s.pop('source_task_list', None)
+Path('.cursor/sw-deliver-state.json').write_text(json.dumps(s))
+"
+mv .cursor/sw-deliver-plan.json .cursor/sw-deliver-plan.json.advance-bak
+python3 -c "
+import json
+from pathlib import Path
+p=json.loads(Path('.cursor/sw-deliver-plan.json.advance-bak').read_text())
+p.pop('source_task_list', None)
+Path('.cursor/sw-deliver-plan.json').write_text(json.dumps(p))
+"
+if OUT=$(python3 "$LOOP_PY" "$FIX" compute-next 2>/dev/null) && \
+   echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['next']['action']=='merge-enqueue', d
+"; then
+  ok "deliver-advance-from-status-only: merge-ready status drives enqueue not chat"
+else
+  bad "deliver-advance-from-status-only"
+fi
+mv .cursor/sw-deliver-plan.json.advance-bak .cursor/sw-deliver-plan.json
+
 # --- deliver-remediation-maxattempts-default ---
 if python3 "$LOOP_PY" "$FIX" remediation-default 2>/dev/null | python3 -c "
 import json,sys

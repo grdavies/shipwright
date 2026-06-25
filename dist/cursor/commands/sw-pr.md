@@ -17,7 +17,8 @@ Push after `/sw-commit`; create/update PR against the real parent branch.
 
 1. `memory-preflight` read (light) for reviewer context.
 2. Clean worktree (`git status --short`).
-3. `git push -u origin HEAD` (first) or `git push`.
+3. `bash scripts/git-push.sh -u origin HEAD` (first) or `bash scripts/git-push.sh` — never raw
+   `git push` in workflow; the wrapper runs `secret-scan.sh` pre-push (R41/R50).
 4. Create/update PR with Summary, Issues (`issueNumbers`), Verification, Next (`/sw-watch-ci`).
 5. PR body may include `prd:<slug>` for living-status linkage (R14).
 6. Return PR URL → `/sw-watch-ci`.

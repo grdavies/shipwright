@@ -122,7 +122,8 @@ or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve
    summary (and `memory-preflight` write where durable). Their "resolution" is the verified code change
    landing on `HEAD`; the next pass re-harvests the bodies and confirms the section no longer recurs.
 8. Re-run `verify` commands from config across the touched surface; log to `/tmp/sw-stabilize-verify.log`.
-9. If fixes were made: stage, create **one** focused commit for this pass, push once.
+9. If fixes were made: stage, create **one** focused commit for this pass, `bash scripts/git-push.sh`
+   once (never raw `git push`; secret scan runs pre-push — R41/R50).
 10. Store concise `memory-preflight` writes for durable learnings (recurring bot false positives, accepted
    review patterns, non-obvious CI fixes, file-specific debug context) with `relatedFiles`. No raw thread
    dumps, secrets, or routine pass/fail logs.

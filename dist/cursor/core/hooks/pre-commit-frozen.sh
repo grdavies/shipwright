@@ -35,6 +35,14 @@ while IFS= read -r path; do
     if git diff --cached --quiet -- "$path" 2>/dev/null; then
       : # no staged change
     else
+      TMPDIR_CB="$(mktemp -d)"
+      git show "HEAD:$path" >"$TMPDIR_CB/old" 2>/dev/null || true
+      git show ":$path" >"$TMPDIR_CB/new" 2>/dev/null || true
+      if python3 "$ROOT/scripts/checkbox_diff.py" is-checkbox-only "$TMPDIR_CB/old" "$TMPDIR_CB/new" >/dev/null 2>&1; then
+        rm -rf "$TMPDIR_CB"
+        continue
+      fi
+      rm -rf "$TMPDIR_CB"
       VIOLATIONS+=("$path")
     fi
   fi

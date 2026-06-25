@@ -59,6 +59,11 @@ if [[ -z "$HEAD" ]]; then
   HEAD="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo "")"
 fi
 
+if [[ "$VERDICT" == "merge-ready-green" && -z "$HEAD" ]]; then
+  echo '{"verdict":"fail","error":"could not resolve HEAD for merge-ready-green"}' >&2
+  exit 2
+fi
+
 if [[ -z "$OUT" ]]; then
   if [[ -n "${SW_RUN_DIR:-}" ]]; then
     OUT="${SW_RUN_DIR%/}/status.json"
@@ -101,6 +106,19 @@ doc = {
     "gate": gate,
     "writtenAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
 }
+steps_path = os.environ.get("SHIP_STEPS_PATH", "")
+if not steps_path:
+    run_dir = os.path.dirname(out)
+    candidate = os.path.join(run_dir, "ship-steps.json")
+    if os.path.isfile(candidate):
+        steps_path = candidate
+if steps_path and os.path.isfile(steps_path):
+    try:
+        with open(steps_path, encoding="utf-8") as sf:
+            doc["shipSteps"] = json.load(sf)
+        doc["shipStepsPath"] = steps_path
+    except (OSError, json.JSONDecodeError):
+        pass
 if verdict == "blocked":
     doc["cause"] = cause
 

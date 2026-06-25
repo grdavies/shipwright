@@ -288,6 +288,11 @@ scripts/wave.sh merge ancestry-check --phase-branch feat/<slug>-phase-<phase> --
   `coderabbitLanded` is not `false` (pending async review is non-green for auto-merge).
 - **Journal:** `merge run-next` opens `mergeJournal` before merge and clears on success (coordinates with
   `wave.sh journal` helpers).
+- **No-PR path:** when a phase has no open PR, `merge run-next` uses local-evidence from durable
+  `status.json` (merge-ready-green + head SHA binding) plus post-merge incremental verify; remote
+  `check-gate.sh` authority applies at the terminal PR only.
+- **Push chokepoint:** workflow pushes use `scripts/git-push.sh` → `scripts/secret-scan.sh` before
+  `git push` (including `sw-pr` and stabilize re-pushes).
 
 ## Terminal report (R24/R55/R57)
 

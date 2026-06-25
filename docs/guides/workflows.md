@@ -255,6 +255,31 @@ default implementation orchestrator. Mode auto-detect from input:
 **Dry-run:** `scripts/wave.sh plan --task-list <path> --dry-run` emits the plan JSON without writing
 `.cursor/sw-deliver-plan.json`.
 
+**Durable autonomy (PRD 007):** the driver is `scripts/wave.sh deliver-loop` (also invoked by
+`/sw-deliver run`). It persists cursor state in `.cursor/sw-deliver-state.json`, resumes after crash
+without restarting from plan, and never emits manual “next steps” prose while work remains. Phase
+advancement keys off durable `status.json` in each **phase-worktree** (`status collect` — not chat).
+Per-phase `/sw-ship` persists step-level state (`ship-steps.json`) for mid-chain resume.
+
+**Merge queue:** phases with no per-phase PR use a local-evidence merge path; phases with a PR use
+`check-gate.sh`. `status.json` binds to the phase head SHA — stale status cannot authorize a merge.
+The orchestrator worktree owns a non-detached `<type>/<slug>` checkout; phase merges advance that ref
+(no manual fast-forward on the primary checkout).
+
+**Pre-merge compounding:** after all phases are `green-merged`, the driver runs `/sw-compound-ship
+--pre-merge` (file outputs committed on the feature branch; memory writes not committed). Completion
+is recorded as `completed-pending-merge` until the human merges; the loop then suggests
+`/sw-cleanup`.
+
+**Task currency:** frozen task checkboxes may be toggled in-loop; a currency gate blocks the terminal
+merge if checkboxes diverge from the durable ledger.
+
+**Branch policy:** workflow-created branches use conforming type prefixes (`feat/`, `fix/`, …) from
+`release-please-config.json` — never `pf/`.
+
+**Secret safety:** `scripts/secret-scan.sh` runs at every workflow push chokepoint (`git-push.sh`);
+range-scoped redaction is required (`scripts/redaction-guard.sh` refuses bare-branch history rewrite).
+
 ### `/sw-ship` — single-phase loop (manual / Quick tier)
 
 Used directly for **Quick-tier** work (no frozen task list) or when debugging a single phase. When

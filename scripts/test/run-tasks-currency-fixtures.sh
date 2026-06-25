@@ -115,6 +115,16 @@ else
   bad "tasks-checkbox-currency: wave.sh tasks-currency routes to gate"
 fi
 
+# --- currency-gate-vs-ledger (R49): partial phase tolerated ---
+echo '{"verdict":"running","source_task_list":"docs/prds/099-test/tasks-099-test.md","phases":{},"taskLedger":{"tasks":{"1.1":{"done":true,"phase":"alpha"}},"phases":{}}}' \
+  > .cursor/sw-deliver-state.json
+bash "$PROGRESS" toggle --file "$TASKS" --ref 1.1 --done true >/dev/null
+if bash "$GATE" --tasks-file "$TASKS" --state-root "$FIX" >/dev/null 2>&1; then
+  ok "currency-gate-vs-ledger: ledger aligned with partial checkboxes passes"
+else
+  bad "currency-gate-vs-ledger: partial aligned ledger should pass"
+fi
+
 if [[ "$FAIL" -eq 0 ]]; then
   echo "tasks-currency fixtures: all passed"
   exit 0
