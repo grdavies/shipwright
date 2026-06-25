@@ -12,6 +12,7 @@
 * merge phase conductor-level-parallel-dispatch-safety-under-concurrency-l into feat/autonomous-orchestration-conductor (9114383) <!-- sw-deliver:conductor-level-parallel-dispatch-safety-under-concurrency-l -->
 * merge phase living-doc-currency-hardening-m into feat/autonomous-orchestration-conductor (b830645) <!-- sw-deliver:living-doc-currency-hardening-m -->
 * merge phase pilot-validation-surface-docs-emitter-m into feat/autonomous-orchestration-conductor (af575a7) <!-- sw-deliver:pilot-validation-surface-docs-emitter-m -->
+* merge phase adopter-facing-readme-user-guide-refresh-s-m into feat/autonomous-orchestration-conductor (e239604) <!-- sw-deliver:adopter-facing-readme-user-guide-refresh-s-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
