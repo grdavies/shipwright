@@ -12,8 +12,11 @@ Every work item runs in its own worktree (R18). Bare `main` is not an implementa
 bash scripts/worktree.sh provision <name> [--base <ref>] [--branch <branch>] [--tier T] [--workstream W]
 ```
 
-Creates `.sw-worktrees/<name>`, branches `pf/<name>` by default, allocates a unique port from the configured
-pool, records scaffold + tier in per-worktree state (`skills/shipwright-state`).
+Creates `.sw-worktrees/<name>`, allocates a unique port from the configured pool, records scaffold + tier in
+per-worktree state (`skills/shipwright-state`). Branch name is derived from `--branch <ref>` or a
+conforming type-prefixed derivation from `<name>` — `pf/<name>` is never produced (R22/R23). Pass
+`--branch <type>/<slug>` explicitly or let the script derive a conforming name; provisioning without a
+conforming branch name fails closed with remediation.
 
 ## List / index
 

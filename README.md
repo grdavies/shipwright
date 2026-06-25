@@ -116,6 +116,10 @@ phase-mode from `--task-list` vs multi-feature from `--items`/`--edges`. Use `--
 output; re-run `run` to **resume** after interrupt. Run the manual `/sw-ship`
 atomics directly only for Quick-tier hotfixes, debugging, or single-phase reruns.
 
+**`/sw-cleanup`** is a standalone maintenance utility — not a workstream. After `/sw-deliver` detects
+the feature branch has merged it suggests a cleanup run; you confirm before any deletion. Prunes merged
+local and remote branches, stale worktrees, and completed deliver run-state. Dry-run by default.
+
 → Full per-tier flows, diagrams, and sample prompts: **[workflow guide](docs/guides/workflows.md)**.
 
 ## Tiers
@@ -141,6 +145,21 @@ atomics directly only for Quick-tier hotfixes, debugging, or single-phase reruns
 | [Configuration](docs/guides/configuration.md) | `/sw-setup` + every config key |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Developing the plugin |
 | [PROVENANCE.md](PROVENANCE.md) | Upstream sources |
+
+## Acknowledgements
+
+Shipwright builds on ideas and patterns from several open-source projects. We're grateful to their
+authors and contributors.
+
+| Project | Role in Shipwright | Repo |
+|---------|-------------------|------|
+| **compound-engineering** | Persona panel doc review, brainstorm dialogue, retro/compounding chain, and debug RCA patterns — adapted and integrated throughout the documentation and implementation workstreams | [everyinc/compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin) |
+| **caveman** | Ultra-compressed communication mode that powers Shipwright's token-efficient orchestration chat (lite → full → ultra intensity levels) | [juliusbrussee/caveman](https://github.com/juliusbrussee/caveman) |
+
+The compound-engineering plugin in particular gave Shipwright its doc-review persona panel, the
+one-question-at-a-time brainstorm dialogue, and the retro → compound → memory-sync chain. Those
+foundations let us focus on the durable delivery loop and gating mechanics rather than rebuilding
+from scratch. Thank you.
 
 ## License
 

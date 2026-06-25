@@ -71,6 +71,7 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `doc.afterTasks` | After frozen tasks: `stop` \| `confirm` (default) \| `auto` |
 | `communication.defaultIntensity` | Caveman chat intensity when no active command (`full` default) |
 | `communication.routing.commands` | Per `sw-*` command intensity: `normal` \| `lite` \| `full` \| `ultra` \| `inherit` |
+| `deliver.remediation.maxAttempts` | Auto-remediation budget per blocked phase before clean halt (default **2**) |
 | `memory.provider` | `in-repo` (default) or `recallium` |
 | `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
 | `review.provider` | AI review adapter — default **`none`**; `coderabbit` opt-in |
