@@ -130,33 +130,33 @@ documented behavior exists.
 
 ### 6. Conductor-level parallel dispatch + safety under concurrency (L)
 
-- [ ] 6.1 Parallel wave dispatch: greedy batches, ceiling-bounded, orchestrator-level (R14, R15, R16)
+- [x] 6.1 Parallel wave dispatch: greedy batches, ceiling-bounded, orchestrator-level (R14, R15, R16)
   - **File:** `core/skills/conductor/SKILL.md`, `scripts/wave.sh` (schedule consumption)
   - **Expected:** all dependency-ready phases dispatched as background `Task` sub-agents in disjoint
     worktrees bounded by `parallelCeiling`; over-ceiling waves run in greedy batches; a running phase is
     never unwound; all dispatch from the conductor level (no nested dispatch)
-- [ ] 6.2 Intra-phase gating, ceiling accounting, degrade-to-inline (R17, R18, R45)
+- [x] 6.2 Intra-phase gating, ceiling accounting, degrade-to-inline (R17, R18, R45)
   - **File:** `core/skills/conductor/SKILL.md`, `rules/sw-subagent-dispatch.mdc`
   - **Expected:** intra-phase dispatch only when `sw-subagent-dispatch` heuristics trip (decision logged);
     it does not consume ceiling slots; a backgrounded phase degrades intra-phase dispatch to inline review
-- [ ] 6.3 Outcomes from durable status only (R19)
+- [x] 6.3 Outcomes from durable status only (R19)
   - **File:** `core/skills/conductor/SKILL.md`, `scripts/wave.sh`
   - **Expected:** phase outcomes read solely from `.cursor/sw-deliver-runs/<phase>/status.json`, never from
     ephemeral sub-agent logs
-- [ ] 6.4 Mechanical contention serialization (R20, R39)
+- [x] 6.4 Mechanical contention serialization (R20, R39)
   - **File:** `scripts/wave_deliver.py`
   - **Expected:** contention edges injected at plan time from declared/derived touch paths
     (migration paths, `INDEX.md`/numbering, `CHANGELOG.md`/`version.txt`); contended phases land in different
     waves; ambiguous cases fail safe to sequential
-- [ ] 6.5 Single-flight, conductor-serialized merge with atomic lock (R21, R41)
+- [x] 6.5 Single-flight, conductor-serialized merge with atomic lock (R21, R41)
   - **File:** `scripts/wave_merge.py`, `scripts/wave_state.py`
   - **Expected:** concurrent phase completion yields exactly one merge; the queue lock acquires atomically;
     phase sub-agents never call `merge run-next`
-- [ ] 6.6 Green-gate, no-main-merge, push chokepoint (R22, R23)
+- [x] 6.6 Green-gate, no-main-merge, push chokepoint (R22, R23)
   - **File:** `scripts/wave_merge.py`, `scripts/git-push.sh`
   - **Expected:** a phase merges only when green + review-satisfied; the conductor never merges `main`; all
     pushes route through `git-push.sh` (no raw `git push`)
-- [ ] 6.7 Blast-radius blocking (R24)
+- [x] 6.7 Blast-radius blocking (R24)
   - **File:** `scripts/wave_deliver.py`
   - **Expected:** a blocked phase blocks only its transitive dependents; green siblings continue and may
     auto-merge

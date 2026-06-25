@@ -92,6 +92,19 @@ After auto-applying eligible fixes from local review:
 Before parallel subagents on shared directory: disjoint file sets required, or worktree isolation.
 Never parallelize shared-migration paths (`skills/parallelism`).
 
+## Parallel phase dispatch (R17, R18, R45)
+
+**Ceiling accounting:** only wave-level phase worktrees (each running `/sw-ship --phase-mode`) count toward
+`worktree.parallelCeiling`. Intra-phase Task/review sub-agents never consume slots.
+
+**Background phase sub-agents** (conductor dispatches phase as parallel Task): intra-phase sub-agent dispatch
+is **disabled** — run inline two-stage review only (R45). Log the decision in the phase run record.
+
+**Inline phase** (conductor runs `/sw-ship` in-turn): normal delegate-when heuristics apply; still no ceiling
+slot for intra-phase agents.
+
+**Conductor-only merge:** phase sub-agents must not call `merge run-next` or `lock acquire` (R41).
+
 ## Authority
 
 Structural isolation (worktrees) is the dominant token lever (R31). This rule governs *when* to add

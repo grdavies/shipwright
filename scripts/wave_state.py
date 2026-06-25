@@ -279,6 +279,7 @@ def cmd_state_terminal(root: Path, args: list[str]) -> None:
 
 
 def cmd_lock_acquire(root: Path, args: list[str]) -> None:
+    """Atomic orchestrator lock (R41): O_CREAT|O_EXCL — concurrent acquire yields exit 20."""
     target = parse_kv(args, "--target")
     if not target:
         fail("--target required (e.g. feat/my-slug)")

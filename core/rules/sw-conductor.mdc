@@ -19,6 +19,7 @@ Load `skills/conductor/SKILL.md` for the full contract. These rules are the alwa
 
 - Phase sub-agents are spawned **only** by the conductor at the orchestrator level.
 - A backgrounded phase sub-agent must not spawn further sub-agents; intra-phase work runs inline (R45).
+- Phase sub-agents must not call `merge run-next`, `lock acquire`, or `git push` (R41/R23).
 
 ## Legitimate halts only (R10–R12)
 
