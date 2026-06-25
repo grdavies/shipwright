@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 MergeStatus = Literal["merged", "unmerged", "indeterminate", "gone", "protected"]
+TERMINAL_DELIVER_VERDICTS = frozenset({"complete", "blocked", "rejected"})
 
 
 @dataclass
@@ -19,6 +20,13 @@ class Item:
     name: str
     reason: str
     detail: str = ""
+
+
+@dataclass
+class DeliverStateView:
+    canonical_root: Path
+    state: dict[str, Any]
+    stale_roots: list[Path] = field(default_factory=list)
 
 
 @dataclass
@@ -84,8 +92,7 @@ def current_branch(root: Path) -> str:
     return (proc.stdout or "").strip()
 
 
-def load_deliver_state(root: Path) -> dict[str, Any]:
-    path = root / ".cursor/sw-deliver-state.json"
+def _read_deliver_state_file(path: Path) -> dict[str, Any]:
     if not path.is_file():
         return {}
     try:
@@ -95,14 +102,99 @@ def load_deliver_state(root: Path) -> dict[str, Any]:
         return {}
 
 
-def deliver_inflight(root: Path) -> tuple[bool, str]:
-    lock = root / ".cursor/sw-deliver.lock"
-    if lock.is_file():
-        return True, "deliver lock present"
-    state = load_deliver_state(root)
-    verdict = state.get("verdict", "")
+def _prefer_orchestrator_state(root_state: dict[str, Any], orch_state: dict[str, Any]) -> bool:
+    root_verdict = str(root_state.get("verdict", ""))
+    orch_verdict = str(orch_state.get("verdict", ""))
+    if root_verdict == "running" and orch_verdict in TERMINAL_DELIVER_VERDICTS:
+        return True
+    if orch_verdict == "running" and root_verdict in TERMINAL_DELIVER_VERDICTS:
+        return False
+    root_at = str(root_state.get("updatedAt", ""))
+    orch_at = str(orch_state.get("updatedAt", ""))
+    if orch_at > root_at:
+        return True
+    if root_at > orch_at:
+        return False
+    if orch_state.get("phases") and not root_state.get("phases"):
+        return True
+    return bool(orch_state) and bool(orch_verdict)
+
+
+def resolve_deliver_state(repo_root: Path) -> DeliverStateView:
+    """Prefer orchestrator worktree deliver state over stale repo-root copies."""
+    repo_root = repo_root.resolve()
+    root_state = _read_deliver_state_file(repo_root / ".cursor" / "sw-deliver-state.json")
+
+    orch_path_raw = (root_state.get("orchestratorWorktree") or {}).get("path")
+    orch_root: Path | None = None
+    orch_state: dict[str, Any] = {}
+    if isinstance(orch_path_raw, str) and orch_path_raw.strip():
+        candidate = Path(orch_path_raw).resolve()
+        orch_state_path = candidate / ".cursor" / "sw-deliver-state.json"
+        if orch_state_path.is_file() or candidate.is_dir():
+            orch_root = candidate
+            orch_state = _read_deliver_state_file(orch_state_path)
+
+    canonical_root = repo_root
+    canonical_state = root_state
+    stale_roots: list[Path] = []
+
+    if orch_root and orch_state and orch_root.is_dir():
+        if _prefer_orchestrator_state(root_state, orch_state):
+            canonical_root = orch_root
+            canonical_state = orch_state
+            if (repo_root / ".cursor" / "sw-deliver-state.json").is_file():
+                stale_roots.append(repo_root)
+        elif orch_root != repo_root and (orch_root / ".cursor" / "sw-deliver-state.json").is_file():
+            stale_roots.append(orch_root)
+
+    return DeliverStateView(canonical_root=canonical_root, state=canonical_state, stale_roots=stale_roots)
+
+
+def load_deliver_state(root: Path) -> dict[str, Any]:
+    return resolve_deliver_state(root).state
+
+
+def rel_to_repo(repo_root: Path, path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(repo_root.resolve()))
+    except ValueError:
+        return str(path.resolve())
+
+
+def _collect_terminal_run_state(
+    report: Report,
+    repo_root: Path,
+    state_root: Path,
+    tag: str,
+) -> None:
+    cursor = state_root / ".cursor"
+    state_file = cursor / "sw-deliver-state.json"
+    if state_file.is_file():
+        report.would_remove.append(
+            Item("run-state", rel_to_repo(repo_root, state_file), tag, "terminal deliver run")
+        )
+    plan_file = cursor / "sw-deliver-plan.json"
+    if plan_file.is_file():
+        report.would_remove.append(
+            Item("run-state", rel_to_repo(repo_root, plan_file), tag, "terminal deliver run")
+        )
+    runs_dir = cursor / "sw-deliver-runs"
+    if runs_dir.is_dir():
+        report.would_remove.append(
+            Item("run-state", rel_to_repo(repo_root, runs_dir), tag, "terminal deliver run")
+        )
+
+
+def deliver_inflight(repo_root: Path) -> tuple[bool, str]:
+    view = resolve_deliver_state(repo_root)
+    for base in (view.canonical_root, repo_root.resolve()):
+        lock = base / ".cursor" / "sw-deliver.lock"
+        if lock.is_file():
+            return True, "deliver lock present"
+    verdict = str(view.state.get("verdict", ""))
     if verdict == "running":
-        if state.get("mergeJournal"):
+        if view.state.get("mergeJournal"):
             return True, "open merge journal"
         return True, "deliver run verdict=running"
     return False, ""
@@ -225,6 +317,7 @@ def enumerate_cleanup(root: Path) -> Report:
     report = Report(dry_run=True)
     default = load_default_branch(root)
     current = current_branch(root)
+    deliver_view = resolve_deliver_state(root)
     inflight, inflight_reason = deliver_inflight(root)
 
     for branch in list_local_branches(root):
@@ -265,8 +358,7 @@ def enumerate_cleanup(root: Path) -> Report:
         if os.getcwd() == path:
             report.protected.append(Item("worktree", path, "protected", "active cwd"))
             continue
-        state = load_deliver_state(root)
-        orch = (state.get("orchestratorWorktree") or {}).get("path")
+        orch = (deliver_view.state.get("orchestratorWorktree") or {}).get("path")
         if orch and path == orch and inflight:
             report.protected.append(Item("worktree", path, "protected", inflight_reason))
             continue
@@ -281,26 +373,18 @@ def enumerate_cleanup(root: Path) -> Report:
         else:
             report.would_remove.append(Item("worktree", path, "detached-stale", "no branch"))
 
-    state = load_deliver_state(root)
     if inflight:
-        report.protected.append(Item("run-state", ".cursor/sw-deliver-state.json", "protected", inflight_reason))
-    elif state:
-        verdict = state.get("verdict", "")
-        if verdict in ("complete", "blocked", "rejected"):
-            report.would_remove.append(
-                Item("run-state", ".cursor/sw-deliver-state.json", verdict, "terminal deliver run")
-            )
-            if (root / ".cursor/sw-deliver-plan.json").is_file():
-                report.would_remove.append(
-                    Item("run-state", ".cursor/sw-deliver-plan.json", verdict, "terminal deliver run")
-                )
-            runs = root / ".cursor/sw-deliver-runs"
-            if runs.is_dir():
-                report.would_remove.append(
-                    Item("run-state", str(runs), verdict, "terminal deliver run artifacts")
-                )
-        else:
-            report.protected.append(Item("run-state", ".cursor/sw-deliver-state.json", "protected", verdict))
+        state_rel = rel_to_repo(root, deliver_view.canonical_root / ".cursor" / "sw-deliver-state.json")
+        report.protected.append(Item("run-state", state_rel, "protected", inflight_reason))
+    elif deliver_view.state:
+        verdict = str(deliver_view.state.get("verdict", ""))
+        if verdict in TERMINAL_DELIVER_VERDICTS:
+            _collect_terminal_run_state(report, root, deliver_view.canonical_root, verdict)
+            for stale_root in deliver_view.stale_roots:
+                _collect_terminal_run_state(report, root, stale_root, "stale-copy")
+        elif verdict:
+            state_rel = rel_to_repo(root, deliver_view.canonical_root / ".cursor" / "sw-deliver-state.json")
+            report.protected.append(Item("run-state", state_rel, "protected", verdict))
 
     return report
 
