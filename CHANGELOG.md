@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.6.0](https://github.com/grdavies/shipwright/compare/v1.5.0...v1.6.0) (2026-06-25)
+
+
+### Features
+
+* **autonomous-orchestration-conductor:** deliver wave ([#73](https://github.com/grdavies/shipwright/issues/73)) ([0ed6e67](https://github.com/grdavies/shipwright/commit/0ed6e671afde2a0da0dd16bd572a64370fd3dd7d))
+* **models:** four-tier model tier setup defaults (PRD 008) ([cde20e0](https://github.com/grdavies/shipwright/commit/cde20e0ab8057c8e95bff5b6e152528a05878358))
+
+
+### Bug Fixes
+
+* **cleanup:** read deliver state from orchestrator worktree ([#75](https://github.com/grdavies/shipwright/issues/75)) ([23f8a9d](https://github.com/grdavies/shipwright/commit/23f8a9dc0486b7e34dd3a702f0ebf95cd5c155b1))
+* **cleanup:** skip bogus origin remote ref in enumeration ([#72](https://github.com/grdavies/shipwright/issues/72)) ([7a83a6a](https://github.com/grdavies/shipwright/commit/7a83a6a470b1625a9bb5f658c71f74344afbaf48))
+* **deliver:** detect squash-merged terminal PRs; reconcile INDEX ([#74](https://github.com/grdavies/shipwright/issues/74)) ([2d83df8](https://github.com/grdavies/shipwright/commit/2d83df8e1def87d5eb8df82113b72d2b59fe2825))
+
+
+### Documentation
+
+* post-PRD-007 documentation coverage pass ([#68](https://github.com/grdavies/shipwright/issues/68)) ([07608f8](https://github.com/grdavies/shipwright/commit/07608f8ea2bd9a269856b0f0c0879dbe91951976))
+* **prds:** mark PRD 008 complete in index and completion log ([#71](https://github.com/grdavies/shipwright/issues/71)) ([6bcacdb](https://github.com/grdavies/shipwright/commit/6bcacdbbf94efd0c51bb18fd6d983bcdc6bb99ec))
+
 ## [Unreleased]
 
 
