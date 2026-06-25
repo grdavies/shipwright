@@ -27,6 +27,12 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
      - **Standard:** accept triaged request directly.
    - Assign PRD number per collision policy in `.sw/layout.md` (scan `docs/prds/`).
    - Draft all required PRD sections; carry forward brainstorm R-IDs where present.
+   - **Frontmatter linkage (Full tier, R52):** write the back-reference via
+     `python3 scripts/doc_link.py write-backref --brainstorm <path> --prd <path>` (sets canonical
+     `brainstorm:` in PRD frontmatter).
+   - **Forward reference (R53):** when the source brainstorm is not frozen, append the PRD path to the
+     brainstorm `prd:` field (list when multiple) via
+     `python3 scripts/doc_link.py write-forwardref --brainstorm <path> --prd <path>`; skip when frozen.
    - Save to `docs/prds/<n>-<slug>/<n>-prd-<slug>.md`.
 4. **Decision record (`--type decision`):**
    - Brainstorm optional — decisions are authored up-front; **do not** apply the "no doc without brainstorm" guard.
