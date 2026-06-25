@@ -143,4 +143,63 @@ trap 'rm -rf "$DRYDIR"' EXIT
 # --- multi-feature baseline unchanged ---
 run_json deliver-multi-feature-baseline 0 "$WAVE" plan --items 'A,B,C' --edges 'C:A'
 
+# --- phase-mode /sw-ship contract (R48/R18) ---
+SW_SHIP="$(cd "$ROOT" && bash -c 'source scripts/test/fixture-lib.sh 2>/dev/null; content_path commands/sw-ship.md' 2>/dev/null || echo "$ROOT/core/commands/sw-ship.md")"
+DELIVER_SKILL="$ROOT/core/skills/deliver/SKILL.md"
+SHIP_STATUS="$ROOT/scripts/ship-phase-status.sh"
+
+if grep -q '\-\-phase-mode' "$SW_SHIP" && grep -q 'SW_PHASE_MODE' "$SW_SHIP" && \
+   grep -q 'merge-ready-green' "$SW_SHIP" && grep -q 'ship-phase-status.sh' "$SW_SHIP"; then
+  echo "OK  deliver-phase-noninteractive: sw-ship phase-mode contract"
+else
+  echo "FAIL deliver-phase-noninteractive: sw-ship phase-mode contract"
+  FAIL=1
+fi
+
+if grep -q 'Sub-agent dispatch spike' "$DELIVER_SKILL" && \
+   grep -q 'inline two-stage review' "$DELIVER_SKILL" && \
+   grep -q 'sw-subagent-dispatch' "$DELIVER_SKILL"; then
+  echo "OK  deliver-phase-noninteractive: nested dispatch spike + inline fallback"
+else
+  echo "FAIL deliver-phase-noninteractive: deliver skill R63 docs"
+  FAIL=1
+fi
+
+PDIR=$(mktemp -d)
+trap 'rm -rf "$PDIR" "$DRYDIR" 2>/dev/null' EXIT
+if OUT=$("$SHIP_STATUS" --verdict merge-ready-green --phase test-phase --out "$PDIR/status.json" 2>/dev/null) && \
+   echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['verdict']=='merge-ready-green' and d['phaseMode'] is True and d['phase']=='test-phase'
+"; then
+  echo "OK  deliver-phase-noninteractive: merge-ready-green status"
+else
+  echo "FAIL deliver-phase-noninteractive: merge-ready-green status"
+  FAIL=1
+fi
+
+if OUT=$("$SHIP_STATUS" --verdict blocked --cause "verification-gate:not-verified" --phase test-phase --out "$PDIR/blocked.json" 2>/dev/null) && \
+   echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['verdict']=='blocked' and 'not-verified' in d['cause']
+"; then
+  echo "OK  deliver-phase-noninteractive: blocked status with cause"
+else
+  echo "FAIL deliver-phase-noninteractive: blocked status"
+  FAIL=1
+fi
+
+set +e
+"$SHIP_STATUS" --verdict blocked --phase x --out "$PDIR/x.json" 2>/dev/null
+EC_BLK=$?
+set -e
+if [[ "$EC_BLK" -eq 2 ]]; then
+  echo "OK  deliver-phase-noninteractive: blocked requires cause"
+else
+  echo "FAIL deliver-phase-noninteractive: blocked should require cause (ec=$EC_BLK)"
+  FAIL=1
+fi
+
 exit "$FAIL"

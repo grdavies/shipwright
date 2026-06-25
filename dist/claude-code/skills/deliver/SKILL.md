@@ -80,3 +80,40 @@ For each leaf in dependency order:
 ## High-contention surfaces
 
 Living `docs/prds/INDEX.md`, `docs/decisions/INDEX.md`, and doc-numbering counters are shared mutable state — serialize doc-creation across a wave or late-bind numbering at integration.
+
+## Phase `/sw-ship` dispatch (R48/R18)
+
+Each phase runs the full `/sw-ship` chain inside an isolated worktree. The orchestrator MUST dispatch with the
+non-interactive contract:
+
+```bash
+export SW_PHASE_MODE=1
+export SW_PHASE_SLUG=<phase-slug>
+export SW_RUN_DIR=.cursor/sw-deliver-runs/<phase-slug>
+# invoke /sw-ship --phase-mode in the phase worktree
+```
+
+On completion, read `$SW_RUN_DIR/status.json` (or `.cursor/sw-deliver-runs/<phase>/status.json`):
+
+| `verdict` | Orchestrator action |
+| --- | --- |
+| `merge-ready-green` | Enqueue serialized merge into `<type>/<slug>` (R19); never merge to `main` here |
+| `blocked` | Record `blocked` in run-state; apply blast-radius (R25/R26); surface `cause` |
+
+Terminal pause is suppressed; `/sw-deliver` must not wait on human input for per-phase outcomes.
+
+## Sub-agent dispatch spike (R63)
+
+**Spike conclusion (2026-06):** Cursor's parent agent can launch **background** subagents via the Task tool
+(`run_in_background: true`), but **nested** dispatch (a subagent launching its own subagents) is not a reliable
+platform contract — depth and tool availability vary by runtime.
+
+**Default / fallback:** per-phase `/sw-execute` uses **inline two-stage review** from
+`rules/sw-subagent-dispatch.mdc` (spec-compliance → code-quality) when:
+
+- nested background dispatch is unavailable or untested for the active runtime, or
+- the phase touches ≤3 files with sequential edits (inline is already preferred).
+
+When background dispatch **is** available at the orchestrator level, `/sw-deliver` may dispatch phase
+`/sw-ship` as a background Task; the orchestrator still collects outcomes from the durable
+`sw-deliver-runs/<phase>/status.json` path — never from ephemeral `sw-tmp` run dirs alone.
