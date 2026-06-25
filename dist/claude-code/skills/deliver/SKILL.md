@@ -149,6 +149,32 @@ Schedule JSON shape:
 When a wave exceeds the ceiling, `batches` splits into sequential chunks (e.g. ceiling 2 with
 phases `["2","3","4"]` → `[["2","3"],["4"]]`).
 
+## Branch topology (R35/R53)
+
+| Role | Branch | Worktree path |
+|------|--------|---------------|
+| Feature base | `<type>/<slug>` | `.sw-worktrees/<slug>-orchestrator` (infrastructure) |
+| Phase unit | `<type>/<slug>-phase-<phase-slug>` | `.sw-worktrees/<slug>-phase-<phase-slug>` |
+
+Phase branches come from the deliver plan `items[].branch`. The orchestrator worktree checks out
+`<type>/<slug>` (detached at the target tip when that branch is already checked out elsewhere) and does
+**not** consume a `parallelCeiling` slot (`countsTowardCeiling: false` in per-worktree state).
+
+```bash
+scripts/wave.sh assert-entry
+scripts/wave.sh orchestrator provision --plan .cursor/sw-deliver-plan.json
+scripts/wave.sh orchestrator status
+scripts/wave.sh phase provision --phase-id 1 --plan .cursor/sw-deliver-plan.json
+scripts/wave.sh forward-merge --worktree .sw-worktrees/<slug>-phase-<phase> --base feat/<slug>
+scripts/wave.sh phase-teardown --name <slug>-phase-<phase>
+```
+
+**Forward-merge (R20/R40):** after a sibling merges into `<type>/<slug>`, integrate the new tip into a
+dependent phase branch via **merge** (never rebase a published phase branch). Conflicts surface as
+`blocked` with `cause: forward-merge:conflict`.
+
+**Teardown (R21):** only `git worktree remove` + `prune` — never `rm` the directory.
+
 ## Stacking
 
 Dependents provision with:
