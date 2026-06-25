@@ -110,3 +110,7 @@ with open(out, "w", encoding="utf-8") as f:
 os.chmod(out, 0o600)
 print(text, end="")
 PY
+
+if [[ "$VERDICT" == "blocked" && -f "$ROOT/.cursor/sw-deliver-state.json" ]]; then
+  python3 "$ROOT/scripts/wave_state.py" "$ROOT" state phase --slug "$PHASE" --status blocked >/dev/null 2>&1 || true
+fi

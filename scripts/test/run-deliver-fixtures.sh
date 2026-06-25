@@ -202,4 +202,63 @@ else
   FAIL=1
 fi
 
+# --- state, lock, journal, progress log (R28/R51/R54) ---
+STATE_FIX=$(mktemp -d)
+(
+  cd "$STATE_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  mkdir -p .cursor docs/prds/004-wave-phase-orchestrator
+  cp "$TASK_FROZEN" docs/prds/004-wave-phase-orchestrator/
+  "$WAVE" plan --task-list docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md >/dev/null
+  "$WAVE" state init --plan .cursor/sw-deliver-plan.json >/dev/null
+  "$WAVE" lock acquire --target feat/wave-phase-orchestrator --nonblock >/dev/null
+  set +e
+  "$WAVE" lock acquire --target feat/wave-phase-orchestrator --nonblock 2>/dev/null
+  LOCK_DUP=$?
+  set -e
+  if [[ "$LOCK_DUP" -eq 20 ]]; then
+    echo "OK  deliver-phase-interrupt-lock: second lock refuses"
+  else
+    echo "FAIL deliver-phase-interrupt-lock: expected exit 20 got $LOCK_DUP"
+    FAIL=1
+  fi
+  "$WAVE" state phase --id 1 --status in-flight >/dev/null
+  "$WAVE" journal begin --phase rename-deliver >/dev/null
+  "$WAVE" journal complete --phase rename-deliver >/dev/null
+  if "$WAVE" state get 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+s=d['state']
+assert s['phases']['1']['status']=='in-flight'
+assert s['mergeJournal'] is None
+"; then
+    echo "OK  deliver-phase-resume: run-state schema + phase transition"
+  else
+    echo "FAIL deliver-phase-resume: run-state schema"
+    FAIL=1
+  fi
+  if "$WAVE" log tail --lines 5 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+events=[e['event'] for e in d['entries']]
+assert 'phase-transition' in events and 'lock-acquire' in events
+"; then
+    echo "OK  deliver-phase-resume: append-only run log"
+  else
+    echo "FAIL deliver-phase-resume: run log"
+    FAIL=1
+  fi
+  "$WAVE" lock release >/dev/null
+) || { echo "FAIL deliver-phase-state-lock fixtures"; FAIL=1; }
+
+SW_COMMIT="$(cd "$ROOT" && bash -c 'source scripts/test/fixture-lib.sh; content_path commands/sw-commit.md' 2>/dev/null || echo "$ROOT/core/commands/sw-commit.md")"
+if grep -q 'sw-deliver-state.json' "$SW_COMMIT" && grep -q 'sw-deliver-runs' "$SW_COMMIT"; then
+  echo "OK  deliver-phase-commit-exclude: sw-commit excludes deliver artifacts"
+else
+  echo "FAIL deliver-phase-commit-exclude"
+  FAIL=1
+fi
+
 exit "$FAIL"

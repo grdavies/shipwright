@@ -111,17 +111,17 @@ frozen_at: 2026-06-24
 
 ### 5. State artifacts, lock, and progress surface (M)
 
-- [ ] 5.1 Run-state schema and per-phase status paths (R28, R36, R47, R38)
+- [x] 5.1 Run-state schema and per-phase status paths (R28, R36, R47, R38)
   - **File:** `core/skills/deliver/SKILL.md`, `scripts/wave.sh` helpers
   - **Expected:** `.cursor/sw-deliver-state.json` with `pending`/`in-flight`/`green-merged`/`blocked`/`rejected`; `.cursor/sw-deliver-runs/<phase>/status.json` for `/sw-ship` terminal outcomes; not committed
   - **R-IDs:** R28, R36, R47, R38
 
-- [ ] 5.2 Orchestrator lock and merge journal (R51)
+- [x] 5.2 Orchestrator lock and merge journal (R51)
   - **File:** `scripts/wave.sh` (lock/journal helpers), `core/commands/sw-commit.md`
   - **Expected:** `flock` on `.cursor/sw-deliver.lock` keyed by `<type>/<slug>`; second invocation refuses; per-phase merge journal detects interrupted merge; state paths excluded from `/sw-commit`
   - **R-IDs:** R51
 
-- [ ] 5.3 Append-only progress run log (R54)
+- [x] 5.3 Append-only progress run log (R54)
   - **File:** `core/skills/deliver/SKILL.md`, `scripts/wave.sh`
   - **Expected:** log append on each phase transition (`in-flight`/`green-merged`/`blocked`); terminal completion/blocked notification
   - **R-IDs:** R54
