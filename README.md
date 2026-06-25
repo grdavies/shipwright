@@ -199,6 +199,40 @@ Configure these in `/sw-setup` or `workflow.config.json` when you need them:
 
 ## Workstreams
 
+Four lifecycle workstreams sit on the foundation. Each has an **orchestrator** that chains atomic `sw-`
+commands; every atomic stays independently runnable.
+
+| Workstream | Orchestrator | Chain |
+|------------|--------------|-------|
+| Documentation | `/sw-doc` | `/sw-brainstorm` → `/sw-prd` → `/sw-doc-review` → `/sw-freeze` → `/sw-tasks` |
+| Implementation | `/sw-deliver` | drives a frozen task list's phases to one merge gate (see below) |
+| Debugging | `/sw-debug` | triage signal → RCA → route (does not implement or merge) |
+| Feedback | `/sw-feedback` | normalize + redact inbound signals → route to debug / gap-capture / brainstorm |
+
+### Implementation — `/sw-deliver` (default)
+
+Once `/sw-doc` has produced a frozen task list (`tasks-<n>-<slug>.md`), **`/sw-deliver` is the default
+implementation process** — the "play button" for that list. It drives every remaining phase of a single
+feature to one human merge gate: dependency-ordered, parallel where safe, stacked where not.
+
+For each phase, `/sw-deliver` runs the full `/sw-ship` chain inside an isolated worktree:
+
+```
+/sw-execute → /sw-verify → /sw-review → /sw-simplify → /sw-commit → /sw-pr → /sw-watch-ci → /sw-stabilize → /sw-ready
+```
+
+When a phase's `check-gate.sh` goes green it **auto-merges into the feature branch `<type>/<slug>`** (the
+bot/CI gate replaces the per-phase human gate). The only human stop is the final **`<type>/<slug> → main`**
+pull request.
+
+Prefer manual control? The atomics still compose by hand, one phase at a time:
+`/sw-worktree` + `/sw-start` → `/sw-ship` (or `/sw-execute` … `/sw-ready`), repeated per phase.
+
+> `/sw-deliver` is the phase-aware evolution of the former `/sw-wave`, specified in
+> [PRD 004](docs/prds/004-wave-phase-orchestrator/004-prd-wave-phase-orchestrator.md). It also retains the
+> existing multi-feature mode (independent features each promoted to `main` via `integration/<stamp>`).
+> "Wave" now refers only to a dependency-ordered batch of concurrently-runnable units.
+
 Most users follow this order: **write and review documentation** → **ship from frozen tasks** → **debug or
 triage production issues** when needed. Post-merge, **compound** learnings back into memory.
 
