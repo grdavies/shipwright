@@ -787,6 +787,77 @@ else
   FAIL=1
 fi
 
+# --- PRD 005 phase 4: gating, framing, phase-mode & run report ---
+
+GAP_CHECK="$(content_path skills/gap-check/SKILL.md)"
+
+# native-doc-framing (R17, R18, R26, R13)
+if grep -q 'review-local-resolve.sh' "$SW_REVIEW" && \
+   grep -qi 'default-on' "$SW_REVIEW" && \
+   grep -qi 'independent' "$SW_REVIEW" && \
+   grep -qi 'phase-2' "$SW_REVIEW" && \
+   grep -q 'haltOn: \[\]' "$SW_REVIEW" && \
+   grep -q 'sw-review' "$SW_SHIP" && \
+   grep -qi 'in-chain' "$SW_SHIP" && \
+   grep -qi 'haltOn: \[\]' "$SW_SHIP" && \
+   grep -qi 'advisory' "$CAPS" && \
+   grep -qi 'scope-fidelity' "$CODE_REVIEW_RULES"; then
+  echo "OK  native-doc-framing"
+else
+  echo "FAIL native-doc-framing"
+  FAIL=1
+fi
+
+# native-scope-fidelity-advisory (R11, R12, R50, R75)
+if grep -qi 'advisory only' "$NATIVE_ADAPTER" && \
+   grep -qi 'binding completeness verdict' "$NATIVE_ADAPTER" && \
+   grep -q 'scope_fidelity_advisory' "$NATIVE_ADAPTER" && \
+   grep -qi 'gap-check' "$NATIVE_ADAPTER" && \
+   grep -q 'sw-local-review-run-report.json' "$GAP_CHECK" && \
+   grep -q 'scope_fidelity_advisory' "$GAP_CHECK" && \
+   grep -qi 'does not alter\|MUST NOT alter' "$GAP_CHECK"; then
+  echo "OK  native-scope-fidelity-advisory"
+else
+  echo "FAIL native-scope-fidelity-advisory"
+  FAIL=1
+fi
+
+# native-run-report (R69)
+if grep -q 'Run report contract' "$NATIVE_ADAPTER" && \
+   grep -qi 'human_triage' "$NATIVE_ADAPTER" && \
+   grep -qi 'change_digest' "$NATIVE_ADAPTER" && \
+   grep -qi 'one_shot_revert' "$NATIVE_ADAPTER" && \
+   grep -qi 'applied.*surfaced.*reverted\|applied / surfaced / reverted' "$NATIVE_ADAPTER" && \
+   grep -q 'sw-local-review-run-report.json' "$SW_REVIEW" && \
+   grep -qi 'roster' "$NATIVE_ADAPTER"; then
+  echo "OK  native-run-report"
+else
+  echo "FAIL native-run-report"
+  FAIL=1
+fi
+
+# native-skip-local-flag (R54, R67)
+if grep -q '\-\-skip-local' "$SW_REVIEW" && grep -q '\-\-fast' "$SW_REVIEW" && \
+   grep -qi 'announce' "$SW_REVIEW" && \
+   grep -qi 'do not change persisted\|MUST NOT change persisted' "$SW_REVIEW" && \
+   grep -q '\-\-skip-local' "$SW_SHIP" && \
+   grep -qi 'phase-mode' "$SW_SHIP" && grep -qi 'skip-local\|skip local' "$SW_SHIP"; then
+  echo "OK  native-skip-local-flag"
+else
+  echo "FAIL native-skip-local-flag"
+  FAIL=1
+fi
+
+# native-tiering (R27, R28)
+if grep -q 'models.tiers' "$NATIVE_ADAPTER" && \
+   grep -qi 'no semantic tier in agent frontmatter' "$NATIVE_ADAPTER" && \
+   grep -qi 'backpressure' "$SUBAGENT_DISPATCH"; then
+  echo "OK  native-tiering"
+else
+  echo "FAIL native-tiering"
+  FAIL=1
+fi
+
 # --- U5: golden-schema contract drift ---
 GOLDEN="$FIX/golden-schema.json"
 for key in $(jq -r '.required_top_level_keys[]' "$GOLDEN"); do

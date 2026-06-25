@@ -109,7 +109,20 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
     Write gate config from `review.local.gate`. Surface-only default (`haltOn: []`) logs P0–P3 and
     continues. Halting mode (`haltOn: ["P0","P1"]`) records halt signal for `/sw-ship` (validated
     P0/P1 only). Persist gate result to `/tmp/sw-local-review-gate-result.json`.
-12. **Persist edges (redaction):**
+12. **Run report (R69/R50):** resolve `runDir` via `bash scripts/sw-tmp.sh resolve` (or `shipwright-state`
+    `runDir` when set). Write `$runDir/sw-local-review-run-report.json` per the contract in `native.md`:
+
+    - announced roster + per-specialist selection reasons (from activation record)
+    - counts: `applied`, `surfaced`, `reverted` (per severity)
+    - `human_triage[]` — every surface-only finding with reason (P0, security-sensitive, unvalidated /
+      non-confirmed P1, reverted-on-verify, circuit-breaker escalations)
+    - `change_digest[]` — finding → file / line → applied hunk summary
+    - `one_shot_revert` — documented command to undo this run's panel-applied hunks only
+    - `scope_fidelity_advisory` — labeled **advisory**; names `gap-check` as binding completeness authority
+      (forwarded to `/sw-ship` gap-check per R75; not persisted to durable memory per R50)
+
+    Announce report path in run output. Scrub report contents via `memory-redact.sh` before any memory write (R29/R30).
+13. **Persist edges (redaction):**
     - Scrub `ce-code-review` run dir after parsing:
 
       ```bash
@@ -118,7 +131,7 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
       ```
 
     - `memory-preflight` write for durable learnings only (via `scripts/memory-redact.sh` — no raw dumps).
-13. Phase-1-applied fixes stay in working tree for phase 2. Any phase-2 finding on a phase-1-touched line
+14. Phase-1-applied fixes stay in working tree for phase 2. Any phase-2 finding on a phase-1-touched line
     is annotated `contests applied fix` additively (never suppressed, R71).
 
 ## Phase 2 — external provider (`review.provider`)

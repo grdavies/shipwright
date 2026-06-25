@@ -165,10 +165,45 @@ Enum: `off` (default, native checklist only) | `ui-ux-pro-max` | `vercel-web-gui
 Enrichment augments but never overrides the native baseline. Bounded fetch timeout; announce on use /
 degradation; absence or failure never blocks review.
 
-## scope-fidelity (R11, R12)
+## scope-fidelity (R11, R12, R50)
 
 Advisory only — flags silent defers, stubs, marker-commented incomplete work, omissions vs stated intent.
-MUST NOT emit a binding completeness verdict; `gap-check` remains authoritative at `/sw-ship`.
+MUST NOT emit a binding completeness verdict; `gap-check` remains authoritative at `/sw-ship`. Advisory
+findings are copied into the run report `scope_fidelity_advisory` block and forwarded to gap-check (R75) —
+never persisted to durable memory (R50).
+
+## Run report contract (R10, R18, R50, R69, R75)
+
+Each phase-1 run MUST emit a user-facing report at `$runDir/sw-local-review-run-report.json` (resolved
+`runDir` from `sw-tmp.sh` / `shipwright-state`). Scrub before memory writes (R29/R30).
+
+| Field | Content |
+|-------|---------|
+| `roster` | Activation record: core + specialists + per-specialist matched signals (R10) |
+| `counts` | Per-severity tallies: `applied`, `surfaced`, `reverted` |
+| `human_triage[]` | Every surface-only finding + reason: P0, security-sensitive, unvalidated / non-confirmed P1, reverted-on-verify, circuit-breaker escalations |
+| `change_digest[]` | Applied fixes: finding id → `file` / `line` → applied hunk summary |
+| `one_shot_revert` | Single documented command reverting **only** this run's panel-applied hunks (never user edits) |
+| `scope_fidelity_advisory` | Advisory defer / stub / omission entries — labeled **advisory**; names `gap-check` as binding authority |
+
+Example skeleton:
+
+```json
+{
+  "roster": { "core": [], "specialists": [], "signals": {}, "excluded": [] },
+  "counts": { "applied": {}, "surfaced": {}, "reverted": {} },
+  "human_triage": [{ "severity": "P0", "file": "…", "reason": "surface-only: P0 never auto-applied" }],
+  "change_digest": [{ "finding_id": "…", "file": "…", "line": 0, "hunk_summary": "…" }],
+  "one_shot_revert": "git checkout -- <paths-from-change_digest>",
+  "scope_fidelity_advisory": {
+    "label": "advisory",
+    "binding_authority": "gap-check",
+    "findings": []
+  }
+}
+```
+
+`/sw-ship` gap-check reads `scope_fidelity_advisory` advisory-only (R75) without altering its binding verdict.
 
 ## Verify scope (R63)
 

@@ -23,7 +23,12 @@ sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review →
     decision prompt). Does not override `check-gate.sh`.
 - **sw-simplify** — behavior-preserving deslop after review; re-runs verify + `simplify-gate.sh`. **Halt** on
   `regressed`; **log and continue** on `inconclusive`. Skipped by `--fast` / `--skip-simplify`.
-- `sw-review` in configured mode; `review.noDefer` honored.
+- **`sw-review`** — native phase-1 panel runs **in-chain by default** (resolved via
+  `scripts/review-local-resolve.sh`; fires even when `review.provider: "none"`). Only
+  `review.local.enabled: false` or `review.local.provider: "none"` opts out (R14/R15). Local severity gate is
+  **additive**: surface-only default (`haltOn: []` logs P0–P3 and continues, R26); promoted halting on validated
+  P0/P1 stops the chain. Phase-1 writes `$runDir/sw-local-review-run-report.json` (R69); `gap-check` reads the
+  advisory `scope_fidelity_advisory` block only — never alters binding verdict (R75). `review.noDefer` honored.
 - `gap-check` default-on (`skills/gap-check`); `--fast` skips.
 - `sw-stabilize` uses `stabilize-loop` when present.
 - Terminal pause at merge gate — "ready to merge — your call" (suppressed under **phase-mode**; see below).
