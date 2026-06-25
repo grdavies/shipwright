@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from collections import defaultdict, deque
 from pathlib import Path
@@ -14,6 +15,7 @@ VALID_TYPES = frozenset(
 )
 PLAN_PATH_NAME = "sw-deliver-plan.json"
 STATE_PATH_NAME = "sw-deliver-state.json"
+SCRIPT_DIR = Path(__file__).resolve().parent
 CONTENTION_DEFAULT = {
     "serialized": ["docs/prds/INDEX.md", "docs/decisions/INDEX.md", "doc-numbering"],
 }
@@ -444,6 +446,54 @@ def detect_mode(args: list[str]) -> str:
     fail("mode undetected: provide --task-list or --items")
 
 
+def resolve_task_list_path(root: Path, task_list: str) -> Path:
+    """Resolve frozen task list inside the active worktree (R61)."""
+    if ".." in Path(task_list).parts:
+        fail(
+            "task list must not traverse outside the worktree (R61)",
+            exit_code=2,
+        )
+    task_path = Path(task_list)
+    resolved = task_path.resolve() if task_path.is_absolute() else (root / task_list).resolve()
+    try:
+        resolved.relative_to(root.resolve())
+    except ValueError:
+        fail(
+            "task list must be readable inside the active worktree (R61)",
+            exit_code=2,
+        )
+    if not resolved.is_file():
+        fail(f"task list not found: {task_list}")
+    return resolved
+
+
+def run_base_preflight(root: Path, target_branch: str) -> dict[str, Any]:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "wave_preflight.py"),
+            str(root),
+            "base-check",
+            "--target",
+            target_branch,
+        ],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        fail(proc.stderr.strip() or proc.stdout.strip() or "base preflight failed")
+    if proc.returncode != 0:
+        fail(
+            payload.get("error", "base-branch preflight failed"),
+            exit_code=proc.returncode,
+            **{k: v for k, v in payload.items() if k != "error"},
+        )
+    return payload
+
+
 def cmd_preflight(root: Path, args: list[str]) -> None:
     mode = detect_mode(args)
     result: dict[str, Any] = {"verdict": "pass", "mode": mode}
@@ -451,9 +501,7 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
     if mode == "phase":
         task_list = parse_kv(args, "--task-list")
         assert task_list
-        task_path = (root / task_list).resolve()
-        if not task_path.is_file():
-            fail(f"task list not found: {task_list}")
+        task_path = resolve_task_list_path(root, task_list)
         content = task_path.read_text(encoding="utf-8")
         fm = parse_frontmatter(content)
         branch_type = resolve_type(args, fm)
@@ -488,6 +536,9 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
         )
         for n in notices:
             print(f"notice: {n}", file=sys.stderr)
+        if not has_flag(args, "--skip-base-check"):
+            base_pf = run_base_preflight(root, branch)
+            result["basePreflight"] = base_pf
     else:
         items_raw = parse_kv(args, "--items", "")
         items = [x.strip() for x in items_raw.split(",") if x.strip()]
@@ -513,9 +564,7 @@ def cmd_plan(root: Path, args: list[str]) -> None:
     if mode == "phase":
         task_list = parse_kv(args, "--task-list")
         assert task_list
-        task_path = (root / task_list).resolve()
-        if not task_path.is_file():
-            fail(f"task list not found: {task_list}")
+        task_path = resolve_task_list_path(root, task_list)
         content = task_path.read_text(encoding="utf-8")
         fm = parse_frontmatter(content)
 
@@ -541,6 +590,9 @@ def cmd_plan(root: Path, args: list[str]) -> None:
             content, phases, edges, contention
         )
         notices.extend(contention_notices)
+
+        if not has_flag(args, "--skip-base-check"):
+            run_base_preflight(root, branch)
 
         if from_phase:
             if from_phase not in phase_ids:

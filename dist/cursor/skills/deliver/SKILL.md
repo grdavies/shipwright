@@ -350,3 +350,31 @@ scripts/wave.sh ack check|complete|status           # optional cadence (deliver.
 - **INDEX.md** uses only `not-started` / `complete` — never `in-progress` (R43). Run-state binds
   `source_task_list` + `prd_number`; wave run does not freeze INDEX to in-progress.
 - **`deliver.phaseAckCadence: K`** (default `0`): pause for human `ack complete` after every K phase merges (R56).
+
+## Base-branch preflight and spec visibility (R49, R61, R62)
+
+Before phase dispatch, phase-mode `preflight` / `plan` runs **base-branch preflight** (R49):
+
+```bash
+scripts/wave.sh preflight --task-list docs/prds/<n>-<slug>/tasks-....md
+scripts/wave.sh preflight-base --target feat/<slug>   # atomic check
+```
+
+- Verifies `.github/workflows` `pull_request` triggers cover `<type>/**` bases (not main-only).
+- When `review.provider` is configured, requires repo review config so phase PRs can land reviews (R52).
+- Fails closed with remediation hints — never silent `checkCount==0` timeout-blocked degradation.
+
+**Spec in worktrees (R61):** `docs/prds/` is git-tracked (`docs/*` ignored, `!docs/prds/**` un-ignored).
+Frozen task lists and PRDs must resolve inside the active worktree (prefer repo-relative paths;
+absolute paths under the worktree root are allowed) — never paths into another checkout.
+
+**Post-run learnings (R62):**
+
+```bash
+scripts/wave.sh memory learnings distill
+scripts/wave.sh memory learnings prepare --out .cursor/sw-deliver-learnings.md
+# then memory-preflight write (category: learning) with redacted payload only
+```
+
+Distills contention, blast-radius, revert, and blocked-phase patterns from plan + run log — never raw
+transcripts or sub-agent logs. Always pipe through `scripts/memory-redact.sh` before persist.

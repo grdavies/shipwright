@@ -240,17 +240,17 @@ frozen_at: 2026-06-24
 
 ### 12. Preflight, spec availability, and memory learnings (S)
 
-- [ ] 12.1 CI/review base-branch preflight (R49)
+- [x] 12.1 CI/review base-branch preflight (R49)
   - **File:** `scripts/wave.sh`, `core/skills/deliver/SKILL.md`
   - **Expected:** before phases, verify CI workflows and review provider trigger on PRs with base `<type>/**`; actionable error if not — no silent timeout-blocked degradation
   - **R-IDs:** R49
 
-- [ ] 12.2 Un-ignore `docs/prds/` for worktree spec visibility (R61)
+- [x] 12.2 Un-ignore `docs/prds/` for worktree spec visibility (R61)
   - **File:** `.gitignore`
   - **Expected:** `docs/prds/` tracked; frozen task list + PRD readable in every phase worktree; orchestrator does not read spec via absolute main-checkout path
   - **R-IDs:** R61
 
-- [ ] 12.3 Distilled wave learnings to memory (R62)
+- [x] 12.3 Distilled wave learnings to memory (R62)
   - **File:** `core/skills/deliver/SKILL.md`
   - **Expected:** post-run writes contention/conflict patterns via `memory-preflight` + `memory-redact.sh`; no raw logs/transcripts/secrets
   - **R-IDs:** R62

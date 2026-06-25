@@ -908,4 +908,85 @@ else
   FAIL=1
 fi
 
+# --- base preflight, spec visibility, memory learnings (R49, R61, R62) ---
+PF="$ROOT/scripts/wave_preflight.py"
+WM="$ROOT/scripts/wave_memory.py"
+if python3 "$PF" "$ROOT" base-check --target feat/wave-phase-orchestrator 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['verdict']=='pass'
+assert d['ci']['ok'] is True
+"; then
+  echo "OK  deliver-phase-base-preflight-pass"
+else
+  echo "FAIL deliver-phase-base-preflight-pass"
+  FAIL=1
+fi
+PF_FAIL=$(mktemp -d)
+mkdir -p "$PF_FAIL/.github/workflows"
+cat >"$PF_FAIL/.github/workflows/ci.yml" <<'YAML'
+name: CI
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo test
+YAML
+set +e
+python3 "$PF" "$PF_FAIL" base-check --target feat/demo 2>/dev/null
+PF_EC=$?
+set -e
+if [[ "$PF_EC" -eq 20 ]]; then
+  echo "OK  deliver-phase-base-preflight-fail"
+else
+  echo "FAIL deliver-phase-base-preflight-fail ec=$PF_EC"
+  FAIL=1
+fi
+rm -rf "$PF_FAIL"
+
+if grep -q '!docs/prds/\*\*' "$ROOT/.gitignore" && git -C "$ROOT" ls-files docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md >/dev/null; then
+  echo "OK  deliver-phase-spec-tracked"
+else
+  echo "FAIL deliver-phase-spec-tracked"
+  FAIL=1
+fi
+
+MEM_FIX=$(mktemp -d)
+mkdir -p "$MEM_FIX/.cursor/sw-deliver-runs"
+echo '{"mode":"phase","target":{"branch":"feat/demo"},"notices":["contention: phases 1 and 2 serialized (shared)"],"contention":{"injectedEdges":[{"from":"1","to":"2","kind":"contention"}]}}' \
+  >"$MEM_FIX/.cursor/sw-deliver-plan.json"
+echo '{"target":{"branch":"feat/demo"},"phases":{"1":{"slug":"alpha","status":"blocked","cause":"verify:failed"}}}' \
+  >"$MEM_FIX/.cursor/sw-deliver-state.json"
+echo '{"event":"blast-radius","sourcePhaseSlug":"alpha","blockedDependents":[{"phaseSlug":"beta"}]}' \
+  >>"$MEM_FIX/.cursor/sw-deliver-runs/run.log"
+if python3 "$WM" "$MEM_FIX" learnings distill 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+p=d['learnings']['patterns']
+assert any(x['kind']=='contention' for x in p)
+assert any(x['kind']=='blocked-phase' for x in p)
+" && python3 "$WM" "$MEM_FIX" learnings prepare 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['patternCount']>=2
+assert 'memory-preflight' in d['memoryWrite']
+"; then
+  echo "OK  deliver-phase-memory-learnings"
+else
+  echo "FAIL deliver-phase-memory-learnings"
+  FAIL=1
+fi
+rm -rf "$MEM_FIX"
+
+if grep -q 'base-branch preflight' "$ROOT/core/skills/deliver/SKILL.md" && \
+   grep -q 'memory learnings prepare' "$ROOT/core/skills/deliver/SKILL.md"; then
+  echo "OK  deliver-phase-preflight-memory-docs"
+else
+  echo "FAIL deliver-phase-preflight-memory-docs"
+  FAIL=1
+fi
+
 exit "$FAIL"
