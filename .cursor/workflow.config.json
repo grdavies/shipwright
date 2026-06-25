@@ -15,6 +15,9 @@
   "prdsDir": "docs/prds",
   "decisionsDir": "docs/decisions",
   "tasksDir": "docs/prds",
+  "doc": {
+    "afterTasks": "confirm"
+  },
   "verify": {
     "lint": "echo 'no lint configured'",
     "typecheck": "echo 'no typecheck configured'",

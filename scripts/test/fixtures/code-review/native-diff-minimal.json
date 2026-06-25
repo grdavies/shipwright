@@ -1,0 +1,12 @@
+{
+  "files": [
+    {
+      "path": "src/util/helpers.go",
+      "added_lines": [
+        "func Trim(s string) string {",
+        "  return strings.TrimSpace(s)",
+        "}"
+      ]
+    }
+  ]
+}

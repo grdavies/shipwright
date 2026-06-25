@@ -11,6 +11,10 @@ Catches planned vs actual before commit.
 
 - **Plan:** task checklist for `phaseSlug` in `tasksDir` + spec union (`scripts/spec-union.sh <prd>`).
 - **Backlog:** open rows from `bash scripts/feedback-backlog.sh list --open-only` (`skills/feedback-closure/SKILL.md`) — map against diff when PR-linked.
+- **Native panel advisory (R75):** when present, read `$runDir/sw-local-review-run-report.json` (resolved via
+  `bash scripts/sw-tmp.sh resolve` or `shipwright-state` `runDir`) and consume `scope_fidelity_advisory` **advisory
+  only** — defer / stub / omission hints from phase-1 `scope-fidelity`. This input MUST NOT alter gap-check's
+  binding verdict; gap-check remains the sole requirements-completeness authority (R12/R50).
 - **Actual:** diff against per-worktree `parentBranch`:
 
 ```bash

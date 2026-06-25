@@ -1,0 +1,14 @@
+{
+  "files": [
+    {
+      "path": "src/types/user.d.ts",
+      "added_lines": [
+        "export interface UserProfile {",
+        "  id: string;",
+        "  email: string;",
+        "  role?: string;",
+        "}"
+      ]
+    }
+  ]
+}

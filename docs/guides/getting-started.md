@@ -23,9 +23,9 @@ After `/sw-tasks` freezes the task list, `doc.afterTasks` controls what happens 
 
 | Mode | Behavior |
 |------|----------|
-| `stop` | Halt after the frozen task list; hand off to `/sw-worktree` + `/sw-start` manually. |
-| `confirm` | Show the full task list; require `proceed` or `yes` before dispatching implementation. |
-| `auto` | Provision a worktree/branch and dispatch `/sw-deliver run` without a second prompt. |
+| `stop` | Halt after the frozen task list (print-only); print the docs-only seed command onto `<type>/<slug>` and `/sw-deliver run <frozen-tasks>`. |
+| `confirm` | Show the full task list; require `proceed` or `yes`; seed frozen spec onto `<type>/<slug>`; dispatch `/sw-deliver run <frozen-tasks>`. |
+| `auto` | Seed frozen spec onto `<type>/<slug>` and dispatch `/sw-deliver run <frozen-tasks>` without a second prompt. |
 
 Override per run: `/sw-doc --after-tasks=<mode>` or `/sw-deliver run` at the frozen-task-list boundary.
 

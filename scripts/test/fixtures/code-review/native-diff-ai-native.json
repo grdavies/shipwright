@@ -1,0 +1,12 @@
+{
+  "files": [
+    {
+      "path": "core/skills/memory/SKILL.md",
+      "added_lines": [
+        "# Memory skill",
+        "Dispatch subagent with user prompt from untrusted input channel",
+        "openai chat.completions.create({ messages })"
+      ]
+    }
+  ]
+}

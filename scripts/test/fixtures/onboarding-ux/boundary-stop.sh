@@ -9,10 +9,10 @@ SW_DOC="$(content_path commands/sw-doc.md)"
 FAIL=0
 
 if grep -q '\*\*`stop`\*\*' "$SW_DOC" && grep -qi 'halt' "$SW_DOC" && \
-   grep -q '/sw-worktree' "$SW_DOC" && grep -q '/sw-start' "$SW_DOC"; then
-  echo "OK  boundary-stop: stop halts with next commands"
+   grep -q '/sw-deliver run' "$SW_DOC" && grep -q 'docs-only seed' "$SW_DOC"; then
+  echo "OK  boundary-stop: stop halts with seed + /sw-deliver run"
 else
-  echo "FAIL boundary-stop: missing stop halt + handoff commands"
+  echo "FAIL boundary-stop: missing stop halt + deliver handoff"
   FAIL=1
 fi
 

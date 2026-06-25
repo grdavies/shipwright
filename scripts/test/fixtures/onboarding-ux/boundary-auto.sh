@@ -15,11 +15,10 @@ else
   FAIL=1
 fi
 
-if grep -q '/sw-worktree' "$SW_DOC" && grep -q '/sw-ship' "$SW_DOC" && \
-   grep -qi 'dispatch' "$SW_DOC"; then
-  echo "OK  boundary-auto: dispatches implementation loop"
+if grep -q '/sw-deliver run' "$SW_DOC" && grep -qi 'dispatch' "$SW_DOC"; then
+  echo "OK  boundary-auto: dispatches /sw-deliver run"
 else
-  echo "FAIL boundary-auto: missing dispatch handoff"
+  echo "FAIL boundary-auto: missing /sw-deliver run dispatch"
   FAIL=1
 fi
 

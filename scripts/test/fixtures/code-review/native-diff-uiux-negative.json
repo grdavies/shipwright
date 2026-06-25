@@ -1,0 +1,12 @@
+{
+  "files": [
+    {
+      "path": "internal/service/billing.go",
+      "added_lines": [
+        "func Charge(amount int) error {",
+        "  return ledger.Debit(amount)",
+        "}"
+      ]
+    }
+  ]
+}

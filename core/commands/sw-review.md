@@ -5,10 +5,10 @@ alwaysApply: false
 
 # `/sw-review`
 
-Two-phase local review over the uncommitted delta: **phase 1** = local multi-agent adapter
-(`review.local`); **phase 2** = external provider (`review.provider`). The schema default is **`none`**
-(review gating off). **CodeRabbit is opt-in** — set `review.provider: "coderabbit"` explicitly to enable
-phase 2.
+Two-phase local review over the uncommitted delta: **phase 1** = native local panel (`review.local`,
+default-on **`native`**); **phase 2** = external provider (`review.provider`, default **`none`**). Phase 1
+runs **independently** of phase-2 opt-out — including when `review.provider: "none"`. CodeRabbit is opt-in via
+`review.provider: "coderabbit"`.
 
 ## Scope
 
@@ -18,19 +18,38 @@ phase 2.
 - `gap-check` remains the sole requirements-completeness authority; local review is requirements-aware
   but emits no completeness verdict.
 
+## Flags
+
+- `--fast` / `--skip-local` — skip phase 1 for this run only; announce skip; do not change persisted config
+  (R54). In phase-mode, record skip in durable status (R67).
+
 ## Phase 1 — local review (`review.local`)
 
-1. Resolve `review.local` from `workflow.config.json`.
+1. Resolve `review.local` via `scripts/review-local-resolve.sh` (schema defaults: `enabled: true`,
+   `provider: "native"`, `apply: "auto"`).
    - `review.local.enabled: false` or `review.local.provider: "none"` → skip to phase 2 with message.
-2. Read `providers/code-review/<provider>.md` (default `ce-code-review`).
-3. **Soft dependency check:** if `ce-code-review` skill is unavailable → report
-   `Local review skipped — ce-code-review skill not available.` and skip to phase 2 (fail-closed;
-   **never** treat as clean pass). No `native` fallback (deferred YAGNI).
+   - `--fast` / `--skip-local` → skip phase 1 for this run (announced).
+2. Read `providers/code-review/<provider>.md` (`native` default).
+3. **Soft dependency check** (`ce-code-review` only): if `ce-code-review` skill is unavailable → report
+   `Local review skipped — ce-code-review skill not available.` and skip to phase 2 (fail-closed; **never**
+   treat as clean pass). The `native` adapter has no soft dependency.
 4. `memory-preflight` read for known false-positives and file learnings.
 5. **Invariants (optional):** when `invariantsFile` is set, resolve relative to the review ref (PR head /
    worktree base). Surface to local review agents as non-negotiable constraints. Missing/unreadable blocks this
    review unless `invariantsOptional: true` or `--no-invariants` (logged).
 6. Compute `base` = per-worktree `parentBranch` from phase state.
+6. **Native panel — selection + activation record (R10):** when `review.local.provider` resolves to `native`,
+   build diff JSON for the uncommitted delta and run:
+
+   ```bash
+   scripts/code-review-select.sh --diff /tmp/sw-local-review-diff.json \
+     > /tmp/sw-local-review-roster.json
+   ```
+
+   Announce the activation record: always-on **core** roster (`correctness`, `maintainability`,
+   `scope-fidelity`, `testing`, `security`), **gated specialists** from `specialists[]`, and **matched signals**
+   per specialist from `signals{}` (explainable panel; `previous-comments` excluded). Copy the record into the
+   phase-1 run report. Roster selection is deterministic — never delegate to the model (`native.md` R58).
 6. Invoke adapter per `providers/code-review/ce-code-review.md`:
 
    ```
@@ -48,20 +67,38 @@ phase 2.
    - `status: skipped|failed|degraded` (no findings) → surface `reason`, skip remainder of phase 1,
      proceed to phase 2 — **never** deserialize as "0 findings → pass."
    - Requirement-stage findings are post-filtered in normalize (gap-check unaffected).
-8. **Apply** (sw-owned, untrusted-output boundary):
+8. **Dedup** overlapping findings per `native.md` (R70) before apply.
+9. **P1 validation wave** (R22/R49/R62): for each P1, spawn independent fresh-context validator at deep tier
+   (diff + neutral location only — never first reviewer's title / fix / reasoning). Confirmed → eligible for
+   apply with `--validated`. Non-confirm / degraded → surface only. **Phase-mode:** all P1 surface as `blocked`
+   — never auto-apply unattended P1 (R67).
+10. **Apply** (Shipwright-owned, untrusted-output boundary, R19/R68):
 
-   For each finding in normalized output, run eligibility check:
+    Resolve `review.local.apply` from resolve output (`auto` | `surface` | `off`). When not `auto`, skip apply
+    (review + surface only).
 
-   ```bash
-   scripts/code-review-apply-check.sh --finding '<json>' --repo-root "$PWD"
-   ```
+    **Dirty tree (R64):** if `git status --porcelain` is non-empty before apply, refuse OR snapshot via
+    `git stash push -u -m sw-local-review-pre-apply` and restore after the run.
 
-   Auto-apply only when eligible: P2/P3, concrete `suggested_fix`, `requires_verification: false`,
-   in-repo file, size-bounded, non-security-sensitive target. **P0/P1 never auto-fixed.** Apply through
-   pf edit machinery only — never let `ce-code-review` commit into the worktree.
-9. **Bounded re-verify:** if any fix applied, run `/sw-verify` once. Circuit-breaker: three identical
-   failures without diff change → escalate per `rules/sw-subagent-dispatch.mdc`.
-10. **Severity gate:**
+    For each finding in deterministic order (severity, file, line):
+
+    ```bash
+    scripts/code-review-apply-check.sh --finding '<json>' --repo-root "$PWD" \
+      --apply-policy "$APPLY_POLICY" \
+      ${PHASE_MODE:+--phase-mode} \
+      ${VALIDATED:+--validated}
+    ```
+
+    Auto-apply when eligible: validated **P1** (interactive only), **P2/P3** with concrete `suggested_fix`,
+    `requires_verification: false`, rails pass. **P0 never auto-applied.** Security-sensitive /
+    behavior-altering / control-marker findings surface only. Apply through pf edit only.
+
+    **Per-fix checkpoint (R64):** apply one fix → bounded `/sw-verify` → on fail revert **only that fix's
+    hunks** and re-surface; on pass keep for phase 2. Re-anchor line numbers before next fix.
+
+    **Circuit breaker (R24/R65):** identical normalized verify-failure signature → count toward cap (3 per
+    finding, 10 per run). Trip → escalate (interactive) or `blocked` (phase-mode, R67).
+11. **Severity gate:**
 
     ```bash
     scripts/code-review-gate.sh \
@@ -72,7 +109,29 @@ phase 2.
     Write gate config from `review.local.gate`. Surface-only default (`haltOn: []`) logs P0–P3 and
     continues. Halting mode (`haltOn: ["P0","P1"]`) records halt signal for `/sw-ship` (validated
     P0/P1 only). Persist gate result to `/tmp/sw-local-review-gate-result.json`.
-11. **Persist edges (redaction):**
+12. **Run report (R69/R50):** resolve `runDir` via `bash scripts/sw-tmp.sh resolve` (or `shipwright-state`
+    `runDir` when set). Write `$runDir/sw-local-review-run-report.json` per the contract in `native.md`:
+
+    - announced roster + per-specialist selection reasons (from activation record)
+    - counts: `applied`, `surfaced`, `reverted` (per severity)
+    - `human_triage[]` — every surface-only finding with reason (P0, security-sensitive, unvalidated /
+      non-confirmed P1, reverted-on-verify, circuit-breaker escalations)
+    - `change_digest[]` — finding → file / line → applied hunk summary
+    - `one_shot_revert` — documented command to undo this run's panel-applied hunks only
+    - `scope_fidelity_advisory` — labeled **advisory**; names `gap-check` as binding completeness authority
+      (forwarded to `/sw-ship` gap-check per R75; not persisted to durable memory per R50)
+    - `instrumentation` — `phase_2_load` (panel-touched vs untouched counts) + `contested_apply.rate` (R74);
+      initialized after phase 1; finalized after phase 2 when external review runs
+
+    Announce report path in run output. Scrub report contents via `memory-redact.sh` before any memory write
+    (R29/R30):
+
+    ```bash
+    bash scripts/memory-redact.sh "$runDir/sw-local-review-run-report.json" \
+      > "$runDir/sw-local-review-run-report.scrubbed.json"
+    mv "$runDir/sw-local-review-run-report.scrubbed.json" "$runDir/sw-local-review-run-report.json"
+    ```
+13. **Persist edges (redaction, R29/R30):**
     - Scrub `ce-code-review` run dir after parsing:
 
       ```bash
@@ -80,9 +139,31 @@ phase 2.
       [[ -n "$RUN_DIR" && -d "$RUN_DIR" ]] && rm -rf "$RUN_DIR"
       ```
 
-    - `memory-preflight` write for durable learnings only (via `scripts/memory-redact.sh` — no raw dumps).
-12. Phase-1-applied fixes stay in working tree for phase 2. Any phase-2 finding on a phase-1-touched line
-    is annotated `contests applied fix` for the human (no automatic re-litigation).
+    - Remove native panel temp intermediates post-parse:
+
+      ```bash
+      for tmp in \
+        /tmp/sw-local-review-diff.json \
+        /tmp/sw-local-review-roster.json \
+        /tmp/sw-local-review-raw.json \
+        /tmp/sw-local-review-normalized.json \
+        /tmp/sw-local-review-gate.json \
+        /tmp/sw-local-review-gate-result.json; do
+        rm -f "$tmp"
+      done
+      ```
+
+    - Finding-derived memory writes only — each distilled learning MUST pass through the redaction chokepoint
+      before `memory-preflight` persist (no raw reviewer output, diffs, or transcripts):
+
+      ```bash
+      while IFS= read -r finding; do
+        REDACTED="$(printf '%s' "$finding" | bash scripts/memory-redact.sh)"
+        # memory-preflight write distilled learning from $REDACTED
+      done < <(jq -c '.findings[]' /tmp/sw-local-review-normalized.json 2>/dev/null || echo '[]')
+      ```
+14. Phase-1-applied fixes stay in working tree for phase 2. Any phase-2 finding on a phase-1-touched line
+    is annotated `contests applied fix` additively (never suppressed, R71).
 
 ## Phase 2 — external provider (`review.provider`)
 
@@ -118,7 +199,19 @@ Unchanged from prior single-phase flow:
    write the status file — the gate treats review evidence as absent.
 6. Fix actionable findings; re-run at most once if substantive fixes applied; refresh `$STATUS_FILE` if
    re-run.
-7. `memory-preflight` write for durable review learnings only (no raw bot dumps).
+7. **Instrumentation update (R74):** when phase 1 emitted `$runDir/sw-local-review-run-report.json` with
+   `change_digest`, merge phase-2 metrics into `instrumentation`:
+
+   - `phase_2_load.panel_touched` — actionable phase-2 findings whose `file`+`line` match a `change_digest`
+     entry
+   - `phase_2_load.panel_untouched` — actionable phase-2 findings on other lines
+   - `contested_apply.contested_count` — findings annotated `contests applied fix`
+   - `contested_apply.applied_count` — `change_digest | length`
+   - `contested_apply.rate` — `contested_count / max(applied_count, 1)`
+
+   Re-scrub the run report via `memory-redact.sh` before any memory write.
+8. `memory-preflight` write for durable review learnings only (no raw bot dumps); route through
+   `scripts/memory-redact.sh`.
 
 ## Guardrails
 

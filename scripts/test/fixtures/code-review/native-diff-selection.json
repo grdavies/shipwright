@@ -1,0 +1,22 @@
+{
+  "files": [
+    {
+      "path": "src/components/Button.tsx",
+      "added_lines": [
+        "import React from 'react';",
+        "",
+        "export function Button() {",
+        "  return <button style={{color:'#ccc',background:'#ddd'}}>Click</button>;",
+        "}",
+        ""
+      ]
+    },
+    {
+      "path": "core/commands/sw-review.md",
+      "added_lines": [
+        "# prompt template for agent dispatch",
+        "invoke openai chat.completions with user prompt"
+      ]
+    }
+  ]
+}

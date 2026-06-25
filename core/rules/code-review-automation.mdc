@@ -6,23 +6,26 @@ globs:
 
 # Code review & automation (Shipwright)
 
-Review provider selected by `review.provider` (default `coderabbit`). Gate per-head state via
+Review provider selected by `review.provider` (default `none`). Gate per-head state via
 `scripts/check-gate.sh` + `providers/review/<provider>.sh`.
 
 ## Two-phase `/sw-review` (local → provider)
 
-1. **Phase 1 — local** (`review.local`, default `ce-code-review`): multi-agent report-only review via
-   compound-engineering skill. Normalized contract in `providers/code-review/CAPABILITIES.md`. Soft dependency —
-   when skill absent, skip with message (fail-closed), proceed to phase 2.
-2. **Phase 2 — external** (`review.provider`): CodeRabbit over uncommitted delta (unchanged). Emits
+1. **Phase 1 — local** (`review.local`, default-on **`native`**): Shipwright-native multi-agent panel via
+   `providers/code-review/native.md`. Resolved by `scripts/review-local-resolve.sh`. Runs **independently** of
+   `review.provider` (including `"none"`). Only `review.local.enabled: false` or
+   `review.local.provider: "none"` disables phase 1.
+2. **Phase 2 — external** (`review.provider`): CodeRabbit / PR-Agent over uncommitted delta (unchanged). Emits
    `/tmp/sw-review.status.json` for verification-gate.
 
-`gap-check` owns requirements completeness. Local adapter post-filters requirement-stage findings.
+`gap-check` owns **binding** requirements completeness. Local adapters post-filter requirement-stage findings.
+The native `scope-fidelity` reviewer MAY surface an **advisory** defer / stub / omission signal (R13) — never
+a binding completeness verdict.
 
 ### Local apply + gate
 
-- pf auto-applies eligible P2/P3 only (concrete fix, `requires_verification: false`, in-repo, bounded,
-  non-security-sensitive). P0/P1 never auto-fixed.
+- pf auto-applies eligible P1 (validated), P2, P3 per `review.local.apply` (default `auto`) after
+  `code-review-apply-check.sh`. P0 never auto-fixed. Security-sensitive targets never auto-applied.
 - Severity gate: surface-only default (`haltOn: []`); promoted halting on validated P0/P1 halts `/sw-ship`.
 - `check-gate.sh` remains sole CI oracle.
 
@@ -30,7 +33,7 @@ Review provider selected by `review.provider` (default `coderabbit`). Gate per-h
 
 1. Correctness 2. Security 3. Type safety 4. Error handling 5. Tests 6. Performance 7. A11y 8. Conventions
 
-## Local provider review (phase 2 — CodeRabbit)
+## Local provider review (phase 2 — external)
 
 `coderabbit review -t uncommitted` mirrors Git tracked diff — stage `??` files first.
 
@@ -50,12 +53,16 @@ When `coderabbit.noDefer` is true, deliver code/test fix or verified resolve-wit
 
 Recompute unresolved actionable count at HEAD. Run `scripts/check-gate.sh` for verdict — never hand-roll green.
 
-## Native code-review panel (deferred — binding standard)
+## Native code-review panel (binding standard)
 
-When a `native` local code-review provider is built under `providers/code-review/`, its persona panel **MUST**
-use **always-on core + deterministic signal-gated specialists** — same shape as doc review (`skills/doc-review/SKILL.md`):
-a fixed core roster plus specialists that fire only on auditable signals (file globs, risk keywords, structural
-markers). Same inputs → same panel; no judgment-based or load-all path.
+The `native` local adapter (`providers/code-review/native.md`) uses **always-on core + deterministic
+signal-gated specialists** — same shape as doc review (`skills/doc-review/SKILL.md`):
 
-- `ce-code-review` (current default local adapter) already conforms via diff-conditional selection — **no change**.
-- This rule holds regardless of local-code-review workstream (plan 003) landing status.
+- Fixed core roster: `correctness`, `maintainability`, `scope-fidelity`, `testing`, `security`.
+- Specialists fire only on auditable signals (file globs, risk keywords, structural markers) via
+  `scripts/code-review-select.sh`.
+- Same inputs → same panel; no judgment-based or load-all path.
+- `previous-comments` is excluded from phase 1.
+
+- `ce-code-review` remains a selectable adapter for repos that set it explicitly — **no change** to that path.
+- Phase 1 is default-on independent of `review.provider`; schema default `review.local.provider` is `native`.

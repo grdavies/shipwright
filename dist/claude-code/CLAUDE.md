@@ -58,7 +58,7 @@ legacy commands and compound-engineering (`ce-`).
 
 ## Documentation orchestrator boundary
 
-`/sw-doc` delegates to atomic doc commands; it does not reimplement their procedures. Each atomic (`/sw-brainstorm`, `/sw-prd`, `/sw-doc-review`, `/sw-freeze`, `/sw-tasks`) remains independently runnable. After task freeze, `doc.afterTasks` (`stop` | `confirm` | `auto`) is the sole checkpoint before implementation: `auto` may **provision a worktree and dispatch** `/sw-worktree` → `/sw-start` → `/sw-execute` or `/sw-ship`, but the doc orchestrator **never inlines implementation** in any mode.
+`/sw-doc` delegates to atomic doc commands; it does not reimplement their procedures. Each atomic (`/sw-brainstorm`, `/sw-prd`, `/sw-doc-review`, `/sw-freeze`, `/sw-tasks`) remains independently runnable. After task freeze, `doc.afterTasks` (`stop` | `confirm` | `auto`) is the sole checkpoint before implementation: `stop` prints the docs-only seed command onto `<type>/<slug>` plus `/sw-deliver run <frozen-task-list-path>`; `confirm` and `auto` seed the frozen `docs/prds/<n>-<slug>/` set onto `<type>/<slug>` then dispatch `/sw-deliver run <frozen-task-list-path>`, but the doc orchestrator **never inlines implementation** in any mode.
 
 ## Debug orchestrator boundary
 
