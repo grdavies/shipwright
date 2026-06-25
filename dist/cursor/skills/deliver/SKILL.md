@@ -9,6 +9,10 @@ Layer above `/sw-ship` for **phase-mode** (frozen task-list phases stacking onto
 **multi-feature mode** (independent features promoting via `integration/<stamp>`). Reuses `scripts/worktree.sh`
 and `skills/parallelism/` wholesale.
 
+**Conductor:** load `skills/conductor/SKILL.md` for the shared autonomous loop (self-continuation,
+legitimate halts, parallel dispatch, resumption). `/sw-deliver` is the pilot consumer; enforce
+`rules/sw-conductor.mdc`. Do not re-author loop logic in this skill (R1, R3).
+
 
 **Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill deliver`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
@@ -162,6 +166,22 @@ Schedule JSON shape:
 When a wave exceeds the ceiling, `batches` splits into sequential chunks (e.g. ceiling 2 with
 phases `["2","3","4"]` → `[["2","3"],["4"]]`).
 
+## Conductor parallel dispatch (R14–R16)
+
+The mechanical driver provisions one phase per `deliver-loop` step; the **conductor** achieves parallelism by:
+
+1. `bash scripts/wave.sh schedule --plan .cursor/sw-deliver-plan.json`
+2. For each `batches[].parallel` set, dispatch background `Task` sub-agents (one per phase worktree).
+3. Wait for durable `status.json` per **Parallel-wave completion wait** in `skills/conductor/SKILL.md`.
+4. Serialize merges via `merge enqueue` → `merge run-next` (conductor only).
+
+On `status collect` with `blocked`, `blast-radius apply` blocks transitive dependents only (R24):
+
+```bash
+scripts/wave.sh status collect --phase-slug <phase-slug>
+scripts/wave.sh blast-radius apply --phase-slug <upstream-slug>
+```
+
 ## Branch topology (R35/R53)
 
 | Role | Branch | Worktree path |
@@ -252,6 +272,24 @@ On completion, read `$SW_RUN_DIR/status.json` (or `.cursor/sw-deliver-runs/<phas
 
 Terminal pause is suppressed; `/sw-deliver` must not wait on human input for per-phase outcomes.
 
+## Conductor in-turn loop (R2, R6, R7, R13)
+
+`/sw-deliver` consumes `skills/conductor/SKILL.md` for the autonomous loop. Summary:
+
+1. Run `bash scripts/wave.sh deliver-loop` from the orchestrator worktree.
+2. While `verdict: running` and no legitimate halt:
+   - `awaitAgent: false` → re-invoke `deliver-loop` immediately (same turn).
+   - `awaitAgent: true` → execute `next.action` (`dispatch-ship`, `remediate`, `compound-ship`, or
+     `terminal-ship`), then re-invoke `deliver-loop`.
+3. Never end the turn asking the user to "continue deliver" when progress is still possible (R13).
+
+**Self-wake (R8/R9):** terminal-PR CI uses `notify_on_output` on `^DELIVER_WAKE_<run-id>`; tear down all
+watchers on terminal halt. **Parallel-wave wait (R44):** poll or self-wake on durable `status.json` set.
+**Headless fallback (R46):** bounded poll to `checks.watch.maxWaitMinutes`, then one consolidated halt.
+
+**Hard stop (R38):** `deliver.autonomy.maxIterations` + 3× no-progress on `(nextAction, stateSignature)` —
+see `rules/sw-subagent-dispatch.mdc`.
+
 ## Sub-agent dispatch spike (R63)
 
 **Spike conclusion (2026-06):** Cursor's parent agent can launch **background** subagents via the Task tool
@@ -331,6 +369,28 @@ scripts/wave.sh bookkeeping projected --types feat,fix
 - `merge run-next` invokes `bookkeeping record --commit` automatically after a green merge.
 
 `CHANGELOG.md` / `version.txt` are contention-serialized (R11) — never edited inside parallel phase worktrees.
+
+## Living-doc currency (R47–R51)
+
+After each green phase merge, `merge run-next` also invokes `living-docs reconcile --commit` on the
+orchestrator worktree — updating `docs/prds/INDEX.md` status from durable run state (`not-started` |
+`in-progress` | `complete`), resolving absorbed `GAP-BACKLOG` rows when the PRD completes, and committing
+the three ledger files onto `<type>/<slug>`.
+
+Before the terminal PR gate, `terminal pr prepare` appends an idempotent `COMPLETION-LOG` row
+(`living-docs append-terminal --commit`) and runs `docs-currency` — a hard-block on drift in the current
+run's INDEX row, completion-log entry, and absorbed gaps (R50; parity with task-currency R15).
+
+```bash
+scripts/wave.sh living-docs reconcile --commit
+scripts/wave.sh living-docs append-terminal --commit
+scripts/wave.sh docs-currency
+bash scripts/reconcile-status.sh set-index-status --prd <NNN> --status in-progress
+bash scripts/reconcile-status.sh append-log-idempotent --prd <NNN> --phase all --pr <N> --sha <sha>
+bash scripts/reconcile-status.sh gap-resolve --absorbing-prd <NNN> --pr <N>
+```
+
+See `skills/living-status/SKILL.md` for the canonical INDEX status enum and reconcile primitives.
 
 ## Incremental verify + failure routing (R25–R27, R39, R45–R46)
 
