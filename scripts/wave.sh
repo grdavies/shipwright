@@ -51,6 +51,12 @@ case "${1:-}" in
   tasks-currency)
     exec bash "$ROOT/scripts/tasks-currency-gate.sh" "${@:2}"
     ;;
+  docs-currency)
+    exec bash "$ROOT/scripts/docs-currency-gate.sh" "${@:2}"
+    ;;
+  living-docs)
+    exec python3 "$ROOT/scripts/wave_living_docs.py" "$ROOT" "${@:2}"
+    ;;
   compound-ship|completion)
     exec python3 "$ROOT/scripts/wave_compound.py" "$ROOT" "$@"
     ;;

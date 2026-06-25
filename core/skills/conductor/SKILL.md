@@ -26,6 +26,7 @@ existing `wave_*.py` primitives behind `scripts/wave.sh` — never duplicated in
 | Merge queue | `scripts/wave.sh merge enqueue`, `scripts/wave.sh merge run-next` |
 | Locks / journal | `scripts/wave.sh lock …`, `scripts/wave.sh journal …` |
 | Halt report | `scripts/wave.sh report terminal` |
+| Living-doc reconcile | `scripts/wave.sh living-docs reconcile`, `scripts/wave.sh docs-currency` |
 
 The conductor **invokes** these commands and interprets their JSON — it does not maintain parallel state.
 
@@ -187,6 +188,7 @@ The conductor **must not** pause or ask the user to continue for:
 - Per-phase `/sw-ship` dispatch or completion
 - `status collect`, `merge enqueue`, `merge run-next`, wave advancement
 - Release bookkeeping (`bookkeeping record`)
+- Living-doc reconcile (`living-docs reconcile` — INDEX, COMPLETION-LOG, GAP-BACKLOG on feature branch, R47–R51)
 - Mechanical `deliver-loop` steps with `awaitAgent: false`
 
 These advance in-turn via `deliver-loop` re-invocation. User-facing text like "continue deliver?" is

@@ -370,6 +370,28 @@ scripts/wave.sh bookkeeping projected --types feat,fix
 
 `CHANGELOG.md` / `version.txt` are contention-serialized (R11) — never edited inside parallel phase worktrees.
 
+## Living-doc currency (R47–R51)
+
+After each green phase merge, `merge run-next` also invokes `living-docs reconcile --commit` on the
+orchestrator worktree — updating `docs/prds/INDEX.md` status from durable run state (`not-started` |
+`in-progress` | `complete`), resolving absorbed `GAP-BACKLOG` rows when the PRD completes, and committing
+the three ledger files onto `<type>/<slug>`.
+
+Before the terminal PR gate, `terminal pr prepare` appends an idempotent `COMPLETION-LOG` row
+(`living-docs append-terminal --commit`) and runs `docs-currency` — a hard-block on drift in the current
+run's INDEX row, completion-log entry, and absorbed gaps (R50; parity with task-currency R15).
+
+```bash
+scripts/wave.sh living-docs reconcile --commit
+scripts/wave.sh living-docs append-terminal --commit
+scripts/wave.sh docs-currency
+bash scripts/reconcile-status.sh set-index-status --prd <NNN> --status in-progress
+bash scripts/reconcile-status.sh append-log-idempotent --prd <NNN> --phase all --pr <N> --sha <sha>
+bash scripts/reconcile-status.sh gap-resolve --absorbing-prd <NNN> --pr <N>
+```
+
+See `skills/living-status/SKILL.md` for the canonical INDEX status enum and reconcile primitives.
+
 ## Incremental verify + failure routing (R25–R27, R39, R45–R46)
 
 After each phase merge into `<type>/<slug>`, `merge run-next` runs configured `verify.*` on the orchestrator
