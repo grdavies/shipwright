@@ -256,6 +256,24 @@ On completion, read `$SW_RUN_DIR/status.json` (or `.cursor/sw-deliver-runs/<phas
 
 Terminal pause is suppressed; `/sw-deliver` must not wait on human input for per-phase outcomes.
 
+## Conductor in-turn loop (R2, R6, R7, R13)
+
+`/sw-deliver` consumes `skills/conductor/SKILL.md` for the autonomous loop. Summary:
+
+1. Run `bash scripts/wave.sh deliver-loop` from the orchestrator worktree.
+2. While `verdict: running` and no legitimate halt:
+   - `awaitAgent: false` → re-invoke `deliver-loop` immediately (same turn).
+   - `awaitAgent: true` → execute `next.action` (`dispatch-ship`, `remediate`, `compound-ship`, or
+     `terminal-ship`), then re-invoke `deliver-loop`.
+3. Never end the turn asking the user to "continue deliver" when progress is still possible (R13).
+
+**Self-wake (R8/R9):** terminal-PR CI uses `notify_on_output` on `^DELIVER_WAKE_<run-id>`; tear down all
+watchers on terminal halt. **Parallel-wave wait (R44):** poll or self-wake on durable `status.json` set.
+**Headless fallback (R46):** bounded poll to `checks.watch.maxWaitMinutes`, then one consolidated halt.
+
+**Hard stop (R38):** `deliver.autonomy.maxIterations` + 3× no-progress on `(nextAction, stateSignature)` —
+see `rules/sw-subagent-dispatch.mdc`.
+
 ## Sub-agent dispatch spike (R63)
 
 **Spike conclusion (2026-06):** Cursor's parent agent can launch **background** subagents via the Task tool
