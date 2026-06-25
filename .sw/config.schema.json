@@ -44,6 +44,32 @@
           "type": "string",
           "enum": ["feat", "fix", "docs", "hotfix", "release"],
           "description": "Optional override for phase-mode base branch type (<type>/<slug>). When omitted, resolved from release-please-config.json or task-list frontmatter."
+        },
+        "remediation": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Bounded auto-remediation before a blocked phase halts clean (R8/R11).",
+          "properties": {
+            "maxAttempts": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 2,
+              "description": "Per-phase stabilize/remediation attempts before consolidated blocker halt."
+            }
+          }
+        },
+        "watchdog": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Driver liveness and per-phase timeout watchdog (R46).",
+          "properties": {
+            "phaseTimeoutMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 240,
+              "description": "In-flight phase exceeds this duration → consolidated blocker."
+            }
+          }
         }
       }
     },

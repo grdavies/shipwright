@@ -51,9 +51,35 @@ sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review →
 
 ## State (per-worktree)
 
-Via `scripts/shipwright-state.sh`: `shipStartedAt`, `lastCommand`, `phaseStatus`, `iteration`, `runDir`.
+Via `scripts/shipwright-state.sh`: `shipStartedAt`, `lastCommand`, `phaseStatus`, `iteration`, `runDir`,
+`phaseShip` (phase-mode step resume).
 
-Resume: `--from` › `lastCommand` (next step) › chain start.
+Resume: `--from` › `phaseShip.currentStep` (durable `ship-steps.json`) › `lastCommand` (next step) › chain start.
+
+### Phase-mode step persistence (R58)
+
+When `--phase-mode` / `SW_PHASE_MODE` is active, persist step-level state under the phase run dir:
+
+```bash
+# At chain start (after sw-tmp init records runDir):
+bash scripts/ship-phase-steps.sh init --phase "${SW_PHASE_SLUG:-}"
+
+# Before each step (records attempt counter):
+bash scripts/ship-phase-steps.sh attempt --step sw-execute
+
+# After each green step:
+bash scripts/ship-phase-steps.sh advance --step sw-execute
+
+# Sync into per-worktree shipwright.json for cross-agent resume:
+bash scripts/shipwright-state.sh sync-ship-steps
+
+# Resolve resume point (fresh agent):
+bash scripts/ship-phase-steps.sh resolve-resume [--from STEP] [--last-command "$lastCommand"]
+```
+
+Default path: `$SW_RUN_DIR/ship-steps.json`, else `.cursor/sw-deliver-runs/<phase>/ship-steps.json`.
+`ship-phase-status.sh` embeds the latest `shipSteps` snapshot in `status.json` when present.
+Survives `sw-tmp clean` (same run-dir contract as `status.json`).
 
 **Stale-green re-verify:** if `lastCommand` is `sw-ready` / `phaseStatus: green`, re-run `check-gate.sh` live
 before reporting done. If no longer green → `phaseStatus: blocked`, re-enter at `sw-stabilize`.

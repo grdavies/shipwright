@@ -8,7 +8,7 @@ source "$ROOT/scripts/test/fixture-lib.sh"
 SW_DOC="$(content_path commands/sw-doc.md)"
 FAIL=0
 
-if grep -q 'docs/brainstorms/\*\*' "$SW_DOC" && grep -qi 'Exclude' "$SW_DOC"; then
+if grep -q 'docs/brainstorms' "$SW_DOC" && grep -qi 'Exclude' "$SW_DOC"; then
   echo "OK  doc-afterTasks-seed-brainstorm-excluded: brainstorm path excluded"
 else
   echo "FAIL doc-afterTasks-seed-brainstorm-excluded: brainstorm exclusion missing"

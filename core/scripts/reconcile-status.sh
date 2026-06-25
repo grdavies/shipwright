@@ -8,7 +8,7 @@ usage() {
   cat <<'EOF'
 Usage:
   reconcile-status.sh derive [--json]     Compute status per PRD from git facts
-  reconcile-status.sh reconcile [--dry-run]  Update docs/prds/INDEX.md Status column
+  reconcile-status.sh reconcile [--dry-run] [--require-merge]  Update INDEX Status (complete only when merged if --require-merge)
   reconcile-status.sh append-log <prd> <phase> <notes>  Append COMPLETION-LOG entry
 EOF
 }
@@ -35,6 +35,7 @@ cmd_derive() {
   cfg="$(read_config)"
   python3 - "$ROOT" "$cfg" <<'PY'
 import json
+import os
 import re
 import subprocess
 import sys
@@ -83,11 +84,13 @@ def merged_prs_for_slug(slug: str):
     feature_complete = False
     slug_esc = re.escape(slug)
     slug_lower = slug.lower()
-    branch_prefixes = ("pf", "docs", "feat", "fix", "chore", "perf", "refactor", "test")
+    branch_prefixes = ("docs", "feat", "fix", "chore", "perf", "refactor", "revert", "test")
     branch_pats = [
         re.compile(rf"^{prefix}/{slug_esc}([/-]|$)", re.IGNORECASE) for prefix in branch_prefixes
     ]
-    integration_pat = re.compile(rf"^pf/{slug_esc}$", re.IGNORECASE)
+    integration_pat = re.compile(
+        rf"^(?:feat|fix|perf|revert|docs|chore|refactor|test)/{slug_esc}$", re.IGNORECASE
+    )
     prd_pat = re.compile(rf"prd:\s*{re.escape(slug_lower)}\b", re.IGNORECASE)
     prd_path_pat = re.compile(rf"prd/{re.escape(slug_lower)}\b", re.IGNORECASE)
     prd_num_pat = re.compile(rf"\bPRD\s+{re.escape(slug_lower)}\b", re.IGNORECASE)
@@ -133,8 +136,13 @@ def status_for(row):
         pass
 
     tasks_complete = tasks["total"] > 0 and tasks["done"] == tasks["total"]
+    require_merge = os.environ.get("SW_RECONCILE_REQUIRE_MERGE") == "1"
     # INDEX vocabulary: not-started | complete (no in-progress per PRD 004 /sw-deliver R43).
-    if feature_complete or (tasks_complete and merged) or (tasks_complete and row.get("indexStatus") == "complete"):
+    if require_merge:
+        status = "complete" if feature_complete else row.get("indexStatus", "not-started")
+        if status != "complete":
+            status = "not-started"
+    elif feature_complete or (tasks_complete and merged) or (tasks_complete and row.get("indexStatus") == "complete"):
         status = "complete"
     else:
         status = "not-started"
@@ -158,7 +166,15 @@ PY
 
 cmd_reconcile() {
   local dry=""
-  [[ "${1:-}" == "--dry-run" ]] && dry="1"
+  local require_merge=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --dry-run) dry="1"; shift ;;
+      --require-merge) require_merge="1"; shift ;;
+      *) break ;;
+    esac
+  done
+  [[ -n "$require_merge" ]] && export SW_RECONCILE_REQUIRE_MERGE=1
   local derived
   derived="$(cmd_derive)"
   python3 - "$ROOT" "$derived" "$dry" <<'PY'

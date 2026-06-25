@@ -14,6 +14,7 @@ legacy commands and compound-engineering (`ce-`).
 - **Orchestrators** chain multiple phases:
   - `/sw-doc` — brainstorm → PRD → persona panel → freeze → tasks (tier-gated; see documentation workstream).
   - `/sw-deliver` — drives a frozen task list's phases to one merge gate (phase-mode) or runs multi-feature waves to `integration/<stamp>`; does not bypass `/sw-ship` or auto-merge to `main`.
+  - `/sw-cleanup` — dry-run default enumeration of merged branches, stale worktrees, and completed deliver run-state; deletes only after confirm; does not drop in-flight runs or use `rm -rf` on worktrees.
   - `/sw-ship` — execute → verify → review → gaps → commit → pr → watch-ci → stabilize → ready (halts at merge gate).
   - `/sw-debug` — triage signal → Sentry enrich (optional) → RCA core (debug entry) → route by fix size; does not implement or merge.
   - `/sw-feedback` — normalize + redact inbound signals → route to debug, gap-capture, or brainstorm; does not analyze or author.

@@ -225,7 +225,20 @@ cmd_provision() {
     exit 1
   }
 
-  local new_branch="${branch:-pf/$name}"
+  # Branch-name conformance floor (PRD 007 R23/R27): never default to pf/.
+  # When no explicit --branch is given, derive a conforming <type>/<slug> name;
+  # always validate the final name against release-please-config.json types and
+  # fail closed (with remediation) rather than minting a non-conforming branch.
+  local new_branch
+  if [[ -n "$branch" ]]; then
+    new_branch="$branch"
+  else
+    new_branch="$("$ROOT/scripts/branch-name-guard.sh" derive "$name")"
+  fi
+  if ! "$ROOT/scripts/branch-name-guard.sh" validate "$new_branch"; then
+    echo "worktree.sh: refusing non-conforming branch name '$new_branch'" >&2
+    exit 12
+  fi
   git fetch origin "$parent" 2>/dev/null || true
   git worktree add -b "$new_branch" "$path" "$parent"
 

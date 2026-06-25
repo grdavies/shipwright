@@ -10,12 +10,35 @@ from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
 
-VALID_TYPES = frozenset(
-    {"feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"}
-)
 PLAN_PATH_NAME = "sw-deliver-plan.json"
 STATE_PATH_NAME = "sw-deliver-state.json"
 SCRIPT_DIR = Path(__file__).resolve().parent
+
+_FALLBACK_TYPES = frozenset(
+    {"feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"}
+)
+
+
+def _load_valid_types() -> frozenset[str]:
+    """Single-source allowed branch/commit types from release-please-config.json
+    (PRD 007 R24 — kept in lockstep with scripts/branch-name-guard.sh)."""
+    cfg = SCRIPT_DIR.parent / "release-please-config.json"
+    try:
+        data = json.loads(cfg.read_text(encoding="utf-8"))
+        types = [
+            sec["type"]
+            for pkg in data.get("packages", {}).values()
+            for sec in pkg.get("changelog-sections", [])
+            if sec.get("type")
+        ]
+        if types:
+            return frozenset(types)
+    except Exception:
+        pass
+    return _FALLBACK_TYPES
+
+
+VALID_TYPES = _load_valid_types()
 CONTENTION_DEFAULT = {
     "serialized": ["docs/prds/INDEX.md", "docs/decisions/INDEX.md", "doc-numbering"],
 }
@@ -673,7 +696,7 @@ def cmd_plan(root: Path, args: list[str]) -> None:
     out = {
         "verdict": "pass",
         "mode": "multi-feature",
-        "items": [{"id": i, "branch": f"pf/{i}"} for i in items],
+        "items": [{"id": i, "branch": f"feat/{i}"} for i in items],
         "edges": edges,
         "waves": waves,
         "contention": CONTENTION_DEFAULT.copy(),

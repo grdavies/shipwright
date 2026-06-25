@@ -1054,8 +1054,8 @@ else
   echo "FAIL deliver-phase-user-docs-readme"
   FAIL=1
 fi
-if grep -q '/sw-deliver run' "$ROOT/documentation/commands.md" && \
-   grep -q 'terminal merge gate' "$ROOT/documentation/commands.md"; then
+if grep -q '/sw-deliver run' "$ROOT/docs/guides/commands.md" && \
+   grep -q 'terminal merge gate' "$ROOT/docs/guides/commands.md"; then
   echo "OK  deliver-phase-user-docs-commands"
 else
   echo "FAIL deliver-phase-user-docs-commands"

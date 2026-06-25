@@ -54,9 +54,15 @@ if [ -z "$PR" ]; then
   exit 30
 fi
 HEAD_SHA="$(gh pr view "$PR" --json headRefOid --jq .headRefOid 2>/dev/null || true)"
+MERGEABLE="$(gh pr view "$PR" --json mergeable --jq .mergeable 2>/dev/null || true)"
+MERGE_STATE="$(gh pr view "$PR" --json mergeStateStatus --jq .mergeStateStatus 2>/dev/null || true)"
 OWNER_REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)"
 if [ -z "$HEAD_SHA" ] || [ -z "$OWNER_REPO" ]; then
   echo '{"verdict":"blocked","reason":"incomplete GitHub metadata (head or repo)"}'
+  exit 30
+fi
+if [ "$MERGEABLE" = "CONFLICTING" ] || [ "$MERGE_STATE" = "DIRTY" ]; then
+  echo "{\"verdict\":\"blocked\",\"reason\":\"merge-conflict\",\"mergeable\":\"$MERGEABLE\",\"mergeStateStatus\":\"$MERGE_STATE\",\"recommendedCommand\":\"/sw-stabilize\"}"
   exit 30
 fi
 OWNER="${OWNER_REPO%/*}"

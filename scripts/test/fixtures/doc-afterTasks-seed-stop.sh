@@ -8,9 +8,8 @@ source "$ROOT/scripts/test/fixture-lib.sh"
 SW_DOC="$(content_path commands/sw-doc.md)"
 FAIL=0
 
-if grep -q '\*\*`stop`\*\*' "$SW_DOC" && grep -qi 'print-only' "$SW_DOC" && \
-   grep -q 'docs-only seed command' "$SW_DOC" && \
-   grep -q '/sw-deliver run <frozen-task-list-path>' "$SW_DOC"; then
+if grep -q 'spec-seed' "$SW_DOC" && grep -qi 'print-only' "$SW_DOC" && \
+   grep -q 'deliver-loop' "$SW_DOC"; then
   echo "OK  doc-afterTasks-seed-stop: stop prints seed + deliver commands"
 else
   echo "FAIL doc-afterTasks-seed-stop: stop missing seed + deliver print guidance"
@@ -24,10 +23,10 @@ else
   FAIL=1
 fi
 
-if grep -q 'git checkout -B <type>/<slug>' "$SW_DOC" && grep -q 'git add docs/prds/<n>-<slug>/' "$SW_DOC"; then
-  echo "OK  doc-afterTasks-seed-stop: stop prints docs-only commit onto feature branch"
+if grep -q 'spec-seed' "$SW_DOC" && grep -q 'docs/prds/<n>-<slug>/' "$SW_DOC"; then
+  echo "OK  doc-afterTasks-seed-stop: stop prints spec-seed onto feature branch"
 else
-  echo "FAIL doc-afterTasks-seed-stop: stop missing feature-branch commit command"
+  echo "FAIL doc-afterTasks-seed-stop: stop missing spec-seed command"
   FAIL=1
 fi
 

@@ -13,7 +13,8 @@ Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** c
 | [`/sw-ship`](../../core/commands/sw-ship.md) | **Manual** single-phase loop: execute → verify → review → commit → PR → CI → stabilize → ready; also runs **inside** each `/sw-deliver` phase | Merge (halts at merge gate) |
 | [`/sw-debug`](../../core/commands/sw-debug.md) | Production/dev RCA and route by fix size | Implement, commit, or merge |
 | [`/sw-feedback`](../../core/commands/sw-feedback.md) | Normalize inbound signals and route to debug, gaps, or brainstorm | Analyze, author, or dispatch without confirmation |
-| [`/sw-compound-ship`](../../core/commands/sw-compound-ship.md) | Post-merge: retro → compound → optional memory-sync | Merge or auto-promote rules |
+| [`/sw-compound-ship`](../../core/commands/sw-compound-ship.md) | Pre-merge (in-loop) or post-merge: retro → compound → optional memory-sync | Merge or auto-promote rules |
+| [`/sw-cleanup`](../../core/commands/sw-cleanup.md) | Dry-run default cleanup of merged branches, stale worktrees, completed run-state | Delete without confirm or drop in-flight runs |
 
 ### `/sw-deliver` — phase-mode and multi-feature
 
@@ -26,7 +27,10 @@ Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** c
 - **Mode auto-detect:** `--task-list` → phase-mode; `--items`/`--edges` → multi-feature; both → halt.
 - **Single terminal merge gate:** per-phase PRs auto-merge into `<type>/<slug>` on green; one
   human-gated `<type>/<slug> → main` PR at the end.
-- **Resumption:** re-run `run` after interrupt; `plan --from <phase>` when resuming mid-wave.
+- **Resumption:** re-run `run` after interrupt; durable `deliver-loop` cursor in
+  `.cursor/sw-deliver-state.json`; `plan --from <phase>` when resuming mid-wave.
+- **Pre-merge compounding:** full `/sw-compound-ship --pre-merge` before the terminal human merge gate;
+  completion stays `completed-pending-merge` until merge is detected.
 - **Dry-run:** `scripts/wave.sh plan --task-list <path> --dry-run` — plan JSON only, no artifact write.
 
 **Multi-feature mode:** `plan`/`run` with `--items` and `--edges`; integration surface at
@@ -34,6 +38,9 @@ Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** c
 
 See [`core/commands/sw-deliver.md`](../../core/commands/sw-deliver.md) and
 [`core/skills/deliver/SKILL.md`](../../core/skills/deliver/SKILL.md).
+
+**Push safety:** workflow pushes route through `scripts/git-push.sh` → `scripts/secret-scan.sh`
+before `git push` (including `sw-pr` and stabilize re-pushes).
 
 ## Entry points
 

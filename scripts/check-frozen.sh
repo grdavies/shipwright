@@ -6,6 +6,7 @@
 # Exit: 0 pass, 1 frozen violation, 2 usage/config error
 set -euo pipefail
 
+SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 BASE="${1:-}"
 
@@ -36,6 +37,27 @@ if ! DIFF_OUT=$(git diff --name-status "$BASE"...HEAD 2>/dev/null); then
   fi
 fi
 
+is_checkbox_only_ref_change() {
+  local path="$1"
+  local base_ref="$2"
+  local tmpdir
+  tmpdir="$(mktemp -d)"
+  if ! git show "$base_ref:$path" >"$tmpdir/old" 2>/dev/null; then
+    rm -rf "$tmpdir"
+    return 1
+  fi
+  if ! git show "HEAD:$path" >"$tmpdir/new" 2>/dev/null; then
+    rm -rf "$tmpdir"
+    return 1
+  fi
+  if python3 "$SCRIPT_ROOT/scripts/checkbox_diff.py" is-checkbox-only "$tmpdir/old" "$tmpdir/new" >/dev/null 2>&1; then
+    rm -rf "$tmpdir"
+    return 0
+  fi
+  rm -rf "$tmpdir"
+  return 1
+}
+
 while IFS=$'\t' read -r status path; do
   [ -z "$path" ] && continue
   case "$path" in
@@ -47,6 +69,9 @@ while IFS=$'\t' read -r status path; do
     D|M)
       if git cat-file -e "$BASE:$path" 2>/dev/null; then
         if is_frozen_at_ref "$path" "$BASE"; then
+          if is_checkbox_only_ref_change "$path" "$BASE"; then
+            continue
+          fi
           VIOLATIONS+=("$path")
         fi
       fi

@@ -39,7 +39,7 @@ if [[ -z "$CURRENT" ]]; then
   exit 1
 fi
 
-# Non-default branch: always allowed (feat/, pf/, fix/, etc.)
+# Non-default branch: always allowed (feat/, fix/, chore/, etc.)
 if [[ "$CURRENT" != "$DEFAULT_BRANCH" ]]; then
   exit 0
 fi

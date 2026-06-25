@@ -30,12 +30,25 @@
 #   wave.sh lock acquire|release|status ...
 #   wave.sh journal begin|complete|status ...
 #   wave.sh log tail [--lines N]
+#   wave.sh spec-seed --task-list docs/prds/.../tasks-....md [--dry-run]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 case "${1:-}" in
-  state|lock|journal|log)
+  spec-seed)
+    exec python3 "$ROOT/scripts/wave_spec_seed.py" "$ROOT" spec-seed "${@:2}"
+    ;;
+  deliver-loop)
+    exec python3 "$ROOT/scripts/wave_deliver_loop.py" "$ROOT" deliver-loop "${@:2}"
+    ;;
+  state|lock|journal|log|ledger)
     exec python3 "$ROOT/scripts/wave_state.py" "$ROOT" "$@"
+    ;;
+  tasks-currency)
+    exec bash "$ROOT/scripts/tasks-currency-gate.sh" "${@:2}"
+    ;;
+  compound-ship|completion)
+    exec python3 "$ROOT/scripts/wave_compound.py" "$ROOT" "$@"
     ;;
   orchestrator|forward-merge|phase-teardown|assert-entry)
     exec python3 "$ROOT/scripts/wave_lifecycle.py" "$ROOT" "$@"

@@ -1,0 +1,376 @@
+#!/usr/bin/env python3
+"""Enumeration and safe cleanup for merged branches, stale worktrees, deliver run-state (R28–R34, R56)."""
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Literal
+
+MergeStatus = Literal["merged", "unmerged", "indeterminate", "gone", "protected"]
+
+
+@dataclass
+class Item:
+    kind: str
+    name: str
+    reason: str
+    detail: str = ""
+
+
+@dataclass
+class Report:
+    dry_run: bool
+    would_remove: list[Item] = field(default_factory=list)
+    protected: list[Item] = field(default_factory=list)
+    removed: list[Item] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        def items(xs: list[Item]) -> list[dict[str, str]]:
+            return [{"kind": i.kind, "name": i.name, "reason": i.reason, "detail": i.detail} for i in xs]
+
+        return {
+            "dryRun": self.dry_run,
+            "wouldRemove": items(self.would_remove),
+            "protected": items(self.protected),
+            "removed": items(self.removed),
+            "errors": self.errors,
+        }
+
+
+def git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+    )
+
+
+def git_ok(root: Path, *args: str) -> bool:
+    return git(root, *args).returncode == 0
+
+
+def git_out(root: Path, *args: str) -> str:
+    proc = git(root, *args)
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or f"git {' '.join(args)} failed")
+    return proc.stdout.strip()
+
+
+def load_default_branch(root: Path) -> str:
+    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
+        path = root / rel
+        if path.is_file():
+            try:
+                cfg = json.loads(path.read_text(encoding="utf-8"))
+                base = cfg.get("defaultBaseBranch")
+                if isinstance(base, str) and base:
+                    return base
+            except json.JSONDecodeError:
+                pass
+    for candidate in ("main", "master"):
+        if git_ok(root, "rev-parse", "--verify", candidate):
+            return candidate
+    return "main"
+
+
+def current_branch(root: Path) -> str:
+    proc = git(root, "branch", "--show-current")
+    return (proc.stdout or "").strip()
+
+
+def load_deliver_state(root: Path) -> dict[str, Any]:
+    path = root / ".cursor/sw-deliver-state.json"
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except json.JSONDecodeError:
+        return {}
+
+
+def deliver_inflight(root: Path) -> tuple[bool, str]:
+    lock = root / ".cursor/sw-deliver.lock"
+    if lock.is_file():
+        return True, "deliver lock present"
+    state = load_deliver_state(root)
+    verdict = state.get("verdict", "")
+    if verdict == "running":
+        if state.get("mergeJournal"):
+            return True, "open merge journal"
+        return True, "deliver run verdict=running"
+    return False, ""
+
+
+def gh_merged(root: Path, branch: str, default: str) -> bool | None:
+    if not git_ok(root, "rev-parse", "--verify", "HEAD"):
+        return None
+    proc = subprocess.run(
+        ["gh", "pr", "list", "--head", branch, "--state", "merged", "--json", "number", "--limit", "1"],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return None
+    try:
+        data = json.loads(proc.stdout or "[]")
+        if isinstance(data, list) and data:
+            return True
+    except json.JSONDecodeError:
+        return None
+    proc2 = subprocess.run(
+        ["gh", "pr", "list", "--head", branch, "--state", "open", "--json", "number", "--limit", "1"],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+    )
+    if proc2.returncode == 0:
+        try:
+            open_prs = json.loads(proc2.stdout or "[]")
+            if isinstance(open_prs, list) and open_prs:
+                return False
+        except json.JSONDecodeError:
+            pass
+    return None
+
+
+def merged_status(root: Path, branch: str, default: str, current: str) -> tuple[MergeStatus, str]:
+    if branch in (default, current):
+        return "protected", "default or current branch"
+    if not git_ok(root, "rev-parse", "--verify", branch):
+        return "gone", "branch ref missing"
+
+    if git_ok(root, "merge-base", "--is-ancestor", branch, default):
+        return "merged", "ancestor-of-default"
+
+    try:
+        diff = git_out(root, "log", f"{default}..{branch}", "--oneline")
+    except RuntimeError:
+        diff = ""
+    if not diff.strip():
+        return "merged", "no-commits-ahead-of-default"
+
+    try:
+        cherry = git_out(root, "cherry", default, branch)
+    except RuntimeError:
+        cherry = ""
+    plus = [ln for ln in cherry.splitlines() if ln.startswith("+")]
+    minus_only = cherry.strip() and not plus
+    if minus_only:
+        return "merged", "squash-cherry"
+
+    host = gh_merged(root, branch, default)
+    if host is True:
+        return "merged", "host-merged"
+    if host is False:
+        return "unmerged", "host-open-pr"
+
+    if plus:
+        return "unmerged", "cherry-plus"
+
+    return "indeterminate", "squash-merge-indeterminate"
+
+
+def list_local_branches(root: Path) -> list[str]:
+    proc = git(root, "for-each-ref", "--format=%(refname:short)", "refs/heads/")
+    if proc.returncode != 0:
+        return []
+    return [b.strip() for b in proc.stdout.splitlines() if b.strip()]
+
+
+def list_remote_branches(root: Path) -> list[str]:
+    proc = git(root, "for-each-ref", "--format=%(refname:short)", "refs/remotes/origin/")
+    if proc.returncode != 0:
+        return []
+    out: list[str] = []
+    for b in proc.stdout.splitlines():
+        b = b.strip()
+        if not b or b.endswith("/HEAD") or b == "origin/HEAD":
+            continue
+        out.append(b)
+    return out
+
+
+def parse_worktrees(root: Path) -> list[dict[str, str]]:
+    proc = git(root, "worktree", "list", "--porcelain")
+    if proc.returncode != 0:
+        return []
+    entries: list[dict[str, str]] = []
+    current: dict[str, str] = {}
+    for line in proc.stdout.splitlines():
+        if line.startswith("worktree "):
+            if current:
+                entries.append(current)
+            current = {"path": line.split(" ", 1)[1].strip()}
+        elif line.startswith("branch "):
+            current["branch"] = line.split(" ", 1)[1].strip().removeprefix("refs/heads/")
+        elif line == "bare":
+            current["bare"] = "true"
+        elif line == "detached":
+            current["detached"] = "true"
+    if current:
+        entries.append(current)
+    top = str(root.resolve())
+    return [e for e in entries if e.get("path") and e["path"] != top]
+
+
+def enumerate_cleanup(root: Path) -> Report:
+    report = Report(dry_run=True)
+    default = load_default_branch(root)
+    current = current_branch(root)
+    inflight, inflight_reason = deliver_inflight(root)
+
+    for branch in list_local_branches(root):
+        status, detail = merged_status(root, branch, default, current)
+        if status == "protected":
+            report.protected.append(Item("branch", branch, status, detail))
+        elif status == "merged":
+            report.would_remove.append(Item("branch", branch, status, detail))
+        elif status == "unmerged":
+            report.protected.append(Item("branch", branch, status, detail))
+        else:
+            report.protected.append(Item("branch", branch, status, detail))
+
+    for remote in list_remote_branches(root):
+        short = remote.removeprefix("origin/")
+        if short in (default, current):
+            report.protected.append(Item("remote", remote, "protected", "default or current"))
+            continue
+        local_status, detail = merged_status(root, short, default, current)
+        if local_status == "merged":
+            report.would_remove.append(Item("remote", remote, "merged-local", detail))
+        elif local_status == "unmerged":
+            report.protected.append(Item("remote", remote, "unmerged", detail))
+        else:
+            report.protected.append(
+                Item("remote", remote, "indeterminate", "remote deletion guarded — " + detail)
+            )
+
+    main_path = str(root.resolve())
+    for wt in parse_worktrees(root):
+        path = wt.get("path", "")
+        branch = wt.get("branch", "")
+        if path == main_path:
+            report.protected.append(Item("worktree", path, "protected", "primary checkout"))
+            continue
+        if os.getcwd() == path:
+            report.protected.append(Item("worktree", path, "protected", "active cwd"))
+            continue
+        state = load_deliver_state(root)
+        orch = (state.get("orchestratorWorktree") or {}).get("path")
+        if orch and path == orch and inflight:
+            report.protected.append(Item("worktree", path, "protected", inflight_reason))
+            continue
+        if branch:
+            st, detail = merged_status(root, branch, default, current)
+            if st == "merged" or st == "gone":
+                report.would_remove.append(Item("worktree", path, st, branch + ": " + detail))
+            elif st == "unmerged":
+                report.protected.append(Item("worktree", path, st, branch + ": " + detail))
+            else:
+                report.protected.append(Item("worktree", path, st, branch + ": " + detail))
+        else:
+            report.would_remove.append(Item("worktree", path, "detached-stale", "no branch"))
+
+    state = load_deliver_state(root)
+    if inflight:
+        report.protected.append(Item("run-state", ".cursor/sw-deliver-state.json", "protected", inflight_reason))
+    elif state:
+        verdict = state.get("verdict", "")
+        if verdict in ("complete", "blocked", "rejected"):
+            report.would_remove.append(
+                Item("run-state", ".cursor/sw-deliver-state.json", verdict, "terminal deliver run")
+            )
+            if (root / ".cursor/sw-deliver-plan.json").is_file():
+                report.would_remove.append(
+                    Item("run-state", ".cursor/sw-deliver-plan.json", verdict, "terminal deliver run")
+                )
+            runs = root / ".cursor/sw-deliver-runs"
+            if runs.is_dir():
+                report.would_remove.append(
+                    Item("run-state", str(runs), verdict, "terminal deliver run artifacts")
+                )
+        else:
+            report.protected.append(Item("run-state", ".cursor/sw-deliver-state.json", "protected", verdict))
+
+    return report
+
+
+def apply_report(root: Path, report: Report) -> Report:
+    report.dry_run = False
+    for item in list(report.would_remove):
+        try:
+            if item.kind == "branch":
+                proc = git(root, "branch", "-D", item.name)
+                if proc.returncode != 0:
+                    report.errors.append(f"branch {item.name}: {proc.stderr.strip()}")
+                    continue
+                report.removed.append(item)
+            elif item.kind == "remote":
+                ref = item.name
+                proc = git(root, "push", "origin", "--delete", ref.removeprefix("origin/"))
+                if proc.returncode != 0:
+                    report.errors.append(f"remote {item.name}: {proc.stderr.strip()}")
+                    continue
+                report.removed.append(item)
+            elif item.kind == "worktree":
+                proc = git(root, "worktree", "remove", item.name, "--force")
+                if proc.returncode != 0:
+                    report.errors.append(f"worktree {item.name}: {proc.stderr.strip()}")
+                    continue
+                git(root, "worktree", "prune")
+                report.removed.append(item)
+            elif item.kind == "run-state":
+                path = root / item.name
+                if path.is_dir():
+                    for child in sorted(path.rglob("*"), reverse=True):
+                        if child.is_file():
+                            child.unlink(missing_ok=True)
+                    for child in sorted(path.rglob("*"), reverse=True):
+                        if child.is_dir():
+                            child.rmdir()
+                    path.rmdir()
+                elif path.is_file():
+                    path.unlink(missing_ok=True)
+                report.removed.append(item)
+        except OSError as exc:
+            report.errors.append(f"{item.kind} {item.name}: {exc}")
+    report.would_remove = []
+    return report
+
+
+def main() -> None:
+    root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
+    confirm = "--confirm" in sys.argv
+    report = enumerate_cleanup(root)
+    if confirm:
+        if "--yes" not in sys.argv and os.environ.get("SW_CLEANUP_CONFIRM") != "1":
+            report.dry_run = True
+            print(
+                json.dumps(
+                    {
+                        "verdict": "fail",
+                        "error": "confirm requires --yes or SW_CLEANUP_CONFIRM=1",
+                        "report": report.to_dict(),
+                    },
+                    indent=2,
+                )
+            )
+            sys.exit(2)
+        report = apply_report(root, report)
+    else:
+        report.dry_run = True
+    out = {"verdict": "pass", "action": "cleanup", "report": report.to_dict()}
+    print(json.dumps(out, indent=2))
+    sys.exit(1 if report.errors else 0)
+
+
+if __name__ == "__main__":
+    main()

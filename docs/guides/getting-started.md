@@ -91,7 +91,8 @@ Use when a production signal (Sentry, deploy log, user report) needs diagnosis.
 ## Post-merge
 
 After you merge, run `/sw-compound-ship` in the target repo to capture retro learnings and sync
-memory.
+memory. When `/sw-deliver` detects the feature branch has merged, it suggests `/sw-cleanup` to prune
+merged branches and stale worktrees (dry-run by default — confirm before deleting).
 
 ## Migration notes
 
