@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/grdavies/shipwright/compare/v1.3.0...v1.3.1) (2026-06-25)
+
+
+### Documentation
+
+* restructure README and migrate guides to docs/guides/ ([1297dc9](https://github.com/grdavies/shipwright/commit/1297dc9a8b36420145e2e37f02f280767a51ee2b))
+
 ## [1.3.0](https://github.com/grdavies/shipwright/compare/v1.2.2...v1.3.0) (2026-06-25)
 
 
