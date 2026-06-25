@@ -120,9 +120,18 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
     - `one_shot_revert` — documented command to undo this run's panel-applied hunks only
     - `scope_fidelity_advisory` — labeled **advisory**; names `gap-check` as binding completeness authority
       (forwarded to `/sw-ship` gap-check per R75; not persisted to durable memory per R50)
+    - `instrumentation` — `phase_2_load` (panel-touched vs untouched counts) + `contested_apply.rate` (R74);
+      initialized after phase 1; finalized after phase 2 when external review runs
 
-    Announce report path in run output. Scrub report contents via `memory-redact.sh` before any memory write (R29/R30).
-13. **Persist edges (redaction):**
+    Announce report path in run output. Scrub report contents via `memory-redact.sh` before any memory write
+    (R29/R30):
+
+    ```bash
+    bash scripts/memory-redact.sh "$runDir/sw-local-review-run-report.json" \
+      > "$runDir/sw-local-review-run-report.scrubbed.json"
+    mv "$runDir/sw-local-review-run-report.scrubbed.json" "$runDir/sw-local-review-run-report.json"
+    ```
+13. **Persist edges (redaction, R29/R30):**
     - Scrub `ce-code-review` run dir after parsing:
 
       ```bash
@@ -130,7 +139,29 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
       [[ -n "$RUN_DIR" && -d "$RUN_DIR" ]] && rm -rf "$RUN_DIR"
       ```
 
-    - `memory-preflight` write for durable learnings only (via `scripts/memory-redact.sh` — no raw dumps).
+    - Remove native panel temp intermediates post-parse:
+
+      ```bash
+      for tmp in \
+        /tmp/sw-local-review-diff.json \
+        /tmp/sw-local-review-roster.json \
+        /tmp/sw-local-review-raw.json \
+        /tmp/sw-local-review-normalized.json \
+        /tmp/sw-local-review-gate.json \
+        /tmp/sw-local-review-gate-result.json; do
+        rm -f "$tmp"
+      done
+      ```
+
+    - Finding-derived memory writes only — each distilled learning MUST pass through the redaction chokepoint
+      before `memory-preflight` persist (no raw reviewer output, diffs, or transcripts):
+
+      ```bash
+      while IFS= read -r finding; do
+        REDACTED="$(printf '%s' "$finding" | bash scripts/memory-redact.sh)"
+        # memory-preflight write distilled learning from $REDACTED
+      done < <(jq -c '.findings[]' /tmp/sw-local-review-normalized.json 2>/dev/null || echo '[]')
+      ```
 14. Phase-1-applied fixes stay in working tree for phase 2. Any phase-2 finding on a phase-1-touched line
     is annotated `contests applied fix` additively (never suppressed, R71).
 
@@ -168,7 +199,19 @@ Unchanged from prior single-phase flow:
    write the status file — the gate treats review evidence as absent.
 6. Fix actionable findings; re-run at most once if substantive fixes applied; refresh `$STATUS_FILE` if
    re-run.
-7. `memory-preflight` write for durable review learnings only (no raw bot dumps).
+7. **Instrumentation update (R74):** when phase 1 emitted `$runDir/sw-local-review-run-report.json` with
+   `change_digest`, merge phase-2 metrics into `instrumentation`:
+
+   - `phase_2_load.panel_touched` — actionable phase-2 findings whose `file`+`line` match a `change_digest`
+     entry
+   - `phase_2_load.panel_untouched` — actionable phase-2 findings on other lines
+   - `contested_apply.contested_count` — findings annotated `contests applied fix`
+   - `contested_apply.applied_count` — `change_digest | length`
+   - `contested_apply.rate` — `contested_count / max(applied_count, 1)`
+
+   Re-scrub the run report via `memory-redact.sh` before any memory write.
+8. `memory-preflight` write for durable review learnings only (no raw bot dumps); route through
+   `scripts/memory-redact.sh`.
 
 ## Guardrails
 

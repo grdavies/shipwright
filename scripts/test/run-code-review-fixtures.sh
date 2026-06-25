@@ -858,6 +858,76 @@ else
   FAIL=1
 fi
 
+# --- PRD 005 phase 5: memory, instrumentation, distribution ---
+
+REDACT="$ROOT/scripts/memory-redact.sh"
+# Use api_key= high-entropy fixture — triggers memory_redact.py HIGH_ENTROPY_SECRET rule
+# without matching Stripe sk_live_* (GH push protection blocks sk_live in history).
+SECRET_FIXTURE_VALUE='fixture_memory_redact_high_entropy_test_val'
+SECRET_FINDING="{\"severity\":\"P2\",\"file\":\"src/config.ts\",\"title\":\"Leaked key\",\"detail\":\"Found api_key=${SECRET_FIXTURE_VALUE}\",\"suggested_fix\":\"api_key=${SECRET_FIXTURE_VALUE}\"}"
+REDACTED_OUT=$(printf '%s' "$SECRET_FINDING" | bash "$REDACT" 2>/dev/null || printf '%s' "$SECRET_FINDING" | python3 "$ROOT/scripts/memory_redact.py")
+if echo "$REDACTED_OUT" | grep -qF "$SECRET_FIXTURE_VALUE" 2>/dev/null; then
+  echo "FAIL native-memory-redaction — secret still present after redact"
+  FAIL=1
+elif echo "$REDACTED_OUT" | grep -q 'REDACTED' 2>/dev/null; then
+  echo "OK  native-memory-redaction — memory-redact.sh scrubs finding-derived secret"
+else
+  echo "FAIL native-memory-redaction — no redaction marker"
+  FAIL=1
+fi
+
+if grep -q 'memory-redact.sh' "$NATIVE_ADAPTER" && \
+   grep -q 'memory-redact.sh' "$SW_REVIEW" && \
+   grep -qi 'scrub' "$NATIVE_ADAPTER" && \
+   grep -qi 'temp artifact scrub\|temp intermediates' "$SW_REVIEW" && \
+   grep -q 'finding-derived' "$NATIVE_ADAPTER"; then
+  echo "OK  native-memory-redaction — wiring documented in native.md + sw-review.md"
+else
+  echo "FAIL native-memory-redaction — redaction wiring docs"
+  FAIL=1
+fi
+
+# Run report scrub contract
+if grep -q 'sw-local-review-run-report.scrubbed.json' "$SW_REVIEW" && \
+   grep -q 'sw-local-review-run-report.scrubbed.json' "$NATIVE_ADAPTER"; then
+  echo "OK  native-memory-redaction — run report scrub path"
+else
+  echo "FAIL native-memory-redaction — run report scrub"
+  FAIL=1
+fi
+
+# contested-apply + phase-2-load instrumentation (R74)
+if grep -q 'instrumentation' "$NATIVE_ADAPTER" && \
+   grep -q 'phase_2_load' "$NATIVE_ADAPTER" && \
+   grep -q 'contested_apply' "$NATIVE_ADAPTER" && \
+   grep -q '"rate"' "$NATIVE_ADAPTER" && \
+   grep -q 'instrumentation' "$SW_REVIEW" && \
+   grep -q 'panel_touched' "$SW_REVIEW"; then
+  echo "OK  native-instrumentation — phase-2-load + contested-apply in run report"
+else
+  echo "FAIL native-instrumentation — R74 run-report fields"
+  FAIL=1
+fi
+
+# native-dist-parity (R31) — core/ propagated to dist/
+for dist in cursor claude-code; do
+  DIST_NATIVE="$ROOT/dist/$dist/providers/code-review/native.md"
+  DIST_REVIEW="$ROOT/dist/$dist/commands/sw-review.md"
+  if [[ -f "$DIST_NATIVE" ]] && [[ -f "$DIST_REVIEW" ]]; then
+    if grep -q 'Run report contract' "$DIST_NATIVE" && \
+       grep -q 'Does \*\*not\*\* invoke compound-engineering' "$DIST_NATIVE" && \
+       grep -q 'memory-redact.sh' "$DIST_REVIEW"; then
+      echo "OK  native-dist-parity — dist/$dist native adapter + sw-review"
+    else
+      echo "FAIL native-dist-parity — dist/$dist content mismatch"
+      FAIL=1
+    fi
+  else
+    echo "FAIL native-dist-parity — dist/$dist missing native.md or sw-review.md"
+    FAIL=1
+  fi
+done
+
 # --- U5: golden-schema contract drift ---
 GOLDEN="$FIX/golden-schema.json"
 for key in $(jq -r '.required_top_level_keys[]' "$GOLDEN"); do

@@ -47,11 +47,39 @@ Each remains independently runnable.
 9. `/sw-tasks` — single-pass generation; traceability + analyze gates before task freeze.
 10. `/sw-freeze` on the task list.
 11. Resolve boundary mode: `doc.afterTasks` from `workflow.config.json`, overridden by `--after-tasks=<mode>` when set.
-12. Present the frozen task-list path, then branch:
-    - **`stop`** — halt. Print the task-list path and exact next commands (`/sw-worktree` → `/sw-start` → `/sw-execute`, or `/sw-ship`). No implementation dispatch.
-    - **`confirm`** — present the full frozen task list, then ask explicitly whether to begin implementation and state the expected tokens. Only case-insensitive **`proceed`** or **`yes`** to that question continues. Legacy **`Go`**, silence, or any ambiguous reply maps to **`stop`** (no implementation).
-    - **`auto`** — emit one line: `implementing on branch <name>`, then **dispatch** the implementation loop (`/sw-worktree` provision when needed → `/sw-start` → `/sw-execute`, or `/sw-ship`). No second prompt. When an **agent** (not a human) invoked `/sw-doc --after-tasks=auto`, record the override in the per-worktree run record via `scripts/shipwright-state.sh` (who/when/mode) before dispatch.
-13. On dispatch paths only: never write implementation files inline — hand off to the implementation workstream commands above.
+12. Present the frozen task-list path. Resolve `<type>/<slug>` via the shared deliver resolver (do **not**
+    re-implement branch derivation in `/sw-doc`):
+    ```bash
+    bash scripts/wave.sh preflight --task-list <frozen-task-list-path> --skip-base-check
+    ```
+    Read `target.branch` from the JSON (`scripts/wave_deliver.py` — same resolver `/sw-deliver run` uses).
+    Derive the PRD docs dir from the task-list parent: `docs/prds/<n>-<slug>/`.
+13. Branch on `doc.afterTasks`:
+    - **`stop`** — halt (print-only; **no repository mutation**). Print:
+      1. The frozen task-list path.
+      2. The target feature branch `<type>/<slug>` from preflight.
+      3. The exact docs-only seed command that places the frozen `docs/prds/<n>-<slug>/` set onto
+         `<type>/<slug>` (never onto `main`):
+         `git checkout -B <type>/<slug> && git add docs/prds/<n>-<slug>/ && git commit -m "docs: freeze PRD and tasks for <slug>"`
+         (skip commit when already committed — idempotent).
+      4. The exact next command: `/sw-deliver run <frozen-task-list-path>`.
+      Do **not** recommend `/sw-worktree` → `/sw-start` → `/sw-execute` or standalone `/sw-ship` as the
+      primary path.
+    - **`confirm`** — present the full frozen task list, then ask explicitly whether to begin implementation
+      and state the expected tokens. Only case-insensitive **`proceed`** or **`yes`** to that question continues.
+      Legacy **`Go`**, silence, or any ambiguous reply maps to **`stop`** (print-only guidance per above; no
+      dispatch). On ack:
+      1. **Seed commit** — on `<type>/<slug>`, commit only tracked files under `docs/prds/<n>-<slug>/` (PRD,
+         frozen tasks, amendments). Exclude `docs/brainstorms/**` and any untracked or ignored path. Idempotent
+         (no-op when already committed). Docs-only message.
+      2. **Dispatch** `/sw-deliver run <frozen-task-list-path>`.
+    - **`auto`** — emit one line: `implementing on branch <type>/<slug>`, then seed commit (same as confirm
+      step 1), then **dispatch** `/sw-deliver run <frozen-task-list-path>`. No second prompt. When an **agent**
+      (not a human) invoked `/sw-doc --after-tasks=auto`, record the override via
+      `scripts/shipwright-state.sh override-add` (who/when/mode) and record the seed commit (branch + SHA) via
+      `scripts/shipwright-state.sh write` **before** dispatch.
+14. On `confirm`/`auto` dispatch paths only: never write implementation files inline — hand off to
+    `/sw-deliver run` (phase worktrees + `/sw-ship` per phase).
 
 ## Flags
 
@@ -63,7 +91,7 @@ Each remains independently runnable.
 
 - `doc.afterTasks` is the **sole human checkpoint** between documentation freeze and implementation; `/sw-tasks` introduces no additional blocking prompt.
 - Halts at manual trade-offs during doc review — do not auto-decide panel outcomes.
-- Never inlines implementation — `stop` halts, `confirm` halts until explicit ack then dispatches, `auto` dispatches without a second prompt.
+- Never inlines implementation — `stop` halts (print-only), `confirm` halts until explicit ack then seeds + dispatches, `auto` seeds + dispatches without a second prompt.
 - Worktree invariant (R6/R27): implementation never starts on bare default branch; enforced by `scripts/sw-assert-worktree.sh` at implementation entry, not by orchestrator prose alone.
 - Does not merge, ship, or run CI gate.
 - Pattern: v1 `/ship` delegates-to-atomics model.

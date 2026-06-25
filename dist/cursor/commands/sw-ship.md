@@ -23,14 +23,21 @@ sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review →
     decision prompt). Does not override `check-gate.sh`.
 - **sw-simplify** — behavior-preserving deslop after review; re-runs verify + `simplify-gate.sh`. **Halt** on
   `regressed`; **log and continue** on `inconclusive`. Skipped by `--fast` / `--skip-simplify`.
-- `sw-review` in configured mode; `review.noDefer` honored.
+- **`sw-review`** — native phase-1 panel runs **in-chain by default** (resolved via
+  `scripts/review-local-resolve.sh`; fires even when `review.provider: "none"`). Only
+  `review.local.enabled: false` or `review.local.provider: "none"` opts out (R14/R15). Local severity gate is
+  **additive**: surface-only default (`haltOn: []` logs P0–P3 and continues, R26); promoted halting on validated
+  P0/P1 stops the chain. Phase-1 writes `$runDir/sw-local-review-run-report.json` (R69); `gap-check` reads the
+  advisory `scope_fidelity_advisory` block only — never alters binding verdict (R75). `review.noDefer` honored.
 - `gap-check` default-on (`skills/gap-check`); `--fast` skips.
 - `sw-stabilize` uses `stabilize-loop` when present.
 - Terminal pause at merge gate — "ready to merge — your call" (suppressed under **phase-mode**; see below).
 
 ## Flags
 
-- `--fast` — skip gap-check and sw-simplify.
+- `--fast` — skip gap-check and sw-simplify; also skips native phase-1 panel when passed to embedded
+  `sw-review` (R54).
+- `--skip-local` — skip native phase-1 panel for this run only (announced; config unchanged, R54).
 - `--skip-simplify` — skip sw-simplify only (gap-check still runs unless `--fast`).
 - `--signal-id <id>` — after merge-ready pause, offer `/sw-feedback-close` for this backlog signal.
 - `--from <step>` — resume mid-chain.
@@ -78,6 +85,9 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/sw-ready` and stop.
 - **Local review gate** — when `review.local.gate.haltOn` includes validated P0/P1 and
   `/tmp/sw-local-review-gate-result.json` reports `verdict: halt`, stop for human triage (surface-only
   default logs and continues). Never overrides `check-gate.sh`.
+- **Native apply rails (phase-mode, R67)** — validated P1 MUST NOT auto-apply; surface as `blocked` with
+  cause. Circuit-breaker trip → `blocked` (not interactive escalate). `--skip-local` refused or recorded in
+  durable per-phase status.
 - User ambiguity (branch/scope/config).
 - CI budget exhausted while `yellow`.
 - Merge gate reached on live green.
@@ -125,6 +135,8 @@ Survives `sw-tmp clean` (R47/R38). Never commit these paths (`/sw-commit` exclud
 | Live `check-gate.sh` green | `merge-ready-green` | Suppress "ready to merge — your call"; exit `0` **without merging** |
 | `verification-gate` halt (`not-verified`, `missing-required`) | `blocked` | Write `--cause`; exit non-zero; no prompt |
 | Local review gate halt (validated P0/P1) | `blocked` | Write `--cause`; exit non-zero; no prompt |
+| Native P1 in phase-mode (validated, not applied) | `blocked` | Write `--cause`; exit non-zero; no prompt |
+| Native apply circuit-breaker trip | `blocked` | Write `--cause`; exit non-zero; no prompt |
 | Branch/scope/config ambiguity | `blocked` | Write `--cause`; exit non-zero; no prompt |
 | CI budget exhausted / stabilize hard stop | `blocked` | Write `--cause`; exit non-zero; no prompt |
 
