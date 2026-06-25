@@ -60,16 +60,16 @@ case "${1:-}" in
     exec python3 "$ROOT/scripts/wave_lifecycle.py" "$ROOT" phase "${@:2}"
     ;;
   status)
-    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" status "$@"
+    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" status "${@:2}"
     ;;
   report)
     if [[ "${2:-}" == "blockers" ]]; then
       exec python3 "$ROOT/scripts/wave_failure.py" "$ROOT" report blockers "${@:3}"
     fi
-    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" report "$@"
+    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" report "${@:2}"
     ;;
   merge)
-    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" merge "$@"
+    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" merge "${@:2}"
     ;;
   bookkeeping)
     exec python3 "$ROOT/scripts/wave_bookkeeping.py" "$ROOT" "${@:2}"
