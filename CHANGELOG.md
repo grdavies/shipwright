@@ -11,6 +11,7 @@
 * merge phase legitimate-halts-consolidated-reports-liveness-m into feat/autonomous-orchestration-conductor (076397f) <!-- sw-deliver:legitimate-halts-consolidated-reports-liveness-m -->
 * merge phase conductor-level-parallel-dispatch-safety-under-concurrency-l into feat/autonomous-orchestration-conductor (9114383) <!-- sw-deliver:conductor-level-parallel-dispatch-safety-under-concurrency-l -->
 * merge phase living-doc-currency-hardening-m into feat/autonomous-orchestration-conductor (b830645) <!-- sw-deliver:living-doc-currency-hardening-m -->
+* merge phase pilot-validation-surface-docs-emitter-m into feat/autonomous-orchestration-conductor (af575a7) <!-- sw-deliver:pilot-validation-surface-docs-emitter-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
