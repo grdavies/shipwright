@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from wave_json_io import StateCorruptError, read_json, write_json
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 VALID_STATUS_VERDICTS = frozenset({"merge-ready-green", "blocked"})
@@ -35,33 +37,77 @@ def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | No
     return default
 
 
-def read_json(path: Path) -> dict[str, Any]:
-    if not path.is_file():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
-    except json.JSONDecodeError:
-        return {}
-
-
-def write_json(path: Path, data: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    os.chmod(path, 0o600)
-
-
 def state_path(root: Path) -> Path:
     return root / ".cursor" / "sw-deliver-state.json"
 
 
 def load_state(root: Path) -> dict[str, Any]:
-    return read_json(state_path(root))
+    path = state_path(root)
+    try:
+        return read_json(path)
+    except StateCorruptError as exc:
+        fail(
+            f"corrupt durable state: {exc}",
+            exit_code=20,
+            halt="blocked",
+            cause="state:corrupt",
+            path=str(path),
+        )
+        return {}
 
 
 def save_state(root: Path, state: dict[str, Any]) -> None:
     state["updatedAt"] = utc_now()
     write_json(state_path(root), state)
+
+
+def phase_already_merged(top: Path, phase_branch: str, target: str) -> bool:
+    try:
+        phase_sha = git_run(["rev-parse", phase_branch], cwd=top, check=True).stdout.strip()
+        target_sha = git_run(["rev-parse", target], cwd=top, check=True).stdout.strip()
+        proc = git_run(
+            ["merge-base", "--is-ancestor", phase_sha, target_sha],
+            cwd=top,
+            check=False,
+        )
+        return proc.returncode == 0
+    except subprocess.CalledProcessError:
+        return False
+
+
+def clear_open_journal_if_merged(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """Idempotent crash recovery: open journal + phase already on target → clear journal (R45)."""
+    journal = state.get("mergeJournal")
+    if not journal:
+        return state
+    phase_slug = journal.get("phase", "")
+    phases = state.get("phases") or {}
+    phase_branch = None
+    for meta in phases.values():
+        if meta.get("slug") == phase_slug:
+            phase_branch = meta.get("branch")
+            break
+    target = (state.get("target") or {}).get("branch")
+    if not phase_branch or not target:
+        return state
+    top = root
+    if phase_already_merged(top, phase_branch, target):
+        key = journal.get("key") or phase_slug
+        done = list(state.get("completedMerges") or [])
+        if not any(isinstance(c, dict) and c.get("key") == key for c in done):
+            done.append(
+                {
+                    "key": key,
+                    "phase": phase_slug,
+                    "head": journal.get("head"),
+                    "completedAt": utc_now(),
+                    "recovered": True,
+                }
+            )
+        state["completedMerges"] = done
+        state["mergeJournal"] = None
+        save_state(root, state)
+    return state
 
 
 def git_run(
@@ -317,6 +363,7 @@ def cmd_merge_ancestry_check(root: Path, args: list[str]) -> None:
 def cmd_merge_run_next(root: Path, args: list[str]) -> None:
     dry_run = "--dry-run" in args
     state = load_state(root)
+    state = clear_open_journal_if_merged(root, state)
     if state.get("mergeJournal"):
         fail("merge already in flight", exit_code=20, journal=state["mergeJournal"])
     queue = list(state.get("mergeQueue") or [])
@@ -362,7 +409,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
             }
         )
 
-    journal = {"phase": phase_slug, "startedAt": utc_now()}
+    journal = {"phase": phase_slug, "head": None, "startedAt": utc_now(), "key": phase_slug}
     state["mergeJournal"] = journal
     save_state(root, state)
 
@@ -401,6 +448,19 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
         state = load_state(root)
         state["mergeQueue"] = queue[1:]
         state["mergeJournal"] = None
+        done = list(state.get("completedMerges") or [])
+        key = phase_slug
+        if not any(isinstance(c, dict) and c.get("key") == key for c in done):
+            done.append(
+                {
+                    "key": key,
+                    "phase": phase_slug,
+                    "head": None,
+                    "completedAt": utc_now(),
+                    "mergeCommit": merge_commit,
+                }
+            )
+        state["completedMerges"] = done
         merged = list(state.get("mergedPhases") or [])
         merged.append(
             {
