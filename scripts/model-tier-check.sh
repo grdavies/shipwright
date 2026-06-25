@@ -32,7 +32,7 @@ config_file = Path(config_path)
 agents_path = Path(agents_dir)
 
 INHERIT = "inherit"
-CANONICAL_TIER_ORDER = ("cheap", "build", "deep")
+CANONICAL_TIER_ORDER = ("cheap", "build", "mid", "deep")
 
 
 def ordered_tiers(tiers):
