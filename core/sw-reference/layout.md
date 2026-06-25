@@ -30,7 +30,10 @@ docs/decisions/
     └── A<k>-<short>.md
 
 .cursor/
-└── sw-wave-plan.json       # wave plan artifact (living, written by /sw-wave plan)
+├── sw-deliver-plan.json    # deliver plan artifact (living, written by /sw-deliver plan)
+├── sw-deliver-state.json   # run-state (living, written by /sw-deliver run)
+├── sw-deliver.lock         # orchestrator lock (living)
+└── sw-deliver-runs/        # per-phase status (living)
 ```
 
 ## Naming conventions

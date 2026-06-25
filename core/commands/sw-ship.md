@@ -26,7 +26,7 @@ sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review →
 - `sw-review` in configured mode; `review.noDefer` honored.
 - `gap-check` default-on (`skills/gap-check`); `--fast` skips.
 - `sw-stabilize` uses `stabilize-loop` when present.
-- Terminal pause at merge gate — "ready to merge — your call".
+- Terminal pause at merge gate — "ready to merge — your call" (suppressed under **phase-mode**; see below).
 
 ## Flags
 
@@ -35,6 +35,8 @@ sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review →
 - `--signal-id <id>` — after merge-ready pause, offer `/sw-feedback-close` for this backlog signal.
 - `--from <step>` — resume mid-chain.
 - `--dry-run` — print plan; no mutations.
+- `--phase-mode` — non-interactive contract for `/sw-deliver` phase dispatch (R48/R18). Also active when
+  `SW_PHASE_MODE` is truthy (`1`, `true`, `yes`). See **Phase-mode contract** below.
 - `--after-tasks <stop|confirm|auto>` — when `/sw-ship` is entered from the doc chain with a frozen task list,
   overrides `doc.afterTasks` for the **frozen-task-list → implementation-loop** boundary (same semantics as
   `/sw-doc --after-tasks`). When an agent supplies `--after-tasks=auto`, record the choice in the per-worktree
@@ -87,3 +89,44 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/sw-ready` and stop.
 - Delegate — do not bypass command guardrails.
 - All **merge-gate** truth from `check-gate.sh` — verification-gate is pre-CI local evidence only.
 - `inconclusive` with `no-baseline` / `unattributed` logs and continues; `missing-required` halts the ship chain.
+
+## Phase-mode contract (`--phase-mode` / `SW_PHASE_MODE`)
+
+When `/sw-deliver` dispatches `/sw-ship` for a phase, it MUST invoke with `--phase-mode` or set `SW_PHASE_MODE=1`.
+Interactive human runs omit the flag (default).
+
+### Activation
+
+- CLI: `--phase-mode`
+- Env: `SW_PHASE_MODE` truthy (`1`, `true`, `yes`, case-insensitive)
+- Orchestrator SHOULD also set `SW_PHASE_SLUG=<phase-slug>` and optionally `SW_RUN_DIR` pointing at
+  `.cursor/sw-deliver-runs/<phase>/` (see `.sw/layout.md`).
+
+### Terminal outcomes (machine-readable)
+
+At chain end (`sw-ready` or any halt), write durable status via `scripts/ship-phase-status.sh`:
+
+```bash
+# Live green at merge gate (R18 — no pause, no merge):
+bash scripts/ship-phase-status.sh --verdict merge-ready-green \
+  --phase "${SW_PHASE_SLUG:-}" --head "$(git rev-parse HEAD)" \
+  ${PR:+--pr "$PR"} [--gate-json /tmp/gate.json]
+
+# Any other halt (R48 — blocked, not interactive):
+bash scripts/ship-phase-status.sh --verdict blocked --cause "<short cause>" \
+  --phase "${SW_PHASE_SLUG:-}"
+```
+
+Default output path: `$SW_RUN_DIR/status.json`, else `.cursor/sw-deliver-runs/<phase>/status.json`.
+Survives `sw-tmp clean` (R47/R38). Never commit these paths (`/sw-commit` excludes them).
+
+| Outcome | `verdict` | Agent behavior |
+| --- | --- | --- |
+| Live `check-gate.sh` green | `merge-ready-green` | Suppress "ready to merge — your call"; exit `0` **without merging** |
+| `verification-gate` halt (`not-verified`, `missing-required`) | `blocked` | Write `--cause`; exit non-zero; no prompt |
+| Local review gate halt (validated P0/P1) | `blocked` | Write `--cause`; exit non-zero; no prompt |
+| Branch/scope/config ambiguity | `blocked` | Write `--cause`; exit non-zero; no prompt |
+| CI budget exhausted / stabilize hard stop | `blocked` | Write `--cause`; exit non-zero; no prompt |
+
+Phase-mode **never merges**. The human merge gate is reserved for `<type>/<slug> → main` on the orchestrator
+(R18/R23). `/sw-deliver` owns phase → `<type>/<slug>` merges (R19).

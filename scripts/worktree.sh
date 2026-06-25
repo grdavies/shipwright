@@ -35,7 +35,32 @@ PY
 
 active_worktree_count() {
   python3 <<'PY'
+import json
 import subprocess
+from pathlib import Path
+
+def resolve_state_path(worktree: str, gitdir: str):
+    if not gitdir:
+        return None
+    gd = Path(gitdir)
+    if not gd.is_absolute():
+        gd = (Path(worktree) / gd).resolve()
+    else:
+        gd = gd.resolve()
+    return gd / "shipwright.json"
+
+def counts_toward_ceiling(worktree: str, gitdir: str) -> bool:
+    sp = resolve_state_path(worktree, gitdir)
+    if sp and sp.is_file():
+        try:
+            data = json.loads(sp.read_text(encoding="utf-8"))
+            if data.get("worktreeRole") == "orchestrator":
+                return False
+            if data.get("countsTowardCeiling") is False:
+                return False
+        except (json.JSONDecodeError, OSError):
+            pass
+    return True
 
 try:
     out = subprocess.check_output(["git", "worktree", "list", "--porcelain"], text=True)
@@ -49,7 +74,7 @@ for line in out.splitlines():
     if not line.strip():
         if block:
             wt = block.get("worktree", "")
-            if "/.sw-worktrees/" in wt:
+            if "/.sw-worktrees/" in wt and counts_toward_ceiling(wt, block.get("gitdir", "")):
                 count += 1
             block = {}
         continue
@@ -57,7 +82,7 @@ for line in out.splitlines():
     block[key] = val
 if block:
     wt = block.get("worktree", "")
-    if "/.sw-worktrees/" in wt:
+    if "/.sw-worktrees/" in wt and counts_toward_ceiling(wt, block.get("gitdir", "")):
         count += 1
 print(count)
 PY
@@ -101,6 +126,9 @@ for line in out.splitlines():
             if sp and sp.is_file():
                 try:
                     data = json.loads(sp.read_text(encoding="utf-8"))
+                    if data.get("worktreeRole") == "orchestrator" or data.get("countsTowardCeiling") is False:
+                        block = {}
+                        continue
                     port = data.get("scaffold", {}).get("port")
                     if isinstance(port, int):
                         used.add(port)

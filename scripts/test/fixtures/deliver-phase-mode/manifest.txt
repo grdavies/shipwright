@@ -1,0 +1,20 @@
+# Required phase-mode scenarios (R34) — each line maps to an OK line in run-deliver-fixtures.sh
+plan:deliver-phase-plan-explicit
+sequential-fallback:deliver-phase-sequential-fallback
+contention:deliver-phase-contention-serialize
+auto-merge:deliver-phase-merge-exec
+blast-radius:deliver-phase-blast-radius
+resume:deliver-phase-resume-reconcile
+frozen-guard:deliver-phase-frozen-guard
+mode-detect:deliver-mode-detect-phase
+deny:deliver-phase-deny
+revert:deliver-phase-revert
+interrupt-lock:deliver-phase-interrupt-lock
+async-review:deliver-phase-merge-gate-barrier
+base-preflight:deliver-phase-base-preflight-pass
+noninteractive:deliver-phase-noninteractive:
+merge-method:deliver-phase-ancestry-check
+contention-cycle:deliver-phase-contention-cycle-detect
+branch-type:deliver-phase-branch-type
+changelog:deliver-phase-changelog-record
+version:deliver-phase-version-projected
