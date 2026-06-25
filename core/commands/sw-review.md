@@ -31,6 +31,18 @@ phase 2.
    worktree base). Surface to local review agents as non-negotiable constraints. Missing/unreadable blocks this
    review unless `invariantsOptional: true` or `--no-invariants` (logged).
 6. Compute `base` = per-worktree `parentBranch` from phase state.
+6. **Native panel — selection + activation record (R10):** when `review.local.provider` resolves to `native`,
+   build diff JSON for the uncommitted delta and run:
+
+   ```bash
+   scripts/code-review-select.sh --diff /tmp/sw-local-review-diff.json \
+     > /tmp/sw-local-review-roster.json
+   ```
+
+   Announce the activation record: always-on **core** roster (`correctness`, `maintainability`,
+   `scope-fidelity`, `testing`, `security`), **gated specialists** from `specialists[]`, and **matched signals**
+   per specialist from `signals{}` (explainable panel; `previous-comments` excluded). Copy the record into the
+   phase-1 run report. Roster selection is deterministic — never delegate to the model (`native.md` R58).
 6. Invoke adapter per `providers/code-review/ce-code-review.md`:
 
    ```

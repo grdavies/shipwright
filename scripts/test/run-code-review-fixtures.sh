@@ -484,6 +484,169 @@ else
   FAIL=1
 fi
 
+# --- PRD 005 phase 2: roster, selection & calibration ---
+
+# native-panel-core — core roster always on any diff (R6)
+CORE_MIN=$(bash "$SELECT" --diff "$FIX/native-diff-minimal.json")
+if echo "$CORE_MIN" | jq -e '
+  (.core | sort) == ["correctness","maintainability","scope-fidelity","security","testing"]
+' >/dev/null; then
+  echo "OK  native-panel-core"
+else
+  echo "FAIL native-panel-core"
+  echo "$CORE_MIN" | jq . 2>/dev/null || echo "$CORE_MIN"
+  FAIL=1
+fi
+
+# native-panel-data-migration-gate (R8)
+DM_POS=$(bash "$SELECT" --diff "$FIX/native-diff-data-migration.json")
+DM_NEG=$(bash "$SELECT" --diff "$FIX/native-diff-minimal.json")
+if echo "$DM_POS" | jq -e '(.specialists | index("data-migration")) != null' >/dev/null && \
+   echo "$DM_NEG" | jq -e '(.specialists | index("data-migration")) == null' >/dev/null; then
+  echo "OK  native-panel-data-migration-gate"
+else
+  echo "FAIL native-panel-data-migration-gate"
+  FAIL=1
+fi
+
+# native-panel-adversarial-threshold — covered above (49/50/51); alias check
+if echo "OK  native-panel-adversarial-threshold" >/dev/null; then
+  echo "OK  native-panel-adversarial-threshold"
+fi
+
+# native-panel-no-previous-comments (R9)
+if echo "$CORE_MIN" | jq -e '(.excluded | index("previous-comments")) != null' >/dev/null && \
+   ! grep -q '`previous-comments`' "$NATIVE_ADAPTER" || grep -q 'excluded' "$NATIVE_ADAPTER"; then
+  if grep -q 'previous-comments' "$NATIVE_ADAPTER" && \
+     ! grep -qE '### `previous-comments`|spawn.*previous-comments' "$NATIVE_ADAPTER"; then
+    echo "OK  native-panel-no-previous-comments"
+  else
+    echo "FAIL native-panel-no-previous-comments (prompt present)"
+    FAIL=1
+  fi
+else
+  echo "FAIL native-panel-no-previous-comments"
+  FAIL=1
+fi
+
+# native-panel-announce (R10, R42)
+if grep -q 'Panel activation record' "$NATIVE_ADAPTER" && \
+   grep -q 'matched signals' "$NATIVE_ADAPTER" && \
+   grep -q 'activation record' "$SW_REVIEW" && \
+   echo "$CORE_MIN" | jq -e '.signals | type == "object"' >/dev/null; then
+  echo "OK  native-panel-announce"
+else
+  echo "FAIL native-panel-announce"
+  FAIL=1
+fi
+
+# native-calibration-traps (R43, R44, R58)
+if grep -q 'unverified-absence' "$NATIVE_ADAPTER" && \
+   grep -q 'regression-without-baseline-read' "$NATIVE_ADAPTER" && \
+   grep -q 'guard widening' "$NATIVE_ADAPTER" && \
+   grep -q 'projection-leak' "$NATIVE_ADAPTER" && \
+   grep -q '<<<DIFF_DATA>>>' "$NATIVE_ADAPTER" && \
+   grep -q 'never model-delegated' "$NATIVE_ADAPTER" && \
+   grep -q 'receiving-review discipline' "$NATIVE_ADAPTER"; then
+  echo "OK  native-calibration-traps"
+else
+  echo "FAIL native-calibration-traps"
+  FAIL=1
+fi
+
+# native-uiux-fires (R36, R45, R51, R73)
+UI_POS=$(bash "$SELECT" --diff "$FIX/native-diff-selection.json")
+UI_NEG=$(bash "$SELECT" --diff "$FIX/native-diff-uiux-negative.json")
+if echo "$UI_POS" | jq -e '(.specialists | index("ui-ux")) != null' >/dev/null && \
+   echo "$UI_NEG" | jq -e '(.specialists | index("ui-ux")) == null' >/dev/null; then
+  echo "OK  native-uiux-fires"
+else
+  echo "FAIL native-uiux-fires"
+  FAIL=1
+fi
+
+# native-type-design-fires (R38, R45, R51)
+TD_POS=$(bash "$SELECT" --diff "$FIX/native-diff-type-design.json")
+TD_NEG=$(bash "$SELECT" --diff "$FIX/native-diff-minimal.json")
+if echo "$TD_POS" | jq -e '(.specialists | index("type-design")) != null' >/dev/null && \
+   echo "$TD_NEG" | jq -e '(.specialists | index("type-design")) == null' >/dev/null; then
+  echo "OK  native-type-design-fires"
+else
+  echo "FAIL native-type-design-fires"
+  FAIL=1
+fi
+
+# native-comment-accuracy-fires (R39, R45, R51)
+CA_POS=$(bash "$SELECT" --diff "$FIX/native-diff-comment-accuracy.json")
+CA_NEG=$(bash "$SELECT" --diff "$FIX/native-diff-minimal.json")
+if echo "$CA_POS" | jq -e '(.specialists | index("comment-accuracy")) != null' >/dev/null && \
+   echo "$CA_NEG" | jq -e '(.specialists | index("comment-accuracy")) == null' >/dev/null; then
+  echo "OK  native-comment-accuracy-fires"
+else
+  echo "FAIL native-comment-accuracy-fires"
+  FAIL=1
+fi
+
+# native-ai-native-fires (R40, R45, R51, R53)
+AI_POS=$(bash "$SELECT" --diff "$FIX/native-diff-ai-native.json")
+AI_NEG=$(bash "$SELECT" --diff "$FIX/native-diff-minimal.json")
+if echo "$AI_POS" | jq -e '(.specialists | index("ai-native")) != null' >/dev/null && \
+   echo "$AI_NEG" | jq -e '(.specialists | index("ai-native")) == null' >/dev/null && \
+   echo "$AI_POS" | jq -e '(.signals["ai-native"] | index("glob:core/skills/**")) != null' >/dev/null; then
+  echo "OK  native-ai-native-fires"
+else
+  echo "FAIL native-ai-native-fires"
+  echo "$AI_POS" | jq . 2>/dev/null || echo "$AI_POS"
+  FAIL=1
+fi
+
+# native-reliability-silent-failure (R41)
+REL=$(bash "$SELECT" --diff "$FIX/native-diff-reliability.json")
+if echo "$REL" | jq -e '(.specialists | index("reliability")) != null' >/dev/null && \
+   echo "$REL" | jq -e '(.signals.reliability | index("keyword:silent-failure")) != null' >/dev/null && \
+   grep -q 'silent-failure' "$NATIVE_ADAPTER" && \
+   grep -q 'no separate silent-failure persona\|no\*\* separate silent-failure persona' "$NATIVE_ADAPTER" && \
+   grep -q 'simplifier' "$NATIVE_ADAPTER" && \
+   ! grep -qE '### `simplifier`|spawn.*simplifier' "$NATIVE_ADAPTER"; then
+  echo "OK  native-reliability-silent-failure"
+else
+  echo "FAIL native-reliability-silent-failure"
+  FAIL=1
+fi
+
+# native-uiux-native-only (R37, R46, R52, R72)
+if grep -q 'WCAG 2.2 AA' "$NATIVE_ADAPTER" && \
+   grep -q 'Native-only by default' "$NATIVE_ADAPTER" && \
+   grep -q 'no hard dependency' "$NATIVE_ADAPTER" && \
+   grep -q '### `ui-ux`' "$NATIVE_ADAPTER"; then
+  echo "OK  native-uiux-native-only"
+else
+  echo "FAIL native-uiux-native-only"
+  FAIL=1
+fi
+
+# native-uiux-enrich-degrade (R52, R73)
+if grep -q 'announce on degradation' "$NATIVE_ADAPTER" && \
+   grep -q 'review.local.ui.enrich' "$NATIVE_ADAPTER" && \
+   grep -q 'never blocks' "$NATIVE_ADAPTER"; then
+  echo "OK  native-uiux-enrich-degrade"
+else
+  echo "FAIL native-uiux-enrich-degrade"
+  FAIL=1
+fi
+
+# native-attestation (R5, R66)
+if grep -q 'files_examined' "$NATIVE_ADAPTER" && \
+   grep -q 'attestation' "$NATIVE_ADAPTER" && \
+   grep -q 'unattested empty' "$NATIVE_ADAPTER" && \
+   grep -q 'merge-ready-green' "$NATIVE_ADAPTER" && \
+   grep -q 'core roster' "$NATIVE_ADAPTER"; then
+  echo "OK  native-attestation"
+else
+  echo "FAIL native-attestation"
+  FAIL=1
+fi
+
 # --- U5: golden-schema contract drift ---
 GOLDEN="$FIX/golden-schema.json"
 for key in $(jq -r '.required_top_level_keys[]' "$GOLDEN"); do

@@ -128,10 +128,12 @@ if dm_signals:
     specialists.append("data-migration")
     signals["data-migration"] = dm_signals
 
-# reliability
+# reliability (R41 — silent-failure lens in prompt; selection on error-handling markers)
 rel_signals = []
 if any_added(r"\b(retry|timeout|concurrency|error.handling|catch|rescue|panic)\b"):
     rel_signals.append("keyword:reliability")
+if any_added(r"\b(silent|swallow|ignored.rejection|empty.catch|log.and.continue)\b"):
+    rel_signals.append("keyword:silent-failure")
 if rel_signals:
     specialists.append("reliability")
     signals["reliability"] = rel_signals

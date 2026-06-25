@@ -1,0 +1,13 @@
+{
+  "files": [
+    {
+      "path": "src/worker.ts",
+      "added_lines": [
+        "async function poll() {",
+        "  try { await fetch(url); } catch { /* swallow */ }",
+        "  setTimeout(retry, 5000);",
+        "}"
+      ]
+    }
+  ]
+}

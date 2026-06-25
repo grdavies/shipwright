@@ -1,0 +1,13 @@
+{
+  "files": [
+    {
+      "path": "src/api/client.ts",
+      "added_lines": [
+        "// Fetches user profile from Redis cache (sync)",
+        "export async function getProfile() {",
+        "  return fetch('/api/profile');",
+        "}"
+      ]
+    }
+  ]
+}

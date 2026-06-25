@@ -1,0 +1,13 @@
+{
+  "files": [
+    {
+      "path": "db/migrations/20260624_add_users.sql",
+      "added_lines": [
+        "CREATE TABLE users (",
+        "  id SERIAL PRIMARY KEY,",
+        "  email TEXT NOT NULL",
+        ");"
+      ]
+    }
+  ]
+}
