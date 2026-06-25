@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+
+### Features
+
+* merge phase schema-four-tier-policy-foundation-m into feat/model-tier-setup-defaults (03558c2) <!-- sw-deliver:schema-four-tier-policy-foundation-m -->
+
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
