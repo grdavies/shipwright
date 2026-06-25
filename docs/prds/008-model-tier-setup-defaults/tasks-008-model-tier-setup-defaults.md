@@ -109,29 +109,29 @@ frozen_at: 2026-06-25
 
 ### 5. Documentation & dogfood (S)
 
-- [ ] 5.1 Update models-tiering docs (R6)
+- [x] 5.1 Update models-tiering docs (R6)
   - **File:** `.sw/models-tiering.md`, `core/sw-reference/models-tiering.md`
   - **Expected:** four tiers, both platform catalogs, routing resolution, inherit sentinel, Claude mid collapse note
   - **R-IDs:** R6
 
-- [ ] 5.2 Update configuration guide and README (R7)
+- [x] 5.2 Update configuration guide and README (R7)
   - **File:** `docs/guides/configuration.md`, `README.md`
   - **Expected:** Models setup step; `models.tiers`, aliases, roles, routing documented; README mentions model defaults
   - **R-IDs:** R7
 
-- [ ] 5.3 Dogfood Shipwright config (R13)
+- [x] 5.3 Dogfood Shipwright config (R13)
   - **File:** `.cursor/workflow.config.json`
   - **Expected:** Cursor four-tier `models` block + full `models.routing` from defaults
   - **R-IDs:** R13
 
 ### 6. Fixtures & verification (M)
 
-- [ ] 6.1 Add model-tier routing fixtures (R12, R23)
+- [x] 6.1 Add model-tier routing fixtures (R12, R23)
   - **File:** `scripts/test/fixtures/model-tier-routing.sh`, `scripts/test/run-impl-fixtures.sh`
   - **Expected:** four-tier example passes tier-check; `sw-prd`→deep→Opus; `sw-triage`→cheap→fast; `sw-execute`→build→Composer; `sw-gaps`→mid; `sw-doc --delegate sw-prd`→deep; key coverage gate
   - **R-IDs:** R12, R23
 
-- [ ] 6.2 Model tier line grep gate (R19)
+- [x] 6.2 Model tier line grep gate (R19)
   - **File:** `scripts/test/fixtures/model-tier-routing.sh` (or sibling)
   - **Expected:** every `core/commands/sw-*.md` contains `Model tier:`; tier matches defaults file
   - **R-IDs:** R19

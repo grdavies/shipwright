@@ -248,6 +248,9 @@ else
   FAIL=1
 fi
 
+# --- PRD 008 model tier routing fixtures ---
+bash "$ROOT/scripts/test/fixtures/model-tier-routing.sh" || FAIL=1
+
 if grep -q 'invariantsFile' "$ROOT/.sw/config.schema.json" && \
    grep -q 'invariantsFile' "$(content_path commands/sw-doc-review.md)"; then
   echo "OK  invariantsFile wired to doc-review"

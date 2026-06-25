@@ -45,6 +45,21 @@ Canonical opt-out: `review.provider: "none"`. Do not use `review.enabled: false`
 | `guardrails.enforceBeforeSubmit` | `true` | Memory guardrails run before prompts submit |
 | `guardrails.requireRuleClass` | `false` | Set `true` in mature repos requiring allowlisted rules |
 
+### Step 4b — Model tier defaults
+
+Detect platform (`cursor` or `claude-code`) and seed the `models` block:
+
+| Key | Purpose |
+|-----|---------|
+| `models.tiers` | Four semantic tiers → concrete dispatch IDs (`cheap`, `build`, `mid`, `deep`) |
+| `models.aliases` | e.g. `fast` → `cheap` |
+| `models.roles` | `builder` and `reviewer` floors (reviewer ≥ builder) |
+| `models.routing` | Per `sw-*` command and skill tier; `inherit` for orchestrators |
+
+Scaffold writes the full block from `scripts/seed-model-config.sh` and
+`core/sw-reference/model-routing.defaults.json`. Doctor offers add/repair without overwriting user-edited tiers
+unless confirmed. See `.sw/models-tiering.md` for platform catalogs and resolver usage.
+
 ### Step 5 — Environment doctor (warnings only)
 
 - CodeRabbit CLI on `PATH` when `review.provider` is `coderabbit`
@@ -71,6 +86,11 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `doc.afterTasks` | After frozen tasks: `stop` \| `confirm` (default) \| `auto` |
 | `communication.defaultIntensity` | Caveman chat intensity when no active command (`full` default) |
 | `communication.routing.commands` | Per `sw-*` command intensity: `normal` \| `lite` \| `full` \| `ultra` \| `inherit` |
+| `models.tiers` | Semantic tier → platform model ID (`cheap`, `build`, `mid`, `deep`) |
+| `models.aliases` | Tier aliases (e.g. `fast` → `cheap`) |
+| `models.roles` | `builder` and `reviewer` policy floors |
+| `models.routing.commands` | Per `sw-*` command model tier (`inherit` for orchestrators) |
+| `models.routing.skills` | Per skill directory model tier |
 | `deliver.remediation.maxAttempts` | Auto-remediation budget per blocked phase before clean halt (default **2**) |
 | `memory.provider` | `in-repo` (default) or `recallium` |
 | `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
@@ -103,6 +123,20 @@ complete prose.
 for the current chat with `/sw-caveman <normal|lite|full|ultra>` until the next command dispatch.
 
 Wenyan variants are not supported in Shipwright — attach the external user skill manually if needed.
+
+## Model tier routing
+
+`/sw-setup` seeds `models.tiers` from the detected platform catalog and the full command/skill map from
+`core/sw-reference/model-routing.defaults.json`. Each `sw-*` command documents its tier in
+`**Model tier:**` prose; resolve at runtime:
+
+```bash
+bash scripts/resolve-model-tier.sh --command sw-prd
+bash scripts/resolve-model-tier.sh --command sw-doc --delegate sw-prd
+```
+
+Orchestrators (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-compound-ship`) route at `inherit` — always resolve the
+delegated child command. Full policy: `.sw/models-tiering.md`.
 
 ## Zero-config fast path
 
