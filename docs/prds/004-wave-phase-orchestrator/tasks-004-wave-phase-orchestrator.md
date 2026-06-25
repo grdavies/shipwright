@@ -60,27 +60,27 @@ frozen_at: 2026-06-24
 
 ### 2. Phase-mode planning in `wave.sh` (M)
 
-- [ ] 2.1 Mode auto-detect, disambiguation halt, and pre-flight echo (R1–R4, R3)
+- [x] 2.1 Mode auto-detect, disambiguation halt, and pre-flight echo (R1–R4, R3)
   - **File:** `scripts/wave.sh`, `core/commands/sw-deliver.md`
   - **Expected:** task-list path → phase-mode; item set/`--edges`/plan → multi-feature; both → disambiguation halt; echoes mode + `<type>/<slug>` + waves before provision
   - **R-IDs:** R1, R2, R3, R4
 
-- [ ] 2.2 Phase DAG from `## Phase Dependencies` + cycle refuse (R7, R9, R10)
+- [x] 2.2 Phase DAG from `## Phase Dependencies` + cycle refuse (R7, R9, R10)
   - **File:** `scripts/wave.sh`
   - **Expected:** parses phase table; feeds `wave.sh plan`; cycle → refuse; each `### N.` maps to one orchestrated unit with sub-task scope + R-IDs carried forward
   - **R-IDs:** R7, R9, R10
 
-- [ ] 2.3 Sequential fallback when metadata absent (R8)
+- [x] 2.3 Sequential fallback when metadata absent (R8)
   - **File:** `scripts/wave.sh`, `core/skills/deliver/SKILL.md`
   - **Expected:** no `## Phase Dependencies` → edges `2:1, 3:2, …`; no parallelism; emits missing-edges notice
   - **R-IDs:** R8
 
-- [ ] 2.4 Branch type resolution and plan artifact schema (R35, R36, R43)
+- [x] 2.4 Branch type resolution and plan artifact schema (R35, R36, R43)
   - **File:** `scripts/wave.sh`, `.cursor/sw-deliver-plan.json` schema in skill
   - **Expected:** `--type` > frontmatter `type:` > default `feat`; invalid type halts; plan records mode marker, DAG, waves, contention, `source_task_list`, PRD `<n>`, target `<type>/<slug>`
   - **R-IDs:** R35, R36, R43
 
-- [ ] 2.5 Frozen guard, dry-run, and `--from` resume guard (R41, R42)
+- [x] 2.5 Frozen guard, dry-run, and `--from` resume guard (R41, R42)
   - **File:** `core/commands/sw-deliver.md`, `scripts/wave.sh`
   - **Expected:** unfrozen task list halts with `/sw-freeze` notice; `--dry-run` prints DAG/waves/contention with no mutations; `--from` refuses when upstream deps not `green-merged`
   - **R-IDs:** R41, R42
