@@ -2,6 +2,8 @@
 date: 2026-06-24
 topic: wave-phase-orchestrator
 source_brainstorm: docs/brainstorms/2026-06-24-wave-phase-orchestrator-requirements.md
+frozen: true
+frozen_at: 2026-06-24
 ---
 
 # PRD 004: `/sw-deliver` task-list phase orchestrator
