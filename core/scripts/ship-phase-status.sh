@@ -59,6 +59,11 @@ if [[ -z "$HEAD" ]]; then
   HEAD="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo "")"
 fi
 
+if [[ "$VERDICT" == "merge-ready-green" && -z "$HEAD" ]]; then
+  echo '{"verdict":"fail","error":"could not resolve HEAD for merge-ready-green"}' >&2
+  exit 2
+fi
+
 if [[ -z "$OUT" ]]; then
   if [[ -n "${SW_RUN_DIR:-}" ]]; then
     OUT="${SW_RUN_DIR%/}/status.json"

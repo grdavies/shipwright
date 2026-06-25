@@ -13,6 +13,11 @@ from typing import Any
 from wave_json_io import StateCorruptError, read_json, write_json
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+from wave_merge import check_status_sha, phase_branch_head_optional, status_file_for
+
+SCRIPT_DIR = Path(__file__).resolve().parent
 PLAN_PATH = Path(".cursor/sw-deliver-plan.json")
 STATE_PATH = Path(".cursor/sw-deliver-state.json")
 BLOCKER_PATH = Path(".cursor/sw-deliver-runs/blockers.json")
@@ -322,10 +327,21 @@ def compute_next_action(
         meta = (state.get("phases") or {}).get(pid, {})
         if isinstance(meta, dict) and meta.get("status") == "in-flight":
             slug = meta.get("slug", "")
-            status_path = root / ".cursor/sw-deliver-runs" / slug / "status.json"
+            status_path = status_file_for(root, slug, None, state)
             if status_path.is_file():
                 status = read_json(status_path, absent_ok=False)
                 if status.get("verdict") == "merge-ready-green":
+                    phase_branch = meta.get("branch")
+                    if phase_branch:
+                        expected = phase_branch_head_optional(root, state, slug, str(phase_branch))
+                        if expected:
+                            ok_sha, sha_cause = check_status_sha(status, expected)
+                            if not ok_sha:
+                                return {
+                                    "action": "halt-blocked",
+                                    "cause": sha_cause or "phase-status:stale",
+                                    "resume": True,
+                                }
                     ok, cause = tasks_currency_ok(root, state, plan)
                     if not ok:
                         return {
