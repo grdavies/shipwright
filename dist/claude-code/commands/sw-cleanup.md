@@ -53,6 +53,8 @@ Branches are classified via, in order:
 
 - Protects: current branch, default branch, unmerged branches, indeterminate merges, cwd worktree,
   orchestrator worktree during in-flight deliver (`verdict: running`, lock, or open merge journal).
+  When an orchestrator worktree is provisioned, cleanup reads deliver state from that worktree when it
+  is newer or terminal — stale `verdict: running` copies at repo root do not block pruning.
 - Never `rm -rf` worktree directories.
 - Emit full report every run (`wouldRemove` + `protected` + `errors`).
 - The deliver loop may suggest `/sw-cleanup` after detecting a merged feature branch — suggestion only;
