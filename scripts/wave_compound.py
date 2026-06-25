@@ -94,24 +94,69 @@ def current_branch(root: Path) -> str:
     return proc.stdout.strip() if proc.returncode == 0 else ""
 
 
+def resolve_default_ref(top: Path, default: str) -> tuple[str, str]:
+    """Prefer origin/<default> when present so worktrees detect merges without a local main update."""
+    for ref in (f"origin/{default}", default):
+        proc = subprocess.run(
+            ["git", "-C", str(top), "rev-parse", ref],
+            text=True,
+            capture_output=True,
+        )
+        if proc.returncode == 0:
+            sha = proc.stdout.strip()
+            if sha:
+                return ref, sha
+    return default, ""
+
+
+def terminal_pr_merged_via_gh(state: dict[str, Any]) -> dict[str, Any] | None:
+    """Authoritative merge signal for squash-merged terminal PRs (R53)."""
+    terminal = state.get("terminalPr") or {}
+    number = terminal.get("number")
+    if number is None:
+        return None
+    proc = subprocess.run(
+        ["gh", "pr", "view", str(number), "--json", "state,mergedAt,mergeCommit"],
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0:
+        return None
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return None
+    if payload.get("state") != "MERGED":
+        return None
+    merge_commit = payload.get("mergeCommit") or {}
+    return {
+        "merged": True,
+        "status": "merged",
+        "detail": "terminal-pr-gh",
+        "prNumber": number,
+        "mergedAt": payload.get("mergedAt"),
+        "mergeCommit": merge_commit.get("oid"),
+    }
+
+
 def target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     target = (state.get("target") or {}).get("branch")
     if not target:
         return {"merged": False, "reason": "no-target-branch"}
     top = git_top(root)
     default = load_default_branch(top)
+
+    gh_info = terminal_pr_merged_via_gh(state)
+    if gh_info:
+        return {**gh_info, "target": target, "default": default}
+
     target_proc = subprocess.run(
         ["git", "-C", str(top), "rev-parse", target],
         text=True,
         capture_output=True,
     )
-    default_proc = subprocess.run(
-        ["git", "-C", str(top), "rev-parse", default],
-        text=True,
-        capture_output=True,
-    )
     target_sha = target_proc.stdout.strip() if target_proc.returncode == 0 else ""
-    default_sha = default_proc.stdout.strip() if default_proc.returncode == 0 else ""
+    default_ref, default_sha = resolve_default_ref(top, default)
     if not target_sha or not default_sha:
         return {
             "merged": False,
@@ -119,6 +164,7 @@ def target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
             "detail": "missing-branch-ref",
             "target": target,
             "default": default,
+            "defaultRef": default_ref,
         }
     anc = subprocess.run(
         ["git", "-C", str(top), "merge-base", "--is-ancestor", target_sha, default_sha],
@@ -131,9 +177,10 @@ def target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
             "detail": "ancestor-of-default",
             "target": target,
             "default": default,
+            "defaultRef": default_ref,
         }
     cherry = subprocess.run(
-        ["git", "-C", str(top), "cherry", default, target],
+        ["git", "-C", str(top), "cherry", default_ref, target],
         text=True,
         capture_output=True,
     )
@@ -145,6 +192,7 @@ def target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
             "detail": "squash-cherry",
             "target": target,
             "default": default,
+            "defaultRef": default_ref,
         }
     return {
         "merged": False,
@@ -152,6 +200,7 @@ def target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
         "detail": "not-on-default",
         "target": target,
         "default": default,
+        "defaultRef": default_ref,
     }
 
 
