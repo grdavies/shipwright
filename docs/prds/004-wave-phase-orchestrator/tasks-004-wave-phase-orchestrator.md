@@ -87,12 +87,12 @@ frozen_at: 2026-06-24
 
 ### 3. `/sw-tasks` Phase Dependencies emission (S)
 
-- [ ] 3.1 Emit `## Phase Dependencies` table from task generation (R5, R6, R37)
+- [x] 3.1 Emit `## Phase Dependencies` table from task generation (R5, R6, R37)
   - **File:** `core/commands/sw-tasks.md`, `core/skills/tasks/SKILL.md`
   - **Expected:** every generated task list includes machine-parseable `| Phase | Depends on |` table inside the artifact; human-reviewable; no sidecar
   - **R-IDs:** R5, R6, R37
 
-- [ ] 3.2 Document sequential-fallback contract for authors (R8)
+- [x] 3.2 Document sequential-fallback contract for authors (R8)
   - **File:** `core/skills/tasks/SKILL.md`
   - **Expected:** skill states that omitting the table triggers R8 sequential fallback in `/sw-deliver`
   - **R-IDs:** R8

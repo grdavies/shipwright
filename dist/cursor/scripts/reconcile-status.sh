@@ -52,17 +52,22 @@ def parse_index():
     if not index_path.is_file():
         return rows
     for line in index_path.read_text(encoding="utf-8").splitlines():
-        if not line.startswith("|") or line.startswith("| PRD") or line.startswith("|-"):
+        if not line.startswith("|") or line.startswith("| #") or line.startswith("|---"):
             continue
         parts = [p.strip() for p in line.strip("|").split("|")]
-        if len(parts) < 4 or parts[0] in ("—", ""):
+        if len(parts) < 4 or not re.match(r"^\d{3}$", parts[0]):
             continue
-        rows.append({"prd": parts[0], "path": parts[1], "amendments": parts[2]})
+        index_status = parts[4] if len(parts) >= 5 else parts[3]
+        rows.append(
+            {
+                "prd": parts[0],
+                "slug": parts[1],
+                "prdLink": parts[2],
+                "tasksLink": parts[3] if len(parts) >= 5 else "",
+                "indexStatus": index_status,
+            }
+        )
     return rows
-
-def prd_slug(path: str) -> str:
-    stem = Path(path).stem
-    return re.sub(r"^\d+-", "", stem)
 
 def task_checkbox_state(task_file: Path):
     if not task_file.is_file():
@@ -75,11 +80,17 @@ def task_checkbox_state(task_file: Path):
 
 def merged_prs_for_slug(slug: str):
     merged = []
+    feature_complete = False
     slug_esc = re.escape(slug)
     slug_lower = slug.lower()
-    branch_pat = re.compile(rf"^pf/{slug_esc}([/-]|$)", re.IGNORECASE)
+    branch_prefixes = ("pf", "docs", "feat", "fix", "chore", "perf", "refactor", "test")
+    branch_pats = [
+        re.compile(rf"^{prefix}/{slug_esc}([/-]|$)", re.IGNORECASE) for prefix in branch_prefixes
+    ]
+    integration_pat = re.compile(rf"^pf/{slug_esc}$", re.IGNORECASE)
     prd_pat = re.compile(rf"prd:\s*{re.escape(slug_lower)}\b", re.IGNORECASE)
     prd_path_pat = re.compile(rf"prd/{re.escape(slug_lower)}\b", re.IGNORECASE)
+    prd_num_pat = re.compile(rf"\bPRD\s+{re.escape(slug_lower)}\b", re.IGNORECASE)
     title_pat = re.compile(rf"\b{slug_esc}\b", re.IGNORECASE)
     try:
         out = subprocess.check_output(
@@ -95,44 +106,47 @@ def merged_prs_for_slug(slug: str):
         head = pr.get("headRefName", "") or ""
         body = pr.get("body", "") or ""
         title = pr.get("title", "") or ""
-        if (
-            branch_pat.search(head)
-            or prd_pat.search(body)
+        if integration_pat.match(head):
+            feature_complete = True
+        if any(pat.search(head) for pat in branch_pats) or (
+            prd_pat.search(body)
             or prd_path_pat.search(body)
+            or prd_num_pat.search(title)
+            or prd_num_pat.search(body)
             or title_pat.search(title)
+            or title_pat.search(head)
         ):
             merged.append(pr["number"])
-    return merged
+    return merged, feature_complete
 
 def status_for(row):
-    path = row["path"]
-    slug = prd_slug(path)
+    slug = row["slug"]
     task_candidates = list(tasks_dir.rglob(f"*{slug}*tasks*.md")) + list(tasks_dir.rglob(f"tasks*{slug}*.md"))
     task_file = task_candidates[0] if task_candidates else None
     tasks = task_checkbox_state(task_file) if task_file else {"total": 0, "done": 0, "ratio": 0.0}
-    merged = merged_prs_for_slug(slug)
+    merged, feature_complete = merged_prs_for_slug(slug)
     open_branches = []
     try:
-        out = subprocess.check_output(["git", "branch", "--list", f"pf/{slug}*"], cwd=root, text=True)
+        out = subprocess.check_output(["git", "branch", "--list", f"*/*{slug}*"], cwd=root, text=True)
         open_branches = [b.strip().lstrip("* ") for b in out.splitlines() if b.strip()]
     except Exception:
         pass
 
-    if tasks["total"] > 0 and tasks["done"] == tasks["total"] and merged:
-        status = "shipped"
-    elif merged or open_branches or tasks["done"] > 0:
-        status = "in-progress"
+    tasks_complete = tasks["total"] > 0 and tasks["done"] == tasks["total"]
+    # INDEX vocabulary: not-started | complete (no in-progress per PRD 004 /sw-deliver R43).
+    if feature_complete or (tasks_complete and merged) or (tasks_complete and row.get("indexStatus") == "complete"):
+        status = "complete"
     else:
         status = "not-started"
 
     return {
         "prd": row["prd"],
-        "path": path,
         "slug": slug,
         "status": status,
         "taskFile": str(task_file.relative_to(root)) if task_file else None,
         "tasks": tasks,
         "mergedPrs": merged,
+        "featureComplete": feature_complete,
         "activeBranches": open_branches,
     }
 
@@ -160,10 +174,11 @@ text = index_path.read_text(encoding="utf-8")
 status_map = {r["prd"]: r["status"] for r in data.get("prds", [])}
 lines = []
 for line in text.splitlines():
-    if line.startswith("|") and not line.startswith("| PRD") and not line.startswith("|---"):
+    if line.startswith("|") and not line.startswith("| #") and not line.startswith("|---"):
         parts = [p.strip() for p in line.strip("|").split("|")]
         if len(parts) >= 4 and parts[0] in status_map:
-            parts[3] = status_map[parts[0]]
+            status_idx = 4 if len(parts) >= 5 else 3
+            parts[status_idx] = status_map[parts[0]]
             line = "| " + " | ".join(parts) + " |"
     lines.append(line)
 new_text = "\n".join(lines) + ("\n" if lines else "")
