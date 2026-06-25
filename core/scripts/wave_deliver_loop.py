@@ -210,6 +210,31 @@ def task_list_from(state: dict[str, Any], plan: dict[str, Any]) -> str | None:
     return str(raw) if raw else None
 
 
+def tasks_currency_ok(
+    root: Path, state: dict[str, Any], plan: dict[str, Any]
+) -> tuple[bool, str | None]:
+    tasks_file = task_list_from(state, plan)
+    if not tasks_file:
+        return True, None
+    state_py = SCRIPT_DIR / "wave_state.py"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(state_py),
+            str(root),
+            "ledger",
+            "check",
+            "--tasks-file",
+            tasks_file,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode == 0:
+        return True, None
+    return False, "tasks-currency-divergence"
+
+
 def compute_next_action(
     root: Path, state: dict[str, Any], plan: dict[str, Any]
 ) -> dict[str, Any]:
@@ -301,6 +326,13 @@ def compute_next_action(
             if status_path.is_file():
                 status = read_json(status_path, absent_ok=False)
                 if status.get("verdict") == "merge-ready-green":
+                    ok, cause = tasks_currency_ok(root, state, plan)
+                    if not ok:
+                        return {
+                            "action": "halt-blocked",
+                            "cause": cause,
+                            "resume": True,
+                        }
                     return {
                         "action": "merge-enqueue",
                         "phaseId": pid,

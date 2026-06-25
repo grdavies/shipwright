@@ -101,6 +101,19 @@ doc = {
     "gate": gate,
     "writtenAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
 }
+steps_path = os.environ.get("SHIP_STEPS_PATH", "")
+if not steps_path:
+    run_dir = os.path.dirname(out)
+    candidate = os.path.join(run_dir, "ship-steps.json")
+    if os.path.isfile(candidate):
+        steps_path = candidate
+if steps_path and os.path.isfile(steps_path):
+    try:
+        with open(steps_path, encoding="utf-8") as sf:
+            doc["shipSteps"] = json.load(sf)
+        doc["shipStepsPath"] = steps_path
+    except (OSError, json.JSONDecodeError):
+        pass
 if verdict == "blocked":
     doc["cause"] = cause
 

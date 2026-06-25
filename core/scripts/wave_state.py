@@ -438,9 +438,115 @@ def cmd_log_tail(root: Path, args: list[str]) -> None:
     emit({"verdict": "pass", "entries": entries})
 
 
+def _task_ledger(state: dict[str, Any]) -> dict[str, Any]:
+    ledger = state.get("taskLedger")
+    if not isinstance(ledger, dict):
+        ledger = {"tasks": {}, "phases": {}}
+    ledger.setdefault("tasks", {})
+    ledger.setdefault("phases", {})
+    return ledger
+
+
+def cmd_ledger_record(root: Path, args: list[str]) -> None:
+    task_ref = parse_kv(args, "--task")
+    phase_slug = parse_kv(args, "--phase")
+    if not task_ref:
+        fail("--task required (e.g. 7.1)")
+    done = parse_kv(args, "--done", "true") != "false"
+    state_path = paths(root)["state"]
+    state = load_state_file(state_path)
+    if not state:
+        fail("run state missing; run state init first")
+    ledger = _task_ledger(state)
+    tasks = ledger["tasks"]
+    if not isinstance(tasks, dict):
+        tasks = {}
+        ledger["tasks"] = tasks
+    tasks[task_ref] = {
+        "done": done,
+        "phase": phase_slug,
+        "updatedAt": utc_now(),
+    }
+    if phase_slug:
+        phases = ledger["phases"]
+        if isinstance(phases, dict):
+            phases.setdefault(phase_slug, {"tasks": [], "updatedAt": utc_now()})
+            phase_entry = phases[phase_slug]
+            if isinstance(phase_entry, dict):
+                refs = phase_entry.setdefault("tasks", [])
+                if isinstance(refs, list) and task_ref not in refs:
+                    refs.append(task_ref)
+                phase_entry["updatedAt"] = utc_now()
+    state["taskLedger"] = ledger
+    state["updatedAt"] = utc_now()
+    write_json(state_path, state)
+    append_log(root, {"event": "ledger-record", "task": task_ref, "done": done, "phase": phase_slug})
+    emit({"verdict": "pass", "action": "ledger-record", "task": task_ref, "done": done})
+
+
+def cmd_ledger_check(root: Path, args: list[str]) -> None:
+    tasks_file = parse_kv(args, "--tasks-file")
+    if not tasks_file:
+        fail("--tasks-file required")
+    path = (root / tasks_file).resolve() if not Path(tasks_file).is_absolute() else Path(tasks_file)
+    if not path.is_file():
+        fail(f"tasks file not found: {tasks_file}")
+    state_path = paths(root)["state"]
+    state = load_state_file(state_path) if state_path.is_file() else {}
+    ledger_tasks = ((state.get("taskLedger") or {}).get("tasks") or {}) if state else {}
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from checkbox_diff import parse_task_checkboxes
+
+    checkboxes = parse_task_checkboxes(path.read_text(encoding="utf-8"))
+    divergences: list[dict[str, Any]] = []
+
+    for ref, checked in checkboxes.items():
+        entry = ledger_tasks.get(ref) if isinstance(ledger_tasks, dict) else None
+        if not entry:
+            if checked:
+                divergences.append(
+                    {"ref": ref, "kind": "stale", "reason": "checkbox-checked-missing-ledger"}
+                )
+            continue
+        ledger_done = bool(entry.get("done"))
+        if ledger_done != checked:
+            divergences.append(
+                {
+                    "ref": ref,
+                    "kind": "divergence",
+                    "reason": "checkbox-ledger-mismatch",
+                    "checkbox": checked,
+                    "ledger": ledger_done,
+                }
+            )
+
+    if isinstance(ledger_tasks, dict):
+        for ref, entry in ledger_tasks.items():
+            if not isinstance(entry, dict) or not entry.get("done"):
+                continue
+            if not checkboxes.get(ref, False):
+                if not any(d.get("ref") == ref for d in divergences):
+                    divergences.append(
+                        {"ref": ref, "kind": "stale", "reason": "ledger-done-checkbox-open"}
+                    )
+
+    if divergences:
+        emit(
+            {
+                "verdict": "fail",
+                "error": "task currency divergence",
+                "divergences": divergences,
+                "partial": any(d.get("kind") == "stale" for d in divergences),
+            },
+            exit_code=1,
+        )
+    emit({"verdict": "pass", "action": "ledger-check", "taskCount": len(checkboxes)})
+
+
 def main() -> None:
     if len(sys.argv) < 3:
-        fail("usage: wave_state.py <root> <state|lock|journal|log> <subcommand> [args...]")
+        fail("usage: wave_state.py <root> <state|lock|journal|log|ledger> <subcommand> [args...]")
     root = Path(sys.argv[1])
     domain = sys.argv[2]
     args = sys.argv[3:]
@@ -488,6 +594,16 @@ def main() -> None:
         if not args or args[0] != "tail":
             fail("log subcommand required: tail")
         cmd_log_tail(root, args[1:])
+    elif domain == "ledger":
+        if not args:
+            fail("ledger subcommand required: record|check")
+        sub, rest = args[0], args[1:]
+        if sub == "record":
+            cmd_ledger_record(root, rest)
+        elif sub == "check":
+            cmd_ledger_check(root, rest)
+        else:
+            fail(f"unknown ledger subcommand: {sub}")
     else:
         fail(f"unknown domain: {domain}")
 

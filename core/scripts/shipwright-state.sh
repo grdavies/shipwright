@@ -12,6 +12,7 @@ Usage:
   shipwright-state.sh write <json|-)>   Merge JSON object into state file (- = stdin)
   shipwright-state.sh override-add <json|-)>  Append one override record (read-modify-write)
   shipwright-state.sh init <json|-)>    Replace state file with JSON object (- = stdin)
+  shipwright-state.sh sync-ship-steps   Merge phaseShip from durable ship-steps.json into state
   shipwright-state.sh index             Aggregate state from all linked worktrees (read-only)
 EOF
 }
@@ -111,6 +112,39 @@ cmd_init() {
   echo "$state"
 }
 
+cmd_sync_ship_steps() {
+  local state steps_py sync_out
+  state="$(resolve_state_path)"
+  steps_py="$ROOT/scripts/ship-phase-steps.sh"
+  if [[ ! -x "$steps_py" ]]; then
+    echo "error: ship-phase-steps.sh missing" >&2
+    return 1
+  fi
+  sync_out="$(bash "$steps_py" sync-state 2>/dev/null)" || {
+    echo "error: ship-phase-steps sync-state failed" >&2
+    return 1
+  }
+  PATCH_JSON="$sync_out" python3 - "$state" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+raw = json.loads(os.environ["PATCH_JSON"])
+phase_ship = raw.get("phaseShip")
+if not phase_ship:
+    sys.exit(0)
+current = {}
+if path.exists():
+    current = json.loads(path.read_text(encoding="utf-8"))
+current["phaseShip"] = phase_ship
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_text(json.dumps(current, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+  echo "$state"
+}
+
 cmd_index() {
   python3 - "$ROOT" <<'PY'
 import json
@@ -195,6 +229,7 @@ main() {
       [[ $# -ge 1 ]] || { usage >&2; exit 1; }
       cmd_init "$1"
       ;;
+    sync-ship-steps) cmd_sync_ship_steps ;;
     index) cmd_index ;;
     -h | --help | "") usage ;;
     *)

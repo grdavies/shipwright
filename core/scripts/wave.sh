@@ -41,8 +41,11 @@ case "${1:-}" in
   deliver-loop)
     exec python3 "$ROOT/scripts/wave_deliver_loop.py" "$ROOT" deliver-loop "${@:2}"
     ;;
-  state|lock|journal|log)
+  state|lock|journal|log|ledger)
     exec python3 "$ROOT/scripts/wave_state.py" "$ROOT" "$@"
+    ;;
+  tasks-currency)
+    exec bash "$ROOT/scripts/tasks-currency-gate.sh" "${@:2}"
     ;;
   orchestrator|forward-merge|phase-teardown|assert-entry)
     exec python3 "$ROOT/scripts/wave_lifecycle.py" "$ROOT" "$@"
