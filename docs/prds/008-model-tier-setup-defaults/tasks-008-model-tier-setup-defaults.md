@@ -41,17 +41,17 @@ frozen_at: 2026-06-25
 
 ### 1. Schema & four-tier policy foundation (M)
 
-- [ ] 1.1 Fix `models.routing` schema enum (R16, R15)
+- [x] 1.1 Fix `models.routing` schema enum (R16, R15)
   - **File:** `.sw/config.schema.json`, `core/sw-reference/config.schema.json`
   - **Expected:** `models.routing.commands` and `skills` values enum `cheap|build|mid|deep|inherit`; remove communication-intensity enum; `models` block remains optional
   - **R-IDs:** R16, R15
 
-- [ ] 1.2 Update four-tier order in tier check (R4)
+- [x] 1.2 Update four-tier order in tier check (R4)
   - **File:** `scripts/model-tier-check.sh`, `core/scripts/model-tier-check.sh` (if duplicated)
   - **Expected:** `CANONICAL_TIER_ORDER` = `cheap`, `build`, `mid`, `deep`; reviewer ≥ builder rank uses four-tier order
   - **R-IDs:** R4
 
-- [ ] 1.3 Refresh example config to Cursor four-tier catalog (R5)
+- [x] 1.3 Refresh example config to Cursor four-tier catalog (R5)
   - **File:** `.sw/workflow.config.example.json`, `core/sw-reference/workflow.config.example.json`
   - **Expected:** `mid: gpt-5.5-medium`, `deep: claude-opus-4-8-thinking-high`; inline `models.routing` sample from defaults
   - **R-IDs:** R5
