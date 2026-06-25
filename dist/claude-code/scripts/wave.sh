@@ -10,6 +10,10 @@
 #   wave.sh forward-merge --worktree <path> --base <type>/<slug>
 #   wave.sh phase-teardown --worktree <path>|--name <name> [--force]
 #   wave.sh assert-entry
+#   wave.sh status collect --phase-slug <slug>
+#   wave.sh phase dispatch-env --phase-slug <slug>
+#   wave.sh merge gate-check|enqueue|exec|run-next|ancestry-check ...
+#   wave.sh report terminal
 #   wave.sh integration --stamp <stamp> --branches 'branch1,branch2'
 #   wave.sh state init|get|phase|terminal ...
 #   wave.sh lock acquire|release|status ...
@@ -26,7 +30,16 @@ case "${1:-}" in
     exec python3 "$ROOT/scripts/wave_lifecycle.py" "$ROOT" "$@"
     ;;
   phase)
-    exec python3 "$ROOT/scripts/wave_lifecycle.py" "$ROOT" phase "$@"
+    if [[ "${2:-}" == "dispatch-env" ]]; then
+      exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" phase "${@:2}"
+    fi
+    exec python3 "$ROOT/scripts/wave_lifecycle.py" "$ROOT" phase "${@:2}"
+    ;;
+  status|report)
+    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" "$@"
+    ;;
+  merge)
+    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" merge "$@"
     ;;
 esac
 exec python3 "$ROOT/scripts/wave_deliver.py" "$ROOT" "$@"

@@ -490,4 +490,121 @@ else
   FAIL=1
 fi
 
+# --- merge queue + status collection (R13/R17/R38/R52/R55) ---
+WM="$ROOT/scripts/wave_merge.py"
+if OUT=$("$WAVE" phase dispatch-env --phase-slug alpha 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['exports']['SW_PHASE_MODE']=='1'
+assert d['invoke']=='/sw-ship --phase-mode'
+"; then
+  echo "OK  deliver-phase-dispatch-env"
+else
+  echo "FAIL deliver-phase-dispatch-env"
+  FAIL=1
+fi
+
+STATUS_FIX=$(mktemp -d)
+mkdir -p "$STATUS_FIX/.cursor/sw-deliver-runs/alpha"
+cat >"$STATUS_FIX/.cursor/sw-deliver-runs/alpha/status.json" <<'JSON'
+{"verdict":"merge-ready-green","phase":"alpha","phaseMode":true,"head":"abc123","pr":99}
+JSON
+if OUT=$(python3 "$WM" "$STATUS_FIX" status collect --phase-slug alpha 2>/dev/null) && \
+   echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['status']['verdict']=='merge-ready-green'"; then
+  echo "OK  deliver-phase-status-collect"
+else
+  echo "FAIL deliver-phase-status-collect"
+  FAIL=1
+fi
+
+if python3 <<PY
+import importlib.util
+from pathlib import Path
+spec = importlib.util.spec_from_file_location("wm", Path("$WM"))
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+assert mod.merge_authorizing(0, {"verdict": "green", "coderabbitLanded": True})
+assert not mod.merge_authorizing(10, {"verdict": "yellow", "coderabbitLanded": False})
+assert not mod.merge_authorizing(0, {"verdict": "green", "coderabbitLanded": False})
+PY
+then
+  echo "OK  deliver-phase-merge-gate-barrier"
+else
+  echo "FAIL deliver-phase-merge-gate-barrier"
+  FAIL=1
+fi
+
+cat >"$STATUS_FIX/.cursor/sw-deliver-state.json" <<'JSON'
+{"target":{"branch":"feat/demo"},"phases":{"1":{"id":"1","slug":"alpha","branch":"feat/demo-phase-alpha","status":"pending"}},"mergeQueue":[]}
+JSON
+if OUT=$(python3 "$WM" "$STATUS_FIX" merge enqueue --phase-slug alpha 2>/dev/null) && \
+   echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['queueLength']==1"; then
+  echo "OK  deliver-phase-merge-enqueue"
+else
+  echo "FAIL deliver-phase-merge-enqueue"
+  FAIL=1
+fi
+
+MERGE_Q_FIX=$(mktemp -d)
+(
+  cd "$MERGE_Q_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  echo base >f.txt && git add f.txt && git commit -q -m init
+  git branch -m feat/demo
+  git checkout -q -b feat/demo-phase-alpha
+  echo phase >>f.txt && git add f.txt && git commit -q -m phase
+  git checkout -q feat/demo
+  mkdir -p .cursor
+  echo '{"target":{"branch":"feat/demo"},"orchestratorWorktree":{"path":"'"$MERGE_Q_FIX"'"}}' >.cursor/sw-deliver-state.json
+  if OUT=$(python3 "$WM" "$MERGE_Q_FIX" merge exec --phase-slug alpha --phase-branch feat/demo-phase-alpha --target feat/demo 2>/dev/null) && \
+     echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['method']=='merge'"; then
+    echo "OK  deliver-phase-merge-exec"
+  else
+    echo "FAIL deliver-phase-merge-exec"
+    exit 1
+  fi
+  if python3 "$WM" "$MERGE_Q_FIX" merge ancestry-check --phase-branch feat/demo-phase-alpha --target feat/demo 2>/dev/null \
+    | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['merged'] is True"; then
+    echo "OK  deliver-phase-ancestry-check"
+  else
+    echo "FAIL deliver-phase-ancestry-check"
+    exit 1
+  fi
+) || FAIL=1
+rm -rf "$STATUS_FIX" "$MERGE_Q_FIX"
+
+cat >"$ROOT/.cursor/sw-deliver-state-test-terminal.json" <<'JSON'
+{"target":{"branch":"feat/demo"},"phases":{"1":{"slug":"alpha","status":"green-merged"}},"mergedPhases":[{"phaseSlug":"alpha","pr":42,"mergeCommit":"deadbeef"}]}
+JSON
+# use temp copy
+TERM_FIX=$(mktemp -d)
+mkdir -p "$TERM_FIX/.cursor"
+cp "$ROOT/.cursor/sw-deliver-state-test-terminal.json" "$TERM_FIX/.cursor/sw-deliver-state.json" 2>/dev/null || \
+  echo '{"target":{"branch":"feat/demo"},"phases":{"1":{"slug":"alpha","status":"green-merged"}},"mergedPhases":[{"phaseSlug":"alpha","pr":42,"mergeCommit":"deadbeef"}]}' >"$TERM_FIX/.cursor/sw-deliver-state.json"
+if OUT=$(python3 "$WM" "$TERM_FIX" report terminal 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+r=d['report']
+assert r['verdict']=='complete'
+assert r['terminalGate']=='ready to merge — your call'
+assert r['phasePrs'][0]['pr']==42
+"; then
+  echo "OK  deliver-phase-report-terminal"
+else
+  echo "FAIL deliver-phase-report-terminal"
+  FAIL=1
+fi
+rm -rf "$TERM_FIX" "$ROOT/.cursor/sw-deliver-state-test-terminal.json" 2>/dev/null
+
+DELIVER_SKILL="$ROOT/core/skills/deliver/SKILL.md"
+if grep -q 'merge run-next' "$DELIVER_SKILL" && grep -q 'status collect' "$DELIVER_SKILL" && \
+   grep -q 'report terminal' "$DELIVER_SKILL"; then
+  echo "OK  deliver-phase-merge-queue-docs"
+else
+  echo "FAIL deliver-phase-merge-queue-docs"
+  FAIL=1
+fi
+
 exit "$FAIL"
