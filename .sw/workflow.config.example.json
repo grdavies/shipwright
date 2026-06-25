@@ -9,6 +9,9 @@
   "doc": {
     "afterTasks": "confirm"
   },
+  "deliver": {
+    "phaseAckCadence": 0
+  },
   "verify": {
     "lint": "echo 'configure verify.lint for your repo'",
     "typecheck": "echo 'configure verify.typecheck for your repo'",

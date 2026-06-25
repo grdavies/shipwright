@@ -1,11 +1,13 @@
 ---
-description: Plan and run dependency-ordered build waves with worktree stacking and integration branch. Does not bypass /sw-ship or auto-merge to main.
+description: Plan and run dependency-ordered deliver waves in phase-mode or multi-feature mode. Does not bypass /sw-ship, auto-merge to main, or re-author frozen task lists.
 alwaysApply: false
 ---
 
-# `/sw-wave`
+# `/sw-deliver`
 
-Multi-item wave orchestrator above `/sw-ship`. Sequences independent leaves in parallel, stacks dependents on green unmerged branches, merges into `integration/<stamp>` for whole-suite testing, then halts at the human merge gate.
+Orchestrator above `/sw-ship` for frozen task lists and multi-item rounds. Auto-detects **phase-mode** (task-list
+path) vs **multi-feature mode** (explicit item set / plan). Sequences independent leaves in parallel, stacks
+dependents on green unmerged branches, and halts at the human merge gate.
 
 ## Subcommands
 
@@ -17,13 +19,13 @@ Multi-item wave orchestrator above `/sw-ship`. Sequences independent leaves in p
 
 ## Scope
 
-- Input: task list path, explicit item set, or wave-plan artifact.
-- Output: wave plan JSON; green leaf branches; `integration/<stamp>` test surface.
+- Input: frozen task list path, explicit item set, or deliver-plan artifact.
+- Output: deliver plan JSON; green leaf branches; `integration/<stamp>` test surface (multi-feature mode).
 - Does **not** bypass `/sw-ship`, auto-merge to `main`, or unwind green siblings on single-leaf red integration.
 
 ## Procedure (`plan`)
 
-1. Load `skills/wave/SKILL.md`.
+1. Load `skills/deliver/SKILL.md`.
 2. Parse work items and dependency edges.
 3. Detect cycles; refuse invalid plans.
 4. Serialize shared-migration overlaps and INDEX/numbering contention per `skills/parallelism/`.
@@ -31,7 +33,7 @@ Multi-item wave orchestrator above `/sw-ship`. Sequences independent leaves in p
 
 ## Procedure (`run`)
 
-1. Load wave plan; respect `worktree.parallelCeiling`.
+1. Load deliver plan; respect `worktree.parallelCeiling`.
 2. Wave 1: provision independent leaves in parallel worktrees.
 3. Run `/sw-ship` per item; advance only on green.
 4. Wave N: provision dependents with `scripts/worktree.sh provision --base <dep-branch>`.
