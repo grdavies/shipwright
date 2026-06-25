@@ -114,11 +114,16 @@ print('schema ok')
 
 Write `.cursor/workflow.config.json` (repo-local). Include `memory.inRepo` block when provider is in-repo.
 
+Seed `communication` from `core/sw-reference/communication-routing.defaults.json` (`defaultIntensity` +
+full `routing.commands` map) unless the user opts out during scaffold.
+
 ### 7. Report
 
-Print summary: providers chosen, store path, guardrail mode, environment warnings, config path.
+Print summary: providers chosen, store path, guardrail mode, communication routing seeded, environment warnings, config path.
 
 Print tip: "Tip: add docs/ to .gitignore to keep workflow artifacts local (brainstorms, PRDs, decisions)."
+
+**Communication intensity:** ultra
 
 ## Guardrails
 

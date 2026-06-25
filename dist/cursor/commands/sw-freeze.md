@@ -46,6 +46,8 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is aut
 
 Bootstrap local hook: `bash scripts/install-hooks.sh`.
 
+**Communication intensity:** normal
+
 ## Guardrails
 
 - No unfreeze path exists.

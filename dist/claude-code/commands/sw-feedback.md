@@ -45,6 +45,8 @@ Read `.cursor/workflow.config.json` for `memory`, `review.provider`, `prdsDir`.
 - Does not execute tasks or merge PRs (`003` owns execution)
 - Does not auto-dispatch routes for hook/monitor triggers without human confirmation
 
+**Communication intensity:** inherit
+
 ## Guardrails
 
 - All payloads through R41 redaction before persist or downstream handoff.

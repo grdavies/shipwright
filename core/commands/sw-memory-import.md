@@ -40,6 +40,8 @@ batch is identifiable and re-runnable.
   path plus a one-line gist. Never copy full document bodies into memory.
 - Do **not** import `Standing Instructions` as memories — those stay in `agentsFile`.
 
+**Communication intensity:** ultra
+
 ## Guardrails
 
 - Idempotent and dry-run-first. Never write without showing the intended batch and getting approval.

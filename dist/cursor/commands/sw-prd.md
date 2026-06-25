@@ -39,6 +39,8 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
 7. Self-audit for consistency, edge cases, gaps.
 8. Report path; next step `/sw-doc-review`.
 
+**Communication intensity:** lite
+
 ## Guardrails
 
 - PRD Full path: no PRD without brainstorm doc (`--type prd` only).

@@ -38,6 +38,8 @@ verify evidence passes. **Requires explicit human confirmation** before mutating
 6. `memory-preflight` write closure record (redacted summary; tag `surface:feedback-closure`).
 7. Emit `/tmp/sw-feedback-close.status.json` with `{signalId, verdict: closed, date}`.
 
+**Communication intensity:** ultra
+
 ## Guardrails
 
 - Never auto-close from hooks/monitors without human confirmation.
