@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.0](https://github.com/grdavies/shipwright/compare/v1.3.1...v1.4.0) (2026-06-25)
+
+
+### Features
+
+* native local review panel (PRD 005) ([#61](https://github.com/grdavies/shipwright/issues/61)) ([d986c3a](https://github.com/grdavies/shipwright/commit/d986c3a25b96eccf480f23aae98bba98b79605e2))
+
+
+### Documentation
+
+* reconcile PRD status and log PRD 005 completion ([#63](https://github.com/grdavies/shipwright/issues/63)) ([8d437c7](https://github.com/grdavies/shipwright/commit/8d437c79032d109975c9e60142dc5324dbadf68f))
+
 ## [1.3.1](https://github.com/grdavies/shipwright/compare/v1.3.0...v1.3.1) (2026-06-25)
 
 
