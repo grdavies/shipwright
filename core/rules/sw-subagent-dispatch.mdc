@@ -36,13 +36,26 @@ Every loop documents max iterations + no-progress detection:
 
 Circuit breaker: three identical failures without diff change → escalate to user.
 
+## Reviewer dispatch backpressure (R28, R61)
+
+When spawning native panel reviewers (or doc-review personas), capacity errors from the harness active-subagent
+limit are **backpressure**, not reviewer failure:
+
+- Retry with bounded parallelism (respect `worktree.parallelCeiling` and harness limits).
+- Do not mark a reviewer as failed solely because dispatch was rate-limited or at capacity.
+- After bounded retries, surface degraded / blocked status — never silently skip the panel.
+
 ## Local review apply loop (`/sw-review` phase 1)
 
-After auto-applying eligible P2/P3 fixes from local review:
+The **native panel apply loop** governs `native` adapter auto-apply (per-fix checkpoint + re-verify). The
+generic circuit-breaker below applies to all loops; native reconcile (R65): identical verify failure signature
++ absolute attempt cap per finding stops apply and escalates (phase-mode → `blocked`, R67).
 
-- **One** bounded re-verify (`sw-verify`) pass — not a nested loop.
-- Circuit breaker: three identical verify failures without diff change → escalate to user (R29).
-- Never let `ce-code-review` commit into the worktree; pf edit machinery only.
+After auto-applying eligible fixes from local review:
+
+- **One** bounded re-verify (`sw-verify`) pass per applied fix — not an unbounded nested loop.
+- Circuit breaker: three identical verify failures without diff change → escalate to user (R29/R65).
+- Never let `ce-code-review` or native reviewers commit into the worktree; pf edit machinery only.
 
 ## Parallel safety
 

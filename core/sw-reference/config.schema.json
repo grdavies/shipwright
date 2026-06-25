@@ -102,8 +102,27 @@
             "provider": {
               "type": "string",
               "enum": ["ce-code-review", "native", "none"],
-              "default": "ce-code-review",
+              "default": "native",
               "description": "Local adapter id under providers/code-review/<id>.md. Use \"none\" to disable."
+            },
+            "apply": {
+              "type": "string",
+              "enum": ["off", "surface", "auto"],
+              "default": "auto",
+              "description": "Auto-apply policy for eligible local findings. surface = review only; off = disable apply."
+            },
+            "ui": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Native panel UI/UX reviewer enrichment (opt-in).",
+              "properties": {
+                "enrich": {
+                  "type": "string",
+                  "enum": ["off", "ui-ux-pro-max", "vercel-web-guidelines"],
+                  "default": "off",
+                  "description": "Optional external design enrichment. Default off = native WCAG checklist only."
+                }
+              }
             },
             "grouping": {
               "type": "string",

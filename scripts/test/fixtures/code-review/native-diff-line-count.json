@@ -1,0 +1,15 @@
+{
+  "files": [
+    {
+      "path": "src/util.ts",
+      "added_lines": [
+        "// comment only",
+        "",
+        "{",
+        "}",
+        "import fs from 'fs';",
+        "export const x = 1;"
+      ]
+    }
+  ]
+}
