@@ -221,13 +221,13 @@ documented behavior exists.
 
 ### 10. Adopter-facing README + user-guide refresh (S/M)
 
-- [ ] 10.1 README + guides refresh for 009/A1/A2 command/workflow/usage changes (R56)
+- [x] 10.1 README + guides refresh for 009/A1/A2 command/workflow/usage changes (R56)
   - **File:** `README.md`, `docs/guides/getting-started.md`, `docs/guides/workflows.md`, `docs/guides/configuration.md`, `docs/guides/commands.md`
   - **Expected:** README + each guide reflects conductor autonomy/parallelism behavior and the
     legitimate-halt set, the `deliver.autonomy` knob + run-level budget (with defaults), living-doc currency
     (INDEX/COMPLETION-LOG/GAP-BACKLOG) behavior, and the brainstorm↔PRD frontmatter fields; complements the
     command-surface descriptions from 7.2 (R36) without duplicating them
-- [ ] 10.2 Docs presence check + legacy-reference removal, wired into the gate (R57)
+- [x] 10.2 Docs presence check + legacy-reference removal, wired into the gate (R57)
   - **File:** `scripts/docs-presence-check.sh`, `scripts/wave.sh`
   - **Expected:** the check asserts README/guides name the new autonomy/config/living-doc/frontmatter
     surfaces and that no `/pf-*` / `pf-` legacy command references remain in `README.md` or `docs/guides/*`;

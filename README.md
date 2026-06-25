@@ -93,6 +93,20 @@ reporting drift, and offering targeted repair without a full rescaffold.
 Configure `verify.lint` / `verify.typecheck` / `verify.test` so `/sw-verify` runs real checks.
 Full walkthrough and schema: **[configuration](docs/guides/configuration.md)**.
 
+### Deliver autonomy (PRD 009)
+
+`/sw-deliver` runs an **autonomous conductor** by default (`deliver.autonomy.mode: autonomous`): it
+self-continues through phase dispatch, merge, and bookkeeping without per-step re-prompts. The **legitimate halt** set is minimal — terminal merge to `main`, exhausted remediation, destructive/ambiguous git,
+checkpoints (`doc.afterTasks`, supervised mode), phase timeout, external-wait exhaustion, or run-level
+budget (`deliver.autonomy.maxRunMinutes` / `maxIterations`). Parallel phases dispatch within
+`worktree.parallelCeiling` when the plan allows.
+
+**Living-doc currency:** `docs/prds/INDEX.md`, `COMPLETION-LOG.md`, and `GAP-BACKLOG.md` reconcile
+in-loop on the feature branch; drift hard-blocks the terminal gate.
+
+**Doc traceability:** Full-tier PRDs carry `brainstorm:` frontmatter; writable brainstorms gain `prd:`
+back-links at draft/freeze time.
+
 ## First run
 
 1. **`/sw-doc`** — triage → (brainstorm) → PRD → review → freeze → tasks.

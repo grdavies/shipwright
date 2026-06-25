@@ -33,6 +33,15 @@ Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** c
   completion stays `completed-pending-merge` until merge is detected.
 - **Dry-run:** `scripts/wave.sh plan --task-list <path> --dry-run` — plan JSON only, no artifact write.
 
+**Autonomy (PRD 009):** default `deliver.autonomy.mode: autonomous` — conductor in-turn loop to terminal
+gate. **Legitimate halts** only (see [`configuration.md`](configuration.md)). Parallel phases when the
+plan allows; outcomes from durable `status.json` only.
+
+**Living-doc currency:** INDEX / COMPLETION-LOG / GAP-BACKLOG reconcile in-loop; `docs-currency` blocks
+terminal merge on drift.
+
+**Frontmatter:** Full-tier PRDs require `brainstorm:`; `/sw-freeze` verifies linkage.
+
 **Multi-feature mode:** `plan`/`run` with `--items` and `--edges`; integration surface at
 `integration/<stamp>`; promotion via `promote` (human-gated).
 
