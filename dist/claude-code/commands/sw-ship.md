@@ -92,6 +92,8 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/sw-ready` and stop.
 - CI budget exhausted while `yellow`.
 - Merge gate reached on live green.
 
+**Communication intensity:** inherit
+
 ## Guardrails
 
 - Never merge or force-push.

@@ -27,6 +27,8 @@ Task list from frozen PRD + amendment union.
    and implementation is `doc.afterTasks` on `/sw-doc` (or `--after-tasks` on `/sw-ship`), not a gate inside
    `/sw-tasks`.
 
+**Communication intensity:** lite
+
 ## Guardrails
 
 - Single-pass generation — complete list (parent phases, executable sub-tasks, traceability) with no

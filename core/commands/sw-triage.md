@@ -21,6 +21,8 @@ Deterministic tier classifier for the documentation pipeline. Routes work before
 4. Report tier, all matched signals, and the recommended next command.
 5. On `--re-score`, note prior Quick classification if promoting.
 
+**Communication intensity:** ultra
+
 ## Guardrails
 
 - Risk triggers are a **hard floor** — auth/payments/migration/public-API work never lands Quick.

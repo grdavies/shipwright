@@ -44,6 +44,8 @@ Run the smallest reliable verification for the current phase.
 8. Report pass/fail with log paths and `$STATUS_FILE`.
 9. On durable failure pattern → `memory-preflight` write (redact first). Stop before `/sw-commit` on fail.
 
+**Communication intensity:** ultra
+
 ## Guardrails
 
 - Logs go to `/tmp` only — never repo root.

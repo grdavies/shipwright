@@ -230,6 +230,72 @@ def fetch_rule_summaries(root: Path, plugin_root: Path, config: dict) -> list[st
     return lines
 
 
+def _communication_defaults_path(plugin_root: Path) -> Path:
+    return plugin_root / "core" / "sw-reference" / "communication-routing.defaults.json"
+
+
+def _load_communication_routing(config: dict, plugin_root: Path) -> tuple[dict[str, str], str]:
+    defaults_path = _communication_defaults_path(plugin_root)
+    base_commands: dict[str, str] = {}
+    default_intensity = "full"
+    try:
+        if defaults_path.is_file():
+            parsed = json.loads(defaults_path.read_text(encoding="utf-8"))
+            if isinstance(parsed, dict):
+                default_intensity = str(parsed.get("defaultIntensity", "full"))
+                routing = parsed.get("routing", {})
+                if isinstance(routing, dict):
+                    commands = routing.get("commands", {})
+                    if isinstance(commands, dict):
+                        base_commands = {str(k): str(v) for k, v in commands.items()}
+    except (OSError, ValueError, TypeError):
+        pass
+
+    comm = config.get("communication", {}) if isinstance(config, dict) else {}
+    if isinstance(comm, dict):
+        default_intensity = str(comm.get("defaultIntensity", default_intensity))
+        routing = comm.get("routing", {})
+        if isinstance(routing, dict):
+            commands = routing.get("commands", {})
+            if isinstance(commands, dict):
+                base_commands = {**base_commands, **{str(k): str(v) for k, v in commands.items()}}
+
+    return base_commands, default_intensity
+
+
+def resolve_communication_intensity(
+    command: str,
+    config: dict,
+    plugin_root: Path,
+    *,
+    child_command: str | None = None,
+) -> tuple[str, str]:
+    """Return (intensity, source) for a command name."""
+    routing, default_intensity = _load_communication_routing(config, plugin_root)
+    raw = routing.get(command, default_intensity)
+    source = "routing" if command in routing else "defaultIntensity"
+
+    if raw == "inherit":
+        if child_command:
+            child_raw = routing.get(child_command, default_intensity)
+            if child_raw == "inherit":
+                return default_intensity, "inherit-fallback"
+            return child_raw, f"inherit:{child_command}"
+        return default_intensity, "inherit-unresolved"
+
+    if raw in {"normal", "lite", "full", "ultra"}:
+        return raw, source
+    return default_intensity, "invalid-fallback"
+
+
+def _load_caveman_core(plugin_root: Path) -> str:
+    path = plugin_root / "core" / "communication" / "caveman-core.md"
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
 def build_session_context(root: Path, plugin_root: Path, context_template: Path) -> str:
     parts: list[str] = []
     try:
@@ -238,6 +304,15 @@ def build_session_context(root: Path, plugin_root: Path, context_template: Path)
         parts.append("This repo uses the Shipwright workflow plugin.")
 
     config = load_config(root)
+    caveman_core = _load_caveman_core(plugin_root)
+    if caveman_core:
+        intensity, source = resolve_communication_intensity("", config, plugin_root)
+        parts.append(
+            "\n## Caveman communication (bundled)\n\n"
+            f"**Resolved intensity:** `{intensity}` ({source})\n\n"
+            + caveman_core
+        )
+
     memory = memory_binding(config, root)
     parts.append("\n## Resolved memory binding\n\n" + _memory_line(memory))
 

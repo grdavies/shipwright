@@ -213,6 +213,8 @@ Unchanged from prior single-phase flow:
 8. `memory-preflight` write for durable review learnings only (no raw bot dumps); route through
    `scripts/memory-redact.sh`.
 
+**Communication intensity:** full
+
 ## Guardrails
 
 - Load `agentsFile` before review.

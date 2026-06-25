@@ -43,6 +43,8 @@ Phase-scoped commit after `/sw-verify` (and `/sw-review` when configured).
 8. Commit with heredoc message matching repo style (include override trailer when applicable).
 9. Hand off to `/sw-pr`.
 
+**Communication intensity:** ultra
+
 ## Guardrails
 
 - Verification gate override is auditable only — cannot suppress red `check-gate.sh`/CI.

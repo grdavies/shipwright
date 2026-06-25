@@ -298,4 +298,7 @@ for fx in \
   bash "$DOC_AFTER/${fx}.sh" || FAIL=1
 done
 
+# --- PRD 006: communication routing ---
+bash "$ROOT/scripts/test/fixtures/communication-routing.sh" || FAIL=1
+
 exit $FAIL

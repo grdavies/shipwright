@@ -21,6 +21,8 @@ Load `skills/living-status/SKILL.md`.
    - `coderabbitState: unconfigured` → `review: not configured`
    - otherwise → `review: <coderabbitState>` (per `skills/living-status/SKILL.md`).
 
+**Communication intensity:** ultra
+
 ## Guardrails
 
 - Frozen artifacts never modified.

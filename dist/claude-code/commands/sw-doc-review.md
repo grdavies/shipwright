@@ -47,6 +47,8 @@ Decision-record routing is **floor-only** — it never subtracts a persona signa
 12. Apply safe_auto; present gated_auto/manual for user decision.
 13. Report result; next step `/sw-freeze` when clear.
 
+**Communication intensity:** normal
+
 ## Guardrails
 
 - PRD non-Quick: five-persona always-on core + signal-gated `security` / `design`.
