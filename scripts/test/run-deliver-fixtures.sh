@@ -607,4 +607,60 @@ else
   FAIL=1
 fi
 
+# --- release bookkeeping (R58/R59/R60) ---
+WB="$ROOT/scripts/wave_bookkeeping.py"
+BK_FIX=$(mktemp -d)
+(
+  cd "$BK_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  cp "$ROOT/CHANGELOG.md" CHANGELOG.md 2>/dev/null || echo -e "# Changelog\n" >CHANGELOG.md
+  cp "$ROOT/version.txt" version.txt 2>/dev/null || echo "1.2.2" >version.txt
+  git add CHANGELOG.md version.txt && git commit -q -m init
+  mkdir -p .cursor
+  echo '{"target":{"branch":"feat/demo"},"mergedPhases":[],"orchestratorWorktree":{"path":"'"$BK_FIX"'"}}' \
+    >.cursor/sw-deliver-state.json
+  if OUT=$(python3 "$WB" "$BK_FIX" record --phase-slug alpha --message "phase alpha" --type feat --merge-commit deadbeef --worktree "$BK_FIX" 2>/dev/null) && \
+     echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['projectedVersion']=='1.3.0'
+assert d['section']=='Features'
+" && grep -q '## \[Unreleased\]' CHANGELOG.md && grep -q 'sw-deliver:alpha' CHANGELOG.md && \
+     [[ "$(cat version.txt)" == "1.3.0" ]]; then
+    echo "OK  deliver-phase-changelog-record"
+  else
+    echo "FAIL deliver-phase-changelog-record"
+    exit 1
+  fi
+  if OUT=$(python3 "$WB" "$BK_FIX" revert --phase-slug alpha --worktree "$BK_FIX" 2>/dev/null) && \
+     echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['projectedVersion']=='1.2.2'" && \
+     ! grep -q 'sw-deliver:alpha' CHANGELOG.md && [[ "$(cat version.txt)" == "1.2.2" ]]; then
+    echo "OK  deliver-phase-changelog-revert"
+  else
+    echo "FAIL deliver-phase-changelog-revert"
+    exit 1
+  fi
+  if python3 "$WB" "$BK_FIX" projected --types fix --worktree "$BK_FIX" 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['projectedVersion']=='1.2.3'
+"; then
+    echo "OK  deliver-phase-version-projected"
+  else
+    echo "FAIL deliver-phase-version-projected"
+    exit 1
+  fi
+) || FAIL=1
+rm -rf "$BK_FIX"
+
+if grep -q 'bookkeeping record' "$ROOT/core/skills/deliver/SKILL.md" && \
+   grep -q 'bookkeeping revert' "$ROOT/core/skills/deliver/SKILL.md"; then
+  echo "OK  deliver-phase-bookkeeping-docs"
+else
+  echo "FAIL deliver-phase-bookkeeping-docs"
+  FAIL=1
+fi
+
 exit "$FAIL"

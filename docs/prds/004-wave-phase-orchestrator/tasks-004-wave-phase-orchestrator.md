@@ -184,12 +184,12 @@ frozen_at: 2026-06-24
 
 ### 9. Release bookkeeping on `<type>/<slug>` (M)
 
-- [ ] 9.1 CHANGELOG and version.txt maintenance per merge (R58, R59, R60)
+- [x] 9.1 CHANGELOG and version.txt maintenance per merge (R58, R59, R60)
   - **File:** `scripts/wave.sh`, `core/skills/deliver/SKILL.md`
   - **Expected:** each green merge appends to `## [Unreleased]` under release-please-mapped section; `version.txt` projected semver; `chore:` bookkeeping commit; orchestrator-only writes (contention-serialized); release-please-compatible format
   - **R-IDs:** R58, R59, R60
 
-- [ ] 9.2 Revert bookkeeping on unstack (R45, R59)
+- [x] 9.2 Revert bookkeeping on unstack (R45, R59)
   - **File:** `scripts/wave.sh`
   - **Expected:** `git revert` of phase merge also removes matching `## [Unreleased]` entry and recomputes `version.txt`
   - **R-IDs:** R45, R59
