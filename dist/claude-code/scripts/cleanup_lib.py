@@ -239,6 +239,8 @@ def enumerate_cleanup(root: Path) -> Report:
             report.protected.append(Item("branch", branch, status, detail))
 
     for remote in list_remote_branches(root):
+        if remote == "origin" or "/" not in remote.removeprefix("origin"):
+            continue
         short = remote.removeprefix("origin/")
         if short in (default, current):
             report.protected.append(Item("remote", remote, "protected", "default or current"))

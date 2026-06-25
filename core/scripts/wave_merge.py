@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Merge queue, review barrier, status collection, and terminal report for /sw-deliver."""
+"""Merge queue, review barrier, status collection, and terminal report for /sw-deliver.
+
+Concurrency contract (R21/R22/R41): only the conductor calls `merge enqueue` / `merge run-next`.
+`merge run-next` authorizes via gate + review barrier, merges onto `<type>/<slug>` never `main`,
+and runs single-flight via merge journal + orchestrator lock (`wave_state.py` O_EXCL acquire).
+
+Status collect (R19/R24): reads durable `status.json` only; `blocked` triggers blast-radius apply
+on transitive dependents — green siblings in the same wave continue.
+"""
 from __future__ import annotations
 
 import json
@@ -703,6 +711,33 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
             )
         bookkeeping = json.loads(bk_proc.stdout)
 
+        living_args = [
+            sys.executable,
+            str(SCRIPT_DIR / "wave_living_docs.py"),
+            str(root),
+            "reconcile",
+            "--commit",
+        ]
+        if orch:
+            living_args.extend(["--worktree", orch])
+        living_proc = subprocess.run(living_args, cwd=str(root), text=True, capture_output=True)
+        living_docs = {}
+        if living_proc.stdout.strip():
+            try:
+                living_docs = json.loads(living_proc.stdout)
+            except json.JSONDecodeError:
+                living_docs = {"raw": living_proc.stdout}
+        if living_proc.returncode != 0:
+            try:
+                err = json.loads(living_proc.stdout)
+            except json.JSONDecodeError:
+                err = {"error": living_proc.stderr or living_proc.stdout}
+            fail(
+                err.get("error", "living-docs reconcile failed"),
+                exit_code=living_proc.returncode,
+                **{k: v for k, v in err.items() if k != "error"},
+            )
+
         verify_args = [
             sys.executable,
             str(SCRIPT_DIR / "wave_failure.py"),
@@ -745,6 +780,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
                 "mergeCommit": merge_commit,
                 "remaining": len(state["mergeQueue"]),
                 "bookkeeping": bookkeeping,
+                "livingDocs": living_docs,
                 "verify": verify_out,
                 "ack": ack_out,
                 "authPath": auth_path,
