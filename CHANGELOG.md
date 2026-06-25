@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/grdavies/shipwright/compare/v1.2.2...v1.3.0) (2026-06-25)
+
+
+### Features
+
+* **wave-phase-orchestrator:** deliver phase-mode orchestrator (PRD 004) ([#57](https://github.com/grdavies/shipwright/issues/57)) ([87ba358](https://github.com/grdavies/shipwright/commit/87ba358b63af9bd6a184bad987a7779e1deb4715))
+
 ## [1.2.2](https://github.com/grdavies/shipwright/compare/v1.2.1...v1.2.2) (2026-06-25)
 
 
