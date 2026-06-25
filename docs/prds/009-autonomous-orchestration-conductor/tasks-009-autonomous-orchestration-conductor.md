@@ -85,27 +85,27 @@ documented behavior exists.
 
 ### 4. Autonomous self-continuation + self-wake (M/L)
 
-- [ ] 4.1 In-turn self-continuation over the driver (R2, R6, R7)
+- [x] 4.1 In-turn self-continuation over the driver (R2, R6, R7)
   - **File:** `core/commands/sw-deliver.md`, `core/skills/deliver/SKILL.md`
   - **Expected:** after `awaitAgent: true` the conductor does the agent work and re-invokes `deliver-loop`
     in-turn; it never ends the turn while `nextAction` is runnable and no halt condition is met
-- [ ] 4.2 Conductor loop hard-stop + no-progress circuit breaker (R38)
+- [x] 4.2 Conductor loop hard-stop + no-progress circuit breaker (R38)
   - **File:** `rules/sw-subagent-dispatch.mdc`, `core/skills/conductor/SKILL.md`
   - **Expected:** documented max-iteration bound; identical `nextAction` + unchanged state signature N× →
     clean consolidated halt
-- [ ] 4.3 Self-wake sentinel + per-run teardown (R8, R9)
+- [x] 4.3 Self-wake sentinel + per-run teardown (R8, R9)
   - **File:** `core/skills/conductor/SKILL.md`, `core/commands/sw-deliver.md`
   - **Expected:** terminal-PR CI arms a uniquely-named `notify_on_output` shell keyed on run id; all
     watchers/heartbeats torn down on terminal halt; no orphaned processes
-- [ ] 4.4 External-wait exhausted → clean halt + re-derive (R40)
+- [x] 4.4 External-wait exhausted → clean halt + re-derive (R40)
   - **File:** `core/skills/conductor/SKILL.md`
   - **Expected:** `checks.watch.maxWaitMinutes` expiry routes to a consolidated halt; a wake re-derives next
     action from durable state
-- [ ] 4.5 Parallel-wave completion wait contract (R44)
+- [x] 4.5 Parallel-wave completion wait contract (R44)
   - **File:** `core/skills/conductor/SKILL.md`
   - **Expected:** bounded poll of the durable `status.json` set or self-wake on status appearance, then
     autonomous resume; mechanism is specified, not implicit
-- [ ] 4.6 Self-wake environment fallback (R46)
+- [x] 4.6 Self-wake environment fallback (R46)
   - **File:** `core/skills/conductor/SKILL.md`
   - **Expected:** where output-notification auto-resume is unavailable (cloud/headless), degrade to a bounded
     in-turn poll up to `maxWaitMinutes` then one consolidated halt

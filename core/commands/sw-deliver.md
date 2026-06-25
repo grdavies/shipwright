@@ -64,7 +64,25 @@ bash scripts/wave.sh deliver-loop --dry-run
 
 When the driver returns `awaitAgent: true`, the conductor performs the agent work and immediately
 re-invokes `bash scripts/wave.sh deliver-loop` within the same turn until a legitimate halt (R6/R7 — see
-conductor skill). A fresh agent resumes from `.cursor/sw-deliver-state.json` + plan + run log alone (R4).
+`skills/conductor/SKILL.md` **In-turn self-continuation loop**). A fresh agent resumes from
+`.cursor/sw-deliver-state.json` + plan + run log alone (R4).
+
+## Conductor in-turn loop (`run` / `deliver-loop`)
+
+After every `deliver-loop` JSON response:
+
+| Response | Conductor action (same turn) |
+| --- | --- |
+| `awaitAgent: false` | Re-invoke `bash scripts/wave.sh deliver-loop` immediately |
+| `awaitAgent: true` | Run agent step for `next.action` (table in conductor skill), then re-invoke `deliver-loop` |
+| `halt: true` | Emit consolidated report; stop — legitimate halt only |
+| `terminal: true` | Terminal gate; arm self-wake for CI if needed (conductor skill **Self-wake sentinel**) |
+
+**Never** end the turn with only "continue deliver" or "re-run deliver-loop" as the user-facing outcome while
+`verdict: running` and no legitimate halt applies (R13).
+
+Hard stops: `deliver.autonomy.maxIterations` (default 500) and no-progress circuit breaker (3× identical
+`nextAction` + state signature) — see `rules/sw-subagent-dispatch.mdc` and conductor skill (R38).
 
 `run` is an alias for `deliver-loop --task-list <path>`.
 

@@ -54,9 +54,114 @@ Never infer progress from chat history or ephemeral sub-agent logs (R19). Phase 
 
 With default configuration (`deliver.autonomy.mode: autonomous`, `phaseAckCadence: 0`, `doc.afterTasks` not
 blocking deliver), a frozen task list runs end-to-end to the **terminal-PR human gate** with zero
-"continue deliver" style re-prompts. The conductor performs agent work when the driver returns
-`awaitAgent: true`, then immediately re-invokes `deliver-loop` within the same turn (R6/R7 — detailed in
-phase 4).
+"continue deliver" style re-prompts. See **In-turn self-continuation loop** below (R6/R7).
+
+## In-turn self-continuation loop (R2, R6, R7)
+
+The conductor never ends its turn while `nextAction` is runnable and no legitimate halt applies.
+
+### Driver ↔ agent handshake
+
+1. Invoke `bash scripts/wave.sh deliver-loop` (or `--dry-run` to inspect only).
+2. Parse JSON:
+   - **`awaitAgent: false`** — driver advanced mechanically; immediately re-invoke `deliver-loop` (same turn).
+   - **`awaitAgent: true`** — perform the agent step for `next.action` (see table), then re-invoke
+     `deliver-loop` without asking the user to continue.
+3. Repeat until `terminal: true`, `halt: true`, or a legitimate halt in **Legitimate-halt set**.
+
+| `next.action` | Agent work (then re-invoke `deliver-loop`) |
+| --- | --- |
+| `dispatch-ship` | Full `/sw-ship --phase-mode` in the phase worktree (`SW_PHASE_MODE=1`, `SW_PHASE_SLUG`, `SW_RUN_DIR`) |
+| `remediate` | `/sw-stabilize` (or scoped fix) for the blocked phase within remediation budget |
+| `compound-ship` | `/sw-compound-ship` on the orchestrator worktree after all phases merge |
+| `terminal-ship` | Terminal PR CI watch + `/sw-ready` surface; may arm self-wake (below) |
+
+**Orchestrator worktree:** run `deliver-loop` from `.sw-worktrees/<slug>-orchestrator` (or repo root with
+state synced). Never hand off with "run deliver-loop next" as the only instruction — run it in-turn.
+
+### Progress rule (R7)
+
+Do not stop after a single mechanical step or one phase ship if `verdict` is still `running` and
+`nextAction` is not a legitimate halt. The only acceptable turn endings are legitimate halts or terminal
+completion.
+
+## Conductor loop hard-stop (R38)
+
+Register bounds in `rules/sw-subagent-dispatch.mdc` hard-stops table.
+
+| Bound | Source | On trip |
+| --- | --- | --- |
+| Max driver invocations per turn | `deliver.autonomy.maxIterations` (default **500**) | Consolidated halt; resume via `deliver-loop` |
+| No-progress circuit breaker | **3** consecutive invocations with identical `nextAction` **and** identical durable-state signature | Consolidated halt (`cause: conductor:no-progress`) |
+
+**State signature** (canonical JSON of): `verdict`, `nextAction`, `currentWave`, sorted phase
+`id→status`, `mergeQueue` length, `mergeJournal` presence. Ignore `driverHeartbeatAt` / `updatedAt`.
+
+On circuit breaker: `bash scripts/wave.sh report terminal` (or `report blocker`) — never spin silently.
+
+## Self-wake sentinel (R8, R9)
+
+For time-gated external waits (terminal-PR CI, long `checks.watch` polls), arm a **uniquely named**
+background shell with `notify_on_output` so the conductor resumes without a user message.
+
+**Run id** (stable per deliver run): `sw-deliver-<prd_number>-<target.slug>` from
+`.cursor/sw-deliver-state.json` (e.g. `sw-deliver-009-autonomous-orchestration-conductor`).
+
+### Terminal-PR CI wait
+
+After `/sw-pr` on the feature branch:
+
+```bash
+RUN_ID="sw-deliver-009-autonomous-orchestration-conductor"   # from state
+PR=$(gh pr view --json number --jq .number)
+gh pr checks "$PR" --watch --fail-fast >/tmp/${RUN_ID}-watch-ci.log 2>&1 || true
+echo "DELIVER_WAKE_${RUN_ID} {\"phase\":\"terminal-ci\",\"prd\":\"009\"}"
+```
+
+Arm as background shell with `notify_on_output` matching `^DELIVER_WAKE_${RUN_ID}`. Reuse
+`checks.watch.pollSeconds` / `checks.watch.maxWaitMinutes` from config — no new knob.
+
+### Teardown (R9)
+
+On any terminal halt (`verdict: complete|blocked|rejected`) or human stop:
+
+- Cancel/kill background shells tagged with `DELIVER_WAKE_<run-id>` and any deliver heartbeats for that run id.
+- Never leave orphaned watchers holding tokens after the run ends.
+
+## External-wait exhaustion (R40)
+
+When a self-wake or CI watch reaches `checks.watch.maxWaitMinutes` without a terminal signal:
+
+1. Emit consolidated halt via `scripts/wave.sh report terminal` (`cause: external-wait:exhausted`).
+2. Do not trust stale log output — re-derive next action from durable state on the next wake or resume.
+3. Treat as a legitimate halt (user may merge manually or resume watch).
+
+## Parallel-wave completion wait (R44)
+
+When multiple phases run concurrently, the conductor waits for **all** wave members to publish terminal
+`status.json` before enqueue/merge advancement.
+
+**Contract (pick one per environment; both bounded by `checks.watch.maxWaitMinutes`):**
+
+1. **Poll:** every `checks.watch.pollSeconds`, test
+   `.cursor/sw-deliver-runs/<phase-slug>/status.json` for each in-flight phase in the current wave batch.
+2. **Self-wake:** arm `notify_on_output` on a watcher that tails `run.log` or polls status paths; pattern
+   `^DELIVER_PHASE_READY_<run-id>` emitted when all batch members have terminal status.
+
+When every member is `merge-ready-green` or `blocked`, re-invoke `deliver-loop` in-turn — never ask the user
+to "check if phases finished".
+
+## Self-wake environment fallback (R46)
+
+Where the harness cannot auto-resume on `notify_on_output` (cloud/headless agents):
+
+1. **Degrade to bounded in-turn poll:** sleep `checks.watch.pollSeconds` between checks, up to
+   `checks.watch.maxWaitMinutes` total wall clock.
+2. After expiry → single consolidated halt (R12) with exact resume command.
+3. Never busy-spin; never yield with only "waiting for CI" and no halt boundary.
+
+Detect unavailable self-wake when background shell + `notify_on_output` is not offered by the runtime;
+default to poll-then-halt rather than indefinite yield.
 
 ## Legitimate-halt set (R10 — summary)
 
