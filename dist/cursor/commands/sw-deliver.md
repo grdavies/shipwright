@@ -47,14 +47,16 @@ dependents on green unmerged branches, and halts at the human merge gate.
 5. Collect outcomes: `scripts/wave.sh status collect --phase-slug <slug>` from durable status path (R38).
 6. On `merge-ready-green`: `scripts/wave.sh merge enqueue` then `merge run-next` when gate + review
    barrier settle (R17/R19/R52). `merge run-next` records CHANGELOG / `version.txt` via
-   `scripts/wave.sh bookkeeping record` in the orchestrator worktree (R58–R60).
-7. After each merge into `<type>/<slug>`, advance dependents with
+   `scripts/wave.sh bookkeeping record` in the orchestrator worktree (R58–R60), then runs incremental
+   `verify.*` on `<type>/<slug>` (R39).
+7. On verify failure or bad merge: `scripts/wave.sh revert phase` + blast-radius; route to `/sw-stabilize`.
+8. After each merge into `<type>/<slug>`, advance dependents with
    `scripts/wave.sh forward-merge --worktree <phase-wt> --base <type>/<slug>` (merge, not rebase); conflicts →
    `blocked`.
-8. Teardown completed phases with `scripts/wave.sh phase-teardown --name <worktree-name>` (`git worktree remove`
+9. Teardown completed phases with `scripts/wave.sh phase-teardown --name <worktree-name>` (`git worktree remove`
    + prune only).
-9. When all phases `green-merged`: `scripts/wave.sh report terminal` then open/update `<type>/<slug> → main` PR.
-10. Halt at human gate for terminal merge (phase-mode) or dependency-ordered promotion (`promote`, multi-feature).
+10. When all phases `green-merged`: `scripts/wave.sh report terminal` then open/update `<type>/<slug> → main` PR.
+11. Halt at human gate for terminal merge (phase-mode) or dependency-ordered promotion (`promote`, multi-feature).
 
 ## Red integration routing
 

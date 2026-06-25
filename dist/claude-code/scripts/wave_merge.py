@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+
 VALID_STATUS_VERDICTS = frozenset({"merge-ready-green", "blocked"})
 
 
@@ -137,6 +139,20 @@ def cmd_status_collect(root: Path, args: list[str]) -> None:
                 break
         state["phases"] = phases
         save_state(root, state)
+        subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT_DIR / "wave_failure.py"),
+                str(root),
+                "blast-radius",
+                "apply",
+                "--phase-slug",
+                phase_slug,
+            ],
+            cwd=str(root),
+            text=True,
+            capture_output=True,
+        )
     emit({"verdict": "pass", "action": "status-collect", "phase": phase_slug, "status": status})
 
 
@@ -364,7 +380,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
 
     try:
         proc = subprocess.run(
-            [sys.executable, str(root / "scripts" / "wave_merge.py"), str(root), "merge", "exec", *merge_args],
+            [sys.executable, str(SCRIPT_DIR / "wave_merge.py"), str(root), "merge", "exec", *merge_args],
             cwd=str(root),
             text=True,
             capture_output=True,
@@ -413,7 +429,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
 
         bk_args = [
             sys.executable,
-            str(root / "scripts" / "wave_bookkeeping.py"),
+            str(SCRIPT_DIR / "wave_bookkeeping.py"),
             str(root),
             "record",
             "--phase-slug",
@@ -442,6 +458,32 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
             )
         bookkeeping = json.loads(bk_proc.stdout)
 
+        verify_args = [
+            sys.executable,
+            str(SCRIPT_DIR / "wave_failure.py"),
+            str(root),
+            "verify",
+            "run-after-merge",
+            "--phase-slug",
+            phase_slug,
+        ]
+        if orch:
+            verify_args.extend(["--orchestrator-worktree", orch])
+        verify_proc = subprocess.run(verify_args, cwd=str(root), text=True, capture_output=True)
+        if verify_proc.returncode != 0:
+            try:
+                err = json.loads(verify_proc.stdout)
+            except json.JSONDecodeError:
+                err = {"error": verify_proc.stderr or verify_proc.stdout}
+            fail(
+                err.get("error", "incremental verify failed after merge"),
+                exit_code=verify_proc.returncode or 20,
+                halt="blocked",
+                cause="verify:failed",
+                **{k: v for k, v in err.items() if k != "error"},
+            )
+        verify_out = json.loads(verify_proc.stdout)
+
         emit(
             {
                 "verdict": "pass",
@@ -450,6 +492,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
                 "mergeCommit": merge_commit,
                 "remaining": len(state["mergeQueue"]),
                 "bookkeeping": bookkeeping,
+                "verify": verify_out,
             }
         )
     except Exception:
@@ -493,9 +536,12 @@ def cmd_report_terminal(root: Path, args: list[str]) -> None:
         "blockedPhases": [{"slug": p.get("slug"), "cause": p.get("cause")} for p in blocked],
         "conventionalCommitTypes": ["feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"],
     }
-    if all_merged:
+    if all_merged and not state.get("terminalRejected"):
         report["terminalGate"] = "ready to merge — your call"
         report["note"] = "Open or update single <type>/<slug> → main PR; halt without merging"
+    elif state.get("terminalRejected"):
+        report["terminalRejected"] = True
+        report["note"] = "Terminal PR rejected; resume must not re-present (R46)"
     emit({"verdict": "pass", "action": "report-terminal", "report": report})
 
 

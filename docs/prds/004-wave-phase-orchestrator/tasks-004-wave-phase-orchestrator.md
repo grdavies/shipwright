@@ -196,22 +196,22 @@ frozen_at: 2026-06-24
 
 ### 10. Verify, failure blast radius, and stabilize routing (M)
 
-- [ ] 10.1 Incremental whole-feature verify after each merge (R39)
+- [x] 10.1 Incremental whole-feature verify after each merge (R39)
   - **File:** `scripts/wave.sh`, `core/skills/deliver/SKILL.md`
   - **Expected:** configured `verify.*` runs on `<type>/<slug>` head after every phase merge; failure routes to `/sw-stabilize` on `<type>/<slug>`, marks phase `blocked`, triggers revert protocol; does not open/advance terminal PR
   - **R-IDs:** R39
 
-- [ ] 10.2 Blast-radius policy and consolidated halt report (R25, R26)
+- [x] 10.2 Blast-radius policy and consolidated halt report (R25, R26)
   - **File:** `core/skills/deliver/SKILL.md`, `scripts/wave.sh`
   - **Expected:** failed phase blocks transitive dependents only; independent siblings continue and auto-merge greens; single consolidated blocker report with recommended next command per blocker
   - **R-IDs:** R25, R26
 
-- [ ] 10.3 Stabilize routing and flaky-vs-deterministic distinction (R27)
+- [x] 10.3 Stabilize routing and flaky-vs-deterministic distinction (R27)
   - **File:** `core/skills/deliver/SKILL.md`
   - **Expected:** blocked/red phase routes to `/sw-stabilize`; per-phase stabilize budget obeys dispatch hard stops; whole-feature stabilize has distinct budget; flaky failures get re-run/quorum before blocking dependents
   - **R-IDs:** R27
 
-- [ ] 10.4 Revert/unstack protocol and terminal deny semantics (R45, R46)
+- [x] 10.4 Revert/unstack protocol and terminal deny semantics (R45, R46)
   - **File:** `scripts/wave.sh`, `core/skills/deliver/SKILL.md`
   - **Expected:** bad merged green → `git revert` on `<type>/<slug>`, phase→`blocked`, dependents re-blocked; human terminal rejection records `rejected`; resume never re-presents rejected terminal PR
   - **R-IDs:** R45, R46

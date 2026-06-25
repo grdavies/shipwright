@@ -15,6 +15,12 @@
 #   wave.sh merge gate-check|enqueue|exec|run-next|ancestry-check ...
 #   wave.sh report terminal
 #   wave.sh bookkeeping record|revert|projected ...
+#   wave.sh verify run|run-after-merge ...
+#   wave.sh blast-radius apply|dependents ...
+#   wave.sh report blockers
+#   wave.sh revert phase ...
+#   wave.sh terminal deny ...
+#   wave.sh stabilize route ...
 #   wave.sh integration --stamp <stamp> --branches 'branch1,branch2'
 #   wave.sh state init|get|phase|terminal ...
 #   wave.sh lock acquire|release|status ...
@@ -36,14 +42,23 @@ case "${1:-}" in
     fi
     exec python3 "$ROOT/scripts/wave_lifecycle.py" "$ROOT" phase "${@:2}"
     ;;
-  status|report)
-    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" "$@"
+  status)
+    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" status "$@"
+    ;;
+  report)
+    if [[ "${2:-}" == "blockers" ]]; then
+      exec python3 "$ROOT/scripts/wave_failure.py" "$ROOT" report blockers "${@:3}"
+    fi
+    exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" report "$@"
     ;;
   merge)
     exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" merge "$@"
     ;;
   bookkeeping)
     exec python3 "$ROOT/scripts/wave_bookkeeping.py" "$ROOT" "${@:2}"
+    ;;
+  verify|blast-radius|revert|terminal|stabilize)
+    exec python3 "$ROOT/scripts/wave_failure.py" "$ROOT" "$@"
     ;;
 esac
 exec python3 "$ROOT/scripts/wave_deliver.py" "$ROOT" "$@"
