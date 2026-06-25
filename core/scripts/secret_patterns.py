@@ -63,7 +63,7 @@ def _patterns() -> list[DenyPattern]:
         ),
         (
             "INTERNAL_HOST",
-            r"(?i)\b[\w.-]+\.(?:internal|local|localhost)\b",
+            r"(?i)(?:\b[\w.-]+\.internal\b|\b[\w.-]+\.cluster\.local\b)",
             "[REDACTED:INTERNAL_HOST]",
         ),
         (
