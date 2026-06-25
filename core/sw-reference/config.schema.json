@@ -70,6 +70,31 @@
               "description": "In-flight phase exceeds this duration → consolidated blocker."
             }
           }
+        },
+        "autonomy": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Conductor autonomy mode and run-level budgets (TR15, TR20 / R13, R42).",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["supervised", "autonomous"],
+              "default": "autonomous",
+              "description": "autonomous = minimal legitimate-halt set (default hands-off); supervised adds per-phase acknowledgement halts."
+            },
+            "maxRunMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1440,
+              "description": "Run-level wall-clock ceiling; exceeded → clean consolidated halt (R42)."
+            },
+            "maxIterations": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 500,
+              "description": "Run-level deliver-loop iteration ceiling; complements maxRunMinutes (R42)."
+            }
+          }
         }
       }
     },

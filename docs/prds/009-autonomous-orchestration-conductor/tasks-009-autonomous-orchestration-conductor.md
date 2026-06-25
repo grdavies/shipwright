@@ -66,19 +66,19 @@ documented behavior exists.
 
 ### 3. Conductor contract + config knobs (M)
 
-- [ ] 3.1 Conductor contract skill + thin guardrail rule (R1, R3)
+- [x] 3.1 Conductor contract skill + thin guardrail rule (R1, R3)
   - **File:** `core/skills/conductor/SKILL.md`, `core/rules/sw-conductor.mdc`
   - **Expected:** one referenced contract specifying self-continuation, legitimate-halt set, parallel
     dispatch, and resumption; invokes `wave_*.py` primitives, never re-implements state logic in prose
-- [ ] 3.2 Durable-state resumption clause for a fresh agent (R4)
+- [x] 3.2 Durable-state resumption clause for a fresh agent (R4)
   - **File:** `core/skills/conductor/SKILL.md`
   - **Expected:** a fresh agent resumes from `.cursor/sw-deliver-state.json` + plan + run log and continues
     to the next legitimate halt
-- [ ] 3.3 Default no-reprompt behavior (R13)
+- [x] 3.3 Default no-reprompt behavior (R13)
   - **File:** `core/skills/conductor/SKILL.md`, `core/commands/sw-deliver.md`
   - **Expected:** with no extra config a frozen task list delivers end-to-end to the terminal-PR gate with
     zero re-prompts
-- [ ] 3.4 `deliver.autonomy` knob + run-level budget (R42)
+- [x] 3.4 `deliver.autonomy` knob + run-level budget (R42)
   - **File:** `.cursor/workflow.config.json` (schema + example), `core/scripts` setup seeding
   - **Expected:** `deliver.autonomy: supervised|autonomous` (default `autonomous`) and a run-level ceiling
     (`deliver.autonomy.maxRunMinutes` / total-iteration) that converts a runaway run to a clean halt
