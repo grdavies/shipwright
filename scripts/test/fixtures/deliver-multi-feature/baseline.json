@@ -1,0 +1,6 @@
+{
+  "items": ["A", "B", "C"],
+  "edges": ["C:A"],
+  "expectedWaves": [["A", "B"], ["C"]],
+  "expectedMode": "multi-feature"
+}
