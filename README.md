@@ -175,8 +175,9 @@ See `core/sw-reference/config.schema.json` for the full schema. User guides: [ge
 
 1. `/sw-setup` — config + `doc.afterTasks` + review choice (`none` default).
 2. `/sw-doc` — doc chain; **single-pass** `/sw-tasks`; boundary modes control dispatch after freeze.
-3. `/sw-worktree` + `/sw-start` — implementation only inside a worktree (never bare `main`).
-4. `/sw-ship` or atomic execute → verify → PR → watch-ci → ready.
+3. `/sw-doc` — doc chain; **single-pass** `/sw-tasks`; boundary modes control dispatch after freeze.
+4. `/sw-deliver run <frozen-tasks>` — primary implementation path (orchestrates all phases to one terminal merge gate).
+5. **Quick tier only:** `/sw-worktree` + `/sw-start` → `/sw-ship` when there is no frozen task list.
 
 ### Optional integrations
 
@@ -205,7 +206,7 @@ commands; every atomic stays independently runnable.
 | Workstream | Orchestrator | Chain |
 |------------|--------------|-------|
 | Documentation | `/sw-doc` | `/sw-brainstorm` → `/sw-prd` → `/sw-doc-review` → `/sw-freeze` → `/sw-tasks` |
-| Implementation | `/sw-deliver` | drives a frozen task list's phases to one merge gate (see below) |
+| Implementation | `/sw-deliver` | `run` → per-phase `/sw-ship` → auto-merge → terminal PR → main |
 | Debugging | `/sw-debug` | triage signal → RCA → route (does not implement or merge) |
 | Feedback | `/sw-feedback` | normalize + redact inbound signals → route to debug / gap-capture / brainstorm |
 
@@ -215,18 +216,21 @@ Once `/sw-doc` has produced a frozen task list (`tasks-<n>-<slug>.md`), **`/sw-d
 implementation process** — the "play button" for that list. It drives every remaining phase of a single
 feature to one human merge gate: dependency-ordered, parallel where safe, stacked where not.
 
-For each phase, `/sw-deliver` runs the full `/sw-ship` chain inside an isolated worktree:
+For each phase, `/sw-deliver` provisions an isolated worktree and dispatches the full `/sw-ship` chain
+(`/sw-execute` through `/sw-ready`) — you do not invoke those atomics yourself unless debugging or running
+a single phase by hand:
 
 ```
-/sw-execute → /sw-verify → /sw-review → /sw-simplify → /sw-commit → /sw-pr → /sw-watch-ci → /sw-stabilize → /sw-ready
+/sw-deliver run → per phase: /sw-execute → /sw-verify → … → /sw-ready → auto-merge into <type>/<slug>
 ```
 
 When a phase's `check-gate.sh` goes green it **auto-merges into the feature branch `<type>/<slug>`** (the
 bot/CI gate replaces the per-phase human gate). The only human stop is the final **`<type>/<slug> → main`**
 pull request.
 
-Prefer manual control? The atomics still compose by hand, one phase at a time:
-`/sw-worktree` + `/sw-start` → `/sw-ship` (or `/sw-execute` … `/sw-ready`), repeated per phase.
+**Manual alternative** (one phase at a time, or Quick-tier slices without a frozen task list):
+`/sw-worktree` + `/sw-start` → `/sw-ship` (or `/sw-execute` … `/sw-ready`). Same atomics `/sw-deliver` calls
+internally — useful for debugging, partial reruns, or hotfixes that skip `/sw-doc`.
 
 > `/sw-deliver` is the phase-aware evolution of the former `/sw-wave`, specified in
 > [PRD 004](docs/prds/004-wave-phase-orchestrator/004-prd-wave-phase-orchestrator.md). It also retains the
@@ -242,17 +246,23 @@ flowchart TB
     T["/sw-triage"] --> D["/sw-doc"]
     D --> FZ["/sw-freeze + /sw-tasks"]
   end
-  subgraph ship["2. Implementation"]
+  subgraph ship["2. Implementation — primary"]
+    DEL["/sw-deliver run"]
+    DEL --> TM["Terminal PR → main"]
+  end
+  subgraph manual["Manual / Quick tier"]
     WT["/sw-worktree"] --> ST["/sw-start"]
     ST --> SH["/sw-ship"]
   end
   subgraph ops["3. Debug & feedback"]
     FB["/sw-feedback"] --> DB["/sw-debug"]
   end
-  FZ --> WT
-  DB -.->|small fix| SH
-  T -.->|Quick tier| SH
-  SH --> CM["/sw-compound-ship"]
+  FZ -->|frozen tasks| DEL
+  T -.->|Quick tier| manual
+  DB -.->|small fix| manual
+  DEL --> CM["/sw-compound-ship"]
+  SH --> CM
+  TM --> CM
 ```
 
 **Tiers** classify how much documentation ceremony a piece of work needs. `/sw-triage` scores deterministically;
@@ -268,7 +278,7 @@ flowchart TB
 | **Artifacts produced** | None (implement from prompt) | `docs/prds/<n>-*/` PRD + frozen tasks | `docs/brainstorms/` + PRD + frozen tasks |
 | **Human gates** | Merge gate only | `doc.afterTasks` confirm; freeze; merge | `doc.afterTasks`; brainstorm checkpoint; freeze; merge |
 | **Best for** | Hotfixes, typos, single-file tweaks | Most features with clear acceptance criteria | New domains, spikes, “figure out” scope |
-| **Entry command** | `/sw-triage` then `/sw-worktree` + `/sw-ship` | `/sw-doc` or `/sw-prd` | `/sw-doc` (includes brainstorm) |
+| **Entry command** | `/sw-triage` then manual `/sw-ship` (no frozen tasks) | `/sw-deliver run` after `/sw-doc` | `/sw-deliver run` after `/sw-doc` |
 
 **Risk floor:** keywords like `auth`, `payment`, `migration`, or `webhook` force **at least Standard** even for
 1-file changes. **Ambiguity bump:** words like `maybe`, `explore`, or `TBD` push Quick→Standard or
@@ -298,13 +308,14 @@ flowchart TD
   UP --> TIER
   MAX --> TIER
   TIER --> QK{Quick?}
-  QK -->|yes| IMPL[Hand off to implementation]
-  QK -->|no| DOC[Enter /sw-doc pipeline]
+  QK -->|yes| IMPL[Manual /sw-ship]
+  QK -->|no| DOC[Enter /sw-doc → /sw-deliver run]
 ```
 
 #### Quick tier workflow
 
-No spec artifacts. Triage routes directly to the ship loop.
+No spec artifacts — no frozen task list, so **`/sw-deliver` does not apply**. Triage routes to the manual
+`/sw-ship` atomics (the same chain `/sw-deliver` dispatches per phase when tasks are frozen).
 
 ```mermaid
 flowchart LR
@@ -342,15 +353,16 @@ flowchart TB
   TS --> BT{doc.afterTasks}
   BT --> SR2[traceability + spec-rigor]
   SR2 --> FZ2["/sw-freeze tasks"]
-  FZ2 --> WT["/sw-worktree → /sw-start"]
-  WT --> SH["/sw-ship loop"]
-  SH --> MERGE[You merge]
+  FZ2 --> DEL["/sw-deliver run"]
+  DEL --> TM[Terminal PR → main]
+  TM --> MERGE[You merge]
   MERGE --> CM["/sw-compound-ship"]
 ```
 
 ```text
 /sw-doc
 Feature: CSV export on reports table — 4 files, clear criteria, no auth
+/sw-deliver run docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
 ```
 
 #### Full tier workflow
@@ -371,15 +383,16 @@ flowchart TB
   TS --> BT{doc.afterTasks}
   BT --> SR2[traceability + spec-rigor]
   SR2 --> FZ2["/sw-freeze tasks"]
-  FZ2 --> WT["/sw-worktree → /sw-start"]
-  WT --> SH["/sw-ship loop"]
-  SH --> MERGE[You merge]
+  FZ2 --> DEL["/sw-deliver run"]
+  DEL --> TM[Terminal PR → main]
+  TM --> MERGE[You merge]
   MERGE --> CM["/sw-compound-ship"]
 ```
 
 ```text
 /sw-doc
 Feature: new billing portal — explore pricing models, 8+ files, auth + Stripe
+/sw-deliver run docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
 ```
 
 > **Note:** `/sw-doc` **stops** on Quick tier and tells you to use the implementation workstream instead.
@@ -424,7 +437,7 @@ Or run `/sw-doc` to orchestrate either chain end-to-end.
 1. `/sw-triage` — classify tier (or pass `--tier` to `/sw-doc`)
 2. `/sw-doc` — runs the tier-appropriate doc chain
 3. Human **`doc.afterTasks`** checkpoint after single-pass task freeze (default `confirm`)
-4. Frozen PRD + tasks become the spec for `/sw-ship`
+4. Frozen PRD + tasks become the spec for **`/sw-deliver run`** (primary) or manual `/sw-ship` per phase
 
 **Sample prompts**
 
@@ -459,6 +472,23 @@ Context: 3–4 files, no auth changes. Skip brainstorm.
 
 Use when you have frozen tasks (Standard/Full) or a Quick-tier slice and want a verified PR.
 
+**Primary path:** `/sw-deliver run` orchestrates every phase from the frozen task list to one terminal merge gate.
+`/sw-ship`, `/sw-execute`, and the other ship-loop atomics still exist — `/sw-deliver` invokes them per phase;
+run them manually only for Quick-tier hotfixes, debugging, or single-phase reruns.
+
+```mermaid
+flowchart TB
+  RUN["/sw-deliver run"] --> PF[preflight + plan]
+  PF --> WAVES[Dependency-ordered waves]
+  WAVES --> PHASE[Per-phase worktree]
+  PHASE --> SHIP["/sw-ship chain"]
+  SHIP --> AM[Auto-merge into type/slug]
+  AM --> MORE{More phases?}
+  MORE -->|yes| WAVES
+  MORE -->|all green-merged| TERM[Terminal PR → main]
+  TERM --> PAUSE[You merge — only human gate]
+```
+
 #### `/sw-deliver run` — phase-mode play button (default)
 
 When `/sw-doc` has produced a **frozen** task list (`tasks-<n>-<slug>.md`), `/sw-deliver` is the default
@@ -488,9 +518,13 @@ and reconciles against the remote tip. Use `plan --from <phase>` when upstream p
 **Dry-run:** `scripts/wave.sh plan --task-list <path> --dry-run` emits the plan JSON without writing
 `.cursor/sw-deliver-plan.json`.
 
-Manual per-phase control remains available: `/sw-worktree` + `/sw-start` → `/sw-ship` for each phase.
+Manual per-phase control remains available when you need it: `/sw-worktree` + `/sw-start` → `/sw-ship` for each
+phase (same chain `/sw-deliver` dispatches automatically).
 
-#### `/sw-ship` — single phase loop
+#### `/sw-ship` — single-phase loop (manual / Quick tier)
+
+Used directly for **Quick-tier** work (no frozen task list) or when debugging a single phase. When you run
+`/sw-deliver`, this chain executes **inside** each phase — you normally do not call it yourself.
 
 ```mermaid
 flowchart LR
@@ -509,16 +543,25 @@ flowchart LR
 ```
 
 Halts on verification failure, review blockers, or red CI. **Never auto-merges** — you decide at `/sw-ready`.
+When invoked by `/sw-deliver`, green phases auto-merge into `<type>/<slug>` without a per-phase human pause.
 
-**Typical flow**
+**Typical manual flow** (Quick tier or single-phase debug)
 
 1. `/sw-worktree provision` — isolated worktree for the work item
 2. `/sw-start` — phase branch (e.g. `feat/my-feature-phase-mvp`)
-3. `/sw-execute` — implement one task slice (or let `/sw-ship` orchestrate)
+3. `/sw-execute` — implement one task slice (or let `/sw-ship` orchestrate the full loop)
 4. `/sw-ship` — verify → review → commit → PR → watch CI → stabilize → **pause at merge-ready**
 5. You merge manually; then `/sw-compound-ship` in the target repo
 
-**Sample prompts**
+**Typical `/sw-deliver` flow** (Standard/Full — preferred)
+
+```text
+/sw-deliver run docs/prds/003-user-profile/tasks-003-user-profile.md
+```
+
+Re-run the same command to resume after interrupt. One terminal PR to `main` when all phases are `green-merged`.
+
+**Sample prompts (manual / debug)**
 
 ```text
 /sw-worktree provision
@@ -539,11 +582,11 @@ Task: 2.1 from tasks-003-user-profile.md — add settings form component
 
 | Command | Use when |
 |---------|----------|
-| `/sw-deliver run <frozen-tasks>` | Orchestrate all phases to one terminal merge gate (phase-mode default) |
-| `/sw-ship` | Full single-phase loop; halts at merge gate |
-| `/sw-worktree` | Create or tear down per-item worktree |
-| `/sw-start` | Open phase branch inside worktree |
-| `/sw-execute` | One bounded implementation slice |
+| `/sw-deliver run <frozen-tasks>` | **Primary** — orchestrate all phases to one terminal merge gate |
+| `/sw-ship` | Manual single-phase loop (Quick tier, debug, or without `/sw-deliver`) |
+| `/sw-worktree` | Create or tear down per-item worktree (manual path; `/sw-deliver` provisions automatically) |
+| `/sw-start` | Open phase branch inside worktree (manual path) |
+| `/sw-execute` | One bounded implementation slice (manual path; first step inside `/sw-ship`) |
 | `/sw-verify` | Run scoped lint/typecheck/test |
 | `/sw-review` | Local multi-agent + provider review |
 | `/sw-commit` | Commit after verify + review |
@@ -656,12 +699,13 @@ dispatch.
 | `/sw-setup` | First run or doctor in a target repo |
 | `/sw-triage` | How much ceremony does this work need? |
 | `/sw-doc` | Full documentation pipeline |
-| `/sw-ship` | Verify, review, PR, CI, stabilize — stop before merge |
+| `/sw-deliver run` | **Primary** — implement frozen tasks to one terminal merge gate |
+| `/sw-ship` | Manual single-phase verify → PR → CI loop (Quick tier / debug) |
 | `/sw-debug` | Diagnose production or CI failure |
 | `/sw-feedback` | Intake and route external signals |
-| `/sw-worktree` | Isolate work in a git worktree |
-| `/sw-start` | Start a phase branch |
-| `/sw-execute` | Implement one task slice |
+| `/sw-worktree` | Isolate work in a git worktree (manual path) |
+| `/sw-start` | Start a phase branch (manual path) |
+| `/sw-execute` | Implement one task slice (manual path) |
 | `/sw-status` | Reconcile PRD status from git facts |
 | `/sw-memory-sync` | Distill session into durable memory |
 | `/sw-memory-audit` | Audit memory hygiene (read-only) |

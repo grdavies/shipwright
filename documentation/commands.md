@@ -8,8 +8,8 @@ bounded step. For full procedure text, open the linked command file under `core/
 | Command | Scope | Does not |
 |---------|-------|----------|
 | [`/sw-doc`](../core/commands/sw-doc.md) | Doc pipeline: triage → brainstorm (Full) → PRD → review → freeze → **single-pass** `/sw-tasks`; then `doc.afterTasks` (`stop` \| `confirm` \| `auto`) | Implement, merge, or skip human gates |
-| [`/sw-ship`](../core/commands/sw-ship.md) | Phase loop: execute → verify → review → commit → PR → CI → stabilize → ready; accepts `--after-tasks=<mode>` at frozen-task boundary | Merge (halts at merge gate) |
-| [`/sw-deliver`](../core/commands/sw-deliver.md) | Frozen task-list phase orchestrator (phase-mode) or multi-feature wave (`integration/<stamp>`) | Bypass `/sw-ship`, auto-merge to `main`, or re-author frozen tasks |
+| [`/sw-deliver`](../core/commands/sw-deliver.md) | **Primary** implementation orchestrator — frozen task-list phase-mode or multi-feature wave | Bypass `/sw-ship`, auto-merge to `main`, or re-author frozen tasks |
+| [`/sw-ship`](../core/commands/sw-ship.md) | **Manual** single-phase loop: execute → verify → review → commit → PR → CI → stabilize → ready; also runs **inside** each `/sw-deliver` phase | Merge (halts at merge gate) |
 | [`/sw-debug`](../core/commands/sw-debug.md) | Production/dev RCA and route by fix size | Implement, commit, or merge |
 | [`/sw-feedback`](../core/commands/sw-feedback.md) | Normalize inbound signals and route to debug, gaps, or brainstorm | Analyze, author, or dispatch without confirmation |
 | [`/sw-compound-ship`](../core/commands/sw-compound-ship.md) | Post-merge: retro → compound → optional memory-sync | Merge or auto-promote rules |
@@ -56,6 +56,10 @@ See [`core/commands/sw-deliver.md`](../core/commands/sw-deliver.md) and [`skills
 `doc.afterTasks` is the sole human checkpoint between PRD freeze and implementation when using `/sw-doc`.
 
 ## Ship loop atomics (selected)
+
+These commands compose the **single-phase** ship loop. In normal use you invoke **`/sw-deliver run`** instead —
+it dispatches this chain per phase automatically. Use the atomics directly for Quick-tier hotfixes, debugging one
+phase, or when you deliberately skip the orchestrator.
 
 | Command | Role |
 |---------|------|
