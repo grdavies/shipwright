@@ -99,12 +99,12 @@ frozen_at: 2026-06-24
 
 ### 4. `/sw-ship` non-interactive phase-mode contract (M)
 
-- [ ] 4.1 Add `--phase-mode` / `SW_PHASE_MODE` contract (R48, R18)
+- [x] 4.1 Add `--phase-mode` / `SW_PHASE_MODE` contract (R48, R18)
   - **File:** `core/commands/sw-ship.md`
   - **Expected:** suppresses terminal "ready to merge" pause; writes `merge-ready-green` or `blocked`+cause to durable path; exits without merging; other human halts → `blocked` not prompt
   - **R-IDs:** R48, R18
 
-- [ ] 4.2 Nested sub-agent dispatch spike and inline-review fallback doc (R63)
+- [x] 4.2 Nested sub-agent dispatch spike and inline-review fallback doc (R63)
   - **File:** `core/skills/deliver/SKILL.md`, spike note in deliver skill or `docs/plans/` (local)
   - **Expected:** spike records whether nested background dispatch is available; inline two-stage review documented as default/fallback when nesting unavailable
   - **R-IDs:** R63
