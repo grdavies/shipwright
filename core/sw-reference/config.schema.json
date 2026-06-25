@@ -29,6 +29,24 @@
         }
       }
     },
+    "deliver": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "/sw-deliver phase-mode orchestrator settings.",
+      "properties": {
+        "phaseAckCadence": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Pause for human acknowledgment after every K phase merges into <type>/<slug>. 0 = off."
+        },
+        "baseBranchType": {
+          "type": "string",
+          "enum": ["feat", "fix", "docs", "hotfix", "release"],
+          "description": "Optional override for phase-mode base branch type (<type>/<slug>). When omitted, resolved from release-please-config.json or task-list frontmatter."
+        }
+      }
+    },
     "verify": {
       "type": "object",
       "additionalProperties": { "type": "string" },

@@ -43,17 +43,17 @@ frozen_at: 2026-06-24
 
 ### 1. Rename `/sw-wave` → `/sw-deliver` and naming boundary (S)
 
-- [ ] 1.1 Rename command and skill paths; update artifact names (R64)
+- [x] 1.1 Rename command and skill paths; update artifact names (R64)
   - **File:** `core/commands/sw-wave.md` → `core/commands/sw-deliver.md`, `core/skills/wave/` → `core/skills/deliver/`
   - **Expected:** no `sw-wave` command file remains; skill frontmatter `name: sw-deliver`; plan/state/lock paths use `sw-deliver-*`
   - **R-IDs:** R64
 
-- [ ] 1.2 Update naming rule and grep-sweep references (R31, R32, R64)
+- [x] 1.2 Update naming rule and grep-sweep references (R31, R32, R64)
   - **File:** `rules/sw-naming.mdc`, `README.md`, `documentation/commands.md`, `.sw/layout.md`
   - **Expected:** `/sw-deliver` two-mode boundary documented; scope + non-goals in command description; no stale `/sw-wave` in rules/docs
   - **R-IDs:** R31, R32, R64
 
-- [ ] 1.3 Add config keys `deliver.phaseAckCadence` and `deliver.baseBranchType` (R56, R35)
+- [x] 1.3 Add config keys `deliver.phaseAckCadence` and `deliver.baseBranchType` (R56, R35)
   - **File:** `.sw/config.schema.json`, `.sw/workflow.config.example.json`
   - **Expected:** `deliver.phaseAckCadence` integer default `0`; `deliver.baseBranchType` optional override; schema validates
   - **R-IDs:** R56, R35

@@ -1,15 +1,17 @@
 ---
-name: sw-wave
-description: Dependency-ordered build waves with dependent-branch stacking and integration branch lifecycle.
+name: sw-deliver
+description: Dependency-ordered deliver waves with dependent-branch stacking and integration branch lifecycle.
 ---
 
-# Wave orchestration
+# Deliver orchestration
 
-Layer above `/sw-ship` for multi-item rounds. Reuses `scripts/worktree.sh` and `skills/parallelism/` wholesale.
+Layer above `/sw-ship` for **phase-mode** (frozen task-list phases stacking onto `<type>/<slug>`) and
+**multi-feature mode** (independent features promoting via `integration/<stamp>`). Reuses `scripts/worktree.sh`
+and `skills/parallelism/` wholesale.
 
-## Wave plan representation
+## Deliver plan representation
 
-Path: `.cursor/sw-wave-plan.json` (machine-readable; see `.sw/layout.md`).
+Path: `.cursor/sw-deliver-plan.json` (machine-readable; see `.sw/layout.md`).
 
 ```json
 {
@@ -22,6 +24,15 @@ Path: `.cursor/sw-wave-plan.json` (machine-readable; see `.sw/layout.md`).
 
 - **waves:** ordered batches; no intra-wave dependencies.
 - **contention:** shared-migration refusal + living INDEX/numbering counters force serialization.
+
+## Run-state artifacts
+
+| Artifact | Path |
+|----------|------|
+| Plan | `.cursor/sw-deliver-plan.json` |
+| Run state | `.cursor/sw-deliver-state.json` |
+| Orchestrator lock | `.cursor/sw-deliver.lock` |
+| Per-phase status | `.cursor/sw-deliver-runs/<phase>/status.json` |
 
 ## Stacking
 
