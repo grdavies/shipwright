@@ -63,9 +63,10 @@ def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 
-def fail_payload(data: dict[str, Any], default: str, exit_code: int) -> None:
-    payload = {k: v for k, v in data.items() if k != "error"}
-    fail(data.get("error") or default, exit_code=exit_code, **payload)
+def fail_payload(data: dict[str, Any], default: str, exit_code: int, **extra: Any) -> None:
+    reserved = {"error", *extra.keys()}
+    payload = {k: v for k, v in data.items() if k not in reserved}
+    fail(data.get("error") or default, exit_code=exit_code, **extra, **payload)
 
 
 def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | None:
