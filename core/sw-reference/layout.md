@@ -82,17 +82,8 @@ docs/decisions/
 ---
 date: YYYY-MM-DD
 topic: <kebab-topic>
-brainstorm: docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md   # Full-tier PRD only (R52)
-prd: docs/prds/<n>-<slug>/<n>-prd-<slug>.md                      # brainstorm forward ref (R53); list when multiple
 ---
 ```
-
-- **`brainstorm:`** (canonical) — repo-relative path to the source brainstorm. Required on every **Full-tier** PRD
-  at draft time (`/sw-prd` writes it; `/sw-freeze` + `scripts/doc-link-check.sh` verify it). Legacy alias:
-  `source_brainstorm:` (accepted by the gate only; new PRDs MUST use `brainstorm:`).
-- **`prd:`** — repo-relative path (or YAML list) from a **writable** brainstorm back to derived PRD(s). Written
-  when the PRD is created or frozen (`/sw-prd` / `/sw-freeze`); skipped when the brainstorm is already frozen
-  (PRD `brainstorm:` remains authoritative).
 
 ### Frozen artifact
 

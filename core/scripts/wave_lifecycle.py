@@ -25,7 +25,6 @@ def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
 
 
 def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
-    extra.pop("error", None)
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 
@@ -113,7 +112,7 @@ def cmd_assert_entry(root: Path, _args: list[str]) -> None:
 
 
 def assert_primary_off_target(top: Path, target: str) -> None:
-    """Primary checkout must not be on the orchestrator-owned branch (R55/R31)."""
+    """Primary checkout must not be on the orchestrator-owned branch (R55)."""
     current = git_run(["branch", "--show-current"], top, check=False).stdout.strip()
     if current != target:
         return
@@ -127,24 +126,12 @@ def assert_primary_off_target(top: Path, target: str) -> None:
                 f"git stash push -m 'pre-deliver' && git checkout $(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo main)"
             ),
         )
-    default_ref = git_run(
-        ["symbolic-ref", "refs/remotes/origin/HEAD"],
-        top,
-        check=False,
-    ).stdout.strip()
-    if default_ref.startswith("refs/remotes/origin/"):
-        default_branch = default_ref.removeprefix("refs/remotes/origin/")
-    else:
-        default_branch = "main"
-    checkout = git_run(["checkout", default_branch], cwd=top, check=False)
-    if checkout.returncode != 0:
-        fail(
-            f"primary checkout is on {target}; auto-checkout to {default_branch!r} failed",
-            exit_code=20,
-            halt="primary-on-target",
-            remediation=f"git checkout {default_branch}  # orchestrator worktree owns {target}",
-            stderr=checkout.stderr.strip(),
-        )
+    fail(
+        f"primary checkout must be off {target} before orchestrator provision",
+        exit_code=20,
+        halt="primary-on-target",
+        remediation=f"git checkout <other-branch>  # orchestrator worktree owns {target}",
+    )
 
 
 def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
