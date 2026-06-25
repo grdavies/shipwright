@@ -284,4 +284,18 @@ else
   FAIL=1
 fi
 
+# --- doc.afterTasks → /sw-deliver run + frozen-spec seed (PRD 005 A1/A2) ---
+DOC_AFTER="$ROOT/scripts/test/fixtures"
+for fx in \
+  doc-afterTasks-stop-deliver \
+  doc-afterTasks-confirm-deliver \
+  doc-afterTasks-auto-deliver \
+  doc-afterTasks-guides-deliver \
+  doc-afterTasks-seed-confirm-auto \
+  doc-afterTasks-seed-stop \
+  doc-afterTasks-seed-branch-derivation \
+  doc-afterTasks-seed-brainstorm-excluded; do
+  bash "$DOC_AFTER/${fx}.sh" || FAIL=1
+done
+
 exit $FAIL

@@ -34,9 +34,9 @@ Canonical opt-out: `review.provider: "none"`. Do not use `review.enabled: false`
 
 | Mode | `doc.afterTasks` | Behavior |
 |------|-----------------|----------|
-| **confirm** (default) | `confirm` | Show frozen task list; require `proceed` or `yes` before dispatch |
-| stop | `stop` | Halt after frozen tasks; hand off to `/sw-worktree` + `/sw-start` manually |
-| auto | `auto` | Provision a worktree and dispatch `/sw-deliver run` without a second prompt |
+| **confirm** (default) | `confirm` | Show frozen task list; require `proceed` or `yes`; seed frozen spec onto `<type>/<slug>`; dispatch `/sw-deliver run <frozen-tasks>` |
+| stop | `stop` | Halt after frozen tasks (print-only); print docs-only seed command onto `<type>/<slug>` and `/sw-deliver run <frozen-tasks>` |
+| auto | `auto` | Seed frozen spec onto `<type>/<slug>` and dispatch `/sw-deliver run <frozen-tasks>` without a second prompt |
 
 ### Step 4 — Guardrails
 
