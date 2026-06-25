@@ -14,6 +14,7 @@ Adapted workflow patterns — not runtime plugin dependencies. Shipwright is sel
 | Retro + compounding | [compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin) | cache `2648200ed2352b6e19a93dcfffc764efe70b6a1b` | `/sw-retro`, `/sw-compound`; writes through memory seam only |
 | Debug RCA + routing | [compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin) | cache `2648200ed2352b6e19a93dcfffc764efe70b6a1b` | `ce-debug`-style phased RCA; `/sw-debug` routes by fix size |
 | Local code review (report-only) | [compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin) | cache `2648200ed2352b6e19a93dcfffc764efe70b6a1b` | `ce-code-review` adapter in `core/providers/code-review/`; Shipwright owns apply + gate |
+| Communication compression | [caveman](https://github.com/juliusbrussee/caveman) | `~/.agents/skills/caveman/SKILL.md` | Ultra-compressed chat intensity (lite / full / ultra) bundled as `core/communication/caveman-core.md`; `/sw-caveman` exposes the override surface |
 
 ## Runtime dependencies (external services & tools)
 

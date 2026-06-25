@@ -28,7 +28,7 @@ Path: `.cursor/sw-deliver-plan.json` (machine-readable; see `.sw/layout.md`).
 }
 ```
 
-Multi-feature mode uses `"mode": "multi-feature"` with `pf/<id>` branches (unchanged).
+Multi-feature mode uses `"mode": "multi-feature"` with conforming type-prefixed branches (e.g. `feat/<id>`); `pf/<id>` is prohibited (R24).
 
 - **waves:** ordered batches; no intra-wave dependencies.
 - **contention:** shared-migration refusal + living INDEX/numbering counters force serialization;
@@ -190,8 +190,12 @@ dependent phase branch via **merge** (never rebase a published phase branch). Co
 Dependents provision with:
 
 ```bash
-scripts/worktree.sh provision <name> --base <dependency-branch> --branch pf/<name>
+scripts/worktree.sh provision <name> --base <dependency-branch> --branch <type>/<name>
 ```
+
+`<type>` must be drawn from `release-please-config.json` `changelog-sections[].type` (e.g. `feat`, `fix`,
+`chore`). `pf/<name>` is prohibited; the branch-name guard (`scripts/branch-name-guard.sh`) refuses
+non-conforming names at creation time (R22–R25).
 
 Merge pre-flight from `skills/parallelism/` runs before stacking. No item touches `main` mid-wave.
 
