@@ -331,3 +331,22 @@ scripts/wave.sh terminal deny --scope whole-feature|per-phase [--phase-slug <slu
   `blocked`, re-blocks dependents; does not open/advance the terminal PR.
 - **Terminal deny (R46):** records `terminalRejected` in run-state; resume must not re-present the rejected PR.
 - **`status collect` on `blocked`:** automatically applies blast-radius to dependents.
+
+## Terminal PR gate and resume (R22–R24, R29–R30, R43, R56)
+
+When all phases are `green-merged` and none `blocked`:
+
+```bash
+scripts/wave.sh resume reconcile                    # remote <type>/<slug> tip is ground truth (R29/R50)
+scripts/wave.sh terminal pr prepare                 # open/update single <type>/<slug> → main PR (R22)
+scripts/wave.sh terminal pr gate                    # check-gate.sh on terminal PR head (R23/R24)
+scripts/wave.sh terminal pr status
+scripts/wave.sh report terminal                     # /sw-ready form when gate green
+scripts/wave.sh ack check|complete|status           # optional cadence (deliver.phaseAckCadence, R56)
+```
+
+- **No `integration/<stamp>`** in phase-mode — one terminal PR only (R22).
+- **Rejected terminal** (`terminal deny`): resume must not re-present the same PR (R46).
+- **INDEX.md** uses only `not-started` / `complete` — never `in-progress` (R43). Run-state binds
+  `source_task_list` + `prd_number`; wave run does not freeze INDEX to in-progress.
+- **`deliver.phaseAckCadence: K`** (default `0`): pause for human `ack complete` after every K phase merges (R56).

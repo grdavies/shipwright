@@ -218,22 +218,22 @@ frozen_at: 2026-06-24
 
 ### 11. Terminal PR gate, resumption, and ack cadence (M)
 
-- [ ] 11.1 Terminal `<type>/<slug> → main` PR and gate halt (R22, R23, R24)
+- [x] 11.1 Terminal `<type>/<slug> → main` PR and gate halt (R22, R23, R24)
   - **File:** `core/commands/sw-deliver.md`, `scripts/wave.sh`
   - **Expected:** opens/updates single terminal PR only when all phases `green-merged`; no `integration/<stamp>` in phase-mode; `check-gate.sh` on PR head; halts at human merge gate; report matches `/sw-ready` form
   - **R-IDs:** R22, R23, R24
 
-- [ ] 11.2 Idempotent resume against pushed remote tip (R29, R30, R50)
+- [x] 11.2 Idempotent resume against pushed remote tip (R29, R30, R50)
   - **File:** `scripts/wave.sh`
   - **Expected:** re-invocation skips `green-merged`; resumes `blocked`/`pending`; reconciles against pushed remote `<type>/<slug>` tip; no duplicate branches/PRs/double-merges; safe interrupt/resume
   - **R-IDs:** R29, R30, R50
 
-- [ ] 11.3 Optional phase ack cadence (R56)
+- [x] 11.3 Optional phase ack cadence (R56)
   - **File:** `core/commands/sw-deliver.md`, `scripts/wave.sh`
   - **Expected:** `deliver.phaseAckCadence: K` pauses for human ack after every K merges; default `0` = off
   - **R-IDs:** R56
 
-- [ ] 11.4 INDEX status vocabulary unchanged (R43)
+- [x] 11.4 INDEX status vocabulary unchanged (R43)
   - **File:** `core/skills/deliver/SKILL.md`
   - **Expected:** run-state binds `source_task_list` + PRD number; INDEX uses only `not-started`/`complete` — no `in-progress`
   - **R-IDs:** R43
