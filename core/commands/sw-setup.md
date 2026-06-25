@@ -78,6 +78,30 @@ Defaults (greenfield-friendly):
 
 Explain `requireRuleClass:true` for mature repos that must have allowlisted rules before prompts proceed.
 
+### 4b. Model tier defaults
+
+Detect platform and seed `models` block (four-tier catalog + routing registry):
+
+```bash
+bash scripts/detect-platform.sh
+bash scripts/seed-model-config.sh --platform "$(bash scripts/detect-platform.sh)" --repair all
+```
+
+| Signal | Platform |
+| --- | --- |
+| `CURSOR_AGENT` or `CURSOR_PLUGIN_ROOT` | `cursor` |
+| `CLAUDE_CODE`, `CLAUDE_CODE_SSE_PORT`, or `CLAUDE_PLUGIN_ROOT` | `claude-code` |
+| Ambiguous | prompt user; default `cursor` in Cursor |
+
+**Scaffold:** always write complete `models` (tiers, aliases, roles, routing) from detected platform catalog
+and `core/sw-reference/model-routing.defaults.json`.
+
+**Doctor:** when `models` is missing → offer add. When present → offer `--repair routing` (routing only, requires
+tiers keys) or confirmed `--repair tiers|all` (overwrites `models.tiers` for detected platform). Never
+auto-overwrite user-edited tiers without explicit confirm.
+
+Report tier map (`cheap` → ID, …) and note re-run on another platform overwrites `models.tiers`.
+
 ### 5. Environment doctor
 
 Detect and recommend (never hard-fail scaffold):
@@ -113,13 +137,15 @@ print('schema ok')
 ```
 
 Write `.cursor/workflow.config.json` (repo-local). Include `memory.inRepo` block when provider is in-repo.
+Merge `models` from `scripts/seed-model-config.sh` unless user opts out.
 
 Seed `communication` from `core/sw-reference/communication-routing.defaults.json` (`defaultIntensity` +
 full `routing.commands` map) unless the user opts out during scaffold.
 
 ### 7. Report
 
-Print summary: providers chosen, store path, guardrail mode, communication routing seeded, environment warnings, config path.
+Print summary: providers chosen, store path, guardrail mode, model tier map, communication routing seeded,
+environment warnings, config path.
 
 Print tip: "Tip: add docs/ to .gitignore to keep workflow artifacts local (brainstorms, PRDs, decisions)."
 

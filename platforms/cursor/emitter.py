@@ -95,6 +95,11 @@ class CursorEmitter(EmitterBase):
             ref_dir = dest / "core" / "sw-reference"
             ref_dir.mkdir(parents=True, exist_ok=True)
             shutil.copy2(comm_defaults, ref_dir / "communication-routing.defaults.json")
+        model_defaults = core_root / "sw-reference" / "model-routing.defaults.json"
+        if model_defaults.is_file():
+            ref_dir = dest / "core" / "sw-reference"
+            ref_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(model_defaults, ref_dir / "model-routing.defaults.json")
 
     def _emit_plugin_manifest(self, repo_root: Path, dest: Path) -> None:
         manifest_dir = dest / ".cursor-plugin"

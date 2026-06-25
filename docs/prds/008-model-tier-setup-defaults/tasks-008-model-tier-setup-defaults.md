@@ -75,17 +75,17 @@ frozen_at: 2026-06-25
 
 ### 3. Setup integration (M)
 
-- [ ] 3.1 Add platform detection helper (R3)
+- [x] 3.1 Add platform detection helper (R3)
   - **File:** `scripts/detect-platform.sh` (or documented procedure in `sw-setup.md`)
   - **Expected:** returns `cursor` or `claude-code` from env signals; ambiguous → prompt; fixture with mocked env
   - **R-IDs:** R3
 
-- [ ] 3.2 Extend `/sw-setup` for model seeding (R1, R2, R2b, R14, R17, R25)
+- [x] 3.2 Extend `/sw-setup` for model seeding (R1, R2, R2b, R14, R17, R25)
   - **File:** `core/commands/sw-setup.md`
   - **Expected:** scaffold writes `models` + routing from defaults; doctor adds missing block; realign tiers on confirm only; routing restore validates tier keys; report summarizes tier map
   - **R-IDs:** R1, R2, R14, R17, R25
 
-- [ ] 3.3 Copy defaults via emitter (R21)
+- [x] 3.3 Copy defaults via emitter (R21)
   - **File:** `platforms/cursor/emitter.py`, `platforms/claude-code/emitter.py`
   - **Expected:** `model-routing.defaults.json` copied to `dist/*/core/sw-reference/`; regenerate dist
   - **R-IDs:** R21
