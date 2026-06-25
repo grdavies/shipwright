@@ -663,4 +663,142 @@ else
   FAIL=1
 fi
 
+# --- verify, blast-radius, revert, deny (R25–R27, R39, R45–R46) ---
+WF="$ROOT/scripts/wave_failure.py"
+BR_FIX=$(mktemp -d)
+mkdir -p "$BR_FIX/.cursor"
+cat >"$BR_FIX/.cursor/sw-deliver-plan.json" <<'JSON'
+{"mode":"phase","edges":[{"from":"1","to":"3"},{"from":"2","to":"3"}],"items":[{"id":"1","slug":"alpha"},{"id":"2","slug":"beta"},{"id":"3","slug":"gamma"}]}
+JSON
+cat >"$BR_FIX/.cursor/sw-deliver-state.json" <<'JSON'
+{"target":{"branch":"feat/demo"},"phases":{"1":{"id":"1","slug":"alpha","status":"blocked","cause":"verify:failed"},"2":{"id":"2","slug":"beta","status":"pending"},"3":{"id":"3","slug":"gamma","status":"pending"}}}
+JSON
+if OUT=$(python3 "$WF" "$BR_FIX" blast-radius apply --phase-slug alpha 2>/dev/null) && \
+   echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['blockedDependents'][0]['phaseSlug']=='gamma'
+" && python3 -c "
+import json
+s=json.load(open('$BR_FIX/.cursor/sw-deliver-state.json'))
+assert s['phases']['3']['status']=='blocked'
+assert s['phases']['2']['status']=='pending'
+"; then
+  echo "OK  deliver-phase-blast-radius"
+else
+  echo "FAIL deliver-phase-blast-radius"
+  FAIL=1
+fi
+if python3 "$WF" "$BR_FIX" report blockers 2>/dev/null | python3 -c "
+import json,sys
+r=json.load(sys.stdin)['report']
+assert r['verdict']=='halt'
+assert len(r['blockers'])>=1
+assert any('/sw-stabilize' in b.get('recommendedCommand','') for b in r['blockers'])
+"; then
+  echo "OK  deliver-phase-blast-radius-report"
+else
+  echo "FAIL deliver-phase-blast-radius-report"
+  FAIL=1
+fi
+if python3 "$WF" "$BR_FIX" stabilize route --phase-slug alpha 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert '/sw-stabilize' in d['recommendedCommand']
+"; then
+  echo "OK  deliver-phase-blast-radius-stabilize-route"
+else
+  echo "FAIL deliver-phase-blast-radius-stabilize-route"
+  FAIL=1
+fi
+rm -rf "$BR_FIX"
+
+REVERT_FIX=$(mktemp -d)
+(
+  cd "$REVERT_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  echo base >f.txt && git add f.txt && git commit -q -m init
+  git branch -m feat/demo
+  git checkout -q -b feat/demo-phase-alpha
+  echo phase >>f.txt && git add f.txt && git commit -q -m phase
+  git checkout -q feat/demo
+  git merge --no-ff feat/demo-phase-alpha -q -m 'merge phase alpha'
+  MERGE_SHA=$(git rev-parse HEAD)
+  mkdir -p .cursor
+  cp "$ROOT/CHANGELOG.md" CHANGELOG.md 2>/dev/null || echo -e "# Changelog\n" >CHANGELOG.md
+  cp "$ROOT/version.txt" version.txt 2>/dev/null || echo "1.2.2" >version.txt
+  git add CHANGELOG.md version.txt && git commit -q -m init-bookkeeping 2>/dev/null || true
+  cat >.cursor/sw-deliver-plan.json <<JSON
+{"mode":"phase","edges":[{"from":"1","to":"2"}],"items":[{"id":"1","slug":"alpha"},{"id":"2","slug":"beta"}]}
+JSON
+  cat >.cursor/sw-deliver-state.json <<JSON
+{"target":{"branch":"feat/demo"},"phases":{"1":{"id":"1","slug":"alpha","status":"green-merged","branch":"feat/demo-phase-alpha","mergeCommit":"$MERGE_SHA"},"2":{"id":"2","slug":"beta","status":"pending"}},"mergedPhases":[{"phaseSlug":"alpha","mergeCommit":"$MERGE_SHA"}],"orchestratorWorktree":{"path":"$REVERT_FIX"}}
+JSON
+  if OUT=$(python3 "$WF" "$REVERT_FIX" revert phase --phase-slug alpha --worktree "$REVERT_FIX" 2>/dev/null) && \
+     echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['action']=='revert-phase'" && \
+     python3 -c "
+import json
+s=json.load(open('.cursor/sw-deliver-state.json'))
+assert s['phases']['1']['status']=='blocked'
+assert s['phases']['2']['status']=='blocked'
+assert s['mergedPhases'][0].get('reverted')
+"; then
+    echo "OK  deliver-phase-revert"
+  else
+    echo "FAIL deliver-phase-revert"
+    exit 1
+  fi
+) || FAIL=1
+rm -rf "$REVERT_FIX"
+
+DENY_FIX=$(mktemp -d)
+mkdir -p "$DENY_FIX/.cursor"
+echo '{"target":{"branch":"feat/demo"},"phases":{"1":{"slug":"alpha","status":"green-merged"}},"verdict":"running"}' \
+  >"$DENY_FIX/.cursor/sw-deliver-state.json"
+if python3 "$WF" "$DENY_FIX" terminal deny --scope whole-feature --reason smoke 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['action']=='terminal-deny'
+" && python3 -c "
+import json
+s=json.load(open('$DENY_FIX/.cursor/sw-deliver-state.json'))
+assert s.get('terminalRejected') is True
+assert s.get('verdict')=='rejected'
+"; then
+  echo "OK  deliver-phase-deny"
+else
+  echo "FAIL deliver-phase-deny"
+  FAIL=1
+fi
+rm -rf "$DENY_FIX"
+
+VERIFY_FIX=$(mktemp -d)
+mkdir -p "$VERIFY_FIX/.cursor"
+echo '{"verify":{"test":"true"}}' >"$VERIFY_FIX/.cursor/workflow.config.json"
+echo '{"target":{"branch":"feat/demo"},"orchestratorWorktree":{"path":"'"$VERIFY_FIX"'"}}' \
+  >"$VERIFY_FIX/.cursor/sw-deliver-state.json"
+git -C "$VERIFY_FIX" init -q && git -C "$VERIFY_FIX" config user.email t@t.com && git -C "$VERIFY_FIX" config user.name T
+git -C "$VERIFY_FIX" commit --allow-empty -q -m init
+if python3 "$WF" "$VERIFY_FIX" verify run --worktree "$VERIFY_FIX" 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['verdict']=='pass'
+"; then
+  echo "OK  deliver-phase-verify-run"
+else
+  echo "FAIL deliver-phase-verify-run"
+  FAIL=1
+fi
+rm -rf "$VERIFY_FIX"
+
+if grep -q 'blast-radius apply' "$ROOT/core/skills/deliver/SKILL.md" && \
+   grep -q 'terminal deny' "$ROOT/core/skills/deliver/SKILL.md"; then
+  echo "OK  deliver-phase-failure-routing-docs"
+else
+  echo "FAIL deliver-phase-failure-routing-docs"
+  FAIL=1
+fi
+
 exit "$FAIL"

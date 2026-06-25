@@ -309,3 +309,25 @@ scripts/wave.sh bookkeeping projected --types feat,fix
 - `merge run-next` invokes `bookkeeping record --commit` automatically after a green merge.
 
 `CHANGELOG.md` / `version.txt` are contention-serialized (R11) — never edited inside parallel phase worktrees.
+
+## Incremental verify + failure routing (R25–R27, R39, R45–R46)
+
+After each phase merge into `<type>/<slug>`, `merge run-next` runs configured `verify.*` on the orchestrator
+worktree head (R39). Flaky failures get one re-run before blocking (R27).
+
+```bash
+scripts/wave.sh verify run --orchestrator-worktree .sw-worktrees/<slug>-orchestrator
+scripts/wave.sh verify run-after-merge --phase-slug <slug>   # revert on fail (R45)
+scripts/wave.sh blast-radius apply --phase-slug <slug>       # block transitive dependents (R25)
+scripts/wave.sh report blockers                              # consolidated halt report (R26)
+scripts/wave.sh stabilize route --phase-slug <slug>          # → /sw-stabilize recommendation (R27)
+scripts/wave.sh revert phase --phase-slug <slug>             # git revert + bookkeeping + blast-radius
+scripts/wave.sh terminal deny --scope whole-feature|per-phase [--phase-slug <slug>]
+```
+
+- **Blast radius:** only transitive dependents of a `blocked` phase are blocked; independent siblings continue
+  and may still auto-merge greens (R25).
+- **Verify red:** routes to `/sw-stabilize` on `<type>/<slug>`, reverts the offending merge (R45), marks phase
+  `blocked`, re-blocks dependents; does not open/advance the terminal PR.
+- **Terminal deny (R46):** records `terminalRejected` in run-state; resume must not re-present the rejected PR.
+- **`status collect` on `blocked`:** automatically applies blast-radius to dependents.
