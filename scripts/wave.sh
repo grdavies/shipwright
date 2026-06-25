@@ -14,6 +14,7 @@
 #   wave.sh phase dispatch-env --phase-slug <slug>
 #   wave.sh merge gate-check|enqueue|exec|run-next|ancestry-check ...
 #   wave.sh report terminal
+#   wave.sh bookkeeping record|revert|projected ...
 #   wave.sh integration --stamp <stamp> --branches 'branch1,branch2'
 #   wave.sh state init|get|phase|terminal ...
 #   wave.sh lock acquire|release|status ...
@@ -40,6 +41,9 @@ case "${1:-}" in
     ;;
   merge)
     exec python3 "$ROOT/scripts/wave_merge.py" "$ROOT" merge "$@"
+    ;;
+  bookkeeping)
+    exec python3 "$ROOT/scripts/wave_bookkeeping.py" "$ROOT" "${@:2}"
     ;;
 esac
 exec python3 "$ROOT/scripts/wave_deliver.py" "$ROOT" "$@"

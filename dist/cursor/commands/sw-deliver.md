@@ -46,7 +46,8 @@ dependents on green unmerged branches, and halts at the human merge gate.
    `SW_PHASE_MODE` / `SW_RUN_DIR`); orchestrator **never bypasses** any `/sw-ship` step (R13).
 5. Collect outcomes: `scripts/wave.sh status collect --phase-slug <slug>` from durable status path (R38).
 6. On `merge-ready-green`: `scripts/wave.sh merge enqueue` then `merge run-next` when gate + review
-   barrier settle (R17/R19/R52).
+   barrier settle (R17/R19/R52). `merge run-next` records CHANGELOG / `version.txt` via
+   `scripts/wave.sh bookkeeping record` in the orchestrator worktree (R58–R60).
 7. After each merge into `<type>/<slug>`, advance dependents with
    `scripts/wave.sh forward-merge --worktree <phase-wt> --base <type>/<slug>` (merge, not rebase); conflicts →
    `blocked`.

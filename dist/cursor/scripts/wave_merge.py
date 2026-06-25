@@ -401,6 +401,47 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
             state["phases"][phase_id]["updatedAt"] = utc_now()
             state["phases"][phase_id]["mergeCommit"] = merge_commit
         save_state(root, state)
+
+        target_branch = (state.get("target") or {}).get("branch", "feat/unknown")
+        commit_type = target_branch.split("/", 1)[0] if "/" in target_branch else "feat"
+        if phase_id and phase_id in state.get("phases", {}):
+            for record in state.get("mergedPhases") or []:
+                if record.get("phaseSlug") == phase_slug:
+                    record["commitType"] = commit_type
+                    break
+            save_state(root, state)
+
+        bk_args = [
+            sys.executable,
+            str(root / "scripts" / "wave_bookkeeping.py"),
+            str(root),
+            "record",
+            "--phase-slug",
+            phase_slug,
+            "--message",
+            f"merge phase {phase_slug} into {target_branch}",
+            "--type",
+            commit_type,
+            "--merge-commit",
+            merge_commit or "",
+            "--commit",
+        ]
+        orch = parse_kv(args, "--orchestrator-worktree")
+        if orch:
+            bk_args.extend(["--worktree", orch])
+        bk_proc = subprocess.run(bk_args, cwd=str(root), text=True, capture_output=True)
+        if bk_proc.returncode != 0:
+            try:
+                err = json.loads(bk_proc.stdout)
+            except json.JSONDecodeError:
+                err = {"error": bk_proc.stderr or bk_proc.stdout}
+            fail(
+                err.get("error", "bookkeeping record failed"),
+                exit_code=bk_proc.returncode,
+                **{k: v for k, v in err.items() if k != "error"},
+            )
+        bookkeeping = json.loads(bk_proc.stdout)
+
         emit(
             {
                 "verdict": "pass",
@@ -408,6 +449,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
                 "phase": phase_slug,
                 "mergeCommit": merge_commit,
                 "remaining": len(state["mergeQueue"]),
+                "bookkeeping": bookkeeping,
             }
         )
     except Exception:

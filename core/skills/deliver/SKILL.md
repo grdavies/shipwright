@@ -289,3 +289,23 @@ scripts/wave.sh report terminal
 
 Emits per-phase PR links (`mergedPhases`), Conventional Commit types from `release-please-config.json`,
 and the whole-feature gate line: `ready to merge — your call` for `<type>/<slug> → main`.
+
+## Release bookkeeping (R58–R60)
+
+After each green phase merge into `<type>/<slug>`, the orchestrator (single locked merge step only) updates
+`CHANGELOG.md` and `version.txt` in the orchestrator worktree:
+
+```bash
+scripts/wave.sh bookkeeping record --phase-slug <slug> --message "..." --type feat \
+  --merge-commit <sha> --commit
+scripts/wave.sh bookkeeping revert --phase-slug <slug> --commit   # after git revert of phase merge
+scripts/wave.sh bookkeeping projected --types feat,fix
+```
+
+- Appends to `## [Unreleased]` under the release-please-mapped section (`feat`→Features, `fix`→Bug Fixes, …).
+- Entries carry `<!-- sw-deliver:<phase-slug> -->` markers for revert/unstack (R45/R59).
+- `version.txt` = projected next semver (breaking→major, `feat`→minor, `fix`/`perf`→patch aggregate).
+- Bookkeeping edits commit as `chore: deliver bookkeeping for phase <slug>` (not listed in changelog).
+- `merge run-next` invokes `bookkeeping record --commit` automatically after a green merge.
+
+`CHANGELOG.md` / `version.txt` are contention-serialized (R11) — never edited inside parallel phase worktrees.
