@@ -9,8 +9,8 @@ SW_DOC="$(content_path commands/sw-doc.md)"
 FAIL=0
 
 if grep -q '\*\*`confirm`\*\*' "$SW_DOC" && \
-   grep -q 'Dispatch.*`/sw-deliver run <frozen-task-list-path>`' "$SW_DOC"; then
-  echo "OK  doc-afterTasks-confirm-deliver: confirm dispatches /sw-deliver run"
+   grep -q 'deliver-loop --task-list <frozen-task-list-path>' "$SW_DOC"; then
+  echo "OK  doc-afterTasks-confirm-deliver: confirm dispatches deliver-loop"
 else
   echo "FAIL doc-afterTasks-confirm-deliver: confirm missing /sw-deliver run dispatch"
   FAIL=1

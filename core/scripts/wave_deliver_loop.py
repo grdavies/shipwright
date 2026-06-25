@@ -21,6 +21,7 @@ LOG_PATH = Path(".cursor/sw-deliver-runs/run.log")
 MECHANICAL_ACTIONS = frozenset(
     {
         "plan",
+        "spec-seed",
         "state-init",
         "lock-acquire",
         "orchestrator-provision",
@@ -204,6 +205,11 @@ def item_for_phase(plan: dict[str, Any], phase_id: str) -> dict[str, Any] | None
     return None
 
 
+def task_list_from(state: dict[str, Any], plan: dict[str, Any]) -> str | None:
+    raw = state.get("source_task_list") or plan.get("source_task_list")
+    return str(raw) if raw else None
+
+
 def compute_next_action(
     root: Path, state: dict[str, Any], plan: dict[str, Any]
 ) -> dict[str, Any]:
@@ -221,6 +227,17 @@ def compute_next_action(
 
     if not state.get("phases"):
         return {"action": "state-init", "resume": False}
+
+    if (
+        not state.get("specSeed")
+        and task_list_from(state, plan)
+        and not state.get("orchestratorWorktree")
+    ):
+        return {
+            "action": "spec-seed",
+            "taskList": task_list_from(state, plan),
+            "resume": True,
+        }
 
     target = (plan.get("target") or {}).get("branch") or (state.get("target") or {}).get(
         "branch"
@@ -422,8 +439,26 @@ def execute_mechanical(
             fail(data.get("error") or "state init failed", exit_code=ec, **data)
         state.update(load_state(root))
         ensure_driver_fields(state)
-        persist_cursor(root, state, "lock-acquire")
+        persist_cursor(root, state, "spec-seed")
         return {"executed": "state-init"}
+
+    if action == "spec-seed":
+        tl = step.get("taskList") or task_list
+        if not tl:
+            fail("spec-seed requires task list")
+        ec, data = run_wave(root, "spec-seed", "--task-list", str(tl))
+        if ec != 0:
+            fail(data.get("error") or "spec-seed failed", exit_code=ec, **data)
+        state.update(load_state(root))
+        if not data.get("skipped"):
+            state["specSeed"] = {
+                "branch": data.get("branch"),
+                "commit": data.get("commit"),
+                "at": utc_now(),
+            }
+            save_state(root, state)
+        persist_cursor(root, state, "lock-acquire")
+        return {"executed": "spec-seed", **data}
 
     if action == "lock-acquire":
         target = step.get("target") or (plan.get("target") or {}).get("branch")

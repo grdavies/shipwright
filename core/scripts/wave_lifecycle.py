@@ -111,6 +111,29 @@ def cmd_assert_entry(root: Path, _args: list[str]) -> None:
     fail(proc.stderr.strip() or "worktree guard configuration error", exit_code=2)
 
 
+def assert_primary_off_target(top: Path, target: str) -> None:
+    """Primary checkout must not be on the orchestrator-owned branch (R55)."""
+    current = git_run(["branch", "--show-current"], top, check=False).stdout.strip()
+    if current != target:
+        return
+    status = git_run(["status", "--porcelain"], top, check=False).stdout
+    if status.strip():
+        fail(
+            f"primary checkout is dirty on {target} — commit, stash, and move off before orchestrator provision",
+            exit_code=20,
+            halt="dirty-primary",
+            remediation=(
+                f"git stash push -m 'pre-deliver' && git checkout $(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo main)"
+            ),
+        )
+    fail(
+        f"primary checkout must be off {target} before orchestrator provision",
+        exit_code=20,
+        halt="primary-on-target",
+        remediation=f"git checkout <other-branch>  # orchestrator worktree owns {target}",
+    )
+
+
 def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
     target = parse_kv(args, "--target")
     if not target:
@@ -121,6 +144,7 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
     slug = slug_from_target(target)
     name = parse_kv(args, "--name", f"{slug}-orchestrator") or f"{slug}-orchestrator"
     top = git_toplevel(root)
+    assert_primary_off_target(top, target)
     wt_root = top / ".sw-worktrees"
     wt_root.mkdir(parents=True, exist_ok=True)
     path = wt_root / name
@@ -142,15 +166,8 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
             fail(f"base branch not found locally or on origin: {target}")
 
     tip = git_run(["rev-parse", ref], cwd=top).stdout.strip()
-    current = git_run(["branch", "--show-current"], cwd=top, check=False).stdout.strip()
-    add_args = ["worktree", "add"]
-    if current == target:
-        add_args.extend(["--detach", str(path), tip])
-        checked_out_branch = None
-    else:
-        add_args.extend(["-B", target, str(path), ref])
-        checked_out_branch = target
-    git_run(add_args, cwd=top)
+    git_run(["worktree", "add", "-B", target, str(path), ref], cwd=top)
+    checked_out_branch = target
 
     write_shipwright_state(
         path,
@@ -160,9 +177,9 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
             "worktreeRole": ORCHESTRATOR_ROLE,
             "countsTowardCeiling": False,
             "parentBranch": target,
-            "currentBranch": checked_out_branch or target,
+            "currentBranch": checked_out_branch,
             "targetBranch": target,
-            "detachedHead": checked_out_branch is None,
+            "detachedHead": False,
             "head": tip,
             "startedAt": utc_now(),
         },
@@ -176,7 +193,7 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
         "path": str(path),
         "branch": target,
         "countsTowardCeiling": False,
-        "detachedHead": checked_out_branch is None,
+        "detachedHead": False,
         "head": tip,
     }
     state["updatedAt"] = utc_now()

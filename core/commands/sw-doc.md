@@ -58,10 +58,10 @@ Each remains independently runnable.
     - **`stop`** — halt (print-only; **no repository mutation**). Print:
       1. The frozen task-list path.
       2. The target feature branch `<type>/<slug>` from preflight.
-      3. The exact docs-only seed command that places the frozen `docs/prds/<n>-<slug>/` set onto
-         `<type>/<slug>` (never onto `main`):
-         `git checkout -B <type>/<slug> && git add docs/prds/<n>-<slug>/ && git commit -m "docs: freeze PRD and tasks for <slug>"`
-         (skip commit when already committed — idempotent).
+      3. The exact docs-only seed command (idempotent shared helper; never onto `main`):
+
+         `bash scripts/wave.sh spec-seed --task-list <frozen-task-list-path>`
+
       4. The exact next command: `bash scripts/wave.sh deliver-loop --task-list <frozen-task-list-path>`.
       Do **not** recommend `/sw-worktree` → `/sw-start` → `/sw-execute` or standalone `/sw-ship` as the
       primary path.
@@ -69,12 +69,13 @@ Each remains independently runnable.
       and state the expected tokens. Only case-insensitive **`proceed`** or **`yes`** to that question continues.
       Legacy **`Go`**, silence, or any ambiguous reply maps to **`stop`** (print-only guidance per above; no
       dispatch). On ack:
-      1. **Seed commit** — on `<type>/<slug>`, commit only tracked files under `docs/prds/<n>-<slug>/` (PRD,
-         frozen tasks, amendments). Exclude `docs/brainstorms/**` and any untracked or ignored path. Idempotent
-         (no-op when already committed). Docs-only message.
+      1. **Seed commit** — `bash scripts/wave.sh spec-seed --task-list <frozen-task-list-path>` (docs
+         under `docs/prds/<n>-<slug>/` only; excludes `docs/brainstorms/**` and untracked/ignored paths;
+         never `main`; idempotent).
       2. **Dispatch** `bash scripts/wave.sh deliver-loop --task-list <frozen-task-list-path>`.
-    - **`auto`** — emit one line: `implementing on branch <type>/<slug>`, then seed commit (same as confirm
-      step 1), then **dispatch** `bash scripts/wave.sh deliver-loop --task-list <frozen-task-list-path>`.
+    - **`auto`** — emit one line: `implementing on branch <type>/<slug>`, then
+      `bash scripts/wave.sh spec-seed --task-list <frozen-task-list-path>`, then **dispatch**
+      `bash scripts/wave.sh deliver-loop --task-list <frozen-task-list-path>`.
       No second prompt. When an **agent** (not a human) invoked `/sw-doc --after-tasks=auto`, record the override via
       `scripts/shipwright-state.sh override-add` (who/when/mode) and record the seed commit (branch + SHA) via
       `scripts/shipwright-state.sh write` **before** dispatch.

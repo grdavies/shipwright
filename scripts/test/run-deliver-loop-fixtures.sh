@@ -152,6 +152,7 @@ cat >.cursor/sw-deliver-state.json <<'JSON'
   "currentWave": 1,
   "driverHeartbeatAt": "2020-01-01T00:00:00Z",
   "orchestratorWorktree": {"path": "/tmp/orch"},
+  "specSeed": {"skipped": true},
   "phases": {"1": {"id": "1", "slug": "alpha", "status": "pending"}}
 }
 JSON
