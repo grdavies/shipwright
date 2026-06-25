@@ -367,4 +367,87 @@ prompt-declaring `*.md` files.
 4. Announce activation record (core + specialists + per-specialist signals).
 5. Spawn core reviewers (parallel within harness limits) + gated specialists.
 6. Collect findings + attestation; degrade on unattested empty (R66).
-7. Normalize → apply rails → gate → run report (later phases).
+7. **Dedup / merge** overlapping findings across personas (same file + line + title stem → keep highest
+   severity; deterministic priority: P0 > P1 > P2 > P3, then `security` > `correctness` > others). Soft cap:
+   at most **8** concurrent specialist dispatches (R70).
+8. **P1 validation wave** (interactive only, R22/R49/R62): for each P1 candidate, spawn fresh-context validator
+   at deep tier with diff + neutral location only; on confirm, pass `--validated` to apply-check; on
+   non-confirm or degraded → surface only. **Phase-mode** (`--phase-mode` / `SW_PHASE_MODE`): skip apply for
+   all P1 — emit `blocked` cause instead (R67).
+9. **Apply loop** (R19–R25, R44, R59, R64, R68):
+   - Resolve `review.local.apply` (`auto` | `surface` | `off`). `surface` / `off` → review + surface only.
+   - **Dirty tree:** if `git status --porcelain` is non-empty before apply, refuse apply OR snapshot
+     pre-apply state (`git stash push -u -m sw-local-review-pre-apply`) and restore after run (R64).
+   - Sort eligible findings: severity asc (P3→P1), then file path, then line.
+   - **Per-fix checkpoint:** for each finding, run `code-review-apply-check.sh` (+ `--apply-policy`,
+     `--phase-mode` when active); apply via pf edit; run bounded `/sw-verify`; on fail revert **only that fix's
+     hunks** (never user edits) and re-surface; on pass keep in tree for phase 2 (R25). Re-anchor line numbers
+     after each hunk before the next fix (R64).
+   - **Receiving-review / YAGNI** (R44/R59): orchestrator re-derives from diff region; mark
+     `behavior_altering: true` on logic / control-flow / invariant changes → surface only regardless of
+     severity.
+10. **Circuit breaker** (R24/R65): track normalized verify-failure signature per finding (`check_id` +
+    normalized message, no timestamps). **Absolute cap:** 3 attempts per finding, 10 per run. Trip → halt apply
+    loop; interactive → escalate per `sw-subagent-dispatch.mdc`; phase-mode → `blocked` with cause (R67).
+11. **Gate** — `code-review-gate.sh` with `review.local.gate`.
+12. **Run report** (R69) under `runDir`: roster, applied / surfaced / reverted counts, human-triage block,
+    change digest, one-shot revert command, advisory `scope-fidelity` block.
+13. **External annotation** (R25/R71): phase-2 findings on panel-touched lines get additive
+    `contests applied fix` annotation — never suppressed or down-weighted.
+
+## Apply policy (`review.local.apply`, R68)
+
+| Value | Behavior |
+|-------|----------|
+| `auto` (default) | Apply eligible findings per rails below |
+| `surface` | Review + surface; never auto-apply |
+| `off` | Disable apply machinery entirely |
+
+## Apply rails state machine (R19–R25, R44, R48, R55–R67)
+
+```
+finding → classify severity (deterministic; never model-delegated, R58)
+  apply-policy != auto             → surface only (R68)
+  phase-mode AND P1                → blocked (R67)
+  P0                               → surface only (R20)
+  security-sensitive target        → surface only (R21/R48/R55)
+  security-reviewer-touched / control-marker → surface only (R56)
+  behavior_altering                → surface only (R59/R63)
+  no concrete suggested_fix         → surface only
+  symlink / out-of-repo / .git/**   → surface only (R57)
+  patch target != validated file    → surface only (R57)
+  fix size > bound                  → surface only (R60)
+  wrong-for-codebase / unverified   → surface only (R44)
+  P1 (interactive only)             → validation wave (R22) → apply if confirmed
+  P2 / P3                           → apply when rails pass
+apply: deterministic ordering + per-fix checkpoint + line re-anchor (R64)
+  per-fix /sw-verify (bounded, R23/R63)
+    pass → keep (remains for phase-2, R25)
+    fail → revert only that fix's hunks, re-surface
+  identical failure signature, attempt cap → circuit-breaker (R65); phase-mode → blocked (R67)
+```
+
+## Dirty tree + per-fix checkpoint (R64)
+
+- Before apply: refuse when dirty **unless** snapshotting via `git stash push -u -m sw-local-review-pre-apply`.
+- Apply one fix at a time; verify; revert failed fix hunks only — never clobber unrelated user edits.
+- Deterministic ordering (severity, file, line) with line re-anchoring after each applied hunk.
+
+## Circuit breaker (R24, R65, R67)
+
+- **Identical** = same normalized verify failure signature (`check_id` + message sans timestamps / temp paths).
+- **Caps:** 3 attempts per finding; 10 total per run (absolute, independent of diff churn).
+- Trip: stop apply loop; interactive escalates; phase-mode writes `blocked` (not interactive prompt).
+
+## External findings on applied lines (R25, R71)
+
+Auto-applied fixes **remain** in the working tree for phase 2. External findings on those lines are annotated
+`contests applied fix` additively — never suppressed, down-weighted, or auto-dismissed.
+
+## Finding dedup (R70)
+
+Before surface or apply, merge overlapping findings (same `file` + `line` + normalized title):
+
+1. Keep highest severity.
+2. Tie-break: `security` > `correctness` > `maintainability` > other specialists.
+3. Soft cap: max **8** concurrent specialist dispatches per run (excess queued sequentially).

@@ -100,12 +100,15 @@ validates before applying:
 - Fix size bounded (chars, lines, hunks — pinned in `native.md` R60)
 - Security-sensitive targets (deny-list path globs + content markers, R48/R55) **never** auto-applied
 - Security-control markers and `security`-reviewer-touched findings **never** auto-applied (R56)
+- `behavior_altering` findings (logic / control-flow / invariant changes) surface only (R59)
 - Patch internal target must match validated `finding.file` (R57)
 
-Auto-apply policy (`review.local.apply`, default `auto`):
+Apply policy (`review.local.apply`, default `auto`):
 
+- **`off`** / **`surface`** — never auto-apply (review + surface only, R68)
 - **P0** — never auto-applied (surface only)
-- **P1** — validated P1 auto-applied only after independent validation (`--validated` to apply-check); unvalidated P1 surfaced only
+- **P1** — validated P1 auto-applied only after independent validation (`--validated`); unvalidated P1
+  surfaced only; **phase-mode** blocks even validated P1 (R67)
 - **P2/P3** — auto-applied when concrete `suggested_fix`, rails pass, `requires_verification: false`
 
 ## Config

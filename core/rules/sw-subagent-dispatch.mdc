@@ -49,12 +49,14 @@ limit are **backpressure**, not reviewer failure:
 
 The **native panel apply loop** governs `native` adapter auto-apply (per-fix checkpoint + re-verify). The
 generic circuit-breaker below applies to all loops; native reconcile (R65): identical verify failure signature
-+ absolute attempt cap per finding stops apply and escalates (phase-mode → `blocked`, R67).
+(normalized `check_id` + message, excluding timestamps / temp paths) + **absolute** attempt cap (3 per finding,
+10 per run) stops apply and escalates (phase-mode → `blocked`, R67 — not interactive prompt).
 
 After auto-applying eligible fixes from local review:
 
-- **One** bounded re-verify (`sw-verify`) pass per applied fix — not an unbounded nested loop.
-- Circuit breaker: three identical verify failures without diff change → escalate to user (R29/R65).
+- **One** bounded re-verify (`sw-verify`) pass **per applied fix** — not an unbounded nested loop.
+- Circuit breaker: identical normalized verify-failure signature without progress → count toward cap; trip at 3
+  per finding / 10 per run → escalate (interactive) or `blocked` (phase-mode, R67).
 - Never let `ce-code-review` or native reviewers commit into the worktree; pf edit machinery only.
 
 ## Parallel safety

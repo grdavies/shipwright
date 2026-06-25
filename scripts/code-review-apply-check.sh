@@ -3,7 +3,8 @@
 #
 # Usage: code-review-apply-check.sh --finding JSON --repo-root PATH \
 #   [--max-fix-chars N] [--max-fix-lines N] [--max-fix-hunks N] \
-#   [--validated] [--diff-context JSON] [--patch-target PATH]
+#   [--validated] [--apply-policy auto|surface|off] [--phase-mode] \
+#   [--diff-context JSON] [--patch-target PATH]
 # Exit: 0 eligible, 20 reject (surface only)
 set -euo pipefail
 
@@ -13,6 +14,8 @@ MAX_FIX_CHARS=2000
 MAX_FIX_LINES=15
 MAX_FIX_HUNKS=3
 VALIDATED=false
+APPLY_POLICY="auto"
+PHASE_MODE=false
 DIFF_CONTEXT="{}"
 PATCH_TARGET=""
 
@@ -29,6 +32,8 @@ while [[ $# -gt 0 ]]; do
     --max-fix-lines) MAX_FIX_LINES="${2:-}"; shift 2 ;;
     --max-fix-hunks) MAX_FIX_HUNKS="${2:-}"; shift 2 ;;
     --validated) VALIDATED=true; shift ;;
+    --apply-policy) APPLY_POLICY="${2:-}"; shift 2 ;;
+    --phase-mode) PHASE_MODE=true; shift ;;
     --diff-context) DIFF_CONTEXT="${2:-}"; shift 2 ;;
     --patch-target) PATCH_TARGET="${2:-}"; shift 2 ;;
     -h|--help) usage ;;
@@ -38,7 +43,7 @@ done
 
 [[ -n "$FINDING" ]] || usage
 
-export FINDING REPO_ROOT MAX_FIX_CHARS MAX_FIX_LINES MAX_FIX_HUNKS VALIDATED DIFF_CONTEXT PATCH_TARGET
+export FINDING REPO_ROOT MAX_FIX_CHARS MAX_FIX_LINES MAX_FIX_HUNKS VALIDATED APPLY_POLICY PHASE_MODE DIFF_CONTEXT PATCH_TARGET
 
 python3 <<'PY'
 import fnmatch, json, os, re, sys
@@ -49,6 +54,8 @@ max_chars = int(os.environ.get("MAX_FIX_CHARS", "2000"))
 max_lines = int(os.environ.get("MAX_FIX_LINES", "15"))
 max_hunks = int(os.environ.get("MAX_FIX_HUNKS", "3"))
 validated = os.environ.get("VALIDATED", "false").lower() == "true"
+apply_policy = os.environ.get("APPLY_POLICY", "auto").lower()
+phase_mode = os.environ.get("PHASE_MODE", "false").lower() == "true"
 try:
     diff_ctx = json.loads(os.environ.get("DIFF_CONTEXT", "{}"))
 except json.JSONDecodeError:
@@ -74,8 +81,17 @@ except json.JSONDecodeError:
 
 sev = finding.get("severity", "P3")
 
+if apply_policy not in ("auto",):
+    reject("apply policy disables auto-apply", apply_policy=apply_policy)
+
+if phase_mode and sev == "P1":
+    reject("phase-mode P1 blocked", severity=sev)
+
 if sev == "P0":
     reject("P0 never auto-applied", severity=sev)
+
+if finding.get("behavior_altering"):
+    reject("behavior-altering fix surfaced only", severity=sev)
 
 if sev == "P1":
     if not validated:

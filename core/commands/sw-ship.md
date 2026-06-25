@@ -30,7 +30,9 @@ sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review →
 
 ## Flags
 
-- `--fast` — skip gap-check and sw-simplify.
+- `--fast` — skip gap-check and sw-simplify; also skips native phase-1 panel when passed to embedded
+  `sw-review` (R54).
+- `--skip-local` — skip native phase-1 panel for this run only (announced; config unchanged, R54).
 - `--skip-simplify` — skip sw-simplify only (gap-check still runs unless `--fast`).
 - `--signal-id <id>` — after merge-ready pause, offer `/sw-feedback-close` for this backlog signal.
 - `--from <step>` — resume mid-chain.
@@ -78,6 +80,9 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/sw-ready` and stop.
 - **Local review gate** — when `review.local.gate.haltOn` includes validated P0/P1 and
   `/tmp/sw-local-review-gate-result.json` reports `verdict: halt`, stop for human triage (surface-only
   default logs and continues). Never overrides `check-gate.sh`.
+- **Native apply rails (phase-mode, R67)** — validated P1 MUST NOT auto-apply; surface as `blocked` with
+  cause. Circuit-breaker trip → `blocked` (not interactive escalate). `--skip-local` refused or recorded in
+  durable per-phase status.
 - User ambiguity (branch/scope/config).
 - CI budget exhausted while `yellow`.
 - Merge gate reached on live green.
@@ -125,6 +130,8 @@ Survives `sw-tmp clean` (R47/R38). Never commit these paths (`/sw-commit` exclud
 | Live `check-gate.sh` green | `merge-ready-green` | Suppress "ready to merge — your call"; exit `0` **without merging** |
 | `verification-gate` halt (`not-verified`, `missing-required`) | `blocked` | Write `--cause`; exit non-zero; no prompt |
 | Local review gate halt (validated P0/P1) | `blocked` | Write `--cause`; exit non-zero; no prompt |
+| Native P1 in phase-mode (validated, not applied) | `blocked` | Write `--cause`; exit non-zero; no prompt |
+| Native apply circuit-breaker trip | `blocked` | Write `--cause`; exit non-zero; no prompt |
 | Branch/scope/config ambiguity | `blocked` | Write `--cause`; exit non-zero; no prompt |
 | CI budget exhausted / stabilize hard stop | `blocked` | Write `--cause`; exit non-zero; no prompt |
 

@@ -5,10 +5,10 @@ alwaysApply: false
 
 # `/sw-review`
 
-Two-phase local review over the uncommitted delta: **phase 1** = local multi-agent adapter
-(`review.local`); **phase 2** = external provider (`review.provider`). The schema default is **`none`**
-(review gating off). **CodeRabbit is opt-in** — set `review.provider: "coderabbit"` explicitly to enable
-phase 2.
+Two-phase local review over the uncommitted delta: **phase 1** = native local panel (`review.local`,
+default-on **`native`**); **phase 2** = external provider (`review.provider`, default **`none`**). Phase 1
+runs **independently** of phase-2 opt-out — including when `review.provider: "none"`. CodeRabbit is opt-in via
+`review.provider: "coderabbit"`.
 
 ## Scope
 
@@ -18,14 +18,21 @@ phase 2.
 - `gap-check` remains the sole requirements-completeness authority; local review is requirements-aware
   but emits no completeness verdict.
 
+## Flags
+
+- `--fast` / `--skip-local` — skip phase 1 for this run only; announce skip; do not change persisted config
+  (R54). In phase-mode, record skip in durable status (R67).
+
 ## Phase 1 — local review (`review.local`)
 
-1. Resolve `review.local` from `workflow.config.json`.
+1. Resolve `review.local` via `scripts/review-local-resolve.sh` (schema defaults: `enabled: true`,
+   `provider: "native"`, `apply: "auto"`).
    - `review.local.enabled: false` or `review.local.provider: "none"` → skip to phase 2 with message.
-2. Read `providers/code-review/<provider>.md` (default `ce-code-review`).
-3. **Soft dependency check:** if `ce-code-review` skill is unavailable → report
-   `Local review skipped — ce-code-review skill not available.` and skip to phase 2 (fail-closed;
-   **never** treat as clean pass). No `native` fallback (deferred YAGNI).
+   - `--fast` / `--skip-local` → skip phase 1 for this run (announced).
+2. Read `providers/code-review/<provider>.md` (`native` default).
+3. **Soft dependency check** (`ce-code-review` only): if `ce-code-review` skill is unavailable → report
+   `Local review skipped — ce-code-review skill not available.` and skip to phase 2 (fail-closed; **never**
+   treat as clean pass). The `native` adapter has no soft dependency.
 4. `memory-preflight` read for known false-positives and file learnings.
 5. **Invariants (optional):** when `invariantsFile` is set, resolve relative to the review ref (PR head /
    worktree base). Surface to local review agents as non-negotiable constraints. Missing/unreadable blocks this
@@ -60,20 +67,38 @@ phase 2.
    - `status: skipped|failed|degraded` (no findings) → surface `reason`, skip remainder of phase 1,
      proceed to phase 2 — **never** deserialize as "0 findings → pass."
    - Requirement-stage findings are post-filtered in normalize (gap-check unaffected).
-8. **Apply** (sw-owned, untrusted-output boundary):
+8. **Dedup** overlapping findings per `native.md` (R70) before apply.
+9. **P1 validation wave** (R22/R49/R62): for each P1, spawn independent fresh-context validator at deep tier
+   (diff + neutral location only — never first reviewer's title / fix / reasoning). Confirmed → eligible for
+   apply with `--validated`. Non-confirm / degraded → surface only. **Phase-mode:** all P1 surface as `blocked`
+   — never auto-apply unattended P1 (R67).
+10. **Apply** (Shipwright-owned, untrusted-output boundary, R19/R68):
 
-   For each finding in normalized output, run eligibility check:
+    Resolve `review.local.apply` from resolve output (`auto` | `surface` | `off`). When not `auto`, skip apply
+    (review + surface only).
 
-   ```bash
-   scripts/code-review-apply-check.sh --finding '<json>' --repo-root "$PWD"
-   ```
+    **Dirty tree (R64):** if `git status --porcelain` is non-empty before apply, refuse OR snapshot via
+    `git stash push -u -m sw-local-review-pre-apply` and restore after the run.
 
-   Auto-apply only when eligible: P2/P3, concrete `suggested_fix`, `requires_verification: false`,
-   in-repo file, size-bounded, non-security-sensitive target. **P0/P1 never auto-fixed.** Apply through
-   pf edit machinery only — never let `ce-code-review` commit into the worktree.
-9. **Bounded re-verify:** if any fix applied, run `/sw-verify` once. Circuit-breaker: three identical
-   failures without diff change → escalate per `rules/sw-subagent-dispatch.mdc`.
-10. **Severity gate:**
+    For each finding in deterministic order (severity, file, line):
+
+    ```bash
+    scripts/code-review-apply-check.sh --finding '<json>' --repo-root "$PWD" \
+      --apply-policy "$APPLY_POLICY" \
+      ${PHASE_MODE:+--phase-mode} \
+      ${VALIDATED:+--validated}
+    ```
+
+    Auto-apply when eligible: validated **P1** (interactive only), **P2/P3** with concrete `suggested_fix`,
+    `requires_verification: false`, rails pass. **P0 never auto-applied.** Security-sensitive /
+    behavior-altering / control-marker findings surface only. Apply through pf edit only.
+
+    **Per-fix checkpoint (R64):** apply one fix → bounded `/sw-verify` → on fail revert **only that fix's
+    hunks** and re-surface; on pass keep for phase 2. Re-anchor line numbers before next fix.
+
+    **Circuit breaker (R24/R65):** identical normalized verify-failure signature → count toward cap (3 per
+    finding, 10 per run). Trip → escalate (interactive) or `blocked` (phase-mode, R67).
+11. **Severity gate:**
 
     ```bash
     scripts/code-review-gate.sh \
@@ -84,7 +109,7 @@ phase 2.
     Write gate config from `review.local.gate`. Surface-only default (`haltOn: []`) logs P0–P3 and
     continues. Halting mode (`haltOn: ["P0","P1"]`) records halt signal for `/sw-ship` (validated
     P0/P1 only). Persist gate result to `/tmp/sw-local-review-gate-result.json`.
-11. **Persist edges (redaction):**
+12. **Persist edges (redaction):**
     - Scrub `ce-code-review` run dir after parsing:
 
       ```bash
@@ -93,8 +118,8 @@ phase 2.
       ```
 
     - `memory-preflight` write for durable learnings only (via `scripts/memory-redact.sh` — no raw dumps).
-12. Phase-1-applied fixes stay in working tree for phase 2. Any phase-2 finding on a phase-1-touched line
-    is annotated `contests applied fix` for the human (no automatic re-litigation).
+13. Phase-1-applied fixes stay in working tree for phase 2. Any phase-2 finding on a phase-1-touched line
+    is annotated `contests applied fix` additively (never suppressed, R71).
 
 ## Phase 2 — external provider (`review.provider`)
 
