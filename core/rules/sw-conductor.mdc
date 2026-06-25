@@ -1,0 +1,33 @@
+---
+description: Conductor guardrails — legitimate halts only, no nested dispatch, durable-state authority. USE WHEN running /sw-deliver or any orchestrator that adopts the conductor contract.
+alwaysApply: false
+---
+
+# Conductor guardrails
+
+Load `skills/conductor/SKILL.md` for the full contract. These rules are the always-on enforcement subset
+(R1, R3).
+
+## Invoke primitives — never re-implement state
+
+- Route every plan, provision, collect, merge, lock, and report action through `scripts/wave.sh` /
+  `wave_*.py` JSON entrypoints.
+- Do not hand-edit `.cursor/sw-deliver-state.json`, phase statuses, or merge journal fields in prose.
+- Phase outcomes come from `.cursor/sw-deliver-runs/<phase-slug>/status.json` only (R19).
+
+## No nested dispatch (R16)
+
+- Phase sub-agents are spawned **only** by the conductor at the orchestrator level.
+- A backgrounded phase sub-agent must not spawn further sub-agents; intra-phase work runs inline (R45).
+
+## Legitimate halts only (R10–R12)
+
+Do not end the turn or ask the human to "continue" for routine driver progression. Halt only on the
+legitimate set defined in `skills/conductor/SKILL.md` and emit `scripts/wave.sh report terminal` output —
+never a bare continuation prompt.
+
+## Push and merge boundaries
+
+- Never `git push` — use `scripts/git-push.sh` (R23).
+- Never merge to `main` from the conductor (R22).
+- Phase sub-agents never call `merge run-next` (R41).

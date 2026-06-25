@@ -11,6 +11,11 @@
   },
   "deliver": {
     "phaseAckCadence": 0,
+    "autonomy": {
+      "mode": "autonomous",
+      "maxRunMinutes": 1440,
+      "maxIterations": 500
+    },
     "remediation": {
       "maxAttempts": 2
     },

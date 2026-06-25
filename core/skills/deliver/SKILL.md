@@ -9,6 +9,10 @@ Layer above `/sw-ship` for **phase-mode** (frozen task-list phases stacking onto
 **multi-feature mode** (independent features promoting via `integration/<stamp>`). Reuses `scripts/worktree.sh`
 and `skills/parallelism/` wholesale.
 
+**Conductor:** load `skills/conductor/SKILL.md` for the shared autonomous loop (self-continuation,
+legitimate halts, parallel dispatch, resumption). `/sw-deliver` is the pilot consumer; enforce
+`rules/sw-conductor.mdc`. Do not re-author loop logic in this skill (R1, R3).
+
 
 **Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill deliver`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
