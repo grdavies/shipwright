@@ -68,10 +68,9 @@
   },
   "models": {
     "tiers": {
-      "cheap": "composer-2.5-fast",
+      "deep": "gpt-5.5",
       "build": "composer-2.5",
-      "mid": "gpt-5.5-medium",
-      "deep": "claude-opus-4-8-thinking-high"
+      "cheap": "composer-2.5-fast"
     },
     "aliases": {
       "fast": "cheap"
@@ -79,18 +78,6 @@
     "roles": {
       "builder": "build",
       "reviewer": "build"
-    },
-    "routing": {
-      "commands": {
-        "sw-prd": "deep",
-        "sw-execute": "build",
-        "sw-triage": "cheap",
-        "sw-doc": "inherit"
-      },
-      "skills": {
-        "prd": "deep",
-        "triage": "cheap"
-      }
     }
   },
   "communication": {

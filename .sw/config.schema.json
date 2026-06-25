@@ -331,12 +331,12 @@
     "models": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Per-tier model map and role assignment. Policy tiers (cheap/build/mid/deep) map to concrete platform model IDs; agent frontmatter uses inherit or dispatch IDs only. Validated by scripts/model-tier-check.sh.",
+      "description": "Per-tier model map and role assignment. Policy tiers (cheap/build/deep) map to concrete platform model IDs; agent frontmatter uses inherit or dispatch IDs only. Validated by scripts/model-tier-check.sh.",
       "properties": {
         "tiers": {
           "type": "object",
           "additionalProperties": { "type": "string" },
-          "description": "Tier name → concrete model id (e.g. deep, build, mid, cheap)."
+          "description": "Tier name → concrete model id (e.g. deep, build, cheap)."
         },
         "aliases": {
           "type": "object",
@@ -354,20 +354,12 @@
         "routing": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Semantic tier routing for sw-* commands and skills (not communication intensity).",
           "properties": {
             "commands": {
               "type": "object",
               "additionalProperties": {
                 "type": "string",
-                "enum": ["cheap", "build", "mid", "deep", "inherit"]
-              }
-            },
-            "skills": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string",
-                "enum": ["cheap", "build", "mid", "deep", "inherit"]
+                "enum": ["normal", "lite", "full", "ultra", "inherit"]
               }
             }
           }
