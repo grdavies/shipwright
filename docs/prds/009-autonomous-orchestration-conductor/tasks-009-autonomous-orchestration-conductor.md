@@ -177,25 +177,25 @@ documented behavior exists.
 
 ### 8. Living-doc currency hardening (M)
 
-- [ ] 8.1 INDEX status reconcile primitive from merge state (R47)
+- [x] 8.1 INDEX status reconcile primitive from merge state (R47)
   - **File:** `scripts/reconcile-status.sh`, `core/skills/living-status/SKILL.md`
   - **Expected:** sets `docs/prds/INDEX.md` status from durable run/merge state on the correct PRD row; a
     shipped PRD is never left `not-started`; the status enum (`not-started | in-progress | complete`) is
     single-sourced in `living-status`
-- [ ] 8.2 Idempotent COMPLETION-LOG append primitive (R48)
+- [x] 8.2 Idempotent COMPLETION-LOG append primitive (R48)
   - **File:** `scripts/reconcile-status.sh`
   - **Expected:** a single primitive appends date/PRD/phase/PR/SHA; re-running on resume never
     double-appends and never omits a shipped PRD
-- [ ] 8.3 GAP-BACKLOG structured status + resolve-on-absorb (R49)
+- [x] 8.3 GAP-BACKLOG structured status + resolve-on-absorb (R49)
   - **File:** `scripts/reconcile-status.sh`, `core/skills/living-status/SKILL.md`, `docs/prds/GAP-BACKLOG.md`
   - **Expected:** entries carry structured status + resolving PRD/R-IDs; when an absorbing PRD reaches
     `complete` the matching `open` gaps flip to `resolved` with the PRD/PR reference; non-matching gaps
     untouched; file stays hand-appendable for new gaps
-- [ ] 8.4 Documentation-currency drift gate (current-run scoped, hard-block) (R50)
+- [x] 8.4 Documentation-currency drift gate (current-run scoped, hard-block) (R50)
   - **File:** `scripts/docs-currency-gate.sh`, `scripts/wave.sh`
   - **Expected:** before the terminal merge gate, drift in the current run's INDEX row / COMPLETION-LOG
     entry / absorbed gaps hard-blocks until reconciled; pre-existing unrelated historical drift does not block
-- [ ] 8.5 Commit living-doc updates in-loop on the feature branch (R51)
+- [x] 8.5 Commit living-doc updates in-loop on the feature branch (R51)
   - **File:** `scripts/wave.sh`, `core/skills/conductor/SKILL.md`
   - **Expected:** INDEX/COMPLETION-LOG/GAP-BACKLOG updates are committed pre-merge so the terminal PR
     reflects accurate ledger state
