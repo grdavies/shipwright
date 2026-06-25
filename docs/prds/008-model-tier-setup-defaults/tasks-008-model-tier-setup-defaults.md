@@ -58,17 +58,17 @@ frozen_at: 2026-06-25
 
 ### 2. Routing defaults & resolver (L)
 
-- [ ] 2.1 Author `model-routing.defaults.json` (R21, R17, R27)
+- [x] 2.1 Author `model-routing.defaults.json` (R21, R17, R27)
   - **File:** `core/sw-reference/model-routing.defaults.json`
   - **Expected:** all 36 shipped `sw-*` commands + 25 reasoning skills mapped per brainstorm KD5/KD6; includes `sw-cleanup`, `sw-caveman`; keys match communication routing when present
   - **R-IDs:** R21, R17, R27
 
-- [ ] 2.2 Implement `resolve-model-tier.sh` (R11, R18, R26)
+- [x] 2.2 Implement `resolve-model-tier.sh` (R11, R18, R26)
   - **File:** `scripts/resolve-model-tier.sh`
   - **Expected:** `--tier`, `--command`, `--skill`, `--delegate` flags; JSON `{tier, modelId, source}`; `inherit` → `modelId: null` exit 0; missing atomic key exit 20
   - **R-IDs:** R11, R18, R26
 
-- [ ] 2.3 Add `model-routing-check.sh` (R22)
+- [x] 2.3 Add `model-routing-check.sh` (R22)
   - **File:** `scripts/model-routing-check.sh` (or extend `model-tier-check.sh`)
   - **Expected:** validates defaults keys ⊆ tiers+inherit; full command/skill coverage; R27 key parity with communication defaults
   - **R-IDs:** R22, R27
