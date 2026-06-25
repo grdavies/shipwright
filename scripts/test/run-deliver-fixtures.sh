@@ -261,4 +261,127 @@ else
   FAIL=1
 fi
 
+# --- contention preflight (R11/R12) ---
+CONTEND="$FIX/tasks-contention.md"
+cat >"$CONTEND" <<'EOF'
+---
+frozen: true
+topic: contention-test
+---
+### 1. Alpha
+- **File:** `scripts/shared-config.ts`
+### 2. Beta
+- **File:** `scripts/shared-config.ts`
+### 3. Gamma
+- **File:** `scripts/other.ts`
+## Phase Dependencies
+| Phase | Depends on |
+|-------|------------|
+| 1 | none |
+| 2 | none |
+| 3 | none |
+EOF
+if OUT=$("$WAVE" plan --task-list "$CONTEND" --dry-run 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert any('contention:' in n for n in d.get('notices',[]))
+injected=[(e['from'],e['to']) for e in d['contention'].get('injectedEdges',[])]
+assert ('1','2') in injected
+assert '2' not in d['waves'][0]
+assert d['waves']==[['1','3'],['2']]
+"; then
+  echo "OK  deliver-phase-contention-serialize"
+else
+  echo "FAIL deliver-phase-contention-serialize"
+  FAIL=1
+fi
+
+CONTEND_SERIAL="$FIX/tasks-contention-serial.md"
+cat >"$CONTEND_SERIAL" <<'EOF'
+---
+frozen: true
+topic: contention-serial
+---
+### 1. One
+- **File:** `shared/x.ts`
+### 2. Two
+- **File:** `shared/y.ts`
+## Phase Dependencies
+| Phase | Depends on |
+|-------|------------|
+| 1 | none |
+| 2 | 1 |
+EOF
+if OUT=$("$WAVE" plan --task-list "$CONTEND_SERIAL" --dry-run 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['contention'].get('injectedEdges',[])==[]
+assert d['waves']==[['1'],['2']]
+"; then
+  echo "OK  deliver-phase-contention-skip-serial"
+else
+  echo "FAIL deliver-phase-contention-skip-serial"
+  FAIL=1
+fi
+
+if python3 <<PY
+import importlib.util
+from pathlib import Path
+spec = importlib.util.spec_from_file_location(
+    "wave_deliver", Path("$ROOT/scripts/wave_deliver.py")
+)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+assert mod.graph_has_cycle(
+    ["1", "2"],
+    [{"from": "1", "to": "2"}, {"from": "2", "to": "1"}],
+)
+PY
+then
+  echo "OK  deliver-phase-contention-cycle-detect"
+else
+  echo "FAIL deliver-phase-contention-cycle-detect"
+  FAIL=1
+fi
+
+# --- greedy scheduler ceiling (R14/R44) ---
+SCHED_FIX=$(mktemp -d)
+mkdir -p "$SCHED_FIX/.cursor"
+echo '{"waves":[["1"],["2","3","4"]]}' >"$SCHED_FIX/.cursor/sw-deliver-plan.json"
+if OUT=$("$WAVE" schedule --plan "$SCHED_FIX/.cursor/sw-deliver-plan.json" --ceiling 2 2>/dev/null) && \
+   echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['parallelCeiling']==2
+wave2=[w for w in d['schedule'] if w['wave']==2][0]
+assert len(wave2['batches'])==2
+assert wave2['batches'][0]['parallel']==['2','3']
+assert wave2['batches'][1]['parallel']==['4']
+assert wave2['countsTowardCeiling'] is True
+"; then
+  echo "OK  deliver-phase-schedule-ceiling"
+else
+  echo "FAIL deliver-phase-schedule-ceiling"
+  echo "$OUT"
+  FAIL=1
+fi
+rm -rf "$SCHED_FIX"
+
+DELIVER_SKILL="$ROOT/core/skills/deliver/SKILL.md"
+PAR_SKILL="$ROOT/core/skills/parallelism/SKILL.md"
+if grep -q 'wave.sh schedule' "$DELIVER_SKILL" && grep -q 'parallelCeiling' "$DELIVER_SKILL"; then
+  echo "OK  deliver-phase-schedule-docs"
+else
+  echo "FAIL deliver-phase-schedule-docs"
+  FAIL=1
+fi
+
+PAR_SKILL="$ROOT/core/skills/parallelism/SKILL.md"
+if grep -q 'injectedEdges' "$PAR_SKILL" || grep -q 'contention:' "$PAR_SKILL"; then
+  echo "OK  deliver-phase-contention-docs"
+else
+  echo "FAIL deliver-phase-contention-docs"
+  FAIL=1
+fi
+
 exit "$FAIL"
