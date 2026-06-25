@@ -7,6 +7,9 @@ description: Derive PRD status from git (merged PRs, branches, task checkboxes);
 
 Status is **derived from git**, never hand-set on frozen artifacts.
 
+
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill living-status`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Link mechanism (R14 resolution)
 
 | Signal | How |

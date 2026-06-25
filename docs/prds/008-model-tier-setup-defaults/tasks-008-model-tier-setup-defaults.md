@@ -92,17 +92,17 @@ frozen_at: 2026-06-25
 
 ### 4. Command & skill surfaces (L)
 
-- [ ] 4.1 Stamp Model tier lines on all commands (R19, R10, R24)
+- [x] 4.1 Stamp Model tier lines on all commands (R19, R10, R24)
   - **File:** `core/commands/sw-*.md`
   - **Expected:** every file has `**Model tier:**` line; orchestrators document `inherit` + `--delegate`; doc-pipeline commands reference `deep` + resolver
   - **R-IDs:** R19, R10, R24
 
-- [ ] 4.2 Document routing tier on reasoning skills (R20)
+- [x] 4.2 Document routing tier on reasoning skills (R20)
   - **File:** `core/skills/*/SKILL.md`
   - **Expected:** each reasoning skill documents tier and subagent dispatch tier when Task tool used
   - **R-IDs:** R20
 
-- [ ] 4.3 Update subagent-dispatch rule (R9)
+- [x] 4.3 Update subagent-dispatch rule (R9)
   - **File:** `core/rules/sw-subagent-dispatch.mdc`
   - **Expected:** references `models.tiers.mid`, `models.tiers.deep`, `models.routing`, KD7 panel tiers (procedural)
   - **R-IDs:** R9

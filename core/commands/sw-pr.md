@@ -25,6 +25,8 @@ Push after `/sw-commit`; create/update PR against the real parent branch.
 
 **Communication intensity:** ultra
 
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-pr`.
+
 ## Guardrails
 
 - Does not commit, merge, or fix code.

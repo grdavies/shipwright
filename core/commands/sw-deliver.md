@@ -67,6 +67,8 @@ bash scripts/wave.sh deliver-loop --dry-run
 
 **Communication intensity:** inherit
 
+**Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-deliver`.
+
 ## Guardrails
 
 - Promotion validates each candidate on a disposable PR head **before** merge to `main`.

@@ -9,6 +9,9 @@ Post-review, pre-commit cleanup on the uncommitted delta. **Behavior-preserving 
 scope expansion, no weakened tests. Complements `/sw-review` (findings) and `gap-check` (requirements); does
 not replace either.
 
+
+**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --skill simplify`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## When it runs
 
 - Default-on in `/sw-ship` after `/sw-review`, before `gap-check`.

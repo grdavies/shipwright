@@ -29,6 +29,8 @@ Task list from frozen PRD + amendment union.
 
 **Communication intensity:** lite
 
+**Model tier:** deep — resolve via `bash scripts/resolve-model-tier.sh --command sw-tasks`.
+
 ## Guardrails
 
 - Single-pass generation — complete list (parent phases, executable sub-tasks, traceability) with no

@@ -19,6 +19,8 @@ Hand off: in-scope closed → `/sw-verify`; out-of-scope → user / feedback int
 
 **Communication intensity:** full
 
+**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --command sw-gaps`.
+
 ## Guardrails
 
 - Read-only mapping before any edit.

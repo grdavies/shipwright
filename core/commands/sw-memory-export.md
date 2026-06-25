@@ -33,6 +33,8 @@ half of a provider swap. It is also the committed snapshot that gates AGENTS.md 
 
 **Communication intensity:** ultra
 
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-memory-export`.
+
 ## Guardrails
 
 - Neutral format only — no provider-specific fields. The output must be re-importable by any adapter.

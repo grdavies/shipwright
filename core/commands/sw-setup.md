@@ -151,6 +151,8 @@ Print tip: "Tip: add docs/ to .gitignore to keep workflow artifacts local (brain
 
 **Communication intensity:** ultra
 
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-setup`.
+
 ## Guardrails
 
 - Never auto-seed `category: rule` files (R42).

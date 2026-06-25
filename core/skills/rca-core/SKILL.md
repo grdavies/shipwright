@@ -15,6 +15,9 @@ downstream routing only.
 | `debug` | Production signals (Sentry / deploy log / user report) | `/sw-debug` routing → `003` or `002` |
 | `dev-time` | Local test/build/verify failures | `/sw-debug` → worktree + `/sw-start` or escalate |
 
+
+**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill rca-core`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Shared discipline
 
 1. **Rank hypotheses** — most likely first; evidence for and against each.

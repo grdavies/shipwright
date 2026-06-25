@@ -8,6 +8,9 @@ description: Pre-freeze spec quality gates (clarify, checklist, analyze) and R-I
 Pre-freeze quality and traceability discipline for the doc workstream. Complements `skills/doc-review` (persona
 panel) — structural gates run **after** panel synthesis and **before** `/sw-freeze`.
 
+
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill spec-rigor`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Tier policy
 
 | Tier | Pre-PRD-freeze | Pre-task-freeze |

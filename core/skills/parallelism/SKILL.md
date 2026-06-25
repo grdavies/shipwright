@@ -5,6 +5,9 @@ description: Bounded parallel worktrees (~2-4 ceiling), cross-branch recombinati
 
 # Bounded parallelism
 
+
+**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill parallelism`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
 ## Ceiling
 
 `workflow.config.json` → `worktree.parallelCeiling` (default 4).
