@@ -260,6 +260,51 @@ else
   bad "stale-state-refuses-start"
 fi
 
+# --- PRD 009 pilot: conductor contract single source (R1/R3/R34) ---
+if [[ -f "$ROOT/core/skills/conductor/SKILL.md" ]] && \
+   [[ -f "$ROOT/core/rules/sw-conductor.mdc" ]] && \
+   rg -q 'skills/conductor/SKILL.md' "$ROOT/core/commands/sw-deliver.md" && \
+   rg -q 'skills/conductor/SKILL.md' "$ROOT/core/skills/deliver/SKILL.md"; then
+  ok "conductor-contract-single-source"
+else
+  bad "conductor-contract-single-source"
+fi
+
+# --- PRD 009 pilot: parallel wave peak concurrency >= 2 (R14/R34) ---
+PAR_PLAN="$FIX/.cursor/sw-deliver-plan-parallel.json"
+cat >"$PAR_PLAN" <<'JSON'
+{
+  "verdict": "pass",
+  "mode": "phase",
+  "waves": [["1", "2", "3"]],
+  "items": [
+    {"id": "1", "slug": "a"},
+    {"id": "2", "slug": "b"},
+    {"id": "3", "slug": "c"}
+  ]
+}
+JSON
+if OUT=$(python3 "$ROOT/scripts/wave_deliver.py" "$FIX" schedule --plan .cursor/sw-deliver-plan-parallel.json --ceiling 4 2>/dev/null) && \
+   echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+peak=max(b['slotCount'] for w in d['schedule'] for b in w['batches'])
+assert peak >= 2, peak
+"; then
+  ok "deliver-pilot-parallel-wave-peak-concurrency"
+else
+  bad "deliver-pilot-parallel-wave-peak-concurrency"
+fi
+
+# --- PRD 009 surface docs (R36) ---
+if rg -q 'Legitimate.halt|legitimate.halt|legitimate halt' "$ROOT/core/commands/sw-deliver.md" && \
+   rg -q 'parallel' "$ROOT/docs/guides/workflows.md" && \
+   rg -q 'deliver.autonomy' "$ROOT/core/commands/sw-deliver.md"; then
+  ok "deliver-surface-docs-autonomy-parallelism"
+else
+  bad "deliver-surface-docs-autonomy-parallelism"
+fi
+
 if [[ "$FAIL" -ne 0 ]]; then
   echo "deliver-loop fixtures: FAIL"
   exit 1

@@ -92,6 +92,21 @@ Hard stops: `deliver.autonomy.maxIterations` (default 500) and no-progress circu
 
 `run` is an alias for `deliver-loop --task-list <path>`.
 
+## Autonomy and parallelism (user surface — R36)
+
+| Knob / concept | Default | User-visible behavior |
+| --- | --- | --- |
+| `deliver.autonomy.mode` | `autonomous` | Runs to terminal gate without per-phase re-prompts; `supervised` adds acknowledgement halts |
+| `deliver.autonomy.maxRunMinutes` | unset | Run-level wall-clock ceiling → consolidated halt |
+| `deliver.autonomy.maxIterations` | 500 | In-turn loop hard stop |
+| `worktree.parallelCeiling` | 4 | Max concurrent phase worktrees per wave batch |
+| Conductor contract | `skills/conductor/SKILL.md` | Single source for loop, halts, parallel dispatch — referenced, not duplicated |
+
+**Parallel waves:** when the plan places multiple phases in one wave, the conductor dispatches each as a
+background sub-agent (peak concurrency ≥2 on parallelizable task lists). **Legitimate halts only:** terminal
+`main` merge, exhausted remediation, destructive/ambiguous git, configured checkpoints, phase timeout,
+external-wait exhaustion, run-level budget — see conductor skill **Legitimate-halt set**.
+
 ## Red integration routing
 
 - **Single leaf reproduces failure** → that leaf re-enters `/sw-stabilize`; siblings untouched.

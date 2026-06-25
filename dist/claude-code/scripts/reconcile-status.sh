@@ -9,7 +9,10 @@ usage() {
 Usage:
   reconcile-status.sh derive [--json]     Compute status per PRD from git facts
   reconcile-status.sh reconcile [--dry-run] [--require-merge]  Update INDEX Status (complete only when merged if --require-merge)
-  reconcile-status.sh append-log <prd> <phase> <notes>  Append COMPLETION-LOG entry
+  reconcile-status.sh set-index-status --prd <NNN> --status <not-started|in-progress|complete>  Set one INDEX row (R47)
+  reconcile-status.sh append-log <prd> <phase> <notes>  Append COMPLETION-LOG entry (legacy)
+  reconcile-status.sh append-log-idempotent --prd <NNN> --phase <name> [--pr N] [--sha SHA] [--notes text]  Idempotent append (R48)
+  reconcile-status.sh gap-resolve --absorbing-prd <NNN> [--pr N]  Flip matching open gaps to resolved (R49)
 EOF
 }
 
@@ -137,13 +140,15 @@ def status_for(row):
 
     tasks_complete = tasks["total"] > 0 and tasks["done"] == tasks["total"]
     require_merge = os.environ.get("SW_RECONCILE_REQUIRE_MERGE") == "1"
-    # INDEX vocabulary: not-started | complete (no in-progress per PRD 004 /sw-deliver R43).
+    # INDEX vocabulary: not-started | in-progress | complete (R47 — single-sourced in living-status skill).
     if require_merge:
         status = "complete" if feature_complete else row.get("indexStatus", "not-started")
         if status != "complete":
             status = "not-started"
     elif feature_complete or (tasks_complete and merged) or (tasks_complete and row.get("indexStatus") == "complete"):
         status = "complete"
+    elif tasks["done"] > 0 or open_branches or merged:
+        status = "in-progress"
     else:
         status = "not-started"
 
@@ -234,13 +239,174 @@ print(line)
 PY
 }
 
+cmd_set_index_status() {
+  local prd="" status=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --prd) prd="${2:-}"; shift 2 ;;
+      --status) status="${2:-}"; shift 2 ;;
+      *) break ;;
+    esac
+  done
+  [[ -n "$prd" && -n "$status" ]] || { usage >&2; exit 1; }
+  python3 - "$ROOT" "$prd" "$status" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+prd = sys.argv[2].zfill(3)
+status = sys.argv[3]
+allowed = {"not-started", "in-progress", "complete"}
+if status not in allowed:
+    raise SystemExit(f"invalid status {status!r}; one of {sorted(allowed)}")
+index_path = root / "docs" / "prds" / "INDEX.md"
+text = index_path.read_text(encoding="utf-8")
+lines = []
+updated = False
+for line in text.splitlines():
+    if line.startswith("|") and not line.startswith("| #") and not line.startswith("|---"):
+        parts = [p.strip() for p in line.strip("|").split("|")]
+        if len(parts) >= 4 and parts[0].zfill(3) == prd:
+            status_idx = 4 if len(parts) >= 5 else 3
+            parts[status_idx] = status
+            line = "| " + " | ".join(parts) + " |"
+            updated = True
+    lines.append(line)
+if not updated:
+  raise SystemExit(f"INDEX row not found for PRD {prd}")
+index_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+print(json.dumps({"verdict": "pass", "action": "set-index-status", "prd": prd, "status": status}))
+PY
+}
+
+cmd_append_log_idempotent() {
+  python3 - "$ROOT" "$@" <<'PY'
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+root = Path(sys.argv[1])
+args = sys.argv[2:]
+prd = phase = notes = pr = sha = ""
+i = 0
+while i < len(args):
+    if args[i] == "--prd" and i + 1 < len(args):
+        prd = args[i + 1].zfill(3)
+        i += 2
+    elif args[i] == "--phase" and i + 1 < len(args):
+        phase = args[i + 1]
+        i += 2
+    elif args[i] == "--notes" and i + 1 < len(args):
+        notes = args[i + 1]
+        i += 2
+    elif args[i] == "--pr" and i + 1 < len(args):
+        pr = args[i + 1]
+        i += 2
+    elif args[i] == "--sha" and i + 1 < len(args):
+        sha = args[i + 1]
+        i += 2
+    else:
+        i += 1
+if not prd or not phase:
+    raise SystemExit("--prd and --phase required")
+log = root / "docs" / "prds" / "COMPLETION-LOG.md"
+text = log.read_text(encoding="utf-8")
+id_key = f"| {prd} | {phase} |"
+sha_key = sha[:7] if sha else ""
+if id_key in text and (not sha_key or sha_key in text):
+    print(json.dumps({"verdict": "pass", "action": "append-log-idempotent", "skipped": True, "reason": "already-present"}))
+    raise SystemExit(0)
+date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+detail_parts = [notes or "deliver complete"]
+if pr:
+    detail_parts.append(f"PR #{pr}")
+if sha:
+    detail_parts.append(f"SHA {sha[:7]}")
+detail = "; ".join(p for p in detail_parts if p)
+line = f"| {date} | {prd} | {phase} | {detail} |"
+if "_No entries yet._" in text:
+    text = text.replace("_No entries yet._\n", "")
+marker = "| Date | PRD | Phase | Notes |"
+idx = text.find(marker)
+if idx == -1:
+    raise SystemExit("COMPLETION-LOG header missing")
+insert_at = text.find("\n", idx) + 1
+insert_at = text.find("\n", insert_at) + 1
+text = text[:insert_at] + line + "\n" + text[insert_at:]
+log.write_text(text, encoding="utf-8")
+print(json.dumps({"verdict": "pass", "action": "append-log-idempotent", "appended": True, "line": line}))
+PY
+}
+
+cmd_gap_resolve() {
+  python3 - "$ROOT" "$@" <<'PY'
+import json
+import re
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+args = sys.argv[2:]
+absorbing = pr_ref = ""
+i = 0
+while i < len(args):
+    if args[i] == "--absorbing-prd" and i + 1 < len(args):
+        absorbing = args[i + 1].zfill(3)
+        i += 2
+    elif args[i] == "--pr" and i + 1 < len(args):
+        pr_ref = args[i + 1]
+        i += 2
+    else:
+        i += 1
+if not absorbing:
+    raise SystemExit("--absorbing-prd required")
+gap_path = root / "docs" / "prds" / "GAP-BACKLOG.md"
+text = gap_path.read_text(encoding="utf-8")
+lines = []
+resolved = []
+for line in text.splitlines():
+    if not line.startswith("|") or line.startswith("| Date") or line.startswith("|---"):
+        lines.append(line)
+        continue
+    parts = [p.strip() for p in line.strip("|").split("|")]
+    if len(parts) < 5:
+        lines.append(line)
+        continue
+    # | Date | Source | PRD | Gap | [Absorbed-by] | Status |
+    status = parts[-1].lower()
+    absorbed_by = ""
+    if len(parts) >= 6:
+        absorbed_by = parts[-2].zfill(3) if parts[-2].isdigit() else parts[-2]
+    else:
+        m = re.search(rf"absorbed by PRD\s+{re.escape(absorbing.lstrip('0') or '0')}\b", parts[3], re.I)
+        if m:
+            absorbed_by = absorbing
+    if status == "open" and absorbed_by.zfill(3) == absorbing:
+        ref = f"resolved via PRD {absorbing}"
+        if pr_ref:
+            ref += f" (PR #{pr_ref})"
+        parts[-1] = f"resolved ({ref})"
+        resolved.append(parts[2])
+        line = "| " + " | ".join(parts) + " |"
+    lines.append(line)
+gap_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+print(json.dumps({"verdict": "pass", "action": "gap-resolve", "absorbingPrd": absorbing, "resolved": resolved}))
+PY
+}
+
 main() {
   local cmd="${1:-}"
   shift || true
   case "$cmd" in
     derive) cmd_derive "$@" ;;
     reconcile) cmd_reconcile "$@" ;;
+    set-index-status) cmd_set_index_status "$@" ;;
     append-log) cmd_append_log "$@" ;;
+    append-log-idempotent) cmd_append_log_idempotent "$@" ;;
+    gap-resolve) cmd_gap_resolve "$@" ;;
     -h | --help | "") usage ;;
     *)
       echo "unknown: $cmd" >&2

@@ -19,11 +19,17 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is aut
 2. **Spec-rigor gate** (`skills/spec-rigor/SKILL.md`) — halt on `fail` (exit `20`):
    - **PRD / brainstorm / amendment:** `bash scripts/spec-rigor-check.sh --artifact prd --path <file> --tier <full|standard>`
      (tier from triage or `--tier`; default `standard` when unknown).
+   - **PRD Full-tier linkage (R55):** before stamping, run
+     `bash scripts/doc-link-check.sh --path <file> --tier full` — halt on exit `20` when `brainstorm:` is
+     missing or dangling.
    - **Decision record / decision amendment:** `bash scripts/spec-rigor-check.sh --artifact decision --path <file> --tier <full|standard>`
      (route by path under `docs/decisions/` or explicit `--artifact decision`).
    - **Task list:** `bash scripts/spec-rigor-check.sh --artifact tasks --path <file> --prd <frozen-prd>` then
      `bash scripts/traceability-check.sh --prd <frozen-prd> --tasks <file>` — both must pass before freeze.
    - `warn` (exit `10`) may proceed with logged findings.
+2b. **Brainstorm forward ref (R53):** when freezing a **Full-tier PRD**, if the source brainstorm is not frozen,
+    run `python3 scripts/doc_link.py write-forwardref --brainstorm <source> --prd <prd-path>` so the
+    brainstorm `prd:` field points at this PRD (skip when brainstorm is frozen).
 3. Stamp frontmatter:
    ```yaml
    frozen: true

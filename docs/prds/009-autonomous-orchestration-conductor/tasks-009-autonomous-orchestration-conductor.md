@@ -163,14 +163,14 @@ documented behavior exists.
 
 ### 7. Pilot validation + surface docs + emitter (M)
 
-- [ ] 7.1 `/sw-deliver` pilot adoption + R6–R20 end-to-end validation (R34)
+- [x] 7.1 `/sw-deliver` pilot adoption + R6–R20 end-to-end validation (R34)
   - **File:** `core/commands/sw-deliver.md`, `scripts/test/run-deliver-loop-fixtures.sh`
   - **Expected:** `/sw-deliver` consumes the conductor contract without re-authoring loop logic and is
     validated against R6–R20 end-to-end (observable peak concurrency ≥2 on a parallelizable task list)
-- [ ] 7.2 Surface documentation updates (R36)
+- [x] 7.2 Surface documentation updates (R36)
   - **File:** `core/commands/sw-deliver.md`, `core/skills/conductor/SKILL.md`, `docs/guides/*`
   - **Expected:** autonomy/parallelism behavior and the legitimate-halt set documented at user-read surfaces
-- [ ] 7.3 Emitter propagation + freshness gate (R5)
+- [x] 7.3 Emitter propagation + freshness gate (R5)
   - **File:** `dist/cursor/**`, `dist/claude-code/**` via `python3 -m sw generate --all`
   - **Expected:** the platform-neutral `core/` contract is emitted to both `dist/cursor` and
     `dist/claude-code`; `scripts/test/run-emitter-fixtures.sh` passes
