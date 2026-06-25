@@ -801,4 +801,111 @@ else
   FAIL=1
 fi
 
+# --- terminal PR, resume, ack cadence (R22–R24, R29–R30, R43, R56) ---
+WT="$ROOT/scripts/wave_terminal.py"
+RESUME_FIX=$(mktemp -d)
+(
+  cd "$RESUME_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  echo base >f.txt && git add f.txt && git commit -q -m init
+  git branch -m feat/demo
+  git checkout -q -b feat/demo-phase-alpha
+  echo phase >>f.txt && git add f.txt && git commit -q -m phase
+  git checkout -q feat/demo
+  git merge --no-ff feat/demo-phase-alpha -q -m merge
+  mkdir -p .cursor
+  echo '{"target":{"branch":"feat/demo"},"phases":{"1":{"id":"1","slug":"alpha","branch":"feat/demo-phase-alpha","status":"pending"},"2":{"id":"2","slug":"beta","branch":"feat/demo-phase-beta","status":"pending"}}}' \
+    >.cursor/sw-deliver-state.json
+  if python3 "$WT" "$RESUME_FIX" resume reconcile --no-fetch 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert 'alpha' in d['promoted']
+" && python3 -c "
+import json
+s=json.load(open('.cursor/sw-deliver-state.json'))
+assert s['phases']['1']['status']=='green-merged'
+assert s['phases']['2']['status']=='pending'
+"; then
+    echo "OK  deliver-phase-resume-reconcile"
+  else
+    echo "FAIL deliver-phase-resume-reconcile"
+    exit 1
+  fi
+) || FAIL=1
+rm -rf "$RESUME_FIX"
+
+TERM_FIX=$(mktemp -d)
+mkdir -p "$TERM_FIX/.cursor"
+echo '{"target":{"type":"feat","slug":"demo","branch":"feat/demo"},"phases":{"1":{"slug":"alpha","status":"green-merged"}},"mergedPhases":[{"phaseSlug":"alpha","pr":7}]}' \
+  >"$TERM_FIX/.cursor/sw-deliver-state.json"
+if SW_DELIVER_DRY_RUN=1 python3 "$WT" "$TERM_FIX" terminal pr prepare 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['action']=='terminal-pr-prepare'
+assert d['head']=='feat/demo'
+"; then
+  echo "OK  deliver-phase-terminal-pr-prepare"
+else
+  echo "FAIL deliver-phase-terminal-pr-prepare"
+  FAIL=1
+fi
+echo '{"target":{"branch":"feat/demo"},"phases":{"1":{"slug":"alpha","status":"green-merged"}},"terminalRejected":true}' \
+  >"$TERM_FIX/.cursor/sw-deliver-state.json"
+set +e
+python3 "$WT" "$TERM_FIX" terminal pr prepare 2>/dev/null
+TERM_DENY_EC=$?
+set -e
+if [[ "$TERM_DENY_EC" -eq 20 ]]; then
+  echo "OK  deliver-phase-terminal-pr-rejected-halt"
+else
+  echo "FAIL deliver-phase-terminal-pr-rejected-halt ec=$TERM_DENY_EC"
+  FAIL=1
+fi
+rm -rf "$TERM_FIX"
+
+ACK_FIX=$(mktemp -d)
+mkdir -p "$ACK_FIX/.cursor"
+echo '{"deliver":{"phaseAckCadence":2}}' >"$ACK_FIX/.cursor/workflow.config.json"
+echo '{"mergesSinceAck":0}' >"$ACK_FIX/.cursor/sw-deliver-state.json"
+python3 "$WT" "$ACK_FIX" ack record-merge >/dev/null
+python3 "$WT" "$ACK_FIX" ack record-merge >/dev/null
+set +e
+python3 "$WT" "$ACK_FIX" ack check 2>/dev/null
+ACK_EC=$?
+set -e
+if [[ "$ACK_EC" -eq 11 ]] && python3 "$WT" "$ACK_FIX" ack complete 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['action']=='ack-complete'
+" && python3 "$WT" "$ACK_FIX" ack check 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['ackRequired'] is False
+"; then
+  echo "OK  deliver-phase-ack-cadence"
+else
+  echo "FAIL deliver-phase-ack-cadence ec=$ACK_EC"
+  FAIL=1
+fi
+rm -rf "$ACK_FIX"
+
+if grep -q 'never `in-progress`' "$ROOT/core/skills/deliver/SKILL.md" && \
+   grep -q 'not-started' "$ROOT/core/skills/deliver/SKILL.md" && \
+   grep -q 'source_task_list' "$ROOT/core/skills/deliver/SKILL.md"; then
+  echo "OK  deliver-phase-index-vocabulary"
+else
+  echo "FAIL deliver-phase-index-vocabulary"
+  FAIL=1
+fi
+
+if grep -q 'terminal pr prepare' "$ROOT/core/skills/deliver/SKILL.md" && \
+   grep -q 'resume reconcile' "$ROOT/core/skills/deliver/SKILL.md"; then
+  echo "OK  deliver-phase-terminal-resume-docs"
+else
+  echo "FAIL deliver-phase-terminal-resume-docs"
+  FAIL=1
+fi
+
 exit "$FAIL"

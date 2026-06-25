@@ -484,6 +484,14 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
             )
         verify_out = json.loads(verify_proc.stdout)
 
+        ack_proc = subprocess.run(
+            [sys.executable, str(SCRIPT_DIR / "wave_terminal.py"), str(root), "ack", "record-merge"],
+            cwd=str(root),
+            text=True,
+            capture_output=True,
+        )
+        ack_out = json.loads(ack_proc.stdout) if ack_proc.stdout.strip() else {}
+
         emit(
             {
                 "verdict": "pass",
@@ -493,6 +501,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
                 "remaining": len(state["mergeQueue"]),
                 "bookkeeping": bookkeeping,
                 "verify": verify_out,
+                "ack": ack_out,
             }
         )
     except Exception:
@@ -539,6 +548,17 @@ def cmd_report_terminal(root: Path, args: list[str]) -> None:
     if all_merged and not state.get("terminalRejected"):
         report["terminalGate"] = "ready to merge — your call"
         report["note"] = "Open or update single <type>/<slug> → main PR; halt without merging"
+        terminal = state.get("terminalPr") or {}
+        pr_num = terminal.get("number")
+        if pr_num is not None:
+            report["terminalPr"] = terminal
+            gate_ec, gate = run_check_gate(root, str(pr_num))
+            report["gate"] = gate
+            report["gateExitCode"] = gate_ec
+            if gate_ec == 0 and gate.get("verdict") == "green":
+                report["gateVerdict"] = "green"
+            else:
+                report["gateVerdict"] = gate.get("verdict", "blocked")
     elif state.get("terminalRejected"):
         report["terminalRejected"] = True
         report["note"] = "Terminal PR rejected; resume must not re-present (R46)"

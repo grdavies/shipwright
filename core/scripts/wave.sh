@@ -19,7 +19,10 @@
 #   wave.sh blast-radius apply|dependents ...
 #   wave.sh report blockers
 #   wave.sh revert phase ...
+#   wave.sh terminal pr prepare|gate|status
 #   wave.sh terminal deny ...
+#   wave.sh resume reconcile
+#   wave.sh ack status|check|complete
 #   wave.sh stabilize route ...
 #   wave.sh integration --stamp <stamp> --branches 'branch1,branch2'
 #   wave.sh state init|get|phase|terminal ...
@@ -57,8 +60,17 @@ case "${1:-}" in
   bookkeeping)
     exec python3 "$ROOT/scripts/wave_bookkeeping.py" "$ROOT" "${@:2}"
     ;;
-  verify|blast-radius|revert|terminal|stabilize)
+  resume|ack)
+    exec python3 "$ROOT/scripts/wave_terminal.py" "$ROOT" "$@"
+    ;;
+  verify|blast-radius|revert|stabilize)
     exec python3 "$ROOT/scripts/wave_failure.py" "$ROOT" "$@"
+    ;;
+  terminal)
+    if [[ "${2:-}" == "deny" ]]; then
+      exec python3 "$ROOT/scripts/wave_failure.py" "$ROOT" terminal "${@:2}"
+    fi
+    exec python3 "$ROOT/scripts/wave_terminal.py" "$ROOT" terminal "$@"
     ;;
 esac
 exec python3 "$ROOT/scripts/wave_deliver.py" "$ROOT" "$@"

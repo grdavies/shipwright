@@ -55,7 +55,9 @@ dependents on green unmerged branches, and halts at the human merge gate.
    `blocked`.
 9. Teardown completed phases with `scripts/wave.sh phase-teardown --name <worktree-name>` (`git worktree remove`
    + prune only).
-10. When all phases `green-merged`: `scripts/wave.sh report terminal` then open/update `<type>/<slug> → main` PR.
+10. When all phases `green-merged`: `scripts/wave.sh resume reconcile`, then
+    `scripts/wave.sh terminal pr prepare` + `terminal pr gate`, then `scripts/wave.sh report terminal`;
+    open/update `<type>/<slug> → main` PR only at this point.
 11. Halt at human gate for terminal merge (phase-mode) or dependency-ordered promotion (`promote`, multi-feature).
 
 ## Red integration routing
