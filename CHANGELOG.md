@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/grdavies/shipwright/compare/v1.2.1...v1.2.2) (2026-06-25)
+
+
+### Documentation
+
+* freeze PRD 004, reconcile INDEX status, fix reconcile-status ([#41](https://github.com/grdavies/shipwright/issues/41)) ([07d853e](https://github.com/grdavies/shipwright/commit/07d853e6fba362a35e117622b55a95c48c3ead04))
+
 ## [1.2.1](https://github.com/grdavies/shipwright/compare/v1.2.0...v1.2.1) (2026-06-25)
 
 

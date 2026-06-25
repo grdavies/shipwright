@@ -1,6 +1,6 @@
 {
   "name": "shipwright",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Shipwright (generated)",
   "commands": "./commands/",
   "skills": "./skills/",
