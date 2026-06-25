@@ -84,6 +84,12 @@ After every `deliver-loop` JSON response:
 Hard stops: `deliver.autonomy.maxIterations` (default 500) and no-progress circuit breaker (3× identical
 `nextAction` + state signature) — see `rules/sw-subagent-dispatch.mdc` and conductor skill (R38).
 
+**Halts (R10–R12):** only legitimate conditions; emit `bash scripts/wave.sh report blockers` (mid-run) or
+`report terminal` (all phases merged) with `resumeCommand` — never "continue deliver?".
+
+**Liveness (R37):** `bash scripts/wave.sh state heartbeat` during long agent steps;
+`bash scripts/wave.sh watchdog check` probes phase timeout / stale driver heartbeat.
+
 `run` is an alias for `deliver-loop --task-list <path>`.
 
 ## Red integration routing

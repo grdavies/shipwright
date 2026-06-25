@@ -239,6 +239,19 @@ def cmd_state_phase(root: Path, args: list[str]) -> None:
     emit({"verdict": "pass", "action": "state-phase", "phaseId": pid, "status": status})
 
 
+def cmd_state_heartbeat(root: Path, _args: list[str]) -> None:
+    """Refresh driverHeartbeatAt for liveness / watchdog (R37)."""
+    state_path = paths(root)["state"]
+    state = load_state_file(state_path)
+    if not state:
+        fail("run state missing; run state init first", exit_code=2)
+    now = utc_now()
+    state["driverHeartbeatAt"] = now
+    state["updatedAt"] = now
+    write_json(state_path, state)
+    emit({"verdict": "pass", "action": "state-heartbeat", "driverHeartbeatAt": now})
+
+
 def cmd_state_get(root: Path, _args: list[str]) -> None:
     state_path = paths(root)["state"]
     if not state_path.is_file():
@@ -565,7 +578,7 @@ def main() -> None:
 
     if domain == "state":
         if not args:
-            fail("state subcommand required: init|get|phase|terminal")
+            fail("state subcommand required: init|get|phase|terminal|heartbeat")
         sub = args[0]
         rest = args[1:]
         if sub == "init":
@@ -576,6 +589,8 @@ def main() -> None:
             cmd_state_phase(root, rest)
         elif sub == "terminal":
             cmd_state_terminal(root, rest)
+        elif sub == "heartbeat":
+            cmd_state_heartbeat(root, rest)
         else:
             fail(f"unknown state subcommand: {sub}")
     elif domain == "lock":

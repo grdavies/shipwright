@@ -355,6 +355,12 @@ def stabilize_command_for_phase(meta: dict[str, Any], target: str) -> str:
     return f"/sw-stabilize  # phase branch {branch}"
 
 
+def resume_deliver_command(state: dict[str, Any]) -> str:
+    task_list = state.get("source_task_list")
+    if task_list:
+        return f"bash scripts/wave.sh deliver-loop --task-list {task_list}"
+    return "bash scripts/wave.sh deliver-loop"
+
 def cmd_stabilize_route(root: Path, args: list[str]) -> None:
     state = load_state(root)
     target = (state.get("target") or {}).get("branch", "")
@@ -422,6 +428,7 @@ def cmd_report_blockers(root: Path, _args: list[str]) -> None:
         "mergedGreenThisRun": merged_green,
         "siblingsContinuing": continuing,
         "terminalRejected": bool(state.get("terminalRejected")),
+        "resumeCommand": resume_deliver_command(state),
     }
     if state.get("terminalRejected"):
         report["note"] = "Terminal PR rejected; resume must not re-present (R46)"

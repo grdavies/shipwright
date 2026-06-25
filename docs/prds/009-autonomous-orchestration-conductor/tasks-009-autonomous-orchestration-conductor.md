@@ -112,18 +112,18 @@ documented behavior exists.
 
 ### 5. Legitimate halts + consolidated reports + liveness (M)
 
-- [ ] 5.1 Legitimate-halt set (R10)
+- [x] 5.1 Legitimate-halt set (R10)
   - **File:** `core/skills/conductor/SKILL.md`, `core/rules/sw-conductor.mdc`
   - **Expected:** halts only on main-merge, exhausted remediation budget, ambiguous/destructive action,
     configured checkpoint, phase-liveness timeout, and external-wait exhaustion
-- [ ] 5.2 No routine halts (R11)
+- [x] 5.2 No routine halts (R11)
   - **File:** `core/skills/conductor/SKILL.md`, `core/commands/sw-deliver.md`
   - **Expected:** no halt for per-phase progression, status collection, wave advancement, or bookkeeping
-- [ ] 5.3 Consolidated halt report (R12)
+- [x] 5.3 Consolidated halt report (R12)
   - **File:** `scripts/wave.sh`, `core/skills/conductor/SKILL.md`
   - **Expected:** every halt emits one actionable report (what is blocked, why, exact resume command), never
     a bare "continue?" prompt
-- [ ] 5.4 Phase liveness watchdog (R37)
+- [x] 5.4 Phase liveness watchdog (R37)
   - **File:** `scripts/wave.sh`, `scripts/wave_state.py`, `core/skills/conductor/SKILL.md`
   - **Expected:** per-phase timeout/heartbeat; expiry without terminal `status.json` marks the phase
     `blocked`, emits the consolidated report, and is a legitimate halt
