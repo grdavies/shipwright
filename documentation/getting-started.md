@@ -31,15 +31,16 @@ After `/sw-tasks` freezes the task list, `doc.afterTasks` controls what happens 
 |------|----------|
 | `stop` | Halt after the frozen task list; hand off to `/sw-worktree` + `/sw-start` manually. |
 | `confirm` | Show the full task list; require `proceed` or `yes` before dispatching implementation. |
-| `auto` | Provision a worktree/branch and dispatch the implementation loop without a second prompt. |
+| `auto` | Provision a worktree/branch and dispatch `/sw-deliver run` (or the manual ship loop) without a second prompt. |
 
-Override per run: `/sw-doc --after-tasks=<mode>` or `/sw-ship --after-tasks=<mode>` at the frozen-task-list
-boundary.
+Override per run: `/sw-doc --after-tasks=<mode>`, `/sw-deliver run …`, or `/sw-ship --after-tasks=<mode>` at the
+frozen-task-list boundary.
 
 ## Worktree invariant
 
-**No implementation files are written on bare `main`.** Use a linked worktree and phase branch (`/sw-worktree`,
-`/sw-start`). `scripts/sw-assert-worktree.sh` enforces this at implementation entry (`/sw-execute`, `/sw-start`).
+**No implementation files are written on bare `main`.** `/sw-deliver` provisions worktrees automatically.
+For manual paths, use a linked worktree and phase branch (`/sw-worktree`, `/sw-start`).
+`scripts/sw-assert-worktree.sh` enforces this at implementation entry (`/sw-deliver`, `/sw-execute`, `/sw-start`).
 
 ## Single-pass `/sw-tasks`
 
@@ -64,13 +65,16 @@ Use when scope spans multiple files or needs a written spec.
 2. Open your **target repo** in Cursor and run `/sw-setup`.
 3. Run `/sw-doc` — triage classifies tier; Full tier includes brainstorm before PRD.
 4. After frozen tasks exist, respond to the `doc.afterTasks` checkpoint (or use `auto` mode).
-5. Run `/sw-deliver run docs/prds/<n>-<slug>/tasks-<n>-<slug>.md` to orchestrate all remaining phases to one
-   terminal merge gate — or `/sw-worktree provision` then `/sw-start` and `/sw-ship` per phase manually.
-6. When `/sw-ready` reports merge-ready on the terminal PR, merge manually.
+5. Run **`/sw-deliver run docs/prds/<n>-<slug>/tasks-<n>-<slug>.md`** — primary path; orchestrates all phases
+   (each running `/sw-ship` internally) to one terminal merge gate.
+6. Merge the terminal PR when `/sw-ready` reports merge-ready.
+
+**Manual alternative:** `/sw-worktree provision` → `/sw-start` → `/sw-ship` per phase (same atomics, no orchestrator).
 
 ## Path 2: Quick fix (Quick tier)
 
-Use for bounded, low-risk changes that skip the doc pipeline.
+Use for bounded, low-risk changes that skip the doc pipeline. **No frozen task list** — `/sw-deliver` does not
+apply; use the manual `/sw-ship` atomics directly (the same chain `/sw-deliver` runs per phase when tasks exist).
 
 1. Install the plugin and ensure target repo has `/sw-setup` or zero-config memory.
 2. Run `/sw-triage` — expect **Quick** for 0–1 file scope without risk keywords.
@@ -105,8 +109,8 @@ Duplicate installs can surface two commands with the same `sw-` name.
 ### From compound-engineering (`ce-`)
 
 Shipwright uses the `sw-` prefix exclusively. Remove co-installed workflow plugins that register overlapping
-commands. Shipwright orchestrators (`/sw-doc`, `/sw-ship`, `/sw-debug`,
-`/sw-feedback`) replace ad-hoc chains; see [commands.md](commands.md) for the full taxonomy.
+commands. Shipwright orchestrators (`/sw-doc`, **`/sw-deliver`** (implementation), `/sw-ship` (manual single-phase),
+`/sw-debug`, `/sw-feedback`) replace ad-hoc chains; see [commands.md](commands.md) for the full taxonomy.
 
 ## Next steps
 
