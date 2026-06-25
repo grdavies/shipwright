@@ -250,3 +250,42 @@ platform contract — depth and tool availability vary by runtime.
 When background dispatch **is** available at the orchestrator level, `/sw-deliver` may dispatch phase
 `/sw-ship` as a background Task; the orchestrator still collects outcomes from the durable
 `sw-deliver-runs/<phase>/status.json` path — never from ephemeral `sw-tmp` run dirs alone.
+
+## Serialized merge queue (R17/R19/R50/R52)
+
+After `merge-ready-green` status is collected, phases enter a **single-flight** merge queue. Only one
+phase → `<type>/<slug>` merge runs at a time; journal + lock prevent double-merge.
+
+```bash
+# 1. Collect durable /sw-ship outcome (R38) — never read sw-tmp run dirs
+scripts/wave.sh status collect --phase-slug <phase-slug>
+
+# 2. Enqueue when status is merge-ready-green
+scripts/wave.sh merge enqueue --phase-slug <phase-slug>
+
+# 3. Review barrier + live gate before merge (R17/R52) — exit 10 while yellow/pending review
+scripts/wave.sh merge gate-check --pr <n>
+
+# 4. Process next queued phase (true merge commit, --no-ff)
+scripts/wave.sh merge run-next --orchestrator-worktree .sw-worktrees/<slug>-orchestrator
+
+# Resume predicate (R50): phase tip is ancestor of target tip after merge
+scripts/wave.sh merge ancestry-check --phase-branch feat/<slug>-phase-<phase> --target feat/<slug>
+```
+
+- **Merge method:** true `git merge --no-ff` only (no squash/rebase) so ancestry reconciliation holds.
+- **Review barrier:** `merge gate-check` / `merge run-next` refuse until `check-gate.sh` is **green** and
+  `coderabbitLanded` is not `false` (pending async review is non-green for auto-merge).
+- **Journal:** `merge run-next` opens `mergeJournal` before merge and clears on success (coordinates with
+  `wave.sh journal` helpers).
+
+## Terminal report (R24/R55/R57)
+
+When all phases are `green-merged`:
+
+```bash
+scripts/wave.sh report terminal
+```
+
+Emits per-phase PR links (`mergedPhases`), Conventional Commit types from `release-please-config.json`,
+and the whole-feature gate line: `ready to merge — your call` for `<type>/<slug> → main`.

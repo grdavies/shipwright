@@ -42,15 +42,18 @@ dependents on green unmerged branches, and halts at the human merge gate.
    on `<type>/<slug>` — hosts the serialized merge queue and R40 forward-merges. Does **not** count toward
    `worktree.parallelCeiling`.
 3. Wave 1: provision independent phase worktrees via `scripts/wave.sh phase provision --phase-id <id>`.
-4. Run `/sw-ship` per item; advance only on green.
-5. After each merge into `<type>/<slug>`, advance dependents with
+4. Dispatch full `/sw-ship` per phase (`scripts/wave.sh phase dispatch-env --phase-slug <slug>` exports
+   `SW_PHASE_MODE` / `SW_RUN_DIR`); orchestrator **never bypasses** any `/sw-ship` step (R13).
+5. Collect outcomes: `scripts/wave.sh status collect --phase-slug <slug>` from durable status path (R38).
+6. On `merge-ready-green`: `scripts/wave.sh merge enqueue` then `merge run-next` when gate + review
+   barrier settle (R17/R19/R52).
+7. After each merge into `<type>/<slug>`, advance dependents with
    `scripts/wave.sh forward-merge --worktree <phase-wt> --base <type>/<slug>` (merge, not rebase); conflicts →
    `blocked`.
-6. Teardown completed phases with `scripts/wave.sh phase-teardown --name <worktree-name>` (`git worktree remove`
+8. Teardown completed phases with `scripts/wave.sh phase-teardown --name <worktree-name>` (`git worktree remove`
    + prune only).
-7. On all green: `scripts/wave.sh integration` merges leaves into `integration/<stamp>` (multi-feature) or
-   open terminal `<type>/<slug> → main` PR (phase-mode).
-8. Halt at human gate for dependency-ordered promotion (`promote`) or terminal merge (phase-mode).
+9. When all phases `green-merged`: `scripts/wave.sh report terminal` then open/update `<type>/<slug> → main` PR.
+10. Halt at human gate for terminal merge (phase-mode) or dependency-ordered promotion (`promote`, multi-feature).
 
 ## Red integration routing
 

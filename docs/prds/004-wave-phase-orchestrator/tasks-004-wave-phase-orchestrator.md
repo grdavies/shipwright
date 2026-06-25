@@ -157,27 +157,27 @@ frozen_at: 2026-06-24
 
 ### 8. Phase execution, merge queue, and review barrier (L)
 
-- [ ] 8.1 Full `/sw-ship` per phase in isolated worktree (R13)
+- [x] 8.1 Full `/sw-ship` per phase in isolated worktree (R13)
   - **File:** `core/commands/sw-deliver.md`, `core/skills/deliver/SKILL.md`
   - **Expected:** each phase runs complete `/sw-ship` chain under R48 contract; orchestrator does not bypass any step
   - **R-IDs:** R13
 
-- [ ] 8.2 Serialized merge queue with true merge commits (R17, R19, R50)
+- [x] 8.2 Serialized merge queue with true merge commits (R17, R19, R50)
   - **File:** `scripts/wave.sh`
   - **Expected:** one merge in flight; auto-merge only on live `check-gate.sh` green; uses merge commits (no squash/rebase); ancestry predicate for resume documented
   - **R-IDs:** R17, R19, R50
 
-- [ ] 8.3 Async review barrier before auto-merge (R52)
+- [x] 8.3 Async review barrier before auto-merge (R52)
   - **File:** `scripts/wave.sh`, `core/skills/deliver/SKILL.md`
   - **Expected:** pending/not-settled review on phase PR head is non-green; merge waits until barrier settles
   - **R-IDs:** R52
 
-- [ ] 8.4 Per-phase PR granularity in terminal report (R55, R57)
+- [x] 8.4 Per-phase PR granularity in terminal report (R55, R57)
   - **File:** `core/skills/deliver/SKILL.md`
   - **Expected:** terminal report links each auto-merged phase PR; phase commits/PR titles use Conventional Commits types from `release-please-config.json`
   - **R-IDs:** R55, R57
 
-- [ ] 8.5 Collect sub-agent outcomes from durable status path (R38)
+- [x] 8.5 Collect sub-agent outcomes from durable status path (R38)
   - **File:** `scripts/wave.sh`
   - **Expected:** orchestrator reads `.cursor/sw-deliver-runs/<phase>/status.json` before merge enqueue; crash/timeout → `blocked`, never silent skip
   - **R-IDs:** R38
