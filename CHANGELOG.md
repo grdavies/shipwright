@@ -5,6 +5,7 @@
 
 ### Features
 
+* merge phase per-orchestrator-audit-adoption-enumeration-s-m into feat/autonomous-orchestration-conductor (08cf681) <!-- sw-deliver:per-orchestrator-audit-adoption-enumeration-s-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
