@@ -202,19 +202,19 @@ documented behavior exists.
 
 ### 9. Brainstorm↔PRD frontmatter traceability (S/M)
 
-- [ ] 9.1 PRD `brainstorm:` back-reference written by `/sw-prd` (R52)
+- [x] 9.1 PRD `brainstorm:` back-reference written by `/sw-prd` (R52)
   - **File:** `core/commands/sw-prd.md`, `.sw/layout.md`
   - **Expected:** a Full-tier PRD draft carries a repo-relative `brainstorm:` reference that resolves to an
     existing brainstorm
-- [ ] 9.2 Brainstorm forward `prd:` reference when writable (R53)
+- [x] 9.2 Brainstorm forward `prd:` reference when writable (R53)
   - **File:** `core/commands/sw-prd.md`, `core/commands/sw-freeze.md`
   - **Expected:** an unfrozen source brainstorm gains a forward `prd:` reference (list when multiple); a
     frozen brainstorm is never edited and the PRD back-reference remains authoritative
-- [ ] 9.3 Fail-closed frontmatter-traceability gate + layout docs (R54)
+- [x] 9.3 Fail-closed frontmatter-traceability gate + layout docs (R54)
   - **File:** `scripts/doc-link-check.sh`, `.sw/layout.md`
   - **Expected:** dangling/missing `brainstorm:`/`prd:` references fail closed for a Full-tier PRD; gate
     wired into the doc/test suite; layout documents the fields
-- [ ] 9.4 `/sw-freeze` verifies PRD↔brainstorm linkage (R55)
+- [x] 9.4 `/sw-freeze` verifies PRD↔brainstorm linkage (R55)
   - **File:** `core/commands/sw-freeze.md`, `scripts/doc-link-check.sh`
   - **Expected:** a Full-tier PRD freeze is blocked when the `brainstorm:` back-reference is missing or
     unresolvable
