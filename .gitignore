@@ -26,3 +26,5 @@ scripts/test/fixtures/emitter-fixture/out/
 docs/*
 !docs/prds/
 !docs/prds/**
+!docs/guides/
+!docs/guides/**

@@ -1,718 +1,140 @@
 # Shipwright
 
-**Gated agentic dev lifecycle for Cursor and Claude Code** — traceable specs, a verify-review-ship loop, and
-compounding memory. Commands use the `sw-` prefix.
+[![version](https://img.shields.io/badge/version-1.2.2-blue)](version.txt)
+[![license](https://img.shields.io/badge/license-MIT-green)](#license)
+[![editors](https://img.shields.io/badge/Cursor-%26%20Claude%20Code-black)](#install)
 
-Orchestrators advance on green and **halt at human gates** (freeze, merge, feedback routing). Shipwright
-**never auto-merges**.
+**A gated agentic dev lifecycle for Cursor and Claude Code.** Traceable specs, a verify → review →
+ship loop, and compounding memory — all driven by `sw-` commands.
 
-- **Traceable specs** — frozen PRDs, tasks, and amendments in your repo
-- **Gated ship loop** — verify, review, CI truth, stabilize; you merge
+Orchestrators advance on green and **halt at human gates** (freeze, merge, feedback routing).
+Shipwright **never auto-merges**.
+
+- **Traceable specs** — frozen PRDs, tasks, and amendments live in your repo
+- **Gated ship loop** — verify, review, CI truth, stabilize; *you* merge
 - **Compounding memory** — post-ship retro and durable project learnings
+
+```mermaid
+flowchart LR
+  DOC["1 · Document<br/>/sw-doc"] --> SHIP["2 · Implement<br/>/sw-deliver"]
+  SHIP --> MERGE([You merge — only human gate])
+  MERGE --> COMPOUND["3 · Compound<br/>/sw-compound-ship"]
+  OPS["Debug & feedback<br/>/sw-debug · /sw-feedback"] -.-> DOC
+  COMPOUND -.->|learnings| DOC
+```
+
+> New here? Read **[Getting started](docs/guides/getting-started.md)** for guided persona paths, or
+> jump to the deep-dive **[workflow guide](docs/guides/workflows.md)**.
 
 ## Prerequisites
 
-Install these **before** cloning Shipwright. They are required for the plugin itself or for common workflows.
+Check you have the essentials:
 
-| Tool | Why |
-|------|-----|
-| **git** | Branches, worktrees, commits — used throughout the ship loop |
-| **bash** | `scripts/install.sh` and gate scripts |
-| **rsync** | `install.sh` copies the plugin tree to your local plugin directory |
-| **Python 3** | `python3 -m sw generate` when developing Shipwright; some gate/validation scripts |
-| **GitHub CLI (`gh`)** | `/sw-pr`, `/sw-watch-ci`, and PR blocker flows — run `gh auth login` |
+```bash
+git --version && bash --version && rsync --version && gh --version
+```
 
-**Per target repo** (the project you build in, not the Shipwright repo):
+- [x] **git**, **bash**, **rsync** — clone, run `scripts/install.sh`, copy the plugin tree
+- [x] **GitHub CLI (`gh`)** — `/sw-pr`, `/sw-watch-ci`, PR blocker flows (run `gh auth login`)
+- [ ] **Python 3** — only for developing Shipwright (`python3 -m sw generate`; see [CONTRIBUTING.md](CONTRIBUTING.md))
 
-| Tool | Why |
-|------|-----|
-| **Your project toolchain** | Configure `verify.lint`, `verify.typecheck`, `verify.test` in `workflow.config.json` so `/sw-verify` runs real checks |
+## Install
 
-Optional integrations (CodeRabbit, Recallium, Sentry) are configured during [plugin setup](#plugin-setup-and-configuration) — not required to install Shipwright.
+Shipwright installs **once per machine**; you configure it **per project repo**. Once installed,
+`sw-` commands appear in the palette (e.g. `/sw-setup`, `/sw-doc`).
 
-## Installation
-
-Shipwright installs **once per machine**. Configuration happens later **in each project repo**.
-
-> Remove other workflow plugins under `~/.cursor/plugins/local/` before installing — duplicates can shadow
-> `sw-` commands.
-
-### Cursor
+<details open>
+<summary><b>Cursor</b></summary>
 
 ```bash
 git clone https://github.com/grdavies/shipwright
 cd shipwright
-./scripts/install.sh
+./scripts/install.sh          # copies dist/cursor/ → ~/.cursor/plugins/local/shipwright
 ```
 
-1. `install.sh` copies `dist/cursor/` → `~/.cursor/plugins/local/shipwright` (override with `scripts/install.sh /path/to/dest`).
-2. Run **Developer: Reload Window** in Cursor.
-3. Confirm `sw-` commands appear in the command palette (e.g. `/sw-setup`, `/sw-doc`).
+Run **Developer: Reload Window** in Cursor. Override the destination:
+`./scripts/install.sh /path/to/dest`.
+</details>
 
-### Claude Code
+<details>
+<summary><b>Claude Code</b></summary>
 
 ```bash
 git clone https://github.com/grdavies/shipwright
 cd shipwright
 ```
 
-Point your Claude Code plugin path at the generated tree:
+Point your Claude Code plugin path at `<shipwright-repo>/dist/claude-code/`, or copy that tree into
+your Claude plugins directory per Claude Code docs. Reload Claude Code.
+</details>
 
-- **Path:** `<shipwright-repo>/dist/claude-code/`
-- Or copy `dist/claude-code/` into your Claude plugins directory per Claude Code docs.
+## Configuration
 
-Reload Claude Code after adding the plugin. Command surface uses the same `sw-` prefix as Cursor.
+Open your **target project repo** and run **`/sw-setup`**. It walks you through four questions and
+writes `.cursor/workflow.config.json`:
 
-### Developing Shipwright itself
+1. **Memory provider** — `in-repo` (default, committed markdown store) or `recallium` (external
+   REST store). For in-repo, choose `committed` (PR-reviewable) or `local` (gitignored).
+2. **Review provider** — `none` (default) or `coderabbit` (opt-in AI review on PRs).
+3. **Doc→implementation boundary** (`doc.afterTasks`) — `confirm` (default: show frozen task list,
+   require `proceed` before dispatch) · `stop` · `auto`.
+4. **Guardrails** — `enforceBeforeSubmit` (default on) and `requireRuleClass` (default off; enable
+   in mature repos).
 
-Authoring lives in `core/`; install trees are generated:
+Re-run `/sw-setup` at any time — it acts as a **doctor** against an existing config, validating,
+reporting drift, and offering targeted repair without a full rescaffold.
 
-```bash
-python3 -m sw generate --all --install   # regenerate dist/ and install to Cursor
-```
+Configure `verify.lint` / `verify.typecheck` / `verify.test` so `/sw-verify` runs real checks.
+Full walkthrough and schema: **[configuration](docs/guides/configuration.md)**.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). User docs live in [`documentation/`](documentation/); internal planning
-artifacts live in gitignored `docs/`.
+## First run
 
-## Plugin setup and configuration
+1. **`/sw-doc`** — triage → (brainstorm) → PRD → review → freeze → tasks.
+2. **`/sw-deliver run <frozen-tasks>`** — drives every phase to one merge gate; **you merge**.
 
-Shipwright configures **per target repo** — open your project in Cursor (or Claude Code) and set it up there.
+Quick fixes skip the doc pipeline — see [Getting started](docs/guides/getting-started.md).
 
-### Zero-config fast path
+## Workstreams
 
-A repo can work without `workflow.config.json` if you commit:
+Four lifecycle workstreams sit on the foundation. Each has an **orchestrator** that chains atomic
+`sw-` commands; every atomic stays independently runnable.
 
-```text
-.cursor/sw-memory.provider    # file containing: in-repo
-.cursor/sw-memory/memories/   # empty
-.cursor/sw-memory/rules/      # empty
-```
+| Workstream | Orchestrator | Chain | Does not |
+|------------|--------------|-------|----------|
+| **Document** | `/sw-doc` | triage → brainstorm (Full) → PRD → review → freeze → tasks | implement or merge |
+| **Implement** | `/sw-deliver` | `run` → per-phase `/sw-ship` → auto-merge → terminal PR → main | bypass `/sw-ship` or auto-merge to `main` |
+| **Debug** | `/sw-debug` | triage signal → RCA → route by fix size | implement or merge |
+| **Feedback** | `/sw-feedback` | normalize + redact → route to debug / gaps / brainstorm | analyze or dispatch without confirmation |
 
-The fail-closed hook engages via the marker. Run `/sw-setup` when you want full config.
+**`/sw-deliver` is the default implementation path** once `/sw-doc` produces a frozen task list — the
+"play button" that drives every phase of a feature to one human merge gate. Run the manual `/sw-ship`
+atomics directly only for Quick-tier hotfixes, debugging, or single-phase reruns.
 
-### `/sw-setup` (recommended)
+→ Full per-tier flows, diagrams, and sample prompts: **[workflow guide](docs/guides/workflows.md)**.
 
-In your **target repo**, run `/sw-setup`. It scaffolds a new config or re-runs as a **doctor** if
-`.cursor/workflow.config.json` already exists.
+## Tiers
 
-**Step 1 — Memory provider**
+`/sw-triage` scores work deterministically; `/sw-doc` respects the result.
 
-| Question | Choices | Default | Writes |
-|----------|---------|---------|--------|
-| Where should durable memory live? | **in-repo** · recallium | **in-repo** | `memory.provider` |
+| | **Quick** | **Standard** | **Full** |
+|---|-----------|--------------|----------|
+| **Scope** | 0–1 files, low risk | 2–5 files, bounded | 6+ files or ambiguous |
+| **Docs** | skipped | PRD → freeze → tasks | brainstorm → PRD → freeze → tasks |
+| **Entry** | manual `/sw-ship` | `/sw-deliver run` | `/sw-deliver run` |
 
-For **in-repo** (default):
-
-- Creates `.cursor/sw-memory.provider` containing `in-repo`
-- Creates `.cursor/sw-memory/memories/` and `.cursor/sw-memory/rules/` (empty — no auto-seeded rules)
-- Asks **commit mode:** `committed` (default, PR-reviewable) or `local` (gitignore `.cursor/sw-memory-local/`)
-
-For **recallium:** requires a reachable REST base URL (`memory.connection.restBaseUrl`); setup warns if health check fails.
-
-**Step 2 — Review provider**
-
-| Question | Choices | Default | Writes |
-|----------|---------|---------|--------|
-| External AI review on PRs? | **coderabbit** · none | **none** | `review.provider` |
-
-Canonical opt-out: `review.provider: "none"`. Do not use `review.enabled: false` (deprecated).
-
-**Step 3 — Doc→implementation boundary**
-
-| Question | Choices | Default | Writes |
-|----------|---------|---------|--------|
-| After frozen tasks? | **stop** · confirm · auto | **confirm** | `doc.afterTasks` |
-
-`confirm` shows the full task list and requires `proceed` or `yes` before dispatch. `auto` provisions a worktree
-and dispatches without a second prompt.
-
-**Step 4 — Guardrails**
-
-| Setting | Default | Meaning |
-|---------|---------|---------|
-| `guardrails.enforceBeforeSubmit` | `true` | Memory guardrails run before prompts submit |
-| `guardrails.requireRuleClass` | `false` | Set `true` in mature repos that require allowlisted rules |
-
-**Step 5 — Environment doctor** (warnings only, never hard-fails scaffold)
-
-- CodeRabbit CLI on `PATH` when review provider is `coderabbit`
-- Recallium reachable when memory provider is `recallium`
-- Placeholder `verify.*` commands → recommends configuring real lint/typecheck/test commands
-- Missing memory dirs → offers `mkdir -p` repair
-
-**Step 6 — Write config**
-
-Validates against `core/sw-reference/config.schema.json`, then writes `.cursor/workflow.config.json`.
-
-**Setup tip:** add `docs/` to your project `.gitignore` if you want brainstorms, PRDs, and decisions to stay local.
-
-### Manual config
-
-```bash
-mkdir -p .cursor
-cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
-# edit memory.project, verify.*, providers
-```
-
-| Key | Purpose |
-|-----|---------|
-| `doc.afterTasks` | After frozen tasks: `stop` \| `confirm` (default) \| `auto` — see [getting started](documentation/getting-started.md) |
-| `memory.provider` | `in-repo` (default) or `recallium` |
-| `review.provider` | AI review adapter — default **`none`** (off); `coderabbit` is opt-in |
-| `verify.lint` / `verify.typecheck` / `verify.test` | Commands `/sw-verify` runs in your repo |
-| `coderabbit.reviewGraceMinutes` | Gate grace window before absent review = settled |
-| `checks.treatNeutralAsPass` | NEUTRAL CI checks count as pass unless allowlisted |
-| `checks.neutralAllowlist` | Check names that stay blocking |
-| `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
-
-Canonical opt-out for review: `review.provider: "none"`.
-
-Provider **credentials** come from the environment or your secret store — never commit secrets.
-
-See `core/sw-reference/config.schema.json` for the full schema. User guides: [getting started](documentation/getting-started.md), [commands](documentation/commands.md).
-
-## First-run workflow (summary)
-
-1. `/sw-setup` — config + `doc.afterTasks` + review choice (`none` default).
-2. `/sw-doc` — doc chain; **single-pass** `/sw-tasks`; boundary modes control dispatch after freeze.
-3. `/sw-doc` — doc chain; **single-pass** `/sw-tasks`; boundary modes control dispatch after freeze.
-4. `/sw-deliver run <frozen-tasks>` — primary implementation path (orchestrates all phases to one terminal merge gate).
-5. **Quick tier only:** `/sw-worktree` + `/sw-start` → `/sw-ship` when there is no frozen task list.
-
-### Optional integrations
-
-Configure these in `/sw-setup` or `workflow.config.json` when you need them:
-
-| Integration | Config | When to enable |
-|-------------|--------|----------------|
-| **CodeRabbit** | `review.provider: coderabbit` | AI review on PRs; install CodeRabbit CLI for local flows |
-| **Recallium** | `memory.provider: recallium` | External memory store instead of in-repo markdown |
-| **Sentry** | Production signals via `/sw-feedback` or `/sw-debug` | Route production errors into the debug workstream |
+**Risk floor:** `auth`, `payment`, `migration`, `webhook` force at least Standard. **Ambiguity bump:**
+`maybe`, `explore`, `TBD` push a tier up. Details in the [workflow guide](docs/guides/workflows.md).
 
 ## Learn more
 
 | Doc | Audience |
 |-----|----------|
-| [documentation/getting-started.md](documentation/getting-started.md) | Persona quick paths |
-| [documentation/commands.md](documentation/commands.md) | Full command taxonomy |
+| [Getting started](docs/guides/getting-started.md) | First run + persona quick paths |
+| [Workflow guide](docs/guides/workflows.md) | Tiers, per-workstream flows, diagrams, prompts |
+| [Commands](docs/guides/commands.md) | Full command taxonomy |
+| [Configuration](docs/guides/configuration.md) | `/sw-setup` + every config key |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Developing the plugin |
 | [PROVENANCE.md](PROVENANCE.md) | Upstream sources |
-
-## Workstreams
-
-Four lifecycle workstreams sit on the foundation. Each has an **orchestrator** that chains atomic `sw-`
-commands; every atomic stays independently runnable.
-
-| Workstream | Orchestrator | Chain |
-|------------|--------------|-------|
-| Documentation | `/sw-doc` | `/sw-brainstorm` → `/sw-prd` → `/sw-doc-review` → `/sw-freeze` → `/sw-tasks` |
-| Implementation | `/sw-deliver` | `run` → per-phase `/sw-ship` → auto-merge → terminal PR → main |
-| Debugging | `/sw-debug` | triage signal → RCA → route (does not implement or merge) |
-| Feedback | `/sw-feedback` | normalize + redact inbound signals → route to debug / gap-capture / brainstorm |
-
-### Implementation — `/sw-deliver` (default)
-
-Once `/sw-doc` has produced a frozen task list (`tasks-<n>-<slug>.md`), **`/sw-deliver` is the default
-implementation process** — the "play button" for that list. It drives every remaining phase of a single
-feature to one human merge gate: dependency-ordered, parallel where safe, stacked where not.
-
-For each phase, `/sw-deliver` provisions an isolated worktree and dispatches the full `/sw-ship` chain
-(`/sw-execute` through `/sw-ready`) — you do not invoke those atomics yourself unless debugging or running
-a single phase by hand:
-
-```
-/sw-deliver run → per phase: /sw-execute → /sw-verify → … → /sw-ready → auto-merge into <type>/<slug>
-```
-
-When a phase's `check-gate.sh` goes green it **auto-merges into the feature branch `<type>/<slug>`** (the
-bot/CI gate replaces the per-phase human gate). The only human stop is the final **`<type>/<slug> → main`**
-pull request.
-
-**Manual alternative** (one phase at a time, or Quick-tier slices without a frozen task list):
-`/sw-worktree` + `/sw-start` → `/sw-ship` (or `/sw-execute` … `/sw-ready`). Same atomics `/sw-deliver` calls
-internally — useful for debugging, partial reruns, or hotfixes that skip `/sw-doc`.
-
-> `/sw-deliver` is the phase-aware evolution of the former `/sw-wave`, specified in
-> [PRD 004](docs/prds/004-wave-phase-orchestrator/004-prd-wave-phase-orchestrator.md). It also retains the
-> existing multi-feature mode (independent features each promoted to `main` via `integration/<stamp>`).
-> "Wave" now refers only to a dependency-ordered batch of concurrently-runnable units.
-
-Most users follow this order: **write and review documentation** → **ship from frozen tasks** → **debug or
-triage production issues** when needed. Post-merge, **compound** learnings back into memory.
-
-```mermaid
-flowchart TB
-  subgraph doc["1. Documentation"]
-    T["/sw-triage"] --> D["/sw-doc"]
-    D --> FZ["/sw-freeze + /sw-tasks"]
-  end
-  subgraph ship["2. Implementation — primary"]
-    DEL["/sw-deliver run"]
-    DEL --> TM["Terminal PR → main"]
-  end
-  subgraph manual["Manual / Quick tier"]
-    WT["/sw-worktree"] --> ST["/sw-start"]
-    ST --> SH["/sw-ship"]
-  end
-  subgraph ops["3. Debug & feedback"]
-    FB["/sw-feedback"] --> DB["/sw-debug"]
-  end
-  FZ -->|frozen tasks| DEL
-  T -.->|Quick tier| manual
-  DB -.->|small fix| manual
-  DEL --> CM["/sw-compound-ship"]
-  SH --> CM
-  TM --> CM
-```
-
-**Tiers** classify how much documentation ceremony a piece of work needs. `/sw-triage` scores deterministically;
-`/sw-doc` respects the result.
-
-### Tiers: Quick, Standard, and Full
-
-| | **Quick** | **Standard** | **Full** |
-|---|-----------|--------------|----------|
-| **Typical scope** | 0–1 files, low risk | 2–5 files, bounded feature | 6+ files, or ambiguous scope |
-| **Doc pipeline** | **Skipped** — route straight to implementation | PRD → review → freeze → tasks | Brainstorm → PRD → review → freeze → tasks |
-| **Persona review** | None | Signal-driven panel on PRD | Signal-driven panel on PRD |
-| **Artifacts produced** | None (implement from prompt) | `docs/prds/<n>-*/` PRD + frozen tasks | `docs/brainstorms/` + PRD + frozen tasks |
-| **Human gates** | Merge gate only | `doc.afterTasks` confirm; freeze; merge | `doc.afterTasks`; brainstorm checkpoint; freeze; merge |
-| **Best for** | Hotfixes, typos, single-file tweaks | Most features with clear acceptance criteria | New domains, spikes, “figure out” scope |
-| **Entry command** | `/sw-triage` then manual `/sw-ship` (no frozen tasks) | `/sw-deliver run` after `/sw-doc` | `/sw-deliver run` after `/sw-doc` |
-
-**Risk floor:** keywords like `auth`, `payment`, `migration`, or `webhook` force **at least Standard** even for
-1-file changes. **Ambiguity bump:** words like `maybe`, `explore`, or `TBD` push Quick→Standard or
-Standard→Full.
-
-**Classification flow** (`/sw-triage`):
-
-```mermaid
-flowchart TD
-  IN[Describe work + file count] --> OVR{--tier override?}
-  OVR -->|yes| TIER[Use override tier]
-  OVR -->|no| RISK{Risk keyword?}
-  RISK -->|yes| FLOOR[Floor = Standard]
-  RISK -->|no| FC[Base tier from file count]
-  FC --> Q0{0-1 files}
-  FC --> Q1{2-5 files}
-  FC --> Q2{6+ files}
-  Q0 --> BQ[Quick]
-  Q1 --> BS[Standard]
-  Q2 --> BF[Full]
-  FLOOR --> AMB{Ambiguity markers?}
-  BQ --> AMB
-  BS --> AMB
-  BF --> AMB
-  AMB -->|bump| UP[Promote one tier]
-  AMB -->|none| MAX[max base floor]
-  UP --> TIER
-  MAX --> TIER
-  TIER --> QK{Quick?}
-  QK -->|yes| IMPL[Manual /sw-ship]
-  QK -->|no| DOC[Enter /sw-doc → /sw-deliver run]
-```
-
-#### Quick tier workflow
-
-No spec artifacts — no frozen task list, so **`/sw-deliver` does not apply**. Triage routes to the manual
-`/sw-ship` atomics (the same chain `/sw-deliver` dispatches per phase when tasks are frozen).
-
-```mermaid
-flowchart LR
-  T["/sw-triage"] --> Q[Quick]
-  Q --> WT["/sw-worktree provision"]
-  WT --> ST["/sw-start"]
-  ST --> EX["/sw-execute"]
-  EX --> SH["/sw-ship"]
-  SH --> V["verify → review → commit"]
-  V --> PR["/sw-pr → /sw-watch-ci"]
-  PR --> STB["/sw-stabilize"]
-  STB --> RD["/sw-ready — PAUSE"]
-  RD --> MERGE[You merge]
-  MERGE --> CM["/sw-compound-ship"]
-```
-
-```text
-/sw-triage — 1 file, fix export button label typo
-/sw-worktree provision → /sw-start → /sw-execute → /sw-ship
-```
-
-#### Standard tier workflow
-
-PRD and frozen tasks before code. No brainstorm phase.
-
-```mermaid
-flowchart TB
-  T["/sw-triage"] --> S[Standard]
-  S --> DOC["/sw-doc"]
-  DOC --> PRD["/sw-prd"]
-  PRD --> REV["/sw-doc-review"]
-  REV --> SR1[spec-rigor]
-  SR1 --> FZ1["/sw-freeze PRD"]
-  FZ1 --> TS["/sw-tasks"]
-  TS --> BT{doc.afterTasks}
-  BT --> SR2[traceability + spec-rigor]
-  SR2 --> FZ2["/sw-freeze tasks"]
-  FZ2 --> DEL["/sw-deliver run"]
-  DEL --> TM[Terminal PR → main]
-  TM --> MERGE[You merge]
-  MERGE --> CM["/sw-compound-ship"]
-```
-
-```text
-/sw-doc
-Feature: CSV export on reports table — 4 files, clear criteria, no auth
-/sw-deliver run docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
-```
-
-#### Full tier workflow
-
-Explores requirements before the PRD. Use when scope or product decisions are still open.
-
-```mermaid
-flowchart TB
-  T["/sw-triage"] --> F[Full]
-  F --> DOC["/sw-doc"]
-  DOC --> BR["/sw-brainstorm"]
-  BR --> SYN{User confirms synthesis}
-  SYN --> PRD["/sw-prd"]
-  PRD --> REV["/sw-doc-review"]
-  REV --> SR1[spec-rigor]
-  SR1 --> FZ1["/sw-freeze brainstorm + PRD"]
-  FZ1 --> TS["/sw-tasks"]
-  TS --> BT{doc.afterTasks}
-  BT --> SR2[traceability + spec-rigor]
-  SR2 --> FZ2["/sw-freeze tasks"]
-  FZ2 --> DEL["/sw-deliver run"]
-  DEL --> TM[Terminal PR → main]
-  TM --> MERGE[You merge]
-  MERGE --> CM["/sw-compound-ship"]
-```
-
-```text
-/sw-doc
-Feature: new billing portal — explore pricing models, 8+ files, auth + Stripe
-/sw-deliver run docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
-```
-
-> **Note:** `/sw-doc` **stops** on Quick tier and tells you to use the implementation workstream instead.
-
----
-
-### Documentation — spec before code
-
-Use when tier is **Standard** or **Full** and you need a reviewed plan before implementation.
-
-**Standard doc pipeline** (no brainstorm):
-
-```mermaid
-flowchart LR
-  TR["/sw-triage"] --> PRD["/sw-prd"]
-  PRD --> DR["/sw-doc-review"]
-  DR --> RIG[spec-rigor]
-  RIG --> FZ["/sw-freeze"]
-  FZ --> TK["/sw-tasks"]
-  TK --> BT{doc.afterTasks}
-  BT --> FZT["/sw-freeze tasks"]
-```
-
-**Full doc pipeline** (brainstorm first):
-
-```mermaid
-flowchart LR
-  TR["/sw-triage"] --> BR["/sw-brainstorm"]
-  BR --> PRD["/sw-prd"]
-  PRD --> DR["/sw-doc-review"]
-  DR --> RIG[spec-rigor]
-  RIG --> FZ["/sw-freeze"]
-  FZ --> TK["/sw-tasks"]
-  TK --> BT{doc.afterTasks}
-  BT --> FZT["/sw-freeze tasks"]
-```
-
-Or run `/sw-doc` to orchestrate either chain end-to-end.
-
-**Typical flow**
-
-1. `/sw-triage` — classify tier (or pass `--tier` to `/sw-doc`)
-2. `/sw-doc` — runs the tier-appropriate doc chain
-3. Human **`doc.afterTasks`** checkpoint after single-pass task freeze (default `confirm`)
-4. Frozen PRD + tasks become the spec for **`/sw-deliver run`** (primary) or manual `/sw-ship` per phase
-
-**Sample prompts**
-
-```text
-/sw-doc
-Feature: user profile settings page
-Context: Need PRD and tasks before implementation. Tier unknown — triage first.
-```
-
-```text
-/sw-prd --tier standard
-Feature: add export-to-CSV on reports table
-Context: 3–4 files, no auth changes. Skip brainstorm.
-```
-
-**Key commands**
-
-| Command | Use when |
-|---------|----------|
-| `/sw-doc` | End-to-end doc pipeline orchestrator |
-| `/sw-triage` | Classify Quick / Standard / Full only |
-| `/sw-brainstorm` | Full-tier requirements exploration (before PRD) |
-| `/sw-prd` | Draft PRD or decision record |
-| `/sw-doc-review` | Persona panel on spec drafts |
-| `/sw-freeze` | Lock artifact; no further edits without `/sw-amend` |
-| `/sw-tasks` | Generate task list from frozen PRD |
-| `/sw-amend` | Post-freeze correction via amendment file |
-
----
-
-### Implementation — ship a feature from spec
-
-Use when you have frozen tasks (Standard/Full) or a Quick-tier slice and want a verified PR.
-
-**Primary path:** `/sw-deliver run` orchestrates every phase from the frozen task list to one terminal merge gate.
-`/sw-ship`, `/sw-execute`, and the other ship-loop atomics still exist — `/sw-deliver` invokes them per phase;
-run them manually only for Quick-tier hotfixes, debugging, or single-phase reruns.
-
-```mermaid
-flowchart TB
-  RUN["/sw-deliver run"] --> PF[preflight + plan]
-  PF --> WAVES[Dependency-ordered waves]
-  WAVES --> PHASE[Per-phase worktree]
-  PHASE --> SHIP["/sw-ship chain"]
-  SHIP --> AM[Auto-merge into type/slug]
-  AM --> MORE{More phases?}
-  MORE -->|yes| WAVES
-  MORE -->|all green-merged| TERM[Terminal PR → main]
-  TERM --> PAUSE[You merge — only human gate]
-```
-
-#### `/sw-deliver run` — phase-mode play button (default)
-
-When `/sw-doc` has produced a **frozen** task list (`tasks-<n>-<slug>.md`), `/sw-deliver` is the default
-implementation orchestrator. Mode auto-detect from input:
-
-| Input | Mode |
-|-------|------|
-| `--task-list docs/prds/<n>-<slug>/tasks-....md` | **phase-mode** — one feature, many phases |
-| `--items A,B` + `--edges C:A` | **multi-feature** — independent features + integration branch |
-
-**Typical phase-mode flow:**
-
-```text
-/sw-deliver run docs/prds/004-my-feature/tasks-004-my-feature.md
-```
-
-1. `preflight` + `plan` — validates frozen tasks, CI/review base-branch preflight (R49), writes
-   `.cursor/sw-deliver-plan.json`.
-2. Provisions orchestrator + per-phase worktrees; dispatches full `/sw-ship` per phase (no bypass).
-3. Auto-merges each green phase into `<type>/<slug>`; siblings continue on blast-radius block.
-4. Opens a **single terminal** `<type>/<slug> → main` PR when all phases are `green-merged` — the only human
-   merge gate for the feature.
-
-**Resumption:** re-run the same `run` command after interrupt; `resume reconcile` skips `green-merged` phases
-and reconciles against the remote tip. Use `plan --from <phase>` when upstream phases are already merged.
-
-**Dry-run:** `scripts/wave.sh plan --task-list <path> --dry-run` emits the plan JSON without writing
-`.cursor/sw-deliver-plan.json`.
-
-Manual per-phase control remains available when you need it: `/sw-worktree` + `/sw-start` → `/sw-ship` for each
-phase (same chain `/sw-deliver` dispatches automatically).
-
-#### `/sw-ship` — single-phase loop (manual / Quick tier)
-
-Used directly for **Quick-tier** work (no frozen task list) or when debugging a single phase. When you run
-`/sw-deliver`, this chain executes **inside** each phase — you normally do not call it yourself.
-
-```mermaid
-flowchart LR
-  TMP[sw-tmp init] --> EX["/sw-execute"]
-  EX --> VF["/sw-verify"]
-  VF --> VG{verification-gate}
-  VG --> RV["/sw-review"]
-  RV --> SM["/sw-simplify"]
-  SM --> GP[gap-check]
-  GP --> CM["/sw-commit"]
-  CM --> PR["/sw-pr"]
-  PR --> WC["/sw-watch-ci"]
-  WC --> ST["/sw-stabilize"]
-  ST --> RD["/sw-ready — PAUSE"]
-  RD --> CLN[sw-tmp clean]
-```
-
-Halts on verification failure, review blockers, or red CI. **Never auto-merges** — you decide at `/sw-ready`.
-When invoked by `/sw-deliver`, green phases auto-merge into `<type>/<slug>` without a per-phase human pause.
-
-**Typical manual flow** (Quick tier or single-phase debug)
-
-1. `/sw-worktree provision` — isolated worktree for the work item
-2. `/sw-start` — phase branch (e.g. `feat/my-feature-phase-mvp`)
-3. `/sw-execute` — implement one task slice (or let `/sw-ship` orchestrate the full loop)
-4. `/sw-ship` — verify → review → commit → PR → watch CI → stabilize → **pause at merge-ready**
-5. You merge manually; then `/sw-compound-ship` in the target repo
-
-**Typical `/sw-deliver` flow** (Standard/Full — preferred)
-
-```text
-/sw-deliver run docs/prds/003-user-profile/tasks-003-user-profile.md
-```
-
-Re-run the same command to resume after interrupt. One terminal PR to `main` when all phases are `green-merged`.
-
-**Sample prompts (manual / debug)**
-
-```text
-/sw-worktree provision
-Work item: user-profile-settings (from PRD 003 tasks)
-```
-
-```text
-/sw-ship
-Context: Phase 1 tasks 1.1–1.3 complete. Parent branch main. Run full loop through stabilize.
-```
-
-```text
-/sw-execute
-Task: 2.1 from tasks-003-user-profile.md — add settings form component
-```
-
-**Key commands**
-
-| Command | Use when |
-|---------|----------|
-| `/sw-deliver run <frozen-tasks>` | **Primary** — orchestrate all phases to one terminal merge gate |
-| `/sw-ship` | Manual single-phase loop (Quick tier, debug, or without `/sw-deliver`) |
-| `/sw-worktree` | Create or tear down per-item worktree (manual path; `/sw-deliver` provisions automatically) |
-| `/sw-start` | Open phase branch inside worktree (manual path) |
-| `/sw-execute` | One bounded implementation slice (manual path; first step inside `/sw-ship`) |
-| `/sw-verify` | Run scoped lint/typecheck/test |
-| `/sw-review` | Local multi-agent + provider review |
-| `/sw-commit` | Commit after verify + review |
-| `/sw-pr` | Push and open/update PR |
-| `/sw-watch-ci` | Poll PR checks until green/red/timeout |
-| `/sw-stabilize` | Clear failing checks and review threads |
-| `/sw-ready` | Final readiness report (never merges) |
-| `/sw-compound-ship` | Post-merge retro → compound → memory sync |
-
-**Post-merge chain** (`/sw-compound-ship`):
-
-```mermaid
-flowchart LR
-  RT["/sw-retro"] --> CP["/sw-compound"]
-  CP --> MS["/sw-memory-sync"]
-  MS --> ST["/sw-status"]
-```
-
----
-
-### Debug — production or dev-time issues
-
-Use when something is broken in production or you need RCA before fixing.
-
-**`/sw-debug` workflow:**
-
-```mermaid
-flowchart TD
-  SIG[Signal in] --> TR[Phase 0 triage]
-  TR --> RD[Redact + normalize]
-  RD --> SE{Sentry?}
-  SE -->|yes| EN[Sentry enrich]
-  SE -->|no| RCA[RCA core]
-  EN --> RCA
-  RCA --> SZ{Fix size}
-  SZ -->|small| WT["/sw-worktree + /sw-start"]
-  WT --> SH["/sw-ship"]
-  SZ -->|substantial| AM["/sw-amend or /sw-brainstorm"]
-```
-
-**Typical flow**
-
-1. `/sw-debug` with signal (Sentry issue, stack trace, deploy log excerpt)
-2. RCA core diagnoses; routes by fix size:
-   - **Small** → `/sw-worktree` + `/sw-ship`
-   - **Large** → `/sw-brainstorm` or `/sw-amend`
-
-**Sample prompts**
-
-```text
-/sw-debug
-Signal: Sentry issue PROJECT-123 — NullReference in CheckoutService.SubmitOrder
-Context: Started after deploy v2.4.1 yesterday. 400 events/hour.
-```
-
-```text
-/sw-debug
-Signal: CI passes locally but fails on PR #42 — test_user_export timeout
-```
-
-**Key commands**
-
-| Command | Use when |
-|---------|----------|
-| `/sw-debug` | RCA + route; does not implement or merge |
-| `/sw-feedback` | Normalize inbound signal and suggest route (human confirms) |
-| `/sw-feedback-close` | Close backlog signal after fix verified shipped |
-
----
-
-### Feedback — intake from production, review, or retro
-
-Use to capture signals without immediately analyzing them.
-
-**`/sw-feedback` workflow:**
-
-```mermaid
-flowchart TD
-  IN[Signal in] --> NM[Normalize]
-  NM --> RD[Redact]
-  RD --> DD{Dedup?}
-  DD -->|duplicate| DROP[Drop — already handled]
-  DD -->|new| RT{Route}
-  RT -->|prod fault| DB["/sw-debug"]
-  RT -->|extends PR| GAP[gap-capture / GAP-BACKLOG]
-  RT -->|new scope| BR["/sw-brainstorm"]
-  DB --> CONF{Human confirms}
-  GAP --> CONF
-  BR --> CONF
-  CONF -->|yes| DISP[Dispatch]
-```
-
-**Sample prompt**
-
-```text
-/sw-feedback
-Signal: Code review on PR #88 — "missing rate limit on public endpoint"
-Source: review comment
-```
-
-`/sw-feedback` redacts, classifies, and proposes a route (debug, gap-capture, brainstorm). **Confirm** before
-dispatch.
-
----
-
-### Quick reference — commands you invoke directly
-
-| Command | One-line use case |
-|---------|-------------------|
-| `/sw-setup` | First run or doctor in a target repo |
-| `/sw-triage` | How much ceremony does this work need? |
-| `/sw-doc` | Full documentation pipeline |
-| `/sw-deliver run` | **Primary** — implement frozen tasks to one terminal merge gate |
-| `/sw-ship` | Manual single-phase verify → PR → CI loop (Quick tier / debug) |
-| `/sw-debug` | Diagnose production or CI failure |
-| `/sw-feedback` | Intake and route external signals |
-| `/sw-worktree` | Isolate work in a git worktree (manual path) |
-| `/sw-start` | Start a phase branch (manual path) |
-| `/sw-execute` | Implement one task slice (manual path) |
-| `/sw-status` | Reconcile PRD status from git facts |
-| `/sw-memory-sync` | Distill session into durable memory |
-| `/sw-memory-audit` | Audit memory hygiene (read-only) |
-| `/sw-compound` | Turn retro into memories |
-| `/sw-retro` | Post-ship retrospective report |
-
-For the full command list, see [documentation/commands.md](documentation/commands.md).
 
 ## License
 
