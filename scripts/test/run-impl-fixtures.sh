@@ -126,7 +126,7 @@ import re
 
 slug = "api"
 slug_esc = re.escape(slug)
-branch_pat = re.compile(rf"^pf/{slug_esc}([/-]|$)", re.IGNORECASE)
+branch_pat = re.compile(rf"^feat/{slug_esc}([/-]|$)", re.IGNORECASE)
 
 def links(head, body, title):
     prd_pat = re.compile(rf"prd:\s*{re.escape(slug.lower())}\b", re.IGNORECASE)
@@ -137,8 +137,8 @@ def links(head, body, title):
         or title_pat.search(title)
     )
 
-assert links("pf/api-phase-auth", "", "") is True
-assert links("pf/authority-fix", "", "") is False
+assert links("feat/api-phase-auth", "", "") is True
+assert links("feat/authority-fix", "", "") is False
 assert links("", "prd:api done", "") is True
 assert links("", "authority prd:apiish", "") is False
 print("ok")
