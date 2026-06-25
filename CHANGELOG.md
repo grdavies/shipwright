@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
+
+
+### Features
+
+* caveman command loading (PRD 006) ([#65](https://github.com/grdavies/shipwright/issues/65)) ([b8145b2](https://github.com/grdavies/shipwright/commit/b8145b262eb523e20045706b8c8737d51269ac3f))
+* prd 007 deliver autonomy hardening ([#67](https://github.com/grdavies/shipwright/issues/67)) ([e18ec99](https://github.com/grdavies/shipwright/commit/e18ec99c325f26972c156cbff0183c9577e60e49))
+
 ## [1.4.0](https://github.com/grdavies/shipwright/compare/v1.3.1...v1.4.0) (2026-06-25)
 
 
