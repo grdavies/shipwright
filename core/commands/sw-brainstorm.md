@@ -20,6 +20,8 @@ Full-tier brainstorm stage. Produces `docs/brainstorms/...-requirements.md` with
 3. Write requirements doc to path in `.sw/layout.md`.
 4. Report output path; next step is `/sw-prd` (not `/sw-tasks`).
 
+**Communication intensity:** lite
+
 ## Guardrails
 
 - Pipeline-order guard: refuse to draft a PRD in this command.

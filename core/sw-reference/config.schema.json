@@ -324,6 +324,51 @@
             "builder": { "type": "string", "description": "Tier name for builder role." },
             "reviewer": { "type": "string", "description": "Tier name for reviewer role floor." }
           }
+        },
+        "routing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "commands": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": ["normal", "lite", "full", "ultra", "inherit"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "communication": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Task-gated caveman communication intensity for orchestration chat.",
+      "properties": {
+        "defaultIntensity": {
+          "type": "string",
+          "enum": ["normal", "lite", "full", "ultra"],
+          "default": "full"
+        },
+        "routing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "commands": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": ["normal", "lite", "full", "ultra", "inherit"]
+              }
+            },
+            "skills": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": ["normal", "lite", "full", "ultra", "inherit"]
+              }
+            }
+          }
         }
       }
     },

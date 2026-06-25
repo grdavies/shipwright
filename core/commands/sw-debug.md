@@ -52,6 +52,8 @@ Read `.cursor/workflow.config.json` for `prdsDir`, `agentsFile`, `memory` provid
 - Does not mutate Sentry (read-only MCP)
 - Does not replace `/sw-stabilize` (in-loop CI/review failures)
 
+**Communication intensity:** inherit
+
 ## Guardrails
 
 - Every ingestion edge through `bash scripts/memory-redact.sh` (R41).

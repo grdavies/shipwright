@@ -31,6 +31,8 @@ half of a provider swap. It is also the committed snapshot that gates AGENTS.md 
    Map the provider-native type back to the canonical category (inverse of the adapter's category map).
 4. Report: line count, output path, byte size, and a content hash for snapshot verification.
 
+**Communication intensity:** ultra
+
 ## Guardrails
 
 - Neutral format only — no provider-specific fields. The output must be re-importable by any adapter.

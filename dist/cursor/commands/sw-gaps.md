@@ -17,6 +17,8 @@ Load `skills/gap-check/SKILL.md` and run the full procedure unless `--report-onl
 
 Hand off: in-scope closed → `/sw-verify`; out-of-scope → user / feedback intake (`005`).
 
+**Communication intensity:** full
+
 ## Guardrails
 
 - Read-only mapping before any edit.

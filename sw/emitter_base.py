@@ -8,7 +8,7 @@ import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-EMITTABLE_DIRS = ("commands", "skills", "rules", "agents", "providers", "scripts")
+EMITTABLE_DIRS = ("commands", "skills", "rules", "agents", "providers", "scripts", "communication")
 
 EXCLUDE_DIR_NAMES = {"__pycache__", "test", ".git", "node_modules"}
 EXCLUDE_REL_PATHS = frozenset({"scripts/install.sh"})

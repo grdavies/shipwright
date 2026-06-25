@@ -31,6 +31,8 @@ Post-freeze correction path. Parent stays byte-stable.
 7. Update `docs/prds/INDEX.md` or `docs/decisions/INDEX.md` amendment links.
 8. On decision record-level supersede: append superseded parent path to `docs/decisions/SUPERSEDED.log`.
 
+**Communication intensity:** lite
+
 ## Guardrails
 
 - Parent file is never written.

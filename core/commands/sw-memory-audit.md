@@ -36,6 +36,8 @@ precedes new writes.
 6. Only if the user approves (or `--apply` was passed and the user confirms the batch): execute via the
    adapter `modify` op (update / inactivate), smallest-blast-radius first, reporting each change.
 
+**Communication intensity:** ultra
+
 ## Guardrails
 
 - Default is propose-only. Never mutate memory without explicit approval.

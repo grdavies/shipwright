@@ -69,6 +69,8 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | Key | Purpose |
 |-----|---------|
 | `doc.afterTasks` | After frozen tasks: `stop` \| `confirm` (default) \| `auto` |
+| `communication.defaultIntensity` | Caveman chat intensity when no active command (`full` default) |
+| `communication.routing.commands` | Per `sw-*` command intensity: `normal` \| `lite` \| `full` \| `ultra` \| `inherit` |
 | `memory.provider` | `in-repo` (default) or `recallium` |
 | `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
 | `review.provider` | AI review adapter — default **`none`**; `coderabbit` opt-in |
@@ -82,6 +84,24 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `guardrails.requireRuleClass` | Require allowlisted rules before prompts proceed |
 
 See `core/sw-reference/config.schema.json` for the full schema.
+
+## Communication routing (caveman intensity)
+
+Shipwright injects bundled `core/communication/caveman-core.md` on every session start. Intensity applies to
+**orchestration chat only** — artifact files (brainstorm, PRD, tasks, commits, PR bodies) always use normal
+complete prose.
+
+| Intensity | Chat style |
+|-----------|------------|
+| `normal` | Standard prose; caveman off (e.g. doc-review, freeze, ready) |
+| `lite` | Tight professional (e.g. brainstorm, prd, tasks) |
+| `full` | Classic caveman — default workhorse |
+| `ultra` | Max compression (e.g. triage, verify, commit) |
+
+`/sw-setup` seeds the full command map from `core/sw-reference/communication-routing.defaults.json`. Override
+for the current chat with `/sw-caveman <normal|lite|full|ultra>` until the next command dispatch.
+
+Wenyan variants are not supported in Shipwright — attach the external user skill manually if needed.
 
 ## Zero-config fast path
 

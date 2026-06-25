@@ -1,0 +1,43 @@
+{
+  "defaultIntensity": "full",
+  "routing": {
+    "commands": {
+      "sw-amend": "lite",
+      "sw-brainstorm": "lite",
+      "sw-caveman": "full",
+      "sw-commit": "ultra",
+      "sw-compound": "full",
+      "sw-compound-ship": "full",
+      "sw-debug": "inherit",
+      "sw-deliver": "inherit",
+      "sw-doc": "inherit",
+      "sw-doc-review": "normal",
+      "sw-execute": "full",
+      "sw-feedback": "inherit",
+      "sw-feedback-close": "ultra",
+      "sw-freeze": "normal",
+      "sw-gaps": "full",
+      "sw-memory-audit": "ultra",
+      "sw-memory-export": "ultra",
+      "sw-memory-import": "ultra",
+      "sw-memory-sync": "ultra",
+      "sw-pr": "ultra",
+      "sw-prd": "lite",
+      "sw-ready": "normal",
+      "sw-retro": "lite",
+      "sw-review": "full",
+      "sw-setup": "ultra",
+      "sw-ship": "inherit",
+      "sw-simplify": "full",
+      "sw-stabilize": "full",
+      "sw-start": "ultra",
+      "sw-status": "ultra",
+      "sw-tasks": "lite",
+      "sw-triage": "ultra",
+      "sw-verify": "ultra",
+      "sw-watch-ci": "ultra",
+      "sw-worktree": "ultra"
+    },
+    "skills": {}
+  }
+}

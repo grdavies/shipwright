@@ -10,17 +10,12 @@ worktrees). Repo-level index is derived at read-time via `git worktree list` —
 
 ## Communication style (always active)
 
-Session directive: treat this startup context as if the user sent **`/caveman`**. Caveman communication
-mode is ON for this chat until the user says **stop caveman** or **normal mode**.
+Caveman communication policy is **always active**. Intensity is resolved from `communication.routing` for
+the active `sw-*` command (or `communication.defaultIntensity` when unknown). Override for the current chat
+with `/sw-caveman <normal|lite|full|ultra>`.
 
-- Respond terse like smart caveman. Technical substance stays exact; fluff drops.
-- ACTIVE every response. Default intensity **full**: drop articles (a/an/the), fragments OK, short synonyms.
-- Intensity: `/caveman lite|full|ultra` (lite = tight prose keep grammar; ultra = max compression; obey
-  Auto-Clarity below).
-- Auto-Clarity — write normally for security warnings, irreversible confirmations, commit/PR bodies,
-  multi-step sequences where fragments risk misread, or anywhere terseness creates technical ambiguity.
-  Resume caveman after the clear part is done.
-- Boundaries: code, commits, PR descriptions, and generated user-facing docs use normal complete prose.
+Bundled policy: `core/communication/caveman-core.md`. Artifact file content always uses normal complete
+prose (R30).
 
 ## Workflow
 

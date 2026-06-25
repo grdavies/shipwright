@@ -87,6 +87,8 @@ Each remains independently runnable.
 - `--tier <quick|standard|full>` — skip triage when tier already known.
 - `--after-tasks <stop|confirm|auto>` — per-run override of `doc.afterTasks` (R8).
 
+**Communication intensity:** inherit
+
 ## Guardrails
 
 - `doc.afterTasks` is the **sole human checkpoint** between documentation freeze and implementation; `/sw-tasks` introduces no additional blocking prompt.
