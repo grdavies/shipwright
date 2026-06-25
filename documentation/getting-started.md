@@ -1,0 +1,1 @@
+../docs/guides/getting-started.md

@@ -93,7 +93,7 @@ Each remains independently runnable.
 
 - `doc.afterTasks` is the **sole human checkpoint** between documentation freeze and implementation; `/sw-tasks` introduces no additional blocking prompt.
 - Halts at manual trade-offs during doc review — do not auto-decide panel outcomes.
-- Never inlines implementation — `stop` halts (print-only), `confirm` halts until explicit ack then seeds + dispatches, `auto` seeds + dispatches without a second prompt.
+- Never inlines implementation — `stop` halts (print-only; **no implementation dispatch**), `confirm` halts until explicit ack then seeds + dispatches, `auto` seeds + dispatches without a second prompt.
 - Worktree invariant (R6/R27): implementation never starts on bare default branch; enforced by `scripts/sw-assert-worktree.sh` at implementation entry, not by orchestrator prose alone.
 - Does not merge, ship, or run CI gate.
 - Pattern: v1 `/ship` delegates-to-atomics model.
