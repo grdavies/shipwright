@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/grdavies/shipwright/compare/v1.2.0...v1.2.1) (2026-06-25)
+
+
+### Documentation
+
+* track PRDs in git and document /sw-deliver in README ([#39](https://github.com/grdavies/shipwright/issues/39)) ([addc08f](https://github.com/grdavies/shipwright/commit/addc08ffe3bb738c59ce228a6877dc6083ae6970))
+
 ## [1.2.0](https://github.com/grdavies/shipwright/compare/v1.1.0...v1.2.0) (2026-06-24)
 
 
