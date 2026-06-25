@@ -30,7 +30,18 @@ def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
 
 
 def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
+    extra.pop("error", None)
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
+
+
+def assert_phase_status(status: str) -> None:
+    if status not in VALID_PHASE_STATUSES:
+        fail(
+            f"invalid phase status {status!r}; allowed: {sorted(VALID_PHASE_STATUSES)}",
+            exit_code=20,
+            halt="blocked",
+            cause="phase-status:invalid",
+        )
 
 
 def fail_corrupt(path: Path, exc: StateCorruptError) -> None:
@@ -201,8 +212,9 @@ def find_phase(state: dict[str, Any], phase_id: str | None, slug: str | None) ->
 
 def cmd_state_phase(root: Path, args: list[str]) -> None:
     status = parse_kv(args, "--status")
-    if not status or status not in VALID_PHASE_STATUSES:
+    if not status:
         fail(f"--status required; one of {sorted(VALID_PHASE_STATUSES)}")
+    assert_phase_status(status)
     state_path = paths(root)["state"]
     state = load_state_file(state_path)
     if not state:

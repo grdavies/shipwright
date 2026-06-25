@@ -25,6 +25,7 @@ def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
 
 
 def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
+    extra.pop("error", None)
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 
@@ -261,32 +262,31 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
                 **outcome,
             }
         )
-    revert_args = ["revert", "phase", "--phase-slug", phase_slug, "--cause", "verify:failed"]
-    orch = parse_kv(args, "--orchestrator-worktree") or parse_kv(args, "--worktree")
-    if orch:
-        revert_args.extend(["--orchestrator-worktree", orch])
-    proc = subprocess.run(
-        [sys.executable, str(SCRIPT_DIR / "wave_failure.py"), str(root), *revert_args],
+    state = load_state(root)
+    pid, _meta = find_phase(state, None, phase_slug)
+    state["phases"][pid]["status"] = "blocked"
+    state["phases"][pid]["cause"] = "verify:failed"
+    state["phases"][pid]["updatedAt"] = utc_now()
+    save_state(root, state)
+    blast_args = ["blast-radius", "apply", "--phase-slug", phase_slug]
+    subprocess.run(
+        [sys.executable, str(SCRIPT_DIR / "wave_failure.py"), str(root), *blast_args],
         cwd=str(root),
         text=True,
         capture_output=True,
     )
-    try:
-        revert_out = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        revert_out = {"error": proc.stderr or proc.stdout}
     emit(
         {
             "verdict": "fail",
             "action": "verify-run-after-merge",
             "phase": phase_slug,
             "verify": outcome,
-            "revert": revert_out,
             "halt": "blocked",
             "cause": "verify:failed",
             "recommendedCommand": "/sw-stabilize",
+            "note": "merge retained; no automatic revert (R26)",
         },
-        exit_code=proc.returncode if proc.returncode else 20,
+        exit_code=20,
     )
 
 
