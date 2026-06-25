@@ -152,6 +152,58 @@ else
   FAIL=1
 fi
 
+# --- spec-rigor: tasks Phase Dependencies (R5/R6/R37) ---
+FIX_TASKS_PD="$ROOT/scripts/test/fixtures/tasks-phase-deps"
+SW_TASKS="$(content_path commands/sw-tasks.md)"
+TASKS_SKILL="$(content_path skills/tasks/SKILL.md)"
+
+set +e
+OUT_TASKS_PD=$(bash "$SPEC_RIGOR_CHECK" --artifact tasks \
+  --path "$FIX_TASKS_PD/pass.md" \
+  --prd "$FIX_TASKS_PD/parent-prd.md" 2>/dev/null)
+EC_TASKS_PD=$?
+set -e
+if [[ "$EC_TASKS_PD" -eq 0 ]] && echo "$OUT_TASKS_PD" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('verdict')=='pass' else 1)"; then
+  echo "OK  spec-rigor-check: tasks with Phase Dependencies → pass"
+else
+  echo "FAIL spec-rigor-check tasks phase-deps pass (ec=$EC_TASKS_PD)"
+  FAIL=1
+fi
+
+set +e
+OUT_TASKS_PD_FAIL=$(bash "$SPEC_RIGOR_CHECK" --artifact tasks \
+  --path "$FIX_TASKS_PD/fail-missing.md" \
+  --prd "$FIX_TASKS_PD/parent-prd.md" 2>/dev/null)
+EC_TASKS_PD_FAIL=$?
+set -e
+if [[ "$EC_TASKS_PD_FAIL" -eq 20 ]] && echo "$OUT_TASKS_PD_FAIL" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+msgs=' '.join(f['message'] for f in d.get('findings',[]))
+sys.exit(0 if 'Phase Dependencies' in msgs else 1)
+"; then
+  echo "OK  spec-rigor-check: tasks missing Phase Dependencies → fail"
+else
+  echo "FAIL spec-rigor-check tasks phase-deps fail (ec=$EC_TASKS_PD_FAIL)"
+  FAIL=1
+fi
+
+if grep -q '## Phase Dependencies' "$SW_TASKS" && grep -q '| Phase | Depends on |' "$SW_TASKS"; then
+  echo "OK  sw-tasks documents Phase Dependencies emission"
+else
+  echo "FAIL sw-tasks missing Phase Dependencies contract"
+  FAIL=1
+fi
+
+if grep -q '## Phase Dependencies' "$TASKS_SKILL" && \
+   grep -q 'Sequential fallback (R8)' "$TASKS_SKILL" && \
+   grep -qi 'sequential fallback' "$TASKS_SKILL"; then
+  echo "OK  tasks skill documents Phase Dependencies + R8 fallback"
+else
+  echo "FAIL tasks skill missing Phase Dependencies / R8 docs"
+  FAIL=1
+fi
+
 # --- U1: sw-prd --type decision + sw-freeze routing ---
 if grep -q '\-\-type decision' "$SW_PRD" && grep -q 'docs/decisions/<n>-<slug>.md' "$SW_PRD"; then
   echo "OK  sw-prd documents --type decision path"

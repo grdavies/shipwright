@@ -148,6 +148,56 @@ elif artifact == "tasks":
   if not re.search(r"^##\s+Traceability\s*$", text, re.M | re.I):
     add("analyze", "error", "missing ## Traceability section")
 
+  phase_heading = re.compile(r"^###\s+(\d+)\.\s+", re.M)
+  phase_ids = sorted({m.group(1) for m in phase_heading.finditer(text)}, key=int)
+
+  dep_section = re.search(
+    r"^##\s+Phase Dependencies\s*$([\s\S]*?)(?=^##\s|\Z)",
+    text,
+    re.M | re.I,
+  )
+  if not dep_section:
+    add("analyze", "error", "missing ## Phase Dependencies section")
+  else:
+    dep_body = dep_section.group(1)
+    table = re.search(
+      r"^\|[^\n]+\|\s*\n^\|[-| :]+\|\s*\n((?:^\|[^\n]+\|\s*\n?)+)",
+      dep_body,
+      re.M,
+    )
+    if not table:
+      add("analyze", "error", "Phase Dependencies missing | Phase | Depends on | table")
+    else:
+      dep_rows: dict[str, str] = {}
+      for line in table.group(1).strip().splitlines():
+        parts = [p.strip() for p in line.strip("|").split("|")]
+        if len(parts) < 2:
+          continue
+        phase, depends = parts[0], parts[1]
+        if not re.match(r"^\d+$", phase):
+          add("analyze", "error", f"invalid phase id in Phase Dependencies row: {phase!r}")
+          continue
+        if phase in dep_rows:
+          add("analyze", "error", f"duplicate Phase Dependencies row for phase {phase}")
+        dep_rows[phase] = depends
+
+      phase_set = set(phase_ids)
+      for pid in phase_ids:
+        if pid not in dep_rows:
+          add("analyze", "error", f"Phase Dependencies missing row for phase {pid}")
+
+      for phase, depends in dep_rows.items():
+        if phase not in phase_set:
+          add("analyze", "error", f"Phase Dependencies row for unknown phase {phase}")
+        raw = depends.strip().lower()
+        if raw in ("none", "—", "-", ""):
+          continue
+        for dep in re.findall(r"\d+", raw):
+          if dep not in phase_set:
+            add("analyze", "error", f"phase {phase} depends on unknown phase {dep}")
+          if dep == phase:
+            add("analyze", "error", f"phase {phase} cannot depend on itself")
+
   task_text = text
   for rid in union_ids:
     if rid not in task_text:
