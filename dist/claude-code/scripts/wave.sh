@@ -3,7 +3,8 @@
 # Usage:
 #   wave.sh plan --task-list docs/prds/.../tasks-....md [--type feat] [--dry-run] [--from N]
 #   wave.sh plan --items 'A,B,C' --edges 'C:A'
-#   wave.sh preflight --task-list ... | --items ...
+#   wave.sh preflight-base --target feat/<slug>
+#   wave.sh memory learnings distill|prepare ...
 #   wave.sh schedule --plan .cursor/sw-deliver-plan.json [--ceiling N]
 #   wave.sh orchestrator provision|status ...
 #   wave.sh phase provision --phase-id N [--plan ...] [--base <type>/<slug>]
@@ -59,6 +60,12 @@ case "${1:-}" in
     ;;
   bookkeeping)
     exec python3 "$ROOT/scripts/wave_bookkeeping.py" "$ROOT" "${@:2}"
+    ;;
+  preflight-base)
+    exec python3 "$ROOT/scripts/wave_preflight.py" "$ROOT" base-check "${@:2}"
+    ;;
+  memory)
+    exec python3 "$ROOT/scripts/wave_memory.py" "$ROOT" "$@"
     ;;
   resume|ack)
     exec python3 "$ROOT/scripts/wave_terminal.py" "$ROOT" "$@"

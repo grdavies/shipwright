@@ -16,3 +16,4 @@ scripts/test/fixtures/emitter-fixture/out/
 # only checks out tracked files) and appear in PR review diffs.
 docs/*
 !docs/prds/
+!docs/prds/**

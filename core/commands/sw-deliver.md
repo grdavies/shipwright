@@ -28,7 +28,8 @@ dependents on green unmerged branches, and halts at the human merge gate.
 1. Load `skills/deliver/SKILL.md`.
 2. Auto-detect mode: frozen `--task-list` → **phase-mode**; `--items`/`--edges` → **multi-feature**; both → disambiguation halt.
 3. Phase-mode: validate `frozen: true`, resolve `<type>/<slug>`, parse `## Phase Dependencies` (or R8 sequential fallback).
-4. Run `scripts/wave.sh preflight` to echo mode, target branch, and waves; then `scripts/wave.sh plan`.
+4. Run `scripts/wave.sh preflight` to echo mode, target branch, and waves (includes CI/review
+   base-branch preflight, R49); then `scripts/wave.sh plan`.
 5. Supports `--type`, `--dry-run` (no mutations), and `--from <phase>` (resume guard).
 6. Detect cycles; refuse invalid plans.
 7. Serialize shared-migration overlaps and INDEX/numbering contention per `skills/parallelism/`.
