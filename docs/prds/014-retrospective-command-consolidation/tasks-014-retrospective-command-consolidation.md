@@ -16,13 +16,13 @@ preserved-semantics wiring + conductor single-source, then docs/dist/fixtures.
 
 ### 1. New `/sw-retrospective` command + internal phase dispatch (M)
 
-- [ ] 1.1 Add the consolidated command (R1)
+- [x] 1.1 Add the consolidated command (R1)
   - **File:** `core/commands/sw-retrospective.md`
   - **Expected:** single top-level command running `retro → compound → memory-sync → status`; description states scope + non-goals per `sw-naming.mdc`
-- [ ] 1.2 Internal phase dispatch + auto-detection (R2)
+- [x] 1.2 Internal phase dispatch + auto-detection (R2)
   - **File:** `core/commands/sw-retrospective.md`, `skills/compound/SKILL.md`
   - **Expected:** `--pre-merge` / `--post-merge` select the phase; no-flag deterministically resolves phase from deliver run-state + merge status
-- [ ] 1.3 Demote the compound write step to internal-only (R3)
+- [x] 1.3 Demote the compound write step to internal-only (R3)
   - **File:** `skills/compound/SKILL.md`, `core/commands/`
   - **Expected:** compound write step invoked internally; not a standalone top-level command; existing atomic `/sw-retro`, `/sw-memory-sync`, `/sw-status` unchanged
 
