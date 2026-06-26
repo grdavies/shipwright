@@ -45,6 +45,11 @@ These six personas run on every non-Quick review:
 - `sw-adversarial-reviewer`
 - `sw-docs-currency-reviewer` — spec-time documentation-impact mapping (artifact path + required update)
 
+**Living-doc complementarity:** `sw-docs-currency-reviewer` explicitly scopes out
+`docs/prds/INDEX.md`, `docs/prds/COMPLETION-LOG.md`, and `docs/prds/GAP-BACKLOG.md` — those three
+living indexes are owned by the PRD 009 living-doc currency gate. This persona must not re-gate or
+duplicate that gate; its scope is arbitrary documentation artifacts at spec-time.
+
 ### Signal-gated specialists
 
 | Persona | Fires when |
