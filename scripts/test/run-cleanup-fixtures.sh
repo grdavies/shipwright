@@ -61,6 +61,52 @@ else
   bad "cleanup-protects-inflight: in-flight state"
 fi
 
+# --- cleanup-orchestrator-state-root ---
+ORCH_FIX=$(mktemp -d)
+cd "$ORCH_FIX"
+git init -q
+git config user.email test@test.com
+git config user.name Test
+git commit --allow-empty -q -m init
+git branch -M main
+git checkout -q -b feat/orch-demo
+git commit --allow-empty -q -m feat
+ORCH_WT="$ORCH_FIX/.sw-worktrees/orch-demo-orchestrator"
+mkdir -p "$(dirname "$ORCH_WT")"
+git checkout -q main
+git worktree add -q "$ORCH_WT" feat/orch-demo
+git merge --no-ff feat/orch-demo -q -m merge
+mkdir -p .cursor "$ORCH_WT/.cursor"
+cat >.cursor/sw-deliver-state.json <<JSON
+{"verdict":"running","updatedAt":"2026-01-01T00:00:00Z","orchestratorWorktree":{"path":"$ORCH_WT"}}
+JSON
+cat >"$ORCH_WT/.cursor/sw-deliver-state.json" <<'JSON'
+{"verdict":"complete","updatedAt":"2026-06-25T22:00:00Z","orchestratorWorktree":{"path":"ORCH_PLACEHOLDER"}}
+JSON
+python3 -c "
+import json
+from pathlib import Path
+p=Path('$ORCH_WT/.cursor/sw-deliver-state.json')
+s=json.loads(p.read_text())
+s['orchestratorWorktree']['path']='$ORCH_WT'
+p.write_text(json.dumps(s))
+"
+if python3 "$CLEANUP_PY" "$ORCH_FIX" 2>/dev/null | python3 -c "
+import json,sys
+r=json.load(sys.stdin)['report']
+prot=[i for i in r['protected'] if i['kind']=='worktree' and 'orch-demo-orchestrator' in i['name']]
+assert not prot, prot
+assert any(i['kind']=='worktree' and 'orch-demo-orchestrator' in i['name'] for i in r['wouldRemove'])
+assert any(i['kind']=='run-state' and i['name']=='.cursor/sw-deliver-state.json' and i['reason']=='stale-copy' for i in r['wouldRemove'])
+assert not any(i['kind']=='run-state' and i['reason']=='protected' for i in r['protected'])
+"; then
+  ok "cleanup-orchestrator-state-root: stale root running does not block terminal orch state"
+else
+  bad "cleanup-orchestrator-state-root"
+fi
+rm -rf "$ORCH_FIX"
+cd "$FIX"
+
 if ! grep -q 'rm -rf' "$ROOT/scripts/cleanup_lib.py" && \
    ! grep -qE '^\s*rm\s' "$ROOT/scripts/cleanup.sh"; then
   ok "cleanup-protects-inflight: no rm -rf invocation in cleanup scripts"
