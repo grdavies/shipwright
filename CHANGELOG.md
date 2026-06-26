@@ -66,6 +66,7 @@
 * merge phase sw-deliver-v1-deferrals-l into feat/deliver-concurrency-and-freeze-safety (9269ef7) <!-- sw-deliver:sw-deliver-v1-deferrals-l -->
 * merge phase autonomous-terminal-delivery-amendment-a1-l into feat/deliver-concurrency-and-freeze-safety (eeb784c) <!-- sw-deliver:autonomous-terminal-delivery-amendment-a1-l -->
 * merge phase fixtures-docs-dist-propagation-m into feat/deliver-concurrency-and-freeze-safety (9a53494) <!-- sw-deliver:fixtures-docs-dist-propagation-m -->
+* merge phase binding-enforcement-foundation-m into feat/pervasive-subagent-delegation (6e97060) <!-- sw-deliver:binding-enforcement-foundation-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
