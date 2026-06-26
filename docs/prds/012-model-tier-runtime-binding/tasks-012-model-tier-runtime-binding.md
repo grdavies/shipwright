@@ -37,13 +37,13 @@ rewrite that depends on the preflight, then the optional hook, then docs/dist.
 
 ### 3. Rule + skill rewrite to call the preflight (S/M)
 
-- [ ] 3.1 Point per-agent tiers at `models.routing.agents`; reference the mechanical floor (R12)
+- [x] 3.1 Point per-agent tiers at `models.routing.agents`; reference the mechanical floor (R12)
   - **File:** `rules/sw-subagent-dispatch.mdc`
   - **Expected:** per-agent tier guidance reads from `models.routing.agents` (not a hand-maintained prose table); R9 section references `reviewer-dispatch-check.sh`
-- [ ] 3.2 doc-review + native-panel dispatch call resolver + preflight before every spawn (R2, R3, R4)
+- [x] 3.2 doc-review + native-panel dispatch call resolver + preflight before every spawn (R2, R3, R4)
   - **File:** `core/skills/doc-review/SKILL.md`, `core/commands/sw-doc-review.md`
   - **Expected:** dispatch section requires `resolve-model-tier.sh --agent` + `reviewer-dispatch-check.sh` before each persona/specialist Task; concrete `model:` stamped from the resolved ID
-- [ ] 3.3 Keep `model: inherit` in reviewer/persona agent files (R9)
+- [x] 3.3 Keep `model: inherit` in reviewer/persona agent files (R9)
   - **File:** `core/agents/sw-*-reviewer.md` (+ native panel specialist agents)
   - **Expected:** agent frontmatter retains `model: inherit`; no hardcoded model IDs introduced
 
