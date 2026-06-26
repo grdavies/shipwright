@@ -1,13 +1,16 @@
 ---
-description: Distill retro/feedback into durable memories with relationship edges. Rule-class promotion requires human gate via /sw-memory-audit.
+description: "[INTERNAL] Compound write step — use /sw-retrospective instead. Distill retro/feedback into durable memories with relationship edges."
 alwaysApply: false
+internal: true
 ---
 
-# `/sw-compound`
+# `/sw-compound` (internal)
 
-Compounding step after `/sw-retro` or explicit feedback.
+**Not a user-facing top-level command (R3).** Use `/sw-retrospective` for post-delivery compounding.
 
-Load `skills/compound/SKILL.md`. Route all writes through `memory-preflight` + `scripts/memory-redact.sh`.
+This file documents the internal compound-write step invoked by `/sw-retrospective` between `/sw-retro` and
+`/sw-memory-sync`. Load `skills/compound/SKILL.md`. Route all writes through `memory-preflight` +
+`scripts/memory-redact.sh`.
 
 **Communication intensity:** full
 
