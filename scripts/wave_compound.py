@@ -223,22 +223,115 @@ def changed_files(root: Path, base: str = "HEAD") -> list[str]:
     return sorted(set(files))
 
 
-def cmd_compound_premerge_env(root: Path, _args: list[str]) -> None:
-    state = load_state(root) if state_path(root).is_file() else {}
-    target = (state.get("target") or {}).get("branch", "<type>/<slug>")
+def load_workflow_config(root: Path) -> dict[str, Any]:
+    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
+        path = root / rel
+        if path.is_file():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                return {}
+    return {}
+
+
+def compound_autonomy_mode(root: Path) -> str:
+    cfg = load_workflow_config(root)
+    compound = cfg.get("compound") or {}
+    mode = compound.get("autonomy", "supervised")
+    return mode if mode in ("supervised", "auto") else "supervised"
+
+
+def cmd_retrospective_autonomy(root: Path, _args: list[str]) -> None:
+    mode = compound_autonomy_mode(root)
     emit(
         {
             "verdict": "pass",
-            "action": "compound-ship-premerge-env",
-            "invoke": "/sw-compound-ship --pre-merge",
+            "action": "retrospective-autonomy",
+            "mode": mode,
+            "promptGates": mode == "supervised",
+            "safetyGates": {
+                "memoryFailClosed": True,
+                "ruleClassHumanGated": True,
+            },
+            "note": "autonomy gates approval prompts only (R10); R7/R8 safety gates always apply",
+        }
+    )
+
+
+def all_phases_green(state: dict[str, Any]) -> bool:
+    phases = state.get("phases") or {}
+    if not phases:
+        return False
+    return all(p.get("status") == "green-merged" for p in phases.values())
+
+
+def detect_retrospective_phase(root: Path, state: dict[str, Any]) -> str:
+    """Deterministic phase from deliver run-state + merge status (R2)."""
+    merge_info = target_merge_detected(root, state)
+    if merge_info.get("merged"):
+        return "post-merge"
+    compound = state.get("compoundShip") or {}
+    completion = state.get("completion") or {}
+    if completion.get("status") == "completed-pending-merge":
+        return "post-merge"
+    if compound.get("premergeDone"):
+        return "post-merge"
+    if state.get("phases") and all_phases_green(state):
+        return "pre-merge"
+    if state.get("terminalPr"):
+        return "pre-merge"
+    if state.get("target", {}).get("branch"):
+        return "pre-merge"
+    return "post-merge"
+
+
+def cmd_retrospective_detect_phase(root: Path, _args: list[str]) -> None:
+    state = load_state(root) if state_path(root).is_file() else {}
+    phase = detect_retrospective_phase(root, state)
+    merge_info = target_merge_detected(root, state) if state else {"merged": False}
+    emit(
+        {
+            "verdict": "pass",
+            "action": "retrospective-detect-phase",
+            "phase": phase,
+            "invoke": f"/sw-retrospective --{phase}",
+            "mergeDetected": merge_info.get("merged"),
+            "premergeDone": bool((state.get("compoundShip") or {}).get("premergeDone")),
+        }
+    )
+
+
+def cmd_compound_premerge_env(root: Path, args: list[str], *, domain: str = "retrospective") -> None:
+    state = load_state(root) if state_path(root).is_file() else {}
+    target = (state.get("target") or {}).get("branch", "<type>/<slug>")
+    invoke = (
+        "/sw-compound-ship --pre-merge"
+        if domain == "compound-ship"
+        else "/sw-retrospective --pre-merge"
+    )
+    record_cmd = (
+        "bash scripts/wave.sh compound-ship record-premerge --prd <n> --phase <name>"
+        if domain == "compound-ship"
+        else "bash scripts/wave.sh retrospective record-premerge --prd <n> --phase <name>"
+    )
+    emit(
+        {
+            "verdict": "pass",
+            "action": (
+                "compound-ship-premerge-env"
+                if domain == "compound-ship"
+                else "retrospective-premerge-env"
+            ),
+            "invoke": invoke,
             "targetBranch": target,
             "fileOutputsCommit": True,
             "memoryCommit": False,
             "reconcileFlags": ["--require-merge"],
-            "recordCommand": "bash scripts/wave.sh compound-ship record-premerge --prd <n> --phase <name>",
+            "recordCommand": record_cmd,
             "guardrails": {
                 "ruleClassPromotion": "human-gated-only",
                 "memoryProviderUnreachable": "fail-closed",
+                "compoundAutonomy": compound_autonomy_mode(root),
             },
         }
     )
@@ -382,26 +475,36 @@ def cmd_completion_status(root: Path, _args: list[str]) -> None:
     )
 
 
+def _compound_ship_subcommands(root: Path, sub: str, rest: list[str], *, domain: str) -> None:
+    if sub in ("premerge-env", "env"):
+        cmd_compound_premerge_env(root, rest, domain=domain)
+    elif sub in ("record-premerge", "record"):
+        cmd_compound_record_premerge(root, rest)
+    elif sub in ("check-file-outputs", "check-files"):
+        cmd_compound_check_file_outputs(root, rest)
+    elif sub in ("detect-phase", "detect"):
+        cmd_retrospective_detect_phase(root, rest)
+    elif sub in ("autonomy", "autonomy-mode"):
+        cmd_retrospective_autonomy(root, rest)
+    else:
+        fail(
+            "subcommand: premerge-env|record-premerge|check-file-outputs|detect-phase|autonomy"
+        )
+
+
 def main() -> None:
     if len(sys.argv) < 3:
         fail(
-            "usage: wave_compound.py <root> <compound-ship|completion> <subcommand> [args...]"
+            "usage: wave_compound.py <root> <compound-ship|retrospective|completion> <subcommand> [args...]"
         )
     root = Path(sys.argv[1])
     domain = sys.argv[2]
     args = sys.argv[3:]
 
-    if domain == "compound-ship":
+    if domain in ("compound-ship", "retrospective"):
         sub = args[0] if args else ""
         rest = args[1:]
-        if sub in ("premerge-env", "env"):
-            cmd_compound_premerge_env(root, rest)
-        elif sub in ("record-premerge", "record"):
-            cmd_compound_record_premerge(root, rest)
-        elif sub in ("check-file-outputs", "check-files"):
-            cmd_compound_check_file_outputs(root, rest)
-        else:
-            fail("compound-ship subcommand: premerge-env|record-premerge|check-file-outputs")
+        _compound_ship_subcommands(root, sub, rest, domain=domain)
     elif domain == "completion":
         sub = args[0] if args else ""
         rest = args[1:]

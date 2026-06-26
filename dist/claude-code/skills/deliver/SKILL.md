@@ -279,9 +279,13 @@ Terminal pause is suppressed; `/sw-deliver` must not wait on human input for per
 1. Run `bash scripts/wave.sh deliver-loop` from the orchestrator worktree.
 2. While `verdict: running` and no legitimate halt:
    - `awaitAgent: false` → re-invoke `deliver-loop` immediately (same turn).
-   - `awaitAgent: true` → execute `next.action` (`dispatch-ship`, `remediate`, `compound-ship`, or
+   - `awaitAgent: true` → execute `next.action` (`dispatch-ship`, `remediate`, `retrospective`, or
      `terminal-ship`), then re-invoke `deliver-loop`.
 3. Never end the turn asking the user to "continue deliver" when progress is still possible (R13).
+
+**Retrospective handoff (R9):** when `next.action` is `retrospective`, run **`/sw-retrospective --pre-merge`**
+on the orchestrator worktree only — do not inline retro/compound/memory/status. Respect `compound.autonomy`
+via `bash scripts/wave.sh retrospective autonomy`. Then re-invoke `deliver-loop` for `terminal-ship`.
 
 **Self-wake (R8/R9):** terminal-PR CI uses `notify_on_output` on `^DELIVER_WAKE_<run-id>`; tear down all
 watchers on terminal halt. **Parallel-wave wait (R44):** poll or self-wake on durable `status.json` set.

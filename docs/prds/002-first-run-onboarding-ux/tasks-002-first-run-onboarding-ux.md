@@ -8,6 +8,11 @@ frozen_at: 2026-06-24
 
 # Task list — PRD 002 First-Run Onboarding UX
 
+> **Status: complete.** Delivered in `ad196d7` (feat(onboarding): first-run onboarding UX (PRD 002));
+> later built upon by PRD 005 (`doc.afterTasks` dispatch amendments A1/A2) and PRD 007. Checkboxes
+> ticked retroactively after verifying landed artifacts and green fixture suites
+> (`run-onboarding-ux-fixtures.sh`). No source re-implementation performed.
+
 ## Relevant Files
 
 | Area | Canonical paths |
@@ -27,116 +32,116 @@ frozen_at: 2026-06-24
 
 ### 1. Review config + gate honesty (S)
 
-- [ ] 1.1 Add `doc.afterTasks` to schema and example config (R1, R7)
+- [x] 1.1 Add `doc.afterTasks` to schema and example config (R1, R7)
   - **File:** `.sw/config.schema.json`, `.sw/workflow.config.example.json`
   - **Expected:** `doc.afterTasks` enum `[stop, confirm, auto]`, default `confirm`; schema validates; fixture passes
   - **R-IDs:** R1, R7
 
-- [ ] 1.2 Flip `review.provider` default to `none` and deprecate `review.enabled` (R11, R13, R18)
+- [x] 1.2 Flip `review.provider` default to `none` and deprecate `review.enabled` (R11, R13, R18)
   - **File:** `.sw/config.schema.json`, `.sw/workflow.config.example.json`
   - **Expected:** schema default `none`; `review.enabled` description marked deprecated; config-schema fixture passes
   - **R-IDs:** R11, R13, R18
 
-- [ ] 1.3 Update `check-gate.sh` fallback, state rename, and honest reasons (R12, R20, R21, R28)
+- [x] 1.3 Update `check-gate.sh` fallback, state rename, and honest reasons (R12, R20, R21, R28)
   - **File:** `scripts/check-gate.sh`, `providers/review/CAPABILITIES.md`
   - **Expected:** fallback `none`; never-configured → `unconfigured` (not "review landed"); explicit opt-out → `off`; green-reason switch updated; `run-gate-fixtures.sh` passes with `state=off`
   - **R-IDs:** R12, R20, R21, R28
 
-- [ ] 1.4 Add gate fixtures: unconfigured vs off, no-disabled-literal grep (R20, R28, R21)
+- [x] 1.4 Add gate fixtures: unconfigured vs off, no-disabled-literal grep (R20, R28, R21)
   - **File:** `scripts/test/fixtures/onboarding-ux/gate-*.sh`, `scripts/test/run-onboarding-ux-fixtures.sh` (new)
   - **Expected:** fixtures assert `unconfigured` vs `off` reasons; grep test finds no `disabled` literal in gate code/consumers/fixtures; wired into `verify.test`
   - **R-IDs:** R20, R21, R28
 
-- [ ] 1.5 Deprecation warning off stdout JSON contract (R17, R22)
+- [x] 1.5 Deprecation warning off stdout JSON contract (R17, R22)
   - **File:** `scripts/check-gate.sh`, `commands/sw-setup.md`
   - **Expected:** `review.enabled:false` keeps stdout valid single-object JSON; warning on stderr and/or `deprecations[]` and/or `/sw-setup` doctor; migration fixture passes
   - **R-IDs:** R17, R22
 
 ### 2. Deterministic worktree guard (S)
 
-- [ ] 2.1 Implement `sw-assert-worktree.sh` fail-closed guard (R6, R27)
+- [x] 2.1 Implement `sw-assert-worktree.sh` fail-closed guard (R6, R27)
   - **File:** `scripts/sw-assert-worktree.sh` (new)
   - **Expected:** aborts when `HEAD` is default branch with no active worktree gitdir; allows hotfix/release on-main paths; exit 0 on valid worktree
   - **R-IDs:** R6, R27
 
-- [ ] 2.2 Worktree guard fixtures (R27)
+- [x] 2.2 Worktree guard fixtures (R27)
   - **File:** `scripts/test/fixtures/onboarding-ux/worktree-guard-*.sh`
   - **Expected:** negative fixture blocks simulated impl on bare `main`; positive fixture allows permitted on-main flow; runner exits 0
   - **R-IDs:** R27
 
 ### 3. `/sw-tasks` single-pass generation (S)
 
-- [ ] 3.1 Remove Go gate from tasks command + skill (R9, R24, R25)
+- [x] 3.1 Remove Go gate from tasks command + skill (R9, R24, R25)
   - **File:** `commands/sw-tasks.md`, `skills/tasks/SKILL.md`
   - **Expected:** no "pause for Go" step; collision policy rewritten for single-pass; guardrail "Go gate is mandatory" removed; doc-pipeline fixture passes
   - **R-IDs:** R9, R24, R25
 
-- [ ] 3.2 Add tasks single-pass fixture (R9, R25)
+- [x] 3.2 Add tasks single-pass fixture (R9, R25)
   - **File:** `scripts/test/fixtures/onboarding-ux/tasks-single-pass.sh`
   - **Expected:** fixture asserts complete list (parents + sub-tasks + `## Traceability`) in one pass with no intervention prompt
   - **R-IDs:** R9, R25
 
 ### 4. Doc boundary + orchestrator dispatch (M)
 
-- [ ] 4.1 Rewrite `/sw-doc` afterTasks branch (stop/confirm/auto-dispatch) (R1–R5, R8, R10, R24, R26)
+- [x] 4.1 Rewrite `/sw-doc` afterTasks branch (stop/confirm/auto-dispatch) (R1–R5, R8, R10, R24, R26)
   - **File:** `commands/sw-doc.md`
   - **Expected:** reads `doc.afterTasks` + `--after-tasks` override; `stop` halts with next commands; `confirm` strict ack (`proceed`/`yes` only); `auto` dispatches impl loop with branch notice; never inlines implementation; Go references removed from procedure/guardrails
   - **R-IDs:** R1, R2, R3, R4, R5, R8, R10, R24, R26
 
-- [ ] 4.2 Amend doc-orchestrator naming rule for auto-dispatch (R26)
+- [x] 4.2 Amend doc-orchestrator naming rule for auto-dispatch (R26)
   - **File:** `rules/sw-naming.mdc`
   - **Expected:** boundary permits provision + dispatch handoff; invariant that doc orchestrator does not inline implementation preserved
   - **R-IDs:** R26
 
-- [ ] 4.3 Add `/sw-ship --after-tasks` integration point (R30, R8)
+- [x] 4.3 Add `/sw-ship --after-tasks` integration point (R30, R8)
   - **File:** `commands/sw-ship.md`
   - **Expected:** documents flag with real effect at frozen-task-list → implementation-loop boundary; agent `--after-tasks=auto` recorded in run record
   - **R-IDs:** R30, R8
 
-- [ ] 4.4 Boundary-mode fixtures (R2–R5, R4, R10)
+- [x] 4.4 Boundary-mode fixtures (R2–R5, R4, R10)
   - **File:** `scripts/test/fixtures/onboarding-ux/boundary-*.sh`
   - **Expected:** `stop` halts without impl; `confirm` requires strict ack; `Go`/silence → stop; `auto` dispatches on worktree; implementing paths never touch bare `main`
   - **R-IDs:** R2, R3, R4, R5, R10
 
-- [ ] 4.5 Wire worktree guard into implementation entry (R6, R27)
+- [x] 4.5 Wire worktree guard into implementation entry (R6, R27)
   - **File:** `commands/sw-execute.md`, `commands/sw-start.md` (or hook integration point)
   - **Expected:** `sw-assert-worktree.sh` invoked before implementation writes; fails closed on bare `main`
   - **R-IDs:** R6, R27
 
 ### 5. `/sw-setup` + review command docs (S)
 
-- [ ] 5.1 Add `doc.afterTasks` + review choice to `/sw-setup` (R7, R15, R19, R16)
+- [x] 5.1 Add `doc.afterTasks` + review choice to `/sw-setup` (R7, R15, R19, R16)
   - **File:** `commands/sw-setup.md`
   - **Expected:** setup writes `doc.afterTasks` default; review choice `coderabbit | none` only (no `disabled`); canonical opt-out documented
   - **R-IDs:** R7, R15, R19, R16
 
-- [ ] 5.2 Update `sw-review.md` — CodeRabbit opt-in, not default (R14, R16)
+- [x] 5.2 Update `sw-review.md` — CodeRabbit opt-in, not default (R14, R16)
   - **File:** `commands/sw-review.md`
   - **Expected:** no "CodeRabbit default" wording; `none` documented as canonical opt-out
   - **R-IDs:** R14, R16
 
-- [ ] 5.3 `/sw-setup` doctor notice for implicit-coderabbit repos (R22)
+- [x] 5.3 `/sw-setup` doctor notice for implicit-coderabbit repos (R22)
   - **File:** `commands/sw-setup.md` (doctor section)
   - **Expected:** when CodeRabbit CLI present but `review.provider` unset, doctor surfaces migration notice
   - **R-IDs:** R22
 
 ### 6. Human surfaces + review state echo (S)
 
-- [ ] 6.1 Echo review state in `/sw-ready` and living-status (R29)
+- [x] 6.1 Echo review state in `/sw-ready` and living-status (R29)
   - **File:** `commands/sw-ready.md`, living-status command/skill
   - **Expected:** summary includes `review: off` or `review: not configured` when gate reports opt-out/unconfigured
   - **R-IDs:** R29
 
 ### 7. Build chain regeneration (S)
 
-- [ ] 7.1 Regenerate `core/` + `dist/` + parity manifest (R13)
+- [x] 7.1 Regenerate `core/` + `dist/` + parity manifest (R13)
   - **File:** run `scripts/copy-to-core.sh`, `python3 -m sw generate --all`, refresh `scripts/test/fixtures/parity/cursor-golden.manifest`
   - **Expected:** `run-emitter-fixtures.sh` freshness gate green; `run-parity-fixtures.sh` green; no hand-edits under `core/` or `dist/`
   - **R-IDs:** R13
 
 ### 8. User-facing documentation (S)
 
-- [ ] 8.1 Update onboarding docs for boundary modes + review default (R23)
+- [x] 8.1 Update onboarding docs for boundary modes + review default (R23)
   - **File:** `documentation/getting-started.md`, `documentation/commands.md`, `README.md`
   - **Expected:** documents `doc.afterTasks` modes, worktree invariant, single-pass `/sw-tasks`, `none` review default, canonical opt-out
   - **R-IDs:** R23

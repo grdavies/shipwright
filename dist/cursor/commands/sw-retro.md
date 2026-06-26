@@ -7,7 +7,7 @@ alwaysApply: false
 
 Lightweight retro after a shipped phase.
 
-Load `skills/retro/SKILL.md`. Produce learning candidates for `/sw-compound`.
+Load `skills/retro/SKILL.md`. Produce learning candidates for `/sw-retrospective` (compound write step).
 
 **Communication intensity:** lite
 

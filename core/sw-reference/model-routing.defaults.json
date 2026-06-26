@@ -25,6 +25,7 @@
       "sw-prd": "deep",
       "sw-ready": "cheap",
       "sw-retro": "mid",
+      "sw-retrospective": "inherit",
       "sw-review": "build",
       "sw-setup": "cheap",
       "sw-ship": "inherit",

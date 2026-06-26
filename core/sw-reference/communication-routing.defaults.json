@@ -26,6 +26,7 @@
       "sw-prd": "lite",
       "sw-ready": "normal",
       "sw-retro": "lite",
+      "sw-retrospective": "full",
       "sw-review": "full",
       "sw-setup": "ultra",
       "sw-ship": "inherit",

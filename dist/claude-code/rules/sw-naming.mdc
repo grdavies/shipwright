@@ -16,6 +16,7 @@ legacy commands and compound-engineering (`ce-`).
   - `/sw-deliver` — drives a frozen task list's phases to one merge gate (phase-mode) or runs multi-feature waves to `integration/<stamp>`; does not bypass `/sw-ship` or auto-merge to `main`.
   - `/sw-cleanup` — dry-run default enumeration of merged branches, stale worktrees, and completed deliver run-state; deletes only after confirm; does not drop in-flight runs or use `rm -rf` on worktrees.
   - `/sw-ship` — execute → verify → review → gaps → commit → pr → watch-ci → stabilize → ready (halts at merge gate).
+  - `/sw-retrospective` — retro → compound write (internal) → memory-sync → status; `--pre-merge` / `--post-merge` phase dispatch; does not merge or auto-promote rules.
   - `/sw-debug` — triage signal → Sentry enrich (optional) → RCA core (debug entry) → route by fix size; does not implement or merge.
   - `/sw-feedback` — normalize + redact inbound signals → route to debug, gap-capture, or brainstorm; does not analyze or author.
   Their descriptions must state the full chain and which atomic commands they subsume.
@@ -44,6 +45,11 @@ legacy commands and compound-engineering (`ce-`).
 2. Skill directories use descriptive kebab-case without the prefix (e.g. `skills/checks-gate/`).
 3. Rules use `sw-` when they encode plugin-specific guardrails (e.g. `sw-naming.mdc`, `sw-guardrails.mdc`).
 4. Provider adapters live under `providers/`; executable adapters use `.sh` (e.g. `providers/review/coderabbit.sh`).
+
+## Deprecated aliases (one release)
+
+- `/sw-compound-ship` and `/sw-compound` are **deprecated** shims routing to `/sw-retrospective` (R4). Live routing,
+  conductor handoffs, and deliver terminal paths MUST reference `/sw-retrospective` — not the old names.
 
 ## Description contract
 

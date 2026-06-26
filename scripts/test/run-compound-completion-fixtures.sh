@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WC="$ROOT/scripts/wave_compound.py"
 LOOP="$ROOT/scripts/wave_deliver_loop.py"
 COMPOUND_SHIP="$ROOT/core/commands/sw-compound-ship.md"
+RETROSPECTIVE="$ROOT/core/commands/sw-retrospective.md"
 FAIL=0
 
 ok()  { echo "OK  $1"; }
@@ -91,7 +92,7 @@ else
 fi
 
 # --- compound-ship-rule-class-gated ---
-if grep -q 'human-gated' "$COMPOUND_SHIP" && grep -q 'Never auto-promote rule-class' "$COMPOUND_SHIP"; then
+if grep -q 'human-gated' "$RETROSPECTIVE" && grep -q 'Never auto-promote rule-class' "$RETROSPECTIVE"; then
   ok "compound-ship-rule-class-gated: rule-class promotion human-gated in command"
 else
   bad "compound-ship-rule-class-gated: rule-class promotion human-gated in command"
