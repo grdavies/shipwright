@@ -54,7 +54,7 @@ When `verdict` is `conflicting`:
    - **`core/**` command/skill/rule sources** — keep both sides' intent; prefer the branch's feature work
      plus main's additive changes.
    - **`dist/**`** — do not hand-merge emitted copies; resolve `core/` then run
-     `bash scripts/copy-to-core.sh` and `python3 -m sw generate --all`.
+     `python3 -m sw generate --all`.
 4. Re-run scoped `verify` on the touched surface; one focused commit; `bash scripts/git-push.sh` once.
 5. Re-run `stabilize-merge-sync.sh status` — must be `mergeable` before step 1 below.
 

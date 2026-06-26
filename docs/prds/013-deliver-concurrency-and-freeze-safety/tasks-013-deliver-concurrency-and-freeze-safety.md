@@ -8,12 +8,13 @@ frozen_at: 2026-06-26
 
 # Tasks — PRD 013 Deliver concurrency and freeze safety
 
-Generated from the frozen PRD `013-prd-deliver-concurrency-and-freeze-safety.md` and amendment
-`A1-autonomous-terminal-delivery.md` (effective union R1–R27; amendment A1 contributes R20–R27). Phases are
-dependency-ordered: freeze safety and the scoped-state resolver are foundational; the run index, v1 deferrals,
-autonomous terminal delivery, and docs/dist follow.
+Generated from the frozen PRD `013-prd-deliver-concurrency-and-freeze-safety.md` and amendments
+`A1-autonomous-terminal-delivery.md` (R20–R27) and `A2-same-run-state-canonicalization.md` (R28).
+Effective union R1–R28. Phases are dependency-ordered: freeze safety and the scoped-state resolver are
+foundational; the run index, v1 deferrals, autonomous terminal delivery, and docs/dist follow.
 
-> Refreshed 2026-06-26 to apply amendment A1 (R20–R27, autonomous terminal delivery) into the task list.
+> Refreshed 2026-06-26 to apply amendment A1 (R20–R27, autonomous terminal delivery) and amendment
+> A2 (R28, same-run state canonicalization) into the task list.
 
 ## Tasks
 
@@ -43,6 +44,10 @@ autonomous terminal delivery, and docs/dist follow.
 - [ ] 2.4 Legacy repo-wide state migration (R11)
   - **File:** `scripts/wave_state.py`
   - **Expected:** on first scoped read, an existing repo-wide `.cursor/sw-deliver-state.json` is adopted to its scoped path keyed by `source_task_list`; in-flight legacy run resumes
+- [ ] 2.5 Canonical same-run state write path — single authoritative file (R28)
+  - **File:** `scripts/wave_compound.py` (`record-premerge` action), `scripts/cleanup_lib.py` (`resolve_deliver_state`), `.sw/layout.md`
+  - **Expected:** `wave_compound.py record-premerge` resolves the canonical state path via `wave_state.scoped_paths()` regardless of whether the conductor is running from the repo-root or from an orchestrator worktree; `cleanup_lib.resolve_deliver_state()` uses the same resolver rather than any separate worktree-glob heuristic; no second copy of the live state lives in a separate worktree `.cursor/`; `.sw/layout.md` documents the single-canonical-path invariant; existing `scoped_paths()` call for read on re-attach already enforces the path — the fix closes the write-side gap only
+  - **R-IDs:** R28
 
 ### 3. Concurrent-run index + enumeration + serialization (M)
 
@@ -75,10 +80,10 @@ autonomous terminal delivery, and docs/dist follow.
 
 - [ ] 5.1 Fixture suite for all new behaviors (R18)
   - **File:** `scripts/test/run-deliver-concurrency-fixtures.sh`, `.cursor/workflow.config.json`
-  - **Expected:** every fixture named in the PRD Testing Strategy table exists and passes; suite registered in `verify.test`
+  - **Expected:** every fixture named in the PRD Testing Strategy table exists and passes (including `deliver-canonical-state-write` for R28); suite registered in `verify.test`
 - [ ] 5.2 Documentation updates (R19)
   - **File:** `core/skills/deliver/SKILL.md`, `core/skills/conductor/SKILL.md`, `rules/sw-workflow-sequencing.mdc`, `.sw/layout.md`, `docs/guides/workflows.md`
-  - **Expected:** freeze-time commit, per-branch scoped state/lock paths, concurrent-run index, and the landed v1 deferrals documented; presence asserted by a fixture
+  - **Expected:** freeze-time commit, per-branch scoped state/lock paths, concurrent-run index, the landed v1 deferrals, and the single-canonical-path invariant (R28) documented; presence asserted by a fixture
 - [ ] 5.3 Emitter propagation + freshness gate (R17)
   - **File:** `dist/cursor/**`, `dist/claude-code/**` via `python3 -m sw generate --all`
   - **Expected:** `dist/` regenerated; `scripts/test/run-emitter-fixtures.sh` passes
@@ -143,3 +148,4 @@ autonomous terminal delivery, and docs/dist follow.
 | R25 | 6.4 | cleanup-autonomy-auto-after-merge |
 | R26 | 6.4 | cleanup-autonomy-indeterminate-falls-back |
 | R27 | 5.3, 6.5 | terminal-autonomy-emitter-freshness / terminal-autonomy-docs-presence |
+| R28 | 2.5, 5.1, 5.2 | deliver-canonical-state-write |

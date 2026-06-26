@@ -30,6 +30,10 @@ Confirm merge-readiness via `scripts/check-gate.sh` — terminal report only.
      gate with no external review is never mistaken for a reviewed change.
 9. Report: `merge-ready` | `ready for next stacked phase` | `not ready` (one blocker) — always include the
    review echo line from step 8.
+10. **Verify-unconfigured (R28)** — run `bash scripts/verify-unconfigured.sh`; when unconfigured, report
+    `verify-unconfigured` with CTA `run /sw-init` (non-blocking in interactive `/sw-ready`; gate truth still
+    from `check-gate.sh`).
+11. **Config drift (R32)** — run `bash scripts/sw-configure.sh drift-check`; include stale notice when applicable.
 
 **Communication intensity:** normal
 

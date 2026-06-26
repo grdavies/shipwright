@@ -4,7 +4,7 @@ Shipwright is a Cursor and Claude Code plugin that structures agentic developmen
 a gated ship loop, and compounding memory.
 
 **Start here:** [README](../../README.md) for prerequisites, installation (Cursor and Claude Code),
-configuration via `/sw-setup`, and the lifecycle overview.
+configuration via `/sw-init`, and the lifecycle overview.
 
 This guide covers three persona paths after setup, plus the key invariants that govern all workflows.
 
@@ -13,9 +13,11 @@ This guide covers three persona paths after setup, plus the key invariants that 
 | Where | What you do |
 |-------|-------------|
 | **This machine (once)** | Clone Shipwright, run `./scripts/install.sh`, reload your editor |
-| **Each project repo** | Run `/sw-setup` so commands know your providers, memory store, and guardrails |
+| **Each project repo** | Run `/sw-init` so commands know your providers, verify commands, memory store, and guardrails |
 
 The plugin lives globally; configuration and artifacts live in the **target repository** you build in.
+Running `install.sh` inside a git repo prints an opt-in reminder to run `/sw-init` for that repo only —
+the installer never configures projects for you.
 
 ## Doc → implementation boundary (`doc.afterTasks`)
 
@@ -53,7 +55,7 @@ it outputs the list and stops without prompting for implementation.
 The schema default for `review.provider` is **`none`** (review gating off). CodeRabbit is **opt-in**
 — set `review.provider: "coderabbit"` explicitly to enable external review on PRs. The **canonical way to disable** external AI review is `review.provider: "none"`.
 
-`/sw-setup` writes these defaults; `/sw-ready` and `/sw-status` echo `review: off` from the CI gate
+`/sw-init` writes these defaults; `/sw-ready` and `/sw-status` echo `review: off` from the CI gate
 when reporting merge readiness.
 
 ## Deliver autonomy and living docs (PRD 009)
@@ -72,7 +74,7 @@ when reporting merge readiness.
 Use when scope spans multiple files or needs a written spec.
 
 1. Install the plugin (see [README](../../README.md#install)).
-2. Open your **target repo** and run `/sw-setup`.
+2. Open your **target repo** and run `/sw-init`.
 3. Run `/sw-doc` — triage classifies tier; Full tier includes brainstorm before PRD.
 4. Respond to the **Implementation checkpoint** after frozen tasks — reply `proceed` or `yes` (or use
    `auto` mode to skip the prompt). `/sw-doc` dispatches **`/sw-deliver run <frozen-task-list-path>`**
@@ -88,7 +90,7 @@ Use when scope spans multiple files or needs a written spec.
 Use for bounded, low-risk changes that skip the doc pipeline. **No frozen task list** — `/sw-deliver`
 does not apply; use the manual `/sw-ship` atomics directly.
 
-1. Install the plugin and ensure target repo has `/sw-setup` or zero-config memory.
+1. Install the plugin and ensure target repo has `/sw-init` or zero-config memory.
 2. Run `/sw-triage` — expect **Quick** for 0–1 file scope without risk keywords.
 3. Run `/sw-worktree provision` → `/sw-start` with prefix `fix/`.
 4. Run `/sw-execute` for the slice, then `/sw-ship` (or atomic commit → pr → stabilize).
@@ -133,5 +135,5 @@ overlapping commands. Shipwright orchestrators (`/sw-doc`, `/sw-deliver`, `/sw-s
 
 - [Workflow guide](workflows.md) — tiers, per-workstream flows, all diagrams, sample prompts
 - [Command reference](commands.md) — full taxonomy
-- [Configuration](configuration.md) — `/sw-setup` walkthrough and every config key
+- [Configuration](configuration.md) — `/sw-init` walkthrough and every config key
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) — developing Shipwright itself

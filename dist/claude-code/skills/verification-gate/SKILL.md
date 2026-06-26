@@ -114,5 +114,6 @@ suppresses red `check-gate.sh`/CI.
 ## Guardrails
 
 - Never override `scripts/check-gate.sh` — advisory at merge gate; blocking only on fresh `not-verified` at pre-CI boundary.
+- **`verify-unconfigured`** (R28) — `scripts/verify-unconfigured.sh` classifies vacuous verify (`echo`, `:`, `true`, empty). Hard-blocks under `SW_PHASE_MODE` / `/sw-deliver` unless `verify.allowUnconfigured: true`. CTA: run `/sw-init`.
 - Redact any persisted evidence summary via `scripts/memory-redact.sh` (R41) before memory store.
 - Deterministic: same inputs → identical verdict JSON (document env/state as inputs when using `--pr-context auto`).

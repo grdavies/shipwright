@@ -49,7 +49,7 @@ ALLOW_JSON='[]'
 # --- PR test-plan manifest (PRD 016 — advisory vs required CI jobs) ------------
 PR_TEST_PLAN_MANIFEST="$ROOT/core/sw-reference/pr-test-plan.manifest.json"
 if [ -n "$CONFIG" ]; then
-  MANIFEST_CFG="$(jq -r '.verify.prTestPlanManifest // empty' "$CONFIG" 2>/dev/null || true)"
+  MANIFEST_CFG="$(jq -r '.ci.prTestPlanManifest // .verify.prTestPlanManifest // empty' "$CONFIG" 2>/dev/null || true)"
   [ -n "$MANIFEST_CFG" ] && [ -f "$ROOT/$MANIFEST_CFG" ] && PR_TEST_PLAN_MANIFEST="$ROOT/$MANIFEST_CFG"
 fi
 PR_TEST_PLAN='null'

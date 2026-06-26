@@ -215,7 +215,15 @@ cmd_provision() {
     exit 10
   fi
 
-  local parent="${base:-$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('defaultBaseBranch','main'))" "$cfg")}"
+  local parent="${base:-}"
+  if [[ -z "$parent" ]]; then
+    if [[ -x "$ROOT/scripts/resolve-base-branch.sh" ]]; then
+      parent="$(bash "$ROOT/scripts/resolve-base-branch.sh" resolve --quiet --name-only 2>/dev/null || true)"
+    fi
+  fi
+  if [[ -z "$parent" ]]; then
+    parent="$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('defaultBaseBranch','main'))" "$cfg")"
+  fi
   local wt_root
   wt_root="$(git rev-parse --show-toplevel)/.sw-worktrees"
   mkdir -p "$wt_root"

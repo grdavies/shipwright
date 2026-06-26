@@ -23,16 +23,18 @@ Shape: `<prefix>/<stem>-phase-<slug>` — no nested refs (`feat/foo/phase-bar` w
 ## Procedure
 
 1. Read `workflow.config.json`; resolve state via `skills/shipwright-state`.
-2. Run `bash scripts/sw-assert-worktree.sh` — exit `1` blocks phase start on bare default branch without a
+2. Print persisted trunk base disclosure: `bash scripts/resolve-base-branch.sh disclose --quiet` (when available).
+3. Run `bash scripts/sw-assert-worktree.sh` — exit `1` blocks phase start on bare default branch without a
    linked worktree; exit `2` is a configuration error. If blocked, `/sw-worktree provision` first.
-3. `git branch --show-current` — stop on detached HEAD.
-4. `memory-preflight` read only on non-routine parent/prefix decisions.
-5. Load `agentsFile` before choosing prefix.
-6. Parent = current branch. For non-hotfix/release on `main`, suggest `defaultBaseBranch` first.
-7. Confirm dirty tree belongs on the new phase branch.
-8. `git checkout -b <prefix>/<stem>-phase-<slug>`.
-9. `bash scripts/shipwright-state.sh write` with `parentBranch`, `currentBranch`, `phaseSlug`, `branchPrefix`, `startedAt`, optional `issueNumbers`.
-10. Report branch + next `/sw-execute`.
+4. `git branch --show-current` — stop on detached HEAD.
+5. `memory-preflight` read only on non-routine parent/prefix decisions.
+6. Load `agentsFile` before choosing prefix.
+7. Parent = current branch. Trunk base for forks/PRs comes from `bash scripts/resolve-base-branch.sh resolve`
+   (persisted at workflow entry — distinct from integration base `<type>/<slug>` for phase stacking).
+8. Confirm dirty tree belongs on the new phase branch.
+9. `git checkout -b <prefix>/<stem>-phase-<slug>`.
+10. `bash scripts/shipwright-state.sh write` with `parentBranch`, `currentBranch`, `phaseSlug`, `branchPrefix`, `startedAt`, optional `issueNumbers`.
+11. Report branch + next `/sw-execute`.
 
 **Communication intensity:** ultra
 

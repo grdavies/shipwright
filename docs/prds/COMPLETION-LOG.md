@@ -4,8 +4,8 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 
 | Date | PRD | Phase | Notes |
 |------|-----|-------|-------|
+| 2026-06-26 | 014 | all | Shipped via PR #82 (squash): retrospective command consolidation; 4 deliver phases; /sw-retrospective + compound.autonomy + fixtures; PR #82; SHA 25504f5 |
 | 2026-06-26 | 014 | all | deliver complete — awaiting terminal merge; SHA 6a8b2d0 |
-| 2026-06-26 | --prd | 014 | --phase |
 | 2026-06-26 | 014 | retrospective-command-consolidation | Deliver PRD 014 |
 | 2026-06-26 | 014 | retrospective-command-consolidation | Deliver PRD 014: consolidated /sw-retrospective command |
 | 2026-06-26 | 016 | pr-test-plan-ci-enforcement | Shipped via PR #80 (squash): PR test-plan CI enforcement; 4 deliver phases; manifest single-source + CI jobs + gate advisory split + fixture suite; PR #80; SHA dcd696b |

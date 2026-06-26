@@ -263,13 +263,12 @@ else
   bad "verify.test missing ux-polish (direct or via pr-test-plan manifest) in .cursor/workflow.config.json"
 fi
 
-if grep -q 'run-pr-test-plan-manifest.sh' "$EXAMPLE" 2>/dev/null && \
-   grep -q 'run-ux-polish-fixtures' "$MANIFEST" 2>/dev/null; then
-  ok "verify.test registers ux-polish via pr-test-plan manifest in workflow.config.example.json"
+if grep -q 'verify-require-configuration.sh' "$EXAMPLE" 2>/dev/null; then
+  ok "verify.test uses neutral sentinel in workflow.config.example.json"
 elif grep -q 'run-ux-polish-fixtures.sh' "$EXAMPLE" 2>/dev/null; then
   ok "verify.test registers ux-polish runner in workflow.config.example.json"
 else
-  bad "verify.test missing ux-polish (direct or via pr-test-plan manifest) in workflow.config.example.json"
+  bad "verify.test missing neutral sentinel or ux-polish runner in workflow.config.example.json"
 fi
 
 if [[ "$FAIL" -ne 0 ]]; then

@@ -111,10 +111,26 @@
         }
       }
     },
+    "configuredWith": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Stamp written by /sw-init recording plugin + schema versions at configuration time (R32).",
+      "properties": {
+        "shipwrightVersion": { "type": "string" },
+        "schemaVersion": { "type": "string" }
+      }
+    },
     "verify": {
       "type": "object",
-      "additionalProperties": { "type": "string" },
-      "description": "Shell commands run during /sw-phase-verify (repo-specific)."
+      "description": "Shell commands run during /sw-phase-verify (repo-specific).",
+      "properties": {
+        "allowUnconfigured": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, vacuous/placeholder verify commands do not hard-block under /sw-deliver or autonomous mode (R28/DL-13)."
+        }
+      },
+      "additionalProperties": { "type": "string" }
     },
     "verifyE2e": {
       "type": "object",
@@ -261,6 +277,17 @@
         }
       }
     },
+    "ci": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Shipwright-CI-only settings (PRD 016/018). Not part of generic user verify.",
+      "properties": {
+        "prTestPlanManifest": {
+          "type": "string",
+          "description": "Path to pr-test-plan.manifest.json for CI generator and check-gate (dev/plugin repos)."
+        }
+      }
+    },
     "worktree": {
       "type": "object",
       "additionalProperties": false,
@@ -275,6 +302,7 @@
         "scaffold": {
           "type": "object",
           "additionalProperties": false,
+          "description": "Opt-in web-app worktree scaffold (local ports/DB). Omit for non-web repos; defaults apply only when set (PRD 018 R15).",
           "properties": {
             "portRangeStart": { "type": "integer", "default": 9100 },
             "portRangeEnd": { "type": "integer", "default": 9199 },

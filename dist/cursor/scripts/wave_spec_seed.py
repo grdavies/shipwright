@@ -44,6 +44,20 @@ def git_run(args: list[str], cwd: Path, *, check: bool = True) -> subprocess.Com
     return subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True, check=check)
 
 
+def load_trunk_base(root: Path) -> str:
+    script = SHIPWRIGHT_ROOT / "scripts" / "resolve_base_branch.py"
+    if script.is_file():
+        proc = subprocess.run(
+            [sys.executable, str(script), "trunk-name"],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            return proc.stdout.strip()
+    return load_default_branch(root)
+
+
 def load_default_branch(root: Path) -> str:
     for rel in (".cursor/workflow.config.json", "workflow.config.json"):
         path = root / rel
@@ -126,7 +140,7 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
         fail("--task-list required")
     dry_run = has_flag(args, "--dry-run")
     top = git_toplevel(root)
-    default = load_default_branch(top)
+    default = load_trunk_base(top)
     branch, slug, docs_dir = resolve_target_branch(top, task_list)
 
     if branch == default:

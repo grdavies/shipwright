@@ -26,6 +26,7 @@ LOG_PATH = Path(".cursor/sw-deliver-runs/run.log")
 MECHANICAL_ACTIONS = frozenset(
     {
         "plan",
+        "base-capture",
         "spec-seed",
         "state-init",
         "lock-acquire",
@@ -224,6 +225,35 @@ def task_list_from(state: dict[str, Any], plan: dict[str, Any]) -> str | None:
     return str(raw) if raw else None
 
 
+def trunk_base_persisted(root: Path) -> bool:
+    path = root / ".cursor" / "sw-base-state.json"
+    if not path.is_file():
+        return False
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return False
+    trunk = data.get("trunkBase")
+    return isinstance(trunk, dict) and bool(trunk.get("name")) and bool(trunk.get("sha"))
+
+
+def run_resolve_capture(root: Path) -> tuple[int, dict[str, Any]]:
+    script = root / "scripts" / "resolve-base-branch.sh"
+    if not script.is_file():
+        return 2, {"verdict": "fail", "error": "resolve-base-branch.sh missing"}
+    proc = subprocess.run(
+        ["bash", str(script), "capture"],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    try:
+        data = json.loads(proc.stdout or "{}")
+    except json.JSONDecodeError:
+        data = {"verdict": "fail", "error": proc.stderr.strip() or proc.stdout.strip()}
+    return proc.returncode, data
+
+
 def canonical_task_list_path(root: Path, raw: str) -> str:
     path = Path(raw)
     if not path.is_absolute():
@@ -319,6 +349,9 @@ def compute_next_action(
 
     if not state.get("phases"):
         return {"action": "state-init", "resume": False}
+
+    if not trunk_base_persisted(root) and not state.get("baseCapture"):
+        return {"action": "base-capture", "resume": True}
 
     if (
         not state.get("specSeed")
@@ -575,8 +608,26 @@ def execute_mechanical(
             fail_payload(data, "state init failed", ec)
         state.update(load_state(root))
         ensure_driver_fields(state)
-        persist_cursor(root, state, "spec-seed")
+        persist_cursor(root, state, "base-capture")
         return {"executed": "state-init"}
+
+    if action == "base-capture":
+        ec, data = run_resolve_capture(root)
+        if ec != 0:
+            fail_payload(data, "base capture failed", ec)
+        state.update(load_state(root))
+        trunk = (data.get("trunkBase") or {}) if isinstance(data, dict) else {}
+        state["baseCapture"] = {
+            "name": trunk.get("name"),
+            "sha": trunk.get("sha"),
+            "source": trunk.get("source"),
+            "disclosure": data.get("disclosure"),
+            "skipped": bool(data.get("skipped")),
+            "at": utc_now(),
+        }
+        save_state(root, state)
+        persist_cursor(root, state, "spec-seed")
+        return {"executed": "base-capture", **data}
 
     if action == "spec-seed":
         tl = step.get("taskList") or task_list
