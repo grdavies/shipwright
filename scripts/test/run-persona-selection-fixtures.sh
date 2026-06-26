@@ -18,7 +18,7 @@ FIXTURES="$ROOT/scripts/test/fixtures/persona-selection"
 WORKFLOW_CONFIG="$ROOT/.cursor/workflow.config.json"
 FAIL=0
 
-# --- U1: doc-review signal-driven model (no tier scaling / Full=all seven) ---
+# --- U1: doc-review signal-driven model (no tier scaling / Full=all eight) ---
 if grep -qi 'Tier no longer selects personas' "$DOC_REVIEW" && \
    grep -qi 'always-on core' "$DOC_REVIEW" && \
    grep -q 'sw-coherence-reviewer' "$DOC_REVIEW" && \
@@ -26,13 +26,14 @@ if grep -qi 'Tier no longer selects personas' "$DOC_REVIEW" && \
    grep -q 'sw-scope-guardian-reviewer' "$DOC_REVIEW" && \
    grep -q 'sw-product-reviewer' "$DOC_REVIEW" && \
    grep -q 'sw-adversarial-reviewer' "$DOC_REVIEW" && \
+   grep -q 'sw-docs-currency-reviewer' "$DOC_REVIEW" && \
    grep -q 'sw-security-reviewer' "$DOC_REVIEW" && \
    grep -q 'sw-design-reviewer' "$DOC_REVIEW" && \
    grep -qi 'activation record' "$DOC_REVIEW" && \
    grep -q '\-\-personas' "$DOC_REVIEW" && \
    grep -q '\-\-all' "$DOC_REVIEW" && \
    ! grep -qE '^\| Full \|' "$DOC_REVIEW"; then
-  echo "OK  doc-review: five-persona core + gated security/design + activation + override"
+  echo "OK  doc-review: six-persona core + gated security/design + activation + override"
 else
   echo "FAIL doc-review signal-driven model"
   FAIL=1
@@ -51,7 +52,8 @@ fi
 # --- U2: sw-doc-review command matches signal-driven model ---
 if grep -qi 'signal-driven' "$SW_DOC_REVIEW" && \
    grep -qi 'activation record' "$SW_DOC_REVIEW" && \
-   grep -qi 'five-persona always-on core' "$SW_DOC_REVIEW" && \
+   grep -qi 'six-persona always-on core' "$SW_DOC_REVIEW" && \
+   grep -q 'docs-currency' "$SW_DOC_REVIEW" && \
    grep -q '\-\-personas' "$SW_DOC_REVIEW" && \
    grep -q '\-\-all' "$SW_DOC_REVIEW" && \
    ! grep -qi 'seven personas in parallel' "$SW_DOC_REVIEW" && \

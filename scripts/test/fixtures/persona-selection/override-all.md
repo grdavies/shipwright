@@ -1,5 +1,5 @@
-# Fixture: override — deep audit all seven
+# Fixture: override — deep audit all eight
 
 Use with `--all` on any non-Quick doc.
 
-<!-- expected-personas: all seven (override: all) -->
+<!-- expected-personas: all eight (override: all) -->

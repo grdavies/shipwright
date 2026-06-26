@@ -18,9 +18,9 @@ Persona panel + synthesis for PRD drafts, decision-record drafts, and amendment 
 | Input | Panel |
 |-------|-------|
 | PRD draft (`docs/prds/...`) | Signal-driven core + gated specialists (see skill) |
-| Decision-record draft (`docs/decisions/<n>-<slug>.md`) | **Full** — all seven personas (cross-cutting blast radius) |
-| Amendment under `docs/prds/.../amendments/` | Coherence + scope-guardian (generic floor) |
-| Amendment under `docs/decisions/...amendments/` | Raised floor: coherence + scope-guardian + adversarial + feasibility (+ security when auth/data/migrations) |
+| Decision-record draft (`docs/decisions/<n>-<slug>.md`) | **Full** — all eight personas (cross-cutting blast radius) |
+| Amendment under `docs/prds/.../amendments/` | Coherence + scope-guardian + docs-currency (generic floor) |
+| Amendment under `docs/decisions/...amendments/` | Raised floor: coherence + scope-guardian + adversarial + feasibility + docs-currency (+ security when auth/data/migrations) |
 
 Decision-record routing is **floor-only** — it never subtracts a persona signal-driven selection would add on PRDs.
 
@@ -35,12 +35,12 @@ Decision-record routing is **floor-only** — it never subtracts a persona signa
    review. Inject content as a non-negotiable constraints block for all personas. Missing/unreadable on the ref
    blocks **this review only** (fail-closed) unless `invariantsOptional: true` or `--no-invariants` (logged).
 4. Detect doc type from path:
-   - `docs/decisions/<n>-<slug>.md` (not under `.amendments/`) → decision-record **draft** → Full panel (all seven).
+   - `docs/decisions/<n>-<slug>.md` (not under `.amendments/`) → decision-record **draft** → Full panel (all eight).
    - `docs/decisions/<n>-<slug>.amendments/A<k>-*.md` → decision **amendment** → raised floor per skill.
-   - `.../amendments/A<k>-*.md` under `docs/prds/` → PRD amendment → coherence + scope-guardian only (U7).
+   - `.../amendments/A<k>-*.md` under `docs/prds/` → PRD amendment → coherence + scope-guardian + docs-currency (U7).
 5. If tier is Quick, report "no panel for Quick" and stop (parity for PRD and decision paths).
 6. **PRD drafts:** run signal-driven selection; announce activation record.
-7. **Decision-record drafts:** dispatch all seven `agents/sw-*-reviewer.md` personas (equivalent to `--all`).
+7. **Decision-record drafts:** dispatch all eight `agents/sw-*-reviewer.md` personas (equivalent to `--all`).
 8. **Amendments:** dispatch per amendment floor rules in the skill; honor `--personas` / `--all` overrides when set.
 9. Dispatch selected personas as parallel sub-agents (full document each).
 10. On partial failure, log and continue with remaining personas.
@@ -54,8 +54,8 @@ Decision-record routing is **floor-only** — it never subtracts a persona signa
 
 ## Guardrails
 
-- PRD non-Quick: five-persona always-on core + signal-gated `security` / `design`.
-- Decision-record drafts: all seven personas always (Full blast radius).
+- PRD non-Quick: six-persona always-on core (includes docs-currency) + signal-gated `security` / `design`.
+- Decision-record drafts: all eight personas always (Full blast radius).
 - Decision amendments: raised floor only for `docs/decisions/` parents — PRD amendment floor unchanged.
 - Quick: no panel.
 - `--personas` / `--all` overrides are logged in the activation record.
