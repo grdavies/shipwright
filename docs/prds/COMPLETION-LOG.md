@@ -4,6 +4,7 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 
 | Date | PRD | Phase | Notes |
 |------|-----|-------|-------|
+| 2026-06-26 | 015 | deliver | PRD 015 merged to main via squash PR #98; PR #98; SHA ed0c219 |
 | 2026-06-26 | 020 | all | Shipped via PR #92 (squash merge to main): documentation-impact review persona; 4 deliver phases + terminal PR.; PR #92; SHA b79569f |
 | 2026-06-26 | 020 | documentation-impact-review-persona | All phases green-merged; terminal PR pending |
 | 2026-06-26 | 018 | generic-repo-portability | pre-merge compounding complete |

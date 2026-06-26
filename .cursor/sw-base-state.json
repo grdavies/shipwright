@@ -1,0 +1,9 @@
+{
+  "trunkBase": {
+    "name": "main",
+    "sha": "fc5b82495792ef0b1bf3fa68f3235bd24008bfc6",
+    "ref": "main",
+    "source": "explicit-base",
+    "capturedAt": "2026-06-26T12:11:20Z"
+  }
+}
