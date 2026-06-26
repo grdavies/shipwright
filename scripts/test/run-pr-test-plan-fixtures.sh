@@ -20,11 +20,11 @@ GENERATOR="$ROOT/scripts/generate-pr-test-plan-ci-workflow.sh"
 
 # --- pr-test-plan-set-single-source (R1, R3) ---
 if [[ -f "$MANIFEST" ]] && [[ -f "$WF_CONFIG" ]] && \
-   grep -q 'run-pr-test-plan-manifest.sh' "$WF_CONFIG" && \
-   grep -q 'pr-test-plan.manifest.json' "$WF_CONFIG"; then
-  ok "pr-test-plan-set-single-source: verify.test consumes manifest"
+   jq -e '.ci.prTestPlanManifest' "$WF_CONFIG" >/dev/null 2>&1 && \
+   grep -q 'run-pr-test-plan-manifest.sh' "$WF_CONFIG"; then
+  ok "pr-test-plan-set-single-source: verify.test + ci.prTestPlanManifest wired"
 else
-  bad "pr-test-plan-set-single-source: manifest not wired in verify.test"
+  bad "pr-test-plan-set-single-source: manifest not wired (ci.prTestPlanManifest + verify.test)"
 fi
 
 TMP_WF="$(mktemp)"

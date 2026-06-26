@@ -57,7 +57,7 @@ case "${1:-}" in
   living-docs)
     exec python3 "$ROOT/scripts/wave_living_docs.py" "$ROOT" "${@:2}"
     ;;
-  compound-ship|completion)
+  compound-ship|retrospective|completion)
     exec python3 "$ROOT/scripts/wave_compound.py" "$ROOT" "$@"
     ;;
   orchestrator|forward-merge|phase-teardown|assert-entry)

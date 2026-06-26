@@ -136,6 +136,16 @@ def assert_primary_off_target(top: Path, target: str) -> None:
         default_branch = default_ref.removeprefix("refs/remotes/origin/")
     else:
         default_branch = "main"
+    trunk_script = root / "scripts" / "resolve_base_branch.py"
+    if trunk_script.is_file():
+        proc = subprocess.run(
+            [sys.executable, str(trunk_script), "trunk-name"],
+            cwd=str(top),
+            capture_output=True,
+            text=True,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            default_branch = proc.stdout.strip()
     checkout = git_run(["checkout", default_branch], cwd=top, check=False)
     if checkout.returncode != 0:
         fail(

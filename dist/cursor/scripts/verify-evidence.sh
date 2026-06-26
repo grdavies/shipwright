@@ -246,6 +246,22 @@ fi
 
 VERIFY_S="$(read_verify_pass "$VERIFY_STATUS")"
 
+# --- unconfigured verify (R28/DL-13) -----------------------------------------
+UNCONFIGURED_SCRIPT="$ROOT/scripts/verify-unconfigured.sh"
+if [[ -x "$UNCONFIGURED_SCRIPT" ]]; then
+  UC_JSON="$(bash "$UNCONFIGURED_SCRIPT" --json 2>/dev/null || true)"
+  UC_CONFIGURED="$(echo "$UC_JSON" | jq -r '.configured // true' 2>/dev/null || echo true)"
+  UC_ALLOW="$(echo "$UC_JSON" | jq -r '.allowUnconfigured // false' 2>/dev/null || echo false)"
+  UC_BLOCK=0
+  if [[ "$UC_CONFIGURED" != "true" && "$UC_ALLOW" != "true" ]]; then
+    UC_BLOCK=1
+    if [[ "${SW_PHASE_MODE:-}" =~ ^(1|true|yes|TRUE|YES)$ ]]; then
+      emit "not-verified" "verify-unconfigured — run /sw-init" "" "$VERIFY_S" "not-required" "absent" 0
+    fi
+    # Interactive/manual: non-blocking but loud — continue evaluation
+  fi
+fi
+
 if [[ "$VERIFY_S" == "missing" ]]; then
   emit_inconclusive "required verify status missing" "missing-required" "$VERIFY_S" "not-required" "absent" 0
 fi
