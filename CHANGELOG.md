@@ -52,6 +52,7 @@
 * merge phase docs-dist-fixtures-m into feat/retrospective-command-consolidation (9adda52) <!-- sw-deliver:docs-dist-fixtures-m -->
 * merge phase persona-agent-file-taxonomy-s into feat/documentation-impact-review-persona (26fa263) <!-- sw-deliver:persona-agent-file-taxonomy-s -->
 * merge phase registry-selection-and-output-contract-m into feat/documentation-impact-review-persona (735ac75) <!-- sw-deliver:registry-selection-and-output-contract-m -->
+* merge phase tier-routing-living-doc-complementarity-s into feat/documentation-impact-review-persona (15aa134) <!-- sw-deliver:tier-routing-living-doc-complementarity-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
