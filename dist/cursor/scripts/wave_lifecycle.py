@@ -136,7 +136,7 @@ def assert_primary_off_target(top: Path, target: str) -> None:
         default_branch = default_ref.removeprefix("refs/remotes/origin/")
     else:
         default_branch = "main"
-    trunk_script = root / "scripts" / "resolve_base_branch.py"
+    trunk_script = top / "scripts" / "resolve_base_branch.py"
     if trunk_script.is_file():
         proc = subprocess.run(
             [sys.executable, str(trunk_script), "trunk-name"],

@@ -50,6 +50,10 @@
 * merge phase deprecated-aliases-rename-propagation-m into feat/retrospective-command-consolidation (7d90846) <!-- sw-deliver:deprecated-aliases-rename-propagation-m -->
 * merge phase autonomy-knob-preserved-semantics-conductor-single-source-m into feat/retrospective-command-consolidation (d489c1c) <!-- sw-deliver:autonomy-knob-preserved-semantics-conductor-single-source-m -->
 * merge phase docs-dist-fixtures-m into feat/retrospective-command-consolidation (9adda52) <!-- sw-deliver:docs-dist-fixtures-m -->
+* merge phase persona-agent-file-taxonomy-s into feat/documentation-impact-review-persona (26fa263) <!-- sw-deliver:persona-agent-file-taxonomy-s -->
+* merge phase registry-selection-and-output-contract-m into feat/documentation-impact-review-persona (735ac75) <!-- sw-deliver:registry-selection-and-output-contract-m -->
+* merge phase tier-routing-living-doc-complementarity-s into feat/documentation-impact-review-persona (15aa134) <!-- sw-deliver:tier-routing-living-doc-complementarity-s -->
+* merge phase docs-dist-fixtures-m into feat/documentation-impact-review-persona (32d6b75) <!-- sw-deliver:docs-dist-fixtures-m -->
 * merge phase trust-verify-sw-init-project-type-detection-fixed-presets-setup-write-unconfigured-signal-rename-configurator-version-stamp-l into feat/generic-repo-portability (8492be7) <!-- sw-deliver:trust-verify-sw-init-project-type-detection-fixed-presets-setup-write-unconfigured-signal-rename-configurator-version-stamp-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 

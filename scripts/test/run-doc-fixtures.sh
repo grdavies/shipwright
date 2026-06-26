@@ -268,7 +268,7 @@ fi
 SW_DOC_REVIEW="$(content_path commands/sw-doc-review.md)"
 DOC_REVIEW_SKILL="$(content_path skills/doc-review/SKILL.md)"
 
-if grep -q 'docs/decisions/<n>-<slug>.md' "$SW_DOC_REVIEW" && grep -q 'all seven' "$SW_DOC_REVIEW"; then
+if grep -q 'docs/decisions/<n>-<slug>.md' "$SW_DOC_REVIEW" && grep -q 'all eight' "$SW_DOC_REVIEW"; then
   echo "OK  sw-doc-review routes decision drafts to Full panel"
 else
   echo "FAIL sw-doc-review decision draft routing"
@@ -277,8 +277,9 @@ fi
 
 if grep -q 'Decision amendment review' "$DOC_REVIEW_SKILL" && \
    grep -q 'adversarial, feasibility' "$DOC_REVIEW_SKILL" && \
+   grep -q 'docs-currency' "$DOC_REVIEW_SKILL" && \
    grep -q 'docs/prds/<n>-<slug>/amendments' "$DOC_REVIEW_SKILL"; then
-  echo "OK  doc-review skill: decision amendment raised floor + PRD amendment unchanged"
+  echo "OK  doc-review skill: decision amendment raised floor + PRD amendment includes docs-currency"
 else
   echo "FAIL doc-review decision amendment floor"
   FAIL=1
@@ -300,6 +301,104 @@ done
 
 # --- PRD 006: communication routing ---
 bash "$ROOT/scripts/test/fixtures/communication-routing.sh" || FAIL=1
+
+# --- PRD 020: docs-currency review persona ---
+DOCS_CURRENCY_AGENT="$(content_path agents/sw-docs-currency-reviewer.md)"
+SYNTHESIS_REF="$(content_path skills/doc-review/references/synthesis.md)"
+MODEL_DEFAULTS="$ROOT/core/sw-reference/model-routing.defaults.json"
+WORKFLOW_CONFIG="$ROOT/.cursor/workflow.config.json"
+
+if [[ -f "$DOCS_CURRENCY_AGENT" ]] && \
+   grep -q 'sw-docs-currency-reviewer' "$DOCS_CURRENCY_AGENT" && \
+   grep -qi 'which in-repo documentation artifacts are affected' "$DOCS_CURRENCY_AGENT" && \
+   grep -q 'findings-schema.json' "$DOCS_CURRENCY_AGENT" && \
+   grep -qi 'no affected artifacts' "$DOCS_CURRENCY_AGENT" && \
+   grep -q 'README.md' "$DOCS_CURRENCY_AGENT" && \
+   grep -q 'core/commands/' "$DOCS_CURRENCY_AGENT" && \
+   grep -q 'core/skills/' "$DOCS_CURRENCY_AGENT"; then
+  echo "OK  docs-currency-persona-present"
+else
+  echo "FAIL docs-currency-persona-present"
+  FAIL=1
+fi
+
+if grep -q 'sw-docs-currency-reviewer' "$DOC_REVIEW_SKILL" && \
+   grep -qi 'always-on core' "$DOC_REVIEW_SKILL" && \
+   grep -q 'docs-currency' "$DOC_REVIEW_SKILL" && \
+   grep -qi 'activation record' "$DOC_REVIEW_SKILL"; then
+  echo "OK  docs-currency-always-on-core"
+else
+  echo "FAIL docs-currency-always-on-core"
+  FAIL=1
+fi
+
+if grep -q 'coherence' "$DOC_REVIEW_SKILL" && \
+   grep -q 'scope-guardian' "$DOC_REVIEW_SKILL" && \
+   grep -q 'docs-currency' "$DOC_REVIEW_SKILL" && \
+   grep -q 'Amendment review (U7)' "$DOC_REVIEW_SKILL" && \
+   grep -q 'Decision amendment review' "$DOC_REVIEW_SKILL" && \
+   grep -q 'Quick' "$DOC_REVIEW_SKILL"; then
+  echo "OK  docs-currency-amendment-floor"
+else
+  echo "FAIL docs-currency-amendment-floor"
+  FAIL=1
+fi
+
+if grep -qi 'Doc-surface taxonomy' "$DOCS_CURRENCY_AGENT" && \
+   grep -q 'no affected artifacts' "$DOCS_CURRENCY_AGENT" && \
+   grep -q 'path' "$DOCS_CURRENCY_AGENT"; then
+  echo "OK  docs-currency-artifact-mapping"
+else
+  echo "FAIL docs-currency-artifact-mapping"
+  FAIL=1
+fi
+
+if grep -qi 'docs-currency findings' "$SYNTHESIS_REF" && \
+   grep -q 'gated_auto' "$SYNTHESIS_REF" && \
+   grep -q 'manual' "$SYNTHESIS_REF" && \
+   grep -qi 'never a hard freeze' "$SYNTHESIS_REF"; then
+  echo "OK  docs-currency-output-folds-to-spec"
+else
+  echo "FAIL docs-currency-output-folds-to-spec"
+  FAIL=1
+fi
+
+if grep -q 'INDEX.md' "$DOC_REVIEW_SKILL" && \
+   grep -q 'COMPLETION-LOG.md' "$DOC_REVIEW_SKILL" && \
+   grep -q 'GAP-BACKLOG.md' "$DOC_REVIEW_SKILL" && \
+   grep -qi 'Living-doc complementarity' "$DOC_REVIEW_SKILL" && \
+   grep -qi 'must not re-gate' "$DOC_REVIEW_SKILL"; then
+  echo "OK  docs-currency-no-living-doc-overlap"
+else
+  echo "FAIL docs-currency-no-living-doc-overlap"
+  FAIL=1
+fi
+
+if grep -q '"sw-docs-currency-reviewer": "build"' "$WORKFLOW_CONFIG" && \
+   grep -q '"sw-docs-currency-reviewer": "build"' "$MODEL_DEFAULTS" && \
+   grep -q 'reviewer-dispatch-check' "$DOC_REVIEW_SKILL"; then
+  echo "OK  docs-currency-tier-build"
+else
+  echo "FAIL docs-currency-tier-build"
+  FAIL=1
+fi
+
+if [[ -f "$ROOT/dist/cursor/agents/sw-docs-currency-reviewer.md" ]] && \
+   [[ -f "$ROOT/dist/claude-code/agents/sw-docs-currency-reviewer.md" ]]; then
+  echo "OK  docs-currency-emitter-freshness"
+else
+  echo "FAIL docs-currency-emitter-freshness"
+  FAIL=1
+fi
+
+if grep -q 'sw-docs-currency-reviewer' "$DOC_REVIEW_SKILL" && \
+   grep -q 'docs-currency' "$SW_DOC_REVIEW" && \
+   grep -qi 'Living-doc complementarity' "$DOC_REVIEW_SKILL"; then
+  echo "OK  docs-currency-docs-presence"
+else
+  echo "FAIL docs-currency-docs-presence"
+  FAIL=1
+fi
 
 # --- PRD 009 A2: user docs presence (R56–R57) ---
 bash "$ROOT/scripts/docs-presence-check.sh" || FAIL=1

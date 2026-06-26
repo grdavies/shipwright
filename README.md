@@ -92,7 +92,8 @@ Re-run `/sw-init` at any time — it acts as a **doctor** against an existing co
 terminal PRs target that persisted base — not a hardcoded `main`. See [configuration](docs/guides/configuration.md#base-branch).
 
 **Worktree invariant:** implementation never starts on bare trunk — use `/sw-worktree` and a feature branch.
-**Review:** `review.provider` defaults to **`none`**; CodeRabbit is opt-in.
+**Review:** `review.provider` defaults to **`none`**; CodeRabbit is opt-in. The **canonical way to disable**
+external AI review is `review.provider: "none"`.
 
 Configure `verify.lint` / `verify.typecheck` / `verify.test` so `/sw-verify` runs real checks.
 Full walkthrough and schema: **[configuration](docs/guides/configuration.md)**.
@@ -113,7 +114,7 @@ back-links at draft/freeze time.
 
 ## First run
 
-1. **`/sw-doc`** — triage → (brainstorm) → PRD → review → freeze → tasks.
+1. **`/sw-doc`** — triage → (brainstorm) → PRD → review → freeze → **single-pass** `/sw-tasks`.
 2. **`/sw-deliver run <frozen-tasks>`** — drives every phase to one merge gate; **you merge**.
 
 Quick fixes skip the doc pipeline — see [Getting started](docs/guides/getting-started.md).

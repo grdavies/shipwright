@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 
 from emitter_base import EmitterBase, EmitterError, ensure_clean_dir, read_version
+# verify-presets.json emitted via emitter_base.SW_REFERENCE_CLOSED_EMIT
 
 SUPPORTED = {
     "hooks": {"native"},

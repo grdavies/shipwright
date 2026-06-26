@@ -1,6 +1,6 @@
 ---
 name: sw-doc-review
-description: Review PRD drafts with parallel persona sub-agents and a synthesizer that auto-applies safe fixes. Signal-driven panel (five-persona core + gated security/design); Quick tier skips review.
+description: Review PRD drafts with parallel persona sub-agents and a synthesizer that auto-applies safe fixes. Signal-driven panel (six-persona core + gated security/design); Quick tier skips review.
 ---
 
 # Document review (`/sw-doc-review`)
@@ -15,8 +15,8 @@ Multi-persona review for PRDs and decision records. Pattern borrowed from compou
 | Doc type | Path pattern | Panel |
 |----------|--------------|-------|
 | PRD draft | `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` | Signal-driven (see Selection) |
-| Decision-record draft | `docs/decisions/<n>-<slug>.md` | **Full** — all seven personas |
-| PRD amendment | `docs/prds/<n>-<slug>/amendments/A<k>-*.md` | Coherence + scope-guardian |
+| Decision-record draft | `docs/decisions/<n>-<slug>.md` | **Full** — all eight personas |
+| PRD amendment | `docs/prds/<n>-<slug>/amendments/A<k>-*.md` | Coherence + scope-guardian + docs-currency |
 | Decision amendment | `docs/decisions/<n>-<slug>.amendments/A<k>-*.md` | Raised floor (see Decision amendment review) |
 
 ## Tier gate (review runs or not)
@@ -27,7 +27,7 @@ Multi-persona review for PRDs and decision records. Pattern borrowed from compou
 | Standard / Full | Per doc type above |
 
 **PRD tier no longer selects personas** — only whether review runs. Quick skips; PRD reviews use signal-driven
-selection. **Decision-record drafts always use the Full panel** (all seven) regardless of tier, because they
+selection. **Decision-record drafts always use the Full panel** (all eight) regardless of tier, because they
 govern multiple plans by definition.
 
 ## Selection
@@ -36,13 +36,19 @@ Deterministic — same inputs → same panel. Not model judgment.
 
 ### Always-on core (non-Quick)
 
-These five personas run on every non-Quick review:
+These six personas run on every non-Quick review:
 
 - `sw-coherence-reviewer`
 - `sw-feasibility-reviewer`
 - `sw-scope-guardian-reviewer`
 - `sw-product-reviewer`
 - `sw-adversarial-reviewer`
+- `sw-docs-currency-reviewer` — spec-time documentation-impact mapping (artifact path + required update)
+
+**Living-doc complementarity:** `sw-docs-currency-reviewer` explicitly scopes out
+`docs/prds/INDEX.md`, `docs/prds/COMPLETION-LOG.md`, and `docs/prds/GAP-BACKLOG.md` — those three
+living indexes are owned by the PRD 009 living-doc currency gate. This persona must not re-gate or
+duplicate that gate; its scope is arbitrary documentation artifacts at spec-time.
 
 ### Signal-gated specialists
 
@@ -64,12 +70,12 @@ audits when wording dodges the list.
 
 ```
 1. If tier is Quick → no panel; stop.
-2. Start with always-on core (five personas).
+2. Start with always-on core (six personas).
 3. Scan PRD text + headings for gated signals (case-insensitive, whole-token match — delimiter-bounded;
    plural inflections do not match unless listed, e.g. `webhooks` ≠ `webhook`).
 4. Add each gated persona whose signal fires; record matched signal.
 5. If --personas <list> → force-add named personas; record override reason.
-6. If --all → run full roster (all seven); record override reason.
+6. If --all → run full roster (all eight); record override reason.
 7. Emit activation record (below).
 ```
 
@@ -77,7 +83,7 @@ audits when wording dodges the list.
 
 - `--personas <comma-separated>` — force-add named personas (e.g. `security,design`). Record
   `override: personas <list>` with reason.
-- `--all` — run all seven personas (deep audit). Record `override: all`.
+- `--all` — run all eight personas (deep audit). Record `override: all`.
 
 Mirrors `sw-triage` `--tier` override recording.
 
@@ -87,7 +93,7 @@ Emit at start of every review (inline in the review report):
 
 ```text
 Persona activation:
-  core: coherence, feasibility, scope-guardian, product, adversarial
+  core: coherence, feasibility, scope-guardian, product, adversarial, docs-currency
   gated:
     - security: matched "<signal>" (if fired)
     - design: matched "<signal>" (if fired)
@@ -112,12 +118,13 @@ bash scripts/reviewer-dispatch-check.sh --agent "$AGENT" --parent-model "$PARENT
 Repeat for every selected persona. Halt on preflight exit 20; do not spawn on unresolved `inherit`.
 
 1. Detect doc type from path (see Doc types).
-2. **Decision-record draft** (`docs/decisions/<n>-<slug>.md`): run all seven personas (`--all` equivalent); record
+2. **Decision-record draft** (`docs/decisions/<n>-<slug>.md`): run all eight personas (`--all` equivalent); record
    `override: decision-record full panel` in the activation record.
 3. **Decision amendment** (`docs/decisions/...amendments/A<k>-*.md`): run Decision amendment review floor — skip
    full selection unless `--personas` / `--all` override.
-4. **PRD amendment** (`docs/prds/.../amendments/A<k>-*.md`): run **coherence** + **scope-guardian** only per
-   Amendment review (U7) — skip the full selection algorithm unless `--personas` / `--all` override.
+4. **PRD amendment** (`docs/prds/.../amendments/A<k>-*.md`): run **coherence** + **scope-guardian** +
+   **docs-currency** per Amendment review (U7) — skip the full selection algorithm unless `--personas` / `--all`
+   override.
 5. Resolve tier — if Quick, report "no panel for Quick" and stop.
 6. **PRD draft:** run selection algorithm; announce activation record (core + any fired gates + matched signals).
 7. Read full document (no section splitting) — each selected persona is a parallel sub-agent (R28/R31).
@@ -139,7 +146,8 @@ When `invariantsFile` is configured:
 
 When reviewing `docs/decisions/<n>-<slug>.md` drafts (pre-freeze, not under `.amendments/`):
 
-- Dispatch **all seven** personas: coherence, feasibility, scope-guardian, product, adversarial, security, design.
+- Dispatch **all eight** personas: coherence, feasibility, scope-guardian, product, adversarial, docs-currency,
+  security, design.
 - Treat as top blast-radius by definition — floor-only relative to PRD signal-driven selection; never subtracts
   personas plan 004 would add on a PRD.
 - Quick tier: no panel (parity with PRD Quick behavior).
@@ -148,11 +156,12 @@ When reviewing `docs/decisions/<n>-<slug>.md` drafts (pre-freeze, not under `.am
 
 When reviewing `docs/decisions/<n>-<slug>.amendments/A<k>-*.md` drafts:
 
-- **Always run:** coherence, scope-guardian, adversarial, feasibility against the frozen parent (read-only).
+- **Always run:** coherence, scope-guardian, adversarial, feasibility, docs-currency against the frozen parent
+  (read-only).
 - **Additionally run security** when the decision touches auth, data, or migrations (same security signal
   enumeration as PRD selection).
-- This is a **raised floor** above the generic PRD amendment path (coherence + scope-guardian only) — applies
-  **only** when the frozen parent lives under `docs/decisions/`.
+- This is a **raised floor** above the generic PRD amendment path (coherence + scope-guardian + docs-currency) —
+  applies **only** when the frozen parent lives under `docs/decisions/`.
 - Verify every `supersedes`/`retracts` target exists; record-level supersede must carry a `replacement:` forward
   pointer to a frozen target.
 - Never edit the parent file — fixes apply only to the amendment draft.
@@ -161,8 +170,8 @@ When reviewing `docs/decisions/<n>-<slug>.amendments/A<k>-*.md` drafts:
 
 When reviewing `docs/prds/<n>-<slug>/amendments/A<k>-*.md` drafts:
 
-- **coherence** + **scope-guardian** always run against the frozen parent (read-only) — not the full
-  signal-driven panel.
+- **coherence** + **scope-guardian** + **docs-currency** always run against the frozen parent (read-only) — not
+  the full signal-driven panel.
 - Verify every `supersedes`/`retracts` target exists in the parent effective spec.
 - Reject targets already retracted; require rationale for each retract.
 - Flag undeclared contradictions with parent requirements; declared directives are the sanctioned path.
