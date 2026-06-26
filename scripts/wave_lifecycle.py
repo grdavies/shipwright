@@ -90,6 +90,44 @@ def load_plan(root: Path, plan_rel: str | None) -> dict[str, Any]:
         fail(f"invalid plan JSON: {exc}")
 
 
+def load_deliver_state(root: Path) -> dict[str, Any]:
+    from wave_state import load_deliver_state as _load
+
+    return _load(root)
+
+
+def save_deliver_state(root: Path, state: dict[str, Any]) -> None:
+    from wave_state import save_deliver_state as _save
+
+    _save(root, state)
+
+
+def dependents_of(plan: dict[str, Any], phase_id: str) -> list[str]:
+    return sorted(
+        str(edge.get("to"))
+        for edge in plan.get("edges") or []
+        if str(edge.get("from")) == phase_id
+    )
+
+
+def dependent_references_worktree(
+    state: dict[str, Any],
+    plan: dict[str, Any],
+    phase_id: str,
+    worktree_path: str,
+) -> bool:
+    for dep_id in dependents_of(plan, phase_id):
+        meta = (state.get("phases") or {}).get(dep_id, {})
+        if not isinstance(meta, dict):
+            continue
+        if meta.get("status") not in ("pending", "in-flight"):
+            continue
+        wt_info = (state.get("phaseWorktrees") or {}).get(dep_id) or {}
+        if str(wt_info.get("path") or "") == worktree_path:
+            return True
+    return False
+
+
 def slug_from_target(target_branch: str) -> str:
     if "/" not in target_branch:
         fail(f"invalid target branch: {target_branch!r}")
@@ -346,6 +384,148 @@ def cmd_phase_teardown(root: Path, args: list[str]) -> None:
     )
 
 
+def cmd_phase_teardown_run(root: Path, args: list[str]) -> None:
+    """Safe eager teardown after green-merged + verify (R17)."""
+    phase_id = parse_kv(args, "--phase-id")
+    if not phase_id:
+        fail("--phase-id required")
+    plan = load_plan(root, parse_kv(args, "--plan"))
+    state = load_deliver_state(root)
+    phases = state.get("phases") or {}
+    meta = phases.get(phase_id)
+    if not isinstance(meta, dict):
+        fail(f"unknown phase id: {phase_id}")
+    if meta.get("status") not in ("green-merged", "teardown-pending"):
+        fail(
+            f"phase {phase_id} not ready for teardown (status={meta.get('status')!r})",
+            exit_code=20,
+        )
+
+    target_branch = (state.get("target") or {}).get("branch")
+    if not target_branch:
+        fail("run-state missing target branch")
+
+    wt_info = (state.get("phaseWorktrees") or {}).get(phase_id) or {}
+    wt_path = str(wt_info.get("path") or "")
+    if not wt_path or not Path(wt_path).is_dir():
+        meta["status"] = "teardown-complete"
+        meta["updatedAt"] = utc_now()
+        phases[phase_id] = meta
+        worktrees = state.get("phaseWorktrees") or {}
+        worktrees.pop(phase_id, None)
+        state["phaseWorktrees"] = worktrees
+        save_deliver_state(root, state)
+        emit(
+            {
+                "verdict": "pass",
+                "action": "phase-teardown-run",
+                "phaseId": phase_id,
+                "note": "worktree already absent; marked teardown-complete",
+            }
+        )
+
+    meta["status"] = "teardown-pending"
+    meta["updatedAt"] = utc_now()
+    phases[phase_id] = meta
+    save_deliver_state(root, state)
+
+    forward_merged: list[str] = []
+    for dep_id in dependents_of(plan, phase_id):
+        dep_meta = (phases.get(dep_id) or {}) if isinstance(phases.get(dep_id), dict) else {}
+        if dep_meta.get("status") not in ("pending", "in-flight"):
+            continue
+        dep_wt_info = (state.get("phaseWorktrees") or {}).get(dep_id) or {}
+        dep_wt = str(dep_wt_info.get("path") or "")
+        if not dep_wt or not Path(dep_wt).is_dir():
+            continue
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(Path(__file__).resolve()),
+                str(root),
+                "forward-merge",
+                "--worktree",
+                dep_wt,
+                "--base",
+                target_branch,
+            ],
+            cwd=str(root),
+            text=True,
+            capture_output=True,
+        )
+        if proc.returncode == 0:
+            forward_merged.append(dep_id)
+        elif proc.returncode == 20:
+            fail(
+                "forward-merge conflict blocks teardown",
+                exit_code=20,
+                halt="blocked",
+                cause="forward-merge:conflict",
+                dependentPhaseId=dep_id,
+            )
+        else:
+            try:
+                err = json.loads(proc.stdout)
+            except json.JSONDecodeError:
+                err = {"error": proc.stderr or proc.stdout}
+            fail(err.get("error", "forward-merge failed"), exit_code=proc.returncode, **err)
+
+    if dependent_references_worktree(state, plan, phase_id, wt_path):
+        fail(
+            "dependent phase still references worktree path",
+            exit_code=20,
+            halt="blocked",
+            cause="teardown:dependent-reference",
+            phaseId=phase_id,
+        )
+
+    slug = meta.get("slug", phase_id)
+    status_retained = (
+        root / ".cursor" / "sw-deliver-runs" / str(slug) / "status.json"
+    ).is_file()
+    branch_retained = bool(meta.get("branch"))
+
+    teardown_args = ["phase-teardown", "--worktree", wt_path]
+    proc = subprocess.run(
+        [sys.executable, str(Path(__file__).resolve()), str(root), *teardown_args],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0:
+        try:
+            err = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            err = {"error": proc.stderr or proc.stdout}
+        fail(err.get("error", "phase teardown failed"), exit_code=proc.returncode, **err)
+
+    state = load_deliver_state(root)
+    phases = state.setdefault("phases", {})
+    meta = phases.get(phase_id, {})
+    if isinstance(meta, dict):
+        meta["status"] = "teardown-complete"
+        meta["updatedAt"] = utc_now()
+        meta["teardownAt"] = utc_now()
+        phases[phase_id] = meta
+    worktrees = state.get("phaseWorktrees") or {}
+    worktrees.pop(phase_id, None)
+    state["phaseWorktrees"] = worktrees
+    save_deliver_state(root, state)
+
+    emit(
+        {
+            "verdict": "pass",
+            "action": "phase-teardown-run",
+            "phaseId": phase_id,
+            "phaseSlug": slug,
+            "forwardMergedDependents": forward_merged,
+            "retainedBranchRef": branch_retained,
+            "retainedStatusJson": status_retained,
+            "worktreeRemoved": wt_path,
+        }
+    )
+
+
 def cmd_phase_provision(root: Path, args: list[str]) -> None:
     phase_id = parse_kv(args, "--phase-id")
     if not phase_id:
@@ -435,6 +615,8 @@ def main() -> None:
         cmd_forward_merge(root, args)
     elif cmd == "phase-teardown":
         cmd_phase_teardown(root, args)
+    elif cmd == "phase-teardown-run":
+        cmd_phase_teardown_run(root, args)
     elif cmd == "phase":
         sub = args[0] if args else ""
         rest = args[1:]

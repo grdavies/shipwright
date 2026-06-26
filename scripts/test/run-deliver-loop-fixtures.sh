@@ -405,6 +405,206 @@ assert d.get('neverAutoMergesMain') is True
   rm -rf "$SHIP_FIX"
 fi
 
+# --- PRD 017 Phase 2: parallel-batch-driver (R22) ---
+BATCH_FIX=$(mktemp -d)
+(
+  cd "$BATCH_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  git commit --allow-empty -q -m init
+  mkdir -p .cursor
+  cat >.cursor/sw-base-state.json <<'JSON'
+{"trunkBase": {"name": "main", "sha": "deadbeef00000000000000000000000000000000"}}
+JSON
+  cat >.cursor/sw-deliver-plan.json <<'JSON'
+{
+  "verdict": "pass",
+  "mode": "phase",
+  "target": {"type": "feat", "slug": "batch", "branch": "feat/batch"},
+  "items": [
+    {"id": "1", "slug": "a", "branch": "feat/batch-phase-a"},
+    {"id": "2", "slug": "b", "branch": "feat/batch-phase-b"},
+    {"id": "3", "slug": "c", "branch": "feat/batch-phase-c"}
+  ],
+  "edges": [],
+  "waves": [["1", "2", "3"]]
+}
+JSON
+  cat >.cursor/sw-base-state.json <<'JSON'
+{"trunkBase": {"name": "main", "sha": "deadbeef00000000000000000000000000000000"}}
+JSON
+  NOW_TS=$(python3 -c "from datetime import datetime,timezone; print(datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))")
+  cat >.cursor/sw-deliver-state.json <<JSON
+{
+  "verdict": "running",
+  "target": {"branch": "feat/batch"},
+  "currentWave": 1,
+  "specSeed": {"skipped": true},
+  "baseCapture": {"skipped": true},
+  "orchestratorWorktree": {"path": "/tmp/orch"},
+  "driverHeartbeatAt": "$NOW_TS",
+  "phases": {
+    "1": {"id": "1", "slug": "a", "status": "pending"},
+    "2": {"id": "2", "slug": "b", "status": "pending"},
+    "3": {"id": "3", "slug": "c", "status": "pending"}
+  },
+  "phaseWorktrees": {
+    "1": {"path": "/tmp/a", "name": "a"},
+    "2": {"path": "/tmp/b", "name": "b"},
+    "3": {"path": "/tmp/c", "name": "c"}
+  }
+}
+JSON
+  echo '{"worktree":{"parallelCeiling":4}}' >.cursor/workflow.config.json
+  if OUT=$(python3 "$LOOP_PY" "$BATCH_FIX" compute-next 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+n=d['next']
+assert n['action']=='dispatch-batch', n
+assert len(n.get('phaseIds',[]))>=2, n
+for pid in n['phaseIds']:
+    assert pid in ('1','2','3')
+"; then
+    :
+  else
+    exit 1
+  fi
+) && ok "parallel-batch-driver" || bad "parallel-batch-driver"
+rm -rf "$BATCH_FIX"
+
+# --- PRD 017 Phase 2: deliver-resume-command-is-sw (R29) ---
+if python3 - <<'PY' "$ROOT"
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from wave_failure import resume_deliver_command
+cmd = resume_deliver_command({"source_task_list": "docs/prds/017-x/tasks.md"})
+assert cmd.startswith("/sw-deliver run "), cmd
+assert "bash" not in cmd, cmd
+assert resume_deliver_command({}) == "/sw-deliver run"
+PY
+then
+  ok "deliver-resume-command-is-sw"
+else
+  bad "deliver-resume-command-is-sw"
+fi
+
+# --- PRD 017 Phase 2: parallel-collect-all-ready (R27) stub ---
+COLLECT_FIX=$(mktemp -d)
+(
+  cd "$COLLECT_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  git commit --allow-empty -q -m init
+  mkdir -p .cursor .cursor/sw-deliver-runs/a .cursor/sw-deliver-runs/b
+  cat >.cursor/sw-base-state.json <<'JSON'
+{"trunkBase": {"name": "main", "sha": "deadbeef00000000000000000000000000000000"}}
+JSON
+  NOW_TS=$(python3 -c "from datetime import datetime,timezone; print(datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))")
+  HEAD=$(git rev-parse HEAD)
+  cat >.cursor/sw-deliver-state.json <<JSON
+{
+  "verdict": "running",
+  "target": {"branch": "feat/collect"},
+  "currentWave": 1,
+  "specSeed": {"skipped": true},
+  "baseCapture": {"skipped": true},
+  "orchestratorWorktree": {"path": "/tmp/orch"},
+  "driverHeartbeatAt": "$NOW_TS",
+  "phases": {
+    "2": {"id": "2", "slug": "b", "status": "in-flight", "branch": "feat/collect-phase-b"},
+    "1": {"id": "1", "slug": "a", "status": "in-flight", "branch": "feat/collect-phase-a"}
+  },
+  "phaseWorktrees": {
+    "1": {"path": "$COLLECT_FIX", "name": "a"},
+    "2": {"path": "$COLLECT_FIX", "name": "b"}
+  }
+}
+JSON
+  cat >.cursor/sw-deliver-plan.json <<'JSON'
+{
+  "mode": "phase",
+  "target": {"branch": "feat/collect"},
+  "items": [
+    {"id": "1", "slug": "a", "branch": "feat/collect-phase-a"},
+    {"id": "2", "slug": "b", "branch": "feat/collect-phase-b"}
+  ],
+  "edges": [],
+  "waves": [["1", "2"]]
+}
+JSON
+  cat >.cursor/sw-deliver-runs/a/status.json <<JSON
+{"verdict":"merge-ready-green","phase":"a","head":"$HEAD","gate":{"verdict":"green"}}
+JSON
+  cat >.cursor/sw-deliver-runs/b/status.json <<JSON
+{"verdict":"merge-ready-green","phase":"b","head":"$HEAD","gate":{"verdict":"green"}}
+JSON
+  if OUT=$(python3 "$LOOP_PY" "$COLLECT_FIX" compute-next 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+n=d['next']
+assert n['action']=='collect-all-ready', n
+slugs=[p['phaseSlug'] for p in n['phases']]
+assert slugs==['a','b'], slugs
+"; then
+    :
+  else
+    exit 1
+  fi
+) && ok "parallel-collect-all-ready" || bad "parallel-collect-all-ready"
+rm -rf "$COLLECT_FIX"
+
+# --- PRD 017 Phase 2: parallel-background-task-failure (R27) stub ---
+BG_FIX=$(mktemp -d)
+(
+  cd "$BG_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  git commit --allow-empty -q -m init
+  mkdir -p .cursor
+  cat >.cursor/sw-base-state.json <<'JSON'
+{"trunkBase": {"name": "main", "sha": "deadbeef00000000000000000000000000000000000000"}}
+JSON
+  NOW_TS=$(python3 -c "from datetime import datetime,timezone; print(datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))")
+  cat >.cursor/sw-deliver-state.json <<JSON
+{
+  "verdict": "running",
+  "target": {"branch": "feat/bg"},
+  "currentWave": 1,
+  "specSeed": {"skipped": true},
+  "baseCapture": {"skipped": true},
+  "orchestratorWorktree": {"path": "/tmp/orch"},
+  "driverHeartbeatAt": "$NOW_TS",
+  "phases": {
+    "1": {
+      "id": "1",
+      "slug": "a",
+      "status": "in-flight",
+      "backgroundDispatchedAt": "2020-01-01T00:00:00Z"
+    }
+  }
+}
+JSON
+  cat >.cursor/sw-deliver-plan.json <<'JSON'
+{"mode":"phase","target":{"branch":"feat/bg"},"items":[{"id":"1","slug":"a"}],"edges":[],"waves":[["1"]]}
+JSON
+  echo '{"deliver":{"watchdog":{"backgroundTaskTimeoutMinutes":1}}}' >.cursor/workflow.config.json
+  if OUT=$(python3 "$LOOP_PY" "$BG_FIX" compute-next 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['next']['action']=='halt-blocked'
+assert 'background-task-timeout' in d['next'].get('cause','')
+"; then
+    :
+  else
+    exit 1
+  fi
+) && ok "parallel-background-task-failure" || bad "parallel-background-task-failure"
+rm -rf "$BG_FIX"
+
 if [[ "$FAIL" -ne 0 ]]; then
   echo "deliver-loop fixtures: FAIL"
   exit 1

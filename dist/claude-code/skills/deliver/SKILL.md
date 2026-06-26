@@ -114,12 +114,21 @@ Initialized from the phase-mode plan via `scripts/wave.sh state init --plan .cur
 **Driver cursor (R1/R2):** `currentWave`, `nextAction`, `remediationAttempts`, and `driverHeartbeatAt` are
 written by `scripts/wave.sh deliver-loop` on every transition. A fresh agent resumes from this state alone.
 
-**Phase status vocabulary:** `pending` | `in-flight` | `green-merged` | `blocked` | `rejected`.
+**Phase status vocabulary:** `pending` | `in-flight` | `green-merged` | `teardown-pending` |
+`teardown-complete` | `blocked` | `rejected`.
 
-**Helpers:**
+**Operator resume (R29):**
+
+```text
+/sw-deliver run docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
+```
+
+The bash `deliver-loop` driver is for conductor in-turn mechanical re-invocation — not the user-facing
+resume command.
+
+**Helpers (internal driver):**
 
 ```bash
-scripts/wave.sh deliver-loop --task-list docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
 scripts/wave.sh deliver-loop --dry-run
 scripts/wave.sh state init --plan .cursor/sw-deliver-plan.json
 scripts/wave.sh state phase --id 1 --status in-flight
@@ -194,14 +203,15 @@ Schedule JSON shape:
 When a wave exceeds the ceiling, `batches` splits into sequential chunks (e.g. ceiling 2 with
 phases `["2","3","4"]` → `[["2","3"],["4"]]`).
 
-## Conductor parallel dispatch (R14–R16)
+## Conductor parallel dispatch (R14–R16, R22)
 
-The mechanical driver provisions one phase per `deliver-loop` step; the **conductor** achieves parallelism by:
+When a wave has N independent ready phases, the driver emits **`dispatch-batch`** — one action marking all N
+`in-flight` atomically. The conductor spawns N background `Task` sub-agents (up to `parallelCeiling`):
 
-1. `bash scripts/wave.sh schedule --plan .cursor/sw-deliver-plan.json`
-2. For each `batches[].parallel` set, dispatch background `Task` sub-agents (one per phase worktree).
+1. Driver `provision-phase` (mechanical) until worktrees exist for the batch.
+2. Driver returns `dispatch-batch` → conductor spawns N background Tasks (`run_in_background: true`).
 3. Wait for durable `status.json` per **Parallel-wave completion wait** in `skills/conductor/SKILL.md`.
-4. Serialize merges via `merge enqueue` → `merge run-next` (conductor only).
+4. Driver `collect-all-ready` enqueues simultaneous greens in phase-id order → `merge run-next` (conductor only).
 
 On `status collect` with `blocked`, `blast-radius apply` blocks transitive dependents only (R24):
 

@@ -363,8 +363,8 @@ def stabilize_command_for_phase(meta: dict[str, Any], target: str) -> str:
 def resume_deliver_command(state: dict[str, Any]) -> str:
     task_list = state.get("source_task_list")
     if task_list:
-        return f"bash scripts/wave.sh deliver-loop --task-list {task_list}"
-    return "bash scripts/wave.sh deliver-loop"
+        return f"/sw-deliver run {task_list}"
+    return "/sw-deliver run"
 
 def cmd_stabilize_route(root: Path, args: list[str]) -> None:
     state = load_state(root)
