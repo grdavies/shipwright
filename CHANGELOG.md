@@ -48,6 +48,7 @@
 * merge phase docs-dist-fixtures-s-m into feat/pr-test-plan-ci-enforcement (a16b106) <!-- sw-deliver:docs-dist-fixtures-s-m -->
 * merge phase new-sw-retrospective-command-internal-phase-dispatch-m into feat/retrospective-command-consolidation (90c7566) <!-- sw-deliver:new-sw-retrospective-command-internal-phase-dispatch-m -->
 * merge phase deprecated-aliases-rename-propagation-m into feat/retrospective-command-consolidation (7d90846) <!-- sw-deliver:deprecated-aliases-rename-propagation-m -->
+* merge phase autonomy-knob-preserved-semantics-conductor-single-source-m into feat/retrospective-command-consolidation (d489c1c) <!-- sw-deliver:autonomy-knob-preserved-semantics-conductor-single-source-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
