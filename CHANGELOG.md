@@ -60,6 +60,7 @@
 * merge phase pointer-inversion-supersede-reconcile-m into feat/memory-source-of-truth (076599f) <!-- sw-deliver:pointer-inversion-supersede-reconcile-m -->
 * merge phase compound-sot-branch-audit-conflict-migration-m into feat/memory-source-of-truth (3dea6f3) <!-- sw-deliver:compound-sot-branch-audit-conflict-migration-m -->
 * merge phase docs-dist-fixtures-m into feat/memory-source-of-truth (e812958) <!-- sw-deliver:docs-dist-fixtures-m -->
+* merge phase freeze-time-commit-safety-m into feat/deliver-concurrency-and-freeze-safety (da44ffb) <!-- sw-deliver:freeze-time-commit-safety-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
