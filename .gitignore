@@ -30,3 +30,4 @@ docs/*
 !docs/guides/**
 !docs/decisions/
 !docs/decisions/INDEX.md
+!docs/decisions/SUPERSEDED.log

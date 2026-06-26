@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Provider-conditional source-of-truth resolver for the decision doc class (PRD 015 R1–R3)."""
+"""Provider-conditional source-of-truth resolver for the decision doc class (PRD 015 R1–R7)."""
 from __future__ import annotations
 
 import argparse
@@ -122,6 +122,80 @@ def cmd_resolve(root: Path, doc_class: str, as_json: bool) -> None:
     print(effective)
 
 
+def build_pointer_recipe(
+    effective: str,
+    decision_path: str | None,
+    memory_id: str | None,
+) -> dict:
+    if effective not in ("repo", "memory"):
+        fail(f"pointer-recipe requires decision effective SoT repo|memory, got {effective!r}")
+
+    norm_path = decision_path.strip() if decision_path else None
+    if norm_path and not norm_path.startswith("docs/decisions/"):
+        fail("decision path must be under docs/decisions/")
+
+    if effective == "repo":
+        return {
+            "verdict": "pass",
+            "action": "pointer-recipe",
+            "effective": "repo",
+            "authoritative": "git",
+            "nonAuthoritative": "provider",
+            "git": {
+                "role": "authoritative",
+                "snapshotRole": "authoritative",
+                "path": norm_path,
+            },
+            "provider": {
+                "role": "pointer",
+                "category": "decision",
+                "contentBearing": False,
+                "relatedFiles": [norm_path] if norm_path else [],
+            },
+        }
+
+    return {
+        "verdict": "pass",
+        "action": "pointer-recipe",
+        "effective": "memory",
+        "authoritative": "provider",
+        "nonAuthoritative": "git",
+        "git": {
+            "role": "pointer",
+            "snapshotRole": "pointer",
+            "path": norm_path,
+            "memoryPointer": memory_id,
+        },
+        "provider": {
+            "role": "authoritative",
+            "category": "decision",
+            "contentBearing": True,
+            "memoryId": memory_id,
+        },
+    }
+
+
+def cmd_pointer_recipe(
+    root: Path,
+    decision_path: str | None,
+    memory_id: str | None,
+    as_json: bool,
+) -> None:
+    config = load_config(root)
+    knob = read_source_of_truth_knob(config)
+    provider = resolve_memory_provider(root, config)
+    effective = resolve_effective_sot(knob, provider, _DECISION_CLASS)
+    recipe = build_pointer_recipe(effective, decision_path or "", memory_id)
+
+    if as_json:
+        recipe["sourceOfTruth"] = knob
+        recipe["provider"] = provider
+        emit(recipe)
+
+    side = recipe["authoritative"]
+    print(side)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Memory source-of-truth resolver")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -131,12 +205,23 @@ def main() -> None:
     resolve.add_argument("--json", action="store_true")
     resolve.add_argument("--root", type=Path, default=None)
 
+    pointer = sub.add_parser(
+        "pointer-recipe",
+        help="Return inverted pointer roles for decision git vs provider (R6)",
+    )
+    pointer.add_argument("--path", default=None, help="Repo-relative docs/decisions/<n>-<slug>.md")
+    pointer.add_argument("--memory-id", default=None, help="Provider record id when memory-SoT")
+    pointer.add_argument("--json", action="store_true")
+    pointer.add_argument("--root", type=Path, default=None)
+
     args = parser.parse_args()
     start = args.root or Path.cwd()
     root = git_root(start)
 
     if args.command == "resolve":
         cmd_resolve(root, str(args.doc_class), args.json)
+    elif args.command == "pointer-recipe":
+        cmd_pointer_recipe(root, args.path, args.memory_id, args.json)
 
 
 if __name__ == "__main__":

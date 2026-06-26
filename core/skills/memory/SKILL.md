@@ -98,6 +98,19 @@ Store distilled memories per the write contract in `CAPABILITIES.md`:
 - project scope by default; global only on explicit user direction,
 - store the distilled substance, never a raw transcript dump.
 
+For **`decision`-class** writes, resolve the inverted pointer recipe first (R6):
+
+```bash
+bash scripts/memory-sot.sh pointer-recipe --path docs/decisions/<n>-<slug>.md [--memory-id <provider-id>] --json
+```
+
+| Effective SoT | Provider write | Git snapshot |
+| --- | --- | --- |
+| `repo` | Pointer only — `relatedFiles: [docs/decisions/...]`; never the record body | Authoritative (`snapshotRole: authoritative`) |
+| `memory` | Content-bearing authoritative record (redacted) | Pointer (`snapshotRole: pointer`, `memoryPointer`) |
+
+Exactly one side is authoritative at a time; the recipe JSON names `authoritative` vs `nonAuthoritative`.
+
 Store on: a decision with rationale, a non-obvious lesson, a bug root-cause+fix, an architecture choice,
 a notable review/CI pattern, or a distilled session recap. Do not store routine, recoverable steps.
 
@@ -157,12 +170,20 @@ When repo-SoT is active (default for `in-repo`):
 - Flag content-bearing `decision` memories that duplicate an existing record — they should become pointers.
 
 When memory-SoT is active, the provider record is authoritative; the committed git snapshot carries a
-forward pointer (see PRD 015).
+forward pointer (`memoryPointer` in frontmatter — see `scripts/memory-decision-snapshot.sh write`).
+
 **Supersede reconciliation (`docs/decisions/SUPERSEDED.log`):**
 
-On record-level supersede, the superseded path is appended to the committed manifest. `/sw-memory-sync`
-reconciles `decision`-class memories still linking a `SUPERSEDED.log` path — best-effort re-point to the
-replacement record. Pointer freshness is **auditable, not transactional** (provider out of CI reach).
+On record-level supersede, append the superseded path via:
+
+```bash
+bash scripts/reconcile-status.sh append-superseded --path docs/decisions/<old>.md --replacement docs/decisions/<new>.md
+```
+
+`/sw-memory-sync` runs `bash scripts/reconcile-status.sh supersede-reconcile --json` after distillation and
+best-effort re-points the **non-authoritative** side per the active SoT (provider `relatedFiles` under
+repo-SoT; git snapshot pointer under memory-SoT). Pointer freshness is **auditable, not transactional**
+(provider out of CI reach).
 
 ## Boundaries
 
