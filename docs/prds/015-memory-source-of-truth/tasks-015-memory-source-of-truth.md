@@ -28,10 +28,10 @@ then pointer inversion + supersede, then compound/audit/migration, then docs/dis
 
 ### 2. Always-committed redacted snapshot + offline-safe freeze/CI (M)
 
-- [ ] 2.1 Snapshot writer in freeze decision path (R4, R6, R10)
+- [x] 2.1 Snapshot writer in freeze decision path (R4, R6, R10)
   - **File:** `core/commands/sw-freeze.md`, `scripts/memory-redact.sh` (invocation)
   - **Expected:** freeze always writes/refreshes a redacted `docs/decisions/<n>-<slug>.md` snapshot, stamps `authoritative: repo|memory` + forward pointer under memory-SoT
-- [ ] 2.2 Offline-safe freeze/CI gate (R5)
+- [x] 2.2 Offline-safe freeze/CI gate (R5)
   - **File:** `scripts/check-frozen.sh`, `core/commands/sw-freeze.md`
   - **Expected:** freeze + `check-frozen.sh` operate only on the committed snapshot, never call the provider; memory-SoT provider write is best-effort with an audit breadcrumb
 
