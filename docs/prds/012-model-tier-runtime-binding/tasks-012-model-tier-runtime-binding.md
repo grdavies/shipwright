@@ -49,9 +49,10 @@ rewrite that depends on the preflight, then the optional hook, then docs/dist.
 
 ### 4. Optional pre-tool hook (feasibility-gated) (M)
 
-- [ ] 4.1 `before-task-dispatch` hook injects resolved `modelId` (R5)
-  - **File:** `core/hooks/before-task-dispatch.py`, `.cursor-plugin/plugin.json` (hook registration)
+- [x] 4.1 `before-task-dispatch` hook injects resolved `modelId` (R5) — **deferred (DL-2 spike 2026-06-25)**
+  - **File:** `core/hooks/before_task_dispatch.py`, `core/sw-reference/model-tier-hook-feasibility.md`
   - **Expected:** on a Task call targeting a `sw-*-reviewer`/persona/native-panel agent, resolve via 1.2 and inject `modelId`; resolution failure logs + surfaces (never silent `inherit`); ships only if the platform supports Task-call mutation, else re-deferred per DL-2
+  - **Outcome:** Logic module + fixture pass; **not registered** in `hooks.json` — Cursor `preToolUse` `updated_input` is not applied for Task; `subagentStart` cannot set model. Phase 2 `reviewer-dispatch-check.sh` remains enforcement floor. Re-open when platform supports Task model mutation (see feasibility doc).
 
 ### 5. Fixtures, docs, dist propagation (M)
 
