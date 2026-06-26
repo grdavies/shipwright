@@ -56,13 +56,13 @@ rewrite that depends on the preflight, then the optional hook, then docs/dist.
 
 ### 5. Fixtures, docs, dist propagation (M)
 
-- [ ] 5.1 Fixture suite for binding behaviors (R11)
+- [x] 5.1 Fixture suite for binding behaviors (R11)
   - **File:** `scripts/test/run-model-binding-fixtures.sh`, `.cursor/workflow.config.json`
   - **Expected:** fixtures named in the PRD Testing Strategy table exist and pass; suite registered in `verify.test`; hook fixture conditional on 4.1 shipping
-- [ ] 5.2 Documentation updates (R12)
+- [x] 5.2 Documentation updates (R12)
   - **File:** `.sw/models-tiering.md`, `docs/guides/configuration.md`
   - **Expected:** binding contract + `models.routing.agents` documented; presence asserted by a fixture
-- [ ] 5.3 Emitter propagation + freshness gate (R10)
+- [x] 5.3 Emitter propagation + freshness gate (R10)
   - **File:** `dist/cursor/**`, `dist/claude-code/**` via `python3 -m sw generate --all`
   - **Expected:** `dist/` regenerated; `scripts/test/run-emitter-fixtures.sh` passes
 

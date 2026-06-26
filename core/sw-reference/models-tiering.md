@@ -20,7 +20,8 @@ detected platform catalog plus `core/sw-reference/model-routing.defaults.json`.
   "roles": { "builder": "build", "reviewer": "build" },
   "routing": {
     "commands": { "sw-prd": "deep", "sw-doc": "inherit" },
-    "skills": { "prd": "deep" }
+    "skills": { "prd": "deep" },
+    "agents": { "sw-coherence-reviewer": "build", "correctness": "deep" }
   }
 }
 ```
@@ -59,10 +60,11 @@ bash scripts/resolve-model-tier.sh --command sw-prd
 bash scripts/resolve-model-tier.sh --skill prd
 bash scripts/resolve-model-tier.sh --command sw-doc --delegate sw-prd
 bash scripts/resolve-model-tier.sh --tier deep
+bash scripts/resolve-model-tier.sh --agent sw-coherence-reviewer
 ```
 
-Config `models.routing` overrides bundled defaults; missing keys fall back to
-`core/sw-reference/model-routing.defaults.json`.
+Config `models.routing` (including `models.routing.agents` for per-reviewer/native-panel tiers) overrides
+bundled defaults; missing keys fall back to `core/sw-reference/model-routing.defaults.json`.
 
 ## Layer 2 — Dispatch (`commands/`, `skills/`, `agents/`)
 
@@ -101,4 +103,5 @@ until the platform supports Task model mutation. Enforcement remains dispatcher 
 bash scripts/model-tier-check.sh --config .sw/workflow.config.example.json
 bash scripts/model-routing-check.sh
 bash scripts/test/fixtures/model-tier-routing.sh
+bash scripts/test/run-model-binding-fixtures.sh
 ```
