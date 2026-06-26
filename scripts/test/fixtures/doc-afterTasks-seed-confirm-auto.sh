@@ -20,8 +20,8 @@ fi
 
 # confirm: seed before dispatch
 if awk '/\*\*`confirm`\*\*/,/\*\*`auto`\*\*/' "$SW_DOC" | grep -q 'spec-seed' && \
-   awk '/\*\*`confirm`\*\*/,/\*\*`auto`\*\*/' "$SW_DOC" | grep -q 'deliver-loop'; then
-  echo "OK  doc-afterTasks-seed-confirm-auto: confirm seeds before deliver-loop"
+   awk '/\*\*`confirm`\*\*/,/\*\*`auto`\*\*/' "$SW_DOC" | grep -q '/sw-deliver run'; then
+  echo "OK  doc-afterTasks-seed-confirm-auto: confirm seeds before /sw-deliver run"
 else
   echo "FAIL doc-afterTasks-seed-confirm-auto: confirm seed order wrong"
   FAIL=1
@@ -29,8 +29,8 @@ fi
 
 # auto: seed before dispatch
 if awk '/\*\*`auto`\*\*/,/^14\./' "$SW_DOC" | grep -q 'spec-seed' && \
-   awk '/\*\*`auto`\*\*/,/^14\./' "$SW_DOC" | grep -q 'deliver-loop'; then
-  echo "OK  doc-afterTasks-seed-confirm-auto: auto seeds before deliver-loop"
+   awk '/\*\*`auto`\*\*/,/^14\./' "$SW_DOC" | grep -q '/sw-deliver run'; then
+  echo "OK  doc-afterTasks-seed-confirm-auto: auto seeds before /sw-deliver run"
 else
   echo "FAIL doc-afterTasks-seed-confirm-auto: auto seed order wrong"
   FAIL=1
