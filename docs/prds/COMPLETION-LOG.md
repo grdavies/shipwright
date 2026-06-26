@@ -4,6 +4,7 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 
 | Date | PRD | Phase | Notes |
 |------|-----|-------|-------|
+| 2026-06-26 | 011 | deliver | PRD 011 four phases on feat/orchestrator-ux-and-doc-polish (1a3de5c); pre-merge compounding; awaiting terminal merge to main |
 | 2026-06-25 | 009 | all | deliver complete — awaiting terminal merge; SHA db87926 |
 | 2026-06-25 | 009 | all | PRD 009 autonomous orchestration conductor — 10 phases delivered; SHA 681671b |
 | 2026-06-25 | 008 | all | Shipped via PR #70 (feat/model-tier-setup-defaults, squash cde20e0): four-tier model routing (cheap/build/mid/deep), defaults + resolver, /sw-setup seeding, command/skill tier stamping, docs + dogfood config, routing fixtures. 6 phases / 17 sub-tasks. Stabilize: dist regen + cursor golden manifest refresh. |
