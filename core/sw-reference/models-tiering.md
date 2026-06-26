@@ -87,13 +87,15 @@ Do **not** put `cheap`/`build`/`mid`/`deep` or vendor aliases like `sonnet` in s
 | `/sw-doc-review`, `sw-subagent-dispatch` | **Runtime R9:** parent model tier ≥ builder when dispatching `inherit` reviewers |
 | `scripts/reviewer-dispatch-check.sh` | Fail-closed preflight before persona/native-panel Task spawn (phase 2 floor) |
 
-### Optional Task hook (R5 — deferred)
+### Task hook (R5 — registered, forward-compatible)
 
-A `preToolUse` hook (`core/hooks/before_task_dispatch.py`) can compute `updated_input.model`
-from `resolve-model-tier.sh --agent`, but **Cursor does not apply `updated_input` for the Task
-tool** and `subagentStart` cannot set model. Spike record:
-`core/sw-reference/model-tier-hook-feasibility.md`. **Not registered** in plugin `hooks.json`
-until the platform supports Task model mutation. Enforcement remains dispatcher + preflight only.
+A `preToolUse` hook (`core/hooks/before_task_dispatch.py`) resolves `updated_input.model`
+via `resolve-model-tier.sh --agent` and is **registered in both platform `hooks.json` files**
+(Cursor `preToolUse`, Claude Code `PreToolUse`). Platform effectiveness is unverified:
+Cursor does not currently apply `updated_input` for Task; Claude Code behavior is untested.
+The hook fails open and logs mutation attempts to stderr. Phase 2 `reviewer-dispatch-check.sh`
+remains the enforcement floor regardless of hook effectiveness. See
+`core/sw-reference/model-tier-hook-feasibility.md` for full rationale.
 
 `inherit` reviewers cannot be fully R9-verified in CI — orchestrator must not run doc-review on a sub-`build` parent.
 

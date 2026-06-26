@@ -99,6 +99,8 @@ def dispatch(repo_root: Path) -> int:
         return _run_submit_with_payload(repo_root, payload)
     if event == "stop":
         return _run_stop_with_payload(repo_root, payload)
+    if event in {"pretooluse", "pre_tool_use"}:
+        return _run_pre_tool_use_with_payload(repo_root, payload)
     # Unknown event — allow
     print(json.dumps({}))
     return 0
@@ -148,6 +150,25 @@ def _run_stop_with_payload(repo_root: Path, payload: dict) -> int:
     except Exception as exc:  # noqa: BLE001
         print(json.dumps({}))
         print(f"Shipwright memory-sync-stop hook degraded: {exc}", file=sys.stderr)
+        return 0
+
+
+def _run_pre_tool_use_with_payload(repo_root: Path, payload: dict) -> int:
+    root = workspace_root(payload)
+    try:
+        from before_task_dispatch import evaluate_pre_tool_use  # noqa: PLC0415
+        result = evaluate_pre_tool_use(payload, root)
+        if result.verdict == "pass":
+            print(
+                f"sw-model-binding: PreToolUse mutation attempted"
+                f" model={result.model_id} agent={result.agent}",
+                file=sys.stderr,
+            )
+        print(json.dumps(result.to_claude_hook_output(), ensure_ascii=False))
+        return 0
+    except Exception as exc:  # noqa: BLE001 — fail-open; preflight check is the enforcement floor
+        print(json.dumps({"decision": "approve"}))
+        print(f"Shipwright before-task-dispatch hook degraded: {exc}", file=sys.stderr)
         return 0
 
 

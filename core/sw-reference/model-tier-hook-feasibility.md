@@ -1,7 +1,7 @@
 # Model-tier Task hook — feasibility spike (PRD 012 phase 4 / DL-2)
 
-**Date:** 2026-06-25  
-**Verdict:** **Deferred — do not register in `hooks.json`**
+**Date:** 2026-06-25 (spike) / 2026-06-26 (revised decision)  
+**Verdict:** **Registered — forward-compatible (Option C)**
 
 ## Goal
 
@@ -23,21 +23,47 @@ Optional belt-and-suspenders (R5): a `preToolUse` hook that injects a resolved c
    returns the correct `updated_input.model` when fed synthetic `preToolUse` stdin. Fixture:
    `scripts/test/fixtures/task-dispatch-hook-feasibility.sh`.
 
-## Conclusion
+## Platform assessment
 
-| Mechanism | Can inject Task `model`? | Ship? |
+| Mechanism | Cursor | Claude Code |
 | --- | --- | --- |
-| `reviewer-dispatch-check.sh` + dispatcher procedure (phase 2–3) | Yes (caller stamps `model:`) | **Yes — enforcement floor** |
-| `preToolUse` + `updated_input` on Task | Documented; **not applied by platform** for Task | **No** |
-| `subagentStart` | **No** model field in output schema | **No** |
+| `preToolUse` `updated_input` on Task | Documented; **not applied by platform** (DL-2 spike confirmed) | **Unverified** — no Claude Code environment available |
+| `reviewer-dispatch-check.sh` preflight (phase 2–3) | ✅ enforcement floor | ✅ enforcement floor |
 
-**Phase 4 closes as deferred:** R3 preflight remains the sole mechanical floor. The hook module
-is retained for fixtures and future Cursor support; it is **not** registered in
-`platforms/cursor/emitter.py` `hooks.json` until platform applies `updated_input` for Task.
+## Decision — Option C (2026-06-26)
 
-## Re-open criteria
+Register the hook in both platforms now. Rationale:
 
-Register `before-task-dispatch` in plugin hooks when **both** are true:
+- The hook logic is already written, tested, and isolated in `core/hooks/before_task_dispatch.py`.
+- Phase 2 `reviewer-dispatch-check.sh` is the real enforcement floor — hook effectiveness is
+  additive defense-in-depth only. A no-op hook does not degrade correctness.
+- Forward compatibility: when Cursor applies `updated_input` for Task, coverage is automatic
+  with zero further changes. Same for Claude Code if/when verified.
+- The hook fails open on all unexpected errors (top-level exception catch) and logs mutation
+  attempts to stderr for observability.
+- Re-opening a deferred GAP-BACKLOG item later would require additional spike work and a new
+  PR cycle. Registering now eliminates that cost.
 
-1. Cursor applies `preToolUse` `updated_input.model` (or equivalent) on Task spawns — verified manually.
-2. `task-dispatch-hook-injection` fixture passes against a live hook registration smoke test.
+## Registration
+
+| Platform | Hook event | Entry point | Mutation status |
+| --- | --- | --- | --- |
+| Cursor | `preToolUse` | `${CURSOR_PLUGIN_ROOT}/hooks/before-task-dispatch.py` | `updated_input` emitted; not applied by platform (DL-2) |
+| Claude Code | `PreToolUse` | `${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py` (dispatch) | `updated_input` emitted; platform behavior unverified |
+
+## Observability
+
+When the hook resolves a bound agent, it logs to stderr:
+
+```
+sw-model-binding: preToolUse mutation attempted model=<id> agent=<id>
+```
+
+This confirms the hook is firing and what it attempted. Whether the mutation was honored can
+only be verified by observing the downstream model in use by the spawned agent.
+
+## Re-evaluate criteria
+
+Downgrade to deferral only if the hook causes measurable dispatch latency regression or
+introduces a failure mode that breaks Task spawning. Otherwise keep registered as the platform
+matures toward full `updated_input` support.

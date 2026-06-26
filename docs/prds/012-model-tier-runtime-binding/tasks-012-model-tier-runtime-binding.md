@@ -49,10 +49,10 @@ rewrite that depends on the preflight, then the optional hook, then docs/dist.
 
 ### 4. Optional pre-tool hook (feasibility-gated) (M)
 
-- [x] 4.1 `before-task-dispatch` hook injects resolved `modelId` (R5) — **deferred (DL-2 spike 2026-06-25)**
-  - **File:** `core/hooks/before_task_dispatch.py`, `core/sw-reference/model-tier-hook-feasibility.md`
-  - **Expected:** on a Task call targeting a `sw-*-reviewer`/persona/native-panel agent, resolve via 1.2 and inject `modelId`; resolution failure logs + surfaces (never silent `inherit`); ships only if the platform supports Task-call mutation, else re-deferred per DL-2
-  - **Outcome:** Logic module + fixture pass; **not registered** in `hooks.json` — Cursor `preToolUse` `updated_input` is not applied for Task; `subagentStart` cannot set model. Phase 2 `reviewer-dispatch-check.sh` remains enforcement floor. Re-open when platform supports Task model mutation (see feasibility doc).
+- [x] 4.1 `before-task-dispatch` hook injects resolved `modelId` (R5) — **registered (Option C, 2026-06-26)**
+  - **File:** `core/hooks/before_task_dispatch.py`, `platforms/cursor/emitter.py`, `platforms/claude-code/emitter.py`, `core/sw-reference/model-tier-hook-feasibility.md`
+  - **Expected:** on a Task call targeting a `sw-*-reviewer`/persona/native-panel agent, resolve via 1.2 and inject `modelId`; resolution failure logs + surfaces (never silent `inherit`); registered in both platform hooks.json files for forward compatibility
+  - **Outcome:** Logic module + fixture pass; **registered** in `hooks.json` for Cursor (`preToolUse`) and Claude Code (`PreToolUse`). Platform mutation effectiveness unverified (Cursor DL-2 confirmed; Claude Code untested). Hook fails open; mutation attempts logged to stderr. Phase 2 `reviewer-dispatch-check.sh` remains enforcement floor.
 
 ### 5. Fixtures, docs, dist propagation (M)
 

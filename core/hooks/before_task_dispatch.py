@@ -1,11 +1,14 @@
-"""Pre-Task dispatch model binding (PRD 012 R5) — logic module + feasibility spike.
+"""Pre-Task dispatch model binding (PRD 012 R5).
 
 Resolves reviewer/persona/native-panel Task calls via resolve-model-tier.sh --agent and
-returns preToolUse-shaped output with updated_input.model.
+attempts to inject the concrete model ID via preToolUse updated_input.
 
-**Registration deferred (DL-2, 2026-06-25 spike):** Cursor does not apply preToolUse
-updated_input for the Task tool, and subagentStart cannot set model. This module is kept
-for fixture-tested logic and future platform support — not wired in hooks.json.
+**Forward-compatible registration (Option C, 2026-06-26):** Registered in hooks.json for both
+Cursor and Claude Code. Whether the platform honors updated_input.model on Task calls is
+unverified for both platforms (DL-2 spike confirmed Cursor silently ignores it; Claude Code
+unverified due to missing environment). The hook fires, logs its mutation attempt to stderr,
+and fails open on unexpected errors. Phase 2 reviewer-dispatch-check.sh remains the
+enforcement floor regardless of hook effectiveness.
 """
 
 from __future__ import annotations
@@ -34,6 +37,7 @@ class DispatchResult:
     remediation: str | None = None
 
     def to_hook_output(self) -> dict[str, Any]:
+        """Cursor preToolUse format."""
         if self.verdict == "skip":
             return {"permission": "allow"}
         if self.verdict == "fail":
@@ -47,6 +51,22 @@ class DispatchResult:
             "permission": "allow",
             "updated_input": {"model": self.model_id},
         }
+
+    def to_claude_hook_output(self) -> dict[str, Any]:
+        """Claude Code PreToolUse format.
+
+        The decision field uses Claude Code's approve/block vocabulary.
+        For pass verdict, mutation is logged to stderr by the caller; we attempt
+        updated_input but cannot verify whether Claude Code honors it for Task calls.
+        """
+        if self.verdict == "skip":
+            return {"decision": "approve"}
+        if self.verdict == "fail":
+            return {
+                "decision": "block",
+                "reason": f"Shipwright model-tier binding: {self.cause or 'no-model-resolved'}",
+            }
+        return {"decision": "approve", "updated_input": {"model": self.model_id}}
 
 
 def agent_id_from_task_input(tool_input: dict[str, Any]) -> str | None:
@@ -134,14 +154,24 @@ def evaluate_pre_tool_use(payload: dict[str, Any], root: Path) -> DispatchResult
 
 
 def run_stdio() -> int:
+    """Cursor preToolUse entrypoint — reads stdin, writes hook output to stdout."""
     try:
         payload = json.load(sys.stdin)
     except (OSError, ValueError, json.JSONDecodeError):
         print(json.dumps({"permission": "allow"}))
         return 0
-    root = workspace_root(payload)
-    result = evaluate_pre_tool_use(payload, root)
-    print(json.dumps(result.to_hook_output(), ensure_ascii=False))
+    try:
+        root = workspace_root(payload)
+        result = evaluate_pre_tool_use(payload, root)
+        if result.verdict == "pass":
+            print(
+                f"sw-model-binding: preToolUse mutation attempted"
+                f" model={result.model_id} agent={result.agent}",
+                file=sys.stderr,
+            )
+        print(json.dumps(result.to_hook_output(), ensure_ascii=False))
+    except Exception:  # noqa: BLE001 — fail-open; preflight check is the enforcement floor
+        print(json.dumps({"permission": "allow"}))
     return 0
 
 

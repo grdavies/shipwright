@@ -151,11 +151,11 @@ else
   bad "reviewer-frontmatter-inherit"
 fi
 
-# --- task-dispatch-hook (deferred — feasibility fixture, not injection) ---
+# --- task-dispatch-hook (Option C — registered in both platform hooks.json files) ---
 if bash "$ROOT/scripts/test/fixtures/task-dispatch-hook-feasibility.sh" >/dev/null 2>&1; then
-  ok "task-dispatch-hook-feasibility-deferred"
+  ok "task-dispatch-hook-registered"
 else
-  bad "task-dispatch-hook-feasibility-deferred"
+  bad "task-dispatch-hook-registered"
 fi
 
 # --- model-binding-docs-presence ---

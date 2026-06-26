@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Feasibility spike + logic tests for before_task_dispatch (PRD 012 phase 4 / DL-2).
+# Hook registration + logic tests for before_task_dispatch (PRD 012 phase 4 / Option C).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 FEAS="$ROOT/core/sw-reference/model-tier-hook-feasibility.md"
-HOOKS_JSON="$ROOT/dist/cursor/hooks/hooks.json"
+CURSOR_HOOKS_JSON="$ROOT/dist/cursor/hooks/hooks.json"
+CLAUDE_HOOKS_JSON="$ROOT/dist/claude-code/hooks/hooks.json"
 PY="$ROOT/core/hooks/before_task_dispatch.py"
 
 FAIL=0
@@ -15,10 +16,10 @@ if [[ ! -f "$FEAS" ]]; then
   bad "model-tier-hook-feasibility.md present"
 else
   ok "model-tier-hook-feasibility.md present"
-  if grep -q "Deferred" "$FEAS" && grep -q "subagentStart" "$FEAS"; then
-    ok "feasibility-doc-deferred-verdict"
+  if grep -q "forward-compatible" "$FEAS" && grep -q "Option C" "$FEAS"; then
+    ok "feasibility-doc-registered-verdict"
   else
-    bad "feasibility-doc-deferred-verdict"
+    bad "feasibility-doc-registered-verdict"
   fi
 fi
 
@@ -77,27 +78,43 @@ else
   bad "hook-logic-skips-non-reviewer-task (got $SKIP)"
 fi
 
-# Registration deferred: dist hooks.json must not wire preToolUse task dispatch yet
-if [[ -f "$HOOKS_JSON" ]]; then
+# Registration: dist/cursor hooks.json must wire preToolUse to before-task-dispatch
+if [[ -f "$CURSOR_HOOKS_JSON" ]]; then
   if python3 -c "
 import json,sys
 h=json.load(open(sys.argv[1]))
 pretool=h.get('hooks',{}).get('preToolUse',[])
 text=json.dumps(pretool)
-assert 'before_task_dispatch' not in text and 'before-task-dispatch' not in text
-" "$HOOKS_JSON"; then
-    ok "hook-not-registered-in-dist-hooks-json"
+assert 'before-task-dispatch' in text
+" "$CURSOR_HOOKS_JSON"; then
+    ok "hook-registered-in-cursor-hooks-json"
   else
-    bad "hook-not-registered-in-dist-hooks-json"
+    bad "hook-registered-in-cursor-hooks-json"
   fi
 else
-  ok "hook-not-registered-in-dist-hooks-json (no dist yet)"
+  bad "hook-registered-in-cursor-hooks-json (no dist yet)"
+fi
+
+# Registration: dist/claude-code hooks.json must wire PreToolUse
+if [[ -f "$CLAUDE_HOOKS_JSON" ]]; then
+  if python3 -c "
+import json,sys
+h=json.load(open(sys.argv[1]))
+pretool=h.get('hooks',{}).get('PreToolUse',[])
+assert len(pretool) > 0
+" "$CLAUDE_HOOKS_JSON"; then
+    ok "hook-registered-in-claude-hooks-json"
+  else
+    bad "hook-registered-in-claude-hooks-json"
+  fi
+else
+  bad "hook-registered-in-claude-hooks-json (no dist yet)"
 fi
 
 if grep -q "model-tier-hook-feasibility" "$ROOT/core/sw-reference/models-tiering.md" 2>/dev/null; then
-  ok "models-tiering references feasibility spike"
+  ok "models-tiering references feasibility doc"
 else
-  bad "models-tiering references feasibility spike"
+  bad "models-tiering references feasibility doc"
 fi
 
 if [[ "$FAIL" -ne 0 ]]; then
