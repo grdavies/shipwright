@@ -52,13 +52,13 @@ preserved-semantics wiring + conductor single-source, then docs/dist/fixtures.
 
 ### 4. Docs, dist, fixtures (M)
 
-- [ ] 4.1 Fixture suite for consolidation behaviors (R12)
+- [x] 4.1 Fixture suite for consolidation behaviors (R12)
   - **File:** `scripts/test/run-retrospective-fixtures.sh`, `.cursor/workflow.config.json`
   - **Expected:** fixtures named in the PRD Testing Strategy exist and pass; suite registered in `verify.test`
-- [ ] 4.2 Documentation updates (R12)
+- [x] 4.2 Documentation updates (R12)
   - **File:** `skills/compound/SKILL.md`, `rules/sw-naming.mdc`, `docs/guides/` (workflow guide)
   - **Expected:** consolidated command + autonomy knob documented; presence asserted by a fixture
-- [ ] 4.3 Emitter propagation + freshness gate (R12)
+- [x] 4.3 Emitter propagation + freshness gate (R12)
   - **File:** `dist/cursor/**`, `dist/claude-code/**` via `python3 -m sw generate --all`
   - **Expected:** `dist/` regenerated; `scripts/test/run-emitter-fixtures.sh` passes
 

@@ -167,8 +167,21 @@ bash scripts/resolve-model-tier.sh --command sw-prd
 bash scripts/resolve-model-tier.sh --command sw-doc --delegate sw-prd
 ```
 
-Orchestrators (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-compound-ship`) route at `inherit` — always resolve the
+Orchestrators (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-retrospective`) route at `inherit` — always resolve the
 delegated child command. Full policy: `.sw/models-tiering.md`.
+
+## Retrospective compounding (`compound.autonomy`)
+
+`/sw-retrospective` is the consolidated post-delivery chain (`retro → compound write → memory-sync → status`).
+Deprecated aliases `/sw-compound-ship` and `/sw-compound` route to it for one release.
+
+| Mode | `compound.autonomy` | Behavior |
+|------|---------------------|----------|
+| **supervised** (default) | `supervised` | Preserve retro/compound approval and merge-ack prompts |
+| hands-off pre-merge | `auto` | Run the pre-merge chain when the terminal PR is green without re-prompting; merge detection still gates INDEX → `complete` |
+
+Inspect at runtime: `bash scripts/wave.sh retrospective autonomy`. Autonomy never bypasses fail-closed
+memory writes or rule-class human gates.
 
 ## Zero-config fast path
 
