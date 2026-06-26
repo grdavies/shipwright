@@ -23,7 +23,7 @@ done
 
 STATE_JSON="$(python3 "$ROOT/scripts/wave_state.py" "$STATE_ROOT" resolve state-path 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('path',''))")"
 if [[ -z "$STATE_JSON" || ! -f "$STATE_JSON" ]]; then
-  STATE_JSON="$STATE_ROOT/.cursor/sw-deliver-state.json"
+  STATE_JSON="$STATE_ROOT/.cursor/sw-deliver-state.json"  # legacy repo-wide fallback when resolve has no scoped file
 fi
 PLAN_JSON="$STATE_ROOT/.cursor/sw-deliver-plan.json"
 if [[ ! -f "$STATE_JSON" ]]; then

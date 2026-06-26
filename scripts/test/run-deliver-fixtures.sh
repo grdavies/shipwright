@@ -246,6 +246,10 @@ STATE_FIX=$(mktemp -d)
   git init -q
   git config user.email test@test.com
   git config user.name Test
+  if [[ -d "$ROOT/.github/workflows" ]]; then
+    mkdir -p .github/workflows
+    cp "$ROOT"/.github/workflows/* .github/workflows/ 2>/dev/null || true
+  fi
   mkdir -p .cursor docs/prds/004-wave-phase-orchestrator
   cp "$TASK_FROZEN" docs/prds/004-wave-phase-orchestrator/
   "$WAVE" plan --task-list docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md >/dev/null

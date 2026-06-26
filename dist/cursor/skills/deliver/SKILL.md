@@ -58,14 +58,30 @@ Multi-feature mode uses `"mode": "multi-feature"` with conforming type-prefixed 
 | Artifact | Path |
 |----------|------|
 | Plan | `.cursor/sw-deliver-plan.json` |
-| Run state | `.cursor/sw-deliver-state.json` |
-| Orchestrator lock | `.cursor/sw-deliver.lock` |
+| Run state (scoped) | `.cursor/sw-deliver-state.<slug>.json` — canonical at **repo root** only (R28) |
+| Orchestrator lock (scoped) | `.cursor/sw-deliver-<slug>.lock` |
+| Concurrent-run index | `.cursor/sw-deliver-runs/index.json` |
+| Living-doc serialization | `.cursor/sw-living-docs.lock` |
 | Per-phase `/sw-ship` status | `.cursor/sw-deliver-runs/<phase-slug>/status.json` |
 | Append-only progress log | `.cursor/sw-deliver-runs/run.log` |
+| Legacy (migration only) | `.cursor/sw-deliver-state.json`, `.cursor/sw-deliver.lock` |
 
 Living artifacts under `.cursor/` are **never committed** (`/sw-commit` excludes them).
 
-### Run-state schema (`.cursor/sw-deliver-state.json`)
+**Per-branch scoping (PRD 013 R6–R11):** `<slug>` derives from the target feature branch
+(`feat/<slug>` → `sw-deliver-state.<slug>.json`). Orthogonal branches run concurrently with
+independent state/lock files; `assert_run_identity` and lock refusal apply **within** a scope only.
+Legacy repo-wide state is adopted to the scoped path on first read (breadcrumb left at the legacy path).
+
+**Single canonical write path (R28):** all readers and writers (`wave_state.py`, `wave_compound.py`
+`record-premerge`, `cleanup_lib.resolve_deliver_state`) resolve the scoped path at the git toplevel —
+never a duplicate copy under an orchestrator worktree `.cursor/`.
+
+**Freeze-time commit (PRD 013 R1–R5):** `/sw-freeze` invokes `check-frozen.sh freeze-commit` → shared
+`wave_spec_seed.py` helper (same as `/sw-doc` afterTasks). Commits docs-only onto `<type>/<slug>`;
+never `main`; verdict-independent (commit failure warns; stamp still completes).
+
+### Run-state schema (scoped `.cursor/sw-deliver-state.<slug>.json`)
 
 Initialized from the phase-mode plan via `scripts/wave.sh state init --plan .cursor/sw-deliver-plan.json`:
 
@@ -124,8 +140,8 @@ scripts/wave.sh journal begin --phase <phase-slug> [--head <sha>]
 scripts/wave.sh journal complete --phase <phase-slug>
 ```
 
-- **Lock:** atomic create on `.cursor/sw-deliver.lock` keyed by `<type>/<slug>` metadata; second
-  invocation refuses (`exit 20`) until `lock release`.
+- **Lock:** atomic create on `.cursor/sw-deliver-<slug>.lock`; a lock for branch A does not block
+  branch B; a second live run on the **same** branch refuses (`exit 20`) until `lock release`.
 - **Merge journal:** open entry before phase → `<type>/<slug>` merge; cleared after push + state commit.
   Resume detects interrupted merge via `journal status`.
 
