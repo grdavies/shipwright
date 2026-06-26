@@ -79,6 +79,9 @@ Before dispatching specialist/debug sub-agents from `/sw-debug`:
 2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-debug --skill debug --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Pass explicit concrete `model:` on Task input.
 
+Resolve model: `bash scripts/resolve-model-tier.sh --command <child-slug>` (or `--skill rca-core`).
+Resolve intensity: `bash scripts/resolve-intensity.sh --command <child-slug>` (or `--skill|--agent`).
+
 ## What this command does not do
 
 - Does not run `/sw-ship`, merge PRs, or patch on bare `main`

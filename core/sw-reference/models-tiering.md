@@ -100,6 +100,21 @@ preflight + `dispatch-check.sh` remain the enforcement floor regardless of hook 
 
 `inherit` reviewers cannot be fully R9-verified in CI — orchestrator must not run doc-review on a sub-`build` parent.
 
+## Delegation binding (PRD 017)
+
+Orchestrators resolve **model** and **caveman intensity** per delegated child before every `Task` spawn:
+
+```bash
+bash scripts/resolve-model-tier.sh --command <child-slug>   # or --agent for panel reviewers
+bash scripts/resolve-intensity.sh --command <child-slug>      # command → skill → agent → default
+bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <id> --command <orchestrator> --skill <skill>
+bash scripts/dispatch-check.sh --agent <id> --command <orchestrator> --skill <skill> --parent-model <concrete-id>
+```
+
+- Pass explicit concrete `model:` on the `Task` call — never `inherit` from the parent session.
+- Dispatch-bound intensity overrides `sessionStart` caveman for delegated sub-agents (see `core/hooks/session-context.md`).
+- `delegation.mode` in `workflow.config.json` selects delegate-by-default vs legacy heuristic gate.
+
 ## Validate
 
 ```bash
@@ -107,4 +122,5 @@ bash scripts/model-tier-check.sh --config .sw/workflow.config.example.json
 bash scripts/model-routing-check.sh
 bash scripts/test/fixtures/model-tier-routing.sh
 bash scripts/test/run-model-binding-fixtures.sh
+bash scripts/test/run-delegation-fixtures.sh
 ```

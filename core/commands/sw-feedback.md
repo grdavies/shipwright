@@ -81,6 +81,9 @@ Before dispatching routed follow-on Tasks from `/sw-feedback`:
 2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-feedback --skill feedback --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Dispatch with explicit concrete `model:` and resolved intensity (no model inheritance).
 
+Resolve model: `bash scripts/resolve-model-tier.sh --command <child-slug>`.
+Resolve intensity: `bash scripts/resolve-intensity.sh --command <child-slug>` (or `--skill feedback`).
+
 ## Inline allowlist (closed)
 
 `/sw-feedback` may remain inline only for:

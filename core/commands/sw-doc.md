@@ -151,6 +151,9 @@ Before any delegated Task spawn from `/sw-doc`:
 2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-doc --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Pass explicit `model: <resolved-concrete-id>` on Task input (never `inherit`).
 
+Resolve model: `bash scripts/resolve-model-tier.sh --command <child-slug>` (or `--agent` for doc-review personas).
+Resolve intensity: `bash scripts/resolve-intensity.sh --command <child-slug>` (or `--agent|--skill`).
+
 ## Inline allowlist (closed)
 
 `/sw-doc` may remain inline only for:
