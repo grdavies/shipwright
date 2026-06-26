@@ -1,6 +1,0 @@
-{
-  "migrated": true,
-  "migratedAt": "2026-06-26T20:42:40Z",
-  "scopedPath": ".cursor/sw-deliver-state.deliver-concurrency-and-freeze-safety.json",
-  "target": "feat/deliver-concurrency-and-freeze-safety"
-}
