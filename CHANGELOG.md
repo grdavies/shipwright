@@ -42,6 +42,10 @@
 * merge phase rule-skill-rewrite-to-call-the-preflight-s-m into feat/model-tier-runtime-binding (be9f908) <!-- sw-deliver:rule-skill-rewrite-to-call-the-preflight-s-m -->
 * merge phase optional-pre-tool-hook-feasibility-gated-m into feat/model-tier-runtime-binding (94778b5) <!-- sw-deliver:optional-pre-tool-hook-feasibility-gated-m -->
 * merge phase fixtures-docs-dist-propagation-m into feat/model-tier-runtime-binding (134e59d) <!-- sw-deliver:fixtures-docs-dist-propagation-m -->
+* merge phase single-sourced-test-plan-set-classification-s-m into feat/pr-test-plan-ci-enforcement (ffdc2b8) <!-- sw-deliver:single-sourced-test-plan-set-classification-s-m -->
+* merge phase ci-workflow-jobs-pr-template-m into feat/pr-test-plan-ci-enforcement (0068d4d) <!-- sw-deliver:ci-workflow-jobs-pr-template-m -->
+* merge phase stabilize-gate-integration-s-m into feat/pr-test-plan-ci-enforcement (e47d29f) <!-- sw-deliver:stabilize-gate-integration-s-m -->
+* merge phase docs-dist-fixtures-s-m into feat/pr-test-plan-ci-enforcement (a16b106) <!-- sw-deliver:docs-dist-fixtures-s-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

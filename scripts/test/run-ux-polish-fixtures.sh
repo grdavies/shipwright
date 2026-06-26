@@ -253,16 +253,23 @@ fi
 # --- verify.test registration ---
 WF="$ROOT/.cursor/workflow.config.json"
 EXAMPLE="$ROOT/.sw/workflow.config.example.json"
-if grep -q 'run-ux-polish-fixtures.sh' "$WF" 2>/dev/null; then
+MANIFEST="$ROOT/core/sw-reference/pr-test-plan.manifest.json"
+if grep -q 'run-pr-test-plan-manifest.sh' "$WF" 2>/dev/null && \
+   [[ -f "$MANIFEST" ]] && grep -q 'run-ux-polish-fixtures' "$MANIFEST"; then
+  ok "verify.test registers ux-polish via pr-test-plan manifest in workflow.config.json"
+elif grep -q 'run-ux-polish-fixtures.sh' "$WF" 2>/dev/null; then
   ok "verify.test registers ux-polish runner in workflow.config.json"
 else
-  bad "verify.test missing run-ux-polish-fixtures.sh in .cursor/workflow.config.json"
+  bad "verify.test missing ux-polish (direct or via pr-test-plan manifest) in .cursor/workflow.config.json"
 fi
 
-if grep -q 'run-ux-polish-fixtures.sh' "$EXAMPLE" 2>/dev/null; then
+if grep -q 'run-pr-test-plan-manifest.sh' "$EXAMPLE" 2>/dev/null && \
+   grep -q 'run-ux-polish-fixtures' "$MANIFEST" 2>/dev/null; then
+  ok "verify.test registers ux-polish via pr-test-plan manifest in workflow.config.example.json"
+elif grep -q 'run-ux-polish-fixtures.sh' "$EXAMPLE" 2>/dev/null; then
   ok "verify.test registers ux-polish runner in workflow.config.example.json"
 else
-  bad "verify.test missing run-ux-polish-fixtures.sh in workflow.config.example.json"
+  bad "verify.test missing ux-polish (direct or via pr-test-plan manifest) in workflow.config.example.json"
 fi
 
 if [[ "$FAIL" -ne 0 ]]; then

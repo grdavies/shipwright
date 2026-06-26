@@ -46,6 +46,21 @@ esac
 ALLOW_JSON='[]'
 [ -n "$CONFIG" ] && ALLOW_JSON="$(jq -c '.checks.neutralAllowlist // []' "$CONFIG" 2>/dev/null || echo '[]')"
 
+# --- PR test-plan manifest (PRD 016 — advisory vs required CI jobs) ------------
+PR_TEST_PLAN_MANIFEST="$ROOT/core/sw-reference/pr-test-plan.manifest.json"
+if [ -n "$CONFIG" ]; then
+  MANIFEST_CFG="$(jq -r '.verify.prTestPlanManifest // empty' "$CONFIG" 2>/dev/null || true)"
+  [ -n "$MANIFEST_CFG" ] && [ -f "$ROOT/$MANIFEST_CFG" ] && PR_TEST_PLAN_MANIFEST="$ROOT/$MANIFEST_CFG"
+fi
+PR_TEST_PLAN='null'
+ADVISORY_JOBS='[]'
+REQUIRED_JOBS='[]'
+if [ -f "$PR_TEST_PLAN_MANIFEST" ]; then
+  PR_TEST_PLAN="$(jq -c '.' "$PR_TEST_PLAN_MANIFEST" 2>/dev/null || echo 'null')"
+  ADVISORY_JOBS="$(jq -c '[.fixtures[]?|select(.classification=="advisory")|.ciJobName]' "$PR_TEST_PLAN_MANIFEST" 2>/dev/null || echo '[]')"
+  REQUIRED_JOBS="$(jq -c '[.fixtures[]?|select(.classification=="required")|.ciJobName]' "$PR_TEST_PLAN_MANIFEST" 2>/dev/null || echo '[]')"
+fi
+
 # --- resolve PR + head --------------------------------------------------------
 PR="${1:-}"
 [ -z "$PR" ] && PR="$(gh pr view --json number --jq .number 2>/dev/null || true)"
@@ -86,6 +101,15 @@ FAILING="$(jq -c '[.[]|select(.class=="fail")|.name]' <<<"$CLASSIFIED")"
 PENDING="$(jq -c '[.[]|select(.class=="pending")|.name]' <<<"$CLASSIFIED")"
 BLOCKING="$(jq -c '[.[]|select(.class=="block")|.name]' <<<"$CLASSIFIED")"
 CHECK_COUNT="$(jq 'length' <<<"$CLASSIFIED")"
+
+# Split manifest-classified PR test-plan job failures (advisory ≠ merge-blocking).
+SPLIT="$(jq -c --argjson adv "$ADVISORY_JOBS" --argjson fail "$FAILING" '
+  ($fail|map(select(. as $n | ($adv|index($n)|not)))) as $req |
+  ($fail|map(select(. as $n | ($adv|index($n))))) as $advFail |
+  {requiredFailing: $req, advisoryFailing: $advFail}
+' <<<"{}")"
+REQUIRED_FAILING="$(jq -c '.requiredFailing' <<<"$SPLIT")"
+ADVISORY_FAILING="$(jq -c '.advisoryFailing' <<<"$SPLIT")"
 
 # --- unresolved review threads ------------------------------------------------
 UNRESOLVED=0
@@ -159,7 +183,7 @@ fi
 
 # --- verdict ------------------------------------------------------------------
 verdict() {
-  [ "$(jq 'length' <<<"$FAILING")" -gt 0 ]  && { echo red; return; }
+  [ "$(jq 'length' <<<"$REQUIRED_FAILING")" -gt 0 ] && { echo red; return; }
   [ "$(jq 'length' <<<"$BLOCKING")" -gt 0 ] && { echo blocked; return; }
   [ "$(jq 'length' <<<"$PENDING")" -gt 0 ]  && { echo yellow; return; }
   [ "$CR_LANDED" != "true" ]                && { echo yellow; return; }
@@ -172,15 +196,19 @@ VERDICT="$(verdict)"
 REASON="$VERDICT"
 case "$VERDICT" in
   yellow)  [ "$CR_LANDED" != "true" ] && REASON="review not yet landed for head ${HEAD_SHA:0:8} (state=$CR_STATE provider=$REVIEW_PROVIDER)" || REASON="checks pending: $(jq -r 'join(",")' <<<"$PENDING")" ;;
-  red)     REASON="failing checks: $(jq -r 'join(",")' <<<"$FAILING")" ;;
+  red)     REASON="failing checks: $(jq -r 'join(",")' <<<"$REQUIRED_FAILING")" ;;
   blocked) [ "$ACTIONABLE" -gt 0 ] && REASON="$ACTIONABLE unresolved actionable review thread(s)" || REASON="blocking/neutral or empty check set" ;;
   green)
+    if [ "$(jq 'length' <<<"$ADVISORY_FAILING")" -gt 0 ]; then
+      REASON="required checks pass; advisory failing (non-blocking): $(jq -r 'join(",")' <<<"$ADVISORY_FAILING")"
+    else
     case "$CR_STATE" in
       off)            REASON="all checks pass; review gating off; 0 actionable threads" ;;
       unconfigured) REASON="all checks pass; review off by default — never configured; 0 actionable threads" ;;
       skipped)      REASON="all checks pass; review skipped head ${HEAD_SHA:0:8}; 0 actionable threads" ;;
       *)            REASON="all checks pass; review landed for head ${HEAD_SHA:0:8}; 0 actionable threads" ;;
     esac
+    fi
     ;;
 esac
 
@@ -201,6 +229,11 @@ jq -n \
   --argjson unresolved "${UNRESOLVED:-0}" \
   --argjson actionable "${ACTIONABLE:-0}" \
   --argjson failing "$FAILING" \
+  --argjson requiredFailing "$REQUIRED_FAILING" \
+  --argjson advisoryFailing "$ADVISORY_FAILING" \
+  --argjson prTestPlanRequired "$REQUIRED_JOBS" \
+  --argjson prTestPlanAdvisory "$ADVISORY_JOBS" \
+  --argjson prTestPlanManifest "$PR_TEST_PLAN" \
   --argjson pending "$PENDING" \
   --argjson blocking "$BLOCKING" \
   --argjson checkCount "${CHECK_COUNT:-0}" \
@@ -224,6 +257,13 @@ jq -n \
     unresolvedThreads: $unresolved,
     unresolvedActionable: $actionable,
     failingChecks: $failing,
+    requiredFailingChecks: $requiredFailing,
+    advisoryFailingChecks: $advisoryFailing,
+    prTestPlan: (if $prTestPlanManifest==null then null else {
+      manifest: $prTestPlanManifest,
+      requiredJobs: $prTestPlanRequired,
+      advisoryJobs: $prTestPlanAdvisory
+    } end),
     pendingChecks: $pending,
     blockingNeutral: $blocking,
     checkCount: $checkCount

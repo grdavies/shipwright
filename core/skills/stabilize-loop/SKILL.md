@@ -17,7 +17,8 @@ mass-resolve); it just repeats it under hard stops.
 
 Stop with success when the `checks-gate` verdict (from `scripts/check-gate.sh`) is **green**:
 
-- every check passes under the configured all-checks policy, and
+- every **required** check passes under the configured all-checks policy (PR test-plan **advisory**
+  job failures appear in `advisoryFailingChecks` but do not block — see `prTestPlan` in gate JSON), and
 - zero checks pending, and
 - **CodeRabbit is settled for the current head** — `coderabbitLanded == true` (`coderabbitState` is
   `landed`, `skipped`, or `absent`). Because every pass pushes a new fix commit, this means a **fresh**
