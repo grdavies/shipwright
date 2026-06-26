@@ -14,6 +14,7 @@
 * merge phase pilot-validation-surface-docs-emitter-m into feat/autonomous-orchestration-conductor (af575a7) <!-- sw-deliver:pilot-validation-surface-docs-emitter-m -->
 * merge phase adopter-facing-readme-user-guide-refresh-s-m into feat/autonomous-orchestration-conductor (e239604) <!-- sw-deliver:adopter-facing-readme-user-guide-refresh-s-m -->
 * merge phase sw-doc-post-freeze-command-surface-confirm-prominence-s-m into feat/orchestrator-ux-and-doc-polish (9b1c6a1) <!-- sw-deliver:sw-doc-post-freeze-command-surface-confirm-prominence-s-m -->
+* merge phase sw-cleanup-agent-driven-confirm-s into feat/orchestrator-ux-and-doc-polish (8e2e8af) <!-- sw-deliver:sw-cleanup-agent-driven-confirm-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
