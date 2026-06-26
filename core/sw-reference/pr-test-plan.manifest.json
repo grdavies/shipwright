@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "description": "Standard FEAT PR test-plan fixture set — single source for verify.test and CI (PRD 016 R1–R3).",
+  "fixtures": [
+    {
+      "id": "doc-fixtures",
+      "script": "scripts/test/run-doc-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-doc-fixtures"
+    },
+    {
+      "id": "cleanup-fixtures",
+      "script": "scripts/test/run-cleanup-fixtures.sh",
+      "args": [],
+      "classification": "advisory",
+      "ciJobName": "feat-test-plan-cleanup-fixtures"
+    },
+    {
+      "id": "ux-polish-fixtures",
+      "script": "scripts/test/run-ux-polish-fixtures.sh",
+      "args": [],
+      "classification": "advisory",
+      "ciJobName": "feat-test-plan-ux-polish-fixtures"
+    },
+    {
+      "id": "docs-link-check",
+      "script": "scripts/docs-link-check.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-docs-link-check"
+    }
+  ]
+}
