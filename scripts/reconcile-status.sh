@@ -178,12 +178,33 @@ index_path.write_text(
     json.dumps({"updatedAt": utc_now(), "runs": deliver_runs}, indent=2) + "\n",
     encoding="utf-8",
 )
+from wave_living_docs import live_phase_status_rows
+
+live_phase_status = []
+for run in deliver_runs:
+    state_path = root / run.get("statePath", "")
+    if not state_path.is_file():
+        continue
+    try:
+        run_state = json.loads(state_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        continue
+    if run_state.get("verdict") != "running":
+        continue
+    live_phase_status.append(
+        {
+            "slug": run.get("slug"),
+            "target": run.get("target"),
+            "phases": live_phase_status_rows(run_state),
+        }
+    )
 print(
     json.dumps(
         {
             "prds": result,
             "gapBacklog": str(prds_dir / "GAP-BACKLOG.md"),
             "deliverRuns": deliver_runs,
+            "livePhaseStatus": live_phase_status,
         },
         indent=2,
     )

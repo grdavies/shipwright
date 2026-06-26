@@ -159,6 +159,46 @@ def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool, repo_root: P
     return sha_proc.stdout.strip()
 
 
+def live_phase_status_rows(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """Per-phase live view for mid-run /sw-status (PRD 013 R15)."""
+    phases = state.get("phases") or {}
+    remediation = state.get("remediationAttempts") or {}
+    rows: list[dict[str, Any]] = []
+    for pid in sorted(phases.keys(), key=lambda x: int(x) if str(x).isdigit() else str(x)):
+        meta = phases[pid] if isinstance(phases[pid], dict) else {}
+        slug = str(meta.get("slug") or "")
+        rows.append(
+            {
+                "phaseId": pid,
+                "slug": slug,
+                "status": meta.get("status", "pending"),
+                "attempt": remediation.get(slug, remediation.get(str(slug), 0)),
+                "blocker": meta.get("cause"),
+            }
+        )
+    return rows
+
+
+def cmd_phase_status_live(root: Path, args: list[str]) -> None:
+    target = parse_kv(args, "--target")
+    if target:
+        from wave_state import load_deliver_state
+
+        state = load_deliver_state(root, target=target)
+    else:
+        state = load_state(root)
+    rows = live_phase_status_rows(state)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "phase-status-live",
+            "target": (state.get("target") or {}).get("branch"),
+            "verdictRun": state.get("verdict"),
+            "livePhaseStatus": rows,
+        }
+    )
+
+
 def cmd_reconcile(root: Path, args: list[str]) -> None:
     from wave_living_doc_lock import living_doc_write_lock
 
@@ -301,6 +341,8 @@ def main() -> None:
         cmd_reconcile(root, rest)
     elif cmd == "append-terminal":
         cmd_append_terminal(root, rest)
+    elif cmd == "phase-status-live":
+        cmd_phase_status_live(root, rest)
     else:
         fail(f"unknown command: {cmd}")
 
