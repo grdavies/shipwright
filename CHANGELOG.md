@@ -74,6 +74,7 @@
 * merge phase always-committed-redacted-snapshot-offline-safe-freeze-ci-m into feat/memory-source-of-truth (89f52ca) <!-- sw-deliver:always-committed-redacted-snapshot-offline-safe-freeze-ci-m -->
 * merge phase pointer-inversion-supersede-reconcile-m into feat/memory-source-of-truth (ed509ad) <!-- sw-deliver:pointer-inversion-supersede-reconcile-m -->
 * merge phase compound-sot-branch-audit-conflict-migration-m into feat/memory-source-of-truth (c16c11e) <!-- sw-deliver:compound-sot-branch-audit-conflict-migration-m -->
+* merge phase docs-dist-fixtures-m into feat/memory-source-of-truth (4db9bef) <!-- sw-deliver:docs-dist-fixtures-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
