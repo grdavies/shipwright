@@ -18,6 +18,9 @@
   "doc": {
     "afterTasks": "confirm"
   },
+  "compound": {
+    "autonomy": "supervised"
+  },
   "verify": {
     "lint": "echo 'no lint configured'",
     "typecheck": "echo 'no typecheck configured'",

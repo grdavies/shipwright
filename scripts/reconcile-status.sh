@@ -8,7 +8,7 @@ usage() {
   cat <<'EOF'
 Usage:
   reconcile-status.sh derive [--json]     Compute status per PRD from git facts
-  reconcile-status.sh reconcile [--dry-run] [--require-merge]  Update INDEX Status (complete only when merged if --require-merge)
+  reconcile-status.sh reconcile [--dry-run] [--require-merge]  Update INDEX Status (complete only when merged if --require-merge; R11 — required for pre-merge /sw-retrospective even when compound.autonomy is auto)
   reconcile-status.sh set-index-status --prd <NNN> --status <not-started|in-progress|complete>  Set one INDEX row (R47)
   reconcile-status.sh append-log <prd> <phase> <notes>  Append COMPLETION-LOG entry (legacy)
   reconcile-status.sh append-log-idempotent --prd <NNN> --phase <name> [--pr N] [--sha SHA] [--notes text]  Idempotent append (R48)

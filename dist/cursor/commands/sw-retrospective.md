@@ -49,6 +49,21 @@ Internal: compound write (`skills/compound/SKILL.md`). Atomic: `/sw-retro`, `/sw
 - `--skip-memory-sync` — skip transcript distillation.
 - `--dry-run` — print the chain; no mutations.
 
+## Autonomy (`compound.autonomy`)
+
+Read mode: `bash scripts/wave.sh retrospective autonomy` (config key `compound.autonomy`, default `supervised`).
+
+| Mode | Behavior |
+| --- | --- |
+| **`supervised`** (default) | Preserve today's gates: retro/compound approval prompts; pre-merge waits for human merge acknowledgment before INDEX → `complete`. |
+| **`auto`** | Run the pre-merge chain hands-off when the terminal PR is green; commit learnings/status on the feature branch; treat merge as external; post-merge reconcile on merge detection without re-prompting. |
+
+**Safety gates (all modes, R7/R8):** memory writes remain fail-closed via `memory-preflight` + redaction; rule-class
+promotion stays human-gated (`/sw-memory-audit` allowlist). Autonomy never bypasses these.
+
+**Completion semantics (R6/R11):** pre-merge always records `completed-pending-merge`; INDEX → `complete` only on
+real merge detection (`reconcile --require-merge` pre-merge; merge detection post-merge) — even under `auto`.
+
 ## State (per-worktree)
 
 Via `scripts/shipwright-state.sh`: record `lastCommand: sw-retrospective` and the completed sub-step when
@@ -87,7 +102,8 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
 
 ## Stop conditions
 
-- User halts at retro or compound approval gates (unless `compound.autonomy: auto` — wired in a later phase).
+- User halts at retro or compound approval gates when `compound.autonomy: supervised` (default).
+- Under `compound.autonomy: auto`, skip approval / "did you merge?" prompts only — not memory or rule-class gates.
 - Memory provider unreachable (fail-closed per R7).
 - `reconcile-status.sh` errors on frozen PRD guard.
 

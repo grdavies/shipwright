@@ -73,8 +73,8 @@ The conductor never ends its turn while `nextAction` is runnable and no legitima
 | --- | --- |
 | `dispatch-ship` | Full `/sw-ship --phase-mode` in the phase worktree (`SW_PHASE_MODE=1`, `SW_PHASE_SLUG`, `SW_RUN_DIR`) |
 | `remediate` | `/sw-stabilize` (or scoped fix) for the blocked phase within remediation budget |
-| `retrospective` | `/sw-retrospective --pre-merge` on the orchestrator worktree after all phases merge (R9) |
-| `terminal-ship` | Terminal PR CI watch + `/sw-ready` surface; may arm self-wake (below) |
+| `retrospective` | `/sw-retrospective --pre-merge` on the orchestrator worktree after all phases merge (R9; single-sourced chain) |
+| `terminal-ship` | After `retrospective` when pre-merge done: terminal PR prepare/gate, CI watch + `/sw-ready`; may arm self-wake (below) |
 
 **Orchestrator worktree:** run `deliver-loop` from `.sw-worktrees/<slug>-orchestrator` (or repo root with
 state synced). Never hand off with "run deliver-loop next" as the only instruction — run it in-turn.

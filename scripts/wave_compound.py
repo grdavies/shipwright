@@ -223,6 +223,41 @@ def changed_files(root: Path, base: str = "HEAD") -> list[str]:
     return sorted(set(files))
 
 
+def load_workflow_config(root: Path) -> dict[str, Any]:
+    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
+        path = root / rel
+        if path.is_file():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                return {}
+    return {}
+
+
+def compound_autonomy_mode(root: Path) -> str:
+    cfg = load_workflow_config(root)
+    compound = cfg.get("compound") or {}
+    mode = compound.get("autonomy", "supervised")
+    return mode if mode in ("supervised", "auto") else "supervised"
+
+
+def cmd_retrospective_autonomy(root: Path, _args: list[str]) -> None:
+    mode = compound_autonomy_mode(root)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "retrospective-autonomy",
+            "mode": mode,
+            "promptGates": mode == "supervised",
+            "safetyGates": {
+                "memoryFailClosed": True,
+                "ruleClassHumanGated": True,
+            },
+            "note": "autonomy gates approval prompts only (R10); R7/R8 safety gates always apply",
+        }
+    )
+
+
 def all_phases_green(state: dict[str, Any]) -> bool:
     phases = state.get("phases") or {}
     if not phases:
@@ -296,6 +331,7 @@ def cmd_compound_premerge_env(root: Path, args: list[str], *, domain: str = "ret
             "guardrails": {
                 "ruleClassPromotion": "human-gated-only",
                 "memoryProviderUnreachable": "fail-closed",
+                "compoundAutonomy": compound_autonomy_mode(root),
             },
         }
     )
@@ -448,9 +484,11 @@ def _compound_ship_subcommands(root: Path, sub: str, rest: list[str], *, domain:
         cmd_compound_check_file_outputs(root, rest)
     elif sub in ("detect-phase", "detect"):
         cmd_retrospective_detect_phase(root, rest)
+    elif sub in ("autonomy", "autonomy-mode"):
+        cmd_retrospective_autonomy(root, rest)
     else:
         fail(
-            "subcommand: premerge-env|record-premerge|check-file-outputs|detect-phase"
+            "subcommand: premerge-env|record-premerge|check-file-outputs|detect-phase|autonomy"
         )
 
 

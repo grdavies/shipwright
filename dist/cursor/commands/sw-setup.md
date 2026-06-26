@@ -82,6 +82,20 @@ acknowledgement halts). Include run-level budgets:
 
 `maxRunMinutes` / `maxIterations` convert a runaway unattended run into a clean consolidated halt (R42).
 
+### 3d. Retrospective autonomy (`compound.autonomy`)
+
+Seed `compound.autonomy` (default **`supervised`** preserves approval gates; **`auto`** runs the pre-merge
+`/sw-retrospective` chain hands-off when the terminal PR is green):
+
+```json
+"compound": {
+  "autonomy": "supervised"
+}
+```
+
+Autonomy gates approval / "did you merge?" prompts only — never fail-closed memory writes (R7) or rule-class
+human gates (R8). Absent key resolves to `supervised`.
+
 ### 4. Guardrail knobs
 
 Defaults (greenfield-friendly):
