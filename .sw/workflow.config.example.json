@@ -26,7 +26,8 @@
   "verify": {
     "lint": "echo 'configure verify.lint for your repo'",
     "typecheck": "echo 'configure verify.typecheck for your repo'",
-    "test": "bash scripts/docs-link-check.sh && bash scripts/test/run-ux-polish-fixtures.sh && echo 'configure verify.test for your repo'"
+    "test": "bash scripts/test/run-pr-test-plan-manifest.sh && echo 'configure verify.test for your repo'",
+    "prTestPlanManifest": "core/sw-reference/pr-test-plan.manifest.json"
   },
   "verifyE2e": {
     "enabled": false,
