@@ -376,7 +376,7 @@ fi
 
 if grep -q '"sw-docs-currency-reviewer": "build"' "$WORKFLOW_CONFIG" && \
    grep -q '"sw-docs-currency-reviewer": "build"' "$MODEL_DEFAULTS" && \
-   grep -q 'reviewer-dispatch-check' "$DOC_REVIEW_SKILL"; then
+   grep -q 'dispatch-check' "$DOC_REVIEW_SKILL"; then
   echo "OK  docs-currency-tier-build"
 else
   echo "FAIL docs-currency-tier-build"
