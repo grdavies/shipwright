@@ -9,7 +9,7 @@ SW_DOC="$(content_path commands/sw-doc.md)"
 FAIL=0
 
 if grep -q 'spec-seed' "$SW_DOC" && grep -qi 'print-only' "$SW_DOC" && \
-   grep -q 'deliver-loop' "$SW_DOC"; then
+   grep -q '/sw-deliver run' "$SW_DOC"; then
   echo "OK  doc-afterTasks-seed-stop: stop prints seed + deliver commands"
 else
   echo "FAIL doc-afterTasks-seed-stop: stop missing seed + deliver print guidance"

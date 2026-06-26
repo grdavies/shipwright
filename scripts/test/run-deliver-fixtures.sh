@@ -440,6 +440,8 @@ LCY="$ROOT/scripts/wave_lifecycle.py"
   mkdir -p .cursor
   echo '{"mode":"phase","target":{"branch":"feat/demo","slug":"demo"},"items":[{"id":"1","slug":"alpha","title":"A","branch":"feat/demo-phase-alpha"}]}' \
     >.cursor/sw-deliver-plan.json
+  git add .cursor/sw-deliver-plan.json
+  git commit -q -m plan
   if OUT=$(python3 "$LCY" "$LIFE_FIX" orchestrator provision --target feat/demo 2>/dev/null) && \
      echo "$OUT" | python3 -c "
 import json,sys
@@ -1036,7 +1038,7 @@ fi
 while IFS= read -r line || [[ -n "$line" ]]; do
   [[ -z "$line" || "$line" =~ ^# ]] && continue
   scenario="${line#*:}"
-  if rg -q "${scenario}" "$ROOT/scripts/test/run-deliver-fixtures.sh"; then
+  if grep -qE "${scenario}" "$ROOT/scripts/test/run-deliver-fixtures.sh"; then
     echo "OK  deliver-phase-manifest:$scenario"
   else
     echo "FAIL deliver-phase-manifest:$scenario"

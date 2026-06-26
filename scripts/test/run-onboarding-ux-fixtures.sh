@@ -30,7 +30,7 @@ print("OK  config-schema: doc.afterTasks + review.provider default none")
 PY
 
 # --- no literal disabled in gate emitter (root script) ---
-if rg -n 'CR_STATE="disabled"|state=disabled|case.*disabled\)' \
+if grep -nE 'CR_STATE="disabled"|state=disabled|case.*disabled\)' \
   "$ROOT/scripts/check-gate.sh" "$ROOT/scripts/test/run-gate-fixtures.sh" 2>/dev/null; then
   echo "FAIL gate files still contain disabled literal"
   FAIL=1

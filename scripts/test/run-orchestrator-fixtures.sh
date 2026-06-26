@@ -25,12 +25,19 @@ set +e
 python3 "$LIFE" "$FIX" orchestrator provision --target feat/demo 2>/dev/null
 EC_PRIMARY=$?
 set -e
-if [[ "$EC_PRIMARY" -eq 20 ]]; then
-  ok "orchestrator-owns-branch: refuses when primary on target branch"
+if [[ "$EC_PRIMARY" -eq 0 ]] && [[ "$(git branch --show-current)" == "main" ]]; then
+  ok "orchestrator-owns-branch: auto-moves primary off target before provision"
 else
-  bad "orchestrator-owns-branch: expected exit 20 when primary on target got $EC_PRIMARY"
+  bad "orchestrator-owns-branch: expected exit 0 with primary on main got ec=$EC_PRIMARY branch=$(git branch --show-current)"
 fi
 
+WT_PATH="$FIX/.sw-worktrees/demo-orchestrator"
+if [[ -d "$WT_PATH" ]]; then
+  git worktree remove --force "$WT_PATH" 2>/dev/null || rm -rf "$WT_PATH"
+  git worktree prune
+fi
+
+git checkout -q feat/demo
 echo dirty >dirty.txt
 set +e
 python3 "$LIFE" "$FIX" orchestrator provision --target feat/demo 2>/dev/null
@@ -107,8 +114,8 @@ assert d.get('skipped') is True
 ) || FAIL=1
 rm -rf "$SEED_FIX"
 
-if rg -q 'wave\.sh spec-seed' "$ROOT/core/commands/sw-doc.md" && \
-   rg -q 'spec-seed' "$ROOT/scripts/wave_deliver_loop.py"; then
+if grep -qE 'wave\.sh spec-seed' "$ROOT/core/commands/sw-doc.md" && \
+   grep -qE 'spec-seed' "$ROOT/scripts/wave_deliver_loop.py"; then
   ok "spec-seed-single-owner-idempotent: sw-doc + deliver-loop share helper"
 else
   bad "spec-seed-single-owner-idempotent: shared helper wiring"

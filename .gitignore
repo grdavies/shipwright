@@ -28,3 +28,5 @@ docs/*
 !docs/prds/**
 !docs/guides/
 !docs/guides/**
+!docs/decisions/
+!docs/decisions/INDEX.md

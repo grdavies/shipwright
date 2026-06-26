@@ -9,8 +9,8 @@ SW_DOC="$(content_path commands/sw-doc.md)"
 FAIL=0
 
 if grep -q '\*\*`stop`\*\*' "$SW_DOC" && grep -qi 'print-only' "$SW_DOC" && \
-   grep -q 'deliver-loop --task-list <frozen-task-list-path>' "$SW_DOC"; then
-  echo "OK  doc-afterTasks-stop-deliver: stop prints deliver-loop"
+   grep -q '/sw-deliver run <frozen-task-list-path>' "$SW_DOC"; then
+  echo "OK  doc-afterTasks-stop-deliver: stop prints /sw-deliver run"
 else
   echo "FAIL doc-afterTasks-stop-deliver: stop missing /sw-deliver run next command"
   FAIL=1

@@ -30,8 +30,8 @@ else
 fi
 
 # --- branch-name-guard-floor: worktree.sh has no pf/ default; calls the guard ---
-if ! rg -nq ':-pf/' "$ROOT/scripts/worktree.sh" \
-   && rg -nq 'branch-name-guard\.sh' "$ROOT/scripts/worktree.sh"; then
+if ! grep -qE ':-pf/' "$ROOT/scripts/worktree.sh" \
+   && grep -qE 'branch-name-guard\.sh' "$ROOT/scripts/worktree.sh"; then
   ok "branch-name-guard-floor: worktree.sh floor fixed + guarded"
 else
   bad "branch-name-guard-floor: worktree.sh floor fixed + guarded"
@@ -53,15 +53,15 @@ spec=importlib.util.spec_from_file_location('wd','$ROOT/scripts/wave_deliver.py'
 m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 print(sorted(m.VALID_TYPES)==['chore','docs','feat','fix','perf','refactor','revert','test'])
 ")"
-if [[ "$MF_BRANCH" == "True" ]] && ! rg -nq 'f"pf/\{i\}"' "$ROOT/scripts/wave_deliver.py"; then
+if [[ "$MF_BRANCH" == "True" ]] && ! grep -qE 'f"pf/\{i\}"' "$ROOT/scripts/wave_deliver.py"; then
   ok "branch-name-guard-multifeature: wave_deliver derivation conforming"
 else
   bad "branch-name-guard-multifeature: wave_deliver derivation conforming"
 fi
 
 # --- pf-matcher-migration: no pf/ matchers in reconcile/impl fixtures ---
-if ! rg -nq '\^pf/' "$ROOT/scripts/reconcile-status.sh" \
-   && ! rg -nq 'pf/' "$ROOT/scripts/test/run-impl-fixtures.sh"; then
+if ! grep -qE '\^pf/' "$ROOT/scripts/reconcile-status.sh" \
+   && ! grep -qE 'pf/' "$ROOT/scripts/test/run-impl-fixtures.sh"; then
   ok "pf-matcher-migration: reconcile + impl fixtures migrated off pf/"
 else
   bad "pf-matcher-migration: reconcile + impl fixtures migrated off pf/"

@@ -95,7 +95,7 @@ score_file() {
     return 1
   fi
   if [ -n "$q" ]; then
-    if rg -q -i --fixed-strings "$q" "$file" 2>/dev/null; then
+    if grep -qiF "$q" "$file" 2>/dev/null; then
       score=$((score + 10))
     else
       return 1

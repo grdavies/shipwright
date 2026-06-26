@@ -42,6 +42,7 @@
       "brainstorm": "deep",
       "checks-gate": "cheap",
       "compound": "mid",
+      "conductor": "inherit",
       "debug": "build",
       "deliver": "build",
       "doc-review": "inherit",

@@ -87,7 +87,7 @@ FIXTURES=(
 for fx in "${FIXTURES[@]}"; do
   case "$fx" in
     emitter-freshness-007)
-      if echo "$ALL_OUT" | rg -q 'freshness dist matches generate'; then
+      if echo "$ALL_OUT" | grep -qE 'freshness dist matches generate'; then
         echo "OK  emitter-freshness-007"
       else
         echo "FAIL emitter-freshness-007"
@@ -98,7 +98,7 @@ for fx in "${FIXTURES[@]}"; do
       continue
       ;;
     *)
-      if echo "$ALL_OUT" | rg -q "OK  $fx"; then
+      if echo "$ALL_OUT" | grep -qE "OK  $fx"; then
         echo "OK  prd-007-fixture-registry:$fx"
       else
         echo "FAIL prd-007-fixture-registry:$fx"
@@ -109,7 +109,7 @@ for fx in "${FIXTURES[@]}"; do
 done
 
 # Documentation presence (R37) — any 007-docs-* OK line
-if echo "$ALL_OUT" | rg -q 'OK  007-docs-'; then
+if echo "$ALL_OUT" | grep -qE 'OK  007-docs-'; then
   echo "OK  007-docs-presence"
 else
   echo "FAIL 007-docs-presence"

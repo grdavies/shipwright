@@ -9,10 +9,10 @@ usage() {
 
 check_filter_branch() {
   local joined="$*"
-  if ! echo "$joined" | rg -q 'filter-branch'; then
+  if ! echo "$joined" | grep -qE 'filter-branch'; then
     return 0
   fi
-  if echo "$joined" | rg -q '\.\.'; then
+  if echo "$joined" | grep -qE '\.\.'; then
     return 0
   fi
   echo "redaction-guard: refuse bare-branch filter-branch — use range-scoped redaction (base..branch)" >&2

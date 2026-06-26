@@ -15,7 +15,7 @@ check_file() {
     FAIL=1
     return
   fi
-  if rg -q "$pattern" "$path"; then
+  if grep -qE "$pattern" "$path"; then
     echo "OK  $label"
   else
     echo "FAIL $label: pattern not found in $path"
@@ -40,7 +40,7 @@ done
 
 LEGACY=0
 for f in "${DOCS[@]}"; do
-  if rg -q '/pf-|pf-' "$f" 2>/dev/null; then
+  if grep -qE '/pf-|pf-' "$f" 2>/dev/null; then
     echo "FAIL legacy pf- ref in $f"
     LEGACY=1
     FAIL=1

@@ -8,7 +8,7 @@ source "$ROOT/scripts/test/fixture-lib.sh"
 SW_REVIEW="$(content_path commands/sw-review.md)"
 FAIL=0
 
-if rg -n 'CodeRabbit default' "$SW_REVIEW" >/dev/null 2>&1; then
+if grep -nE 'CodeRabbit default' "$SW_REVIEW" >/dev/null 2>&1; then
   echo "FAIL sw-review-opt-in: must not describe CodeRabbit as default"
   FAIL=1
 else

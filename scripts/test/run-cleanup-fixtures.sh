@@ -107,15 +107,15 @@ fi
 rm -rf "$ORCH_FIX"
 cd "$FIX"
 
-if ! rg -q 'rm -rf' "$ROOT/scripts/cleanup_lib.py" && \
-   ! rg -q '^\s*rm\s' "$ROOT/scripts/cleanup.sh"; then
+if ! grep -q 'rm -rf' "$ROOT/scripts/cleanup_lib.py" && \
+   ! grep -qE '^\s*rm\s' "$ROOT/scripts/cleanup.sh"; then
   ok "cleanup-protects-inflight: no rm -rf invocation in cleanup scripts"
 else
   bad "cleanup-protects-inflight: rm -rf invocation present"
 fi
 
-if rg -q 'worktree", "remove"' "$ROOT/scripts/cleanup_lib.py" && \
-   rg -q 'worktree remove' "$ROOT/core/commands/sw-cleanup.md"; then
+if grep -q '"worktree", "remove"' "$ROOT/scripts/cleanup_lib.py" && \
+   grep -q 'worktree remove' "$ROOT/core/commands/sw-cleanup.md"; then
   ok "cleanup-protects-inflight: worktree remove documented"
 else
   bad "cleanup-protects-inflight: worktree remove"
@@ -162,8 +162,8 @@ cd "$FIX"
 
 # --- cleanup-registered ---
 CMD="$ROOT/core/commands/sw-cleanup.md"
-if [[ -f "$CMD" ]] && rg -q '^description:.*dry-run' "$CMD" && \
-   rg -q 'Does not' "$CMD" && rg -q 'sw-cleanup' "$CMD"; then
+if [[ -f "$CMD" ]] && grep -qE '^description:.*dry-run' "$CMD" && \
+   grep -q 'Does not' "$CMD" && grep -q 'sw-cleanup' "$CMD"; then
   ok "cleanup-registered: sw-cleanup command + description contract"
 else
   bad "cleanup-registered"

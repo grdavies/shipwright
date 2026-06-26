@@ -25,7 +25,7 @@ set +e
 OUT=$(python3 "$STATE_PY" "$STATE_FIX" state get 2>&1)
 EC=$?
 set -e
-if [[ "$EC" -eq 20 ]] && echo "$OUT" | rg -q 'corrupt|state:corrupt'; then
+if [[ "$EC" -eq 20 ]] && echo "$OUT" | grep -qE 'corrupt|state:corrupt'; then
   ok "state-write-atomic-crash: corrupt state halts (exit 20)"
 else
   bad "state-write-atomic-crash: expected corrupt halt ec=20 got ec=$EC"

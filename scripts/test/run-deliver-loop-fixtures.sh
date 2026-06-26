@@ -82,11 +82,11 @@ else
 fi
 
 # --- deliver-loop-no-manual-handoff ---
-if ! rg -q 'Next steps' "$ROOT/core/commands/sw-deliver.md" && \
-   ! rg -q 'cd <worktree>' "$ROOT/core/commands/sw-deliver.md" && \
-   rg -q 'deliver-loop' "$ROOT/core/commands/sw-deliver.md" && \
-   rg -q 'deliver-loop' "$ROOT/core/skills/deliver/SKILL.md" && \
-   rg -q 'deliver-loop' "$ROOT/core/commands/sw-doc.md"; then
+if ! grep -qE 'Next steps' "$ROOT/core/commands/sw-deliver.md" && \
+   ! grep -qE 'cd <worktree>' "$ROOT/core/commands/sw-deliver.md" && \
+   grep -qE 'deliver-loop' "$ROOT/core/commands/sw-deliver.md" && \
+   grep -qE 'deliver-loop' "$ROOT/core/skills/deliver/SKILL.md" && \
+   grep -qE 'deliver-loop' "$ROOT/core/commands/sw-doc.md"; then
   ok "deliver-loop-no-manual-handoff: docs wire deliver-loop not prose handoff"
 else
   bad "deliver-loop-no-manual-handoff"
@@ -254,7 +254,7 @@ cat >.cursor/sw-deliver-state.json <<'JSON'
   "driverHeartbeatAt": "$NOW_TS"
 }
 JSON
-if OUT=$(python3 "$LOOP_PY" "$FIX" deliver-loop --task-list docs/prds/007-x/tasks.md --max-steps 1 2>&1 || true) && echo "$OUT" | rg -q 'stale run-state'; then
+if OUT=$(python3 "$LOOP_PY" "$FIX" deliver-loop --task-list docs/prds/007-x/tasks.md --max-steps 1 2>&1 || true) && echo "$OUT" | grep -qE 'stale run-state'; then
   ok "stale-state-refuses-start"
 else
   bad "stale-state-refuses-start"
@@ -263,8 +263,8 @@ fi
 # --- PRD 009 pilot: conductor contract single source (R1/R3/R34) ---
 if [[ -f "$ROOT/core/skills/conductor/SKILL.md" ]] && \
    [[ -f "$ROOT/core/rules/sw-conductor.mdc" ]] && \
-   rg -q 'skills/conductor/SKILL.md' "$ROOT/core/commands/sw-deliver.md" && \
-   rg -q 'skills/conductor/SKILL.md' "$ROOT/core/skills/deliver/SKILL.md"; then
+   grep -qE 'skills/conductor/SKILL.md' "$ROOT/core/commands/sw-deliver.md" && \
+   grep -qE 'skills/conductor/SKILL.md' "$ROOT/core/skills/deliver/SKILL.md"; then
   ok "conductor-contract-single-source"
 else
   bad "conductor-contract-single-source"
@@ -297,9 +297,9 @@ else
 fi
 
 # --- PRD 009 surface docs (R36) ---
-if rg -q 'Legitimate.halt|legitimate.halt|legitimate halt' "$ROOT/core/commands/sw-deliver.md" && \
-   rg -q 'parallel' "$ROOT/docs/guides/workflows.md" && \
-   rg -q 'deliver.autonomy' "$ROOT/core/commands/sw-deliver.md"; then
+if grep -qE 'Legitimate.halt|legitimate.halt|legitimate halt' "$ROOT/core/commands/sw-deliver.md" && \
+   grep -qE 'parallel' "$ROOT/docs/guides/workflows.md" && \
+   grep -qE 'deliver.autonomy' "$ROOT/core/commands/sw-deliver.md"; then
   ok "deliver-surface-docs-autonomy-parallelism"
 else
   bad "deliver-surface-docs-autonomy-parallelism"
