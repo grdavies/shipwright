@@ -4,6 +4,8 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 
 | Date | PRD | Phase | Notes |
 |------|-----|-------|-------|
+| 2026-06-26 | 012 | model-tier-runtime-binding | 5 phases merged; hook deferred per DL-2 |
+| 2026-06-26 | 012 | model-tier-runtime-binding | Pre-merge compounding: model-tier runtime binding delivered in 5 phases |
 | 2026-06-26 | 011 | all | Shipped via PR #76 (squash): orchestrator UX + doc polish; four deliver phases; PR #76; SHA 392c6a4 |
 | 2026-06-26 | 011 | deliver | PRD 011 four phases on feat/orchestrator-ux-and-doc-polish (1a3de5c); pre-merge compounding; awaiting terminal merge to main |
 | 2026-06-25 | 009 | all | deliver complete — awaiting terminal merge; SHA db87926 |

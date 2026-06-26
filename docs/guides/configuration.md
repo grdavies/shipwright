@@ -55,10 +55,16 @@ Detect platform (`cursor` or `claude-code`) and seed the `models` block:
 | `models.aliases` | e.g. `fast` → `cheap` |
 | `models.roles` | `builder` and `reviewer` floors (reviewer ≥ builder) |
 | `models.routing` | Per `sw-*` command and skill tier; `inherit` for orchestrators |
+| `models.routing.agents` | Per reviewer/persona/native-panel agent id → semantic tier (`build`/`mid`/`deep`) |
 
 Scaffold writes the full block from `scripts/seed-model-config.sh` and
 `core/sw-reference/model-routing.defaults.json`. Doctor offers add/repair without overwriting user-edited tiers
-unless confirmed. See `.sw/models-tiering.md` for platform catalogs and resolver usage.
+unless confirmed. See `.sw/models-tiering.md` for platform catalogs, `models.routing.agents`, and resolver usage.
+
+**Dispatch binding (PRD 012):** before spawning reviewer/persona Tasks, resolve
+`bash scripts/resolve-model-tier.sh --agent <id>` and run
+`bash scripts/reviewer-dispatch-check.sh --agent <id> --parent-model <parent-concrete-id>`;
+stamp the resolved concrete `model:` on the Task (do not rely on `model: inherit` from the parent session).
 
 ### Deliver autonomy (`deliver.autonomy`)
 
@@ -116,6 +122,7 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `models.roles` | `builder` and `reviewer` policy floors |
 | `models.routing.commands` | Per `sw-*` command model tier (`inherit` for orchestrators) |
 | `models.routing.skills` | Per skill directory model tier |
+| `models.routing.agents` | Per reviewer/persona/native-panel agent id → semantic tier |
 | `deliver.remediation.maxAttempts` | Auto-remediation budget per blocked phase before clean halt (default **2**) |
 | `memory.provider` | `in-repo` (default) or `recallium` |
 | `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |

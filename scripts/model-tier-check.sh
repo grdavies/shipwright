@@ -92,6 +92,21 @@ if not violations and reviewer_rank < builder_rank:
         "error": f"roles.reviewer tier {reviewer_role_tier!r} below roles.builder tier {builder_tier!r}",
     })
 
+routing = models.get("routing", {}) if isinstance(models.get("routing"), dict) else {}
+agents_map = routing.get("agents", {}) if isinstance(routing.get("agents"), dict) else {}
+
+for agent_id, tier_name in sorted(agents_map.items()):
+    resolved = tier_name
+    if tier_name in aliases:
+        resolved = aliases[tier_name]
+    if resolved not in tiers:
+        violations.append({
+            "kind": "config",
+            "agent": agent_id,
+            "tier": tier_name,
+            "error": f"models.routing.agents[{agent_id!r}] references unknown tier {tier_name!r}",
+        })
+
 
 def resolve_dispatch_to_tier(dispatch_value: str):
     if dispatch_value in tiers:
@@ -152,6 +167,7 @@ out = {
     "builderTier": builder_tier,
     "reviewerRoleTier": reviewer_role_tier,
     "inheritReviewers": inherit_count,
+    "agentsMapped": len(agents_map),
     "runtimeR9": "orchestrator must dispatch reviewers only when parent model tier >= builder tier"
     if inherit_count else None,
 }

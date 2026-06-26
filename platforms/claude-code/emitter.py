@@ -193,6 +193,9 @@ if __name__ == "__main__":
                 "Stop": [
                     {"command": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py"'}
                 ],
+                "PreToolUse": [
+                    {"command": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py"'}
+                ],
             }
         }
         (hooks_dir / "hooks.json").write_text(

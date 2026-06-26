@@ -20,7 +20,8 @@ detected platform catalog plus `core/sw-reference/model-routing.defaults.json`.
   "roles": { "builder": "build", "reviewer": "build" },
   "routing": {
     "commands": { "sw-prd": "deep", "sw-doc": "inherit" },
-    "skills": { "prd": "deep" }
+    "skills": { "prd": "deep" },
+    "agents": { "sw-coherence-reviewer": "build", "correctness": "deep" }
   }
 }
 ```
@@ -59,10 +60,11 @@ bash scripts/resolve-model-tier.sh --command sw-prd
 bash scripts/resolve-model-tier.sh --skill prd
 bash scripts/resolve-model-tier.sh --command sw-doc --delegate sw-prd
 bash scripts/resolve-model-tier.sh --tier deep
+bash scripts/resolve-model-tier.sh --agent sw-coherence-reviewer
 ```
 
-Config `models.routing` overrides bundled defaults; missing keys fall back to
-`core/sw-reference/model-routing.defaults.json`.
+Config `models.routing` (including `models.routing.agents` for per-reviewer/native-panel tiers) overrides
+bundled defaults; missing keys fall back to `core/sw-reference/model-routing.defaults.json`.
 
 ## Layer 2 — Dispatch (`commands/`, `skills/`, `agents/`)
 
@@ -83,6 +85,17 @@ Do **not** put `cheap`/`build`/`mid`/`deep` or vendor aliases like `sonnet` in s
 | `scripts/model-routing-check.sh` | Defaults cover all shipped commands/skills; valid tier keys; R27 parity with communication defaults when present |
 | `scripts/resolve-model-tier.sh` | Runtime tier → concrete ID; `inherit` → `modelId: null` exit 0 |
 | `/sw-doc-review`, `sw-subagent-dispatch` | **Runtime R9:** parent model tier ≥ builder when dispatching `inherit` reviewers |
+| `scripts/reviewer-dispatch-check.sh` | Fail-closed preflight before persona/native-panel Task spawn (phase 2 floor) |
+
+### Task hook (R5 — registered, forward-compatible)
+
+A `preToolUse` hook (`core/hooks/before_task_dispatch.py`) resolves `updated_input.model`
+via `resolve-model-tier.sh --agent` and is **registered in both platform `hooks.json` files**
+(Cursor `preToolUse`, Claude Code `PreToolUse`). Platform effectiveness is unverified:
+Cursor does not currently apply `updated_input` for Task; Claude Code behavior is untested.
+The hook fails open and logs mutation attempts to stderr. Phase 2 `reviewer-dispatch-check.sh`
+remains the enforcement floor regardless of hook effectiveness. See
+`core/sw-reference/model-tier-hook-feasibility.md` for full rationale.
 
 `inherit` reviewers cannot be fully R9-verified in CI — orchestrator must not run doc-review on a sub-`build` parent.
 
@@ -92,4 +105,5 @@ Do **not** put `cheap`/`build`/`mid`/`deep` or vendor aliases like `sonnet` in s
 bash scripts/model-tier-check.sh --config .sw/workflow.config.example.json
 bash scripts/model-routing-check.sh
 bash scripts/test/fixtures/model-tier-routing.sh
+bash scripts/test/run-model-binding-fixtures.sh
 ```

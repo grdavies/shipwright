@@ -97,6 +97,20 @@ Persona activation:
 
 ## Dispatch
 
+**Binding (R2–R4):** before each persona Task spawn, resolve and preflight:
+
+```bash
+PARENT_MODEL="<concrete platform model id of the dispatching agent session>"
+AGENT="sw-coherence-reviewer"   # example persona id
+
+RESOLVED=$(bash scripts/resolve-model-tier.sh --agent "$AGENT")
+MODEL_ID=$(echo "$RESOLVED" | python3 -c "import json,sys; print(json.load(sys.stdin)['modelId'])")
+bash scripts/reviewer-dispatch-check.sh --agent "$AGENT" --parent-model "$PARENT_MODEL"
+# Task spawn MUST use model: <MODEL_ID> — not inherit
+```
+
+Repeat for every selected persona. Halt on preflight exit 20; do not spawn on unresolved `inherit`.
+
 1. Detect doc type from path (see Doc types).
 2. **Decision-record draft** (`docs/decisions/<n>-<slug>.md`): run all seven personas (`--all` equivalent); record
    `override: decision-record full panel` in the activation record.
