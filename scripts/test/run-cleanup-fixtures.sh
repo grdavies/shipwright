@@ -174,6 +174,62 @@ else
   bad "cleanup-registered: cleanup.sh executable"
 fi
 
+# --- cleanup-autonomy (PRD 013 A1 R25/R26) ---
+AUTO_FIX=$(mktemp -d)
+(
+  cd "$AUTO_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  git commit --allow-empty -q -m init
+  git branch -M main
+  git checkout -q -b feat/merged-auto
+  git commit --allow-empty -q -m feat
+  git checkout -q main
+  git merge --no-ff feat/merged-auto -q -m merge
+  mkdir -p .cursor
+  cat >.cursor/workflow.config.json <<'JSON'
+{"defaultBaseBranch":"main","cleanup":{"autonomy":"auto"}}
+JSON
+  if OUT=$(python3 "$CLEANUP_PY" "$AUTO_FIX" --autonomous 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('verdict')=='pass'
+assert d.get('action')=='cleanup-autonomous-apply'
+removed=[i['name'] for i in d['report'].get('removed',[]) if i.get('kind')=='branch']
+assert 'feat/merged-auto' in removed
+"; then
+    ok "cleanup-autonomy-auto-after-merge"
+  else
+    bad "cleanup-autonomy-auto-after-merge"
+  fi
+) || bad "cleanup-autonomy-auto-after-merge"
+
+if python3 -c "
+import sys
+sys.path.insert(0, '$ROOT/scripts')
+from pathlib import Path
+from cleanup_lib import Report, Item, can_autonomous_apply, cleanup_autonomy_mode
+root = Path('$ROOT')
+report = Report(dry_run=True, protected=[Item('branch', 'feat/x', 'indeterminate', 'squash')])
+# config default is confirm — override check by testing reason path directly
+assert can_autonomous_apply(root, report)[0] is False or cleanup_autonomy_mode(root) != 'auto'
+report2 = Report(dry_run=True, protected=[Item('branch', 'feat/x', 'indeterminate', 'squash')])
+# simulate auto: monkeypatch via temp config
+import json, tempfile, os
+td = tempfile.mkdtemp()
+cfg = root / '.cursor' / 'workflow.config.json'
+data = json.loads(cfg.read_text())
+data.setdefault('cleanup', {})['autonomy'] = 'auto'
+(tmp := Path(td) / '.cursor').mkdir(parents=True)
+(tmp / 'workflow.config.json').write_text(json.dumps(data))
+assert can_autonomous_apply(Path(td), report2) == (False, 'indeterminate merge status — human gate required')
+"; then
+  ok "cleanup-autonomy-indeterminate-falls-back"
+else
+  bad "cleanup-autonomy-indeterminate-falls-back"
+fi
+
 if [[ "$FAIL" -ne 0 ]]; then
   echo "cleanup fixtures: FAIL"
   exit 1

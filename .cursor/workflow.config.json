@@ -180,7 +180,13 @@
       "mode": "autonomous",
       "maxRunMinutes": 1440,
       "maxIterations": 500
+    },
+    "terminal": {
+      "autonomy": "supervised"
     }
+  },
+  "cleanup": {
+    "autonomy": "confirm"
   },
   "communication": {
     "defaultIntensity": "full",

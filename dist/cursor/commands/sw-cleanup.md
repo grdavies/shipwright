@@ -46,7 +46,18 @@ Dry-run by default; deletions only after explicit confirmation.
 
 4. Worktree teardown uses `git worktree remove` + `git worktree prune` only — never `rm -rf`.
 
-5. Remote branch deletion is guarded: indeterminate squash-merge status fails closed (branch protected).
+5. **Autonomous apply (R25/R26)** — when `cleanup.autonomy` is `auto` in
+   `.cursor/workflow.config.json`, a deterministic post-merge path may apply the dry-run `wouldRemove` set
+   without human confirm when: no in-flight scoped deliver run, merge status is not `indeterminate`, and
+   targets are not the current/default branch. Invocation:
+
+   ```bash
+   python3 scripts/cleanup_lib.py "$(git rev-parse --show-toplevel)" --autonomous
+   ```
+
+   `indeterminate` merge status always falls back to the human gate (step 3).
+
+6. Remote branch deletion is guarded: indeterminate squash-merge status fails closed (branch protected).
 
 ## Merge detection (R56)
 
