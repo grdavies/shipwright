@@ -1102,6 +1102,97 @@ release(root)
 ) && echo "OK  deliver-living-doc-serialized" || { echo "FAIL deliver-living-doc-serialized"; FAIL=1; }
 rm -rf "$LD_FIX"
 
+# --- deliver v1 deferrals (PRD 013 R13–R16) ---
+FILESET="$FIX/tasks-fileset.md"
+mkdir -p "$FIX/docs/prds/fileset-test"
+cat >"$FILESET" <<'EOF'
+---
+frozen: true
+topic: fileset-test
+---
+### 1. Alpha
+- **File:** `scripts/wave_deliver.py`
+### 2. Beta
+- **File:** `scripts/wave_deliver.py`
+### 3. Gamma
+- **File:** `scripts/wave_state.py`
+EOF
+if OUT=$("$WAVE" plan --task-list "$FILESET" --skip-base-check 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert any('file-set' in n for n in d.get('notices',[]))
+edges=[(e['from'],e['to']) for e in d['edges']]
+assert ('1','2') in edges
+"; then
+  echo "OK  deliver-file-set-edge-inference"
+else
+  echo "FAIL deliver-file-set-edge-inference"
+  FAIL=1
+fi
+
+COMBINED="$FIX/tasks-combined.md"
+cat >"$COMBINED" <<'EOF'
+---
+frozen: true
+topic: combined-test
+---
+### 1. First
+### 2. Second
+EOF
+if OUT=$("$WAVE" plan --task-list "$COMBINED" --items extra --edges extra:1 --combine --skip-base-check 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('mode')=='combined'
+ids={i['id'] for i in d['items']}
+assert '1' in ids and 'extra' in ids
+assert any(w for w in d['waves'] if 'extra' in w)
+"; then
+  echo "OK  deliver-cross-feature-wave-plan"
+else
+  echo "FAIL deliver-cross-feature-wave-plan"
+  FAIL=1
+fi
+
+LIVE_FIX=$(mktemp -d)
+(
+  cd "$LIVE_FIX"
+  git init -q && git config user.email t@t.com && git config user.name T
+  git checkout -qb feat/live-test
+  git commit --allow-empty -q -m init
+  mkdir -p .cursor
+  cat >.cursor/sw-deliver-state.live-test.json <<'JSON'
+{"verdict":"running","phases":{"1":{"slug":"alpha","status":"in-flight","cause":"verify:pending"},"2":{"slug":"beta","status":"pending"}},"remediationAttempts":{"alpha":1},"target":{"branch":"feat/live-test"}}
+JSON
+  OUT=$(python3 "$ROOT/scripts/wave_living_docs.py" "$LIVE_FIX" phase-status-live --target feat/live-test 2>/dev/null)
+  echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+rows=d.get('livePhaseStatus',[])
+assert len(rows)==2 and rows[0]['status']=='in-flight' and rows[0]['attempt']==1
+"
+) && echo "OK  deliver-live-phase-status" || { echo "FAIL deliver-live-phase-status"; FAIL=1; }
+rm -rf "$LIVE_FIX"
+
+CONT_FIX=$(mktemp -d)
+(
+  cd "$CONT_FIX"
+  git init -q && git config user.email t@t.com && git config user.name T
+  git checkout -qb feat/contention-test
+  git commit --allow-empty -q -m init
+  mkdir -p .cursor
+  cat >.cursor/sw-deliver-state.contention-test.json <<'JSON'
+{"verdict":"running","phases":{"1":{"slug":"a","status":"pending"}},"target":{"branch":"feat/contention-test"},"contentionFeedback":{"injectedEdges":[{"from":"1","to":"2","kind":"contention"}],"notices":["contention: phases 1 and 2 serialized"]}}
+JSON
+  OUT=$(python3 "$ROOT/scripts/wave_deliver.py" "$CONT_FIX" tasks-suggest --target feat/contention-test 2>/dev/null)
+  echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('rerunCommand')=='/sw-tasks'
+assert len(d.get('explicitDependencyRows',[]))==1
+"
+) && echo "OK  deliver-contention-durable-feedback" || { echo "FAIL deliver-contention-durable-feedback"; FAIL=1; }
+rm -rf "$CONT_FIX"
+
 # --- layout reference includes deliver artifacts (R33) ---
 if grep -q 'sw-deliver-plan.json' "$ROOT/.sw/layout.md" && \
    grep -q 'sw-deliver-plan.json' "$ROOT/core/sw-reference/layout.md"; then
