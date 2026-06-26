@@ -11,6 +11,19 @@ Production-signal and dev-time debugging orchestrator (R22). Runs bounded RCA vi
 commit, push, or merge** — scoped fixes go to the implementation worktree loop; substantial
 fixes go to brainstorm/PRD amendment.
 
+Load `skills/conductor/SKILL.md` and enforce `rules/sw-conductor.mdc` — **single source** for in-turn
+continuation after route confirmation, parallel I/O dispatch, and legitimate halts (R18). Do not re-implement
+loop or halt policy in this file.
+
+## Conductor adoption (DBG-A1..A2)
+
+| ID | Requirement | Contract clause |
+| --- | --- | --- |
+| DBG-A1 | After one human route confirmation, provision worktree + dispatch `/sw-start` in-turn — no second turn-yield | In-turn self-continuation |
+| DBG-A2 | Run Sentry enrich and memory preflight search concurrently after normalize when both are applicable | Parallel dispatch |
+
+Human gates unchanged: RCA human-decision halt, max iterations / no-progress hard stops, Sentry MCP degrade-only.
+
 ## Signal forms
 
 **Production (debug entry):**
@@ -33,18 +46,38 @@ Read `.cursor/workflow.config.json` for `prdsDir`, `agentsFile`, `memory` provid
 
 ## Procedure
 
+0. Load `skills/conductor/SKILL.md`; enforce `rules/sw-conductor.mdc`.
 1. **Triage** (`skills/debug/SKILL.md` Phase 0) — classify production vs dev-time; trivial fast-path when obvious.
 2. **Normalize + redact** signal per `skills/rca-core/references/debug-inputs.md` (extend shape for dev-time).
 3. **Sentry enrich** when applicable (`skills/debug/references/sentry.md`); degrade if MCP unavailable.
 4. **Memory preflight** — search prior `debug` memories for the failing area.
+   - When steps 3 and 4 both apply, run **concurrently** (DBG-A2) — independent I/O; collect before RCA.
 5. **RCA** — `skills/rca-core`:
    - production signals → **debug entry**
    - test/build/verify failures → **dev-time entry** (repro-first + failing-regression-test gates)
-6. **Route** — classify fix size via triage rubric; hand off:
-   - **Small** → `/sw-worktree provision` + `/sw-start` with RCA brief in worktree
-   - **Substantial** → `/sw-brainstorm` or `/sw-amend` (frozen PRD scope change) per doc workstream
-7. **Record** route + originating signal via `memory-preflight` write (redacted) for compounding.
-8. Return structured handoff summary (root cause, proposed fix, route, next command).
+6. **Route** — classify fix size via triage rubric; present handoff and **halt for one human route confirmation**.
+7. On confirmed route, **in-turn** (DBG-A1):
+   - **Small** → `/sw-worktree provision` + dispatch `/sw-start` with RCA brief (no second turn-yield)
+   - **Substantial** → dispatch `/sw-brainstorm` or `/sw-amend` per doc workstream
+8. **Record** route + originating signal via `memory-preflight` write (redacted) for compounding.
+9. Return structured handoff summary (root cause, proposed fix, route, next command).
+
+## Delegated atomics
+
+| Step | Delegate via | Skill / agent binding |
+| --- | --- | --- |
+| Sentry enrich | Task when MCP-heavy | `--command sw-debug --skill debug` |
+| RCA deep dive | Task | `--command sw-debug --skill rca-core` |
+| `/sw-start` (small-fix route) | Task after confirmation | `--command sw-start` |
+| `/sw-brainstorm` / `/sw-amend` (substantial) | Task after confirmation | `--command sw-brainstorm` or `--command sw-amend` |
+
+## Delegated Task binding contract
+
+Before dispatching specialist/debug sub-agents from `/sw-debug`:
+
+1. `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-debug --skill debug`
+2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-debug --skill debug --parent-model <parent-concrete-id> [--dispatch-id <id>]`
+3. Pass explicit concrete `model:` on Task input.
 
 ## What this command does not do
 
@@ -55,14 +88,6 @@ Read `.cursor/workflow.config.json` for `prdsDir`, `agentsFile`, `memory` provid
 **Communication intensity:** inherit
 
 **Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --command sw-debug`.
-
-## Delegated Task binding contract
-
-Before dispatching specialist/debug sub-agents from `/sw-debug`:
-
-1. `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-debug --skill debug`
-2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-debug --skill debug --parent-model <parent-concrete-id> [--dispatch-id <id>]`
-3. Pass explicit concrete `model:` on Task input.
 
 ## Inline allowlist (closed)
 

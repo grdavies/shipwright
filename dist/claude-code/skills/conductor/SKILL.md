@@ -373,7 +373,10 @@ Read from `.cursor/workflow.config.json`:
 
 | Orchestrator | Status |
 | --- | --- |
-| `/sw-deliver` | Pilot consumer (R34) — load this skill in `deliver-loop` / `run` |
-| `/sw-doc`, `/sw-ship`, `/sw-debug`, `/sw-feedback` | Enumerated in `orchestrator-adoption-audit.md`; adopt in follow-on PRDs (R35) |
+| `/sw-deliver` | Pilot consumer (R34) — `deliver-loop` / `run` |
+| `/sw-ship` | Adopted (PRD 017 Phase 3) — SHIP-A1..A4 |
+| `/sw-debug` | Adopted (PRD 017 Phase 3) — DBG-A1..A2 |
+| `/sw-doc` | Adopted (PRD 017 Phase 3) — DOC-A1..A2 |
+| `/sw-feedback` | Adopted (PRD 017 Phase 3) — FB-A1..A2 |
 
 Reference this skill from orchestrator commands; do not duplicate loop prose.
