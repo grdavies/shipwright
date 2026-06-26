@@ -449,6 +449,23 @@ scripts/wave.sh ack check|complete|status           # optional cadence (deliver.
   `source_task_list` + `prd_number`; wave run does not freeze INDEX to in-progress.
 - **`deliver.phaseAckCadence: K`** (default `0`): pause for human `ack complete` after every K phase merges (R56).
 
+### Terminal autonomy — amendment A1 (PRD 013 R20–R27)
+
+Config: `deliver.terminal.autonomy` (`supervised` | `auto`, default `supervised`); `cleanup.autonomy`
+(`confirm` | `auto`, default `confirm`).
+
+```bash
+scripts/wave.sh terminal autonomy                      # read knob + mode
+scripts/wave.sh terminal retro run [--dry-run]         # retrospective before PR (R20/R21)
+scripts/wave.sh terminal ship run [--dry-run]          # PR → push → gate watch (R22/R23)
+python3 scripts/cleanup_lib.py <root> --autonomous     # zero-interaction cleanup when safe (R25/R26)
+```
+
+- **`auto`:** retrospective + terminal ship run hands-off; merge to `main` stays human-gated (R23).
+- **`supervised`:** preserves today's halts (`exit 11` supervised-checkpoint).
+- Cleanup `auto` applies only the dry-run `wouldRemove` set when merge is deterministic, no in-flight
+  scoped run, and not current/default branch; `indeterminate` → human gate.
+
 ## Base-branch preflight and spec visibility (R49, R61, R62)
 
 Before phase dispatch, phase-mode `preflight` / `plan` runs **base-branch preflight** (R49):
