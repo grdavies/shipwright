@@ -288,9 +288,11 @@ contract.
 The orchestrator worktree owns a non-detached `<type>/<slug>` checkout; phase merges advance that ref
 (no manual fast-forward on the primary checkout).
 
-**Pre-merge compounding:** after all phases are `green-merged`, the driver runs `/sw-compound-ship
---pre-merge` (file outputs committed on the feature branch; memory writes not committed). Completion
-is recorded as `completed-pending-merge` until the human merges; the loop then suggests
+**Pre-merge compounding:** after all phases are `green-merged`, the driver runs `/sw-retrospective
+--pre-merge` (single-sourced chain; deprecated `/sw-compound-ship` routes to the same). File outputs
+are committed on the feature branch; memory writes are not committed. `compound.autonomy` (`supervised` |
+`auto`) gates approval prompts only — memory fail-closed and rule-class human gates always apply.
+Completion is recorded as `completed-pending-merge` until the human merges; the loop then suggests
 `/sw-cleanup` (dry-run first; agent asks for confirm before applying removals).
 
 **Task currency:** frozen task checkboxes may be toggled in-loop; a currency gate blocks the terminal

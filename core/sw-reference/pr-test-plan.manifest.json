@@ -24,6 +24,13 @@
       "ciJobName": "feat-test-plan-ux-polish-fixtures"
     },
     {
+      "id": "retrospective-fixtures",
+      "script": "scripts/test/run-retrospective-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-retrospective-fixtures"
+    },
+    {
       "id": "docs-link-check",
       "script": "scripts/docs-link-check.sh",
       "args": [],

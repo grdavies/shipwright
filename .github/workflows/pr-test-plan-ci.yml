@@ -44,6 +44,17 @@ jobs:
       - name: Run ux-polish-fixtures
         run: bash scripts/test/run-ux-polish-fixtures.sh
 
+  feat-test-plan-retrospective-fixtures:
+    name: feat-test-plan-retrospective-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run retrospective-fixtures
+        run: bash scripts/test/run-retrospective-fixtures.sh
+
   feat-test-plan-docs-link-check:
     name: feat-test-plan-docs-link-check
     runs-on: ubuntu-latest
