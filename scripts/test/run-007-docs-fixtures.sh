@@ -20,7 +20,7 @@ check_doc() {
   local text
   text="$(cat "$file")"
   for term in "$@"; do
-    if ! echo "$text" | rg -qi "$term"; then
+    if ! echo "$text" | grep -qiE "$term"; then
       bad "007-docs-$label: missing topic '$term' in $file"
       return
     fi
@@ -40,9 +40,9 @@ check_doc "$ROOT/docs/guides/getting-started.md" getting-started \
 check_doc "$ROOT/core/rules/sw-naming.mdc" naming \
   '/sw-cleanup' '/sw-deliver'
 
-if rg -q 'deliver-loop' "$ROOT/core/skills/deliver/SKILL.md" && \
-   rg -q 'status collect' "$ROOT/core/skills/deliver/SKILL.md" && \
-   rg -q 'secret-scan' "$ROOT/core/skills/deliver/SKILL.md"; then
+if grep -qE 'deliver-loop' "$ROOT/core/skills/deliver/SKILL.md" && \
+   grep -qE 'status collect' "$ROOT/core/skills/deliver/SKILL.md" && \
+   grep -qE 'secret-scan' "$ROOT/core/skills/deliver/SKILL.md"; then
   ok "007-docs-deliver-skill"
 else
   bad "007-docs-deliver-skill"

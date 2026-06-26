@@ -45,7 +45,7 @@ else
   FAIL=1
 fi
 
-if ! rg -q 'Go gate' "$SW_DOC" 2>/dev/null; then
+if ! grep -qE 'Go gate' "$SW_DOC" 2>/dev/null; then
   echo "OK  boundary-no-inline: no Go gate reference in sw-doc"
 else
   echo "FAIL boundary-no-inline: Go gate still in sw-doc"

@@ -10,14 +10,14 @@ SW_TASKS="$(content_path commands/sw-tasks.md)"
 SW_TASKS_SKILL="$(content_path skills/tasks/SKILL.md)"
 FAIL=0
 
-if rg -q 'Go gate|pause for "Go"|pause for Go|Respond with .Go.' "$SW_TASKS" "$SW_TASKS_SKILL" 2>/dev/null; then
+if grep -qE 'Go gate|pause for "Go"|pause for Go|Respond with .Go.' "$SW_TASKS" "$SW_TASKS_SKILL" 2>/dev/null; then
   echo "FAIL tasks-single-pass: sub-task-expansion gate still present in command or skill"
   FAIL=1
 else
   echo "OK  tasks-single-pass: no sub-task-expansion gate in command or skill"
 fi
 
-if rg -qi 'single.pass|one pass|single-pass' "$SW_TASKS" "$SW_TASKS_SKILL" 2>/dev/null; then
+if grep -qiE 'single.pass|one pass|single-pass' "$SW_TASKS" "$SW_TASKS_SKILL" 2>/dev/null; then
   echo "OK  tasks-single-pass: single-pass generation documented"
 else
   echo "FAIL tasks-single-pass: missing single-pass wording"

@@ -1038,7 +1038,7 @@ fi
 while IFS= read -r line || [[ -n "$line" ]]; do
   [[ -z "$line" || "$line" =~ ^# ]] && continue
   scenario="${line#*:}"
-  if rg -q "${scenario}" "$ROOT/scripts/test/run-deliver-fixtures.sh"; then
+  if grep -qE "${scenario}" "$ROOT/scripts/test/run-deliver-fixtures.sh"; then
     echo "OK  deliver-phase-manifest:$scenario"
   else
     echo "FAIL deliver-phase-manifest:$scenario"

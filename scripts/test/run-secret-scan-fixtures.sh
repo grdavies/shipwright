@@ -104,19 +104,19 @@ else
 fi
 
 # --- secret-scan-at-sw-pr-push: sw-pr documents git-push wrapper ---
-if rg -q 'git-push\.sh' "$ROOT/core/commands/sw-pr.md"; then
+if grep -qE 'git-push\.sh' "$ROOT/core/commands/sw-pr.md"; then
   ok "secret-scan-at-sw-pr-push: sw-pr uses git-push wrapper"
 else
   bad "secret-scan-at-sw-pr-push: sw-pr missing git-push.sh"
 fi
-if rg -q 'secret-scan' "$ROOT/core/commands/sw-pr.md"; then
+if grep -qE 'secret-scan' "$ROOT/core/commands/sw-pr.md"; then
   ok "secret-scan-at-sw-pr-push: sw-pr documents secret-scan"
 else
   bad "secret-scan-at-sw-pr-push: sw-pr missing secret-scan reference"
 fi
 
 # git-push.sh invokes scan before push (dry-run: scan only path)
-if rg -q 'secret-scan\.sh' "$ROOT/scripts/git-push.sh"; then
+if grep -qE 'secret-scan\.sh' "$ROOT/scripts/git-push.sh"; then
   ok "secret-scan-at-sw-pr-push: git-push.sh invokes secret-scan"
 else
   bad "secret-scan-at-sw-pr-push: git-push.sh missing secret-scan"
