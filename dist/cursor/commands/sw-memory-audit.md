@@ -30,6 +30,17 @@ precedes new writes.
    - **missing links** — `debug`/`code-context` memories with no `relatedFiles`,
    - **duplicate** — near-identical memories that should be merged via `modify`,
    - **stale** — superseded content that should be `modify`-inactivated with a reason.
+3b. **SoT conflict pass (R9, R11):** run the mechanical helper, then merge into the proposal:
+
+```bash
+bash scripts/memory-sot-audit.sh audit-conflicts
+# optional one-time migration plan when switching memory.sourceOfTruth:
+bash scripts/memory-sot-audit.sh legacy-reconcile-plan --target memory
+```
+
+Flag `decision`-class memories that contradict the active SoT (content-bearing under repo-SoT; pointer-only
+under memory-SoT). Default `auto` + `in-repo` MUST report `noChange: true` when the corpus is clean.
+Present legacy reconcile steps before applying a mode switch; never auto-mutate on this pass.
 4. Produce a **proposal table**: id, current category, problem, proposed action (reclassify-to-X /
    collapse-to-pointer / merge-into-id / inactivate), and the proposed new content/tags where relevant.
 5. Stop and present the proposal. Summarize counts per problem type.
@@ -47,5 +58,7 @@ precedes new writes.
 - Collapse mirrors to pointers — do not lose the canonical doc reference (keep the `.project_docs` path).
 - Never reclassify a `rule` memory without explicit user direction.
 - Route every read and write through the adapter; never call a provider tool directly.
-- Memory is not the source of truth — when a memory contradicts current repo docs, prefer flagging it
-  stale over rewriting it to match.
+- Resolve git↔provider authority per `bash scripts/memory-sot.sh resolve --class decision --json` — flag
+  contradicting content-bearing `decision` memories; offer `legacy-reconcile-plan` on explicit mode switch.
+- When a memory contradicts the authoritative side, propose collapse-to-pointer or promotion per SoT — do not
+  silently rewrite authoritative git records from memory.
