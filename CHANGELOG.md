@@ -72,6 +72,7 @@
 * merge phase docs-dist-fixtures-m into feat/pervasive-subagent-delegation (99bb9a7) <!-- sw-deliver:docs-dist-fixtures-m -->
 * merge phase sot-resolver-config-schema-defaults-m into feat/memory-source-of-truth (312ee05) <!-- sw-deliver:sot-resolver-config-schema-defaults-m -->
 * merge phase always-committed-redacted-snapshot-offline-safe-freeze-ci-m into feat/memory-source-of-truth (89f52ca) <!-- sw-deliver:always-committed-redacted-snapshot-offline-safe-freeze-ci-m -->
+* merge phase pointer-inversion-supersede-reconcile-m into feat/memory-source-of-truth (ed509ad) <!-- sw-deliver:pointer-inversion-supersede-reconcile-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
