@@ -51,7 +51,9 @@ def read_run_log(root: Path, limit: int = 200) -> list[dict[str, Any]]:
 
 
 def distill_learnings(root: Path) -> dict[str, Any]:
-    state = read_json(root / ".cursor" / "sw-deliver-state.json")
+    from wave_state import load_deliver_state
+
+    state = load_deliver_state(root)
     plan = read_json(root / ".cursor" / "sw-deliver-plan.json")
     target = state.get("target") or plan.get("target") or {}
     patterns: list[dict[str, str]] = []

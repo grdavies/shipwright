@@ -259,10 +259,20 @@ default implementation orchestrator. Mode auto-detect from input:
 `.cursor/sw-deliver-plan.json`.
 
 **Durable autonomy (PRD 007):** the driver is `scripts/wave.sh deliver-loop` (also invoked by
-`/sw-deliver run`). It persists cursor state in `.cursor/sw-deliver-state.json`, resumes after crash
-without restarting from plan, and never emits manual “next steps” prose while work remains. Phase
-advancement keys off durable `status.json` in each **phase-worktree** (`status collect` — not chat).
-Per-phase `/sw-ship` persists step-level state (`ship-steps.json`) for mid-chain resume.
+`/sw-deliver run`). It persists cursor state in **scoped** `.cursor/sw-deliver-state.<slug>.json` at the
+repo root (canonical — R28), resumes after crash without restarting from plan, and never emits manual
+“next steps” prose while work remains. Phase advancement keys off durable `status.json` in each
+**phase-worktree** (`status collect` — not chat). Per-phase `/sw-ship` persists step-level state
+(`ship-steps.json`) for mid-chain resume.
+
+**Concurrent deliver (PRD 013):** orthogonal features may run `/sw-deliver run` in parallel — each
+target branch owns scoped state/lock files. `/sw-status` lists every in-flight run via
+`.cursor/sw-deliver-runs/index.json`. Living docs (`INDEX.md`, `CHANGELOG.md`) stay serialized via
+`.cursor/sw-living-docs.lock`.
+
+**Freeze-time commit (PRD 013):** `/sw-freeze` commits frozen artifacts onto `<type>/<slug>` immediately
+(closing the working-tree data-loss window) via the same spec-seed helper as `/sw-doc` afterTasks — never
+`main`.
 
 **Autonomous conductor (PRD 009):** `/sw-deliver` loads `skills/conductor/SKILL.md` and runs an
 **in-turn self-continuation loop** — after each `deliver-loop` step the conductor re-invokes the driver

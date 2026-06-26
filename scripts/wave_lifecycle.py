@@ -208,9 +208,12 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
         },
     )
 
-    state_path = root / ".cursor" / "sw-deliver-state.json"
+    from wave_state import load_deliver_state, resolve_state_path, save_deliver_state
+
+    top = git_toplevel(root)
+    state_path = resolve_state_path(top, target=target)
     state_path.parent.mkdir(parents=True, exist_ok=True)
-    state = read_json(state_path)
+    state = load_deliver_state(top, target=target)
     state["orchestratorWorktree"] = {
         "name": name,
         "path": str(path),
@@ -219,9 +222,7 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
         "detachedHead": False,
         "head": tip,
     }
-    state["updatedAt"] = utc_now()
-    state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
-    os.chmod(state_path, 0o600)
+    save_deliver_state(top, state, target=target)
 
     emit(
         {
@@ -235,7 +236,9 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
 
 
 def cmd_orchestrator_status(root: Path, _args: list[str]) -> None:
-    state = read_json(root / ".cursor" / "sw-deliver-state.json")
+    from wave_state import load_deliver_state
+
+    state = load_deliver_state(git_toplevel(root))
     orch = state.get("orchestratorWorktree")
     if not orch:
         emit({"verdict": "pass", "provisioned": False})

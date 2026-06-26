@@ -60,6 +60,12 @@
 * merge phase pointer-inversion-supersede-reconcile-m into feat/memory-source-of-truth (076599f) <!-- sw-deliver:pointer-inversion-supersede-reconcile-m -->
 * merge phase compound-sot-branch-audit-conflict-migration-m into feat/memory-source-of-truth (3dea6f3) <!-- sw-deliver:compound-sot-branch-audit-conflict-migration-m -->
 * merge phase docs-dist-fixtures-m into feat/memory-source-of-truth (e812958) <!-- sw-deliver:docs-dist-fixtures-m -->
+* merge phase freeze-time-commit-safety-m into feat/deliver-concurrency-and-freeze-safety (da44ffb) <!-- sw-deliver:freeze-time-commit-safety-m -->
+* merge phase scoped-deliver-state-lock-resolver-l into feat/deliver-concurrency-and-freeze-safety (099156f) <!-- sw-deliver:scoped-deliver-state-lock-resolver-l -->
+* merge phase concurrent-run-index-enumeration-serialization-m into feat/deliver-concurrency-and-freeze-safety (5f33bee) <!-- sw-deliver:concurrent-run-index-enumeration-serialization-m -->
+* merge phase sw-deliver-v1-deferrals-l into feat/deliver-concurrency-and-freeze-safety (9269ef7) <!-- sw-deliver:sw-deliver-v1-deferrals-l -->
+* merge phase autonomous-terminal-delivery-amendment-a1-l into feat/deliver-concurrency-and-freeze-safety (eeb784c) <!-- sw-deliver:autonomous-terminal-delivery-amendment-a1-l -->
+* merge phase fixtures-docs-dist-propagation-m into feat/deliver-concurrency-and-freeze-safety (9a53494) <!-- sw-deliver:fixtures-docs-dist-propagation-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

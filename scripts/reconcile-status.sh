@@ -15,6 +15,7 @@ Usage:
   reconcile-status.sh gap-resolve --absorbing-prd <NNN> [--pr N]  Flip matching open gaps to resolved (R49)
   reconcile-status.sh append-superseded --path <repo-rel> [--replacement <repo-rel>]  Append to docs/decisions/SUPERSEDED.log (idempotent)
   reconcile-status.sh supersede-reconcile [--json] [--dry-run]  Emit best-effort re-point plan for non-authoritative side (R7)
+  reconcile-status.sh deliver-runs [--json]       List live scoped deliver runs (PRD 013 R10)
 EOF
 }
 
@@ -167,8 +168,62 @@ def status_for(row):
 
 rows = parse_index()
 result = [status_for(r) for r in rows]
-print(json.dumps({"prds": result, "gapBacklog": str(prds_dir / "GAP-BACKLOG.md")}, indent=2))
+sys.path.insert(0, str(root / "scripts"))
+from wave_state import enumerate_scoped_runs, utc_now
+
+deliver_runs = enumerate_scoped_runs(root)
+index_path = root / ".cursor" / "sw-deliver-runs" / "index.json"
+index_path.parent.mkdir(parents=True, exist_ok=True)
+index_path.write_text(
+    json.dumps({"updatedAt": utc_now(), "runs": deliver_runs}, indent=2) + "\n",
+    encoding="utf-8",
+)
+from wave_living_docs import live_phase_status_rows
+
+live_phase_status = []
+for run in deliver_runs:
+    state_path = root / run.get("statePath", "")
+    if not state_path.is_file():
+        continue
+    try:
+        run_state = json.loads(state_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        continue
+    if run_state.get("verdict") != "running":
+        continue
+    live_phase_status.append(
+        {
+            "slug": run.get("slug"),
+            "target": run.get("target"),
+            "phases": live_phase_status_rows(run_state),
+        }
+    )
+print(
+    json.dumps(
+        {
+            "prds": result,
+            "gapBacklog": str(prds_dir / "GAP-BACKLOG.md"),
+            "deliverRuns": deliver_runs,
+            "livePhaseStatus": live_phase_status,
+        },
+        indent=2,
+    )
+)
 PY
+}
+
+cmd_deliver_runs() {
+  local as_json="${1:-}"
+  if [[ "$as_json" == "--json" ]]; then
+    python3 "$ROOT/scripts/wave_state.py" "$ROOT" runs index 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps({'deliverRuns': d.get('runs', []), 'indexPath': d.get('path')}, indent=2))"
+  else
+    python3 "$ROOT/scripts/wave_state.py" "$ROOT" runs index 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+for r in d.get('runs', []):
+    print(f\"{r.get('slug')}: {r.get('target')} verdict={r.get('verdict')} lock={r.get('lockHeld')}\")
+"
+  fi
 }
 
 cmd_reconcile() {
@@ -558,6 +613,7 @@ main() {
     gap-resolve) cmd_gap_resolve "$@" ;;
     append-superseded) cmd_append_superseded "$@" ;;
     supersede-reconcile) cmd_supersede_reconcile "$@" ;;
+    deliver-runs) cmd_deliver_runs "$@" ;;
     -h | --help | "") usage ;;
     *)
       echo "unknown: $cmd" >&2

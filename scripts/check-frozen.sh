@@ -2,12 +2,61 @@
 # Reject diffs that modify frozen artifacts. CI authority for doc-freeze integrity (R9).
 # Operates only on the committed git snapshot — never calls the memory provider (PRD 015 R5).
 #
-# Usage: check-frozen.sh [BASE_REF]
+# Usage:
+#   check-frozen.sh [BASE_REF]
+#   check-frozen.sh freeze-commit --artifact <path>
+#
 #   BASE_REF — git ref to diff against (default: origin/main or merge-base)
+#   freeze-commit — verdict-independent wrapper around spec-seed (PRD 013 R4); warns on failure, exits 0
 # Exit: 0 pass, 1 frozen violation, 2 usage/config error
 set -euo pipefail
 
 SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ "${1:-}" == "freeze-commit" ]]; then
+  shift
+  ARTIFACT=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --artifact) ARTIFACT="${2:-}"; shift 2 ;;
+      *) echo '{"verdict":"fail","reason":"unknown freeze-commit argument"}' >&2; exit 2 ;;
+    esac
+  done
+  if [[ -z "$ARTIFACT" ]]; then
+    echo '{"verdict":"fail","reason":"freeze-commit requires --artifact <path>"}' >&2
+    exit 2
+  fi
+  OUT=""
+  EC=0
+  set +e
+  OUT=$(bash "$SCRIPT_ROOT/scripts/wave.sh" spec-seed --artifact "$ARTIFACT" 2>&1)
+  EC=$?
+  set -e
+  NEED_WARN=0
+  if [[ "$EC" -ne 0 ]]; then
+    NEED_WARN=1
+  elif ! echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('verdict') in ('pass', 'ok') else 1)" 2>/dev/null; then
+    NEED_WARN=1
+  fi
+  if [[ "$NEED_WARN" -eq 1 ]]; then
+    python3 - <<'PY' "$EC" "$OUT"
+import json, sys
+ec, detail = int(sys.argv[1]), sys.argv[2]
+print(json.dumps({
+    "verdict": "warn",
+    "action": "freeze-commit",
+    "reason": "branch or commit failed; freeze stamp still stands (verdict-independent)",
+    "exitCode": ec,
+    "detail": detail.strip(),
+}))
+PY
+    exit 0
+  fi
+  echo "$OUT"
+  exit 0
+  echo "$OUT"
+  exit 0
+fi
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 BASE="${1:-}"
 

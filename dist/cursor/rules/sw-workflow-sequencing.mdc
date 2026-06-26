@@ -69,3 +69,13 @@ Human merges → `/sw-retrospective` (or atomically: `/sw-retro` → compound wr
 `/sw-memory-sync` → `/sw-status reconcile` + `append-log`). Deprecated: `/sw-compound-ship` routes to the same chain.
 
 Stacking: after merge-ready merge, update parent, `/sw-start` for next phase.
+
+## Deliver concurrency and freeze safety (PRD 013)
+
+- **Freeze-time commit:** `/sw-freeze` commits frozen docs onto `<type>/<slug>` via the shared
+  `wave_spec_seed.py` helper (`check-frozen.sh freeze-commit`); never `main`; stamp completes even when
+  commit warns (R4).
+- **Scoped deliver state:** per-branch `.cursor/sw-deliver-state.<slug>.json` and
+  `.cursor/sw-deliver-<slug>.lock`; `/sw-status` + `/sw-cleanup` enumerate all live scoped runs.
+- **Terminal knobs:** `deliver.terminal.autonomy` (`supervised` | `auto`); `cleanup.autonomy`
+  (`confirm` | `auto`). Auto modes never merge to `main` or force-push.

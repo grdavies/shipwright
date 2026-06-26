@@ -41,19 +41,47 @@ Multi-feature mode uses `"mode": "multi-feature"` with conforming type-prefixed 
 - **contention:** shared-migration refusal + living INDEX/numbering counters force serialization;
   `injectedEdges` records contention-forced edges merged into `edges` / `waves`.
 
+### v1 deferrals (PRD 013 R13–R16)
+
+- **Cross-feature waves (R13):** `plan --task-list <frozen> --items a,b --combine [--edges b:1]` mixes
+  phase-mode units with multi-feature items; waves honor the combined edge set (`mode: combined`).
+- **File-set edge inference (R14):** when `## Phase Dependencies` is absent, overlapping `**File:**`
+  paths infer edges before sequential fallback; an explicit dependency table always wins.
+- **Live phase status (R15):** `/sw-status` `derive --json` embeds `livePhaseStatus` for in-flight runs;
+  `wave_living_docs.py phase-status-live` renders per-phase status, attempt, and blocker mid-run.
+- **Contention → `/sw-tasks` (R16):** plan-time serialization notices persist to run-state
+  `contentionFeedback`; surface suggestions (never auto-rewrite frozen tasks) via
+  `scripts/wave_deliver.py <root> tasks-suggest [--target <type>/<slug>]`.
+
 ## Run-state artifacts
 
 | Artifact | Path |
 |----------|------|
 | Plan | `.cursor/sw-deliver-plan.json` |
-| Run state | `.cursor/sw-deliver-state.json` |
-| Orchestrator lock | `.cursor/sw-deliver.lock` |
+| Run state (scoped) | `.cursor/sw-deliver-state.<slug>.json` — canonical at **repo root** only (R28) |
+| Orchestrator lock (scoped) | `.cursor/sw-deliver-<slug>.lock` |
+| Concurrent-run index | `.cursor/sw-deliver-runs/index.json` |
+| Living-doc serialization | `.cursor/sw-living-docs.lock` |
 | Per-phase `/sw-ship` status | `.cursor/sw-deliver-runs/<phase-slug>/status.json` |
 | Append-only progress log | `.cursor/sw-deliver-runs/run.log` |
+| Legacy (migration only) | `.cursor/sw-deliver-state.json`, `.cursor/sw-deliver.lock` |
 
 Living artifacts under `.cursor/` are **never committed** (`/sw-commit` excludes them).
 
-### Run-state schema (`.cursor/sw-deliver-state.json`)
+**Per-branch scoping (PRD 013 R6–R11):** `<slug>` derives from the target feature branch
+(`feat/<slug>` → `sw-deliver-state.<slug>.json`). Orthogonal branches run concurrently with
+independent state/lock files; `assert_run_identity` and lock refusal apply **within** a scope only.
+Legacy repo-wide state is adopted to the scoped path on first read (breadcrumb left at the legacy path).
+
+**Single canonical write path (R28):** all readers and writers (`wave_state.py`, `wave_compound.py`
+`record-premerge`, `cleanup_lib.resolve_deliver_state`) resolve the scoped path at the git toplevel —
+never a duplicate copy under an orchestrator worktree `.cursor/`.
+
+**Freeze-time commit (PRD 013 R1–R5):** `/sw-freeze` invokes `check-frozen.sh freeze-commit` → shared
+`wave_spec_seed.py` helper (same as `/sw-doc` afterTasks). Commits docs-only onto `<type>/<slug>`;
+never `main`; verdict-independent (commit failure warns; stamp still completes).
+
+### Run-state schema (scoped `.cursor/sw-deliver-state.<slug>.json`)
 
 Initialized from the phase-mode plan via `scripts/wave.sh state init --plan .cursor/sw-deliver-plan.json`:
 
@@ -112,8 +140,8 @@ scripts/wave.sh journal begin --phase <phase-slug> [--head <sha>]
 scripts/wave.sh journal complete --phase <phase-slug>
 ```
 
-- **Lock:** atomic create on `.cursor/sw-deliver.lock` keyed by `<type>/<slug>` metadata; second
-  invocation refuses (`exit 20`) until `lock release`.
+- **Lock:** atomic create on `.cursor/sw-deliver-<slug>.lock`; a lock for branch A does not block
+  branch B; a second live run on the **same** branch refuses (`exit 20`) until `lock release`.
 - **Merge journal:** open entry before phase → `<type>/<slug>` merge; cleared after push + state commit.
   Resume detects interrupted merge via `journal status`.
 
@@ -436,6 +464,23 @@ scripts/wave.sh ack check|complete|status           # optional cadence (deliver.
 - **INDEX.md** uses only `not-started` / `complete` — never `in-progress` (R43). Run-state binds
   `source_task_list` + `prd_number`; wave run does not freeze INDEX to in-progress.
 - **`deliver.phaseAckCadence: K`** (default `0`): pause for human `ack complete` after every K phase merges (R56).
+
+### Terminal autonomy — amendment A1 (PRD 013 R20–R27)
+
+Config: `deliver.terminal.autonomy` (`supervised` | `auto`, default `supervised`); `cleanup.autonomy`
+(`confirm` | `auto`, default `confirm`).
+
+```bash
+scripts/wave.sh terminal autonomy                      # read knob + mode
+scripts/wave.sh terminal retro run [--dry-run]         # retrospective before PR (R20/R21)
+scripts/wave.sh terminal ship run [--dry-run]          # PR → push → gate watch (R22/R23)
+python3 scripts/cleanup_lib.py <root> --autonomous     # zero-interaction cleanup when safe (R25/R26)
+```
+
+- **`auto`:** retrospective + terminal ship run hands-off; merge to `main` stays human-gated (R23).
+- **`supervised`:** preserves today's halts (`exit 11` supervised-checkpoint).
+- Cleanup `auto` applies only the dry-run `wouldRemove` set when merge is deterministic, no in-flight
+  scoped run, and not current/default branch; `indeterminate` → human gate.
 
 ## Base-branch preflight and spec visibility (R49, R61, R62)
 
