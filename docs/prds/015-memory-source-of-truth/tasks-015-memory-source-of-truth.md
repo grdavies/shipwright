@@ -37,10 +37,10 @@ then pointer inversion + supersede, then compound/audit/migration, then docs/dis
 
 ### 3. Pointer inversion + supersede reconcile (M)
 
-- [ ] 3.1 Inverted authority pointer per SoT (R6)
+- [x] 3.1 Inverted authority pointer per SoT (R6)
   - **File:** `skills/memory/SKILL.md`, `scripts/memory-sot.sh`
   - **Expected:** repo-SoT → provider points at git record; memory-SoT → snapshot points at provider record; exactly one authoritative
-- [ ] 3.2 Supersede manifest + reconcile (R7)
+- [x] 3.2 Supersede manifest + reconcile (R7)
   - **File:** `docs/decisions/SUPERSEDED.log` (handling), `scripts/reconcile-status.sh`, `core/commands/sw-memory-sync.md`
   - **Expected:** `SUPERSEDED.log` committed in both modes; `/sw-memory-sync` re-points the non-authoritative side best-effort
 

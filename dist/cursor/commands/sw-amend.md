@@ -29,7 +29,7 @@ Post-freeze correction path. Parent stays byte-stable.
    raised floor per `skills/doc-review/SKILL.md`).
 6. Freeze amendment via `/sw-freeze`.
 7. Update `docs/prds/INDEX.md` or `docs/decisions/INDEX.md` amendment links.
-8. On decision record-level supersede: append superseded parent path to `docs/decisions/SUPERSEDED.log`.
+8. On decision record-level supersede: `bash scripts/reconcile-status.sh append-superseded --path <parent-record> --replacement <replacement-record>`.
 
 **Communication intensity:** lite
 

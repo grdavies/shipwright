@@ -13,6 +13,8 @@ Usage:
   reconcile-status.sh append-log <prd> <phase> <notes>  Append COMPLETION-LOG entry (legacy)
   reconcile-status.sh append-log-idempotent --prd <NNN> --phase <name> [--pr N] [--sha SHA] [--notes text]  Idempotent append (R48)
   reconcile-status.sh gap-resolve --absorbing-prd <NNN> [--pr N]  Flip matching open gaps to resolved (R49)
+  reconcile-status.sh append-superseded --path <repo-rel> [--replacement <repo-rel>]  Append to docs/decisions/SUPERSEDED.log (idempotent)
+  reconcile-status.sh supersede-reconcile [--json] [--dry-run]  Emit best-effort re-point plan for non-authoritative side (R7)
 EOF
 }
 
@@ -397,6 +399,153 @@ print(json.dumps({"verdict": "pass", "action": "gap-resolve", "absorbingPrd": ab
 PY
 }
 
+cmd_append_superseded() {
+  python3 - "$ROOT" "$@" <<'PY'
+import json
+import re
+import sys
+from datetime import date
+from pathlib import Path
+
+root = Path(sys.argv[1])
+args = sys.argv[2:]
+superseded = replacement = ""
+i = 0
+while i < len(args):
+    if args[i] == "--path" and i + 1 < len(args):
+        superseded = args[i + 1].strip()
+        i += 2
+    elif args[i] == "--replacement" and i + 1 < len(args):
+        replacement = args[i + 1].strip()
+        i += 2
+    else:
+        i += 1
+if not superseded:
+    raise SystemExit("--path required")
+if not superseded.startswith("docs/decisions/") or superseded.endswith("INDEX.md"):
+    raise SystemExit("path must be a decision record under docs/decisions/")
+log_path = root / "docs" / "decisions" / "SUPERSEDED.log"
+header = (
+    "# SUPERSEDED.log — append-only manifest (decision record-level supersede)\n"
+    "# date<TAB>superseded_path<TAB>replacement_path\n"
+)
+if log_path.is_file():
+    text = log_path.read_text(encoding="utf-8")
+else:
+    text = header
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+for line in text.splitlines():
+    if line.startswith("#") or not line.strip():
+        continue
+    parts = line.split("\t")
+    path_col = parts[1] if len(parts) > 1 and re.match(r"^\d{4}-\d{2}-\d{2}$", parts[0]) else parts[0]
+    if path_col.strip() == superseded:
+        print(json.dumps({"verdict": "pass", "action": "append-superseded", "skipped": True, "path": superseded}))
+        raise SystemExit(0)
+entry = f"{date.today().isoformat()}\t{superseded}\t{replacement}\n"
+if not text.endswith("\n") and text:
+    text += "\n"
+text += entry
+log_path.write_text(text, encoding="utf-8")
+print(json.dumps({"verdict": "pass", "action": "append-superseded", "appended": True, "path": superseded, "replacement": replacement or None}))
+PY
+}
+
+cmd_supersede_reconcile() {
+  python3 - "$ROOT" "$@" <<'PY'
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+args = sys.argv[2:]
+as_json = "--json" in args
+dry_run = "--dry-run" in args
+
+log_path = root / "docs" / "decisions" / "SUPERSEDED.log"
+entries = []
+if log_path.is_file():
+    for line in log_path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("#") or not line.strip():
+            continue
+        parts = line.split("\t")
+        if len(parts) < 2:
+            continue
+        date_part = parts[0] if re.match(r"^\d{4}-\d{2}-\d{2}$", parts[0]) else ""
+        if date_part:
+            superseded, replacement = parts[1], parts[2] if len(parts) > 2 else ""
+        else:
+            superseded, replacement = parts[0], parts[1] if len(parts) > 1 else ""
+        entries.append({"superseded": superseded.strip(), "replacement": replacement.strip() or None})
+
+proc = subprocess.run(
+    ["bash", str(root / "scripts/memory-sot.sh"), "resolve", "--class", "decision", "--json"],
+    cwd=str(root),
+    text=True,
+    capture_output=True,
+)
+if proc.returncode != 0:
+    print(json.dumps({"verdict": "fail", "error": "memory-sot resolve failed", "stderr": proc.stderr.strip()}))
+    raise SystemExit(2)
+sot = json.loads(proc.stdout)
+effective = sot.get("effective", "repo")
+non_auth = "provider" if effective == "repo" else "git"
+
+def scan_in_repo_pointers(superseded: str):
+    store = root / ".cursor" / "sw-memory" / "memories"
+    hits = []
+    if not store.is_dir():
+        return hits
+    for mem in store.glob("*.md"):
+        text = mem.read_text(encoding="utf-8")
+        if superseded in text:
+            hits.append(mem.as_posix())
+    return hits
+
+actions = []
+for entry in entries:
+    superseded = entry["superseded"]
+    replacement = entry["replacement"]
+    item = {
+        "superseded": superseded,
+        "replacement": replacement,
+        "effective": effective,
+        "reconcileTarget": non_auth,
+    }
+    if effective == "repo":
+        item["action"] = "repoint-provider-pointer"
+        item["providerRecipe"] = {
+            "category": "decision",
+            "contentBearing": False,
+            "relatedFiles": [replacement] if replacement else [],
+        }
+        item["inRepoMatches"] = scan_in_repo_pointers(superseded)
+    else:
+        item["action"] = "refresh-git-snapshot-pointer"
+        item["gitRecipe"] = {
+            "path": superseded,
+            "snapshotRole": "pointer",
+            "replacementPath": replacement,
+        }
+    actions.append(item)
+
+out = {
+    "verdict": "pass",
+    "action": "supersede-reconcile",
+    "effective": effective,
+    "nonAuthoritative": non_auth,
+    "dryRun": dry_run,
+    "entries": len(entries),
+    "reconcile": actions,
+}
+if dry_run:
+    out["note"] = "plan only — apply via /sw-memory-sync or memory-preflight modify"
+print(json.dumps(out, indent=2) if as_json else json.dumps(out))
+PY
+}
+
 main() {
   local cmd="${1:-}"
   shift || true
@@ -407,6 +556,8 @@ main() {
     append-log) cmd_append_log "$@" ;;
     append-log-idempotent) cmd_append_log_idempotent "$@" ;;
     gap-resolve) cmd_gap_resolve "$@" ;;
+    append-superseded) cmd_append_superseded "$@" ;;
+    supersede-reconcile) cmd_supersede_reconcile "$@" ;;
     -h | --help | "") usage ;;
     *)
       echo "unknown: $cmd" >&2

@@ -168,7 +168,7 @@ draft = {
     "compound": {"autonomy": "supervised"},
     "guardrails": {"enforceBeforeSubmit": True, "requireRuleClass": False},
     "review": {"provider": "none"},
-    "memory": {"provider": "in-repo"},
+    "memory": {"provider": "in-repo", "sourceOfTruth": "auto"},
     "configuredWith": {"shipwrightVersion": sw_ver, "schemaVersion": sch_ver},
 }
 
