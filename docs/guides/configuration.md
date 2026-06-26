@@ -129,7 +129,7 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `review.provider` | AI review adapter — default **`none`**; `coderabbit` opt-in |
 | `verify.lint` | Command `/sw-verify` runs for linting |
 | `verify.typecheck` | Command `/sw-verify` runs for type checking |
-| `verify.test` | Command `/sw-verify` runs for tests (Shipwright repos include `scripts/docs-link-check.sh` advisory + fixture suites) |
+| `verify.test` | Command `/sw-verify` runs for tests (Shipwright repos include fixture suites; PR test-plan set via `run-pr-test-plan-manifest.sh` from `verify.prTestPlanManifest`) |
 | `coderabbit.reviewGraceMinutes` | Gate grace window before absent review = settled |
 | `checks.treatNeutralAsPass` | NEUTRAL CI checks count as pass unless allowlisted |
 | `checks.neutralAllowlist` | Check names that stay blocking even if neutral |
@@ -191,3 +191,19 @@ The fail-closed hook engages via the marker. Run `/sw-setup` when you want full 
 | **Sentry** | Production signals via `/sw-feedback` or `/sw-debug` | Route production errors into the debug workstream |
 
 Provider **credentials** come from the environment or your secret store — never commit secrets.
+
+## PR test-plan CI enforcement (FEAT PRs)
+
+Shipwright repos single-source the standard FEAT test-plan fixture set in
+`core/sw-reference/pr-test-plan.manifest.json` (`verify.prTestPlanManifest` in config). Local
+`verify.test` runs the same set via `scripts/test/run-pr-test-plan-manifest.sh`; CI runs it via
+`.github/workflows/pr-test-plan-ci.yml` (regenerate with `bash scripts/generate-pr-test-plan-ci-workflow.sh`).
+
+Each manifest entry carries **`required`** (merge-blocking) or **`advisory`** (visible in the all-checks
+readiness verdict but non-blocking). `scripts/check-gate.sh` loads the manifest and exposes
+`requiredFailingChecks` / `advisoryFailingChecks` in gate JSON; `/sw-stabilize` remediates through the
+existing gate path. The PR template references CI **job names** as the authoritative gate — not a manual
+script checklist.
+
+Fixture suite: `bash scripts/test/run-pr-test-plan-fixtures.sh` (registered in `verify.test`).
+

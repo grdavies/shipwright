@@ -6,8 +6,10 @@ globs:
 
 # All-checks readiness gate
 
-When judging PR readiness in the Shipwright workflow, evaluate **every** check, not only required ones.
-A non-required job that fails still blocks merge-ready.
+When judging PR readiness in the Shipwright workflow, evaluate **every** check under the configured
+`checks.policy`. PR test-plan jobs from `pr-test-plan.manifest.json` carry an explicit **required** or
+**advisory** classification — only **required** job failures block merge-ready; **advisory** failures
+still surface in the readiness summary (`advisoryFailingChecks` in gate JSON).
 
 - Canonical algorithm: `checks-gate` skill (`skills/checks-gate/SKILL.md`). `/sw-watch-ci` and
   `/sw-stabilize` both use it.
