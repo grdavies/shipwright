@@ -41,6 +41,18 @@ Multi-feature mode uses `"mode": "multi-feature"` with conforming type-prefixed 
 - **contention:** shared-migration refusal + living INDEX/numbering counters force serialization;
   `injectedEdges` records contention-forced edges merged into `edges` / `waves`.
 
+### v1 deferrals (PRD 013 R13–R16)
+
+- **Cross-feature waves (R13):** `plan --task-list <frozen> --items a,b --combine [--edges b:1]` mixes
+  phase-mode units with multi-feature items; waves honor the combined edge set (`mode: combined`).
+- **File-set edge inference (R14):** when `## Phase Dependencies` is absent, overlapping `**File:**`
+  paths infer edges before sequential fallback; an explicit dependency table always wins.
+- **Live phase status (R15):** `/sw-status` `derive --json` embeds `livePhaseStatus` for in-flight runs;
+  `wave_living_docs.py phase-status-live` renders per-phase status, attempt, and blocker mid-run.
+- **Contention → `/sw-tasks` (R16):** plan-time serialization notices persist to run-state
+  `contentionFeedback`; surface suggestions (never auto-rewrite frozen tasks) via
+  `scripts/wave_deliver.py <root> tasks-suggest [--target <type>/<slug>]`.
+
 ## Run-state artifacts
 
 | Artifact | Path |
