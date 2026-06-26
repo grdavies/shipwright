@@ -41,7 +41,7 @@ MECHANICAL_ACTIONS = frozenset(
         "suggest-cleanup",
     }
 )
-AGENT_ACTIONS = frozenset({"dispatch-ship", "remediate", "terminal-ship", "compound-ship"})
+AGENT_ACTIONS = frozenset({"dispatch-ship", "remediate", "terminal-ship", "retrospective", "compound-ship"})
 TERMINAL_ACTIONS = frozenset({"halt-blocked", "complete", "terminal"})
 
 DRIVER_STALE_SECONDS = int(os.environ.get("SW_DRIVER_STALE_SECONDS", "7200"))
@@ -355,7 +355,7 @@ def compute_next_action(
                     "resume": True,
                 }
         if not compound.get("premergeDone"):
-            return {"action": "compound-ship", "resume": True}
+            return {"action": "retrospective", "resume": True}
         return {"action": "terminal-ship", "resume": True}
 
     if not state.get("orchestratorWorktree"):
@@ -672,8 +672,8 @@ def execute_mechanical(
         return {"executed": "advance-wave", "currentWave": wave_num}
 
     if action == "all-phases-complete":
-        persist_cursor(root, state, "compound-ship")
-        return {"executed": "all-phases-complete", "next": "compound-ship"}
+        persist_cursor(root, state, "retrospective")
+        return {"executed": "all-phases-complete", "next": "retrospective"}
 
     if action == "finalize-completion":
         ec, data = run_wave(root, "completion", "finalize-if-merged")

@@ -279,7 +279,7 @@ Terminal pause is suppressed; `/sw-deliver` must not wait on human input for per
 1. Run `bash scripts/wave.sh deliver-loop` from the orchestrator worktree.
 2. While `verdict: running` and no legitimate halt:
    - `awaitAgent: false` → re-invoke `deliver-loop` immediately (same turn).
-   - `awaitAgent: true` → execute `next.action` (`dispatch-ship`, `remediate`, `compound-ship`, or
+   - `awaitAgent: true` → execute `next.action` (`dispatch-ship`, `remediate`, `retrospective`, or
      `terminal-ship`), then re-invoke `deliver-loop`.
 3. Never end the turn asking the user to "continue deliver" when progress is still possible (R13).
 

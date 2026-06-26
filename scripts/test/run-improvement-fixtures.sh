@@ -14,6 +14,7 @@ STABILIZE="$(content_path commands/sw-stabilize.md)"
 RCA="$(content_path skills/rca-core/SKILL.md)"
 LOOP="$(content_path skills/stabilize-loop/SKILL.md)"
 COMPOUND_SHIP="$(content_path commands/sw-compound-ship.md)"
+RETROSPECTIVE="$(content_path commands/sw-retrospective.md)"
 SEQUENCING="$(content_path rules/sw-workflow-sequencing.mdc)"
 FAIL=0
 
@@ -113,36 +114,43 @@ else
   FAIL=1
 fi
 
-# --- U5: sw-compound-ship orchestrator exists with correct chain order ---
-if [[ -f "$COMPOUND_SHIP" ]]; then
-  echo "OK  sw-compound-ship command exists"
+# --- U5: sw-retrospective orchestrator exists with correct chain order ---
+if [[ -f "$RETROSPECTIVE" ]]; then
+  echo "OK  sw-retrospective command exists"
 else
-  echo "FAIL sw-compound-ship.md missing"
+  echo "FAIL sw-retrospective.md missing"
   FAIL=1
 fi
 
-if CHAIN_LINE=$(grep 'sw-retro' "$COMPOUND_SHIP" | grep 'sw-compound' | grep 'sw-status' | head -1) && \
+if [[ -f "$COMPOUND_SHIP" ]] && grep -q 'deprecated' "$COMPOUND_SHIP" && grep -q 'sw-retrospective' "$COMPOUND_SHIP"; then
+  echo "OK  sw-compound-ship deprecated alias routes to sw-retrospective"
+else
+  echo "FAIL sw-compound-ship deprecated alias"
+  FAIL=1
+fi
+
+if CHAIN_LINE=$(grep 'sw-retro' "$RETROSPECTIVE" | grep 'sw-status' | head -1) && \
    [[ -n "$CHAIN_LINE" ]] && \
-   echo "$CHAIN_LINE" | grep -qE 'sw-retro.*sw-compound.*sw-status'; then
-  echo "OK  compound-ship chain order retro → compound → status"
+   echo "$CHAIN_LINE" | grep -qE 'sw-retro.*sw-status'; then
+  echo "OK  retrospective chain order retro → compound write → status"
 else
-  echo "FAIL compound-ship chain order"
+  echo "FAIL retrospective chain order"
   FAIL=1
 fi
 
-if grep -qi 'never merge' "$COMPOUND_SHIP" && \
-   grep -qi 'delegat' "$COMPOUND_SHIP" && \
-   grep -qi 'never auto-promote rule' "$COMPOUND_SHIP"; then
-  echo "OK  compound-ship guardrails (delegate, never merge, never auto-promote rules)"
+if grep -qi 'never merge' "$RETROSPECTIVE" && \
+   grep -qi 'delegat' "$RETROSPECTIVE" && \
+   grep -qi 'never auto-promote rule' "$RETROSPECTIVE"; then
+  echo "OK  retrospective guardrails (delegate, never merge, never auto-promote rules)"
 else
-  echo "FAIL compound-ship guardrails"
+  echo "FAIL retrospective guardrails"
   FAIL=1
 fi
 
-if grep -q 'sw-compound-ship' "$SEQUENCING"; then
-  echo "OK  sw-workflow-sequencing references sw-compound-ship"
+if grep -q 'sw-retrospective' "$SEQUENCING"; then
+  echo "OK  sw-workflow-sequencing references sw-retrospective"
 else
-  echo "FAIL sw-workflow-sequencing missing sw-compound-ship"
+  echo "FAIL sw-workflow-sequencing missing sw-retrospective"
   FAIL=1
 fi
 

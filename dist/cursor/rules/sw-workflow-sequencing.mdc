@@ -54,7 +54,8 @@ Repo-level index: `scripts/shipwright-state.sh index` (read-time aggregate — n
 | `/sw-stabilize` | fix blockers | merge |
 | `/sw-ready` | readiness report | push, merge |
 | `/sw-ship` | orchestrate chain | merge |
-| `/sw-compound-ship` | post-merge compounding chain | merge, auto-promote rules |
+| `/sw-retrospective` | post-delivery compounding chain (`--pre-merge` / `--post-merge`) | merge, auto-promote rules |
+| `/sw-compound-ship` | *(deprecated alias → `/sw-retrospective`)* | — |
 | `/sw-setup` | scaffold config + doctor | scaffold CI, migrate memories |
 
 ## Parallelism
@@ -64,7 +65,7 @@ shared migrations.
 
 ## Post-merge
 
-Human merges → `/sw-compound-ship` (or atomically: `/sw-retro` → `/sw-compound` → optional
-`/sw-memory-sync` → `/sw-status reconcile` + `append-log`).
+Human merges → `/sw-retrospective` (or atomically: `/sw-retro` → compound write via `skills/compound/SKILL.md` → optional
+`/sw-memory-sync` → `/sw-status reconcile` + `append-log`). Deprecated: `/sw-compound-ship` routes to the same chain.
 
 Stacking: after merge-ready merge, update parent, `/sw-start` for next phase.
