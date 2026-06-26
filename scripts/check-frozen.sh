@@ -11,6 +11,15 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 BASE="${1:-}"
 
 if [ -z "$BASE" ]; then
+  RESOLVER="$SCRIPT_ROOT/scripts/resolve-base-branch.sh"
+  if [[ -x "$RESOLVER" ]]; then
+    if OUT=$(bash "$RESOLVER" diff-base 2>/dev/null); then
+      BASE=$(echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('range','').split('..')[0])" 2>/dev/null || true)
+    fi
+  fi
+fi
+
+if [ -z "$BASE" ]; then
   if git rev-parse --verify origin/main >/dev/null 2>&1; then
     BASE="$(git merge-base HEAD origin/main 2>/dev/null || echo origin/main)"
   else
