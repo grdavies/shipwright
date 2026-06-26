@@ -11,7 +11,10 @@ Post-persona merge for `/sw-doc-review`.
    - `safe_auto` — apply `suggested_fix` silently to the PRD draft.
    - `gated_auto` — present fix; apply only after user confirms.
    - `manual` — surface as trade-off; halt orchestrator until user decides.
-5. **Report** — list applied fixes, gated items, manual trade-offs, residual risks.
+5. **Docs-currency findings** (`sw-docs-currency-reviewer`) — recommended documentation-artifact updates
+   (path + required change) fold into PRD requirements / tasks on acceptance via `gated_auto` or `manual`.
+   Never silent auto-edit of docs or the parent file; never a hard freeze/ship block.
+6. **Report** — list applied fixes, gated items, manual trade-offs, residual risks.
 
 ## Bounded loop (R29)
 
@@ -25,7 +28,7 @@ If a persona sub-agent fails, log the failure and proceed with partial coverage.
 
 ## Amendment review
 
-When reviewing amendments (U7), coherence + scope-guardian always run against the frozen parent:
+When reviewing amendments (U7), coherence + scope-guardian + docs-currency always run against the frozen parent:
 
 - Verify every `supersedes`/`retracts` target exists in parent.
 - Reject targets already retracted.
