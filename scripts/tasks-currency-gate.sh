@@ -24,11 +24,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$TASKS_FILE" ]]; then
-  STATE_JSON="$(python3 "$ROOT/scripts/wave_state.py" "$ROOT" resolve state-path 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('path',''))")"
+  STATE_JSON="$(python3 "$ROOT/scripts/wave_state.py" "$STATE_ROOT" resolve state-path 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('path',''))")"
   if [[ -z "$STATE_JSON" || ! -f "$STATE_JSON" ]]; then
-    STATE_JSON="$STATE_ROOT/.cursor/sw-deliver-state.json"
-  fi
-  if [[ ! -f "$STATE_JSON" ]]; then
     echo '{"verdict":"fail","error":"no --tasks-file and no deliver state"}' >&2
     exit 2
   fi

@@ -28,10 +28,17 @@ if [[ "${1:-}" == "freeze-commit" ]]; then
   fi
   OUT=""
   EC=0
-  if ! OUT=$(bash "$SCRIPT_ROOT/scripts/wave.sh" spec-seed --artifact "$ARTIFACT" 2>&1); then
-    EC=$?
-  fi
+  set +e
+  OUT=$(bash "$SCRIPT_ROOT/scripts/wave.sh" spec-seed --artifact "$ARTIFACT" 2>&1)
+  EC=$?
+  set -e
+  NEED_WARN=0
   if [[ "$EC" -ne 0 ]]; then
+    NEED_WARN=1
+  elif ! echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('verdict') in ('pass', 'ok') else 1)" 2>/dev/null; then
+    NEED_WARN=1
+  fi
+  if [[ "$NEED_WARN" -eq 1 ]]; then
     python3 - <<'PY' "$EC" "$OUT"
 import json, sys
 ec, detail = int(sys.argv[1]), sys.argv[2]
@@ -45,6 +52,8 @@ print(json.dumps({
 PY
     exit 0
   fi
+  echo "$OUT"
+  exit 0
   echo "$OUT"
   exit 0
 fi

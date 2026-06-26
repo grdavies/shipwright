@@ -32,10 +32,10 @@ docs/decisions/
 
 .cursor/
 ├── sw-deliver-plan.json    # deliver plan artifact (living, written by /sw-deliver plan)
-├── sw-deliver-state.<slug>.json   # per-run scoped state (canonical at repo root; PRD 013)
+├── sw-deliver-state.<slug>.json   # per-run scoped state — single canonical path at repo root (PRD 013 R6/R28)
 ├── sw-deliver-<slug>.lock         # per-run scoped orchestrator lock
 ├── sw-living-docs.lock            # repo-wide living-doc write serialization (PRD 013 R12)
-├── sw-deliver-state.json          # legacy repo-wide state (migrated on first scoped read)
+├── sw-deliver-state.json          # legacy repo-wide state (migration breadcrumb after adopt)
 ├── sw-deliver.lock                # legacy repo-wide lock (superseded by scoped locks)
 ├── sw-deliver-runs/
 │   ├── index.json                 # concurrent-run index (live scoped runs)
@@ -139,6 +139,14 @@ Amendment body is **delta-only** — parent file is never edited.
 | `/sw-amend` | frozen parent PRD | `docs/prds/<n>-<slug>/amendments/A<k>-<short>.md` |
 | `/sw-tasks` | frozen PRD + union | `docs/prds/<n>-<slug>/tasks-<n>-<slug>.md`, `INDEX.md` |
 | `/sw-doc` | tier from triage | delegates to above |
+
+### Deliver state canonicalization (R28)
+
+The live deliver run-state file exists **once** at the repo-root scoped path
+(`.cursor/sw-deliver-state.<slug>.json`). Orchestrator and phase worktrees read and write through
+`wave_state.scoped_paths()` / `resolve_state_path()` at the git toplevel — never a second authoritative
+copy under `.sw-worktrees/**/.cursor/`. `wave_compound.py record-premerge` and
+`cleanup_lib.resolve_deliver_state()` use the same resolver.
 
 ## Living vs frozen layers
 

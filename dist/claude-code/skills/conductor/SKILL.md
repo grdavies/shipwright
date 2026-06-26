@@ -35,10 +35,16 @@ A fresh agent with no prior chat context resumes from:
 
 | Artifact | Path |
 | --- | --- |
-| Run cursor | `.cursor/sw-deliver-state.json` (`nextAction`, `currentWave`, phase statuses) |
+| Run cursor (scoped) | `.cursor/sw-deliver-state.<slug>.json` at **repo root** (`nextAction`, `currentWave`, phase statuses) |
 | Plan | `.cursor/sw-deliver-plan.json` |
+| Concurrent-run index | `.cursor/sw-deliver-runs/index.json` |
 | Per-phase `/sw-ship` status | `.cursor/sw-deliver-runs/<phase-slug>/status.json` |
 | Append-only progress | `.cursor/sw-deliver-runs/run.log` |
+
+**Per-branch scoped deliver state (PRD 013):** orthogonal feature branches each own
+`sw-deliver-state.<slug>.json` + `sw-deliver-<slug>.lock`. The conductor never treats branch B's
+in-flight run as stale identity for branch A. All writes use the repo-root canonical path (R28) — not a
+duplicate under orchestrator worktree `.cursor/`.
 
 Resume command (phase-mode):
 
@@ -76,6 +82,11 @@ The conductor never ends its turn while `nextAction` is runnable and no legitima
 | `retrospective` | `/sw-retrospective --pre-merge` on the orchestrator worktree after all phases merge (R9; single-sourced chain) |
 | `terminal-ship` | After `retrospective` when pre-merge done: terminal PR prepare/gate, CI watch + `/sw-ready`; may arm self-wake (below) |
 
+**Terminal autonomy (PRD 013 A1):** when `deliver.terminal.autonomy: auto`, the conductor runs
+`terminal retro run` then `terminal ship run` hands-off (bounded gate watch + `/sw-stabilize` via
+`deliver.remediation.maxAttempts`). Merge to `main` stays human-gated. Optional `cleanup.autonomy: auto`
+applies safe post-merge cleanup when deterministic.
+
 **Orchestrator worktree:** run `deliver-loop` from `.sw-worktrees/<slug>-orchestrator` (or repo root with
 state synced). Never hand off with "run deliver-loop next" as the only instruction — run it in-turn.
 
@@ -104,8 +115,8 @@ On circuit breaker: `bash scripts/wave.sh report terminal` (or `report blocker`)
 For time-gated external waits (terminal-PR CI, long `checks.watch` polls), arm a **uniquely named**
 background shell with `notify_on_output` so the conductor resumes without a user message.
 
-**Run id** (stable per deliver run): `sw-deliver-<prd_number>-<target.slug>` from
-`.cursor/sw-deliver-state.json` (e.g. `sw-deliver-009-autonomous-orchestration-conductor`).
+**Run id** (stable per deliver run): `sw-deliver-<prd_number>-<target.slug>` from the scoped
+`.cursor/sw-deliver-state.<slug>.json` (e.g. `sw-deliver-009-autonomous-orchestration-conductor`).
 
 ### Terminal-PR CI wait
 
