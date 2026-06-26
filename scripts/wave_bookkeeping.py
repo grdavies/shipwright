@@ -185,7 +185,9 @@ def resolve_worktree(root: Path, args: list[str]) -> Path:
     explicit = parse_kv(args, "--worktree")
     if explicit:
         return Path(explicit).resolve()
-    state = read_json(root / ".cursor" / "sw-deliver-state.json")
+    from wave_state import load_deliver_state
+
+    state = load_deliver_state(root)
     orch = state.get("orchestratorWorktree") or {}
     path = orch.get("path")
     if path:
@@ -230,8 +232,10 @@ def cmd_record(root: Path, args: list[str]) -> None:
     if not section:
         fail(f"commit type {commit_type!r} has no visible changelog section")
 
-    state_path = root / ".cursor" / "sw-deliver-state.json"
-    state = read_json(state_path)
+    from wave_state import load_deliver_state, resolve_state_path
+
+    state_path = resolve_state_path(root)
+    state = load_deliver_state(root)
     if changelog_path.is_file():
         changelog = changelog_path.read_text(encoding="utf-8")
     else:
@@ -305,8 +309,10 @@ def cmd_revert(root: Path, args: list[str]) -> None:
     if not changelog_path.is_file():
         fail(f"CHANGELOG.md not found in {worktree}")
 
-    state_path = root / ".cursor" / "sw-deliver-state.json"
-    state = read_json(state_path)
+    from wave_state import load_deliver_state, resolve_state_path
+
+    state_path = resolve_state_path(root)
+    state = load_deliver_state(root)
 
     if changelog_path.is_file():
         changelog = changelog_path.read_text(encoding="utf-8")

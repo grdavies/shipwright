@@ -448,7 +448,9 @@ def feature_slug(frontmatter: dict[str, str], task_path: Path) -> str:
 
 
 def load_run_state(root: Path) -> dict[str, Any]:
-    state_path = root / ".cursor" / STATE_PATH_NAME
+    from wave_state import resolve_state_path
+
+    state_path = resolve_state_path(root)
     if not state_path.is_file():
         return {}
     try:

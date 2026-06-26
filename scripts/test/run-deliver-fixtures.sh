@@ -724,8 +724,11 @@ import json,sys
 d=json.load(sys.stdin)
 assert d['blockedDependents'][0]['phaseSlug']=='gamma'
 " && python3 -c "
-import json
-s=json.load(open('$BR_FIX/.cursor/sw-deliver-state.json'))
+import json, sys
+sys.path.insert(0, '$ROOT/scripts')
+from pathlib import Path
+from wave_state import load_deliver_state
+s = load_deliver_state(Path('$BR_FIX'), target='feat/demo')
 assert s['phases']['3']['status']=='blocked'
 assert s['phases']['2']['status']=='pending'
 "; then
@@ -784,8 +787,11 @@ JSON
   if OUT=$(python3 "$WF" "$REVERT_FIX" revert phase --phase-slug alpha --worktree "$REVERT_FIX" 2>/dev/null) && \
      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['action']=='revert-phase'" && \
      python3 -c "
-import json
-s=json.load(open('.cursor/sw-deliver-state.json'))
+import json, sys
+sys.path.insert(0, '$ROOT/scripts')
+from pathlib import Path
+from wave_state import load_deliver_state
+s = load_deliver_state(Path('.'), target='feat/demo')
 assert s['phases']['1']['status']=='blocked'
 assert s['phases']['2']['status']=='blocked'
 assert s['mergedPhases'][0].get('reverted')
@@ -807,8 +813,11 @@ import json,sys
 d=json.load(sys.stdin)
 assert d['action']=='terminal-deny'
 " && python3 -c "
-import json
-s=json.load(open('$DENY_FIX/.cursor/sw-deliver-state.json'))
+import json, sys
+sys.path.insert(0, '$ROOT/scripts')
+from pathlib import Path
+from wave_state import load_deliver_state
+s = load_deliver_state(Path('$DENY_FIX'), target='feat/demo')
 assert s.get('terminalRejected') is True
 assert s.get('verdict')=='rejected'
 "; then
@@ -868,8 +877,11 @@ import json,sys
 d=json.load(sys.stdin)
 assert 'alpha' in d['promoted']
 " && python3 -c "
-import json
-s=json.load(open('.cursor/sw-deliver-state.json'))
+import json, sys
+sys.path.insert(0, '$ROOT/scripts')
+from pathlib import Path
+from wave_state import load_deliver_state
+s = load_deliver_state(Path('.'), target='feat/demo')
 assert s['phases']['1']['status']=='green-merged'
 assert s['phases']['2']['status']=='pending'
 "; then
@@ -913,7 +925,7 @@ rm -rf "$TERM_FIX"
 ACK_FIX=$(mktemp -d)
 mkdir -p "$ACK_FIX/.cursor"
 echo '{"deliver":{"phaseAckCadence":2}}' >"$ACK_FIX/.cursor/workflow.config.json"
-echo '{"mergesSinceAck":0}' >"$ACK_FIX/.cursor/sw-deliver-state.json"
+echo '{"target":{"branch":"feat/demo"},"mergesSinceAck":0}' >"$ACK_FIX/.cursor/sw-deliver-state.json"
 python3 "$WT" "$ACK_FIX" ack record-merge >/dev/null
 python3 "$WT" "$ACK_FIX" ack record-merge >/dev/null
 set +e

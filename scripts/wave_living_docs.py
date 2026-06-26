@@ -40,7 +40,9 @@ def has_flag(args: list[str], flag: str) -> bool:
 
 
 def load_state(root: Path) -> dict[str, Any]:
-    path = root / ".cursor" / "sw-deliver-state.json"
+    from wave_state import resolve_state_path
+
+    path = resolve_state_path(root)
     if not path.is_file():
         return {}
     try:

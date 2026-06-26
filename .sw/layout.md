@@ -32,9 +32,13 @@ docs/decisions/
 
 .cursor/
 ├── sw-deliver-plan.json    # deliver plan artifact (living, written by /sw-deliver plan)
-├── sw-deliver-state.json   # run-state (living, written by /sw-deliver run)
-├── sw-deliver.lock         # orchestrator lock (living)
-└── sw-deliver-runs/        # per-phase status (living)
+├── sw-deliver-state.<slug>.json   # per-run scoped state (canonical at repo root; PRD 013)
+├── sw-deliver-<slug>.lock         # per-run scoped orchestrator lock
+├── sw-deliver-state.json          # legacy repo-wide state (migrated on first scoped read)
+├── sw-deliver.lock                # legacy repo-wide lock (superseded by scoped locks)
+├── sw-deliver-runs/
+│   ├── index.json                 # concurrent-run index (live scoped runs)
+│   └── <phase-slug>/              # per-phase status (living)
 ```
 
 ## Naming conventions

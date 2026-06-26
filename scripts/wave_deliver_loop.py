@@ -16,12 +16,18 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 from wave_merge import check_status_sha, phase_branch_head_optional, status_file_for
+from wave_state import (
+    append_log as state_append_log,
+    load_deliver_state,
+    resolve_state_path,
+    save_deliver_state,
+    scoped_paths,
+    target_branch_from_state,
+)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PLAN_PATH = Path(".cursor/sw-deliver-plan.json")
-STATE_PATH = Path(".cursor/sw-deliver-state.json")
 BLOCKER_PATH = Path(".cursor/sw-deliver-runs/blockers.json")
-LOG_PATH = Path(".cursor/sw-deliver-runs/run.log")
 
 MECHANICAL_ACTIONS = frozenset(
     {
@@ -127,13 +133,9 @@ def age_seconds(ts: str) -> float | None:
     return (datetime.now(timezone.utc) - dt).total_seconds()
 
 
-def append_log(root: Path, entry: dict[str, Any]) -> None:
-    path = root / LOG_PATH
-    path.parent.mkdir(parents=True, exist_ok=True)
-    line = json.dumps({**entry, "at": utc_now()}, ensure_ascii=False) + "\n"
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(line)
-    os.chmod(path, 0o600)
+def append_log(root: Path, entry: dict[str, Any], state: dict[str, Any] | None = None) -> None:
+    target = target_branch_from_state(state) if state else None
+    state_append_log(root, entry, target=target)
 
 
 def load_plan(root: Path) -> dict[str, Any]:
@@ -143,17 +145,12 @@ def load_plan(root: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def load_state(root: Path) -> dict[str, Any]:
-    path = root / STATE_PATH
-    try:
-        return read_json(path)
-    except StateCorruptError as exc:
-        fail(str(exc), exit_code=20, halt="blocked", cause="state:corrupt")
+def load_state(root: Path, task_list: str | None = None) -> dict[str, Any]:
+    return load_deliver_state(root, task_list=task_list)
 
 
 def save_state(root: Path, state: dict[str, Any]) -> None:
-    state["updatedAt"] = utc_now()
-    write_json(root / STATE_PATH, state)
+    save_deliver_state(root, state)
 
 
 def ensure_driver_fields(state: dict[str, Any]) -> None:
@@ -285,7 +282,7 @@ def assert_run_identity(
         "stale run-state from a different source_task_list/prd_number",
         exit_code=20,
         halt="stale-state",
-        remediation="bash scripts/wave.sh deliver-loop --reset --task-list <path> or remove .cursor/sw-deliver-state.json",
+        remediation="bash scripts/wave.sh deliver-loop --reset --task-list <path> or remove scoped .cursor/sw-deliver-state.<slug>.json",
     )
 
 
@@ -550,7 +547,7 @@ def persist_cursor(root: Path, state: dict[str, Any], action: str, **extra: Any)
     for key, val in extra.items():
         state[key] = val
     save_state(root, state)
-    append_log(root, {"event": "driver-transition", "nextAction": action, **extra})
+    append_log(root, {"event": "driver-transition", "nextAction": action, **extra}, state)
 
 
 def write_blocker_report(root: Path, state: dict[str, Any], cause: str) -> Path:
@@ -807,7 +804,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     max_steps = int(parse_kv(args, "--max-steps", "12") or "12")
     task_list = parse_kv(args, "--task-list")
 
-    state = load_state(root)
+    state = load_state(root, task_list)
     plan = load_plan(root)
     resumed = bool(state.get("verdict") == "running" and state.get("phases"))
 
@@ -823,7 +820,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
 
     steps_taken: list[dict[str, Any]] = []
     for _ in range(max_steps):
-        state = load_state(root)
+        state = load_state(root, task_list)
         plan = load_plan(root)
         if task_list:
             state["source_task_list"] = task_list
@@ -899,7 +896,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
             "resumed": resumed,
             "note": f"step budget ({max_steps}) reached",
             "stepsTaken": steps_taken,
-            "next": compute_next_action(root, load_state(root), load_plan(root)),
+            "next": compute_next_action(root, load_state(root, task_list), load_plan(root)),
         }
     )
 
