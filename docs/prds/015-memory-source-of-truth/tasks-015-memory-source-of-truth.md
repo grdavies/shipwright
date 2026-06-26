@@ -46,13 +46,13 @@ then pointer inversion + supersede, then compound/audit/migration, then docs/dis
 
 ### 4. Compound SoT branch + audit conflict + migration (M)
 
-- [ ] 4.1 `/sw-retrospective` decision-write SoT branch (R8)
+- [x] 4.1 `/sw-retrospective` decision-write SoT branch (R8)
   - **File:** `skills/compound/SKILL.md`, `skills/memory/SKILL.md`
   - **Expected:** pointer under repo-SoT; content-bearing authoritative record under memory-SoT; redaction chokepoint always
-- [ ] 4.2 SoT-aware audit conflict + legacy reconcile (R9, R11)
+- [x] 4.2 SoT-aware audit conflict + legacy reconcile (R9, R11)
   - **File:** `core/commands/sw-memory-audit.md`, `scripts/` (audit helper)
   - **Expected:** flags contradicting content-bearing decision memories; one-time legacy reconcile on mode switch; default `auto`+in-repo is no-change
-- [ ] 4.3 Fail-closed redaction across writes (R10)
+- [x] 4.3 Fail-closed redaction across writes (R10)
   - **File:** `scripts/memory-redact.sh` (invocation), `skills/memory/SKILL.md`
   - **Expected:** a redaction failure aborts both the provider write and the snapshot write (no raw store); provider outage degrades to snapshot with a warning
 

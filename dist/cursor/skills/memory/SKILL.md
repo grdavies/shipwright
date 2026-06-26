@@ -86,6 +86,10 @@ Or: `bash scripts/memory-redact.sh path/to/file`. The filter is deterministic (s
 runs offline, and scrubs the named corpus in `rules/memory-guardrails.mdc` (AWS keys, GitHub PATs, JWTs,
 `Bearer` tokens, PEM private keys, emails). Never persist or re-inject unredacted content.
 
+**Fail-closed (R10):** if `memory-redact.sh` exits non-zero, abort the provider write **and** any snapshot
+write (`scripts/memory-decision-snapshot.sh write` propagates the failure). A provider outage after a
+successful snapshot stamp degrades to the committed snapshot with a warning — never block freeze/CI.
+
 ## Write mode (after substantive work)
 
 Store distilled memories per the write contract in `CAPABILITIES.md`:

@@ -27,10 +27,19 @@ fail-closed (R7) and rule-class human gates (R8) apply under all settings.
 3. `memory-preflight` **search** before store — `modify` near-duplicates.
 4. Store with canonical category (`decision` / `learning` / `debug` / `design`), `relatedFiles`, tags
    (`prd-<n>`, `surface:compound`), relationship edges when supported.
-5. **Decision record boundary (R32 / KTD3):** when a cross-cutting decision has a frozen decision record at
-   `docs/decisions/<n>-<slug>.md`, store a **pointer** memory only — short summary + `relatedFiles: [docs/decisions/...]`.
-   Never copy the record body into memory. A `decision`-class memory is retrospective knowledge; the record is
-   the authoritative frozen deliverable.
+5. **Decision record boundary (R32 / provider-conditional SoT — R8):** resolve the write recipe first:
+
+```bash
+bash scripts/memory-sot.sh pointer-recipe --path docs/decisions/<n>-<slug>.md [--memory-id <id>] --json
+```
+
+| Effective SoT | Compound `decision` write |
+| --- | --- |
+| `repo` (default `auto`+in-repo) | **Pointer only** — short summary + `relatedFiles: [docs/decisions/...]`; never the record body |
+| `memory` | **Content-bearing authoritative** record via redaction chokepoint; git snapshot stays pointer |
+
+Under repo-SoT the frozen git record remains authoritative; under memory-SoT the provider record is
+authoritative and the committed snapshot is a forward pointer only.
 6. **On record-level supersede:** best-effort re-point linking `decision`-class memories to the replacement
    record path; append the superseded record path to `docs/decisions/SUPERSEDED.log` (file-side audit hook).
 7. **Rule-class promotion (R8):** never auto-promote. Candidate → user confirms → `/sw-memory-audit` →
