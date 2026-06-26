@@ -308,6 +308,103 @@ else
   bad "deliver-surface-docs-autonomy-parallelism"
 fi
 
+# --- PRD 013 A1 terminal autonomy (R20–R24) ---
+TERM_PY="$ROOT/scripts/wave_terminal.py"
+if OUT=$(python3 "$TERM_PY" "$ROOT" terminal autonomy 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('mode')=='supervised'
+assert d.get('supervisedHalts') is True
+"; then
+  ok "deliver-terminal-autonomy-knob: default supervised"
+else
+  bad "deliver-terminal-autonomy-knob: default supervised"
+fi
+
+AUTO_CFG_FIX=$(mktemp -d)
+mkdir -p "$AUTO_CFG_FIX/.cursor"
+cp "$ROOT/.cursor/workflow.config.json" "$AUTO_CFG_FIX/.cursor/" 2>/dev/null || echo '{}' >"$AUTO_CFG_FIX/.cursor/workflow.config.json"
+python3 -c "
+import json
+from pathlib import Path
+p=Path('$AUTO_CFG_FIX/.cursor/workflow.config.json')
+cfg=json.loads(p.read_text())
+cfg.setdefault('deliver',{})['terminal']={'autonomy':'auto'}
+p.write_text(json.dumps(cfg, indent=2))
+"
+if OUT=$(python3 "$TERM_PY" "$AUTO_CFG_FIX" terminal autonomy 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('mode')=='auto' and d.get('handsOff')
+"; then
+  ok "deliver-terminal-autonomy-knob: auto mode honored"
+else
+  bad "deliver-terminal-autonomy-knob: auto mode honored"
+fi
+rm -rf "$AUTO_CFG_FIX"
+
+RETRO_FIX=$(mktemp -d)
+(
+  cd "$RETRO_FIX"
+  git init -q
+  git config user.email t@t.com
+  git config user.name T
+  git commit --allow-empty -q -m init
+  git branch -M main
+  git checkout -qb feat/terminal-retro
+  git commit --allow-empty -q -m feat
+  mkdir -p .cursor docs/prds
+  cat >.cursor/workflow.config.json <<'JSON'
+{"defaultBaseBranch":"main","deliver":{"terminal":{"autonomy":"auto"}}}
+JSON
+  cat >.cursor/sw-deliver-state.terminal-retro.json <<'JSON'
+{"verdict":"running","prd_number":"013","target":{"branch":"feat/terminal-retro"},"phases":{"1":{"status":"green-merged","slug":"a"},"2":{"status":"green-merged","slug":"b"}}}
+JSON
+  if OUT=$(python3 "$TERM_PY" "$RETRO_FIX" terminal retro run --dry-run 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('action')=='terminal-retro-run'
+assert d.get('targetBranch')=='feat/terminal-retro'
+assert d.get('wouldCommitOn')=='feat/terminal-retro'
+"; then
+    :
+  else
+    exit 1
+  fi
+) && ok "deliver-terminal-retro-before-pr" || bad "deliver-terminal-retro-before-pr"
+rm -rf "$RETRO_FIX"
+
+if OUT=$(python3 "$TERM_PY" "$ROOT" terminal ship run --dry-run --force 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('neverAutoMergesMain') is True
+assert 'gate-watch' in d.get('steps',[])
+"; then
+  ok "deliver-terminal-no-auto-merge: dry-run declares human gate"
+else
+  SHIP_FIX=$(mktemp -d)
+  cd "$SHIP_FIX"
+  git init -q
+  git config user.email t@t.com
+  git config user.name T
+  git commit --allow-empty -q -m init
+  git branch -M main
+  git checkout -qb feat/terminal-ship
+  mkdir -p .cursor
+  echo '{"defaultBaseBranch":"main","deliver":{"terminal":{"autonomy":"auto"}}}' > .cursor/workflow.config.json
+  echo '{"verdict":"running","prd_number":"013","target":{"branch":"feat/terminal-ship"},"phases":{"1":{"status":"green-merged","slug":"a"}},"compoundShip":{"premergeDone":true}}' > .cursor/sw-deliver-state.terminal-ship.json
+  if OUT2=$(python3 "$TERM_PY" "$SHIP_FIX" terminal ship run --dry-run 2>/dev/null) && echo "$OUT2" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('neverAutoMergesMain') is True
+"; then
+    ok "deliver-terminal-no-auto-merge: dry-run declares human gate"
+  else
+    bad "deliver-terminal-no-auto-merge"
+  fi
+  rm -rf "$SHIP_FIX"
+fi
+
 if [[ "$FAIL" -ne 0 ]]; then
   echo "deliver-loop fixtures: FAIL"
   exit 1

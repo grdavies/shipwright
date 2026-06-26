@@ -165,6 +165,62 @@ def load_deliver_state(root: Path) -> dict[str, Any]:
     return resolve_deliver_state(root).state
 
 
+def load_workflow_config(root: Path) -> dict[str, Any]:
+    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
+        path = root / rel
+        if path.is_file():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+    return {}
+
+
+def cleanup_autonomy_mode(root: Path) -> str:
+    cfg = load_workflow_config(root)
+    cleanup = cfg.get("cleanup") or {}
+    mode = cleanup.get("autonomy", "confirm")
+    return mode if mode in ("confirm", "auto") else "confirm"
+
+
+def has_indeterminate_protected(report: Report) -> bool:
+    return any(item.reason == "indeterminate" for item in report.protected)
+
+
+def can_autonomous_apply(root: Path, report: Report) -> tuple[bool, str]:
+    if cleanup_autonomy_mode(root) != "auto":
+        return False, "cleanup.autonomy is confirm (default)"
+    inflight, reason = deliver_inflight(root)
+    if inflight:
+        return False, reason
+    if has_indeterminate_protected(report):
+        return False, "indeterminate merge status — human gate required"
+    default = load_default_branch(root)
+    current = current_branch(root)
+    for item in report.would_remove:
+        if item.kind == "branch" and item.name in (current, default):
+            return False, f"would remove protected branch {item.name}"
+    return True, "ok"
+
+
+def apply_autonomous_cleanup(root: Path) -> dict[str, Any]:
+    report = enumerate_cleanup(root)
+    ok, reason = can_autonomous_apply(root, report)
+    if not ok:
+        return {
+            "verdict": "halt",
+            "action": "cleanup-autonomous-apply",
+            "reason": reason,
+            "report": report.to_dict(),
+        }
+    applied = apply_report(root, report)
+    return {
+        "verdict": "pass",
+        "action": "cleanup-autonomous-apply",
+        "report": applied.to_dict(),
+    }
+
+
 def rel_to_repo(repo_root: Path, path: Path) -> str:
     try:
         return str(path.resolve().relative_to(repo_root.resolve()))
@@ -493,6 +549,11 @@ def apply_report(root: Path, report: Report) -> Report:
 def main() -> None:
     root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
     confirm = "--confirm" in sys.argv
+    autonomous = "--autonomous" in sys.argv
+    if autonomous:
+        out = apply_autonomous_cleanup(root)
+        print(json.dumps(out, indent=2))
+        sys.exit(0 if out.get("verdict") == "pass" else 11)
     report = enumerate_cleanup(root)
     if confirm:
         if "--yes" not in sys.argv and os.environ.get("SW_CLEANUP_CONFIRM") != "1":

@@ -728,12 +728,23 @@ def execute_mechanical(
         if ec != 0:
             fail_payload(data, "finalize completion failed", ec)
         state.update(load_state(root))
+        cleanup_payload: dict[str, Any] | None = None
+        try:
+            from cleanup_lib import apply_autonomous_cleanup, cleanup_autonomy_mode
+
+            if cleanup_autonomy_mode(root) == "auto":
+                cleanup_payload = apply_autonomous_cleanup(root)
+        except Exception as exc:
+            cleanup_payload = {"verdict": "halt", "error": str(exc)}
         persist_cursor(root, state, "suggest-cleanup")
-        return {
+        result: dict[str, Any] = {
             "executed": "finalize-completion",
             "cleanupSuggestion": data.get("cleanupSuggestion"),
             **data,
         }
+        if cleanup_payload is not None:
+            result["autonomousCleanup"] = cleanup_payload
+        return result
 
     if action == "suggest-cleanup":
         suggestion = str(step.get("cleanupSuggestion") or "Run `/sw-cleanup` to prune merged branches and stale worktrees.")
