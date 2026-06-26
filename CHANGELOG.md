@@ -73,6 +73,7 @@
 * merge phase sot-resolver-config-schema-defaults-m into feat/memory-source-of-truth (312ee05) <!-- sw-deliver:sot-resolver-config-schema-defaults-m -->
 * merge phase always-committed-redacted-snapshot-offline-safe-freeze-ci-m into feat/memory-source-of-truth (89f52ca) <!-- sw-deliver:always-committed-redacted-snapshot-offline-safe-freeze-ci-m -->
 * merge phase pointer-inversion-supersede-reconcile-m into feat/memory-source-of-truth (ed509ad) <!-- sw-deliver:pointer-inversion-supersede-reconcile-m -->
+* merge phase compound-sot-branch-audit-conflict-migration-m into feat/memory-source-of-truth (c16c11e) <!-- sw-deliver:compound-sot-branch-audit-conflict-migration-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
