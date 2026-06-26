@@ -54,6 +54,7 @@
 * merge phase registry-selection-and-output-contract-m into feat/documentation-impact-review-persona (735ac75) <!-- sw-deliver:registry-selection-and-output-contract-m -->
 * merge phase tier-routing-living-doc-complementarity-s into feat/documentation-impact-review-persona (15aa134) <!-- sw-deliver:tier-routing-living-doc-complementarity-s -->
 * merge phase docs-dist-fixtures-m into feat/documentation-impact-review-persona (32d6b75) <!-- sw-deliver:docs-dist-fixtures-m -->
+* merge phase trust-verify-sw-init-project-type-detection-fixed-presets-setup-write-unconfigured-signal-rename-configurator-version-stamp-l into feat/generic-repo-portability (8492be7) <!-- sw-deliver:trust-verify-sw-init-project-type-detection-fixed-presets-setup-write-unconfigured-signal-rename-configurator-version-stamp-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

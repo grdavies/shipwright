@@ -8,6 +8,7 @@ import shutil
 from pathlib import Path
 
 from emitter_base import EmitterBase, EmitterError, ensure_clean_dir, read_version
+# verify-presets.json emitted via emitter_base.SW_REFERENCE_CLOSED_EMIT
 
 SUPPORTED = {
     "hooks": {"native"},
@@ -138,16 +139,7 @@ class ClaudeCodeEmitter(EmitterBase):
             plat_dir = dest / "platforms" / "claude-code"
             plat_dir.mkdir(parents=True, exist_ok=True)
             shutil.copy2(adapter_src, plat_dir / "hook_adapter.py")
-        comm_defaults = core_root / "sw-reference" / "communication-routing.defaults.json"
-        if comm_defaults.is_file():
-            ref_dir = dest / "core" / "sw-reference"
-            ref_dir.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(comm_defaults, ref_dir / "communication-routing.defaults.json")
-        model_defaults = core_root / "sw-reference" / "model-routing.defaults.json"
-        if model_defaults.is_file():
-            ref_dir = dest / "core" / "sw-reference"
-            ref_dir.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(model_defaults, ref_dir / "model-routing.defaults.json")
+        self.copy_closed_sw_reference(core_root, dest)
 
     def _emit_plugin_manifest(self, repo_root: Path, dest: Path) -> None:
         manifest_dir = dest / ".claude-plugin"

@@ -21,7 +21,7 @@ still surface in the readiness summary (`advisoryFailingChecks` in gate JSON).
 ## PR test-plan fixture classification (PRD 016)
 
 The standard FEAT test-plan set is single-sourced in `core/sw-reference/pr-test-plan.manifest.json`
-(`workflow.config.json` → `verify.prTestPlanManifest`). Each entry carries a **classification**:
+(`workflow.config.json` → `ci.prTestPlanManifest`; legacy `verify.prTestPlanManifest` tolerated one release). Each entry carries a **classification**:
 
 | Classification | CI merge gate | Readiness verdict |
 | --- | --- | --- |

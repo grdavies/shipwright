@@ -33,6 +33,10 @@ elif [ -d "$ROOT/.sw" ]; then
   rsync -a --delete \
     --exclude 'model-routing.defaults.json' \
     --exclude 'communication-routing.defaults.json' \
+    --exclude 'verify-presets.json' \
+    --exclude 'pr-test-plan.manifest.json' \
+    --exclude 'model-tier-hook-feasibility.md' \
+    --exclude 'models-tiering.md' \
     "$ROOT/.sw/" "$CORE/sw-reference/"
 fi
 

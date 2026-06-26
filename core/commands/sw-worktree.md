@@ -22,9 +22,11 @@ Load `skills/worktree/SKILL.md` for scaffold schema and guardrails.
 
 1. Read `workflow.config.json` → `worktree`, `defaultBaseBranch`.
 2. Run `ceiling-check`; if at ceiling, hand off to recombination (`skills/parallelism`) — do not fan out.
-3. Provision via `scripts/worktree.sh provision`.
-4. `cd` into the new worktree path; confirm state via `scripts/shipwright-state.sh read`.
-5. Next step: `/sw-start` inside the worktree.
+3. Provision via `scripts/worktree.sh provision` (parent ref defaults to persisted trunk base via
+   `scripts/resolve-base-branch.sh`; phase-mode phase worktrees fork from integration base `<type>/<slug>` when `--base` omitted).
+4. Print `bash scripts/resolve-base-branch.sh disclose --quiet` when base state exists.
+5. `cd` into the new worktree path; confirm state via `scripts/shipwright-state.sh read`.
+6. Next step: `/sw-start` inside the worktree.
 
 ## Procedure (teardown)
 

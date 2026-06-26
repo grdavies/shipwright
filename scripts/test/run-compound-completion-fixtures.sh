@@ -20,6 +20,9 @@ git init -q
 git config user.email test@test.com
 git config user.name Test
 mkdir -p docs/prds .cursor
+cat >.cursor/sw-base-state.json <<'JSON'
+{"trunkBase": {"name": "main", "sha": "deadbeef00000000000000000000000000000000"}}
+JSON
 echo '| Date | PRD | Phase | Notes |' > docs/prds/COMPLETION-LOG.md
 echo '|---|---|---|---|' >> docs/prds/COMPLETION-LOG.md
 echo '_No entries yet._' >> docs/prds/COMPLETION-LOG.md

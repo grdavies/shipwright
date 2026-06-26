@@ -101,8 +101,27 @@ def collect_pre_push_diff(root: Path) -> str:
 
     if upstream:
         try:
-            return git_out("diff", f"{upstream}..HEAD", cwd=root)
+            merge_base = git_out("merge-base", upstream, "HEAD", cwd=root).strip()
+            return git_out("diff", f"{merge_base}..HEAD", cwd=root)
         except RuntimeError:
+            pass
+
+    resolver = root / "scripts" / "resolve_base_branch.py"
+    if resolver.is_file():
+        try:
+            proc = subprocess.run(
+                [sys.executable, str(resolver), "diff-base"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+            )
+            if proc.returncode == 0:
+                data = json.loads(proc.stdout)
+                range_spec = data.get("range", "")
+                if ".." in range_spec:
+                    base_sha, head_sha = range_spec.split("..", 1)
+                    return git_out("diff", f"{base_sha}..{head_sha}", cwd=root)
+        except (RuntimeError, json.JSONDecodeError, subprocess.SubprocessError):
             pass
 
     try:

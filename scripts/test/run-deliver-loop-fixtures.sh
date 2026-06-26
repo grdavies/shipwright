@@ -19,6 +19,9 @@ git config user.email test@test.com
 git config user.name Test
 git commit --allow-empty -q -m init
 mkdir -p .cursor
+cat >.cursor/sw-base-state.json <<'JSON'
+{"trunkBase": {"name": "main", "sha": "deadbeef00000000000000000000000000000000"}}
+JSON
 
 # Minimal phase-mode plan + in-progress state (resume scenario)
 cat >.cursor/sw-deliver-plan.json <<'JSON'
@@ -62,7 +65,7 @@ import json,sys
 d=json.load(sys.stdin)
 assert d.get('resumed') is True
 n=d['next']
-assert n.get('action') in ('dispatch-ship','collect-status','merge-enqueue','provision-phase','remediate')
+assert n.get('action') in ('base-capture','dispatch-ship','collect-status','merge-enqueue','provision-phase','remediate')
 assert n.get('resume') is True
 "; then
   ok "deliver-loop-resume-from-state: dry-run resumes from durable state"

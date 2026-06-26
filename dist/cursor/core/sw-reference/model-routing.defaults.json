@@ -28,6 +28,7 @@
       "sw-retrospective": "inherit",
       "sw-review": "build",
       "sw-setup": "cheap",
+      "sw-init": "cheap",
       "sw-ship": "inherit",
       "sw-simplify": "mid",
       "sw-stabilize": "build",

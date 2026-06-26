@@ -29,6 +29,7 @@
       "sw-retrospective": "full",
       "sw-review": "full",
       "sw-setup": "ultra",
+      "sw-init": "ultra",
       "sw-ship": "inherit",
       "sw-simplify": "full",
       "sw-stabilize": "full",
