@@ -21,6 +21,7 @@ else
   SCHEMA="$ROOT/.sw/config.schema.json"
 fi
 SW_SETUP="$CONTENT/commands/sw-setup.md"
+SW_INIT="$CONTENT/commands/sw-init.md"
 IN_REPO_MD="$CONTENT/providers/in-repo.md"
 CAPS="$CONTENT/skills/memory/CAPABILITIES.md"
 REDACT="$ROOT/scripts/memory-redact.sh"
@@ -203,17 +204,18 @@ else
   FAIL=1
 fi
 
-# --- U5: sw-setup command ---
-if [[ -f "$SW_SETUP" ]] && grep -qi 'doctor' "$SW_SETUP" && grep -qi 'does not scaffold CI' "$SW_SETUP" && \
-   grep -qi 'does not' "$SW_SETUP" && grep -qi 'migrate' "$SW_SETUP"; then
-  echo "OK  sw-setup command scope + doctor mode"
+# --- U5: sw-init command (sw-setup delegate) ---
+if [[ -f "$SW_INIT" ]] && grep -qi 'doctor' "$SW_INIT" && grep -qi 'does not scaffold CI' "$SW_INIT" && \
+   grep -qi 'does not' "$SW_INIT" && grep -qi 'migrate' "$SW_INIT" && \
+   [[ -f "$SW_SETUP" ]] && grep -qi 'deprecated' "$SW_SETUP" && grep -qi '/sw-init' "$SW_SETUP"; then
+  echo "OK  sw-init command scope + doctor mode (sw-setup delegates)"
 else
   echo "FAIL U5 sw-setup command"
   FAIL=1
 fi
 
-if grep -q '/sw-setup' "$CONTENT/rules/sw-workflow-sequencing.mdc"; then
-  echo "OK  workflow sequencing references /sw-setup"
+if grep -qE '/sw-(setup|init)' "$CONTENT/rules/sw-workflow-sequencing.mdc"; then
+  echo "OK  workflow sequencing references /sw-setup or /sw-init"
 else
   echo "FAIL U5 sequencing reference"
   FAIL=1

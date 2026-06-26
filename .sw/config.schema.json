@@ -111,10 +111,26 @@
         }
       }
     },
+    "configuredWith": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Stamp written by /sw-init recording plugin + schema versions at configuration time (R32).",
+      "properties": {
+        "shipwrightVersion": { "type": "string" },
+        "schemaVersion": { "type": "string" }
+      }
+    },
     "verify": {
       "type": "object",
-      "additionalProperties": { "type": "string" },
-      "description": "Shell commands run during /sw-phase-verify (repo-specific)."
+      "description": "Shell commands run during /sw-phase-verify (repo-specific).",
+      "properties": {
+        "allowUnconfigured": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, vacuous/placeholder verify commands do not hard-block under /sw-deliver or autonomous mode (R28/DL-13)."
+        }
+      },
+      "additionalProperties": { "type": "string" }
     },
     "verifyE2e": {
       "type": "object",

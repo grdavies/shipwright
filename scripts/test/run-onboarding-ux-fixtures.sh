@@ -90,4 +90,7 @@ else
   FAIL=1
 fi
 
+# --- PRD 018 phase 1 portability setup fixtures ---
+bash "$ROOT/scripts/test/run-portability-setup-fixtures.sh" || FAIL=1
+
 exit "$FAIL"
