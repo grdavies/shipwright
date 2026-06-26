@@ -285,6 +285,14 @@ disjoint worktrees, bounded by `worktree.parallelCeiling` (default 4). Peak conc
 plan has parallelizable waves. Outcomes are read only from durable `status.json` — never chat logs.
 Merge is single-flight (conductor-serialized queue + lock).
 
+**Pervasive delegation (PRD 017):** all five orchestrators (`/sw-doc`, `/sw-ship`, `/sw-deliver`,
+`/sw-debug`, `/sw-feedback`) default to **delegate-by-default** for substantive steps. Only closed
+inline allowlists (bookkeeping, driver invocations, human gates) run in-turn. Every delegated `Task`
+must carry an explicit resolved `model:` and caveman intensity — enforced by `dispatch-check.sh` and
+mechanical `dispatch preflight` + `preToolUse` deny. Tune gate aggressiveness with `delegation.mode`
+(`bind-only` | `heuristic` | `default`). Intensity maps live in `communication.routing` (command → skill
+→ agent → default). See `rules/sw-subagent-dispatch.mdc` and `core/sw-reference/models-tiering.md`.
+
 **Legitimate halts (summary):** final merge to `main`; remediation budget exhausted; merge conflict /
 destructive git; `deliver.autonomy.mode: supervised` or `doc.afterTasks: confirm`; phase liveness
 timeout; CI/external wait exhausted; run-level `deliver.autonomy.maxRunMinutes` / `maxIterations`.

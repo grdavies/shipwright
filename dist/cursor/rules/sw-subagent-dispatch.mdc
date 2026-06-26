@@ -121,6 +121,13 @@ slot for intra-phase agents.
 
 **Conductor-only merge:** phase sub-agents must not call `merge run-next` or `lock acquire` (R41).
 
+## Fixture validation (PRD 017)
+
+```bash
+bash scripts/test/run-delegation-fixtures.sh
+bash scripts/test/run-dispatch-foundation-fixtures.sh
+```
+
 ## Authority
 
 Structural isolation (worktrees) is the dominant token lever (R31). This rule governs *when* to add

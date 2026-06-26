@@ -127,6 +127,9 @@ Before each phase/terminal delegated Task from `/sw-deliver`:
 2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-deliver --skill conductor --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Dispatch Task with explicit concrete `model:` and resolved caveman intensity context; never rely on inherited model.
 
+Resolve model: `bash scripts/resolve-model-tier.sh --command <child-slug>` (or `--skill conductor`).
+Resolve intensity: `bash scripts/resolve-intensity.sh --command sw-deliver --skill conductor`.
+
 ## Inline allowlist (closed)
 
 `/sw-deliver` may remain inline only for:

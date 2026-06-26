@@ -1,4 +1,5 @@
 {
+  "_doc": "Bundled caveman intensity routing. Precedence: command -> skill -> agent -> defaultIntensity. Seeded by /sw-setup into workflow.config.json communication.routing (PRD 017 R6/R7). Dispatch-bound intensity from dispatch preflight overrides sessionStart for delegated Tasks.",
   "defaultIntensity": "full",
   "routing": {
     "commands": {
