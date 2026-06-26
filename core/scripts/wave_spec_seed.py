@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Idempotent spec-seed onto <type>/<slug> — single owner for /sw-doc and deliver-loop (R6/R57)."""
+"""Idempotent spec-seed onto <type>/<slug> — single owner for /sw-doc, /sw-freeze, and deliver-loop."""
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -10,6 +11,10 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SHIPWRIGHT_ROOT = SCRIPT_DIR.parent
+
+_VALID_TYPES = frozenset(
+    {"feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"}
+)
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
@@ -30,6 +35,28 @@ def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | No
 
 def has_flag(args: list[str], flag: str) -> bool:
     return flag in args
+
+
+def slugify(text: str) -> str:
+    text = text.lower()
+    text = re.sub(r"[`/]", " ", text)
+    text = re.sub(r"[^a-z0-9]+", "-", text)
+    return text.strip("-")
+
+
+def parse_frontmatter(content: str) -> dict[str, str]:
+    if not content.startswith("---"):
+        return {}
+    end = content.find("\n---", 3)
+    if end == -1:
+        return {}
+    block = content[4:end]
+    out: dict[str, str] = {}
+    for line in block.splitlines():
+        if ":" in line:
+            key, val = line.split(":", 1)
+            out[key.strip()] = val.strip()
+    return out
 
 
 def git_toplevel(start: Path) -> Path:
@@ -72,6 +99,13 @@ def load_default_branch(root: Path) -> str:
     return "main"
 
 
+def resolve_type_from_frontmatter(frontmatter: dict[str, str]) -> str:
+    branch_type = frontmatter.get("type") or "feat"
+    if branch_type not in _VALID_TYPES:
+        fail(f"invalid branch type {branch_type!r}; want one of {sorted(_VALID_TYPES)}")
+    return branch_type
+
+
 def resolve_target_branch(root: Path, task_list_rel: str) -> tuple[str, str, Path]:
     proc = subprocess.run(
         [
@@ -104,14 +138,61 @@ def resolve_target_branch(root: Path, task_list_rel: str) -> tuple[str, str, Pat
     return branch, slug, docs_dir
 
 
-def docs_paths(docs_dir: Path, root: Path) -> list[Path]:
-    rel = docs_dir.relative_to(root)
+def prd_docs_dir_for_artifact(root: Path, artifact: Path) -> Path:
+    rel_parts = artifact.relative_to(root).parts
+    if "docs" not in rel_parts or "prds" not in rel_parts:
+        fail(f"artifact must live under docs/prds/: {artifact}")
+    idx = rel_parts.index("prds")
+    if idx + 1 >= len(rel_parts):
+        fail(f"cannot resolve PRD directory from artifact: {artifact}")
+    return root.joinpath(*rel_parts[: idx + 2])
+
+
+def resolve_target_from_artifact(root: Path, artifact_rel: str) -> tuple[str, str, Path]:
+    artifact = (root / artifact_rel).resolve()
+    if not artifact.is_file():
+        fail(f"artifact not found: {artifact_rel}")
+    docs_dir = prd_docs_dir_for_artifact(root, artifact)
+
+    for task_path in sorted(docs_dir.glob("tasks-*.md")):
+        if task_path.is_file():
+            rel = str(task_path.relative_to(root))
+            branch, slug, _ = resolve_target_branch(root, rel)
+            return branch, slug, docs_dir
+
+    m = re.match(r"^(\d+)-(.+)$", docs_dir.name)
+    slug = m.group(2) if m else slugify(docs_dir.name)
+    branch_type = "feat"
+    for prd_path in sorted(docs_dir.glob("*-prd-*.md")):
+        if prd_path.is_file():
+            fm = parse_frontmatter(prd_path.read_text(encoding="utf-8"))
+            branch_type = resolve_type_from_frontmatter(fm)
+            if fm.get("topic"):
+                slug = slugify(fm["topic"])
+            break
+    return f"{branch_type}/{slug}", slug, docs_dir
+
+
+def docs_paths(docs_dir: Path, root: Path, *, single: Path | None = None) -> list[Path]:
     paths: list[Path] = []
+    if single is not None:
+        if single.is_file() and "brainstorms" not in single.parts:
+            paths.append(single)
+        return paths
     if docs_dir.is_dir():
         for p in sorted(docs_dir.rglob("*")):
             if p.is_file() and "brainstorms" not in p.parts:
                 paths.append(p)
     return paths
+
+
+def tracked_paths(root: Path, paths: list[Path]) -> list[Path]:
+    tracked: list[Path] = []
+    for p in paths:
+        rel = str(p.relative_to(root))
+        if git_run(["ls-files", "--error-unmatch", rel], root, check=False).returncode == 0:
+            tracked.append(p)
+    return tracked
 
 
 def rel_paths(root: Path, paths: list[Path]) -> list[str]:
@@ -134,23 +215,17 @@ def branch_has_docs_commit(top: Path, branch: str, doc_rels: list[str]) -> bool:
     return True
 
 
-def cmd_spec_seed(root: Path, args: list[str]) -> None:
-    task_list = parse_kv(args, "--task-list")
-    if not task_list:
-        fail("--task-list required")
-    dry_run = has_flag(args, "--dry-run")
-    top = git_toplevel(root)
-    default = load_trunk_base(top)
-    branch, slug, docs_dir = resolve_target_branch(top, task_list)
-
-    if branch == default:
-        fail(f"refused: spec-seed never targets default branch {default!r}")
-
-    doc_files = docs_paths(docs_dir, top)
-    doc_rels = rel_paths(top, doc_files)
-    if not doc_rels:
-        fail(f"no files under {docs_dir.relative_to(top)}")
-
+def commit_docs_seed(
+    top: Path,
+    *,
+    branch: str,
+    slug: str,
+    docs_dir: Path,
+    doc_rels: list[str],
+    default: str,
+    dry_run: bool,
+    scope: str,
+) -> None:
     current = git_run(["branch", "--show-current"], top, check=False).stdout.strip()
     status = git_run(["status", "--porcelain"], top, check=False).stdout
 
@@ -169,6 +244,7 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
                 "action": "spec-seed",
                 "branch": branch,
                 "docsDir": str(docs_dir.relative_to(top)),
+                "scope": scope,
                 "note": "already seeded (idempotent no-op)",
                 "skipped": True,
             }
@@ -182,6 +258,7 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
                 "dry_run": True,
                 "branch": branch,
                 "docsDir": str(docs_dir.relative_to(top)),
+                "scope": scope,
                 "files": doc_rels,
             }
         )
@@ -202,12 +279,17 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
                 "verdict": "pass",
                 "action": "spec-seed",
                 "branch": branch,
+                "scope": scope,
                 "note": "docs already match branch HEAD (idempotent)",
                 "skipped": True,
             }
         )
 
-    msg = f"docs: freeze PRD and tasks for {slug}"
+    msg = (
+        f"docs: freeze artifact for {slug}"
+        if scope == "artifact"
+        else f"docs: freeze PRD and tasks for {slug}"
+    )
     git_run(["commit", "-m", msg], top)
     head = git_run(["rev-parse", "HEAD"], top).stdout.strip()
     if prev and prev != branch:
@@ -220,14 +302,54 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
             "branch": branch,
             "commit": head,
             "docsDir": str(docs_dir.relative_to(top)),
+            "scope": scope,
             "files": doc_rels,
         }
     )
 
 
+def cmd_spec_seed(root: Path, args: list[str]) -> None:
+    task_list = parse_kv(args, "--task-list")
+    artifact = parse_kv(args, "--artifact")
+    if bool(task_list) == bool(artifact):
+        fail("exactly one of --task-list or --artifact required")
+    dry_run = has_flag(args, "--dry-run")
+    top = git_toplevel(root)
+    default = load_trunk_base(top)
+
+    single: Path | None = None
+    if artifact:
+        branch, slug, docs_dir = resolve_target_from_artifact(top, artifact)
+        single = (top / artifact).resolve()
+        scope = "artifact"
+    else:
+        assert task_list is not None
+        branch, slug, docs_dir = resolve_target_branch(top, task_list)
+        scope = "task-list"
+
+    if branch == default:
+        fail(f"refused: spec-seed never targets default branch {default!r}")
+
+    doc_files = tracked_paths(top, docs_paths(docs_dir, top, single=single))
+    doc_rels = rel_paths(top, doc_files)
+    if not doc_rels:
+        fail("no tracked doc files to seed (docs-only; brainstorms/untracked excluded)")
+
+    commit_docs_seed(
+        top,
+        branch=branch,
+        slug=slug,
+        docs_dir=docs_dir,
+        doc_rels=doc_rels,
+        default=default,
+        dry_run=dry_run,
+        scope=scope,
+    )
+
+
 def main() -> None:
     if len(sys.argv) < 2:
-        fail("usage: wave_spec_seed.py <root> spec-seed --task-list PATH [--dry-run]")
+        fail("usage: wave_spec_seed.py <root> spec-seed (--task-list PATH | --artifact PATH) [--dry-run]")
     root = Path(sys.argv[1])
     cmd = sys.argv[2] if len(sys.argv) > 2 else "spec-seed"
     args = sys.argv[3:]

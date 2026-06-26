@@ -32,6 +32,7 @@
 #   wave.sh journal begin|complete|status ...
 #   wave.sh log tail [--lines N]
 #   wave.sh spec-seed --task-list docs/prds/.../tasks-....md [--dry-run]
+#   wave.sh spec-seed --artifact docs/prds/.../<artifact>.md [--dry-run]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

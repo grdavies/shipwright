@@ -45,7 +45,18 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is aut
    - **PRDs / task lists:** add or refresh entry in `docs/prds/INDEX.md` (path, amendments, status `not-started`).
    - **Decision records:** add or refresh entry in `docs/decisions/INDEX.md` (path, amendments, status `not-started`).
      **No task list generation and no `COMPLETION-LOG` row** for decisions.
-5. Report freeze complete; next step `/sw-tasks` for PRDs only.
+5. **Freeze-time commit (PRD 013 R1–R5):** after stamping and index registration, invoke the shared
+   spec-seed helper via the verdict-independent wrapper (R4 — warn-not-block; stamp is never rolled back):
+
+   ```bash
+   bash scripts/check-frozen.sh freeze-commit --artifact <artifact-path>
+   ```
+
+   The helper commits the frozen artifact onto the resolved `<type>/<slug>` (creating the branch from the
+   default branch when absent) using non-switching plumbing — the operator's current checkout is restored.
+   Docs-only; excludes `docs/brainstorms/**` and untracked/ignored paths; never `main`. A branch or commit
+   failure logs a warning and returns success to the freeze verdict.
+6. Report freeze complete; next step `/sw-tasks` for PRDs only.
 
 ## Enforcement layers
 
