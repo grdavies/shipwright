@@ -329,6 +329,12 @@
           "default": "in-repo",
           "description": "Active memory adapter id (must match providers/<name>.md and providers/<name>-rules.sh)."
         },
+        "sourceOfTruth": {
+          "type": "string",
+          "enum": ["repo", "memory", "auto"],
+          "default": "auto",
+          "description": "Authoritative store for decision-class records. auto derives from provider (external→memory, in-repo/none→repo)."
+        },
         "inRepo": {
           "type": "object",
           "additionalProperties": false,

@@ -110,6 +110,7 @@
   "invariantsFile": "INVARIANTS.md",
   "memory": {
     "provider": "in-repo",
+    "sourceOfTruth": "auto",
     "project": "my-project",
     "defaultScope": "project",
     "inRepo": {
