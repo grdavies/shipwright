@@ -8,6 +8,13 @@ frozen_at: 2026-06-25
 
 # Task list — PRD 006 caveman command loading
 
+> **Status: complete.** Delivered in `b8145b2` (feat: caveman command loading (PRD 006) (#65));
+> `communication-routing.defaults.json` key parity later depended on by PRD 008. Checkboxes ticked
+> retroactively after verifying landed artifacts and green fixture suites (`run-doc-fixtures.sh`
+> → `communication-routing.sh`). Fixtures live at `scripts/test/fixtures/communication-routing.sh`
+> (single file) rather than the `communication-routing/` directory named above. No source
+> re-implementation performed.
+
 ## Relevant Files
 
 | Area | Canonical paths |
@@ -38,92 +45,92 @@ frozen_at: 2026-06-25
 
 ### 1. Bundled core & session hook (M)
 
-- [ ] 1.1 Author `caveman-core.md` (R1, R10)
+- [x] 1.1 Author `caveman-core.md` (R1, R10)
   - **File:** `core/communication/caveman-core.md`
   - **Expected:** ≤35 lines; four intensity definitions; Auto-Clarity; artifact boundaries; no wenyan
   - **R-IDs:** R1, R10
 
-- [ ] 1.2 Rewrite `session-context.md` (R3, R15)
+- [x] 1.2 Rewrite `session-context.md` (R3, R15)
   - **File:** `core/hooks/session-context.md`
   - **Expected:** no `` `/caveman` `` or phantom slash refs; describes routing-based always-on policy
   - **R-IDs:** R3, R15
 
-- [ ] 1.3 Update `build_session_context()` (R2, R16, R19, R20)
+- [x] 1.3 Update `build_session_context()` (R2, R16, R19, R20)
   - **File:** `core/hooks/guardrail_core.py`
   - **Expected:** injects caveman-core; splices resolved intensity; output has no `` `/caveman` ``; uses `defaultIntensity` when no active command
   - **R-IDs:** R2, R16, R19, R20
 
 ### 2. Config, schema & routing defaults (M)
 
-- [ ] 2.1 Add `communication-routing.defaults.json` (R5, R14)
+- [x] 2.1 Add `communication-routing.defaults.json` (R5, R14)
   - **File:** `core/sw-reference/communication-routing.defaults.json`
   - **Expected:** all 34 `sw-*` commands mapped; `defaultIntensity: full`; matches PRD routing table
   - **R-IDs:** R5, R14
 
-- [ ] 2.2 Extend config schema with `communication` block (R4, R10)
+- [x] 2.2 Extend config schema with `communication` block (R4, R10)
   - **File:** `.sw/config.schema.json`, `core/sw-reference/config.schema.json`
   - **Expected:** intensity enum `normal|lite|full|ultra` only; rejects wenyan; `routing.commands` object
   - **R-IDs:** R4, R10
 
-- [ ] 2.3 Update workflow example config (R5, R16)
+- [x] 2.3 Update workflow example config (R5, R16)
   - **File:** `.sw/workflow.config.example.json`
   - **Expected:** populated `communication` example block with `defaultIntensity` and sample routing
   - **R-IDs:** R5, R16
 
-- [ ] 2.4 Add `communication-resolve.sh` (R6, R17)
+- [x] 2.4 Add `communication-resolve.sh` (R6, R17)
   - **File:** `scripts/communication-resolve.sh`
   - **Expected:** given command name + optional config path → JSON `{ "command", "intensity", "source" }`; handles `inherit` orchestrators
   - **R-IDs:** R6, R17
 
 ### 3. Commands & override (L)
 
-- [ ] 3.1 Author `sw-caveman.md` (R9, R21)
+- [x] 3.1 Author `sw-caveman.md` (R9, R21)
   - **File:** `core/commands/sw-caveman.md`
   - **Expected:** args `normal|lite|full|ultra`; no-arg shows resolved intensity; references caveman-core only
   - **R-IDs:** R9, R21
 
-- [ ] 3.2 Register `sw-caveman` in plugin manifest (R21)
+- [x] 3.2 Register `sw-caveman` in plugin manifest (R21)
   - **File:** `.cursor-plugin/plugin.json`
   - **Expected:** command path declared; Cursor slash UI resolves `/sw-caveman`
   - **R-IDs:** R21
 
-- [ ] 3.3 Stamp **Communication intensity** on all `sw-*.md` (R7)
+- [x] 3.3 Stamp **Communication intensity** on all `sw-*.md` (R7)
   - **File:** `core/commands/sw-*.md` (34 files)
   - **Expected:** each file has `**Communication intensity:**` line per routing defaults
   - **R-IDs:** R7
 
-- [ ] 3.4 Update `sw-setup.md` seeding (R5)
+- [x] 3.4 Update `sw-setup.md` seeding (R5)
   - **File:** `core/commands/sw-setup.md`
   - **Expected:** seeds `communication.defaultIntensity` and full routing map from defaults JSON
   - **R-IDs:** R5
 
 ### 4. Emitter & dist propagation (S)
 
-- [ ] 4.1 Update emitters to copy new artifacts (R12)
+- [x] 4.1 Update emitters to copy new artifacts (R12)
   - **File:** `platforms/cursor/emitter.py`, `platforms/claude-code/emitter.py`
   - **Expected:** copies `caveman-core.md`, `communication-routing.defaults.json`, `sw-caveman.md`, updated session-context
   - **R-IDs:** R12
 
-- [ ] 4.2 Regenerate dist trees (R12, R22)
+- [x] 4.2 Regenerate dist trees (R12, R22)
   - **File:** `dist/cursor/`, `dist/claude-code/`
   - **Expected:** `python3 -m sw generate --all`; `run-emitter-fixtures.sh` passes
   - **R-IDs:** R12, R22
 
 ### 5. Documentation (S)
 
-- [ ] 5.1 Document communication routing in configuration guide (R13)
+- [x] 5.1 Document communication routing in configuration guide (R13)
   - **File:** `docs/guides/configuration.md`
   - **Expected:** four intensities explained; `communication.routing` shape; `/sw-caveman` override semantics
   - **R-IDs:** R13
 
 ### 6. Fixtures & verification (M)
 
-- [ ] 6.1 Add communication routing fixtures (R11, R18, R19)
+- [x] 6.1 Add communication routing fixtures (R11, R18, R19)
   - **File:** `scripts/test/fixtures/communication-routing/`, updates to `scripts/test/run-doc-fixtures.sh`
   - **Expected:** phantom-slash grep pass; `sw-prd`→`lite`, `sw-triage`→`ultra`, `sw-doc-review`→`normal`; wenyan schema rejection
   - **R-IDs:** R11, R18, R19
 
-- [ ] 6.2 Run full verify gate (R22)
+- [x] 6.2 Run full verify gate (R22)
   - **File:** `scripts/test/run-gate-fixtures.sh` (and siblings via `workflow.config.json` verify.test)
   - **Expected:** all fixture suites green including emitter and doc fixtures
   - **R-IDs:** R22
