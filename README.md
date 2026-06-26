@@ -41,7 +41,7 @@ git --version && bash --version && rsync --version && gh --version
 ## Install
 
 Shipwright installs **once per machine**; you configure it **per project repo**. Once installed,
-`sw-` commands appear in the palette (e.g. `/sw-setup`, `/sw-doc`).
+`sw-` commands appear in the palette (e.g. `/sw-init`, `/sw-doc`).
 
 <details open>
 <summary><b>Cursor</b></summary>
@@ -70,25 +70,29 @@ your Claude plugins directory per Claude Code docs. Reload Claude Code.
 
 ## Configuration
 
-Open your **target project repo** and run **`/sw-setup`**. It walks you through four questions and
-writes `.cursor/workflow.config.json`:
+Install the plugin **once per machine**; configure it **per project repo** with **`/sw-init`**
+(`/sw-setup` is a deprecated alias with identical behavior).
+
+Open your **target project repo** and run **`/sw-init`**. It walks through project setup and writes
+`.cursor/workflow.config.json`:
 
 1. **Memory provider** — `in-repo` (default, committed markdown store) or `recallium` (external
    REST store). For in-repo, choose `committed` (PR-reviewable) or `local` (gitignored).
 2. **Review provider** — `none` (default) or `coderabbit` (opt-in AI review on PRs).
-3. **Doc→implementation boundary** (`doc.afterTasks`) — `confirm` (default: show frozen task list,
-   require `proceed` before dispatch) · `stop` · `auto`.
-4. **Guardrails** — `enforceBeforeSubmit` (default on) and `requireRuleClass` (default off; enable
-   in mature repos).
-5. **Model tier defaults** — four-tier `models` block (`cheap` / `build` / `mid` / `deep`) plus per-command
-   routing from bundled defaults; platform-detected catalog (Cursor vs Claude Code).
+3. **Project type + verify** — detects manifests at repo root and proposes real `verify.*` commands
+   from fixed presets (never vacuous placeholders).
+4. **Doc→implementation boundary** (`doc.afterTasks`) — `confirm` (default) · `stop` · `auto`.
+5. **Guardrails** — `enforceBeforeSubmit` (default on) and `requireRuleClass` (default off).
+6. **Model tier defaults** — four-tier `models` block plus per-command routing from bundled defaults.
 
-Re-run `/sw-setup` at any time — it acts as a **doctor** against an existing config, validating,
-reporting drift, and offering targeted repair without a full rescaffold.
+Re-run `/sw-init` at any time — it acts as a **doctor** against an existing config, surfaces
+**version drift** (`configuredWith` stamp vs installed plugin), and offers consent-gated refresh.
 
-**Worktree invariant:** implementation never starts on bare `main` — use `/sw-worktree` and a feature branch.
-**Single-pass `/sw-tasks`:** one pass produces the complete frozen checklist; no implementation dispatch in the doc chain.
-**Review:** `review.provider` defaults to **`none`**; the canonical way to disable external review is `review.provider: "none"` (CodeRabbit is opt-in).
+**Base branch:** workflow entry captures your trunk base (name + SHA) before worktrees are created;
+terminal PRs target that persisted base — not a hardcoded `main`. See [configuration](docs/guides/configuration.md#base-branch).
+
+**Worktree invariant:** implementation never starts on bare trunk — use `/sw-worktree` and a feature branch.
+**Review:** `review.provider` defaults to **`none`**; CodeRabbit is opt-in.
 
 Configure `verify.lint` / `verify.typecheck` / `verify.test` so `/sw-verify` runs real checks.
 Full walkthrough and schema: **[configuration](docs/guides/configuration.md)**.
@@ -158,7 +162,7 @@ local and remote branches, stale worktrees, and completed deliver run-state. Dry
 | [Getting started](docs/guides/getting-started.md) | First run + persona quick paths |
 | [Workflow guide](docs/guides/workflows.md) | Tiers, per-workstream flows, diagrams, prompts |
 | [Commands](docs/guides/commands.md) | Full command taxonomy |
-| [Configuration](docs/guides/configuration.md) | `/sw-setup` + every config key |
+| [Configuration](docs/guides/configuration.md) | `/sw-init` + every config key |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Developing the plugin |
 | [PROVENANCE.md](PROVENANCE.md) | Upstream sources |
 

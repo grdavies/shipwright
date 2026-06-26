@@ -302,6 +302,7 @@
         "scaffold": {
           "type": "object",
           "additionalProperties": false,
+          "description": "Opt-in web-app worktree scaffold (local ports/DB). Omit for non-web repos; defaults apply only when set (PRD 018 R15).",
           "properties": {
             "portRangeStart": { "type": "integer", "default": 9100 },
             "portRangeEnd": { "type": "integer", "default": 9199 },

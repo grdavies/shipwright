@@ -66,13 +66,7 @@
     }
   },
   "worktree": {
-    "parallelCeiling": 4,
-    "scaffold": {
-      "portRangeStart": 9100,
-      "portRangeEnd": 9199,
-      "dbStrategy": "schema-prefix",
-      "dbTemplate": ""
-    }
+    "parallelCeiling": 4
   },
   "models": {
     "tiers": {

@@ -79,6 +79,7 @@ legacy commands and compound-engineering (`ce-`).
 
 ## Deprecated aliases (one release)
 
+- `/sw-setup` — **deprecated** delegate to **`/sw-init`** (identical behavior; one-release alias).
 - `/sw-compound-ship` and `/sw-compound` are **deprecated** shims routing to `/sw-retrospective` (R4). Live routing,
   conductor handoffs, and deliver terminal paths MUST reference `/sw-retrospective` — not the old names.
 
