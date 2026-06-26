@@ -14,7 +14,7 @@ Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** c
 | [`/sw-debug`](../../core/commands/sw-debug.md) | Production/dev RCA and route by fix size | Implement, commit, or merge |
 | [`/sw-feedback`](../../core/commands/sw-feedback.md) | Normalize inbound signals and route to debug, gaps, or brainstorm | Analyze, author, or dispatch without confirmation |
 | [`/sw-compound-ship`](../../core/commands/sw-compound-ship.md) | Pre-merge (in-loop) or post-merge: retro → compound → optional memory-sync | Merge or auto-promote rules |
-| [`/sw-cleanup`](../../core/commands/sw-cleanup.md) | Dry-run default cleanup of merged branches, stale worktrees, completed run-state | Delete without confirm or drop in-flight runs |
+| [`/sw-cleanup`](../../core/commands/sw-cleanup.md) | Dry-run default cleanup of merged branches, stale worktrees, completed run-state; agent asks for confirm before apply | Delete without confirm or drop in-flight runs |
 
 ### `/sw-deliver` — phase-mode and multi-feature
 
@@ -72,7 +72,10 @@ before `git push` (including `sw-pr` and stabilize re-pushes).
 | [`/sw-amend`](../../core/commands/sw-amend.md) | Post-freeze PRD amendment |
 
 `doc.afterTasks` is the sole human checkpoint between PRD freeze and implementation when using
-`/sw-doc`.
+`/sw-doc`. In **`confirm`** mode, `/sw-doc` emits a dedicated **Implementation checkpoint** block
+(heading + direct question + paused-state line) — only `proceed`/`yes` continues; unrelated messages
+re-emit the checkpoint. On ack, `/sw-doc` dispatches **`/sw-deliver run <frozen-task-list-path>`**
+(the primary post-freeze implementation entry).
 
 ## Ship loop atomics
 

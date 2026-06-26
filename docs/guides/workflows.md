@@ -174,8 +174,11 @@ Or run `/sw-doc` to orchestrate either chain end-to-end.
 
 1. `/sw-triage` — classify tier (or pass `--tier` to `/sw-doc`)
 2. `/sw-doc` — runs the tier-appropriate doc chain
-3. Human **`doc.afterTasks`** checkpoint after single-pass task freeze (default `confirm`)
-4. Frozen PRD + tasks become the spec for **`/sw-deliver run`** (primary) or manual `/sw-ship` per phase
+3. Human **`doc.afterTasks`** checkpoint after single-pass task freeze (default `confirm`) — a dedicated
+   **Implementation checkpoint** block (not buried in closing prose); only `proceed`/`yes` continues;
+   unrelated messages re-emit the checkpoint until acked
+4. Frozen PRD + tasks become the spec for **`/sw-deliver run <frozen-task-list-path>`** (primary post-freeze
+   command; `/sw-doc` dispatches it on `confirm`/`auto`) or manual `/sw-ship` per phase
 
 **Sample prompts**
 
@@ -288,7 +291,7 @@ The orchestrator worktree owns a non-detached `<type>/<slug>` checkout; phase me
 **Pre-merge compounding:** after all phases are `green-merged`, the driver runs `/sw-compound-ship
 --pre-merge` (file outputs committed on the feature branch; memory writes not committed). Completion
 is recorded as `completed-pending-merge` until the human merges; the loop then suggests
-`/sw-cleanup`.
+`/sw-cleanup` (dry-run first; agent asks for confirm before applying removals).
 
 **Task currency:** frozen task checkboxes may be toggled in-loop; a currency gate blocks the terminal
 merge if checkboxes diverge from the durable ledger.

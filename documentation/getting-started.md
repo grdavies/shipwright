@@ -24,10 +24,17 @@ After `/sw-tasks` freezes the task list, `doc.afterTasks` controls what happens 
 | Mode | Behavior |
 |------|----------|
 | `stop` | Halt after the frozen task list (print-only); print the docs-only seed command onto `<type>/<slug>` and `/sw-deliver run <frozen-tasks>`. |
-| `confirm` | Show the full task list; require `proceed` or `yes`; seed frozen spec onto `<type>/<slug>`; dispatch `/sw-deliver run <frozen-tasks>`. |
+| `confirm` | Show the full task list, then a dedicated **Implementation checkpoint** block (heading + direct question + paused-state line); require `proceed` or `yes`; seed frozen spec onto `<type>/<slug>`; dispatch `/sw-deliver run <frozen-tasks>`. Unrelated messages while pending re-emit the checkpoint — nothing dispatches until you ack. |
 | `auto` | Seed frozen spec onto `<type>/<slug>` and dispatch `/sw-deliver run <frozen-tasks>` without a second prompt. |
 
 Override per run: `/sw-doc --after-tasks=<mode>` or `/sw-deliver run` at the frozen-task-list boundary.
+
+## Agent-driven `/sw-cleanup`
+
+After merge, `/sw-cleanup` enumerates merged branches and stale worktrees in **dry-run** mode. The agent
+presents the `wouldRemove` set and asks you to confirm before applying removals; on explicit ack it runs
+`bash scripts/cleanup.sh --confirm --yes` for you. Declined or ambiguous replies leave the dry-run report
+as-is — use the manual escape hatch if you prefer to apply yourself.
 
 ## Worktree invariant
 
@@ -67,9 +74,11 @@ Use when scope spans multiple files or needs a written spec.
 1. Install the plugin (see [README](../../README.md#install)).
 2. Open your **target repo** and run `/sw-setup`.
 3. Run `/sw-doc` — triage classifies tier; Full tier includes brainstorm before PRD.
-4. Respond to the `doc.afterTasks` checkpoint after frozen tasks (or use `auto` mode).
-5. Run **`/sw-deliver run docs/prds/<n>-<slug>/tasks-<n>-<slug>.md`** — orchestrates all phases to
-   one terminal merge gate.
+4. Respond to the **Implementation checkpoint** after frozen tasks — reply `proceed` or `yes` (or use
+   `auto` mode to skip the prompt). `/sw-doc` dispatches **`/sw-deliver run <frozen-task-list-path>`**
+   on ack; you do not need to type the command yourself when using `confirm`/`auto`.
+5. When using `stop` mode, run **`/sw-deliver run docs/prds/<n>-<slug>/tasks-<n>-<slug>.md`** yourself —
+   orchestrates all phases to one terminal merge gate.
 6. Merge the terminal PR when `/sw-ready` reports merge-ready.
 
 **Manual alternative:** `/sw-worktree provision` → `/sw-start` → `/sw-ship` per phase.
@@ -103,7 +112,9 @@ Use when a production signal (Sentry, deploy log, user report) needs diagnosis.
 
 After you merge, run `/sw-compound-ship` in the target repo to capture retro learnings and sync
 memory. When `/sw-deliver` detects the feature branch has merged, it suggests `/sw-cleanup` to prune
-merged branches and stale worktrees (dry-run by default — confirm before deleting).
+merged branches and stale worktrees. **`/sw-cleanup` is dry-run by default** — the agent presents the
+`wouldRemove` set and asks you to confirm; on explicit ack it runs the apply step for you (or you can
+use the manual `bash scripts/cleanup.sh --confirm --yes` escape hatch).
 
 ## Migration notes
 

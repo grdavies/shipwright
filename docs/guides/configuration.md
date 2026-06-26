@@ -34,7 +34,7 @@ Canonical opt-out: `review.provider: "none"`. Do not use `review.enabled: false`
 
 | Mode | `doc.afterTasks` | Behavior |
 |------|-----------------|----------|
-| **confirm** (default) | `confirm` | Show frozen task list; require `proceed` or `yes`; seed frozen spec onto `<type>/<slug>`; dispatch `/sw-deliver run <frozen-tasks>` |
+| **confirm** (default) | `confirm` | Show frozen task list, then a dedicated **Implementation checkpoint** (heading + direct question + paused-state line); require `proceed` or `yes`; seed frozen spec onto `<type>/<slug>`; dispatch `/sw-deliver run <frozen-tasks>`. Un-acked returns re-emit the checkpoint. |
 | stop | `stop` | Halt after frozen tasks (print-only); print docs-only seed command onto `<type>/<slug>` and `/sw-deliver run <frozen-tasks>` |
 | auto | `auto` | Seed frozen spec onto `<type>/<slug>` and dispatch `/sw-deliver run <frozen-tasks>` without a second prompt |
 
@@ -74,6 +74,13 @@ exhausted; run-level budget. Every halt emits one report with an exact resume co
 
 **Living-doc currency:** mechanical reconcile of `docs/prds/INDEX.md`, `COMPLETION-LOG.md`, and
 `GAP-BACKLOG.md` on the feature branch; `docs-currency` gate hard-blocks terminal merge on drift.
+
+### `/sw-cleanup` agent-driven confirm
+
+`/sw-cleanup` defaults to dry-run. The agent presents the `wouldRemove` set and asks for explicit confirm
+before running `bash scripts/cleanup.sh --confirm --yes` (or `SW_CLEANUP_CONFIRM=1`) on your behalf.
+All fail-closed protections (unmerged branches, in-flight deliver, indeterminate squash, no `rm -rf`) are
+unchanged — only the apply trigger moves from manual bash to agent-on-ack.
 
 **PRD frontmatter:** Full-tier PRDs require resolvable `brainstorm:`; `/sw-freeze` verifies linkage.
 Writable brainstorms may carry forward `prd:` references.
@@ -115,7 +122,7 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `review.provider` | AI review adapter — default **`none`**; `coderabbit` opt-in |
 | `verify.lint` | Command `/sw-verify` runs for linting |
 | `verify.typecheck` | Command `/sw-verify` runs for type checking |
-| `verify.test` | Command `/sw-verify` runs for tests |
+| `verify.test` | Command `/sw-verify` runs for tests (Shipwright repos include `scripts/docs-link-check.sh` advisory + fixture suites) |
 | `coderabbit.reviewGraceMinutes` | Gate grace window before absent review = settled |
 | `checks.treatNeutralAsPass` | NEUTRAL CI checks count as pass unless allowlisted |
 | `checks.neutralAllowlist` | Check names that stay blocking even if neutral |
