@@ -41,9 +41,12 @@ echo "$OUT" | jq .
 | `30` | `blocked` |
 
 JSON includes `verdict`, `head`, `reviewProvider`, `coderabbitState` (`landed`/`skipped`/`in-flight`/`absent`),
-`coderabbitLanded`, `unresolvedActionable`, check lists, and `reason`.
+`coderabbitLanded`, `unresolvedActionable`, check lists, `requiredFailingChecks`, `advisoryFailingChecks`,
+and `prTestPlan` (manifest job names when `core/sw-reference/pr-test-plan.manifest.json` is present), and
+`reason`.
 
-`green` requires: all checks pass, review settled for current head (`coderabbitLanded == true`), and
+`green` requires: all **required** checks pass (PR test-plan advisory failures are surfaced but
+non-blocking), review settled for current head (`coderabbitLanded == true`), and
 `unresolvedActionable == 0`.
 
 ## Deterministic tests

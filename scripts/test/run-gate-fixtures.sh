@@ -47,6 +47,7 @@ FAIL=0
 run_case green green 0 green || FAIL=1
 run_case yellow-pending yellow-pending 10 yellow || FAIL=1
 run_case red-fail red-fail 20 red || FAIL=1
+run_case advisory-fail advisory-fail 0 green || FAIL=1
 run_case blocked-empty blocked-empty 30 blocked || FAIL=1
 run_case blocked-threads blocked-threads 30 blocked || FAIL=1
 # repo not onboarded to the review provider: no signal past grace -> non-blocking green
