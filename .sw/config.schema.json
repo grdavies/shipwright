@@ -394,6 +394,14 @@
                 "type": "string",
                 "enum": ["cheap", "build", "mid", "deep", "inherit"]
               }
+            },
+            "agents": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": ["cheap", "build", "mid", "deep"]
+              },
+              "description": "Agent or native-panel specialist id → semantic tier (no inherit)."
             }
           }
         }
