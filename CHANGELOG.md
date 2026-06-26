@@ -38,6 +38,7 @@
 * merge phase sw-cleanup-agent-driven-confirm-s into feat/orchestrator-ux-and-doc-polish (8e2e8af) <!-- sw-deliver:sw-cleanup-agent-driven-confirm-s -->
 * merge phase optional-repo-link-check-script-wiring-m into feat/orchestrator-ux-and-doc-polish (6756722) <!-- sw-deliver:optional-repo-link-check-script-wiring-m -->
 * merge phase config-driven-per-agent-tiers-resolver-agent-m into feat/model-tier-runtime-binding (fe74a29) <!-- sw-deliver:config-driven-per-agent-tiers-resolver-agent-m -->
+* merge phase dispatch-preflight-parent-floor-m into feat/model-tier-runtime-binding (c5f13c7) <!-- sw-deliver:dispatch-preflight-parent-floor-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
