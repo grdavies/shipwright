@@ -122,6 +122,30 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/sw-ready` and stop.
 
 **Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-ship`.
 
+## Delegated Task binding contract
+
+Before any delegated Task spawn from `/sw-ship`:
+
+1. `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-ship --skill <active-skill>`
+2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-ship --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>]`
+3. Stamp Task with explicit `model: <resolved-concrete-id>`; do not use `inherit`.
+
+## Inline allowlist (closed)
+
+`/sw-ship` may remain inline only for:
+
+- Step sequencing/state sync (`ship-phase-steps`, `shipwright-state`) and gate reads.
+- Mechanical command invocation (`sw-execute`, `sw-verify`, `sw-review`, etc.) without bypassing them.
+- Emitting phase-mode status and merge-gate summaries.
+
+Implementation/review authoring outside these bookkeeping paths delegates.
+
+## Dispatch context redaction contract
+
+Before dispatching any Task, redact non-config payloads (diff excerpts, CI/review output, feedback snippets,
+memory-preflight data) via `bash scripts/memory-redact.sh`, then include only redacted/fenced
+`untrusted_payload` content.
+
 ## Guardrails
 
 - Never merge or force-push.

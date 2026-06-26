@@ -27,10 +27,12 @@ Decision-record routing is **floor-only** — it never subtracts a persona signa
 ## Procedure
 
 1. Load `skills/doc-review/SKILL.md`.
-2. **Dispatch binding (R9):** before each persona Task, resolve via `resolve-model-tier.sh --agent <id>` and
-   run `reviewer-dispatch-check.sh --agent <id> --parent-model <parent-concrete-id>`. Stamp the resolved
-   concrete `model:` on the Task — reviewer agents keep `model: inherit` in frontmatter but dispatch must not
-   rely on session inheritance. Halt on preflight exit 20 unless `--override` is explicitly recorded.
+2. **Dispatch binding (R9):** before each persona Task, run
+   `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <id> --command sw-doc-review --skill doc-review`,
+   then `bash scripts/dispatch-check.sh --agent <id> --command sw-doc-review --skill doc-review --parent-model <parent-concrete-id> --dispatch-id <id>`.
+   Stamp the resolved concrete `model:` on Task input — reviewer agents keep `model: inherit` in frontmatter
+   but dispatch must not rely on session inheritance. Halt on preflight exit 20 unless `--override` has a
+   durable audit record.
 3. **Invariants (optional):** when `invariantsFile` is set in config, resolve it relative to the ref under
    review. Inject content as a non-negotiable constraints block for all personas. Missing/unreadable on the ref
    blocks **this review only** (fail-closed) unless `invariantsOptional: true` or `--no-invariants` (logged).

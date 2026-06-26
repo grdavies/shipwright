@@ -29,8 +29,17 @@ else
   ok "before_task_dispatch.py present"
 fi
 
-# Logic: reviewer Task resolves model via --agent
+# Logic: reviewer Task resolves model via fresh dispatch preflight + hook
 export ROOT
+if ! bash "$ROOT/scripts/wave.sh" dispatch preflight \
+  --dispatch-id fixture-hook-test \
+  --agent sw-coherence-reviewer \
+  --command sw-doc-review \
+  --skill doc-review >/dev/null 2>&1; then
+  bad "hook-logic-preflight-seed"
+  echo "task-dispatch-hook-feasibility: FAIL"
+  exit 1
+fi
 OUT=$(python3 - <<'PY' "$ROOT"
 import json, sys
 from pathlib import Path

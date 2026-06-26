@@ -117,6 +117,31 @@ while a `confirm` halt is pending and has not sent `proceed`/`yes`, map to **`st
 
 **Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-doc`.
 
+## Delegated Task binding contract
+
+Before any delegated Task spawn from `/sw-doc`:
+
+1. `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-doc --skill <active-skill>`
+2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-doc --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>]`
+3. Pass explicit `model: <resolved-concrete-id>` on Task input (never `inherit`).
+
+## Inline allowlist (closed)
+
+`/sw-doc` may remain inline only for:
+
+- Triaging doc tier and boundary mode selection.
+- Rendering frozen artifact summaries/checkpoint prompts.
+- Writing bookkeeping state (`shipwright-state` override/seed records).
+- Dispatch handoff preparation to `/sw-deliver run`.
+
+All other substantive work delegates.
+
+## Dispatch context redaction contract
+
+Before building a Task prompt, route non-config context through `bash scripts/memory-redact.sh` and embed
+external payloads only inside fenced `untrusted_payload` blocks. Never forward raw transcripts or provider
+memory payloads.
+
 ## Guardrails
 
 - `doc.afterTasks` is the **sole human checkpoint** between documentation freeze and implementation; `/sw-tasks` introduces no additional blocking prompt.
