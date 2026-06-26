@@ -83,6 +83,15 @@ Do **not** put `cheap`/`build`/`mid`/`deep` or vendor aliases like `sonnet` in s
 | `scripts/model-routing-check.sh` | Defaults cover all shipped commands/skills; valid tier keys; R27 parity with communication defaults when present |
 | `scripts/resolve-model-tier.sh` | Runtime tier → concrete ID; `inherit` → `modelId: null` exit 0 |
 | `/sw-doc-review`, `sw-subagent-dispatch` | **Runtime R9:** parent model tier ≥ builder when dispatching `inherit` reviewers |
+| `scripts/reviewer-dispatch-check.sh` | Fail-closed preflight before persona/native-panel Task spawn (phase 2 floor) |
+
+### Optional Task hook (R5 — deferred)
+
+A `preToolUse` hook (`core/hooks/before_task_dispatch.py`) can compute `updated_input.model`
+from `resolve-model-tier.sh --agent`, but **Cursor does not apply `updated_input` for the Task
+tool** and `subagentStart` cannot set model. Spike record:
+`core/sw-reference/model-tier-hook-feasibility.md`. **Not registered** in plugin `hooks.json`
+until the platform supports Task model mutation. Enforcement remains dispatcher + preflight only.
 
 `inherit` reviewers cannot be fully R9-verified in CI — orchestrator must not run doc-review on a sub-`build` parent.
 
