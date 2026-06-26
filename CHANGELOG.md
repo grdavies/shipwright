@@ -62,6 +62,7 @@
 * merge phase docs-dist-fixtures-m into feat/memory-source-of-truth (e812958) <!-- sw-deliver:docs-dist-fixtures-m -->
 * merge phase freeze-time-commit-safety-m into feat/deliver-concurrency-and-freeze-safety (da44ffb) <!-- sw-deliver:freeze-time-commit-safety-m -->
 * merge phase scoped-deliver-state-lock-resolver-l into feat/deliver-concurrency-and-freeze-safety (099156f) <!-- sw-deliver:scoped-deliver-state-lock-resolver-l -->
+* merge phase concurrent-run-index-enumeration-serialization-m into feat/deliver-concurrency-and-freeze-safety (5f33bee) <!-- sw-deliver:concurrent-run-index-enumeration-serialization-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
