@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Reject diffs that modify frozen artifacts. CI authority for doc-freeze integrity (R9).
+# Operates only on the committed git snapshot — never calls the memory provider (PRD 015 R5).
 #
 # Usage: check-frozen.sh [BASE_REF]
 #   BASE_REF — git ref to diff against (default: origin/main or merge-base)
