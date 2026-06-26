@@ -201,7 +201,7 @@ A repo can work without `workflow.config.json` if you commit:
 
 The fail-closed hook engages via the marker. Run `/sw-init` when you want full config.
 
-## Base branch {#base-branch}
+## Base branch
 
 Workflow entry resolves and **persists** your trunk base (branch name + SHA) before any feature worktree
 is created. Precedence: explicit `--base` → user-set `defaultBaseBranch` → captured HEAD at entry.
