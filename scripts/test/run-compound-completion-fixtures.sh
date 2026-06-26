@@ -63,8 +63,11 @@ fi
 
 if python3 "$WC" "$FIX" compound-ship record-premerge --prd 007 --phase deliver --notes "test" >/dev/null 2>&1 && \
    python3 -c "
-import json
-s=json.load(open('.cursor/sw-deliver-state.json'))
+import json, sys
+sys.path.insert(0, '$ROOT/scripts')
+from pathlib import Path
+from wave_state import load_deliver_state
+s = load_deliver_state(Path('.'), target='feat/demo')
 assert s['compoundShip']['premergeDone'] is True
 assert s['completion']['status']=='completed-pending-merge'
 "; then
