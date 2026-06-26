@@ -70,6 +70,7 @@
 * merge phase deliver-reliability-hard-gate-before-phase-3-l into feat/pervasive-subagent-delegation (b3d0c06) <!-- sw-deliver:deliver-reliability-hard-gate-before-phase-3-l -->
 * merge phase per-orchestrator-adoption-m into feat/pervasive-subagent-delegation (721319f) <!-- sw-deliver:per-orchestrator-adoption-m -->
 * merge phase docs-dist-fixtures-m into feat/pervasive-subagent-delegation (99bb9a7) <!-- sw-deliver:docs-dist-fixtures-m -->
+* merge phase sot-resolver-config-schema-defaults-m into feat/memory-source-of-truth (312ee05) <!-- sw-deliver:sot-resolver-config-schema-defaults-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
