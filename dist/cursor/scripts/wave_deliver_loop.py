@@ -48,6 +48,7 @@ TERMINAL_ACTIONS = frozenset({"halt-blocked", "complete", "terminal"})
 DRIVER_STALE_SECONDS = int(os.environ.get("SW_DRIVER_STALE_SECONDS", "7200"))
 DEFAULT_REMEDIATION_MAX = 2
 DEFAULT_PHASE_TIMEOUT_MIN = int(os.environ.get("SW_PHASE_TIMEOUT_MINUTES", "240"))
+MERGED_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
 
 
 def utc_now() -> str:
@@ -176,7 +177,7 @@ def deps_satisfied(phase_id: str, plan: dict[str, Any], statuses: dict[str, str]
     for edge in plan.get("edges") or []:
         if str(edge.get("to")) == phase_id:
             dep = str(edge.get("from", ""))
-            if statuses.get(dep) != "green-merged":
+            if statuses.get(dep) not in MERGED_PHASE_STATUSES:
                 return False
     return True
 
