@@ -88,8 +88,11 @@ echo '|---|---|---|---|' >> docs/prds/COMPLETION-LOG.md
 git add docs/prds && git commit -q -m init && git branch -m feat/demo
 if python3 "$WC" "$FIX" retrospective record-premerge --prd 014 --phase demo >/dev/null 2>&1 && \
    python3 -c "
-import json
-s=json.load(open('.cursor/sw-deliver-state.json'))
+import json, sys
+sys.path.insert(0, '$ROOT/scripts')
+from pathlib import Path
+from wave_state import load_deliver_state
+s = load_deliver_state(Path('.'), target='feat/demo')
 assert s['completion']['status']=='completed-pending-merge'
 "; then
   ok "retrospective-pending-merge"

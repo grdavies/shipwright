@@ -215,6 +215,16 @@ def is_feature_target(target: str | None) -> bool:
     return bool(target and "/" in target)
 
 
+def _current_feature_branch(root: Path) -> str | None:
+    proc = subprocess.run(
+        ["git", "-C", str(root), "branch", "--show-current"],
+        text=True,
+        capture_output=True,
+    )
+    branch = (proc.stdout or "").strip()
+    return branch if is_feature_target(branch) else None
+
+
 def resolve_state_path(
     root: Path,
     *,
@@ -347,8 +357,12 @@ def save_deliver_state(
 ) -> Path:
     branch = target or target_branch_from_state(state)
     if not is_feature_target(branch):
+        branch = _current_feature_branch(root)
+    if not is_feature_target(branch):
         fail("cannot save deliver state without feature target branch")
     assert branch is not None
+    if not target_branch_from_state(state):
+        state["target"] = {"branch": branch}
     path = scoped_paths(root, branch)["state"]
     path.parent.mkdir(parents=True, exist_ok=True)
     state["updatedAt"] = utc_now()
