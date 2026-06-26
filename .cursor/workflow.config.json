@@ -173,7 +173,7 @@
   },
   "configuredWith": {
     "shipwrightVersion": "1.7.0",
-    "schemaVersion": "41d1866f43f8"
+    "schemaVersion": "63abe8f424b6"
   },
   "deliver": {
     "autonomy": {
