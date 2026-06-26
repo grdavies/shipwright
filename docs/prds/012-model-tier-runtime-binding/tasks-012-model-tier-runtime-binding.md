@@ -28,10 +28,10 @@ rewrite that depends on the preflight, then the optional hook, then docs/dist.
 
 ### 2. Dispatch preflight + parent-floor (M)
 
-- [ ] 2.1 Add `scripts/reviewer-dispatch-check.sh` preflight (R2, R3)
+- [x] 2.1 Add `scripts/reviewer-dispatch-check.sh` preflight (R2, R3)
   - **File:** `scripts/reviewer-dispatch-check.sh`
   - **Expected:** given target agent + resolved parent model, returns JSON `pass` only when a concrete model is resolved; otherwise exit 20 with `cause: no-model-resolved` + remediation; fixture-exercisable
-- [ ] 2.2 Mechanical R9 parent-floor in the preflight (R4)
+- [x] 2.2 Mechanical R9 parent-floor in the preflight (R4)
   - **File:** `scripts/reviewer-dispatch-check.sh`
   - **Expected:** parent model below `models.roles.builder` → exit 20 `cause: parent-below-builder` unless an explicit override is recorded; halts before any persona spawn
 
