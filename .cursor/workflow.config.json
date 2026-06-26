@@ -120,6 +120,7 @@
         "sw-scope-guardian-reviewer": "build",
         "sw-product-reviewer": "build",
         "sw-adversarial-reviewer": "build",
+        "sw-docs-currency-reviewer": "build",
         "sw-security-reviewer": "build",
         "sw-design-reviewer": "build",
         "correctness": "deep",
