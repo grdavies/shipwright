@@ -86,6 +86,16 @@ def phase_ack_cadence(root: Path) -> int:
 
 
 def default_base_branch(root: Path) -> str:
+    script = SCRIPT_DIR / "resolve_base_branch.py"
+    if script.is_file():
+        proc = subprocess.run(
+            [sys.executable, str(script), "trunk-name"],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            return proc.stdout.strip()
     cfg = load_workflow_config(root)
     return str(cfg.get("defaultBaseBranch") or "main")
 

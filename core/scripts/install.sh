@@ -52,3 +52,16 @@ rsync -a --delete \
   "$SRC/" "$DEST/"
 
 echo "Done. Run 'Developer: Reload Window' in Cursor to pick up changes."
+
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  REPO_ROOT="$(git rev-parse --show-toplevel)"
+  if [[ -f "$REPO_ROOT/.cursor/workflow.config.json" ]]; then
+    echo ""
+    echo "This git repo ($REPO_ROOT) already has .cursor/workflow.config.json."
+    echo "Run /sw-init there to validate or refresh repo-local configuration."
+  else
+    echo ""
+    echo "Tip: you ran install inside a git repo ($REPO_ROOT)."
+    echo "Run /sw-init in that repo to configure Shipwright for this project (opt-in; not run automatically)."
+  fi
+fi

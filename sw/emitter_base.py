@@ -11,7 +11,22 @@ from pathlib import Path
 EMITTABLE_DIRS = ("commands", "skills", "rules", "agents", "providers", "scripts", "communication")
 
 EXCLUDE_DIR_NAMES = {"__pycache__", "test", ".git", "node_modules"}
-EXCLUDE_REL_PATHS = frozenset({"scripts/install.sh"})
+DEV_ONLY_SCRIPT_RELPATHS = (
+    "scripts/copy-to-core.sh",
+    "scripts/snapshot-tree.sh",
+    "scripts/model-routing-check.sh",
+)
+
+EXCLUDE_REL_PATHS = frozenset({"scripts/install.sh", *DEV_ONLY_SCRIPT_RELPATHS})
+
+SW_REFERENCE_CLOSED_EMIT = (
+    "config.schema.json",
+    "layout.md",
+    "workflow.config.example.json",
+    "communication-routing.defaults.json",
+    "model-routing.defaults.json",
+    "verify-presets.json",
+)
 EXCLUDE_SUFFIXES = (".pyc",)
 
 CURSOR_PLUGIN_ROOT = "${CURSOR_PLUGIN_ROOT}"
@@ -86,6 +101,18 @@ class EmitterBase(ABC):
         text = content.decode("utf-8")
         text = self.substitute_plugin_root_env(text)
         return text.encode("utf-8")
+
+    def copy_closed_sw_reference(self, core_root: Path, dest: Path) -> None:
+        """Emit the closed sw-reference set for user installs (PRD 018 R12/TR8)."""
+        ref_src = core_root / "sw-reference"
+        if not ref_src.is_dir():
+            return
+        ref_dir = dest / "core" / "sw-reference"
+        ref_dir.mkdir(parents=True, exist_ok=True)
+        for name in SW_REFERENCE_CLOSED_EMIT:
+            src = ref_src / name
+            if src.is_file():
+                shutil.copy2(src, ref_dir / name)
 
     def substitute_plugin_root_env(self, text: str) -> str:
         target = self.plugin_root_env_name()
