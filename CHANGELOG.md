@@ -63,6 +63,7 @@
 * merge phase freeze-time-commit-safety-m into feat/deliver-concurrency-and-freeze-safety (da44ffb) <!-- sw-deliver:freeze-time-commit-safety-m -->
 * merge phase scoped-deliver-state-lock-resolver-l into feat/deliver-concurrency-and-freeze-safety (099156f) <!-- sw-deliver:scoped-deliver-state-lock-resolver-l -->
 * merge phase concurrent-run-index-enumeration-serialization-m into feat/deliver-concurrency-and-freeze-safety (5f33bee) <!-- sw-deliver:concurrent-run-index-enumeration-serialization-m -->
+* merge phase sw-deliver-v1-deferrals-l into feat/deliver-concurrency-and-freeze-safety (9269ef7) <!-- sw-deliver:sw-deliver-v1-deferrals-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
