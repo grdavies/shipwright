@@ -25,13 +25,24 @@ Dry-run by default; deletions only after explicit confirmation.
 2. Review the report: each protected item includes a reason (current/default, unmerged, indeterminate
    squash status, deliver lock, open merge journal, etc.).
 
-3. To apply removals:
+3. **Agent-driven confirm** (default apply path):
+
+   - After the dry-run report, the agent presents the `wouldRemove` set and asks the user to confirm
+     (e.g. yes / proceed) before applying removals.
+   - On explicit ack only, the agent runs:
+
+     ```bash
+     bash scripts/cleanup.sh --confirm --yes
+     ```
+
+     Or sets `SW_CLEANUP_CONFIRM=1` for the same invocation after human ack.
+   - Declined, silent, or ambiguous responses → **no apply**; dry-run report stands.
+
+   **Manual escape hatch** — user may run confirm directly without the agent:
 
    ```bash
    bash scripts/cleanup.sh --confirm --yes
    ```
-
-   Or set `SW_CLEANUP_CONFIRM=1` for non-interactive agent runs after human ack.
 
 4. Worktree teardown uses `git worktree remove` + `git worktree prune` only — never `rm -rf`.
 
@@ -58,4 +69,4 @@ Branches are classified via, in order:
 - Never `rm -rf` worktree directories.
 - Emit full report every run (`wouldRemove` + `protected` + `errors`).
 - The deliver loop may suggest `/sw-cleanup` after detecting a merged feature branch — suggestion only;
-  the human runs and confirms this command.
+  the agent runs dry-run then applies on explicit user ack (or the user runs the manual escape hatch).
