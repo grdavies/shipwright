@@ -1,12 +1,14 @@
 # Configuration
 
-Shipwright configures **per target repo** — open your project and run `/sw-setup`.
+Shipwright configures **per target repo** — open your project and run `/sw-init` (`/sw-setup` is a
+deprecated alias with identical behavior).
 
-## `/sw-setup`
+## `/sw-init`
 
-Run `/sw-setup` in your **target project repo**. It walks through four questions and writes
+Run `/sw-init` in your **target project repo**. It walks through setup and writes
 `.cursor/workflow.config.json`. Re-run at any time — it acts as a **doctor** against an existing
-config, validating, reporting drift, and offering targeted repair without a full rescaffold.
+config, validates project-type detection, surfaces **version drift** when `configuredWith` differs from
+the installed plugin, and offers consent-gated refresh without overwriting user-set verify or base branch.
 
 ### Step 1 — Memory provider
 
@@ -129,7 +131,11 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `review.provider` | AI review adapter — default **`none`**; `coderabbit` opt-in |
 | `verify.lint` | Command `/sw-verify` runs for linting |
 | `verify.typecheck` | Command `/sw-verify` runs for type checking |
-| `verify.test` | Command `/sw-verify` runs for tests (Shipwright repos include fixture suites; PR test-plan set via `run-pr-test-plan-manifest.sh` from `verify.prTestPlanManifest`) |
+| `verify.test` | Command `/sw-verify` runs for tests (Shipwright dev repos chain fixture suites; user installs use real project tests) |
+| `ci.prTestPlanManifest` | Shipwright-CI-only path to `pr-test-plan.manifest.json` (dev/plugin repos; not in shipped example) |
+| `verifyE2e.enabled` | Opt-in smoke/E2E adapter — default **`false`** (web-specific) |
+| `worktree.scaffold` | Opt-in local port/DB scaffold for web apps — omit for generic repos |
+| `review.local.ui.enrich` | Opt-in external UI enrichment — default **`off`** |
 | `coderabbit.reviewGraceMinutes` | Gate grace window before absent review = settled |
 | `checks.treatNeutralAsPass` | NEUTRAL CI checks count as pass unless allowlisted |
 | `checks.neutralAllowlist` | Check names that stay blocking even if neutral |
@@ -151,14 +157,14 @@ complete prose.
 | `full` | Classic caveman — default workhorse |
 | `ultra` | Max compression (e.g. triage, verify, commit) |
 
-`/sw-setup` seeds the full command map from `core/sw-reference/communication-routing.defaults.json`. Override
+`/sw-init` seeds the full command map from `core/sw-reference/communication-routing.defaults.json`. Override
 for the current chat with `/sw-caveman <normal|lite|full|ultra>` until the next command dispatch.
 
 Wenyan variants are not supported in Shipwright — attach the external user skill manually if needed.
 
 ## Model tier routing
 
-`/sw-setup` seeds `models.tiers` from the detected platform catalog and the full command/skill map from
+`/sw-init` seeds `models.tiers` from the detected platform catalog and the full command/skill map from
 `core/sw-reference/model-routing.defaults.json`. Each `sw-*` command documents its tier in
 `**Model tier:**` prose; resolve at runtime:
 
@@ -193,7 +199,43 @@ A repo can work without `workflow.config.json` if you commit:
 .cursor/sw-memory/rules/      # empty
 ```
 
-The fail-closed hook engages via the marker. Run `/sw-setup` when you want full config.
+The fail-closed hook engages via the marker. Run `/sw-init` when you want full config.
+
+## Base branch {#base-branch}
+
+Workflow entry resolves and **persists** your trunk base (branch name + SHA) before any feature worktree
+is created. Precedence: explicit `--base` → user-set `defaultBaseBranch` → captured HEAD at entry.
+
+- **Trunk base** — terminal PR target; secret-scan and frozen checks diff against this OID.
+- **Integration base** — `<type>/<slug>` parent for phase-mode deliver; distinct from trunk base.
+
+One-line disclosure at entry names the source, e.g. `base: dev (captured from HEAD)`.
+Detached HEAD or Shipwright feature-branch HEAD is refused with recovery copy — re-enter from trunk or pass `--base`.
+
+## Dev vs product boundary
+
+The **shipped example** config (`core/sw-reference/workflow.config.example.json`) is neutral: no dev-harness
+fixture paths, no `ci.*` keys. The **Shipwright source repo** carries a `.shipwright-dev` sentinel — it gates
+CI generator tooling and template selection only; **never** weakens secret-scan, frozen guard, or push hooks.
+
+User installs receive a closed `core/sw-reference/` emit set (schema, layout, example, routing defaults,
+verify presets) via the plugin bundle — not the full dev `.sw/` tree.
+
+## GitHub / CI ceiling
+
+The merge-readiness gate (`/sw-watch-ci`, `/sw-stabilize`) observes **GitHub Actions** via `gh`. Repos without
+`gh` or Actions can still use local `/sw-verify`, but cannot pass the CI-readiness gate until GitHub CI is
+available — `/sw-init` portability self-check warns about this honestly.
+
+## Web-specific opt-in knobs (R15)
+
+| Knob | Default | Enable when |
+|------|---------|-------------|
+| `worktree.scaffold` | omitted | Local web app needs port/DB isolation per worktree |
+| `verifyE2e` | `enabled: false` | Smoke/E2E routes after static verify |
+| `review.local.ui.enrich` | `off` | External design enrichment beyond native WCAG checklist |
+
+Neutral shipped example omits scaffold; dogfood repos may set scaffold explicitly.
 
 ## Optional integrations
 
@@ -208,8 +250,8 @@ Provider **credentials** come from the environment or your secret store — neve
 ## PR test-plan CI enforcement (FEAT PRs)
 
 Shipwright repos single-source the standard FEAT test-plan fixture set in
-`core/sw-reference/pr-test-plan.manifest.json` (`verify.prTestPlanManifest` in config). Local
-`verify.test` runs the same set via `scripts/test/run-pr-test-plan-manifest.sh`; CI runs it via
+`core/sw-reference/pr-test-plan.manifest.json` (`ci.prTestPlanManifest` in config — not under `verify.*`).
+Local `verify.test` runs the same set via `scripts/test/run-pr-test-plan-manifest.sh`; CI runs it via
 `.github/workflows/pr-test-plan-ci.yml` (regenerate with `bash scripts/generate-pr-test-plan-ci-workflow.sh`).
 
 Each manifest entry carries **`required`** (merge-blocking) or **`advisory`** (visible in the all-checks
