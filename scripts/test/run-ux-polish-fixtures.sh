@@ -162,7 +162,7 @@ cat > "$FIX/docs/guides/offline.md" <<'EOF'
 [external](https://example.com/docs)
 [local](../README.md)
 EOF
-if rg -q 'SKIP_SCHEMES|http://|https://' "$ROOT/scripts/docs_link_check.py"; then
+if grep -qE 'SKIP_SCHEMES|https?://' "$ROOT/scripts/docs_link_check.py"; then
   ok "docs-link-check-offline: checker skips http/https schemes in source"
 else
   bad "docs-link-check-offline: missing scheme skip in docs_link_check.py"
