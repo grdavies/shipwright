@@ -37,34 +37,34 @@ then pointer inversion + supersede, then compound/audit/migration, then docs/dis
 
 ### 3. Pointer inversion + supersede reconcile (M)
 
-- [ ] 3.1 Inverted authority pointer per SoT (R6)
+- [x] 3.1 Inverted authority pointer per SoT (R6)
   - **File:** `skills/memory/SKILL.md`, `scripts/memory-sot.sh`
   - **Expected:** repo-SoT → provider points at git record; memory-SoT → snapshot points at provider record; exactly one authoritative
-- [ ] 3.2 Supersede manifest + reconcile (R7)
+- [x] 3.2 Supersede manifest + reconcile (R7)
   - **File:** `docs/decisions/SUPERSEDED.log` (handling), `scripts/reconcile-status.sh`, `core/commands/sw-memory-sync.md`
   - **Expected:** `SUPERSEDED.log` committed in both modes; `/sw-memory-sync` re-points the non-authoritative side best-effort
 
 ### 4. Compound SoT branch + audit conflict + migration (M)
 
-- [ ] 4.1 `/sw-retrospective` decision-write SoT branch (R8)
+- [x] 4.1 `/sw-retrospective` decision-write SoT branch (R8)
   - **File:** `skills/compound/SKILL.md`, `skills/memory/SKILL.md`
   - **Expected:** pointer under repo-SoT; content-bearing authoritative record under memory-SoT; redaction chokepoint always
-- [ ] 4.2 SoT-aware audit conflict + legacy reconcile (R9, R11)
+- [x] 4.2 SoT-aware audit conflict + legacy reconcile (R9, R11)
   - **File:** `core/commands/sw-memory-audit.md`, `scripts/` (audit helper)
   - **Expected:** flags contradicting content-bearing decision memories; one-time legacy reconcile on mode switch; default `auto`+in-repo is no-change
-- [ ] 4.3 Fail-closed redaction across writes (R10)
+- [x] 4.3 Fail-closed redaction across writes (R10)
   - **File:** `scripts/memory-redact.sh` (invocation), `skills/memory/SKILL.md`
   - **Expected:** a redaction failure aborts both the provider write and the snapshot write (no raw store); provider outage degrades to snapshot with a warning
 
 ### 5. Docs, dist, fixtures (M)
 
-- [ ] 5.1 Fixture suite for SoT behaviors (R12)
+- [x] 5.1 Fixture suite for SoT behaviors (R12)
   - **File:** `scripts/test/run-memory-sot-fixtures.sh`, `.cursor/workflow.config.json`
   - **Expected:** fixtures named in the PRD Testing Strategy exist and pass; suite registered in `verify.test`
-- [ ] 5.2 Documentation updates (R12)
+- [x] 5.2 Documentation updates (R12)
   - **File:** `skills/memory/SKILL.md`, `rules/memory-guardrails.mdc`, `.sw/layout.md`, `docs/guides/` (memory guide)
   - **Expected:** SoT policy documented; presence asserted by a fixture
-- [ ] 5.3 Emitter propagation + freshness gate (R12)
+- [x] 5.3 Emitter propagation + freshness gate (R12)
   - **File:** `dist/cursor/**`, `dist/claude-code/**` via `python3 -m sw generate --all`
   - **Expected:** `dist/` regenerated; `scripts/test/run-emitter-fixtures.sh` passes
 

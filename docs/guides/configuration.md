@@ -127,6 +127,7 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `models.routing.agents` | Per reviewer/persona/native-panel agent id → semantic tier |
 | `deliver.remediation.maxAttempts` | Auto-remediation budget per blocked phase before clean halt (default **2**) |
 | `memory.provider` | `in-repo` (default) or `recallium` |
+| `memory.sourceOfTruth` | `auto` (default), `repo`, or `memory` — authority for **decision** records only (`auto`: external provider → memory, in-repo → repo) |
 | `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
 | `review.provider` | AI review adapter — default **`none`**; `coderabbit` opt-in |
 | `verify.lint` | Command `/sw-verify` runs for linting |

@@ -42,7 +42,34 @@ Per-command read templates:
 | `/phase-start` | only on a non-routine branch decision (parent ambiguity, prior workflow correction). |
 
 Memory is an input, not an authority: git state, the per-repo `stateFile`, `agentsFile`, and repo
-doctrine remain the sources of truth.
+doctrine remain the sources of truth — except for the `decision` doc class when memory-SoT is active
+(see **Source of truth resolution** below).
+
+## Source of truth resolution (decision class only — R1–R3)
+
+The `decision` doc class has a provider-conditional authoritative side. All other classes
+(`learning`, `design`, `debug`, etc.) remain **distillation-only** — the SoT switch does not apply.
+
+Single source for freeze, compound, and audit:
+
+```bash
+bash scripts/memory-sot.sh resolve --class decision --json
+# effective: repo | memory
+
+bash scripts/memory-sot.sh resolve --class learning --json
+# effective: distillation (scope guard)
+```
+
+**Config:** `memory.sourceOfTruth` — `repo` | `memory` | `auto` (default `auto`).
+
+| Knob | Provider | Effective SoT |
+| --- | --- | --- |
+| `auto` | `recallium` (external) | `memory` |
+| `auto` | `in-repo` / none | `repo` |
+| `repo` | any | `repo` |
+| `memory` | any | `memory` |
+
+Default `auto` + `in-repo` preserves today's R32/KTD3 behavior (no change for existing repos).
 
 ## Redaction chokepoint (R41 — mandatory before persist/re-inject)
 
@@ -59,6 +86,10 @@ Or: `bash scripts/memory-redact.sh path/to/file`. The filter is deterministic (s
 runs offline, and scrubs the named corpus in `rules/memory-guardrails.mdc` (AWS keys, GitHub PATs, JWTs,
 `Bearer` tokens, PEM private keys, emails). Never persist or re-inject unredacted content.
 
+**Fail-closed (R10):** if `memory-redact.sh` exits non-zero, abort the provider write **and** any snapshot
+write (`scripts/memory-decision-snapshot.sh write` propagates the failure). A provider outage after a
+successful snapshot stamp degrades to the committed snapshot with a warning — never block freeze/CI.
+
 ## Write mode (after substantive work)
 
 Store distilled memories per the write contract in `CAPABILITIES.md`:
@@ -70,6 +101,19 @@ Store distilled memories per the write contract in `CAPABILITIES.md`:
 - search before store; `modify` a near-duplicate instead of adding a second,
 - project scope by default; global only on explicit user direction,
 - store the distilled substance, never a raw transcript dump.
+
+For **`decision`-class** writes, resolve the inverted pointer recipe first (R6):
+
+```bash
+bash scripts/memory-sot.sh pointer-recipe --path docs/decisions/<n>-<slug>.md [--memory-id <provider-id>] --json
+```
+
+| Effective SoT | Provider write | Git snapshot |
+| --- | --- | --- |
+| `repo` | Pointer only — `relatedFiles: [docs/decisions/...]`; never the record body | Authoritative (`snapshotRole: authoritative`) |
+| `memory` | Content-bearing authoritative record (redacted) | Pointer (`snapshotRole: pointer`, `memoryPointer`) |
+
+Exactly one side is authoritative at a time; the recipe JSON names `authoritative` vs `nonAuthoritative`.
 
 Store on: a decision with rationale, a non-obvious lesson, a bug root-cause+fix, an architecture choice,
 a notable review/CI pattern, or a distilled session recap. Do not store routine, recoverable steps.
@@ -109,24 +153,41 @@ Then `expand` by reading `memories/<id>.md` (or `rules/<id>.md` for rule categor
 
 ## Decision records (file-linked deliverables)
 
-**Boundary rule (R32 / KTD3):**
+**Boundary rule (R32 / KTD3 + provider-conditional SoT):**
+
+Resolve authority first: `bash scripts/memory-sot.sh resolve --class decision --json`.
+
+| Effective SoT | Authoritative artifact | Memory role |
+| --- | --- | --- |
+| `repo` | Decision record (`docs/decisions/<n>-<slug>.md`) | Pointer via `relatedFiles` only |
+| `memory` | Provider `decision` record (redacted) | Content-bearing; git snapshot is pointer |
 
 | Artifact | Role | Mutable | CI freeze |
 |----------|------|---------|-----------|
 | Decision record (`docs/decisions/<n>-<slug>.md`) | Up-front, reviewed-before-build deliverable | Only via amendment | Yes |
 | `decision`-class memory | Retrospective knowledge distillation | Yes | No |
 
-When a frozen decision record exists for a cross-cutting decision:
+When repo-SoT is active (default for `in-repo`):
 
 - Read: load the record from git; memory may point at it via `relatedFiles` but is not authoritative.
 - Write: store a pointer (`relatedFiles: [docs/decisions/...]`), never the record body.
 - Flag content-bearing `decision` memories that duplicate an existing record — they should become pointers.
 
+When memory-SoT is active, the provider record is authoritative; the committed git snapshot carries a
+forward pointer (`memoryPointer` in frontmatter — see `scripts/memory-decision-snapshot.sh write`).
+
 **Supersede reconciliation (`docs/decisions/SUPERSEDED.log`):**
 
-On record-level supersede, the superseded path is appended to the committed manifest. `/sw-memory-sync`
-reconciles `decision`-class memories still linking a `SUPERSEDED.log` path — best-effort re-point to the
-replacement record. Pointer freshness is **auditable, not transactional** (provider out of CI reach).
+On record-level supersede, append the superseded path via:
+
+```bash
+bash scripts/reconcile-status.sh append-superseded --path docs/decisions/<old>.md --replacement docs/decisions/<new>.md
+```
+
+`/sw-memory-sync` runs `bash scripts/reconcile-status.sh supersede-reconcile --json` after distillation and
+best-effort re-points the **non-authoritative** side per the active SoT (provider `relatedFiles` under
+repo-SoT; git snapshot pointer under memory-SoT). Pointer freshness is **auditable, not transactional**
+(provider out of CI reach).
 
 ## Boundaries
 

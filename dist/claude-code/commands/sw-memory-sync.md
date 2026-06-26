@@ -36,7 +36,15 @@ source. `/sw-memory-sync` only writes the *distilled* sink into the memory provi
    stable tags (`surface:sync`, plus `prd-<n>`/`task-<n>` when inferable), and a deliberate importance.
    Project scope by default; global only on explicit user direction.
 7. Update the marker (`processedMtimeMs`, `lastDistilledAt`) for each processed transcript.
-8. Report: transcripts scanned, memories created/updated/skipped, and any items deferred for review.
+8. **Supersede reconcile (R7):** `bash scripts/reconcile-status.sh supersede-reconcile --json` — for each
+   entry in `docs/decisions/SUPERSEDED.log`, best-effort re-point the non-authoritative side:
+   - **repo-SoT:** `modify` provider `decision` memories whose `relatedFiles` still reference a superseded path
+     → replacement path (pointer only; never copy record body).
+   - **memory-SoT:** when the provider id for the replacement is known, refresh the git snapshot
+     `memoryPointer` on the superseded path via `scripts/memory-decision-snapshot.sh write` (offline-safe;
+     provider write remains best-effort).
+9. Report: transcripts scanned, memories created/updated/skipped, supersede reconcile actions, and any items
+   deferred for review.
 
 **Communication intensity:** ultra
 
