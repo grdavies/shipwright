@@ -53,17 +53,22 @@ def write_json(path: Path, data: dict[str, Any]) -> None:
     os.chmod(path, 0o600)
 
 
-def state_path(root: Path) -> Path:
-    return root / ".cursor" / "sw-deliver-state.json"
+def state_path(root: Path, state: dict[str, Any] | None = None) -> Path:
+    from wave_state import resolve_state_path
+
+    return resolve_state_path(root, state_hint=state)
 
 
 def load_state(root: Path) -> dict[str, Any]:
-    return read_json(state_path(root))
+    from wave_state import load_deliver_state
+
+    return load_deliver_state(root)
 
 
 def save_state(root: Path, state: dict[str, Any]) -> None:
-    state["updatedAt"] = utc_now()
-    write_json(state_path(root), state)
+    from wave_state import save_deliver_state
+
+    save_deliver_state(root, state)
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:

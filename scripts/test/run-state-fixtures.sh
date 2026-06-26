@@ -50,7 +50,7 @@ if python3 "$STATE_PY" "$STATE_FIX" lock acquire --target feat/x --nonblock >/de
 else
   bad "lock-stale-reclaim: stale/dead-owner lock reclaimed"
 fi
-python3 "$STATE_PY" "$STATE_FIX" lock release >/dev/null 2>&1 || true
+python3 "$STATE_PY" "$STATE_FIX" lock release --target feat/x >/dev/null 2>&1 || true
 
 # --- fresh heartbeat: second acquire refused even when first pid exited ---
 python3 "$STATE_PY" "$STATE_FIX" lock acquire --target feat/x --nonblock >/dev/null
@@ -58,7 +58,7 @@ set +e
 python3 "$STATE_PY" "$STATE_FIX" lock acquire --target feat/x --nonblock 2>/dev/null
 EC_LIVE=$?
 set -e
-python3 "$STATE_PY" "$STATE_FIX" lock release >/dev/null
+python3 "$STATE_PY" "$STATE_FIX" lock release --target feat/x >/dev/null
 if [[ "$EC_LIVE" -eq 20 ]]; then
   ok "lock-stale-reclaim: fresh-heartbeat lock refused (exit 20)"
 else
@@ -85,6 +85,31 @@ assert d.get('note','').startswith('already completed')
   ok "merge-journal-idempotent-replay: second complete is idempotent"
 else
   bad "merge-journal-idempotent-replay: idempotent complete"
+fi
+
+# --- deliver-state-scoped-per-branch (PRD 013) ---
+mkdir -p .cursor
+python3 "$STATE_PY" "$STATE_FIX" lock acquire --target feat/alpha --nonblock >/dev/null
+python3 "$STATE_PY" "$STATE_FIX" lock acquire --target feat/beta --nonblock >/dev/null
+if [[ -f .cursor/sw-deliver-alpha.lock && -f .cursor/sw-deliver-beta.lock ]]; then
+  ok "deliver-state-scoped-per-branch: per-target lock files"
+else
+  bad "deliver-state-scoped-per-branch: per-target lock files"
+fi
+python3 "$STATE_PY" "$STATE_FIX" lock release --target feat/alpha >/dev/null
+python3 "$STATE_PY" "$STATE_FIX" lock release --target feat/beta >/dev/null
+
+TARGET_BRANCH="feat/scoped-demo"
+echo '{"verdict":"running","source_task_list":"docs/prds/099-demo/tasks-099-demo.md","target":{"branch":"feat/scoped-demo","slug":"scoped-demo"}}' \
+  > .cursor/sw-deliver-state.json
+if python3 "$STATE_PY" "$STATE_FIX" resolve state-path --target "$TARGET_BRANCH" 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['relative'].endswith('sw-deliver-state.scoped-demo.json')
+"; then
+  ok "deliver-legacy-state-migration: resolves scoped path for target"
+else
+  bad "deliver-legacy-state-migration: resolves scoped path for target"
 fi
 
 if [[ "$FAIL" -ne 0 ]]; then

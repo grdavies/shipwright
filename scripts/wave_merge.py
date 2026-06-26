@@ -55,28 +55,22 @@ def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | No
     return default
 
 
-def state_path(root: Path) -> Path:
-    return root / ".cursor" / "sw-deliver-state.json"
+def state_path(root: Path, state: dict[str, Any] | None = None) -> Path:
+    from wave_state import resolve_state_path
+
+    return resolve_state_path(root, state_hint=state)
 
 
 def load_state(root: Path) -> dict[str, Any]:
-    path = state_path(root)
-    try:
-        return read_json(path)
-    except StateCorruptError as exc:
-        fail(
-            f"corrupt durable state: {exc}",
-            exit_code=20,
-            halt="blocked",
-            cause="state:corrupt",
-            path=str(path),
-        )
-        return {}
+    from wave_state import load_deliver_state
+
+    return load_deliver_state(root)
 
 
 def save_state(root: Path, state: dict[str, Any]) -> None:
-    state["updatedAt"] = utc_now()
-    write_json(state_path(root), state)
+    from wave_state import save_deliver_state
+
+    save_deliver_state(root, state)
 
 
 def phase_already_merged(top: Path, phase_branch: str, target: str) -> bool:

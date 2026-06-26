@@ -121,34 +121,44 @@ def _prefer_orchestrator_state(root_state: dict[str, Any], orch_state: dict[str,
 
 
 def resolve_deliver_state(repo_root: Path) -> DeliverStateView:
-    """Prefer orchestrator worktree deliver state over stale repo-root copies."""
+    """Canonical deliver state lives at repo-root scoped path only (PRD 013 R28)."""
+    from wave_state import _read_state_optional, enumerate_scoped_runs, resolve_state_path
+
     repo_root = repo_root.resolve()
-    root_state = _read_deliver_state_file(repo_root / ".cursor" / "sw-deliver-state.json")
-
-    orch_path_raw = (root_state.get("orchestratorWorktree") or {}).get("path")
-    orch_root: Path | None = None
-    orch_state: dict[str, Any] = {}
-    if isinstance(orch_path_raw, str) and orch_path_raw.strip():
-        candidate = Path(orch_path_raw).resolve()
-        orch_state_path = candidate / ".cursor" / "sw-deliver-state.json"
-        if orch_state_path.is_file() or candidate.is_dir():
-            orch_root = candidate
-            orch_state = _read_deliver_state_file(orch_state_path)
-
-    canonical_root = repo_root
-    canonical_state = root_state
     stale_roots: list[Path] = []
 
-    if orch_root and orch_state and orch_root.is_dir():
-        if _prefer_orchestrator_state(root_state, orch_state):
-            canonical_root = orch_root
-            canonical_state = orch_state
-            if (repo_root / ".cursor" / "sw-deliver-state.json").is_file():
-                stale_roots.append(repo_root)
-        elif orch_root != repo_root and (orch_root / ".cursor" / "sw-deliver-state.json").is_file():
-            stale_roots.append(orch_root)
+    state_path = resolve_state_path(repo_root)
+    state = _read_state_optional(state_path)
+    if not state:
+        runs = enumerate_scoped_runs(repo_root)
+        for run in runs:
+            if run.get("verdict") == "running":
+                candidate = repo_root / run["statePath"]
+                state = _read_state_optional(candidate)
+                if state:
+                    state_path = candidate
+                    break
 
-    return DeliverStateView(canonical_root=canonical_root, state=canonical_state, stale_roots=stale_roots)
+    orch_state: dict[str, Any] = {}
+    orch_root: Path | None = None
+    orch_raw = (state.get("orchestratorWorktree") or {}).get("path")
+    if isinstance(orch_raw, str) and orch_raw.strip():
+        orch_root = Path(orch_raw).resolve()
+        if orch_root != repo_root and (orch_root / ".cursor").is_dir():
+            for path in sorted((orch_root / ".cursor").glob("sw-deliver-state*.json")):
+                candidate = _read_state_optional(path)
+                if candidate:
+                    orch_state = candidate
+                    break
+
+    if orch_state and _prefer_orchestrator_state(state, orch_state):
+        if state:
+            stale_roots.append(repo_root)
+        state = orch_state
+    elif orch_state and orch_root is not None:
+        stale_roots.append(orch_root)
+
+    return DeliverStateView(canonical_root=repo_root, state=state, stale_roots=stale_roots)
 
 
 def load_deliver_state(root: Path) -> dict[str, Any]:
@@ -169,8 +179,7 @@ def _collect_terminal_run_state(
     tag: str,
 ) -> None:
     cursor = state_root / ".cursor"
-    state_file = cursor / "sw-deliver-state.json"
-    if state_file.is_file():
+    for state_file in sorted(cursor.glob("sw-deliver-state*.json")):
         report.would_remove.append(
             Item("run-state", rel_to_repo(repo_root, state_file), tag, "terminal deliver run")
         )
@@ -187,11 +196,12 @@ def _collect_terminal_run_state(
 
 
 def deliver_inflight(repo_root: Path) -> tuple[bool, str]:
+    from wave_state import enumerate_scoped_runs
+
     view = resolve_deliver_state(repo_root)
-    for base in (view.canonical_root, repo_root.resolve()):
-        lock = base / ".cursor" / "sw-deliver.lock"
-        if lock.is_file():
-            return True, "deliver lock present"
+    for run in enumerate_scoped_runs(repo_root):
+        if run.get("lockHeld"):
+            return True, f"deliver lock present ({run.get('slug')})"
     verdict = str(view.state.get("verdict", ""))
     if verdict == "running":
         if view.state.get("mergeJournal"):
@@ -373,8 +383,10 @@ def enumerate_cleanup(root: Path) -> Report:
         else:
             report.would_remove.append(Item("worktree", path, "detached-stale", "no branch"))
 
+    from wave_state import resolve_state_path
+
     if inflight:
-        state_rel = rel_to_repo(root, deliver_view.canonical_root / ".cursor" / "sw-deliver-state.json")
+        state_rel = rel_to_repo(root, resolve_state_path(root, state_hint=deliver_view.state))
         report.protected.append(Item("run-state", state_rel, "protected", inflight_reason))
     elif deliver_view.state:
         verdict = str(deliver_view.state.get("verdict", ""))
@@ -383,7 +395,7 @@ def enumerate_cleanup(root: Path) -> Report:
             for stale_root in deliver_view.stale_roots:
                 _collect_terminal_run_state(report, root, stale_root, "stale-copy")
         elif verdict:
-            state_rel = rel_to_repo(root, deliver_view.canonical_root / ".cursor" / "sw-deliver-state.json")
+            state_rel = rel_to_repo(root, resolve_state_path(root, state_hint=deliver_view.state))
             report.protected.append(Item("run-state", state_rel, "protected", verdict))
 
     return report
