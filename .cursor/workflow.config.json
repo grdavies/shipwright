@@ -47,6 +47,7 @@
   },
   "memory": {
     "provider": "recallium",
+    "sourceOfTruth": "auto",
     "project": "shipwright",
     "defaultScope": "project",
     "connection": {

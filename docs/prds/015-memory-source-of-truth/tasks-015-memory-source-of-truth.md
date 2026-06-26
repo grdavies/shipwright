@@ -16,13 +16,13 @@ then pointer inversion + supersede, then compound/audit/migration, then docs/dis
 
 ### 1. SoT resolver + config/schema/defaults (M)
 
-- [ ] 1.1 SoT resolution helper (R1, R2)
+- [x] 1.1 SoT resolution helper (R1, R2)
   - **File:** `scripts/memory-sot.sh`, `skills/memory/SKILL.md`
   - **Expected:** reads `memory.sourceOfTruth` + provider class; returns authoritative side (`repo`|`memory`) for the `decision` class; single-sourced for freeze/compound/audit
-- [ ] 1.2 Config knob + schema + seeding (R2)
+- [x] 1.2 Config knob + schema + seeding (R2)
   - **File:** `.cursor/workflow.config.json`, `.sw/config.schema.json`, `core/sw-reference/` setup defaults
   - **Expected:** `memory.sourceOfTruth` (`repo`|`memory`|`auto`, default `auto`) accepted by schema and seeded
-- [ ] 1.3 Decision-only scope guard (R3)
+- [x] 1.3 Decision-only scope guard (R3)
   - **File:** `scripts/memory-sot.sh`, `skills/memory/SKILL.md`
   - **Expected:** SoT switch applies only to `decision`; other classes remain distillation-only
 
