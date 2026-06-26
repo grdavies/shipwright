@@ -195,19 +195,61 @@ def _collect_terminal_run_state(
         )
 
 
+def _stale_state_rel_paths(view: DeliverStateView, repo_root: Path) -> set[str]:
+    rels: set[str] = set()
+    for stale_root in view.stale_roots:
+        cursor = stale_root / ".cursor"
+        if not cursor.is_dir():
+            continue
+        for path in cursor.glob("sw-deliver-state*.json"):
+            rels.add(rel_to_repo(repo_root, path))
+    return rels
+
+
+def _scoped_run_inflight(repo_root: Path, run: dict[str, Any]) -> tuple[bool, str]:
+    from wave_state import _is_migration_breadcrumb, _read_state_optional
+
+    state_path = repo_root / run["statePath"]
+    state = _read_state_optional(state_path)
+    if _is_migration_breadcrumb(state):
+        return False, ""
+    if run.get("lockHeld"):
+        return True, f"deliver lock present ({run.get('slug')})"
+    verdict = str(state.get("verdict") or run.get("verdict") or "")
+    if verdict == "running":
+        if state.get("mergeJournal"):
+            return True, f"open merge journal ({run.get('slug')})"
+        return True, f"deliver run verdict=running ({run.get('slug')})"
+    return False, ""
+
+
 def deliver_inflight(repo_root: Path) -> tuple[bool, str]:
     from wave_state import enumerate_scoped_runs
 
     view = resolve_deliver_state(repo_root)
+    stale = _stale_state_rel_paths(view, repo_root)
     for run in enumerate_scoped_runs(repo_root):
-        if run.get("lockHeld"):
-            return True, f"deliver lock present ({run.get('slug')})"
-    verdict = str(view.state.get("verdict", ""))
-    if verdict == "running":
-        if view.state.get("mergeJournal"):
-            return True, "open merge journal"
-        return True, "deliver run verdict=running"
+        if run.get("statePath") in stale:
+            continue
+        inflight, reason = _scoped_run_inflight(repo_root, run)
+        if inflight:
+            return True, reason
     return False, ""
+
+
+def _protect_inflight_scoped_runs(report: Report, repo_root: Path) -> None:
+    from wave_state import enumerate_scoped_runs
+
+    view = resolve_deliver_state(repo_root)
+    stale = _stale_state_rel_paths(view, repo_root)
+    for run in enumerate_scoped_runs(repo_root):
+        if run.get("statePath") in stale:
+            continue
+        inflight, reason = _scoped_run_inflight(repo_root, run)
+        if inflight:
+            report.protected.append(
+                Item("run-state", run["statePath"], "protected", reason)
+            )
 
 
 def gh_merged(root: Path, branch: str, default: str) -> bool | None:
@@ -385,9 +427,13 @@ def enumerate_cleanup(root: Path) -> Report:
 
     from wave_state import resolve_state_path
 
+    _protect_inflight_scoped_runs(report, root)
     if inflight:
         state_rel = rel_to_repo(root, resolve_state_path(root, state_hint=deliver_view.state))
-        report.protected.append(Item("run-state", state_rel, "protected", inflight_reason))
+        if not any(
+            i.kind == "run-state" and i.name == state_rel for i in report.protected
+        ):
+            report.protected.append(Item("run-state", state_rel, "protected", inflight_reason))
     elif deliver_view.state:
         verdict = str(deliver_view.state.get("verdict", ""))
         if verdict in TERMINAL_DELIVER_VERDICTS:

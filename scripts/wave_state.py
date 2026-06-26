@@ -311,7 +311,9 @@ def enumerate_scoped_runs(root: Path) -> list[dict[str, Any]]:
             data = read_json(legacy)
         except StateCorruptError:
             data = {}
-        if data.get("phases") or data.get("verdict") == "running":
+        if not _is_migration_breadcrumb(data) and (
+            data.get("phases") or data.get("verdict") == "running"
+        ):
             runs.append(
                 {
                     "slug": "(legacy)",

@@ -1076,6 +1076,32 @@ else
   FAIL=1
 fi
 
+# --- deliver-living-doc-serialized (PRD 013 R12) ---
+LD_FIX=$(mktemp -d)
+(
+  cd "$LD_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  git commit --allow-empty -q -m init
+  mkdir -p .cursor
+  python3 -c "
+import subprocess, sys
+sys.path.insert(0, '$ROOT/scripts')
+from pathlib import Path
+from wave_living_doc_lock import try_acquire, release
+root = Path('$LD_FIX')
+assert try_acquire(root, target='feat/a', holder='test-a')
+proc = subprocess.run(
+    [sys.executable, '-c', 'import sys; sys.path.insert(0, \"$ROOT/scripts\"); from pathlib import Path; from wave_living_doc_lock import try_acquire; raise SystemExit(0 if try_acquire(Path(\"$LD_FIX\"), holder=\"test-b\") else 20)'],
+    capture_output=True,
+)
+assert proc.returncode == 20, proc.stderr.decode()
+release(root)
+"
+) && echo "OK  deliver-living-doc-serialized" || { echo "FAIL deliver-living-doc-serialized"; FAIL=1; }
+rm -rf "$LD_FIX"
+
 # --- layout reference includes deliver artifacts (R33) ---
 if grep -q 'sw-deliver-plan.json' "$ROOT/.sw/layout.md" && \
    grep -q 'sw-deliver-plan.json' "$ROOT/core/sw-reference/layout.md"; then

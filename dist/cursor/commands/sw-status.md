@@ -22,6 +22,9 @@ Load `skills/living-status/SKILL.md`.
    - `coderabbitState: off` → `review: off`
    - `coderabbitState: unconfigured` → `review: not configured`
    - otherwise → `review: <coderabbitState>` (per `skills/living-status/SKILL.md`).
+8. **Deliver runs (R10)** — `bash scripts/reconcile-status.sh deliver-runs` lists every live scoped deliver
+   run (slug, target branch, verdict, lock holder). `derive --json` embeds the same `deliverRuns` array and
+   refreshes `.cursor/sw-deliver-runs/index.json`.
 
 **Communication intensity:** ultra
 
