@@ -213,7 +213,7 @@ def deps_satisfied(phase_id: str, plan: dict[str, Any], statuses: dict[str, str]
     for edge in plan.get("edges") or []:
         if str(edge.get("to")) == phase_id:
             dep = str(edge.get("from", ""))
-            if statuses.get(dep) != "green-merged":
+            if statuses.get(dep) not in MERGED_PHASE_STATUSES:
                 return False
     return True
 
