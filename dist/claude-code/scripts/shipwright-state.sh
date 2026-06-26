@@ -11,6 +11,7 @@ Usage:
   shipwright-state.sh read              Print state JSON (empty object if missing)
   shipwright-state.sh write <json|-)>   Merge JSON object into state file (- = stdin)
   shipwright-state.sh override-add <json|-)>  Append one override record (read-modify-write)
+  shipwright-state.sh dispatch-override-add <json|-)>  Append one dispatch override audit record
   shipwright-state.sh init <json|-)>    Replace state file with JSON object (- = stdin)
   shipwright-state.sh sync-ship-steps   Merge phaseShip from durable ship-steps.json into state
   shipwright-state.sh index             Aggregate state from all linked worktrees (read-only)
@@ -98,6 +99,42 @@ if not isinstance(overrides, list):
 overrides.append(entry)
 current["overrides"] = overrides
 path.write_text(json.dumps(current, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+  echo "$state"
+}
+
+cmd_dispatch_override_add() {
+  local entry
+  entry="$(read_json_arg "${1:-}")"
+  local state
+  state="$(resolve_state_path)"
+  mkdir -p "$(dirname "$state")"
+  ENTRY_JSON="$entry" python3 - "$state" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+entry = json.loads(os.environ["ENTRY_JSON"])
+required = ("actor", "timestamp", "dispatchId", "skippedFields")
+missing = [k for k in required if k not in entry]
+if missing:
+    print(json.dumps({"verdict": "fail", "error": "missing fields", "missing": missing}))
+    raise SystemExit(2)
+if not isinstance(entry.get("skippedFields"), list) or not entry.get("skippedFields"):
+    print(json.dumps({"verdict": "fail", "error": "skippedFields must be a non-empty list"}))
+    raise SystemExit(2)
+current = {}
+if path.exists():
+    current = json.loads(path.read_text(encoding="utf-8"))
+records = current.get("dispatchOverrides")
+if not isinstance(records, list):
+    records = []
+records.append(entry)
+current["dispatchOverrides"] = records
+path.write_text(json.dumps(current, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+print(json.dumps({"verdict": "pass", "count": len(records)}))
 PY
   echo "$state"
 }
@@ -224,6 +261,10 @@ main() {
     override-add)
       [[ $# -ge 1 ]] || { usage >&2; exit 1; }
       cmd_override_add "$1"
+      ;;
+    dispatch-override-add)
+      [[ $# -ge 1 ]] || { usage >&2; exit 1; }
+      cmd_dispatch_override_add "$1"
       ;;
     init)
       [[ $# -ge 1 ]] || { usage >&2; exit 1; }

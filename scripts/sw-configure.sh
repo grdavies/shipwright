@@ -164,6 +164,7 @@ detect = json.loads(subprocess.check_output(
 
 draft = {
     "doc": {"afterTasks": "confirm"},
+    "delegation": {"mode": "bind-only"},
     "deliver": {"autonomy": {"mode": "autonomous", "maxRunMinutes": 1440, "maxIterations": 500}},
     "compound": {"autonomy": "supervised"},
     "guardrails": {"enforceBeforeSubmit": True, "requireRuleClass": False},
@@ -171,6 +172,15 @@ draft = {
     "memory": {"provider": "in-repo", "sourceOfTruth": "auto"},
     "configuredWith": {"shipwrightVersion": sw_ver, "schemaVersion": sch_ver},
 }
+
+comm_defaults_path = Path(root) / "core/sw-reference/communication-routing.defaults.json"
+if comm_defaults_path.is_file():
+    try:
+        comm_defaults = json.loads(comm_defaults_path.read_text(encoding="utf-8"))
+        if isinstance(comm_defaults, dict):
+            draft["communication"] = comm_defaults
+    except json.JSONDecodeError:
+        pass
 
 if accept:
     draft["verifyGaps"] = detect.get("verifyGaps") or []

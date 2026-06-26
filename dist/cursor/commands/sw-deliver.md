@@ -116,6 +116,30 @@ external-wait exhaustion, run-level budget — see conductor skill **Legitimate-
 
 **Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-deliver`.
 
+## Delegated Task binding contract
+
+Before each phase/terminal delegated Task from `/sw-deliver`:
+
+1. `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-deliver --skill conductor`
+2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-deliver --skill conductor --parent-model <parent-concrete-id> [--dispatch-id <id>]`
+3. Dispatch Task with explicit concrete `model:` and resolved caveman intensity context; never rely on inherited model.
+
+## Inline allowlist (closed)
+
+`/sw-deliver` may remain inline only for:
+
+- Durable driver invocations (`wave.sh deliver-loop/state/merge/status/report`).
+- Lock/journal bookkeeping and deterministic state transitions.
+- Legitimate-halt report emission and resume-command surfacing.
+
+Wave implementation/review remediation work delegates.
+
+## Dispatch context redaction contract
+
+All non-config context passed to delegated Tasks (status excerpts, blocker reports, blast-radius notes,
+memory-preflight outputs, diffs) must be redacted via `bash scripts/memory-redact.sh` and fenced as
+`untrusted_payload` before inclusion.
+
 ## Guardrails
 
 - Promotion validates each candidate on a disposable PR head **before** merge to `main`.

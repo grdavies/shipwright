@@ -234,9 +234,11 @@ def _communication_defaults_path(plugin_root: Path) -> Path:
     return plugin_root / "core" / "sw-reference" / "communication-routing.defaults.json"
 
 
-def _load_communication_routing(config: dict, plugin_root: Path) -> tuple[dict[str, str], str]:
+def _load_communication_routing(config: dict, plugin_root: Path) -> tuple[dict[str, dict[str, str]], str]:
     defaults_path = _communication_defaults_path(plugin_root)
     base_commands: dict[str, str] = {}
+    base_skills: dict[str, str] = {}
+    base_agents: dict[str, str] = {}
     default_intensity = "full"
     try:
         if defaults_path.is_file():
@@ -248,6 +250,12 @@ def _load_communication_routing(config: dict, plugin_root: Path) -> tuple[dict[s
                     commands = routing.get("commands", {})
                     if isinstance(commands, dict):
                         base_commands = {str(k): str(v) for k, v in commands.items()}
+                    skills = routing.get("skills", {})
+                    if isinstance(skills, dict):
+                        base_skills = {str(k): str(v) for k, v in skills.items()}
+                    agents = routing.get("agents", {})
+                    if isinstance(agents, dict):
+                        base_agents = {str(k): str(v) for k, v in agents.items()}
     except (OSError, ValueError, TypeError):
         pass
 
@@ -259,8 +267,15 @@ def _load_communication_routing(config: dict, plugin_root: Path) -> tuple[dict[s
             commands = routing.get("commands", {})
             if isinstance(commands, dict):
                 base_commands = {**base_commands, **{str(k): str(v) for k, v in commands.items()}}
+            skills = routing.get("skills", {})
+            if isinstance(skills, dict):
+                base_skills = {**base_skills, **{str(k): str(v) for k, v in skills.items()}}
+            agents = routing.get("agents", {})
+            if isinstance(agents, dict):
+                base_agents = {**base_agents, **{str(k): str(v) for k, v in agents.items()}}
 
-    return base_commands, default_intensity
+    merged = {"commands": base_commands, "skills": base_skills, "agents": base_agents}
+    return merged, default_intensity
 
 
 def resolve_communication_intensity(
@@ -268,24 +283,72 @@ def resolve_communication_intensity(
     config: dict,
     plugin_root: Path,
     *,
+    skill: str | None = None,
+    agent: str | None = None,
     child_command: str | None = None,
 ) -> tuple[str, str]:
-    """Return (intensity, source) for a command name."""
+    """Return (intensity, source) for command -> skill -> agent -> default precedence."""
     routing, default_intensity = _load_communication_routing(config, plugin_root)
-    raw = routing.get(command, default_intensity)
-    source = "routing" if command in routing else "defaultIntensity"
+    commands = routing.get("commands", {}) if isinstance(routing, dict) else {}
+    skills = routing.get("skills", {}) if isinstance(routing, dict) else {}
+    agents = routing.get("agents", {}) if isinstance(routing, dict) else {}
 
-    if raw == "inherit":
-        if child_command:
-            child_raw = routing.get(child_command, default_intensity)
-            if child_raw == "inherit":
-                return default_intensity, "inherit-fallback"
-            return child_raw, f"inherit:{child_command}"
-        return default_intensity, "inherit-unresolved"
+    def _normalize(raw: str, source: str) -> tuple[str, str]:
+        if raw in {"normal", "lite", "full", "ultra"}:
+            return raw, source
+        if raw == "inherit":
+            return "inherit", source
+        return default_intensity, "invalid-fallback"
 
-    if raw in {"normal", "lite", "full", "ultra"}:
-        return raw, source
-    return default_intensity, "invalid-fallback"
+    if command:
+        raw = str(commands.get(command, default_intensity))
+        source = "routing.commands" if command in commands else "defaultIntensity"
+        value, source = _normalize(raw, source)
+        if value == "inherit" and child_command:
+            child_raw = str(commands.get(child_command, default_intensity))
+            child_value, child_source = _normalize(child_raw, f"inherit.command:{child_command}")
+            if child_value != "inherit":
+                return child_value, child_source
+        elif value != "inherit":
+            return value, source
+
+    if skill:
+        raw = str(skills.get(skill, default_intensity))
+        source = "routing.skills" if skill in skills else "defaultIntensity"
+        value, source = _normalize(raw, source)
+        if value != "inherit":
+            return value, source
+
+    if agent:
+        raw = str(agents.get(agent, default_intensity))
+        source = "routing.agents" if agent in agents else "defaultIntensity"
+        value, source = _normalize(raw, source)
+        if value != "inherit":
+            return value, source
+
+    fallback, source = _normalize(default_intensity, "defaultIntensity")
+    if fallback == "inherit":
+        return "full", "defaultIntensity:inherit-fallback"
+    return fallback, source
+
+
+def _dispatch_preflight_record(root: Path) -> dict | None:
+    path = root / ".cursor" / "hooks" / "state" / "task-dispatch-preflight.json"
+    try:
+        if not path.is_file():
+            return None
+        parsed = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    intensity = parsed.get("intensity")
+    if intensity not in {"normal", "lite", "full", "ultra"}:
+        return None
+    consumed = parsed.get("consumedAt")
+    if consumed:
+        return None
+    return parsed
 
 
 def _load_caveman_core(plugin_root: Path) -> str:
@@ -306,7 +369,12 @@ def build_session_context(root: Path, plugin_root: Path, context_template: Path)
     config = load_config(root)
     caveman_core = _load_caveman_core(plugin_root)
     if caveman_core:
-        intensity, source = resolve_communication_intensity("", config, plugin_root)
+        dispatch_preflight = _dispatch_preflight_record(root)
+        if dispatch_preflight:
+            intensity = str(dispatch_preflight.get("intensity"))
+            source = "dispatch-preflight"
+        else:
+            intensity, source = resolve_communication_intensity("", config, plugin_root)
         parts.append(
             "\n## Caveman communication (bundled)\n\n"
             f"**Resolved intensity:** `{intensity}` ({source})\n\n"
