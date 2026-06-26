@@ -29,6 +29,19 @@
         }
       }
     },
+    "delegation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Sub-agent dispatch policy gate mode for orchestrators and atomic commands.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["bind-only", "heuristic", "default"],
+          "default": "bind-only",
+          "description": "bind-only enforces model/intensity binding with delegate-by-default policy. default remains gated until Phase 2 live acceptance (DL-9)."
+        }
+      }
+    },
     "deliver": {
       "type": "object",
       "additionalProperties": false,
@@ -507,6 +520,14 @@
                 "type": "string",
                 "enum": ["normal", "lite", "full", "ultra", "inherit"]
               }
+            },
+            "agents": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": ["normal", "lite", "full", "ultra", "inherit"]
+              },
+              "description": "Agent id → caveman intensity. Used after command/skill routing during delegated Task binding."
             }
           }
         }

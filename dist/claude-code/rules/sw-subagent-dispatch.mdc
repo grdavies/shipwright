@@ -1,21 +1,30 @@
 ---
-description: Heuristic-gated sub-agent dispatch and loop hard stops for Shipwright.
+description: Delegate-by-default sub-agent dispatch, binding enforcement, and loop hard stops for Shipwright.
 alwaysApply: false
 ---
 
 # Sub-agent dispatch policy
 
-## Delegate when
+## Standing gate (delegate-by-default)
 
-- Work spans **~8+ files** (count planned touch paths).
-- Heavy/throwaway exploration whose reads would bloat orchestrator context.
-- Subtasks are **independently parallelizable** (disjoint file sets).
+Default posture is **delegate**. Inline execution is allowed only by a closed allowlist declared per
+orchestrator command and by `delegation.mode`.
 
-## Stay inline when
+`delegation.mode` (from `workflow.config.json`):
 
-- Single-file or ≤3 files with clear scope.
-- Sequential dependencies between edits.
-- User interaction mid-flight required.
+- `bind-only` (**Phase 1 default**) — delegate-by-default + fail-closed model/intensity binding.
+- `heuristic` — same binding requirements; may use file-count heuristics as secondary guidance.
+- `default` — reserved for post-Phase-2 acceptance (DL-9); treat as `bind-only` until enabled.
+
+## Inline execution policy
+
+Inline is legal only when **all** are true:
+
+1. The current command includes the action in its explicit inline allowlist.
+2. The action is bookkeeping/control-flow only (no open "trivial" bucket).
+3. Binding requirements are still satisfied for any delegated child Task.
+
+If any condition is not met, delegate.
 
 ## Model tier (R30 / R9)
 
@@ -38,9 +47,12 @@ Per-agent tiers for reviewers, doc-review personas, and native-panel specialists
 - Orchestrators at routing tier `inherit` (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-compound-ship`) MUST resolve
   delegated atomics via `--command <child-slug>` — never downgrade the child (KD8).
 - **R9 runtime contract (mechanical):** before every `sw-*-reviewer` / persona / native-panel Task spawn,
-  run `scripts/reviewer-dispatch-check.sh --agent <id> --parent-model <parent-concrete-id>`. It fails closed
-  (`parent-below-builder`, `no-model-resolved`) unless `--override` is explicitly recorded. Stamp the resolved
-  concrete `model:` from `resolve-model-tier.sh --agent` — never rely on `model: inherit` from the parent session.
+  run `scripts/dispatch-check.sh --agent <id> --parent-model <parent-concrete-id> [--command <orchestrator>] [--skill <skill>]`.
+  It fails closed on `binding:*` causes and only treats `harness:*` causes as retryable backpressure.
+  Stamp the resolved concrete `model:` from `resolve-model-tier.sh --agent` and resolved caveman intensity from
+  `resolve-intensity.sh`; never rely on session inheritance.
+- `--override` requires a durable audit record written first via
+  `bash scripts/shipwright-state.sh dispatch-override-add '{"actor":"...","timestamp":"...","dispatchId":"...","skippedFields":["..."]}'`.
 - Native panel specialists: tier per `models.routing.agents` (e.g. `correctness`/`security`/`adversarial` →
   `deep`; others → `mid`).
 
@@ -108,6 +120,13 @@ is **disabled** — run inline two-stage review only (R45). Log the decision in 
 slot for intra-phase agents.
 
 **Conductor-only merge:** phase sub-agents must not call `merge run-next` or `lock acquire` (R41).
+
+## Fixture validation (PRD 017)
+
+```bash
+bash scripts/test/run-delegation-fixtures.sh
+bash scripts/test/run-dispatch-foundation-fixtures.sh
+```
 
 ## Authority
 

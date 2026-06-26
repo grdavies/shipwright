@@ -29,6 +29,19 @@
         }
       }
     },
+    "delegation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Sub-agent dispatch policy gate mode for orchestrators and atomic commands.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["bind-only", "heuristic", "default"],
+          "default": "bind-only",
+          "description": "bind-only enforces model/intensity binding with delegate-by-default policy. default remains gated until Phase 2 live acceptance (DL-9)."
+        }
+      }
+    },
     "deliver": {
       "type": "object",
       "additionalProperties": false,
@@ -95,6 +108,32 @@
               "description": "Run-level deliver-loop iteration ceiling; complements maxRunMinutes (R42)."
             }
           }
+        },
+        "terminal": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Terminal path autonomy after all phases green-merged (PRD 013 A1 R24).",
+          "properties": {
+            "autonomy": {
+              "type": "string",
+              "enum": ["supervised", "auto"],
+              "default": "supervised",
+              "description": "auto runs retrospective → PR → watch/stabilize hands-off; supervised preserves halts."
+            }
+          }
+        }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "/sw-cleanup apply autonomy (PRD 013 A1 R25–R26).",
+      "properties": {
+        "autonomy": {
+          "type": "string",
+          "enum": ["confirm", "auto"],
+          "default": "confirm",
+          "description": "auto applies dry-run wouldRemove when merge is deterministic and safe; confirm preserves human ack."
         }
       }
     },
@@ -481,6 +520,14 @@
                 "type": "string",
                 "enum": ["normal", "lite", "full", "ultra", "inherit"]
               }
+            },
+            "agents": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": ["normal", "lite", "full", "ultra", "inherit"]
+              },
+              "description": "Agent id → caveman intensity. Used after command/skill routing during delegated Task binding."
             }
           }
         }

@@ -111,7 +111,8 @@ AGENT="sw-coherence-reviewer"   # example persona id
 
 RESOLVED=$(bash scripts/resolve-model-tier.sh --agent "$AGENT")
 MODEL_ID=$(echo "$RESOLVED" | python3 -c "import json,sys; print(json.load(sys.stdin)['modelId'])")
-bash scripts/reviewer-dispatch-check.sh --agent "$AGENT" --parent-model "$PARENT_MODEL"
+bash scripts/wave.sh dispatch preflight --dispatch-id "$DISPATCH_ID" --agent "$AGENT" --command sw-doc-review --skill doc-review
+bash scripts/dispatch-check.sh --agent "$AGENT" --command sw-doc-review --skill doc-review --parent-model "$PARENT_MODEL" --dispatch-id "$DISPATCH_ID"
 # Task spawn MUST use model: <MODEL_ID> — not inherit
 ```
 

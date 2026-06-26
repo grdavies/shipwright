@@ -10,8 +10,9 @@ worktrees). Repo-level index is derived at read-time via `git worktree list` —
 
 ## Communication style (always active)
 
-Caveman communication policy is **always active**. Intensity is resolved from `communication.routing` for
-the active `sw-*` command (or `communication.defaultIntensity` when unknown). Override for the current chat
+Caveman communication policy is **always active**. Intensity is resolved from `communication.routing` with
+command → skill → agent → default precedence. A fresh dispatch-preflight binding overrides session-start
+intensity for the next delegated Task. Override for the current chat
 with `/sw-caveman <normal|lite|full|ultra>`.
 
 Bundled policy: `core/communication/caveman-core.md`. Artifact file content always uses normal complete

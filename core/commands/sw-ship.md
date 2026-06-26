@@ -7,6 +7,22 @@ alwaysApply: false
 
 Orchestrates the atomic phase loop inside the worktree. Delegates to each command's procedure; never merges.
 
+Load `skills/conductor/SKILL.md` and enforce `rules/sw-conductor.mdc` — **single source** for in-turn
+continuation, legitimate halts, parallel dispatch, and self-wake/bounded-wait behavior (R18). Do not
+re-implement loop or halt policy in this file.
+
+## Conductor adoption (SHIP-A1..A4)
+
+| ID | Requirement | Contract clause |
+| --- | --- | --- |
+| SHIP-A1 | Orchestrator-dispatched runs use `--phase-mode` / `SW_PHASE_MODE`; write durable `status.json`; suppress interactive merge pause | Legitimate-halt set; **Phase-mode contract** below |
+| SHIP-A2 | On `sw-stabilize`, re-enter the stabilize loop in-turn until live green or remediation budget exhausted | In-turn self-continuation; legitimate-halt set |
+| SHIP-A3 | CI `yellow` uses self-wake sentinel (or bounded in-turn poll fallback) — never end turn while checks pending | Self-wake / bounded wait; external-wait exhaustion |
+| SHIP-A4 | Parallelize independent native review sub-agents when `sw-subagent-dispatch` heuristics allow; respect `worktree.parallelCeiling` | Parallel dispatch |
+
+Human gates unchanged: interactive merge pause (non-phase-mode), validated P0/P1 local review halt, branch/scope
+ambiguity, optional `--signal-id` feedback close.
+
 ## Chain
 
 ```
@@ -87,7 +103,10 @@ before reporting done. If no longer green → `phaseStatus: blocked`, re-enter a
 ## CI segment
 
 After `sw-pr`: bounded wait per `checks.watch` (`maxWaitMinutes`, `pollSeconds`). `yellow` is not terminal —
-poll until green, red, or budget exhausted. After `sw-stabilize` push, re-arm CodeRabbit barrier on new head.
+poll until green, red, or budget exhausted (SHIP-A3). Under conductor adoption, arm self-wake per
+`skills/conductor/SKILL.md` **Self-wake sentinel** (or bounded in-turn poll fallback per **Self-wake environment
+fallback**) — do not end the turn with only "waiting for CI" prose. After `sw-stabilize` push, re-arm CodeRabbit
+barrier on new head.
 
 Gate (authoritative):
 
@@ -121,6 +140,44 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/sw-ready` and stop.
 **Communication intensity:** inherit
 
 **Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-ship`.
+
+## Delegated atomics
+
+Substantive chain steps delegate with bound model + intensity per child slug:
+
+| Step | Delegate via | Skill / agent binding |
+| --- | --- | --- |
+| `sw-execute` | Task | `--command sw-execute` |
+| `sw-review` (native panel) | Task per reviewer | `--command sw-review --agent <panel-agent-id>` |
+| `sw-simplify` | Task when heuristics fire | `--command sw-simplify` |
+| `sw-stabilize` | Task or in-turn chain | `--command sw-stabilize --skill stabilize` |
+
+Resolve model: `bash scripts/resolve-model-tier.sh --command <child-slug>` (or `--agent` for panel agents).
+Resolve intensity: `bash scripts/resolve-intensity.sh --command <child-slug>` (or `--agent|--skill`).
+
+## Delegated Task binding contract
+
+Before any delegated Task spawn from `/sw-ship`:
+
+1. `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-ship --skill <active-skill>`
+2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-ship --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>]`
+3. Stamp Task with explicit `model: <resolved-concrete-id>`; do not use `inherit`.
+
+## Inline allowlist (closed)
+
+`/sw-ship` may remain inline only for:
+
+- Step sequencing/state sync (`ship-phase-steps`, `shipwright-state`) and gate reads.
+- Mechanical command invocation (`sw-execute`, `sw-verify`, `sw-review`, etc.) without bypassing them.
+- Emitting phase-mode status and merge-gate summaries.
+
+Implementation/review authoring outside these bookkeeping paths delegates.
+
+## Dispatch context redaction contract
+
+Before dispatching any Task, redact non-config payloads (diff excerpts, CI/review output, feedback snippets,
+memory-preflight data) via `bash scripts/memory-redact.sh`, then include only redacted/fenced
+`untrusted_payload` content.
 
 ## Guardrails
 

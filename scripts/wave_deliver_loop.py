@@ -15,7 +15,12 @@ from wave_json_io import StateCorruptError, read_json, write_json
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
-from wave_merge import check_status_sha, phase_branch_head_optional, status_file_for
+from wave_merge import (
+    VALID_STATUS_VERDICTS,
+    check_status_sha,
+    phase_branch_head_optional,
+    status_file_for,
+)
 from wave_state import (
     append_log as state_append_log,
     load_deliver_state,
@@ -38,9 +43,11 @@ MECHANICAL_ACTIONS = frozenset(
         "lock-acquire",
         "orchestrator-provision",
         "provision-phase",
+        "collect-all-ready",
         "collect-status",
         "merge-enqueue",
         "merge-run-next",
+        "phase-teardown-run",
         "advance-wave",
         "write-blocker-report",
         "all-phases-complete",
@@ -48,12 +55,26 @@ MECHANICAL_ACTIONS = frozenset(
         "suggest-cleanup",
     }
 )
-AGENT_ACTIONS = frozenset({"dispatch-ship", "remediate", "terminal-ship", "retrospective", "compound-ship"})
+AGENT_ACTIONS = frozenset(
+    {
+        "dispatch-ship",
+        "dispatch-batch",
+        "remediate",
+        "terminal-ship",
+        "retrospective",
+        "compound-ship",
+    }
+)
+AWAIT_ACTIONS = frozenset({"await-in-flight"})
 TERMINAL_ACTIONS = frozenset({"halt-blocked", "complete", "terminal"})
 
 DRIVER_STALE_SECONDS = int(os.environ.get("SW_DRIVER_STALE_SECONDS", "7200"))
 DEFAULT_REMEDIATION_MAX = 2
 DEFAULT_PHASE_TIMEOUT_MIN = int(os.environ.get("SW_PHASE_TIMEOUT_MINUTES", "240"))
+DEFAULT_BACKGROUND_TASK_TIMEOUT_MIN = int(
+    os.environ.get("SW_BACKGROUND_TASK_TIMEOUT_MINUTES", "120")
+)
+MERGED_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
 
 
 def utc_now() -> str:
@@ -117,6 +138,25 @@ def phase_timeout_minutes(root: Path) -> int:
         return max(1, int(raw))
     except (TypeError, ValueError):
         return DEFAULT_PHASE_TIMEOUT_MIN
+
+
+def background_task_timeout_minutes(root: Path) -> int:
+    deliver = load_workflow_config(root).get("deliver") or {}
+    watchdog = deliver.get("watchdog") or {}
+    raw = watchdog.get("backgroundTaskTimeoutMinutes", DEFAULT_BACKGROUND_TASK_TIMEOUT_MIN)
+    try:
+        return max(1, int(raw))
+    except (TypeError, ValueError):
+        return DEFAULT_BACKGROUND_TASK_TIMEOUT_MIN
+
+
+def parallel_ceiling(root: Path) -> int:
+    worktree = load_workflow_config(root).get("worktree") or {}
+    raw = worktree.get("parallelCeiling", 4)
+    try:
+        return max(1, int(raw))
+    except (TypeError, ValueError):
+        return 4
 
 
 def parse_ts(ts: str) -> datetime | None:
@@ -187,7 +227,165 @@ def wave_phase_ids(plan: dict[str, Any], wave_num: int) -> list[str]:
 
 def all_phases_merged(state: dict[str, Any]) -> bool:
     statuses = phase_status_map(state)
-    return bool(statuses) and all(s == "green-merged" for s in statuses.values())
+    return bool(statuses) and all(s in MERGED_PHASE_STATUSES for s in statuses.values())
+
+
+def in_flight_count(statuses: dict[str, str], wave_ids: list[str]) -> int:
+    return sum(1 for pid in wave_ids if statuses.get(pid) == "in-flight")
+
+
+def phase_dispatch_payload(
+    plan: dict[str, Any], phase_id: str
+) -> dict[str, Any]:
+    item = item_for_phase(plan, phase_id) or {}
+    return {
+        "phaseId": phase_id,
+        "phaseSlug": item.get("slug"),
+        "branch": item.get("branch"),
+    }
+
+
+def runnable_pending_phases(
+    wave_ids: list[str],
+    statuses: dict[str, str],
+    plan: dict[str, Any],
+) -> list[str]:
+    ready: list[str] = []
+    for pid in sorted(wave_ids):
+        if statuses.get(pid) != "pending":
+            continue
+        if not deps_satisfied(pid, plan, statuses):
+            continue
+        ready.append(pid)
+    return ready
+
+
+def mark_background_task_blocked(
+    state: dict[str, Any], phase_id: str, cause: str
+) -> None:
+    phases = state.setdefault("phases", {})
+    meta = phases.get(phase_id)
+    if not isinstance(meta, dict):
+        return
+    meta["status"] = "blocked"
+    meta["cause"] = cause
+    meta["updatedAt"] = utc_now()
+
+
+def check_background_task_failures(
+    root: Path, state: dict[str, Any], wave_ids: list[str]
+) -> str | None:
+    timeout_min = background_task_timeout_minutes(root)
+    for pid in sorted(wave_ids):
+        meta = (state.get("phases") or {}).get(pid, {})
+        if not isinstance(meta, dict) or meta.get("status") != "in-flight":
+            continue
+        if not meta.get("backgroundDispatchedAt"):
+            continue
+        slug = meta.get("slug", pid)
+        status_path = status_file_for(root, slug, None, state)
+        if status_path.is_file():
+            status = read_json(status_path, absent_ok=False)
+            if status.get("verdict") in VALID_STATUS_VERDICTS:
+                continue
+        started = meta.get("backgroundDispatchedAt") or meta.get("startedAt")
+        if isinstance(started, str):
+            age = age_seconds(started)
+            if age is not None and age > timeout_min * 60:
+                mark_background_task_blocked(
+                    state,
+                    pid,
+                    f"background-task-timeout:{pid}",
+                )
+                save_state(root, state)
+                return f"background-task-timeout:{pid}"
+    return None
+
+
+def merge_ready_in_flight_phases(
+    root: Path,
+    state: dict[str, Any],
+    plan: dict[str, Any],
+    wave_ids: list[str],
+) -> list[dict[str, Any]]:
+    ready: list[dict[str, Any]] = []
+    for pid in sorted(wave_ids):
+        meta = (state.get("phases") or {}).get(pid, {})
+        if not isinstance(meta, dict) or meta.get("status") != "in-flight":
+            continue
+        slug = meta.get("slug", pid)
+        status_path = status_file_for(root, slug, None, state)
+        if not status_path.is_file():
+            continue
+        status = read_json(status_path, absent_ok=False)
+        if status.get("verdict") != "merge-ready-green":
+            continue
+        phase_branch = meta.get("branch")
+        if phase_branch:
+            expected = phase_branch_head_optional(root, state, slug, str(phase_branch))
+            if expected:
+                ok_sha, _sha_cause = check_status_sha(status, expected)
+                if not ok_sha:
+                    continue
+        ok, _cause = tasks_currency_ok(root, state, plan)
+        if not ok:
+            continue
+        ready.append({"phaseId": pid, "phaseSlug": slug})
+    return ready
+
+
+def in_flight_merge_halt(
+    root: Path,
+    state: dict[str, Any],
+    plan: dict[str, Any],
+    wave_ids: list[str],
+) -> dict[str, Any] | None:
+    for pid in sorted(wave_ids):
+        meta = (state.get("phases") or {}).get(pid, {})
+        if not isinstance(meta, dict) or meta.get("status") != "in-flight":
+            continue
+        slug = meta.get("slug", pid)
+        status_path = status_file_for(root, slug, None, state)
+        if not status_path.is_file():
+            continue
+        status = read_json(status_path, absent_ok=False)
+        if status.get("verdict") != "merge-ready-green":
+            continue
+        phase_branch = meta.get("branch")
+        if phase_branch:
+            expected = phase_branch_head_optional(root, state, slug, str(phase_branch))
+            if expected:
+                ok_sha, sha_cause = check_status_sha(status, expected)
+                if not ok_sha:
+                    return {
+                        "action": "halt-blocked",
+                        "cause": sha_cause or "phase-status:stale",
+                        "resume": True,
+                    }
+        ok, cause = tasks_currency_ok(root, state, plan)
+        if not ok:
+            return {
+                "action": "halt-blocked",
+                "cause": cause,
+                "resume": True,
+            }
+    return None
+
+
+def mark_phases_in_flight(
+    state: dict[str, Any], phase_ids: list[str], *, background: bool = False
+) -> None:
+    phases = state.setdefault("phases", {})
+    now = utc_now()
+    for pid in phase_ids:
+        meta = phases.get(pid)
+        if not isinstance(meta, dict):
+            continue
+        meta["status"] = "in-flight"
+        meta["startedAt"] = meta.get("startedAt") or now
+        if background:
+            meta["backgroundDispatchedAt"] = now
+        phases[pid] = meta
 
 
 def check_watchdog(root: Path, state: dict[str, Any]) -> str | None:
@@ -432,55 +630,126 @@ def compute_next_action(
             "watchdog": True,
         }
 
-    # In-flight: collect durable status
-    for pid in wave_ids:
-        meta = (state.get("phases") or {}).get(pid, {})
-        if isinstance(meta, dict) and meta.get("status") == "in-flight":
-            slug = meta.get("slug", "")
-            status_path = status_file_for(root, slug, None, state)
-            if status_path.is_file():
-                status = read_json(status_path, absent_ok=False)
-                if status.get("verdict") == "merge-ready-green":
-                    phase_branch = meta.get("branch")
-                    if phase_branch:
-                        expected = phase_branch_head_optional(root, state, slug, str(phase_branch))
-                        if expected:
-                            ok_sha, sha_cause = check_status_sha(status, expected)
-                            if not ok_sha:
-                                return {
-                                    "action": "halt-blocked",
-                                    "cause": sha_cause or "phase-status:stale",
-                                    "resume": True,
-                                }
-                    ok, cause = tasks_currency_ok(root, state, plan)
-                    if not ok:
-                        return {
-                            "action": "halt-blocked",
-                            "cause": cause,
-                            "resume": True,
-                        }
-                    return {
-                        "action": "merge-enqueue",
-                        "phaseId": pid,
-                        "phaseSlug": slug,
-                        "resume": True,
-                    }
-                if status.get("verdict") == "blocked":
-                    return {
-                        "action": "collect-status",
-                        "phaseId": pid,
-                        "phaseSlug": slug,
-                        "resume": True,
-                    }
-            return {
-                "action": "dispatch-ship",
-                "phaseId": pid,
-                "phaseSlug": slug,
-                "resume": True,
-                "note": "awaiting /sw-ship --phase-mode in phase worktree",
-            }
+    bg_fail = check_background_task_failures(root, state, wave_ids)
+    if bg_fail:
+        return {
+            "action": "halt-blocked",
+            "cause": bg_fail,
+            "resume": True,
+            "watchdog": True,
+        }
 
-    # Pending runnable phases in current wave
+    merge_halt = in_flight_merge_halt(root, state, plan, wave_ids)
+    if merge_halt:
+        return merge_halt
+
+    merge_ready = merge_ready_in_flight_phases(root, state, plan, wave_ids)
+    if len(merge_ready) > 1:
+        return {
+            "action": "collect-all-ready",
+            "phases": merge_ready,
+            "resume": True,
+        }
+    if len(merge_ready) == 1:
+        entry = merge_ready[0]
+        return {
+            "action": "merge-enqueue",
+            "phaseId": entry["phaseId"],
+            "phaseSlug": entry["phaseSlug"],
+            "resume": True,
+        }
+
+    awaiting: list[str] = []
+    for pid in sorted(wave_ids):
+        meta = (state.get("phases") or {}).get(pid, {})
+        if not isinstance(meta, dict) or meta.get("status") != "in-flight":
+            continue
+        slug = meta.get("slug", "")
+        status_path = status_file_for(root, slug, None, state)
+        if status_path.is_file():
+            status = read_json(status_path, absent_ok=False)
+            if status.get("verdict") == "blocked":
+                return {
+                    "action": "collect-status",
+                    "phaseId": pid,
+                    "phaseSlug": slug,
+                    "resume": True,
+                }
+            if status.get("verdict") == "merge-ready-green":
+                continue
+        if meta.get("backgroundDispatchedAt"):
+            awaiting.append(pid)
+            continue
+        item = item_for_phase(plan, pid)
+        return {
+            "action": "dispatch-ship",
+            "phaseId": pid,
+            "phaseSlug": (item or {}).get("slug"),
+            "resume": True,
+            "note": "awaiting /sw-ship --phase-mode in phase worktree",
+        }
+
+    if awaiting:
+        return {
+            "action": "await-in-flight",
+            "phaseIds": awaiting,
+            "resume": True,
+            "note": "awaiting terminal status.json from background Tasks",
+        }
+
+    teardown_pending = [
+        pid
+        for pid in sorted(wave_ids)
+        if statuses.get(pid) == "teardown-pending"
+    ]
+    if teardown_pending:
+        pid = teardown_pending[0]
+        meta = (state.get("phases") or {}).get(pid, {})
+        return {
+            "action": "phase-teardown-run",
+            "phaseId": pid,
+            "phaseSlug": meta.get("slug") if isinstance(meta, dict) else pid,
+            "resume": True,
+        }
+
+    ceiling = parallel_ceiling(root)
+    slots_used = in_flight_count(statuses, wave_ids)
+    slots_free = max(0, ceiling - slots_used)
+    runnable = runnable_pending_phases(wave_ids, statuses, plan)
+    if runnable and slots_free > 0:
+        worktrees = state.get("phaseWorktrees") or {}
+        need_provision = [pid for pid in runnable if pid not in worktrees]
+        if need_provision:
+            pid = need_provision[0]
+            item = item_for_phase(plan, pid)
+            return {
+                "action": "provision-phase",
+                "phaseId": pid,
+                "phaseSlug": (item or {}).get("slug"),
+                "resume": True,
+            }
+        batch_ids = runnable[:slots_free]
+        batch_phases = [phase_dispatch_payload(plan, pid) for pid in batch_ids]
+        if len(batch_ids) >= 2:
+            return {
+                "action": "dispatch-batch",
+                "phaseIds": batch_ids,
+                "phases": batch_phases,
+                "slotCount": len(batch_ids),
+                "parallelCeiling": ceiling,
+                "resume": True,
+                "note": "spawn N background Tasks (run_in_background: true) — one per phase worktree",
+            }
+        pid = batch_ids[0]
+        payload = batch_phases[0]
+        return {
+            "action": "dispatch-ship",
+            "phaseId": payload["phaseId"],
+            "phaseSlug": payload["phaseSlug"],
+            "resume": True,
+        }
+
+    # Pending runnable phases in current wave (legacy single-phase path)
     for pid in wave_ids:
         if statuses.get(pid) != "pending":
             continue
@@ -505,7 +774,8 @@ def compute_next_action(
 
     # Wave complete — advance or wait on blocked upstream elsewhere
     if wave_ids and all(
-        statuses.get(pid) in ("green-merged", "blocked", "rejected") for pid in wave_ids
+        statuses.get(pid) in (*MERGED_PHASE_STATUSES, "blocked", "rejected")
+        for pid in wave_ids
     ):
         waves = plan.get("waves") or []
         if wave_num < len(waves):
@@ -551,15 +821,12 @@ def persist_cursor(root: Path, state: dict[str, Any], action: str, **extra: Any)
 
 
 def write_blocker_report(root: Path, state: dict[str, Any], cause: str) -> Path:
+    from wave_failure import resume_deliver_command
+
     ec, report_payload = run_wave(root, "report", "blockers")
     report = report_payload.get("report") or {}
     if "resumeCommand" not in report:
-        task_list = state.get("source_task_list")
-        report["resumeCommand"] = (
-            f"bash scripts/wave.sh deliver-loop --task-list {task_list}"
-            if task_list
-            else "bash scripts/wave.sh deliver-loop"
-        )
+        report["resumeCommand"] = resume_deliver_command(state)
     out = {
         "verdict": "halt",
         "cause": cause,
@@ -682,12 +949,35 @@ def execute_mechanical(
             "name": data.get("name") or data.get("worktreeName"),
             "path": data.get("path") or data.get("worktreePath"),
         }
-        phases = state.setdefault("phases", {})
-        if pid in phases and isinstance(phases[pid], dict):
-            phases[pid]["status"] = "in-flight"
-            phases[pid]["startedAt"] = utc_now()
         persist_cursor(root, state, "dispatch-ship", phaseWorktrees=worktrees)
         return {"executed": "provision-phase", "phaseId": pid, **data}
+
+    if action == "collect-all-ready":
+        enqueued: list[str] = []
+        for entry in step.get("phases") or []:
+            slug = str(entry.get("phaseSlug", ""))
+            ec, data = run_wave(root, "merge", "enqueue", "--phase-slug", slug)
+            if ec != 0:
+                fail_payload(data, "merge enqueue failed", ec)
+            enqueued.append(slug)
+        persist_cursor(root, state, "merge-run-next")
+        return {"executed": "collect-all-ready", "enqueued": enqueued}
+
+    if action == "phase-teardown-run":
+        pid = str(step.get("phaseId", ""))
+        ec, data = run_wave(
+            root,
+            "phase-teardown-run",
+            "--phase-id",
+            pid,
+            "--plan",
+            str(PLAN_PATH),
+        )
+        if ec != 0:
+            fail_payload(data, "phase teardown failed", ec)
+        state.update(load_state(root))
+        persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
+        return {"executed": "phase-teardown-run", "phaseId": pid, **data}
 
     if action == "collect-status":
         slug = str(step.get("phaseSlug", ""))
@@ -866,6 +1156,19 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
                 pid = str(step.get("phaseId", ""))
                 attempts[pid] = int(step.get("attempt", 1))
                 persist_cursor(root, state, "remediate")
+            elif step["action"] == "dispatch-batch":
+                phase_ids = [str(p) for p in step.get("phaseIds") or []]
+                mark_phases_in_flight(state, phase_ids, background=True)
+                persist_cursor(
+                    root,
+                    state,
+                    "dispatch-batch",
+                    batchPhaseIds=phase_ids,
+                )
+            elif step["action"] == "dispatch-ship":
+                pid = str(step.get("phaseId", ""))
+                mark_phases_in_flight(state, [pid], background=True)
+                persist_cursor(root, state, "dispatch-ship")
             elif step["action"] == "halt-blocked":
                 execute_mechanical(root, state, plan, step, loop_args=args)
                 emit(
@@ -888,6 +1191,20 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
                     "action": "deliver-loop",
                     "resumed": resumed,
                     "awaitAgent": step["action"] in AGENT_ACTIONS,
+                    "next": step,
+                    "stepsTaken": steps_taken,
+                }
+            )
+
+        if step["action"] in AWAIT_ACTIONS:
+            persist_cursor(root, state, step["action"])
+            emit(
+                {
+                    "verdict": "pass",
+                    "action": "deliver-loop",
+                    "resumed": resumed,
+                    "awaitInFlight": True,
+                    "awaitAgent": False,
                     "next": step,
                     "stepsTaken": steps_taken,
                 }

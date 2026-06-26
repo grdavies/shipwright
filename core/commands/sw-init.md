@@ -100,6 +100,16 @@ acknowledgement halts). Include run-level budgets:
 
 Seed `compound.autonomy` (default **`supervised`**).
 
+### 3e. Delegation mode (Phase 1 default)
+
+Seed:
+
+```json
+"delegation": { "mode": "bind-only" }
+```
+
+`default` mode remains gated until Phase-2 live acceptance (DL-9).
+
 ### 4. Guardrail knobs
 
 Defaults (greenfield-friendly):
@@ -178,7 +188,7 @@ Assemble draft via configurator; validate against `.sw/config.schema.json`; stam
 ```
 
 Write `.cursor/workflow.config.json`. Merge `models` from `scripts/seed-model-config.sh` unless user opts out.
-Seed `communication` from `core/sw-reference/communication-routing.defaults.json`.
+Seed `communication` from `core/sw-reference/communication-routing.defaults.json` (commands + skills + agents maps).
 
 ### 7. Report
 

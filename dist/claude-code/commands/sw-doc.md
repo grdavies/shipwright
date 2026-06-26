@@ -8,6 +8,20 @@ alwaysApply: false
 Documentation orchestrator. Delegates to atomic `sw-` doc commands; does not reimplement them or perform
 implementation itself.
 
+Load `skills/conductor/SKILL.md` and enforce `rules/sw-conductor.mdc` — **single source** for in-turn
+continuation on `doc.afterTasks: auto`, consolidated halt reports, and legitimate halts (R18). Do not
+re-implement loop or halt policy in this file.
+
+## Conductor adoption (DOC-A1..A2)
+
+| ID | Requirement | Contract clause |
+| --- | --- | --- |
+| DOC-A1 | `doc.afterTasks: auto` runs `spec-seed` + `/sw-deliver run` in-turn with recorded agent override when applicable — no second prompt | In-turn self-continuation; legitimate-halt set |
+| DOC-A2 | On spec-rigor/traceability failure, emit consolidated halt report — no per-gate re-prompts | Legitimate-halt set; consolidated report (R12) |
+
+Human gates unchanged: `doc.afterTasks: confirm` / `stop`, doc-review `gated_auto` / `manual` trade-offs,
+Quick tier handoff.
+
 ## Chain (tier-gated)
 
 ```
@@ -36,13 +50,15 @@ Each remains independently runnable.
 
 ## Procedure
 
+0. Load `skills/conductor/SKILL.md`; enforce `rules/sw-conductor.mdc`.
 1. Run `/sw-triage` (or accept pre-classified tier).
 2. If Quick → report handoff to implementation; stop.
 3. If Full → `/sw-brainstorm`; halt on blocker.
 4. `/sw-prd` per tier rules.
 5. `/sw-doc-review` — tier gates whether panel runs (Quick skips); non-Quick uses signal-driven persona selection per `skills/doc-review/SKILL.md`.
 6. Halt on `manual` or `gated_auto` trade-offs — do not auto-decide.
-7. Run spec-rigor PRD gates (`skills/spec-rigor/SKILL.md`); halt on `fail`.
+7. Run spec-rigor PRD gates (`skills/spec-rigor/SKILL.md`); on `fail`, emit consolidated halt report (DOC-A2)
+   with `resumeCommand` — do not re-prompt per gate.
 8. `/sw-freeze` on PRD (and brainstorm if applicable).
 9. `/sw-tasks` — single-pass generation; traceability + analyze gates before task freeze.
 10. `/sw-freeze` on the task list.
@@ -74,7 +90,7 @@ Each remains independently runnable.
          under `docs/prds/<n>-<slug>/` only; excludes `docs/brainstorms/**` and untracked/ignored paths;
          never `main`; idempotent).
       2. **Dispatch** `/sw-deliver run <frozen-task-list-path>`.
-    - **`auto`** — emit one line: `implementing on branch <type>/<slug>`, then
+    - **`auto`** — emit one line: `implementing on branch <type>/<slug>`, then in-turn (DOC-A1):
       `bash scripts/wave.sh spec-seed --task-list <frozen-task-list-path>`, then **dispatch**
       `/sw-deliver run <frozen-task-list-path>`.
       No second prompt. When an **agent** (not a human) invoked `/sw-doc --after-tasks=auto`, record the override via
@@ -116,6 +132,44 @@ while a `confirm` halt is pending and has not sent `proceed`/`yes`, map to **`st
 **Communication intensity:** inherit
 
 **Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-doc`.
+
+## Delegated atomics
+
+| Step | Delegate via | Skill / agent binding |
+| --- | --- | --- |
+| `/sw-brainstorm` | Task | `--command sw-brainstorm` |
+| `/sw-prd` | Task | `--command sw-prd` |
+| `/sw-doc-review` personas | Task per persona (parallel) | `--command sw-doc-review --agent <persona-id>` |
+| `/sw-tasks` | Task | `--command sw-tasks` |
+| `/sw-deliver run` (`auto`/`confirm` ack) | Orchestrator dispatch | `--command sw-deliver --skill conductor` |
+
+## Delegated Task binding contract
+
+Before any delegated Task spawn from `/sw-doc`:
+
+1. `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-doc --skill <active-skill>`
+2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-doc --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>]`
+3. Pass explicit `model: <resolved-concrete-id>` on Task input (never `inherit`).
+
+Resolve model: `bash scripts/resolve-model-tier.sh --command <child-slug>` (or `--agent` for doc-review personas).
+Resolve intensity: `bash scripts/resolve-intensity.sh --command <child-slug>` (or `--agent|--skill`).
+
+## Inline allowlist (closed)
+
+`/sw-doc` may remain inline only for:
+
+- Triaging doc tier and boundary mode selection.
+- Rendering frozen artifact summaries/checkpoint prompts.
+- Writing bookkeeping state (`shipwright-state` override/seed records).
+- Dispatch handoff preparation to `/sw-deliver run`.
+
+All other substantive work delegates.
+
+## Dispatch context redaction contract
+
+Before building a Task prompt, route non-config context through `bash scripts/memory-redact.sh` and embed
+external payloads only inside fenced `untrusted_payload` blocks. Never forward raw transcripts or provider
+memory payloads.
 
 ## Guardrails
 

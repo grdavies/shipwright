@@ -44,8 +44,10 @@ zero re-prompts (R13); `supervised` adds acknowledgement halts per `deliver.phas
 `doc.afterTasks`.
 
 ```bash
-bash scripts/wave.sh deliver-loop --task-list <frozen-task-list-path>
-# resume (state present):
+/sw-deliver run <frozen-task-list-path>
+# resume when durable state already holds source_task_list:
+/sw-deliver run
+# internal driver (conductor in-turn only — not operator-facing resume):
 bash scripts/wave.sh deliver-loop --dry-run
 ```
 
@@ -75,6 +77,7 @@ After every `deliver-loop` JSON response:
 | --- | --- |
 | `awaitAgent: false` | Re-invoke `bash scripts/wave.sh deliver-loop` immediately |
 | `awaitAgent: true` | Run agent step for `next.action` (table in conductor skill), then re-invoke `deliver-loop` |
+| `awaitInFlight: true` | Poll phase `status.json` paths (parallel-wave completion wait), then re-invoke `deliver-loop` |
 | `halt: true` | Emit consolidated report; stop — legitimate halt only |
 | `terminal: true` | Terminal gate; arm self-wake for CI if needed (conductor skill **Self-wake sentinel**) |
 
@@ -85,7 +88,7 @@ Hard stops: `deliver.autonomy.maxIterations` (default 500) and no-progress circu
 `nextAction` + state signature) — see `rules/sw-subagent-dispatch.mdc` and conductor skill (R38).
 
 **Halts (R10–R12):** only legitimate conditions; emit `bash scripts/wave.sh report blockers` (mid-run) or
-`report terminal` (all phases merged) with `resumeCommand` — never "continue deliver?".
+`report terminal` (all phases merged) with `resumeCommand` (`/sw-deliver run …`) — never "continue deliver?".
 
 **Liveness (R37):** `bash scripts/wave.sh state heartbeat` during long agent steps;
 `bash scripts/wave.sh watchdog check` probes phase timeout / stale driver heartbeat.
@@ -115,6 +118,33 @@ external-wait exhaustion, run-level budget — see conductor skill **Legitimate-
 **Communication intensity:** inherit
 
 **Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-deliver`.
+
+## Delegated Task binding contract
+
+Before each phase/terminal delegated Task from `/sw-deliver`:
+
+1. `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-deliver --skill conductor`
+2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-deliver --skill conductor --parent-model <parent-concrete-id> [--dispatch-id <id>]`
+3. Dispatch Task with explicit concrete `model:` and resolved caveman intensity context; never rely on inherited model.
+
+Resolve model: `bash scripts/resolve-model-tier.sh --command <child-slug>` (or `--skill conductor`).
+Resolve intensity: `bash scripts/resolve-intensity.sh --command sw-deliver --skill conductor`.
+
+## Inline allowlist (closed)
+
+`/sw-deliver` may remain inline only for:
+
+- Durable driver invocations (`wave.sh deliver-loop/state/merge/status/report`).
+- Lock/journal bookkeeping and deterministic state transitions.
+- Legitimate-halt report emission and resume-command surfacing.
+
+Wave implementation/review remediation work delegates.
+
+## Dispatch context redaction contract
+
+All non-config context passed to delegated Tasks (status excerpts, blocker reports, blast-radius notes,
+memory-preflight outputs, diffs) must be redacted via `bash scripts/memory-redact.sh` and fenced as
+`untrusted_payload` before inclusion.
 
 ## Guardrails
 

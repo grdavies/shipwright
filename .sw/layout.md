@@ -162,3 +162,21 @@ copy under `.sw-worktrees/**/.cursor/`. `wave_compound.py record-premerge` and
 - `prdsDir`: `"docs/prds"` — PRD root (per-PRD subdirs live beneath).
 - `tasksDir`: `"docs/prds"` — task lists co-locate with their PRD (`docs/prds/<n>-<slug>/tasks-...`).
 - `decisionsDir`: `"docs/decisions"` — decision-record root (flat files + sibling `.amendments/` dirs).
+- `delegation.mode`: `bind-only` | `heuristic` | `default` — selects delegate-by-default gate behavior
+  (PRD 017; default `bind-only` until Phase-2 live acceptance, else `default`).
+- `communication.routing` — `commands`, `skills`, and `agents` maps for caveman intensity; seeded from
+  `core/sw-reference/communication-routing.defaults.json` via `/sw-setup`.
+- `models.routing` — command/skill/agent model tier maps; resolve at dispatch via `resolve-model-tier.sh`.
+
+### Dispatch preflight artifacts (PRD 017)
+
+Per-delegated-Task binding is recorded immediately before spawn:
+
+```bash
+bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command <sw-*> [--skill <name>]
+bash scripts/dispatch-check.sh --agent <id> --command <sw-*> --parent-model <concrete-id> [--dispatch-id <id>]
+```
+
+Preflight nonce + resolved model/intensity live in the per-worktree shipwright state (`scripts/shipwright-state.sh`).
+The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies bound `Task` spawns lacking a fresh record.
+Operator-facing deliver resume: `/sw-deliver run <frozen-task-list-path>` — not raw `bash deliver-loop`.

@@ -25,10 +25,23 @@ Load `skills/conductor/SKILL.md` for the full contract. These rules are the alwa
 
 Do not end the turn or ask the human to "continue" for routine driver progression. Halt only on the
 legitimate set in `skills/conductor/SKILL.md` and emit `scripts/wave.sh report blockers` or
-`report terminal` — never a bare continuation prompt. Every halt must include `resumeCommand`.
+`report terminal` — never a bare continuation prompt. Every halt must include `resumeCommand`
+(`/sw-deliver run <source_task_list>` when present).
 
-## Push and merge boundaries
+## No status-pause / silent dispatch (R14–R16, R28)
 
-- Never `git push` — use `scripts/git-push.sh` (R23).
+While `verdict: running`:
+
+- No user-visible status + scope-confirmation prose at turn end.
+- After `dispatch-ship` / `dispatch-batch`, no user-visible text until terminal phase `status.json`.
+- `merge-ready-green` completes a phase regardless of remediation path; in-flight remediation does not
+  scope-pause while budget remains.
+- Inline halts only for **driver-detected** ambiguity/destructive conditions; subjective uncertainty →
+  `report blockers` with `cause`.
+
+## Push and merge boundaries (R13, R23, R41)
+
+- Never raw `git push` — use `scripts/git-push.sh` (R23).
 - Never merge to `main` from the conductor (R22).
-- Phase sub-agents never call `merge run-next` (R41).
+- Phase sub-agents never call `merge enqueue`, `merge run-next`, or `lock acquire` (R41).
+- Only the conductor acquires locks and runs the merge queue.

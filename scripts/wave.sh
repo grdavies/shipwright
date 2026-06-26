@@ -4,6 +4,7 @@
 #   wave.sh plan --task-list docs/prds/.../tasks-....md [--type feat] [--dry-run] [--from N]
 #   wave.sh plan --items 'A,B,C' --edges 'C:A'
 #   wave.sh preflight-base --target feat/<slug>
+#   wave.sh dispatch preflight --dispatch-id <id> --agent <id> [--command <sw-*>] [--skill <name>]
 #   wave.sh memory learnings distill|prepare ...
 #   wave.sh schedule --plan .cursor/sw-deliver-plan.json [--ceiling N]  # parallel batches (R14/R44)
 #   wave.sh orchestrator provision|status ...
@@ -65,7 +66,7 @@ case "${1:-}" in
   compound-ship|retrospective|completion)
     exec python3 "$PLUGIN_ROOT/scripts/wave_compound.py" "$ROOT" "$@"
     ;;
-  orchestrator|forward-merge|phase-teardown|assert-entry)
+  orchestrator|forward-merge|phase-teardown|phase-teardown-run|assert-entry)
     exec python3 "$PLUGIN_ROOT/scripts/wave_lifecycle.py" "$ROOT" "$@"
     ;;
   phase)
@@ -91,6 +92,9 @@ case "${1:-}" in
     ;;
   preflight-base)
     exec python3 "$PLUGIN_ROOT/scripts/wave_preflight.py" "$ROOT" base-check "${@:2}"
+    ;;
+  dispatch)
+    exec python3 "$PLUGIN_ROOT/scripts/wave_preflight.py" "$ROOT" dispatch "${@:2}"
     ;;
   memory)
     exec python3 "$PLUGIN_ROOT/scripts/wave_memory.py" "$ROOT" "$@"

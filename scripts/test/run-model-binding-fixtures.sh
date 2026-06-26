@@ -9,6 +9,7 @@ bad() { echo "FAIL $1"; FAIL=1; }
 
 RESOLVE="$ROOT/scripts/resolve-model-tier.sh"
 PREFLIGHT="$ROOT/scripts/reviewer-dispatch-check.sh"
+DISPATCH_CHECK="$ROOT/scripts/dispatch-check.sh"
 MODEL_CHECK="$ROOT/scripts/model-tier-check.sh"
 SCHEMA="$ROOT/.sw/config.schema.json"
 DEFAULTS="$ROOT/core/sw-reference/model-routing.defaults.json"
@@ -54,7 +55,7 @@ set +e
 PREF_OUT=$(bash "$PREFLIGHT" --agent sw-coherence-reviewer --parent-model composer-2.5 --config "$BROKEN" 2>/dev/null)
 PREF_EC=$?
 set -e
-if [[ "$PREF_EC" -eq 20 ]] && echo "$PREF_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('cause')=='no-model-resolved'"; then
+if [[ "$PREF_EC" -eq 20 ]] && echo "$PREF_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('cause')=='binding:no-model'"; then
   ok "dispatch-preflight-no-model"
 else
   bad "dispatch-preflight-no-model (ec=$PREF_EC)"
@@ -65,10 +66,21 @@ set +e
 PF_OUT=$(bash "$PREFLIGHT" --agent sw-coherence-reviewer --parent-model composer-2.5-fast --config "$CONFIG" 2>/dev/null)
 PF_EC=$?
 set -e
-if [[ "$PF_EC" -eq 20 ]] && echo "$PF_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('cause')=='parent-below-builder'"; then
+if [[ "$PF_EC" -eq 20 ]] && echo "$PF_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('cause')=='binding:no-model'"; then
   ok "dispatch-preflight-parent-floor"
 else
   bad "dispatch-preflight-parent-floor"
+fi
+
+# --- dispatch-check-cause-enum ---
+set +e
+CAP_OUT=$(bash "$DISPATCH_CHECK" --agent sw-coherence-reviewer --parent-model composer-2.5 --simulate-capacity 2>/dev/null)
+CAP_EC=$?
+set -e
+if [[ "$CAP_EC" -eq 20 ]] && echo "$CAP_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('cause')=='harness:capacity'"; then
+  ok "dispatch-check-cause-enum"
+else
+  bad "dispatch-check-cause-enum"
 fi
 
 # --- dispatch-binding-single-source ---
@@ -160,7 +172,7 @@ fi
 
 # --- model-binding-docs-presence ---
 if grep -q 'models.routing.agents' "$DISPATCH" && \
-   grep -q 'reviewer-dispatch-check.sh' "$DISPATCH" && \
+   grep -q 'dispatch-check.sh' "$DISPATCH" && \
    grep -q 'resolve-model-tier.sh --agent' "$DOC_REVIEW" && \
    grep -q 'models.routing.agents' "$TIERING"; then
   ok "model-binding-docs-presence"

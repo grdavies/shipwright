@@ -49,10 +49,14 @@ duplicate under orchestrator worktree `.cursor/`.
 
 Resume command (phase-mode):
 
-```bash
-bash scripts/wave.sh deliver-loop --dry-run   # inspect nextAction
-bash scripts/wave.sh deliver-loop             # advance one mechanical step or emit awaitAgent
+```text
+/sw-deliver run <frozen-task-list-path>
+# inspect driver cursor (internal mechanical driver):
+bash scripts/wave.sh deliver-loop --dry-run
 ```
+
+User-facing resume/handoff MUST use `/sw-deliver run …`. The bash `deliver-loop` driver is for
+conductor in-turn mechanical re-invocation only — never surface it as the operator resume command (R29).
 
 Never infer progress from chat history or ephemeral sub-agent logs (R19). Phase outcomes come solely from
 `status.json`.
@@ -78,6 +82,7 @@ The conductor never ends its turn while `nextAction` is runnable and no legitima
 
 | `next.action` | Agent work (then re-invoke `deliver-loop`) |
 | --- | --- |
+| `dispatch-batch` | Spawn **N background** `Task` sub-agents (`run_in_background: true`) — one per `phases[]` entry in the batch; each runs provision (if needed) + full `/sw-ship --phase-mode` in its phase worktree |
 | `dispatch-ship` | Full `/sw-ship --phase-mode` in the phase worktree (`SW_PHASE_MODE=1`, `SW_PHASE_SLUG`, `SW_RUN_DIR`) |
 | `remediate` | `/sw-stabilize` (or scoped fix) for the blocked phase within remediation budget |
 | `retrospective` | `/sw-retrospective --pre-merge` on the orchestrator worktree after all phases merge (R9; single-sourced chain) |
@@ -96,6 +101,26 @@ state synced). Never hand off with "run deliver-loop next" as the only instructi
 Do not stop after a single mechanical step or one phase ship if `verdict` is still `running` and
 `nextAction` is not a legitimate halt. The only acceptable turn endings are legitimate halts or terminal
 completion.
+
+### No status-pause (R14)
+
+While `verdict: running`, never end the turn with user-visible prose that combines a status update with a
+scope-confirmation or resume prompt. Remediation context belongs in `run.log` / consolidated halt reports.
+
+### Post-remediation complete (R15)
+
+A phase whose final `status.json` is `merge-ready-green` is complete regardless of remediation path. While
+a phase is `in-flight` with remediation budget remaining, do not scope-pause.
+
+### Silent dispatch window (R16)
+
+After `dispatch-ship` or `dispatch-batch`, emit no user-visible text until every dispatched phase has
+terminal `status.json`. Poll per **Parallel-wave completion wait** when `awaitInFlight: true`.
+
+### Driver-detected halts only (R28)
+
+Subjective ambiguity is not an inline halt. Only driver-detected conditions qualify; other uncertainty
+routes through `report blockers` with a `cause`.
 
 ## Conductor loop hard-stop (R38)
 
@@ -163,6 +188,15 @@ When multiple phases run concurrently, the conductor waits for **all** wave memb
 When every member is `merge-ready-green` or `blocked`, re-invoke `deliver-loop` in-turn — never ask the user
 to "check if phases finished".
 
+When the driver returns `awaitInFlight: true`, poll status paths per this section before the next
+`deliver-loop` invocation — do not re-dispatch `/sw-ship` for phases already marked `backgroundDispatchedAt`.
+
+### collect-all-ready (R27)
+
+When multiple in-flight phases publish `merge-ready-green` simultaneously, the driver emits
+`collect-all-ready` (mechanical) to enqueue all ready phases in deterministic phase-id order before
+`merge run-next`. The conductor never merges until the driver advances the merge queue.
+
 ## Self-wake environment fallback (R46)
 
 Where the harness cannot auto-resume on `notify_on_output` (cloud/headless agents):
@@ -218,7 +252,7 @@ bash scripts/wave.sh report blockers
 bash scripts/wave.sh report terminal
 ```
 
-Each report includes `resumeCommand` (e.g. `bash scripts/wave.sh deliver-loop --task-list <path>`),
+Each report includes `resumeCommand` (e.g. `/sw-deliver run docs/prds/…/tasks-….md`),
 `blockers` with `recommendedCommand` (`/sw-stabilize` when applicable), and `cause`. Surface all three to
 the user in one message.
 
@@ -267,15 +301,19 @@ Read `schedule[].batches[]`:
 
 Greedy batches never unwind a running phase to admit a queued one (R15).
 
-### 3. Conductor-level Task dispatch (R16)
+### 3. Conductor-level Task dispatch (R16, R22)
 
 For the current wave batch, the conductor (not phase sub-agents):
 
-1. `provision-phase` for each id in `parallel` (or parallel Task agents each running provision + `/sw-ship --phase-mode`).
-2. Dispatch each phase as a **background** `Task` sub-agent in its own worktree (`run_in_background: true`).
+1. When the driver emits `dispatch-batch`, spawn **N background** `Task` sub-agents in one turn — up to
+   `parallelCeiling` concurrent phase worktrees (`run_in_background: true`).
+2. Each Task runs full `/sw-ship --phase-mode` in its isolated worktree.
 3. Wait per **Parallel-wave completion wait** (R44).
 4. Collect outcomes only from `.cursor/sw-deliver-runs/<slug>/status.json` (R19) — never ephemeral logs.
-5. **Conductor only** calls `merge enqueue` / `merge run-next` — phase sub-agents never merge (R41).
+5. A background Task that crashes or never writes terminal `status.json` becomes `blocked` via the driver
+   (`background-task-timeout:<id>`) — never left stuck `in-flight` (R27).
+6. **Conductor only** calls `merge enqueue` / `merge run-next` / `lock acquire` — phase sub-agents never
+   merge or acquire locks (R41). Workflow pushes use `scripts/git-push.sh` only (R23).
 
 ### 4. Intra-phase dispatch (R17, R18, R45)
 
@@ -309,7 +347,15 @@ bash scripts/wave.sh blast-radius dependents --phase-slug <slug>   # inspect
 | Push chokepoint (R23) | `scripts/git-push.sh` only — secret-scan pre-push |
 | Blast radius (R24) | `status collect` → `blast-radius apply`; siblings unaffected |
 
-Phase sub-agents **must not** call `merge run-next`, `lock acquire`, or raw `git push`.
+Phase sub-agents **must not** call `merge run-next`, `merge enqueue`, `lock acquire`, or raw `git push`.
+All workflow pushes route through `scripts/git-push.sh` (secret-scan pre-push preserved).
+
+### Eager phase-worktree teardown (R17)
+
+After `merge run-next` + incremental verify, the driver transitions the phase
+`green-merged → teardown-pending → teardown-complete` via `phase-teardown-run` once dependents forward-merge
+and retained branch/status refs are safe. `phaseWorktrees[<id>]` clears on `teardown-complete`; the
+orchestrator worktree persists until terminal completion. Teardown uses `git worktree remove` + `prune` only.
 
 ## Config knobs
 
@@ -328,7 +374,10 @@ Read from `.cursor/workflow.config.json`:
 
 | Orchestrator | Status |
 | --- | --- |
-| `/sw-deliver` | Pilot consumer (R34) — load this skill in `deliver-loop` / `run` |
-| `/sw-doc`, `/sw-ship`, `/sw-debug`, `/sw-feedback` | Enumerated in `orchestrator-adoption-audit.md`; adopt in follow-on PRDs (R35) |
+| `/sw-deliver` | Pilot consumer (R34) — `deliver-loop` / `run` |
+| `/sw-ship` | Adopted (PRD 017 Phase 3) — SHIP-A1..A4 |
+| `/sw-debug` | Adopted (PRD 017 Phase 3) — DBG-A1..A2 |
+| `/sw-doc` | Adopted (PRD 017 Phase 3) — DOC-A1..A2 |
+| `/sw-feedback` | Adopted (PRD 017 Phase 3) — FB-A1..A2 |
 
 Reference this skill from orchestrator commands; do not duplicate loop prose.

@@ -84,8 +84,9 @@ Do **not** put `cheap`/`build`/`mid`/`deep` or vendor aliases like `sonnet` in s
 | `scripts/model-tier-check.sh` | Four-tier order; `roles.reviewer` ≥ `roles.builder`; concrete agent models ≥ builder; `inherit` passes static check |
 | `scripts/model-routing-check.sh` | Defaults cover all shipped commands/skills; valid tier keys; R27 parity with communication defaults when present |
 | `scripts/resolve-model-tier.sh` | Runtime tier → concrete ID; `inherit` → `modelId: null` exit 0 |
+| `scripts/resolve-intensity.sh` | Runtime intensity resolution with command → skill → agent → default precedence |
 | `/sw-doc-review`, `sw-subagent-dispatch` | **Runtime R9:** parent model tier ≥ builder when dispatching `inherit` reviewers |
-| `scripts/reviewer-dispatch-check.sh` | Fail-closed preflight before persona/native-panel Task spawn (phase 2 floor) |
+| `scripts/dispatch-check.sh` | Fail-closed binding check (`binding:no-model`, `binding:no-intensity`, `harness:capacity`) before Task spawn |
 
 ### Task hook (R5 — registered, forward-compatible)
 
@@ -93,11 +94,26 @@ A `preToolUse` hook (`core/hooks/before_task_dispatch.py`) resolves `updated_inp
 via `resolve-model-tier.sh --agent` and is **registered in both platform `hooks.json` files**
 (Cursor `preToolUse`, Claude Code `PreToolUse`). Platform effectiveness is unverified:
 Cursor does not currently apply `updated_input` for Task; Claude Code behavior is untested.
-The hook fails open and logs mutation attempts to stderr. Phase 2 `reviewer-dispatch-check.sh`
-remains the enforcement floor regardless of hook effectiveness. See
+The hook fails open on unexpected runtime errors and logs mutation attempts to stderr. Mechanical dispatch
+preflight + `dispatch-check.sh` remain the enforcement floor regardless of hook effectiveness. See
 `core/sw-reference/model-tier-hook-feasibility.md` for full rationale.
 
 `inherit` reviewers cannot be fully R9-verified in CI — orchestrator must not run doc-review on a sub-`build` parent.
+
+## Delegation binding (PRD 017)
+
+Orchestrators resolve **model** and **caveman intensity** per delegated child before every `Task` spawn:
+
+```bash
+bash scripts/resolve-model-tier.sh --command <child-slug>   # or --agent for panel reviewers
+bash scripts/resolve-intensity.sh --command <child-slug>      # command → skill → agent → default
+bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <id> --command <orchestrator> --skill <skill>
+bash scripts/dispatch-check.sh --agent <id> --command <orchestrator> --skill <skill> --parent-model <concrete-id>
+```
+
+- Pass explicit concrete `model:` on the `Task` call — never `inherit` from the parent session.
+- Dispatch-bound intensity overrides `sessionStart` caveman for delegated sub-agents (see `core/hooks/session-context.md`).
+- `delegation.mode` in `workflow.config.json` selects delegate-by-default vs legacy heuristic gate.
 
 ## Validate
 
@@ -106,4 +122,5 @@ bash scripts/model-tier-check.sh --config .sw/workflow.config.example.json
 bash scripts/model-routing-check.sh
 bash scripts/test/fixtures/model-tier-routing.sh
 bash scripts/test/run-model-binding-fixtures.sh
+bash scripts/test/run-delegation-fixtures.sh
 ```

@@ -13,11 +13,11 @@ else
   echo "OK  communication-no-phantom-slash"
 fi
 
-RESOLVE="$ROOT/scripts/communication-resolve.sh"
+RESOLVE="$ROOT/scripts/resolve-intensity.sh"
 for pair in "sw-prd:lite" "sw-triage:ultra" "sw-doc-review:normal"; do
   cmd="${pair%%:*}"
   want="${pair##*:}"
-  got=$(bash "$RESOLVE" "$cmd" | python3 -c "import json,sys; print(json.load(sys.stdin)['intensity'])")
+  got=$(bash "$RESOLVE" --command "$cmd" | python3 -c "import json,sys; print(json.load(sys.stdin)['intensity'])")
   if [[ "$got" == "$want" ]]; then
     echo "OK  communication-resolve $cmd -> $want"
   else
@@ -28,10 +28,18 @@ done
 
 DEFAULTS="$ROOT/core/sw-reference/communication-routing.defaults.json"
 CMD_COUNT=$(python3 -c "import json; print(len(json.load(open('$DEFAULTS'))['routing']['commands']))")
+SKILL_COUNT=$(python3 -c "import json; print(len(json.load(open('$DEFAULTS'))['routing']['skills']))")
+AGENT_COUNT=$(python3 -c "import json; print(len(json.load(open('$DEFAULTS'))['routing']['agents']))")
 if [[ "$CMD_COUNT" -ge 34 ]]; then
   echo "OK  communication-routing-defaults-complete ($CMD_COUNT commands)"
 else
   echo "FAIL communication-routing-defaults expected >=34 commands got $CMD_COUNT"
+  FAIL=1
+fi
+if [[ "$SKILL_COUNT" -ge 20 && "$AGENT_COUNT" -ge 10 ]]; then
+  echo "OK  communication-routing-defaults-skills-agents ($SKILL_COUNT skills, $AGENT_COUNT agents)"
+else
+  echo "FAIL communication-routing-defaults-skills-agents expected populated skills/agents got $SKILL_COUNT/$AGENT_COUNT"
   FAIL=1
 fi
 
@@ -42,6 +50,8 @@ schema = json.loads(Path('$ROOT/.sw/config.schema.json').read_text())
 enum = schema['properties']['communication']['properties']['defaultIntensity']['enum']
 assert 'wenyan-full' not in enum
 assert set(enum) == {'normal', 'lite', 'full', 'ultra'}
+agent_enum = schema['properties']['communication']['properties']['routing']['properties']['agents']['additionalProperties']['enum']
+assert set(agent_enum) == {'normal', 'lite', 'full', 'ultra', 'inherit'}
 "; then
   echo "OK  communication-schema-rejects-wenyan"
 else
