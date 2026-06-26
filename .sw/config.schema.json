@@ -98,6 +98,19 @@
         }
       }
     },
+    "compound": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "/sw-retrospective compounding autonomy (R10). Gates approval prompts only — never memory or rule-class safety.",
+      "properties": {
+        "autonomy": {
+          "type": "string",
+          "enum": ["supervised", "auto"],
+          "default": "supervised",
+          "description": "supervised preserves retro/compound approval and did-you-merge prompts; auto runs the pre-merge chain hands-off when the terminal PR is green but never bypasses fail-closed memory (R7) or rule-class human gates (R8)."
+        }
+      }
+    },
     "verify": {
       "type": "object",
       "additionalProperties": { "type": "string" },

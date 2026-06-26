@@ -14,6 +14,10 @@ top-level command — use `/sw-retrospective` for the full `retro → compound �
 `bash scripts/wave.sh retrospective detect-phase`). This skill runs identically in both phases; only
 downstream status/reconcile flags differ.
 
+**Autonomy (`compound.autonomy`):** read via `bash scripts/wave.sh retrospective autonomy`. `supervised` (default)
+requires user approval at compound write and merge-ack prompts; `auto` removes those prompts only. Memory
+fail-closed (R7) and rule-class human gates (R8) apply under all settings.
+
 **Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --skill compound`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Procedure

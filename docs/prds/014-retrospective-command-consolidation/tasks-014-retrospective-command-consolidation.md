@@ -37,16 +37,16 @@ preserved-semantics wiring + conductor single-source, then docs/dist/fixtures.
 
 ### 3. Autonomy knob + preserved semantics + conductor single-source (M)
 
-- [ ] 3.1 Add `compound.autonomy` config + schema + seeding (R10)
+- [x] 3.1 Add `compound.autonomy` config + schema + seeding (R10)
   - **File:** `.cursor/workflow.config.json`, `.sw/config.schema.json`, `core/sw-reference/` setup defaults
   - **Expected:** `compound.autonomy` (`supervised` | `auto`, default `supervised`) accepted by schema and seeded by `/sw-setup`
-- [ ] 3.2 Wire autonomy to prompts only; keep safety gates (R7, R8, R10)
+- [x] 3.2 Wire autonomy to prompts only; keep safety gates (R7, R8, R10)
   - **File:** `skills/compound/SKILL.md`, `core/commands/sw-retrospective.md`
   - **Expected:** `auto` removes approval / "did you merge?" prompts; memory writes stay fail-closed; rule-class promotion stays human-gated under all settings
-- [ ] 3.3 Preserve pending-merge + no-false-complete (R6, R11)
+- [x] 3.3 Preserve pending-merge + no-false-complete (R6, R11)
   - **File:** `skills/compound/SKILL.md`, `scripts/reconcile-status.sh`
   - **Expected:** pre-merge records `completed-pending-merge`; INDEX → `complete` only on real merge detection, even under `auto`
-- [ ] 3.4 Conductor terminal-ship single-source handoff (R9)
+- [x] 3.4 Conductor terminal-ship single-source handoff (R9)
   - **File:** `skills/conductor/SKILL.md`, `skills/deliver/SKILL.md`
   - **Expected:** terminal-ship handoff invokes `/sw-retrospective --pre-merge`; no duplicated retro/compound/memory/status procedure
 
