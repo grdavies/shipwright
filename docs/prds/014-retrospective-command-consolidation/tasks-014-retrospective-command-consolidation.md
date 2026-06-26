@@ -28,10 +28,10 @@ preserved-semantics wiring + conductor single-source, then docs/dist/fixtures.
 
 ### 2. Deprecated aliases + rename propagation (M)
 
-- [ ] 2.1 Deprecation shims for old commands (R4)
+- [x] 2.1 Deprecation shims for old commands (R4)
   - **File:** `core/commands/sw-compound.md`, `core/commands/sw-compound-ship.md`
   - **Expected:** thin shims route to `/sw-retrospective` (`compound-ship` → phase auto-detect; `compound` → write step), preserve behavior, print one-release deprecation notice
-- [ ] 2.2 Propagate the rename across routing/handoffs/fixtures (R5)
+- [x] 2.2 Propagate the rename across routing/handoffs/fixtures (R5)
   - **File:** `.cursor/workflow.config.json`, `rules/sw-naming.mdc`, `skills/deliver/SKILL.md`, `skills/conductor/SKILL.md`, fixtures referencing `sw-compound`
   - **Expected:** no live top-level `sw-compound` reference remains (only deprecated aliases); routing points at `/sw-retrospective`
 
