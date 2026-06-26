@@ -55,8 +55,13 @@ for sk in shipped_skills:
 comm_path = Path(comm_defaults_path)
 if comm_path.is_file():
     comm = json.loads(comm_path.read_text())
-    comm_cmds = set((comm.get("routing", {}).get("commands", {}) or {}).keys())
+    comm_routing = comm.get("routing", {}) or {}
+    comm_cmds = set((comm_routing.get("commands", {}) or {}).keys())
+    comm_skills = set((comm_routing.get("skills", {}) or {}).keys())
+    comm_agents = set((comm_routing.get("agents", {}) or {}).keys())
     model_cmds = set(cmd_map.keys())
+    model_skills = set(skill_map.keys())
+    model_agents = set(defaults.get("routing", {}).get("agents", {}).keys())
     if comm_cmds != model_cmds:
         only_comm = sorted(comm_cmds - model_cmds)
         only_model = sorted(model_cmds - comm_cmds)
@@ -64,6 +69,26 @@ if comm_path.is_file():
             violations.append({
                 "kind": "parity",
                 "error": "communication vs model routing key mismatch",
+                "onlyCommunication": only_comm,
+                "onlyModel": only_model,
+            })
+    if comm_skills != model_skills:
+        only_comm = sorted(comm_skills - model_skills)
+        only_model = sorted(model_skills - comm_skills)
+        if only_comm or only_model:
+            violations.append({
+                "kind": "parity",
+                "error": "communication skills vs model skills mismatch",
+                "onlyCommunication": only_comm,
+                "onlyModel": only_model,
+            })
+    if comm_agents != model_agents:
+        only_comm = sorted(comm_agents - model_agents)
+        only_model = sorted(model_agents - comm_agents)
+        if only_comm or only_model:
+            violations.append({
+                "kind": "parity",
+                "error": "communication agents vs model agents mismatch",
                 "onlyCommunication": only_comm,
                 "onlyModel": only_model,
             })

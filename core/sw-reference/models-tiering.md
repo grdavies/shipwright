@@ -84,8 +84,9 @@ Do **not** put `cheap`/`build`/`mid`/`deep` or vendor aliases like `sonnet` in s
 | `scripts/model-tier-check.sh` | Four-tier order; `roles.reviewer` ≥ `roles.builder`; concrete agent models ≥ builder; `inherit` passes static check |
 | `scripts/model-routing-check.sh` | Defaults cover all shipped commands/skills; valid tier keys; R27 parity with communication defaults when present |
 | `scripts/resolve-model-tier.sh` | Runtime tier → concrete ID; `inherit` → `modelId: null` exit 0 |
+| `scripts/resolve-intensity.sh` | Runtime intensity resolution with command → skill → agent → default precedence |
 | `/sw-doc-review`, `sw-subagent-dispatch` | **Runtime R9:** parent model tier ≥ builder when dispatching `inherit` reviewers |
-| `scripts/reviewer-dispatch-check.sh` | Fail-closed preflight before persona/native-panel Task spawn (phase 2 floor) |
+| `scripts/dispatch-check.sh` | Fail-closed binding check (`binding:no-model`, `binding:no-intensity`, `harness:capacity`) before Task spawn |
 
 ### Task hook (R5 — registered, forward-compatible)
 
@@ -93,8 +94,8 @@ A `preToolUse` hook (`core/hooks/before_task_dispatch.py`) resolves `updated_inp
 via `resolve-model-tier.sh --agent` and is **registered in both platform `hooks.json` files**
 (Cursor `preToolUse`, Claude Code `PreToolUse`). Platform effectiveness is unverified:
 Cursor does not currently apply `updated_input` for Task; Claude Code behavior is untested.
-The hook fails open and logs mutation attempts to stderr. Phase 2 `reviewer-dispatch-check.sh`
-remains the enforcement floor regardless of hook effectiveness. See
+The hook fails open on unexpected runtime errors and logs mutation attempts to stderr. Mechanical dispatch
+preflight + `dispatch-check.sh` remain the enforcement floor regardless of hook effectiveness. See
 `core/sw-reference/model-tier-hook-feasibility.md` for full rationale.
 
 `inherit` reviewers cannot be fully R9-verified in CI — orchestrator must not run doc-review on a sub-`build` parent.

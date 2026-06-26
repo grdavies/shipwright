@@ -28,14 +28,14 @@ Optional belt-and-suspenders (R5): a `preToolUse` hook that injects a resolved c
 | Mechanism | Cursor | Claude Code |
 | --- | --- | --- |
 | `preToolUse` `updated_input` on Task | Documented; **not applied by platform** (DL-2 spike confirmed) | **Unverified** — no Claude Code environment available |
-| `reviewer-dispatch-check.sh` preflight (phase 2–3) | ✅ enforcement floor | ✅ enforcement floor |
+| `dispatch-check.sh` preflight (phase 2–3) | ✅ enforcement floor | ✅ enforcement floor |
 
 ## Decision — Option C (2026-06-26)
 
 Register the hook in both platforms now. Rationale:
 
 - The hook logic is already written, tested, and isolated in `core/hooks/before_task_dispatch.py`.
-- Phase 2 `reviewer-dispatch-check.sh` is the real enforcement floor — hook effectiveness is
+- Phase 2 `dispatch-check.sh` is the real enforcement floor — hook effectiveness is
   additive defense-in-depth only. A no-op hook does not degrade correctness.
 - Forward compatibility: when Cursor applies `updated_input` for Task, coverage is automatic
   with zero further changes. Same for Claude Code if/when verified.

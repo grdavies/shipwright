@@ -9,6 +9,9 @@
   "doc": {
     "afterTasks": "confirm"
   },
+  "delegation": {
+    "mode": "bind-only"
+  },
   "deliver": {
     "phaseAckCadence": 0,
     "autonomy": {
@@ -92,6 +95,10 @@
       "skills": {
         "prd": "deep",
         "triage": "cheap"
+      },
+      "agents": {
+        "sw-coherence-reviewer": "build",
+        "correctness": "deep"
       }
     }
   },
@@ -104,7 +111,13 @@
         "sw-doc-review": "normal",
         "sw-execute": "full"
       },
-      "skills": {}
+      "skills": {
+        "doc-review": "normal"
+      },
+      "agents": {
+        "sw-coherence-reviewer": "full",
+        "correctness": "full"
+      }
     }
   },
   "invariantsFile": "INVARIANTS.md",

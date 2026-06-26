@@ -1,13 +1,13 @@
 """Pre-Task dispatch model binding (PRD 012 R5).
 
-Resolves reviewer/persona/native-panel Task calls via resolve-model-tier.sh --agent and
-attempts to inject the concrete model ID via preToolUse updated_input.
+Resolves reviewer/persona/native-panel Task calls via resolve-model-tier.sh --agent,
+enforces a fresh dispatch-preflight nonce record, and injects concrete model metadata.
 
 **Forward-compatible registration (Option C, 2026-06-26):** Registered in hooks.json for both
 Cursor and Claude Code. Whether the platform honors updated_input.model on Task calls is
 unverified for both platforms (DL-2 spike confirmed Cursor silently ignores it; Claude Code
 unverified due to missing environment). The hook fires, logs its mutation attempt to stderr,
-and fails open on unexpected errors. Phase 2 reviewer-dispatch-check.sh remains the
+and fails open on unexpected errors. `scripts/dispatch-check.sh` remains the
 enforcement floor regardless of hook effectiveness.
 """
 
@@ -17,6 +17,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,7 @@ from sw_hook_util import workspace_root
 
 _REVIEWER_AGENT = re.compile(r"^sw-[a-z0-9-]+-reviewer$")
 _TASK_TOOL_NAMES = frozenset({"Task", "task"})
+_DISPATCH_PREFLIGHT = Path(".cursor/hooks/state/task-dispatch-preflight.json")
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,8 @@ class DispatchResult:
     agent: str | None = None
     model_id: str | None = None
     tier: str | None = None
+    intensity: str | None = None
+    dispatch_id: str | None = None
     cause: str | None = None
     remediation: str | None = None
 
@@ -49,7 +53,13 @@ class DispatchResult:
             }
         return {
             "permission": "allow",
-            "updated_input": {"model": self.model_id},
+            "updated_input": {
+                "model": self.model_id,
+                "metadata": {
+                    "dispatchId": self.dispatch_id,
+                    "intensity": self.intensity,
+                },
+            },
         }
 
     def to_claude_hook_output(self) -> dict[str, Any]:
@@ -66,7 +76,16 @@ class DispatchResult:
                 "decision": "block",
                 "reason": f"Shipwright model-tier binding: {self.cause or 'no-model-resolved'}",
             }
-        return {"decision": "approve", "updated_input": {"model": self.model_id}}
+        return {
+            "decision": "approve",
+            "updated_input": {
+                "model": self.model_id,
+                "metadata": {
+                    "dispatchId": self.dispatch_id,
+                    "intensity": self.intensity,
+                },
+            },
+        }
 
 
 def agent_id_from_task_input(tool_input: dict[str, Any]) -> str | None:
@@ -140,6 +159,86 @@ def resolve_agent_model(root: Path, agent_id: str) -> DispatchResult:
     return DispatchResult(verdict="pass", agent=agent_id, model_id=str(model_id), tier=str(tier))
 
 
+def _load_dispatch_preflight(root: Path) -> dict[str, Any] | None:
+    path = root / _DISPATCH_PREFLIGHT
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _consume_dispatch_preflight(root: Path, payload: dict[str, Any]) -> None:
+    path = root / _DISPATCH_PREFLIGHT
+    payload["consumedAt"] = int(time.time())
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def validate_dispatch_preflight(root: Path, agent_id: str) -> DispatchResult:
+    preflight = _load_dispatch_preflight(root)
+    if not preflight:
+        return DispatchResult(
+            verdict="fail",
+            agent=agent_id,
+            cause="missing-preflight-nonce",
+            remediation=(
+                "run dispatch preflight immediately before Task: "
+                "bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <id>"
+            ),
+        )
+    now = int(time.time())
+    if preflight.get("consumedAt"):
+        return DispatchResult(
+            verdict="fail",
+            agent=agent_id,
+            cause="stale-preflight-nonce",
+            remediation="dispatch preflight nonce already consumed; run a fresh preflight before Task",
+        )
+    if preflight.get("agent") != agent_id:
+        return DispatchResult(
+            verdict="fail",
+            agent=agent_id,
+            cause="preflight-agent-mismatch",
+            remediation="dispatch preflight agent must match Task agent id",
+        )
+    expires_at = int(preflight.get("expiresAt") or 0)
+    if expires_at <= now:
+        return DispatchResult(
+            verdict="fail",
+            agent=agent_id,
+            cause="stale-preflight-nonce",
+            remediation="dispatch preflight expired; run preflight again immediately before Task",
+        )
+    intensity = str(preflight.get("intensity") or "")
+    if intensity not in {"normal", "lite", "full", "ultra"}:
+        return DispatchResult(
+            verdict="fail",
+            agent=agent_id,
+            cause="binding:no-intensity",
+            remediation="dispatch preflight record missing resolved intensity",
+        )
+    model_id = str(preflight.get("modelId") or "")
+    if not model_id:
+        return DispatchResult(
+            verdict="fail",
+            agent=agent_id,
+            cause="binding:no-model",
+            remediation="dispatch preflight record missing concrete model id",
+        )
+    _consume_dispatch_preflight(root, preflight)
+    return DispatchResult(
+        verdict="pass",
+        agent=agent_id,
+        model_id=model_id,
+        tier=str(preflight.get("modelTier") or ""),
+        intensity=intensity,
+        dispatch_id=str(preflight.get("dispatchId") or ""),
+    )
+
+
 def evaluate_pre_tool_use(payload: dict[str, Any], root: Path) -> DispatchResult:
     tool_name = str(payload.get("tool_name") or "")
     if tool_name not in _TASK_TOOL_NAMES:
@@ -150,7 +249,27 @@ def evaluate_pre_tool_use(payload: dict[str, Any], root: Path) -> DispatchResult
     agent_id = agent_id_from_task_input(tool_input)
     if not agent_id or not is_bound_agent(agent_id):
         return DispatchResult(verdict="skip")
-    return resolve_agent_model(root, agent_id)
+    preflight = validate_dispatch_preflight(root, agent_id)
+    if preflight.verdict != "pass":
+        return preflight
+    resolved = resolve_agent_model(root, agent_id)
+    if resolved.verdict != "pass":
+        return resolved
+    if preflight.model_id and resolved.model_id and preflight.model_id != resolved.model_id:
+        return DispatchResult(
+            verdict="fail",
+            agent=agent_id,
+            cause="binding:model-mismatch",
+            remediation="dispatch preflight model does not match current routing resolution; rerun preflight",
+        )
+    return DispatchResult(
+        verdict="pass",
+        agent=agent_id,
+        model_id=preflight.model_id or resolved.model_id,
+        tier=resolved.tier,
+        intensity=preflight.intensity,
+        dispatch_id=preflight.dispatch_id,
+    )
 
 
 def run_stdio() -> int:
