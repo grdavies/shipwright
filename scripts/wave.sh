@@ -66,7 +66,7 @@ case "${1:-}" in
   compound-ship|retrospective|completion)
     exec python3 "$PLUGIN_ROOT/scripts/wave_compound.py" "$ROOT" "$@"
     ;;
-  orchestrator|forward-merge|phase-teardown|assert-entry)
+  orchestrator|forward-merge|phase-teardown|phase-teardown-run|assert-entry)
     exec python3 "$PLUGIN_ROOT/scripts/wave_lifecycle.py" "$ROOT" "$@"
     ;;
   phase)

@@ -659,8 +659,8 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
         )
         state["mergedPhases"] = merged
         if phase_id and phase_id in state.get("phases", {}):
-            assert_phase_status("green-merged")
-            state["phases"][phase_id]["status"] = "green-merged"
+            assert_phase_status("teardown-pending")
+            state["phases"][phase_id]["status"] = "teardown-pending"
             state["phases"][phase_id]["updatedAt"] = utc_now()
             state["phases"][phase_id]["mergeCommit"] = merge_commit
         save_state(root, state)
@@ -787,6 +787,51 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
         raise
 
 
+def cmd_merge_collect_all_ready(root: Path, args: list[str]) -> None:
+    """Enqueue all merge-ready-green phases deterministically (phase-id sort, R27)."""
+    slugs_raw = parse_kv(args, "--phase-slugs")
+    if not slugs_raw:
+        fail("--phase-slugs required (comma-separated)")
+    slugs = [s.strip() for s in slugs_raw.split(",") if s.strip()]
+    enqueued: list[str] = []
+    for slug in sorted(slugs):
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT_DIR / "wave_merge.py"),
+                str(root),
+                "merge",
+                "enqueue",
+                "--phase-slug",
+                slug,
+            ],
+            cwd=str(root),
+            text=True,
+            capture_output=True,
+        )
+        if proc.returncode != 0:
+            try:
+                err = json.loads(proc.stdout)
+            except json.JSONDecodeError:
+                err = {"error": proc.stderr or proc.stdout}
+            fail_payload(err, "merge enqueue failed", proc.returncode)
+        enqueued.append(slug)
+    state = load_state(root)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "merge-collect-all-ready",
+            "enqueued": enqueued,
+            "queueLength": len(state.get("mergeQueue") or []),
+        }
+    )
+
+
+MERGED_TERMINAL_STATUSES = frozenset(
+    {"green-merged", "teardown-pending", "teardown-complete"}
+)
+
+
 def cmd_report_terminal(root: Path, args: list[str]) -> None:
     state = load_state(root)
     target = (state.get("target") or {}).get("branch", "")
@@ -796,7 +841,7 @@ def cmd_report_terminal(root: Path, args: list[str]) -> None:
     pending = [
         p
         for p in phases.values()
-        if p.get("status") not in ("green-merged", "blocked", "rejected")
+        if p.get("status") not in (*MERGED_TERMINAL_STATUSES, "blocked", "rejected")
     ]
     completion = state.get("completion") or {}
     completion_pending = completion.get("status") == "completed-pending-merge"
@@ -880,10 +925,12 @@ def main() -> None:
             cmd_merge_exec(root, rest)
         elif sub == "run-next":
             cmd_merge_run_next(root, rest)
+        elif sub == "collect-all-ready":
+            cmd_merge_collect_all_ready(root, rest)
         elif sub == "ancestry-check":
             cmd_merge_ancestry_check(root, rest)
         else:
-            fail("merge subcommand required: gate-check|enqueue|exec|run-next|ancestry-check")
+            fail("merge subcommand required: gate-check|enqueue|exec|run-next|collect-all-ready|ancestry-check")
     elif domain == "report":
         sub = args[0] if args else ""
         rest = args[1:]

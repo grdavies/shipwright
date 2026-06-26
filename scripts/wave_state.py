@@ -15,7 +15,15 @@ from typing import Any
 from wave_json_io import StateCorruptError, read_json, write_json
 
 VALID_PHASE_STATUSES = frozenset(
-    {"pending", "in-flight", "green-merged", "blocked", "rejected"}
+    {
+        "pending",
+        "in-flight",
+        "green-merged",
+        "teardown-pending",
+        "teardown-complete",
+        "blocked",
+        "rejected",
+    }
 )
 TERMINAL_VERDICTS = frozenset({"running", "complete", "blocked", "rejected"})
 LOCK_STALE_SECONDS = int(os.environ.get("SW_LOCK_STALE_SECONDS", "3600"))
