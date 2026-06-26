@@ -46,3 +46,17 @@ promote without `/sw-memory-audit` approval. Active rules must appear in `.curso
 
 Memory provider holds project-scoped operational data. Least-privilege API credentials via environment only.
 Compromised provider → rotate credentials, audit allowlist, re-export neutral JSONL.
+
+## Source of truth — decision class (PRD 015)
+
+`memory.sourceOfTruth` (`repo` | `memory` | `auto`, default `auto`) selects which side is authoritative for
+**frozen decision records** only. Other memory categories remain distillation-only.
+
+| Effective SoT | Authoritative | Non-authoritative |
+| --- | --- | --- |
+| `repo` (default `auto`+in-repo) | git decision record | provider pointer via `relatedFiles` |
+| `memory` | provider `decision` record (redacted) | committed git snapshot pointer |
+
+Resolve via `bash scripts/memory-sot.sh resolve --class decision --json`. Switching modes requires an
+explicit operator change plus `/sw-memory-audit` + `memory-sot-audit.sh legacy-reconcile-plan`. Redaction
+(R41) and rule-class gates (R42) apply identically in both modes.

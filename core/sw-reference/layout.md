@@ -25,6 +25,7 @@ docs/prds/
 docs/decisions/
 ├── INDEX.md
 ├── SUPERSEDED.log          # append-only manifest (written on record-level supersede)
+├── .memory-freeze-audit.log  # offline freeze audit breadcrumb (local; not authoritative)
 ├── <n>-<slug>.md
 └── <n>-<slug>.amendments/
     └── A<k>-<short>.md
