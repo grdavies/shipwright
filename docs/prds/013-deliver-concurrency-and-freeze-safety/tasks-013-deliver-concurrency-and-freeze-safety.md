@@ -3,14 +3,17 @@ date: 2026-06-25
 topic: deliver-concurrency-and-freeze-safety
 prd: docs/prds/013-deliver-concurrency-and-freeze-safety/013-prd-deliver-concurrency-and-freeze-safety.md
 frozen: true
-frozen_at: 2026-06-25
+frozen_at: 2026-06-26
 ---
 
 # Tasks — PRD 013 Deliver concurrency and freeze safety
 
-Generated from the frozen PRD `013-prd-deliver-concurrency-and-freeze-safety.md` (effective union R1–R19).
-Phases are dependency-ordered: freeze safety and the scoped-state resolver are foundational; the run index,
-v1 deferrals, and docs/dist follow.
+Generated from the frozen PRD `013-prd-deliver-concurrency-and-freeze-safety.md` and amendment
+`A1-autonomous-terminal-delivery.md` (effective union R1–R27; amendment A1 contributes R20–R27). Phases are
+dependency-ordered: freeze safety and the scoped-state resolver are foundational; the run index, v1 deferrals,
+autonomous terminal delivery, and docs/dist follow.
+
+> Refreshed 2026-06-26 to apply amendment A1 (R20–R27, autonomous terminal delivery) into the task list.
 
 ## Tasks
 
@@ -80,6 +83,24 @@ v1 deferrals, and docs/dist follow.
   - **File:** `dist/cursor/**`, `dist/claude-code/**` via `python3 -m sw generate --all`
   - **Expected:** `dist/` regenerated; `scripts/test/run-emitter-fixtures.sh` passes
 
+### 6. Autonomous terminal delivery — amendment A1 (L)
+
+- [ ] 6.1 Terminal retrospective before the PR; artifacts on `<type>/<slug>` (R20, R21)
+  - **File:** `scripts/wave_terminal.py`, `core/skills/deliver/SKILL.md`
+  - **Expected:** on all-phases-`green-merged`, invoke the single-sourced retrospective chain (PRD 014 `/sw-retrospective --pre-merge`; today's `/sw-compound-ship --pre-merge` until 014 lands) and commit its artifacts onto `<type>/<slug>` via the R5 seed helper **before** any PR action; no human re-prompt under `auto`; never `main`; memory writes stay fail-closed and rule-class promotion stays human-gated
+- [ ] 6.2 Autonomous PR → CI-watch → stabilize within budget (R22, R23)
+  - **File:** `scripts/wave_terminal.py`, `core/skills/conductor/SKILL.md`
+  - **Expected:** terminal-ship creates/updates the PR via the `phase-pr` path, pushes head, runs a bounded `check-gate.sh` watch + `/sw-stabilize` up to `deliver.remediation.maxAttempts`; never auto-merges / force-pushes `main` / dismisses checks; halts only at exhausted budget, destructive git, or an explicit `supervised` checkpoint; conductor self-continuation (R6/R13) owns the loop
+- [ ] 6.3 `deliver.terminal.autonomy` knob (R24)
+  - **File:** `.cursor/workflow.config.json`, `.sw/config.schema.json`, `core/sw-reference/` setup defaults
+  - **Expected:** `deliver.terminal.autonomy` (`supervised` | `auto`, default `supervised`) accepted by schema and seeded; `auto` runs 6.1–6.2 hands-off; `supervised` preserves today's halts
+- [ ] 6.4 Zero-interaction cleanup gate + `cleanup.autonomy` knob (R25, R26)
+  - **File:** `scripts/cleanup_lib.py`, `core/commands/sw-cleanup.md`, `.cursor/workflow.config.json`, `.sw/config.schema.json`
+  - **Expected:** `cleanup.autonomy` (`confirm` | `auto`, default `confirm`); `auto` applies only the dry-run `wouldRemove` set when merge is deterministic + no in-flight scoped run (per phase-3 enumeration) + not current/default branch; `indeterminate` → human gate; never deletes unmerged/protected; no `rm -rf` on worktrees
+- [ ] 6.5 Fixtures + docs for terminal autonomy (R27)
+  - **File:** `scripts/test/run-deliver-concurrency-fixtures.sh` (extend), `core/skills/deliver/SKILL.md`, `core/skills/conductor/SKILL.md`, `core/commands/sw-cleanup.md`, `rules/sw-workflow-sequencing.mdc`
+  - **Expected:** the amendment A1 Testing Strategy fixtures exist and pass; deliver/conductor skills, `sw-cleanup`, and the sequencing rule describe terminal autonomy + the cleanup knob; `dist/` regenerated via the phase-5.3 freshness gate
+
 ## Phase Dependencies
 
 | Phase | Depends on |
@@ -88,7 +109,8 @@ v1 deferrals, and docs/dist follow.
 | 2 | none |
 | 3 | 2 |
 | 4 | 2 |
-| 5 | 1, 2, 3, 4 |
+| 5 | 1, 2, 3, 4, 6 |
+| 6 | 1, 2, 3 |
 
 ## Traceability
 
@@ -113,3 +135,11 @@ v1 deferrals, and docs/dist follow.
 | R17 | 5.3 | deliver-concurrency-emitter-freshness |
 | R18 | 5.1 | run-deliver-concurrency-fixtures.sh (full suite) |
 | R19 | 5.2 | deliver-concurrency-docs-presence |
+| R20 | 6.1 | deliver-terminal-retro-before-pr |
+| R21 | 6.1 | deliver-terminal-retro-before-pr / deliver-terminal-retro-fail-closed |
+| R22 | 6.2 | deliver-terminal-autonomous-watch-stabilize |
+| R23 | 6.2 | deliver-terminal-no-auto-merge |
+| R24 | 6.3 | deliver-terminal-autonomy-knob |
+| R25 | 6.4 | cleanup-autonomy-auto-after-merge |
+| R26 | 6.4 | cleanup-autonomy-indeterminate-falls-back |
+| R27 | 5.3, 6.5 | terminal-autonomy-emitter-freshness / terminal-autonomy-docs-presence |
