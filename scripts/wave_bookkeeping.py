@@ -265,24 +265,29 @@ def cmd_record(root: Path, args: list[str]) -> None:
             }
         )
 
-    changelog_path.write_text(new_changelog, encoding="utf-8")
-    version_path.write_text(new_version + "\n", encoding="utf-8")
+    from wave_living_doc_lock import living_doc_write_lock
 
+    target_branch = (state.get("target") or {}).get("branch")
     bookkeeping_sha = None
-    if do_commit:
-        bookkeeping_sha = git_commit_bookkeeping(worktree, phase_slug, dry_run=False)
+    with living_doc_write_lock(root, target=target_branch, holder=f"bookkeeping-record:{phase_slug}"):
+        changelog_path.write_text(new_changelog, encoding="utf-8")
+        version_path.write_text(new_version + "\n", encoding="utf-8")
 
-    if state_path.is_file():
-        state = read_json(state_path)
-        for record in state.get("mergedPhases") or []:
-            if record.get("phaseSlug") == phase_slug:
-                record["commitType"] = commit_type
-                record["bookkeepingVersion"] = new_version
-                if bookkeeping_sha:
-                    record["bookkeepingCommit"] = bookkeeping_sha
-                break
-        state["projectedVersion"] = new_version
-        state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+        bookkeeping_sha = None
+        if do_commit:
+            bookkeeping_sha = git_commit_bookkeeping(worktree, phase_slug, dry_run=False)
+
+        if state_path.is_file():
+            state = read_json(state_path)
+            for record in state.get("mergedPhases") or []:
+                if record.get("phaseSlug") == phase_slug:
+                    record["commitType"] = commit_type
+                    record["bookkeepingVersion"] = new_version
+                    if bookkeeping_sha:
+                        record["bookkeepingCommit"] = bookkeeping_sha
+                    break
+            state["projectedVersion"] = new_version
+            state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
 
     emit(
         {
@@ -337,25 +342,29 @@ def cmd_revert(root: Path, args: list[str]) -> None:
             }
         )
 
-    changelog_path.write_text(new_changelog, encoding="utf-8")
-    version_path.write_text(new_version + "\n", encoding="utf-8")
+    from wave_living_doc_lock import living_doc_write_lock
 
+    target_branch = (state.get("target") or {}).get("branch")
     bookkeeping_sha = None
-    if do_commit:
-        bookkeeping_sha = git_commit_bookkeeping(
-            worktree, f"revert-{phase_slug}", dry_run=False
-        )
+    with living_doc_write_lock(root, target=target_branch, holder=f"bookkeeping-revert:{phase_slug}"):
+        changelog_path.write_text(new_changelog, encoding="utf-8")
+        version_path.write_text(new_version + "\n", encoding="utf-8")
 
-    if state_path.is_file():
-        state = read_json(state_path)
-        merged = []
-        for record in state.get("mergedPhases") or []:
-            if record.get("phaseSlug") == phase_slug:
-                record = {**record, "reverted": True, "bookkeepingReverted": True}
-            merged.append(record)
-        state["mergedPhases"] = merged
-        state["projectedVersion"] = new_version
-        state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+        if do_commit:
+            bookkeeping_sha = git_commit_bookkeeping(
+                worktree, f"revert-{phase_slug}", dry_run=False
+            )
+
+        if state_path.is_file():
+            state = read_json(state_path)
+            merged = []
+            for record in state.get("mergedPhases") or []:
+                if record.get("phaseSlug") == phase_slug:
+                    record = {**record, "reverted": True, "bookkeepingReverted": True}
+                merged.append(record)
+            state["mergedPhases"] = merged
+            state["projectedVersion"] = new_version
+            state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
 
     emit(
         {

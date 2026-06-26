@@ -130,7 +130,7 @@ def run_reconcile_script(root: Path, *cmd: str) -> dict[str, Any]:
     return data
 
 
-def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool) -> str | None:
+def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool, repo_root: Path | None = None) -> str | None:
     top = worktree
     proc = subprocess.run(
         ["git", "-C", str(top), "status", "--porcelain", "--", *LIVING_PATHS],
@@ -160,12 +160,22 @@ def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool) -> str | Non
 
 
 def cmd_reconcile(root: Path, args: list[str]) -> None:
+    from wave_living_doc_lock import living_doc_write_lock
+
     state = load_state(root)
     plan = load_plan(root)
     prd = prd_number_from_state(state, plan)
     if not prd:
         fail("prd_number missing from deliver state/plan")
 
+    target = (state.get("target") or {}).get("branch")
+    with living_doc_write_lock(root, target=target, holder="living-docs-reconcile"):
+        _cmd_reconcile_locked(root, args, state, plan, prd)
+
+
+def _cmd_reconcile_locked(
+    root: Path, args: list[str], state: dict[str, Any], plan: dict[str, Any], prd: str
+) -> None:
     merged_main = target_merge_detected(root, state)
     index_status = derive_index_status(state, merged_main)
     worktree = resolve_worktree(root, args)
@@ -216,7 +226,15 @@ def cmd_reconcile(root: Path, args: list[str]) -> None:
 
 def cmd_append_terminal(root: Path, args: list[str]) -> None:
     """Idempotent COMPLETION-LOG append when all phases are green (R48)."""
+    from wave_living_doc_lock import living_doc_write_lock
+
     state = load_state(root)
+    target = (state.get("target") or {}).get("branch")
+    with living_doc_write_lock(root, target=target, holder="living-docs-append-terminal"):
+        _cmd_append_terminal_locked(root, args, state)
+
+
+def _cmd_append_terminal_locked(root: Path, args: list[str], state: dict[str, Any]) -> None:
     plan = load_plan(root)
     prd = prd_number_from_state(state, plan)
     if not prd:

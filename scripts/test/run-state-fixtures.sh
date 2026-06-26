@@ -112,6 +112,40 @@ else
   bad "deliver-legacy-state-migration: resolves scoped path for target"
 fi
 
+# --- deliver-run-index-enumerates (PRD 013 R10) ---
+echo '{"verdict":"running","target":{"branch":"feat/alpha"},"source_task_list":"tasks/a.md"}' \
+  > .cursor/sw-deliver-state.alpha.json
+echo '{"verdict":"running","target":{"branch":"feat/beta"},"source_task_list":"tasks/b.md"}' \
+  > .cursor/sw-deliver-state.beta.json
+python3 "$STATE_PY" "$STATE_FIX" lock acquire --target feat/alpha --nonblock >/dev/null
+python3 "$STATE_PY" "$STATE_FIX" lock acquire --target feat/beta --nonblock >/dev/null
+if python3 "$STATE_PY" "$STATE_FIX" runs index 2>/dev/null | python3 -c "
+import json,sys
+from pathlib import Path
+d=json.load(sys.stdin)
+slugs={r['slug'] for r in d.get('runs', [])}
+assert 'alpha' in slugs and 'beta' in slugs
+assert Path('.cursor/sw-deliver-runs/index.json').is_file()
+"; then
+  ok "deliver-run-index-enumerates: runs index lists scoped runs"
+else
+  bad "deliver-run-index-enumerates: runs index lists scoped runs"
+fi
+CLEANUP_PY="$ROOT/scripts/cleanup_lib.py"
+if python3 "$CLEANUP_PY" "$STATE_FIX" 2>/dev/null | python3 -c "
+import json,sys
+r=json.load(sys.stdin)['report']
+protected={i['name'] for i in r.get('protected', []) if i.get('kind')=='run-state'}
+assert '.cursor/sw-deliver-state.alpha.json' in protected
+assert '.cursor/sw-deliver-state.beta.json' in protected
+"; then
+  ok "deliver-run-index-enumerates: cleanup protects all in-flight scoped runs"
+else
+  bad "deliver-run-index-enumerates: cleanup protects all in-flight scoped runs"
+fi
+python3 "$STATE_PY" "$STATE_FIX" lock release --target feat/alpha >/dev/null 2>&1 || true
+python3 "$STATE_PY" "$STATE_FIX" lock release --target feat/beta >/dev/null 2>&1 || true
+
 if [[ "$FAIL" -ne 0 ]]; then
   echo "state fixtures: FAIL"
   exit 1
