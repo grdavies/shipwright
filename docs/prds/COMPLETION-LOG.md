@@ -4,6 +4,7 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 
 | Date | PRD | Phase | Notes |
 |------|-----|-------|-------|
+| 2026-06-26 | 011 | all | Shipped via PR #76 (squash): orchestrator UX + doc polish; four deliver phases; PR #76; SHA 392c6a4 |
 | 2026-06-26 | 011 | deliver | PRD 011 four phases on feat/orchestrator-ux-and-doc-polish (1a3de5c); pre-merge compounding; awaiting terminal merge to main |
 | 2026-06-25 | 009 | all | deliver complete — awaiting terminal merge; SHA db87926 |
 | 2026-06-25 | 009 | all | PRD 009 autonomous orchestration conductor — 10 phases delivered; SHA 681671b |
