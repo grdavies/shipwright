@@ -16,13 +16,13 @@ rewrite that depends on the preflight, then the optional hook, then docs/dist.
 
 ### 1. Config-driven per-agent tiers + resolver `--agent` (M)
 
-- [ ] 1.1 Add `models.routing.agents` to config + schema + defaults (R6)
+- [x] 1.1 Add `models.routing.agents` to config + schema + defaults (R6)
   - **File:** `.cursor/workflow.config.json`, `.sw/config.schema.json`, `core/sw-reference/model-routing.defaults.json`
   - **Expected:** `models.routing.agents` map (agent id → semantic tier) present and schema-accepted; defaults cover doc-review personas (`build`) and native-panel specialists (high-stakes `deep`, others `mid`)
-- [ ] 1.2 `resolve-model-tier.sh --agent <id>` with deterministic fallback (R1, R7)
+- [x] 1.2 `resolve-model-tier.sh --agent <id>` with deterministic fallback (R1, R7)
   - **File:** `scripts/resolve-model-tier.sh`
   - **Expected:** `--agent` resolves `models.routing.agents[id]` → `models.tiers` → concrete model ID (JSON: tier + modelId); unmapped agent falls back to `models.roles.reviewer` tier; single source for doc-review + native panel
-- [ ] 1.3 `model-tier-check.sh` validates the agents map (R8)
+- [x] 1.3 `model-tier-check.sh` validates the agents map (R8)
   - **File:** `scripts/model-tier-check.sh`
   - **Expected:** every `models.routing.agents` value is a known tier (or alias) and resolves to a concrete ID; fails closed on an unknown tier
 
