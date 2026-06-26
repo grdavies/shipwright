@@ -188,10 +188,10 @@ else
 fi
 
 # --- subagent dispatch rule exists ---
-if [[ -f "$(content_path rules/sw-subagent-dispatch.mdc)" ]] && grep -q '8+' "$(content_path rules/sw-subagent-dispatch.mdc)"; then
+if [[ -f "$(content_path rules/sw-subagent-dispatch.mdc)" ]] && grep -q 'delegate-by-default' "$(content_path rules/sw-subagent-dispatch.mdc)"; then
   echo "OK  subagent dispatch rule"
 else
-  echo "FAIL sw-subagent-dispatch.mdc missing thresholds"
+  echo "FAIL sw-subagent-dispatch.mdc missing delegate-by-default policy"
   FAIL=1
 fi
 
