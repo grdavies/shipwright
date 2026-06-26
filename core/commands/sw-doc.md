@@ -62,25 +62,50 @@ Each remains independently runnable.
 
          `bash scripts/wave.sh spec-seed --task-list <frozen-task-list-path>`
 
-      4. The exact next command: `bash scripts/wave.sh deliver-loop --task-list <frozen-task-list-path>`.
+      4. The exact next command: `/sw-deliver run <frozen-task-list-path>`.
       Do **not** recommend `/sw-worktree` → `/sw-start` → `/sw-execute` or standalone `/sw-ship` as the
-      primary path.
-    - **`confirm`** — present the full frozen task list, then ask explicitly whether to begin implementation
-      and state the expected tokens. Only case-insensitive **`proceed`** or **`yes`** to that question continues.
-      Legacy **`Go`**, silence, or any ambiguous reply maps to **`stop`** (print-only guidance per above; no
-      dispatch). On ack:
+      primary path. (`/sw-deliver run` invokes the underlying `bash scripts/wave.sh deliver-loop` driver — do
+      not print the raw script as the primary operator command.)
+    - **`confirm`** — present the full frozen task list, then emit the **Implementation checkpoint** block
+      (see below) and halt. Only case-insensitive **`proceed`** or **`yes`** to the checkpoint question
+      continues. Legacy **`Go`**, silence, or any ambiguous reply maps to **`stop`** (print-only guidance per
+      above; no dispatch). On ack:
       1. **Seed commit** — `bash scripts/wave.sh spec-seed --task-list <frozen-task-list-path>` (docs
          under `docs/prds/<n>-<slug>/` only; excludes `docs/brainstorms/**` and untracked/ignored paths;
          never `main`; idempotent).
-      2. **Dispatch** `bash scripts/wave.sh deliver-loop --task-list <frozen-task-list-path>`.
+      2. **Dispatch** `/sw-deliver run <frozen-task-list-path>`.
     - **`auto`** — emit one line: `implementing on branch <type>/<slug>`, then
       `bash scripts/wave.sh spec-seed --task-list <frozen-task-list-path>`, then **dispatch**
-      `bash scripts/wave.sh deliver-loop --task-list <frozen-task-list-path>`.
+      `/sw-deliver run <frozen-task-list-path>`.
       No second prompt. When an **agent** (not a human) invoked `/sw-doc --after-tasks=auto`, record the override via
       `scripts/shipwright-state.sh override-add` (who/when/mode) and record the seed commit (branch + SHA) via
       `scripts/shipwright-state.sh write` **before** dispatch.
 14. On `confirm`/`auto` dispatch paths only: never write implementation files inline — hand off to
-    `deliver-loop` (phase worktrees + `/sw-ship` per phase).
+    `/sw-deliver run` (phase worktrees + `/sw-ship` per phase via the durable driver).
+
+### Implementation checkpoint (`confirm` mode output contract)
+
+When `doc.afterTasks: confirm`, emit this dedicated block **after** the frozen task list summary — not buried
+in closing prose:
+
+```text
+## Implementation checkpoint
+
+Implementation is **paused** awaiting your acknowledgement. The frozen task list is ready; nothing has been
+dispatched yet.
+
+Begin implementation on `<type>/<slug>`? Reply with **proceed** or **yes** (case-insensitive) to continue.
+
+| Reply | Result |
+|-------|--------|
+| `proceed` / `yes` | Seed docs (if needed), then dispatch `/sw-deliver run <frozen-task-list-path>` |
+| `Go`, silence, ambiguous, or unrelated message | `stop` — print-only guidance (no dispatch); re-emit this checkpoint on the next turn while still un-acked |
+| Any other text | Treated as unrelated → same as silence (`stop` + re-emit checkpoint) |
+```
+
+**Re-emit rule:** If the user returns with an unrelated message (e.g. `/sw-memory-sync`, a doc question)
+while a `confirm` halt is pending and has not sent `proceed`/`yes`, map to **`stop`** (no dispatch) and
+**re-emit the Implementation checkpoint block** so the pending acknowledgement is visible again.
 
 ## Flags
 

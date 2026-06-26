@@ -9,8 +9,8 @@ SW_DOC="$(content_path commands/sw-doc.md)"
 FAIL=0
 
 if grep -q '\*\*`auto`\*\*' "$SW_DOC" && \
-   grep -q 'deliver-loop --task-list <frozen-task-list-path>' "$SW_DOC"; then
-  echo "OK  doc-afterTasks-auto-deliver: auto dispatches deliver-loop"
+   grep -q '/sw-deliver run <frozen-task-list-path>' "$SW_DOC"; then
+  echo "OK  doc-afterTasks-auto-deliver: auto dispatches /sw-deliver run"
 else
   echo "FAIL doc-afterTasks-auto-deliver: auto missing /sw-deliver run dispatch"
   FAIL=1
