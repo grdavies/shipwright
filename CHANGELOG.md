@@ -41,6 +41,7 @@
 * merge phase dispatch-preflight-parent-floor-m into feat/model-tier-runtime-binding (c5f13c7) <!-- sw-deliver:dispatch-preflight-parent-floor-m -->
 * merge phase rule-skill-rewrite-to-call-the-preflight-s-m into feat/model-tier-runtime-binding (be9f908) <!-- sw-deliver:rule-skill-rewrite-to-call-the-preflight-s-m -->
 * merge phase optional-pre-tool-hook-feasibility-gated-m into feat/model-tier-runtime-binding (94778b5) <!-- sw-deliver:optional-pre-tool-hook-feasibility-gated-m -->
+* merge phase fixtures-docs-dist-propagation-m into feat/model-tier-runtime-binding (134e59d) <!-- sw-deliver:fixtures-docs-dist-propagation-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
