@@ -53,13 +53,27 @@ bash scripts/wave.sh plan validate --tier wave --proposal /path/to/wave-proposal
 
 Returns stable JSON `{verdict: pass|reject|ambiguous, reasons[]}`. Reject → canonical chain (phase) or
 canonical waves / `wave.sh schedule` (wave). With default `orchestration.planPolicy: canonical`, behavior is
-byte-identical to today; `proposed` is exercised in fixtures until PRD-023 pilot.
+byte-identical to today; live `proposed` on `/sw-deliver` requires pilot opt-in (below).
 
-**Proposed-path wiring (PRD 023 phase 1):** when `orchestration.planPolicy: proposed` and the TR0 dependency
-gate passes (`scripts/pilot_dependency_gate.py`), state init seeds `twoTierLifecycle` + `planRejectionLog`;
-wave entry runs `plan validate --tier wave --record-rejection` then persists `waveBatchingPlan` and sets
-`wave-validated`; phase entry runs `plan validate --tier phase` before persisting `phase-step-plan.json`, falling
-back to the canonical chain on reject.
+**Proposed-path wiring (PRD 023):** when `orchestration.planPolicy: proposed` and the TR0 dependency gate
+passes (`scripts/pilot_dependency_gate.py` / `scripts/test/pilot-022-prerequisite-check.sh`), state init seeds
+`twoTierLifecycle` + `planRejectionLog`; wave entry runs `plan validate --tier wave --record-rejection` then
+persists `waveBatchingPlan` and sets `wave-validated`; phase entry runs `plan validate --tier phase` before
+persisting `phase-step-plan.json`, falling back to the canonical chain on reject.
+
+### Pilot opt-in (PRD 023 rollout)
+
+Default `canonical` is unchanged for all repos. Enabling `proposed` on `/sw-deliver` requires:
+
+1. **TR0 gate green** — PRD-022 execution-fidelity + resume fixtures pass (`pilot-dependency-gate`).
+2. **Config** — `orchestration.planPolicy: proposed` (never silently seeded; `/sw-init` writes `canonical`).
+3. **Staged blast radius** — hermetic/fixture repos first; real repos need explicit per-run pilot
+   acknowledgement and an integration/non-`main` target branch.
+4. **Production guard** — `/sw-init` doctor surfaces `planPolicy` vs default and refuses `proposed` toward
+   shared `main` without acknowledgement.
+
+Benefit metric soak and default-flip decisions use `bash scripts/wave.sh plan benefit-report --pairs <path>`
+(`scripts/wave_plan_benefit.py`); insufficient evidence fails closed to `canonical` (R31).
 
 ## Procedure (`deliver-loop` / `run`)
 

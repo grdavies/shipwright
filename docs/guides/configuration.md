@@ -96,8 +96,9 @@ exhausted; run-level budget. Every halt emits one report with an exact resume co
   and never overwrites an explicit `proposed` without confirm.
 - **Resume:** runs honor the **recorded** `planPolicy` on persisted plans over live config; re-validated against
   the current kernel envelope on resume (fail-closed).
-- **Dark by default:** `proposed` is fixture-only until PRD-023 (`/sw-deliver` pilot) and PRD-024
-  (debug/doc/feedback). Call-site map:
+- **Default canonical:** nothing observable changes until you set `proposed` **and** pass the PRD-023
+  pilot guards (TR0 gate, per-run acknowledgement, safe target branch). `/sw-deliver` is the live pilot;
+  PRD-024 fans out to other orchestrators. Call-site map:
   `docs/prds/022-kernel-classification-and-plan-validation/call-site-map.md`.
 
 Mechanical validation:
@@ -167,6 +168,8 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `guardrails.enforceBeforeSubmit` | Memory guardrails run before prompts submit |
 | `guardrails.requireRuleClass` | Require allowlisted rules before prompts proceed |
 | `orchestration.planPolicy` | `canonical` (default) \| `proposed` — agent plan proposals vs hardcoded chains; kill-switch |
+| `intraPhase.parallelBudget` | Max concurrent intra-phase Task workers per phase (default **2**) |
+| `intraPhase.harnessLimit` | Harness-wide cap combined with `worktree.parallelCeiling` (default **8**) |
 
 See `core/sw-reference/config.schema.json` for the full schema.
 
@@ -311,6 +314,21 @@ existing gate path. The PR template references CI **job names** as the authorita
 script checklist.
 
 Fixture suite: `bash scripts/test/run-pr-test-plan-fixtures.sh` (registered in `verify.test`).
+
+
+## Deliver plan-policy pilot (PRD 023)
+
+`/sw-deliver` is the live pilot for `orchestration.planPolicy: proposed`. Default stays `canonical`.
+
+| Guard | Meaning |
+| --- | --- |
+| TR0 dependency gate | `proposed` refused until PRD-022 exec-fidelity + resume fixtures pass |
+| Pilot acknowledgement | Real repos require explicit per-run opt-in + integration/non-`main` target |
+| Driver budgets | `runStartedAt`, `driverIterationCount`, `noProgressStreak` on shared run-state |
+| Benefit metric | Numeric/enumerated `benefitMetric`; soak via `wave.sh plan benefit-report` |
+
+Fixture suite: `bash scripts/test/run-pilot-fixtures.sh` (pilot-e2e, intra-phase-*, budget-*, benefit-*).
+After `core/` pilot prose changes: `python3 -m sw generate --all` + `run-emitter-fixtures.sh`.
 
 ## PRD 022 fixture suites (kernel / gate / plan policy)
 

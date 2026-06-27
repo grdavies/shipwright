@@ -92,4 +92,19 @@ bash scripts/intra-phase-dispatch.sh evaluate --context-json '<signal_context>' 
 ```
 
 Parallel intra-phase workers are read-only on `ship-steps.json` and `status.json` in the phase run dir.
-Each parallelization decision is recorded in `dispatch-decisions.json`.
+Each parallelization decision is recorded in `dispatch-decisions.json`. The latest validated snapshot
+also appears on phase status as `intraPhaseFanOut` (`activeWorkers`, `globalCap`, `partitionSummary`).
+
+Config keys: `intraPhase.parallelBudget` (default 2), `intraPhase.harnessLimit` (default 8).
+
+Example `dispatch-decisions.json` entry:
+
+```json
+{
+  "timestamp": "2026-06-27T08:00:00Z",
+  "signals": {"fileCount": 4, "derivedTags": ["docs"], "conductorMode": "inline", "phaseType": "ship"},
+  "declaredPartition": [{"files": ["docs/guides/configuration.md"], "workerId": "w1"}],
+  "chosenParallelism": {"workers": 1, "serialized": false},
+  "degradeReason": null
+}
+```

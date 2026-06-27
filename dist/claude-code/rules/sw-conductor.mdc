@@ -32,6 +32,14 @@ Load `skills/conductor/SKILL.md` for the full contract. These rules are the alwa
 - Shared run-state writes (`waveBatchingPlan`, `twoTierLifecycle`) are **conductor-only**; phase sub-agents
   writing shared state exit 20.
 
+## Driver-enforced budgets (PRD 023 TR3)
+
+- Run-level budgets (`runStartedAt`, `driverIterationCount`, `noProgressStreak`) are written by
+  `wave_deliver_loop.py` — not agent prose.
+- Proposal/validation overhead is accounted separately from execution iterations; persistent
+  `planRejectionLog` entries feed the no-progress breaker.
+- Budget trip → `halt-blocked` with merge-queue journal replayability and lock release (R22).
+
 ## No nested dispatch (R16)
 
 - Phase sub-agents are spawned **only** by the conductor at the orchestrator level.

@@ -63,6 +63,7 @@ Multi-feature mode uses `"mode": "multi-feature"` with conforming type-prefixed 
 | Concurrent-run index | `.cursor/sw-deliver-runs/index.json` |
 | Living-doc serialization | `.cursor/sw-living-docs.lock` |
 | Per-phase `/sw-ship` status | `.cursor/sw-deliver-runs/<phase-slug>/status.json` |
+| Dispatch decisions | `.cursor/sw-deliver-runs/<phase-slug>/dispatch-decisions.json` |
 | Phase step plan | `.cursor/sw-deliver-runs/<phase-slug>/phase-step-plan.json` |
 | Append-only progress log | `.cursor/sw-deliver-runs/run.log` |
 | Legacy (migration only) | `.cursor/sw-deliver-state.json`, `.cursor/sw-deliver.lock` |
@@ -73,10 +74,20 @@ Multi-feature mode uses `"mode": "multi-feature"` with conforming type-prefixed 
 is honored on resume. Proposals validate via `bash scripts/wave.sh plan validate` before persist — see
 `skills/conductor/SKILL.md` **Two-tier plan lifecycle**.
 
-**Proposed pilot wiring (PRD 023 phase 1):** live `proposed` on `/sw-deliver` requires the TR0 dependency
-gate (`scripts/pilot_dependency_gate.py` / `scripts/test/pilot-022-prerequisite-check.sh`). When enabled,
-`wave_deliver_loop.py` invokes wave/phase `plan validate` with `--record-rejection` at each proposal site;
-rejections fall back to canonical waves/chain without kernel changes.
+**Proposed-path (PRD 023):** live `proposed` on `/sw-deliver` requires the TR0 dependency gate
+(`scripts/pilot_dependency_gate.py` / `scripts/test/pilot-022-prerequisite-check.sh`) plus pilot opt-in guards
+(see `core/commands/sw-deliver.md` **Pilot opt-in**). When enabled, `wave_deliver_loop.py` invokes wave/phase
+`plan validate` with `--record-rejection` at each proposal site; rejections fall back to canonical waves/chain
+without kernel changes. Default `canonical` is byte-identical to pre-023 behavior.
+
+**Benefit metric + reporting (R31):** per-phase and run-level `benefitMetric` objects (numeric/enumerated only)
+are captured at terminal phase status and rolled up on shared run-state. Operator soak comparisons use
+`bash scripts/wave.sh plan benefit-report --pairs <path>` → `scripts/wave_plan_benefit.py`. Schema and
+decision rule: `.sw/layout.md` **Deliver pilot run records**.
+
+**Intra-phase fan-out snapshot:** `intraPhaseFanOut` on phase status / `phases.<id>` records the latest
+validated partition, active worker count, and cap state; append-only audit lives in per-phase
+`dispatch-decisions.json` (see `skills/parallelism/SKILL.md`).
 
 Living artifacts under `.cursor/` are **never committed** (`/sw-commit` excludes them).
 
@@ -119,6 +130,10 @@ Initialized from the phase-mode plan via `scripts/wave.sh state init --plan .cur
   "nextAction": "lock-acquire",
   "remediationAttempts": {},
   "driverHeartbeatAt": "2026-06-25T00:00:00Z",
+  "runStartedAt": "2026-06-25T00:00:00Z",
+  "driverIterationCount": 0,
+  "noProgressStreak": 0,
+  "planRejectionLog": [],
   "updatedAt": "2026-06-25T00:00:00Z"
 }
 ```

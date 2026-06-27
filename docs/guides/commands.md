@@ -28,7 +28,7 @@ Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** c
 - **Single terminal merge gate:** per-phase PRs auto-merge into `<type>/<slug>` on green; one
   human-gated `<type>/<slug> → main` PR at the end.
 - **Resumption:** re-run `run` after interrupt; durable `deliver-loop` cursor in
-  `.cursor/sw-deliver-state.json`; `plan --from <phase>` when resuming mid-wave.
+  `.cursor/sw-deliver-state.<slug>.json` at repo root; `plan --from <phase>` when resuming mid-wave.
 - **Pre-merge compounding:** full `/sw-compound-ship --pre-merge` before the terminal human merge gate;
   completion stays `completed-pending-merge` until merge is detected.
 - **Dry-run:** `scripts/wave.sh plan --task-list <path> --dry-run` — plan JSON only, no artifact write.
@@ -49,8 +49,12 @@ See [`core/commands/sw-deliver.md`](../../core/commands/sw-deliver.md) and
 [`core/skills/deliver/SKILL.md`](../../core/skills/deliver/SKILL.md).
 
 **Plan validation (PRD 022):** mechanical gate for agent-proposed phase/wave plans — not hand-authored in
-chat. Default `orchestration.planPolicy: canonical` preserves today's behavior; `proposed` is opt-in
-(PRD-023 pilot).
+chat. Default `orchestration.planPolicy: canonical` preserves today's behavior; `proposed` is opt-in on
+the `/sw-deliver` pilot (TR0 gate, per-run acknowledgement, non-`main` target).
+
+```bash
+bash scripts/wave.sh plan benefit-report --pairs scripts/test/fixtures/benefit-metric/positive-pairs.json
+```
 
 ```bash
 bash scripts/wave.sh plan validate --tier phase --phase-type ship --proposal <path|json>

@@ -45,7 +45,7 @@
     "orchestration": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Cross-orchestrator plan-policy kill-switch (PRD 022 R29). Default canonical is byte-identical to today; proposed is fixture-only until PRD 023/024 adoption.",
+      "description": "Cross-orchestrator plan-policy kill-switch (PRD 022 R29). Default canonical is byte-identical to today; proposed is live on /sw-deliver pilot when TR0 gate and opt-in guards pass; PRD 024 fans out to other orchestrators.",
       "properties": {
         "planPolicy": {
           "type": "string",
