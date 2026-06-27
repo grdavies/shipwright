@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# PRD 023 — dependency gate, proposed-path deliver wiring, E2E, intra-phase safety (TR0–TR2, R15–R17).
+# PRD 023 — dependency gate, proposed-path deliver wiring, E2E + 022 parity (TR0, TR1, TR5a, TR5c),
+# intra-phase safety (R15–R17), and benefit metric capture + decision rule (TR4, TR5b, R31).
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -11,6 +12,10 @@ INTRA_PY="$ROOT/scripts/intra_phase_dispatch.py"
 INTRA_SH="$ROOT/scripts/intra-phase-dispatch.sh"
 LOOP_PY="$ROOT/scripts/wave_deliver_loop.py"
 STATE_PY="$ROOT/scripts/wave_state.py"
+BENEFIT_PY="$ROOT/scripts/wave_plan_benefit.py"
+WAVE_SH="$ROOT/scripts/wave.sh"
+POSITIVE_PAIRS="$ROOT/scripts/test/fixtures/benefit-metric/positive-pairs.json"
+INSUFFICIENT_PAIRS="$ROOT/scripts/test/fixtures/benefit-metric/insufficient-n-pairs.json"
 WF="$ROOT/.cursor/workflow.config.json"
 FAIL=0
 
@@ -252,6 +257,223 @@ if bash "$PARITY_FIX" >/dev/null 2>&1; then
   ok "pilot-022-parity-suite-under-proposed"
 else
   bad "pilot-022-parity-suite-under-proposed"
+fi
+
+# --- benefit-metric-no-sensitive-fields ---
+if python3 - <<PY
+import sys
+sys.path.insert(0, "$ROOT/scripts")
+from wave_plan_benefit import build_benefit_metric, sensitive_field_violations, validate_benefit_metric
+from pathlib import Path
+
+root = Path("$ROOT")
+metric = build_benefit_metric(
+    plan_policy="proposed",
+    kernel_verdict={"terminalPhaseStatuses": ["green-merged"], "gateOutcome": "green", "mergeReadyCount": 1},
+    executed_step_set=["sw-tmp-init", "sw-execute", "sw-commit", "sw-ready"],
+    stabilize_reentries=[],
+    escaped_defect_signal="none",
+    phase_wall_clock_ms=120000,
+    root=root,
+)
+assert not sensitive_field_violations(metric), sensitive_field_violations(metric)
+ok, reasons = validate_benefit_metric(metric)
+assert ok, reasons
+bad_metric = dict(metric)
+bad_metric["notes"] = "secret transcript excerpt"
+violations = sensitive_field_violations(bad_metric)
+assert violations, violations
+PY
+then
+  ok "benefit-metric-no-sensitive-fields"
+else
+  bad "benefit-metric-no-sensitive-fields"
+fi
+
+# --- benefit-refuses-credit-on-later-stabilize ---
+if python3 - <<PY
+import sys
+sys.path.insert(0, "$ROOT/scripts")
+from wave_plan_benefit import compute_steps_skipped_without_rework
+
+canonical = ["sw-tmp-init", "sw-execute", "sw-verify", "sw-simplify", "sw-commit", "sw-ready"]
+executed = ["sw-tmp-init", "sw-execute", "sw-commit", "sw-ready"]
+without = compute_steps_skipped_without_rework(canonical, executed, [])
+assert without == 2, without
+with_rework = compute_steps_skipped_without_rework(
+    canonical,
+    executed,
+    [{"step": "sw-verify", "attributed": True}],
+)
+assert with_rework == 1, with_rework
+all_zero = compute_steps_skipped_without_rework(
+    canonical,
+    executed,
+    [
+        {"step": "sw-verify", "attributed": True},
+        {"step": "sw-simplify", "attributed": True},
+    ],
+)
+assert all_zero == 0, all_zero
+PY
+then
+  ok "benefit-refuses-credit-on-later-stabilize"
+else
+  bad "benefit-refuses-credit-on-later-stabilize"
+fi
+
+# --- pilot-atypical-phase-step-omit ---
+if python3 - <<PY
+import sys
+sys.path.insert(0, "$ROOT/scripts")
+from wave_plan_benefit import build_benefit_metric
+from pathlib import Path
+
+root = Path("$ROOT")
+kernel = {"terminalPhaseStatuses": ["green-merged"], "gateOutcome": "green", "mergeReadyCount": 1}
+canonical_chain = [
+    "sw-tmp-init", "sw-execute", "sw-verify", "verification-gate", "sw-review",
+    "sw-simplify", "gap-check", "sw-commit", "sw-pr", "sw-watch-ci", "sw-stabilize", "sw-ready", "sw-tmp-clean",
+]
+# docs-only atypical phase: gate-accepted proposed plan omits verify/simplify
+proposed_executed = [s for s in canonical_chain if s not in ("sw-verify", "sw-simplify")]
+metric = build_benefit_metric(
+    plan_policy="proposed",
+    kernel_verdict=kernel,
+    canonical_step_set=canonical_chain,
+    executed_step_set=proposed_executed,
+    stabilize_reentries=[],
+    escaped_defect_signal="none",
+    phase_wall_clock_ms=80000,
+    decomposed={"stepPlanAdaptivity": {"stepsSkipped": 2, "wallClockMs": 20000}, "waveSchedule": {"wallClockMs": 0}, "intraPhase": {"wallClockMs": 0}},
+    root=root,
+)
+assert metric["stepsSkippedWithoutRework"] == 2, metric
+assert metric["decomposed"]["stepPlanAdaptivity"]["stepsSkipped"] == 2
+PY
+then
+  ok "pilot-atypical-phase-step-omit"
+else
+  bad "pilot-atypical-phase-step-omit"
+fi
+
+# --- benefit-decision-rule-fail-closed (insufficient N) ---
+if OUT=$(bash "$WAVE_SH" plan benefit-report --pairs "$INSUFFICIENT_PAIRS" --min-n 3 2>/dev/null) \
+  && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['decision']['recommendation']=='canonical', d
+assert d['decision']['failClosed'] is True, d
+"; then
+  ok "benefit-decision-rule-fail-closed insufficient-n"
+else
+  bad "benefit-decision-rule-fail-closed insufficient-n"
+fi
+
+# --- benefit-decision-rule-fail-closed (non-positive steps-skipped) ---
+NONPOS_FIX=$(mktemp -d)
+cat >"$NONPOS_FIX/pairs.json" <<'JSON'
+{
+  "pairs": [
+    {
+      "canonical": {
+        "planPolicy": "canonical",
+        "kernelVerdict": {"terminalPhaseStatuses": ["green-merged"], "gateOutcome": "green", "mergeReadyCount": 1},
+        "canonicalStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-commit", "sw-ready"],
+        "executedStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-commit", "sw-ready"],
+        "stepsSkippedWithoutRework": 0,
+        "stabilizeReentries": [],
+        "escapedDefectSignal": "none",
+        "phaseWallClockMs": 100000,
+        "decomposed": {"stepPlanAdaptivity": {"stepsSkipped": 0, "wallClockMs": 0}, "waveSchedule": {"wallClockMs": 0}, "intraPhase": {"wallClockMs": 0}}
+      },
+      "proposed": {
+        "planPolicy": "proposed",
+        "kernelVerdict": {"terminalPhaseStatuses": ["green-merged"], "gateOutcome": "green", "mergeReadyCount": 1},
+        "canonicalStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-commit", "sw-ready"],
+        "executedStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-commit", "sw-ready"],
+        "stepsSkippedWithoutRework": 0,
+        "stabilizeReentries": [],
+        "escapedDefectSignal": "none",
+        "phaseWallClockMs": 90000,
+        "decomposed": {"stepPlanAdaptivity": {"stepsSkipped": 0, "wallClockMs": 0}, "waveSchedule": {"wallClockMs": 0}, "intraPhase": {"wallClockMs": 0}}
+      }
+    },
+    {
+      "canonical": {
+        "planPolicy": "canonical",
+        "kernelVerdict": {"terminalPhaseStatuses": ["green-merged"], "gateOutcome": "green", "mergeReadyCount": 1},
+        "canonicalStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-commit", "sw-ready"],
+        "executedStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-commit", "sw-ready"],
+        "stepsSkippedWithoutRework": 0,
+        "stabilizeReentries": [],
+        "escapedDefectSignal": "none",
+        "phaseWallClockMs": 100000,
+        "decomposed": {"stepPlanAdaptivity": {"stepsSkipped": 0, "wallClockMs": 0}, "waveSchedule": {"wallClockMs": 0}, "intraPhase": {"wallClockMs": 0}}
+      },
+      "proposed": {
+        "planPolicy": "proposed",
+        "kernelVerdict": {"terminalPhaseStatuses": ["green-merged"], "gateOutcome": "green", "mergeReadyCount": 1},
+        "canonicalStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-commit", "sw-ready"],
+        "executedStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-commit", "sw-ready"],
+        "stepsSkippedWithoutRework": 0,
+        "stabilizeReentries": [],
+        "escapedDefectSignal": "none",
+        "phaseWallClockMs": 90000,
+        "decomposed": {"stepPlanAdaptivity": {"stepsSkipped": 0, "wallClockMs": 0}, "waveSchedule": {"wallClockMs": 0}, "intraPhase": {"wallClockMs": 0}}
+      }
+    },
+    {
+      "canonical": {
+        "planPolicy": "canonical",
+        "kernelVerdict": {"terminalPhaseStatuses": ["green-merged"], "gateOutcome": "green", "mergeReadyCount": 1},
+        "canonicalStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-commit", "sw-ready"],
+        "executedStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-commit", "sw-ready"],
+        "stepsSkippedWithoutRework": 0,
+        "stabilizeReentries": [],
+        "escapedDefectSignal": "none",
+        "phaseWallClockMs": 100000,
+        "decomposed": {"stepPlanAdaptivity": {"stepsSkipped": 0, "wallClockMs": 0}, "waveSchedule": {"wallClockMs": 0}, "intraPhase": {"wallClockMs": 0}}
+      },
+      "proposed": {
+        "planPolicy": "proposed",
+        "kernelVerdict": {"terminalPhaseStatuses": ["green-merged"], "gateOutcome": "green", "mergeReadyCount": 1},
+        "canonicalStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-commit", "sw-ready"],
+        "executedStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-commit", "sw-ready"],
+        "stepsSkippedWithoutRework": 0,
+        "stabilizeReentries": [],
+        "escapedDefectSignal": "none",
+        "phaseWallClockMs": 90000,
+        "decomposed": {"stepPlanAdaptivity": {"stepsSkipped": 0, "wallClockMs": 0}, "waveSchedule": {"wallClockMs": 0}, "intraPhase": {"wallClockMs": 0}}
+      }
+    }
+  ]
+}
+JSON
+if OUT=$(bash "$WAVE_SH" plan benefit-report --pairs "$NONPOS_FIX/pairs.json" --min-n 3 2>/dev/null) \
+  && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['decision']['recommendation']=='canonical', d
+"; then
+  ok "benefit-decision-rule-fail-closed non-positive"
+else
+  bad "benefit-decision-rule-fail-closed non-positive"
+fi
+rm -rf "$NONPOS_FIX"
+
+# --- wave.sh plan benefit-report positive cohort ---
+if OUT=$(bash "$WAVE_SH" plan benefit-report --pairs "$POSITIVE_PAIRS" --min-n 3 2>/dev/null) \
+  && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['decision']['recommendation']=='proposed-eligible', d
+assert d['decision']['failClosed'] is False, d
+assert d['summary']['stepsSkippedWithoutRework']['delta'] == 6, d
+"; then
+  ok "benefit-decision-rule-positive-cohort"
+else
+  bad "benefit-decision-rule-positive-cohort"
 fi
 
 # --- intra-phase-disjoint-partition-required (R15) ---
