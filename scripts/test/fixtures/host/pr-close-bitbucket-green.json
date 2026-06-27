@@ -1,0 +1,10 @@
+{
+  "verdict": "ok",
+  "verb": "pr-close",
+  "provider": "bitbucket",
+  "data": {
+    "number": 3,
+    "url": "https://bitbucket.org/owner/repo/pull-requests/3",
+    "state": "DECLINED"
+  }
+}

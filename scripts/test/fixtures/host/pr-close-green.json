@@ -1,0 +1,10 @@
+{
+  "verdict": "ok",
+  "verb": "pr-close",
+  "provider": "github",
+  "data": {
+    "number": 42,
+    "url": "https://github.com/owner/repo/pull/42",
+    "state": "CLOSED"
+  }
+}

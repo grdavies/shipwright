@@ -27,6 +27,7 @@ Agent-mediated consumers read markdown adapters (`providers/host/<id>.md`).
 | `pr-view` | Fetch PR/MR metadata (head, base, state, mergeable) |
 | `pr-list` | List open PRs/MRs (filterable) |
 | `pr-head` | Resolve PR head SHA for gate binding |
+| `pr-close` | Close superseded PR/MR by number |
 | `checks` | CI/check-run status for a PR head |
 | `review-threads` | Unresolved review thread count / bodies |
 | `repo-meta` | Repository identity (owner/name, default branch) |

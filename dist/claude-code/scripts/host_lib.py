@@ -38,6 +38,7 @@ HOST_VERBS = (
     "pr-view",
     "pr-list",
     "pr-head",
+    "pr-close",
     "checks",
     "review-threads",
     "repo-meta",
@@ -243,6 +244,36 @@ def github_api_base(host: dict[str, Any]) -> str:
     if isinstance(api, str) and api.strip():
         return api.strip().rstrip("/")
     return "https://api.github.com"
+
+
+
+def gitlab_api_base(host: dict[str, Any]) -> str:
+    api = host.get("apiBaseUrl")
+    if isinstance(api, str) and api.strip():
+        return api.strip().rstrip("/")
+    base = host.get("baseUrl")
+    if isinstance(base, str) and base.strip():
+        return base.strip().rstrip("/") + "/api/v4"
+    return "https://gitlab.com/api/v4"
+
+
+def bitbucket_api_base(host: dict[str, Any]) -> str:
+    api = host.get("apiBaseUrl")
+    if isinstance(api, str) and api.strip():
+        return api.strip().rstrip("/")
+    return "https://api.bitbucket.org/2.0"
+
+
+def url_encode_project(owner: str, repo: str) -> str:
+    from urllib.parse import quote
+
+    return quote(f"{owner}/{repo}", safe="")
+
+
+def phase_mode_active() -> bool:
+    raw = os.environ.get("SW_PHASE_MODE", "")
+    return raw.lower() in ("1", "true", "yes")
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Host provider resolution helpers")

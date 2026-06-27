@@ -1,0 +1,11 @@
+{
+  "verdict": "ok",
+  "verb": "repo-meta",
+  "provider": "gitlab",
+  "data": {
+    "nameWithOwner": "owner/repo",
+    "defaultBranch": "main",
+    "owner": "owner",
+    "name": "repo"
+  }
+}

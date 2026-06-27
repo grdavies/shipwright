@@ -376,6 +376,10 @@ def merged_status(root: Path, branch: str, default: str, current: str) -> tuple[
     if minus_only:
         return "merged", "squash-cherry"
 
+    from wave_phase_pr import phase_green_merged_branch
+    if phase_green_merged_branch(root, branch):
+        return "merged", "phase-green-merged"
+
     host = host_merged(root, branch, default)
     if host is True:
         return "merged", "host-merged"

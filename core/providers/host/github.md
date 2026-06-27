@@ -36,6 +36,7 @@ Markdown companion to `host_github.sh` (Phase 2). Selected when `workflow.config
     "pr-view": true,
     "pr-list": true,
     "pr-head": true,
+    "pr-close": true,
     "checks": true,
     "review-threads": true,
     "repo-meta": true,
@@ -51,6 +52,7 @@ Markdown companion to `host_github.sh` (Phase 2). Selected when `workflow.config
 | `pr-create` | `POST /repos/{owner}/{repo}/pulls` |
 | `pr-view` | `GET /repos/{owner}/{repo}/pulls/{n}` |
 | `pr-list` | `GET /repos/{owner}/{repo}/pulls` |
+| `pr-close` | `PATCH /repos/{owner}/{repo}/pulls/{n}` (`state: closed`) |
 | `pr-head` | `GET /repos/{owner}/{repo}/pulls/{n}` → `head.sha` |
 | `checks` | `GET /repos/{owner}/{repo}/commits/{sha}/check-runs` |
 | `review-threads` | GraphQL `reviewThreads` (resolution state is GraphQL-only) |

@@ -1,0 +1,16 @@
+{
+  "verdict": "ok",
+  "verb": "pr-view",
+  "provider": "gitlab",
+  "data": {
+    "number": 7,
+    "url": "https://gitlab.com/owner/repo/-/merge_requests/7",
+    "headRefName": "feat/x",
+    "headRefOid": "abc123",
+    "baseRefName": "main",
+    "state": "OPEN",
+    "isDraft": false,
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "CLEAN"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "verdict": "ok",
+  "verb": "pr-create",
+  "provider": "bitbucket",
+  "data": {
+    "number": 4,
+    "url": "https://bitbucket.org/owner/repo/pull-requests/4",
+    "headRefOid": "deadbeef",
+    "headRefName": "feat/x",
+    "baseRefName": "feat/demo",
+    "state": "OPEN"
+  }
+}

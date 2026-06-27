@@ -110,6 +110,8 @@ mock_fixture() {
     f="$FIXTURE_DIR/pr-view-green.json"
   elif [[ "$name" == pr-list-* ]]; then
     f="$FIXTURE_DIR/pr-list-green.json"
+  elif [[ "$name" == pr-close-* ]]; then
+    f="$FIXTURE_DIR/pr-close-green.json"
   else
     f=""
   fi
@@ -150,6 +152,11 @@ http_post() {
 http_put() {
   local url="$1" body_file="$2"
   "$TRANSPORT" --root "$ROOT" --provider github --method PUT --url "$url" --token-env "$TOKEN_ENV" --body-file "$body_file"
+}
+
+http_patch() {
+  local url="$1" body_file="$2"
+  "$TRANSPORT" --root "$ROOT" --provider github --method PATCH --url "$url" --token-env "$TOKEN_ENV" --body-file "$body_file"
 }
 
 parse_transport_body() {
@@ -364,6 +371,21 @@ PY
       [[ "$has_next" == "True" && -n "$cursor" ]] || break
     done
     emit "{\"verdict\":\"ok\",\"verb\":\"review-threads\",\"provider\":\"github\",\"data\":{\"unresolved\":$unresolved,\"actionable\":$actionable}}"
+    ;;
+
+
+  pr-close)
+    number="$(kv number "")"
+    [[ -n "$number" ]] || fail_json "missing-pr-number"
+    if mock_fixture "pr-close-$FIXTURE"; then exit 0; fi
+    [[ -n "$OWNER" && -n "$REPO" ]] || fail_json "missing-repo"
+    tmp="$(mktemp)"
+    echo '{"state":"closed"}' > "$tmp"
+    resp="$(http_patch "$API_BASE/repos/$OWNER/$REPO/pulls/$number" "$tmp")" || fail_json "transport-failed"
+    rm -f "$tmp"
+    body="$(parse_transport_body "$resp")"
+    view="$(gh_pr_to_view "$body")"
+    emit "$(python3 -c "import json,sys; print(json.dumps({'verdict':'ok','verb':'pr-close','provider':'github','data':json.loads(sys.argv[1])}))" "$view")"
     ;;
 
   merge)

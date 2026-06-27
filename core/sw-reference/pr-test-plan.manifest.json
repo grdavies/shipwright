@@ -64,7 +64,13 @@
         "terminal-flow-verbset",
         "stabilize-sync-verbset",
         "prose-gh-free",
-        "install-docs-currency"
+        "install-docs-currency",
+        "gitlab-adapter-verbs",
+        "bitbucket-adapter-verbs",
+        "bitbucket-backoff-default",
+        "phase-pr-base-integration",
+        "superseded-pr-close-by-branch-identity",
+        "cleanup-not-blocked-by-open-pr"
       ]
     },
     {

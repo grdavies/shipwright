@@ -1,0 +1,16 @@
+{
+  "verdict": "ok",
+  "verb": "pr-view",
+  "provider": "bitbucket",
+  "data": {
+    "number": 3,
+    "url": "https://bitbucket.org/owner/repo/pull-requests/3",
+    "headRefName": "feat/x",
+    "headRefOid": "abc123",
+    "baseRefName": "main",
+    "state": "OPEN",
+    "isDraft": false,
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "CLEAN"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "verdict": "ok",
+  "verb": "pr-create",
+  "provider": "gitlab",
+  "data": {
+    "number": 8,
+    "url": "https://gitlab.com/owner/repo/-/merge_requests/8",
+    "headRefOid": "deadbeef",
+    "headRefName": "feat/x",
+    "baseRefName": "feat/demo",
+    "state": "OPEN"
+  }
+}

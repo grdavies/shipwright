@@ -1,0 +1,15 @@
+{
+  "verdict": "ok",
+  "verb": "pr-list",
+  "provider": "gitlab",
+  "data": [
+    {
+      "number": 7,
+      "url": "https://gitlab.com/owner/repo/-/merge_requests/7",
+      "headRefOid": "abc123",
+      "headRefName": "feat/x",
+      "baseRefName": "main",
+      "state": "OPEN"
+    }
+  ]
+}
