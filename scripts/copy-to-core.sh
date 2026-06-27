@@ -43,6 +43,9 @@ elif [ -d "$ROOT/.sw" ]; then
     --exclude 'signal-context.schema.json' \
     --exclude 'kernel-classification.json' \
     --exclude 'kernel-classification.md' \
+    --exclude 'guidelines.schema.json' \
+    --exclude 'guidelines.json' \
+    --exclude 'guidelines.md' \
     "$ROOT/.sw/" "$CORE/sw-reference/"
 fi
 
