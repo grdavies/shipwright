@@ -126,6 +126,35 @@ else
   bad "memory-prework-prompt-redacted"
 fi
 
+# --- memory-prework-search-entry (R1, R4) ---
+ENTRY_FAIL=0
+for cmd in sw-execute sw-debug sw-prd sw-brainstorm sw-amend sw-review sw-stabilize; do
+  if ! grep -q 'Pre-work search (mandatory)' "$ROOT/core/commands/${cmd}.md" 2>/dev/null; then
+    bad "memory-prework-search-entry: missing in ${cmd}"
+    ENTRY_FAIL=1
+  fi
+done
+if [[ "$ENTRY_FAIL" -eq 0 ]]; then
+  ok "memory-prework-search-entry"
+fi
+
+# --- memory-prework-provider-agnostic (R3) ---
+if grep -q 'providers/<memory.provider>.md' "$ROOT/core/skills/memory/SKILL.md" && \
+   grep -q 'never call a provider tool directly' "$ROOT/core/skills/memory/SKILL.md"; then
+  ok "memory-prework-provider-agnostic"
+else
+  bad "memory-prework-provider-agnostic"
+fi
+
+# --- memory-prework-docs-presence (R10) ---
+if grep -q 'Pre-work memory search' "$ROOT/.sw/layout.md" && \
+   grep -q 'Pre-work memory search' "$ROOT/docs/guides/workflows.md" && \
+   grep -q 'Pre-work search (mandatory)' "$ROOT/core/skills/memory/SKILL.md"; then
+  ok "memory-prework-docs-presence"
+else
+  bad "memory-prework-docs-presence"
+fi
+
 if [[ "$FAIL" -ne 0 ]]; then
   echo "run-memory-prework-fixtures: FAIL"
   exit 1
