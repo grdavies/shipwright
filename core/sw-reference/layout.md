@@ -40,6 +40,10 @@ docs/decisions/
 ├── sw-deliver-runs/
 │   ├── index.json                 # concurrent-run index (live scoped runs)
 │   └── <phase-slug>/              # per-phase status (living)
+│       ├── status.json
+│       ├── ship-steps.json
+│       ├── phase-step-plan.json
+│       └── dispatch-decisions.json
 ```
 
 ## Naming conventions

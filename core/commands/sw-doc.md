@@ -50,6 +50,23 @@ Each remains independently runnable.
 
 ## Procedure
 
+### Docs-on-a-branch (R28–R29)
+
+Before step 1 when starting a **new** documentation effort:
+
+```bash
+bash scripts/docs_worktree.sh provision --topic <topic>
+```
+
+Operate inside the provisioned worktree (`.sw-worktrees/docs-<topic>/`) on branch `docs/<topic>`.
+Never commit brainstorm/PRD artifacts on the protected default branch. See `skills/git-workflow/SKILL.md`.
+
+After doc freeze, durability paths diverge (R32):
+
+- **Docs branch** — `bash scripts/wave_spec_seed.py <root> docs-commit --topic <topic>` (brainstorms + PRDs)
+- **Feature handoff** — `bash scripts/wave.sh spec-seed --task-list <frozen-task-list-path>` (PRD 013)
+- **Merge docs to trunk** — `bash scripts/docs_pr.sh --topic <topic>` (docs-only PR)
+
 0. Load `skills/conductor/SKILL.md`; enforce `rules/sw-conductor.mdc`.
 1. Run `/sw-triage` (or accept pre-classified tier).
 2. If Quick → report handoff to implementation; stop.

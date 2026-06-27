@@ -22,6 +22,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from host_lib import load_workflow_config, remote_name, remote_ref, remote_heads_ref
 from wave_json_io import StateCorruptError, read_json, write_json
 from wave_state import assert_phase_status
 
@@ -462,18 +463,19 @@ def cmd_merge_exec(root: Path, args: list[str]) -> None:
     if not phase_slug or not phase_branch or not target:
         fail("--phase-slug, --phase-branch, and --target required")
     wt = resolve_orchestrator_worktree(root, args)
-    git_run(["fetch", "origin", phase_branch, target], cwd=wt, check=False)
+    host_remote = remote_name(load_workflow_config(root))
+    git_run(["fetch", host_remote, phase_branch, target], cwd=wt, check=False)
     merge_ref = phase_branch
     if git_run(["show-ref", "--verify", f"refs/heads/{phase_branch}"], cwd=wt, check=False).returncode != 0:
         if (
             git_run(
-                ["show-ref", "--verify", f"refs/remotes/origin/{phase_branch}"],
+                ["show-ref", "--verify", remote_heads_ref(host_remote, phase_branch)],
                 cwd=wt,
                 check=False,
             ).returncode
             == 0
         ):
-            merge_ref = f"origin/{phase_branch}"
+            merge_ref = remote_ref(host_remote, phase_branch)
         else:
             fail(f"phase branch not found: {phase_branch}")
 

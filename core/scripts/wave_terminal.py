@@ -12,6 +12,11 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from host_lib import load_workflow_config, remote_name, remote_ref
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -278,7 +283,8 @@ def cmd_terminal_ship_run(root: Path, args: list[str]) -> None:
     cmd_terminal_pr_prepare(root, [])
     state = load_state(root)
     top = git_top(root)
-    push = git_run(["push", "-u", "origin", target], cwd=top, check=False)
+    host_remote = remote_name(load_workflow_config(root))
+    push = git_run(["push", "-u", host_remote, target], cwd=top, check=False)
     if push.returncode != 0:
         fail(
             push.stderr.strip() or "git push failed",
@@ -478,15 +484,16 @@ def cmd_resume_reconcile(root: Path, args: list[str]) -> None:
     if not target:
         fail("target branch missing in run-state")
     top = git_top(root)
+    host_remote = remote_name(load_workflow_config(root))
     if not has_flag(args, "--no-fetch"):
-        git_run(["fetch", "origin", target], cwd=top, check=False)
+        git_run(["fetch", host_remote, target], cwd=top, check=False)
 
-    remote_ref = f"origin/{target}"
-    remote_tip = resolve_ref(top, remote_ref)
+    remote_ref_name = remote_ref(host_remote, target)
+    remote_tip = resolve_ref(top, remote_ref_name)
     local_tip = resolve_ref(top, target)
     ground_tip = remote_tip or local_tip
     if not ground_tip:
-        fail(f"cannot resolve tip for {target!r} (fetch origin/{target} first)")
+        fail(f"cannot resolve tip for {target!r} (fetch {host_remote}/{target} first)")
 
     phases = state.get("phases") or {}
     promoted: list[str] = []

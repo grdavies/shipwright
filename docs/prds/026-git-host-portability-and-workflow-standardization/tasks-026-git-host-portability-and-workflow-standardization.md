@@ -147,32 +147,32 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 
 ### 5. Git-workflow skill + docs-branch standardization — L
 
-- [ ] 5.1 Native `git-workflow` skill + single-source conventions (R23, R27)
+- [x] 5.1 Native `git-workflow` skill + single-source conventions (R23, R27)
   - **File:** `skills/git-workflow/SKILL.md`
   - **Expected:** sw-namespaced skill (informed by + crediting netresearch) defines branch/commit/PR
     conventions once; documented in the skill and a dedicated reference. `git-workflow-skill-present` +
     `conventions-single-source`.
   - **R-IDs:** R23, R27
-- [ ] 5.2 `branch-name-guard` enforcement (R24)
+- [x] 5.2 `branch-name-guard` enforcement (R24)
   - **File:** `scripts/branch-name-guard.sh`, `scripts/worktree_lib.py`
   - **Expected:** wired into worktree/branch creation; rejects non-conforming names. `branch-name-guard-reject`.
   - **R-IDs:** R24
-- [ ] 5.3 Commit-message validator (Conventional Commits) (R25)
+- [x] 5.3 Commit-message validator (Conventional Commits) (R25)
   - **File:** `scripts/commit-msg-guard.sh`, `hooks/commit-msg`
   - **Expected:** enforces Conventional Commit types from a single source; rejects invalid messages.
     `commit-msg-validator-reject`.
   - **R-IDs:** R25
-- [ ] 5.4 PR/merge templates + host application (R26)
+- [x] 5.4 PR/merge templates + host application (R26)
   - **File:** `core/sw-reference/templates/pr-body.md`, `core/sw-reference/templates/merge-commit.md`
   - **Expected:** standardized PR/MR description + merge-commit body templates; host adapter applies them and
     enforces required fields. `pr-template-required-fields`.
   - **R-IDs:** R26
-- [ ] 5.5 Docs-on-a-branch policy + worktree provisioning (R28, R29)
+- [x] 5.5 Docs-on-a-branch policy + worktree provisioning (R28, R29)
   - **File:** `core/commands/sw-doc.md`, `scripts/docs_worktree.sh`
   - **Expected:** brainstorm/PRD/doc authoring occurs on a `docs/<topic>` branch (never the default branch);
     tooling creates/resumes a docs worktree + branch. `docs-branch-no-main-commit` + `docs-worktree-provision`.
   - **R-IDs:** R28, R29
-- [ ] 5.6 Docs PR to default + brainstorm durability + PRD-013 reconcile (R30, R31, R32)
+- [x] 5.6 Docs PR to default + brainstorm durability + PRD-013 reconcile (R30, R31, R32)
   - **File:** `scripts/wave_spec_seed.py`, `scripts/docs_pr.sh`
   - **Expected:** docs reach the default branch via a docs-only PR (branch-protection-safe); brainstorms are
     committed and durable on the docs branch (closing the data-loss window); the durability model reconciles

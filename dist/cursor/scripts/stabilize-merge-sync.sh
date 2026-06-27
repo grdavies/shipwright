@@ -33,6 +33,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+host_remote() {
+  python3 "$ROOT/scripts/host_lib.py" --root "$ROOT" remote-name
+}
+
 default_base() {
   local cfg=""
   for p in "$ROOT/.cursor/workflow.config.json" "$ROOT/workflow.config.json"; do
@@ -52,8 +56,8 @@ resolve_base_ref() {
   fi
   local base
   base="$(default_base)"
-  if git show-ref --verify --quiet "refs/remotes/origin/$base"; then
-    printf 'origin/%s\n' "$base"
+  if git show-ref --verify --quiet "refs/remotes/$(host_remote)/$base"; then
+    printf '%s/%s\n' "$(host_remote)" "$base"
   else
     printf '%s\n' "$base"
   fi
@@ -70,7 +74,7 @@ pr_json() {
 cmd_fetch_base() {
   local ref
   ref="$(resolve_base_ref)"
-  git fetch origin "${ref#origin/}" 2>/dev/null || git fetch origin "$ref" 2>/dev/null || true
+  local hr; hr="$(host_remote)"; git fetch "$hr" "${ref#${hr}/}" 2>/dev/null || git fetch "$hr" "$ref" 2>/dev/null || true
 }
 
 list_conflict_files() {

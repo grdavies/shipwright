@@ -5,17 +5,34 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "$schema": { "type": "string" },
-    "defaultBaseBranch": { "type": "string", "default": "main" },
+    "$schema": {
+      "type": "string"
+    },
+    "defaultBaseBranch": {
+      "type": "string",
+      "default": "main"
+    },
     "stateFile": {
       "type": "string",
       "default": ".git/shipwright.json",
       "description": "Per-worktree workflow state file path (lives in the worktree gitdir)."
     },
-    "agentsFile": { "type": "string", "default": "AGENTS.md" },
-    "prdsDir": { "type": "string", "default": "docs/prds" },
-    "decisionsDir": { "type": "string", "default": "docs/decisions" },
-    "tasksDir": { "type": "string", "default": "docs/prds" },
+    "agentsFile": {
+      "type": "string",
+      "default": "AGENTS.md"
+    },
+    "prdsDir": {
+      "type": "string",
+      "default": "docs/prds"
+    },
+    "decisionsDir": {
+      "type": "string",
+      "default": "docs/decisions"
+    },
+    "tasksDir": {
+      "type": "string",
+      "default": "docs/prds"
+    },
     "doc": {
       "type": "object",
       "additionalProperties": false,
@@ -23,9 +40,13 @@
       "properties": {
         "afterTasks": {
           "type": "string",
-          "enum": ["stop", "confirm", "auto"],
+          "enum": [
+            "stop",
+            "confirm",
+            "auto"
+          ],
           "default": "confirm",
-          "description": "Doc→implementation boundary after /sw-tasks freeze: stop halts; confirm prompts before dispatch; auto dispatches the implementation loop."
+          "description": "Doc\u2192implementation boundary after /sw-tasks freeze: stop halts; confirm prompts before dispatch; auto dispatches the implementation loop."
         }
       }
     },
@@ -36,7 +57,11 @@
       "properties": {
         "mode": {
           "type": "string",
-          "enum": ["bind-only", "heuristic", "default"],
+          "enum": [
+            "bind-only",
+            "heuristic",
+            "default"
+          ],
           "default": "bind-only",
           "description": "bind-only enforces model/intensity binding with delegate-by-default policy. default remains gated until Phase 2 live acceptance (DL-9)."
         }
@@ -45,11 +70,14 @@
     "orchestration": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Cross-orchestrator plan-policy kill-switch (PRD 022 R29). Default canonical is byte-identical to today; proposed is live on /sw-deliver pilot when TR0 gate and opt-in guards pass; PRD 024 fans out to other orchestrators.",
+      "description": "Cross-orchestrator plan-policy kill-switch (PRD 022 R29). Default canonical is byte-identical to today; proposed is fixture-only until PRD 023/024 adoption.",
       "properties": {
         "planPolicy": {
           "type": "string",
-          "enum": ["canonical", "proposed"],
+          "enum": [
+            "canonical",
+            "proposed"
+          ],
           "default": "canonical",
           "description": "canonical = validated proposals must match canonical chain/waves; proposed = guideline latitude (kernel envelope unchanged). Recorded mode on persisted plans is honored on resume over live config."
         }
@@ -68,7 +96,13 @@
         },
         "baseBranchType": {
           "type": "string",
-          "enum": ["feat", "fix", "docs", "hotfix", "release"],
+          "enum": [
+            "feat",
+            "fix",
+            "docs",
+            "hotfix",
+            "release"
+          ],
           "description": "Optional override for phase-mode base branch type (<type>/<slug>). When omitted, resolved from release-please-config.json or task-list frontmatter."
         },
         "remediation": {
@@ -93,7 +127,7 @@
               "type": "integer",
               "minimum": 1,
               "default": 240,
-              "description": "In-flight phase exceeds this duration → consolidated blocker."
+              "description": "In-flight phase exceeds this duration \u2192 consolidated blocker."
             }
           }
         },
@@ -104,7 +138,10 @@
           "properties": {
             "mode": {
               "type": "string",
-              "enum": ["supervised", "autonomous"],
+              "enum": [
+                "supervised",
+                "autonomous"
+              ],
               "default": "autonomous",
               "description": "autonomous = minimal legitimate-halt set (default hands-off); supervised adds per-phase acknowledgement halts."
             },
@@ -112,7 +149,7 @@
               "type": "integer",
               "minimum": 1,
               "default": 1440,
-              "description": "Run-level wall-clock ceiling; exceeded → clean consolidated halt (R42)."
+              "description": "Run-level wall-clock ceiling; exceeded \u2192 clean consolidated halt (R42)."
             },
             "maxIterations": {
               "type": "integer",
@@ -129,9 +166,12 @@
           "properties": {
             "autonomy": {
               "type": "string",
-              "enum": ["supervised", "auto"],
+              "enum": [
+                "supervised",
+                "auto"
+              ],
               "default": "supervised",
-              "description": "auto runs retrospective → PR → watch/stabilize hands-off; supervised preserves halts."
+              "description": "auto runs retrospective \u2192 PR \u2192 watch/stabilize hands-off; supervised preserves halts."
             }
           }
         }
@@ -140,11 +180,14 @@
     "cleanup": {
       "type": "object",
       "additionalProperties": false,
-      "description": "/sw-cleanup apply autonomy (PRD 013 A1 R25–R26).",
+      "description": "/sw-cleanup apply autonomy (PRD 013 A1 R25\u2013R26).",
       "properties": {
         "autonomy": {
           "type": "string",
-          "enum": ["confirm", "auto"],
+          "enum": [
+            "confirm",
+            "auto"
+          ],
           "default": "confirm",
           "description": "auto applies dry-run wouldRemove when merge is deterministic and safe; confirm preserves human ack."
         }
@@ -153,11 +196,14 @@
     "compound": {
       "type": "object",
       "additionalProperties": false,
-      "description": "/sw-retrospective compounding autonomy (R10). Gates approval prompts only — never memory or rule-class safety.",
+      "description": "/sw-retrospective compounding autonomy (R10). Gates approval prompts only \u2014 never memory or rule-class safety.",
       "properties": {
         "autonomy": {
           "type": "string",
-          "enum": ["supervised", "auto"],
+          "enum": [
+            "supervised",
+            "auto"
+          ],
           "default": "supervised",
           "description": "supervised preserves retro/compound approval and did-you-merge prompts; auto runs the pre-merge chain hands-off when the terminal PR is green but never bypasses fail-closed memory (R7) or rule-class human gates (R8)."
         }
@@ -168,8 +214,12 @@
       "additionalProperties": false,
       "description": "Stamp written by /sw-init recording plugin + schema versions at configuration time (R32).",
       "properties": {
-        "shipwrightVersion": { "type": "string" },
-        "schemaVersion": { "type": "string" }
+        "shipwrightVersion": {
+          "type": "string"
+        },
+        "schemaVersion": {
+          "type": "string"
+        }
       }
     },
     "verify": {
@@ -182,7 +232,9 @@
           "description": "When true, vacuous/placeholder verify commands do not hard-block under /sw-deliver or autonomous mode (R28/DL-13)."
         }
       },
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "verifyE2e": {
       "type": "object",
@@ -201,7 +253,9 @@
         },
         "routes": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Optional affected routes hint for smoke scoping (adapter-specific)."
         }
       }
@@ -209,7 +263,7 @@
     "review": {
       "type": "object",
       "additionalProperties": false,
-      "description": "AI code-review provider selection. Credentials are never stored here — use env/secret store at runtime.",
+      "description": "AI code-review provider selection. Credentials are never stored here \u2014 use env/secret store at runtime.",
       "properties": {
         "provider": {
           "type": "string",
@@ -219,7 +273,7 @@
         "enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Deprecated — use review.provider:\"none\" instead. When false, review gating is disabled (gate state off, non-blocking). Equivalent to provider:\"none\"."
+          "description": "Deprecated \u2014 use review.provider:\"none\" instead. When false, review gating is disabled (gate state off, non-blocking). Equivalent to provider:\"none\"."
         },
         "local": {
           "type": "object",
@@ -233,13 +287,21 @@
             },
             "provider": {
               "type": "string",
-              "enum": ["ce-code-review", "native", "none"],
+              "enum": [
+                "ce-code-review",
+                "native",
+                "none"
+              ],
               "default": "native",
               "description": "Local adapter id under providers/code-review/<id>.md. Use \"none\" to disable."
             },
             "apply": {
               "type": "string",
-              "enum": ["off", "surface", "auto"],
+              "enum": [
+                "off",
+                "surface",
+                "auto"
+              ],
               "default": "auto",
               "description": "Auto-apply policy for eligible local findings. surface = review only; off = disable apply."
             },
@@ -250,7 +312,11 @@
               "properties": {
                 "enrich": {
                   "type": "string",
-                  "enum": ["off", "ui-ux-pro-max", "vercel-web-guidelines"],
+                  "enum": [
+                    "off",
+                    "ui-ux-pro-max",
+                    "vercel-web-guidelines"
+                  ],
                   "default": "off",
                   "description": "Optional external design enrichment. Default off = native WCAG checklist only."
                 }
@@ -258,7 +324,10 @@
             },
             "grouping": {
               "type": "string",
-              "enum": ["auto", "off"],
+              "enum": [
+                "auto",
+                "off"
+              ],
               "default": "auto",
               "description": "Passed to ce-code-review as grouping:auto|off."
             },
@@ -269,13 +338,32 @@
               "properties": {
                 "surface": {
                   "type": "array",
-                  "items": { "enum": ["P0", "P1", "P2", "P3"] },
-                  "default": ["P0", "P1", "P2", "P3"],
+                  "items": {
+                    "enum": [
+                      "P0",
+                      "P1",
+                      "P2",
+                      "P3"
+                    ]
+                  },
+                  "default": [
+                    "P0",
+                    "P1",
+                    "P2",
+                    "P3"
+                  ],
                   "description": "Severities to log/surface before phase 2."
                 },
                 "haltOn": {
                   "type": "array",
-                  "items": { "enum": ["P0", "P1", "P2", "P3"] },
+                  "items": {
+                    "enum": [
+                      "P0",
+                      "P1",
+                      "P2",
+                      "P3"
+                    ]
+                  },
                   "default": [],
                   "description": "Validated severities that halt /sw-ship. Empty = surface-only rollout."
                 }
@@ -284,14 +372,19 @@
           }
         }
       },
-      "required": ["provider"]
+      "required": [
+        "provider"
+      ]
     },
     "coderabbit": {
       "type": "object",
       "additionalProperties": false,
       "description": "CodeRabbit-specific settings for the gate and review adapter. API keys are env-sourced only.",
       "properties": {
-        "noDefer": { "type": "boolean", "default": true },
+        "noDefer": {
+          "type": "boolean",
+          "default": true
+        },
         "reviewGraceMinutes": {
           "type": "integer",
           "minimum": 0,
@@ -305,7 +398,10 @@
       "additionalProperties": false,
       "properties": {
         "policy": {
-          "enum": ["all", "required"],
+          "enum": [
+            "all",
+            "required"
+          ],
           "default": "all",
           "description": "Whether the gate evaluates all checks or required checks only."
         },
@@ -316,15 +412,25 @@
         },
         "neutralAllowlist": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Check names that remain blocking even when treatNeutralAsPass is true."
         },
         "watch": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "maxWaitMinutes": { "type": "integer", "minimum": 1, "default": 20 },
-            "pollSeconds": { "type": "integer", "minimum": 1, "default": 45 }
+            "maxWaitMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 20
+            },
+            "pollSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 45
+            }
           }
         }
       }
@@ -356,10 +462,20 @@
           "additionalProperties": false,
           "description": "Opt-in web-app worktree scaffold (local ports/DB). Omit for non-web repos; defaults apply only when set (PRD 018 R15).",
           "properties": {
-            "portRangeStart": { "type": "integer", "default": 9100 },
-            "portRangeEnd": { "type": "integer", "default": 9199 },
+            "portRangeStart": {
+              "type": "integer",
+              "default": 9100
+            },
+            "portRangeEnd": {
+              "type": "integer",
+              "default": 9199
+            },
             "dbStrategy": {
-              "enum": ["schema-prefix", "isolated-db", "shared"],
+              "enum": [
+                "schema-prefix",
+                "isolated-db",
+                "shared"
+              ],
               "default": "schema-prefix"
             },
             "dbTemplate": {
@@ -396,15 +512,22 @@
       "properties": {
         "provider": {
           "type": "string",
-          "enum": ["recallium", "in-repo"],
+          "enum": [
+            "recallium",
+            "in-repo"
+          ],
           "default": "in-repo",
           "description": "Active memory adapter id (must match providers/<name>.md and providers/<name>-rules.sh)."
         },
         "sourceOfTruth": {
           "type": "string",
-          "enum": ["repo", "memory", "auto"],
+          "enum": [
+            "repo",
+            "memory",
+            "auto"
+          ],
           "default": "auto",
-          "description": "Authoritative store for decision-class records. auto derives from provider (external→memory, in-repo/none→repo)."
+          "description": "Authoritative store for decision-class records. auto derives from provider (external\u2192memory, in-repo/none\u2192repo)."
         },
         "inRepo": {
           "type": "object",
@@ -418,7 +541,10 @@
             },
             "commitMode": {
               "type": "string",
-              "enum": ["committed", "local"],
+              "enum": [
+                "committed",
+                "local"
+              ],
               "default": "committed",
               "description": "Where non-rule memories write. Rule-class files are always committed under storeDir/rules/."
             }
@@ -428,12 +554,21 @@
           "type": "string",
           "description": "Memory project scope key (e.g. repo name)."
         },
-        "defaultScope": { "enum": ["project", "global"], "default": "project" },
+        "defaultScope": {
+          "enum": [
+            "project",
+            "global"
+          ],
+          "default": "project"
+        },
         "connection": {
           "type": "object",
           "description": "Non-secret connection hints. For recallium, restBaseUrl points at the local REST API.",
           "properties": {
-            "restBaseUrl": { "type": "string", "default": "http://localhost:8001" }
+            "restBaseUrl": {
+              "type": "string",
+              "default": "http://localhost:8001"
+            }
           }
         },
         "autoSync": {
@@ -441,9 +576,20 @@
           "additionalProperties": false,
           "description": "Controls the stop hook that schedules /sw-memory-sync distillation runs.",
           "properties": {
-            "enabled": { "type": "boolean", "default": true },
-            "minTurns": { "type": "integer", "minimum": 1, "default": 10 },
-            "minMinutes": { "type": "integer", "minimum": 1, "default": 120 }
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "minTurns": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 10
+            },
+            "minMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 120
+            }
           }
         },
         "guardrails": {
@@ -459,17 +605,20 @@
             "requireRuleClass": {
               "type": "boolean",
               "default": false,
-              "description": "When true, block until at least one allowlisted rule-class memory exists. Default false — empty memory is normal for new repos."
+              "description": "When true, block until at least one allowlisted rule-class memory exists. Default false \u2014 empty memory is normal for new repos."
             },
             "allowEmptyRules": {
               "type": "boolean",
               "default": true,
-              "description": "Deprecated — use requireRuleClass (inverted). When false, equivalent to requireRuleClass:true."
+              "description": "Deprecated \u2014 use requireRuleClass (inverted). When false, equivalent to requireRuleClass:true."
             }
           }
         }
       },
-      "required": ["provider", "project"]
+      "required": [
+        "provider",
+        "project"
+      ]
     },
     "models": {
       "type": "object",
@@ -478,20 +627,30 @@
       "properties": {
         "tiers": {
           "type": "object",
-          "additionalProperties": { "type": "string" },
-          "description": "Tier name → concrete model id (e.g. deep, build, mid, cheap)."
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Tier name \u2192 concrete model id (e.g. deep, build, mid, cheap)."
         },
         "aliases": {
           "type": "object",
-          "additionalProperties": { "type": "string" },
-          "description": "Frontmatter alias → tier name (e.g. fast → cheap)."
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Frontmatter alias \u2192 tier name (e.g. fast \u2192 cheap)."
         },
         "roles": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "builder": { "type": "string", "description": "Tier name for builder role." },
-            "reviewer": { "type": "string", "description": "Tier name for reviewer role floor." }
+            "builder": {
+              "type": "string",
+              "description": "Tier name for builder role."
+            },
+            "reviewer": {
+              "type": "string",
+              "description": "Tier name for reviewer role floor."
+            }
           }
         },
         "routing": {
@@ -503,23 +662,40 @@
               "type": "object",
               "additionalProperties": {
                 "type": "string",
-                "enum": ["cheap", "build", "mid", "deep", "inherit"]
+                "enum": [
+                  "cheap",
+                  "build",
+                  "mid",
+                  "deep",
+                  "inherit"
+                ]
               }
             },
             "skills": {
               "type": "object",
               "additionalProperties": {
                 "type": "string",
-                "enum": ["cheap", "build", "mid", "deep", "inherit"]
+                "enum": [
+                  "cheap",
+                  "build",
+                  "mid",
+                  "deep",
+                  "inherit"
+                ]
               }
             },
             "agents": {
               "type": "object",
               "additionalProperties": {
                 "type": "string",
-                "enum": ["cheap", "build", "mid", "deep"]
+                "enum": [
+                  "cheap",
+                  "build",
+                  "mid",
+                  "deep"
+                ]
               },
-              "description": "Agent or native-panel specialist id → semantic tier (no inherit)."
+              "description": "Agent or native-panel specialist id \u2192 semantic tier (no inherit)."
             }
           }
         }
@@ -532,7 +708,12 @@
       "properties": {
         "defaultIntensity": {
           "type": "string",
-          "enum": ["normal", "lite", "full", "ultra"],
+          "enum": [
+            "normal",
+            "lite",
+            "full",
+            "ultra"
+          ],
           "default": "full"
         },
         "routing": {
@@ -543,23 +724,41 @@
               "type": "object",
               "additionalProperties": {
                 "type": "string",
-                "enum": ["normal", "lite", "full", "ultra", "inherit"]
+                "enum": [
+                  "normal",
+                  "lite",
+                  "full",
+                  "ultra",
+                  "inherit"
+                ]
               }
             },
             "skills": {
               "type": "object",
               "additionalProperties": {
                 "type": "string",
-                "enum": ["normal", "lite", "full", "ultra", "inherit"]
+                "enum": [
+                  "normal",
+                  "lite",
+                  "full",
+                  "ultra",
+                  "inherit"
+                ]
               }
             },
             "agents": {
               "type": "object",
               "additionalProperties": {
                 "type": "string",
-                "enum": ["normal", "lite", "full", "ultra", "inherit"]
+                "enum": [
+                  "normal",
+                  "lite",
+                  "full",
+                  "ultra",
+                  "inherit"
+                ]
               },
-              "description": "Agent id → caveman intensity. Used after command/skill routing during delegated Task binding."
+              "description": "Agent id \u2192 caveman intensity. Used after command/skill routing during delegated Task binding."
             }
           }
         }
@@ -573,6 +772,81 @@
       "type": "boolean",
       "default": false,
       "description": "When true, missing/unreadable invariants on a ref logs override instead of blocking that review."
+    },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Git host/forge provider selection and API transport settings (PRD 026).",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": [
+            "github",
+            "gitlab",
+            "bitbucket",
+            "none"
+          ],
+          "description": "Active host adapter id. Auto-detected from remote URL when omitted."
+        },
+        "remote": {
+          "type": "string",
+          "default": "origin",
+          "description": "Git remote name for host operations."
+        },
+        "tokenEnv": {
+          "type": "string",
+          "description": "Environment variable name holding the API token (never the secret value)."
+        },
+        "baseUrl": {
+          "type": "string",
+          "description": "Optional web base URL for self-hosted instances."
+        },
+        "apiBaseUrl": {
+          "type": "string",
+          "description": "Optional REST API base URL override."
+        },
+        "rateLimit": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Shared rate-limit retry policy for host HTTP transport.",
+          "properties": {
+            "maxAttempts": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 5
+            },
+            "baseBackoffMs": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 1000
+            },
+            "capBackoffMs": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 60000
+            },
+            "maxCumulativeWaitMs": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 300000
+            },
+            "jitter": {
+              "type": "boolean",
+              "default": true
+            },
+            "nearLimitThreshold": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 5
+            },
+            "mutatingMinDelayMs": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 1000
+            }
+          }
+        }
+      }
     }
   }
 }

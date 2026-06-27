@@ -59,6 +59,25 @@
         "doctor-degraded-warns",
         "host-ratelimit-config"
       ]
+    },
+    {
+      "id": "git-workflow-fixtures",
+      "script": "scripts/test/run-git-workflow-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-git-workflow-fixtures",
+      "scenarios": [
+        "git-workflow-skill-present",
+        "conventions-single-source",
+        "branch-name-guard-reject",
+        "commit-msg-validator-reject",
+        "pr-template-required-fields",
+        "docs-branch-no-main-commit",
+        "docs-worktree-provision",
+        "docs-pr-to-default",
+        "brainstorm-durable-commit",
+        "durability-reconcile-prd013"
+      ]
     }
   ]
 }
