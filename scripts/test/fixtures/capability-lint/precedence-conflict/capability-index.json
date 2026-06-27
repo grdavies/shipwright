@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "skill.conflict-a",
+      "kind": "skill",
+      "sourcePath": "core/skills/conflict-a/SKILL.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "path_glob",
+            "selectionFamily": "doc-review",
+            "globs": [
+              "docs/**/*.md"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "skill.conflict-b",
+      "kind": "skill",
+      "sourcePath": "core/skills/conflict-b/SKILL.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "path_glob",
+            "selectionFamily": "doc-review",
+            "globs": [
+              "docs/**/*.md"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
