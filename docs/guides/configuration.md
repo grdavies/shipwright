@@ -177,6 +177,30 @@ bash scripts/resolve-model-tier.sh --command sw-doc --delegate sw-prd
 Orchestrators (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-retrospective`) route at `inherit` — always resolve the
 delegated child command. Full policy: `.sw/models-tiering.md`.
 
+## Capability selection (manifest + selector)
+
+Signal-driven eligibility for skills, personas, providers, rules, and hooks is declared in per-artifact
+`capability` frontmatter, aggregated into `core/sw-reference/capability-index.json`, and resolved by
+`scripts/capability-select.sh` over a versioned `signal_context`. Contract:
+`core/sw-reference/capability-manifest.md`.
+
+| Concept | Meaning |
+| --- | --- |
+| **Eligibility** | Selector output — which capabilities match the snapshotted `signal_context` |
+| **Authorization** | Named trust/config gate for executables only — `check-gate.sh`, `memory-preflight`, hook slots (R27) |
+| **Model tier** | Orthogonal — `models.routing` + `resolve-model-tier.sh`; not chosen by the selector |
+
+**No new `workflow.config.json` keys** — existing keys (`review.provider`, `review.local.provider`,
+`memory.provider`, `verify.provider`, etc.) are read into `signal_context.config` at selection time via
+manifest `config_flag` triggers. Provider configuredness (absent / `none` / unconfigured) matches
+`check-gate.sh` / `wave_preflight` verdicts.
+
+**Freshness:** regenerate dist after manifest edits (`python3 -m sw generate --all`); stale index fails
+`scripts/test/run-emitter-fixtures.sh` and pre-selection preflight.
+
+Fixture suites: `scripts/test/run-capability-select-fixtures.sh`,
+`scripts/test/run-capability-lint-fixtures.sh`, `scripts/test/run-migration-parity-fixtures.sh`.
+
 ## Retrospective compounding (`compound.autonomy`)
 
 `/sw-retrospective` is the consolidated post-delivery chain (`retro → compound write → memory-sync → status`).

@@ -76,4 +76,6 @@ Findings shape for stabilize (markdown adapters document fetch procedure):
 
 ## Config
 
-`review.provider` in `workflow.config.json` selects `providers/review/<id>.sh` + `<id>.md`.
+`review.provider` in `workflow.config.json` selects `providers/review/<id>.sh` + `<id>.md` via the
+capability selector's `config_flag` triggers (`selectionFamily: providers`). Eligibility ≠ authorization —
+executables still pass `check-gate.sh` and the named adapter gate (R27).

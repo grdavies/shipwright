@@ -50,6 +50,16 @@ bash scripts/test/run-emitter-fixtures.sh
 bash scripts/test/run-parity-fixtures.sh
 bash scripts/test/run-claude-golden-fixtures.sh
 bash scripts/test/run-gate-fixtures.sh
+bash scripts/test/run-capability-select-fixtures.sh
+bash scripts/test/run-capability-lint-fixtures.sh
+bash scripts/test/run-migration-parity-fixtures.sh
+```
+
+**After editing `capability` frontmatter** under `core/`, regenerate both dist trees before opening a PR:
+
+```bash
+python3 -m sw generate --all
+bash scripts/test/run-emitter-fixtures.sh
 ```
 
 Additional domain fixtures (doc, impl, debug, feedback, etc.) live under `scripts/test/` and can be run

@@ -152,7 +152,8 @@ Six **always-on** core personas carry explicit `always_on` triggers:
 - `sw-security-reviewer` — `text_token` over security enumeration (sync with `skills/triage/SKILL.md`)
 - `sw-design-reviewer` — `any_of` text-token UI terms, structural headings, or design-tool link patterns
 
-Authoritative selection prose remains in `skills/doc-review/SKILL.md` until Phase 6 parity cutover.
+Orchestration prose in `skills/doc-review/SKILL.md` and related commands points here and to
+`scripts/doc-review-select.sh` / `scripts/capability-select.sh` — not duplicate trigger tables.
 
 ## Index row shape (emitter, TR2)
 

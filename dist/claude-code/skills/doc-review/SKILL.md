@@ -41,52 +41,52 @@ govern multiple plans by definition.
 
 ## Selection
 
-Deterministic — same inputs → same panel. Not model judgment.
+Deterministic — same inputs → same panel. Not model judgment. **Authoritative algorithm:** per-persona
+`capability` frontmatter on `core/agents/sw-*-reviewer.md` aggregated into
+`core/sw-reference/capability-index.json`, resolved by `bash scripts/doc-review-select.sh` (wraps
+`capability-select.sh` for the `doc-review` selection family). Contract:
+`core/sw-reference/capability-manifest.md` (triggers, precedence, trust boundary).
 
-### Always-on core (non-Quick)
+**Model tier is orthogonal** — persona dispatch tiers resolve via `resolve-model-tier.sh --agent <id>`;
+capability selection does not choose models.
 
-These six personas run on every non-Quick review:
+### Tier gate (selector input)
 
-- `sw-coherence-reviewer`
-- `sw-feasibility-reviewer`
-- `sw-scope-guardian-reviewer`
-- `sw-product-reviewer`
-- `sw-adversarial-reviewer`
-- `sw-docs-currency-reviewer` — spec-time documentation-impact mapping (artifact path + required update)
+Quick tier → empty panel; selector is not invoked. Non-Quick PRD drafts build a versioned `signal_context`
+(`tier`, `doc_path`, `body_snapshot`, `derived_tags` from triage, `overrides` for CLI flags) and call
+`doc-review-select.sh`. Decision-record and amendment paths use **floor rules** below (not the PRD selector).
+
+### Always-on core (manifest)
+
+Six personas carry explicit `always_on` triggers (`selectionFamily: doc-review`):
+
+- `sw-coherence-reviewer`, `sw-feasibility-reviewer`, `sw-scope-guardian-reviewer`
+- `sw-product-reviewer`, `sw-adversarial-reviewer`, `sw-docs-currency-reviewer`
 
 **Living-doc complementarity:** `sw-docs-currency-reviewer` explicitly scopes out
 `docs/prds/INDEX.md`, `docs/prds/COMPLETION-LOG.md`, and `docs/prds/GAP-BACKLOG.md` — those three
 living indexes are owned by the PRD 009 living-doc currency gate. This persona must not re-gate or
 duplicate that gate; its scope is arbitrary documentation artifacts at spec-time.
 
-### Signal-gated specialists
+### Signal-gated specialists (manifest)
 
-| Persona | Fires when |
+| Persona | Manifest trigger summary |
 | --- | --- |
-| `sw-security-reviewer` | Any **`security`-tagged** keyword from `skills/triage/SKILL.md` "Risk triggers" matches the PRD (case-insensitive). Tags `data-migration` and `billing-routing` floor triage tier but do **not** fire security. |
-| `sw-design-reviewer` | **Either** (a) one **unambiguous** UI term is present (`UI`, `UX`, `wireframe`, `modal`, `button`, `navigation`, `responsive`, `accessibility`, `user flow`), **or** (b) a **structural UI signal** exists: a `UI` / `UX` / `Screens` / `Mockups` section heading, a design-tool link (e.g. Figma), or an explicit interaction-state enumeration. Bare polysemous tokens (`component`, `view`, `page`, `form`) do **not** count alone. |
-
-**Security signal enumeration** (authoritative; must stay in sync with triage `security` tags):
-
-`auth`, `authn`, `authz`, `authentication`, `authorization`, `login`, `session`, `oauth`, `jwt`, `payment`,
-`payments`, `billing`, `PII`, `credentials`, `token`, `encryption`, `public api`, `public endpoint`,
-`external api`, `webhook`
+| `sw-security-reviewer` | `text_token` over **`security`-tagged** keywords (sync with `skills/triage/SKILL.md` risk triggers). `data-migration` / `billing-routing` tags floor triage tier but do **not** fire security. |
+| `sw-design-reviewer` | `any_of` unambiguous UI terms, structural headings (`UI` / `UX` / `Screens` / `Mockups`), or design-tool link patterns. Bare polysemous tokens (`component`, `view`, `page`, `form`) do **not** count alone. |
 
 Keyword-gated security accepts deliberate false-negative cost on novel phrasing; use `--personas security` for
 audits when wording dodges the list.
 
-### Selection algorithm
+### Selector invocation
 
+```bash
+bash scripts/doc-review-select.sh --context-json '<signal_context>'
 ```
-1. If tier is Quick → no panel; stop.
-2. Start with always-on core (six personas).
-3. Scan PRD text + headings for gated signals (case-insensitive, whole-token match — delimiter-bounded;
-   plural inflections do not match unless listed, e.g. `webhooks` ≠ `webhook`).
-4. Add each gated persona whose signal fires; record matched signal.
-5. If --personas <list> → force-add named personas; record override reason.
-6. If --all → run full roster (all eight); record override reason.
-7. Emit activation record (below).
-```
+
+Returns canonical JSON: resolved persona ids, matched signals, and activation-record fields. Identical
+`signal_context` ⇒ byte-identical output. Overrides (`--personas`, `--all`) are carried in
+`signal_context.overrides` at selection time.
 
 ### Overrides
 
