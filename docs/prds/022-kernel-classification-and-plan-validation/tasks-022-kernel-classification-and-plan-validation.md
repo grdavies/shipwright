@@ -68,19 +68,19 @@ only in fixtures.
 
 ### 4. Two-tier persist + deterministic step driver + lifecycle — L
 
-- [ ] 4.1 Persist validated plans to correct durable owners (atomic, stamped) (R7)
+- [x] 4.1 Persist validated plans to correct durable owners (atomic, stamped) (R7)
   - **File:** `scripts/ship_phase_steps.py` (per-phase run dir), shared run-state writer
   - **Expected:** phase step plan → per-phase run dir (executor-owned, alongside `status.json`/`ship-steps.json`); wave-batching plan → shared run-state (conductor only); each stamped with `planPolicy` + `kernelVersion` + `guidelineVersion`, written atomically (temp-file + rename).
   - **R-IDs:** R7
-- [ ] 4.2 Conductor-only single-writer guard (mechanical) (R7)
+- [x] 4.2 Conductor-only single-writer guard (mechanical) (R7)
   - **File:** shared run-state writer + `scripts/test/run-plan-persist-fixtures.sh`
   - **Expected:** shared run-state writes accept conductor role/caller identity only; phase writes scoped to the phase slug's run dir; `single-writer-phase-refused` (simulated phase sub-agent write refused, exit 20) while conductor write succeeds.
   - **R-IDs:** R7
-- [ ] 4.3 Deterministic per-phase step driver (sole-authority + ordering re-check) (R26)
+- [x] 4.3 Deterministic per-phase step driver (sole-authority + ordering re-check) (R26)
   - **File:** `scripts/ship_phase_steps.py` (`advance`/`resolve-resume` → `nextStep`)
   - **Expected:** driver reads the persisted phase plan's step list as the **sole authority** (not the hardcoded `SHIP_CHAIN`, which becomes the canonical fallback only); **re-checks kernel ordering at each `advance`** and **refuses an out-of-order / not-in-plan step** → hard halt; distinct from the conductor deliver-loop `nextAction`; stays deterministic so resume needs no model. Fixture `exec-fidelity-out-of-order-halt`.
   - **R-IDs:** R26
-- [ ] 4.4 Two-tier lifecycle states + crash-between-tiers recovery (R8, R34)
+- [x] 4.4 Two-tier lifecycle states + crash-between-tiers recovery (R8, R34)
   - **File:** `scripts/wave_deliver_loop.py`, `scripts/ship_phase_steps.py`, `.sw/layout.md`
   - **Expected:** lifecycle `wave-validated` → `phase-plan-pending` → `phase-plan-validated`; conductor drives the stored wave layer, the step driver the stored phase layer; crash with a validated wave but missing/`pending` phase plan re-runs the **phase** proposal+validate only; corrupt/partial/stale-version plan fails closed (halt or canonical replacement) — never partial execution. Fixtures `resume-two-tier-deterministic`, `resume-corrupt-plan-fail-closed`, `resume-between-tiers-rerun-phase-only`. Resolve the wave-authority single-source-of-truth in `.sw/layout.md`.
   - **R-IDs:** R8, R34

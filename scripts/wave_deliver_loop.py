@@ -12,6 +12,21 @@ from typing import Any
 
 from wave_json_io import StateCorruptError, read_json, write_json
 
+from plan_persist import (
+    LIFECYCLE_PHASE_PLAN_PENDING,
+    LIFECYCLE_PHASE_PLAN_VALIDATED,
+    LIFECYCLE_WAVE_VALIDATED,
+    get_lifecycle,
+    needs_phase_plan_proposal,
+    persist_wave_batching_plan,
+    set_phase_lifecycle,
+    set_wave_lifecycle,
+    wave_lifecycle,
+    wave_plan_ready,
+)
+from wave_plan_validate import phase_fallback_canonical_chain, validate_wave_plan, wave_fallback_canonical_waves
+
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
@@ -49,6 +64,8 @@ MECHANICAL_ACTIONS = frozenset(
         "merge-run-next",
         "phase-teardown-run",
         "advance-wave",
+        "wave-plan-persist",
+        "phase-plan-entry",
         "write-blocker-report",
         "all-phases-complete",
         "finalize-completion",
@@ -527,6 +544,50 @@ def tasks_currency_ok(
     return False, "tasks-currency-divergence"
 
 
+
+def effective_wave_plan(state: dict[str, Any], plan: dict[str, Any]) -> dict[str, Any]:
+    """Single source of truth: persisted waveBatchingPlan overlays frozen deliver plan waves."""
+    batching = state.get("waveBatchingPlan")
+    if isinstance(batching, dict) and batching.get("waves"):
+        merged = dict(plan)
+        merged["waves"] = batching.get("waves")
+        if batching.get("parallelCeiling"):
+            merged["parallelCeiling"] = batching.get("parallelCeiling")
+        return merged
+    return plan
+
+
+def phase_run_dir_for_slug(root: Path, slug: str) -> Path:
+    return root / ".cursor" / "sw-deliver-runs" / slug
+
+
+def mechanical_phase_plan(root: Path, phase_id: str, slug: str) -> dict[str, Any]:
+    return phase_fallback_canonical_chain(root, "ship", phase_id)
+
+
+def dispatch_or_phase_plan_entry(
+    state: dict[str, Any], plan: dict[str, Any], phase_id: str, *, note: str | None = None
+) -> dict[str, Any]:
+    item = item_for_phase(plan, phase_id) or {}
+    slug = item.get("slug") or phase_id
+    if needs_phase_plan_proposal(state, phase_id):
+        return {
+            "action": "phase-plan-entry",
+            "phaseId": phase_id,
+            "phaseSlug": slug,
+            "resume": True,
+        }
+    payload = {
+        "action": "dispatch-ship",
+        "phaseId": phase_id,
+        "phaseSlug": slug,
+        "resume": True,
+    }
+    if note:
+        payload["note"] = note
+    return payload
+
+
 def compute_next_action(
     root: Path, state: dict[str, Any], plan: dict[str, Any]
 ) -> dict[str, Any]:
@@ -586,6 +647,11 @@ def compute_next_action(
             return {"action": "retrospective", "resume": True}
         return {"action": "terminal-ship", "resume": True}
 
+    effective_plan = effective_wave_plan(state, plan)
+
+    if state.get("orchestratorWorktree") and not wave_plan_ready(state):
+        return {"action": "wave-plan-persist", "resume": True}
+
     if not state.get("orchestratorWorktree"):
         if state.get("nextAction") in (None, "plan", "state-init"):
             return {"action": "lock-acquire", "target": target, "resume": True}
@@ -593,7 +659,7 @@ def compute_next_action(
 
     statuses = phase_status_map(state)
     wave_num = int(state.get("currentWave") or 1)
-    wave_ids = wave_phase_ids(plan, wave_num)
+    wave_ids = wave_phase_ids(effective_plan, wave_num)
 
     # Blocked phases awaiting remediation or halt (before watchdog — explicit blockers win)
     for pid in wave_ids:
@@ -680,14 +746,12 @@ def compute_next_action(
         if meta.get("backgroundDispatchedAt"):
             awaiting.append(pid)
             continue
-        item = item_for_phase(plan, pid)
-        return {
-            "action": "dispatch-ship",
-            "phaseId": pid,
-            "phaseSlug": (item or {}).get("slug"),
-            "resume": True,
-            "note": "awaiting /sw-ship --phase-mode in phase worktree",
-        }
+        return dispatch_or_phase_plan_entry(
+            state,
+            plan,
+            pid,
+            note="awaiting /sw-ship --phase-mode in phase worktree",
+        )
 
     if awaiting:
         return {
@@ -741,13 +805,7 @@ def compute_next_action(
                 "note": "spawn N background Tasks (run_in_background: true) — one per phase worktree",
             }
         pid = batch_ids[0]
-        payload = batch_phases[0]
-        return {
-            "action": "dispatch-ship",
-            "phaseId": payload["phaseId"],
-            "phaseSlug": payload["phaseSlug"],
-            "resume": True,
-        }
+        return dispatch_or_phase_plan_entry(state, plan, pid)
 
     # Pending runnable phases in current wave (legacy single-phase path)
     for pid in wave_ids:
@@ -764,13 +822,7 @@ def compute_next_action(
                 "phaseSlug": (item or {}).get("slug"),
                 "resume": True,
             }
-        item = item_for_phase(plan, pid)
-        return {
-            "action": "dispatch-ship",
-            "phaseId": pid,
-            "phaseSlug": (item or {}).get("slug"),
-            "resume": True,
-        }
+        return dispatch_or_phase_plan_entry(state, plan, pid)
 
     # Wave complete — advance or wait on blocked upstream elsewhere
     if wave_ids and all(
@@ -784,7 +836,7 @@ def compute_next_action(
             return {"action": "halt-blocked", "cause": "wave-has-blocked-phases", "resume": True}
 
     return {
-        "action": "dispatch-ship",
+        "action": "await-in-flight",
         "resume": True,
         "note": "waiting for upstream phases or merge queue",
     }
@@ -1040,6 +1092,45 @@ def execute_mechanical(
         suggestion = str(step.get("cleanupSuggestion") or "Run `/sw-cleanup` to prune merged branches and stale worktrees.")
         persist_cursor(root, state, "terminal")
         return {"executed": "suggest-cleanup", "cleanupSuggestion": suggestion}
+
+
+    if action == "wave-plan-persist":
+        proposal = {
+            "waves": plan.get("waves") or [],
+            "planPolicy": "canonical",
+        }
+        frozen = {"waves": plan.get("waves") or [], "edges": plan.get("edges") or []}
+        result = validate_wave_plan(root, proposal, frozen_plan=frozen)
+        if result.get("verdict") != "pass":
+            fallback = result.get("fallback") or wave_fallback_canonical_waves(frozen, root)
+            wave_plan = fallback
+        else:
+            wave_plan = result.get("plan") or wave_fallback_canonical_waves(frozen, root)
+        persist_wave_batching_plan(state, wave_plan, fail)
+        save_state(root, state)
+        persist_cursor(root, state, "provision-phase")
+        return {"executed": "wave-plan-persist", "lifecycle": get_lifecycle(state)}
+
+    if action == "phase-plan-entry":
+        pid = str(step.get("phaseId", ""))
+        slug = str(step.get("phaseSlug") or pid)
+        set_phase_lifecycle(state, pid, LIFECYCLE_PHASE_PLAN_PENDING)
+        phase_plan = mechanical_phase_plan(root, pid, slug)
+        run_dir = phase_run_dir_for_slug(root, slug)
+        run_dir.mkdir(parents=True, exist_ok=True)
+        from plan_persist import persist_phase_plan, phase_plan_path
+
+        persist_phase_plan(phase_plan_path(run_dir), phase_plan)
+        set_phase_lifecycle(state, pid, LIFECYCLE_PHASE_PLAN_VALIDATED)
+        save_state(root, state)
+        persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
+        return {
+            "executed": "phase-plan-entry",
+            "phaseId": pid,
+            "phaseSlug": slug,
+            "planPath": str(phase_plan_path(run_dir)),
+            "lifecycle": get_lifecycle(state),
+        }
 
     if action == "halt-blocked":
         cause = str(step.get("cause", "blocked"))
