@@ -91,6 +91,11 @@ proposal+validate only — never partial execution.
 **Reject fallbacks:** phase reject → canonical chain from `kernel-classification.json`; wave contention or
 dependency violation → canonical waves re-derived from the frozen plan; over-ceiling → `wave.sh schedule`.
 
+**Proposed pilot wiring (PRD 023 phase 1):** `/sw-deliver` reads `orchestration.planPolicy` at wave entry and
+phase entry. Under `proposed` (after TR0 gate), the conductor proposes → `wave.sh plan validate`
+(`--record-rejection` on shared state) → persist; `wave_deliver_loop` sets `wave-validated` after wave persist
+and routes phase entry through validate-before-persist. Default `canonical` is unchanged.
+
 **`orchestration.planPolicy`:** read at proposal time (default `canonical` — byte-identical to today);
 recorded `planPolicy` + `kernelVersion` + `guidelineVersion` stamped on each persisted plan and honored on
 resume over live config. `proposed` is fixture-only until PRD-023/024 adoption; see

@@ -73,6 +73,11 @@ Multi-feature mode uses `"mode": "multi-feature"` with conforming type-prefixed 
 is honored on resume. Proposals validate via `bash scripts/wave.sh plan validate` before persist — see
 `skills/conductor/SKILL.md` **Two-tier plan lifecycle**.
 
+**Proposed pilot wiring (PRD 023 phase 1):** live `proposed` on `/sw-deliver` requires the TR0 dependency
+gate (`scripts/pilot_dependency_gate.py` / `scripts/test/pilot-022-prerequisite-check.sh`). When enabled,
+`wave_deliver_loop.py` invokes wave/phase `plan validate` with `--record-rejection` at each proposal site;
+rejections fall back to canonical waves/chain without kernel changes.
+
 Living artifacts under `.cursor/` are **never committed** (`/sw-commit` excludes them).
 
 **Per-branch scoping (PRD 013 R6–R11):** `<slug>` derives from the target feature branch
