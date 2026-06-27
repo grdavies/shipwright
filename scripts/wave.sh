@@ -2,6 +2,7 @@
 # Wave plan + integration helpers (multi-feature + phase-mode).
 # Usage:
 #   wave.sh plan --task-list docs/prds/.../tasks-....md [--type feat] [--dry-run] [--from N]
+#   wave.sh plan validate --tier phase|wave --proposal <path|json> ...
 #   wave.sh plan --items 'A,B,C' --edges 'C:A'
 #   wave.sh preflight-base --target feat/<slug>
 #   wave.sh dispatch preflight --dispatch-id <id> --agent <id> [--command <sw-*>] [--skill <name>]
@@ -117,6 +118,12 @@ case "${1:-}" in
       exec python3 "$PLUGIN_ROOT/scripts/wave_failure.py" "$ROOT" terminal "${@:2}"
     fi
     exec python3 "$PLUGIN_ROOT/scripts/wave_terminal.py" "$ROOT" terminal "${@:2}"
+    ;;
+  plan)
+    if [[ "${2:-}" == "validate" ]]; then
+      exec python3 "$PLUGIN_ROOT/scripts/wave_plan_validate.py" "$ROOT" validate "${@:3}"
+    fi
+    exec python3 "$PLUGIN_ROOT/scripts/wave_deliver.py" "$ROOT" plan "${@:2}"
     ;;
 esac
 exec python3 "$PLUGIN_ROOT/scripts/wave_deliver.py" "$ROOT" "$@"
