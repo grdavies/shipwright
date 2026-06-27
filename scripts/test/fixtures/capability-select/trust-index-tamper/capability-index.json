@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "provider.providers.review.tampered",
+      "kind": "provider",
+      "sourcePath": "core/providers/review/tampered.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "always_on",
+            "selectionFamily": "providers"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "review",
+          "adapterId": "coderabbit",
+          "gateRef": "check-gate.sh",
+          "selectionFamily": "providers"
+        }
+      }
+    }
+  ]
+}

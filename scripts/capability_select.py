@@ -16,6 +16,7 @@ from typing import Any
 from capability_index import check_freshness
 from capability_precedence import effective_tier, total_order_key
 from capability_run_log import surface_capability_selection
+from capability_trust import authorize_executable, is_kernel_hook_source
 from wave_json_io import read_json, write_json
 
 SIGNAL_CONTEXT_VERSION = 1
@@ -404,56 +405,21 @@ def apply_overrides(
     return selected
 
 
-def trust_fields(entry: dict[str, Any], ctx: dict[str, Any], *, eligible: bool) -> dict[str, Any]:
-    executable = bool(entry.get("executable"))
-    metadata = (entry.get("capability") or {}).get("metadata") or {}
-    gate_ref = metadata.get("gateRef")
-    if not eligible:
-        return {
-            "eligible": False,
-            "executable": executable,
-            "authorized": False,
-            "gateRef": gate_ref,
-            "refusalReason": "not_eligible",
-        }
-    if not executable:
-        return {
-            "eligible": True,
-            "executable": False,
-            "authorized": True,
-            "gateRef": None,
-            "refusalReason": None,
-        }
-    provider_keys = {
-        "review.provider": metadata.get("providerFamily") == "review",
-        "review.local.provider": metadata.get("providerFamily") == "review.local",
-        "memory.provider": metadata.get("providerFamily") == "memory",
-        "verify.provider": metadata.get("providerFamily") == "verify",
-    }
-    configured = True
-    for key, relevant in provider_keys.items():
-        if not relevant:
-            continue
-        value = resolve_config_value(ctx.get("config") or {}, key)
-        if not is_configured(value):
-            configured = False
-            break
-    if gate_ref and configured:
-        return {
-            "eligible": True,
-            "executable": True,
-            "authorized": True,
-            "gateRef": gate_ref,
-            "refusalReason": None,
-        }
-    reason = "unconfigured_provider" if not configured else "unknown_gate"
-    return {
-        "eligible": True,
-        "executable": True,
-        "authorized": False,
-        "gateRef": gate_ref,
-        "refusalReason": reason,
-    }
+def trust_fields(
+    entry: dict[str, Any],
+    ctx: dict[str, Any],
+    *,
+    eligible: bool,
+    repo_root: Path,
+) -> dict[str, Any]:
+    return authorize_executable(
+        entry,
+        ctx,
+        eligible=eligible,
+        repo_root=repo_root,
+        resolve_config_value=resolve_config_value,
+        is_configured=is_configured,
+    )
 
 
 def membership_hash(capability_ids: list[str]) -> str:
@@ -467,10 +433,11 @@ def build_output_row(
     *,
     matched_triggers: list[str],
     override_tier: str | None,
+    repo_root: Path,
 ) -> dict[str, Any]:
     capability = entry.get("capability") or {}
     tier = override_tier or effective_tier(capability, None)
-    trust = trust_fields(entry, ctx, eligible=True)
+    trust = trust_fields(entry, ctx, eligible=True, repo_root=repo_root)
     return {
         "id": entry["id"],
         "kind": entry.get("kind"),
@@ -485,10 +452,13 @@ def build_output_row(
     }
 
 
-def select_capabilities(index: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
+def select_capabilities(index: dict[str, Any], ctx: dict[str, Any], *, repo_root: Path) -> dict[str, Any]:
     entries = index.get("capabilities") or []
     selected: list[dict[str, Any]] = []
     for entry in entries:
+        source_path = str(entry.get("sourcePath") or "")
+        if entry.get("kind") == "hook" and is_kernel_hook_source(source_path):
+            continue
         matched, triggers = capability_matches(entry, ctx)
         if matched:
             selected.append({"entry": entry, "matched_triggers": triggers, "override_tier": None})
@@ -506,6 +476,7 @@ def select_capabilities(index: dict[str, Any], ctx: dict[str, Any]) -> dict[str,
             ctx,
             matched_triggers=row["matched_triggers"],
             override_tier=row.get("override_tier"),
+            repo_root=repo_root,
         )
         for row in selected
     ]
@@ -569,7 +540,7 @@ def main(argv: list[str] | None = None) -> None:
 
     ctx = load_or_snapshot_context(run_dir, resume=args.resume, incoming=raw_context)
     index = load_index(index_path)
-    result = select_capabilities(index, ctx)
+    result = select_capabilities(index, ctx, repo_root=root)
     if run_dir is not None:
         surface_capability_selection(root, run_dir, ctx, result)
     payload = canonical_bytes(result) + b"\n"

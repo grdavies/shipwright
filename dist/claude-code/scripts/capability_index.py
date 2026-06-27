@@ -9,6 +9,8 @@ from typing import Any
 
 from yaml_structured import safe_load
 
+from capability_trust import is_kernel_hook_source
+
 INDEX_VERSION = 1
 CAPABILITY_ROOTS = (
     ("skills", "skill"),
@@ -74,6 +76,8 @@ def collect_capability_files(core_root: Path) -> list[Path]:
 def build_entry(core_root: Path, path: Path) -> dict[str, Any] | None:
     rel = path.relative_to(core_root)
     source_path = f"core/{rel.as_posix()}"
+    if is_kernel_hook_source(source_path):
+        return None
     text = path.read_text(encoding="utf-8")
     frontmatter = parse_frontmatter(text)
     capability = frontmatter.get("capability")

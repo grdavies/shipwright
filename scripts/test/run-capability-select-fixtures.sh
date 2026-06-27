@@ -56,6 +56,48 @@ sys.exit(1 if sys.argv[1] in ids else 0)
   fi
 }
 
+assert_capability_trust() {
+  local name="$1" json="$2" cap_id="$3" want_eligible="$4" want_executable="$5" want_authorized="$6" want_reason="${7:-}"
+  if echo "$json" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+cap_id, want_eligible, want_executable, want_authorized, want_reason = sys.argv[1:6]
+row = next((r for r in data.get('capabilities', []) if r.get('id') == cap_id), None)
+if row is None:
+    print(f'missing capability {cap_id}')
+    sys.exit(1)
+checks = [
+    row.get('eligible') == (want_eligible == 'true'),
+    row.get('executable') == (want_executable == 'true'),
+    row.get('authorized') == (want_authorized == 'true'),
+]
+if want_reason:
+    checks.append(row.get('refusalReason') == want_reason)
+if all(checks):
+    sys.exit(0)
+print(row)
+sys.exit(1)
+" "$cap_id" "$want_eligible" "$want_executable" "$want_authorized" "$want_reason" 2>/dev/null; then
+    echo "OK  $name"
+  else
+    echo "FAIL $name trust state for $cap_id"
+    echo "$json" | python3 -c "import json,sys; print([r for r in json.load(sys.stdin).get('capabilities',[]) if r.get('id')=='$cap_id'])"
+    FAIL=1
+  fi
+}
+
+build_fixture_index() {
+  local core_dir="$1" index_path="$2"
+  python3 -c "
+import json, sys
+sys.path.insert(0, '$ROOT/scripts')
+from capability_index import build_index
+from pathlib import Path
+index = build_index(Path('$core_dir'))
+Path('$index_path').write_text(json.dumps(index, indent=2) + '\n')
+"
+}
+
 # --- selector-determinism-repeat-identical ---
 CTX_DOC_REVIEW='{"version":1,"phase_type":"sw-doc-review","body_snapshot":"# Minimal PRD\nNo security signals."}'
 OUT1=$("$SELECT" --context-json "$CTX_DOC_REVIEW")
@@ -221,5 +263,151 @@ p.write_text(json.dumps(data, indent=2) + '\n')
   rm -f "$INDEX_BACKUP"
   run_expect selector-fresh-index-passes 0 "$SELECT" --context-json "$CTX_MINIMAL"
 fi
+
+# --- capability-trust-unconfigured-provider (R27) ---
+TRUST_UNCONFIGURED="$FIX/trust-unconfigured-provider"
+TRUST_UNCONFIGURED_CORE="$TRUST_UNCONFIGURED/core"
+TRUST_UNCONFIGURED_INDEX="$TRUST_UNCONFIGURED/capability-index.json"
+rm -rf "$TRUST_UNCONFIGURED_CORE"
+mkdir -p "$TRUST_UNCONFIGURED_CORE/providers/review" "$TRUST_UNCONFIGURED_CORE/sw-reference"
+cat >"$TRUST_UNCONFIGURED_CORE/providers/review/unconfigured.md" <<'YAML'
+---
+capability:
+  version: 1
+  triggers:
+    - type: always_on
+      selectionFamily: providers
+  metadata:
+    providerFamily: review
+    adapterId: coderabbit
+    gateRef: check-gate.sh
+    selectionFamily: providers
+---
+YAML
+build_fixture_index "$TRUST_UNCONFIGURED_CORE" "$TRUST_UNCONFIGURED_INDEX"
+TRUST_UNCONFIGURED_CTX='{"version":1,"config":{"review":{"provider":"none"}}}'
+TRUST_UNCONFIGURED_OUT=$(python3 "$ROOT/scripts/capability_select.py" \
+  --root "$TRUST_UNCONFIGURED" --index "$TRUST_UNCONFIGURED_INDEX" \
+  --context-json "$TRUST_UNCONFIGURED_CTX" --skip-freshness)
+assert_capability_trust capability-trust-unconfigured-provider "$TRUST_UNCONFIGURED_OUT" \
+  provider.providers.review.unconfigured true true false unconfigured_provider
+
+# --- capability-trust-unknown-hook (R27) ---
+TRUST_UNKNOWN_HOOK="$FIX/trust-unknown-hook"
+TRUST_UNKNOWN_HOOK_CORE="$TRUST_UNKNOWN_HOOK/core"
+TRUST_UNKNOWN_HOOK_INDEX="$TRUST_UNKNOWN_HOOK/capability-index.json"
+rm -rf "$TRUST_UNKNOWN_HOOK_CORE"
+mkdir -p "$TRUST_UNKNOWN_HOOK_CORE/hooks" "$TRUST_UNKNOWN_HOOK_CORE/sw-reference"
+cat >"$TRUST_UNKNOWN_HOOK_CORE/hooks/augment-hook.md" <<'YAML'
+---
+capability:
+  version: 1
+  triggers:
+    - type: always_on
+      selectionFamily: hooks
+  metadata:
+    selectionFamily: hooks
+    gateRef: hooks.json:unknownSlot
+---
+YAML
+build_fixture_index "$TRUST_UNKNOWN_HOOK_CORE" "$TRUST_UNKNOWN_HOOK_INDEX"
+TRUST_UNKNOWN_HOOK_OUT=$(python3 "$ROOT/scripts/capability_select.py" \
+  --root "$TRUST_UNKNOWN_HOOK" --index "$TRUST_UNKNOWN_HOOK_INDEX" \
+  --context-json '{"version":1}' --skip-freshness)
+assert_capability_trust capability-trust-unknown-hook "$TRUST_UNKNOWN_HOOK_OUT" \
+  hook.augment-hook true true false unknown_hook
+
+# --- capability-config-override-untrusted (R27) ---
+TRUST_OVERRIDE="$FIX/trust-config-override"
+TRUST_OVERRIDE_CORE="$TRUST_OVERRIDE/core"
+TRUST_OVERRIDE_INDEX="$TRUST_OVERRIDE/capability-index.json"
+rm -rf "$TRUST_OVERRIDE_CORE"
+mkdir -p "$TRUST_OVERRIDE_CORE/providers/review" "$TRUST_OVERRIDE_CORE/sw-reference"
+cat >"$TRUST_OVERRIDE_CORE/providers/review/override-target.md" <<'YAML'
+---
+capability:
+  version: 1
+  triggers:
+    - type: always_on
+      selectionFamily: providers
+  metadata:
+    providerFamily: review
+    adapterId: coderabbit
+    gateRef: check-gate.sh
+    selectionFamily: providers
+---
+YAML
+build_fixture_index "$TRUST_OVERRIDE_CORE" "$TRUST_OVERRIDE_INDEX"
+TRUST_OVERRIDE_CTX='{"version":1,"config":{"review":{"provider":"native"}}}'
+TRUST_OVERRIDE_OUT=$(python3 "$ROOT/scripts/capability_select.py" \
+  --root "$TRUST_OVERRIDE" --index "$TRUST_OVERRIDE_INDEX" \
+  --context-json "$TRUST_OVERRIDE_CTX" --skip-freshness)
+assert_capability_trust capability-config-override-untrusted "$TRUST_OVERRIDE_OUT" \
+  provider.providers.review.override-target true true false config_override_untrusted
+
+# --- capability-index-tamper-reject (R27) ---
+TRUST_TAMPER="$FIX/trust-index-tamper"
+TRUST_TAMPER_CORE="$TRUST_TAMPER/core"
+TRUST_TAMPER_INDEX="$TRUST_TAMPER/capability-index.json"
+rm -rf "$TRUST_TAMPER_CORE"
+mkdir -p "$TRUST_TAMPER_CORE/providers/review" "$TRUST_TAMPER_CORE/sw-reference"
+python3 -c "
+import json
+from pathlib import Path
+index = {
+  'version': 1,
+  'capabilities': [{
+    'id': 'provider.providers.review.tampered',
+    'kind': 'provider',
+    'sourcePath': 'core/providers/review/tampered.md',
+    'executable': True,
+    'capability': {
+      'version': 1,
+      'triggers': [{'type': 'always_on', 'selectionFamily': 'providers'}],
+      'metadata': {
+        'providerFamily': 'review',
+        'adapterId': 'coderabbit',
+        'gateRef': 'check-gate.sh',
+        'selectionFamily': 'providers',
+      },
+    },
+  }],
+}
+Path('$TRUST_TAMPER_INDEX').parent.mkdir(parents=True, exist_ok=True)
+Path('$TRUST_TAMPER_INDEX').write_text(json.dumps(index, indent=2) + '\n')
+"
+TRUST_TAMPER_CTX='{"version":1,"config":{"review":{"provider":"coderabbit"}}}'
+TRUST_TAMPER_OUT=$(python3 "$ROOT/scripts/capability_select.py" \
+  --root "$TRUST_TAMPER" --index "$TRUST_TAMPER_INDEX" \
+  --context-json "$TRUST_TAMPER_CTX" --skip-freshness)
+assert_capability_trust capability-index-tamper-reject "$TRUST_TAMPER_OUT" \
+  provider.providers.review.tampered true true false index_tamper
+
+# --- capability-hook-kernel-non-selectable (R27) ---
+KERNEL_HOOK="$FIX/kernel-hook"
+KERNEL_HOOK_CORE="$KERNEL_HOOK/core"
+KERNEL_HOOK_INDEX="$KERNEL_HOOK/capability-index.json"
+rm -rf "$KERNEL_HOOK_CORE"
+mkdir -p "$KERNEL_HOOK_CORE/hooks" "$KERNEL_HOOK_CORE/sw-reference"
+cat >"$KERNEL_HOOK_CORE/hooks/before-submit-guardrails.md" <<'YAML'
+---
+capability:
+  version: 1
+  triggers:
+    - type: always_on
+      selectionFamily: hooks
+  metadata:
+    selectionFamily: hooks
+    gateRef: hooks.json:beforeSubmitPrompt
+---
+YAML
+run_expect capability-hook-kernel-lint-rejects 1 \
+  python3 "$ROOT/scripts/capability_manifest_lint.py" \
+  --root "$KERNEL_HOOK" --core "$KERNEL_HOOK_CORE" --index "$KERNEL_HOOK_INDEX"
+build_fixture_index "$KERNEL_HOOK_CORE" "$KERNEL_HOOK_INDEX"
+KERNEL_HOOK_OUT=$(python3 "$ROOT/scripts/capability_select.py" \
+  --root "$KERNEL_HOOK" --index "$KERNEL_HOOK_INDEX" \
+  --context-json '{"version":1}' --skip-freshness)
+assert_ids_exclude capability-hook-kernel-non-selectable "$KERNEL_HOOK_OUT" hook.before-submit-guardrails
 
 exit "$FAIL"

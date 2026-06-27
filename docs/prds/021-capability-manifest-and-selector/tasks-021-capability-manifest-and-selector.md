@@ -86,15 +86,15 @@ contract per the Decision Log).
 
 ### 5. Trust boundary + execution chokepoint + kernel-hook pinning — M
 
-- [ ] 5.1 Non-authorizing selector output through named gates (R27)
+- [x] 5.1 Non-authorizing selector output through named gates (R27)
   - **File:** `capability_select.py` + provider/hook/memory call sites
   - **Expected:** every executable invocation flows through its named existing gate — providers → `check-gate.sh` / `review-local-resolve.sh` + the `providers/<family>/` adapter; hooks → emitter-registered `hooks.json` slots; memory → `memory-preflight`. Eligibility never authorizes; unknown/unconfigured executables fail closed.
   - **R-IDs:** R27
-- [ ] 5.2 Kernel-hook pinning (exclude safety hooks from selection/reordering) (R27)
+- [x] 5.2 Kernel-hook pinning (exclude safety hooks from selection/reordering) (R27)
   - **File:** emitter hooks registration + manifest lint
   - **Expected:** `beforeSubmitPrompt` guardrails and memory/redaction hooks are excluded from manifest selection and reordering; manifest hooks may only augment non-safety slots and never run before guardrails.
   - **R-IDs:** R27
-- [ ] 5.3 Trust / anti-spoof / schema fixture table (R27)
+- [x] 5.3 Trust / anti-spoof / schema fixture table (R27)
   - **File:** `scripts/test/run-capability-select-fixtures.sh` + lint fixtures
   - **Expected:** `capability-trust-unconfigured-provider`, `capability-trust-unknown-hook`, `capability-config-override-untrusted`, `capability-index-tamper-reject` each resolve `eligible:true, executable:true, authorized:false`; `capability-hook-kernel-non-selectable`; malformed manifest frontmatter fails schema validation (failing-before), valid passes.
   - **R-IDs:** R27
