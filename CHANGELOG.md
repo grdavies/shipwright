@@ -90,6 +90,7 @@
 * merge phase single-sourced-kernel-classification-canonical-chain-source-l into feat/kernel-classification-and-plan-validation (5b0fa22) <!-- sw-deliver:single-sourced-kernel-classification-canonical-chain-source-l -->
 * merge phase guidelines-artifact-floor-harness-reuse-m into feat/kernel-classification-and-plan-validation (ef5794e) <!-- sw-deliver:guidelines-artifact-floor-harness-reuse-m -->
 * merge phase plan-validation-gate-schemas-rejection-breaker-l into feat/kernel-classification-and-plan-validation (cb4ab30) <!-- sw-deliver:plan-validation-gate-schemas-rejection-breaker-l -->
+* merge phase two-tier-persist-deterministic-step-driver-lifecycle-l into feat/kernel-classification-and-plan-validation (78eb9e0) <!-- sw-deliver:two-tier-persist-deterministic-step-driver-lifecycle-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
