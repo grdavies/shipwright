@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/grdavies/shipwright/core/sw-reference/signal-context.schema.json",
+  "title": "Shipwright signal_context",
+  "description": "Versioned, fully static selector inputs snapshotted at phase entry (R10). Not the live working tree.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "signal_context schema version."
+    },
+    "tier": {
+      "type": ["string", "null"],
+      "enum": ["cheap", "build", "deep", "quick", "standard", "full", null],
+      "description": "Semantic model tier for the phase. Fail-closed default: null."
+    },
+    "doc_path": {
+      "type": ["string", "null"],
+      "description": "Frozen review-target document path. Fail-closed default: null."
+    },
+    "body_snapshot": {
+      "type": "string",
+      "default": "",
+      "description": "Frozen body text of the review target. Fail-closed default: empty string."
+    },
+    "derived_tags": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "default": [],
+      "description": "Triage-derived tags computed once from the frozen body. Fail-closed default: []."
+    },
+    "file_paths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "default": [],
+      "description": "Declared File: paths from the task list. Fail-closed default: []."
+    },
+    "change_digest": {
+      "type": ["object", "null"],
+      "description": "Persisted diff digest for code-review gating. Fail-closed default: null.",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": { "type": "string" },
+              "added_lines": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "default": {},
+      "description": "Resolved workflow.config.json subtree. Fail-closed default: {}."
+    },
+    "phase_type": {
+      "type": ["string", "null"],
+      "description": "Phase or command slug (e.g. sw-doc-review). Fail-closed default: null."
+    },
+    "conductor_mode": {
+      "type": ["string", "null"],
+      "enum": ["inline", "background_phase", null],
+      "description": "Durable inline/background_phase flag. Fail-closed default: null."
+    },
+    "overrides": {
+      "type": "object",
+      "default": {},
+      "description": "CLI overrides (--personas, --all). Fail-closed default: {}.",
+      "properties": {
+        "personas": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "all": { "type": "boolean" }
+      }
+    }
+  }
+}

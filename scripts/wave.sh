@@ -94,6 +94,9 @@ case "${1:-}" in
   preflight-base)
     exec python3 "$PLUGIN_ROOT/scripts/wave_preflight.py" "$ROOT" base-check "${@:2}"
     ;;
+  preflight-capability-index)
+    exec python3 "$PLUGIN_ROOT/scripts/wave_preflight.py" "$ROOT" capability-index-check "${@:2}"
+    ;;
   dispatch)
     exec python3 "$PLUGIN_ROOT/scripts/wave_preflight.py" "$ROOT" dispatch "${@:2}"
     ;;

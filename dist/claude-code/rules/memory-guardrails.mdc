@@ -1,6 +1,14 @@
 ---
 description: Memory guardrails — fail-closed injection, redaction chokepoint, human-gated rule-class promotion, provider trust boundary.
 alwaysApply: false
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: memory
+      command: sw-memory-sync
+  metadata:
+    selectionFamily: memory
 ---
 
 # Memory guardrails (Shipwright)

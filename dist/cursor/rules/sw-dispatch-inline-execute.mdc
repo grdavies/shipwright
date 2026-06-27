@@ -1,0 +1,21 @@
+---
+description: Dispatch inline execute posture when declared file paths are within the inline threshold.
+alwaysApply: false
+capability:
+  version: 1
+  triggers:
+    - type: all_of
+      selectionFamily: subagent-dispatch
+      triggers:
+        - type: file_count
+          max: 3
+        - type: conductor_mode
+          notEquals: background_phase
+  metadata:
+    selectionFamily: subagent-dispatch
+    dispatchPosture: inline
+---
+
+# Dispatch inline execute posture
+
+Inline (no subagent) when ≤3 declared `file_paths` and not `background_phase` (execute discipline).

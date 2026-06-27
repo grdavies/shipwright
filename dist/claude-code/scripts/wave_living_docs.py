@@ -40,7 +40,9 @@ def has_flag(args: list[str], flag: str) -> bool:
 
 
 def load_state(root: Path) -> dict[str, Any]:
-    path = root / ".cursor" / "sw-deliver-state.json"
+    from wave_state import resolve_state_path
+
+    path = resolve_state_path(root)
     if not path.is_file():
         return {}
     try:
@@ -128,7 +130,7 @@ def run_reconcile_script(root: Path, *cmd: str) -> dict[str, Any]:
     return data
 
 
-def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool) -> str | None:
+def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool, repo_root: Path | None = None) -> str | None:
     top = worktree
     proc = subprocess.run(
         ["git", "-C", str(top), "status", "--porcelain", "--", *LIVING_PATHS],
@@ -157,13 +159,63 @@ def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool) -> str | Non
     return sha_proc.stdout.strip()
 
 
+def live_phase_status_rows(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """Per-phase live view for mid-run /sw-status (PRD 013 R15)."""
+    phases = state.get("phases") or {}
+    remediation = state.get("remediationAttempts") or {}
+    rows: list[dict[str, Any]] = []
+    for pid in sorted(phases.keys(), key=lambda x: int(x) if str(x).isdigit() else str(x)):
+        meta = phases[pid] if isinstance(phases[pid], dict) else {}
+        slug = str(meta.get("slug") or "")
+        rows.append(
+            {
+                "phaseId": pid,
+                "slug": slug,
+                "status": meta.get("status", "pending"),
+                "attempt": remediation.get(slug, remediation.get(str(slug), 0)),
+                "blocker": meta.get("cause"),
+            }
+        )
+    return rows
+
+
+def cmd_phase_status_live(root: Path, args: list[str]) -> None:
+    target = parse_kv(args, "--target")
+    if target:
+        from wave_state import load_deliver_state
+
+        state = load_deliver_state(root, target=target)
+    else:
+        state = load_state(root)
+    rows = live_phase_status_rows(state)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "phase-status-live",
+            "target": (state.get("target") or {}).get("branch"),
+            "verdictRun": state.get("verdict"),
+            "livePhaseStatus": rows,
+        }
+    )
+
+
 def cmd_reconcile(root: Path, args: list[str]) -> None:
+    from wave_living_doc_lock import living_doc_write_lock
+
     state = load_state(root)
     plan = load_plan(root)
     prd = prd_number_from_state(state, plan)
     if not prd:
         fail("prd_number missing from deliver state/plan")
 
+    target = (state.get("target") or {}).get("branch")
+    with living_doc_write_lock(root, target=target, holder="living-docs-reconcile"):
+        _cmd_reconcile_locked(root, args, state, plan, prd)
+
+
+def _cmd_reconcile_locked(
+    root: Path, args: list[str], state: dict[str, Any], plan: dict[str, Any], prd: str
+) -> None:
     merged_main = target_merge_detected(root, state)
     index_status = derive_index_status(state, merged_main)
     worktree = resolve_worktree(root, args)
@@ -214,7 +266,15 @@ def cmd_reconcile(root: Path, args: list[str]) -> None:
 
 def cmd_append_terminal(root: Path, args: list[str]) -> None:
     """Idempotent COMPLETION-LOG append when all phases are green (R48)."""
+    from wave_living_doc_lock import living_doc_write_lock
+
     state = load_state(root)
+    target = (state.get("target") or {}).get("branch")
+    with living_doc_write_lock(root, target=target, holder="living-docs-append-terminal"):
+        _cmd_append_terminal_locked(root, args, state)
+
+
+def _cmd_append_terminal_locked(root: Path, args: list[str], state: dict[str, Any]) -> None:
     plan = load_plan(root)
     prd = prd_number_from_state(state, plan)
     if not prd:
@@ -281,6 +341,8 @@ def main() -> None:
         cmd_reconcile(root, rest)
     elif cmd == "append-terminal":
         cmd_append_terminal(root, rest)
+    elif cmd == "phase-status-live":
+        cmd_phase_status_live(root, rest)
     else:
         fail(f"unknown command: {cmd}")
 

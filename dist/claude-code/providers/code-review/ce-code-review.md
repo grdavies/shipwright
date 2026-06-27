@@ -1,3 +1,18 @@
+---
+capability:
+  version: 1
+  triggers:
+    - type: config_flag
+      selectionFamily: providers
+      key: review.local.provider
+      equals: "ce-code-review"
+  metadata:
+    providerFamily: review.local
+    adapterId: ce-code-review
+    selectionFamily: providers
+    gateRef: check-gate.sh
+---
+
 # ce-code-review local adapter (agent-mediated)
 
 Markdown companion for phase 1 of `/sw-review`. Invokes compound-engineering `ce-code-review` in **report-only**

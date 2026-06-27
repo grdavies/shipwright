@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -14,7 +15,15 @@ from typing import Any
 from wave_json_io import StateCorruptError, read_json, write_json
 
 VALID_PHASE_STATUSES = frozenset(
-    {"pending", "in-flight", "green-merged", "blocked", "rejected"}
+    {
+        "pending",
+        "in-flight",
+        "green-merged",
+        "teardown-pending",
+        "teardown-complete",
+        "blocked",
+        "rejected",
+    }
 )
 TERMINAL_VERDICTS = frozenset({"running", "complete", "blocked", "rejected"})
 LOCK_STALE_SECONDS = int(os.environ.get("SW_LOCK_STALE_SECONDS", "3600"))
@@ -69,15 +78,346 @@ def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | No
     return default
 
 
-def paths(root: Path) -> dict[str, Path]:
+LEGACY_STATE_NAME = "sw-deliver-state.json"
+LEGACY_LOCK_NAME = "sw-deliver.lock"
+
+
+def slug_from_target(target_branch: str) -> str:
+    if "/" not in target_branch:
+        fail(f"invalid target branch: {target_branch!r}")
+    return target_branch.split("/", 1)[1]
+
+
+def target_branch_from_state(state: dict[str, Any]) -> str | None:
+    target = state.get("target") or {}
+    branch = target.get("branch") if isinstance(target, dict) else None
+    return branch if isinstance(branch, str) and branch else None
+
+
+def scoped_paths(root: Path, target: str) -> dict[str, Path]:
+    """Per-branch scoped state/lock paths (PRD 013 R6/R9)."""
+    slug = slug_from_target(target)
     cursor = root / ".cursor"
     runs = cursor / "sw-deliver-runs"
     return {
-        "state": cursor / "sw-deliver-state.json",
-        "lock": cursor / "sw-deliver.lock",
+        "state": cursor / f"sw-deliver-state.{slug}.json",
+        "lock": cursor / f"sw-deliver-{slug}.lock",
         "log": runs / "run.log",
         "runs": runs,
     }
+
+
+def legacy_paths(root: Path) -> dict[str, Path]:
+    cursor = root / ".cursor"
+    runs = cursor / "sw-deliver-runs"
+    return {
+        "state": cursor / LEGACY_STATE_NAME,
+        "lock": cursor / LEGACY_LOCK_NAME,
+        "log": runs / "run.log",
+        "runs": runs,
+    }
+
+
+def paths(root: Path, target: str | None = None, state: dict[str, Any] | None = None) -> dict[str, Path]:
+    """Resolve durable paths; prefers scoped layout when target is a feature branch."""
+    branch = target or (target_branch_from_state(state) if state else None)
+    if is_feature_target(branch):
+        assert branch is not None
+        return scoped_paths(root, branch)
+    return legacy_paths(root)
+
+
+def _task_list_matches_target(root: Path, task_list: str, target: str) -> bool:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).resolve().parent / "wave_deliver.py"),
+            str(root),
+            "preflight",
+            "--task-list",
+            task_list,
+            "--skip-base-check",
+        ],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return False
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return False
+    branch = (data.get("target") or {}).get("branch")
+    return branch == target
+
+
+def _is_migration_breadcrumb(data: dict[str, Any]) -> bool:
+    return data.get("migrated") is True
+
+
+def _scoped_path_from_breadcrumb(root: Path, data: dict[str, Any]) -> Path | None:
+    rel = data.get("scopedPath")
+    if isinstance(rel, str):
+        path = root / rel
+        if path.is_file():
+            return path
+    target = data.get("target")
+    if is_feature_target(target):
+        assert target is not None
+        scoped = scoped_paths(root, target)["state"]
+        return scoped if scoped.is_file() else None
+    return None
+
+
+def _write_legacy_breadcrumb(root: Path, *, target: str, scoped_state: Path) -> None:
+    legacy = legacy_paths(root)["state"]
+    if legacy == scoped_state:
+        return
+    breadcrumb = {
+        "migrated": True,
+        "migratedAt": utc_now(),
+        "scopedPath": str(scoped_state.relative_to(root)),
+        "target": target,
+    }
+    legacy.parent.mkdir(parents=True, exist_ok=True)
+    legacy.write_text(json.dumps(breadcrumb, indent=2) + "\n", encoding="utf-8")
+    os.chmod(legacy, 0o600)
+
+
+def migrate_legacy_state(root: Path, target: str, scoped_state: Path) -> bool:
+    """Adopt repo-wide state to scoped path on first read (PRD 013 R11)."""
+    legacy = legacy_paths(root)["state"]
+    if scoped_state.is_file() or not legacy.is_file():
+        return False
+    try:
+        data = read_json(legacy)
+    except StateCorruptError:
+        return False
+    legacy_target = target_branch_from_state(data)
+    task_list = data.get("source_task_list")
+    if legacy_target and legacy_target != target:
+        return False
+    if legacy_target and not is_feature_target(legacy_target):
+        return False
+    if not legacy_target and isinstance(task_list, str):
+        if not _task_list_matches_target(root, task_list, target):
+            return False
+    elif not legacy_target:
+        return False
+    scoped_state.parent.mkdir(parents=True, exist_ok=True)
+    write_json(scoped_state, data)
+    breadcrumb = {
+        "migrated": True,
+        "migratedAt": utc_now(),
+        "scopedPath": str(scoped_state.relative_to(root)),
+        "target": target,
+        "source_task_list": task_list,
+    }
+    legacy.write_text(json.dumps(breadcrumb, indent=2) + "\n", encoding="utf-8")
+    os.chmod(legacy, 0o600)
+    return True
+
+
+def is_feature_target(target: str | None) -> bool:
+    return bool(target and "/" in target)
+
+
+def _current_feature_branch(root: Path) -> str | None:
+    proc = subprocess.run(
+        ["git", "-C", str(root), "branch", "--show-current"],
+        text=True,
+        capture_output=True,
+    )
+    branch = (proc.stdout or "").strip()
+    return branch if is_feature_target(branch) else None
+
+
+def resolve_state_path(
+    root: Path,
+    *,
+    target: str | None = None,
+    task_list: str | None = None,
+    state_hint: dict[str, Any] | None = None,
+) -> Path:
+    """Canonical scoped state file path with legacy migration."""
+    if not target and task_list:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(Path(__file__).resolve().parent / "wave_deliver.py"),
+                str(root),
+                "preflight",
+                "--task-list",
+                task_list,
+                "--skip-base-check",
+            ],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+        )
+        if proc.returncode == 0:
+            try:
+                data = json.loads(proc.stdout)
+                target = (data.get("target") or {}).get("branch")
+            except json.JSONDecodeError:
+                pass
+    if not target and state_hint:
+        target = target_branch_from_state(state_hint)
+    if is_feature_target(target):
+        assert target is not None
+        scoped = scoped_paths(root, target)["state"]
+        migrate_legacy_state(root, target, scoped)
+        return scoped
+    legacy = legacy_paths(root)["state"]
+    if legacy.is_file():
+        try:
+            leg_data = read_json(legacy)
+        except StateCorruptError:
+            leg_data = {}
+        if _is_migration_breadcrumb(leg_data):
+            scoped = _scoped_path_from_breadcrumb(root, leg_data)
+            if scoped is not None:
+                return scoped
+        else:
+            leg_target = target_branch_from_state(leg_data)
+            if is_feature_target(leg_target):
+                assert leg_target is not None
+                scoped = scoped_paths(root, leg_target)["state"]
+                if scoped.is_file():
+                    return scoped
+        return legacy
+    matches = sorted((root / ".cursor").glob("sw-deliver-state.*.json"))
+    if len(matches) == 1:
+        return matches[0]
+    return legacy
+
+
+def enumerate_scoped_runs(root: Path) -> list[dict[str, Any]]:
+    """List live scoped deliver runs for index / cleanup (PRD 013 R10)."""
+    cursor = root / ".cursor"
+    runs: list[dict[str, Any]] = []
+    for path in sorted(cursor.glob("sw-deliver-state.*.json")):
+        slug = path.name.removeprefix("sw-deliver-state.").removesuffix(".json")
+        state = _read_state_optional(path)
+        lock_path = cursor / f"sw-deliver-{slug}.lock"
+        lock_meta = read_lock_meta(lock_path) if lock_path.is_file() else {}
+        runs.append(
+            {
+                "slug": slug,
+                "statePath": str(path.relative_to(root)),
+                "taskList": state.get("source_task_list"),
+                "verdict": state.get("verdict"),
+                "target": (state.get("target") or {}).get("branch"),
+                "lockHeld": lock_path.is_file() and bool(lock_meta),
+                "lockHolder": lock_meta or None,
+            }
+        )
+    legacy = legacy_paths(root)["state"]
+    if legacy.is_file():
+        try:
+            data = read_json(legacy)
+        except StateCorruptError:
+            data = {}
+        if not _is_migration_breadcrumb(data) and (
+            data.get("phases") or data.get("verdict") == "running"
+        ):
+            runs.append(
+                {
+                    "slug": "(legacy)",
+                    "statePath": str(legacy.relative_to(root)),
+                    "taskList": data.get("source_task_list"),
+                    "verdict": data.get("verdict"),
+                    "target": target_branch_from_state(data),
+                    "lockHeld": legacy_paths(root)["lock"].is_file(),
+                    "lockHolder": read_lock_meta(legacy_paths(root)["lock"]) or None,
+                }
+            )
+    return runs
+
+
+def _read_state_optional(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    try:
+        return read_json(path)
+    except (StateCorruptError, json.JSONDecodeError):
+        return {}
+
+
+def load_deliver_state(
+    root: Path,
+    *,
+    target: str | None = None,
+    task_list: str | None = None,
+) -> dict[str, Any]:
+    path = resolve_state_path(root, target=target, task_list=task_list)
+    try:
+        return read_json(path)
+    except StateCorruptError as exc:
+        fail_corrupt(path, exc)
+        return {}
+
+
+def save_deliver_state(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    target: str | None = None,
+) -> Path:
+    branch = target or target_branch_from_state(state)
+    if not is_feature_target(branch):
+        branch = _current_feature_branch(root)
+    if not is_feature_target(branch):
+        fail("cannot save deliver state without feature target branch")
+    assert branch is not None
+    if not target_branch_from_state(state):
+        state["target"] = {"branch": branch}
+    path = scoped_paths(root, branch)["state"]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    state["updatedAt"] = utc_now()
+    write_json(path, state)
+    _write_legacy_breadcrumb(root, target=branch, scoped_state=path)
+    return path
+
+
+def cmd_resolve_state_path(root: Path, args: list[str]) -> None:
+    target = parse_kv(args, "--target")
+    task_list = parse_kv(args, "--task-list")
+    path = resolve_state_path(root, target=target, task_list=task_list)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "resolve-state-path",
+            "path": str(path),
+            "relative": str(path.relative_to(root)) if path.is_relative_to(root) else str(path),
+        }
+    )
+
+
+def cmd_resolve_lock_path(root: Path, args: list[str]) -> None:
+    target = parse_kv(args, "--target")
+    if not target:
+        fail("--target required")
+    path = scoped_paths(root, target)["lock"]
+    emit(
+        {
+            "verdict": "pass",
+            "action": "resolve-lock-path",
+            "path": str(path),
+            "relative": str(path.relative_to(root)),
+        }
+    )
+
+
+def cmd_runs_index(root: Path, _args: list[str]) -> None:
+    runs = enumerate_scoped_runs(root)
+    index_path = root / ".cursor" / "sw-deliver-runs" / "index.json"
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"updatedAt": utc_now(), "runs": runs}
+    index_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    os.chmod(index_path, 0o600)
+    emit({"verdict": "pass", "action": "runs-index", "runs": runs, "path": str(index_path)})
 
 
 def lock_host() -> str:
@@ -135,8 +475,8 @@ def reclaim_stale_lock(lock_path: Path) -> bool:
     return True
 
 
-def append_log(root: Path, entry: dict[str, Any]) -> None:
-    p = paths(root)
+def append_log(root: Path, entry: dict[str, Any], *, target: str | None = None) -> None:
+    p = paths(root, target=target)
     p["runs"].mkdir(parents=True, exist_ok=True)
     line = json.dumps({**entry, "at": utc_now()}, ensure_ascii=False) + "\n"
     with open(p["log"], "a", encoding="utf-8") as f:
@@ -184,7 +524,7 @@ def cmd_state_init(root: Path, args: list[str]) -> None:
         "driverHeartbeatAt": utc_now(),
         "updatedAt": utc_now(),
     }
-    write_json(paths(root)["state"], state)
+    write_json(resolve_state_path(root, task_list=plan.get("source_task_list"), target=(plan.get("target") or {}).get("branch")), state)
     append_log(
         root,
         {
@@ -210,12 +550,18 @@ def find_phase(state: dict[str, Any], phase_id: str | None, slug: str | None) ->
     fail("--id or --slug required")
 
 
+def _ops_state_path(root: Path, args: list[str]) -> Path:
+    target = parse_kv(args, "--target")
+    task_list = parse_kv(args, "--task-list")
+    return resolve_state_path(root, target=target, task_list=task_list)
+
+
 def cmd_state_phase(root: Path, args: list[str]) -> None:
     status = parse_kv(args, "--status")
     if not status:
         fail(f"--status required; one of {sorted(VALID_PHASE_STATUSES)}")
     assert_phase_status(status)
-    state_path = paths(root)["state"]
+    state_path = _ops_state_path(root, args)
     state = load_state_file(state_path)
     if not state:
         fail("run state missing; run state init first", exit_code=2)
@@ -239,9 +585,9 @@ def cmd_state_phase(root: Path, args: list[str]) -> None:
     emit({"verdict": "pass", "action": "state-phase", "phaseId": pid, "status": status})
 
 
-def cmd_state_heartbeat(root: Path, _args: list[str]) -> None:
+def cmd_state_heartbeat(root: Path, args: list[str]) -> None:
     """Refresh driverHeartbeatAt for liveness / watchdog (R37)."""
-    state_path = paths(root)["state"]
+    state_path = _ops_state_path(root, args)
     state = load_state_file(state_path)
     if not state:
         fail("run state missing; run state init first", exit_code=2)
@@ -252,8 +598,8 @@ def cmd_state_heartbeat(root: Path, _args: list[str]) -> None:
     emit({"verdict": "pass", "action": "state-heartbeat", "driverHeartbeatAt": now})
 
 
-def cmd_state_get(root: Path, _args: list[str]) -> None:
-    state_path = paths(root)["state"]
+def cmd_state_get(root: Path, args: list[str]) -> None:
+    state_path = _ops_state_path(root, args)
     if not state_path.is_file():
         emit({"verdict": "pass", "state": None, "present": False})
     state = load_state_file(state_path)
@@ -264,7 +610,7 @@ def cmd_state_terminal(root: Path, args: list[str]) -> None:
     verdict = parse_kv(args, "--verdict")
     if not verdict or verdict not in TERMINAL_VERDICTS:
         fail(f"--verdict required; one of {sorted(TERMINAL_VERDICTS)}")
-    state_path = paths(root)["state"]
+    state_path = _ops_state_path(root, args)
     state = load_state_file(state_path)
     if not state:
         fail("run state missing")
@@ -284,7 +630,7 @@ def cmd_lock_acquire(root: Path, args: list[str]) -> None:
     if not target:
         fail("--target required (e.g. feat/my-slug)")
     nonblock = "--nonblock" in args
-    lock_path = paths(root)["lock"]
+    lock_path = scoped_paths(root, target)["lock"]
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     now = utc_now()
     meta = {
@@ -322,8 +668,27 @@ def cmd_lock_acquire(root: Path, args: list[str]) -> None:
     emit({"verdict": "pass", "action": "lock-acquire", "target": target})
 
 
-def cmd_lock_release(root: Path, _args: list[str]) -> None:
-    lock_path = paths(root)["lock"]
+def _resolve_lock_path(root: Path, args: list[str]) -> Path:
+    target = parse_kv(args, "--target")
+    if target:
+        return scoped_paths(root, target)["lock"]
+    lock_path = legacy_paths(root)["lock"]
+    if lock_path.is_file():
+        return lock_path
+    matches = [
+        p
+        for p in sorted((root / ".cursor").glob("sw-deliver-*.lock"))
+        if p.name != LEGACY_LOCK_NAME
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        return lock_path
+    fail("--target required when multiple scoped locks exist")
+
+
+def cmd_lock_release(root: Path, args: list[str]) -> None:
+    lock_path = _resolve_lock_path(root, args)
     if not lock_path.is_file():
         emit({"verdict": "pass", "action": "lock-release", "note": "no lock file"})
     meta: dict[str, Any] = {}
@@ -338,8 +703,12 @@ def cmd_lock_release(root: Path, _args: list[str]) -> None:
     emit({"verdict": "pass", "action": "lock-release"})
 
 
-def cmd_lock_status(root: Path, _args: list[str]) -> None:
-    lock_path = paths(root)["lock"]
+def cmd_lock_status(root: Path, args: list[str]) -> None:
+    target = parse_kv(args, "--target")
+    if target:
+        lock_path = scoped_paths(root, target)["lock"]
+    else:
+        lock_path = _resolve_lock_path(root, args)
     if not lock_path.is_file():
         emit({"verdict": "pass", "held": False})
     meta: dict[str, Any] = {}
@@ -357,7 +726,7 @@ def cmd_journal_begin(root: Path, args: list[str]) -> None:
     if not slug:
         fail("--phase required")
     head = parse_kv(args, "--head", "")
-    state_path = paths(root)["state"]
+    state_path = _ops_state_path(root, args)
     state = load_state_file(state_path)
     if not state:
         fail("run state missing")
@@ -405,7 +774,7 @@ def cmd_journal_begin(root: Path, args: list[str]) -> None:
 
 def cmd_journal_complete(root: Path, args: list[str]) -> None:
     slug = parse_kv(args, "--phase")
-    state_path = paths(root)["state"]
+    state_path = _ops_state_path(root, args)
     state = load_state_file(state_path)
     journal = state.get("mergeJournal")
     if not journal:
@@ -443,15 +812,16 @@ def cmd_journal_complete(root: Path, args: list[str]) -> None:
     emit({"verdict": "pass", "action": "journal-complete", "journal": completed})
 
 
-def cmd_journal_status(root: Path, _args: list[str]) -> None:
-    state = load_state_file(paths(root)["state"])
+def cmd_journal_status(root: Path, args: list[str]) -> None:
+    state = load_state_file(_ops_state_path(root, args))
     journal = state.get("mergeJournal")
     emit({"verdict": "pass", "open": journal is not None, "journal": journal})
 
 
 def cmd_log_tail(root: Path, args: list[str]) -> None:
     lines = int(parse_kv(args, "--lines", "10") or "10")
-    log_path = paths(root)["log"]
+    target = parse_kv(args, "--target")
+    log_path = paths(root, target=target)["log"]
     if not log_path.is_file():
         emit({"verdict": "pass", "entries": []})
     content = log_path.read_text(encoding="utf-8").strip().splitlines()
@@ -479,7 +849,7 @@ def cmd_ledger_record(root: Path, args: list[str]) -> None:
     if not task_ref:
         fail("--task required (e.g. 7.1)")
     done = parse_kv(args, "--done", "true") != "false"
-    state_path = paths(root)["state"]
+    state_path = _ops_state_path(root, args)
     state = load_state_file(state_path)
     if not state:
         fail("run state missing; run state init first")
@@ -517,7 +887,7 @@ def cmd_ledger_check(root: Path, args: list[str]) -> None:
     path = (root / tasks_file).resolve() if not Path(tasks_file).is_absolute() else Path(tasks_file)
     if not path.is_file():
         fail(f"tasks file not found: {tasks_file}")
-    state_path = paths(root)["state"]
+    state_path = _ops_state_path(root, args)
     state = load_state_file(state_path) if state_path.is_file() else {}
     ledger_tasks = ((state.get("taskLedger") or {}).get("tasks") or {}) if state else {}
 
@@ -572,12 +942,26 @@ def cmd_ledger_check(root: Path, args: list[str]) -> None:
 
 def main() -> None:
     if len(sys.argv) < 3:
-        fail("usage: wave_state.py <root> <state|lock|journal|log|ledger> <subcommand> [args...]")
+        fail("usage: wave_state.py <root> <state|lock|journal|log|ledger|resolve|runs> <subcommand> [args...]")
     root = Path(sys.argv[1])
     domain = sys.argv[2]
     args = sys.argv[3:]
 
-    if domain == "state":
+    if domain == "resolve":
+        if not args:
+            fail("resolve subcommand required: state-path|lock-path")
+        sub, rest = args[0], args[1:]
+        if sub == "state-path":
+            cmd_resolve_state_path(root, rest)
+        elif sub == "lock-path":
+            cmd_resolve_lock_path(root, rest)
+        else:
+            fail(f"unknown resolve subcommand: {sub}")
+    elif domain == "runs":
+        if not args or args[0] != "index":
+            fail("runs subcommand required: index")
+        cmd_runs_index(root, args[1:])
+    elif domain == "state":
         if not args:
             fail("state subcommand required: init|get|phase|terminal|heartbeat")
         sub = args[0]

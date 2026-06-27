@@ -1,0 +1,1115 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "hook.session-context",
+      "kind": "hook",
+      "sourcePath": "core/hooks/session-context.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "always_on",
+            "selectionFamily": "workflow",
+            "scope": "session-bootstrap"
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "workflow",
+          "notes": "non-kernel session context hook doc; kernel guardrails excluded from manifest selection"
+        }
+      }
+    },
+    {
+      "id": "persona.sw-adversarial-reviewer",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-adversarial-reviewer.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "always_on",
+            "selectionFamily": "doc-review",
+            "scope": "doc-review-core"
+          }
+        ],
+        "metadata": {
+          "personaId": "adversarial",
+          "selectionFamily": "doc-review",
+          "modelTierRef": "agents.sw-adversarial-reviewer"
+        }
+      }
+    },
+    {
+      "id": "persona.sw-coherence-reviewer",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-coherence-reviewer.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "always_on",
+            "selectionFamily": "doc-review",
+            "scope": "doc-review-core"
+          }
+        ],
+        "metadata": {
+          "personaId": "coherence",
+          "selectionFamily": "doc-review",
+          "modelTierRef": "agents.sw-coherence-reviewer"
+        }
+      }
+    },
+    {
+      "id": "persona.sw-design-reviewer",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-design-reviewer.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "any_of",
+            "selectionFamily": "doc-review",
+            "triggers": [
+              {
+                "type": "text_token",
+                "source": "body_snapshot",
+                "match": "whole_token",
+                "case_insensitive": true,
+                "exclude_polysemous": true,
+                "tokens": [
+                  "UI",
+                  "UX",
+                  "wireframe",
+                  "modal",
+                  "button",
+                  "navigation",
+                  "responsive",
+                  "accessibility",
+                  "user flow"
+                ]
+              },
+              {
+                "type": "heading",
+                "source": "body_snapshot",
+                "case_insensitive": true,
+                "headings": [
+                  "UI",
+                  "UX",
+                  "Screens",
+                  "Mockups"
+                ]
+              },
+              {
+                "type": "link_pattern",
+                "source": "body_snapshot",
+                "patterns": [
+                  "figma.com",
+                  "figma.io"
+                ]
+              }
+            ]
+          }
+        ],
+        "metadata": {
+          "personaId": "design",
+          "selectionFamily": "doc-review",
+          "gated": true,
+          "modelTierRef": "agents.sw-design-reviewer"
+        }
+      }
+    },
+    {
+      "id": "persona.sw-docs-currency-reviewer",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-docs-currency-reviewer.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "always_on",
+            "selectionFamily": "doc-review",
+            "scope": "doc-review-core"
+          }
+        ],
+        "metadata": {
+          "personaId": "docs-currency",
+          "selectionFamily": "doc-review",
+          "modelTierRef": "agents.sw-docs-currency-reviewer"
+        }
+      }
+    },
+    {
+      "id": "persona.sw-feasibility-reviewer",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-feasibility-reviewer.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "always_on",
+            "selectionFamily": "doc-review",
+            "scope": "doc-review-core"
+          }
+        ],
+        "metadata": {
+          "personaId": "feasibility",
+          "selectionFamily": "doc-review",
+          "modelTierRef": "agents.sw-feasibility-reviewer"
+        }
+      }
+    },
+    {
+      "id": "persona.sw-product-reviewer",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-product-reviewer.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "always_on",
+            "selectionFamily": "doc-review",
+            "scope": "doc-review-core"
+          }
+        ],
+        "metadata": {
+          "personaId": "product",
+          "selectionFamily": "doc-review",
+          "modelTierRef": "agents.sw-product-reviewer"
+        }
+      }
+    },
+    {
+      "id": "persona.sw-scope-guardian-reviewer",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-scope-guardian-reviewer.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "always_on",
+            "selectionFamily": "doc-review",
+            "scope": "doc-review-core"
+          }
+        ],
+        "metadata": {
+          "personaId": "scope-guardian",
+          "selectionFamily": "doc-review",
+          "modelTierRef": "agents.sw-scope-guardian-reviewer"
+        }
+      }
+    },
+    {
+      "id": "persona.sw-security-reviewer",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-security-reviewer.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "text_token",
+            "selectionFamily": "doc-review",
+            "source": "body_snapshot",
+            "match": "whole_token",
+            "case_insensitive": true,
+            "tokens": [
+              "auth",
+              "authn",
+              "authz",
+              "authentication",
+              "authorization",
+              "login",
+              "session",
+              "oauth",
+              "jwt",
+              "payment",
+              "payments",
+              "billing",
+              "PII",
+              "credentials",
+              "token",
+              "encryption",
+              "public api",
+              "public endpoint",
+              "external api",
+              "webhook"
+            ]
+          }
+        ],
+        "metadata": {
+          "personaId": "security",
+          "selectionFamily": "doc-review",
+          "gated": true,
+          "modelTierRef": "agents.sw-security-reviewer"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.code-review.CAPABILITIES",
+      "kind": "provider",
+      "sourcePath": "core/providers/code-review/CAPABILITIES.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "review.local.provider",
+            "equals": "native"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "code-review",
+          "adapterId": "contract",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.sh"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.code-review.ce-code-review",
+      "kind": "provider",
+      "sourcePath": "core/providers/code-review/ce-code-review.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "review.local.provider",
+            "equals": "ce-code-review"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "review.local",
+          "adapterId": "ce-code-review",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.sh"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.code-review.native",
+      "kind": "provider",
+      "sourcePath": "core/providers/code-review/native.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "review.local.provider",
+            "equals": "native"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "review.local",
+          "adapterId": "native",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.sh"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.code-review.specialists.adversarial",
+      "kind": "provider",
+      "sourcePath": "core/providers/code-review/specialists/adversarial.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "any_of",
+            "selectionFamily": "code-review",
+            "triggers": [
+              {
+                "type": "change_digest",
+                "predicate": "executable_lines_gte",
+                "threshold": 50
+              },
+              {
+                "type": "change_digest",
+                "predicate": "regex_in_added_lines",
+                "patterns": [
+                  "\\b(auth|payment|stripe|mutation|external.api|webhook)\\b"
+                ]
+              }
+            ]
+          }
+        ],
+        "metadata": {
+          "specialistId": "adversarial",
+          "selectionFamily": "code-review"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.code-review.specialists.ai-native",
+      "kind": "provider",
+      "sourcePath": "core/providers/code-review/specialists/ai-native.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "any_of",
+            "selectionFamily": "code-review",
+            "triggers": [
+              {
+                "type": "change_digest",
+                "predicate": "path_match",
+                "globs": [
+                  "commands/**",
+                  "core/commands/**",
+                  "skills/**",
+                  "core/skills/**",
+                  "rules/**",
+                  "providers/**"
+                ]
+              },
+              {
+                "type": "change_digest",
+                "predicate": "regex_in_added_lines",
+                "patterns": [
+                  "\\b(openai|anthropic|llm|chat\\.completions|untrusted)\\b",
+                  "\\b(prompt|agent|subagent|skill)\\b"
+                ]
+              }
+            ]
+          }
+        ],
+        "metadata": {
+          "specialistId": "ai-native",
+          "selectionFamily": "code-review"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.code-review.specialists.api-contract",
+      "kind": "provider",
+      "sourcePath": "core/providers/code-review/specialists/api-contract.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "any_of",
+            "selectionFamily": "code-review",
+            "triggers": [
+              {
+                "type": "change_digest",
+                "predicate": "regex_in_path",
+                "patterns": [
+                  "openapi",
+                  "swagger",
+                  "\\.proto$",
+                  "graphql",
+                  "/routes?/",
+                  "handler",
+                  "/api/",
+                  "\\.openapi\\."
+                ]
+              },
+              {
+                "type": "change_digest",
+                "predicate": "regex_in_added_lines",
+                "patterns": [
+                  "openapi",
+                  "swagger",
+                  "\\.proto$",
+                  "graphql",
+                  "/routes?/",
+                  "handler",
+                  "/api/",
+                  "\\.openapi\\."
+                ]
+              }
+            ]
+          }
+        ],
+        "metadata": {
+          "specialistId": "api-contract",
+          "selectionFamily": "code-review"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.code-review.specialists.comment-accuracy",
+      "kind": "provider",
+      "sourcePath": "core/providers/code-review/specialists/comment-accuracy.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "any_of",
+            "selectionFamily": "code-review",
+            "triggers": [
+              {
+                "type": "change_digest",
+                "predicate": "path_match",
+                "globs": [
+                  "*.md",
+                  "*.mdx"
+                ]
+              },
+              {
+                "type": "change_digest",
+                "predicate": "regex_in_added_lines",
+                "patterns": [
+                  "^\\s*(//|#|/\\*|\\*|\"\"\"|''')"
+                ]
+              }
+            ]
+          }
+        ],
+        "metadata": {
+          "specialistId": "comment-accuracy",
+          "selectionFamily": "code-review"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.code-review.specialists.data-migration",
+      "kind": "provider",
+      "sourcePath": "core/providers/code-review/specialists/data-migration.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "change_digest",
+            "selectionFamily": "code-review",
+            "predicate": "path_match",
+            "globs": [
+              "**/migrations/**",
+              "**/migrate/**",
+              "**/schema.sql",
+              "*backfill*"
+            ]
+          }
+        ],
+        "metadata": {
+          "specialistId": "data-migration",
+          "selectionFamily": "code-review"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.code-review.specialists.performance",
+      "kind": "provider",
+      "sourcePath": "core/providers/code-review/specialists/performance.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "any_of",
+            "selectionFamily": "code-review",
+            "triggers": [
+              {
+                "type": "change_digest",
+                "predicate": "regex_in_added_lines",
+                "patterns": [
+                  "\\b(loop|hot[- ]?path|query|index|perf)\\b"
+                ]
+              },
+              {
+                "type": "change_digest",
+                "predicate": "path_match",
+                "globs": [
+                  "**/*.sql"
+                ]
+              }
+            ]
+          }
+        ],
+        "metadata": {
+          "specialistId": "performance",
+          "selectionFamily": "code-review"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.code-review.specialists.reliability",
+      "kind": "provider",
+      "sourcePath": "core/providers/code-review/specialists/reliability.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "any_of",
+            "selectionFamily": "code-review",
+            "triggers": [
+              {
+                "type": "change_digest",
+                "predicate": "regex_in_added_lines",
+                "patterns": [
+                  "\\b(retry|timeout|concurrency|error.handling|catch|rescue|panic)\\b"
+                ]
+              },
+              {
+                "type": "change_digest",
+                "predicate": "regex_in_added_lines",
+                "patterns": [
+                  "\\b(silent|swallow|ignored.rejection|empty.catch|log.and.continue)\\b"
+                ]
+              }
+            ]
+          }
+        ],
+        "metadata": {
+          "specialistId": "reliability",
+          "selectionFamily": "code-review"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.code-review.specialists.type-design",
+      "kind": "provider",
+      "sourcePath": "core/providers/code-review/specialists/type-design.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "any_of",
+            "selectionFamily": "code-review",
+            "triggers": [
+              {
+                "type": "change_digest",
+                "predicate": "path_match",
+                "globs": [
+                  "*.d.ts"
+                ]
+              },
+              {
+                "type": "change_digest",
+                "predicate": "regex_in_added_lines",
+                "patterns": [
+                  "\\b(interface|type|class|struct|enum)\\b"
+                ]
+              }
+            ]
+          }
+        ],
+        "metadata": {
+          "specialistId": "type-design",
+          "selectionFamily": "code-review"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.code-review.specialists.ui-ux",
+      "kind": "provider",
+      "sourcePath": "core/providers/code-review/specialists/ui-ux.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "any_of",
+            "selectionFamily": "code-review",
+            "triggers": [
+              {
+                "type": "change_digest",
+                "predicate": "path_match",
+                "globs": [
+                  "*.tsx",
+                  "*.jsx",
+                  "*.vue",
+                  "*.svelte",
+                  "*.css",
+                  "*.scss",
+                  "*.less",
+                  "*.styles.ts",
+                  "*.css.ts",
+                  "*.swift",
+                  "*.kt",
+                  "*.dart",
+                  "*.storyboard",
+                  "*.xib",
+                  "**/components/**",
+                  "**/ui/**",
+                  "**/styles/**",
+                  "**/theme/**",
+                  "**/res/layout/*.xml"
+                ]
+              },
+              {
+                "type": "change_digest",
+                "predicate": "regex_in_added_lines",
+                "patterns": [
+                  "\\b(styled|makeStyles|createGlobalStyle)\\b",
+                  "css`"
+                ]
+              }
+            ]
+          }
+        ],
+        "metadata": {
+          "specialistId": "ui-ux",
+          "selectionFamily": "code-review"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.in-repo",
+      "kind": "provider",
+      "sourcePath": "core/providers/in-repo.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "memory.provider",
+            "equals": "in-repo"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "memory",
+          "adapterId": "in-repo",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.sh"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.recallium",
+      "kind": "provider",
+      "sourcePath": "core/providers/recallium.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "memory.provider",
+            "equals": "recallium"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "memory",
+          "adapterId": "recallium",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.sh"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.review.CAPABILITIES",
+      "kind": "provider",
+      "sourcePath": "core/providers/review/CAPABILITIES.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "providers",
+            "scope": "review-contract"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "review",
+          "selectionFamily": "providers",
+          "notes": "neutral capability contract doc"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.review.coderabbit",
+      "kind": "provider",
+      "sourcePath": "core/providers/review/coderabbit.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "review.provider",
+            "equals": "coderabbit"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "review",
+          "adapterId": "coderabbit",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.sh"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.verify.CAPABILITIES",
+      "kind": "provider",
+      "sourcePath": "core/providers/verify/CAPABILITIES.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "providers",
+            "scope": "verify-contract"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "verify",
+          "selectionFamily": "providers",
+          "notes": "neutral capability contract doc"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.verify.none",
+      "kind": "provider",
+      "sourcePath": "core/providers/verify/none.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "verify.provider",
+            "equals": "none"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "verify",
+          "adapterId": "none",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.sh"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.verify.playwright",
+      "kind": "provider",
+      "sourcePath": "core/providers/verify/playwright.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "verify.provider",
+            "equals": "playwright"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "verify",
+          "adapterId": "playwright",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.sh"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.verify.stub",
+      "kind": "provider",
+      "sourcePath": "core/providers/verify/stub.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "verify.provider",
+            "equals": "stub"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "verify",
+          "adapterId": "stub",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.sh"
+        }
+      }
+    },
+    {
+      "id": "rule.checks-gate",
+      "kind": "rule",
+      "sourcePath": "core/rules/checks-gate.mdc",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "providers",
+            "command": "sw-watch-ci"
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "providers"
+        }
+      }
+    },
+    {
+      "id": "rule.code-review-automation",
+      "kind": "rule",
+      "sourcePath": "core/rules/code-review-automation.mdc",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "code-review",
+            "command": "sw-review"
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "code-review"
+        }
+      }
+    },
+    {
+      "id": "rule.memory-guardrails",
+      "kind": "rule",
+      "sourcePath": "core/rules/memory-guardrails.mdc",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "memory",
+            "command": "sw-memory-sync"
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "memory"
+        }
+      }
+    },
+    {
+      "id": "rule.sw-conductor",
+      "kind": "rule",
+      "sourcePath": "core/rules/sw-conductor.mdc",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "subagent-dispatch",
+            "command": "sw-deliver"
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "subagent-dispatch"
+        }
+      }
+    },
+    {
+      "id": "rule.sw-dispatch-background-phase",
+      "kind": "rule",
+      "sourcePath": "core/rules/sw-dispatch-background-phase.mdc",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "conductor_mode",
+            "selectionFamily": "subagent-dispatch",
+            "equals": "background_phase"
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "subagent-dispatch",
+          "dispatchPosture": "inline",
+          "intraphaseSubagentDispatch": "disabled"
+        }
+      }
+    },
+    {
+      "id": "rule.sw-dispatch-inline-execute",
+      "kind": "rule",
+      "sourcePath": "core/rules/sw-dispatch-inline-execute.mdc",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "all_of",
+            "selectionFamily": "subagent-dispatch",
+            "triggers": [
+              {
+                "type": "file_count",
+                "max": 3
+              },
+              {
+                "type": "conductor_mode",
+                "notEquals": "background_phase"
+              }
+            ]
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "subagent-dispatch",
+          "dispatchPosture": "inline"
+        }
+      }
+    },
+    {
+      "id": "rule.sw-subagent-dispatch",
+      "kind": "rule",
+      "sourcePath": "core/rules/sw-subagent-dispatch.mdc",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "subagent-dispatch",
+            "scope": "delegation-policy"
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "subagent-dispatch"
+        }
+      }
+    },
+    {
+      "id": "skill.checks-gate",
+      "kind": "skill",
+      "sourcePath": "core/skills/checks-gate/SKILL.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "providers",
+            "command": "sw-watch-ci"
+          }
+        ],
+        "metadata": {
+          "skill": "checks-gate",
+          "selectionFamily": "providers"
+        }
+      }
+    },
+    {
+      "id": "skill.conductor",
+      "kind": "skill",
+      "sourcePath": "core/skills/conductor/SKILL.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "subagent-dispatch",
+            "command": "sw-deliver"
+          }
+        ],
+        "metadata": {
+          "skill": "conductor",
+          "selectionFamily": "subagent-dispatch"
+        }
+      }
+    },
+    {
+      "id": "skill.doc-review",
+      "kind": "skill",
+      "sourcePath": "core/skills/doc-review/SKILL.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "doc-review",
+            "command": "sw-doc-review"
+          }
+        ],
+        "metadata": {
+          "skill": "doc-review",
+          "selectionFamily": "doc-review"
+        }
+      }
+    },
+    {
+      "id": "skill.memory",
+      "kind": "skill",
+      "sourcePath": "core/skills/memory/SKILL.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "memory",
+            "command": "sw-memory-sync"
+          }
+        ],
+        "metadata": {
+          "skill": "memory",
+          "selectionFamily": "memory"
+        }
+      }
+    },
+    {
+      "id": "skill.triage",
+      "kind": "skill",
+      "sourcePath": "core/skills/triage/SKILL.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "workflow",
+            "command": "sw-triage"
+          }
+        ],
+        "metadata": {
+          "skill": "triage",
+          "selectionFamily": "workflow"
+        }
+      }
+    },
+    {
+      "id": "skill.verification-gate",
+      "kind": "skill",
+      "sourcePath": "core/skills/verification-gate/SKILL.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "verify",
+            "command": "sw-verify"
+          }
+        ],
+        "metadata": {
+          "skill": "verification-gate",
+          "selectionFamily": "verify"
+        }
+      }
+    }
+  ]
+}

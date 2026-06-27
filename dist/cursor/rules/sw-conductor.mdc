@@ -1,6 +1,14 @@
 ---
 description: Conductor guardrails — legitimate halts only, no nested dispatch, durable-state authority. USE WHEN running /sw-deliver or any orchestrator that adopts the conductor contract.
 alwaysApply: false
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: subagent-dispatch
+      command: sw-deliver
+  metadata:
+    selectionFamily: subagent-dispatch
 ---
 
 # Conductor guardrails

@@ -1,3 +1,16 @@
+---
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: providers
+      scope: review-contract
+  metadata:
+    providerFamily: review
+    selectionFamily: providers
+    notes: neutral capability contract doc
+---
+
 # Review provider capabilities (R36)
 
 Neutral contract for AI code-review adapters. Deterministic consumers (`scripts/check-gate.sh`) call the
@@ -63,4 +76,6 @@ Findings shape for stabilize (markdown adapters document fetch procedure):
 
 ## Config
 
-`review.provider` in `workflow.config.json` selects `providers/review/<id>.sh` + `<id>.md`.
+`review.provider` in `workflow.config.json` selects `providers/review/<id>.sh` + `<id>.md` via the
+capability selector's `config_flag` triggers (`selectionFamily: providers`). Eligibility ≠ authorization —
+executables still pass `check-gate.sh` and the named adapter gate (R27).

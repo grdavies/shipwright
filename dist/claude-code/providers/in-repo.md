@@ -1,3 +1,18 @@
+---
+capability:
+  version: 1
+  triggers:
+    - type: config_flag
+      selectionFamily: providers
+      key: memory.provider
+      equals: "in-repo"
+  metadata:
+    providerFamily: memory
+    adapterId: in-repo
+    selectionFamily: providers
+    gateRef: check-gate.sh
+---
+
 # Provider adapter: in-repo
 
 Maps the Shipwright memory capability spec ([`skills/memory/CAPABILITIES.md`](../skills/memory/CAPABILITIES.md))

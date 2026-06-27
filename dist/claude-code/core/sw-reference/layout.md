@@ -32,9 +32,14 @@ docs/decisions/
 
 .cursor/
 ├── sw-deliver-plan.json    # deliver plan artifact (living, written by /sw-deliver plan)
-├── sw-deliver-state.json   # run-state (living, written by /sw-deliver run)
-├── sw-deliver.lock         # orchestrator lock (living)
-└── sw-deliver-runs/        # per-phase status (living)
+├── sw-deliver-state.<slug>.json   # per-run scoped state — single canonical path at repo root (PRD 013 R6/R28)
+├── sw-deliver-<slug>.lock         # per-run scoped orchestrator lock
+├── sw-living-docs.lock            # repo-wide living-doc write serialization (PRD 013 R12)
+├── sw-deliver-state.json          # legacy repo-wide state (migration breadcrumb after adopt)
+├── sw-deliver.lock                # legacy repo-wide lock (superseded by scoped locks)
+├── sw-deliver-runs/
+│   ├── index.json                 # concurrent-run index (live scoped runs)
+│   └── <phase-slug>/              # per-phase status (living)
 ```
 
 ## Naming conventions
@@ -135,12 +140,40 @@ Amendment body is **delta-only** — parent file is never edited.
 | `/sw-tasks` | frozen PRD + union | `docs/prds/<n>-<slug>/tasks-<n>-<slug>.md`, `INDEX.md` |
 | `/sw-doc` | tier from triage | delegates to above |
 
+### Deliver state canonicalization (R28)
+
+The live deliver run-state file exists **once** at the repo-root scoped path
+(`.cursor/sw-deliver-state.<slug>.json`). Orchestrator and phase worktrees read and write through
+`wave_state.scoped_paths()` / `resolve_state_path()` at the git toplevel — never a second authoritative
+copy under `.sw-worktrees/**/.cursor/`. `wave_compound.py record-premerge` and
+`cleanup_lib.resolve_deliver_state()` use the same resolver.
+
 ## Living vs frozen layers
 
 - **Frozen:** brainstorms, PRDs, task lists, amendments — immutable after `/sw-freeze`; change only via new amendments.
 - **Living:** `INDEX.md`, `COMPLETION-LOG.md` — updated as work progresses; never frozen.
 - **Gap backlog:** `GAP-BACKLOG.md` — committed, append-only, hand-appendable; not frozen, not git-derived.
 - **Generated install trees:** `dist/cursor/` and `dist/claude-code/` — committed outputs of `python3 -m sw generate`; edit `core/` then regenerate (freshness gate in `scripts/test/run-emitter-fixtures.sh`). Not hand-edited except via emitter changes.
+
+## Capability manifest + selector (PRD 021)
+
+Authoring lives under `core/`; the emitter propagates manifest artifacts into both dist trees.
+
+| Artifact | Role |
+| --- | --- |
+| `core/sw-reference/capability-manifest.schema.json` | JSON Schema for per-capability `capability` frontmatter |
+| `core/sw-reference/capability-manifest.md` | Frontmatter, precedence, trust-boundary contract |
+| `core/sw-reference/capability-index.json` | Emitter-generated aggregate (committed; freshness-gated) |
+| `core/sw-reference/signal-context.schema.json` | Versioned selector inputs |
+| `scripts/capability-select.sh` | Deterministic selector primitive |
+| `scripts/capability-manifest-lint.sh` | Author-time precedence/conflict/anti-spoof lint |
+| `scripts/doc-review-select.sh` / `scripts/code-review-select.sh` | Selection-family wrappers |
+
+**Freshness:** `scripts/test/run-emitter-fixtures.sh` fails when `capability-index.json` or dist trees drift
+from current frontmatter. Regenerate after manifest edits: `python3 -m sw generate --all`.
+
+**Pre-selection:** `wave_preflight` / selector entrypoints fail closed when the runtime index does not
+reproduce from current sources.
 
 ## Config keys
 
@@ -149,3 +182,43 @@ Amendment body is **delta-only** — parent file is never edited.
 - `prdsDir`: `"docs/prds"` — PRD root (per-PRD subdirs live beneath).
 - `tasksDir`: `"docs/prds"` — task lists co-locate with their PRD (`docs/prds/<n>-<slug>/tasks-...`).
 - `decisionsDir`: `"docs/decisions"` — decision-record root (flat files + sibling `.amendments/` dirs).
+- `delegation.mode`: `bind-only` | `heuristic` | `default` — selects delegate-by-default gate behavior
+  (PRD 017; default `bind-only` until Phase-2 live acceptance, else `default`).
+- `communication.routing` — `commands`, `skills`, and `agents` maps for caveman intensity; seeded from
+  `core/sw-reference/communication-routing.defaults.json` via `/sw-setup`.
+- `models.routing` — command/skill/agent model tier maps; resolve at dispatch via `resolve-model-tier.sh`.
+
+### Dispatch preflight artifacts (PRD 017)
+
+Per-delegated-Task binding is recorded immediately before spawn:
+
+```bash
+bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command <sw-*> [--skill <name>]
+bash scripts/dispatch-check.sh --agent <id> --command <sw-*> --parent-model <concrete-id> [--dispatch-id <id>]
+```
+
+Preflight nonce + resolved model/intensity live in the per-worktree shipwright state (`scripts/shipwright-state.sh`).
+The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies bound `Task` spawns lacking a fresh record.
+Operator-facing deliver resume: `/sw-deliver run <frozen-task-list-path>` — not raw `bash deliver-loop`.
+
+### Pre-work memory search (PRD 019)
+
+Work-performing commands (`/sw-execute`, `/sw-debug`, `/sw-prd`, `/sw-brainstorm`, `/sw-amend`,
+`/sw-review`, `/sw-stabilize`) MUST run a scoped `memory-preflight` search before the first substantive
+mutation. Record the breadcrumb mechanically:
+
+```bash
+bash scripts/wave.sh memory prework record --surface sw-execute --scope "<paths>" [--hit-count N]
+```
+
+Artifacts:
+
+| Path | Role |
+| --- | --- |
+| `.cursor/hooks/state/memory-prework-search.json` | Redacted per-surface search record (or `memory:offline` / `memory:none`) |
+| `.cursor/sw-deliver-runs/run.log` | Append-only audit breadcrumb |
+
+The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies the first file-mutating tool call
+when no fresh record exists. Delegated work sub-agents inherit the obligation per
+`rules/sw-subagent-dispatch.mdc` (perform-or-be-handed-redacted-result). Provider outage degrades open
+via probe-gated `memory:offline` — never blocks work.

@@ -1,6 +1,15 @@
 ---
 name: sw-triage
 description: Classify work into Quick, Standard, or Full tiers from deterministic signals. Does not run the doc pipeline or implementation phases.
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: workflow
+      command: sw-triage
+  metadata:
+    skill: triage
+    selectionFamily: workflow
 ---
 
 # Triage rubric (`/sw-triage`)
@@ -22,8 +31,10 @@ Collect before scoring:
 
 ## Risk triggers (hard floor → ≥ Standard)
 
-Each keyword is **tagged**. **Any tag match** forces at least Standard regardless of file count. Doc-review's
-`security` persona gate fires only on **`security`-tagged** entries (see `skills/doc-review/SKILL.md`).
+Each keyword is **tagged**. **Any tag match** forces at least Standard regardless of file count.
+**`security`-tagged** entries flow into doc-review selection via `signal_context.derived_tags` and manifest
+`text_token` triggers on `sw-security-reviewer` (see `core/sw-reference/capability-manifest.md` — not
+duplicated here).
 
 | Keyword | Category |
 | --- | --- |

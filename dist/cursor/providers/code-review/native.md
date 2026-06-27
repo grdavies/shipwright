@@ -1,3 +1,18 @@
+---
+capability:
+  version: 1
+  triggers:
+    - type: config_flag
+      selectionFamily: providers
+      key: review.local.provider
+      equals: "native"
+  metadata:
+    providerFamily: review.local
+    adapterId: native
+    selectionFamily: providers
+    gateRef: check-gate.sh
+---
+
 # Native local review adapter (Shipwright panel)
 
 Markdown companion for phase 1 of `/sw-review` and `/sw-ship`. Dispatches a fixed always-on core panel plus
@@ -40,14 +55,19 @@ fire phase-1 iff (enabled == true AND provider != "none")
 independent of config.review.provider (incl. "none")
 ```
 
-## Selection signal table (authoritative — R7, R8, R42, R47, R51, R53, R60, R73)
+## Selection signal table (manifest reference — R7, R8, R42, R47, R51, R53, R60, R73)
+
+**Authoritative triggers:** per-specialist `capability` frontmatter on `core/agents/*.md` and this file's
+frontmatter, aggregated in `core/sw-reference/capability-index.json`. Runtime:
+`bash scripts/code-review-select.sh` (wraps `capability-select.sh` for the `code-review` family). Contract:
+`core/sw-reference/capability-manifest.md`.
 
 **Core (always-on, R6):** `correctness`, `maintainability`, `scope-fidelity`, `testing`, `security`.
 
 `previous-comments` is **excluded** from phase 1 (R9).
 
-| Specialist | Fires when (deterministic signal) |
-|------------|-----------------------------------|
+| Specialist | Manifest trigger summary |
+|------------|-------------------------|
 | `performance` | hot-path / loop / query / index keywords in added lines, or `**/*.sql` changes |
 | `api-contract` | public API / route / handler / OpenAPI / proto / GraphQL schema file paths or markers |
 | `data-migration` | migration paths (`**/migrations/**`, `**/migrate/**`), schema dumps (`**/schema.sql`), backfill scripts (`*backfill*`) |
@@ -58,8 +78,8 @@ independent of config.review.provider (incl. "none")
 | `comment-accuracy` | changed comment / docstring lines (`//`, `#`, `/*`, `*`, `"""`, `'''`) or `*.md` / `*.mdx` doc files |
 | `ai-native` | AI-surface paths (`commands/**`, `core/commands/**`, `skills/**`, `core/skills/**`, `rules/**`, `providers/**`, prompt-declaring `*.md`) or untrusted-LLM markers (`openai`, `anthropic`, `llm`, `prompt`, `chat.completions`) |
 
-Runtime engine: `scripts/code-review-select.sh` (identical diff → identical roster; R33/R61). Every fired
-signal is announced in the panel activation record (R10).
+Selector takes a versioned `signal_context` with persisted `change_digest`. Identical diff → identical roster
+(R33/R61). Every fired signal is announced in the panel activation record (R10).
 
 ## Executable-code-line counting algorithm (R60)
 

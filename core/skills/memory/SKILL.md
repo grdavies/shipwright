@@ -1,6 +1,15 @@
 ---
 name: memory-preflight
 description: Provider-agnostic durable-memory access for the Shipwright workflow. Use at the start of any phase command (execute, coderabbit, stabilize, watch-ci) to load relevant memories and rules, and at the end to store distilled memories. Routes through the configured memory provider adapter so no command names a provider directly.
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: memory
+      command: sw-memory-sync
+  metadata:
+    skill: memory
+    selectionFamily: memory
 ---
 
 # memory-preflight

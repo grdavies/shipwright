@@ -79,6 +79,14 @@
 * merge phase search-record-degrade-open-breadcrumb-m into feat/pre-work-memory-search-gate (617b36f) <!-- sw-deliver:search-record-degrade-open-breadcrumb-m -->
 * merge phase enforcement-dispatch-inheritance-m into feat/pre-work-memory-search-gate (8b7207a) <!-- sw-deliver:enforcement-dispatch-inheritance-m -->
 * merge phase docs-dist-fixtures-m into feat/pre-work-memory-search-gate (635ec0e) <!-- sw-deliver:docs-dist-fixtures-m -->
+* merge phase manifest-frontmatter-schema-contract-m into feat/capability-manifest-and-selector (e672065) <!-- sw-deliver:manifest-frontmatter-schema-contract-m -->
+* merge phase generated-capability-index-freshness-gates-m into feat/capability-manifest-and-selector (a499a64) <!-- sw-deliver:generated-capability-index-freshness-gates-m -->
+* merge phase precedence-policy-author-time-lint-m into feat/capability-manifest-and-selector (74a55cd) <!-- sw-deliver:precedence-policy-author-time-lint-m -->
+* merge phase deterministic-selector-signal-context-l into feat/capability-manifest-and-selector (cbe18d5) <!-- sw-deliver:deterministic-selector-signal-context-l -->
+* merge phase run-log-surfacing-s into feat/capability-manifest-and-selector (4235f06) <!-- sw-deliver:run-log-surfacing-s -->
+* merge phase trust-boundary-execution-chokepoint-kernel-hook-pinning-m into feat/capability-manifest-and-selector (dd8a578) <!-- sw-deliver:trust-boundary-execution-chokepoint-kernel-hook-pinning-m -->
+* merge phase migration-with-parity-shadow-cutover-call-site-map-l into feat/capability-manifest-and-selector (412e81d) <!-- sw-deliver:migration-with-parity-shadow-cutover-call-site-map-l -->
+* merge phase documentation-emitter-propagation-freshness-m into feat/capability-manifest-and-selector (6dd263b) <!-- sw-deliver:documentation-emitter-propagation-freshness-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
