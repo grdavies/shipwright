@@ -81,6 +81,7 @@
 * merge phase docs-dist-fixtures-m into feat/pre-work-memory-search-gate (635ec0e) <!-- sw-deliver:docs-dist-fixtures-m -->
 * merge phase manifest-frontmatter-schema-contract-m into feat/capability-manifest-and-selector (e672065) <!-- sw-deliver:manifest-frontmatter-schema-contract-m -->
 * merge phase generated-capability-index-freshness-gates-m into feat/capability-manifest-and-selector (a499a64) <!-- sw-deliver:generated-capability-index-freshness-gates-m -->
+* merge phase precedence-policy-author-time-lint-m into feat/capability-manifest-and-selector (74a55cd) <!-- sw-deliver:precedence-policy-author-time-lint-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
