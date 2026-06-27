@@ -57,12 +57,30 @@ rules/decisions:
 - Memory remains an input, not an authority — except `decision`-class SoT per **Source of truth
   resolution** when memory-SoT is active.
 
-### Recording (Phase 2+)
+### Recording (mechanical)
 
-The mechanical search-record breadcrumb (`memory:none`, `memory:offline`, or scoped hit summary) is written
-by `bash scripts/wave.sh memory preflight` (shared recorder) and enforced at the first file-mutating tool
-call via the PRD 017 `preToolUse` deny path. Until that recorder is wired, the procedural obligation and
-reconcile contract above still apply at command entry.
+Record the pre-work search breadcrumb before the first substantive mutation:
+
+```bash
+bash scripts/wave.sh memory prework record \
+  --surface sw-execute \
+  --scope "core/skills/memory/SKILL.md" \
+  --classes rule,decision,learning,code-context,design \
+  [--hit-count N]
+```
+
+The shared recorder (`scripts/wave_memory_prework.py`) writes a redacted per-surface artifact to
+`.cursor/hooks/state/memory-prework-search.json` and appends an auditable line to
+`.cursor/sw-deliver-runs/run.log`. Outcomes:
+
+| Probe / search | `outcome` | Gate behavior |
+| --- | --- | --- |
+| Provider unreachable (mechanical probe) | `memory:offline` | Satisfies degrade-open gate (R6) |
+| Search completed, zero relevant hits | `memory:none` | Satisfies gate (R7) |
+| Search completed with hits | `memory:hits` | Satisfies gate; hits surfaced + reconciled (R5) |
+
+Offline is **probe-gated** — never agent-asserted. Enforcement at the first file-mutating tool call
+reuses the PRD 017 `preToolUse` deny path (Phase 3).
 
 ## Read mode (preflight)
 
