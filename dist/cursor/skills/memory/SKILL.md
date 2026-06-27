@@ -23,6 +23,65 @@ config change, never a command edit.
 3. If the provider is unreachable, degrade: continue using `agentsFile` + repo docs, and tell the user
    memory is offline. Never block the workflow on a memory outage.
 
+## Pre-work search (mandatory)
+
+Every **work-performing** command MUST run a scoped `memory-preflight` **search** (read mode) before its
+first substantive mutation. The enumerated surfaces are: `/sw-execute`, `/sw-debug` (`rca-core` entry),
+`/sw-prd`, `/sw-brainstorm`, `/sw-amend`, `/sw-review`, `/sw-stabilize`. Route through this skill +
+`providers/<memory.provider>.md` only — never call a provider tool directly (`sw-guardrails`).
+
+### Scoped read recipe
+
+Follow `CAPABILITIES.md` **Read recipe**, scoped to the surface being touched:
+
+1. **Recency OFF** (`recentOnly: false`) — durable facts are not recent-only.
+2. Run **scoped searches**, not one broad query:
+   - **file-path** search on the paths the command will touch,
+   - **semantic** search on the change type / PRD / feature / surface,
+   - **category** narrowing when the adapter supports `categoryFilter`.
+3. Search these classes: `rule`, `decision`, `learning`, `code-context`, `design`.
+4. `expand` only the handful of ids that look relevant before mutation.
+
+Per-command scope hints remain in the table under **Read mode (preflight)** below; the obligation and
+recipe above apply to every enumerated work-performing surface.
+
+### Surface and reconcile
+
+Hits MUST be **surfaced to the acting agent before mutation** and **reconciled** against found
+rules/decisions:
+
+- An **applicable `rule`** or a **contradicting prior `decision`** is a reconcile obligation — record
+  alignment or an explicit conflict + how it is resolved; never silently ignore.
+- A direct conflict with a **frozen** decision/rule that cannot be reconciled is a **blocker** — halt per
+  the invoking command's halt contract (do not proceed with mutation).
+- Memory remains an input, not an authority — except `decision`-class SoT per **Source of truth
+  resolution** when memory-SoT is active.
+
+### Recording (mechanical)
+
+Record the pre-work search breadcrumb before the first substantive mutation:
+
+```bash
+bash scripts/wave.sh memory prework record \
+  --surface sw-execute \
+  --scope "core/skills/memory/SKILL.md" \
+  --classes rule,decision,learning,code-context,design \
+  [--hit-count N]
+```
+
+The shared recorder (`scripts/wave_memory_prework.py`) writes a redacted per-surface artifact to
+`.cursor/hooks/state/memory-prework-search.json` and appends an auditable line to
+`.cursor/sw-deliver-runs/run.log`. Outcomes:
+
+| Probe / search | `outcome` | Gate behavior |
+| --- | --- | --- |
+| Provider unreachable (mechanical probe) | `memory:offline` | Satisfies degrade-open gate (R6) |
+| Search completed, zero relevant hits | `memory:none` | Satisfies gate (R7) |
+| Search completed with hits | `memory:hits` | Satisfies gate; hits surfaced + reconciled (R5) |
+
+Offline is **probe-gated** — never agent-asserted. Enforcement at the first file-mutating tool call
+reuses the PRD 017 `preToolUse` deny path (Phase 3).
+
 ## Read mode (preflight)
 
 Run before doing the command's real work. Follow the read recipe in `CAPABILITIES.md`:

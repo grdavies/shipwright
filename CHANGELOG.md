@@ -75,6 +75,10 @@
 * merge phase pointer-inversion-supersede-reconcile-m into feat/memory-source-of-truth (ed509ad) <!-- sw-deliver:pointer-inversion-supersede-reconcile-m -->
 * merge phase compound-sot-branch-audit-conflict-migration-m into feat/memory-source-of-truth (c16c11e) <!-- sw-deliver:compound-sot-branch-audit-conflict-migration-m -->
 * merge phase docs-dist-fixtures-m into feat/memory-source-of-truth (4db9bef) <!-- sw-deliver:docs-dist-fixtures-m -->
+* merge phase memory-preflight-entry-obligation-m into feat/pre-work-memory-search-gate (fd42f46) <!-- sw-deliver:memory-preflight-entry-obligation-m -->
+* merge phase search-record-degrade-open-breadcrumb-m into feat/pre-work-memory-search-gate (617b36f) <!-- sw-deliver:search-record-degrade-open-breadcrumb-m -->
+* merge phase enforcement-dispatch-inheritance-m into feat/pre-work-memory-search-gate (8b7207a) <!-- sw-deliver:enforcement-dispatch-inheritance-m -->
+* merge phase docs-dist-fixtures-m into feat/pre-work-memory-search-gate (635ec0e) <!-- sw-deliver:docs-dist-fixtures-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

@@ -16,9 +16,14 @@ Full-tier brainstorm stage. Produces `docs/brainstorms/...-requirements.md` with
 ## Procedure
 
 1. Load `skills/brainstorm/SKILL.md` and follow its phases.
-2. One question per turn; synthesis checkpoint before any file write.
-3. Write requirements doc to path in `.sw/layout.md`.
-4. Report output path; next step is `/sw-prd` (not `/sw-tasks`).
+2. **Pre-work search (mandatory)** — before the first substantive mutation (including the requirements doc
+   write), run `memory-preflight` **pre-work search** per `skills/memory/SKILL.md` **Pre-work search
+   (mandatory)** (scoped to the feature domain; classes `rule`, `decision`, `learning`, `code-context`,
+   `design` via `providers/<memory.provider>.md` — no direct provider call). Surface hits and reconcile
+   applicable rules/contradicting decisions before authoring.
+3. One question per turn; synthesis checkpoint before any file write.
+4. Write requirements doc to path in `.sw/layout.md`.
+5. Report output path; next step is `/sw-prd` (not `/sw-tasks`).
 
 **Communication intensity:** lite
 
