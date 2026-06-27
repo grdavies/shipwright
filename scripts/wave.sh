@@ -123,6 +123,9 @@ case "${1:-}" in
     if [[ "${2:-}" == "validate" ]]; then
       exec python3 "$PLUGIN_ROOT/scripts/wave_plan_validate.py" "$ROOT" validate "${@:3}"
     fi
+    if [[ "${2:-}" == "benefit-report" ]]; then
+      exec python3 "$PLUGIN_ROOT/scripts/wave_plan_benefit.py" "$ROOT" benefit-report "${@:3}"
+    fi
     exec python3 "$PLUGIN_ROOT/scripts/wave_deliver.py" "$ROOT" plan "${@:2}"
     ;;
 esac

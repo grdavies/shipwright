@@ -1,0 +1,124 @@
+{
+  "pairs": [
+    {
+      "canonical": {
+        "planPolicy": "canonical",
+        "kernelVerdict": {
+          "terminalPhaseStatuses": ["green-merged"],
+          "gateOutcome": "green",
+          "mergeReadyCount": 1
+        },
+        "canonicalStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-simplify", "sw-commit", "sw-ready"],
+        "executedStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-simplify", "sw-commit", "sw-ready"],
+        "stepsSkippedWithoutRework": 0,
+        "stabilizeReentries": [],
+        "escapedDefectSignal": "none",
+        "phaseWallClockMs": 100000,
+        "decomposed": {
+          "stepPlanAdaptivity": {"stepsSkipped": 0, "wallClockMs": 0},
+          "waveSchedule": {"wallClockMs": 0},
+          "intraPhase": {"wallClockMs": 0}
+        }
+      },
+      "proposed": {
+        "planPolicy": "proposed",
+        "kernelVerdict": {
+          "terminalPhaseStatuses": ["green-merged"],
+          "gateOutcome": "green",
+          "mergeReadyCount": 1
+        },
+        "canonicalStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-simplify", "sw-commit", "sw-ready"],
+        "executedStepSet": ["sw-tmp-init", "sw-execute", "sw-commit", "sw-ready"],
+        "stepsSkippedWithoutRework": 2,
+        "stabilizeReentries": [],
+        "escapedDefectSignal": "none",
+        "phaseWallClockMs": 90000,
+        "decomposed": {
+          "stepPlanAdaptivity": {"stepsSkipped": 2, "wallClockMs": 10000},
+          "waveSchedule": {"wallClockMs": 0},
+          "intraPhase": {"wallClockMs": 0}
+        }
+      }
+    },
+    {
+      "canonical": {
+        "planPolicy": "canonical",
+        "kernelVerdict": {
+          "terminalPhaseStatuses": ["green-merged"],
+          "gateOutcome": "green",
+          "mergeReadyCount": 1
+        },
+        "canonicalStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-simplify", "sw-commit", "sw-ready"],
+        "executedStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-simplify", "sw-commit", "sw-ready"],
+        "stepsSkippedWithoutRework": 0,
+        "stabilizeReentries": [],
+        "escapedDefectSignal": "none",
+        "phaseWallClockMs": 110000,
+        "decomposed": {
+          "stepPlanAdaptivity": {"stepsSkipped": 0, "wallClockMs": 0},
+          "waveSchedule": {"wallClockMs": 0},
+          "intraPhase": {"wallClockMs": 0}
+        }
+      },
+      "proposed": {
+        "planPolicy": "proposed",
+        "kernelVerdict": {
+          "terminalPhaseStatuses": ["green-merged"],
+          "gateOutcome": "green",
+          "mergeReadyCount": 1
+        },
+        "canonicalStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-simplify", "sw-commit", "sw-ready"],
+        "executedStepSet": ["sw-tmp-init", "sw-execute", "sw-commit", "sw-ready"],
+        "stepsSkippedWithoutRework": 2,
+        "stabilizeReentries": [],
+        "escapedDefectSignal": "none",
+        "phaseWallClockMs": 95000,
+        "decomposed": {
+          "stepPlanAdaptivity": {"stepsSkipped": 2, "wallClockMs": 15000},
+          "waveSchedule": {"wallClockMs": 0},
+          "intraPhase": {"wallClockMs": 0}
+        }
+      }
+    },
+    {
+      "canonical": {
+        "planPolicy": "canonical",
+        "kernelVerdict": {
+          "terminalPhaseStatuses": ["green-merged"],
+          "gateOutcome": "green",
+          "mergeReadyCount": 1
+        },
+        "canonicalStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-simplify", "sw-commit", "sw-ready"],
+        "executedStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-simplify", "sw-commit", "sw-ready"],
+        "stepsSkippedWithoutRework": 0,
+        "stabilizeReentries": [],
+        "escapedDefectSignal": "none",
+        "phaseWallClockMs": 105000,
+        "decomposed": {
+          "stepPlanAdaptivity": {"stepsSkipped": 0, "wallClockMs": 0},
+          "waveSchedule": {"wallClockMs": 0},
+          "intraPhase": {"wallClockMs": 0}
+        }
+      },
+      "proposed": {
+        "planPolicy": "proposed",
+        "kernelVerdict": {
+          "terminalPhaseStatuses": ["green-merged"],
+          "gateOutcome": "green",
+          "mergeReadyCount": 1
+        },
+        "canonicalStepSet": ["sw-tmp-init", "sw-execute", "sw-verify", "sw-simplify", "sw-commit", "sw-ready"],
+        "executedStepSet": ["sw-tmp-init", "sw-execute", "sw-commit", "sw-ready"],
+        "stepsSkippedWithoutRework": 2,
+        "stabilizeReentries": [],
+        "escapedDefectSignal": "none",
+        "phaseWallClockMs": 98000,
+        "decomposed": {
+          "stepPlanAdaptivity": {"stepsSkipped": 2, "wallClockMs": 7000},
+          "waveSchedule": {"wallClockMs": 0},
+          "intraPhase": {"wallClockMs": 0}
+        }
+      }
+    }
+  ]
+}
