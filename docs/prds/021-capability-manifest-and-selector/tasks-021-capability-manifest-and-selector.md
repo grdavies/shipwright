@@ -101,23 +101,23 @@ contract per the Decision Log).
 
 ### 6. Migration with parity + shadow cutover + call-site map — L
 
-- [ ] 6.1 Integration / call-site map + dual-run shadow harness (R13)
+- [x] 6.1 Integration / call-site map + dual-run shadow harness (R13)
   - **File:** `docs/prds/021-capability-manifest-and-selector/` (map) + dual-run shadow runner
   - **Expected:** enumerate every current selection site and its replacement selector invocation (`sw-doc-review`, `sw-review` / `code-review-select.sh`, `check-gate.sh`, provider resolution, deliver/phase entry, `sw-subagent-dispatch` consumers); a dual-run fixture asserts selector output equals the legacy selection on the golden corpus before any legacy branch is removed.
   - **R-IDs:** R13
-- [ ] 6.2 Migrate doc-review personas (parity) (R13)
+- [x] 6.2 Migrate doc-review personas (parity) (R13)
   - **File:** `core/skills/doc-review/SKILL.md`, `core/commands/sw-doc-review.md`
   - **Expected:** selector-in/out golden fixture covering the tier gate, doc-type routing, security/design text-token gates (shared regex table preserving whole-token / inflection / polysemous-exclusion rules), and overrides; byte-identical to legacy; remove the legacy branch once `migration-parity-doc-review` is authoritative.
   - **R-IDs:** R13
-- [ ] 6.3 Migrate code-review specialist roster (parity over change-digest) (R13)
+- [x] 6.3 Migrate code-review specialist roster (parity over change-digest) (R13)
   - **File:** `core/providers/code-review/native.md`, `code-review-select.sh`
   - **Expected:** selection over the persisted change-digest; byte-parity with `code-review-select.sh` / `run-code-review-fixtures.sh` (`migration-parity-code-review`).
   - **R-IDs:** R13
-- [ ] 6.4 Migrate config-selected provider families (parity) (R13)
+- [x] 6.4 Migrate config-selected provider families (parity) (R13)
   - **File:** `check-gate.sh` / `wave_preflight` + `core/providers/**`
   - **Expected:** `review.provider`, `review.local`, `memory.provider`, `verify.provider` enumerated; configuredness (absent / `none` / unconfigured) matches `check-gate.sh` / `wave_preflight` verdicts exactly (`migration-parity-providers`).
   - **R-IDs:** R13
-- [ ] 6.5 Migrate `sw-subagent-dispatch` current selection (parity, no widening) (R13)
+- [x] 6.5 Migrate `sw-subagent-dispatch` current selection (parity, no widening) (R13)
   - **File:** `core/rules/sw-subagent-dispatch.mdc` + dispatch consumers
   - **Expected:** file-count from declared paths + the durable `inline`/`background_phase` flag; model-tier binding stays in `resolve-model-tier.sh` / `reviewer-dispatch-check.sh` (referenced, not re-encoded); delegate/fan-out budget widening explicitly deferred to PRD-023 (`migration-parity-dispatch`).
   - **R-IDs:** R13

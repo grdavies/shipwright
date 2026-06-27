@@ -172,7 +172,8 @@ During `/sw-execute`, **between tasks** (after TDD gate passes for the current t
    - No scope expansion or new requirements.
    - Fail → fix within task scope or escalate (R29).
 
-Inline (no subagent) when ≤3 files and sequential — still run both stages; orchestrator performs them explicitly.
+Inline (no subagent) when ≤3 declared `file_paths` in `signal_context` and sequential — resolved via
+`bash scripts/migration-parity-shadow.sh --family dispatch --context-json '<signal_context>'` / selector dispatch family (see `docs/prds/021-capability-manifest-and-selector/call-site-map.md`).
 
 **Do not batch** multi-task reviews at phase end. TDD red-green runs **before** stage 1 for each task.
 

@@ -41,7 +41,7 @@ Decision-record routing is **floor-only** — it never subtracts a persona signa
    - `docs/decisions/<n>-<slug>.amendments/A<k>-*.md` → decision **amendment** → raised floor per skill.
    - `.../amendments/A<k>-*.md` under `docs/prds/` → PRD amendment → coherence + scope-guardian + docs-currency (U7).
 5. If tier is Quick, report "no panel for Quick" and stop (parity for PRD and decision paths).
-6. **PRD drafts:** run signal-driven selection; announce activation record.
+6. **PRD drafts:** run `bash scripts/doc-review-select.sh --context-json '<signal_context>'`; announce activation record.
 7. **Decision-record drafts:** dispatch all eight `agents/sw-*-reviewer.md` personas (equivalent to `--all`).
 8. **Amendments:** dispatch per amendment floor rules in the skill; honor `--personas` / `--all` overrides when set.
 9. Dispatch selected personas as parallel sub-agents (full document each).
