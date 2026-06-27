@@ -24,8 +24,13 @@ from typing import Any
 
 from sw_hook_util import workspace_root
 
+from memory_prework_gate import consume_record, validate_fresh_record, load_record
+
 _REVIEWER_AGENT = re.compile(r"^sw-[a-z0-9-]+-reviewer$")
 _TASK_TOOL_NAMES = frozenset({"Task", "task"})
+_MUTATING_TOOL_NAMES = frozenset(
+    {"Write", "StrReplace", "Delete", "ApplyPatch", "EditNotebook"}
+)
 _DISPATCH_PREFLIGHT = Path(".cursor/hooks/state/task-dispatch-preflight.json")
 
 
@@ -239,8 +244,36 @@ def validate_dispatch_preflight(root: Path, agent_id: str) -> DispatchResult:
     )
 
 
+def validate_memory_prework(root: Path) -> DispatchResult:
+    cause = validate_fresh_record(load_record(root))
+    if cause:
+        return DispatchResult(
+            verdict="fail",
+            cause=cause,
+            remediation=(
+                "run pre-work memory search and record before the first file mutation: "
+                "bash scripts/wave.sh memory prework record --surface <sw-command> "
+                "[--scope paths] [--hit-count N]"
+            ),
+        )
+    return DispatchResult(verdict="pass")
+
+
 def evaluate_pre_tool_use(payload: dict[str, Any], root: Path) -> DispatchResult:
     tool_name = str(payload.get("tool_name") or "")
+
+    if tool_name in _MUTATING_TOOL_NAMES:
+        prework = validate_memory_prework(root)
+        if prework.verdict != "pass":
+            prework = DispatchResult(
+                verdict="fail",
+                cause=prework.cause,
+                remediation=prework.remediation,
+            )
+            return prework
+        consume_record(root)
+        return DispatchResult(verdict="skip")
+
     if tool_name not in _TASK_TOOL_NAMES:
         return DispatchResult(verdict="skip")
     tool_input = payload.get("tool_input")
