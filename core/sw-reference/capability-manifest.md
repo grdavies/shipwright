@@ -193,6 +193,10 @@ against `core/sw-reference/signal-context.schema.json`. Slots and **fail-closed 
 `<run-dir>/signal-context.json`. A mid-run `--resume` replays that snapshot instead of re-reading mutated
 files.
 
+**Run-log surfacing (R21):** when `--run-dir` / `SW_RUN_DIR` is set, each selection appends a
+`capability-selection` record to `.cursor/sw-deliver-runs/run.log` and `<run-dir>/run.log` with `inputsHash`,
+`resolvedCapabilities`, `precedenceTrace`, `activationRecord`, and `at` timestamp.
+
 **Selector output:** canonical JSON with `membershipHash` (sorted capability ids) separated from per-entry
 presentation fields. Each row carries `eligible`, `executable`, `authorized`, `gateRef`, `refusalReason`.
 Identical inputs ⇒ byte-identical output (`scripts/capability-select.sh`).
