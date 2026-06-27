@@ -63,23 +63,23 @@ contract per the Decision Log).
 
 ### 4. Deterministic selector + `signal_context` — L
 
-- [ ] 4.1 Versioned `signal_context` schema with fail-closed defaults (R10)
+- [x] 4.1 Versioned `signal_context` schema with fail-closed defaults (R10)
   - **File:** `core/sw-reference/signal-context.schema.json` (+ contract in `capability-manifest.md`)
   - **Expected:** `{tier, doc_path, body_snapshot|derived_tags, file_paths[], change_digest, config, phase_type, conductor_mode, overrides}`, each slot with a documented fail-closed default (missing triage → empty tags; unset provider → none); fully static (not the live working tree).
   - **R-IDs:** R10
-- [ ] 4.2 Deterministic selector primitive (canonical JSON + trust fields) (R10, R14)
+- [x] 4.2 Deterministic selector primitive (canonical JSON + trust fields) (R10, R14)
   - **File:** `scripts/capability-select.sh` → `capability_select.py`
   - **Expected:** takes a `signal_context`, returns canonically serialized JSON (ids sorted, fixed field order, membership hash separated from presentation metadata); each entry carries `eligible`, `executable`, `authorized`, `gateRef`, `refusalReason`; identical inputs ⇒ byte-identical output.
   - **R-IDs:** R10, R14
-- [ ] 4.3 Snapshot `signal_context` to durable state for resume (R10)
+- [x] 4.3 Snapshot `signal_context` to durable state for resume (R10)
   - **File:** `capability_select.py` + durable run-state writer
   - **Expected:** the resolved `signal_context` is snapshotted at first selection; a mid-run resume replays the identical context rather than re-reading mutated files.
   - **R-IDs:** R10
-- [ ] 4.4 Selector isolation + determinism fixtures (failing-before/passing-after) (R14, R25)
+- [x] 4.4 Selector isolation + determinism fixtures (failing-before/passing-after) (R14, R25)
   - **File:** `scripts/test/run-capability-select-fixtures.sh`
   - **Expected:** fixed signal contexts → asserted capability set; repeat-run byte-identical across both dist trees (`selector-determinism-repeat-identical`, `selector-isolation-fixture`).
   - **R-IDs:** R14, R25
-- [ ] 4.5 Drop-in fixture — frontmatter-only selection (R12)
+- [x] 4.5 Drop-in fixture — frontmatter-only selection (R12)
   - **File:** `scripts/test/run-capability-select-fixtures.sh`
   - **Expected:** a new **non-executable** capability added via frontmatter only (no orchestrator-command edits) is selected (`capability-dropin-frontmatter-only`, SC1).
   - **R-IDs:** R12

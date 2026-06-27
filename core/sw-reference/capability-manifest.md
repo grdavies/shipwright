@@ -170,6 +170,33 @@ The committed `core/sw-reference/capability-index.json` aggregates:
 
 Lint rejects phantom `sourcePath` values and `kind`/path prefix mismatches.
 
+## `signal_context` contract (R10)
+
+The selector consumes a **versioned, fully static** `signal_context` — not the live working tree. Validate
+against `core/sw-reference/signal-context.schema.json`. Slots and **fail-closed defaults**:
+
+| Slot | Default when absent/unset |
+| --- | --- |
+| `version` | `1` (required) |
+| `tier` | `null` |
+| `doc_path` | `null` |
+| `body_snapshot` | `""` |
+| `derived_tags` | `[]` (missing triage → empty tag set) |
+| `file_paths` | `[]` |
+| `change_digest` | `null` |
+| `config` | `{}` (unset provider keys → none via lookup) |
+| `phase_type` | `null` |
+| `conductor_mode` | `null` |
+| `overrides` | `{}` (`--personas` / `--all` at selection time) |
+
+**Resume (R10):** on first selection with `--run-dir`, the normalized `signal_context` is atomically written to
+`<run-dir>/signal-context.json`. A mid-run `--resume` replays that snapshot instead of re-reading mutated
+files.
+
+**Selector output:** canonical JSON with `membershipHash` (sorted capability ids) separated from per-entry
+presentation fields. Each row carries `eligible`, `executable`, `authorized`, `gateRef`, `refusalReason`.
+Identical inputs ⇒ byte-identical output (`scripts/capability-select.sh`).
+
 ## Related artifacts
 
 | Artifact | Role |

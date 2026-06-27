@@ -121,38 +121,104 @@ def _prefer_orchestrator_state(root_state: dict[str, Any], orch_state: dict[str,
 
 
 def resolve_deliver_state(repo_root: Path) -> DeliverStateView:
-    """Prefer orchestrator worktree deliver state over stale repo-root copies."""
+    """Canonical deliver state lives at repo-root scoped path only (PRD 013 R28)."""
+    from wave_state import _read_state_optional, enumerate_scoped_runs, resolve_state_path
+
     repo_root = repo_root.resolve()
-    root_state = _read_deliver_state_file(repo_root / ".cursor" / "sw-deliver-state.json")
-
-    orch_path_raw = (root_state.get("orchestratorWorktree") or {}).get("path")
-    orch_root: Path | None = None
-    orch_state: dict[str, Any] = {}
-    if isinstance(orch_path_raw, str) and orch_path_raw.strip():
-        candidate = Path(orch_path_raw).resolve()
-        orch_state_path = candidate / ".cursor" / "sw-deliver-state.json"
-        if orch_state_path.is_file() or candidate.is_dir():
-            orch_root = candidate
-            orch_state = _read_deliver_state_file(orch_state_path)
-
-    canonical_root = repo_root
-    canonical_state = root_state
     stale_roots: list[Path] = []
 
-    if orch_root and orch_state and orch_root.is_dir():
-        if _prefer_orchestrator_state(root_state, orch_state):
-            canonical_root = orch_root
-            canonical_state = orch_state
-            if (repo_root / ".cursor" / "sw-deliver-state.json").is_file():
-                stale_roots.append(repo_root)
-        elif orch_root != repo_root and (orch_root / ".cursor" / "sw-deliver-state.json").is_file():
-            stale_roots.append(orch_root)
+    state_path = resolve_state_path(repo_root)
+    state = _read_state_optional(state_path)
+    if not state:
+        runs = enumerate_scoped_runs(repo_root)
+        for run in runs:
+            if run.get("verdict") == "running":
+                candidate = repo_root / run["statePath"]
+                state = _read_state_optional(candidate)
+                if state:
+                    state_path = candidate
+                    break
 
-    return DeliverStateView(canonical_root=canonical_root, state=canonical_state, stale_roots=stale_roots)
+    orch_state: dict[str, Any] = {}
+    orch_root: Path | None = None
+    orch_raw = (state.get("orchestratorWorktree") or {}).get("path")
+    if isinstance(orch_raw, str) and orch_raw.strip():
+        orch_root = Path(orch_raw).resolve()
+        if orch_root != repo_root and (orch_root / ".cursor").is_dir():
+            for path in sorted((orch_root / ".cursor").glob("sw-deliver-state*.json")):
+                candidate = _read_state_optional(path)
+                if candidate:
+                    orch_state = candidate
+                    break
+
+    if orch_state and _prefer_orchestrator_state(state, orch_state):
+        if state:
+            stale_roots.append(repo_root)
+        state = orch_state
+    elif orch_state and orch_root is not None:
+        stale_roots.append(orch_root)
+
+    return DeliverStateView(canonical_root=repo_root, state=state, stale_roots=stale_roots)
 
 
 def load_deliver_state(root: Path) -> dict[str, Any]:
     return resolve_deliver_state(root).state
+
+
+def load_workflow_config(root: Path) -> dict[str, Any]:
+    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
+        path = root / rel
+        if path.is_file():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+    return {}
+
+
+def cleanup_autonomy_mode(root: Path) -> str:
+    cfg = load_workflow_config(root)
+    cleanup = cfg.get("cleanup") or {}
+    mode = cleanup.get("autonomy", "confirm")
+    return mode if mode in ("confirm", "auto") else "confirm"
+
+
+def has_indeterminate_protected(report: Report) -> bool:
+    return any(item.reason == "indeterminate" for item in report.protected)
+
+
+def can_autonomous_apply(root: Path, report: Report) -> tuple[bool, str]:
+    if cleanup_autonomy_mode(root) != "auto":
+        return False, "cleanup.autonomy is confirm (default)"
+    inflight, reason = deliver_inflight(root)
+    if inflight:
+        return False, reason
+    if has_indeterminate_protected(report):
+        return False, "indeterminate merge status — human gate required"
+    default = load_default_branch(root)
+    current = current_branch(root)
+    for item in report.would_remove:
+        if item.kind == "branch" and item.name in (current, default):
+            return False, f"would remove protected branch {item.name}"
+    return True, "ok"
+
+
+def apply_autonomous_cleanup(root: Path) -> dict[str, Any]:
+    report = enumerate_cleanup(root)
+    ok, reason = can_autonomous_apply(root, report)
+    if not ok:
+        return {
+            "verdict": "halt",
+            "action": "cleanup-autonomous-apply",
+            "reason": reason,
+            "report": report.to_dict(),
+        }
+    applied = apply_report(root, report)
+    return {
+        "verdict": "pass",
+        "action": "cleanup-autonomous-apply",
+        "report": applied.to_dict(),
+    }
 
 
 def rel_to_repo(repo_root: Path, path: Path) -> str:
@@ -169,8 +235,7 @@ def _collect_terminal_run_state(
     tag: str,
 ) -> None:
     cursor = state_root / ".cursor"
-    state_file = cursor / "sw-deliver-state.json"
-    if state_file.is_file():
+    for state_file in sorted(cursor.glob("sw-deliver-state*.json")):
         report.would_remove.append(
             Item("run-state", rel_to_repo(repo_root, state_file), tag, "terminal deliver run")
         )
@@ -186,18 +251,61 @@ def _collect_terminal_run_state(
         )
 
 
-def deliver_inflight(repo_root: Path) -> tuple[bool, str]:
-    view = resolve_deliver_state(repo_root)
-    for base in (view.canonical_root, repo_root.resolve()):
-        lock = base / ".cursor" / "sw-deliver.lock"
-        if lock.is_file():
-            return True, "deliver lock present"
-    verdict = str(view.state.get("verdict", ""))
+def _stale_state_rel_paths(view: DeliverStateView, repo_root: Path) -> set[str]:
+    rels: set[str] = set()
+    for stale_root in view.stale_roots:
+        cursor = stale_root / ".cursor"
+        if not cursor.is_dir():
+            continue
+        for path in cursor.glob("sw-deliver-state*.json"):
+            rels.add(rel_to_repo(repo_root, path))
+    return rels
+
+
+def _scoped_run_inflight(repo_root: Path, run: dict[str, Any]) -> tuple[bool, str]:
+    from wave_state import _is_migration_breadcrumb, _read_state_optional
+
+    state_path = repo_root / run["statePath"]
+    state = _read_state_optional(state_path)
+    if _is_migration_breadcrumb(state):
+        return False, ""
+    if run.get("lockHeld"):
+        return True, f"deliver lock present ({run.get('slug')})"
+    verdict = str(state.get("verdict") or run.get("verdict") or "")
     if verdict == "running":
-        if view.state.get("mergeJournal"):
-            return True, "open merge journal"
-        return True, "deliver run verdict=running"
+        if state.get("mergeJournal"):
+            return True, f"open merge journal ({run.get('slug')})"
+        return True, f"deliver run verdict=running ({run.get('slug')})"
     return False, ""
+
+
+def deliver_inflight(repo_root: Path) -> tuple[bool, str]:
+    from wave_state import enumerate_scoped_runs
+
+    view = resolve_deliver_state(repo_root)
+    stale = _stale_state_rel_paths(view, repo_root)
+    for run in enumerate_scoped_runs(repo_root):
+        if run.get("statePath") in stale:
+            continue
+        inflight, reason = _scoped_run_inflight(repo_root, run)
+        if inflight:
+            return True, reason
+    return False, ""
+
+
+def _protect_inflight_scoped_runs(report: Report, repo_root: Path) -> None:
+    from wave_state import enumerate_scoped_runs
+
+    view = resolve_deliver_state(repo_root)
+    stale = _stale_state_rel_paths(view, repo_root)
+    for run in enumerate_scoped_runs(repo_root):
+        if run.get("statePath") in stale:
+            continue
+        inflight, reason = _scoped_run_inflight(repo_root, run)
+        if inflight:
+            report.protected.append(
+                Item("run-state", run["statePath"], "protected", reason)
+            )
 
 
 def gh_merged(root: Path, branch: str, default: str) -> bool | None:
@@ -373,9 +481,15 @@ def enumerate_cleanup(root: Path) -> Report:
         else:
             report.would_remove.append(Item("worktree", path, "detached-stale", "no branch"))
 
+    from wave_state import resolve_state_path
+
+    _protect_inflight_scoped_runs(report, root)
     if inflight:
-        state_rel = rel_to_repo(root, deliver_view.canonical_root / ".cursor" / "sw-deliver-state.json")
-        report.protected.append(Item("run-state", state_rel, "protected", inflight_reason))
+        state_rel = rel_to_repo(root, resolve_state_path(root, state_hint=deliver_view.state))
+        if not any(
+            i.kind == "run-state" and i.name == state_rel for i in report.protected
+        ):
+            report.protected.append(Item("run-state", state_rel, "protected", inflight_reason))
     elif deliver_view.state:
         verdict = str(deliver_view.state.get("verdict", ""))
         if verdict in TERMINAL_DELIVER_VERDICTS:
@@ -383,7 +497,7 @@ def enumerate_cleanup(root: Path) -> Report:
             for stale_root in deliver_view.stale_roots:
                 _collect_terminal_run_state(report, root, stale_root, "stale-copy")
         elif verdict:
-            state_rel = rel_to_repo(root, deliver_view.canonical_root / ".cursor" / "sw-deliver-state.json")
+            state_rel = rel_to_repo(root, resolve_state_path(root, state_hint=deliver_view.state))
             report.protected.append(Item("run-state", state_rel, "protected", verdict))
 
     return report
@@ -435,6 +549,11 @@ def apply_report(root: Path, report: Report) -> Report:
 def main() -> None:
     root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
     confirm = "--confirm" in sys.argv
+    autonomous = "--autonomous" in sys.argv
+    if autonomous:
+        out = apply_autonomous_cleanup(root)
+        print(json.dumps(out, indent=2))
+        sys.exit(0 if out.get("verdict") == "pass" else 11)
     report = enumerate_cleanup(root)
     if confirm:
         if "--yes" not in sys.argv and os.environ.get("SW_CLEANUP_CONFIRM") != "1":

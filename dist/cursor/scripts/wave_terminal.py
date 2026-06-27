@@ -53,17 +53,22 @@ def write_json(path: Path, data: dict[str, Any]) -> None:
     os.chmod(path, 0o600)
 
 
-def state_path(root: Path) -> Path:
-    return root / ".cursor" / "sw-deliver-state.json"
+def state_path(root: Path, state: dict[str, Any] | None = None) -> Path:
+    from wave_state import resolve_state_path
+
+    return resolve_state_path(root, state_hint=state)
 
 
 def load_state(root: Path) -> dict[str, Any]:
-    return read_json(state_path(root))
+    from wave_state import load_deliver_state
+
+    return load_deliver_state(root)
 
 
 def save_state(root: Path, state: dict[str, Any]) -> None:
-    state["updatedAt"] = utc_now()
-    write_json(state_path(root), state)
+    from wave_state import save_deliver_state
+
+    save_deliver_state(root, state)
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
@@ -85,7 +90,263 @@ def phase_ack_cadence(root: Path) -> int:
         return 0
 
 
+def terminal_autonomy_mode(root: Path) -> str:
+    deliver = load_workflow_config(root).get("deliver") or {}
+    terminal = deliver.get("terminal") or {}
+    mode = terminal.get("autonomy", "supervised")
+    return mode if mode in ("supervised", "auto") else "supervised"
+
+
+def remediation_max_attempts(root: Path) -> int:
+    deliver = load_workflow_config(root).get("deliver") or {}
+    remediation = deliver.get("remediation") or {}
+    try:
+        return max(0, int(remediation.get("maxAttempts", 2)))
+    except (TypeError, ValueError):
+        return 2
+
+
+def current_branch_name(root: Path) -> str:
+    proc = git_run(["branch", "--show-current"], cwd=git_top(root), check=False)
+    return (proc.stdout or "").strip()
+
+
+def run_retrospective_record_premerge(root: Path, state: dict[str, Any]) -> None:
+    """Record pre-merge retrospective completion on feature branch (R20/R21)."""
+    prd = str(state.get("prd_number") or "000").zfill(3)
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "wave_compound.py"),
+            str(root),
+            "retrospective",
+            "record-premerge",
+            "--prd",
+            prd,
+            "--phase",
+            "deliver-terminal",
+            "--skip-append-log",
+        ],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0:
+        try:
+            err = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            err = {"error": proc.stderr.strip() or proc.stdout.strip()}
+        fail(err.get("error", "retrospective record-premerge failed"), exit_code=proc.returncode)
+
+
+def cmd_terminal_autonomy(root: Path, _args: list[str]) -> None:
+    mode = terminal_autonomy_mode(root)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "terminal-autonomy",
+            "mode": mode,
+            "handsOff": mode == "auto",
+            "supervisedHalts": mode == "supervised",
+            "default": "supervised",
+        }
+    )
+
+
+def cmd_terminal_retro_run(root: Path, args: list[str]) -> None:
+    """Pre-merge retrospective chain before terminal PR (PRD 013 A1 R20/R21)."""
+    dry_run = has_flag(args, "--dry-run")
+    state = load_state(root)
+    if not all_phases_green(state):
+        fail("retrospective requires all phases green-merged", exit_code=20)
+    target = (state.get("target") or {}).get("branch")
+    if not target:
+        fail("target branch missing in run-state")
+    top = git_top(root)
+    default = default_base_branch(root)
+    branch = current_branch_name(top)
+    if branch == default:
+        fail(
+            "retrospective artifacts must be committed on feature branch, never main",
+            exit_code=20,
+            halt="blocked",
+            cause="terminal-retro:on-main",
+        )
+    mode = terminal_autonomy_mode(root)
+    if mode == "supervised" and not has_flag(args, "--force"):
+        emit(
+            {
+                "verdict": "halt",
+                "action": "terminal-retro-run",
+                "halt": "supervised-checkpoint",
+                "mode": mode,
+                "invoke": "/sw-retrospective --pre-merge",
+                "note": "Set deliver.terminal.autonomy: auto for hands-off retrospective",
+            },
+            exit_code=11,
+        )
+    if (state.get("compoundShip") or {}).get("premergeDone"):
+        emit(
+            {
+                "verdict": "pass",
+                "action": "terminal-retro-run",
+                "skipped": True,
+                "reason": "premerge already recorded",
+            }
+        )
+    if dry_run:
+        emit(
+            {
+                "verdict": "pass",
+                "action": "terminal-retro-run",
+                "dry_run": True,
+                "targetBranch": target,
+                "wouldCommitOn": branch,
+            }
+        )
+    append_proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "wave_living_docs.py"),
+            str(root),
+            "append-terminal",
+            "--commit",
+        ],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    if append_proc.returncode not in (0, 10):
+        try:
+            err = json.loads(append_proc.stdout)
+        except json.JSONDecodeError:
+            err = {"error": append_proc.stderr or append_proc.stdout}
+        fail(err.get("error", "living-docs append-terminal failed"), exit_code=append_proc.returncode)
+    run_retrospective_record_premerge(root, state)
+    state = load_state(root)
+    append_log(root, {"event": "terminal-retro-run", "target": target, "branch": branch})
+    emit(
+        {
+            "verdict": "pass",
+            "action": "terminal-retro-run",
+            "targetBranch": target,
+            "committedOn": branch,
+            "premergeDone": bool((state.get("compoundShip") or {}).get("premergeDone")),
+            "safetyGates": {
+                "memoryFailClosed": True,
+                "ruleClassHumanGated": True,
+            },
+        }
+    )
+
+
+def cmd_terminal_ship_run(root: Path, args: list[str]) -> None:
+    """Autonomous terminal PR → push → gate watch → stabilize budget (R22/R23)."""
+    dry_run = has_flag(args, "--dry-run")
+    state = load_state(root)
+    mode = terminal_autonomy_mode(root)
+    if mode == "supervised" and not has_flag(args, "--force"):
+        emit(
+            {
+                "verdict": "halt",
+                "action": "terminal-ship-run",
+                "halt": "supervised-checkpoint",
+                "mode": mode,
+                "note": "Set deliver.terminal.autonomy: auto for hands-off terminal ship",
+            },
+            exit_code=11,
+        )
+    if not all_phases_green(state):
+        fail("terminal-ship requires all phases green-merged", exit_code=20)
+    compound = state.get("compoundShip") or {}
+    if not compound.get("premergeDone"):
+        cmd_terminal_retro_run(root, ["--force"])
+        state = load_state(root)
+    target = (state.get("target") or {}).get("branch")
+    if not target:
+        fail("target branch missing")
+    if dry_run:
+        emit(
+            {
+                "verdict": "pass",
+                "action": "terminal-ship-run",
+                "dry_run": True,
+                "steps": ["terminal-pr-prepare", "push-head", "gate-watch", "stabilize-within-budget"],
+                "neverAutoMergesMain": True,
+            }
+        )
+    cmd_terminal_pr_prepare(root, [])
+    state = load_state(root)
+    top = git_top(root)
+    push = git_run(["push", "-u", "origin", target], cwd=top, check=False)
+    if push.returncode != 0:
+        fail(
+            push.stderr.strip() or "git push failed",
+            exit_code=push.returncode,
+            halt="blocked",
+            cause="terminal-ship:push-failed",
+        )
+    terminal = state.get("terminalPr") or {}
+    pr = terminal.get("number")
+    if not pr:
+        fail("terminal PR missing after prepare")
+    pr_str = str(pr)
+    max_attempts = remediation_max_attempts(root)
+    terminal_attempts = int((state.get("remediationAttempts") or {}).get("terminal", 0))
+    gate_ec, gate = run_check_gate(root, pr_str)
+    ready = gate_ec == 0 and gate.get("verdict") == "green"
+    state["terminalShip"] = {
+        "status": "gate-green" if ready else "watching",
+        "pr": pr,
+        "attempts": terminal_attempts,
+        "updatedAt": utc_now(),
+    }
+    save_state(root, state)
+    if ready:
+        append_log(root, {"event": "terminal-ship-gate-green", "pr": pr})
+        emit(
+            {
+                "verdict": "pass",
+                "action": "terminal-ship-run",
+                "gate": gate,
+                "terminalGate": "ready to merge — your call",
+                "neverAutoMergesMain": True,
+                "note": "Human merge gate preserved (R23)",
+            }
+        )
+    if terminal_attempts >= max_attempts:
+        fail(
+            "terminal stabilization budget exhausted",
+            exit_code=20,
+            halt="blocked",
+            cause="terminal-ship:remediation-exhausted",
+            attempts=terminal_attempts,
+            maxAttempts=max_attempts,
+            recommendedCommand="/sw-stabilize",
+        )
+    state.setdefault("remediationAttempts", {})["terminal"] = terminal_attempts + 1
+    save_state(root, state)
+    emit(
+        {
+            "verdict": "wait",
+            "action": "terminal-ship-run",
+            "gate": gate,
+            "gateExitCode": gate_ec,
+            "attempt": terminal_attempts + 1,
+            "maxAttempts": max_attempts,
+            "recommendedCommand": "/sw-stabilize",
+            "neverAutoMergesMain": True,
+            "note": "Gate not green — stabilize within budget then re-run terminal ship",
+        },
+        exit_code=10,
+    )
+
+
 def default_base_branch(root: Path) -> str:
+    cfg = load_workflow_config(root)
+    base = cfg.get("defaultBaseBranch")
+    if isinstance(base, str) and base:
+        return base
     script = SCRIPT_DIR / "resolve_base_branch.py"
     if script.is_file():
         proc = subprocess.run(
@@ -547,7 +808,23 @@ def main() -> None:
     elif domain == "terminal":
         sub = args[0] if args else ""
         rest = args[1:]
-        if sub == "pr":
+        if sub == "autonomy":
+            cmd_terminal_autonomy(root, rest)
+        elif sub == "retro":
+            retro_sub = rest[0] if rest else ""
+            retro_rest = rest[1:]
+            if retro_sub == "run":
+                cmd_terminal_retro_run(root, retro_rest)
+            else:
+                fail("terminal retro subcommand required: run")
+        elif sub == "ship":
+            ship_sub = rest[0] if rest else ""
+            ship_rest = rest[1:]
+            if ship_sub == "run":
+                cmd_terminal_ship_run(root, ship_rest)
+            else:
+                fail("terminal ship subcommand required: run")
+        elif sub == "pr":
             pr_sub = rest[0] if rest else ""
             pr_rest = rest[1:]
             if pr_sub == "prepare":

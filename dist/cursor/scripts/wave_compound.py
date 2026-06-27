@@ -16,6 +16,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from cleanup_lib import load_default_branch
 from wave_json_io import StateCorruptError, read_json, write_json
+from wave_state import load_deliver_state, resolve_state_path, save_deliver_state
 
 # File outputs safe to commit pre-merge (R18). Memory/provider artifacts are never committed (R19).
 ALLOWED_PREMERGE_FILE_PREFIXES = (
@@ -23,7 +24,7 @@ ALLOWED_PREMERGE_FILE_PREFIXES = (
     "docs/prds/INDEX.md",
     "CHANGELOG.md",
     "docs/learnings/",
-    ".cursor/sw-deliver-state.json",
+    ".cursor/sw-deliver-state",
 )
 
 MEMORY_PATH_MARKERS = (
@@ -57,21 +58,18 @@ def has_flag(args: list[str], flag: str) -> bool:
     return flag in args
 
 
-def state_path(root: Path) -> Path:
-    return root / ".cursor" / "sw-deliver-state.json"
+def state_path(root: Path, state: dict[str, Any] | None = None) -> Path:
+    return resolve_state_path(git_top(root), state_hint=state)
 
 
 def load_state(root: Path) -> dict[str, Any]:
-    path = state_path(root)
-    try:
-        return read_json(path)
-    except StateCorruptError as exc:
-        fail(f"corrupt durable state: {exc}", exit_code=20, cause="state:corrupt")
+    top = git_top(root)
+    return load_deliver_state(top)
 
 
 def save_state(root: Path, state: dict[str, Any]) -> None:
-    state["updatedAt"] = utc_now()
-    write_json(state_path(root), state)
+    top = git_top(root)
+    save_deliver_state(top, state)
 
 
 def git_top(root: Path) -> Path:

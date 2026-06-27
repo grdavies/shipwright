@@ -37,6 +37,10 @@ elif [ -d "$ROOT/.sw" ]; then
     --exclude 'pr-test-plan.manifest.json' \
     --exclude 'model-tier-hook-feasibility.md' \
     --exclude 'models-tiering.md' \
+    --exclude 'capability-manifest.md' \
+    --exclude 'capability-manifest.schema.json' \
+    --exclude 'capability-index.json' \
+    --exclude 'signal-context.schema.json' \
     "$ROOT/.sw/" "$CORE/sw-reference/"
 fi
 
