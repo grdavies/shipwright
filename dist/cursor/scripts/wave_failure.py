@@ -437,6 +437,9 @@ def cmd_report_blockers(root: Path, _args: list[str]) -> None:
     }
     if state.get("terminalRejected"):
         report["note"] = "Terminal PR rejected; resume must not re-present (R46)"
+    from deliver_plan_surfacing import REPORT_KIND_HALT, attach_plan_surfacing_to_report
+
+    attach_plan_surfacing_to_report(root, state, report, report_kind=REPORT_KIND_HALT)
     append_log(root, {"event": "blocker-report", "blockerCount": len(blockers)})
     emit({"verdict": "pass", "action": "report-blockers", "report": report})
 

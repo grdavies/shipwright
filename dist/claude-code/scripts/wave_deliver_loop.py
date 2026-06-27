@@ -24,6 +24,10 @@ from plan_persist import (
     wave_lifecycle,
     wave_plan_ready,
 )
+from deliver_plan_surfacing import (
+    surface_phase_plan_chosen,
+    surface_wave_plan_chosen,
+)
 from wave_plan_validate import (
     phase_fallback_canonical_chain,
     read_config_plan_policy,
@@ -1410,6 +1414,7 @@ def execute_mechanical(
         persist_wave_batching_plan(state, wave_plan, fail)
         set_wave_lifecycle(state, LIFECYCLE_WAVE_VALIDATED)
         save_state(root, state)
+        surface_wave_plan_chosen(root, wave_plan)
         persist_cursor(root, state, "provision-phase")
         return {"executed": "wave-plan-persist", "lifecycle": get_lifecycle(state)}
 
@@ -1460,6 +1465,12 @@ def execute_mechanical(
         persist_phase_plan(phase_plan_path(run_dir), phase_plan)
         set_phase_lifecycle(state, pid, LIFECYCLE_PHASE_PLAN_VALIDATED)
         save_state(root, state)
+        surface_phase_plan_chosen(
+            root,
+            phase_id=pid,
+            phase_slug=slug,
+            phase_plan=phase_plan,
+        )
         persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
         return {
             "executed": "phase-plan-entry",
