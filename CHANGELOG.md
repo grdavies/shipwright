@@ -83,6 +83,7 @@
 * merge phase generated-capability-index-freshness-gates-m into feat/capability-manifest-and-selector (a499a64) <!-- sw-deliver:generated-capability-index-freshness-gates-m -->
 * merge phase precedence-policy-author-time-lint-m into feat/capability-manifest-and-selector (74a55cd) <!-- sw-deliver:precedence-policy-author-time-lint-m -->
 * merge phase deterministic-selector-signal-context-l into feat/capability-manifest-and-selector (cbe18d5) <!-- sw-deliver:deterministic-selector-signal-context-l -->
+* merge phase run-log-surfacing-s into feat/capability-manifest-and-selector (4235f06) <!-- sw-deliver:run-log-surfacing-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
