@@ -10,6 +10,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from host_lib import load_workflow_config, remote_name, remote_ref
+
+
+def host_remote_name(root: Path) -> str:
+    return remote_name(load_workflow_config(root))
+
 MergeStatus = Literal["merged", "unmerged", "indeterminate", "gone", "protected"]
 TERMINAL_DELIVER_VERDICTS = frozenset({"complete", "blocked", "rejected"})
 
@@ -406,13 +416,14 @@ def list_local_branches(root: Path) -> list[str]:
 
 
 def list_remote_branches(root: Path) -> list[str]:
-    proc = git(root, "for-each-ref", "--format=%(refname:short)", "refs/remotes/origin/")
+    host_remote = host_remote_name(root)
+    proc = git(root, "for-each-ref", "--format=%(refname:short)", f"refs/remotes/{host_remote}/")
     if proc.returncode != 0:
         return []
     out: list[str] = []
     for b in proc.stdout.splitlines():
         b = b.strip()
-        if not b or b.endswith("/HEAD") or b == "origin/HEAD":
+        if not b or b.endswith("/HEAD") or b == f"{host_remote}/HEAD":
             continue
         out.append(b)
     return out
@@ -443,6 +454,8 @@ def parse_worktrees(root: Path) -> list[dict[str, str]]:
 
 def enumerate_cleanup(root: Path) -> Report:
     report = Report(dry_run=True)
+    host_remote = host_remote_name(root)
+    prefix = f"{host_remote}/"
     default = load_default_branch(root)
     current = current_branch(root)
     deliver_view = resolve_deliver_state(root)
@@ -460,9 +473,10 @@ def enumerate_cleanup(root: Path) -> Report:
             report.protected.append(Item("branch", branch, status, detail))
 
     for remote in list_remote_branches(root):
-        if remote == "origin" or "/" not in remote.removeprefix("origin"):
+        prefix = f"{host_remote}/"
+        if remote == host_remote or "/" not in remote.removeprefix(prefix):
             continue
-        short = remote.removeprefix("origin/")
+        short = remote.removeprefix(prefix)
         if short in (default, current):
             report.protected.append(Item("remote", remote, "protected", "default or current"))
             continue
@@ -532,6 +546,8 @@ def _apply_sort_key(item: Item) -> tuple[int, str]:
 
 def apply_report(root: Path, report: Report) -> Report:
     report.dry_run = False
+    host_remote = host_remote_name(root)
+    prefix = f"{host_remote}/"
     for item in sorted(report.would_remove, key=_apply_sort_key):
         try:
             if item.kind == "branch":
@@ -542,7 +558,7 @@ def apply_report(root: Path, report: Report) -> Report:
                 report.removed.append(item)
             elif item.kind == "remote":
                 ref = item.name
-                proc = git(root, "push", "origin", "--delete", ref.removeprefix("origin/"))
+                proc = git(root, "push", host_remote, "--delete", ref.removeprefix(prefix))
                 if proc.returncode != 0:
                     report.errors.append(f"remote {item.name}: {proc.stderr.strip()}")
                     continue

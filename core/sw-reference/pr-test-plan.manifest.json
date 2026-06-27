@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Standard FEAT PR test-plan fixture set — single source for verify.test and CI (PRD 016 R1–R3).",
+  "description": "Standard FEAT PR test-plan fixture set \u2014 single source for verify.test and CI (PRD 016 R1\u2013R3).",
   "fixtures": [
     {
       "id": "doc-fixtures",
@@ -36,6 +36,29 @@
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-docs-link-check"
+    },
+    {
+      "id": "host-fixtures",
+      "script": "scripts/test/run-host-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-host-fixtures",
+      "scenarios": [
+        "host-provider-select",
+        "host-verb-capability-flags",
+        "remote-url-autodetect",
+        "origin-literal-guard",
+        "missing-token-degrades",
+        "throttle-detect-not-fail",
+        "wait-priority-order",
+        "bounded-retry-exhaustion-halt",
+        "near-limit-preemptive-pause",
+        "serial-and-paced-requests",
+        "backoff-log-redaction",
+        "github-migration-token-only",
+        "doctor-degraded-warns",
+        "host-ratelimit-config"
+      ]
     }
   ]
 }

@@ -19,31 +19,31 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 
 ### 1. Host adapter + rate-limit foundation — L
 
-- [ ] 1.1 Host config schema (`host.*` incl. `host.rateLimit`) (R1, R41)
+- [x] 1.1 Host config schema (`host.*` incl. `host.rateLimit`) (R1, R41)
   - **File:** `.sw/config.schema.json`, `.cursor/workflow.config.json`
   - **Expected:** schema validates `host.provider`, `host.remote`, `host.tokenEnv`, `host.baseUrl`,
     `host.apiBaseUrl`, and a `host.rateLimit` object (max attempts, base/cap backoff, jitter, near-limit
     threshold); unknown provider rejected closed-world. `host-provider-select` resolves the configured adapter.
   - **R-IDs:** R1, R41
-- [ ] 1.2 Adapter contract + capability flags (R2, R3)
+- [x] 1.2 Adapter contract + capability flags (R2, R3)
   - **File:** `core/providers/host/CAPABILITIES.md`, `core/providers/host/github.md`, `core/providers/host/none.md`
   - **Expected:** stable host-operation verb set documented (`pr-create`, `pr-view`, `pr-list`, `pr-head`,
     `checks`, `review-threads`, `repo-meta`, `merge`); each adapter declares capability frontmatter; missing
     capability surfaces a typed degraded result, not a crash. `host-verb-capability-flags` asserts the matrix.
   - **R-IDs:** R2, R3
-- [ ] 1.3 Provider auto-detection + configurable remote (R6, R7)
+- [x] 1.3 Provider auto-detection + configurable remote (R6, R7)
   - **File:** `scripts/host-detect.sh`, `scripts/host_lib.py`
   - **Expected:** provider auto-detected from the configured remote URL for public hosts; `host.remote`
     (default `origin`) replaces every hard-coded `origin` literal in the R7 script set.
     `remote-url-autodetect` maps URLs→providers; `origin-literal-guard` greps the scripts for stray `origin`.
   - **R-IDs:** R6, R7
-- [ ] 1.4 Token resolution + missing-token degradation (R8)
+- [x] 1.4 Token resolution + missing-token degradation (R8)
   - **File:** `scripts/host_token.sh`
   - **Expected:** tokens referenced by env-var name (`host.tokenEnv` + per-provider override); resolved at
     call time, never written to argv/state/logs; absent token degrades to a typed warning verdict.
     `missing-token-degrades` proves no crash and no token leakage.
   - **R-IDs:** R8
-- [ ] 1.5 Shared rate-limit retry wrapper (R35, R36, R37, R38, R39, R42)
+- [x] 1.5 Shared rate-limit retry wrapper (R35, R36, R37, R38, R39, R42)
   - **File:** `scripts/host_transport.sh`, `scripts/host_ratelimit.py`
   - **Expected:** wrapper detects throttling (`403`/`429` + remaining/reset or `Retry-After`); computes wait
     in priority order (`Retry-After` → reset header when remaining `0` → jittered exponential backoff);
@@ -53,7 +53,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
     `bounded-retry-exhaustion-halt`, `near-limit-preemptive-pause`, `serial-and-paced-requests`,
     `backoff-log-redaction`.
   - **R-IDs:** R35, R36, R37, R38, R39, R42
-- [ ] 1.6 Doctor/setup check + GitHub migration parity (R33, R34)
+- [x] 1.6 Doctor/setup check + GitHub migration parity (R33, R34)
   - **File:** `core/commands/sw-init.md`, `scripts/host-doctor.sh`
   - **Expected:** `/sw-init` (and `sw-configure`) validate provider, token presence, and reachability;
     degraded capability reported as a warning; an existing GitHub repo works with only a token env var set.
