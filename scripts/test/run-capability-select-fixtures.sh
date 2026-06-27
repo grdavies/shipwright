@@ -146,6 +146,57 @@ else
   FAIL=1
 fi
 
+# --- run-log-capability-set-surfaced (R21) ---
+LOG_ROOT=$(mktemp -d)
+LOG_PHASE="$LOG_ROOT/.cursor/sw-deliver-runs/run-log-fixture-phase"
+mkdir -p "$LOG_PHASE"
+LOG_INDEX="$ROOT/core/sw-reference/capability-index.json"
+LOG_CTX='{"version":1,"phase_type":"sw-doc-review","body_snapshot":"# Auth PRD\nOAuth login flow."}'
+LOG_OUT=$(python3 "$ROOT/scripts/capability_select.py" --root "$LOG_ROOT" --index "$LOG_INDEX" \
+  --context-json "$LOG_CTX" --run-dir "$LOG_PHASE" --skip-freshness 2>/dev/null || true)
+DELIVER_LOG="$LOG_ROOT/.cursor/sw-deliver-runs/run.log"
+PHASE_LOG="$LOG_PHASE/run.log"
+if python3 -c "
+import json, sys
+from pathlib import Path
+
+deliver = Path(sys.argv[1])
+phase = Path(sys.argv[2])
+selection = json.loads(sys.argv[3])
+want = {row['id'] for row in selection.get('capabilities', [])}
+
+def check(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    for line in path.read_text(encoding='utf-8').splitlines():
+        if not line.strip():
+            continue
+        entry = json.loads(line)
+        if entry.get('event') != 'capability-selection':
+            continue
+        got = set(entry.get('resolvedCapabilities') or [])
+        if got != want:
+            return False
+        if not entry.get('inputsHash'):
+            return False
+        if not entry.get('precedenceTrace'):
+            return False
+        if not entry.get('at'):
+            return False
+        if not entry.get('activationRecord'):
+            return False
+        return True
+    return False
+
+sys.exit(0 if check(deliver) and check(phase) else 1)
+" "$DELIVER_LOG" "$PHASE_LOG" "$LOG_OUT"; then
+  echo "OK  run-log-capability-set-surfaced"
+else
+  echo "FAIL run-log-capability-set-surfaced"
+  FAIL=1
+fi
+rm -rf "$LOG_ROOT"
+
 # --- stale index fails closed (failing-before) ---
 INDEX="$ROOT/core/sw-reference/capability-index.json"
 if [ -f "$INDEX" ]; then

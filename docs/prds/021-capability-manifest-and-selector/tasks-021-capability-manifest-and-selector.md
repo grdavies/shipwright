@@ -124,11 +124,11 @@ contract per the Decision Log).
 
 ### 7. Run-log surfacing — S
 
-- [ ] 7.1 Emit resolved capability set into run-log sinks (R21)
+- [x] 7.1 Emit resolved capability set into run-log sinks (R21)
   - **File:** deliver `run.log` + per-phase run-dir writer
   - **Expected:** inputs hash, resolved set, precedence trace, and timestamp written to the durable run-log sink at each selection site, aligned with the doc-review activation record.
   - **R-IDs:** R21
-- [ ] 7.2 Run-log surfacing fixture (R21)
+- [x] 7.2 Run-log surfacing fixture (R21)
   - **File:** `scripts/test/run-capability-select-fixtures.sh`
   - **Expected:** for a fixed signal context, the resolved capability set appears in the run log at selection time (`run-log-capability-set-surfaced`).
   - **R-IDs:** R21
