@@ -9,29 +9,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from kernel_classification import canonical_ship_chain, normalize_step
 from wave_json_io import StateCorruptError, read_json, write_json
 
-# Ordered /sw-ship chain (phase-mode). Hyphenated ids; aliases normalized in normalize_step().
-SHIP_CHAIN: list[str] = [
-    "sw-tmp-init",
-    "sw-execute",
-    "sw-verify",
-    "verification-gate",
-    "sw-review",
-    "sw-simplify",
-    "gap-check",
-    "sw-commit",
-    "sw-pr",
-    "sw-watch-ci",
-    "sw-stabilize",
-    "sw-ready",
-    "sw-tmp-clean",
-]
 
-STEP_ALIASES: dict[str, str] = {
-    "sw-tmp init": "sw-tmp-init",
-    "sw-tmp clean": "sw-tmp-clean",
-}
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
+# Single-sourced from core/sw-reference/kernel-classification.json (PRD 022 TR1).
+SHIP_CHAIN: list[str] = canonical_ship_chain(_repo_root())
 
 
 def utc_now() -> str:
@@ -47,11 +34,6 @@ def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 
-def normalize_step(step: str) -> str:
-    s = step.strip()
-    if s in STEP_ALIASES:
-        return STEP_ALIASES[s]
-    return s.replace(" ", "-")
 
 
 def chain_index(step: str) -> int:

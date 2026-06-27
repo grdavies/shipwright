@@ -26,8 +26,11 @@ ambiguity, optional `--signal-id` feedback close.
 ## Chain
 
 ```
-sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review → sw-simplify → gap-check → sw-commit → sw-pr → sw-watch-ci → sw-stabilize → sw-ready [PAUSE] → sw-tmp clean
+sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review → sw-simplify → gap-check → sw-commit → sw-pr → sw-watch-ci → sw-stabilize → sw-ready → sw-tmp clean [PAUSE]
 ```
+
+Canonical chain is single-sourced from `core/sw-reference/kernel-classification.json` (`canonicalPhaseChains.sw-ship`); `scripts/ship_phase_steps.py` derives `SHIP_CHAIN` from the same artifact.
+
 
 - **sw-tmp** — at chain start: `bash scripts/sw-tmp.sh clean` then `bash scripts/sw-tmp.sh init` (records
   `runDir` in shipwright-state). At chain end: `bash scripts/sw-tmp.sh clean`. No `trap … EXIT` (markdown-orchestrated
