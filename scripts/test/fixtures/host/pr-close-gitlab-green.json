@@ -1,0 +1,10 @@
+{
+  "verdict": "ok",
+  "verb": "pr-close",
+  "provider": "gitlab",
+  "data": {
+    "number": 7,
+    "url": "https://gitlab.com/owner/repo/-/merge_requests/7",
+    "state": "CLOSED"
+  }
+}

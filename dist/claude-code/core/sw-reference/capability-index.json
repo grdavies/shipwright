@@ -688,6 +688,29 @@
       }
     },
     {
+      "id": "provider.providers.host.bitbucket",
+      "kind": "provider",
+      "sourcePath": "core/providers/host/bitbucket.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "host.provider",
+            "equals": "bitbucket"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "host",
+          "adapterId": "bitbucket",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.sh"
+        }
+      }
+    },
+    {
       "id": "provider.providers.host.github",
       "kind": "provider",
       "sourcePath": "core/providers/host/github.md",
@@ -705,6 +728,29 @@
         "metadata": {
           "providerFamily": "host",
           "adapterId": "github",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.sh"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.host.gitlab",
+      "kind": "provider",
+      "sourcePath": "core/providers/host/gitlab.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "host.provider",
+            "equals": "gitlab"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "host",
+          "adapterId": "gitlab",
           "selectionFamily": "providers",
           "gateRef": "check-gate.sh"
         }

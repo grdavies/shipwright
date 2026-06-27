@@ -457,6 +457,12 @@ def host_pr_list(root: Path, *, head: str, base: str, state: str = "open") -> li
 
 
 def host_pr_create(root: Path, *, title: str, body: str, head: str, base: str) -> dict[str, Any]:
+    from wave_phase_pr import enforce_phase_pr_base
+
+    resolved = enforce_phase_pr_base(root, base)
+    if resolved.get("verdict") != "ok":
+        fail(resolved.get("error", "phase-pr-base"), exit_code=20, **{k: v for k, v in resolved.items() if k != "verdict"})
+    base = str(resolved.get("base") or base)
     out = host_verb(root, "pr-create", title=title, body=body, head=head, base=base)
     if out.get("verdict") != "ok":
         fail(out.get("reason", "host pr-create failed"), exit_code=out.get("_exitCode", 30))

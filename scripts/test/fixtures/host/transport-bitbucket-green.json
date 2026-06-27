@@ -1,0 +1,40 @@
+{
+  "/pullrequests": {
+    "values": [
+      {
+        "id": 3,
+        "links": {
+          "html": {
+            "href": "https://bitbucket.org/owner/repo/pull-requests/3"
+          }
+        },
+        "source": {
+          "branch": {
+            "name": "feat/x"
+          },
+          "commit": {
+            "hash": "abc123"
+          }
+        },
+        "destination": {
+          "branch": {
+            "name": "main"
+          }
+        },
+        "state": "OPEN",
+        "title": "t",
+        "description": "b"
+      }
+    ]
+  },
+  "/repositories/owner/repo": {
+    "full_name": "owner/repo",
+    "mainbranch": {
+      "name": "main"
+    },
+    "name": "repo",
+    "workspace": {
+      "slug": "owner"
+    }
+  }
+}

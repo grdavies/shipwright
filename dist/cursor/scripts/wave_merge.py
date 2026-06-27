@@ -376,6 +376,11 @@ def cmd_phase_dispatch_env(root: Path, args: list[str]) -> None:
         stamp_phase_context(run_dir, conductor_mode)
     except ImportError:
         pass
+    from wave_phase_pr import resolve_phase_pr_base
+    phase_pr_base = resolve_phase_pr_base(root)
+    if phase_pr_base.get("verdict") != "ok":
+        fail(phase_pr_base.get("error", "phase-pr-base"), exit_code=20, **phase_pr_base)
+    integration = phase_pr_base.get("integrationBranch") or ""
     emit(
         {
             "verdict": "pass",
@@ -383,10 +388,12 @@ def cmd_phase_dispatch_env(root: Path, args: list[str]) -> None:
             "phase": phase_slug,
             "conductorMode": conductor_mode,
             "phaseContextPath": str(run_dir / "phase-context.json"),
+            "phasePrBase": phase_pr_base,
             "exports": {
                 "SW_PHASE_MODE": "1",
                 "SW_PHASE_SLUG": phase_slug,
                 "SW_RUN_DIR": run_dir_rel,
+                "SW_INTEGRATION_BRANCH": integration,
             },
             "invoke": "/sw-ship --phase-mode",
             "note": "Run full /sw-ship chain in phase worktree; orchestrator does not bypass steps",
@@ -778,10 +785,15 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
         )
         ack_out = json.loads(ack_proc.stdout) if ack_proc.stdout.strip() else {}
 
+        from wave_phase_pr import close_superseded_phase_prs
+        state = load_state(root)
+        pr_close = close_superseded_phase_prs(root, state, phase_slug=phase_slug)
+
         emit(
             {
                 "verdict": "pass",
                 "action": "merge-run-next",
+                "supersededPrClose": pr_close,
                 "phase": phase_slug,
                 "mergeCommit": merge_commit,
                 "remaining": len(state["mergeQueue"]),
@@ -885,6 +897,10 @@ def cmd_report_terminal(root: Path, args: list[str]) -> None:
         report["note"] = (
             "Pre-merge compounding recorded; awaiting human merge — not complete until merged (R53)"
         )
+    from wave_phase_pr import close_superseded_phase_prs
+    pr_close = close_superseded_phase_prs(root, state)
+    report["supersededPrClose"] = pr_close
+
     if all_merged and not state.get("terminalRejected") and not completion_pending:
         report["terminalGate"] = "ready to merge — your call"
         report["note"] = "Open or update single <type>/<slug> → main PR; halt without merging"

@@ -118,28 +118,28 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 
 ### 4. GitLab + Bitbucket adapters + PR-automation fixes — L
 
-- [ ] 4.1 GitLab adapter over REST (merge requests) (R18)
+- [x] 4.1 GitLab adapter over REST (merge requests) (R18)
   - **File:** `core/providers/host/gitlab.md`, `scripts/host_gitlab.sh`
   - **Expected:** verb set implemented over the GitLab MR REST API incl. its rate-limit signal mapping.
     `gitlab-adapter-verbs` on recorded responses.
   - **R-IDs:** R18
-- [ ] 4.2 Bitbucket adapter + backoff-by-default (R19, R40)
+- [x] 4.2 Bitbucket adapter + backoff-by-default (R19, R40)
   - **File:** `core/providers/host/bitbucket.md`, `scripts/host_bitbucket.sh`
   - **Expected:** verb set over the Bitbucket PR REST API; because Bitbucket Cloud often omits `Retry-After`
     and a reset header on `429`, the adapter falls back to jittered exponential backoff by default.
     `bitbucket-adapter-verbs` + `bitbucket-backoff-default`.
   - **R-IDs:** R19, R40
-- [ ] 4.3 Phase-mode PR base = integration branch, fail-closed (R20)
+- [x] 4.3 Phase-mode PR base = integration branch, fail-closed (R20)
   - **File:** `scripts/wave_terminal.py`, `scripts/wave_deliver.py`
   - **Expected:** in phase mode, PR/MR creation targets `<type>/<slug>` and fails closed on base mismatch.
     `phase-pr-base-integration`.
   - **R-IDs:** R20
-- [ ] 4.4 Close superseded phase PRs by branch identity (R21)
+- [x] 4.4 Close superseded phase PRs by branch identity (R21)
   - **File:** `scripts/wave_merge.py`
   - **Expected:** at `green-merged` and terminal assembly, superseded phase PRs close keyed on branch
     identity regardless of ancestry. `superseded-pr-close-by-branch-identity`.
   - **R-IDs:** R21
-- [ ] 4.5 Cleanup not blocked by open phase-head PR (R22)
+- [x] 4.5 Cleanup not blocked by open phase-head PR (R22)
   - **File:** `scripts/cleanup_lib.py`
   - **Expected:** cleanup proceeds for phases recorded `green-merged` even with an open phase-head PR.
     `cleanup-not-blocked-by-open-pr`.

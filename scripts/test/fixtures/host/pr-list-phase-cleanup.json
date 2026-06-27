@@ -1,0 +1,14 @@
+{
+  "verdict": "ok",
+  "verb": "pr-list",
+  "provider": "github",
+  "data": [
+    {
+      "number": 55,
+      "url": "https://github.com/owner/repo/pull/55",
+      "headRefName": "feat/demo-phase-alpha",
+      "baseRefName": "main",
+      "state": "OPEN"
+    }
+  ]
+}
