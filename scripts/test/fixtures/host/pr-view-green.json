@@ -1,0 +1,16 @@
+{
+  "verdict": "ok",
+  "verb": "pr-view",
+  "provider": "github",
+  "data": {
+    "number": 42,
+    "url": "https://github.com/owner/repo/pull/42",
+    "headRefName": "feat/x",
+    "headRefOid": "abc123def4567890abcdef1234567890abcdef12",
+    "baseRefName": "main",
+    "state": "OPEN",
+    "isDraft": false,
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "CLEAN"
+  }
+}

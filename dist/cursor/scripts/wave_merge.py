@@ -22,6 +22,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from host_lib import load_workflow_config, remote_name, remote_ref, remote_heads_ref
 from wave_json_io import StateCorruptError, read_json, write_json
 from wave_state import assert_phase_status
 
@@ -375,6 +376,11 @@ def cmd_phase_dispatch_env(root: Path, args: list[str]) -> None:
         stamp_phase_context(run_dir, conductor_mode)
     except ImportError:
         pass
+    from wave_phase_pr import resolve_phase_pr_base
+    phase_pr_base = resolve_phase_pr_base(root)
+    if phase_pr_base.get("verdict") != "ok":
+        fail(phase_pr_base.get("error", "phase-pr-base"), exit_code=20, **phase_pr_base)
+    integration = phase_pr_base.get("integrationBranch") or ""
     emit(
         {
             "verdict": "pass",
@@ -382,10 +388,12 @@ def cmd_phase_dispatch_env(root: Path, args: list[str]) -> None:
             "phase": phase_slug,
             "conductorMode": conductor_mode,
             "phaseContextPath": str(run_dir / "phase-context.json"),
+            "phasePrBase": phase_pr_base,
             "exports": {
                 "SW_PHASE_MODE": "1",
                 "SW_PHASE_SLUG": phase_slug,
                 "SW_RUN_DIR": run_dir_rel,
+                "SW_INTEGRATION_BRANCH": integration,
             },
             "invoke": "/sw-ship --phase-mode",
             "note": "Run full /sw-ship chain in phase worktree; orchestrator does not bypass steps",
@@ -462,18 +470,19 @@ def cmd_merge_exec(root: Path, args: list[str]) -> None:
     if not phase_slug or not phase_branch or not target:
         fail("--phase-slug, --phase-branch, and --target required")
     wt = resolve_orchestrator_worktree(root, args)
-    git_run(["fetch", "origin", phase_branch, target], cwd=wt, check=False)
+    host_remote = remote_name(load_workflow_config(root))
+    git_run(["fetch", host_remote, phase_branch, target], cwd=wt, check=False)
     merge_ref = phase_branch
     if git_run(["show-ref", "--verify", f"refs/heads/{phase_branch}"], cwd=wt, check=False).returncode != 0:
         if (
             git_run(
-                ["show-ref", "--verify", f"refs/remotes/origin/{phase_branch}"],
+                ["show-ref", "--verify", remote_heads_ref(host_remote, phase_branch)],
                 cwd=wt,
                 check=False,
             ).returncode
             == 0
         ):
-            merge_ref = f"origin/{phase_branch}"
+            merge_ref = remote_ref(host_remote, phase_branch)
         else:
             fail(f"phase branch not found: {phase_branch}")
 
@@ -776,10 +785,15 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
         )
         ack_out = json.loads(ack_proc.stdout) if ack_proc.stdout.strip() else {}
 
+        from wave_phase_pr import close_superseded_phase_prs
+        state = load_state(root)
+        pr_close = close_superseded_phase_prs(root, state, phase_slug=phase_slug)
+
         emit(
             {
                 "verdict": "pass",
                 "action": "merge-run-next",
+                "supersededPrClose": pr_close,
                 "phase": phase_slug,
                 "mergeCommit": merge_commit,
                 "remaining": len(state["mergeQueue"]),
@@ -883,6 +897,10 @@ def cmd_report_terminal(root: Path, args: list[str]) -> None:
         report["note"] = (
             "Pre-merge compounding recorded; awaiting human merge — not complete until merged (R53)"
         )
+    from wave_phase_pr import close_superseded_phase_prs
+    pr_close = close_superseded_phase_prs(root, state)
+    report["supersededPrClose"] = pr_close
+
     if all_merged and not state.get("terminalRejected") and not completion_pending:
         report["terminalGate"] = "ready to merge — your call"
         report["note"] = "Open or update single <type>/<slug> → main PR; halt without merging"

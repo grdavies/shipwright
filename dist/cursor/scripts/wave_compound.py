@@ -14,6 +14,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from host_invoke import host_verb
+
 from cleanup_lib import load_default_branch
 from wave_json_io import StateCorruptError, read_json, write_json
 from wave_state import load_deliver_state, resolve_state_path, save_deliver_state
@@ -107,33 +109,26 @@ def resolve_default_ref(top: Path, default: str) -> tuple[str, str]:
     return default, ""
 
 
-def terminal_pr_merged_via_gh(state: dict[str, Any]) -> dict[str, Any] | None:
+def terminal_pr_merged_via_host(root: Path, state: dict[str, Any]) -> dict[str, Any] | None:
     """Authoritative merge signal for squash-merged terminal PRs (R53)."""
     terminal = state.get("terminalPr") or {}
     number = terminal.get("number")
     if number is None:
         return None
-    proc = subprocess.run(
-        ["gh", "pr", "view", str(number), "--json", "state,mergedAt,mergeCommit"],
-        text=True,
-        capture_output=True,
-    )
-    if proc.returncode != 0:
+    out = host_verb(root, "pr-view", number=str(number))
+    if out.get("verdict") != "ok":
         return None
-    try:
-        payload = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return None
+    payload = out.get("data") or {}
     if payload.get("state") != "MERGED":
         return None
     merge_commit = payload.get("mergeCommit") or {}
     return {
         "merged": True,
         "status": "merged",
-        "detail": "terminal-pr-gh",
+        "detail": "terminal-pr-host",
         "prNumber": number,
         "mergedAt": payload.get("mergedAt"),
-        "mergeCommit": merge_commit.get("oid"),
+        "mergeCommit": merge_commit.get("oid") if isinstance(merge_commit, dict) else merge_commit,
     }
 
 
@@ -144,7 +139,7 @@ def target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     top = git_top(root)
     default = load_default_branch(top)
 
-    gh_info = terminal_pr_merged_via_gh(state)
+    gh_info = terminal_pr_merged_via_host(root, state)
     if gh_info:
         return {**gh_info, "target": target, "default": default}
 

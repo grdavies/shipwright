@@ -115,7 +115,9 @@ PY
     DETECT="$(bash "$ROOT/scripts/detect-project-type.sh" --root "$ROOT" --propose 2>/dev/null || echo '{}')"
     DRIFT="$(bash "$0" drift-check --config "${CONFIG:-}")"
     GH_OK="unknown"
-    if command -v gh >/dev/null 2>&1; then
+    if bash "$ROOT/scripts/host-doctor.sh" --root "$ROOT" >/dev/null 2>&1; then
+      gh="present"
+    elif command -v gh >/dev/null 2>&1; then
       GH_OK="available"
     else
       GH_OK="missing"
@@ -132,7 +134,7 @@ lines.append(f"gh: {gh}")
 if drift.get("stale"):
     lines.append(drift.get("notice", "config stale"))
 if gh == "missing":
-    lines.append("warning: gh unavailable — CI-readiness gate requires GitHub Actions")
+    lines.append("warning: host token missing — set host.tokenEnv for CI-readiness gate")
 print(json.dumps({"summary": lines, "gh": gh, "drift": drift}, indent=2))
 PY
     ;;

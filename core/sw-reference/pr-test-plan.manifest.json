@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Standard FEAT PR test-plan fixture set — single source for verify.test and CI (PRD 016 R1–R3).",
+  "description": "Standard FEAT PR test-plan fixture set \u2014 single source for verify.test and CI (PRD 016 R1\u2013R3).",
   "fixtures": [
     {
       "id": "doc-fixtures",
@@ -36,6 +36,60 @@
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-docs-link-check"
+    },
+    {
+      "id": "host-fixtures",
+      "script": "scripts/test/run-host-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-host-fixtures",
+      "scenarios": [
+        "host-provider-select",
+        "host-verb-capability-flags",
+        "remote-url-autodetect",
+        "origin-literal-guard",
+        "missing-token-degrades",
+        "throttle-detect-not-fail",
+        "wait-priority-order",
+        "bounded-retry-exhaustion-halt",
+        "near-limit-preemptive-pause",
+        "serial-and-paced-requests",
+        "backoff-log-redaction",
+        "github-migration-token-only",
+        "doctor-degraded-warns",
+        "host-ratelimit-config",
+        "gh-removal-guard",
+        "gh-absent-path",
+        "check-gate-verbset",
+        "terminal-flow-verbset",
+        "stabilize-sync-verbset",
+        "prose-gh-free",
+        "install-docs-currency",
+        "noremote-local-adapter",
+        "terminal-local-evidence-gate",
+        "local-merge-human-halt",
+        "ci-watch-local-degrade",
+        "check-gate-local-verdict"
+      ]
+    },
+    {
+      "id": "git-workflow-fixtures",
+      "script": "scripts/test/run-git-workflow-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-git-workflow-fixtures",
+      "scenarios": [
+        "git-workflow-skill-present",
+        "conventions-single-source",
+        "branch-name-guard-reject",
+        "commit-msg-validator-reject",
+        "pr-template-required-fields",
+        "docs-branch-no-main-commit",
+        "docs-worktree-provision",
+        "docs-pr-to-default",
+        "brainstorm-durable-commit",
+        "durability-reconcile-prd013"
+      ]
     }
   ]
 }

@@ -828,6 +828,11 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
             result["basePreflight"] = base_pf
         cap_pf = run_capability_index_preflight(root)
         result["capabilityIndexPreflight"] = cap_pf
+        from wave_phase_pr import resolve_phase_pr_base
+        phase_pr_base = resolve_phase_pr_base(root)
+        if phase_pr_base.get("verdict") != "ok":
+            fail(phase_pr_base.get("error", "phase-pr-base"), exit_code=20, **phase_pr_base)
+        result["phasePrBase"] = phase_pr_base
     elif mode == "combined":
         out = plan_combined(root, args, dry_run=True)
         result.update(

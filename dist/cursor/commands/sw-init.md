@@ -180,6 +180,9 @@ Detect and recommend (never hard-fail scaffold):
 - Config drift vs schema → `bash scripts/sw-configure.sh drift-check`.
 - Missing in-repo store dir → offer `mkdir -p` repair.
 
+- **Host provider doctor** via `bash scripts/host-doctor.sh` — validates `host.provider`, configured remote, token env presence (never prints token), and rate-limit config. Warns when capability is degraded (missing token, missing remote) without blocking scaffold.
+- Seed `host` config on greenfield: `provider` auto-detected, `remote: origin`, `tokenEnv` per provider (`GITHUB_TOKEN` default for GitHub). Existing GitHub repos need only `GITHUB_TOKEN` set (R33).
+
 ### 5b. Portability self-check (R24/R25)
 
 Before first `/sw-ship`:

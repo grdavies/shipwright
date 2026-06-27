@@ -102,13 +102,17 @@ def merged_prs_for_slug(slug: str):
     prd_num_pat = re.compile(rf"\bPRD\s+{re.escape(slug_lower)}\b", re.IGNORECASE)
     title_pat = re.compile(rf"\b{slug_esc}\b", re.IGNORECASE)
     try:
-        out = subprocess.check_output(
-            ["gh", "pr", "list", "--state", "merged", "--json", "number,title,headRefName,body", "--limit", "100"],
+        proc = subprocess.run(
+            ["bash", str(Path(root) / "scripts" / "host.sh"), "--root", root, "pr-list", "--state", "closed", "--limit", "100"],
             cwd=root,
             text=True,
+            capture_output=True,
             stderr=subprocess.DEVNULL,
         )
-        prs = json.loads(out)
+        payload = json.loads(proc.stdout or "{}")
+        prs = payload.get("data") if payload.get("verdict") == "ok" else []
+        if not isinstance(prs, list):
+            prs = []
     except Exception:
         prs = []
     for pr in prs:

@@ -2,7 +2,7 @@
 # Deterministic Shipwright CI readiness gate.
 #
 # Prints a single JSON verdict to stdout and never mutates anything. Canonical computation behind the
-# `checks-gate` skill — `/sw-watch-ci` and stabilize invoke it instead of ad-hoc `gh` calls.
+# `checks-gate` skill — `/sw-watch-ci` and stabilize invoke it instead of ad-hoc host CLI calls.
 #
 # Per-head review state comes from providers/review/<provider>.sh (executable adapter seam).
 #
@@ -15,11 +15,23 @@ CHECKS="$(mktemp "${TMPDIR:-/tmp}/sw-gate-checks.XXXXXX")"
 ISSUE_COMMENTS="$(mktemp "${TMPDIR:-/tmp}/sw-gate-comments.XXXXXX")"
 trap 'rm -f "$CHECKS" "$ISSUE_COMMENTS"' EXIT
 
+host_verb() {
+  bash "$SCRIPT_DIR/host.sh" --root "$ROOT" "$@"
+}
+
+host_data() {
+  local out
+  out="$(host_verb "$@")" || true
+  python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(json.dumps(d.get('data'))) if d.get('verdict')=='ok' else sys.exit(1)" "$out" 2>/dev/null
+}
+
+
 # --- repo + config ------------------------------------------------------------
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 # shellcheck source=sw-resolve-plugin-root.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sw-resolve-plugin-root.sh"
-PLUGIN_ROOT="$(sw_resolve_plugin_root "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_ROOT="$(sw_resolve_plugin_root "$SCRIPT_DIR")"
 CONFIG=""
 for p in "$ROOT/.cursor/workflow.config.json" "$ROOT/workflow.config.json"; do
   [ -f "$p" ] && CONFIG="$p" && break
@@ -61,19 +73,129 @@ if [ -f "$PR_TEST_PLAN_MANIFEST" ]; then
   REQUIRED_JOBS="$(jq -c '[.fixtures[]?|select(.classification=="required")|.ciJobName]' "$PR_TEST_PLAN_MANIFEST" 2>/dev/null || echo '[]')"
 fi
 
-# --- resolve PR + head --------------------------------------------------------
+# --- host provider (local-evidence path for none) -----------------------------
+HOST_PROVIDER="$(python3 "$SCRIPT_DIR/host_lib.py" --root "$ROOT" resolve 2>/dev/null | jq -r '.provider // ""' 2>/dev/null || echo "")"
+
+GATE_DEPRECATIONS='[]'
+
+local_evidence_gate() {
+  HEAD_SHA="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)"
+  BRANCH="$(git -C "$ROOT" branch --show-current 2>/dev/null || true)"
+  if [ -z "$HEAD_SHA" ]; then
+    echo '{"verdict":"blocked","reason":"not a git repository","source":"local-evidence"}'
+    exit 30
+  fi
+  REPO_META="$(host_verb repo-meta 2>/dev/null || true)"
+  OWNER_REPO="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print((d.get('data') or {}).get('nameWithOwner','local/repo'))" "$REPO_META" 2>/dev/null || echo 'local/repo')"
+  OWNER="${OWNER_REPO%/*}"
+  REPO="${OWNER_REPO#*/}"
+  CHECKS_OUT="$(host_verb checks --sha "$HEAD_SHA" 2>/dev/null || true)"
+  python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); open(sys.argv[2],'w').write(json.dumps(d.get('data') or []))" "$CHECKS_OUT" "$CHECKS" 2>/dev/null || echo '[]' > "$CHECKS"
+  [ -s "$CHECKS" ] || echo '[]' > "$CHECKS"
+  CLASSIFIED="$(jq -c --argjson allow "$ALLOW_JSON" --argjson npass "$NEUTRAL_PASS" '
+    def klass:
+      .state as $s |
+      if   ($s=="SUCCESS" or $s=="SKIPPED") then "pass"
+      elif ($s=="NEUTRAL") then (if ($npass or (.name as $n | $allow|index($n))) then "pass" else "block" end)
+      elif ($s|IN("PENDING","QUEUED","IN_PROGRESS","REQUESTED","WAITING","EXPECTED")) then "pending"
+      else "fail" end;
+    [ .[] | {name, state, class: klass} ]
+  ' "$CHECKS" 2>/dev/null || echo '[]')"
+  FAILING="$(jq -c '[.[]|select(.class=="fail")|.name]' <<<"$CLASSIFIED")"
+  PENDING="$(jq -c '[.[]|select(.class=="pending")|.name]' <<<"$CLASSIFIED")"
+  BLOCKING="$(jq -c '[.[]|select(.class=="block")|.name]' <<<"$CLASSIFIED")"
+  CHECK_COUNT="$(jq 'length' <<<"$CLASSIFIED")"
+  SPLIT="$(jq -c --argjson adv "$ADVISORY_JOBS" --argjson fail "$FAILING" '
+    ($fail|map(select(. as $n | ($adv|index($n)|not)))) as $req |
+    ($fail|map(select(. as $n | ($adv|index($n))))) as $advFail |
+    {requiredFailing: $req, advisoryFailing: $advFail}
+  ' <<<"{}")"
+  REQUIRED_FAILING="$(jq -c '.requiredFailing' <<<"$SPLIT")"
+  ADVISORY_FAILING="$(jq -c '.advisoryFailing' <<<"$SPLIT")"
+  UNRESOLVED=0
+  ACTIONABLE=0
+  HAS_PER_HEAD=true
+  CR_STATE="off"; CR_LANDED=true
+  CR_REVIEWED_HEAD=""; CR_STATUS="off"
+  CR_MARKER=0; CR_SKIP=0; MINS_SINCE=0
+  verdict() {
+    [ "$(jq 'length' <<<"$REQUIRED_FAILING")" -gt 0 ] && { echo red; return; }
+    [ "$(jq 'length' <<<"$BLOCKING")" -gt 0 ] && { echo blocked; return; }
+    [ "$(jq 'length' <<<"$PENDING")" -gt 0 ]  && { echo yellow; return; }
+    [ "$CHECK_COUNT" -eq 0 ]                  && { echo blocked; return; }
+    echo green
+  }
+  VERDICT="$(verdict)"
+  REASON="$VERDICT"
+  case "$VERDICT" in
+    yellow)  REASON="checks pending: $(jq -r 'join(",")' <<<"$PENDING")" ;;
+    red)     REASON="failing checks: $(jq -r 'join(",")' <<<"$REQUIRED_FAILING")" ;;
+    blocked) REASON="blocking/neutral or empty check set" ;;
+    green)   REASON="local-evidence: all local checks pass; review gating off; 0 actionable threads" ;;
+  esac
+  CR_MARKER_BOOL=false; CR_SKIP_BOOL=false
+  jq -n     --arg verdict "$VERDICT"     --arg reason "$REASON"     --arg head "$HEAD_SHA"     --arg branch "$BRANCH"     --arg crHead "$CR_REVIEWED_HEAD"     --arg crStatus "$CR_STATUS"     --arg crState "$CR_STATE"     --arg reviewProvider "$REVIEW_PROVIDER"     --argjson crLanded "$CR_LANDED"     --argjson crMarker "$CR_MARKER_BOOL"     --argjson crSkipped "$CR_SKIP_BOOL"     --argjson minsSince 0     --argjson unresolved 0     --argjson actionable 0     --argjson failing "$FAILING"     --argjson requiredFailing "$REQUIRED_FAILING"     --argjson advisoryFailing "$ADVISORY_FAILING"     --argjson prTestPlanRequired "$REQUIRED_JOBS"     --argjson prTestPlanAdvisory "$ADVISORY_JOBS"     --argjson prTestPlanManifest "$PR_TEST_PLAN"     --argjson pending "$PENDING"     --argjson blocking "$BLOCKING"     --argjson checkCount "${CHECK_COUNT:-0}"     --argjson deprecations "$GATE_DEPRECATIONS"     '{
+      verdict: $verdict,
+      reason: $reason,
+      source: "local-evidence",
+      pr: null,
+      head: $head,
+      branch: $branch,
+      reviewProvider: $reviewProvider,
+      deprecations: $deprecations,
+      coderabbitReviewedHead: null,
+      coderabbitReviewedCurrentHead: false,
+      coderabbitStatus: $crStatus,
+      coderabbitState: $crState,
+      coderabbitLanded: $crLanded,
+      coderabbitSkipped: $crSkipped,
+      coderabbitInProgressMarker: $crMarker,
+      minutesSinceHeadPush: $minsSince,
+      unresolvedThreads: $unresolved,
+      unresolvedActionable: $actionable,
+      failingChecks: $failing,
+      requiredFailingChecks: $requiredFailing,
+      advisoryFailingChecks: $advisoryFailing,
+      prTestPlan: (if $prTestPlanManifest==null then null else {
+        manifest: $prTestPlanManifest,
+        requiredJobs: $prTestPlanRequired,
+        advisoryJobs: $prTestPlanAdvisory
+      } end),
+      pendingChecks: $pending,
+      blockingNeutral: $blocking,
+      checkCount: $checkCount
+    }'
+  case "$VERDICT" in
+    green)   exit 0 ;;
+    yellow)  exit 10 ;;
+    red)     exit 20 ;;
+    blocked) exit 30 ;;
+    *)       exit 1 ;;
+  esac
+}
+
+if [ "$HOST_PROVIDER" = "none" ]; then
+  local_evidence_gate
+fi
+
+# --- resolve PR + head (host verbs) -------------------------------------------
 PR="${1:-}"
-[ -z "$PR" ] && PR="$(gh pr view --json number --jq .number 2>/dev/null || true)"
+if [ -z "$PR" ]; then
+  RESOLVE_OUT="$(host_verb resolve-pr-for-branch 2>/dev/null || true)"
+  PR="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); items=d.get('data') or []; print(items[0].get('number','') if items else '')" "$RESOLVE_OUT" 2>/dev/null || true)"
+fi
 if [ -z "$PR" ]; then
   echo '{"verdict":"blocked","reason":"no open PR for current branch"}'
   exit 30
 fi
-HEAD_SHA="$(gh pr view "$PR" --json headRefOid --jq .headRefOid 2>/dev/null || true)"
-MERGEABLE="$(gh pr view "$PR" --json mergeable --jq .mergeable 2>/dev/null || true)"
-MERGE_STATE="$(gh pr view "$PR" --json mergeStateStatus --jq .mergeStateStatus 2>/dev/null || true)"
-OWNER_REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)"
+PR_VIEW="$(host_verb pr-view --number "$PR" 2>/dev/null || true)"
+HEAD_SHA="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print((d.get('data') or {}).get('headRefOid',''))" "$PR_VIEW" 2>/dev/null || true)"
+MERGEABLE="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print((d.get('data') or {}).get('mergeable',''))" "$PR_VIEW" 2>/dev/null || true)"
+MERGE_STATE="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print((d.get('data') or {}).get('mergeStateStatus',''))" "$PR_VIEW" 2>/dev/null || true)"
+REPO_META="$(host_verb repo-meta 2>/dev/null || true)"
+OWNER_REPO="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print((d.get('data') or {}).get('nameWithOwner',''))" "$REPO_META" 2>/dev/null || true)"
 if [ -z "$HEAD_SHA" ] || [ -z "$OWNER_REPO" ]; then
-  echo '{"verdict":"blocked","reason":"incomplete GitHub metadata (head or repo)"}'
+  echo '{"verdict":"blocked","reason":"incomplete host metadata (head or repo)"}'
   exit 30
 fi
 if [ "$MERGEABLE" = "CONFLICTING" ] || [ "$MERGE_STATE" = "DIRTY" ]; then
@@ -84,7 +206,8 @@ OWNER="${OWNER_REPO%/*}"
 REPO="${OWNER_REPO#*/}"
 
 # --- checks -------------------------------------------------------------------
-gh pr checks "$PR" --json name,state,bucket,link,workflow > "$CHECKS" 2>/dev/null || true
+CHECKS_OUT="$(host_verb checks --number "$PR" --sha "$HEAD_SHA" 2>/dev/null || true)"
+python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); open(sys.argv[2],'w').write(json.dumps(d.get('data') or []))" "$CHECKS_OUT" "$CHECKS" 2>/dev/null || echo '[]' > "$CHECKS"
 [ -s "$CHECKS" ] || echo '[]' > "$CHECKS"
 
 CLASSIFIED="$(jq -c --argjson allow "$ALLOW_JSON" --argjson npass "$NEUTRAL_PASS" '
@@ -111,23 +234,12 @@ SPLIT="$(jq -c --argjson adv "$ADVISORY_JOBS" --argjson fail "$FAILING" '
 REQUIRED_FAILING="$(jq -c '.requiredFailing' <<<"$SPLIT")"
 ADVISORY_FAILING="$(jq -c '.advisoryFailing' <<<"$SPLIT")"
 
-# --- unresolved review threads ------------------------------------------------
+# --- unresolved review threads (host verb) ------------------------------------
 UNRESOLVED=0
 ACTIONABLE=0
-CURSOR=""
-if [ -n "$OWNER" ] && [ -n "$REPO" ]; then
-  while :; do
-    RESP="$(gh api graphql -f query='query($o:String!,$r:String!,$p:Int!,$c:String){repository(owner:$o,name:$r){pullRequest(number:$p){reviewThreads(first:100,after:$c){pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated}}}}}' \
-      -F o="$OWNER" -F r="$REPO" -F p="$PR" -F c="${CURSOR:-}" 2>/dev/null || echo '{}')"
-    N="$(jq '[.data.repository.pullRequest.reviewThreads.nodes[]?|select(.isResolved==false)]|length' <<<"$RESP" 2>/dev/null || echo 0)"
-    A="$(jq '[.data.repository.pullRequest.reviewThreads.nodes[]?|select(.isResolved==false and .isOutdated==false)]|length' <<<"$RESP" 2>/dev/null || echo 0)"
-    UNRESOLVED=$((UNRESOLVED + N))
-    ACTIONABLE=$((ACTIONABLE + A))
-    HASNEXT="$(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage // false' <<<"$RESP" 2>/dev/null || echo false)"
-    CURSOR="$(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // empty' <<<"$RESP" 2>/dev/null || echo "")"
-    [ "$HASNEXT" = "true" ] && [ -n "$CURSOR" ] || break
-  done
-fi
+THREADS_OUT="$(host_verb review-threads --number "$PR" 2>/dev/null || true)"
+UNRESOLVED="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print((d.get('data') or {}).get('unresolved',0))" "$THREADS_OUT" 2>/dev/null || echo 0)"
+ACTIONABLE="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print((d.get('data') or {}).get('actionable',0))" "$THREADS_OUT" 2>/dev/null || echo 0)"
 
 # --- review per-head state (executable adapter seam) --------------------------
 # Opt-out: review.provider="none" (explicit) or review.enabled=false (deprecated).

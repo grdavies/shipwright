@@ -1,0 +1,13 @@
+{
+  "verdict": "ok",
+  "verb": "pr-create",
+  "provider": "github",
+  "data": {
+    "number": 99,
+    "url": "https://github.com/owner/repo/pull/99",
+    "headRefOid": "deadbeef",
+    "headRefName": "feat/x",
+    "baseRefName": "main",
+    "state": "OPEN"
+  }
+}

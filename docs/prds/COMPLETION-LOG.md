@@ -4,6 +4,16 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 
 | Date | PRD | Phase | Notes |
 |------|-----|-------|-------|
+| 2026-06-27 | 026 | all | deliver complete — awaiting terminal merge; PR #151; SHA 6479fb0 |
+| 2026-06-27 | 026 | all | deliver complete — awaiting terminal merge; PR #151; SHA 95d6b30 |
+| 2026-06-27 | 026 | all | deliver complete — awaiting terminal merge; PR #151; SHA 66df758 |
+| 2026-06-27 | 026 | all | deliver complete — awaiting terminal merge; PR #151; SHA 8d38ab3 |
+| 2026-06-27 | 026 | all | deliver complete — awaiting terminal merge; PR #151; SHA 3797e05 |
+| 2026-06-27 | 026 | all | deliver complete — awaiting terminal merge; PR #151; SHA af87d51 |
+| 2026-06-27 | 026 | all | deliver complete — awaiting terminal merge; PR #151; SHA f641b9e |
+| 2026-06-27 | 026 | all | deliver complete — awaiting terminal merge; PR #151; SHA ee6ee5b |
+| 2026-06-27 | 026 | all | deliver complete — awaiting terminal merge; SHA fd28033 |
+| 2026-06-27 | 026 | all | deliver complete — awaiting terminal merge; SHA f769845 |
 | 2026-06-27 | 023 | post-merge | terminal PR #143 squash-merged to `main`; SHA 7711574; phase PRs #140/#141 closed as superseded (#142 auto-merged); GAP-BACKLOG dangling-PR row added |
 | 2026-06-27 | 023 | all | deliver complete — awaiting terminal merge; SHA 65a90d6 |
 | 2026-06-27 | 022 | post-merge | post-merge retrospective complete; PR #139; SHA b5edbda |

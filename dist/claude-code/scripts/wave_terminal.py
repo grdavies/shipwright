@@ -12,6 +12,12 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from host_invoke import host_verb
+from host_lib import load_workflow_config, remote_name, remote_ref, resolve_provider
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -275,10 +281,24 @@ def cmd_terminal_ship_run(root: Path, args: list[str]) -> None:
                 "neverAutoMergesMain": True,
             }
         )
+    if is_local_host_mode(root):
+        cmd_terminal_pr_prepare(root, [])
+        gate_ec, gate = run_check_gate(root, None)
+        state = load_state(root)
+        state["terminalShip"] = {
+            "status": "gate-green" if gate_ec == 0 and gate.get("verdict") == "green" else "local-evidence",
+            "mode": "local-evidence",
+            "updatedAt": utc_now(),
+        }
+        save_state(root, state)
+        payload = terminal_local_gate_payload(root, gate_ec, gate, action="terminal-ship-run")
+        append_log(root, {"event": "terminal-ship-local", "gateVerdict": gate.get("verdict")})
+        emit(payload, 0 if payload["verdict"] == "pass" else 10)
     cmd_terminal_pr_prepare(root, [])
     state = load_state(root)
     top = git_top(root)
-    push = git_run(["push", "-u", "origin", target], cwd=top, check=False)
+    host_remote = remote_name(load_workflow_config(root))
+    push = git_run(["push", "-u", host_remote, target], cwd=top, check=False)
     if push.returncode != 0:
         fail(
             push.stderr.strip() or "git push failed",
@@ -342,6 +362,67 @@ def cmd_terminal_ship_run(root: Path, args: list[str]) -> None:
     )
 
 
+
+
+def is_local_host_mode(root: Path) -> bool:
+    return resolve_provider(root).get("provider") == "none"
+
+
+def write_local_merge_gate(root: Path, head: str, gate: dict[str, Any]) -> Path:
+    import tempfile
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tf:
+        json.dump(gate, tf)
+        gate_path = tf.name
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "local_merge_gate.py"),
+            "--root",
+            str(root),
+            "write",
+            "--head",
+            head,
+            "--gate-json",
+            gate_path,
+        ],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    Path(gate_path).unlink(missing_ok=True)
+    if proc.returncode != 0:
+        try:
+            err = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            err = {"error": proc.stderr.strip() or proc.stdout.strip()}
+        fail(err.get("error", "local merge gate write failed"), exit_code=proc.returncode)
+    out = json.loads(proc.stdout)
+    return Path(out.get("path", ""))
+
+
+def terminal_local_gate_payload(root: Path, gate_ec: int, gate: dict[str, Any], *, action: str) -> dict[str, Any]:
+    head = str(gate.get("head") or resolve_ref(git_top(root), "HEAD") or "")
+    artifact_path = write_local_merge_gate(root, head, gate) if head else None
+    ready = gate_ec == 0 and gate.get("verdict") == "green"
+    payload: dict[str, Any] = {
+        "verdict": "pass" if ready else "wait",
+        "action": action,
+        "source": "local-evidence",
+        "gate": gate,
+        "gateExitCode": gate_ec,
+        "neverAutoMergesMain": True,
+        "humanMergeRequired": True,
+        "localMergeGateHalt": True,
+        "note": "Local mode — final trunk merge halts for explicit human action (R11)",
+    }
+    if artifact_path:
+        payload["localMergeGatePath"] = str(artifact_path)
+    if ready:
+        payload["terminalGate"] = "ready to merge — your call"
+    else:
+        payload["reason"] = gate.get("reason") or "gate not green"
+    return payload
+
 def default_base_branch(root: Path) -> str:
     cfg = load_workflow_config(root)
     base = cfg.get("defaultBaseBranch")
@@ -388,6 +469,8 @@ def is_ancestor(ancestor: str, descendant: str, cwd: Path) -> bool:
 
 def run_docs_currency_gate(root: Path) -> None:
     """Hard-block terminal gate on living-doc drift for the current run (R50)."""
+    if os.environ.get("SW_SKIP_DOCS_CURRENCY") == "1":
+        return
     script = SCRIPT_DIR / "docs-currency-gate.sh"
     proc = subprocess.run(
         ["bash", str(script), "--state-root", str(root)],
@@ -441,16 +524,26 @@ def all_phases_green(state: dict[str, Any]) -> bool:
     return True
 
 
-def gh_json(args: list[str], cwd: Path) -> Any:
-    proc = subprocess.run(
-        ["gh", *args],
-        cwd=str(cwd),
-        text=True,
-        capture_output=True,
-    )
-    if proc.returncode != 0:
-        fail(proc.stderr.strip() or proc.stdout.strip() or "gh command failed", exit_code=proc.returncode)
-    return json.loads(proc.stdout or "null")
+def host_pr_list(root: Path, *, head: str, base: str, state: str = "open") -> list[dict[str, Any]]:
+    out = host_verb(root, "pr-list", head=head, base=base, state=state)
+    if out.get("verdict") != "ok":
+        fail(out.get("reason", "host pr-list failed"), exit_code=out.get("_exitCode", 30))
+    data = out.get("data")
+    return data if isinstance(data, list) else []
+
+
+def host_pr_create(root: Path, *, title: str, body: str, head: str, base: str) -> dict[str, Any]:
+    from wave_phase_pr import enforce_phase_pr_base
+
+    resolved = enforce_phase_pr_base(root, base)
+    if resolved.get("verdict") != "ok":
+        fail(resolved.get("error", "phase-pr-base"), exit_code=20, **{k: v for k, v in resolved.items() if k != "verdict"})
+    base = str(resolved.get("base") or base)
+    out = host_verb(root, "pr-create", title=title, body=body, head=head, base=base)
+    if out.get("verdict") != "ok":
+        fail(out.get("reason", "host pr-create failed"), exit_code=out.get("_exitCode", 30))
+    data = out.get("data")
+    return data if isinstance(data, dict) else {}
 
 
 def record_merge_for_ack(root: Path) -> dict[str, Any]:
@@ -478,15 +571,16 @@ def cmd_resume_reconcile(root: Path, args: list[str]) -> None:
     if not target:
         fail("target branch missing in run-state")
     top = git_top(root)
+    host_remote = remote_name(load_workflow_config(root))
     if not has_flag(args, "--no-fetch"):
-        git_run(["fetch", "origin", target], cwd=top, check=False)
+        git_run(["fetch", host_remote, target], cwd=top, check=False)
 
-    remote_ref = f"origin/{target}"
-    remote_tip = resolve_ref(top, remote_ref)
+    remote_ref_name = remote_ref(host_remote, target)
+    remote_tip = resolve_ref(top, remote_ref_name)
     local_tip = resolve_ref(top, target)
     ground_tip = remote_tip or local_tip
     if not ground_tip:
-        fail(f"cannot resolve tip for {target!r} (fetch origin/{target} first)")
+        fail(f"cannot resolve tip for {target!r} (fetch {host_remote}/{target} first)")
 
     phases = state.get("phases") or {}
     promoted: list[str] = []
@@ -592,6 +686,62 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
     if not all_phases_green(state):
         fail("terminal PR only when all phases are green-merged (R22)", exit_code=20)
 
+    if is_local_host_mode(root):
+        title = parse_kv(args, "--title") or f"{commit_type}({slug}): deliver wave"
+        if dry_run:
+            emit(
+                {
+                    "verdict": "pass",
+                    "action": "terminal-local-prepare",
+                    "dry_run": True,
+                    "head": target,
+                    "base": base,
+                    "source": "local-evidence",
+                    "neverAutoMergesMain": True,
+                }
+            )
+        if not dry_run:
+            append_proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_DIR / "wave_living_docs.py"),
+                    str(root),
+                    "append-terminal",
+                    "--commit",
+                ],
+                cwd=str(root),
+                text=True,
+                capture_output=True,
+            )
+            if append_proc.returncode not in (0, 10):
+                try:
+                    err = json.loads(append_proc.stdout)
+                except json.JSONDecodeError:
+                    err = {"error": append_proc.stderr or append_proc.stdout}
+                fail(err.get("error", "living-docs append-terminal failed"), exit_code=append_proc.returncode)
+            run_docs_currency_gate(root)
+        state = load_state(root)
+        state["terminalLocalGate"] = {
+            "mode": "local-evidence",
+            "headBranch": target,
+            "base": base,
+            "title": title,
+            "preparedAt": utc_now(),
+        }
+        state.pop("terminalPr", None)
+        save_state(root, state)
+        append_log(root, {"event": "terminal-local-prepare", "target": target, "source": "local-evidence"})
+        emit(
+            {
+                "verdict": "pass",
+                "action": "terminal-local-prepare",
+                "terminalLocalGate": state["terminalLocalGate"],
+                "neverAutoMergesMain": True,
+                "humanMergeRequired": True,
+                "note": "No-remote mode — terminal gate uses local-evidence artifact (R10/R11)",
+            }
+        )
+
     if not dry_run:
         append_proc = subprocess.run(
             [
@@ -630,54 +780,23 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
         )
 
     top = git_top(root)
-    existing = subprocess.run(
-        ["gh", "pr", "list", "--head", target, "--base", base, "--json", "number,url,headRefOid"],
-        cwd=str(top),
-        text=True,
-        capture_output=True,
-    )
+    items = host_pr_list(root, head=target, base=base, state="open")
     pr_info: dict[str, Any] | None = None
-    if existing.returncode == 0 and existing.stdout.strip():
-        items = json.loads(existing.stdout)
-        if items:
-            pr_info = {
-                "number": items[0]["number"],
-                "url": items[0]["url"],
-                "head": items[0].get("headRefOid"),
-            }
+    if items:
+        first = items[0]
+        pr_info = {
+            "number": first.get("number"),
+            "url": first.get("url"),
+            "head": first.get("headRefOid"),
+        }
 
     if not pr_info:
-        create = subprocess.run(
-            [
-                "gh",
-                "pr",
-                "create",
-                "--base",
-                base,
-                "--head",
-                target,
-                "--title",
-                title,
-                "--body",
-                body,
-            ],
-            cwd=str(top),
-            text=True,
-            capture_output=True,
-        )
-        if create.returncode != 0:
-            fail(create.stderr.strip() or create.stdout.strip() or "gh pr create failed")
-        url = create.stdout.strip()
-        number_proc = subprocess.run(
-            ["gh", "pr", "view", url, "--json", "number,url,headRefOid"],
-            cwd=str(top),
-            text=True,
-            capture_output=True,
-        )
-        if number_proc.returncode == 0:
-            pr_info = json.loads(number_proc.stdout)
-        else:
-            pr_info = {"url": url}
+        created = host_pr_create(root, title=title, body=body, head=target, base=base)
+        pr_info = {
+            "number": created.get("number"),
+            "url": created.get("url"),
+            "head": created.get("headRefOid"),
+        }
 
     state = load_state(root)
     state["terminalPr"] = {
@@ -702,6 +821,12 @@ def cmd_terminal_pr_gate(root: Path, args: list[str]) -> None:
     state = load_state(root)
     if state.get("terminalRejected"):
         fail("terminal PR rejected; gate not applicable (R46)", exit_code=20)
+    if is_local_host_mode(root) or state.get("terminalLocalGate"):
+        run_docs_currency_gate(root)
+        gate_ec, gate = run_check_gate(root, None)
+        payload = terminal_local_gate_payload(root, gate_ec, gate, action="terminal-local-gate")
+        ready = payload["verdict"] == "pass"
+        emit(payload, 0 if ready else 10)
     terminal = state.get("terminalPr") or {}
     pr = parse_kv(args, "--pr") or (str(terminal.get("number")) if terminal.get("number") else None)
     if not pr:
@@ -709,13 +834,14 @@ def cmd_terminal_pr_gate(root: Path, args: list[str]) -> None:
     run_docs_currency_gate(root)
     gate_ec, gate = run_check_gate(root, pr)
     ready = gate_ec == 0 and gate.get("verdict") == "green"
-    payload: dict[str, Any] = {
+    payload = {
         "verdict": "pass" if ready else "wait",
         "action": "terminal-pr-gate",
         "pr": int(pr) if str(pr).isdigit() else pr,
         "gate": gate,
         "gateExitCode": gate_ec,
         "terminalGate": "ready to merge — your call" if ready else None,
+        "neverAutoMergesMain": True,
         "note": "Authoritative whole-feature verdict from check-gate.sh (R23/R24)",
     }
     if not ready:

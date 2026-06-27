@@ -1,0 +1,25 @@
+{
+  "/merge_requests": [
+    {
+      "iid": 7,
+      "web_url": "https://gitlab.com/owner/repo/-/merge_requests/7",
+      "source_branch": "feat/x",
+      "target_branch": "main",
+      "state": "opened",
+      "sha": "abc123",
+      "title": "t",
+      "description": "b",
+      "draft": false,
+      "merge_status": "can_be_merged",
+      "merged_at": null
+    }
+  ],
+  "/projects/": {
+    "path_with_namespace": "owner/repo",
+    "default_branch": "main",
+    "name": "repo",
+    "namespace": {
+      "path": "owner"
+    }
+  }
+}
