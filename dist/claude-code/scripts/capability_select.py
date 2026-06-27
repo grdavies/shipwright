@@ -264,7 +264,37 @@ def match_change_digest(trigger: dict[str, Any], ctx: dict[str, Any]) -> bool:
     if predicate == "added_lines_match":
         keywords = [str(k).lower() for k in trigger.get("keywords") or []]
         return any(any(k in line.lower() for k in keywords) for _, line in rows)
+    if predicate == "regex_in_added_lines":
+        patterns = [str(p) for p in trigger.get("patterns") or []]
+        flags = re.I if trigger.get("case_insensitive", True) else 0
+        return any(re.search(pat, line, flags) for pat in patterns for _, line in rows)
+    if predicate == "regex_in_path":
+        patterns = [str(p) for p in trigger.get("patterns") or []]
+        flags = re.I if trigger.get("case_insensitive", True) else 0
+        paths = {path for path, _ in rows}
+        paths.update(str(f.get("path", "")) for f in (ctx.get("change_digest") or {}).get("files") or [])
+        return any(re.search(pat, path, flags) for pat in patterns for path in paths)
     return False
+
+
+def match_file_count(trigger: dict[str, Any], ctx: dict[str, Any]) -> bool:
+    count = len(ctx.get("file_paths") or [])
+    if "max" in trigger:
+        return count <= int(trigger["max"])
+    if "min" in trigger:
+        return count >= int(trigger["min"])
+    if "equals" in trigger:
+        return count == int(trigger["equals"])
+    return False
+
+
+def match_conductor_mode(trigger: dict[str, Any], ctx: dict[str, Any]) -> bool:
+    mode = ctx.get("conductor_mode")
+    if trigger.get("equals") is not None:
+        return str(mode).strip().lower() == str(trigger["equals"]).strip().lower()
+    if trigger.get("notEquals") is not None:
+        return str(mode).strip().lower() != str(trigger["notEquals"]).strip().lower()
+    return mode is not None
 
 
 def _is_executable_line(line: str) -> bool:
@@ -338,6 +368,10 @@ def match_trigger(trigger: dict[str, Any], ctx: dict[str, Any]) -> bool:
         return match_config_flag(trigger, ctx)
     if trigger_type == "triage_tag":
         return match_triage_tag(trigger, ctx)
+    if trigger_type == "file_count":
+        return match_file_count(trigger, ctx)
+    if trigger_type == "conductor_mode":
+        return match_conductor_mode(trigger, ctx)
     if trigger_type == "any_of":
         children = trigger.get("triggers") or []
         return any(match_trigger(child, ctx) for child in children if isinstance(child, dict))

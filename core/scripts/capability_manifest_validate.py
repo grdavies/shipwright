@@ -16,6 +16,8 @@ VALID_TRIGGER_TYPES = frozenset(
         "path_glob",
         "change_digest",
         "config_flag",
+        "file_count",
+        "conductor_mode",
         "any_of",
         "all_of",
     }

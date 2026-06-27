@@ -136,7 +136,7 @@ Repeat for every selected persona. Halt on preflight exit 20; do not spawn on un
    **docs-currency** per Amendment review (U7) — skip the full selection algorithm unless `--personas` / `--all`
    override.
 5. Resolve tier — if Quick, report "no panel for Quick" and stop.
-6. **PRD draft:** run selection algorithm; announce activation record (core + any fired gates + matched signals).
+6. **PRD draft:** run `bash scripts/doc-review-select.sh --context-json '<signal_context>'`; announce activation record (core + any fired gates + matched signals).
 7. Read full document (no section splitting) — each selected persona is a parallel sub-agent (R28/R31).
 8. Each agent returns JSON per `references/findings-schema.json`.
 9. Synthesizer follows `references/synthesis.md`.

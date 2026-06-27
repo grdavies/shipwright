@@ -73,7 +73,7 @@ independent of config.review.provider (incl. "none")
 | `comment-accuracy` | changed comment / docstring lines (`//`, `#`, `/*`, `*`, `"""`, `'''`) or `*.md` / `*.mdx` doc files |
 | `ai-native` | AI-surface paths (`commands/**`, `core/commands/**`, `skills/**`, `core/skills/**`, `rules/**`, `providers/**`, prompt-declaring `*.md`) or untrusted-LLM markers (`openai`, `anthropic`, `llm`, `prompt`, `chat.completions`) |
 
-Runtime engine: `scripts/code-review-select.sh` (identical diff → identical roster; R33/R61). Every fired
+Runtime engine: `scripts/code-review-select.sh` (capability selector with legacy byte-parity shadow; identical diff → identical roster; R33/R61). Every fired
 signal is announced in the panel activation record (R10).
 
 ## Executable-code-line counting algorithm (R60)
