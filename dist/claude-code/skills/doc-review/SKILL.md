@@ -1,6 +1,15 @@
 ---
 name: sw-doc-review
 description: Review PRD drafts with parallel persona sub-agents and a synthesizer that auto-applies safe fixes. Signal-driven panel (six-persona core + gated security/design); Quick tier skips review.
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: doc-review
+      command: sw-doc-review
+  metadata:
+    skill: doc-review
+    selectionFamily: doc-review
 ---
 
 # Document review (`/sw-doc-review`)

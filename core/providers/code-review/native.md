@@ -1,3 +1,18 @@
+---
+capability:
+  version: 1
+  triggers:
+    - type: config_flag
+      selectionFamily: providers
+      key: review.local.provider
+      equals: "native"
+  metadata:
+    providerFamily: review.local
+    adapterId: native
+    selectionFamily: providers
+    gateRef: check-gate.sh
+---
+
 # Native local review adapter (Shipwright panel)
 
 Markdown companion for phase 1 of `/sw-review` and `/sw-ship`. Dispatches a fixed always-on core panel plus

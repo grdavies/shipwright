@@ -18,15 +18,15 @@ contract per the Decision Log).
 
 ### 1. Manifest frontmatter schema + contract — M
 
-- [ ] 1.1 Define the capability-manifest frontmatter schema (anti-spoof, path-derived kind) (R9, R27)
+- [x] 1.1 Define the capability-manifest frontmatter schema (anti-spoof, path-derived kind) (R9, R27)
   - **File:** `core/sw-reference/capability-manifest.schema.json`
   - **Expected:** versioned frontmatter block declaring `triggers` (triage tags, text-token predicates over the body snapshot, file/path globs, change-digest predicates, config-flag predicates), `precedence`, an explicit `always_on`/`phase_default` trigger, and selection `metadata`; **executable `kind` derived from the canonical source path prefix** (`providers/**`, `hooks/**`), not author-declared; absence of the block ⇒ "not signal-selected" (back-compat). JSON schema validates; `kind`/path mismatch and phantom-artifact entries are rejectable.
   - **R-IDs:** R9, R27
-- [ ] 1.2 Author the manifest contract doc (drop-in + trust boundary) (R9, R12, R27)
+- [x] 1.2 Author the manifest contract doc (drop-in + trust boundary) (R9, R12, R27)
   - **File:** `core/sw-reference/capability-manifest.md`
   - **Expected:** documents frontmatter fields, applicable source kinds, absence-default, the precedence/conflict policy (R11), and the executable-vs-non-executable trust boundary (R27); states that declaring a non-executable capability is drop-in (R12) while executables still require the existing trust/config gate.
   - **R-IDs:** R9, R12, R27
-- [ ] 1.3 Add per-capability manifest frontmatter to the migrated source families (R9, R12)
+- [x] 1.3 Add per-capability manifest frontmatter to the migrated source families (R9, R12)
   - **File:** `core/skills/**`, `core/agents/sw-*-reviewer.md`, `core/providers/**`, `core/rules/**`, `core/hooks/**`
   - **Expected:** trigger frontmatter added to the families migrated in Phase 6 (no behavior change until the index + selector are authoritative); the six always-on doc-review personas carry an explicit `always_on` trigger (lint-visible, no silent default).
   - **R-IDs:** R9, R12

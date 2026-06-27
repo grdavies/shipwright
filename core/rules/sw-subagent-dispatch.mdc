@@ -1,6 +1,14 @@
 ---
 description: Delegate-by-default sub-agent dispatch, binding enforcement, and loop hard stops for Shipwright.
 alwaysApply: false
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: subagent-dispatch
+      scope: delegation-policy
+  metadata:
+    selectionFamily: subagent-dispatch
 ---
 
 # Sub-agent dispatch policy

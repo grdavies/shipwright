@@ -2,6 +2,14 @@
 description: USE WHEN reviewing code, handling review feedback, or running /sw-review and /sw-stabilize.
 alwaysApply: false
 globs:
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: code-review
+      command: sw-review
+  metadata:
+    selectionFamily: code-review
 ---
 
 # Code review & automation (Shipwright)
