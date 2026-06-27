@@ -12,7 +12,12 @@ discipline** (`skills/execute-discipline/SKILL.md`): plan self-review → TDD re
 
 1. **Worktree guard** — run `bash scripts/sw-assert-worktree.sh` before any implementation write. Exit `1` → halt
    (bare default branch without linked worktree). Exit `2` → configuration error; halt.
-2. Load the task file from `tasksDir` for this phase; resolve requirements via **spec union**:
+2. **Pre-work search (mandatory)** — before the first substantive mutation, run `memory-preflight` **pre-work
+   search** per `skills/memory/SKILL.md` **Pre-work search (mandatory)** (scoped file-path + semantic search
+   across classes `rule`, `decision`, `learning`, `code-context`, `design` via `providers/<memory.provider>.md`
+   — no direct provider call). Surface hits and reconcile applicable rules/contradicting decisions before
+   proceeding.
+3. Load the task file from `tasksDir` for this phase; resolve requirements via **spec union**:
 
    ```bash
    bash scripts/spec-union.sh <frozen-prd-path>
@@ -21,8 +26,7 @@ discipline** (`skills/execute-discipline/SKILL.md`): plan self-review → TDD re
    Load `skills/spec-union/SKILL.md`. Parse `## Traceability` for R-ID → test scenario per task ref.
    Load open `docs/prds/GAP-BACKLOG.md` items (`bash scripts/feedback-backlog.sh list --open-only`) linked to
    this PR/PRD as supplemental scope (`skills/feedback-closure/SKILL.md`).
-3. Verify branch matches `scripts/shipwright-state.sh read` → `currentBranch`.
-4. `memory-preflight` read: PRD/task, target files, prior learnings.
+4. Verify branch matches `scripts/shipwright-state.sh read` → `currentBranch`.
 5. Load `agentsFile` + applicable doctrine + `skills/execute-discipline/SKILL.md`.
 6. `TodoWrite` for the phase checklist items.
 7. **Per task ref** (sub-task granularity, e.g. `1.1`, `1.2`):

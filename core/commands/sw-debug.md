@@ -47,12 +47,17 @@ Read `.cursor/workflow.config.json` for `prdsDir`, `agentsFile`, `memory` provid
 ## Procedure
 
 0. Load `skills/conductor/SKILL.md`; enforce `rules/sw-conductor.mdc`.
-1. **Triage** (`skills/debug/SKILL.md` Phase 0) — classify production vs dev-time; trivial fast-path when obvious.
-2. **Normalize + redact** signal per `skills/rca-core/references/debug-inputs.md` (extend shape for dev-time).
-3. **Sentry enrich** when applicable (`skills/debug/references/sentry.md`); degrade if MCP unavailable.
-4. **Memory preflight** — search prior `debug` memories for the failing area.
-   - When steps 3 and 4 both apply, run **concurrently** (DBG-A2) — independent I/O; collect before RCA.
-5. **RCA** — `skills/rca-core`:
+1. **Pre-work search (mandatory)** — before the first substantive mutation, run `memory-preflight` **pre-work
+   search** per `skills/memory/SKILL.md` **Pre-work search (mandatory)** (scoped to the failing area / touched
+   paths; classes `rule`, `decision`, `learning`, `code-context`, `design` via `providers/<memory.provider>.md`
+   — no direct provider call). Surface hits and reconcile applicable rules/contradicting decisions before
+   proceeding.
+2. **Triage** (`skills/debug/SKILL.md` Phase 0) — classify production vs dev-time; trivial fast-path when obvious.
+3. **Normalize + redact** signal per `skills/rca-core/references/debug-inputs.md` (extend shape for dev-time).
+4. **Sentry enrich** when applicable (`skills/debug/references/sentry.md`); degrade if MCP unavailable.
+   - When steps 4 and the pre-work search both apply, run **concurrently** (DBG-A2) — independent I/O; collect
+     before RCA.
+5. **RCA** — `skills/rca-core` (`rca-core` entry):
    - production signals → **debug entry**
    - test/build/verify failures → **dev-time entry** (repro-first + failing-regression-test gates)
 6. **Route** — classify fix size via triage rubric; present handoff and **halt for one human route confirmation**.
