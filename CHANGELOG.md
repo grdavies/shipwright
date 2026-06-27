@@ -88,6 +88,7 @@
 * merge phase migration-with-parity-shadow-cutover-call-site-map-l into feat/capability-manifest-and-selector (412e81d) <!-- sw-deliver:migration-with-parity-shadow-cutover-call-site-map-l -->
 * merge phase documentation-emitter-propagation-freshness-m into feat/capability-manifest-and-selector (6dd263b) <!-- sw-deliver:documentation-emitter-propagation-freshness-m -->
 * merge phase single-sourced-kernel-classification-canonical-chain-source-l into feat/kernel-classification-and-plan-validation (5b0fa22) <!-- sw-deliver:single-sourced-kernel-classification-canonical-chain-source-l -->
+* merge phase guidelines-artifact-floor-harness-reuse-m into feat/kernel-classification-and-plan-validation (ef5794e) <!-- sw-deliver:guidelines-artifact-floor-harness-reuse-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
