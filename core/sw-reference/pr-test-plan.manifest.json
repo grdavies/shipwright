@@ -57,7 +57,14 @@
         "backoff-log-redaction",
         "github-migration-token-only",
         "doctor-degraded-warns",
-        "host-ratelimit-config"
+        "host-ratelimit-config",
+        "gh-removal-guard",
+        "gh-absent-path",
+        "check-gate-verbset",
+        "terminal-flow-verbset",
+        "stabilize-sync-verbset",
+        "prose-gh-free",
+        "install-docs-currency"
       ]
     },
     {

@@ -15,6 +15,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from host_invoke import host_verb
 from host_lib import load_workflow_config, remote_name, remote_ref
 
 
@@ -447,16 +448,20 @@ def all_phases_green(state: dict[str, Any]) -> bool:
     return True
 
 
-def gh_json(args: list[str], cwd: Path) -> Any:
-    proc = subprocess.run(
-        ["gh", *args],
-        cwd=str(cwd),
-        text=True,
-        capture_output=True,
-    )
-    if proc.returncode != 0:
-        fail(proc.stderr.strip() or proc.stdout.strip() or "gh command failed", exit_code=proc.returncode)
-    return json.loads(proc.stdout or "null")
+def host_pr_list(root: Path, *, head: str, base: str, state: str = "open") -> list[dict[str, Any]]:
+    out = host_verb(root, "pr-list", head=head, base=base, state=state)
+    if out.get("verdict") != "ok":
+        fail(out.get("reason", "host pr-list failed"), exit_code=out.get("_exitCode", 30))
+    data = out.get("data")
+    return data if isinstance(data, list) else []
+
+
+def host_pr_create(root: Path, *, title: str, body: str, head: str, base: str) -> dict[str, Any]:
+    out = host_verb(root, "pr-create", title=title, body=body, head=head, base=base)
+    if out.get("verdict") != "ok":
+        fail(out.get("reason", "host pr-create failed"), exit_code=out.get("_exitCode", 30))
+    data = out.get("data")
+    return data if isinstance(data, dict) else {}
 
 
 def record_merge_for_ack(root: Path) -> dict[str, Any]:
@@ -637,54 +642,23 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
         )
 
     top = git_top(root)
-    existing = subprocess.run(
-        ["gh", "pr", "list", "--head", target, "--base", base, "--json", "number,url,headRefOid"],
-        cwd=str(top),
-        text=True,
-        capture_output=True,
-    )
+    items = host_pr_list(root, head=target, base=base, state="open")
     pr_info: dict[str, Any] | None = None
-    if existing.returncode == 0 and existing.stdout.strip():
-        items = json.loads(existing.stdout)
-        if items:
-            pr_info = {
-                "number": items[0]["number"],
-                "url": items[0]["url"],
-                "head": items[0].get("headRefOid"),
-            }
+    if items:
+        first = items[0]
+        pr_info = {
+            "number": first.get("number"),
+            "url": first.get("url"),
+            "head": first.get("headRefOid"),
+        }
 
     if not pr_info:
-        create = subprocess.run(
-            [
-                "gh",
-                "pr",
-                "create",
-                "--base",
-                base,
-                "--head",
-                target,
-                "--title",
-                title,
-                "--body",
-                body,
-            ],
-            cwd=str(top),
-            text=True,
-            capture_output=True,
-        )
-        if create.returncode != 0:
-            fail(create.stderr.strip() or create.stdout.strip() or "gh pr create failed")
-        url = create.stdout.strip()
-        number_proc = subprocess.run(
-            ["gh", "pr", "view", url, "--json", "number,url,headRefOid"],
-            cwd=str(top),
-            text=True,
-            capture_output=True,
-        )
-        if number_proc.returncode == 0:
-            pr_info = json.loads(number_proc.stdout)
-        else:
-            pr_info = {"url": url}
+        created = host_pr_create(root, title=title, body=body, head=target, base=base)
+        pr_info = {
+            "number": created.get("number"),
+            "url": created.get("url"),
+            "head": created.get("headRefOid"),
+        }
 
     state = load_state(root)
     state["terminalPr"] = {

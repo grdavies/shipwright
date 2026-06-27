@@ -1,0 +1,11 @@
+{
+  "verdict": "ok",
+  "verb": "repo-meta",
+  "provider": "github",
+  "data": {
+    "nameWithOwner": "owner/repo",
+    "defaultBranch": "main",
+    "owner": "owner",
+    "name": "repo"
+  }
+}

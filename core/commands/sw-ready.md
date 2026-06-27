@@ -9,7 +9,7 @@ Confirm merge-readiness via `scripts/check-gate.sh` — terminal report only.
 
 ## Procedure
 
-1. `gh pr view --json number,url,isDraft,baseRefName,headRefName,reviewDecision,statusCheckRollup`.
+1. `bash scripts/host.sh pr-view` for number, url, draft/base/head; combine with `scripts/check-gate.sh` for checks.
 2. No PR → hand off `/sw-pr`.
 3. Confirm PR base matches `parentBranch` from per-worktree state.
 4. Clean branch; local verify already passed.

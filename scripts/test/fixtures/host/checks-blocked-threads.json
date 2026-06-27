@@ -1,0 +1,21 @@
+{
+  "verdict": "ok",
+  "verb": "checks",
+  "provider": "github",
+  "data": [
+    {
+      "name": "CodeRabbit",
+      "state": "SUCCESS",
+      "bucket": "pass",
+      "link": "",
+      "workflow": "review"
+    },
+    {
+      "name": "ci",
+      "state": "SUCCESS",
+      "bucket": "pass",
+      "link": "",
+      "workflow": "ci"
+    }
+  ]
+}

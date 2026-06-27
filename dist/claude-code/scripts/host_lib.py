@@ -222,6 +222,28 @@ def remote_heads_ref(remote: str, branch: str) -> str:
     return f"refs/remotes/{remote}/{branch}"
 
 
+
+def parse_owner_repo(url: str | None) -> tuple[str, str] | None:
+    if not url or not url.strip():
+        return None
+    cleaned = url.strip().removesuffix(".git")
+    path = ""
+    if cleaned.startswith("git@"):
+        path = cleaned.split(":", 1)[-1] if ":" in cleaned else ""
+    else:
+        path = urlparse(cleaned).path.lstrip("/")
+    parts = [p for p in path.split("/") if p]
+    if len(parts) >= 2:
+        return parts[0], parts[1]
+    return None
+
+
+def github_api_base(host: dict[str, Any]) -> str:
+    api = host.get("apiBaseUrl")
+    if isinstance(api, str) and api.strip():
+        return api.strip().rstrip("/")
+    return "https://api.github.com"
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Host provider resolution helpers")
     parser.add_argument("--root", type=Path, default=Path.cwd())

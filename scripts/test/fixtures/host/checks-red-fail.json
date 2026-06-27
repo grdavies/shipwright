@@ -1,0 +1,14 @@
+{
+  "verdict": "ok",
+  "verb": "checks",
+  "provider": "github",
+  "data": [
+    {
+      "name": "ci",
+      "state": "FAILURE",
+      "bucket": "fail",
+      "link": "",
+      "workflow": "ci"
+    }
+  ]
+}

@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+
+from host_invoke import host_verb
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -330,36 +332,22 @@ def parent_wave_branch(branch: str) -> str | None:
     return parent
 
 
-def gh_merged(root: Path, branch: str, default: str) -> bool | None:
+def host_merged(root: Path, branch: str, default: str) -> bool | None:
     if not git_ok(root, "rev-parse", "--verify", "HEAD"):
         return None
-    proc = subprocess.run(
-        ["gh", "pr", "list", "--head", branch, "--state", "merged", "--json", "number", "--limit", "1"],
-        cwd=str(root),
-        capture_output=True,
-        text=True,
-    )
-    if proc.returncode != 0:
+    merged_out = host_verb(root, "pr-list", head=branch, state="closed", limit="5")
+    if merged_out.get("verdict") != "ok":
         return None
-    try:
-        data = json.loads(proc.stdout or "[]")
-        if isinstance(data, list) and data:
-            return True
-    except json.JSONDecodeError:
-        return None
-    proc2 = subprocess.run(
-        ["gh", "pr", "list", "--head", branch, "--state", "open", "--json", "number", "--limit", "1"],
-        cwd=str(root),
-        capture_output=True,
-        text=True,
-    )
-    if proc2.returncode == 0:
-        try:
-            open_prs = json.loads(proc2.stdout or "[]")
-            if isinstance(open_prs, list) and open_prs:
-                return False
-        except json.JSONDecodeError:
-            pass
+    merged_items = merged_out.get("data") or []
+    if isinstance(merged_items, list):
+        for item in merged_items:
+            if isinstance(item, dict) and item.get("state") == "MERGED":
+                return True
+    open_out = host_verb(root, "pr-list", head=branch, state="open", limit="1")
+    if open_out.get("verdict") == "ok":
+        open_items = open_out.get("data") or []
+        if isinstance(open_items, list) and open_items:
+            return False
     return None
 
 
@@ -388,7 +376,7 @@ def merged_status(root: Path, branch: str, default: str, current: str) -> tuple[
     if minus_only:
         return "merged", "squash-cherry"
 
-    host = gh_merged(root, branch, default)
+    host = host_merged(root, branch, default)
     if host is True:
         return "merged", "host-merged"
     if host is False:
@@ -396,7 +384,7 @@ def merged_status(root: Path, branch: str, default: str, current: str) -> tuple[
 
     parent = parent_wave_branch(branch)
     if parent and parent not in (default, current):
-        parent_host = gh_merged(root, parent, default)
+        parent_host = host_merged(root, parent, default)
         if parent_host is True:
             return "merged", "parent-wave-merged"
         if parent_host is False:

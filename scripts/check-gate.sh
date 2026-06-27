@@ -2,7 +2,7 @@
 # Deterministic Shipwright CI readiness gate.
 #
 # Prints a single JSON verdict to stdout and never mutates anything. Canonical computation behind the
-# `checks-gate` skill — `/sw-watch-ci` and stabilize invoke it instead of ad-hoc `gh` calls.
+# `checks-gate` skill — `/sw-watch-ci` and stabilize invoke it instead of ad-hoc host CLI calls.
 #
 # Per-head review state comes from providers/review/<provider>.sh (executable adapter seam).
 #
@@ -14,6 +14,17 @@ set -uo pipefail
 CHECKS="$(mktemp "${TMPDIR:-/tmp}/sw-gate-checks.XXXXXX")"
 ISSUE_COMMENTS="$(mktemp "${TMPDIR:-/tmp}/sw-gate-comments.XXXXXX")"
 trap 'rm -f "$CHECKS" "$ISSUE_COMMENTS"' EXIT
+
+host_verb() {
+  bash "$ROOT/scripts/host.sh" --root "$ROOT" "$@"
+}
+
+host_data() {
+  local out
+  out="$(host_verb "$@")" || true
+  python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(json.dumps(d.get('data'))) if d.get('verdict')=='ok' else sys.exit(1)" "$out" 2>/dev/null
+}
+
 
 # --- repo + config ------------------------------------------------------------
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
@@ -61,19 +72,24 @@ if [ -f "$PR_TEST_PLAN_MANIFEST" ]; then
   REQUIRED_JOBS="$(jq -c '[.fixtures[]?|select(.classification=="required")|.ciJobName]' "$PR_TEST_PLAN_MANIFEST" 2>/dev/null || echo '[]')"
 fi
 
-# --- resolve PR + head --------------------------------------------------------
+# --- resolve PR + head (host verbs) -------------------------------------------
 PR="${1:-}"
-[ -z "$PR" ] && PR="$(gh pr view --json number --jq .number 2>/dev/null || true)"
+if [ -z "$PR" ]; then
+  RESOLVE_OUT="$(host_verb resolve-pr-for-branch 2>/dev/null || true)"
+  PR="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); items=d.get('data') or []; print(items[0].get('number','') if items else '')" "$RESOLVE_OUT" 2>/dev/null || true)"
+fi
 if [ -z "$PR" ]; then
   echo '{"verdict":"blocked","reason":"no open PR for current branch"}'
   exit 30
 fi
-HEAD_SHA="$(gh pr view "$PR" --json headRefOid --jq .headRefOid 2>/dev/null || true)"
-MERGEABLE="$(gh pr view "$PR" --json mergeable --jq .mergeable 2>/dev/null || true)"
-MERGE_STATE="$(gh pr view "$PR" --json mergeStateStatus --jq .mergeStateStatus 2>/dev/null || true)"
-OWNER_REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)"
+PR_VIEW="$(host_verb pr-view --number "$PR" 2>/dev/null || true)"
+HEAD_SHA="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print((d.get('data') or {}).get('headRefOid',''))" "$PR_VIEW" 2>/dev/null || true)"
+MERGEABLE="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print((d.get('data') or {}).get('mergeable',''))" "$PR_VIEW" 2>/dev/null || true)"
+MERGE_STATE="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print((d.get('data') or {}).get('mergeStateStatus',''))" "$PR_VIEW" 2>/dev/null || true)"
+REPO_META="$(host_verb repo-meta 2>/dev/null || true)"
+OWNER_REPO="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print((d.get('data') or {}).get('nameWithOwner',''))" "$REPO_META" 2>/dev/null || true)"
 if [ -z "$HEAD_SHA" ] || [ -z "$OWNER_REPO" ]; then
-  echo '{"verdict":"blocked","reason":"incomplete GitHub metadata (head or repo)"}'
+  echo '{"verdict":"blocked","reason":"incomplete host metadata (head or repo)"}'
   exit 30
 fi
 if [ "$MERGEABLE" = "CONFLICTING" ] || [ "$MERGE_STATE" = "DIRTY" ]; then
@@ -84,7 +100,8 @@ OWNER="${OWNER_REPO%/*}"
 REPO="${OWNER_REPO#*/}"
 
 # --- checks -------------------------------------------------------------------
-gh pr checks "$PR" --json name,state,bucket,link,workflow > "$CHECKS" 2>/dev/null || true
+CHECKS_OUT="$(host_verb checks --number "$PR" --sha "$HEAD_SHA" 2>/dev/null || true)"
+python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); open(sys.argv[2],'w').write(json.dumps(d.get('data') or []))" "$CHECKS_OUT" "$CHECKS" 2>/dev/null || echo '[]' > "$CHECKS"
 [ -s "$CHECKS" ] || echo '[]' > "$CHECKS"
 
 CLASSIFIED="$(jq -c --argjson allow "$ALLOW_JSON" --argjson npass "$NEUTRAL_PASS" '
@@ -111,23 +128,12 @@ SPLIT="$(jq -c --argjson adv "$ADVISORY_JOBS" --argjson fail "$FAILING" '
 REQUIRED_FAILING="$(jq -c '.requiredFailing' <<<"$SPLIT")"
 ADVISORY_FAILING="$(jq -c '.advisoryFailing' <<<"$SPLIT")"
 
-# --- unresolved review threads ------------------------------------------------
+# --- unresolved review threads (host verb) ------------------------------------
 UNRESOLVED=0
 ACTIONABLE=0
-CURSOR=""
-if [ -n "$OWNER" ] && [ -n "$REPO" ]; then
-  while :; do
-    RESP="$(gh api graphql -f query='query($o:String!,$r:String!,$p:Int!,$c:String){repository(owner:$o,name:$r){pullRequest(number:$p){reviewThreads(first:100,after:$c){pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated}}}}}' \
-      -F o="$OWNER" -F r="$REPO" -F p="$PR" -F c="${CURSOR:-}" 2>/dev/null || echo '{}')"
-    N="$(jq '[.data.repository.pullRequest.reviewThreads.nodes[]?|select(.isResolved==false)]|length' <<<"$RESP" 2>/dev/null || echo 0)"
-    A="$(jq '[.data.repository.pullRequest.reviewThreads.nodes[]?|select(.isResolved==false and .isOutdated==false)]|length' <<<"$RESP" 2>/dev/null || echo 0)"
-    UNRESOLVED=$((UNRESOLVED + N))
-    ACTIONABLE=$((ACTIONABLE + A))
-    HASNEXT="$(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage // false' <<<"$RESP" 2>/dev/null || echo false)"
-    CURSOR="$(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // empty' <<<"$RESP" 2>/dev/null || echo "")"
-    [ "$HASNEXT" = "true" ] && [ -n "$CURSOR" ] || break
-  done
-fi
+THREADS_OUT="$(host_verb review-threads --number "$PR" 2>/dev/null || true)"
+UNRESOLVED="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print((d.get('data') or {}).get('unresolved',0))" "$THREADS_OUT" 2>/dev/null || echo 0)"
+ACTIONABLE="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print((d.get('data') or {}).get('actionable',0))" "$THREADS_OUT" 2>/dev/null || echo 0)"
 
 # --- review per-head state (executable adapter seam) --------------------------
 # Opt-out: review.provider="none" (explicit) or review.enabled=false (deprecated).
