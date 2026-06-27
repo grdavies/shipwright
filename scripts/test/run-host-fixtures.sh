@@ -371,6 +371,68 @@ else
   bad "install-docs-currency"
 fi
 
+
+
+# --- Phase 3: no-remote local mode (R9–R13) ---
+LOCAL_FIX=$(mktemp -d)
+trap 'rm -rf "$LOCAL_FIX" "$TMP_CFG" 2>/dev/null || true' EXIT
+(
+  cd "$LOCAL_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  echo base >f.txt && git add f.txt && git commit -q -m "chore: init"
+  git branch -m feat/local-test
+  mkdir -p .cursor
+  python3 - <<'CFG' "$ROOT/.cursor/workflow.config.json" > .cursor/workflow.config.json
+import json, sys
+cfg = json.load(open(sys.argv[1]))
+cfg['host'] = {'provider': 'none', 'remote': 'origin'}
+json.dump(cfg, open('/dev/stdout','w'), indent=2)
+CFG
+  export SW_LOCAL_GATE_FIXTURE=green
+  if OUT=$(bash "$ROOT/scripts/host.sh" --root "$LOCAL_FIX" resolve-pr-for-branch) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d['provider']=='none' and d['data'][0].get('localEvidence')"; then
+    ok "noremote-local-adapter"
+  else
+    bad "noremote-local-adapter"
+  fi
+  if OUT=$(bash "$ROOT/scripts/host.sh" --root "$LOCAL_FIX" checks --sha "$(git rev-parse HEAD)") &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and len(d['data'])>0"; then
+    ok "noremote-local-adapter:checks"
+  else
+    bad "noremote-local-adapter:checks"
+  fi
+  if OUT=$(bash "$ROOT/scripts/check-gate.sh" 2>/dev/null) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('source')=='local-evidence' and d.get('verdict')=='green'"; then
+    ok "check-gate-local-verdict"
+  else
+    bad "check-gate-local-verdict"
+  fi
+  RUN_DIR="$LOCAL_FIX/.cursor/sw-deliver-runs/terminal"
+  mkdir -p "$RUN_DIR"
+  export SW_RUN_DIR="$RUN_DIR"
+  GATE_JSON="$RUN_DIR/gate.json"
+  bash "$ROOT/scripts/check-gate.sh" > "$GATE_JSON" 2>/dev/null || true
+  HEAD=$(git rev-parse HEAD)
+  if OUT=$(python3 "$ROOT/scripts/local_merge_gate.py" --root "$LOCAL_FIX" write --head "$HEAD" --gate-json "$GATE_JSON" --run-dir "$RUN_DIR") &&      test -f "$RUN_DIR/local-merge-gate.json" &&      python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['source']=='local-evidence' and d['head']==sys.argv[2]" "$RUN_DIR/local-merge-gate.json" "$HEAD"; then
+    ok "terminal-local-evidence-gate"
+  else
+    bad "terminal-local-evidence-gate"
+  fi
+  if OUT=$(python3 "$ROOT/scripts/watch_ci_lib.py" --root "$LOCAL_FIX") &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('mode')=='degraded-local' and d.get('ciWatch') is False"; then
+    ok "ci-watch-local-degrade"
+  else
+    bad "ci-watch-local-degrade"
+  fi
+  mkdir -p "$LOCAL_FIX/.cursor"
+  echo '{"prd_number":"026","target":{"branch":"feat/local-test","slug":"local-test","type":"feat"},"phases":{"1":{"slug":"p1","status":"green-merged"}},"terminalLocalGate":{"mode":"local-evidence"}}' > "$LOCAL_FIX/.cursor/sw-deliver-state.json"
+  if OUT=$(SW_SKIP_DOCS_CURRENCY=1 python3 "$ROOT/scripts/wave_terminal.py" "$LOCAL_FIX" terminal pr gate 2>/dev/null) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('humanMergeRequired') is True and d.get('neverAutoMergesMain') is True"; then
+    ok "local-merge-human-halt"
+  else
+    bad "local-merge-human-halt"
+    echo "$OUT" | head -20 >&2 || true
+  fi
+)
+
+
 if [[ "$FAIL" -eq 0 ]]; then
   echo "ALL host fixtures passed"
 else

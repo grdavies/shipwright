@@ -7,7 +7,8 @@
 # Emits JSON on stdout; exit 0 on ok/degraded, non-zero on hard failure.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$SCRIPT_ROOT"
 VERB=""
 
 while [[ $# -gt 0 ]]; do
@@ -30,7 +31,7 @@ if [[ -z "$VERB" ]]; then
   exit 2
 fi
 
-RESOLVED="$(python3 "$ROOT/scripts/host_lib.py" --root "$ROOT" resolve)"
+RESOLVED="$(python3 "$SCRIPT_ROOT/scripts/host_lib.py" --root "$ROOT" resolve)"
 PROVIDER="$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('provider','none'))" "$RESOLVED")"
 
 if [[ "$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('verdict','fail'))" "$RESOLVED")" != "ok" ]]; then
@@ -38,7 +39,11 @@ if [[ "$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('verdict
   exit 30
 fi
 
-ADAPTER="$ROOT/scripts/host_${PROVIDER}.sh"
+ADAPTER_ID="$PROVIDER"
+if [[ "$PROVIDER" == "none" ]]; then
+  ADAPTER_ID="local"
+fi
+ADAPTER="$SCRIPT_ROOT/scripts/host_${ADAPTER_ID}.sh"
 if [[ ! -x "$ADAPTER" ]]; then
   python3 -c "import json,sys; print(json.dumps({'verdict':'degraded','verb':sys.argv[1],'provider':sys.argv[2],'reason':'capability-missing','retryable':False}))" "$VERB" "$PROVIDER"
   exit 0

@@ -90,27 +90,27 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 
 ### 3. No-remote local mode — M
 
-- [ ] 3.1 Local-only host adapter (R9)
+- [x] 3.1 Local-only host adapter (R9)
   - **File:** `core/providers/host/none.md`, `scripts/host_local.sh`
   - **Expected:** `host.provider: none` (or no detected remote) activates a local adapter whose PR/CI verbs
     resolve to local-evidence equivalents. `noremote-local-adapter` asserts selection + verb behavior.
   - **R-IDs:** R9
-- [ ] 3.2 Generalize `local_evidence_authorizing` to the terminal tier + artifact (R10)
+- [x] 3.2 Generalize `local_evidence_authorizing` to the terminal tier + artifact (R10)
   - **File:** `scripts/check-gate.sh`, `scripts/local_merge_gate.py`
   - **Expected:** local-evidence path extends feature→trunk; writes a local-merge-gate artifact.
     `terminal-local-evidence-gate` asserts artifact contents.
   - **R-IDs:** R10
-- [ ] 3.3 Local-mode human merge halt (R11)
+- [x] 3.3 Local-mode human merge halt (R11)
   - **File:** `scripts/wave_terminal.py`
   - **Expected:** final merge into trunk halts for explicit human action by default; no auto-merge.
     `local-merge-human-halt`.
   - **R-IDs:** R11
-- [ ] 3.4 CI-watch degradation without host CI (R12)
+- [x] 3.4 CI-watch degradation without host CI (R12)
   - **File:** `core/commands/sw-watch-ci.md`, `scripts/watch_ci_lib.py`
   - **Expected:** CI-watch degrades to local checks-gate evidence and reports degraded mode.
     `ci-watch-local-degrade`.
   - **R-IDs:** R12
-- [ ] 3.5 `check-gate.sh` local-evidence verdict (R13)
+- [x] 3.5 `check-gate.sh` local-evidence verdict (R13)
   - **File:** `scripts/check-gate.sh`
   - **Expected:** returns a local-evidence verdict instead of the blocked "no open PR" path in no-remote mode.
     `check-gate-local-verdict`.
