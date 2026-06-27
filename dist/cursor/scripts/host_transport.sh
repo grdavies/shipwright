@@ -67,7 +67,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-sys.path.insert(0, sys.argv[1])
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
 from host_lib import host_section, load_workflow_config, resolve_rate_limit
 from host_ratelimit import SerialGate, RequestResult, execute_with_retry
 
@@ -116,6 +116,8 @@ outcome = execute_with_retry(
 )
 payload = outcome.to_json()
 if outcome.result is not None:
+    payload["headers"] = outcome.result.headers
+    payload["body"] = outcome.result.body
     payload["bodyBytes"] = len(outcome.result.body or "")
 meta_out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 print(json.dumps(payload, indent=2))

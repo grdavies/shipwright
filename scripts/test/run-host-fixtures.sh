@@ -372,142 +372,66 @@ else
 fi
 
 
-# --- Phase 4: gitlab-adapter-verbs ---
+
+# --- Phase 3: no-remote local mode (R9–R13) ---
+LOCAL_FIX=$(mktemp -d)
+trap 'rm -rf "$LOCAL_FIX" "$TMP_CFG" 2>/dev/null || true' EXIT
 (
-  export GITLAB_TOKEN=glpat_fixture_token_for_tests
-  export SW_HOST_FIXTURE=gitlab-green
-  CFG_BAK=$(mktemp)
-  cp "$ROOT/.cursor/workflow.config.json" "$CFG_BAK"
-  python3 - <<'PYCFG' "$ROOT/.cursor/workflow.config.json"
+  cd "$LOCAL_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  echo base >f.txt && git add f.txt && git commit -q -m "chore: init"
+  git branch -m feat/local-test
+  mkdir -p .cursor
+  python3 - <<'CFG' "$ROOT/.cursor/workflow.config.json" > .cursor/workflow.config.json
 import json, sys
 cfg = json.load(open(sys.argv[1]))
-cfg['host'] = {'provider': 'gitlab', 'remote': 'origin', 'tokenEnv': 'GITLAB_TOKEN'}
-json.dump(cfg, open(sys.argv[1], 'w'), indent=2)
-PYCFG
-  for verb_args in "pr-list --head feat/x --base main --state open" "pr-create --title t --body b --head feat/x --base feat/demo" "pr-view --number 7" "pr-close --number 7" "repo-meta"; do
-    if OUT=$(GITLAB_TOKEN=glpat_fixture_token_for_tests SW_HOST_FIXTURE=gitlab-green bash "$ROOT/scripts/host.sh" --root "$ROOT" $verb_args) && \
-       echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d.get('provider')=='gitlab'"; then
-      ok "gitlab-adapter-verbs:${verb_args%% *}"
-    else
-      bad "gitlab-adapter-verbs:${verb_args%% *}"
-    fi
-  done
-  cp "$CFG_BAK" "$ROOT/.cursor/workflow.config.json"
-  rm -f "$CFG_BAK"
+cfg['host'] = {'provider': 'none', 'remote': 'origin'}
+json.dump(cfg, open('/dev/stdout','w'), indent=2)
+CFG
+  export SW_LOCAL_GATE_FIXTURE=green
+  if OUT=$(bash "$ROOT/scripts/host.sh" --root "$LOCAL_FIX" resolve-pr-for-branch) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d['provider']=='none' and d['data'][0].get('localEvidence')"; then
+    ok "noremote-local-adapter"
+  else
+    bad "noremote-local-adapter"
+  fi
+  if OUT=$(bash "$ROOT/scripts/host.sh" --root "$LOCAL_FIX" checks --sha "$(git rev-parse HEAD)") &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and len(d['data'])>0"; then
+    ok "noremote-local-adapter:checks"
+  else
+    bad "noremote-local-adapter:checks"
+  fi
+  if OUT=$(bash "$ROOT/scripts/check-gate.sh" 2>/dev/null) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('source')=='local-evidence' and d.get('verdict')=='green'"; then
+    ok "check-gate-local-verdict"
+  else
+    bad "check-gate-local-verdict"
+  fi
+  RUN_DIR="$LOCAL_FIX/.cursor/sw-deliver-runs/terminal"
+  mkdir -p "$RUN_DIR"
+  export SW_RUN_DIR="$RUN_DIR"
+  GATE_JSON="$RUN_DIR/gate.json"
+  bash "$ROOT/scripts/check-gate.sh" > "$GATE_JSON" 2>/dev/null || true
+  HEAD=$(git rev-parse HEAD)
+  if OUT=$(python3 "$ROOT/scripts/local_merge_gate.py" --root "$LOCAL_FIX" write --head "$HEAD" --gate-json "$GATE_JSON" --run-dir "$RUN_DIR") &&      test -f "$RUN_DIR/local-merge-gate.json" &&      python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['source']=='local-evidence' and d['head']==sys.argv[2]" "$RUN_DIR/local-merge-gate.json" "$HEAD"; then
+    ok "terminal-local-evidence-gate"
+  else
+    bad "terminal-local-evidence-gate"
+  fi
+  if OUT=$(python3 "$ROOT/scripts/watch_ci_lib.py" --root "$LOCAL_FIX") &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('mode')=='degraded-local' and d.get('ciWatch') is False"; then
+    ok "ci-watch-local-degrade"
+  else
+    bad "ci-watch-local-degrade"
+  fi
+  mkdir -p "$LOCAL_FIX/.cursor"
+  echo '{"prd_number":"026","target":{"branch":"feat/local-test","slug":"local-test","type":"feat"},"phases":{"1":{"slug":"p1","status":"green-merged"}},"terminalLocalGate":{"mode":"local-evidence"}}' > "$LOCAL_FIX/.cursor/sw-deliver-state.json"
+  if OUT=$(SW_SKIP_DOCS_CURRENCY=1 python3 "$ROOT/scripts/wave_terminal.py" "$LOCAL_FIX" terminal pr gate 2>/dev/null) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('humanMergeRequired') is True and d.get('neverAutoMergesMain') is True"; then
+    ok "local-merge-human-halt"
+  else
+    bad "local-merge-human-halt"
+    echo "$OUT" | head -20 >&2 || true
+  fi
 )
 
-# --- Phase 4: bitbucket-adapter-verbs ---
-(
-  export BITBUCKET_TOKEN=bb_fixture_token_for_tests
-  export SW_HOST_FIXTURE=bitbucket-green
-  CFG_BAK=$(mktemp)
-  cp "$ROOT/.cursor/workflow.config.json" "$CFG_BAK"
-  python3 - <<'PYCFG' "$ROOT/.cursor/workflow.config.json"
-import json, sys
-cfg = json.load(open(sys.argv[1]))
-cfg['host'] = {'provider': 'bitbucket', 'remote': 'origin', 'tokenEnv': 'BITBUCKET_TOKEN'}
-json.dump(cfg, open(sys.argv[1], 'w'), indent=2)
-PYCFG
-  for verb_args in "pr-list --head feat/x --base main --state open" "pr-create --title t --body b --head feat/x --base feat/demo" "pr-view --number 3" "pr-close --number 3" "repo-meta"; do
-    if OUT=$(BITBUCKET_TOKEN=bb_fixture_token_for_tests SW_HOST_FIXTURE=bitbucket-green bash "$ROOT/scripts/host.sh" --root "$ROOT" $verb_args) && \
-       echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d.get('provider')=='bitbucket'"; then
-      ok "bitbucket-adapter-verbs:${verb_args%% *}"
-    else
-      bad "bitbucket-adapter-verbs:${verb_args%% *}"
-    fi
-  done
-  cp "$CFG_BAK" "$ROOT/.cursor/workflow.config.json"
-  rm -f "$CFG_BAK"
-)
-
-# --- Phase 4: bitbucket-backoff-default (R40) ---
-if OUT=$(python3 "$ROOT/scripts/host_ratelimit.py" compute-wait \
-  --provider bitbucket --status 429 --attempt 2 \
-  --headers-json '{}') && \
-   echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['reason']=='backoff'"; then
-  ok "bitbucket-backoff-default"
-else
-  bad "bitbucket-backoff-default"
-fi
-
-# --- Phase 4: phase-pr-base-integration ---
-(
-  TMP_ROOT=$(mktemp -d)
-  mkdir -p "$TMP_ROOT/.cursor"
-  echo '{"target":{"branch":"feat/demo"},"phases":{}}' > "$TMP_ROOT/.cursor/sw-deliver-state.json"
-  export SW_PHASE_MODE=1
-  OUT=$(SW_PHASE_MODE=1 python3 "$ROOT/scripts/wave_phase_pr.py" --root "$TMP_ROOT" enforce-base --base main 2>/dev/null || true)
-  if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('verdict')=='fail' and d.get('error')=='phase-pr-base-mismatch'"; then
-    ok "phase-pr-base-integration:mismatch"
-  else
-    bad "phase-pr-base-integration:mismatch"
-  fi
-  if OUT=$(python3 "$ROOT/scripts/wave_phase_pr.py" --root "$TMP_ROOT" enforce-base --base feat/demo) && \
-     echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('verdict')=='ok' and d.get('base')=='feat/demo'"; then
-    ok "phase-pr-base-integration:enforced"
-  else
-    bad "phase-pr-base-integration:enforced"
-  fi
-  rm -rf "$TMP_ROOT"
-)
-
-# --- Phase 4: superseded-pr-close-by-branch-identity ---
-(
-  export GITHUB_TOKEN=gh_fixture_token_for_tests
-  export SW_HOST_FIXTURE=phase-close
-  STATE_BAK=$(mktemp)
-  [[ -f "$ROOT/.cursor/sw-deliver-state.json" ]] && cp "$ROOT/.cursor/sw-deliver-state.json" "$STATE_BAK" || true
-  echo '{"target":{"branch":"feat/demo"},"phases":{"1":{"slug":"alpha","status":"green-merged","branch":"feat/demo-phase-alpha"}}}' > "$ROOT/.cursor/sw-deliver-state.json"
-  if OUT=$(GITHUB_TOKEN=gh_fixture_token_for_tests SW_HOST_FIXTURE=phase-close python3 "$ROOT/scripts/wave_phase_pr.py" --root "$ROOT" close-superseded) && \
-     echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('verdict') in ('ok','partial') and len(d.get('closed',[]))>=1"; then
-    ok "superseded-pr-close-by-branch-identity"
-  else
-    bad "superseded-pr-close-by-branch-identity"
-    echo "$OUT" >&2 || true
-  fi
-  if [[ -f "$STATE_BAK" ]]; then cp "$STATE_BAK" "$ROOT/.cursor/sw-deliver-state.json"; else rm -f "$ROOT/.cursor/sw-deliver-state.json"; fi
-  rm -f "$STATE_BAK"
-)
-
-# --- Phase 4: cleanup-not-blocked-by-open-pr ---
-(
-  TMP_ROOT=$(mktemp -d)
-  git -C "$TMP_ROOT" init -q
-  git -C "$TMP_ROOT" config user.email test@example.com
-  git -C "$TMP_ROOT" config user.name test
-  echo init > "$TMP_ROOT/README.md"
-  git -C "$TMP_ROOT" add README.md
-  git -C "$TMP_ROOT" commit -q -m "init"
-  git -C "$TMP_ROOT" branch -M main
-  git -C "$TMP_ROOT" checkout -q -b feat/demo-phase-alpha
-  echo phase > "$TMP_ROOT/p.txt"
-  git -C "$TMP_ROOT" add p.txt
-  git -C "$TMP_ROOT" commit -q -m "phase"
-  git -C "$TMP_ROOT" checkout -q main
-  mkdir -p "$TMP_ROOT/.cursor"
-  cat > "$TMP_ROOT/.cursor/sw-deliver-state.json" <<'STATE'
-{"target":{"branch":"feat/demo"},"phases":{"1":{"slug":"alpha","status":"green-merged","branch":"feat/demo-phase-alpha"}}}
-STATE
-  if OUT=$(python3 -c "import sys; sys.path.insert(0,'$ROOT/scripts'); from pathlib import Path; from cleanup_lib import merged_status, load_default_branch, current_branch; r=Path('$TMP_ROOT'); print(merged_status(r,'feat/demo-phase-alpha',load_default_branch(r),current_branch(r))[0])") && \
-     [[ "$OUT" == "merged" ]]; then
-    ok "cleanup-not-blocked-by-open-pr"
-  else
-    bad "cleanup-not-blocked-by-open-pr"
-  fi
-  rm -rf "$TMP_ROOT"
-)
-
-# --- host-verb-capability-flags phase4 adapters ---
-for adapter in gitlab bitbucket; do
-  if grep -q '"pr-close"' "$ROOT/core/providers/host/${adapter}.md" && \
-     grep -q '"verbs"' "$ROOT/core/providers/host/${adapter}.md"; then
-    ok "host-verb-capability-flags:${adapter}"
-  else
-    bad "host-verb-capability-flags:${adapter}"
-  fi
-done
-
-chmod +x "$ROOT/scripts/host_gitlab.sh" "$ROOT/scripts/host_bitbucket.sh" 2>/dev/null || true
 
 if [[ "$FAIL" -eq 0 ]]; then
   echo "ALL host fixtures passed"

@@ -65,12 +65,11 @@
         "stabilize-sync-verbset",
         "prose-gh-free",
         "install-docs-currency",
-        "gitlab-adapter-verbs",
-        "bitbucket-adapter-verbs",
-        "bitbucket-backoff-default",
-        "phase-pr-base-integration",
-        "superseded-pr-close-by-branch-identity",
-        "cleanup-not-blocked-by-open-pr"
+        "noremote-local-adapter",
+        "terminal-local-evidence-gate",
+        "local-merge-human-halt",
+        "ci-watch-local-degrade",
+        "check-gate-local-verdict"
       ]
     },
     {

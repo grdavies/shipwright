@@ -19,6 +19,19 @@ If no PR exists, stop and send the workflow back to `/phase-pr`.
 When `host.sh pr-view` reports `mergeable: CONFLICTING`, stop and hand off to `/sw-stabilize` (merge-base
 sync). Do not busy-poll checks that cannot run until conflicts are resolved.
 
+
+## Local / no-remote degradation (R12)
+
+When `host.provider` is `none` (or no remote is detected), host CI polling is unavailable. Resolve the
+verdict via the local degradation helper instead of polling host CI:
+
+```bash
+python3 scripts/watch_ci_lib.py --root "$(git rev-parse --show-toplevel)"
+```
+
+The helper runs `check-gate.sh` in local-evidence mode (`source: local-evidence`, `mode: degraded-local`)
+and reports `ciWatch: false`. Do not busy-poll a missing host API.
+
 ## Procedure
 
 1. Read `.cursor/workflow.config.json` → `checks` (policy, `treatNeutralAsPass`, `neutralAllowlist`) and
