@@ -31,6 +31,9 @@ SW_REFERENCE_CLOSED_EMIT = (
     "signal-context.schema.json",
     "kernel-classification.json",
     "kernel-classification.md",
+    "guidelines.schema.json",
+    "guidelines.json",
+    "guidelines.md",
 )
 EXCLUDE_SUFFIXES = (".pyc",)
 

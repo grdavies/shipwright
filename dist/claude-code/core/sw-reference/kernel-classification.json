@@ -385,6 +385,111 @@
   },
   "floorMatrix": {
     "version": 1,
-    "rules": []
+    "rules": [
+      {
+        "id": "security-sensitive-paths",
+        "description": "Force sw-review when work touches auth or payments surfaces",
+        "mandatorySteps": [
+          "sw-review"
+        ],
+        "orderingConstraints": [
+          {
+            "step": "sw-review",
+            "mustPrecede": "sw-commit"
+          }
+        ],
+        "triggers": {
+          "anyOf": [
+            {
+              "type": "path_glob",
+              "source": "task_file_paths",
+              "globs": [
+                "auth/**",
+                "payments/**"
+              ]
+            },
+            {
+              "type": "path_glob",
+              "source": "signal_context_file_paths",
+              "globs": [
+                "auth/**",
+                "payments/**"
+              ]
+            }
+          ]
+        },
+        "triageTagsAloneInsufficient": true
+      },
+      {
+        "id": "kernel-scripts-providers",
+        "description": "Force sw-review for kernel scripts and provider changes",
+        "mandatorySteps": [
+          "sw-review"
+        ],
+        "orderingConstraints": [
+          {
+            "step": "sw-review",
+            "mustPrecede": "sw-commit"
+          }
+        ],
+        "triggers": {
+          "anyOf": [
+            {
+              "type": "path_glob",
+              "source": "task_file_paths",
+              "globs": [
+                "scripts/git-push.sh",
+                "scripts/wave_*",
+                "core/providers/**"
+              ]
+            },
+            {
+              "type": "path_glob",
+              "source": "signal_context_file_paths",
+              "globs": [
+                "scripts/git-push.sh",
+                "scripts/wave_*",
+                "core/providers/**"
+              ]
+            }
+          ]
+        },
+        "triageTagsAloneInsufficient": true
+      },
+      {
+        "id": "hooks-manifest",
+        "description": "Force sw-review when hooks.json is in scope",
+        "mandatorySteps": [
+          "sw-review"
+        ],
+        "orderingConstraints": [
+          {
+            "step": "sw-review",
+            "mustPrecede": "sw-commit"
+          }
+        ],
+        "triggers": {
+          "anyOf": [
+            {
+              "type": "path_glob",
+              "source": "task_file_paths",
+              "globs": [
+                "hooks.json",
+                "**/hooks.json"
+              ]
+            },
+            {
+              "type": "path_glob",
+              "source": "signal_context_file_paths",
+              "globs": [
+                "hooks.json",
+                "**/hooks.json"
+              ]
+            }
+          ]
+        },
+        "triageTagsAloneInsufficient": true
+      }
+    ]
   }
 }

@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "guidelineVersion": "1.0.0",
+  "description": "Phase-type guidelines for deliver and ship orchestration (PRD 022 R30). Debug/doc/feedback packs land with PRD-024.",
+  "phaseTypes": {
+    "ship": {
+      "candidateSteps": [
+        "sw-tmp-init",
+        "sw-execute",
+        "sw-verify",
+        "verification-gate",
+        "sw-review",
+        "sw-simplify",
+        "gap-check",
+        "sw-commit",
+        "sw-pr",
+        "sw-watch-ci",
+        "sw-stabilize",
+        "sw-ready",
+        "sw-tmp-clean"
+      ],
+      "requiredSteps": [
+        "sw-tmp-init",
+        "sw-execute",
+        "sw-verify",
+        "verification-gate",
+        "sw-commit",
+        "sw-pr",
+        "sw-watch-ci",
+        "sw-stabilize",
+        "sw-ready",
+        "sw-tmp-clean"
+      ],
+      "optionalSteps": [
+        "sw-review",
+        "sw-simplify",
+        "gap-check"
+      ],
+      "allowedReorderings": [
+        {
+          "steps": [
+            "sw-review",
+            "sw-simplify",
+            "gap-check"
+          ],
+          "anchorBefore": "verification-gate",
+          "anchorAfter": "sw-commit"
+        }
+      ],
+      "forbiddenDeviations": [
+        {
+          "id": "skip-verification-gate",
+          "reason": "verification-gate is kernel-injected and non-droppable",
+          "omitStep": "verification-gate"
+        },
+        {
+          "id": "commit-before-verify",
+          "reason": "sw-commit must follow sw-verify and verification-gate",
+          "reorderBefore": "sw-commit",
+          "reorderAfter": "sw-verify"
+        }
+      ],
+      "floorRuleRefs": [
+        "security-sensitive-paths",
+        "kernel-scripts-providers",
+        "hooks-manifest"
+      ]
+    },
+    "deliver": {
+      "candidateSteps": [
+        "wave-plan-validate",
+        "phase-dispatch",
+        "sw-ship",
+        "phase-merge"
+      ],
+      "requiredSteps": [
+        "phase-dispatch",
+        "sw-ship"
+      ],
+      "optionalSteps": [
+        "wave-plan-validate",
+        "phase-merge"
+      ],
+      "allowedReorderings": [],
+      "forbiddenDeviations": [
+        {
+          "id": "skip-ship-delegation",
+          "reason": "deliver phases must delegate implementation through sw-ship",
+          "omitStep": "sw-ship"
+        }
+      ],
+      "floorRuleRefs": [
+        "security-sensitive-paths",
+        "kernel-scripts-providers",
+        "hooks-manifest"
+      ]
+    }
+  }
+}
