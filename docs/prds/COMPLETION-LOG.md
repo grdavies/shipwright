@@ -4,6 +4,7 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 
 | Date | PRD | Phase | Notes |
 |------|-----|-------|-------|
+| 2026-06-27 | 022 | post-merge | post-merge retrospective complete; PR #139; SHA b5edbda |
 | 2026-06-27 | 022 | all | deliver complete — awaiting terminal merge; PR #139; SHA 6b949cb |
 | 2026-06-27 | 022 | all | deliver complete — awaiting terminal merge; SHA 5f6ee09 |
 | 2026-06-27 | 022 | kernel-classification-and-plan-validation | pre-merge compounding complete |
