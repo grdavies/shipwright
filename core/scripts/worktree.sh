@@ -243,11 +243,12 @@ cmd_provision() {
   else
     new_branch="$("$ROOT/scripts/branch-name-guard.sh" derive "$name")"
   fi
-  if ! "$ROOT/scripts/branch-name-guard.sh" validate "$new_branch"; then
+  if ! "$ROOT/scripts/branch-name-guard.sh" validate "$new_branch"      || ! python3 "$ROOT/scripts/worktree_lib.py" validate "$new_branch" >/dev/null 2>&1; then
     echo "worktree.sh: refusing non-conforming branch name '$new_branch'" >&2
     exit 12
   fi
-  git fetch origin "$parent" 2>/dev/null || true
+  local host_remote; host_remote="$(python3 "$ROOT/scripts/host_lib.py" --root "$ROOT" remote-name)"
+  git fetch "$host_remote" "$parent" 2>/dev/null || true
   git worktree add -b "$new_branch" "$path" "$parent"
 
   local port db_strategy db_template

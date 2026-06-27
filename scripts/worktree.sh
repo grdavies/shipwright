@@ -243,7 +243,7 @@ cmd_provision() {
   else
     new_branch="$("$ROOT/scripts/branch-name-guard.sh" derive "$name")"
   fi
-  if ! "$ROOT/scripts/branch-name-guard.sh" validate "$new_branch"; then
+  if ! "$ROOT/scripts/branch-name-guard.sh" validate "$new_branch"      || ! python3 "$ROOT/scripts/worktree_lib.py" validate "$new_branch" >/dev/null 2>&1; then
     echo "worktree.sh: refusing non-conforming branch name '$new_branch'" >&2
     exit 12
   fi

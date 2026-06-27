@@ -1119,6 +1119,26 @@
       }
     },
     {
+      "id": "skill.git-workflow",
+      "kind": "skill",
+      "sourcePath": "core/skills/git-workflow/SKILL.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "providers",
+            "scope": "git-conventions"
+          }
+        ],
+        "metadata": {
+          "skill": "git-workflow",
+          "selectionFamily": "providers"
+        }
+      }
+    },
+    {
       "id": "skill.memory",
       "kind": "skill",
       "sourcePath": "core/skills/memory/SKILL.md",

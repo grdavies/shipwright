@@ -12,6 +12,11 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 SHIPWRIGHT_ROOT = SCRIPT_DIR.parent
 
+import sys as _sys
+if str(SCRIPT_DIR) not in _sys.path:
+    _sys.path.insert(0, str(SCRIPT_DIR))
+from worktree_lib import docs_branch_for_topic, refuse_default_branch
+
 _VALID_TYPES = frozenset(
     {"feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"}
 )
@@ -186,6 +191,19 @@ def docs_paths(docs_dir: Path, root: Path, *, single: Path | None = None) -> lis
     return paths
 
 
+
+def docs_paths_all(root: Path, topic: str) -> list[Path]:
+    """Tracked doc artifacts for a topic incl. brainstorms (R31)."""
+    slug = topic.lower().replace(" ", "-")
+    paths: list[Path] = []
+    for base in (root / "docs" / "brainstorms", root / "docs" / "prds"):
+        if not base.is_dir():
+            continue
+        for p in sorted(base.rglob("*")):
+            if p.is_file() and slug in p.name.lower():
+                paths.append(p)
+    return paths
+
 def tracked_paths(root: Path, paths: list[Path]) -> list[Path]:
     tracked: list[Path] = []
     for p in paths:
@@ -347,15 +365,50 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
     )
 
 
+
+
+def cmd_docs_commit(root: Path, args: list[str]) -> None:
+    """Commit brainstorm + PRD artifacts on docs/<topic> (R31); separate from feature spec-seed (R32)."""
+    topic = parse_kv(args, "--topic")
+    if not topic:
+        fail("docs-commit requires --topic")
+    dry_run = has_flag(args, "--dry-run")
+    top = git_toplevel(root)
+    default = load_trunk_base(top)
+    branch = docs_branch_for_topic(topic)
+    try:
+        refuse_default_branch(branch, default)
+    except ValueError as exc:
+        fail(str(exc))
+
+    doc_files = tracked_paths(top, docs_paths_all(top, topic))
+    doc_rels = rel_paths(top, doc_files)
+    if not doc_rels:
+        fail("no tracked doc files for topic (brainstorms/prds)")
+
+    commit_docs_seed(
+        top,
+        branch=branch,
+        slug=topic,
+        docs_dir=top / "docs",
+        doc_rels=doc_rels,
+        default=default,
+        dry_run=dry_run,
+        scope="docs-commit",
+    )
+
 def main() -> None:
     if len(sys.argv) < 2:
-        fail("usage: wave_spec_seed.py <root> spec-seed (--task-list PATH | --artifact PATH) [--dry-run]")
+        fail("usage: wave_spec_seed.py <root> {spec-seed|docs-commit} ...")
     root = Path(sys.argv[1])
     cmd = sys.argv[2] if len(sys.argv) > 2 else "spec-seed"
     args = sys.argv[3:]
-    if cmd != "spec-seed":
+    if cmd == "spec-seed":
+        cmd_spec_seed(root, args)
+    elif cmd == "docs-commit":
+        cmd_docs_commit(root, args)
+    else:
         fail(f"unknown command: {cmd}")
-    cmd_spec_seed(root, args)
 
 
 if __name__ == "__main__":
