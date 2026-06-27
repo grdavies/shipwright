@@ -667,6 +667,73 @@
       }
     },
     {
+      "id": "provider.providers.host.CAPABILITIES",
+      "kind": "provider",
+      "sourcePath": "core/providers/host/CAPABILITIES.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "providers",
+            "scope": "host-contract"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "host",
+          "selectionFamily": "providers",
+          "notes": "neutral host/forge capability contract doc"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.host.github",
+      "kind": "provider",
+      "sourcePath": "core/providers/host/github.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "host.provider",
+            "equals": "github"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "host",
+          "adapterId": "github",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.sh"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.host.none",
+      "kind": "provider",
+      "sourcePath": "core/providers/host/none.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "host.provider",
+            "equals": "none"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "host",
+          "adapterId": "none",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.sh"
+        }
+      }
+    },
+    {
       "id": "provider.providers.in-repo",
       "kind": "provider",
       "sourcePath": "core/providers/in-repo.md",
