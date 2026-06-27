@@ -58,9 +58,76 @@ fi
 
 popd >/dev/null
 
-if [[ "$FAIL" -eq 0 ]]; then
-  echo "run-memory-prework-fixtures: PASS"
+# --- memory-prework-pretooluse-deny (R8) ---
+pushd "$FIX_DIR" >/dev/null
+rm -f .cursor/hooks/state/memory-prework-search.json
+DENY=$(python3 - <<'PY' "$ROOT" "$FIX_DIR"
+import json, sys
+from pathlib import Path
+plugin_root = Path(sys.argv[1])
+root = Path(sys.argv[2])
+sys.path.insert(0, str(plugin_root / "core" / "hooks"))
+from before_task_dispatch import evaluate_pre_tool_use
+
+blocked = evaluate_pre_tool_use(
+    {"tool_name": "Write", "tool_input": {"path": "x.txt", "contents": "y"}, "cwd": str(root)},
+    root,
+)
+print(json.dumps({"verdict": blocked.verdict, "cause": blocked.cause}))
+PY
+)
+if echo "$DENY" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['verdict']=='fail'
+assert d['cause']=='missing-prework-search-record'
+"; then
+  ok "memory-prework-pretooluse-deny"
 else
+  bad "memory-prework-pretooluse-deny"
+  echo "$DENY"
+fi
+
+bash "$WAVE" memory prework record --surface sw-execute --offline >/dev/null 2>&1
+ALLOW=$(python3 - <<'PY' "$ROOT" "$FIX_DIR"
+import sys
+from pathlib import Path
+plugin_root = Path(sys.argv[1])
+root = Path(sys.argv[2])
+sys.path.insert(0, str(plugin_root / "core" / "hooks"))
+from before_task_dispatch import evaluate_pre_tool_use
+r = evaluate_pre_tool_use(
+    {"tool_name": "Write", "tool_input": {"path": "x.txt", "contents": "y"}, "cwd": str(root)},
+    root,
+)
+print(r.verdict)
+PY
+)
+if [[ "$ALLOW" == "skip" ]]; then
+  ok "memory-prework-pretooluse-allow-with-record"
+else
+  bad "memory-prework-pretooluse-allow-with-record (got $ALLOW)"
+fi
+popd >/dev/null
+
+# --- memory-prework-dispatch-inherited (R2) ---
+if grep -q 'Pre-work memory search inheritance' "$ROOT/core/rules/sw-subagent-dispatch.mdc" && \
+   grep -q 'untrusted_payload' "$ROOT/core/rules/sw-subagent-dispatch.mdc"; then
+  ok "memory-prework-dispatch-inherited"
+else
+  bad "memory-prework-dispatch-inherited"
+fi
+
+# --- memory-prework-prompt-redacted (R9) ---
+if grep -q 'memory-redact.sh' "$ROOT/core/rules/sw-subagent-dispatch.mdc" && \
+   grep -q 'untrusted_payload' "$ROOT/core/rules/sw-subagent-dispatch.mdc"; then
+  ok "memory-prework-prompt-redacted"
+else
+  bad "memory-prework-prompt-redacted"
+fi
+
+if [[ "$FAIL" -ne 0 ]]; then
   echo "run-memory-prework-fixtures: FAIL"
   exit 1
 fi
+echo "run-memory-prework-fixtures: PASS"
