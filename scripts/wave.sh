@@ -6,6 +6,7 @@
 #   wave.sh preflight-base --target feat/<slug>
 #   wave.sh dispatch preflight --dispatch-id <id> --agent <id> [--command <sw-*>] [--skill <name>]
 #   wave.sh memory learnings distill|prepare ...
+#   wave.sh memory prework record|status ...
 #   wave.sh schedule --plan .cursor/sw-deliver-plan.json [--ceiling N]  # parallel batches (R14/R44)
 #   wave.sh orchestrator provision|status ...
 #   wave.sh phase provision --phase-id N [--plan ...] [--base <type>/<slug>]
@@ -97,6 +98,9 @@ case "${1:-}" in
     exec python3 "$PLUGIN_ROOT/scripts/wave_preflight.py" "$ROOT" dispatch "${@:2}"
     ;;
   memory)
+    if [[ "${2:-}" == "prework" ]]; then
+      exec python3 "$PLUGIN_ROOT/scripts/wave_memory_prework.py" "$ROOT" "${@:3}"
+    fi
     exec python3 "$PLUGIN_ROOT/scripts/wave_memory.py" "$ROOT" "$@"
     ;;
   resume|ack)
