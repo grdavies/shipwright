@@ -24,7 +24,12 @@ from plan_persist import (
     wave_lifecycle,
     wave_plan_ready,
 )
-from wave_plan_validate import phase_fallback_canonical_chain, validate_wave_plan, wave_fallback_canonical_waves
+from wave_plan_validate import (
+    phase_fallback_canonical_chain,
+    read_config_plan_policy,
+    validate_wave_plan,
+    wave_fallback_canonical_waves,
+)
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -902,6 +907,37 @@ def write_blocker_report(root: Path, state: dict[str, Any], cause: str) -> Path:
     return path
 
 
+def run_plan_validate(
+    root: Path,
+    args: list[str],
+) -> tuple[int, dict[str, Any]]:
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT_DIR / "wave_plan_validate.py"), str(root), "validate", *args],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+    )
+    data: dict[str, Any] = {}
+    if proc.stdout.strip():
+        try:
+            parsed = json.loads(proc.stdout)
+            if isinstance(parsed, dict):
+                data = parsed
+        except json.JSONDecodeError:
+            data = {"raw": proc.stdout.strip()}
+    data["exitCode"] = proc.returncode
+    return proc.returncode, data
+
+
+def reload_state_from_path(state: dict[str, Any], state_path: Path) -> None:
+    if not state_path.is_file():
+        return
+    try:
+        state.update(read_json(state_path))
+    except (StateCorruptError, json.JSONDecodeError):
+        return
+
+
 def execute_mechanical(
     root: Path,
     state: dict[str, Any],
@@ -1104,15 +1140,44 @@ def execute_mechanical(
 
 
     if action == "wave-plan-persist":
+        policy = read_config_plan_policy(root)
         proposal = {"waves": plan.get("waves") or []}
         frozen = {"waves": plan.get("waves") or [], "edges": plan.get("edges") or []}
-        result = validate_wave_plan(root, proposal, frozen_plan=frozen)
-        if result.get("verdict") != "pass":
-            fallback = result.get("fallback") or wave_fallback_canonical_waves(frozen, root)
-            wave_plan = fallback
+        state_path = resolve_state_path(root, state_hint=state)
+        if policy == "proposed":
+            _, result = run_plan_validate(
+                root,
+                [
+                    "--tier",
+                    "wave",
+                    "--proposal",
+                    json.dumps(proposal),
+                    "--frozen-plan",
+                    json.dumps(frozen),
+                    "--record-rejection",
+                    "--phase-id",
+                    "wave",
+                    "--state-path",
+                    str(state_path),
+                ],
+            )
+            reload_state_from_path(state, state_path)
+            if result.get("verdict") != "pass":
+                wave_plan = result.get("fallback") or wave_fallback_canonical_waves(
+                    frozen, root, recorded_parent=state.get("waveBatchingPlan")
+                )
+            else:
+                wave_plan = result.get("plan") or wave_fallback_canonical_waves(
+                    frozen, root, recorded_parent=state.get("waveBatchingPlan")
+                )
         else:
-            wave_plan = result.get("plan") or wave_fallback_canonical_waves(frozen, root)
+            result = validate_wave_plan(root, proposal, frozen_plan=frozen)
+            if result.get("verdict") != "pass":
+                wave_plan = result.get("fallback") or wave_fallback_canonical_waves(frozen, root)
+            else:
+                wave_plan = result.get("plan") or wave_fallback_canonical_waves(frozen, root)
         persist_wave_batching_plan(state, wave_plan, fail)
+        set_wave_lifecycle(state, LIFECYCLE_WAVE_VALIDATED)
         save_state(root, state)
         persist_cursor(root, state, "provision-phase")
         return {"executed": "wave-plan-persist", "lifecycle": get_lifecycle(state)}
@@ -1121,7 +1186,42 @@ def execute_mechanical(
         pid = str(step.get("phaseId", ""))
         slug = str(step.get("phaseSlug") or pid)
         set_phase_lifecycle(state, pid, LIFECYCLE_PHASE_PLAN_PENDING)
-        phase_plan = mechanical_phase_plan(root, pid, slug, state)
+        policy = read_config_plan_policy(root)
+        proposal = mechanical_phase_plan(root, pid, slug, state)
+        if policy == "proposed":
+            state_path = resolve_state_path(root, state_hint=state)
+            validate_proposal = {
+                "steps": proposal.get("steps") or [],
+                "phaseId": pid,
+            }
+            _, result = run_plan_validate(
+                root,
+                [
+                    "--tier",
+                    "phase",
+                    "--phase-type",
+                    "ship",
+                    "--proposal",
+                    json.dumps(validate_proposal),
+                    "--phase-id",
+                    pid,
+                    "--record-rejection",
+                    "--state-path",
+                    str(state_path),
+                ],
+            )
+            reload_state_from_path(state, state_path)
+            if result.get("verdict") != "pass":
+                phase_plan = result.get("fallback") or phase_fallback_canonical_chain(
+                    root,
+                    "ship",
+                    pid,
+                    recorded_parent=state.get("waveBatchingPlan"),
+                )
+            else:
+                phase_plan = result.get("plan") or proposal
+        else:
+            phase_plan = proposal
         run_dir = phase_run_dir_for_slug(root, slug)
         run_dir.mkdir(parents=True, exist_ok=True)
         from plan_persist import persist_phase_plan, phase_plan_path
