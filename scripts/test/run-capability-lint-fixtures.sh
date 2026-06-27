@@ -176,6 +176,7 @@ rm -rf "$SCHEMA_OK_CORE"
 mkdir -p "$SCHEMA_OK_CORE/skills/good-schema" "$SCHEMA_OK_CORE/sw-reference"
 cp "$ROOT/core/sw-reference/guidelines.json" "$SCHEMA_OK_CORE/sw-reference/guidelines.json"
 cp "$ROOT/core/sw-reference/guidelines.schema.json" "$SCHEMA_OK_CORE/sw-reference/guidelines.schema.json"
+cp "$ROOT/core/sw-reference/kernel-classification.json" "$SCHEMA_OK_CORE/sw-reference/kernel-classification.json"
 cat >"$SCHEMA_OK_CORE/skills/good-schema/SKILL.md" <<'YAML'
 ---
 name: good-schema
