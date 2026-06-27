@@ -15,6 +15,7 @@ from typing import Any
 
 from capability_index import check_freshness
 from capability_precedence import effective_tier, total_order_key
+from capability_run_log import surface_capability_selection
 from wave_json_io import read_json, write_json
 
 SIGNAL_CONTEXT_VERSION = 1
@@ -569,6 +570,8 @@ def main(argv: list[str] | None = None) -> None:
     ctx = load_or_snapshot_context(run_dir, resume=args.resume, incoming=raw_context)
     index = load_index(index_path)
     result = select_capabilities(index, ctx)
+    if run_dir is not None:
+        surface_capability_selection(root, run_dir, ctx, result)
     payload = canonical_bytes(result) + b"\n"
     sys.stdout.buffer.write(payload)
 
