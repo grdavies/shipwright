@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# PRD 023 — dependency gate, proposed-path deliver wiring, E2E + 022 parity (TR0, TR1, TR5a, TR5c)
-# and benefit metric capture + decision rule (TR4, TR5b, R31).
+# PRD 023 — dependency gate, proposed-path deliver wiring, E2E + 022 parity (TR0, TR1, TR5a, TR5c),
+# intra-phase safety (R15–R17), and benefit metric capture + decision rule (TR4, TR5b, R31).
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -8,6 +8,8 @@ GATE_PY="$ROOT/scripts/pilot_dependency_gate.py"
 PREREQ="$ROOT/scripts/test/pilot-022-prerequisite-check.sh"
 PERSIST_FIX="$ROOT/scripts/test/run-plan-persist-fixtures.sh"
 PARITY_FIX="$ROOT/scripts/test/run-plan-proposed-parity-fixtures.sh"
+INTRA_PY="$ROOT/scripts/intra_phase_dispatch.py"
+INTRA_SH="$ROOT/scripts/intra-phase-dispatch.sh"
 LOOP_PY="$ROOT/scripts/wave_deliver_loop.py"
 STATE_PY="$ROOT/scripts/wave_state.py"
 BENEFIT_PY="$ROOT/scripts/wave_plan_benefit.py"
@@ -473,6 +475,106 @@ assert d['summary']['stepsSkippedWithoutRework']['delta'] == 6, d
 else
   bad "benefit-decision-rule-positive-cohort"
 fi
+
+# --- intra-phase-disjoint-partition-required (R15) ---
+if OUT=$(python3 "$INTRA_PY" "$ROOT" evaluate --context-json '{}' \
+  --proposal-json '{"partitions":[{"workerId":"a","files":["src/a.py"]},{"workerId":"b","files":["src/a.py"]}],"proposedWorkers":2}' 2>/dev/null) \
+  && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('verdict') in ('serialize','reject'), d
+assert d.get('partition',{}).get('verdict') in ('serialize','reject'), d
+"; then
+  ok "intra-phase-disjoint-partition-required"
+else
+  bad "intra-phase-disjoint-partition-required"
+fi
+
+# --- intra-phase-global-cap (R15) ---
+set +e
+OUT=$(python3 "$INTRA_PY" "$ROOT" evaluate \
+  --context-json '{"file_paths":["a.py","b.py","c.py"],"derived_tags":["review-panel"]}' \
+  --wave-slots 4 --active-intra-phase 0 2>/dev/null)
+EC=$?
+set -e
+if [[ "$EC" -eq 20 ]] && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('verdict')=='reject', d
+assert d.get('cause')=='cap:global', d
+cap=d.get('cap',{})
+assert cap.get('globalCap') == 4, cap
+assert cap.get('waveSlots') == 4, cap
+"; then
+  ok "intra-phase-global-cap"
+else
+  bad "intra-phase-global-cap"
+fi
+
+# --- intra-phase-no-durable-write-race (R15) ---
+if OUT=$(python3 "$INTRA_PY" "$ROOT" evaluate \
+  --context-json '{"file_paths":["src/a.py","src/b.py"],"derived_tags":["review-panel"]}' \
+  --wave-slots 0 --active-intra-phase 0 2>/dev/null) \
+  && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+files=set(d.get('decision',{}).get('readOnlyDurableFiles') or [])
+assert files == {'ship-steps.json','status.json'}, files
+"; then
+  ok "intra-phase-no-durable-write-race"
+else
+  bad "intra-phase-no-durable-write-race"
+fi
+
+# --- intra-phase-background-degrade-before-dispatch (R16) ---
+BG_FIX=$(mktemp -d)
+(
+  RUN_DIR="$BG_FIX/.cursor/sw-deliver-runs/bg-phase"
+  mkdir -p "$RUN_DIR"
+  python3 "$INTRA_PY" "$BG_FIX" stamp-context --run-dir "$RUN_DIR" --conductor-mode background_phase >/dev/null
+  if OUT=$(python3 "$INTRA_PY" "$BG_FIX" check-nesting --run-dir "$RUN_DIR" \
+    --context-json '{"conductor_mode":"background_phase"}' 2>/dev/null) \
+    && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('taskSpawnAllowed') is False, d
+assert d.get('nestedTaskSpawns') == 0, d
+evald=d.get('evaluation',{})
+assert evald.get('verdict')=='inline', evald
+"; then
+    exit 0
+  fi
+  exit 1
+) && ok "intra-phase-background-degrade-before-dispatch" \
+  || bad "intra-phase-background-degrade-before-dispatch"
+rm -rf "$BG_FIX"
+
+# --- intra-phase-decision-logged (R17) ---
+LOG_FIX=$(mktemp -d)
+(
+  RUN_DIR="$LOG_FIX/.cursor/sw-deliver-runs/log-phase"
+  mkdir -p "$RUN_DIR"
+  if OUT=$(python3 "$INTRA_PY" "$LOG_FIX" evaluate \
+    --context-json '{"file_paths":["src/x.py"],"derived_tags":["review-panel"]}' \
+    --wave-slots 0 --active-intra-phase 0 --run-dir "$RUN_DIR" --record 2>/dev/null) \
+    && test -f "$RUN_DIR/dispatch-decisions.json" \
+    && python3 - <<PY
+import json
+from pathlib import Path
+doc = json.loads(Path("$RUN_DIR/dispatch-decisions.json").read_text())
+assert doc.get("version") == 1
+assert isinstance(doc.get("decisions"), list) and doc["decisions"]
+row = doc["decisions"][-1]
+for key in ("timestamp","signals","declaredPartition","chosenParallelism","degradeReason"):
+    assert key in row, key
+PY
+  then
+    exit 0
+  fi
+  exit 1
+) && ok "intra-phase-decision-logged" \
+  || bad "intra-phase-decision-logged"
+rm -rf "$LOG_FIX"
 
 if [[ "$FAIL" -eq 0 ]]; then
   echo "pilot fixtures: all passed"

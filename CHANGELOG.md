@@ -95,6 +95,8 @@
 * merge phase safety-invariant-parity-fixtures-proposed-cross-cutting-m into feat/kernel-classification-and-plan-validation (d2f4d9e) <!-- sw-deliver:safety-invariant-parity-fixtures-proposed-cross-cutting-m -->
 * merge phase docs-emitter-propagation-freshness-call-site-map-m into feat/kernel-classification-and-plan-validation (5151657) <!-- sw-deliver:docs-emitter-propagation-freshness-call-site-map-m -->
 * merge phase dependency-gate-deliver-pilot-wiring-wire-only-e2e-m into feat/deliver-plan-policy-pilot (a6c254d) <!-- sw-deliver:dependency-gate-deliver-pilot-wiring-wire-only-e2e-m -->
+* merge phase intra-phase-fan-out-no-nesting-decision-logging-m into feat/deliver-plan-policy-pilot (3ce9fd7) <!-- sw-deliver:intra-phase-fan-out-no-nesting-decision-logging-m -->
+* merge phase driver-enforced-budgets-clean-halt-integrity-m into feat/deliver-plan-policy-pilot (be5a271) <!-- sw-deliver:driver-enforced-budgets-clean-halt-integrity-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

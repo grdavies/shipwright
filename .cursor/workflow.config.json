@@ -11,6 +11,10 @@
       "dbTemplate": ""
     }
   },
+  "intraPhase": {
+    "parallelBudget": 2,
+    "harnessLimit": 8
+  },
   "agentsFile": "AGENTS.md",
   "prdsDir": "docs/prds",
   "decisionsDir": "docs/decisions",

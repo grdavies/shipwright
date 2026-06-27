@@ -33,30 +33,30 @@ driver budgets, benefit metric, plan surfacing) fan out from it; docs/dist close
 
 ### 2. Intra-phase fan-out + no-nesting + decision logging — M
 
-- [ ] 2.1 Guideline-bounded intra-phase fan-out + validated disjoint partition + global cap (R15, TR2)
+- [x] 2.1 Guideline-bounded intra-phase fan-out + validated disjoint partition + global cap (R15, TR2)
   - **File:** `core/rules/sw-subagent-dispatch.mdc`, intra-phase dispatch logic, `core/skills/parallelism/SKILL.md`
   - **Expected:** replace the fixed intra-phase dispatch list with a declared, guideline-bounded heuristic/budget consuming 021's `signal_context`; every fan-out proposal declares a **disjoint file/task partition** validated **before dispatch** (reject/serialize on overlap); bounded by `intraPhase.parallelBudget` and the global cap `waveSlots + activeIntraPhase ≤ min(worktree.parallelCeiling, harness limit)`. Fixtures `intra-phase-disjoint-partition-required`, `intra-phase-global-cap`, `intra-phase-no-durable-write-race` (parallel workers read-only on `ship-steps.json`/`status.json`).
   - **R-IDs:** R15
-- [ ] 2.2 Pre-dispatch no-nesting enforcement + inline degrade (R16)
+- [x] 2.2 Pre-dispatch no-nesting enforcement + inline degrade (R16)
   - **File:** intra-phase dispatch guard, `core/skills/parallelism/SKILL.md`
   - **Expected:** when `conductor_mode: background_phase` (stamped to the per-phase run dir at phase entry), intra-phase Task dispatch is **refused before any spawn** (no TOCTOU) and degrades to inline two-stage review; `intra-phase-background-degrade-before-dispatch` asserts zero nested Task invocations.
   - **R-IDs:** R16
-- [ ] 2.3 Intra-phase decision record (R17)
+- [x] 2.3 Intra-phase decision record (R17)
   - **File:** per-phase `dispatch-decisions.json` writer
   - **Expected:** each parallelization decision recorded with the defined shape (timestamp, signals, declared partition, chosen parallelism, degrade reason); `intra-phase-decision-logged`.
   - **R-IDs:** R17
 
 ### 3. Driver-enforced budgets + clean-halt integrity — M
 
-- [ ] 3.1 Persist + enforce budget counters in the deliver loop (R22, TR3)
+- [x] 3.1 Persist + enforce budget counters in the deliver loop (R22, TR3)
   - **File:** `scripts/wave_deliver_loop.py`
   - **Expected:** persist `runStartedAt`, `driverIterationCount`, `noProgressStreak`; read `deliver.autonomy.maxRunMinutes` / `maxIterations`, per-phase remediation, and the no-progress breaker; budgets are **driver-enforced** (durable counters, not agent prose) so adaptivity cannot extend a run past the ceilings; proposal/validation overhead accounted separately from execution (`budget-proposed-overhead-accounted`).
   - **R-IDs:** R22
-- [ ] 3.2 Clean consolidated halt with merge-queue + lock integrity (R22)
+- [x] 3.2 Clean consolidated halt with merge-queue + lock integrity (R22)
   - **File:** `scripts/wave_deliver_loop.py`, merge-queue/lock release path
   - **Expected:** a runaway/looping run converts to a **clean consolidated halt** that preserves merge-queue journal replayability and releases the orchestrator `O_EXCL` lock (no half-merged state); `budget-halt-merge-queue-integrity`.
   - **R-IDs:** R22
-- [ ] 3.3 Subscribe persistent plan rejection into the no-progress surface (R22)
+- [x] 3.3 Subscribe persistent plan rejection into the no-progress surface (R22)
   - **File:** `scripts/wave_deliver_loop.py` (consumes 022 `planRejectionLog`)
   - **Expected:** persistent plan rejection (022 R6 `planRejectionLog`) feeds the same no-progress signal; 023 **subscribes** to the schema, does not re-author it.
   - **R-IDs:** R22

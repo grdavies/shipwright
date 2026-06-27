@@ -15,7 +15,8 @@
 #   wave.sh phase-teardown --worktree <path>|--name <name> [--force]
 #   wave.sh assert-entry
 #   wave.sh status collect --phase-slug <slug>
-#   wave.sh phase dispatch-env --phase-slug <slug>
+#   wave.sh phase dispatch-env --phase-slug <slug> [--conductor-mode inline|background_phase]
+#   wave.sh intra-phase stamp-context|evaluate|check-nesting ...
 #   wave.sh merge gate-check|enqueue|exec|run-next|ancestry-check ...
 #   wave.sh report terminal
 #   wave.sh bookkeeping record|revert|projected ...
@@ -100,6 +101,9 @@ case "${1:-}" in
     ;;
   dispatch)
     exec python3 "$PLUGIN_ROOT/scripts/wave_preflight.py" "$ROOT" dispatch "${@:2}"
+    ;;
+  intra-phase)
+    exec python3 "$PLUGIN_ROOT/scripts/intra_phase_dispatch.py" "$ROOT" "${@:2}"
     ;;
   memory)
     if [[ "${2:-}" == "prework" ]]; then

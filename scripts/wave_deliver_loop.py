@@ -97,6 +97,18 @@ DEFAULT_BACKGROUND_TASK_TIMEOUT_MIN = int(
     os.environ.get("SW_BACKGROUND_TASK_TIMEOUT_MINUTES", "120")
 )
 MERGED_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
+DEFAULT_MAX_ITERATIONS = 500
+DEFAULT_NO_PROGRESS_THRESHOLD = 3
+PROPOSAL_OVERHEAD_ACTIONS = frozenset({"wave-plan-persist", "phase-plan-entry"})
+BUDGET_HALT_CAUSES = frozenset(
+    {
+        "conductor:max-iterations-exceeded",
+        "conductor:max-run-minutes-exceeded",
+        "conductor:no-progress",
+        "conductor:plan-rejection-breaker",
+        "plan-rejection-breaker",
+    }
+)
 
 
 def utc_now() -> str:
@@ -181,6 +193,216 @@ def parallel_ceiling(root: Path) -> int:
         return 4
 
 
+def autonomy_config(root: Path) -> dict[str, Any]:
+    deliver = load_workflow_config(root).get("deliver") or {}
+    autonomy = deliver.get("autonomy") or {}
+    return autonomy if isinstance(autonomy, dict) else {}
+
+
+def max_iterations(root: Path) -> int:
+    raw = autonomy_config(root).get("maxIterations", DEFAULT_MAX_ITERATIONS)
+    try:
+        return max(1, int(raw))
+    except (TypeError, ValueError):
+        return DEFAULT_MAX_ITERATIONS
+
+
+def max_run_minutes(root: Path) -> int | None:
+    raw = autonomy_config(root).get("maxRunMinutes")
+    if raw is None:
+        return None
+    try:
+        return max(1, int(raw))
+    except (TypeError, ValueError):
+        return None
+
+
+def no_progress_threshold(_root: Path) -> int:
+    return DEFAULT_NO_PROGRESS_THRESHOLD
+
+
+def init_budget_counters(state: dict[str, Any]) -> None:
+    state.setdefault("runStartedAt", utc_now())
+    state.setdefault("driverIterationCount", 0)
+    state.setdefault("noProgressStreak", 0)
+    state.setdefault(
+        "budgetCounters",
+        {"proposalOverheadCount": 0, "executionIterationCount": 0},
+    )
+    state.setdefault("lastProgressKey", None)
+
+
+def build_state_signature(state: dict[str, Any]) -> str:
+    phases = state.get("phases") or {}
+    status_map = {
+        str(k): (v.get("status") if isinstance(v, dict) else str(v))
+        for k, v in phases.items()
+    }
+    payload = {
+        "verdict": state.get("verdict"),
+        "nextAction": state.get("nextAction"),
+        "currentWave": state.get("currentWave"),
+        "phaseStatuses": dict(sorted(status_map.items())),
+        "mergeQueueLength": len(state.get("mergeQueue") or []),
+        "mergeJournalPresent": state.get("mergeJournal") is not None,
+    }
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def record_budget_tick(state: dict[str, Any], next_action: str) -> None:
+    init_budget_counters(state)
+    state["driverIterationCount"] = int(state.get("driverIterationCount", 0)) + 1
+    counters = state.setdefault(
+        "budgetCounters",
+        {"proposalOverheadCount": 0, "executionIterationCount": 0},
+    )
+    if next_action in PROPOSAL_OVERHEAD_ACTIONS:
+        counters["proposalOverheadCount"] = int(counters.get("proposalOverheadCount", 0)) + 1
+    else:
+        counters["executionIterationCount"] = int(
+            counters.get("executionIterationCount", 0)
+        ) + 1
+        progress_key = json.dumps(
+            {"signature": build_state_signature(state), "nextAction": next_action},
+            sort_keys=True,
+        )
+        if progress_key == state.get("lastProgressKey"):
+            state["noProgressStreak"] = int(state.get("noProgressStreak", 0)) + 1
+        else:
+            state["noProgressStreak"] = 0
+            state["lastProgressKey"] = progress_key
+
+
+def plan_rejection_halt_cause(state: dict[str, Any]) -> str | None:
+    log = state.get("planRejectionLog")
+    if not isinstance(log, dict):
+        return None
+    halt = log.get("halt")
+    if not isinstance(halt, dict):
+        return None
+    return str(halt.get("cause") or "conductor:plan-rejection-breaker")
+
+
+def sync_plan_rejection_no_progress(state: dict[str, Any]) -> None:
+    """Subscribe 022 planRejectionLog breaker into the no-progress surface (R22)."""
+    cause = plan_rejection_halt_cause(state)
+    if not cause:
+        return
+    threshold = DEFAULT_NO_PROGRESS_THRESHOLD
+    state["noProgressStreak"] = max(int(state.get("noProgressStreak", 0)), threshold)
+
+
+def check_budget_halt(root: Path, state: dict[str, Any]) -> str | None:
+    init_budget_counters(state)
+    sync_plan_rejection_no_progress(state)
+
+    rejection = plan_rejection_halt_cause(state)
+    if rejection:
+        return rejection
+
+    counters = state.get("budgetCounters") or {}
+    execution_count = int(counters.get("executionIterationCount", 0))
+    if execution_count >= max_iterations(root):
+        return "conductor:max-iterations-exceeded"
+
+    max_mins = max_run_minutes(root)
+    if max_mins is not None:
+        started = state.get("runStartedAt")
+        if isinstance(started, str):
+            age = age_seconds(started)
+            if age is not None and age > max_mins * 60:
+                return "conductor:max-run-minutes-exceeded"
+
+    if int(state.get("noProgressStreak", 0)) >= no_progress_threshold(root):
+        return "conductor:no-progress"
+
+    return None
+
+
+def is_budget_halt(cause: str) -> bool:
+    return cause in BUDGET_HALT_CAUSES or cause.startswith("conductor:")
+
+
+def preserve_merge_queue_on_halt(state: dict[str, Any]) -> None:
+    """Clear abandoned merge journal while keeping queue replayable (R22)."""
+    journal = state.get("mergeJournal")
+    if not isinstance(journal, dict):
+        return
+    phase_slug = str(journal.get("phase") or "")
+    queue = list(state.get("mergeQueue") or [])
+    if phase_slug:
+        existing = next(
+            (entry for entry in queue if entry.get("phaseSlug") == phase_slug),
+            None,
+        )
+        if existing is None:
+            queue.insert(
+                0,
+                {
+                    "phaseSlug": phase_slug,
+                    "head": journal.get("head"),
+                    "recoveredFromJournal": True,
+                },
+            )
+        elif existing.get("head") is None and journal.get("head"):
+            existing["head"] = journal.get("head")
+    state["mergeQueue"] = queue
+    state["mergeJournal"] = None
+
+
+def clean_consolidated_halt(
+    root: Path,
+    state: dict[str, Any],
+    plan: dict[str, Any],
+    cause: str,
+) -> dict[str, Any]:
+    from wave_merge import clear_open_journal_if_merged
+    from wave_state import append_log as state_append_log, scoped_paths
+
+    state.update(clear_open_journal_if_merged(root, state))
+    preserve_merge_queue_on_halt(state)
+    state["verdict"] = "blocked"
+    state["cause"] = cause
+    save_state(root, state)
+
+    target = (state.get("target") or {}).get("branch") or (plan.get("target") or {}).get(
+        "branch"
+    )
+    lock_released = False
+    if target:
+        lock_path = scoped_paths(root, str(target))["lock"]
+        if lock_path.is_file():
+            meta: dict[str, Any] = {}
+            try:
+                raw = lock_path.read_text(encoding="utf-8").strip()
+                if raw:
+                    meta = json.loads(raw)
+            except (OSError, json.JSONDecodeError):
+                meta = {}
+            lock_path.unlink(missing_ok=True)
+            state_append_log(root, {"event": "lock-release", "target": meta.get("target") or target})
+            lock_released = True
+
+    path = write_blocker_report(root, state, cause)
+    persist_cursor(
+        root,
+        state,
+        "halt-blocked",
+        blockerReport=str(path),
+        budgetHalt=True,
+        lockReleased=lock_released,
+    )
+    return {
+        "executed": "halt-blocked",
+        "cause": cause,
+        "blockerReport": str(path),
+        "budgetHalt": True,
+        "lockReleased": lock_released,
+        "mergeQueueLength": len(state.get("mergeQueue") or []),
+        "mergeJournalPresent": state.get("mergeJournal") is not None,
+    }
+
+
 def parse_ts(ts: str) -> datetime | None:
     try:
         return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
@@ -221,6 +443,7 @@ def ensure_driver_fields(state: dict[str, Any]) -> None:
     state.setdefault("remediationAttempts", {})
     state.setdefault("phaseWorktrees", {})
     state.setdefault("driverHeartbeatAt", utc_now())
+    init_budget_counters(state)
 
 
 def phase_status_map(state: dict[str, Any]) -> dict[str, str]:
@@ -606,6 +829,14 @@ def compute_next_action(
     root: Path, state: dict[str, Any], plan: dict[str, Any]
 ) -> dict[str, Any]:
     ensure_driver_fields(state)
+    budget_cause = check_budget_halt(root, state)
+    if budget_cause:
+        return {
+            "action": "halt-blocked",
+            "cause": budget_cause,
+            "budgetHalt": True,
+            "resume": True,
+        }
     verdict = state.get("verdict", "running")
 
     if verdict in ("complete", "blocked", "rejected"):
@@ -1240,6 +1471,8 @@ def execute_mechanical(
 
     if action == "halt-blocked":
         cause = str(step.get("cause", "blocked"))
+        if step.get("budgetHalt") or is_budget_halt(cause):
+            return clean_consolidated_halt(root, state, plan, cause)
         if cause.startswith("phase-timeout:"):
             pid = cause.split(":", 1)[1]
             phases = state.setdefault("phases", {})
@@ -1322,7 +1555,19 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
         plan = load_plan(root)
         if task_list:
             state["source_task_list"] = task_list
+        init_budget_counters(state)
         step = compute_next_action(root, state, plan)
+        if step["action"] != "halt-blocked":
+            record_budget_tick(state, step["action"])
+            save_state(root, state)
+            budget_cause = check_budget_halt(root, state)
+            if budget_cause:
+                step = {
+                    "action": "halt-blocked",
+                    "cause": budget_cause,
+                    "budgetHalt": True,
+                    "resume": True,
+                }
         step["resumed"] = resumed
 
         if dry_run:
@@ -1436,6 +1681,43 @@ def cmd_remediation_default(root: Path, _args: list[str]) -> None:
     )
 
 
+def cmd_budget_tick(root: Path, args: list[str]) -> None:
+    state = load_state(root)
+    plan = load_plan(root)
+    next_action = parse_kv(args, "--next-action")
+    if not next_action:
+        next_action = compute_next_action(root, state, plan)["action"]
+    record_budget_tick(state, next_action)
+    save_state(root, state)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "budget-tick",
+            "nextAction": next_action,
+            "driverIterationCount": state.get("driverIterationCount"),
+            "noProgressStreak": state.get("noProgressStreak"),
+            "budgetCounters": state.get("budgetCounters"),
+        }
+    )
+
+
+def cmd_budget_check(root: Path, _args: list[str]) -> None:
+    state = load_state(root)
+    cause = check_budget_halt(root, state)
+    emit(
+        {
+            "verdict": "blocked" if cause else "pass",
+            "action": "budget-check",
+            "budgetHalt": cause,
+            "driverIterationCount": state.get("driverIterationCount"),
+            "noProgressStreak": state.get("noProgressStreak"),
+            "budgetCounters": state.get("budgetCounters"),
+            "runStartedAt": state.get("runStartedAt"),
+        },
+        exit_code=20 if cause else 0,
+    )
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         fail("usage: wave_deliver_loop.py <root> deliver-loop [--task-list PATH] [--dry-run]")
@@ -1447,6 +1729,10 @@ def main() -> None:
         cmd_deliver_loop(root, args)
     elif cmd == "remediation-default":
         cmd_remediation_default(root, args)
+    elif cmd == "budget-tick":
+        cmd_budget_tick(root, args)
+    elif cmd == "budget-check":
+        cmd_budget_check(root, args)
     elif cmd == "compute-next":
         state = load_state(root)
         plan = load_plan(root)

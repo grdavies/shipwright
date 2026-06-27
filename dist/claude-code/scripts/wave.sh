@@ -2,6 +2,7 @@
 # Wave plan + integration helpers (multi-feature + phase-mode).
 # Usage:
 #   wave.sh plan --task-list docs/prds/.../tasks-....md [--type feat] [--dry-run] [--from N]
+#   wave.sh plan validate --tier phase|wave --proposal <path|json> ...
 #   wave.sh plan --items 'A,B,C' --edges 'C:A'
 #   wave.sh preflight-base --target feat/<slug>
 #   wave.sh dispatch preflight --dispatch-id <id> --agent <id> [--command <sw-*>] [--skill <name>]
@@ -14,7 +15,8 @@
 #   wave.sh phase-teardown --worktree <path>|--name <name> [--force]
 #   wave.sh assert-entry
 #   wave.sh status collect --phase-slug <slug>
-#   wave.sh phase dispatch-env --phase-slug <slug>
+#   wave.sh phase dispatch-env --phase-slug <slug> [--conductor-mode inline|background_phase]
+#   wave.sh intra-phase stamp-context|evaluate|check-nesting ...
 #   wave.sh merge gate-check|enqueue|exec|run-next|ancestry-check ...
 #   wave.sh report terminal
 #   wave.sh bookkeeping record|revert|projected ...
@@ -100,6 +102,9 @@ case "${1:-}" in
   dispatch)
     exec python3 "$PLUGIN_ROOT/scripts/wave_preflight.py" "$ROOT" dispatch "${@:2}"
     ;;
+  intra-phase)
+    exec python3 "$PLUGIN_ROOT/scripts/intra_phase_dispatch.py" "$ROOT" "${@:2}"
+    ;;
   memory)
     if [[ "${2:-}" == "prework" ]]; then
       exec python3 "$PLUGIN_ROOT/scripts/wave_memory_prework.py" "$ROOT" "${@:3}"
@@ -117,6 +122,12 @@ case "${1:-}" in
       exec python3 "$PLUGIN_ROOT/scripts/wave_failure.py" "$ROOT" terminal "${@:2}"
     fi
     exec python3 "$PLUGIN_ROOT/scripts/wave_terminal.py" "$ROOT" terminal "${@:2}"
+    ;;
+  plan)
+    if [[ "${2:-}" == "validate" ]]; then
+      exec python3 "$PLUGIN_ROOT/scripts/wave_plan_validate.py" "$ROOT" validate "${@:3}"
+    fi
+    exec python3 "$PLUGIN_ROOT/scripts/wave_deliver.py" "$ROOT" plan "${@:2}"
     ;;
 esac
 exec python3 "$PLUGIN_ROOT/scripts/wave_deliver.py" "$ROOT" "$@"

@@ -96,6 +96,25 @@ else
 fi
 
 # --- deliver-advance-from-status-only (R7) ---
+for _scoped in .cursor/sw-deliver-state.*.json; do
+  [[ -e "$_scoped" && "$(basename "$_scoped")" != "sw-deliver-state.json" ]] && rm -f "$_scoped"
+done
+cat >.cursor/sw-deliver-state.json <<JSON
+{
+  "verdict": "running",
+  "target": {"type": "feat", "slug": "demo", "branch": "feat/demo"},
+  "source_task_list": "docs/prds/007-x/tasks.md",
+  "currentWave": 1,
+  "nextAction": "dispatch-ship",
+  "driverHeartbeatAt": "$NOW_TS",
+  "orchestratorWorktree": {"path": "/tmp/orch"},
+  "specSeed": {"skipped": true},
+  "phases": {
+    "1": {"id": "1", "slug": "alpha", "status": "in-flight", "startedAt": "$NOW_TS"},
+    "2": {"id": "2", "slug": "beta", "status": "pending"}
+  }
+}
+JSON
 STATUS_DIR="$FIX/.cursor/sw-deliver-runs/alpha"
 mkdir -p "$STATUS_DIR"
 PHASE_HEAD=$(git -C "$FIX" rev-parse HEAD 2>/dev/null || echo abc)
@@ -157,6 +176,9 @@ fi
 
 # --- deliver-blocker-clean-halt ---
 rm -f .cursor/workflow.config.json
+for _scoped in .cursor/sw-deliver-state.*.json; do
+  [[ -e "$_scoped" && "$(basename "$_scoped")" != "sw-deliver-state.json" ]] && rm -f "$_scoped"
+done
 cat >.cursor/sw-deliver-state.json <<'JSON'
 {
   "verdict": "running",
@@ -185,6 +207,9 @@ else
 fi
 
 # --- driver-heartbeat-timeout-halt ---
+for _scoped in .cursor/sw-deliver-state.*.json; do
+  [[ -e "$_scoped" && "$(basename "$_scoped")" != "sw-deliver-state.json" ]] && rm -f "$_scoped"
+done
 cat >.cursor/sw-deliver-state.json <<'JSON'
 {
   "verdict": "running",
@@ -604,6 +629,139 @@ assert 'background-task-timeout' in d['next'].get('cause','')
   fi
 ) && ok "parallel-background-task-failure" || bad "parallel-background-task-failure"
 rm -rf "$BG_FIX"
+
+# --- budget-proposed-overhead-accounted (PRD 023 R22) ---
+BUDGET_FIX=$(mktemp -d)
+(
+  cd "$BUDGET_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  git commit --allow-empty -q -m init
+  mkdir -p .cursor
+  echo '{"deliver":{"autonomy":{"maxIterations":2}}}' >.cursor/workflow.config.json
+  echo '{"verdict":"running","target":{"branch":"feat/demo"},"nextAction":"wave-plan-persist","currentWave":1,"phases":{"1":{"slug":"alpha","status":"pending"}},"orchestratorWorktree":{"path":"/tmp/orch"}}' \
+    >.cursor/sw-deliver-state.json
+  cp "$ROOT/.cursor/sw-deliver-plan.json" .cursor/sw-deliver-plan.json 2>/dev/null || \
+    echo '{"mode":"phase","target":{"branch":"feat/demo"},"items":[{"id":"1","slug":"alpha"}],"waves":[["1"]],"edges":[]}' >.cursor/sw-deliver-plan.json
+  for _ in 1 2 3 4; do
+    python3 "$LOOP_PY" "$BUDGET_FIX" budget-tick --next-action wave-plan-persist >/dev/null
+  done
+  if python3 "$LOOP_PY" "$BUDGET_FIX" budget-check 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['verdict']=='pass'
+assert d['budgetCounters']['proposalOverheadCount']==4
+assert d['budgetCounters']['executionIterationCount']==0
+"; then
+    :
+  else
+    exit 1
+  fi
+) && ok "budget-proposed-overhead-accounted" || bad "budget-proposed-overhead-accounted"
+rm -rf "$BUDGET_FIX"
+
+# --- budget-halt-merge-queue-integrity (PRD 023 R22) ---
+HALT_FIX=$(mktemp -d)
+(
+  cd "$HALT_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  git commit --allow-empty -q -m init
+  mkdir -p .cursor
+  echo '{"deliver":{"autonomy":{"maxIterations":1}}}' >.cursor/workflow.config.json
+  cat >.cursor/sw-deliver-plan.json <<'JSON'
+{"mode":"phase","target":{"branch":"feat/demo"},"items":[{"id":"1","slug":"alpha","branch":"feat/demo-phase-alpha"}],"waves":[["1"]],"edges":[]}
+JSON
+  cat >.cursor/sw-deliver-state.demo.json <<'JSON'
+{
+  "verdict": "running",
+  "target": {"branch": "feat/demo"},
+  "nextAction": "merge-run-next",
+  "currentWave": 1,
+  "driverIterationCount": 0,
+  "budgetCounters": {"proposalOverheadCount": 0, "executionIterationCount": 1},
+  "noProgressStreak": 0,
+  "orchestratorWorktree": {"path": "/tmp/orch"},
+  "mergeQueue": [{"phaseSlug": "alpha", "head": "abc123"}],
+  "mergeJournal": {"phase": "alpha", "head": "abc123", "startedAt": "2026-01-01T00:00:00Z", "key": "alpha"},
+  "phases": {"1": {"slug": "alpha", "status": "in-flight", "branch": "feat/demo-phase-alpha"}}
+}
+JSON
+  echo '{"target":"feat/demo","holder":"test","pid":1,"at":"2026-01-01T00:00:00Z"}' >.cursor/sw-deliver-demo.lock
+  if OUT=$(python3 "$LOOP_PY" "$HALT_FIX" compute-next 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['next']['action']=='halt-blocked'
+assert d['next'].get('budgetHalt') is True
+"; then
+    :
+  else
+    exit 1
+  fi
+  if OUT=$(python3 "$LOOP_PY" "$HALT_FIX" deliver-loop --max-steps 1 2>/dev/null || true) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('halt') is True
+assert d.get('cause','').startswith('conductor:')
+"; then
+    :
+  else
+    exit 1
+  fi
+  if test ! -f .cursor/sw-deliver-demo.lock && \
+     python3 -c "
+import json
+s=json.load(open('.cursor/sw-deliver-state.demo.json'))
+assert s.get('mergeJournal') is None
+assert len(s.get('mergeQueue') or []) >= 1
+"; then
+    :
+  else
+    exit 1
+  fi
+) && ok "budget-halt-merge-queue-integrity" || bad "budget-halt-merge-queue-integrity"
+rm -rf "$HALT_FIX"
+
+# --- plan-rejection-no-progress (PRD 023 R22 / 022 R6) ---
+REJ_FIX=$(mktemp -d)
+(
+  cd "$REJ_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  git commit --allow-empty -q -m init
+  mkdir -p .cursor
+  cat >.cursor/sw-deliver-state.json <<'JSON'
+{
+  "verdict": "running",
+  "target": {"branch": "feat/demo"},
+  "nextAction": "provision-phase",
+  "currentWave": 1,
+  "planRejectionLog": {
+    "version": 1,
+    "threshold": 3,
+    "phases": {"1": {"consecutiveRejections": 3, "entries": []}},
+    "halt": {"cause": "plan-rejection-breaker", "phaseId": "1", "consecutiveRejections": 3}
+  },
+  "phases": {"1": {"slug": "alpha", "status": "pending"}},
+  "orchestratorWorktree": {"path": "/tmp/orch"}
+}
+JSON
+  echo '{"mode":"phase","target":{"branch":"feat/demo"},"items":[{"id":"1","slug":"alpha"}],"waves":[["1"]],"edges":[]}' >.cursor/sw-deliver-plan.json
+  if python3 "$LOOP_PY" "$REJ_FIX" compute-next 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['next']['action']=='halt-blocked'
+assert 'plan-rejection' in d['next'].get('cause','')
+"; then
+    :
+  else
+    exit 1
+  fi
+) && ok "plan-rejection-no-progress" || bad "plan-rejection-no-progress"
+rm -rf "$REJ_FIX"
 
 if [[ "$FAIL" -ne 0 ]]; then
   echo "deliver-loop fixtures: FAIL"

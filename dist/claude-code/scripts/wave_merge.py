@@ -366,16 +366,26 @@ def cmd_phase_dispatch_env(root: Path, args: list[str]) -> None:
     phase_slug = parse_kv(args, "--phase-slug")
     if not phase_slug:
         fail("--phase-slug required")
-    run_dir = f".cursor/sw-deliver-runs/{phase_slug}"
+    conductor_mode = parse_kv(args, "--conductor-mode") or "inline"
+    run_dir_rel = f".cursor/sw-deliver-runs/{phase_slug}"
+    run_dir = root / run_dir_rel
+    try:
+        from intra_phase_dispatch import stamp_phase_context
+
+        stamp_phase_context(run_dir, conductor_mode)
+    except ImportError:
+        pass
     emit(
         {
             "verdict": "pass",
             "action": "phase-dispatch-env",
             "phase": phase_slug,
+            "conductorMode": conductor_mode,
+            "phaseContextPath": str(run_dir / "phase-context.json"),
             "exports": {
                 "SW_PHASE_MODE": "1",
                 "SW_PHASE_SLUG": phase_slug,
-                "SW_RUN_DIR": run_dir,
+                "SW_RUN_DIR": run_dir_rel,
             },
             "invoke": "/sw-ship --phase-mode",
             "note": "Run full /sw-ship chain in phase worktree; orchestrator does not bypass steps",
