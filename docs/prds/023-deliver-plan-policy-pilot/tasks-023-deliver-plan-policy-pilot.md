@@ -33,15 +33,15 @@ driver budgets, benefit metric, plan surfacing) fan out from it; docs/dist close
 
 ### 2. Intra-phase fan-out + no-nesting + decision logging — M
 
-- [ ] 2.1 Guideline-bounded intra-phase fan-out + validated disjoint partition + global cap (R15, TR2)
+- [x] 2.1 Guideline-bounded intra-phase fan-out + validated disjoint partition + global cap (R15, TR2)
   - **File:** `core/rules/sw-subagent-dispatch.mdc`, intra-phase dispatch logic, `core/skills/parallelism/SKILL.md`
   - **Expected:** replace the fixed intra-phase dispatch list with a declared, guideline-bounded heuristic/budget consuming 021's `signal_context`; every fan-out proposal declares a **disjoint file/task partition** validated **before dispatch** (reject/serialize on overlap); bounded by `intraPhase.parallelBudget` and the global cap `waveSlots + activeIntraPhase ≤ min(worktree.parallelCeiling, harness limit)`. Fixtures `intra-phase-disjoint-partition-required`, `intra-phase-global-cap`, `intra-phase-no-durable-write-race` (parallel workers read-only on `ship-steps.json`/`status.json`).
   - **R-IDs:** R15
-- [ ] 2.2 Pre-dispatch no-nesting enforcement + inline degrade (R16)
+- [x] 2.2 Pre-dispatch no-nesting enforcement + inline degrade (R16)
   - **File:** intra-phase dispatch guard, `core/skills/parallelism/SKILL.md`
   - **Expected:** when `conductor_mode: background_phase` (stamped to the per-phase run dir at phase entry), intra-phase Task dispatch is **refused before any spawn** (no TOCTOU) and degrades to inline two-stage review; `intra-phase-background-degrade-before-dispatch` asserts zero nested Task invocations.
   - **R-IDs:** R16
-- [ ] 2.3 Intra-phase decision record (R17)
+- [x] 2.3 Intra-phase decision record (R17)
   - **File:** per-phase `dispatch-decisions.json` writer
   - **Expected:** each parallelization decision recorded with the defined shape (timestamp, signals, declared partition, chosen parallelism, degrade reason); `intra-phase-decision-logged`.
   - **R-IDs:** R17

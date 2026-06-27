@@ -370,6 +370,25 @@
         }
       }
     },
+    "intraPhase": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Within-phase Task fan-out budget (PRD 023 R15). Does not consume wave ceiling slots.",
+      "properties": {
+        "parallelBudget": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 2,
+          "description": "Max concurrent intra-phase Task workers per phase executor."
+        },
+        "harnessLimit": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 8,
+          "description": "Platform active-subagent ceiling for global cap accounting."
+        }
+      }
+    },
     "memory": {
       "type": "object",
       "additionalProperties": false,
