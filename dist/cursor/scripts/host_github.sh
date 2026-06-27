@@ -80,6 +80,16 @@ emit() {
   python3 -c 'import json,sys; print(json.dumps(json.loads(sys.argv[1]), indent=2))' "$1"
 }
 
+emit_verb_ok() {
+  local verb="$1"
+  local data_json="$2"
+  VERB_OUT="$verb" DATA_JSON="$data_json" python3 -c '
+import json, os
+print(json.dumps({"verdict": "ok", "verb": os.environ["VERB_OUT"], "provider": "github", "data": json.loads(os.environ["DATA_JSON"])}, indent=2))
+'
+}
+
+
 fail_json() {
   local reason="$1" msg="${2:-}"
   emit "{\"verdict\":\"fail\",\"verb\":\"$VERB\",\"provider\":\"github\",\"reason\":\"$reason\",\"message\":\"$msg\"}"
@@ -215,7 +225,8 @@ case "$VERB" in
     [[ -n "$OWNER" && -n "$REPO" ]] || fail_json "missing-repo"
     resp="$(http_get "$API_BASE/repos/$OWNER/$REPO")" || fail_json "transport-failed"
     body="$(parse_transport_body "$resp")"
-    emit "$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(json.dumps({'verdict':'ok','verb':'repo-meta','provider':'github','data':{'nameWithOwner':d.get('full_name') or d.get('name'),'defaultBranch':d.get('default_branch'),'owner':(d.get('owner') or {}).get('login'),'name':d.get('name')}}))" "$body")"
+    meta_data="$(BODY="$body" python3 -c 'import json,os; d=json.loads(os.environ["BODY"]); print(json.dumps({"nameWithOwner": d.get("full_name") or d.get("name"), "defaultBranch": d.get("default_branch"), "owner": (d.get("owner") or {}).get("login"), "name": d.get("name")}))' )"
+    emit_verb_ok repo-meta "$meta_data"
     ;;
 
   resolve-pr-for-branch)
@@ -273,7 +284,8 @@ PY
     resp="$(http_get "$API_BASE/repos/$OWNER/$REPO/pulls/$number")" || fail_json "transport-failed"
     body="$(parse_transport_body "$resp")"
     view="$(gh_pr_to_view "$body")"
-    emit "$(python3 -c "import json,sys; print(json.dumps({'verdict':'ok','verb':'pr-view','provider':'github','data':json.loads(sys.argv[1])}))" "$view")"
+    payload="$(VIEW="$view" python3 -c 'import json,os; print(json.dumps({"verdict":"ok","verb":"pr-view","provider":"github","data":json.loads(os.environ["VIEW"])}))' )"
+    emit "$payload"
     ;;
 
   pr-head)
@@ -284,7 +296,8 @@ PY
     fi
     [[ -n "$number" ]] || fail_json "missing-pr-number"
     view_out="$(bash "$0" --root "$ROOT" pr-view --number "$number")"
-    emit "$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(json.dumps({'verdict':'ok','verb':'pr-head','provider':'github','data':{'headRefOid':d['data'].get('headRefOid'),'number':d['data'].get('number')}}))" "$view_out")"
+    head_data="$(VIEW="$view_out" python3 -c 'import json,os; d=json.loads(os.environ["VIEW"]); print(json.dumps({"headRefOid": d["data"].get("headRefOid"), "number": d["data"].get("number")}))' )"
+    emit_verb_ok pr-head "$head_data"
     ;;
 
   pr-create)
@@ -322,7 +335,7 @@ PY
     resp="$(http_get "$API_BASE/repos/$OWNER/$REPO/commits/$sha/check-runs?per_page=100")" || fail_json "transport-failed"
     body="$(parse_transport_body "$resp")"
     checks="$(map_checks "$body")"
-    emit "$(python3 -c "import json,sys; print(json.dumps({'verdict':'ok','verb':'checks','provider':'github','data':json.loads(sys.argv[1])}))" "$checks")"
+    emit_verb_ok checks "$checks"
     ;;
 
   review-threads)
