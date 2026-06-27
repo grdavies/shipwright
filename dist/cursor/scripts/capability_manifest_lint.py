@@ -10,6 +10,7 @@ from typing import Any
 
 from capability_index import build_index, collect_capability_files, derive_kind, parse_frontmatter
 from capability_manifest_validate import validate_capability_block
+from guidelines_validate import lint_guidelines
 from capability_precedence import effective_priority, effective_tier, has_precedence_resolution
 from capability_trust import KERNEL_HOOK_SLOTS, MANIFEST_HOOK_SLOTS, is_kernel_hook_source
 
@@ -240,6 +241,12 @@ def lint_repo(repo_root: Path, *, index_path: Path | None = None) -> tuple[bool,
     return (len(errors) == 0, errors)
 
 
+
+def check_guidelines_artifact(repo_root: Path) -> list[str]:
+    """Validate guidelines.json via the shared author-time harness (PRD 022 R30 / SC7)."""
+    ok, errors = lint_guidelines(repo_root)
+    return [] if ok else errors
+
 def lint_core(repo_root: Path, core_root: Path, *, index_path: Path | None = None) -> tuple[bool, list[str]]:
     path = index_path or (core_root / "sw-reference" / "capability-index.json")
     if index_path and index_path.is_file():
@@ -250,6 +257,7 @@ def lint_core(repo_root: Path, core_root: Path, *, index_path: Path | None = Non
     errors.extend(check_kernel_hook_manifests(repo_root, core_root))
     if index_path is None:
         errors.extend(check_manifest_schema(core_root))
+        errors.extend(check_guidelines_artifact(repo_root))
     return (len(errors) == 0, errors)
 
 

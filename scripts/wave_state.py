@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from plan_persist import ROLE_PHASE, caller_role
 from wave_json_io import StateCorruptError, read_json, write_json
 
 VALID_PHASE_STATUSES = frozenset(
@@ -365,6 +366,13 @@ def save_deliver_state(
     *,
     target: str | None = None,
 ) -> Path:
+    if caller_role() == ROLE_PHASE:
+        fail(
+            "conductor-only shared run-state write refused",
+            exit_code=20,
+            callerRole=caller_role(),
+            requiredRole="conductor",
+        )
     branch = target or target_branch_from_state(state)
     if not is_feature_target(branch):
         branch = _current_feature_branch(root)

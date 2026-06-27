@@ -494,3 +494,22 @@ Before substantive work, every **work-performing** command runs a scoped `memory
 
 Delegated sub-agents inherit the obligation (`rules/sw-subagent-dispatch.mdc`): perform the search or receive
 a fresh redacted result fenced as `untrusted_payload`. Pure read-only exploration dispatch is exempt.
+
+## Orchestration plan policy (PRD 022)
+
+Shipwright splits orchestration into a **deterministic safety kernel** (non-skippable chokepoints) and an
+**agent-decidable plan-policy** surface (optional steps, reorderings within guidelines, wave batching).
+The classification is single-sourced in `core/sw-reference/kernel-classification.md`.
+
+| Mode | Config | Behavior |
+| --- | --- | --- |
+| **Canonical** (default) | `orchestration.planPolicy: canonical` | Byte-identical to pre-022: hardcoded `/sw-ship` chain and plan-time deliver waves |
+| Proposed (opt-in) | `orchestration.planPolicy: proposed` | Phase executors and the conductor may propose plans validated by `wave.sh plan validate` |
+
+**Default disclosure:** new repos seed `canonical`. Nothing observable changes until you opt into `proposed`
+and PRD-023/024 wire the orchestrator entrypoints. Invalid proposals fail closed to the canonical chain
+(phase) or canonical waves / `wave.sh schedule` (wave).
+
+Two-tier persistence: wave batching → shared deliver run-state (conductor-only); phase step plans → per-phase
+run dir. See [configuration](configuration.md#orchestration-plan-policy-orchestrationplanpolicy) and
+[call-site map](../prds/022-kernel-classification-and-plan-validation/call-site-map.md).

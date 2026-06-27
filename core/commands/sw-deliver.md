@@ -14,6 +14,7 @@ dependents on green unmerged branches, and halts at the human merge gate.
 | Subcommand | Scope |
 |------------|-------|
 | `plan` | Emit a dependency-ordered wave plan artifact from work items + edges |
+| `plan validate` | Fail-closed two-tier gate for agent-proposed phase/wave plans (mechanical; PRD 022) |
 | `deliver-loop` | Durable state-machine driver: plan → provision → dispatch → merge → terminal; resumes from state (R1–R5) |
 | `run` | Alias for `deliver-loop` on a frozen task list (phase-mode) |
 | `promote` | Human-gated dependency-ordered promotion with per-candidate pre-merge validation |
@@ -34,6 +35,25 @@ dependents on green unmerged branches, and halts at the human merge gate.
 5. Supports `--type`, `--dry-run` (no mutations), and `--from <phase>` (resume guard).
 6. Detect cycles; refuse invalid plans.
 7. Serialize shared-migration overlaps and INDEX/numbering contention per `skills/parallelism/`.
+
+## Plan validation primitive (`plan validate`)
+
+Mechanical gate for agent-proposed plans (PRD 022). Invoked by the conductor and phase executor — not
+hand-authored in prose:
+
+```bash
+# Phase tier — step list for a phase type (ship/deliver):
+bash scripts/wave.sh plan validate --tier phase --phase-type ship \
+  --proposal /path/to/proposal.json [--signal-context /path/to/signal_context.json]
+
+# Wave tier — batching within contention + parallelCeiling:
+bash scripts/wave.sh plan validate --tier wave --proposal /path/to/wave-proposal.json \
+  --plan .cursor/sw-deliver-plan.json
+```
+
+Returns stable JSON `{verdict: pass|reject|ambiguous, reasons[]}`. Reject → canonical chain (phase) or
+canonical waves / `wave.sh schedule` (wave). With default `orchestration.planPolicy: canonical`, behavior is
+byte-identical to today; `proposed` is exercised in fixtures until PRD-023 pilot.
 
 ## Procedure (`deliver-loop` / `run`)
 

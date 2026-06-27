@@ -308,6 +308,18 @@ def _protect_inflight_scoped_runs(report: Report, repo_root: Path) -> None:
             )
 
 
+def parent_wave_branch(branch: str) -> str | None:
+    """Derive deliver integration branch from a phase branch (feat/foo-phase-bar -> feat/foo)."""
+    marker = "-phase-"
+    idx = branch.find(marker)
+    if idx == -1:
+        return None
+    parent = branch[:idx]
+    if not parent or "/" not in parent:
+        return None
+    return parent
+
+
 def gh_merged(root: Path, branch: str, default: str) -> bool | None:
     if not git_ok(root, "rev-parse", "--verify", "HEAD"):
         return None
@@ -371,6 +383,14 @@ def merged_status(root: Path, branch: str, default: str, current: str) -> tuple[
         return "merged", "host-merged"
     if host is False:
         return "unmerged", "host-open-pr"
+
+    parent = parent_wave_branch(branch)
+    if parent and parent not in (default, current):
+        parent_host = gh_merged(root, parent, default)
+        if parent_host is True:
+            return "merged", "parent-wave-merged"
+        if parent_host is False:
+            return "unmerged", "parent-wave-open-pr"
 
     if plus:
         return "unmerged", "cherry-plus"
@@ -503,9 +523,16 @@ def enumerate_cleanup(root: Path) -> Report:
     return report
 
 
+_APPLY_KIND_ORDER = {"worktree": 0, "run-state": 1, "remote": 2, "branch": 3}
+
+
+def _apply_sort_key(item: Item) -> tuple[int, str]:
+    return (_APPLY_KIND_ORDER.get(item.kind, 99), item.name)
+
+
 def apply_report(root: Path, report: Report) -> Report:
     report.dry_run = False
-    for item in list(report.would_remove):
+    for item in sorted(report.would_remove, key=_apply_sort_key):
         try:
             if item.kind == "branch":
                 proc = git(root, "branch", "-D", item.name)

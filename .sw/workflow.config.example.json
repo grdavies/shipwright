@@ -12,6 +12,9 @@
   "delegation": {
     "mode": "bind-only"
   },
+  "orchestration": {
+    "planPolicy": "canonical"
+  },
   "deliver": {
     "phaseAckCadence": 0,
     "autonomy": {

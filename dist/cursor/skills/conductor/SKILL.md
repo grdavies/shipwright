@@ -28,6 +28,7 @@ existing `wave_*.py` primitives behind `scripts/wave.sh` — never duplicated in
 | Concern | Entrypoint |
 | --- | --- |
 | Plan + waves | `scripts/wave.sh plan`, `scripts/wave.sh schedule` |
+| Plan validation | `scripts/wave.sh plan validate` → `scripts/wave_plan_validate.py` (two-tier, closed-world) |
 | Durable driver | `scripts/wave.sh deliver-loop` |
 | Run-state R/W | `scripts/wave.sh state …` |
 | Provision / teardown | `scripts/wave.sh orchestrator provision`, `scripts/wave.sh phase provision` |
@@ -49,6 +50,9 @@ A fresh agent with no prior chat context resumes from:
 | Plan | `.cursor/sw-deliver-plan.json` |
 | Concurrent-run index | `.cursor/sw-deliver-runs/index.json` |
 | Per-phase `/sw-ship` status | `.cursor/sw-deliver-runs/<phase-slug>/status.json` |
+| Phase step plan | `.cursor/sw-deliver-runs/<phase-slug>/phase-step-plan.json` (executor-owned) |
+| Wave batching plan | `waveBatchingPlan` on `.cursor/sw-deliver-state.<slug>.json` (conductor-only) |
+| Two-tier lifecycle | `twoTierLifecycle` on shared run-state |
 | Append-only progress | `.cursor/sw-deliver-runs/run.log` |
 
 **Per-branch scoped deliver state (PRD 013):** orthogonal feature branches each own
@@ -69,6 +73,29 @@ conductor in-turn mechanical re-invocation only — never surface it as the oper
 
 Never infer progress from chat history or ephemeral sub-agent logs (R19). Phase outcomes come solely from
 `status.json`.
+
+## Two-tier plan lifecycle (PRD 022)
+
+Proposals route through `bash scripts/wave.sh plan validate` — **never** hand-author plan JSON in prose.
+Kernel invariants live in `core/sw-reference/kernel-classification.md` (single home — do not duplicate the
+enumeration here).
+
+| Tier | Proposer | Validated plan | Durable owner | Driver |
+| --- | --- | --- | --- | --- |
+| Wave | Conductor at wave entry | Wave-batching plan | `waveBatchingPlan` on shared run-state | `wave_deliver_loop` |
+| Phase | Phase executor at phase entry | Phase step plan | `.cursor/sw-deliver-runs/<phase-slug>/phase-step-plan.json` | `ship_phase_steps.py` |
+
+**Lifecycle** (`twoTierLifecycle` on shared run-state): `wave-validated` → `phase-plan-pending` →
+`phase-plan-validated`. Crash with a validated wave but missing/pending phase plan re-runs phase
+proposal+validate only — never partial execution.
+
+**Reject fallbacks:** phase reject → canonical chain from `kernel-classification.json`; wave contention or
+dependency violation → canonical waves re-derived from the frozen plan; over-ceiling → `wave.sh schedule`.
+
+**`orchestration.planPolicy`:** read at proposal time (default `canonical` — byte-identical to today);
+recorded `planPolicy` + `kernelVersion` + `guidelineVersion` stamped on each persisted plan and honored on
+resume over live config. `proposed` is fixture-only until PRD-023/024 adoption; see
+`docs/prds/022-kernel-classification-and-plan-validation/call-site-map.md`.
 
 ## Default autonomy (R13)
 

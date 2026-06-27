@@ -69,6 +69,14 @@ when reporting merge readiness.
 - **Frontmatter traceability** — Full-tier PRDs carry `brainstorm:`; `/sw-prd` and `/sw-freeze` enforce
   resolvable `brainstorm:` / `prd:` links.
 
+## Orchestration plan policy (PRD 022 — default canonical)
+
+`/sw-init` seeds `orchestration.planPolicy: canonical`. With this default, deliver and ship behavior is
+**byte-identical** to pre-022 — no plan proposals, no observable change. Opt-in `proposed` (after PRD-023
+pilot) lets agents propose step plans and wave batching within validated guidelines; rejections fall back to
+the canonical chain automatically. See [workflows](workflows.md#orchestration-plan-policy-prd-022) and
+[configuration](configuration.md#orchestration-plan-policy-orchestrationplanpolicy).
+
 ## Path 1: New feature (Standard or Full tier)
 
 Use when scope spans multiple files or needs a written spec.

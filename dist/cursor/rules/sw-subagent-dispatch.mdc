@@ -76,6 +76,7 @@ Every loop documents max iterations + no-progress detection:
 | parallel dispatch | `worktree.parallelCeiling` |
 | `/sw-deliver` conductor in-turn loop | `deliver.autonomy.maxIterations` (default **500**) |
 | `/sw-deliver` no-progress breaker | **3** identical `nextAction` + unchanged durable-state signature → consolidated halt (`cause: conductor:no-progress`) |
+| Plan rejection breaker (PRD 022) | N consecutive `plan validate` rejections for a phase → consolidated halt; feeds no-progress / budget signal (enforcement in PRD-023) |
 
 Circuit breaker: three identical failures without diff change → escalate to user.
 

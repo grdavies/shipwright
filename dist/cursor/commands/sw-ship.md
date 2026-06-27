@@ -26,8 +26,11 @@ ambiguity, optional `--signal-id` feedback close.
 ## Chain
 
 ```
-sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review → sw-simplify → gap-check → sw-commit → sw-pr → sw-watch-ci → sw-stabilize → sw-ready [PAUSE] → sw-tmp clean
+sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review → sw-simplify → gap-check → sw-commit → sw-pr → sw-watch-ci → sw-stabilize → sw-ready → sw-tmp clean [PAUSE]
 ```
+
+Canonical chain is single-sourced from `core/sw-reference/kernel-classification.json` (`canonicalPhaseChains.sw-ship`); `scripts/ship_phase_steps.py` derives `SHIP_CHAIN` from the same artifact.
+
 
 - **sw-tmp** — at chain start: `bash scripts/sw-tmp.sh clean` then `bash scripts/sw-tmp.sh init` (records
   `runDir` in shipwright-state). At chain end: `bash scripts/sw-tmp.sh clean`. No `trap … EXIT` (markdown-orchestrated
@@ -96,6 +99,12 @@ bash scripts/ship-phase-steps.sh resolve-resume [--from STEP] [--last-command "$
 Default path: `$SW_RUN_DIR/ship-steps.json`, else `.cursor/sw-deliver-runs/<phase>/ship-steps.json`.
 `ship-phase-status.sh` embeds the latest `shipSteps` snapshot in `status.json` when present.
 Survives `sw-tmp clean` (same run-dir contract as `status.json`).
+
+**Plan authority (PRD 022):** when `phase-step-plan.json` exists in the phase run dir, `ship-phase-steps.sh`
+reads its step list as the **sole authority** for `advance`/`resolve-resume` and re-checks kernel ordering at
+each step. Canonical `SHIP_CHAIN` (from `kernel-classification.json`) is the fallback only when no validated
+plan is present. With default `orchestration.planPolicy: canonical`, behavior matches the hardcoded chain;
+`proposed` step-plan adaptivity is fixture-only until PRD-023 wires deliver/phase dispatch.
 
 **Stale-green re-verify:** if `lastCommand` is `sw-ready` / `phaseStatus: green`, re-run `check-gate.sh` live
 before reporting done. If no longer green → `phaseStatus: blocked`, re-enter at `sw-stabilize`.

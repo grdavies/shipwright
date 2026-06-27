@@ -160,6 +160,61 @@ fi
 rm -rf "$SQ"
 cd "$FIX"
 
+# --- cleanup-parent-wave-merged ---
+PW_FIX=$(mktemp -d)
+cd "$PW_FIX"
+git init -q
+git config user.email test@test.com
+git config user.name Test
+git commit --allow-empty -q -m init
+git branch -M main
+git checkout -q -b feat/parent-wave
+echo parent >parent.txt && git add parent.txt && git commit -q -m parent
+git checkout -q -b feat/parent-wave-phase-alpha-m
+echo phase >phase.txt && git add phase.txt && git commit -q -m phase
+git checkout -q main
+git merge --squash feat/parent-wave -q
+git commit -q -m 'squash parent wave'
+git checkout -q -b feat/stale-phase-beta-s
+echo beta >beta.txt && git add beta.txt && git commit -q -m beta
+git checkout -q main
+if python3 -c "
+import sys
+sys.path.insert(0, '$ROOT/scripts')
+from pathlib import Path
+from unittest import mock
+from cleanup_lib import merged_status, parent_wave_branch
+
+root = Path('$PW_FIX')
+assert parent_wave_branch('feat/parent-wave-phase-alpha-m') == 'feat/parent-wave'
+assert parent_wave_branch(
+    'feat/retrospective-command-consolidation-phase-new-sw-retrospective-command-internal-phase-dispatch-m'
+) == 'feat/retrospective-command-consolidation'
+
+def fake_gh(root, branch, default):
+    if branch == 'feat/parent-wave':
+        return True
+    if branch == 'feat/parent-wave-phase-alpha-m':
+        return None
+    return None
+
+with mock.patch('cleanup_lib.gh_merged', side_effect=fake_gh):
+    st, detail = merged_status(root, 'feat/parent-wave-phase-alpha-m', 'main', 'main')
+    assert st == 'merged' and detail == 'parent-wave-merged', (st, detail)
+
+    st2, detail2 = merged_status(root, 'feat/parent-wave', 'main', 'main')
+    assert st2 == 'merged' and detail2 in ('host-merged', 'squash-cherry'), (st2, detail2)
+
+    st3, detail3 = merged_status(root, 'feat/stale-phase-beta-s', 'main', 'main')
+    assert st3 == 'unmerged' and detail3 == 'cherry-plus', (st3, detail3)
+"; then
+  ok "cleanup-parent-wave-merged: parent merged PR classifies phase branch"
+else
+  bad "cleanup-parent-wave-merged"
+fi
+rm -rf "$PW_FIX"
+cd "$FIX"
+
 # --- cleanup-registered ---
 CMD="$ROOT/core/commands/sw-cleanup.md"
 if [[ -f "$CMD" ]] && grep -qE '^description:.*dry-run' "$CMD" && \
