@@ -23,6 +23,15 @@ Load `skills/conductor/SKILL.md` for the full contract. These rules are the alwa
 - Do not hand-edit `.cursor/sw-deliver-state.json`, phase statuses, or merge journal fields in prose.
 - Phase outcomes come from `.cursor/sw-deliver-runs/<phase-slug>/status.json` only (R19).
 
+## Plan validation (PRD 022)
+
+- Route wave and phase **proposals** through `bash scripts/wave.sh plan validate` — never hand-author plan JSON.
+- On reject: phase → canonical chain from `kernel-classification.json`; wave → canonical waves or
+  `wave.sh schedule` when over-ceiling.
+- The phase step driver reads persisted `phase-step-plan.json` as sole authority; `SHIP_CHAIN` is fallback only.
+- Shared run-state writes (`waveBatchingPlan`, `twoTierLifecycle`) are **conductor-only**; phase sub-agents
+  writing shared state exit 20.
+
 ## No nested dispatch (R16)
 
 - Phase sub-agents are spawned **only** by the conductor at the orchestrator level.

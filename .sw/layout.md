@@ -228,7 +228,7 @@ via probe-gated `memory:offline` — never blocks work.
 | Artifact | Path / field | Writer | Role |
 | --- | --- | --- | --- |
 | Kernel classification | `core/sw-reference/kernel-classification.{json,md}` | docs/emitter | read-only at runtime |
-| Guidelines | `core/sw-reference/guidelines.{schema.json,md}` | docs/emitter | read-only at runtime |
+| Guidelines | `core/sw-reference/guidelines.{schema.json,md,json}` | docs/emitter | read-only at runtime |
 | Phase step plan | `.cursor/sw-deliver-runs/<phase-slug>/phase-step-plan.json` | phase executor (`ship_phase_steps.py` / `plan_persist.py`) | per-phase run dir |
 | Wave batching plan | `waveBatchingPlan` on `.cursor/sw-deliver-state.<slug>.json` | conductor only (`plan_persist.py`; `SW_CALLER_ROLE=conductor`) | shared run-state |
 | Two-tier lifecycle | `twoTierLifecycle` on shared run-state | conductor | `wave-validated` → `phase-plan-pending` → `phase-plan-validated` |
@@ -242,4 +242,7 @@ sole step authority (`ship_phase_steps.authoritative_chain`); canonical `SHIP_CH
 **Single-writer guard:** `save_deliver_state` and `plan_persist.guarded-state-save` refuse writes when
 `SW_CALLER_ROLE=phase` (exit 20). Phase-scoped artifacts (`ship-steps.json`, `phase-step-plan.json`,
 `status.json`) are written only under the phase slug's run dir.
+
+**Invariants home:** `core/sw-reference/kernel-classification.md` — cross-link; do not duplicate the kernel
+enumeration elsewhere.
 

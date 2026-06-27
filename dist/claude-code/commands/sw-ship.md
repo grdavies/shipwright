@@ -100,6 +100,12 @@ Default path: `$SW_RUN_DIR/ship-steps.json`, else `.cursor/sw-deliver-runs/<phas
 `ship-phase-status.sh` embeds the latest `shipSteps` snapshot in `status.json` when present.
 Survives `sw-tmp clean` (same run-dir contract as `status.json`).
 
+**Plan authority (PRD 022):** when `phase-step-plan.json` exists in the phase run dir, `ship-phase-steps.sh`
+reads its step list as the **sole authority** for `advance`/`resolve-resume` and re-checks kernel ordering at
+each step. Canonical `SHIP_CHAIN` (from `kernel-classification.json`) is the fallback only when no validated
+plan is present. With default `orchestration.planPolicy: canonical`, behavior matches the hardcoded chain;
+`proposed` step-plan adaptivity is fixture-only until PRD-023 wires deliver/phase dispatch.
+
 **Stale-green re-verify:** if `lastCommand` is `sw-ready` / `phaseStatus: green`, re-run `check-gate.sh` live
 before reporting done. If no longer green → `phaseStatus: blocked`, re-enter at `sw-stabilize`.
 

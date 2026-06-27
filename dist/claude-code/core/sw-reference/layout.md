@@ -222,3 +222,26 @@ The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies the first fi
 when no fresh record exists. Delegated work sub-agents inherit the obligation per
 `rules/sw-subagent-dispatch.mdc` (perform-or-be-handed-redacted-result). Provider outage degrades open
 via probe-gated `memory:offline` — never blocks work.
+
+## Kernel classification, guidelines, and two-tier plan persistence (PRD 022)
+
+| Artifact | Path / field | Writer | Role |
+| --- | --- | --- | --- |
+| Kernel classification | `core/sw-reference/kernel-classification.{json,md}` | docs/emitter | read-only at runtime |
+| Guidelines | `core/sw-reference/guidelines.{schema.json,md,json}` | docs/emitter | read-only at runtime |
+| Phase step plan | `.cursor/sw-deliver-runs/<phase-slug>/phase-step-plan.json` | phase executor (`ship_phase_steps.py` / `plan_persist.py`) | per-phase run dir |
+| Wave batching plan | `waveBatchingPlan` on `.cursor/sw-deliver-state.<slug>.json` | conductor only (`plan_persist.py`; `SW_CALLER_ROLE=conductor`) | shared run-state |
+| Two-tier lifecycle | `twoTierLifecycle` on shared run-state | conductor | `wave-validated` → `phase-plan-pending` → `phase-plan-validated` |
+| Plan validation | `bash scripts/wave.sh plan validate` → `scripts/wave_plan_validate.py` | mechanical gate | proposals only |
+
+**Wave authority (single source of truth):** the conductor deliver loop reads `waveBatchingPlan` from shared
+run-state when present (`wave_deliver_loop.effective_wave_plan`); otherwise it falls back to the frozen
+`.cursor/sw-deliver-plan.json` waves. Phase execution reads `phase-step-plan.json` in the phase run dir as the
+sole step authority (`ship_phase_steps.authoritative_chain`); canonical `SHIP_CHAIN` is the fallback only.
+
+**Single-writer guard:** `save_deliver_state` and `plan_persist.guarded-state-save` refuse writes when
+`SW_CALLER_ROLE=phase` (exit 20). Phase-scoped artifacts (`ship-steps.json`, `phase-step-plan.json`,
+`status.json`) are written only under the phase slug's run dir.
+
+**Invariants home:** `core/sw-reference/kernel-classification.md` — cross-link; do not duplicate the kernel
+enumeration elsewhere.

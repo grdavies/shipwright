@@ -48,6 +48,17 @@ terminal merge on drift.
 See [`core/commands/sw-deliver.md`](../../core/commands/sw-deliver.md) and
 [`core/skills/deliver/SKILL.md`](../../core/skills/deliver/SKILL.md).
 
+**Plan validation (PRD 022):** mechanical gate for agent-proposed phase/wave plans — not hand-authored in
+chat. Default `orchestration.planPolicy: canonical` preserves today's behavior; `proposed` is opt-in
+(PRD-023 pilot).
+
+```bash
+bash scripts/wave.sh plan validate --tier phase --phase-type ship --proposal <path|json>
+bash scripts/wave.sh plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
+```
+
+Call-site map: [`call-site-map.md`](../prds/022-kernel-classification-and-plan-validation/call-site-map.md).
+
 **Push safety:** workflow pushes route through `scripts/git-push.sh` → `scripts/secret-scan.sh`
 before `git push` (including `sw-pr` and stabilize re-pushes).
 

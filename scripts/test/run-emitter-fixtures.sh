@@ -184,4 +184,48 @@ sys.exit(0 if ok else 1)
   fi
 fi
 
+# Kernel/guidelines dist freshness (PRD 022 R24 — emitter-stale-classification-fails)
+classification_dist_fresh() {
+  local platform="$1"
+  local base="$ROOT/dist/$platform/core/sw-reference"
+  cmp -s "$ROOT/core/sw-reference/kernel-classification.json" "$base/kernel-classification.json" && \
+  cmp -s "$ROOT/core/sw-reference/kernel-classification.md" "$base/kernel-classification.md" && \
+  cmp -s "$ROOT/core/sw-reference/guidelines.json" "$base/guidelines.json" && \
+  cmp -s "$ROOT/core/sw-reference/guidelines.md" "$base/guidelines.md"
+}
+
+if [ -d "$ROOT/dist/cursor/core/sw-reference" ]; then
+  if classification_dist_fresh cursor && classification_dist_fresh claude-code; then
+    echo "OK  emitter-stale-classification-fails passing-before"
+  else
+    echo "FAIL emitter-stale-classification-fails expected fresh dist before tamper"
+    FAIL=1
+  fi
+  STALE_DIST="$ROOT/dist/cursor/core/sw-reference/kernel-classification.json"
+  STALE_BACKUP="$(mktemp)"
+  cp "$STALE_DIST" "$STALE_BACKUP"
+  python3 -c "
+import json
+from pathlib import Path
+p = Path('$STALE_DIST')
+data = json.loads(p.read_text())
+data['kernelVersion'] = 'stale-fixture-tamper'
+p.write_text(json.dumps(data, indent=2) + '\n')
+"
+  if classification_dist_fresh cursor; then
+    echo "FAIL emitter-stale-classification-fails tampered dist should fail freshness"
+    FAIL=1
+  else
+    echo "OK  emitter-stale-classification-fails failing-before"
+  fi
+  mv "$STALE_BACKUP" "$STALE_DIST"
+  run_expect emitter-stale-classification-regen 0 $GEN generate --all
+  if classification_dist_fresh cursor && classification_dist_fresh claude-code; then
+    echo "OK  emitter-stale-classification-fails passing-after"
+  else
+    echo "FAIL emitter-stale-classification-fails dist should match core after regenerate"
+    FAIL=1
+  fi
+fi
+
 exit "$FAIL"
