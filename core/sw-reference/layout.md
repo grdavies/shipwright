@@ -155,6 +155,26 @@ copy under `.sw-worktrees/**/.cursor/`. `wave_compound.py record-premerge` and
 - **Gap backlog:** `GAP-BACKLOG.md` — committed, append-only, hand-appendable; not frozen, not git-derived.
 - **Generated install trees:** `dist/cursor/` and `dist/claude-code/` — committed outputs of `python3 -m sw generate`; edit `core/` then regenerate (freshness gate in `scripts/test/run-emitter-fixtures.sh`). Not hand-edited except via emitter changes.
 
+## Capability manifest + selector (PRD 021)
+
+Authoring lives under `core/`; the emitter propagates manifest artifacts into both dist trees.
+
+| Artifact | Role |
+| --- | --- |
+| `core/sw-reference/capability-manifest.schema.json` | JSON Schema for per-capability `capability` frontmatter |
+| `core/sw-reference/capability-manifest.md` | Frontmatter, precedence, trust-boundary contract |
+| `core/sw-reference/capability-index.json` | Emitter-generated aggregate (committed; freshness-gated) |
+| `core/sw-reference/signal-context.schema.json` | Versioned selector inputs |
+| `scripts/capability-select.sh` | Deterministic selector primitive |
+| `scripts/capability-manifest-lint.sh` | Author-time precedence/conflict/anti-spoof lint |
+| `scripts/doc-review-select.sh` / `scripts/code-review-select.sh` | Selection-family wrappers |
+
+**Freshness:** `scripts/test/run-emitter-fixtures.sh` fails when `capability-index.json` or dist trees drift
+from current frontmatter. Regenerate after manifest edits: `python3 -m sw generate --all`.
+
+**Pre-selection:** `wave_preflight` / selector entrypoints fail closed when the runtime index does not
+reproduce from current sources.
+
 ## Config keys
 
 `workflow.config.json`:

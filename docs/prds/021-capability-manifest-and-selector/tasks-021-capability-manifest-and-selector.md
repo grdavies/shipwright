@@ -135,15 +135,15 @@ contract per the Decision Log).
 
 ### 8. Documentation + emitter propagation + freshness — M
 
-- [ ] 8.1 Selection-doc migrations (prose → manifest + selector) (R24)
+- [x] 8.1 Selection-doc migrations (prose → manifest + selector) (R24)
   - **File:** `core/skills/doc-review/SKILL.md`, `core/commands/sw-doc-review.md`, `core/commands/sw-doc.md`, `core/rules/sw-subagent-dispatch.mdc`, `core/providers/code-review/native.md`, `core/providers/review/CAPABILITIES.md`, `core/rules/code-review-automation.mdc`, `core/skills/triage/SKILL.md`, `.sw/models-tiering.md`
   - **Expected:** prose that currently *is* the selection algorithm now points at the manifest + selector, retaining the tier gate / overrides / activation-record shape; model-tier resolution noted as orthogonal.
   - **R-IDs:** R24
-- [ ] 8.2 Layout + configuration + CONTRIBUTING updates (R24)
+- [x] 8.2 Layout + configuration + CONTRIBUTING updates (R24)
   - **File:** `.sw/layout.md`, `core/sw-reference/layout.md`, `docs/guides/configuration.md`, `CONTRIBUTING.md`
   - **Expected:** capability-manifest frontmatter contract + generated-index path + selector + freshness-gate entries in layout; configuration capability-selection subsection (eligibility vs config/trust gating, R27) stating **no** new `workflow.config.json` keys; CONTRIBUTING adds the capability-select / manifest-lint / parity fixture suites + "regenerate dist after core manifest edits" reminder.
   - **R-IDs:** R24
-- [ ] 8.3 Regenerate both dist trees; freshness gate green (R24)
+- [x] 8.3 Regenerate both dist trees; freshness gate green (R24)
   - **File:** `dist/cursor/**`, `dist/claude-code/**` via `python3 -m sw generate --all`
   - **Expected:** `scripts/test/run-emitter-fixtures.sh` passes; `dist/` parity with `core/` (schema, index, selector, lint, and migrated docs propagated).
   - **R-IDs:** R24

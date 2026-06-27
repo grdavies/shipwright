@@ -55,7 +55,8 @@ Each remains independently runnable.
 2. If Quick → report handoff to implementation; stop.
 3. If Full → `/sw-brainstorm`; halt on blocker.
 4. `/sw-prd` per tier rules.
-5. `/sw-doc-review` — tier gates whether panel runs (Quick skips); non-Quick uses signal-driven persona selection per `skills/doc-review/SKILL.md`.
+5. `/sw-doc-review` — tier gates whether panel runs (Quick skips); non-Quick PRD drafts use
+   `scripts/doc-review-select.sh` over the capability manifest (`core/sw-reference/capability-manifest.md`).
 6. Halt on `manual` or `gated_auto` trade-offs — do not auto-decide.
 7. Run spec-rigor PRD gates (`skills/spec-rigor/SKILL.md`); on `fail`, emit consolidated halt report (DOC-A2)
    with `resumeCommand` — do not re-prompt per gate.
