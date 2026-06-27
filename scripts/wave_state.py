@@ -12,8 +12,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from plan_persist import ROLE_PHASE, caller_role
+from plan_persist import ROLE_PHASE, caller_role, empty_lifecycle
+from pilot_dependency_gate import proposed_pilot_enabled
 from wave_json_io import StateCorruptError, read_json, write_json
+from wave_plan_validate import empty_rejection_log, read_config_plan_policy
 
 VALID_PHASE_STATUSES = frozenset(
     {
@@ -532,6 +534,23 @@ def cmd_state_init(root: Path, args: list[str]) -> None:
         "driverHeartbeatAt": utc_now(),
         "updatedAt": utc_now(),
     }
+    if read_config_plan_policy(root) == "proposed":
+        if not proposed_pilot_enabled(root):
+            fail(
+                "proposed planPolicy refused: 022 dependency gate not satisfied",
+                exit_code=20,
+                halt="blocked",
+                cause="pilot-dependency-gate",
+                requiredFixtures=sorted(
+                    {
+                        "exec-fidelity-out-of-order-halt",
+                        "resume-two-tier-deterministic",
+                        "resume-corrupt-plan-fail-closed",
+                    }
+                ),
+            )
+        state["twoTierLifecycle"] = empty_lifecycle()
+        state["planRejectionLog"] = empty_rejection_log()
     write_json(resolve_state_path(root, task_list=plan.get("source_task_list"), target=(plan.get("target") or {}).get("branch")), state)
     append_log(
         root,

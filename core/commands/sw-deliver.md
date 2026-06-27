@@ -55,6 +55,12 @@ Returns stable JSON `{verdict: pass|reject|ambiguous, reasons[]}`. Reject → ca
 canonical waves / `wave.sh schedule` (wave). With default `orchestration.planPolicy: canonical`, behavior is
 byte-identical to today; `proposed` is exercised in fixtures until PRD-023 pilot.
 
+**Proposed-path wiring (PRD 023 phase 1):** when `orchestration.planPolicy: proposed` and the TR0 dependency
+gate passes (`scripts/pilot_dependency_gate.py`), state init seeds `twoTierLifecycle` + `planRejectionLog`;
+wave entry runs `plan validate --tier wave --record-rejection` then persists `waveBatchingPlan` and sets
+`wave-validated`; phase entry runs `plan validate --tier phase` before persisting `phase-step-plan.json`, falling
+back to the canonical chain on reject.
+
 ## Procedure (`deliver-loop` / `run`)
 
 Phase-mode runs MUST enter through the durable driver — never a manual worktree handoff while progress is
