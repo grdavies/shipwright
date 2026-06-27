@@ -16,6 +16,7 @@ DIST_ROOT = REPO_ROOT / "dist"
 
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 from capability_index import write_index  # noqa: E402
+from kernel_classification import sync_sw_ship_chain_markers  # noqa: E402
 
 
 def _discover_platforms() -> list[str]:
@@ -44,6 +45,9 @@ def _load_emitter_module(platform: str):
 
 def generate_platform(platform: str, *, core_root: Path | None = None, dest_root: Path | None = None) -> Path:
     core = core_root or CORE_ROOT
+    repo = core.parent if (core_root and core.name == "core") else REPO_ROOT
+    if (core / "sw-reference" / "kernel-classification.json").is_file():
+        sync_sw_ship_chain_markers(repo)
     write_index(core)
     dest = (dest_root or DIST_ROOT) / platform
     mod = _load_emitter_module(platform)

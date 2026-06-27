@@ -41,6 +41,8 @@ elif [ -d "$ROOT/.sw" ]; then
     --exclude 'capability-manifest.schema.json' \
     --exclude 'capability-index.json' \
     --exclude 'signal-context.schema.json' \
+    --exclude 'kernel-classification.json' \
+    --exclude 'kernel-classification.md' \
     "$ROOT/.sw/" "$CORE/sw-reference/"
 fi
 
