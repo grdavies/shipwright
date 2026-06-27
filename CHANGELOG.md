@@ -91,6 +91,7 @@
 * merge phase guidelines-artifact-floor-harness-reuse-m into feat/kernel-classification-and-plan-validation (ef5794e) <!-- sw-deliver:guidelines-artifact-floor-harness-reuse-m -->
 * merge phase plan-validation-gate-schemas-rejection-breaker-l into feat/kernel-classification-and-plan-validation (cb4ab30) <!-- sw-deliver:plan-validation-gate-schemas-rejection-breaker-l -->
 * merge phase two-tier-persist-deterministic-step-driver-lifecycle-l into feat/kernel-classification-and-plan-validation (78eb9e0) <!-- sw-deliver:two-tier-persist-deterministic-step-driver-lifecycle-l -->
+* merge phase orchestration-planpolicy-flag-definition-resume-semantics-m into feat/kernel-classification-and-plan-validation (ef45df3) <!-- sw-deliver:orchestration-planpolicy-flag-definition-resume-semantics-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
