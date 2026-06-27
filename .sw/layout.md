@@ -180,3 +180,25 @@ bash scripts/dispatch-check.sh --agent <id> --command <sw-*> --parent-model <con
 Preflight nonce + resolved model/intensity live in the per-worktree shipwright state (`scripts/shipwright-state.sh`).
 The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies bound `Task` spawns lacking a fresh record.
 Operator-facing deliver resume: `/sw-deliver run <frozen-task-list-path>` — not raw `bash deliver-loop`.
+
+### Pre-work memory search (PRD 019)
+
+Work-performing commands (`/sw-execute`, `/sw-debug`, `/sw-prd`, `/sw-brainstorm`, `/sw-amend`,
+`/sw-review`, `/sw-stabilize`) MUST run a scoped `memory-preflight` search before the first substantive
+mutation. Record the breadcrumb mechanically:
+
+```bash
+bash scripts/wave.sh memory prework record --surface sw-execute --scope "<paths>" [--hit-count N]
+```
+
+Artifacts:
+
+| Path | Role |
+| --- | --- |
+| `.cursor/hooks/state/memory-prework-search.json` | Redacted per-surface search record (or `memory:offline` / `memory:none`) |
+| `.cursor/sw-deliver-runs/run.log` | Append-only audit breadcrumb |
+
+The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies the first file-mutating tool call
+when no fresh record exists. Delegated work sub-agents inherit the obligation per
+`rules/sw-subagent-dispatch.mdc` (perform-or-be-handed-redacted-result). Provider outage degrades open
+via probe-gated `memory:offline` — never blocks work.

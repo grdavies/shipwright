@@ -477,3 +477,20 @@ Source: review comment
 ```
 
 `/sw-feedback` redacts, classifies, and proposes a route. **Confirm** before dispatch.
+
+## Pre-work memory search (PRD 019)
+
+Before substantive work, every **work-performing** command runs a scoped `memory-preflight` **search**
+(not optional guidance). The obligation applies to `/sw-execute`, `/sw-debug`, `/sw-prd`, `/sw-brainstorm`,
+`/sw-amend`, `/sw-review`, and `/sw-stabilize`.
+
+1. **Search** — scoped file-path + semantic queries across classes `rule`, `decision`, `learning`,
+   `code-context`, `design` via `providers/<memory.provider>.md` (see `skills/memory/SKILL.md`).
+2. **Surface + reconcile** — applicable rules and contradicting decisions are reconciled before mutation.
+3. **Record** — `bash scripts/wave.sh memory prework record --surface <cmd> …` writes a redacted breadcrumb
+   to `.cursor/hooks/state/memory-prework-search.json` and `run.log`.
+4. **Enforce** — the `preToolUse` hook denies the first file mutation without a fresh record; `memory:offline`
+   (probe-gated provider outage) satisfies the gate.
+
+Delegated sub-agents inherit the obligation (`rules/sw-subagent-dispatch.mdc`): perform the search or receive
+a fresh redacted result fenced as `untrusted_payload`. Pure read-only exploration dispatch is exempt.
