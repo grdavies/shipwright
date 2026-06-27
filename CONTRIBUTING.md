@@ -59,6 +59,8 @@ bash scripts/test/run-plan-validate-fixtures.sh
 bash scripts/test/run-plan-persist-fixtures.sh
 bash scripts/test/run-plan-killswitch-fixtures.sh
 bash scripts/test/run-plan-proposed-parity-fixtures.sh
+bash scripts/test/run-pilot-fixtures.sh
+bash scripts/test/run-ux-polish-fixtures.sh
 ```
 
 **After editing `core/`** (commands, skills, rules, `kernel-classification.*`, `guidelines.*`, or

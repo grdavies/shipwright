@@ -113,7 +113,7 @@ Seed:
 ### 3f. Orchestration plan policy (PRD 022 R29)
 
 Seed `orchestration.planPolicy` (default **`canonical`** — byte-identical to today; `proposed` is
-fixture-only until PRD-023/024 adoption). Orthogonal to `deliver.autonomy.mode` and
+live on `/sw-deliver` pilot when TR0 gate and opt-in guards pass). Orthogonal to `deliver.autonomy.mode` and
 `deliver.phaseAckCadence`.
 
 ```json

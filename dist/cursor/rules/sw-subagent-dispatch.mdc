@@ -151,7 +151,7 @@ bash scripts/intra-phase-dispatch.sh evaluate --context-json '<signal_context>' 
   `waveSlots + activeIntraPhase ≤ min(worktree.parallelCeiling, intraPhase.harnessLimit)`.
 - Parallel workers are **read-only** on per-phase durable files (`ship-steps.json`, `status.json`).
 - Each decision is appended to per-phase `dispatch-decisions.json` (timestamp, signals, partition,
-  chosen parallelism, degrade reason).
+  chosen parallelism, degrade reason). Latest snapshot also on phase `intraPhaseFanOut` (see `.sw/layout.md`).
 
 Pre-dispatch no-nesting (R16): when `conductor_mode: background_phase` (stamped to the per-phase run
 dir at phase entry via `wave.sh phase dispatch-env --conductor-mode background_phase`), intra-phase Task

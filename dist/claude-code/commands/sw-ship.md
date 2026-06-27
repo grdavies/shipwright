@@ -104,7 +104,13 @@ Survives `sw-tmp clean` (same run-dir contract as `status.json`).
 reads its step list as the **sole authority** for `advance`/`resolve-resume` and re-checks kernel ordering at
 each step. Canonical `SHIP_CHAIN` (from `kernel-classification.json`) is the fallback only when no validated
 plan is present. With default `orchestration.planPolicy: canonical`, behavior matches the hardcoded chain;
-`proposed` step-plan adaptivity is fixture-only until PRD-023 wires deliver/phase dispatch.
+`proposed` step-plan adaptivity is live when `/sw-deliver` runs with `planPolicy: proposed` (default
+`canonical` unchanged).
+
+**Phase-entry proposed step plan (PRD 023):** under `planPolicy: proposed`, the phase executor proposes a
+step list → `bash scripts/wave.sh plan validate --tier phase --phase-type ship` → persists
+`phase-step-plan.json` in the phase run dir before the chain starts. `ship-phase-steps.sh` reads that plan as
+sole authority and re-checks kernel ordering at each `advance`; rejections fall back to canonical `SHIP_CHAIN`.
 
 **Stale-green re-verify:** if `lastCommand` is `sw-ready` / `phaseStatus: green`, re-run `check-gate.sh` live
 before reporting done. If no longer green → `phaseStatus: blocked`, re-enter at `sw-stabilize`.

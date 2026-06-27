@@ -495,6 +495,20 @@ Before substantive work, every **work-performing** command runs a scoped `memory
 Delegated sub-agents inherit the obligation (`rules/sw-subagent-dispatch.mdc`): perform the search or receive
 a fresh redacted result fenced as `untrusted_payload`. Pure read-only exploration dispatch is exempt.
 
+
+## Deliver plan-policy pilot (PRD 023)
+
+`/sw-deliver` exercises both proposal tiers live when `orchestration.planPolicy: proposed` and pilot guards pass:
+
+- **Wave entry** — conductor proposes batching → `wave.sh plan validate --tier wave` → `waveBatchingPlan` on shared run-state.
+- **Phase entry** — executor proposes step plan → `plan validate --tier phase` → `phase-step-plan.json` in the phase run dir.
+- **Intra-phase fan-out** — guideline-bounded parallelism with disjoint partition validation, global cap
+  `waveSlots + activeIntraPhase ≤ min(parallelCeiling, harnessLimit)`, and `dispatch-decisions.json` audit.
+- **Driver budgets** — `wave_deliver_loop.py` enforces `runStartedAt`, `driverIterationCount`, `noProgressStreak`; clean halt preserves merge-queue integrity.
+- **Benefit metric (R31)** — paired `canonical` vs `proposed` runs; `wave.sh plan benefit-report` applies the fail-closed decision rule.
+
+Default remains `canonical`. PRD-024 fans the proved pattern to `/sw-doc`, `/sw-debug`, and `/sw-feedback`.
+
 ## Orchestration plan policy (PRD 022)
 
 Shipwright splits orchestration into a **deterministic safety kernel** (non-skippable chokepoints) and an
@@ -507,7 +521,7 @@ The classification is single-sourced in `core/sw-reference/kernel-classification
 | Proposed (opt-in) | `orchestration.planPolicy: proposed` | Phase executors and the conductor may propose plans validated by `wave.sh plan validate` |
 
 **Default disclosure:** new repos seed `canonical`. Nothing observable changes until you opt into `proposed`
-and PRD-023/024 wire the orchestrator entrypoints. Invalid proposals fail closed to the canonical chain
+with PRD-023 pilot guards on `/sw-deliver`. Invalid proposals fail closed to the canonical chain
 (phase) or canonical waves / `wave.sh schedule` (wave).
 
 Two-tier persistence: wave batching → shared deliver run-state (conductor-only); phase step plans → per-phase
