@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Durable step-level state for /sw-ship phase-mode resume (R58)."""
+"""Durable step-level state for /sw-ship phase-mode resume (R58, PRD 022 R26/TR4)."""
 from __future__ import annotations
 
 import json
@@ -9,15 +9,24 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from kernel_classification import canonical_ship_chain, normalize_step
+from kernel_classification import canonical_ship_chain, load_classification, normalize_step, validate_chain_order
+from plan_persist import (
+    LIFECYCLE_PHASE_PLAN_PENDING,
+    LIFECYCLE_PHASE_PLAN_VALIDATED,
+    load_phase_plan,
+    persist_phase_plan,
+    phase_plan_path,
+    resolve_phase_run_dir,
+    validate_phase_plan_document,
+)
 from wave_json_io import StateCorruptError, read_json, write_json
+from wave_plan_validate import phase_fallback_canonical_chain
 
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-# Single-sourced from core/sw-reference/kernel-classification.json (PRD 022 TR1).
 SHIP_CHAIN: list[str] = canonical_ship_chain(_repo_root())
 
 
@@ -34,24 +43,6 @@ def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 
-
-
-def chain_index(step: str) -> int:
-    norm = normalize_step(step)
-    if norm not in SHIP_CHAIN:
-        fail(f"unknown ship step: {step!r}", valid=SHIP_CHAIN)
-    return SHIP_CHAIN.index(norm)
-
-
-def next_step_after(step: str | None) -> str | None:
-    if not step:
-        return SHIP_CHAIN[0]
-    idx = chain_index(step)
-    if idx + 1 >= len(SHIP_CHAIN):
-        return None
-    return SHIP_CHAIN[idx + 1]
-
-
 def resolve_steps_path(root: Path, phase: str, explicit: str | None) -> Path:
     if explicit:
         return Path(explicit)
@@ -59,6 +50,73 @@ def resolve_steps_path(root: Path, phase: str, explicit: str | None) -> Path:
     if run_dir:
         return Path(run_dir) / "ship-steps.json"
     return root / ".cursor" / "sw-deliver-runs" / phase / "ship-steps.json"
+
+
+def resolve_plan_file(root: Path, phase: str, explicit_out: str | None) -> Path:
+    if explicit_out:
+        run_dir = Path(explicit_out).parent
+    else:
+        run_dir = resolve_phase_run_dir(phase, None)
+        if not os.environ.get("SW_RUN_DIR"):
+            run_dir = root / run_dir
+    return phase_plan_path(run_dir)
+
+
+def authoritative_chain(root: Path, phase: str, explicit_out: str | None) -> tuple[list[str], str, dict[str, Any] | None]:
+    plan_path = resolve_plan_file(root, phase, explicit_out)
+    try:
+        plan = load_phase_plan(plan_path, absent_ok=True)
+    except StateCorruptError as exc:
+        fail(f"corrupt phase-step-plan: {exc}", exit_code=20, path=str(plan_path), halt="phase-plan-corrupt")
+    if plan and isinstance(plan.get("steps"), list) and plan["steps"]:
+        return [normalize_step(str(s)) for s in plan["steps"]], "persisted-plan", plan
+    return SHIP_CHAIN, "canonical-fallback", None
+
+
+def plan_index(chain: list[str], step: str) -> int:
+    norm = normalize_step(step)
+    if norm not in chain:
+        fail(
+            f"step not in authoritative plan: {step!r}",
+            exit_code=20,
+            halt="exec-fidelity-not-in-plan",
+            valid=chain,
+        )
+    return chain.index(norm)
+
+
+def expected_next_step(chain: list[str], last_completed: str | None) -> str | None:
+    if not last_completed:
+        return chain[0] if chain else None
+    idx = plan_index(chain, last_completed)
+    if idx + 1 >= len(chain):
+        return None
+    return chain[idx + 1]
+
+
+def assert_advance_fidelity(root: Path, chain: list[str], step: str, doc: dict[str, Any]) -> None:
+    norm = normalize_step(step)
+    expected = expected_next_step(chain, doc.get("lastCompletedStep"))
+    if expected is None:
+        fail("no further steps in plan", exit_code=20, halt="exec-fidelity-complete")
+    if norm != expected:
+        fail(
+            f"out-of-order advance: expected {expected!r}, got {norm!r}",
+            exit_code=20,
+            halt="exec-fidelity-out-of-order",
+            expected=expected,
+            received=norm,
+        )
+    classification = load_classification(root)
+    prefix = chain[: plan_index(chain, norm) + 1]
+    order_ok, reasons = validate_chain_order(prefix, classification)
+    if not order_ok:
+        fail(
+            "kernel ordering violation at advance",
+            exit_code=20,
+            halt="exec-fidelity-kernel-order",
+            reasons=reasons,
+        )
 
 
 def load_steps(path: Path) -> dict[str, Any]:
@@ -85,13 +143,16 @@ def cmd_init(root: Path, args: list[str]) -> None:
     out = _parse_kv(args, "--out")
     path = resolve_steps_path(root, phase, out)
     head = _parse_kv(args, "--head") or _git_head(root)
+    chain, source, plan = authoritative_chain(root, phase, out)
     doc = {
         "phase": phase,
-        "currentStep": SHIP_CHAIN[0],
+        "currentStep": chain[0],
         "lastCompletedStep": None,
         "stepAttempts": {},
         "headAtStart": head,
-        "chain": SHIP_CHAIN,
+        "chain": chain,
+        "chainSource": source,
+        "phasePlanPath": str(resolve_plan_file(root, phase, out)) if plan else None,
     }
     save_steps(path, doc)
     emit({"verdict": "pass", "action": "ship-steps-init", "path": str(path), "state": doc})
@@ -99,14 +160,19 @@ def cmd_init(root: Path, args: list[str]) -> None:
 
 def cmd_get(root: Path, args: list[str]) -> None:
     phase = _parse_kv(args, "--phase") or os.environ.get("SW_PHASE_SLUG", "unknown")
-    path = resolve_steps_path(root, phase, _parse_kv(args, "--out"))
+    out = _parse_kv(args, "--out")
+    path = resolve_steps_path(root, phase, out)
     doc = load_steps(path)
+    chain, source, plan = authoritative_chain(root, phase, out)
     emit(
         {
             "verdict": "pass",
             "present": bool(doc),
             "path": str(path),
             "state": doc or None,
+            "authoritativeChain": chain,
+            "chainSource": source,
+            "phasePlan": plan,
         }
     )
 
@@ -117,17 +183,28 @@ def cmd_attempt(root: Path, args: list[str]) -> None:
         fail("--step required")
     norm = normalize_step(step)
     phase = _parse_kv(args, "--phase") or os.environ.get("SW_PHASE_SLUG", "unknown")
-    path = resolve_steps_path(root, phase, _parse_kv(args, "--out"))
+    out = _parse_kv(args, "--out")
+    path = resolve_steps_path(root, phase, out)
     doc = load_steps(path)
     if not doc:
-        cmd_init(root, ["--phase", phase] + (["--out", str(path)] if _parse_kv(args, "--out") else []))
+        cmd_init(root, ["--phase", phase] + (["--out", str(path)] if out else []))
         doc = load_steps(path)
+    chain, _, _ = authoritative_chain(root, phase, out)
+    plan_index(chain, norm)
+    current = doc.get("currentStep")
+    if current and normalize_step(str(current)) != norm:
+        fail(
+            f"attempt on non-current step: current={current!r}, attempted={norm!r}",
+            exit_code=20,
+            halt="exec-fidelity-wrong-step",
+        )
     attempts = doc.setdefault("stepAttempts", {})
     if not isinstance(attempts, dict):
         attempts = {}
         doc["stepAttempts"] = attempts
     attempts[norm] = int(attempts.get(norm, 0)) + 1
     doc["currentStep"] = norm
+    doc["chain"] = chain
     save_steps(path, doc)
     emit({"verdict": "pass", "action": "ship-steps-attempt", "step": norm, "attempts": attempts[norm]})
 
@@ -138,13 +215,18 @@ def cmd_advance(root: Path, args: list[str]) -> None:
         fail("--step required")
     norm = normalize_step(step)
     phase = _parse_kv(args, "--phase") or os.environ.get("SW_PHASE_SLUG", "unknown")
-    path = resolve_steps_path(root, phase, _parse_kv(args, "--out"))
+    out = _parse_kv(args, "--out")
+    path = resolve_steps_path(root, phase, out)
     doc = load_steps(path)
     if not doc:
         fail("ship-steps missing; run init first", path=str(path))
+    chain, source, _ = authoritative_chain(root, phase, out)
+    assert_advance_fidelity(root, chain, norm, doc)
     doc["lastCompletedStep"] = norm
-    nxt = next_step_after(norm)
+    nxt = expected_next_step(chain, norm)
     doc["currentStep"] = nxt
+    doc["chain"] = chain
+    doc["chainSource"] = source
     save_steps(path, doc)
     emit(
         {
@@ -159,48 +241,160 @@ def cmd_advance(root: Path, args: list[str]) -> None:
 def cmd_resolve_resume(root: Path, args: list[str]) -> None:
     explicit_from = _parse_kv(args, "--from")
     phase = _parse_kv(args, "--phase") or os.environ.get("SW_PHASE_SLUG", "unknown")
-    path = resolve_steps_path(root, phase, _parse_kv(args, "--out"))
+    out = _parse_kv(args, "--out")
+    path = resolve_steps_path(root, phase, out)
     doc = load_steps(path)
+    chain, source, plan = authoritative_chain(root, phase, out)
 
-    source = "chain-start"
-    next_step: str | None = SHIP_CHAIN[0]
+    next_step: str | None = chain[0] if chain else None
+    resume_source = "chain-start"
 
     if explicit_from:
         norm = normalize_step(explicit_from)
-        chain_index(norm)
+        plan_index(chain, norm)
         next_step = norm
-        source = "cli-from"
+        resume_source = "cli-from"
     elif doc.get("currentStep"):
         next_step = normalize_step(str(doc["currentStep"]))
-        source = "persisted-current"
+        resume_source = "persisted-current"
     elif doc.get("lastCompletedStep"):
-        next_step = next_step_after(str(doc["lastCompletedStep"]))
-        source = "persisted-after-last"
+        next_step = expected_next_step(chain, str(doc["lastCompletedStep"]))
+        resume_source = "persisted-after-last"
     else:
         last_cmd = _parse_kv(args, "--last-command")
         if last_cmd:
             mapped = normalize_step(last_cmd)
-            if mapped in SHIP_CHAIN:
-                idx = SHIP_CHAIN.index(mapped)
-                next_step = SHIP_CHAIN[idx + 1] if idx + 1 < len(SHIP_CHAIN) else None
-                source = "last-command"
+            if mapped in chain:
+                idx = chain.index(mapped)
+                next_step = chain[idx + 1] if idx + 1 < len(chain) else None
+                resume_source = "last-command"
 
     emit(
         {
             "verdict": "pass",
             "action": "resolve-resume",
             "nextStep": next_step,
-            "source": source,
+            "source": resume_source,
+            "chainSource": source,
             "path": str(path),
+            "phasePlanPath": str(resolve_plan_file(root, phase, out)) if plan else None,
             "state": doc or None,
         }
     )
 
 
-def cmd_sync_state(root: Path, args: list[str]) -> None:
-    """Merge ship-steps into shipwright.json phaseShip (called from shipwright-state.sh)."""
+def cmd_validate_plan(root: Path, args: list[str]) -> None:
     phase = _parse_kv(args, "--phase") or os.environ.get("SW_PHASE_SLUG", "unknown")
-    path = resolve_steps_path(root, phase, _parse_kv(args, "--out"))
+    out = _parse_kv(args, "--out")
+    plan_path = resolve_plan_file(root, phase, out)
+    steps_path = resolve_steps_path(root, phase, out)
+    doc = load_steps(steps_path) if steps_path.is_file() else {}
+
+    try:
+        plan = load_phase_plan(plan_path, absent_ok=False)
+    except StateCorruptError as exc:
+        replacement = phase_fallback_canonical_chain(root, "ship", phase)
+        emit(
+            {
+                "verdict": "fail",
+                "action": "validate-plan",
+                "disposition": "replace",
+                "error": str(exc),
+                "replacement": replacement,
+            },
+            exit_code=20,
+        )
+
+    assert plan is not None
+    ok, reasons, disposition = validate_phase_plan_document(root, plan)
+    if not ok:
+        last_completed = doc.get("lastCompletedStep")
+        if last_completed and disposition == "replace":
+            chain_steps = [normalize_step(str(s)) for s in plan.get("steps") or []]
+            if normalize_step(str(last_completed)) not in chain_steps:
+                fail(
+                    "stale plan incompatible with execution progress",
+                    exit_code=20,
+                    halt="phase-plan-stale",
+                    reasons=reasons,
+                    disposition="halt",
+                )
+        payload: dict[str, Any] = {
+            "verdict": "fail",
+            "action": "validate-plan",
+            "disposition": disposition,
+            "reasons": reasons,
+        }
+        if disposition == "replace":
+            payload["replacement"] = phase_fallback_canonical_chain(root, "ship", phase)
+        emit(payload, exit_code=20)
+
+    emit({"verdict": "pass", "action": "validate-plan", "path": str(plan_path), "plan": plan})
+
+
+def cmd_persist_plan(root: Path, args: list[str]) -> None:
+    phase = _parse_kv(args, "--phase") or os.environ.get("SW_PHASE_SLUG", "unknown")
+    plan_raw = _parse_kv(args, "--plan")
+    if not plan_raw:
+        fail("--plan <path|json> required")
+    path_arg = Path(plan_raw)
+    if path_arg.is_file():
+        plan = json.loads(path_arg.read_text(encoding="utf-8"))
+    else:
+        plan = json.loads(plan_raw)
+    if not isinstance(plan, dict):
+        fail("plan must be a JSON object")
+    out = _parse_kv(args, "--out")
+    target = resolve_plan_file(root, phase, out)
+    ok, reasons, _ = validate_phase_plan_document(root, plan)
+    if not ok:
+        fail("refusing to persist invalid phase plan", reasons=reasons, exit_code=20)
+    persist_phase_plan(target, plan)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "persist-plan",
+            "path": str(target),
+            "lifecycleHint": LIFECYCLE_PHASE_PLAN_VALIDATED,
+            "plan": plan,
+        }
+    )
+
+
+def cmd_lifecycle_phase(root: Path, args: list[str]) -> None:
+    sub = args[0] if args else ""
+    phase = _parse_kv(args, "--phase") or os.environ.get("SW_PHASE_SLUG", "unknown")
+    out = _parse_kv(args, "--out")
+    plan_path = resolve_plan_file(root, phase, out)
+    if sub == "pending":
+        emit(
+            {
+                "verdict": "pass",
+                "action": "lifecycle-phase-pending",
+                "phase": phase,
+                "status": LIFECYCLE_PHASE_PLAN_PENDING,
+                "planPath": str(plan_path),
+            }
+        )
+    if sub == "validated":
+        if not plan_path.is_file():
+            fail("phase plan missing; cannot mark validated", path=str(plan_path), exit_code=20)
+        emit(
+            {
+                "verdict": "pass",
+                "action": "lifecycle-phase-validated",
+                "phase": phase,
+                "status": LIFECYCLE_PHASE_PLAN_VALIDATED,
+                "planPath": str(plan_path),
+            }
+        )
+    fail(f"unknown lifecycle subcommand: {sub!r}")
+
+
+def cmd_sync_state(root: Path, args: list[str]) -> None:
+    phase = _parse_kv(args, "--phase") or os.environ.get("SW_PHASE_SLUG", "unknown")
+    out = _parse_kv(args, "--out")
+    path = resolve_steps_path(root, phase, out)
     doc = load_steps(path)
     if not doc:
         emit({"verdict": "pass", "action": "sync-state", "note": "no ship-steps file"})
@@ -210,6 +404,7 @@ def cmd_sync_state(root: Path, args: list[str]) -> None:
         "stepAttempts": doc.get("stepAttempts") or {},
         "phase": doc.get("phase") or phase,
         "stepsPath": str(path),
+        "phasePlanPath": str(resolve_plan_file(root, phase, out)),
         "updatedAt": doc.get("updatedAt"),
     }
     emit({"verdict": "pass", "action": "sync-state", "phaseShip": phase_ship})
@@ -238,7 +433,8 @@ def _git_head(root: Path) -> str | None:
 def main() -> None:
     if len(sys.argv) < 3:
         fail(
-            "usage: ship_phase_steps.py <root> <init|get|attempt|advance|resolve-resume|sync-state> [args...]"
+            "usage: ship_phase_steps.py <root> "
+            "<init|get|attempt|advance|resolve-resume|validate-plan|persist-plan|lifecycle-phase|sync-state> [args...]"
         )
     root = Path(sys.argv[1])
     cmd = sys.argv[2]
@@ -250,6 +446,9 @@ def main() -> None:
         "attempt": cmd_attempt,
         "advance": cmd_advance,
         "resolve-resume": cmd_resolve_resume,
+        "validate-plan": cmd_validate_plan,
+        "persist-plan": cmd_persist_plan,
+        "lifecycle-phase": cmd_lifecycle_phase,
         "sync-state": cmd_sync_state,
     }
     handler = handlers.get(cmd)

@@ -298,3 +298,4 @@ contents, secrets, or free-text blobs.
 identical `kernelVerdict`. Primary signal: `stepsSkippedWithoutRework` net-of-rework must be strictly
 positive per pair; wall-clock must not regress beyond ε at equal verdict; minimum N pairs per stratum.
 Insufficient N or non-positive benefit **fails closed** to `canonical`.
+
