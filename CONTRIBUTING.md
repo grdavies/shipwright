@@ -53,14 +53,24 @@ bash scripts/test/run-gate-fixtures.sh
 bash scripts/test/run-capability-select-fixtures.sh
 bash scripts/test/run-capability-lint-fixtures.sh
 bash scripts/test/run-migration-parity-fixtures.sh
+bash scripts/test/run-kernel-classification-fixtures.sh
+bash scripts/test/run-guidelines-floor-fixtures.sh
+bash scripts/test/run-plan-validate-fixtures.sh
+bash scripts/test/run-plan-persist-fixtures.sh
+bash scripts/test/run-plan-killswitch-fixtures.sh
+bash scripts/test/run-plan-proposed-parity-fixtures.sh
 ```
 
-**After editing `capability` frontmatter** under `core/`, regenerate both dist trees before opening a PR:
+**After editing `core/`** (commands, skills, rules, `kernel-classification.*`, `guidelines.*`, or
+`capability` frontmatter), regenerate both dist trees before opening a PR:
 
 ```bash
 python3 -m sw generate --all
 bash scripts/test/run-emitter-fixtures.sh
 ```
+
+The emitter freshness gate (`emitter-stale-classification-fails`, capability-index parity) fails when
+committed `dist/` drifts from `core/`.
 
 Additional domain fixtures (doc, impl, debug, feedback, etc.) live under `scripts/test/` and can be run
 individually as needed.

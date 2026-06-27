@@ -71,7 +71,8 @@ bundled defaults; missing keys fall back to `core/sw-reference/model-routing.def
 **Capability selection is orthogonal** — manifest-driven eligibility (`scripts/capability-select.sh`,
 `core/sw-reference/capability-manifest.md`) chooses *which* skills/personas/providers are in scope for a
 `signal_context`. Model tier resolution (`resolve-model-tier.sh`, `dispatch-check.sh`) chooses *which concrete
-model* dispatches a selected agent. Do not conflate the two.
+model* dispatches a selected agent. Do not conflate the two. **`orchestration.planPolicy` is also orthogonal**
+— it governs agent-proposed step/wave plans, not model tier or capability selection.
 
 | Surface | Tier documentation |
 | --- | --- |

@@ -109,19 +109,19 @@ only in fixtures.
 
 ### 7. Docs + emitter propagation + freshness + call-site map — M
 
-- [ ] 7.1 Orchestration prose + layout updates (R24)
+- [x] 7.1 Orchestration prose + layout updates (R24)
   - **File:** `core/skills/conductor/SKILL.md`, `core/rules/sw-conductor.mdc`, `core/skills/deliver/SKILL.md`, `core/commands/sw-deliver.md`, `core/commands/sw-ship.md`, `core/rules/sw-workflow-sequencing.mdc`, `core/skills/parallelism/SKILL.md`, `core/rules/sw-subagent-dispatch.mdc`, `.sw/layout.md`, `core/sw-reference/layout.md`
   - **Expected:** `wave.sh plan validate` added to the conductor mechanical-source table + two-tier lifecycle + durable owners; proposals routed through the gate (no hand-authored plan JSON); driver reads stored plan; layout records kernel-classification artifact, guidelines artifact, validated phase-step-plan path, wave-batching field (conductor-only), and the primitive. Canonical default unchanged; `kernel-classification.md` is the single invariants home (no duplicate enumeration).
   - **R-IDs:** R24
-- [ ] 7.2 Config + guides + CONTRIBUTING (R24)
+- [x] 7.2 Config + guides + CONTRIBUTING (R24)
   - **File:** `docs/guides/configuration.md`, `docs/guides/workflows.md`, `docs/guides/commands.md`, `docs/guides/getting-started.md`, `CONTRIBUTING.md`, `.sw/models-tiering.md`
   - **Expected:** Orchestration-plan-policy subsection + all-keys-table entry; plan-policy overview + `plan validate` command entry; default-canonical disclosure; new fixture suites + regenerate-dist reminder; one-line model-tiering orthogonality note.
   - **R-IDs:** R24
-- [ ] 7.3 Call-site / integration map (TR9) (R24)
+- [x] 7.3 Call-site / integration map (TR9) (R24)
   - **File:** `docs/prds/022-kernel-classification-and-plan-validation/` (map) / `core/sw-reference/layout.md`
   - **Expected:** enumerate every orchestrator proposal entrypoint reading the flag (deliver/phase dispatch, `/sw-doc`, `/sw-debug`, `/sw-feedback`, interactive `/sw-ship`), its canonical fallback, and its parity-fixture scope — even where `proposed` is fixture-only until 023/024 — so a flag read is not silently missed.
   - **R-IDs:** R24
-- [ ] 7.4 Regenerate both dist trees; freshness gate green (R24)
+- [x] 7.4 Regenerate both dist trees; freshness gate green (R24)
   - **File:** `dist/cursor/**`, `dist/claude-code/**` via `python3 -m sw generate --all`
   - **Expected:** classification, guidelines, schemas, and config propagated; `emitter-stale-classification-fails` passes; `dist/` parity with `core/`.
   - **R-IDs:** R24

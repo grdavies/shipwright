@@ -83,6 +83,30 @@ exhausted; run-level budget. Every halt emits one report with an exact resume co
 **Living-doc currency:** mechanical reconcile of `docs/prds/INDEX.md`, `COMPLETION-LOG.md`, and
 `GAP-BACKLOG.md` on the feature branch; `docs-currency` gate hard-blocks terminal merge on drift.
 
+### Orchestration plan policy (`orchestration.planPolicy`)
+
+| Value | Default | Meaning |
+|-------|---------|---------|
+| `canonical` | **yes** | Byte-identical to pre-022 behavior; hardcoded chains and plan-time waves only |
+| `proposed` | no | Agent may propose phase step plans and wave batching within guideline latitude; validated by `wave.sh plan validate` |
+
+- **Kill-switch:** per-repo instant revert to canonical behavior; composes orthogonally with
+  `deliver.autonomy.mode` and `deliver.phaseAckCadence`.
+- **Seeding:** `/sw-init` writes `orchestration.planPolicy: canonical`; doctor surfaces current vs default
+  and never overwrites an explicit `proposed` without confirm.
+- **Resume:** runs honor the **recorded** `planPolicy` on persisted plans over live config; re-validated against
+  the current kernel envelope on resume (fail-closed).
+- **Dark by default:** `proposed` is fixture-only until PRD-023 (`/sw-deliver` pilot) and PRD-024
+  (debug/doc/feedback). Call-site map:
+  `docs/prds/022-kernel-classification-and-plan-validation/call-site-map.md`.
+
+Mechanical validation:
+
+```bash
+bash scripts/wave.sh plan validate --tier phase --phase-type ship --proposal <path|json>
+bash scripts/wave.sh plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
+```
+
 ### `/sw-cleanup` agent-driven confirm
 
 `/sw-cleanup` defaults to dry-run. The agent presents the `wouldRemove` set and asks for explicit confirm
@@ -142,6 +166,7 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `checks.neutralAllowlist` | Check names that stay blocking even if neutral |
 | `guardrails.enforceBeforeSubmit` | Memory guardrails run before prompts submit |
 | `guardrails.requireRuleClass` | Require allowlisted rules before prompts proceed |
+| `orchestration.planPolicy` | `canonical` (default) \| `proposed` — agent plan proposals vs hardcoded chains; kill-switch |
 
 See `core/sw-reference/config.schema.json` for the full schema.
 
@@ -286,4 +311,25 @@ existing gate path. The PR template references CI **job names** as the authorita
 script checklist.
 
 Fixture suite: `bash scripts/test/run-pr-test-plan-fixtures.sh` (registered in `verify.test`).
+
+## PRD 022 fixture suites (kernel / gate / plan policy)
+
+After editing `core/sw-reference/kernel-classification.*`, `guidelines.*`, or orchestration prose under
+`core/`, regenerate dist trees before opening a PR:
+
+```bash
+python3 -m sw generate --all
+bash scripts/test/run-emitter-fixtures.sh
+```
+
+| Suite | Scope |
+| --- | --- |
+| `run-kernel-classification-fixtures.sh` | Kernel membership, ordering, completeness lint |
+| `run-guidelines-floor-fixtures.sh` | Guideline harness reuse + floor matrix |
+| `run-plan-validate-fixtures.sh` | `wave.sh plan validate` gate |
+| `run-plan-persist-fixtures.sh` | Two-tier persist + single-writer guard |
+| `run-plan-killswitch-fixtures.sh` | `orchestration.planPolicy` kill-switch + resume |
+| `run-plan-proposed-parity-fixtures.sh` | Kernel chokepoint parity under `proposed` |
+
+All registered in `verify.test` for Shipwright dev repos.
 

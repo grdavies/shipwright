@@ -63,8 +63,15 @@ Multi-feature mode uses `"mode": "multi-feature"` with conforming type-prefixed 
 | Concurrent-run index | `.cursor/sw-deliver-runs/index.json` |
 | Living-doc serialization | `.cursor/sw-living-docs.lock` |
 | Per-phase `/sw-ship` status | `.cursor/sw-deliver-runs/<phase-slug>/status.json` |
+| Phase step plan | `.cursor/sw-deliver-runs/<phase-slug>/phase-step-plan.json` |
 | Append-only progress log | `.cursor/sw-deliver-runs/run.log` |
 | Legacy (migration only) | `.cursor/sw-deliver-state.json`, `.cursor/sw-deliver.lock` |
+
+**Two-tier plan persistence (PRD 022):** validated wave-batching plans live on shared run-state
+(`waveBatchingPlan`, conductor-only); validated phase step plans live under the phase run dir
+(`phase-step-plan.json`, executor-owned). `orchestration.planPolicy` defaults to `canonical`; recorded mode
+is honored on resume. Proposals validate via `bash scripts/wave.sh plan validate` before persist — see
+`skills/conductor/SKILL.md` **Two-tier plan lifecycle**.
 
 Living artifacts under `.cursor/` are **never committed** (`/sw-commit` excludes them).
 

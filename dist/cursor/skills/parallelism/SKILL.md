@@ -59,3 +59,15 @@ scripts/wave.sh plan --task-list docs/prds/<n>-<slug>/tasks-<n>-<slug>.md --dry-
 
 - `/sw-worktree provision` enforces ceiling.
 - `/sw-ship` and gap-closers respect dispatch policy (`rules/sw-subagent-dispatch.mdc`).
+
+## Wave-batching proposals + fallbacks (PRD 022)
+
+Under `orchestration.planPolicy: proposed` (PRD-023 pilot), the conductor may propose wave batching at wave
+entry. Proposals validate through `bash scripts/wave.sh plan validate --tier wave` against contention edges +
+`worktree.parallelCeiling`. On reject or ambiguity:
+
+- Re-derive **canonical waves** from the frozen `.cursor/sw-deliver-plan.json` plan.
+- When over-ceiling → `bash scripts/wave.sh schedule --plan .cursor/sw-deliver-plan.json`.
+- Undeclared `**File:**` overlaps between parallel phases auto-serialize (PRD-013 R14 precedent).
+
+Default `planPolicy: canonical` uses plan-time `wave.sh plan` waves only — no observable change.
