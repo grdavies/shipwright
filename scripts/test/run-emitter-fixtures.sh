@@ -118,4 +118,70 @@ if [ -d "$ROOT/dist/cursor" ] && [ -d "$ROOT/dist/claude-code" ]; then
   fi
 fi
 
+# Capability index freshness: stale hand-edited index fails (failing-before / passing-after)
+INDEX="$ROOT/core/sw-reference/capability-index.json"
+if [ -f "$INDEX" ]; then
+  INDEX_BACKUP="$(mktemp)"
+  cp "$INDEX" "$INDEX_BACKUP"
+  if python3 -c "
+import sys
+sys.path.insert(0, '$ROOT/scripts')
+from capability_index import check_freshness
+from pathlib import Path
+ok, _ = check_freshness(Path('$ROOT/core'))
+sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+    echo "OK  emitter-freshness-stale-index passing-before"
+  else
+    echo "FAIL emitter-freshness-stale-index expected fresh index before tamper"
+    FAIL=1
+  fi
+  # Tamper: inject phantom capability row
+  python3 -c "
+import json
+from pathlib import Path
+p = Path('$INDEX')
+data = json.loads(p.read_text())
+data['capabilities'].append({
+  'id': 'skill.phantom-stale-fixture',
+  'kind': 'skill',
+  'sourcePath': 'core/skills/phantom-stale-fixture/SKILL.md',
+  'executable': False,
+  'capability': {'version': 1, 'triggers': [{'type': 'always_on'}]},
+})
+p.write_text(json.dumps(data, indent=2) + '\n')
+"
+  set +e
+  python3 -c "
+import sys
+sys.path.insert(0, '$ROOT/scripts')
+from capability_index import check_freshness
+from pathlib import Path
+ok, _ = check_freshness(Path('$ROOT/core'))
+sys.exit(0 if ok else 1)
+" >/dev/null 2>&1
+  STALE_EC=$?
+  set -e
+  if [ "$STALE_EC" -ne 0 ]; then
+    echo "OK  emitter-freshness-stale-index failing-before"
+  else
+    echo "FAIL emitter-freshness-stale-index tampered index should fail freshness"
+    FAIL=1
+  fi
+  mv "$INDEX_BACKUP" "$INDEX"
+  if python3 -c "
+import sys
+sys.path.insert(0, '$ROOT/scripts')
+from capability_index import check_freshness
+from pathlib import Path
+ok, _ = check_freshness(Path('$ROOT/core'))
+sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+    echo "OK  emitter-freshness-stale-index passing-after"
+  else
+    echo "FAIL emitter-freshness-stale-index restored index should pass"
+    FAIL=1
+  fi
+fi
+
 exit "$FAIL"

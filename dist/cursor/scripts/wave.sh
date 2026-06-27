@@ -6,6 +6,7 @@
 #   wave.sh preflight-base --target feat/<slug>
 #   wave.sh dispatch preflight --dispatch-id <id> --agent <id> [--command <sw-*>] [--skill <name>]
 #   wave.sh memory learnings distill|prepare ...
+#   wave.sh memory prework record|status ...
 #   wave.sh schedule --plan .cursor/sw-deliver-plan.json [--ceiling N]  # parallel batches (R14/R44)
 #   wave.sh orchestrator provision|status ...
 #   wave.sh phase provision --phase-id N [--plan ...] [--base <type>/<slug>]
@@ -66,7 +67,7 @@ case "${1:-}" in
   compound-ship|retrospective|completion)
     exec python3 "$PLUGIN_ROOT/scripts/wave_compound.py" "$ROOT" "$@"
     ;;
-  orchestrator|forward-merge|phase-teardown|assert-entry)
+  orchestrator|forward-merge|phase-teardown|phase-teardown-run|assert-entry)
     exec python3 "$PLUGIN_ROOT/scripts/wave_lifecycle.py" "$ROOT" "$@"
     ;;
   phase)
@@ -93,10 +94,16 @@ case "${1:-}" in
   preflight-base)
     exec python3 "$PLUGIN_ROOT/scripts/wave_preflight.py" "$ROOT" base-check "${@:2}"
     ;;
+  preflight-capability-index)
+    exec python3 "$PLUGIN_ROOT/scripts/wave_preflight.py" "$ROOT" capability-index-check "${@:2}"
+    ;;
   dispatch)
     exec python3 "$PLUGIN_ROOT/scripts/wave_preflight.py" "$ROOT" dispatch "${@:2}"
     ;;
   memory)
+    if [[ "${2:-}" == "prework" ]]; then
+      exec python3 "$PLUGIN_ROOT/scripts/wave_memory_prework.py" "$ROOT" "${@:3}"
+    fi
     exec python3 "$PLUGIN_ROOT/scripts/wave_memory.py" "$ROOT" "$@"
     ;;
   resume|ack)

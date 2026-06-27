@@ -33,15 +33,15 @@ contract per the Decision Log).
 
 ### 2. Generated capability index + freshness gates — M
 
-- [ ] 2.1 Emitter aggregation into `capability-index.json` (structured YAML) (R9, R24)
+- [x] 2.1 Emitter aggregation into `capability-index.json` (structured YAML) (R9, R24)
   - **File:** sw emitter (`python3 -m sw generate`) module + `core/sw-reference/capability-index.json`
   - **Expected:** aggregates per-capability frontmatter into the committed index using a **structured YAML parser** (nested `triggers` round-trip), emitted to `dist/cursor` and `dist/claude-code`; no hand-maintained registry.
   - **R-IDs:** R9, R24
-- [ ] 2.2 Test-gate index freshness fixture (R24)
+- [x] 2.2 Test-gate index freshness fixture (R24)
   - **File:** `scripts/test/run-emitter-fixtures.sh`
   - **Expected:** a stale/hand-edited index fails the freshness fixture (failing-before / passing-after).
   - **R-IDs:** R24
-- [ ] 2.3 Pre-selection preflight freshness check (fail-closed) (R9, R24)
+- [x] 2.3 Pre-selection preflight freshness check (fail-closed) (R9, R24)
   - **File:** `scripts/wave_preflight.*` / selector entrypoint
   - **Expected:** before selection, fail closed if the runtime index does not reproduce from current frontmatter, so a stale local index cannot silently diverge before CI.
   - **R-IDs:** R9, R24

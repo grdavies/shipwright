@@ -26,6 +26,7 @@ SW_REFERENCE_CLOSED_EMIT = (
     "communication-routing.defaults.json",
     "model-routing.defaults.json",
     "verify-presets.json",
+    "capability-index.json",
 )
 EXCLUDE_SUFFIXES = (".pyc",)
 

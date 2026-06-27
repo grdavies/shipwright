@@ -14,6 +14,9 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 DISPATCH_PREFLIGHT_PATH = Path(".cursor/hooks/state/task-dispatch-preflight.json")
 
+sys.path.insert(0, str(SCRIPT_DIR))
+from capability_index import check_freshness  # noqa: E402
+
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
     print(json.dumps(obj, ensure_ascii=False, indent=2))
@@ -211,6 +214,39 @@ def run_json_cmd(root: Path, argv: list[str]) -> dict[str, Any]:
     return parsed
 
 
+def run_capability_index_check(root: Path, args: list[str]) -> dict[str, Any]:
+    index_rel = parse_kv(args, "--index", "core/sw-reference/capability-index.json")
+    index_path = root / str(index_rel)
+    core_root = root / "core"
+    if not index_path.is_file():
+        return {
+            "verdict": "pass",
+            "action": "capability-index-check",
+            "skipped": True,
+            "reason": "no committed capability-index.json",
+        }
+    ok, message = check_freshness(core_root, index_path)
+    if not ok:
+        fail(
+            message,
+            exit_code=20,
+            halt="preflight",
+            cause="capability-index:stale",
+            action="capability-index-check",
+            indexPath=str(index_path),
+        )
+    return {
+        "verdict": "pass",
+        "action": "capability-index-check",
+        "indexPath": str(index_path),
+        "message": message,
+    }
+
+
+def cmd_capability_index_check(root: Path, args: list[str]) -> None:
+    emit(run_capability_index_check(root, args))
+
+
 def cmd_dispatch(root: Path, args: list[str]) -> None:
     if not args:
         fail("dispatch subcommand required: preflight")
@@ -219,6 +255,7 @@ def cmd_dispatch(root: Path, args: list[str]) -> None:
     if sub != "preflight":
         fail(f"unknown dispatch subcommand: {sub}")
 
+    run_capability_index_check(root, [])
     dispatch_id = parse_kv(rest, "--dispatch-id")
     agent = parse_kv(rest, "--agent")
     command = parse_kv(rest, "--command")
@@ -309,6 +346,8 @@ def main() -> None:
     args = sys.argv[3:]
     if cmd == "base-check":
         cmd_base_check(root, args)
+    elif cmd == "capability-index-check":
+        cmd_capability_index_check(root, args)
     elif cmd == "dispatch":
         cmd_dispatch(root, args)
     else:

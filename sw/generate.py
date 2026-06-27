@@ -14,6 +14,9 @@ CORE_ROOT = REPO_ROOT / "core"
 PLATFORMS_ROOT = REPO_ROOT / "platforms"
 DIST_ROOT = REPO_ROOT / "dist"
 
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from capability_index import write_index  # noqa: E402
+
 
 def _discover_platforms() -> list[str]:
     if not PLATFORMS_ROOT.is_dir():
@@ -41,6 +44,7 @@ def _load_emitter_module(platform: str):
 
 def generate_platform(platform: str, *, core_root: Path | None = None, dest_root: Path | None = None) -> Path:
     core = core_root or CORE_ROOT
+    write_index(core)
     dest = (dest_root or DIST_ROOT) / platform
     mod = _load_emitter_module(platform)
     if not hasattr(mod, "emit"):

@@ -755,6 +755,31 @@ def run_base_preflight(root: Path, target_branch: str) -> dict[str, Any]:
     return payload
 
 
+def run_capability_index_preflight(root: Path) -> dict[str, Any]:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "wave_preflight.py"),
+            str(root),
+            "capability-index-check",
+        ],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        fail(proc.stderr.strip() or proc.stdout.strip() or "capability index preflight failed")
+    if proc.returncode != 0:
+        fail(
+            payload.get("error", "capability index preflight failed"),
+            exit_code=proc.returncode,
+            **{k: v for k, v in payload.items() if k != "error"},
+        )
+    return payload
+
+
 def cmd_preflight(root: Path, args: list[str]) -> None:
     mode = detect_mode(args)
     result: dict[str, Any] = {"verdict": "pass", "mode": mode}
@@ -801,6 +826,8 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
         if not has_flag(args, "--skip-base-check"):
             base_pf = run_base_preflight(root, branch)
             result["basePreflight"] = base_pf
+        cap_pf = run_capability_index_preflight(root)
+        result["capabilityIndexPreflight"] = cap_pf
     elif mode == "combined":
         out = plan_combined(root, args, dry_run=True)
         result.update(
@@ -820,6 +847,8 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
         if not has_flag(args, "--skip-base-check"):
             base_pf = run_base_preflight(root, out["target"]["branch"])
             result["basePreflight"] = base_pf
+        cap_pf = run_capability_index_preflight(root)
+        result["capabilityIndexPreflight"] = cap_pf
     else:
         items_raw = parse_kv(args, "--items", "")
         items = [x.strip() for x in items_raw.split(",") if x.strip()]
