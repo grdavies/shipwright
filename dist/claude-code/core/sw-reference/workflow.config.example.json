@@ -74,6 +74,10 @@
   "worktree": {
     "parallelCeiling": 4
   },
+  "intraPhase": {
+    "parallelBudget": 2,
+    "harnessLimit": 8
+  },
   "models": {
     "tiers": {
       "cheap": "composer-2.5-fast",
