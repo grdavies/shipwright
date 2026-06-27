@@ -100,6 +100,7 @@
 * merge phase benefit-metric-capture-decision-rule-m into feat/deliver-plan-policy-pilot (2ad6637) <!-- sw-deliver:benefit-metric-capture-decision-rule-m -->
 * merge phase deliver-scoped-plan-surfacing-s into feat/deliver-plan-policy-pilot (56c64f9) <!-- sw-deliver:deliver-scoped-plan-surfacing-s -->
 * merge phase docs-emitter-propagation-freshness-m into feat/deliver-plan-policy-pilot (49523b8) <!-- sw-deliver:docs-emitter-propagation-freshness-m -->
+* merge phase host-adapter-rate-limit-foundation-l into feat/git-host-portability-and-workflow-standardization (e2696c2) <!-- sw-deliver:host-adapter-rate-limit-foundation-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
