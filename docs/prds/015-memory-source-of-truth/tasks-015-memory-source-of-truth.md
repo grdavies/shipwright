@@ -16,22 +16,22 @@ then pointer inversion + supersede, then compound/audit/migration, then docs/dis
 
 ### 1. SoT resolver + config/schema/defaults (M)
 
-- [ ] 1.1 SoT resolution helper (R1, R2)
+- [x] 1.1 SoT resolution helper (R1, R2)
   - **File:** `scripts/memory-sot.sh`, `skills/memory/SKILL.md`
   - **Expected:** reads `memory.sourceOfTruth` + provider class; returns authoritative side (`repo`|`memory`) for the `decision` class; single-sourced for freeze/compound/audit
-- [ ] 1.2 Config knob + schema + seeding (R2)
+- [x] 1.2 Config knob + schema + seeding (R2)
   - **File:** `.cursor/workflow.config.json`, `.sw/config.schema.json`, `core/sw-reference/` setup defaults
   - **Expected:** `memory.sourceOfTruth` (`repo`|`memory`|`auto`, default `auto`) accepted by schema and seeded
-- [ ] 1.3 Decision-only scope guard (R3)
+- [x] 1.3 Decision-only scope guard (R3)
   - **File:** `scripts/memory-sot.sh`, `skills/memory/SKILL.md`
   - **Expected:** SoT switch applies only to `decision`; other classes remain distillation-only
 
 ### 2. Always-committed redacted snapshot + offline-safe freeze/CI (M)
 
-- [ ] 2.1 Snapshot writer in freeze decision path (R4, R6, R10)
+- [x] 2.1 Snapshot writer in freeze decision path (R4, R6, R10)
   - **File:** `core/commands/sw-freeze.md`, `scripts/memory-redact.sh` (invocation)
   - **Expected:** freeze always writes/refreshes a redacted `docs/decisions/<n>-<slug>.md` snapshot, stamps `authoritative: repo|memory` + forward pointer under memory-SoT
-- [ ] 2.2 Offline-safe freeze/CI gate (R5)
+- [x] 2.2 Offline-safe freeze/CI gate (R5)
   - **File:** `scripts/check-frozen.sh`, `core/commands/sw-freeze.md`
   - **Expected:** freeze + `check-frozen.sh` operate only on the committed snapshot, never call the provider; memory-SoT provider write is best-effort with an audit breadcrumb
 
