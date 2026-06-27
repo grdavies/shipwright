@@ -553,6 +553,8 @@ def effective_wave_plan(state: dict[str, Any], plan: dict[str, Any]) -> dict[str
         merged["waves"] = batching.get("waves")
         if batching.get("parallelCeiling"):
             merged["parallelCeiling"] = batching.get("parallelCeiling")
+        if batching.get("planPolicy"):
+            merged["planPolicy"] = batching.get("planPolicy")
         return merged
     return plan
 
@@ -561,8 +563,15 @@ def phase_run_dir_for_slug(root: Path, slug: str) -> Path:
     return root / ".cursor" / "sw-deliver-runs" / slug
 
 
-def mechanical_phase_plan(root: Path, phase_id: str, slug: str) -> dict[str, Any]:
-    return phase_fallback_canonical_chain(root, "ship", phase_id)
+def mechanical_phase_plan(
+    root: Path, phase_id: str, slug: str, state: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    recorded_parent = None
+    if state:
+        batching = state.get("waveBatchingPlan")
+        if isinstance(batching, dict):
+            recorded_parent = batching
+    return phase_fallback_canonical_chain(root, "ship", phase_id, recorded_parent=recorded_parent)
 
 
 def dispatch_or_phase_plan_entry(
@@ -1095,10 +1104,7 @@ def execute_mechanical(
 
 
     if action == "wave-plan-persist":
-        proposal = {
-            "waves": plan.get("waves") or [],
-            "planPolicy": "canonical",
-        }
+        proposal = {"waves": plan.get("waves") or []}
         frozen = {"waves": plan.get("waves") or [], "edges": plan.get("edges") or []}
         result = validate_wave_plan(root, proposal, frozen_plan=frozen)
         if result.get("verdict") != "pass":
@@ -1115,7 +1121,7 @@ def execute_mechanical(
         pid = str(step.get("phaseId", ""))
         slug = str(step.get("phaseSlug") or pid)
         set_phase_lifecycle(state, pid, LIFECYCLE_PHASE_PLAN_PENDING)
-        phase_plan = mechanical_phase_plan(root, pid, slug)
+        phase_plan = mechanical_phase_plan(root, pid, slug, state)
         run_dir = phase_run_dir_for_slug(root, slug)
         run_dir.mkdir(parents=True, exist_ok=True)
         from plan_persist import persist_phase_plan, phase_plan_path

@@ -22,6 +22,64 @@ from plan_floor_evaluator import floor_mandatory_steps, rule_triggered, validate
 
 REJECTION_THRESHOLD = 3
 PLAN_REJECTION_LOG_KEY = "planRejectionLog"
+VALID_PLAN_POLICIES = frozenset({"canonical", "proposed"})
+DEFAULT_PLAN_POLICY = "canonical"
+
+
+def load_workflow_config(root: Path) -> dict[str, Any]:
+    for rel in (
+        ".cursor/workflow.config.json",
+        "workflow.config.json",
+        ".sw/workflow.config.example.json",
+    ):
+        path = root / rel
+        if path.is_file():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                return data if isinstance(data, dict) else {}
+            except json.JSONDecodeError:
+                continue
+    return {}
+
+
+def read_config_plan_policy(root: Path) -> str:
+    """Read orchestration.planPolicy from live workflow config (default canonical)."""
+    orch = load_workflow_config(root).get("orchestration") or {}
+    policy = str(orch.get("planPolicy", DEFAULT_PLAN_POLICY)).strip().lower()
+    return policy if policy in VALID_PLAN_POLICIES else DEFAULT_PLAN_POLICY
+
+
+def recorded_plan_policy(recorded: dict[str, Any] | None) -> str | None:
+    if not isinstance(recorded, dict):
+        return None
+    policy = str(recorded.get("planPolicy") or "").strip().lower()
+    return policy if policy in VALID_PLAN_POLICIES else None
+
+
+def resolve_plan_policy_for_proposal(
+    root: Path,
+    *,
+    recorded_parent: dict[str, Any] | None = None,
+) -> str:
+    """Honor recorded planPolicy on resume; otherwise read live config at proposal time."""
+    recorded_policy = recorded_plan_policy(recorded_parent)
+    if recorded_policy:
+        return recorded_policy
+    return read_config_plan_policy(root)
+
+
+def plan_stamps(root: Path, plan_policy: str | None = None, *, recorded_parent: dict[str, Any] | None = None) -> dict[str, str]:
+    if plan_policy is None:
+        plan_policy = resolve_plan_policy_for_proposal(root, recorded_parent=recorded_parent)
+    elif plan_policy not in VALID_PLAN_POLICIES:
+        plan_policy = DEFAULT_PLAN_POLICY
+    classification = load_classification(root)
+    guidelines = load_guidelines(root)
+    return {
+        "planPolicy": plan_policy,
+        "kernelVersion": str(classification.get("kernelVersion", "1.0.0")),
+        "guidelineVersion": str(guidelines.get("guidelineVersion", "1.0.0")),
+    }
 
 
 def utc_now() -> str:
@@ -57,16 +115,6 @@ def load_json_arg(root: Path, raw: str | None) -> dict[str, Any] | None:
     else:
         data = json.loads(raw)
     return data if isinstance(data, dict) else None
-
-
-def plan_stamps(root: Path, plan_policy: str = "canonical") -> dict[str, str]:
-    classification = load_classification(root)
-    guidelines = load_guidelines(root)
-    return {
-        "planPolicy": plan_policy,
-        "kernelVersion": str(classification.get("kernelVersion", "1.0.0")),
-        "guidelineVersion": str(guidelines.get("guidelineVersion", "1.0.0")),
-    }
 
 
 def floor_needs_signal_context(classification: dict[str, Any], task_file_paths: list[str] | None) -> bool:
@@ -171,8 +219,14 @@ def validate_kernel_envelope(classification: dict[str, Any], steps: list[str]) -
     return reasons
 
 
-def phase_fallback_canonical_chain(root: Path, phase_type: str = "ship", phase_id: str | None = None) -> dict[str, Any]:
-    stamps = plan_stamps(root)
+def phase_fallback_canonical_chain(
+    root: Path,
+    phase_type: str = "ship",
+    phase_id: str | None = None,
+    *,
+    recorded_parent: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    stamps = plan_stamps(root, recorded_parent=recorded_parent)
     if phase_type == "ship":
         steps = canonical_ship_chain(root)
     else:
@@ -247,7 +301,7 @@ def validate_phase_plan(
             return {"verdict": "ambiguous", "reasons": reasons + ["partial order missing kernel ordering pair"]}
         return {"verdict": "reject", "reasons": reasons}
 
-    stamps = plan_stamps(root, str(proposal.get("planPolicy") or "canonical"))
+    stamps = plan_stamps(root)
     return {
         "verdict": "pass",
         "reasons": [],
@@ -297,8 +351,13 @@ def wave_contention_violation(
     return reasons
 
 
-def wave_fallback_canonical_waves(frozen_plan: dict[str, Any], root: Path) -> dict[str, Any]:
-    stamps = plan_stamps(root)
+def wave_fallback_canonical_waves(
+    frozen_plan: dict[str, Any],
+    root: Path,
+    *,
+    recorded_parent: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    stamps = plan_stamps(root, recorded_parent=recorded_parent)
     return {
         "version": 1,
         "tier": "wave",
@@ -311,12 +370,18 @@ def wave_fallback_canonical_waves(frozen_plan: dict[str, Any], root: Path) -> di
     }
 
 
-def wave_fallback_schedule(root: Path, frozen_plan: dict[str, Any], ceiling: int | None = None) -> dict[str, Any]:
+def wave_fallback_schedule(
+    root: Path,
+    frozen_plan: dict[str, Any],
+    ceiling: int | None = None,
+    *,
+    recorded_parent: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     from wave_deliver import greedy_wave_batches, load_parallel_ceiling
 
     if ceiling is None:
         ceiling = load_parallel_ceiling(root, [])
-    stamps = plan_stamps(root)
+    stamps = plan_stamps(root, recorded_parent=recorded_parent)
     waves = frozen_plan.get("waves") or []
     schedule: list[dict[str, Any]] = []
     for wave_index, wave in enumerate(waves, start=1):
@@ -429,7 +494,7 @@ def validate_wave_plan(
             "fallback": wave_fallback_canonical_waves(frozen_plan, root),
         }
 
-    stamps = plan_stamps(root, str(proposal.get("planPolicy") or "canonical"))
+    stamps = plan_stamps(root)
     return {
         "verdict": "pass",
         "reasons": [],
