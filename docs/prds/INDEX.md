@@ -31,3 +31,4 @@
 | 027 | deliver-terminal-finalization-robustness | [027-prd-deliver-terminal-finalization-robustness.md](027-deliver-terminal-finalization-robustness/027-prd-deliver-terminal-finalization-robustness.md) (frozen) | — | not-started |
 | 028 | living-status-backlog-lifecycle | [028-prd-living-status-backlog-lifecycle.md](028-living-status-backlog-lifecycle/028-prd-living-status-backlog-lifecycle.md) (frozen) | — | not-started |
 | 029 | doc-format-parser-robustness | [029-prd-doc-format-parser-robustness.md](029-doc-format-parser-robustness/029-prd-doc-format-parser-robustness.md) (frozen) | — | not-started |
+| 030 | spec-mutation-safety | [030-prd-spec-mutation-safety.md](030-spec-mutation-safety/030-prd-spec-mutation-safety.md) (frozen) | — | not-started |
