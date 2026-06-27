@@ -98,6 +98,7 @@
 * merge phase intra-phase-fan-out-no-nesting-decision-logging-m into feat/deliver-plan-policy-pilot (3ce9fd7) <!-- sw-deliver:intra-phase-fan-out-no-nesting-decision-logging-m -->
 * merge phase driver-enforced-budgets-clean-halt-integrity-m into feat/deliver-plan-policy-pilot (be5a271) <!-- sw-deliver:driver-enforced-budgets-clean-halt-integrity-m -->
 * merge phase benefit-metric-capture-decision-rule-m into feat/deliver-plan-policy-pilot (2ad6637) <!-- sw-deliver:benefit-metric-capture-decision-rule-m -->
+* merge phase deliver-scoped-plan-surfacing-s into feat/deliver-plan-policy-pilot (56c64f9) <!-- sw-deliver:deliver-scoped-plan-surfacing-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
