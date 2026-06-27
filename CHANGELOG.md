@@ -86,6 +86,7 @@
 * merge phase run-log-surfacing-s into feat/capability-manifest-and-selector (4235f06) <!-- sw-deliver:run-log-surfacing-s -->
 * merge phase trust-boundary-execution-chokepoint-kernel-hook-pinning-m into feat/capability-manifest-and-selector (dd8a578) <!-- sw-deliver:trust-boundary-execution-chokepoint-kernel-hook-pinning-m -->
 * merge phase migration-with-parity-shadow-cutover-call-site-map-l into feat/capability-manifest-and-selector (412e81d) <!-- sw-deliver:migration-with-parity-shadow-cutover-call-site-map-l -->
+* merge phase documentation-emitter-propagation-freshness-m into feat/capability-manifest-and-selector (6dd263b) <!-- sw-deliver:documentation-emitter-propagation-freshness-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
