@@ -42,6 +42,19 @@
         }
       }
     },
+    "orchestration": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Cross-orchestrator plan-policy kill-switch (PRD 022 R29). Default canonical is byte-identical to today; proposed is fixture-only until PRD 023/024 adoption.",
+      "properties": {
+        "planPolicy": {
+          "type": "string",
+          "enum": ["canonical", "proposed"],
+          "default": "canonical",
+          "description": "canonical = validated proposals must match canonical chain/waves; proposed = guideline latitude (kernel envelope unchanged). Recorded mode on persisted plans is honored on resume over live config."
+        }
+      }
+    },
     "deliver": {
       "type": "object",
       "additionalProperties": false,

@@ -10,6 +10,7 @@ from typing import Any
 
 from kernel_classification import load_classification, validate_chain_order
 from wave_json_io import StateCorruptError, read_json, write_json
+from wave_plan_validate import DEFAULT_PLAN_POLICY, recorded_plan_policy
 
 CALLER_ROLE_ENV = "SW_CALLER_ROLE"
 ROLE_CONDUCTOR = "conductor"
@@ -122,6 +123,9 @@ def validate_phase_plan_document(root: Path, plan: dict[str, Any]) -> tuple[bool
     steps = plan.get("steps")
     if not isinstance(steps, list) or not steps:
         return False, ["plan steps missing or empty"], "halt"
+    policy = recorded_plan_policy(plan) or DEFAULT_PLAN_POLICY
+    if policy not in {DEFAULT_PLAN_POLICY, "proposed"}:
+        return False, [f"invalid planPolicy: {policy!r}"], "halt"
     classification = load_classification(root)
     current_kernel = str(classification.get("kernelVersion", "1.0.0"))
     stamped = str(plan.get("kernelVersion", ""))

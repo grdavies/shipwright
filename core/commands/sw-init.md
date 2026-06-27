@@ -110,6 +110,20 @@ Seed:
 
 `default` mode remains gated until Phase-2 live acceptance (DL-9).
 
+### 3f. Orchestration plan policy (PRD 022 R29)
+
+Seed `orchestration.planPolicy` (default **`canonical`** — byte-identical to today; `proposed` is
+fixture-only until PRD-023/024 adoption). Orthogonal to `deliver.autonomy.mode` and
+`deliver.phaseAckCadence`.
+
+```json
+"orchestration": { "planPolicy": "canonical" }
+```
+
+**Doctor:** surface current `orchestration.planPolicy` vs schema default (`canonical`). On re-run,
+never overwrite an explicit `proposed` without user confirm — same consent gate as `verify.*` and model
+tiers.
+
 ### 4. Guardrail knobs
 
 Defaults (greenfield-friendly):
@@ -160,6 +174,8 @@ Detect and recommend (never hard-fail scaffold):
   `none`; set `review.provider` explicitly if review gating is desired).
 - `review.enabled: false` in existing config → warn deprecated; suggest `review.provider: "none"`.
 - Recallium reachable when `memory.provider` is `recallium`.
+- **`orchestration.planPolicy`:** surface current value vs default (`canonical`); warn when set to
+  `proposed` (fixture/adoption path — kernel envelope unchanged).
 - **`verify-unconfigured`** via `bash scripts/verify-unconfigured.sh` — CTA: run `/sw-init`.
 - Config drift vs schema → `bash scripts/sw-configure.sh drift-check`.
 - Missing in-repo store dir → offer `mkdir -p` repair.
