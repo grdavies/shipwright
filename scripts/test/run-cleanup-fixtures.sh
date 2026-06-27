@@ -198,7 +198,7 @@ def fake_gh(root, branch, default):
         return None
     return None
 
-with mock.patch('cleanup_lib.gh_merged', side_effect=fake_gh):
+with mock.patch('cleanup_lib.host_merged', side_effect=fake_gh):
     st, detail = merged_status(root, 'feat/parent-wave-phase-alpha-m', 'main', 'main')
     assert st == 'merged' and detail == 'parent-wave-merged', (st, detail)
 
