@@ -35,9 +35,9 @@ Multi-persona review for PRDs and decision records. Pattern borrowed from compou
 | Quick | None — do not invoke |
 | Standard / Full | Per doc type above |
 
-**PRD tier no longer selects personas** — only whether review runs. Quick skips; PRD reviews use signal-driven
-selection. **Decision-record drafts always use the Full panel** (all eight) regardless of tier, because they
-govern multiple plans by definition.
+**PRD tier no longer selects personas** — only whether review runs. Quick skips; PRD reviews use the
+capability selector (`doc-review` family). **Decision-record drafts always use the Full panel** (all eight)
+regardless of tier, because they govern multiple plans by definition.
 
 ## Selection
 
@@ -72,8 +72,14 @@ duplicate that gate; its scope is arbitrary documentation artifacts at spec-time
 
 | Persona | Manifest trigger summary |
 | --- | --- |
-| `sw-security-reviewer` | `text_token` over **`security`-tagged** keywords (sync with `skills/triage/SKILL.md` risk triggers). `data-migration` / `billing-routing` tags floor triage tier but do **not** fire security. |
-| `sw-design-reviewer` | `any_of` unambiguous UI terms, structural headings (`UI` / `UX` / `Screens` / `Mockups`), or design-tool link patterns. Bare polysemous tokens (`component`, `view`, `page`, `form`) do **not** count alone. |
+| `sw-security-reviewer` | `text_token` over **`security`-tagged** keywords (sync with `skills/triage/SKILL.md` risk triggers). Tags `data-migration` and `billing-routing` floor triage tier but do **not** fire security. |
+| `sw-design-reviewer` | `any_of` unambiguous UI terms (`wireframe`, `modal`, `navigation`, `responsive`, `accessibility`, `user flow`, …), structural headings (`UI` / `UX` / `Screens` / `Mockups`), or design-tool links (e.g. Figma). Bare **polysemous** tokens (`component`, `view`, `page`, `form`) do **not** count alone. |
+
+**Security signal enumeration** (must stay in sync with triage `security` tags and manifest `text_token` triggers):
+
+`auth`, `authn`, `authz`, `authentication`, `authorization`, `login`, `session`, `oauth`, `jwt`, `payment`,
+`payments`, `billing`, `PII`, `credentials`, `token`, `encryption`, `public api`, `public endpoint`,
+`external api`, `webhook`
 
 Keyword-gated security accepts deliberate false-negative cost on novel phrasing; use `--personas security` for
 audits when wording dodges the list.

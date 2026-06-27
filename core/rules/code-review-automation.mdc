@@ -63,13 +63,13 @@ Recompute unresolved actionable count at HEAD. Run `scripts/check-gate.sh` for v
 
 ## Native code-review panel (binding standard)
 
-The `native` local adapter (`providers/code-review/native.md`) uses **always-on core + capability-selected
-specialists** — same manifest + selector shape as doc review:
+The `native` local adapter (`providers/code-review/native.md`) uses **always-on core + signal-gated
+specialists** selected via the capability manifest and `scripts/code-review-select.sh` — same shape as doc
+review (`skills/doc-review/SKILL.md`):
 
 - Fixed core roster from manifest `always_on` triggers: `correctness`, `maintainability`, `scope-fidelity`,
   `testing`, `security`.
-- Specialists fire from per-agent `capability` frontmatter via `scripts/code-review-select.sh`
-  (`core/sw-reference/capability-manifest.md`).
+- Specialists fire from per-agent `capability` frontmatter (`core/sw-reference/capability-manifest.md`).
 - Same `signal_context` + `change_digest` → same panel; no judgment-based or load-all path.
 - `previous-comments` is excluded from phase 1.
 

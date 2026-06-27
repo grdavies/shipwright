@@ -17,7 +17,7 @@ Persona panel + synthesis for PRD drafts, decision-record drafts, and amendment 
 
 | Input | Panel |
 |-------|-------|
-| PRD draft (`docs/prds/...`) | Capability selector — `doc-review` family (`scripts/doc-review-select.sh`) |
+| PRD draft (`docs/prds/...`) | Signal-driven via capability selector — `doc-review` family (`scripts/doc-review-select.sh`) |
 | Decision-record draft (`docs/decisions/<n>-<slug>.md`) | **Full** — all eight personas (cross-cutting blast radius) |
 | Amendment under `docs/prds/.../amendments/` | Coherence + scope-guardian + docs-currency (generic floor) |
 | Amendment under `docs/decisions/...amendments/` | Raised floor: coherence + scope-guardian + adversarial + feasibility + docs-currency (+ security when auth/data/migrations) |
@@ -58,7 +58,8 @@ Decision-record routing is **floor-only** — it never subtracts a persona the c
 
 ## Guardrails
 
-- PRD non-Quick: six-persona always-on core (includes docs-currency) + signal-gated `security` / `design`.
+- PRD non-Quick: six-persona always-on core (includes docs-currency) + signal-gated `security` / `design`
+  (resolved by `scripts/doc-review-select.sh` / manifest triggers).
 - Decision-record drafts: all eight personas always (Full blast radius).
 - Decision amendments: raised floor only for `docs/decisions/` parents — PRD amendment floor unchanged.
 - Quick: no panel.
