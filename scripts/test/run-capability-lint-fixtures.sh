@@ -153,4 +153,39 @@ run_expect capability-kind-spoof-rejected 1 \
   python3 "$ROOT/scripts/capability_manifest_lint.py" \
   --root "$SPOOF" --core "$SPOOF_CORE" --index "$SPOOF_INDEX"
 
+# --- manifest schema validation (failing-before / passing-after) (R27) ---
+SCHEMA_BAD="$FIX/schema-invalid"
+SCHEMA_BAD_CORE="$SCHEMA_BAD/core"
+rm -rf "$SCHEMA_BAD_CORE"
+mkdir -p "$SCHEMA_BAD_CORE/skills/bad-schema" "$SCHEMA_BAD_CORE/sw-reference"
+cat >"$SCHEMA_BAD_CORE/skills/bad-schema/SKILL.md" <<'YAML'
+---
+name: bad-schema
+capability:
+  version: 2
+  triggers: []
+---
+YAML
+run_expect capability-manifest-schema-fails-closed 1 \
+  python3 "$ROOT/scripts/capability_manifest_lint.py" \
+  --root "$SCHEMA_BAD" --core "$SCHEMA_BAD_CORE"
+
+SCHEMA_OK="$FIX/schema-valid"
+SCHEMA_OK_CORE="$SCHEMA_OK/core"
+rm -rf "$SCHEMA_OK_CORE"
+mkdir -p "$SCHEMA_OK_CORE/skills/good-schema" "$SCHEMA_OK_CORE/sw-reference"
+cat >"$SCHEMA_OK_CORE/skills/good-schema/SKILL.md" <<'YAML'
+---
+name: good-schema
+capability:
+  version: 1
+  triggers:
+    - type: always_on
+      selectionFamily: doc-review
+---
+YAML
+run_expect capability-manifest-schema-passes 0 \
+  python3 "$ROOT/scripts/capability_manifest_lint.py" \
+  --root "$SCHEMA_OK" --core "$SCHEMA_OK_CORE"
+
 exit "$FAIL"

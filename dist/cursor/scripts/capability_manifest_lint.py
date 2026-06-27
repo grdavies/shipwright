@@ -8,8 +8,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from capability_index import build_index, derive_kind
+from capability_index import build_index, collect_capability_files, derive_kind, parse_frontmatter
+from capability_manifest_validate import validate_capability_block
 from capability_precedence import effective_priority, effective_tier, has_precedence_resolution
+from capability_trust import KERNEL_HOOK_SLOTS, MANIFEST_HOOK_SLOTS, is_kernel_hook_source
 
 MULTI_SELECT_TRIGGER_TYPES = frozenset(
     {
@@ -177,6 +179,46 @@ def check_trigger_overlaps(entries: list[dict[str, Any]]) -> list[str]:
     return errors
 
 
+def check_kernel_hook_manifests(repo_root: Path, core_root: Path) -> list[str]:
+    errors: list[str] = []
+    for path in collect_capability_files(core_root):
+        rel = path.relative_to(core_root)
+        source_path = f"core/{rel.as_posix()}"
+        if not is_kernel_hook_source(source_path):
+            continue
+        text = path.read_text(encoding="utf-8")
+        frontmatter = parse_frontmatter(text)
+        if isinstance(frontmatter.get("capability"), dict):
+            errors.append(
+                "kernel hook manifest rejected: "
+                f"{source_path} is non-selectable (beforeSubmitPrompt guardrails / memory-redaction kernel)"
+            )
+    return errors
+
+
+def check_manifest_schema(core_root: Path) -> list[str]:
+    errors: list[str] = []
+    for path in collect_capability_files(core_root):
+        rel = path.relative_to(core_root)
+        source_path = f"core/{rel.as_posix()}"
+        text = path.read_text(encoding="utf-8")
+        frontmatter = parse_frontmatter(text)
+        capability = frontmatter.get("capability")
+        if not isinstance(capability, dict):
+            continue
+        errors.extend(validate_capability_block(capability, source=source_path))
+        metadata = capability.get("metadata") or {}
+        gate_ref = metadata.get("gateRef") if isinstance(metadata, dict) else None
+        if gate_ref and str(gate_ref).startswith("hooks.json:"):
+            slot = str(gate_ref)[len("hooks.json:") :]
+            if slot in KERNEL_HOOK_SLOTS:
+                errors.append(
+                    f"{source_path}: hook gateRef targets kernel slot {slot!r} — manifest hooks may only augment "
+                    f"{sorted(MANIFEST_HOOK_SLOTS)}"
+                )
+    return errors
+
+
 def lint_index(repo_root: Path, index: dict[str, Any]) -> list[str]:
     entries = index.get("capabilities")
     if not isinstance(entries, list):
@@ -205,6 +247,9 @@ def lint_core(repo_root: Path, core_root: Path, *, index_path: Path | None = Non
     else:
         index = build_index(core_root)
     errors = lint_index(repo_root, index)
+    errors.extend(check_kernel_hook_manifests(repo_root, core_root))
+    if index_path is None:
+        errors.extend(check_manifest_schema(core_root))
     return (len(errors) == 0, errors)
 
 

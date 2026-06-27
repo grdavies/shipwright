@@ -7,6 +7,13 @@ import shutil
 from pathlib import Path
 
 from emitter_base import EmitterBase, EmitterError, ensure_clean_dir, read_version
+
+import sys
+
+_REPO_SCRIPTS = Path(__file__).resolve().parent.parent.parent / "scripts"
+if str(_REPO_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_REPO_SCRIPTS))
+from capability_trust import KERNEL_HOOK_SLOTS, MANIFEST_HOOK_SLOTS  # noqa: E402
 # verify-presets.json emitted via emitter_base.SW_REFERENCE_CLOSED_EMIT
 
 SUPPORTED = {
@@ -154,6 +161,8 @@ class CursorEmitter(EmitterBase):
                     {"command": 'python3 "${CURSOR_PLUGIN_ROOT}/hooks/before-task-dispatch.py"'}
                 ],
             },
+            "kernelHookSlots": sorted(KERNEL_HOOK_SLOTS),
+            "manifestHookSlots": sorted(MANIFEST_HOOK_SLOTS),
         }
         (hooks_dir / "hooks.json").write_text(
             json.dumps(hooks_json, indent=2) + "\n",

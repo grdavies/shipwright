@@ -21,5 +21,13 @@
         "command": "python3 \"${CURSOR_PLUGIN_ROOT}/hooks/before-task-dispatch.py\""
       }
     ]
-  }
+  },
+  "kernelHookSlots": [
+    "beforeSubmitPrompt",
+    "stop"
+  ],
+  "manifestHookSlots": [
+    "preToolUse",
+    "sessionStart"
+  ]
 }
