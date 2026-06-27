@@ -23,6 +23,47 @@ config change, never a command edit.
 3. If the provider is unreachable, degrade: continue using `agentsFile` + repo docs, and tell the user
    memory is offline. Never block the workflow on a memory outage.
 
+## Pre-work search (mandatory)
+
+Every **work-performing** command MUST run a scoped `memory-preflight` **search** (read mode) before its
+first substantive mutation. The enumerated surfaces are: `/sw-execute`, `/sw-debug` (`rca-core` entry),
+`/sw-prd`, `/sw-brainstorm`, `/sw-amend`, `/sw-review`, `/sw-stabilize`. Route through this skill +
+`providers/<memory.provider>.md` only — never call a provider tool directly (`sw-guardrails`).
+
+### Scoped read recipe
+
+Follow `CAPABILITIES.md` **Read recipe**, scoped to the surface being touched:
+
+1. **Recency OFF** (`recentOnly: false`) — durable facts are not recent-only.
+2. Run **scoped searches**, not one broad query:
+   - **file-path** search on the paths the command will touch,
+   - **semantic** search on the change type / PRD / feature / surface,
+   - **category** narrowing when the adapter supports `categoryFilter`.
+3. Search these classes: `rule`, `decision`, `learning`, `code-context`, `design`.
+4. `expand` only the handful of ids that look relevant before mutation.
+
+Per-command scope hints remain in the table under **Read mode (preflight)** below; the obligation and
+recipe above apply to every enumerated work-performing surface.
+
+### Surface and reconcile
+
+Hits MUST be **surfaced to the acting agent before mutation** and **reconciled** against found
+rules/decisions:
+
+- An **applicable `rule`** or a **contradicting prior `decision`** is a reconcile obligation — record
+  alignment or an explicit conflict + how it is resolved; never silently ignore.
+- A direct conflict with a **frozen** decision/rule that cannot be reconciled is a **blocker** — halt per
+  the invoking command's halt contract (do not proceed with mutation).
+- Memory remains an input, not an authority — except `decision`-class SoT per **Source of truth
+  resolution** when memory-SoT is active.
+
+### Recording (Phase 2+)
+
+The mechanical search-record breadcrumb (`memory:none`, `memory:offline`, or scoped hit summary) is written
+by `bash scripts/wave.sh memory preflight` (shared recorder) and enforced at the first file-mutating tool
+call via the PRD 017 `preToolUse` deny path. Until that recorder is wired, the procedural obligation and
+reconcile contract above still apply at command entry.
+
 ## Read mode (preflight)
 
 Run before doing the command's real work. Follow the read recipe in `CAPABILITIES.md`:

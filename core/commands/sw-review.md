@@ -25,20 +25,24 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
 
 ## Phase 1 — local review (`review.local`)
 
-1. Resolve `review.local` via `scripts/review-local-resolve.sh` (schema defaults: `enabled: true`,
+1. **Pre-work search (mandatory)** — before the first substantive mutation, run `memory-preflight` **pre-work
+   search** per `skills/memory/SKILL.md` **Pre-work search (mandatory)** (scoped to changed paths; classes
+   `rule`, `decision`, `learning`, `code-context`, `design` plus known false-positives via
+   `providers/<memory.provider>.md` — no direct provider call). Surface hits and reconcile applicable
+   rules/contradicting decisions before review commentary.
+2. Resolve `review.local` via `scripts/review-local-resolve.sh` (schema defaults: `enabled: true`,
    `provider: "native"`, `apply: "auto"`).
    - `review.local.enabled: false` or `review.local.provider: "none"` → skip to phase 2 with message.
    - `--fast` / `--skip-local` → skip phase 1 for this run (announced).
-2. Read `providers/code-review/<provider>.md` (`native` default).
-3. **Soft dependency check** (`ce-code-review` only): if `ce-code-review` skill is unavailable → report
+3. Read `providers/code-review/<provider>.md` (`native` default).
+4. **Soft dependency check** (`ce-code-review` only): if `ce-code-review` skill is unavailable → report
    `Local review skipped — ce-code-review skill not available.` and skip to phase 2 (fail-closed; **never**
    treat as clean pass). The `native` adapter has no soft dependency.
-4. `memory-preflight` read for known false-positives and file learnings.
 5. **Invariants (optional):** when `invariantsFile` is set, resolve relative to the review ref (PR head /
    worktree base). Surface to local review agents as non-negotiable constraints. Missing/unreadable blocks this
    review unless `invariantsOptional: true` or `--no-invariants` (logged).
 6. Compute `base` = per-worktree `parentBranch` from phase state.
-6. **Native panel — selection + activation record (R10):** when `review.local.provider` resolves to `native`,
+7. **Native panel — selection + activation record (R10):** when `review.local.provider` resolves to `native`,
    build diff JSON for the uncommitted delta and run:
 
    ```bash

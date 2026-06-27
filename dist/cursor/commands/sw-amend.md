@@ -17,19 +17,24 @@ Post-freeze correction path. Parent stays byte-stable.
 
 ## Procedure
 
-1. Read frozen parent; extract highest R-ID or D-ID and existing amendments.
-2. Assign next amendment number `A<k>` in the parent's amendment directory.
-3. Draft delta-only body with IDs continuing parent namespace (R-IDs for PRDs, D-IDs for decisions).
-4. Optional frontmatter directives:
+1. **Pre-work search (mandatory)** — before the first substantive mutation, run `memory-preflight` **pre-work
+   search** per `skills/memory/SKILL.md` **Pre-work search (mandatory)** (scoped to the parent PRD/decision
+   domain and amendment paths; classes `rule`, `decision`, `learning`, `code-context`, `design` via
+   `providers/<memory.provider>.md` — no direct provider call). Surface hits and reconcile applicable
+   rules/contradicting decisions — especially against the frozen parent — before drafting.
+2. Read frozen parent; extract highest R-ID or D-ID and existing amendments.
+3. Assign next amendment number `A<k>` in the parent's amendment directory.
+4. Draft delta-only body with IDs continuing parent namespace (R-IDs for PRDs, D-IDs for decisions).
+5. Optional frontmatter directives:
    - `supersedes: [R<n>|D<n>, ...]` — inline replacement (PRD) or record-level drop (decision).
    - `retracts: [R<n>|D<n>, ...]` — parent requirement dropped (record rationale in body).
    - `replacement: <path>` — **decision record-level supersede only**: forward pointer to frozen
      replacement record (target must have `frozen: true`; blocks at author time if missing or unfrozen).
-5. Run `/sw-doc-review` — floor per doc type (PRD amendment: coherence + scope-guardian; decision amendment:
+6. Run `/sw-doc-review` — floor per doc type (PRD amendment: coherence + scope-guardian; decision amendment:
    raised floor per `skills/doc-review/SKILL.md`).
-6. Freeze amendment via `/sw-freeze`.
-7. Update `docs/prds/INDEX.md` or `docs/decisions/INDEX.md` amendment links.
-8. On decision record-level supersede: `bash scripts/reconcile-status.sh append-superseded --path <parent-record> --replacement <replacement-record>`.
+7. Freeze amendment via `/sw-freeze`.
+8. Update `docs/prds/INDEX.md` or `docs/decisions/INDEX.md` amendment links.
+9. On decision record-level supersede: `bash scripts/reconcile-status.sh append-superseded --path <parent-record> --replacement <replacement-record>`.
 
 **Communication intensity:** lite
 

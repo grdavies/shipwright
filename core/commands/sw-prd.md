@@ -20,8 +20,13 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
 ## Procedure
 
 1. Read `workflow.config.json` (`prdsDir`, `decisionsDir`); load `skills/prd/SKILL.md`.
-2. Resolve `--type` (default `prd`) and section contract from the skill.
-3. **PRD (`--type prd`, default):**
+2. **Pre-work search (mandatory)** — before the first substantive mutation, run `memory-preflight` **pre-work
+   search** per `skills/memory/SKILL.md` **Pre-work search (mandatory)** (scoped to the feature domain and
+   deliverable paths; classes `rule`, `decision`, `learning`, `code-context`, `design` via
+   `providers/<memory.provider>.md` — no direct provider call). Surface hits and reconcile applicable
+   rules/contradicting decisions before drafting.
+3. Resolve `--type` (default `prd`) and section contract from the skill.
+4. **PRD (`--type prd`, default):**
    - Resolve tier:
      - **Full:** require brainstorm doc; refuse if missing (ordering guard).
      - **Standard:** accept triaged request directly.
@@ -34,13 +39,12 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
      brainstorm `prd:` field (list when multiple) via
      `python3 scripts/doc_link.py write-forwardref --brainstorm <path> --prd <path>`; skip when frozen.
    - Save to `docs/prds/<n>-<slug>/<n>-prd-<slug>.md`.
-4. **Decision record (`--type decision`):**
+5. **Decision record (`--type decision`):**
    - Brainstorm optional — decisions are authored up-front; **do not** apply the "no doc without brainstorm" guard.
    - Assign decision number per collision policy (scan `docs/decisions/` — separate counter from `docs/prds/`).
    - Draft all required decision sections with stable D-IDs.
    - Refuse to overwrite an existing frozen decision record without explicit user confirmation.
    - Save to `docs/decisions/<n>-<slug>.md`.
-5. `memory-preflight` read for prior decisions in the feature domain.
 6. Ask clarifying questions if scope ambiguous; proceed when input provides enough context.
 7. Self-audit for consistency, edge cases, gaps.
 8. Report path; next step `/sw-doc-review`.
