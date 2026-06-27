@@ -48,15 +48,15 @@ driver budgets, benefit metric, plan surfacing) fan out from it; docs/dist close
 
 ### 3. Driver-enforced budgets + clean-halt integrity — M
 
-- [ ] 3.1 Persist + enforce budget counters in the deliver loop (R22, TR3)
+- [x] 3.1 Persist + enforce budget counters in the deliver loop (R22, TR3)
   - **File:** `scripts/wave_deliver_loop.py`
   - **Expected:** persist `runStartedAt`, `driverIterationCount`, `noProgressStreak`; read `deliver.autonomy.maxRunMinutes` / `maxIterations`, per-phase remediation, and the no-progress breaker; budgets are **driver-enforced** (durable counters, not agent prose) so adaptivity cannot extend a run past the ceilings; proposal/validation overhead accounted separately from execution (`budget-proposed-overhead-accounted`).
   - **R-IDs:** R22
-- [ ] 3.2 Clean consolidated halt with merge-queue + lock integrity (R22)
+- [x] 3.2 Clean consolidated halt with merge-queue + lock integrity (R22)
   - **File:** `scripts/wave_deliver_loop.py`, merge-queue/lock release path
   - **Expected:** a runaway/looping run converts to a **clean consolidated halt** that preserves merge-queue journal replayability and releases the orchestrator `O_EXCL` lock (no half-merged state); `budget-halt-merge-queue-integrity`.
   - **R-IDs:** R22
-- [ ] 3.3 Subscribe persistent plan rejection into the no-progress surface (R22)
+- [x] 3.3 Subscribe persistent plan rejection into the no-progress surface (R22)
   - **File:** `scripts/wave_deliver_loop.py` (consumes 022 `planRejectionLog`)
   - **Expected:** persistent plan rejection (022 R6 `planRejectionLog`) feeds the same no-progress signal; 023 **subscribes** to the schema, does not re-author it.
   - **R-IDs:** R22
