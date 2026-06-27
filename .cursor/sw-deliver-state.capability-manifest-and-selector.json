@@ -1,0 +1,303 @@
+{
+  "source_task_list": "docs/prds/021-capability-manifest-and-selector/tasks-021-capability-manifest-and-selector.md",
+  "currentWave": 7,
+  "nextAction": "suggest-cleanup",
+  "remediationAttempts": {},
+  "phaseWorktrees": {},
+  "driverHeartbeatAt": "2026-06-27T04:59:17Z",
+  "verdict": "complete",
+  "target": {
+    "type": "feat",
+    "slug": "capability-manifest-and-selector",
+    "branch": "feat/capability-manifest-and-selector"
+  },
+  "prd_number": "021",
+  "phases": {
+    "1": {
+      "id": "1",
+      "slug": "manifest-frontmatter-schema-contract-m",
+      "title": "Manifest frontmatter schema + contract \u2014 M",
+      "branch": "feat/capability-manifest-and-selector-phase-manifest-frontmatter-schema-contract-m",
+      "status": "green-merged",
+      "updatedAt": "2026-06-27T02:34:44Z",
+      "startedAt": "2026-06-27T00:41:40Z",
+      "backgroundDispatchedAt": "2026-06-27T00:41:40Z",
+      "mergeCommit": "e6720654efe9a233e3b21c6043fe1f9731e85e16",
+      "reconciledFrom": "origin/feat/capability-manifest-and-selector"
+    },
+    "2": {
+      "id": "2",
+      "slug": "generated-capability-index-freshness-gates-m",
+      "title": "Generated capability index + freshness gates \u2014 M",
+      "branch": "feat/capability-manifest-and-selector-phase-generated-capability-index-freshness-gates-m",
+      "status": "green-merged",
+      "updatedAt": "2026-06-27T02:34:44Z",
+      "startedAt": "2026-06-27T00:53:56Z",
+      "backgroundDispatchedAt": "2026-06-27T00:53:56Z",
+      "mergeCommit": "a499a6444bfcdb9b77847fc9a6e724c6d2eb99f3",
+      "reconciledFrom": "origin/feat/capability-manifest-and-selector"
+    },
+    "3": {
+      "id": "3",
+      "slug": "precedence-policy-author-time-lint-m",
+      "title": "Precedence policy + author-time lint \u2014 M",
+      "branch": "feat/capability-manifest-and-selector-phase-precedence-policy-author-time-lint-m",
+      "status": "green-merged",
+      "updatedAt": "2026-06-27T02:34:44Z",
+      "startedAt": "2026-06-27T01:13:38Z",
+      "backgroundDispatchedAt": "2026-06-27T01:13:38Z",
+      "mergeCommit": "74a55cde5ba617f7cb30adbdb357de2441dce0d9",
+      "reconciledFrom": "origin/feat/capability-manifest-and-selector"
+    },
+    "4": {
+      "id": "4",
+      "slug": "deterministic-selector-signal-context-l",
+      "title": "Deterministic selector + `signal_context` \u2014 L",
+      "branch": "feat/capability-manifest-and-selector-phase-deterministic-selector-signal-context-l",
+      "status": "green-merged",
+      "updatedAt": "2026-06-27T02:34:44Z",
+      "startedAt": "2026-06-27T01:25:45Z",
+      "backgroundDispatchedAt": "2026-06-27T01:25:45Z",
+      "mergeCommit": "cbe18d58e8a45157f1f4b1f2402cc9f214743b5e",
+      "reconciledFrom": "origin/feat/capability-manifest-and-selector"
+    },
+    "5": {
+      "id": "5",
+      "slug": "trust-boundary-execution-chokepoint-kernel-hook-pinning-m",
+      "title": "Trust boundary + execution chokepoint + kernel-hook pinning \u2014 M",
+      "branch": "feat/capability-manifest-and-selector-phase-trust-boundary-execution-chokepoint-kernel-hook-pinning-m",
+      "status": "green-merged",
+      "updatedAt": "2026-06-27T02:34:44Z",
+      "startedAt": "2026-06-27T01:49:52Z",
+      "backgroundDispatchedAt": "2026-06-27T01:49:52Z",
+      "mergeCommit": "dd8a578185e80e435875f762641031c90e6e70f3",
+      "reconciledFrom": "origin/feat/capability-manifest-and-selector"
+    },
+    "6": {
+      "id": "6",
+      "slug": "migration-with-parity-shadow-cutover-call-site-map-l",
+      "title": "Migration with parity + shadow cutover + call-site map \u2014 L",
+      "branch": "feat/capability-manifest-and-selector-phase-migration-with-parity-shadow-cutover-call-site-map-l",
+      "status": "green-merged",
+      "updatedAt": "2026-06-27T02:34:44Z",
+      "startedAt": "2026-06-27T02:02:40Z",
+      "backgroundDispatchedAt": "2026-06-27T02:02:40Z",
+      "mergeCommit": "412e81db4e07bb7cfb6f96599105d5eed291f8f7",
+      "reconciledFrom": "origin/feat/capability-manifest-and-selector"
+    },
+    "7": {
+      "id": "7",
+      "slug": "run-log-surfacing-s",
+      "title": "Run-log surfacing \u2014 S",
+      "branch": "feat/capability-manifest-and-selector-phase-run-log-surfacing-s",
+      "status": "green-merged",
+      "updatedAt": "2026-06-27T02:34:44Z",
+      "startedAt": "2026-06-27T01:49:52Z",
+      "backgroundDispatchedAt": "2026-06-27T01:49:52Z",
+      "mergeCommit": "4235f06dd3f2815f5d69ced180c932c0835e0a58",
+      "reconciledFrom": "origin/feat/capability-manifest-and-selector"
+    },
+    "8": {
+      "id": "8",
+      "slug": "documentation-emitter-propagation-freshness-m",
+      "title": "Documentation + emitter propagation + freshness \u2014 M",
+      "branch": "feat/capability-manifest-and-selector-phase-documentation-emitter-propagation-freshness-m",
+      "status": "green-merged",
+      "updatedAt": "2026-06-27T02:34:44Z",
+      "startedAt": "2026-06-27T02:22:18Z",
+      "backgroundDispatchedAt": "2026-06-27T02:22:18Z",
+      "mergeCommit": "6dd263bd35417feb07044ccc8ca0f46b50745e2f",
+      "reconciledFrom": "origin/feat/capability-manifest-and-selector"
+    }
+  },
+  "mergeJournal": null,
+  "completedMerges": [
+    {
+      "key": "manifest-frontmatter-schema-contract-m",
+      "phase": "manifest-frontmatter-schema-contract-m",
+      "head": null,
+      "completedAt": "2026-06-27T00:51:55Z",
+      "mergeCommit": "e6720654efe9a233e3b21c6043fe1f9731e85e16"
+    },
+    {
+      "key": "generated-capability-index-freshness-gates-m",
+      "phase": "generated-capability-index-freshness-gates-m",
+      "head": null,
+      "completedAt": "2026-06-27T01:11:43Z",
+      "mergeCommit": "a499a6444bfcdb9b77847fc9a6e724c6d2eb99f3"
+    },
+    {
+      "key": "precedence-policy-author-time-lint-m",
+      "phase": "precedence-policy-author-time-lint-m",
+      "head": null,
+      "completedAt": "2026-06-27T01:23:39Z",
+      "mergeCommit": "74a55cde5ba617f7cb30adbdb357de2441dce0d9"
+    },
+    {
+      "key": "deterministic-selector-signal-context-l",
+      "phase": "deterministic-selector-signal-context-l",
+      "head": null,
+      "completedAt": "2026-06-27T01:47:29Z",
+      "mergeCommit": "cbe18d58e8a45157f1f4b1f2402cc9f214743b5e"
+    },
+    {
+      "key": "run-log-surfacing-s",
+      "phase": "run-log-surfacing-s",
+      "head": null,
+      "completedAt": "2026-06-27T01:57:20Z",
+      "mergeCommit": "4235f06dd3f2815f5d69ced180c932c0835e0a58"
+    },
+    {
+      "key": "trust-boundary-execution-chokepoint-kernel-hook-pinning-m",
+      "phase": "trust-boundary-execution-chokepoint-kernel-hook-pinning-m",
+      "head": null,
+      "completedAt": "2026-06-27T02:01:00Z",
+      "mergeCommit": "dd8a578185e80e435875f762641031c90e6e70f3"
+    },
+    {
+      "key": "migration-with-parity-shadow-cutover-call-site-map-l",
+      "phase": "migration-with-parity-shadow-cutover-call-site-map-l",
+      "head": null,
+      "completedAt": "2026-06-27T02:20:28Z",
+      "mergeCommit": "412e81db4e07bb7cfb6f96599105d5eed291f8f7"
+    },
+    {
+      "key": "documentation-emitter-propagation-freshness-m",
+      "phase": "documentation-emitter-propagation-freshness-m",
+      "head": null,
+      "completedAt": "2026-06-27T02:31:47Z",
+      "mergeCommit": "6dd263bd35417feb07044ccc8ca0f46b50745e2f"
+    }
+  ],
+  "updatedAt": "2026-06-27T04:59:17Z",
+  "specSeed": {
+    "branch": "feat/capability-manifest-and-selector",
+    "commit": null,
+    "skipped": true,
+    "at": "2026-06-27T00:41:39Z"
+  },
+  "orchestratorWorktree": {
+    "name": "capability-manifest-and-selector-orchestrator",
+    "path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/capability-manifest-and-selector-orchestrator",
+    "branch": "feat/capability-manifest-and-selector",
+    "countsTowardCeiling": false,
+    "detachedHead": false,
+    "head": "6aa5e5b48e99e9da6e3e970a1b46749e7227b0ff"
+  },
+  "mergeQueue": [],
+  "mergedPhases": [
+    {
+      "phaseSlug": "manifest-frontmatter-schema-contract-m",
+      "phaseId": "1",
+      "pr": 123,
+      "mergeCommit": "e6720654efe9a233e3b21c6043fe1f9731e85e16",
+      "mergedAt": "2026-06-27T00:51:55Z",
+      "commitType": "feat",
+      "bookkeepingVersion": "1.7.0",
+      "bookkeepingCommit": "7f27a8f0741c9eea341bf6972e1bee62905e0686"
+    },
+    {
+      "phaseSlug": "generated-capability-index-freshness-gates-m",
+      "phaseId": "2",
+      "pr": 124,
+      "mergeCommit": "a499a6444bfcdb9b77847fc9a6e724c6d2eb99f3",
+      "mergedAt": "2026-06-27T01:11:43Z",
+      "commitType": "feat",
+      "bookkeepingVersion": "1.7.0",
+      "bookkeepingCommit": "83563af085fb5a211670e3833c9883c957fba930"
+    },
+    {
+      "phaseSlug": "precedence-policy-author-time-lint-m",
+      "phaseId": "3",
+      "pr": 125,
+      "mergeCommit": "74a55cde5ba617f7cb30adbdb357de2441dce0d9",
+      "mergedAt": "2026-06-27T01:23:39Z",
+      "commitType": "feat",
+      "bookkeepingVersion": "1.7.0",
+      "bookkeepingCommit": "53c37fd530adaba9b6e844be3fbd5540dd43fbce"
+    },
+    {
+      "phaseSlug": "deterministic-selector-signal-context-l",
+      "phaseId": "4",
+      "pr": 126,
+      "mergeCommit": "cbe18d58e8a45157f1f4b1f2402cc9f214743b5e",
+      "mergedAt": "2026-06-27T01:47:29Z",
+      "commitType": "feat",
+      "bookkeepingVersion": "1.7.0",
+      "bookkeepingCommit": "06f8a52f77987af48a60ea86c5b7579210266899"
+    },
+    {
+      "phaseSlug": "run-log-surfacing-s",
+      "phaseId": "7",
+      "pr": 127,
+      "mergeCommit": "4235f06dd3f2815f5d69ced180c932c0835e0a58",
+      "mergedAt": "2026-06-27T01:57:20Z",
+      "commitType": "feat",
+      "bookkeepingVersion": "1.7.0",
+      "bookkeepingCommit": "db33ef668b4845782680de53aeefd27d3c89f352"
+    },
+    {
+      "phaseSlug": "trust-boundary-execution-chokepoint-kernel-hook-pinning-m",
+      "phaseId": "5",
+      "pr": 128,
+      "mergeCommit": "dd8a578185e80e435875f762641031c90e6e70f3",
+      "mergedAt": "2026-06-27T02:01:00Z",
+      "commitType": "feat",
+      "bookkeepingVersion": "1.7.0",
+      "bookkeepingCommit": "1cd72ffd49e6b16a12c6a65579cb8248ce8428a1"
+    },
+    {
+      "phaseSlug": "migration-with-parity-shadow-cutover-call-site-map-l",
+      "phaseId": "6",
+      "pr": 129,
+      "mergeCommit": "412e81db4e07bb7cfb6f96599105d5eed291f8f7",
+      "mergedAt": "2026-06-27T02:20:28Z",
+      "commitType": "feat",
+      "bookkeepingVersion": "1.7.0",
+      "bookkeepingCommit": "02a612baa664a05943ba54b884bb1e38314e1c1c"
+    },
+    {
+      "phaseSlug": "documentation-emitter-propagation-freshness-m",
+      "phaseId": "8",
+      "pr": 130,
+      "mergeCommit": "6dd263bd35417feb07044ccc8ca0f46b50745e2f",
+      "mergedAt": "2026-06-27T02:31:47Z",
+      "commitType": "feat",
+      "bookkeepingVersion": "1.7.0",
+      "bookkeepingCommit": "e2691407b07de0f955db01d3ed2516e0c20b1175"
+    }
+  ],
+  "projectedVersion": "1.7.0",
+  "mergesSinceAck": 8,
+  "batchPhaseIds": [
+    "5",
+    "7"
+  ],
+  "remoteTargetTip": "e2691407b07de0f955db01d3ed2516e0c20b1175",
+  "reconciledAt": "2026-06-27T02:34:44Z",
+  "compoundShip": {
+    "premergeDone": true,
+    "mode": "pre-merge",
+    "at": "2026-06-27T02:36:15Z",
+    "prd": "021",
+    "phase": "deliver-terminal",
+    "ruleClassPromotion": "human-gated"
+  },
+  "completion": {
+    "status": "merged-complete",
+    "at": "2026-06-27T02:36:15Z",
+    "prd": "021",
+    "phase": "deliver-terminal",
+    "notes": "pre-merge compounding complete",
+    "mergedAt": "2026-06-27T04:59:17Z",
+    "mergeDetail": "terminal-pr-gh"
+  },
+  "terminalPr": {
+    "number": 131,
+    "url": "https://github.com/grdavies/shipwright/pull/131",
+    "head": "50bd037fea1840540568dd240640074d36faadb3",
+    "base": "main",
+    "headBranch": "feat/capability-manifest-and-selector",
+    "preparedAt": "2026-06-27T02:39:29Z"
+  }
+}
