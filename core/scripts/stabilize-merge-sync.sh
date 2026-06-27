@@ -6,7 +6,7 @@
 #   stabilize-merge-sync.sh conflict-files [--base REF]
 #   stabilize-merge-sync.sh fetch-base [--base REF]
 #
-# Exit: 0 mergeable/clean; 1 conflicting; 2 usage; 30 gh/metadata unavailable
+# Exit: 0 mergeable/clean; 1 conflicting; 2 usage; 30 host/metadata unavailable
 set -euo pipefail
 
 SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -33,6 +33,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+host_remote() {
+  python3 "$ROOT/scripts/host_lib.py" --root "$ROOT" remote-name
+}
+
 default_base() {
   local cfg=""
   for p in "$ROOT/.cursor/workflow.config.json" "$ROOT/workflow.config.json"; do
@@ -52,25 +56,34 @@ resolve_base_ref() {
   fi
   local base
   base="$(default_base)"
-  if git show-ref --verify --quiet "refs/remotes/origin/$base"; then
-    printf 'origin/%s\n' "$base"
+  if git show-ref --verify --quiet "refs/remotes/$(host_remote)/$base"; then
+    printf '%s/%s\n' "$(host_remote)" "$base"
   else
     printf '%s\n' "$base"
   fi
 }
 
+host_verb() {
+  bash "$ROOT/scripts/host.sh" --root "$ROOT" "$@"
+}
+
 pr_json() {
+  local out
   if [[ -n "$PR" ]]; then
-    gh pr view "$PR" --json number,url,headRefName,headRefOid,baseRefName,state,isDraft,mergeable,mergeStateStatus 2>/dev/null
+    out="$(host_verb pr-view --number "$PR" 2>/dev/null || true)"
   else
-    gh pr view --json number,url,headRefName,headRefOid,baseRefName,state,isDraft,mergeable,mergeStateStatus 2>/dev/null
+    resolve="$(host_verb resolve-pr-for-branch 2>/dev/null || true)"
+    num="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); items=d.get('data') or []; print(items[0].get('number','') if items else '')" "$resolve" 2>/dev/null || true)"
+    [[ -n "$num" ]] || return 1
+    out="$(host_verb pr-view --number "$num" 2>/dev/null || true)"
   fi
+  python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print(json.dumps(d.get('data'))) if d.get('verdict')=='ok' else sys.exit(1)" "$out" 2>/dev/null
 }
 
 cmd_fetch_base() {
   local ref
   ref="$(resolve_base_ref)"
-  git fetch origin "${ref#origin/}" 2>/dev/null || git fetch origin "$ref" 2>/dev/null || true
+  local hr; hr="$(host_remote)"; git fetch "$hr" "${ref#${hr}/}" 2>/dev/null || git fetch "$hr" "$ref" 2>/dev/null || true
 }
 
 list_conflict_files() {
@@ -100,7 +113,7 @@ PY
 cmd_status() {
   local pj mergeable merge_state base_ref files_json
   if ! pj="$(pr_json)"; then
-    echo '{"verdict":"fail","reason":"no open PR or gh unavailable"}'
+    echo '{"verdict":"fail","reason":"no open PR or host unavailable"}'
     exit 30
   fi
   mergeable="$(jq -r '.mergeable // "UNKNOWN"' <<<"$pj")"

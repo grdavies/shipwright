@@ -1,0 +1,9 @@
+{
+  "verdict": "ok",
+  "verb": "review-threads",
+  "provider": "github",
+  "data": {
+    "unresolved": 1,
+    "actionable": 1
+  }
+}

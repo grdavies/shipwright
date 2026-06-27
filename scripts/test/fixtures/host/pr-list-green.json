@@ -1,0 +1,15 @@
+{
+  "verdict": "ok",
+  "verb": "pr-list",
+  "provider": "github",
+  "data": [
+    {
+      "number": 42,
+      "url": "https://github.com/owner/repo/pull/42",
+      "headRefOid": "abc123def4567890abcdef1234567890abcdef12",
+      "headRefName": "feat/x",
+      "baseRefName": "main",
+      "state": "OPEN"
+    }
+  ]
+}

@@ -66,7 +66,7 @@ Branches are classified via, in order:
 - `merge-base --is-ancestor` (regular merge / ff)
 - empty `default..branch` log
 - `git cherry` minus-only lines (squash-aware)
-- `gh pr list --state merged` when `gh` is available
+- `bash scripts/host.sh pr-list --state closed` when host token is available
 - otherwise **indeterminate** → protected (no delete)
 
 **Communication intensity:** ultra

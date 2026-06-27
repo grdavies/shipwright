@@ -26,7 +26,7 @@ Read `.cursor/workflow.config.json`:
 ## Preconditions
 
 ```bash
-PR_JSON=$(gh pr view --json number,url,headRefName,headRefOid,baseRefName,state,isDraft)
+PR_JSON=$(bash scripts/host.sh pr-view --number "$PR_NUMBER")
 PR_NUMBER=$(jq -r .number <<<"$PR_JSON")
 HEAD_SHA=$(jq -r .headRefOid <<<"$PR_JSON")
 ```
@@ -62,7 +62,7 @@ When `verdict` is `mergeable`, continue to harvest.
 
 Build the blocker surface for **this** `HEAD_SHA` before changing code (after any merge-base sync).
 
-1. Fetch **all** review-thread pages to `/tmp/sw-stabilize-threads.json` via `gh api graphql`
+1. Fetch review-thread summary via `bash scripts/host.sh review-threads --number "$PR_NUMBER"`
    (paginate `reviewThreads` with `after` until `hasNextPage` is false). Write each GraphQL response to
    a temp **file** before `jq` — multiline thread bodies break naive stdin pipelines.
 2. **Harvest non-inline review findings** (the surface that has no thread to reply/resolve). CodeRabbit
@@ -71,16 +71,15 @@ Build the blocker surface for **this** `HEAD_SHA` before changing code (after an
    `reviewThreads`, so fetch the bodies too:
 
    ```bash
-   OWNER_REPO=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
-   gh api "repos/$OWNER_REPO/pulls/$PR_NUMBER/reviews" --paginate > /tmp/sw-stabilize-reviews.json
-   gh api "repos/$OWNER_REPO/issues/$PR_NUMBER/comments" --paginate > /tmp/sw-stabilize-issue-comments.json
+   OWNER_REPO=$(bash scripts/host.sh repo-meta | jq -r '.data.nameWithOwner')
+   # optional supplemental review/issue comment harvest via host REST when needed
    ```
 
    From the bot-authored bodies, extract every finding under sections such as **"Outside diff range
    comments"**, **"Additional comments"**, and **"Nitpick comments"** into `/tmp/sw-stabilize-noninline.md`,
    keyed by `path:line` + the suggested change. Treat each as a first-class blocker — identical priority
    to an inline thread — the **only** difference is there is no reply/resolve handle (see the ledger).
-3. Compute the check gate with **`scripts/check-gate.sh`** (canonical — do not hand-roll `gh` verdicts).
+3. Compute the check gate with **`scripts/check-gate.sh`** (canonical — do not hand-roll host verdicts).
    Tee stdout to `/tmp/sw-stabilize-gate.json` for the RCA pass. Consume its JSON + exit code via the
    **`checks-gate`** skill (all checks, neutral allowlist applied). Pull failure logs for failing checks.
 
@@ -143,7 +142,7 @@ or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve
    stay unresolved.
 5. Implement `fix-now` items for this pass only. Do not expand scope to "finish the bot."
 6. When deferrals are allowed and an item is `defer-issue`: search existing issues
-   (`gh issue list --search`), then create one with a `## Relationships` section (`Blocked by:` /
+   (host issue search when available), then create one with a `## Relationships` section (`Blocked by:` /
    `Blocks:` / `Related:`, using `none` where empty) and mirror the dependency on referenced issues.
    Add the issue number to the ledger before replying to those threads.
 7. **Threads (strict):** reply before resolve, with specific evidence (commit SHA, file paths, behavior).
@@ -151,7 +150,7 @@ or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve
    then `resolveReviewThread(input: { threadId })`. Resolve **only** verified `resolve-with-evidence`,
    `already-fixed-with-evidence`, or (when allowed) `defer-inline`/`defer-issue` items. Never mass-resolve.
    For multi-line reply bodies, pass the body via a file — inline shell heredocs with backticks break
-   `gh api graphql`.
+   `bash scripts/host.sh review-threads`.
 8. **Non-inline findings:** apply the `fix-now` code changes the same as for threads. There is no
    reply/resolve API, so do **not** attempt one — instead record each finding's disposition in the pass
    summary (and `memory-preflight` write where durable). Their "resolution" is the verified code change
@@ -182,7 +181,7 @@ or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve
 - Never resolve a thread you did not verify against current code (or tie to a concrete rationale/issue).
 - Never mass-resolve to "clear the queue" or hit a thread-count target.
 - Use thread-level reply APIs only (not `/pulls/comments/{id}/replies`, `addPullRequestReviewComment`,
-  or top-level `gh pr comment`). Resolve only after the reply succeeds.
+  or top-level PR comment via host REST). Resolve only after the reply succeeds.
 - Do not rerun workflows, merge, or dismiss failures automatically.
 - Do not push without re-running verification on the fixes made this pass.
 - Expect multiple passes to drain a large bot thread list — that is normal.

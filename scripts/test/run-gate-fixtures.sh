@@ -3,10 +3,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-STUB="$ROOT/scripts/test/gh-stub.sh"
+# Host fixture mode (Phase 2 — no gh on PATH)
 GATE="$ROOT/scripts/check-gate.sh"
 CONFIG_BACKUP=""
 CONFIG_PATH="$ROOT/.cursor/workflow.config.json"
+export GITHUB_TOKEN=gh_fixture_token_for_tests
+export SW_HOST_FIXTURE="${SW_HOST_FIXTURE:-green}"
 
 restore_config() {
   if [ -n "$CONFIG_BACKUP" ] && [ -f "$CONFIG_BACKUP" ]; then
@@ -20,9 +22,10 @@ restore_config() {
 run_case() {
   local name="$1" fixture="$2" expect_ec="$3" expect_verdict="$4"
   export SW_GATE_FIXTURE="$fixture"
+  export SW_HOST_FIXTURE="$fixture"
   export SW_GATE_NOW=1577838000
   set +e
-  OUT=$(PATH="$(dirname "$STUB"):$PATH" bash "$GATE" 42 2>/dev/null)
+  OUT=$(bash "$GATE" 42 2>/dev/null)
   EC=$?
   set -e
   VERDICT=$(echo "$OUT" | jq -r .verdict 2>/dev/null || echo "parse-error")
@@ -35,13 +38,9 @@ run_case() {
   fi
 }
 
-mkdir -p "$ROOT/scripts/test/bin"
-cat > "$ROOT/scripts/test/bin/gh" <<'WRAP'
-#!/usr/bin/env bash
-exec "$(dirname "$0")/../gh-stub.sh" "$@"
-WRAP
-chmod +x "$ROOT/scripts/test/bin/gh"
-export PATH="$ROOT/scripts/test/bin:$PATH"
+export GITHUB_TOKEN=gh_fixture_token_for_tests
+export SW_HOST_FIXTURE="${SW_HOST_FIXTURE:-green}"
+export PATH="$(echo "$PATH" | tr ':' '\n' | grep -v '/scripts/test/bin' | paste -sd: -)"
 
 FAIL=0
 run_case green green 0 green || FAIL=1
@@ -71,6 +70,7 @@ cat > "$CONFIG_PATH" <<'CFG'
 }
 CFG
 export SW_GATE_FIXTURE=green
+export SW_HOST_FIXTURE=green
 export SW_GATE_NOW=1577838000
 OUT=$(bash "$GATE" 42 2>/dev/null) || EC=$?
 EC=${EC:-$?}
@@ -91,6 +91,7 @@ cat > "$CONFIG_PATH" <<'CFG'
 }
 CFG
 export SW_GATE_FIXTURE=unconfigured
+export SW_HOST_FIXTURE=unconfigured
 export SW_GATE_NOW=1577838000
 unset EC
 OUT=$(bash "$GATE" 42 2>/dev/null) || EC=$?
@@ -112,6 +113,7 @@ cat > "$CONFIG_PATH" <<'CFG'
 }
 CFG
 export SW_GATE_FIXTURE=green
+export SW_HOST_FIXTURE=green
 export SW_GATE_NOW=1577838000
 unset EC
 OUT=$(bash "$GATE" 42 2>/dev/null) || EC=$?
@@ -137,6 +139,7 @@ cat > "$CONFIG_PATH" <<'CFG'
 }
 CFG
 export SW_GATE_FIXTURE=green
+export SW_HOST_FIXTURE=green
 ERR=$(bash "$GATE" 42 2>&1 >/dev/null) || EC=$?
 EC=${EC:-$?}
 OUT=$(bash "$GATE" 42 2>/dev/null)

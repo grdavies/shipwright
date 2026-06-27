@@ -61,7 +61,7 @@ check_doc() {
 check_doc "$README" "README" "/sw-init" "per project" "base"
 check_doc "$GETTING" "getting-started" "/sw-init" "worktree"
 check_doc "$CONFIG" "configuration" "/sw-init" "ci.prTestPlanManifest" "verifyE2e" "product boundary"
-check_doc "$CONFIG" "configuration" "GitHub" "gh"
+check_doc "$CONFIG" "configuration" "GitHub" "host.tokenEnv"
 [[ "$DOC_FAIL" -eq 0 ]] && ok "portability-docs-presence"
 
 # --- init-docs-and-naming (R30/R33) ---

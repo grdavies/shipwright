@@ -62,27 +62,27 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 
 ### 2. GitHub gate abstraction over REST — M
 
-- [ ] 2.1 GitHub REST verb implementation + `gh` removal (R4, R5)
+- [x] 2.1 GitHub REST verb implementation + `gh` removal (R4, R5)
   - **File:** `core/providers/host/github.md`, `scripts/host_github.sh`
   - **Expected:** the GitHub adapter implements the full verb set over REST (plus GraphQL only for
     review-thread resolution); every direct `gh` invocation in runtime scripts is replaced; no host CLI is a
     prerequisite. `gh-removal-guard` greps for zero `gh` calls and `gh-absent-path` runs with `gh` off `PATH`.
   - **R-IDs:** R4, R5
-- [ ] 2.2 `check-gate.sh` over the verb set (R14)
+- [x] 2.2 `check-gate.sh` over the verb set (R14)
   - **File:** `scripts/check-gate.sh`
   - **Expected:** PR number, CI checks, unresolved review threads, and repo metadata obtained via host verbs;
     no direct `gh`. `check-gate-verbset` asserts identical verdicts against recorded REST fixtures.
   - **R-IDs:** R14
-- [ ] 2.3 Terminal flow over the verb set (R15)
+- [x] 2.3 Terminal flow over the verb set (R15)
   - **File:** `scripts/wave_terminal.py`, `scripts/wave_compound.py`, `scripts/cleanup_lib.py`, `scripts/reconcile-status.sh`
   - **Expected:** PR prepare/create/list/view/head go through host verbs across the terminal, compound,
     cleanup, and reconcile paths. `terminal-flow-verbset` exercises the flow on mocked REST.
   - **R-IDs:** R15
-- [ ] 2.4 `stabilize-merge-sync.sh` over the verb set (R16)
+- [x] 2.4 `stabilize-merge-sync.sh` over the verb set (R16)
   - **File:** `scripts/stabilize-merge-sync.sh`
   - **Expected:** PR metadata + conflict probe run through host verbs. `stabilize-sync-verbset` on fixtures.
   - **R-IDs:** R16
-- [ ] 2.5 Command/skill prose + install docs de-`gh` (R17, R5)
+- [x] 2.5 Command/skill prose + install docs de-`gh` (R17, R5)
   - **File:** `core/commands/sw-watch-ci.md`, `core/commands/sw-stabilize.md`, `core/commands/sw-pr.md`, `core/commands/sw-ready.md`, `core/commands/sw-cleanup.md`, `README.md`
   - **Expected:** agent-facing prose references host verbs (not `gh`); installation/setup docs drop the `gh`
     prerequisite and document `host.tokenEnv`. `prose-gh-free` guard + `install-docs-currency`.

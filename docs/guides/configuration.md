@@ -276,9 +276,10 @@ verify presets) via the plugin bundle — not the full dev `.sw/` tree.
 
 ## GitHub / CI ceiling
 
-The merge-readiness gate (`/sw-watch-ci`, `/sw-stabilize`) observes **GitHub Actions** via `gh`. Repos without
-`gh` or Actions can still use local `/sw-verify`, but cannot pass the CI-readiness gate until GitHub CI is
-available — `/sw-init` portability self-check warns about this honestly.
+The merge-readiness gate (`/sw-watch-ci`, `/sw-stabilize`) observes **GitHub Actions** via the GitHub host
+adapter (`scripts/host.sh` over REST). Set `host.tokenEnv` (default `GITHUB_TOKEN`) — no host CLI is required.
+Repos without a token or Actions can still use local `/sw-verify`, but cannot pass the CI-readiness gate until
+GitHub CI is available — `/sw-init` host doctor warns about this honestly.
 
 ## Web-specific opt-in knobs (R15)
 

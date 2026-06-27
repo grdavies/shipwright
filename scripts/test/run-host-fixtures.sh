@@ -275,6 +275,102 @@ else
   bad "doctor-degraded-warns"
 fi
 
+
+# --- Phase 2: gh-removal-guard (runtime scripts only) ---
+RUNTIME_GH=0
+while IFS= read -r f; do
+  if rg -n '\bgh\b' "$f" >/dev/null 2>&1; then
+    echo "gh reference remains in $f"
+    RUNTIME_GH=1
+  fi
+done < <(printf '%s\n'   scripts/check-gate.sh   scripts/wave_terminal.py   scripts/wave_compound.py   scripts/cleanup_lib.py   scripts/reconcile-status.sh   scripts/stabilize-merge-sync.sh)
+if [[ "$RUNTIME_GH" -eq 0 ]]; then
+  ok "gh-removal-guard"
+else
+  bad "gh-removal-guard"
+fi
+
+# --- gh-absent-path ---
+(
+  export GITHUB_TOKEN=gh_fixture_token_for_tests
+  export SW_HOST_FIXTURE=green
+  export SW_GATE_NOW=1577838000
+  export PATH="$(echo "$PATH" | tr ':' '\n' | grep -v '/scripts/test/bin' | paste -sd: -)"
+  if OUT=$(env -u GH_TOKEN bash "$ROOT/scripts/check-gate.sh" 42 2>/dev/null) &&      echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='green'"; then
+    ok "gh-absent-path"
+  else
+    bad "gh-absent-path"
+  fi
+)
+
+# --- check-gate-verbset ---
+if bash "$ROOT/scripts/test/run-gate-fixtures.sh" >/tmp/sw-host-gate-fixtures.log 2>&1; then
+  ok "check-gate-verbset"
+else
+  bad "check-gate-verbset"
+  tail -5 /tmp/sw-host-gate-fixtures.log >&2 || true
+fi
+
+# --- terminal-flow-verbset (mocked REST) ---
+(
+  export GITHUB_TOKEN=gh_fixture_token_for_tests
+  export SW_HOST_FIXTURE=green
+  if OUT=$(bash "$ROOT/scripts/host.sh" --root "$ROOT" pr-list --head feat/x --base main --state open) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and isinstance(d.get('data'), list)"; then
+    ok "terminal-flow-verbset:pr-list"
+  else
+    bad "terminal-flow-verbset:pr-list"
+  fi
+  if OUT=$(bash "$ROOT/scripts/host.sh" --root "$ROOT" pr-create --title t --body b --head feat/x --base main) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d['data'].get('number')"; then
+    ok "terminal-flow-verbset:pr-create"
+  else
+    bad "terminal-flow-verbset:pr-create"
+  fi
+)
+
+# --- stabilize-sync-verbset ---
+(
+  export GITHUB_TOKEN=gh_fixture_token_for_tests
+  export SW_HOST_FIXTURE=green
+  if OUT=$(bash "$ROOT/scripts/stabilize-merge-sync.sh" status --pr 42) &&      echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='mergeable'"; then
+    ok "stabilize-sync-verbset"
+  else
+    bad "stabilize-sync-verbset"
+  fi
+)
+
+# --- prose-gh-free (agent command docs in scope) ---
+PROSE_FAIL=0
+for doc in   core/commands/sw-watch-ci.md   core/commands/sw-stabilize.md   core/commands/sw-pr.md   core/commands/sw-ready.md   core/commands/sw-cleanup.md; do
+  if rg -n '`gh |\bgh pr |\bgh api |\bgh repo ' "$ROOT/$doc" >/dev/null 2>&1; then
+    echo "gh prose in $doc"
+    PROSE_FAIL=1
+  fi
+done
+if [[ "$PROSE_FAIL" -eq 0 ]]; then
+  ok "prose-gh-free"
+else
+  bad "prose-gh-free"
+fi
+
+
+# --- install-docs-currency ---
+DOC_FAIL=0
+for needle_file in README.md docs/guides/configuration.md; do
+  if ! grep -q 'host.tokenEnv\|GITHUB_TOKEN' "$ROOT/$needle_file" 2>/dev/null; then
+    echo "missing host token docs in $needle_file"
+    DOC_FAIL=1
+  fi
+  if grep -q '`gh`' "$ROOT/$needle_file" 2>/dev/null || grep -q 'gh auth login' "$ROOT/$needle_file" 2>/dev/null; then
+    echo "stale gh prerequisite in $needle_file"
+    DOC_FAIL=1
+  fi
+done
+if [[ "$DOC_FAIL" -eq 0 ]]; then
+  ok "install-docs-currency"
+else
+  bad "install-docs-currency"
+fi
+
 if [[ "$FAIL" -eq 0 ]]; then
   echo "ALL host fixtures passed"
 else

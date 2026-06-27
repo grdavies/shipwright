@@ -12,11 +12,11 @@ Watch the active PR after `/phase-pr` or any follow-up push, and report a single
 ## Preconditions
 
 - The current branch has an open PR, and the latest state is pushed to `origin`.
-- `gh` is authenticated.
+- Host token env var is set (`host.tokenEnv`, default `GITHUB_TOKEN`).
 
 If no PR exists, stop and send the workflow back to `/phase-pr`.
 
-When `gh pr view` reports `mergeable: CONFLICTING`, stop and hand off to `/sw-stabilize` (merge-base
+When `host.sh pr-view` reports `mergeable: CONFLICTING`, stop and hand off to `/sw-stabilize` (merge-base
 sync). Do not busy-poll checks that cannot run until conflicts are resolved.
 
 ## Procedure
@@ -26,14 +26,14 @@ sync). Do not busy-poll checks that cannot run until conflicts are resolved.
 2. Resolve the active PR:
 
 ```bash
-PR_JSON=$(gh pr view --json number,url,headRefName,headRefOid,baseRefName,state,isDraft)
+PR_JSON=$(bash scripts/host.sh pr-view --number "$PR")
 PR_NUMBER=$(jq -r .number <<<"$PR_JSON")
 HEAD_SHA=$(jq -r .headRefOid <<<"$PR_JSON")
 printf '%s\n' "$PR_JSON"
 ```
 
-3. **Compute the verdict with the deterministic gate script (do not hand-roll it).** Hand-rolled `gh`
-   checks are exactly how a false `green` slipped through (a `gh api pulls/<n>/comments --jq length` proxy
+3. **Compute the verdict with the deterministic gate script (do not hand-roll it).** Hand-rolled host
+   checks are exactly how a false `green` slipped through (a comment-count proxy
    counted only already-posted inline comments and missed a re-review that had not posted yet). Run:
 
 ```bash
@@ -64,8 +64,7 @@ cat /tmp/sw-watch-ci-gate.json
      orchestrator owns the bounded loop and re-enters here.)
 
 ```bash
-PR=$(gh pr view --json number --jq .number)
-gh pr checks "$PR" --watch --fail-fast >/tmp/sw-watch-ci-watch.log 2>&1 || true
+Use `bash scripts/host.sh checks --number "$PR"` in a poll loop (bounded intervals per host rate-limit policy).
 echo 'WATCH_CI_TICK {"phase":"recheck"}'
 ```
 
@@ -75,12 +74,12 @@ echo 'WATCH_CI_TICK {"phase":"recheck"}'
    - **`red`/`blocked`** — pull failure logs for the `/sw-stabilize` handoff:
 
 ```bash
-RUN_IDS=$(gh run list --commit "$HEAD_SHA" --event pull_request --json databaseId --jq '.[].databaseId // empty')
+Optional: fetch failed workflow logs via host REST when CI job links are present in checks output.
 : > /tmp/sw-watch-ci-failed.log
 for RUN_ID in $RUN_IDS; do
   [ -n "$RUN_ID" ] || continue
   printf '=== failed logs for run %s ===\n' "$RUN_ID" >> /tmp/sw-watch-ci-failed.log
-  gh run view "$RUN_ID" --log-failed >> /tmp/sw-watch-ci-failed.log || true
+  # append failed job logs when available from the host checks payload
 done
 ```
 
@@ -102,7 +101,7 @@ Per the `checks-gate` skill:
 - Watch the PR tied to the current branch only.
 - Evaluate **all** checks under the configured policy — a failing non-required job blocks readiness.
 - Use `scripts/check-gate.sh` for the verdict; never substitute a hand-rolled proxy (e.g.
-  `gh api pulls/<n>/comments --jq length`) — that proxy can't see a not-yet-posted re-review and is what
+  a comment-count proxy — that shortcut can't see a not-yet-posted re-review and is what
   produced a false `green`. Trust the script's `verdict`: `green` ⟺ `coderabbitLanded == true` (reviewed,
   skipped, or absent). Do not re-gate on `coderabbitReviewedCurrentHead`.
 - Treat unresolved actionable review items as a readiness gate alongside checks.

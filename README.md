@@ -34,11 +34,11 @@ flowchart LR
 Check you have the essentials:
 
 ```bash
-git --version && bash --version && rsync --version && gh --version
+git --version && bash --version && rsync --version && curl --version
 ```
 
 - [x] **git**, **bash**, **rsync** — clone, run `scripts/install.sh`, copy the plugin tree
-- [x] **GitHub CLI (`gh`)** — `/sw-pr`, `/sw-watch-ci`, PR blocker flows (run `gh auth login`)
+- [x] **Host API token** — set `GITHUB_TOKEN` (or `host.tokenEnv`) for GitHub; no host CLI required
 - [ ] **Python 3** — only for developing Shipwright (`python3 -m sw generate`; see [CONTRIBUTING.md](CONTRIBUTING.md))
 
 ## Install
