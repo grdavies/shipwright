@@ -98,7 +98,7 @@ SEED_FIX=$(mktemp -d)
   cp "$PREREQ" scripts/test/pilot-022-prerequisite-check.sh
   for f in kernel_classification.py guidelines_validate.py plan_floor_evaluator.py wave_json_io.py \
     wave_plan_validate.py plan_persist.py pilot_dependency_gate.py wave_state.py wave_deliver.py \
-    ship_phase_steps.py wave_deliver_loop.py wave_merge.py wave_failure.py plan_persist.py; do
+    ship_phase_steps.py wave_deliver_loop.py wave_merge.py wave_failure.py plan_persist.py deliver_plan_surfacing.py; do
     cp "$ROOT/scripts/$f" scripts/ 2>/dev/null || true
   done
   cp "$ROOT/scripts/ship-phase-steps.sh" scripts/
@@ -141,7 +141,7 @@ E2E_FIX=$(mktemp -d)
   cp "$PREREQ" scripts/test/pilot-022-prerequisite-check.sh
   for f in kernel_classification.py guidelines_validate.py plan_floor_evaluator.py wave_json_io.py \
     wave_plan_validate.py plan_persist.py pilot_dependency_gate.py wave_state.py wave_deliver.py \
-    wave_deliver_loop.py wave_merge.py wave_failure.py wave_terminal.py wave_compound.py; do
+    wave_deliver_loop.py wave_merge.py wave_failure.py wave_terminal.py wave_compound.py deliver_plan_surfacing.py; do
     cp "$ROOT/scripts/$f" scripts/
   done
   cp "$ROOT/scripts/ship-phase-steps.sh" scripts/
@@ -575,6 +575,65 @@ PY
 ) && ok "intra-phase-decision-logged" \
   || bad "intra-phase-decision-logged"
 rm -rf "$LOG_FIX"
+
+
+# --- deliver-plan-surfacing (R21) ---
+SURF_FIX=$(mktemp -d)
+(
+  RUN_DIR="$SURF_FIX/.cursor/sw-deliver-runs/alpha-phase"
+  mkdir -p "$RUN_DIR"
+  cat >"$RUN_DIR/phase-step-plan.json" <<'JSON'
+{"version":1,"tier":"phase","phaseType":"ship","phaseId":"1","steps":["sw-tmp-init","sw-execute","sw-commit","sw-ready"],"planPolicy":"proposed","kernelVersion":"1.0.0","guidelineVersion":"1.0.0"}
+JSON
+  cat >"$SURF_FIX/.cursor/sw-deliver-runs/run.log" <<'JSON'
+{"event":"capability-selection","resolvedCapabilities":["persona.sw-security-reviewer"],"inputsHash":"abc123","precedenceTrace":["phase_default"],"phaseType":"sw-doc-review","at":"2026-06-27T00:00:00Z"}
+JSON
+  cat >"$SURF_FIX/.cursor/sw-deliver-state.surf-test.json" <<'JSON'
+{
+  "target": {"branch": "feat/surf-test"},
+  "waveBatchingPlan": {"version":1,"tier":"wave","waves":[["1"]],"planPolicy":"proposed","kernelVersion":"1.0.0","guidelineVersion":"1.0.0"},
+  "planRejectionLog": {
+    "version": 1,
+    "threshold": 3,
+    "phases": {
+      "1": {
+        "consecutiveRejections": 1,
+        "entries": [{"at":"2026-06-27T00:00:00Z","verdict":"reject","tier":"phase","reasons":["out-of-order:sw-verify"]}]
+      }
+    },
+    "halt": null
+  },
+  "phases": {"1": {"id":"1","slug":"alpha-phase","status":"green-merged"}}
+}
+JSON
+  if python3 - <<PY2
+import json, sys
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+from deliver_plan_surfacing import build_plan_surfacing_snapshot, attach_plan_surfacing_to_report, REPORT_KIND_TERMINAL
+from wave_state import load_deliver_state
+
+root = Path("$SURF_FIX")
+state = json.loads(Path("$SURF_FIX/.cursor/sw-deliver-state.surf-test.json").read_text())
+snapshot = build_plan_surfacing_snapshot(root, state)
+assert snapshot.get("waveBatchingPlan"), snapshot
+assert snapshot.get("phaseStepPlans", {}).get("alpha-phase"), snapshot
+rejections = snapshot.get("planRejections", {}).get("rejections") or []
+assert rejections and rejections[0].get("reasons"), snapshot
+caps = snapshot.get("resolvedCapabilities") or []
+assert caps and caps[0].get("resolvedCapabilities"), snapshot
+report = {}
+attach_plan_surfacing_to_report(root, state, report, report_kind=REPORT_KIND_TERMINAL)
+assert report.get("planSurfacing"), report
+log = Path("$SURF_FIX/.cursor/sw-deliver-runs/run.log").read_text(encoding="utf-8")
+assert any(json.loads(line).get("event") == "deliver-plan-surfacing" for line in log.splitlines() if line.strip()), log
+PY2
+  then
+    exit 0
+  fi
+  exit 1
+) && ok "deliver-plan-surfacing" || bad "deliver-plan-surfacing"
+rm -rf "$SURF_FIX"
 
 if [[ "$FAIL" -eq 0 ]]; then
   echo "pilot fixtures: all passed"

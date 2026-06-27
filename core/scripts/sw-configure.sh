@@ -165,6 +165,7 @@ detect = json.loads(subprocess.check_output(
 draft = {
     "doc": {"afterTasks": "confirm"},
     "delegation": {"mode": "bind-only"},
+    "orchestration": {"planPolicy": "canonical"},
     "deliver": {"autonomy": {"mode": "autonomous", "maxRunMinutes": 1440, "maxIterations": 500}},
     "compound": {"autonomy": "supervised"},
     "guardrails": {"enforceBeforeSubmit": True, "requireRuleClass": False},
