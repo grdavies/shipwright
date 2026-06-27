@@ -4,6 +4,7 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 
 | Date | PRD | Phase | Notes |
 |------|-----|-------|-------|
+| 2026-06-27 | 026 | all | deliver complete — awaiting terminal merge; SHA f769845 |
 | 2026-06-27 | 023 | post-merge | terminal PR #143 squash-merged to `main`; SHA 7711574; phase PRs #140/#141 closed as superseded (#142 auto-merged); GAP-BACKLOG dangling-PR row added |
 | 2026-06-27 | 023 | all | deliver complete — awaiting terminal merge; SHA 65a90d6 |
 | 2026-06-27 | 022 | post-merge | post-merge retrospective complete; PR #139; SHA b5edbda |
