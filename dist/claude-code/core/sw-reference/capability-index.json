@@ -81,11 +81,46 @@
                 "match": "whole_token",
                 "case_insensitive": true,
                 "exclude_polysemous": true,
-                "tokens": null
+                "tokens": [
+                  "UI",
+                  "UX",
+                  "wireframe",
+                  "modal",
+                  "button",
+                  "navigation",
+                  "responsive",
+                  "accessibility",
+                  "user flow"
+                ]
+              },
+              {
+                "type": "heading",
+                "source": "body_snapshot",
+                "case_insensitive": true,
+                "headings": [
+                  "UI",
+                  "UX",
+                  "Screens",
+                  "Mockups"
+                ]
+              },
+              {
+                "type": "link_pattern",
+                "source": "body_snapshot",
+                "patterns": [
+                  "figma.com",
+                  "figma.io"
+                ]
               }
             ]
           }
-        ]
+        ],
+        "metadata": {
+          "personaId": "design",
+          "selectionFamily": "doc-review",
+          "gated": true,
+          "modelTierRef": "agents.sw-design-reviewer"
+        }
       }
     },
     {
@@ -186,9 +221,36 @@
             "source": "body_snapshot",
             "match": "whole_token",
             "case_insensitive": true,
-            "tokens": null
+            "tokens": [
+              "auth",
+              "authn",
+              "authz",
+              "authentication",
+              "authorization",
+              "login",
+              "session",
+              "oauth",
+              "jwt",
+              "payment",
+              "payments",
+              "billing",
+              "PII",
+              "credentials",
+              "token",
+              "encryption",
+              "public api",
+              "public endpoint",
+              "external api",
+              "webhook"
+            ]
           }
-        ]
+        ],
+        "metadata": {
+          "personaId": "security",
+          "selectionFamily": "doc-review",
+          "gated": true,
+          "modelTierRef": "agents.sw-security-reviewer"
+        }
       }
     },
     {

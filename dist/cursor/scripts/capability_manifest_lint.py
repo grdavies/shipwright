@@ -43,7 +43,9 @@ def trigger_signature(trigger: dict[str, Any]) -> str:
         )
     if trigger_type == "text_token":
         tokens = trigger.get("tokens") or []
-        return f"text_token:{family}:{trigger.get('source', 'body_snapshot')}:{','.join(sorted(tokens))}"
+        source = str(trigger.get("source") or "body_snapshot")
+        token_csv = ",".join(sorted(str(t) for t in tokens))
+        return ":".join(["text_token", family, source, token_csv])
     if trigger_type == "triage_tag":
         tags = trigger.get("tags") or []
         return f"triage_tag:{family}:{trigger.get('match', 'any')}:{','.join(sorted(tags))}"

@@ -65,6 +65,9 @@ def _parse_mapping(lines: list[tuple[int, str]], index: int, indent: int) -> tup
         if i < len(lines) and lines[i][0] > indent:
             child, i = _parse_value(lines, i, lines[i][0])
             mapping[key] = child
+        elif i < len(lines) and lines[i][0] == indent and lines[i][1].startswith("- "):
+            child, i = _parse_sequence(lines, i, lines[i][0])
+            mapping[key] = child
         else:
             mapping[key] = None
     return mapping, i
@@ -95,6 +98,9 @@ def _parse_sequence(lines: list[tuple[int, str]], index: int, indent: int) -> tu
             if i < len(lines) and lines[i][0] > indent:
                 child, i = _parse_value(lines, i, lines[i][0])
                 item[key] = child
+            elif i < len(lines) and lines[i][0] == indent and lines[i][1].startswith("- "):
+                child, i = _parse_sequence(lines, i, lines[i][0])
+                item[key] = child
             items.append(item)
             continue
         child_indent = indent + 2
@@ -114,6 +120,9 @@ def _parse_sequence(lines: list[tuple[int, str]], index: int, indent: int) -> tu
             i += 1
             if i < len(lines) and lines[i][0] > sub_indent:
                 child, i = _parse_value(lines, i, lines[i][0])
+                item[sub_key] = child
+            elif i < len(lines) and lines[i][0] == sub_indent and lines[i][1].startswith("- "):
+                child, i = _parse_sequence(lines, i, lines[i][0])
                 item[sub_key] = child
             else:
                 item[sub_key] = None
