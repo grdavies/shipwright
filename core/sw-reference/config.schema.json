@@ -45,7 +45,7 @@
     "orchestration": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Cross-orchestrator plan-policy kill-switch (PRD 022 R29). Default canonical is byte-identical to today; proposed is fixture-only until PRD 023/024 adoption.",
+      "description": "Cross-orchestrator plan-policy kill-switch (PRD 022 R29). Default canonical is byte-identical to today; proposed is live on /sw-deliver pilot when TR0 gate and opt-in guards pass; PRD 024 fans out to other orchestrators.",
       "properties": {
         "planPolicy": {
           "type": "string",
@@ -367,6 +367,25 @@
               "description": "Optional DSN/template for isolated-db strategy."
             }
           }
+        }
+      }
+    },
+    "intraPhase": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Within-phase Task fan-out budget (PRD 023 R15). Does not consume wave ceiling slots.",
+      "properties": {
+        "parallelBudget": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 2,
+          "description": "Max concurrent intra-phase Task workers per phase executor."
+        },
+        "harnessLimit": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 8,
+          "description": "Platform active-subagent ceiling for global cap accounting."
         }
       }
     },

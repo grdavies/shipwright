@@ -10,6 +10,9 @@ ship loop, and compounding memory — all driven by `sw-` commands.
 Orchestrators advance on green and **halt at human gates** (freeze, merge, feedback routing).
 Shipwright **never auto-merges**.
 
+**Plan policy:** `orchestration.planPolicy` defaults to `canonical` (byte-identical to pre-022). Live `proposed`
+on `/sw-deliver` is opt-in only — see [configuration](docs/guides/configuration.md#deliver-plan-policy-pilot-prd-023).
+
 - **Traceable specs** — frozen PRDs, tasks, and amendments live in your repo
 - **Gated ship loop** — verify, review, CI truth, stabilize; *you* merge
 - **Compounding memory** — post-ship retro and durable project learnings

@@ -71,3 +71,40 @@ entry. Proposals validate through `bash scripts/wave.sh plan validate --tier wav
 - Undeclared `**File:**` overlaps between parallel phases auto-serialize (PRD-013 R14 precedent).
 
 Default `planPolicy: canonical` uses plan-time `wave.sh plan` waves only — no observable change.
+
+## Intra-phase fan-out vs wave ceiling (PRD 023 R15–R17)
+
+Wave-level phase worktrees count toward `worktree.parallelCeiling`; intra-phase Task/review workers
+use a separate `intraPhase.parallelBudget` and never consume wave slots. A **global cap** still holds:
+
+`waveSlots + activeIntraPhase ≤ min(worktree.parallelCeiling, intraPhase.harnessLimit)`
+
+Mechanical guard (disjoint partition, no-nesting, decision log):
+
+```bash
+# Stamp conductor_mode at phase entry (inline default; background_phase disables nested Task dispatch)
+bash scripts/wave.sh phase dispatch-env --phase-slug <slug> --conductor-mode background_phase
+
+# Evaluate / record before spawning intra-phase workers
+bash scripts/intra-phase-dispatch.sh evaluate --context-json '<signal_context>' \
+  --wave-slots <n> --active-intra-phase <n> \
+  --run-dir .cursor/sw-deliver-runs/<slug> --record
+```
+
+Parallel intra-phase workers are read-only on `ship-steps.json` and `status.json` in the phase run dir.
+Each parallelization decision is recorded in `dispatch-decisions.json`. The latest validated snapshot
+also appears on phase status as `intraPhaseFanOut` (`activeWorkers`, `globalCap`, `partitionSummary`).
+
+Config keys: `intraPhase.parallelBudget` (default 2), `intraPhase.harnessLimit` (default 8).
+
+Example `dispatch-decisions.json` entry:
+
+```json
+{
+  "timestamp": "2026-06-27T08:00:00Z",
+  "signals": {"fileCount": 4, "derivedTags": ["docs"], "conductorMode": "inline", "phaseType": "ship"},
+  "declaredPartition": [{"files": ["docs/guides/configuration.md"], "workerId": "w1"}],
+  "chosenParallelism": {"workers": 1, "serialized": false},
+  "degradeReason": null
+}
+```

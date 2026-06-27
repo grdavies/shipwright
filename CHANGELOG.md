@@ -94,6 +94,12 @@
 * merge phase orchestration-planpolicy-flag-definition-resume-semantics-m into feat/kernel-classification-and-plan-validation (ef45df3) <!-- sw-deliver:orchestration-planpolicy-flag-definition-resume-semantics-m -->
 * merge phase safety-invariant-parity-fixtures-proposed-cross-cutting-m into feat/kernel-classification-and-plan-validation (d2f4d9e) <!-- sw-deliver:safety-invariant-parity-fixtures-proposed-cross-cutting-m -->
 * merge phase docs-emitter-propagation-freshness-call-site-map-m into feat/kernel-classification-and-plan-validation (5151657) <!-- sw-deliver:docs-emitter-propagation-freshness-call-site-map-m -->
+* merge phase dependency-gate-deliver-pilot-wiring-wire-only-e2e-m into feat/deliver-plan-policy-pilot (a6c254d) <!-- sw-deliver:dependency-gate-deliver-pilot-wiring-wire-only-e2e-m -->
+* merge phase intra-phase-fan-out-no-nesting-decision-logging-m into feat/deliver-plan-policy-pilot (3ce9fd7) <!-- sw-deliver:intra-phase-fan-out-no-nesting-decision-logging-m -->
+* merge phase driver-enforced-budgets-clean-halt-integrity-m into feat/deliver-plan-policy-pilot (be5a271) <!-- sw-deliver:driver-enforced-budgets-clean-halt-integrity-m -->
+* merge phase benefit-metric-capture-decision-rule-m into feat/deliver-plan-policy-pilot (2ad6637) <!-- sw-deliver:benefit-metric-capture-decision-rule-m -->
+* merge phase deliver-scoped-plan-surfacing-s into feat/deliver-plan-policy-pilot (56c64f9) <!-- sw-deliver:deliver-scoped-plan-surfacing-s -->
+* merge phase docs-emitter-propagation-freshness-m into feat/deliver-plan-policy-pilot (49523b8) <!-- sw-deliver:docs-emitter-propagation-freshness-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

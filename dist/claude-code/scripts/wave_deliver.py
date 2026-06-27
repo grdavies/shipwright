@@ -1056,6 +1056,36 @@ def cmd_schedule(root: Path, args: list[str]) -> None:
     )
 
 
+
+
+def phase_plan_fallback_canonical(root: Path, phase_type: str = "ship", phase_id: str | None = None) -> dict[str, Any]:
+    """Fail-closed phase fallback — canonical chain from kernel classification (PRD 022 R6)."""
+    from wave_plan_validate import phase_fallback_canonical_chain
+
+    return phase_fallback_canonical_chain(root, phase_type=phase_type, phase_id=phase_id)
+
+
+def wave_plan_fallback_canonical(frozen_plan: dict[str, Any], root: Path) -> dict[str, Any]:
+    """Fail-closed wave fallback — canonical waves from frozen deliver plan (PRD 022 R32)."""
+    from wave_plan_validate import wave_fallback_canonical_waves
+
+    return wave_fallback_canonical_waves(frozen_plan, root)
+
+
+def wave_plan_fallback_schedule(root: Path, frozen_plan: dict[str, Any], ceiling: int | None = None) -> dict[str, Any]:
+    """Fail-closed wave fallback — ceiling-aware schedule batches (PRD 022 R32)."""
+    from wave_plan_validate import wave_fallback_schedule
+
+    return wave_fallback_schedule(root, frozen_plan, ceiling=ceiling)
+
+
+def wave_plan_serialize_undeclared_overlaps(root: Path, task_list: str) -> dict[str, Any]:
+    """Auto-serialize undeclared **File:** overlaps via contention edges (PRD 013 R14)."""
+    from wave_plan_validate import apply_undeclared_overlap_serialization
+
+    return apply_undeclared_overlap_serialization(root, task_list)
+
+
 def cmd_integration(root: Path, args: list[str]) -> None:
     stamp = parse_kv(args, "--stamp")
     branches_raw = parse_kv(args, "--branches", "")

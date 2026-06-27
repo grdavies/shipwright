@@ -134,6 +134,33 @@ When forwarding memory-search results into a delegated `Task` prompt:
 Before parallel subagents on shared directory: disjoint file sets required, or worktree isolation.
 Never parallelize shared-migration paths (`skills/parallelism`).
 
+## Intra-phase fan-out (PRD 023 R15–R17)
+
+Guideline-bounded intra-phase parallelism replaces fixed dispatch lists. Proposals consume 021
+`signal_context` and validate through the mechanical guard:
+
+```bash
+bash scripts/intra-phase-dispatch.sh evaluate --context-json '<signal_context>' \
+  --wave-slots <wave-worktrees> --active-intra-phase <running> \
+  --run-dir .cursor/sw-deliver-runs/<phase-slug> --record
+```
+
+- Every fan-out proposal declares a **disjoint file/task partition** validated **before dispatch**
+  (reject or serialize on overlap).
+- Bounded by `intraPhase.parallelBudget` and global cap
+  `waveSlots + activeIntraPhase ≤ min(worktree.parallelCeiling, intraPhase.harnessLimit)`.
+- Parallel workers are **read-only** on per-phase durable files (`ship-steps.json`, `status.json`).
+- Each decision is appended to per-phase `dispatch-decisions.json` (timestamp, signals, partition,
+  chosen parallelism, degrade reason). Latest snapshot also on phase `intraPhaseFanOut` (see `.sw/layout.md`).
+
+Pre-dispatch no-nesting (R16): when `conductor_mode: background_phase` (stamped to the per-phase run
+dir at phase entry via `wave.sh phase dispatch-env --conductor-mode background_phase`), intra-phase Task
+dispatch is **refused before any spawn** and degrades to inline two-stage review:
+
+```bash
+bash scripts/intra-phase-dispatch.sh check-nesting --run-dir .cursor/sw-deliver-runs/<phase-slug>
+```
+
 ## Parallel phase dispatch (R17, R18, R45)
 
 **Ceiling accounting:** only wave-level phase worktrees (each running `/sw-ship --phase-mode`) count toward

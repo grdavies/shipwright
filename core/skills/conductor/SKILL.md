@@ -92,9 +92,15 @@ proposal+validate only — never partial execution.
 **Reject fallbacks:** phase reject → canonical chain from `kernel-classification.json`; wave contention or
 dependency violation → canonical waves re-derived from the frozen plan; over-ceiling → `wave.sh schedule`.
 
+**Proposed pilot wiring (PRD 023 phase 1):** `/sw-deliver` reads `orchestration.planPolicy` at wave entry and
+phase entry. Under `proposed` (after TR0 gate), the conductor proposes → `wave.sh plan validate`
+(`--record-rejection` on shared state) → persist; `wave_deliver_loop` sets `wave-validated` after wave persist
+and routes phase entry through validate-before-persist. Default `canonical` is unchanged.
+
 **`orchestration.planPolicy`:** read at proposal time (default `canonical` — byte-identical to today);
 recorded `planPolicy` + `kernelVersion` + `guidelineVersion` stamped on each persisted plan and honored on
-resume over live config. `proposed` is fixture-only until PRD-023/024 adoption; see
+resume over live config. Live `proposed` runs on `/sw-deliver` when TR0 passes and pilot opt-in guards are
+met; default stays `canonical`. PRD-024 fans the pattern to other orchestrators — see
 `docs/prds/022-kernel-classification-and-plan-validation/call-site-map.md`.
 
 ## Default autonomy (R13)
@@ -259,8 +265,17 @@ Halt for human input **only** when one of these applies:
 | 6 | External wait exhausted (R40) | CI/self-wake hits `checks.watch.maxWaitMinutes` without signal |
 | 7 | Run-level autonomy budget (R42) | `deliver.autonomy.maxRunMinutes` or `maxIterations` exceeded |
 | 8 | No-progress circuit breaker (R38) | 3× identical `nextAction` + unchanged state signature |
+| 9 | Driver-enforced budget trip (PRD 023 TR3) | `runStartedAt` / `driverIterationCount` / `noProgressStreak` exceeded; `planRejectionLog` feeds no-progress |
 
 Anything not in this table is **not** a legitimate halt.
+
+### Driver-enforced budgets (PRD 023 TR3)
+
+`wave_deliver_loop.py` maintains durable `runStartedAt`, `driverIterationCount`, and `noProgressStreak` on
+shared run-state. Proposal and `plan validate` overhead count separately from execution iterations; persistent
+`planRejectionLog` rejections increment no-progress. Budget trip emits `halt-blocked` with merge-queue journal
+replayability and scoped lock release (R22). Terminal runs roll up `benefitMetric` and surface chosen plans /
+rejections / capability sets via `deliver_plan_surfacing` (R21).
 
 ## No routine halts (R11)
 

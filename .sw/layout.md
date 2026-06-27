@@ -40,6 +40,10 @@ docs/decisions/
 ├── sw-deliver-runs/
 │   ├── index.json                 # concurrent-run index (live scoped runs)
 │   └── <phase-slug>/              # per-phase status (living)
+│       ├── status.json
+│       ├── ship-steps.json
+│       ├── phase-step-plan.json
+│       └── dispatch-decisions.json
 ```
 
 ## Naming conventions
@@ -245,4 +249,88 @@ sole step authority (`ship_phase_steps.authoritative_chain`); canonical `SHIP_CH
 
 **Invariants home:** `core/sw-reference/kernel-classification.md` — cross-link; do not duplicate the kernel
 enumeration elsewhere.
+
+## Deliver pilot run records (PRD 023)
+
+| Artifact | Path / field | Writer | Role |
+| --- | --- | --- | --- |
+| Per-phase dispatch decisions | `.cursor/sw-deliver-runs/<phase-slug>/dispatch-decisions.json` | phase executor | intra-phase fan-out audit (R17) |
+| Intra-phase fan-out snapshot | `intraPhaseFanOut` on phase status / `phases.<id>` | phase executor | latest partition + worker count + cap state (R15–R17) |
+| Per-phase benefit metric | `benefitMetric` on phase status / shared run-state `phases.<id>` | phase executor at terminal | R31 capture (numeric/enumerated only) |
+| Run-level benefit rollup | `benefitMetric` on `.cursor/sw-deliver-state.<slug>.json` | conductor at terminal | paired-run aggregation input |
+| Benefit report | `bash scripts/wave.sh plan benefit-report --pairs <path>` → `scripts/wave_plan_benefit.py` | operator / soak protocol | R31 decision rule (fail-closed to `canonical`) |
+
+### `benefitMetric` object (R31 — numeric/enumerated only)
+
+Recorded on per-phase status and optionally rolled up on shared deliver run-state. No transcripts, file
+contents, secrets, or free-text blobs.
+
+```json
+{
+  "planPolicy": "canonical",
+  "kernelVerdict": {
+    "terminalPhaseStatuses": ["green-merged"],
+    "gateOutcome": "green",
+    "mergeReadyCount": 1
+  },
+  "canonicalStepSet": ["sw-tmp-init", "sw-execute", "..."],
+  "executedStepSet": ["sw-tmp-init", "sw-execute", "..."],
+  "stepsSkippedWithoutRework": 0,
+  "stabilizeReentries": [{"step": "sw-verify", "attributed": true}],
+  "escapedDefectSignal": "none",
+  "phaseWallClockMs": 120000,
+  "decomposed": {
+    "stepPlanAdaptivity": {"stepsSkipped": 0, "wallClockMs": 0},
+    "waveSchedule": {"wallClockMs": 0},
+    "intraPhase": {"wallClockMs": 0}
+  }
+}
+```
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `planPolicy` | `canonical` \| `proposed` | policy under measurement |
+| `kernelVerdict` | object | equivalence tuple for stratum grouping |
+| `canonicalStepSet` | string[] | baseline chain for the phase |
+| `executedStepSet` | string[] | steps actually advanced |
+| `stepsSkippedWithoutRework` | int | canonical − executed minus attributed stabilize re-entries |
+| `stabilizeReentries` | `{step, attributed: bool}[]` | attributed re-entry zeroes credit for that skipped step |
+| `escapedDefectSignal` | enum | `none`, `terminal_pr_ci_red`, `post_merge_stabilize`, `post_merge_revert` |
+| `phaseWallClockMs` | int | phase wall-clock; secondary guard vs paired canonical |
+| `decomposed` | object | category breakdown (`stepPlanAdaptivity`, `waveSchedule`, `intraPhase`) |
+
+**Decision rule:** `wave.sh plan benefit-report` compares paired `canonical` vs `proposed` metrics at
+identical `kernelVerdict`. Primary signal: `stepsSkippedWithoutRework` net-of-rework must be strictly
+positive per pair; wall-clock must not regress beyond ε at equal verdict; minimum N pairs per stratum.
+Insufficient N or non-positive benefit **fails closed** to `canonical`.
+### `dispatch-decisions.json` (R17)
+
+Append-only per-phase audit log written by `scripts/intra_phase_dispatch.py`.
+
+```json
+{
+  "version": 1,
+  "decisions": [{
+    "timestamp": "2026-06-27T08:00:00Z",
+    "signals": {"fileCount": 4, "derivedTags": ["docs"], "conductorMode": "inline", "phaseType": "ship"},
+    "declaredPartition": [{"files": ["docs/guides/configuration.md"], "workerId": "w1"}],
+    "chosenParallelism": {"workers": 1, "serialized": false},
+    "degradeReason": null
+  }]
+}
+```
+
+### `intraPhaseFanOut` snapshot (R15–R17)
+
+Latest validated fan-out state on phase status (not a substitute for the append-only decision log):
+
+```json
+{
+  "activeWorkers": 1,
+  "globalCap": 4,
+  "parallelBudget": 2,
+  "partitionSummary": ["docs/guides/configuration.md"]
+}
+```
+
 
