@@ -1,3 +1,18 @@
+---
+capability:
+  version: 1
+  triggers:
+    - type: config_flag
+      selectionFamily: providers
+      key: review.provider
+      equals: "coderabbit"
+  metadata:
+    providerFamily: review
+    adapterId: coderabbit
+    selectionFamily: providers
+    gateRef: check-gate.sh
+---
+
 # CodeRabbit review adapter (agent-mediated)
 
 Markdown companion to `coderabbit.sh` (gate path). Route local review via `/sw-review`; gate per-head state via

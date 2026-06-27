@@ -1,3 +1,16 @@
+---
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: providers
+      scope: verify-contract
+  metadata:
+    providerFamily: verify
+    selectionFamily: providers
+    notes: neutral capability contract doc
+---
+
 # Verify E2E / smoke adapter capabilities (IM9 / U10)
 
 Provider-style smoke/E2E verification. Selected by `verifyE2e.provider` in `workflow.config.json`.

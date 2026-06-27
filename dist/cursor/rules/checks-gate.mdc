@@ -2,6 +2,14 @@
 description: The Shipwright CI readiness gate evaluates all checks, not just required ones.
 alwaysApply: false
 globs:
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: providers
+      command: sw-watch-ci
+  metadata:
+    selectionFamily: providers
 ---
 
 # All-checks readiness gate

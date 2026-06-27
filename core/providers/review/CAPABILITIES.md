@@ -1,3 +1,16 @@
+---
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: providers
+      scope: review-contract
+  metadata:
+    providerFamily: review
+    selectionFamily: providers
+    notes: neutral capability contract doc
+---
+
 # Review provider capabilities (R36)
 
 Neutral contract for AI code-review adapters. Deterministic consumers (`scripts/check-gate.sh`) call the

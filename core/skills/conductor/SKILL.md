@@ -1,6 +1,15 @@
 ---
 name: conductor
 description: Shared autonomous orchestration contract — self-continuation, legitimate halts, parallel phase dispatch, and durable-state resumption. Consumed by orchestrators; never re-authored inline.
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: subagent-dispatch
+      command: sw-deliver
+  metadata:
+    skill: conductor
+    selectionFamily: subagent-dispatch
 ---
 
 # Conductor contract

@@ -1,3 +1,18 @@
+---
+capability:
+  version: 1
+  triggers:
+    - type: config_flag
+      selectionFamily: providers
+      key: verify.provider
+      equals: "playwright"
+  metadata:
+    providerFamily: verify
+    adapterId: playwright
+    selectionFamily: providers
+    gateRef: check-gate.sh
+---
+
 # verify adapter: `playwright`
 
 Runs `npx playwright test` when a Playwright config file exists at repo root. Skips (non-blocking) when absent.
