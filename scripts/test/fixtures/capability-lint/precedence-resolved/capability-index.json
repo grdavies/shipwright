@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "skill.resolved-a",
+      "kind": "skill",
+      "sourcePath": "core/skills/resolved-a/SKILL.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "precedence": {
+          "tier": "override",
+          "priority": 0
+        },
+        "triggers": [
+          {
+            "type": "path_glob",
+            "selectionFamily": "doc-review",
+            "globs": [
+              "docs/**/*.md"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "skill.resolved-b",
+      "kind": "skill",
+      "sourcePath": "core/skills/resolved-b/SKILL.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "path_glob",
+            "selectionFamily": "doc-review",
+            "globs": [
+              "docs/**/*.md"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

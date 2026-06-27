@@ -48,15 +48,15 @@ contract per the Decision Log).
 
 ### 3. Precedence policy + author-time lint — M
 
-- [ ] 3.1 Encode precedence + documented total-order tie-break (R11)
+- [x] 3.1 Encode precedence + documented total-order tie-break (R11)
   - **File:** `core/sw-reference/capability-manifest.md` + selector precedence module
   - **Expected:** precedence `config override > signal match > default`; remaining ties resolved deterministically via a documented total order (capability-id lexicographic) so equal-precedence overlaps cannot be machine-/emitter-order-dependent.
   - **R-IDs:** R11
-- [ ] 3.2 Author-time manifest lint wired into the test gate (R11, R25, R27)
+- [x] 3.2 Author-time manifest lint wired into the test gate (R11, R25, R27)
   - **File:** `scripts/capability-manifest-lint.sh` (registered in `workflow.config.json` `verify.test`)
   - **Expected:** conflict taxonomy (duplicate id, overlapping globs/predicates at equal precedence, competing defaults) fails closed without a precedence resolution; also rejects `kind`/path mismatch and index entries referencing non-existent artifacts (anti-spoof).
   - **R-IDs:** R11, R25, R27
-- [ ] 3.3 Lint failing-before / passing-after fixtures (R11, R25)
+- [x] 3.3 Lint failing-before / passing-after fixtures (R11, R25)
   - **File:** `scripts/test/run-capability-lint-fixtures.sh`
   - **Expected:** `precedence-conflict-lint-fails-closed` (ambiguous triggers fail) and the passing case (precedence resolution present); `capability-kind-spoof-rejected`.
   - **R-IDs:** R11, R25
