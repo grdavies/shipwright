@@ -230,12 +230,20 @@ def has_path(edges: list[dict[str, str]], src: str, dst: str) -> bool:
 
 
 def graph_has_cycle(items: list[str], edges: list[dict[str, str]]) -> bool:
-    indeg = {i: 0 for i in items}
+    nodes = set(items)
+    for edge in edges:
+        nodes.add(edge["from"])
+        nodes.add(edge["to"])
+    indeg = {i: 0 for i in nodes}
     adj: dict[str, list[str]] = defaultdict(list)
     for edge in edges:
+        if edge["to"] not in indeg:
+            indeg[edge["to"]] = 0
+        if edge["from"] not in indeg:
+            indeg[edge["from"]] = 0
         adj[edge["from"]].append(edge["to"])
         indeg[edge["to"]] += 1
-    q = deque([i for i in items if indeg[i] == 0])
+    q = deque([i for i in nodes if indeg[i] == 0])
     order: list[str] = []
     while q:
         node = q.popleft()
@@ -244,7 +252,7 @@ def graph_has_cycle(items: list[str], edges: list[dict[str, str]]) -> bool:
             indeg[nxt] -= 1
             if indeg[nxt] == 0:
                 q.append(nxt)
-    return len(order) != len(items)
+    return len(order) != len(nodes)
 
 
 def inject_contention_edges(
@@ -258,14 +266,23 @@ def inject_contention_edges(
     injected: list[dict[str, str]] = []
     existing = {(e["from"], e["to"]) for e in declared_edges}
     all_edges = [dict(e) for e in declared_edges]
+    phase_id_set = set(phase_ids)
+    graph_nodes = set(phase_ids)
+    for edge in declared_edges:
+        graph_nodes.add(edge["from"])
+        graph_nodes.add(edge["to"])
 
-    declared_waves = assign_waves(phase_ids, declared_edges)
+    def sort_key(item: str) -> tuple[int, str | int]:
+        return (0, int(item)) if str(item).isdigit() else (1, item)
+
+    declared_waves = assign_waves(sorted(graph_nodes, key=sort_key), declared_edges)
 
     for wave in declared_waves:
-        if len(wave) < 2:
+        phase_in_wave = [p for p in wave if p in phase_id_set]
+        if len(phase_in_wave) < 2:
             continue
-        for left in wave:
-            for right in wave:
+        for left in phase_in_wave:
+            for right in phase_in_wave:
                 if int(left) >= int(right):
                     continue
                 files_left = phase_files.get(left, [])
@@ -301,7 +318,7 @@ def inject_contention_edges(
                     f"contention: phases {left} and {right} serialized ({overlap})"
                 )
 
-    if graph_has_cycle(phase_ids, all_edges):
+    if graph_has_cycle(sorted(graph_nodes, key=sort_key), all_edges):
         fail(
             "contention-cycle: combined declared + contention graph has a cycle",
             exit_code=20,
@@ -363,41 +380,74 @@ def greedy_wave_batches(phase_ids: list[str], ceiling: int) -> list[list[str]]:
 
 
 def deps_to_edges(
-    phases: list[dict[str, str]], dep_rows: list[dict[str, str]] | None
+    phases: list[dict[str, str]],
+    dep_rows: list[dict[str, str]] | None,
+    phase_files: dict[str, list[str]] | None = None,
 ) -> tuple[list[dict[str, str]], list[str]]:
     notices: list[str] = []
     phase_ids = {p["id"] for p in phases}
     edges: list[dict[str, str]] = []
 
-    if dep_rows is None:
-        notices.append(
-            "missing Phase Dependencies table — sequential fallback edges 2:1, 3:2, …"
-        )
-        sorted_ids = sorted(phase_ids, key=int)
-        for i in range(1, len(sorted_ids)):
-            edges.append({"from": sorted_ids[i - 1], "to": sorted_ids[i]})
+    if dep_rows is not None:
+        for row in dep_rows:
+            phase = row["phase"]
+            raw = row["depends_on"].strip().lower()
+            if raw in ("none", "—", "-", ""):
+                continue
+            for dep in re.findall(r"\d+", raw):
+                if dep not in phase_ids:
+                    fail(f"phase dependency references unknown phase {dep!r}")
+                if dep == phase:
+                    fail(f"phase {phase} cannot depend on itself")
+                edges.append({"from": dep, "to": phase})
         return edges, notices
 
-    for row in dep_rows:
-        phase = row["phase"]
-        raw = row["depends_on"].strip().lower()
-        if raw in ("none", "—", "-", ""):
-            continue
-        for dep in re.findall(r"\d+", raw):
-            if dep not in phase_ids:
-                fail(f"phase dependency references unknown phase {dep!r}")
-            if dep == phase:
-                fail(f"phase {phase} cannot depend on itself")
-            edges.append({"from": dep, "to": phase})
+    sorted_ids = sorted(phase_ids, key=int)
+    files = phase_files or {}
+    file_edges: list[dict[str, str]] = []
+    for i, left in enumerate(sorted_ids):
+        for right in sorted_ids[i + 1 :]:
+            contend = False
+            detail = ""
+            for fl in files.get(left, []):
+                for fr in files.get(right, []):
+                    hit, detail = paths_contend(fl, fr, CONTENTION_DEFAULT["serialized"])
+                    if hit:
+                        contend = True
+                        break
+                if contend:
+                    break
+            if contend:
+                file_edges.append({"from": left, "to": right, "kind": "file-set"})
+                notices.append(
+                    f"file-set edge {left}→{right} ({detail or 'shared file overlap'})"
+                )
+    if file_edges:
+        notices.insert(
+            0,
+            "missing Phase Dependencies table — edges inferred from overlapping **File:** paths",
+        )
+        return file_edges, notices
+
+    notices.append(
+        "missing Phase Dependencies table — sequential fallback edges 1→2, 2→3, …"
+    )
+    for i in range(1, len(sorted_ids)):
+        edges.append({"from": sorted_ids[i - 1], "to": sorted_ids[i]})
     return edges, notices
 
 
 def assign_waves(items: list[str], edges: list[dict[str, str]]) -> list[list[str]]:
-    deps = {i: {e["from"] for e in edges if e["to"] == i} for i in items}
-    if graph_has_cycle(items, edges):
+    graph_nodes = set(items)
+    for edge in edges:
+        graph_nodes.add(edge["from"])
+        graph_nodes.add(edge["to"])
+    items_list = sorted(graph_nodes, key=lambda x: (0, int(x)) if str(x).isdigit() else (1, str(x)))
+    deps = {i: {e["from"] for e in edges if e["to"] == i} for i in items_list}
+    if graph_has_cycle(items_list, edges):
         fail("dependency cycle detected", exit_code=20)
     waves: list[list[str]] = []
-    remaining = set(items)
+    remaining = set(items_list)
     while remaining:
         wave = sorted(
             [i for i in remaining if not (deps[i] & remaining)],
@@ -448,7 +498,9 @@ def feature_slug(frontmatter: dict[str, str], task_path: Path) -> str:
 
 
 def load_run_state(root: Path) -> dict[str, Any]:
-    state_path = root / ".cursor" / STATE_PATH_NAME
+    from wave_state import resolve_state_path
+
+    state_path = resolve_state_path(root)
     if not state_path.is_file():
         return {}
     try:
@@ -472,8 +524,10 @@ def detect_mode(args: list[str]) -> str:
     has_multi = bool(items.strip() or edges.strip() or plan_file)
     has_phase = bool(task_list)
     if has_phase and has_multi:
+        if has_flag(args, "--combine"):
+            return "combined"
         fail(
-            "ambiguous input: both task-list and multi-feature item set; disambiguate",
+            "ambiguous input: both task-list and multi-feature item set; pass --combine to mix units",
             exit_code=2,
             halt="disambiguation",
         )
@@ -482,6 +536,175 @@ def detect_mode(args: list[str]) -> str:
     if has_multi or has_flag(args, "--items"):
         return "multi-feature"
     fail("mode undetected: provide --task-list or --items")
+
+
+def parse_multi_edges(edges_raw: str) -> list[dict[str, str]]:
+    edges: list[dict[str, str]] = []
+    for pair in [x.strip() for x in edges_raw.split(",") if x.strip()]:
+        if ":" not in pair:
+            fail(f"invalid edge {pair!r}, want item:dependency")
+        item, dep = pair.split(":", 1)
+        edges.append({"from": dep.strip(), "to": item.strip()})
+    return edges
+
+
+def persist_contention_feedback(
+    root: Path,
+    target_branch: str,
+    notices: list[str],
+    injected: list[dict[str, str]],
+) -> None:
+    """Persist contention serialization feedback for /sw-tasks re-run (PRD 013 R16)."""
+    if not injected and not any(n.startswith("contention:") for n in notices):
+        return
+    from wave_state import load_deliver_state, save_deliver_state
+
+    try:
+        state = load_deliver_state(root, target=target_branch)
+    except SystemExit:
+        return
+    state["contentionFeedback"] = {
+        "notices": [n for n in notices if n.startswith("contention:") or "serialized" in n],
+        "injectedEdges": injected,
+        "suggestedTaskListAction": "Re-run /sw-tasks to add explicit ## Phase Dependencies rows",
+        "updatedAt": utc_now_iso(),
+    }
+    save_deliver_state(root, state, target=target_branch)
+
+
+def utc_now_iso() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def cmd_tasks_suggest(root: Path, args: list[str]) -> None:
+    """Surface durable contention feedback as /sw-tasks re-run suggestions (R16)."""
+    from wave_state import load_deliver_state, resolve_state_path
+
+    target = parse_kv(args, "--target")
+    task_list = parse_kv(args, "--task-list")
+    try:
+        state = load_deliver_state(root, target=target, task_list=task_list)
+    except SystemExit:
+        state = {}
+    fb = state.get("contentionFeedback") or {}
+    injected = fb.get("injectedEdges") or []
+    rows: list[dict[str, str]] = []
+    for edge in injected:
+        rows.append(
+            {
+                "phase": edge.get("to", ""),
+                "dependsOn": edge.get("from", ""),
+                "tableRow": f"| {edge.get('to', '')} | {edge.get('from', '')} |",
+            }
+        )
+    emit(
+        {
+            "verdict": "pass",
+            "action": "tasks-suggest",
+            "statePath": str(
+                resolve_state_path(root, target=target, task_list=task_list).relative_to(root)
+            ),
+            "suggestion": fb.get("suggestedTaskListAction")
+            or "No contention feedback recorded; nothing to suggest",
+            "notices": fb.get("notices") or [],
+            "explicitDependencyRows": rows,
+            "rerunCommand": "/sw-tasks",
+        }
+    )
+
+
+def plan_combined(
+    root: Path,
+    args: list[str],
+    *,
+    dry_run: bool,
+) -> dict[str, Any]:
+    """Cross-feature plan: frozen phase list + multi-feature units (PRD 013 R13)."""
+    task_list = parse_kv(args, "--task-list")
+    assert task_list
+    task_path = resolve_task_list_path(root, task_list)
+    content = task_path.read_text(encoding="utf-8")
+    fm = parse_frontmatter(content)
+    if fm.get("frozen", "").lower() != "true":
+        fail("task list is not frozen; run /sw-freeze first", exit_code=2, halt="unfrozen")
+
+    branch_type = resolve_type(args, fm)
+    slug = feature_slug(fm, task_path)
+    branch = f"{branch_type}/{slug}"
+    prd_num = prd_number_from_path(task_path, fm)
+    phases = parse_phases(content)
+    if not phases:
+        fail("no phases found in task list")
+
+    multi_raw = parse_kv(args, "--items", "")
+    multi_items = [x.strip() for x in multi_raw.split(",") if x.strip()]
+    if not multi_items:
+        fail("combined plan requires --items")
+
+    phase_files = parse_phase_files(content)
+    dep_rows = parse_phase_dependencies(content)
+    phase_edges, notices = deps_to_edges(phases, dep_rows, phase_files)
+    multi_edges = parse_multi_edges(parse_kv(args, "--edges", ""))
+    edges = phase_edges + multi_edges
+    phase_ids = [p["id"] for p in phases]
+    all_ids = phase_ids + multi_items
+    if graph_has_cycle(all_ids, edges):
+        fail("combined plan has a dependency cycle", exit_code=20, halt="cycle")
+
+    contention = CONTENTION_DEFAULT.copy()
+    waves, edges, injected, contention_notices, phase_files = apply_contention(
+        content, phases, edges, contention
+    )
+    waves = assign_waves(all_ids, edges)
+    notices.extend(contention_notices)
+
+    if not has_flag(args, "--skip-base-check"):
+        run_base_preflight(root, branch)
+
+    items_out: list[dict[str, Any]] = []
+    for p in phases:
+        items_out.append(
+            {
+                "id": p["id"],
+                "kind": "phase",
+                "slug": p["slug"],
+                "title": p["title"],
+                "branch": f"{branch}-phase-{p['slug']}",
+                "files": phase_files.get(p["id"], []),
+            }
+        )
+    for item in multi_items:
+        items_out.append(
+            {
+                "id": item,
+                "kind": "multi-feature",
+                "branch": f"feat/{item}",
+            }
+        )
+
+    out: dict[str, Any] = {
+        "verdict": "pass",
+        "mode": "combined",
+        "source_task_list": task_list,
+        "prd_number": prd_num,
+        "target": {"type": branch_type, "slug": slug, "branch": branch},
+        "items": items_out,
+        "edges": edges,
+        "waves": waves,
+        "contention": {**contention, "injectedEdges": injected},
+        "notices": notices + ["combined plan: phase-mode + multi-feature units"],
+    }
+    if dry_run:
+        out["dry_run"] = True
+        return out
+
+    plan_path = root / ".cursor" / PLAN_PATH_NAME
+    plan_path.parent.mkdir(parents=True, exist_ok=True)
+    plan_path.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
+    persist_contention_feedback(root, branch, notices, injected)
+    return out
 
 
 def resolve_task_list_path(root: Path, task_list: str) -> Path:
@@ -532,6 +755,31 @@ def run_base_preflight(root: Path, target_branch: str) -> dict[str, Any]:
     return payload
 
 
+def run_capability_index_preflight(root: Path) -> dict[str, Any]:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "wave_preflight.py"),
+            str(root),
+            "capability-index-check",
+        ],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        fail(proc.stderr.strip() or proc.stdout.strip() or "capability index preflight failed")
+    if proc.returncode != 0:
+        fail(
+            payload.get("error", "capability index preflight failed"),
+            exit_code=proc.returncode,
+            **{k: v for k, v in payload.items() if k != "error"},
+        )
+    return payload
+
+
 def cmd_preflight(root: Path, args: list[str]) -> None:
     mode = detect_mode(args)
     result: dict[str, Any] = {"verdict": "pass", "mode": mode}
@@ -549,7 +797,8 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
         if not phases:
             fail("no phases found in task list (### N. headings)")
         dep_rows = parse_phase_dependencies(content)
-        edges, notices = deps_to_edges(phases, dep_rows)
+        phase_files = parse_phase_files(content)
+        edges, notices = deps_to_edges(phases, dep_rows, phase_files)
         contention = CONTENTION_DEFAULT.copy()
         waves, edges, injected, contention_notices, phase_files = apply_contention(
             content, phases, edges, contention
@@ -577,6 +826,29 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
         if not has_flag(args, "--skip-base-check"):
             base_pf = run_base_preflight(root, branch)
             result["basePreflight"] = base_pf
+        cap_pf = run_capability_index_preflight(root)
+        result["capabilityIndexPreflight"] = cap_pf
+    elif mode == "combined":
+        out = plan_combined(root, args, dry_run=True)
+        result.update(
+            {
+                "target": out["target"],
+                "waves": out["waves"],
+                "phaseCount": sum(1 for i in out["items"] if i.get("kind") == "phase"),
+                "itemCount": len(out["items"]),
+                "notices": out.get("notices", []),
+                "contention": out.get("contention"),
+            }
+        )
+        print(
+            f"mode=combined target={out['target']['branch']} waves={len(out['waves'])} items={len(out['items'])}",
+            file=sys.stderr,
+        )
+        if not has_flag(args, "--skip-base-check"):
+            base_pf = run_base_preflight(root, out["target"]["branch"])
+            result["basePreflight"] = base_pf
+        cap_pf = run_capability_index_preflight(root)
+        result["capabilityIndexPreflight"] = cap_pf
     else:
         items_raw = parse_kv(args, "--items", "")
         items = [x.strip() for x in items_raw.split(",") if x.strip()]
@@ -598,6 +870,14 @@ def cmd_plan(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run")
     from_phase = parse_kv(args, "--from")
     mode = detect_mode(args)
+
+    if mode == "combined":
+        out = plan_combined(root, args, dry_run=dry_run)
+        print(
+            f"mode=combined target={out['target']['branch']} waves={len(out['waves'])}",
+            file=sys.stderr,
+        )
+        emit(out, 0)
 
     if mode == "phase":
         task_list = parse_kv(args, "--task-list")
@@ -621,7 +901,8 @@ def cmd_plan(root: Path, args: list[str]) -> None:
         if not phases:
             fail("no phases found in task list")
         dep_rows = parse_phase_dependencies(content)
-        edges, notices = deps_to_edges(phases, dep_rows)
+        phase_files_early = parse_phase_files(content)
+        edges, notices = deps_to_edges(phases, dep_rows, phase_files_early)
         phase_ids = [p["id"] for p in phases]
         contention = CONTENTION_DEFAULT.copy()
         waves, edges, injected, contention_notices, phase_files = apply_contention(
@@ -687,6 +968,7 @@ def cmd_plan(root: Path, args: list[str]) -> None:
         plan_path = root / ".cursor" / PLAN_PATH_NAME
         plan_path.parent.mkdir(parents=True, exist_ok=True)
         plan_path.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
+        persist_contention_feedback(root, branch, notices, injected)
         print(
             f"mode=phase target={branch} waves={len(waves)}",
             file=sys.stderr,
@@ -805,6 +1087,8 @@ def main() -> None:
         cmd_schedule(root, args)
     elif cmd == "integration":
         cmd_integration(root, args)
+    elif cmd == "tasks-suggest":
+        cmd_tasks_suggest(root, args)
     else:
         fail(f"unknown command: {cmd}")
 
