@@ -66,3 +66,14 @@ jobs:
       - name: Run docs-link-check
         run: bash scripts/docs-link-check.sh
 
+  feat-test-plan-host-fixtures:
+    name: feat-test-plan-host-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run host-fixtures
+        run: bash scripts/test/run-host-fixtures.sh
+
