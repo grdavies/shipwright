@@ -89,6 +89,7 @@
 * merge phase documentation-emitter-propagation-freshness-m into feat/capability-manifest-and-selector (6dd263b) <!-- sw-deliver:documentation-emitter-propagation-freshness-m -->
 * merge phase single-sourced-kernel-classification-canonical-chain-source-l into feat/kernel-classification-and-plan-validation (5b0fa22) <!-- sw-deliver:single-sourced-kernel-classification-canonical-chain-source-l -->
 * merge phase guidelines-artifact-floor-harness-reuse-m into feat/kernel-classification-and-plan-validation (ef5794e) <!-- sw-deliver:guidelines-artifact-floor-harness-reuse-m -->
+* merge phase plan-validation-gate-schemas-rejection-breaker-l into feat/kernel-classification-and-plan-validation (cb4ab30) <!-- sw-deliver:plan-validation-gate-schemas-rejection-breaker-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
