@@ -163,6 +163,17 @@
       ]
     },
     {
+      "id": "inflight-migration-bridge-fixtures",
+      "script": "scripts/test/run-inflight-migration-bridge-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-inflight-migration-bridge-fixtures",
+      "scenarios": [
+        "migration-bridge-backfill-no-desync",
+        "migration-bridge-desync-failclosed"
+      ]
+    },
+    {
       "id": "planning-index-fixtures",
       "script": "scripts/test/run-planning-index-fixtures.sh",
       "args": [],

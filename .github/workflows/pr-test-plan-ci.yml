@@ -121,17 +121,6 @@ jobs:
       - name: Run doc-format-fixtures
         run: bash scripts/test/run-doc-format-fixtures.sh
 
-  feat-test-plan-planning-index-fixtures:
-    name: feat-test-plan-planning-index-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run planning-index-fixtures
-        run: bash scripts/test/run-planning-index-fixtures.sh
-
   feat-test-plan-inflight-signal-fixtures:
     name: feat-test-plan-inflight-signal-fixtures
     runs-on: ubuntu-latest
@@ -142,6 +131,28 @@ jobs:
           python-version: "3.12"
       - name: Run inflight-signal-fixtures
         run: bash scripts/test/run-inflight-signal-fixtures.sh
+
+  feat-test-plan-inflight-migration-bridge-fixtures:
+    name: feat-test-plan-inflight-migration-bridge-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run inflight-migration-bridge-fixtures
+        run: bash scripts/test/run-inflight-migration-bridge-fixtures.sh
+
+  feat-test-plan-planning-index-fixtures:
+    name: feat-test-plan-planning-index-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-index-fixtures
+        run: bash scripts/test/run-planning-index-fixtures.sh
 
   feat-test-plan-planning-migrate-fixtures:
     name: feat-test-plan-planning-migrate-fixtures
