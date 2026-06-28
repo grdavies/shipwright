@@ -17,6 +17,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from host_invoke import host_verb
 from host_lib import load_workflow_config, remote_name, remote_ref, resolve_provider
+from wave_state import phase_complete
 
 
 def utc_now() -> str:
@@ -518,10 +519,7 @@ def all_phases_green(state: dict[str, Any]) -> bool:
     phases = state.get("phases") or {}
     if not phases:
         return False
-    for meta in phases.values():
-        if meta.get("status") != "green-merged":
-            return False
-    return True
+    return all(phase_complete(meta.get("status")) for meta in phases.values())
 
 
 def host_pr_list(root: Path, *, head: str, base: str, state: str = "open") -> list[dict[str, Any]]:
