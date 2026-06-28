@@ -2,3 +2,6 @@
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 [ -x "$DIR/pre-commit-frozen.sh" ] && "$DIR/pre-commit-frozen.sh"
+GUARD="$DIR/../../scripts/index-region-guard.sh"
+[ -x "$GUARD" ] && "$GUARD" --staged
+
