@@ -1,0 +1,347 @@
+{
+  "verdict": "pass",
+  "mode": "phase",
+  "source_task_list": "docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md",
+  "prd_number": "004",
+  "target": {
+    "type": "feat",
+    "slug": "wave-phase-orchestrator",
+    "branch": "feat/wave-phase-orchestrator"
+  },
+  "items": [
+    {
+      "id": "1",
+      "slug": "rename-sw-wave-sw-deliver-and-naming-boundary-s",
+      "title": "Rename `/sw-wave` → `/sw-deliver` and naming boundary (S)",
+      "branch": "feat/wave-phase-orchestrator-phase-rename-sw-wave-sw-deliver-and-naming-boundary-s",
+      "files": [
+        "core/commands/sw-wave.md`",
+        "core/skills/wave/`",
+        "rules/sw-naming.mdc",
+        "README.md",
+        "documentation/commands.md",
+        ".sw/layout.md",
+        ".sw/config.schema.json",
+        ".sw/workflow.config.example.json"
+      ]
+    },
+    {
+      "id": "2",
+      "slug": "phase-mode-planning-in-wave-sh-m",
+      "title": "Phase-mode planning in `wave.sh` (M)",
+      "branch": "feat/wave-phase-orchestrator-phase-phase-mode-planning-in-wave-sh-m",
+      "files": [
+        "scripts/wave.sh",
+        "core/commands/sw-deliver.md",
+        "scripts/wave.sh",
+        "scripts/wave.sh",
+        "core/skills/deliver/SKILL.md",
+        "scripts/wave.sh",
+        ".cursor/sw-deliver-plan.json` schema in skill",
+        "core/commands/sw-deliver.md",
+        "scripts/wave.sh"
+      ]
+    },
+    {
+      "id": "3",
+      "slug": "sw-tasks-phase-dependencies-emission-s",
+      "title": "`/sw-tasks` Phase Dependencies emission (S)",
+      "branch": "feat/wave-phase-orchestrator-phase-sw-tasks-phase-dependencies-emission-s",
+      "files": [
+        "core/commands/sw-tasks.md",
+        "core/skills/tasks/SKILL.md",
+        "core/skills/tasks/SKILL.md"
+      ]
+    },
+    {
+      "id": "4",
+      "slug": "sw-ship-non-interactive-phase-mode-contract-m",
+      "title": "`/sw-ship` non-interactive phase-mode contract (M)",
+      "branch": "feat/wave-phase-orchestrator-phase-sw-ship-non-interactive-phase-mode-contract-m",
+      "files": [
+        "core/commands/sw-ship.md",
+        "core/skills/deliver/SKILL.md",
+        "spike note in deliver skill or `docs/plans/` (local)"
+      ]
+    },
+    {
+      "id": "5",
+      "slug": "state-artifacts-lock-and-progress-surface-m",
+      "title": "State artifacts, lock, and progress surface (M)",
+      "branch": "feat/wave-phase-orchestrator-phase-state-artifacts-lock-and-progress-surface-m",
+      "files": [
+        "core/skills/deliver/SKILL.md",
+        "scripts/wave.sh` helpers",
+        "scripts/wave.sh` (lock/journal helpers)",
+        "core/commands/sw-commit.md",
+        "core/skills/deliver/SKILL.md",
+        "scripts/wave.sh"
+      ]
+    },
+    {
+      "id": "6",
+      "slug": "contention-preflight-and-parallel-scheduling-m",
+      "title": "Contention preflight and parallel scheduling (M)",
+      "branch": "feat/wave-phase-orchestrator-phase-contention-preflight-and-parallel-scheduling-m",
+      "files": [
+        "scripts/wave.sh",
+        "skills/parallelism/",
+        "paths (migrations",
+        "shared config",
+        "INDEX counters",
+        "CHANGELOG/version contention); emits contention notice; injected edges respect declared order; combined graph cycle",
+        "core/skills/deliver/SKILL.md",
+        "scripts/wave.sh"
+      ]
+    },
+    {
+      "id": "7",
+      "slug": "orchestrator-worktree-branches-and-lifecycle-m",
+      "title": "Orchestrator worktree, branches, and lifecycle (M)",
+      "branch": "feat/wave-phase-orchestrator-phase-orchestrator-worktree-branches-and-lifecycle-m",
+      "files": [
+        "scripts/wave.sh",
+        "core/skills/deliver/SKILL.md",
+        "scripts/wave.sh",
+        "core/commands/sw-deliver.md",
+        "integration with `scripts/sw-assert-worktree.sh` or minimal guard"
+      ]
+    },
+    {
+      "id": "8",
+      "slug": "phase-execution-merge-queue-and-review-barrier-l",
+      "title": "Phase execution, merge queue, and review barrier (L)",
+      "branch": "feat/wave-phase-orchestrator-phase-phase-execution-merge-queue-and-review-barrier-l",
+      "files": [
+        "core/commands/sw-deliver.md",
+        "core/skills/deliver/SKILL.md",
+        "scripts/wave.sh",
+        "scripts/wave.sh",
+        "core/skills/deliver/SKILL.md",
+        "core/skills/deliver/SKILL.md",
+        "scripts/wave.sh"
+      ]
+    },
+    {
+      "id": "9",
+      "slug": "release-bookkeeping-on-type-slug-m",
+      "title": "Release bookkeeping on `<type>/<slug>` (M)",
+      "branch": "feat/wave-phase-orchestrator-phase-release-bookkeeping-on-type-slug-m",
+      "files": [
+        "scripts/wave.sh",
+        "core/skills/deliver/SKILL.md",
+        "scripts/wave.sh"
+      ]
+    },
+    {
+      "id": "10",
+      "slug": "verify-failure-blast-radius-and-stabilize-routing-m",
+      "title": "Verify, failure blast radius, and stabilize routing (M)",
+      "branch": "feat/wave-phase-orchestrator-phase-verify-failure-blast-radius-and-stabilize-routing-m",
+      "files": [
+        "scripts/wave.sh",
+        "core/skills/deliver/SKILL.md",
+        "core/skills/deliver/SKILL.md",
+        "scripts/wave.sh",
+        "core/skills/deliver/SKILL.md",
+        "scripts/wave.sh",
+        "core/skills/deliver/SKILL.md"
+      ]
+    },
+    {
+      "id": "11",
+      "slug": "terminal-pr-gate-resumption-and-ack-cadence-m",
+      "title": "Terminal PR gate, resumption, and ack cadence (M)",
+      "branch": "feat/wave-phase-orchestrator-phase-terminal-pr-gate-resumption-and-ack-cadence-m",
+      "files": [
+        "core/commands/sw-deliver.md",
+        "scripts/wave.sh",
+        "scripts/wave.sh",
+        "core/commands/sw-deliver.md",
+        "scripts/wave.sh",
+        "core/skills/deliver/SKILL.md"
+      ]
+    },
+    {
+      "id": "12",
+      "slug": "preflight-spec-availability-and-memory-learnings-s",
+      "title": "Preflight, spec availability, and memory learnings (S)",
+      "branch": "feat/wave-phase-orchestrator-phase-preflight-spec-availability-and-memory-learnings-s",
+      "files": [
+        "scripts/wave.sh",
+        "core/skills/deliver/SKILL.md",
+        ".gitignore",
+        "core/skills/deliver/SKILL.md"
+      ]
+    },
+    {
+      "id": "13",
+      "slug": "fixtures-build-chain-and-user-documentation-m",
+      "title": "Fixtures, build chain, and user documentation (M)",
+      "branch": "feat/wave-phase-orchestrator-phase-fixtures-build-chain-and-user-documentation-m",
+      "files": [
+        "scripts/test/fixtures/deliver-phase-*",
+        "scripts/test/run-deliver-fixtures.sh",
+        "scripts/test/fixtures/deliver-phase-*` or `wave-*` baseline",
+        "scripts/test/run-deliver-fixtures.sh",
+        "run `scripts/copy-to-core.sh",
+        "python3 -m sw generate --all`; `.sw/layout.md",
+        "core/sw-reference/layout.md",
+        "README.md",
+        "documentation/commands.md"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "1",
+      "to": "2"
+    },
+    {
+      "from": "1",
+      "to": "3"
+    },
+    {
+      "from": "1",
+      "to": "4"
+    },
+    {
+      "from": "2",
+      "to": "5"
+    },
+    {
+      "from": "2",
+      "to": "6"
+    },
+    {
+      "from": "5",
+      "to": "6"
+    },
+    {
+      "from": "5",
+      "to": "7"
+    },
+    {
+      "from": "4",
+      "to": "8"
+    },
+    {
+      "from": "6",
+      "to": "8"
+    },
+    {
+      "from": "7",
+      "to": "8"
+    },
+    {
+      "from": "8",
+      "to": "9"
+    },
+    {
+      "from": "8",
+      "to": "10"
+    },
+    {
+      "from": "9",
+      "to": "10"
+    },
+    {
+      "from": "10",
+      "to": "11"
+    },
+    {
+      "from": "7",
+      "to": "12"
+    },
+    {
+      "from": "11",
+      "to": "13"
+    },
+    {
+      "from": "12",
+      "to": "13"
+    },
+    {
+      "from": "2",
+      "to": "4",
+      "kind": "contention"
+    },
+    {
+      "from": "6",
+      "to": "7",
+      "kind": "contention"
+    },
+    {
+      "from": "8",
+      "to": "12",
+      "kind": "contention"
+    }
+  ],
+  "waves": [
+    [
+      "1"
+    ],
+    [
+      "2",
+      "3"
+    ],
+    [
+      "4",
+      "5"
+    ],
+    [
+      "6"
+    ],
+    [
+      "7"
+    ],
+    [
+      "8"
+    ],
+    [
+      "9",
+      "12"
+    ],
+    [
+      "10"
+    ],
+    [
+      "11"
+    ],
+    [
+      "13"
+    ]
+  ],
+  "contention": {
+    "serialized": [
+      "docs/prds/INDEX.md",
+      "docs/decisions/INDEX.md",
+      "CHANGELOG.md",
+      "version.txt",
+      "doc-numbering"
+    ],
+    "injectedEdges": [
+      {
+        "from": "2",
+        "to": "4",
+        "kind": "contention"
+      },
+      {
+        "from": "6",
+        "to": "7",
+        "kind": "contention"
+      },
+      {
+        "from": "8",
+        "to": "12",
+        "kind": "contention"
+      }
+    ]
+  },
+  "notices": [
+    "contention: phases 2 and 4 serialized (core/skills/deliver/SKILL.md)",
+    "contention: phases 6 and 7 serialized (scripts/wave.sh)",
+    "contention: phases 8 and 12 serialized (core/skills/deliver/SKILL.md)"
+  ],
+  "dry_run": true
+}

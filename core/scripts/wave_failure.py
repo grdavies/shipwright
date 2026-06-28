@@ -14,6 +14,45 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 FLAKY_DEFAULT_RETRIES = 1
 
+ENVIRONMENTAL_VERIFY_MARKERS = (
+    "parallelceiling",
+    "parallel ceiling",
+    "parallel_ceiling",
+    "fixture-harness",
+    "harness unavailable",
+    "harness-unavailable",
+    "no verify commands configured",
+)
+
+
+def classify_verify_failure(outcome: dict[str, Any]) -> str:
+    """Return cause class: environmental | regression (R9)."""
+    note = str(outcome.get("note") or "").lower()
+    if "no verify commands configured" in note:
+        return "environmental"
+    for result in outcome.get("results") or []:
+        blob = " ".join(
+            str(result.get(k) or "") for k in ("command", "stdoutTail", "stderrTail")
+        ).lower()
+        if any(marker in blob for marker in ENVIRONMENTAL_VERIFY_MARKERS):
+            return "environmental"
+    return "regression"
+
+
+def verify_failure_cause(outcome: dict[str, Any]) -> str:
+    if classify_verify_failure(outcome) == "environmental":
+        return "verify:environmental"
+    return "verify:failed"
+
+
+def remediation_max_attempts(root: Path) -> int:
+    deliver = load_workflow_config(root).get("deliver") or {}
+    remediation = deliver.get("remediation") or {}
+    try:
+        return max(0, int(remediation.get("maxAttempts", 2)))
+    except (TypeError, ValueError):
+        return 2
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -241,7 +280,8 @@ def cmd_verify_run(root: Path, args: list[str]) -> None:
     }
     if outcome["verdict"] != "pass":
         payload["halt"] = "blocked"
-        payload["cause"] = "verify:failed"
+        payload["cause"] = verify_failure_cause(outcome)
+        payload["causeClass"] = classify_verify_failure(outcome)
         payload["recommendedCommand"] = "/sw-stabilize"
         emit(payload, exit_code=20)
     emit(payload)
@@ -267,10 +307,36 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
                 **outcome,
             }
         )
+    cause = verify_failure_cause(outcome)
+    cause_class = classify_verify_failure(outcome)
+    if cause == "verify:environmental":
+        state = load_state(root)
+        pid, _meta = find_phase(state, None, phase_slug)
+        attempts_map = state.setdefault("verifyRemediationAttempts", {})
+        count = int(attempts_map.get(pid, 0))
+        max_attempts = remediation_max_attempts(root)
+        if count < max_attempts:
+            attempts_map[pid] = count + 1
+            save_state(root, state)
+            emit(
+                {
+                    "verdict": "wait",
+                    "action": "verify-run-after-merge",
+                    "phase": phase_slug,
+                    "verify": outcome,
+                    "cause": cause,
+                    "causeClass": cause_class,
+                    "attempt": count + 1,
+                    "maxAttempts": max_attempts,
+                    "mergeRetained": True,
+                    "note": "Environmental post-merge verify — merge retained; bounded remediation (R9)",
+                },
+                exit_code=10,
+            )
     state = load_state(root)
     pid, _meta = find_phase(state, None, phase_slug)
     state["phases"][pid]["status"] = "blocked"
-    state["phases"][pid]["cause"] = "verify:failed"
+    state["phases"][pid]["cause"] = cause
     state["phases"][pid]["updatedAt"] = utc_now()
     save_state(root, state)
     blast_args = ["blast-radius", "apply", "--phase-slug", phase_slug]
@@ -287,7 +353,8 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
             "phase": phase_slug,
             "verify": outcome,
             "halt": "blocked",
-            "cause": "verify:failed",
+            "cause": cause,
+            "causeClass": cause_class,
             "recommendedCommand": "/sw-stabilize",
             "note": "merge retained; no automatic revert (R26)",
         },
@@ -416,9 +483,17 @@ def cmd_report_blockers(root: Path, _args: list[str]) -> None:
             if (meta.get("cause") or "").startswith("blast-radius:"):
                 blocked_dependents.append(entry)
             else:
+                cause = str(meta.get("cause") or "")
                 blockers.append(
                     {
                         **entry,
+                        "causeClass": (
+                            "environmental"
+                            if cause.startswith("verify:environmental")
+                            else "regression"
+                            if cause.startswith("verify:")
+                            else "operational"
+                        ),
                         "recommendedCommand": stabilize_command_for_phase(meta, target),
                     }
                 )
