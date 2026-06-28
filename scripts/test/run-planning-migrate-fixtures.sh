@@ -17,7 +17,6 @@ seed_repo() {
   rm -rf "$dest"
   mkdir -p "$dest"
   cp -R "$CORPUS/." "$dest/"
-  cp "$ROOT/.gitignore" "$dest/.gitignore"
   (
     cd "$dest"
     git init -q

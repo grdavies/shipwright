@@ -60,7 +60,7 @@ seed_repo "$TMP2/repo2"
   cd "$TMP2/repo2"
   python3 "$PY" "$TMP2/repo2" lock-acquire >/dev/null
   python3 "$PY" "$TMP2/repo2" write --skip-commit >/dev/null
-  python3 -c "from pathlib import Path; p=Path('.gitignore'); t=p.read_text().replace('docs/*\n', '# docs/* stripped for fixture\n'); p.write_text(t)"
+  python3 -c "from pathlib import Path; p=Path('.gitignore'); p.write_text('\n'.join(l for l in p.read_text().splitlines() if 'docs/planning/brainstorm' not in l))"
   set +e
   OUT=$(bash "$PRIV" --repo-root "$TMP2/repo2" --scan-private 2>&1)
   EC=$?
