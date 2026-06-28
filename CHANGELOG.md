@@ -107,6 +107,7 @@
 * merge phase phase-status-write-read-path-hardening-m into feat/deliver-terminal-finalization-robustness (9af6c42) <!-- sw-deliver:phase-status-write-read-path-hardening-m -->
 * merge phase contributing-factor-resolution-m into feat/deliver-terminal-finalization-robustness (d6fc31e) <!-- sw-deliver:contributing-factor-resolution-m -->
 * merge phase planning-unit-schema-validator-stub-enum-l into feat/planning-feedback-lifecycle (3de48dc) <!-- sw-deliver:planning-unit-schema-validator-stub-enum-l -->
+* merge phase tokenizer-phase-a-adoption-on-legacy-docs-prds-paths-l into feat/planning-feedback-lifecycle (b7c520a) <!-- sw-deliver:tokenizer-phase-a-adoption-on-legacy-docs-prds-paths-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
