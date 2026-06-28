@@ -100,6 +100,28 @@ pre-commit and in CI.
 **Status precedence:** lifecycle consumers read `derived.status` when populated and fall back to structural
 `status`; gap units (`type: gap`) always use structural status only.
 
+
+
+### Private INDEX rows (R33 — PRD 034 handoff)
+
+INDEX structural rows for `visibility: private` units carry **provisional** title metadata (`[provisional]` prefix)
+until PRD 034 defines redaction/omission of private rows. Unit bodies for brainstorm/decision private units
+remain gitignored under the interim `legacy-pre-034` profile (R18); only public metadata appears in INDEX.
+
+### Migration cutover checklist (R27/R28)
+
+Atomic release train (031 + 032 + 033) cutover gates:
+
+1. Acquire migration lock; halt deliver/feedback append.
+2. Run `planning_migrate.py write` then mandatory `--verify`.
+3. Run `scripts/relief-acceptance-check.sh` (derived INDEX status vs deliver state).
+4. Flip `planningDir` to `docs/planning`; regenerate planning INDEX + legacy projections.
+5. Run `scripts/planning_legacy_projection.py` to emit legacy `GAP-BACKLOG.md` + `INDEX.md` shims.
+
+**Kill-criteria / falsification (R28):** if PRD 032/033 slip past the release threshold or the reconciler
+misses the accuracy floor on the relief fixture corpus, fall back to shim + legacy layout; R10 supersession
+edges recorded in `.cursor/planning-migration-supersession-map.json` are **reversible** via `--rollback`.
+
 ### Gaps as first-class units (R3)
 
 Gap artifacts are planning units with `type: gap` (folder + frontmatter). They **replace** `GAP-BACKLOG.md`

@@ -29,7 +29,7 @@
     "visibility": {
       "type": "string",
       "enum": ["public", "private"],
-      "description": "Visibility profile token. Ongoing visibility semantics are PRD 034."
+      "description": "Visibility profile token. Interim private units use tags [legacy-pre-034] until PRD 034. Ongoing visibility semantics are PRD 034."
     },
     "depends": {
       "type": "array",
@@ -64,7 +64,7 @@
       "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
       "uniqueItems": true,
       "default": [],
-      "description": "Unit ids absorbed by this unit."
+      "description": "Unit ids absorbed by this unit. Cancelled PRD supersession edges (R10) are reversible per R28."
     },
     "priority": {
       "type": ["integer", "null"],

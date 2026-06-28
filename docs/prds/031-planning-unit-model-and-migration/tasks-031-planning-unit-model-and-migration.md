@@ -214,14 +214,14 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
 
 ### 7. Atomic cutover — Phase B relocation, supersession, privacy, projections, kill-criteria — L
 
-- [ ] 7.1 Cancelled-PRD supersession edges (reversible) (R10)
+- [x] 7.1 Cancelled-PRD supersession edges (reversible) (R10)
   - **File:** `scripts/planning_migrate.py`, `core/sw-reference/planning-unit.schema.json`
   - **Expected:** the migration records each cancelled/superseded point-fix PRD (025/028/029/030) as a unit with
     `status: superseded`/`cancelled` and the corresponding supersession edge to a named absorbing unit id
     (recorded in the migration map), satisfying brainstorm R46 mechanically; per R28 these edges are reversible.
     Fixture: `cancelled-prd-supersession-edges`.
   - **R-IDs:** R10
-- [ ] 7.2 Interim privacy guard — no exposure before PRD 034 (R18)
+- [x] 7.2 Interim privacy guard — no exposure before PRD 034 (R18)
   - **File:** `scripts/planning-privacy-guard.sh`, `.gitignore`
   - **Expected:** the migration backfills `visibility: private` (interim `legacy-pre-034` profile token) for every
     unit whose pre-migration source path was gitignored (brainstorms, decision bodies); the R7 `.gitignore`
@@ -229,13 +229,13 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     if any formerly-gitignored body would become tracked by the migration commit. Fixtures:
     `privacy-backfill-legacy-token`, `formerly-ignored-body-tracked-fails`.
   - **R-IDs:** R18
-- [ ] 7.3 INDEX private-row provisional + 034 handoff (R33)
+- [x] 7.3 INDEX private-row provisional + 034 handoff (R33)
   - **File:** `scripts/planning_index_gen.py`, `core/sw-reference/layout.md`
   - **Expected:** INDEX metadata for `visibility: private` units (title/edges) is provisional until PRD 034
     defines redaction/omission of private rows; 031 keeps such bodies ignored (R18) and records this as a 034
     handoff. Fixture: `private-index-row-provisional`.
   - **R-IDs:** R33
-- [ ] 7.4 Release-train legacy GAP-BACKLOG/INDEX projections (R27)
+- [x] 7.4 Release-train legacy GAP-BACKLOG/INDEX projections (R27)
   - **File:** `scripts/planning_legacy_projection.py`, `scripts/wave_living_docs.py`
   - **Expected:** 031 ships same-day with 032 (guards) and 033 (lifecycle/reconciler) as one atomic cutover; the
     compatibility layer generates legacy `docs/prds/GAP-BACKLOG.md` + `INDEX.md` projections from the planning/gap
@@ -243,7 +243,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     no config flip merges to `main` that leaves the loop reading a half-migrated tree. Fixtures:
     `legacy-projection-gapbacklog-index`, `no-half-migrated-merge`.
   - **R-IDs:** R27
-- [ ] 7.5 Kill-criteria / falsification plan + relief acceptance check (R28)
+- [x] 7.5 Kill-criteria / falsification plan + relief acceptance check (R28)
   - **File:** `scripts/relief-acceptance-check.sh`, `core/sw-reference/layout.md`
   - **Expected:** the cutover documents a fallback — if 032/033 slip past a defined threshold or the 033
     reconciler misses an accuracy floor on the fixture corpus, the program falls back to the shim + legacy layout
