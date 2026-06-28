@@ -110,6 +110,7 @@
 * merge phase tokenizer-phase-a-adoption-on-legacy-docs-prds-paths-l into feat/planning-feedback-lifecycle (b7c520a) <!-- sw-deliver:tokenizer-phase-a-adoption-on-legacy-docs-prds-paths-l -->
 * merge phase config-driven-path-resolution-helper-m into feat/planning-feedback-lifecycle (bb2d3e4) <!-- sw-deliver:config-driven-path-resolution-helper-m -->
 * merge phase deterministic-dual-region-index-generator-region-integrity-hook-l into feat/planning-feedback-lifecycle (a143068) <!-- sw-deliver:deterministic-dual-region-index-generator-region-integrity-hook-l -->
+* merge phase migration-tool-held-lock-redirect-map-verification-fixture-l into feat/planning-feedback-lifecycle (4e07f38) <!-- sw-deliver:migration-tool-held-lock-redirect-map-verification-fixture-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
