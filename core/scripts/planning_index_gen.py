@@ -1,0 +1,439 @@
+#!/usr/bin/env python3
+"""Deterministic dual-region planning INDEX generator (PRD 031 R5/R9/R24)."""
+from __future__ import annotations
+
+import json
+import re
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+import planning_paths  # noqa: E402
+
+SCHEMA_MARKER = "<!-- planning-index:schema v1 -->"
+STATUS_PRECEDENCE_DOC = (
+    "<!-- Status precedence: lifecycle units read derived.status when populated, "
+    "else structural status; gap units use structural status only. -->"
+)
+
+REGION_MARKERS: dict[str, tuple[str, str]] = {
+    "structural": (
+        "<!-- planning-index:structural begin -->",
+        "<!-- planning-index:structural end -->",
+    ),
+    "derived": (
+        "<!-- planning-index:derived begin -->",
+        "<!-- planning-index:derived end -->",
+    ),
+    "inFlight": (
+        "<!-- planning-index:inFlight begin -->",
+        "<!-- planning-index:inFlight end -->",
+    ),
+}
+
+VALID_WRITERS = frozenset({"generator", "structural", "reconciler", "derived", "deliver", "inFlight"})
+WRITER_REGION: dict[str, str] = {
+    "generator": "structural",
+    "structural": "structural",
+    "reconciler": "derived",
+    "derived": "derived",
+    "deliver": "inFlight",
+    "inFlight": "inFlight",
+}
+
+UNIT_TYPES = frozenset({"brainstorm", "gap", "prd", "decision", "amendment"})
+EDGE_KEYS = ("depends", "blocks", "supersedes", "extends", "absorbs")
+
+
+@dataclass(frozen=True)
+class IndexRegions:
+    structural: str
+    derived: str
+    inFlight: str
+    prefix: str
+    suffix: str
+
+
+@dataclass(frozen=True)
+class PlanningUnit:
+    id: str
+    type: str
+    status: str
+    title: str
+    visibility: str
+    edges: str
+    body_path: str
+
+
+def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
+    print(json.dumps(obj, ensure_ascii=False, indent=2))
+    sys.exit(exit_code)
+
+
+def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
+    emit({"verdict": "fail", "error": error, **extra}, exit_code)
+
+
+def index_rel(root: Path) -> str:
+    dirs = planning_paths.load_planning_dirs(root)
+    return planning_paths.join_rel(dirs.planning, "INDEX.md")
+
+
+def index_path(root: Path) -> Path:
+    return planning_paths.git_root(root) / index_rel(root)
+
+
+def extract_region(content: str, region: str) -> str:
+    start, end = REGION_MARKERS[region]
+    if start not in content or end not in content:
+        raise ValueError(f"missing {region} region markers")
+    return content.split(start, 1)[1].split(end, 1)[0]
+
+
+def parse_regions(content: str) -> IndexRegions:
+    prefix = content
+    suffix = ""
+    first_region = REGION_MARKERS["structural"][0]
+    if first_region in content:
+        prefix = content.split(first_region, 1)[0]
+    last_end = REGION_MARKERS["inFlight"][1]
+    if last_end in content:
+        suffix = content.split(last_end, 1)[1]
+    return IndexRegions(
+        structural=extract_region(content, "structural"),
+        derived=extract_region(content, "derived"),
+        inFlight=extract_region(content, "inFlight"),
+        prefix=prefix,
+        suffix=suffix,
+    )
+
+
+def render_region(region: str, body: str) -> str:
+    start, end = REGION_MARKERS[region]
+    return f"{start}\n{body}{end}"
+
+
+
+
+def replace_region_inner(content: str, region: str, new_inner: str) -> str:
+    """Splice one region inner body; preserve marker bytes and sibling regions."""
+    start, end = REGION_MARKERS[region]
+    if start not in content or end not in content:
+        raise ValueError(f"missing {region} region markers")
+    pre, rest = content.split(start, 1)
+    _, post = rest.split(end, 1)
+    return pre + start + new_inner + end + post
+
+def assemble_index(regions: IndexRegions) -> str:
+    header = regions.prefix.rstrip("\n")
+    if SCHEMA_MARKER not in header:
+        header = (
+            "# Planning units INDEX\n\n"
+            f"{SCHEMA_MARKER}\n"
+            f"{STATUS_PRECEDENCE_DOC}\n"
+        )
+    parts = [header, ""]
+    for name in ("structural", "derived", "inFlight"):
+        body = getattr(regions, name)
+        parts.append(render_region(name, body))
+    parts.append(regions.suffix.lstrip("\n"))
+    text = "\n".join(parts)
+    if not text.endswith("\n"):
+        text += "\n"
+    return text
+
+
+def parse_scalar(raw: str) -> Any:
+    raw = raw.strip()
+    if not raw:
+        return ""
+    if raw.startswith("[") and raw.endswith("]"):
+        inner = raw[1:-1].strip()
+        if not inner:
+            return []
+        return [item.strip().strip("'\"") for item in re.split(r",\s*", inner) if item.strip()]
+    if (raw.startswith('"') and raw.endswith('"')) or (raw.startswith("'") and raw.endswith("'")):
+        return raw[1:-1]
+    return raw
+
+
+def parse_frontmatter(text: str) -> dict[str, Any] | None:
+    if not text.startswith("---"):
+        return None
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        return None
+    fm: dict[str, Any] = {}
+    for line in parts[1].splitlines():
+        if not line.strip() or ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        fm[key.strip()] = parse_scalar(value)
+    return fm
+
+
+def body_file_for_unit_dir(unit_dir: Path) -> Path | None:
+    for path in sorted(unit_dir.glob("*.md")):
+        if path.name.startswith("tasks-"):
+            continue
+        text = path.read_text(encoding="utf-8")
+        fm = parse_frontmatter(text)
+        if fm and fm.get("id"):
+            return path
+    return None
+
+
+def format_edges(fm: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for key in EDGE_KEYS:
+        value = fm.get(key)
+        if not value:
+            continue
+        if isinstance(value, list):
+            if value:
+                parts.append(f"{key}:{','.join(str(v) for v in value)}")
+        else:
+            parts.append(f"{key}:{value}")
+    return "; ".join(parts)
+
+
+def discover_units(root: Path) -> list[PlanningUnit]:
+    worktree = planning_paths.git_root(root)
+    dirs = planning_paths.load_planning_dirs(root)
+    planning_root = worktree / dirs.planning
+    if not planning_root.is_dir():
+        return []
+    units: list[PlanningUnit] = []
+    for type_dir in sorted(planning_root.iterdir()):
+        if not type_dir.is_dir() or type_dir.name.startswith("."):
+            continue
+        if type_dir.name not in UNIT_TYPES:
+            continue
+        for unit_dir in sorted(type_dir.iterdir()):
+            if not unit_dir.is_dir():
+                continue
+            body = body_file_for_unit_dir(unit_dir)
+            if not body:
+                continue
+            fm = parse_frontmatter(body.read_text(encoding="utf-8"))
+            if not fm:
+                continue
+            unit_id = str(fm.get("id", "")).strip()
+            if not unit_id:
+                continue
+            units.append(
+                PlanningUnit(
+                    id=unit_id,
+                    type=str(fm.get("type", type_dir.name)),
+                    status=str(fm.get("status", "")),
+                    title=str(fm.get("title", "")),
+                    visibility=str(fm.get("visibility", "")),
+                    edges=format_edges(fm),
+                    body_path=str(body.relative_to(worktree)),
+                )
+            )
+    units.sort(key=lambda u: (u.type, u.id))
+    return units
+
+
+def render_structural_table(units: list[PlanningUnit]) -> str:
+    lines = [
+        "| id | type | title | status | visibility | edges |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for unit in units:
+        lines.append(
+            "| {id} | {type} | {title} | {status} | {visibility} | {edges} |".format(
+                id=unit.id,
+                type=unit.type,
+                title=unit.title.replace("|", "\\|"),
+                status=unit.status,
+                visibility=unit.visibility,
+                edges=unit.edges.replace("|", "\\|"),
+            )
+        )
+    return "\n".join(lines) + "\n"
+
+
+def parse_derived_status_map(derived_body: str) -> dict[str, str]:
+    statuses: dict[str, str] = {}
+    for line in derived_body.splitlines():
+        line = line.strip()
+        if not line or line.startswith("|") or line.startswith("-"):
+            continue
+        if ":" in line:
+            unit_id, _, status = line.partition(":")
+            unit_id = unit_id.strip()
+            status = status.strip()
+            if unit_id and status:
+                statuses[unit_id] = status
+    return statuses
+
+
+def resolve_consumer_status(unit: PlanningUnit, derived_body: str) -> str:
+    """Status precedence (R9): derived when populated for lifecycle units; gaps use structural only."""
+    if unit.type == "gap":
+        return unit.status
+    derived = parse_derived_status_map(derived_body)
+    return derived.get(unit.id, unit.status)
+
+
+def read_merge_write(
+    existing: str | None,
+    *,
+    writer: str,
+    new_region_body: str,
+) -> str:
+    if writer not in VALID_WRITERS:
+        fail(f"invalid writer: {writer!r}", valid=sorted(VALID_WRITERS))
+    region_key = WRITER_REGION[writer]
+    if existing and all(marker[0] in existing for marker in REGION_MARKERS.values()):
+        return replace_region_inner(existing, region_key, new_region_body)
+    empty = IndexRegions(
+        structural=new_region_body if region_key == "structural" else render_structural_table([]),
+        derived=new_region_body if region_key == "derived" else "\n",
+        inFlight=new_region_body if region_key == "inFlight" else "\n",
+        prefix="",
+        suffix="",
+    )
+    return assemble_index(empty)
+
+
+def generate_index(root: Path, *, writer: str = "generator") -> str:
+    units = discover_units(root)
+    structural = render_structural_table(units)
+    path = index_path(root)
+    existing = path.read_text(encoding="utf-8") if path.is_file() else None
+    return read_merge_write(existing, writer=writer, new_region_body=structural)
+
+
+def write_index(root: Path, content: str, *, dry_run: bool = False) -> Path:
+    path = index_path(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        path.write_text(content, encoding="utf-8")
+    return path
+
+
+def cmd_generate(root: Path, args: list[str]) -> None:
+    writer = "generator"
+    dry_run = "--dry-run" in args
+    if "--writer" in args:
+        i = args.index("--writer")
+        writer = args[i + 1] if i + 1 < len(args) else writer
+    content = generate_index(root, writer=writer)
+    rel = index_rel(root)
+    if not dry_run:
+        write_index(root, content)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "planning-index-generate",
+            "path": rel,
+            "writer": writer,
+            "unitCount": len(discover_units(root)),
+            "dryRun": dry_run,
+        }
+    )
+
+
+def cmd_write_region(root: Path, args: list[str]) -> None:
+    if "--region-body" not in args or "--writer" not in args:
+        fail("--writer and --region-body required")
+    writer = args[args.index("--writer") + 1]
+    body_path = Path(args[args.index("--region-body") + 1])
+    if not body_path.is_file():
+        fail(f"region body not found: {body_path}")
+    body = body_path.read_text(encoding="utf-8")
+    dry_run = "--dry-run" in args
+    path = index_path(root)
+    existing = path.read_text(encoding="utf-8") if path.is_file() else None
+    content = read_merge_write(existing, writer=writer, new_region_body=body)
+    if not dry_run:
+        write_index(root, content)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "planning-index-write-region",
+            "writer": writer,
+            "path": index_rel(root),
+            "dryRun": dry_run,
+        }
+    )
+
+
+def cmd_resolve_status(root: Path, args: list[str]) -> None:
+    unit_id = None
+    if "--unit" in args:
+        unit_id = args[args.index("--unit") + 1]
+    if not unit_id:
+        fail("--unit required")
+    units = {u.id: u for u in discover_units(root)}
+    unit = units.get(unit_id)
+    if not unit:
+        fail(f"unit not found: {unit_id}", exit_code=20)
+    path = index_path(root)
+    derived_body = ""
+    if path.is_file():
+        derived_body = parse_regions(path.read_text(encoding="utf-8")).derived
+    status = resolve_consumer_status(unit, derived_body)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "resolve-status",
+            "unit": unit_id,
+            "type": unit.type,
+            "structuralStatus": unit.status,
+            "consumerStatus": status,
+        }
+    )
+
+
+def cmd_parse(root: Path, args: list[str]) -> None:
+    path = index_path(root)
+    if "--path" in args:
+        rel = args[args.index("--path") + 1]
+        path = planning_paths.resolve_contained(root, rel)
+    if not path.is_file():
+        fail(f"INDEX not found: {path}")
+    regions = parse_regions(path.read_text(encoding="utf-8"))
+    emit(
+        {
+            "verdict": "pass",
+            "action": "parse-regions",
+            "regions": {
+                "structural": regions.structural,
+                "derived": regions.derived,
+                "inFlight": regions.inFlight,
+            },
+        }
+    )
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = list(argv if argv is not None else sys.argv[1:])
+    if len(args) < 2:
+        fail("usage: planning_index_gen.py <repo-root> <command> ...")
+    root = Path(args[0]).resolve()
+    cmd_args = args[2:]
+    command = args[1]
+    commands = {
+        "generate": lambda: cmd_generate(root, cmd_args),
+        "write-region": lambda: cmd_write_region(root, cmd_args),
+        "resolve-status": lambda: cmd_resolve_status(root, cmd_args),
+        "parse": lambda: cmd_parse(root, cmd_args),
+    }
+    handler = commands.get(command)
+    if not handler:
+        fail(f"unknown command: {command}")
+    handler()
+
+
+if __name__ == "__main__":
+    main()

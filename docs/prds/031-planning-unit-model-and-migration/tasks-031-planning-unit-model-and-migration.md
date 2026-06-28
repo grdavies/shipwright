@@ -167,7 +167,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
 
 ### 6. Migration tool + held lock + redirect map + verification fixture — L
 
-- [ ] 6.1 Migration tool modes + filesystem-atomic staging (R20)
+- [x] 6.1 Migration tool modes + filesystem-atomic staging (R20)
   - **File:** `scripts/planning_migrate.py`
   - **Expected:** exposes `--dry-run`/`--write`/`--verify`/`--rollback`; runs relocation as a single atomic
     commit with filesystem-atomic staging (relocations staged under a temp prefix; reverse map + `GAP-id → unit-id`
@@ -177,14 +177,14 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     `planningDir` back before/with the tree restore); `--verify` is a mandatory gate before the config flip.
     Fixtures: `migrate-atomic-staging`, `rollback-refuses-dirty-restores-config-inverse`.
   - **R-IDs:** R20
-- [ ] 6.2 One-time idempotent relocation of all artifacts (R6)
+- [x] 6.2 One-time idempotent relocation of all artifacts (R6)
   - **File:** `scripts/planning_migrate.py`
   - **Expected:** a one-time idempotent migration relocates all existing artifacts into the unified model — PRD
     folders including their nested frozen task lists and `amendments/` trees, gap rows, brainstorms, the decision
     index, and the GAP feedback-checklist content; frozen unit content is preserved verbatim (relocation plus
     frontmatter backfill only, no body edits). Fixture: `migrate-relocates-all-verbatim`.
   - **R-IDs:** R6
-- [ ] 6.3 Migration one-to-one verification fixture (R8)
+- [x] 6.3 Migration one-to-one verification fixture (R8)
   - **File:** `core/sw-reference/pr-test-plan.manifest.json`, `scripts/planning_migrate.py`
   - **Expected:** proves every pre-migration artifact maps one-to-one to a post-migration unit with byte-preserved
     body content and reconstructed edges; staged into explicit snapshots (PRD folders with task lists + amendment
@@ -192,7 +192,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     `GAP-id → unit-id` map and feedback-checklist item preservation as separate assertions; `--verify` fails
     closed on drift. Fixtures: `migration-one-to-one`, `gap-id-map-assertion`, `feedback-checklist-preserved`.
   - **R-IDs:** R8
-- [ ] 6.4 Held migration lock + cross-worktree scan + path-redirect map (R21)
+- [x] 6.4 Held migration lock + cross-worktree scan + path-redirect map (R21)
   - **File:** `scripts/planning_migrate.py`, `scripts/planning_path_redirect.py`, `scripts/worktree_lib.py`
   - **Expected:** a migration lock/sentinel is acquired atomically with the run-state scan and held through
     `--verify` (re-checked immediately before commit), closing the TOCTOU window; the run-state scan covers all
@@ -203,7 +203,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     checklist enumerates open feature branches/worktrees carrying `docs/prds` task lists and resolves or halts.
     Fixtures: `migration-lock-toctou`, `cross-worktree-runstate-detect`, `redirect-map-resume`.
   - **R-IDs:** R21
-- [ ] 6.5 Migration scope discipline + operational map artifacts (R29, R32)
+- [x] 6.5 Migration scope discipline + operational map artifacts (R29, R32)
   - **File:** `scripts/planning_migrate.py`, `.gitignore`
   - **Expected:** the migration touches documentation artifacts and the path-resolution/`.gitignore` config keys
     only — never code, secrets, or other configuration; the reverse map and `GAP-id → unit-id` map are

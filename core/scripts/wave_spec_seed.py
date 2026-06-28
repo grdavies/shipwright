@@ -18,6 +18,7 @@ if str(SCRIPT_DIR) not in _sys.path:
 from worktree_lib import docs_branch_for_topic, refuse_default_branch
 
 import planning_paths
+import planning_path_redirect
 
 _VALID_TYPES = frozenset(
     {"feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"}
@@ -137,6 +138,7 @@ def resolve_target_branch(root: Path, task_list_rel: str) -> tuple[str, str, Pat
     branch = (data.get("target") or {}).get("branch")
     if not branch:
         fail("preflight missing target.branch")
+    task_list_rel = planning_path_redirect.resolve_path(root, task_list_rel)
     task_path = (root / task_list_rel).resolve()
     if not task_path.is_file():
         fail(f"task list not found: {task_list_rel}")

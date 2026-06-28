@@ -200,6 +200,32 @@ def cmd_phase_status_live(root: Path, args: list[str]) -> None:
     )
 
 
+
+
+def cmd_regenerate_index(root: Path, args: list[str]) -> None:
+    """Regenerate planning INDEX structural region under living-doc lock (PRD 031 R24)."""
+    from wave_living_doc_lock import living_doc_write_lock
+    import planning_index_gen as pig
+
+    state = load_state(root)
+    target = (state.get("target") or {}).get("branch")
+    dry_run = has_flag(args, "--dry-run")
+    with living_doc_write_lock(root, target=target, holder="planning-index-generator"):
+        content = pig.generate_index(root, writer="generator")
+        rel = pig.index_rel(root)
+        if not dry_run:
+            pig.write_index(root, content)
+        emit(
+            {
+                "verdict": "pass",
+                "action": "planning-index-regenerate",
+                "path": rel,
+                "unitCount": len(pig.discover_units(root)),
+                "dryRun": dry_run,
+            }
+        )
+
+
 def cmd_reconcile(root: Path, args: list[str]) -> None:
     from wave_living_doc_lock import living_doc_write_lock
 
@@ -334,7 +360,7 @@ def _cmd_append_terminal_locked(root: Path, args: list[str], state: dict[str, An
 
 def main() -> None:
     if len(sys.argv) < 3:
-        fail("usage: wave_living_docs.py <root> <reconcile|append-terminal> [args...]")
+        fail("usage: wave_living_docs.py <root> <reconcile|append-terminal|regenerate-index|phase-status-live> [args...]")
     root = Path(sys.argv[1]).resolve()
     cmd = sys.argv[2]
     rest = sys.argv[3:]
@@ -344,6 +370,8 @@ def main() -> None:
         cmd_append_terminal(root, rest)
     elif cmd == "phase-status-live":
         cmd_phase_status_live(root, rest)
+    elif cmd == "regenerate-index":
+        cmd_regenerate_index(root, rest)
     else:
         fail(f"unknown command: {cmd}")
 

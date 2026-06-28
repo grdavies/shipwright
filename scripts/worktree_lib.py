@@ -83,10 +83,47 @@ def refuse_default_branch(branch: str, default: str) -> None:
         raise ValueError(f"refused: operation targets protected default branch {default!r}")
 
 
+
+def list_all_worktree_roots(start: Path | None = None) -> list[Path]:
+    """All linked git worktrees plus .sw-worktrees/* (PRD 031 R21)."""
+    root = start or Path.cwd()
+    proc = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0:
+        return [root.resolve()]
+    repo = Path(proc.stdout.strip())
+    roots: list[Path] = [repo]
+    proc2 = subprocess.run(
+        ["git", "-C", str(repo), "worktree", "list", "--porcelain"],
+        text=True,
+        capture_output=True,
+    )
+    if proc2.returncode == 0:
+        for line in proc2.stdout.splitlines():
+            if line.startswith("worktree "):
+                roots.append(Path(line.split(" ", 1)[1].strip()))
+    sw = repo / ".sw-worktrees"
+    if sw.is_dir():
+        for wt in sw.iterdir():
+            if wt.is_dir():
+                roots.append(wt)
+    seen: set[str] = set()
+    out: list[Path] = []
+    for r in roots:
+        key = str(r.resolve())
+        if key not in seen:
+            seen.add(key)
+            out.append(r.resolve())
+    return out
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         print(
-            "usage: worktree_lib.py {types|validate <branch>|derive <name> [type]|docs-branch <topic>}",
+            "usage: worktree_lib.py {types|validate <branch>|derive <name> [type]|docs-branch <topic>|scan-worktrees}",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -107,6 +144,10 @@ def main() -> None:
             sys.exit(2)
         btype = sys.argv[3] if len(sys.argv) > 3 else "feat"
         print(derive_branch(sys.argv[2], btype))
+        sys.exit(0)
+    if cmd == "scan-worktrees":
+        roots = list_all_worktree_roots(ROOT)
+        print(json.dumps({"verdict": "pass", "worktrees": [str(r) for r in roots]}, indent=2))
         sys.exit(0)
     if cmd == "docs-branch":
         if len(sys.argv) < 3:

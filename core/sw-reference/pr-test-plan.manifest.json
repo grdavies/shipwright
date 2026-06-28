@@ -156,6 +156,26 @@
         "empty-inflight-with-runstate-fails",
         "living-doc-index-generator-wired"
       ]
+    },
+    {
+      "id": "planning-migrate-fixtures",
+      "script": "scripts/test/run-planning-migrate-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-migrate-fixtures",
+      "scenarios": [
+        "migrate-atomic-staging",
+        "rollback-refuses-dirty-restores-config-inverse",
+        "migrate-relocates-all-verbatim",
+        "migration-one-to-one",
+        "gap-id-map-assertion",
+        "feedback-checklist-preserved",
+        "migration-lock-toctou",
+        "cross-worktree-runstate-detect",
+        "redirect-map-resume",
+        "migration-scope-docs-config-only",
+        "opmaps-gitignored-redacted"
+      ]
     }
   ]
 }
