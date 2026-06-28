@@ -46,6 +46,46 @@ docs/decisions/
 │       └── dispatch-decisions.json
 ```
 
+
+## Planning-unit model (PRD 031)
+
+Canonical frontmatter schema: `core/sw-reference/planning-unit.schema.json` (validated by
+`scripts/planning-unit-validate.sh`). Status enums are type-conditioned via `scripts/planning_status_enum.py`
+(stub values only — PRD 033 owns transition semantics).
+
+### Unit folder layout
+
+Every planning unit is a **folder** under the typed-unit tree (`docs/planning/` at cutover; see R5). Each
+folder contains:
+
+- A **canonical body file** with planning-unit frontmatter (`id`, `type`, `status`, `title`, `visibility`, edge
+  arrays, optional `priority`/`tags`).
+- **Optional ancillary tracked files** co-located in the same folder (e.g. a PRD unit's frozen task lists and
+  `amendments/` subtree).
+
+```text
+docs/planning/
+├── INDEX.md                         # single generated unified INDEX (R5)
+└── <type>/<id>-<slug>/              # one folder per unit
+    ├── <id>-<type>-<slug>.md        # canonical body (frontmatter + content)
+    ├── tasks-<id>-<slug>.md         # optional (PRD units)
+    └── amendments/                  # optional (PRD / decision units)
+        └── A<k>-<short>.md
+```
+
+### Stable unit ids (R2)
+
+- Unit `id` values are **stable**, **monotonic**, and **never reused** after assignment.
+- All cross-references (`depends`, `blocks`, `supersedes`, `extends`, `absorbs`, INDEX rows) use the **unit id**
+  — never a table row index, filesystem path alone, or positional reference.
+- Gap units use the same id discipline (e.g. `gap-045-sample`) — they are not anonymous backlog rows.
+
+### Gaps as first-class units (R3)
+
+Gap artifacts are planning units with `type: gap` (folder + frontmatter). They **replace** `GAP-BACKLOG.md`
+table rows at cutover and render as rows in the **single generated unified INDEX** — not a separate gap-only
+index. Legacy `docs/prds/GAP-BACKLOG.md` is a compatibility projection until consumers migrate (R27).
+
 ## Naming conventions
 
 | Artifact | Path pattern | Written by | Frozen |
