@@ -384,6 +384,299 @@ def emit_canonical(document: Document) -> str:
     return "".join(out_lines)
 
 
+EXCEPTION_MANIFEST_REL = (
+    "docs/prds/031-planning-unit-model-and-migration/tokenizer-exception-manifest.json"
+)
+EXCEPTION_MANIFEST_CAP = 64
+
+RID_BULLET_NONCANON = re.compile(
+    r"^- \*\*([RD]\d+)[.:]+\*\*\s*(.*)$", re.I
+)
+PHASE_HEADING_NONCANON = re.compile(
+    r"^###\s+(?:Phase\s+)?(\d+)\s*(?:[.:—\-]|$)", re.I
+)
+
+SLOT_TEMPLATES: dict[str, str] = {
+    "prd_requirement": "- **{id}** {body}",
+    "prd_section": "## {title}",
+    "decision_bullet": "- **{id}** {body}",
+    "task_phase": "### {phase}. {title}",
+    "task_file": "  - **File:** `{path}`",
+    "traceability_row": "| {rid} | {task} | {scenario} |",
+    "directive_inline": "{key}: [{ids}]",
+    "directive_block": "{key}:\n  - {id}",
+}
+
+
+@dataclass
+class Finding:
+    file: str
+    line: int
+    expected: str
+    found: str
+    klass: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "file": self.file,
+            "line": self.line,
+            "expected": self.expected,
+            "found": self.found,
+            "class": self.klass,
+        }
+
+
+def id_sort_key(rid: str) -> tuple[str, int | str]:
+    m = ID_PATTERN.match(rid)
+    if m:
+        return (m.group(1).upper(), int(m.group(2)))
+    return ("Z", rid)
+
+
+def parse_frontmatter_scalar(text: str, key: str) -> str | None:
+    fm, _ = split_frontmatter(text)
+    if fm is None:
+        return None
+    for line in fm.splitlines():
+        if line.startswith(f"{key}:"):
+            return line.split(":", 1)[1].strip().strip('"').strip("'")
+    return None
+
+
+def parse_frontmatter_directives(text: str) -> dict[str, list[str]]:
+    fm, _ = split_frontmatter(text)
+    out: dict[str, list[str]] = {k: [] for k in DIRECTIVE_KEYS}
+    if fm is None:
+        return out
+    for key in DIRECTIVE_KEYS:
+        out[key] = parse_directive_list(fm, key)
+    return out
+
+
+def extract_rd_bullets(text: str) -> list[tuple[str, str]]:
+    doc = tokenize(text)
+    seen: set[str] = set()
+    out: list[tuple[str, str]] = []
+    for tok in doc.tokens:
+        if tok.kind != TokenKind.RD_ID_BULLET:
+            continue
+        rid = tok.data["id"]
+        if rid in seen:
+            continue
+        seen.add(rid)
+        out.append((rid, tok.data.get("body", "")))
+    out.sort(key=lambda x: id_sort_key(x[0]))
+    return out
+
+
+def extract_traceability_rows(text: str) -> list[dict[str, str]]:
+    doc = tokenize(text)
+    return [
+        {
+            "rid": t.data["rid"],
+            "task": t.data["task"],
+            "testScenario": t.data["testScenario"],
+        }
+        for t in doc.tokens
+        if t.kind == TokenKind.TRACEABILITY_ROW
+    ]
+
+
+def extract_phases(text: str) -> list[dict[str, str]]:
+    doc = tokenize(text)
+    phases: list[dict[str, str]] = []
+    for tok in doc.tokens:
+        if tok.kind != TokenKind.PHASE_HEADING:
+            continue
+        title = tok.data.get("title", "")
+        phases.append(
+            {
+                "id": tok.data.get("phase", ""),
+                "title": title,
+                "slug": re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-"),
+            }
+        )
+    return phases
+
+
+def extract_phase_dependencies(text: str) -> list[dict[str, str]] | None:
+    doc = tokenize(text)
+    rows = [
+        {"phase": t.data["phase"], "depends_on": t.data["depends_on"]}
+        for t in doc.tokens
+        if t.kind == TokenKind.PHASE_DEPENDENCIES_ROW
+    ]
+    return rows if rows else None
+
+
+def extract_phase_files(text: str) -> dict[str, list[str]]:
+    doc = tokenize(text)
+    phases = extract_phases(text)
+    phase_ids = [p["id"] for p in phases]
+    out: dict[str, list[str]] = {pid: [] for pid in phase_ids}
+    current_phase = ""
+    body_lines = split_frontmatter(text)[1].splitlines()
+    body_start = text.count("\n", 0, text.find(body_lines[0]) if body_lines else 0) + 1
+    line_to_phase: dict[int, str] = {}
+    for tok in doc.tokens:
+        if tok.kind == TokenKind.PHASE_HEADING:
+            current_phase = tok.data.get("phase", "")
+        elif tok.kind == TokenKind.FILE_REFERENCE and current_phase:
+            line_to_phase[tok.line] = current_phase
+    for tok in doc.tokens:
+        if tok.kind != TokenKind.FILE_REFERENCE:
+            continue
+        phase = line_to_phase.get(tok.line, current_phase)
+        if phase and phase in out:
+            out[phase].extend(tok.data.get("paths", []))
+    return out
+
+
+def emit_template(kind: str) -> str:
+    if kind not in SLOT_TEMPLATES:
+        raise KeyError(f"unknown template kind: {kind}")
+    return SLOT_TEMPLATES[kind]
+
+
+def structural_check(text: str, path: str = "") -> list[Finding]:
+    findings: list[Finding] = []
+    fm, body = split_frontmatter(text)
+    file_ref = path or "<stdin>"
+
+    if fm is not None:
+        fm_start = 2
+        for key in DIRECTIVE_KEYS:
+            ids = parse_directive_list(fm, key)
+            key_line = None
+            for i, line in enumerate(fm.splitlines()):
+                if line.startswith(f"{key}:"):
+                    key_line = fm_start + i
+                    val = line.split(":", 1)[1].strip()
+                    if val or any(
+                        ln.strip().startswith("-")
+                        for ln in fm.splitlines()[i + 1 :]
+                        if ln.startswith(" ") or ln.startswith("\t")
+                    ):
+                        if not ids:
+                            findings.append(
+                                Finding(
+                                    file=file_ref,
+                                    line=key_line,
+                                    expected=f"{key} with at least one id",
+                                    found=f"{key}: (zero parsed ids)",
+                                    klass="directive-empty-ids",
+                                )
+                            )
+                    break
+
+    body_start = (fm.count("\n") + 3) if fm is not None else 1
+    for idx, line in enumerate(body.splitlines()):
+        line_no = body_start + idx
+        m = RID_BULLET_NONCANON.match(line)
+        if m:
+            rid = norm_id(m.group(1))
+            findings.append(
+                Finding(
+                    file=file_ref,
+                    line=line_no,
+                    expected=f"- **{rid}** …",
+                    found=line.strip(),
+                    klass="rid-bullet-variant",
+                )
+            )
+        m = PHASE_HEADING_NONCANON.match(line)
+        if m and not PHASE_HEADING.match(line):
+            findings.append(
+                Finding(
+                    file=file_ref,
+                    line=line_no,
+                    expected=f"### {m.group(1)}. Title",
+                    found=line.strip(),
+                    klass="phase-heading-variant",
+                )
+            )
+    return findings
+
+
+def check_document(text: str, path: str = "") -> tuple[str, list[Finding]]:
+    findings = structural_check(text, path)
+    verdict = "pass" if not findings else "fail"
+    return verdict, findings
+
+
+def _body_prefix(text: str) -> tuple[str, str]:
+    fm, _ = split_frontmatter(text)
+    if fm is None:
+        return "", text
+    end = text.find("\n---", 3)
+    offset = end + 4
+    if offset < len(text) and text[offset] == "\n":
+        offset += 1
+    return text[:offset], text[offset:]
+
+
+def write_document(text: str) -> str:
+    if not text:
+        return text
+    prefix, body = _body_prefix(text)
+    changed = False
+    new_body_lines: list[str] = []
+    for line in body.splitlines(keepends=True):
+        raw = line.rstrip("\n\r")
+        newline = line[len(raw):] if len(line) > len(raw) else "\n"
+        m = RID_BULLET_NONCANON.match(raw)
+        if m:
+            rid = norm_id(m.group(1))
+            body_text = m.group(2).strip()
+            new_line = f"- **{rid}** {body_text}{newline}"
+            if new_line != line:
+                changed = True
+            new_body_lines.append(new_line)
+            continue
+        m = PHASE_HEADING_NONCANON.match(raw)
+        if m and not PHASE_HEADING.match(raw):
+            title = re.sub(r"^[.:—\-\s]+", "", raw.split(str(m.group(1)), 1)[-1]).strip()
+            title = re.sub(r"^[:.\-\s]+", "", title).strip() or "Untitled"
+            new_line = f"### {m.group(1)}. {title}{newline}"
+            if new_line != line:
+                changed = True
+            new_body_lines.append(new_line)
+            continue
+        new_body_lines.append(line)
+
+    candidate = prefix + "".join(new_body_lines)
+    if changed:
+        return write_document(candidate)
+    return candidate
+
+
+def load_exception_manifest(root: Path) -> dict[str, Any]:
+    path = root / EXCEPTION_MANIFEST_REL
+    if not path.is_file():
+        return {"version": 1, "cap": EXCEPTION_MANIFEST_CAP, "signoff": "", "exceptions": []}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if len(data.get("exceptions", [])) > data.get("cap", EXCEPTION_MANIFEST_CAP):
+        raise ValueError("exception manifest exceeds cap")
+    return data
+
+
+def manifest_allows(
+    manifest: dict[str, Any],
+    *,
+    file: str,
+    consumer: str,
+    klass: str,
+) -> bool:
+    for exc in manifest.get("exceptions", []):
+        if (
+            exc.get("file") == file
+            and exc.get("consumer") == consumer
+            and exc.get("class") == klass
+        ):
+            return True
+    return False
+
+
 def assert_offline_module(path: Path) -> list[str]:
     forbidden = {
         "urllib",
@@ -439,13 +732,21 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Doc-format tokenizer (PRD 031)")
     parser.add_argument(
         "command",
-        choices=["tokenize", "emit", "lint-callsites"],
+        choices=[
+            "tokenize",
+            "emit",
+            "lint-callsites",
+            "check",
+            "write",
+            "template",
+        ],
         nargs="?",
         default="tokenize",
     )
-    parser.add_argument("path", nargs="?", help="Markdown file path")
+    parser.add_argument("path", nargs="?", help="Markdown file path or template kind")
     parser.add_argument("--map", dest="map_path", help="call-site-map.md for lint-callsites")
-    parser.add_argument("--json", action="store_true", help="JSON output for tokenize")
+    parser.add_argument("--json", action="store_true", help="JSON output")
+    parser.add_argument("--inplace", action="store_true", help="write mode: overwrite file")
     args = parser.parse_args(argv)
 
     if args.command == "lint-callsites":
@@ -455,6 +756,42 @@ def main(argv: list[str] | None = None) -> int:
                 print(err, file=sys.stderr)
             return 20
         print(json.dumps({"verdict": "pass", "consumers": sorted(RUNTIME_CALL_SITES)}))
+        return 0
+
+    if args.command == "template":
+        kind = args.path or ""
+        try:
+            print(emit_template(kind))
+        except KeyError as exc:
+            print(json.dumps({"verdict": "fail", "error": str(exc)}), file=sys.stderr)
+            return 2
+        return 0
+
+    if args.command in ("check", "write"):
+        if not args.path:
+            parser.error("path required for check/write")
+        p = Path(args.path)
+        text = p.read_text(encoding="utf-8") if p.is_file() else args.path
+        file_ref = str(p) if p.is_file() else "<stdin>"
+        if args.command == "check":
+            verdict, findings = check_document(text, file_ref)
+            payload = {
+                "verdict": verdict,
+                "findings": [f.to_dict() for f in findings],
+            }
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+            if verdict != "pass":
+                for f in findings:
+                    print(
+                        f"{f.file}:{f.line}: expected {f.expected!r}, found {f.found!r} [{f.klass}]",
+                        file=sys.stderr,
+                    )
+            return 0 if verdict == "pass" else 20
+        canonical = write_document(text)
+        if args.inplace and p.is_file():
+            p.write_text(canonical, encoding="utf-8")
+        else:
+            sys.stdout.write(canonical)
         return 0
 
     if not args.path:

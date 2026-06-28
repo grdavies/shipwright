@@ -37,18 +37,25 @@ if [[ ! -f "$PATH_FILE" ]]; then
   exit 2
 fi
 
+# Pre-freeze structural check (R13) — fail closed before spec-rigor gates.
+if ! STRUCT_OUT=$(bash "$ROOT/scripts/doc-format-normalize.sh" --check "$PATH_FILE" 2>&1); then
+  echo "$STRUCT_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps({'verdict':'fail','gate':'structural','findings':d.get('findings',[])}))" 2>/dev/null || echo "$STRUCT_OUT"
+  exit 20
+fi
+
 exec python3 - "$ROOT" "$ARTIFACT" "$PATH_FILE" "$TIER" "$PRD_PATH" <<'PY'
 import json, re, subprocess, sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+import doc_format
 
 root, artifact, path_file, tier, prd_path = sys.argv[1:6]
 text = Path(path_file).read_text()
 findings = []
 
 AMBIGUITY = re.compile(r"\b(TBD|TODO|FIXME|\?\?\?|to be determined)\b", re.I)
-RID_LINE = re.compile(r"^- \*\*(R\d+)\*\*\s*(.*)$", re.M)
 RID_INLINE = re.compile(r"\bR\d+\b")
-DID_LINE = re.compile(r"^- \*\*(D\d+)\*\*\s*(.*)$", re.M)
 
 def add(gate, severity, message, rid=None):
     f = {"gate": gate, "severity": severity, "message": message}
@@ -62,8 +69,9 @@ def section_body(name):
 
 if artifact == "prd":
     rids = []
-    for m in RID_LINE.finditer(text):
-        rid, body = m.group(1), m.group(2).strip()
+    for rid, body in doc_format.extract_rd_bullets(text):
+        if not rid.startswith("R"):
+            continue
         rids.append(rid)
         if AMBIGUITY.search(body):
             add("checklist", "error", f"ambiguity marker in {rid}", rid)
@@ -105,8 +113,9 @@ if artifact == "prd":
 
 elif artifact == "decision":
     dids = []
-    for m in DID_LINE.finditer(text):
-        did, body = m.group(1), m.group(2).strip()
+    for did, body in doc_format.extract_rd_bullets(text):
+        if not did.startswith("D"):
+            continue
         dids.append(did)
         if AMBIGUITY.search(body):
             add("checklist", "error", f"ambiguity marker in {did}", did)
@@ -148,55 +157,34 @@ elif artifact == "tasks":
   if not re.search(r"^##\s+Traceability\s*$", text, re.M | re.I):
     add("analyze", "error", "missing ## Traceability section")
 
-  phase_heading = re.compile(r"^###\s+(\d+)\.\s+", re.M)
-  phase_ids = sorted({m.group(1) for m in phase_heading.finditer(text)}, key=int)
-
-  dep_section = re.search(
-    r"^##\s+Phase Dependencies\s*$([\s\S]*?)(?=^##\s|\Z)",
-    text,
-    re.M | re.I,
-  )
-  if not dep_section:
+  phase_ids = sorted({p["id"] for p in doc_format.extract_phases(text)}, key=int)
+  dep_rows_list = doc_format.extract_phase_dependencies(text)
+  if dep_rows_list is None:
     add("analyze", "error", "missing ## Phase Dependencies section")
   else:
-    dep_body = dep_section.group(1)
-    table = re.search(
-      r"^\|[^\n]+\|\s*\n^\|[-| :]+\|\s*\n((?:^\|[^\n]+\|\s*\n?)+)",
-      dep_body,
-      re.M,
-    )
-    if not table:
-      add("analyze", "error", "Phase Dependencies missing | Phase | Depends on | table")
-    else:
-      dep_rows: dict[str, str] = {}
-      for line in table.group(1).strip().splitlines():
-        parts = [p.strip() for p in line.strip("|").split("|")]
-        if len(parts) < 2:
-          continue
-        phase, depends = parts[0], parts[1]
-        if not re.match(r"^\d+$", phase):
-          add("analyze", "error", f"invalid phase id in Phase Dependencies row: {phase!r}")
-          continue
-        if phase in dep_rows:
-          add("analyze", "error", f"duplicate Phase Dependencies row for phase {phase}")
-        dep_rows[phase] = depends
+    dep_rows: dict[str, str] = {}
+    for row in dep_rows_list:
+      phase, depends = row["phase"], row["depends_on"]
+      if phase in dep_rows:
+        add("analyze", "error", f"duplicate Phase Dependencies row for phase {phase}")
+      dep_rows[phase] = depends
 
-      phase_set = set(phase_ids)
-      for pid in phase_ids:
-        if pid not in dep_rows:
-          add("analyze", "error", f"Phase Dependencies missing row for phase {pid}")
+    phase_set = set(phase_ids)
+    for pid in phase_ids:
+      if pid not in dep_rows:
+        add("analyze", "error", f"Phase Dependencies missing row for phase {pid}")
 
-      for phase, depends in dep_rows.items():
-        if phase not in phase_set:
-          add("analyze", "error", f"Phase Dependencies row for unknown phase {phase}")
-        raw = depends.strip().lower()
-        if raw in ("none", "—", "-", ""):
-          continue
-        for dep in re.findall(r"\d+", raw):
-          if dep not in phase_set:
-            add("analyze", "error", f"phase {phase} depends on unknown phase {dep}")
-          if dep == phase:
-            add("analyze", "error", f"phase {phase} cannot depend on itself")
+    for phase, depends in dep_rows.items():
+      if phase not in phase_set:
+        add("analyze", "error", f"Phase Dependencies row for unknown phase {phase}")
+      raw = depends.strip().lower()
+      if raw in ("none", "—", "-", ""):
+        continue
+      for dep in re.findall(r"\d+", raw):
+        if dep not in phase_set:
+          add("analyze", "error", f"phase {phase} depends on unknown phase {dep}")
+        if dep == phase:
+          add("analyze", "error", f"phase {phase} cannot depend on itself")
 
   task_text = text
   for rid in union_ids:

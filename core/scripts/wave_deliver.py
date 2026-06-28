@@ -19,6 +19,8 @@ from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
 
+import doc_format
+
 PLAN_PATH_NAME = "sw-deliver-plan.json"
 STATE_PATH_NAME = "sw-deliver-state.json"
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -101,85 +103,33 @@ def slugify(text: str) -> str:
 
 
 def parse_frontmatter(content: str) -> dict[str, str]:
-    if not content.startswith("---"):
+    fm, _ = doc_format.split_frontmatter(content)
+    if fm is None:
         return {}
-    end = content.find("\n---", 3)
-    if end == -1:
-        return {}
-    block = content[3:end].strip()
     out: dict[str, str] = {}
-    for line in block.splitlines():
+    for line in fm.splitlines():
         if ":" not in line:
             continue
         key, val = line.split(":", 1)
-        out[key.strip()] = val.strip()
+        out[key.strip()] = val.strip().strip('"').strip("'")
     return out
 
 
 def parse_phases(content: str) -> list[dict[str, str]]:
-    phases: list[dict[str, str]] = []
-    for m in re.finditer(r"^###\s+(\d+)\.\s+(.+)$", content, re.MULTILINE):
-        num, title = m.group(1), m.group(2).strip()
-        phases.append(
-            {
-                "id": num,
-                "title": title,
-                "slug": slugify(title),
-            }
-        )
-    return phases
+    return doc_format.extract_phases(content)
 
 
 def parse_phase_dependencies(content: str) -> list[dict[str, str]] | None:
-    m = re.search(
-        r"^## Phase Dependencies\s*\n+\|[^\n]+\|\n\|[-| ]+\|\n((?:\|[^\n]+\|\n?)+)",
-        content,
-        re.MULTILINE,
-    )
-    if not m:
-        return None
-    rows: list[dict[str, str]] = []
-    for line in m.group(1).strip().splitlines():
-        parts = [p.strip() for p in line.strip("|").split("|")]
-        if len(parts) < 2:
-            continue
-        phase, depends = parts[0], parts[1]
-        if not re.match(r"^\d+$", phase):
-            continue
-        rows.append({"phase": phase, "depends_on": depends})
-    return rows if rows else None
+    return doc_format.extract_phase_dependencies(content)
 
 
 def normalize_file_path(raw: str) -> str:
-    path = raw.strip().strip("`").strip()
-    path = re.sub(r"\s*→\s*.*$", "", path).strip()
-    return path
+    return doc_format.normalize_file_path(raw)
 
 
 def parse_phase_files(content: str) -> dict[str, list[str]]:
     """Map phase id -> normalized **File:** paths under that phase section."""
-    sections: dict[str, str] = {}
-    parts = re.split(r"^###\s+(\d+)\.\s+", content, flags=re.MULTILINE)
-    i = 1
-    while i + 1 < len(parts):
-        sections[parts[i]] = parts[i + 1]
-        i += 2
-
-    out: dict[str, list[str]] = {}
-    for phase_id, body in sections.items():
-        section_body = re.split(
-            r"^###\s+\d+\.|^##\s+", body, maxsplit=1, flags=re.MULTILINE
-        )[0]
-        paths: list[str] = []
-        for m in re.finditer(r"\*\*File:\*\*\s*(.+)$", section_body, re.MULTILINE):
-            raw = m.group(1).strip()
-            for part in re.split(r"[,]|(?:\s+and\s+)", raw):
-                part = part.strip().strip("`").strip()
-                if not part:
-                    continue
-                paths.append(normalize_file_path(part))
-        out[phase_id] = paths
-    return out
+    return doc_format.extract_phase_files(content)
 
 
 def migration_dir(path: str) -> str | None:

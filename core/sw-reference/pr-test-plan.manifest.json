@@ -117,7 +117,17 @@
       "scenarios": [
         "doc-format-grammar-tokenizes",
         "call-site-map-exhaustion",
-        "tokenizer-deterministic-offline"
+        "tokenizer-deterministic-offline",
+        "check-fail-closed-diagnostics",
+        "write-idempotent-shape-only",
+        "consumers-tokenizer-only",
+        "unlisted-divergence-fails-closed",
+        "template-slot-fill",
+        "directive-zero-ids-fails-closed",
+        "golden-before-after-equivalence",
+        "four-consumer-id-agreement",
+        "write-roundtrip-stable",
+        "phaseA-legacy-paths-no-relocation"
       ]
     }
   ]

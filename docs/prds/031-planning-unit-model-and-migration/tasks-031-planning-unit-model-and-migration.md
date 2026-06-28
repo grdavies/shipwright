@@ -45,7 +45,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
 
 ### 2. Tokenizer Phase A adoption on legacy `docs/prds` paths — L
 
-- [ ] 2.1 `--check` / `--write` modes + pre-freeze structural check (R13)
+- [x] 2.1 `--check` / `--write` modes + pre-freeze structural check (R13)
   - **File:** `scripts/doc_format.py`, `scripts/doc-format-normalize.sh`
   - **Expected:** `--check` fails closed with `file:line` expected/found diagnostics (never a silent drop);
     `--write` performs structural canonicalization only (shape, never content) and is idempotent; a pre-freeze
@@ -53,7 +53,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     before persisting so non-canonical drafts cannot reach freeze. Fixtures: `check-fail-closed-diagnostics`,
     `write-idempotent-shape-only`.
   - **R-IDs:** R13
-- [ ] 2.2 Four-consumer adoption + machine-checked exception manifest (R12)
+- [x] 2.2 Four-consumer adoption + machine-checked exception manifest (R12)
   - **File:** `scripts/spec-union.sh`, `scripts/spec-rigor-check.sh`, `scripts/traceability-check.sh`, `scripts/wave_deliver.py`
   - **Expected:** all four parse exclusively through the shared tokenizer with no independent structural regex
     retained; per-consumer baseline snapshots captured *before* adoption; divergence classes recorded in a
@@ -62,13 +62,13 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     exceptions may not cover post-migration edits. Fixtures: `consumers-tokenizer-only`,
     `unlisted-divergence-fails-closed`.
   - **R-IDs:** R12
-- [ ] 2.3 Authoring slot-fill templates + directive fail-closed (R14)
+- [x] 2.3 Authoring slot-fill templates + directive fail-closed (R14)
   - **File:** `scripts/doc_format.py`, `core/commands/sw-prd.md`
   - **Expected:** authoring commands emit machine-readable slot-filling templates matching the canonical shape;
     a non-empty directive key (`absorbs`/`supersedes`/`retracts`) that yields zero parsed ids fails closed.
     Fixtures: `template-slot-fill`, `directive-zero-ids-fails-closed`.
   - **R-IDs:** R14
-- [ ] 2.4 Golden-corpus regression (R15)
+- [x] 2.4 Golden-corpus regression (R15)
   - **File:** `core/sw-reference/pr-test-plan.manifest.json`, `scripts/doc_format.py`
   - **Expected:** for the migrated frozen set plus the GAP-045 adversarial structural variants — (a) per-consumer
     parse equivalence before vs after tokenizer adoption; (b) four-consumer agreement on extracted id sets
@@ -76,7 +76,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     any unit not in the R12 exception manifest that diverges fails the gate. Fixtures:
     `golden-before-after-equivalence`, `four-consumer-id-agreement`, `write-roundtrip-stable`.
   - **R-IDs:** R15
-- [ ] 2.5 Phase A landing on `docs/prds` with no relocation (R16)
+- [x] 2.5 Phase A landing on `docs/prds` with no relocation (R16)
   - **File:** `docs/prds/031-planning-unit-model-and-migration/call-site-map.md`, `scripts/doc_format.py`
   - **Expected:** full tokenizer adoption + golden-corpus regression ship on the current `docs/prds` paths with
     no relocation, delivering GAP-045 parser-parity relief independently; Phase A acceptance does not depend on

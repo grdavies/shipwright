@@ -30,9 +30,20 @@ if [[ ! -f "$PRD_PATH" || ! -f "$TASKS_PATH" ]]; then
   exit 2
 fi
 
+# Pre-freeze structural check (R13) on tasks before traceability parse.
+for STRUCT_PATH in "$PRD_PATH" "$TASKS_PATH"; do
+  if ! STRUCT_OUT=$(bash "$ROOT/scripts/doc-format-normalize.sh" --check "$STRUCT_PATH" 2>&1); then
+    echo "$STRUCT_OUT"
+    exit 20
+  fi
+done
+
 exec python3 - "$ROOT" "$PRD_PATH" "$TASKS_PATH" <<'PY'
-import json, re, subprocess, sys
+import json, subprocess, sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+import doc_format
 
 root, prd_path, tasks_path = sys.argv[1:4]
 tasks_text = Path(tasks_path).read_text()
@@ -42,27 +53,7 @@ union = json.loads(
 )
 union_ids = [r["id"] for r in union.get("requirements", [])]
 
-rows = []
-in_table = False
-for line in tasks_text.splitlines():
-    if re.match(r"^##\s+Traceability\s*$", line, re.I):
-        in_table = True
-        continue
-    if in_table and line.startswith("## "):
-        break
-    if not in_table:
-        continue
-    if not line.strip().startswith("|"):
-        continue
-    if re.match(r"^\|\s*R-ID\s*\|", line, re.I) or re.match(r"^\|[-:\s|]+\|$", line):
-        continue
-    parts = [p.strip() for p in line.strip().strip("|").split("|")]
-    if len(parts) < 3:
-        continue
-    rid, task_ref, scenario = parts[0], parts[1], parts[2]
-    if not re.match(r"^R\d+$", rid):
-        continue
-    rows.append({"rid": rid, "task": task_ref, "testScenario": scenario})
+rows = doc_format.extract_traceability_rows(tasks_text)
 
 covered = {r["rid"]: r for r in rows if r["testScenario"] and r["testScenario"].lower() not in ("tbd", "todo", "n/a")}
 uncovered = [rid for rid in union_ids if rid not in covered or not covered[rid]["testScenario"].strip()]

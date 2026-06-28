@@ -11,32 +11,26 @@ DOC="${1:-}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# Pre-freeze structural check (R13) — fail closed before union parse.
+if ! CHECK_OUT=$(bash "$ROOT/scripts/doc-format-normalize.sh" --check "$DOC" 2>&1); then
+  echo "$CHECK_OUT"
+  exit 20
+fi
+
 exec python3 - "$DOC" "$ROOT" <<'PY'
 import json, re, sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[2]) / "scripts"))
+import doc_format
 
 doc = Path(sys.argv[1])
 root = Path(sys.argv[2])
 MAX_CHAIN_DEPTH = 20
 
-ID_PATTERN = re.compile(r"^([RD])(\d+)$", re.I)
-
-
-def norm_id(rid: str) -> str:
-    rid = rid.strip()
-    m = ID_PATTERN.match(rid)
-    if m:
-        return f"{m.group(1).upper()}{m.group(2)}"
-    if rid.isdigit():
-        return f"R{rid}"
-    return rid
-
 
 def id_sort_key(rid: str):
-    m = ID_PATTERN.match(rid)
-    if m:
-        return (m.group(1).upper(), int(m.group(2)))
-    return ("Z", rid)
+    return doc_format.id_sort_key(rid)
 
 
 def resolve_amend_dir(path: Path) -> Path:
@@ -44,59 +38,6 @@ def resolve_amend_dir(path: Path) -> Path:
     if sibling.is_dir():
         return sibling
     return path.parent / "amendments"
-
-
-def parse_frontmatter_list(text, key):
-    in_fm = False
-    for line in text.splitlines():
-        if line.strip() == "---":
-            if not in_fm:
-                in_fm = True
-                continue
-            break
-        if in_fm and line.startswith(f"{key}:"):
-            val = line.split(":", 1)[1].strip()
-            val = val.strip("[]")
-            return [norm_id(x.strip()) for x in re.split(r",\s*", val) if x.strip()]
-    return []
-
-
-def parse_frontmatter_scalar(text, key):
-    in_fm = False
-    for line in text.splitlines():
-        if line.strip() == "---":
-            if not in_fm:
-                in_fm = True
-                continue
-            break
-        if in_fm and line.startswith(f"{key}:"):
-            return line.split(":", 1)[1].strip().strip('"').strip("'")
-    return None
-
-
-def extract_requirements(text):
-    reqs = []
-    seen = set()
-    patterns = [
-        re.compile(r"^- \*\*([RD]\d+)\*\*\s*(.*)$", re.I),
-        re.compile(r"^\*\*([RD]\d+)\*\*\s*(.*)$", re.I),
-        re.compile(r"^##\s+([RD]\d+)\b(?:\s*\((.*)\))?\s*$", re.I),
-    ]
-    for line in text.splitlines():
-        for i, pat in enumerate(patterns):
-            m = pat.match(line)
-            if not m:
-                continue
-            if i == 1 and line.startswith("- "):
-                continue
-            rid = norm_id(m.group(1))
-            body = (m.group(2) if m.lastindex >= 2 else "") or ""
-            body = body.strip()
-            if rid not in seen:
-                reqs.append((rid, body))
-                seen.add(rid)
-            break
-    return reqs
 
 
 def amendment_sort_key(path: Path) -> int:
@@ -125,8 +66,9 @@ def resolve_terminal_replacement(replacement: str, visited_paths: set, depth: in
         return replacement
     for amend in sorted(amend_dir.glob("A*.md"), key=amendment_sort_key):
         atext = amend.read_text()
-        rep_scalar = parse_frontmatter_scalar(atext, "replacement")
-        for old in parse_frontmatter_list(atext, "supersedes"):
+        rep_scalar = doc_format.parse_frontmatter_scalar(atext, "replacement")
+        directives = doc_format.parse_frontmatter_directives(atext)
+        for old in directives.get("supersedes", []):
             if old.startswith("D") and rep_scalar:
                 return resolve_terminal_replacement(rep_scalar, visited_paths, depth + 1)
     return replacement
@@ -138,7 +80,7 @@ superseded = {}
 record_superseded = {}
 
 parent_text = doc.read_text()
-parent_reqs = extract_requirements(parent_text)
+parent_reqs = doc_format.extract_rd_bullets(parent_text)
 
 if re.search(r"\*\*D\d+\*\*", parent_text, re.I) and not parent_reqs:
     print(json.dumps({"error": "D-ID extraction failed on non-empty decision doc"}))
@@ -152,14 +94,15 @@ amend_dir = resolve_amend_dir(doc)
 if amend_dir.is_dir():
     for amend in sorted(amend_dir.glob("A*.md"), key=amendment_sort_key):
         atext = amend.read_text()
-        supersede_targets = parse_frontmatter_list(atext, "supersedes")
-        replacement_path = parse_frontmatter_scalar(atext, "replacement")
+        directives = doc_format.parse_frontmatter_directives(atext)
+        supersede_targets = directives.get("supersedes", [])
+        replacement_path = doc_format.parse_frontmatter_scalar(atext, "replacement")
 
-        for rid in parse_frontmatter_list(atext, "retracts"):
+        for rid in directives.get("retracts", []):
             retracted.append(rid)
             reqs.pop(rid, None)
 
-        amend_reqs = extract_requirements(atext)
+        amend_reqs = doc_format.extract_rd_bullets(atext)
         amend_ids = {r[0] for r in amend_reqs}
 
         record_level = []
