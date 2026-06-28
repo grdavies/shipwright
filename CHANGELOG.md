@@ -112,6 +112,7 @@
 * merge phase deterministic-dual-region-index-generator-region-integrity-hook-l into feat/planning-feedback-lifecycle (a143068) <!-- sw-deliver:deterministic-dual-region-index-generator-region-integrity-hook-l -->
 * merge phase migration-tool-held-lock-redirect-map-verification-fixture-l into feat/planning-feedback-lifecycle (4e07f38) <!-- sw-deliver:migration-tool-held-lock-redirect-map-verification-fixture-l -->
 * merge phase atomic-cutover-phase-b-relocation-supersession-privacy-projections-kill-criteria-l into feat/planning-feedback-lifecycle (e544b75) <!-- sw-deliver:atomic-cutover-phase-b-relocation-supersession-privacy-projections-kill-criteria-l -->
+* merge phase documentation-currency-dist-propagation-no-regression-memory-guardrails-l into feat/planning-feedback-lifecycle (3ea0b85) <!-- sw-deliver:documentation-currency-dist-propagation-no-regression-memory-guardrails-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
