@@ -103,6 +103,9 @@
 * merge phase host-adapter-rate-limit-foundation-l into feat/git-host-portability-and-workflow-standardization (e2696c2) <!-- sw-deliver:host-adapter-rate-limit-foundation-l -->
 * merge phase git-workflow-skill-docs-branch-standardization-l into feat/git-host-portability-and-workflow-standardization (22f8b88) <!-- sw-deliver:git-workflow-skill-docs-branch-standardization-l -->
 * merge phase gitlab-bitbucket-adapters-pr-automation-fixes-l into feat/git-host-portability-and-workflow-standardization (71fd1ad) <!-- sw-deliver:gitlab-bitbucket-adapters-pr-automation-fixes-l -->
+* merge phase completeness-unification-conductor-terminal-clause-m into feat/deliver-terminal-finalization-robustness (671d2ba) <!-- sw-deliver:completeness-unification-conductor-terminal-clause-m -->
+* merge phase phase-status-write-read-path-hardening-m into feat/deliver-terminal-finalization-robustness (9af6c42) <!-- sw-deliver:phase-status-write-read-path-hardening-m -->
+* merge phase contributing-factor-resolution-m into feat/deliver-terminal-finalization-robustness (d6fc31e) <!-- sw-deliver:contributing-factor-resolution-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
