@@ -2,7 +2,8 @@
 # Derive PRD living status from git + INDEX + task checkboxes; reconcile INDEX; append completion log.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+_PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(git -C "${PWD}" rev-parse --show-toplevel 2>/dev/null || echo "$_PLUGIN_ROOT")"
 
 usage() {
   cat <<'EOF'
@@ -53,6 +54,23 @@ prds_dir = root / cfg.get("prdsDir", "prds")
 index_path = prds_dir / "INDEX.md"
 tasks_dir = root / cfg.get("tasksDir", "prds")
 base_branch = cfg.get("defaultBaseBranch", "main")
+
+
+
+def load_authoring_handoffs(root: Path):
+    path = root / ".cursor" / "authoring-handoffs.json"
+    if not path.is_file():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    items = data.get("handoffs")
+    return items if isinstance(items, list) else []
+
+
+def pull_in_scan_targets(root: Path):
+    return [h.get("artifact") for h in load_authoring_handoffs(root) if h.get("artifact")]
 
 def parse_index():
     rows = []
@@ -209,6 +227,8 @@ print(
             "gapBacklog": str(prds_dir / "GAP-BACKLOG.md"),
             "deliverRuns": deliver_runs,
             "livePhaseStatus": live_phase_status,
+            "authoringHandoffs": load_authoring_handoffs(root),
+            "pullInScan": pull_in_scan_targets(root),
         },
         indent=2,
     )

@@ -186,7 +186,7 @@ print(json.dumps({
     "headRefName": head.get("ref"),
     "headRefOid": head.get("sha"),
     "baseRefName": base.get("ref"),
-    "state": "MERGED" if pr.get("merged") else pr.get("state", "").upper(),
+    "state": "MERGED" if (pr.get("merged") or pr.get("merged_at")) else pr.get("state", "").upper(),
     "isDraft": pr.get("draft", False),
     "mergeable": "CONFLICTING" if pr.get("mergeable") is False else ("MERGEABLE" if pr.get("mergeable") is True else "UNKNOWN"),
     "mergeStateStatus": pr.get("mergeable_state", "UNKNOWN").upper() if pr.get("mergeable_state") else "UNKNOWN",
@@ -270,7 +270,7 @@ for pr in items:
         "headRefName": head.get("ref"),
         "headRefOid": head.get("sha"),
         "baseRefName": base.get("ref"),
-        "state": pr.get("state", "").upper(),
+        "state": "MERGED" if (pr.get("merged") or pr.get("merged_at")) else pr.get("state", "").upper(),
         "title": pr.get("title"),
         "body": pr.get("body"),
     })

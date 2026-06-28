@@ -36,6 +36,7 @@ elif [ -d "$ROOT/.sw" ]; then
     --exclude 'verify-presets.json' \
     --exclude 'pr-test-plan.manifest.json' \
     --exclude 'planning-unit.schema.json' \
+    --exclude 'inflight-signal.schema.json' \
     --exclude 'model-tier-hook-feasibility.md' \
     --exclude 'models-tiering.md' \
     --exclude 'capability-manifest.md' \

@@ -77,6 +77,10 @@
       "uniqueItems": true,
       "default": [],
       "description": "Free-form classification tags."
+    },
+    "inflightTuple": {
+      "$ref": "inflight-tuple.schema.json",
+      "description": "Reserved cross-reference shape for committed INDEX inFlight tuples (PRD 032 R13). Not stored in unit frontmatter."
     }
   },
   "allOf": [
