@@ -43,6 +43,7 @@ from wave_merge import (
     VALID_STATUS_VERDICTS,
     check_status_sha,
     phase_branch_head_optional,
+    read_phase_status_optional,
     status_file_for,
 )
 from wave_state import (
@@ -533,11 +534,9 @@ def check_background_task_failures(
         if not meta.get("backgroundDispatchedAt"):
             continue
         slug = meta.get("slug", pid)
-        status_path = status_file_for(root, slug, None, state)
-        if status_path.is_file():
-            status = read_json(status_path, absent_ok=False)
-            if status.get("verdict") in VALID_STATUS_VERDICTS:
-                continue
+        status_path, status = read_phase_status_optional(root, slug, state)
+        if status is not None and status.get("verdict") in VALID_STATUS_VERDICTS:
+            continue
         started = meta.get("backgroundDispatchedAt") or meta.get("startedAt")
         if isinstance(started, str):
             age = age_seconds(started)
@@ -564,10 +563,9 @@ def merge_ready_in_flight_phases(
         if not isinstance(meta, dict) or meta.get("status") != "in-flight":
             continue
         slug = meta.get("slug", pid)
-        status_path = status_file_for(root, slug, None, state)
-        if not status_path.is_file():
+        status_path, status = read_phase_status_optional(root, slug, state)
+        if status is None:
             continue
-        status = read_json(status_path, absent_ok=False)
         if status.get("verdict") != "merge-ready-green":
             continue
         phase_branch = meta.get("branch")
@@ -595,10 +593,9 @@ def in_flight_merge_halt(
         if not isinstance(meta, dict) or meta.get("status") != "in-flight":
             continue
         slug = meta.get("slug", pid)
-        status_path = status_file_for(root, slug, None, state)
-        if not status_path.is_file():
+        status_path, status = read_phase_status_optional(root, slug, state)
+        if status is None:
             continue
-        status = read_json(status_path, absent_ok=False)
         if status.get("verdict") != "merge-ready-green":
             continue
         phase_branch = meta.get("branch")
@@ -981,9 +978,8 @@ def compute_next_action(
         if not isinstance(meta, dict) or meta.get("status") != "in-flight":
             continue
         slug = meta.get("slug", "")
-        status_path = status_file_for(root, slug, None, state)
-        if status_path.is_file():
-            status = read_json(status_path, absent_ok=False)
+        status_path, status = read_phase_status_optional(root, slug, state)
+        if status is not None:
             if status.get("verdict") == "blocked":
                 return {
                     "action": "collect-status",
@@ -1277,11 +1273,17 @@ def execute_mechanical(
         )
         if ec != 0:
             fail_payload(data, "phase provision failed", ec)
+        wt_path = data.get("path") or data.get("worktreePath")
+        if not wt_path:
+            wt_name = data.get("worktreeName") or data.get("name")
+            if wt_name:
+                wt_path = str((root / ".sw-worktrees" / wt_name).resolve())
         worktrees = state.setdefault("phaseWorktrees", {})
         worktrees[pid] = {
             "name": data.get("name") or data.get("worktreeName"),
-            "path": data.get("path") or data.get("worktreePath"),
+            "path": wt_path,
         }
+        save_state(root, state)
         persist_cursor(root, state, "dispatch-ship", phaseWorktrees=worktrees)
         return {"executed": "provision-phase", "phaseId": pid, **data}
 

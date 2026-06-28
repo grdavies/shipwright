@@ -158,6 +158,14 @@ def merge_authorizing(gate_ec: int, gate: dict[str, Any]) -> bool:
     return True
 
 
+def _glob_phase_status_paths(root: Path, phase_slug: str) -> list[Path]:
+    """Discover worktree-local status files when state lookup misses (PRD 027 R5)."""
+    wt_root = root / ".sw-worktrees"
+    if not wt_root.is_dir():
+        return []
+    return sorted(wt_root.glob(f"*/.cursor/sw-deliver-runs/{phase_slug}/status.json"))
+
+
 def status_file_for(
     root: Path,
     phase_slug: str,
@@ -168,12 +176,51 @@ def status_file_for(
         return Path(explicit).resolve()
     if state is None and state_path(root).is_file():
         state = load_state(root)
+    canonical = root / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json"
     wt = resolve_phase_worktree(root, phase_slug, state or {})
     if wt is not None:
         candidate = wt / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json"
         if candidate.is_file():
             return candidate
-    return root / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json"
+    if canonical.is_file():
+        return canonical
+    for candidate in _glob_phase_status_paths(root, phase_slug):
+        if candidate.is_file():
+            return candidate
+    if wt is not None:
+        return wt / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json"
+    return canonical
+
+
+def read_phase_status_optional(
+    root: Path,
+    phase_slug: str,
+    state: dict[str, Any] | None = None,
+) -> tuple[Path | None, dict[str, Any] | None]:
+    """Re-resolve status via canonical, worktree-local, and glob paths (PRD 027 R6)."""
+    if state is None and state_path(root).is_file():
+        state = load_state(root)
+    state = state or {}
+    candidates: list[Path] = []
+    canonical = root / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json"
+    candidates.append(canonical)
+    wt = resolve_phase_worktree(root, phase_slug, state)
+    if wt is not None:
+        candidates.append(wt / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json")
+    candidates.extend(_glob_phase_status_paths(root, phase_slug))
+    seen: set[str] = set()
+    for path in candidates:
+        key = str(path.resolve())
+        if key in seen:
+            continue
+        seen.add(key)
+        if not path.is_file():
+            continue
+        try:
+            return path, read_json(path)
+        except (StateCorruptError, json.JSONDecodeError, OSError):
+            continue
+    return None, None
 
 
 def resolve_phase_worktree(
@@ -393,6 +440,7 @@ def cmd_phase_dispatch_env(root: Path, args: list[str]) -> None:
                 "SW_PHASE_MODE": "1",
                 "SW_PHASE_SLUG": phase_slug,
                 "SW_RUN_DIR": run_dir_rel,
+                "SW_REPO_ROOT": str(root.resolve()),
                 "SW_INTEGRATION_BRANCH": integration,
             },
             "invoke": "/sw-ship --phase-mode",
