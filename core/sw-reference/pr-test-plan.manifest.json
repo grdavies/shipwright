@@ -109,6 +109,18 @@
       ]
     },
     {
+      "id": "planning-paths-fixtures",
+      "script": "scripts/test/run-planning-paths-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-paths-fixtures",
+      "scenarios": [
+        "realpath-containment-reject-escape",
+        "no-hardcoded-prds-literal",
+        "paths-resolve-through-config"
+      ]
+    },
+    {
       "id": "doc-format-fixtures",
       "script": "scripts/test/run-doc-format-fixtures.sh",
       "args": [],

@@ -10,13 +10,14 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+import planning_paths
 VALID_INDEX_STATUSES = frozenset({"not-started", "in-progress", "complete"})
 
-LIVING_PATHS = (
-    "docs/prds/INDEX.md",
-    "docs/prds/COMPLETION-LOG.md",
-    "docs/prds/GAP-BACKLOG.md",
-)
+def living_paths(root: Path) -> tuple[str, ...]:
+    return planning_paths.living_paths_rel(planning_paths.load_planning_dirs(root))
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
@@ -133,7 +134,7 @@ def run_reconcile_script(root: Path, *cmd: str) -> dict[str, Any]:
 def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool, repo_root: Path | None = None) -> str | None:
     top = worktree
     proc = subprocess.run(
-        ["git", "-C", str(top), "status", "--porcelain", "--", *LIVING_PATHS],
+        ["git", "-C", str(top), "status", "--porcelain", "--", *living_paths(top)],
         text=True,
         capture_output=True,
     )
@@ -141,7 +142,7 @@ def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool, repo_root: P
         return None
     if dry_run:
         return "dry-run"
-    subprocess.run(["git", "-C", str(top), "add", *LIVING_PATHS], check=True)
+    subprocess.run(["git", "-C", str(top), "add", *living_paths(top)], check=True)
     msg = f"chore: living-doc reconcile for PRD {prd}"
     proc = subprocess.run(
         ["git", "-C", str(top), "commit", "-m", msg],

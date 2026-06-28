@@ -99,6 +99,17 @@ jobs:
       - name: Run planning-unit-fixtures
         run: bash scripts/test/run-planning-unit-fixtures.sh
 
+  feat-test-plan-planning-paths-fixtures:
+    name: feat-test-plan-planning-paths-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-paths-fixtures
+        run: bash scripts/test/run-planning-paths-fixtures.sh
+
   feat-test-plan-doc-format-fixtures:
     name: feat-test-plan-doc-format-fixtures
     runs-on: ubuntu-latest
