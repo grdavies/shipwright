@@ -23,7 +23,8 @@
     },
     "prdsDir": {
       "type": "string",
-      "default": "docs/prds"
+      "default": "docs/prds",
+      "description": "Legacy PRD directory alias; defaults to docs/prds until planningDir cutover (R7)."
     },
     "decisionsDir": {
       "type": "string",
@@ -31,7 +32,8 @@
     },
     "tasksDir": {
       "type": "string",
-      "default": "docs/prds"
+      "default": "docs/prds",
+      "description": "Frozen task-list directory alias; defaults to prdsDir until migration cutover (R7)."
     },
     "doc": {
       "type": "object",
@@ -847,6 +849,11 @@
           }
         }
       }
+    },
+    "planningDir": {
+      "type": "string",
+      "default": "docs/planning",
+      "description": "Canonical planning-unit home (R5). Legacy prdsDir/tasksDir aliases retain docs/prds until migration cutover."
     }
   }
 }
