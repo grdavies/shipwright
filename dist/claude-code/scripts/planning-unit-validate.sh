@@ -174,5 +174,3 @@ def main() -> int:
 
 sys.exit(main())
 PY
-chmod +x scripts/planning-unit-validate.sh
-echo "wrote validator"

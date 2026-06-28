@@ -17,6 +17,11 @@ if str(SCRIPT_DIR) not in sys.path:
 import planning_paths  # noqa: E402
 
 SCHEMA_MARKER = "<!-- planning-index:schema v1 -->"
+PRIVATE_INDEX_NOTE = (
+    "<!-- Private-row metadata is provisional until PRD 034 defines "
+    "redaction/omission policy (R33). -->"
+)
+
 STATUS_PRECEDENCE_DOC = (
     "<!-- Status precedence: lifecycle units read derived.status when populated, "
     "else structural status; gap units use structural status only. -->"
@@ -137,6 +142,7 @@ def assemble_index(regions: IndexRegions) -> str:
             "# Planning units INDEX\n\n"
             f"{SCHEMA_MARKER}\n"
             f"{STATUS_PRECEDENCE_DOC}\n"
+            f"{PRIVATE_INDEX_NOTE}\n"
         )
     parts = [header, ""]
     for name in ("structural", "derived", "inFlight"):
@@ -248,11 +254,14 @@ def render_structural_table(units: list[PlanningUnit]) -> str:
         "| --- | --- | --- | --- | --- | --- |",
     ]
     for unit in units:
+        title = unit.title.replace("|", "\\|")
+        if unit.visibility == "private":
+            title = f"[provisional] {title}"
         lines.append(
             "| {id} | {type} | {title} | {status} | {visibility} | {edges} |".format(
                 id=unit.id,
                 type=unit.type,
-                title=unit.title.replace("|", "\\|"),
+                title=title,
                 status=unit.status,
                 visibility=unit.visibility,
                 edges=unit.edges.replace("|", "\\|"),

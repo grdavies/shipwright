@@ -202,6 +202,13 @@ def cmd_phase_status_live(root: Path, args: list[str]) -> None:
 
 
 
+def project_legacy_compat(root: Path, *, dry_run: bool = False) -> dict[str, Any] | None:
+    """Emit legacy GAP-BACKLOG/INDEX projections when planningDir is flipped (R27)."""
+    import planning_legacy_projection as plp
+
+    return plp.project_all(root, dry_run=dry_run)
+
+
 def cmd_regenerate_index(root: Path, args: list[str]) -> None:
     """Regenerate planning INDEX structural region under living-doc lock (PRD 031 R24)."""
     from wave_living_doc_lock import living_doc_write_lock
@@ -213,8 +220,10 @@ def cmd_regenerate_index(root: Path, args: list[str]) -> None:
     with living_doc_write_lock(root, target=target, holder="planning-index-generator"):
         content = pig.generate_index(root, writer="generator")
         rel = pig.index_rel(root)
+        legacy = None
         if not dry_run:
             pig.write_index(root, content)
+            legacy = project_legacy_compat(root, dry_run=False)
         emit(
             {
                 "verdict": "pass",
@@ -222,6 +231,7 @@ def cmd_regenerate_index(root: Path, args: list[str]) -> None:
                 "path": rel,
                 "unitCount": len(pig.discover_units(root)),
                 "dryRun": dry_run,
+                "legacyProjection": legacy,
             }
         )
 

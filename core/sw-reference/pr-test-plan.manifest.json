@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Standard FEAT PR test-plan fixture set \u2014 single source for verify.test and CI (PRD 016 R1\u2013R3).",
+  "description": "Standard FEAT PR test-plan fixture set — single source for verify.test and CI (PRD 016 R1–R3).",
   "fixtures": [
     {
       "id": "doc-fixtures",
@@ -192,6 +192,20 @@
         "no-half-migrated-merge",
         "relief-acceptance-gates-cutover",
         "kill-criteria-fallback-documented"
+      ]
+    },
+    {
+      "id": "planning-currency-fixtures",
+      "script": "scripts/test/run-planning-currency-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-currency-fixtures",
+      "scenarios": [
+        "copy-to-core-parity",
+        "emitter-freshness-planning-artifacts",
+        "doc-currency-layout-config-skills-readme-guide",
+        "no-regression-migrated-corpus",
+        "no-memory-writes-redaction-unchanged"
       ]
     }
   ]

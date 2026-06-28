@@ -10,12 +10,22 @@ Single read-time view of frozen doc + amendments (R12). Parent is never mutated.
 
 **Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill spec-union`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
+
+## Structural tokenizer (PRD 031)
+
+`scripts/spec-union.sh` parses exclusively through `scripts/doc_format.py` (shared tokenizer). No
+independent structural regex is retained. Pre-freeze docs pass through
+`bash scripts/doc-format-normalize.sh --check|--write` before persisting.
+
+Post-cutover paths live under `planningDir` (default `docs/planning`); pre-cutover repos use legacy
+`prdsDir`/`decisionsDir` until migration `--verify` passes. See `core/sw-reference/layout.md`.
+
 ## Supported doc types
 
 | Type | Path | ID grammar | Amendment dir |
 |------|------|------------|---------------|
-| PRD | `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` | `R\d+` | `parent/amendments/` |
-| Decision | `docs/decisions/<n>-<slug>.md` | `D\d+` | sibling `<stem>.amendments/` |
+| PRD | `<planningDir>/prd/<id>-<slug>/<id>-prd-<slug>.md` (legacy: `prdsDir/<n>-<slug>/...`) | `R\d+` | `parent/amendments/` |
+| Decision | `<planningDir>/decision/<id>-<slug>.md` (legacy: `decisionsDir/<n>-<slug>.md`) | `D\d+` | sibling `<stem>.amendments/` |
 
 ## Resolution rules
 
@@ -63,6 +73,6 @@ path is additive.
 ## Examples
 
 ```bash
-bash scripts/spec-union.sh docs/prds/001-feature/001-prd-feature.md
-bash scripts/spec-union.sh docs/decisions/001-my-decision.md
+bash scripts/spec-union.sh docs/planning/prd/prd-001-feature/prd-001-feature-prd-feature.md
+bash scripts/spec-union.sh docs/planning/decision/decision-001-my-decision/decision-001-my-decision.md
 ```

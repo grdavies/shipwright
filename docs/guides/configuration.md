@@ -80,8 +80,10 @@ stamp the resolved concrete `model:` on the Task (do not rely on `model: inherit
 destructive git; `doc.afterTasks: confirm` or supervised mode; phase liveness timeout; CI/external wait
 exhausted; run-level budget. Every halt emits one report with an exact resume command.
 
-**Living-doc currency:** mechanical reconcile of `docs/prds/INDEX.md`, `COMPLETION-LOG.md`, and
-`GAP-BACKLOG.md` on the feature branch; `docs-currency` gate hard-blocks terminal merge on drift.
+**Living-doc currency:** mechanical reconcile of the unified `docs/planning/INDEX.md` (post-cutover)
+plus legacy projections `docs/prds/INDEX.md`, `COMPLETION-LOG.md`, and `GAP-BACKLOG.md` on the feature
+branch; `docs-currency` gate hard-blocks terminal merge on drift. Resolve paths via `planningDir` with
+legacy `prdsDir`/`tasksDir` aliases until migration cutover.
 
 ### Orchestration plan policy (`orchestration.planPolicy`)
 
@@ -141,6 +143,10 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 
 | Key | Purpose |
 |-----|---------|
+| `planningDir` | Canonical planning-unit tree (`docs/planning` post-cutover; legacy paths until migration `--verify`) |
+| `prdsDir` | Legacy PRD directory alias (defaults to `docs/prds` until `planningDir` cutover) |
+| `tasksDir` | Frozen task-list alias (defaults to `prdsDir` until cutover) |
+| `decisionsDir` | Decision-record root |
 | `doc.afterTasks` | After frozen tasks: `stop` \| `confirm` (default) \| `auto` |
 | `communication.defaultIntensity` | Caveman chat intensity when no active command (`full` default) |
 | `communication.routing.commands` | Per `sw-*` command intensity: `normal` \| `lite` \| `full` \| `ultra` \| `inherit` |
