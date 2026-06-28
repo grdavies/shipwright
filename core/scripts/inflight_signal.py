@@ -25,8 +25,8 @@ from wave_state import (  # noqa: E402
     enumerate_scoped_runs,
     load_deliver_state,
     resolve_state_path,
-    save_deliver_state,
 )
+from wave_json_io import write_json  # noqa: E402
 
 UNIT_HEADER_RE = re.compile(r"^([a-z][a-z0-9-]*):$")
 ALLOWED_FIELDS = frozenset({"run-id", "branch", "branch-token", "epoch"})
@@ -256,6 +256,12 @@ def resolve_run_context(
     return state, state_path, slug, unit_id
 
 
+def persist_state(state_path: Path, state: dict[str, Any]) -> None:
+    state["updatedAt"] = utc_now()
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(state_path, state)
+
+
 def append_override_audit(
     state: dict[str, Any],
     *,
@@ -470,7 +476,7 @@ def cmd_write(root: Path, args: list[str]) -> None:
             "leasedAt": utc_now(),
         }
         if not dry_run:
-            save_deliver_state(root, state, target=target)
+            persist_state(state_path, state)
         commit_sha = git_commit_inflight(root, unit_id, dry_run=dry_run or not do_commit)
 
     emit(
@@ -505,7 +511,7 @@ def cmd_clear(root: Path, args: list[str]) -> None:
         state.pop("inflightLease", None)
         append_override_audit(state, action="clear", why=reason)
         if not dry_run:
-            save_deliver_state(root, state, target=target)
+            persist_state(state_path, state)
         commit_sha = git_commit_inflight(root, unit_id, dry_run=dry_run or not do_commit)
 
     emit(

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# CLI for committed in-flight signal (PRD 032).
+# Committed in-flight signal writer CLI (PRD 032 R1/R2/R11).
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GIT_ROOT="$(git -C "$ROOT" rev-parse --show-toplevel)"
-exec python3 "$ROOT/scripts/inflight_signal.py" "$GIT_ROOT" "$@"
+exec python3 "$ROOT/scripts/inflight_signal.py" "$ROOT" "$@"

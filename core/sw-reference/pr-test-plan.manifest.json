@@ -151,9 +151,12 @@
       "scenarios": [
         "inflight-write-read-clear",
         "cross-clone-cas-takeover-failclosed",
-        "override-logged-who-when-why",
-        "inflight-tuple-no-secret",
-        "inflight-opaque-token-slot-reserved"
+        "runstart-writer-inflight-region-only",
+        "inflight-opaque-token-slot-reserved",
+        "override-logged-who-when-why-takeover",
+        "override-logged-who-when-why-handoff",
+        "override-logged-who-when-why-override",
+        "inflight-tuple-no-secret"
       ]
     },
     {

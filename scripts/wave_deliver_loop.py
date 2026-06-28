@@ -1188,6 +1188,30 @@ def compute_next_action(
     }
 
 
+def run_inflight_signal(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
+    script = root / "scripts" / "inflight-signal.sh"
+    if not script.is_file():
+        return 2, {"verdict": "fail", "error": "inflight-signal.sh missing"}
+    proc = subprocess.run(
+        ["bash", str(script), *args],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+    )
+    data: dict[str, Any] = {}
+    if proc.stdout.strip():
+        try:
+            parsed = json.loads(proc.stdout)
+            if isinstance(parsed, dict):
+                data = parsed
+        except json.JSONDecodeError:
+            data = {"raw": proc.stdout.strip()}
+    if proc.stderr.strip():
+        data.setdefault("stderr", proc.stderr.strip())
+    data["exitCode"] = proc.returncode
+    return proc.returncode, data
+
+
 def run_wave(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
     proc = subprocess.run(
         ["bash", str(root / "scripts/wave.sh"), *args],
@@ -1353,36 +1377,27 @@ def execute_mechanical(
 
     if action == "inflight-signal-write":
         target = step.get("target") or (plan.get("target") or {}).get("branch")
-        from wave_living_doc_lock import living_doc_write_lock
-
-        with living_doc_write_lock(root, target=str(target), holder="inflight-signal-writer"):
-            ec, data = run_wave(
-                root,
-                "inflight",
-                "write",
-                "--target",
-                str(target),
-            )
+        tl = task_list_from(state, plan) or task_list
+        write_args = ["run-start", "--target", str(target)]
+        if tl:
+            write_args.extend(["--task-list", str(tl)])
+        ec, data = run_inflight_signal(root, *write_args)
         if ec != 0:
             fail_payload(data, "inflight signal write failed", ec)
+        state.update(load_state(root))
         persist_cursor(root, state, "orchestrator-provision")
         return {"executed": "inflight-signal-write", "target": target, **(data or {})}
 
     if action == "inflight-signal-clear":
         target = step.get("target") or (plan.get("target") or {}).get("branch")
-        from wave_living_doc_lock import living_doc_write_lock
-
-        slug = str((state.get("target") or {}).get("slug") or "")
-        with living_doc_write_lock(root, target=str(target), holder="inflight-signal-writer"):
-            ec, data = run_wave(
-                root,
-                "inflight",
-                "clear",
-                "--unit",
-                slug,
-            )
+        tl = task_list_from(state, plan) or task_list
+        clear_args = ["run-complete", "--target", str(target)]
+        if tl:
+            clear_args.extend(["--task-list", str(tl)])
+        ec, data = run_inflight_signal(root, *clear_args)
         if ec not in (0, 20):
             fail_payload(data, "inflight signal clear failed", ec)
+        state.update(load_state(root))
         next_action = step.get("next") or "retrospective"
         persist_cursor(root, state, next_action)
         return {"executed": "inflight-signal-clear", "target": target, **(data or {})}
@@ -1504,6 +1519,17 @@ def execute_mechanical(
         ec, data = run_wave(root, "completion", "finalize-if-merged")
         if ec != 0:
             fail_payload(data, "finalize completion failed", ec)
+        state.update(load_state(root))
+        target = (state.get("target") or {}).get("branch")
+        task_list = task_list_from(state, plan)
+        clear_args = ["run-complete"]
+        if target:
+            clear_args.extend(["--target", str(target)])
+        if task_list:
+            clear_args.extend(["--task-list", str(task_list)])
+        clear_ec, clear_data = run_inflight_signal(root, *clear_args)
+        if clear_ec != 0:
+            fail_payload(clear_data, "inflight clear failed", clear_ec)
         state.update(load_state(root))
         cleanup_payload: dict[str, Any] | None = None
         try:
