@@ -42,3 +42,13 @@ docs/*
 .cursor/planning-migration.lock
 
 .cursor/planning-migration-staging/
+
+
+# Planning privacy (R18) — brainstorm/decision bodies stay ignored until PRD 034
+docs/planning/brainstorm/**/*
+!docs/planning/brainstorm/**/.gitkeep
+docs/planning/decision/**/*
+!docs/planning/decision/INDEX.md
+!docs/planning/decision/SUPERSEDED.log
+
+.cursor/planning-migration-supersession-map.json

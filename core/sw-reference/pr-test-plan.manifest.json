@@ -176,6 +176,23 @@
         "migration-scope-docs-config-only",
         "opmaps-gitignored-redacted"
       ]
+    },
+    {
+      "id": "planning-cutover-fixtures",
+      "script": "scripts/test/run-planning-cutover-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-cutover-fixtures",
+      "scenarios": [
+        "cancelled-prd-supersession-edges",
+        "privacy-backfill-legacy-token",
+        "formerly-ignored-body-tracked-fails",
+        "private-index-row-provisional",
+        "legacy-projection-gapbacklog-index",
+        "no-half-migrated-merge",
+        "relief-acceptance-gates-cutover",
+        "kill-criteria-fallback-documented"
+      ]
     }
   ]
 }
