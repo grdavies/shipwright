@@ -115,6 +115,7 @@
 * merge phase documentation-currency-dist-propagation-no-regression-memory-guardrails-l into feat/planning-feedback-lifecycle (3ea0b85) <!-- sw-deliver:documentation-currency-dist-propagation-no-regression-memory-guardrails-l -->
 * merge phase committed-in-flight-signal-writer-l into feat/planning-feedback-lifecycle (e5f9234) <!-- sw-deliver:committed-in-flight-signal-writer-l -->
 * merge phase self-heal-staleness-ttl-escape-hatch-m into feat/planning-feedback-lifecycle (19a46ba) <!-- sw-deliver:self-heal-staleness-ttl-escape-hatch-m -->
+* merge phase migration-bridge-backfill-s into feat/planning-feedback-lifecycle (c3e7c06) <!-- sw-deliver:migration-bridge-backfill-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
