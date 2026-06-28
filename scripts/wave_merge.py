@@ -28,6 +28,179 @@ from wave_state import assert_phase_status
 
 VALID_STATUS_VERDICTS = frozenset({"merge-ready-green", "blocked"})
 
+PLAN_PATH = Path(".cursor/sw-deliver-plan.json")
+FORWARD_MERGE_REBASE_RETRIES = 1
+
+MERGED_TERMINAL_STATUSES = frozenset(
+    {"green-merged", "teardown-pending", "teardown-complete"}
+)
+
+
+def load_deliver_plan(root: Path) -> dict[str, Any]:
+    path = root / PLAN_PATH
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def phase_id_for_slug(state: dict[str, Any], slug: str) -> str | None:
+    for pid, meta in (state.get("phases") or {}).items():
+        if isinstance(meta, dict) and meta.get("slug") == slug:
+            return str(pid)
+    return None
+
+
+def merged_phase_slugs(state: dict[str, Any]) -> set[str]:
+    return {str(r.get("phaseSlug")) for r in (state.get("mergedPhases") or []) if r.get("phaseSlug")}
+
+
+def dependency_ids_for(phase_id: str, edges: list[dict[str, Any]]) -> list[str]:
+    return sorted(str(e.get("from", "")) for e in edges if str(e.get("to", "")) == phase_id)
+
+
+def topological_sort_slugs(
+    slugs: list[str], state: dict[str, Any], edges: list[dict[str, Any]]
+) -> list[str]:
+    slug_set = set(slugs)
+    id_to_slug: dict[str, str] = {}
+    for slug in slugs:
+        pid = phase_id_for_slug(state, slug)
+        if pid:
+            id_to_slug[pid] = slug
+    in_degree = {s: 0 for s in slugs}
+    graph: dict[str, list[str]] = {s: [] for s in slugs}
+    for edge in edges:
+        from_slug = id_to_slug.get(str(edge.get("from", "")))
+        to_slug = id_to_slug.get(str(edge.get("to", "")))
+        if from_slug in slug_set and to_slug in slug_set:
+            graph[from_slug].append(to_slug)
+            in_degree[to_slug] = in_degree.get(to_slug, 0) + 1
+    ready = sorted(s for s in slugs if in_degree.get(s, 0) == 0)
+    ordered: list[str] = []
+    while ready:
+        node = ready.pop(0)
+        ordered.append(node)
+        for nxt in sorted(graph.get(node, [])):
+            in_degree[nxt] -= 1
+            if in_degree[nxt] == 0:
+                ready.append(nxt)
+                ready.sort()
+    for slug in sorted(slugs):
+        if slug not in ordered:
+            ordered.append(slug)
+    return ordered
+
+
+def reorder_merge_queue(state: dict[str, Any], root: Path) -> None:
+    queue = list(state.get("mergeQueue") or [])
+    if len(queue) <= 1:
+        return
+    slugs = [str(e.get("phaseSlug", "")) for e in queue if e.get("phaseSlug")]
+    plan = load_deliver_plan(root)
+    ordered = topological_sort_slugs(slugs, state, plan.get("edges") or [])
+    by_slug = {str(e.get("phaseSlug")): e for e in queue}
+    state["mergeQueue"] = [by_slug[s] for s in ordered if s in by_slug]
+
+
+def dependencies_merged(phase_id: str, state: dict[str, Any], edges: list[dict[str, Any]]) -> bool:
+    merged = merged_phase_slugs(state)
+    phases = state.get("phases") or {}
+    for dep_id in dependency_ids_for(phase_id, edges):
+        dep_meta = phases.get(dep_id) or {}
+        dep_slug = str(dep_meta.get("slug") or dep_id)
+        if dep_slug not in merged and dep_meta.get("status") not in MERGED_TERMINAL_STATUSES:
+            return False
+    return True
+
+
+def select_next_merge_entry(
+    state: dict[str, Any], root: Path
+) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+    reorder_merge_queue(state, root)
+    queue = list(state.get("mergeQueue") or [])
+    if not queue:
+        return None, queue
+    plan = load_deliver_plan(root)
+    edges = plan.get("edges") or []
+    for entry in queue:
+        slug = str(entry.get("phaseSlug", ""))
+        pid = phase_id_for_slug(state, slug)
+        if pid and dependencies_merged(pid, state, edges):
+            return entry, queue
+    return queue[0], queue
+
+
+def forward_merge_dependency_branches(
+    root: Path,
+    state: dict[str, Any],
+    phase_slug: str,
+    orch_wt: Path,
+    target: str,
+) -> list[str]:
+    """Forward-merge dependency branches into orchestrator worktree before dependent (R8/D7)."""
+    pid = phase_id_for_slug(state, phase_slug)
+    if not pid:
+        return []
+    plan = load_deliver_plan(root)
+    edges = plan.get("edges") or []
+    phases = state.get("phases") or {}
+    host_remote = remote_name(load_workflow_config(root))
+    git_run(["fetch", host_remote, target], cwd=orch_wt, check=False)
+    forward_merged: list[str] = []
+    for dep_id in dependency_ids_for(pid, edges):
+        dep_meta = phases.get(dep_id) or {}
+        dep_slug = str(dep_meta.get("slug") or dep_id)
+        dep_branch = dep_meta.get("branch")
+        if not dep_branch:
+            continue
+        if phase_already_merged(orch_wt, str(dep_branch), target):
+            continue
+        merge_ref = str(dep_branch)
+        if git_run(["show-ref", "--verify", f"refs/heads/{dep_branch}"], cwd=orch_wt, check=False).returncode != 0:
+            remote_ref_name = remote_heads_ref(host_remote, str(dep_branch))
+            if (
+                git_run(["show-ref", "--verify", remote_ref_name], cwd=orch_wt, check=False).returncode
+                == 0
+            ):
+                merge_ref = remote_ref(host_remote, str(dep_branch))
+            else:
+                continue
+        proc = git_run(
+            [
+                "merge",
+                "--no-ff",
+                merge_ref,
+                "-m",
+                f"forward-merge(dep): {dep_slug} into {target}",
+            ],
+            cwd=orch_wt,
+            check=False,
+        )
+        if proc.returncode != 0:
+            git_run(["merge", "--abort"], cwd=orch_wt, check=False)
+            retried = False
+            for _ in range(FORWARD_MERGE_REBASE_RETRIES):
+                rebase = git_run(["rebase", merge_ref], cwd=orch_wt, check=False)
+                if rebase.returncode == 0:
+                    retried = True
+                    break
+                git_run(["rebase", "--abort"], cwd=orch_wt, check=False)
+            if not retried:
+                fail(
+                    "dependency forward-merge conflict",
+                    exit_code=20,
+                    halt="blocked",
+                    cause="merge-queue:conflict",
+                    dependency=dep_slug,
+                    phase=phase_slug,
+                )
+        forward_merged.append(dep_slug)
+    return forward_merged
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -495,8 +668,9 @@ def cmd_merge_enqueue(root: Path, args: list[str]) -> None:
     }
     queue.append(entry)
     state["mergeQueue"] = queue
+    reorder_merge_queue(state, root)
     save_state(root, state)
-    emit({"verdict": "pass", "action": "merge-enqueue", "entry": entry, "queueLength": len(queue)})
+    emit({"verdict": "pass", "action": "merge-enqueue", "entry": entry, "queueLength": len(state["mergeQueue"])})
 
 
 def resolve_orchestrator_worktree(root: Path, args: list[str]) -> Path:
@@ -602,7 +776,15 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
     queue = list(state.get("mergeQueue") or [])
     if not queue:
         emit({"verdict": "pass", "action": "merge-run-next", "note": "queue empty"})
-    entry = queue[0]
+    entry, queue = select_next_merge_entry(state, root)
+    if entry is None:
+        emit({"verdict": "pass", "action": "merge-run-next", "note": "queue empty"})
+    if queue and queue[0].get("phaseSlug") != entry.get("phaseSlug"):
+        by_slug = {str(e.get("phaseSlug")): e for e in queue}
+        slug = str(entry.get("phaseSlug", ""))
+        state["mergeQueue"] = [by_slug[slug]] + [e for e in queue if e.get("phaseSlug") != slug]
+        save_state(root, state)
+        queue = list(state["mergeQueue"])
     phase_slug = entry.get("phaseSlug", "")
     pr = entry.get("pr")
     pr_str = str(pr) if pr is not None else None
@@ -656,6 +838,11 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
                 "authPath": auth_path,
             }
         )
+
+    orch_wt = resolve_orchestrator_worktree(root, args)
+    forward_merged = forward_merge_dependency_branches(
+        root, state, str(phase_slug), orch_wt, str(target)
+    )
 
     journal = {
         "phase": phase_slug,
@@ -816,12 +1003,40 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
                 err = json.loads(verify_proc.stdout)
             except json.JSONDecodeError:
                 err = {"error": verify_proc.stderr or verify_proc.stdout}
+            from wave_failure import classify_verify_failure, verify_failure_cause
+
+            verify_outcome = err.get("verify") if isinstance(err.get("verify"), dict) else err
+            cause = str(err.get("cause") or verify_failure_cause(verify_outcome))
+            cause_class = classify_verify_failure(verify_outcome)
+            if cause == "verify:environmental" or cause_class == "environmental":
+                state = load_state(root)
+                if phase_id and phase_id in state.get("phases", {}):
+                    phase_meta = state["phases"][phase_id]
+                    phase_meta["verifyEnvironmental"] = True
+                    phase_meta["cause"] = "verify:environmental"
+                    phase_meta["updatedAt"] = utc_now()
+                save_state(root, state)
+                emit(
+                    {
+                        "verdict": "wait",
+                        "action": "merge-run-next",
+                        "phase": phase_slug,
+                        "verify": verify_outcome,
+                        "cause": "verify:environmental",
+                        "causeClass": "environmental",
+                        "forwardMergedDependencies": forward_merged,
+                        "mergeRetained": True,
+                        "note": "Environmental post-merge verify — merge retained; bounded remediation (R9)",
+                    },
+                    exit_code=10,
+                )
             fail_payload(
                 err,
                 "incremental verify failed after merge",
                 verify_proc.returncode or 20,
                 halt="blocked",
                 cause="verify:failed",
+                causeClass="regression",
             )
         verify_out = json.loads(verify_proc.stdout)
 
@@ -841,6 +1056,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
             {
                 "verdict": "pass",
                 "action": "merge-run-next",
+                "forwardMergedDependencies": forward_merged,
                 "supersededPrClose": pr_close,
                 "phase": phase_slug,
                 "mergeCommit": merge_commit,
@@ -889,6 +1105,8 @@ def cmd_merge_collect_all_ready(root: Path, args: list[str]) -> None:
             fail_payload(err, "merge enqueue failed", proc.returncode)
         enqueued.append(slug)
     state = load_state(root)
+    reorder_merge_queue(state, root)
+    save_state(root, state)
     emit(
         {
             "verdict": "pass",
@@ -898,10 +1116,6 @@ def cmd_merge_collect_all_ready(root: Path, args: list[str]) -> None:
         }
     )
 
-
-MERGED_TERMINAL_STATUSES = frozenset(
-    {"green-merged", "teardown-pending", "teardown-complete"}
-)
 
 
 def cmd_report_terminal(root: Path, args: list[str]) -> None:

@@ -146,6 +146,66 @@ def run_retrospective_record_premerge(root: Path, state: dict[str, Any]) -> None
         fail(err.get("error", "retrospective record-premerge failed"), exit_code=proc.returncode)
 
 
+
+
+def cmd_terminal_checkpoint(root: Path, args: list[str]) -> None:
+    """Single consolidated supervised terminal checkpoint (R10)."""
+    dry_run = has_flag(args, "--dry-run")
+    state = load_state(root)
+    mode = terminal_autonomy_mode(root)
+    if not all_phases_green(state):
+        fail("terminal checkpoint requires all phases complete", exit_code=20)
+    compound = state.get("compoundShip") or {}
+    terminal_ship = state.get("terminalShip") or {}
+    needs_retro = not compound.get("premergeDone")
+    needs_ship = terminal_ship.get("status") not in ("gate-green", "local-evidence")
+    if mode == "auto" or has_flag(args, "--force"):
+        if dry_run:
+            emit(
+                {
+                    "verdict": "pass",
+                    "action": "terminal-checkpoint",
+                    "dry_run": True,
+                    "mode": mode,
+                    "wouldRunRetrospective": needs_retro,
+                    "wouldRunTerminalShip": needs_ship,
+                }
+            )
+        if needs_retro:
+            cmd_terminal_retro_run(root, ["--force"])
+            state = load_state(root)
+        if needs_ship:
+            cmd_terminal_ship_run(root, ["--force"])
+        state = load_state(root)
+        state["terminalCheckpointCompleted"] = True
+        save_state(root, state)
+        emit(
+            {
+                "verdict": "pass",
+                "action": "terminal-checkpoint",
+                "mode": mode,
+                "completed": True,
+            }
+        )
+    invoke: list[str] = []
+    if needs_retro:
+        invoke.append("/sw-retrospective --pre-merge")
+    if needs_ship:
+        invoke.append("/sw-ship")
+    emit(
+        {
+            "verdict": "halt",
+            "action": "terminal-checkpoint",
+            "halt": "supervised-checkpoint",
+            "mode": mode,
+            "invoke": invoke,
+            "reportTerminal": "bash scripts/wave.sh report terminal",
+            "note": "Single consolidated terminal checkpoint — retrospective and ship gate combined (R10)",
+        },
+        exit_code=11,
+    )
+
+
 def cmd_terminal_autonomy(root: Path, _args: list[str]) -> None:
     mode = terminal_autonomy_mode(root)
     emit(
@@ -468,6 +528,27 @@ def is_ancestor(ancestor: str, descendant: str, cwd: Path) -> bool:
     return proc.returncode == 0
 
 
+def run_tasks_currency_gate(root: Path, state: dict[str, Any]) -> None:
+    """Hard-block terminal gate when task-list currency diverges (R7)."""
+    from wave_deliver_loop import load_plan, tasks_currency_ok
+
+    plan: dict[str, Any] = {}
+    plan_path = root / ".cursor" / "sw-deliver-plan.json"
+    if plan_path.is_file():
+        try:
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            plan = {}
+    ok, cause = tasks_currency_ok(root, state, plan)
+    if not ok:
+        fail(
+            "task-list currency divergence",
+            exit_code=1,
+            halt="blocked",
+            cause=cause or "tasks-currency-divergence",
+        )
+
+
 def run_docs_currency_gate(root: Path) -> None:
     """Hard-block terminal gate on living-doc drift for the current run (R50)."""
     if os.environ.get("SW_SKIP_DOCS_CURRENCY") == "1":
@@ -717,7 +798,8 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
                 except json.JSONDecodeError:
                     err = {"error": append_proc.stderr or append_proc.stdout}
                 fail(err.get("error", "living-docs append-terminal failed"), exit_code=append_proc.returncode)
-            run_docs_currency_gate(root)
+            run_tasks_currency_gate(root, state)
+        run_docs_currency_gate(root)
         state = load_state(root)
         state["terminalLocalGate"] = {
             "mode": "local-evidence",
@@ -759,6 +841,7 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
             except json.JSONDecodeError:
                 err = {"error": append_proc.stderr or append_proc.stdout}
             fail(err.get("error", "living-docs append-terminal failed"), exit_code=append_proc.returncode)
+        run_tasks_currency_gate(root, state)
         run_docs_currency_gate(root)
 
     title = parse_kv(args, "--title") or f"{commit_type}({slug}): deliver wave"
@@ -941,6 +1024,8 @@ def main() -> None:
                 cmd_terminal_retro_run(root, retro_rest)
             else:
                 fail("terminal retro subcommand required: run")
+        elif sub == "checkpoint":
+            cmd_terminal_checkpoint(root, rest)
         elif sub == "ship":
             ship_sub = rest[0] if rest else ""
             ship_rest = rest[1:]
