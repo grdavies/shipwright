@@ -116,6 +116,7 @@
 * merge phase committed-in-flight-signal-writer-l into feat/planning-feedback-lifecycle (e5f9234) <!-- sw-deliver:committed-in-flight-signal-writer-l -->
 * merge phase self-heal-staleness-ttl-escape-hatch-m into feat/planning-feedback-lifecycle (19a46ba) <!-- sw-deliver:self-heal-staleness-ttl-escape-hatch-m -->
 * merge phase migration-bridge-backfill-s into feat/planning-feedback-lifecycle (c3e7c06) <!-- sw-deliver:migration-bridge-backfill-s -->
+* merge phase shared-authoring-guard-preflight-handoff-route-m into feat/planning-feedback-lifecycle (be102df) <!-- sw-deliver:shared-authoring-guard-preflight-handoff-route-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
