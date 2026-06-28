@@ -32,7 +32,7 @@
 | 028 | living-status-backlog-lifecycle | [028-prd-living-status-backlog-lifecycle.md](028-living-status-backlog-lifecycle/028-prd-living-status-backlog-lifecycle.md) (frozen) | — | not-started |
 | 029 | doc-format-parser-robustness | [029-prd-doc-format-parser-robustness.md](029-doc-format-parser-robustness/029-prd-doc-format-parser-robustness.md) (frozen) | — | not-started |
 | 030 | spec-mutation-safety | [030-prd-spec-mutation-safety.md](030-spec-mutation-safety/030-prd-spec-mutation-safety.md) (frozen) | — | not-started |
-| 031 | planning-unit-model-and-migration | [031-prd-planning-unit-model-and-migration.md](031-planning-unit-model-and-migration/031-prd-planning-unit-model-and-migration.md) (frozen) | — | in-progress |
+| 031 | planning-unit-model-and-migration | [031-prd-planning-unit-model-and-migration.md](031-planning-unit-model-and-migration/031-prd-planning-unit-model-and-migration.md) (frozen) | — | complete |
 | 032 | planning-mutation-safety-guards | [032-prd-planning-mutation-safety-guards.md](032-planning-mutation-safety-guards/032-prd-planning-mutation-safety-guards.md) (frozen) | — | not-started |
 | 033 | lifecycle-dependencies-and-scheduler | [033-prd-lifecycle-dependencies-and-scheduler.md](033-lifecycle-dependencies-and-scheduler/033-prd-lifecycle-dependencies-and-scheduler.md) (frozen) | — | not-started |
 | 034 | visibility-and-planning-store | [034-prd-visibility-and-planning-store.md](034-visibility-and-planning-store/034-prd-visibility-and-planning-store.md) (frozen) | — | not-started |
