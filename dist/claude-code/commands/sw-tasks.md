@@ -34,6 +34,8 @@ Task list from frozen PRD + amendment union.
 
 ## Guardrails
 
+- **Complete-unit refusal (R9):** mutations under a `status: complete` unit folder are rejected by the
+  completed-unit immutability hook (`hooks/pre-commit-completed-unit.sh`; see `/sw-freeze`).
 - Single-pass generation — complete list (parent phases, executable sub-tasks, traceability) with no
   user-intervention gate.
 - Overwrite of an existing **frozen** task list still requires explicit confirmation before replacing.

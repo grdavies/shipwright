@@ -60,6 +60,8 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
 
 ## Guardrails
 
+- **Complete-unit refusal (R9):** mutations under a `status: complete` unit folder are rejected by the
+  completed-unit immutability hook (`hooks/pre-commit-completed-unit.sh`; see `/sw-freeze`).
 - PRD Full path: no PRD without brainstorm doc (`--type prd` only).
 - No `frozen: true` in this step — freeze is `/sw-freeze`.
 - No GitHub tracking issue by default (deferred to `003`).
