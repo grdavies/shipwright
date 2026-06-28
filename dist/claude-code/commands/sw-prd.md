@@ -38,6 +38,10 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
    - **Forward reference (R53):** when the source brainstorm is not frozen, append the PRD path to the
      brainstorm `prd:` field (list when multiple) via
      `python3 scripts/doc_link.py write-forwardref --brainstorm <path> --prd <path>`; skip when frozen.
+   - **Structural canonicalization (R14):** before persisting the draft, pipe body output through
+     `bash scripts/doc-format-normalize.sh --write --inplace <path>` so non-canonical structural shape cannot
+     reach freeze; slot-filling templates are available via
+     `python3 scripts/doc_format.py template prd_requirement` (and related kinds in `doc_format.SLOT_TEMPLATES`).
    - Save to `docs/prds/<n>-<slug>/<n>-prd-<slug>.md`.
 5. **Decision record (`--type decision`):**
    - Brainstorm optional — decisions are authored up-front; **do not** apply the "no doc without brainstorm" guard.
