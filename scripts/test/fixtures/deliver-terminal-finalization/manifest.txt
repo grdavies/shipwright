@@ -1,0 +1,11 @@
+# PRD 027 terminal finalization scenarios (R13) — each maps to OK in run-deliver-loop-fixtures.sh
+terminal-completeness:terminal-completeness-teardown-complete-passes
+canonical-mirror:phase-status-canonical-mirror-discovered
+glob-fallback:phase-status-glob-fallback-discovered
+await-in-flight:await-in-flight-clears-on-status
+tasks-currency:tasks-currency-integration-worktree-ok
+parallel-merge:parallel-wave-out-of-order-merge-deterministic
+environmental-verify:post-merge-verify-environmental-remediates
+supervised-checkpoint:supervised-terminal-checkpoint-single-halt
+stale-blockers:stale-blockers-superseded-on-progress
+canonical-state:canonical-state-phaseworktrees-present

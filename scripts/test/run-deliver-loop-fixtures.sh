@@ -763,6 +763,241 @@ assert 'plan-rejection' in d['next'].get('cause','')
 ) && ok "plan-rejection-no-progress" || bad "plan-rejection-no-progress"
 rm -rf "$REJ_FIX"
 
+# --- PRD 027 terminal finalization (R1–R13) ---
+TERM_PY="$ROOT/scripts/wave_terminal.py"
+COMP_PY="$ROOT/scripts/wave_compound.py"
+WM="$ROOT/scripts/wave_merge.py"
+WF="$ROOT/scripts/wave_failure.py"
+SHIP_STATUS="$ROOT/scripts/ship-phase-status.sh"
+MANIFEST_027="$ROOT/scripts/test/fixtures/deliver-terminal-finalization/manifest.txt"
+
+# terminal-completeness-teardown-complete-passes (R1, R2)
+TEARDOWN_FIX=$(mktemp -d)
+(
+  cd "$TEARDOWN_FIX"
+  git init -q && git config user.email t@t.com && git config user.name T
+  git commit --allow-empty -q -m init
+  git branch -m main
+  git checkout -qb feat/demo
+  mkdir -p .cursor
+  echo '{"defaultBaseBranch":"main"}' >.cursor/workflow.config.json
+  cat >.cursor/sw-deliver-state.feat-demo.json <<'JSON'
+{"target":{"branch":"feat/demo"},"phases":{"1":{"slug":"a","status":"teardown-complete"},"2":{"slug":"b","status":"teardown-complete"}}}
+JSON
+  python3 -c "
+import importlib.util, json, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+state = json.loads(Path('.cursor/sw-deliver-state.feat-demo.json').read_text())
+for path, label in (('$TERM_PY', 'terminal'), ('$COMP_PY', 'compound')):
+    spec = importlib.util.spec_from_file_location(label, path)
+    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+    assert m.all_phases_green(state), label
+"
+  SW_DELIVER_DRY_RUN=1 python3 "$TERM_PY" "$TEARDOWN_FIX" terminal retro run --dry-run --force 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('action')=='terminal-retro-run' and d.get('dry_run') is True
+"
+) && ok "terminal-completeness-teardown-complete-passes" || bad "terminal-completeness-teardown-complete-passes"
+rm -rf "$TEARDOWN_FIX"
+
+# phase-status-canonical-mirror-discovered (R4, R6)
+MIRROR_FIX=$(mktemp -d)
+(
+  cd "$MIRROR_FIX"
+  git init -q && git config user.email t@t.com && git config user.name T
+  git commit --allow-empty -q -m init
+  mkdir -p phase-wt/.cursor/sw-deliver-runs/alpha
+  export SW_PHASE_SLUG=alpha SW_RUN_DIR="$MIRROR_FIX/phase-wt/.cursor/sw-deliver-runs/alpha" SW_REPO_ROOT="$MIRROR_FIX"
+  bash "$SHIP_STATUS" --verdict merge-ready-green --phase alpha --out "$SW_RUN_DIR/status.json" >/dev/null
+  test -f "$MIRROR_FIX/.cursor/sw-deliver-runs/alpha/status.json"
+  python3 -c "
+import importlib.util, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+spec = importlib.util.spec_from_file_location('wm', '$WM')
+mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+path, status = mod.read_phase_status_optional(Path('$MIRROR_FIX'), 'alpha', {})
+assert path and status.get('verdict')=='merge-ready-green'
+"
+) && ok "phase-status-canonical-mirror-discovered" || bad "phase-status-canonical-mirror-discovered"
+rm -rf "$MIRROR_FIX"
+
+# phase-status-glob-fallback-discovered (R5, R6)
+GLOB_FIX=$(mktemp -d)
+(
+  mkdir -p "$GLOB_FIX/.sw-worktrees/orphan-phase/.cursor/sw-deliver-runs/beta"
+  echo '{"verdict":"merge-ready-green","phase":"beta","head":"abc"}' >"$GLOB_FIX/.sw-worktrees/orphan-phase/.cursor/sw-deliver-runs/beta/status.json"
+  python3 -c "
+import importlib.util, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+spec = importlib.util.spec_from_file_location('wm', '$WM')
+mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+path, status = mod.read_phase_status_optional(Path('$GLOB_FIX'), 'beta', {'phases': {}})
+assert path and status.get('verdict')=='merge-ready-green' and '.sw-worktrees' in str(path)
+"
+) && ok "phase-status-glob-fallback-discovered" || bad "phase-status-glob-fallback-discovered"
+rm -rf "$GLOB_FIX"
+
+# await-in-flight-clears-on-status (R6)
+AWAIT_FIX=$(mktemp -d)
+(
+  cd "$AWAIT_FIX" && git init -q && git config user.email t@t.com && git config user.name T
+  git commit --allow-empty -q -m init
+  NOW_TS=$(python3 -c "from datetime import datetime,timezone; print(datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))")
+  HEAD=$(git rev-parse HEAD)
+  mkdir -p .cursor .cursor/sw-deliver-runs/alpha
+  echo '{"trunkBase": {"name": "main", "sha": "deadbeef00000000000000000000000000000000"}}' >.cursor/sw-base-state.json
+  echo '{"mode":"phase","target":{"branch":"feat/await"},"items":[{"id":"1","slug":"alpha","branch":"feat/await-phase-alpha"}],"edges":[],"waves":[["1"]]}' >.cursor/sw-deliver-plan.json
+  python3 -c "import json; from pathlib import Path; Path('.cursor/sw-deliver-state.json').write_text(json.dumps({'verdict':'running','target':{'branch':'feat/await'},'currentWave':1,'specSeed':{'skipped':True},'baseCapture':{'skipped':True},'orchestratorWorktree':{'path':'/tmp/orch'},'driverHeartbeatAt':'$NOW_TS','phases':{'1':{'id':'1','slug':'alpha','status':'in-flight','backgroundDispatchedAt':'$NOW_TS','branch':'feat/await-phase-alpha'}},'phaseWorktrees':{'1':{'path':'$AWAIT_FIX','name':'alpha-wt'}}}))"
+  echo "{\"verdict\":\"merge-ready-green\",\"phase\":\"alpha\",\"head\":\"$HEAD\",\"gate\":{\"verdict\":\"green\"}}" >.cursor/sw-deliver-runs/alpha/status.json
+  OUT=$(python3 "$LOOP_PY" "$AWAIT_FIX" compute-next 2>/dev/null)
+  echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['next']['action']!='await-in-flight'; assert d['next']['action'] in ('merge-enqueue','collect-status','collect-all-ready')"
+) && ok "await-in-flight-clears-on-status" || bad "await-in-flight-clears-on-status"
+rm -rf "$AWAIT_FIX"
+
+# tasks-currency-integration-worktree-ok (R7)
+CURRENCY_FIX=$(mktemp -d)
+(
+  cd "$CURRENCY_FIX" && git init -q && git config user.email t@t.com && git config user.name T
+  git checkout -qb feat/integration
+  mkdir -p docs/prds/027-x
+  printf '%s\n' '---' 'frozen: true' '---' '### 1. One' >docs/prds/027-x/tasks.md
+  git add docs/prds/027-x/tasks.md && git commit -q -m tasks
+  mkdir -p .cursor
+  echo '{"target":{"branch":"feat/integration"},"source_task_list":"docs/prds/027-x/tasks.md","orchestratorWorktree":{"path":"'"$CURRENCY_FIX"'"}}' >.cursor/sw-deliver-state.feat-integration.json
+  python3 -c "
+import importlib.util, json, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+spec = importlib.util.spec_from_file_location('loop', '$LOOP_PY')
+mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+root = Path('$CURRENCY_FIX')
+state = json.loads((root/'.cursor/sw-deliver-state.feat-integration.json').read_text())
+ok, cause = mod.tasks_currency_ok(root, state, {})
+assert ok, cause
+"
+) && ok "tasks-currency-integration-worktree-ok" || bad "tasks-currency-integration-worktree-ok"
+rm -rf "$CURRENCY_FIX"
+
+# parallel-wave-out-of-order-merge-deterministic (R8)
+MERGE_ORDER_FIX=$(mktemp -d)
+mkdir -p "$MERGE_ORDER_FIX/.cursor"
+echo '{"mode":"phase","edges":[{"from":"1","to":"3"},{"from":"2","to":"3"}],"items":[{"id":"1","slug":"a"},{"id":"2","slug":"b"},{"id":"3","slug":"c"}]}' >"$MERGE_ORDER_FIX/.cursor/sw-deliver-plan.json"
+if python3 -c "
+import importlib.util, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+spec = importlib.util.spec_from_file_location('wm', '$WM')
+mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+state = {'phases': {'1': {'slug': 'a'}, '2': {'slug': 'b'}, '3': {'slug': 'c'}}, 'mergeQueue': [{'phaseSlug': 'c'}, {'phaseSlug': 'a'}, {'phaseSlug': 'b'}]}
+mod.reorder_merge_queue(state, Path('$MERGE_ORDER_FIX'))
+assert [e['phaseSlug'] for e in state['mergeQueue']] == ['a','b','c']
+"; then ok "parallel-wave-out-of-order-merge-deterministic"; else bad "parallel-wave-out-of-order-merge-deterministic"; fi
+rm -rf "$MERGE_ORDER_FIX"
+
+# post-merge-verify-environmental-remediates (R9)
+if python3 -c "
+import importlib.util, sys
+sys.path.insert(0, '$ROOT/scripts')
+spec = importlib.util.spec_from_file_location('wf', '$WF')
+mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+o = {'results': [{'stderrTail': 'parallel ceiling reached'}]}
+assert mod.verify_failure_cause(o) == 'verify:environmental'
+"; then ok "post-merge-verify-environmental-remediates"; else bad "post-merge-verify-environmental-remediates"; fi
+
+# supervised-terminal-checkpoint-single-halt (R10)
+CHECKPOINT_FIX=$(mktemp -d)
+mkdir -p "$CHECKPOINT_FIX/.cursor"
+echo '{"deliver":{"terminal":{"autonomy":"supervised"}}}' >"$CHECKPOINT_FIX/.cursor/workflow.config.json"
+echo '{"target":{"branch":"feat/demo"},"phases":{"1":{"slug":"a","status":"green-merged"},"2":{"slug":"b","status":"teardown-complete"}}}' >"$CHECKPOINT_FIX/.cursor/sw-deliver-state.feat-demo.json"
+set +e; OUT=$(python3 "$TERM_PY" "$CHECKPOINT_FIX" terminal checkpoint 2>/dev/null); EC=$?; set -e
+if [[ "$EC" -eq 11 ]] && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); i=d.get('invoke') or []; assert d.get('action')=='terminal-checkpoint' and len(i)==2 and '/sw-retrospective --pre-merge' in i and '/sw-ship' in i"; then
+  ok "supervised-terminal-checkpoint-single-halt"
+else
+  bad "supervised-terminal-checkpoint-single-halt"
+fi
+rm -rf "$CHECKPOINT_FIX"
+
+# stale-blockers-superseded-on-progress (R11)
+BLOCKER_FIX=$(mktemp -d)
+mkdir -p "$BLOCKER_FIX/.cursor/sw-deliver-runs"
+echo '{"verdict":"halt","cause":"conductor:no-progress"}' >"$BLOCKER_FIX/.cursor/sw-deliver-runs/blockers.json"
+if python3 -c "
+import importlib.util, json, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+spec = importlib.util.spec_from_file_location('loop', '$LOOP_PY')
+mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+root = Path('$BLOCKER_FIX')
+assert mod.supersede_stale_blockers(root)
+doc = json.loads((root/'.cursor/sw-deliver-runs/blockers.json').read_text())
+assert doc['verdict']=='superseded' and doc['priorCause']=='conductor:no-progress'
+"; then ok "stale-blockers-superseded-on-progress"; else bad "stale-blockers-superseded-on-progress"; fi
+rm -rf "$BLOCKER_FIX"
+
+# canonical-state-phaseworktrees-present (R12)
+CANON_FIX=$(mktemp -d)
+(
+  cd "$CANON_FIX" && git init -q && git config user.email t@t.com && git config user.name T
+  git checkout -qb feat/canonical && git commit --allow-empty -q -m init && mkdir -p .cursor
+  python3 -c "
+import sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+from wave_state import resolve_state_path, save_deliver_state, load_deliver_state
+root = Path('.')
+state = {'verdict':'running','target':{'branch':'feat/canonical'},'phases':{'1':{'slug':'alpha','status':'in-flight'}},'phaseWorktrees':{'1':{'path':'/tmp/alpha-wt','name':'alpha-wt'}}}
+path = resolve_state_path(root, state_hint=state)
+save_deliver_state(root, state, target='feat/canonical')
+loaded = load_deliver_state(root, target='feat/canonical')
+assert path.is_file() and loaded.get('phaseWorktrees', {}).get('1')
+"
+  python3 "$COMP_PY" "$CANON_FIX" compound-ship record-premerge --prd 027 --phase deliver --skip-append-log >/dev/null
+  python3 -c "
+import sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+from wave_state import load_deliver_state
+loaded = load_deliver_state(Path('$CANON_FIX'), target='feat/canonical')
+assert loaded.get('compoundShip', {}).get('premergeDone') and loaded.get('phaseWorktrees', {}).get('1')
+"
+) && ok "canonical-state-phaseworktrees-present" || bad "canonical-state-phaseworktrees-present"
+rm -rf "$CANON_FIX"
+
+if python3 -c "
+import inspect, importlib.util, sys
+sys.path.insert(0, '$ROOT/scripts')
+for name, path in (('compound', '$COMP_PY'), ('loop', '$LOOP_PY')):
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    assert 'resolve_state_path' in inspect.getsource(mod)
+" && grep -q '| GAP-028 | resolved |' "$ROOT/docs/prds/GAP-BACKLOG.md"; then
+  ok "canonical-state-r12-gap-028-reconciled"
+else
+  bad "canonical-state-r12-gap-028-reconciled"
+fi
+
+if grep -q 'run-deliver-loop-fixtures.sh' "$ROOT/.cursor/workflow.config.json" && grep -q 'run-deliver-fixtures.sh' "$ROOT/.cursor/workflow.config.json"; then
+  ok "verify.test-deliver-suite-registered"
+else
+  bad "verify.test-deliver-suite-registered"
+fi
+
+while IFS= read -r line || [[ -n "$line" ]]; do
+  [[ -z "$line" || "$line" =~ ^# ]] && continue
+  scenario="${line#*:}"
+  if grep -qE "${scenario}" "$ROOT/scripts/test/run-deliver-loop-fixtures.sh"; then
+    ok "deliver-terminal-manifest:$scenario"
+  else
+    bad "deliver-terminal-manifest:$scenario"
+    FAIL=1
+  fi
+done <"$MANIFEST_027"
+
+
 if [[ "$FAIL" -ne 0 ]]; then
   echo "deliver-loop fixtures: FAIL"
   exit 1
