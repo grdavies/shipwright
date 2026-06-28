@@ -15,7 +15,7 @@ each will adopt in Phase A, and the fixture that gates cutover on map exhaustion
 | Surface | Role |
 | --- | --- |
 | `scripts/doc_format.py` | Canonical tokenizer module — tokenize/emit API |
-| `scripts/doc-format-normalize.sh` | CLI wrapper (`tokenize`, `emit`, `lint-callsites`; Phase 2 adds `--check` / `--write`) |
+| `scripts/doc-format-normalize.sh` | CLI wrapper (`tokenize`, `emit`, `lint-callsites`; `--check` / `--write` — landed Phase A task 2.1) |
 
 ## Mechanical lint
 
@@ -28,6 +28,6 @@ Authoritative consumer enumeration: `doc_format.RUNTIME_CALL_SITES` (single sour
 
 ## Cutover policy
 
-1. Phase 1 map + tokenizer engine land with `call-site-map-exhaustion` green (this slice).
-2. Phase A adoption switches each consumer row to tokenizer-only parsing; legacy regex removed per row.
-3. Cutover is gated on map exhaustion — no consumer may retain independent structural regex after Phase 2.5.
+1. Phase 1 map + tokenizer engine land with `call-site-map-exhaustion` green.
+2. **Phase A (task 2.5) — complete:** all four consumers parse exclusively via `doc_format`; exception manifest at `tokenizer-exception-manifest.json`; golden-corpus fixtures green on legacy `docs/prds` paths (no relocation).
+3. Phase B relocation (R6) is gated separately — map exhaustion for tokenizer adoption is satisfied.

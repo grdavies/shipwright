@@ -1,0 +1,7 @@
+---
+absorbs:
+  -
+frozen: false
+---
+
+# Sample
