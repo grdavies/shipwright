@@ -311,6 +311,20 @@ else
   tail -5 /tmp/sw-host-gate-fixtures.log >&2 || true
 fi
 
+# --- pr-list-merged-state-normalization (host_github.sh pr-list + gh_pr_to_view) ---
+if python3 -c "
+def normalize(pr):
+    return 'MERGED' if (pr.get('merged') or pr.get('merged_at')) else pr.get('state', '').upper()
+assert normalize({'state': 'closed', 'merged_at': '2026-01-01T00:00:00Z'}) == 'MERGED'
+assert normalize({'state': 'closed', 'merged': True}) == 'MERGED'
+assert normalize({'state': 'closed'}) == 'CLOSED'
+assert normalize({'state': 'open'}) == 'OPEN'
+"; then
+  ok "pr-list-merged-state-normalization"
+else
+  bad "pr-list-merged-state-normalization"
+fi
+
 # --- terminal-flow-verbset (mocked REST) ---
 (
   export GITHUB_TOKEN=gh_fixture_token_for_tests
