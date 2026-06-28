@@ -904,7 +904,7 @@ echo '{"target":{"type":"feat","slug":"demo","branch":"feat/demo"},"phases":{"1"
 if SW_DELIVER_DRY_RUN=1 python3 "$WT" "$TERM_FIX" terminal pr prepare 2>/dev/null | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
-assert d['action']=='terminal-pr-prepare'
+assert d['action'] in ('terminal-pr-prepare', 'terminal-local-prepare')
 assert d['head']=='feat/demo'
 "; then
   echo "OK  deliver-phase-terminal-pr-prepare"

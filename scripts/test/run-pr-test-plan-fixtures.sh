@@ -99,15 +99,11 @@ fi
 
 # Advisory-only failure → green (reuse gate fixture harness)
 export SW_GATE_FIXTURE=advisory-fail
+export SW_HOST_FIXTURE=advisory-fail
 export SW_GATE_NOW=1577838000
-mkdir -p "$ROOT/scripts/test/bin"
-cat > "$ROOT/scripts/test/bin/gh" <<'WRAP'
-#!/usr/bin/env bash
-exec "$(dirname "$0")/../gh-stub.sh" "$@"
-WRAP
-chmod +x "$ROOT/scripts/test/bin/gh"
+export GITHUB_TOKEN=gh_fixture_token_for_tests
 set +e
-OUT=$(PATH="$ROOT/scripts/test/bin:$PATH" bash "$GATE" 42 2>/dev/null)
+OUT=$(bash "$GATE" 42 2>/dev/null)
 EC=$?
 set -e
 VERDICT=$(echo "$OUT" | jq -r .verdict 2>/dev/null || echo "")

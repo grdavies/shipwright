@@ -107,6 +107,18 @@
         "validate-unknown-key",
         "validate-tracked-private-rejected"
       ]
+    },
+    {
+      "id": "doc-format-fixtures",
+      "script": "scripts/test/run-doc-format-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-doc-format-fixtures",
+      "scenarios": [
+        "doc-format-grammar-tokenizes",
+        "call-site-map-exhaustion",
+        "tokenizer-deterministic-offline"
+      ]
     }
   ]
 }

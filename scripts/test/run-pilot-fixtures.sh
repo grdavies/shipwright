@@ -141,7 +141,7 @@ E2E_FIX=$(mktemp -d)
   cp "$PREREQ" scripts/test/pilot-022-prerequisite-check.sh
   for f in kernel_classification.py guidelines_validate.py plan_floor_evaluator.py wave_json_io.py \
     wave_plan_validate.py plan_persist.py pilot_dependency_gate.py wave_state.py wave_deliver.py \
-    wave_deliver_loop.py wave_merge.py wave_failure.py wave_terminal.py wave_compound.py deliver_plan_surfacing.py; do
+    wave_deliver_loop.py wave_merge.py wave_failure.py wave_terminal.py wave_compound.py deliver_plan_surfacing.py     host_lib.py host_invoke.py; do
     cp "$ROOT/scripts/$f" scripts/
   done
   cp "$ROOT/scripts/ship-phase-steps.sh" scripts/

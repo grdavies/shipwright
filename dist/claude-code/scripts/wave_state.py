@@ -28,7 +28,16 @@ VALID_PHASE_STATUSES = frozenset(
         "rejected",
     }
 )
+# Terminal completeness: phase counts as done for retrospective/compound/driver gates (R1/D6).
+TERMINAL_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
 TERMINAL_VERDICTS = frozenset({"running", "complete", "blocked", "rejected"})
+
+
+def phase_complete(status: str | None) -> bool:
+    """True when a phase status satisfies terminal completeness (R1)."""
+    return status in TERMINAL_PHASE_STATUSES
+
+
 LOCK_STALE_SECONDS = int(os.environ.get("SW_LOCK_STALE_SECONDS", "3600"))
 
 

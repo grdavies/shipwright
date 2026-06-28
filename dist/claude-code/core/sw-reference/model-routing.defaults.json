@@ -76,6 +76,7 @@
       "feedback": "build",
       "feedback-closure": "mid",
       "gap-check": "mid",
+      "git-workflow": "cheap",
       "living-status": "cheap",
       "memory": "cheap",
       "parallelism": "cheap",

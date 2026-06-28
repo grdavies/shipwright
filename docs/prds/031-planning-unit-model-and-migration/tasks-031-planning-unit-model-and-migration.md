@@ -24,20 +24,20 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
 
 ### 1. Shared doc-format tokenizer engine — L
 
-- [ ] 1.1 Doc-format tokenizer module + grammar (R11)
+- [x] 1.1 Doc-format tokenizer module + grammar (R11)
   - **File:** `scripts/doc_format.py`
   - **Expected:** one module defines the canonical structure for unit frontmatter and body — R/D-ID bullets,
     section headings, traceability cells, phase headings, and directive lists including block-list
     `absorbs`/`supersedes`/`retracts`; exposes a single tokenize/emit API. Fixture: `doc-format-grammar-tokenizes`.
   - **R-IDs:** R11
-- [ ] 1.2 Normalize wrapper + enumerated call-site map (R22)
+- [x] 1.2 Normalize wrapper + enumerated call-site map (R22)
   - **File:** `scripts/doc-format-normalize.sh`, `docs/prds/031-planning-unit-model-and-migration/call-site-map.md`
   - **Expected:** `doc-format-normalize.sh` wraps `doc_format.py`; an explicit call-site map (per the PRD
     021/022 pattern) enumerates every runtime reader/writer (`spec-union`, `spec-rigor-check`,
     `traceability-check`, `wave_deliver` incl. phase/`**File:**` parsing); cutover is gated on map exhaustion.
     Fixture: `call-site-map-exhaustion`.
   - **R-IDs:** R22
-- [ ] 1.3 Deterministic + offline guarantee (R31)
+- [x] 1.3 Deterministic + offline guarantee (R31)
   - **File:** `scripts/doc_format.py`, `core/sw-reference/pr-test-plan.manifest.json`
   - **Expected:** the tokenizer performs no network I/O and is deterministic — identical input yields identical
     output so CI gates stay reproducible. Fixture: `tokenizer-deterministic-offline`.

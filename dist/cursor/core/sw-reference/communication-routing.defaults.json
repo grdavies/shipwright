@@ -54,6 +54,7 @@
       "feedback": "inherit",
       "feedback-closure": "ultra",
       "gap-check": "full",
+      "git-workflow": "normal",
       "living-status": "ultra",
       "memory": "ultra",
       "parallelism": "ultra",
