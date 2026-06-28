@@ -67,6 +67,8 @@ MECHANICAL_ACTIONS = frozenset(
         "spec-seed",
         "state-init",
         "lock-acquire",
+        "inflight-signal-write",
+        "inflight-signal-clear",
         "orchestrator-provision",
         "provision-phase",
         "collect-all-ready",
@@ -1346,8 +1348,44 @@ def execute_mechanical(
             fail_payload(data, "lock acquire failed", ec)
         if ec == 20:
             fail("orchestrator lock held", exit_code=20, holder=data.get("holder"))
-        persist_cursor(root, state, "orchestrator-provision")
+        persist_cursor(root, state, "inflight-signal-write")
         return {"executed": "lock-acquire", "target": target}
+
+    if action == "inflight-signal-write":
+        target = step.get("target") or (plan.get("target") or {}).get("branch")
+        from wave_living_doc_lock import living_doc_write_lock
+
+        with living_doc_write_lock(root, target=str(target), holder="inflight-signal-writer"):
+            ec, data = run_wave(
+                root,
+                "inflight",
+                "write",
+                "--target",
+                str(target),
+            )
+        if ec != 0:
+            fail_payload(data, "inflight signal write failed", ec)
+        persist_cursor(root, state, "orchestrator-provision")
+        return {"executed": "inflight-signal-write", "target": target, **(data or {})}
+
+    if action == "inflight-signal-clear":
+        target = step.get("target") or (plan.get("target") or {}).get("branch")
+        from wave_living_doc_lock import living_doc_write_lock
+
+        slug = str((state.get("target") or {}).get("slug") or "")
+        with living_doc_write_lock(root, target=str(target), holder="inflight-signal-writer"):
+            ec, data = run_wave(
+                root,
+                "inflight",
+                "clear",
+                "--unit",
+                slug,
+            )
+        if ec not in (0, 20):
+            fail_payload(data, "inflight signal clear failed", ec)
+        next_action = step.get("next") or "retrospective"
+        persist_cursor(root, state, next_action)
+        return {"executed": "inflight-signal-clear", "target": target, **(data or {})}
 
     if action == "orchestrator-provision":
         ec, data = run_wave(
@@ -1459,8 +1497,8 @@ def execute_mechanical(
         return {"executed": "advance-wave", "currentWave": wave_num}
 
     if action == "all-phases-complete":
-        persist_cursor(root, state, "retrospective")
-        return {"executed": "all-phases-complete", "next": "retrospective"}
+        persist_cursor(root, state, "inflight-signal-clear")
+        return {"executed": "all-phases-complete", "next": "inflight-signal-clear"}
 
     if action == "finalize-completion":
         ec, data = run_wave(root, "completion", "finalize-if-merged")

@@ -66,6 +66,9 @@ case "${1:-}" in
   living-docs)
     exec python3 "$PLUGIN_ROOT/scripts/wave_living_docs.py" "$ROOT" "${@:2}"
     ;;
+  inflight)
+    exec python3 "$PLUGIN_ROOT/scripts/inflight_signal.py" "$ROOT" "${@:2}"
+    ;;
   compound-ship|retrospective|completion)
     exec python3 "$PLUGIN_ROOT/scripts/wave_compound.py" "$ROOT" "$@"
     ;;

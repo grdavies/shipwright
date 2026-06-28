@@ -90,7 +90,12 @@ The INDEX carries three disjoint regions (HTML comment markers):
 |--------|-------|---------|
 | `structural` | INDEX generator | Rows from unit frontmatter (`id`, `type`, `title`, `status`, `visibility`, edges) |
 | `derived` | reconciler (PRD 033) | Derived lifecycle status per unit — empty schema slot at cutover |
-| `inFlight` | deliver writer (PRD 032) | Committed in-flight tuple per active unit — empty schema slot at cutover |
+| `inFlight` | deliver writer (PRD 032) | Committed in-flight tuple per active unit (`runId`, `branch` or `branchToken`, `leaseEpoch`) — schema: `core/sw-reference/inflight-signal.schema.json` |
+
+**inFlight tuple (PRD 032):** markdown table rows in the INDEX `inFlight` region; no lifecycle status in the tuple
+(033 derives `in-progress`). Cleartext `branch` is committed for non-private units until PRD 034 lands; the schema
+reserves `branchToken` (hashed suffix) for private-unit redaction. The region is included in the PRD 034
+emission-point registry handoff.
 
 **Read-merge-write:** every writer parses the existing INDEX and preserves non-owned regions **byte-for-byte**.
 Full-file regen that drops a sibling region is prohibited; `scripts/index-region-guard.sh` enforces this on

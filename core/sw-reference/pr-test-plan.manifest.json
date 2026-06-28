@@ -143,6 +143,20 @@
       ]
     },
     {
+      "id": "inflight-signal-fixtures",
+      "script": "scripts/test/run-inflight-signal-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-inflight-signal-fixtures",
+      "scenarios": [
+        "inflight-write-read-clear",
+        "cross-clone-cas-takeover-failclosed",
+        "override-logged-who-when-why",
+        "inflight-tuple-no-secret",
+        "inflight-opaque-token-slot-reserved"
+      ]
+    },
+    {
       "id": "planning-index-fixtures",
       "script": "scripts/test/run-planning-index-fixtures.sh",
       "args": [],
