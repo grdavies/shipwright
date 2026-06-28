@@ -54,7 +54,12 @@
         "enrich": "off"
       },
       "gate": {
-        "surface": ["P0", "P1", "P2", "P3"],
+        "surface": [
+          "P0",
+          "P1",
+          "P2",
+          "P3"
+        ],
         "haltOn": []
       }
     }
@@ -144,6 +149,11 @@
     "guardrails": {
       "enforceBeforeSubmit": true,
       "requireRuleClass": false
+    }
+  },
+  "planning": {
+    "inFlight": {
+      "stalenessTtlHours": 72
     }
   }
 }

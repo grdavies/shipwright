@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Standard FEAT PR test-plan fixture set — single source for verify.test and CI (PRD 016 R1–R3).",
+  "description": "Standard FEAT PR test-plan fixture set \u2014 single source for verify.test and CI (PRD 016 R1\u2013R3).",
   "fixtures": [
     {
       "id": "doc-fixtures",
@@ -156,7 +156,10 @@
         "override-logged-who-when-why-takeover",
         "override-logged-who-when-why-handoff",
         "override-logged-who-when-why-override",
-        "inflight-tuple-no-secret"
+        "inflight-tuple-no-secret",
+        "branch-absence-alone-no-clear",
+        "inflight-ttl-autoclear-audit",
+        "clear-inflight-manual"
       ]
     },
     {
