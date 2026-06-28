@@ -238,6 +238,13 @@
         "no-regression-migrated-corpus",
         "no-memory-writes-redaction-unchanged"
       ]
+    },
+    {
+      "id": "authoring-guard-fixtures",
+      "script": "scripts/test/run-authoring-guard-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-authoring-guard-fixtures"
     }
   ]
 }

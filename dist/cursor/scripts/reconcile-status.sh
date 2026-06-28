@@ -54,6 +54,23 @@ index_path = prds_dir / "INDEX.md"
 tasks_dir = root / cfg.get("tasksDir", "prds")
 base_branch = cfg.get("defaultBaseBranch", "main")
 
+
+
+def load_authoring_handoffs(root: Path):
+    path = root / ".cursor" / "authoring-handoffs.json"
+    if not path.is_file():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    items = data.get("handoffs")
+    return items if isinstance(items, list) else []
+
+
+def pull_in_scan_targets(root: Path):
+    return [h.get("artifact") for h in load_authoring_handoffs(root) if h.get("artifact")]
+
 def parse_index():
     rows = []
     if not index_path.is_file():
@@ -209,6 +226,8 @@ print(
             "gapBacklog": str(prds_dir / "GAP-BACKLOG.md"),
             "deliverRuns": deliver_runs,
             "livePhaseStatus": live_phase_status,
+            "authoringHandoffs": load_authoring_handoffs(root),
+            "pullInScan": pull_in_scan_targets(root),
         },
         indent=2,
     )
