@@ -150,6 +150,7 @@
         "brainstorm": "deep",
         "checks-gate": "cheap",
         "compound": "mid",
+        "conductor": "inherit",
         "debug": "build",
         "deliver": "build",
         "doc-review": "inherit",
@@ -157,6 +158,7 @@
         "feedback": "build",
         "feedback-closure": "mid",
         "gap-check": "mid",
+        "git-workflow": "cheap",
         "living-status": "cheap",
         "memory": "cheap",
         "parallelism": "cheap",
@@ -171,14 +173,13 @@
         "tasks": "deep",
         "triage": "cheap",
         "verification-gate": "cheap",
-        "worktree": "cheap",
-        "conductor": "inherit"
+        "worktree": "cheap"
       }
     }
   },
   "configuredWith": {
     "shipwrightVersion": "1.7.0",
-    "schemaVersion": "d3c2cac3beb7"
+    "schemaVersion": "a6066b4cc3b5"
   },
   "deliver": {
     "autonomy": {
@@ -294,7 +295,7 @@
     "mode": "bind-only"
   },
   "orchestration": {
-    "planPolicy": "canonical"
+    "planPolicy": "proposed"
   },
   "host": {
     "provider": "github",
