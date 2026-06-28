@@ -17,7 +17,7 @@ Post-freeze correction path. Parent stays byte-stable.
 
 ## Procedure
 
-0. **Authoring-guard preflight (PRD 032 R5/R14)** — before the first substantive mutation on a planning unit, run `bash scripts/authoring-guard.sh preflight --path <unit-artifact> --command sw-amend`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6).
+0. **Authoring-guard preflight (PRD 032 R5/R6/R7/R8/R14)** — before the first substantive mutation on a planning unit, run `bash scripts/authoring-guard.sh preflight --path <unit-artifact> --command sw-amend`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6). `/sw-amend` is permitted only when the unit consumer status is `planned` or `in-progress`; on `complete` units the guard **refuses in-place amend** and returns a **route** to fork a new `extends:`/`supersedes:` unit or append a gap (exit `21`, `outcome: route`).
 1. **Pre-work search (mandatory)** — before the first substantive mutation, run `memory-preflight` **pre-work
    search** per `skills/memory/SKILL.md` **Pre-work search (mandatory)** (scoped to the parent PRD/decision
    domain and amendment paths; classes `rule`, `decision`, `learning`, `code-context`, `design` via
@@ -44,6 +44,8 @@ Post-freeze correction path. Parent stays byte-stable.
 ## Guardrails
 
 - Parent file is never written.
+- **Complete-unit refusal (R7/R8):** do not amend units with consumer status `complete`; follow the routed `extends:`/`supersedes:` unit or gap from the preflight `route` payload.
+- **Allowed amend statuses (R7):** `planned`, `in-progress` only.
 - Undeclared contradiction with parent → failure mode; declared supersede/retract → sanctioned.
 - Record-level decision supersede does **not** inline replacement content — pointer only (KTD3).
 - Forward-pointer target must be `frozen: true`.
