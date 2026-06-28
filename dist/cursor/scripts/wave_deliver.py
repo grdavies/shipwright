@@ -291,7 +291,7 @@ def apply_contention(
     phase_ids = [p["id"] for p in phases]
     phase_files = parse_phase_files(content)
     edges, injected, contention_notices = inject_contention_edges(
-        phase_ids, declared_edges, phase_files, contention
+        phase_ids, declared_edges, phase_files, contention, root
     )
     waves = assign_waves(phase_ids, edges)
     return waves, edges, injected, contention_notices, phase_files

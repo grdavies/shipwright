@@ -67,6 +67,8 @@ MECHANICAL_ACTIONS = frozenset(
         "spec-seed",
         "state-init",
         "lock-acquire",
+        "inflight-signal-write",
+        "inflight-signal-clear",
         "orchestrator-provision",
         "provision-phase",
         "collect-all-ready",
@@ -1186,6 +1188,30 @@ def compute_next_action(
     }
 
 
+def run_inflight_signal(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
+    script = root / "scripts" / "inflight-signal.sh"
+    if not script.is_file():
+        return 2, {"verdict": "fail", "error": "inflight-signal.sh missing"}
+    proc = subprocess.run(
+        ["bash", str(script), *args],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+    )
+    data: dict[str, Any] = {}
+    if proc.stdout.strip():
+        try:
+            parsed = json.loads(proc.stdout)
+            if isinstance(parsed, dict):
+                data = parsed
+        except json.JSONDecodeError:
+            data = {"raw": proc.stdout.strip()}
+    if proc.stderr.strip():
+        data.setdefault("stderr", proc.stderr.strip())
+    data["exitCode"] = proc.returncode
+    return proc.returncode, data
+
+
 def run_wave(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
     proc = subprocess.run(
         ["bash", str(root / "scripts/wave.sh"), *args],
@@ -1346,8 +1372,35 @@ def execute_mechanical(
             fail_payload(data, "lock acquire failed", ec)
         if ec == 20:
             fail("orchestrator lock held", exit_code=20, holder=data.get("holder"))
-        persist_cursor(root, state, "orchestrator-provision")
+        persist_cursor(root, state, "inflight-signal-write")
         return {"executed": "lock-acquire", "target": target}
+
+    if action == "inflight-signal-write":
+        target = step.get("target") or (plan.get("target") or {}).get("branch")
+        tl = task_list_from(state, plan) or task_list
+        write_args = ["run-start", "--target", str(target)]
+        if tl:
+            write_args.extend(["--task-list", str(tl)])
+        ec, data = run_inflight_signal(root, *write_args)
+        if ec != 0:
+            fail_payload(data, "inflight signal write failed", ec)
+        state.update(load_state(root))
+        persist_cursor(root, state, "orchestrator-provision")
+        return {"executed": "inflight-signal-write", "target": target, **(data or {})}
+
+    if action == "inflight-signal-clear":
+        target = step.get("target") or (plan.get("target") or {}).get("branch")
+        tl = task_list_from(state, plan) or task_list
+        clear_args = ["run-complete", "--target", str(target)]
+        if tl:
+            clear_args.extend(["--task-list", str(tl)])
+        ec, data = run_inflight_signal(root, *clear_args)
+        if ec not in (0, 20):
+            fail_payload(data, "inflight signal clear failed", ec)
+        state.update(load_state(root))
+        next_action = step.get("next") or "retrospective"
+        persist_cursor(root, state, next_action)
+        return {"executed": "inflight-signal-clear", "target": target, **(data or {})}
 
     if action == "orchestrator-provision":
         ec, data = run_wave(
@@ -1459,13 +1512,24 @@ def execute_mechanical(
         return {"executed": "advance-wave", "currentWave": wave_num}
 
     if action == "all-phases-complete":
-        persist_cursor(root, state, "retrospective")
-        return {"executed": "all-phases-complete", "next": "retrospective"}
+        persist_cursor(root, state, "inflight-signal-clear")
+        return {"executed": "all-phases-complete", "next": "inflight-signal-clear"}
 
     if action == "finalize-completion":
         ec, data = run_wave(root, "completion", "finalize-if-merged")
         if ec != 0:
             fail_payload(data, "finalize completion failed", ec)
+        state.update(load_state(root))
+        target = (state.get("target") or {}).get("branch")
+        task_list = task_list_from(state, plan)
+        clear_args = ["run-complete"]
+        if target:
+            clear_args.extend(["--target", str(target)])
+        if task_list:
+            clear_args.extend(["--task-list", str(task_list)])
+        clear_ec, clear_data = run_inflight_signal(root, *clear_args)
+        if clear_ec != 0:
+            fail_payload(clear_data, "inflight clear failed", clear_ec)
         state.update(load_state(root))
         cleanup_payload: dict[str, Any] | None = None
         try:
