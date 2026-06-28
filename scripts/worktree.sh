@@ -23,10 +23,57 @@ import json
 import sys
 from pathlib import Path
 
+
+def strip_jsonc(text: str) -> str:
+    """Strip // line and /* */ block comments that are not inside JSON strings.
+
+    String-aware so string values such as "http://localhost:8001" are never
+    truncated (a naive `//`-strip turns that into invalid JSON).
+    """
+    out = []
+    i, n = 0, len(text)
+    in_str = escape = False
+    while i < n:
+        c = text[i]
+        if in_str:
+            out.append(c)
+            if escape:
+                escape = False
+            elif c == "\\":
+                escape = True
+            elif c == '"':
+                in_str = False
+            i += 1
+        elif c == '"':
+            in_str = True
+            out.append(c)
+            i += 1
+        elif c == "/" and i + 1 < n and text[i + 1] == "/":
+            while i < n and text[i] != "\n":
+                i += 1
+        elif c == "/" and i + 1 < n and text[i + 1] == "*":
+            i += 2
+            while i + 1 < n and not (text[i] == "*" and text[i + 1] == "/"):
+                i += 1
+            i += 2
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
+
+
 root = Path(sys.argv[1])
 for candidate in (root / ".cursor/workflow.config.json", root / "workflow.config.json"):
     if candidate.is_file():
-        print(candidate.read_text(encoding="utf-8"))
+        raw = candidate.read_text(encoding="utf-8")
+        try:
+            data = json.loads(strip_jsonc(raw))
+        except json.JSONDecodeError:
+            # Unparseable input: emit raw so the downstream consumer surfaces the
+            # real error rather than silently collapsing to an empty config.
+            print(raw)
+            break
+        print(json.dumps(data))
         break
 else:
     print("{}")
