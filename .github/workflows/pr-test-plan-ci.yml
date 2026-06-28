@@ -88,3 +88,14 @@ jobs:
       - name: Run git-workflow-fixtures
         run: bash scripts/test/run-git-workflow-fixtures.sh
 
+  feat-test-plan-planning-unit-fixtures:
+    name: feat-test-plan-planning-unit-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-unit-fixtures
+        run: bash scripts/test/run-planning-unit-fixtures.sh
+
