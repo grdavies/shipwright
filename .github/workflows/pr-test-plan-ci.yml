@@ -231,3 +231,14 @@ jobs:
       - name: Run inflight-doc-currency-fixtures
         run: bash scripts/test/run-inflight-doc-currency-fixtures.sh
 
+  feat-test-plan-worktree-config-fixtures:
+    name: feat-test-plan-worktree-config-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run worktree-config-fixtures
+        run: bash scripts/test/run-worktree-config-fixtures.sh
+

@@ -280,6 +280,18 @@
       "scenarios": [
         "inflight-doc-currency"
       ]
+    },
+    {
+      "id": "worktree-config-fixtures",
+      "script": "scripts/test/run-worktree-config-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-worktree-config-fixtures",
+      "scenarios": [
+        "jsonc-url-preserved",
+        "jsonc-plain",
+        "read-config-emits-valid-json"
+      ]
     }
   ]
 }
