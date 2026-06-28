@@ -245,6 +245,20 @@
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-authoring-guard-fixtures"
+    },
+    {
+      "id": "completed-unit-fixtures",
+      "script": "scripts/test/run-completed-unit-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-completed-unit-fixtures",
+      "scenarios": [
+        "amend-refuses-complete-allows-planned",
+        "complete-change-routes-to-new-unit",
+        "complete-unit-folder-mutation-rejected",
+        "complete-flip-toctou-caught",
+        "completed-hook-graceful-degrade-warns"
+      ]
     }
   ]
 }

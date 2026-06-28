@@ -65,7 +65,16 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is aut
 | `frozen: true` flag | machine-readable state | — |
 | `rules/sw-freeze-guardrail.mdc` | agent instruction | — |
 | `hooks/pre-commit-frozen.sh` | local commit block | yes (`--no-verify`) |
+| `hooks/pre-commit-completed-unit.sh` | complete-unit folder immutability (R9/R12) | yes (`--no-verify`) |
 | `scripts/check-frozen.sh` | CI required-check | **no** |
+
+
+**Completed-unit immutability (PRD 032 R9/R12):** `hooks/pre-commit-completed-unit.sh` chains from
+`hooks/pre-commit` after the frozen-artifact check. It rejects any staged mutation under a planning unit
+folder whose consumer status is `complete` (body, `amendments/` subtree, or ancillary paths). Evaluation
+binds to a reconcile-generation token (inline reconcile + derived-status re-read) to close TOCTOU races.
+When the reconciler `derived` region is empty (half-applied train), the hook runs in **graceful-degraded
+structural-status mode** and emits a warning instead of blocking every write.
 
 `check-frozen.sh` and the freeze snapshot path operate on the committed git record only — the provider
 is never consulted during freeze or CI (PRD 015 R5).

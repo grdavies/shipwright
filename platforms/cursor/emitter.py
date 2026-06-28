@@ -139,7 +139,7 @@ class CursorEmitter(EmitterBase):
             path = hooks_dir / name
             path.write_text(body, encoding="utf-8")
             path.chmod(0o755)
-        for extra in ("sw_recallium_url.py", "pre-commit", "pre-commit-frozen.sh"):
+        for extra in ("sw_recallium_url.py", "pre-commit", "pre-commit-frozen.sh", "pre-commit-completed-unit.sh"):
             src = repo_root / "hooks" / extra
             if not src.is_file():
                 src = repo_root / "core" / "hooks" / extra
