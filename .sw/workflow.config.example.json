@@ -3,6 +3,7 @@
   "defaultBaseBranch": "main",
   "stateFile": ".git/shipwright.json",
   "agentsFile": "AGENTS.md",
+  "planningDir": "docs/planning",
   "prdsDir": "docs/prds",
   "decisionsDir": "docs/decisions",
   "tasksDir": "docs/prds",

@@ -19,9 +19,17 @@ from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+import doc_format
+import planning_paths
+import planning_path_redirect
+
 PLAN_PATH_NAME = "sw-deliver-plan.json"
 STATE_PATH_NAME = "sw-deliver-state.json"
-SCRIPT_DIR = Path(__file__).resolve().parent
 
 _FALLBACK_TYPES = frozenset(
     {"feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"}
@@ -48,23 +56,12 @@ def _load_valid_types() -> frozenset[str]:
 
 
 VALID_TYPES = _load_valid_types()
-CONTENTION_DEFAULT = {
-    "serialized": [
-        "docs/prds/INDEX.md",
-        "docs/decisions/INDEX.md",
-        "CHANGELOG.md",
-        "version.txt",
-        "doc-numbering",
-    ],
-}
 MIGRATION_DIRS = (
     "db/migrate/",
     "supabase/migrations/",
     "prisma/migrations/",
 )
 RELEASE_BOOKKEEPING = ("CHANGELOG.md", "version.txt")
-INDEX_PATHS = ("docs/prds/INDEX.md", "docs/decisions/INDEX.md")
-
 
 def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | None:
     if flag in args:
@@ -83,7 +80,14 @@ def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
 
 
 def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
+    extra.pop("error", None)
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
+
+
+def fail_payload(data: dict[str, Any], default: str, exit_code: int, **extra: Any) -> None:
+    reserved = {"error", *extra.keys()}
+    payload = {k: v for k, v in data.items() if k not in reserved}
+    fail(data.get("error") or default, exit_code=exit_code, **extra, **payload)
 
 
 def slugify(text: str) -> str:
@@ -94,85 +98,33 @@ def slugify(text: str) -> str:
 
 
 def parse_frontmatter(content: str) -> dict[str, str]:
-    if not content.startswith("---"):
+    fm, _ = doc_format.split_frontmatter(content)
+    if fm is None:
         return {}
-    end = content.find("\n---", 3)
-    if end == -1:
-        return {}
-    block = content[3:end].strip()
     out: dict[str, str] = {}
-    for line in block.splitlines():
+    for line in fm.splitlines():
         if ":" not in line:
             continue
         key, val = line.split(":", 1)
-        out[key.strip()] = val.strip()
+        out[key.strip()] = val.strip().strip('"').strip("'")
     return out
 
 
 def parse_phases(content: str) -> list[dict[str, str]]:
-    phases: list[dict[str, str]] = []
-    for m in re.finditer(r"^###\s+(\d+)\.\s+(.+)$", content, re.MULTILINE):
-        num, title = m.group(1), m.group(2).strip()
-        phases.append(
-            {
-                "id": num,
-                "title": title,
-                "slug": slugify(title),
-            }
-        )
-    return phases
+    return doc_format.extract_phases(content)
 
 
 def parse_phase_dependencies(content: str) -> list[dict[str, str]] | None:
-    m = re.search(
-        r"^## Phase Dependencies\s*\n+\|[^\n]+\|\n\|[-| ]+\|\n((?:\|[^\n]+\|\n?)+)",
-        content,
-        re.MULTILINE,
-    )
-    if not m:
-        return None
-    rows: list[dict[str, str]] = []
-    for line in m.group(1).strip().splitlines():
-        parts = [p.strip() for p in line.strip("|").split("|")]
-        if len(parts) < 2:
-            continue
-        phase, depends = parts[0], parts[1]
-        if not re.match(r"^\d+$", phase):
-            continue
-        rows.append({"phase": phase, "depends_on": depends})
-    return rows if rows else None
+    return doc_format.extract_phase_dependencies(content)
 
 
 def normalize_file_path(raw: str) -> str:
-    path = raw.strip().strip("`").strip()
-    path = re.sub(r"\s*→\s*.*$", "", path).strip()
-    return path
+    return doc_format.normalize_file_path(raw)
 
 
 def parse_phase_files(content: str) -> dict[str, list[str]]:
     """Map phase id -> normalized **File:** paths under that phase section."""
-    sections: dict[str, str] = {}
-    parts = re.split(r"^###\s+(\d+)\.\s+", content, flags=re.MULTILINE)
-    i = 1
-    while i + 1 < len(parts):
-        sections[parts[i]] = parts[i + 1]
-        i += 2
-
-    out: dict[str, list[str]] = {}
-    for phase_id, body in sections.items():
-        section_body = re.split(
-            r"^###\s+\d+\.|^##\s+", body, maxsplit=1, flags=re.MULTILINE
-        )[0]
-        paths: list[str] = []
-        for m in re.finditer(r"\*\*File:\*\*\s*(.+)$", section_body, re.MULTILINE):
-            raw = m.group(1).strip()
-            for part in re.split(r"[,]|(?:\s+and\s+)", raw):
-                part = part.strip().strip("`").strip()
-                if not part:
-                    continue
-                paths.append(normalize_file_path(part))
-        out[phase_id] = paths
-    return out
+    return doc_format.extract_phase_files(content)
 
 
 def migration_dir(path: str) -> str | None:
@@ -182,16 +134,12 @@ def migration_dir(path: str) -> str | None:
     return None
 
 
-def phase_touches_doc_numbering(paths: list[str]) -> bool:
-    for path in paths:
-        if path.startswith("docs/prds/") or path.startswith("docs/decisions/"):
-            if not path.endswith("INDEX.md"):
-                return True
-    return False
+def phase_touches_doc_numbering(paths: list[str], root: Path) -> bool:
+    return planning_paths.phase_touches_doc_numbering(paths, root)
 
 
 def paths_contend(
-    left: str, right: str, serialized: list[str]
+    left: str, right: str, serialized: list[str], root: Path
 ) -> tuple[bool, str]:
     if left == right:
         return True, left
@@ -203,11 +151,12 @@ def paths_contend(
         right_hit = right == book or right.endswith(f"/{book}")
         if left_hit and right_hit:
             return True, book
-    for index in INDEX_PATHS:
+    index_paths = planning_paths.index_paths_rel(planning_paths.load_planning_dirs(root))
+    for index in index_paths:
         if index in left and index in right:
             return True, index
     if "doc-numbering" in serialized:
-        if phase_touches_doc_numbering([left]) and phase_touches_doc_numbering([right]):
+        if phase_touches_doc_numbering([left], root) and phase_touches_doc_numbering([right], root):
             return True, "doc-numbering"
     return False, ""
 
@@ -260,8 +209,13 @@ def inject_contention_edges(
     declared_edges: list[dict[str, str]],
     phase_files: dict[str, list[str]],
     contention: dict[str, Any],
+    root: Path,
 ) -> tuple[list[dict[str, str]], list[dict[str, str]], list[str]]:
-    serialized = list(contention.get("serialized", CONTENTION_DEFAULT["serialized"]))
+    dirs = planning_paths.load_planning_dirs(root)
+    serialized = list(
+        contention.get("serialized")
+        or planning_paths.contention_serialized_defaults(dirs)
+    )
     notices: list[str] = []
     injected: list[dict[str, str]] = []
     existing = {(e["from"], e["to"]) for e in declared_edges}
@@ -291,7 +245,7 @@ def inject_contention_edges(
                 contend = False
                 for fl in files_left:
                     for fr in files_right:
-                        hit, detail = paths_contend(fl, fr, serialized)
+                        hit, detail = paths_contend(fl, fr, serialized, root)
                         if hit:
                             contend = True
                             overlap = detail or f"{fl} ⟷ {fr}"
@@ -332,6 +286,7 @@ def apply_contention(
     phases: list[dict[str, str]],
     declared_edges: list[dict[str, str]],
     contention: dict[str, Any],
+    root: Path,
 ) -> tuple[list[list[str]], list[dict[str, str]], list[dict[str, str]], list[str], dict[str, list[str]]]:
     phase_ids = [p["id"] for p in phases]
     phase_files = parse_phase_files(content)
@@ -383,6 +338,7 @@ def deps_to_edges(
     phases: list[dict[str, str]],
     dep_rows: list[dict[str, str]] | None,
     phase_files: dict[str, list[str]] | None = None,
+    root: Path | None = None,
 ) -> tuple[list[dict[str, str]], list[str]]:
     notices: list[str] = []
     phase_ids = {p["id"] for p in phases}
@@ -411,7 +367,14 @@ def deps_to_edges(
             detail = ""
             for fl in files.get(left, []):
                 for fr in files.get(right, []):
-                    hit, detail = paths_contend(fl, fr, CONTENTION_DEFAULT["serialized"])
+                    hit, detail = paths_contend(
+                        fl,
+                        fr,
+                        planning_paths.contention_serialized_defaults(
+                            planning_paths.load_planning_dirs(root)
+                        ),
+                        root,
+                    )
                     if hit:
                         contend = True
                         break
@@ -645,7 +608,7 @@ def plan_combined(
 
     phase_files = parse_phase_files(content)
     dep_rows = parse_phase_dependencies(content)
-    phase_edges, notices = deps_to_edges(phases, dep_rows, phase_files)
+    phase_edges, notices = deps_to_edges(phases, dep_rows, phase_files, root)
     multi_edges = parse_multi_edges(parse_kv(args, "--edges", ""))
     edges = phase_edges + multi_edges
     phase_ids = [p["id"] for p in phases]
@@ -653,9 +616,9 @@ def plan_combined(
     if graph_has_cycle(all_ids, edges):
         fail("combined plan has a dependency cycle", exit_code=20, halt="cycle")
 
-    contention = CONTENTION_DEFAULT.copy()
+    contention = planning_paths.contention_default(root)
     waves, edges, injected, contention_notices, phase_files = apply_contention(
-        content, phases, edges, contention
+        content, phases, edges, contention, root
     )
     waves = assign_waves(all_ids, edges)
     notices.extend(contention_notices)
@@ -709,13 +672,11 @@ def plan_combined(
 
 def resolve_task_list_path(root: Path, task_list: str) -> Path:
     """Resolve frozen task list inside the active worktree (R61)."""
-    if ".." in Path(task_list).parts:
-        fail(
-            "task list must not traverse outside the worktree (R61)",
-            exit_code=2,
-        )
-    task_path = Path(task_list)
-    resolved = task_path.resolve() if task_path.is_absolute() else (root / task_list).resolve()
+    task_list = planning_path_redirect.resolve_path(root, task_list)
+    try:
+        resolved = planning_paths.resolve_contained(root, task_list)
+    except planning_paths.PathEscapeError as exc:
+        fail(str(exc), exit_code=2)
     try:
         resolved.relative_to(root.resolve())
     except ValueError:
@@ -798,10 +759,10 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
             fail("no phases found in task list (### N. headings)")
         dep_rows = parse_phase_dependencies(content)
         phase_files = parse_phase_files(content)
-        edges, notices = deps_to_edges(phases, dep_rows, phase_files)
-        contention = CONTENTION_DEFAULT.copy()
+        edges, notices = deps_to_edges(phases, dep_rows, phase_files, root)
+        contention = planning_paths.contention_default(root)
         waves, edges, injected, contention_notices, phase_files = apply_contention(
-            content, phases, edges, contention
+            content, phases, edges, contention, root
         )
         notices.extend(contention_notices)
         result.update(
@@ -831,7 +792,7 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
         from wave_phase_pr import resolve_phase_pr_base
         phase_pr_base = resolve_phase_pr_base(root)
         if phase_pr_base.get("verdict") != "ok":
-            fail(phase_pr_base.get("error", "phase-pr-base"), exit_code=20, **phase_pr_base)
+            fail_payload(phase_pr_base, "phase-pr-base", exit_code=20)
         result["phasePrBase"] = phase_pr_base
     elif mode == "combined":
         out = plan_combined(root, args, dry_run=True)
@@ -907,11 +868,11 @@ def cmd_plan(root: Path, args: list[str]) -> None:
             fail("no phases found in task list")
         dep_rows = parse_phase_dependencies(content)
         phase_files_early = parse_phase_files(content)
-        edges, notices = deps_to_edges(phases, dep_rows, phase_files_early)
+        edges, notices = deps_to_edges(phases, dep_rows, phase_files_early, root)
         phase_ids = [p["id"] for p in phases]
-        contention = CONTENTION_DEFAULT.copy()
+        contention = planning_paths.contention_default(root)
         waves, edges, injected, contention_notices, phase_files = apply_contention(
-            content, phases, edges, contention
+            content, phases, edges, contention, root
         )
         notices.extend(contention_notices)
 
@@ -1001,7 +962,7 @@ def cmd_plan(root: Path, args: list[str]) -> None:
         "items": [{"id": i, "branch": f"feat/{i}"} for i in items],
         "edges": edges,
         "waves": waves,
-        "contention": CONTENTION_DEFAULT.copy(),
+        "contention": planning_paths.contention_default(root),
     }
     if dry_run:
         out["dry_run"] = True

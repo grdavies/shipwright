@@ -24,20 +24,20 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
 
 ### 1. Shared doc-format tokenizer engine — L
 
-- [ ] 1.1 Doc-format tokenizer module + grammar (R11)
+- [x] 1.1 Doc-format tokenizer module + grammar (R11)
   - **File:** `scripts/doc_format.py`
   - **Expected:** one module defines the canonical structure for unit frontmatter and body — R/D-ID bullets,
     section headings, traceability cells, phase headings, and directive lists including block-list
     `absorbs`/`supersedes`/`retracts`; exposes a single tokenize/emit API. Fixture: `doc-format-grammar-tokenizes`.
   - **R-IDs:** R11
-- [ ] 1.2 Normalize wrapper + enumerated call-site map (R22)
+- [x] 1.2 Normalize wrapper + enumerated call-site map (R22)
   - **File:** `scripts/doc-format-normalize.sh`, `docs/prds/031-planning-unit-model-and-migration/call-site-map.md`
   - **Expected:** `doc-format-normalize.sh` wraps `doc_format.py`; an explicit call-site map (per the PRD
     021/022 pattern) enumerates every runtime reader/writer (`spec-union`, `spec-rigor-check`,
     `traceability-check`, `wave_deliver` incl. phase/`**File:**` parsing); cutover is gated on map exhaustion.
     Fixture: `call-site-map-exhaustion`.
   - **R-IDs:** R22
-- [ ] 1.3 Deterministic + offline guarantee (R31)
+- [x] 1.3 Deterministic + offline guarantee (R31)
   - **File:** `scripts/doc_format.py`, `core/sw-reference/pr-test-plan.manifest.json`
   - **Expected:** the tokenizer performs no network I/O and is deterministic — identical input yields identical
     output so CI gates stay reproducible. Fixture: `tokenizer-deterministic-offline`.
@@ -45,7 +45,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
 
 ### 2. Tokenizer Phase A adoption on legacy `docs/prds` paths — L
 
-- [ ] 2.1 `--check` / `--write` modes + pre-freeze structural check (R13)
+- [x] 2.1 `--check` / `--write` modes + pre-freeze structural check (R13)
   - **File:** `scripts/doc_format.py`, `scripts/doc-format-normalize.sh`
   - **Expected:** `--check` fails closed with `file:line` expected/found diagnostics (never a silent drop);
     `--write` performs structural canonicalization only (shape, never content) and is idempotent; a pre-freeze
@@ -53,7 +53,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     before persisting so non-canonical drafts cannot reach freeze. Fixtures: `check-fail-closed-diagnostics`,
     `write-idempotent-shape-only`.
   - **R-IDs:** R13
-- [ ] 2.2 Four-consumer adoption + machine-checked exception manifest (R12)
+- [x] 2.2 Four-consumer adoption + machine-checked exception manifest (R12)
   - **File:** `scripts/spec-union.sh`, `scripts/spec-rigor-check.sh`, `scripts/traceability-check.sh`, `scripts/wave_deliver.py`
   - **Expected:** all four parse exclusively through the shared tokenizer with no independent structural regex
     retained; per-consumer baseline snapshots captured *before* adoption; divergence classes recorded in a
@@ -62,13 +62,13 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     exceptions may not cover post-migration edits. Fixtures: `consumers-tokenizer-only`,
     `unlisted-divergence-fails-closed`.
   - **R-IDs:** R12
-- [ ] 2.3 Authoring slot-fill templates + directive fail-closed (R14)
+- [x] 2.3 Authoring slot-fill templates + directive fail-closed (R14)
   - **File:** `scripts/doc_format.py`, `core/commands/sw-prd.md`
   - **Expected:** authoring commands emit machine-readable slot-filling templates matching the canonical shape;
     a non-empty directive key (`absorbs`/`supersedes`/`retracts`) that yields zero parsed ids fails closed.
     Fixtures: `template-slot-fill`, `directive-zero-ids-fails-closed`.
   - **R-IDs:** R14
-- [ ] 2.4 Golden-corpus regression (R15)
+- [x] 2.4 Golden-corpus regression (R15)
   - **File:** `core/sw-reference/pr-test-plan.manifest.json`, `scripts/doc_format.py`
   - **Expected:** for the migrated frozen set plus the GAP-045 adversarial structural variants — (a) per-consumer
     parse equivalence before vs after tokenizer adoption; (b) four-consumer agreement on extracted id sets
@@ -76,7 +76,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     any unit not in the R12 exception manifest that diverges fails the gate. Fixtures:
     `golden-before-after-equivalence`, `four-consumer-id-agreement`, `write-roundtrip-stable`.
   - **R-IDs:** R15
-- [ ] 2.5 Phase A landing on `docs/prds` with no relocation (R16)
+- [x] 2.5 Phase A landing on `docs/prds` with no relocation (R16)
   - **File:** `docs/prds/031-planning-unit-model-and-migration/call-site-map.md`, `scripts/doc_format.py`
   - **Expected:** full tokenizer adoption + golden-corpus regression ship on the current `docs/prds` paths with
     no relocation, delivering GAP-045 parser-parity relief independently; Phase A acceptance does not depend on
@@ -167,7 +167,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
 
 ### 6. Migration tool + held lock + redirect map + verification fixture — L
 
-- [ ] 6.1 Migration tool modes + filesystem-atomic staging (R20)
+- [x] 6.1 Migration tool modes + filesystem-atomic staging (R20)
   - **File:** `scripts/planning_migrate.py`
   - **Expected:** exposes `--dry-run`/`--write`/`--verify`/`--rollback`; runs relocation as a single atomic
     commit with filesystem-atomic staging (relocations staged under a temp prefix; reverse map + `GAP-id → unit-id`
@@ -177,14 +177,14 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     `planningDir` back before/with the tree restore); `--verify` is a mandatory gate before the config flip.
     Fixtures: `migrate-atomic-staging`, `rollback-refuses-dirty-restores-config-inverse`.
   - **R-IDs:** R20
-- [ ] 6.2 One-time idempotent relocation of all artifacts (R6)
+- [x] 6.2 One-time idempotent relocation of all artifacts (R6)
   - **File:** `scripts/planning_migrate.py`
   - **Expected:** a one-time idempotent migration relocates all existing artifacts into the unified model — PRD
     folders including their nested frozen task lists and `amendments/` trees, gap rows, brainstorms, the decision
     index, and the GAP feedback-checklist content; frozen unit content is preserved verbatim (relocation plus
     frontmatter backfill only, no body edits). Fixture: `migrate-relocates-all-verbatim`.
   - **R-IDs:** R6
-- [ ] 6.3 Migration one-to-one verification fixture (R8)
+- [x] 6.3 Migration one-to-one verification fixture (R8)
   - **File:** `core/sw-reference/pr-test-plan.manifest.json`, `scripts/planning_migrate.py`
   - **Expected:** proves every pre-migration artifact maps one-to-one to a post-migration unit with byte-preserved
     body content and reconstructed edges; staged into explicit snapshots (PRD folders with task lists + amendment
@@ -192,7 +192,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     `GAP-id → unit-id` map and feedback-checklist item preservation as separate assertions; `--verify` fails
     closed on drift. Fixtures: `migration-one-to-one`, `gap-id-map-assertion`, `feedback-checklist-preserved`.
   - **R-IDs:** R8
-- [ ] 6.4 Held migration lock + cross-worktree scan + path-redirect map (R21)
+- [x] 6.4 Held migration lock + cross-worktree scan + path-redirect map (R21)
   - **File:** `scripts/planning_migrate.py`, `scripts/planning_path_redirect.py`, `scripts/worktree_lib.py`
   - **Expected:** a migration lock/sentinel is acquired atomically with the run-state scan and held through
     `--verify` (re-checked immediately before commit), closing the TOCTOU window; the run-state scan covers all
@@ -203,7 +203,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     checklist enumerates open feature branches/worktrees carrying `docs/prds` task lists and resolves or halts.
     Fixtures: `migration-lock-toctou`, `cross-worktree-runstate-detect`, `redirect-map-resume`.
   - **R-IDs:** R21
-- [ ] 6.5 Migration scope discipline + operational map artifacts (R29, R32)
+- [x] 6.5 Migration scope discipline + operational map artifacts (R29, R32)
   - **File:** `scripts/planning_migrate.py`, `.gitignore`
   - **Expected:** the migration touches documentation artifacts and the path-resolution/`.gitignore` config keys
     only — never code, secrets, or other configuration; the reverse map and `GAP-id → unit-id` map are
@@ -214,14 +214,14 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
 
 ### 7. Atomic cutover — Phase B relocation, supersession, privacy, projections, kill-criteria — L
 
-- [ ] 7.1 Cancelled-PRD supersession edges (reversible) (R10)
+- [x] 7.1 Cancelled-PRD supersession edges (reversible) (R10)
   - **File:** `scripts/planning_migrate.py`, `core/sw-reference/planning-unit.schema.json`
   - **Expected:** the migration records each cancelled/superseded point-fix PRD (025/028/029/030) as a unit with
     `status: superseded`/`cancelled` and the corresponding supersession edge to a named absorbing unit id
     (recorded in the migration map), satisfying brainstorm R46 mechanically; per R28 these edges are reversible.
     Fixture: `cancelled-prd-supersession-edges`.
   - **R-IDs:** R10
-- [ ] 7.2 Interim privacy guard — no exposure before PRD 034 (R18)
+- [x] 7.2 Interim privacy guard — no exposure before PRD 034 (R18)
   - **File:** `scripts/planning-privacy-guard.sh`, `.gitignore`
   - **Expected:** the migration backfills `visibility: private` (interim `legacy-pre-034` profile token) for every
     unit whose pre-migration source path was gitignored (brainstorms, decision bodies); the R7 `.gitignore`
@@ -229,13 +229,13 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     if any formerly-gitignored body would become tracked by the migration commit. Fixtures:
     `privacy-backfill-legacy-token`, `formerly-ignored-body-tracked-fails`.
   - **R-IDs:** R18
-- [ ] 7.3 INDEX private-row provisional + 034 handoff (R33)
+- [x] 7.3 INDEX private-row provisional + 034 handoff (R33)
   - **File:** `scripts/planning_index_gen.py`, `core/sw-reference/layout.md`
   - **Expected:** INDEX metadata for `visibility: private` units (title/edges) is provisional until PRD 034
     defines redaction/omission of private rows; 031 keeps such bodies ignored (R18) and records this as a 034
     handoff. Fixture: `private-index-row-provisional`.
   - **R-IDs:** R33
-- [ ] 7.4 Release-train legacy GAP-BACKLOG/INDEX projections (R27)
+- [x] 7.4 Release-train legacy GAP-BACKLOG/INDEX projections (R27)
   - **File:** `scripts/planning_legacy_projection.py`, `scripts/wave_living_docs.py`
   - **Expected:** 031 ships same-day with 032 (guards) and 033 (lifecycle/reconciler) as one atomic cutover; the
     compatibility layer generates legacy `docs/prds/GAP-BACKLOG.md` + `INDEX.md` projections from the planning/gap
@@ -243,7 +243,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     no config flip merges to `main` that leaves the loop reading a half-migrated tree. Fixtures:
     `legacy-projection-gapbacklog-index`, `no-half-migrated-merge`.
   - **R-IDs:** R27
-- [ ] 7.5 Kill-criteria / falsification plan + relief acceptance check (R28)
+- [x] 7.5 Kill-criteria / falsification plan + relief acceptance check (R28)
   - **File:** `scripts/relief-acceptance-check.sh`, `core/sw-reference/layout.md`
   - **Expected:** the cutover documents a fallback — if 032/033 slip past a defined threshold or the 033
     reconciler misses an accuracy floor on the fixture corpus, the program falls back to the shim + legacy layout

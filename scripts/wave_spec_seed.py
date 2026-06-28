@@ -17,6 +17,9 @@ if str(SCRIPT_DIR) not in _sys.path:
     _sys.path.insert(0, str(SCRIPT_DIR))
 from worktree_lib import docs_branch_for_topic, refuse_default_branch
 
+import planning_paths
+import planning_path_redirect
+
 _VALID_TYPES = frozenset(
     {"feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"}
 )
@@ -135,6 +138,7 @@ def resolve_target_branch(root: Path, task_list_rel: str) -> tuple[str, str, Pat
     branch = (data.get("target") or {}).get("branch")
     if not branch:
         fail("preflight missing target.branch")
+    task_list_rel = planning_path_redirect.resolve_path(root, task_list_rel)
     task_path = (root / task_list_rel).resolve()
     if not task_path.is_file():
         fail(f"task list not found: {task_list_rel}")
@@ -144,13 +148,11 @@ def resolve_target_branch(root: Path, task_list_rel: str) -> tuple[str, str, Pat
 
 
 def prd_docs_dir_for_artifact(root: Path, artifact: Path) -> Path:
-    rel_parts = artifact.relative_to(root).parts
-    if "docs" not in rel_parts or "prds" not in rel_parts:
-        fail(f"artifact must live under docs/prds/: {artifact}")
-    idx = rel_parts.index("prds")
-    if idx + 1 >= len(rel_parts):
-        fail(f"cannot resolve PRD directory from artifact: {artifact}")
-    return root.joinpath(*rel_parts[: idx + 2])
+    dirs = planning_paths.load_planning_dirs(root)
+    try:
+        return planning_paths.prd_unit_dir_for_artifact(root, artifact)
+    except planning_paths.PathEscapeError as exc:
+        fail(f"artifact must live under {dirs.prds}: {artifact} ({exc})")
 
 
 def resolve_target_from_artifact(root: Path, artifact_rel: str) -> tuple[str, str, Path]:
@@ -196,7 +198,8 @@ def docs_paths_all(root: Path, topic: str) -> list[Path]:
     """Tracked doc artifacts for a topic incl. brainstorms (R31)."""
     slug = topic.lower().replace(" ", "-")
     paths: list[Path] = []
-    for base in (root / "docs" / "brainstorms", root / "docs" / "prds"):
+    dirs = planning_paths.load_planning_dirs(root)
+    for base in (root / planning_paths.brainstorms_rel(), root / dirs.prds):
         if not base.is_dir():
             continue
         for p in sorted(base.rglob("*")):

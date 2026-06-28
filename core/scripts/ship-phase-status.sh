@@ -129,6 +129,36 @@ os.chmod(out, 0o600)
 print(text, end="")
 PY
 
+# Mirror to repo-root-canonical path when integration root is resolvable (PRD 027 R4).
+resolve_canonical_root() {
+  if [[ -n "${SW_REPO_ROOT:-}" && -d "${SW_REPO_ROOT}" ]]; then
+    cd "${SW_REPO_ROOT}" && pwd
+    return 0
+  fi
+  local common=""
+  common="$(git -C "$ROOT" rev-parse --git-common-dir 2>/dev/null || true)"
+  if [[ -z "$common" || "$common" == ".git" ]]; then
+    printf '%s\n' "$ROOT"
+    return 0
+  fi
+  if [[ "$common" != /* ]]; then
+    common="$(cd "$ROOT" && cd "$common" && pwd)"
+  fi
+  dirname "$common"
+}
+
+CANONICAL_ROOT="$(resolve_canonical_root 2>/dev/null || true)"
+if [[ -n "$CANONICAL_ROOT" && -d "$CANONICAL_ROOT" ]]; then
+  CANONICAL_OUT="${CANONICAL_ROOT%/}/.cursor/sw-deliver-runs/${PHASE}/status.json"
+  OUT_ABS="$(cd "$(dirname "$OUT")" 2>/dev/null && pwd)/$(basename "$OUT")" || OUT_ABS="$OUT"
+  CANONICAL_ABS="$(cd "$(dirname "$CANONICAL_OUT")" 2>/dev/null && pwd)/$(basename "$CANONICAL_OUT")" 2>/dev/null || CANONICAL_ABS="$CANONICAL_OUT"
+  if [[ "$CANONICAL_ABS" != "$OUT_ABS" ]]; then
+    mkdir -p "$(dirname "$CANONICAL_OUT")"
+    cp -f "$OUT" "$CANONICAL_OUT"
+    chmod 600 "$CANONICAL_OUT" 2>/dev/null || true
+  fi
+fi
+
 if [[ "$VERDICT" == "blocked" ]]; then
   STATE_PATH="$(python3 "$ROOT/scripts/wave_state.py" "$ROOT" resolve state-path 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('path',''))" || true)"
   if [[ -n "$STATE_PATH" && -f "$STATE_PATH" ]]; then

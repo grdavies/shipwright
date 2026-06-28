@@ -106,6 +106,13 @@
 * merge phase completeness-unification-conductor-terminal-clause-m into feat/deliver-terminal-finalization-robustness (671d2ba) <!-- sw-deliver:completeness-unification-conductor-terminal-clause-m -->
 * merge phase phase-status-write-read-path-hardening-m into feat/deliver-terminal-finalization-robustness (9af6c42) <!-- sw-deliver:phase-status-write-read-path-hardening-m -->
 * merge phase contributing-factor-resolution-m into feat/deliver-terminal-finalization-robustness (d6fc31e) <!-- sw-deliver:contributing-factor-resolution-m -->
+* merge phase planning-unit-schema-validator-stub-enum-l into feat/planning-feedback-lifecycle (3de48dc) <!-- sw-deliver:planning-unit-schema-validator-stub-enum-l -->
+* merge phase tokenizer-phase-a-adoption-on-legacy-docs-prds-paths-l into feat/planning-feedback-lifecycle (b7c520a) <!-- sw-deliver:tokenizer-phase-a-adoption-on-legacy-docs-prds-paths-l -->
+* merge phase config-driven-path-resolution-helper-m into feat/planning-feedback-lifecycle (bb2d3e4) <!-- sw-deliver:config-driven-path-resolution-helper-m -->
+* merge phase deterministic-dual-region-index-generator-region-integrity-hook-l into feat/planning-feedback-lifecycle (a143068) <!-- sw-deliver:deterministic-dual-region-index-generator-region-integrity-hook-l -->
+* merge phase migration-tool-held-lock-redirect-map-verification-fixture-l into feat/planning-feedback-lifecycle (4e07f38) <!-- sw-deliver:migration-tool-held-lock-redirect-map-verification-fixture-l -->
+* merge phase atomic-cutover-phase-b-relocation-supersession-privacy-projections-kill-criteria-l into feat/planning-feedback-lifecycle (e544b75) <!-- sw-deliver:atomic-cutover-phase-b-relocation-supersession-privacy-projections-kill-criteria-l -->
+* merge phase documentation-currency-dist-propagation-no-regression-memory-guardrails-l into feat/planning-feedback-lifecycle (3ea0b85) <!-- sw-deliver:documentation-currency-dist-propagation-no-regression-memory-guardrails-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

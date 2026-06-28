@@ -43,9 +43,11 @@ from wave_merge import (
     VALID_STATUS_VERDICTS,
     check_status_sha,
     phase_branch_head_optional,
+    read_phase_status_optional,
     status_file_for,
 )
 from wave_state import (
+    TERMINAL_PHASE_STATUSES,
     append_log as state_append_log,
     load_deliver_state,
     resolve_state_path,
@@ -87,6 +89,7 @@ AGENT_ACTIONS = frozenset(
         "dispatch-batch",
         "remediate",
         "terminal-ship",
+        "terminal-checkpoint",
         "retrospective",
         "compound-ship",
     }
@@ -100,7 +103,7 @@ DEFAULT_PHASE_TIMEOUT_MIN = int(os.environ.get("SW_PHASE_TIMEOUT_MINUTES", "240"
 DEFAULT_BACKGROUND_TASK_TIMEOUT_MIN = int(
     os.environ.get("SW_BACKGROUND_TASK_TIMEOUT_MINUTES", "120")
 )
-MERGED_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
+MERGED_PHASE_STATUSES = TERMINAL_PHASE_STATUSES  # re-export (R1); do not redefine locally
 DEFAULT_MAX_ITERATIONS = 500
 DEFAULT_NO_PROGRESS_THRESHOLD = 3
 PROPOSAL_OVERHEAD_ACTIONS = frozenset({"wave-plan-persist", "phase-plan-entry"})
@@ -225,6 +228,82 @@ def no_progress_threshold(_root: Path) -> int:
     return DEFAULT_NO_PROGRESS_THRESHOLD
 
 
+def terminal_autonomy_mode(root: Path) -> str:
+    deliver = load_workflow_config(root).get("deliver") or {}
+    terminal = deliver.get("terminal") or {}
+    mode = terminal.get("autonomy", "supervised")
+    return mode if mode in ("supervised", "auto") else "supervised"
+
+
+def orchestrator_worktree_path(root: Path, state: dict[str, Any]) -> Path | None:
+    orch = state.get("orchestratorWorktree") or {}
+    raw = orch.get("path")
+    if not raw:
+        return None
+    path = Path(str(raw))
+    if not path.is_absolute():
+        path = (root / path).resolve()
+    return path if path.is_dir() else None
+
+
+def resolve_currency_check(
+    root: Path, state: dict[str, Any], plan: dict[str, Any]
+) -> tuple[Path, str] | tuple[None, None]:
+    """Resolve ledger check root + tasks path (R7 — integration worktree when list lives there)."""
+    raw = task_list_from(state, plan)
+    if not raw:
+        return None, None
+    rel = str(raw)
+    candidates: list[Path] = [root]
+    orch = orchestrator_worktree_path(root, state)
+    if orch is not None:
+        candidates.append(orch)
+    for check_root in candidates:
+        task_path = Path(rel)
+        if not task_path.is_absolute():
+            task_path = (check_root / rel).resolve()
+        if task_path.is_file():
+            try:
+                rel_for_check = str(task_path.relative_to(check_root.resolve()))
+            except ValueError:
+                rel_for_check = str(task_path)
+            return check_root, rel_for_check
+    return root, rel
+
+
+def blocker_cause_class(cause: str) -> str:
+    if cause in BUDGET_HALT_CAUSES or cause.startswith("conductor:"):
+        return "budget"
+    if cause.startswith("verify:environmental"):
+        return "environmental"
+    if cause.startswith("verify:"):
+        return "regression"
+    return "operational"
+
+
+def supersede_stale_blockers(root: Path) -> bool:
+    """Supersede stale blockers.json when the driver makes progress (R11)."""
+    path = root / BLOCKER_PATH
+    if not path.is_file():
+        return False
+    try:
+        prior = read_json(path)
+    except (StateCorruptError, json.JSONDecodeError, OSError):
+        prior = {}
+    if prior.get("verdict") == "superseded":
+        return False
+    write_json(
+        path,
+        {
+            "verdict": "superseded",
+            "supersededAt": utc_now(),
+            "priorCause": prior.get("cause"),
+            "note": "Stale blockers superseded on driver progress (R11)",
+        },
+    )
+    return True
+
+
 def init_budget_counters(state: dict[str, Any]) -> None:
     state.setdefault("runStartedAt", utc_now())
     state.setdefault("driverIterationCount", 0)
@@ -253,7 +332,7 @@ def build_state_signature(state: dict[str, Any]) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
-def record_budget_tick(state: dict[str, Any], next_action: str) -> None:
+def record_budget_tick(root: Path, state: dict[str, Any], next_action: str) -> None:
     init_budget_counters(state)
     state["driverIterationCount"] = int(state.get("driverIterationCount", 0)) + 1
     counters = state.setdefault(
@@ -273,6 +352,8 @@ def record_budget_tick(state: dict[str, Any], next_action: str) -> None:
         if progress_key == state.get("lastProgressKey"):
             state["noProgressStreak"] = int(state.get("noProgressStreak", 0)) + 1
         else:
+            if int(state.get("noProgressStreak", 0)) > 0:
+                supersede_stale_blockers(root)
             state["noProgressStreak"] = 0
             state["lastProgressKey"] = progress_key
 
@@ -532,11 +613,9 @@ def check_background_task_failures(
         if not meta.get("backgroundDispatchedAt"):
             continue
         slug = meta.get("slug", pid)
-        status_path = status_file_for(root, slug, None, state)
-        if status_path.is_file():
-            status = read_json(status_path, absent_ok=False)
-            if status.get("verdict") in VALID_STATUS_VERDICTS:
-                continue
+        status_path, status = read_phase_status_optional(root, slug, state)
+        if status is not None and status.get("verdict") in VALID_STATUS_VERDICTS:
+            continue
         started = meta.get("backgroundDispatchedAt") or meta.get("startedAt")
         if isinstance(started, str):
             age = age_seconds(started)
@@ -563,10 +642,9 @@ def merge_ready_in_flight_phases(
         if not isinstance(meta, dict) or meta.get("status") != "in-flight":
             continue
         slug = meta.get("slug", pid)
-        status_path = status_file_for(root, slug, None, state)
-        if not status_path.is_file():
+        status_path, status = read_phase_status_optional(root, slug, state)
+        if status is None:
             continue
-        status = read_json(status_path, absent_ok=False)
         if status.get("verdict") != "merge-ready-green":
             continue
         phase_branch = meta.get("branch")
@@ -594,10 +672,9 @@ def in_flight_merge_halt(
         if not isinstance(meta, dict) or meta.get("status") != "in-flight":
             continue
         slug = meta.get("slug", pid)
-        status_path = status_file_for(root, slug, None, state)
-        if not status_path.is_file():
+        status_path, status = read_phase_status_optional(root, slug, state)
+        if status is None:
             continue
-        status = read_json(status_path, absent_ok=False)
         if status.get("verdict") != "merge-ready-green":
             continue
         phase_branch = meta.get("branch")
@@ -754,15 +831,16 @@ def _target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
 def tasks_currency_ok(
     root: Path, state: dict[str, Any], plan: dict[str, Any]
 ) -> tuple[bool, str | None]:
-    tasks_file = task_list_from(state, plan)
-    if not tasks_file:
+    resolved = resolve_currency_check(root, state, plan)
+    if resolved == (None, None):
         return True, None
+    check_root, tasks_file = resolved
     state_py = SCRIPT_DIR / "wave_state.py"
     proc = subprocess.run(
         [
             sys.executable,
             str(state_py),
-            str(root),
+            str(check_root),
             "ledger",
             "check",
             "--tasks-file",
@@ -878,6 +956,7 @@ def compute_next_action(
     if all_phases_merged(state):
         completion = state.get("completion") or {}
         compound = state.get("compoundShip") or {}
+        terminal_ship = state.get("terminalShip") or {}
         if completion.get("status") == "completed-pending-merge":
             merge_info = _target_merge_detected(root, state)
             if merge_info.get("merged"):
@@ -891,6 +970,23 @@ def compute_next_action(
                     "action": "terminal-ship",
                     "note": "awaiting human merge — completion pending until merged",
                     "resume": True,
+                }
+        if terminal_autonomy_mode(root) == "supervised" and not state.get(
+            "terminalCheckpointCompleted"
+        ):
+            needs_retro = not compound.get("premergeDone")
+            needs_ship = terminal_ship.get("status") not in (
+                "gate-green",
+                "local-evidence",
+            )
+            if needs_retro or needs_ship:
+                return {
+                    "action": "terminal-checkpoint",
+                    "resume": True,
+                    "mode": "supervised",
+                    "needsRetrospective": needs_retro,
+                    "needsTerminalShip": needs_ship,
+                    "note": "Single consolidated supervised terminal checkpoint (R10)",
                 }
         if not compound.get("premergeDone"):
             return {"action": "retrospective", "resume": True}
@@ -980,9 +1076,8 @@ def compute_next_action(
         if not isinstance(meta, dict) or meta.get("status") != "in-flight":
             continue
         slug = meta.get("slug", "")
-        status_path = status_file_for(root, slug, None, state)
-        if status_path.is_file():
-            status = read_json(status_path, absent_ok=False)
+        status_path, status = read_phase_status_optional(root, slug, state)
+        if status is not None:
             if status.get("verdict") == "blocked":
                 return {
                     "action": "collect-status",
@@ -1131,6 +1226,7 @@ def write_blocker_report(root: Path, state: dict[str, Any], cause: str) -> Path:
     out = {
         "verdict": "halt",
         "cause": cause,
+        "causeClass": blocker_cause_class(cause),
         "generatedAt": utc_now(),
         "report": report,
         "resumeCommand": report.get("resumeCommand"),
@@ -1276,11 +1372,17 @@ def execute_mechanical(
         )
         if ec != 0:
             fail_payload(data, "phase provision failed", ec)
+        wt_path = data.get("path") or data.get("worktreePath")
+        if not wt_path:
+            wt_name = data.get("worktreeName") or data.get("name")
+            if wt_name:
+                wt_path = str((root / ".sw-worktrees" / wt_name).resolve())
         worktrees = state.setdefault("phaseWorktrees", {})
         worktrees[pid] = {
             "name": data.get("name") or data.get("worktreeName"),
-            "path": data.get("path") or data.get("worktreePath"),
+            "path": wt_path,
         }
+        save_state(root, state)
         persist_cursor(root, state, "dispatch-ship", phaseWorktrees=worktrees)
         return {"executed": "provision-phase", "phaseId": pid, **data}
 
@@ -1330,6 +1432,21 @@ def execute_mechanical(
 
     if action == "merge-run-next":
         ec, data = run_wave(root, "merge", "run-next")
+        if ec == 10 and data.get("cause") == "verify:environmental":
+            slug = str(data.get("phase") or "")
+            for pid, meta in (state.get("phases") or {}).items():
+                if isinstance(meta, dict) and meta.get("slug") == slug:
+                    attempts = state.setdefault("remediationAttempts", {})
+                    attempts[str(pid)] = int(attempts.get(str(pid), 0)) + 1
+                    save_state(root, state)
+                    break
+            persist_cursor(root, state, "remediate")
+            return {
+                "executed": "merge-run-next",
+                "verifyEnvironmental": True,
+                "causeClass": "environmental",
+                **data,
+            }
         if ec not in (0, 10):
             fail_payload(data, "merge run-next failed", ec)
         state.update(load_state(root))
@@ -1569,7 +1686,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
         init_budget_counters(state)
         step = compute_next_action(root, state, plan)
         if step["action"] != "halt-blocked":
-            record_budget_tick(state, step["action"])
+            record_budget_tick(root, state, step["action"])
             save_state(root, state)
             budget_cause = check_budget_halt(root, state)
             if budget_cause:
@@ -1698,7 +1815,7 @@ def cmd_budget_tick(root: Path, args: list[str]) -> None:
     next_action = parse_kv(args, "--next-action")
     if not next_action:
         next_action = compute_next_action(root, state, plan)["action"]
-    record_budget_tick(state, next_action)
+    record_budget_tick(root, state, next_action)
     save_state(root, state)
     emit(
         {

@@ -88,3 +88,80 @@ jobs:
       - name: Run git-workflow-fixtures
         run: bash scripts/test/run-git-workflow-fixtures.sh
 
+  feat-test-plan-planning-unit-fixtures:
+    name: feat-test-plan-planning-unit-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-unit-fixtures
+        run: bash scripts/test/run-planning-unit-fixtures.sh
+
+  feat-test-plan-planning-paths-fixtures:
+    name: feat-test-plan-planning-paths-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-paths-fixtures
+        run: bash scripts/test/run-planning-paths-fixtures.sh
+
+  feat-test-plan-doc-format-fixtures:
+    name: feat-test-plan-doc-format-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run doc-format-fixtures
+        run: bash scripts/test/run-doc-format-fixtures.sh
+
+  feat-test-plan-planning-index-fixtures:
+    name: feat-test-plan-planning-index-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-index-fixtures
+        run: bash scripts/test/run-planning-index-fixtures.sh
+
+  feat-test-plan-planning-migrate-fixtures:
+    name: feat-test-plan-planning-migrate-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-migrate-fixtures
+        run: bash scripts/test/run-planning-migrate-fixtures.sh
+
+  feat-test-plan-planning-cutover-fixtures:
+    name: feat-test-plan-planning-cutover-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-cutover-fixtures
+        run: bash scripts/test/run-planning-cutover-fixtures.sh
+
+  feat-test-plan-planning-currency-fixtures:
+    name: feat-test-plan-planning-currency-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-currency-fixtures
+        run: bash scripts/test/run-planning-currency-fixtures.sh
+

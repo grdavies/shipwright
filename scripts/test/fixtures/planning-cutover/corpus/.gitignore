@@ -1,0 +1,13 @@
+# Fixture corpus gitignore — mirrors production planning privacy (R18) without docs/* catch-all.
+docs/planning/brainstorm/**/*
+!docs/planning/brainstorm/**/.gitkeep
+docs/planning/decision/**/*
+!docs/planning/decision/INDEX.md
+!docs/planning/decision/SUPERSEDED.log
+
+.cursor/planning-migration-reverse-map.json
+.cursor/planning-migration-gap-id-map.json
+.cursor/planning-migration-supersession-map.json
+.cursor/planning-path-redirect-map.json
+.cursor/planning-migration.lock
+.cursor/planning-migration-staging/

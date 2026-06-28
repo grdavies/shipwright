@@ -18,7 +18,7 @@ from host_invoke import host_verb
 
 from cleanup_lib import load_default_branch
 from wave_json_io import StateCorruptError, read_json, write_json
-from wave_state import load_deliver_state, resolve_state_path, save_deliver_state
+from wave_state import load_deliver_state, phase_complete, resolve_state_path, save_deliver_state
 
 # File outputs safe to commit pre-merge (R18). Memory/provider artifacts are never committed (R19).
 ALLOWED_PREMERGE_FILE_PREFIXES = (
@@ -255,7 +255,7 @@ def all_phases_green(state: dict[str, Any]) -> bool:
     phases = state.get("phases") or {}
     if not phases:
         return False
-    return all(p.get("status") == "green-merged" for p in phases.values())
+    return all(phase_complete(p.get("status")) for p in phases.values())
 
 
 def detect_retrospective_phase(root: Path, state: dict[str, Any]) -> str:

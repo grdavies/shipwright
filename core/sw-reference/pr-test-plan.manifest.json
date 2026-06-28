@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Standard FEAT PR test-plan fixture set \u2014 single source for verify.test and CI (PRD 016 R1\u2013R3).",
+  "description": "Standard FEAT PR test-plan fixture set — single source for verify.test and CI (PRD 016 R1–R3).",
   "fixtures": [
     {
       "id": "doc-fixtures",
@@ -89,6 +89,123 @@
         "docs-pr-to-default",
         "brainstorm-durable-commit",
         "durability-reconcile-prd013"
+      ]
+    },
+    {
+      "id": "planning-unit-fixtures",
+      "script": "scripts/test/run-planning-unit-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-unit-fixtures",
+      "scenarios": [
+        "schema-fields-and-type-enum",
+        "unit-folder-and-id-stability",
+        "gap-unit-in-unified-index",
+        "status-type-conditioned",
+        "cross-enum-token-rejected",
+        "status-enum-stub",
+        "validate-unknown-key",
+        "validate-tracked-private-rejected"
+      ]
+    },
+    {
+      "id": "planning-paths-fixtures",
+      "script": "scripts/test/run-planning-paths-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-paths-fixtures",
+      "scenarios": [
+        "realpath-containment-reject-escape",
+        "no-hardcoded-prds-literal",
+        "paths-resolve-through-config"
+      ]
+    },
+    {
+      "id": "doc-format-fixtures",
+      "script": "scripts/test/run-doc-format-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-doc-format-fixtures",
+      "scenarios": [
+        "doc-format-grammar-tokenizes",
+        "call-site-map-exhaustion",
+        "tokenizer-deterministic-offline",
+        "check-fail-closed-diagnostics",
+        "write-idempotent-shape-only",
+        "consumers-tokenizer-only",
+        "unlisted-divergence-fails-closed",
+        "template-slot-fill",
+        "directive-zero-ids-fails-closed",
+        "golden-before-after-equivalence",
+        "four-consumer-id-agreement",
+        "write-roundtrip-stable",
+        "phaseA-legacy-paths-no-relocation"
+      ]
+    },
+    {
+      "id": "planning-index-fixtures",
+      "script": "scripts/test/run-planning-index-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-index-fixtures",
+      "scenarios": [
+        "single-unified-index-from-frontmatter",
+        "region-preserve-byte-for-byte",
+        "status-precedence-resolves",
+        "region-hook-rejects-cross-writer",
+        "empty-inflight-with-runstate-fails",
+        "living-doc-index-generator-wired"
+      ]
+    },
+    {
+      "id": "planning-migrate-fixtures",
+      "script": "scripts/test/run-planning-migrate-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-migrate-fixtures",
+      "scenarios": [
+        "migrate-atomic-staging",
+        "rollback-refuses-dirty-restores-config-inverse",
+        "migrate-relocates-all-verbatim",
+        "migration-one-to-one",
+        "gap-id-map-assertion",
+        "feedback-checklist-preserved",
+        "migration-lock-toctou",
+        "cross-worktree-runstate-detect",
+        "redirect-map-resume",
+        "migration-scope-docs-config-only",
+        "opmaps-gitignored-redacted"
+      ]
+    },
+    {
+      "id": "planning-cutover-fixtures",
+      "script": "scripts/test/run-planning-cutover-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-cutover-fixtures",
+      "scenarios": [
+        "cancelled-prd-supersession-edges",
+        "privacy-backfill-legacy-token",
+        "formerly-ignored-body-tracked-fails",
+        "private-index-row-provisional",
+        "legacy-projection-gapbacklog-index",
+        "no-half-migrated-merge",
+        "relief-acceptance-gates-cutover",
+        "kill-criteria-fallback-documented"
+      ]
+    },
+    {
+      "id": "planning-currency-fixtures",
+      "script": "scripts/test/run-planning-currency-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-currency-fixtures",
+      "scenarios": [
+        "copy-to-core-parity",
+        "emitter-freshness-planning-artifacts",
+        "doc-currency-layout-config-skills-readme-guide",
+        "no-regression-migrated-corpus",
+        "no-memory-writes-redaction-unchanged"
       ]
     }
   ]

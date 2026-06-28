@@ -1,0 +1,495 @@
+{
+  "version": 1,
+  "kernelVersion": "1.0.0",
+  "description": "Single-sourced kernel vs plan-policy classification for Shipwright orchestration (PRD 022).",
+  "kernelChokepoints": [
+    {
+      "id": "scoped-run-identity",
+      "layer": "kernel",
+      "enforcedBy": [
+        "shipwright-state.sh",
+        "ship-phase-steps.sh"
+      ],
+      "mustPrecede": [
+        "merge-push",
+        "gate-check"
+      ]
+    },
+    {
+      "id": "durable-state-transitions",
+      "layer": "kernel",
+      "enforcedBy": [
+        "shipwright-state.sh",
+        "wave_deliver_loop.py"
+      ],
+      "mustPrecede": [
+        "merge-push"
+      ]
+    },
+    {
+      "id": "verification-gate",
+      "layer": "kernel",
+      "stepId": "verification-gate",
+      "inCanonicalChain": true,
+      "mustPrecede": [
+        "sw-commit",
+        "merge-push"
+      ]
+    },
+    {
+      "id": "check-gate",
+      "layer": "kernel",
+      "enforcedBy": [
+        "check-gate.sh"
+      ],
+      "traceAnchors": [
+        "sw-stabilize",
+        "sw-ready"
+      ],
+      "mustPrecede": [
+        "merge-ready",
+        "merge-push"
+      ]
+    },
+    {
+      "id": "merge-queue-journal",
+      "layer": "kernel",
+      "enforcedBy": [
+        "merge-queue.sh"
+      ],
+      "mustPrecede": [
+        "merge-push"
+      ]
+    },
+    {
+      "id": "merge-single-flight-lock",
+      "layer": "kernel",
+      "enforcedBy": [
+        "O_EXCL"
+      ],
+      "mustPrecede": [
+        "merge-push"
+      ]
+    },
+    {
+      "id": "merge-gate-check-barrier",
+      "layer": "kernel",
+      "mustPrecede": [
+        "merge-push"
+      ]
+    },
+    {
+      "id": "no-main-auto-merge",
+      "layer": "kernel",
+      "enforcedBy": [
+        "sw-ready",
+        "sw-deliver"
+      ],
+      "mustPrecede": []
+    },
+    {
+      "id": "human-terminal-merge-gate",
+      "layer": "kernel",
+      "traceAnchors": [
+        "sw-ready"
+      ],
+      "mustPrecede": [
+        "merge-push"
+      ]
+    },
+    {
+      "id": "git-push-secret-scan",
+      "layer": "kernel",
+      "enforcedBy": [
+        "git-push.sh"
+      ],
+      "traceAnchors": [
+        "sw-pr"
+      ],
+      "mustPrecede": [
+        "merge-push"
+      ]
+    },
+    {
+      "id": "memory-redaction-chokepoint",
+      "layer": "kernel",
+      "enforcedBy": [
+        "memory-redact.sh"
+      ],
+      "mustPrecede": [
+        "memory-preflight",
+        "dispatch"
+      ]
+    },
+    {
+      "id": "memory-preflight-routing",
+      "layer": "kernel",
+      "enforcedBy": [
+        "memory-preflight"
+      ],
+      "mustPrecede": [
+        "memory-write"
+      ]
+    },
+    {
+      "id": "range-scoped-redaction-guard",
+      "layer": "kernel",
+      "mustPrecede": [
+        "merge-push"
+      ]
+    },
+    {
+      "id": "beforeSubmitPrompt-guardrails",
+      "layer": "kernel",
+      "nonSelectable": true,
+      "nonReorderable": true,
+      "enforcedBy": [
+        "before-submit-guardrails.py"
+      ]
+    },
+    {
+      "id": "orchestrator-excl-lock",
+      "layer": "kernel",
+      "enforcedBy": [
+        "sw-deliver.lock"
+      ],
+      "mustPrecede": [
+        "merge-push"
+      ]
+    },
+    {
+      "id": "living-doc-excl-lock",
+      "layer": "kernel",
+      "mustPrecede": [
+        "living-doc-merge"
+      ]
+    }
+  ],
+  "planPolicySteps": [
+    {
+      "id": "sw-tmp-init",
+      "phaseType": "ship",
+      "required": true
+    },
+    {
+      "id": "sw-execute",
+      "phaseType": "ship",
+      "required": true
+    },
+    {
+      "id": "sw-verify",
+      "phaseType": "ship",
+      "required": true
+    },
+    {
+      "id": "sw-review",
+      "phaseType": "ship",
+      "required": false
+    },
+    {
+      "id": "sw-simplify",
+      "phaseType": "ship",
+      "required": false
+    },
+    {
+      "id": "gap-check",
+      "phaseType": "ship",
+      "required": false
+    },
+    {
+      "id": "sw-commit",
+      "phaseType": "ship",
+      "required": true
+    },
+    {
+      "id": "sw-pr",
+      "phaseType": "ship",
+      "required": true
+    },
+    {
+      "id": "sw-watch-ci",
+      "phaseType": "ship",
+      "required": true
+    },
+    {
+      "id": "sw-stabilize",
+      "phaseType": "ship",
+      "required": true
+    },
+    {
+      "id": "sw-ready",
+      "phaseType": "ship",
+      "required": true
+    },
+    {
+      "id": "sw-tmp-clean",
+      "phaseType": "ship",
+      "required": true
+    },
+    {
+      "id": "sw-triage",
+      "phaseType": "doc",
+      "required": true
+    },
+    {
+      "id": "sw-brainstorm",
+      "phaseType": "doc",
+      "required": false
+    },
+    {
+      "id": "sw-prd",
+      "phaseType": "doc",
+      "required": true
+    },
+    {
+      "id": "sw-doc-review",
+      "phaseType": "doc",
+      "required": true
+    },
+    {
+      "id": "sw-freeze",
+      "phaseType": "doc",
+      "required": true
+    },
+    {
+      "id": "sw-tasks",
+      "phaseType": "doc",
+      "required": true
+    }
+  ],
+  "canonicalPhaseChains": {
+    "sw-ship": [
+      "sw-tmp-init",
+      "sw-execute",
+      "sw-verify",
+      "verification-gate",
+      "sw-review",
+      "sw-simplify",
+      "gap-check",
+      "sw-commit",
+      "sw-pr",
+      "sw-watch-ci",
+      "sw-stabilize",
+      "sw-ready",
+      "sw-tmp-clean"
+    ]
+  },
+  "orderingInvariants": [
+    {
+      "before": "sw-tmp-init",
+      "after": "sw-execute"
+    },
+    {
+      "before": "sw-execute",
+      "after": "sw-verify"
+    },
+    {
+      "before": "sw-verify",
+      "after": "verification-gate"
+    },
+    {
+      "before": "verification-gate",
+      "after": "sw-commit"
+    },
+    {
+      "before": "sw-review",
+      "after": "sw-commit"
+    },
+    {
+      "before": "sw-simplify",
+      "after": "sw-commit"
+    },
+    {
+      "before": "gap-check",
+      "after": "sw-commit"
+    },
+    {
+      "before": "sw-commit",
+      "after": "sw-pr"
+    },
+    {
+      "before": "sw-pr",
+      "after": "sw-watch-ci"
+    },
+    {
+      "before": "sw-watch-ci",
+      "after": "sw-stabilize"
+    },
+    {
+      "before": "sw-stabilize",
+      "after": "sw-ready"
+    },
+    {
+      "before": "sw-ready",
+      "after": "sw-tmp-clean"
+    },
+    {
+      "before": "verification-gate",
+      "after": "merge-push",
+      "kind": "chokepoint"
+    },
+    {
+      "before": "check-gate",
+      "after": "merge-push",
+      "kind": "chokepoint"
+    },
+    {
+      "before": "git-push-secret-scan",
+      "after": "merge-push",
+      "kind": "chokepoint"
+    }
+  ],
+  "orchestratorStepRegistry": {
+    "sw-ship": {
+      "chainKey": "sw-ship",
+      "sourcePaths": [
+        "core/commands/sw-ship.md"
+      ]
+    },
+    "sw-deliver": {
+      "delegatesTo": "sw-ship",
+      "sourcePaths": [
+        "core/commands/sw-deliver.md",
+        "core/skills/conductor/SKILL.md"
+      ]
+    },
+    "sw-doc": {
+      "chain": [
+        "sw-triage",
+        "sw-brainstorm",
+        "sw-prd",
+        "sw-doc-review",
+        "sw-freeze",
+        "sw-tasks"
+      ],
+      "sourcePaths": [
+        "core/commands/sw-doc.md"
+      ]
+    },
+    "sw-debug": {
+      "chain": [
+        "sw-debug"
+      ],
+      "sourcePaths": [
+        "core/commands/sw-debug.md"
+      ]
+    },
+    "sw-feedback": {
+      "chain": [
+        "sw-feedback"
+      ],
+      "sourcePaths": [
+        "core/commands/sw-feedback.md"
+      ]
+    }
+  },
+  "floorMatrix": {
+    "version": 1,
+    "rules": [
+      {
+        "id": "security-sensitive-paths",
+        "description": "Force sw-review when work touches auth or payments surfaces",
+        "mandatorySteps": [
+          "sw-review"
+        ],
+        "orderingConstraints": [
+          {
+            "step": "sw-review",
+            "mustPrecede": "sw-commit"
+          }
+        ],
+        "triggers": {
+          "anyOf": [
+            {
+              "type": "path_glob",
+              "source": "task_file_paths",
+              "globs": [
+                "auth/**",
+                "payments/**"
+              ]
+            },
+            {
+              "type": "path_glob",
+              "source": "signal_context_file_paths",
+              "globs": [
+                "auth/**",
+                "payments/**"
+              ]
+            }
+          ]
+        },
+        "triageTagsAloneInsufficient": true
+      },
+      {
+        "id": "kernel-scripts-providers",
+        "description": "Force sw-review for kernel scripts and provider changes",
+        "mandatorySteps": [
+          "sw-review"
+        ],
+        "orderingConstraints": [
+          {
+            "step": "sw-review",
+            "mustPrecede": "sw-commit"
+          }
+        ],
+        "triggers": {
+          "anyOf": [
+            {
+              "type": "path_glob",
+              "source": "task_file_paths",
+              "globs": [
+                "scripts/git-push.sh",
+                "scripts/wave_*",
+                "core/providers/**"
+              ]
+            },
+            {
+              "type": "path_glob",
+              "source": "signal_context_file_paths",
+              "globs": [
+                "scripts/git-push.sh",
+                "scripts/wave_*",
+                "core/providers/**"
+              ]
+            }
+          ]
+        },
+        "triageTagsAloneInsufficient": true
+      },
+      {
+        "id": "hooks-manifest",
+        "description": "Force sw-review when hooks.json is in scope",
+        "mandatorySteps": [
+          "sw-review"
+        ],
+        "orderingConstraints": [
+          {
+            "step": "sw-review",
+            "mustPrecede": "sw-commit"
+          }
+        ],
+        "triggers": {
+          "anyOf": [
+            {
+              "type": "path_glob",
+              "source": "task_file_paths",
+              "globs": [
+                "hooks.json",
+                "**/hooks.json"
+              ]
+            },
+            {
+              "type": "path_glob",
+              "source": "signal_context_file_paths",
+              "globs": [
+                "hooks.json",
+                "**/hooks.json"
+              ]
+            }
+          ]
+        },
+        "triageTagsAloneInsufficient": true
+      }
+    ]
+  }
+}

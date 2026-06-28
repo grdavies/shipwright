@@ -46,6 +46,86 @@ docs/decisions/
 │       └── dispatch-decisions.json
 ```
 
+## Planning-unit model (PRD 031)
+
+Canonical frontmatter schema: `core/sw-reference/planning-unit.schema.json` (validated by
+`scripts/planning-unit-validate.sh`). Status enums are type-conditioned via `scripts/planning_status_enum.py`
+(stub values only — PRD 033 owns transition semantics).
+
+### Unit folder layout
+
+Every planning unit is a **folder** under the typed-unit tree (`docs/planning/` at cutover; see R5). Each
+folder contains:
+
+- A **canonical body file** with planning-unit frontmatter (`id`, `type`, `status`, `title`, `visibility`, edge
+  arrays, optional `priority`/`tags`).
+- **Optional ancillary tracked files** co-located in the same folder (e.g. a PRD unit's frozen task lists and
+  `amendments/` subtree).
+
+```text
+docs/planning/
+├── INDEX.md                         # single generated unified INDEX (R5)
+└── <type>/<id>-<slug>/              # one folder per unit
+    ├── <id>-<type>-<slug>.md        # canonical body (frontmatter + content)
+    ├── tasks-<id>-<slug>.md         # optional (PRD units)
+    └── amendments/                  # optional (PRD / decision units)
+        └── A<k>-<short>.md
+```
+
+### Stable unit ids (R2)
+
+- Unit `id` values are **stable**, **monotonic**, and **never reused** after assignment.
+- All cross-references (`depends`, `blocks`, `supersedes`, `extends`, `absorbs`, INDEX rows) use the **unit id**
+  — never a table row index, filesystem path alone, or positional reference.
+- Gap units use the same id discipline (e.g. `gap-045-sample`) — they are not anonymous backlog rows.
+
+### Unified INDEX schema (R5/R9/R24)
+
+`docs/planning/INDEX.md` is the **single generated unified INDEX** produced from unit frontmatter by
+`scripts/planning_index_gen.py`. It is never hand-maintained.
+
+The INDEX carries three disjoint regions (HTML comment markers):
+
+| Region | Owner | Purpose |
+|--------|-------|---------|
+| `structural` | INDEX generator | Rows from unit frontmatter (`id`, `type`, `title`, `status`, `visibility`, edges) |
+| `derived` | reconciler (PRD 033) | Derived lifecycle status per unit — empty schema slot at cutover |
+| `inFlight` | deliver writer (PRD 032) | Committed in-flight tuple per active unit — empty schema slot at cutover |
+
+**Read-merge-write:** every writer parses the existing INDEX and preserves non-owned regions **byte-for-byte**.
+Full-file regen that drops a sibling region is prohibited; `scripts/index-region-guard.sh` enforces this on
+pre-commit and in CI.
+
+**Status precedence:** lifecycle consumers read `derived.status` when populated and fall back to structural
+`status`; gap units (`type: gap`) always use structural status only.
+
+### Private INDEX rows (R33 — PRD 034 handoff)
+
+INDEX structural rows for `visibility: private` units carry **provisional** title metadata (`[provisional]` prefix)
+until PRD 034 defines redaction/omission of private rows. Unit bodies for brainstorm/decision private units
+remain gitignored under the interim `legacy-pre-034` profile (R18); only public metadata appears in INDEX.
+
+### Migration cutover checklist (R27/R28)
+
+Atomic release train (031 + 032 + 033) cutover gates:
+
+1. Acquire migration lock; halt deliver/feedback append.
+2. Run `planning_migrate.py write` then mandatory `--verify`.
+3. Run `scripts/relief-acceptance-check.sh` (derived INDEX status vs deliver state).
+4. Flip `planningDir` to `docs/planning`; regenerate planning INDEX + legacy projections.
+5. Run `scripts/planning_legacy_projection.py` to emit legacy `GAP-BACKLOG.md` + `INDEX.md` shims.
+6. Run `scripts/copy-to-core.sh` then `python3 -m sw generate --all` + emitter freshness fixtures (R25).
+
+**Kill-criteria / falsification (R28):** if PRD 032/033 slip past the release threshold or the reconciler
+misses the accuracy floor on the relief fixture corpus, fall back to shim + legacy layout; R10 supersession
+edges recorded in `.cursor/planning-migration-supersession-map.json` are **reversible** via `--rollback`.
+
+### Gaps as first-class units (R3)
+
+Gap artifacts are planning units with `type: gap` (folder + frontmatter). They **replace** `GAP-BACKLOG.md`
+table rows at cutover and render as rows in the **single generated unified INDEX** — not a separate gap-only
+index. Legacy `docs/prds/GAP-BACKLOG.md` is a compatibility projection until consumers migrate (R27).
+
 ## Naming conventions
 
 | Artifact | Path pattern | Written by | Frozen |
@@ -183,8 +263,10 @@ reproduce from current sources.
 
 `workflow.config.json`:
 
-- `prdsDir`: `"docs/prds"` — PRD root (per-PRD subdirs live beneath).
-- `tasksDir`: `"docs/prds"` — task lists co-locate with their PRD (`docs/prds/<n>-<slug>/tasks-...`).
+- `planningDir`: `"docs/planning"` — canonical planning-unit tree (post-cutover; pre-cutover may remain
+  `docs/prds` until migration `--verify` passes).
+- `prdsDir`: `"docs/prds"` — legacy PRD directory alias (defaults to `docs/prds` until `planningDir` cutover).
+- `tasksDir`: `"docs/prds"` — frozen task-list alias (defaults to `prdsDir` until cutover).
 - `decisionsDir`: `"docs/decisions"` — decision-record root (flat files + sibling `.amendments/` dirs).
 - `delegation.mode`: `bind-only` | `heuristic` | `default` — selects delegate-by-default gate behavior
   (PRD 017; default `bind-only` until Phase-2 live acceptance, else `default`).

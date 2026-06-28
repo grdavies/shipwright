@@ -10,13 +10,14 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+import planning_paths
 VALID_INDEX_STATUSES = frozenset({"not-started", "in-progress", "complete"})
 
-LIVING_PATHS = (
-    "docs/prds/INDEX.md",
-    "docs/prds/COMPLETION-LOG.md",
-    "docs/prds/GAP-BACKLOG.md",
-)
+def living_paths(root: Path) -> tuple[str, ...]:
+    return planning_paths.living_paths_rel(planning_paths.load_planning_dirs(root))
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
@@ -133,7 +134,7 @@ def run_reconcile_script(root: Path, *cmd: str) -> dict[str, Any]:
 def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool, repo_root: Path | None = None) -> str | None:
     top = worktree
     proc = subprocess.run(
-        ["git", "-C", str(top), "status", "--porcelain", "--", *LIVING_PATHS],
+        ["git", "-C", str(top), "status", "--porcelain", "--", *living_paths(top)],
         text=True,
         capture_output=True,
     )
@@ -141,7 +142,7 @@ def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool, repo_root: P
         return None
     if dry_run:
         return "dry-run"
-    subprocess.run(["git", "-C", str(top), "add", *LIVING_PATHS], check=True)
+    subprocess.run(["git", "-C", str(top), "add", *living_paths(top)], check=True)
     msg = f"chore: living-doc reconcile for PRD {prd}"
     proc = subprocess.run(
         ["git", "-C", str(top), "commit", "-m", msg],
@@ -197,6 +198,42 @@ def cmd_phase_status_live(root: Path, args: list[str]) -> None:
             "livePhaseStatus": rows,
         }
     )
+
+
+
+
+def project_legacy_compat(root: Path, *, dry_run: bool = False) -> dict[str, Any] | None:
+    """Emit legacy GAP-BACKLOG/INDEX projections when planningDir is flipped (R27)."""
+    import planning_legacy_projection as plp
+
+    return plp.project_all(root, dry_run=dry_run)
+
+
+def cmd_regenerate_index(root: Path, args: list[str]) -> None:
+    """Regenerate planning INDEX structural region under living-doc lock (PRD 031 R24)."""
+    from wave_living_doc_lock import living_doc_write_lock
+    import planning_index_gen as pig
+
+    state = load_state(root)
+    target = (state.get("target") or {}).get("branch")
+    dry_run = has_flag(args, "--dry-run")
+    with living_doc_write_lock(root, target=target, holder="planning-index-generator"):
+        content = pig.generate_index(root, writer="generator")
+        rel = pig.index_rel(root)
+        legacy = None
+        if not dry_run:
+            pig.write_index(root, content)
+            legacy = project_legacy_compat(root, dry_run=False)
+        emit(
+            {
+                "verdict": "pass",
+                "action": "planning-index-regenerate",
+                "path": rel,
+                "unitCount": len(pig.discover_units(root)),
+                "dryRun": dry_run,
+                "legacyProjection": legacy,
+            }
+        )
 
 
 def cmd_reconcile(root: Path, args: list[str]) -> None:
@@ -333,7 +370,7 @@ def _cmd_append_terminal_locked(root: Path, args: list[str], state: dict[str, An
 
 def main() -> None:
     if len(sys.argv) < 3:
-        fail("usage: wave_living_docs.py <root> <reconcile|append-terminal> [args...]")
+        fail("usage: wave_living_docs.py <root> <reconcile|append-terminal|regenerate-index|phase-status-live> [args...]")
     root = Path(sys.argv[1]).resolve()
     cmd = sys.argv[2]
     rest = sys.argv[3:]
@@ -343,6 +380,8 @@ def main() -> None:
         cmd_append_terminal(root, rest)
     elif cmd == "phase-status-live":
         cmd_phase_status_live(root, rest)
+    elif cmd == "regenerate-index":
+        cmd_regenerate_index(root, rest)
     else:
         fail(f"unknown command: {cmd}")
 
