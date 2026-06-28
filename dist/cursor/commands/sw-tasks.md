@@ -15,6 +15,7 @@ Task list from frozen PRD + amendment union.
 
 ## Procedure
 
+0. **Authoring-guard preflight (PRD 032 R5/R14)** — before the first substantive mutation on a planning unit, run `bash scripts/authoring-guard.sh preflight --path <unit-artifact> --command sw-tasks`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6).
 1. Verify PRD has `frozen: true`.
 2. Load `skills/tasks/SKILL.md`.
 3. Read effective requirements via `scripts/spec-union.sh <prd-path>`.

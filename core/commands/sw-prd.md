@@ -19,6 +19,7 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
 
 ## Procedure
 
+0. **Authoring-guard preflight (PRD 032 R5/R14)** — before the first substantive mutation on a planning unit, run `bash scripts/authoring-guard.sh preflight --path <unit-artifact> --command sw-prd`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6).
 1. Read `workflow.config.json` (`prdsDir`, `decisionsDir`); load `skills/prd/SKILL.md`.
 2. **Pre-work search (mandatory)** — before the first substantive mutation, run `memory-preflight` **pre-work
    search** per `skills/memory/SKILL.md` **Pre-work search (mandatory)** (scoped to the feature domain and

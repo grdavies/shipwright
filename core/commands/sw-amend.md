@@ -17,6 +17,7 @@ Post-freeze correction path. Parent stays byte-stable.
 
 ## Procedure
 
+0. **Authoring-guard preflight (PRD 032 R5/R14)** — before the first substantive mutation on a planning unit, run `bash scripts/authoring-guard.sh preflight --path <unit-artifact> --command sw-amend`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6).
 1. **Pre-work search (mandatory)** — before the first substantive mutation, run `memory-preflight` **pre-work
    search** per `skills/memory/SKILL.md` **Pre-work search (mandatory)** (scoped to the parent PRD/decision
    domain and amendment paths; classes `rule`, `decision`, `learning`, `code-context`, `design` via
