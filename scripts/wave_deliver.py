@@ -19,11 +19,15 @@ from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
 import doc_format
 
 PLAN_PATH_NAME = "sw-deliver-plan.json"
 STATE_PATH_NAME = "sw-deliver-state.json"
-SCRIPT_DIR = Path(__file__).resolve().parent
 
 _FALLBACK_TYPES = frozenset(
     {"feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"}
