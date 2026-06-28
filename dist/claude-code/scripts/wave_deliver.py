@@ -26,6 +26,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import doc_format
 import planning_paths
+import planning_path_redirect
 
 PLAN_PATH_NAME = "sw-deliver-plan.json"
 STATE_PATH_NAME = "sw-deliver-state.json"
@@ -671,6 +672,7 @@ def plan_combined(
 
 def resolve_task_list_path(root: Path, task_list: str) -> Path:
     """Resolve frozen task list inside the active worktree (R61)."""
+    task_list = planning_path_redirect.resolve_path(root, task_list)
     try:
         resolved = planning_paths.resolve_contained(root, task_list)
     except planning_paths.PathEscapeError as exc:

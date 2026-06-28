@@ -32,3 +32,13 @@ docs/*
 !docs/decisions/
 !docs/decisions/INDEX.md
 !docs/decisions/SUPERSEDED.log
+
+.cursor/planning-migration-reverse-map.json
+
+.cursor/planning-migration-gap-id-map.json
+
+.cursor/planning-path-redirect-map.json
+
+.cursor/planning-migration.lock
+
+.cursor/planning-migration-staging/
