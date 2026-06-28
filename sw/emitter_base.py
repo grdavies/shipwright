@@ -21,6 +21,7 @@ EXCLUDE_REL_PATHS = frozenset({"scripts/install.sh", *DEV_ONLY_SCRIPT_RELPATHS})
 
 SW_REFERENCE_CLOSED_EMIT = (
     "config.schema.json",
+    "planning-unit.schema.json",
     "layout.md",
     "workflow.config.example.json",
     "communication-routing.defaults.json",

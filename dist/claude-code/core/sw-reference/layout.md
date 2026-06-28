@@ -46,7 +46,6 @@ docs/decisions/
 │       └── dispatch-decisions.json
 ```
 
-
 ## Planning-unit model (PRD 031)
 
 Canonical frontmatter schema: `core/sw-reference/planning-unit.schema.json` (validated by
@@ -100,8 +99,6 @@ pre-commit and in CI.
 **Status precedence:** lifecycle consumers read `derived.status` when populated and fall back to structural
 `status`; gap units (`type: gap`) always use structural status only.
 
-
-
 ### Private INDEX rows (R33 — PRD 034 handoff)
 
 INDEX structural rows for `visibility: private` units carry **provisional** title metadata (`[provisional]` prefix)
@@ -117,6 +114,7 @@ Atomic release train (031 + 032 + 033) cutover gates:
 3. Run `scripts/relief-acceptance-check.sh` (derived INDEX status vs deliver state).
 4. Flip `planningDir` to `docs/planning`; regenerate planning INDEX + legacy projections.
 5. Run `scripts/planning_legacy_projection.py` to emit legacy `GAP-BACKLOG.md` + `INDEX.md` shims.
+6. Run `scripts/copy-to-core.sh` then `python3 -m sw generate --all` + emitter freshness fixtures (R25).
 
 **Kill-criteria / falsification (R28):** if PRD 032/033 slip past the release threshold or the reconciler
 misses the accuracy floor on the relief fixture corpus, fall back to shim + legacy layout; R10 supersession
@@ -265,8 +263,10 @@ reproduce from current sources.
 
 `workflow.config.json`:
 
-- `prdsDir`: `"docs/prds"` — PRD root (per-PRD subdirs live beneath).
-- `tasksDir`: `"docs/prds"` — task lists co-locate with their PRD (`docs/prds/<n>-<slug>/tasks-...`).
+- `planningDir`: `"docs/planning"` — canonical planning-unit tree (post-cutover; pre-cutover may remain
+  `docs/prds` until migration `--verify` passes).
+- `prdsDir`: `"docs/prds"` — legacy PRD directory alias (defaults to `docs/prds` until `planningDir` cutover).
+- `tasksDir`: `"docs/prds"` — frozen task-list alias (defaults to `prdsDir` until cutover).
 - `decisionsDir`: `"docs/decisions"` — decision-record root (flat files + sibling `.amendments/` dirs).
 - `delegation.mode`: `bind-only` | `heuristic` | `default` — selects delegate-by-default gate behavior
   (PRD 017; default `bind-only` until Phase-2 live acceptance, else `default`).

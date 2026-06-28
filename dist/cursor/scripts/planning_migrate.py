@@ -27,8 +27,30 @@ LOCK_REL = ".cursor/planning-migration.lock"
 STAGING_REL = ".cursor/planning-migration-staging"
 REVERSE_MAP_REL = ".cursor/planning-migration-reverse-map.json"
 GAP_MAP_REL = ".cursor/planning-migration-gap-id-map.json"
+SUPERSESSION_MAP_REL = ".cursor/planning-migration-supersession-map.json"
 REDIRECT_MAP_REL = planning_path_redirect.REDIRECT_MAP_REL
 FEEDBACK_CHECKLIST_REL = "docs/prds/FEEDBACK-CHECKLIST.md"
+LEGACY_PRE_034_TAG = "legacy-pre-034"
+
+# Cancelled point-fix PRDs → absorbing unit id (R10/R46). Edges are reversible (R28).
+CANCELLED_PRD_SUPERSESSION: dict[str, tuple[str, str]] = {
+    "025-in-loop-retrospection-and-adaptive-replanning": (
+        "superseded",
+        "prd-035-planning-autonomy-and-orchestration",
+    ),
+    "028-living-status-backlog-lifecycle": (
+        "superseded",
+        "prd-033-lifecycle-dependencies-and-scheduler",
+    ),
+    "029-doc-format-parser-robustness": (
+        "superseded",
+        "prd-031-planning-unit-model-and-migration",
+    ),
+    "030-spec-mutation-safety": (
+        "superseded",
+        "prd-032-planning-mutation-safety-guards",
+    ),
+}
 
 ALLOWED_TOUCH_PREFIXES = (
     "docs/",
@@ -53,11 +75,19 @@ class Relocation:
 
 
 @dataclass
+class SupersessionEdge:
+    cancelled_unit_id: str
+    absorbing_unit_id: str
+    status: str
+
+
+@dataclass
 class MigrationPlan:
     relocations: list[Relocation] = field(default_factory=list)
     gap_id_map: dict[str, str] = field(default_factory=dict)
     feedback_items: list[str] = field(default_factory=list)
     config_flip: dict[str, str] = field(default_factory=dict)
+    supersession_edges: list[SupersessionEdge] = field(default_factory=list)
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
@@ -112,6 +142,23 @@ def reverse_map_path(root: Path) -> Path:
 
 def gap_map_path(root: Path) -> Path:
     return git_root(root) / GAP_MAP_REL
+
+
+def supersession_map_path(root: Path) -> Path:
+    return git_root(root) / SUPERSESSION_MAP_REL
+
+
+def prd_dir_name_from_src(src_rel: str) -> str | None:
+    m = re.match(r"docs/prds/(\d+-[^/]+)/", src_rel.replace("\\", "/"))
+    return m.group(1) if m else None
+
+
+def cancelled_prd_supersession(prd_dir_name: str) -> tuple[str, str] | None:
+    return CANCELLED_PRD_SUPERSESSION.get(prd_dir_name)
+
+
+def private_profile_fields() -> dict[str, str]:
+    return {"visibility": "private", "tags": f"[{LEGACY_PRE_034_TAG}]"}
 
 
 def is_private_source(root: Path, src_rel: str) -> bool:
@@ -227,6 +274,16 @@ def discover_plan(root: Path) -> MigrationPlan:
                 continue
             unit_id = prd_unit_id(entry.name)
             dst_dir = f"docs/planning/prd/{unit_id}"
+            supersession = cancelled_prd_supersession(entry.name)
+            if supersession:
+                status, absorbing = supersession
+                plan.supersession_edges.append(
+                    SupersessionEdge(
+                        cancelled_unit_id=unit_id,
+                        absorbing_unit_id=absorbing,
+                        status=status,
+                    )
+                )
             for src_file in sorted(entry.rglob("*")):
                 if not src_file.is_file():
                     continue
@@ -455,16 +512,42 @@ def stage_relocations(root: Path, plan: MigrationPlan) -> Path:
                 fields = {"id": "gap-feedback-checklist", "type": "gap", "status": "open", "title": "Feedback checklist", "visibility": "public"}
             elif item.kind == "brainstorm":
                 uid = Path(item.dst).parent.name
-                fields = {"id": uid, "type": "brainstorm", "status": "proposed", "title": uid, "visibility": "private"}
+                fields = {"id": uid, "type": "brainstorm", "status": "proposed", "title": uid, **private_profile_fields()}
             elif item.kind == "decision":
                 uid = Path(item.dst).parent.name
-                fields = {"id": uid, "type": "decision", "status": "proposed", "title": uid, "visibility": "private"}
+                fields = {"id": uid, "type": "decision", "status": "proposed", "title": uid, **private_profile_fields()}
             elif item.kind == "prd-artifact":
                 uid = Path(item.dst).parent.name
-                fields = {"id": uid, "type": "prd", "status": "complete", "title": uid, "visibility": "public"}
+                prd_dir = prd_dir_name_from_src(item.src) or ""
+                supersession = cancelled_prd_supersession(prd_dir) if prd_dir else None
+                status = supersession[0] if supersession else "complete"
+                fields = {"id": uid, "type": "prd", "status": status, "title": uid, "visibility": "public"}
+                # Absorbing-unit edge applied in second pass via absorbs[]
             if fields.get("id"):
                 content = backfill_frontmatter(body_text, fields).encode("utf-8")
         dst.write_bytes(content)
+
+    for edge in plan.supersession_edges:
+        absorbing_dst = staging / "docs/planning/prd" / edge.absorbing_unit_id
+        if not absorbing_dst.is_dir():
+            continue
+        for body in sorted(absorbing_dst.glob("*.md")):
+            if body.name.startswith("tasks-"):
+                continue
+            text_body = body.read_text(encoding="utf-8")
+            fm = parse_frontmatter_fields(text_body)
+            absorbs = fm.get("absorbs", "")
+            if absorbs.startswith("[") and absorbs.endswith("]"):
+                items = [x.strip() for x in absorbs[1:-1].split(",") if x.strip()]
+            elif absorbs:
+                items = [absorbs]
+            else:
+                items = []
+            if edge.cancelled_unit_id not in items:
+                items.append(edge.cancelled_unit_id)
+            fm["absorbs"] = "[" + ", ".join(items) + "]"
+            body.write_text(backfill_frontmatter(text_body, fm), encoding="utf-8")
+            break
     return staging
 
 
@@ -518,6 +601,21 @@ def emit_operational_maps(root: Path, plan: MigrationPlan, *, after_commit: bool
         worktree / REDIRECT_MAP_REL,
         {"version": 1, "map": build_redirect_map(plan, root)},
     )
+    write_json(
+        supersession_map_path(root),
+        {
+            "version": 1,
+            "reversible": True,
+            "edges": [
+                {
+                    "cancelled": e.cancelled_unit_id,
+                    "absorbing": e.absorbing_unit_id,
+                    "status": e.status,
+                }
+                for e in plan.supersession_edges
+            ],
+        },
+    )
 
 
 def _git_head(worktree: Path) -> str:
@@ -563,6 +661,15 @@ def cmd_write(root: Path, *, force: bool = False, skip_commit: bool = False) -> 
     violations = scope_check(touched)
     if violations:
         fail("migration scope violation", violations=violations)
+    privacy_script = SCRIPT_DIR / "planning-privacy-guard.sh"
+    if privacy_script.is_file():
+        proc = subprocess.run(
+            ["bash", str(privacy_script), "--repo-root", str(git_root(root)), "--migration-staging"],
+            text=True,
+            capture_output=True,
+        )
+        if proc.returncode != 0:
+            fail("privacy guard rejected migration", stderr=proc.stderr, stdout=proc.stdout, exit_code=20)
     if not skip_commit:
         worktree = git_root(root)
         subprocess.run(["git", "-C", str(worktree), "add", "-A"], check=False)
@@ -618,6 +725,36 @@ def cmd_verify(root: Path) -> None:
     feedback_stored = gap_data.get("feedbackItems", [])
     if plan.feedback_items and feedback_stored != plan.feedback_items:
         errors.append("feedback checklist drift")
+    ss_data = load_json(supersession_map_path(root))
+    stored_edges = ss_data.get("edges", [])
+    for edge in plan.supersession_edges:
+        match = next(
+            (
+                e
+                for e in stored_edges
+                if e.get("cancelled") == edge.cancelled_unit_id
+                and e.get("absorbing") == edge.absorbing_unit_id
+            ),
+            None,
+        )
+        if not match:
+            errors.append(f"supersession map missing edge: {edge.cancelled_unit_id}")
+            continue
+        cancelled_dir = worktree / "docs/planning/prd" / edge.cancelled_unit_id
+        if cancelled_dir.is_dir():
+            body_files = [p for p in cancelled_dir.glob("*.md") if not p.name.startswith("tasks-")]
+            if body_files:
+                fm = parse_frontmatter_fields(body_files[0].read_text(encoding="utf-8"))
+                if fm.get("status") != edge.status:
+                    errors.append(f"cancelled PRD status drift: {edge.cancelled_unit_id}")
+        absorbing_dir = worktree / "docs/planning/prd" / edge.absorbing_unit_id
+        if absorbing_dir.is_dir():
+            body_files = [p for p in absorbing_dir.glob("*.md") if not p.name.startswith("tasks-")]
+            if body_files:
+                fm = parse_frontmatter_fields(body_files[0].read_text(encoding="utf-8"))
+                absorbs = fm.get("absorbs", "")
+                if edge.cancelled_unit_id not in absorbs:
+                    errors.append(f"absorbing unit missing absorbs edge: {edge.absorbing_unit_id}")
     if errors:
         fail("verify failed", errors=errors, exit_code=20)
     emit({"verdict": "pass", "mode": "verify", "checked": len(plan.relocations)})
@@ -643,7 +780,12 @@ def cmd_rollback(root: Path, *, force: bool = False) -> None:
             dst.unlink()
         if src_rel.endswith(".md") and not src.parent.exists():
             src.parent.mkdir(parents=True, exist_ok=True)
-    for map_path in (reverse_map_path(root), gap_map_path(root), worktree / REDIRECT_MAP_REL):
+    for map_path in (
+        reverse_map_path(root),
+        gap_map_path(root),
+        supersession_map_path(root),
+        worktree / REDIRECT_MAP_REL,
+    ):
         if map_path.is_file():
             map_path.unlink()
     release_lock(root)

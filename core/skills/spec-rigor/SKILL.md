@@ -23,6 +23,21 @@ panel) — structural gates run **after** panel synthesis and **before** `/sw-fr
 **Analyze** and **traceability** always run before task-list freeze — every tier that reaches tasks needs
 spec↔task consistency and R-ID→test coverage.
 
+
+## Structural tokenizer (PRD 031)
+
+All spec-rigor and traceability parsing flows through the shared doc-format tokenizer
+(`scripts/doc_format.py` via `scripts/doc-format-normalize.sh`). Before freeze:
+
+- `bash scripts/doc-format-normalize.sh --check <path>` — fail-closed `file:line` diagnostics.
+- `bash scripts/doc-format-normalize.sh --write <path>` — shape-only canonicalization (idempotent).
+
+Authoring commands emit slot-filling templates matching the canonical shape; non-empty directive keys
+(`absorbs`/`supersedes`/`retracts`) that yield zero parsed ids fail closed.
+
+Paths resolve through `planningDir` from `workflow.config.json` (legacy `prdsDir`/`tasksDir` aliases
+pre-cutover). See `core/sw-reference/layout.md` for the unit tree and INDEX regions.
+
 ## Passes
 
 ### Clarify (ambiguity — Full, pre-PRD-freeze)
@@ -62,12 +77,12 @@ Via `scripts/traceability-check.sh`:
 ## Canonical scripts
 
 ```bash
-# Pre-PRD-freeze (pass --tier full|standard)
-bash scripts/spec-rigor-check.sh --artifact prd --path docs/prds/.../prd.md --tier full
+# Pre-PRD-freeze (pass --tier full|standard) — paths relative to planningDir or legacy prdsDir
+bash scripts/spec-rigor-check.sh --artifact prd --path <planningDir>/prd/prd-031-.../prd-031-....md --tier full
 
 # Pre-task-freeze
-bash scripts/spec-rigor-check.sh --artifact tasks --path docs/prds/.../tasks.md --prd docs/prds/.../prd.md
-bash scripts/traceability-check.sh --prd docs/prds/.../prd.md --tasks docs/prds/.../tasks.md
+bash scripts/spec-rigor-check.sh --artifact tasks --path <planningDir>/prd/prd-031-.../tasks-prd-031-....md --prd <prd-body>
+bash scripts/traceability-check.sh --prd <prd-body> --tasks <tasks-path>
 ```
 
 ### Verdict contract
