@@ -2,7 +2,8 @@
 # Derive PRD living status from git + INDEX + task checkboxes; reconcile INDEX; append completion log.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+_PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(git -C "${PWD}" rev-parse --show-toplevel 2>/dev/null || echo "$_PLUGIN_ROOT")"
 
 usage() {
   cat <<'EOF'
