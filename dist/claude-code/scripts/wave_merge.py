@@ -599,7 +599,7 @@ def cmd_phase_dispatch_env(root: Path, args: list[str]) -> None:
     from wave_phase_pr import resolve_phase_pr_base
     phase_pr_base = resolve_phase_pr_base(root)
     if phase_pr_base.get("verdict") != "ok":
-        fail(phase_pr_base.get("error", "phase-pr-base"), exit_code=20, **phase_pr_base)
+        fail_payload(phase_pr_base, "phase-pr-base", exit_code=20)
     integration = phase_pr_base.get("integrationBranch") or ""
     emit(
         {
