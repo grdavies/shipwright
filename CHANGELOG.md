@@ -119,6 +119,7 @@
 * merge phase shared-authoring-guard-preflight-handoff-route-m into feat/planning-feedback-lifecycle (be102df) <!-- sw-deliver:shared-authoring-guard-preflight-handoff-route-m -->
 * merge phase completed-unit-immutability-l into feat/planning-feedback-lifecycle (2dc12d2) <!-- sw-deliver:completed-unit-immutability-l -->
 * merge phase doc-impact-acceptance-criteria-m into feat/planning-feedback-lifecycle (181a0d1) <!-- sw-deliver:doc-impact-acceptance-criteria-m -->
+* merge phase emitter-dist-parity-s into feat/planning-feedback-lifecycle (415a998) <!-- sw-deliver:emitter-dist-parity-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
