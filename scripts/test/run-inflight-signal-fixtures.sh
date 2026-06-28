@@ -198,5 +198,124 @@ TMP6=$(mktemp -d)
   set -e
   [[ "$EC2" -ne 0 ]]
 ) && ok "inflight-tuple-no-secret" || bad "inflight-tuple-no-secret"
+REC="$ROOT/scripts/inflight_reconcile.py"
+CLR="$ROOT/scripts/clear-inflight.sh"
+
+write_tuple_direct() {
+  local repo="$1" unit="$2" run_id="$3" branch="$4" epoch="${5:-1}"
+  python3 - "$repo" "$ROOT/scripts" "$unit" "$run_id" "$branch" "$epoch" <<'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[2])
+from inflight_signal import InflightTuple, write_tuples
+root = Path(sys.argv[1])
+write_tuples(root, {
+    sys.argv[3]: InflightTuple(
+        run_id=sys.argv[4],
+        epoch=int(sys.argv[6]),
+        branch=sys.argv[5],
+    )
+}, dry_run=False)
+PY
+}
+
+# --- branch-absence-alone-no-clear (R3) ---
+TMP7=$(mktemp -d)
+(
+  cd "$TMP7"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  seed_repo "$TMP7"
+  git add docs/planning && git commit -q -m "seed"
+  mkdir -p .cursor
+  cat > .cursor/sw-deliver-state.live.json <<'JSON'
+{"verdict":"running","target":{"branch":"feat/gone"},"inflightLease":{"runId":"deliver-live","epoch":1}}
+JSON
+  write_tuple_direct "$TMP7" prd-031-planning-unit-model deliver-live feat/gone 1
+  OUT=$(python3 "$REC" "$TMP7" reconcile)
+  echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['verdict']=='pass'
+assert not d['cleared'], d
+a=[x for x in d['assessments'] if x['unit']=='prd-031-planning-unit-model'][0]
+assert a['verdict']=='warn-live-branch-missing', a
+assert not a['clearable'], a
+"
+  cat > .cursor/sw-deliver-state.live.json <<'JSON'
+{"verdict":"complete","target":{"branch":"feat/gone"},"inflightLease":{"runId":"deliver-live","epoch":1}}
+JSON
+  OUT2=$(python3 "$REC" "$TMP7" reconcile)
+  echo "$OUT2" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['cleared'], d
+assert d['cleared'][0]['verdict']=='clear-terminal', d
+"
+  AFTER=$(python3 "$PY" "$TMP7" read --unit prd-031-planning-unit-model)
+  echo "$AFTER" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['tuple'] is None"
+) && ok "branch-absence-alone-no-clear" || bad "branch-absence-alone-no-clear"
+rm -rf "$TMP7"
+
+# --- inflight-ttl-autoclear-audit (R4) ---
+TMP8=$(mktemp -d)
+(
+  cd "$TMP8"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  seed_repo "$TMP8"
+  git add docs/planning && git commit -q -m "seed"
+  write_tuple_direct "$TMP8" prd-031-planning-unit-model deliver-orphan feat/deleted-branch 1
+  OUT=$(python3 "$REC" "$TMP8" reconcile)
+  echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['cleared'], d
+assert d['cleared'][0]['verdict']=='clear-ttl', d
+"
+  python3 -c "
+import json
+from pathlib import Path
+lines=Path('.cursor/inflight-reconcile-audit.jsonl').read_text().strip().splitlines()
+entry=json.loads(lines[-1])
+assert entry['action']=='auto-clear'
+assert entry['who'] and entry['when'] and entry['reason']
+"
+) && ok "inflight-ttl-autoclear-audit" || bad "inflight-ttl-autoclear-audit"
+rm -rf "$TMP8"
+
+# --- clear-inflight-manual (R4) ---
+TMP9=$(mktemp -d)
+(
+  cd "$TMP9"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  seed_repo "$TMP9"
+  git add docs/planning && git commit -q -m "seed"
+  mkdir -p .cursor
+  cat > .cursor/sw-deliver-state.blocked.json <<'JSON'
+{"verdict":"running","target":{"branch":"feat/still-live"},"inflightLease":{"runId":"deliver-blocked","epoch":1}}
+JSON
+  write_tuple_direct "$TMP9" prd-031-planning-unit-model deliver-blocked feat/still-live 1
+  OUT=$(python3 "$REC" "$TMP9" manual-clear --unit prd-031-planning-unit-model --reason "operator escape hatch test")
+  echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['verdict']=='pass' and d['cleared'] is True, d
+"
+  AFTER=$(python3 "$PY" "$TMP9" read --unit prd-031-planning-unit-model)
+  echo "$AFTER" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['tuple'] is None"
+  python3 -c "
+import json
+from pathlib import Path
+entry=json.loads(Path('.cursor/inflight-reconcile-audit.jsonl').read_text().strip().splitlines()[-1])
+assert entry['action']=='manual-clear'
+assert entry['reason']=='operator escape hatch test'
+"
+) && ok "clear-inflight-manual" || bad "clear-inflight-manual"
+rm -rf "$TMP9"
 
 exit "$FAIL"

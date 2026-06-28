@@ -4,6 +4,11 @@
   "stateFile": ".git/shipwright.json",
   "agentsFile": "AGENTS.md",
   "planningDir": "docs/planning",
+  "planning": {
+    "inFlight": {
+      "stalenessTtlHours": 72
+    }
+  },
   "prdsDir": "docs/prds",
   "decisionsDir": "docs/decisions",
   "tasksDir": "docs/prds",
@@ -54,7 +59,12 @@
         "enrich": "off"
       },
       "gate": {
-        "surface": ["P0", "P1", "P2", "P3"],
+        "surface": [
+          "P0",
+          "P1",
+          "P2",
+          "P3"
+        ],
         "haltOn": []
       }
     }

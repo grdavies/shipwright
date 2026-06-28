@@ -854,6 +854,26 @@
       "type": "string",
       "default": "docs/planning",
       "description": "Canonical planning-unit home (R5). Legacy prdsDir/tasksDir aliases retain docs/prds until migration cutover."
+    },
+    "planning": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Planning-unit guard and inFlight signal settings (PRD 032).",
+      "properties": {
+        "inFlight": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Committed inFlight tuple reconcile and staleness policy.",
+          "properties": {
+            "stalenessTtlHours": {
+              "type": "number",
+              "minimum": 0,
+              "default": 72,
+              "description": "Auto-clear orphan tuples when branch is missing, run-id is absent from the registry, and porcelain deliver state is missing or older than this TTL (R4)."
+            }
+          }
+        }
+      }
     }
   }
 }
