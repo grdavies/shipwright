@@ -80,6 +80,26 @@ docs/planning/
   — never a table row index, filesystem path alone, or positional reference.
 - Gap units use the same id discipline (e.g. `gap-045-sample`) — they are not anonymous backlog rows.
 
+### Unified INDEX schema (R5/R9/R24)
+
+`docs/planning/INDEX.md` is the **single generated unified INDEX** produced from unit frontmatter by
+`scripts/planning_index_gen.py`. It is never hand-maintained.
+
+The INDEX carries three disjoint regions (HTML comment markers):
+
+| Region | Owner | Purpose |
+|--------|-------|---------|
+| `structural` | INDEX generator | Rows from unit frontmatter (`id`, `type`, `title`, `status`, `visibility`, edges) |
+| `derived` | reconciler (PRD 033) | Derived lifecycle status per unit — empty schema slot at cutover |
+| `inFlight` | deliver writer (PRD 032) | Committed in-flight tuple per active unit — empty schema slot at cutover |
+
+**Read-merge-write:** every writer parses the existing INDEX and preserves non-owned regions **byte-for-byte**.
+Full-file regen that drops a sibling region is prohibited; `scripts/index-region-guard.sh` enforces this on
+pre-commit and in CI.
+
+**Status precedence:** lifecycle consumers read `derived.status` when populated and fall back to structural
+`status`; gap units (`type: gap`) always use structural status only.
+
 ### Gaps as first-class units (R3)
 
 Gap artifacts are planning units with `type: gap` (folder + frontmatter). They **replace** `GAP-BACKLOG.md`
