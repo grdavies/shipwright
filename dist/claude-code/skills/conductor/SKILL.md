@@ -158,6 +158,16 @@ a phase is `in-flight` with remediation budget remaining, do not scope-pause.
 After `dispatch-ship` or `dispatch-batch`, emit no user-visible text until every dispatched phase has
 terminal `status.json`. Poll per **Parallel-wave completion wait** when `awaitInFlight: true`.
 
+### Terminal transition (R14/R16 at terminal boundary)
+
+The `retrospective` and `terminal-ship` driver actions are **awaitAgent-non-optional**: while
+`verdict: running`, the conductor performs each terminal step and re-invokes `deliver-loop` in the
+**same turn** — never end the turn between them.
+
+At this boundary the **no-status-pause** prohibition (R14) applies with full force: do not emit a
+wave-complete status update combined with a scope-confirmation or resume prompt. Terminal remediation
+context belongs in `run.log` / consolidated halt reports only.
+
 ### Driver-detected halts only (R28)
 
 Subjective ambiguity is not an inline halt. Only driver-detected conditions qualify; other uncertainty

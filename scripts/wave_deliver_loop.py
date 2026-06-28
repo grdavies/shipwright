@@ -46,6 +46,7 @@ from wave_merge import (
     status_file_for,
 )
 from wave_state import (
+    TERMINAL_PHASE_STATUSES,
     append_log as state_append_log,
     load_deliver_state,
     resolve_state_path,
@@ -100,7 +101,7 @@ DEFAULT_PHASE_TIMEOUT_MIN = int(os.environ.get("SW_PHASE_TIMEOUT_MINUTES", "240"
 DEFAULT_BACKGROUND_TASK_TIMEOUT_MIN = int(
     os.environ.get("SW_BACKGROUND_TASK_TIMEOUT_MINUTES", "120")
 )
-MERGED_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
+MERGED_PHASE_STATUSES = TERMINAL_PHASE_STATUSES  # re-export (R1); do not redefine locally
 DEFAULT_MAX_ITERATIONS = 500
 DEFAULT_NO_PROGRESS_THRESHOLD = 3
 PROPOSAL_OVERHEAD_ACTIONS = frozenset({"wave-plan-persist", "phase-plan-entry"})
