@@ -90,6 +90,23 @@
         "brainstorm-durable-commit",
         "durability-reconcile-prd013"
       ]
+    },
+    {
+      "id": "planning-unit-fixtures",
+      "script": "scripts/test/run-planning-unit-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-unit-fixtures",
+      "scenarios": [
+        "schema-fields-and-type-enum",
+        "unit-folder-and-id-stability",
+        "gap-unit-in-unified-index",
+        "status-type-conditioned",
+        "cross-enum-token-rejected",
+        "status-enum-stub",
+        "validate-unknown-key",
+        "validate-tracked-private-rejected"
+      ]
     }
   ]
 }
