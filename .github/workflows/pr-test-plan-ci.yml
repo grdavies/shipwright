@@ -209,3 +209,14 @@ jobs:
       - name: Run completed-unit-fixtures
         run: bash scripts/test/run-completed-unit-fixtures.sh
 
+  feat-test-plan-inflight-doc-currency-fixtures:
+    name: feat-test-plan-inflight-doc-currency-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run inflight-doc-currency-fixtures
+        run: bash scripts/test/run-inflight-doc-currency-fixtures.sh
+

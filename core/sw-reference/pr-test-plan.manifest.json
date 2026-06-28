@@ -259,6 +259,16 @@
         "complete-flip-toctou-caught",
         "completed-hook-graceful-degrade-warns"
       ]
+    },
+    {
+      "id": "inflight-doc-currency-fixtures",
+      "script": "scripts/test/run-inflight-doc-currency-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-inflight-doc-currency-fixtures",
+      "scenarios": [
+        "inflight-doc-currency"
+      ]
     }
   ]
 }
