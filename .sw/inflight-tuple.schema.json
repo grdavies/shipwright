@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/grdavies/shipwright/core/sw-reference/inflight-tuple.schema.json",
+  "title": "Shipwright planning INDEX inFlight tuple",
+  "description": "Committed metadata tuple for an active deliver run (PRD 032 R1/R13). Lifecycle status is derived by PRD 033 — never stored here.",
+  "oneOf": [
+    { "$ref": "#/$defs/cleartextTuple" },
+    { "$ref": "#/$defs/opaqueTokenTuple" }
+  ],
+  "$defs": {
+    "cleartextTuple": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "branch", "epoch"],
+      "properties": {
+        "unitId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Planning unit id this tuple binds to."
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Durable deliver run identifier (authoritative lease key)."
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Implementing feature branch (cleartext; interim exposure for non-private units until PRD 034 redaction)."
+        },
+        "epoch": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Optimistic concurrency generation; increments on each write."
+        }
+      }
+    },
+    "opaqueTokenTuple": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "branchToken", "epoch"],
+      "properties": {
+        "unitId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "branchToken": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8,64}$",
+          "description": "Opaque hashed branch suffix reserved for PRD 034 private-unit redaction (R13)."
+        },
+        "epoch": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

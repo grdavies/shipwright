@@ -15,6 +15,7 @@ Task list from frozen PRD + amendment union.
 
 ## Procedure
 
+0. **Authoring-guard preflight (PRD 032 R5/R14)** — before the first substantive mutation on a planning unit, run `bash scripts/authoring-guard.sh preflight --path <unit-artifact> --command sw-tasks`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6).
 1. Verify PRD has `frozen: true`.
 2. Load `skills/tasks/SKILL.md`.
 3. Read effective requirements via `scripts/spec-union.sh <prd-path>`.
@@ -33,6 +34,8 @@ Task list from frozen PRD + amendment union.
 
 ## Guardrails
 
+- **Complete-unit refusal (R9):** mutations under a `status: complete` unit folder are rejected by the
+  completed-unit immutability hook (`hooks/pre-commit-completed-unit.sh`; see `/sw-freeze`).
 - Single-pass generation — complete list (parent phases, executable sub-tasks, traceability) with no
   user-intervention gate.
 - Overwrite of an existing **frozen** task list still requires explicit confirmation before replacing.

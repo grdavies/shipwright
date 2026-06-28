@@ -113,6 +113,13 @@
 * merge phase migration-tool-held-lock-redirect-map-verification-fixture-l into feat/planning-feedback-lifecycle (4e07f38) <!-- sw-deliver:migration-tool-held-lock-redirect-map-verification-fixture-l -->
 * merge phase atomic-cutover-phase-b-relocation-supersession-privacy-projections-kill-criteria-l into feat/planning-feedback-lifecycle (e544b75) <!-- sw-deliver:atomic-cutover-phase-b-relocation-supersession-privacy-projections-kill-criteria-l -->
 * merge phase documentation-currency-dist-propagation-no-regression-memory-guardrails-l into feat/planning-feedback-lifecycle (3ea0b85) <!-- sw-deliver:documentation-currency-dist-propagation-no-regression-memory-guardrails-l -->
+* merge phase committed-in-flight-signal-writer-l into feat/planning-feedback-lifecycle (e5f9234) <!-- sw-deliver:committed-in-flight-signal-writer-l -->
+* merge phase self-heal-staleness-ttl-escape-hatch-m into feat/planning-feedback-lifecycle (19a46ba) <!-- sw-deliver:self-heal-staleness-ttl-escape-hatch-m -->
+* merge phase migration-bridge-backfill-s into feat/planning-feedback-lifecycle (c3e7c06) <!-- sw-deliver:migration-bridge-backfill-s -->
+* merge phase shared-authoring-guard-preflight-handoff-route-m into feat/planning-feedback-lifecycle (be102df) <!-- sw-deliver:shared-authoring-guard-preflight-handoff-route-m -->
+* merge phase completed-unit-immutability-l into feat/planning-feedback-lifecycle (2dc12d2) <!-- sw-deliver:completed-unit-immutability-l -->
+* merge phase doc-impact-acceptance-criteria-m into feat/planning-feedback-lifecycle (181a0d1) <!-- sw-deliver:doc-impact-acceptance-criteria-m -->
+* merge phase emitter-dist-parity-s into feat/planning-feedback-lifecycle (415a998) <!-- sw-deliver:emitter-dist-parity-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
