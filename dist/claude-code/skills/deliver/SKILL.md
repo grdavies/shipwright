@@ -498,8 +498,11 @@ scripts/wave.sh ack check|complete|status           # optional cadence (deliver.
 
 - **No `integration/<stamp>`** in phase-mode — one terminal PR only (R22).
 - **Rejected terminal** (`terminal deny`): resume must not re-present the same PR (R46).
-- **INDEX.md** uses only `not-started` / `complete` — never `in-progress` (R43). Run-state binds
-  `source_task_list` + `prd_number`; wave run does not freeze INDEX to in-progress.
+- **INDEX `inFlight` region (PRD 032):** deliver run-start writes a committed tuple (`runId`, `branch`,
+  `leaseEpoch`) under the living-doc single-writer lock after `lock-acquire` / before `orchestrator-provision`;
+  cleared at run completion. Lifecycle `in-progress` is **not** stored in the tuple — PRD 033 derives it.
+  Legacy `docs/prds/INDEX.md` uses only `not-started` / `complete` for PRD rows (R43).
+- **Run-state** binds `source_task_list` + `prd_number`; wave run does not mutate legacy INDEX status to in-progress.
 - **`deliver.phaseAckCadence: K`** (default `0`): pause for human `ack complete` after every K phase merges (R56).
 
 ### Terminal autonomy — amendment A1 (PRD 013 R20–R27)

@@ -1188,6 +1188,30 @@ def compute_next_action(
     }
 
 
+def run_inflight_signal(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
+    script = root / "scripts" / "inflight-signal.sh"
+    if not script.is_file():
+        return 2, {"verdict": "fail", "error": "inflight-signal.sh missing"}
+    proc = subprocess.run(
+        ["bash", str(script), *args],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+    )
+    data: dict[str, Any] = {}
+    if proc.stdout.strip():
+        try:
+            parsed = json.loads(proc.stdout)
+            if isinstance(parsed, dict):
+                data = parsed
+        except json.JSONDecodeError:
+            data = {"raw": proc.stdout.strip()}
+    if proc.stderr.strip():
+        data.setdefault("stderr", proc.stderr.strip())
+    data["exitCode"] = proc.returncode
+    return proc.returncode, data
+
+
 def run_wave(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
     proc = subprocess.run(
         ["bash", str(root / "scripts/wave.sh"), *args],
@@ -1504,6 +1528,17 @@ def execute_mechanical(
         ec, data = run_wave(root, "completion", "finalize-if-merged")
         if ec != 0:
             fail_payload(data, "finalize completion failed", ec)
+        state.update(load_state(root))
+        target = (state.get("target") or {}).get("branch")
+        task_list = task_list_from(state, plan)
+        clear_args = ["run-complete"]
+        if target:
+            clear_args.extend(["--target", str(target)])
+        if task_list:
+            clear_args.extend(["--task-list", str(task_list)])
+        clear_ec, clear_data = run_inflight_signal(root, *clear_args)
+        if clear_ec != 0:
+            fail_payload(clear_data, "inflight clear failed", clear_ec)
         state.update(load_state(root))
         cleanup_payload: dict[str, Any] | None = None
         try:
