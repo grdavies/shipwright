@@ -462,3 +462,14 @@ jobs:
       - name: Run planning-related-fixtures
         run: bash scripts/test/run-planning-related-fixtures.sh
 
+  feat-test-plan-two-track-fixtures:
+    name: feat-test-plan-two-track-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run two-track-fixtures
+        run: bash scripts/test/run-two-track-fixtures.sh
+
