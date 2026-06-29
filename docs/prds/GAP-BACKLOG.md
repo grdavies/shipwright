@@ -48,7 +48,7 @@ table row numbers. When appending, use the next ID: **`GAP-071`**.
 | GAP-029 | planned | Conductor paused mid-phase during `dispatch-ship` (incomplete ship work  |
 | GAP-030 | planned | Phase worktrees not torn down immediately after `green-merged` — linger  |
 | GAP-031 | planned | Pre-work memory search not a categorical, enforced obligation (consisten |
-| GAP-032 | planned | `copy-to-core.sh` destructive sync vs split source-of-truth (investigate |
+| GAP-032 | resolved — PRD 038 | `copy-to-core.sh` destructive sync vs split source-of-truth — closed by SoT manifest + fail-closed orphans |
 | GAP-033 | resolved | `/sw-cleanup` apply order deletes branches before worktrees — predictabl |
 | GAP-034 | resolved |  `merged_status()` in `cleanup_lib.py` classifies branches via ancestor- |
 | GAP-035 | resolved | Phase-mode `/sw-ship` opens orphan PR to `main` — deliver merges locally |
@@ -72,7 +72,7 @@ table row numbers. When appending, use the next ID: **`GAP-071`**.
 | GAP-053 | planned | PRD-unit INDEX status staleness (merged-to-`main` units marked `not-started`: 013/017/018/023) is a **distinct surface** from GAP-043/046 (gap-rows) — covered only *implicitly* by PRD 033 R2/R22; plus a COMPLETION-LOG post-merge logging gap (018 missing PR #87 line) that would defeat any log-based `complete` derivation — **absorbed by PRD 033 A1 (R29/R35)** |
 | GAP-055 | planned | Post-merge completion-state bypass disables `finalize-if-merged` and cascades to manual `reconcile` on `main` (PRD 036) — **absorbed by PRD 033 A1 (R33–R35)** |
 | GAP-056 | planned | Repo-root `.cursor/` writes during deliver look like `main` mutations — intentional canonical state vs cwd/isolation bugs (PRD 036) |
-| GAP-054 | partially resolved | `scripts/host_github.sh` mirror drift — `scripts/` (PR #178 `merged_at` fix) ahead of `core/`+`dist/`+golden, which are stale-but-mutually-consistent; CI cannot catch it (no `core`↔`dist` gate in `ci.yml`; parity only checks `dist`↔golden) so any build-chain run silently surfaces it |
+| GAP-054 | resolved — PRD 038 | `scripts/`↔`core/scripts/` parity wired into CI + verify.test; one-shot resync cleared latent drift |
 | GAP-057 | planned | No sanctioned post-merge refresh path for an already-merged frozen task list when an amendment adds requirements — `check-frozen.sh` blocked it (PRD 013's pre-merge refresh worked only because the task list was an added file). Bridged by two scoped `check-frozen.sh` exceptions (format-normalization-only; amendment-companion task-list); durable design (re-freeze contract + PRD 031 tokenizer) deferred |
 | GAP-058 | planned | PRD 033 deliver: conductor ends turn on `awaitAgent: true` instead of same-turn `deliver-loop` re-invoke (R13 recurrence) |
 | GAP-059 | planned | PRD 033 deliver: parallel waves 6+7 golden-manifest / generated CI workflow conflict — union fixture jobs + regen on integration |
