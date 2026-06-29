@@ -53,3 +53,6 @@ docs/planning/decision/**/*
 !docs/planning/decision/SUPERSEDED.log
 
 .cursor/planning-migration-supersession-map.json
+
+# PRD 034 R8 — provision-time materialized private spec bodies (worktree-only, never committed)
+.cursor/planning-materialized/
