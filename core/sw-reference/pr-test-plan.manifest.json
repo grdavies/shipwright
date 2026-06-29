@@ -484,7 +484,9 @@
         "failclosed-unknown-visibility",
         "index-redaction-opaque-title",
         "emission-callsite-map-bypass-fails",
-        "spec-seed-visibility-route"
+        "spec-seed-visibility-route",
+        "gitignore-visibility-no-private-bytes",
+        "decision-sot-inflight-redaction"
       ]
     },
     {

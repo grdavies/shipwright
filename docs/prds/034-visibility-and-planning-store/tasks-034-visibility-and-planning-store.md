@@ -178,7 +178,7 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
 
 ### 5. PRD-015 reconciliation + `.gitignore` generation + 032 handoff — M
 
-- [ ] 5.1 Visibility-driven `.gitignore` generator + tracked-private reject (R13)
+- [x] 5.1 Visibility-driven `.gitignore` generator + tracked-private reject (R13)
   - **File:** `scripts/gitignore-generate.sh`, `scripts/planning-unit-validate.sh`, `.gitignore`
   - **Expected:** `.gitignore` is generated from the visibility resolver (track frontmatter stubs + public
     bodies only), reconciling the PRD-015 committed-snapshot vs `.gitignore` conflict; the migration verifier
@@ -186,7 +186,7 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
     `visibility: private` unit whose body path is tracked. Fixture `gitignore-visibility-no-private-bytes`
     proves zero private bytes tracked and a tracked private body is rejected.
   - **R-IDs:** R13
-- [ ] 5.2 PRD-015 decision SoT + 032 in-flight redaction handoff (R12)
+- [x] 5.2 PRD-015 decision SoT + 032 in-flight redaction handoff (R12)
   - **File:** `scripts/memory-decision-snapshot.sh`, `scripts/planning_visibility.py` (inFlight tuple redaction)
   - **Expected:** the memory backend is body-storage only and does not alter source-of-truth; for
     `decision`-class units the PRD-015 always-committed redacted snapshot + pointer flow runs regardless of

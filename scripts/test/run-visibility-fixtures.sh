@@ -210,6 +210,130 @@ else
   bad "spec-seed-visibility-route:private-skipped"
 fi
 
+# --- gitignore-visibility-no-private-bytes (R13) ---
+GITIGN="$ROOT/scripts/gitignore-generate.sh"
+VALIDATOR="$ROOT/scripts/planning-unit-validate.sh"
+TMP_G=$(mktemp -d)
+(
+  cd "$TMP_G"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  mkdir -p docs/planning/prd/prd-001-public-spec docs/planning/brainstorm/brainstorm-001-private-topic
+  cat > docs/planning/prd/prd-001-public-spec/prd-001-public-spec-prd-public-spec.md <<'MD'
+---
+id: prd-001-public-spec
+type: prd
+status: proposed
+title: Public spec
+visibility: public
+---
+# Public PRD body
+MD
+  cat > docs/planning/brainstorm/brainstorm-001-private-topic/brainstorm-001-private-topic.md <<'MD'
+---
+id: brainstorm-001-private-topic
+type: brainstorm
+status: proposed
+title: Private brainstorm
+visibility: private
+---
+# PRIVATE_GOLDEN_MARKER_XYZ secret brainstorm body
+MD
+  bash "$GITIGN" --repo-root "$TMP_G" generate --write >/dev/null
+  git add .gitignore docs/planning/prd/prd-001-public-spec/prd-001-public-spec-prd-public-spec.md
+  if OUT=$(bash "$GITIGN" --repo-root "$TMP_G" verify-index 2>&1); then
+    echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='pass'"
+  else
+    echo "$OUT" >&2
+    exit 1
+  fi
+  git add -f docs/planning/brainstorm/brainstorm-001-private-topic/brainstorm-001-private-topic.md
+  set +e
+  OUT=$(bash "$GITIGN" --repo-root "$TMP_G" verify-index 2>&1)
+  EC=$?
+  set -e
+  [[ "$EC" -ne 0 ]] || { echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='fail'" || exit 1; }
+  if OUT=$(bash "$VALIDATOR" --path docs/planning/brainstorm/brainstorm-001-private-topic/brainstorm-001-private-topic.md --repo-root "$TMP_G" 2>/dev/null || true); then
+    echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='fail'"
+  else
+    exit 1
+  fi
+) && ok "gitignore-visibility-no-private-bytes" || bad "gitignore-visibility-no-private-bytes"
+rm -rf "$TMP_G"
+
+# --- decision-sot-inflight-redaction (R12) ---
+SNAP="$ROOT/scripts/memory-decision-snapshot.sh"
+INFL="$ROOT/scripts/inflight_signal.py"
+PIG="$ROOT/scripts/planning_index_gen.py"
+TMP_D=$(mktemp -d)
+(
+  cd "$TMP_D"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  mkdir -p docs/decisions docs/planning/decision/decision-001-memory-sot docs/planning/prd/prd-034-visibility
+  cat > docs/decisions/001-memory-sot.md <<'MD'
+---
+id: decision-001-memory-sot
+type: decision
+status: accepted
+title: Memory visibility decision
+visibility: memory
+---
+Sensitive decision rationale with TOKEN_LIKE_SECRET_abc123
+MD
+  cat > docs/planning/decision/decision-001-memory-sot/decision-001-memory-sot.md <<'MD'
+---
+id: decision-001-memory-sot
+type: decision
+status: accepted
+title: Memory visibility decision
+visibility: memory
+---
+Sensitive planning-unit body
+MD
+  cat > docs/planning/prd/prd-034-visibility/prd-034-visibility-prd-034-visibility.md <<'MD'
+---
+id: prd-034-visibility
+type: prd
+status: planned
+title: Visibility PRD
+visibility: public
+---
+MD
+  python3 "$PIG" "$TMP_D" generate --writer generator >/dev/null
+  git add docs/planning docs/decisions
+  git commit -q -m "seed decision fixture"
+  mkdir -p .cursor
+  cat > .cursor/sw-deliver-state.json <<'JSON'
+{"verdict":"running","target":{"branch":"feat/codename-nightingale"},"source_task_list":"docs/prds/034/tasks.md"}
+JSON
+  OUT=$(bash "$SNAP" write --path docs/decisions/001-memory-sot.md --root "$TMP_D")
+  echo "$OUT" | python3 -c "
+import json,sys
+from pathlib import Path
+d=json.load(sys.stdin)
+assert d['verdict']=='pass'
+assert d.get('alwaysCommitted') is True
+assert d.get('unitVisibility')=='memory'
+text=Path('docs/decisions/001-memory-sot.md').read_text()
+assert 'authoritative:' in text
+"
+  WOUT=$(python3 "$INFL" "$TMP_D" run-start --target feat/codename-nightingale --unit decision-001-memory-sot --run-id deliver-memory-sot --branch feat/codename-nightingale --commit)
+  echo "$WOUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='pass'"
+  ROUT=$(python3 "$INFL" "$TMP_D" read --unit decision-001-memory-sot)
+  echo "$ROUT" | python3 -c "
+import json,sys
+t=json.load(sys.stdin)['tuple']
+assert t is not None
+assert 'branch' not in t or t.get('branch') is None
+assert t.get('branchToken')
+assert t.get('runId') != 'deliver-memory-sot'
+"
+) && ok "decision-sot-inflight-redaction" || bad "decision-sot-inflight-redaction"
+rm -rf "$TMP_D"
+
 if [[ "$FAIL" -ne 0 ]]; then
   echo "visibility fixtures: FAIL"
   exit 1

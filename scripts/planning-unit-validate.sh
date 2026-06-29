@@ -147,14 +147,14 @@ def is_git_tracked(file_path: Path) -> bool:
 
 
 def validate_private_visibility(fm: dict, body_path: Path) -> list[str]:
-    if fm.get("visibility") != "private":
+    if fm.get("visibility") not in {"private", "memory"}:
         return []
     try:
         rel = body_path.resolve().relative_to(repo_root.resolve())
     except ValueError:
         rel = body_path
     if is_git_tracked(rel):
-        return [f"visibility private but body path is git-tracked: {rel}"]
+        return [f"visibility {fm.get('visibility')} but body path is git-tracked: {rel}"]
     return []
 
 
