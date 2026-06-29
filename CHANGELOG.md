@@ -138,6 +138,7 @@
 * merge phase unified-sync-entrypoint-operator-docs-m into feat/build-chain-source-of-truth (b6f539a) <!-- sw-deliver:unified-sync-entrypoint-operator-docs-m -->
 * merge phase one-shot-resync-gap-close-s into feat/build-chain-source-of-truth (3ba0ece) <!-- sw-deliver:one-shot-resync-gap-close-s -->
 * merge phase heading-matcher-fix-manifest-audit-s into feat/doc-review-persona-selection-accuracy (a7e42dd) <!-- sw-deliver:heading-matcher-fix-manifest-audit-s -->
+* merge phase fixtures-parity-m into feat/doc-review-persona-selection-accuracy (7295de7) <!-- sw-deliver:fixtures-parity-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
