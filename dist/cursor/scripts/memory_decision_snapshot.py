@@ -11,6 +11,15 @@ from datetime import date
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+PLUGIN_ROOT = SCRIPT_DIR.parent
+
+
+def plugin_scripts(root: Path) -> Path:
+    """Harness scripts live at plugin root; fall back when repo root lacks scripts/."""
+    candidate = root / "scripts"
+    if (candidate / "memory-sot.sh").is_file():
+        return candidate
+    return PLUGIN_ROOT / "scripts"
 
 
 def emit(obj: dict, exit_code: int = 0) -> None:
@@ -34,8 +43,9 @@ def git_root(start: Path) -> Path:
 
 
 def resolve_sot(root: Path) -> dict:
+    scripts = plugin_scripts(root)
     proc = subprocess.run(
-        ["bash", str(root / "scripts/memory-sot.sh"), "resolve", "--class", "decision", "--json"],
+        ["bash", str(scripts / "memory-sot.sh"), "resolve", "--class", "decision", "--json"],
         cwd=str(root),
         text=True,
         capture_output=True,
@@ -52,8 +62,9 @@ def resolve_sot(root: Path) -> dict:
 
 
 def redact_text(root: Path, text: str) -> str:
+    scripts = plugin_scripts(root)
     proc = subprocess.run(
-        ["bash", str(root / "scripts/memory-redact.sh")],
+        ["bash", str(scripts / "memory-redact.sh")],
         input=text,
         text=True,
         capture_output=True,
@@ -130,6 +141,9 @@ def cmd_write(root: Path, rel_path: str, memory_pointer: str | None, dry_run: bo
 
     raw = target.read_text(encoding="utf-8")
     meta, body = split_frontmatter(raw)
+    unit_visibility = str(meta.get("visibility", "")).strip().lower()
+    # PRD 034 R12: decision snapshots are always committed regardless of unit visibility.
+    always_committed = True
     redacted_body = redact_text(root, body)
     stamped = stamp_snapshot(meta, effective, memory_pointer)
     output = render_frontmatter(stamped) + redacted_body.lstrip("\n")
@@ -143,6 +157,8 @@ def cmd_write(root: Path, rel_path: str, memory_pointer: str | None, dry_run: bo
                 "path": rel_path,
                 "authoritative": effective,
                 "snapshotRole": stamped.get("snapshotRole"),
+                "alwaysCommitted": always_committed,
+                "unitVisibility": unit_visibility or None,
             }
         )
 
@@ -162,6 +178,8 @@ def cmd_write(root: Path, rel_path: str, memory_pointer: str | None, dry_run: bo
             "authoritative": effective,
             "snapshotRole": stamped.get("snapshotRole"),
             "providerWrite": "deferred-best-effort",
+            "alwaysCommitted": always_committed,
+            "unitVisibility": unit_visibility or None,
         }
     )
 
