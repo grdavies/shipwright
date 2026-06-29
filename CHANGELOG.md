@@ -141,6 +141,7 @@
 * merge phase fixtures-parity-m into feat/doc-review-persona-selection-accuracy (7295de7) <!-- sw-deliver:fixtures-parity-m -->
 * merge phase docs-propagate-gap-close-s into feat/doc-review-persona-selection-accuracy (0883bb7) <!-- sw-deliver:docs-propagate-gap-close-s -->
 * merge phase docs-propagate-gap-close-s into feat/doc-review-persona-selection-accuracy (6724ea2) <!-- sw-deliver:docs-propagate-gap-close-s -->
+* merge phase visibility-field-public-repo-aware-resolver-m into feat/planning-feedback-lifecycle (3b7c2fd) <!-- sw-deliver:visibility-field-public-repo-aware-resolver-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
