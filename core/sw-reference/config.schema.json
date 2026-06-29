@@ -872,6 +872,15 @@
               "description": "Auto-clear orphan tuples when branch is missing, run-id is absent from the registry, and porcelain deliver state is missing or older than this TTL (R4)."
             }
           }
+        },
+        "autonomy": {
+          "type": "string",
+          "enum": [
+            "maintenance-only",
+            "full-conductor"
+          ],
+          "default": "maintenance-only",
+          "description": "Soft-enforce posture for explicit --task-list vs scheduler priority (PRD 033 R8 stub; owned by PRD 035)."
         }
       }
     }
