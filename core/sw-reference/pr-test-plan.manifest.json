@@ -292,6 +292,81 @@
         "jsonc-plain",
         "read-config-emits-valid-json"
       ]
+    },
+    {
+      "id": "dual-ship-fixtures",
+      "script": "scripts/test/run-dual-ship-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-dual-ship-fixtures",
+      "scenarios": [
+        "dual-ship-exactly-one-pr"
+      ]
+    },
+    {
+      "id": "regression-remediation-fixtures",
+      "script": "scripts/test/run-regression-remediation-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-regression-remediation-fixtures",
+      "scenarios": [
+        "verify-failed-routes-bounded-stabilize",
+        "blocked-budget-signature-distinct",
+        "remediation-exhaustion-consolidated-halt"
+      ]
+    },
+    {
+      "id": "parallel-merge-safety-fixtures",
+      "script": "scripts/test/run-parallel-merge-safety-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-parallel-merge-safety-fixtures",
+      "scenarios": [
+        "whole-batch-no-early-merge",
+        "deterministic-merge-order",
+        "contention-generator-output-separation",
+        "deterministic-conflict-autoregen",
+        "semantic-conflict-halt"
+      ]
+    },
+    {
+      "id": "status-integrity-fixtures",
+      "script": "scripts/test/run-status-integrity-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-status-integrity-fixtures",
+      "scenarios": [
+        "provenance-marker-roundtrip",
+        "forged-merge-ready-green-rejected",
+        "abbreviated-head-rejected",
+        "stuck-stale-classification",
+        "recovery-command-documented"
+      ]
+    },
+    {
+      "id": "mechanical-sourcing-fixtures",
+      "script": "scripts/test/run-mechanical-sourcing-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-mechanical-sourcing-fixtures",
+      "scenarios": [
+        "no-new-parallel-state-store",
+        "conductor-delegates-wave-sh",
+        "state-transitions-via-wave-py"
+      ]
+    },
+    {
+      "id": "deliver-invariant-fixtures",
+      "script": "scripts/test/run-deliver-invariant-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-invariant-fixtures",
+      "scenarios": [
+        "human-merge-gate-unchanged",
+        "secret-scan-push-chokepoint",
+        "scoped-lock-single-flight",
+        "frozen-doc-ci-gates-unchanged"
+      ]
     }
   ]
 }

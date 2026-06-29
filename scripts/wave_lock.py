@@ -12,6 +12,7 @@ import json
 import os
 import re
 import socket
+import threading
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -136,7 +137,11 @@ def acquire_ship_lease(root: Path, args: list[str]) -> dict[str, Any]:
     lock_path = lock_path_for(root, integration, phase_branch)
     if lock_path.is_file():
         existing = read_lock_meta(lock_path)
-        if existing.get("pid") == os.getpid() and ship_lease_owner_live(existing):
+        if (
+            existing.get("pid") == os.getpid()
+            and existing.get("threadId") == threading.get_ident()
+            and ship_lease_owner_live(existing)
+        ):
             return {
                 "verdict": "pass",
                 "action": "ship-lease-acquire",
@@ -151,6 +156,7 @@ def acquire_ship_lease(root: Path, args: list[str]) -> dict[str, Any]:
         "integrationBranch": integration,
         "phaseBranch": phase_branch,
         "pid": os.getpid(),
+        "threadId": threading.get_ident(),
         "host": lock_host(),
         "acquiredAt": now,
         "heartbeatAt": now,
