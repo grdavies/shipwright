@@ -54,7 +54,9 @@ def load_redirect_map(root: Path) -> dict[str, str]:
 
 def resolve_path(root: Path, rel_path: str) -> str:
     """Resolve a repo-relative path through the redirect map when present."""
-    norm = rel_path.replace("\\", "/").lstrip("./")
+    norm = rel_path.replace("\\", "/")
+    if norm.startswith("./"):
+        norm = norm[2:]
     mapping = load_redirect_map(root)
     if norm in mapping:
         return mapping[norm]

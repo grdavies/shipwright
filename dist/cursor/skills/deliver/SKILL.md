@@ -503,7 +503,7 @@ scripts/wave.sh ack check|complete|status           # optional cadence (deliver.
   `orchestrator-provision`; cleared at run completion via `inflight-signal-clear`. Lifecycle `in-progress` is
   **not** stored in the tuple — PRD 033 derives it. Durable run-id lease in scoped deliver state is authoritative
   (R2). Set `SW_INDEX_REGION_WRITER=deliver` on INDEX commits touching `inFlight`.
-- **Run-state** binds `source_task_list` + `prd_number`; wave run does not mutate legacy INDEX status to in-progress.
+- **Run-state** binds `source_task_list` + `prd_number`; wave run never `in-progress` INDEX status mutation (PRD 033 derives lifecycle).
 - **`deliver.phaseAckCadence: K`** (default `0`): pause for human `ack complete` after every K phase merges (R56).
 
 ### Terminal autonomy — amendment A1 (PRD 013 R20–R27)

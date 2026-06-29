@@ -1114,6 +1114,9 @@ def compute_next_action(
     if merge_halt:
         return merge_halt
 
+    if (state.get("mergeQueue") or []) and not state.get("mergeJournal"):
+        return {"action": "merge-run-next", "resume": True}
+
     merge_ready = merge_ready_in_flight_phases(root, state, plan, wave_ids)
     if len(merge_ready) > 1:
         return {
