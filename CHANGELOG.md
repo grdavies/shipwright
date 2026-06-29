@@ -121,6 +121,7 @@
 * merge phase doc-impact-acceptance-criteria-m into feat/planning-feedback-lifecycle (181a0d1) <!-- sw-deliver:doc-impact-acceptance-criteria-m -->
 * merge phase emitter-dist-parity-s into feat/planning-feedback-lifecycle (415a998) <!-- sw-deliver:emitter-dist-parity-s -->
 * merge phase ship-single-flight-r1-r5-l into feat/delivery-conductor-concurrency-and-remediation-robustness (7152aa8) <!-- sw-deliver:ship-single-flight-r1-r5-l -->
+* merge phase regression-remediation-routing-r6-r8-m into feat/delivery-conductor-concurrency-and-remediation-robustness (86b950f) <!-- sw-deliver:regression-remediation-routing-r6-r8-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
