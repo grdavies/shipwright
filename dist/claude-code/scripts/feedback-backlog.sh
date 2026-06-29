@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Parse and mutate docs/prds/GAP-BACKLOG.md (IM8 / U9).
+# Parse and mutate prdsDir/GAP-BACKLOG.md (IM8 / U9).
 #
 # Usage:
 #   feedback-backlog.sh list [--open-only] [--backlog PATH]
@@ -10,7 +10,17 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CMD="${1:-}"
 shift || true
 
-BACKLOG="${BACKLOG:-$ROOT/docs/prds/GAP-BACKLOG.md}"
+if [[ -z "${BACKLOG:-}" ]]; then
+  BACKLOG="$(python3 - "$ROOT" <<'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+import planning_paths as pp
+d = pp.load_planning_dirs(Path(sys.argv[1]))
+print(pp.prds_rel(d, "GAP-BACKLOG.md"))
+PY
+)"
+fi
 OPEN_ONLY=0
 SIGNAL_ID=""
 CLOSE_DATE=""

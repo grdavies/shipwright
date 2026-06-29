@@ -45,8 +45,9 @@ Read `.cursor/workflow.config.json` for `memory`, `review.provider`, `prdsDir`.
    - Prod fault → `/sw-debug`
    - Extends prior PR → gap-capture (Phase 3)
    - New scope → `/sw-brainstorm`
-5. **Gap split** — substantial → `/sw-amend`; trivial → append `docs/prds/GAP-BACKLOG.md` with
-   `source:feedback` (create file with checklist header if absent).
+5. **Gap split** — substantial → `/sw-amend`; trivial → write a canonical gap unit via
+   `python3 scripts/planning_gap_capture.py <repo> capture --signal-id <id> --title <title> [--pr N]`,
+   then `python3 scripts/planning_graph.py <repo> reconcile --dry-run` (legacy GAP-BACKLOG is a read-only projection).
 6. **Record** route per `skills/feedback/references/route-record.md` — redact serialized JSON via
    `bash scripts/memory-redact.sh` before `memory-preflight` write.
 7. Return handoff summary with target command and normalized signal id. **Halt** for one human handoff

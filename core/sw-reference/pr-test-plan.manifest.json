@@ -411,6 +411,20 @@
         "terminal-excluded-from-eligible",
         "superseded-manifest-render"
       ]
+    },
+    {
+      "id": "planning-cutover-phase5-fixtures",
+      "script": "scripts/test/run-planning-cutover-phase5-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-cutover-phase5-fixtures",
+      "scenarios": [
+        "legacy-projection-frontmatter-only",
+        "gap-capture-canonical-unit",
+        "doctor-legacy-manual-edit-warning",
+        "frozen-traceability-no-regression",
+        "feedback-backlog-planningdir"
+      ]
     }
   ]
 }

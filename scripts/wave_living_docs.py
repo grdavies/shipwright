@@ -268,8 +268,23 @@ def _cmd_reconcile_locked(
         index_status,
     )
 
+
+    planning_graph_out: dict[str, Any] | None = None
+    legacy: dict[str, Any] | None = None
+    dirs = planning_paths.load_planning_dirs(root)
+    if dirs.planning == "docs/planning":
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT_DIR / "planning_graph.py"), str(worktree), "reconcile", "--dry-run"],
+            cwd=str(root),
+            text=True,
+            capture_output=True,
+        )
+        if proc.returncode == 0 and proc.stdout.strip().startswith("{"):
+            planning_graph_out = json.loads(proc.stdout)
+        legacy = project_legacy_compat(worktree, dry_run=dry_run)
+
     gap_out: dict[str, Any] | None = None
-    if index_status == "complete":
+    if index_status == "complete" and dirs.planning != "docs/planning":
         pr_ref = ""
         terminal = state.get("terminalPr") or {}
         if terminal.get("number"):
@@ -295,6 +310,8 @@ def _cmd_reconcile_locked(
             "mergedToMain": merged_main,
             "index": index_out,
             "gapResolve": gap_out,
+            "planningGraphReconcile": planning_graph_out,
+            "legacyProjection": legacy if dirs.planning == "docs/planning" else None,
             "livingDocsCommit": commit_sha,
             "dryRun": dry_run,
         }

@@ -417,7 +417,7 @@ def cmd_reconcile(root: Path, args: list[str]) -> None:
 
 def cmd_doctor(root: Path, _args: list[str]) -> None:
     units = pg.discover_units(root)
-    warnings = dependency_dead_warnings(units)
+    warnings = dependency_dead_warnings(units) + plp.legacy_manual_edit_warnings(root)
     emit(
         {
             "verdict": "pass",
