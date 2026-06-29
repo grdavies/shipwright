@@ -127,6 +127,7 @@
 * merge phase cross-cutting-invariants-ci-enforcement-dogfood-r18-r22-m into feat/delivery-conductor-concurrency-and-remediation-robustness (c52e97e) <!-- sw-deliver:cross-cutting-invariants-ci-enforcement-dogfood-r18-r22-m -->
 * merge phase lifecycle-enum-pure-graph-module-substrate-l into feat/planning-feedback-lifecycle (7f754e8) <!-- sw-deliver:lifecycle-enum-pure-graph-module-substrate-l -->
 * merge phase deterministic-maintenance-reconciler-l into feat/planning-feedback-lifecycle (cf7628f) <!-- sw-deliver:deterministic-maintenance-reconciler-l -->
+* merge phase scheduler-sw-deliver-dependency-gate-m into feat/planning-feedback-lifecycle (8038e93) <!-- sw-deliver:scheduler-sw-deliver-dependency-gate-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
