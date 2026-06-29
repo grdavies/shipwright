@@ -549,9 +549,33 @@ fi
 
 STATUS_FIX=$(mktemp -d)
 mkdir -p "$STATUS_FIX/.cursor/sw-deliver-runs/alpha"
-cat >"$STATUS_FIX/.cursor/sw-deliver-runs/alpha/status.json" <<'JSON'
-{"verdict":"merge-ready-green","phase":"alpha","phaseMode":true,"head":"abc123","pr":99}
-JSON
+(
+  cd "$STATUS_FIX"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  echo x >f.txt && git add f.txt && git commit -q -m init
+  git branch -m feat/demo
+  git checkout -q -b feat/demo-phase-alpha
+  echo phase >>f.txt && git add f.txt && git commit -q -m phase
+  HEAD_SHA="$(git rev-parse HEAD)"
+  python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+from status_integrity import attach_provenance_marker
+doc = {
+    'verdict': 'merge-ready-green',
+    'phase': 'alpha',
+    'phaseMode': True,
+    'head': '$HEAD_SHA',
+    'pr': 99,
+}
+Path('.cursor/sw-deliver-runs/alpha/status.json').write_text(
+    json.dumps(attach_provenance_marker(doc), indent=2) + '\n'
+)
+"
+)
 if OUT=$(python3 "$WM" "$STATUS_FIX" status collect --phase-slug alpha 2>/dev/null) && \
    echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['status']['verdict']=='merge-ready-green'"; then
   echo "OK  deliver-phase-status-collect"
