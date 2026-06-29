@@ -39,4 +39,12 @@ check "workflows-legacy-projection" "$WF" "read-only projection"
 check "getting-started-reconciler" "$GS" "maintenance reconciler"
 check "getting-started-planning-index" "$GS" "docs/planning/INDEX"
 
+# doc-currency-033-a1-sections (R36)
+check "living-status-a1-monotonic" "$LIVING" "Monotonic terminal status"
+check "living-status-a1-default-branch" "$LIVING" "Default-branch reconcile refusal"
+check "living-status-a1-finalize" "$LIVING" "Completion finalize chokepoint"
+check "sw-status-a1-playbook" "$STATUS" "Post-merge playbook (A1)"
+RETRO="$(content_path commands/sw-retrospective.md)"
+check "sw-retrospective-a1" "$RETRO" "Post-merge INDEX safety (A1)"
+
 exit "$FAIL"

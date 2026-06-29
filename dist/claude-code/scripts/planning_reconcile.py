@@ -25,6 +25,7 @@ from wave_living_doc_lock import living_doc_write_lock  # noqa: E402
 
 ARCHIVE_VIEW_STATUSES = frozenset({"complete", "superseded", "cancelled", "resolved"})
 ACTIVE_VIEW_ALWAYS = frozenset({"deferred", "blocked"})
+TERMINAL_MONOTONIC_STATUSES = frozenset({"complete", "superseded"})
 RELIEF_ACCURACY_FLOOR = 0.95
 
 
@@ -102,6 +103,101 @@ def git_complete_unit_ids(root: Path, units: list[pg.GraphUnit]) -> set[str]:
                 complete.add(unit.id)
                 break
     return complete
+
+
+def host_pr_complete_unit_ids(root: Path, units: list[pg.GraphUnit]) -> set[str]:
+    """Host PR merge metadata corroborates git-primary complete (R29)."""
+    worktree = pp.git_root(root)
+    host_sh = worktree / "scripts" / "host.sh"
+    if not host_sh.is_file():
+        return set()
+    proc = subprocess.run(
+        ["bash", str(host_sh), "--root", str(worktree), "pr-list", "--state", "closed", "--limit", "100"],
+        cwd=str(worktree),
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return set()
+    try:
+        payload = json.loads(proc.stdout or "{}")
+    except json.JSONDecodeError:
+        return set()
+    prs = payload.get("data") if payload.get("verdict") == "ok" else []
+    if not isinstance(prs, list):
+        return set()
+    complete: set[str] = set()
+    for unit in units:
+        if unit.unit_type != "prd":
+            continue
+        m = re.match(r"prd-\d+-(.+)", unit.id)
+        if not m:
+            continue
+        slug = m.group(1)
+        slug_esc = re.escape(slug)
+        integration_pat = re.compile(
+            rf"^(?:feat|fix|perf|revert|docs|chore|refactor|test)/{slug_esc}$",
+            re.IGNORECASE,
+        )
+        for pr in prs:
+            head = str(pr.get("headRefName") or "")
+            if integration_pat.match(head) and pr.get("mergedAt"):
+                complete.add(unit.id)
+                break
+    return complete
+
+
+def resolve_git_complete_unit_ids(root: Path, units: list[pg.GraphUnit]) -> set[str]:
+    return git_complete_unit_ids(root, units) | host_pr_complete_unit_ids(root, units)
+
+
+def read_prior_derived_map(root: Path) -> dict[str, str]:
+    index_path = pig.index_path(root)
+    if not index_path.is_file():
+        return {}
+    regions = pig.parse_regions(index_path.read_text(encoding="utf-8"))
+    return pig.parse_derived_status_map(regions.derived)
+
+
+def parse_override_status(args: list[str]) -> dict[str, str] | None:
+    if "--override-status" not in args:
+        return None
+    idx = args.index("--override-status")
+    if idx + 3 >= len(args):
+        fail("--override-status requires <unit-id> <from-status> <to-status> --reason <text>")
+    reason_idx = args.index("--reason") if "--reason" in args else -1
+    if reason_idx < 0 or reason_idx + 1 >= len(args):
+        fail("--override-status requires --reason <text>")
+    return {
+        "unit": args[idx + 1],
+        "from": args[idx + 2],
+        "to": args[idx + 3],
+        "reason": args[reason_idx + 1],
+    }
+
+
+def apply_monotonic_terminal(
+    prior: dict[str, str],
+    proposed: dict[str, str],
+    override: dict[str, str] | None,
+) -> dict[str, str]:
+    """Terminal derived rows never downgrade without explicit override (R30)."""
+    merged = dict(proposed)
+    if override:
+        uid = override["unit"]
+        if prior.get(uid) == override["from"] and merged.get(uid) == override["to"]:
+            return merged
+    for uid, prior_status in prior.items():
+        if prior_status not in TERMINAL_MONOTONIC_STATUSES:
+            continue
+        new_status = merged.get(uid, prior_status)
+        if new_status == prior_status:
+            continue
+        if override and uid == override["unit"]:
+            continue
+        merged[uid] = prior_status
+    return merged
+
 
 def derive_status(
     unit: pg.GraphUnit,
@@ -296,6 +392,7 @@ def reconcile_core(
     *,
     dry_run: bool = False,
     before_serialize_hook: Callable[[], None] | None = None,
+    override: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     worktree = pp.git_root(root)
     units = pg.discover_units(root)
@@ -303,7 +400,8 @@ def reconcile_core(
     if cycle:
         fail("dependency cycle detected", cycle=cycle)
 
-    git_complete = git_complete_unit_ids(root, units)
+    prior_derived = read_prior_derived_map(root)
+    git_complete = resolve_git_complete_unit_ids(root, units)
 
     index_path = pig.index_path(root)
     if not index_path.is_file():
@@ -323,7 +421,7 @@ def reconcile_core(
     inflight_final = read_tuples(root)
     final_inflight_bytes = pig.parse_regions(existing).inFlight
     effects = edge_effects_for_units(units, inflight_final, git_complete)
-    derived = effects.derived
+    derived = apply_monotonic_terminal(prior_derived, effects.derived, override)
     derived_body = render_derived_body(derived, active_only=True)
     content = pig.read_merge_write(existing, writer="reconciler", new_region_body=derived_body)
     pig.write_index(root, content, dry_run=dry_run)
@@ -394,19 +492,35 @@ def git_commit_reconcile(root: Path, *, dry_run: bool = False) -> str | None:
 def cmd_reconcile(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run")
     do_commit = has_flag(args, "--commit")
+    override = parse_override_status(args)
     worktree = pp.git_root(root)
     branch = current_branch(worktree)
     base = default_base_branch(root)
-    if branch == base and not dry_run and not has_flag(args, "--allow-default-branch"):
+    allow_default = has_flag(args, "--allow-default-branch")
+    if branch == base and not dry_run and not allow_default:
         fail(
             "reconcile refuses default branch commits (R31)",
             exit_code=20,
             branch=branch,
-            remediation="use a docs branch or --dry-run",
+            remediation=(
+                "single-unit post-merge: set-index-status + append-log-idempotent on a docs branch; "
+                "full-corpus reconcile only on a non-default branch or via completion finalize-if-merged"
+            ),
         )
+    allow_log: dict[str, str] | None = None
+    if allow_default and not dry_run:
+        reason = ""
+        if "--reason" in args:
+            reason = args[args.index("--reason") + 1]
+        allow_log = {
+            "actor": os.environ.get("USER", "unknown"),
+            "reason": reason or "unspecified",
+        }
 
     with living_doc_write_lock(root, holder="planning-graph-reconcile"):
-        result = reconcile_core(root, dry_run=dry_run)
+        result = reconcile_core(root, dry_run=dry_run, override=override)
+        if allow_log:
+            result["allowDefaultBranch"] = allow_log
         commit_sha = None
         if do_commit and not dry_run:
             commit_sha = git_commit_reconcile(root, dry_run=False)

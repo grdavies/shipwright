@@ -127,3 +127,7 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
 - **Pre-merge:** `/sw-deliver` terminal PR prepare/gate; human merges; loop suggests `/sw-cleanup` when
   merge detected.
 - **Post-merge:** stack next phase via workflow sequencing.
+
+## Post-merge INDEX safety (A1)
+
+Post-merge compounding uses `completion finalize-if-merged` only. On failure, resume with the printed `resumeCommand` — do **not** fall back to bare `reconcile-status.sh reconcile` on `main`. Single-unit bookkeeping belongs on a docs branch.

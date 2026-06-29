@@ -90,3 +90,28 @@ mapping in its terminal report.
 - Re-running derive → reconcile is idempotent for same git facts.
 - Living-doc file edits commit on the feature branch in-loop (R51), never only in chat.
 - Manual edits to generated legacy `GAP-BACKLOG.md` / `INDEX.md` projections trigger `planning-graph doctor` warnings.
+
+## Post-merge playbook (A1 — R29–R36)
+
+### Derived status precedence (R29, R32)
+
+1. **Git ancestry** on `defaultBaseBranch` (and host PR merge metadata when available) is the authoritative `complete` signal for non-gap units.
+2. **Slug-scoped deliver state** is secondary corroboration only.
+3. **COMPLETION-LOG** is audit-only — never the sole `complete` predicate.
+4. **Stale local feature branches** MUST NOT downgrade a terminal row when git/host evidence still shows merged.
+
+### Monotonic terminal status (R30)
+
+`complete` and `superseded` rows in the planning INDEX `derived` region never regress during reconcile unless an explicit `--override-status <id> <from> <to> --reason <text>` names the unit.
+
+### Default-branch reconcile refusal (R31)
+
+`planning-graph reconcile` and legacy `reconcile-status.sh reconcile` **refuse to commit** on `defaultBaseBranch`. Allowed post-merge paths:
+
+- **Single unit:** `set-index-status` + `append-log-idempotent` on a **docs branch**.
+- **Full corpus:** reconciler on a non-default branch, or deliver `completion finalize-if-merged` — never bare full-corpus `reconcile` on `main`.
+
+### Completion finalize chokepoint (R33–R34)
+
+Only `bash scripts/wave.sh completion finalize-if-merged` may set `completion.status: merged-complete`. Out-of-band state writes are rejected at the save guard.
+
