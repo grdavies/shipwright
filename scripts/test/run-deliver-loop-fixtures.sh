@@ -18,7 +18,11 @@ git init -q
 git config user.email test@test.com
 git config user.name Test
 git commit --allow-empty -q -m init
+git branch -M main
 mkdir -p .cursor
+cat >.cursor/workflow.config.json <<'WCFG'
+{"review":{"provider":"none"},"checks":{"treatNeutralAsPass":true}}
+WCFG
 cat >.cursor/sw-base-state.json <<'JSON'
 {"trunkBase": {"name": "main", "sha": "deadbeef00000000000000000000000000000000"}}
 JSON
@@ -118,9 +122,8 @@ JSON
 STATUS_DIR="$FIX/.cursor/sw-deliver-runs/alpha"
 mkdir -p "$STATUS_DIR"
 PHASE_HEAD=$(git -C "$FIX" rev-parse HEAD 2>/dev/null || echo abc)
-cat >"$STATUS_DIR/status.json" <<JSON
-{"verdict":"merge-ready-green","phase":"alpha","head":"$PHASE_HEAD","gate":{"verdict":"green"}}
-JSON
+git -C "$FIX" branch feat/demo-phase-alpha "$PHASE_HEAD" 2>/dev/null || true
+"$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase alpha --head "$PHASE_HEAD" --out "$STATUS_DIR/status.json" >/dev/null
 python3 -c "
 import json
 from pathlib import Path
@@ -128,6 +131,7 @@ s=json.loads(Path('.cursor/sw-deliver-state.json').read_text())
 s['phases']['1']['status']='in-flight'
 s['phases']['1']['branch']='feat/demo-phase-alpha'
 s['phaseWorktrees']={'1': {'path': '$FIX', 'name': 'alpha-wt'}}
+s['baseCapture']={'skipped': True}
 s.pop('source_task_list', None)
 Path('.cursor/sw-deliver-state.json').write_text(json.dumps(s))
 "
@@ -523,7 +527,13 @@ COLLECT_FIX=$(mktemp -d)
   git config user.email test@test.com
   git config user.name Test
   git commit --allow-empty -q -m init
+  git branch -M main
+  git branch feat/collect-phase-a
+  git branch feat/collect-phase-b
   mkdir -p .cursor .cursor/sw-deliver-runs/a .cursor/sw-deliver-runs/b
+  cat >.cursor/workflow.config.json <<'WCFG'
+{"review":{"provider":"none"},"checks":{"treatNeutralAsPass":true}}
+WCFG
   cat >.cursor/sw-base-state.json <<'JSON'
 {"trunkBase": {"name": "main", "sha": "deadbeef00000000000000000000000000000000"}}
 JSON
@@ -560,12 +570,8 @@ JSON
   "waves": [["1", "2"]]
 }
 JSON
-  cat >.cursor/sw-deliver-runs/a/status.json <<JSON
-{"verdict":"merge-ready-green","phase":"a","head":"$HEAD","gate":{"verdict":"green"}}
-JSON
-  cat >.cursor/sw-deliver-runs/b/status.json <<JSON
-{"verdict":"merge-ready-green","phase":"b","head":"$HEAD","gate":{"verdict":"green"}}
-JSON
+  "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase a --head "$HEAD" --out .cursor/sw-deliver-runs/a/status.json >/dev/null
+  "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase b --head "$HEAD" --out .cursor/sw-deliver-runs/b/status.json >/dev/null
   if OUT=$(python3 "$LOOP_PY" "$COLLECT_FIX" compute-next 2>/dev/null) && echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)

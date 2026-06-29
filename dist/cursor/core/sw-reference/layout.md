@@ -420,4 +420,21 @@ Latest validated fan-out state on phase status (not a substitute for the append-
 }
 ```
 
+### Phase terminal `status.json` (PRD 036 R13–R17)
+
+Written only by `scripts/ship-phase-status.sh` (or driver `canonical-reemit`). Key fields:
+
+| Field | Role |
+| --- | --- |
+| `verdict` | `merge-ready-green` or `blocked` |
+| `head` | Full 40-char phase branch tip SHA |
+| `gate` | Diagnostic gate snapshot (not authorization) |
+| `provenanceMarker` | SHA256 over canonical fields (excludes `writtenAt`) |
+| `shipSteps` | Optional embedded step snapshot |
+| `writtenAt` | UTC emission timestamp |
+
+Per-head ship leases live under `.cursor/sw-deliver-locks/<hash>-<phase>.lock` (PRD 036 R2).
+
+Recovery command: `/sw-ship --phase-mode --from <terminal-step>`; auto re-emit counter on deliver state:
+`statusReemitAttempts`.
 
