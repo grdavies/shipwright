@@ -131,6 +131,7 @@
 * merge phase supersession-absorption-edge-effects-m into feat/planning-feedback-lifecycle (a1553a9) <!-- sw-deliver:supersession-absorption-edge-effects-m -->
 * merge phase atomic-cutover-one-commit-with-031-phase-b-032-m into feat/planning-feedback-lifecycle (6e866b9) <!-- sw-deliver:atomic-cutover-one-commit-with-031-phase-b-032-m -->
 * merge phase emitter-dist-parity-s into feat/planning-feedback-lifecycle (27b08e3) <!-- sw-deliver:emitter-dist-parity-s -->
+* merge phase operator-doc-acceptance-criteria-033-owned-m into feat/planning-feedback-lifecycle (b1b168e) <!-- sw-deliver:operator-doc-acceptance-criteria-033-owned-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
