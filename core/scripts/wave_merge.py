@@ -25,6 +25,7 @@ if str(SCRIPT_DIR) not in sys.path:
 from host_lib import load_workflow_config, remote_name, remote_ref, remote_heads_ref
 from wave_json_io import StateCorruptError, read_json, write_json
 from wave_state import assert_phase_status
+import planning_paths
 from status_integrity import (
     VALID_STATUS_VERDICTS,
     check_status_sha,
@@ -105,11 +106,8 @@ def reorder_merge_queue(state: dict[str, Any], root: Path) -> None:
     queue = list(state.get("mergeQueue") or [])
     if len(queue) <= 1:
         return
-    slugs = [str(e.get("phaseSlug", "")) for e in queue if e.get("phaseSlug")]
-    plan = load_deliver_plan(root)
-    ordered = topological_sort_slugs(slugs, state, plan.get("edges") or [])
-    by_slug = {str(e.get("phaseSlug")): e for e in queue}
-    state["mergeQueue"] = [by_slug[s] for s in ordered if s in by_slug]
+    queue.sort(key=lambda entry: phase_sort_key(state, str(entry.get("phaseSlug", ""))))
+    state["mergeQueue"] = queue
 
 
 def dependencies_merged(phase_id: str, state: dict[str, Any], edges: list[dict[str, Any]]) -> bool:
@@ -132,11 +130,25 @@ def select_next_merge_entry(
         return None, queue
     plan = load_deliver_plan(root)
     edges = plan.get("edges") or []
+    merged = merged_phase_slugs(state)
     for entry in queue:
         slug = str(entry.get("phaseSlug", ""))
         pid = phase_id_for_slug(state, slug)
-        if pid and dependencies_merged(pid, state, edges):
-            return entry, queue
+        if pid and not dependencies_merged(pid, state, edges):
+            continue
+        blocked = False
+        for other in queue:
+            other_slug = str(other.get("phaseSlug", ""))
+            if other_slug == slug:
+                break
+            if other_slug in merged:
+                continue
+            if shares_generator_contention(slug, other_slug, plan):
+                blocked = True
+                break
+        if blocked:
+            continue
+        return entry, queue
     return queue[0], queue
 
 
@@ -300,6 +312,239 @@ def clear_open_journal_if_merged(root: Path, state: dict[str, Any]) -> dict[str,
         state["mergeJournal"] = None
         save_state(root, state)
     return state
+
+
+DETERMINISTIC_REGEN_RELPATHS = (
+    "core/sw-reference/deterministic-regen-paths.json",
+    ".sw/deterministic-regen-paths.json",
+)
+DEFAULT_DETERMINISTIC_CONFLICT_MAX = 1
+
+
+def deterministic_conflict_max_attempts(root: Path) -> int:
+    cfg = load_workflow_config(root)
+    deliver = cfg.get("deliver") or {}
+    block = deliver.get("deterministicConflict") or {}
+    raw = block.get("maxAttempts", DEFAULT_DETERMINISTIC_CONFLICT_MAX)
+    try:
+        return max(0, min(2, int(raw)))
+    except (TypeError, ValueError):
+        return DEFAULT_DETERMINISTIC_CONFLICT_MAX
+
+
+def load_deterministic_regen_config(root: Path) -> dict[str, Any]:
+    for rel in DETERMINISTIC_REGEN_RELPATHS:
+        path = root / rel
+        if not path.is_file():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
+        except json.JSONDecodeError:
+            continue
+    return {"allowlist": list(planning_paths.GENERATOR_OUTPUT_GLOBS)}
+
+
+def path_in_allowlist(path: str, allowlist: list[str]) -> bool:
+    norm = path.replace("\\", "/")
+    for entry in allowlist:
+        if planning_paths.path_matches_serialized_token(norm, entry):
+            return True
+        if norm == entry:
+            return True
+    return False
+
+
+def paths_within_allowlist(paths: list[str], allowlist: list[str]) -> bool:
+    return bool(paths) and all(path_in_allowlist(p, allowlist) for p in paths)
+
+
+def list_merge_conflict_paths(wt: Path) -> list[str]:
+    proc = git_run(["diff", "--name-only", "--diff-filter=U"], cwd=wt, check=False)
+    paths = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+    if paths:
+        return paths
+    proc = git_run(["ls-files", "-u"], cwd=wt, check=False)
+    seen: set[str] = set()
+    for line in proc.stdout.splitlines():
+        parts = line.split(None, 2)
+        if len(parts) >= 4:
+            seen.add(parts[3].strip())
+    return sorted(seen)
+
+
+def item_files_for_slug(plan: dict[str, Any], slug: str) -> list[str]:
+    for item in plan.get("items") or []:
+        if isinstance(item, dict) and item.get("slug") == slug:
+            files = item.get("files") or []
+            return [str(f) for f in files if f]
+    return []
+
+
+def phase_sort_key(state: dict[str, Any], slug: str) -> tuple[int, str | int]:
+    pid = phase_id_for_slug(state, slug)
+    if pid and str(pid).isdigit():
+        return (0, int(pid))
+    return (1, str(pid or slug))
+
+
+def shares_generator_contention(
+    slug_a: str,
+    slug_b: str,
+    plan: dict[str, Any],
+) -> bool:
+    files_a = item_files_for_slug(plan, slug_a)
+    files_b = item_files_for_slug(plan, slug_b)
+    for left in files_a:
+        for right in files_b:
+            if planning_paths.path_matches_generator_output(left) and planning_paths.path_matches_generator_output(
+                right
+            ):
+                return True
+    return False
+
+
+def conflict_single_preimage(
+    root: Path,
+    state: dict[str, Any],
+    plan: dict[str, Any],
+    conflict_paths: list[str],
+    phase_slug: str,
+) -> bool:
+    allowlist = load_deterministic_regen_config(root).get("allowlist") or []
+    contributors: set[str] = set()
+    slugs = {phase_slug}
+    for entry in state.get("mergeQueue") or []:
+        slug = str(entry.get("phaseSlug") or "")
+        if slug:
+            slugs.add(slug)
+    for slug in slugs:
+        files = item_files_for_slug(plan, slug)
+        touches = any(
+            path_in_allowlist(f, allowlist) and any(path_in_allowlist(cp, allowlist) for cp in conflict_paths)
+            for f in files
+        ) or any(planning_paths.path_matches_generator_output(f) for f in files)
+        if not touches:
+            continue
+        meta = phase_meta_for_slug(state, slug)[1]
+        branch = meta.get("branch")
+        head = None
+        for entry in state.get("mergeQueue") or []:
+            if entry.get("phaseSlug") == slug and entry.get("head"):
+                head = str(entry.get("head"))
+                break
+        if not head and branch:
+            head = branch
+        if head:
+            contributors.add(head)
+    return len(contributors) <= 1
+
+
+def regen_output_hash(root: Path, wt: Path, allowlist: list[str]) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    for rel in sorted(allowlist):
+        if rel.endswith("/**"):
+            prefix = rel[:-3]
+            base = wt / prefix
+            if not base.is_dir():
+                continue
+            for path in sorted(base.rglob("*")):
+                if path.is_file():
+                    digest.update(str(path.relative_to(wt)).encode("utf-8"))
+                    digest.update(path.read_bytes())
+        else:
+            path = wt / rel
+            if path.is_file():
+                digest.update(rel.encode("utf-8"))
+                digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def stage_allowlisted_outputs(wt: Path, allowlist: list[str]) -> None:
+    for entry in allowlist:
+        if entry.endswith("/**"):
+            prefix = entry[:-3]
+            base = wt / prefix
+            if not base.is_dir():
+                continue
+            for path in sorted(base.rglob("*")):
+                if path.is_file():
+                    rel = str(path.relative_to(wt))
+                    git_run(["add", rel], cwd=wt, check=False)
+        else:
+            path = wt / entry
+            if path.is_file():
+                git_run(["add", entry], cwd=wt, check=False)
+
+
+def run_deterministic_regen(root: Path, wt: Path) -> tuple[bool, str]:
+    stub = os.environ.get("SW_DETERMINISTIC_REGEN_STUB", "").strip().lower()
+    cfg = load_deterministic_regen_config(root)
+    allowlist = [str(x) for x in (cfg.get("allowlist") or [])]
+    if stub == "pass":
+        for entry in allowlist:
+            if entry.endswith("/**"):
+                continue
+            path = wt / entry
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("stub-canonical\n", encoding="utf-8")
+        stage_allowlisted_outputs(wt, allowlist)
+        return True, "stub-pass"
+    if stub == "fail":
+        return False, "stub-fail"
+    for cmd in cfg.get("regenCommands") or []:
+        proc = subprocess.run(cmd, cwd=str(wt), shell=True, text=True, capture_output=True)
+        if proc.returncode != 0:
+            return False, proc.stderr.strip() or proc.stdout.strip() or f"regen failed: {cmd}"
+    stage_allowlisted_outputs(wt, allowlist)
+    return True, "regen-commands"
+
+
+def attempt_deterministic_conflict_resolve(
+    root: Path,
+    wt: Path,
+    state: dict[str, Any],
+    conflict_paths: list[str],
+    phase_slug: str,
+) -> tuple[bool, dict[str, Any]]:
+    cfg = load_deterministic_regen_config(root)
+    allowlist = [str(x) for x in (cfg.get("allowlist") or [])]
+    detail: dict[str, Any] = {"conflictPaths": conflict_paths}
+    if not paths_within_allowlist(conflict_paths, allowlist):
+        detail["reason"] = "semantic-conflict"
+        return False, detail
+    plan = load_deliver_plan(root)
+    if not conflict_single_preimage(root, state, plan, conflict_paths, phase_slug):
+        detail["reason"] = "multi-preimage"
+        return False, detail
+    attempts = state.setdefault("deterministicConflictAttempts", {})
+    key = phase_slug
+    count = int(attempts.get(key, 0))
+    max_attempts = deterministic_conflict_max_attempts(root)
+    if count >= max_attempts:
+        detail["reason"] = "deterministic-regen-budget-exhausted"
+        detail["attempts"] = count
+        return False, detail
+    ok, reason = run_deterministic_regen(root, wt)
+    if not ok:
+        detail["reason"] = reason
+        return False, detail
+    hash1 = regen_output_hash(root, wt, allowlist)
+    ok2, reason2 = run_deterministic_regen(root, wt)
+    hash2 = regen_output_hash(root, wt, allowlist)
+    if not ok2 or hash1 != hash2:
+        detail["reason"] = reason2 or "determinism-gate-failed"
+        detail["hash1"] = hash1
+        detail["hash2"] = hash2
+        return False, detail
+    attempts[key] = count + 1
+    state["deterministicConflictAttempts"] = attempts
+    save_state(root, state)
+    detail["reason"] = "deterministic-regen-applied"
+    detail["attempt"] = attempts[key]
+    return True, detail
 
 
 def git_run(
@@ -744,20 +989,34 @@ def cmd_merge_exec(root: Path, args: list[str]) -> None:
             fail(f"phase branch not found: {phase_branch}")
 
     msg = parse_kv(args, "--message") or f"merge({target.split('/')[-1]}): phase {phase_slug}"
+    state = load_state(root)
     proc = git_run(
         ["merge", "--no-ff", merge_ref, "-m", msg],
         cwd=wt,
         check=False,
     )
     if proc.returncode != 0:
-        git_run(["merge", "--abort"], cwd=wt, check=False)
-        fail(
-            "merge failed",
-            exit_code=20,
-            halt="blocked",
-            cause="merge-queue:conflict",
-            stderr=proc.stderr.strip(),
-        )
+        conflict_paths = list_merge_conflict_paths(wt)
+        resolved = False
+        resolve_detail: dict[str, Any] = {}
+        if conflict_paths:
+            resolved, resolve_detail = attempt_deterministic_conflict_resolve(
+                root, wt, state, conflict_paths, phase_slug
+            )
+        if resolved:
+            proc = git_run(["commit", "-m", msg], cwd=wt, check=False)
+        if proc.returncode != 0:
+            git_run(["merge", "--abort"], cwd=wt, check=False)
+            fail_detail = dict(resolve_detail)
+            fail_detail.setdefault("conflictPaths", conflict_paths)
+            fail(
+                "merge failed",
+                exit_code=20,
+                halt="blocked",
+                cause="merge-queue:conflict",
+                stderr=proc.stderr.strip(),
+                **fail_detail,
+            )
     head = git_run(["rev-parse", "HEAD"], cwd=wt).stdout.strip()
     emit(
         {
