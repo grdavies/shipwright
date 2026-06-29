@@ -133,6 +133,7 @@
 * merge phase emitter-dist-parity-s into feat/planning-feedback-lifecycle (27b08e3) <!-- sw-deliver:emitter-dist-parity-s -->
 * merge phase operator-doc-acceptance-criteria-033-owned-m into feat/planning-feedback-lifecycle (b1b168e) <!-- sw-deliver:operator-doc-acceptance-criteria-033-owned-m -->
 * merge phase post-merge-index-reconcile-safety-completion-finalize-chokepoint-amendment-a1-m into feat/planning-feedback-lifecycle (9f2f1cc) <!-- sw-deliver:post-merge-index-reconcile-safety-completion-finalize-chokepoint-amendment-a1-m -->
+* merge phase sot-manifest-copy-to-core-hardening-m into feat/build-chain-source-of-truth (2fcabd4) <!-- sw-deliver:sot-manifest-copy-to-core-hardening-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
