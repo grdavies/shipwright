@@ -20,6 +20,8 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import planning_index_gen as pig  # noqa: E402
 import planning_paths  # noqa: E402
+import planning_visibility as pv  # noqa: E402
+from host_lib import load_workflow_config  # noqa: E402
 from secret_scan import load_allowlist, scan_text  # noqa: E402
 from wave_state import (  # noqa: E402
     enumerate_scoped_runs,
@@ -93,6 +95,35 @@ def actor_id() -> str:
     user = getpass.getuser()
     host = socket.gethostname()
     return f"{user}@{host}"
+
+
+def unit_visibility(root: Path, unit_id: str) -> str:
+    """Resolve visibility for inFlight redaction (PRD 034 R12 / 032 R13 handoff)."""
+    cfg = load_workflow_config(root)
+    for unit in pig.discover_units(root):
+        if unit.id == unit_id:
+            fm = pig.unit_frontmatter_dict(unit)
+            return pv.resolve_unit_visibility(fm, cfg)["visibility"]
+    return "private"
+
+
+def redact_tuple_for_visibility(root: Path, unit_id: str, tup: InflightTuple) -> InflightTuple:
+    vis = unit_visibility(root, unit_id)
+    payload: dict[str, Any] = {
+        "runId": tup.run_id,
+        "epoch": tup.epoch,
+    }
+    if tup.branch_token:
+        payload["branchToken"] = tup.branch_token
+    elif tup.branch:
+        payload["branch"] = tup.branch
+    red = pv.redact_inflight_tuple(payload, vis)
+    return InflightTuple(
+        run_id=str(red.get("runId", tup.run_id)),
+        epoch=int(red.get("epoch", tup.epoch)),
+        branch=red.get("branch") if isinstance(red.get("branch"), str) else None,
+        branch_token=red.get("branchToken") if isinstance(red.get("branchToken"), str) else None,
+    )
 
 
 def parse_region_body(body: str) -> dict[str, InflightTuple]:
@@ -451,6 +482,7 @@ def cmd_write(root: Path, args: list[str]) -> None:
         branch=branch if not branch_token else None,
         branch_token=branch_token,
     )
+    new_tuple = redact_tuple_for_visibility(root, unit_id, new_tuple)
     new_tuple.validate_shape()
 
     target = (state.get("target") or {}).get("branch")
