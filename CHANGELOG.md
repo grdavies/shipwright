@@ -148,6 +148,7 @@
 * merge phase prd-015-reconciliation-gitignore-generation-032-handoff-m into feat/planning-feedback-lifecycle (c892f2c) <!-- sw-deliver:prd-015-reconciliation-gitignore-generation-032-handoff-m -->
 * merge phase sw-init-seeding-doctor-checks-m into feat/planning-feedback-lifecycle (8b5884e) <!-- sw-deliver:sw-init-seeding-doctor-checks-m -->
 * merge phase emitter-dist-parity-doc-impact-acceptance-m into feat/planning-feedback-lifecycle (c18e9a9) <!-- sw-deliver:emitter-dist-parity-doc-impact-acceptance-m -->
+* merge phase related-units-scanner-pull-in-proposal-flow-l into feat/planning-feedback-lifecycle (9e016fb) <!-- sw-deliver:related-units-scanner-pull-in-proposal-flow-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
