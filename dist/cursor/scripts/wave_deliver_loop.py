@@ -763,6 +763,101 @@ def merge_ready_in_flight_phases(
     return ready
 
 
+def in_flight_wave_phases(wave_ids: list[str], statuses: dict[str, str]) -> list[str]:
+    return [pid for pid in sorted(wave_ids) if statuses.get(pid) == "in-flight"]
+
+
+def phase_has_validated_terminal(
+    root: Path,
+    state: dict[str, Any],
+    plan: dict[str, Any],
+    phase_id: str,
+) -> bool:
+    meta = (state.get("phases") or {}).get(phase_id, {})
+    if not isinstance(meta, dict) or meta.get("status") != "in-flight":
+        return True
+    slug = str(meta.get("slug") or phase_id)
+    _, status = read_phase_status_optional(root, slug, state)
+    if status is None:
+        return False
+    if status.get("verdict") == "blocked":
+        return status_is_consumable_terminal(status)
+    if status.get("verdict") != "merge-ready-green":
+        return False
+    ok_shape, _ = validate_terminal_status_shape(status)
+    if not ok_shape:
+        return False
+    phase_branch = meta.get("branch")
+    if not phase_branch:
+        return False
+    expected = phase_branch_head_optional(root, state, slug, str(phase_branch))
+    if not expected:
+        return False
+    ok_sha, _ = check_status_sha(status, expected)
+    if not ok_sha:
+        return False
+    pr_number = resolve_pr_number(root, state, slug, status, str(phase_branch))
+    authorized, _ = live_host_evidence_ok(root, status, expected, pr_number)
+    if not authorized:
+        return False
+    ok, _ = tasks_currency_ok(root, state, plan)
+    return ok
+
+
+def batch_in_flight_all_terminal(
+    root: Path,
+    state: dict[str, Any],
+    plan: dict[str, Any],
+    wave_ids: list[str],
+    statuses: dict[str, str],
+) -> bool:
+    in_flight = in_flight_wave_phases(wave_ids, statuses)
+    if len(in_flight) <= 1:
+        return True
+    return all(phase_has_validated_terminal(root, state, plan, pid) for pid in in_flight)
+
+
+def integration_branch_head(root: Path, state: dict[str, Any]) -> str | None:
+    target = (state.get("target") or {}).get("branch")
+    if not target:
+        return None
+    orch = state.get("orchestratorWorktree") or {}
+    wt_raw = orch.get("path")
+    wt = Path(str(wt_raw)) if wt_raw else root
+    if not wt.is_dir():
+        wt = root
+    proc = subprocess.run(
+        ["git", "-C", str(wt), "rev-parse", str(target)],
+        text=True,
+        capture_output=True,
+    )
+    head = proc.stdout.strip()
+    return head if proc.returncode == 0 and head else None
+
+
+def batch_integration_head_halt(
+    root: Path, state: dict[str, Any]
+) -> dict[str, Any] | None:
+    frozen = state.get("batchIntegrationHead")
+    if not isinstance(frozen, str) or not frozen:
+        return None
+    current = integration_branch_head(root, state)
+    if current and current != frozen:
+        return {
+            "action": "halt-blocked",
+            "cause": "batch-integration-head-moved",
+            "batchIntegrationHead": frozen,
+            "currentIntegrationHead": current,
+            "resume": True,
+        }
+    return None
+
+
+def clear_batch_integration_head_if_idle(state: dict[str, Any]) -> None:
+    if not state.get("mergeQueue") and not state.get("mergeJournal"):
+        state.pop("batchIntegrationHead", None)
+
+
 def in_flight_merge_halt(
     root: Path,
     state: dict[str, Any],
@@ -1191,24 +1286,40 @@ def compute_next_action(
     if merge_halt:
         return merge_halt
 
+    batch_halt = batch_integration_head_halt(root, state)
+    if batch_halt:
+        return batch_halt
+
     if (state.get("mergeQueue") or []) and not state.get("mergeJournal"):
         return {"action": "merge-run-next", "resume": True}
 
+    in_flight = in_flight_wave_phases(wave_ids, statuses)
     merge_ready = merge_ready_in_flight_phases(root, state, plan, wave_ids)
-    if len(merge_ready) > 1:
+    batch_complete = batch_in_flight_all_terminal(root, state, plan, wave_ids, statuses)
+
+    if len(in_flight) > 1 and merge_ready and not batch_complete:
         return {
-            "action": "collect-all-ready",
-            "phases": merge_ready,
+            "action": "await-in-flight",
+            "phaseIds": in_flight,
             "resume": True,
+            "note": "whole-batch completion wait — no early merge (R10)",
         }
-    if len(merge_ready) == 1:
-        entry = merge_ready[0]
-        return {
-            "action": "merge-enqueue",
-            "phaseId": entry["phaseId"],
-            "phaseSlug": entry["phaseSlug"],
-            "resume": True,
-        }
+
+    if merge_ready and batch_complete:
+        if len(merge_ready) > 1:
+            return {
+                "action": "collect-all-ready",
+                "phases": merge_ready,
+                "resume": True,
+            }
+        if len(merge_ready) == 1:
+            entry = merge_ready[0]
+            return {
+                "action": "merge-enqueue",
+                "phaseId": entry["phaseId"],
+                "phaseSlug": entry["phaseSlug"],
+                "resume": True,
+            }
 
     for pid in sorted(wave_ids):
         meta = (state.get("phases") or {}).get(pid, {})
@@ -1610,6 +1721,10 @@ def execute_mechanical(
         return {"executed": "provision-phase", "phaseId": pid, **data}
 
     if action == "collect-all-ready":
+        head = integration_branch_head(root, state)
+        if head:
+            state["batchIntegrationHead"] = head
+            save_state(root, state)
         enqueued: list[str] = []
         for entry in step.get("phases") or []:
             slug = str(entry.get("phaseSlug", ""))
@@ -1617,8 +1732,9 @@ def execute_mechanical(
             if ec != 0:
                 fail_payload(data, "merge enqueue failed", ec)
             enqueued.append(slug)
-        persist_cursor(root, state, "merge-run-next")
-        return {"executed": "collect-all-ready", "enqueued": enqueued}
+        state.update(load_state(root))
+        persist_cursor(root, state, "merge-run-next", batchIntegrationHead=state.get("batchIntegrationHead"))
+        return {"executed": "collect-all-ready", "enqueued": enqueued, "batchIntegrationHead": state.get("batchIntegrationHead")}
 
     if action == "phase-teardown-run":
         pid = str(step.get("phaseId", ""))
@@ -1742,6 +1858,14 @@ def execute_mechanical(
         return {"executed": "merge-enqueue", "phaseSlug": slug}
 
     if action == "merge-run-next":
+        batch_halt = batch_integration_head_halt(root, state)
+        if batch_halt:
+            fail(
+                batch_halt.get("cause") or "batch-integration-head-moved",
+                exit_code=20,
+                halt="blocked",
+                **{k: v for k, v in batch_halt.items() if k not in ("action", "resume")},
+            )
         ec, data = run_wave(root, "merge", "run-next")
         if ec == 10 and data.get("cause") == "verify:environmental":
             slug = str(data.get("phase") or "")
@@ -1781,6 +1905,9 @@ def execute_mechanical(
             fail_payload(data, "merge run-next failed", ec)
         state.update(load_state(root))
         persist_cursor(root, state, "provision-phase")
+        state.update(load_state(root))
+        clear_batch_integration_head_if_idle(state)
+        save_state(root, state)
         return {"executed": "merge-run-next", **data}
 
     if action == "advance-wave":

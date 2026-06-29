@@ -158,6 +158,14 @@ def paths_contend(
     if "doc-numbering" in serialized:
         if phase_touches_doc_numbering([left], root) and phase_touches_doc_numbering([right], root):
             return True, "doc-numbering"
+    for token in serialized:
+        if token.endswith("/**") or token == planning_paths.GOLDEN_MANIFEST_REL:
+            if planning_paths.path_matches_serialized_token(left, token) and planning_paths.path_matches_serialized_token(
+                right, token
+            ):
+                return True, token
+    if planning_paths.path_matches_generator_output(left) and planning_paths.path_matches_generator_output(right):
+        return True, "generator-output"
     return False, ""
 
 
@@ -290,6 +298,7 @@ def apply_contention(
 ) -> tuple[list[list[str]], list[dict[str, str]], list[dict[str, str]], list[str], dict[str, list[str]]]:
     phase_ids = [p["id"] for p in phases]
     phase_files = parse_phase_files(content)
+    phase_files = planning_paths.expand_generator_contention_paths(phase_files, content, root)
     edges, injected, contention_notices = inject_contention_edges(
         phase_ids, declared_edges, phase_files, contention, root
     )

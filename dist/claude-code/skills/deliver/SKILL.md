@@ -238,7 +238,11 @@ When a wave has N independent ready phases, the driver emits **`dispatch-batch`*
 1. Driver `provision-phase` (mechanical) until worktrees exist for the batch.
 2. Driver returns `dispatch-batch` → conductor spawns N background Tasks (`run_in_background: true`).
 3. Wait for durable `status.json` per **Parallel-wave completion wait** in `skills/conductor/SKILL.md`.
-4. Driver `collect-all-ready` enqueues simultaneous greens in phase-id order → `merge run-next` (conductor only).
+4. Driver `collect-all-ready` enqueues simultaneous greens in phase-id order → `merge run-next`
+   (conductor only). **Whole-batch gate (R10):** the driver never `merge-enqueue`s a lone ready member while
+   sibling in-flight phases lack validated terminal status; integration HEAD is pinned at collect-all-ready.
+5. **Deterministic merge conflicts (R12):** conflicts confined to `core/sw-reference/deterministic-regen-paths.json`
+   auto-resolve via regenerate-and-restage in the orchestrator worktree; semantic paths halt.
 
 On `status collect` with `blocked`, `blast-radius apply` blocks transitive dependents only (R24):
 

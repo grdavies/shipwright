@@ -98,11 +98,18 @@ bash scripts/wave.sh deliver-loop --dry-run
 4. Per wave: `phase provision` → `phase dispatch-env` → full `/sw-ship --phase-mode` in phase worktree
    (agent step; orchestrator never bypasses `/sw-ship`).
 5. `status collect` from durable path; advance only from `status.json` (R7).
-6. On `merge-ready-green`: `merge enqueue` → `merge run-next` when gate + review barrier settle.
-7. On blocker: bounded remediation (`deliver.remediation.maxAttempts`, default **2**), blast-radius for
+6. **Whole-batch merge (R10):** no phase in a parallel batch merges until every in-flight batch member
+   publishes a validated terminal `status.json` (`merge-ready-green` or `blocked`). Multiple greens enqueue via
+   `collect-all-ready` in phase-id order; integration HEAD is frozen at `batchIntegrationHead` until the batch
+   queue drains — halt if integration moves mid-batch.
+7. On `merge-ready-green`: `merge enqueue` → `merge run-next` when gate + review barrier settle.
+8. **Deterministic conflict auto-resolve (R12):** `merge-queue:conflict` on golden-manifest / `dist/**` /
+   generated mirrors only may auto-regen (`copy-to-core` + `python3 -m sw generate --all`) within
+   `deliver.deterministicConflict.maxAttempts` (default 1); semantic or multi-preimage conflicts halt.
+9. On blocker: bounded remediation (`deliver.remediation.maxAttempts`, default **2**), blast-radius for
    siblings, consolidated blocker report on halt (R8–R12).
-8. When all phases `green-merged`: `resume reconcile`, terminal PR, compounding (later phases).
-9. Halt at human merge gate — never in-flux.
+10. When all phases `green-merged`: `resume reconcile`, terminal PR, compounding (later phases).
+11. Halt at human merge gate — never in-flux.
 
 When the driver returns `awaitAgent: true`, the conductor performs the agent work and immediately
 re-invokes `bash scripts/wave.sh deliver-loop` within the same turn until a legitimate halt (R6/R7 — see
