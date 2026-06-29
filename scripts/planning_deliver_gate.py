@@ -91,6 +91,9 @@ def units_with_derived_status(root: Path) -> tuple[list[pg.GraphUnit], dict[str,
                 priority=unit.priority,
                 depends=unit.depends,
                 blocks=unit.blocks,
+                supersedes=unit.supersedes,
+                extends=unit.extends,
+                absorbs=unit.absorbs,
                 source_path=unit.source_path,
             )
         )

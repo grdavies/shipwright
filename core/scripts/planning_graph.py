@@ -20,10 +20,19 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import planning_index_gen as pig  # noqa: E402
 import planning_paths as pp  # noqa: E402
+import planning_lifecycle as plc  # noqa: E402
 
 TERMINAL_STATUSES = frozenset({"complete", "superseded", "cancelled", "resolved"})
 DEPENDENCY_DEAD_TARGET_STATUSES = frozenset({"superseded", "cancelled"})
 SATISFIED_STATUSES = frozenset({"complete", "resolved"})
+
+
+def parse_edge_list(raw: Any) -> tuple[str, ...]:
+    if isinstance(raw, list):
+        return tuple(str(x) for x in raw if str(x).strip())
+    if raw:
+        return (str(raw).strip(),)
+    return ()
 
 
 @dataclass(frozen=True)
@@ -34,6 +43,9 @@ class GraphUnit:
     priority: int
     depends: tuple[str, ...] = ()
     blocks: tuple[str, ...] = ()
+    supersedes: tuple[str, ...] = ()
+    extends: tuple[str, ...] = ()
+    absorbs: tuple[str, ...] = ()
     source_path: str = ""
 
     @property
@@ -55,10 +67,6 @@ def fail(error: str, exit_code: int = 20, **extra: Any) -> None:
 
 
 def unit_from_frontmatter(fm: dict[str, Any], source_path: str = "") -> GraphUnit:
-    depends_raw = fm.get("depends") or []
-    blocks_raw = fm.get("blocks") or []
-    depends = tuple(str(x) for x in depends_raw) if isinstance(depends_raw, list) else ()
-    blocks = tuple(str(x) for x in blocks_raw) if isinstance(blocks_raw, list) else ()
     priority = fm.get("priority")
     if not isinstance(priority, int):
         priority = 0
@@ -67,8 +75,11 @@ def unit_from_frontmatter(fm: dict[str, Any], source_path: str = "") -> GraphUni
         unit_type=str(fm.get("type", "")),
         status=str(fm.get("status", "")),
         priority=priority,
-        depends=depends,
-        blocks=blocks,
+        depends=parse_edge_list(fm.get("depends")),
+        blocks=parse_edge_list(fm.get("blocks")),
+        supersedes=parse_edge_list(fm.get("supersedes")),
+        extends=parse_edge_list(fm.get("extends")),
+        absorbs=parse_edge_list(fm.get("absorbs")),
         source_path=source_path,
     )
 
@@ -181,6 +192,52 @@ def topological_order(units: Iterable[GraphUnit]) -> list[str]:
         return []
     return order
 
+
+
+def absorption_gap_status(absorber_derived: str, gap_status: str) -> str:
+    return plc.gap_absorption_target(absorber_derived, gap_status)
+
+
+@dataclass(frozen=True)
+class EdgeEffects:
+    derived: dict[str, str]
+    supersede_edges: tuple[tuple[str, str], ...]
+    extend_edges: tuple[tuple[str, str], ...]
+
+
+def apply_edge_effects(units: Iterable[GraphUnit], base_derived: dict[str, str]) -> EdgeEffects:
+    """R10/R11 — supersession flips, extends lineage, absorbs gap progression."""
+    by_id = index_units(units)
+    derived = dict(base_derived)
+    supersede_edges: list[tuple[str, str]] = []
+    extend_edges: list[tuple[str, str]] = []
+
+    for unit in by_id.values():
+        for target_id in unit.extends:
+            extend_edges.append((target_id, unit.id))
+        for target_id in unit.supersedes:
+            supersede_edges.append((target_id, unit.id))
+            if target_id in derived:
+                derived[target_id] = "superseded"
+            elif target_id in by_id:
+                derived[target_id] = "superseded"
+
+    for unit in by_id.values():
+        if not unit.absorbs:
+            continue
+        absorber_status = derived.get(unit.id, unit.status)
+        for gap_id in unit.absorbs:
+            gap = by_id.get(gap_id)
+            if not gap or gap.unit_type != "gap":
+                continue
+            current = derived.get(gap_id, gap.status)
+            derived[gap_id] = absorption_gap_status(absorber_status, current)
+
+    return EdgeEffects(
+        derived=derived,
+        supersede_edges=tuple(sorted(supersede_edges)),
+        extend_edges=tuple(sorted(extend_edges)),
+    )
 
 def order_eligible(units: Iterable[GraphUnit]) -> list[str]:
     """R6 — priority desc, then topo order, stable tie-break on unit id."""

@@ -330,3 +330,14 @@ jobs:
       - name: Run planning-scheduler-fixtures
         run: bash scripts/test/run-planning-scheduler-fixtures.sh
 
+  feat-test-plan-planning-edge-effects-fixtures:
+    name: feat-test-plan-planning-edge-effects-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-edge-effects-fixtures
+        run: bash scripts/test/run-planning-edge-effects-fixtures.sh
+

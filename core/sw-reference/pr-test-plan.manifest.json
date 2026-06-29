@@ -398,6 +398,19 @@
         "deliver-dependency-preflight",
         "override-logged-rate-surfaced"
       ]
+    },
+    {
+      "id": "planning-edge-effects-fixtures",
+      "script": "scripts/test/run-planning-edge-effects-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-edge-effects-fixtures",
+      "scenarios": [
+        "supersedes-flip-manifest",
+        "absorbs-lifecycle-progression",
+        "terminal-excluded-from-eligible",
+        "superseded-manifest-render"
+      ]
     }
   ]
 }
