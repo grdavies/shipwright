@@ -124,6 +124,7 @@
 * merge phase regression-remediation-routing-r6-r8-m into feat/delivery-conductor-concurrency-and-remediation-robustness (86b950f) <!-- sw-deliver:regression-remediation-routing-r6-r8-m -->
 * merge phase terminal-status-integrity-recovery-r13-r17-l into feat/delivery-conductor-concurrency-and-remediation-robustness (d98d1da) <!-- sw-deliver:terminal-status-integrity-recovery-r13-r17-l -->
 * merge phase parallel-merge-batch-safety-r9-r12-l into feat/delivery-conductor-concurrency-and-remediation-robustness (a7fa461) <!-- sw-deliver:parallel-merge-batch-safety-r9-r12-l -->
+* merge phase cross-cutting-invariants-ci-enforcement-dogfood-r18-r22-m into feat/delivery-conductor-concurrency-and-remediation-robustness (c52e97e) <!-- sw-deliver:cross-cutting-invariants-ci-enforcement-dogfood-r18-r22-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
