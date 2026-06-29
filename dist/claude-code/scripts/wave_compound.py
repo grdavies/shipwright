@@ -18,7 +18,14 @@ from host_invoke import host_verb
 
 from cleanup_lib import load_default_branch
 from wave_json_io import StateCorruptError, read_json, write_json
-from wave_state import completion_finalize_authorization, load_deliver_state, phase_complete, resolve_state_path, save_deliver_state
+from wave_state import (
+    completion_finalize_authorization,
+    load_deliver_state,
+    phase_complete,
+    resolve_state_path,
+    save_deliver_state,
+    target_branch_from_state,
+)
 
 # File outputs safe to commit pre-merge (R18). Memory/provider artifacts are never committed (R19).
 ALLOWED_PREMERGE_FILE_PREFIXES = (
@@ -133,7 +140,7 @@ def terminal_pr_merged_via_host(root: Path, state: dict[str, Any]) -> dict[str, 
 
 
 def target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     if not target:
         return {"merged": False, "reason": "no-target-branch"}
     top = git_top(root)
@@ -273,7 +280,7 @@ def detect_retrospective_phase(root: Path, state: dict[str, Any]) -> str:
         return "pre-merge"
     if state.get("terminalPr"):
         return "pre-merge"
-    if state.get("target", {}).get("branch"):
+    if target_branch_from_state(state):
         return "pre-merge"
     return "post-merge"
 

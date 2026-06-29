@@ -133,9 +133,13 @@ def slug_from_target(target_branch: str) -> str:
 
 
 def target_branch_from_state(state: dict[str, Any]) -> str | None:
-    target = state.get("target") or {}
-    branch = target.get("branch") if isinstance(target, dict) else None
-    return branch if isinstance(branch, str) and branch else None
+    target = state.get("target")
+    if isinstance(target, str) and is_feature_target(target):
+        return target
+    if isinstance(target, dict):
+        branch = target.get("branch")
+        return branch if isinstance(branch, str) and branch else None
+    return None
 
 
 def scoped_paths(root: Path, target: str) -> dict[str, Path]:
@@ -397,10 +401,19 @@ def load_deliver_state(
 ) -> dict[str, Any]:
     path = resolve_state_path(root, target=target, task_list=task_list)
     try:
-        return read_json(path)
+        data = read_json(path)
     except StateCorruptError as exc:
         fail_corrupt(path, exc)
         return {}
+    if _is_migration_breadcrumb(data):
+        scoped = _scoped_path_from_breadcrumb(root, data)
+        if scoped is not None:
+            try:
+                return read_json(scoped)
+            except StateCorruptError:
+                return {}
+        return {}
+    return data
 
 
 def save_deliver_state(
