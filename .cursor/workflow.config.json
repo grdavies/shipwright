@@ -189,7 +189,7 @@
       "maxIterations": 500
     },
     "terminal": {
-      "autonomy": "auto"
+      "autonomy": "supervised"
     }
   },
   "cleanup": {
