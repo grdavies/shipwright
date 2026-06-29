@@ -244,3 +244,17 @@ Survives `sw-tmp clean` (R47/R38). Never commit these paths (`/sw-commit` exclud
 
 Phase-mode **never merges**. The human merge gate is reserved for `<type>/<slug> → main` on the orchestrator
 (R18/R23). `/sw-deliver` owns phase → `<type>/<slug>` merges (R19).
+
+### Single-flight ship lease + PR idempotency (PRD 036 R1–R5)
+
+Before `sw-pr` touches a phase head under deliver dispatch:
+
+1. **Per-head lease** — `bash scripts/wave.sh ship-lease acquire --integration <integration> --phase-branch <head>`
+   (keyed `(integrationBranch, phaseBranch)` under `.cursor/sw-deliver-locks/`; heartbeat TTL
+   `SW_SHIP_LEASE_STALE_SECONDS`, default 300s).
+2. **PR idempotency** — phase-mode `host_pr_create` routes through `create_or_reuse_phase_pr`: `pr-list` filtered
+   by integration base under the lease, reuse open PR or create once; `openPrNumber` persisted to deliver state.
+3. **Base pin** — integration branch from durable deliver state only; `SW_INTEGRATION_BRANCH` is harness-only.
+4. **Release** — `bash scripts/wave.sh ship-lease release` after the list→create window closes.
+
+`dispatch-ship` runs **in-turn** in the conductor; only `dispatch-batch` backgrounds sub-agents on distinct heads.

@@ -713,6 +713,9 @@ def mark_phases_in_flight(
         meta["startedAt"] = meta.get("startedAt") or now
         if background:
             meta["backgroundDispatchedAt"] = now
+        else:
+            meta.pop("backgroundDispatchedAt", None)
+            meta["inlineDispatchedAt"] = now
         phases[pid] = meta
 
 
@@ -1801,7 +1804,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
                 )
             elif step["action"] == "dispatch-ship":
                 pid = str(step.get("phaseId", ""))
-                mark_phases_in_flight(state, [pid], background=True)
+                mark_phases_in_flight(state, [pid], background=False)
                 persist_cursor(root, state, "dispatch-ship")
             elif step["action"] == "halt-blocked":
                 execute_mechanical(root, state, plan, step, loop_args=args)

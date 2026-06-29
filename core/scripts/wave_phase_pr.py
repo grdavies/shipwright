@@ -17,19 +17,56 @@ from host_lib import phase_mode_active
 
 
 def integration_branch(root: Path) -> str | None:
-    env_branch = os.environ.get("SW_INTEGRATION_BRANCH", "").strip()
-    if env_branch:
-        return env_branch
+    """Sole authority: durable deliver state; SW_INTEGRATION_BRANCH is harness-only (R4)."""
+    state_branch: str | None = None
     try:
         from wave_state import load_deliver_state
+
         state = load_deliver_state(root)
+        target = state.get("target") or {}
+        raw = target.get("branch")
+        if isinstance(raw, str) and raw.strip():
+            state_branch = raw.strip()
     except ImportError:
-        state = {}
-    target = state.get("target") or {}
-    branch = target.get("branch")
-    if isinstance(branch, str) and branch.strip():
-        return branch.strip()
+        state_branch = None
+    env_branch = os.environ.get("SW_INTEGRATION_BRANCH", "").strip()
+    if env_branch and state_branch and env_branch != state_branch:
+        return None  # caller maps to fail-closed via resolve_phase_pr_base
+    if state_branch:
+        return state_branch
+    if env_branch:
+        return env_branch
     return None
+
+
+def integration_branch_or_fail(root: Path) -> str:
+    state_branch: str | None = None
+    try:
+        from wave_state import load_deliver_state
+
+        state = load_deliver_state(root)
+        target = state.get("target") or {}
+        raw = target.get("branch")
+        if isinstance(raw, str) and raw.strip():
+            state_branch = raw.strip()
+    except ImportError:
+        state_branch = None
+    env_branch = os.environ.get("SW_INTEGRATION_BRANCH", "").strip()
+    if env_branch and state_branch and env_branch != state_branch:
+        from wave_state import fail
+
+        fail(
+            "integration-branch-env-state-mismatch",
+            exit_code=20,
+            envBranch=env_branch,
+            stateBranch=state_branch,
+        )
+    branch = state_branch or env_branch
+    if not branch:
+        from wave_state import fail
+
+        fail("integration-branch-missing", exit_code=20)
+    return branch
 
 
 def resolve_phase_pr_base(root: Path, explicit_base: str | None = None) -> dict[str, Any]:
@@ -107,6 +144,146 @@ def close_superseded_phase_prs(root: Path, state: dict[str, Any], *, phase_slug:
             else:
                 errors.append({**entry, "reason": out.get("reason", "pr-close-failed")})
     return {"verdict": "ok" if not errors else "partial", "closed": closed, "skipped": skipped, "errors": errors}
+
+
+def _phase_meta_for_slug(state: dict[str, Any], phase_slug: str) -> dict[str, Any] | None:
+    for meta in (state.get("phases") or {}).values():
+        if meta.get("slug") == phase_slug:
+            return meta if isinstance(meta, dict) else None
+    return None
+
+
+def close_prs_wrong_base(
+    root: Path,
+    *,
+    head: str,
+    integration: str,
+) -> dict[str, Any]:
+    """Close open PRs on head whose base ≠ integration (R4)."""
+    listed = host_verb(root, "pr-list", head=head, state="open", limit="20")
+    if listed.get("verdict") != "ok":
+        return {"verdict": "fail", "reason": listed.get("reason", "pr-list-failed")}
+    closed: list[dict[str, Any]] = []
+    kept: list[dict[str, Any]] = []
+    for pr in listed.get("data") or []:
+        if not isinstance(pr, dict):
+            continue
+        base = pr.get("baseRefName") or pr.get("base")
+        if base == integration:
+            kept.append(pr)
+            continue
+        number = pr.get("number")
+        if number is None:
+            continue
+        out = host_verb(root, "pr-close", number=str(number))
+        closed.append({"number": number, "base": base, "verdict": out.get("verdict")})
+    return {"verdict": "ok", "closed": closed, "kept": kept}
+
+
+def canonical_pr_on_base(prs: list[dict[str, Any]], integration: str) -> dict[str, Any] | None:
+    """Select canonical PR by integration-base identity (R5)."""
+    matches = [
+        pr
+        for pr in prs
+        if isinstance(pr, dict)
+        and (pr.get("baseRefName") or pr.get("base")) == integration
+    ]
+    if not matches:
+        return None
+    if len(matches) == 1:
+        return matches[0]
+    matches.sort(key=lambda p: str(p.get("createdAt") or p.get("number") or ""))
+    return matches[0]
+
+
+def persist_open_pr_number(
+    root: Path,
+    *,
+    phase_slug: str,
+    number: int | str,
+) -> None:
+    from wave_state import load_deliver_state, save_deliver_state
+
+    state = load_deliver_state(root)
+    for meta in (state.get("phases") or {}).values():
+        if meta.get("slug") == phase_slug:
+            meta["openPrNumber"] = int(number)
+            break
+    save_deliver_state(root, state)
+
+
+def recorded_open_pr(state: dict[str, Any], phase_slug: str) -> int | None:
+    meta = _phase_meta_for_slug(state, phase_slug)
+    if not meta:
+        return None
+    raw = meta.get("openPrNumber")
+    return int(raw) if raw is not None else None
+
+
+def create_or_reuse_phase_pr(
+    root: Path,
+    *,
+    phase_slug: str,
+    head: str,
+    title: str,
+    body: str,
+) -> dict[str, Any]:
+    """Idempotent phase PR under per-head lease (R2/R3/R4)."""
+    from wave_state import fail, load_deliver_state
+
+    integration = integration_branch_or_fail(root)
+    resolved = enforce_phase_pr_base(root, integration)
+    if resolved.get("verdict") != "ok":
+        return resolved
+    base = str(resolved["base"])
+
+    from wave_lock import acquire_ship_lease, release_ship_lease
+
+    acquire_args = ["--integration", integration, "--phase-branch", head]
+    lease = acquire_ship_lease(root, acquire_args)
+    if lease.get("verdict") != "pass":
+        return lease
+    owned_lease = not lease.get("reentrant")
+
+    try:
+        close_prs_wrong_base(root, head=head, integration=base)
+        state = load_deliver_state(root)
+        recorded = recorded_open_pr(state, phase_slug)
+        if recorded is not None:
+            listed = host_verb(root, "pr-list", head=head, base=base, state="open", limit="10")
+            items = listed.get("data") if listed.get("verdict") == "ok" else []
+            if isinstance(items, list):
+                for pr in items:
+                    if isinstance(pr, dict) and pr.get("number") == recorded:
+                        return {"verdict": "ok", "reused": True, "pr": pr, "number": recorded}
+            return {
+                "verdict": "fail",
+                "error": "duplicate-pr-recorded-open",
+                "openPrNumber": recorded,
+                "route": "supersede",
+            }
+
+        listed = host_verb(root, "pr-list", head=head, base=base, state="open", limit="10")
+        if listed.get("verdict") != "ok":
+            return {"verdict": "fail", "reason": listed.get("reason", "pr-list-failed")}
+        items = listed.get("data") if isinstance(listed.get("data"), list) else []
+        canonical = canonical_pr_on_base(items, base)
+        if canonical and canonical.get("number") is not None:
+            persist_open_pr_number(root, phase_slug=phase_slug, number=canonical["number"])
+            return {"verdict": "ok", "reused": True, "pr": canonical, "number": canonical["number"]}
+
+        out = host_verb(root, "pr-create", title=title, body=body, head=head, base=base)
+        if out.get("verdict") != "ok":
+            return {"verdict": "fail", "reason": out.get("reason", "pr-create-failed")}
+        data = out.get("data") if isinstance(out.get("data"), dict) else {}
+        number = data.get("number")
+        if number is None:
+            fail("pr-create missing number", exit_code=30)
+        persist_open_pr_number(root, phase_slug=phase_slug, number=number)
+        return {"verdict": "ok", "created": True, "pr": data, "number": number}
+    finally:
+        if owned_lease:
+            release_ship_lease(root, acquire_args)
 
 
 def phase_green_merged_branch(root: Path, branch: str) -> bool:
