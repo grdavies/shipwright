@@ -4,6 +4,7 @@ topic: planning-feedback-lifecycle
 prd: docs/prds/033-lifecycle-dependencies-and-scheduler/033-prd-lifecycle-dependencies-and-scheduler.md
 amendments:
   - docs/prds/033-lifecycle-dependencies-and-scheduler/amendments/A1-post-merge-index-reconcile-safety.md
+  - docs/prds/033-lifecycle-dependencies-and-scheduler/amendments/A2-decision-id-union-exclusion.md
 frozen: true
 frozen_at: 2026-06-29
 ---

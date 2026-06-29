@@ -73,6 +73,108 @@ EOF
   fi
 ) || FAIL=1
 
+# --- check-frozen: allow pure doc-format normalization of a frozen artifact (PRD 033 A1) ---
+TMPGIT_NORM=$(mktemp -d)
+(
+  cd "$TMPGIT_NORM"
+  git init -q
+  git config user.email "test@example.com"; git config user.name "Test"
+  mkdir -p docs/prds/normtest
+  cat > docs/prds/normtest/prd.md <<'EOF'
+---
+frozen: true
+---
+# Norm
+
+## Decision Log
+
+- **D1.** A decision
+EOF
+  git add -A && git commit -m "add frozen with D1. variant" --quiet
+  python3 "$ROOT/scripts/doc_format.py" write --inplace docs/prds/normtest/prd.md
+  git add -A && git commit -m "normalize decision log" --quiet
+  OUT=$(bash "$ROOT/scripts/check-frozen.sh" HEAD~1 2>/dev/null || true)
+  if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('verdict')=='pass' else 1)"; then
+    echo "OK  check-frozen allows pure doc-format normalization"
+  else
+    echo "FAIL check-frozen should allow pure doc-format normalization"
+    FAIL=1
+  fi
+)
+rm -rf "$TMPGIT_NORM"
+
+# --- check-frozen: allow frozen task-list refresh bound to an added frozen amendment (PRD 033 A1) ---
+TMPGIT_AMD=$(mktemp -d)
+(
+  cd "$TMPGIT_AMD"
+  git init -q
+  git config user.email "test@example.com"; git config user.name "Test"
+  mkdir -p docs/prds/amdtest
+  cat > docs/prds/amdtest/tasks-amdtest.md <<'EOF'
+---
+frozen: true
+---
+# Tasks
+
+## Tasks
+
+### 1. Phase one — S
+
+- [ ] 1.1 Do a thing (R1)
+EOF
+  git add -A && git commit -m "add frozen task list" --quiet
+  mkdir -p docs/prds/amdtest/amendments
+  cat > docs/prds/amdtest/amendments/A1.md <<'EOF'
+---
+amends: docs/prds/amdtest/tasks-amdtest.md
+frozen: true
+---
+# Amendment A1
+EOF
+  printf '\n### 2. Phase two — S\n\n- [ ] 2.1 New thing (R2)\n' >> docs/prds/amdtest/tasks-amdtest.md
+  git add -A && git commit -m "refresh task list + add amendment" --quiet
+  OUT=$(bash "$ROOT/scripts/check-frozen.sh" HEAD~1 2>/dev/null || true)
+  if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('verdict')=='pass' else 1)"; then
+    echo "OK  check-frozen allows amendment-companion task-list refresh"
+  else
+    echo "FAIL check-frozen should allow amendment-companion task-list refresh"
+    FAIL=1
+  fi
+)
+rm -rf "$TMPGIT_AMD"
+
+# --- check-frozen: still reject a frozen task-list change with no companion amendment ---
+TMPGIT_NEG=$(mktemp -d)
+(
+  cd "$TMPGIT_NEG"
+  git init -q
+  git config user.email "test@example.com"; git config user.name "Test"
+  mkdir -p docs/prds/negtest
+  cat > docs/prds/negtest/tasks-negtest.md <<'EOF'
+---
+frozen: true
+---
+# Tasks
+
+## Tasks
+
+### 1. Phase one — S
+
+- [ ] 1.1 Do a thing (R1)
+EOF
+  git add -A && git commit -m "add frozen task list" --quiet
+  printf '\n### 2. Phase two — S\n\n- [ ] 2.1 New thing (R2)\n' >> docs/prds/negtest/tasks-negtest.md
+  git add -A && git commit -m "refresh task list without amendment" --quiet
+  OUT=$(bash "$ROOT/scripts/check-frozen.sh" HEAD~1 2>/dev/null || true)
+  if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('verdict')=='fail' else 1)"; then
+    echo "OK  check-frozen rejects frozen task-list change without amendment"
+  else
+    echo "FAIL check-frozen should reject frozen task-list change without amendment"
+    FAIL=1
+  fi
+)
+rm -rf "$TMPGIT_NEG"
+
 # --- spec-union: ## R<n> heading format (exemplar shape) ---
 FIX3=$(mktemp -d)
 cp "$FIX/parent-prd.md" "$FIX3/"
