@@ -537,6 +537,26 @@
         "public-unit-no-regression",
         "doc-impact-visibility-store"
       ]
+    },
+    {
+      "id": "planning-related-fixtures",
+      "script": "scripts/test/run-planning-related-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-related-fixtures",
+      "scenarios": [
+        "scanner-confirm-list-not-autoabsorb",
+        "related-deterministic-rank-threshold",
+        "related-repeat-suppression",
+        "semantic-optin-flag-gated",
+        "min-recall-gap-043-044-046",
+        "private-metadata-only-proposal",
+        "frozen-pull-in-routes-amendment",
+        "prd-pull-in-proposal-confirm",
+        "tasks-rescan-amendment-proposal",
+        "absorption-edge-autonomous-choices-gated",
+        "proposal-payload-redaction"
+      ]
     }
   ]
 }
