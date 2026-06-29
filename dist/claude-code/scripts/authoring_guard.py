@@ -28,6 +28,9 @@ PLANNING_UNIT_RE = re.compile(
     r"docs/planning/(brainstorm|gap|prd|decision|amendment)/([^/]+)/"
 )
 AMEND_ALLOWED_STATUSES = frozenset({"planned", "in-progress"})
+LEGACY_UNIT_ID_RE = re.compile(r"^prd-(\d{3})-")
+# Pre-031 cutover: legacy INDEX uses not-started; frozen-but-unshipped PRDs amend as planned.
+LEGACY_INDEX_AMEND_STATUS = {"not-started": "planned"}
 
 
 def utc_now() -> str:
@@ -93,6 +96,49 @@ def resolve_unit_id(root: Path, args: list[str]) -> tuple[str, str | None]:
     fail("--unit or --path required")
 
 
+
+def legacy_prd_index_status(root: Path, unit_id: str) -> str:
+    """Read legacy docs/prds/INDEX.md Status for pre-planning-model units (PRD 032 R12)."""
+    match = LEGACY_UNIT_ID_RE.match(unit_id)
+    if not match:
+        return ""
+    prd_num = match.group(1)
+    index_path = root / "docs" / "prds" / "INDEX.md"
+    if not index_path.is_file():
+        return ""
+    for line in index_path.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|") or line.startswith("| #") or line.startswith("|---"):
+            continue
+        parts = [p.strip() for p in line.strip("|").split("|")]
+        if len(parts) >= 5 and parts[0] == prd_num:
+            return parts[4]
+    return ""
+
+
+def legacy_prd_body_frozen(root: Path, unit_id: str) -> bool:
+    match = LEGACY_UNIT_ID_RE.match(unit_id)
+    if not match:
+        return False
+    prd_dir = root / "docs" / "prds"
+    if not prd_dir.is_dir():
+        return False
+    prefix = f"{match.group(1)}-"
+    for child in prd_dir.iterdir():
+        if not child.is_dir() or not child.name.startswith(prefix):
+            continue
+        for md in child.glob("*-prd-*.md"):
+            text = md.read_text(encoding="utf-8")
+            if text.startswith("---") and "frozen: true" in text.split("---", 2)[1]:
+                return True
+    return False
+
+
+def normalize_legacy_amend_status(index_status: str, *, frozen: bool) -> str:
+    if frozen and index_status in LEGACY_INDEX_AMEND_STATUS:
+        return LEGACY_INDEX_AMEND_STATUS[index_status]
+    return index_status
+
+
 def derived_region_populated(derived_body: str) -> bool:
     for line in derived_body.splitlines():
         line = line.strip()
@@ -121,6 +167,12 @@ def reconcile_generation_token(root: Path, unit_id: str) -> dict[str, Any]:
         mode = "derived"
         consumer_status = (
             pig.resolve_consumer_status(unit, derived_body) if unit else ""
+        )
+    elif unit is None and LEGACY_UNIT_ID_RE.match(unit_id):
+        legacy_status = legacy_prd_index_status(root, unit_id)
+        mode = "legacy-index-degraded"
+        consumer_status = normalize_legacy_amend_status(
+            legacy_status, frozen=legacy_prd_body_frozen(root, unit_id)
         )
     else:
         mode = "structural-degraded"
