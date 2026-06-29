@@ -64,4 +64,29 @@ else
   bad "verify-test-registers-core-scripts-parity"
 fi
 
+
+# --- build-chain-sync-runs (R7) ---
+if [ -x "$ROOT/scripts/build-chain-sync.sh" ] && bash "$ROOT/scripts/build-chain-sync.sh" >/dev/null 2>&1; then
+  ok "build-chain-sync-runs"
+else
+  bad "build-chain-sync-runs"
+fi
+
+# --- build-chain-sync-idempotent (R8) ---
+if bash "$ROOT/scripts/build-chain-sync.sh" >/dev/null 2>&1; then
+  BEFORE="$(git -C "$ROOT" status --porcelain)"
+  if bash "$ROOT/scripts/build-chain-sync.sh" >/dev/null 2>&1; then
+    AFTER="$(git -C "$ROOT" status --porcelain)"
+    if [ "$BEFORE" = "$AFTER" ]; then
+      ok "build-chain-sync-idempotent"
+    else
+      bad "build-chain-sync-idempotent: second run changed working tree"
+    fi
+  else
+    bad "build-chain-sync-idempotent: second run failed"
+  fi
+else
+  bad "build-chain-sync-idempotent: first run failed"
+fi
+
 exit "$FAIL"
