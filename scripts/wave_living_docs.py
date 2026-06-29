@@ -282,7 +282,7 @@ def _cmd_reconcile_locked(
         if proc.returncode == 0 and proc.stdout.strip().startswith("{"):
             planning_graph_out = json.loads(proc.stdout)
         # Reconcile updates living INDEX/GAP-BACKLOG via set-index-status + gap-resolve only.
-        # Legacy projection emits a sparse shim and must not run here (pre-cutover corpus lives in docs/prds/).
+        # Legacy projection emits a sparse shim and must not run here (pre-cutover prdsDir corpus).
 
     gap_out: dict[str, Any] | None = None
     if index_status == "complete":
