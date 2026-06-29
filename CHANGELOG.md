@@ -144,6 +144,7 @@
 * merge phase visibility-field-public-repo-aware-resolver-m into feat/planning-feedback-lifecycle (3b7c2fd) <!-- sw-deliver:visibility-field-public-repo-aware-resolver-m -->
 * merge phase emission-point-registry-machine-checked-call-site-map-l into feat/planning-feedback-lifecycle (b920958) <!-- sw-deliver:emission-point-registry-machine-checked-call-site-map-l -->
 * merge phase planning-store-interface-backends-l into feat/planning-feedback-lifecycle (e3a6afe) <!-- sw-deliver:planning-store-interface-backends-l -->
+* merge phase provision-time-materialization-commit-boundary-barrier-l into feat/planning-feedback-lifecycle (c475abe) <!-- sw-deliver:provision-time-materialization-commit-boundary-barrier-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

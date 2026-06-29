@@ -4,5 +4,9 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$(git rev-parse --show-toplevel)"
+export PYTHONPATH="$ROOT:${PYTHONPATH:-}"
+if [[ -f "$ROOT/planning_materialize.py" ]]; then
+  python3 "$ROOT/planning_materialize.py" --root "$PWD" guard-staged --push
+fi
 bash "$ROOT/secret-scan.sh" pre-push
 exec git push "$@"

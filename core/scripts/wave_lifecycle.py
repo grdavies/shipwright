@@ -361,6 +361,23 @@ def cmd_phase_teardown(root: Path, args: list[str]) -> None:
     if not Path(target).is_dir():
         fail(f"worktree not found: {target}")
 
+    mat_script = top / "scripts" / "planning_materialize.py"
+    if mat_script.is_file():
+        subprocess.run(
+            [
+                sys.executable,
+                str(mat_script),
+                "--root",
+                str(top),
+                "teardown",
+                "--worktree",
+                target,
+            ],
+            cwd=str(top),
+            capture_output=True,
+            text=True,
+        )
+
     before_kb = 0
     try:
         du = subprocess.check_output(["du", "-sk", target], text=True)
@@ -583,6 +600,38 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
                 "startedAt": utc_now(),
             },
         )
+
+    task_list = plan.get("source_task_list")
+    if task_list and wt_path.is_dir():
+        mat_proc = subprocess.run(
+            [
+                sys.executable,
+                str(top / "scripts" / "planning_materialize.py"),
+                "--root",
+                str(top),
+                "provision",
+                "--worktree",
+                str(wt_path),
+                "--task-list",
+                str(task_list),
+                "--target",
+                base,
+            ],
+            cwd=str(top),
+            capture_output=True,
+            text=True,
+        )
+        if mat_proc.returncode == 20:
+            try:
+                err = json.loads(mat_proc.stdout)
+            except json.JSONDecodeError:
+                err = {"error": mat_proc.stderr or mat_proc.stdout}
+            fail(err.get("error", "materialize provision failed"), exit_code=20, **err)
+        if mat_proc.returncode not in (0,):
+            fail(
+                mat_proc.stderr.strip() or mat_proc.stdout.strip() or "materialize provision failed",
+                exit_code=mat_proc.returncode,
+            )
 
     try:
         payload = json.loads(proc.stdout)

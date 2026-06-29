@@ -11,3 +11,8 @@ GRAPH="$DIR/../../scripts/planning_graph.py"
 if [[ -f "$GRAPH" ]]; then
   python3 "$GRAPH" "$(git rev-parse --show-toplevel)" cycle-check --staged
 fi
+MAT="$DIR/../../scripts/planning_materialize.py"
+if [[ -f "$MAT" ]]; then
+  export PYTHONPATH="$DIR/../../scripts:${PYTHONPATH:-}"
+  python3 "$MAT" --root "$(git rev-parse --show-toplevel)" guard-staged
+fi

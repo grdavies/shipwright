@@ -503,6 +503,17 @@
         "local-synced-path-validation",
         "memory-chokepoint-read-write"
       ]
+    },
+    {
+      "id": "planning-materialize-fixtures",
+      "script": "scripts/test/run-planning-materialize-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-materialize-fixtures",
+      "scenarios": [
+        "materialize-provision-backend-pinned",
+        "commit-boundary-barrier"
+      ]
     }
   ]
 }
