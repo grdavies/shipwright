@@ -537,6 +537,25 @@
         "public-unit-no-regression",
         "doc-impact-visibility-store"
       ]
+    },
+    {
+      "id": "two-track-fixtures",
+      "script": "scripts/test/run-two-track-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-two-track-fixtures",
+      "scenarios": [
+        "two-track-driver-classify-route",
+        "mechanical-allowlist-derived-only",
+        "inflight-never-mechanical",
+        "planning-path-forced-substantive",
+        "frontmatter-edit-substantive-regression",
+        "mechanical-batched-auto-merge",
+        "substantive-auto-driven-pr",
+        "branch-protection-defaults-pr-path",
+        "both-region-content-hash-abort",
+        "mechanical-premerge-secret-scan"
+      ]
     }
   ]
 }
