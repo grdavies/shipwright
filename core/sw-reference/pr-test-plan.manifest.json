@@ -425,6 +425,16 @@
         "frozen-traceability-no-regression",
         "feedback-backlog-planningdir"
       ]
+    },
+    {
+      "id": "planning-emitter-parity-fixtures",
+      "script": "scripts/test/run-planning-emitter-parity-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-emitter-parity-fixtures",
+      "scenarios": [
+        "emitter-parity-planning-autonomy"
+      ]
     }
   ]
 }
