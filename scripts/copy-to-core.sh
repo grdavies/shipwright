@@ -48,6 +48,7 @@ elif [ -d "$ROOT/.sw" ]; then
     --exclude 'guidelines.schema.json' \
     --exclude 'guidelines.json' \
     --exclude 'guidelines.md' \
+    --exclude 'deterministic-regen-paths.json' \
     --exclude 'templates/' \
     "$ROOT/.sw/" "$CORE/sw-reference/"
 fi
