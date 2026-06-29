@@ -46,6 +46,18 @@ from wave_merge import (
     read_phase_status_optional,
     status_file_for,
 )
+from status_integrity import (
+    DEFAULT_REEMIT_MAX,
+    DEFAULT_TIP_QUIESCENCE_SECONDS,
+    build_status_document,
+    classify_stuck_stale,
+    derive_terminal_verdict_from_live_evidence,
+    live_host_evidence_ok,
+    resolve_pr_number,
+    status_is_consumable_terminal,
+    validate_terminal_status_shape,
+    write_status_atomic,
+)
 from wave_state import (
     TERMINAL_PHASE_STATUSES,
     append_log as state_append_log,
@@ -73,6 +85,7 @@ MECHANICAL_ACTIONS = frozenset(
         "provision-phase",
         "collect-all-ready",
         "collect-status",
+        "canonical-reemit",
         "merge-enqueue",
         "merge-run-next",
         "phase-teardown-run",
@@ -242,6 +255,52 @@ def no_progress_threshold(_root: Path) -> int:
     return DEFAULT_NO_PROGRESS_THRESHOLD
 
 
+def status_reemit_max(root: Path) -> int:
+    deliver = load_workflow_config(root).get("deliver") or {}
+    status_reemit = deliver.get("statusReemit") or {}
+    raw = status_reemit.get("maxAttempts", DEFAULT_REEMIT_MAX)
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return DEFAULT_REEMIT_MAX
+
+
+def tip_quiescence_seconds(root: Path) -> int:
+    deliver = load_workflow_config(root).get("deliver") or {}
+    status_reemit = deliver.get("statusReemit") or {}
+    raw = status_reemit.get("tipQuiescenceSeconds", DEFAULT_TIP_QUIESCENCE_SECONDS)
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return DEFAULT_TIP_QUIESCENCE_SECONDS
+
+
+def detect_stuck_stale_phase(
+    root: Path,
+    state: dict[str, Any],
+    pid: str,
+    meta: dict[str, Any],
+) -> tuple[bool, dict[str, Any]]:
+    slug = str(meta.get("slug") or pid)
+    phase_branch = meta.get("branch")
+    if not phase_branch:
+        return False, {"reason": "missing-branch"}
+    branch_head = phase_branch_head_optional(root, state, slug, str(phase_branch))
+    if not branch_head:
+        return False, {"reason": "missing-branch-head"}
+    _, status = read_phase_status_optional(root, slug, state)
+    pr_number = resolve_pr_number(root, state, slug, status, str(phase_branch))
+    return classify_stuck_stale(
+        root,
+        phase_slug=slug,
+        phase_branch=str(phase_branch),
+        branch_head=branch_head,
+        status=status,
+        pr_number=pr_number,
+        quiescence_seconds=tip_quiescence_seconds(root),
+    )
+
+
 def terminal_autonomy_mode(root: Path) -> str:
     deliver = load_workflow_config(root).get("deliver") or {}
     terminal = deliver.get("terminal") or {}
@@ -346,6 +405,7 @@ def build_state_signature(state: dict[str, Any]) -> str:
         stabilize_pass[pid] = v.get("stabilizePassId")
     remediation = state.get("remediationAttempts") or {}
     verify_remediation = state.get("verifyRemediationAttempts") or {}
+    status_reemit = state.get("statusReemitAttempts") or {}
     payload = {
         "verdict": state.get("verdict"),
         "nextAction": state.get("nextAction"),
@@ -356,6 +416,7 @@ def build_state_signature(state: dict[str, Any]) -> str:
         "verifyRemediationAttempts": dict(
             sorted((str(k), int(v)) for k, v in verify_remediation.items())
         ),
+        "statusReemitAttempts": dict(sorted((str(k), int(v)) for k, v in status_reemit.items())),
         "lastRemediationAt": dict(sorted(last_remediation.items())),
         "stabilizePassId": dict(sorted(stabilize_pass.items())),
         "mergeQueueLength": len(state.get("mergeQueue") or []),
@@ -679,13 +740,22 @@ def merge_ready_in_flight_phases(
             continue
         if status.get("verdict") != "merge-ready-green":
             continue
+        ok_shape, _shape_cause = validate_terminal_status_shape(status)
+        if not ok_shape:
+            continue
         phase_branch = meta.get("branch")
-        if phase_branch:
-            expected = phase_branch_head_optional(root, state, slug, str(phase_branch))
-            if expected:
-                ok_sha, _sha_cause = check_status_sha(status, expected)
-                if not ok_sha:
-                    continue
+        if not phase_branch:
+            continue
+        expected = phase_branch_head_optional(root, state, slug, str(phase_branch))
+        if not expected:
+            continue
+        ok_sha, _sha_cause = check_status_sha(status, expected)
+        if not ok_sha:
+            continue
+        pr_number = resolve_pr_number(root, state, slug, status, str(phase_branch))
+        authorized, _evidence = live_host_evidence_ok(root, status, expected, pr_number)
+        if not authorized:
+            continue
         ok, _cause = tasks_currency_ok(root, state, plan)
         if not ok:
             continue
@@ -709,6 +779,13 @@ def in_flight_merge_halt(
             continue
         if status.get("verdict") != "merge-ready-green":
             continue
+        ok_shape, shape_cause = validate_terminal_status_shape(status)
+        if not ok_shape:
+            return {
+                "action": "halt-blocked",
+                "cause": shape_cause or "phase-status:invalid",
+                "resume": True,
+            }
         phase_branch = meta.get("branch")
         if phase_branch:
             expected = phase_branch_head_optional(root, state, slug, str(phase_branch))
@@ -1133,6 +1210,38 @@ def compute_next_action(
             "resume": True,
         }
 
+    for pid in sorted(wave_ids):
+        meta = (state.get("phases") or {}).get(pid, {})
+        if not isinstance(meta, dict) or meta.get("status") != "in-flight":
+            continue
+        slug = str(meta.get("slug") or pid)
+        _, status = read_phase_status_optional(root, slug, state)
+        if status_is_consumable_terminal(status):
+            continue
+        is_stale, detail = detect_stuck_stale_phase(root, state, pid, meta)
+        if not is_stale:
+            continue
+        attempts = state.get("statusReemitAttempts") or {}
+        count = int(attempts.get(str(pid), 0))
+        max_attempts = status_reemit_max(root)
+        if count < max_attempts:
+            return {
+                "action": "canonical-reemit",
+                "phaseId": pid,
+                "phaseSlug": slug,
+                "attempt": count + 1,
+                "maxAttempts": max_attempts,
+                "resume": True,
+                "stuckStale": detail,
+            }
+        return {
+            "action": "halt-blocked",
+            "phaseId": pid,
+            "phaseSlug": slug,
+            "cause": "status-reemit-budget-exhausted",
+            "resume": True,
+        }
+
     awaiting: list[str] = []
     for pid in sorted(wave_ids):
         meta = (state.get("phases") or {}).get(pid, {})
@@ -1526,6 +1635,94 @@ def execute_mechanical(
         state.update(load_state(root))
         persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
         return {"executed": "phase-teardown-run", "phaseId": pid, **data}
+
+    if action == "canonical-reemit":
+        pid = str(step.get("phaseId", ""))
+        slug = str(step.get("phaseSlug") or pid)
+        meta = (state.get("phases") or {}).get(pid, {})
+        if not isinstance(meta, dict):
+            fail("canonical-reemit missing phase meta", exit_code=2)
+        phase_branch = meta.get("branch")
+        if not phase_branch:
+            fail("canonical-reemit missing phase branch", exit_code=2)
+        integration = (state.get("target") or {}).get("branch")
+        if not integration:
+            fail("canonical-reemit missing integration branch", exit_code=2)
+        if meta.get("backgroundDispatchedAt"):
+            fail(
+                "canonical-reemit refused while background ship in-flight",
+                exit_code=20,
+                phaseId=pid,
+            )
+        lease_ec, lease_data = run_wave(
+            root,
+            "ship-lease",
+            "acquire",
+            "--integration",
+            str(integration),
+            "--phase-branch",
+            str(phase_branch),
+        )
+        if lease_ec != 0:
+            fail_payload(lease_data, "ship-lease acquire failed", lease_ec)
+        try:
+            branch_head = phase_branch_head_optional(root, state, slug, str(phase_branch))
+            if not branch_head:
+                fail("canonical-reemit could not resolve branch head", exit_code=20)
+            pr_number = resolve_pr_number(root, state, slug, None, str(phase_branch))
+            verdict, gate, pr_number = derive_terminal_verdict_from_live_evidence(
+                root,
+                pr_number=pr_number,
+                branch_head=branch_head,
+            )
+            run_dir = root / ".cursor" / "sw-deliver-runs" / slug
+            run_dir.mkdir(parents=True, exist_ok=True)
+            status_path = run_dir / "status.json"
+            doc = build_status_document(
+                verdict=verdict,
+                phase=slug,
+                head=branch_head,
+                pr=pr_number,
+                gate=gate,
+                cause=None if verdict == "merge-ready-green" else (gate or {}).get("reason"),
+            )
+            write_status_atomic(status_path, doc)
+            attempts = state.setdefault("statusReemitAttempts", {})
+            attempts[str(pid)] = int(attempts.get(str(pid), 0)) + 1
+            meta.pop("backgroundDispatchedAt", None)
+            save_state(root, state)
+            actor = os.environ.get("SW_RECOVERY_ACTOR") or os.environ.get("USER") or "driver"
+            state_append_log(
+                root,
+                {
+                    "event": "status-canonical-reemit",
+                    "phaseId": pid,
+                    "phaseSlug": slug,
+                    "attempt": attempts[str(pid)],
+                    "actor": actor,
+                    "verdict": verdict,
+                    "head": branch_head,
+                },
+                state,
+            )
+            persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
+            return {
+                "executed": "canonical-reemit",
+                "phaseId": pid,
+                "phaseSlug": slug,
+                "verdict": verdict,
+                "statusPath": str(status_path),
+            }
+        finally:
+            run_wave(
+                root,
+                "ship-lease",
+                "release",
+                "--integration",
+                str(integration),
+                "--phase-branch",
+                str(phase_branch),
+            )
 
     if action == "collect-status":
         slug = str(step.get("phaseSlug", ""))

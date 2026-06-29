@@ -258,3 +258,23 @@ Before `sw-pr` touches a phase head under deliver dispatch:
 4. **Release** — `bash scripts/wave.sh ship-lease release` after the list→create window closes.
 
 `dispatch-ship` runs **in-turn** in the conductor; only `dispatch-batch` backgrounds sub-agents on distinct heads.
+
+### Terminal status provenance + recovery (PRD 036 R13–R17)
+
+`scripts/ship-phase-status.sh` emits a deterministic SHA256 `provenanceMarker` over canonical fields
+(`verdict`, `phase`, `head`, gate-subset, `shipSteps` checksum; excluding `writtenAt`). The marker is
+integrity/shape only — merge enqueue still re-verifies live host evidence (`check-gate.sh` on the current
+head). Hand-editing `status.json` is never valid.
+
+**Blessed recovery** when a phase is `stuck-stale` or status is non-terminal despite green live evidence:
+
+```bash
+/sw-ship --phase-mode --from <terminal-step>
+```
+
+Re-run from the last durable `ship-steps.json` step (typically `sw-ready` chain tail: `sw-stabilize`,
+`sw-watch-ci`, or `sw-ready`). Recovery acquires the per-head ship lease, re-derives the verdict from live
+evidence, and atomically re-emits `status.json`. Set `SW_RECOVERY_ACTOR=<actor>` so `run.log` records the
+invocation. The deliver driver may also auto re-emit via `canonical-reemit` within
+`deliver.statusReemit.maxAttempts` (default 2).
+
