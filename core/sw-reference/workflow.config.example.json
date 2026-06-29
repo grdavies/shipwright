@@ -4,11 +4,6 @@
   "stateFile": ".git/shipwright.json",
   "agentsFile": "AGENTS.md",
   "planningDir": "docs/planning",
-  "planning": {
-    "inFlight": {
-      "stalenessTtlHours": 72
-    }
-  },
   "prdsDir": "docs/prds",
   "decisionsDir": "docs/decisions",
   "tasksDir": "docs/prds",
@@ -154,6 +149,14 @@
     "guardrails": {
       "enforceBeforeSubmit": true,
       "requireRuleClass": false
+    }
+  },
+  "planning": {
+    "inFlight": {
+      "stalenessTtlHours": 72
+    },
+    "store": {
+      "backend": "in-repo-public"
     }
   }
 }

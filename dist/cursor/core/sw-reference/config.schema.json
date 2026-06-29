@@ -910,6 +910,57 @@
               "description": "ISO-8601 timestamp when the operator acknowledged the privacy notice."
             }
           }
+        },
+        "store": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Planning unit body store backend selection (PRD 034 R5/R18).",
+          "properties": {
+            "backend": {
+              "type": "string",
+              "enum": [
+                "in-repo-public",
+                "local-synced",
+                "memory",
+                "private-repo",
+                "encryption-at-rest"
+              ],
+              "default": "in-repo-public",
+              "description": "Active planning.store backend for unit bodies."
+            },
+            "pinnedBackend": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "in-repo-public",
+                "local-synced",
+                "memory",
+                "private-repo",
+                "encryption-at-rest",
+                null
+              ],
+              "description": "Run-pinned backend override (PRD 034 R7)."
+            },
+            "localSynced": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "Operator-local directory for local/synced bodies (R16)."
+                },
+                "allowlist": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Optional extra allowed roots beyond the operator home."
+                }
+              }
+            }
+          }
         }
       }
     }
