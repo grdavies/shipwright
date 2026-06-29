@@ -244,6 +244,32 @@ copy under `.sw-worktrees/**/.cursor/`. `wave_compound.py record-premerge` and
 - **Gap backlog:** `GAP-BACKLOG.md` — committed, append-only, hand-appendable; not frozen, not git-derived.
 - **Generated install trees:** `dist/cursor/` and `dist/claude-code/` — committed outputs of `python3 -m sw generate`; edit `core/` then regenerate (freshness gate in `scripts/test/run-emitter-fixtures.sh`). Not hand-edited except via emitter changes.
 
+
+## Build-chain source of truth (PRD 038)
+
+Machine-readable map: `core/sw-reference/build-chain-sot.json` (lint: `scripts/build-chain-sot-lint.sh`).
+
+| Tree | Role | Edit where |
+| --- | --- | --- |
+| `scripts/` | Harness SoT — runtime entrypoints (`wave.sh`, gates, tests) | Repo root only |
+| `core/scripts/` | Mirrored harness (excludes `test/`, `check-frozen.sh`) | Via `copy-to-core` from `scripts/` |
+| `commands/`, `skills/`, `rules/`, `agents/`, `providers/` | Emittable content SoT | Repo root → `copy-to-core` → `core/` |
+| `.sw/` | Operator-edited sw-reference inputs (subset) | Repo root `.sw/` |
+| `core/sw-reference/` | `.sw/` sync + `coreAuthoredAllowlist` artifacts | `.sw/` or allowlisted core paths |
+| `dist/cursor/`, `dist/claude-code/` | Emitter output only | `python3 -m sw generate --all` after `core/` changes |
+| `scripts/test/fixtures/parity/cursor-golden.manifest` | Committed golden parity | `scripts/snapshot-tree.sh` after dist changes |
+
+**Not in repo scope:** `~/.cursor/plugins/local/shipwright/` (plugin install path). `copy-to-core` reads
+repo trees only — never the install path.
+
+**Unified sync:** after editing `scripts/` or emittable roots, run:
+
+```bash
+bash scripts/build-chain-sync.sh
+```
+
+Runs `copy-to-core.sh` → `python3 -m sw generate --all` → golden re-snapshot when `dist/` changes.
+
 ## Capability manifest + selector (PRD 021)
 
 Authoring lives under `core/`; the emitter propagates manifest artifacts into both dist trees.
