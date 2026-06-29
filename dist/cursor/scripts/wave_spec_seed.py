@@ -19,6 +19,9 @@ from worktree_lib import docs_branch_for_topic, refuse_default_branch
 
 import planning_paths
 import planning_path_redirect
+import planning_index_gen as planning_index
+import planning_visibility as planning_vis
+from host_lib import load_workflow_config
 
 _VALID_TYPES = frozenset(
     {"feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"}
@@ -220,6 +223,65 @@ def rel_paths(root: Path, paths: list[Path]) -> list[str]:
     return [str(p.relative_to(root)) for p in paths]
 
 
+
+def resolve_path_visibility(root: Path, path: Path) -> str:
+    cfg = load_workflow_config(root)
+    fm = parse_frontmatter(path.read_text(encoding="utf-8"))
+    unit = {
+        "id": fm.get("id") or path.stem,
+        "type": fm.get("type") or "prd",
+        "status": fm.get("status") or "proposed",
+        "title": fm.get("title") or path.stem,
+    }
+    if fm.get("visibility"):
+        unit["visibility"] = fm["visibility"]
+    if fm.get("contentClass"):
+        unit["contentClass"] = fm["contentClass"]
+    return planning_vis.resolve_unit_visibility(unit, cfg)["visibility"]
+
+
+def filter_public_docs(root: Path, paths: list[Path]) -> tuple[list[Path], list[str]]:
+    public: list[Path] = []
+    skipped: list[str] = []
+    for p in paths:
+        vis = resolve_path_visibility(root, p)
+        if planning_vis.body_is_redacted(vis):
+            skipped.append(str(p.relative_to(root)))
+        else:
+            public.append(p)
+    return public, skipped
+
+
+def assert_no_tracked_private_bodies(root: Path, paths: list[Path]) -> None:
+    tracked_private: list[str] = []
+    for p in paths:
+        rel = str(p.relative_to(root))
+        if git_run(["ls-files", "--error-unmatch", rel], root, check=False).returncode != 0:
+            continue
+        vis = resolve_path_visibility(root, p)
+        if planning_vis.body_is_redacted(vis):
+            tracked_private.append(rel)
+    if tracked_private:
+        fail(
+            "tracked private/memory body path(s) — remove from index or set visibility public",
+            exit_code=20,
+            halt="tracked-private-body",
+            remediation="git rm --cached <path> or change visibility to public",
+            paths=tracked_private,
+        )
+
+
+def ensure_redacted_index(root: Path) -> str | None:
+    rel = planning_index.index_rel(root)
+    index = root / rel
+    content = planning_index.generate_index(root)
+    index.parent.mkdir(parents=True, exist_ok=True)
+    index.write_text(content, encoding="utf-8")
+    if git_run(["ls-files", "--error-unmatch", rel], root, check=False).returncode == 0:
+        return rel
+    return None
+
+
 def branch_has_docs_commit(top: Path, branch: str, doc_rels: list[str]) -> bool:
     if not doc_rels:
         return False
@@ -246,6 +308,7 @@ def commit_docs_seed(
     default: str,
     dry_run: bool,
     scope: str,
+    skipped_private: list[str] | None = None,
 ) -> None:
     current = git_run(["branch", "--show-current"], top, check=False).stdout.strip()
     status = git_run(["status", "--porcelain"], top, check=False).stdout
@@ -281,6 +344,7 @@ def commit_docs_seed(
                 "docsDir": str(docs_dir.relative_to(top)),
                 "scope": scope,
                 "files": doc_rels,
+                "skippedPrivate": skipped_private or [],
             }
         )
 
@@ -325,6 +389,7 @@ def commit_docs_seed(
             "docsDir": str(docs_dir.relative_to(top)),
             "scope": scope,
             "files": doc_rels,
+            "skippedPrivate": skipped_private or [],
         }
     )
 
@@ -351,10 +416,16 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
     if branch == default:
         fail(f"refused: spec-seed never targets default branch {default!r}")
 
-    doc_files = tracked_paths(top, docs_paths(docs_dir, top, single=single))
+    candidate_files = docs_paths(docs_dir, top, single=single)
+    assert_no_tracked_private_bodies(top, candidate_files)
+    public_files, skipped_private = filter_public_docs(top, candidate_files)
+    doc_files = tracked_paths(top, public_files)
     doc_rels = rel_paths(top, doc_files)
+    index_rel = ensure_redacted_index(top)
+    if index_rel and index_rel not in doc_rels:
+        doc_rels.append(index_rel)
     if not doc_rels:
-        fail("no tracked doc files to seed (docs-only; brainstorms/untracked excluded)")
+        fail("no tracked public doc files to seed (private/memory bodies skipped)")
 
     commit_docs_seed(
         top,
@@ -365,6 +436,7 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
         default=default,
         dry_run=dry_run,
         scope=scope,
+        skipped_private=skipped_private,
     )
 
 

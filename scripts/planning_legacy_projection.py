@@ -14,8 +14,15 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import planning_index_gen as pig  # noqa: E402
 import planning_paths  # noqa: E402
+import planning_visibility as pv  # noqa: E402
 
 LEGACY_GENERATED_MARKER = "<!-- planning-legacy-projection: generated v1 -->"
+
+
+
+def redacted_title(unit: pig.PlanningUnit, root: Path) -> str:
+    row = pig.index_row_dict(unit, root)
+    return str(row.get("title", unit.title))
 
 GAP_ID_RE = re.compile(r"^gap-(\d+)-")
 
@@ -36,7 +43,7 @@ def gap_legacy_id(unit_id: str) -> str:
     return unit_id.upper().replace("-", "-")
 
 
-def render_gap_backlog(units: list[pig.PlanningUnit]) -> str:
+def render_gap_backlog(units: list[pig.PlanningUnit], root: Path) -> str:
     gaps = [u for u in units if u.type == "gap" and u.id != "gap-feedback-checklist"]
     lines = [
         LEGACY_GENERATED_MARKER,
@@ -48,7 +55,7 @@ def render_gap_backlog(units: list[pig.PlanningUnit]) -> str:
     ]
     for gap in sorted(gaps, key=lambda u: u.id):
         gid = gap_legacy_id(gap.id)
-        lines.append(f"| {gid} | {gap.status} | {gap.title} |")
+        lines.append(f"| {gid} | {gap.status} | {redacted_title(gap, root)} |")
     lines.append("")
     return "\n".join(lines)
 
@@ -69,8 +76,9 @@ def render_prd_index(units: list[pig.PlanningUnit], root: Path) -> str:
         body = Path(prd.body_path).name
         task_path = Path(prd.body_path).parent / f"tasks-{num}-{slug}.md"
         tasks = f"[tasks]({task_path.as_posix()})" if task_path.is_file() else "—"
+        title = redacted_title(prd, root)
         lines.append(
-            f"| {num} | {slug} | [{body}]({prd.body_path}) | {tasks} | {prd.status} |"
+            f"| {num} | {slug} | [{title}]({prd.body_path}) | {tasks} | {prd.status} |"
         )
     lines.append("")
     return "\n".join(lines)
@@ -151,7 +159,7 @@ def project_all(root: Path, *, dry_run: bool = False) -> dict[str, Any]:
     units = pig.discover_units(root)
     gap_path = worktree / dirs.prds / "GAP-BACKLOG.md"
     index_path = worktree / dirs.prds / "INDEX.md"
-    gap_content = render_gap_backlog(units)
+    gap_content = render_gap_backlog(units, root)
     index_content = render_prd_index(units, root)
     leaks = verify_frontmatter_only(root, gap_content, index_content, units)
     if leaks:

@@ -15,11 +15,11 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import planning_paths  # noqa: E402
+import planning_visibility as pv  # noqa: E402
 
 SCHEMA_MARKER = "<!-- planning-index:schema v1 -->"
 PRIVATE_INDEX_NOTE = (
-    "<!-- Private-row metadata is provisional until PRD 034 defines "
-    "redaction/omission policy (R33). -->"
+    "<!-- Private/memory rows redact body bytes via planning_visibility (PRD 034 R4). -->"
 )
 
 STATUS_PRECEDENCE_DOC = (
@@ -74,6 +74,8 @@ class PlanningUnit:
     visibility: str
     edges: str
     body_path: str
+    opaque_title: bool = False
+    edge_map: dict[str, Any] | None = None
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
@@ -209,6 +211,57 @@ def format_edges(fm: dict[str, Any]) -> str:
     return "; ".join(parts)
 
 
+def parse_opaque_title(raw: Any) -> bool:
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str):
+        return raw.strip().lower() in {"true", "yes", "1"}
+    return False
+
+
+def unit_frontmatter_dict(unit: PlanningUnit) -> dict[str, Any]:
+    fm: dict[str, Any] = {
+        "id": unit.id,
+        "type": unit.type,
+        "status": unit.status,
+        "title": unit.title,
+    }
+    if unit.visibility:
+        fm["visibility"] = unit.visibility
+    if unit.opaque_title:
+        fm["opaqueTitle"] = True
+    if unit.edge_map:
+        fm.update(unit.edge_map)
+    return fm
+
+
+def resolved_visibility(unit: PlanningUnit, root: Path) -> str:
+    from host_lib import load_workflow_config
+
+    cfg = load_workflow_config(planning_paths.git_root(root))
+    return pv.resolve_unit_visibility(unit_frontmatter_dict(unit), cfg)["visibility"]
+
+
+def index_row_dict(unit: PlanningUnit, root: Path) -> dict[str, Any]:
+    vis = resolved_visibility(unit, root)
+    row: dict[str, Any] = {
+        "id": unit.id,
+        "type": unit.type,
+        "title": unit.title,
+        "status": unit.status,
+        "visibility": vis,
+    }
+    if unit.opaque_title:
+        row["opaqueTitle"] = True
+    if unit.edge_map:
+        for key in EDGE_KEYS:
+            val = unit.edge_map.get(key)
+            if val:
+                row[key] = val
+    return pv.redact_index_row(row, vis)
+
+
+
 def discover_units(root: Path) -> list[PlanningUnit]:
     worktree = planning_paths.git_root(root)
     dirs = planning_paths.load_planning_dirs(root)
@@ -233,6 +286,7 @@ def discover_units(root: Path) -> list[PlanningUnit]:
             unit_id = str(fm.get("id", "")).strip()
             if not unit_id:
                 continue
+            edge_map = {key: fm.get(key) for key in EDGE_KEYS if fm.get(key)}
             units.append(
                 PlanningUnit(
                     id=unit_id,
@@ -242,32 +296,40 @@ def discover_units(root: Path) -> list[PlanningUnit]:
                     visibility=str(fm.get("visibility", "")),
                     edges=format_edges(fm),
                     body_path=str(body.relative_to(worktree)),
+                    opaque_title=parse_opaque_title(fm.get("opaqueTitle")),
+                    edge_map=edge_map or None,
                 )
             )
     units.sort(key=lambda u: (u.type, u.id))
     return units
 
 
-def render_structural_table(units: list[PlanningUnit]) -> str:
+def render_index_table(units: list[PlanningUnit], root: Path) -> str:
     lines = [
         "| id | type | title | status | visibility | edges |",
         "| --- | --- | --- | --- | --- | --- |",
     ]
     for unit in units:
-        title = unit.title.replace("|", "\\|")
-        if unit.visibility == "private":
-            title = f"[provisional] {title}"
+        row = index_row_dict(unit, root)
+        title = str(row.get("title", "")).replace("|", "\\|")
+        edges = unit.edges.replace("|", "\\|")
         lines.append(
             "| {id} | {type} | {title} | {status} | {visibility} | {edges} |".format(
-                id=unit.id,
-                type=unit.type,
+                id=row["id"],
+                type=row["type"],
                 title=title,
-                status=unit.status,
-                visibility=unit.visibility,
-                edges=unit.edges.replace("|", "\\|"),
+                status=row["status"],
+                visibility=row["visibility"],
+                edges=edges,
             )
         )
     return "\n".join(lines) + "\n"
+
+def render_structural_table(units: list[PlanningUnit], root: Path | None = None) -> str:
+    if root is None:
+        return render_index_table(units, Path("."))
+    return render_index_table(units, root)
+
 
 
 def parse_derived_status_map(derived_body: str) -> dict[str, str]:
@@ -305,7 +367,7 @@ def read_merge_write(
     if existing and all(marker[0] in existing for marker in REGION_MARKERS.values()):
         return replace_region_inner(existing, region_key, new_region_body)
     empty = IndexRegions(
-        structural=new_region_body if region_key == "structural" else render_structural_table([]),
+        structural=new_region_body if region_key == "structural" else render_structural_table([], root),
         derived=new_region_body if region_key == "derived" else "\n",
         inFlight=new_region_body if region_key == "inFlight" else "\n",
         prefix="",
@@ -316,7 +378,7 @@ def read_merge_write(
 
 def generate_index(root: Path, *, writer: str = "generator") -> str:
     units = discover_units(root)
-    structural = render_structural_table(units)
+    structural = render_structural_table(units, root)
     path = index_path(root)
     existing = path.read_text(encoding="utf-8") if path.is_file() else None
     return read_merge_write(existing, writer=writer, new_region_body=structural)

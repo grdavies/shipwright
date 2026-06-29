@@ -91,9 +91,9 @@ def write_state(root: Path, state: dict[str, Any]) -> None:
 def normalize_visibility(raw: str | None) -> str:
     if raw is None:
         return "private"
-    token = str(raw).strip().lower()
-    if token in VISIBILITY_VALUES:
-        return token
+    normalized = str(raw).strip().lower()
+    if normalized in VISIBILITY_VALUES:
+        return normalized
     return "private"
 
 
@@ -164,19 +164,19 @@ def _github_repo_private(
     root: Path, owner: str, repo: str, host: dict[str, Any], provider: str
 ) -> bool | None:
     token_env = resolve_token_env(host, provider)
-    token = os.environ.get(token_env, "") if token_env else ""
+    api_token = os.environ.get(token_env, "") if token_env else ""
     base = github_api_base(host)
     url = f"{base}/repos/{owner}/{repo}"
     req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json"})
-    if token:
-        req.add_header("Authorization", f"Bearer {token}")
+    if api_token:
+        req.add_header("Authorization", f"Bearer {api_token}")
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
             return None
-        if exc.code == 403 and not token:
+        if exc.code == 403 and not api_token:
             return None
         return None
     except (urllib.error.URLError, json.JSONDecodeError, TimeoutError):
