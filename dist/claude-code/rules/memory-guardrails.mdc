@@ -35,6 +35,12 @@ Set `memory.guardrails.enforceBeforeSubmit: false` to disable the hook entirely 
 
 `sessionStart` injection is best-effort (fail-open).
 
+## Planning store memory backend (PRD 034 R11/R25)
+
+The `planning.store` memory backend routes exclusively through the provider-agnostic memory adapter and
+`scripts/memory-redact.sh` on both read and write. It never calls provider MCP tools directly, bans
+`discussion`/`progress` classes for planning bodies, and refuses raw transcript content.
+
 ## Redaction chokepoint (R41)
 
 Before any memory persist or re-injection, run the shared redaction filter on:

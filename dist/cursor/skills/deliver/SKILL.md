@@ -91,6 +91,20 @@ validated partition, active worker count, and cap state; append-only audit lives
 
 Living artifacts under `.cursor/` are **never committed** (`/sw-commit` excludes them).
 
+### Provision-time materialization (PRD 034 R7/R8/R20)
+
+Private and memory planning-unit bodies may live outside the tracked tree (`planning.store` backends). During
+phase provision — after worktree add and before preflight/spec-seed reads — `wave_lifecycle.py` invokes
+`scripts/planning_materialize.py` to copy required spec bodies into the ignored prefix
+`.cursor/planning-materialized/`. A post-materialize `secret-scan file` runs; paths register in deliver
+run-state for orphan sweep; teardown deletes the tree. Pre-commit, pre-push, and CI diff scans reject any
+staged path under the prefix (`scripts/materialized-prefix-scan.sh`) — the **commit-boundary barrier** holds
+even under `git add -f`. Store backend + revision are pinned at provision; mid-run `planning.store` config
+changes halt with remediation. CI/host never materializes.
+
+Fixture suite: `bash scripts/test/run-planning-materialize-fixtures.sh` (registered as
+`planning-materialize-fixtures` in the PR test-plan manifest).
+
 **Per-branch scoping (PRD 013 R6–R11):** `<slug>` derives from the target feature branch
 (`feat/<slug>` → `sw-deliver-state.<slug>.json`). Orthogonal branches run concurrently with
 independent state/lock files; `assert_run_identity` and lock refusal apply **within** a scope only.

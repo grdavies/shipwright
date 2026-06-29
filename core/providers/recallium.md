@@ -103,6 +103,15 @@ genuine shippable-capability recaps if ever needed (not a default).
 - Search before store; on a near-duplicate use `modify_memory` with `action: "update"`.
 - Never auto-store `rule`; never re-store rules just read from `get_rules`/`recallium`.
 
+## Planning store adapter (PRD 034 R11/R23)
+
+When selected as the `planning.store` **memory** backend, Recallium is **storage-only** for planning-unit
+bodies — it does not alter source-of-truth for decision-class units. Decision paths under
+`docs/planning/decision/` follow the PRD-015 committed snapshot flow; authoritative decision records remain
+at `docs/decisions/<n>-<slug>.md` (repo-SoT) or the provider record (memory-SoT). All body reads/writes pass
+through the provider-agnostic memory adapter and `scripts/memory-redact.sh` — never direct MCP calls from
+planning-store code.
+
 ## Notes / gotchas
 
 - Recallium runs locally with Ollama embeddings here — no external API cost or data egress.

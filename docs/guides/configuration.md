@@ -85,6 +85,40 @@ plus legacy projections `docs/prds/INDEX.md`, `COMPLETION-LOG.md`, and `GAP-BACK
 branch; `docs-currency` gate hard-blocks terminal merge on drift. Resolve paths via `planningDir` with
 legacy `prdsDir`/`tasksDir` aliases until migration cutover.
 
+### Planning visibility (PRD 034)
+
+Per-unit bodies carry `visibility: public|private|memory`. When a unit omits `visibility`, the repo-level
+**profile** supplies the default via `scripts/planning_visibility.py` (wrapped by `scripts/visibility-resolve.sh`).
+
+| Key | Values | Meaning |
+|-----|--------|---------|
+| `planning.visibilityProfile` | `all-private` \| `specs-public` (default) \| `all-public` | Closed-world default profile (schema-validated). |
+| `planning.privacyAck` | object | Durable acknowledgement gate when the origin remote is **public** (see below). |
+| `planning.store.backend` | `in-repo-public` (default) \| `local-synced` \| `memory` | Pluggable planning-unit body backend (PRD 034 R5/R18). Pinned per deliver run at provision. |
+
+**Public-repo-aware default (R3):** `/sw-init` probes `origin`. A **public** remote selects `all-private` and
+sets `planning.privacyAck.required: true` until the operator acknowledges before the first tracked spec commit.
+A private, absent, or inconclusive remote selects `specs-public`. Resolved profile + ack are written to
+`.cursor/workflow.config.json` and `.cursor/hooks/state/planning-visibility.json` when seeding with `--write`.
+
+Under `specs-public`, advisory classes (`brainstorm`, `decision`, `learnings`, `gap`) default to `private`;
+spec classes (`prd`, `tasks`, `amendment`) default to `public`. Per-unit `visibility` always wins.
+
+**Fail-closed limits (R24):** unknown or unresolved visibility tokens normalize to `private`. Regex/body
+redaction at emission points is **not** semantic anonymization — use `all-private` plus `local/synced` store
+for truly sensitive specs; keep codenames out of INDEX titles (opaque title) or in private/memory backends.
+The memory backend routes bodies through the existing memory adapter and redaction chokepoint — it is never
+labeled encrypted or anonymized.
+
+Fixture suite: `bash scripts/test/run-visibility-fixtures.sh` (registered as `visibility-fixtures` in the PR test-plan manifest).
+
+**Visibility-driven `.gitignore` (R13):** regenerate tracking rules from the resolver via
+`bash scripts/gitignore-generate.sh --write`. The generated block is delimited by
+`# BEGIN visibility-generated` / `# END visibility-generated` markers in `.gitignore`.
+
+Fixture suite: `bash scripts/test/run-planning-visibility-acceptance-fixtures.sh` (registered as
+`planning-visibility-acceptance-fixtures` — emitter parity, public-unit no-regression, doc-impact acceptance).
+
 ### Orchestration plan policy (`orchestration.planPolicy`)
 
 | Value | Default | Meaning |

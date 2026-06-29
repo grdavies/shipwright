@@ -326,9 +326,14 @@ case "$VERDICT" in
 esac
 
 # PRD 038 R15 — advisory only when PR touches scripts/ (no hard block).
-if [ "$VERDICT" = "green" ] && [ -n "${PR:-}" ] && command -v gh >/dev/null 2>&1; then
-  if gh pr diff "$PR" --name-only 2>/dev/null | grep -q '^scripts/'; then
-    REASON="${REASON}; advisory: PR touches scripts/ — consider bash scripts/build-chain-sync.sh"
+if [ "$VERDICT" = "green" ] && [ -n "${PR:-}" ] && [ -n "${HEAD_SHA:-}" ]; then
+  BASE_REF="$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '{}'); print((d.get('data') or {}).get('baseRefName',''))" "$PR_VIEW" 2>/dev/null || true)"
+  if [ -n "$BASE_REF" ]; then
+    git -C "$ROOT" fetch -q origin "$BASE_REF" 2>/dev/null || true
+    MERGE_BASE="$(git -C "$ROOT" merge-base "origin/${BASE_REF}" "$HEAD_SHA" 2>/dev/null || true)"
+    if [ -n "$MERGE_BASE" ] && git -C "$ROOT" diff --name-only "$MERGE_BASE" "$HEAD_SHA" 2>/dev/null | grep -q '^scripts/'; then
+      REASON="${REASON}; advisory: PR touches scripts/ — consider bash scripts/build-chain-sync.sh"
+    fi
   fi
 fi
 

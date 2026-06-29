@@ -141,6 +141,13 @@
 * merge phase fixtures-parity-m into feat/doc-review-persona-selection-accuracy (7295de7) <!-- sw-deliver:fixtures-parity-m -->
 * merge phase docs-propagate-gap-close-s into feat/doc-review-persona-selection-accuracy (0883bb7) <!-- sw-deliver:docs-propagate-gap-close-s -->
 * merge phase docs-propagate-gap-close-s into feat/doc-review-persona-selection-accuracy (6724ea2) <!-- sw-deliver:docs-propagate-gap-close-s -->
+* merge phase visibility-field-public-repo-aware-resolver-m into feat/planning-feedback-lifecycle (3b7c2fd) <!-- sw-deliver:visibility-field-public-repo-aware-resolver-m -->
+* merge phase emission-point-registry-machine-checked-call-site-map-l into feat/planning-feedback-lifecycle (b920958) <!-- sw-deliver:emission-point-registry-machine-checked-call-site-map-l -->
+* merge phase planning-store-interface-backends-l into feat/planning-feedback-lifecycle (e3a6afe) <!-- sw-deliver:planning-store-interface-backends-l -->
+* merge phase provision-time-materialization-commit-boundary-barrier-l into feat/planning-feedback-lifecycle (c475abe) <!-- sw-deliver:provision-time-materialization-commit-boundary-barrier-l -->
+* merge phase prd-015-reconciliation-gitignore-generation-032-handoff-m into feat/planning-feedback-lifecycle (c892f2c) <!-- sw-deliver:prd-015-reconciliation-gitignore-generation-032-handoff-m -->
+* merge phase sw-init-seeding-doctor-checks-m into feat/planning-feedback-lifecycle (8b5884e) <!-- sw-deliver:sw-init-seeding-doctor-checks-m -->
+* merge phase emitter-dist-parity-doc-impact-acceptance-m into feat/planning-feedback-lifecycle (c18e9a9) <!-- sw-deliver:emitter-dist-parity-doc-impact-acceptance-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

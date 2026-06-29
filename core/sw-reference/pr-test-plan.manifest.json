@@ -469,6 +469,74 @@
         "completion-finalize-chokepoint",
         "deliver-postmerge-finalize-no-reconcile"
       ]
+    },
+    {
+      "id": "visibility-fixtures",
+      "script": "scripts/test/run-visibility-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-visibility-fixtures",
+      "scenarios": [
+        "visibility-field-default-profile",
+        "content-class-default-visibility",
+        "public-remote-default-resolution",
+        "resolver-single-authority",
+        "failclosed-unknown-visibility",
+        "index-redaction-opaque-title",
+        "emission-callsite-map-bypass-fails",
+        "spec-seed-visibility-route",
+        "gitignore-visibility-no-private-bytes",
+        "decision-sot-inflight-redaction"
+      ]
+    },
+    {
+      "id": "planning-store-fixtures",
+      "script": "scripts/test/run-planning-store-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-store-fixtures",
+      "scenarios": [
+        "store-interface-in-repo-default",
+        "store-backend-interface-parity",
+        "store-log-id-hash-backend",
+        "memory-backend-adapter-only",
+        "local-synced-path-validation",
+        "memory-chokepoint-read-write"
+      ]
+    },
+    {
+      "id": "planning-materialize-fixtures",
+      "script": "scripts/test/run-planning-materialize-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-materialize-fixtures",
+      "scenarios": [
+        "materialize-provision-backend-pinned",
+        "commit-boundary-barrier"
+      ]
+    },
+    {
+      "id": "planning-init-fixtures",
+      "script": "scripts/test/run-planning-init-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-init-fixtures",
+      "scenarios": [
+        "init-profile-store-seed",
+        "store-no-token-leak"
+      ]
+    },
+    {
+      "id": "planning-visibility-acceptance-fixtures",
+      "script": "scripts/test/run-planning-visibility-acceptance-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-visibility-acceptance-fixtures",
+      "scenarios": [
+        "store-emitter-parity",
+        "public-unit-no-regression",
+        "doc-impact-visibility-store"
+      ]
     }
   ]
 }

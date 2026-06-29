@@ -5,7 +5,13 @@
   "description": "Canonical frontmatter for every planning unit under docs/planning/. Status validation is type-conditioned (PRD 031 R1, R4). The token planned is a homonym: gap units use planned in the gap sense (scheduled for work); lifecycle units use planned in the lifecycle sense (accepted but not started).",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "type", "status", "title", "visibility"],
+  "required": [
+    "id",
+    "type",
+    "status",
+    "title",
+    "visibility"
+  ],
   "properties": {
     "id": {
       "type": "string",
@@ -14,12 +20,18 @@
     },
     "type": {
       "type": "string",
-      "enum": ["brainstorm", "gap", "prd", "decision", "amendment"],
+      "enum": [
+        "brainstorm",
+        "gap",
+        "prd",
+        "decision",
+        "amendment"
+      ],
       "description": "Planning-unit artifact type."
     },
     "status": {
       "type": "string",
-      "description": "Type-conditioned status — see allOf branches for allowed values per type."
+      "description": "Type-conditioned status \u2014 see allOf branches for allowed values per type."
     },
     "title": {
       "type": "string",
@@ -28,52 +40,77 @@
     },
     "visibility": {
       "type": "string",
-      "enum": ["public", "private"],
-      "description": "Visibility profile token. Interim private units use tags [legacy-pre-034] until PRD 034. Ongoing visibility semantics are PRD 034."
+      "enum": [
+        "public",
+        "private",
+        "memory"
+      ],
+      "description": "Per-unit visibility token (PRD 034). Resolved through scripts/planning_visibility.py when unset."
     },
     "depends": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
       "uniqueItems": true,
       "default": [],
       "description": "Unit ids this unit depends on."
     },
     "blocks": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
       "uniqueItems": true,
       "default": [],
       "description": "Unit ids blocked by this unit."
     },
     "supersedes": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
       "uniqueItems": true,
       "default": [],
       "description": "Unit ids this unit supersedes."
     },
     "extends": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
       "uniqueItems": true,
       "default": [],
       "description": "Unit ids this unit extends."
     },
     "absorbs": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
       "uniqueItems": true,
       "default": [],
       "description": "Unit ids absorbed by this unit. Cancelled PRD supersession edges (R10) are reversible per R28."
     },
     "priority": {
-      "type": ["integer", "null"],
+      "type": [
+        "integer",
+        "null"
+      ],
       "minimum": 0,
       "description": "Optional scheduling priority (PRD 033 owns enforcement)."
     },
     "tags": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 },
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
       "uniqueItems": true,
       "default": [],
       "description": "Free-form classification tags."
@@ -85,12 +122,26 @@
   },
   "allOf": [
     {
-      "if": { "properties": { "type": { "const": "gap" } }, "required": ["type"] },
+      "if": {
+        "properties": {
+          "type": {
+            "const": "gap"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
       "then": {
         "properties": {
           "status": {
-            "enum": ["open", "planned", "partially resolved", "resolved"],
-            "description": "Gap lifecycle enum (stub — PRD 033 owns transitions)."
+            "enum": [
+              "open",
+              "planned",
+              "partially resolved",
+              "resolved"
+            ],
+            "description": "Gap lifecycle enum (stub \u2014 PRD 033 owns transitions)."
           }
         }
       }
@@ -98,9 +149,18 @@
     {
       "if": {
         "properties": {
-          "type": { "enum": ["brainstorm", "prd", "decision", "amendment"] }
+          "type": {
+            "enum": [
+              "brainstorm",
+              "prd",
+              "decision",
+              "amendment"
+            ]
+          }
         },
-        "required": ["type"]
+        "required": [
+          "type"
+        ]
       },
       "then": {
         "properties": {
@@ -115,7 +175,7 @@
               "deferred",
               "blocked"
             ],
-            "description": "Lifecycle enum (stub — PRD 033 owns transitions). planned here means accepted-but-not-started, distinct from gap planned."
+            "description": "Lifecycle enum (stub \u2014 PRD 033 owns transitions). planned here means accepted-but-not-started, distinct from gap planned."
           }
         }
       }

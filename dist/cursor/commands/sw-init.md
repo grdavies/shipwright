@@ -182,6 +182,7 @@ Detect and recommend (never hard-fail scaffold):
 
 - **Host provider doctor** via `bash scripts/host-doctor.sh` — validates `host.provider`, configured remote, token env presence (never prints token), and rate-limit config. Warns when capability is degraded (missing token, missing remote) without blocking scaffold.
 - Seed `host` config on greenfield: `provider` auto-detected, `remote: origin`, `tokenEnv` per provider (`GITHUB_TOKEN` default for GitHub). Existing GitHub repos need only `GITHUB_TOKEN` set (R33).
+- **Planning store doctor** via `bash scripts/planning-doctor.sh` — validates `planning.store` backend reachability (degrade-open when `memory` is configured but no memory provider is present), sweeps orphaned `.cursor/planning-materialized/` trees, and never prints provider tokens (R27).
 
 ### 5b. Portability self-check (R24/R25)
 
@@ -208,6 +209,29 @@ Assemble draft via configurator; validate against `.sw/config.schema.json`; stam
 
 Write `.cursor/workflow.config.json`. Merge `models` from `scripts/seed-model-config.sh` unless user opts out.
 Seed `communication` from `core/sw-reference/communication-routing.defaults.json` (commands + skills + agents maps).
+
+### 6b. Planning profile + store seeding (PRD 034 R21)
+
+After the config file exists, seed the public-repo-aware visibility profile, default store backend, and
+first-run privacy notice:
+
+```bash
+bash scripts/planning-init-seed.sh --config "$CONFIG"
+```
+
+This:
+
+- Sets `planning.store.backend` to `in-repo-public` when unset (draft also seeds this key).
+- Probes `origin` via `scripts/planning_visibility.py resolve-default-profile --write` — a **public**
+  remote selects `all-private` and sets `planning.privacyAck.required: true`; private/absent remotes
+  select `specs-public`.
+- Copies `core/sw-reference/planning-privacy-notice.md` to
+  `.cursor/hooks/state/planning-privacy-notice.md` and mirrors profile + ack into
+  `.cursor/hooks/state/planning-visibility.json`.
+
+**Doctor re-run:** `bash scripts/planning-doctor.sh` validates store reachability, degrade-opens when the
+memory backend has no provider (actionable remediation, no hard-fail), sweeps orphaned materialized trees,
+and references env-var names only — never token values (R27).
 
 ### 7. Report
 
