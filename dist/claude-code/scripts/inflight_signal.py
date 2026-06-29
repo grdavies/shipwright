@@ -196,7 +196,11 @@ def read_tuples(root: Path) -> dict[str, InflightTuple]:
     path = pig.index_path(root)
     if not path.is_file():
         return {}
-    regions = pig.parse_regions(path.read_text(encoding="utf-8"))
+    try:
+        regions = pig.parse_regions(path.read_text(encoding="utf-8"))
+    except ValueError:
+        # Pre-cutover repos may point planningDir at a legacy INDEX without dual-region markers.
+        return {}
     try:
         return parse_region_body(regions.inFlight)
     except ValueError as exc:
