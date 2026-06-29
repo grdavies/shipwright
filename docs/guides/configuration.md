@@ -94,6 +94,7 @@ Per-unit bodies carry `visibility: public|private|memory`. When a unit omits `vi
 |-----|--------|---------|
 | `planning.visibilityProfile` | `all-private` \| `specs-public` (default) \| `all-public` | Closed-world default profile (schema-validated). |
 | `planning.privacyAck` | object | Durable acknowledgement gate when the origin remote is **public** (see below). |
+| `planning.store.backend` | `in-repo-public` (default) \| `local-synced` \| `memory` | Pluggable planning-unit body backend (PRD 034 R5/R18). Pinned per deliver run at provision. |
 
 **Public-repo-aware default (R3):** `/sw-init` probes `origin`. A **public** remote selects `all-private` and
 sets `planning.privacyAck.required: true` until the operator acknowledges before the first tracked spec commit.
@@ -110,6 +111,13 @@ The memory backend routes bodies through the existing memory adapter and redacti
 labeled encrypted or anonymized.
 
 Fixture suite: `bash scripts/test/run-visibility-fixtures.sh` (registered as `visibility-fixtures` in the PR test-plan manifest).
+
+**Visibility-driven `.gitignore` (R13):** regenerate tracking rules from the resolver via
+`bash scripts/gitignore-generate.sh --write`. The generated block is delimited by
+`# BEGIN visibility-generated` / `# END visibility-generated` markers in `.gitignore`.
+
+Fixture suite: `bash scripts/test/run-planning-visibility-acceptance-fixtures.sh` (registered as
+`planning-visibility-acceptance-fixtures` — emitter parity, public-unit no-regression, doc-impact acceptance).
 
 ### Orchestration plan policy (`orchestration.planPolicy`)
 

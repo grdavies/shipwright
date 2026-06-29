@@ -525,6 +525,18 @@
         "init-profile-store-seed",
         "store-no-token-leak"
       ]
+    },
+    {
+      "id": "planning-visibility-acceptance-fixtures",
+      "script": "scripts/test/run-planning-visibility-acceptance-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-visibility-acceptance-fixtures",
+      "scenarios": [
+        "store-emitter-parity",
+        "public-unit-no-regression",
+        "doc-impact-visibility-store"
+      ]
     }
   ]
 }

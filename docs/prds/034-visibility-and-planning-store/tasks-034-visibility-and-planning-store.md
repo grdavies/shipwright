@@ -216,20 +216,20 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
 
 ### 7. Emitter/dist parity + doc-impact acceptance — M
 
-- [ ] 7.1 Store/visibility artifacts in `core/` + dist parity (R22)
+- [x] 7.1 Store/visibility artifacts in `core/` + dist parity (R22)
   - **File:** `scripts/copy-to-core.sh`, `scripts/migration-parity-shadow.sh`, `core/sw-reference/pr-test-plan.manifest.json`
   - **Expected:** the `.gitignore` generator and store/visibility artifacts land in `core/` and propagate to
     both dist trees; `copy-to-core` parity, emitter-freshness, and secret-scan fixtures cover the new scripts
     and config keys. Fixture `store-emitter-parity` asserts core to dist parity + emitter freshness for the new
     surfaces.
   - **R-IDs:** R22
-- [ ] 7.2 No regression to the delivery-loop documentation (R17)
+- [x] 7.2 No regression to the delivery-loop documentation (R17)
   - **File:** `core/scripts/spec-rigor-check.sh`, `core/scripts/traceability-check.sh`
   - **Expected:** public units behave exactly as today; frozen immutability, traceability, and spec-rigor
     gates are preserved; the human merge-to-`main` gate is unchanged. Fixture `public-unit-no-regression`
     proves public-unit behavior and gate preservation are unchanged.
   - **R-IDs:** R17
-- [ ] 7.3 Doc-impact acceptance criteria (R23)
+- [x] 7.3 Doc-impact acceptance criteria (R23)
   - **File:** `.gitignore`, `core/skills/memory/SKILL.md`, `core/providers/recallium.md`, `core/rules/memory-guardrails.mdc`, `core/commands/sw-init.md`, `core/skills/deliver/SKILL.md`, `core/sw-reference/config.schema.json`, `core/sw-reference/workflow.config.example.json`, `docs/guides/configuration.md`
   - **Expected:** all listed docs are updated as acceptance criteria — `.gitignore` (visibility-driven
     generation), memory SKILL (decision paths under `docs/planning/`; memory store is body-only),
