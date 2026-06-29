@@ -220,38 +220,38 @@ PRD 031's kill-criteria (031 R28) gate the cutover on. See R14/R20/R20a.
 
 ## Decision Log
 
-- **D1.** The lifecycle enum is single-sourced here and imported by 031's validator (resolves the coherence
+- **D1** The lifecycle enum is single-sourced here and imported by 031's validator (resolves the coherence
   panel's status-enum collision) — schema and behavior share one module, type-conditioned by unit type; 031
   carries a values-only stub until this PRD lands in the same train.
-- **D2.** Lifecycle splits mechanical derivation (`in-progress`/`complete`/`blocked`) from human-gated
+- **D2** Lifecycle splits mechanical derivation (`in-progress`/`complete`/`blocked`) from human-gated
   authoring transitions (`superseded`/`cancelled`/`deferred`) — autonomy without surrendering spec-quality
   judgement (brainstorm K5).
-- **D3.** Dependency is a hard gate; priority is enforced when delivery auto-picks (`next`) and
+- **D3** Dependency is a hard gate; priority is enforced when delivery auto-picks (`next`) and
   **soft-enforced (confirm prompt)** on explicit `--task-list` (doc-review priority decision) — prevents
   silent priority inversion while preserving deliberate override.
-- **D4.** Supersession/absorption are edge-driven status effects, not manual flips, with an explicit
+- **D4** Supersession/absorption are edge-driven status effects, not manual flips, with an explicit
   `partially resolved` transition — eliminates the stale-row drift class (GAP-043/044/046) at the mechanism
   level and gives brainstorm R26's fourth state a rule.
-- **D5.** The reconciler is the single writer of the `derived` INDEX region and **read-only** on the
+- **D5** The reconciler is the single writer of the `derived` INDEX region and **read-only** on the
   deliver-owned `inFlight` region; stale-marker repair/clearing is PRD 032's deliver writer, not the
   reconciler (resolves the coherence/scope/adversarial dual-ownership finding); reconcile re-reads inFlight
   before serialize.
-- **D6.** Resolves brainstorm OQ7 (archive view format): archived units render in a **separate generated
+- **D6** Resolves brainstorm OQ7 (archive view format): archived units render in a **separate generated
   archive file**, threshold = terminal states (`complete`/`superseded`/`cancelled`); `deferred`/`blocked`
   stay active because actionable.
-- **D7.** `/sw-deliver next` is the graph-driven scheduler entry; the reconciler is `scripts/planning-graph.sh`
+- **D7** `/sw-deliver next` is the graph-driven scheduler entry; the reconciler is `scripts/planning-graph.sh`
   (command-surface naming finalized in PRD 035, which owns brainstorm OQ1).
-- **D8.** The reconciler does not auto-open PRs until PRD 035's two-track driver lands (R17) — avoids
+- **D8** The reconciler does not auto-open PRs until PRD 035's two-track driver lands (R17) — avoids
   reintroducing per-change doc friction in the mid-program window.
-- **D9.** Depends-on-terminal targets are flagged `dependency-dead` (R5) rather than leaving a permanent
+- **D9** Depends-on-terminal targets are flagged `dependency-dead` (R5) rather than leaving a permanent
   `blocked` dead-end — closes the adversarial panel's never-unblocks scenario.
-- **D10.** 033 ships in the **one-commit cutover with 031 (Phase B) + 032** after the 031 substrate/Phase-A
+- **D10** 033 ships in the **one-commit cutover with 031 (Phase B) + 032** after the 031 substrate/Phase-A
   prerequisites validate (doc-review substrate-first decision) and owns the cutover compatibility surface —
   the frontmatter-only legacy projections (R15/R21), the relief acceptance check, and the reconciler-accuracy
   floor (R22) that PRD 031's kill-criteria (031 R28) gate on.
-- **D11.** `planning.autonomy` is **owned by PRD 035 R17** but **stubbed in the config schema (default
+- **D11** `planning.autonomy` is **owned by PRD 035 R17** but **stubbed in the config schema (default
   `maintenance-only`)** by this train so R8's soft-enforce behavior is fully defined at cutover even though
   035 ships later (resolves the coherence/scope/feasibility forward-reference finding).
-- **D12.** `next`/explicit-start **re-validate eligibility at run-start** (R9), not only at selection — closes
+- **D12** `next`/explicit-start **re-validate eligibility at run-start** (R9), not only at selection — closes
   the adversarial select-then-supersede race; the relief corpus (R22) is expanded to adversarial cases so the
   031 kill-criteria cannot pass on an under-specified corpus.

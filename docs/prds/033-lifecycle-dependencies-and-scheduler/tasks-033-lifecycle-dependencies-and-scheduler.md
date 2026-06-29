@@ -2,13 +2,17 @@
 date: 2026-06-27
 topic: planning-feedback-lifecycle
 prd: docs/prds/033-lifecycle-dependencies-and-scheduler/033-prd-lifecycle-dependencies-and-scheduler.md
+amendments:
+  - docs/prds/033-lifecycle-dependencies-and-scheduler/amendments/A1-post-merge-index-reconcile-safety.md
+  - docs/prds/033-lifecycle-dependencies-and-scheduler/amendments/A2-decision-id-union-exclusion.md
 frozen: true
-frozen_at: 2026-06-27
+frozen_at: 2026-06-29
 ---
 
 # Tasks — PRD 033 Lifecycle state machine, dependency graph & scheduler
 
-Generated from the frozen PRD spec union **R1–R28** (no amendments). Seven dependency-ordered phases mirror
+Generated from the frozen PRD spec union **R1–R36** (parent R1–R28 + amendment A1 R29–R36; A1 is purely
+additive — no parent requirement superseded or retracted). Eight dependency-ordered phases mirror
 the PRD rollout: a single-sourced lifecycle/state enum + pure graph module land first as the substrate
 (Phase 1); the deterministic maintenance reconciler — sole writer of the `derived` INDEX region, read-only on
 the PRD 032 `inFlight` region with re-read-before-serialize — builds on it (Phase 2); the `/sw-deliver`
@@ -16,10 +20,17 @@ scheduler, hard dependency gate, `next`, run-start re-validation, and soft-enfor
 supersession/absorption edge effects mechanize the lifecycle flips (Phase 4); the one-commit cutover (with
 PRD 031 Phase B + PRD 032) retires the hand-maintained GAP-BACKLOG and runs the relief acceptance check
 (Phase 5); emitter/dist parity covers the new scripts and the stubbed `planning.autonomy` schema key
-(Phase 6); and the 033-owned operator docs are updated as acceptance criteria (Phase 7). Phase Dependencies
+(Phase 6); the 033-owned operator docs are updated as acceptance criteria (Phase 7); and amendment A1 hardens
+the reconciler and deliver-writer contracts for post-merge safety — git-ancestry-primary and monotonic
+terminal derived status, default-branch reconcile refusal, and a finalize-only `merged-complete` completion
+chokepoint (Phase 8). Phase Dependencies
 are intra-PRD only; the cross-PRD atomic-train ordering (031 substrate first, then 031 Phase B + 032 + 033 in
 one commit) is owned by the program rollout, not these edges. Every phase ships behind passing fixtures
 registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.test`.
+
+> Refreshed 2026-06-29 to apply amendment A1 (R29–R36, post-merge INDEX reconcile safety + completion-finalize
+> chokepoint; absorbs GAP-053 and GAP-055). Phase 8 and the R29–R36 traceability rows are the only additions;
+> parent phases 1–7 (R1–R28) are unchanged.
 
 ## Tasks
 
@@ -235,6 +246,63 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
     `doc-currency-033-sections` (guides).
   - **R-IDs:** R25
 
+### 8. Post-merge INDEX reconcile safety + completion-finalize chokepoint — amendment A1 — M
+
+- [ ] 8.1 Git-ancestry-primary `complete` predicate + monotonic terminal derived status (R29, R30)
+  - **File:** `core/scripts/planning_graph.py`, `core/scripts/planning-graph.sh`
+  - **Expected:** derived `complete` for non-gap units is determined from **git facts first** — the unit's
+    terminal integration/feature branch is an ancestor of `defaultBaseBranch` (or a squash-merge of it),
+    corroborated by host PR merge metadata when available; slug-scoped deliver state is secondary and the
+    append-only COMPLETION-LOG is audit-only (never the sole predicate, extends GAP-053). Terminal states
+    (`complete`, `superseded`) are **monotonic**: the reconciler MUST NOT downgrade a row unless an explicit
+    `--override-status` names the unit id, prior status, new status, and reason; default reconcile is a no-op for
+    terminal rows when git/deliver evidence still supports the terminal state. Fixtures:
+    `reconcile-complete-from-git-ancestry`, `reconcile-terminal-monotonic`.
+  - **R-IDs:** R29, R30
+- [ ] 8.2 Default-branch reconcile refusal + stale-branch precedence (R31, R32)
+  - **File:** `core/scripts/planning-graph.sh`, `core/scripts/reconcile-status.sh`, `core/skills/living-status/SKILL.md`
+  - **Expected:** the maintenance reconciler and the legacy `reconcile-status.sh reconcile` shim it replaces
+    **refuse to commit** when the current git branch is `defaultBaseBranch` — exit non-zero with an actionable
+    message naming the allowed post-merge path (`set-index-status` + `append-log-idempotent` on a docs branch
+    for single units; full-corpus reconcile only via the reconciler entrypoint on a non-default branch or the
+    deliver completion finalizer); a `--allow-default-branch` escape hatch exists for fixtures/CI only and logs
+    actor + reason. Reconcile inputs degrade safely when local branch inventory is stale: a local feature branch
+    MUST NOT imply `in-progress` when git ancestry / host merge metadata show the unit terminal; the precedence
+    order is documented in `living-status/SKILL.md`. Fixtures: `reconcile-refuse-default-branch`,
+    `reconcile-stale-local-branches`.
+  - **R-IDs:** R31, R32
+- [ ] 8.3 Finalize-only `merged-complete` completion save guard (R33)
+  - **File:** `core/scripts/wave_state.py`, `core/scripts/wave_compound.py`
+  - **Expected:** only `wave_compound.py:cmd_completion_finalize_if_merged` (via
+    `bash scripts/wave.sh completion finalize-if-merged`) may transition `completion.status` from
+    `completed-pending-merge` to `merged-complete` and set `mergedAt`; direct hand-edits or ad-hoc `wave_state`
+    saves that set `merged-complete` without passing the finalizer are rejected at the save guard (exit
+    non-zero, no partial write). Fixture: `completion-finalize-chokepoint`.
+  - **R-IDs:** R33
+- [ ] 8.4 Deliver post-merge path: finalize-only, no bare reconcile suggestion (R34)
+  - **File:** `core/scripts/wave_deliver_loop.py`, `core/commands/sw-retrospective.md`, `core/commands/sw-status.md`
+  - **Expected:** the deliver-loop post-merge path invokes `finalize-if-merged` only; on guard failure it emits
+    a consolidated halt with `resumeCommand` and MUST NOT suggest bare `reconcile-status.sh reconcile`; operator
+    docs (`sw-retrospective.md`, `sw-status.md`) state the post-merge playbook — single-unit bookkeeping on a
+    **docs branch**, never full-corpus `reconcile` on `main`. Fixture: `deliver-postmerge-finalize-no-reconcile`.
+  - **R-IDs:** R34
+- [ ] 8.5 Relief acceptance corpus extension + manifest registration (R35)
+  - **File:** `core/scripts/planning-graph.sh`, `core/sw-reference/pr-test-plan.manifest.json`
+  - **Expected:** the relief acceptance corpus (extends parent R22) includes, at minimum: (1) forward drift
+    (GAP-053) — unit merged to `main` but INDEX `not-started` → reconciled `complete`; (2) backward regression
+    (PRD 036) — INDEX `complete` with terminal branch ancestor of `main` but stale local branches + missing
+    slug-scoped deliver state → derived status stays `complete`; (3) monotonic guard — downgrade without
+    override refuses / no-op; (4) branch guard — `reconcile` on `main` exits non-zero, no commit; (5) finalize
+    chokepoint — premature `merged-complete` rejected, valid `finalize-if-merged` succeeds. All five register in
+    `pr-test-plan.manifest.json` and run in `verify.test`. Fixture: `relief-corpus-postmerge-safety`.
+  - **R-IDs:** R35
+- [ ] 8.6 Operator-doc acceptance — living-status SKILL + sw-status (A1 playbook) (R36)
+  - **File:** `core/skills/living-status/SKILL.md`, `core/commands/sw-status.md`
+  - **Expected:** `living-status/SKILL.md` and `sw-status.md` document the post-merge playbook, monotonic
+    terminal status, default-branch reconcile refusal, and the finalize-only completion transition as
+    acceptance criteria. Fixture: `doc-currency-033-a1-sections`.
+  - **R-IDs:** R36
+
 ## Phase Dependencies
 
 | Phase | Depends on |
@@ -246,6 +314,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
 | 5 | 2, 3, 4 |
 | 6 | 2, 3, 4 |
 | 7 | 5 |
+| 8 | 2, 3 |
 
 ## Traceability
 
@@ -279,6 +348,14 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
 | R26 | 2.8 | reconciler-no-private-bodies |
 | R27 | 1.6 | graph-offline-reproducible |
 | R28 | 3.5 | override-logged-rate-surfaced |
+| R29 | 8.1 | reconcile-complete-from-git-ancestry |
+| R30 | 8.1 | reconcile-terminal-monotonic |
+| R31 | 8.2 | reconcile-refuse-default-branch |
+| R32 | 8.2 | reconcile-stale-local-branches |
+| R33 | 8.3 | completion-finalize-chokepoint |
+| R34 | 8.4 | deliver-postmerge-finalize-no-reconcile |
+| R35 | 8.5 | relief-corpus-postmerge-safety |
+| R36 | 8.6 | doc-currency-033-a1-sections |
 
 ## Notes
 
@@ -292,4 +369,10 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
 - Cross-PRD: the reconciler reads (never writes) PRD 032's `inFlight` region; the relief check + accuracy floor
   (2.7) feed PRD 031's cutover kill-criteria (031 R28); `planning.autonomy` is owned by PRD 035 and only
   stubbed here. These cross-PRD relationships are not Phase Dependencies edges (intra-PRD only).
+- Amendment A1 (Phase 8) surfaces: `core/scripts/wave_state.py` + `core/scripts/wave_compound.py`
+  (finalize-only `merged-complete` save guard, R33), `core/scripts/wave_deliver_loop.py` (post-merge
+  finalize-only path, R34), `core/commands/sw-retrospective.md` + `core/commands/sw-status.md` (post-merge
+  playbook, R34/R36); A1 extends the Phase 2 reconciler (`planning-graph.sh`, `planning_graph.py`) and the
+  legacy `reconcile-status.sh` shim for git-ancestry-primary, monotonic terminal status, and default-branch
+  reconcile refusal (R29–R32). A1 absorbs GAP-053 and GAP-055.
 - All new fixtures register in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.test`.
