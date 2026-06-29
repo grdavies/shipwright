@@ -415,8 +415,8 @@ def wave_fallback_schedule(
 
 
 def derive_canonical_waves_from_task_list(root: Path, task_list: str) -> dict[str, Any]:
+    import planning_paths
     from wave_deliver import (
-        CONTENTION_DEFAULT,
         apply_contention,
         deps_to_edges,
         parse_phase_dependencies,
@@ -430,9 +430,10 @@ def derive_canonical_waves_from_task_list(root: Path, task_list: str) -> dict[st
     phases = parse_phases(content)
     dep_rows = parse_phase_dependencies(content)
     phase_files = parse_phase_files(content)
-    edges, _ = deps_to_edges(phases, dep_rows, phase_files)
+    edges, _ = deps_to_edges(phases, dep_rows, phase_files, root)
+    contention = planning_paths.contention_default(root)
     waves, edges, injected, notices, phase_files = apply_contention(
-        content, phases, edges, CONTENTION_DEFAULT.copy()
+        content, phases, edges, contention, root
     )
     return {
         "waves": waves,
