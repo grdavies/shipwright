@@ -10,6 +10,19 @@ FAIL=0
 ok()  { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
+write_fixture_workflow_config() {
+  local repo="$1"
+  mkdir -p "$repo/.cursor"
+  cat >"$repo/.cursor/workflow.config.json" <<'WCFG'
+{"review":{"provider":"none"},"checks":{"treatNeutralAsPass":true}}
+WCFG
+}
+
+sync_target_to_phase() {
+  git -C "$ORCH" checkout -q feat/demo
+  git -C "$ORCH" merge --ff-only feat/demo-phase-alpha
+}
+
 FIX=$(mktemp -d)
 trap 'rm -rf "$FIX"' EXIT
 
@@ -26,13 +39,29 @@ git checkout -q feat/demo
 
 ORCH="$FIX"
 PHASE_WT="$FIX/phase-alpha-wt"
+write_fixture_workflow_config "$ORCH"
 git worktree add -q -b feat/demo-phase-alpha-wt "$PHASE_WT" feat/demo-phase-alpha 2>/dev/null || \
   git worktree add -q "$PHASE_WT" feat/demo-phase-alpha
+sync_target_to_phase
 
 mkdir -p "$PHASE_WT/.cursor/sw-deliver-runs/alpha"
-cat >"$PHASE_WT/.cursor/sw-deliver-runs/alpha/status.json" <<JSON
-{"verdict":"merge-ready-green","phase":"alpha","phaseMode":true,"head":"$PHASE_HEAD","pr":null,"gate":{"verdict":"green","coderabbitLanded":true}}
-JSON
+python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+from status_integrity import attach_provenance_marker
+doc = {
+    'verdict': 'merge-ready-green',
+    'phase': 'alpha',
+    'phaseMode': True,
+    'head': '$PHASE_HEAD',
+    'pr': None,
+    'gate': {'verdict': 'green', 'coderabbitLanded': True},
+}
+Path('$PHASE_WT/.cursor/sw-deliver-runs/alpha/status.json').write_text(
+    json.dumps(attach_provenance_marker(doc), indent=2) + '\n'
+)
+"
 
 mkdir -p "$ORCH/.cursor"
 cat >"$ORCH/.cursor/sw-deliver-state.json" <<JSON
@@ -68,8 +97,22 @@ fi
 
 # --- status-sha-freshness (R47) ---
 python3 "$WM" "$ORCH" merge enqueue --phase-slug alpha >/dev/null 2>&1 || true
-echo '{"verdict":"merge-ready-green","phase":"alpha","head":"deadbeef","gate":{"verdict":"green"}}' \
-  >"$PHASE_WT/.cursor/sw-deliver-runs/alpha/status.json"
+STALE_HEAD="$(printf 'd%.0s' {1..40})"
+python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+from status_integrity import attach_provenance_marker
+doc = {
+    'verdict': 'merge-ready-green',
+    'phase': 'alpha',
+    'head': '$STALE_HEAD',
+    'gate': {'verdict': 'green'},
+}
+Path('$PHASE_WT/.cursor/sw-deliver-runs/alpha/status.json').write_text(
+    json.dumps(attach_provenance_marker(doc), indent=2) + '\n'
+)
+"
 set +e
 python3 "$WM" "$ORCH" merge enqueue --phase-slug alpha 2>/dev/null
 EC_STALE=$?
@@ -81,15 +124,33 @@ else
 fi
 
 # restore fresh status + queue
-cat >"$PHASE_WT/.cursor/sw-deliver-runs/alpha/status.json" <<JSON
-{"verdict":"merge-ready-green","phase":"alpha","head":"$PHASE_HEAD","gate":{"verdict":"green","coderabbitLanded":true}}
-JSON
+python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+from status_integrity import attach_provenance_marker
+doc = {
+    'verdict': 'merge-ready-green',
+    'phase': 'alpha',
+    'head': '$PHASE_HEAD',
+    'gate': {'verdict': 'green', 'coderabbitLanded': True},
+}
+Path('$PHASE_WT/.cursor/sw-deliver-runs/alpha/status.json').write_text(
+    json.dumps(attach_provenance_marker(doc), indent=2) + '\n'
+)
+"
+sync_target_to_phase
 echo '{"target":{"branch":"feat/demo"},"phases":{"1":{"slug":"alpha","branch":"feat/demo-phase-alpha"}},"phaseWorktrees":{"1":{"path":"'"$PHASE_WT"'"}},"mergeQueue":[],"orchestratorWorktree":{"path":"'"$ORCH"'"}}' \
   >"$ORCH/.cursor/sw-deliver-state.json"
 
 # --- merge-run-next-no-pr (R39) ---
-python3 "$WM" "$ORCH" merge enqueue --phase-slug alpha >/dev/null
-if OUT=$(python3 "$WM" "$ORCH" merge run-next --dry-run 2>/dev/null) && \
+set +e
+python3 "$WM" "$ORCH" merge enqueue --phase-slug alpha >/dev/null 2>&1
+EC_ENQ=$?
+set -e
+if [[ "$EC_ENQ" -ne 0 ]]; then
+  bad "merge-enqueue-after-restore (ec=$EC_ENQ)"
+elif OUT=$(python3 "$WM" "$ORCH" merge run-next --dry-run 2>/dev/null) && \
    echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
@@ -102,9 +163,22 @@ else
 fi
 
 # --- merge-run-next-pr-vs-local (R54): PR path selected when pr present ---
-cat >"$PHASE_WT/.cursor/sw-deliver-runs/alpha/status.json" <<JSON
-{"verdict":"merge-ready-green","phase":"alpha","head":"$PHASE_HEAD","pr":99,"gate":{"verdict":"green"}}
-JSON
+python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+from status_integrity import attach_provenance_marker
+doc = {
+    'verdict': 'merge-ready-green',
+    'phase': 'alpha',
+    'head': '$PHASE_HEAD',
+    'pr': 99,
+    'gate': {'verdict': 'green'},
+}
+Path('$PHASE_WT/.cursor/sw-deliver-runs/alpha/status.json').write_text(
+    json.dumps(attach_provenance_marker(doc), indent=2) + '\n'
+)
+"
 echo '{"target":{"branch":"feat/demo"},"phases":{"1":{"slug":"alpha","branch":"feat/demo-phase-alpha"}},"phaseWorktrees":{"1":{"path":"'"$PHASE_WT"'"}},"mergeQueue":[{"phaseSlug":"alpha","head":"'"$PHASE_HEAD"'","pr":99}],"orchestratorWorktree":{"path":"'"$ORCH"'"}}' \
   >"$ORCH/.cursor/sw-deliver-state.json"
 
@@ -133,9 +207,24 @@ MERGE_FIX=$(mktemp -d)
   echo phase >>f.txt && git add f.txt && git commit -q -m phase
   PHASE_HEAD=$(git rev-parse HEAD)
   git checkout -q feat/demo
+  write_fixture_workflow_config "$MERGE_FIX"
+  git merge --ff-only feat/demo-phase-alpha
   mkdir -p .cursor/sw-deliver-runs/alpha
-  echo "{\"verdict\":\"merge-ready-green\",\"phase\":\"alpha\",\"head\":\"$PHASE_HEAD\",\"gate\":{\"verdict\":\"green\"}}" \
-    > .cursor/sw-deliver-runs/alpha/status.json
+  python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+from status_integrity import attach_provenance_marker
+doc = {
+    'verdict': 'merge-ready-green',
+    'phase': 'alpha',
+    'head': '$PHASE_HEAD',
+    'gate': {'verdict': 'green'},
+}
+Path('.cursor/sw-deliver-runs/alpha/status.json').write_text(
+    json.dumps(attach_provenance_marker(doc), indent=2) + '\n'
+)
+"
   echo '{"target":{"branch":"feat/demo"},"orchestratorWorktree":{"path":"'"$MERGE_FIX"'"},"phases":{"1":{"slug":"alpha","branch":"feat/demo-phase-alpha"}},"phaseWorktrees":{"1":{"path":"'"$MERGE_FIX"'"}},"mergeQueue":[]}' \
     > .cursor/sw-deliver-state.json
   BEFORE=$(git rev-parse HEAD)

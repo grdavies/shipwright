@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Write durable /sw-ship phase-mode terminal status for /sw-deliver (R48/R18/R47).
+# Write durable /sw-ship phase-mode terminal status for /sw-deliver (R48/R18/R47, R13).
 #
 # Usage:
 #   ship-phase-status.sh --verdict merge-ready-green|blocked [--cause TEXT] [--phase SLUG]
@@ -19,6 +19,7 @@ OUT=""
 HEAD=""
 PR=""
 GATE_JSON=""
+SHIP_STEPS_PATH="${SHIP_STEPS_PATH:-}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -72,64 +73,17 @@ if [[ -z "$OUT" ]]; then
   fi
 fi
 
-mkdir -p "$(dirname "$OUT")"
-
-GATE_OBJ="null"
-if [[ -n "$GATE_JSON" && -f "$GATE_JSON" ]]; then
-  GATE_OBJ="$(python3 -c "import json; print(json.dumps(json.load(open('$GATE_JSON'))))")"
+WRITE_ARGS=(--verdict "$VERDICT" --phase "$PHASE" --out "$OUT")
+[[ -n "$HEAD" ]] && WRITE_ARGS+=(--head "$HEAD")
+[[ -n "$PR" ]] && WRITE_ARGS+=(--pr "$PR")
+[[ -n "$CAUSE" ]] && WRITE_ARGS+=(--cause "$CAUSE")
+[[ -n "$GATE_JSON" && -f "$GATE_JSON" ]] && WRITE_ARGS+=(--gate-json "$GATE_JSON")
+if [[ -n "$SHIP_STEPS_PATH" && -f "$SHIP_STEPS_PATH" ]]; then
+  WRITE_ARGS+=(--ship-steps-path "$SHIP_STEPS_PATH")
 fi
 
-PR_JSON="null"
-if [[ -n "$PR" ]]; then
-  PR_JSON="$PR"
-fi
+python3 "$ROOT/scripts/status_integrity.py" write "${WRITE_ARGS[@]}"
 
-export VERDICT CAUSE PHASE HEAD OUT PR_JSON GATE_OBJ
-python3 - <<'PY'
-import json, os
-from datetime import datetime, timezone
-
-verdict = os.environ["VERDICT"]
-cause = os.environ.get("CAUSE", "")
-phase = os.environ["PHASE"]
-head = os.environ.get("HEAD", "")
-out = os.environ["OUT"]
-pr = json.loads(os.environ["PR_JSON"])
-gate = json.loads(os.environ["GATE_OBJ"])
-
-doc = {
-    "verdict": verdict,
-    "phase": phase,
-    "phaseMode": True,
-    "head": head or None,
-    "pr": pr,
-    "gate": gate,
-    "writtenAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-}
-steps_path = os.environ.get("SHIP_STEPS_PATH", "")
-if not steps_path:
-    run_dir = os.path.dirname(out)
-    candidate = os.path.join(run_dir, "ship-steps.json")
-    if os.path.isfile(candidate):
-        steps_path = candidate
-if steps_path and os.path.isfile(steps_path):
-    try:
-        with open(steps_path, encoding="utf-8") as sf:
-            doc["shipSteps"] = json.load(sf)
-        doc["shipStepsPath"] = steps_path
-    except (OSError, json.JSONDecodeError):
-        pass
-if verdict == "blocked":
-    doc["cause"] = cause
-
-text = json.dumps(doc, ensure_ascii=False, indent=2) + "\n"
-with open(out, "w", encoding="utf-8") as f:
-    f.write(text)
-os.chmod(out, 0o600)
-print(text, end="")
-PY
-
-# Mirror to repo-root-canonical path when integration root is resolvable (PRD 027 R4).
 resolve_canonical_root() {
   if [[ -n "${SW_REPO_ROOT:-}" && -d "${SW_REPO_ROOT}" ]]; then
     cd "${SW_REPO_ROOT}" && pwd

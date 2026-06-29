@@ -238,7 +238,11 @@ When a wave has N independent ready phases, the driver emits **`dispatch-batch`*
 1. Driver `provision-phase` (mechanical) until worktrees exist for the batch.
 2. Driver returns `dispatch-batch` → conductor spawns N background Tasks (`run_in_background: true`).
 3. Wait for durable `status.json` per **Parallel-wave completion wait** in `skills/conductor/SKILL.md`.
-4. Driver `collect-all-ready` enqueues simultaneous greens in phase-id order → `merge run-next` (conductor only).
+4. Driver `collect-all-ready` enqueues simultaneous greens in phase-id order → `merge run-next`
+   (conductor only). **Whole-batch gate (R10):** the driver never `merge-enqueue`s a lone ready member while
+   sibling in-flight phases lack validated terminal status; integration HEAD is pinned at collect-all-ready.
+5. **Deterministic merge conflicts (R12):** conflicts confined to `core/sw-reference/deterministic-regen-paths.json`
+   auto-resolve via regenerate-and-restage in the orchestrator worktree; semantic paths halt.
 
 On `status collect` with `blocked`, `blast-radius apply` blocks transitive dependents only (R24):
 
@@ -503,7 +507,7 @@ scripts/wave.sh ack check|complete|status           # optional cadence (deliver.
   `orchestrator-provision`; cleared at run completion via `inflight-signal-clear`. Lifecycle `in-progress` is
   **not** stored in the tuple — PRD 033 derives it. Durable run-id lease in scoped deliver state is authoritative
   (R2). Set `SW_INDEX_REGION_WRITER=deliver` on INDEX commits touching `inFlight`.
-- **Run-state** binds `source_task_list` + `prd_number`; wave run does not mutate legacy INDEX status to in-progress.
+- **Run-state** binds `source_task_list` + `prd_number`; wave run never `in-progress` INDEX status mutation (PRD 033 derives lifecycle).
 - **`deliver.phaseAckCadence: K`** (default `0`): pause for human `ack complete` after every K phase merges (R56).
 
 ### Terminal autonomy — amendment A1 (PRD 013 R20–R27)
@@ -550,3 +554,22 @@ scripts/wave.sh memory learnings prepare --out .cursor/sw-deliver-learnings.md
 
 Distills contention, blast-radius, revert, and blocked-phase patterns from plan + run log — never raw
 transcripts or sub-agent logs. Always pipe through `scripts/memory-redact.sh` before persist.
+
+## Concurrency invariants (PRD 036 — acceptance)
+
+Operator-facing guarantees enforced by CI fixtures (`run-dual-ship-fixtures.sh`,
+`run-regression-remediation-fixtures.sh`, `run-parallel-merge-safety-fixtures.sh`,
+`run-status-integrity-fixtures.sh`):
+
+1. **Single-flight ship (R1–R5):** one in-turn `/sw-ship --phase-mode` per phase head; per-head lease +
+   PR idempotency; conductor never backgrounds ship on the same head.
+2. **Regression remediation (R6–R8):** `verify:failed` routes to bounded `/sw-stabilize`; remediation
+   attempts change the durable state signature; exhaustion halts with a consolidated report.
+3. **Whole-batch merge (R9–R12):** no early single-phase merge while siblings lack validated terminal
+   status; deterministic phase-id merge order; bounded auto-regen for deterministic-conflict paths only.
+4. **Status provenance (R13–R17):** `ship-phase-status.sh` emits an offline-regenerable provenance marker;
+   forged or stale `merge-ready-green` is rejected; recovery reuses `/sw-ship --phase-mode --from <step>`
+   — never hand-edit `status.json`.
+
+Trust boundaries unchanged (R22): human merge to `main`, secret-scan push chokepoint, scoped deliver
+locks, and frozen-doc CI gates.

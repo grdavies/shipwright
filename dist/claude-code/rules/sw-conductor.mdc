@@ -70,3 +70,12 @@ While `verdict: running`:
 - Never merge to `main` from the conductor (R22).
 - Phase sub-agents never call `merge enqueue`, `merge run-next`, or `lock acquire` (R41).
 - Only the conductor acquires locks and runs the merge queue.
+
+## Terminal status integrity (PRD 036 R13–R17)
+
+- Phase outcomes come from provenance-stamped `status.json` only — never hand-edit terminal status (R19).
+- Invalid, forged, or non-terminal status is not consumable; the driver classifies `stuck-stale` when branch
+  tip, PR head, gate-checked SHA, and any status head all match with tip quiescence (R15).
+- Recovery: `/sw-ship --phase-mode --from <terminal-step>` — not manual JSON edits. Log actor via
+  `SW_RECOVERY_ACTOR`; recovery and auto re-emit acquire the per-head ship lease (R16/R17).
+

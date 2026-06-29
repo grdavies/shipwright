@@ -1,0 +1,11 @@
+{
+  "allowlist": [
+    "scripts/test/fixtures/parity/cursor-golden.manifest",
+    "dist/**",
+    "core/**"
+  ],
+  "regenCommands": [
+    "bash scripts/copy-to-core.sh",
+    "python3 -m sw generate --all"
+  ]
+}

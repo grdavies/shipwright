@@ -285,6 +285,14 @@ disjoint worktrees, bounded by `worktree.parallelCeiling` (default 4). Peak conc
 plan has parallelizable waves. Outcomes are read only from durable `status.json` — never chat logs.
 Merge is single-flight (conductor-serialized queue + lock).
 
+**PRD 036 deliver invariants:** whole-batch merge gating (no lone merge-enqueue while siblings lack
+validated terminal status), deterministic-conflict auto-regen on the bounded path set, terminal
+status.json provenance + blessed /sw-ship --phase-mode recovery (never hand-edit status), and
+bounded verify:failed → /sw-stabilize remediation. CI-required fixtures:
+feat-test-plan-dual-ship-fixtures, feat-test-plan-regression-remediation-fixtures,
+feat-test-plan-parallel-merge-safety-fixtures, feat-test-plan-status-integrity-fixtures,
+feat-test-plan-mechanical-sourcing-fixtures, feat-test-plan-deliver-invariant-fixtures.
+
 **Pervasive delegation (PRD 017):** all five orchestrators (`/sw-doc`, `/sw-ship`, `/sw-deliver`,
 `/sw-debug`, `/sw-feedback`) default to **delegate-by-default** for substantive steps. Only closed
 inline allowlists (bookkeeping, driver invocations, human gates) run in-turn. Every delegated `Task`

@@ -242,3 +242,69 @@ jobs:
       - name: Run worktree-config-fixtures
         run: bash scripts/test/run-worktree-config-fixtures.sh
 
+  feat-test-plan-dual-ship-fixtures:
+    name: feat-test-plan-dual-ship-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run dual-ship-fixtures
+        run: bash scripts/test/run-dual-ship-fixtures.sh
+
+  feat-test-plan-regression-remediation-fixtures:
+    name: feat-test-plan-regression-remediation-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run regression-remediation-fixtures
+        run: bash scripts/test/run-regression-remediation-fixtures.sh
+
+  feat-test-plan-parallel-merge-safety-fixtures:
+    name: feat-test-plan-parallel-merge-safety-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run parallel-merge-safety-fixtures
+        run: bash scripts/test/run-parallel-merge-safety-fixtures.sh
+
+  feat-test-plan-status-integrity-fixtures:
+    name: feat-test-plan-status-integrity-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run status-integrity-fixtures
+        run: bash scripts/test/run-status-integrity-fixtures.sh
+
+  feat-test-plan-mechanical-sourcing-fixtures:
+    name: feat-test-plan-mechanical-sourcing-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run mechanical-sourcing-fixtures
+        run: bash scripts/test/run-mechanical-sourcing-fixtures.sh
+
+  feat-test-plan-deliver-invariant-fixtures:
+    name: feat-test-plan-deliver-invariant-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run deliver-invariant-fixtures
+        run: bash scripts/test/run-deliver-invariant-fixtures.sh
+

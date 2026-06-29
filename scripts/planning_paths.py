@@ -31,6 +31,20 @@ LIVING_DOC_NAMES: tuple[str, ...] = (
     "GAP-BACKLOG.md",
 )
 
+GOLDEN_MANIFEST_REL = "scripts/test/fixtures/parity/cursor-golden.manifest"
+
+GENERATOR_OUTPUT_GLOBS: tuple[str, ...] = (
+    GOLDEN_MANIFEST_REL,
+    "dist/**",
+    "core/**",
+)
+
+GENERATE_INVOCATION_MARKERS: tuple[str, ...] = (
+    "python3 -m sw generate",
+    "copy-to-core",
+    "generate --all",
+)
+
 
 class PathEscapeError(ValueError):
     """Resolved path escapes the worktree root."""
@@ -163,6 +177,85 @@ def index_paths_rel(dirs: PlanningDirs) -> tuple[str, ...]:
     )
 
 
+def generator_output_paths() -> list[str]:
+    """Declared generator-output touch set for plan-time contention (PRD 036 R9)."""
+    return list(GENERATOR_OUTPUT_GLOBS)
+
+
+def path_matches_serialized_token(path: str, token: str) -> bool:
+    norm = path.replace("\\", "/")
+    if token.endswith("/**"):
+        prefix = token[:-3]
+        return norm == prefix or norm.startswith(f"{prefix}/")
+    if token == "doc-numbering":
+        return False
+    return norm == token
+
+
+def path_matches_generator_output(path: str) -> bool:
+    norm = path.replace("\\", "/")
+    if norm == GOLDEN_MANIFEST_REL:
+        return True
+    for token in GENERATOR_OUTPUT_GLOBS:
+        if path_matches_serialized_token(norm, token):
+            return True
+    return False
+
+
+def phase_invokes_generate(paths: list[str], extra_text: str | None = None) -> bool:
+    haystacks = [p.replace("\\", "/") for p in paths]
+    if extra_text:
+        haystacks.append(extra_text)
+    for text in haystacks:
+        for marker in GENERATE_INVOCATION_MARKERS:
+            if marker in text:
+                return True
+    return False
+
+
+def full_generator_output_touch_set(root: Path | None = None) -> list[str]:
+    """Concrete generator-output paths used when a phase invokes generate (R9)."""
+    _ = root
+    return [
+        GOLDEN_MANIFEST_REL,
+        "dist/cursor",
+        "dist/claude-code",
+        "core/scripts",
+        "core/commands",
+        "core/skills",
+        "core/rules",
+        "core/agents",
+        "core/providers",
+        "core/sw-reference",
+    ]
+
+
+def expand_generator_contention_paths(
+    phase_files: dict[str, list[str]],
+    content: str,
+    root: Path,
+) -> dict[str, list[str]]:
+    """Treat generate/copy-to-core phases as touching the full generator-output set (R9)."""
+    expanded: dict[str, list[str]] = {}
+    gen_paths = full_generator_output_touch_set(root)
+    for phase_id, paths in phase_files.items():
+        merged = list(dict.fromkeys(paths))
+        section = ""
+        marker = f"### {phase_id}."
+        if marker not in content:
+            marker = f"### {phase_id} "
+        start = content.find(marker)
+        if start >= 0:
+            nxt = content.find("\n### ", start + 1)
+            section = content[start:nxt] if nxt >= 0 else content[start:]
+        if phase_invokes_generate(merged, section):
+            for gp in gen_paths:
+                if gp not in merged:
+                    merged.append(gp)
+        expanded[phase_id] = merged
+    return expanded
+
+
 def contention_serialized_defaults(dirs: PlanningDirs) -> list[str]:
     return [
         prds_rel(dirs, "INDEX.md"),
@@ -170,6 +263,7 @@ def contention_serialized_defaults(dirs: PlanningDirs) -> list[str]:
         "CHANGELOG.md",
         "version.txt",
         "doc-numbering",
+        *generator_output_paths(),
     ]
 
 
