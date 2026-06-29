@@ -360,6 +360,7 @@ def read_merge_write(
     *,
     writer: str,
     new_region_body: str,
+    root: Path | None = None,
 ) -> str:
     if writer not in VALID_WRITERS:
         fail(f"invalid writer: {writer!r}", valid=sorted(VALID_WRITERS))
@@ -367,7 +368,7 @@ def read_merge_write(
     if existing and all(marker[0] in existing for marker in REGION_MARKERS.values()):
         return replace_region_inner(existing, region_key, new_region_body)
     empty = IndexRegions(
-        structural=new_region_body if region_key == "structural" else render_structural_table([], root),
+        structural=new_region_body if region_key == "structural" else render_structural_table([], root or Path(".")),
         derived=new_region_body if region_key == "derived" else "\n",
         inFlight=new_region_body if region_key == "inFlight" else "\n",
         prefix="",
@@ -381,7 +382,7 @@ def generate_index(root: Path, *, writer: str = "generator") -> str:
     structural = render_structural_table(units, root)
     path = index_path(root)
     existing = path.read_text(encoding="utf-8") if path.is_file() else None
-    return read_merge_write(existing, writer=writer, new_region_body=structural)
+    return read_merge_write(existing, writer=writer, new_region_body=structural, root=root)
 
 
 def write_index(root: Path, content: str, *, dry_run: bool = False) -> Path:
@@ -425,7 +426,7 @@ def cmd_write_region(root: Path, args: list[str]) -> None:
     dry_run = "--dry-run" in args
     path = index_path(root)
     existing = path.read_text(encoding="utf-8") if path.is_file() else None
-    content = read_merge_write(existing, writer=writer, new_region_body=body)
+    content = read_merge_write(existing, writer=writer, new_region_body=body, root=root)
     if not dry_run:
         write_index(root, content)
     emit(
