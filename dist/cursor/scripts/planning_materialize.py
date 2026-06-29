@@ -430,7 +430,9 @@ def cmd_sweep_orphans(_root: Path, args: argparse.Namespace) -> int:
     swept: list[str] = []
     for entry in paths:
         path = Path(str(entry)).expanduser().resolve()
-        if path.is_dir() and MATERIALIZED_PREFIX in path.parts:
+        if not path.is_dir():
+            continue
+        if path.name == "planning-materialized" and path.parent.name == ".cursor":
             shutil.rmtree(path)
             swept.append(str(path))
     emit({"verdict": "ok", "action": "materialize-sweep", "swept": swept})

@@ -198,7 +198,7 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
 
 ### 6. `/sw-init` seeding + doctor checks — M
 
-- [ ] 6.1 `/sw-init` profile + store + privacy-notice/ack seeding + doctor (R21)
+- [x] 6.1 `/sw-init` profile + store + privacy-notice/ack seeding + doctor (R21)
   - **File:** `core/commands/sw-init.md`, `scripts/planning-doctor.sh`
   - **Expected:** `/sw-init` resolves and seeds the public-repo-aware default profile (R3) + default store
     backend, records the first-run privacy notice + ack, and a doctor check validates store reachability
@@ -206,7 +206,7 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
     present) and sweeps orphaned materialized trees. Fixture `init-profile-store-seed` proves seeding +
     degrade-open doctor verdict + orphan sweep.
   - **R-IDs:** R21
-- [ ] 6.2 No new credential surface + token-safe doctor (R27)
+- [x] 6.2 No new credential surface + token-safe doctor (R27)
   - **File:** `scripts/planning-doctor.sh`, `scripts/planning_store.py`
   - **Expected:** no new credential surface beyond the configured backend's own auth (via the existing
     provider-agnostic adapter); the doctor check never prints provider tokens, store config references env-var

@@ -55,6 +55,7 @@
     "model-routing.defaults.json",
     "model-tier-hook-feasibility.md",
     "planning-unit.schema.json",
+    "planning-privacy-notice.md",
     "pr-test-plan.manifest.json",
     "signal-context.schema.json",
     "verify-presets.json",

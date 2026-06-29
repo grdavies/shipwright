@@ -514,6 +514,17 @@
         "materialize-provision-backend-pinned",
         "commit-boundary-barrier"
       ]
+    },
+    {
+      "id": "planning-init-fixtures",
+      "script": "scripts/test/run-planning-init-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-init-fixtures",
+      "scenarios": [
+        "init-profile-store-seed",
+        "store-no-token-leak"
+      ]
     }
   ]
 }
