@@ -177,21 +177,41 @@ def match_text_token(trigger: dict[str, Any], ctx: dict[str, Any]) -> bool:
     )
 
 
+def heading_has_token(
+    heading_text: str,
+    token: str,
+    *,
+    match_mode: str,
+    case_insensitive: bool,
+) -> bool:
+    compare = heading_text.lower() if case_insensitive else heading_text
+    needle = token.lower() if case_insensitive else token
+    if match_mode == "exact":
+        return compare == needle
+    if match_mode == "substring":
+        return needle in compare
+    return bool(whole_token_pattern(token, case_insensitive=case_insensitive).search(heading_text))
+
+
 def match_heading(trigger: dict[str, Any], ctx: dict[str, Any]) -> bool:
     headings = trigger.get("headings") or []
     if not headings:
         return False
     body = str(ctx.get("body_snapshot") or "")
     case_insensitive = bool(trigger.get("case_insensitive", True))
+    match_mode = trigger.get("match", "whole_token")
     for line in body.splitlines():
         stripped = line.strip()
         if not stripped.startswith("#"):
             continue
         heading_text = re.sub(r"^#+\s*", "", stripped).strip()
-        compare = heading_text.lower() if case_insensitive else heading_text
         for target in headings:
-            needle = target.lower() if case_insensitive else target
-            if compare == needle or needle in compare:
+            if heading_has_token(
+                heading_text,
+                str(target),
+                match_mode=match_mode,
+                case_insensitive=case_insensitive,
+            ):
                 return True
     return False
 
