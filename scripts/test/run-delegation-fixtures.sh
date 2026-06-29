@@ -340,7 +340,13 @@ COLLECT_FIX=$(mktemp -d)
   git config user.email test@test.com
   git config user.name Test
   git commit --allow-empty -q -m init
+  git branch -M main
+  git branch feat/collect-phase-a
+  git branch feat/collect-phase-b
   mkdir -p .cursor .cursor/sw-deliver-runs/a .cursor/sw-deliver-runs/b
+  cat >.cursor/workflow.config.json <<'WCFG'
+{"review":{"provider":"none"},"checks":{"treatNeutralAsPass":true}}
+WCFG
   cat >.cursor/sw-base-state.json <<'JSON'
 {"trunkBase": {"name": "main", "sha": "deadbeef00000000000000000000000000000000"}}
 JSON
@@ -366,14 +372,19 @@ JSON
 }
 JSON
   cat >.cursor/sw-deliver-plan.json <<'JSON'
-{"mode":"phase","target":{"branch":"feat/collect"},"items":[{"id":"1","slug":"a"},{"id":"2","slug":"b"}],"edges":[],"waves":[["1","2"]]}
+{
+  "mode": "phase",
+  "target": {"branch": "feat/collect"},
+  "items": [
+    {"id": "1", "slug": "a", "branch": "feat/collect-phase-a"},
+    {"id": "2", "slug": "b", "branch": "feat/collect-phase-b"}
+  ],
+  "edges": [],
+  "waves": [["1", "2"]]
+}
 JSON
-  cat >.cursor/sw-deliver-runs/a/status.json <<JSON
-{"verdict":"merge-ready-green","phase":"a","head":"$HEAD","gate":{"verdict":"green"}}
-JSON
-  cat >.cursor/sw-deliver-runs/b/status.json <<JSON
-{"verdict":"merge-ready-green","phase":"b","head":"$HEAD","gate":{"verdict":"green"}}
-JSON
+  "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase a --head "$HEAD" --out .cursor/sw-deliver-runs/a/status.json >/dev/null
+  "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase b --head "$HEAD" --out .cursor/sw-deliver-runs/b/status.json >/dev/null
   if OUT=$(python3 "$LOOP_PY" "$COLLECT_FIX" compute-next 2>/dev/null) && echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
