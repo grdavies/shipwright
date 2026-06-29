@@ -169,6 +169,21 @@ or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve
 
 **Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --command sw-stabilize`.
 
+
+## Deliver-loop remediation (PRD 036 R6–R8)
+
+When `/sw-deliver` routes a post-merge `verify:failed` regression from `merge-run-next` (exit 20), the
+conductor dispatches `/sw-stabilize` on the phase branch within `deliver.remediation.maxAttempts`
+(**regression budget**, separate from `verifyRemediationAttempts` for environmental flakes).
+
+- **Regression path** — `verify:failed` → `remediate` → `/sw-stabilize` on the phase head; merge is retained.
+- **Environmental path** — `verify:environmental` (exit 10) uses `verifyRemediationAttempts` only.
+- **No-progress breaker** — durable state signature includes `remediationAttempts`, `lastRemediationAt`, and
+  `stabilizePassId` so a freshly-`blocked` phase with budget does not trip `conductor:no-progress` before
+  the first remediation attempt.
+- **Budget exhaustion** — emits one consolidated halt with `resumeCommand`; repeated identical verify causes
+  escalate early as `remediation-non-converging` even when budget remains.
+
 ## Guardrails
 
 - Merge conflicts are **fix-now** and block check/thread triage until `mergeable` — never interpret

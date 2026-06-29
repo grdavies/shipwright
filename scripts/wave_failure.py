@@ -335,9 +335,16 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
             )
     state = load_state(root)
     pid, _meta = find_phase(state, None, phase_slug)
-    state["phases"][pid]["status"] = "blocked"
-    state["phases"][pid]["cause"] = cause
-    state["phases"][pid]["updatedAt"] = utc_now()
+    phase_meta = state["phases"][pid]
+    phase_meta["status"] = "blocked"
+    phase_meta["cause"] = cause
+    phase_meta["updatedAt"] = utc_now()
+    history = phase_meta.setdefault("remediationCauseHistory", [])
+    if not isinstance(history, list):
+        history = []
+        phase_meta["remediationCauseHistory"] = history
+    history.append(cause)
+    phase_meta["lastRemediationCause"] = cause
     save_state(root, state)
     blast_args = ["blast-radius", "apply", "--phase-slug", phase_slug]
     subprocess.run(
