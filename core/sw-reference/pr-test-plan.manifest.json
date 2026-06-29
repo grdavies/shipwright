@@ -469,6 +469,20 @@
         "completion-finalize-chokepoint",
         "deliver-postmerge-finalize-no-reconcile"
       ]
+    },
+    {
+      "id": "visibility-fixtures",
+      "script": "scripts/test/run-visibility-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-visibility-fixtures",
+      "scenarios": [
+        "visibility-field-default-profile",
+        "content-class-default-visibility",
+        "public-remote-default-resolution",
+        "resolver-single-authority",
+        "failclosed-unknown-visibility"
+      ]
     }
   ]
 }
