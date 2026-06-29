@@ -124,13 +124,31 @@ def derive_status(
     return unit.status
 
 
-def build_derived_map(
+def build_base_derived_map(
     units: list[pg.GraphUnit],
     inflight: dict[str, InflightTuple],
     git_complete: set[str],
 ) -> dict[str, str]:
     by_id = pg.index_units(units)
     return {u.id: derive_status(u, by_id, inflight, git_complete) for u in units if u.id}
+
+
+def build_derived_map(
+    units: list[pg.GraphUnit],
+    inflight: dict[str, InflightTuple],
+    git_complete: set[str],
+) -> dict[str, str]:
+    base = build_base_derived_map(units, inflight, git_complete)
+    return pg.apply_edge_effects(units, base).derived
+
+
+def edge_effects_for_units(
+    units: list[pg.GraphUnit],
+    inflight: dict[str, InflightTuple],
+    git_complete: set[str],
+) -> pg.EdgeEffects:
+    base = build_base_derived_map(units, inflight, git_complete)
+    return pg.apply_edge_effects(units, base)
 
 
 def render_derived_body(status_map: dict[str, str], *, active_only: bool = False) -> str:
@@ -174,18 +192,30 @@ def render_archive_markdown(root: Path, units: list[pg.GraphUnit], status_map: d
     return "\n".join(lines)
 
 
-def render_superseded_manifest(units: list[pg.GraphUnit], status_map: dict[str, str]) -> str:
+def render_superseded_manifest(
+    units: list[pg.GraphUnit],
+    status_map: dict[str, str],
+    effects: pg.EdgeEffects | None = None,
+) -> str:
+    effects = effects or pg.apply_edge_effects(units, status_map)
+    superseded_by: dict[str, str] = {}
+    for target_id, by_id in effects.supersede_edges:
+        superseded_by.setdefault(target_id, by_id)
     lines = [
         "# Superseded planning units",
         "",
-        "_Generated manifest (PRD 033 R21)._",
+        "_Generated manifest (PRD 033 R10/R21)._",
         "",
-        "| id | status |",
-        "| --- | --- |",
+        "| id | status | superseded_by |",
+        "| --- | --- | --- |",
     ]
     for unit_id in sorted(status_map):
         if status_map[unit_id] == "superseded":
-            lines.append(f"| {unit_id} | superseded |")
+            lines.append(f"| {unit_id} | superseded | {superseded_by.get(unit_id, '')} |")
+    if effects.extend_edges:
+        lines.extend(["", "## Extends lineage", "", "| target | extended_by |", "| --- | --- |"])
+        for target_id, by_id in effects.extend_edges:
+            lines.append(f"| {target_id} | {by_id} |")
     lines.append("")
     return "\n".join(lines)
 
@@ -273,9 +303,7 @@ def reconcile_core(
     if cycle:
         fail("dependency cycle detected", cycle=cycle)
 
-    inflight_initial = read_tuples(root)
     git_complete = git_complete_unit_ids(root, units)
-    derived = build_derived_map(units, inflight_initial, git_complete)
 
     index_path = pig.index_path(root)
     if not index_path.is_file():
@@ -294,9 +322,8 @@ def reconcile_core(
         existing = index_path.read_text(encoding="utf-8")
     inflight_final = read_tuples(root)
     final_inflight_bytes = pig.parse_regions(existing).inFlight
-    if final_inflight_bytes != inflight_bytes_before:
-        derived = build_derived_map(units, inflight_final, git_complete)
-
+    effects = edge_effects_for_units(units, inflight_final, git_complete)
+    derived = effects.derived
     derived_body = render_derived_body(derived, active_only=True)
     content = pig.read_merge_write(existing, writer="reconciler", new_region_body=derived_body)
     pig.write_index(root, content, dry_run=dry_run)
@@ -310,7 +337,7 @@ def reconcile_core(
     dirs = pp.load_planning_dirs(root)
     superseded_path = worktree / dirs.prds / "SUPERSEDED.md"
     if not dry_run:
-        superseded_path.write_text(render_superseded_manifest(units, derived), encoding="utf-8")
+        superseded_path.write_text(render_superseded_manifest(units, derived, effects), encoding="utf-8")
 
     legacy = plp.project_all(root, dry_run=dry_run)
     relief = relief_acceptance_check(root, derived)

@@ -101,3 +101,16 @@ def is_mechanical_status(status: str) -> bool:
 
 def is_human_gated_status(status: str) -> bool:
     return status in HUMAN_GATED_STATUSES
+
+def gap_absorption_target(absorber_derived: str, gap_status: str) -> str:
+    """R11 — mechanical gap progression when an absorbing unit advances."""
+    if absorber_derived == "complete":
+        return "resolved"
+    if absorber_derived == "in-progress":
+        if gap_status == "resolved":
+            return gap_status
+        return "partially resolved"
+    if absorber_derived == "planned" and gap_status == "open":
+        return "planned"
+    return gap_status
+
