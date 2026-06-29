@@ -33,6 +33,7 @@
 #   wave.sh integration --stamp <stamp> --branches 'branch1,branch2'
 #   wave.sh state init|get|phase|terminal ...
 #   wave.sh lock acquire|release|status ...
+#   wave.sh ship-lease acquire|release|heartbeat|status ...
 #   wave.sh journal begin|complete|status ...
 #   wave.sh log tail [--lines N]
 #   wave.sh spec-seed --task-list docs/prds/.../tasks-....md [--dry-run]
@@ -53,6 +54,9 @@ case "${1:-}" in
     ;;
   watchdog)
     exec python3 "$PLUGIN_ROOT/scripts/wave_deliver_loop.py" "$ROOT" watchdog "${@:2}"
+    ;;
+  ship-lease)
+    exec python3 "$PLUGIN_ROOT/scripts/wave_lock.py" "$ROOT" "${@:2}"
     ;;
   state|lock|journal|log|ledger)
     exec python3 "$PLUGIN_ROOT/scripts/wave_state.py" "$ROOT" "$@"
