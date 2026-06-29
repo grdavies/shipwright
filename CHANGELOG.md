@@ -146,6 +146,7 @@
 * merge phase planning-store-interface-backends-l into feat/planning-feedback-lifecycle (e3a6afe) <!-- sw-deliver:planning-store-interface-backends-l -->
 * merge phase provision-time-materialization-commit-boundary-barrier-l into feat/planning-feedback-lifecycle (c475abe) <!-- sw-deliver:provision-time-materialization-commit-boundary-barrier-l -->
 * merge phase prd-015-reconciliation-gitignore-generation-032-handoff-m into feat/planning-feedback-lifecycle (c892f2c) <!-- sw-deliver:prd-015-reconciliation-gitignore-generation-032-handoff-m -->
+* merge phase sw-init-seeding-doctor-checks-m into feat/planning-feedback-lifecycle (8b5884e) <!-- sw-deliver:sw-init-seeding-doctor-checks-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
