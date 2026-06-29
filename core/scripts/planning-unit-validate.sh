@@ -124,7 +124,7 @@ def validate_structure(fm: dict) -> list[str]:
     if priority is not None and not isinstance(priority, int):
         errors.append("priority must be an integer")
     visibility = fm.get("visibility")
-    if visibility not in {"public", "private"}:
+    if visibility not in {"public", "private", "memory"}:
         errors.append(f"invalid visibility: {visibility!r}")
     if unit_type in UNIT_TYPES and isinstance(fm.get("status"), str):
         status_err = validate_status(unit_type, fm["status"])
