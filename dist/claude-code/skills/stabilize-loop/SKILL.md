@@ -76,6 +76,15 @@ Run that as a background shell with `notify_on_output` on `^STABILIZE_LOOP_TICK`
 checks finish. Also poll for new review threads on wake. Use a unique sentinel; do not arm duplicate
 loops; track the PID so the loop can be stopped on request.
 
+
+## Deliver-initiated remediation
+
+When invoked from `/sw-deliver` `remediate` dispatch (post-merge `verify:failed`), this loop runs on the
+phase branch under the regression remediation budget (`deliver.remediation.maxAttempts`). Environmental
+post-merge verify failures use a separate `verifyRemediationAttempts` counter and do not consume the
+regression budget. Completion updates durable deliver state (`stabilizePassId`, `lastRemediationAt`) so the
+conductor no-progress signature advances before the next driver tick.
+
 ## Guardrails
 
 - Opt-in. Never convert a plain `/sw-stabilize` into a loop without the user asking (or `/ship` driving).

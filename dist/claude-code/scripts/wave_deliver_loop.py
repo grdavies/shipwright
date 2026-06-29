@@ -124,6 +124,18 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _record_remediation_cause(meta: dict[str, Any], cause: str) -> None:
+    history = meta.setdefault("remediationCauseHistory", [])
+    if not isinstance(history, list):
+        history = []
+        meta["remediationCauseHistory"] = history
+    if history and history[-1] == cause:
+        meta["lastRemediationCause"] = cause
+        return
+    history.append(cause)
+    meta["lastRemediationCause"] = cause
+
+
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
     print(json.dumps(obj, ensure_ascii=False, indent=2))
     sys.exit(exit_code)
@@ -319,15 +331,33 @@ def init_budget_counters(state: dict[str, Any]) -> None:
 
 def build_state_signature(state: dict[str, Any]) -> str:
     phases = state.get("phases") or {}
-    status_map = {
-        str(k): (v.get("status") if isinstance(v, dict) else str(v))
-        for k, v in phases.items()
-    }
+    status_map: dict[str, str] = {}
+    cause_map: dict[str, str | None] = {}
+    last_remediation: dict[str, str | None] = {}
+    stabilize_pass: dict[str, str | None] = {}
+    for k, v in phases.items():
+        if not isinstance(v, dict):
+            status_map[str(k)] = str(v)
+            continue
+        pid = str(k)
+        status_map[pid] = str(v.get("status") or "")
+        cause_map[pid] = v.get("cause") if v.get("cause") else None
+        last_remediation[pid] = v.get("lastRemediationAt")
+        stabilize_pass[pid] = v.get("stabilizePassId")
+    remediation = state.get("remediationAttempts") or {}
+    verify_remediation = state.get("verifyRemediationAttempts") or {}
     payload = {
         "verdict": state.get("verdict"),
         "nextAction": state.get("nextAction"),
         "currentWave": state.get("currentWave"),
         "phaseStatuses": dict(sorted(status_map.items())),
+        "phaseCauses": dict(sorted(cause_map.items())),
+        "remediationAttempts": dict(sorted((str(k), int(v)) for k, v in remediation.items())),
+        "verifyRemediationAttempts": dict(
+            sorted((str(k), int(v)) for k, v in verify_remediation.items())
+        ),
+        "lastRemediationAt": dict(sorted(last_remediation.items())),
+        "stabilizePassId": dict(sorted(stabilize_pass.items())),
         "mergeQueueLength": len(state.get("mergeQueue") or []),
         "mergeJournalPresent": state.get("mergeJournal") is not None,
     }
@@ -1017,8 +1047,28 @@ def compute_next_action(
         if not isinstance(meta, dict):
             continue
         if meta.get("status") == "blocked":
-            attempts = state.get("remediationAttempts") or {}
-            count = int(attempts.get(pid, 0))
+            cause = str(meta.get("cause") or "")
+            if cause.startswith("verify:"):
+                history = meta.get("remediationCauseHistory") or []
+                if (
+                    isinstance(history, list)
+                    and len(history) >= 2
+                    and history[-1] == history[-2]
+                ):
+                    return {
+                        "action": "halt-blocked",
+                        "phaseId": pid,
+                        "phaseSlug": meta.get("slug"),
+                        "cause": "remediation-non-converging",
+                        "resume": True,
+                    }
+            attempts_key = (
+                "verifyRemediationAttempts"
+                if cause.startswith("verify:environmental")
+                else "remediationAttempts"
+            )
+            attempts = state.get(attempts_key) or {}
+            count = int(attempts.get(str(pid), 0))
             max_attempts = remediation_max(root)
             if count < max_attempts:
                 return {
@@ -1028,6 +1078,11 @@ def compute_next_action(
                     "attempt": count + 1,
                     "maxAttempts": max_attempts,
                     "resume": True,
+                    "causeClass": (
+                        "environmental"
+                        if cause.startswith("verify:environmental")
+                        else "regression"
+                    ),
                 }
             return {
                 "action": "halt-blocked",
@@ -1492,8 +1547,10 @@ def execute_mechanical(
             slug = str(data.get("phase") or "")
             for pid, meta in (state.get("phases") or {}).items():
                 if isinstance(meta, dict) and meta.get("slug") == slug:
-                    attempts = state.setdefault("remediationAttempts", {})
+                    attempts = state.setdefault("verifyRemediationAttempts", {})
                     attempts[str(pid)] = int(attempts.get(str(pid), 0)) + 1
+                    _record_remediation_cause(meta, "verify:environmental")
+                    meta["lastRemediationAt"] = utc_now()
                     save_state(root, state)
                     break
             persist_cursor(root, state, "remediate")
@@ -1501,6 +1558,23 @@ def execute_mechanical(
                 "executed": "merge-run-next",
                 "verifyEnvironmental": True,
                 "causeClass": "environmental",
+                **data,
+            }
+        if ec == 20 and data.get("cause") == "verify:failed":
+            slug = str(data.get("phase") or "")
+            state.update(load_state(root))
+            for pid, meta in (state.get("phases") or {}).items():
+                if isinstance(meta, dict) and meta.get("slug") == slug:
+                    _record_remediation_cause(meta, "verify:failed")
+                    meta["lastRemediationAt"] = utc_now()
+                    save_state(root, state)
+                    break
+            persist_cursor(root, state, "remediate")
+            return {
+                "executed": "merge-run-next",
+                "verifyFailed": True,
+                "causeClass": "regression",
+                "recommendedCommand": "/sw-stabilize",
                 **data,
             }
         if ec not in (0, 10):
@@ -1789,9 +1863,19 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
                     }
                 )
             if step["action"] == "remediate":
-                attempts = state.setdefault("remediationAttempts", {})
                 pid = str(step.get("phaseId", ""))
+                cause_class = str(step.get("causeClass") or "regression")
+                attempts_key = (
+                    "verifyRemediationAttempts"
+                    if cause_class == "environmental"
+                    else "remediationAttempts"
+                )
+                attempts = state.setdefault(attempts_key, {})
                 attempts[pid] = int(step.get("attempt", 1))
+                meta = (state.get("phases") or {}).get(pid)
+                if isinstance(meta, dict):
+                    meta["lastRemediationAt"] = utc_now()
+                save_state(root, state)
                 persist_cursor(root, state, "remediate")
             elif step["action"] == "dispatch-batch":
                 phase_ids = [str(p) for p in step.get("phaseIds") or []]
