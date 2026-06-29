@@ -86,10 +86,6 @@
       "files": [
         "scripts/wave.sh",
         "skills/parallelism/",
-        "paths (migrations",
-        "shared config",
-        "INDEX counters",
-        "CHANGELOG/version contention); emits contention notice; injected edges respect declared order; combined graph cycle",
         "core/skills/deliver/SKILL.md",
         "scripts/wave.sh"
       ]
