@@ -4,6 +4,7 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 
 | Date | PRD | Phase | Notes |
 |------|-----|-------|-------|
+| 2026-06-29 | 038 | all | PRD 038 deliver complete — squash merged via PR #217; PR #217; SHA 058efb7 |
 | 2026-06-29 | 038 | all | deliver complete — awaiting terminal merge; SHA 2ee4adf |
 | 2026-06-29 | 038 | all | deliver complete — awaiting terminal merge; SHA f2a973f |
 | 2026-06-29 | 036 | all | Shipped via PR #195 (squash): delivery conductor concurrency and remediation robustness; 5 deliver phases (#190–#194); PR #195; SHA 9164191 |
