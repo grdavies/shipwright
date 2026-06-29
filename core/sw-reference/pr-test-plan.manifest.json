@@ -109,6 +109,23 @@
       ]
     },
     {
+      "id": "planning-graph-fixtures",
+      "script": "scripts/test/run-planning-graph-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-graph-fixtures",
+      "scenarios": [
+        "enum-type-conditioned-tokens",
+        "derived-status-from-inflight",
+        "blocked-matches-unmet-edges",
+        "whole-graph-cycle-precommit-reject",
+        "priority-topo-stable-tiebreak",
+        "graph-module-deterministic",
+        "graph-offline-reproducible",
+        "enum-shared-module-no-drift"
+      ]
+    },
+    {
       "id": "planning-paths-fixtures",
       "script": "scripts/test/run-planning-paths-fixtures.sh",
       "args": [],
