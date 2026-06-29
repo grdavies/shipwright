@@ -133,7 +133,8 @@ local_evidence_gate() {
     blocked) REASON="blocking/neutral or empty check set" ;;
     green)   REASON="local-evidence: all local checks pass; review gating off; 0 actionable threads" ;;
   esac
-  CR_MARKER_BOOL=false; CR_SKIP_BOOL=false
+  
+CR_MARKER_BOOL=false; CR_SKIP_BOOL=false
   jq -n     --arg verdict "$VERDICT"     --arg reason "$REASON"     --arg head "$HEAD_SHA"     --arg branch "$BRANCH"     --arg crHead "$CR_REVIEWED_HEAD"     --arg crStatus "$CR_STATUS"     --arg crState "$CR_STATE"     --arg reviewProvider "$REVIEW_PROVIDER"     --argjson crLanded "$CR_LANDED"     --argjson crMarker "$CR_MARKER_BOOL"     --argjson crSkipped "$CR_SKIP_BOOL"     --argjson minsSince 0     --argjson unresolved 0     --argjson actionable 0     --argjson failing "$FAILING"     --argjson requiredFailing "$REQUIRED_FAILING"     --argjson advisoryFailing "$ADVISORY_FAILING"     --argjson prTestPlanRequired "$REQUIRED_JOBS"     --argjson prTestPlanAdvisory "$ADVISORY_JOBS"     --argjson prTestPlanManifest "$PR_TEST_PLAN"     --argjson pending "$PENDING"     --argjson blocking "$BLOCKING"     --argjson checkCount "${CHECK_COUNT:-0}"     --argjson deprecations "$GATE_DEPRECATIONS"     '{
       verdict: $verdict,
       reason: $reason,
@@ -323,6 +324,13 @@ case "$VERDICT" in
     fi
     ;;
 esac
+
+# PRD 038 R15 — advisory only when PR touches scripts/ (no hard block).
+if [ "$VERDICT" = "green" ] && [ -n "${PR:-}" ] && command -v gh >/dev/null 2>&1; then
+  if gh pr diff "$PR" --name-only 2>/dev/null | grep -q '^scripts/'; then
+    REASON="${REASON}; advisory: PR touches scripts/ — consider bash scripts/build-chain-sync.sh"
+  fi
+fi
 
 CR_MARKER_BOOL=false; [ "$CR_MARKER" -eq 1 ] && CR_MARKER_BOOL=true
 CR_SKIP_BOOL=false; [ "$CR_SKIP" -eq 1 ] && CR_SKIP_BOOL=true
