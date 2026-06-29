@@ -39,7 +39,7 @@
 | 035 | planning-autonomy-and-orchestration | [035-prd-planning-autonomy-and-orchestration.md](035-planning-autonomy-and-orchestration/035-prd-planning-autonomy-and-orchestration.md) (frozen) | [tasks](035-planning-autonomy-and-orchestration/tasks-035-planning-autonomy-and-orchestration.md) (frozen) | not-started |
 | 036 | delivery-conductor-concurrency-and-remediation-robustness | [036-prd-delivery-conductor-concurrency-and-remediation-robustness.md](036-delivery-conductor-concurrency-and-remediation-robustness/036-prd-delivery-conductor-concurrency-and-remediation-robustness.md) (frozen) | [tasks](036-delivery-conductor-concurrency-and-remediation-robustness/tasks-036-delivery-conductor-concurrency-and-remediation-robustness.md) (frozen) | complete |
 | 037 | doc-review-persona-selection-accuracy | [037-prd-doc-review-persona-selection-accuracy.md](037-doc-review-persona-selection-accuracy/037-prd-doc-review-persona-selection-accuracy.md) (frozen) | [tasks](037-doc-review-persona-selection-accuracy/tasks-037-doc-review-persona-selection-accuracy.md) (frozen) | not-started |
-| 038 | build-chain-source-of-truth | [038-prd-build-chain-source-of-truth.md](038-build-chain-source-of-truth/038-prd-build-chain-source-of-truth.md) (frozen) | [tasks](038-build-chain-source-of-truth/tasks-038-build-chain-source-of-truth.md) (frozen) | not-started |
+| 038 | build-chain-source-of-truth | [038-prd-build-chain-source-of-truth.md](038-build-chain-source-of-truth/038-prd-build-chain-source-of-truth.md) (frozen) | [tasks](038-build-chain-source-of-truth/tasks-038-build-chain-source-of-truth.md) (frozen) | in-progress |
 
 ## Supersession notes (025, 028–030)
 
