@@ -493,6 +493,25 @@ Source: review comment
 
 `/sw-feedback` redacts, classifies, and proposes a route. **Confirm** before dispatch.
 
+
+## Build-chain maintenance (PRD 038)
+
+When a change touches repo-root `scripts/` or other harness/emittable paths, propagate through the
+build chain before opening a PR:
+
+```bash
+bash scripts/build-chain-sync.sh
+```
+
+This runs, in order:
+
+1. `scripts/copy-to-core.sh` — mirror harness + content into `core/` (orphan fail-closed on `core/sw-reference/`)
+2. `python3 -m sw generate --all` — refresh `dist/cursor/` and `dist/claude-code/`
+3. `scripts/snapshot-tree.sh` — update `cursor-golden.manifest` when `dist/` changed
+
+The SoT map lives in `.sw/layout.md` and `core/sw-reference/build-chain-sot.json`. CI enforces
+`scripts/`↔`core/scripts/` parity (`run-core-scripts-parity-fixtures.sh`) and dist↔golden parity.
+
 ## Pre-work memory search (PRD 019)
 
 Before substantive work, every **work-performing** command runs a scoped `memory-preflight` **search**

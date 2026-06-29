@@ -20,6 +20,9 @@ jobs:
       - name: Emitter fixtures
         run: bash scripts/test/run-emitter-fixtures.sh
 
+      - name: Core scripts parity fixtures
+        run: bash scripts/test/run-core-scripts-parity-fixtures.sh
+
       - name: Parity fixtures
         run: bash scripts/test/run-parity-fixtures.sh
 
