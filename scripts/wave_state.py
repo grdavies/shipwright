@@ -2,6 +2,7 @@
 """Run-state, lock, merge journal, and progress log for /sw-deliver phase-mode."""
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import socket
@@ -31,6 +32,37 @@ VALID_PHASE_STATUSES = frozenset(
 # Terminal completeness: phase counts as done for retrospective/compound/driver gates (R1/D6).
 TERMINAL_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
 TERMINAL_VERDICTS = frozenset({"running", "complete", "blocked", "rejected"})
+
+_COMPLETION_FINALIZE_DEPTH = 0
+
+
+@contextlib.contextmanager
+def completion_finalize_authorization():
+    """Authorize merged-complete writes from finalize-if-merged only (R33)."""
+    global _COMPLETION_FINALIZE_DEPTH
+    _COMPLETION_FINALIZE_DEPTH += 1
+    try:
+        yield
+    finally:
+        _COMPLETION_FINALIZE_DEPTH -= 1
+
+
+def _assert_completion_finalize_allowed(root: Path, state: dict[str, Any], prior: dict[str, Any] | None) -> None:
+    completion = state.get("completion") or {}
+    if completion.get("status") != "merged-complete":
+        return
+    prior_status = ((prior or {}).get("completion") or {}).get("status")
+    if prior_status == "merged-complete":
+        return
+    if os.environ.get("SW_FIXTURE_COMPLETION_FINALIZE") == "1":
+        return
+    if _COMPLETION_FINALIZE_DEPTH > 0:
+        return
+    fail(
+        "completion.status merged-complete is finalize-only (R33)",
+        exit_code=20,
+        remediation="bash scripts/wave.sh completion finalize-if-merged",
+    )
 
 
 def phase_complete(status: str | None) -> bool:
@@ -394,6 +426,13 @@ def save_deliver_state(
         state["target"] = {"branch": branch}
     path = scoped_paths(root, branch)["state"]
     path.parent.mkdir(parents=True, exist_ok=True)
+    prior: dict[str, Any] | None = None
+    if path.is_file():
+        try:
+            prior = read_json(path)
+        except StateCorruptError:
+            prior = None
+    _assert_completion_finalize_allowed(root, state, prior)
     state["updatedAt"] = utc_now()
     write_json(path, state)
     _write_legacy_breadcrumb(root, target=branch, scoped_state=path)

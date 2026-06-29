@@ -13,7 +13,7 @@ case "$cmd" in
   -h|--help|"")
     cat <<'EOF'
 Usage:
-  planning-graph.sh reconcile [--dry-run] [--commit]
+  planning-graph.sh reconcile [--dry-run] [--commit] [--allow-default-branch --reason <text>] [--override-status <id> <from> <to> --reason <text>]
   planning-graph.sh cycle-check [--staged]
   planning-graph.sh doctor
   planning-graph.sh relief-check

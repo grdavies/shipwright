@@ -443,7 +443,24 @@
       "classification": "required",
       "ciJobName": "feat-test-plan-doc-currency-033-fixtures",
       "scenarios": [
-        "doc-currency-033-sections"
+        "doc-currency-033-sections",
+        "doc-currency-033-a1-sections"
+      ]
+    },
+    {
+      "id": "planning-postmerge-safety-fixtures",
+      "script": "scripts/test/run-planning-postmerge-safety-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-postmerge-safety-fixtures",
+      "scenarios": [
+        "reconcile-complete-from-git-ancestry",
+        "reconcile-terminal-monotonic",
+        "reconcile-refuse-default-branch",
+        "reconcile-stale-local-branches",
+        "relief-corpus-postmerge-safety",
+        "completion-finalize-chokepoint",
+        "deliver-postmerge-finalize-no-reconcile"
       ]
     }
   ]

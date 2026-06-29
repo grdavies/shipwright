@@ -18,7 +18,7 @@ from host_invoke import host_verb
 
 from cleanup_lib import load_default_branch
 from wave_json_io import StateCorruptError, read_json, write_json
-from wave_state import load_deliver_state, phase_complete, resolve_state_path, save_deliver_state
+from wave_state import completion_finalize_authorization, load_deliver_state, phase_complete, resolve_state_path, save_deliver_state
 
 # File outputs safe to commit pre-merge (R18). Memory/provider artifacts are never committed (R19).
 ALLOWED_PREMERGE_FILE_PREFIXES = (
@@ -420,18 +420,12 @@ def cmd_completion_finalize_if_merged(root: Path, args: list[str]) -> None:
             halt="wait",
             **info,
         )
-    if not has_flag(args, "--skip-reconcile"):
-        script = root / "scripts" / "reconcile-status.sh"
-        subprocess.run(
-            ["bash", str(script), "reconcile"],
-            cwd=str(root),
-            check=False,
-        )
     state["completion"]["status"] = "merged-complete"
     state["completion"]["mergedAt"] = utc_now()
     state["completion"]["mergeDetail"] = info.get("detail")
     state["verdict"] = "complete"
-    save_state(root, state)
+    with completion_finalize_authorization():
+        save_state(root, state)
     emit(
         {
             "verdict": "pass",

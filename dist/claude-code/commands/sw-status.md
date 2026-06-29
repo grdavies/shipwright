@@ -39,3 +39,7 @@ Load `skills/living-status/SKILL.md`.
 
 - Frozen artifacts never modified.
 - Task checkboxes are derivation inputs only.
+## Post-merge playbook (A1)
+
+After target merge: use `set-index-status` + `append-log-idempotent` on a **docs branch** for single-unit INDEX updates. Never run full-corpus `reconcile-status.sh reconcile` on `main`. Terminal derived status is monotonic (`complete`/`superseded` do not downgrade). `merged-complete` is set only via `bash scripts/wave.sh completion finalize-if-merged`.
+

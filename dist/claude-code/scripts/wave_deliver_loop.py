@@ -1922,7 +1922,15 @@ def execute_mechanical(
     if action == "finalize-completion":
         ec, data = run_wave(root, "completion", "finalize-if-merged")
         if ec != 0:
-            fail_payload(data, "finalize completion failed", ec)
+            fail_payload(
+                data,
+                "finalize completion failed",
+                ec,
+                remediation=(
+                    "post-merge playbook: single-unit set-index-status + append-log-idempotent on a docs branch; "
+                    "never bare reconcile-status.sh reconcile on main; retry via bash scripts/wave.sh completion finalize-if-merged"
+                ),
+            )
         state.update(load_state(root))
         target = (state.get("target") or {}).get("branch")
         task_list = task_list_from(state, plan)
