@@ -539,6 +539,7 @@
       ]
     },
     {
+<<<<<<< HEAD
       "id": "planning-related-fixtures",
       "script": "scripts/test/run-planning-related-fixtures.sh",
       "args": [],
@@ -556,6 +557,24 @@
         "tasks-rescan-amendment-proposal",
         "absorption-edge-autonomous-choices-gated",
         "proposal-payload-redaction"
+=======
+      "id": "two-track-fixtures",
+      "script": "scripts/test/run-two-track-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-two-track-fixtures",
+      "scenarios": [
+        "two-track-driver-classify-route",
+        "mechanical-allowlist-derived-only",
+        "inflight-never-mechanical",
+        "planning-path-forced-substantive",
+        "frontmatter-edit-substantive-regression",
+        "mechanical-batched-auto-merge",
+        "substantive-auto-driven-pr",
+        "branch-protection-defaults-pr-path",
+        "both-region-content-hash-abort",
+        "mechanical-premerge-secret-scan"
+>>>>>>> feat/planning-feedback-lifecycle-phase-two-track-edit-driver-l
       ]
     }
   ]
