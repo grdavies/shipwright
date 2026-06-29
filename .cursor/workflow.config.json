@@ -23,7 +23,7 @@
     "afterTasks": "confirm"
   },
   "compound": {
-    "autonomy": "supervised"
+    "autonomy": "auto"
   },
   "verify": {
     "lint": "bash scripts/model-routing-check.sh",
@@ -188,11 +188,11 @@
       "maxIterations": 500
     },
     "terminal": {
-      "autonomy": "supervised"
+      "autonomy": "auto"
     }
   },
   "cleanup": {
-    "autonomy": "confirm"
+    "autonomy": "auto"
   },
   "communication": {
     "defaultIntensity": "full",
