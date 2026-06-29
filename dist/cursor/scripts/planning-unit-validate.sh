@@ -42,6 +42,7 @@ repo_root = Path(sys.argv[2])
 path_file = Path(sys.argv[3])
 schema_path = plugin_root / "core/sw-reference/planning-unit.schema.json"
 
+sys.path.insert(0, str(plugin_root / "core" / "scripts"))
 sys.path.insert(0, str(plugin_root / "scripts"))
 from planning_status_enum import validate_status  # noqa: E402
 

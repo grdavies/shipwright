@@ -7,3 +7,7 @@ GUARD="$DIR/../../scripts/index-region-guard.sh"
 [ -x "$GUARD" ] && "$GUARD" --staged
 PRIV="$DIR/../../scripts/planning-privacy-guard.sh"
 [ -x "$PRIV" ] && "$PRIV" --staged
+GRAPH="$DIR/../../scripts/planning_graph.py"
+if [[ -f "$GRAPH" ]]; then
+  python3 "$GRAPH" "$(git rev-parse --show-toplevel)" cycle-check --staged
+fi
