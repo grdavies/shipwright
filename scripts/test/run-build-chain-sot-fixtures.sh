@@ -42,4 +42,26 @@ else
   bad "copy-to-core-manifest-driven"
 fi
 
+
+# --- ci-yml-includes-core-scripts-parity (R5) ---
+if grep -q 'run-core-scripts-parity-fixtures.sh' "$ROOT/.github/workflows/ci.yml"; then
+  ok "ci-yml-includes-core-scripts-parity"
+else
+  bad "ci-yml-includes-core-scripts-parity"
+fi
+
+# --- verify-test-registers-core-scripts-parity (R6) ---
+if python3 -c "
+import json
+m=json.load(open('$ROOT/core/sw-reference/pr-test-plan.manifest.json'))
+ids=[f['id'] for f in m.get('fixtures',[])]
+assert 'core-scripts-parity-fixtures' in ids
+match=[f for f in m['fixtures'] if f['id']=='core-scripts-parity-fixtures'][0]
+assert match['script']=='scripts/test/run-core-scripts-parity-fixtures.sh'
+"; then
+  ok "verify-test-registers-core-scripts-parity"
+else
+  bad "verify-test-registers-core-scripts-parity"
+fi
+
 exit "$FAIL"

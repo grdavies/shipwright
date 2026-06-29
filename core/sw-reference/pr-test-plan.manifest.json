@@ -275,6 +275,13 @@
       ]
     },
     {
+      "id": "core-scripts-parity-fixtures",
+      "script": "scripts/test/run-core-scripts-parity-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-core-scripts-parity-fixtures"
+    },
+    {
       "id": "completed-unit-fixtures",
       "script": "scripts/test/run-completed-unit-fixtures.sh",
       "args": [],
