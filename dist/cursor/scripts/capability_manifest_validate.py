@@ -64,6 +64,13 @@ def _validate_trigger(trigger: Any, *, path: str) -> list[str]:
         tokens = trigger.get("tokens")
         if not isinstance(tokens, list) or not tokens:
             errors.append(f"{path}.tokens must be a non-empty array")
+    if trigger_type == "heading":
+        headings = trigger.get("headings")
+        if not isinstance(headings, list) or not headings:
+            errors.append(f"{path}.headings must be a non-empty array")
+        match_mode = trigger.get("match", "whole_token")
+        if match_mode not in {"whole_token", "exact"}:
+            errors.append(f"{path}.match invalid for heading: {match_mode!r}")
     if trigger_type == "triage_tag":
         tags = trigger.get("tags")
         if not isinstance(tags, list) or not tags:
