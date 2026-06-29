@@ -760,6 +760,7 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
         task_path = resolve_task_list_path(root, task_list)
         content = task_path.read_text(encoding="utf-8")
         fm = parse_frontmatter(content)
+        run_unit_planning_gate(root, task_list, args)
         branch_type = resolve_type(args, fm)
         slug = feature_slug(fm, task_path)
         branch = f"{branch_type}/{slug}"
@@ -841,6 +842,35 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
     emit(result, 0)
 
 
+
+
+def run_unit_planning_gate(root: Path, task_list: str, args: list[str]) -> None:
+    """PRD 033 unit-level dependency gate + soft-enforce before plan/preflight."""
+    import planning_deliver_gate as pdg
+
+    task_path = resolve_task_list_path(root, task_list)
+    flags = pdg.parse_gate_flags(args)
+    pdg.run_start_revalidate(root, task_path)
+    pdg.dependency_gate(
+        root,
+        task_path,
+        override=bool(flags["override"]),
+        override_reason=flags["override_reason"],
+    )
+    pdg.soft_enforce_confirm(root, task_path, confirmed=bool(flags["confirmed"]))
+
+
+def cmd_next(root: Path, args: list[str]) -> None:
+    import planning_deliver_gate as pdg
+
+    pdg.cmd_next(root, args)
+
+
+def cmd_dependency_gate(root: Path, args: list[str]) -> None:
+    import planning_deliver_gate as pdg
+
+    pdg.cmd_dependency_gate(root, args)
+
 def cmd_plan(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run")
     from_phase = parse_kv(args, "--from")
@@ -867,6 +897,8 @@ def cmd_plan(root: Path, args: list[str]) -> None:
                 exit_code=2,
                 halt="unfrozen",
             )
+
+        run_unit_planning_gate(root, task_list, args)
 
         branch_type = resolve_type(args, fm)
         slug = feature_slug(fm, task_path)
@@ -1094,6 +1126,10 @@ def main() -> None:
         cmd_integration(root, args)
     elif cmd == "tasks-suggest":
         cmd_tasks_suggest(root, args)
+    elif cmd == "next":
+        cmd_next(root, args)
+    elif cmd == "dependency-gate":
+        cmd_dependency_gate(root, args)
     else:
         fail(f"unknown command: {cmd}")
 

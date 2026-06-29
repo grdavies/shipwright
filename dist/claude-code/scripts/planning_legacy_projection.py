@@ -15,6 +15,8 @@ if str(SCRIPT_DIR) not in sys.path:
 import planning_index_gen as pig  # noqa: E402
 import planning_paths  # noqa: E402
 
+LEGACY_GENERATED_MARKER = "<!-- planning-legacy-projection: generated v1 -->"
+
 GAP_ID_RE = re.compile(r"^gap-(\d+)-")
 
 
@@ -37,7 +39,7 @@ def gap_legacy_id(unit_id: str) -> str:
 def render_gap_backlog(units: list[pig.PlanningUnit]) -> str:
     gaps = [u for u in units if u.type == "gap" and u.id != "gap-feedback-checklist"]
     lines = [
-        "# Gap backlog (legacy projection)",
+        LEGACY_GENERATED_MARKER,
         "",
         "Generated compatibility projection from planning gap units (PRD 031 R27).",
         "",
@@ -54,7 +56,7 @@ def render_gap_backlog(units: list[pig.PlanningUnit]) -> str:
 def render_prd_index(units: list[pig.PlanningUnit], root: Path) -> str:
     prds = [u for u in units if u.type == "prd"]
     lines = [
-        "# PRD index (legacy projection)",
+        LEGACY_GENERATED_MARKER,
         "",
         "| # | Slug | PRD | Tasks | Status |",
         "|---|------|-----|-------|--------|",
@@ -74,6 +76,73 @@ def render_prd_index(units: list[pig.PlanningUnit], root: Path) -> str:
     return "\n".join(lines)
 
 
+
+def unit_body_sentinels(root: Path, units: list[pig.PlanningUnit]) -> list[str]:
+    """Unique body substrings used to prove projections are frontmatter-only (R15)."""
+    worktree = planning_paths.git_root(root)
+    sentinels: list[str] = []
+    for unit in units:
+        body = worktree / unit.body_path
+        if not body.is_file():
+            continue
+        raw = body.read_text(encoding="utf-8")
+        if raw.startswith("---"):
+            parts = raw.split("---", 2)
+            body_text = parts[2] if len(parts) > 2 else ""
+        else:
+            body_text = raw
+        for line in body_text.splitlines():
+            line = line.strip()
+            if len(line) >= 12 and not line.startswith("#"):
+                sentinels.append(line)
+                break
+    return sentinels
+
+
+def verify_frontmatter_only(root: Path, gap_content: str, index_content: str, units: list[pig.PlanningUnit]) -> list[str]:
+    leaks: list[str] = []
+    for sentinel in unit_body_sentinels(root, units):
+        if sentinel in gap_content or sentinel in index_content:
+            leaks.append(sentinel)
+    return leaks
+
+
+def write_legacy_stamp(root: Path, *, gap_hash: str, index_hash: str) -> None:
+    worktree = planning_paths.git_root(root)
+    stamp = worktree / ".cursor" / "planning-legacy-projection-stamp.json"
+    stamp.parent.mkdir(parents=True, exist_ok=True)
+    import hashlib, json
+    stamp.write_text(json.dumps({"gapBacklogSha256": gap_hash, "indexSha256": index_hash}, indent=2) + "\n", encoding="utf-8")
+
+
+def legacy_manual_edit_warnings(root: Path) -> list[dict[str, str]]:
+    import hashlib, json
+    dirs = planning_paths.load_planning_dirs(root)
+    if dirs.planning != "docs/planning":
+        return []
+    worktree = planning_paths.git_root(root)
+    stamp_path = worktree / ".cursor" / "planning-legacy-projection-stamp.json"
+    if not stamp_path.is_file():
+        return []
+    try:
+        stamp = json.loads(stamp_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    warnings: list[dict[str, str]] = []
+    for key, rel_name in (("gapBacklogSha256", "GAP-BACKLOG.md"), ("indexSha256", "INDEX.md")):
+        expected = stamp.get(key)
+        path = worktree / dirs.prds / rel_name
+        if not expected or not path.is_file():
+            continue
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if actual != expected:
+            warnings.append({
+                "check": "legacy-manual-edit",
+                "path": str(path.relative_to(worktree)),
+                "hint": "legacy projection is read-only; edit canonical planning units and reconcile",
+            })
+    return warnings
+
 def project_all(root: Path, *, dry_run: bool = False) -> dict[str, Any]:
     dirs = planning_paths.load_planning_dirs(root)
     if dirs.planning != "docs/planning":
@@ -84,10 +153,19 @@ def project_all(root: Path, *, dry_run: bool = False) -> dict[str, Any]:
     index_path = worktree / dirs.prds / "INDEX.md"
     gap_content = render_gap_backlog(units)
     index_content = render_prd_index(units, root)
+    leaks = verify_frontmatter_only(root, gap_content, index_content, units)
+    if leaks:
+        fail("legacy projection leaked unit body bytes", leaks=leaks, exit_code=20)
     if not dry_run:
         gap_path.parent.mkdir(parents=True, exist_ok=True)
         gap_path.write_text(gap_content, encoding="utf-8")
         index_path.write_text(index_content, encoding="utf-8")
+        import hashlib
+        write_legacy_stamp(
+            root,
+            gap_hash=hashlib.sha256(gap_content.encode()).hexdigest(),
+            index_hash=hashlib.sha256(index_content.encode()).hexdigest(),
+        )
     return {
         "gapBacklog": str(gap_path.relative_to(worktree)),
         "index": str(index_path.relative_to(worktree)),
@@ -118,11 +196,24 @@ def cmd_check_half_migrated(root: Path) -> None:
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     if len(args) < 2:
-        fail("usage: planning_legacy_projection.py <repo-root> <project|check-half-migrated>")
+        fail("usage: planning_legacy_projection.py <repo-root> <project|check-half-migrated|verify-frontmatter-only>")
     root = Path(args[0]).resolve()
     cmd = args[1]
     if cmd == "project":
         cmd_project(root, args[2:])
+    elif cmd == "verify-frontmatter-only":
+        units = pig.discover_units(root)
+        out = project_all(root, dry_run=True)
+        if out.get("skipped"):
+            emit({"verdict": "pass", "action": "verify-frontmatter-only", "skipped": True})
+        dirs = planning_paths.load_planning_dirs(root)
+        worktree = planning_paths.git_root(root)
+        gap_content = (worktree / dirs.prds / "GAP-BACKLOG.md").read_text(encoding="utf-8")
+        index_content = (worktree / dirs.prds / "INDEX.md").read_text(encoding="utf-8")
+        leaks = verify_frontmatter_only(root, gap_content, index_content, units)
+        if leaks:
+            fail("body bytes in legacy projection", leaks=leaks, exit_code=20)
+        emit({"verdict": "pass", "action": "verify-frontmatter-only"})
     elif cmd == "check-half-migrated":
         cmd_check_half_migrated(root)
     else:

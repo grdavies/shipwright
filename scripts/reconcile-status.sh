@@ -165,14 +165,18 @@ def status_for(row):
 
     tasks_complete = tasks["total"] > 0 and tasks["done"] == tasks["total"]
     require_merge = os.environ.get("SW_RECONCILE_REQUIRE_MERGE") == "1"
+    index_terminal = row.get("indexStatus") in ("complete", "superseded")
     # INDEX vocabulary: not-started | in-progress | complete (R47 — single-sourced in living-status skill).
+    # Stale local branches must not downgrade terminal rows (R32).
     if require_merge:
         status = "complete" if feature_complete else row.get("indexStatus", "not-started")
         if status != "complete":
             status = "not-started"
-    elif feature_complete or (tasks_complete and merged) or (tasks_complete and row.get("indexStatus") == "complete"):
+    elif feature_complete or index_terminal:
         status = "complete"
-    elif tasks["done"] > 0 or open_branches or merged:
+    elif tasks_complete and merged:
+        status = "complete"
+    elif tasks["done"] > 0 or (open_branches and not feature_complete) or merged:
         status = "in-progress"
     else:
         status = "not-started"
@@ -253,14 +257,26 @@ for r in d.get('runs', []):
 cmd_reconcile() {
   local dry=""
   local require_merge=""
+  local allow_default=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --dry-run) dry="1"; shift ;;
       --require-merge) require_merge="1"; shift ;;
+      --allow-default-branch) allow_default="1"; shift ;;
       *) break ;;
     esac
   done
   [[ -n "$require_merge" ]] && export SW_RECONCILE_REQUIRE_MERGE=1
+  if [[ -z "$dry" && -z "$allow_default" ]]; then
+    local cfg branch base
+    cfg="$(read_config)"
+    branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+    base="$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('defaultBaseBranch','main'))" "$cfg")"
+    if [[ "$branch" == "$base" ]]; then
+      python3 -c "import json; print(json.dumps({'verdict':'fail','error':'reconcile refuses default branch commits (R31)','branch':'$branch','remediation':'use set-index-status + append-log-idempotent on a docs branch'}))" >&2
+      exit 20
+    fi
+  fi
   local derived
   derived="$(cmd_derive)"
   python3 - "$ROOT" "$derived" "$dry" <<'PY'

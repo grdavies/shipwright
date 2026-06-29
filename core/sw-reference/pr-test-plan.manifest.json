@@ -109,6 +109,23 @@
       ]
     },
     {
+      "id": "planning-graph-fixtures",
+      "script": "scripts/test/run-planning-graph-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-graph-fixtures",
+      "scenarios": [
+        "enum-type-conditioned-tokens",
+        "derived-status-from-inflight",
+        "blocked-matches-unmet-edges",
+        "whole-graph-cycle-precommit-reject",
+        "priority-topo-stable-tiebreak",
+        "graph-module-deterministic",
+        "graph-offline-reproducible",
+        "enum-shared-module-no-drift"
+      ]
+    },
+    {
       "id": "planning-paths-fixtures",
       "script": "scripts/test/run-planning-paths-fixtures.sh",
       "args": [],
@@ -366,6 +383,84 @@
         "secret-scan-push-chokepoint",
         "scoped-lock-single-flight",
         "frozen-doc-ci-gates-unchanged"
+      ]
+    },
+    {
+      "id": "planning-scheduler-fixtures",
+      "script": "scripts/test/run-planning-scheduler-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-scheduler-fixtures",
+      "scenarios": [
+        "dependency-gate-fail-closed",
+        "soft-enforce-confirm-stubbed-default",
+        "run-start-revalidate-supersede-refuse",
+        "deliver-dependency-preflight",
+        "override-logged-rate-surfaced"
+      ]
+    },
+    {
+      "id": "planning-edge-effects-fixtures",
+      "script": "scripts/test/run-planning-edge-effects-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-edge-effects-fixtures",
+      "scenarios": [
+        "supersedes-flip-manifest",
+        "absorbs-lifecycle-progression",
+        "terminal-excluded-from-eligible",
+        "superseded-manifest-render"
+      ]
+    },
+    {
+      "id": "planning-cutover-phase5-fixtures",
+      "script": "scripts/test/run-planning-cutover-phase5-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-cutover-phase5-fixtures",
+      "scenarios": [
+        "legacy-projection-frontmatter-only",
+        "gap-capture-canonical-unit",
+        "doctor-legacy-manual-edit-warning",
+        "frozen-traceability-no-regression",
+        "feedback-backlog-planningdir"
+      ]
+    },
+    {
+      "id": "planning-emitter-parity-fixtures",
+      "script": "scripts/test/run-planning-emitter-parity-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-emitter-parity-fixtures",
+      "scenarios": [
+        "emitter-parity-planning-autonomy"
+      ]
+    },
+    {
+      "id": "doc-currency-033-fixtures",
+      "script": "scripts/test/run-doc-currency-033-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-doc-currency-033-fixtures",
+      "scenarios": [
+        "doc-currency-033-sections",
+        "doc-currency-033-a1-sections"
+      ]
+    },
+    {
+      "id": "planning-postmerge-safety-fixtures",
+      "script": "scripts/test/run-planning-postmerge-safety-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-postmerge-safety-fixtures",
+      "scenarios": [
+        "reconcile-complete-from-git-ancestry",
+        "reconcile-terminal-monotonic",
+        "reconcile-refuse-default-branch",
+        "reconcile-stale-local-branches",
+        "relief-corpus-postmerge-safety",
+        "completion-finalize-chokepoint",
+        "deliver-postmerge-finalize-no-reconcile"
       ]
     }
   ]

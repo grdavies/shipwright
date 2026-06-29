@@ -125,6 +125,14 @@
 * merge phase terminal-status-integrity-recovery-r13-r17-l into feat/delivery-conductor-concurrency-and-remediation-robustness (d98d1da) <!-- sw-deliver:terminal-status-integrity-recovery-r13-r17-l -->
 * merge phase parallel-merge-batch-safety-r9-r12-l into feat/delivery-conductor-concurrency-and-remediation-robustness (a7fa461) <!-- sw-deliver:parallel-merge-batch-safety-r9-r12-l -->
 * merge phase cross-cutting-invariants-ci-enforcement-dogfood-r18-r22-m into feat/delivery-conductor-concurrency-and-remediation-robustness (c52e97e) <!-- sw-deliver:cross-cutting-invariants-ci-enforcement-dogfood-r18-r22-m -->
+* merge phase lifecycle-enum-pure-graph-module-substrate-l into feat/planning-feedback-lifecycle (7f754e8) <!-- sw-deliver:lifecycle-enum-pure-graph-module-substrate-l -->
+* merge phase deterministic-maintenance-reconciler-l into feat/planning-feedback-lifecycle (cf7628f) <!-- sw-deliver:deterministic-maintenance-reconciler-l -->
+* merge phase scheduler-sw-deliver-dependency-gate-m into feat/planning-feedback-lifecycle (8038e93) <!-- sw-deliver:scheduler-sw-deliver-dependency-gate-m -->
+* merge phase supersession-absorption-edge-effects-m into feat/planning-feedback-lifecycle (a1553a9) <!-- sw-deliver:supersession-absorption-edge-effects-m -->
+* merge phase atomic-cutover-one-commit-with-031-phase-b-032-m into feat/planning-feedback-lifecycle (6e866b9) <!-- sw-deliver:atomic-cutover-one-commit-with-031-phase-b-032-m -->
+* merge phase emitter-dist-parity-s into feat/planning-feedback-lifecycle (27b08e3) <!-- sw-deliver:emitter-dist-parity-s -->
+* merge phase operator-doc-acceptance-criteria-033-owned-m into feat/planning-feedback-lifecycle (b1b168e) <!-- sw-deliver:operator-doc-acceptance-criteria-033-owned-m -->
+* merge phase post-merge-index-reconcile-safety-completion-finalize-chokepoint-amendment-a1-m into feat/planning-feedback-lifecycle (9f2f1cc) <!-- sw-deliver:post-merge-index-reconcile-safety-completion-finalize-chokepoint-amendment-a1-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
