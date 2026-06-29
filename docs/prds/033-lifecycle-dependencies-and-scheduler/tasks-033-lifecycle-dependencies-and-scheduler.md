@@ -303,6 +303,39 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
     acceptance criteria. Fixture: `doc-currency-033-a1-sections`.
   - **R-IDs:** R36
 
+### 9. Operator worktree contract — amendment A3 — M
+
+- [ ] 9.1 Operator worktree contract in layout (R37)
+  - **File:** `.sw/layout.md`, `core/sw-reference/layout.md` (if emitted)
+  - **Expected:** diagram/table for primary vs orchestrator vs phase worktrees; repo-root `.cursor/` as gitignored
+    conductor runtime; `status.json` mirror direction worktree→root (R37). Fixture: `doc-currency-033-a3-sections`.
+  - **R-IDs:** R37
+- [ ] 9.2 Conductor + deliver skill contract prose (R38)
+  - **File:** `core/skills/conductor/SKILL.md`, `core/skills/deliver/SKILL.md`
+  - **Expected:** echoes R37 — which checkout to run ship/execute in; repo-root `.cursor/` updates expected;
+    no tracked `main` implementation commits during a run (R38).
+  - **R-IDs:** R38
+- [ ] 9.3 In-flight cwd guard for work-performing commands (R39)
+  - **File:** `core/scripts/deliver_cwd_guard.sh` (or module), guarded entrypoints (`wave_living_docs.py`,
+    `reconcile-status.sh`, retrospective write paths)
+  - **Expected:** refuse primary on `defaultBaseBranch` while deliver `verdict: running` (R39). Fixture:
+    `deliver-cwd-guard-blocks-main-living-doc`.
+  - **R-IDs:** R39
+- [ ] 9.4 Canonical state sync before terminal steps (R40)
+  - **File:** `core/scripts/wave_state.py`, `core/scripts/wave_deliver_loop.py`
+  - **Expected:** `sync_canonical_state_read()` before terminal actions; repo-root mirror on save; skew threshold
+    halt (R40). Fixture: `terminal-reads-repo-root-state-from-orchestrator-cwd`.
+  - **R-IDs:** R40
+- [ ] 9.5 Phase status repo-root mirror + SW_REPO_ROOT (R41)
+  - **File:** `core/scripts/ship-phase-status.sh`, phase dispatch env
+  - **Expected:** absolute `SW_REPO_ROOT` required; mirror `status.json` to repo root on write (R41). Fixture:
+    `phase-status-repo-root-mirror`.
+  - **R-IDs:** R41
+- [ ] 9.6 End-to-end worktree contract fixture + gap close (R42, R43)
+  - **File:** `core/sw-reference/pr-test-plan.manifest.json`, `docs/prds/GAP-BACKLOG.md`
+  - **Expected:** `deliver-worktree-contract` registered and green (R42); GAP-056 resolved on ship (R43).
+  - **R-IDs:** R42, R43
+
 ## Phase Dependencies
 
 | Phase | Depends on |
@@ -315,6 +348,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
 | 6 | 2, 3, 4 |
 | 7 | 5 |
 | 8 | 2, 3 |
+| 9 | 8 |
 
 ## Traceability
 
@@ -357,6 +391,15 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
 | R35 | 8.5 | relief-corpus-postmerge-safety |
 | R36 | 8.6 | doc-currency-033-a1-sections |
 
+| R37 | 9.1 | doc-currency-033-a3-sections |
+| R38 | 9.2 | doc-currency-033-a3-sections |
+| R39 | 9.3 | deliver-cwd-guard-blocks-main-living-doc |
+| R40 | 9.4 | terminal-reads-repo-root-state-from-orchestrator-cwd |
+| R41 | 9.5 | phase-status-repo-root-mirror |
+| R42 | 9.6 | deliver-worktree-contract |
+| R43 | 9.6 | GAP-056 resolved |
+| R44 | — | no new security surface (review only) |
+
 ## Notes
 
 - New surfaces: `core/scripts/planning_lifecycle.py` (single-sourced enum; replaces PRD 031's values-only
@@ -376,3 +419,6 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
   legacy `reconcile-status.sh` shim for git-ancestry-primary, monotonic terminal status, and default-branch
   reconcile refusal (R29–R32). A1 absorbs GAP-053 and GAP-055.
 - All new fixtures register in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.test`.
+- Amendment A3 (Phase 9) surfaces: `.sw/layout.md`, `core/skills/conductor/SKILL.md`,
+  `core/skills/deliver/SKILL.md`, `core/scripts/deliver_cwd_guard.sh`, `wave_state.py`,
+  `wave_deliver_loop.py`, `ship-phase-status.sh`; absorbs GAP-056; complements A1 R31.
