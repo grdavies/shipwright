@@ -418,3 +418,14 @@ jobs:
       - name: Run planning-store-fixtures
         run: bash scripts/test/run-planning-store-fixtures.sh
 
+  feat-test-plan-planning-materialize-fixtures:
+    name: feat-test-plan-planning-materialize-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-materialize-fixtures
+        run: bash scripts/test/run-planning-materialize-fixtures.sh
+
