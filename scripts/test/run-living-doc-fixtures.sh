@@ -63,10 +63,16 @@ PY
 # --- set-index-status via script (temp root with docs/prds) ---
 FIX_ROOT=$(mktemp -d)
 mkdir -p "$FIX_ROOT/docs/prds"
-cp "$ROOT/docs/prds/INDEX.md" "$FIX_ROOT/docs/prds/"
 if bash -c "ROOT='$FIX_ROOT' source '$RS' 2>/dev/null" 2>/dev/null; then :; fi
 # direct python path via env hack - use subprocess from repo with modified cwd files
-(cd "$FIX_ROOT" && cp -R "$ROOT/scripts" . && cp -R "$ROOT/docs" . 2>/dev/null || true)
+(cd "$FIX_ROOT" && cp -R "$ROOT/scripts" .)
+cat >"$FIX_ROOT/docs/prds/INDEX.md" <<'INDEX'
+# PRD index
+
+| # | Slug | PRD | Tasks | Status |
+|---|------|-----|-------|--------|
+| 008 | model-tier-setup-defaults | [008-prd-model-tier-setup-defaults.md](008-model-tier-setup-defaults/008-prd-model-tier-setup-defaults.md) (frozen) | [tasks](008-model-tier-setup-defaults/tasks-008-model-tier-setup-defaults.md) (frozen) | complete |
+INDEX
 if (cd "$FIX_ROOT" && bash scripts/reconcile-status.sh set-index-status --prd 008 --status in-progress 2>/dev/null | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
