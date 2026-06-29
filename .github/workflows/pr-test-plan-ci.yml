@@ -220,6 +220,17 @@ jobs:
       - name: Run inflight-guards-parity-fixtures
         run: bash scripts/test/run-inflight-guards-parity-fixtures.sh
 
+  feat-test-plan-core-scripts-parity-fixtures:
+    name: feat-test-plan-core-scripts-parity-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run core-scripts-parity-fixtures
+        run: bash scripts/test/run-core-scripts-parity-fixtures.sh
+
   feat-test-plan-completed-unit-fixtures:
     name: feat-test-plan-completed-unit-fixtures
     runs-on: ubuntu-latest
@@ -384,4 +395,15 @@ jobs:
           python-version: "3.12"
       - name: Run planning-postmerge-safety-fixtures
         run: bash scripts/test/run-planning-postmerge-safety-fixtures.sh
+
+  feat-test-plan-visibility-fixtures:
+    name: feat-test-plan-visibility-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run visibility-fixtures
+        run: bash scripts/test/run-visibility-fixtures.sh
 
