@@ -173,6 +173,9 @@ draft = {
     "guardrails": {"enforceBeforeSubmit": True, "requireRuleClass": False},
     "review": {"provider": "none"},
     "memory": {"provider": "in-repo", "sourceOfTruth": "auto"},
+    "planning": {
+        "store": {"backend": "in-repo-public"},
+    },
     "configuredWith": {"shipwrightVersion": sw_ver, "schemaVersion": sch_ver},
 }
 
