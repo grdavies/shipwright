@@ -363,3 +363,14 @@ jobs:
       - name: Run planning-emitter-parity-fixtures
         run: bash scripts/test/run-planning-emitter-parity-fixtures.sh
 
+  feat-test-plan-doc-currency-033-fixtures:
+    name: feat-test-plan-doc-currency-033-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run doc-currency-033-fixtures
+        run: bash scripts/test/run-doc-currency-033-fixtures.sh
+

@@ -327,6 +327,13 @@ merge if checkboxes diverge from the durable ledger.
 **Living-doc currency:** INDEX status, COMPLETION-LOG, and GAP-BACKLOG reconcile in-loop on the
 feature branch; `docs-currency` hard-blocks the terminal gate on drift for the current PRD.
 
+**Planning lifecycle (PRD 033):** units under `docs/planning/` carry typed lifecycles and `depends:`/`absorbs:`/
+`supersedes:` edges. The maintenance reconciler (`planning-graph reconcile`) regenerates the INDEX `derived`
+region and archive view; deliver writes `inFlight` only. `/sw-deliver next` and the unit-level dependency gate
+fail closed on unmet prerequisites (`planning.autonomy` soft-enforces priority on explicit `--task-list`).
+Legacy `GAP-BACKLOG.md` is a read-only projection during cutover — gap capture writes canonical gap units.
+
+
 **Doc frontmatter traceability:** Full-tier PRDs carry `brainstorm:` in frontmatter; writable brainstorms
 may gain `prd:` forward links. `/sw-freeze` verifies resolvable linkage before freeze.
 

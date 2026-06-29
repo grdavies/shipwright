@@ -435,6 +435,16 @@
       "scenarios": [
         "emitter-parity-planning-autonomy"
       ]
+    },
+    {
+      "id": "doc-currency-033-fixtures",
+      "script": "scripts/test/run-doc-currency-033-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-doc-currency-033-fixtures",
+      "scenarios": [
+        "doc-currency-033-sections"
+      ]
     }
   ]
 }

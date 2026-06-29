@@ -1,6 +1,6 @@
 ---
 name: sw-living-status
-description: Derive PRD status from git and deliver state; reconcile INDEX, COMPLETION-LOG, and GAP-BACKLOG; hard-block on drift.
+description: Derive PRD status from git and deliver state; reconcile planning INDEX derived region, COMPLETION-LOG, and legacy gap projections; hard-block on drift.
 ---
 
 # Living status (R47–R51)
@@ -39,11 +39,14 @@ bash scripts/reconcile-status.sh gap-resolve --absorbing-prd <NNN> [--pr N]
 scripts/wave.sh living-docs reconcile [--commit]
 scripts/wave.sh living-docs append-terminal [--commit]
 scripts/wave.sh docs-currency
+python3 scripts/planning-graph.sh / planning_graph.py <repo> reconcile [--dry-run]
+python3 scripts/planning-graph.sh / planning_graph.py <repo> doctor
+python3 scripts/wave_deliver.py <repo> next
 ```
 
 ## INDEX reconciliation
 
-Updates **Status** column only in `docs/prds/INDEX.md`. Frozen PRD/amendment bodies untouched.
+Archived units render in `docs/prds/INDEX-archive.md`. **Planning INDEX** (`docs/planning/INDEX.md`): `planning-graph reconcile` owns the `derived` region; deliver owns `inFlight` (read-only to reconciler). **Legacy PRD INDEX** (`docs/prds/INDEX.md`): projected table during cutover; `reconcile-status.sh` may update Status column for deliver-era rows. Frozen PRD/amendment bodies untouched.
 `merge run-next` invokes `living-docs reconcile --commit` after each green phase merge (R51).
 
 ## Completion log (R48)
@@ -52,11 +55,14 @@ Append-only rows in `docs/prds/COMPLETION-LOG.md`. `append-log-idempotent` keys 
 resume never double-appends. Terminal prepare calls `living-docs append-terminal --commit` when all phases
 are green.
 
-## GAP-BACKLOG (R49)
+## Gap units and legacy GAP-BACKLOG (PRD 033 R15/R49)
 
-`docs/prds/GAP-BACKLOG.md` remains hand-appendable for new gaps. Optional **Absorbed-by** column (PRD
-number) marks which deliver PRD resolves an `open` row. `gap-resolve --absorbing-prd` flips matching rows to
-`resolved` when that PRD reaches `complete`; non-matching gaps are untouched.
+Canonical gaps live under `docs/planning/gap/<unit-id>/`. Status flips are mechanical via `absorbs:` edges
+and the maintenance reconciler — not manual edits to `docs/prds/GAP-BACKLOG.md`. During the cutover window
+`GAP-BACKLOG.md` is a **read-only legacy projection** (frontmatter-only). Trivial `/sw-feedback` gaps use
+`planning_gap_capture.py`; substantial gaps route to `/sw-amend`.
+
+Legacy `gap-resolve --absorbing-prd` applies only before `planningDir` cutover.
 
 ## Documentation-currency gate (R50)
 
@@ -83,3 +89,4 @@ mapping in its terminal report.
 - Never modify frozen PRD/amendment files.
 - Re-running derive → reconcile is idempotent for same git facts.
 - Living-doc file edits commit on the feature branch in-loop (R51), never only in chat.
+- Manual edits to generated legacy `GAP-BACKLOG.md` / `INDEX.md` projections trigger `planning-graph doctor` warnings.
