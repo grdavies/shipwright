@@ -16,6 +16,7 @@
     "harnessLimit": 8
   },
   "agentsFile": "AGENTS.md",
+  "planningDir": "docs/prds",
   "prdsDir": "docs/prds",
   "decisionsDir": "docs/decisions",
   "tasksDir": "docs/prds",

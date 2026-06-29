@@ -281,10 +281,11 @@ def _cmd_reconcile_locked(
         )
         if proc.returncode == 0 and proc.stdout.strip().startswith("{"):
             planning_graph_out = json.loads(proc.stdout)
-        legacy = project_legacy_compat(worktree, dry_run=dry_run)
+        # Reconcile updates living INDEX/GAP-BACKLOG via set-index-status + gap-resolve only.
+        # Legacy projection emits a sparse shim and must not run here (pre-cutover corpus lives in docs/prds/).
 
     gap_out: dict[str, Any] | None = None
-    if index_status == "complete" and dirs.planning != "docs/planning":
+    if index_status == "complete":
         pr_ref = ""
         terminal = state.get("terminalPr") or {}
         if terminal.get("number"):
