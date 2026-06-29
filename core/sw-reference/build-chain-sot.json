@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "roles": {
+    "harness": {
+      "path": "scripts/",
+      "description": "Canonical harness source; runtime entrypoints execute from repo root. MUST NOT be edited only under core/scripts/."
+    },
+    "coreContentDirs": {
+      "paths": [
+        "core/commands/",
+        "core/skills/",
+        "core/rules/",
+        "core/agents/",
+        "core/providers/"
+      ],
+      "source": "repo-root siblings",
+      "description": "Mirrored from commands/, skills/, rules/, agents/, providers/ via copy-to-core."
+    },
+    "coreScripts": {
+      "path": "core/scripts/",
+      "source": "scripts/",
+      "excludes": ["test/", "check-frozen.sh"],
+      "description": "Mirrored from scripts/ with documented excludes."
+    },
+    "swReferenceInput": {
+      "path": ".sw/",
+      "description": "Operator-edited sw-reference inputs (strict subset)."
+    },
+    "swReferenceOutput": {
+      "path": "core/sw-reference/",
+      "description": "Union of .sw/ sync output plus coreAuthoredAllowlist entries."
+    },
+    "dist": {
+      "paths": ["dist/cursor/", "dist/claude-code/"],
+      "description": "Emitter output only; never hand-edited."
+    },
+    "goldenManifest": {
+      "path": "scripts/test/fixtures/parity/cursor-golden.manifest",
+      "description": "Committed golden; updated only via sanctioned snapshot command."
+    }
+  },
+  "coreAuthoredAllowlist": [
+    "build-chain-sot.json",
+    "capability-index.json",
+    "capability-manifest.md",
+    "capability-manifest.schema.json",
+    "communication-routing.defaults.json",
+    "deterministic-regen-paths.json",
+    "guidelines.json",
+    "guidelines.md",
+    "guidelines.schema.json",
+    "inflight-signal.schema.json",
+    "kernel-classification.json",
+    "kernel-classification.md",
+    "model-routing.defaults.json",
+    "model-tier-hook-feasibility.md",
+    "planning-unit.schema.json",
+    "pr-test-plan.manifest.json",
+    "signal-context.schema.json",
+    "verify-presets.json",
+    "templates/"
+  ],
+  "deprecatedAllowlist": []
+}
