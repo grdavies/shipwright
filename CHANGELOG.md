@@ -123,6 +123,7 @@
 * merge phase ship-single-flight-r1-r5-l into feat/delivery-conductor-concurrency-and-remediation-robustness (7152aa8) <!-- sw-deliver:ship-single-flight-r1-r5-l -->
 * merge phase regression-remediation-routing-r6-r8-m into feat/delivery-conductor-concurrency-and-remediation-robustness (86b950f) <!-- sw-deliver:regression-remediation-routing-r6-r8-m -->
 * merge phase terminal-status-integrity-recovery-r13-r17-l into feat/delivery-conductor-concurrency-and-remediation-robustness (d98d1da) <!-- sw-deliver:terminal-status-integrity-recovery-r13-r17-l -->
+* merge phase parallel-merge-batch-safety-r9-r12-l into feat/delivery-conductor-concurrency-and-remediation-robustness (a7fa461) <!-- sw-deliver:parallel-merge-batch-safety-r9-r12-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
