@@ -129,6 +129,7 @@
 * merge phase deterministic-maintenance-reconciler-l into feat/planning-feedback-lifecycle (cf7628f) <!-- sw-deliver:deterministic-maintenance-reconciler-l -->
 * merge phase scheduler-sw-deliver-dependency-gate-m into feat/planning-feedback-lifecycle (8038e93) <!-- sw-deliver:scheduler-sw-deliver-dependency-gate-m -->
 * merge phase supersession-absorption-edge-effects-m into feat/planning-feedback-lifecycle (a1553a9) <!-- sw-deliver:supersession-absorption-edge-effects-m -->
+* merge phase atomic-cutover-one-commit-with-031-phase-b-032-m into feat/planning-feedback-lifecycle (6e866b9) <!-- sw-deliver:atomic-cutover-one-commit-with-031-phase-b-032-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
