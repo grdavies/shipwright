@@ -3,12 +3,15 @@ date: 2026-06-27
 topic: planning-feedback-lifecycle
 prd: docs/prds/035-planning-autonomy-and-orchestration/035-prd-planning-autonomy-and-orchestration.md
 frozen: true
-frozen_at: 2026-06-27
+frozen_at: 2026-06-29
+absorbs_amendments:
+  - amendments/A1-deliver-conductor-completion.md
+  - amendments/A2-gap-lifecycle-and-doc-format.md
 ---
 
 # Tasks — PRD 035 Planning Autonomy, Backlog Pull-In & Two-Track Orchestration
 
-Generated from the frozen PRD spec union **R1–R24** (Requirements + Technical Requirements + Security &
+Generated from the frozen PRD spec union **R1–R24** plus amendments **A1 R25–R50** and **A2 R51–R58** (Requirements + Technical Requirements + Security &
 Compliance; no amendments). This is the capstone of the Planning & Feedback Lifecycle and **composes** PRD
 031 (unit model + path helper), 032 (mutation-safety guards + `inFlight` signal), 033 (lifecycle/reconciler/
 scheduler + INDEX `derived`/`inFlight` regions), and 034 (visibility resolver) — those are external `depends:`
@@ -223,6 +226,58 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
     Fixture `no-regression-035`.
   - **R-IDs:** R16
 
+
+### 7. Deliver conductor completion (amendment A1) — L
+
+- [ ] 7.1 Build-chain ship verify + parity in verify.test (R25–R26)
+  - **File:** `core/commands/sw-ship.md`, `.cursor/workflow.config.json`, `scripts/build-chain-sync.sh`
+  - **Expected:** phase/terminal ship fails when build-chain paths drift; `verify.test` includes parity fixtures.
+    Fixtures: `ship-without-build-chain-sync-fails`, `verify-test-includes-parity`.
+  - **R-IDs:** R25, R26
+- [ ] 7.2 Post-merge environmental verify + deterministic regen (R27–R29)
+  - **File:** `scripts/wave_merge.py`, `scripts/wave_deliver_loop.py`
+  - **Expected:** build-chain-only post-merge failures classify environmental; parallel-wave regen before verify.
+    Fixtures: `post-merge-build-chain-environmental`, `merge-queue-deterministic-regen`, `parallel-wave-regen-before-verify`.
+  - **R-IDs:** R27, R28, R29
+- [ ] 7.3 Remediation routing + batch queue hygiene (R30–R34)
+  - **File:** `scripts/wave_deliver_loop.py`, `scripts/wave_failure.py`
+  - **Expected:** `verify:failed` routes remediate; no-progress does not pre-empt; batch head reconcile after stabilize.
+    Fixtures: `verify-failed-routes-remediate`, `no-progress-before-first-remediate`, `current-wave-overflow-terminal`, `whole-batch-merge-wait`, `batch-integration-head-reconcile`.
+  - **R-IDs:** R30, R31, R32, R33, R34
+- [ ] 7.4 Conductor continuity + terminal path (R35–R43)
+  - **File:** `core/skills/conductor/SKILL.md`, `scripts/wave_terminal.py`, `scripts/wave_deliver_loop.py`
+  - **Expected:** no illegitimate halts; terminal autonomy honors `deliver.terminal.autonomy: auto`.
+    Fixtures: `post-remediation-no-status-pause`, `dispatch-ship-completes-in-turn`, `await-agent-same-turn-continue`, `terminal-eligibility-teardown-green-parity`, `terminal-retro-before-pr-auto`, `terminal-ship-autonomous-watch`, `single-flight-phase-ship`, `terminal-status-provenance-reemit`, `terminal-pr-prepare-commitlint`.
+  - **R-IDs:** R35, R36, R37, R38, R39, R40, R41, R42, R43
+- [ ] 7.5 Worktree lifecycle + operator resume (R44–R47)
+  - **File:** `scripts/wave_merge.py`, `scripts/wave_failure.py`, `scripts/wave_lifecycle.py`
+  - **Expected:** eager teardown; parallel ceiling wouldFree; `/sw-deliver run` resume strings.
+    Fixtures: `eager-phase-teardown-after-merge`, `parallel-ceiling-would-free`, `status-collect-background-worktree`, `deliver-resume-command-is-sw`.
+  - **R-IDs:** R44, R45, R46, R47
+- [ ] 7.6 Docs durability + deferrals (R48–R50)
+  - **File:** `scripts/wave_spec_seed.py`, `scripts/planning_legacy_projection.py`, `core/commands/sw-deliver.md`
+  - **Expected:** post-freeze durability; projection refuse; cleanup autonomy hook when configured.
+    Fixtures: `post-freeze-docs-durability`, `projection-refuse-hand-maintained`, `re-freeze-contract-amendment`, `cleanup-autonomy-auto-post-merge`.
+  - **R-IDs:** R48, R49, R50
+
+### 8. Gap lifecycle + doc format (amendment A2) — M
+
+- [ ] 8.1 Mechanical gap resolve + freeze absorbs flip (R51–R52)
+  - **File:** `scripts/living-status-gap-resolve.sh`, `core/commands/sw-freeze.md`
+  - **Expected:** PRD ship flips gap rows; freeze writes schedule from `absorbs:` frontmatter.
+    Fixtures: `gap-resolve-on-prd-ship`, `freeze-absorbs-flips-gap-schedule`.
+  - **R-IDs:** R51, R52
+- [ ] 8.2 Gap backlog integrity guard (R53–R54)
+  - **File:** `scripts/gap-backlog.sh`, `scripts/docs-currency-gate.sh`, `core/skills/living-status/SKILL.md`
+  - **Expected:** index/table binary status consistency CI guard.
+    Fixtures: `gap-backlog-index-integrity`, `gap-backlog-ci-guard`.
+  - **R-IDs:** R53, R54
+- [ ] 8.3 Shared doc-format tokenizer (R55–R58)
+  - **File:** `scripts/doc_format_tokenizer.py`, `scripts/spec-rigor-check.sh`, `scripts/traceability-check.sh`
+  - **Expected:** normalize-before-rigor; shared regex; minimum-recall passes; feedback routing prefers gap units.
+    Fixtures: `doc-format-normalize-before-rigor`, `spec-rigor-traceability-regex-parity`, `min-recall-gap-043-044-046`.
+  - **R-IDs:** R55, R56, R57, R58
+
 ## Phase Dependencies
 
 | Phase | Depends on |
@@ -233,6 +288,8 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 | 4 | 1, 2, 3 |
 | 5 | 1, 2, 3, 4 |
 | 6 | 4, 5 |
+| 7 | 1, 2, 3, 4, 5, 6 |
+| 8 | 1, 7 |
 
 ## Traceability
 
@@ -262,6 +319,41 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 | R22 | 1.8 | proposal-payload-redaction |
 | R23 | 2.5 | autonomy-actions-logged-durable |
 | R24 | 3.7 | mechanical-premerge-secret-scan |
+| R25 | 7.1 | ship-without-build-chain-sync-fails |
+| R26 | 7.1 | verify-test-includes-parity |
+| R27 | 7.2 | post-merge-build-chain-environmental |
+| R28 | 7.2 | merge-queue-deterministic-regen |
+| R29 | 7.2 | parallel-wave-regen-before-verify |
+| R30 | 7.3 | verify-failed-routes-remediate |
+| R31 | 7.3 | no-progress-before-first-remediate |
+| R32 | 7.3 | current-wave-overflow-terminal |
+| R33 | 7.3 | whole-batch-merge-wait |
+| R34 | 7.3 | batch-integration-head-reconcile |
+| R35 | 7.4 | post-remediation-no-status-pause |
+| R36 | 7.4 | dispatch-ship-completes-in-turn |
+| R37 | 7.4 | await-agent-same-turn-continue |
+| R38 | 7.4 | terminal-eligibility-teardown-green-parity |
+| R39 | 7.4 | terminal-retro-before-pr-auto |
+| R40 | 7.4 | terminal-ship-autonomous-watch |
+| R41 | 7.4 | single-flight-phase-ship |
+| R42 | 7.4 | terminal-status-provenance-reemit |
+| R43 | 7.4 | terminal-pr-prepare-commitlint |
+| R44 | 7.5 | eager-phase-teardown-after-merge |
+| R45 | 7.5 | parallel-ceiling-would-free |
+| R46 | 7.5 | status-collect-background-worktree |
+| R47 | 7.5 | deliver-resume-command-is-sw |
+| R48 | 7.6 | post-freeze-docs-durability |
+| R49 | 7.6 | (deferral doc — no fixture) |
+| R50 | 7.6 | cleanup-autonomy-auto-post-merge |
+| R51 | 8.1 | gap-resolve-on-prd-ship |
+| R52 | 8.1 | freeze-absorbs-flips-gap-schedule |
+| R53 | 8.2 | gap-backlog-index-integrity |
+| R54 | 8.2 | gap-backlog-ci-guard |
+| R55 | 8.3 | doc-format-normalize-before-rigor |
+| R56 | 8.3 | spec-rigor-traceability-regex-parity |
+| R57 | 8.3 | min-recall-gap-043-044-046 |
+| R58 | 8.3 | (feedback routing — doc + fixture) |
+
 
 ## Notes
 
