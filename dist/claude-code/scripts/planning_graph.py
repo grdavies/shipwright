@@ -263,6 +263,18 @@ def main(argv: list[str] | None = None) -> None:
     rest = args[2:]
     if command == "cycle-check":
         cmd_cycle_check(root, rest)
+    elif command == "reconcile":
+        from planning_reconcile import cmd_reconcile
+
+        cmd_reconcile(root, rest)
+    elif command == "doctor":
+        from planning_reconcile import cmd_doctor
+
+        cmd_doctor(root, rest)
+    elif command == "relief-check":
+        from planning_reconcile import cmd_relief_check
+
+        cmd_relief_check(root, rest)
     else:
         fail(f"unknown command: {command}")
 
