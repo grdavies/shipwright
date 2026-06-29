@@ -53,7 +53,8 @@ def trigger_signature(trigger: dict[str, Any]) -> str:
         tags = trigger.get("tags") or []
         return f"triage_tag:{family}:{trigger.get('match', 'any')}:{','.join(sorted(tags))}"
     if trigger_type == "heading":
-        return f"heading:{family}:{trigger.get('pattern', '')}"
+        headings = trigger.get("headings") or []
+        return f"heading:{family}:{trigger.get('match', 'whole_token')}:{','.join(sorted(str(h) for h in headings))}"
     if trigger_type == "link_pattern":
         return f"link_pattern:{family}:{trigger.get('pattern', '')}"
     if trigger_type in {"any_of", "all_of"}:

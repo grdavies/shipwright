@@ -11,6 +11,7 @@ from typing import Any
 
 from capability_select import (
     POLYSEMOUS_TOKENS,
+    heading_has_token,
     normalize_signal_context,
     text_has_token,
     whole_token_pattern,
@@ -131,9 +132,13 @@ def design_signal_fires(body: str) -> str | None:
         if not stripped.startswith("#"):
             continue
         heading = re.sub(r"^#+\s*", "", stripped).strip()
-        compare = heading.lower()
         for target in DESIGN_HEADINGS:
-            if compare == target.lower() or target.lower() in compare:
+            if heading_has_token(
+                heading,
+                target,
+                match_mode="whole_token",
+                case_insensitive=True,
+            ):
                 return f"heading:{target}"
     lowered = body.lower()
     for pattern in DESIGN_LINK_PATTERNS:

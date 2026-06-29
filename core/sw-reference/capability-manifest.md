@@ -79,7 +79,7 @@ Non-empty array of trigger predicates. Types:
 | `phase_default` | Default binding for a phase/command when no higher-precedence signal fires. |
 | `triage_tag` | Match triage-derived tag set in `signal_context`. |
 | `text_token` | Whole-token (or substring) match over frozen `body_snapshot` or `derived_tags`. |
-| `heading` | Section-heading match in frozen body. |
+| `heading` | Section-heading match in frozen body. Default `match: whole_token` (or `exact`); substring containment is not used — e.g. `## Requirements` must not match `UI`. |
 | `link_pattern` | URL substring match in frozen body (e.g. design-tool links). |
 | `path_glob` | Glob match over `file_paths`, `doc_path`, or change-digest paths. |
 | `change_digest` | Predicate over persisted diff digest (code-review specialist gating). |

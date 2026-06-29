@@ -73,7 +73,7 @@ duplicate that gate; its scope is arbitrary documentation artifacts at spec-time
 | Persona | Manifest trigger summary |
 | --- | --- |
 | `sw-security-reviewer` | `text_token` over **`security`-tagged** keywords (sync with `skills/triage/SKILL.md` risk triggers). Tags `data-migration` and `billing-routing` floor triage tier but do **not** fire security. |
-| `sw-design-reviewer` | `any_of` unambiguous UI terms (`wireframe`, `modal`, `navigation`, `responsive`, `accessibility`, `user flow`, …), structural headings (`UI` / `UX` / `Screens` / `Mockups`), or design-tool links (e.g. Figma). Bare **polysemous** tokens (`component`, `view`, `page`, `form`) do **not** count alone. |
+| `sw-design-reviewer` | `any_of` unambiguous UI terms (`wireframe`, `modal`, `navigation`, `responsive`, `accessibility`, `user flow`, …), structural headings (`UI` / `UX` / `Screens` / `Mockups`), or design-tool links (e.g. Figma). Heading triggers use **whole-token** or **exact** match on stripped heading text — not substring containment (so `## Requirements` does not fire on embedded `ui`). Bare **polysemous** tokens (`component`, `view`, `page`, `form`) do **not** count alone. |
 
 **Security signal enumeration** (must stay in sync with triage `security` tags and manifest `text_token` triggers):
 

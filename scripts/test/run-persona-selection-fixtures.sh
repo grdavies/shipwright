@@ -101,6 +101,7 @@ REQUIRED_FIXTURES=(
   design-unambiguous.md
   design-polysemous-only.md
   design-structural.md
+  design-requirements-false-positive.md
   override-personas.md
   override-all.md
   quick-tier.md
@@ -121,6 +122,7 @@ if grep -q 'expected-personas: core-only' "$FIXTURES/minimal-standard.md" && \
    grep -q 'expected-personas: core-only' "$FIXTURES/billing-routing-only.md" && \
    grep -q 'expected-personas: core-only' "$FIXTURES/design-polysemous-only.md" && \
    grep -q 'expected-personas: core + design' "$FIXTURES/design-structural.md" && \
+   grep -q 'expected-personas: core-only (Requirements heading must not fire design)' "$FIXTURES/design-requirements-false-positive.md" && \
    grep -q 'expected-personas: none' "$FIXTURES/quick-tier.md"; then
   echo "OK  fixture expected-outcome markers"
 else

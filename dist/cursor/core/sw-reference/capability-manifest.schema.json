@@ -146,6 +146,12 @@
         "case_insensitive": {
           "type": "boolean",
           "default": true
+        },
+        "match": {
+          "type": "string",
+          "enum": ["whole_token", "exact"],
+          "default": "whole_token",
+          "description": "whole_token uses word-boundary matching on heading text; exact requires normalized heading equality."
         }
       }
     },

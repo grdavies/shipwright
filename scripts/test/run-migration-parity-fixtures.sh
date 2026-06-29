@@ -28,6 +28,7 @@ run_family() {
 run_family migration-parity-doc-review-core doc-review '{"version":1,"tier":"standard","phase_type":"sw-doc-review","body_snapshot":"# Minimal PRD\nPlain requirements."}'
 run_family migration-parity-doc-review-security doc-review '{"version":1,"tier":"standard","phase_type":"sw-doc-review","body_snapshot":"# Auth PRD\nOAuth login and session handling."}'
 run_family migration-parity-doc-review-design doc-review '{"version":1,"tier":"standard","phase_type":"sw-doc-review","body_snapshot":"# UI PRD\n## Screens\nCheckout wireframe."}'
+run_family migration-parity-doc-review-requirements doc-review '{"version":1,"tier":"standard","phase_type":"sw-doc-review","body_snapshot":"# Backend PRD\n## Requirements\n- R1: Cache consistency."}'
 run_family migration-parity-doc-review-quick doc-review '{"version":1,"tier":"quick","phase_type":"sw-doc-review","body_snapshot":"# Quick"}'
 
 # --- migration-parity-code-review ---
