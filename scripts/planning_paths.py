@@ -23,6 +23,8 @@ PATH_DEPENDENT_CONSUMERS: tuple[str, ...] = (
     "scripts/wave_spec_seed.py",
     "scripts/wave_deliver.py",
     "scripts/wave_living_docs.py",
+    "scripts/feedback-backlog.sh",
+    "scripts/reconcile-status.sh",
 )
 
 LIVING_DOC_NAMES: tuple[str, ...] = (
