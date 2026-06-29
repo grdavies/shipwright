@@ -26,17 +26,46 @@
 | 022 | kernel-classification-and-plan-validation | [022-prd-kernel-classification-and-plan-validation.md](022-kernel-classification-and-plan-validation/022-prd-kernel-classification-and-plan-validation.md) (frozen) | [tasks](022-kernel-classification-and-plan-validation/tasks-022-kernel-classification-and-plan-validation.md) (frozen) | complete |
 | 023 | deliver-plan-policy-pilot | [023-prd-deliver-plan-policy-pilot.md](023-deliver-plan-policy-pilot/023-prd-deliver-plan-policy-pilot.md) (frozen) | [tasks](023-deliver-plan-policy-pilot/tasks-023-deliver-plan-policy-pilot.md) (frozen) | complete |
 | 024 | orchestrator-plan-policy-adoption | [024-prd-orchestrator-plan-policy-adoption.md](024-orchestrator-plan-policy-adoption/024-prd-orchestrator-plan-policy-adoption.md) (frozen) [A1](024-orchestrator-plan-policy-adoption/amendments/A1-close-open-questions.md) [A2](024-orchestrator-plan-policy-adoption/amendments/A2-dispatch-binding-parallel-preflight-and-command-tier.md) | [tasks](024-orchestrator-plan-policy-adoption/tasks-024-orchestrator-plan-policy-adoption.md) (frozen) | not-started |
-| 025 | in-loop-retrospection-and-adaptive-replanning | [025-prd-in-loop-retrospection-and-adaptive-replanning.md](025-in-loop-retrospection-and-adaptive-replanning/025-prd-in-loop-retrospection-and-adaptive-replanning.md) (frozen) | — | not-started |
+| 025 | in-loop-retrospection-and-adaptive-replanning | [025-prd-in-loop-retrospection-and-adaptive-replanning.md](025-in-loop-retrospection-and-adaptive-replanning/025-prd-in-loop-retrospection-and-adaptive-replanning.md) (frozen) | — | superseded → 031 |
 | 026 | git-host-portability-and-workflow-standardization | [026-prd-git-host-portability-and-workflow-standardization.md](026-git-host-portability-and-workflow-standardization/026-prd-git-host-portability-and-workflow-standardization.md) (frozen) | [tasks-026-git-host-portability-and-workflow-standardization.md](026-git-host-portability-and-workflow-standardization/tasks-026-git-host-portability-and-workflow-standardization.md) (frozen) | complete |
 | 027 | deliver-terminal-finalization-robustness | [027-prd-deliver-terminal-finalization-robustness.md](027-deliver-terminal-finalization-robustness/027-prd-deliver-terminal-finalization-robustness.md) (frozen) [A1](027-deliver-terminal-finalization-robustness/amendments/A1-decision-id-union-exclusion.md) | [tasks](027-deliver-terminal-finalization-robustness/tasks-027-deliver-terminal-finalization-robustness.md) (frozen) | complete |
-| 028 | living-status-backlog-lifecycle | [028-prd-living-status-backlog-lifecycle.md](028-living-status-backlog-lifecycle/028-prd-living-status-backlog-lifecycle.md) (frozen) | — | not-started |
-| 029 | doc-format-parser-robustness | [029-prd-doc-format-parser-robustness.md](029-doc-format-parser-robustness/029-prd-doc-format-parser-robustness.md) (frozen) | — | not-started |
-| 030 | spec-mutation-safety | [030-prd-spec-mutation-safety.md](030-spec-mutation-safety/030-prd-spec-mutation-safety.md) (frozen) | — | not-started |
+| 028 | living-status-backlog-lifecycle | [028-prd-living-status-backlog-lifecycle.md](028-living-status-backlog-lifecycle/028-prd-living-status-backlog-lifecycle.md) (frozen) | — | superseded → 031/033 |
+| 029 | doc-format-parser-robustness | [029-prd-doc-format-parser-robustness.md](029-doc-format-parser-robustness/029-prd-doc-format-parser-robustness.md) (frozen) | — | superseded → 031 |
+| 030 | spec-mutation-safety | [030-prd-spec-mutation-safety.md](030-spec-mutation-safety/030-prd-spec-mutation-safety.md) (frozen) | — | superseded → 032 |
 | 031 | planning-unit-model-and-migration | [031-prd-planning-unit-model-and-migration.md](031-planning-unit-model-and-migration/031-prd-planning-unit-model-and-migration.md) (frozen) | [tasks](031-planning-unit-model-and-migration/tasks-031-planning-unit-model-and-migration.md) (frozen) | complete |
-| 032 | planning-mutation-safety-guards | [032-prd-planning-mutation-safety-guards.md](032-planning-mutation-safety-guards/032-prd-planning-mutation-safety-guards.md) (frozen) | [tasks](032-planning-mutation-safety-guards/tasks-032-planning-mutation-safety-guards.md) (frozen) | not-started |
+| 032 | planning-mutation-safety-guards | [032-prd-planning-mutation-safety-guards.md](032-planning-mutation-safety-guards/032-prd-planning-mutation-safety-guards.md) (frozen) | [tasks](032-planning-mutation-safety-guards/tasks-032-planning-mutation-safety-guards.md) (frozen) | complete |
 | 033 | lifecycle-dependencies-and-scheduler | [033-prd-lifecycle-dependencies-and-scheduler.md](033-lifecycle-dependencies-and-scheduler/033-prd-lifecycle-dependencies-and-scheduler.md) (frozen) [A1](033-lifecycle-dependencies-and-scheduler/amendments/A1-post-merge-index-reconcile-safety.md) [A2](033-lifecycle-dependencies-and-scheduler/amendments/A2-decision-id-union-exclusion.md) [A3](033-lifecycle-dependencies-and-scheduler/amendments/A3-operator-worktree-contract.md) | [tasks](033-lifecycle-dependencies-and-scheduler/tasks-033-lifecycle-dependencies-and-scheduler.md) (frozen) | complete |
 | 034 | visibility-and-planning-store | [034-prd-visibility-and-planning-store.md](034-visibility-and-planning-store/034-prd-visibility-and-planning-store.md) (frozen) | [tasks](034-visibility-and-planning-store/tasks-034-visibility-and-planning-store.md) (frozen) | not-started |
 | 035 | planning-autonomy-and-orchestration | [035-prd-planning-autonomy-and-orchestration.md](035-planning-autonomy-and-orchestration/035-prd-planning-autonomy-and-orchestration.md) (frozen) | [tasks](035-planning-autonomy-and-orchestration/tasks-035-planning-autonomy-and-orchestration.md) (frozen) | not-started |
 | 036 | delivery-conductor-concurrency-and-remediation-robustness | [036-prd-delivery-conductor-concurrency-and-remediation-robustness.md](036-delivery-conductor-concurrency-and-remediation-robustness/036-prd-delivery-conductor-concurrency-and-remediation-robustness.md) (frozen) | [tasks](036-delivery-conductor-concurrency-and-remediation-robustness/tasks-036-delivery-conductor-concurrency-and-remediation-robustness.md) (frozen) | complete |
 | 037 | doc-review-persona-selection-accuracy | [037-prd-doc-review-persona-selection-accuracy.md](037-doc-review-persona-selection-accuracy/037-prd-doc-review-persona-selection-accuracy.md) (frozen) | [tasks](037-doc-review-persona-selection-accuracy/tasks-037-doc-review-persona-selection-accuracy.md) (frozen) | not-started |
 | 038 | build-chain-source-of-truth | [038-prd-build-chain-source-of-truth.md](038-build-chain-source-of-truth/038-prd-build-chain-source-of-truth.md) (frozen) | [tasks](038-build-chain-source-of-truth/tasks-038-build-chain-source-of-truth.md) (frozen) | not-started |
+
+## Supersession notes (025, 028–030)
+
+PRD 031 explicitly cancels/supersedes the point-fix PRDs **025, 028, 029, and 030**, folding their problems
+into the unified Planning & Feedback Lifecycle program (031 → 032 → 033 → 034 → 035). Frozen bodies are
+retained for traceability; do not implement these as standalone deliverables.
+
+| PRD | Absorbed by | What moved |
+|-----|-------------|------------|
+| 025 | 031 (cancelled) | Per-phase learning + adaptive plan insertion deferred; deliver-side runtime tracked separately (see PRD 035 non-goals) |
+| 028 | 031 + 033 | GAP-BACKLOG `open → planned → resolved` lifecycle + `absorbs:` frontmatter (033 R10–R11) |
+| 029 | 031 | Shared doc-format tokenizer (031 Phase A/B; GAP-045) |
+| 030 | 032 | In-flight authoring guard + committed `inFlight` tuple (032 subsumes cancelled 030) |
+
+## Recommended implementation order (remaining valid PRDs)
+
+Queue below is for PRDs still marked `not-started` with active scope. **024** is a separate
+guidelined-autonomous-orchestration track (021 → 022 → 023 → 024), not part of the planning program tail.
+
+| Order | PRD | Rationale |
+|------:|-----|-----------|
+| 1 | **038** build-chain-source-of-truth | Independent infra win; closes GAP-032/GAP-054; wires `scripts/`↔`core/scripts/` parity into CI before more surface-area PRs land |
+| 2 | **037** doc-review-persona-selection-accuracy | Small successor fix (GAP-047); parent 021 complete; stops spurious design-persona dispatch on every PRD |
+| 3 | **034** visibility-and-planning-store | Next planning-program dependency (031 + 033 complete); unblocks public-repo privacy and store materialization |
+| 4 | **035** planning-autonomy-and-orchestration | Capstone; depends on 034; backlog pull-in, two-track doc edits, bounded `full-conductor` |
+| 5 | **024** orchestrator-plan-policy-adoption | Fan-out to `/sw-debug`, `/sw-doc`, `/sw-feedback`; **gated** on PRD 023 R31 positive + sufficient N (TR0); A2 parallel-preflight binding is prerequisite for `/sw-doc` adoption |
+
+**034 and 035** must stay in order (035 `depends:` on 034). **037** and **038** can run in parallel if
+capacity allows; prefer **038** first to reduce build-chain drift during **037**'s `copy-to-core` propagation.
