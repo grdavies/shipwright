@@ -384,6 +384,20 @@
         "scoped-lock-single-flight",
         "frozen-doc-ci-gates-unchanged"
       ]
+    },
+    {
+      "id": "planning-scheduler-fixtures",
+      "script": "scripts/test/run-planning-scheduler-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-scheduler-fixtures",
+      "scenarios": [
+        "dependency-gate-fail-closed",
+        "soft-enforce-confirm-stubbed-default",
+        "run-start-revalidate-supersede-refuse",
+        "deliver-dependency-preflight",
+        "override-logged-rate-surfaced"
+      ]
     }
   ]
 }

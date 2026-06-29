@@ -42,7 +42,7 @@ class GraphUnit:
 
     @property
     def is_eligible_status(self) -> bool:
-        return self.status not in frozenset({"superseded", "cancelled", "deferred"})
+        return self.status not in frozenset({"superseded", "cancelled", "deferred", "complete", "resolved"})
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
