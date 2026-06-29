@@ -193,6 +193,22 @@ All non-config context passed to delegated Tasks (status excerpts, blocker repor
 memory-preflight outputs, diffs) must be redacted via `bash scripts/memory-redact.sh` and fenced as
 `untrusted_payload` before inclusion.
 
+
+## Planning scheduler and dependency gate (PRD 033)
+
+Unit-level graph primitives (in addition to phase-mode waves):
+
+| Entry | Command |
+| --- | --- |
+| Next eligible unit | `python3 scripts/wave_deliver.py <repo> next` |
+| Dependency gate | `python3 scripts/wave_deliver.py <repo> dependency-gate preflight --task-list <path>` |
+| Run-start revalidation | `python3 scripts/planning_deliver_gate.py <repo> dependency-gate run-start --task-list <path>` |
+| Override (logged) | add `--override --override-reason "<why>"` to dependency-gate |
+
+**Soft-enforce:** when `planning.autonomy` is `maintenance-only` (default) and an explicit `--task-list` targets a lower-priority eligible unit than `next` would pick, preflight returns a confirm prompt — pass `--confirmed` after operator ack.
+
+**Run-start:** both `next` and explicit `--task-list` re-validate eligibility and depends at run-start (refuses `superseded`/`cancelled` races).
+
 ## Guardrails
 
 - Promotion validates each candidate on a disposable PR head **before** merge to `main`.
