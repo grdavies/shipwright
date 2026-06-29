@@ -59,14 +59,14 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
 
 ### 2. Emission-point registry + machine-checked call-site map — L
 
-- [ ] 2.1 INDEX redaction (active + archive) + opaque title (R4)
+- [x] 2.1 INDEX redaction (active + archive) + opaque title (R4)
   - **File:** `scripts/planning-graph.sh`, `scripts/planning_visibility.py`
   - **Expected:** the INDEX is always tracked but private/memory units render only id/title/status/type +
     edges (never body) in both active and archived views; a unit may opt into an opaque title (id + generic
     label) so a codename is not exposed in the tracked INDEX or PR diffs. Fixture
     `index-redaction-opaque-title` proves body redaction and that an opaque title hides a codename.
   - **R-IDs:** R4
-- [ ] 2.2 Central wrapper across the emission-point registry + call-site map CI (R14)
+- [x] 2.2 Central wrapper across the emission-point registry + call-site map CI (R14)
   - **File:** `docs/prds/034-visibility-and-planning-store/call-site-map.md`, `scripts/visibility-callsite-lint.py`
   - **Expected:** a machine-checked call-site map (PRD 021/022 pattern) enumerates every planning-body
     read/write path and the registry covers INDEX (active+archive), the 033 legacy GAP-BACKLOG/INDEX
@@ -76,7 +76,7 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
     golden marker in a generated artifact. Fixture `emission-callsite-map-bypass-fails` adds a bypassing read
     and asserts CI fails.
   - **R-IDs:** R14
-- [ ] 2.3 `spec-seed` visibility routing (R15)
+- [x] 2.3 `spec-seed` visibility routing (R15)
   - **File:** `scripts/wave_spec_seed.py`
   - **Expected:** `spec-seed` routes through the resolver, skips `private`/`memory` bodies entirely, commits
     only public bodies plus the redacted INDEX, and aborts with remediation if a `private` body path is

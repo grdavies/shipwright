@@ -73,8 +73,8 @@ seed_repo "$TMP2/repo2"
   cd "$TMP/repo"
   python3 "$IDX" "$TMP/repo" generate >/dev/null
   OUT=$(python3 "$IDX" "$TMP/repo" parse)
-  echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert '[provisional]' in d['regions']['structural']"
-  grep -q 'Private-row metadata is provisional' docs/planning/INDEX.md
+  echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert 'private' in d['regions']['structural']"
+  grep -q 'planning_visibility (PRD 034 R4)' docs/planning/INDEX.md
 ) && ok "private-index-row-provisional" || bad "private-index-row-provisional"
 
 # legacy-projection-gapbacklog-index (R27)

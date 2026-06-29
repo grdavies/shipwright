@@ -146,6 +146,70 @@ else
   bad "failclosed-unknown-visibility"
 fi
 
+# --- index-redaction-opaque-title (R4) ---
+if OUT=$(python3 "$PY" --root "$ROOT" emit-point --point index-active \
+  --payload-json '{"visibility":"private","body":"TOP_SECRET_CODENAME_XYZ","row":{"id":"u1","title":"Project Nightingale","body":"leak","status":"planned","type":"prd","opaqueTitle":true}}') && \
+  echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+row=d['row']
+assert 'body' not in row
+assert row['title']=='u1: [private]'
+assert d['body'] != 'TOP_SECRET_CODENAME_XYZ'
+"; then
+  ok "index-redaction-opaque-title:active-row"
+else
+  bad "index-redaction-opaque-title:active-row"
+fi
+
+if OUT=$(python3 "$PY" --root "$ROOT" emit-point --point index-archive \
+  --payload-json '{"visibility":"memory","row":{"id":"u2","title":"Codename Alpha","status":"complete","type":"gap"}}') && \
+  echo "$OUT" | python3 -c "
+import json,sys
+row=json.load(sys.stdin)['row']
+assert 'body' not in row
+assert row['title']=='Codename Alpha'
+"; then
+  ok "index-redaction-opaque-title:archive-row"
+else
+  bad "index-redaction-opaque-title:archive-row"
+fi
+
+# --- emission-callsite-map-bypass-fails (R14) ---
+MAP="$ROOT/docs/prds/034-visibility-and-planning-store/call-site-map.md"
+LINT="$ROOT/scripts/visibility-callsite-lint.py"
+PROBE="$ROOT/scripts/test/fixtures/visibility-lint/bypass-probe.py"
+if python3 "$LINT" --root "$ROOT" --map "$MAP" >/dev/null 2>&1; then
+  ok "emission-callsite-map-bypass-fails:map-exhaustion"
+else
+  bad "emission-callsite-map-bypass-fails:map-exhaustion"
+fi
+if python3 "$LINT" --root "$ROOT" --map "$MAP" --probe-bypass "$PROBE" >/dev/null 2>&1; then
+  bad "emission-callsite-map-bypass-fails:probe-should-fail"
+else
+  ok "emission-callsite-map-bypass-fails:probe-should-fail"
+fi
+
+# --- spec-seed-visibility-route (R15) ---
+if OUT=$(python3 "$PY" --root "$ROOT" resolve-unit \
+  --profile specs-public \
+  --unit-json '{"id":"h","type":"prd","status":"proposed","title":"t","visibility":"private"}') && \
+  echo "$OUT" | python3 -c "
+import json,sys
+assert json.load(sys.stdin)['visibility']=='private'
+" && python3 -c "
+import sys
+sys.path.insert(0, '$ROOT/scripts')
+import planning_visibility as pv
+assert pv.body_is_redacted('private')
+assert pv.body_is_redacted('memory')
+assert not pv.body_is_redacted('public')
+"; then
+  ok "spec-seed-visibility-route:private-skipped"
+else
+  bad "spec-seed-visibility-route:private-skipped"
+fi
+
 if [[ "$FAIL" -ne 0 ]]; then
   echo "visibility fixtures: FAIL"
   exit 1

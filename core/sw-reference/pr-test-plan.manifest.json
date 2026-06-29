@@ -481,7 +481,10 @@
         "content-class-default-visibility",
         "public-remote-default-resolution",
         "resolver-single-authority",
-        "failclosed-unknown-visibility"
+        "failclosed-unknown-visibility",
+        "index-redaction-opaque-title",
+        "emission-callsite-map-bypass-fails",
+        "spec-seed-visibility-route"
       ]
     }
   ]
