@@ -155,6 +155,7 @@
     "inFlight": {
       "stalenessTtlHours": 72
     },
+    "visibilityProfile": "specs-public",
     "store": {
       "backend": "in-repo-public"
     }

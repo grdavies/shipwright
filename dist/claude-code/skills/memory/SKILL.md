@@ -219,6 +219,15 @@ Then `expand` by reading `memories/<id>.md` (or `rules/<id>.md` for rule categor
 5. **`category: rule` always writes to `.cursor/sw-memory/rules/`** — offline hook reads committed rules.
 6. Never auto-seed starter rules; store starts empty.
 
+## Planning store memory backend (PRD 034 R11/R23)
+
+When `planning.store.backend` is `memory`, unit **bodies** route through this skill's provider adapter and
+`scripts/memory-redact.sh` on read and write — **body storage only**; the memory backend does not alter
+source-of-truth for any planning class. Decision-class units under `docs/planning/decision/` still follow
+the PRD-015 committed redacted snapshot + pointer flow regardless of `visibility`. The authoritative
+decision record paths remain `docs/decisions/<n>-<slug>.md` (repo-SoT) or the provider record (memory-SoT)
+per **Source of truth resolution** below — the planning-store memory backend never replaces that contract.
+
 ## Decision records (file-linked deliverables)
 
 **Boundary rule (R32 / KTD3 + provider-conditional SoT):**
