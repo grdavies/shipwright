@@ -86,26 +86,26 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
 
 ### 3. Planning-store interface + backends — L
 
-- [ ] 3.1 `planning.store` interface + registry + `in-repo public` default (R5)
+- [x] 3.1 `planning.store` interface + registry + `in-repo public` default (R5)
   - **File:** `scripts/planning_store.py`, `core/providers/planning-store/in-repo.md`, `core/providers/planning-store/CAPABILITIES.md`
   - **Expected:** unit bodies are addressed through a single interface (`put`/`get`/`exists`/`materialize`)
     over a backend registry; the default backend is `in-repo public` with no behavior change. Fixture
     `store-interface-in-repo-default` asserts the default backend satisfies the interface contract.
   - **R-IDs:** R5
-- [ ] 3.2 `local/synced` + `memory` backends; deferred backends inert (R6)
+- [x] 3.2 `local/synced` + `memory` backends; deferred backends inert (R6)
   - **File:** `core/providers/planning-store/local-synced.md`, `core/providers/planning-store/memory.md`, `scripts/planning_store.py`
   - **Expected:** `local/synced` folder and `memory` provider backends implement the same interface; the
     private-repo and encryption backends are seam-compatible but deferred (present-but-inert in tests).
     Fixture `store-backend-interface-parity` proves each shipped backend satisfies the interface and a
     deferred backend is inert.
   - **R-IDs:** R6
-- [ ] 3.3 Config-driven selection + id/hash/backend-only logging (R18)
+- [x] 3.3 Config-driven selection + id/hash/backend-only logging (R18)
   - **File:** `scripts/planning_store.py`, `core/sw-reference/config.schema.json`
   - **Expected:** backend selection is config-driven (`planning.store` in `workflow.config.json`) and pinnable
     per run; `get`/`put`/`materialize` log id+hash+backend only — never body content. Fixture
     `store-log-id-hash-backend` greps store logs and asserts no body bytes appear.
   - **R-IDs:** R18
-- [ ] 3.4 Memory backend adapter-only + redact on read+write + class bans (R11)
+- [x] 3.4 Memory backend adapter-only + redact on read+write + class bans (R11)
   - **File:** `scripts/planning_store.py` (memory backend), `scripts/wave_memory.py`, `scripts/memory-redact.sh`
   - **Expected:** the memory backend routes exclusively through the provider-agnostic adapter (never a direct
     provider call), passes `memory-redact.sh` on both `put` and read, degrades open when no provider exists,
@@ -113,14 +113,14 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
     `discussion`/`progress` classes. Fixture `memory-backend-adapter-only` bans direct provider MCP calls and
     proves redaction on read+write.
   - **R-IDs:** R11
-- [ ] 3.5 `local/synced` path validation doctor check (R16)
+- [x] 3.5 `local/synced` path validation doctor check (R16)
   - **File:** `scripts/planning-doctor.sh`
   - **Expected:** the path must resolve inside the operator home or a configured allowlist, reject symlinks
     and `..`, and have a directory mode no looser than `0700`; known cloud-sync roots warn; the backend is
     documented as convenience-not-security and not the public-repo template default. Fixture
     `local-synced-path-validation` rejects symlink/`..`/loose-mode and warns on a cloud root.
   - **R-IDs:** R16
-- [ ] 3.6 Memory chokepoint posture unchanged on read + write (R25)
+- [x] 3.6 Memory chokepoint posture unchanged on read + write (R25)
   - **File:** `scripts/memory-redact.sh`, `core/rules/memory-guardrails.mdc`
   - **Expected:** the redaction chokepoint + memory guardrails posture is unchanged; memory-routed bodies pass
     `memory-redact.sh` on read and write; no raw transcript or secret is ever stored. Fixture

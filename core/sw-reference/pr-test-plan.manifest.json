@@ -483,6 +483,21 @@
         "resolver-single-authority",
         "failclosed-unknown-visibility"
       ]
+    },
+    {
+      "id": "planning-store-fixtures",
+      "script": "scripts/test/run-planning-store-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-store-fixtures",
+      "scenarios": [
+        "store-interface-in-repo-default",
+        "store-backend-interface-parity",
+        "store-log-id-hash-backend",
+        "memory-backend-adapter-only",
+        "local-synced-path-validation",
+        "memory-chokepoint-read-write"
+      ]
     }
   ]
 }
