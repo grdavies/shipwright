@@ -66,7 +66,7 @@ done <"$MANIFEST"
 should_skip_relpath() {
   local relpath="$1"
   case "$relpath" in
-    */__pycache__/* | */__pycache__ | *.pyc) return 0 ;;
+    */__pycache__/* | */__pycache__ | *.pyc | *.bak) return 0 ;;
     scripts/test/* | scripts/test) return 0 ;;
     scripts/install.sh) return 0 ;;
     hooks/* | hooks) return 0 ;;

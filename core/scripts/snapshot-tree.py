@@ -9,6 +9,7 @@ EMITTABLE = ("commands","skills","rules","agents","providers")
 
 def should_skip(relpath: str) -> bool:
     if "__pycache__" in relpath or relpath.endswith(".pyc"): return True
+    if relpath.endswith(".bak"): return True
     if "/.git/" in relpath or "/node_modules/" in relpath: return True
     if relpath.startswith("scripts/test"): return True
     if relpath == "scripts/install.sh": return True
