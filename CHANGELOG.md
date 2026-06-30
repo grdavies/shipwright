@@ -164,6 +164,7 @@
 * merge phase signal-context-capture-state-isolation-episodic-model-m into feat/orchestrator-plan-policy-adoption (fa96971) <!-- sw-deliver:signal-context-capture-state-isolation-episodic-model-m -->
 * merge phase sw-debug-adoption-wire-only-episodic-m into feat/orchestrator-plan-policy-adoption (1bbd560) <!-- sw-deliver:sw-debug-adoption-wire-only-episodic-m -->
 * merge phase sw-doc-adoption-consistency-only-default-m into feat/orchestrator-plan-policy-adoption (3b20260) <!-- sw-deliver:sw-doc-adoption-consistency-only-default-m -->
+* merge phase sw-feedback-adoption-untrusted-signal-chokepoint-episodic-m into feat/orchestrator-plan-policy-adoption (7d6ae52) <!-- sw-deliver:sw-feedback-adoption-untrusted-signal-chokepoint-episodic-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
