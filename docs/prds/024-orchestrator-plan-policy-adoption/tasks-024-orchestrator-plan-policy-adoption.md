@@ -97,11 +97,11 @@ consistency-only mode (R36c), so the binding defects GAP-039/GAP-040 are not gat
 > **Prerequisite (A2):** Phase 9 (dispatch-binding scaffolding) MUST be green before this phase begins — the
 > doc-review persona panel runs on the canonical path even in consistency-only mode (R36c).
 
-- [ ] 6.1 Doc proposal-site wiring + canonical parity + probe outcome (TR4b, R18, R20, R36c)
+- [x] 6.1 Doc proposal-site wiring + canonical parity + probe outcome (TR4b, R18, R20, R36c)
   - **File:** `core/commands/sw-doc.md`
   - **Expected:** `/sw-doc` defaults **consistency-only** (009 audit: no routine yields) — manifest + selector + canonical wiring land; a probe showing latitude flips to full adoption (recorded in task notes). `doc-canonical-parity`; `doc-proposed-routes-gate-selector` only if probe shows latitude (else N/A per R36d).
   - **R-IDs:** R18, R20
-- [ ] 6.2 Preserve doc-review + afterTasks halts (R19)
+- [x] 6.2 Preserve doc-review + afterTasks halts (R19)
   - **File:** `core/commands/sw-doc.md`, doc guideline floor
   - **Expected:** doc-review `manual`/`gated_auto` trade-off halts fire before any freeze step; `doc.afterTasks` (`stop`/`confirm`/`auto`) boundary preserved; halts proven on the canonical path for consistency-only. `doc-review-halt-{manual,gated-auto}-required`, `doc-afterTasks-checkpoint-required`. Deliver handoff reuses 023 wiring unchanged. **Assumes Phase 9 parallel preflight + command-tier binding are green** so the parallel persona panel dispatches without single-consume / down-tier defects (A2 R38/R39).
   - **R-IDs:** R19

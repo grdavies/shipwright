@@ -500,6 +500,38 @@ def debug_budget_trip_simulate(root: Path) -> dict[str, Any]:
     teardown(root, "debug", rid)
     return trip
 
+
+def doc_canonical_parity_check(root: Path) -> dict[str, Any]:
+    from orchestrator_step_plan import canonical_orchestrator_chain  # noqa: PLC0415
+    from variance_probe import probe_orchestrator  # noqa: PLC0415
+    from wave_plan_validate import validate_orchestrator_plan  # noqa: PLC0415
+
+    probe = probe_orchestrator(root, "doc")
+    steps = list(canonical_orchestrator_chain(root, "doc"))
+    validated = validate_orchestrator_plan(
+        root,
+        {"steps": steps, "orchestratorType": "doc"},
+        orchestrator_type="doc",
+        signal_context=None,
+    )
+    policy = read_plan_policy(root)
+    ok = (
+        probe.get("adoptionMode") == "consistency-only"
+        and probe.get("proposedPackDeferred") is True
+        and probe.get("defaultsConsistencyOnly") is True
+        and probe.get("canonicalEquivProposed") is True
+        and validated.get("verdict") == "pass"
+        and policy in {"canonical", "proposed"}
+    )
+    return {
+        "verdict": "pass" if ok else "reject",
+        "probe": probe,
+        "validated": validated.get("verdict"),
+        "planPolicy": policy,
+        "stepCount": len(steps),
+    }
+
+
 def main() -> None:
     args = sys.argv[1:]
     if not args or args[0] in {"-h", "--help"}:
@@ -541,8 +573,10 @@ def main() -> None:
         orch = parse_kv(rest, "--orchestrator-type") or "debug"
         if orch == "debug":
             emit(debug_canonical_parity_check(root))
+        elif orch == "doc":
+            emit(doc_canonical_parity_check(root))
         else:
-            fail("canonical-parity-check only for debug in phase 5")
+            fail(f"canonical-parity-check unsupported for orchestrator: {orch!r}")
     if cmd == "proposed-routes-check":
         emit(debug_proposed_routes_gate_selector_check(root))
     if cmd == "r21-surfacing-check":
