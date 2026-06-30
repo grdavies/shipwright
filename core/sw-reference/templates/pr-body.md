@@ -11,3 +11,10 @@
 ## Traceability
 
 prd:{{prd_slug}}
+
+## Decision log
+<!-- required:decision-log -->
+
+```json
+{{decision_log_json}}
+```

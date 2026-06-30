@@ -14,8 +14,8 @@ capability:
 
 # Code review & automation (Shipwright)
 
-Review provider selected by `review.provider` (default `none`). Gate per-head state via
-`scripts/check-gate.py` + `providers/review/<provider>.py`.
+Review providers are selected by `review.providers` (array; scalar `review.provider` coerced) with union synthesis via `scripts/review_synthesize.py`. Gate per-head `reviewLanded` via
+`scripts/check-gate.py` + `providers/review/<provider>.py` (heterogeneous mode is opt-in).
 
 ## Two-phase `/sw-review` (local → provider)
 

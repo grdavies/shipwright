@@ -603,3 +603,7 @@ All four orchestrators (`/sw-deliver`, `/sw-debug`, `/sw-doc`, `/sw-feedback`) c
 
 See `docs/guides/configuration.md` (R35–R36) and `core/sw-reference/layout.md` (scratch + preflight paths).
 
+
+## Execute loop
+
+Per-task discipline: **red → green → tdd-gate → refactor → stage-1 review → stage-2 review** (refactor re-runs verify; `quality:none` skips structural signal). Ship adds **decision-log provenance** on the PR.

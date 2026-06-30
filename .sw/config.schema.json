@@ -372,6 +372,14 @@
               }
             }
           }
+        },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "description": "Ordered heterogeneous review adapter ids (supersedes scalar review.provider; scalar coerced to single-element array)."
         }
       },
       "required": [
@@ -1015,6 +1023,27 @@
             "type": "string"
           },
           "description": "Paths or globs excluded from mutation (forwarded via SW_MUTATION_EXCLUDE)."
+        }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Structural-quality harness (PRD 039). Default none preserves loop behavior.",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "default": "none",
+          "description": "Quality adapter id under providers/quality/<id>.py (none = no-op)."
+        },
+        "blockingTier": {
+          "type": "string",
+          "enum": [
+            "quick",
+            "standard",
+            "full"
+          ],
+          "description": "When change triage tier >= this value, a poor verdict blocks via check-gate (unset = advisory only)."
         }
       }
     }

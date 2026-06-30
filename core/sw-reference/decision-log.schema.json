@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "decision-log.schema.json",
+  "title": "Agent decision log / provenance (PRD 039 R14)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["intent", "alternativesRuledOut", "highRiskAreas", "taskRefs"],
+  "properties": {
+    "intent": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Primary implementation intent in plain language."
+    },
+    "alternativesRuledOut": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "highRiskAreas": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "taskRefs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "gateSeeds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional auto-seeded gate flags (test-tamper, quality verdict, config changes)."
+    }
+  }
+}

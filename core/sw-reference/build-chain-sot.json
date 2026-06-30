@@ -53,6 +53,7 @@
     "capability-manifest.md",
     "capability-manifest.schema.json",
     "communication-routing.defaults.json",
+    "decision-log.schema.json",
     "deterministic-regen-paths.json",
     "guidelines.json",
     "guidelines.md",
