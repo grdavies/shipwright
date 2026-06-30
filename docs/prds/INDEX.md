@@ -43,6 +43,7 @@
 | 039 | loop-quality-gates | [039-prd-loop-quality-gates.md](039-loop-quality-gates/039-prd-loop-quality-gates.md) (frozen) | [tasks](039-loop-quality-gates/tasks-039-loop-quality-gates.md) (frozen) | not-started |
 | 040 | phase-granularity-parallelism | [040-prd-phase-granularity-parallelism.md](040-phase-granularity-parallelism/040-prd-phase-granularity-parallelism.md) (frozen) | [tasks](040-phase-granularity-parallelism/tasks-040-phase-granularity-parallelism.md) (frozen) | not-started |
 | 041 | self-improving-loop | [041-prd-self-improving-loop.md](041-self-improving-loop/041-prd-self-improving-loop.md) (frozen) | [tasks](041-self-improving-loop/tasks-041-self-improving-loop.md) (frozen) | not-started |
+| 042 | cross-platform-python-standardization | [042-prd-cross-platform-python-standardization.md](042-cross-platform-python-standardization/042-prd-cross-platform-python-standardization.md) (frozen) | [tasks](042-cross-platform-python-standardization/tasks-042-cross-platform-python-standardization.md) (frozen) | not-started |
 
 ## Supersession notes (025, 028–030)
 
