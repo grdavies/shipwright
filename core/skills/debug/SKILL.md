@@ -12,6 +12,16 @@ implementation (`003`) or documentation (`002`).
 
 **Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill debug`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
+
+## Orchestrator plan-policy (PRD 024)
+
+Single-tier orchestrator-step plan proposal, validation, and capability selection are owned by
+`core/commands/sw-debug.md` + `skills/conductor/SKILL.md` — this skill maps phases to step IDs
+(`triage`, `normalize`, `enrich`, `rca`, `route-confirm-halt`, `route`, `rca-human-decision-halt`, `record`).
+
+Under `proposed`, Sentry bodies MUST be redacted via `bash scripts/memory-redact.sh` before any persist or
+handoff (including DBG-A2 concurrent enrich + preflight). Fail-closed on redaction error.
+
 ## Phase 0 — Triage
 
 Parse the inbound signal:
