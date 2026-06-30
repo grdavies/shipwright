@@ -500,6 +500,191 @@ def debug_budget_trip_simulate(root: Path) -> dict[str, Any]:
     teardown(root, "debug", rid)
     return trip
 
+
+
+
+def episodic_canonical_parity_check(
+    root: Path,
+    orchestrator_type: str,
+    signal_raw: dict[str, Any],
+) -> dict[str, Any]:
+    import shutil
+    import tempfile
+
+    fix = Path(tempfile.mkdtemp())
+    try:
+        (fix / ".cursor").mkdir(parents=True)
+        (fix / "core" / "sw-reference").mkdir(parents=True)
+        shutil.copytree(root / "core" / "sw-reference", fix / "core" / "sw-reference", dirs_exist_ok=True)
+        (fix / "scripts").mkdir(exist_ok=True)
+        for script in (
+            "orchestrator_run.py",
+            "orchestrator_signal_context.py",
+            "orchestrator_step_plan.py",
+            "orchestrator_plan_surfacing.py",
+            "orchestrator_guidelines.py",
+            "wave_plan_validate.py",
+            "wave_json_io.py",
+            "kernel_classification.py",
+            "guidelines_validate.py",
+            "plan_floor_evaluator.py",
+            "capability_select.py",
+            "capability_index.py",
+            "capability_precedence.py",
+            "capability_trust.py",
+            "capability_run_log.py",
+            "variance_probe.py",
+        ):
+            src = root / "scripts" / script
+            if src.is_file():
+                shutil.copy2(src, fix / "scripts" / script)
+        (fix / ".cursor" / "workflow.config.json").write_text(
+            '{"orchestration":{"planPolicy":"canonical"}}\n', encoding="utf-8"
+        )
+        result = orchestrator_entry(
+            fix,
+            orchestrator_type,
+            signal_raw,
+            run_id="canonical-parity-fixture",
+        )
+        rd = run_dir(fix, orchestrator_type, "canonical-parity-fixture")
+        proposed_artifacts = (rd / "orchestrator-step-plan.json").exists()
+        teardown(fix, orchestrator_type, "canonical-parity-fixture")
+        ok = (
+            result.get("planPolicy") == "canonical"
+            and result.get("persistedPlan") is False
+            and not proposed_artifacts
+        )
+        return {"verdict": "pass" if ok else "reject", "entry": result, "proposedArtifacts": proposed_artifacts}
+    finally:
+        shutil.rmtree(fix, ignore_errors=True)
+
+
+def feedback_canonical_parity_check(root: Path) -> dict[str, Any]:
+    return episodic_canonical_parity_check(
+        root,
+        "feedback",
+        {"source_class": "review", "invocation": "human"},
+    )
+
+
+def episodic_proposed_routes_check(
+    root: Path,
+    orchestrator_type: str,
+    signal_raw: dict[str, Any],
+    *,
+    run_id: str = "proposed-route-fixture",
+) -> dict[str, Any]:
+    policy = read_plan_policy(root)
+    if policy != "proposed":
+        return {"verdict": "pass", "skipped": True, "reason": "planPolicy not proposed"}
+    result = orchestrator_entry(root, orchestrator_type, signal_raw, run_id=run_id)
+    rd = run_dir(root, orchestrator_type, run_id)
+    ok = (
+        result.get("verdict") == "pass"
+        and (rd / "orchestrator-step-plan.json").is_file()
+        and (rd / "episodic-run-summary.json").is_file()
+        and result.get("capabilityCount", 0) >= 0
+    )
+    summary = {}
+    if (rd / "episodic-run-summary.json").is_file():
+        summary = json.loads((rd / "episodic-run-summary.json").read_text(encoding="utf-8"))
+    teardown(root, orchestrator_type, run_id)
+    return {
+        "verdict": "pass" if ok else "reject",
+        "entry": result,
+        "summaryHasPlan": bool(summary.get("chosenPlan")),
+        "summaryHasCapabilities": "capabilitySet" in summary,
+    }
+
+
+def feedback_proposed_routes_gate_selector_check(root: Path) -> dict[str, Any]:
+    return episodic_proposed_routes_check(
+        root,
+        "feedback",
+        {"source_class": "production", "invocation": "human", "route": "debug"},
+        run_id="feedback-proposed-route-fixture",
+    )
+
+
+def episodic_r21_surfacing_check(
+    root: Path,
+    orchestrator_type: str,
+    signal_raw: dict[str, Any],
+    *,
+    run_id: str = "r21-surfacing-fixture",
+) -> dict[str, Any]:
+    result = orchestrator_entry(root, orchestrator_type, signal_raw, run_id=run_id)
+    rd = run_dir(root, orchestrator_type, run_id)
+    summary = json.loads((rd / "episodic-run-summary.json").read_text(encoding="utf-8"))
+    teardown(root, orchestrator_type, run_id)
+    ok = (
+        result.get("verdict") == "pass"
+        and summary.get("chosenPlan")
+        and "capabilitySet" in summary
+        and isinstance(summary.get("planRejections"), list)
+    )
+    return {"verdict": "pass" if ok else "reject", "summaryKeys": sorted(summary.keys())}
+
+
+def feedback_r21_surfacing_check(root: Path) -> dict[str, Any]:
+    return episodic_r21_surfacing_check(
+        root,
+        "feedback",
+        {"source_class": "review", "invocation": "human"},
+        run_id="feedback-r21-surfacing-fixture",
+    )
+
+
+def episodic_budget_trip_simulate(
+    root: Path, orchestrator_type: str, *, run_id: str = "budget-trip-fixture"
+) -> dict[str, Any]:
+    run = provision(root, orchestrator_type, run_id)
+    rid = run["runId"]
+    for _ in range(BUDGET_REJECTION_THRESHOLD):
+        append_plan_rejection(root, orchestrator_type, rid, {"verdict": "reject", "reasons": ["fixture"]})
+    trip = budget_trip_check(root, orchestrator_type, rid)
+    teardown(root, orchestrator_type, rid)
+    return trip
+
+
+def feedback_budget_trip_simulate(root: Path) -> dict[str, Any]:
+    return episodic_budget_trip_simulate(root, "feedback", run_id="feedback-budget-trip-fixture")
+
+
+
+
+def doc_canonical_parity_check(root: Path) -> dict[str, Any]:
+    from orchestrator_step_plan import canonical_orchestrator_chain  # noqa: PLC0415
+    from variance_probe import probe_orchestrator  # noqa: PLC0415
+    from wave_plan_validate import validate_orchestrator_plan  # noqa: PLC0415
+
+    probe = probe_orchestrator(root, "doc")
+    steps = list(canonical_orchestrator_chain(root, "doc"))
+    validated = validate_orchestrator_plan(
+        root,
+        {"steps": steps, "orchestratorType": "doc"},
+        orchestrator_type="doc",
+        signal_context=None,
+    )
+    policy = read_plan_policy(root)
+    ok = (
+        probe.get("adoptionMode") == "consistency-only"
+        and probe.get("proposedPackDeferred") is True
+        and probe.get("defaultsConsistencyOnly") is True
+        and probe.get("canonicalEquivProposed") is True
+        and validated.get("verdict") == "pass"
+        and policy in {"canonical", "proposed"}
+    )
+    return {
+        "verdict": "pass" if ok else "reject",
+        "probe": probe,
+        "validated": validated.get("verdict"),
+        "planPolicy": policy,
+        "stepCount": len(steps),
+    }
+
+
 def main() -> None:
     args = sys.argv[1:]
     if not args or args[0] in {"-h", "--help"}:
@@ -541,14 +726,30 @@ def main() -> None:
         orch = parse_kv(rest, "--orchestrator-type") or "debug"
         if orch == "debug":
             emit(debug_canonical_parity_check(root))
+        elif orch == "doc":
+            emit(doc_canonical_parity_check(root))
+        elif orch == "feedback":
+            emit(feedback_canonical_parity_check(root))
         else:
-            fail("canonical-parity-check only for debug in phase 5")
+            fail(f"canonical-parity-check unsupported for orchestrator: {orch!r}")
     if cmd == "proposed-routes-check":
-        emit(debug_proposed_routes_gate_selector_check(root))
+        orch = parse_kv(rest, "--orchestrator-type") or "debug"
+        if orch == "feedback":
+            emit(feedback_proposed_routes_gate_selector_check(root))
+        else:
+            emit(debug_proposed_routes_gate_selector_check(root))
     if cmd == "r21-surfacing-check":
-        emit(debug_r21_surfacing_check(root))
+        orch = parse_kv(rest, "--orchestrator-type") or "debug"
+        if orch == "feedback":
+            emit(feedback_r21_surfacing_check(root))
+        else:
+            emit(debug_r21_surfacing_check(root))
     if cmd == "budget-trip-check":
-        emit(debug_budget_trip_simulate(root))
+        orch = parse_kv(rest, "--orchestrator-type") or "debug"
+        if orch == "feedback":
+            emit(feedback_budget_trip_simulate(root))
+        else:
+            emit(debug_budget_trip_simulate(root))
     if cmd == "assert-write":
         orch = parse_kv(rest, "--orchestrator-type")
         target_raw = parse_kv(rest, "--target")
