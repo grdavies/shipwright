@@ -42,8 +42,7 @@ def main(argv=None):
         sys.stdout.write(proc.stdout or json.dumps({"verdict":"none","provider":"none","skipped":True}))
         return 0
     if provider == "auto":
-        print(json.dumps({"verdict":"none","provider":"auto","skipped":True,"reason":"builtin reserved Phase 2"}))
-        return 0
+        provider = "builtin"
     adapter = plugin_root/f"core/providers/quality/{provider}.py"
     if not adapter.is_file(): adapter = plugin_root/f"providers/quality/{provider}.py"
     if not adapter.is_file():
