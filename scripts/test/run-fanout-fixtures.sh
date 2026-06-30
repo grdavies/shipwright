@@ -317,4 +317,82 @@ else
 fi
 
 
+# --- Phase 5: /sw-debug adoption fixtures (TR4a, R18–R23) ---
+if OUT=$(python3 "$ROOT/scripts/orchestrator_run.py" "$ROOT" canonical-parity-check 2>/dev/null || true)   && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='pass', d"; then
+  ok "debug-canonical-parity"
+else
+  bad "debug-canonical-parity"
+fi
+
+if OUT=$(python3 "$ROOT/scripts/orchestrator_run.py" "$ROOT" proposed-routes-check 2>/dev/null || true)   && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='pass', d"; then
+  ok "debug-proposed-routes-gate-selector"
+else
+  bad "debug-proposed-routes-gate-selector"
+fi
+
+for HALT in route-confirm-halt rca-human-decision-halt; do
+  BAD=$(mktemp)
+  python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, str(Path('$ROOT') / 'scripts'))
+from orchestrator_step_plan import canonical_orchestrator_chain
+steps = [s for s in canonical_orchestrator_chain(Path('$ROOT'), 'debug') if s != '$HALT']
+print(json.dumps({'steps': steps}))
+" > "$BAD"
+  FIX_NAME=$(echo "$HALT" | sed 's/-halt$//')
+  if OUT=$(bash "$ROOT/scripts/wave.sh" plan validate --tier orchestrator --orchestrator-type debug --proposal "$BAD" 2>/dev/null || true)     && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='reject', d"; then
+    ok "debug-${FIX_NAME}-halt-required"
+  else
+    bad "debug-${FIX_NAME}-halt-required"
+  fi
+  rm -f "$BAD"
+done
+
+SENTRY_LIKE=$'breadcrumb: user clicked\nghp_abcdefghijklmnopqrstuvwxyz1234567890ABCD\nemail: leak@corp.example.com'
+SCRUBBED=$(echo "$SENTRY_LIKE" | bash "$ROOT/scripts/memory-redact.sh")
+if [[ "$SCRUBBED" == *'[REDACTED:'* ]] && [[ "$SCRUBBED" != *'ghp_abc'* ]]; then
+  ok "debug-proposed-sentry-enrich-redact-before-preflight"
+else
+  bad "debug-proposed-sentry-enrich-redact-before-preflight"
+fi
+
+if OUT=$(python3 "$ROOT/scripts/orchestrator_run.py" "$ROOT" budget-trip-check 2>/dev/null || true)   && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['tripped'] is True, d"; then
+  ok "debug-budget-trip"
+else
+  bad "debug-budget-trip"
+fi
+
+if OUT=$(python3 "$ROOT/scripts/orchestrator_run.py" "$ROOT" r21-surfacing-check 2>/dev/null || true)   && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='pass', d"; then
+  ok "debug-r21-surfacing"
+else
+  bad "debug-r21-surfacing"
+fi
+
+PARITY022_OK=1
+if ! python3 - <<PY
+import sys
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+from wave_plan_validate import read_config_plan_policy
+assert read_config_plan_policy(Path("$ROOT")) == "proposed"
+from capability_trust import MEMORY_GATES
+assert "memory-preflight" in MEMORY_GATES
+from kernel_classification import load_classification
+data = load_classification(Path("$ROOT"))
+ids = {c.get("id") for c in data.get("kernelChokepoints") or []}
+for required in ("memory-preflight-routing", "beforeSubmitPrompt-guardrails"):
+    assert required in ids, required
+PY
+then
+  PARITY022_OK=0
+fi
+if [[ "$PARITY022_OK" -eq 1 ]] \
+  && OUT=$(python3 "$ROOT/scripts/wave_plan_validate.py" "$ROOT" validate --tier orchestrator --orchestrator-type debug --proposal '{"steps":["memory-prework","triage"]}' 2>/dev/null || true) \
+  && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict'] in ('reject','ambiguous'), d"; then
+  ok "debug-022-parity-under-proposed"
+else
+  bad "debug-022-parity-under-proposed"
+fi
+
 exit "$FAIL"
