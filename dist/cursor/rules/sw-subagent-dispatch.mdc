@@ -54,6 +54,9 @@ Per-agent tiers for reviewers, doc-review personas, and native-panel specialists
 - Doc authoring and high-stakes review → `models.tiers.deep`.
 - Orchestrators at routing tier `inherit` (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-compound-ship`) MUST resolve
   delegated atomics via `--command <child-slug>` — never downgrade the child (KD8).
+- **R39b precedence (mechanical):** explicit `models.routing.agents[<agent>]` for a bound reviewer/persona
+  wins → else `--command <sw-slug>` → else `--agent` alone. Single-sourced in `resolve-model-tier.sh` and
+  `dispatch-check.sh` — do not duplicate ad-hoc in callers.
 - **R9 runtime contract (mechanical):** before every `sw-*-reviewer` / persona / native-panel Task spawn,
   run `scripts/dispatch-check.sh --agent <id> --parent-model <parent-concrete-id> [--command <orchestrator>] [--skill <skill>]`.
   It fails closed on `binding:*` causes and only treats `harness:*` causes as retryable backpressure.

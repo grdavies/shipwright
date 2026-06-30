@@ -123,6 +123,12 @@ legacy commands and compound-engineering (`ce-`).
 
 `/sw-feedback` normalizes and routes inbound signals — it does not run `/sw-debug` analysis, `/sw-amend` authoring, or task execution. Production signals with error/crash/regression markers dispatch to `/sw-debug`; PR-extending work splits to `/sw-amend` or a canonical **gap unit** under `docs/planning/<gap-unit-id>/` via `planning_gap_capture.py` (legacy `GAP-BACKLOG.md` is read-only projection only); new scope dispatches to `/sw-brainstorm`. Human confirmation required before dispatching any route (including agent callers).
 
+## Plan-policy adoption notes (PRD 024)
+
+- `/sw-debug` and `/sw-feedback` use **episodic** adoption (session scratch under `.cursor/sw-*-runs/`).
+- `/sw-doc` defaults to **consistency-only** plan-policy adoption unless a variance probe shows latitude.
+- `/sw-deliver` remains the durable pilot consumer of `orchestration.planPolicy: proposed`.
+
 ## Naming rules
 
 1. Prefix every command file with `sw-` (e.g. `commands/sw-review.md`).

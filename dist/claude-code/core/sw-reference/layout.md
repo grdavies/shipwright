@@ -305,7 +305,7 @@ reproduce from current sources.
   `core/sw-reference/communication-routing.defaults.json` via `/sw-setup`.
 - `models.routing` — command/skill/agent model tier maps; resolve at dispatch via `resolve-model-tier.sh`.
 
-### Dispatch preflight artifacts (PRD 017)
+### Dispatch preflight artifacts (PRD 017 + A2 R38/R39)
 
 Per-delegated-Task binding is recorded immediately before spawn:
 
@@ -314,9 +314,16 @@ bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --
 bash scripts/dispatch-check.sh --agent <id> --command <sw-*> --parent-model <concrete-id> [--dispatch-id <id>]
 ```
 
-Preflight nonce + resolved model/intensity live in the per-worktree shipwright state (`scripts/shipwright-state.sh`).
-The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies bound `Task` spawns lacking a fresh record.
-Operator-facing deliver resume: `/sw-deliver run <frozen-task-list-path>` — not raw `bash deliver-loop`.
+**Keyed store (R38):** one JSON record per dispatch under
+`.cursor/hooks/state/task-dispatch-preflight/<dispatch-id>.json` (legacy single-file
+`task-dispatch-preflight.json` read fallback when exactly one unconsumed record exists). Each record carries
+the full binding payload, `expiresAt` (TTL), and `consumedAt` after the hook consumes **only** the matching
+`dispatchId`. Parallel persona panels require **N unique ids** — consuming record `A` leaves record `B` valid.
+
+Model tier uses R39b precedence via `resolve-model-tier.sh` / `dispatch-check.sh` (explicit agent routing →
+`--command` → `--agent`). The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies bound `Task`
+spawns lacking a fresh, matching record. Operator-facing deliver resume: `/sw-deliver run <frozen-task-list-path>`
+— not raw `bash deliver-loop`.
 
 ### Pre-work memory search (PRD 019)
 

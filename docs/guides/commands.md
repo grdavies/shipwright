@@ -162,3 +162,15 @@ branch.
 See [Getting started](getting-started.md) for boundary modes and worktree rules.
 
 **Review opt-out:** the canonical way to disable external review is `review.provider: "none"` (schema default). CodeRabbit is opt-in only.
+
+### PRD 024 orchestrator plan-policy (fan-out)
+
+| Command | Adoption | Notes |
+| --- | --- | --- |
+| `/sw-deliver` | `full` pilot | Durable run-state; `deliver-loop` driver |
+| `/sw-debug` | `full` episodic | Proposed entry + R21 surfacing under `.cursor/sw-debug-runs/` |
+| `/sw-doc` | **`consistency-only` default** | Canonical path + doc-review halts; proposed pack deferred unless probe shows latitude |
+| `/sw-feedback` | `full` episodic | Untrusted-signal halts; `.cursor/sw-feedback-runs/` scratch |
+
+Fixtures: `bash scripts/test/run-fanout-fixtures.sh`; A2 binding: `bash scripts/test/run-dispatch-foundation-fixtures.sh`.
+

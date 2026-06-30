@@ -238,6 +238,10 @@ Branch protection is probed via host API — ambiguous detection fails closed to
 
 Before any delegated Task spawn from `/sw-doc`:
 
+For `/sw-doc-review` persona panel dispatches, each parallel persona MUST use a **unique** `--dispatch-id`
+(R38/R39) and resolve tier via `--command <child-slug>` / `--agent <persona-id>` per
+`scripts/resolve-model-tier.sh` — never reuse one preflight record across N Tasks.
+
 1. `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-doc --skill <active-skill>`
 2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-doc --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Pass explicit `model: <resolved-concrete-id>` on Task input (never `inherit`).
