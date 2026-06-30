@@ -22,7 +22,7 @@ rm -rf "$TMP"
 echo "OK  windows-hook-invocation"
 """
 src = _src.replace("#!/usr/bin/env bash", "").replace("set -euo pipefail", "")
-src = re.sub(r'ROOT="[^"]*"', 'ROOT="' + str(ROOT) + '"', src, count=1)
+src = re.sub(r'ROOT="[^"]*"', lambda _m: 'ROOT="' + str(ROOT).replace("\\", "\\\\") + '"', src, count=1)
 src = src.replace('.sh"', '.py"').replace('bash "', 'python3 "')
 rc = subprocess.run(["bash", "-c", src], cwd=str(ROOT), env=env, shell=False).returncode
 if rc == 0:
