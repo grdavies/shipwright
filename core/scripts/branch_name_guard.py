@@ -45,7 +45,8 @@ def main(argv=None):
     root = Path(__file__).resolve().parent.parent
     if not args:
         print("usage: branch-name-guard {types|validate|derive}", file=sys.stderr); return 2
-    cmd, *rest = args[0], args[1:]
+    cmd = args[0]
+    rest = args[1:]
     if cmd == "types": print(load_types(root)); return 0
     if cmd == "validate":
         if not rest: print("usage: validate <branch>", file=sys.stderr); return 2

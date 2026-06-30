@@ -1046,6 +1046,151 @@
       }
     },
     {
+      "id": "rule.checks-gate",
+      "kind": "rule",
+      "sourcePath": "core/rules/checks-gate.mdc",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "providers",
+            "command": "sw-watch-ci"
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "providers"
+        }
+      }
+    },
+    {
+      "id": "rule.code-review-automation",
+      "kind": "rule",
+      "sourcePath": "core/rules/code-review-automation.mdc",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "code-review",
+            "command": "sw-review"
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "code-review"
+        }
+      }
+    },
+    {
+      "id": "rule.memory-guardrails",
+      "kind": "rule",
+      "sourcePath": "core/rules/memory-guardrails.mdc",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "memory",
+            "command": "sw-memory-sync"
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "memory"
+        }
+      }
+    },
+    {
+      "id": "rule.sw-conductor",
+      "kind": "rule",
+      "sourcePath": "core/rules/sw-conductor.mdc",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "subagent-dispatch",
+            "command": "sw-deliver"
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "subagent-dispatch"
+        }
+      }
+    },
+    {
+      "id": "rule.sw-dispatch-background-phase",
+      "kind": "rule",
+      "sourcePath": "core/rules/sw-dispatch-background-phase.mdc",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "conductor_mode",
+            "selectionFamily": "subagent-dispatch",
+            "equals": "background_phase"
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "subagent-dispatch",
+          "dispatchPosture": "inline",
+          "intraphaseSubagentDispatch": "disabled"
+        }
+      }
+    },
+    {
+      "id": "rule.sw-dispatch-inline-execute",
+      "kind": "rule",
+      "sourcePath": "core/rules/sw-dispatch-inline-execute.mdc",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "all_of",
+            "selectionFamily": "subagent-dispatch",
+            "triggers": [
+              {
+                "type": "file_count",
+                "max": 3
+              },
+              {
+                "type": "conductor_mode",
+                "notEquals": "background_phase"
+              }
+            ]
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "subagent-dispatch",
+          "dispatchPosture": "inline"
+        }
+      }
+    },
+    {
+      "id": "rule.sw-subagent-dispatch",
+      "kind": "rule",
+      "sourcePath": "core/rules/sw-subagent-dispatch.mdc",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "subagent-dispatch",
+            "scope": "delegation-policy"
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "subagent-dispatch"
+        }
+      }
+    },
+    {
       "id": "skill.checks-gate",
       "kind": "skill",
       "sourcePath": "core/skills/checks-gate/SKILL.md",

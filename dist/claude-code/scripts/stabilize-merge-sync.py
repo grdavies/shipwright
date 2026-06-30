@@ -39,7 +39,7 @@ def _host_remote(root: Path) -> str:
         text=True,
         check=False,
     )
-    return proc.stdout.strip() or "origin"
+    return proc.stdout.strip() or remote_name(load_workflow_config(root))
 
 
 def _default_base(root: Path) -> str:

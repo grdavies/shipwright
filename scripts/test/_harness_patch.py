@@ -100,6 +100,7 @@ def patch_source(src: str, root: Path) -> str:
     src = re.sub(r'bash\s+"\$DOC_AFTER/\$\{fx\}\.sh"', r'python3 "$DOC_AFTER/${fx}.py"', src)
     src = re.sub(r"scripts/[A-Za-z0-9_./-]+\.sh", lambda m: m.group(0)[:-3] + ".py", src)
     src = re.sub(r'bash\s+"([^"]+\.py)"', r'python3 "\1"', src)
+    src = re.sub(r'\bbash scripts/([A-Za-z0-9_./-]+\.py)\b', r'python3 scripts/\1', src)
     src = re.sub(r'bash\s+"\$([A-Z_][A-Z0-9_]*)"', r'python3 "$\1"', src)
     src = re.sub(r'chmod \+x[^\n]*\n', '', src)
     src = re.sub(r'\[\[ -x "\$REDACT" \]\]', '[[ -f "$REDACT" ]]', src)

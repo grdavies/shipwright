@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Worktree provision, scaffold allocation, safe teardown, parallelism ceiling."""
+"""Worktree provision, scaffold allocation, safe teardown, parallelism ceiling.
+
+Branch validation delegates to worktree_lib.py (PRD 026 R24)."""
 from __future__ import annotations
 import sys
 from pathlib import Path
@@ -7,6 +9,16 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 from _sw.cli import run_module_main
+
+def _validate_branch_via_worktree_lib(branch: str) -> bool:
+    import subprocess
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT_DIR / "worktree_lib.py"), "validate", branch],
+        capture_output=True,
+        check=False,
+    )
+    return proc.returncode == 0
+
 
 def main(argv: list[str] | None = None) -> int:
     import json
