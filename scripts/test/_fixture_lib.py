@@ -14,9 +14,22 @@ from _sw import proc
 
 
 def repo_root(from_file: str | Path | None = None) -> Path:
-    if from_file is not None:
-        return Path(from_file).resolve().parent.parent.parent
-    return Path(__file__).resolve().parent.parent.parent
+    start = Path(from_file).resolve().parent if from_file is not None else Path(__file__).resolve().parent
+    proc = subprocess.run(
+        ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode == 0 and proc.stdout.strip():
+        return Path(proc.stdout.strip())
+    # Fallback: scripts/test/{fixtures/,run_*.py}
+    path = Path(from_file).resolve() if from_file is not None else Path(__file__).resolve()
+    depth = 4 if path.parent.name == "fixtures" else 3
+    cur = path.parent
+    for _ in range(depth):
+        cur = cur.parent
+    return cur
 
 
 def content_path(root: Path, rel: str) -> Path:

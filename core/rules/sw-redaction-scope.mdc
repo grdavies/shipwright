@@ -1,0 +1,27 @@
+---
+description: Range-scoped history redaction only — bare-branch filter-branch on shared main is prohibited.
+alwaysApply: false
+---
+
+# History redaction scope (R42)
+
+When removing secrets or PII from git history, redaction MUST be **range-scoped** so shared
+`main` commits are not rewritten under new SHAs.
+
+## Required
+
+- Use a revision range: `git filter-branch <base>..<branch>` (or equivalent range-scoped tooling).
+- Prefer interactive rebase for small, branch-local fixes when appropriate.
+- Run `bash scripts/redaction-guard.sh check-command -- git filter-branch ...` before any
+  `filter-branch` invocation; exit `20` means the command is refused.
+
+## Prohibited
+
+- Bare-branch `git filter-branch` without a `..` range (e.g. rewriting all of `HEAD` or `main`
+  in place).
+- Any history rewrite that would change SHAs already on the shared default branch.
+
+## Related
+
+- Pre-push secret hygiene: `bash scripts/secret-scan.sh` / `bash scripts/git-push.sh` (R41/R50).
+- Memory persist redaction: `scripts/memory-redact.sh` (same deny pattern source as secret scan).

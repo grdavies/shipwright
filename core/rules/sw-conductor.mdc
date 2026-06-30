@@ -1,0 +1,86 @@
+---
+description: Conductor guardrails — legitimate halts only, no nested dispatch, durable-state authority. USE WHEN running /sw-deliver or any orchestrator that adopts the conductor contract.
+alwaysApply: false
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: subagent-dispatch
+      command: sw-deliver
+  metadata:
+    selectionFamily: subagent-dispatch
+---
+
+# Conductor guardrails
+
+Load `skills/conductor/SKILL.md` for the full contract. These rules are the always-on enforcement subset
+(R1, R3).
+
+## Episodic vs durable runs (PRD 024 R37)
+
+- **Durable:** `/sw-deliver` (+ `/sw-doc` → deliver handoff) owns PRD 007/013 run-state.
+- **Episodic:** `/sw-debug` and `/sw-feedback` validate at entry only; no deliver-scoped crash-resume.
+
+## Invoke primitives — never re-implement state
+
+- Route every plan, provision, collect, merge, lock, and report action through `scripts/wave.sh` /
+  `wave_*.py` JSON entrypoints.
+- Do not hand-edit `.cursor/sw-deliver-state.json`, phase statuses, or merge journal fields in prose.
+- Phase outcomes come from `.cursor/sw-deliver-runs/<phase-slug>/status.json` only (R19).
+
+## Plan validation (PRD 022)
+
+- Route wave and phase **proposals** through `bash scripts/wave.sh plan validate` — never hand-author plan JSON.
+- On reject: phase → canonical chain from `kernel-classification.json`; wave → canonical waves or
+  `wave.sh schedule` when over-ceiling.
+- The phase step driver reads persisted `phase-step-plan.json` as sole authority; `SHIP_CHAIN` is fallback only.
+- Shared run-state writes (`waveBatchingPlan`, `twoTierLifecycle`) are **conductor-only**; phase sub-agents
+  writing shared state exit 20.
+
+## Driver-enforced budgets (PRD 023 TR3)
+
+- Run-level budgets (`runStartedAt`, `driverIterationCount`, `noProgressStreak`) are written by
+  `wave_deliver_loop.py` — not agent prose.
+- Proposal/validation overhead is accounted separately from execution iterations; persistent
+  `planRejectionLog` entries feed the no-progress breaker.
+- Budget trip → `halt-blocked` with merge-queue journal replayability and lock release (R22).
+
+## No nested dispatch (R16)
+
+- Phase sub-agents are spawned **only** by the conductor at the orchestrator level.
+- A backgrounded phase sub-agent must not spawn further sub-agents; intra-phase work runs inline (R45).
+- Phase sub-agents must not call `merge run-next`, `lock acquire`, or `git push` (R41/R23).
+
+## Legitimate halts only (R10–R12)
+
+Do not end the turn or ask the human to "continue" for routine driver progression. Halt only on the
+legitimate set in `skills/conductor/SKILL.md` and emit `scripts/wave.sh report blockers` or
+`report terminal` — never a bare continuation prompt. Every halt must include `resumeCommand`
+(`/sw-deliver run <source_task_list>` when present).
+
+## No status-pause / silent dispatch (R14–R16, R28)
+
+While `verdict: running`:
+
+- No user-visible status + scope-confirmation prose at turn end.
+- After `dispatch-ship` / `dispatch-batch`, no user-visible text until terminal phase `status.json`.
+- `merge-ready-green` completes a phase regardless of remediation path; in-flight remediation does not
+  scope-pause while budget remains.
+- Inline halts only for **driver-detected** ambiguity/destructive conditions; subjective uncertainty →
+  `report blockers` with `cause`.
+
+## Push and merge boundaries (R13, R23, R41)
+
+- Never raw `git push` — use `scripts/git-push.sh` (R23).
+- Never merge to `main` from the conductor (R22).
+- Phase sub-agents never call `merge enqueue`, `merge run-next`, or `lock acquire` (R41).
+- Only the conductor acquires locks and runs the merge queue.
+
+## Terminal status integrity (PRD 036 R13–R17)
+
+- Phase outcomes come from provenance-stamped `status.json` only — never hand-edit terminal status (R19).
+- Invalid, forged, or non-terminal status is not consumable; the driver classifies `stuck-stale` when branch
+  tip, PR head, gate-checked SHA, and any status head all match with tip quiescence (R15).
+- Recovery: `/sw-ship --phase-mode --from <terminal-step>` — not manual JSON edits. Log actor via
+  `SW_RECOVERY_ACTOR`; recovery and auto re-emit acquire the per-head ship lease (R16/R17).
+

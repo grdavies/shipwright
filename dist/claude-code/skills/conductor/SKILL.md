@@ -1,6 +1,6 @@
 ---
 name: conductor
-description: Shared autonomous orchestration contract — self-continuation, legitimate halts, parallel phase dispatch, and durable-state resumption. Consumed by orchestrators; never re-authored inline.
+description: Conductor guardrails — legitimate halts only, no nested dispatch, durable-state authority. USE WHEN running /sw-deliver or any orchestrator that adopts the conductor contract. Shared autonomous orchestration contract — self-continuation, legitimate halts, parallel phase dispatch, and durable-state resumption. Consumed by orchestrators; never re-authored inline.
 capability:
   version: 1
   triggers:
@@ -9,8 +9,7 @@ capability:
       command: sw-deliver
   metadata:
     skill: conductor
-    selectionFamily: subagent-dispatch
----
+    selectionFamily: subagent-dispatch---
 
 # Conductor contract
 

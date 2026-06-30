@@ -29,6 +29,6 @@ def main(argv=None):
     base = args[0] if args else None
     cmd = [sys.executable, str(SCRIPT_DIR/"check_frozen_scan.py")]
     if base: cmd.append(base)
-    return subprocess.run(cmd, cwd=str(root)).returncode
+    return subprocess.run(cmd).returncode
 
 if __name__ == "__main__": run_module_main(main)

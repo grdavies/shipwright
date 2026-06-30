@@ -1,0 +1,49 @@
+---
+description: Single-source git conventions for Shipwright — branch names, Conventional Commits, PR/merge templates, docs-on-a-branch. Reference skills/git-workflow; do not duplicate.
+alwaysApply: true
+---
+
+# sw-git-conventions
+
+**Authoritative reference:** `skills/git-workflow/SKILL.md`. This rule encodes enforceable guardrails only.
+
+## Branch names
+
+- Pattern: `<type>/<slug>` or `docs/<topic>` where `type` ∈ `release-please-config.json` changelog types.
+- Enforced by `scripts/branch-name-guard.sh` at worktree/branch creation (`scripts/worktree_lib.py` for Python).
+- `pf/<name>` is prohibited. Fail closed on non-conforming names.
+
+## Commit messages
+
+- Conventional Commits: `type(scope): description` or `type!: description` for breaking changes.
+- Types single-sourced from `release-please-config.json`.
+- Enforced by `scripts/commit-msg-guard.sh` via `core/hooks/commit-msg`.
+
+## PR / merge bodies
+
+- Templates: `core/sw-reference/templates/pr-body.md`, `merge-commit.md`.
+- Required fields validated by `scripts/git_template_lib.py`; host `pr-create` fails closed on missing fields.
+
+## Documentation authoring
+
+- Brainstorm/PRD/doc pipeline work occurs on `docs/<topic>` in a dedicated worktree (`scripts/docs_worktree.sh`).
+- Never create local commits on the protected default branch for doc authoring.
+- Docs reach trunk via `scripts/docs_pr.sh` (docs-only PR), not direct push.
+- Feature-branch `spec-seed` (PRD 013) remains for implementation handoff; docs durability is separate (R32).
+
+
+
+## Two-track doc edits (PRD 035 R10–R14)
+
+- **Mechanical** — reconciler-generated artifacts only (INDEX `derived` region, SUPERSEDED manifest, gap index):
+  batched via `scripts/docs-merge.sh` with CI-gated auto-merge or direct-to-trunk when protection probe permits.
+- **Substantive** — any path under `docs/planning/<unit-id>/` (body or frontmatter): auto-driven docs worktree +
+  PR via `scripts/docs-edit-route.sh route-substantive` → `docs_worktree.sh` / `docs_pr.sh`.
+- **`inFlight` region** — never mechanically edited (PRD 032 deliver writer sole region).
+- Branch protection is detected via host API; ambiguous/missing auth fails closed to the PR path — never bypass
+  the protected trunk merge gate.
+
+## Provenance
+
+Conventions informed by [netresearch/git-workflow-skill](https://github.com/netresearch/git-workflow-skill)
+(CC-BY-SA-4.0 / MIT), adapted for Shipwright trunk-based worktrees.

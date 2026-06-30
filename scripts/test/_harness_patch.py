@@ -19,6 +19,9 @@ _BARE_SCRIPT_RENAMES = {
     "copy-to-core.sh": "copy-to-core.py",
     "host-doctor.sh": "host-doctor.py",
     "stabilize-merge-sync.sh": "stabilize-merge-sync.py",
+    "rules-empty.sh": "rules-empty.py",
+    "rules-fail.sh": "rules-fail.py",
+    "rules-ok.sh": "rules-ok.py",
     "run-gate-fixtures.sh": "run_gate_fixtures.py",
     "run-core-scripts-parity-fixtures.sh": "run_core_scripts_parity_fixtures.py",
     "pre-commit-completed-unit.sh": "pre-commit-completed-unit.py",
@@ -65,7 +68,17 @@ def patch_source(src: str, root: Path) -> str:
         src,
     )
     src = re.sub(
+        r'ROOT="\$\(cd "\$\(dirname "\$\{BASH_SOURCE\[0\]\}"\)/\.\./\.\./\.\." && pwd\)"',
+        f'ROOT="{root}"',
+        src,
+    )
+    src = re.sub(
         r'ROOT="\$\(cd "\$\(dirname "\$\{BASH_SOURCE\[0\]\}"\)/\.\." && pwd\)"',
+        f'ROOT="{root}"',
+        src,
+    )
+    src = re.sub(
+        r'ROOT="\$\(cd "\$\(dirname "\$\{BASH_SOURCE\[0\]\}"\)/(?:\.\./)+" && pwd\)"',
         f'ROOT="{root}"',
         src,
     )
