@@ -46,6 +46,7 @@ gate verdict.
 | Verify aggregate | `$RUN_DIR/sw-verify.status.json` (`sw-tmp.py resolve`, else `/tmp`) | **Yes** — emitted by `/sw-verify` |
 | Gate JSON | caller-supplied | **When PR context** (`--pr-context on/auto` or `--require-gate`) |
 | Review status | `$RUN_DIR/sw-review.status.json` | **Optional** — absent-aware (review-disabled repos still reach `verified`) |
+| Mutation hook (optional) | `verifyMutation` config | **Advisory** — `scripts/verify_mutation.py` after green; surviving mutants exit `10`, never default-blocking |
 
 Producers write into the private run dir (`scripts/sw-tmp.py init` at ship start; mode `0700`, files `600`).
 `safe_read` rejects symlinks, foreign-owned, or group/world-writable evidence files.

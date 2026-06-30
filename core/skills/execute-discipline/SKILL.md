@@ -19,12 +19,17 @@ plan-self-review → TDD red → implement → TDD green → tdd-gate → refact
 
 1. **Plan self-review** — `python3 scripts/plan-self-review.py --tasks <file> [--task-ref <ref>]`
    Validates executable steps (`**File:**`, `**Expected:**`) and scans for placeholders.
-2. **Resolve traceability** — from `## Traceability` (U6), load `testScenario` + `rid` for this task ref.
+2. **Resolve traceability** — from `## Traceability` (U6), load `testScenario` + `rid` + `zombiesChecklist` for this task ref.
+   - `python3 scripts/zombies_gate.py --tasks <file> --task-ref <ref>` (or `--record` JSON) — halt on exit `20` when scenario is bound but checklist is empty.
+   - `python3 scripts/traceability_bind.py bind --root . --out .shipwright/traceability-baseline.json --task-ref <ref> --rid <rid>` — freeze pre-red test baseline (R9).
 3. **TDD red** — run the traced test command; record failure in `/tmp/sw-tdd.status.json` (`red.observed: true`,
    `red.exitCode != 0`). If no test scenario exists, record `skipped: true` with reason — gate returns `skipped`.
 4. **Implement** — minimal change for the task; do not weaken assertions to force green.
 5. **TDD green** — re-run the same test; record pass (`green.observed: true`, `green.exitCode: 0`).
-6. **TDD gate** — `python3 scripts/tdd-gate.py --status /tmp/sw-tdd.status.json` must return `pass` or `skipped`.
+   - Optional advisory: `python3 scripts/verify_mutation.py` when `verifyMutation.enabled` is true (never default-blocking).
+   - `python3 scripts/test_tamper_check.py --baseline .shipwright/traceability-baseline.json --status /tmp/sw-tdd.status.json` after green — authoritative over `testWeakened` (exit `20` on R9a flags).
+   - Advisory: `python3 scripts/over_mock_scan.py --root .` — surface flags to stage-1 review.
+6. **TDD gate** — `python3 scripts/tdd-gate.py --status /tmp/sw-tdd.status.json [--require-skip-reason]` must return `pass` or `skipped` (phase mode defaults `--require-skip-reason` on). — `python3 scripts/tdd-gate.py --status /tmp/sw-tdd.status.json` must return `pass` or `skipped`.
 7. **Refactor** (PRD 039 R1/R7) — always run and record:
    - Snapshot quality signal: `python3 scripts/quality_provider.py > /tmp/sw-quality.signal.json`
    - When signal is `none`, record `verdict: none` / `signal: none` without structural edits.

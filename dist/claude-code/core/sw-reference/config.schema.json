@@ -989,6 +989,34 @@
           }
         }
       }
+    },
+    "verifyMutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional mutation-testing hook (contract-only; advisory by default).",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, run scripts/verify_mutation.py after green (advisory)."
+        },
+        "provider": {
+          "type": "string",
+          "default": "none",
+          "description": "Provider id for documentation/telemetry; no built-in provider ships in PRD 039."
+        },
+        "command": {
+          "type": "string",
+          "description": "Shell command to run mutation tests (repo-defined)."
+        },
+        "excludeList": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Paths or globs excluded from mutation (forwarded via SW_MUTATION_EXCLUDE)."
+        }
+      }
     }
   }
 }

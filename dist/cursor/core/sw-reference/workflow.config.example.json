@@ -165,5 +165,10 @@
       "mutationBudget": 10,
       "undoWindowSeconds": 3600
     }
+  },
+  "verifyMutation": {
+    "enabled": false,
+    "provider": "none",
+    "excludeList": []
   }
 }

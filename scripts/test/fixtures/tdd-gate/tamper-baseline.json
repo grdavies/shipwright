@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "taskRef": "3.2",
+  "files": {
+    "tests/test_sample.py": {
+      "sha256": "",
+      "size": 0,
+      "assertionCount": 2
+    }
+  },
+  "coverageConfig": [
+    {
+      "path": "pyproject.toml",
+      "coverageThresholds": [
+        90.0
+      ]
+    }
+  ]
+}
