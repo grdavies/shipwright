@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PRD 034 Phase 3 + PRD 043 Phase 1 — planning.store interface + issue-store foundation."""
+"""PRD 034 Phase 3 + PRD 043 Phase 1–2 — planning.store interface + issue-store."""
 
 from __future__ import annotations
 
@@ -59,12 +59,32 @@ ISSUE_STORE_FALLBACK_NOTICE = (
     "(issuesProvider none/unsupported or host.provider none)"
 )
 
-ISSUE_STORE_PHASE1_NOTICE = (
-    "issue-store phase-1: store ops delegate to in-repo-public until phase-2 issue CRUD is wired"
-)
-
 PROJECT_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
 PROJECT_KEY_REGISTRY = ".cursor/hooks/state/issue-store-project-keys.json"
+ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
+
+from issues_lib import (  # noqa: E402
+    IssueCapabilityError,
+    IssueNotFound,
+    IssueRevisionConflict,
+    IssuesClient,
+)
+from planning_canonical import (  # noqa: E402
+    IssueSnapshot,
+    canonical_hash,
+    chunk_body_if_needed,
+    compose_issue_body,
+    infer_artifact_type,
+    parse_edges_block,
+    project_label,
+    reconcile_edges,
+    reassemble_body,
+    strip_markers_and_edges,
+    title_prefix,
+    type_label,
+    verify_project_scope,
+    verify_unit_id,
+)
 
 BANNED_MEMORY_CLASSES = frozenset({"discussion", "progress"})
 RAW_TRANSCRIPT_MARKERS = (
@@ -551,41 +571,205 @@ class InRepoPublicBackend(PlanningStoreBackend):
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=content_hash(content))
 
 
+
+def load_issue_unit_index(root: Path) -> dict[str, str]:
+    path = root / ISSUE_UNIT_INDEX
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    units = data.get("units") if isinstance(data, dict) else None
+    if not isinstance(units, dict):
+        return {}
+    return {str(k): str(v) for k, v in units.items() if isinstance(k, str) and isinstance(v, str)}
+
+
+def save_issue_unit_index(root: Path, index: dict[str, str]) -> None:
+    path = root / ISSUE_UNIT_INDEX
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"version": 1, "units": index}, indent=2) + "\n", encoding="utf-8")
+
+
+def issue_index_key(project_key: str, unit_id: str) -> str:
+    return f"{project_key}:{unit_id}"
+
+
 class IssueStoreBackend(PlanningStoreBackend):
     backend_id = "issue-store"
 
     def __init__(self, root: Path, cfg: dict[str, Any]) -> None:
         super().__init__(root, cfg)
-        self._delegate = InRepoPublicBackend(root, cfg)
-        self._notice_emitted = False
+        key_result = validate_project_key(root, cfg)
+        if key_result.get("verdict") != "ok":
+            fail(key_result.get("message") or key_result.get("error", "invalid-project-key"))
+        self.project_key = str(key_result["projectKey"])
+        issues = resolve_issues_provider(cfg)
+        self.issues_provider = str(issues.get("provider", "none"))
+        self._client = IssuesClient(root, self.issues_provider)
+        self._index = load_issue_unit_index(root)
 
-    def _with_notice(self, result: StoreResult) -> StoreResult:
-        if not self._notice_emitted:
-            log_operation("phase1-delegate", result.unit_id, result.body_path, None, self.backend_id, notice=ISSUE_STORE_PHASE1_NOTICE)
-            self._notice_emitted = True
-        return StoreResult(
-            result.verdict,
-            result.unit_id,
-            result.body_path,
-            self.backend_id,
-            content=result.content,
-            hash=result.hash,
-            reason=result.reason,
-            inert=result.inert,
-            notice=ISSUE_STORE_PHASE1_NOTICE,
+    def _artifact_type(self, body_path: str) -> str:
+        return infer_artifact_type(body_path)
+
+    def _issue_title(self, artifact_type: str, unit_id: str) -> str:
+        return f"{title_prefix(self.project_key)} {artifact_type}:{unit_id}"
+
+    def _labels_for(self, artifact_type: str) -> list[str]:
+        return sorted({project_label(self.project_key), type_label(artifact_type)})
+
+    def _record_to_snapshot(self, record: Any) -> IssueSnapshot:
+        return IssueSnapshot(
+            title=record.title,
+            body=record.body,
+            state=record.state,
+            labels=list(record.labels),
+            comments=list(record.comments),
+            native_links=list(record.native_links),
+            etag=record.etag,
+            updated_at=record.updated_at,
         )
 
+    def _extract_content(self, record: Any) -> str:
+        full_body = reassemble_body(record.body, record.comments)
+        if not verify_project_scope(full_body, self.project_key):
+            fail(
+                "project-scope-violation",
+                code="project-scope-violation",
+                unitId=record.unit_id,
+                projectKey=self.project_key,
+            )
+        if not verify_unit_id(full_body, record.unit_id):
+            fail("unit-id-mismatch", code="unit-id-mismatch", unitId=record.unit_id)
+        body_edges = parse_edges_block(full_body)
+        try:
+            reconcile_edges(body_edges, record.native_links)
+        except ValueError as exc:
+            fail(str(exc), code="edge-divergence")
+        return strip_markers_and_edges(full_body)
+
+    def _lookup_record(self, unit_id: str, body_path: str) -> Any:
+        idx_key = issue_index_key(self.project_key, unit_id)
+        issue_id = self._index.get(idx_key)
+        if issue_id:
+            try:
+                record = self._client.issue_get(issue_id)
+            except IssueNotFound:
+                record = None
+            else:
+                if verify_project_scope(record.body, self.project_key):
+                    return record
+        matches = self._client.issue_search(
+            project_key=self.project_key,
+            unit_id=unit_id,
+            artifact_type=self._artifact_type(body_path),
+        )
+        if not matches:
+            raise IssueNotFound(f"no issue for unit {unit_id}")
+        record = matches[0]
+        self._index[idx_key] = record.id
+        save_issue_unit_index(self.root, self._index)
+        return record
+
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
-        return self._with_notice(self._delegate.put(unit_id, body_path, content, content_class=content_class))
+        artifact_type = self._artifact_type(body_path)
+        title = self._issue_title(artifact_type, unit_id)
+        labels = self._labels_for(artifact_type)
+        body = compose_issue_body(self.project_key, artifact_type, unit_id, content)
+        body, extra_comments = chunk_body_if_needed(body, [])
+        try:
+            record = self._lookup_record(unit_id, body_path)
+        except IssueNotFound:
+            record = self._client.issue_create(
+                title=title,
+                body=body,
+                labels=labels,
+                project_key=self.project_key,
+                artifact_type=artifact_type,
+                unit_id=unit_id,
+            )
+        else:
+            try:
+                record = self._client.issue_update(
+                    record.id,
+                    title=title,
+                    body=body,
+                    labels=labels,
+                    if_match=record.etag,
+                )
+            except IssueRevisionConflict as exc:
+                fail(
+                    "revision-conflict",
+                    code="revision-conflict",
+                    expected=exc.expected,
+                    actual=exc.actual,
+                )
+        for comment in extra_comments:
+            self._client.issue_comment(record.id, comment.body, markers=comment.markers)
+            record = self._client.issue_get(record.id)
+        idx_key = issue_index_key(self.project_key, unit_id)
+        self._index[idx_key] = record.id
+        save_issue_unit_index(self.root, self._index)
+        digest = canonical_hash(self._record_to_snapshot(record))
+        log_operation("put", unit_id, body_path, content, self.backend_id)
+        return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=digest)
 
     def get(self, unit_id: str, body_path: str) -> StoreResult:
-        return self._with_notice(self._delegate.get(unit_id, body_path))
+        try:
+            record = self._lookup_record(unit_id, body_path)
+        except IssueNotFound:
+            return StoreResult("missing", unit_id, body_path, self.backend_id, reason="not-found")
+        except IssueCapabilityError as exc:
+            fail(str(exc), code="issues-capability")
+        content = self._extract_content(record)
+        digest = canonical_hash(self._record_to_snapshot(record))
+        log_operation("get", unit_id, body_path, content, self.backend_id)
+        return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=digest)
 
     def exists(self, unit_id: str, body_path: str) -> StoreResult:
-        return self._with_notice(self._delegate.exists(unit_id, body_path))
+        try:
+            self._lookup_record(unit_id, body_path)
+        except IssueNotFound:
+            log_operation("exists", unit_id, body_path, None, self.backend_id)
+            return StoreResult("missing", unit_id, body_path, self.backend_id, reason="not-found")
+        except IssueCapabilityError as exc:
+            fail(str(exc), code="issues-capability")
+        log_operation("exists", unit_id, body_path, None, self.backend_id)
+        return StoreResult("ok", unit_id, body_path, self.backend_id)
 
     def materialize(self, unit_id: str, body_path: str, dest_path: Path) -> StoreResult:
-        return self._with_notice(self._delegate.materialize(unit_id, body_path, dest_path))
+        got = self.get(unit_id, body_path)
+        if got.verdict != "ok" or got.content is None:
+            return StoreResult(got.verdict, unit_id, body_path, self.backend_id, reason=got.reason)
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        dest_path.write_text(got.content, encoding="utf-8")
+        log_operation("materialize", unit_id, body_path, got.content, self.backend_id)
+        return StoreResult("ok", unit_id, body_path, self.backend_id, content=got.content, hash=got.hash)
+
+    def link_brainstorm_to_prd(self, brainstorm_unit_id: str, prd_unit_id: str) -> dict[str, Any]:
+        try:
+            brainstorm = self._lookup_record(brainstorm_unit_id, f"docs/brainstorms/{brainstorm_unit_id}.md")
+        except IssueNotFound:
+            fail("brainstorm-issue-missing", code="brainstorm-missing")
+        edges = [{"rel": "spawned", "target": prd_unit_id, "targetType": "prd"}]
+        body = compose_issue_body(
+            self.project_key,
+            "brainstorm",
+            brainstorm_unit_id,
+            strip_markers_and_edges(reassemble_body(brainstorm.body, brainstorm.comments)),
+            edges=edges,
+        )
+        try:
+            updated = self._client.issue_update(brainstorm.id, body=body, if_match=brainstorm.etag)
+        except IssueRevisionConflict as exc:
+            fail("revision-conflict", code="revision-conflict", expected=exc.expected, actual=exc.actual)
+        return {
+            "verdict": "ok",
+            "brainstormUnitId": brainstorm_unit_id,
+            "prdUnitId": prd_unit_id,
+            "etag": updated.etag,
+        }
 
 
 class LocalSyncedBackend(PlanningStoreBackend):
@@ -841,6 +1025,9 @@ def main() -> None:
         "exists",
         "materialize",
         "validate-local-synced",
+        "canonical-hash",
+        "link-brainstorm-prd",
+        "clear-issue-fixture",
     ):
         sub.add_parser(name)
     args, rest = parser.parse_known_args()
@@ -884,6 +1071,29 @@ def main() -> None:
         backend = get_backend(root, cfg, override=_optional(rest, "--backend"))
         result = backend.materialize(_require(rest, "--unit-id"), _require(rest, "--body-path"), Path(_require(rest, "--dest")))
         emit(result.as_dict(), 0 if result.verdict == "ok" else 2)
+
+    elif args.command == "canonical-hash":
+        from planning_canonical import CommentRecord, IssueSnapshot, canonical_form, canonical_hash as ch
+        fixture_path = Path(_require(rest, "--fixture"))
+        data = json.loads(fixture_path.read_text(encoding="utf-8"))
+        comments = [CommentRecord(**c) for c in data.get("comments", [])]
+        snap = IssueSnapshot(
+            title=data["title"],
+            body=data["body"],
+            state=data.get("state", "open"),
+            labels=list(data.get("labels", [])),
+            comments=comments,
+        )
+        emit({"verdict": "ok", "canonical": canonical_form(snap), "hash": ch(snap)})
+    elif args.command == "link-brainstorm-prd":
+        backend = get_backend(root, cfg, override="issue-store")
+        if not isinstance(backend, IssueStoreBackend):
+            fail("issue-store backend required")
+        emit(backend.link_brainstorm_to_prd(_require(rest, "--brainstorm-unit"), _require(rest, "--prd-unit")))
+    elif args.command == "clear-issue-fixture":
+        from issues_lib import get_fixture_store
+        get_fixture_store(root).clear()
+        emit({"verdict": "ok"})
     elif args.command == "validate-local-synced":
         raw = _require(rest, "--path")
         allowlist_raw = _optional(rest, "--allowlist")

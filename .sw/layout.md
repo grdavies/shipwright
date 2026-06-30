@@ -115,6 +115,10 @@ When `planning.store.backend` is `issue-store`, authoritative location per INDEX
 Until a region is issue-derived, the file-store remains authoritative — issue-store config alone does not
 migrate regions.
 
+**Zero stub files (R7):** when issue-store is the effective backend, doc commands must not commit
+planning artifact bodies to the code repo; artifacts live as issues and materialize to git-ignored paths
+at deliver time (Phase 3).
+
 **Status precedence:** lifecycle consumers read `derived.status` when populated and fall back to structural
 `status`; gap units (`type: gap`) always use structural status only.
 
