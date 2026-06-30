@@ -193,7 +193,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 
 ### 5. Emitter + dist parity — S
 
-- [ ] 5.1 `copy-to-core` parity + emitter freshness for new scripts/config (R20)
+- [x] 5.1 `copy-to-core` parity + emitter freshness for new scripts/config (R20)
   - **File:** `scripts/copy-to-core.sh`, `dist/cursor/scripts/`, `dist/claude-code/scripts/`
   - **Expected:** autonomy/pull-in/two-track artifacts land in `core/` and propagate to both dist trees;
     `copy-to-core` parity and emitter-freshness fixtures cover the new scripts and config keys. Fixtures:
