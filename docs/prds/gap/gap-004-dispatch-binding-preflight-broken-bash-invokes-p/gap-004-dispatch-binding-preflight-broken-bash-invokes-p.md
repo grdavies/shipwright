@@ -96,10 +96,41 @@ non-`models.tiers` parent model even once A is fixed) made every attempted subag
 fail, forcing inline execution of `/sw-doc-review` and `/sw-freeze` work that should have been delegated per
 `rules/sw-subagent-dispatch.mdc`.
 
+### Defect C — the R23 push chokepoint itself is broken (same root-cause commit)
+
+While pushing this very signal's gap-capture commit, `scripts/git-push.py` (the **only** sanctioned push path
+per the conductor skill's R23: "Push chokepoint — `scripts/git-push.py` only — secret-scan pre-push") crashed
+before reaching `git push`:
+
+```19:20:scripts/git-push.py
+import secret_scan
+secret_scan.main(["pre-push"])
+```
+
+```246:scripts/secret_scan.py
+def main() -> int:
+```
+
+`secret_scan.main()` takes **zero** arguments; `git-push.py` calls it with a one-element list, raising
+`TypeError: main() takes 0 positional arguments but 1 was given` on every invocation — `git-push.py` cannot
+complete a push at all today, for any branch. This forces a fallback to raw `git push`, which **silently skips
+the secret-scan pre-push check** R23 exists to enforce — the exact guardrail-bypass class R23 was written to
+prevent, now unavoidable because the chokepoint script itself is broken.
+
+**Same root cause as Defects A and B:** `git blame` on both the crashing call site
+(`scripts/git-push.py:19-20`) and `wave_preflight.py:277-278` (Defect A) point to the **same commit**,
+`bd9ab91e` ("feat(prd-42): deliver wave (#256)") — a single large squashed PRD-042 delivery commit that ported
+multiple `.sh` entrypoints to Python in one pass (`git-push.sh`→`git-push.py` included) and introduced this
+class of signature/interpreter mismatch in several of the newly-ported files simultaneously. `secret_scan.py`'s
+own `main()` signature is unchanged since 2026-06-25 — only the caller in the newly-ported `git-push.py`
+passes an argument it never accepted.
+
 ## Lineage
 
-- Defect A is a regression introduced by PRD 042 (cross-platform-python-standardization, "complete") — the
-  exact program whose purpose was eliminating shell/Python interpreter mismatches.
+- Defects A and C are both regressions introduced by the **same commit**, `bd9ab91e` (PRD 042
+  cross-platform-python-standardization, "complete") — the exact program whose purpose was eliminating
+  shell/Python interpreter mismatches; the squashed delivery commit ported many `.sh` scripts to `.py` in one
+  pass and several call sites/signatures did not get updated to match.
 - Defect B is adjacent to PRD 012 (model-tier-runtime-binding) and PRD 024 A2 ("dispatch-binding parallel
   preflight and command tier" — GAP-039/GAP-040), both "complete". A2 already fixed the `--agent`-vs-`--command`
   precedence half of dispatch-binding; it does not address either the interpreter bug or the
@@ -121,4 +152,11 @@ fail, forcing inline execution of `/sw-doc-review` and `/sw-freeze` work that sh
    contract's failure mode.
 3. Natural amendment home for both: PRD 024 (already has A1 + A2 in this exact area) — a new A3, since A2's own
    "GAP-040" framing ("command-vs-agent split is residual") is the same family of dispatch-binding defect.
+4. **Defect C:** fix the `secret_scan.main(["pre-push"])` call to match the zero-arg signature (or give
+   `secret_scan.main` an optional mode parameter if `git-push.py` needs to pass one) and add a regression
+   fixture that actually invokes `scripts/git-push.py --dry-run`-equivalent (or imports + calls `main()`
+   directly) so a broken push chokepoint fails CI immediately rather than being discovered manually mid-push.
+   Given Defects A and C share one root-cause commit, consider auditing the rest of `bd9ab91e`'s squashed
+   `.sh`→`.py` ports for further signature/interpreter mismatches in one pass rather than per-discovery PRs
+   (PR #261 already fixed one such instance independently).
 
