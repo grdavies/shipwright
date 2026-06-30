@@ -204,6 +204,7 @@ import json, sys
 data = json.loads(sys.argv[1])
 runs = data.get("check_runs") or []
 out = []
+by_name = {}
 for r in runs:
     status = (r.get("status") or "").upper()
     conclusion = (r.get("conclusion") or "").upper()
@@ -215,13 +216,22 @@ for r in runs:
         state = "FAILURE"
     else:
         state = conclusion or status or "PENDING"
-    out.append({
+    entry = {
         "name": r.get("name") or "check",
         "state": state,
         "bucket": "pass" if state in ("SUCCESS", "SKIPPED", "NEUTRAL") else ("fail" if state == "FAILURE" else "pending"),
         "link": (r.get("html_url") or ""),
         "workflow": (r.get("app") or {}).get("slug") or "",
-    })
+        "_started": r.get("started_at") or "",
+    }
+    name = entry["name"]
+    prev = by_name.get(name)
+    if prev is None or (entry["_started"], entry["link"]) >= (prev.get("_started", ""), prev.get("link", "")):
+        by_name[name] = entry
+out = []
+for entry in by_name.values():
+    entry.pop("_started", None)
+    out.append(entry)
 print(json.dumps(out))
 PY
 }

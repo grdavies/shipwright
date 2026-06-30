@@ -606,6 +606,17 @@
         "planning-graph-posture-subcommand",
         "planning-graph-core-parity"
       ]
+    },
+    {
+      "id": "planning-035-emitter-parity-fixtures",
+      "script": "scripts/test/run-planning-035-emitter-parity-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-emitter-parity-fixtures",
+      "scenarios": [
+        "copy-to-core-parity-035",
+        "emitter-freshness-035"
+      ]
     }
   ]
 }
