@@ -168,6 +168,7 @@
 * merge phase docs-emitter-propagation-freshness-m into feat/orchestrator-plan-policy-adoption (63a9bff) <!-- sw-deliver:docs-emitter-propagation-freshness-m -->
 * merge phase foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l into feat/cross-platform-python-standardization (c5cac21) <!-- sw-deliver:foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l -->
 * merge phase host-layer-gh-curl-elimination-l into feat/cross-platform-python-standardization (1cd2b23) <!-- sw-deliver:host-layer-gh-curl-elimination-l -->
+* merge phase host-layer-gh-curl-elimination-l into feat/cross-platform-python-standardization (adc7d1b) <!-- sw-deliver:host-layer-gh-curl-elimination-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
