@@ -266,4 +266,55 @@ rm -rf "$PREFLIGHT_DIR"
 rm -f "$ROOT/.cursor/hooks/state/task-dispatch-preflight.json"
 
 
+
+# --- cross-orchestrator-state-isolation (TR6/R37e) ---
+if OUT=$(python3 "$ROOT/scripts/orchestrator_run.py" "$ROOT" isolation-check 2>/dev/null || true)   && echo "$OUT" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert d['verdict'] == 'pass', d
+assert d['debugDeliverStateWrite']['verdict'] == 'reject', d
+assert d['debugSelectorWrite']['verdict'] == 'reject', d
+"; then
+  ok "cross-orchestrator-state-isolation"
+else
+  bad "cross-orchestrator-state-isolation"
+fi
+
+# --- non-deliver-episodic-no-durable-resume (R37a–R37d) ---
+EPISODIC_OK=1
+for ORCH in debug feedback; do
+  if OUT=$(python3 "$ROOT/scripts/orchestrator_run.py" "$ROOT" episodic-check --orchestrator-type "$ORCH" 2>/dev/null || true)     && echo "$OUT" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert d['verdict'] == 'pass', d
+assert d['resume']['resumeRevalidatesPlanPolicyMode'] == 'N/A', d
+"; then
+    :
+  else
+    EPISODIC_OK=0
+    bad "non-deliver-episodic-no-durable-resume-$ORCH"
+  fi
+done
+if [[ "$EPISODIC_OK" -eq 1 ]]; then
+  ok "non-deliver-episodic-no-durable-resume"
+fi
+
+# --- signal-context-capture-before-validate (TR3) ---
+CAPTURE_INPUT='{"signal_type":"sentry","related_files":["src/a.ts"],"sentry_ref":"evt-1"}'
+if OUT=$(python3 "$ROOT/scripts/orchestrator_signal_context.py" "$ROOT" capture --orchestrator-type debug --run-id capture-fixture --input "$CAPTURE_INPUT" 2>/dev/null || true)   && echo "$OUT" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert d['verdict'] == 'pass', d
+assert d['snapshotPoint'] == 'before-plan-validate', d
+sc = d['signal_context']
+assert sc['owner'] == 'session/ephemeral', sc
+assert sc['signal_type'] == 'sentry', sc
+"; then
+  ok "signal-context-capture-before-validate"
+  python3 "$ROOT/scripts/orchestrator_run.py" "$ROOT" teardown --orchestrator-type debug --run-id capture-fixture >/dev/null 2>&1 || true
+else
+  bad "signal-context-capture-before-validate"
+fi
+
+
 exit "$FAIL"

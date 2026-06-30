@@ -84,6 +84,46 @@
         },
         "all": { "type": "boolean" }
       }
+    },
+    "orchestrator_type": {
+      "type": ["string", "null"],
+      "enum": ["debug", "doc", "feedback", null],
+      "description": "Orchestrator entry point that captured this snapshot (PRD 024 TR3)."
+    },
+    "owner": {
+      "type": ["string", "null"],
+      "description": "Durable owner: session/ephemeral for debug/feedback; durable/docs-worktree for doc."
+    },
+    "signal_type": {
+      "type": ["string", "null"],
+      "description": "Debug signal classification (error, crash, sentry, etc.)."
+    },
+    "related_files": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "default": [],
+      "description": "Debug-related file paths from the inbound signal."
+    },
+    "sentry_ref": {
+      "type": ["string", "null"],
+      "description": "Optional Sentry issue/event reference for debug enrichment."
+    },
+    "source_class": {
+      "type": ["string", "null"],
+      "description": "Feedback signal source class (production, staging, etc.)."
+    },
+    "invocation": {
+      "type": ["string", "null"],
+      "enum": ["human", "hook", "monitor", null],
+      "description": "Feedback invocation channel; hook/monitor hard-halt under proposed."
+    },
+    "route": {
+      "type": ["string", "null"],
+      "description": "Feedback routing target selected at entry."
+    },
+    "capturedAt": {
+      "type": ["string", "null"],
+      "description": "UTC timestamp when the entry snapshot was taken (before plan validate)."
     }
   }
 }

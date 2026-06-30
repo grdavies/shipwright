@@ -64,15 +64,15 @@ consistency-only mode (R36c), so the binding defects GAP-039/GAP-040 are not gat
 
 ### 4. signal_context capture + state isolation + episodic model — M
 
-- [ ] 4.1 Entry-time `signal_context` snapshot per orchestrator (TR3)
+- [x] 4.1 Entry-time `signal_context` snapshot per orchestrator (TR3)
   - **File:** orchestrator entry hooks, `core/sw-reference/adoption-call-site-map.md`
   - **Expected:** snapshot + owner captured **before** `plan validate` (debug: signal type + relatedFiles + Sentry ref; feedback: sourceClass + invocation + route; doc: tier + doc_path) so the gate's anti-spoof/divergence check (022 R6) applies; owner is **session/ephemeral** for debug/feedback (R37b).
   - **R-IDs:** TR3, R37
-- [ ] 4.2 Cross-orchestrator state isolation (TR6, R37e)
+- [x] 4.2 Cross-orchestrator state isolation (TR6, R37e)
   - **File:** run-dir namespacing (`sw-debug-runs/`, `sw-feedback-runs/`), `.sw/layout.md`, `core/sw-reference/layout.md`
   - **Expected:** durable/scratch artifacts namespaced by orchestrator + runId; debug/feedback isolation is **ephemeral per-invocation** scratch (abandoned on terminal halt, no crash-resume checkpoint, no shared-state writes); `cross-orchestrator-state-isolation` — a debug/feedback run cannot mutate a deliver run's state or selector output.
   - **R-IDs:** R37
-- [ ] 4.3 Episodic non-deliver run model + no durable resume (R37, R37a–d)
+- [x] 4.3 Episodic non-deliver run model + no durable resume (R37, R37a–d)
   - **File:** `scripts/test/run-fanout-fixtures.sh`
   - **Expected:** `non-deliver-episodic-no-durable-resume` — `/sw-debug`/`/sw-feedback` validate the plan at entry, surface R21 into the **existing episodic run/handoff summary**, expose **no** durable run-record/crash-resume; parent `resume-revalidates-planpolicy-mode` is **N/A** for them (deliver/doc-handoff-scoped); session-scoped budget counters still driver-enforced within the run (R37c).
   - **R-IDs:** R37

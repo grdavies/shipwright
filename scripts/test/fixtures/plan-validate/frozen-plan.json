@@ -33,13 +33,8 @@
       "files": [
         "scripts/wave.sh",
         "core/commands/sw-deliver.md",
-        "scripts/wave.sh",
-        "scripts/wave.sh",
         "core/skills/deliver/SKILL.md",
-        "scripts/wave.sh",
-        ".cursor/sw-deliver-plan.json` schema in skill",
-        "core/commands/sw-deliver.md",
-        "scripts/wave.sh"
+        ".cursor/sw-deliver-plan.json` schema in skill"
       ]
     },
     {
@@ -49,7 +44,6 @@
       "branch": "feat/wave-phase-orchestrator-phase-sw-tasks-phase-dependencies-emission-s",
       "files": [
         "core/commands/sw-tasks.md",
-        "core/skills/tasks/SKILL.md",
         "core/skills/tasks/SKILL.md"
       ]
     },
@@ -74,7 +68,6 @@
         "scripts/wave.sh` helpers",
         "scripts/wave.sh` (lock/journal helpers)",
         "core/commands/sw-commit.md",
-        "core/skills/deliver/SKILL.md",
         "scripts/wave.sh"
       ]
     },
@@ -86,8 +79,7 @@
       "files": [
         "scripts/wave.sh",
         "skills/parallelism/",
-        "core/skills/deliver/SKILL.md",
-        "scripts/wave.sh"
+        "core/skills/deliver/SKILL.md"
       ]
     },
     {
@@ -98,7 +90,6 @@
       "files": [
         "scripts/wave.sh",
         "core/skills/deliver/SKILL.md",
-        "scripts/wave.sh",
         "core/commands/sw-deliver.md",
         "integration with `scripts/sw-assert-worktree.sh` or minimal guard"
       ]
@@ -111,10 +102,6 @@
       "files": [
         "core/commands/sw-deliver.md",
         "core/skills/deliver/SKILL.md",
-        "scripts/wave.sh",
-        "scripts/wave.sh",
-        "core/skills/deliver/SKILL.md",
-        "core/skills/deliver/SKILL.md",
         "scripts/wave.sh"
       ]
     },
@@ -125,8 +112,7 @@
       "branch": "feat/wave-phase-orchestrator-phase-release-bookkeeping-on-type-slug-m",
       "files": [
         "scripts/wave.sh",
-        "core/skills/deliver/SKILL.md",
-        "scripts/wave.sh"
+        "core/skills/deliver/SKILL.md"
       ]
     },
     {
@@ -135,11 +121,6 @@
       "title": "Verify, failure blast radius, and stabilize routing (M)",
       "branch": "feat/wave-phase-orchestrator-phase-verify-failure-blast-radius-and-stabilize-routing-m",
       "files": [
-        "scripts/wave.sh",
-        "core/skills/deliver/SKILL.md",
-        "core/skills/deliver/SKILL.md",
-        "scripts/wave.sh",
-        "core/skills/deliver/SKILL.md",
         "scripts/wave.sh",
         "core/skills/deliver/SKILL.md"
       ]
@@ -150,9 +131,6 @@
       "title": "Terminal PR gate, resumption, and ack cadence (M)",
       "branch": "feat/wave-phase-orchestrator-phase-terminal-pr-gate-resumption-and-ack-cadence-m",
       "files": [
-        "core/commands/sw-deliver.md",
-        "scripts/wave.sh",
-        "scripts/wave.sh",
         "core/commands/sw-deliver.md",
         "scripts/wave.sh",
         "core/skills/deliver/SKILL.md"
@@ -166,8 +144,7 @@
       "files": [
         "scripts/wave.sh",
         "core/skills/deliver/SKILL.md",
-        ".gitignore",
-        "core/skills/deliver/SKILL.md"
+        ".gitignore"
       ]
     },
     {
@@ -179,12 +156,21 @@
         "scripts/test/fixtures/deliver-phase-*",
         "scripts/test/run-deliver-fixtures.sh",
         "scripts/test/fixtures/deliver-phase-*` or `wave-*` baseline",
-        "scripts/test/run-deliver-fixtures.sh",
         "run `scripts/copy-to-core.sh",
         "python3 -m sw generate --all`; `.sw/layout.md",
         "core/sw-reference/layout.md",
         "README.md",
-        "documentation/commands.md"
+        "documentation/commands.md",
+        "scripts/test/fixtures/parity/cursor-golden.manifest",
+        "dist/cursor",
+        "dist/claude-code",
+        "core/scripts",
+        "core/commands",
+        "core/skills",
+        "core/rules",
+        "core/agents",
+        "core/providers",
+        "core/sw-reference"
       ]
     }
   ],
@@ -259,6 +245,16 @@
     },
     {
       "from": "2",
+      "to": "3",
+      "kind": "contention"
+    },
+    {
+      "from": "2",
+      "to": "4",
+      "kind": "contention"
+    },
+    {
+      "from": "3",
       "to": "4",
       "kind": "contention"
     },
@@ -278,14 +274,14 @@
       "1"
     ],
     [
-      "2",
-      "3"
+      "2"
     ],
     [
-      "4",
+      "3",
       "5"
     ],
     [
+      "4",
       "6"
     ],
     [
@@ -314,11 +310,24 @@
       "docs/decisions/INDEX.md",
       "CHANGELOG.md",
       "version.txt",
-      "doc-numbering"
+      "doc-numbering",
+      "scripts/test/fixtures/parity/cursor-golden.manifest",
+      "dist/**",
+      "core/**"
     ],
     "injectedEdges": [
       {
         "from": "2",
+        "to": "3",
+        "kind": "contention"
+      },
+      {
+        "from": "2",
+        "to": "4",
+        "kind": "contention"
+      },
+      {
+        "from": "3",
         "to": "4",
         "kind": "contention"
       },
@@ -335,9 +344,11 @@
     ]
   },
   "notices": [
-    "contention: phases 2 and 4 serialized (core/skills/deliver/SKILL.md)",
+    "contention: phases 2 and 3 serialized (core/**)",
+    "contention: phases 2 and 4 serialized (core/**)",
+    "contention: phases 3 and 4 serialized (core/**)",
     "contention: phases 6 and 7 serialized (scripts/wave.sh)",
-    "contention: phases 8 and 12 serialized (core/skills/deliver/SKILL.md)"
+    "contention: phases 8 and 12 serialized (core/**)"
   ],
   "dry_run": true
 }
