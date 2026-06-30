@@ -305,7 +305,7 @@ reproduce from current sources.
   `core/sw-reference/communication-routing.defaults.json` via `/sw-setup`.
 - `models.routing` — command/skill/agent model tier maps; resolve at dispatch via `resolve-model-tier.sh`.
 
-### Dispatch preflight artifacts (PRD 017)
+### Dispatch preflight artifacts (PRD 017 + A2 R38/R39)
 
 Per-delegated-Task binding is recorded immediately before spawn:
 
@@ -314,9 +314,16 @@ bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --
 bash scripts/dispatch-check.sh --agent <id> --command <sw-*> --parent-model <concrete-id> [--dispatch-id <id>]
 ```
 
-Preflight nonce + resolved model/intensity live in the per-worktree shipwright state (`scripts/shipwright-state.sh`).
-The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies bound `Task` spawns lacking a fresh record.
-Operator-facing deliver resume: `/sw-deliver run <frozen-task-list-path>` — not raw `bash deliver-loop`.
+**Keyed store (R38):** one JSON record per dispatch under
+`.cursor/hooks/state/task-dispatch-preflight/<dispatch-id>.json` (legacy single-file
+`task-dispatch-preflight.json` read fallback when exactly one unconsumed record exists). Each record carries
+the full binding payload, `expiresAt` (TTL), and `consumedAt` after the hook consumes **only** the matching
+`dispatchId`. Parallel persona panels require **N unique ids** — consuming record `A` leaves record `B` valid.
+
+Model tier uses R39b precedence via `resolve-model-tier.sh` / `dispatch-check.sh` (explicit agent routing →
+`--command` → `--agent`). The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies bound `Task`
+spawns lacking a fresh, matching record. Operator-facing deliver resume: `/sw-deliver run <frozen-task-list-path>`
+— not raw `bash deliver-loop`.
 
 ### Pre-work memory search (PRD 019)
 
@@ -463,4 +470,29 @@ Per-head ship leases live under `.cursor/sw-deliver-locks/<hash>-<phase>.lock` (
 
 Recovery command: `/sw-ship --phase-mode --from <terminal-step>`; auto re-emit counter on deliver state:
 `statusReemitAttempts`.
+
+## Episodic orchestrator scratch (PRD 024 TR6 / R37)
+
+Debug and feedback orchestrators use **ephemeral, per-invocation** namespaced scratch — not deliver-style
+durable run state. Artifacts are abandoned on terminal halt; there is no crash-resume checkpoint and no
+writes to deliver-scoped paths.
+
+| Path | Role |
+| --- | --- |
+| `.cursor/sw-debug-runs/<runId>/run-meta.json` | Episodic debug run metadata (`crashResume: false`) |
+| `.cursor/sw-debug-runs/<runId>/signal_context.json` | Entry snapshot before `plan validate` (TR3) |
+| `.cursor/sw-debug-runs/<runId>/episodic-run-summary.json` | R21 surfacing (chosen plan, capability set, rejections) |
+| `.cursor/sw-feedback-runs/<runId>/` | Same layout for `/sw-feedback` |
+| `.cursor/sw-doc-runs/<runId>/signal_context.json` | Doc entry snapshot (durable handoff remains docs-worktree scoped) |
+
+Mechanical primitives:
+
+```bash
+python3 scripts/orchestrator_signal_context.py . capture --orchestrator-type debug --run-id <id> --input '{"signal_type":"error"}'
+python3 scripts/orchestrator_run.py . provision --orchestrator-type debug --run-id <id>
+python3 scripts/orchestrator_run.py . teardown --orchestrator-type debug --run-id <id>
+```
+
+Cross-orchestrator isolation: episodic runs refuse writes under `.cursor/sw-deliver-state*`,
+`.cursor/sw-deliver-runs/`, and other deliver-scoped paths (`scripts/orchestrator_run.py assert-write`).
 

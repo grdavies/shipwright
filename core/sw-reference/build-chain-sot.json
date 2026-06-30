@@ -46,6 +46,8 @@
     }
   },
   "coreAuthoredAllowlist": [
+    "adoption-call-site-map.md",
+    "build-chain-paths.json",
     "build-chain-sot.json",
     "capability-index.json",
     "capability-manifest.md",
@@ -55,18 +57,25 @@
     "guidelines.json",
     "guidelines.md",
     "guidelines.schema.json",
+    "guidelines/",
+    "guidelines/debug.pack.json",
+    "guidelines/doc.pack.json",
+    "guidelines/feedback.pack.json",
     "inflight-signal.schema.json",
     "kernel-classification.json",
     "kernel-classification.md",
     "model-routing.defaults.json",
     "model-tier-hook-feasibility.md",
-    "planning-unit.schema.json",
+    "orchestrator-step-plan.json",
     "planning-privacy-notice.md",
+    "planning-unit.schema.json",
     "pr-test-plan.manifest.json",
+    "schemas/",
+    "schemas/orchestrator-step-plan.schema.json",
     "signal-context.schema.json",
-    "verify-presets.json",
     "templates/",
-    "build-chain-paths.json"
+    "verify-presets.json",
+    "schemas/orchestrator-guideline-pack.schema.json"
   ],
   "deprecatedAllowlist": []
 }

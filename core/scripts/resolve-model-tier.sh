@@ -102,13 +102,25 @@ def resolve_tier_name(name: str, source: str) -> None:
     sys.exit(0)
 
 
-if tier_arg:
-    resolve_tier_name(tier_arg, "tier")
+NATIVE_PANEL_IDS = {
+    "correctness", "security", "adversarial", "data-migration", "maintainability",
+    "scope-fidelity", "testing", "performance", "api-contract", "reliability",
+    "ui-ux", "type-design", "comment-accuracy", "ai-native",
+}
 
-if command:
-    if command not in cmd_routing:
-        fail(f"missing routing.commands entry for {command!r}")
-    raw = cmd_routing[command]
+
+def is_bound_agent(agent_id: str) -> bool:
+    return (agent_id.startswith("sw-") and agent_id.endswith("-reviewer")) or agent_id in NATIVE_PANEL_IDS
+
+
+def has_explicit_agent_routing(agent_id: str) -> bool:
+    return agent_id in agent_routing
+
+
+def resolve_command_tier(cmd: str) -> None:
+    if cmd not in cmd_routing:
+        fail(f"missing routing.commands entry for {cmd!r}")
+    raw = cmd_routing[cmd]
     source = "routing.commands"
     if raw == "inherit":
         if delegate:
@@ -122,17 +134,37 @@ if command:
         resolve_tier_name("inherit", source)
     resolve_tier_name(raw, source)
 
+
+def resolve_agent_tier(agent_id: str) -> None:
+    reviewer_tier = roles.get("reviewer", roles.get("builder", "build"))
+    if agent_id in agent_routing:
+        resolve_tier_name(agent_routing[agent_id], "routing.agents")
+    resolve_tier_name(reviewer_tier, "roles.reviewer-default")
+
+
+if tier_arg:
+    resolve_tier_name(tier_arg, "tier")
+
+# R39b precedence: explicit bound-agent routing → command → agent
+lookup_command = command
+lookup_agent = agent
+if agent and command:
+    if is_bound_agent(agent) and has_explicit_agent_routing(agent):
+        lookup_command = ""
+    else:
+        lookup_agent = ""
+
+if lookup_command:
+    resolve_command_tier(lookup_command)
+
 if skill:
     if skill not in skill_routing:
         fail(f"missing routing.skills entry for {skill!r}")
     raw = skill_routing[skill]
     resolve_tier_name(raw, "routing.skills")
 
-if agent:
-    reviewer_tier = roles.get("reviewer", roles.get("builder", "build"))
-    if agent in agent_routing:
-        resolve_tier_name(agent_routing[agent], "routing.agents")
-    resolve_tier_name(reviewer_tier, "roles.reviewer-default")
+if lookup_agent:
+    resolve_agent_tier(lookup_agent)
 
 fail("no lookup performed")
 PY

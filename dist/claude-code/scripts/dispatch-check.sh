@@ -66,6 +66,7 @@ fi
 
 MODEL_ARGS=(--agent "$AGENT")
 INTENSITY_ARGS=(--agent "$AGENT")
+[[ -n "$COMMAND" ]] && MODEL_ARGS+=(--command "$COMMAND")
 [[ -n "$COMMAND" ]] && INTENSITY_ARGS+=(--command "$COMMAND")
 [[ -n "$SKILL" ]] && INTENSITY_ARGS+=(--skill "$SKILL")
 if [[ -n "$CONFIG" ]]; then

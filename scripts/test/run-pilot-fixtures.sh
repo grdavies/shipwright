@@ -60,7 +60,7 @@ GATE_FIX=$(mktemp -d)
   mkdir -p .cursor scripts core/sw-reference
   cp -R "$ROOT/core/sw-reference/." core/sw-reference/
   for f in kernel_classification.py guidelines_validate.py plan_floor_evaluator.py wave_json_io.py \
-    wave_plan_validate.py plan_persist.py pilot_dependency_gate.py wave_state.py wave_deliver.py; do
+    wave_plan_validate.py orchestrator_step_plan.py plan_persist.py pilot_dependency_gate.py wave_state.py wave_deliver.py; do
     cp "$ROOT/scripts/$f" scripts/
   done
   cat >.cursor/workflow.config.json <<'JSON'
@@ -97,7 +97,7 @@ SEED_FIX=$(mktemp -d)
   cp -R "$ROOT/core/sw-reference/." core/sw-reference/
   cp "$PREREQ" scripts/test/pilot-022-prerequisite-check.sh
   for f in kernel_classification.py guidelines_validate.py plan_floor_evaluator.py wave_json_io.py \
-    wave_plan_validate.py plan_persist.py pilot_dependency_gate.py wave_state.py wave_deliver.py \
+    wave_plan_validate.py orchestrator_step_plan.py plan_persist.py pilot_dependency_gate.py wave_state.py wave_deliver.py \
     ship_phase_steps.py wave_deliver_loop.py wave_merge.py wave_failure.py plan_persist.py deliver_plan_surfacing.py \
     status_integrity.py; do
     cp "$ROOT/scripts/$f" scripts/ 2>/dev/null || true
@@ -141,7 +141,7 @@ E2E_FIX=$(mktemp -d)
   cp -R "$ROOT/core/sw-reference/." core/sw-reference/
   cp "$PREREQ" scripts/test/pilot-022-prerequisite-check.sh
   for f in kernel_classification.py guidelines_validate.py plan_floor_evaluator.py wave_json_io.py \
-    wave_plan_validate.py plan_persist.py pilot_dependency_gate.py wave_state.py wave_deliver.py \
+    wave_plan_validate.py orchestrator_step_plan.py plan_persist.py pilot_dependency_gate.py wave_state.py wave_deliver.py \
     wave_deliver_loop.py wave_merge.py wave_failure.py wave_terminal.py wave_compound.py deliver_plan_surfacing.py \
     host_lib.py host_invoke.py status_integrity.py planning_paths.py; do
     cp "$ROOT/scripts/$f" scripts/

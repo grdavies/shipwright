@@ -19,6 +19,18 @@ from kernel_classification import (
     validate_chain_order,
 )
 from plan_floor_evaluator import floor_mandatory_steps, rule_triggered, validate_plan_against_floor
+from orchestrator_guidelines import (
+    load_orchestrator_pack,
+    pack_signal_conditional_mandatory_steps,
+    validate_pack_constraints,
+)
+from orchestrator_step_plan import (
+    VALID_ORCHESTRATOR_TYPES,
+    canonical_orchestrator_chain,
+    closed_world_vocabulary as orchestrator_closed_world_vocabulary,
+    orchestrator_type_spec,
+    validate_ordering_invariants as validate_orchestrator_ordering_invariants,
+)
 
 REJECTION_THRESHOLD = 3
 PLAN_REJECTION_LOG_KEY = "planRejectionLog"
@@ -147,7 +159,19 @@ def _trigger_references_signal_context(trigger: dict[str, Any]) -> bool:
 
 def check_signal_divergence(embedded: dict[str, Any], persisted: dict[str, Any]) -> list[str]:
     reasons: list[str] = []
-    for field in ("file_paths", "derived_tags", "tier", "doc_path"):
+    for field in (
+        "file_paths",
+        "derived_tags",
+        "tier",
+        "doc_path",
+        "signal_type",
+        "related_files",
+        "sentry_ref",
+        "source_class",
+        "invocation",
+        "route",
+        "orchestrator_type",
+    ):
         if field not in embedded:
             continue
         if embedded.get(field) != persisted.get(field):
@@ -244,6 +268,147 @@ def phase_fallback_canonical_chain(
         "validatedAt": utc_now(),
     }
 
+
+
+
+def validate_orchestrator_constraints(spec: dict[str, Any], steps: list[str]) -> list[str]:
+    reasons: list[str] = []
+    positions = {step: idx for idx, step in enumerate(steps)}
+    for req in spec.get("requiredSteps") or []:
+        norm = normalize_step(str(req))
+        if norm not in positions:
+            reasons.append(f"required step missing: {norm}")
+    for forbidden in spec.get("forbiddenSteps") or []:
+        norm = normalize_step(str(forbidden))
+        if norm in positions:
+            reasons.append(f"forbidden step present: {norm}")
+    reasons.extend(validate_orchestrator_ordering_invariants(steps, spec.get("orderingInvariants") or []))
+    return reasons
+
+
+def orchestrator_fallback_canonical_chain(
+    root: Path,
+    orchestrator_type: str,
+    orchestrator_id: str | None = None,
+    *,
+    recorded_parent: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    stamps = plan_stamps(root, recorded_parent=recorded_parent)
+    steps = canonical_orchestrator_chain(root, orchestrator_type)
+    return {
+        "version": 1,
+        "tier": "orchestrator",
+        "orchestratorType": orchestrator_type,
+        "orchestratorId": orchestrator_id,
+        "steps": steps,
+        "planPolicy": stamps["planPolicy"],
+        "kernelVersion": stamps["kernelVersion"],
+        "guidelineVersion": stamps["guidelineVersion"],
+        "fallback": "canonical-chain",
+        "validatedAt": utc_now(),
+    }
+
+
+
+def orchestrator_forbidden_deliver_steps(root: Path, orchestrator_type: str) -> set[str]:
+    forbidden: set[str] = set()
+    try:
+        spec = orchestrator_type_spec(root, orchestrator_type)
+        forbidden.update(normalize_step(str(s)) for s in spec.get("forbiddenSteps") or [] if isinstance(s, str))
+    except (OSError, ValueError, KeyError):
+        pass
+    try:
+        pack = load_orchestrator_pack(root, orchestrator_type)
+        forbidden.update(
+            normalize_step(str(s)) for s in pack.get("forbiddenDeliverOnlySteps") or [] if isinstance(s, str)
+        )
+    except (OSError, ValueError, KeyError):
+        pass
+    return forbidden
+
+
+def validate_orchestrator_plan(
+    root: Path,
+    proposal: dict[str, Any],
+    *,
+    orchestrator_type: str,
+    signal_context: dict[str, Any] | None,
+) -> dict[str, Any]:
+    steps_raw = proposal.get("steps") or []
+    if not isinstance(steps_raw, list) or not steps_raw:
+        return {"verdict": "reject", "reasons": ["steps must be a non-empty array"]}
+
+    steps = [normalize_step(str(s)) for s in steps_raw]
+    ambiguity = detect_phase_ambiguity(proposal, steps)
+    if ambiguity:
+        return {"verdict": "ambiguous", "reasons": ambiguity}
+
+    if orchestrator_type not in VALID_ORCHESTRATOR_TYPES:
+        return {"verdict": "reject", "reasons": [f"unknown orchestrator type: {orchestrator_type!r}"]}
+
+    vocabulary = orchestrator_closed_world_vocabulary(root, orchestrator_type)
+    if not vocabulary:
+        return {"verdict": "reject", "reasons": [f"unknown orchestrator type: {orchestrator_type!r}"]}
+
+    forbidden_deliver = orchestrator_forbidden_deliver_steps(root, orchestrator_type)
+    deliver_hits = sorted({s for s in steps if s in forbidden_deliver})
+    if deliver_hits:
+        return {
+            "verdict": "reject",
+            "reasons": [f"forbidden deliver-only step present: {s}" for s in deliver_hits],
+        }
+
+    unknown = sorted({s for s in steps if s not in vocabulary})
+    if unknown:
+        return {"verdict": "reject", "reasons": [f"unknown/extraneous step id: {s}" for s in unknown]}
+
+    embedded = proposal.get("signal_context") or proposal.get("signals")
+    if isinstance(embedded, dict) and signal_context:
+        divergence = check_signal_divergence(embedded, signal_context)
+        if divergence:
+            return {"verdict": "reject", "reasons": divergence}
+
+    spec = orchestrator_type_spec(root, orchestrator_type)
+    reasons = validate_orchestrator_constraints(spec, steps)
+    try:
+        pack = load_orchestrator_pack(root, orchestrator_type)
+        reasons.extend(validate_pack_constraints(pack, steps))
+        for mandatory in pack_signal_conditional_mandatory_steps(pack, signal_context):
+            norm = normalize_step(mandatory)
+            if norm not in steps:
+                reasons.append(f"signal-conditional floor step missing: {norm}")
+    except (OSError, ValueError, KeyError) as exc:
+        reasons.append(f"orchestrator guideline pack unavailable: {exc}")
+    if reasons:
+        if proposal.get("partialOrder"):
+            return {"verdict": "ambiguous", "reasons": reasons + ["partial order missing orchestrator ordering pair"]}
+        return {"verdict": "reject", "reasons": reasons}
+
+    stamps = plan_stamps(root)
+    return {
+        "verdict": "pass",
+        "reasons": [],
+        "plan": {
+            "version": 1,
+            "tier": "orchestrator",
+            "orchestratorType": orchestrator_type,
+            "orchestratorId": proposal.get("orchestratorId"),
+            "steps": steps,
+            **stamps,
+            "validatedAt": utc_now(),
+        },
+    }
+
+
+def apply_orchestrator_fallback(
+    result: dict[str, Any], root: Path, orchestrator_type: str, orchestrator_id: str | None
+) -> dict[str, Any]:
+    if result.get("verdict") == "pass":
+        return result
+    fallback = orchestrator_fallback_canonical_chain(root, orchestrator_type, orchestrator_id)
+    result["fallback"] = fallback
+    result["fallbackAction"] = "canonical-chain"
+    return result
 
 def validate_phase_plan(
     root: Path,
@@ -611,8 +776,8 @@ def apply_wave_fallback(result: dict[str, Any], root: Path, frozen_plan: dict[st
 
 def cmd_validate(root: Path, args: list[str]) -> None:
     tier = parse_kv(args, "--tier")
-    if tier not in {"phase", "wave"}:
-        fail("--tier phase|wave required")
+    if tier not in {"phase", "wave", "orchestrator"}:
+        fail("--tier phase|wave|orchestrator required")
 
     proposal = load_json_arg(root, parse_kv(args, "--proposal"))
     if proposal is None:
@@ -637,6 +802,20 @@ def cmd_validate(root: Path, args: list[str]) -> None:
             task_file_paths=task_file_paths,
         )
         result = apply_phase_fallback(result, root, phase_type, phase_id)
+    elif tier == "orchestrator":
+        orchestrator_type = parse_kv(args, "--orchestrator-type")
+        if not orchestrator_type or orchestrator_type not in VALID_ORCHESTRATOR_TYPES:
+            fail("--orchestrator-type debug|doc|feedback required for orchestrator tier")
+        signal_context = load_json_arg(root, parse_kv(args, "--signal-context"))
+        orchestrator_id = parse_kv(args, "--orchestrator-id") or proposal.get("orchestratorId") or "unknown"
+
+        result = validate_orchestrator_plan(
+            root,
+            proposal,
+            orchestrator_type=orchestrator_type,
+            signal_context=signal_context,
+        )
+        result = apply_orchestrator_fallback(result, root, orchestrator_type, orchestrator_id)
     else:
         frozen_plan = load_json_arg(root, parse_kv(args, "--frozen-plan"))
         if frozen_plan is None:

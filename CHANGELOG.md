@@ -156,6 +156,16 @@
 * merge phase doc-impact-acceptance-no-regression-m into feat/planning-feedback-lifecycle (18ae610) <!-- sw-deliver:doc-impact-acceptance-no-regression-m -->
 * merge phase deliver-conductor-completion-amendment-a1-l into feat/planning-feedback-lifecycle (7672d9e) <!-- sw-deliver:deliver-conductor-completion-amendment-a1-l -->
 * merge phase gap-lifecycle-doc-format-amendment-a2-m into feat/planning-feedback-lifecycle (2b72723) <!-- sw-deliver:gap-lifecycle-doc-format-amendment-a2-m -->
+* merge phase program-dependency-gate-r31-inconclusive-fail-closed-s into feat/orchestrator-plan-policy-adoption (93fab26) <!-- sw-deliver:program-dependency-gate-r31-inconclusive-fail-closed-s -->
+* merge phase orchestrator-step-plan-schema-single-tier-gate-orchestrator-tier-m into feat/orchestrator-plan-policy-adoption (d48349a) <!-- sw-deliver:orchestrator-step-plan-schema-single-tier-gate-orchestrator-tier-m -->
+* merge phase guideline-packs-deny-lists-variance-probe-consistency-only-mode-m into feat/orchestrator-plan-policy-adoption (c3fd511) <!-- sw-deliver:guideline-packs-deny-lists-variance-probe-consistency-only-mode-m -->
+* merge phase dispatch-binding-scaffolding-parallel-preflight-command-authoritative-tier-a2-m into feat/orchestrator-plan-policy-adoption (ef9423d) <!-- sw-deliver:dispatch-binding-scaffolding-parallel-preflight-command-authoritative-tier-a2-m -->
+* merge phase signal-context-capture-state-isolation-episodic-model-m into feat/orchestrator-plan-policy-adoption (9c9dcf5) <!-- sw-deliver:signal-context-capture-state-isolation-episodic-model-m -->
+* merge phase signal-context-capture-state-isolation-episodic-model-m into feat/orchestrator-plan-policy-adoption (fa96971) <!-- sw-deliver:signal-context-capture-state-isolation-episodic-model-m -->
+* merge phase sw-debug-adoption-wire-only-episodic-m into feat/orchestrator-plan-policy-adoption (1bbd560) <!-- sw-deliver:sw-debug-adoption-wire-only-episodic-m -->
+* merge phase sw-doc-adoption-consistency-only-default-m into feat/orchestrator-plan-policy-adoption (3b20260) <!-- sw-deliver:sw-doc-adoption-consistency-only-default-m -->
+* merge phase sw-feedback-adoption-untrusted-signal-chokepoint-episodic-m into feat/orchestrator-plan-policy-adoption (7d6ae52) <!-- sw-deliver:sw-feedback-adoption-untrusted-signal-chokepoint-episodic-m -->
+* merge phase docs-emitter-propagation-freshness-m into feat/orchestrator-plan-policy-adoption (63a9bff) <!-- sw-deliver:docs-emitter-propagation-freshness-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

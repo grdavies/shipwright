@@ -21,7 +21,7 @@ trap 'rm -rf "$FIX"' EXIT
 
 mkdir -p "$FIX/.cursor" "$FIX/core/sw-reference" "$FIX/scripts"
 cp -R "$ROOT/core/sw-reference/." "$FIX/core/sw-reference/"
-for f in kernel_classification.py guidelines_validate.py plan_floor_evaluator.py wave_plan_validate.py plan_persist.py wave_deliver.py wave_json_io.py wave_terminal.py wave_state.py capability_trust.py memory_redact.py secret_patterns.py; do
+for f in kernel_classification.py guidelines_validate.py plan_floor_evaluator.py wave_plan_validate.py orchestrator_step_plan.py plan_persist.py wave_deliver.py wave_json_io.py wave_terminal.py wave_state.py capability_trust.py memory_redact.py secret_patterns.py; do
   cp "$ROOT/scripts/$f" "$FIX/scripts/"
 done
 

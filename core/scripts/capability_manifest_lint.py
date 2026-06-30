@@ -259,6 +259,10 @@ def lint_core(repo_root: Path, core_root: Path, *, index_path: Path | None = Non
     if index_path is None:
         errors.extend(check_manifest_schema(core_root))
         errors.extend(check_guidelines_artifact(repo_root))
+    from guidelines_validate import lint_orchestrator_packs
+    ok_packs, pack_errors = lint_orchestrator_packs(repo_root)
+    if not ok_packs:
+        errors.extend(pack_errors)
     return (len(errors) == 0, errors)
 
 

@@ -156,11 +156,26 @@ Fixture suite: `bash scripts/test/run-planning-035-doc-impact-fixtures.sh` (`doc
   PRD-024 fans out to other orchestrators. Call-site map:
   `docs/prds/022-kernel-classification-and-plan-validation/call-site-map.md`.
 
+**PRD 024 fan-out (all four orchestrators):** `/sw-deliver`, `/sw-debug`, `/sw-doc`, and `/sw-feedback`
+read `orchestration.planPolicy` (default `canonical`). Enabling `proposed` on non-deliver orchestrators
+remains TR0 + metric-gated (PRD 023).
+
+| Program rule | Meaning |
+| --- | --- |
+| **R35** | Inconclusive R31 (insufficient N) = non-positive → program exit (no deferred fan-out) |
+| **R36** | Variance probe at authoring: `canonical ≡ proposed` → **consistency-only** (manifest + selector; proposed pack deferred); `/sw-doc` **defaults consistency-only** |
+| **R37** | Debug/feedback = episodic scratch; deliver/doc handoff = durable run-state |
+
+**Fixture suites:** `bash scripts/test/run-fanout-fixtures.sh` (program gate, per-orchestrator parity,
+consistency-only, halts, R21/R22/R23); `bash scripts/test/run-dispatch-foundation-fixtures.sh` (A2 parallel
+preflight + command-tier binding, R38/R39).
+
 Mechanical validation:
 
 ```bash
 bash scripts/wave.sh plan validate --tier phase --phase-type ship --proposal <path|json>
 bash scripts/wave.sh plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
+bash scripts/wave.sh plan validate --tier orchestrator --orchestrator-type debug --proposal <path|json>
 ```
 
 ### `/sw-cleanup` agent-driven confirm

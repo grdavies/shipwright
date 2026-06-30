@@ -12,7 +12,8 @@ from pathlib import Path
 from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-DISPATCH_PREFLIGHT_PATH = Path(".cursor/hooks/state/task-dispatch-preflight.json")
+DISPATCH_PREFLIGHT_DIR = Path(".cursor/hooks/state/task-dispatch-preflight")
+DISPATCH_PREFLIGHT_LEGACY = Path(".cursor/hooks/state/task-dispatch-preflight.json")
 
 sys.path.insert(0, str(SCRIPT_DIR))
 from capability_index import check_freshness  # noqa: E402
@@ -276,6 +277,7 @@ def cmd_dispatch(root: Path, args: list[str]) -> None:
     model_cmd = ["bash", str(SCRIPT_DIR / "resolve-model-tier.sh"), "--agent", agent]
     intensity_cmd = ["bash", str(SCRIPT_DIR / "resolve-intensity.sh"), "--agent", agent]
     if command:
+        model_cmd.extend(["--command", command])
         intensity_cmd.extend(["--command", command])
     if skill:
         intensity_cmd.extend(["--skill", skill])
@@ -320,8 +322,9 @@ def cmd_dispatch(root: Path, args: list[str]) -> None:
         "expiresAt": now + ttl_seconds,
         "consumedAt": None,
     }
-    out_path = root / DISPATCH_PREFLIGHT_PATH
-    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_dir = root / DISPATCH_PREFLIGHT_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"{dispatch_id}.json"
     out_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     emit(
         {

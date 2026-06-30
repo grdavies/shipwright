@@ -64,30 +64,30 @@ consistency-only mode (R36c), so the binding defects GAP-039/GAP-040 are not gat
 
 ### 4. signal_context capture + state isolation + episodic model — M
 
-- [ ] 4.1 Entry-time `signal_context` snapshot per orchestrator (TR3)
+- [x] 4.1 Entry-time `signal_context` snapshot per orchestrator (TR3)
   - **File:** orchestrator entry hooks, `core/sw-reference/adoption-call-site-map.md`
   - **Expected:** snapshot + owner captured **before** `plan validate` (debug: signal type + relatedFiles + Sentry ref; feedback: sourceClass + invocation + route; doc: tier + doc_path) so the gate's anti-spoof/divergence check (022 R6) applies; owner is **session/ephemeral** for debug/feedback (R37b).
   - **R-IDs:** TR3, R37
-- [ ] 4.2 Cross-orchestrator state isolation (TR6, R37e)
+- [x] 4.2 Cross-orchestrator state isolation (TR6, R37e)
   - **File:** run-dir namespacing (`sw-debug-runs/`, `sw-feedback-runs/`), `.sw/layout.md`, `core/sw-reference/layout.md`
   - **Expected:** durable/scratch artifacts namespaced by orchestrator + runId; debug/feedback isolation is **ephemeral per-invocation** scratch (abandoned on terminal halt, no crash-resume checkpoint, no shared-state writes); `cross-orchestrator-state-isolation` — a debug/feedback run cannot mutate a deliver run's state or selector output.
   - **R-IDs:** R37
-- [ ] 4.3 Episodic non-deliver run model + no durable resume (R37, R37a–d)
+- [x] 4.3 Episodic non-deliver run model + no durable resume (R37, R37a–d)
   - **File:** `scripts/test/run-fanout-fixtures.sh`
   - **Expected:** `non-deliver-episodic-no-durable-resume` — `/sw-debug`/`/sw-feedback` validate the plan at entry, surface R21 into the **existing episodic run/handoff summary**, expose **no** durable run-record/crash-resume; parent `resume-revalidates-planpolicy-mode` is **N/A** for them (deliver/doc-handoff-scoped); session-scoped budget counters still driver-enforced within the run (R37c).
   - **R-IDs:** R37
 
 ### 5. `/sw-debug` adoption (wire-only, episodic) — M
 
-- [ ] 5.1 Debug proposal-site wiring + canonical parity (TR4a, R18, R20)
+- [x] 5.1 Debug proposal-site wiring + canonical parity (TR4a, R18, R20)
   - **File:** `core/commands/sw-debug.md`, `core/skills/debug/SKILL.md`
   - **Expected:** read `orchestration.planPolicy`; when `proposed`, propose single-tier plan → `wave.sh plan validate` → selector → persist → drive from stored plan (kernel re-check each `advance`); `canonical` byte-identical. `debug-canonical-parity`, `debug-proposed-routes-gate-selector`.
   - **R-IDs:** R18, R20
-- [ ] 5.2 Preserve debug legitimate halts (R19)
+- [x] 5.2 Preserve debug legitimate halts (R19)
   - **File:** `core/commands/sw-debug.md`, debug guideline floor
   - **Expected:** after **one** human route confirmation continue in-turn (DBG-A1) but the route-confirm and RCA human-decision halts are **driver-asserted** (a plan omitting/reordering them is rejected fail-closed); `debug-route-confirm-halt-required`, `debug-rca-human-decision-halt-required`.
   - **R-IDs:** R19
-- [ ] 5.3 Sentry ingestion redaction + budgets + surfacing + parity (R21, R22, R23)
+- [x] 5.3 Sentry ingestion redaction + budgets + surfacing + parity (R21, R22, R23)
   - **File:** `core/skills/debug/SKILL.md`, ingestion path, `scripts/test/run-fanout-fixtures.sh`
   - **Expected:** Sentry bodies redacted before any persist/handoff incl. DBG-A2 concurrency; `debug-proposed-sentry-enrich-redact-before-preflight`; driver-enforced budget/no-progress `debug-budget-trip` (R22); chosen plan + capability set + rejections in episodic summary `debug-r21-surfacing` (R21); orchestrator-applicable 022 TR7 subset green `debug-022-parity-under-proposed` (R23).
   - **R-IDs:** R21, R22, R23
@@ -97,41 +97,41 @@ consistency-only mode (R36c), so the binding defects GAP-039/GAP-040 are not gat
 > **Prerequisite (A2):** Phase 9 (dispatch-binding scaffolding) MUST be green before this phase begins — the
 > doc-review persona panel runs on the canonical path even in consistency-only mode (R36c).
 
-- [ ] 6.1 Doc proposal-site wiring + canonical parity + probe outcome (TR4b, R18, R20, R36c)
+- [x] 6.1 Doc proposal-site wiring + canonical parity + probe outcome (TR4b, R18, R20, R36c)
   - **File:** `core/commands/sw-doc.md`
   - **Expected:** `/sw-doc` defaults **consistency-only** (009 audit: no routine yields) — manifest + selector + canonical wiring land; a probe showing latitude flips to full adoption (recorded in task notes). `doc-canonical-parity`; `doc-proposed-routes-gate-selector` only if probe shows latitude (else N/A per R36d).
   - **R-IDs:** R18, R20
-- [ ] 6.2 Preserve doc-review + afterTasks halts (R19)
+- [x] 6.2 Preserve doc-review + afterTasks halts (R19)
   - **File:** `core/commands/sw-doc.md`, doc guideline floor
   - **Expected:** doc-review `manual`/`gated_auto` trade-off halts fire before any freeze step; `doc.afterTasks` (`stop`/`confirm`/`auto`) boundary preserved; halts proven on the canonical path for consistency-only. `doc-review-halt-{manual,gated-auto}-required`, `doc-afterTasks-checkpoint-required`. Deliver handoff reuses 023 wiring unchanged. **Assumes Phase 9 parallel preflight + command-tier binding are green** so the parallel persona panel dispatches without single-consume / down-tier defects (A2 R38/R39).
   - **R-IDs:** R19
 
 ### 7. `/sw-feedback` adoption (untrusted-signal chokepoint, episodic) — M
 
-- [ ] 7.1 Feedback proposal-site wiring + canonical parity (TR4c, R18, R20)
+- [x] 7.1 Feedback proposal-site wiring + canonical parity (TR4c, R18, R20)
   - **File:** `core/commands/sw-feedback.md`, `core/skills/feedback/SKILL.md`
   - **Expected:** read `planPolicy`; propose single-tier plan → gate → selector → persist → drive (episodic, R37); `canonical` byte-identical. `feedback-canonical-parity`, `feedback-proposed-routes-gate-selector`.
   - **R-IDs:** R18, R20
-- [ ] 7.2 Untrusted-signal hard halt + redact-before-record + human-confirm (R19, R23)
+- [x] 7.2 Untrusted-signal hard halt + redact-before-record + human-confirm (R19, R23)
   - **File:** `core/commands/sw-feedback.md`, ingestion path
   - **Expected:** `invocation ∈ {hook, monitor}` (`≠ human`) → **hard halt**, never auto-dispatch; full signal JSON redacted (`memory-redact.sh`) and wrapped `untrusted_payload` before any route record/memory write; routed dispatch requires persisted human-ack keyed by signalId. `feedback-hook-trigger-no-autodispatch-under-proposed`, `feedback-proposed-human-confirm-before-dispatch`, `feedback-proposed-inbound-redact-fail-closed`.
   - **R-IDs:** R19, R23
-- [ ] 7.3 Feedback budgets + surfacing + parity (R21, R22, R23)
+- [x] 7.3 Feedback budgets + surfacing + parity (R21, R22, R23)
   - **File:** `core/skills/feedback/SKILL.md`, `scripts/test/run-fanout-fixtures.sh`
   - **Expected:** driver-enforced budget/no-progress `feedback-budget-trip` (R22); chosen plan + capability set + rejections in episodic summary `feedback-r21-surfacing` (R21); orchestrator-applicable 022 TR7 subset green `feedback-022-parity-under-proposed` (R23).
   - **R-IDs:** R21, R22, R23
 
 ### 8. Docs + emitter propagation + freshness — M
 
-- [ ] 8.1 Per-orchestrator command/skill/rule prose (R18, R19, R37, R38, R39)
+- [x] 8.1 Per-orchestrator command/skill/rule prose (R18, R19, R37, R38, R39)
   - **File:** `core/commands/sw-debug.md`, `core/commands/sw-doc.md`, `core/commands/sw-feedback.md`, `core/skills/conductor/SKILL.md`, `core/skills/debug/SKILL.md`, `core/skills/feedback/SKILL.md`, `core/skills/doc-review/SKILL.md`, `core/rules/sw-naming.mdc`, `core/rules/sw-conductor.mdc`, `core/rules/sw-subagent-dispatch.mdc`
   - **Expected:** Plan-policy adoption subsection per command (read `planPolicy`; route single-tier plan via gate + selector by reference; preserved halts; R21 surfacing; default `canonical`); conductor adoption-table extension distinguishing **run durability** (`durable` deliver/doc→deliver vs `episodic` debug/feedback) and **adoption mode** (`full` vs `consistency-only`); one-line naming/conductor notes (episodic adoption; `/sw-doc` defaults consistency-only). **A2 doc deltas:** `sw-doc.md` delegated-Task binding states each parallel persona needs a **unique** `--dispatch-id` and tier resolved via `--command <child-slug>` (R39); `doc-review/SKILL.md` step 7 documents N preflights (unique ids) before N parallel Task spawns (R38); `sw-subagent-dispatch.mdc` KD8 points at the R39b precedence as mechanical (not prose-only). No gate/selector duplication.
   - **R-IDs:** R18, R19, R37, R38, R39
-- [ ] 8.2 Guides + CONTRIBUTING + layout (R35, R36, R38, R39)
+- [x] 8.2 Guides + CONTRIBUTING + layout (R35, R36, R38, R39)
   - **File:** `docs/guides/configuration.md`, `docs/guides/workflows.md`, `docs/guides/commands.md`, `README.md`, `docs/guides/getting-started.md`, `CONTRIBUTING.md`, `.sw/layout.md`, `core/sw-reference/layout.md`
   - **Expected:** list all four orchestrators as flag consumers (default `canonical`; flip remains 023-metric-gated); state R35 (inconclusive N = non-positive → program exit) and R36 (consistency-only via variance probe; `/sw-doc` default; pack deferred when `canonical ≡ proposed`); named per-orchestrator + amendment fixture suites with R-ID mapping; episodic ephemeral scratch documented separately from deliver durable run-state. **A2:** `.sw/layout.md` + `core/sw-reference/layout.md` document the keyed dispatch-preflight directory path + per-record TTL/consume semantics (R38); `CONTRIBUTING.md` adds the seven A2 dispatch/fan-out fixtures with R-ID mapping (R38/R39). **Do not** touch `INDEX.md`/`COMPLETION-LOG.md`/`GAP-BACKLOG.md`.
   - **R-IDs:** R35, R36, R38, R39
-- [ ] 8.3 Regenerate both dist trees; freshness gate green (TR9)
+- [x] 8.3 Regenerate both dist trees; freshness gate green (TR9)
   - **File:** `dist/cursor/**`, `dist/claude-code/**` via `python3 -m sw generate --all`
   - **Expected:** command/skill/rule/schema/layout deltas propagated; `emitter-freshness-stale-fails` green; `dist/` parity with `core/`.
   - **R-IDs:** TR9, SC1
