@@ -45,8 +45,8 @@
 | 041 | self-improving-loop | [041-prd-self-improving-loop.md](041-self-improving-loop/041-prd-self-improving-loop.md) (frozen) | [tasks](041-self-improving-loop/tasks-041-self-improving-loop.md) (frozen) | not-started |
 | 042 | cross-platform-python-standardization | [042-prd-cross-platform-python-standardization.md](042-cross-platform-python-standardization/042-prd-cross-platform-python-standardization.md) (frozen) | [tasks](042-cross-platform-python-standardization/tasks-042-cross-platform-python-standardization.md) (frozen) | in-progress |
 | 043 | issue-backed-planning-store | [043-prd-issue-backed-planning-store.md](043-issue-backed-planning-store/043-prd-issue-backed-planning-store.md) (frozen) | [tasks](043-issue-backed-planning-store/tasks-043-issue-backed-planning-store.md) (frozen) | not-started |
-| 044 | issue-store-migration | [044-prd-issue-store-migration.md](044-issue-store-migration/044-prd-issue-store-migration.md) (frozen) | — | not-started |
-| 045 | issue-native-dev-tracking | [045-prd-issue-native-dev-tracking.md](045-issue-native-dev-tracking/045-prd-issue-native-dev-tracking.md) (frozen) | — | not-started |
+| 044 | issue-store-migration | [044-prd-issue-store-migration.md](044-issue-store-migration/044-prd-issue-store-migration.md) (frozen) | [tasks](044-issue-store-migration/tasks-044-issue-store-migration.md) (frozen) | not-started |
+| 045 | issue-native-dev-tracking | [045-prd-issue-native-dev-tracking.md](045-issue-native-dev-tracking/045-prd-issue-native-dev-tracking.md) (frozen) | [tasks](045-issue-native-dev-tracking/tasks-045-issue-native-dev-tracking.md) (frozen) | not-started |
 | 046 | issue-store-planning-graph | [046-prd-issue-store-planning-graph.md](046-issue-store-planning-graph/046-prd-issue-store-planning-graph.md) (frozen) | — | not-started |
 | 047 | jira-issue-store-adapter | [047-prd-jira-issue-store-adapter.md](047-jira-issue-store-adapter/047-prd-jira-issue-store-adapter.md) (frozen) | — | not-started |
 
