@@ -174,6 +174,7 @@
 * merge phase test-harness-build-chain-docs-migration-enforcement-flip-xl into feat/cross-platform-python-standardization (af526c2) <!-- sw-deliver:test-harness-build-chain-docs-migration-enforcement-flip-xl -->
 * merge phase foundation-config-provider-abstraction-capability-token-probes-region-disposition-matrix-l into feat/issue-backed-planning-store (9a85522) <!-- sw-deliver:foundation-config-provider-abstraction-capability-token-probes-region-disposition-matrix-l -->
 * merge phase core-artifact-store-identification-canonical-serialization-l into feat/issue-backed-planning-store (f22277f) <!-- sw-deliver:core-artifact-store-identification-canonical-serialization-l -->
+* merge phase freeze-materialization-brainstorm-durability-resilience-l into feat/issue-backed-planning-store (69d2398) <!-- sw-deliver:freeze-materialization-brainstorm-durability-resilience-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
