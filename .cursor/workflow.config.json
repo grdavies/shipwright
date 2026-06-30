@@ -3,7 +3,7 @@
   "defaultBaseBranch": "main",
   "stateFile": ".git/shipwright.json",
   "worktree": {
-    "parallelCeiling": 4,
+    "parallelCeiling": 10,
     "scaffold": {
       "portRangeStart": 9100,
       "portRangeEnd": 9199,
@@ -12,8 +12,8 @@
     }
   },
   "intraPhase": {
-    "parallelBudget": 2,
-    "harnessLimit": 8
+    "parallelBudget": 4,
+    "harnessLimit": 10
   },
   "agentsFile": "AGENTS.md",
   "planningDir": "docs/prds",
@@ -27,9 +27,9 @@
     "autonomy": "auto"
   },
   "verify": {
-    "lint": "python3 scripts/model-routing-check.py",
-    "typecheck": "python3 scripts/model-tier-check.py",
-    "test": "python3 scripts/test/_runner.py verify"
+    "lint": "python3 scripts/model-routing-check.py . .cursor/workflow.config.json core/sw-reference/model-routing.defaults.json core/sw-reference/communication-routing.defaults.json",
+    "typecheck": "python3 scripts/model-tier-check.py . .cursor/workflow.config.json core/agents",
+    "test": "PYTHONPATH=scripts python3 scripts/test/_runner.py verify"
   },
   "ci": {
     "prTestPlanManifest": "core/sw-reference/pr-test-plan.manifest.json"
