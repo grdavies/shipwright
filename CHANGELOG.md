@@ -171,6 +171,7 @@
 * merge phase host-layer-gh-curl-elimination-l into feat/cross-platform-python-standardization (adc7d1b) <!-- sw-deliver:host-layer-gh-curl-elimination-l -->
 * merge phase hooks-security-filters-providers-l into feat/cross-platform-python-standardization (86f9471) <!-- sw-deliver:hooks-security-filters-providers-l -->
 * merge phase remaining-production-port-consolidations-l into feat/cross-platform-python-standardization (58a4edf) <!-- sw-deliver:remaining-production-port-consolidations-l -->
+* merge phase test-harness-build-chain-docs-migration-enforcement-flip-xl into feat/cross-platform-python-standardization (af526c2) <!-- sw-deliver:test-harness-build-chain-docs-migration-enforcement-flip-xl -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
