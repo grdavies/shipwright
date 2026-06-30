@@ -20,7 +20,11 @@ Single-tier orchestrator-step plan proposal, validation, and capability selectio
 (`triage`, `normalize`, `enrich`, `rca`, `route-confirm-halt`, `route`, `rca-human-decision-halt`, `record`).
 
 Under `proposed`, Sentry bodies MUST be redacted via `bash scripts/memory-redact.sh` before any persist or
-handoff (including DBG-A2 concurrent enrich + preflight). Fail-closed on redaction error.
+handoff (including DBG-A2 concurrent enrich + preflight).  Fail-closed on redaction error.
+
+Under `proposed`, R21 surfacing writes `chosenPlan`, `capabilitySet`, and `planRejections` to
+`.cursor/sw-debug-runs/<runId>/episodic-run-summary.json` (fixture: `debug-r21-surfacing`).
+Driver-enforced budget/no-progress trips after repeated plan rejections (fixture: `debug-budget-trip`).
 
 ## Phase 0 — Triage
 

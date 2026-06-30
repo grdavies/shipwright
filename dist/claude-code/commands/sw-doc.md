@@ -50,6 +50,35 @@ Each remains independently runnable.
 
 ## Procedure
 
+### Plan-policy adoption (PRD 024 — consistency-only default, R36c)
+
+Read `orchestration.planPolicy` from `.cursor/workflow.config.json` (default **`canonical`**).
+
+`/sw-doc` defaults to **consistency-only** adoption (009 audit: no routine yields). Run the variance probe once at
+authoring time:
+
+```bash
+python3 scripts/variance_probe.py . probe doc
+```
+
+When `adoptionMode` is `consistency-only` (`canonical ≡ proposed`, `proposedPackDeferred: true`):
+
+- **`canonical`:** the tier-gated chain below is unchanged — no orchestrator-step plan artifacts are persisted.
+  Manifest + selector + canonical-parity wiring land; the doc guideline pack’s **canonical** chain and halt floors
+  (`doc-review-halt-manual`, `doc-review-halt-gated-auto`, `afterTasks-checkpoint`) are enforced by
+  `bash scripts/wave.sh plan validate --tier orchestrator --orchestrator-type doc`.
+- **`proposed`:** **not built** for consistency-only — all `*-proposed-*` and `*-022-parity-under-proposed` fixtures
+  are N/A (R36d). Halt preservation (R19) is proven on the **canonical** path via the doc guideline pack, not a
+  `proposed` surface.
+
+When a probe shows plan-shape latitude (`adoptionMode: full`), full TR1–TR7 adoption applies (record in task
+notes); wire the proposed entry path per `core/sw-reference/adoption-call-site-map.md`.
+
+**Preserved halts (R19):** `doc-review-halt-manual` and `doc-review-halt-gated-auto` fire before freeze when
+`doc_review_mode` requires them; `afterTasks-checkpoint` is mandatory before any `/sw-deliver run` dispatch.
+DOC-A1 in-turn `auto` continuation applies **after** the afterTasks boundary only. Parallel persona panel
+dispatches require Phase 9 keyed preflight + command-tier binding (A2 R38/R39).
+
 ### Docs-on-a-branch (R28–R29)
 
 Before step 1 when starting a **new** documentation effort:
@@ -208,6 +237,10 @@ Branch protection is probed via host API — ambiguous detection fails closed to
 ## Delegated Task binding contract
 
 Before any delegated Task spawn from `/sw-doc`:
+
+For `/sw-doc-review` persona panel dispatches, each parallel persona MUST use a **unique** `--dispatch-id`
+(R38/R39) and resolve tier via `--command <child-slug>` / `--agent <persona-id>` per
+`scripts/resolve-model-tier.sh` — never reuse one preflight record across N Tasks.
 
 1. `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-doc --skill <active-skill>`
 2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-doc --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>]`

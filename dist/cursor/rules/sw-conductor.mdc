@@ -16,6 +16,11 @@ capability:
 Load `skills/conductor/SKILL.md` for the full contract. These rules are the always-on enforcement subset
 (R1, R3).
 
+## Episodic vs durable runs (PRD 024 R37)
+
+- **Durable:** `/sw-deliver` (+ `/sw-doc` → deliver handoff) owns PRD 007/013 run-state.
+- **Episodic:** `/sw-debug` and `/sw-feedback` validate at entry only; no deliver-scoped crash-resume.
+
 ## Invoke primitives — never re-implement state
 
 - Route every plan, provision, collect, merge, lock, and report action through `scripts/wave.sh` /

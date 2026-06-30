@@ -590,3 +590,16 @@ with PRD-023 pilot guards on `/sw-deliver`. Invalid proposals fail closed to the
 Two-tier persistence: wave batching → shared deliver run-state (conductor-only); phase step plans → per-phase
 run dir. See [configuration](configuration.md#orchestration-plan-policy-orchestrationplanpolicy) and
 [call-site map](../prds/022-kernel-classification-and-plan-validation/call-site-map.md).
+
+## Orchestrator plan-policy fan-out (PRD 024)
+
+All four orchestrators (`/sw-deliver`, `/sw-debug`, `/sw-doc`, `/sw-feedback`) consume
+`orchestration.planPolicy`. Default `canonical` is byte-identical to pre-024 behavior.
+
+- **Durable path:** `/sw-deliver` and `/sw-doc` → `/sw-deliver run` handoff use deliver-scoped durable state.
+- **Episodic path:** `/sw-debug` and `/sw-feedback` use per-invocation scratch under `.cursor/sw-debug-runs/`
+  and `.cursor/sw-feedback-runs/` (abandoned on terminal halt; no crash-resume).
+- **Consistency-only:** `/sw-doc` defers proposed guideline packs when `canonical ≡ proposed` (variance probe).
+
+See `docs/guides/configuration.md` (R35–R36) and `core/sw-reference/layout.md` (scratch + preflight paths).
+

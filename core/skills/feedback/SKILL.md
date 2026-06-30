@@ -23,7 +23,11 @@ Single-tier orchestrator-step plan proposal, validation, and capability selectio
 (`normalize`, `redact`, `dedup`, `route`, `hook-trigger-halt`, `human-confirm-halt`, `handoff`, `record`).
 
 Under `proposed`, inbound signal JSON MUST be redacted via `bash scripts/memory-redact.sh` before any persist,
-route record, or handoff. Fail-closed on redaction error. Hook/monitor `invocation` values hard-halt — never
+route record, or handoff.  Fail-closed on redaction error.
+
+Under `proposed`, R21 surfacing writes `chosenPlan`, `capabilitySet`, and `planRejections` to
+`.cursor/sw-feedback-runs/<runId>/episodic-run-summary.json` (fixture: `feedback-r21-surfacing`).
+Driver-enforced budget/no-progress trips after repeated plan rejections (fixture: `feedback-budget-trip`). Hook/monitor `invocation` values hard-halt — never
 auto-dispatch without human confirmation.
 
 ## Phase 1 — Normalize + redact (U1)

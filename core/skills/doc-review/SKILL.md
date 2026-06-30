@@ -131,7 +131,10 @@ bash scripts/dispatch-check.sh --agent "$AGENT" --command sw-doc-review --skill 
 # Task spawn MUST use model: <MODEL_ID> — not inherit
 ```
 
-Repeat for every selected persona. Halt on preflight exit 20; do not spawn on unresolved `inherit`.
+For **N parallel persona Tasks**, run **N independent preflights** with **unique** `--dispatch-id` values
+(one record per persona under `.cursor/hooks/state/task-dispatch-preflight/<dispatch-id>.json`);
+consuming one record leaves the others valid (R38). Repeat for every selected persona. Halt on preflight
+exit 20; do not spawn on unresolved `inherit`.
 
 1. Detect doc type from path (see Doc types).
 2. **Decision-record draft** (`docs/decisions/<n>-<slug>.md`): run all eight personas (`--all` equivalent); record
@@ -143,10 +146,11 @@ Repeat for every selected persona. Halt on preflight exit 20; do not spawn on un
    override.
 5. Resolve tier — if Quick, report "no panel for Quick" and stop.
 6. **PRD draft:** run `bash scripts/doc-review-select.sh --context-json '<signal_context>'`; announce activation record (core + any fired gates + matched signals).
-7. Read full document (no section splitting) — each selected persona is a parallel sub-agent (R28/R31).
-8. Each agent returns JSON per `references/findings-schema.json`.
-9. Synthesizer follows `references/synthesis.md`.
-10. Apply `safe_auto` silently; gate `gated_auto` and `manual`.
+7. **Parallel panel (R38):** for each selected persona, run a **unique** `dispatch preflight` + `dispatch-check` (see Dispatch binding) **before** spawning that persona Task — never reuse a single preflight across N spawns.
+8. Read full document (no section splitting) — each selected persona is a parallel sub-agent (R28/R31).
+9. Each agent returns JSON per `references/findings-schema.json`.
+10. Synthesizer follows `references/synthesis.md`.
+11. Apply `safe_auto` silently; gate `gated_auto` and `manual`.
 
 ## Invariants (non-negotiable constraint class)
 

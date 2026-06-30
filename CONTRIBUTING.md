@@ -60,7 +60,25 @@ bash scripts/test/run-plan-persist-fixtures.sh
 bash scripts/test/run-plan-killswitch-fixtures.sh
 bash scripts/test/run-plan-proposed-parity-fixtures.sh
 bash scripts/test/run-pilot-fixtures.sh
+bash scripts/test/run-fanout-fixtures.sh
+bash scripts/test/run-dispatch-foundation-fixtures.sh
 bash scripts/test/run-ux-polish-fixtures.sh
+```
+
+**PRD 024 fan-out fixtures** (`run-fanout-fixtures.sh`): program gate (R35), consistency-only probe (R36),
+per-orchestrator canonical parity, debug/doc/feedback halts, R21 surfacing, budget trip, 022-parity subset.
+
+**A2 dispatch binding** (`run-dispatch-foundation-fixtures.sh`, R38/R39):
+
+| Fixture | R-ID |
+| --- | --- |
+| `dispatch-preflight-parallel-n-personas` | R38 |
+| `dispatch-preflight-ambiguous-agent-fail-closed` | R38 |
+| `dispatch-command-tier-inherits-routing` | R39 |
+| `dispatch-command-tier-sw-tasks` | R39 |
+| `dispatch-agent-explicit-override-wins` | R39b |
+| `dispatch-preflight-command-model-parity` | R39 |
+| `doc-review-parallel-panel-binding` (in fanout suite) | R38, R39 |
 ```
 
 **After editing `core/`** (commands, skills, rules, `kernel-classification.*`, `guidelines.*`, or

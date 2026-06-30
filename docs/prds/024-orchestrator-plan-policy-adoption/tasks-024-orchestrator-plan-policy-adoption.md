@@ -123,15 +123,15 @@ consistency-only mode (R36c), so the binding defects GAP-039/GAP-040 are not gat
 
 ### 8. Docs + emitter propagation + freshness — M
 
-- [ ] 8.1 Per-orchestrator command/skill/rule prose (R18, R19, R37, R38, R39)
+- [x] 8.1 Per-orchestrator command/skill/rule prose (R18, R19, R37, R38, R39)
   - **File:** `core/commands/sw-debug.md`, `core/commands/sw-doc.md`, `core/commands/sw-feedback.md`, `core/skills/conductor/SKILL.md`, `core/skills/debug/SKILL.md`, `core/skills/feedback/SKILL.md`, `core/skills/doc-review/SKILL.md`, `core/rules/sw-naming.mdc`, `core/rules/sw-conductor.mdc`, `core/rules/sw-subagent-dispatch.mdc`
   - **Expected:** Plan-policy adoption subsection per command (read `planPolicy`; route single-tier plan via gate + selector by reference; preserved halts; R21 surfacing; default `canonical`); conductor adoption-table extension distinguishing **run durability** (`durable` deliver/doc→deliver vs `episodic` debug/feedback) and **adoption mode** (`full` vs `consistency-only`); one-line naming/conductor notes (episodic adoption; `/sw-doc` defaults consistency-only). **A2 doc deltas:** `sw-doc.md` delegated-Task binding states each parallel persona needs a **unique** `--dispatch-id` and tier resolved via `--command <child-slug>` (R39); `doc-review/SKILL.md` step 7 documents N preflights (unique ids) before N parallel Task spawns (R38); `sw-subagent-dispatch.mdc` KD8 points at the R39b precedence as mechanical (not prose-only). No gate/selector duplication.
   - **R-IDs:** R18, R19, R37, R38, R39
-- [ ] 8.2 Guides + CONTRIBUTING + layout (R35, R36, R38, R39)
+- [x] 8.2 Guides + CONTRIBUTING + layout (R35, R36, R38, R39)
   - **File:** `docs/guides/configuration.md`, `docs/guides/workflows.md`, `docs/guides/commands.md`, `README.md`, `docs/guides/getting-started.md`, `CONTRIBUTING.md`, `.sw/layout.md`, `core/sw-reference/layout.md`
   - **Expected:** list all four orchestrators as flag consumers (default `canonical`; flip remains 023-metric-gated); state R35 (inconclusive N = non-positive → program exit) and R36 (consistency-only via variance probe; `/sw-doc` default; pack deferred when `canonical ≡ proposed`); named per-orchestrator + amendment fixture suites with R-ID mapping; episodic ephemeral scratch documented separately from deliver durable run-state. **A2:** `.sw/layout.md` + `core/sw-reference/layout.md` document the keyed dispatch-preflight directory path + per-record TTL/consume semantics (R38); `CONTRIBUTING.md` adds the seven A2 dispatch/fan-out fixtures with R-ID mapping (R38/R39). **Do not** touch `INDEX.md`/`COMPLETION-LOG.md`/`GAP-BACKLOG.md`.
   - **R-IDs:** R35, R36, R38, R39
-- [ ] 8.3 Regenerate both dist trees; freshness gate green (TR9)
+- [x] 8.3 Regenerate both dist trees; freshness gate green (TR9)
   - **File:** `dist/cursor/**`, `dist/claude-code/**` via `python3 -m sw generate --all`
   - **Expected:** command/skill/rule/schema/layout deltas propagated; `emitter-freshness-stale-fails` green; `dist/` parity with `core/`.
   - **R-IDs:** TR9, SC1
