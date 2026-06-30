@@ -8,9 +8,33 @@ FAIL=0
 ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+CFG_BACKUP=""
+if [[ -f "$ROOT/.cursor/workflow.config.json" ]]; then
+  CFG_BACKUP="$TMP/workflow.config.json.bak"
+  cp "$ROOT/.cursor/workflow.config.json" "$CFG_BACKUP"
+fi
+restore_config() {
+  if [[ -n "$CFG_BACKUP" ]]; then
+    cp "$CFG_BACKUP" "$ROOT/.cursor/workflow.config.json"
+  else
+    rm -f "$ROOT/.cursor/workflow.config.json"
+  fi
+}
+trap 'restore_config; rm -rf "$TMP"' EXIT
+
+write_in_repo_public_config() {
+  python3 - <<PY
+import json
+from pathlib import Path
+p = Path("$ROOT/.cursor/workflow.config.json")
+p.parent.mkdir(parents=True, exist_ok=True)
+cfg = {"version": 1, "planning": {"store": {"backend": "in-repo-public"}}}
+p.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+PY
+}
 
 # --- store-interface-in-repo-default ---
+write_in_repo_public_config
 if OUT=$(python3 "$PY" --root "$ROOT" resolve-backend) &&    echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['backend']=='in-repo-public'"; then
   ok "store-interface-in-repo-default:default-backend"
 else
@@ -79,6 +103,7 @@ else
 fi
 
 # --- store-log-id-hash-backend ---
+write_in_repo_public_config
 SECRET_BODY='token ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA tail'
 if LOGS=$(python3 "$PY" --root "$ROOT" put --unit-id log-test --body-path docs/prds/_fixture-store/log.md --content "$SECRET_BODY" 2>/tmp/store-log.stderr); then
   if grep -q 'planningStore' /tmp/store-log.stderr && grep -q '"hash"' /tmp/store-log.stderr && ! grep -q 'ghp_' /tmp/store-log.stderr; then

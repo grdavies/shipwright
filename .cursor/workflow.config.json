@@ -314,7 +314,7 @@
   },
   "planning": {
     "store": {
-      "backend": "in-repo-public"
+      "backend": "memory"
     },
     "visibilityProfile": "all-private",
     "privacyAck": {
