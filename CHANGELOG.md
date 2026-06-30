@@ -155,6 +155,7 @@
 * merge phase emitter-dist-parity-s into feat/planning-feedback-lifecycle (d0c1e33) <!-- sw-deliver:emitter-dist-parity-s -->
 * merge phase doc-impact-acceptance-no-regression-m into feat/planning-feedback-lifecycle (18ae610) <!-- sw-deliver:doc-impact-acceptance-no-regression-m -->
 * merge phase deliver-conductor-completion-amendment-a1-l into feat/planning-feedback-lifecycle (7672d9e) <!-- sw-deliver:deliver-conductor-completion-amendment-a1-l -->
+* merge phase gap-lifecycle-doc-format-amendment-a2-m into feat/planning-feedback-lifecycle (2b72723) <!-- sw-deliver:gap-lifecycle-doc-format-amendment-a2-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
