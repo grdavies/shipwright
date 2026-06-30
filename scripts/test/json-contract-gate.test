@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# JSON contract parity for ported check-gate.py (PRD 042 R7).
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+GATE_PY="$ROOT/scripts/check-gate.py"
+GATE_SH="$ROOT/scripts/check-gate.sh"
+export GITHUB_TOKEN=gh_fixture_token_for_tests
+export SW_HOST_FIXTURE="${SW_HOST_FIXTURE:-green}"
+export SW_GATE_NOW=1577838000
+FAIL=0
+
+run_case() {
+  local name="$1" fixture="$2" expect_ec="$3" expect_verdict="$4"
+  export SW_GATE_FIXTURE="$fixture"
+  export SW_HOST_FIXTURE="$fixture"
+  set +e
+  OUT=$(python3 "$GATE_PY" 42 2>/dev/null)
+  EC=$?
+  set -e
+  VERDICT=$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('verdict',''))" "$OUT")
+  if [ "$EC" -eq "$expect_ec" ] && [ "$VERDICT" = "$expect_verdict" ]; then
+    echo "OK  $name exit=$EC verdict=$VERDICT"
+  else
+    echo "FAIL $name expected exit=$expect_ec verdict=$expect_verdict got exit=$EC verdict=$VERDICT"
+    echo "$OUT"
+    FAIL=1
+  fi
+  # no jq — python semantic parse only
+  python3 -c "import json,sys; d=json.loads(sys.argv[1]); assert 'verdict' in d and 'reason' in d" "$OUT" || FAIL=1
+}
+
+run_case green green 0 green
+run_case yellow-pending yellow-pending 10 yellow
+run_case red-fail red-fail 20 red
+run_case advisory-fail advisory-fail 0 green
+run_case blocked-empty blocked-empty 30 blocked
+
+exit "$FAIL"

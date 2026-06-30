@@ -65,7 +65,7 @@
       "disposition": "port",
       "target": "scripts/check-gate.py",
       "phase": 3,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/cleanup.sh",
@@ -525,9 +525,9 @@
     {
       "path": "scripts/reconcile-status.sh",
       "disposition": "port",
-      "target": "scripts/reconcile-status.py",
+      "target": "scripts/reconcile.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/redaction-guard.sh",
@@ -1724,7 +1724,7 @@
       "disposition": "port",
       "target": "scripts/wave.py",
       "phase": 3,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/worktree.sh",
