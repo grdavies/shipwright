@@ -173,6 +173,7 @@
 * merge phase remaining-production-port-consolidations-l into feat/cross-platform-python-standardization (58a4edf) <!-- sw-deliver:remaining-production-port-consolidations-l -->
 * merge phase test-harness-build-chain-docs-migration-enforcement-flip-xl into feat/cross-platform-python-standardization (af526c2) <!-- sw-deliver:test-harness-build-chain-docs-migration-enforcement-flip-xl -->
 * merge phase quality-harness-contract-s-m-advisory-only-scaffold-no-default-behavior-change into feat/loop-quality-gates (dea7070) <!-- sw-deliver:quality-harness-contract-s-m-advisory-only-scaffold-no-default-behavior-change -->
+* merge phase refactor-step-built-in-provider-m-l-enforced-consideration-signal-gated-action into feat/loop-quality-gates (e3ddc8b) <!-- sw-deliver:refactor-step-built-in-provider-m-l-enforced-consideration-signal-gated-action -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
