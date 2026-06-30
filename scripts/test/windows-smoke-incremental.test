@@ -1,20 +1,32 @@
 #!/usr/bin/env python3
-import os, re, subprocess, sys
+"""Incremental Windows smoke bundle (R45) — native Python."""
+from __future__ import annotations
+
+import subprocess
+import sys
 from pathlib import Path
+
 ROOT = Path(__file__).resolve().parent.parent.parent
-env = os.environ.copy(); env["ROOT"]=str(ROOT); env["PYTHONPATH"]=str(ROOT/"scripts")
-_src = """#!/usr/bin/env bash
-set -euo pipefail
-ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l"
-bash "$ROOT/scripts/test/interpreter-probe.test"
-bash "$ROOT/scripts/test/windows-hook-invocation.test"
-bash "$ROOT/scripts/test/json-determinism.test"
-echo "OK  windows-smoke-incremental"
-"""
-src = _src.replace("#!/usr/bin/env bash", "").replace("set -euo pipefail", "")
-src = re.sub(r'ROOT="[^"]*"', 'ROOT="' + str(ROOT) + '"', src, count=1)
-src = src.replace('.sh"', '.py"').replace('bash "', 'python3 "')
-rc = subprocess.run(["bash", "-c", src], cwd=str(ROOT), env=env, shell=False).returncode
-if rc == 0:
+BUNDLE = (
+    "interpreter-probe.test",
+    "windows-hook-invocation.test",
+    "json-determinism.test",
+)
+
+
+def main() -> int:
+    test_dir = ROOT / "scripts" / "test"
+    for name in BUNDLE:
+        completed = subprocess.run(
+            [sys.executable, str(test_dir / name)],
+            cwd=str(ROOT),
+            check=False,
+        )
+        if completed.returncode != 0:
+            return completed.returncode
     print("OK  windows-smoke-incremental")
-raise SystemExit(rc or 0)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

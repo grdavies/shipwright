@@ -1,52 +1,65 @@
 #!/usr/bin/env python3
-import os, re, subprocess, sys
+"""JSON contract parity for ported check-gate.py (PRD 042 R7) — native Python."""
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
 from pathlib import Path
+
 ROOT = Path(__file__).resolve().parent.parent.parent
-env = os.environ.copy(); env["ROOT"]=str(ROOT); env["PYTHONPATH"]=str(ROOT/"scripts")
-_src = """#!/usr/bin/env bash
-# JSON contract parity for ported check-gate.py (PRD 042 R7).
-set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
-GATE_PY="$ROOT/scripts/check-gate.py"
-GATE_SH="$ROOT/scripts/check-gate.py"
-export GITHUB_TOKEN=gh_fixture_token_for_tests
-export SW_HOST_FIXTURE="${SW_HOST_FIXTURE:-green}"
-export SW_GATE_NOW=1577838000
-FAIL=0
+GATE_PY = ROOT / "scripts" / "check-gate.py"
 
-run_case() {
-  local name="$1" fixture="$2" expect_ec="$3" expect_verdict="$4"
-  export SW_GATE_FIXTURE="$fixture"
-  export SW_HOST_FIXTURE="$fixture"
-  set +e
-  OUT=$(python3 "$GATE_PY" 42 2>/dev/null)
-  EC=$?
-  set -e
-  VERDICT=$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('verdict',''))" "$OUT")
-  if [ "$EC" -eq "$expect_ec" ] && [ "$VERDICT" = "$expect_verdict" ]; then
-    echo "OK  $name exit=$EC verdict=$VERDICT"
-  else
-    echo "FAIL $name expected exit=$expect_ec verdict=$expect_verdict got exit=$EC verdict=$VERDICT"
-    echo "$OUT"
-    FAIL=1
-  fi
-  # no jq — python semantic parse only
-  python3 -c "import json,sys; d=json.loads(sys.argv[1]); assert 'verdict' in d and 'reason' in d" "$OUT" || FAIL=1
-}
+CASES = (
+    ("green", "green", 0, "green"),
+    ("yellow-pending", "yellow-pending", 10, "yellow"),
+    ("red-fail", "red-fail", 20, "red"),
+    ("advisory-fail", "advisory-fail", 0, "green"),
+    ("blocked-empty", "blocked-empty", 30, "blocked"),
+)
 
-run_case green green 0 green
-run_case yellow-pending yellow-pending 10 yellow
-run_case red-fail red-fail 20 red
-run_case advisory-fail advisory-fail 0 green
-run_case blocked-empty blocked-empty 30 blocked
 
-exit "$FAIL"
-"""
-src = _src.replace("#!/usr/bin/env bash", "").replace("set -euo pipefail", "")
-src = re.sub(r'ROOT="[^"]*"', 'ROOT="' + str(ROOT) + '"', src, count=1)
-src = src.replace('.sh"', '.py"').replace('bash "', 'python3 "')
-rc = subprocess.run(["bash", "-c", src], cwd=str(ROOT), env=env, shell=False).returncode
-if rc == 0:
-    print("OK  json-contract-gate")
-raise SystemExit(rc or 0)
+def run_case(name: str, fixture: str, expect_ec: int, expect_verdict: str) -> int:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(ROOT / "scripts")
+    env["GITHUB_TOKEN"] = "gh_fixture_token_for_tests"
+    env["SW_GATE_FIXTURE"] = fixture
+    env["SW_HOST_FIXTURE"] = fixture
+    env["SW_GATE_NOW"] = "1577838000"
+    completed = subprocess.run(
+        [sys.executable, str(GATE_PY), "42"],
+        cwd=str(ROOT),
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    try:
+        payload = json.loads(completed.stdout or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+    verdict = payload.get("verdict", "")
+    if completed.returncode != expect_ec or verdict != expect_verdict:
+        print(
+            f"FAIL {name} expected exit={expect_ec} verdict={expect_verdict} "
+            f"got exit={completed.returncode} verdict={verdict}"
+        )
+        if completed.stdout:
+            print(completed.stdout)
+        return 1
+    if "verdict" not in payload or "reason" not in payload:
+        print(f"FAIL {name}: missing verdict/reason keys")
+        return 1
+    print(f"OK  {name} exit={completed.returncode} verdict={verdict}")
+    return 0
+
+
+def main() -> int:
+    fail = 0
+    for case in CASES:
+        fail |= run_case(*case)
+    return fail
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

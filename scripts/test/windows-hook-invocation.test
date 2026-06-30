@@ -1,30 +1,48 @@
 #!/usr/bin/env python3
-import os, re, subprocess, sys
-from pathlib import Path
-ROOT = Path(__file__).resolve().parent.parent.parent
-env = os.environ.copy(); env["ROOT"]=str(ROOT); env["PYTHONPATH"]=str(ROOT/"scripts")
-_src = """#!/usr/bin/env bash
-set -euo pipefail
-ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-hooks-security-filters-providers-l"
-export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
-TMP=$(mktemp -d)
-cat > "$TMP/violation.py" <<'PYIN'
+"""Windows hook launcher smoke (R40) — native Python, no bash/WSL."""
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess
 import sys
-sys.exit(1)
-PYIN
-set +e
-python3 "$ROOT/scripts/_sw/hook_launcher.py" "$TMP/violation.py"
-EC=$?
-set -e
-[ "$EC" -eq 1 ] || { echo FAIL exit; exit 1; }
-test -f "$ROOT/hooks/launcher.cmd"
-rm -rf "$TMP"
-echo "OK  windows-hook-invocation"
-"""
-src = _src.replace("#!/usr/bin/env bash", "").replace("set -euo pipefail", "")
-src = re.sub(r'ROOT="[^"]*"', lambda _m: 'ROOT="' + str(ROOT).replace("\\", "\\\\") + '"', src, count=1)
-src = src.replace('.sh"', '.py"').replace('bash "', 'python3 "')
-rc = subprocess.run(["bash", "-c", src], cwd=str(ROOT), env=env, shell=False).returncode
-if rc == 0:
-    print("OK  windows-hook-invocation")
-raise SystemExit(rc or 0)
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+def main() -> int:
+    scripts = ROOT / "scripts"
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(scripts)
+    tmpdir = Path(tempfile.mkdtemp())
+    try:
+        violation = tmpdir / "violation.py"
+        violation.write_text("import sys\nsys.exit(1)\n", encoding="utf-8")
+        launcher = scripts / "_sw" / "hook_launcher.py"
+        completed = subprocess.run(
+            [sys.executable, str(launcher), str(violation)],
+            cwd=str(ROOT),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        if completed.returncode != 1:
+            print(f"FAIL hook_launcher exit expected 1 got {completed.returncode}")
+            if completed.stdout:
+                print(completed.stdout)
+            if completed.stderr:
+                print(completed.stderr, file=sys.stderr)
+            return 1
+        if not (ROOT / "hooks" / "launcher.cmd").is_file():
+            print("FAIL missing hooks/launcher.cmd")
+            return 1
+        print("OK  windows-hook-invocation")
+        return 0
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

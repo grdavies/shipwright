@@ -1,23 +1,47 @@
 #!/usr/bin/env python3
-import os, re, subprocess, sys
+"""Host adapter parity (R25/R39) — native Python."""
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
 from pathlib import Path
+
 ROOT = Path(__file__).resolve().parent.parent.parent
-env = os.environ.copy(); env["ROOT"]=str(ROOT); env["PYTHONPATH"]=str(ROOT/"scripts")
-_src = """#!/usr/bin/env bash
-set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-export GITHUB_TOKEN=gh_fixture_token_for_tests
-export SW_HOST_FIXTURE=green
-OUT=$(python3 "$ROOT/scripts/host.py" --root "$ROOT" pr-list --head feat/x --base main --state open)
-python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and isinstance(d.get('data'), list)" <<<"$OUT"
-OUT2=$(python3 "$ROOT/scripts/host.py" --root "$ROOT" pr-create --title t --body b --head feat/x --base main)
-python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d['data'].get('number')" <<<"$OUT2"
-echo "OK  host-adapter-parity"
-"""
-src = _src.replace("#!/usr/bin/env bash", "").replace("set -euo pipefail", "")
-src = re.sub(r'ROOT="[^"]*"', 'ROOT="' + str(ROOT) + '"', src, count=1)
-src = src.replace('.sh"', '.py"').replace('bash "', 'python3 "')
-rc = subprocess.run(["bash", "-c", src], cwd=str(ROOT), env=env, shell=False).returncode
-if rc == 0:
+
+
+def run_host(*args: str) -> dict:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(ROOT / "scripts")
+    env.setdefault("GITHUB_TOKEN", "gh_fixture_token_for_tests")
+    env.setdefault("SW_HOST_FIXTURE", "green")
+    completed = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "host.py"), "--root", str(ROOT), *args],
+        cwd=str(ROOT),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        print(completed.stderr or completed.stdout, file=sys.stderr)
+        raise RuntimeError(f"host.py failed exit={completed.returncode}")
+    return json.loads(completed.stdout)
+
+
+def main() -> int:
+    out = run_host("pr-list", "--head", "feat/x", "--base", "main", "--state", "open")
+    if out.get("verdict") != "ok" or not isinstance(out.get("data"), list):
+        print(f"FAIL host-adapter-parity pr-list: {out}")
+        return 1
+    out2 = run_host("pr-create", "--title", "t", "--body", "b", "--head", "feat/x", "--base", "main")
+    if out2.get("verdict") != "ok" or not out2.get("data", {}).get("number"):
+        print(f"FAIL host-adapter-parity pr-create: {out2}")
+        return 1
     print("OK  host-adapter-parity")
-raise SystemExit(rc or 0)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
