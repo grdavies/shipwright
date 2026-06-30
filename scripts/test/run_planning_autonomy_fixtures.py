@@ -61,7 +61,7 @@ mk_repo() {
     if [[ -n "$cfg" ]]; then
       cp "$cfg" .cursor/workflow.config.json
     fi
-    bash "$ROOT/scripts/shipwright-state.sh" init '{}' >/dev/null
+    bash "$ROOT/scripts/shipwright-state.py" init '{}' >/dev/null
   )
 }
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""R-ID traceability gate."""
+"""
+# R16 no-regression (PRD 035): frozen immutability, traceability, and spec-rigor gates feed the delivery loop.
+R-ID traceability gate."""
 from __future__ import annotations
 
 import argparse

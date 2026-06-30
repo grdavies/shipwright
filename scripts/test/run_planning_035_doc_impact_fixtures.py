@@ -83,11 +83,11 @@ check_doc() {
   ok "doc-currency-035:$label"
 }
 
-check "doc-currency-035:sw-prd-pull-in" "$SW_PRD" "planning-related\.sh scan --mode creation"
+check "doc-currency-035:sw-prd-pull-in" "$SW_PRD" "planning-related[.]py scan --mode creation"
 check "doc-currency-035:sw-prd-confirm-list" "$SW_PRD" "confirm-list"
-check "doc-currency-035:sw-tasks-rescan" "$SW_TASKS" "planning-related\.sh scan --mode tasks-rescan"
-check "doc-currency-035:sw-doc-reconciler" "$SW_DOC" "planning-graph\.sh reconcile"
-check "doc-currency-035:sw-doc-two-track" "$SW_DOC" "docs-edit-route\.sh"
+check "doc-currency-035:sw-tasks-rescan" "$SW_TASKS" "planning-related[.]py scan --mode tasks-rescan"
+check "doc-currency-035:sw-doc-reconciler" "$SW_DOC" "planning-graph[.]sh reconcile"
+check "doc-currency-035:sw-doc-two-track" "$SW_DOC" "docs-edit-route[.]py"
 check "doc-currency-035:sw-doc-posture" "$SW_DOC" "planning\.autonomy"
 check "doc-currency-035:sw-feedback-gap-unit" "$SW_FEEDBACK" "planning_gap_capture"
 check "doc-currency-035:route-record-gap-unit" "$ROUTE_RECORD" "docs/planning/<gap-unit-id>"
@@ -103,7 +103,7 @@ check_doc "workflow-example-sw" "$WF_SW" '"autonomy"' 'maintenance-only' 'fullCo
 check_doc "workflow-example-core" "$WF_CORE" '"autonomy"' 'maintenance-only' 'fullConductor'
 check_doc "configuration-guide" "$CONFIG_GUIDE" 'Planning autonomy \(PRD 035\)' 'planning\.autonomy' 'full-conductor'
 check_doc "workflows-guide" "$WORKFLOWS" 'Planning autonomy and two-track edits \(PRD 035\)' 'confirm-list' 'docs-edit-route'
-check_doc "commands-guide" "$COMMANDS" 'Planning surface \(PRD 035\)' 'planning-related\.sh' 'planning_gap_capture'
+check_doc "commands-guide" "$COMMANDS" 'Planning surface \(PRD 035\)' 'planning-related[.]py' 'planning_gap_capture'
 
 [[ "$FAIL" -eq 0 ]] && ok "doc-currency-035"
 
@@ -112,9 +112,9 @@ PRD_CORPUS="$CORPUS/prd-099-fixture-prd-prd-fixture-prd.md"
 TASKS_CORPUS="$CORPUS/tasks-099-fixture-prd.md"
 
 if [[ -f "$PRD_CORPUS" && -f "$TASKS_CORPUS" ]]; then
-  if bash "$ROOT/scripts/spec-rigor-check.sh" --artifact prd --path "$PRD_CORPUS" --tier full >/dev/null 2>&1 && \
-     bash "$ROOT/scripts/spec-rigor-check.sh" --artifact tasks --path "$TASKS_CORPUS" --prd "$PRD_CORPUS" >/dev/null 2>&1 && \
-     bash "$ROOT/scripts/traceability-check.sh" --prd "$PRD_CORPUS" --tasks "$TASKS_CORPUS" >/dev/null 2>&1; then
+  if bash "$ROOT/scripts/spec-rigor-check.py" --artifact prd --path "$PRD_CORPUS" --tier full >/dev/null 2>&1 && \
+     bash "$ROOT/scripts/spec-rigor-check.py" --artifact tasks --path "$TASKS_CORPUS" --prd "$PRD_CORPUS" >/dev/null 2>&1 && \
+     bash "$ROOT/scripts/traceability-check.py" --prd "$PRD_CORPUS" --tasks "$TASKS_CORPUS" >/dev/null 2>&1; then
     ok "no-regression-035:migrated-corpus-gates"
   else
     bad "no-regression-035:migrated-corpus-gates"
@@ -131,8 +131,8 @@ else
   bad "no-regression-035:frozen-workflow-invariants"
 fi
 
-if grep -q 'R16 no-regression' "$ROOT/scripts/spec-rigor-check.sh" && \
-   grep -q 'R16 no-regression' "$ROOT/scripts/traceability-check.sh"; then
+if grep -q 'R16 no-regression' "$ROOT/scripts/spec-rigor-check.py" && \
+   grep -q 'R16 no-regression' "$ROOT/scripts/traceability-check.py"; then
   ok "no-regression-035:gate-script-contract"
 else
   bad "no-regression-035:gate-script-contract"

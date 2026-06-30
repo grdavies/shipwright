@@ -62,7 +62,7 @@ when reporting merge readiness.
 
 - **`deliver.autonomy`** — default `autonomous`; runs `/sw-deliver` to the terminal gate without routine
   re-prompts. Set `supervised` for extra acknowledgement halts.
-- **Legitimate halts** — only terminal `main` merge, exhausted remediation, destructive git, configured
+- **Legitimate halt** (`legitimate.halt`) — only terminal `main` merge, exhausted remediation, destructive git, configured
   checkpoints, phase timeout, external-wait exhaustion, or run-level budget.
 - **Living-doc currency** — generated planning INDEX (`docs/planning/INDEX.md` derived region), legacy
   projections (`docs/prds/INDEX.md`, `GAP-BACKLOG.md`), and `COMPLETION-LOG.md` stay accurate via the

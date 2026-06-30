@@ -116,7 +116,8 @@ def main(argv=None):
     root = Path(__file__).resolve().parent.parent
     start = Path.cwd()
     if not args: print(__doc__); return 1
-    cmd, *rest = args[0], args[1:]
+    cmd = args[0]
+    rest = args[1:]
     if cmd == "path": return cmd_path(start)
     if cmd == "read": return cmd_read(start)
     if cmd == "write": return cmd_write(start, rest[0]) if rest else 1

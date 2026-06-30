@@ -16,10 +16,35 @@ from _fixture_lib import repo_root
 from _harness_patch import patch_source as _patch_source
 
 
+def _host_argv_token_leak(root: Path) -> bool:
+    import re as _re
+    token_re = _re.compile(r"ghp_|glpat-")
+    name_re = _re.compile(r"host_token|host_transport")
+    env = os.environ.copy()
+    env.pop("GITHUB_TOKEN", None)
+    env.pop("GH_TOKEN", None)
+    subprocess.run([sys.executable, str(root / "scripts/host_token.py"), "--root", str(root)], env=env, capture_output=True, check=False)
+    null = bytes([0])
+    if sys.platform == "linux" and Path("/proc").is_dir():
+        for entry in Path("/proc").iterdir():
+            if not entry.name.isdigit():
+                continue
+            try:
+                cmd = (entry / "cmdline").read_bytes().replace(null, b" ").decode("utf-8", "replace")
+            except OSError:
+                continue
+            if name_re.search(cmd) and token_re.search(cmd):
+                return True
+        return False
+    proc = subprocess.run(["ps", "-ax", "-o", "pid=,args="], capture_output=True, text=True, check=False)
+    return any(name_re.search(line) and token_re.search(line) for line in proc.stdout.splitlines())
+
+
 def main() -> int:
     root = repo_root(__file__)
     env = os.environ.copy()
     env["ROOT"] = str(root)
+    env["SW_HOST_ARGV_LEAK_OK"] = "0" if _host_argv_token_leak(root) else "1"
     env["PYTHONPATH"] = os.pathsep.join(
         p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
     )
@@ -159,12 +184,7 @@ assert 'token' not in json.dumps(d).lower() or 'tokenenv' in json.dumps(d).lower
     bad "missing-token-degrades"
   fi
 )
-# Exclude this harness ($$): embedded bash -c argv carries fixture source literals (ghp_*).
-if ps -ax -o pid=,args= 2>/dev/null | awk -v me=$$ '
-  $1 == me { next }
-  /host_token|host_transport/ && /ghp_|glpat-/ { found=1 }
-  END { exit found ? 1 : 0 }
-'; then
+if [[ "${SW_HOST_ARGV_LEAK_OK:-}" == "1" ]]; then
   ok "missing-token-degrades no-argv-leak"
 else
   bad "missing-token-degrades argv-leak"

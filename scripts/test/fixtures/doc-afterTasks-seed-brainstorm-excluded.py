@@ -41,7 +41,7 @@ else
 fi
 
 if grep -q 'seed commit (branch + SHA)' "$SW_DOC" && \
-   grep -q 'shipwright-state.sh write' "$SW_DOC" && \
+   grep -q 'shipwright-state.py write' "$SW_DOC" && \
    grep -q '\-\-after-tasks=auto' "$SW_DOC"; then
   echo "OK  doc-afterTasks-seed-brainstorm-excluded: agent auto records seed commit"
 else

@@ -46,10 +46,10 @@ bad() { echo "FAIL $1"; FAIL=1; }
 
 SCRIPTS_035=(
   planning_related.py
-  planning-related.sh
+  planning-related.py
   planning_autonomy.py
-  docs-edit-route.sh
-  docs-merge.sh
+  docs-edit-route.py
+  docs-merge.py
   two_track_lib.py
   host_lib.py
 )
@@ -96,10 +96,10 @@ else
   bad "copy-to-core-parity-035: sw-reference config drift"
 fi
 
-python3 - <<PY || bad "copy-to-core-parity-035: planning.autonomy schema"
-import json
+python3 - "$ROOT" <<'PY' || bad "copy-to-core-parity-035: planning.autonomy schema"
+import json, sys
 from pathlib import Path
-root = Path(\"\"\"$ROOT\"\"\")
+root = Path(sys.argv[1])
 for rel in (".sw/config.schema.json", "core/sw-reference/config.schema.json"):
     s = json.loads((root / rel).read_text())
     pa = s["properties"]["planning"]["properties"]["autonomy"]

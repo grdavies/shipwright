@@ -35,7 +35,7 @@ def main() -> int:
 
 _SOURCE = r"""
 #!/usr/bin/env bash
-# Fixtures for worktree.sh read_config JSONC tolerance.
+# Fixtures for worktree.py read_config JSONC tolerance.
 #
 # Regression guard: read_config() must tolerate // line and /* */ block comments
 # in workflow.config.json WITHOUT mangling string values that contain "//"
@@ -45,13 +45,13 @@ _SOURCE = r"""
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-SRC="$ROOT/scripts/worktree.sh"
+SRC="$ROOT/scripts/worktree.py"
 FAIL=0
 
 ok()  { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
-# Stage a throwaway repo-shaped dir with worktree.sh and a config, run
+# Stage a throwaway repo-shaped dir with worktree.py and a config, run
 # `ceiling-check`, and read the resolved ceiling. ceiling-check routes through
 # read_config + the parallelCeiling parse, so a correct ceiling proves the whole
 # config (including any line containing a URL) parsed cleanly.
@@ -59,9 +59,9 @@ resolved_ceiling() {
   local config_body="$1" tmp out
   tmp="$(mktemp -d)"
   mkdir -p "$tmp/scripts" "$tmp/.cursor"
-  cp "$SRC" "$tmp/scripts/worktree.sh"
+  cp "$SRC" "$tmp/scripts/worktree.py"
   printf '%s\n' "$config_body" >"$tmp/.cursor/workflow.config.json"
-  out="$(bash "$tmp/scripts/worktree.sh" ceiling-check 2>/dev/null || true)"
+  out="$(bash "$tmp/scripts/worktree.py" ceiling-check 2>/dev/null || true)"
   rm -rf "$tmp"
   python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('ceiling',''))" "$out" 2>/dev/null || echo ""
 }
@@ -92,7 +92,7 @@ fi
 # --- read-config-emits-valid-json: output of read_config is parseable JSON ---
 tmp="$(mktemp -d)"
 mkdir -p "$tmp/scripts" "$tmp/.cursor"
-cp "$SRC" "$tmp/scripts/worktree.sh"
+cp "$SRC" "$tmp/scripts/worktree.py"
 cat >"$tmp/.cursor/workflow.config.json" <<'JSON'
 {
   // comment
@@ -100,17 +100,7 @@ cat >"$tmp/.cursor/workflow.config.json" <<'JSON'
   "worktree": { "parallelCeiling": 3 }
 }
 JSON
-emitted="$(cd "$tmp" && python3 - "$tmp" <<'PY'
-import re, subprocess, sys
-src = open(sys.argv[1] + "/scripts/worktree.sh").read()
-# Extract and exec the read_config python body in isolation.
-body = src.split("read_config() {", 1)[1].split("PY\n}", 1)[0]
-body = body.split("<<'PY'\n", 1)[1]
-ns = {"__name__": "__main__"}
-sys.argv = ["read_config", sys.argv[1]]
-exec(compile(body, "read_config", "exec"), ns)
-PY
-)"
+emitted="$(cd "$tmp" && python3 "$tmp/scripts/worktree.py" read-config)"
 rm -rf "$tmp"
 if python3 -c "import json,sys; d=json.loads(sys.argv[1]); assert d['url']=='https://example.com//path'; assert d['worktree']['parallelCeiling']==3" "$emitted" 2>/dev/null; then
   ok "read-config-emits-valid-json: in-string // preserved, parses to expected dict"

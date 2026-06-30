@@ -255,7 +255,7 @@ def log_autonomy_action(
     state["actionLog"] = log[-100:]
     save_state(root, state)
     proc = subprocess.run(
-        ["bash", str(SCRIPT_DIR / "shipwright-state.py"), "override-add", json.dumps(entry)],
+        [sys.executable, str(SCRIPT_DIR / "shipwright-state.py"), "override-add", json.dumps(entry)],
         cwd=str(pp.git_root(root)),
         capture_output=True,
         text=True,

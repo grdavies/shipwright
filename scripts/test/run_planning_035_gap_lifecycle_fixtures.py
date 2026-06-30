@@ -49,7 +49,7 @@ GR="$ROOT/scripts/living-status-gap-resolve.sh"
 NORM="$ROOT/scripts/doc-format-normalize.sh"
 SPEC="$ROOT/scripts/spec-rigor-check.sh"
 TRACE="$ROOT/scripts/traceability-check.sh"
-REL="$ROOT/scripts/planning-related.sh"
+REL="$ROOT/scripts/planning-related.py"
 FIX_SRC="$ROOT/scripts/test/fixtures/planning-related/corpus"
 chmod +x "$GB" "$GR" "$NORM" 2>/dev/null || true
 

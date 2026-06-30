@@ -40,14 +40,14 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export PYTHONPATH="$ROOT/scripts:${PYTHONPATH:-}"
-REL_SH="$ROOT/scripts/planning-related.sh"
+REL="$ROOT/scripts/planning-related.py"
 PY="$ROOT/scripts/planning_related.py"
 FIX_SRC="$ROOT/scripts/test/fixtures/planning-related/corpus"
 FAIL=0
 ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
-[[ -x "$REL_SH" ]] || chmod +x "$REL_SH"
+[[ -f "$REL" ]]
 [[ -f "$PY" ]] || { bad "planning_related.py missing"; exit 1; }
 
 mk_repo() {
@@ -67,13 +67,13 @@ scan_json() {
   local repo="$1" path="$2" mode="${3:-creation}"
   shift 2
   [[ $# -gt 0 ]] && shift || true
-  (cd "$repo" && bash "$REL_SH" scan --path "$path" --mode "$mode")
+  (cd "$repo" && python3 "$REL" scan --path "$path" --mode "$mode")
 }
 
 confirm_json() {
   local repo="$1" path="$2" accept="$3"
   shift 3
-  (cd "$repo" && bash "$REL_SH" confirm --path "$path" --accept "$accept")
+  (cd "$repo" && python3 "$REL" confirm --path "$path" --accept "$accept")
 }
 
 # --- scanner-confirm-list-not-autoabsorb (R17) ---
@@ -232,7 +232,7 @@ else
 fi
 
 # --- emission point registry ---
-if OUTE=$(bash "$REL_SH" list-emission-points) && echo "$OUTE" | python3 -c "
+if OUTE=$(python3 "$REL" list-emission-points) && echo "$OUTE" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 assert 'pull-in-confirm' in d['points']
@@ -244,8 +244,8 @@ fi
 
 [[ -f "$ROOT/core/skills/visibility/references/emission-points.md" ]] && grep -q 'pull-in-confirm' "$ROOT/core/skills/visibility/references/emission-points.md" && ok "emission-points-doc" || bad "emission-points-doc"
 
-grep -q 'planning-related.sh scan' "$ROOT/core/commands/sw-prd.md" && ok "sw-prd-pull-in-wired" || bad "sw-prd-pull-in-wired"
-grep -q 'planning-related.sh scan' "$ROOT/core/commands/sw-tasks.md" && ok "sw-tasks-rescan-wired" || bad "sw-tasks-rescan-wired"
+grep -q 'planning-related.py scan' "$ROOT/core/commands/sw-prd.md" && ok "sw-prd-pull-in-wired" || bad "sw-prd-pull-in-wired"
+grep -q 'planning-related.py scan' "$ROOT/core/commands/sw-tasks.md" && ok "sw-tasks-rescan-wired" || bad "sw-tasks-rescan-wired"
 
 exit "$FAIL"
 

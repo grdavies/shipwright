@@ -41,7 +41,7 @@ else
   FAIL=1
 fi
 
-if grep -q 'shipwright-state.sh override-add' "$SW_DOC" && \
+if grep -q 'shipwright-state.py override-add' "$SW_DOC" && \
    grep -q '\-\-after-tasks=auto' "$SW_DOC" && grep -qi 'before.*dispatch' "$SW_DOC"; then
   echo "OK  doc-afterTasks-auto-deliver: agent override recorded before dispatch"
 else

@@ -34,7 +34,7 @@ Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** c
 - **Dry-run:** `scripts/wave.sh plan --task-list <path> --dry-run` — plan JSON only, no artifact write.
 
 **Autonomy (PRD 009):** default `deliver.autonomy.mode: autonomous` — conductor in-turn loop to terminal
-gate. **Legitimate halts** only (see [`configuration.md`](configuration.md)). Parallel phases when the
+gate. **Legitimate halt** (`legitimate.halt`) only (see [`configuration.md`](configuration.md)). Parallel phases when the
 plan allows; outcomes from durable `status.json` only.
 
 **Living-doc currency:** INDEX / COMPLETION-LOG / gap-index reconcile in-loop (legacy GAP-BACKLOG projection read-only); `docs-currency` blocks
