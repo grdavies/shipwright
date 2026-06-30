@@ -1,70 +1,66 @@
 #!/usr/bin/env python3
-"""Planning store + visibility doctor checks (PRD 034 R16, R21, R27). """
+"""Planning store + visibility doctor checks (PRD 034 R16, R21, R27)."""
 from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import subprocess
 import sys
 from pathlib import Path
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
+
 from _sw.cli import run_module_main
 
-def main(argv: list[str] | None = None) -> int:
-    import json
-    import os
-    import re
-    import subprocess
-    import sys
-    from pathlib import Path
-
-    root = Path(sys.argv[1])
-    sweep = os.environ.get("SWEEP", "1") == "1"
-
-    TOKEN_PATTERNS = (
-        re.compile(r"ghp_[A-Za-z0-9_]{20,}"),
-        re.compile(r"github_pat_[A-Za-z0-9_]{20,}"),
-        re.compile(r"Bearer\s+[A-Za-z0-9._-]{8,}"),
-        re.compile(r"sk-[A-Za-z0-9]{20,}"),
-    )
+TOKEN_PATTERNS = (
+    re.compile(r"ghp_[A-Za-z0-9_]{20,}"),
+    re.compile(r"github_pat_[A-Za-z0-9_]{20,}"),
+    re.compile(r"Bearer\s+[A-Za-z0-9._-]{8,}"),
+    re.compile(r"sk-[A-Za-z0-9]{20,}"),
+)
 
 
-    def sanitize(value):
-        if isinstance(value, str):
-            out = value
-            for pat in TOKEN_PATTERNS:
-                out = pat.sub("[REDACTED:TOKEN]", out)
-            return out
-        if isinstance(value, list):
-            return [sanitize(v) for v in value]
-        if isinstance(value, dict):
-            return {k: sanitize(v) for k, v in value.items()}
-        return value
+def sanitize(value):
+    if isinstance(value, str):
+        out = value
+        for pat in TOKEN_PATTERNS:
+            out = pat.sub("[REDACTED:TOKEN]", out)
+        return out
+    if isinstance(value, list):
+        return [sanitize(v) for v in value]
+    if isinstance(value, dict):
+        return {k: sanitize(v) for k, v in value.items()}
+    return value
 
 
-    def run_json(cmd: list[str]) -> dict:
-        proc = subprocess.run(cmd, capture_output=True, text=True)
-        raw = proc.stdout.strip() or proc.stderr.strip() or "{}"
-        try:
-            return json.loads(raw)
-        except json.JSONDecodeError:
-            return {"verdict": "fail", "error": "invalid-json", "raw": raw[:200]}
+def run_json(cmd: list[str]) -> dict:
+    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    raw = proc.stdout.strip() or proc.stderr.strip() or "{}"
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {"verdict": "fail", "error": "invalid-json", "raw": raw[:200]}
 
 
+def doctor(root: Path, *, sweep: bool) -> dict:
     checks: list[dict] = []
     warnings: list[str] = []
     verdict = "ok"
 
     backend_data = run_json([
-        "python3", str(root / "scripts/planning_store.py"), "--root", str(root), "resolve-backend",
+        sys.executable, str(SCRIPT_DIR / "planning_store.py"), "--root", str(root), "resolve-backend",
     ])
     store_backend = backend_data.get("backend", "in-repo-public")
     checks.append({"check": "store-backend", "status": "ok", "backend": store_backend})
 
-    # Store reachability (R21)
-    reach_cmd = [
-        "python3", str(root / "scripts/planning_store.py"), "--root", str(root),
+    reach = run_json([
+        sys.executable, str(SCRIPT_DIR / "planning_store.py"), "--root", str(root),
         "exists", "--unit-id", "__doctor-probe__", "--body-path", "__doctor-probe__.md",
-    ]
-    reach = run_json(reach_cmd)
+    ])
     if store_backend == "in-repo-public":
         if reach.get("verdict") in {"ok", "missing"}:
             checks.append({"check": "store-reachability", "status": "ok", "backend": store_backend})
@@ -90,7 +86,7 @@ def main(argv: list[str] | None = None) -> int:
             verdict = "fail"
         else:
             data = run_json([
-                "python3", str(root / "scripts/planning_store.py"), "--root", str(root),
+                sys.executable, str(SCRIPT_DIR / "planning_store.py"), "--root", str(root),
                 "validate-local-synced", "--path", sync_path,
             ])
             if data.get("verdict") == "ok":
@@ -129,7 +125,6 @@ def main(argv: list[str] | None = None) -> int:
             checks.append({"check": "memory-provider", "status": "ok", "provider": provider})
             checks.append({"check": "store-reachability", "status": "ok", "backend": store_backend, "provider": provider})
 
-    # Config surfaces env-var names only (R27) — never token values
     cfg_path = root / ".cursor/workflow.config.json"
     if cfg_path.is_file():
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
@@ -143,22 +138,18 @@ def main(argv: list[str] | None = None) -> int:
             "note": "env-var names only; no secrets in config",
         })
 
-    # Orphan materialized sweep (R21)
     swept: list[str] = []
     if sweep:
         materialized_roots: list[Path] = []
-
         repo_mat = root / ".cursor" / "planning-materialized"
         if repo_mat.is_dir():
             materialized_roots.append(repo_mat)
-
         worktrees = root / ".sw-worktrees"
         if worktrees.is_dir():
             for wt in worktrees.iterdir():
                 mat = wt / ".cursor" / "planning-materialized"
                 if mat.is_dir():
                     materialized_roots.append(mat)
-
         cursor = root / ".cursor"
         if cursor.is_dir():
             for state_file in cursor.glob("sw-deliver-state*.json"):
@@ -178,11 +169,10 @@ def main(argv: list[str] | None = None) -> int:
                             candidate = candidate / part
                         if candidate.name == "planning-materialized" and candidate.is_dir():
                             materialized_roots.append(candidate)
-
         unique_roots = sorted({str(p.resolve()) for p in materialized_roots})
         if unique_roots:
             sweep_out = run_json([
-                "python3", str(root / "scripts/planning_materialize.py"), "--root", str(root),
+                sys.executable, str(SCRIPT_DIR / "planning_materialize.py"), "--root", str(root),
                 "sweep-orphans", "--paths-json", json.dumps(unique_roots),
             ])
             swept = sweep_out.get("swept") or []
@@ -195,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             checks.append({"check": "orphan-materialized-sweep", "status": "ok", "candidates": 0, "swept": 0})
 
-    out = sanitize({
+    return sanitize({
         "verdict": verdict,
         "backend": store_backend,
         "warnings": warnings,
@@ -203,8 +193,17 @@ def main(argv: list[str] | None = None) -> int:
         "swept": swept,
         "notes": "local/synced is convenience-not-security; not the public-repo template default (R16)",
     })
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Planning store + visibility doctor")
+    parser.add_argument("--root", type=Path, default=SCRIPT_DIR.parent)
+    parser.add_argument("--no-sweep", action="store_true")
+    args = parser.parse_args(argv)
+    out = doctor(args.root.resolve(), sweep=not args.no_sweep)
     print(json.dumps(out, indent=2))
     return 0
+
 
 if __name__ == "__main__":
     run_module_main(main)

@@ -113,7 +113,7 @@ After doc freeze, durability paths diverge (R32):
     region, gap edges, or unit linkage), run the mechanical reconciler before the implementation boundary:
 
     ```bash
-    python3 scripts/planning-graph.sh reconcile --dry-run
+    python3 scripts/planning-graph.py reconcile --dry-run
     ```
 
     Commit on the docs/feature branch only (`--commit`; never on bare default branch). Living-status also
@@ -183,14 +183,14 @@ while a `confirm` halt is pending and has not sent `proceed`/`yes`, map to **`st
 ## Planning command surface (PRD 035 D6 / R15)
 
 The planning surface **extends `/sw-doc`** — no top-level `/sw-plan`. Commands resolve paths via the PRD 031
-helper (`python3 scripts/planning_paths.py`); the graph shell exposes thin wrappers for operator ergonomics.
+helper (`python3 scripts/planning_paths.py`); the graph CLI exposes thin wrappers for operator ergonomics.
 
 | Entry | Command |
 | --- | --- |
-| Mechanical reconciler | `python3 scripts/planning-graph.sh reconcile [--dry-run] [--commit]` |
-| Graph-driven scheduler | `/sw-deliver next` → `python3 scripts/wave_deliver.py <repo> next` (also `planning-graph.sh next`) |
+| Mechanical reconciler | `python3 scripts/planning-graph.py reconcile [--dry-run] [--commit]` |
+| Graph-driven scheduler | `/sw-deliver next` → `python3 scripts/wave_deliver.py <repo> next` (also `planning-graph.py next`) |
 | Autonomy posture | `planning.autonomy` in `workflow.config.json` (`maintenance-only` default \| `full-conductor`) |
-| Posture readback | `python3 scripts/planning-graph.sh posture` |
+| Posture readback | `python3 scripts/planning-graph.py posture` |
 
 **Scheduler:** `/sw-deliver next` picks the highest-priority eligible frozen task list from the planning graph
 (PRD 033). Under `planning.autonomy: maintenance-only`, an explicit `--task-list` that skips a higher-priority

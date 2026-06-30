@@ -40,7 +40,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export PYTHONPATH="$ROOT/scripts:${PYTHONPATH:-}"
-RESOLVE="$ROOT/scripts/visibility-resolve.sh"
+RESOLVE="$ROOT/scripts/visibility-resolve.py"
 PY="$ROOT/scripts/planning_visibility.py"
 FAIL=0
 ok() { echo "OK  $1"; }
@@ -165,7 +165,7 @@ else
   bad "resolver-single-authority:inflight-tuple"
 fi
 
-if [[ -x "$RESOLVE" ]] && OUT=$("$RESOLVE" list-emission-points) && \
+if [[ -f "$RESOLVE" ]] && OUT=$(python3 "$RESOLVE" list-emission-points) && \
   echo "$OUT" | python3 -c "import json,sys; assert 'index-active' in json.load(sys.stdin)['points']"; then
   ok "resolver-single-authority:wrapper"
 else
@@ -247,8 +247,8 @@ else
 fi
 
 # --- gitignore-visibility-no-private-bytes (R13) ---
-GITIGN="$ROOT/scripts/gitignore-generate.sh"
-VALIDATOR="$ROOT/scripts/planning-unit-validate.sh"
+GITIGN="$ROOT/scripts/gitignore-generate.py"
+VALIDATOR="$ROOT/scripts/planning-unit-validate.py"
 TMP_G=$(mktemp -d)
 (
   cd "$TMP_G"
@@ -276,9 +276,9 @@ visibility: private
 ---
 # PRIVATE_GOLDEN_MARKER_XYZ secret brainstorm body
 MD
-  bash "$GITIGN" --repo-root "$TMP_G" generate --write >/dev/null
+  python3 "$GITIGN" --repo-root "$TMP_G" generate --write >/dev/null
   git add .gitignore docs/planning/prd/prd-001-public-spec/prd-001-public-spec-prd-public-spec.md
-  if OUT=$(bash "$GITIGN" --repo-root "$TMP_G" verify-index 2>&1); then
+  if OUT=$(python3 "$GITIGN" --repo-root "$TMP_G" verify-index 2>&1); then
     echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='pass'"
   else
     echo "$OUT" >&2
@@ -286,11 +286,11 @@ MD
   fi
   git add -f docs/planning/brainstorm/brainstorm-001-private-topic/brainstorm-001-private-topic.md
   set +e
-  OUT=$(bash "$GITIGN" --repo-root "$TMP_G" verify-index 2>&1)
+  OUT=$(python3 "$GITIGN" --repo-root "$TMP_G" verify-index 2>&1)
   EC=$?
   set -e
   [[ "$EC" -ne 0 ]] || { echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='fail'" || exit 1; }
-  if OUT=$(bash "$VALIDATOR" --path docs/planning/brainstorm/brainstorm-001-private-topic/brainstorm-001-private-topic.md --repo-root "$TMP_G" 2>/dev/null || true); then
+  if OUT=$(python3 "$VALIDATOR" --path docs/planning/brainstorm/brainstorm-001-private-topic/brainstorm-001-private-topic.md --repo-root "$TMP_G" 2>/dev/null || true); then
     echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='fail'"
   else
     exit 1

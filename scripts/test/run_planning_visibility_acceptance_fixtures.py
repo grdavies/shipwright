@@ -45,16 +45,16 @@ bad() { echo "FAIL $1"; FAIL=1; }
 GEN="python3 -m sw"
 
 SCRIPTS_034=(
-  gitignore-generate.sh
+  gitignore-generate.py
   gitignore_generate.py
   planning_visibility.py
   planning_store.py
   planning_materialize.py
-  planning-init-seed.sh
-  planning-doctor.sh
-  visibility-resolve.sh
+  planning-init-seed.py
+  planning-doctor.py
+  visibility-resolve.py
   visibility-callsite-lint.py
-  materialized-prefix-scan.sh
+  materialized-prefix-scan.py
 )
 
 PROVIDERS_034=(
@@ -122,7 +122,7 @@ for dist in "$ROOT/dist/cursor" "$ROOT/dist/claude-code"; do
 done
 [[ "$FAIL" -eq 0 ]] && ok "store-emitter-parity:dist-propagation"
 
-bash "$ROOT/scripts/test/run-emitter-fixtures.sh" >/dev/null 2>&1 && ok "store-emitter-parity:emitter-freshness" || bad "store-emitter-parity:emitter-freshness"
+python3 "$ROOT/scripts/test/run_emitter_fixtures.py" >/dev/null 2>&1 && ok "store-emitter-parity:emitter-freshness" || bad "store-emitter-parity:emitter-freshness"
 
 # --- public-unit-no-regression (R17) ---
 CORPUS="$ROOT/scripts/test/fixtures/planning-currency/migrated-corpus"

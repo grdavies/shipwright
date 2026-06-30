@@ -28,7 +28,10 @@ def main(argv: list[str] | None = None) -> int:
     root = git_root(plugin_root)
     if not args or args[0] in {"-h", "--help"}:
         print(
-            "usage: planning-graph.py reconcile|cycle-check|doctor|relief-check|next|posture|paths ..."
+            "usage: planning-graph.py reconcile|cycle-check|doctor|relief-check|next|posture|paths ...\n"
+            "  planning-graph.py reconcile [--dry-run]\n"
+            "  planning-graph.py next [--override]\n"
+            "  planning-graph.py posture\n"
         )
         return 0
     cmd = args[0]
@@ -45,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
     if cmd == "paths":
         if not rest:
             rest = ["dirs"]
-        return subprocess.run([py, str(plugin_root / "scripts/planning_paths.py"), *rest], shell=False).returncode
+        return subprocess.run([py, str(plugin_root / "scripts/planning_paths.py"), str(root), *rest], shell=False).returncode
     print(f"unknown command: {cmd}", file=sys.stderr)
     return 2
 

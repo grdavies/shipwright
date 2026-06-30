@@ -13,28 +13,23 @@ if str(SCRIPT_DIR) not in sys.path:
 from _sw.cli import run_module_main
 
 
-def git_root() -> Path:
-    proc = subprocess.run(
-        ["git", "-C", str(Path.cwd()), "rev-parse", "--show-toplevel"],
-        capture_output=True,
-        text=True,
-    )
-    if proc.returncode == 0 and proc.stdout.strip():
-        return Path(proc.stdout.strip())
-    return SCRIPT_DIR.parent
-
-
-def repo_root() -> Path:
-    return git_root()
-
-
 def main(argv: list[str] | None = None) -> int:
-    args = list(sys.argv[1:] if argv is None else argv)
+    args = list(argv if argv is not None else sys.argv[1:])
     root = SCRIPT_DIR.parent
-    import planning_visibility
-    planning_visibility.main([str(root), *args])
-    return 0
-    return 0
+    forwarded: list[str] = []
+    i = 0
+    while i < len(args):
+        if args[i] == "--root" and i + 1 < len(args):
+            root = Path(args[i + 1]).resolve()
+            i += 2
+        else:
+            forwarded.append(args[i])
+            i += 1
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT_DIR / "planning_visibility.py"), "--root", str(root), *forwarded],
+        check=False,
+    )
+    return proc.returncode
 
 
 if __name__ == "__main__":

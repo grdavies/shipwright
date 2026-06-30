@@ -39,8 +39,8 @@ _SOURCE = r"""
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export PYTHONPATH="$ROOT/scripts:${PYTHONPATH:-}"
-SEED="$ROOT/scripts/planning-init-seed.sh"
-DOCTOR="$ROOT/scripts/planning-doctor.sh"
+SEED="$ROOT/scripts/planning-init-seed.py"
+DOCTOR="$ROOT/scripts/planning-doctor.py"
 PY="$ROOT/scripts/planning_store.py"
 FAIL=0
 ok() { echo "OK  $1"; }
@@ -97,7 +97,7 @@ Path("$ROOT/.cursor/workflow.config.json").write_text(json.dumps({
 PY
 (
   export SW_VISIBILITY_REMOTE_PROBE=public
-  if OUT=$(bash "$SEED" --root "$ROOT" 2>&1) && \
+  if OUT=$(python3 "$SEED" --root "$ROOT" 2>&1) && \
     echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
@@ -135,7 +135,7 @@ cfg.pop("memory", None)
 Path("$ROOT/.cursor/workflow.config.json").write_text(json.dumps(cfg, indent=2) + "\n")
 PY
 rm -f "$ROOT/.cursor/sw-memory.provider"
-if OUT=$(bash "$DOCTOR" --root "$ROOT" --no-sweep 2>&1) && \
+if OUT=$(python3 "$DOCTOR" --root "$ROOT" --no-sweep 2>&1) && \
   echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
@@ -152,7 +152,7 @@ fi
 ORPHAN_WT="$ROOT/.sw-worktrees/_fixture-orphan-mat"
 mkdir -p "$ORPHAN_WT/.cursor/planning-materialized/docs/prds"
 echo "orphan body" >"$ORPHAN_WT/.cursor/planning-materialized/docs/prds/orphan.md"
-if OUT=$(bash "$DOCTOR" --root "$ROOT" 2>&1); then
+if OUT=$(python3 "$DOCTOR" --root "$ROOT" 2>&1); then
   if [[ ! -d "$ORPHAN_WT/.cursor/planning-materialized" ]] && \
     echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert int(d.get('swept') and len(d['swept'])>0 or any(c.get('swept',0)>0 for c in d.get('checks',[]) if c.get('check')=='orphan-materialized-sweep'))"; then
     ok "init-profile-store-seed:orphan-sweep"
@@ -176,7 +176,7 @@ cfg["planning"]["store"]["backend"] = "memory"
 cfg["memory"] = {"provider": "recallium", "project": "fixture"}
 Path("$ROOT/.cursor/workflow.config.json").write_text(json.dumps(cfg, indent=2) + "\n")
 PY
-if OUT=$(bash "$DOCTOR" --root "$ROOT" --no-sweep 2>&1); then
+if OUT=$(python3 "$DOCTOR" --root "$ROOT" --no-sweep 2>&1); then
   if echo "$OUT" | grep -q 'ghp_' ; then
     bad "store-no-token-leak:doctor-output"
   else
