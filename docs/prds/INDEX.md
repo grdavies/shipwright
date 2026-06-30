@@ -40,6 +40,9 @@
 | 036 | delivery-conductor-concurrency-and-remediation-robustness | [036-prd-delivery-conductor-concurrency-and-remediation-robustness.md](036-delivery-conductor-concurrency-and-remediation-robustness/036-prd-delivery-conductor-concurrency-and-remediation-robustness.md) (frozen) | [tasks](036-delivery-conductor-concurrency-and-remediation-robustness/tasks-036-delivery-conductor-concurrency-and-remediation-robustness.md) (frozen) | complete |
 | 037 | doc-review-persona-selection-accuracy | [037-prd-doc-review-persona-selection-accuracy.md](037-doc-review-persona-selection-accuracy/037-prd-doc-review-persona-selection-accuracy.md) (frozen) | [tasks](037-doc-review-persona-selection-accuracy/tasks-037-doc-review-persona-selection-accuracy.md) (frozen) | complete |
 | 038 | build-chain-source-of-truth | [038-prd-build-chain-source-of-truth.md](038-build-chain-source-of-truth/038-prd-build-chain-source-of-truth.md) (frozen) | [tasks](038-build-chain-source-of-truth/tasks-038-build-chain-source-of-truth.md) (frozen) | complete |
+| 039 | loop-quality-gates | [039-prd-loop-quality-gates.md](039-loop-quality-gates/039-prd-loop-quality-gates.md) (frozen) | [tasks](039-loop-quality-gates/tasks-039-loop-quality-gates.md) (frozen) | not-started |
+| 040 | phase-granularity-parallelism | [040-prd-phase-granularity-parallelism.md](040-phase-granularity-parallelism/040-prd-phase-granularity-parallelism.md) (frozen) | [tasks](040-phase-granularity-parallelism/tasks-040-phase-granularity-parallelism.md) (frozen) | not-started |
+| 041 | self-improving-loop | [041-prd-self-improving-loop.md](041-self-improving-loop/041-prd-self-improving-loop.md) (frozen) | [tasks](041-self-improving-loop/tasks-041-self-improving-loop.md) (frozen) | not-started |
 
 ## Supersession notes (025, 028–030)
 
