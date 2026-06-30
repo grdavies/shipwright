@@ -70,6 +70,7 @@
     "planning-privacy-notice.md",
     "planning-unit.schema.json",
     "pr-test-plan.manifest.json",
+    "quality-signal.schema.json",
     "schemas/",
     "schemas/orchestrator-guideline-pack.schema.json",
     "schemas/orchestrator-step-plan.schema.json",

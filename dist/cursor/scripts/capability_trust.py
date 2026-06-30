@@ -30,6 +30,7 @@ PROVIDER_FAMILY_KEYS: dict[str, str] = {
     "review.local": "review.local.provider",
     "memory": "memory.provider",
     "verify": "verify.provider",
+    "quality": "quality.provider",
     "code-review": "code-review.provider",
 }
 

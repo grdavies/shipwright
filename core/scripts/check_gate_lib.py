@@ -232,6 +232,30 @@ def build_reason(
     return f"all checks pass; review landed for head {short}; 0 actionable threads"
 
 
+def attach_quality_context(root: Path, cfg: dict, payload: dict) -> tuple[int, dict]:
+    from quality_config_freeze import load_pin_from_deliver_state, validate_pin
+    pin = load_pin_from_deliver_state(root)
+    freeze = validate_pin(pin, cfg)
+    if freeze.get("verdict") == "fail":
+        blocked = {
+            "verdict": "blocked",
+            "reason": freeze.get("reason", "quality-config-mutation"),
+            "qualityConfigFreeze": freeze,
+        }
+        jsonio.emit(blocked)
+        return 30, blocked
+    import subprocess
+    proc = subprocess.run([sys.executable, str(SCRIPT_DIR / "quality_provider.py")], capture_output=True, text=True, cwd=str(root))
+    signal = {}
+    try:
+        signal = json.loads(proc.stdout.strip() or "{}")
+    except json.JSONDecodeError:
+        signal = {"verdict": "none", "provider": "unknown", "skipped": True}
+    payload = dict(payload)
+    payload["qualityAdvisory"] = signal
+    return 0, payload
+
+
 def build_gate_payload(
     *,
     verdict: str,
@@ -257,6 +281,7 @@ def build_gate_payload(
     blocking: list[str],
     check_count: int,
     deprecations: list[str],
+    quality_advisory: Any | None = None,
     pr: int | None = None,
     branch: str | None = None,
     source: str | None = None,
@@ -286,6 +311,8 @@ def build_gate_payload(
         "blockingNeutral": blocking,
         "checkCount": check_count,
     }
+    if quality_advisory is not None:
+        payload["qualityAdvisory"] = quality_advisory
     if pr is not None:
         payload["pr"] = pr
     if branch is not None:
@@ -533,6 +560,9 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
         source="local-evidence",
         pr=None,
     )
+    ec, payload = attach_quality_context(root, cfg, payload)
+    if ec != 0:
+        return ec, payload
     jsonio.emit(payload)
     return VERDICT_EXIT.get(verdict, 1), payload
 
@@ -682,5 +712,8 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
         deprecations=deprecations,
         pr=int(pr),
     )
+    ec, payload = attach_quality_context(root, cfg, payload)
+    if ec != 0:
+        return ec, payload
     jsonio.emit(payload)
     return VERDICT_EXIT.get(verdict, 1), payload
