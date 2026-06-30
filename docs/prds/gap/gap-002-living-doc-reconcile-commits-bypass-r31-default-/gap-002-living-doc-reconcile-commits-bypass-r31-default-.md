@@ -74,3 +74,29 @@ pattern) without first closing this gap, PRD 046 ships with the defect built in 
    fix or a further PRD 033/035 amendment — flagged for operator decision, out of scope for the 043-047
    amendments proposed here.
 
+## Addendum (2026-06-30, second `/sw-feedback` pass): remediation #4 is still unowned, and the risk is no longer theoretical
+
+PRD 046 A1 (drafted from this gap, see `045-issue-native-dev-tracking`/`046-issue-store-planning-graph`
+amendments) explicitly scopes its new R95–R97 guard to **PRD 046's own future R80 write path only** and
+declares the upstream primitives (`reconcile_lib.py:set_index_status`, `wave_living_docs.py:git_commit_living_docs`)
+a **Non-Goal**: "tracked as a dependency, not delivered here" (A1 R97 / DL-A1-2). So after PRD 046 A1 ships,
+the actual primitives this gap names in remediation #1 are **still unguarded** — remediation #4's "operator
+decision" was deferred, not resolved.
+
+That deferred decision is no longer hypothetical. Independently, **GAP-080** (GAP-BACKLOG.md, captured by a
+different concurrent `/sw-feedback` session, merged via PR #264, 2026-06-30 ~14:30) reproduced this *exact*
+class of live defect in real time: `.cursor/workflow.config.json` rewritten in place with no commit, plus two
+gap-unit directories appearing untracked, while 4+ concurrent `/sw-deliver` runs were live against the shared
+primary checkout. This session's own original evidence above (two unpushed `chore: living-doc reconcile`
+commits on local `main`) is the same defect, reproduced independently a second time the same day.
+
+Given two independent live reproductions in one day and zero PRDs currently committed to closing the upstream
+primitives, this `/sw-feedback` pass recommends treating remediation #4 as actionable now rather than further
+deferred — see the companion handoff for the proposed target (PRD 036,
+`delivery-conductor-concurrency-and-remediation-robustness`, "complete" but thematically the closest existing
+home, vs. PRD 033 A1's own origin point).
+
+Also note: GAP-077–080 are filed in the legacy `docs/prds/GAP-BACKLOG.md`, not as canonical `docs/prds/gap/*`
+units — independent corroboration of gap-003's finding that the two-namespace split is live and actively
+causing inconsistent practice across concurrent sessions, not just a one-off in this session.
+
