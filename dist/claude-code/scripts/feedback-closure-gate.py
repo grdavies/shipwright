@@ -15,7 +15,7 @@ def main(argv: list[str] | None = None) -> int:
     require_gate = require_gate_s == "1"
 
     list_out = subprocess.check_output(
-        ["bash", str(Path(root) / "scripts/feedback-backlog.py"), "list", "--open-only", "--backlog", backlog],
+        [sys.executable, str(Path(root) / "scripts/feedback-backlog.py"), "list", "--open-only", "--backlog", backlog],
         text=True,
     )
     items = json.loads(list_out)

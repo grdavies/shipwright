@@ -35,7 +35,7 @@ def git_root(start: Path) -> Path:
 
 def resolve_sot(root: Path) -> dict:
     proc = subprocess.run(
-        ["bash", str(root / "scripts/memory-sot.py"), "resolve", "--class", "decision", "--json"],
+        [sys.executable, str(root / "scripts/memory-sot.py"), "resolve", "--class", "decision", "--json"],
         cwd=str(root),
         text=True,
         capture_output=True,

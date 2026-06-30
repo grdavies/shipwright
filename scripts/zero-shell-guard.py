@@ -29,6 +29,30 @@ SHELL_OUT_PATTERNS = (
     re.compile(r"os\.popen\s*\("),
 )
 
+# gap-004 Defect A: `["bash", ..., "<script>.py", ...]` argv lists invoke a Python target
+# via the bash interpreter instead of sys.executable — silently broken on the .sh->.py
+# PRD-042 migration, not caught by SHELL_OUT_PATTERNS (no shell=True/os.system involved).
+BASH_PY_INVOCATION_PATTERN = re.compile(r'\[\s*["\']bash["\']\s*,[^\]]*\.py["\']')
+
+
+def find_bash_py_invocations(root: Path) -> list[str]:
+    hits: list[str] = []
+    for rel in ("scripts", "core/hooks", "core/scripts"):
+        base = root / rel
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            posix = path.as_posix()
+            if "/test/" in posix or path.name == "zero-shell-guard.py":
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            if BASH_PY_INVOCATION_PATTERN.search(text):
+                hits.append(f"{path.relative_to(root).as_posix()}: bash-invokes-py")
+    return hits
+
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
@@ -122,7 +146,8 @@ def main(argv: list[str] | None = None) -> int:
     shell_files = find_shell_files(root)
     shell_outs = find_shell_outs(root)
     stale = find_stale_bash_refs(root, closed)
-    issues = shell_files + shell_outs + stale
+    bash_py = find_bash_py_invocations(root)
+    issues = shell_files + shell_outs + stale + bash_py
     active_mode = (args.mode or mode()).lower()
     if not issues:
         print("OK zero-shell-guard: no issues")

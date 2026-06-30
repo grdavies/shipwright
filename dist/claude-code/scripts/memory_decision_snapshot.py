@@ -45,7 +45,7 @@ def git_root(start: Path) -> Path:
 def resolve_sot(root: Path) -> dict:
     scripts = plugin_scripts(root)
     proc = subprocess.run(
-        ["bash", str(scripts / "memory-sot.py"), "resolve", "--class", "decision", "--json"],
+        [sys.executable, str(scripts / "memory-sot.py"), "resolve", "--class", "decision", "--json"],
         cwd=str(root),
         text=True,
         capture_output=True,
@@ -64,7 +64,7 @@ def resolve_sot(root: Path) -> dict:
 def redact_text(root: Path, text: str) -> str:
     scripts = plugin_scripts(root)
     proc = subprocess.run(
-        ["bash", str(scripts / "memory-redact.py")],
+        [sys.executable, str(scripts / "memory-redact.py")],
         input=text,
         text=True,
         capture_output=True,

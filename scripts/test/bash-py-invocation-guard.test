@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+"""Regression fixture for gap-004 Defect A — native Python.
+
+`["bash", str(script), ...]` argv lists silently break when `script` is a `.py`
+target (the PRD-042 `.sh`->`.py` migration left several call sites hardcoding the
+`bash` interpreter literal). This guards two things:
+
+1. `zero-shell-guard.py`'s `find_bash_py_invocations` detector actually flags the
+   offending pattern (so a future regression doesn't slip past CI silently).
+2. The current `scripts/` and `core/scripts/` trees are clean of the pattern today
+   (the eleven call sites fixed for gap-004 Defect A stay fixed).
+"""
+from __future__ import annotations
+
+import importlib.util
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+
+
+def _load_guard():
+    spec = importlib.util.spec_from_file_location("zero_shell_guard", ROOT / "scripts" / "zero-shell-guard.py")
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def main() -> int:
+    guard = _load_guard()
+    failures: list[str] = []
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_root = Path(tmp)
+        offending_dir = tmp_root / "scripts"
+        offending_dir.mkdir()
+        (offending_dir / "fixture_offender.py").write_text(
+            'model_cmd = ["bash", str(SCRIPT_DIR / "resolve-model-tier.py"), "--agent", agent]\n',
+            encoding="utf-8",
+        )
+        hits = guard.find_bash_py_invocations(tmp_root)
+        if not hits:
+            failures.append("detector did not flag synthetic bash-invokes-py fixture")
+
+    real_hits = guard.find_bash_py_invocations(ROOT)
+    if real_hits:
+        failures.append(f"real tree has unguarded bash-invokes-py hits: {real_hits}")
+
+    if failures:
+        for failure in failures:
+            print(f"FAIL bash-py-invocation-guard: {failure}")
+        return 1
+    print("OK  bash-py-invocation-guard")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

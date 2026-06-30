@@ -1007,7 +1007,7 @@ def run_resolve_capture(root: Path) -> tuple[int, dict[str, Any]]:
     if not script.is_file():
         return 2, {"verdict": "fail", "error": "resolve-base-branch.py missing"}
     proc = subprocess.run(
-        ["bash", str(script), "capture"],
+        [sys.executable, str(script), "capture"],
         cwd=str(root),
         text=True,
         capture_output=True,
@@ -1526,7 +1526,7 @@ def run_inflight_signal(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
     if not script.is_file():
         return 2, {"verdict": "fail", "error": "inflight-signal.py missing"}
     proc = subprocess.run(
-        ["bash", str(script), *args],
+        [sys.executable, str(script), *args],
         cwd=str(root),
         capture_output=True,
         text=True,

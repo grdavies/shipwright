@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 
-from _sw.cli import run_module_main
+from _sw.cli import build_parser, run_module_main
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -12,7 +12,39 @@ def main(argv: list[str] | None = None) -> int:
     import sys
     from pathlib import Path
 
-    tier_arg, command, skill, agent, delegate, config_path, defaults_path = sys.argv[1:8]
+    parser = build_parser(
+        prog="resolve-model-tier",
+        description="Resolve semantic model tier -> concrete dispatch ID (command -> skill -> agent -> tier).",
+    )
+    parser.add_argument("--tier", default="")
+    parser.add_argument("--command", default="")
+    parser.add_argument("--skill", default="")
+    parser.add_argument("--agent", default="")
+    parser.add_argument("--delegate", default="")
+    parser.add_argument("--config", default="")
+    parser.add_argument("--defaults", default="")
+    args = parser.parse_args(argv)
+
+    if not any((args.tier, args.command, args.skill, args.agent)):
+        parser.print_help()
+        return 2
+
+    root = Path(__file__).resolve().parent.parent
+    defaults_path = args.defaults or str(root / "core/sw-reference/model-routing.defaults.json")
+    config_path = args.config
+    if not config_path:
+        for candidate in (root / ".cursor/workflow.config.json", root / "workflow.config.json"):
+            if candidate.is_file():
+                config_path = str(candidate)
+                break
+
+    tier_arg, command, skill, agent, delegate = (
+        args.tier,
+        args.command,
+        args.skill,
+        args.agent,
+        args.delegate,
+    )
     SEMANTIC = {"cheap", "build", "mid", "deep", "inherit"}
 
 
