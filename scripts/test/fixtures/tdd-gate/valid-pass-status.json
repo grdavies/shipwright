@@ -1,0 +1,14 @@
+{
+  "taskRef": "3.1",
+  "testScenario": "fixture",
+  "red": {
+    "observed": true,
+    "exitCode": 1
+  },
+  "green": {
+    "observed": true,
+    "exitCode": 0
+  },
+  "testWeakened": false,
+  "skipped": false
+}

@@ -1,0 +1,6 @@
+{
+  "taskRef": "3.1",
+  "testScenario": "fixture",
+  "skipped": true,
+  "skipReason": "manual"
+}

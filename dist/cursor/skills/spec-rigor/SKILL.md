@@ -69,7 +69,7 @@ Via `scripts/spec-rigor-check.py --artifact tasks`:
 
 Via `scripts/traceability-check.py`:
 
-- Each effective R-ID maps to a **task ref** (e.g. `1.2`, `2`) and a **named test scenario** (fixture name,
+- Each effective R-ID maps to a **task ref** (and **ZOMBIES checklist** when test scenarios are bound — `references/zombies.md`) (e.g. `1.2`, `2`) and a **named test scenario** (fixture name,
   test file path, or explicit scenario label — not "add tests later").
 - Uncovered R-IDs block task-list freeze (`verdict: gaps`, exit `20`).
 - Output is stable JSON for fixtures and downstream U7 TDD gate consumption.

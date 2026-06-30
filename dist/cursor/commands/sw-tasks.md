@@ -26,7 +26,7 @@ Task list from frozen PRD + amendment union.
      autonomous via the PRD 033 reconciler **after** confirmed choices only (R3).
 4. In **one pass**, draft parent tasks (phases), expand executable sub-tasks, Relevant Files, and Notes.
 5. Add **`## Phase Dependencies`** table: `| Phase | Depends on |` with one row per phase (`none` or phase refs); machine-parseable by `/sw-deliver` (R5/R6/R37).
-6. Add **`## Traceability`** table: every union R-ID → task ref → named test scenario (see `skills/spec-rigor/SKILL.md`).
+6. Add **`## Traceability`** table: every union R-ID → task ref → named test scenario → **ZOMBIES checklist** column (see `skills/spec-rigor/references/zombies.md`).
 7. Save; run spec-rigor + traceability gates, then `/sw-freeze` on task list.
 8. Update `docs/prds/INDEX.md` entry (status `not-started`).
 9. **Stop** — standalone runs end here without implementation. The human checkpoint between documentation

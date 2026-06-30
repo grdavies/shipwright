@@ -1,0 +1,8 @@
+{
+  "taskRef": "3.4",
+  "testScenario": "named scenario",
+  "zombiesChecklist": [
+    "Z: empty input",
+    "O: single item"
+  ]
+}
