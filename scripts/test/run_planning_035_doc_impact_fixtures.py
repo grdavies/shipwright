@@ -86,7 +86,7 @@ check_doc() {
 check "doc-currency-035:sw-prd-pull-in" "$SW_PRD" "planning-related[.]py scan --mode creation"
 check "doc-currency-035:sw-prd-confirm-list" "$SW_PRD" "confirm-list"
 check "doc-currency-035:sw-tasks-rescan" "$SW_TASKS" "planning-related[.]py scan --mode tasks-rescan"
-check "doc-currency-035:sw-doc-reconciler" "$SW_DOC" "planning-graph[.]sh reconcile"
+check "doc-currency-035:sw-doc-reconciler" "$SW_DOC" "planning-graph[.]py reconcile"
 check "doc-currency-035:sw-doc-two-track" "$SW_DOC" "docs-edit-route[.]py"
 check "doc-currency-035:sw-doc-posture" "$SW_DOC" "planning\.autonomy"
 check "doc-currency-035:sw-feedback-gap-unit" "$SW_FEEDBACK" "planning_gap_capture"
