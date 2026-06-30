@@ -166,6 +166,7 @@
 * merge phase sw-doc-adoption-consistency-only-default-m into feat/orchestrator-plan-policy-adoption (3b20260) <!-- sw-deliver:sw-doc-adoption-consistency-only-default-m -->
 * merge phase sw-feedback-adoption-untrusted-signal-chokepoint-episodic-m into feat/orchestrator-plan-policy-adoption (7d6ae52) <!-- sw-deliver:sw-feedback-adoption-untrusted-signal-chokepoint-episodic-m -->
 * merge phase docs-emitter-propagation-freshness-m into feat/orchestrator-plan-policy-adoption (63a9bff) <!-- sw-deliver:docs-emitter-propagation-freshness-m -->
+* merge phase foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l into feat/cross-platform-python-standardization (c5cac21) <!-- sw-deliver:foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
