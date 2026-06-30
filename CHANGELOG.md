@@ -169,6 +169,7 @@
 * merge phase foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l into feat/cross-platform-python-standardization (c5cac21) <!-- sw-deliver:foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l -->
 * merge phase host-layer-gh-curl-elimination-l into feat/cross-platform-python-standardization (1cd2b23) <!-- sw-deliver:host-layer-gh-curl-elimination-l -->
 * merge phase host-layer-gh-curl-elimination-l into feat/cross-platform-python-standardization (adc7d1b) <!-- sw-deliver:host-layer-gh-curl-elimination-l -->
+* merge phase hooks-security-filters-providers-l into feat/cross-platform-python-standardization (86f9471) <!-- sw-deliver:hooks-security-filters-providers-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
