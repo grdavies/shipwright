@@ -30,6 +30,7 @@ from host_lib import (
     token_present,
 )
 from memory_sot import resolve_memory_provider
+import planning_visibility
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -64,18 +65,25 @@ PROJECT_KEY_REGISTRY = ".cursor/hooks/state/issue-store-project-keys.json"
 ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
 
 from issues_lib import (  # noqa: E402
+    IssueBudgetExhausted,
     IssueCapabilityError,
     IssueNotFound,
     IssueRevisionConflict,
+    IssueTombstone,
+    IssueTransferred,
     IssuesClient,
 )
 from planning_canonical import (  # noqa: E402
+    FREEZE_INCOMPLETE_LABEL,
+    FROZEN_LABEL,
     IssueSnapshot,
+    build_freeze_record_body,
     canonical_hash,
     chunk_body_if_needed,
     compose_issue_body,
     infer_artifact_type,
     parse_edges_block,
+    parse_freeze_record_hash,
     project_label,
     reconcile_edges,
     reassemble_body,
@@ -473,6 +481,71 @@ def probe_issues_token(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+
+def parse_visibility_from_content(content: str) -> str | None:
+    if not content.startswith("---"):
+        return None
+    end = content.find("\n---", 3)
+    if end == -1:
+        return None
+    block = content[4:end]
+    for line in block.splitlines():
+        if line.strip().lower().startswith("visibility:"):
+            return line.split(":", 1)[1].strip()
+    return None
+
+
+def secret_scan_text(text: str, *, path_hint: str | None = None) -> None:
+    from secret_scan import load_allowlist, scan_text
+
+    allowlist = load_allowlist(git_root())
+    findings = scan_text(text, allowlist=allowlist, path=path_hint)
+    if findings:
+        fail(
+            "secret-scan-deny",
+            code="secret-scan",
+            pattern=findings[0].pattern,
+            line=findings[0].line_no,
+        )
+
+
+def issue_store_visibility_gate(
+    root: Path,
+    cfg: dict[str, Any],
+    unit_id: str,
+    body_path: str,
+    content: str,
+) -> None:
+    artifact_type = infer_artifact_type(body_path)
+    unit: dict[str, Any] = {
+        "id": unit_id,
+        "type": artifact_type,
+        "bodyPath": body_path,
+    }
+    explicit = parse_visibility_from_content(content)
+    if explicit:
+        unit["visibility"] = explicit
+    resolved = planning_visibility.resolve_unit_visibility(unit, cfg)
+    if planning_visibility.body_is_redacted(resolved["visibility"]):
+        fail(
+            "private-visibility-refused-for-public-issue-store",
+            code="visibility-refused",
+            visibility=resolved["visibility"],
+            unitId=unit_id,
+        )
+
+
+def handle_issue_client_error(exc: Exception) -> None:
+    if isinstance(exc, IssueBudgetExhausted):
+        fail(str(exc), code="deliver-aborted-inconsistent")
+    if isinstance(exc, IssueTombstone):
+        fail(str(exc), code="lifecycle-tombstone")
+    if isinstance(exc, IssueTransferred):
+        fail(str(exc), code="issue-transferred")
+    if isinstance(exc, IssueCapabilityError):
+        fail(str(exc), code="issues-capability")
+
+
 @dataclass(frozen=True)
 class StoreResult:
     verdict: str
@@ -649,6 +722,71 @@ class IssueStoreBackend(PlanningStoreBackend):
             fail(str(exc), code="edge-divergence")
         return strip_markers_and_edges(full_body)
 
+
+    def _verify_frozen_integrity(self, record: Any) -> None:
+        if FREEZE_INCOMPLETE_LABEL in record.labels:
+            fail("freeze-incomplete", code="freeze-incomplete", unitId=record.unit_id)
+        if FROZEN_LABEL not in record.labels:
+            return
+        recorded = parse_freeze_record_hash(record.comments)
+        if not recorded:
+            fail("missing-freeze-record", code="lifecycle-tombstone", unitId=record.unit_id)
+        current = canonical_hash(self._record_to_snapshot(record))
+        if current != recorded:
+            fail(
+                "tamper-detected",
+                code="tamper-detected",
+                unitId=record.unit_id,
+                recordedHash=recorded,
+                currentHash=current,
+            )
+
+    def _guard_write_visibility(self, unit_id: str, body_path: str, content: str) -> None:
+        issue_store_visibility_gate(self.root, self.cfg, unit_id, body_path, content)
+
+    def _guard_write_secrets(self, *texts: str, path_hint: str | None = None) -> None:
+        for chunk in texts:
+            if chunk:
+                secret_scan_text(chunk, path_hint=path_hint)
+
+    def _find_linked_brainstorm(self, prd_unit_id: str) -> Any | None:
+        matches = self._client.issue_search(project_key=self.project_key, artifact_type="brainstorm")
+        for record in matches:
+            full_body = reassemble_body(record.body, record.comments)
+            edges = parse_edges_block(full_body)
+            if not edges:
+                continue
+            for edge in edges.get("edges") or []:
+                if isinstance(edge, dict) and edge.get("target") == prd_unit_id:
+                    return record
+        return None
+
+    def _distill_brainstorm_rationale(self, brainstorm: Any, prd_unit_id: str) -> dict[str, Any]:
+        if os.environ.get("SW_FREEZE_DISTILL_FAIL", "").strip() in {"1", "true", "yes"}:
+            raise RuntimeError("distillation-forced-fail")
+        content = self._extract_content(brainstorm)
+        if contains_raw_transcript(content):
+            raise RuntimeError("raw-transcript-in-brainstorm")
+        excerpt = content[:4000]
+        redacted = redact_content(excerpt)
+        mem = MemoryBackend(self.root, self.cfg)
+        mem_result = mem.put(
+            f"brainstorm-{brainstorm.unit_id}",
+            f"docs/brainstorms/{brainstorm.unit_id}.md",
+            redacted,
+            content_class="research",
+        )
+        pointer = (
+            f"<!-- sw-memory-pointer -->\n"
+            f"memoryUnit: {mem_result.unit_id}\n"
+            f"prdUnit: {prd_unit_id}\n"
+            f"brainstormUnit: {brainstorm.unit_id}\n"
+        )
+        self._guard_write_secrets(pointer, path_hint="freeze-memory-pointer")
+        self._client.issue_comment(brainstorm.id, pointer, markers=["sw-memory-pointer"])
+        closed = self._client.issue_update(brainstorm.id, state="closed", if_match=brainstorm.etag)
+        return {"memoryUnitId": mem_result.unit_id, "brainstormUnitId": brainstorm.unit_id, "etag": closed.etag}
+
     def _lookup_record(self, unit_id: str, body_path: str) -> Any:
         idx_key = issue_index_key(self.project_key, unit_id)
         issue_id = self._index.get(idx_key)
@@ -657,6 +795,8 @@ class IssueStoreBackend(PlanningStoreBackend):
                 record = self._client.issue_get(issue_id)
             except IssueNotFound:
                 record = None
+            except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
+                handle_issue_client_error(exc)
             else:
                 if verify_project_scope(record.body, self.project_key):
                     return record
@@ -673,6 +813,8 @@ class IssueStoreBackend(PlanningStoreBackend):
         return record
 
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
+        self._guard_write_visibility(unit_id, body_path, content)
+        self._guard_write_secrets(content, path_hint=body_path)
         artifact_type = self._artifact_type(body_path)
         title = self._issue_title(artifact_type, unit_id)
         labels = self._labels_for(artifact_type)
@@ -706,6 +848,7 @@ class IssueStoreBackend(PlanningStoreBackend):
                     actual=exc.actual,
                 )
         for comment in extra_comments:
+            self._guard_write_secrets(comment.body, path_hint=body_path)
             self._client.issue_comment(record.id, comment.body, markers=comment.markers)
             record = self._client.issue_get(record.id)
         idx_key = issue_index_key(self.project_key, unit_id)
@@ -722,6 +865,9 @@ class IssueStoreBackend(PlanningStoreBackend):
             return StoreResult("missing", unit_id, body_path, self.backend_id, reason="not-found")
         except IssueCapabilityError as exc:
             fail(str(exc), code="issues-capability")
+        except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
+            handle_issue_client_error(exc)
+        self._verify_frozen_integrity(record)
         content = self._extract_content(record)
         digest = canonical_hash(self._record_to_snapshot(record))
         log_operation("get", unit_id, body_path, content, self.backend_id)
@@ -747,19 +893,105 @@ class IssueStoreBackend(PlanningStoreBackend):
         log_operation("materialize", unit_id, body_path, got.content, self.backend_id)
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=got.content, hash=got.hash)
 
+
+    def freeze(self, unit_id: str, body_path: str, *, distill: bool = True) -> dict[str, Any]:
+        try:
+            record = self._lookup_record(unit_id, body_path)
+        except IssueNotFound:
+            fail("issue-not-found", code="not-found", unitId=unit_id)
+        except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
+            handle_issue_client_error(exc)
+        self._guard_write_visibility(unit_id, body_path, self._extract_content(record))
+        if FROZEN_LABEL in record.labels:
+            fail("already-frozen", code="already-frozen", unitId=unit_id)
+        try:
+            record = self._client.issue_lock(record.id, if_match=record.etag)
+            labels = sorted(set(record.labels) | {FROZEN_LABEL})
+            record = self._client.issue_label(record.id, labels, if_match=record.etag)
+            digest = canonical_hash(self._record_to_snapshot(record))
+            freeze_body = build_freeze_record_body(digest)
+            self._guard_write_secrets(freeze_body, path_hint="sw-freeze-record")
+            self._client.issue_comment(record.id, freeze_body, markers=["sw-freeze-record"])
+            record = self._client.issue_get(record.id)
+        except IssueRevisionConflict as exc:
+            fail("revision-conflict", code="revision-conflict", expected=exc.expected, actual=exc.actual)
+        except (IssueBudgetExhausted, IssueTombstone, IssueTransferred) as exc:
+            handle_issue_client_error(exc)
+
+        distillation: dict[str, Any] | None = None
+        artifact_type = self._artifact_type(body_path)
+        if distill and artifact_type == "prd":
+            brainstorm = self._find_linked_brainstorm(unit_id)
+            if brainstorm is not None:
+                try:
+                    distillation = self._distill_brainstorm_rationale(brainstorm, unit_id)
+                except Exception as exc:  # noqa: BLE001 — fail-closed R48
+                    labels = sorted(set(record.labels) | {FREEZE_INCOMPLETE_LABEL})
+                    try:
+                        record = self._client.issue_label(record.id, labels, if_match=record.etag)
+                    except Exception:
+                        pass
+                    fail("freeze-incomplete", code="freeze-incomplete", reason=str(exc))
+
+        log_operation("freeze", unit_id, body_path, None, self.backend_id)
+        return {
+            "verdict": "ok",
+            "unitId": unit_id,
+            "bodyPath": body_path,
+            "hash": digest,
+            "locked": True,
+            "labels": list(record.labels),
+            "distillation": distillation,
+        }
+
+    def verify_frozen_hash(self, unit_id: str, body_path: str) -> dict[str, Any]:
+        try:
+            record = self._lookup_record(unit_id, body_path)
+        except IssueNotFound:
+            fail("issue-not-found", code="not-found", unitId=unit_id)
+        except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
+            handle_issue_client_error(exc)
+        if FREEZE_INCOMPLETE_LABEL in record.labels:
+            fail("freeze-incomplete", code="freeze-incomplete", unitId=unit_id)
+        if FROZEN_LABEL not in record.labels:
+            fail("not-frozen", code="not-frozen", unitId=unit_id)
+        recorded = parse_freeze_record_hash(record.comments)
+        if not recorded:
+            fail("missing-freeze-record", code="lifecycle-tombstone", unitId=unit_id)
+        current = canonical_hash(self._record_to_snapshot(record))
+        if current != recorded:
+            fail(
+                "tamper-detected",
+                code="tamper-detected",
+                unitId=unit_id,
+                recordedHash=recorded,
+                currentHash=current,
+            )
+        return {
+            "verdict": "ok",
+            "unitId": unit_id,
+            "bodyPath": body_path,
+            "hash": current,
+            "recordedHash": recorded,
+        }
+
     def link_brainstorm_to_prd(self, brainstorm_unit_id: str, prd_unit_id: str) -> dict[str, Any]:
         try:
             brainstorm = self._lookup_record(brainstorm_unit_id, f"docs/brainstorms/{brainstorm_unit_id}.md")
         except IssueNotFound:
             fail("brainstorm-issue-missing", code="brainstorm-missing")
         edges = [{"rel": "spawned", "target": prd_unit_id, "targetType": "prd"}]
+        raw_content = strip_markers_and_edges(reassemble_body(brainstorm.body, brainstorm.comments))
+        self._guard_write_visibility(brainstorm_unit_id, f"docs/brainstorms/{brainstorm_unit_id}.md", raw_content)
+        self._guard_write_secrets(raw_content, path_hint=f"docs/brainstorms/{brainstorm_unit_id}.md")
         body = compose_issue_body(
             self.project_key,
             "brainstorm",
             brainstorm_unit_id,
-            strip_markers_and_edges(reassemble_body(brainstorm.body, brainstorm.comments)),
+            raw_content,
             edges=edges,
         )
+        self._guard_write_secrets(body, path_hint=f"docs/brainstorms/{brainstorm_unit_id}.md")
         try:
             updated = self._client.issue_update(brainstorm.id, body=body, if_match=brainstorm.etag)
         except IssueRevisionConflict as exc:
@@ -1026,7 +1258,11 @@ def main() -> None:
         "materialize",
         "validate-local-synced",
         "canonical-hash",
+        "freeze",
+        "verify-frozen-hash",
         "link-brainstorm-prd",
+        "mark-issue-tombstone",
+        "mark-issue-transferred",
         "clear-issue-fixture",
     ):
         sub.add_parser(name)
@@ -1085,6 +1321,27 @@ def main() -> None:
             comments=comments,
         )
         emit({"verdict": "ok", "canonical": canonical_form(snap), "hash": ch(snap)})
+
+    elif args.command == "freeze":
+        backend = get_backend(root, cfg, override="issue-store")
+        if not isinstance(backend, IssueStoreBackend):
+            fail("issue-store backend required")
+        distill = "--no-distill" not in rest
+        emit(backend.freeze(_require(rest, "--unit-id"), _require(rest, "--body-path"), distill=distill))
+    elif args.command == "verify-frozen-hash":
+        backend = get_backend(root, cfg, override="issue-store")
+        if not isinstance(backend, IssueStoreBackend):
+            fail("issue-store backend required")
+        result = backend.verify_frozen_hash(_require(rest, "--unit-id"), _require(rest, "--body-path"))
+        emit(result)
+    elif args.command == "mark-issue-tombstone":
+        client = IssuesClient(root, resolve_issues_provider(cfg).get("provider", "none"))
+        client.mark_tombstone(_require(rest, "--issue-id"))
+        emit({"verdict": "ok"})
+    elif args.command == "mark-issue-transferred":
+        client = IssuesClient(root, resolve_issues_provider(cfg).get("provider", "none"))
+        client.mark_transferred(_require(rest, "--issue-id"))
+        emit({"verdict": "ok"})
     elif args.command == "link-brainstorm-prd":
         backend = get_backend(root, cfg, override="issue-store")
         if not isinstance(backend, IssueStoreBackend):

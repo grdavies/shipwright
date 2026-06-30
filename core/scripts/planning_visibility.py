@@ -50,6 +50,10 @@ EMISSION_POINTS: dict[str, str] = {
     "reconciler-output": "033 reconciler emitted bodies",
     "run-log": "Deliver run logs",
     "handoff-032": "032 handoff artifacts",
+    "issue-store-memory-pointer": "Issue-store brainstorm distillation pointer (PRD 043 R19)",
+    "issue-store-freeze-record": "Issue-store freeze-record comment (PRD 043 R13)",
+    "issue-store-comment": "Issue-store comment / overflow chunk write (PRD 043 R45)",
+    "issue-store-put": "Issue-store put/create body write (PRD 043 R45)",
     "pull-in-confirm": "035 pull-in confirm lists",
 }
 

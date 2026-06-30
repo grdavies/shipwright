@@ -117,7 +117,7 @@ migrate regions.
 
 **Zero stub files (R7):** when issue-store is the effective backend, doc commands must not commit
 planning artifact bodies to the code repo; artifacts live as issues and materialize to git-ignored paths
-at deliver time (Phase 3).
+at deliver time (Phase 3): `planning_store.py freeze` records `sw-freeze-record` hash; `planning_materialize.py provision` verifies hash before materializing frozen task lists to `.cursor/planning-materialized/`.
 
 **Status precedence:** lifecycle consumers read `derived.status` when populated and fall back to structural
 `status`; gap units (`type: gap`) always use structural status only.

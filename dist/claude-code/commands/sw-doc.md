@@ -48,6 +48,15 @@ No brainstorm required; no task generation after freeze.
 
 Each remains independently runnable.
 
+## Issue-store dual-mode (PRD 043)
+
+When `planning.store.backend` is `issue-store`, doc commands write artifacts to issues (no repo
+stub files). Freeze uses `planning_store.py freeze` (lock + hash + optional brainstorm
+distillation). Task lists materialize to `.cursor/planning-materialized/` at deliver start with
+`verify-frozen-hash`. Private/memory units are refused against a public issue store — route to
+`memory` or `local-synced` backends instead.
+
+
 ## Procedure
 
 ### Plan-policy adoption (PRD 024 — consistency-only default, R36c)

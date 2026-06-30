@@ -28,6 +28,10 @@ SW_EDGES_FENCE = re.compile(
 )
 
 EXCLUDED_COMMENT_MARKERS = frozenset({"sw-freeze-record", "sw-chunk-overflow"})
+FREEZE_RECORD_MARKER = "sw-freeze-record"
+FROZEN_LABEL = "sw:frozen"
+FREEZE_INCOMPLETE_LABEL = "sw:freeze-incomplete"
+FREEZE_HASH_PATTERN = re.compile(r"sw-freeze-hash:\s*([a-f0-9]{64})")
 
 ARTIFACT_TYPES = frozenset({"prd", "gap", "tasks", "brainstorm"})
 TYPE_LABELS = {
@@ -298,3 +302,18 @@ def verify_project_scope(body: str, project_key: str) -> bool:
 def verify_unit_id(body: str, unit_id: str) -> bool:
     marker = parse_body_marker(body, MARKER_UNIT_ID)
     return marker == unit_id
+
+
+def parse_freeze_record_hash(comments: list[CommentRecord]) -> str | None:
+    for comment in comments:
+        if FREEZE_RECORD_MARKER not in comment.markers and not comment.excluded_from_canonical():
+            if f"<!-- {FREEZE_RECORD_MARKER} -->" not in comment.body and f"<!--{FREEZE_RECORD_MARKER}-->" not in comment.body:
+                continue
+        match = FREEZE_HASH_PATTERN.search(comment.body)
+        if match:
+            return match.group(1)
+    return None
+
+
+def build_freeze_record_body(content_hash: str) -> str:
+    return f"<!-- {FREEZE_RECORD_MARKER} -->\nsw-freeze-hash: {content_hash}\n"

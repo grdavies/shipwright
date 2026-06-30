@@ -5,11 +5,12 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 from planning_canonical import CommentRecord, compute_etag
 
@@ -23,6 +24,12 @@ ISSUE_VERBS = frozenset({
     "issue-search",
 })
 
+DEFAULT_CALL_BUDGET = 500
+MAX_BACKOFF_ATTEMPTS = 4
+BASE_BACKOFF_SECONDS = 0.05
+
+T = TypeVar("T")
+
 
 class IssueRevisionConflict(Exception):
     def __init__(self, message: str, *, expected: str | None = None, actual: str | None = None) -> None:
@@ -35,8 +42,20 @@ class IssueNotFound(Exception):
     pass
 
 
+class IssueTombstone(IssueNotFound):
+    """Issue deleted or 410 tombstone (R40)."""
+
+
+class IssueTransferred(Exception):
+    """Issue transferred to another project (R40)."""
+
+
 class IssueCapabilityError(Exception):
     pass
+
+
+class IssueBudgetExhausted(Exception):
+    """Per-run API call budget exhausted (R39)."""
 
 
 @dataclass
@@ -55,6 +74,8 @@ class IssueRecord:
     project_key: str = ""
     artifact_type: str = ""
     unit_id: str = ""
+    tombstoned: bool = False
+    transferred: bool = False
 
     def touch(self) -> None:
         self.updated_at = str(int(time.time()))
@@ -79,6 +100,8 @@ class IssueRecord:
             "project_key": self.project_key,
             "artifact_type": self.artifact_type,
             "unit_id": self.unit_id,
+            "tombstoned": self.tombstoned,
+            "transferred": self.transferred,
         }
 
     @classmethod
@@ -110,6 +133,8 @@ class IssueRecord:
             project_key=str(data.get("project_key", "")),
             artifact_type=str(data.get("artifact_type", "")),
             unit_id=str(data.get("unit_id", "")),
+            tombstoned=bool(data.get("tombstoned")),
+            transferred=bool(data.get("transferred")),
         )
 
 
@@ -144,6 +169,16 @@ class FixtureIssuesStore:
         }
         self.path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
+    def _resolve_get(self, issue_id: str) -> IssueRecord:
+        record = self._issues.get(issue_id)
+        if record is None:
+            raise IssueNotFound(f"issue not found: {issue_id}")
+        if record.transferred:
+            raise IssueTransferred(f"issue transferred: {issue_id}")
+        if record.tombstoned:
+            raise IssueTombstone(f"issue tombstoned: {issue_id}")
+        return record
+
     def create(
         self,
         *,
@@ -175,10 +210,7 @@ class FixtureIssuesStore:
         return record
 
     def get(self, issue_id: str) -> IssueRecord:
-        record = self._issues.get(issue_id)
-        if record is None:
-            raise IssueNotFound(f"issue not found: {issue_id}")
-        return record
+        return self._resolve_get(issue_id)
 
     def update(
         self,
@@ -190,15 +222,16 @@ class FixtureIssuesStore:
         labels: list[str] | None = None,
         native_links: list[dict[str, Any]] | None = None,
         if_match: str | None = None,
+        allow_locked: bool = False,
     ) -> IssueRecord:
-        record = self.get(issue_id)
+        record = self._resolve_get(issue_id)
         if if_match and record.etag != if_match:
             raise IssueRevisionConflict(
                 "revision-conflict",
                 expected=if_match,
                 actual=record.etag,
             )
-        if record.locked:
+        if record.locked and not allow_locked:
             raise IssueRevisionConflict("issue-locked")
         if title is not None:
             record.title = title
@@ -215,7 +248,7 @@ class FixtureIssuesStore:
         return record
 
     def add_comment(self, issue_id: str, body: str, *, markers: list[str] | None = None) -> CommentRecord:
-        record = self.get(issue_id)
+        record = self._resolve_get(issue_id)
         comment = CommentRecord(
             id=f"comment-{len(record.comments)}",
             body=body,
@@ -228,10 +261,10 @@ class FixtureIssuesStore:
         return comment
 
     def set_labels(self, issue_id: str, labels: list[str], *, if_match: str | None = None) -> IssueRecord:
-        return self.update(issue_id, labels=labels, if_match=if_match)
+        return self.update(issue_id, labels=labels, if_match=if_match, allow_locked=True)
 
     def lock(self, issue_id: str, *, if_match: str | None = None) -> IssueRecord:
-        record = self.get(issue_id)
+        record = self._resolve_get(issue_id)
         if if_match and record.etag != if_match:
             raise IssueRevisionConflict("revision-conflict", expected=if_match, actual=record.etag)
         record.locked = True
@@ -249,6 +282,8 @@ class FixtureIssuesStore:
     ) -> list[IssueRecord]:
         out: list[IssueRecord] = []
         for record in self._issues.values():
+            if record.tombstoned or record.transferred:
+                continue
             if record.project_key != project_key:
                 continue
             if artifact_type and record.artifact_type != artifact_type:
@@ -266,6 +301,20 @@ class FixtureIssuesStore:
     def find_by_unit(self, project_key: str, unit_id: str) -> IssueRecord | None:
         matches = self.search(project_key=project_key, unit_id=unit_id)
         return matches[0] if matches else None
+
+    def mark_tombstone(self, issue_id: str) -> None:
+        record = self._issues.get(issue_id)
+        if record is None:
+            raise IssueNotFound(f"issue not found: {issue_id}")
+        record.tombstoned = True
+        self._persist()
+
+    def mark_transferred(self, issue_id: str) -> None:
+        record = self._issues.get(issue_id)
+        if record is None:
+            raise IssueNotFound(f"issue not found: {issue_id}")
+        record.transferred = True
+        self._persist()
 
     def clear(self) -> None:
         self._issues.clear()
@@ -285,6 +334,13 @@ def get_fixture_store(root: Path) -> FixtureIssuesStore:
     return FixtureIssuesStore(fixture_store_path(root))
 
 
+def resolve_call_budget() -> int:
+    raw = os.environ.get("SW_ISSUES_CALL_BUDGET", "").strip()
+    if raw.isdigit():
+        return max(1, int(raw))
+    return DEFAULT_CALL_BUDGET
+
+
 class IssuesClient:
     """Selector-facing issues client; fixture mode when SW_ISSUES_FIXTURE=1."""
 
@@ -292,6 +348,35 @@ class IssuesClient:
         self.root = root
         self.provider = provider
         self._fixture = get_fixture_store(root) if use_fixture_mode() else None
+        self._call_count = 0
+        self._budget = resolve_call_budget()
+
+    def _charge_budget(self) -> None:
+        if self._call_count >= self._budget:
+            raise IssueBudgetExhausted("deliver-aborted-inconsistent: issue API call budget exhausted")
+        self._call_count += 1
+
+    def _with_resilience(self, verb: str, fn: Callable[[], T]) -> T:
+        last_exc: Exception | None = None
+        for attempt in range(MAX_BACKOFF_ATTEMPTS):
+            self._charge_budget()
+            try:
+                return fn()
+            except (IssueRevisionConflict, IssueNotFound, IssueTombstone, IssueTransferred, IssueBudgetExhausted):
+                raise
+            except IssueCapabilityError as exc:
+                last_exc = exc
+                if attempt + 1 >= MAX_BACKOFF_ATTEMPTS:
+                    raise
+            except Exception as exc:
+                last_exc = exc
+                if attempt + 1 >= MAX_BACKOFF_ATTEMPTS:
+                    raise
+            delay = BASE_BACKOFF_SECONDS * (2 ** attempt) + random.uniform(0, BASE_BACKOFF_SECONDS)
+            time.sleep(delay)
+        if last_exc is not None:
+            raise last_exc
+        raise IssueCapabilityError(f"{verb} failed after retries")
 
     def _require_fixture(self) -> FixtureIssuesStore:
         if self._fixture is None:
@@ -301,22 +386,28 @@ class IssuesClient:
         return self._fixture
 
     def issue_create(self, **kwargs: Any) -> IssueRecord:
-        return self._require_fixture().create(**kwargs)
+        return self._with_resilience("issue-create", lambda: self._require_fixture().create(**kwargs))
 
     def issue_get(self, issue_id: str) -> IssueRecord:
-        return self._require_fixture().get(issue_id)
+        return self._with_resilience("issue-get", lambda: self._require_fixture().get(issue_id))
 
     def issue_update(self, issue_id: str, **kwargs: Any) -> IssueRecord:
-        return self._require_fixture().update(issue_id, **kwargs)
+        return self._with_resilience("issue-update", lambda: self._require_fixture().update(issue_id, **kwargs))
 
     def issue_comment(self, issue_id: str, body: str, *, markers: list[str] | None = None) -> CommentRecord:
-        return self._require_fixture().add_comment(issue_id, body, markers=markers)
+        return self._with_resilience("issue-comment", lambda: self._require_fixture().add_comment(issue_id, body, markers=markers))
 
     def issue_label(self, issue_id: str, labels: list[str], *, if_match: str | None = None) -> IssueRecord:
-        return self._require_fixture().set_labels(issue_id, labels, if_match=if_match)
+        return self._with_resilience("issue-label", lambda: self._require_fixture().set_labels(issue_id, labels, if_match=if_match))
 
     def issue_lock(self, issue_id: str, *, if_match: str | None = None) -> IssueRecord:
-        return self._require_fixture().lock(issue_id, if_match=if_match)
+        return self._with_resilience("issue-lock", lambda: self._require_fixture().lock(issue_id, if_match=if_match))
 
     def issue_search(self, **kwargs: Any) -> list[IssueRecord]:
-        return self._require_fixture().search(**kwargs)
+        return self._with_resilience("issue-search", lambda: self._require_fixture().search(**kwargs))
+
+    def mark_tombstone(self, issue_id: str) -> None:
+        self._with_resilience("issue-tombstone", lambda: self._require_fixture().mark_tombstone(issue_id))
+
+    def mark_transferred(self, issue_id: str) -> None:
+        self._with_resilience("issue-transfer", lambda: self._require_fixture().mark_transferred(issue_id))
