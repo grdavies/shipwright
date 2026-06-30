@@ -110,8 +110,13 @@ def synthetic_config_from_marker(root: Path) -> dict | None:
 def rules_script_for_provider(plugin_root: Path, provider: str) -> Path | None:
     if provider not in _KNOWN_MEMORY_PROVIDERS:
         return None
-    script = plugin_root / "providers" / f"{provider}-rules.sh"
-    return script if script.is_file() else None
+    # Python-first (R31): the rule-fetcher adapters are authored as .py. Keep a
+    # .sh fallback so a partially-migrated install still resolves a runnable script.
+    for suffix in (".py", ".sh"):
+        script = plugin_root / "providers" / f"{provider}-rules{suffix}"
+        if script.is_file():
+            return script
+    return None
 
 
 def workflow_config_path(root: Path) -> Path | None:
