@@ -197,6 +197,11 @@ Before dispatching any Task, redact non-config payloads (diff excerpts, CI/revie
 memory-preflight data) via `python3 scripts/memory-redact.py`, then include only redacted/fenced
 `untrusted_payload` content.
 
+
+## Decision log (required)
+
+Before PR create/update, capture a schema-valid `## Decision log` JSON block on the PR body (see `core/sw-reference/decision-log.schema.json`). Validate with `python3 scripts/decision_log.py ship-require --body-file <pr-body.md>`; missing/invalid records halt the ship chain (fail-closed; content routes through `scripts/memory-redact.py`).
+
 ## Guardrails
 
 - Never merge or force-push.

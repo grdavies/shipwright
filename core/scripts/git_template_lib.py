@@ -37,6 +37,17 @@ def render_template(name: str, context: dict[str, str]) -> str:
     return text
 
 
+
+def _validate_decision_log_marker(body: str, marker: str) -> bool:
+    if marker not in body:
+        return False
+    try:
+        from decision_log import parse_body
+
+        return parse_body(body).get("verdict") == "pass"
+    except Exception:
+        return False
+
 def validate_body(name: str, body: str) -> dict:
     tpl = template_path(name).read_text(encoding="utf-8")
     missing: list[str] = []
@@ -48,6 +59,10 @@ def validate_body(name: str, body: str) -> dict:
         section = body.split(marker, 1)[1]
         content = section.split("##", 1)[0].strip()
         content = re.sub(r"<!--.*?-->", "", content, flags=re.DOTALL).strip()
+        if field == "decision-log":
+            if not _validate_decision_log_marker(body, marker):
+                missing.append(field)
+            continue
         if not content or content.startswith("{{"):
             missing.append(field)
     verdict = "pass" if not missing else "fail"

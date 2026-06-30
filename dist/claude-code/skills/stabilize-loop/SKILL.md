@@ -19,7 +19,7 @@ Stop with success when the `checks-gate` verdict (from `scripts/check-gate.py`) 
 - every **required** check passes under the configured all-checks policy (PR test-plan **advisory**
   job failures appear in `advisoryFailingChecks` but do not block — see `prTestPlan` in gate JSON), and
 - zero checks pending, and
-- **CodeRabbit is settled for the current head** — `coderabbitLanded == true` (`coderabbitState` is
+- **External review is settled for the current head** — `reviewLanded == true` (provider-agnostic; legacy `coderabbitLanded` mirrors the same predicate when `coderabbitState` is
   `landed`, `skipped`, or `absent`). Because every pass pushes a new fix commit, this means a **fresh**
   CodeRabbit review must land for that commit, *or* CodeRabbit explicitly skips it (`skipped` — "no new
   commits to review"); a stale review of the pre-fix head with no skip marker never counts. This is the
@@ -53,7 +53,7 @@ the loop is not done while reproducible findings remain unresolved.
 5. Recompute the verdict via `scripts/check-gate.py` (it folds in the per-head CodeRabbit barrier,
    classified checks, and the unresolved-thread count); also re-harvest open non-inline findings from the
    review/walkthrough bodies (a fixed "Outside diff range" item should no longer recur).
-   - **green** (`coderabbitLanded == true` — the re-review of this pass's fix landed clean, or CodeRabbit
+   - **green** (`reviewLanded == true` — the re-review of this pass's fix landed clean, or CodeRabbit
      skipped the head) → success: report and hand back (to `/ship` → `phase-ready`, or to the user).
    - **`coderabbitState == "in-flight"`** (re-review of the fix not posted yet, no skip marker) → treat as
      **yellow**, wait on the wake (step 4) and recompute; do **not** declare success.

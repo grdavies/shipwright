@@ -4,8 +4,7 @@
 [![license](https://img.shields.io/badge/license-MIT-green)](#license)
 [![editors](https://img.shields.io/badge/Cursor-%26%20Claude%20Code-black)](#install)
 
-**A gated agentic dev lifecycle for Cursor and Claude Code.** Traceable specs, a verify → review →
-ship loop, and compounding memory — all driven by `sw-` commands.
+**A gated agentic dev lifecycle for Cursor and Claude Code.** Traceable specs, a per-task **red → green → refactor** loop (TDD + optional quality signal), then verify → review → ship with decision-log provenance — all driven by `sw-` commands.
 
 Orchestrators advance on green and **halt at human gates** (freeze, merge, feedback routing).
 Shipwright **never auto-merges**.

@@ -5,7 +5,7 @@ alwaysApply: false
 
 # `/sw-review`
 
-Two-phase local review over the uncommitted delta: **phase 1** = native local panel (`review.local`,
+Two-phase local review over the uncommitted delta; phase 2 may run **heterogeneous** external providers (`review.providers` array, scalar back-compat) synthesized by `scripts/review_synthesize.py`. **phase 1** = native local panel (`review.local`,
 default-on **`native`**); **phase 2** = external provider (`review.provider`, default **`none`**). Phase 1
 runs **independently** of phase-2 opt-out — including when `review.provider: "none"`. CodeRabbit is opt-in via
 `review.provider: "coderabbit"`.
