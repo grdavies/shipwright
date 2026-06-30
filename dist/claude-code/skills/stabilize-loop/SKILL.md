@@ -1,6 +1,7 @@
 ---
 name: stabilize-loop
-description: USE WHEN reviewing code, handling review feedback, or running /sw-review and /sw-stabilize. Opt-in goal-driven loop that keeps running /sw-stabilize and /sw-watch-ci until the all-checks gate is green and no actionable review threads remain. Use when the user asks to stabilize until green, or from /ship. Single-pass /sw-stabilize remains the default; this only adds the loop wrapper with hard stops.---
+description: Opt-in goal-driven loop that keeps running /sw-stabilize and /sw-watch-ci until the all-checks gate is green and no actionable review threads remain. Use when the user asks to stabilize until green, or from /ship. Single-pass /sw-stabilize remains the default; this only adds the loop wrapper with hard stops.
+---
 
 # stabilize-loop
 

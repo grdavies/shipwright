@@ -32,8 +32,16 @@ def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     root = SCRIPT_DIR.parent
     import ship_phase_steps
-    ship_phase_steps.main([str(root), *args])
-    return 0
+
+    saved = sys.argv
+    sys.argv = [str(Path(__file__).resolve()), str(root), *args]
+    try:
+        ship_phase_steps.main()
+    except SystemExit as exc:
+        code = exc.code
+        return int(code) if isinstance(code, int) else (0 if code is None else 1)
+    finally:
+        sys.argv = saved
     return 0
 
 

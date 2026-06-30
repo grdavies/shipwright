@@ -82,8 +82,8 @@ def cfg_value(cfg: dict[str, Any], *path: str, default: Any = None) -> Any:
 
 
 def host_verb(root: Path, *args: str) -> dict[str, Any]:
-    host_sh = SCRIPT_DIR / "host.sh"
-    completed = proc.run(["bash", str(host_sh), "--root", str(root), *args], cwd=str(root))
+    host_py = SCRIPT_DIR / "host.py"
+    completed = proc.run([sys.executable, str(host_py), "--root", str(root), *args], cwd=str(root))
     try:
         return json.loads(completed.stdout.strip() or "{}")
     except json.JSONDecodeError:

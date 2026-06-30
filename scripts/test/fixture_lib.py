@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""Ported harness (R27)."""
+from __future__ import annotations
+import os, re, subprocess, sys
+from pathlib import Path
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR.parent) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR.parent))
+from _fixture_lib import repo_root
+
+from _harness_patch import patch_source as _patch_source
+
+def main() -> int:
+    root = repo_root(__file__)
+    env = os.environ.copy(); env['ROOT']=str(root)
+    env['PYTHONPATH']=str(root/'scripts')+os.pathsep+env.get('PYTHONPATH','')
+    return subprocess.run(['bash','-c',_patch_source(_SOURCE,root)],cwd=str(root),env=env,shell=False).returncode
+_SOURCE = r"""
+#!/usr/bin/env bash
+# Shared helpers for scripts/test/*-fixtures.sh
+# Content dirs (commands/, skills/, rules/, agents/) live under repo root or core/.
+set -euo pipefail
+
+if [[ -z "${ROOT:-}" ]]; then
+  ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+fi
+
+# content_path <relative> — print absolute path; prefer root, then core/
+content_path() {
+  local rel="${1:?relative path e.g. commands/sw-prd.md}"
+  if [[ -f "$ROOT/$rel" ]]; then
+    printf '%s\n' "$ROOT/$rel"
+  elif [[ -f "$ROOT/core/$rel" ]]; then
+    printf '%s\n' "$ROOT/core/$rel"
+  else
+    printf '%s\n' "$ROOT/$rel"
+    return 1
+  fi
+}
+
+"""
+if __name__=="__main__": raise SystemExit(main())

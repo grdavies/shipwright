@@ -34,12 +34,11 @@ flowchart LR
 Check you have the essentials:
 
 ```bash
-git --version && bash --version && rsync --version && curl --version
+git --version && python3 --version
 ```
 
-- [x] **git**, **bash**, **rsync** — clone, run `scripts/install.sh`, copy the plugin tree
+- [x] **Python ≥ 3.9** and **git** — the only runtime dependencies for install, hooks, gates, and tests
 - [x] **Host API token** — set `GITHUB_TOKEN` (or `host.tokenEnv`) for GitHub; no host CLI required
-- [ ] **Python 3** — only for developing Shipwright (`python3 -m sw generate`; see [CONTRIBUTING.md](CONTRIBUTING.md))
 
 ## Install
 
@@ -52,11 +51,11 @@ Shipwright installs **once per machine**; you configure it **per project repo**.
 ```bash
 git clone https://github.com/grdavies/shipwright
 cd shipwright
-./scripts/install.sh          # copies dist/cursor/ → ~/.cursor/plugins/local/shipwright
+python3 scripts/install.py          # copies dist/cursor/ → ~/.cursor/plugins/local/shipwright
 ```
 
 Run **Developer: Reload Window** in Cursor. Override the destination:
-`./scripts/install.sh /path/to/dest`.
+`python3 scripts/install.py /path/to/dest`.
 </details>
 
 <details>

@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+import json
+from pathlib import Path
+root = Path(__file__).resolve().parent.parent.parent
+sot = json.loads((root/'core/sw-reference/build-chain-sot.json').read_text())
+layout = (root/'.sw/layout.md').read_text(encoding='utf-8')
+if 'python' not in layout.lower() or 'harness' not in sot.get('roles', {}):
+    raise SystemExit('FAIL build-chain-sot-layout')
+print('OK  build-chain-sot-layout')
