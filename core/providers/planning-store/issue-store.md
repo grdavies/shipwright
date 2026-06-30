@@ -96,3 +96,59 @@ Mutations require matching `etag` preconditions; conflicts return `revision-conf
 ### Canonical hash CLI
 
 `python3 scripts/planning_store.py canonical-hash --fixture <path>`
+
+
+## Phase 3 — freeze, tamper detection, materialization (R8, R13–R15, R19, R37–R41, R45–R48)
+
+### Freeze (`freeze` CLI)
+
+```bash
+python3 scripts/planning_store.py freeze --unit-id <id> --body-path <path> [--no-distill]
+```
+
+Ordered steps (fail-closed):
+
+1. Lock issue (`issue-lock`)
+2. Apply `sw:frozen` label
+3. Compute canonical content-hash (includes `sw:frozen`, excludes `sw-freeze-record` comments)
+4. Write `sw-freeze-record` comment with `sw-freeze-hash: <sha256>`
+5. On PRD freeze with linked brainstorm: distill rationale to memory (`research`) via
+   `memory-redact`, close+link brainstorm issue (retain, never delete)
+6. Distillation failure → `sw:freeze-incomplete` label; blocks `/sw-deliver`
+
+### Tamper detection (R37)
+
+Every `get`/`verify-frozen-hash` on a frozen issue recomputes the canonical hash and compares
+to the freeze-record comment. Mismatch → `tamper-detected` (distinct from auth/outage).
+
+```bash
+python3 scripts/planning_store.py verify-frozen-hash --unit-id <id> --body-path <path>
+```
+
+`/sw-deliver` materialization calls `verify-frozen-hash` before consuming frozen task lists
+(`scripts/planning_materialize.py`).
+
+### Materialization (R8)
+
+Frozen task-list issues materialize to `.cursor/planning-materialized/` (gitignored) with hash
+verification and post-materialize `secret-scan`.
+
+### Visibility + secret-scan (R28, R45)
+
+All issue-store writes resolve visibility via `planning_visibility` before API calls.
+`private`/`memory` units are refused against the public issue store. Every body/comment write
+runs `secret-scan` (shared deny patterns with `memory-redact`).
+
+Emission points: `issue-store-put`, `issue-store-comment`, `issue-store-freeze-record`,
+`issue-store-memory-pointer`.
+
+### Resilience (R15, R39, R41)
+
+- Per-run API call budget: `SW_ISSUES_CALL_BUDGET` (default 500); exhaustion →
+  `deliver-aborted-inconsistent`
+- Exponential backoff with jitter between retries (no `Retry-After` reliance)
+- Lifecycle: `IssueNotFound` / tombstone / transferred distinguished from `tamper-detected`
+
+Issue-store mode requires network connectivity for planning operations; outages fail closed with
+idempotent retry on reconnect.
+

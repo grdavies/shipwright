@@ -332,7 +332,7 @@ fi
 # --- brainstorm-durability-link (R18) ---
 python3 "$PY" --root "$ROOT" clear-issue-fixture >/dev/null
 cp "$ISSUE_CFG" "$ROOT/.cursor/workflow.config.json"
-python3 "$PY" --root "$ROOT" put --backend issue-store --unit-id bs-fixture --body-path docs/brainstorms/2026-06-30-fixture-requirements.md --content '# brainstorm' >/dev/null
+python3 "$PY" --root "$ROOT" put --backend issue-store --unit-id bs-fixture --body-path docs/brainstorms/2026-06-30-fixture-requirements.md --content $'---\nvisibility: public\n---\n# brainstorm' >/dev/null
 if OUT=$(python3 "$PY" --root "$ROOT" link-brainstorm-prd --brainstorm-unit bs-fixture --prd-unit fixture-prd) && \
    echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='ok'"; then
   ok "brainstorm-durability:link-prd"
@@ -362,6 +362,168 @@ then
 else
   bad "revision-conflict:should-fail"
 fi
+
+
+# --- issue-store-freeze-r13 (R13) ---
+python3 "$PY" --root "$ROOT" clear-issue-fixture >/dev/null
+cp "$ISSUE_CFG" "$ROOT/.cursor/workflow.config.json"
+python3 "$PY" --root "$ROOT" put --backend issue-store --unit-id freeze-me --body-path docs/prds/099-fixture/099-prd-freeze.md --content '# freeze target' >/dev/null
+if OUT=$(python3 "$PY" --root "$ROOT" freeze --backend issue-store --unit-id freeze-me --body-path docs/prds/099-fixture/099-prd-freeze.md --no-distill) && \
+   echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d.get('locked') and d.get('hash')"; then
+  ok "issue-store-freeze-r13:lock-label-hash"
+else
+  bad "issue-store-freeze-r13:lock-label-hash"
+fi
+if python3 - <<INNER
+import json, sys
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+from issues_lib import FixtureIssuesStore
+from planning_canonical import FROZEN_LABEL, parse_freeze_record_hash
+store = FixtureIssuesStore(Path("$ROOT/.cursor/hooks/state/issue-store-fixture.json"))
+rec = next(iter(store._issues.values()))
+assert rec.locked and FROZEN_LABEL in rec.labels
+assert parse_freeze_record_hash(rec.comments)
+raise SystemExit(0)
+INNER
+then
+  ok "issue-store-freeze-r13:fixture-state"
+else
+  bad "issue-store-freeze-r13:fixture-state"
+fi
+
+# --- issue-store-tamper-r37 (R37) ---
+if OUT=$(python3 "$PY" --root "$ROOT" get --backend issue-store --unit-id freeze-me --body-path docs/prds/099-fixture/099-prd-freeze.md) && \
+   echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='ok'"; then
+  ok "issue-store-tamper-r37:pre-tamper-read"
+else
+  bad "issue-store-tamper-r37:pre-tamper-read"
+fi
+python3 - <<INNER
+import sys
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+from issues_lib import FixtureIssuesStore
+store = FixtureIssuesStore(Path("$ROOT/.cursor/hooks/state/issue-store-fixture.json"))
+rec = next(iter(store._issues.values()))
+rec.body = rec.body + "\n<!-- tamper -->"
+rec.touch()
+store._persist()
+INNER
+if OUT=$(python3 "$PY" --root "$ROOT" get --backend issue-store --unit-id freeze-me --body-path docs/prds/099-fixture/099-prd-freeze.md 2>/dev/null || true); then
+  if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('code')=='tamper-detected'"; then
+    ok "issue-store-tamper-r37:detected"
+  else
+    bad "issue-store-tamper-r37:detected"
+  fi
+else
+  bad "issue-store-tamper-r37:detected"
+fi
+
+# --- issue-store-verify-hash-r14 (R14) ---
+python3 "$PY" --root "$ROOT" clear-issue-fixture >/dev/null
+cp "$ISSUE_CFG" "$ROOT/.cursor/workflow.config.json"
+python3 "$PY" --root "$ROOT" put --backend issue-store --unit-id verify-me --body-path docs/prds/099-fixture/099-prd-verify.md --content v1 >/dev/null
+python3 "$PY" --root "$ROOT" freeze --backend issue-store --unit-id verify-me --body-path docs/prds/099-fixture/099-prd-verify.md --no-distill >/dev/null
+if OUT=$(python3 "$PY" --root "$ROOT" verify-frozen-hash --unit-id verify-me --body-path docs/prds/099-fixture/099-prd-verify.md) && \
+   echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='ok'"; then
+  ok "issue-store-verify-hash-r14:match"
+else
+  bad "issue-store-verify-hash-r14:match"
+fi
+python3 - <<INNER
+import sys
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+from issues_lib import FixtureIssuesStore
+store = FixtureIssuesStore(Path("$ROOT/.cursor/hooks/state/issue-store-fixture.json"))
+rec = next(i for i in store._issues.values() if i.unit_id=='verify-me')
+rec.title = rec.title + ' tampered'
+rec.touch(); store._persist()
+INNER
+if OUT=$(python3 "$PY" --root "$ROOT" verify-frozen-hash --unit-id verify-me --body-path docs/prds/099-fixture/099-prd-verify.md 2>/dev/null || true); then
+  if echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin).get('code')=='tamper-detected'"; then
+    ok "issue-store-verify-hash-r14:mismatch"
+  else
+    bad "issue-store-verify-hash-r14:mismatch"
+  fi
+else
+  bad "issue-store-verify-hash-r14:mismatch"
+fi
+
+# --- issue-store-freeze-incomplete-r48 (R48) ---
+python3 "$PY" --root "$ROOT" clear-issue-fixture >/dev/null
+cp "$ISSUE_CFG" "$ROOT/.cursor/workflow.config.json"
+python3 "$PY" --root "$ROOT" put --backend issue-store --unit-id inc --body-path docs/prds/099-fixture/099-prd-inc.md --content '# inc' >/dev/null
+python3 "$PY" --root "$ROOT" put --backend issue-store --unit-id bs-inc --body-path docs/brainstorms/bs-inc.md --content $'---\nvisibility: public\n---\n# bs' >/dev/null
+python3 "$PY" --root "$ROOT" link-brainstorm-prd --brainstorm-unit bs-inc --prd-unit inc >/dev/null
+export SW_FREEZE_DISTILL_FAIL=1
+if OUT=$(python3 "$PY" --root "$ROOT" freeze --unit-id inc --body-path docs/prds/099-fixture/099-prd-inc.md 2>/dev/null || true); then
+  if echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin).get('code')=='freeze-incomplete'"; then
+    ok "issue-store-freeze-incomplete-r48:blocked"
+  else
+    bad "issue-store-freeze-incomplete-r48:blocked"
+  fi
+else
+  bad "issue-store-freeze-incomplete-r48:blocked"
+fi
+unset SW_FREEZE_DISTILL_FAIL
+if OUT=$(python3 "$PY" --root "$ROOT" verify-frozen-hash --unit-id inc --body-path docs/prds/099-fixture/099-prd-inc.md 2>/dev/null || true); then
+  if echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin).get('code')=='freeze-incomplete'"; then
+    ok "issue-store-freeze-incomplete-r48:verify-blocked"
+  else
+    bad "issue-store-freeze-incomplete-r48:verify-blocked"
+  fi
+fi
+
+# --- issue-store-visibility-r28 (R28) ---
+python3 "$PY" --root "$ROOT" clear-issue-fixture >/dev/null
+cp "$ISSUE_CFG" "$ROOT/.cursor/workflow.config.json"
+PRIVATE_BODY=$'---\nvisibility: private\n---\n# private'
+if OUT=$(python3 "$PY" --root "$ROOT" put --backend issue-store --unit-id priv --body-path docs/prds/099-fixture/099-prd-priv.md --content "$PRIVATE_BODY" 2>/dev/null || true); then
+  if echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin).get('code')=='visibility-refused'"; then
+    ok "issue-store-visibility-r28:refuse-private"
+  else
+    bad "issue-store-visibility-r28:refuse-private"
+  fi
+else
+  bad "issue-store-visibility-r28:refuse-private"
+fi
+
+# --- issue-store-secret-scan-r45 (R45) ---
+SECRET_BODY='token ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA tail'
+if OUT=$(python3 "$PY" --root "$ROOT" put --backend issue-store --unit-id secret --body-path docs/prds/099-fixture/099-prd-secret.md --content "$SECRET_BODY" 2>/dev/null || true); then
+  if echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin).get('code')=='secret-scan'"; then
+    ok "issue-store-secret-scan-r45:refuse"
+  else
+    bad "issue-store-secret-scan-r45:refuse"
+  fi
+else
+  bad "issue-store-secret-scan-r45:refuse"
+fi
+
+# --- issue-store-budget-r39 (R39) ---
+python3 "$PY" --root "$ROOT" clear-issue-fixture >/dev/null
+cp "$ISSUE_CFG" "$ROOT/.cursor/workflow.config.json"
+export SW_ISSUES_CALL_BUDGET=1
+if OUT=$(python3 "$PY" --root "$ROOT" freeze --unit-id budget --body-path docs/prds/099-fixture/099-prd-budget.md 2>/dev/null || true); then
+  if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('code')=='not-found' or d.get('code')=='deliver-aborted-inconsistent'"; then
+    ok "issue-store-budget-r39:exhausted"
+  else
+    # put then freeze should exhaust budget on freeze multi-step
+    python3 "$PY" --root "$ROOT" put --backend issue-store --unit-id budget --body-path docs/prds/099-fixture/099-prd-budget.md --content x >/dev/null 2>&1 || true
+    OUT2=$(python3 "$PY" --root "$ROOT" freeze --unit-id budget --body-path docs/prds/099-fixture/099-prd-budget.md --no-distill 2>/dev/null || true)
+    if echo "$OUT2" | python3 -c "import json,sys; assert json.load(sys.stdin).get('code')=='deliver-aborted-inconsistent'"; then
+      ok "issue-store-budget-r39:exhausted"
+    else
+      bad "issue-store-budget-r39:exhausted"
+    fi
+  fi
+else
+  bad "issue-store-budget-r39:exhausted"
+fi
+unset SW_ISSUES_CALL_BUDGET
+
 
 python3 "$PY" --root "$ROOT" clear-issue-fixture >/dev/null
 unset SW_ISSUES_FIXTURE
