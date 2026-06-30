@@ -109,11 +109,11 @@ def git_complete_unit_ids(root: Path, units: list[pg.GraphUnit]) -> set[str]:
 def host_pr_complete_unit_ids(root: Path, units: list[pg.GraphUnit]) -> set[str]:
     """Host PR merge metadata corroborates git-primary complete (R29)."""
     worktree = pp.git_root(root)
-    host_sh = worktree / "scripts" / "host.sh"
-    if not host_sh.is_file():
+    host_py = worktree / "scripts" / "host.py"
+    if not host_py.is_file():
         return set()
     proc = subprocess.run(
-        ["bash", str(host_sh), "--root", str(worktree), "pr-list", "--state", "closed", "--limit", "100"],
+        [sys.executable, str(host_py), "--root", str(worktree), "pr-list", "--state", "closed", "--limit", "100"],
         cwd=str(worktree),
         capture_output=True,
         text=True,

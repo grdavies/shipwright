@@ -56,11 +56,11 @@ exists in routing for cross-platform parity; only the concrete ID collapses.
 ### Routing resolution
 
 ```bash
-python3 scripts/resolve-model-tier.sh --command sw-prd
-python3 scripts/resolve-model-tier.sh --skill prd
-python3 scripts/resolve-model-tier.sh --command sw-doc --delegate sw-prd
-python3 scripts/resolve-model-tier.sh --tier deep
-python3 scripts/resolve-model-tier.sh --agent sw-coherence-reviewer
+bash scripts/resolve-model-tier.sh --command sw-prd
+bash scripts/resolve-model-tier.sh --skill prd
+bash scripts/resolve-model-tier.sh --command sw-doc --delegate sw-prd
+bash scripts/resolve-model-tier.sh --tier deep
+bash scripts/resolve-model-tier.sh --agent sw-coherence-reviewer
 ```
 
 Config `models.routing` (including `models.routing.agents` for per-reviewer/native-panel tiers) overrides
@@ -107,8 +107,8 @@ until the platform supports Task model mutation. Enforcement remains dispatcher 
 ## Validate
 
 ```bash
-python3 scripts/model-tier-check.sh --config .sw/workflow.config.example.json
-python3 scripts/model-routing-check.sh
-python3 scripts/test/fixtures/model-tier-routing.sh
-python3 scripts/test/run-model-binding-fixtures.sh
+bash scripts/model-tier-check.sh --config .sw/workflow.config.example.json
+bash scripts/model-routing-check.sh
+bash scripts/test/fixtures/model-tier-routing.sh
+bash scripts/test/run-model-binding-fixtures.sh
 ```

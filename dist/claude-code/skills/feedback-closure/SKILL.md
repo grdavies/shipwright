@@ -9,7 +9,7 @@ Closes the loop from `/sw-feedback` trivial-gap routing → `docs/prds/GAP-BACKL
 ship. Complements `skills/feedback` (intake/route) and `skills/gap-check` (plan vs diff).
 
 
-**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --skill feedback-closure`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.sh --skill feedback-closure`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Backlog entry format
 
@@ -32,7 +32,7 @@ Closed:
 | `living-status` | Already surfaces backlog read-only |
 
 ```bash
-bash scripts/feedback-backlog.sh list --open-only --backlog docs/prds/GAP-BACKLOG.md
+python3 scripts/feedback-backlog.sh list --open-only --backlog docs/prds/GAP-BACKLOG.md
 ```
 
 ## Closure (post-verify ship)
@@ -40,10 +40,10 @@ bash scripts/feedback-backlog.sh list --open-only --backlog docs/prds/GAP-BACKLO
 Runs when local evidence shows the fix is verified **and** the backlog item is still open:
 
 1. **Human confirmation** — same bar as `/sw-feedback` dispatch; never auto-close without explicit user OK.
-2. **Eligibility gate** — `bash scripts/feedback-closure-gate.sh`:
+2. **Eligibility gate** — `python3 scripts/feedback-closure-gate.sh`:
    - `--backlog`, `--signal-id`, `--verify-status` (required)
    - Optional `--gate-json` + `--require-gate` when a PR exists
-3. On `closable`, `bash scripts/feedback-backlog.sh close --signal-id … --backlog …`
+3. On `closable`, `python3 scripts/feedback-backlog.sh close --signal-id … --backlog …`
 4. `memory-preflight` write closure record (redacted); tag `surface:feedback-closure`.
 
 ### Closure verdict contract

@@ -18,13 +18,13 @@ compound write step; does not reimplement their procedures.
 **Auto-detect (no flag):** resolve phase from deliver run-state + merge status:
 
 ```bash
-bash scripts/wave.sh retrospective detect-phase
+python3 scripts/wave.sh retrospective detect-phase
 ```
 
 Returns `pre-merge` when the target feature branch is merge-ready but not yet on `main`; `post-merge` when
 merge is detected or no deliver context applies.
 
-Driver env (pre-merge): `bash scripts/wave.sh retrospective premerge-env`
+Driver env (pre-merge): `python3 scripts/wave.sh retrospective premerge-env`
 
 ## Chain
 
@@ -43,7 +43,7 @@ Internal: compound write (`skills/compound/SKILL.md`). Atomic: `/sw-retro`, `/sw
 ## Flags
 
 - `--pre-merge` — in-loop mode (R6): commit file outputs on the feature branch; record
-  `completed-pending-merge` via `bash scripts/wave.sh retrospective record-premerge --prd <n> --phase <name>`.
+  `completed-pending-merge` via `python3 scripts/wave.sh retrospective record-premerge --prd <n> --phase <name>`.
 - `--post-merge` — standalone reconcile after merge detection.
 - `--from <step>` — resume mid-chain (`retro`, `compound`, `memory-sync`, `status`).
 - `--skip-memory-sync` — skip transcript distillation.
@@ -51,7 +51,7 @@ Internal: compound write (`skills/compound/SKILL.md`). Atomic: `/sw-retro`, `/sw
 
 ## Autonomy (`compound.autonomy`)
 
-Read mode: `bash scripts/wave.sh retrospective autonomy` (config key `compound.autonomy`, default `supervised`).
+Read mode: `python3 scripts/wave.sh retrospective autonomy` (config key `compound.autonomy`, default `supervised`).
 
 | Mode | Behavior |
 | --- | --- |
@@ -78,7 +78,7 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
 
 1. If `--pre-merge` → pre-merge mode.
 2. If `--post-merge` → post-merge mode.
-3. Else run `bash scripts/wave.sh retrospective detect-phase` and use the returned `phase`.
+3. Else run `python3 scripts/wave.sh retrospective detect-phase` and use the returned `phase`.
 
 ### Pre-merge (`--pre-merge` or auto-detected)
 
@@ -87,11 +87,11 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
 3. **Compound write** — load `skills/compound/SKILL.md`; route writes through `memory-preflight` +
    `scripts/memory-redact.sh` (internal step — not `/sw-compound`).
 4. **`/sw-memory-sync`** — unless `--skip-memory-sync`; provider unreachable → **fail-closed** (R7).
-5. **`/sw-status`** — `bash scripts/reconcile-status.sh reconcile --require-merge` (INDEX `complete` only
+5. **`/sw-status`** — `python3 scripts/reconcile-status.sh reconcile --require-merge` (INDEX `complete` only
    after merge detection, R11); `append-log` for COMPLETION-LOG.
 6. **Commit file outputs only** on the feature branch: COMPLETION-LOG, INDEX, CHANGELOG/version,
    learnings notes. **Never commit** memory/provider artifacts (R7).
-7. `bash scripts/wave.sh retrospective record-premerge --prd <n> --phase <name> [--notes "..."]`
+7. `python3 scripts/wave.sh retrospective record-premerge --prd <n> --phase <name> [--notes "..."]`
 8. Hand off to terminal merge gate (`/sw-deliver` → `terminal-ship`).
 
 ### Post-merge (`--post-merge` or auto-detected)
@@ -109,7 +109,7 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
 
 **Communication intensity:** full
 
-**Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-retrospective`.
+**Model tier:** inherit — resolve delegated atomics via `python3 scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-retrospective`.
 
 ## Guardrails
 

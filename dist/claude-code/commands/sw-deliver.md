@@ -43,11 +43,11 @@ hand-authored in prose:
 
 ```bash
 # Phase tier — step list for a phase type (ship/deliver):
-bash scripts/wave.sh plan validate --tier phase --phase-type ship \
+python3 scripts/wave.sh plan validate --tier phase --phase-type ship \
   --proposal /path/to/proposal.json [--signal-context /path/to/signal_context.json]
 
 # Wave tier — batching within contention + parallelCeiling:
-bash scripts/wave.sh plan validate --tier wave --proposal /path/to/wave-proposal.json \
+python3 scripts/wave.sh plan validate --tier wave --proposal /path/to/wave-proposal.json \
   --plan .cursor/sw-deliver-plan.json
 ```
 
@@ -72,7 +72,7 @@ Default `canonical` is unchanged for all repos. Enabling `proposed` on `/sw-deli
 4. **Production guard** — `/sw-init` doctor surfaces `planPolicy` vs default and refuses `proposed` toward
    shared `main` without acknowledgement.
 
-Benefit metric soak and default-flip decisions use `bash scripts/wave.sh plan benefit-report --pairs <path>`
+Benefit metric soak and default-flip decisions use `python3 scripts/wave.sh plan benefit-report --pairs <path>`
 (`scripts/wave_plan_benefit.py`); insufficient evidence fails closed to `canonical` (R31).
 
 ## Procedure (`deliver-loop` / `run`)
@@ -88,10 +88,10 @@ zero re-prompts (R13); `supervised` adds acknowledgement halts per `deliver.phas
 # resume when durable state already holds source_task_list:
 /sw-deliver run
 # internal driver (conductor in-turn only — not operator-facing resume):
-bash scripts/wave.sh deliver-loop --dry-run
+python3 scripts/wave.sh deliver-loop --dry-run
 ```
 
-0. **Entry guard (R16):** `bash scripts/wave.sh assert-entry` when not resuming from durable state.
+0. **Entry guard (R16):** `python3 scripts/wave.sh assert-entry` when not resuming from durable state.
 1. Load `skills/conductor/SKILL.md`; enforce `rules/sw-conductor.mdc`.
 2. Driver loads plan from state or runs `plan`; auto-detects in-progress runs on entry (R3).
 3. **Orchestrator worktree (R53):** `orchestrator provision` on `<type>/<slug>`.
@@ -112,7 +112,7 @@ bash scripts/wave.sh deliver-loop --dry-run
 11. Halt at human merge gate — never in-flux.
 
 When the driver returns `awaitAgent: true`, the conductor performs the agent work and immediately
-re-invokes `bash scripts/wave.sh deliver-loop` within the same turn until a legitimate halt (R6/R7 — see
+re-invokes `python3 scripts/wave.sh deliver-loop` within the same turn until a legitimate halt (R6/R7 — see
 `skills/conductor/SKILL.md` **In-turn self-continuation loop**). A fresh agent resumes from
 `.cursor/sw-deliver-state.json` + plan + run log alone (R4).
 
@@ -122,7 +122,7 @@ After every `deliver-loop` JSON response:
 
 | Response | Conductor action (same turn) |
 | --- | --- |
-| `awaitAgent: false` | Re-invoke `bash scripts/wave.sh deliver-loop` immediately |
+| `awaitAgent: false` | Re-invoke `python3 scripts/wave.sh deliver-loop` immediately |
 | `awaitAgent: true` | Run agent step for `next.action` (table in conductor skill), then re-invoke `deliver-loop` |
 | `awaitInFlight: true` | Poll phase `status.json` paths (parallel-wave completion wait), then re-invoke `deliver-loop` |
 | `halt: true` | Emit consolidated report; stop — legitimate halt only |
@@ -134,11 +134,11 @@ After every `deliver-loop` JSON response:
 Hard stops: `deliver.autonomy.maxIterations` (default 500) and no-progress circuit breaker (3× identical
 `nextAction` + state signature) — see `rules/sw-subagent-dispatch.mdc` and conductor skill (R38).
 
-**Halts (R10–R12):** only legitimate conditions; emit `bash scripts/wave.sh report blockers` (mid-run) or
+**Halts (R10–R12):** only legitimate conditions; emit `python3 scripts/wave.sh report blockers` (mid-run) or
 `report terminal` (all phases merged) with `resumeCommand` (`/sw-deliver run …`) — never "continue deliver?".
 
-**Liveness (R37):** `bash scripts/wave.sh state heartbeat` during long agent steps;
-`bash scripts/wave.sh watchdog check` probes phase timeout / stale driver heartbeat.
+**Liveness (R37):** `python3 scripts/wave.sh state heartbeat` during long agent steps;
+`python3 scripts/wave.sh watchdog check` probes phase timeout / stale driver heartbeat.
 
 `run` is an alias for `deliver-loop --task-list <path>`.
 
@@ -164,18 +164,18 @@ external-wait exhaustion, run-level budget — see conductor skill **Legitimate-
 
 **Communication intensity:** inherit
 
-**Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-deliver`.
+**Model tier:** inherit — resolve delegated atomics via `python3 scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-deliver`.
 
 ## Delegated Task binding contract
 
 Before each phase/terminal delegated Task from `/sw-deliver`:
 
-1. `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-deliver --skill conductor`
-2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-deliver --skill conductor --parent-model <parent-concrete-id> [--dispatch-id <id>]`
+1. `python3 scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-deliver --skill conductor`
+2. `python3 scripts/dispatch-check.sh --agent <agent-id> --command sw-deliver --skill conductor --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Dispatch Task with explicit concrete `model:` and resolved caveman intensity context; never rely on inherited model.
 
-Resolve model: `bash scripts/resolve-model-tier.sh --command <child-slug>` (or `--skill conductor`).
-Resolve intensity: `bash scripts/resolve-intensity.sh --command sw-deliver --skill conductor`.
+Resolve model: `python3 scripts/resolve-model-tier.sh --command <child-slug>` (or `--skill conductor`).
+Resolve intensity: `python3 scripts/resolve-intensity.sh --command sw-deliver --skill conductor`.
 
 ## Inline allowlist (closed)
 
@@ -190,7 +190,7 @@ Wave implementation/review remediation work delegates.
 ## Dispatch context redaction contract
 
 All non-config context passed to delegated Tasks (status excerpts, blocker reports, blast-radius notes,
-memory-preflight outputs, diffs) must be redacted via `bash scripts/memory-redact.sh` and fenced as
+memory-preflight outputs, diffs) must be redacted via `python3 scripts/memory-redact.sh` and fenced as
 `untrusted_payload` before inclusion.
 
 

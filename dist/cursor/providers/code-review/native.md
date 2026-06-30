@@ -59,7 +59,7 @@ independent of config.review.provider (incl. "none")
 
 **Authoritative triggers:** per-specialist `capability` frontmatter on `core/agents/*.md` and this file's
 frontmatter, aggregated in `core/sw-reference/capability-index.json`. Runtime:
-`bash scripts/code-review-select.sh` (wraps `capability-select.sh` for the `code-review` family). Contract:
+`python3 scripts/code-review-select.sh` (wraps `capability-select.sh` for the `code-review` family). Contract:
 `core/sw-reference/capability-manifest.md`.
 
 **Core (always-on, R6):** `correctness`, `maintainability`, `scope-fidelity`, `testing`, `security`.
@@ -258,14 +258,14 @@ or cleartext diff evidence.
 **Chokepoint (finding-derived writes):**
 
 ```bash
-REDACTED="$(jq -c . <<<"$finding_json" | bash scripts/memory-redact.sh)"
+REDACTED="$(Python json -c . <<<"$finding_json" | python3 scripts/memory-redact.sh)"
 # memory-preflight write distilled learning from $REDACTED only
 ```
 
 **Run report scrub** (before any memory write or durable copy):
 
 ```bash
-bash scripts/memory-redact.sh "$runDir/sw-local-review-run-report.json" \
+python3 scripts/memory-redact.sh "$runDir/sw-local-review-run-report.json" \
   > "${runDir}/sw-local-review-run-report.scrubbed.json"
 mv "${runDir}/sw-local-review-run-report.scrubbed.json" "$runDir/sw-local-review-run-report.json"
 ```

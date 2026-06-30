@@ -20,7 +20,7 @@ PR/merge bodies — reference this skill and `rules/sw-git-conventions.mdc`; do 
 Informed by and crediting [netresearch/git-workflow-skill](https://github.com/netresearch/git-workflow-skill)
 (CC-BY-SA-4.0 / MIT). Adapted for Shipwright's trunk-based-with-worktrees model and sw-namespaced tooling.
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill git-workflow`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --skill git-workflow`.
 
 ## Trunk model
 
@@ -47,8 +47,8 @@ Legacy `pf/<name>` prefixes are **prohibited** (PRD 007).
 Validation (fail-closed):
 
 ```bash
-bash scripts/branch-name-guard.sh validate <branch>
-bash scripts/branch-name-guard.sh derive <name> [type]
+python3 scripts/branch-name-guard.sh validate <branch>
+python3 scripts/branch-name-guard.sh derive <name> [type]
 ```
 
 Python consumers: `python3 scripts/worktree_lib.py validate <branch>`.
@@ -67,7 +67,7 @@ Commit subjects must match:
 Types from `release-please-config.json`. Enforced at commit time:
 
 ```bash
-bash scripts/commit-msg-guard.sh validate "<message>"
+python3 scripts/commit-msg-guard.sh validate "<message>"
 ```
 
 Hook: `core/hooks/commit-msg` (install via `git config core.hooksPath` pointing at emitted hooks dir).
@@ -92,14 +92,14 @@ Host adapters apply `pr-body.md` at `pr-create` time; missing required fields fa
 
 ## Docs-on-a-branch policy (R28–R32)
 
-1. **Provision** — `bash scripts/docs_worktree.sh provision --topic <topic>` creates `docs/<topic>` +
+1. **Provision** — `python3 scripts/docs_worktree.sh provision --topic <topic>` creates `docs/<topic>` +
    worktree under `.sw-worktrees/docs-<topic>/`.
 2. **Author** — run `/sw-doc` chain inside the docs worktree; never commit doc artifacts on trunk.
-3. **Durability** — `bash scripts/wave_spec_seed.py <root> docs-commit --topic <topic>` commits brainstorms
+3. **Durability** — `python3 scripts/wave_spec_seed.py <root> docs-commit --topic <topic>` commits brainstorms
    and PRD artifacts on the docs branch (R31).
-4. **Implementation handoff** — `bash scripts/wave.sh spec-seed --task-list <path>` still seeds frozen PRD/tasks
+4. **Implementation handoff** — `python3 scripts/wave.sh spec-seed --task-list <path>` still seeds frozen PRD/tasks
    onto `<type>/<slug>` for `/sw-deliver` (PRD 013 reconcile, R32).
-5. **Merge docs** — `bash scripts/docs_pr.sh --topic <topic>` opens a docs-only PR to trunk (R30).
+5. **Merge docs** — `python3 scripts/docs_pr.py --topic <topic>` opens a docs-only PR to trunk (R30).
 
 ## Two-track doc edits (PRD 035 R10–R14)
 

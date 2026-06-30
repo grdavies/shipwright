@@ -15,7 +15,7 @@ capability:
 
 # GitHub host adapter
 
-Markdown companion to `host_github.sh` (Phase 2). Selected when `workflow.config.json` → `host.provider` is
+Markdown companion to `scripts/host.py` (Phase 2). Selected when `workflow.config.json` → `host.provider` is
 `github` or auto-detected from a `github.com` remote.
 
 ## Capability flags

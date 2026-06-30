@@ -19,7 +19,7 @@ Complementary to `skills/checks-gate` (CI truth via `scripts/check-gate.sh`); ne
 gate verdict.
 
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill verification-gate`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --skill verification-gate`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Three-state contract
 
@@ -69,7 +69,7 @@ Same as verify status. When the file is absent, review evidence is treated as `a
 ## Canonical computation — `scripts/verify-evidence.sh`
 
 ```bash
-bash scripts/verify-evidence.sh \
+python3 scripts/verify-evidence.sh \
   --verify-status "$RUN_DIR/sw-verify.status.json" \
   [--gate-json /path/to/gate.json --require-gate] \
   [--pr-context on|off|auto] \
@@ -91,7 +91,7 @@ Capture baseline **before** the change (merge base or pre-change head) at a **ca
 (longer-lived than the per-run dir):
 
 ```bash
-bash scripts/verify-baseline.sh capture \
+python3 scripts/verify-baseline.sh capture \
   --from "$RUN_DIR/sw-verify.status.json" \
   --to .shipwright/baseline.verify.json \
   [--gate-from gate.json --gate-to .shipwright/baseline.gate.json]

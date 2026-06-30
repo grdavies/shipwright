@@ -15,13 +15,13 @@ Task list from frozen PRD + amendment union.
 
 ## Procedure
 
-0. **Authoring-guard preflight (PRD 032 R5/R14)** — before the first substantive mutation on a planning unit, run `bash scripts/authoring-guard.sh preflight --path <unit-artifact> --command sw-tasks`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6).
+0. **Authoring-guard preflight (PRD 032 R5/R14)** — before the first substantive mutation on a planning unit, run `python3 scripts/authoring-guard.sh preflight --path <unit-artifact> --command sw-tasks`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6).
 1. Verify PRD has `frozen: true`.
 2. Load `skills/tasks/SKILL.md`.
 3. Read effective requirements via `scripts/spec-union.sh <prd-path>`.
 
    - **Backlog re-scan (R2):** before drafting tasks, run
-     `bash scripts/planning-related.sh scan --mode tasks-rescan --path <prd-path>`; propose PRD amendments
+     `python3 scripts/planning-related.sh scan --mode tasks-rescan --path <prd-path>`; propose PRD amendments
      for newly-related items; human confirms via `planning-related.sh confirm`. Edge materialization remains
      autonomous via the PRD 033 reconciler **after** confirmed choices only (R3).
 4. In **one pass**, draft parent tasks (phases), expand executable sub-tasks, Relevant Files, and Notes.
@@ -35,7 +35,7 @@ Task list from frozen PRD + amendment union.
 
 **Communication intensity:** lite
 
-**Model tier:** deep — resolve via `bash scripts/resolve-model-tier.sh --command sw-tasks`.
+**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.sh --command sw-tasks`.
 
 ## Guardrails
 

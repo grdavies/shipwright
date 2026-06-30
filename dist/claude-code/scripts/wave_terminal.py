@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+
+from _sw import interpreter
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -209,7 +211,7 @@ def cmd_terminal_checkpoint(root: Path, args: list[str]) -> None:
             "halt": "supervised-checkpoint",
             "mode": mode,
             "invoke": invoke,
-            "reportTerminal": "bash scripts/wave.sh report terminal",
+            "reportTerminal": "bash scripts/wave.py report terminal",
             "note": "Single consolidated terminal checkpoint — retrospective and ship gate combined (R10)",
         },
         exit_code=11,
@@ -585,8 +587,9 @@ def run_docs_currency_gate(root: Path) -> None:
 
 
 def run_check_gate(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
-    script = SCRIPT_DIR / "check-gate.sh"
-    cmd = ["bash", str(script)]
+    script = SCRIPT_DIR / "check-gate.py"
+    probe = interpreter.probe()
+    cmd = [*probe.executable, str(script)]
     if pr:
         cmd.append(pr)
     proc = subprocess.run(cmd, cwd=str(root), text=True, capture_output=True)
@@ -953,7 +956,7 @@ def cmd_terminal_pr_gate(root: Path, args: list[str]) -> None:
         "gateExitCode": gate_ec,
         "terminalGate": "ready to merge — your call" if ready else None,
         "neverAutoMergesMain": True,
-        "note": "Authoritative whole-feature verdict from check-gate.sh (R23/R24)",
+        "note": "Authoritative whole-feature verdict from check-gate.py (R23/R24)",
     }
     if not ready:
         payload["reason"] = gate.get("reason") or "gate not green"

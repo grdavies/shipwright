@@ -9,7 +9,7 @@ Confirm merge-readiness via `scripts/check-gate.sh` — terminal report only.
 
 ## Procedure
 
-1. `bash scripts/host.sh pr-view` for number, url, draft/base/head; combine with `scripts/check-gate.sh` for checks.
+1. `python3 scripts/host.py pr-view` for number, url, draft/base/head; combine with `scripts/check-gate.sh` for checks.
 2. No PR → hand off `/sw-pr`.
 3. Confirm PR base matches `parentBranch` from per-worktree state.
 4. Clean branch; local verify already passed.
@@ -18,7 +18,7 @@ Confirm merge-readiness via `scripts/check-gate.sh` — terminal report only.
    ```bash
    GATE="${CLAUDE_PLUGIN_ROOT:-$PWD}/scripts/check-gate.sh"
    if OUT=$(bash "$GATE"); then GATE_EC=0; else GATE_EC=$?; fi
-   echo "$OUT" | jq .
+   echo "$OUT" | Python json .
    ```
 
 6. `merge-ready` only when `GATE_EC == 0` / `verdict == "green"`.
@@ -30,14 +30,14 @@ Confirm merge-readiness via `scripts/check-gate.sh` — terminal report only.
      gate with no external review is never mistaken for a reviewed change.
 9. Report: `merge-ready` | `ready for next stacked phase` | `not ready` (one blocker) — always include the
    review echo line from step 8.
-10. **Verify-unconfigured (R28)** — run `bash scripts/verify-unconfigured.sh`; when unconfigured, report
+10. **Verify-unconfigured (R28)** — run `python3 scripts/verify-unconfigured.sh`; when unconfigured, report
     `verify-unconfigured` with CTA `run /sw-init` (non-blocking in interactive `/sw-ready`; gate truth still
     from `check-gate.sh`).
-11. **Config drift (R32)** — run `bash scripts/sw-configure.sh drift-check`; include stale notice when applicable.
+11. **Config drift (R32)** — run `python3 scripts/sw-configure.sh drift-check`; include stale notice when applicable.
 
 **Communication intensity:** normal
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-ready`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --command sw-ready`.
 
 ## Guardrails
 

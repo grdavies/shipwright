@@ -55,10 +55,10 @@ def install(dest: Path, *, src: Path | None = None, install_hooks: bool = True) 
         # Plugin install copies dist; git hooks for dev repos use core/hooks via separate path
         core_hooks = source / "core" / "hooks"
         if core_hooks.is_dir():
-            for hook_name in ("pre-commit", "pre-push", "commit-msg"):
+            for hook_name in ("pre-commit.py", "pre-push.py", "commit-msg.py"):
                 target = core_hooks / hook_name
                 if target.is_file():
-                    hook_launcher.install_hook(dest / "hooks", hook_name, target, repo_root=root)
+                    hook_launcher.install_hook(dest / "hooks", hook_name.removesuffix(".py"), target, repo_root=root)
 
     logging_setup.info("Done. Run 'Developer: Reload Window' in Cursor to pick up changes.")
 

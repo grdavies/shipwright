@@ -19,7 +19,7 @@ provider behind the capability spec in [`CAPABILITIES.md`](CAPABILITIES.md), so 
 config change, never a command edit.
 
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill memory`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --skill memory`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Resolve the provider (first step, always)
 
@@ -71,7 +71,7 @@ rules/decisions:
 Record the pre-work search breadcrumb before the first substantive mutation:
 
 ```bash
-bash scripts/wave.sh memory prework record \
+python3 scripts/wave.sh memory prework record \
   --surface sw-execute \
   --scope "core/skills/memory/SKILL.md" \
   --classes rule,decision,learning,code-context,design \
@@ -121,10 +121,10 @@ The `decision` doc class has a provider-conditional authoritative side. All othe
 Single source for freeze, compound, and audit:
 
 ```bash
-bash scripts/memory-sot.sh resolve --class decision --json
+python3 scripts/memory-sot.sh resolve --class decision --json
 # effective: repo | memory
 
-bash scripts/memory-sot.sh resolve --class learning --json
+python3 scripts/memory-sot.sh resolve --class learning --json
 # effective: distillation (scope guard)
 ```
 
@@ -145,12 +145,12 @@ Before **any** `store`, transcript distillation (`/sw-memory-sync`), or compound
 through the executable filter:
 
 ```bash
-bash scripts/memory-redact.sh <<'EOF'
+python3 scripts/memory-redact.sh <<'EOF'
 <payload>
 EOF
 ```
 
-Or: `bash scripts/memory-redact.sh path/to/file`. The filter is deterministic (same input → same output),
+Or: `python3 scripts/memory-redact.sh path/to/file`. The filter is deterministic (same input → same output),
 runs offline, and scrubs the named corpus in `rules/memory-guardrails.mdc` (AWS keys, GitHub PATs, JWTs,
 `Bearer` tokens, PEM private keys, emails). Never persist or re-inject unredacted content.
 
@@ -173,7 +173,7 @@ Store distilled memories per the write contract in `CAPABILITIES.md`:
 For **`decision`-class** writes, resolve the inverted pointer recipe first (R6):
 
 ```bash
-bash scripts/memory-sot.sh pointer-recipe --path docs/decisions/<n>-<slug>.md [--memory-id <provider-id>] --json
+python3 scripts/memory-sot.sh pointer-recipe --path docs/decisions/<n>-<slug>.md [--memory-id <provider-id>] --json
 ```
 
 | Effective SoT | Provider write | Git snapshot |
@@ -202,7 +202,7 @@ Check the adapter's flags and adjust:
 **Read:** when `semanticSearch:false`, call:
 
 ```bash
-bash scripts/in-repo-memory-search.sh \
+python3 scripts/in-repo-memory-search.sh \
   --store .cursor/sw-memory \
   --query "<terms>" \
   [--category decision] [--tag prd-1] [--file-glob src/auth.ts]
@@ -232,7 +232,7 @@ per **Source of truth resolution** below — the planning-store memory backend n
 
 **Boundary rule (R32 / KTD3 + provider-conditional SoT):**
 
-Resolve authority first: `bash scripts/memory-sot.sh resolve --class decision --json`.
+Resolve authority first: `python3 scripts/memory-sot.sh resolve --class decision --json`.
 
 | Effective SoT | Authoritative artifact | Memory role |
 | --- | --- | --- |
@@ -258,10 +258,10 @@ forward pointer (`memoryPointer` in frontmatter — see `scripts/memory-decision
 On record-level supersede, append the superseded path via:
 
 ```bash
-bash scripts/reconcile-status.sh append-superseded --path docs/decisions/<old>.md --replacement docs/decisions/<new>.md
+python3 scripts/reconcile-status.sh append-superseded --path docs/decisions/<old>.md --replacement docs/decisions/<new>.md
 ```
 
-`/sw-memory-sync` runs `bash scripts/reconcile-status.sh supersede-reconcile --json` after distillation and
+`/sw-memory-sync` runs `python3 scripts/reconcile-status.sh supersede-reconcile --json` after distillation and
 best-effort re-points the **non-authoritative** side per the active SoT (provider `relatedFiles` under
 repo-SoT; git snapshot pointer under memory-SoT). Pointer freshness is **auditable, not transactional**
 (provider out of CI reach).

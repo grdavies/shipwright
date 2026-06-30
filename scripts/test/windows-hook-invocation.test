@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l"
-TMP=$(mktemp -d)
+ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-hooks-security-filters-providers-l"
 export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
-cat > "$TMP/violation.py" <<'PY'
+TMP=$(mktemp -d)
+cat > "$TMP/violation.py" <<'PYIN'
 import sys
 sys.exit(1)
-PY
+PYIN
 set +e
 python3 "$ROOT/scripts/_sw/hook_launcher.py" "$TMP/violation.py"
 EC=$?

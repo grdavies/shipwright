@@ -10,7 +10,7 @@ stabilize (R35). **Diagnoses + proposes; does not implement or merge** — routi
 implementation (`003`) or documentation (`002`).
 
 
-**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill debug`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.sh --skill debug`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 
 ## Orchestrator plan-policy (PRD 024)
@@ -19,7 +19,7 @@ Single-tier orchestrator-step plan proposal, validation, and capability selectio
 `core/commands/sw-debug.md` + `skills/conductor/SKILL.md` — this skill maps phases to step IDs
 (`triage`, `normalize`, `enrich`, `rca`, `route-confirm-halt`, `route`, `rca-human-decision-halt`, `record`).
 
-Under `proposed`, Sentry bodies MUST be redacted via `bash scripts/memory-redact.sh` before any persist or
+Under `proposed`, Sentry bodies MUST be redacted via `python3 scripts/memory-redact.sh` before any persist or
 handoff (including DBG-A2 concurrent enrich + preflight).  Fail-closed on redaction error.
 
 Under `proposed`, R21 surfacing writes `chosenPlan`, `capabilitySet`, and `planRejections` to
@@ -53,7 +53,7 @@ Otherwise → Phase 1.
 ## Phase 1 — Enrich + memory preflight
 
 1. Normalize to `skills/rca-core/references/debug-inputs.md` shape.
-2. **Redact** all text: `bash scripts/memory-redact.sh`.
+2. **Redact** all text: `python3 scripts/memory-redact.sh`.
 3. If `type == sentry` → `skills/debug/references/sentry.md` (MCP enrich or degrade).
 4. `memory-preflight` **search**: category `debug`, `relatedFiles`, tags for failing area.
 5. Attach `priorDebugMemoryIds` to the signal context.

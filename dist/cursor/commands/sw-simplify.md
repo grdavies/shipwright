@@ -24,7 +24,7 @@ behavior**. Default-on in `/sw-ship` after `/sw-review`.
 6. Run behavior gate:
 
    ```bash
-   bash scripts/simplify-gate.sh \
+   python3 scripts/simplify-gate.sh \
      --baseline-verify /tmp/sw-verify.pre-simplify.json \
      --post-verify /tmp/sw-verify.status.json
    ```
@@ -38,7 +38,7 @@ behavior**. Default-on in `/sw-ship` after `/sw-review`.
 
 **Communication intensity:** full
 
-**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --command sw-simplify`.
+**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.sh --command sw-simplify`.
 
 ## Guardrails
 

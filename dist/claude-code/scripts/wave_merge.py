@@ -13,6 +13,8 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+
+from _sw import interpreter
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -562,8 +564,9 @@ def git_run(
 
 
 def run_check_gate(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
-    script = root / "scripts" / "check-gate.sh"
-    cmd = ["bash", str(script)]
+    script = root / "scripts" / "check-gate.py"
+    probe = interpreter.probe()
+    cmd = [*probe.executable, str(script)]
     if pr:
         cmd.append(pr)
     proc = subprocess.run(cmd, cwd=str(root), text=True, capture_output=True)

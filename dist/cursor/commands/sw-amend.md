@@ -17,7 +17,7 @@ Post-freeze correction path. Parent stays byte-stable.
 
 ## Procedure
 
-0. **Authoring-guard preflight (PRD 032 R5/R6/R7/R8/R14)** — before the first substantive mutation on a planning unit, run `bash scripts/authoring-guard.sh preflight --path <unit-artifact> --command sw-amend`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6). `/sw-amend` is permitted only when the unit consumer status is `planned` or `in-progress`; on `complete` units the guard **refuses in-place amend** and returns a **route** to fork a new `extends:`/`supersedes:` unit or append a gap (exit `21`, `outcome: route`).
+0. **Authoring-guard preflight (PRD 032 R5/R6/R7/R8/R14)** — before the first substantive mutation on a planning unit, run `python3 scripts/authoring-guard.sh preflight --path <unit-artifact> --command sw-amend`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6). `/sw-amend` is permitted only when the unit consumer status is `planned` or `in-progress`; on `complete` units the guard **refuses in-place amend** and returns a **route** to fork a new `extends:`/`supersedes:` unit or append a gap (exit `21`, `outcome: route`).
 1. **Pre-work search (mandatory)** — before the first substantive mutation, run `memory-preflight` **pre-work
    search** per `skills/memory/SKILL.md` **Pre-work search (mandatory)** (scoped to the parent PRD/decision
    domain and amendment paths; classes `rule`, `decision`, `learning`, `code-context`, `design` via
@@ -35,11 +35,11 @@ Post-freeze correction path. Parent stays byte-stable.
    raised floor per `skills/doc-review/SKILL.md`).
 7. Freeze amendment via `/sw-freeze`.
 8. Update `docs/prds/INDEX.md` or `docs/decisions/INDEX.md` amendment links.
-9. On decision record-level supersede: `bash scripts/reconcile-status.sh append-superseded --path <parent-record> --replacement <replacement-record>`.
+9. On decision record-level supersede: `python3 scripts/reconcile-status.sh append-superseded --path <parent-record> --replacement <replacement-record>`.
 
 **Communication intensity:** lite
 
-**Model tier:** deep — resolve via `bash scripts/resolve-model-tier.sh --command sw-amend`.
+**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.sh --command sw-amend`.
 
 ## Guardrails
 

@@ -101,9 +101,19 @@ class CursorEmitter(EmitterBase):
     def _copy_runtime_support(self, core_root: Path, repo_root: Path, dest: Path) -> None:
         hooks_src = core_root / "hooks"
         if hooks_src.is_dir():
-            if (dest / "core" / "hooks").exists():
-                shutil.rmtree(dest / "core" / "hooks")
-            shutil.copytree(hooks_src, dest / "core" / "hooks")
+            dest_hooks = dest / "core" / "hooks"
+            if dest_hooks.exists():
+                shutil.rmtree(dest_hooks)
+            dest_hooks.mkdir(parents=True, exist_ok=True)
+            for item in hooks_src.iterdir():
+                if item.suffix == ".sh" and (item.with_suffix(".py")).is_file():
+                    continue
+                if item.name in ("pre-commit", "pre-push", "commit-msg") and not item.suffix:
+                    continue
+                if item.is_dir():
+                    shutil.copytree(item, dest_hooks / item.name)
+                elif item.is_file():
+                    shutil.copy2(item, dest_hooks / item.name)
         adapter_src = repo_root / "platforms" / "cursor" / "hook_adapter.py"
         if adapter_src.is_file():
             plat_dir = dest / "platforms" / "cursor"
@@ -139,7 +149,7 @@ class CursorEmitter(EmitterBase):
             path = hooks_dir / name
             path.write_text(body, encoding="utf-8")
             path.chmod(0o755)
-        for extra in ("sw_recallium_url.py", "pre-commit", "pre-commit-frozen.sh", "pre-commit-completed-unit.sh"):
+        for extra in ("sw_recallium_url.py", "pre-commit.py", "pre-push.py", "commit-msg.py", "pre-commit-frozen.py", "pre-commit-completed-unit.py"):
             src = repo_root / "hooks" / extra
             if not src.is_file():
                 src = repo_root / "core" / "hooks" / extra
