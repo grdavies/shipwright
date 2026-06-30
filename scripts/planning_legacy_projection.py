@@ -151,12 +151,33 @@ def legacy_manual_edit_warnings(root: Path) -> list[dict[str, str]]:
             })
     return warnings
 
-def project_all(root: Path, *, dry_run: bool = False) -> dict[str, Any]:
+def hand_maintained_legacy_paths(worktree: Path, dirs: Any) -> list[str]:
+    """Paths missing generated marker — refuse wipe without --force (R48)."""
+    hand: list[str] = []
+    for name in ("GAP-BACKLOG.md", "INDEX.md"):
+        path = worktree / dirs.prds / name
+        if path.is_file():
+            content = path.read_text(encoding="utf-8")
+            if LEGACY_GENERATED_MARKER not in content:
+                hand.append(str(path.relative_to(worktree)))
+    return hand
+
+
+def project_all(root: Path, *, dry_run: bool = False, force: bool = False) -> dict[str, Any]:
     dirs = planning_paths.load_planning_dirs(root)
     if dirs.planning != "docs/planning":
         return {"skipped": True, "reason": "planningDir not flipped"}
     worktree = planning_paths.git_root(root)
     units = pig.discover_units(root)
+    hand = hand_maintained_legacy_paths(worktree, dirs)
+    if hand and not force and not dry_run:
+        fail(
+            "refuse to overwrite hand-maintained legacy projection",
+            exit_code=20,
+            halt="projection-refuse",
+            paths=hand,
+            remediation="pass --force after human review",
+        )
     gap_path = worktree / dirs.prds / "GAP-BACKLOG.md"
     index_path = worktree / dirs.prds / "INDEX.md"
     gap_content = render_gap_backlog(units, root)
@@ -184,7 +205,8 @@ def project_all(root: Path, *, dry_run: bool = False) -> dict[str, Any]:
 
 def cmd_project(root: Path, args: list[str]) -> None:
     dry_run = "--dry-run" in args
-    out = project_all(root, dry_run=dry_run)
+    force = "--force" in args
+    out = project_all(root, dry_run=dry_run, force=force)
     if out.get("skipped"):
         emit({"verdict": "pass", "action": "legacy-projection-skip", **out})
     emit({"verdict": "pass", "action": "legacy-projection", "dryRun": dry_run, **out})

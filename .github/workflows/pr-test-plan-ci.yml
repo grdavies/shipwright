@@ -517,3 +517,25 @@ jobs:
       - name: Run planning-035-doc-impact-fixtures
         run: bash scripts/test/run-planning-035-doc-impact-fixtures.sh
 
+  feat-test-plan-parity-fixtures:
+    name: feat-test-plan-parity-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run parity-fixtures
+        run: bash scripts/test/run-parity-fixtures.sh
+
+  feat-test-plan-planning-035-deliver-conductor-fixtures:
+    name: feat-test-plan-planning-035-deliver-conductor-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-035-deliver-conductor-fixtures
+        run: bash scripts/test/run-planning-035-deliver-conductor-fixtures.sh
+

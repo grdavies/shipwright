@@ -19,7 +19,10 @@
     "coreScripts": {
       "path": "core/scripts/",
       "source": "scripts/",
-      "excludes": ["test/", "check-frozen.sh"],
+      "excludes": [
+        "test/",
+        "check-frozen.sh"
+      ],
       "description": "Mirrored from scripts/ with documented excludes."
     },
     "swReferenceInput": {
@@ -31,7 +34,10 @@
       "description": "Union of .sw/ sync output plus coreAuthoredAllowlist entries."
     },
     "dist": {
-      "paths": ["dist/cursor/", "dist/claude-code/"],
+      "paths": [
+        "dist/cursor/",
+        "dist/claude-code/"
+      ],
       "description": "Emitter output only; never hand-edited."
     },
     "goldenManifest": {
@@ -59,7 +65,8 @@
     "pr-test-plan.manifest.json",
     "signal-context.schema.json",
     "verify-presets.json",
-    "templates/"
+    "templates/",
+    "build-chain-paths.json"
   ],
   "deprecatedAllowlist": []
 }

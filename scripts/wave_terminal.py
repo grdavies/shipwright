@@ -29,8 +29,18 @@ def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
     sys.exit(exit_code)
 
 
-def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
-    emit({"verdict": "fail", "error": error, **extra}, exit_code)
+def fail(error: Any, exit_code: int = 2, **extra: Any) -> None:
+    emit({"verdict": "fail", "error": str(error), **extra}, exit_code)
+
+
+def commitlint_safe_title(commit_type: str, slug: str, prd_number: str | None = None) -> str:
+    """Conventional-commit title with lowercase prd scope (R43)."""
+    if prd_number:
+        num = str(prd_number).lstrip("0") or "0"
+        scope = f"prd-{num}".lower()
+        return f"{commit_type}({scope}): deliver wave"
+    safe_slug = slug.lower().replace("_", "-")
+    return f"{commit_type}({safe_slug}): deliver wave"
 
 
 def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | None:
@@ -784,7 +794,8 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
         fail("terminal PR only when all phases are green-merged (R22)", exit_code=20)
 
     if is_local_host_mode(root):
-        title = parse_kv(args, "--title") or f"{commit_type}({slug}): deliver wave"
+        prd_number = state.get("prd_number")
+        title = parse_kv(args, "--title") or commitlint_safe_title(commit_type, slug, prd_number)
         if dry_run:
             emit(
                 {
@@ -862,7 +873,8 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
         run_tasks_currency_gate(root, state)
         run_docs_currency_gate(root)
 
-    title = parse_kv(args, "--title") or f"{commit_type}({slug}): deliver wave"
+    prd_number = state.get("prd_number")
+    title = parse_kv(args, "--title") or commitlint_safe_title(commit_type, slug, prd_number)
     body = terminal_pr_body(state)
 
     if dry_run:

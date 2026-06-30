@@ -628,6 +628,52 @@
         "doc-currency-035",
         "no-regression-035"
       ]
+    },
+    {
+      "id": "parity-fixtures",
+      "script": "scripts/test/run-parity-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-parity-fixtures",
+      "scenarios": [
+        "cursor-golden-vs-dist"
+      ]
+    },
+    {
+      "id": "planning-035-deliver-conductor-fixtures",
+      "script": "scripts/test/run-planning-035-deliver-conductor-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-deliver-conductor-fixtures",
+      "scenarios": [
+        "ship-without-build-chain-sync-fails",
+        "verify-test-includes-parity",
+        "post-merge-build-chain-environmental",
+        "merge-queue-deterministic-regen",
+        "parallel-wave-regen-before-verify",
+        "verify-failed-routes-remediate",
+        "no-progress-before-first-remediate",
+        "current-wave-overflow-terminal",
+        "whole-batch-merge-wait",
+        "batch-integration-head-reconcile",
+        "post-remediation-no-status-pause",
+        "dispatch-ship-completes-in-turn",
+        "await-agent-same-turn-continue",
+        "terminal-eligibility-teardown-green-parity",
+        "terminal-retro-before-pr-auto",
+        "terminal-ship-autonomous-watch",
+        "single-flight-phase-ship",
+        "terminal-status-provenance-reemit",
+        "terminal-pr-prepare-commitlint",
+        "eager-phase-teardown-after-merge",
+        "parallel-ceiling-would-free",
+        "status-collect-background-worktree",
+        "deliver-resume-command-is-sw",
+        "post-freeze-docs-durability",
+        "projection-refuse-hand-maintained",
+        "re-freeze-contract-amendment",
+        "cleanup-autonomy-auto-post-merge"
+      ]
     }
   ]
 }
