@@ -581,9 +581,9 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
     )
     if proc.returncode == 10:
         would_free: list[str] = []
-        for _pid, meta in (load_state(root).get("phases") or {}).items():
+        for _pid, meta in (load_deliver_state(root).get("phases") or {}).items():
             if isinstance(meta, dict) and meta.get("status") == "teardown-pending":
-                wt_info = (load_state(root).get("phaseWorktrees") or {}).get(str(_pid), {})
+                wt_info = (load_deliver_state(root).get("phaseWorktrees") or {}).get(str(_pid), {})
                 name = wt_info.get("name") if isinstance(wt_info, dict) else None
                 if name:
                     would_free.append(str(name))

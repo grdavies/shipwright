@@ -228,4 +228,42 @@ else
   bad "consistency-only-exempts-proposed-fixtures debug-not-exempt"
 fi
 
+# --- doc-review-parallel-panel-binding (R38 + R39 integration) ---
+PREFLIGHT_DIR="$ROOT/.cursor/hooks/state/task-dispatch-preflight"
+WAVE="$ROOT/scripts/wave.sh"
+rm -rf "$PREFLIGHT_DIR"
+rm -f "$ROOT/.cursor/hooks/state/task-dispatch-preflight.json"
+PANEL_AGENTS=(sw-coherence-reviewer sw-feasibility-reviewer sw-product-reviewer)
+PANEL_IDS=(doc-panel-a doc-panel-b doc-panel-c)
+PANEL_OK=1
+for i in 0 1 2; do
+  bash "$WAVE" dispatch preflight --dispatch-id "${PANEL_IDS[$i]}" --agent "${PANEL_AGENTS[$i]}" --command sw-doc-review --skill doc-review >/dev/null 2>&1 || PANEL_OK=0
+done
+if [[ "$PANEL_OK" -eq 1 ]]; then
+  ALL_PASS=1
+  for i in 0 1 2; do
+    OUT=$(python3 - "$ROOT" "${PANEL_IDS[$i]}" "${PANEL_AGENTS[$i]}" <<'PY'
+import json, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'core' / 'hooks'))
+from before_task_dispatch import evaluate_pre_tool_use
+payload = {'tool_name': 'Task', 'tool_input': {'subagent_type': sys.argv[3], 'metadata': {'dispatchId': sys.argv[2]}}}
+result = evaluate_pre_tool_use(payload, Path(sys.argv[1]))
+print(json.dumps({'verdict': result.verdict, 'cause': result.cause}))
+PY
+)
+    echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='pass'" || ALL_PASS=0
+  done
+  if [[ "$ALL_PASS" -eq 1 ]]; then
+    ok "doc-review-parallel-panel-binding"
+  else
+    bad "doc-review-parallel-panel-binding (hook)"
+  fi
+else
+  bad "doc-review-parallel-panel-binding (preflight)"
+fi
+rm -rf "$PREFLIGHT_DIR"
+rm -f "$ROOT/.cursor/hooks/state/task-dispatch-preflight.json"
+
+
 exit "$FAIL"
