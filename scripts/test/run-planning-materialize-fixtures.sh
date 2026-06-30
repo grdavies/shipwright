@@ -8,9 +8,40 @@ FAIL=0
 ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP" "$ROOT/docs/prds/_fixture-materialize"' EXIT
+CFG_BACKUP=""
+if [[ -f "$ROOT/.cursor/workflow.config.json" ]]; then
+  CFG_BACKUP="$TMP/workflow.config.json.bak"
+  cp "$ROOT/.cursor/workflow.config.json" "$CFG_BACKUP"
+fi
+restore_config() {
+  if [[ -n "$CFG_BACKUP" ]]; then
+    cp "$CFG_BACKUP" "$ROOT/.cursor/workflow.config.json"
+  else
+    rm -f "$ROOT/.cursor/workflow.config.json"
+  fi
+}
+trap 'restore_config; rm -rf "$TMP" "$ROOT/docs/prds/_fixture-materialize"' EXIT
+
+write_in_repo_public_config() {
+  python3 - <<PY
+import json
+from pathlib import Path
+backup = Path("$CFG_BACKUP")
+live = Path("$ROOT/.cursor/workflow.config.json")
+if backup.is_file():
+    cfg = json.loads(backup.read_text(encoding="utf-8"))
+elif live.is_file():
+    cfg = json.loads(live.read_text(encoding="utf-8"))
+else:
+    cfg = {"version": 1}
+cfg.setdefault("planning", {}).setdefault("store", {})["backend"] = "in-repo-public"
+live.parent.mkdir(parents=True, exist_ok=True)
+live.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+PY
+}
 
 # --- materialize-provision-backend-pinned ---
+write_in_repo_public_config
 mkdir -p "$ROOT/docs/prds/_fixture-materialize"
 cat >"$ROOT/docs/prds/_fixture-materialize/099-fixture-private-prd.md" <<'EOF'
 ---
@@ -73,10 +104,8 @@ if OUT=$(python3 "$PY" --root "$ROOT" validate-pin 2>&1); then
 else
   bad "materialize-provision-backend-pinned:validate-pin"
 fi
-CFG_BACKUP="$TMP/workflow.config.json"
-if [[ -f "$ROOT/.cursor/workflow.config.json" ]]; then
-  cp "$ROOT/.cursor/workflow.config.json" "$CFG_BACKUP"
-fi
+PIN_CFG_BACKUP="$TMP/workflow.config.pinned.json"
+cp "$ROOT/.cursor/workflow.config.json" "$PIN_CFG_BACKUP"
 python3 - <<PY
 import json
 from pathlib import Path
@@ -103,10 +132,10 @@ else
     bad "materialize-provision-backend-pinned:backend-swap-halt"
   fi
 fi
-if [[ -f "$CFG_BACKUP" ]]; then
-  cp "$CFG_BACKUP" "$ROOT/.cursor/workflow.config.json"
+if [[ -f "$PIN_CFG_BACKUP" ]]; then
+  cp "$PIN_CFG_BACKUP" "$ROOT/.cursor/workflow.config.json"
 else
-  rm -f "$ROOT/.cursor/workflow.config.json"
+  write_in_repo_public_config
 fi
 if [[ -f "$STATE_BACKUP" ]]; then
   cp "$STATE_BACKUP" "$STATE"
