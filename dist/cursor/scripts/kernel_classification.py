@@ -139,18 +139,22 @@ def orchestrator_referenced_steps(root: Path, classification: dict[str, Any]) ->
     _ = root
     refs: set[str] = set()
     registry = classification.get("orchestratorStepRegistry") or {}
-    chains = classification.get("canonicalPhaseChains") or {}
+    phase_chains = classification.get("canonicalPhaseChains") or {}
+    orch_chains = classification.get("canonicalOrchestratorChains") or {}
     for entry in registry.values():
         if not isinstance(entry, dict):
             continue
         if isinstance(entry.get("chainKey"), str):
-            for step in chains.get(entry["chainKey"]) or []:
+            key = entry["chainKey"]
+            chain_source = orch_chains if key in orch_chains else phase_chains
+            for step in chain_source.get(key) or []:
                 refs.add(normalize_step(str(step)))
         for step in entry.get("chain") or []:
             refs.add(normalize_step(str(step)))
         if entry.get("delegatesTo"):
             key = str(entry["delegatesTo"])
-            for step in chains.get(key) or []:
+            chain_source = orch_chains if key in orch_chains else phase_chains
+            for step in chain_source.get(key) or []:
                 refs.add(normalize_step(str(step)))
     return refs
 

@@ -25,7 +25,7 @@ git checkout -q -b feat/resume-tier
 mkdir -p core/sw-reference scripts .cursor/sw-deliver-runs/alpha
 cp -R "$ROOT/core/sw-reference/." core/sw-reference/
 for f in kernel_classification.py guidelines_validate.py plan_floor_evaluator.py wave_json_io.py \
-  wave_plan_validate.py plan_persist.py ship_phase_steps.py wave_state.py wave_deliver.py \
+  wave_plan_validate.py orchestrator_step_plan.py plan_persist.py ship_phase_steps.py wave_state.py wave_deliver.py \
   wave_deliver_loop.py wave_merge.py wave_failure.py; do
   cp "$ROOT/scripts/$f" scripts/
 done

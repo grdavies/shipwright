@@ -102,4 +102,43 @@ else
   bad "fanout-024-insufficient-n-not-adopted exit=$EC_INSUF prereq=$EC_PREREQ"
 fi
 
+# --- orchestrator-plan-rejects-unknown-step (R20): closed-world orchestrator tier ---
+BAD_PROPOSAL=$(mktemp)
+cat > "$BAD_PROPOSAL" <<'JSON'
+{"steps": ["memory-prework", "triage", "not-a-real-step", "normalize"]}
+JSON
+if OUT=$(bash "$ROOT/scripts/wave.sh" plan validate --tier orchestrator --orchestrator-type debug --proposal "$BAD_PROPOSAL" 2>/dev/null || true)   && echo "$OUT" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert d['verdict'] == 'reject', d
+assert any('unknown/extraneous' in r for r in d.get('reasons', [])), d
+"; then
+  ok "orchestrator-plan-rejects-unknown-step"
+else
+  bad "orchestrator-plan-rejects-unknown-step"
+fi
+rm -f "$BAD_PROPOSAL"
+
+GOOD_PROPOSAL=$(mktemp)
+python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, str(Path('$ROOT') / 'scripts'))
+from orchestrator_step_plan import canonical_orchestrator_chain
+steps = canonical_orchestrator_chain(Path('$ROOT'), 'debug')
+print(json.dumps({'steps': steps}))
+" > "$GOOD_PROPOSAL"
+if OUT=$(bash "$ROOT/scripts/wave.sh" plan validate --tier orchestrator --orchestrator-type debug --proposal "$GOOD_PROPOSAL" 2>/dev/null || true)   && echo "$OUT" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert d['verdict'] == 'pass', d
+assert d['plan']['tier'] == 'orchestrator', d
+"; then
+  ok "orchestrator-plan-accepts-canonical-debug"
+else
+  bad "orchestrator-plan-accepts-canonical-debug"
+fi
+rm -f "$GOOD_PROPOSAL"
+
+
 exit "$FAIL"

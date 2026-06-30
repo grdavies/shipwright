@@ -2,7 +2,7 @@
 # Wave plan + integration helpers (multi-feature + phase-mode).
 # Usage:
 #   wave.sh plan --task-list docs/prds/.../tasks-....md [--type feat] [--dry-run] [--from N]
-#   wave.sh plan validate --tier phase|wave --proposal <path|json> ...
+#   wave.sh plan validate --tier phase|wave|orchestrator --proposal <path|json> ...
 #   wave.sh plan --items 'A,B,C' --edges 'C:A'
 #   wave.sh preflight-base --target feat/<slug>
 #   wave.sh dispatch preflight --dispatch-id <id> --agent <id> [--command <sw-*>] [--skill <name>]
