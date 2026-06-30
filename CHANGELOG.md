@@ -152,6 +152,7 @@
 * merge phase two-track-edit-driver-l into feat/planning-feedback-lifecycle (651d1d1) <!-- sw-deliver:two-track-edit-driver-l -->
 * merge phase autonomy-posture-bounded-full-conductor-l into feat/planning-feedback-lifecycle (e3ee6c1) <!-- sw-deliver:autonomy-posture-bounded-full-conductor-l -->
 * merge phase planning-command-surface-finalization-s into feat/planning-feedback-lifecycle (76635f9) <!-- sw-deliver:planning-command-surface-finalization-s -->
+* merge phase emitter-dist-parity-s into feat/planning-feedback-lifecycle (d0c1e33) <!-- sw-deliver:emitter-dist-parity-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
