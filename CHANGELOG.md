@@ -151,6 +151,7 @@
 * merge phase related-units-scanner-pull-in-proposal-flow-l into feat/planning-feedback-lifecycle (9e016fb) <!-- sw-deliver:related-units-scanner-pull-in-proposal-flow-l -->
 * merge phase two-track-edit-driver-l into feat/planning-feedback-lifecycle (651d1d1) <!-- sw-deliver:two-track-edit-driver-l -->
 * merge phase autonomy-posture-bounded-full-conductor-l into feat/planning-feedback-lifecycle (e3ee6c1) <!-- sw-deliver:autonomy-posture-bounded-full-conductor-l -->
+* merge phase planning-command-surface-finalization-s into feat/planning-feedback-lifecycle (76635f9) <!-- sw-deliver:planning-command-surface-finalization-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
