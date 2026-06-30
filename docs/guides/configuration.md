@@ -119,6 +119,25 @@ Fixture suite: `bash scripts/test/run-visibility-fixtures.sh` (registered as `vi
 Fixture suite: `bash scripts/test/run-planning-visibility-acceptance-fixtures.sh` (registered as
 `planning-visibility-acceptance-fixtures` — emitter parity, public-unit no-regression, doc-impact acceptance).
 
+### Planning autonomy (PRD 035)
+
+Posture for planning graph bookkeeping vs content decisions. PRD 033 reads this key and soft-enforces
+scheduler confirm when a lower-priority unit is selected under `maintenance-only`.
+
+| Key | Values | Meaning |
+|-----|--------|---------|
+| `planning.autonomy` | `maintenance-only` (default) \| `full-conductor` | Mechanical reconciler/INDEX `derived` runs without prompts; pull-in, amendments, priority changes are proposed and human-confirmed by default |
+| `planning.fullConductor.confidenceThreshold` | number (default `0.85`) | Minimum edge confidence before auto-absorb under `full-conductor` |
+| `planning.fullConductor.mutationBudget` | integer (default `10`) | Per-session autonomous mutation cap → legitimate halt `planning-mutation-budget` |
+| `planning.fullConductor.undoWindowSeconds` | integer (default `3600`) | Reversible undo window before reconciler materializes absorption |
+
+**`full-conductor` bounds (R8–R9):** elevates only **gap/absorption-class** decisions; never auto-absorbs
+`private`/`memory` units; enqueues handoffs only (no nested `/sw-deliver`, `/sw-doc`, or orchestrator dispatch);
+never weakens merge-to-`main`. See `core/skills/conductor/SKILL.md` **Bounded planning full-conductor**.
+
+Fixture suite: `bash scripts/test/run-planning-035-doc-impact-fixtures.sh` (`doc-currency-035`, `no-regression-035`).
+
+
 ### Orchestration plan policy (`orchestration.planPolicy`)
 
 | Value | Default | Meaning |
@@ -207,6 +226,8 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `checks.neutralAllowlist` | Check names that stay blocking even if neutral |
 | `guardrails.enforceBeforeSubmit` | Memory guardrails run before prompts submit |
 | `guardrails.requireRuleClass` | Require allowlisted rules before prompts proceed |
+| `planning.autonomy` | `maintenance-only` (default) \| `full-conductor` — planning posture (PRD 035) |
+| `planning.fullConductor.*` | confidence/mutation/undo knobs under `full-conductor` opt-in |
 | `orchestration.planPolicy` | `canonical` (default) \| `proposed` — agent plan proposals vs hardcoded chains; kill-switch |
 | `intraPhase.parallelBudget` | Max concurrent intra-phase Task workers per phase (default **2**) |
 | `intraPhase.harnessLimit` | Harness-wide cap combined with `worktree.parallelCeiling` (default **8**) |

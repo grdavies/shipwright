@@ -171,6 +171,20 @@ unit soft-enforces a confirm prompt (see `core/commands/sw-deliver.md` **Plannin
 prompts; content decisions (pull-in, amendment, priority) stay human-gated. `full-conductor` opt-in elevates
 only gap/absorption-class decisions under bounded conductor limits (`planning.fullConductor`).
 
+## Two-track doc edits (PRD 035 R10–R14)
+
+After freeze, planning graph maintenance edits route through the two-track driver — not per-edit manual PRs:
+
+| Track | Classifier (R11) | Entry |
+| --- | --- | --- |
+| Mechanical | INDEX `derived` region, SUPERSEDED manifest, generated gap index only | `bash scripts/docs-edit-route.sh route --path …` → `docs-merge.sh` |
+| Substantive | Any `docs/planning/<unit-id>/` path (body or frontmatter) | `bash scripts/docs-edit-route.sh route-substantive --topic <topic>` |
+
+The INDEX **`inFlight` region is never mechanical** (PRD 032 deliver writer). Mechanical batches embed a
+both-region content-hash at PR open; auto-merge aborts when `derived` or `inFlight` advanced since (R14).
+Branch protection is probed via host API — ambiguous detection fails closed to the PR path (R13).
+
+
 ## Flags
 
 - `--from <stage>` — resume from a specific atomic stage.

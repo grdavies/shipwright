@@ -62,6 +62,18 @@ alwaysApply: true
 - Docs reach trunk via `scripts/docs_pr.sh` (docs-only PR), not direct push.
 - Feature-branch `spec-seed` (PRD 013) remains for implementation handoff; docs durability is separate (R32).
 
+
+
+## Two-track doc edits (PRD 035 R10–R14)
+
+- **Mechanical** — reconciler-generated artifacts only (INDEX `derived` region, SUPERSEDED manifest, gap index):
+  batched via `scripts/docs-merge.sh` with CI-gated auto-merge or direct-to-trunk when protection probe permits.
+- **Substantive** — any path under `docs/planning/<unit-id>/` (body or frontmatter): auto-driven docs worktree +
+  PR via `scripts/docs-edit-route.sh route-substantive` → `docs_worktree.sh` / `docs_pr.sh`.
+- **`inFlight` region** — never mechanically edited (PRD 032 deliver writer sole region).
+- Branch protection is detected via host API; ambiguous/missing auth fails closed to the PR path — never bypass
+  the protected trunk merge gate.
+
 ## Provenance
 
 Conventions informed by [netresearch/git-workflow-skill](https://github.com/netresearch/git-workflow-skill)
@@ -109,7 +121,7 @@ legacy commands and compound-engineering (`ce-`).
 
 ## Feedback orchestrator boundary
 
-`/sw-feedback` normalizes and routes inbound signals — it does not run `/sw-debug` analysis, `/sw-amend` authoring, or task execution. Production signals with error/crash/regression markers dispatch to `/sw-debug`; PR-extending work splits to `/sw-amend` or `docs/prds/GAP-BACKLOG.md`; new scope dispatches to `/sw-brainstorm`. Human confirmation required before dispatching any route (including agent callers).
+`/sw-feedback` normalizes and routes inbound signals — it does not run `/sw-debug` analysis, `/sw-amend` authoring, or task execution. Production signals with error/crash/regression markers dispatch to `/sw-debug`; PR-extending work splits to `/sw-amend` or a canonical **gap unit** under `docs/planning/<gap-unit-id>/` via `planning_gap_capture.py` (legacy `GAP-BACKLOG.md` is read-only projection only); new scope dispatches to `/sw-brainstorm`. Human confirmation required before dispatching any route (including agent callers).
 
 ## Naming rules
 
