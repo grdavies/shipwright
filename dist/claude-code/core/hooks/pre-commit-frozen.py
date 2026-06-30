@@ -43,9 +43,9 @@ def _checkbox_only(repo: Path, scripts: Path, old_path: Path, new_path: Path) ->
 def main() -> int:
     repo = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
     scripts = repo / "scripts"
-    check = scripts / "check-frozen.sh"
+    check = scripts / "check-frozen.py"
     if not check.is_file():
-        print("sw-freeze: check-frozen.sh missing; refusing commit", file=sys.stderr)
+        print("sw-freeze: check-frozen.py missing; refusing commit", file=sys.stderr)
         return 1
     staged = _git("diff", "--cached", "--name-only", cwd=repo).stdout.splitlines()
     if not staged:

@@ -61,7 +61,7 @@ def _assert_completion_finalize_allowed(root: Path, state: dict[str, Any], prior
     fail(
         "completion.status merged-complete is finalize-only (R33)",
         exit_code=20,
-        remediation="bash scripts/wave.sh completion finalize-if-merged",
+        remediation="python3 scripts/wave.py completion finalize-if-merged",
     )
 
 

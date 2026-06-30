@@ -120,7 +120,7 @@ fi
 FREEZE="$(check_surface commands/sw-freeze.md)" || DOC_CURRENCY_OK=false
 if [[ -n "${FREEZE:-}" ]]; then
   require_patterns "inflight-doc-currency:sw-freeze" "$FREEZE" \
-    'pre-commit-completed-unit\.sh' \
+    'pre-commit-completed-unit\.py' \
     'R9/R12|R9.*R12' \
     'complete.unit|Complete-unit' \
     'graceful-degraded|structural-status' \

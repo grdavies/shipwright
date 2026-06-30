@@ -18,13 +18,13 @@ compound write step; does not reimplement their procedures.
 **Auto-detect (no flag):** resolve phase from deliver run-state + merge status:
 
 ```bash
-python3 scripts/wave.sh retrospective detect-phase
+python3 scripts/wave.py retrospective detect-phase
 ```
 
 Returns `pre-merge` when the target feature branch is merge-ready but not yet on `main`; `post-merge` when
 merge is detected or no deliver context applies.
 
-Driver env (pre-merge): `python3 scripts/wave.sh retrospective premerge-env`
+Driver env (pre-merge): `python3 scripts/wave.py retrospective premerge-env`
 
 ## Chain
 
@@ -43,7 +43,7 @@ Internal: compound write (`skills/compound/SKILL.md`). Atomic: `/sw-retro`, `/sw
 ## Flags
 
 - `--pre-merge` — in-loop mode (R6): commit file outputs on the feature branch; record
-  `completed-pending-merge` via `python3 scripts/wave.sh retrospective record-premerge --prd <n> --phase <name>`.
+  `completed-pending-merge` via `python3 scripts/wave.py retrospective record-premerge --prd <n> --phase <name>`.
 - `--post-merge` — standalone reconcile after merge detection.
 - `--from <step>` — resume mid-chain (`retro`, `compound`, `memory-sync`, `status`).
 - `--skip-memory-sync` — skip transcript distillation.
@@ -51,7 +51,7 @@ Internal: compound write (`skills/compound/SKILL.md`). Atomic: `/sw-retro`, `/sw
 
 ## Autonomy (`compound.autonomy`)
 
-Read mode: `python3 scripts/wave.sh retrospective autonomy` (config key `compound.autonomy`, default `supervised`).
+Read mode: `python3 scripts/wave.py retrospective autonomy` (config key `compound.autonomy`, default `supervised`).
 
 | Mode | Behavior |
 | --- | --- |
@@ -78,7 +78,7 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
 
 1. If `--pre-merge` → pre-merge mode.
 2. If `--post-merge` → post-merge mode.
-3. Else run `python3 scripts/wave.sh retrospective detect-phase` and use the returned `phase`.
+3. Else run `python3 scripts/wave.py retrospective detect-phase` and use the returned `phase`.
 
 ### Pre-merge (`--pre-merge` or auto-detected)
 
@@ -91,7 +91,7 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
    after merge detection, R11); `append-log` for COMPLETION-LOG.
 6. **Commit file outputs only** on the feature branch: COMPLETION-LOG, INDEX, CHANGELOG/version,
    learnings notes. **Never commit** memory/provider artifacts (R7).
-7. `python3 scripts/wave.sh retrospective record-premerge --prd <n> --phase <name> [--notes "..."]`
+7. `python3 scripts/wave.py retrospective record-premerge --prd <n> --phase <name> [--notes "..."]`
 8. Hand off to terminal merge gate (`/sw-deliver` → `terminal-ship`).
 
 ### Post-merge (`--post-merge` or auto-detected)

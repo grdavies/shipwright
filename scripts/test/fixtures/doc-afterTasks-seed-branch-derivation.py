@@ -26,7 +26,7 @@ source "$ROOT/scripts/test/fixture-lib.sh"
 SW_DOC="$(content_path commands/sw-doc.md)"
 FAIL=0
 
-if grep -q 'scripts/wave[.]sh preflight --task-list' "$SW_DOC" && \
+if grep -q 'scripts/wave[.]py preflight --task-list' "$SW_DOC" && \
    grep -q 'target.branch' "$SW_DOC" && \
    grep -q 'scripts/wave_deliver.py' "$SW_DOC"; then
   echo "OK  doc-afterTasks-seed-branch-derivation: uses shared deliver resolver"

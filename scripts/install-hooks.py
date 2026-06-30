@@ -17,7 +17,7 @@ def main(argv: list[str] | None = None) -> int:
     hooks = plugin_root/"hooks"
     try: hooks_rel = os.path.relpath(str(hooks), str(root))
     except ValueError: hooks_rel = str(hooks)
-    for rel in ("scripts/check-frozen.py","hooks/pre-commit-frozen.sh","hooks/pre-commit"):
+    for rel in ("scripts/check-frozen.py","hooks/pre-commit-frozen.py","hooks/pre-commit"):
         target = plugin_root.parent/rel if rel.startswith("scripts") else hooks/Path(rel).name
         if target.is_file(): target.chmod(0o755)
     subprocess.run(["git","config","core.hooksPath", hooks_rel], cwd=str(root), check=True)

@@ -111,7 +111,7 @@ plan is present. With default `orchestration.planPolicy: canonical`, behavior ma
 `canonical` unchanged).
 
 **Phase-entry proposed step plan (PRD 023):** under `planPolicy: proposed`, the phase executor proposes a
-step list → `python3 scripts/wave.sh plan validate --tier phase --phase-type ship` → persists
+step list → `python3 scripts/wave.py plan validate --tier phase --phase-type ship` → persists
 `phase-step-plan.json` in the phase run dir before the chain starts. `ship-phase-steps.py` reads that plan as
 sole authority and re-checks kernel ordering at each `advance`; rejections fall back to canonical `SHIP_CHAIN`.
 
@@ -177,7 +177,7 @@ Resolve intensity: `python3 scripts/resolve-intensity.py --command <child-slug>`
 
 Before any delegated Task spawn from `/sw-ship`:
 
-1. `python3 scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-ship --skill <active-skill>`
+1. `python3 scripts/wave.py dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-ship --skill <active-skill>`
 2. `python3 scripts/dispatch-check.py --agent <agent-id> --command sw-ship --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Stamp Task with explicit `model: <resolved-concrete-id>`; do not use `inherit`.
 
@@ -252,13 +252,13 @@ Phase-mode **never merges**. The human merge gate is reserved for `<type>/<slug>
 
 Before `sw-pr` touches a phase head under deliver dispatch:
 
-1. **Per-head lease** — `python3 scripts/wave.sh ship-lease acquire --integration <integration> --phase-branch <head>`
+1. **Per-head lease** — `python3 scripts/wave.py ship-lease acquire --integration <integration> --phase-branch <head>`
    (keyed `(integrationBranch, phaseBranch)` under `.cursor/sw-deliver-locks/`; heartbeat TTL
    `SW_SHIP_LEASE_STALE_SECONDS`, default 300s).
 2. **PR idempotency** — phase-mode `host_pr_create` routes through `create_or_reuse_phase_pr`: `pr-list` filtered
    by integration base under the lease, reuse open PR or create once; `openPrNumber` persisted to deliver state.
 3. **Base pin** — integration branch from durable deliver state only; `SW_INTEGRATION_BRANCH` is harness-only.
-4. **Release** — `python3 scripts/wave.sh ship-lease release` after the list→create window closes.
+4. **Release** — `python3 scripts/wave.py ship-lease release` after the list→create window closes.
 
 `dispatch-ship` runs **in-turn** in the conductor; only `dispatch-batch` backgrounds sub-agents on distinct heads.
 

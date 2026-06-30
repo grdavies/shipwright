@@ -30,8 +30,8 @@ dependents on green unmerged branches, and halts at the human merge gate.
 1. Load `skills/deliver/SKILL.md` and `skills/conductor/SKILL.md` (conductor contract — R1/R3).
 2. Auto-detect mode: frozen `--task-list` → **phase-mode**; `--items`/`--edges` → **multi-feature**; both → disambiguation halt.
 3. Phase-mode: validate `frozen: true`, resolve `<type>/<slug>`, parse `## Phase Dependencies` (or R8 sequential fallback).
-4. Run `scripts/wave.sh preflight` to echo mode, target branch, and waves (includes CI/review
-   base-branch preflight, R49); then `scripts/wave.sh plan`.
+4. Run `scripts/wave.py preflight` to echo mode, target branch, and waves (includes CI/review
+   base-branch preflight, R49); then `scripts/wave.py plan`.
 5. Supports `--type`, `--dry-run` (no mutations), and `--from <phase>` (resume guard).
 6. Detect cycles; refuse invalid plans.
 7. Serialize shared-migration overlaps and INDEX/numbering contention per `skills/parallelism/`.
@@ -43,20 +43,20 @@ hand-authored in prose:
 
 ```bash
 # Phase tier — step list for a phase type (ship/deliver):
-python3 scripts/wave.sh plan validate --tier phase --phase-type ship \
+python3 scripts/wave.py plan validate --tier phase --phase-type ship \
   --proposal /path/to/proposal.json [--signal-context /path/to/signal_context.json]
 
 # Wave tier — batching within contention + parallelCeiling:
-python3 scripts/wave.sh plan validate --tier wave --proposal /path/to/wave-proposal.json \
+python3 scripts/wave.py plan validate --tier wave --proposal /path/to/wave-proposal.json \
   --plan .cursor/sw-deliver-plan.json
 ```
 
 Returns stable JSON `{verdict: pass|reject|ambiguous, reasons[]}`. Reject → canonical chain (phase) or
-canonical waves / `wave.sh schedule` (wave). With default `orchestration.planPolicy: canonical`, behavior is
+canonical waves / `wave.py schedule` (wave). With default `orchestration.planPolicy: canonical`, behavior is
 byte-identical to today; live `proposed` on `/sw-deliver` requires pilot opt-in (below).
 
 **Proposed-path wiring (PRD 023):** when `orchestration.planPolicy: proposed` and the TR0 dependency gate
-passes (`scripts/pilot_dependency_gate.py` / `scripts/test/pilot-022-prerequisite-check.sh`), state init seeds
+passes (`scripts/pilot_dependency_gate.py` / `scripts/test/pilot_022_prerequisite_check.py`), state init seeds
 `twoTierLifecycle` + `planRejectionLog`; wave entry runs `plan validate --tier wave --record-rejection` then
 persists `waveBatchingPlan` and sets `wave-validated`; phase entry runs `plan validate --tier phase` before
 persisting `phase-step-plan.json`, falling back to the canonical chain on reject.
@@ -72,7 +72,7 @@ Default `canonical` is unchanged for all repos. Enabling `proposed` on `/sw-deli
 4. **Production guard** — `/sw-init` doctor surfaces `planPolicy` vs default and refuses `proposed` toward
    shared `main` without acknowledgement.
 
-Benefit metric soak and default-flip decisions use `python3 scripts/wave.sh plan benefit-report --pairs <path>`
+Benefit metric soak and default-flip decisions use `python3 scripts/wave.py plan benefit-report --pairs <path>`
 (`scripts/wave_plan_benefit.py`); insufficient evidence fails closed to `canonical` (R31).
 
 ## Procedure (`deliver-loop` / `run`)
@@ -88,10 +88,10 @@ zero re-prompts (R13); `supervised` adds acknowledgement halts per `deliver.phas
 # resume when durable state already holds source_task_list:
 /sw-deliver run
 # internal driver (conductor in-turn only — not operator-facing resume):
-python3 scripts/wave.sh deliver-loop --dry-run
+python3 scripts/wave.py deliver-loop --dry-run
 ```
 
-0. **Entry guard (R16):** `python3 scripts/wave.sh assert-entry` when not resuming from durable state.
+0. **Entry guard (R16):** `python3 scripts/wave.py assert-entry` when not resuming from durable state.
 1. Load `skills/conductor/SKILL.md`; enforce `rules/sw-conductor.mdc`.
 2. Driver loads plan from state or runs `plan`; auto-detects in-progress runs on entry (R3).
 3. **Orchestrator worktree (R53):** `orchestrator provision` on `<type>/<slug>`.
@@ -112,7 +112,7 @@ python3 scripts/wave.sh deliver-loop --dry-run
 11. Halt at human merge gate — never in-flux.
 
 When the driver returns `awaitAgent: true`, the conductor performs the agent work and immediately
-re-invokes `python3 scripts/wave.sh deliver-loop` within the same turn until a legitimate halt (R6/R7 — see
+re-invokes `python3 scripts/wave.py deliver-loop` within the same turn until a legitimate halt (R6/R7 — see
 `skills/conductor/SKILL.md` **In-turn self-continuation loop**). A fresh agent resumes from
 `.cursor/sw-deliver-state.json` + plan + run log alone (R4).
 
@@ -122,7 +122,7 @@ After every `deliver-loop` JSON response:
 
 | Response | Conductor action (same turn) |
 | --- | --- |
-| `awaitAgent: false` | Re-invoke `python3 scripts/wave.sh deliver-loop` immediately |
+| `awaitAgent: false` | Re-invoke `python3 scripts/wave.py deliver-loop` immediately |
 | `awaitAgent: true` | Run agent step for `next.action` (table in conductor skill), then re-invoke `deliver-loop` |
 | `awaitInFlight: true` | Poll phase `status.json` paths (parallel-wave completion wait), then re-invoke `deliver-loop` |
 | `halt: true` | Emit consolidated report; stop — legitimate halt only |
@@ -134,11 +134,11 @@ After every `deliver-loop` JSON response:
 Hard stops: `deliver.autonomy.maxIterations` (default 500) and no-progress circuit breaker (3× identical
 `nextAction` + state signature) — see `rules/sw-subagent-dispatch.mdc` and conductor skill (R38).
 
-**Halts (R10–R12):** only legitimate conditions; emit `python3 scripts/wave.sh report blockers` (mid-run) or
+**Halts (R10–R12):** only legitimate conditions; emit `python3 scripts/wave.py report blockers` (mid-run) or
 `report terminal` (all phases merged) with `resumeCommand` (`/sw-deliver run …`) — never "continue deliver?".
 
-**Liveness (R37):** `python3 scripts/wave.sh state heartbeat` during long agent steps;
-`python3 scripts/wave.sh watchdog check` probes phase timeout / stale driver heartbeat.
+**Liveness (R37):** `python3 scripts/wave.py state heartbeat` during long agent steps;
+`python3 scripts/wave.py watchdog check` probes phase timeout / stale driver heartbeat.
 
 `run` is an alias for `deliver-loop --task-list <path>`.
 
@@ -170,7 +170,7 @@ external-wait exhaustion, run-level budget — see conductor skill **Legitimate-
 
 Before each phase/terminal delegated Task from `/sw-deliver`:
 
-1. `python3 scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-deliver --skill conductor`
+1. `python3 scripts/wave.py dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-deliver --skill conductor`
 2. `python3 scripts/dispatch-check.py --agent <agent-id> --command sw-deliver --skill conductor --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Dispatch Task with explicit concrete `model:` and resolved caveman intensity context; never rely on inherited model.
 
@@ -181,7 +181,7 @@ Resolve intensity: `python3 scripts/resolve-intensity.py --command sw-deliver --
 
 `/sw-deliver` may remain inline only for:
 
-- Durable driver invocations (`wave.sh deliver-loop/state/merge/status/report`).
+- Durable driver invocations (`wave.py deliver-loop/state/merge/status/report`).
 - Lock/journal bookkeeping and deterministic state transitions.
 - Legitimate-halt report emission and resume-command surfacing.
 

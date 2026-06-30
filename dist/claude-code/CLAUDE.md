@@ -21,8 +21,8 @@ Files with `frozen: true` in YAML frontmatter are **immutable**. Do not edit, re
 ## Enforcement layers
 
 - This rule — agent instruction (early warning).
-- `hooks/pre-commit-frozen.sh` — local commit block (bypassable with `--no-verify`).
-- `scripts/check-frozen.sh` — CI required-check (authoritative; not bypassable).
+- `core/hooks/pre-commit-frozen.py` — local commit block (bypassable with `--no-verify`).
+- `scripts/check-frozen.py` — CI required-check (authoritative; not bypassable).
 
 There is **no unfreeze** command.
 
@@ -41,14 +41,14 @@ alwaysApply: true
 ## Branch names
 
 - Pattern: `<type>/<slug>` or `docs/<topic>` where `type` ∈ `release-please-config.json` changelog types.
-- Enforced by `scripts/branch-name-guard.sh` at worktree/branch creation (`scripts/worktree_lib.py` for Python).
+- Enforced by `scripts/branch-name-guard.py` at worktree/branch creation (`scripts/worktree_lib.py` for Python).
 - `pf/<name>` is prohibited. Fail closed on non-conforming names.
 
 ## Commit messages
 
 - Conventional Commits: `type(scope): description` or `type!: description` for breaking changes.
 - Types single-sourced from `release-please-config.json`.
-- Enforced by `scripts/commit-msg-guard.sh` via `core/hooks/commit-msg`.
+- Enforced by `scripts/commit-msg-guard.py` via `core/hooks/commit-msg`.
 
 ## PR / merge bodies
 
@@ -57,9 +57,9 @@ alwaysApply: true
 
 ## Documentation authoring
 
-- Brainstorm/PRD/doc pipeline work occurs on `docs/<topic>` in a dedicated worktree (`scripts/docs_worktree.sh`).
+- Brainstorm/PRD/doc pipeline work occurs on `docs/<topic>` in a dedicated worktree (`scripts/docs_worktree.py`).
 - Never create local commits on the protected default branch for doc authoring.
-- Docs reach trunk via `scripts/docs_pr.sh` (docs-only PR), not direct push.
+- Docs reach trunk via `scripts/docs_pr.py` (docs-only PR), not direct push.
 - Feature-branch `spec-seed` (PRD 013) remains for implementation handoff; docs durability is separate (R32).
 
 
@@ -67,9 +67,9 @@ alwaysApply: true
 ## Two-track doc edits (PRD 035 R10–R14)
 
 - **Mechanical** — reconciler-generated artifacts only (INDEX `derived` region, SUPERSEDED manifest, gap index):
-  batched via `scripts/docs-merge.sh` with CI-gated auto-merge or direct-to-trunk when protection probe permits.
+  batched via `scripts/docs-merge.py` with CI-gated auto-merge or direct-to-trunk when protection probe permits.
 - **Substantive** — any path under `docs/planning/<unit-id>/` (body or frontmatter): auto-driven docs worktree +
-  PR via `scripts/docs-edit-route.sh route-substantive` → `docs_worktree.sh` / `docs_pr.sh`.
+  PR via `scripts/docs-edit-route.py route-substantive` → `docs_worktree.py` / `docs_pr.py`.
 - **`inFlight` region** — never mechanically edited (PRD 032 deliver writer sole region).
 - Branch protection is detected via host API; ambiguous/missing auth fails closed to the PR path — never bypass
   the protected trunk merge gate.
@@ -134,7 +134,8 @@ legacy commands and compound-engineering (`ce-`).
 1. Prefix every command file with `sw-` (e.g. `commands/sw-review.md`).
 2. Skill directories use descriptive kebab-case without the prefix (e.g. `skills/checks-gate/`).
 3. Rules use `sw-` when they encode plugin-specific guardrails (e.g. `sw-naming.mdc`, `sw-guardrails.mdc`).
-4. Provider adapters live under `providers/`; executable adapters use `.sh` (e.g. `providers/review/coderabbit.sh`).
+4. Provider adapters live under `providers/`; executable adapters use `.py` (R31 Python-first; e.g.
+   `providers/recallium-rules.py`).
 
 ## Deprecated aliases (one release)
 
@@ -151,13 +152,13 @@ ambiguity is likely.
 
 Semantic tiers (`cheap`/`build`/`deep`) live in `workflow.config.json` `models.tiers` only — not in agent
 `model:` frontmatter. Reviewer agents use `model: inherit` or a concrete platform ID. Validated by
-`scripts/model-tier-check.sh` (config + concrete models); runtime R9 for `inherit` reviewers is enforced at
+`scripts/model-tier-check.py` (config + concrete models); runtime R9 for `inherit` reviewers is enforced at
 dispatch by `/sw-doc-review` and `rules/sw-subagent-dispatch.mdc`. See `.sw/models-tiering.md`.
 
 ## Planning full-conductor boundary (PRD 035 R9)
 
 `scripts/planning_autonomy.py` under `planning.autonomy: full-conductor` is a **bounded planning driver**,
-not an orchestrator. It may enqueue atomic handoffs (`/sw-prd`, `/sw-tasks`, `planning-graph.sh reconcile`)
+not an orchestrator. It may enqueue atomic handoffs (`/sw-prd`, `/sw-tasks`, `planning-graph.py reconcile`)
 but **must not** invoke `/sw-deliver`, `/sw-doc`, `/sw-ship`, `/sw-debug`, `/sw-feedback`, `/sw-cleanup`, or
 `/sw-retrospective` from within its loop. An explicit halt applies between a reconcile batch and any downstream
 dispatch. Nested orchestrator dispatch is a naming/conductor boundary violation — use enqueue-handoff-only.

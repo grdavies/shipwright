@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """E2E/smoke verify adapter selector."""
 from __future__ import annotations
-import json, subprocess, sys
+import json, os, subprocess, sys
 from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path: sys.path.insert(0, str(SCRIPT_DIR))
@@ -51,9 +51,7 @@ def main(argv=None):
     changed = sorted(set((subprocess.run(["git","-C",str(root),"diff","--name-only"], capture_output=True, text=True).stdout or "").split() +
         (subprocess.run(["git","-C",str(root),"diff","--cached","--name-only"], capture_output=True, text=True).stdout or "").split() +
         (subprocess.run(["git","-C",str(root),"ls-files","--others","--exclude-standard"], capture_output=True, text=True).stdout or "").split()))
-    env = {**dict(**os.environ), "SW_VERIFY_ROOT": str(root), "SW_CHANGED_FILES": "\n".join(changed), "SW_E2E_ROUTES": cfg(config,"verifyE2e.routes","[]"), "SW_E2E_CONFIG": str(config or "")}
-    import os
-    env = {**os.environ, "SW_VERIFY_ROOT": str(root), "SW_CHANGED_FILES": chr(10).join(changed), "SW_E2E_ROUTES": cfg(config,"verifyE2e.routes","[]"), "SW_E2E_CONFIG": str(config or "")}
+    env = {**os.environ, "SW_VERIFY_ROOT": str(root), "SW_CHANGED_FILES": "\n".join(changed), "SW_E2E_ROUTES": cfg(config,"verifyE2e.routes","[]"), "SW_E2E_CONFIG": str(config or "")}
     proc = subprocess.run(["bash" if adapter.suffix==".sh" else sys.executable, str(adapter)], capture_output=True, text=True, env=env)
     sys.stdout.write(proc.stdout)
     try:

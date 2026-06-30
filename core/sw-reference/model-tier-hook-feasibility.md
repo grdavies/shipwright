@@ -21,7 +21,7 @@ Optional belt-and-suspenders (R5): a `preToolUse` hook that injects a resolved c
 
 3. **Logic prototype:** `core/hooks/before_task_dispatch.py` implements resolver integration and
    returns the correct `updated_input.model` when fed synthetic `preToolUse` stdin. Fixture:
-   `scripts/test/fixtures/task-dispatch-hook-feasibility.sh`.
+   `scripts/test/fixtures/task-dispatch-hook-feasibility.py`.
 
 ## Platform assessment
 

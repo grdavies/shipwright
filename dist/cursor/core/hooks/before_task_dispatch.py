@@ -261,7 +261,7 @@ def validate_dispatch_preflight(
                 cause="missing-preflight-nonce",
                 remediation=(
                     "run dispatch preflight immediately before Task: "
-                    "bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <id>"
+                    "python3 scripts/wave.py dispatch preflight --dispatch-id <id> --agent <id>"
                 ),
             )
     else:
@@ -278,7 +278,7 @@ def validate_dispatch_preflight(
                     cause="missing-preflight-nonce",
                     remediation=(
                         "run dispatch preflight immediately before Task: "
-                        "bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <id>"
+                        "python3 scripts/wave.py dispatch preflight --dispatch-id <id> --agent <id>"
                     ),
                 )
         elif len(matches) == 1:
@@ -358,7 +358,7 @@ def validate_memory_prework(root: Path) -> DispatchResult:
             cause=cause,
             remediation=(
                 "run pre-work memory search and record before the first file mutation: "
-                "bash scripts/wave.sh memory prework record --surface <sw-command> "
+                "python3 scripts/wave.py memory prework record --surface <sw-command> "
                 "[--scope paths] [--hit-count N]"
             ),
         )

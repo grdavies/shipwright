@@ -31,7 +31,7 @@ Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** c
   `.cursor/sw-deliver-state.json`; `plan --from <phase>` when resuming mid-wave.
 - **Pre-merge compounding:** full `/sw-compound-ship --pre-merge` before the terminal human merge gate;
   completion stays `completed-pending-merge` until merge is detected.
-- **Dry-run:** `scripts/wave.sh plan --task-list <path> --dry-run` — plan JSON only, no artifact write.
+- **Dry-run:** `scripts/wave.py plan --task-list <path> --dry-run` — plan JSON only, no artifact write.
 
 **Autonomy (PRD 009):** default `deliver.autonomy.mode: autonomous` — conductor in-turn loop to terminal
 gate. **Legitimate halts** only (see [`configuration.md`](configuration.md)). Parallel phases when the
@@ -48,7 +48,7 @@ terminal merge on drift.
 See [`core/commands/sw-deliver.md`](../../core/commands/sw-deliver.md) and
 [`core/skills/deliver/SKILL.md`](../../core/skills/deliver/SKILL.md).
 
-**Push safety:** workflow pushes route through `scripts/git-push.sh` → `scripts/secret-scan.sh`
+**Push safety:** workflow pushes route through `scripts/git-push.py` → `scripts/secret-scan.py`
 before `git push` (including `sw-pr` and stabilize re-pushes).
 
 ## Entry points
@@ -90,7 +90,7 @@ debugging one phase, or when you deliberately skip the orchestrator.
 | [`/sw-review`](../../core/commands/sw-review.md) | Local then provider code review (`review.provider`; default **`none`**) |
 | [`/sw-commit`](../../core/commands/sw-commit.md) | Commit after verify + review |
 | [`/sw-pr`](../../core/commands/sw-pr.md) | Push and open/update PR |
-| [`/sw-watch-ci`](../../core/commands/sw-watch-ci.md) | Poll PR checks via `check-gate.sh` |
+| [`/sw-watch-ci`](../../core/commands/sw-watch-ci.md) | Poll PR checks via `check-gate.py` |
 | [`/sw-stabilize`](../../core/commands/sw-stabilize.md) | Clear CI + review blockers |
 | [`/sw-ready`](../../core/commands/sw-ready.md) | Terminal readiness report; echoes `review: off` or `review: not configured` from gate JSON |
 

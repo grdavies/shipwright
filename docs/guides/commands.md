@@ -31,7 +31,7 @@ Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** c
   `.cursor/sw-deliver-state.<slug>.json` at repo root; `plan --from <phase>` when resuming mid-wave.
 - **Pre-merge compounding:** full `/sw-compound-ship --pre-merge` before the terminal human merge gate;
   completion stays `completed-pending-merge` until merge is detected.
-- **Dry-run:** `scripts/wave.sh plan --task-list <path> --dry-run` — plan JSON only, no artifact write.
+- **Dry-run:** `scripts/wave.py plan --task-list <path> --dry-run` — plan JSON only, no artifact write.
 
 **Autonomy (PRD 009):** default `deliver.autonomy.mode: autonomous` — conductor in-turn loop to terminal
 gate. **Legitimate halt** (`legitimate.halt`) only (see [`configuration.md`](configuration.md)). Parallel phases when the
@@ -53,12 +53,12 @@ chat. Default `orchestration.planPolicy: canonical` preserves today's behavior; 
 the `/sw-deliver` pilot (TR0 gate, per-run acknowledgement, non-`main` target).
 
 ```bash
-python3 scripts/wave.sh plan benefit-report --pairs scripts/test/fixtures/benefit-metric/positive-pairs.json
+python3 scripts/wave.py plan benefit-report --pairs scripts/test/fixtures/benefit-metric/positive-pairs.json
 ```
 
 ```bash
-python3 scripts/wave.sh plan validate --tier phase --phase-type ship --proposal <path|json>
-python3 scripts/wave.sh plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
+python3 scripts/wave.py plan validate --tier phase --phase-type ship --proposal <path|json>
+python3 scripts/wave.py plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
 ```
 
 Call-site map: [`call-site-map.md`](../prds/022-kernel-classification-and-plan-validation/call-site-map.md).
@@ -74,10 +74,10 @@ Extends `/sw-doc` — no `/sw-plan` command.
 | --- | --- |
 | Pull-in at PRD creation | `/sw-prd` → `planning-related.py scan --mode creation` + confirm-list |
 | Backlog re-scan at tasks | `/sw-tasks` → `planning-related.py scan --mode tasks-rescan` |
-| Mechanical reconciler | `python3 scripts/planning-graph.sh reconcile` |
+| Mechanical reconciler | `python3 scripts/planning-graph.py reconcile` |
 | Scheduler | `/sw-deliver next` |
 | Autonomy posture | `planning.autonomy` (`maintenance-only` default \| `full-conductor`) |
-| Two-track doc edits | `scripts/docs-edit-route.py` → mechanical `docs-merge.sh` or substantive docs worktree + PR |
+| Two-track doc edits | `scripts/docs-edit-route.py` → mechanical `docs-merge.py` or substantive docs worktree + PR |
 | Gap capture from feedback | `/sw-feedback` → `planning_gap_capture.py` (not legacy `GAP-BACKLOG.md`) |
 
 See [`core/commands/sw-doc.md`](../../core/commands/sw-doc.md) **Planning command surface** and
@@ -172,5 +172,5 @@ See [Getting started](getting-started.md) for boundary modes and worktree rules.
 | `/sw-doc` | **`consistency-only` default** | Canonical path + doc-review halts; proposed pack deferred unless probe shows latitude |
 | `/sw-feedback` | `full` episodic | Untrusted-signal halts; `.cursor/sw-feedback-runs/` scratch |
 
-Fixtures: `python3 scripts/test/run-fanout-fixtures.sh`; A2 binding: `python3 scripts/test/run-dispatch-foundation-fixtures.sh`.
+Fixtures: `python3 scripts/test/run_fanout_fixtures.py`; A2 binding: `python3 scripts/test/run_dispatch_foundation_fixtures.py`.
 

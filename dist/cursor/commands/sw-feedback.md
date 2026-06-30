@@ -44,7 +44,7 @@ Read `orchestration.planPolicy` from `.cursor/workflow.config.json` (default **`
 - **`canonical`:** steps 1–8 below are unchanged — no orchestrator-step plan artifacts are persisted.
 - **`proposed`:** after conductor load, run the episodic entry driver:
   1. `python3 scripts/orchestrator_signal_context.py . capture --orchestrator-type feedback --run-id <id> --input '<json>'`
-  2. Propose the single-tier feedback chain → `python3 scripts/wave.sh plan validate --tier orchestrator --orchestrator-type feedback --signal-context …`
+  2. Propose the single-tier feedback chain → `python3 scripts/wave.py plan validate --tier orchestrator --orchestrator-type feedback --signal-context …`
   3. `python3 scripts/capability-select.py --run-dir .cursor/sw-feedback-runs/<id> --context-json …`
   4. Persist validated plan + R21 surfacing under `.cursor/sw-feedback-runs/<id>/` via `scripts/orchestrator_run.py entry --orchestrator-type feedback`
   5. Drive phases from the stored plan; re-validate kernel ordering at each `advance`.
@@ -97,7 +97,7 @@ FB-A1 in-turn continuation applies **after** handoff confirmation only.
 
 Before dispatching routed follow-on Tasks from `/sw-feedback`:
 
-1. `python3 scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-feedback --skill feedback`
+1. `python3 scripts/wave.py dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-feedback --skill feedback`
 2. `python3 scripts/dispatch-check.py --agent <agent-id> --command sw-feedback --skill feedback --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Dispatch with explicit concrete `model:` and resolved intensity (no model inheritance).
 

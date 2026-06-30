@@ -11,10 +11,10 @@ Adapted from compound-engineering — writes through the memory seam only (not `
 top-level command — use `/sw-retrospective` for the full `retro → compound → memory-sync → status` chain.
 
 **Phase dispatch:** `/sw-retrospective` selects `--pre-merge` / `--post-merge` (or auto-detects via
-`python3 scripts/wave.sh retrospective detect-phase`). This skill runs identically in both phases; only
+`python3 scripts/wave.py retrospective detect-phase`). This skill runs identically in both phases; only
 downstream status/reconcile flags differ.
 
-**Autonomy (`compound.autonomy`):** read via `python3 scripts/wave.sh retrospective autonomy`. `supervised` (default)
+**Autonomy (`compound.autonomy`):** read via `python3 scripts/wave.py retrospective autonomy`. `supervised` (default)
 requires user approval at compound write and merge-ack prompts; `auto` removes those prompts only. Memory
 fail-closed (R7) and rule-class human gates (R8) apply under all settings.
 

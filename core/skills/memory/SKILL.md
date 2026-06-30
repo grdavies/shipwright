@@ -71,7 +71,7 @@ rules/decisions:
 Record the pre-work search breadcrumb before the first substantive mutation:
 
 ```bash
-python3 scripts/wave.sh memory prework record \
+python3 scripts/wave.py memory prework record \
   --surface sw-execute \
   --scope "core/skills/memory/SKILL.md" \
   --classes rule,decision,learning,code-context,design \

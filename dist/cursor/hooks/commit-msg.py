@@ -8,12 +8,12 @@ def main() -> int:
     if len(sys.argv) < 2:
         print("commit-msg: message file required", file=sys.stderr)
         return 2
-    repo = Path(__file__).resolve().parents[2]
-    guard = repo / "scripts" / "commit-msg-guard.sh"
+    repo = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
+    guard = repo / "scripts" / "commit-msg-guard.py"
     if not guard.is_file():
-        print("commit-msg: commit-msg-guard.sh missing", file=sys.stderr)
+        print("commit-msg: commit-msg-guard.py missing", file=sys.stderr)
         return 1
-    return subprocess.run(["bash", str(guard), "validate", sys.argv[1]], cwd=repo).returncode
+    return subprocess.run([sys.executable, str(guard), "validate", sys.argv[1]], cwd=repo).returncode
 
 if __name__ == "__main__":
     raise SystemExit(main())

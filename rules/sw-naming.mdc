@@ -50,7 +50,8 @@ legacy commands and compound-engineering (`ce-`).
 1. Prefix every command file with `sw-` (e.g. `commands/sw-review.md`).
 2. Skill directories use descriptive kebab-case without the prefix (e.g. `skills/checks-gate/`).
 3. Rules use `sw-` when they encode plugin-specific guardrails (e.g. `sw-naming.mdc`, `sw-guardrails.mdc`).
-4. Provider adapters live under `providers/`; executable adapters use `.sh` (e.g. `providers/review/coderabbit.sh`).
+4. Provider adapters live under `providers/`; executable adapters use `.py` (R31 Python-first; e.g.
+   `providers/recallium-rules.py`).
 
 ## Deprecated aliases (one release)
 
@@ -67,13 +68,13 @@ ambiguity is likely.
 
 Semantic tiers (`cheap`/`build`/`deep`) live in `workflow.config.json` `models.tiers` only — not in agent
 `model:` frontmatter. Reviewer agents use `model: inherit` or a concrete platform ID. Validated by
-`scripts/model-tier-check.sh` (config + concrete models); runtime R9 for `inherit` reviewers is enforced at
+`scripts/model-tier-check.py` (config + concrete models); runtime R9 for `inherit` reviewers is enforced at
 dispatch by `/sw-doc-review` and `rules/sw-subagent-dispatch.mdc`. See `.sw/models-tiering.md`.
 
 ## Planning full-conductor boundary (PRD 035 R9)
 
 `scripts/planning_autonomy.py` under `planning.autonomy: full-conductor` is a **bounded planning driver**,
-not an orchestrator. It may enqueue atomic handoffs (`/sw-prd`, `/sw-tasks`, `planning-graph.sh reconcile`)
+not an orchestrator. It may enqueue atomic handoffs (`/sw-prd`, `/sw-tasks`, `planning-graph.py reconcile`)
 but **must not** invoke `/sw-deliver`, `/sw-doc`, `/sw-ship`, `/sw-debug`, `/sw-feedback`, `/sw-cleanup`, or
 `/sw-retrospective` from within its loop. An explicit halt applies between a reconcile batch and any downstream
 dispatch. Nested orchestrator dispatch is a naming/conductor boundary violation — use enqueue-handoff-only.

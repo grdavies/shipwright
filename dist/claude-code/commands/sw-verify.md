@@ -21,7 +21,7 @@ Run the smallest reliable verification for the current phase.
    # Merge into commands array as { "name": "e2e", "exitCode", "status", "provider", "logPath" }
    ```
 
-   Selector reads `verifyE2e.provider` → `providers/verify/<id>.sh` (`providers/verify/CAPABILITIES.md`).
+   Selector reads `verifyE2e.provider` → `providers/verify/<id>.py` (`providers/verify/CAPABILITIES.md`).
    Skipped when `enabled: false` or `provider: "none"` — non-blocking.
 6. After all commands complete, resolve the run dir and write the aggregate status file:
 

@@ -55,7 +55,7 @@ Read `orchestration.planPolicy` from `.cursor/workflow.config.json` (default **`
 - **`canonical`:** steps 1–9 above are unchanged — no orchestrator-step plan artifacts are persisted.
 - **`proposed`:** after conductor load and pre-work search, run the episodic entry driver:
   1. `python3 scripts/orchestrator_signal_context.py . capture --orchestrator-type debug --run-id <id> --input '<json>'`
-  2. Propose the single-tier debug chain → `python3 scripts/wave.sh plan validate --tier orchestrator --orchestrator-type debug --signal-context …`
+  2. Propose the single-tier debug chain → `python3 scripts/wave.py plan validate --tier orchestrator --orchestrator-type debug --signal-context …`
   3. `python3 scripts/capability-select.py --run-dir .cursor/sw-debug-runs/<id> --context-json …`
   4. Persist validated plan + R21 surfacing under `.cursor/sw-debug-runs/<id>/` via `scripts/orchestrator_run.py entry`
   5. Drive phases from the stored plan; re-validate kernel ordering at each `advance`.
@@ -97,7 +97,7 @@ guideline pack — plans omitting or reordering them are rejected fail-closed. D
 
 Before dispatching specialist/debug sub-agents from `/sw-debug`:
 
-1. `python3 scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-debug --skill debug`
+1. `python3 scripts/wave.py dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-debug --skill debug`
 2. `python3 scripts/dispatch-check.py --agent <agent-id> --command sw-debug --skill debug --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Pass explicit concrete `model:` on Task input.
 

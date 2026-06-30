@@ -37,11 +37,11 @@ detected platform catalog plus `core/sw-reference/model-routing.defaults.json`.
 
 - **`cheap` / `build` / `mid` / `deep`** — policy vocabulary only; not valid in agent `model:` frontmatter.
 - **`inherit`** — routing sentinel only (orchestrators `sw-doc`, `sw-ship`, `sw-deliver`, `sw-compound-ship`);
-  resolve delegated children via `resolve-model-tier.sh --delegate`.
+  resolve delegated children via `resolve-model-tier.py --delegate`.
 - **Tier values** — Cursor/Claude dispatch IDs ([Cursor subagents](https://cursor.com/docs/subagents#model-configuration)).
 - **`roles`** — builder vs reviewer floor; `roles.reviewer` tier must be ≥ `roles.builder`.
 
-### Platform catalogs (`scripts/seed-model-config.sh`)
+### Platform catalogs (`scripts/seed-model-config.py`)
 
 | Tier | Cursor | Claude Code |
 | --- | --- | --- |
@@ -56,11 +56,11 @@ exists in routing for cross-platform parity; only the concrete ID collapses.
 ### Routing resolution
 
 ```bash
-bash scripts/resolve-model-tier.sh --command sw-prd
-bash scripts/resolve-model-tier.sh --skill prd
-bash scripts/resolve-model-tier.sh --command sw-doc --delegate sw-prd
-bash scripts/resolve-model-tier.sh --tier deep
-bash scripts/resolve-model-tier.sh --agent sw-coherence-reviewer
+python3 scripts/resolve-model-tier.py --command sw-prd
+python3 scripts/resolve-model-tier.py --skill prd
+python3 scripts/resolve-model-tier.py --command sw-doc --delegate sw-prd
+python3 scripts/resolve-model-tier.py --tier deep
+python3 scripts/resolve-model-tier.py --agent sw-coherence-reviewer
 ```
 
 Config `models.routing` (including `models.routing.agents` for per-reviewer/native-panel tiers) overrides
@@ -68,9 +68,9 @@ bundled defaults; missing keys fall back to `core/sw-reference/model-routing.def
 
 ## Layer 2 — Dispatch (`commands/`, `skills/`, `agents/`)
 
-**Capability selection is orthogonal** — manifest-driven eligibility (`scripts/capability-select.sh`,
+**Capability selection is orthogonal** — manifest-driven eligibility (`scripts/capability-select.py`,
 `core/sw-reference/capability-manifest.md`) chooses *which* skills/personas/providers are in scope for a
-`signal_context`. Model tier resolution (`resolve-model-tier.sh`, `dispatch-check.sh`) chooses *which concrete
+`signal_context`. Model tier resolution (`resolve-model-tier.py`, `dispatch-check.py`) chooses *which concrete
 model* dispatches a selected agent. Do not conflate the two. **`orchestration.planPolicy` is also orthogonal**
 — it governs agent-proposed step/wave plans, not model tier or capability selection.
 
@@ -87,17 +87,17 @@ Do **not** put `cheap`/`build`/`mid`/`deep` or vendor aliases like `sonnet` in s
 
 | Check | What |
 | --- | --- |
-| `scripts/model-tier-check.sh` | Four-tier order; `roles.reviewer` ≥ `roles.builder`; concrete agent models ≥ builder; `inherit` passes static check |
-| `scripts/model-routing-check.sh` | Defaults cover all shipped commands/skills; valid tier keys; R27 parity with communication defaults when present |
-| `scripts/resolve-model-tier.sh` | Runtime tier → concrete ID; `inherit` → `modelId: null` exit 0 |
-| `scripts/resolve-intensity.sh` | Runtime intensity resolution with command → skill → agent → default precedence |
+| `scripts/model-tier-check.py` | Four-tier order; `roles.reviewer` ≥ `roles.builder`; concrete agent models ≥ builder; `inherit` passes static check |
+| `scripts/model-routing-check.py` | Defaults cover all shipped commands/skills; valid tier keys; R27 parity with communication defaults when present |
+| `scripts/resolve-model-tier.py` | Runtime tier → concrete ID; `inherit` → `modelId: null` exit 0 |
+| `scripts/resolve-intensity.py` | Runtime intensity resolution with command → skill → agent → default precedence |
 | `/sw-doc-review`, `sw-subagent-dispatch` | **Runtime R9:** parent model tier ≥ builder when dispatching `inherit` reviewers |
-| `scripts/dispatch-check.sh` | Fail-closed binding check (`binding:no-model`, `binding:no-intensity`, `harness:capacity`) before Task spawn |
+| `scripts/dispatch-check.py` | Fail-closed binding check (`binding:no-model`, `binding:no-intensity`, `harness:capacity`) before Task spawn |
 
 ### Optional Task hook (R5 — deferred)
 
 A `preToolUse` hook (`core/hooks/before_task_dispatch.py`) can compute `updated_input.model`
-from `resolve-model-tier.sh --agent`, but **Cursor does not apply `updated_input` for the Task
+from `resolve-model-tier.py --agent`, but **Cursor does not apply `updated_input` for the Task
 tool** and `subagentStart` cannot set model. Spike record:
 `core/sw-reference/model-tier-hook-feasibility.md`. **Not registered** in plugin `hooks.json`
 until the platform supports Task model mutation. Enforcement remains dispatcher + preflight only.
@@ -107,8 +107,8 @@ until the platform supports Task model mutation. Enforcement remains dispatcher 
 ## Validate
 
 ```bash
-bash scripts/model-tier-check.sh --config .sw/workflow.config.example.json
-bash scripts/model-routing-check.sh
-bash scripts/test/fixtures/model-tier-routing.sh
-bash scripts/test/run-model-binding-fixtures.sh
+python3 scripts/model-tier-check.py --config .sw/workflow.config.example.json
+python3 scripts/model-routing-check.py
+python3 scripts/test/fixtures/model-tier-routing.py
+python3 scripts/test/run_model_binding_fixtures.py
 ```

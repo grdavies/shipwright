@@ -308,7 +308,7 @@ activation record in run output (and copy to the run report per R69):
 ```json
 {
   "core": ["correctness", "maintainability", "scope-fidelity", "testing", "security"],
-  "specialists": ["<gated roster from select.sh>"],
+  "specialists": ["<gated roster from code-review-select.py>"],
   "signals": { "<specialist>": ["<matched signal ids>"] },
   "excluded": ["previous-comments", "simplifier"]
 }

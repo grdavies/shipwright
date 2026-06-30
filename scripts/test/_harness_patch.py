@@ -27,6 +27,7 @@ _BARE_SCRIPT_RENAMES = {
     "pre-commit-completed-unit.sh": "pre-commit-completed-unit.py",
     "authoring-guard.sh": "authoring-guard.py",
     "rules-*.sh": "rules-*.py",
+    "pilot-022-prerequisite-check.sh": "pilot_022_prerequisite_check.py",
 }
 
 
