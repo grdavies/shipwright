@@ -674,6 +674,23 @@
         "re-freeze-contract-amendment",
         "cleanup-autonomy-auto-post-merge"
       ]
+    },
+    {
+      "id": "planning-035-gap-lifecycle-fixtures",
+      "script": "scripts/test/run-planning-035-gap-lifecycle-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-gap-lifecycle-fixtures",
+      "scenarios": [
+        "gap-resolve-on-prd-ship",
+        "freeze-absorbs-flips-gap-schedule",
+        "gap-backlog-index-integrity",
+        "gap-backlog-ci-guard",
+        "doc-format-normalize-before-rigor",
+        "spec-rigor-traceability-regex-parity",
+        "min-recall-gap-043-044-046",
+        "feedback-routing-prefers-gap-units"
+      ]
     }
   ]
 }

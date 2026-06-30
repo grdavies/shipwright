@@ -539,3 +539,14 @@ jobs:
       - name: Run planning-035-deliver-conductor-fixtures
         run: bash scripts/test/run-planning-035-deliver-conductor-fixtures.sh
 
+  feat-test-plan-planning-035-gap-lifecycle-fixtures:
+    name: feat-test-plan-planning-035-gap-lifecycle-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-035-gap-lifecycle-fixtures
+        run: bash scripts/test/run-planning-035-gap-lifecycle-fixtures.sh
+
