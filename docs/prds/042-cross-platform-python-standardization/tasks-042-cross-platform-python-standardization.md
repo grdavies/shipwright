@@ -103,15 +103,15 @@ off `rsync` early so subsequent ports build cleanly.
   - **File:** `scripts/check-gate.py`, `scripts/wave.py` (+ wave_* modules) (remove ported `.sh`)
   - **Expected:** stdout JSON contract, exit codes, fail-closed semantics preserved
   - **R-IDs:** R24
-- [ ] 3.2 Eliminate `jq` on gate/dispatcher surfaces via `json` (R7 incremental)
+- [x] 3.2 Eliminate `jq` on gate/dispatcher surfaces via `json` (R7 incremental)
   - **File:** ported gate/dispatcher modules, `scripts/test/json-contract-gate.test`
   - **Expected:** no `jq`; semantic parity (+ byte parity where goldens exist)
   - **R-IDs:** R7
-- [ ] 3.3 Resolve twin INDEX reconciler code paths into one Python surface (R22)
+- [x] 3.3 Resolve twin INDEX reconciler code paths into one Python surface (R22)
   - **File:** `scripts/reconcile.py` (consolidates `reconcile-status.sh` + `planning-graph reconcile` code paths), `scripts/test/single-reconciler.test`
   - **Expected:** shared helpers, deduplicated logic; INDEX schemas/regions/lifecycle unchanged; fixture covers both INDEX behaviors
   - **R-IDs:** R22
-- [ ] 3.4 JSON contract fixtures for ported verbs/gates (TR4 support)
+- [x] 3.4 JSON contract fixtures for ported verbs/gates (TR4 support)
   - **File:** `scripts/test/json-contract-*.test`
   - **Expected:** per-verb/gate semantic-parity diff; byte parity where goldens exist
   - **R-IDs:** R7
