@@ -1,6 +1,7 @@
 ---
 date: 2026-06-30
 topic: issue-backed-planning-store
+visibility: public
 prd: docs/prds/043-issue-backed-planning-store/043-prd-issue-backed-planning-store.md
 program: issue-backed-planning-store
 frozen: true

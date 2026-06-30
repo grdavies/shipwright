@@ -72,3 +72,15 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
 - No `frozen: true` in this step — freeze is `/sw-freeze`.
 - No GitHub tracking issue by default (deferred to `003`).
 - Default `--type prd` behavior unchanged from prior `sw-prd` contract.
+
+
+## Issue-store mode (PRD 043)
+
+When `planning.store.backend` is `issue-store` (effective):
+
+1. Persist PRD drafts via the planning store (`sw:prd` issues) — do not author stub files under `docs/prds/`.
+2. Carry brainstorm linkage in the PRD `sw-edges` block and via
+   `python3 scripts/planning_store.py link-brainstorm-prd`.
+3. Task lists (`sw:tasks`) and gap units (`sw:gap`) use the same store interface.
+
+Decision records (`--type decision`) remain file-native (D8).
