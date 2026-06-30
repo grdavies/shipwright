@@ -262,17 +262,17 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 
 ### 8. Gap lifecycle + doc format (amendment A2) — M
 
-- [ ] 8.1 Mechanical gap resolve + freeze absorbs flip (R51–R52)
+- [x] 8.1 Mechanical gap resolve + freeze absorbs flip (R51–R52)
   - **File:** `scripts/living-status-gap-resolve.sh`, `core/commands/sw-freeze.md`
   - **Expected:** PRD ship flips gap rows; freeze writes schedule from `absorbs:` frontmatter.
     Fixtures: `gap-resolve-on-prd-ship`, `freeze-absorbs-flips-gap-schedule`.
   - **R-IDs:** R51, R52
-- [ ] 8.2 Gap backlog integrity guard (R53–R54)
+- [x] 8.2 Gap backlog integrity guard (R53–R54)
   - **File:** `scripts/gap-backlog.sh`, `scripts/docs-currency-gate.sh`, `core/skills/living-status/SKILL.md`
   - **Expected:** index/table binary status consistency CI guard.
     Fixtures: `gap-backlog-index-integrity`, `gap-backlog-ci-guard`.
   - **R-IDs:** R53, R54
-- [ ] 8.3 Shared doc-format tokenizer (R55–R58)
+- [x] 8.3 Shared doc-format tokenizer (R55–R58)
   - **File:** `scripts/doc_format_tokenizer.py`, `scripts/spec-rigor-check.sh`, `scripts/traceability-check.sh`
   - **Expected:** normalize-before-rigor; shared regex; minimum-recall passes; feedback routing prefers gap units.
     Fixtures: `doc-format-normalize-before-rigor`, `spec-rigor-traceability-regex-parity`, `min-recall-gap-043-044-046`.

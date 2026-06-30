@@ -45,7 +45,7 @@ Read `.cursor/workflow.config.json` for `memory`, `review.provider`, `prdsDir`.
    - Prod fault → `/sw-debug`
    - Extends prior PR → gap-capture (Phase 3)
    - New scope → `/sw-brainstorm`
-5. **Gap split** — substantial → `/sw-amend`; trivial → write a canonical gap unit via
+5. **Gap split** — when `planningDir` is active, prefer canonical gap units under `docs/planning/gap/` via
    `python3 scripts/planning_gap_capture.py <repo> capture --signal-id <id> --title <title> [--pr N]`,
    then `python3 scripts/planning_graph.py <repo> reconcile --dry-run` (legacy GAP-BACKLOG is a read-only projection).
 6. **Record** route per `skills/feedback/references/route-record.md` — redact serialized JSON via

@@ -110,6 +110,20 @@ if expected == "complete" and gap_path.is_file():
         if status == "open" and absorbed == prd:
             drift.append({"kind": "gap-still-open", "prd": prd, "row": parts[2]})
 
+# GAP-BACKLOG index/table integrity (R54)
+import subprocess
+gb = subprocess.run(
+    [sys.executable, str(root / "scripts" / "gap_backlog.py"), "--root", str(root), "check"],
+    text=True,
+    capture_output=True,
+)
+if gb.returncode != 0:
+    try:
+        payload = json.loads(gb.stdout or gb.stderr)
+    except json.JSONDecodeError:
+        payload = {"error": gb.stderr or gb.stdout}
+    drift.append({"kind": "gap-backlog-integrity", "detail": payload})
+
 if drift:
     print(json.dumps({"verdict": "fail", "action": "docs-currency-gate", "prd": prd, "drift": drift}))
     sys.exit(1)
