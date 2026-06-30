@@ -57,6 +57,36 @@ So after the whole program ships, a default (file-backend) install still has two
 code paths, neither routed through `planning_store` — the exact problem PRD 043's own R33 interface exists to
 prevent for any *other* future backend.
 
+## Additional evidence (found during `/sw-doc-review` of PRD 045 A1, 2026-06-30)
+
+The two-namespace split is sharp enough to corrupt unrelated state, not just duplicate effort. PRD 045 A1 and
+PRD 046 A1 (both amendments absorbing this signal and gap-002) initially declared `absorbs: [gap-002]` /
+`absorbs: [gap-003]` — the short numeric form. `/sw-freeze`'s gap-schedule-flip step
+(`scripts/gap_backlog.py:flip_schedule`) reads `absorbs` and matches it case-insensitively against
+`docs/prds/GAP-BACKLOG.md` row ids (`GAP-NNN`):
+
+```146:159:scripts/gap_backlog.py
+def flip_schedule(backlog: GapBacklog, *, gap_ids: list[str], prd: str, amendment: str | None = None) -> list[str]:
+    label = schedule_label(prd, amendment)
+    flipped: list[str] = []
+    want = {g.upper() for g in gap_ids}
+    for row in backlog.rows:
+        if row.gap_id.upper() not in want:
+            continue
+```
+
+`docs/prds/GAP-BACKLOG.md` already has unrelated, already-`resolved` rows literally named `GAP-002` (scoped
+history-redaction guardrail) and `GAP-003` (phase `status.json` worktree path) — confirmed by direct lookup.
+`"gap-002".upper()` and `"GAP-002"` collide exactly. In this instance both legacy rows are `resolved` (neither
+`is_open` nor `is_scheduled`), so `flip_schedule` no-ops by luck of current status, not by design — had either
+been `open`, the flip would have silently re-scheduled the wrong, unrelated legacy entry against PRD 045/046.
+Fixed in both amendment drafts by using the full canonical `id:` (e.g.
+`gap-002-living-doc-reconcile-commits-bypass-r31-default-`) instead of the short form, which cannot collide
+with a 3-digit legacy id. This is direct, reproduced evidence that the two gap-id namespaces are not just
+undocumented but **actively unsafe to cross-reference** with the short form — any remediation (Suggested
+remediation #2/#3 below) must either retire the short numeric form for canonical units or make
+`flip_schedule`/`gap_backlog.py` namespace-aware before relying on `absorbs:` automation again.
+
 ## Suggested remediation
 
 1. Route `planning_gap_capture.py` (and the `/sw-feedback` Phase 3 "trivial gap" path) through

@@ -1,8 +1,9 @@
 ---
 date: 2026-06-30
 amends: docs/prds/046-issue-store-planning-graph/046-prd-issue-store-planning-graph.md
-absorbs: [gap-002]
-frozen: false
+absorbs: [gap-002-living-doc-reconcile-commits-bypass-r31-default-]
+frozen: true
+frozen_at: 2026-06-30
 ---
 
 # Amendment A1: Committed-INDEX write path inherits default-branch commit safety

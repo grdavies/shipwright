@@ -1,8 +1,9 @@
 ---
 date: 2026-06-30
 amends: docs/prds/045-issue-native-dev-tracking/045-prd-issue-native-dev-tracking.md
-absorbs: [gap-003]
-frozen: false
+absorbs: [gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi]
+frozen: true
+frozen_at: 2026-06-30
 ---
 
 # Amendment A1: Unify gap-capture behind `planning_store` for every backend, not only `issue-store`
