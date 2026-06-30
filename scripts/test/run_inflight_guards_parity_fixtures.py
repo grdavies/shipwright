@@ -46,18 +46,18 @@ bad() { echo "FAIL $1"; FAIL=1; }
 
 GUARD_SCRIPTS=(
   inflight_signal.py
-  inflight-signal.sh
+  inflight-signal.py
   inflight_reconcile.py
-  inflight-reconcile.sh
-  clear-inflight.sh
+  inflight-reconcile.py
+  clear-inflight.py
   authoring_guard.py
-  authoring-guard.sh
+  authoring-guard.py
   inflight_migration_bridge.py
-  inflight-migration-bridge.sh
+  inflight-migration-bridge.py
 )
 
 GUARD_HOOKS=(
-  pre-commit-completed-unit.sh
+  pre-commit-completed-unit.py
 )
 
 GUARD_SCHEMAS=(
@@ -66,10 +66,10 @@ GUARD_SCHEMAS=(
 )
 
 # --- inflight-guards-copy-to-core-parity (R16) ---
-if bash "$ROOT/scripts/copy-to-core.sh" >/dev/null 2>&1; then
+if python3 "$ROOT/scripts/copy-to-core.py" >/dev/null 2>&1; then
   :
 else
-  bad "inflight-guards-copy-to-core-parity: copy-to-core.sh failed"
+  bad "inflight-guards-copy-to-core-parity: copy-to-core.py failed"
 fi
 
 for rel in "${GUARD_SCRIPTS[@]}"; do
@@ -89,7 +89,7 @@ for rel in "${GUARD_HOOKS[@]}"; do
   fi
 done
 
-if grep -q 'pre-commit-completed-unit' "$ROOT/core/hooks/pre-commit" 2>/dev/null; then
+if grep -q 'pre-commit-completed-unit' "$ROOT/core/hooks/pre-commit.py" 2>/dev/null; then
   :
 else
   bad "inflight-guards-copy-to-core-parity: pre-commit missing completed-unit chain"
@@ -140,11 +140,11 @@ for dist in "$ROOT/dist/cursor" "$ROOT/dist/claude-code"; do
   done
 done
 
-if [[ -f "$ROOT/dist/cursor/hooks/pre-commit-completed-unit.sh" ]] && \
-   cmp -s "$ROOT/core/hooks/pre-commit-completed-unit.sh" "$ROOT/dist/cursor/hooks/pre-commit-completed-unit.sh"; then
+if [[ -f "$ROOT/dist/cursor/hooks/pre-commit-completed-unit.py" ]] && \
+   cmp -s "$ROOT/core/hooks/pre-commit-completed-unit.py" "$ROOT/dist/cursor/hooks/pre-commit-completed-unit.py"; then
   ok "inflight-guards-emitter-freshness: cursor top-level hook copy"
 else
-  bad "inflight-guards-emitter-freshness: cursor hooks/pre-commit-completed-unit.sh drift"
+  bad "inflight-guards-emitter-freshness: cursor hooks/pre-commit-completed-unit.py drift"
 fi
 
 if git -C "$ROOT" diff --exit-code -- dist/cursor dist/claude-code >/dev/null 2>&1; then

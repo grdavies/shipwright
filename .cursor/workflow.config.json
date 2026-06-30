@@ -27,8 +27,8 @@
     "autonomy": "auto"
   },
   "verify": {
-    "lint": "python3 scripts/model-routing-check.py /Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-test-harness-build-chain-docs-migration-enforcement-flip-xl /Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-test-harness-build-chain-docs-migration-enforcement-flip-xl/.cursor/workflow.config.json /Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-test-harness-build-chain-docs-migration-enforcement-flip-xl/core/sw-reference/model-routing.defaults.json /Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-test-harness-build-chain-docs-migration-enforcement-flip-xl/core/sw-reference/communication-routing.defaults.json",
-    "typecheck": "python3 scripts/model-tier-check.py /Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-test-harness-build-chain-docs-migration-enforcement-flip-xl /Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-test-harness-build-chain-docs-migration-enforcement-flip-xl/.cursor/workflow.config.json /Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-test-harness-build-chain-docs-migration-enforcement-flip-xl/core/agents",
+    "lint": "python3 scripts/model-routing-check.py",
+    "typecheck": "python3 scripts/model-tier-check.py",
     "test": "python3 scripts/test/_runner.py verify"
   },
   "ci": {

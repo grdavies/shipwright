@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
-"""Planning-unit frontmatter validator (PRD 031 R19). Usage: planning-unit-validate.py --path UNIT_BODY_FILE [--repo-root ROOT]"""
+"""Planning-unit frontmatter validator (PRD 031 R19)."""
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
 import sys
 from pathlib import Path
 
-plugin_root = Path(sys.argv[1])
-repo_root = Path(sys.argv[2])
-path_file = Path(sys.argv[3])
-schema_path = plugin_root / "core/sw-reference/planning-unit.schema.json"
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
-sys.path.insert(0, str(plugin_root / "core" / "scripts"))
-sys.path.insert(0, str(plugin_root / "scripts"))
-from planning_status_enum import validate_status  # noqa: E402
+from _sw.cli import run_module_main
 
 KNOWN_KEYS = frozenset({
     "id", "type", "status", "title", "visibility",
@@ -35,15 +33,8 @@ def parse_scalar(raw: str):
         inner = raw[1:-1].strip()
         if not inner:
             return []
-        parts = []
-        for item in re.split(r",\s*", inner):
-            item = item.strip().strip("'\"")
-            if item:
-                parts.append(item)
-        return parts
-    if raw.startswith('"') and raw.endswith('"'):
-        return raw[1:-1]
-    if raw.startswith("'") and raw.endswith("'"):
+        return [item.strip().strip("\"'") for item in re.split(r",\s*", inner) if item.strip().strip("\"'")]
+    if (raw.startswith('"') and raw.endswith('"')) or (raw.startswith("'") and raw.endswith("'")):
         return raw[1:-1]
     if re.fullmatch(r"-?\d+", raw):
         return int(raw)
@@ -56,15 +47,13 @@ def parse_frontmatter(content: str) -> tuple[dict, list[str]]:
     end = content.find("\n---", 3)
     if end == -1:
         return {}, ["unterminated frontmatter block"]
-    block = content[3:end]
     fm: dict = {}
     errors: list[str] = []
-    for line_no, line in enumerate(block.splitlines(), start=2):
+    for line_no, line in enumerate(content[3:end].splitlines(), start=2):
         stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        if ":" not in line:
-            errors.append(f"line {line_no}: malformed frontmatter line")
+        if not stripped or stripped.startswith("#") or ":" not in line:
+            if stripped and ":" not in line:
+                errors.append(f"line {line_no}: malformed frontmatter line")
             continue
         key, val = line.split(":", 1)
         key = key.strip()
@@ -98,50 +87,49 @@ def validate_structure(fm: dict) -> list[str]:
     if visibility not in {"public", "private", "memory"}:
         errors.append(f"invalid visibility: {visibility!r}")
     if unit_type in UNIT_TYPES and isinstance(fm.get("status"), str):
+        from planning_status_enum import validate_status
         status_err = validate_status(unit_type, fm["status"])
         if status_err:
             errors.append(status_err)
     return errors
 
 
-def is_git_tracked(file_path: Path) -> bool:
-    try:
-        proc = subprocess.run(
-            ["git", "ls-files", "--error-unmatch", str(file_path)],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-        )
-        return proc.returncode == 0
-    except OSError:
-        return False
+def is_git_tracked(file_path: Path, repo_root: Path) -> bool:
+    proc = subprocess.run(["git", "ls-files", "--error-unmatch", str(file_path)], cwd=repo_root, capture_output=True, text=True)
+    return proc.returncode == 0
 
 
-def validate_private_visibility(fm: dict, body_path: Path) -> list[str]:
+def validate_private_visibility(fm: dict, body_path: Path, repo_root: Path) -> list[str]:
     if fm.get("visibility") not in {"private", "memory"}:
         return []
     try:
         rel = body_path.resolve().relative_to(repo_root.resolve())
     except ValueError:
         rel = body_path
-    if is_git_tracked(rel):
+    if is_git_tracked(rel, repo_root):
         return [f"visibility {fm.get('visibility')} but body path is git-tracked: {rel}"]
     return []
 
 
-def main() -> int:
-    text = path_file.read_text(encoding="utf-8")
-    fm, parse_errors = parse_frontmatter(text)
-    errors = list(parse_errors)
-    errors.extend(validate_structure(fm))
-    errors.extend(validate_private_visibility(fm, path_file))
-
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="planning-unit-validate.py")
+    parser.add_argument("--path", required=True)
+    parser.add_argument("--repo-root", default=None)
+    args = parser.parse_args(argv)
+    plugin_root = SCRIPT_DIR.parent
+    repo_root = Path(args.repo_root).resolve() if args.repo_root else plugin_root
+    path_file = Path(args.path)
+    if not path_file.is_file():
+        print(json.dumps({"verdict": "fail", "error": f"not found: {path_file}"}))
+        return 2
+    fm, parse_errors = parse_frontmatter(path_file.read_text(encoding="utf-8"))
+    errors = list(parse_errors) + validate_structure(fm) + validate_private_visibility(fm, path_file, repo_root)
     if errors:
         print(json.dumps({"verdict": "fail", "errors": errors, "path": str(path_file)}))
         return 20
-
     print(json.dumps({"verdict": "pass", "path": str(path_file), "id": fm.get("id")}))
     return 0
 
 
-sys.exit(main())
+if __name__ == "__main__":
+    run_module_main(main)

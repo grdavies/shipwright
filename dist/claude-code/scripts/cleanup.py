@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Safe cleanup of merged branches, stale worktrees, and terminal deliver run-state (R28–R34, R56). Never uses rm -rf on worktrees — git worktree remove + prune only."""
+"""Safe cleanup of merged branches, stale worktrees, and terminal deliver run-state."""
 from __future__ import annotations
 
 import subprocess
@@ -14,26 +14,20 @@ from _sw.cli import run_module_main
 
 
 def git_root() -> Path:
-    proc = subprocess.run(
-        ["git", "-C", str(Path.cwd()), "rev-parse", "--show-toplevel"],
-        capture_output=True,
-        text=True,
-    )
-    if proc.returncode == 0 and proc.stdout.strip():
-        return Path(proc.stdout.strip())
-    return SCRIPT_DIR.parent
-
-
-def repo_root() -> Path:
-    return git_root()
+    proc = subprocess.run(["git", "-C", str(Path.cwd()), "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+    return Path(proc.stdout.strip()) if proc.returncode == 0 and proc.stdout.strip() else SCRIPT_DIR.parent
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = list(sys.argv[1:] if argv is None else argv)
+    args = list(argv if argv is not None else sys.argv[1:])
     root = git_root()
     import cleanup_lib
-    cleanup_lib.main([str(root), *args])
-    return 0
+    old_argv = sys.argv
+    try:
+        sys.argv = [str(Path(__file__).name), str(root), *args]
+        cleanup_lib.main()
+    finally:
+        sys.argv = old_argv
     return 0
 
 

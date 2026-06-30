@@ -49,7 +49,7 @@ FAIL=0
 should_skip_relpath() {
   case "$1" in
     test/* | test) return 0 ;;
-    check-frozen.sh) return 0 ;;
+    check-frozen.sh|check-frozen.py) return 0 ;;
     */__pycache__/* | */__pycache__ | *.pyc) return 0 ;;
   esac
   return 1

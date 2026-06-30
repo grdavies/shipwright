@@ -7,10 +7,10 @@ from pathlib import Path
 _FIXTURE_LIB_SHIM = """
 content_path() {
   local rel="${1:?relative path}"
-  if [[ -f "$ROOT/$rel" ]]; then
-    printf '%s\\n' "$ROOT/$rel"
-  elif [[ -f "$ROOT/core/$rel" ]]; then
+  if [[ -f "$ROOT/core/$rel" ]]; then
     printf '%s\\n' "$ROOT/core/$rel"
+  elif [[ -f "$ROOT/$rel" ]]; then
+    printf '%s\\n' "$ROOT/$rel"
   else
     printf '%s\\n' "$ROOT/$rel"
     return 1
@@ -40,19 +40,21 @@ def patch_source(src: str, root: Path) -> str:
         src,
     )
     src = re.sub(r'ROOT="[^"]*worktrees/[^"]*"', f'ROOT="{root}"', src)
-    src = re.sub(
-        r"scripts/test/run-[a-z0-9-]+-fixtures\.sh",
-        lambda m: "scripts/test/" + _dash_fixtures(m.group(0).rsplit("/", 1)[-1]),
-        src,
-    )
-    src = re.sub(r"scripts/[A-Za-z0-9_./-]+\.sh", lambda m: m.group(0)[:-3] + ".py", src)
     src = re.sub(r"# shellcheck source=[^\n]*\n", "", src)
     src = re.sub(
         r'source\s+"\$\(dirname\s+"\$\{BASH_SOURCE\[0\]\}"\)/fixture-lib\.sh"\s*\n?',
         "",
         src,
     )
+    src = re.sub(r'source\s+"\$ROOT/scripts/test/fixture-lib\.sh"\s*\n?', "", src)
     src = re.sub(r'source\s+"[^"]*fixture-lib\.sh"\s*\n?', "", src)
+    src = re.sub(
+        r"scripts/test/run-[a-z0-9-]+-fixtures\.sh",
+        lambda m: "scripts/test/" + _dash_fixtures(m.group(0).rsplit("/", 1)[-1]),
+        src,
+    )
+    src = re.sub(r'bash\s+"\$DOC_AFTER/\$\{fx\}\.sh"', r'python3 "$DOC_AFTER/${fx}.py"', src)
+    src = re.sub(r"scripts/[A-Za-z0-9_./-]+\.sh", lambda m: m.group(0)[:-3] + ".py", src)
     src = re.sub(r'bash\s+"([^"]+\.py)"', r'python3 "\1"', src)
     src = re.sub(r'bash\s+"\$([A-Z_][A-Z0-9_]*)"', r'python3 "$\1"', src)
     src = re.sub(r'bash\s+"\$ROOT/([^"]+)"', r'python3 "$ROOT/\1"', src)

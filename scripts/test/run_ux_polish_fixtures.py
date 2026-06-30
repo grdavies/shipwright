@@ -54,7 +54,7 @@ bad() { echo "FAIL $1"; FAIL=1; }
 # --- cleanup-agent-confirm-flow (R8, R10) ---
 if grep -q 'Agent-driven confirm' "$SW_CLEANUP" && \
    grep -q 'asks the user to confirm' "$SW_CLEANUP" && \
-   grep -q 'bash scripts/cleanup.sh --confirm --yes' "$SW_CLEANUP" && \
+   grep -q 'python3 scripts/cleanup.py --confirm --yes' "$SW_CLEANUP" && \
    grep -q 'SW_CLEANUP_CONFIRM=1' "$SW_CLEANUP" && \
    grep -q 'Manual escape hatch' "$SW_CLEANUP"; then
   ok "cleanup-agent-confirm-flow: agent prompt → apply on ack + escape hatch"
@@ -290,10 +290,10 @@ fi
 WF="$ROOT/.cursor/workflow.config.json"
 EXAMPLE="$ROOT/.sw/workflow.config.example.json"
 MANIFEST="$ROOT/core/sw-reference/pr-test-plan.manifest.json"
-if grep -q 'run-pr-test-plan-manifest.sh' "$WF" 2>/dev/null && \
-   [[ -f "$MANIFEST" ]] && grep -q 'run-ux-polish-fixtures' "$MANIFEST"; then
+if { grep -qE 'run[-_]pr[-_]test[-_]plan[-_]manifest|_runner\.py verify|pr-test-plan\.manifest\.json' "$WF"; } 2>/dev/null && \
+   [[ -f "$MANIFEST" ]] && grep -qE 'run[-_]ux[-_]polish[-_]fixtures' "$MANIFEST"; then
   ok "verify.test registers ux-polish via pr-test-plan manifest in workflow.config.json"
-elif grep -q 'run-ux-polish-fixtures.sh' "$WF" 2>/dev/null; then
+elif grep -qE 'run[-_]ux[-_]polish[-_]fixtures' "$WF" 2>/dev/null; then
   ok "verify.test registers ux-polish runner in workflow.config.json"
 else
   bad "verify.test missing ux-polish (direct or via pr-test-plan manifest) in .cursor/workflow.config.json"
@@ -301,7 +301,7 @@ fi
 
 if grep -q 'verify-require-configuration.sh' "$EXAMPLE" 2>/dev/null; then
   ok "verify.test uses neutral sentinel in workflow.config.example.json"
-elif grep -q 'run-ux-polish-fixtures.sh' "$EXAMPLE" 2>/dev/null; then
+elif grep -qE 'run[-_]ux[-_]polish[-_]fixtures' "$EXAMPLE" 2>/dev/null; then
   ok "verify.test registers ux-polish runner in workflow.config.example.json"
 else
   bad "verify.test missing neutral sentinel or ux-polish runner in workflow.config.example.json"
