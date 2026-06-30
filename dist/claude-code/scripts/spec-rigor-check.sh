@@ -49,7 +49,7 @@ import json, re, subprocess, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
-import doc_format_tokenizer as doc_format
+import doc_format
 
 root, artifact, path_file, tier, prd_path = sys.argv[1:6]
 text = Path(path_file).read_text()

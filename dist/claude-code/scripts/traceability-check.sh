@@ -44,7 +44,7 @@ import json, subprocess, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
-import doc_format_tokenizer as doc_format
+import doc_format
 
 root, prd_path, tasks_path = sys.argv[1:4]
 tasks_text = Path(tasks_path).read_text()
