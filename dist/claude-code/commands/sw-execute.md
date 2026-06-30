@@ -35,13 +35,14 @@ discipline** (`skills/execute-discipline/SKILL.md`): plan self-review → TDD re
    3. Implement the slice; keep todos and checkboxes current.
    4. **TDD green** — re-run test; update status with `green` passing.
    5. `python3 scripts/tdd-gate.py --status /tmp/sw-tdd.status.json` — halt on `fail` (`20`).
-   6. **Two-stage review** (fresh subagent when delegated — `rules/sw-subagent-dispatch.mdc`):
+   6. **Refactor** — quality signal + behavior-preserving edit when warranted; `python3 scripts/refactor-gate.py` — halt on `20` (see `skills/execute-discipline`).
+   7. **Two-stage review** (fresh subagent when delegated — `rules/sw-subagent-dispatch.mdc`):
       - Stage 1: spec-compliance (task + union R-IDs)
       - Stage 2: code-quality (no scope expansion)
 8. Optional issue comments when `issueNumbers` set (host issue-comment verb).
 9. `memory-preflight` write for durable decisions only (redact via `scripts/memory-redact.py` first).
 10. Subagents per `rules/sw-subagent-dispatch.mdc` for independent parallel work **within** a task only when
-   file sets are disjoint; never skip the per-task TDD + two-stage sequence.
+   file sets are disjoint; never skip the per-task TDD + refactor + two-stage sequence.
 11. Leave uncommitted for `/sw-verify`, `/sw-review`, `/sw-commit`.
 
 **Communication intensity:** full

@@ -191,7 +191,7 @@ sub-agents inside a worktree — not whether to provision another worktree.
 
 ## Execute discipline — two-stage review (IM6 / U7)
 
-During `/sw-execute`, **between tasks** (after TDD gate passes for the current task ref):
+During `/sw-execute`, **between tasks** (after TDD gate and **refactor** step pass for the current task ref):
 
 1. **Fresh subagent per task** when delegating implementation or review — do not resume a prior task's agent.
 2. **Stage 1 — spec-compliance** (dispatch with `readonly: true` when possible):
@@ -206,7 +206,7 @@ During `/sw-execute`, **between tasks** (after TDD gate passes for the current t
 Inline (no subagent) when ≤3 declared `file_paths` in `signal_context` and sequential — resolved via
 `python3 scripts/migration-parity-shadow.py --family dispatch --context-json '<signal_context>'` / selector dispatch family (see `docs/prds/021-capability-manifest-and-selector/call-site-map.md`).
 
-**Do not batch** multi-task reviews at phase end. TDD red-green runs **before** stage 1 for each task.
+**Do not batch** multi-task reviews at phase end. Per-task order: TDD red-green → `tdd-gate` → **refactor** (`refactor-gate`) → stage 1 → stage 2.
 
 ## Model tier for execute review
 
