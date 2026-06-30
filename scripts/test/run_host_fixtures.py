@@ -159,10 +159,15 @@ assert 'token' not in json.dumps(d).lower() or 'tokenenv' in json.dumps(d).lower
     bad "missing-token-degrades"
   fi
 )
-if ps -ax -o args= 2>/dev/null | grep -E 'host_token|host_transport' | grep -qE 'ghp_|glpat-'; then
-  bad "missing-token-degrades argv-leak"
-else
+# Exclude this harness ($$): embedded bash -c argv carries fixture source literals (ghp_*).
+if ps -ax -o pid=,args= 2>/dev/null | awk -v me=$$ '
+  $1 == me { next }
+  /host_token|host_transport/ && /ghp_|glpat-/ { found=1 }
+  END { exit found ? 1 : 0 }
+'; then
   ok "missing-token-degrades no-argv-leak"
+else
+  bad "missing-token-degrades argv-leak"
 fi
 
 # --- host-ratelimit-config ---
