@@ -21,7 +21,7 @@ for touched surfaces (R29), dist-no-shell for ported surfaces (R37), and expands
 Establishes the Python runtime substrate every later phase depends on, and moves the build/install chain
 off `rsync` early so subsequent ports build cleanly.
 
-- [ ] 1.1 Shared runtime package skeleton + docstring/CLI convention (R18)
+- [x] 1.1 Shared runtime package skeleton + docstring/CLI convention (R18)
   - **File:** `scripts/_sw/__init__.py`, `scripts/_sw/cli.py`
   - **Expected:** `argparse` scaffold with `--help`, module + per-command docstrings; importable without `pip`
   - **R-IDs:** R18
@@ -76,7 +76,7 @@ off `rsync` early so subsequent ports build cleanly.
 
 ### 2. Host layer & `gh`/`curl` elimination (L)
 
-- [ ] 2.1 Host HTTP transport on `urllib` with TLS + SSRF hardening (R8, R44)
+- [x] 2.1 Host HTTP transport on `urllib` with TLS + SSRF hardening (R8, R44)
   - **File:** `scripts/_sw/host_transport.py`
   - **Expected:** `ssl.create_default_context()`, token via header (never argv/logs), HTTPS-only, same-host redirect constraint, loopback/link-local/metadata rejection unless allowlisted; rate-limit retry on `poll_until`
   - **R-IDs:** R8, R44
@@ -99,7 +99,7 @@ off `rsync` early so subsequent ports build cleanly.
 
 ### 3. Gate & dispatcher core (L)
 
-- [ ] 3.1 Port `check-gate` and `wave.sh` + `wave_*` dispatch surface to Python (R24 subset)
+- [x] 3.1 Port `check-gate` and `wave.sh` + `wave_*` dispatch surface to Python (R24 subset)
   - **File:** `scripts/check-gate.py`, `scripts/wave.py` (+ wave_* modules) (remove ported `.sh`)
   - **Expected:** stdout JSON contract, exit codes, fail-closed semantics preserved
   - **R-IDs:** R24
@@ -118,7 +118,7 @@ off `rsync` early so subsequent ports build cleanly.
 
 ### 4. Hooks, security filters, providers (L)
 
-- [ ] 4.1 Port git hooks onto the R40 launcher (R3)
+- [x] 4.1 Port git hooks onto the R40 launcher (R3)
   - **File:** `hooks/pre-commit.py`, `hooks/pre-push.py`, `hooks/commit-msg.py` + helpers (remove `.sh` hooks)
   - **Expected:** execute on Windows under git hook runner without bash; all fail-closed guards preserved
   - **R-IDs:** R3
@@ -137,7 +137,7 @@ off `rsync` early so subsequent ports build cleanly.
 
 ### 5. Remaining production port + consolidations (L)
 
-- [ ] 5.1 Port remaining production `scripts/*.sh` to Python (R24 remainder)
+- [x] 5.1 Port remaining production `scripts/*.sh` to Python (R24 remainder)
   - **File:** remaining `scripts/*.py` (worktree, reconcile-status, etc.; remove `.sh`)
   - **Expected:** stdout JSON, exit codes, fail-closed semantics preserved per ledger
   - **R-IDs:** R24
@@ -156,7 +156,7 @@ off `rsync` early so subsequent ports build cleanly.
 
 ### 6. Test harness, build chain, docs, migration, enforcement flip (XL)
 
-- [ ] 6.1 Port `scripts/test/` shell harnesses to a Python runner (R27)
+- [x] 6.1 Port `scripts/test/` shell harnesses to a Python runner (R27)
   - **File:** `scripts/test/_runner.py`, ported `*.test` (137 files)
   - **Expected:** coverage preserved; PR test-plan manifest registration; `verify.test` integration
   - **R-IDs:** R27

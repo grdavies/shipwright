@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l"
+TMP=$(mktemp -d)
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+export SW_RUN_DIR="$TMP"
+python3 -c "from _sw import logging_setup; logging_setup.append_run_log({'event':'test','token':'ghp_' + 'A'*40})"
+grep -q ghp_A "$TMP/run.log" && { echo FAIL not redacted; exit 1; }
+grep -q REDACTED "$TMP/run.log" || { echo FAIL no marker; exit 1; }
+rm -rf "$TMP"
+echo "OK  runlog-redaction"

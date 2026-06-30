@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+python3 -c "import json; d=json.load(open('/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l/scripts/_sw/waitmap.json')); assert d.get('sites')"
+echo "OK  external-wait-callsite-map"

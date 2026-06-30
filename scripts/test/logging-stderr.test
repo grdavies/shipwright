@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l"
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+export SW_LOG_LEVEL=INFO
+JSON_OUT=$(python3 -c "from _sw import jsonio, logging_setup; logging_setup.info('probe'); jsonio.emit({'verdict':'ok'})" 2>stderr.log)
+echo "$JSON_OUT" | grep -q probe && { echo FAIL stdout; exit 1; }
+grep -q probe stderr.log || { echo FAIL stderr; exit 1; }
+echo "OK  logging-stderr"

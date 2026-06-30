@@ -1,0 +1,4220 @@
+{
+  "version": 1,
+  "description": "Per-script audit ledger for shell to Python port (R23).",
+  "generatedFrom": [
+    "scripts",
+    "scripts/test",
+    "core/scripts",
+    "core/hooks",
+    "core/providers",
+    "dist/cursor",
+    "dist/claude-code"
+  ],
+  "entries": [
+    {
+      "path": "scripts/authoring-guard.sh",
+      "disposition": "port",
+      "target": "scripts/authoring-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/branch-name-guard.sh",
+      "disposition": "port",
+      "target": "scripts/branch-name-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/build-chain-sot-lint.sh",
+      "disposition": "port",
+      "target": "scripts/build-chain-sot-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/build-chain-sync.sh",
+      "disposition": "port",
+      "target": "scripts/build-chain-sync.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/capability-manifest-lint.sh",
+      "disposition": "port",
+      "target": "scripts/capability-manifest-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/capability-select.sh",
+      "disposition": "port",
+      "target": "scripts/capability-select.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/check-frozen.sh",
+      "disposition": "port",
+      "target": "scripts/check-frozen.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/check-gate.sh",
+      "disposition": "port",
+      "target": "scripts/check-gate.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/cleanup.sh",
+      "disposition": "port",
+      "target": "scripts/cleanup.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/clear-inflight.sh",
+      "disposition": "port",
+      "target": "scripts/clear-inflight.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/code-review-apply-check.sh",
+      "disposition": "port",
+      "target": "scripts/code-review-apply-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/code-review-gate.sh",
+      "disposition": "port",
+      "target": "scripts/code-review-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/code-review-normalize.sh",
+      "disposition": "port",
+      "target": "scripts/code-review-normalize.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/code-review-select.sh",
+      "disposition": "port",
+      "target": "scripts/code-review-select.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/commit-msg-guard.sh",
+      "disposition": "port",
+      "target": "scripts/commit-msg-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/communication-resolve.sh",
+      "disposition": "port",
+      "target": "scripts/communication-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/config-at-entry.sh",
+      "disposition": "port",
+      "target": "scripts/config-at-entry.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/detect-platform.sh",
+      "disposition": "port",
+      "target": "scripts/detect-platform.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/detect-project-type.sh",
+      "disposition": "port",
+      "target": "scripts/detect-project-type.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/dispatch-check.sh",
+      "disposition": "port",
+      "target": "scripts/dispatch-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/doc-format-normalize.sh",
+      "disposition": "port",
+      "target": "scripts/doc-format-normalize.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/doc-link-check.sh",
+      "disposition": "port",
+      "target": "scripts/doc-link-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/doc-review-select.sh",
+      "disposition": "port",
+      "target": "scripts/doc-review-select.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/docs-currency-gate.sh",
+      "disposition": "port",
+      "target": "scripts/docs-currency-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/docs-edit-route.sh",
+      "disposition": "port",
+      "target": "scripts/docs-edit-route.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/docs-link-check.sh",
+      "disposition": "port",
+      "target": "scripts/docs-link-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/docs-merge.sh",
+      "disposition": "port",
+      "target": "scripts/docs-merge.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/docs-presence-check.sh",
+      "disposition": "port",
+      "target": "scripts/docs-presence-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/docs_pr.sh",
+      "disposition": "port",
+      "target": "scripts/docs_pr.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/docs_worktree.sh",
+      "disposition": "port",
+      "target": "scripts/docs_worktree.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/evidence-read.sh",
+      "disposition": "port",
+      "target": "scripts/evidence-read.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/feedback-backlog.sh",
+      "disposition": "port",
+      "target": "scripts/feedback-backlog.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/feedback-closure-gate.sh",
+      "disposition": "port",
+      "target": "scripts/feedback-closure-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/gap-backlog.sh",
+      "disposition": "port",
+      "target": "scripts/gap-backlog.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/generate-pr-test-plan-ci-workflow.sh",
+      "disposition": "port",
+      "target": "scripts/generate-pr-test-plan-ci-workflow.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/git-push.sh",
+      "disposition": "port",
+      "target": "scripts/git-push.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/gitignore-generate.sh",
+      "disposition": "port",
+      "target": "scripts/gitignore-generate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/host-detect.sh",
+      "disposition": "port",
+      "target": "scripts/host-detect.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/host-doctor.sh",
+      "disposition": "port",
+      "target": "scripts/host-doctor.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/host.sh",
+      "disposition": "port",
+      "target": "scripts/host.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/host_bitbucket.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/bitbucket.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/host_github.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/github.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/host_gitlab.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/gitlab.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/host_local.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/local.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/host_token.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/token.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/host_transport.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/transport.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/in-repo-memory-search.sh",
+      "disposition": "port",
+      "target": "scripts/in-repo-memory-search.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/index-region-guard.sh",
+      "disposition": "port",
+      "target": "scripts/index-region-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/inflight-migration-bridge.sh",
+      "disposition": "port",
+      "target": "scripts/inflight-migration-bridge.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/inflight-reconcile.sh",
+      "disposition": "port",
+      "target": "scripts/inflight-reconcile.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/inflight-signal.sh",
+      "disposition": "port",
+      "target": "scripts/inflight-signal.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/install-hooks.sh",
+      "disposition": "port",
+      "target": "scripts/install-hooks.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/intra-phase-dispatch.sh",
+      "disposition": "port",
+      "target": "scripts/intra-phase-dispatch.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/is-shipwright-dev-repo.sh",
+      "disposition": "port",
+      "target": "scripts/is-shipwright-dev-repo.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/kernel-classification-lint.sh",
+      "disposition": "port",
+      "target": "scripts/kernel-classification-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/kernel-completeness-lint.sh",
+      "disposition": "port",
+      "target": "scripts/kernel-completeness-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/living-status-gap-resolve.sh",
+      "disposition": "port",
+      "target": "scripts/living-status-gap-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/materialized-prefix-scan.sh",
+      "disposition": "port",
+      "target": "scripts/materialized-prefix-scan.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/memory-decision-snapshot.sh",
+      "disposition": "port",
+      "target": "scripts/memory-decision-snapshot.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/memory-redact.sh",
+      "disposition": "port",
+      "target": "scripts/memory-redact.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/memory-sot-audit.sh",
+      "disposition": "port",
+      "target": "scripts/memory-sot-audit.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/memory-sot.sh",
+      "disposition": "port",
+      "target": "scripts/memory-sot.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/migration-parity-shadow.sh",
+      "disposition": "port",
+      "target": "scripts/migration-parity-shadow.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/model-routing-check.sh",
+      "disposition": "port",
+      "target": "scripts/model-routing-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/model-tier-check.sh",
+      "disposition": "port",
+      "target": "scripts/model-tier-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/plan-self-review.sh",
+      "disposition": "port",
+      "target": "scripts/plan-self-review.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/planning-doctor.sh",
+      "disposition": "port",
+      "target": "scripts/planning-doctor.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/planning-graph.sh",
+      "disposition": "port",
+      "target": "scripts/planning-graph.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/planning-init-seed.sh",
+      "disposition": "port",
+      "target": "scripts/planning-init-seed.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/planning-privacy-guard.sh",
+      "disposition": "port",
+      "target": "scripts/planning-privacy-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/planning-related.sh",
+      "disposition": "port",
+      "target": "scripts/planning-related.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/planning-unit-validate.sh",
+      "disposition": "port",
+      "target": "scripts/planning-unit-validate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/planning_paths.sh",
+      "disposition": "port",
+      "target": "scripts/planning_paths.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/reconcile-status.sh",
+      "disposition": "port",
+      "target": "scripts/reconcile-status.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/redaction-guard.sh",
+      "disposition": "port",
+      "target": "scripts/redaction-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/relief-acceptance-check.sh",
+      "disposition": "port",
+      "target": "scripts/relief-acceptance-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/resolve-base-branch.sh",
+      "disposition": "port",
+      "target": "scripts/resolve-base-branch.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/resolve-intensity.sh",
+      "disposition": "port",
+      "target": "scripts/resolve-intensity.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/resolve-model-tier.sh",
+      "disposition": "port",
+      "target": "scripts/resolve-model-tier.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/review-local-resolve.sh",
+      "disposition": "port",
+      "target": "scripts/review-local-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/reviewer-dispatch-check.sh",
+      "disposition": "port",
+      "target": "scripts/reviewer-dispatch-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/secret-scan.sh",
+      "disposition": "port",
+      "target": "scripts/secret-scan.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/seed-model-config.sh",
+      "disposition": "port",
+      "target": "scripts/seed-model-config.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/ship-build-chain-check.sh",
+      "disposition": "port",
+      "target": "scripts/ship-build-chain-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/ship-phase-status.sh",
+      "disposition": "port",
+      "target": "scripts/ship-phase-status.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/ship-phase-steps.sh",
+      "disposition": "port",
+      "target": "scripts/ship-phase-steps.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/shipwright-state.sh",
+      "disposition": "port",
+      "target": "scripts/shipwright-state.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/simplify-gate.sh",
+      "disposition": "port",
+      "target": "scripts/simplify-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/snapshot-tree.sh",
+      "disposition": "port",
+      "target": "scripts/snapshot-tree.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/spec-rigor-check.sh",
+      "disposition": "port",
+      "target": "scripts/spec-rigor-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/spec-union.sh",
+      "disposition": "port",
+      "target": "scripts/spec-union.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/stabilize-merge-sync.sh",
+      "disposition": "port",
+      "target": "scripts/stabilize-merge-sync.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/sw-assert-worktree.sh",
+      "disposition": "port",
+      "target": "scripts/sw-assert-worktree.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/sw-configure.sh",
+      "disposition": "port",
+      "target": "scripts/sw-configure.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/sw-resolve-plugin-root.sh",
+      "disposition": "port",
+      "target": "scripts/sw-resolve-plugin-root.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/sw-tmp.sh",
+      "disposition": "port",
+      "target": "scripts/sw-tmp.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/tasks-currency-gate.sh",
+      "disposition": "port",
+      "target": "scripts/tasks-currency-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/tasks-progress.sh",
+      "disposition": "port",
+      "target": "scripts/tasks-progress.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/tdd-gate.sh",
+      "disposition": "port",
+      "target": "scripts/tdd-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixture-lib.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#fixture-lib",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/communication-routing.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#communication-routing",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/doc-afterTasks-auto-deliver.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#doc-afterTasks-auto-deliver",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/doc-afterTasks-confirm-deliver.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#doc-afterTasks-confirm-deliver",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/doc-afterTasks-guides-deliver.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#doc-afterTasks-guides-deliver",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/doc-afterTasks-seed-brainstorm-excluded.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#doc-afterTasks-seed-brainstorm-excluded",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/doc-afterTasks-seed-branch-derivation.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#doc-afterTasks-seed-branch-derivation",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/doc-afterTasks-seed-confirm-auto.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#doc-afterTasks-seed-confirm-auto",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/doc-afterTasks-seed-stop.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#doc-afterTasks-seed-stop",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/doc-afterTasks-stop-deliver.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#doc-afterTasks-stop-deliver",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/model-tier-routing.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#model-tier-routing",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/boundary-auto.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#boundary-auto",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/boundary-confirm.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#boundary-confirm",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/boundary-guard-wire.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#boundary-guard-wire",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/boundary-no-inline.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#boundary-no-inline",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/boundary-stop.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#boundary-stop",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/build-chain-regen.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#build-chain-regen",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/ready-review-echo.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#ready-review-echo",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/setup-doctor-implicit-coderabbit.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#setup-doctor-implicit-coderabbit",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/setup-review-choice.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#setup-review-choice",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/sw-review-opt-in.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#sw-review-opt-in",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/tasks-single-pass.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#tasks-single-pass",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/user-docs-onboarding.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#user-docs-onboarding",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/worktree-guard-negative.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#worktree-guard-negative",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/worktree-guard-positive-hotfix.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#worktree-guard-positive-hotfix",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/onboarding-ux/worktree-guard-positive-linked.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#worktree-guard-positive-linked",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/rules-empty.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#rules-empty",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/rules-fail.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#rules-fail",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/rules-ok.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#rules-ok",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/fixtures/task-dispatch-hook-feasibility.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#task-dispatch-hook-feasibility",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/gh-stub.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#gh-stub",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/parity-compare.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#parity-compare",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/pilot-022-prerequisite-check.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#pilot-022-prerequisite-check",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-007-docs-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-007-docs-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-007-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-007-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-authoring-guard-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-authoring-guard-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-base-resolution-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-base-resolution-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-branch-guard-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-branch-guard-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-build-chain-sot-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-build-chain-sot-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-capability-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-capability-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-capability-lint-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-capability-lint-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-capability-select-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-capability-select-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-claude-golden-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-claude-golden-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-cleanup-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-cleanup-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-code-review-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-code-review-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-completed-unit-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-completed-unit-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-compound-completion-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-compound-completion-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-core-scripts-parity-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-core-scripts-parity-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-debug-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-debug-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-delegation-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-delegation-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-deliver-concurrency-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-deliver-concurrency-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-deliver-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-deliver-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-deliver-invariant-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-deliver-invariant-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-deliver-loop-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-deliver-loop-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-dispatch-foundation-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-dispatch-foundation-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-doc-currency-033-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-doc-currency-033-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-doc-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-doc-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-doc-format-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-doc-format-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-doc-link-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-doc-link-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-dual-ship-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-dual-ship-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-emitter-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-emitter-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-fanout-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-fanout-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-feedback-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-feedback-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-gate-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-gate-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-git-workflow-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-git-workflow-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-guardrail-matrix-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-guardrail-matrix-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-guidelines-floor-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-guidelines-floor-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-hook-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-hook-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-host-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-host-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-impl-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-impl-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-improvement-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-improvement-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-inflight-doc-currency-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-inflight-doc-currency-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-inflight-guards-parity-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-inflight-guards-parity-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-inflight-migration-bridge-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-inflight-migration-bridge-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-inflight-signal-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-inflight-signal-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-kernel-classification-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-kernel-classification-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-living-doc-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-living-doc-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-mechanical-sourcing-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-mechanical-sourcing-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-memory-prework-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-memory-prework-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-memory-provider-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-memory-provider-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-memory-sot-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-memory-sot-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-merge-queue-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-merge-queue-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-migration-parity-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-migration-parity-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-model-binding-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-model-binding-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-onboarding-ux-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-onboarding-ux-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-orchestrator-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-orchestrator-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-parallel-merge-safety-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-parallel-merge-safety-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-parity-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-parity-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-persona-selection-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-persona-selection-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-pilot-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-pilot-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-plan-killswitch-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-plan-killswitch-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-plan-persist-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-plan-persist-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-plan-proposed-parity-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-plan-proposed-parity-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-plan-validate-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-plan-validate-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-035-deliver-conductor-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-035-deliver-conductor-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-035-doc-impact-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-035-doc-impact-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-035-emitter-parity-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-035-emitter-parity-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-035-gap-lifecycle-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-035-gap-lifecycle-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-autonomy-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-autonomy-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-command-surface-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-command-surface-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-currency-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-currency-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-cutover-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-cutover-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-cutover-phase5-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-cutover-phase5-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-edge-effects-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-edge-effects-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-emitter-parity-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-emitter-parity-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-graph-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-graph-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-index-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-index-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-init-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-init-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-materialize-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-materialize-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-migrate-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-migrate-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-paths-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-paths-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-postmerge-safety-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-postmerge-safety-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-related-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-related-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-scheduler-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-scheduler-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-store-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-store-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-unit-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-unit-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-planning-visibility-acceptance-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-planning-visibility-acceptance-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-portability-boundary-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-portability-boundary-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-portability-closure-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-portability-closure-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-portability-setup-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-portability-setup-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-pr-test-plan-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-pr-test-plan-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-pr-test-plan-manifest.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-pr-test-plan-manifest",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-regression-remediation-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-regression-remediation-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-relocation-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-relocation-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-retrospective-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-retrospective-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-secret-scan-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-secret-scan-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-ship-phase-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-ship-phase-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-stabilize-merge-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-stabilize-merge-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-state-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-state-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-status-integrity-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-status-integrity-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-tasks-currency-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-tasks-currency-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-two-track-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-two-track-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-url-validate.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-url-validate",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-ux-polish-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-ux-polish-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-visibility-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-visibility-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/run-worktree-config-fixtures.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#run-worktree-config-fixtures",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/test/validate-descriptor.sh",
+      "disposition": "port",
+      "target": "scripts/test/_runner.py#validate-descriptor",
+      "phase": 6,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/traceability-check.sh",
+      "disposition": "port",
+      "target": "scripts/traceability-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/verify-baseline.sh",
+      "disposition": "port",
+      "target": "scripts/verify-baseline.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/verify-e2e.sh",
+      "disposition": "port",
+      "target": "scripts/verify-e2e.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/verify-evidence.sh",
+      "disposition": "port",
+      "target": "scripts/verify-evidence.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/verify-require-configuration.sh",
+      "disposition": "port",
+      "target": "scripts/verify-require-configuration.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/verify-unconfigured.sh",
+      "disposition": "port",
+      "target": "scripts/verify-unconfigured.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/visibility-callsite-lint.sh",
+      "disposition": "port",
+      "target": "scripts/visibility-callsite-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/visibility-resolve.sh",
+      "disposition": "port",
+      "target": "scripts/visibility-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/wave.sh",
+      "disposition": "port",
+      "target": "scripts/wave.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "scripts/worktree.sh",
+      "disposition": "port",
+      "target": "scripts/worktree.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/authoring-guard.sh",
+      "disposition": "port",
+      "target": "scripts/authoring-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/branch-name-guard.sh",
+      "disposition": "port",
+      "target": "scripts/branch-name-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/build-chain-sot-lint.sh",
+      "disposition": "port",
+      "target": "scripts/build-chain-sot-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/build-chain-sync.sh",
+      "disposition": "port",
+      "target": "scripts/build-chain-sync.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/capability-manifest-lint.sh",
+      "disposition": "port",
+      "target": "scripts/capability-manifest-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/capability-select.sh",
+      "disposition": "port",
+      "target": "scripts/capability-select.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/check-gate.sh",
+      "disposition": "port",
+      "target": "scripts/check-gate.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/cleanup.sh",
+      "disposition": "port",
+      "target": "scripts/cleanup.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/clear-inflight.sh",
+      "disposition": "port",
+      "target": "scripts/clear-inflight.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/code-review-apply-check.sh",
+      "disposition": "port",
+      "target": "scripts/code-review-apply-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/code-review-gate.sh",
+      "disposition": "port",
+      "target": "scripts/code-review-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/code-review-normalize.sh",
+      "disposition": "port",
+      "target": "scripts/code-review-normalize.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/code-review-select.sh",
+      "disposition": "port",
+      "target": "scripts/code-review-select.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/commit-msg-guard.sh",
+      "disposition": "port",
+      "target": "scripts/commit-msg-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/communication-resolve.sh",
+      "disposition": "port",
+      "target": "scripts/communication-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/config-at-entry.sh",
+      "disposition": "port",
+      "target": "scripts/config-at-entry.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/copy-to-core.sh",
+      "disposition": "port",
+      "target": "scripts/copy-to-core.py",
+      "phase": 1,
+      "status": "ported"
+    },
+    {
+      "path": "core/scripts/detect-platform.sh",
+      "disposition": "port",
+      "target": "scripts/detect-platform.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/detect-project-type.sh",
+      "disposition": "port",
+      "target": "scripts/detect-project-type.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/dispatch-check.sh",
+      "disposition": "port",
+      "target": "scripts/dispatch-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/doc-format-normalize.sh",
+      "disposition": "port",
+      "target": "scripts/doc-format-normalize.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/doc-link-check.sh",
+      "disposition": "port",
+      "target": "scripts/doc-link-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/doc-review-select.sh",
+      "disposition": "port",
+      "target": "scripts/doc-review-select.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/docs-currency-gate.sh",
+      "disposition": "port",
+      "target": "scripts/docs-currency-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/docs-edit-route.sh",
+      "disposition": "port",
+      "target": "scripts/docs-edit-route.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/docs-link-check.sh",
+      "disposition": "port",
+      "target": "scripts/docs-link-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/docs-merge.sh",
+      "disposition": "port",
+      "target": "scripts/docs-merge.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/docs-presence-check.sh",
+      "disposition": "port",
+      "target": "scripts/docs-presence-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/docs_pr.sh",
+      "disposition": "port",
+      "target": "scripts/docs_pr.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/docs_worktree.sh",
+      "disposition": "port",
+      "target": "scripts/docs_worktree.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/evidence-read.sh",
+      "disposition": "port",
+      "target": "scripts/evidence-read.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/feedback-backlog.sh",
+      "disposition": "port",
+      "target": "scripts/feedback-backlog.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/feedback-closure-gate.sh",
+      "disposition": "port",
+      "target": "scripts/feedback-closure-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/gap-backlog.sh",
+      "disposition": "port",
+      "target": "scripts/gap-backlog.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/generate-pr-test-plan-ci-workflow.sh",
+      "disposition": "port",
+      "target": "scripts/generate-pr-test-plan-ci-workflow.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/git-push.sh",
+      "disposition": "port",
+      "target": "scripts/git-push.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/gitignore-generate.sh",
+      "disposition": "port",
+      "target": "scripts/gitignore-generate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/host-detect.sh",
+      "disposition": "port",
+      "target": "scripts/host-detect.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/host-doctor.sh",
+      "disposition": "port",
+      "target": "scripts/host-doctor.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/host.sh",
+      "disposition": "port",
+      "target": "scripts/host.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/host_bitbucket.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/bitbucket.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/host_github.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/github.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/host_gitlab.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/gitlab.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/host_local.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/local.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/host_token.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/token.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/host_transport.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/transport.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/in-repo-memory-search.sh",
+      "disposition": "port",
+      "target": "scripts/in-repo-memory-search.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/index-region-guard.sh",
+      "disposition": "port",
+      "target": "scripts/index-region-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/inflight-migration-bridge.sh",
+      "disposition": "port",
+      "target": "scripts/inflight-migration-bridge.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/inflight-reconcile.sh",
+      "disposition": "port",
+      "target": "scripts/inflight-reconcile.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/inflight-signal.sh",
+      "disposition": "port",
+      "target": "scripts/inflight-signal.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/install-hooks.sh",
+      "disposition": "port",
+      "target": "scripts/install-hooks.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/install.sh",
+      "disposition": "port",
+      "target": "scripts/install.py",
+      "phase": 1,
+      "status": "ported"
+    },
+    {
+      "path": "core/scripts/intra-phase-dispatch.sh",
+      "disposition": "port",
+      "target": "scripts/intra-phase-dispatch.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/is-shipwright-dev-repo.sh",
+      "disposition": "port",
+      "target": "scripts/is-shipwright-dev-repo.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/kernel-classification-lint.sh",
+      "disposition": "port",
+      "target": "scripts/kernel-classification-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/kernel-completeness-lint.sh",
+      "disposition": "port",
+      "target": "scripts/kernel-completeness-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/living-status-gap-resolve.sh",
+      "disposition": "port",
+      "target": "scripts/living-status-gap-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/materialized-prefix-scan.sh",
+      "disposition": "port",
+      "target": "scripts/materialized-prefix-scan.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/memory-decision-snapshot.sh",
+      "disposition": "port",
+      "target": "scripts/memory-decision-snapshot.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/memory-redact.sh",
+      "disposition": "port",
+      "target": "scripts/memory-redact.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/memory-sot-audit.sh",
+      "disposition": "port",
+      "target": "scripts/memory-sot-audit.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/memory-sot.sh",
+      "disposition": "port",
+      "target": "scripts/memory-sot.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/migration-parity-shadow.sh",
+      "disposition": "port",
+      "target": "scripts/migration-parity-shadow.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/model-routing-check.sh",
+      "disposition": "port",
+      "target": "scripts/model-routing-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/model-tier-check.sh",
+      "disposition": "port",
+      "target": "scripts/model-tier-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/plan-self-review.sh",
+      "disposition": "port",
+      "target": "scripts/plan-self-review.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/planning-doctor.sh",
+      "disposition": "port",
+      "target": "scripts/planning-doctor.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/planning-graph.sh",
+      "disposition": "port",
+      "target": "scripts/planning-graph.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/planning-init-seed.sh",
+      "disposition": "port",
+      "target": "scripts/planning-init-seed.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/planning-privacy-guard.sh",
+      "disposition": "port",
+      "target": "scripts/planning-privacy-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/planning-related.sh",
+      "disposition": "port",
+      "target": "scripts/planning-related.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/planning-unit-validate.sh",
+      "disposition": "port",
+      "target": "scripts/planning-unit-validate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/planning_paths.sh",
+      "disposition": "port",
+      "target": "scripts/planning_paths.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/reconcile-status.sh",
+      "disposition": "port",
+      "target": "scripts/reconcile-status.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/redaction-guard.sh",
+      "disposition": "port",
+      "target": "scripts/redaction-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/relief-acceptance-check.sh",
+      "disposition": "port",
+      "target": "scripts/relief-acceptance-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/resolve-base-branch.sh",
+      "disposition": "port",
+      "target": "scripts/resolve-base-branch.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/resolve-intensity.sh",
+      "disposition": "port",
+      "target": "scripts/resolve-intensity.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/resolve-model-tier.sh",
+      "disposition": "port",
+      "target": "scripts/resolve-model-tier.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/review-local-resolve.sh",
+      "disposition": "port",
+      "target": "scripts/review-local-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/reviewer-dispatch-check.sh",
+      "disposition": "port",
+      "target": "scripts/reviewer-dispatch-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/secret-scan.sh",
+      "disposition": "port",
+      "target": "scripts/secret-scan.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/seed-model-config.sh",
+      "disposition": "port",
+      "target": "scripts/seed-model-config.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/ship-build-chain-check.sh",
+      "disposition": "port",
+      "target": "scripts/ship-build-chain-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/ship-phase-status.sh",
+      "disposition": "port",
+      "target": "scripts/ship-phase-status.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/ship-phase-steps.sh",
+      "disposition": "port",
+      "target": "scripts/ship-phase-steps.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/shipwright-state.sh",
+      "disposition": "port",
+      "target": "scripts/shipwright-state.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/simplify-gate.sh",
+      "disposition": "port",
+      "target": "scripts/simplify-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/snapshot-tree.sh",
+      "disposition": "port",
+      "target": "scripts/snapshot-tree.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/spec-rigor-check.sh",
+      "disposition": "port",
+      "target": "scripts/spec-rigor-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/spec-union.sh",
+      "disposition": "port",
+      "target": "scripts/spec-union.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/stabilize-merge-sync.sh",
+      "disposition": "port",
+      "target": "scripts/stabilize-merge-sync.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/sw-assert-worktree.sh",
+      "disposition": "port",
+      "target": "scripts/sw-assert-worktree.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/sw-configure.sh",
+      "disposition": "port",
+      "target": "scripts/sw-configure.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/sw-resolve-plugin-root.sh",
+      "disposition": "port",
+      "target": "scripts/sw-resolve-plugin-root.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/sw-tmp.sh",
+      "disposition": "port",
+      "target": "scripts/sw-tmp.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/tasks-currency-gate.sh",
+      "disposition": "port",
+      "target": "scripts/tasks-currency-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/tasks-progress.sh",
+      "disposition": "port",
+      "target": "scripts/tasks-progress.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/tdd-gate.sh",
+      "disposition": "port",
+      "target": "scripts/tdd-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/traceability-check.sh",
+      "disposition": "port",
+      "target": "scripts/traceability-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/verify-baseline.sh",
+      "disposition": "port",
+      "target": "scripts/verify-baseline.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/verify-e2e.sh",
+      "disposition": "port",
+      "target": "scripts/verify-e2e.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/verify-evidence.sh",
+      "disposition": "port",
+      "target": "scripts/verify-evidence.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/verify-require-configuration.sh",
+      "disposition": "port",
+      "target": "scripts/verify-require-configuration.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/verify-unconfigured.sh",
+      "disposition": "port",
+      "target": "scripts/verify-unconfigured.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/visibility-callsite-lint.sh",
+      "disposition": "port",
+      "target": "scripts/visibility-callsite-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/visibility-resolve.sh",
+      "disposition": "port",
+      "target": "scripts/visibility-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/wave.sh",
+      "disposition": "port",
+      "target": "scripts/wave.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "core/scripts/worktree.sh",
+      "disposition": "port",
+      "target": "scripts/worktree.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "core/hooks/pre-commit-completed-unit.sh",
+      "disposition": "port",
+      "target": "core/hooks/pre-commit-completed-unit.py",
+      "phase": 4,
+      "status": "pending"
+    },
+    {
+      "path": "core/hooks/pre-commit-frozen.sh",
+      "disposition": "port",
+      "target": "core/hooks/pre-commit-frozen.py",
+      "phase": 4,
+      "status": "pending"
+    },
+    {
+      "path": "core/providers/in-repo-rules.sh",
+      "disposition": "port",
+      "target": "core/providers/in-repo-rules.py",
+      "phase": 4,
+      "status": "pending"
+    },
+    {
+      "path": "core/providers/recallium-rules.sh",
+      "disposition": "port",
+      "target": "core/providers/recallium-rules.py",
+      "phase": 4,
+      "status": "pending"
+    },
+    {
+      "path": "core/providers/review/coderabbit.sh",
+      "disposition": "port",
+      "target": "core/providers/review/coderabbit.py",
+      "phase": 4,
+      "status": "pending"
+    },
+    {
+      "path": "core/providers/review/nocap-stub.sh",
+      "disposition": "port",
+      "target": "core/providers/review/nocap-stub.py",
+      "phase": 4,
+      "status": "pending"
+    },
+    {
+      "path": "core/providers/verify/failstub.sh",
+      "disposition": "port",
+      "target": "core/providers/verify/failstub.py",
+      "phase": 4,
+      "status": "pending"
+    },
+    {
+      "path": "core/providers/verify/none.sh",
+      "disposition": "port",
+      "target": "core/providers/verify/none.py",
+      "phase": 4,
+      "status": "pending"
+    },
+    {
+      "path": "core/providers/verify/playwright.sh",
+      "disposition": "port",
+      "target": "core/providers/verify/playwright.py",
+      "phase": 4,
+      "status": "pending"
+    },
+    {
+      "path": "core/providers/verify/stub.sh",
+      "disposition": "port",
+      "target": "core/providers/verify/stub.py",
+      "phase": 4,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/core/hooks/pre-commit-completed-unit.sh",
+      "disposition": "port",
+      "target": "dist/cursor/core/hooks/pre-commit-completed-unit.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/core/hooks/pre-commit-frozen.sh",
+      "disposition": "port",
+      "target": "dist/cursor/core/hooks/pre-commit-frozen.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/hooks/pre-commit-completed-unit.sh",
+      "disposition": "port",
+      "target": "dist/cursor/hooks/pre-commit-completed-unit.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/hooks/pre-commit-frozen.sh",
+      "disposition": "port",
+      "target": "dist/cursor/hooks/pre-commit-frozen.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/providers/in-repo-rules.sh",
+      "disposition": "port",
+      "target": "dist/cursor/providers/in-repo-rules.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/providers/recallium-rules.sh",
+      "disposition": "port",
+      "target": "dist/cursor/providers/recallium-rules.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/providers/review/coderabbit.sh",
+      "disposition": "port",
+      "target": "dist/cursor/providers/review/coderabbit.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/providers/review/nocap-stub.sh",
+      "disposition": "port",
+      "target": "dist/cursor/providers/review/nocap-stub.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/providers/verify/failstub.sh",
+      "disposition": "port",
+      "target": "dist/cursor/providers/verify/failstub.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/providers/verify/none.sh",
+      "disposition": "port",
+      "target": "dist/cursor/providers/verify/none.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/providers/verify/playwright.sh",
+      "disposition": "port",
+      "target": "dist/cursor/providers/verify/playwright.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/providers/verify/stub.sh",
+      "disposition": "port",
+      "target": "dist/cursor/providers/verify/stub.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/authoring-guard.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/authoring-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/branch-name-guard.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/branch-name-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/build-chain-sot-lint.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/build-chain-sot-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/build-chain-sync.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/build-chain-sync.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/capability-manifest-lint.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/capability-manifest-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/capability-select.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/capability-select.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/check-gate.sh",
+      "disposition": "port",
+      "target": "scripts/check-gate.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/cleanup.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/cleanup.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/clear-inflight.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/clear-inflight.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/code-review-apply-check.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/code-review-apply-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/code-review-gate.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/code-review-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/code-review-normalize.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/code-review-normalize.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/code-review-select.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/code-review-select.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/commit-msg-guard.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/commit-msg-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/communication-resolve.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/communication-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/config-at-entry.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/config-at-entry.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/detect-platform.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/detect-platform.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/detect-project-type.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/detect-project-type.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/dispatch-check.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/dispatch-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/doc-format-normalize.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/doc-format-normalize.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/doc-link-check.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/doc-link-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/doc-review-select.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/doc-review-select.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/docs-currency-gate.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/docs-currency-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/docs-edit-route.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/docs-edit-route.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/docs-link-check.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/docs-link-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/docs-merge.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/docs-merge.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/docs-presence-check.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/docs-presence-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/docs_pr.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/docs_pr.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/docs_worktree.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/docs_worktree.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/evidence-read.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/evidence-read.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/feedback-backlog.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/feedback-backlog.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/feedback-closure-gate.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/feedback-closure-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/gap-backlog.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/gap-backlog.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/generate-pr-test-plan-ci-workflow.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/generate-pr-test-plan-ci-workflow.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/git-push.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/git-push.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/gitignore-generate.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/gitignore-generate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/host-detect.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/host-detect.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/host-doctor.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/host-doctor.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/host.sh",
+      "disposition": "port",
+      "target": "scripts/host.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/host_bitbucket.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/bitbucket.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/host_github.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/github.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/host_gitlab.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/gitlab.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/host_local.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/local.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/host_token.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/token.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/host_transport.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/transport.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/in-repo-memory-search.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/in-repo-memory-search.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/index-region-guard.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/index-region-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/inflight-migration-bridge.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/inflight-migration-bridge.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/inflight-reconcile.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/inflight-reconcile.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/inflight-signal.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/inflight-signal.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/install-hooks.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/install-hooks.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/intra-phase-dispatch.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/intra-phase-dispatch.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/is-shipwright-dev-repo.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/is-shipwright-dev-repo.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/kernel-classification-lint.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/kernel-classification-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/kernel-completeness-lint.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/kernel-completeness-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/living-status-gap-resolve.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/living-status-gap-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/materialized-prefix-scan.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/materialized-prefix-scan.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/memory-decision-snapshot.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/memory-decision-snapshot.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/memory-redact.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/memory-redact.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/memory-sot-audit.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/memory-sot-audit.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/memory-sot.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/memory-sot.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/migration-parity-shadow.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/migration-parity-shadow.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/model-tier-check.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/model-tier-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/plan-self-review.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/plan-self-review.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/planning-doctor.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/planning-doctor.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/planning-graph.sh",
+      "disposition": "port",
+      "target": "scripts/planning-graph.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/planning-init-seed.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/planning-init-seed.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/planning-privacy-guard.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/planning-privacy-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/planning-related.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/planning-related.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/planning-unit-validate.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/planning-unit-validate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/planning_paths.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/planning_paths.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/reconcile-status.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/reconcile-status.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/redaction-guard.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/redaction-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/relief-acceptance-check.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/relief-acceptance-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/resolve-base-branch.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/resolve-base-branch.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/resolve-intensity.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/resolve-intensity.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/resolve-model-tier.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/resolve-model-tier.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/review-local-resolve.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/review-local-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/reviewer-dispatch-check.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/reviewer-dispatch-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/secret-scan.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/secret-scan.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/seed-model-config.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/seed-model-config.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/ship-build-chain-check.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/ship-build-chain-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/ship-phase-status.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/ship-phase-status.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/ship-phase-steps.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/ship-phase-steps.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/shipwright-state.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/shipwright-state.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/simplify-gate.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/simplify-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/spec-rigor-check.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/spec-rigor-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/spec-union.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/spec-union.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/stabilize-merge-sync.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/stabilize-merge-sync.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/sw-assert-worktree.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/sw-assert-worktree.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/sw-configure.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/sw-configure.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/sw-resolve-plugin-root.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/sw-resolve-plugin-root.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/sw-tmp.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/sw-tmp.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/tasks-currency-gate.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/tasks-currency-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/tasks-progress.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/tasks-progress.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/tdd-gate.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/tdd-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/traceability-check.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/traceability-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/verify-baseline.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/verify-baseline.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/verify-e2e.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/verify-e2e.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/verify-evidence.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/verify-evidence.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/verify-require-configuration.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/verify-require-configuration.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/verify-unconfigured.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/verify-unconfigured.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/visibility-callsite-lint.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/visibility-callsite-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/visibility-resolve.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/visibility-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/wave.sh",
+      "disposition": "port",
+      "target": "scripts/wave.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "dist/cursor/scripts/worktree.sh",
+      "disposition": "port",
+      "target": "dist/cursor/scripts/worktree.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/core/hooks/pre-commit-completed-unit.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/core/hooks/pre-commit-completed-unit.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/core/hooks/pre-commit-frozen.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/core/hooks/pre-commit-frozen.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/providers/in-repo-rules.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/providers/in-repo-rules.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/providers/recallium-rules.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/providers/recallium-rules.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/providers/review/coderabbit.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/providers/review/coderabbit.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/providers/review/nocap-stub.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/providers/review/nocap-stub.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/providers/verify/failstub.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/providers/verify/failstub.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/providers/verify/none.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/providers/verify/none.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/providers/verify/playwright.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/providers/verify/playwright.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/providers/verify/stub.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/providers/verify/stub.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/authoring-guard.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/authoring-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/branch-name-guard.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/branch-name-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/build-chain-sot-lint.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/build-chain-sot-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/build-chain-sync.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/build-chain-sync.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/capability-manifest-lint.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/capability-manifest-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/capability-select.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/capability-select.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/check-gate.sh",
+      "disposition": "port",
+      "target": "scripts/check-gate.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/cleanup.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/cleanup.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/clear-inflight.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/clear-inflight.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/code-review-apply-check.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/code-review-apply-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/code-review-gate.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/code-review-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/code-review-normalize.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/code-review-normalize.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/code-review-select.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/code-review-select.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/commit-msg-guard.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/commit-msg-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/communication-resolve.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/communication-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/config-at-entry.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/config-at-entry.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/detect-platform.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/detect-platform.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/detect-project-type.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/detect-project-type.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/dispatch-check.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/dispatch-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/doc-format-normalize.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/doc-format-normalize.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/doc-link-check.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/doc-link-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/doc-review-select.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/doc-review-select.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/docs-currency-gate.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/docs-currency-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/docs-edit-route.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/docs-edit-route.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/docs-link-check.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/docs-link-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/docs-merge.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/docs-merge.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/docs-presence-check.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/docs-presence-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/docs_pr.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/docs_pr.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/docs_worktree.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/docs_worktree.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/evidence-read.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/evidence-read.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/feedback-backlog.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/feedback-backlog.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/feedback-closure-gate.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/feedback-closure-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/gap-backlog.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/gap-backlog.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/generate-pr-test-plan-ci-workflow.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/generate-pr-test-plan-ci-workflow.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/git-push.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/git-push.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/gitignore-generate.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/gitignore-generate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/host-detect.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/host-detect.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/host-doctor.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/host-doctor.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/host.sh",
+      "disposition": "port",
+      "target": "scripts/host.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/host_bitbucket.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/bitbucket.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/host_github.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/github.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/host_gitlab.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/gitlab.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/host_local.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/local.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/host_token.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/token.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/host_transport.sh",
+      "disposition": "port",
+      "target": "scripts/_sw/host/transport.py",
+      "phase": 2,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/in-repo-memory-search.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/in-repo-memory-search.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/index-region-guard.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/index-region-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/inflight-migration-bridge.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/inflight-migration-bridge.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/inflight-reconcile.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/inflight-reconcile.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/inflight-signal.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/inflight-signal.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/install-hooks.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/install-hooks.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/intra-phase-dispatch.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/intra-phase-dispatch.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/is-shipwright-dev-repo.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/is-shipwright-dev-repo.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/kernel-classification-lint.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/kernel-classification-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/kernel-completeness-lint.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/kernel-completeness-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/living-status-gap-resolve.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/living-status-gap-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/materialized-prefix-scan.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/materialized-prefix-scan.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/memory-decision-snapshot.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/memory-decision-snapshot.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/memory-redact.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/memory-redact.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/memory-sot-audit.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/memory-sot-audit.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/memory-sot.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/memory-sot.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/migration-parity-shadow.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/migration-parity-shadow.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/model-tier-check.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/model-tier-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/plan-self-review.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/plan-self-review.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/planning-doctor.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/planning-doctor.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/planning-graph.sh",
+      "disposition": "port",
+      "target": "scripts/planning-graph.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/planning-init-seed.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/planning-init-seed.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/planning-privacy-guard.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/planning-privacy-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/planning-related.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/planning-related.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/planning-unit-validate.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/planning-unit-validate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/planning_paths.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/planning_paths.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/reconcile-status.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/reconcile-status.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/redaction-guard.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/redaction-guard.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/relief-acceptance-check.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/relief-acceptance-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/resolve-base-branch.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/resolve-base-branch.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/resolve-intensity.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/resolve-intensity.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/resolve-model-tier.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/resolve-model-tier.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/review-local-resolve.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/review-local-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/reviewer-dispatch-check.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/reviewer-dispatch-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/secret-scan.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/secret-scan.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/seed-model-config.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/seed-model-config.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/ship-build-chain-check.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/ship-build-chain-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/ship-phase-status.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/ship-phase-status.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/ship-phase-steps.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/ship-phase-steps.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/shipwright-state.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/shipwright-state.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/simplify-gate.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/simplify-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/spec-rigor-check.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/spec-rigor-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/spec-union.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/spec-union.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/stabilize-merge-sync.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/stabilize-merge-sync.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/sw-assert-worktree.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/sw-assert-worktree.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/sw-configure.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/sw-configure.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/sw-resolve-plugin-root.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/sw-resolve-plugin-root.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/sw-tmp.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/sw-tmp.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/tasks-currency-gate.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/tasks-currency-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/tasks-progress.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/tasks-progress.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/tdd-gate.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/tdd-gate.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/traceability-check.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/traceability-check.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/verify-baseline.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/verify-baseline.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/verify-e2e.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/verify-e2e.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/verify-evidence.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/verify-evidence.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/verify-require-configuration.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/verify-require-configuration.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/verify-unconfigured.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/verify-unconfigured.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/visibility-callsite-lint.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/visibility-callsite-lint.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/visibility-resolve.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/visibility-resolve.py",
+      "phase": 5,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/wave.sh",
+      "disposition": "port",
+      "target": "scripts/wave.py",
+      "phase": 3,
+      "status": "pending"
+    },
+    {
+      "path": "dist/claude-code/scripts/worktree.sh",
+      "disposition": "port",
+      "target": "dist/claude-code/scripts/worktree.py",
+      "phase": 5,
+      "status": "pending"
+    }
+  ],
+  "summary": {
+    "total": 600,
+    "ported": 2,
+    "pending": 598
+  }
+}

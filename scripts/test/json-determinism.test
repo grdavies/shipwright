@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export PYTHONPATH="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l/scripts${PYTHONPATH:+:$PYTHONPATH}"
+python3 -c "from _sw import jsonio; a=jsonio.dumps({'b':1,'a':2}); b=jsonio.dumps({'a':2,'b':1}); assert a==b"
+echo "OK  json-determinism"

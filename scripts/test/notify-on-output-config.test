@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export PYTHONPATH="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l/scripts${PYTHONPATH:+:$PYTHONPATH}"
+python3 -c "from _sw.poll import notify_on_output_cadence,load_poll_config; i,c=notify_on_output_cadence(); cfg=load_poll_config(); assert i==cfg.interval_seconds and c==cfg.max_wait_seconds"
+echo "OK  notify-on-output-config"
