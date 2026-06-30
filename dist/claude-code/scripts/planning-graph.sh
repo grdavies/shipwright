@@ -10,6 +10,16 @@ case "$cmd" in
   reconcile|cycle-check|doctor|relief-check)
     exec python3 "$PY" "$ROOT" "$cmd" "$@"
     ;;
+  next)
+    exec python3 "$_PLUGIN_ROOT/scripts/wave_deliver.py" "$ROOT" next "$@"
+    ;;
+  posture)
+    exec python3 "$_PLUGIN_ROOT/scripts/planning_autonomy.py" "$ROOT" posture
+    ;;
+  paths)
+    if [[ $# -eq 0 ]]; then set -- dirs; fi
+    exec bash "$_PLUGIN_ROOT/scripts/planning_paths.sh" "$@"
+    ;;
   -h|--help|"")
     cat <<'EOF'
 Usage:
@@ -17,6 +27,9 @@ Usage:
   planning-graph.sh cycle-check [--staged]
   planning-graph.sh doctor
   planning-graph.sh relief-check
+  planning-graph.sh next [--override --override-reason <text>]
+  planning-graph.sh posture
+  planning-graph.sh paths <planning_paths.py subcommand> [args...]
 EOF
     ;;
   *)

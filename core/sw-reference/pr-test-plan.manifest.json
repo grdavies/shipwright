@@ -590,6 +590,22 @@
         "enqueue-handoff-no-nested-dispatch",
         "autonomy-actions-logged-durable"
       ]
+    },
+    {
+      "id": "planning-command-surface-fixtures",
+      "script": "scripts/test/run-planning-command-surface-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-command-surface-fixtures",
+      "scenarios": [
+        "command-surface-wired",
+        "sw-doc-reconciler-entry",
+        "sw-doc-scheduler-entry",
+        "sw-doc-posture-config",
+        "planning-graph-next-subcommand",
+        "planning-graph-posture-subcommand",
+        "planning-graph-core-parity"
+      ]
     }
   ]
 }

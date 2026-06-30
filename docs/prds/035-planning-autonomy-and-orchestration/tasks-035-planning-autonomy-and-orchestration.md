@@ -182,7 +182,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 
 ### 4. Planning command surface finalization — S
 
-- [ ] 4.1 Wire reconciler entry, scheduler entry, and posture config (R15)
+- [x] 4.1 Wire reconciler entry, scheduler entry, and posture config (R15)
   - **File:** `core/commands/sw-doc.md`, `scripts/planning-graph.sh`
   - **Expected:** the planning command surface is finalized (D6) and wired — the mechanical reconciler entry
     (`scripts/planning-graph.sh reconcile`, invoked by living-status and `/sw-doc`), the graph-driven scheduler
