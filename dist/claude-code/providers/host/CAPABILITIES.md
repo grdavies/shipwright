@@ -13,9 +13,9 @@ capability:
 
 # Host provider capabilities (PRD 026)
 
-Neutral contract for git-host / forge adapters. Deterministic consumers (`scripts/check-gate.sh`,
-`scripts/wave_terminal.py`, `scripts/stabilize-merge-sync.sh`) call host verbs through
-`scripts/host.sh <verb>` (Phase 2+) routed by `host.provider` via capability-manifest selection.
+Neutral contract for git-host / forge adapters. Deterministic consumers (`scripts/check-gate.py`,
+`scripts/wave_terminal.py`, `scripts/stabilize-merge-sync.py`) call host verbs through
+`scripts/host.py <verb>` (Phase 2+) routed by `host.provider` via capability-manifest selection.
 Agent-mediated consumers read markdown adapters (`providers/host/<id>.md`).
 
 ## Verb set (R3)
@@ -94,6 +94,6 @@ Degraded / rate-limited outcomes:
 
 ## Transport
 
-All HTTP calls route through `scripts/host_transport.sh` → `scripts/host_ratelimit.py` (R35–R42). Tokens
-are read at call time via `scripts/host_token.sh` and passed to `curl` through a header file — never argv or
+All HTTP calls route through `scripts/scripts/_sw/host_transport.py` → `scripts/host_ratelimit.py` (R35–R42). Tokens
+are read at call time via `scripts/host_token.sh` and passed to `host HTTP transport` through a header file — never argv or
 logs.

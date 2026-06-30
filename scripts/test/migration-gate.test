@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+import json, subprocess, sys, tempfile
+from pathlib import Path
+root = Path(__file__).resolve().parent.parent.parent
+with tempfile.TemporaryDirectory() as td:
+    t = Path(td); (t/'.cursor/sw-deliver-runs/x').mkdir(parents=True)
+    (t/'.cursor/sw-deliver-runs/x/status.json').write_text(json.dumps({'verdict':'in-progress'}))
+    proc = subprocess.run([sys.executable, str(root/'scripts/upgrade-gate.py'), '--root', td], shell=False)
+if proc.returncode != 20:
+    raise SystemExit('FAIL migration-gate')
+print('OK  migration-gate')

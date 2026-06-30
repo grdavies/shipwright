@@ -13,9 +13,9 @@ frozen_at: 2026-06-25
 | Area | Canonical paths |
 |------|-----------------|
 | Routing defaults | `core/sw-reference/model-routing.defaults.json` (new) |
-| Resolver | `scripts/resolve-model-tier.sh` (new) |
-| Platform detect | `scripts/detect-platform.sh` (new, optional helper) |
-| Tier check | `scripts/model-tier-check.sh`, `scripts/model-routing-check.sh` (new sibling) |
+| Resolver | `scripts/resolve-model-tier.py` (new) |
+| Platform detect | `scripts/detect-platform.py` (new, optional helper) |
+| Tier check | `scripts/model-tier-check.py`, `scripts/model-routing-check.py` (new sibling) |
 | Schema | `.sw/config.schema.json`, `core/sw-reference/config.schema.json` |
 | Example config | `.sw/workflow.config.example.json`, `core/sw-reference/workflow.config.example.json` |
 | Setup | `core/commands/sw-setup.md` |
@@ -31,7 +31,7 @@ frozen_at: 2026-06-25
 
 ## Notes
 
-- Effective spec union: parent PRD R1–R27 (`spec-union.sh`); R2b is an implementation sub-requirement of R2.
+- Effective spec union: parent PRD R1–R27 (`spec-union.py`); R2b is an implementation sub-requirement of R2.
 - Coordinate with PRD 006: `communication-routing.defaults.json` key parity (R27) before or with model routing land.
 - Atomic rollout step 0: four-tier `CANONICAL_TIER_ORDER` before setup seeds four-tier catalogs.
 - Cursor `mid` canonical slug: `gpt-5.5-medium` per Decision Log D4.
@@ -47,7 +47,7 @@ frozen_at: 2026-06-25
   - **R-IDs:** R16, R15
 
 - [x] 1.2 Update four-tier order in tier check (R4)
-  - **File:** `scripts/model-tier-check.sh`, `core/scripts/model-tier-check.sh` (if duplicated)
+  - **File:** `scripts/model-tier-check.py`, `core/scripts/model-tier-check.py` (if duplicated)
   - **Expected:** `CANONICAL_TIER_ORDER` = `cheap`, `build`, `mid`, `deep`; reviewer ≥ builder rank uses four-tier order
   - **R-IDs:** R4
 
@@ -63,20 +63,20 @@ frozen_at: 2026-06-25
   - **Expected:** all 36 shipped `sw-*` commands + 25 reasoning skills mapped per brainstorm KD5/KD6; includes `sw-cleanup`, `sw-caveman`; keys match communication routing when present
   - **R-IDs:** R21, R17, R27
 
-- [x] 2.2 Implement `resolve-model-tier.sh` (R11, R18, R26)
-  - **File:** `scripts/resolve-model-tier.sh`
+- [x] 2.2 Implement `resolve-model-tier.py` (R11, R18, R26)
+  - **File:** `scripts/resolve-model-tier.py`
   - **Expected:** `--tier`, `--command`, `--skill`, `--delegate` flags; JSON `{tier, modelId, source}`; `inherit` → `modelId: null` exit 0; missing atomic key exit 20
   - **R-IDs:** R11, R18, R26
 
-- [x] 2.3 Add `model-routing-check.sh` (R22)
-  - **File:** `scripts/model-routing-check.sh` (or extend `model-tier-check.sh`)
+- [x] 2.3 Add `model-routing-check.py` (R22)
+  - **File:** `scripts/model-routing-check.py` (or extend `model-tier-check.py`)
   - **Expected:** validates defaults keys ⊆ tiers+inherit; full command/skill coverage; R27 key parity with communication defaults
   - **R-IDs:** R22, R27
 
 ### 3. Setup integration (M)
 
 - [x] 3.1 Add platform detection helper (R3)
-  - **File:** `scripts/detect-platform.sh` (or documented procedure in `sw-setup.md`)
+  - **File:** `scripts/detect-platform.py` (or documented procedure in `sw-setup.md`)
   - **Expected:** returns `cursor` or `claude-code` from env signals; ambiguous → prompt; fixture with mocked env
   - **R-IDs:** R3
 

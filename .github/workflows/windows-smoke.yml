@@ -1,0 +1,54 @@
+name: Windows Smoke
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-smoke:
+    name: windows-smoke
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Interpreter probe (R2)
+        shell: pwsh
+        run: python scripts/_sw/interpreter.py; python -c "import sys; sys.path.insert(0,'scripts'); from _sw.interpreter import probe; r=probe(); print(r.version_text)"
+
+      - name: Hook launcher fixture (R40)
+        shell: pwsh
+        run: python scripts/test/windows-hook-invocation.test
+
+      - name: JSON determinism gate (R38)
+        shell: pwsh
+        run: python scripts/test/json-determinism.test
+
+      - name: Host verb mocked REST (R25/R39)
+        shell: pwsh
+        env:
+          SW_HOST_FIXTURE: green
+          GITHUB_TOKEN: gh_fixture_token
+        run: python scripts/test/host-adapter-parity.test
+
+      - name: Poll primitive (R15)
+        shell: pwsh
+        run: python scripts/test/poll-until.test
+
+      - name: Gate JSON contract (R7)
+        shell: pwsh
+        env:
+          SW_GATE_FIXTURE: green
+          SW_HOST_FIXTURE: green
+          GITHUB_TOKEN: gh_fixture_token
+        run: python scripts/test/json-contract-gate.test
+
+      - name: Incremental smoke bundle (R45)
+        shell: pwsh
+        run: python scripts/test/windows-smoke-incremental.test

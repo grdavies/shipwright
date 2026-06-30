@@ -1,7 +1,7 @@
 # Debug entry — input shapes
 
 Normalized signals for the RCA core `debug` entry (R22). All text fields must pass through
-`bash scripts/memory-redact.sh` before prompts or memory.
+`python3 scripts/memory-redact.py` before prompts or memory.
 
 ## Signal types
 

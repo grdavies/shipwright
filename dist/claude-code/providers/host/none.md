@@ -10,7 +10,7 @@ capability:
     providerFamily: host
     adapterId: none
     selectionFamily: providers
-    gateRef: check-gate.sh
+    gateRef: check-gate.py
 ---
 
 # Local / no-remote host adapter

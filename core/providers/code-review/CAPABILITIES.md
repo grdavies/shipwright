@@ -10,15 +10,15 @@ capability:
     providerFamily: code-review
     adapterId: contract
     selectionFamily: providers
-    gateRef: check-gate.sh
+    gateRef: check-gate.py
 ---
 
 # Local code-review provider capabilities
 
 Neutral contract for **local** multi-agent code-review adapters (`review.local.provider`). Agent-mediated
 consumers (`/sw-review` phase 1) read the markdown adapter (`providers/code-review/<id>.md`). Deterministic
-fixtures and gates call `scripts/code-review-normalize.sh`, `scripts/code-review-select.sh`,
-`scripts/review-local-resolve.sh`, and `scripts/code-review-gate.sh`.
+fixtures and gates call `scripts/code-review-normalize.py`, `scripts/code-review-select.py`,
+`scripts/review-local-resolve.py`, and `scripts/code-review-gate.py`.
 
 External provider review (CodeRabbit, PR-Agent, phase 2) remains under `providers/review/` — different seam.
 
@@ -104,11 +104,11 @@ the binding verdict.
 | Surface-only (default rollout) | `surface: ["P0","P1","P2","P3"]`, `haltOn: []` | Log validated severities; continue to phase 2 |
 | Halting (promoted) | `haltOn: ["P0","P1"]` | Validated P0/P1 halt `/sw-ship`; P2/P3 surface and continue |
 
-Only **validated** P0/P1 are halt-eligible. `check-gate.sh` remains the sole CI oracle — this gate is additive.
+Only **validated** P0/P1 are halt-eligible. `check-gate.py` remains the sole CI oracle — this gate is additive.
 
 ## Untrusted apply boundary
 
-Adapter `suggested_fix` / `file` fields are untrusted at auto-apply. `scripts/code-review-apply-check.sh`
+Adapter `suggested_fix` / `file` fields are untrusted at auto-apply. `scripts/code-review-apply-check.py`
 validates before applying:
 
 - `file` resolves **within the repo** (no path traversal; realpath; no symlink component; no `.git/**`)
@@ -129,4 +129,4 @@ Apply policy (`review.local.apply`, default `auto`):
 ## Config
 
 `review.local` in `workflow.config.json` selects `providers/code-review/<id>.md`. Resolved at runtime by
-`scripts/review-local-resolve.sh`.
+`scripts/review-local-resolve.py`.

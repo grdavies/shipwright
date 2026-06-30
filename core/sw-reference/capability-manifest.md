@@ -102,8 +102,8 @@ Selection presentation and cross-refs — **not** execution authorization:
 
 - `personaId`, `specialistId`, `providerFamily`, `adapterId`, `skill`, `command`
 - `gated` — signal-gated persona/specialist
-- `modelTierRef` — pointer to `models.routing`; resolution stays in `resolve-model-tier.sh` / `dispatch-check.sh`
-- `gateRef` — named chokepoint for executables (`check-gate.sh`, `memory-preflight`, `hooks.json` slot)
+- `modelTierRef` — pointer to `models.routing`; resolution stays in `resolve-model-tier.py` / `dispatch-check.py`
+- `gateRef` — named chokepoint for executables (`check-gate.py`, `memory-preflight`, `hooks.json` slot)
 
 ## Precedence and conflict policy (R11)
 
@@ -130,7 +130,7 @@ Author-time lint (Phase 3) fails closed on ambiguous overlaps that lack a preced
 
 Selector output is **non-authorizing**:
 
-- Providers → `check-gate.sh` / `review-local-resolve.sh` + `providers/<family>/` adapter
+- Providers → `check-gate.py` / `review-local-resolve.py` + `providers/<family>/` adapter
 - Hooks → emitter-registered `hooks.json` slots only
 - Memory → `memory-preflight` / `providers/<memory.provider>.md`
 
@@ -153,7 +153,7 @@ Six **always-on** core personas carry explicit `always_on` triggers:
 - `sw-design-reviewer` — `any_of` text-token UI terms, structural headings, or design-tool link patterns
 
 Orchestration prose in `skills/doc-review/SKILL.md` and related commands points here and to
-`scripts/doc-review-select.sh` / `scripts/capability-select.sh` — not duplicate trigger tables.
+`scripts/doc-review-select.py` / `scripts/capability-select.py` — not duplicate trigger tables.
 
 ## Index row shape (emitter, TR2)
 
@@ -200,7 +200,7 @@ files.
 
 **Selector output:** canonical JSON with `membershipHash` (sorted capability ids) separated from per-entry
 presentation fields. Each row carries `eligible`, `executable`, `authorized`, `gateRef`, `refusalReason`.
-Identical inputs ⇒ byte-identical output (`scripts/capability-select.sh`).
+Identical inputs ⇒ byte-identical output (`scripts/capability-select.py`).
 
 ## Related artifacts
 
@@ -209,5 +209,5 @@ Identical inputs ⇒ byte-identical output (`scripts/capability-select.sh`).
 | `capability-manifest.schema.json` | JSON Schema for the `capability` block |
 | `capability-index.json` | Emitter-generated aggregate (Phase 2) |
 | `signal-context.schema.json` | Versioned selector inputs (Phase 4) |
-| `scripts/capability-select.sh` | Deterministic selector (Phase 4) |
-| `scripts/capability-manifest-lint.sh` | Author-time lint (Phase 3) |
+| `scripts/capability-select.py` | Deterministic selector (Phase 4) |
+| `scripts/capability-manifest-lint.py` | Author-time lint (Phase 3) |

@@ -27,7 +27,7 @@ Full-tier brainstorm stage. Produces `docs/brainstorms/...-requirements.md` with
 
 **Communication intensity:** lite
 
-**Model tier:** deep — resolve via `bash scripts/resolve-model-tier.sh --command sw-brainstorm`.
+**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.py --command sw-brainstorm`.
 
 ## Guardrails
 

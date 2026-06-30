@@ -1,6 +1,6 @@
 """Pre-Task dispatch model binding (PRD 012 R5).
 
-Resolves reviewer/persona/native-panel Task calls via resolve-model-tier.sh (R39b),
+Resolves reviewer/persona/native-panel Task calls via resolve-model-tier.py (R39b),
 enforces a fresh dispatch-preflight nonce record keyed by dispatchId (R38),
 and injects concrete model metadata.
 
@@ -8,7 +8,7 @@ and injects concrete model metadata.
 Cursor and Claude Code. Whether the platform honors updated_input.model on Task calls is
 unverified for both platforms (DL-2 spike confirmed Cursor silently ignores it; Claude Code
 unverified due to missing environment). The hook fires, logs its mutation attempt to stderr,
-and fails open on unexpected errors. `scripts/dispatch-check.sh` remains the
+and fails open on unexpected errors. `scripts/dispatch-check.py` remains the
 enforcement floor regardless of hook effectiveness.
 """
 
@@ -151,14 +151,14 @@ def resolve_dispatch_model(
     command: str | None = None,
     skill: str | None = None,
 ) -> DispatchResult:
-    """Resolve model tier using R39b precedence via resolve-model-tier.sh."""
-    script = root / "scripts" / "resolve-model-tier.sh"
+    """Resolve model tier using R39b precedence via resolve-model-tier.py."""
+    script = root / "scripts" / "resolve-model-tier.py"
     if not script.is_file():
         return DispatchResult(
             verdict="fail",
             agent=agent_id,
             cause="no-model-resolved",
-            remediation="scripts/resolve-model-tier.sh missing",
+            remediation="scripts/resolve-model-tier.py missing",
         )
     argv = ["bash", str(script), "--agent", agent_id]
     if command:
@@ -175,7 +175,7 @@ def resolve_dispatch_model(
             verdict="fail",
             agent=agent_id,
             cause="no-model-resolved",
-            remediation=f"bash scripts/resolve-model-tier.sh --agent {agent_id}",
+            remediation=f"python3 scripts/resolve-model-tier.py --agent {agent_id}",
         )
     return DispatchResult(verdict="pass", agent=agent_id, model_id=str(model_id), tier=str(tier))
 

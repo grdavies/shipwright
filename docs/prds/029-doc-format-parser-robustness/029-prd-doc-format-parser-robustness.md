@@ -13,8 +13,8 @@ frozen_at: 2026-06-27
 The doc-authoring chain generates markdown from prose skill instructions (`skills/prd`, `skills/tasks`,
 `skills/spec-rigor`) but validates it with regex-strict gates that each accept a different canonical shape.
 As a result, freeze, union, and traceability pass for some models and fail for others on semantically
-identical content, and the parsers disagree with one another: `spec-union.sh` accepts three R/D-ID forms,
-`spec-rigor-check.sh` accepts only one, `traceability-check.sh` requires single-ID cells, and
+identical content, and the parsers disagree with one another: `spec-union.py` accepts three R/D-ID forms,
+`spec-rigor-check.py` accepts only one, `traceability-check.py` requires single-ID cells, and
 `wave_deliver.py` requires a single phase-heading and exact-table shape. There is no machine-readable
 template the model fills, and no pre-freeze structural normalizer — `spec-rigor` is explicitly "no auto-fix"
 (it rejects, never canonicalizes). Separately, `parse_frontmatter_list` reads `supersedes`/`retracts` only as
@@ -51,7 +51,7 @@ backward compatibility with a fixture and golden-corpus suite. It absorbs GAP-04
 - **R1** A single shared doc-format tokenizer library defines the canonical grammar for R/D-ID bullets,
   section headings, traceability cells, phase headings, and frontmatter directive lists, and is the sole
   source of accepted forms across the doc toolchain.
-- **R2** `spec-union.sh`, `spec-rigor-check.sh`, `traceability-check.sh`, and `wave_deliver.py` parse these
+- **R2** `spec-union.py`, `spec-rigor-check.py`, `traceability-check.py`, and `wave_deliver.py` parse these
   tokens exclusively via the shared tokenizer; none retains an independent regex for them, so they cannot
   disagree on what is a valid R-ID, D-ID, section heading, traceability cell, or phase heading.
 - **R3** The tokenizer's `--check` mode fails closed with precise, line-anchored, actionable diagnostics
@@ -89,8 +89,8 @@ backward compatibility with a fixture and golden-corpus suite. It absorbs GAP-04
 
 - **TR1** (R1, R2) Implement the tokenizer as `scripts/doc_format.py` exposing pure functions
   (`parse_requirement_id`, `parse_section_heading`, `parse_traceability_cell`, `parse_phase_heading`,
-  `parse_directive_list`) plus a `scripts/doc-format-normalize.sh` CLI wrapper (`--check` / `--write`).
-  `spec-union.sh`, `spec-rigor-check.sh`, and `traceability-check.sh` import the Python functions in their
+  `parse_directive_list`) plus a `scripts/doc-format-normalize.py` CLI wrapper (`--check` / `--write`).
+  `spec-union.py`, `spec-rigor-check.py`, and `traceability-check.py` import the Python functions in their
   embedded `python3 - <<PY` blocks; `wave_deliver.py` imports the module directly.
 - **TR2** (R3) Diagnostics are structured (JSON `findings` with `file`, `line`, `expected`, `found`, `class`)
   and also rendered human-readably; exit codes follow the established `0 pass / 10 warn / 20 fail` convention.
@@ -100,12 +100,12 @@ backward compatibility with a fixture and golden-corpus suite. It absorbs GAP-04
 - **TR4** (R5) Encode each divergence class as a tokenizer rule with an explicit canonical target and an
   ambiguity policy (canonicalize vs reject); ambiguous forms that cannot be safely rewritten reject under
   `--check` with the class identifier.
-- **TR5** (R6) Replace the inline-only `parse_frontmatter_list` in `spec-union.sh` (and any duplicate in
+- **TR5** (R6) Replace the inline-only `parse_frontmatter_list` in `spec-union.py` (and any duplicate in
   `doc_link.py`) with the shared `parse_directive_list`, which accepts inline and block-list YAML and raises a
   fail-closed error when a present key yields zero IDs.
 - **TR6** (R7) Add template emission to the `prd` / `tasks` / `amend` skills (and any scaffolding script) as a
   canonical skeleton; document the slot contract in the skills. Regenerate `dist/` via the emitter.
-- **TR7** (R8) Wire `doc-format-normalize.sh --check` into the freeze path and the `/sw-doc-review`
+- **TR7** (R8) Wire `doc-format-normalize.py --check` into the freeze path and the `/sw-doc-review`
   pre-checks, before `spec-union` / `traceability-check`, with a `--write` remediation hint in the failure
   output.
 - **TR8** (R9) `spec-union` D-ID extraction keys on the `## Decision Log` section boundary (decisions) vs the
@@ -148,7 +148,7 @@ must remain green.
 
 ## Rollout Plan
 
-- **Phase 1 — Tokenizer library + CLI (R1, R3, R4).** Build `doc_format.py` + `doc-format-normalize.sh` with
+- **Phase 1 — Tokenizer library + CLI (R1, R3, R4).** Build `doc_format.py` + `doc-format-normalize.py` with
   `--check`/`--write` and full divergence-class rules; pure functions with unit fixtures. No consumer changes
   yet — lowest risk.
 - **Phase 2 — Consumer adoption (R2, R5, R6, R9).** Swap `spec-union`, `spec-rigor`, `traceability-check`, and

@@ -128,7 +128,7 @@ def log_dependency_override(root: Path, *, unit_id: str, task_list: str, blockin
         "blockingUnits": blocking_units,
     }
     proc = subprocess.run(
-        ["bash", str(SCRIPT_DIR / "shipwright-state.sh"), "override-add", json.dumps(payload)],
+        [sys.executable, str(SCRIPT_DIR / "shipwright-state.py"), "override-add", json.dumps(payload)],
         cwd=str(root), text=True, capture_output=True,
     )
     if proc.returncode != 0:

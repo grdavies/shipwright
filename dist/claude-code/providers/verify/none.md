@@ -10,10 +10,10 @@ capability:
     providerFamily: verify
     adapterId: none
     selectionFamily: providers
-    gateRef: check-gate.sh
+    gateRef: check-gate.py
 ---
 
 # verify adapter: `none`
 
-E2E/smoke verification disabled. `scripts/verify-e2e.sh` selects this when `verifyE2e.provider` is `none` or
+E2E/smoke verification disabled. `scripts/verify-e2e.py` selects this when `verifyE2e.provider` is `none` or
 `verifyE2e.enabled` is `false`.

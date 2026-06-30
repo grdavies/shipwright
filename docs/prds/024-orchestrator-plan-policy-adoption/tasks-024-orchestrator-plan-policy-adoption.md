@@ -43,7 +43,7 @@ consistency-only mode (R36c), so the binding defects GAP-039/GAP-040 are not gat
   - **Expected:** validate single-tier orchestrator plans under an **orchestrator tier** using the *same* fail-closed gate as deliver (no weaker path); unknown step IDs rejected closed-world; `orchestrator-plan-rejects-unknown-step`.
   - **R-IDs:** R20
 - [ ] 2.3 Adoption call-site map skeleton + kernel-completeness lint (TR8)
-  - **File:** `core/sw-reference/adoption-call-site-map.md`, `scripts/kernel-completeness-lint.sh`
+  - **File:** `core/sw-reference/adoption-call-site-map.md`, `scripts/kernel-completeness-lint.py`
   - **Expected:** 022 TR9 adoption-side map (proposal site, canonical chain source, guideline-pack id, durable owner path, `signal_context` snapshot point, parity fixture set per orchestrator); completeness lint covers the new orchestrator step IDs.
   - **R-IDs:** TR8, R18
 
@@ -114,7 +114,7 @@ consistency-only mode (R36c), so the binding defects GAP-039/GAP-040 are not gat
   - **R-IDs:** R18, R20
 - [x] 7.2 Untrusted-signal hard halt + redact-before-record + human-confirm (R19, R23)
   - **File:** `core/commands/sw-feedback.md`, ingestion path
-  - **Expected:** `invocation ∈ {hook, monitor}` (`≠ human`) → **hard halt**, never auto-dispatch; full signal JSON redacted (`memory-redact.sh`) and wrapped `untrusted_payload` before any route record/memory write; routed dispatch requires persisted human-ack keyed by signalId. `feedback-hook-trigger-no-autodispatch-under-proposed`, `feedback-proposed-human-confirm-before-dispatch`, `feedback-proposed-inbound-redact-fail-closed`.
+  - **Expected:** `invocation ∈ {hook, monitor}` (`≠ human`) → **hard halt**, never auto-dispatch; full signal JSON redacted (`memory-redact.py`) and wrapped `untrusted_payload` before any route record/memory write; routed dispatch requires persisted human-ack keyed by signalId. `feedback-hook-trigger-no-autodispatch-under-proposed`, `feedback-proposed-human-confirm-before-dispatch`, `feedback-proposed-inbound-redact-fail-closed`.
   - **R-IDs:** R19, R23
 - [x] 7.3 Feedback budgets + surfacing + parity (R21, R22, R23)
   - **File:** `core/skills/feedback/SKILL.md`, `scripts/test/run-fanout-fixtures.sh`
@@ -147,8 +147,8 @@ consistency-only mode (R36c), so the binding defects GAP-039/GAP-040 are not gat
   - **Expected:** dispatch preflight persists **N independent, concurrently valid records** keyed by `dispatchId` (keyed directory `.cursor/hooks/state/task-dispatch-preflight/<dispatch-id>.json` or equivalent map; legacy single-file read fallback for one record during migration); each record carries the full binding payload + per-record TTL/`consumedAt`. `before_task_dispatch.py` validates and consumes **only** the record matching the Task's `dispatchId` (fail-closed on ambiguity when no id and >1 unconsumed record share an agent); consuming record `A` leaves record `B` valid. `dispatch-preflight-parallel-n-personas`, `dispatch-preflight-ambiguous-agent-fail-closed`.
   - **R-IDs:** R38
 - [ ] 9.2 Command-authoritative tier resolution + precedence (R39, R39a–e)
-  - **File:** `scripts/resolve-model-tier.sh`, `scripts/wave_preflight.py`, `scripts/dispatch-check.sh`
-  - **Expected:** when a dispatch carries `--command <sw-slug>`, model-tier resolution uses `resolve-model-tier.sh --command <sw-slug>` as the **primary** lookup (`--agent` alone MUST NOT down-tier a command-backed delegation); precedence R39b (explicit `routing.agents[<agent>]` for a bound reviewer/persona wins → else `--command` → else `--agent`) is single-sourced in the resolver, not duplicated ad-hoc in callers; the preflight record `modelId`/`modelTier` and the hook `binding:model-mismatch` check use the same precedence. `dispatch-command-tier-inherits-routing`, `dispatch-command-tier-sw-tasks`, `dispatch-agent-explicit-override-wins`, `dispatch-preflight-command-model-parity`.
+  - **File:** `scripts/resolve-model-tier.py`, `scripts/wave_preflight.py`, `scripts/dispatch-check.py`
+  - **Expected:** when a dispatch carries `--command <sw-slug>`, model-tier resolution uses `resolve-model-tier.py --command <sw-slug>` as the **primary** lookup (`--agent` alone MUST NOT down-tier a command-backed delegation); precedence R39b (explicit `routing.agents[<agent>]` for a bound reviewer/persona wins → else `--command` → else `--agent`) is single-sourced in the resolver, not duplicated ad-hoc in callers; the preflight record `modelId`/`modelTier` and the hook `binding:model-mismatch` check use the same precedence. `dispatch-command-tier-inherits-routing`, `dispatch-command-tier-sw-tasks`, `dispatch-agent-explicit-override-wins`, `dispatch-preflight-command-model-parity`.
   - **R-IDs:** R39
 - [ ] 9.3 Parallel-panel binding integration + fixture wiring (R38, R39)
   - **File:** `scripts/test/run-dispatch-foundation-fixtures.sh`, `scripts/test/run-fanout-fixtures.sh`
@@ -197,8 +197,8 @@ consistency-only mode (R36c), so the binding defects GAP-039/GAP-040 are not gat
 - `scripts/fanout_gate.py` — TR0/R35 program gate (positive R31 + sufficient N)
 - `scripts/wave_preflight.py` — keyed parallel dispatch-preflight store (A2 R38) + command-authoritative tier (A2 R39)
 - `core/hooks/before_task_dispatch.py` — consume-by-dispatch-id; precedence-aware model binding (A2 R38/R39)
-- `scripts/resolve-model-tier.sh` — command/agent precedence resolution (A2 R39)
-- `scripts/dispatch-check.sh` — command-authoritative tier at dispatch-check (A2 R39)
+- `scripts/resolve-model-tier.py` — command/agent precedence resolution (A2 R39)
+- `scripts/dispatch-check.py` — command-authoritative tier at dispatch-check (A2 R39)
 - run-dir namespacing (`sw-debug-runs/`, `sw-feedback-runs/`) + ephemeral episodic scratch — `.sw/layout.md`, `core/sw-reference/layout.md`
 - `core/sw-reference/adoption-call-site-map.md` — TR8 adoption-side call-site map
 - `scripts/test/run-fanout-fixtures.sh` — all 024 + A1/A2 amendment fixtures

@@ -22,9 +22,9 @@ frozen_at: 2026-06-24
 | Config | `.sw/config.schema.json`, `.sw/workflow.config.example.json` |
 | Layout | `.sw/layout.md`, `core/sw-reference/layout.md` |
 | Release bookkeeping | `CHANGELOG.md`, `version.txt`, `release-please-config.json` (read-only) |
-| Worktree guard | `scripts/sw-assert-worktree.sh` (PRD 002 dependency) |
+| Worktree guard | `scripts/sw-assert-worktree.py` (PRD 002 dependency) |
 | Parallelism | `skills/parallelism/`, `rules/sw-subagent-dispatch.mdc` |
-| Memory | `scripts/memory-redact.sh`, `rules/memory-guardrails.mdc` |
+| Memory | `scripts/memory-redact.py`, `rules/memory-guardrails.mdc` |
 | Fixtures | `scripts/test/fixtures/deliver-phase-*`, `scripts/test/run-deliver-fixtures.sh` |
 | Build chain | `scripts/copy-to-core.sh`, `python3 -m sw generate --all` |
 | User docs | `README.md`, `documentation/commands.md` |
@@ -32,7 +32,7 @@ frozen_at: 2026-06-24
 
 ## Notes
 
-- PRD 002's `sw-assert-worktree.sh` may not exist yet; phase 7 must enforce R16 via that guard or a minimal
+- PRD 002's `sw-assert-worktree.py` may not exist yet; phase 7 must enforce R16 via that guard or a minimal
   bare-main assertion until 002 lands.
 - Multi-feature mode (`integration/<stamp>`) must remain unchanged; baseline `wave.sh` fixtures are part of
   phase 13 (R34 regression).
@@ -151,7 +151,7 @@ frozen_at: 2026-06-24
   - **R-IDs:** R20, R21, R40
 
 - [x] 7.3 Bare-main guard at implementation entry (R16)
-  - **File:** `core/commands/sw-deliver.md`, integration with `scripts/sw-assert-worktree.sh` or minimal guard
+  - **File:** `core/commands/sw-deliver.md`, integration with `scripts/sw-assert-worktree.py` or minimal guard
   - **Expected:** no phase implementation on bare `main`; guard invoked before phase `/sw-ship` writes
   - **R-IDs:** R16
 
@@ -164,7 +164,7 @@ frozen_at: 2026-06-24
 
 - [x] 8.2 Serialized merge queue with true merge commits (R17, R19, R50)
   - **File:** `scripts/wave.sh`
-  - **Expected:** one merge in flight; auto-merge only on live `check-gate.sh` green; uses merge commits (no squash/rebase); ancestry predicate for resume documented
+  - **Expected:** one merge in flight; auto-merge only on live `check-gate.py` green; uses merge commits (no squash/rebase); ancestry predicate for resume documented
   - **R-IDs:** R17, R19, R50
 
 - [x] 8.3 Async review barrier before auto-merge (R52)
@@ -220,7 +220,7 @@ frozen_at: 2026-06-24
 
 - [x] 11.1 Terminal `<type>/<slug> → main` PR and gate halt (R22, R23, R24)
   - **File:** `core/commands/sw-deliver.md`, `scripts/wave.sh`
-  - **Expected:** opens/updates single terminal PR only when all phases `green-merged`; no `integration/<stamp>` in phase-mode; `check-gate.sh` on PR head; halts at human merge gate; report matches `/sw-ready` form
+  - **Expected:** opens/updates single terminal PR only when all phases `green-merged`; no `integration/<stamp>` in phase-mode; `check-gate.py` on PR head; halts at human merge gate; report matches `/sw-ready` form
   - **R-IDs:** R22, R23, R24
 
 - [x] 11.2 Idempotent resume against pushed remote tip (R29, R30, R50)
@@ -252,7 +252,7 @@ frozen_at: 2026-06-24
 
 - [x] 12.3 Distilled wave learnings to memory (R62)
   - **File:** `core/skills/deliver/SKILL.md`
-  - **Expected:** post-run writes contention/conflict patterns via `memory-preflight` + `memory-redact.sh`; no raw logs/transcripts/secrets
+  - **Expected:** post-run writes contention/conflict patterns via `memory-preflight` + `memory-redact.py`; no raw logs/transcripts/secrets
   - **R-IDs:** R62
 
 ### 13. Fixtures, build chain, and user documentation (M)

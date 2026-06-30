@@ -73,8 +73,8 @@ to cover host API rate-limit resilience.
   ci-watch, and merge; each adapter declares per-verb capability flags so unsupported operations degrade
   explicitly rather than failing opaquely.
 - **R4** The GitHub adapter implements the verb set over the GitHub REST API and replaces every direct `gh`
-  invocation in `scripts/check-gate.sh`, `scripts/wave_terminal.py`, `scripts/stabilize-merge-sync.sh`,
-  `scripts/wave_compound.py`, `scripts/cleanup_lib.py`, and `scripts/reconcile-status.sh`.
+  invocation in `scripts/check-gate.py`, `scripts/wave_terminal.py`, `scripts/stabilize-merge-sync.py`,
+  `scripts/wave_compound.py`, `scripts/cleanup_lib.py`, and `scripts/reconcile-status.py`.
 - **R5** No host CLI (`gh`, `glab`, or equivalent) is a required installation prerequisite or an invoked
   runtime dependency of the workflow; the host HTTP API (REST, with GraphQL where REST lacks parity) accessed
   via `curl` plus a token is the sole supported transport.
@@ -83,7 +83,7 @@ to cover host API rate-limit resilience.
   configured through a host base URL.
 - **R7** The remote name is configurable through a `host.remote` key (default `origin`), and the hard-coded
   `origin` literal is removed from `scripts/wave_merge.py`, `scripts/wave_terminal.py`,
-  `scripts/stabilize-merge-sync.sh`, `scripts/worktree.sh`, and `scripts/cleanup_lib.py`.
+  `scripts/stabilize-merge-sync.py`, `scripts/worktree.py`, and `scripts/cleanup_lib.py`.
 - **R8** Authentication tokens are referenced by environment-variable name in configuration (for example
   `host.tokenEnv`), never stored as literal secrets in configuration, and a missing token degrades to the
   no-remote/offline path rather than leaking the value or aborting uncontrollably.
@@ -99,18 +99,18 @@ to cover host API rate-limit resilience.
   never auto-merges the trunk.
 - **R12** When no host CI is available, CI-watch degrades to relying on the local checks-gate evidence and
   requires no host CI polling.
-- **R13** `scripts/check-gate.sh` returns a local-evidence verdict instead of the blocked
+- **R13** `scripts/check-gate.py` returns a local-evidence verdict instead of the blocked
   "no open PR for current branch" result when the host provider is `none` or local.
 
 ### Gate and prose abstraction
 
-- **R14** `scripts/check-gate.sh` obtains PR number, CI checks, unresolved review threads, and repository
+- **R14** `scripts/check-gate.py` obtains PR number, CI checks, unresolved review threads, and repository
   identity through the host-adapter verb set rather than direct `gh` calls, preserving its read-only,
   non-mutating contract.
 - **R15** The terminal flow in `scripts/wave_terminal.py` performs PR prepare, create, list, view, and head
   push through the host adapter and the configurable remote, preserving the human merge gate
   (`neverAutoMergesMain`).
-- **R16** `scripts/stabilize-merge-sync.sh` obtains PR metadata and runs its conflict probe through the host
+- **R16** `scripts/stabilize-merge-sync.py` obtains PR metadata and runs its conflict probe through the host
   adapter and configurable remote.
 - **R17** Agent-facing prose in `sw-watch-ci`, `sw-stabilize`, `sw-pr`, `sw-ready`, `sw-cleanup`, and
   `sw-execute` commands, and in the `checks-gate`, `stabilize-loop`, and `conductor` skills, uses
@@ -201,7 +201,7 @@ to cover host API rate-limit resilience.
 
 - **TR1 — Adapter interface.** Each host adapter implements the R3 verb set behind a single dispatch entry
   (`scripts/host.sh <verb> [args]` resolving `host.provider` via `capability-select`). Verbs emit stable
-  JSON on stdout; consumers (`check-gate.sh`, `wave_terminal.py`, `stabilize-merge-sync.sh`) parse JSON and
+  JSON on stdout; consumers (`check-gate.py`, `wave_terminal.py`, `stabilize-merge-sync.py`) parse JSON and
   never shell out to `gh` directly. The verb contract and JSON shapes live in
   `core/providers/host/CAPABILITIES.md`, mirroring `core/providers/review/CAPABILITIES.md`.
 - **TR2 — Capability flags.** Adapters declare flags such as `pullRequests`, `reviewThreads`, `checksApi`,
@@ -253,7 +253,7 @@ to cover host API rate-limit resilience.
 
 - Tokens are referenced by environment-variable name only (R8, TR3); literal secrets in configuration are
   prohibited and caught by the existing redaction chokepoint and secret-scan.
-- The pre-push secret scan (`scripts/secret-scan.sh`) and the range-scoped history-redaction guardrail
+- The pre-push secret scan (`scripts/secret-scan.py`) and the range-scoped history-redaction guardrail
   remain in force across all hosts and the local mode.
 - REST transport is HTTPS-only; self-hosted base URLs are validated as well-formed URLs before use.
 - Tokens require least-privilege scopes (repository read plus pull-request/merge-request write); the doctor
@@ -305,8 +305,8 @@ Phased delivery; each phase ships behind passing fixtures and is independently m
   selection, auto-detection, doctor check, and the shared rate-limit retry wrapper (core policy plus the
   GitHub/local signal mapping; GitLab and Bitbucket signal mapping completes in Phase 4). Requirements: R1,
   R2, R3, R6, R7, R8, R33, R34, R35, R36, R37, R38, R39, R41, R42, TR1–TR4, TR6, TR10.
-- **Phase 2 — GitHub gate abstraction over REST.** Refactor `check-gate.sh`, `wave_terminal.py`,
-  `stabilize-merge-sync.sh`, `wave_compound.py`, `cleanup_lib.py`, `reconcile-status.sh`, and command/skill
+- **Phase 2 — GitHub gate abstraction over REST.** Refactor `check-gate.py`, `wave_terminal.py`,
+  `stabilize-merge-sync.py`, `wave_compound.py`, `cleanup_lib.py`, `reconcile-status.py`, and command/skill
   prose to the verb set; remove `gh`. Update user-facing installation/setup documentation (README and
   `/sw-init` guidance) to drop the `gh` prerequisite and document `host.tokenEnv`. Requirements: R4, R5, R14,
   R15, R16, R17.

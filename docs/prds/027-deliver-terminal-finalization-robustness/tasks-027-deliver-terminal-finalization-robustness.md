@@ -39,7 +39,7 @@ and the `main` human merge gate — all of which remain unchanged.
 ### 2. Phase status write/read path hardening — M
 
 - [ ] 2.1 Mirror-on-write the repo-root-canonical phase status (R4, per D2)
-  - **File:** `scripts/ship-phase-status.sh` (and the phase dispatch env that sets `SW_RUN_DIR`)
+  - **File:** `scripts/ship-phase-status.py` (and the phase dispatch env that sets `SW_RUN_DIR`)
   - **Expected:** the phase ship status writer writes `<integration-root>/.cursor/sw-deliver-runs/<phase-slug>/status.json` (mirrored on write) whenever the integration root is resolvable from `SW_REPO_ROOT` or deliver state, in addition to the worktree-local copy. No removal of the worktree-local write.
   - **R-IDs:** R4
 - [ ] 2.2 Glob fallback in `wave_merge.status_file_for` (R5, per D2)
@@ -122,7 +122,7 @@ and the `main` human merge gate — all of which remain unchanged.
 - `scripts/wave_deliver_loop.py` — deliver driver; `MERGED_PHASE_STATUSES` re-export, `await-in-flight` advancement, post-merge verify classification, stale-blocker supersession, currency resolution.
 - `scripts/wave_terminal.py` — `all_phases_green` via shared predicate; currency resolution; single supervised terminal checkpoint.
 - `scripts/wave_compound.py` — `all_phases_green` via shared predicate; `record-premerge` canonical-state verification.
-- `scripts/ship-phase-status.sh` — mirror-on-write of the repo-root-canonical phase `status.json`.
+- `scripts/ship-phase-status.py` — mirror-on-write of the repo-root-canonical phase `status.json`.
 - `scripts/wave_merge.py` — `status_file_for` glob fallback; dependency-ordered deterministic merge.
 - `core/skills/conductor/SKILL.md` — terminal-transition no-status-pause clause (mirrored to `dist/`).
 - `scripts/test/run-deliver-fixtures.sh`, `scripts/test/run-deliver-loop-fixtures.sh` — R13 fixture wiring.

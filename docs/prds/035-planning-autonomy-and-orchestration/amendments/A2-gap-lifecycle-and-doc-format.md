@@ -59,12 +59,12 @@ rejecting semantically valid PRD/amendment bodies.
 - **R53** (closes GAP-044) Document append protocol in `core/skills/living-status/SKILL.md` and
   `.sw/layout.md`: next id = max+1, never reuse; cross-links use `GAP-NNN`. Fixture:
   `gap-backlog-index-integrity` asserts index counts match table binary statuses.
-- **R54** (closes GAP-044) `scripts/gap-backlog.sh` (or extend `living-status` scripts) MUST expose
-  `list --json` for CI guard; `docs-currency-gate.sh` validates index/table consistency. Fixture:
+- **R54** (closes GAP-044) `scripts/gap-backlog.py` (or extend `living-status` scripts) MUST expose
+  `list --json` for CI guard; `docs-currency-gate.py` validates index/table consistency. Fixture:
   `gap-backlog-ci-guard`.
 - **R55** (closes GAP-045) A shared **doc-format tokenizer** module (`scripts/doc_format_tokenizer.py`) MUST
   canonicalize R-ID/D-ID bullet shapes, heading levels, and amendment task checkbox lines **before**
-  `spec-rigor-check.sh` / `traceability-check.sh` — opt-in per command via `--normalize` on freeze path.
+  `spec-rigor-check.py` / `traceability-check.py` — opt-in per command via `--normalize` on freeze path.
   Fixture: `doc-format-normalize-before-rigor`.
 - **R56** (closes GAP-045) Spec-rigor and traceability MUST share one bullet regex source imported from the
   tokenizer package (no divergent patterns). Fixture: `spec-rigor-traceability-regex-parity`.

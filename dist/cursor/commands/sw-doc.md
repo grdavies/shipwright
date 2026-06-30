@@ -66,7 +66,7 @@ When `adoptionMode` is `consistency-only` (`canonical ≡ proposed`, `proposedPa
 - **`canonical`:** the tier-gated chain below is unchanged — no orchestrator-step plan artifacts are persisted.
   Manifest + selector + canonical-parity wiring land; the doc guideline pack’s **canonical** chain and halt floors
   (`doc-review-halt-manual`, `doc-review-halt-gated-auto`, `afterTasks-checkpoint`) are enforced by
-  `bash scripts/wave.sh plan validate --tier orchestrator --orchestrator-type doc`.
+  `python3 scripts/wave.sh plan validate --tier orchestrator --orchestrator-type doc`.
 - **`proposed`:** **not built** for consistency-only — all `*-proposed-*` and `*-022-parity-under-proposed` fixtures
   are N/A (R36d). Halt preservation (R19) is proven on the **canonical** path via the doc guideline pack, not a
   `proposed` surface.
@@ -84,7 +84,7 @@ dispatches require Phase 9 keyed preflight + command-tier binding (A2 R38/R39).
 Before step 1 when starting a **new** documentation effort:
 
 ```bash
-bash scripts/docs_worktree.sh provision --topic <topic>
+python3 scripts/docs_worktree.py provision --topic <topic>
 ```
 
 Operate inside the provisioned worktree (`.sw-worktrees/docs-<topic>/`) on branch `docs/<topic>`.
@@ -92,9 +92,9 @@ Never commit brainstorm/PRD artifacts on the protected default branch. See `skil
 
 After doc freeze, durability paths diverge (R32):
 
-- **Docs branch** — `bash scripts/wave_spec_seed.py <root> docs-commit --topic <topic>` (brainstorms + PRDs)
-- **Feature handoff** — `bash scripts/wave.sh spec-seed --task-list <frozen-task-list-path>` (PRD 013)
-- **Merge docs to trunk** — `bash scripts/docs_pr.sh --topic <topic>` (docs-only PR)
+- **Docs branch** — `python3 scripts/wave_spec_seed.py <root> docs-commit --topic <topic>` (brainstorms + PRDs)
+- **Feature handoff** — `python3 scripts/wave.sh spec-seed --task-list <frozen-task-list-path>` (PRD 013)
+- **Merge docs to trunk** — `python3 scripts/docs_pr.py --topic <topic>` (docs-only PR)
 
 0. Load `skills/conductor/SKILL.md`; enforce `rules/sw-conductor.mdc`.
 1. Run `/sw-triage` (or accept pre-classified tier).
@@ -102,7 +102,7 @@ After doc freeze, durability paths diverge (R32):
 3. If Full → `/sw-brainstorm`; halt on blocker.
 4. `/sw-prd` per tier rules.
 5. `/sw-doc-review` — tier gates whether panel runs (Quick skips); non-Quick PRD drafts use
-   `scripts/doc-review-select.sh` over the capability manifest (`core/sw-reference/capability-manifest.md`).
+   `scripts/doc-review-select.py` over the capability manifest (`core/sw-reference/capability-manifest.md`).
 6. Halt on `manual` or `gated_auto` trade-offs — do not auto-decide.
 7. Run spec-rigor PRD gates (`skills/spec-rigor/SKILL.md`); on `fail`, emit consolidated halt report (DOC-A2)
    with `resumeCommand` — do not re-prompt per gate.
@@ -113,17 +113,17 @@ After doc freeze, durability paths diverge (R32):
     region, gap edges, or unit linkage), run the mechanical reconciler before the implementation boundary:
 
     ```bash
-    bash scripts/planning-graph.sh reconcile --dry-run
+    python3 scripts/planning-graph.py reconcile --dry-run
     ```
 
     Commit on the docs/feature branch only (`--commit`; never on bare default branch). Living-status also
     invokes this via `scripts/wave.sh living-docs reconcile`. Resolve artifact paths via
-    `bash scripts/planning_paths.sh` (PRD 031) — do not hardcode `docs/planning/` roots.
+    `python3 scripts/planning_paths.py` (PRD 031) — do not hardcode `docs/planning/` roots.
 11. Resolve boundary mode: `doc.afterTasks` from `workflow.config.json`, overridden by `--after-tasks=<mode>` when set.
 12. Present the frozen task-list path. Resolve `<type>/<slug>` via the shared deliver resolver (do **not**
     re-implement branch derivation in `/sw-doc`):
     ```bash
-    bash scripts/wave.sh preflight --task-list <frozen-task-list-path> --skip-base-check
+    python3 scripts/wave.sh preflight --task-list <frozen-task-list-path> --skip-base-check
     ```
     Read `target.branch` from the JSON (`scripts/wave_deliver.py` — same resolver `/sw-deliver run` uses).
     Derive the PRD docs dir from the task-list parent: `docs/prds/<n>-<slug>/`.
@@ -133,26 +133,26 @@ After doc freeze, durability paths diverge (R32):
       2. The target feature branch `<type>/<slug>` from preflight.
       3. The exact docs-only seed command (idempotent shared helper; never onto `main`):
 
-         `bash scripts/wave.sh spec-seed --task-list <frozen-task-list-path>`
+         `python3 scripts/wave.sh spec-seed --task-list <frozen-task-list-path>`
 
       4. The exact next command: `/sw-deliver run <frozen-task-list-path>`.
       Do **not** recommend `/sw-worktree` → `/sw-start` → `/sw-execute` or standalone `/sw-ship` as the
-      primary path. (`/sw-deliver run` invokes the underlying `bash scripts/wave.sh deliver-loop` driver — do
+      primary path. (`/sw-deliver run` invokes the underlying `python3 scripts/wave.sh deliver-loop` driver — do
       not print the raw script as the primary operator command.)
     - **`confirm`** — present the full frozen task list, then emit the **Implementation checkpoint** block
       (see below) and halt. Only case-insensitive **`proceed`** or **`yes`** to the checkpoint question
       continues. Legacy **`Go`**, silence, or any ambiguous reply maps to **`stop`** (print-only guidance per
       above; no dispatch). On ack:
-      1. **Seed commit** — `bash scripts/wave.sh spec-seed --task-list <frozen-task-list-path>` (docs
+      1. **Seed commit** — `python3 scripts/wave.sh spec-seed --task-list <frozen-task-list-path>` (docs
          under `docs/prds/<n>-<slug>/` only; excludes `docs/brainstorms/**` and untracked/ignored paths;
          never `main`; idempotent).
       2. **Dispatch** `/sw-deliver run <frozen-task-list-path>`.
     - **`auto`** — emit one line: `implementing on branch <type>/<slug>`, then in-turn (DOC-A1):
-      `bash scripts/wave.sh spec-seed --task-list <frozen-task-list-path>`, then **dispatch**
+      `python3 scripts/wave.sh spec-seed --task-list <frozen-task-list-path>`, then **dispatch**
       `/sw-deliver run <frozen-task-list-path>`.
       No second prompt. When an **agent** (not a human) invoked `/sw-doc --after-tasks=auto`, record the override via
-      `scripts/shipwright-state.sh override-add` (who/when/mode) and record the seed commit (branch + SHA) via
-      `scripts/shipwright-state.sh write` **before** dispatch.
+      `scripts/shipwright-state.py override-add` (who/when/mode) and record the seed commit (branch + SHA) via
+      `scripts/shipwright-state.py write` **before** dispatch.
 14. On `confirm`/`auto` dispatch paths only: never write implementation files inline — hand off to
     `/sw-deliver run` (phase worktrees + `/sw-ship` per phase via the durable driver).
 
@@ -183,14 +183,14 @@ while a `confirm` halt is pending and has not sent `proceed`/`yes`, map to **`st
 ## Planning command surface (PRD 035 D6 / R15)
 
 The planning surface **extends `/sw-doc`** — no top-level `/sw-plan`. Commands resolve paths via the PRD 031
-helper (`bash scripts/planning_paths.sh`); the graph shell exposes thin wrappers for operator ergonomics.
+helper (`python3 scripts/planning_paths.py`); the graph CLI exposes thin wrappers for operator ergonomics.
 
 | Entry | Command |
 | --- | --- |
-| Mechanical reconciler | `bash scripts/planning-graph.sh reconcile [--dry-run] [--commit]` |
-| Graph-driven scheduler | `/sw-deliver next` → `python3 scripts/wave_deliver.py <repo> next` (also `planning-graph.sh next`) |
+| Mechanical reconciler | `python3 scripts/planning-graph.py reconcile [--dry-run] [--commit]` |
+| Graph-driven scheduler | `/sw-deliver next` → `python3 scripts/wave_deliver.py <repo> next` (also `planning-graph.py next`) |
 | Autonomy posture | `planning.autonomy` in `workflow.config.json` (`maintenance-only` default \| `full-conductor`) |
-| Posture readback | `bash scripts/planning-graph.sh posture` |
+| Posture readback | `python3 scripts/planning-graph.py posture` |
 
 **Scheduler:** `/sw-deliver next` picks the highest-priority eligible frozen task list from the planning graph
 (PRD 033). Under `planning.autonomy: maintenance-only`, an explicit `--task-list` that skips a higher-priority
@@ -206,8 +206,8 @@ After freeze, planning graph maintenance edits route through the two-track drive
 
 | Track | Classifier (R11) | Entry |
 | --- | --- | --- |
-| Mechanical | INDEX `derived` region, SUPERSEDED manifest, generated gap index only | `bash scripts/docs-edit-route.sh route --path …` → `docs-merge.sh` |
-| Substantive | Any `docs/planning/<unit-id>/` path (body or frontmatter) | `bash scripts/docs-edit-route.sh route-substantive --topic <topic>` |
+| Mechanical | INDEX `derived` region, SUPERSEDED manifest, generated gap index only | `python3 scripts/docs-edit-route.py route --path …` → `docs-merge.sh` |
+| Substantive | Any `docs/planning/<unit-id>/` path (body or frontmatter) | `python3 scripts/docs-edit-route.py route-substantive --topic <topic>` |
 
 The INDEX **`inFlight` region is never mechanical** (PRD 032 deliver writer). Mechanical batches embed a
 both-region content-hash at PR open; auto-merge aborts when `derived` or `inFlight` advanced since (R14).
@@ -222,7 +222,7 @@ Branch protection is probed via host API — ambiguous detection fails closed to
 
 **Communication intensity:** inherit
 
-**Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-doc`.
+**Model tier:** inherit — resolve delegated atomics via `python3 scripts/resolve-model-tier.py --command <child-slug>`; do not dispatch on bare `--command sw-doc`.
 
 ## Delegated atomics
 
@@ -240,14 +240,14 @@ Before any delegated Task spawn from `/sw-doc`:
 
 For `/sw-doc-review` persona panel dispatches, each parallel persona MUST use a **unique** `--dispatch-id`
 (R38/R39) and resolve tier via `--command <child-slug>` / `--agent <persona-id>` per
-`scripts/resolve-model-tier.sh` — never reuse one preflight record across N Tasks.
+`scripts/resolve-model-tier.py` — never reuse one preflight record across N Tasks.
 
-1. `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-doc --skill <active-skill>`
-2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-doc --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>]`
+1. `python3 scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-doc --skill <active-skill>`
+2. `python3 scripts/dispatch-check.py --agent <agent-id> --command sw-doc --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Pass explicit `model: <resolved-concrete-id>` on Task input (never `inherit`).
 
-Resolve model: `bash scripts/resolve-model-tier.sh --command <child-slug>` (or `--agent` for doc-review personas).
-Resolve intensity: `bash scripts/resolve-intensity.sh --command <child-slug>` (or `--agent|--skill`).
+Resolve model: `python3 scripts/resolve-model-tier.py --command <child-slug>` (or `--agent` for doc-review personas).
+Resolve intensity: `python3 scripts/resolve-intensity.py --command <child-slug>` (or `--agent|--skill`).
 
 ## Inline allowlist (closed)
 
@@ -262,7 +262,7 @@ All other substantive work delegates.
 
 ## Dispatch context redaction contract
 
-Before building a Task prompt, route non-config context through `bash scripts/memory-redact.sh` and embed
+Before building a Task prompt, route non-config context through `python3 scripts/memory-redact.py` and embed
 external payloads only inside fenced `untrusted_payload` blocks. Never forward raw transcripts or provider
 memory payloads.
 
@@ -271,6 +271,6 @@ memory payloads.
 - `doc.afterTasks` is the **sole human checkpoint** between documentation freeze and implementation; `/sw-tasks` introduces no additional blocking prompt.
 - Halts at manual trade-offs during doc review — do not auto-decide panel outcomes.
 - Never inlines implementation — `stop` halts (print-only; **no implementation dispatch**), `confirm` halts until explicit ack then seeds + dispatches, `auto` seeds + dispatches without a second prompt.
-- Worktree invariant (R6/R27): implementation never starts on bare default branch; enforced by `scripts/sw-assert-worktree.sh` at implementation entry, not by orchestrator prose alone.
+- Worktree invariant (R6/R27): implementation never starts on bare default branch; enforced by `scripts/sw-assert-worktree.py` at implementation entry, not by orchestrator prose alone.
 - Does not merge, ship, or run CI gate.
 - Pattern: v1 `/ship` delegates-to-atomics model.

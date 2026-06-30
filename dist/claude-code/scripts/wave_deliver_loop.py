@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+
+from _sw import interpreter
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1001,9 +1003,9 @@ def trunk_base_persisted(root: Path) -> bool:
 
 
 def run_resolve_capture(root: Path) -> tuple[int, dict[str, Any]]:
-    script = root / "scripts" / "resolve-base-branch.sh"
+    script = root / "scripts" / "resolve-base-branch.py"
     if not script.is_file():
-        return 2, {"verdict": "fail", "error": "resolve-base-branch.sh missing"}
+        return 2, {"verdict": "fail", "error": "resolve-base-branch.py missing"}
     proc = subprocess.run(
         ["bash", str(script), "capture"],
         cwd=str(root),
@@ -1048,7 +1050,7 @@ def assert_run_identity(
         "stale run-state from a different source_task_list/prd_number",
         exit_code=20,
         halt="stale-state",
-        remediation="bash scripts/wave.sh deliver-loop --reset --task-list <path> or remove scoped .cursor/sw-deliver-state.<slug>.json",
+        remediation="bash scripts/wave.py deliver-loop --reset --task-list <path> or remove scoped .cursor/sw-deliver-state.<slug>.json",
     )
 
 
@@ -1520,9 +1522,9 @@ def compute_next_action(
 
 
 def run_inflight_signal(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
-    script = root / "scripts" / "inflight-signal.sh"
+    script = root / "scripts" / "inflight-signal.py"
     if not script.is_file():
-        return 2, {"verdict": "fail", "error": "inflight-signal.sh missing"}
+        return 2, {"verdict": "fail", "error": "inflight-signal.py missing"}
     proc = subprocess.run(
         ["bash", str(script), *args],
         cwd=str(root),
@@ -1545,7 +1547,7 @@ def run_inflight_signal(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
 
 def run_wave(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
     proc = subprocess.run(
-        ["bash", str(root / "scripts/wave.sh"), *args],
+        [*interpreter.probe().executable, str(root / "scripts/wave.py"), *args],
         cwd=str(root),
         capture_output=True,
         text=True,
@@ -1979,7 +1981,7 @@ def execute_mechanical(
                 ec,
                 remediation=(
                     "post-merge playbook: single-unit set-index-status + append-log-idempotent on a docs branch; "
-                    "never bare reconcile-status.sh reconcile on main; retry via bash scripts/wave.sh completion finalize-if-merged"
+                    "never bare reconcile.py reconcile on main; retry via bash scripts/wave.py completion finalize-if-merged"
                 ),
             )
         state.update(load_state(root))
@@ -2171,7 +2173,7 @@ def cmd_watchdog_check(root: Path, _args: list[str]) -> None:
                 "cause": cause,
                 "phaseTimeoutMinutes": timeout_min,
                 "inFlight": in_flight,
-                "recommendedCommand": "bash scripts/wave.sh deliver-loop",
+                "recommendedCommand": "bash scripts/wave.py deliver-loop",
             },
             exit_code=20,
         )

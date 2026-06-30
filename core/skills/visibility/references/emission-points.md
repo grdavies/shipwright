@@ -18,4 +18,4 @@ private/memory bodies through the resolver before emit.
 | `reconciler-output` | 033 reconciler emitted bodies |
 | `run-log` | Deliver run logs |
 | `handoff-032` | 032 handoff artifacts |
-| `pull-in-confirm` | **035 pull-in confirm lists** — ranked absorption/amendment proposals from `scripts/planning-related.sh`; metadata-only for private units; never auto-absorb |
+| `pull-in-confirm` | **035 pull-in confirm lists** — ranked absorption/amendment proposals from `scripts/planning-related.py`; metadata-only for private units; never auto-absorb |

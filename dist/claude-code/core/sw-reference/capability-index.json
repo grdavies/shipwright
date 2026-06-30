@@ -272,7 +272,7 @@
           "providerFamily": "code-review",
           "adapterId": "contract",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.sh"
+          "gateRef": "check-gate.py"
         }
       }
     },
@@ -295,7 +295,7 @@
           "providerFamily": "review.local",
           "adapterId": "ce-code-review",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.sh"
+          "gateRef": "check-gate.py"
         }
       }
     },
@@ -318,7 +318,7 @@
           "providerFamily": "review.local",
           "adapterId": "native",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.sh"
+          "gateRef": "check-gate.py"
         }
       }
     },
@@ -706,7 +706,7 @@
           "providerFamily": "host",
           "adapterId": "bitbucket",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.sh"
+          "gateRef": "check-gate.py"
         }
       }
     },
@@ -729,7 +729,7 @@
           "providerFamily": "host",
           "adapterId": "github",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.sh"
+          "gateRef": "check-gate.py"
         }
       }
     },
@@ -752,7 +752,7 @@
           "providerFamily": "host",
           "adapterId": "gitlab",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.sh"
+          "gateRef": "check-gate.py"
         }
       }
     },
@@ -775,7 +775,7 @@
           "providerFamily": "host",
           "adapterId": "none",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.sh"
+          "gateRef": "check-gate.py"
         }
       }
     },
@@ -798,7 +798,7 @@
           "providerFamily": "memory",
           "adapterId": "in-repo",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.sh"
+          "gateRef": "check-gate.py"
         }
       }
     },
@@ -907,7 +907,7 @@
           "providerFamily": "memory",
           "adapterId": "recallium",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.sh"
+          "gateRef": "check-gate.py"
         }
       }
     },
@@ -951,7 +951,7 @@
           "providerFamily": "review",
           "adapterId": "coderabbit",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.sh"
+          "gateRef": "check-gate.py"
         }
       }
     },
@@ -995,7 +995,7 @@
           "providerFamily": "verify",
           "adapterId": "none",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.sh"
+          "gateRef": "check-gate.py"
         }
       }
     },
@@ -1018,7 +1018,7 @@
           "providerFamily": "verify",
           "adapterId": "playwright",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.sh"
+          "gateRef": "check-gate.py"
         }
       }
     },
@@ -1041,7 +1041,7 @@
           "providerFamily": "verify",
           "adapterId": "stub",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.sh"
+          "gateRef": "check-gate.py"
         }
       }
     },

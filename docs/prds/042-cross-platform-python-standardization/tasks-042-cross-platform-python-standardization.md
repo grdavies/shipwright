@@ -4,6 +4,7 @@ date: 2026-06-30
 topic: cross-platform-python-standardization
 frozen: true
 frozen_at: 2026-06-30
+visibility: public
 ---
 # Tasks — PRD 042 Cross-platform Python standardization
 
@@ -20,7 +21,7 @@ for touched surfaces (R29), dist-no-shell for ported surfaces (R37), and expands
 Establishes the Python runtime substrate every later phase depends on, and moves the build/install chain
 off `rsync` early so subsequent ports build cleanly.
 
-- [ ] 1.1 Shared runtime package skeleton + docstring/CLI convention (R18)
+- [x] 1.1 Shared runtime package skeleton + docstring/CLI convention (R18)
   - **File:** `scripts/_sw/__init__.py`, `scripts/_sw/cli.py`
   - **Expected:** `argparse` scaffold with `--help`, module + per-command docstrings; importable without `pip`
   - **R-IDs:** R18
@@ -75,7 +76,7 @@ off `rsync` early so subsequent ports build cleanly.
 
 ### 2. Host layer & `gh`/`curl` elimination (L)
 
-- [ ] 2.1 Host HTTP transport on `urllib` with TLS + SSRF hardening (R8, R44)
+- [x] 2.1 Host HTTP transport on `urllib` with TLS + SSRF hardening (R8, R44)
   - **File:** `scripts/_sw/host_transport.py`
   - **Expected:** `ssl.create_default_context()`, token via header (never argv/logs), HTTPS-only, same-host redirect constraint, loopback/link-local/metadata rejection unless allowlisted; rate-limit retry on `poll_until`
   - **R-IDs:** R8, R44
@@ -98,64 +99,64 @@ off `rsync` early so subsequent ports build cleanly.
 
 ### 3. Gate & dispatcher core (L)
 
-- [ ] 3.1 Port `check-gate` and `wave.sh` + `wave_*` dispatch surface to Python (R24 subset)
+- [x] 3.1 Port `check-gate` and `wave.sh` + `wave_*` dispatch surface to Python (R24 subset)
   - **File:** `scripts/check-gate.py`, `scripts/wave.py` (+ wave_* modules) (remove ported `.sh`)
   - **Expected:** stdout JSON contract, exit codes, fail-closed semantics preserved
   - **R-IDs:** R24
-- [ ] 3.2 Eliminate `jq` on gate/dispatcher surfaces via `json` (R7 incremental)
+- [x] 3.2 Eliminate `jq` on gate/dispatcher surfaces via `json` (R7 incremental)
   - **File:** ported gate/dispatcher modules, `scripts/test/json-contract-gate.test`
   - **Expected:** no `jq`; semantic parity (+ byte parity where goldens exist)
   - **R-IDs:** R7
-- [ ] 3.3 Resolve twin INDEX reconciler code paths into one Python surface (R22)
-  - **File:** `scripts/reconcile.py` (consolidates `reconcile-status.sh` + `planning-graph reconcile` code paths), `scripts/test/single-reconciler.test`
+- [x] 3.3 Resolve twin INDEX reconciler code paths into one Python surface (R22)
+  - **File:** `scripts/reconcile.py` (consolidates `reconcile-status.py` + `planning-graph reconcile` code paths), `scripts/test/single-reconciler.test`
   - **Expected:** shared helpers, deduplicated logic; INDEX schemas/regions/lifecycle unchanged; fixture covers both INDEX behaviors
   - **R-IDs:** R22
-- [ ] 3.4 JSON contract fixtures for ported verbs/gates (TR4 support)
+- [x] 3.4 JSON contract fixtures for ported verbs/gates (TR4 support)
   - **File:** `scripts/test/json-contract-*.test`
   - **Expected:** per-verb/gate semantic-parity diff; byte parity where goldens exist
   - **R-IDs:** R7
 
 ### 4. Hooks, security filters, providers (L)
 
-- [ ] 4.1 Port git hooks onto the R40 launcher (R3)
+- [x] 4.1 Port git hooks onto the R40 launcher (R3)
   - **File:** `hooks/pre-commit.py`, `hooks/pre-push.py`, `hooks/commit-msg.py` + helpers (remove `.sh` hooks)
   - **Expected:** execute on Windows under git hook runner without bash; all fail-closed guards preserved
   - **R-IDs:** R3
-- [ ] 4.2 Port security filters with behavioral parity (R36)
+- [x] 4.2 Port security filters with behavioral parity (R36)
   - **File:** `scripts/secret-scan.py`, `scripts/memory-redact.py`, `scripts/redaction-guard.py`, `scripts/test/secret-scan-behavioral.test`
   - **Expected:** planted secret blocks pre-push; allowlist exit-2; git-push chain blocks on scanner failure; redaction-guard strips same fields
   - **R-IDs:** R36
-- [ ] 4.3 Port `core/providers/` review+verify adapters to Python (R26)
+- [x] 4.3 Port `core/providers/` review+verify adapters to Python (R26)
   - **File:** `core/providers/review/*.py`, `core/providers/verify/*.py` (remove `.sh`)
   - **Expected:** capability-frontmatter provider-selection contract preserved
   - **R-IDs:** R26
-- [ ] 4.4 No-shell `dist/`/`core/scripts/` for hook + Cursor/Claude adapter surfaces (R4)
+- [x] 4.4 No-shell `dist/`/`core/scripts/` for hook + Cursor/Claude adapter surfaces (R4)
   - **File:** `dist/cursor/**`, `dist/claude-code/**`, emitter wiring
   - **Expected:** adapters/emitters functional cross-platform; `dist/cursor/`+`dist/claude-code/` contain no `.sh`
   - **R-IDs:** R4
 
 ### 5. Remaining production port + consolidations (L)
 
-- [ ] 5.1 Port remaining production `scripts/*.sh` to Python (R24 remainder)
+- [x] 5.1 Port remaining production `scripts/*.sh` to Python (R24 remainder)
   - **File:** remaining `scripts/*.py` (worktree, reconcile-status, etc.; remove `.sh`)
   - **Expected:** stdout JSON, exit codes, fail-closed semantics preserved per ledger
   - **R-IDs:** R24
-- [ ] 5.2 Complete `jq` elimination across all surfaces (R7 complete)
+- [x] 5.2 Complete `jq` elimination across all surfaces (R7 complete)
   - **File:** remaining ported modules, `scripts/test/no-jq-guard.test`
   - **Expected:** zero `jq` invocations workflow-wide
   - **R-IDs:** R7
-- [ ] 5.3 Retire legacy non-idempotent `append-log` (R20)
+- [x] 5.3 Retire legacy non-idempotent `append-log` (R20)
   - **File:** `scripts/_sw/completion_log.py`, `scripts/wave_compound.py`, `scripts/test/completion-log-idempotent.test`
   - **Expected:** single idempotent COMPLETION-LOG writer; fixture asserts no duplicate rows on resume
   - **R-IDs:** R20
-- [ ] 5.4 Collapse `.sh`/`.py` sibling pairs (R21)
+- [x] 5.4 Collapse `.sh`/`.py` sibling pairs (R21)
   - **File:** ~22 sibling pairs → single Python module each; update all callers; `scripts/test/pair-collapse.test`
   - **Expected:** one module per pair; callers resolve to the Python module
   - **R-IDs:** R21
 
 ### 6. Test harness, build chain, docs, migration, enforcement flip (XL)
 
-- [ ] 6.1 Port `scripts/test/` shell harnesses to a Python runner (R27)
+- [x] 6.1 Port `scripts/test/` shell harnesses to a Python runner (R27)
   - **File:** `scripts/test/_runner.py`, ported `*.test` (137 files)
   - **Expected:** coverage preserved; PR test-plan manifest registration; `verify.test` integration
   - **R-IDs:** R27

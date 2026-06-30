@@ -17,4 +17,4 @@ capability:
 
 # Code-review specialist — data-migration
 
-Signal-gated native panel specialist (parity with `code-review-select.sh`).
+Signal-gated native panel specialist (parity with `code-review-select.py`).

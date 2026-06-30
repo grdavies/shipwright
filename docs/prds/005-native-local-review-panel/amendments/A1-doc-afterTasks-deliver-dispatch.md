@@ -50,7 +50,7 @@ when documentation is completed via `/sw-doc`. PRD 004 noted this integration po
   `docs/guides/configuration.md`, and `docs/guides/getting-started.md` MUST document `/sw-deliver run` as the
   `confirm` and `auto` dispatch target and the `stop`-mode next command per R76/R77.
 - **R79** When an agent (not a human) invokes `/sw-doc --after-tasks=auto`, the orchestrator MUST record the
-  override in the per-worktree run record via `scripts/shipwright-state.sh` (who / when / mode) before
+  override in the per-worktree run record via `scripts/shipwright-state.py` (who / when / mode) before
   dispatching `/sw-deliver run`, and MUST NOT inline implementation files in any `doc.afterTasks` mode.
 
 ## Testing Strategy

@@ -134,7 +134,7 @@ groups (A–G) and numeric R-ID order are preserved.
   lock; concurrent phase completion never produces a double-merge.
 - **R22** A phase merges only after its gate is green and the review barrier is satisfied; the conductor
   never auto-merges to `main`.
-- **R23** All pushes route through `scripts/git-push.sh` (the secret-scan chokepoint); the conductor
+- **R23** All pushes route through `scripts/git-push.py` (the secret-scan chokepoint); the conductor
   introduces no raw `git push`.
 - **R24** A blocked phase blocks only its transitive dependents (blast radius); independent sibling phases
   continue and may still auto-merge when green.
@@ -262,7 +262,7 @@ stable R-IDs; do not renumber R1–R36.)*
   conductor-serialized (phase sub-agents never call `merge run-next`) and the queue lock is acquired
   atomically, closing the simultaneous-completion TOCTOU window (R41); `merge run-next` only merges a
   green-gated, review-satisfied phase and never targets `main` (R22); all pushes go through
-  `scripts/git-push.sh` (R23); blast-radius blocking limits a blocked phase to its transitive dependents
+  `scripts/git-push.py` (R23); blast-radius blocking limits a blocked phase to its transitive dependents
   while green siblings continue (R24). These reuse the PRD 007 merge/lock/push primitives (009 re-states
   none of them) and add concurrency fixtures; the reuse is reachable only once the TR9 dispatch fix lands.
 - **TR7 — `spec-seed` idempotent state record.** `scripts/wave.sh spec-seed` (and `scripts/wave_deliver.py`)
@@ -329,7 +329,7 @@ stable R-IDs; do not renumber R1–R36.)*
 
 - **No destructive git / no auto-merge to `main` (R22).** The conductor halts at the terminal merge gate;
   it never merges to `main` or force-pushes, even under full autonomy.
-- **Push chokepoint (R23).** Every push routes through `scripts/git-push.sh`; the secret-scan chokepoint
+- **Push chokepoint (R23).** Every push routes through `scripts/git-push.py`; the secret-scan chokepoint
   delivered by PRD 007 remains the local first line of defense — the conductor adds no raw `git push`.
 - **Single-flight merge under concurrency (R21).** Parallel phase completion cannot bypass the serialized
   merge queue lock/journal; concurrency never produces a double-merge or a half-applied merge.
@@ -365,7 +365,7 @@ Fixtures extend the existing harness invoked by `workflow.config.json` `verify.t
 | `conductor-contention-serialized` | contended phases (migration/INDEX/CHANGELOG) never run concurrently | R20 |
 | `conductor-single-flight-merge` | concurrent completion serializes through the merge queue; no double-merge | R21 |
 | `conductor-green-gate-no-main-merge` | merge only when green + review-satisfied; never merges `main` | R22 |
-| `conductor-push-chokepoint` | all pushes route through `git-push.sh`; no raw `git push` | R23 |
+| `conductor-push-chokepoint` | all pushes route through `git-push.py`; no raw `git push` | R23 |
 | `conductor-blast-radius` | blocked phase blocks only transitive dependents; green siblings continue | R24 |
 | `spec-seed-idempotent-state` | `specSeed` recorded on idempotent skip; no driver loop | R25 |
 | `merge-postverify-no-silent-revert` | post-verify failure routes to stabilize + marks blocked; explicit revert | R26 |

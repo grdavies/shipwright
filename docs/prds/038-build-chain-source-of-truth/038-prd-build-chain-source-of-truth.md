@@ -62,7 +62,7 @@ by making propagation mechanical and CI-visible.
   `core/sw-reference/build-chain-sot.json` (committed). It MUST state, at minimum:
   - `scripts/` — canonical harness source (runtime entrypoints); MUST NOT be hand-edited only in `core/scripts/`.
   - `core/commands|skills|rules|agents|providers/` — mirrored from repo-root siblings via `copy-to-core`.
-  - `core/scripts/` — mirrored from `scripts/` (with documented excludes: `test/`, `check-frozen.sh`).
+  - `core/scripts/` — mirrored from `scripts/` (with documented excludes: `test/`, `check-frozen.py`).
   - `.sw/` — canonical operator-edited sw-reference **inputs** (subset).
   - `core/sw-reference/` — union of `.sw/` sync output **plus** an explicit **core-authored allowlist** (R2).
   - `dist/{cursor,claude-code}/` — emitter output only; never hand-edited.
@@ -89,15 +89,15 @@ by making propagation mechanical and CI-visible.
 - **R6** `run-core-scripts-parity-fixtures.sh` MUST be registered in `verify.test` (via
   `pr-test-plan.manifest.json` or direct `workflow.config.json` entry) so local `/sw-stabilize` and PR test-plan
   CI enforce the same gate.
-- **R7** A single sanctioned entrypoint `scripts/build-chain-sync.sh` (name fixed in tasks) runs, in order:
+- **R7** A single sanctioned entrypoint `scripts/build-chain-sync.py` (name fixed in tasks) runs, in order:
   `copy-to-core.sh` → `python3 -m sw generate --all` → golden manifest re-snapshot when `dist/` changed. It
   exits non-zero on any step failure. Documented in `.sw/layout.md` and `docs/guides/workflows.md`.
-- **R8** A fixture `build-chain-sync-idempotent` proves a second consecutive `build-chain-sync.sh` run produces
+- **R8** A fixture `build-chain-sync-idempotent` proves a second consecutive `build-chain-sync.py` run produces
   no git diff (idempotent on a clean tree after first sync).
 
 ### One-shot resync & operator clarity
 
-- **R9** Implementation MUST include a one-shot commit on the feature branch that runs `build-chain-sync.sh`
+- **R9** Implementation MUST include a one-shot commit on the feature branch that runs `build-chain-sync.py`
   and commits resulting `core/`, `dist/`, and golden manifest changes so latent drift (GAP-054 `host_github.sh`
   class) is cleared on merge.
 - **R10** `.sw/layout.md` MUST include a diagram or table clarifying the three trees operators confuse:
@@ -107,7 +107,7 @@ by making propagation mechanical and CI-visible.
 
 ## Technical Requirements
 
-- **R12** `build-chain-sot.json` is validated by a lint script (`scripts/build-chain-sot-lint.sh` or folded
+- **R12** `build-chain-sot.json` is validated by a lint script (`scripts/build-chain-sot-lint.py` or folded
   into an existing manifest linter) — every `coreAuthoredAllowlist` path must exist on disk; no duplicate entries.
 - **R13** `copy-to-core.sh` reads `core/sw-reference/build-chain-sot.json` at runtime (fail closed if missing
   after this PRD ships).
@@ -115,7 +115,7 @@ by making propagation mechanical and CI-visible.
   freshness — a PR that updates `scripts/foo.sh` without `core/scripts/foo.sh` MUST fail CI even when
   `dist`↔golden is internally consistent.
 - **R15** Optional v1 deliver hook: when a phase task list touches `scripts/**` and the PR test-plan includes
-  build-chain fixtures, `check-gate.sh` advisory notice suggests `build-chain-sync.sh` — not a hard block in v1.
+  build-chain fixtures, `check-gate.py` advisory notice suggests `build-chain-sync.py` — not a hard block in v1.
 
 ## Security & Compliance
 
@@ -137,7 +137,7 @@ by making propagation mechanical and CI-visible.
 1. **SoT manifest + copy-to-core hardening** — `build-chain-sot.json`, lint, fail-closed orphans, migrate
    excludes to allowlist (R1–R4, R12–R13).
 2. **CI + verify.test wiring** — `ci.yml` + manifest registration (R5–R6, R14).
-3. **`build-chain-sync.sh` + docs** — unified entrypoint + layout diagram (R7–R8, R10).
+3. **`build-chain-sync.py` + docs** — unified entrypoint + layout diagram (R7–R8, R10).
 4. **One-shot resync commit** — clear GAP-054 latent drift (R9).
 5. **Gap close** — GAP-032, GAP-054 (R11).
 
@@ -151,7 +151,7 @@ by making propagation mechanical and CI-visible.
 - **D4** Orphan deletion is fail-closed (R3), not silent `--delete` — closes GAP-032 destructive-sync hazard.
 - **D5** CI wires existing `run-core-scripts-parity-fixtures.sh` rather than a new diff algorithm — minimal
   change, closes GAP-054 enforcement hole (D5 implements GAP-054 item 2).
-- **D6** Golden re-snapshot is part of `build-chain-sync.sh` when `dist/` changes — prevents
+- **D6** Golden re-snapshot is part of `build-chain-sync.py` when `dist/` changes — prevents
   dist↔golden-passing / scripts↔core-failing split.
 
 ## Open Questions

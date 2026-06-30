@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""JSON determinism gate (R38) — native Python."""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from _sw import jsonio  # noqa: E402
+
+
+def main() -> int:
+    a = jsonio.dumps({"b": 1, "a": 2})
+    b = jsonio.dumps({"a": 2, "b": 1})
+    if a != b:
+        print("FAIL json-determinism: key order not canonical")
+        return 1
+    print("OK  json-determinism")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

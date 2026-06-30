@@ -108,7 +108,7 @@ state-split concern in GAP-042 is reconciled against that resolver rather than d
 - **TR2** (R3) Add the terminal-transition clause to `core/skills/conductor/SKILL.md` under the existing
   no-status-pause / silent-dispatch-window sections; no new top-level requirement number — reinforce R14/R16
   at the `retrospective` / `terminal-ship` boundary. Mirror into `dist/` via the emitter.
-- **TR3** (R4, R5, R6) Mirror-on-write in `scripts/ship-phase-status.sh` (and the phase dispatch env that
+- **TR3** (R4, R5, R6) Mirror-on-write in `scripts/ship-phase-status.py` (and the phase dispatch env that
   sets `SW_RUN_DIR`); add the `.sw-worktrees/*` glob fallback to `wave_merge.status_file_for`; ensure
   `await-in-flight` for `backgroundDispatchedAt` phases re-resolves status via both locations before sleeping.
 - **TR4** (R7) Resolve `source_task_list` for the terminal currency check via the orchestrator worktree /
@@ -137,7 +137,7 @@ state-split concern in GAP-042 is reconciled against that resolver rather than d
   status resolution.
 - `status.json`, `blockers.json`, and run-state remain free of transcripts and secrets; the benefit-metric
   numeric/enumerated contract (PRD 023 R31) is unchanged.
-- Push and merge chokepoints (`scripts/git-push.sh`, single-flight merge) are preserved; no requirement
+- Push and merge chokepoints (`scripts/git-push.py`, single-flight merge) are preserved; no requirement
   weakens the secret-scan pre-push or the `main` human gate.
 
 ## Testing Strategy

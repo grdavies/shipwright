@@ -12,7 +12,7 @@ frozen_at: 2026-06-29
 ## Overview
 
 PRD 021 shipped the capability manifest and deterministic selector (`scripts/capability_select.py`,
-`scripts/doc-review-select.sh`, `core/sw-reference/capability-index.json`). The `text_token` trigger path
+`scripts/doc-review-select.py`, `core/sw-reference/capability-index.json`). The `text_token` trigger path
 already uses whole-token matching (`\bUI\b`), but **`match_heading()` still uses substring containment**
 (`needle in compare`), so every PRD whose body includes `## Requirements` falsely activates
 `sw-design-reviewer` because `"ui"` is a substring of `"requirements"`.
@@ -93,7 +93,7 @@ limited to heading-trigger semantics, fixture coverage, and doc contract alignme
 - Parity (R5): `run-migration-parity-fixtures.sh` doc-review family passes with documented delta for the
   Requirements false-positive case only.
 - CI: `run-persona-selection-fixtures.sh` registered in `verify.test` (already present — extend corpus).
-- Manual smoke: run `doc-review-select.sh` against a minimal PRD body snapshot containing only
+- Manual smoke: run `doc-review-select.py` against a minimal PRD body snapshot containing only
   `## Requirements` → `design` absent from activation record.
 
 ## Rollout Plan

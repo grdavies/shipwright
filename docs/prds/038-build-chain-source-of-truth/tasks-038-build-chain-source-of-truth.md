@@ -27,7 +27,7 @@ Generated from frozen PRD spec union (R1–R16). Phases follow Rollout Plan.
   - **Expected:** every GAP-032 core-only artifact (e.g. `pr-test-plan.manifest.json`, `capability-index.json`) in allowlist or `.sw/` (R4)
   - **R-IDs:** R4
 - [ ] 1.4 Add SoT lint + orphan fail-closed fixtures
-  - **File:** `scripts/build-chain-sot-lint.sh`, `scripts/test/run-build-chain-sot-fixtures.sh`
+  - **File:** `scripts/build-chain-sot-lint.py`, `scripts/test/run-build-chain-sot-fixtures.sh`
   - **Expected:** `build-chain-sot-lint` + `copy-to-core-orphan-fail-closed` pass (R12, R3)
   - **R-IDs:** R12
 
@@ -48,13 +48,13 @@ Generated from frozen PRD spec union (R1–R16). Phases follow Rollout Plan.
 
 ### 3. Unified sync entrypoint + operator docs — M
 
-- [ ] 3.1 Implement `build-chain-sync.sh`
-  - **File:** `scripts/build-chain-sync.sh`
+- [ ] 3.1 Implement `build-chain-sync.py`
+  - **File:** `scripts/build-chain-sync.py`
   - **Expected:** runs `copy-to-core` → `sw generate --all` → golden re-snapshot when dist changes (R7, D6); idempotent fixture (R8)
   - **R-IDs:** R7, R8
 - [ ] 3.2 Document build-chain SoT map
   - **File:** `.sw/layout.md`, `docs/guides/workflows.md`
-  - **Expected:** SoT table/diagram; repo trees vs plugin install path (R1, R10); `build-chain-sync.sh` usage (R7)
+  - **Expected:** SoT table/diagram; repo trees vs plugin install path (R1, R10); `build-chain-sync.py` usage (R7)
   - **R-IDs:** R1, R7, R10
 - [ ] 3.3 Propagate scripts to core/dist
   - **File:** `core/scripts/`, `dist/**` via `copy-to-core` + emitter
@@ -72,8 +72,8 @@ Generated from frozen PRD spec union (R1–R16). Phases follow Rollout Plan.
   - **Expected:** both rows `resolved — PRD 038` after merge (R11)
   - **R-IDs:** R11
 - [ ] 4.3 Optional deliver advisory hook
-  - **File:** `scripts/check-gate.sh` or deliver docs (advisory only)
-  - **Expected:** when `scripts/**` touched, notice suggests `build-chain-sync.sh` — no hard block (R15)
+  - **File:** `scripts/check-gate.py` or deliver docs (advisory only)
+  - **Expected:** when `scripts/**` touched, notice suggests `build-chain-sync.py` — no hard block (R15)
   - **R-IDs:** R15
 
 ## Phase Dependencies
@@ -95,7 +95,7 @@ Generated from frozen PRD spec union (R1–R16). Phases follow Rollout Plan.
 | R4 | 1.3, 1.2 | manifest replaces ad-hoc excludes |
 | R5 | 2.1, 2.3 | `ci-yml-includes-core-scripts-parity` |
 | R6 | 2.2, 2.3 | `verify-test-registers-core-scripts-parity` |
-| R7 | 3.1, 3.2 | `build-chain-sync.sh` runs full chain |
+| R7 | 3.1, 3.2 | `build-chain-sync.py` runs full chain |
 | R8 | 3.1 | `build-chain-sync-idempotent` |
 | R9 | 4.1 | resync clears `host_github.sh` drift |
 | R10 | 3.2 | layout plugin-install vs repo trees |
@@ -116,7 +116,7 @@ Generated from frozen PRD spec union (R1–R16). Phases follow Rollout Plan.
 
 - `core/sw-reference/build-chain-sot.json` — SoT manifest + allowlist
 - `scripts/copy-to-core.sh` — orphan fail-closed sync
-- `scripts/build-chain-sync.sh` — unified entrypoint
+- `scripts/build-chain-sync.py` — unified entrypoint
 - `scripts/test/run-core-scripts-parity-fixtures.sh` — existing parity gate
 - `.github/workflows/ci.yml` — CI wiring
 - `.sw/layout.md` — operator SoT map

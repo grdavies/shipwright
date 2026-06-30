@@ -66,7 +66,7 @@ table row numbers. When appending, use the next ID: **`GAP-075`**.
 | GAP-037 | resolved | — | Dangling phase-mode PRs recur — TWO distinct non-close modes confirmed ( |
 | GAP-038 | resolved | — | No spec-mutation safety when a PRD/task list is being implemented in ano |
 | GAP-039 | scheduled | PRD 024 A2 | `core/hooks/before_task_dispatch.py` validates bound reviewer / native- |
-| GAP-040 | scheduled | PRD 024 A2 | `resolve-model-tier.sh` returns different tiers for `--command` vs `--ag |
+| GAP-040 | scheduled | PRD 024 A2 | `resolve-model-tier.py` returns different tiers for `--command` vs `--ag |
 | GAP-041 | scheduled | PRD 035 A1 | Terminal `retrospective` pause after all waves — `all_phases_merged` vs |
 | GAP-042 | scheduled | PRD 035 A1 | Phase `status.json` path edge case recurs — background dispatch + relati |
 | GAP-043 | scheduled | PRD 035 A2 | Backlog status feedback loop not mechanical — `planned` rows stay stale |
@@ -83,7 +83,7 @@ table row numbers. When appending, use the next ID: **`GAP-075`**.
 | GAP-054 | scheduled | PRD 035 A1 | `scripts/`↔`core/scripts/` parity wired into CI + verify.test; one-shot resync cleared latent drift |
 | GAP-055 | scheduled | PRD 033 A1 (post-merge finalize guard; R33–R35) | Post-merge completion-state bypass disables `finalize-if-merged` and cascades to manual `reconcile` on `main` (PRD 036) — **absorbed by PRD 033 A1 (R33–R35)** |
 | GAP-056 | scheduled | PRD 033 A3 (operator worktree contract) | Repo-root `.cursor/` writes during deliver look like `main` mutations — intentional canonical state vs cwd/isolation bugs (PRD 036) |
-| GAP-057 | scheduled | PRD 035 A1 | No sanctioned post-merge refresh path for an already-merged frozen task list when an amendment adds requirements — `check-frozen.sh` blocked it (PRD 013's pre-merge refresh worked only because the task list was an added file). Bridged by two scoped `check-frozen.sh` exceptions (format-normalization-only; amendment-companion task-list); durable design (re-freeze contract + PRD 031 tokenizer) deferred |
+| GAP-057 | scheduled | PRD 035 A1 | No sanctioned post-merge refresh path for an already-merged frozen task list when an amendment adds requirements — `check-frozen.py` blocked it (PRD 013's pre-merge refresh worked only because the task list was an added file). Bridged by two scoped `check-frozen.py` exceptions (format-normalization-only; amendment-companion task-list); durable design (re-freeze contract + PRD 031 tokenizer) deferred |
 | GAP-058 | scheduled | PRD 035 A1 | PRD 033 deliver: conductor ends turn on `awaitAgent: true` instead of same-turn `deliver-loop` re-invoke (R13 recurrence) |
 | GAP-059 | scheduled | PRD 035 A1 | PRD 033 deliver: parallel waves 6+7 golden-manifest / generated CI workflow conflict — union fixture jobs + regen on integration |
 | GAP-060 | scheduled | PRD 035 A1 | PRD 033 deliver: `currentWave` past `plan.waves.length` → empty batch + `await-in-flight` stall |
@@ -92,7 +92,7 @@ table row numbers. When appending, use the next ID: **`GAP-075`**.
 | GAP-063 | resolved | — | PRD 033 deliver: orchestrator `.cursor/sw-deliver-state.*.json` stale vs repo-root canonical state before terminal steps |
 | GAP-064 | scheduled | PRD 035 A1 | PRD 033 deliver: `wave_terminal.py` terminal PR create `fail()` TypeError + commitlint reject on uppercase `PRD` in title |
 | GAP-065 | scheduled | PRD 033 A1 (`terminalPr.number` squash detection; R29) | PRD 033 deliver: post-merge `finalize-if-merged` squash not detected via git ancestry — needs `terminalPr.number` / host signal |
-| GAP-066 | scheduled | PRD 033 A1 (refuse bare `reconcile` on `main`; R31) | PRD 033 deliver: `finalize-if-merged` triggered full `reconcile-status.sh reconcile` on `main`, regressing INDEX (PR #207 partial) |
+| GAP-066 | scheduled | PRD 033 A1 (refuse bare `reconcile` on `main`; R31) | PRD 033 deliver: `finalize-if-merged` triggered full `reconcile-status.py reconcile` on `main`, regressing INDEX (PR #207 partial) |
 | GAP-067 | scheduled | PRD 033 A1 (living-doc commits off default branch) | PRD 033 deliver: local `main` dirty — in-loop living-doc commit + unstaged full-reconcile on primary checkout |
 | GAP-068 | scheduled | PRD 035 A1 | PRD 033 deliver: `living-docs reconcile --commit` / legacy projection wiped hand-maintained INDEX + GAP-BACKLOG |
 | GAP-069 | resolved | — | PRD 033 deliver: untracked `.cursor/planning-legacy-projection-stamp.json` after projection run — gitignore (PR #208) |

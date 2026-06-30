@@ -37,7 +37,7 @@ No implementation starts until the `doc.afterTasks` boundary.
   - **Expected:** `separableSets` = connected components of intra-phase contention graph via `inject_contention_edges`/`paths_contend` + `expand_generator_contention_paths` + `contention_serialized_defaults`; split proposes smaller units with transitive fan-in/fan-out edge preservation; full pairwise simulation injects mandatory serializing edges; split rejected if contention closure differs from parent.
   - **R-IDs:** R16
 - [ ] 3.2 Advisory block + frozen hygiene
-  - **File:** `scripts/phase-sizing.sh` (`--check-frozen`), `scripts/check-frozen.sh`, `core/skills/spec-rigor/SKILL.md`, `core/sw-reference/layout.md`, `.sw/layout.md`
+  - **File:** `scripts/phase-sizing.sh` (`--check-frozen`), `scripts/check-frozen.py`, `core/skills/spec-rigor/SKILL.md`, `core/sw-reference/layout.md`, `.sw/layout.md`
   - **Expected:** `## Sizing & Split Suggestions` rendered into draft only (with cost estimate); `--check-frozen` print-only/fail-closed on `frozen: true`; `/sw-freeze` strips/flags a stray advisory block from a frozen artifact; layout docs register the block + sizing JSON.
   - **R-IDs:** R16, R30
 
@@ -63,8 +63,8 @@ No implementation starts until the `doc.afterTasks` boundary.
   - **Expected:** `/sw-tasks` requires `## Phase Dependencies` at freeze; deliver docs authoritatively describe the PRD 013 ladder (declared → file-set inference → sequential+notice); no regression to `wave_deliver` behavior.
   - **R-IDs:** R19
 - [ ] 5.3 Redaction of persisted sizing summaries
-  - **File:** `scripts/phase-sizing.sh` (persist path), `scripts/memory-redact.sh` integration
-  - **Expected:** any persisted sizing/split summary routes through `scripts/memory-redact.sh` (fail-closed) before write; `sw-` naming + model-tier floor obeyed.
+  - **File:** `scripts/phase-sizing.sh` (persist path), `scripts/memory-redact.py` integration
+  - **Expected:** any persisted sizing/split summary routes through `scripts/memory-redact.py` (fail-closed) before write; `sw-` naming + model-tier floor obeyed.
   - **R-IDs:** R31
 
 ## Phase Dependencies

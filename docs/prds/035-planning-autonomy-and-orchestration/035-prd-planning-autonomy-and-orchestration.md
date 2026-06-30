@@ -123,7 +123,7 @@ decisions human-gated.
 - **R18** A two-track edit driver classifies an edit as mechanical (batched auto-merge PR / direct-to-trunk
   where permitted) vs substantive (auto-driven docs worktree + PR) using the R11 allowlist (generated
   artifacts only; any `docs/planning/<unit-id>/` path is substantive); it reuses the existing
-  `docs_worktree.sh`/`docs_pr.sh` machinery and adds a net-new `docs-merge.sh` (or `host_lib` merge+checks-
+  `docs_worktree.py`/`docs_pr.sh` machinery and adds a net-new `docs-merge.sh` (or `host_lib` merge+checks-
   wait, since `docs_pr.sh` stops at PR open), the host-API branch-protection probe (R13), and the
   both-region content-hash abort (R14) with fixtures mirroring the merge-queue fixtures.
 - **R19** The autonomy posture is the `planning.autonomy` config key (`maintenance-only` default |
@@ -147,7 +147,7 @@ decisions human-gated.
 
 ## Security & Compliance
 
-- **R22** Pull-in and amendment proposals route external/context payloads through `memory-redact.sh` and
+- **R22** Pull-in and amendment proposals route external/context payloads through `memory-redact.py` and
   embed them only in fenced untrusted blocks; the proposal step never forwards raw transcripts or provider
   memory payloads, and private-unit bodies/opaque titles are filtered by the visibility resolver (R4).
 - **R23** `full-conductor` opt-in, any `--override`, `--accept-frozen-impact`, and direct-to-trunk are

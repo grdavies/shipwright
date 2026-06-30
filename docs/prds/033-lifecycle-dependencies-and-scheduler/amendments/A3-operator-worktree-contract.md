@@ -61,7 +61,7 @@ skew) without re-specifying all of PRD 013.
 - **R39** A fail-closed **in-flight cwd guard** MUST refuse (exit non-zero with remediation) when a
   work-performing surface runs from the primary checkout on `defaultBaseBranch` while a deliver run for the
   repo is `verdict: running` (read from repo-root canonical state index). Surfaces (minimum): `wave_living_docs`
-  `--commit`, `reconcile-status.sh reconcile`, `/sw-retrospective` write paths, and `wave_deliver_loop` manual
+  `--commit`, `reconcile-status.py reconcile`, `/sw-retrospective` write paths, and `wave_deliver_loop` manual
   living-doc reconcile suggestions. Extends A1 R31 (reconciler default-branch refuse) to **operator command
   entry**, not only the reconciler script.
 - **R40** Before `retrospective`, `terminal-ship`, or `all-phases-complete`, deliver MUST
@@ -82,7 +82,7 @@ skew) without re-specifying all of PRD 013.
   `deliver-cwd-guard-blocks-main-living-doc`.
 - **TR-A3-2** (R40) Extend `wave_state.py` / `wave_deliver_loop.py` with `sync_canonical_state_read()` and skew
   threshold check before terminal actions; fixture: `terminal-reads-repo-root-state-from-orchestrator-cwd`.
-- **TR-A3-3** (R41) Extend `ship-phase-status.sh` / phase dispatch env to require `SW_REPO_ROOT` and perform
+- **TR-A3-3** (R41) Extend `ship-phase-status.py` / phase dispatch env to require `SW_REPO_ROOT` and perform
   repo-root mirror write; fixture: `phase-status-repo-root-mirror`.
 - **TR-A3-4** (R37–R38, R42) Doc-currency fixtures for layout + conductor/deliver skills; register
   `deliver-worktree-contract` in `pr-test-plan.manifest.json`.

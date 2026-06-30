@@ -59,10 +59,10 @@ receives only clarifying edits.
 ### Always-committed snapshot + freeze/CI contract
 
 - **R4** Regardless of SoT, a **redacted committed snapshot** of each frozen decision record MUST exist under
-  `docs/decisions/` (frontmatter + body), so `check-frozen.sh`, `git worktree` propagation, and PR review work
+  `docs/decisions/` (frontmatter + body), so `check-frozen.py`, `git worktree` propagation, and PR review work
   without provider access. Under memory-SoT the snapshot MUST be marked non-authoritative (pointer to the
   provider record).
-- **R5** The freeze/CI contract MUST remain auditable, not transactional: `/sw-freeze` and `check-frozen.sh` MUST
+- **R5** The freeze/CI contract MUST remain auditable, not transactional: `/sw-freeze` and `check-frozen.py` MUST
   NOT require the provider to be reachable and MUST operate on the committed snapshot. A provider write of the
   authoritative record (memory-SoT) MUST be best-effort with a recorded audit breadcrumb, never a CI gate.
 
@@ -87,7 +87,7 @@ receives only clarifying edits.
 ### Safety + migration + cross-cutting
 
 - **R10** Redaction (R41), the rule-class human gate (R42), and the trust boundary (R43) MUST hold identically in
-  both modes; a provider write of decision content MUST pass `scripts/memory-redact.sh` first. A provider outage
+  both modes; a provider write of decision content MUST pass `scripts/memory-redact.py` first. A provider outage
   MUST degrade to the committed snapshot with a warning and MUST NOT block the workflow.
 - **R11** Switching an existing repo from repo-SoT to memory-SoT MUST be an explicit operator action with a
   one-time `/sw-memory-audit` reconcile; the default (`auto` + in-repo) MUST produce no behavior change.
@@ -97,16 +97,16 @@ receives only clarifying edits.
 
 ## Technical Requirements
 
-- **TR1 — SoT resolver.** Add a resolution helper (e.g. `scripts/memory-sot.sh` or a `memory-preflight` step)
+- **TR1 — SoT resolver.** Add a resolution helper (e.g. `scripts/memory-sot.py` or a `memory-preflight` step)
   that reads `memory.sourceOfTruth` + provider class and returns the authoritative side for the `decision` class
   (`repo` | `memory`); single-sourced for freeze, compound, and audit (R1, R2, R3).
 - **TR2 — Snapshot writer.** `/sw-freeze` (decision path) MUST always write/refresh the redacted committed
   snapshot under `docs/decisions/` via the redaction chokepoint, stamping `authoritative: repo|memory` and a
   forward pointer under memory-SoT (R4, R6, R10).
-- **TR3 — Freeze/CI offline-safe.** `check-frozen.sh` + `/sw-freeze` operate only on the committed snapshot and
+- **TR3 — Freeze/CI offline-safe.** `check-frozen.py` + `/sw-freeze` operate only on the committed snapshot and
   never call the provider; the memory-SoT provider write is a best-effort post-stamp step that records an audit
   breadcrumb (R5).
-- **TR4 — Pointer inversion + supersede.** `memory-preflight` write recipe + `scripts/reconcile-status.sh` /
+- **TR4 — Pointer inversion + supersede.** `memory-preflight` write recipe + `scripts/reconcile-status.py` /
   `SUPERSEDED.log` handling honor the inverted pointer per SoT; `/sw-memory-sync` reconciles the
   non-authoritative pointer best-effort (R6, R7).
 - **TR5 — Compound SoT branch.** The `/sw-retrospective` decision-write path branches on TR1: pointer under
@@ -123,7 +123,7 @@ receives only clarifying edits.
 ## Security & Compliance
 
 - **Redaction is mode-independent and mandatory.** Every provider write of decision content passes
-  `scripts/memory-redact.sh` (R41) before persist; the committed snapshot is likewise redacted (R4, R10). No raw
+  `scripts/memory-redact.py` (R41) before persist; the committed snapshot is likewise redacted (R4, R10). No raw
   transcript or secret is ever stored on either side.
 - **Trust boundary unchanged (R43).** The provider still holds only project-scoped operational data via
   least-privilege credentials in the environment; making it authoritative for decisions does not grant it new
@@ -146,7 +146,7 @@ freeze suites).
 | `memory-sot-resolve-auto` | `auto` resolves external provider → `memory`, in-repo/none → `repo`; explicit `repo`/`memory` honored; schema accepts the knob | R1, R2 |
 | `memory-sot-decision-scope-only` | the SoT switch applies only to the `decision` class; `learning`/`design` stay distillation-only | R3 |
 | `memory-sot-snapshot-always-committed` | a redacted decision snapshot is committed under `docs/decisions/` in both modes; marked non-authoritative under memory-SoT | R4, R6 |
-| `memory-sot-freeze-offline` | `/sw-freeze` + `check-frozen.sh` pass with the provider unreachable; memory write is best-effort with an audit breadcrumb | R5 |
+| `memory-sot-freeze-offline` | `/sw-freeze` + `check-frozen.py` pass with the provider unreachable; memory write is best-effort with an audit breadcrumb | R5 |
 | `memory-sot-pointer-inversion` | repo-SoT → provider points at git record; memory-SoT → snapshot points at provider record; exactly one authoritative | R6 |
 | `memory-sot-supersede-reconcile` | `SUPERSEDED.log` committed in both modes; `/sw-memory-sync` re-points the non-authoritative side | R7 |
 | `memory-sot-compound-branch` | `/sw-retrospective` stores a pointer under repo-SoT and a content-bearing record under memory-SoT (chokepoint always) | R8 |

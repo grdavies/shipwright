@@ -24,29 +24,29 @@ for ref in "${TASK_REFS[@]}"; do
   sed -i "s/- \[ \] ${ref} /- [x] ${ref} /" "$PHASE_WT/docs/prds/015-memory-source-of-truth/tasks-015-memory-source-of-truth.md"
 done
 
-bash scripts/ship-phase-steps.sh init --phase "$PHASE_SLUG" >/dev/null
-bash scripts/ship-phase-steps.sh advance --step sw-tmp-init --phase "$PHASE_SLUG" >/dev/null
-bash scripts/ship-phase-steps.sh advance --step sw-execute --phase "$PHASE_SLUG" >/dev/null
+python3 scripts/ship-phase-steps.py init --phase "$PHASE_SLUG" >/dev/null
+python3 scripts/ship-phase-steps.py advance --step sw-tmp-init --phase "$PHASE_SLUG" >/dev/null
+python3 scripts/ship-phase-steps.py advance --step sw-execute --phase "$PHASE_SLUG" >/dev/null
 
 bash scripts/test/run-memory-sot-fixtures.sh >/dev/null
-bash scripts/ship-phase-steps.sh advance --step sw-verify --phase "$PHASE_SLUG" >/dev/null
+python3 scripts/ship-phase-steps.py advance --step sw-verify --phase "$PHASE_SLUG" >/dev/null
 
 python3 - <<PY "$RUN_DIR/sw-verify.status.json"
 import json, sys
 json.dump({"exitCode": 0, "status": "pass", "commands": [{"name": "test", "exitCode": 0, "status": "pass"}]}, open(sys.argv[1], "w"), indent=2)
 PY
 chmod 600 "$RUN_DIR/sw-verify.status.json"
-bash scripts/verify-evidence.sh --verify-status "$RUN_DIR/sw-verify.status.json" --pr-context off >/dev/null
-bash scripts/ship-phase-steps.sh advance --step verification-gate --phase "$PHASE_SLUG" >/dev/null
-bash scripts/ship-phase-steps.sh advance --step sw-review --phase "$PHASE_SLUG" >/dev/null
-bash scripts/ship-phase-steps.sh advance --step sw-simplify --phase "$PHASE_SLUG" >/dev/null
-bash scripts/ship-phase-steps.sh advance --step gap-check --phase "$PHASE_SLUG" >/dev/null
+python3 scripts/verify-evidence.py --verify-status "$RUN_DIR/sw-verify.status.json" --pr-context off >/dev/null
+python3 scripts/ship-phase-steps.py advance --step verification-gate --phase "$PHASE_SLUG" >/dev/null
+python3 scripts/ship-phase-steps.py advance --step sw-review --phase "$PHASE_SLUG" >/dev/null
+python3 scripts/ship-phase-steps.py advance --step sw-simplify --phase "$PHASE_SLUG" >/dev/null
+python3 scripts/ship-phase-steps.py advance --step gap-check --phase "$PHASE_SLUG" >/dev/null
 
 git add docs/prds/015-memory-source-of-truth/tasks-015-memory-source-of-truth.md
 if ! git diff --cached --quiet; then
   git commit -m "feat(memory-sot): mark phase ${PHASE_NUM} tasks complete"
 fi
-bash scripts/ship-phase-steps.sh advance --step sw-commit --phase "$PHASE_SLUG" >/dev/null
+python3 scripts/ship-phase-steps.py advance --step sw-commit --phase "$PHASE_SLUG" >/dev/null
 
 git push -u origin HEAD 2>&1 | tail -3
 PR_URL=$(gh pr create --base feat/memory-source-of-truth --head "$(git branch --show-current)" \
@@ -59,19 +59,19 @@ Mark phase ${PHASE_NUM} tasks complete (PRD 015).
 PR_NUM=$(echo "$PR_URL" | grep -oE '[0-9]+$')
 echo "PR=$PR_NUM"
 
-bash scripts/ship-phase-steps.sh advance --step sw-pr --phase "$PHASE_SLUG" >/dev/null
+python3 scripts/ship-phase-steps.py advance --step sw-pr --phase "$PHASE_SLUG" >/dev/null
 for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
   if gh pr checks "$PR_NUM" 2>/dev/null | grep -q pass; then break; fi
   sleep 10
 done
 gh pr checks "$PR_NUM" --watch 2>&1 | tail -5 || true
-bash scripts/ship-phase-steps.sh advance --step sw-watch-ci --phase "$PHASE_SLUG" >/dev/null
-bash scripts/ship-phase-steps.sh advance --step sw-stabilize --phase "$PHASE_SLUG" >/dev/null
+python3 scripts/ship-phase-steps.py advance --step sw-watch-ci --phase "$PHASE_SLUG" >/dev/null
+python3 scripts/ship-phase-steps.py advance --step sw-stabilize --phase "$PHASE_SLUG" >/dev/null
 
 HEAD=$(git rev-parse HEAD)
-bash scripts/ship-phase-status.sh --verdict merge-ready-green --phase "$PHASE_SLUG" --head "$HEAD" --pr "$PR_NUM" --out "$RUN_DIR/status.json" >/dev/null
-bash scripts/ship-phase-steps.sh advance --step sw-ready --phase "$PHASE_SLUG" >/dev/null
-bash scripts/ship-phase-steps.sh advance --step sw-tmp-clean --phase "$PHASE_SLUG" >/dev/null
+python3 scripts/ship-phase-status.py --verdict merge-ready-green --phase "$PHASE_SLUG" --head "$HEAD" --pr "$PR_NUM" --out "$RUN_DIR/status.json" >/dev/null
+python3 scripts/ship-phase-steps.py advance --step sw-ready --phase "$PHASE_SLUG" >/dev/null
+python3 scripts/ship-phase-steps.py advance --step sw-tmp-clean --phase "$PHASE_SLUG" >/dev/null
 
 cd "$ROOT"
 for ref in "${TASK_REFS[@]}"; do

@@ -332,11 +332,13 @@ def write_probe_cache(root: Path, branch: str, entry: dict[str, Any]) -> None:
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
-def gh_available() -> bool:
-    return subprocess.run(["command", "-v", "gh"], capture_output=True).returncode == 0
-
-
 def probe_github_branch_protection(root: Path, branch: str) -> dict[str, Any]:
+    """Probe branch protection via GitHub REST (no GitHub CLI)."""
+    import io
+    from contextlib import redirect_stdout
+
+    from _sw.host_transport import urllib_request
+
     resolved = resolve_provider(root)
     if resolved.get("verdict") != "ok":
         return {
@@ -359,14 +361,7 @@ def probe_github_branch_protection(root: Path, branch: str) -> dict[str, Any]:
             "verdict": "ambiguous",
             "protected": None,
             "route": "pr",
-            "reason": "missing-gh-auth",
-        }
-    if not gh_available():
-        return {
-            "verdict": "ambiguous",
-            "protected": None,
-            "route": "pr",
-            "reason": "gh-missing",
+            "reason": "missing-token",
         }
     remote_url = resolved.get("remoteUrl")
     owner_repo = parse_owner_repo(remote_url if isinstance(remote_url, str) else None)
@@ -378,20 +373,27 @@ def probe_github_branch_protection(root: Path, branch: str) -> dict[str, Any]:
             "reason": "owner-repo-unresolved",
         }
     owner, repo = owner_repo
-    proc = subprocess.run(
-        ["gh", "api", f"repos/{owner}/{repo}/branches/{branch}/protection"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if proc.returncode == 0:
+    host = host_section(load_workflow_config(root))
+    api_base = github_api_base(host)
+    url = f"{api_base}/repos/{owner}/{repo}/branches/{branch}/protection"
+    with redirect_stdout(io.StringIO()):
+        transport = urllib_request(
+            method="GET",
+            url=url,
+            root=root,
+            provider="github",
+            token_env=token_env,
+        )
+    status = int(transport.get("status") or 0)
+    body = str(transport.get("body") or "")
+    if transport.get("verdict") == "ok" and status == 200:
         return {
             "verdict": "ok",
             "protected": True,
             "route": "pr",
             "reason": "branch-protected",
         }
-    if proc.returncode == 404 or "Branch not protected" in (proc.stderr or proc.stdout):
+    if status == 404 or "Branch not protected" in body:
         return {
             "verdict": "ok",
             "protected": False,
@@ -403,7 +405,7 @@ def probe_github_branch_protection(root: Path, branch: str) -> dict[str, Any]:
         "protected": None,
         "route": "pr",
         "reason": "probe-failed",
-        "detail": (proc.stderr or proc.stdout or "").strip()[:200],
+        "detail": body.strip()[:200],
     }
 
 

@@ -20,12 +20,12 @@ frozen_at: 2026-06-25
 | Setup / export / import | `core/commands/pf-setup.md`, `core/commands/pf-memory-export.md`, `core/commands/pf-memory-import.md` |
 | Fixtures | `scripts/test/fixtures/mempalace-rules-stub.sh`, `scripts/test/fixtures/mempalace-*` |
 | Fixture runner | `scripts/test/run-memory-provider-fixtures.sh` |
-| Redaction | `scripts/memory-redact.sh` |
-| Build chain | `python3 -m sw generate --all`, `bash scripts/copy-to-core.sh`, `dist/cursor/`, `dist/claude-code/` |
+| Redaction | `scripts/memory-redact.py` |
+| Build chain | `python3 -m sw generate --all`, `python3 scripts/copy-to-core.py`, `dist/cursor/`, `dist/claude-code/` |
 
 ## Notes
 
-- Effective spec union: parent PRD R1–R38 (`spec-union.sh`).
+- Effective spec union: parent PRD R1–R38 (`spec-union.py`).
 - Two transport paths: agent MCP (`mempalace.md`) and hook CLI (`mempalace-rules.sh`) — design and test independently.
 - Python-API `ruleFetchCommand` recipe is provisional — pin exact enumeration call in task 2.2 against installed MemPalace.
 - `softDelete: false` — inactivate is hard delete; document prominently in adapter (D7).
@@ -109,12 +109,12 @@ frozen_at: 2026-06-25
   - **R-IDs:** R31, R32, R33
 
 - [ ] 5.2 Regenerate dist and sync core mirrors (R1–R4)
-  - **File:** `python3 -m sw generate --all`, `bash scripts/copy-to-core.sh`
+  - **File:** `python3 -m sw generate --all`, `python3 scripts/copy-to-core.py`
   - **Expected:** `dist/cursor/` and `dist/claude-code/` include `mempalace.md`, `mempalace-rules.sh`, hook changes, schema; `core/scripts/` parity maintained
   - **R-IDs:** R1, R4
 
 - [ ] 5.3 Verify full gate fixture suite (R34–R38)
-  - **File:** `bash scripts/test/run-memory-provider-fixtures.sh`
+  - **File:** `python3 scripts/test/run_memory_provider_fixtures.py`
   - **Expected:** all MemPalace fixtures pass; wired in `workflow.config.json` `verify.test`
   - **R-IDs:** R34, R35, R36, R37, R38
 

@@ -10,7 +10,7 @@ capability:
     providerFamily: memory
     adapterId: recallium
     selectionFamily: providers
-    gateRef: check-gate.sh
+    gateRef: check-gate.py
 ---
 
 # Provider adapter: Recallium
@@ -109,7 +109,7 @@ When selected as the `planning.store` **memory** backend, Recallium is **storage
 bodies — it does not alter source-of-truth for decision-class units. Decision paths under
 `docs/planning/decision/` follow the PRD-015 committed snapshot flow; authoritative decision records remain
 at `docs/decisions/<n>-<slug>.md` (repo-SoT) or the provider record (memory-SoT). All body reads/writes pass
-through the provider-agnostic memory adapter and `scripts/memory-redact.sh` — never direct MCP calls from
+through the provider-agnostic memory adapter and `scripts/memory-redact.py` — never direct MCP calls from
 planning-store code.
 
 ## Notes / gotchas

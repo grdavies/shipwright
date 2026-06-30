@@ -7,4 +7,4 @@ scope: project
 links: []
 createdAt: 2026-06-21T14:00:00Z
 ---
-Always run check-gate.sh before claiming CI green.
+Always run check-gate.py before claiming CI green.

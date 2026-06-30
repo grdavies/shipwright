@@ -9,22 +9,22 @@ Phase-scoped commit after `/sw-verify` (and `/sw-review` when configured).
 
 ## Procedure
 
-1. Confirm `/sw-verify` passed and verify status exists (resolve run dir via `scripts/sw-tmp.sh resolve`,
+1. Confirm `/sw-verify` passed and verify status exists (resolve run dir via `scripts/sw-tmp.py resolve`,
    defaulting to `/tmp/sw-verify.status.json` when unset).
-2. **Verification gate** — `Load skills/verification-gate/SKILL.md`; run `scripts/verify-evidence.sh` with
+2. **Verification gate** — `Load skills/verification-gate/SKILL.md`; run `scripts/verify-evidence.py` with
    `--verify-status <resolved>/sw-verify.status.json`, optional `--review-status <resolved>/sw-review.status.json`
    (absent when review disabled), and `--pr-context on` when a PR is open. Policy by `inconclusiveClass`:
    - **`verified`** — proceed.
    - **`missing-required`** — **block** (do not commit).
    - **`no-baseline` / `unattributed`** — require a **logged auditable override** before proceeding (loud
      prompt → user reason → persist record).
-3. **Override record** (when inconclusive is overridden) — append via `scripts/shipwright-state.sh override-add`:
+3. **Override record** (when inconclusive is overridden) — append via `scripts/shipwright-state.py override-add`:
 
    ```bash
-   REASON_REDACTED=$(printf '%s' "$USER_REASON" | bash scripts/memory-redact.sh)
+   REASON_REDACTED=$(printf '%s' "$USER_REASON" | python3 scripts/memory-redact.py)
    WHO=$(git config user.email)
    WHEN=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-   bash scripts/shipwright-state.sh override-add "$(jq -n \
+   python3 scripts/shipwright-state.py override-add "$(Python json -n \
      --arg who "$WHO" --arg when "$WHEN" --arg ic "$INCONCLUSIVE_CLASS" \
      --arg reason "$REASON_REDACTED" --arg vo "inconclusive" \
      '{who:$who,when:$when,verdictOverridden:$vo,inconclusiveClass:$ic,reason:$reason}')"
@@ -32,7 +32,7 @@ Phase-scoped commit after `/sw-verify` (and `/sw-review` when configured).
 
    Emit the same redacted fields in a **commit trailer** (`Verification-Override:`). Any lightweight/trivial
    path writes this same record — no unlogged exception. Override **never** suppresses a red
-   `check-gate.sh`/CI verdict.
+   `check-gate.py`/CI verdict.
 4. Complete `/sw-review` when review is enabled; address actionable findings; re-run the verification gate if
    review or fixes changed the delta materially.
 5. `memory-preflight` checkpoint for durable learnings (redact before store).
@@ -45,11 +45,11 @@ Phase-scoped commit after `/sw-verify` (and `/sw-review` when configured).
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-commit`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-commit`.
 
 ## Guardrails
 
-- Verification gate override is auditable only — cannot suppress red `check-gate.sh`/CI.
+- Verification gate override is auditable only — cannot suppress red `check-gate.py`/CI.
 - Block on `missing-required`; logged decision required on `no-baseline` / `unattributed`.
 - No unrelated dirty-tree files.
 - Never commit `shipwright.json` or `.git/shipwright-memory-sync.json`.

@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+"""Incremental Windows smoke bundle (R45) — native Python."""
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+BUNDLE = (
+    "interpreter-probe.test",
+    "windows-hook-invocation.test",
+    "json-determinism.test",
+)
+
+
+def main() -> int:
+    test_dir = ROOT / "scripts" / "test"
+    for name in BUNDLE:
+        completed = subprocess.run(
+            [sys.executable, str(test_dir / name)],
+            cwd=str(ROOT),
+            check=False,
+        )
+        if completed.returncode != 0:
+            return completed.returncode
+    print("OK  windows-smoke-incremental")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

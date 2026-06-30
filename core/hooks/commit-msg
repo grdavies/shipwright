@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-# Git commit-msg hook — delegates to commit-msg-guard (PRD 026 R25).
-set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-MSG_FILE="${1:?commit message file}"
-exec bash "$ROOT/scripts/commit-msg-guard.sh" validate "$MSG_FILE"

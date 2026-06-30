@@ -35,7 +35,7 @@ Each adapter declares these so commands can degrade gracefully:
 | `tasks` | native task board | use local registry fallback for the phase board |
 | `export` / `import` | neutral interchange | provider swap requires manual re-distillation from raw transcripts |
 | `softDelete` | inactivate vs hard delete | treat modify-inactivate as best effort |
-| `semanticSearch` | vector / embedding search | use keyword + frontmatter filtering (`scripts/in-repo-memory-search.sh` for in-repo) |
+| `semanticSearch` | vector / embedding search | use keyword + frontmatter filtering (`scripts/in-repo-memory-search.py` for in-repo) |
 
 ## Canonical category map (write contract)
 
@@ -77,7 +77,7 @@ repo docs, referenced by pointer, not copied into memory).
 
 ## Redaction chokepoint (R41 — live)
 
-`scripts/memory-redact.sh` is the single deterministic filter every ingestion edge invokes before
+`scripts/memory-redact.py` is the single deterministic filter every ingestion edge invokes before
 `store`, re-injection, or compounding. Same input → same redacted output; offline; no provider calls.
 
 ## Neutral interchange format (export/import)

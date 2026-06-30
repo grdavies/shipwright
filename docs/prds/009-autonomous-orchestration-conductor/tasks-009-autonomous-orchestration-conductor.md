@@ -10,7 +10,7 @@ frozen_at: 2026-06-25
 
 Generated from the frozen PRD `009-prd-autonomous-orchestration-conductor.md` plus amendments
 `amendments/A1-doc-integrity-and-traceability.md` and `amendments/A2-user-docs-refresh.md`
-(effective union R1–R57 via `scripts/spec-union.sh`).
+(effective union R1–R57 via `scripts/spec-union.py`).
 Phases are dependency-ordered: primitive reliability hardening and the per-orchestrator audit land first;
 the conductor contract, autonomous loop, halts/liveness, and parallel dispatch build on top; living-doc
 currency and brainstorm↔PRD traceability harden documentation integrity; the `/sw-deliver` pilot, surface
@@ -153,9 +153,9 @@ documented behavior exists.
   - **Expected:** concurrent phase completion yields exactly one merge; the queue lock acquires atomically;
     phase sub-agents never call `merge run-next`
 - [x] 6.6 Green-gate, no-main-merge, push chokepoint (R22, R23)
-  - **File:** `scripts/wave_merge.py`, `scripts/git-push.sh`
+  - **File:** `scripts/wave_merge.py`, `scripts/git-push.py`
   - **Expected:** a phase merges only when green + review-satisfied; the conductor never merges `main`; all
-    pushes route through `git-push.sh` (no raw `git push`)
+    pushes route through `git-push.py` (no raw `git push`)
 - [x] 6.7 Blast-radius blocking (R24)
   - **File:** `scripts/wave_deliver.py`
   - **Expected:** a blocked phase blocks only its transitive dependents; green siblings continue and may
@@ -178,21 +178,21 @@ documented behavior exists.
 ### 8. Living-doc currency hardening (M)
 
 - [x] 8.1 INDEX status reconcile primitive from merge state (R47)
-  - **File:** `scripts/reconcile-status.sh`, `core/skills/living-status/SKILL.md`
+  - **File:** `scripts/reconcile-status.py`, `core/skills/living-status/SKILL.md`
   - **Expected:** sets `docs/prds/INDEX.md` status from durable run/merge state on the correct PRD row; a
     shipped PRD is never left `not-started`; the status enum (`not-started | in-progress | complete`) is
     single-sourced in `living-status`
 - [x] 8.2 Idempotent COMPLETION-LOG append primitive (R48)
-  - **File:** `scripts/reconcile-status.sh`
+  - **File:** `scripts/reconcile-status.py`
   - **Expected:** a single primitive appends date/PRD/phase/PR/SHA; re-running on resume never
     double-appends and never omits a shipped PRD
 - [x] 8.3 GAP-BACKLOG structured status + resolve-on-absorb (R49)
-  - **File:** `scripts/reconcile-status.sh`, `core/skills/living-status/SKILL.md`, `docs/prds/GAP-BACKLOG.md`
+  - **File:** `scripts/reconcile-status.py`, `core/skills/living-status/SKILL.md`, `docs/prds/GAP-BACKLOG.md`
   - **Expected:** entries carry structured status + resolving PRD/R-IDs; when an absorbing PRD reaches
     `complete` the matching `open` gaps flip to `resolved` with the PRD/PR reference; non-matching gaps
     untouched; file stays hand-appendable for new gaps
 - [x] 8.4 Documentation-currency drift gate (current-run scoped, hard-block) (R50)
-  - **File:** `scripts/docs-currency-gate.sh`, `scripts/wave.sh`
+  - **File:** `scripts/docs-currency-gate.py`, `scripts/wave.sh`
   - **Expected:** before the terminal merge gate, drift in the current run's INDEX row / COMPLETION-LOG
     entry / absorbed gaps hard-blocks until reconciled; pre-existing unrelated historical drift does not block
 - [x] 8.5 Commit living-doc updates in-loop on the feature branch (R51)
@@ -211,11 +211,11 @@ documented behavior exists.
   - **Expected:** an unfrozen source brainstorm gains a forward `prd:` reference (list when multiple); a
     frozen brainstorm is never edited and the PRD back-reference remains authoritative
 - [x] 9.3 Fail-closed frontmatter-traceability gate + layout docs (R54)
-  - **File:** `scripts/doc-link-check.sh`, `.sw/layout.md`
+  - **File:** `scripts/doc-link-check.py`, `.sw/layout.md`
   - **Expected:** dangling/missing `brainstorm:`/`prd:` references fail closed for a Full-tier PRD; gate
     wired into the doc/test suite; layout documents the fields
 - [x] 9.4 `/sw-freeze` verifies PRD↔brainstorm linkage (R55)
-  - **File:** `core/commands/sw-freeze.md`, `scripts/doc-link-check.sh`
+  - **File:** `core/commands/sw-freeze.md`, `scripts/doc-link-check.py`
   - **Expected:** a Full-tier PRD freeze is blocked when the `brainstorm:` back-reference is missing or
     unresolvable
 
@@ -228,7 +228,7 @@ documented behavior exists.
     (INDEX/COMPLETION-LOG/GAP-BACKLOG) behavior, and the brainstorm↔PRD frontmatter fields; complements the
     command-surface descriptions from 7.2 (R36) without duplicating them
 - [x] 10.2 Docs presence check + legacy-reference removal, wired into the gate (R57)
-  - **File:** `scripts/docs-presence-check.sh`, `scripts/wave.sh`
+  - **File:** `scripts/docs-presence-check.py`, `scripts/wave.sh`
   - **Expected:** the check asserts README/guides name the new autonomy/config/living-doc/frontmatter
     surfaces and that no `/pf-*` / `pf-` legacy command references remain in `README.md` or `docs/guides/*`;
     failing-before / passing-after fixtures wired into `verify.test`

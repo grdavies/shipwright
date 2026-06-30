@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+
+from _sw import interpreter
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -310,9 +312,9 @@ def cmd_compound_premerge_env(root: Path, args: list[str], *, domain: str = "ret
         else "/sw-retrospective --pre-merge"
     )
     record_cmd = (
-        "bash scripts/wave.sh compound-ship record-premerge --prd <n> --phase <name>"
+        "bash scripts/wave.py compound-ship record-premerge --prd <n> --phase <name>"
         if domain == "compound-ship"
-        else "bash scripts/wave.sh retrospective record-premerge --prd <n> --phase <name>"
+        else "bash scripts/wave.py retrospective record-premerge --prd <n> --phase <name>"
     )
     emit(
         {
@@ -362,12 +364,8 @@ def cmd_compound_record_premerge(root: Path, args: list[str]) -> None:
     }
     save_state(root, state)
     if not has_flag(args, "--skip-append-log"):
-        script = root / "scripts" / "reconcile-status.sh"
-        subprocess.run(
-            ["bash", str(script), "append-log", prd, phase, notes],
-            cwd=str(root),
-            check=False,
-        )
+        from _sw.completion_log import append_log_idempotent
+        append_log_idempotent(root, prd=prd, phase=phase, notes=notes)
     emit(
         {
             "verdict": "pass",

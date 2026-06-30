@@ -32,7 +32,7 @@ dispatch-context redaction. No deliver-loop behavior change in this phase.
   - **Expected:** knob selects gate behavior; default value wired per DL-9 (`default` gated on Phase-2 live acceptance, else `bind-only`)
   - **R-IDs:** R3
 - [ ] 1.3 Extend `communication.routing` with skills+agents maps, resolver, and sessionStart precedence
-  - **File:** `core/sw-reference/communication-routing.defaults.json`, `.sw/config.schema.json`, `scripts/resolve-intensity.sh`, `guardrail_core` session-context assembly
+  - **File:** `core/sw-reference/communication-routing.defaults.json`, `.sw/config.schema.json`, `scripts/resolve-intensity.py`, `guardrail_core` session-context assembly
   - **Expected:** schema accepts `skills`/`agents`; resolver returns intensity for `--command|--skill|--agent` with command→skill→agent→default precedence; dispatch-bound intensity overrides sessionStart caveman for delegated sub-agents
   - **R-IDs:** R5, R6, R7, R24
 - [ ] 1.4 Bind concrete model on dispatch; keep hook forward-compatible
@@ -40,7 +40,7 @@ dispatch-context redaction. No deliver-loop behavior change in this phase.
   - **Expected:** every delegated `Task` passes an explicit resolved `model:` (no `inherit`); hook stays registered and no-op-tolerant on Cursor (deny works, inject does not)
   - **R-IDs:** R4, R8
 - [ ] 1.5 Generalized dispatch-check with structured cause enum
-  - **File:** `scripts/dispatch-check.sh`; `scripts/reviewer-dispatch-check.sh` (thin wrapper)
+  - **File:** `scripts/dispatch-check.py`; `scripts/reviewer-dispatch-check.py` (thin wrapper)
   - **Expected:** validates resolved model + intensity (`--command|--skill|--agent`); builder floor only for reviewer/persona agents; emits `binding:no-model`/`binding:no-intensity`/`harness:capacity`; `binding:*` halts regardless of retry, only `harness:*` retried
   - **R-IDs:** R9, R10
 - [ ] 1.6 Mechanical pre-`Task` preflight nonce + `preToolUse` deny
@@ -48,12 +48,12 @@ dispatch-context redaction. No deliver-loop behavior change in this phase.
   - **Expected:** preflight records resolved model+intensity+nonce immediately before a bound `Task`; hook denies a bound `Task` spawn lacking a fresh preflight record
   - **R-IDs:** R23
 - [ ] 1.7 `--override` durable audit record
-  - **File:** `scripts/shipwright-state.sh` (`override-add`), `scripts/dispatch-check.sh`
+  - **File:** `scripts/shipwright-state.py` (`override-add`), `scripts/dispatch-check.py`
   - **Expected:** `--override` refused without a durable record capturing actor/timestamp/dispatch-id/skipped-fields written before dispatch; override never bypasses redaction or push/merge chokepoints
   - **R-IDs:** R26
 - [ ] 1.8 Dispatch-context redaction + untrusted-input fencing
-  - **File:** orchestrator dispatch-prompt assembly; `scripts/memory-redact.sh` integration
-  - **Expected:** all non-config context (feedback, Sentry, diffs, run-log excerpts, memory-preflight results) passes `memory-redact.sh` and untrusted blobs are fenced before dispatch; raw transcript/memory payloads never forwarded
+  - **File:** orchestrator dispatch-prompt assembly; `scripts/memory-redact.py` integration
+  - **Expected:** all non-config context (feedback, Sentry, diffs, run-log excerpts, memory-preflight results) passes `memory-redact.py` and untrusted blobs are fenced before dispatch; raw transcript/memory payloads never forwarded
   - **R-IDs:** R25
 
 ### 2. Deliver reliability (hard gate before Phase 3) — L
@@ -70,8 +70,8 @@ on `/sw-deliver`. Phase-2 fixtures plus a supervised live-acceptance run MUST pa
   - **Expected:** conductor spawns ≥2 background Tasks per batch up to `parallelCeiling`; intra-step agents excluded from the ceiling; `collect-all-ready` enqueues simultaneous greens deterministically; a crashed/never-writing background Task → `blocked`, not stuck `in-flight`
   - **R-IDs:** R11, R12, R27
 - [ ] 2.3 Conductor-only merge/lock + phase push chokepoint
-  - **File:** `core/rules/sw-conductor.mdc`, `core/skills/conductor/SKILL.md`, `scripts/git-push.sh` references
-  - **Expected:** phase sub-agents cannot `merge`/`lock acquire`; no raw `git push`; phase pushes route through `scripts/git-push.sh` (secret-scan preserved)
+  - **File:** `core/rules/sw-conductor.mdc`, `core/skills/conductor/SKILL.md`, `scripts/git-push.py` references
+  - **Expected:** phase sub-agents cannot `merge`/`lock acquire`; no raw `git push`; phase pushes route through `scripts/git-push.py` (secret-scan preserved)
   - **R-IDs:** R13
 - [ ] 2.4 Conductor in-turn loop guarantees
   - **File:** `core/skills/conductor/SKILL.md`, `core/rules/sw-conductor.mdc`, `core/commands/sw-deliver.md`; post-turn linter fixture
@@ -160,8 +160,8 @@ Phase-2 hard gate.
 - `core/rules/sw-conductor.mdc`, `core/skills/conductor/SKILL.md` — loop guarantees, parallel dispatch, single source
 - `scripts/wave_deliver_loop.py`, `scripts/wave_merge.py`, `scripts/wave_lifecycle.py` — batch driver, merge, teardown
 - `scripts/wave_failure.py` — `resume_deliver_command()` resume string (R29)
-- `scripts/dispatch-check.sh`, `scripts/reviewer-dispatch-check.sh`, `scripts/wave.sh` (`dispatch preflight`) — enforcement
-- `scripts/resolve-intensity.sh`, `core/sw-reference/communication-routing.defaults.json`, `.sw/config.schema.json` — intensity binding
+- `scripts/dispatch-check.py`, `scripts/reviewer-dispatch-check.py`, `scripts/wave.sh` (`dispatch preflight`) — enforcement
+- `scripts/resolve-intensity.py`, `core/sw-reference/communication-routing.defaults.json`, `.sw/config.schema.json` — intensity binding
 - `core/hooks/before_task_dispatch.py` — forward-compatible model hook + deny gate
 - `core/commands/sw-doc.md`, `sw-ship.md`, `sw-deliver.md`, `sw-debug.md`, `sw-feedback.md` — orchestrator adoption
 - `core/skills/deliver/SKILL.md` — orchestrator restart guidance (R29)

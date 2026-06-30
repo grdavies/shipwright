@@ -108,7 +108,7 @@ Make terminal `status.json` provenance-stamped, validity-checked, and recoverabl
 status; re-verify live host evidence at merge.
 
 - [ ] 4.1 Provenance marker emission (R13)
-  - **File:** `scripts/ship-phase-status.sh`
+  - **File:** `scripts/ship-phase-status.py`
   - **Expected:** deterministic content-hash marker over canonical fields (`verdict`, `phase`, `head`, gate-subset, `shipSteps`-checksum; excluding `writtenAt`); driver rejects status lacking a valid marker
   - **R-IDs:** R13
 - [ ] 4.2 Validity check + live-host-evidence re-verification (R14)
@@ -120,7 +120,7 @@ status; re-verify live host evidence at merge.
   - **Expected:** classify `stuck-stale` only on head-SHA equality across branch tip / PR head / gate-checked SHA / status.json, plus tip quiescence — never on "open PR + green CI on older tip"
   - **R-IDs:** R15
 - [ ] 4.4 Budget-bounded canonical re-emit (R16)
-  - **File:** `scripts/wave_deliver_loop.py`, `scripts/ship-phase-status.sh`
+  - **File:** `scripts/wave_deliver_loop.py`, `scripts/ship-phase-status.py`
   - **Expected:** re-emit re-derives verdict via canonical ship terminal steps; acquires the per-head lease and confirms no in-flight ship before atomic temp-write+rename; changes the state signature (re-emit counter); exhaustion is a legitimate halt
   - **R-IDs:** R16
 - [ ] 4.5 Blessed recovery command (R17)
@@ -169,7 +169,7 @@ Wire all guards into CI, verify no invariant regressions, and confirm the four c
 - `scripts/wave_lock.py` / `scripts/wave.sh` — per-head ship lease.
 - `scripts/wave_failure.py` — remediation routing + consolidated halt.
 - `scripts/wave_deliver.py` / `scripts/planning_paths.py` — plan-time contention edges.
-- `scripts/ship-phase-status.sh` — provenance marker emission + canonical re-emit.
+- `scripts/ship-phase-status.py` — provenance marker emission + canonical re-emit.
 - `core/sw-reference/pr-test-plan.manifest.json` + `.github/workflows/pr-test-plan-ci.yml` — CI registration.
 - `core/commands/`, `core/skills/`, `core/rules/`, `docs/guides/`, `.sw/layout.md` — operator-facing docs (R21).
 

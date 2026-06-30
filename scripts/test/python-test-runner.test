@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+import json, subprocess, sys
+from pathlib import Path
+root = Path(__file__).resolve().parent.parent.parent
+manifest = json.loads((root/'core/sw-reference/pr-test-plan.manifest.json').read_text())
+if not any(str(f.get('script','')).endswith('.py') for f in manifest.get('fixtures',[])):
+    raise SystemExit('FAIL no python fixtures in manifest')
+if list((root/'scripts/test').glob('*.sh')):
+    raise SystemExit('FAIL scripts/test still has .sh harness files')
+proc = subprocess.run([sys.executable, str(root/'scripts/test/_runner.py'), 'list'], shell=False)
+if proc.returncode != 0:
+    raise SystemExit('FAIL runner list')
+print('OK  python-test-runner')

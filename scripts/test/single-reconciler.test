@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+import os, re, subprocess, sys
+from pathlib import Path
+ROOT = Path(__file__).resolve().parent.parent.parent
+env = os.environ.copy(); env["ROOT"]=str(ROOT); env["PYTHONPATH"]=str(ROOT/"scripts")
+_src = """#!/usr/bin/env bash
+# Single reconciler surface covers PRD INDEX + planning INDEX (PRD 042 R22).
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+FAIL=0
+ok() { echo "OK  $1"; }
+bad() { echo "FAIL $1"; FAIL=1; }
+
+# PRD INDEX derive returns expected shape without jq
+if python3 "$ROOT/scripts/reconcile.py" derive 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert 'prds' in d and 'deliverRuns' in d
+assert isinstance(d['prds'], list)
+print('ok')
+"; then ok "prd-index-derive-shape"; else bad "prd-index-derive-shape"; fi
+
+# planning reconcile dry-run via unified surface
+if python3 "$ROOT/scripts/reconcile.py" planning-reconcile --dry-run 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('verdict') in ('pass','dry-run',None) or 'derived' in d or 'verdict' in d
+print('ok')
+"; then ok "planning-index-reconcile-route"; else bad "planning-index-reconcile-route"; fi
+
+# shared helper import
+if python3 -c "
+from reconcile_lib import parse_prd_index, read_config
+from pathlib import Path
+rows=parse_prd_index(Path('$ROOT/docs/prds/INDEX.md'))
+assert isinstance(rows, list)
+"; then ok "shared-reconcile-helpers"; else bad "shared-reconcile-helpers"; fi
+
+exit "$FAIL"
+"""
+src = _src.replace("#!/usr/bin/env bash", "").replace("set -euo pipefail", "")
+src = re.sub(r'ROOT="[^"]*"', 'ROOT="' + str(ROOT) + '"', src, count=1)
+src = src.replace('.sh"', '.py"').replace('bash "', 'python3 "')
+rc = subprocess.run(["bash", "-c", src], cwd=str(ROOT), env=env, shell=False).returncode
+if rc == 0:
+    print("OK  single-reconciler")
+raise SystemExit(rc or 0)

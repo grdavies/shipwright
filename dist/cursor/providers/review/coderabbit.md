@@ -10,12 +10,12 @@ capability:
     providerFamily: review
     adapterId: coderabbit
     selectionFamily: providers
-    gateRef: check-gate.sh
+    gateRef: check-gate.py
 ---
 
 # CodeRabbit review adapter (agent-mediated)
 
-Markdown companion to `coderabbit.sh` (gate path). Route local review via `/sw-review`; gate per-head state via
+Markdown companion to `coderabbit.py` (gate path). Route local review via `/sw-review`; gate per-head state via
 the executable adapter.
 
 ## Per-head signals (gate)
@@ -34,6 +34,6 @@ Stage new untracked files before review (`git add`). Credentials from env — ne
 ## Findings harvest (stabilize)
 
 - Inline: GraphQL `reviewThreads` (paginate).
-- Non-inline: `gh api repos/<owner>/<repo>/pulls/<n>/reviews` + issue comments (walkthrough/summary bodies).
+- Non-inline: `host transport repos/<owner>/<repo>/pulls/<n>/reviews` + issue comments (walkthrough/summary bodies).
 
 Normalize to `CAPABILITIES.md` findings shape before stabilize RCA input.

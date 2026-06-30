@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""Windows hook launcher smoke (R40) — native Python, no bash/WSL."""
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+def main() -> int:
+    scripts = ROOT / "scripts"
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(scripts)
+    tmpdir = Path(tempfile.mkdtemp())
+    try:
+        violation = tmpdir / "violation.py"
+        violation.write_text("import sys\nsys.exit(1)\n", encoding="utf-8")
+        launcher = scripts / "_sw" / "hook_launcher.py"
+        completed = subprocess.run(
+            [sys.executable, str(launcher), str(violation)],
+            cwd=str(ROOT),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        if completed.returncode != 1:
+            print(f"FAIL hook_launcher exit expected 1 got {completed.returncode}")
+            if completed.stdout:
+                print(completed.stdout)
+            if completed.stderr:
+                print(completed.stderr, file=sys.stderr)
+            return 1
+        if not (ROOT / "hooks" / "launcher.cmd").is_file():
+            print("FAIL missing hooks/launcher.cmd")
+            return 1
+        print("OK  windows-hook-invocation")
+        return 0
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -34,7 +34,7 @@ Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** c
 - **Dry-run:** `scripts/wave.sh plan --task-list <path> --dry-run` — plan JSON only, no artifact write.
 
 **Autonomy (PRD 009):** default `deliver.autonomy.mode: autonomous` — conductor in-turn loop to terminal
-gate. **Legitimate halts** only (see [`configuration.md`](configuration.md)). Parallel phases when the
+gate. **Legitimate halt** (`legitimate.halt`) only (see [`configuration.md`](configuration.md)). Parallel phases when the
 plan allows; outcomes from durable `status.json` only.
 
 **Living-doc currency:** INDEX / COMPLETION-LOG / gap-index reconcile in-loop (legacy GAP-BACKLOG projection read-only); `docs-currency` blocks
@@ -53,17 +53,17 @@ chat. Default `orchestration.planPolicy: canonical` preserves today's behavior; 
 the `/sw-deliver` pilot (TR0 gate, per-run acknowledgement, non-`main` target).
 
 ```bash
-bash scripts/wave.sh plan benefit-report --pairs scripts/test/fixtures/benefit-metric/positive-pairs.json
+python3 scripts/wave.sh plan benefit-report --pairs scripts/test/fixtures/benefit-metric/positive-pairs.json
 ```
 
 ```bash
-bash scripts/wave.sh plan validate --tier phase --phase-type ship --proposal <path|json>
-bash scripts/wave.sh plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
+python3 scripts/wave.sh plan validate --tier phase --phase-type ship --proposal <path|json>
+python3 scripts/wave.sh plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
 ```
 
 Call-site map: [`call-site-map.md`](../prds/022-kernel-classification-and-plan-validation/call-site-map.md).
 
-**Push safety:** workflow pushes route through `scripts/git-push.sh` → `scripts/secret-scan.sh`
+**Push safety:** workflow pushes route through `scripts/git-push.py` → `scripts/secret-scan.py`
 before `git push` (including `sw-pr` and stabilize re-pushes).
 
 ### Planning surface (PRD 035)
@@ -72,12 +72,12 @@ Extends `/sw-doc` — no `/sw-plan` command.
 
 | Surface | Command / script |
 | --- | --- |
-| Pull-in at PRD creation | `/sw-prd` → `planning-related.sh scan --mode creation` + confirm-list |
-| Backlog re-scan at tasks | `/sw-tasks` → `planning-related.sh scan --mode tasks-rescan` |
-| Mechanical reconciler | `bash scripts/planning-graph.sh reconcile` |
+| Pull-in at PRD creation | `/sw-prd` → `planning-related.py scan --mode creation` + confirm-list |
+| Backlog re-scan at tasks | `/sw-tasks` → `planning-related.py scan --mode tasks-rescan` |
+| Mechanical reconciler | `python3 scripts/planning-graph.sh reconcile` |
 | Scheduler | `/sw-deliver next` |
 | Autonomy posture | `planning.autonomy` (`maintenance-only` default \| `full-conductor`) |
-| Two-track doc edits | `scripts/docs-edit-route.sh` → mechanical `docs-merge.sh` or substantive docs worktree + PR |
+| Two-track doc edits | `scripts/docs-edit-route.py` → mechanical `docs-merge.sh` or substantive docs worktree + PR |
 | Gap capture from feedback | `/sw-feedback` → `planning_gap_capture.py` (not legacy `GAP-BACKLOG.md`) |
 
 See [`core/commands/sw-doc.md`](../../core/commands/sw-doc.md) **Planning command surface** and
@@ -120,7 +120,7 @@ debugging one phase, or when you deliberately skip the orchestrator.
 | [`/sw-review`](../../core/commands/sw-review.md) | Local then provider code review (`review.provider`; default **`none`**) |
 | [`/sw-commit`](../../core/commands/sw-commit.md) | Commit after verify + review |
 | [`/sw-pr`](../../core/commands/sw-pr.md) | Push and open/update PR |
-| [`/sw-watch-ci`](../../core/commands/sw-watch-ci.md) | Poll PR checks via `check-gate.sh` |
+| [`/sw-watch-ci`](../../core/commands/sw-watch-ci.md) | Poll PR checks via `check-gate.py` |
 | [`/sw-stabilize`](../../core/commands/sw-stabilize.md) | Clear CI + review blockers |
 | [`/sw-ready`](../../core/commands/sw-ready.md) | Terminal readiness report; echoes `review: off` or `review: not configured` from gate JSON |
 
@@ -172,5 +172,5 @@ See [Getting started](getting-started.md) for boundary modes and worktree rules.
 | `/sw-doc` | **`consistency-only` default** | Canonical path + doc-review halts; proposed pack deferred unless probe shows latitude |
 | `/sw-feedback` | `full` episodic | Untrusted-signal halts; `.cursor/sw-feedback-runs/` scratch |
 
-Fixtures: `bash scripts/test/run-fanout-fixtures.sh`; A2 binding: `bash scripts/test/run-dispatch-foundation-fixtures.sh`.
+Fixtures: `python3 scripts/test/run-fanout-fixtures.sh`; A2 binding: `python3 scripts/test/run-dispatch-foundation-fixtures.sh`.
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -71,9 +72,10 @@ def fetch_rules(
     env["PYTHONPATH"] = os.pathsep.join(
         [str(plugin_root), env.get("PYTHONPATH", "")]
     ).strip(os.pathsep)
+    cmd = [sys.executable, str(script)] if script.suffix == ".py" else ["bash", str(script)]
     try:
         proc = subprocess.run(
-            ["bash", str(script)],
+            cmd,
             capture_output=True,
             text=True,
             timeout=5,

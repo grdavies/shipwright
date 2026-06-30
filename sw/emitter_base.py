@@ -98,6 +98,10 @@ class EmitterBase(ABC):
                     continue
                 if path.suffix in EXCLUDE_SUFFIXES:
                     continue
+                if path.suffix == ".sh" and dirname == "providers":
+                    py_sibling = path.with_suffix(".py")
+                    if py_sibling.is_file():
+                        continue
                 if dirname == "scripts" and parts and parts[0] == "test":
                     continue
                 out_path = dest / out_rel

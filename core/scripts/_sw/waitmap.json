@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "description": "Authoritative external-wait call-site map (R16). Fixed sleep banned on these paths.",
+  "sites": [
+    {
+      "id": "ci-checks-settling",
+      "module": "watch_ci_lib.py",
+      "mechanism": "poll_until"
+    },
+    {
+      "id": "phase-status-appearance",
+      "module": "wave_deliver_loop.py",
+      "mechanism": "poll_until"
+    },
+    {
+      "id": "lock-acquisition",
+      "module": "wave_lock.py",
+      "mechanism": "poll_until"
+    },
+    {
+      "id": "pr-mergeable-state",
+      "module": "host_lib.py",
+      "mechanism": "poll_until"
+    },
+    {
+      "id": "parallel-wave-batch",
+      "module": "wave_deliver_loop.py",
+      "mechanism": "poll_until"
+    },
+    {
+      "id": "host-api-rate-limit",
+      "module": "host_ratelimit.py",
+      "mechanism": "poll_until"
+    }
+  ],
+  "notify_on_output": {
+    "source": "checks.watch",
+    "pollSeconds": "checks.watch.pollSeconds",
+    "maxWaitMinutes": "checks.watch.maxWaitMinutes"
+  }
+}
