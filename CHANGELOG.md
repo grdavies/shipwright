@@ -153,6 +153,7 @@
 * merge phase autonomy-posture-bounded-full-conductor-l into feat/planning-feedback-lifecycle (e3ee6c1) <!-- sw-deliver:autonomy-posture-bounded-full-conductor-l -->
 * merge phase planning-command-surface-finalization-s into feat/planning-feedback-lifecycle (76635f9) <!-- sw-deliver:planning-command-surface-finalization-s -->
 * merge phase emitter-dist-parity-s into feat/planning-feedback-lifecycle (d0c1e33) <!-- sw-deliver:emitter-dist-parity-s -->
+* merge phase doc-impact-acceptance-no-regression-m into feat/planning-feedback-lifecycle (18ae610) <!-- sw-deliver:doc-impact-acceptance-no-regression-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
