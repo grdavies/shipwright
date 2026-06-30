@@ -162,6 +162,7 @@
 * merge phase dispatch-binding-scaffolding-parallel-preflight-command-authoritative-tier-a2-m into feat/orchestrator-plan-policy-adoption (ef9423d) <!-- sw-deliver:dispatch-binding-scaffolding-parallel-preflight-command-authoritative-tier-a2-m -->
 * merge phase signal-context-capture-state-isolation-episodic-model-m into feat/orchestrator-plan-policy-adoption (9c9dcf5) <!-- sw-deliver:signal-context-capture-state-isolation-episodic-model-m -->
 * merge phase signal-context-capture-state-isolation-episodic-model-m into feat/orchestrator-plan-policy-adoption (fa96971) <!-- sw-deliver:signal-context-capture-state-isolation-episodic-model-m -->
+* merge phase sw-debug-adoption-wire-only-episodic-m into feat/orchestrator-plan-policy-adoption (1bbd560) <!-- sw-deliver:sw-debug-adoption-wire-only-episodic-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
