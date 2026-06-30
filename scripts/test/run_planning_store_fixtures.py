@@ -248,6 +248,124 @@ fi
 rm -f "$ROOT/$MARKER"
 rm -rf "$ROOT/.cursor/sw-memory/planning-bodies" 2>/dev/null || true
 
+# --- issue-store-artifact-crud (PRD 043 Phase 2) ---
+export SW_ISSUES_FIXTURE=1
+ISSUE_CFG="$TMP/issue-store.config.json"
+python3 - <<PY
+import json
+from pathlib import Path
+Path("$ISSUE_CFG").write_text(json.dumps({
+  "version": 1,
+  "planning": {"store": {
+    "backend": "issue-store",
+    "issuesProvider": "github-issues",
+    "projectKey": "fixture-alpha",
+  }},
+}, indent=2) + "\n")
+PY
+cp "$ISSUE_CFG" "$ROOT/.cursor/workflow.config.json"
+python3 "$PY" --root "$ROOT" clear-issue-fixture >/dev/null
+PRD_BODY='# fixture prd'
+if OUT=$(python3 "$PY" --root "$ROOT" put --backend issue-store --unit-id fixture-prd --body-path docs/prds/099-fixture/099-prd-fixture.md --content "$PRD_BODY") && \
+   echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d['backend']=='issue-store'"; then
+  ok "issue-store-artifact-crud:put-prd"
+else
+  bad "issue-store-artifact-crud:put-prd"
+fi
+if [[ ! -f "$ROOT/docs/prds/099-fixture/099-prd-fixture.md" ]]; then
+  ok "issue-store-zero-stub:no-repo-file"
+else
+  bad "issue-store-zero-stub:no-repo-file"
+fi
+if OUT=$(python3 "$PY" --root "$ROOT" get --backend issue-store --unit-id fixture-prd --body-path docs/prds/099-fixture/099-prd-fixture.md) && \
+   echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['content']=='# fixture prd'"; then
+  ok "issue-store-artifact-crud:get-roundtrip"
+else
+  bad "issue-store-artifact-crud:get-roundtrip"
+fi
+
+# --- issue-store-isolation (R11/R12) ---
+python3 - <<PY
+import json
+from pathlib import Path
+Path("$ROOT/.cursor/workflow.config.json").write_text(json.dumps({
+  "version": 1,
+  "planning": {"store": {
+    "backend": "issue-store",
+    "issuesProvider": "github-issues",
+    "projectKey": "fixture-beta",
+  }},
+}, indent=2) + "\n")
+PY
+if OUT=$(python3 "$PY" --root "$ROOT" put --backend issue-store --unit-id spoof --body-path docs/prds/099-fixture/099-prd-spoof.md --content '# spoof' 2>/dev/null); then
+  ok "issue-store-isolation:beta-write"
+else
+  bad "issue-store-isolation:beta-write"
+fi
+cp "$ISSUE_CFG" "$ROOT/.cursor/workflow.config.json"
+if OUT=$(python3 "$PY" --root "$ROOT" get --backend issue-store --unit-id spoof --body-path docs/prds/099-fixture/099-prd-spoof.md 2>/dev/null || true); then
+  if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('verdict')=='missing'"; then
+    ok "issue-store-isolation:cross-project-read-blocked"
+  else
+    bad "issue-store-isolation:cross-project-read-blocked"
+  fi
+fi
+
+# --- canonical-hash-golden (R35) ---
+for fx in github-prd-open gitlab-prd-open github-tasks-chunked; do
+  FPATH="$ROOT/scripts/tests/fixtures/canonical/${fx}.json"
+  if OUT=$(python3 "$PY" --root "$ROOT" canonical-hash --fixture "$FPATH") && \
+     echo "$OUT" | python3 -c "import json,sys,pathlib; d=json.load(sys.stdin); exp=json.loads(pathlib.Path(sys.argv[1]).read_text())['expectedHash']; assert d['hash']==exp" "$FPATH"; then
+    ok "canonical-hash-golden:${fx}"
+  else
+    bad "canonical-hash-golden:${fx}"
+  fi
+done
+GH=$(python3 -c "import json; print(json.load(open('$ROOT/scripts/tests/fixtures/canonical/github-prd-open.json'))['expectedHash'])")
+GL=$(python3 -c "import json; print(json.load(open('$ROOT/scripts/tests/fixtures/canonical/gitlab-prd-open.json'))['expectedHash'])")
+if [[ "$GH" == "$GL" ]]; then
+  ok "canonical-hash-golden:cross-provider-parity"
+else
+  bad "canonical-hash-golden:cross-provider-parity"
+fi
+
+# --- brainstorm-durability-link (R18) ---
+python3 "$PY" --root "$ROOT" clear-issue-fixture >/dev/null
+cp "$ISSUE_CFG" "$ROOT/.cursor/workflow.config.json"
+python3 "$PY" --root "$ROOT" put --backend issue-store --unit-id bs-fixture --body-path docs/brainstorms/2026-06-30-fixture-requirements.md --content '# brainstorm' >/dev/null
+if OUT=$(python3 "$PY" --root "$ROOT" link-brainstorm-prd --brainstorm-unit bs-fixture --prd-unit fixture-prd) && \
+   echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='ok'"; then
+  ok "brainstorm-durability:link-prd"
+else
+  bad "brainstorm-durability:link-prd"
+fi
+
+# --- revision-conflict (R36) ---
+python3 "$PY" --root "$ROOT" clear-issue-fixture >/dev/null
+cp "$ISSUE_CFG" "$ROOT/.cursor/workflow.config.json"
+python3 "$PY" --root "$ROOT" put --backend issue-store --unit-id rev --body-path docs/prds/099-fixture/099-prd-rev.md --content v1 >/dev/null
+if python3 - <<INNER
+import sys
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+from issues_lib import FixtureIssuesStore, IssueRevisionConflict
+store = FixtureIssuesStore(Path("$ROOT/.cursor/hooks/state/issue-store-fixture.json"))
+issue_id = next(iter(store._issues))
+try:
+    store.update(issue_id, body="v2", if_match="stale-etag-from-checkpoint")
+except IssueRevisionConflict:
+    raise SystemExit(0)
+raise SystemExit(1)
+INNER
+then
+  ok "revision-conflict:fail-closed"
+else
+  bad "revision-conflict:should-fail"
+fi
+
+python3 "$PY" --root "$ROOT" clear-issue-fixture >/dev/null
+unset SW_ISSUES_FIXTURE
+
 exit $FAIL
 
 """

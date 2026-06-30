@@ -52,3 +52,14 @@ Selected when `planning.store.issuesProvider` is `gitlab-issues` (independent of
 Token from `planning.store.issues.tokenEnv` (default `ISSUES_GITLAB_TOKEN`). Minimum scope: `api`.
 Never stored in config.
 
+
+## Phase 2 artifact CRUD (PRD 043)
+
+Planning artifacts (PRD/gap/tasks/brainstorm) are created via `issue-create` with:
+
+- Title: `[<projectKey>] <type>:<unitId>`
+- Labels: `sw:project:<key>` + `sw:<type>`
+- Body: canonical markers + markdown + optional `sw-edges` block
+
+Mutations use `issue-update` with `If-Match` / etag preconditions (R36). Hermetic CI uses
+`SW_ISSUES_FIXTURE=1` — no live API calls.

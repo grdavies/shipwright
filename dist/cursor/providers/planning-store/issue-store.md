@@ -67,3 +67,32 @@ Effective backend falls back to `in-repo-public` when:
 
 Fallback emits a notice and never blocks work.
 
+
+
+## Phase 2 — artifact CRUD (R6–R12, R18, R29, R35–R36, R47)
+
+When `issue-store` is the effective backend (no fallback), `put`/`get`/`exists`/`materialize` route to
+issues — **no planning stub files** are written under `docs/` in the code repo (R7). Runtime indices live
+under `.cursor/hooks/state/` only.
+
+| Artifact | Type marker | Label |
+| --- | --- | --- |
+| PRD | `sw:prd` | `sw:project:<key>` |
+| Gap | `sw:gap` | `sw:project:<key>` |
+| Task list | `sw:tasks` | `sw:project:<key>` |
+| Brainstorm | `sw:brainstorm` | `sw:project:<key>` |
+
+Decision-class artifacts remain file-native (D8) — not routed to issue-store.
+
+### Hermetic fixtures
+
+Set `SW_ISSUES_FIXTURE=1` for in-memory issue adapter (CI). Clear with
+`python3 scripts/planning_store.py clear-issue-fixture`.
+
+### Concurrency (R36)
+
+Mutations require matching `etag` preconditions; conflicts return `revision-conflict` (fail-closed).
+
+### Canonical hash CLI
+
+`python3 scripts/planning_store.py canonical-hash --fixture <path>`
