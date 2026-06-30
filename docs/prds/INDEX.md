@@ -44,6 +44,11 @@
 | 040 | phase-granularity-parallelism | [040-prd-phase-granularity-parallelism.md](040-phase-granularity-parallelism/040-prd-phase-granularity-parallelism.md) (frozen) | [tasks](040-phase-granularity-parallelism/tasks-040-phase-granularity-parallelism.md) (frozen) | not-started |
 | 041 | self-improving-loop | [041-prd-self-improving-loop.md](041-self-improving-loop/041-prd-self-improving-loop.md) (frozen) | [tasks](041-self-improving-loop/tasks-041-self-improving-loop.md) (frozen) | not-started |
 | 042 | cross-platform-python-standardization | [042-prd-cross-platform-python-standardization.md](042-cross-platform-python-standardization/042-prd-cross-platform-python-standardization.md) (frozen) | [tasks](042-cross-platform-python-standardization/tasks-042-cross-platform-python-standardization.md) (frozen) | in-progress |
+| 043 | issue-backed-planning-store | [043-prd-issue-backed-planning-store.md](043-issue-backed-planning-store/043-prd-issue-backed-planning-store.md) (frozen) | — | not-started |
+| 044 | issue-store-migration | [044-prd-issue-store-migration.md](044-issue-store-migration/044-prd-issue-store-migration.md) (frozen) | — | not-started |
+| 045 | issue-native-dev-tracking | [045-prd-issue-native-dev-tracking.md](045-issue-native-dev-tracking/045-prd-issue-native-dev-tracking.md) (frozen) | — | not-started |
+| 046 | issue-store-planning-graph | [046-prd-issue-store-planning-graph.md](046-issue-store-planning-graph/046-prd-issue-store-planning-graph.md) (frozen) | — | not-started |
+| 047 | jira-issue-store-adapter | [047-prd-jira-issue-store-adapter.md](047-jira-issue-store-adapter/047-prd-jira-issue-store-adapter.md) (frozen) | — | not-started |
 
 ## Supersession notes (025, 028–030)
 
