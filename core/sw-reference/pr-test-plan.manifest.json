@@ -590,9 +590,7 @@
         "enqueue-handoff-no-nested-dispatch",
         "autonomy-actions-logged-durable"
       ]
-    }
-  ],
-  "jobs": [
+    },
     {
       "id": "planning-command-surface-fixtures",
       "script": "scripts/test/run-planning-command-surface-fixtures.sh",
