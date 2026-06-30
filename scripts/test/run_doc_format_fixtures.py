@@ -190,7 +190,7 @@ rm -rf "$TMPW"
 
 # --- consumers-tokenizer-only (R12) ---
 CONSUMER_OK=1
-for f in spec-union.sh spec-rigor-check.sh traceability-check.sh wave_deliver.py; do
+for f in spec-union.py spec-rigor-check.py traceability-check.py wave_deliver.py; do
   if ! grep -q 'doc_format' "$ROOT/scripts/$f"; then
     echo "missing doc_format in $f"
     CONSUMER_OK=0

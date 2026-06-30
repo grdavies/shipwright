@@ -134,6 +134,23 @@ def active_worktree_count() -> int:
     return count
 
 
+def _validate_branch_name(branch: str) -> bool:
+    """Refuse non-conforming branch names (PRD 007 R23/R27) via worktree_lib.py."""
+    guard_proc = subprocess.run(
+        [sys.executable, str(SCRIPT_DIR / "branch-name-guard.py"), "validate", branch],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    wlib_proc = subprocess.run(
+        [sys.executable, str(SCRIPT_DIR / "worktree_lib.py"), "validate", branch],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return guard_proc.returncode == 0 and wlib_proc.returncode == 0
+
+
 def ceiling_check(start: Path | None = None) -> int:
     root = repo_root(start)
     cfg: dict = {}

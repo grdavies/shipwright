@@ -116,13 +116,13 @@ rm -rf "$TMP"
 # --- two-track-driver-classify-route ---
 TMP=$(mktemp -d)
 seed_repo "$TMP"
-if OUT=$(bash "$ROUTE" route --path docs/prds/SUPERSEDED.md --dry-run 2>/dev/null) && \
+if OUT=$(python3 "$ROUTE" route --path docs/prds/SUPERSEDED.md --dry-run 2>/dev/null) && \
    echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['track']=='mechanical', d"; then
   ok "two-track-driver-classify-route:mechanical"
 else
   bad "two-track-driver-classify-route:mechanical"
 fi
-if OUT=$(bash "$ROUTE" route --path docs/planning/gap/gap-045-parser-parity/gap-045-parser-parity.md --topic gap-edit --dry-run 2>/dev/null) && \
+if OUT=$(python3 "$ROUTE" route --path docs/planning/gap/gap-045-parser-parity/gap-045-parser-parity.md --topic gap-edit --dry-run 2>/dev/null) && \
    echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['track']=='substantive' and d['worktree']['dry_run']==True, d"; then
   ok "two-track-driver-classify-route:substantive"
 else
@@ -133,7 +133,7 @@ rm -rf "$TMP"
 # --- mechanical-batched-auto-merge ---
 TMP=$(mktemp -d)
 seed_repo "$TMP"
-if OUT=$(bash "$MERGE" open --dry-run 2>/dev/null) && \
+if OUT=$(python3 "$MERGE" open --dry-run 2>/dev/null) && \
    echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('dry_run') and d.get('hash'), d"; then
   ok "mechanical-batched-auto-merge"
 else
@@ -144,7 +144,7 @@ rm -rf "$TMP"
 # --- substantive-auto-driven-pr ---
 TMP=$(mktemp -d)
 seed_repo "$TMP"
-if OUT=$(bash "$ROUTE" route-substantive --topic my-doc-topic --dry-run 2>/dev/null) && \
+if OUT=$(python3 "$ROUTE" route-substantive --topic my-doc-topic --dry-run 2>/dev/null) && \
    echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['track']=='substantive' and d['pr']['dry_run']==True, d"; then
   ok "substantive-auto-driven-pr"
 else
@@ -181,7 +181,7 @@ text = text.split(start, 1)[0] + start + "\n" + body + end + text.split(end, 1)[
 idx.write_text(text)
 PY
 EC=0
-bash "$MERGE" merge-if-ready --hash "$OPEN_HASH" >/dev/null 2>&1 || EC=$?
+python3 "$MERGE" merge-if-ready --hash "$OPEN_HASH" >/dev/null 2>&1 || EC=$?
 if [[ "$EC" -ne 0 ]]; then
   ok "both-region-content-hash-abort"
 else

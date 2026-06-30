@@ -82,7 +82,7 @@ if bash "$GUARD" validate pf/bad-name >/dev/null 2>&1 \
 else
   bad "branch-name-guard-reject"
 fi
-if grep -q 'worktree_lib.py' "$ROOT/scripts/worktree.sh"; then
+if grep -q 'worktree_lib.py' "$ROOT/scripts/worktree.py"; then
   ok "branch-name-guard-reject:worktree-wired"
 else
   bad "branch-name-guard-reject:worktree-wired"
