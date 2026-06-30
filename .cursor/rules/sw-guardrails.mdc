@@ -10,5 +10,5 @@ the `beforeSubmitPrompt` hook (`before-submit-guardrails.py`).
 
 - Route memory ops through `memory-preflight` / `providers/<memory.provider>.md` — never call Recallium directly.
 - Never store raw transcripts or secrets in memory.
-- CI readiness: run `scripts/check-gate.sh` — never hand-roll a green verdict.
+- CI readiness: run `scripts/check-gate.py` — never hand-roll a green verdict.
 - `sw-` commands only for this plugin's workflow surface.

@@ -71,7 +71,7 @@ While `verdict: running`:
 
 ## Push and merge boundaries (R13, R23, R41)
 
-- Never raw `git push` — use `scripts/git-push.sh` (R23).
+- Never raw `git push` — use `scripts/git-push.py` (R23).
 - Never merge to `main` from the conductor (R22).
 - Phase sub-agents never call `merge enqueue`, `merge run-next`, or `lock acquire` (R41).
 - Only the conductor acquires locks and runs the merge queue.

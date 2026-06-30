@@ -362,7 +362,7 @@ def cmd_compound_record_premerge(root: Path, args: list[str]) -> None:
     }
     save_state(root, state)
     if not has_flag(args, "--skip-append-log"):
-        script = root / "scripts" / "reconcile-status.sh"
+        script = root / "scripts" / "reconcile-status.py"
         subprocess.run(
             ["bash", str(script), "append-log", prd, phase, notes],
             cwd=str(root),

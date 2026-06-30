@@ -3,9 +3,9 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODEL_RESOLVER="$ROOT/scripts/resolve-model-tier.sh"
-INTENSITY_RESOLVER="$ROOT/scripts/resolve-intensity.sh"
-STATE_TOOL="$ROOT/scripts/shipwright-state.sh"
+MODEL_RESOLVER="$ROOT/scripts/resolve-model-tier.py"
+INTENSITY_RESOLVER="$ROOT/scripts/resolve-intensity.py"
+STATE_TOOL="$ROOT/scripts/shipwright-state.py"
 
 AGENT=""
 COMMAND=""
@@ -19,7 +19,7 @@ SIMULATE_CAPACITY=0
 usage() {
   cat <<'EOF'
 Usage:
-  dispatch-check.sh --agent <id> [--command <sw-*>] [--skill <name>] --parent-model <concrete-model-id>
+  dispatch-check.py --agent <id> [--command <sw-*>] [--skill <name>] --parent-model <concrete-model-id>
                     [--dispatch-id <id>] [--override] [--config <path>] [--simulate-capacity]
 
 Exit 0: pass
@@ -91,7 +91,7 @@ print(json.dumps({
     "command": sys.argv[2] or None,
     "skill": sys.argv[3] or None,
     "retryable": False,
-    "remediation": f"resolve and stamp a concrete model before Task dispatch: bash scripts/resolve-model-tier.sh --agent {sys.argv[1]}",
+    "remediation": f"resolve and stamp a concrete model before Task dispatch: python3 scripts/resolve-model-tier.py --agent {sys.argv[1]}",
 }))
 PY
   exit 20
@@ -136,7 +136,7 @@ for rec in records:
 raise SystemExit(1)
 PY
   then
-    echo '{"verdict":"fail","cause":"binding:no-override-audit","retryable":false,"remediation":"record durable override first: bash scripts/shipwright-state.sh dispatch-override-add ..."}'
+    echo '{"verdict":"fail","cause":"binding:no-override-audit","retryable":false,"remediation":"record durable override first: python3 scripts/shipwright-state.py dispatch-override-add ..."}'
     exit 20
   fi
 fi

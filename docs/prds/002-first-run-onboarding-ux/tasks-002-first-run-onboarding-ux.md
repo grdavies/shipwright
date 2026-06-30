@@ -18,8 +18,8 @@ frozen_at: 2026-06-24
 | Area | Canonical paths |
 |------|-----------------|
 | Schema / examples | `.sw/config.schema.json`, `.sw/workflow.config.example.json` |
-| Gate | `scripts/check-gate.sh`, `providers/review/CAPABILITIES.md` |
-| Worktree guard | `scripts/sw-assert-worktree.sh` (new) |
+| Gate | `scripts/check-gate.py`, `providers/review/CAPABILITIES.md` |
+| Worktree guard | `scripts/sw-assert-worktree.py` (new) |
 | Orchestrators | `commands/sw-doc.md`, `commands/sw-tasks.md`, `commands/sw-ship.md`, `commands/sw-setup.md`, `commands/sw-review.md` |
 | Skills | `skills/tasks/SKILL.md` |
 | Rules | `rules/sw-naming.mdc` |
@@ -42,8 +42,8 @@ frozen_at: 2026-06-24
   - **Expected:** schema default `none`; `review.enabled` description marked deprecated; config-schema fixture passes
   - **R-IDs:** R11, R13, R18
 
-- [x] 1.3 Update `check-gate.sh` fallback, state rename, and honest reasons (R12, R20, R21, R28)
-  - **File:** `scripts/check-gate.sh`, `providers/review/CAPABILITIES.md`
+- [x] 1.3 Update `check-gate.py` fallback, state rename, and honest reasons (R12, R20, R21, R28)
+  - **File:** `scripts/check-gate.py`, `providers/review/CAPABILITIES.md`
   - **Expected:** fallback `none`; never-configured → `unconfigured` (not "review landed"); explicit opt-out → `off`; green-reason switch updated; `run-gate-fixtures.sh` passes with `state=off`
   - **R-IDs:** R12, R20, R21, R28
 
@@ -53,14 +53,14 @@ frozen_at: 2026-06-24
   - **R-IDs:** R20, R21, R28
 
 - [x] 1.5 Deprecation warning off stdout JSON contract (R17, R22)
-  - **File:** `scripts/check-gate.sh`, `commands/sw-setup.md`
+  - **File:** `scripts/check-gate.py`, `commands/sw-setup.md`
   - **Expected:** `review.enabled:false` keeps stdout valid single-object JSON; warning on stderr and/or `deprecations[]` and/or `/sw-setup` doctor; migration fixture passes
   - **R-IDs:** R17, R22
 
 ### 2. Deterministic worktree guard (S)
 
-- [x] 2.1 Implement `sw-assert-worktree.sh` fail-closed guard (R6, R27)
-  - **File:** `scripts/sw-assert-worktree.sh` (new)
+- [x] 2.1 Implement `sw-assert-worktree.py` fail-closed guard (R6, R27)
+  - **File:** `scripts/sw-assert-worktree.py` (new)
   - **Expected:** aborts when `HEAD` is default branch with no active worktree gitdir; allows hotfix/release on-main paths; exit 0 on valid worktree
   - **R-IDs:** R6, R27
 
@@ -105,7 +105,7 @@ frozen_at: 2026-06-24
 
 - [x] 4.5 Wire worktree guard into implementation entry (R6, R27)
   - **File:** `commands/sw-execute.md`, `commands/sw-start.md` (or hook integration point)
-  - **Expected:** `sw-assert-worktree.sh` invoked before implementation writes; fails closed on bare `main`
+  - **Expected:** `sw-assert-worktree.py` invoked before implementation writes; fails closed on bare `main`
   - **R-IDs:** R6, R27
 
 ### 5. `/sw-setup` + review command docs (S)

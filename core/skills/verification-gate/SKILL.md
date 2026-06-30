@@ -15,11 +15,11 @@ capability:
 # verification-gate
 
 Reusable local verification gate (IM1). Consumes **structured** evidence pointers — not raw `/tmp` logs.
-Complementary to `skills/checks-gate` (CI truth via `scripts/check-gate.sh`); never overrides a red/green
+Complementary to `skills/checks-gate` (CI truth via `scripts/check-gate.py`); never overrides a red/green
 gate verdict.
 
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --skill verification-gate`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill verification-gate`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Three-state contract
 
@@ -43,11 +43,11 @@ gate verdict.
 
 | Source | Path (default) | Required? |
 | --- | --- | --- |
-| Verify aggregate | `$RUN_DIR/sw-verify.status.json` (`sw-tmp.sh resolve`, else `/tmp`) | **Yes** — emitted by `/sw-verify` |
+| Verify aggregate | `$RUN_DIR/sw-verify.status.json` (`sw-tmp.py resolve`, else `/tmp`) | **Yes** — emitted by `/sw-verify` |
 | Gate JSON | caller-supplied | **When PR context** (`--pr-context on/auto` or `--require-gate`) |
 | Review status | `$RUN_DIR/sw-review.status.json` | **Optional** — absent-aware (review-disabled repos still reach `verified`) |
 
-Producers write into the private run dir (`scripts/sw-tmp.sh init` at ship start; mode `0700`, files `600`).
+Producers write into the private run dir (`scripts/sw-tmp.py init` at ship start; mode `0700`, files `600`).
 `safe_read` rejects symlinks, foreign-owned, or group/world-writable evidence files.
 
 ### Verify status shape
@@ -66,10 +66,10 @@ Producers write into the private run dir (`scripts/sw-tmp.sh init` at ship start
 
 Same as verify status. When the file is absent, review evidence is treated as `absent` (not a blocker).
 
-## Canonical computation — `scripts/verify-evidence.sh`
+## Canonical computation — `scripts/verify-evidence.py`
 
 ```bash
-python3 scripts/verify-evidence.sh \
+python3 scripts/verify-evidence.py \
   --verify-status "$RUN_DIR/sw-verify.status.json" \
   [--gate-json /path/to/gate.json --require-gate] \
   [--pr-context on|off|auto] \
@@ -91,7 +91,7 @@ Capture baseline **before** the change (merge base or pre-change head) at a **ca
 (longer-lived than the per-run dir):
 
 ```bash
-python3 scripts/verify-baseline.sh capture \
+python3 scripts/verify-baseline.py capture \
   --from "$RUN_DIR/sw-verify.status.json" \
   --to .shipwright/baseline.verify.json \
   [--gate-from gate.json --gate-to .shipwright/baseline.gate.json]
@@ -109,11 +109,11 @@ Rejected baseline reads → `missing-required`, never silent downgrade.
 
 ### Override record
 
-Append via `scripts/shipwright-state.sh override-add` (never shallow `write` — it clobbers `overrides[]`):
+Append via `scripts/shipwright-state.py override-add` (never shallow `write` — it clobbers `overrides[]`):
 
 `{who: git user.email, when: ISO-8601, verdictOverridden, inconclusiveClass, reason}` — `reason` redacted via
-`scripts/memory-redact.sh`; duplicate fields in commit trailer `Verification-Override:`. Override never
-suppresses red `check-gate.sh`/CI.
+`scripts/memory-redact.py`; duplicate fields in commit trailer `Verification-Override:`. Override never
+suppresses red `check-gate.py`/CI.
 
 ## Reuse points
 
@@ -122,7 +122,7 @@ suppresses red `check-gate.sh`/CI.
 
 ## Guardrails
 
-- Never override `scripts/check-gate.sh` — advisory at merge gate; blocking only on fresh `not-verified` at pre-CI boundary.
-- **`verify-unconfigured`** (R28) — `scripts/verify-unconfigured.sh` classifies vacuous verify (`echo`, `:`, `true`, empty). Hard-blocks under `SW_PHASE_MODE` / `/sw-deliver` unless `verify.allowUnconfigured: true`. CTA: run `/sw-init`.
-- Redact any persisted evidence summary via `scripts/memory-redact.sh` (R41) before memory store.
+- Never override `scripts/check-gate.py` — advisory at merge gate; blocking only on fresh `not-verified` at pre-CI boundary.
+- **`verify-unconfigured`** (R28) — `scripts/verify-unconfigured.py` classifies vacuous verify (`echo`, `:`, `true`, empty). Hard-blocks under `SW_PHASE_MODE` / `/sw-deliver` unless `verify.allowUnconfigured: true`. CTA: run `/sw-init`.
+- Redact any persisted evidence summary via `scripts/memory-redact.py` (R41) before memory store.
 - Deterministic: same inputs → identical verdict JSON (document env/state as inputs when using `--pr-context auto`).

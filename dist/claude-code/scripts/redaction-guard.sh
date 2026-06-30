@@ -3,7 +3,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: redaction-guard.sh check-command -- <git args...>" >&2
+  echo "usage: redaction-guard.py check-command -- <git args...>" >&2
   exit 2
 }
 

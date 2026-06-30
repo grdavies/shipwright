@@ -17,7 +17,7 @@ PLUGIN_ROOT = SCRIPT_DIR.parent
 def plugin_scripts(root: Path) -> Path:
     """Harness scripts live at plugin root; fall back when repo root lacks scripts/."""
     candidate = root / "scripts"
-    if (candidate / "memory-sot.sh").is_file():
+    if (candidate / "memory-sot.py").is_file():
         return candidate
     return PLUGIN_ROOT / "scripts"
 
@@ -45,7 +45,7 @@ def git_root(start: Path) -> Path:
 def resolve_sot(root: Path) -> dict:
     scripts = plugin_scripts(root)
     proc = subprocess.run(
-        ["bash", str(scripts / "memory-sot.sh"), "resolve", "--class", "decision", "--json"],
+        ["bash", str(scripts / "memory-sot.py"), "resolve", "--class", "decision", "--json"],
         cwd=str(root),
         text=True,
         capture_output=True,
@@ -64,7 +64,7 @@ def resolve_sot(root: Path) -> dict:
 def redact_text(root: Path, text: str) -> str:
     scripts = plugin_scripts(root)
     proc = subprocess.run(
-        ["bash", str(scripts / "memory-redact.sh")],
+        ["bash", str(scripts / "memory-redact.py")],
         input=text,
         text=True,
         capture_output=True,

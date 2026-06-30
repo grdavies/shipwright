@@ -21,4 +21,4 @@ capability:
 
 # Code-review specialist — comment-accuracy
 
-Signal-gated native panel specialist (parity with `code-review-select.sh`).
+Signal-gated native panel specialist (parity with `code-review-select.py`).

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Unified build-chain sync: copy-to-core → generate --all → golden re-snapshot when dist changes (PRD 038 R7).
 #
-# Usage: scripts/build-chain-sync.sh [--check]
+# Usage: scripts/build-chain-sync.py [--check]
 #   --check  verify parity only (no mutations); exit 20 on drift (R25).
 # Exit: 0 on success; non-zero on any step failure.
 set -euo pipefail
@@ -28,7 +28,7 @@ fi
 
 if [[ "$CHECK_ONLY" -eq 1 ]]; then
   FAIL=0
-  bash "$ROOT/scripts/build-chain-sot-lint.sh" >/dev/null 2>&1 || FAIL=1
+  bash "$ROOT/scripts/build-chain-sot-lint.py" >/dev/null 2>&1 || FAIL=1
   bash "$ROOT/scripts/test/run-core-scripts-parity-fixtures.sh" >/dev/null 2>&1 || FAIL=1
   bash "$ROOT/scripts/test/run-parity-fixtures.sh" >/dev/null 2>&1 || FAIL=1
   BEFORE="$(dist_hash)"
@@ -53,7 +53,7 @@ python3 -m sw generate --all
 
 AFTER="$(dist_hash)"
 if [ "$BEFORE" != "$AFTER" ]; then
-  bash "$ROOT/scripts/snapshot-tree.sh" "$GOLDEN"
+  bash "$ROOT/scripts/snapshot-tree.py" "$GOLDEN"
   echo "build-chain-sync: dist changed — updated $GOLDEN"
 fi
 

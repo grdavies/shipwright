@@ -14,7 +14,7 @@ capability:
 # Verify E2E / smoke adapter capabilities (IM9 / U10)
 
 Provider-style smoke/E2E verification. Selected by `verifyE2e.provider` in `workflow.config.json`.
-Invoked by `scripts/verify-e2e.sh` during `/sw-verify` — runs **only when enabled**.
+Invoked by `scripts/verify-e2e.py` during `/sw-verify` — runs **only when enabled**.
 
 ## Config
 

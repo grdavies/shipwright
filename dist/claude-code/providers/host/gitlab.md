@@ -10,7 +10,7 @@ capability:
     providerFamily: host
     adapterId: gitlab
     selectionFamily: providers
-    gateRef: check-gate.sh
+    gateRef: check-gate.py
 ---
 
 # GitLab host adapter

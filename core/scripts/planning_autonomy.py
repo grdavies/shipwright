@@ -67,7 +67,7 @@ ALLOWED_HANDOFF_PREFIXES = (
     "/sw-tasks",
     "/sw-amend",
     "bash scripts/planning-graph.sh reconcile",
-    "bash scripts/planning-related.sh",
+    "python3 scripts/planning-related.py",
 )
 BUDGET_HALT_EXIT = 31
 NESTED_DISPATCH_EXIT = 32
@@ -255,7 +255,7 @@ def log_autonomy_action(
     state["actionLog"] = log[-100:]
     save_state(root, state)
     proc = subprocess.run(
-        ["bash", str(SCRIPT_DIR / "shipwright-state.sh"), "override-add", json.dumps(entry)],
+        ["bash", str(SCRIPT_DIR / "shipwright-state.py"), "override-add", json.dumps(entry)],
         cwd=str(pp.git_root(root)),
         capture_output=True,
         text=True,

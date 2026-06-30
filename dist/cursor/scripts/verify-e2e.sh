@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # E2E/smoke verify adapter selector (IM9 / U10). Modelled on check-gate review adapter seam.
 #
-# Usage: verify-e2e.sh [--config PATH]
+# Usage: verify-e2e.py [--config PATH]
 # Prints adapter JSON to stdout; exit code mirrors adapter exitCode (skipped → 0).
 set -euo pipefail
 
-# shellcheck source=sw-resolve-plugin-root.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sw-resolve-plugin-root.sh"
+# shellcheck source=sw-resolve-plugin-root.py
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sw-resolve-plugin-root.py"
 PLUGIN_ROOT="$(sw_resolve_plugin_root "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 CONFIG=""
@@ -15,7 +15,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --config) CONFIG="${2:-}"; shift 2 ;;
     -h|--help)
-      echo "usage: verify-e2e.sh [--config PATH]" >&2
+      echo "usage: verify-e2e.py [--config PATH]" >&2
       exit 0
       ;;
     *) echo '{"status":"failed","reason":"unknown argument"}' >&2; exit 2 ;;

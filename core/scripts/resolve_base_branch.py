@@ -147,7 +147,7 @@ def entry_guard(root: Path, *, explicit_base: str | None) -> None:
             "detached HEAD — checkout a branch or pass --base <branch>",
             exit_code=20,
             halt="detached-head",
-            remediation="git checkout <trunk-branch>  # or: bash scripts/resolve-base-branch.sh capture --base <branch>",
+            remediation="git checkout <trunk-branch>  # or: python3 scripts/resolve-base-branch.py capture --base <branch>",
         )
     branch, _ = current_head(root)
     if branch and is_shipwright_work_branch(branch) and not explicit_base:
@@ -156,8 +156,8 @@ def entry_guard(root: Path, *, explicit_base: str | None) -> None:
             exit_code=20,
             halt="work-branch-head",
             remediation=(
-                f"git checkout $(bash scripts/resolve-base-branch.sh resolve --quiet --name-only) "
-                f"&& bash scripts/resolve-base-branch.sh capture"
+                f"git checkout $(python3 scripts/resolve-base-branch.py resolve --quiet --name-only) "
+                f"&& python3 scripts/resolve-base-branch.py capture"
             ),
             currentBranch=branch,
         )
@@ -233,7 +233,7 @@ def load_persisted_trunk(root: Path) -> dict[str, Any]:
             "persisted base missing or corrupt — re-enter from trunk branch or pass --base",
             exit_code=20,
             halt="needs-base-replay",
-            remediation="git checkout <trunk> && bash scripts/resolve-base-branch.sh capture",
+            remediation="git checkout <trunk> && python3 scripts/resolve-base-branch.py capture",
         )
     return trunk
 

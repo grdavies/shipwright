@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shared safe evidence file/dir reads (plan 005 U4).
-# Source from verify-evidence.sh, simplify-gate.sh, feedback-closure-gate.sh.
+# Source from verify-evidence.py, simplify-gate.py, feedback-closure-gate.py.
 set -euo pipefail
 
 stat_uid() {

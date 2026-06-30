@@ -29,7 +29,7 @@ verdict via the local degradation helper instead of polling host CI:
 python3 scripts/watch_ci_lib.py --root "$(git rev-parse --show-toplevel)"
 ```
 
-The helper runs `check-gate.sh` in local-evidence mode (`source: local-evidence`, `mode: degraded-local`)
+The helper runs `check-gate.py` in local-evidence mode (`source: local-evidence`, `mode: degraded-local`)
 and reports `ciWatch: false`. Do not busy-poll a missing host API.
 
 ## Procedure
@@ -50,7 +50,7 @@ printf '%s\n' "$PR_JSON"
    counted only already-posted inline comments and missed a re-review that had not posted yet). Run:
 
 ```bash
-GATE="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/plugins/local/shipwright}/scripts/check-gate.sh"
+GATE="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/plugins/local/shipwright}/scripts/check-gate.py"
 bash "$GATE" > /tmp/sw-watch-ci-gate.json
 cat /tmp/sw-watch-ci-gate.json
 ```
@@ -107,13 +107,13 @@ Per the `checks-gate` skill:
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-watch-ci`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-watch-ci`.
 
 ## Guardrails
 
 - Watch the PR tied to the current branch only.
 - Evaluate **all** checks under the configured policy — a failing non-required job blocks readiness.
-- Use `scripts/check-gate.sh` for the verdict; never substitute a hand-rolled proxy (e.g.
+- Use `scripts/check-gate.py` for the verdict; never substitute a hand-rolled proxy (e.g.
   a comment-count proxy — that shortcut can't see a not-yet-posted re-review and is what
   produced a false `green`. Trust the script's `verdict`: `green` ⟺ `coderabbitLanded == true` (reviewed,
   skipped, or absent). Do not re-gate on `coderabbitReviewedCurrentHead`.

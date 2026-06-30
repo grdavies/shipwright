@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Normalize ce-code-review mode:agent JSON to providers/code-review/CAPABILITIES.md contract.
 #
-# Usage: code-review-normalize.sh --input PATH [--repo-root PATH]
+# Usage: code-review-normalize.py --input PATH [--repo-root PATH]
 # Exit 0 on success; 1 on malformed input (emits fail-closed skip JSON on stdout).
 set -euo pipefail
 
@@ -9,7 +9,7 @@ INPUT=""
 REPO_ROOT="${PWD}"
 
 usage() {
-  echo "Usage: code-review-normalize.sh --input PATH [--repo-root PATH]" >&2
+  echo "Usage: code-review-normalize.py --input PATH [--repo-root PATH]" >&2
   exit 2
 }
 

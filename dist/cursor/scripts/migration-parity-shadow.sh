@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Dual-run shadow harness — legacy vs selector per migration family (PRD 021 TR9).
 #
-# Usage: migration-parity-shadow.sh --family <doc-review|code-review|providers|dispatch> [--context PATH|JSON]
+# Usage: migration-parity-shadow.py --family <doc-review|code-review|providers|dispatch> [--context PATH|JSON]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -9,7 +9,7 @@ FAMILY=""
 CONTEXT_JSON="{}"
 
 usage() {
-  echo "Usage: migration-parity-shadow.sh --family FAMILY [--context PATH] [--context-json JSON]" >&2
+  echo "Usage: migration-parity-shadow.py --family FAMILY [--context PATH] [--context-json JSON]" >&2
   exit 2
 }
 

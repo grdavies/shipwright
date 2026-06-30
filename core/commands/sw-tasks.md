@@ -15,14 +15,14 @@ Task list from frozen PRD + amendment union.
 
 ## Procedure
 
-0. **Authoring-guard preflight (PRD 032 R5/R14)** — before the first substantive mutation on a planning unit, run `python3 scripts/authoring-guard.sh preflight --path <unit-artifact> --command sw-tasks`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6).
+0. **Authoring-guard preflight (PRD 032 R5/R14)** — before the first substantive mutation on a planning unit, run `python3 scripts/authoring-guard.py preflight --path <unit-artifact> --command sw-tasks`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6).
 1. Verify PRD has `frozen: true`.
 2. Load `skills/tasks/SKILL.md`.
-3. Read effective requirements via `scripts/spec-union.sh <prd-path>`.
+3. Read effective requirements via `scripts/spec-union.py <prd-path>`.
 
    - **Backlog re-scan (R2):** before drafting tasks, run
-     `python3 scripts/planning-related.sh scan --mode tasks-rescan --path <prd-path>`; propose PRD amendments
-     for newly-related items; human confirms via `planning-related.sh confirm`. Edge materialization remains
+     `python3 scripts/planning-related.py scan --mode tasks-rescan --path <prd-path>`; propose PRD amendments
+     for newly-related items; human confirms via `planning-related.py confirm`. Edge materialization remains
      autonomous via the PRD 033 reconciler **after** confirmed choices only (R3).
 4. In **one pass**, draft parent tasks (phases), expand executable sub-tasks, Relevant Files, and Notes.
 5. Add **`## Phase Dependencies`** table: `| Phase | Depends on |` with one row per phase (`none` or phase refs); machine-parseable by `/sw-deliver` (R5/R6/R37).
@@ -35,7 +35,7 @@ Task list from frozen PRD + amendment union.
 
 **Communication intensity:** lite
 
-**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.sh --command sw-tasks`.
+**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.py --command sw-tasks`.
 
 ## Guardrails
 
@@ -45,6 +45,6 @@ Task list from frozen PRD + amendment union.
   user-intervention gate.
 - Overwrite of an existing **frozen** task list still requires explicit confirmation before replacing.
 - Task list reflects union, not bare parent alone.
-- Traceability table required — `traceability-check.sh` blocks freeze on uncovered R-IDs.
-- Phase Dependencies table required — `spec-rigor-check.sh` blocks freeze when missing or invalid (R5/R6/R37).
+- Traceability table required — `traceability-check.py` blocks freeze on uncovered R-IDs.
+- Phase Dependencies table required — `spec-rigor-check.py` blocks freeze when missing or invalid (R5/R6/R37).
 - Does not provision worktrees or run `/sw-execute`.

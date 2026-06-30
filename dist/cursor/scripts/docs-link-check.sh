@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Advisory offline markdown link checker (PRD 011 — R11–R13).
 #
-# Usage: docs-link-check.sh [--strict] [--include-prds]
+# Usage: docs-link-check.py [--strict] [--include-prds]
 # Scans README.md and docs/guides/** (optionally docs/prds/**) for repo-relative links.
 # Exit: 0 advisory (even with findings); 20 strict with broken links; 2 error
 set -euo pipefail

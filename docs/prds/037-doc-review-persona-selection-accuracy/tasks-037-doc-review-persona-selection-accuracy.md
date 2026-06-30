@@ -96,4 +96,4 @@ Generated from the frozen PRD spec union (R1–R12). Phases follow the Rollout P
 ## Notes
 
 - PRD 021 is complete; this is a successor defect-repair PRD (D1).
-- The PRD draft itself demonstrated the bug: `doc-review-select.sh` fired `design` on `## Requirements` during `/sw-doc-review` selection.
+- The PRD draft itself demonstrated the bug: `doc-review-select.py` fired `design` on `## Requirements` during `/sw-doc-review` selection.

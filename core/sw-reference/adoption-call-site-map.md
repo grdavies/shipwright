@@ -16,4 +16,4 @@ with per-orchestrator proposal sites, canonical chain sources, and durable owner
 | `python3 scripts/wave.sh plan validate --tier orchestrator --orchestrator-type <debug\|doc\|feedback> …` | Closed-world single-tier orchestrator plan gate |
 | `core/sw-reference/orchestrator-step-plan.json` | Authoritative closed-world vocabulary per orchestrator type |
 | `scripts/orchestrator_step_plan.py` | Load/lint helpers for orchestrator-step-plan |
-| `scripts/kernel-completeness-lint.sh` | Kernel classification + orchestrator step coverage |
+| `scripts/kernel-completeness-lint.py` | Kernel classification + orchestrator step coverage |

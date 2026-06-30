@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Planning-unit frontmatter validator (PRD 031 R19).
-# Usage: planning-unit-validate.sh --path UNIT_BODY_FILE [--repo-root ROOT]
+# Usage: planning-unit-validate.py --path UNIT_BODY_FILE [--repo-root ROOT]
 # Exit: 0 pass, 20 fail, 2 error
 set -euo pipefail
 
@@ -12,7 +12,7 @@ while [[ $# -gt 0 ]]; do
     --path) PATH_FILE="${2:-}"; shift 2 ;;
     --repo-root) ROOT="${2:-}"; shift 2 ;;
     -h|--help)
-      echo "usage: planning-unit-validate.sh --path UNIT_BODY_FILE [--repo-root ROOT]"
+      echo "usage: planning-unit-validate.py --path UNIT_BODY_FILE [--repo-root ROOT]"
       exit 0
       ;;
     *) echo '{"verdict":"fail","error":"unknown argument"}' >&2; exit 2 ;;

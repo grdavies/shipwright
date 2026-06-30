@@ -2,7 +2,7 @@
 # Host provider doctor — validate provider, token, remote (PRD 026 R33, R34).
 #
 # Usage:
-#   host-doctor.sh [--root PATH]
+#   host-doctor.py [--root PATH]
 #
 # Exit 0 always (warnings only); JSON verdict on stdout.
 set -euo pipefail

@@ -7,7 +7,10 @@ PY="$_PLUGIN_ROOT/scripts/planning_graph.py"
 cmd="${1:-}"
 shift || true
 case "$cmd" in
-  reconcile|cycle-check|doctor|relief-check)
+  reconcile)
+    exec python3 "$_PLUGIN_ROOT/scripts/reconcile.py" planning-reconcile "$@"
+    ;;
+  cycle-check|doctor|relief-check)
     exec python3 "$PY" "$ROOT" "$cmd" "$@"
     ;;
   next)
@@ -18,7 +21,7 @@ case "$cmd" in
     ;;
   paths)
     if [[ $# -eq 0 ]]; then set -- dirs; fi
-    exec bash "$_PLUGIN_ROOT/scripts/planning_paths.sh" "$@"
+    exec bash "$_PLUGIN_ROOT/scripts/planning_paths.py" "$@"
     ;;
   -h|--help|"")
     cat <<'EOF'

@@ -10,7 +10,7 @@ set -euo pipefail
 STATUS_FILE=""
 
 usage() {
-  echo "Usage: tdd-gate.sh --status PATH" >&2
+  echo "Usage: tdd-gate.py --status PATH" >&2
   exit 2
 }
 

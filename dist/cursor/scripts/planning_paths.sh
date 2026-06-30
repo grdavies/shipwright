@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Config-driven planning path resolution wrapper (PRD 031 R23/R7).
-# Usage: planning_paths.sh <command> [args...]
+# Usage: planning_paths.py <command> [args...]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

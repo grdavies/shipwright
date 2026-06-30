@@ -2,7 +2,7 @@
 # Deterministic verification-gate verdict helper (IM1 / U1; hardened plan 005).
 #
 # Consumes structured evidence status files — not raw /tmp logs.
-# Prints JSON verdict to stdout. Complementary to check-gate.sh; never overrides CI truth.
+# Prints JSON verdict to stdout. Complementary to check-gate.py; never overrides CI truth.
 #
 # Exit codes:
 #   0  verified
@@ -11,8 +11,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck source=evidence-read.sh
-source "$ROOT/scripts/evidence-read.sh"
+# shellcheck source=evidence-read.py
+source "$ROOT/scripts/evidence-read.py"
 
 VERIFY_STATUS=""
 GATE_JSON=""
@@ -23,7 +23,7 @@ REQUIRE_GATE=0
 PR_CONTEXT="auto"
 
 usage() {
-  echo "Usage: verify-evidence.sh --verify-status PATH [--gate-json PATH] [--require-gate] [--pr-context on|off|auto] [--review-status PATH] [--baseline-verify PATH] [--baseline-gate PATH]" >&2
+  echo "Usage: verify-evidence.py --verify-status PATH [--gate-json PATH] [--require-gate] [--pr-context on|off|auto] [--review-status PATH] [--baseline-verify PATH] [--baseline-gate PATH]" >&2
   exit 2
 }
 
@@ -157,7 +157,7 @@ detect_pr_context() {
     return 0
   fi
   local pr_field
-  pr_field="$("$ROOT/scripts/shipwright-state.sh" read 2>/dev/null | jq -r '.pr.number // .prNumber // empty' 2>/dev/null || true)"
+  pr_field="$("$ROOT/scripts/shipwright-state.py" read 2>/dev/null | jq -r '.pr.number // .prNumber // empty' 2>/dev/null || true)"
   if [[ -n "$pr_field" ]]; then
     return 0
   fi
@@ -247,7 +247,7 @@ fi
 VERIFY_S="$(read_verify_pass "$VERIFY_STATUS")"
 
 # --- unconfigured verify (R28/DL-13) -----------------------------------------
-UNCONFIGURED_SCRIPT="$ROOT/scripts/verify-unconfigured.sh"
+UNCONFIGURED_SCRIPT="$ROOT/scripts/verify-unconfigured.py"
 if [[ -x "$UNCONFIGURED_SCRIPT" ]]; then
   UC_JSON="$(bash "$UNCONFIGURED_SCRIPT" --json 2>/dev/null || true)"
   UC_CONFIGURED="$(echo "$UC_JSON" | jq -r '.configured // true' 2>/dev/null || echo true)"

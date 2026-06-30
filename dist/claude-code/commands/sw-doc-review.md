@@ -17,7 +17,7 @@ Persona panel + synthesis for PRD drafts, decision-record drafts, and amendment 
 
 | Input | Panel |
 |-------|-------|
-| PRD draft (`docs/prds/...`) | Signal-driven via capability selector — `doc-review` family (`scripts/doc-review-select.sh`) |
+| PRD draft (`docs/prds/...`) | Signal-driven via capability selector — `doc-review` family (`scripts/doc-review-select.py`) |
 | Decision-record draft (`docs/decisions/<n>-<slug>.md`) | **Full** — all eight personas (cross-cutting blast radius) |
 | Amendment under `docs/prds/.../amendments/` | Coherence + scope-guardian + docs-currency (generic floor) |
 | Amendment under `docs/decisions/...amendments/` | Raised floor: coherence + scope-guardian + adversarial + feasibility + docs-currency (+ security when auth/data/migrations) |
@@ -29,7 +29,7 @@ Decision-record routing is **floor-only** — it never subtracts a persona the c
 1. Load `skills/doc-review/SKILL.md`.
 2. **Dispatch binding (R9):** before each persona Task, run
    `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <id> --command sw-doc-review --skill doc-review`,
-   then `bash scripts/dispatch-check.sh --agent <id> --command sw-doc-review --skill doc-review --parent-model <parent-concrete-id> --dispatch-id <id>`.
+   then `python3 scripts/dispatch-check.py --agent <id> --command sw-doc-review --skill doc-review --parent-model <parent-concrete-id> --dispatch-id <id>`.
    Stamp the resolved concrete `model:` on Task input — reviewer agents keep `model: inherit` in frontmatter
    but dispatch must not rely on session inheritance. Halt on preflight exit 20 unless `--override` has a
    durable audit record.
@@ -43,7 +43,7 @@ Decision-record routing is **floor-only** — it never subtracts a persona the c
 5. If tier is Quick, report "no panel for Quick" and stop (parity for PRD and decision paths).
 6. **PRD drafts:** build `signal_context` (tier, `doc_path`, frozen `body_snapshot`, `derived_tags` from triage,
    `overrides` for `--personas` / `--all`); run
-   `bash scripts/doc-review-select.sh --context-json '<signal_context>'`; announce activation record from selector output.
+   `python3 scripts/doc-review-select.py --context-json '<signal_context>'`; announce activation record from selector output.
 7. **Decision-record drafts:** dispatch all eight `agents/sw-*-reviewer.md` personas (equivalent to `--all`).
 8. **Amendments:** dispatch per amendment floor rules in the skill; honor `--personas` / `--all` overrides when set.
 9. Dispatch selected personas as parallel sub-agents (full document each).
@@ -54,12 +54,12 @@ Decision-record routing is **floor-only** — it never subtracts a persona the c
 
 **Communication intensity:** normal
 
-**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --command sw-doc-review`.
+**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --command sw-doc-review`.
 
 ## Guardrails
 
 - PRD non-Quick: six-persona always-on core (includes docs-currency) + signal-gated `security` / `design`
-  (resolved by `scripts/doc-review-select.sh` / manifest triggers).
+  (resolved by `scripts/doc-review-select.py` / manifest triggers).
 - Decision-record drafts: all eight personas always (Full blast radius).
 - Decision amendments: raised floor only for `docs/decisions/` parents — PRD amendment floor unchanged.
 - Quick: no panel.

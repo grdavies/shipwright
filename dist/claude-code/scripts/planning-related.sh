@@ -14,9 +14,9 @@ case "$cmd" in
   -h|--help|"")
     cat <<'EOF'
 Usage:
-  planning-related.sh scan --path <artifact> [--mode creation|tasks-rescan] [--refresh-stale]
-  planning-related.sh confirm --path <artifact> --accept <id>[,<id>...] [--accept-frozen-impact]
-  planning-related.sh list-emission-points
+  planning-related.py scan --path <artifact> [--mode creation|tasks-rescan] [--refresh-stale]
+  planning-related.py confirm --path <artifact> --accept <id>[,<id>...] [--accept-frozen-impact]
+  planning-related.py list-emission-points
 EOF
     ;;
   *)

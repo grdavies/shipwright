@@ -31,7 +31,7 @@ PY
 
 # --- no literal disabled in gate emitter (root script) ---
 if grep -nE 'CR_STATE="disabled"|state=disabled|case.*disabled\)' \
-  "$ROOT/scripts/check-gate.sh" "$ROOT/scripts/test/run-gate-fixtures.sh" 2>/dev/null; then
+  "$ROOT/scripts/check-gate.py" "$ROOT/scripts/test/run-gate-fixtures.sh" 2>/dev/null; then
   echo "FAIL gate files still contain disabled literal"
   FAIL=1
 else

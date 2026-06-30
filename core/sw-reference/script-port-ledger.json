@@ -16,49 +16,49 @@
       "disposition": "port",
       "target": "scripts/authoring-guard.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/branch-name-guard.sh",
       "disposition": "port",
       "target": "scripts/branch-name-guard.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/build-chain-sot-lint.sh",
       "disposition": "port",
       "target": "scripts/build-chain-sot-lint.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/build-chain-sync.sh",
       "disposition": "port",
       "target": "scripts/build-chain-sync.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/capability-manifest-lint.sh",
       "disposition": "port",
       "target": "scripts/capability-manifest-lint.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/capability-select.sh",
       "disposition": "port",
       "target": "scripts/capability-select.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/check-frozen.sh",
       "disposition": "port",
       "target": "scripts/check-frozen.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/check-gate.sh",
@@ -72,126 +72,126 @@
       "disposition": "port",
       "target": "scripts/cleanup.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/clear-inflight.sh",
       "disposition": "port",
       "target": "scripts/clear-inflight.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/code-review-apply-check.sh",
       "disposition": "port",
       "target": "scripts/code-review-apply-check.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/code-review-gate.sh",
       "disposition": "port",
       "target": "scripts/code-review-gate.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/code-review-normalize.sh",
       "disposition": "port",
       "target": "scripts/code-review-normalize.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/code-review-select.sh",
       "disposition": "port",
       "target": "scripts/code-review-select.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/commit-msg-guard.sh",
       "disposition": "port",
       "target": "scripts/commit-msg-guard.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/communication-resolve.sh",
       "disposition": "port",
       "target": "scripts/communication-resolve.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/config-at-entry.sh",
       "disposition": "port",
       "target": "scripts/config-at-entry.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/detect-platform.sh",
       "disposition": "port",
       "target": "scripts/detect-platform.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/detect-project-type.sh",
       "disposition": "port",
       "target": "scripts/detect-project-type.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/dispatch-check.sh",
       "disposition": "port",
       "target": "scripts/dispatch-check.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/doc-format-normalize.sh",
       "disposition": "port",
       "target": "scripts/doc-format-normalize.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/doc-link-check.sh",
       "disposition": "port",
       "target": "scripts/doc-link-check.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/doc-review-select.sh",
       "disposition": "port",
       "target": "scripts/doc-review-select.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/docs-currency-gate.sh",
       "disposition": "port",
       "target": "scripts/docs-currency-gate.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/docs-edit-route.sh",
       "disposition": "port",
       "target": "scripts/docs-edit-route.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/docs-link-check.sh",
       "disposition": "port",
       "target": "scripts/docs-link-check.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/docs-merge.sh",
@@ -205,7 +205,7 @@
       "disposition": "port",
       "target": "scripts/docs-presence-check.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/docs_pr.sh",
@@ -219,70 +219,70 @@
       "disposition": "port",
       "target": "scripts/docs_worktree.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/evidence-read.sh",
       "disposition": "port",
       "target": "scripts/evidence-read.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/feedback-backlog.sh",
       "disposition": "port",
       "target": "scripts/feedback-backlog.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/feedback-closure-gate.sh",
       "disposition": "port",
       "target": "scripts/feedback-closure-gate.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/gap-backlog.sh",
       "disposition": "port",
       "target": "scripts/gap-backlog.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/generate-pr-test-plan-ci-workflow.sh",
       "disposition": "port",
       "target": "scripts/generate-pr-test-plan-ci-workflow.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/git-push.sh",
       "disposition": "port",
       "target": "scripts/git-push.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/gitignore-generate.sh",
       "disposition": "port",
       "target": "scripts/gitignore-generate.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/host-detect.sh",
       "disposition": "port",
       "target": "scripts/host-detect.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/host-doctor.sh",
       "disposition": "port",
       "target": "scripts/host-doctor.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/host.sh",
@@ -338,147 +338,147 @@
       "disposition": "port",
       "target": "scripts/in-repo-memory-search.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/index-region-guard.sh",
       "disposition": "port",
       "target": "scripts/index-region-guard.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/inflight-migration-bridge.sh",
       "disposition": "port",
       "target": "scripts/inflight-migration-bridge.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/inflight-reconcile.sh",
       "disposition": "port",
       "target": "scripts/inflight-reconcile.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/inflight-signal.sh",
       "disposition": "port",
       "target": "scripts/inflight-signal.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/install-hooks.sh",
       "disposition": "port",
       "target": "scripts/install-hooks.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/intra-phase-dispatch.sh",
       "disposition": "port",
       "target": "scripts/intra-phase-dispatch.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/is-shipwright-dev-repo.sh",
       "disposition": "port",
       "target": "scripts/is-shipwright-dev-repo.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/kernel-classification-lint.sh",
       "disposition": "port",
       "target": "scripts/kernel-classification-lint.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/kernel-completeness-lint.sh",
       "disposition": "port",
       "target": "scripts/kernel-completeness-lint.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/living-status-gap-resolve.sh",
       "disposition": "port",
       "target": "scripts/living-status-gap-resolve.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/materialized-prefix-scan.sh",
       "disposition": "port",
       "target": "scripts/materialized-prefix-scan.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/memory-decision-snapshot.sh",
       "disposition": "port",
       "target": "scripts/memory-decision-snapshot.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/memory-redact.sh",
       "disposition": "port",
       "target": "scripts/memory-redact.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/memory-sot-audit.sh",
       "disposition": "port",
       "target": "scripts/memory-sot-audit.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/memory-sot.sh",
       "disposition": "port",
       "target": "scripts/memory-sot.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/migration-parity-shadow.sh",
       "disposition": "port",
       "target": "scripts/migration-parity-shadow.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/model-routing-check.sh",
       "disposition": "port",
       "target": "scripts/model-routing-check.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/model-tier-check.sh",
       "disposition": "port",
       "target": "scripts/model-tier-check.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/plan-self-review.sh",
       "disposition": "port",
       "target": "scripts/plan-self-review.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/planning-doctor.sh",
       "disposition": "port",
       "target": "scripts/planning-doctor.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/planning-graph.sh",
@@ -492,35 +492,35 @@
       "disposition": "port",
       "target": "scripts/planning-init-seed.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/planning-privacy-guard.sh",
       "disposition": "port",
       "target": "scripts/planning-privacy-guard.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/planning-related.sh",
       "disposition": "port",
       "target": "scripts/planning-related.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/planning-unit-validate.sh",
       "disposition": "port",
       "target": "scripts/planning-unit-validate.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/planning_paths.sh",
       "disposition": "port",
       "target": "scripts/planning_paths.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/reconcile-status.sh",
@@ -534,175 +534,175 @@
       "disposition": "port",
       "target": "scripts/redaction-guard.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/relief-acceptance-check.sh",
       "disposition": "port",
       "target": "scripts/relief-acceptance-check.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/resolve-base-branch.sh",
       "disposition": "port",
       "target": "scripts/resolve-base-branch.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/resolve-intensity.sh",
       "disposition": "port",
       "target": "scripts/resolve-intensity.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/resolve-model-tier.sh",
       "disposition": "port",
       "target": "scripts/resolve-model-tier.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/review-local-resolve.sh",
       "disposition": "port",
       "target": "scripts/review-local-resolve.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/reviewer-dispatch-check.sh",
       "disposition": "port",
       "target": "scripts/reviewer-dispatch-check.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/secret-scan.sh",
       "disposition": "port",
       "target": "scripts/secret-scan.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/seed-model-config.sh",
       "disposition": "port",
       "target": "scripts/seed-model-config.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/ship-build-chain-check.sh",
       "disposition": "port",
       "target": "scripts/ship-build-chain-check.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/ship-phase-status.sh",
       "disposition": "port",
       "target": "scripts/ship-phase-status.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/ship-phase-steps.sh",
       "disposition": "port",
       "target": "scripts/ship-phase-steps.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/shipwright-state.sh",
       "disposition": "port",
       "target": "scripts/shipwright-state.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/simplify-gate.sh",
       "disposition": "port",
       "target": "scripts/simplify-gate.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/snapshot-tree.sh",
       "disposition": "port",
       "target": "scripts/snapshot-tree.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/spec-rigor-check.sh",
       "disposition": "port",
       "target": "scripts/spec-rigor-check.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/spec-union.sh",
       "disposition": "port",
       "target": "scripts/spec-union.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/stabilize-merge-sync.sh",
       "disposition": "port",
       "target": "scripts/stabilize-merge-sync.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/sw-assert-worktree.sh",
       "disposition": "port",
       "target": "scripts/sw-assert-worktree.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/sw-configure.sh",
       "disposition": "port",
       "target": "scripts/sw-configure.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/sw-resolve-plugin-root.sh",
       "disposition": "port",
       "target": "scripts/sw-resolve-plugin-root.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/sw-tmp.sh",
       "disposition": "port",
       "target": "scripts/sw-tmp.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/tasks-currency-gate.sh",
       "disposition": "port",
       "target": "scripts/tasks-currency-gate.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/tasks-progress.sh",
       "disposition": "port",
       "target": "scripts/tasks-progress.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/tdd-gate.sh",
       "disposition": "port",
       "target": "scripts/tdd-gate.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/test/fixture-lib.sh",
@@ -1668,56 +1668,56 @@
       "disposition": "port",
       "target": "scripts/traceability-check.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/verify-baseline.sh",
       "disposition": "port",
       "target": "scripts/verify-baseline.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/verify-e2e.sh",
       "disposition": "port",
       "target": "scripts/verify-e2e.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/verify-evidence.sh",
       "disposition": "port",
       "target": "scripts/verify-evidence.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/verify-require-configuration.sh",
       "disposition": "port",
       "target": "scripts/verify-require-configuration.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/verify-unconfigured.sh",
       "disposition": "port",
       "target": "scripts/verify-unconfigured.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/visibility-callsite-lint.sh",
       "disposition": "port",
       "target": "scripts/visibility-callsite-lint.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/visibility-resolve.sh",
       "disposition": "port",
       "target": "scripts/visibility-resolve.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "scripts/wave.sh",
@@ -1731,7 +1731,7 @@
       "disposition": "port",
       "target": "scripts/worktree.py",
       "phase": 5,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "core/scripts/authoring-guard.sh",

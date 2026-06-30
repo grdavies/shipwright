@@ -63,7 +63,7 @@ python3 scripts/wave.sh plan validate --tier wave --proposal <path|json> --plan 
 
 Call-site map: [`call-site-map.md`](../prds/022-kernel-classification-and-plan-validation/call-site-map.md).
 
-**Push safety:** workflow pushes route through `scripts/git-push.sh` → `scripts/secret-scan.sh`
+**Push safety:** workflow pushes route through `scripts/git-push.py` → `scripts/secret-scan.py`
 before `git push` (including `sw-pr` and stabilize re-pushes).
 
 ### Planning surface (PRD 035)
@@ -72,12 +72,12 @@ Extends `/sw-doc` — no `/sw-plan` command.
 
 | Surface | Command / script |
 | --- | --- |
-| Pull-in at PRD creation | `/sw-prd` → `planning-related.sh scan --mode creation` + confirm-list |
-| Backlog re-scan at tasks | `/sw-tasks` → `planning-related.sh scan --mode tasks-rescan` |
+| Pull-in at PRD creation | `/sw-prd` → `planning-related.py scan --mode creation` + confirm-list |
+| Backlog re-scan at tasks | `/sw-tasks` → `planning-related.py scan --mode tasks-rescan` |
 | Mechanical reconciler | `python3 scripts/planning-graph.sh reconcile` |
 | Scheduler | `/sw-deliver next` |
 | Autonomy posture | `planning.autonomy` (`maintenance-only` default \| `full-conductor`) |
-| Two-track doc edits | `scripts/docs-edit-route.sh` → mechanical `docs-merge.sh` or substantive docs worktree + PR |
+| Two-track doc edits | `scripts/docs-edit-route.py` → mechanical `docs-merge.sh` or substantive docs worktree + PR |
 | Gap capture from feedback | `/sw-feedback` → `planning_gap_capture.py` (not legacy `GAP-BACKLOG.md`) |
 
 See [`core/commands/sw-doc.md`](../../core/commands/sw-doc.md) **Planning command surface** and
@@ -120,7 +120,7 @@ debugging one phase, or when you deliberately skip the orchestrator.
 | [`/sw-review`](../../core/commands/sw-review.md) | Local then provider code review (`review.provider`; default **`none`**) |
 | [`/sw-commit`](../../core/commands/sw-commit.md) | Commit after verify + review |
 | [`/sw-pr`](../../core/commands/sw-pr.md) | Push and open/update PR |
-| [`/sw-watch-ci`](../../core/commands/sw-watch-ci.md) | Poll PR checks via `check-gate.sh` |
+| [`/sw-watch-ci`](../../core/commands/sw-watch-ci.md) | Poll PR checks via `check-gate.py` |
 | [`/sw-stabilize`](../../core/commands/sw-stabilize.md) | Clear CI + review blockers |
 | [`/sw-ready`](../../core/commands/sw-ready.md) | Terminal readiness report; echoes `review: off` or `review: not configured` from gate JSON |
 

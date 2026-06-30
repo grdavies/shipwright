@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Resolve review.local config with schema defaults (R14–R16, R61).
 #
-# Usage: review-local-resolve.sh [--config PATH]
+# Usage: review-local-resolve.py [--config PATH]
 # Exit: 0 always; JSON stdout with fire/skip + resolved values
 set -euo pipefail
 
 CONFIG="${PWD}/.cursor/workflow.config.json"
 
 usage() {
-  echo "Usage: review-local-resolve.sh [--config PATH]" >&2
+  echo "Usage: review-local-resolve.py [--config PATH]" >&2
   exit 2
 }
 

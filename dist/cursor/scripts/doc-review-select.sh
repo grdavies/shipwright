@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deterministic doc-review persona selection via capability selector (PRD 021 phase 6).
 #
-# Usage: doc-review-select.sh [--context PATH] [--context-json JSON]
+# Usage: doc-review-select.py [--context PATH] [--context-json JSON]
 # Exit: 0; JSON stdout with panel + activation record shape
 set -euo pipefail
 
@@ -9,7 +9,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTEXT_JSON=""
 
 usage() {
-  echo "Usage: doc-review-select.sh [--context PATH] [--context-json JSON]" >&2
+  echo "Usage: doc-review-select.py [--context PATH] [--context-json JSON]" >&2
   exit 2
 }
 

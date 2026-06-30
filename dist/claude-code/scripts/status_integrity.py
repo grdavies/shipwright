@@ -175,9 +175,9 @@ def merge_authorizing(gate_ec: int, gate: dict[str, Any]) -> bool:
 
 
 def run_check_gate(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
-    script = SCRIPT_DIR / "check-gate.sh"
+    script = SCRIPT_DIR / "check-gate.py"
     if not script.is_file():
-        script = root / "scripts" / "check-gate.sh"
+        script = root / "scripts" / "check-gate.py"
     cmd = ["bash", str(script)]
     if pr:
         cmd.append(str(pr))

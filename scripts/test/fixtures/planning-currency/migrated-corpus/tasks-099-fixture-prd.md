@@ -8,10 +8,10 @@ frozen_at: 2026-01-01
 ### 1. Migrated corpus regression — S
 
 - [ ] 1.1 Immutability gate (R1)
-  - **File:** `scripts/spec-rigor-check.sh`
+  - **File:** `scripts/spec-rigor-check.py`
   - **Expected:** frozen PRD passes structural + checklist gates.
 - [ ] 1.2 Traceability gate (R2, R3)
-  - **File:** `scripts/traceability-check.sh`
+  - **File:** `scripts/traceability-check.py`
   - **Expected:** every R-ID maps to a task ref and named scenario.
 
 ## Phase Dependencies

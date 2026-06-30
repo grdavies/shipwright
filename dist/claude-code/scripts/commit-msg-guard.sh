@@ -61,11 +61,11 @@ shift || true
 case "$cmd" in
   types) load_types ;;
   validate)
-    [[ $# -ge 1 ]] || { echo "usage: commit-msg-guard.sh validate <message-or-file>" >&2; exit 2; }
+    [[ $# -ge 1 ]] || { echo "usage: commit-msg-guard.py validate <message-or-file>" >&2; exit 2; }
     validate "$1"
     ;;
   *)
-    echo "usage: commit-msg-guard.sh {types | validate <message-or-file>}" >&2
+    echo "usage: commit-msg-guard.py {types | validate <message-or-file>}" >&2
     exit 2
     ;;
 esac

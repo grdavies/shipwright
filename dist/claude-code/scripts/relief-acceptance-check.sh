@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Relief acceptance check — gates cutover on derived-vs-deliver alignment (PRD 031 R28).
-# Usage: relief-acceptance-check.sh [--repo-root ROOT] [--state PATH]
+# Usage: relief-acceptance-check.py [--repo-root ROOT] [--state PATH]
 set -euo pipefail
 
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

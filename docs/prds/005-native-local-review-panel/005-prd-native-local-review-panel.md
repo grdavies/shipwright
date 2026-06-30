@@ -57,7 +57,7 @@ lands unattended code without the phase-mode block path. No `/sw-deliver` change
   default from PRD 002/003.
 - Retiring or weakening `gap-check`'s authoritative ownership of requirements completeness.
 - Reintroducing `previous-comments` or any PR-thread / PR-history review into phase 1.
-- Making the native panel a CI/merge oracle — `check-gate.sh` stays the sole authority.
+- Making the native panel a CI/merge oracle — `check-gate.py` stays the sole authority.
 - Auto-applying P0 or security-sensitive fixes at any severity.
 - Suppressing or down-weighting external (phase-2) findings on panel-touched lines (R71).
 - Migrating repos that explicitly set `review.local.provider: "ce-code-review"` (they keep that adapter).
@@ -158,7 +158,7 @@ Each requirement is testable; where a brainstorm requirement is tightened, the a
 ### Gate, model tiering & integration
 
 - **R26** The local severity gate MUST stay additive: surface-only default (`haltOn: []`), opt-in halting on
-  validated P0 / P1; `check-gate.sh` remains the sole CI / merge oracle.
+  validated P0 / P1; `check-gate.py` remains the sole CI / merge oracle.
 - **R27** High-stakes reviewers (`correctness`, `security`, `adversarial`) MUST inherit the session / deep tier;
   remaining reviewers run mid-tier. No semantic tier name appears in any agent frontmatter (R9 floor).
 - **R28** Reviewer dispatch MUST respect the harness's active-subagent limit with bounded parallelism and treat
@@ -167,7 +167,7 @@ Each requirement is testable; where a brainstorm requirement is tightened, the a
 ### Memory, redaction & distribution
 
 - **R29** Memory reads (known false positives, file learnings) and writes MUST route through the existing
-  preflight / redaction chokepoint (`scripts/memory-redact.sh`); raw reviewer output MUST never be persisted to
+  preflight / redaction chokepoint (`scripts/memory-redact.py`); raw reviewer output MUST never be persisted to
   memory, and any finding-derived write (file learnings, known-FP records quoting diff text) MUST pass through
   redaction before persist.
 - **R30** Native panel run artifacts MUST be scrubbed after parsing (no cleartext diff / evidence left in temp
@@ -296,10 +296,10 @@ Each requirement is testable; where a brainstorm requirement is tightened, the a
   blank, brace-only, import, and comment lines; define added-versus-deleted handling) and its language
   coverage, and MUST pin a concrete numeric fix-size bound (max changed lines AND hunks per auto-applied fix,
   in addition to the existing character bound); boundary fixtures MUST cover 49 / 50 / 51 executable lines.
-- **R61** Deterministic engines MUST back the runtime claims: `scripts/code-review-select.sh` (diff → roster)
-  for R7 / R33 / R47 / R51 / R73; an extended `scripts/code-review-apply-check.sh` admitting validated-P1 (via a
+- **R61** Deterministic engines MUST back the runtime claims: `scripts/code-review-select.py` (diff → roster)
+  for R7 / R33 / R47 / R51 / R73; an extended `scripts/code-review-apply-check.py` admitting validated-P1 (via a
   `--validated` input set only after the R49 wave), content-marker and symlink rails (R55 / R57), and the
-  expanded deny-list; `scripts/review-local-resolve.sh` (config → fire/skip) for R14 / R15 / R16 / R35; and a
+  expanded deny-list; `scripts/review-local-resolve.py` (config → fire/skip) for R14 / R15 / R16 / R35; and a
   backpressure clause in `rules/sw-subagent-dispatch.mdc` for R28. Fixtures invoke these scripts for true
   determinism; doc-grep fixtures cover prompt content only.
 - **R62** The P1 validation wave MUST be newly created (not "reuse" of any prior template). The validator's
@@ -307,7 +307,7 @@ Each requirement is testable; where a brainstorm requirement is tightened, the a
   `suggested_fix`, or reasoning — and the validator MUST NOT read the same memory entries the first reviewer
   used. The contract MUST document that same-model validation cannot catch correlated false positives.
 - **R63** `native.md` MUST document that `/sw-verify` is the smallest reliable check whose scope may be narrower
-  than `check-gate.sh`, so verify-green is necessary but not sufficient for autonomy; auto-apply MUST be
+  than `check-gate.py`, so verify-green is necessary but not sufficient for autonomy; auto-apply MUST be
   restricted to fix classes the configured verify can validate, and security-relevant or behavior-altering
   changes surface regardless of verify outcome (composes with R56 / R59).
 - **R64** The panel MUST NOT clobber pre-existing user edits: it MUST refuse to run on a dirty tree OR snapshot
@@ -370,7 +370,7 @@ Each requirement is testable; where a brainstorm requirement is tightened, the a
 
 ### Config resolution (R14–R16, R32, R61, R68)
 
-The native panel fires on a resolved view of `review.local`, computed by `scripts/review-local-resolve.sh`
+The native panel fires on a resolved view of `review.local`, computed by `scripts/review-local-resolve.py`
 (schema-default-merged) so the absent-block path is deterministically testable:
 
 ```
@@ -404,7 +404,7 @@ Core (always-on, R6): `correctness`, `maintainability`, `scope-fidelity`, `testi
 | `ai-native` | AI-surface paths per R53 (`commands/**`, `core/commands/**`, `skills/**`, `core/skills/**`, `rules/**`, `providers/**`, prompt-declaring `*.md`) + any path where untrusted input reaches an LLM |
 
 `previous-comments` is **excluded** from phase 1 (R9). Thresholds count executable code lines only per the
-pinned R60 algorithm; identical diffs → identical panel (`scripts/code-review-select.sh`, R61); every fired
+pinned R60 algorithm; identical diffs → identical panel (`scripts/code-review-select.py`, R61); every fired
 signal is announced (R10).
 
 ### Apply rails state machine (R19–R25, R44, R48, R55–R67)
@@ -475,10 +475,10 @@ hygiene. Native (non-network) authoring may draw on the local `accessibility-a11
 | Dispatch rule | `rules/sw-subagent-dispatch.mdc` (backpressure R28/R61; native apply-loop reconciliation R65) |
 | Commands | `core/commands/sw-review.md` (R17/R54), `core/commands/sw-ship.md` (R18/R54/R67), `core/skills/gap-check` (R75 read step) |
 | Reviewer prompts | inline native panel personas in `native.md` (core + specialists), embedding the R43 calibration catalog + R58 injection fencing |
-| Selection / apply scripts | `scripts/code-review-select.sh` (new), `scripts/code-review-apply-check.sh` (extend: validated-P1, expanded deny-list, content markers, symlink/`.git`, fix-size lines/hunks), `scripts/review-local-resolve.sh` (new) |
+| Selection / apply scripts | `scripts/code-review-select.py` (new), `scripts/code-review-apply-check.py` (extend: validated-P1, expanded deny-list, content markers, symlink/`.git`, fix-size lines/hunks), `scripts/review-local-resolve.py` (new) |
 | Config schema | `.sw/config.schema.json`, `core/sw-reference/config.schema.json` (`provider` default `native`, `review.local.apply` enum, `review.local.ui.enrich` enum) |
 | Example config | `.sw/workflow.config.example.json` (populated `review.local` block, R32) |
-| Memory | `scripts/memory-redact.sh` chokepoint (R29/R30) — used, not re-implemented |
+| Memory | `scripts/memory-redact.py` chokepoint (R29/R30) — used, not re-implemented |
 | Tests | `scripts/test/fixtures/code-review-*`, `scripts/test/run-code-review-fixtures.sh`, `run-persona-selection-fixtures.sh` |
 | Dist | sync to `dist/cursor/`, `dist/claude-code/` (R31) |
 
@@ -498,21 +498,21 @@ hygiene. Native (non-network) authoring may draw on the local `accessibility-a11
   (R57/R60). The panel refuses a dirty tree or snapshots and restores deterministically (R64).
 - **Autonomy oversight:** validated-P1 auto-apply happens only interactively; unattended phase-mode surfaces P1
   as `blocked` (R67). A persistent `review.local.apply` knob lets operators keep review value with no edits
-  (R68). `/sw-verify` is documented as narrower than `check-gate.sh` — verify-green is necessary not sufficient
+  (R68). `/sw-verify` is documented as narrower than `check-gate.py` — verify-green is necessary not sufficient
   (R63).
 - **Fail-closed:** `skipped` / `failed` / `degraded` without `findings` is never a pass; unattested empties →
   `degraded`; a panel that cannot run its core roster blocks `merge-ready-green` (R5/R66).
-- **Memory redaction:** all reads / writes (incl. finding-derived) route through `scripts/memory-redact.sh`;
+- **Memory redaction:** all reads / writes (incl. finding-derived) route through `scripts/memory-redact.py`;
   only distilled learnings persist, never raw reviewer output, diffs, or transcripts (R29); run artifacts and
   the run report are scrubbed after parsing (R30).
-- **Gate authority preserved:** the local severity gate is additive (`haltOn: []` default); `check-gate.sh`
+- **Gate authority preserved:** the local severity gate is additive (`haltOn: []` default); `check-gate.py`
   remains the sole CI / merge oracle (R26); external findings are never suppressed (R71).
 - **AI trust boundary:** `ai-native` flags paths where untrusted input reaches an LLM (R40/R53).
 
 ## Testing Strategy
 
-Fixtures split into **deterministic-script** assertions (invoke `code-review-select.sh` /
-`code-review-apply-check.sh` / `review-local-resolve.sh`) and **doc-grep** assertions (prompt / checklist
+Fixtures split into **deterministic-script** assertions (invoke `code-review-select.py` /
+`code-review-apply-check.py` / `review-local-resolve.py`) and **doc-grep** assertions (prompt / checklist
 content). Runtime agent behavior is asserted only via the deterministic scripts, never by claiming a grep
 proves a runtime outcome.
 
@@ -527,7 +527,7 @@ proves a runtime outcome.
 | `native-line-count-algo` | executable-line counter excludes blanks / braces / imports / comments per R60 | R60 |
 | `native-panel-no-previous-comments` | `previous-comments` never in phase-1 panel | R9 |
 | `native-panel-announce` | each fired specialist's selection reason announced | R10, R42 |
-| `native-resolve-default` | `review-local-resolve.sh` fires phase-1 on default / absent block / provider:none | R14, R16, R35, R61 |
+| `native-resolve-default` | `review-local-resolve.py` fires phase-1 on default / absent block / provider:none | R14, R16, R35, R61 |
 | `native-resolve-opt-out` | skipped only on `enabled:false` / `provider:"none"` | R15, R35 |
 | `native-apply-policy` | `apply:off|surface` never auto-applies; `auto` applies eligible | R68 |
 | `native-apply-p0-surface` | P0 surfaced, never applied | R20, R34 |
@@ -604,7 +604,7 @@ proves a runtime outcome.
 
 - Author `native.md` (selection table R47, deny-list R48/R55, counting algo + fix-size bound R60, checklist R72,
   validator contract R62, registration); update `CAPABILITIES.md` / `code-review-automation.mdc` (R13); add
-  `code-review-select.sh` + `review-local-resolve.sh`, extend `code-review-apply-check.sh` (validated-P1, expanded
+  `code-review-select.py` + `review-local-resolve.py`, extend `code-review-apply-check.py` (validated-P1, expanded
   deny-list, symlink/`.git`, content markers, fix-size); schema defaults + `apply` + `ui.enrich` enums + example
   (R32/R68/R73); backpressure clause in dispatch rule (R28/R61). Contract / schema / selection / deny-list /
   resolve fixtures green.
@@ -626,7 +626,7 @@ proves a runtime outcome.
 
 ### Phase 4 — Gating, framing, phase-mode & report
 
-- `review-local-resolve.sh` default-on independent of `review.provider` (R14/R15/R16); reword `sw-review.md` /
+- `review-local-resolve.py` default-on independent of `review.provider` (R14/R15/R16); reword `sw-review.md` /
   `sw-ship.md` (R17/R18); additive gate (R26); `--fast` / `--skip-local` (R54); phase-mode precedence (R67);
   run-report contract + scope-fidelity → gap-check forwarding (R69/R50/R75). Gating / framing / phase-mode / report
   fixtures green.
@@ -651,7 +651,7 @@ default (DL-28). No migration required.
 | DL-4 | `scope-fidelity` advisory; `gap-check` stays the binding completeness authority | Surfaces gaps early without verdict creep. Brainstorm DK3. |
 | DL-5 | Default-ON, decoupled from `review.provider` (incl. `none`); only `review.local` opt-out disables | Native review is fully local, so external-provider safe-default-off reasons (PRD 002/003) do not apply to *surfacing*. Brainstorm DK4. |
 | DL-6 | Autonomous apply incl. validated P1, behind hard rails | P0 / security never auto-applied; P1 needs independent validation; mandatory re-verify + revert + circuit-breaker. Brainstorm DK5. |
-| DL-7 | Severity gate stays additive (`haltOn: []` default) | `check-gate.sh` remains the sole CI oracle. Brainstorm DK6. |
+| DL-7 | Severity gate stays additive (`haltOn: []` default) | `check-gate.py` remains the sole CI oracle. Brainstorm DK6. |
 | DL-8 | High-stakes reviewers + P1 validation at deep tier; tiers only in `models.tiers` | R9 floor. Brainstorm DK7. |
 | DL-9 | Add four optional specialists; fold silent-failure into `reliability`; no simplifier | Simplification stays `/sw-simplify`. Brainstorm DK8. |
 | DL-10 | Calibration catalog in every prompt; rails encode receiving-review discipline | Findings evidence-verified; wrong-for-codebase findings skipped, not applied. Brainstorm DK9. |
@@ -669,7 +669,7 @@ default (DL-28). No migration required.
 | DL-22 | Realpath / no-symlink / no-`.git` / TOCTOU / write-field validation on the apply path (R57) | Lexical in-repo checks are defeated by symlinks and patch-internal target paths. |
 | DL-23 | Fence untrusted diff as data; deterministic (never model-delegated) gating; validator necessary-not-sufficient (R58/R59) | The diff is attacker-influenceable; injection could confirm a malicious P2/P3 or suppress a P0. |
 | DL-24 | Pin executable-line counting algorithm + numeric fix-size bound (R60) | The 50-line `adversarial` threshold is a determinism cliff without a pinned counter; "bounded size" needs a number. |
-| DL-25 | Back runtime claims with `code-review-select.sh` / extended `apply-check.sh` / `review-local-resolve.sh` (R61) | The existing harness greps markdown + runs scripts; runtime determinism needs real engines, and `apply-check.sh` hard-rejects P1 today. |
+| DL-25 | Back runtime claims with `code-review-select.py` / extended `apply-check.sh` / `review-local-resolve.py` (R61) | The existing harness greps markdown + runs scripts; runtime determinism needs real engines, and `apply-check.sh` hard-rejects P1 today. |
 | DL-26 | Validator independence: diff + neutral location only; no shared memory entries; same-model FP limit documented (R62) | "Independent" must be operationally defined or it collapses into a confirming second pass. |
 | DL-27 | Per-fix checkpoint + dirty-tree refusal/snapshot + deterministic apply ordering + line re-anchor (R64) | Batch verify cannot attribute failure; naive revert clobbers user edits; offset drift corrupts batched applies. |
 | DL-28 | Add persistent `review.local.apply` (`off`/`surface`/`auto`); **shipped default `auto`** (user-confirmed at the doc boundary) | Reviewers (product / security) flagged that bundling default-ON autonomous edits with the phase-1 bug fix expands write authority with no surface-only middle option; the knob restores the choice (`surface`/`off`). The user confirmed `auto` as the shipped default to honor the frozen brainstorm's maximum-safe-autonomy decision (DK5); the hard rails (R20/R21/R48/R55–R67) and the opt-out knob bound the risk. |

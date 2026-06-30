@@ -62,10 +62,10 @@ case "${1:-}" in
     exec python3 "$PLUGIN_ROOT/scripts/wave_state.py" "$ROOT" "$@"
     ;;
   tasks-currency)
-    exec bash "$PLUGIN_ROOT/scripts/tasks-currency-gate.sh" "${@:2}"
+    exec bash "$PLUGIN_ROOT/scripts/tasks-currency-gate.py" "${@:2}"
     ;;
   docs-currency)
-    exec bash "$PLUGIN_ROOT/scripts/docs-currency-gate.sh" "${@:2}"
+    exec bash "$PLUGIN_ROOT/scripts/docs-currency-gate.py" "${@:2}"
     ;;
   living-docs)
     exec python3 "$PLUGIN_ROOT/scripts/wave_living_docs.py" "$ROOT" "${@:2}"

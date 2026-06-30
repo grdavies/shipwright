@@ -22,7 +22,7 @@ Files with `frozen: true` in YAML frontmatter are **immutable**. Do not edit, re
 
 - This rule — agent instruction (early warning).
 - `hooks/pre-commit-frozen.sh` — local commit block (bypassable with `--no-verify`).
-- `scripts/check-frozen.sh` — CI required-check (authoritative; not bypassable).
+- `scripts/check-frozen.py` — CI required-check (authoritative; not bypassable).
 
 There is **no unfreeze** command.
 
@@ -41,14 +41,14 @@ alwaysApply: true
 ## Branch names
 
 - Pattern: `<type>/<slug>` or `docs/<topic>` where `type` ∈ `release-please-config.json` changelog types.
-- Enforced by `scripts/branch-name-guard.sh` at worktree/branch creation (`scripts/worktree_lib.py` for Python).
+- Enforced by `scripts/branch-name-guard.py` at worktree/branch creation (`scripts/worktree_lib.py` for Python).
 - `pf/<name>` is prohibited. Fail closed on non-conforming names.
 
 ## Commit messages
 
 - Conventional Commits: `type(scope): description` or `type!: description` for breaking changes.
 - Types single-sourced from `release-please-config.json`.
-- Enforced by `scripts/commit-msg-guard.sh` via `core/hooks/commit-msg`.
+- Enforced by `scripts/commit-msg-guard.py` via `core/hooks/commit-msg`.
 
 ## PR / merge bodies
 
@@ -57,7 +57,7 @@ alwaysApply: true
 
 ## Documentation authoring
 
-- Brainstorm/PRD/doc pipeline work occurs on `docs/<topic>` in a dedicated worktree (`scripts/docs_worktree.sh`).
+- Brainstorm/PRD/doc pipeline work occurs on `docs/<topic>` in a dedicated worktree (`scripts/docs_worktree.py`).
 - Never create local commits on the protected default branch for doc authoring.
 - Docs reach trunk via `scripts/docs_pr.sh` (docs-only PR), not direct push.
 - Feature-branch `spec-seed` (PRD 013) remains for implementation handoff; docs durability is separate (R32).
@@ -69,7 +69,7 @@ alwaysApply: true
 - **Mechanical** — reconciler-generated artifacts only (INDEX `derived` region, SUPERSEDED manifest, gap index):
   batched via `scripts/docs-merge.sh` with CI-gated auto-merge or direct-to-trunk when protection probe permits.
 - **Substantive** — any path under `docs/planning/<unit-id>/` (body or frontmatter): auto-driven docs worktree +
-  PR via `scripts/docs-edit-route.sh route-substantive` → `docs_worktree.sh` / `docs_pr.sh`.
+  PR via `scripts/docs-edit-route.py route-substantive` → `docs_worktree.py` / `docs_pr.sh`.
 - **`inFlight` region** — never mechanically edited (PRD 032 deliver writer sole region).
 - Branch protection is detected via host API; ambiguous/missing auth fails closed to the PR path — never bypass
   the protected trunk merge gate.
@@ -151,7 +151,7 @@ ambiguity is likely.
 
 Semantic tiers (`cheap`/`build`/`deep`) live in `workflow.config.json` `models.tiers` only — not in agent
 `model:` frontmatter. Reviewer agents use `model: inherit` or a concrete platform ID. Validated by
-`scripts/model-tier-check.sh` (config + concrete models); runtime R9 for `inherit` reviewers is enforced at
+`scripts/model-tier-check.py` (config + concrete models); runtime R9 for `inherit` reviewers is enforced at
 dispatch by `/sw-doc-review` and `rules/sw-subagent-dispatch.mdc`. See `.sw/models-tiering.md`.
 
 ## Planning full-conductor boundary (PRD 035 R9)

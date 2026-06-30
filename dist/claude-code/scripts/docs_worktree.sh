@@ -3,10 +3,10 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STATE_HELPER="$ROOT/scripts/shipwright-state.sh"
+STATE_HELPER="$ROOT/scripts/shipwright-state.py"
 
 usage() {
-  echo "usage: docs_worktree.sh {provision|resume|status} --topic <topic> [--dry-run]" >&2
+  echo "usage: docs_worktree.py {provision|resume|status} --topic <topic> [--dry-run]" >&2
   exit 2
 }
 

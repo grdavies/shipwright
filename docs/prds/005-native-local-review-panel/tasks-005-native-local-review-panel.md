@@ -18,21 +18,21 @@ frozen_at: 2026-06-24
 | Dispatch rule | `rules/sw-subagent-dispatch.mdc` |
 | Commands | `core/commands/sw-review.md`, `core/commands/sw-ship.md`, `core/commands/sw-doc.md` |
 | Gap-check | `core/skills/gap-check/` (or command wiring) |
-| Selection / apply / resolve | `scripts/code-review-select.sh`, `scripts/code-review-apply-check.sh`, `scripts/review-local-resolve.sh` |
+| Selection / apply / resolve | `scripts/code-review-select.py`, `scripts/code-review-apply-check.py`, `scripts/review-local-resolve.py` |
 | Config | `.sw/config.schema.json`, `core/sw-reference/config.schema.json`, `.sw/workflow.config.example.json` |
 | Naming | `rules/sw-naming.mdc` |
 | User guides | `docs/guides/configuration.md`, `docs/guides/getting-started.md` |
-| Memory | `scripts/memory-redact.sh`, `rules/memory-guardrails.mdc` |
-| State / branch resolver | `scripts/shipwright-state.sh`, `scripts/wave.sh` (shared `<type>/<slug>` derivation, A2) |
+| Memory | `scripts/memory-redact.py`, `rules/memory-guardrails.mdc` |
+| State / branch resolver | `scripts/shipwright-state.py`, `scripts/wave.sh` (shared `<type>/<slug>` derivation, A2) |
 | Fixtures | `scripts/test/fixtures/code-review-*`, `scripts/test/fixtures/doc-afterTasks-*`, `scripts/test/run-code-review-fixtures.sh`, `scripts/test/run-persona-selection-fixtures.sh`, `scripts/test/run-doc-fixtures.sh` |
 | Build chain | `scripts/copy-to-core.sh`, `python3 -m sw generate --all` |
 | Dist | `dist/cursor/`, `dist/claude-code/` |
 
 ## Notes
 
-- Effective spec union: parent PRD R1–R75 + amendment A1 R76–R79 + amendment A2 R80–R83 (`spec-union.sh`).
-- Deterministic fixtures invoke `code-review-select.sh`, `code-review-apply-check.sh`, and
-  `review-local-resolve.sh`; doc-grep fixtures cover prompt/checklist content only.
+- Effective spec union: parent PRD R1–R75 + amendment A1 R76–R79 + amendment A2 R80–R83 (`spec-union.py`).
+- Deterministic fixtures invoke `code-review-select.py`, `code-review-apply-check.py`, and
+  `review-local-resolve.py`; doc-grep fixtures cover prompt/checklist content only.
 - `ce-code-review` adapter must stay green (R3 regression); update "apply-check rejects P1" → unvalidated vs
   validated P1 (R22/R61).
 - Phase-mode `/sw-deliver` dogfood exercises R67; amendment A1 wires `doc.afterTasks` → `/sw-deliver run`,
@@ -73,18 +73,18 @@ frozen_at: 2026-06-24
   - **Expected:** fresh-context validator spec (diff + neutral location only; no shared memory); same-model FP limit noted
   - **R-IDs:** R49, R62
 
-- [ ] 1.7 Add `scripts/code-review-select.sh` (R7, R33, R47, R51, R61)
-  - **File:** `scripts/code-review-select.sh`
+- [ ] 1.7 Add `scripts/code-review-select.py` (R7, R33, R47, R51, R61)
+  - **File:** `scripts/code-review-select.py`
   - **Expected:** given diff JSON/path → deterministic roster JSON; core + gated specialists per signal table
   - **R-IDs:** R7, R33, R47, R51, R61
 
-- [ ] 1.8 Add `scripts/review-local-resolve.sh` (R14, R15, R16, R35, R61)
-  - **File:** `scripts/review-local-resolve.sh`
+- [ ] 1.8 Add `scripts/review-local-resolve.py` (R14, R15, R16, R35, R61)
+  - **File:** `scripts/review-local-resolve.py`
   - **Expected:** merges schema defaults; fires phase-1 independent of `review.provider`; opt-out on `enabled:false` / `provider:none`
   - **R-IDs:** R14, R15, R16, R35, R61
 
-- [ ] 1.9 Extend `scripts/code-review-apply-check.sh` (R19, R22, R48, R55, R56, R57, R60, R61)
-  - **File:** `scripts/code-review-apply-check.sh`
+- [ ] 1.9 Extend `scripts/code-review-apply-check.py` (R19, R22, R48, R55, R56, R57, R60, R61)
+  - **File:** `scripts/code-review-apply-check.py`
   - **Expected:** `--validated` admits P1; expanded deny-list + content markers; security-control markers; symlink/`.git`/TOCTOU/write-field validation; fix-size lines/hunks
   - **R-IDs:** R19, R22, R48, R55, R56, R57, R60, R61
 
@@ -111,7 +111,7 @@ frozen_at: 2026-06-24
   - **R-IDs:** R6, R27
 
 - [ ] 2.2 Gated specialist prompts + signals (R7, R8, R9, R36–R42, R51, R53)
-  - **File:** `core/providers/code-review/native.md`, `scripts/code-review-select.sh`
+  - **File:** `core/providers/code-review/native.md`, `scripts/code-review-select.py`
   - **Expected:** specialists fire per table; `previous-comments` excluded; `reliability` folds silent-failure; no simplifier persona; `ai-native` includes `core/` paths + untrusted-LLM trigger
   - **R-IDs:** R7, R8, R9, R36, R37, R38, R39, R40, R41, R42, R51, R53
 
@@ -143,12 +143,12 @@ frozen_at: 2026-06-24
   - **R-IDs:** R19, R20, R44, R59, R68
 
 - [ ] 3.2 Security deny-list + security-logic apply gates (R21, R48, R55, R56)
-  - **File:** `scripts/code-review-apply-check.sh`, `core/providers/code-review/native.md`
+  - **File:** `scripts/code-review-apply-check.py`, `core/providers/code-review/native.md`
   - **Expected:** per-class path + marker fixtures; security-reviewer-touched + control-marker surface-only
   - **R-IDs:** R21, R48, R55, R56
 
 - [ ] 3.3 Symlink / `.git` / write-field apply rails (R57)
-  - **File:** `scripts/code-review-apply-check.sh`
+  - **File:** `scripts/code-review-apply-check.py`
   - **Expected:** realpath containment; no symlink component; `.git/**` denied; patch target must match validated `file`
   - **R-IDs:** R57
 
@@ -184,7 +184,7 @@ frozen_at: 2026-06-24
 
 ### 4. Gating, framing, phase-mode & run report (M)
 
-- [ ] 4.1 Wire `review-local-resolve.sh` into commands (R14, R15, R16, R26, R35)
+- [ ] 4.1 Wire `review-local-resolve.py` into commands (R14, R15, R16, R26, R35)
   - **File:** `core/commands/sw-review.md`, `core/commands/sw-ship.md`
   - **Expected:** phase-1 fires default-on incl. `review.provider:none`; additive `haltOn:[]` gate; only `review.local` opt-out
   - **R-IDs:** R14, R15, R16, R26, R35
@@ -218,7 +218,7 @@ frozen_at: 2026-06-24
 
 - [ ] 5.1 Memory redaction + artifact scrub wiring (R29, R30)
   - **File:** `core/providers/code-review/native.md`, `core/commands/sw-review.md`
-  - **Expected:** finding-derived writes through `memory-redact.sh`; run report + temp dirs scrubbed post-parse
+  - **Expected:** finding-derived writes through `memory-redact.py`; run report + temp dirs scrubbed post-parse
   - **R-IDs:** R29, R30
 
 - [ ] 5.2 Phase-2 load + contested-apply instrumentation (R74)
@@ -240,7 +240,7 @@ frozen_at: 2026-06-24
 
 - [ ] 6.1 Update `sw-doc.md` boundary dispatch (R76, R77, R79)
   - **File:** `core/commands/sw-doc.md`
-  - **Expected:** `confirm`/`auto` dispatch `/sw-deliver run <frozen-tasks>`; `stop` prints same as next command; agent `auto` records override in `shipwright-state.sh` before dispatch; never inline implementation
+  - **Expected:** `confirm`/`auto` dispatch `/sw-deliver run <frozen-tasks>`; `stop` prints same as next command; agent `auto` records override in `shipwright-state.py` before dispatch; never inline implementation
   - **R-IDs:** R76, R77, R79
 
 - [ ] 6.2 Update naming rule + user guides (R78)
@@ -259,8 +259,8 @@ frozen_at: 2026-06-24
   - **R-IDs:** R80, R81, R82
 
 - [ ] 6.5 Brainstorm exclusion + seed-commit run-record (R83)
-  - **File:** `core/commands/sw-doc.md`, `scripts/shipwright-state.sh`
-  - **Expected:** seed commit excludes `docs/brainstorms/**` and any untracked/ignored path; agent `--after-tasks=auto` records the seed commit (branch + SHA) via `shipwright-state.sh` before dispatch (parity with R79)
+  - **File:** `core/commands/sw-doc.md`, `scripts/shipwright-state.py`
+  - **Expected:** seed commit excludes `docs/brainstorms/**` and any untracked/ignored path; agent `--after-tasks=auto` records the seed commit (branch + SHA) via `shipwright-state.py` before dispatch (parity with R79)
   - **R-IDs:** R83
 
 - [ ] 6.6 Seed-commit fixture suite (R80–R83)

@@ -562,7 +562,7 @@ def git_run(
 
 
 def run_check_gate(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
-    script = root / "scripts" / "check-gate.sh"
+    script = root / "scripts" / "check-gate.py"
     cmd = ["bash", str(script)]
     if pr:
         cmd.append(pr)

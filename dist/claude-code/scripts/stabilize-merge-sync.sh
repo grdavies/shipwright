@@ -2,9 +2,9 @@
 # Merge-base sync probe for /sw-stabilize — detect PR merge conflicts before check/thread harvest.
 #
 # Usage:
-#   stabilize-merge-sync.sh status [--pr N]
-#   stabilize-merge-sync.sh conflict-files [--base REF]
-#   stabilize-merge-sync.sh fetch-base [--base REF]
+#   stabilize-merge-sync.py status [--pr N]
+#   stabilize-merge-sync.py conflict-files [--base REF]
+#   stabilize-merge-sync.py fetch-base [--base REF]
 #
 # Exit: 0 mergeable/clean; 1 conflicting; 2 usage; 30 host/metadata unavailable
 set -euo pipefail

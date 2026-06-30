@@ -9,7 +9,7 @@ Pre-freeze quality and traceability discipline for the doc workstream. Complemen
 panel) — structural gates run **after** panel synthesis and **before** `/sw-freeze`.
 
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill spec-rigor`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill spec-rigor`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Tier policy
 
@@ -27,10 +27,10 @@ spec↔task consistency and R-ID→test coverage.
 ## Structural tokenizer (PRD 031)
 
 All spec-rigor and traceability parsing flows through the shared doc-format tokenizer
-(`scripts/doc_format.py` via `scripts/doc-format-normalize.sh`). Before freeze:
+(`scripts/doc_format.py` via `scripts/doc-format-normalize.py`). Before freeze:
 
-- `bash scripts/doc-format-normalize.sh --check <path>` — fail-closed `file:line` diagnostics.
-- `bash scripts/doc-format-normalize.sh --write <path>` — shape-only canonicalization (idempotent).
+- `python3 scripts/doc-format-normalize.py --check <path>` — fail-closed `file:line` diagnostics.
+- `python3 scripts/doc-format-normalize.py --write <path>` — shape-only canonicalization (idempotent).
 
 Authoring commands emit slot-filling templates matching the canonical shape; non-empty directive keys
 (`absorbs`/`supersedes`/`retracts`) that yield zero parsed ids fail closed.
@@ -50,7 +50,7 @@ Resolve or explicitly defer every open question before freeze:
 
 ### Checklist (requirement quality — pre-PRD-freeze)
 
-Deterministic PRD checks via `scripts/spec-rigor-check.sh --artifact prd`:
+Deterministic PRD checks via `scripts/spec-rigor-check.py --artifact prd`:
 
 - At least one stable R-ID in Requirements.
 - No duplicate R-IDs.
@@ -59,15 +59,15 @@ Deterministic PRD checks via `scripts/spec-rigor-check.sh --artifact prd`:
 
 ### Analyze (spec↔task consistency — pre-task-freeze)
 
-Via `scripts/spec-rigor-check.sh --artifact tasks`:
+Via `scripts/spec-rigor-check.py --artifact tasks`:
 
-- Task file references every effective R-ID from `scripts/spec-union.sh` (union, not parent-only).
+- Task file references every effective R-ID from `scripts/spec-union.py` (union, not parent-only).
 - Parent tasks are dependency-ordered; no orphan R-IDs in union without a task reference.
 - `## Traceability` table present and parseable.
 
 ### Traceability (R-ID → task → test — pre-task-freeze)
 
-Via `scripts/traceability-check.sh`:
+Via `scripts/traceability-check.py`:
 
 - Each effective R-ID maps to a **task ref** (e.g. `1.2`, `2`) and a **named test scenario** (fixture name,
   test file path, or explicit scenario label — not "add tests later").
@@ -78,11 +78,11 @@ Via `scripts/traceability-check.sh`:
 
 ```bash
 # Pre-PRD-freeze (pass --tier full|standard) — paths relative to planningDir or legacy prdsDir
-bash scripts/spec-rigor-check.sh --artifact prd --path <planningDir>/prd/prd-031-.../prd-031-....md --tier full
+python3 scripts/spec-rigor-check.py --artifact prd --path <planningDir>/prd/prd-031-.../prd-031-....md --tier full
 
 # Pre-task-freeze
-bash scripts/spec-rigor-check.sh --artifact tasks --path <planningDir>/prd/prd-031-.../tasks-prd-031-....md --prd <prd-body>
-bash scripts/traceability-check.sh --prd <prd-body> --tasks <tasks-path>
+python3 scripts/spec-rigor-check.py --artifact tasks --path <planningDir>/prd/prd-031-.../tasks-prd-031-....md --prd <prd-body>
+python3 scripts/traceability-check.py --prd <prd-body> --tasks <tasks-path>
 ```
 
 ### Verdict contract
@@ -120,6 +120,6 @@ Task items cite R-IDs inline: `- [ ] 1.2 Implement gate (R1)`.
 
 ## Guardrails
 
-- Gates are **additive** — they do not replace doc-review or freeze CI (`check-frozen.sh`).
+- Gates are **additive** — they do not replace doc-review or freeze CI (`check-frozen.py`).
 - No auto-fix of PRD/task content — surface findings; human or synthesizer fixes.
-- Redact any persisted gate summary through `bash scripts/memory-redact.sh` (R41).
+- Redact any persisted gate summary through `python3 scripts/memory-redact.py` (R41).

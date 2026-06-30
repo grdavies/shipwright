@@ -31,7 +31,7 @@ Claude Code receives a separate all-Anthropic default catalog.
    detected platform; doctor mode offers repair when absent.
 2. **Authoritative routing** — every shipped `sw-*` command and reasoning skill has a default tier assignment
    in `model-routing.defaults.json`, seeded into `models.routing` by setup.
-3. **Runtime resolution** — `scripts/resolve-model-tier.sh` turns semantic tier names and routing lookups
+3. **Runtime resolution** — `scripts/resolve-model-tier.py` turns semantic tier names and routing lookups
    into concrete dispatch IDs for orchestrators and fixtures.
 4. **Documentation alignment** — `models-tiering.md`, configuration guide, README setup, and example config
    reflect four tiers, both platform catalogs, and routing resolution.
@@ -50,7 +50,7 @@ Claude Code receives a separate all-Anthropic default catalog.
 - PRD 005 native panel implementation (this PRD only seeds tiers the panel will consume).
 - Changing `workflow.config.json` path for Claude Code.
 - User-interactive model picker in setup (defaults only; manual edit after setup).
-- Mandatory runtime invocation of `resolve-model-tier.sh` from hooks or command runners (R19/R20 are
+- Mandatory runtime invocation of `resolve-model-tier.py` from hooks or command runners (R19/R20 are
   procedural guidance for agents).
 
 ## Scope Boundaries
@@ -59,7 +59,7 @@ Claude Code receives a separate all-Anthropic default catalog.
 
 - `/sw-setup` scaffold + doctor for `models` seeding and repair.
 - Four-tier policy, platform default catalogs (Cursor + Claude Code).
-- `model-tier-check.sh` tier-order update; `resolve-model-tier.sh` helper.
+- `model-tier-check.py` tier-order update; `resolve-model-tier.py` helper.
 - `models.routing` schema, default registry (`model-routing.defaults.json`), and setup seeding.
 - Full command + skill tier inventory (KD5, KD6); agent rules (KD7) via `sw-subagent-dispatch.mdc`.
 - Model tier lines in all command and reasoning skill procedures.
@@ -88,11 +88,11 @@ Requirements R1–R26 carry forward from the frozen brainstorm with stable R-IDs
 - **R14** Setup report output MUST summarize the written tier map (tier → model ID) and note that re-run on
   another platform overwrites `models.tiers`.
 - **R15** `models` block MUST remain optional in schema — repos without tiering continue to pass
-  `model-tier-check.sh` with `"tiering not configured"` — but setup MUST always seed it on fresh scaffold.
+  `model-tier-check.py` with `"tiering not configured"` — but setup MUST always seed it on fresh scaffold.
 
 ### Four-tier policy & validation
 
-- **R4** The canonical tier order MUST be `cheap` < `build` < `mid` < `deep`; `scripts/model-tier-check.sh`
+- **R4** The canonical tier order MUST be `cheap` < `build` < `mid` < `deep`; `scripts/model-tier-check.py`
   MUST validate `roles.reviewer` tier rank ≥ `roles.builder` tier rank using this four-tier order.
 - **R5** `.sw/workflow.config.example.json` and `core/sw-reference/workflow.config.example.json` MUST reflect
   the Cursor four-tier catalog from KD3 in the brainstorm.
@@ -109,7 +109,7 @@ Requirements R1–R26 carry forward from the frozen brainstorm with stable R-IDs
   communication-intensity enum on `models.routing` with semantic tier values.
 - **R17** `/sw-setup` MUST seed the complete default `models.routing` maps per KD5 and KD6 in the brainstorm
   for the detected platform (tier names only; IDs come from `models.tiers`).
-- **R18** `scripts/resolve-model-tier.sh` MUST support `--tier <name>`, `--command <slug>`, `--skill <name>`,
+- **R18** `scripts/resolve-model-tier.py` MUST support `--tier <name>`, `--command <slug>`, `--skill <name>`,
   and `--delegate <child-slug>` (for `inherit` orchestrators) lookups into `models.routing`. When routing
   resolves to `inherit`, emit `{ "tier": "inherit", "modelId": null, "source": "routing" }` with exit `0` —
   callers MUST resolve delegated children, not dispatch on orchestrator lookup alone. Missing keys for shipped
@@ -117,7 +117,7 @@ Requirements R1–R26 carry forward from the frozen brainstorm with stable R-IDs
 - **R21** `core/sw-reference/model-routing.defaults.json` MUST be the single authored source for default
   command + skill routing maps; setup copies from this file; example config embeds the same defaults inline
   for readability.
-- **R22** `scripts/model-tier-check.sh` (or a sibling `model-routing-check.sh`) MUST validate every key in
+- **R22** `scripts/model-tier-check.py` (or a sibling `model-routing-check.py`) MUST validate every key in
   `model-routing.defaults.json` resolves to a tier present in `models.tiers` (or `inherit`) and that every
   shipped `sw-*` command and reasoning skill from KD5/KD6 has a defaults entry.
 - **R25** `models.routing` entries MUST be overridable in `workflow.config.json` without editing plugin files;
@@ -134,9 +134,9 @@ Requirements R1–R26 carry forward from the frozen brainstorm with stable R-IDs
 - **R9** `core/rules/sw-subagent-dispatch.mdc` MUST reference `models.tiers.mid` for medium-effort delegation,
   `models.tiers.deep` for high-stakes dispatch, and `models.routing` for command/skill resolution.
 - **R10** Doc-pipeline commands (`sw-brainstorm.md`, `sw-prd.md`, `sw-tasks.md`, `sw-amend.md`) MUST reference
-  routing tier `deep` and instruct orchestrators to resolve via `scripts/resolve-model-tier.sh --command <slug>`.
+  routing tier `deep` and instruct orchestrators to resolve via `scripts/resolve-model-tier.py --command <slug>`.
 - **R19** Every `core/commands/sw-*.md` file MUST include a **Model tier** line in procedure (or scope) stating
-  its routing tier and how to resolve it (`inherit`, or `resolve-model-tier.sh --command <slug>`).
+  its routing tier and how to resolve it (`inherit`, or `resolve-model-tier.py --command <slug>`).
 - **R20** Every `core/skills/*/SKILL.md` that drives agent reasoning MUST document its routing tier and
   subagent dispatch tier (when Task tool is used).
 - **R24** Orchestrator commands (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-compound-ship`) MUST NOT override the
@@ -152,11 +152,11 @@ Requirements R1–R26 carry forward from the frozen brainstorm with stable R-IDs
 
 ### Scripts & fixtures
 
-- **R11** A `scripts/resolve-model-tier.sh` script MUST accept `--tier <name>` and config path and emit JSON
+- **R11** A `scripts/resolve-model-tier.py` script MUST accept `--tier <name>` and config path and emit JSON
   `{ "tier", "modelId", "source" }` with the concrete platform model ID from `models.tiers`, exiting `20` on
   unknown tier or missing config; it MUST be invoked from fixture tests.
 - **R12** `scripts/test/run-impl-fixtures.sh` (or a dedicated fixture runner) MUST assert four-tier example
-  config passes `model-tier-check.sh` and `resolve-model-tier.sh deep` returns the Cursor Opus ID from the
+  config passes `model-tier-check.py` and `resolve-model-tier.py deep` returns the Cursor Opus ID from the
   example.
 - **R23** Fixture coverage MUST assert representative commands resolve expected tiers: `sw-prd` → `deep` → Opus
   ID; `sw-triage` → `cheap` → fast model ID; `sw-execute` → `build` → Composer ID; `sw-gaps` → `mid` →
@@ -224,13 +224,13 @@ Requirements R1–R26 carry forward from the frozen brainstorm with stable R-IDs
 
 ```bash
 # Direct tier lookup
-bash scripts/resolve-model-tier.sh --tier deep --config .cursor/workflow.config.json
+python3 scripts/resolve-model-tier.py --tier deep --config .cursor/workflow.config.json
 
 # Command routing lookup
-bash scripts/resolve-model-tier.sh --command sw-prd --config .cursor/workflow.config.json
+python3 scripts/resolve-model-tier.py --command sw-prd --config .cursor/workflow.config.json
 
 # Skill routing lookup
-bash scripts/resolve-model-tier.sh --skill prd --config .cursor/workflow.config.json
+python3 scripts/resolve-model-tier.py --skill prd --config .cursor/workflow.config.json
 ```
 
 Output: JSON `{ "tier", "modelId", "source" }` on stdout; exit `0` on success, `20` on resolution failure.
@@ -240,8 +240,8 @@ Output: JSON `{ "tier", "modelId", "source" }` on stdout; exit `0` on success, `
 | Area | Path |
 |------|------|
 | Routing defaults | `core/sw-reference/model-routing.defaults.json` (new) |
-| Resolver | `scripts/resolve-model-tier.sh` (new) |
-| Tier check | `scripts/model-tier-check.sh` (update four-tier order) |
+| Resolver | `scripts/resolve-model-tier.py` (new) |
+| Tier check | `scripts/model-tier-check.py` (update four-tier order) |
 | Schema | `.sw/config.schema.json`, `core/sw-reference/config.schema.json` |
 | Example config | `.sw/workflow.config.example.json`, `core/sw-reference/workflow.config.example.json` |
 | Setup command | `core/commands/sw-setup.md` |
@@ -257,7 +257,7 @@ Output: JSON `{ "tier", "modelId", "source" }` on stdout; exit `0` on success, `
 ## Security & Compliance
 
 - No API credentials in `workflow.config.json` — tier values are dispatch IDs only.
-- `scripts/memory-redact.sh` applies to any persisted setup summaries (existing guardrail).
+- `scripts/memory-redact.py` applies to any persisted setup summaries (existing guardrail).
 - Platform detection MUST NOT execute arbitrary code or read secrets from env beyond documented markers.
 - Routing defaults are committed plugin artifacts — no user transcript content.
 
@@ -280,8 +280,8 @@ Fixture runner: extend `scripts/test/run-impl-fixtures.sh` or add `scripts/test/
 ## Success Criteria
 
 1. Fresh `/sw-setup` writes valid four-tier `models` + routing for detected platform; config validates.
-2. `model-tier-check.sh` passes on example config with four tiers and seven `inherit` reviewers.
-3. `resolve-model-tier.sh --tier deep` prints Opus ID; representative command paths pass (R23).
+2. `model-tier-check.py` passes on example config with four tiers and seven `inherit` reviewers.
+3. `resolve-model-tier.py --tier deep` prints Opus ID; representative command paths pass (R23).
 4. Configuration guide, README, and `/sw-setup` doc describe model defaults.
 5. All shipped commands and reasoning skills appear in `model-routing.defaults.json`; key-coverage fixture green.
 6. Dogfood `.cursor/workflow.config.json` has Cursor catalog `models` block.
@@ -289,7 +289,7 @@ Fixture runner: extend `scripts/test/run-impl-fixtures.sh` or add `scripts/test/
 
 ## Rollout Plan
 
-0. Update `CANONICAL_TIER_ORDER` in `model-tier-check.sh` to include `mid` (atomic with schema/defaults).
+0. Update `CANONICAL_TIER_ORDER` in `model-tier-check.py` to include `mid` (atomic with schema/defaults).
 1. Land schema + defaults JSON + resolver + tier-check updates.
 2. Update `/sw-setup` scaffold and doctor paths; regenerate dist.
 3. Stamp Model tier lines on all commands and reasoning skills.

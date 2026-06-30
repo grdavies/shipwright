@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Executable-plan self-review for task sub-items (IM6 / U7).
 #
-# Usage: plan-self-review.sh --tasks PATH [--task-ref REF]
+# Usage: plan-self-review.py --tasks PATH [--task-ref REF]
 # Exit: 0 pass, 10 warn, 20 fail
 set -euo pipefail
 
@@ -9,7 +9,7 @@ TASKS_FILE=""
 TASK_REF=""
 
 usage() {
-  echo "Usage: plan-self-review.sh --tasks PATH [--task-ref REF]" >&2
+  echo "Usage: plan-self-review.py --tasks PATH [--task-ref REF]" >&2
   exit 2
 }
 

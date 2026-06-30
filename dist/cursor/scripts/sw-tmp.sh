@@ -2,15 +2,15 @@
 # Per-run private temp dir for evidence files (plan 005 U4).
 #
 # Usage:
-#   sw-tmp.sh init              Create 0700 run dir; record in shipwright-state; print path
-#   sw-tmp.sh resolve           Print run dir ($SW_RUN_DIR → shipwright-state → empty)
-#   sw-tmp.sh clean [max_age_s] Remove stale caller-owned sw-run.* dirs (default 86400)
+#   sw-tmp.py init              Create 0700 run dir; record in shipwright-state; print path
+#   sw-tmp.py resolve           Print run dir ($SW_RUN_DIR → shipwright-state → empty)
+#   sw-tmp.py clean [max_age_s] Remove stale caller-owned sw-run.* dirs (default 86400)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SHIPWRIGHT_STATE="$ROOT/scripts/shipwright-state.sh"
-# shellcheck source=evidence-read.sh
-source "$ROOT/scripts/evidence-read.sh"
+SHIPWRIGHT_STATE="$ROOT/scripts/shipwright-state.py"
+# shellcheck source=evidence-read.py
+source "$ROOT/scripts/evidence-read.py"
 MAX_AGE="${2:-86400}"
 
 caller_uid() {
@@ -82,7 +82,7 @@ case "$CMD" in
   resolve) cmd_resolve ;;
   clean) cmd_clean "${2:-86400}" ;;
   -h|--help)
-    echo "usage: sw-tmp.sh init|resolve|clean [max_age_seconds]"
+    echo "usage: sw-tmp.py init|resolve|clean [max_age_seconds]"
     ;;
   *)
     echo "unknown command: $CMD" >&2

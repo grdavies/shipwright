@@ -2,12 +2,12 @@
 # Single per-repo configurator for /sw-init (PRD 018 R29/R30/R32).
 #
 # Usage:
-#   sw-configure.sh detect [--propose]
-#   sw-configure.sh schema-version
-#   sw-configure.sh shipwright-version
-#   sw-configure.sh drift-check [--config PATH]
-#   sw-configure.sh portability-check [--config PATH]
-#   sw-configure.sh write-draft [--accept-defaults] [--write-verify] [--config PATH]
+#   sw-configure.py detect [--propose]
+#   sw-configure.py schema-version
+#   sw-configure.py shipwright-version
+#   sw-configure.py drift-check [--config PATH]
+#   sw-configure.py portability-check [--config PATH]
+#   sw-configure.py write-draft [--accept-defaults] [--write-verify] [--config PATH]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -15,11 +15,11 @@ CMD="${1:-}"
 shift || true
 
 schema_path() {
-  # shellcheck source=sw-resolve-plugin-root.sh
+  # shellcheck source=sw-resolve-plugin-root.py
   local script_dir plugin_root
   script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   # shellcheck disable=SC1091
-  source "$script_dir/sw-resolve-plugin-root.sh"
+  source "$script_dir/sw-resolve-plugin-root.py"
   plugin_root="$(sw_resolve_plugin_root "$script_dir")"
   for candidate in \
     "$ROOT/.sw/config.schema.json" \
@@ -66,7 +66,7 @@ case "$CMD" in
   detect)
     PROPOSE=""
     [[ "${1:-}" == "--propose" ]] && PROPOSE="--propose"
-    bash "$ROOT/scripts/detect-project-type.sh" --root "$ROOT" $PROPOSE
+    bash "$ROOT/scripts/detect-project-type.py" --root "$ROOT" $PROPOSE
     ;;
   schema-version) schema_version ;;
   shipwright-version) shipwright_version ;;
@@ -111,11 +111,11 @@ PY
       esac
     done
     [[ -z "$CONFIG" && -f "$ROOT/.cursor/workflow.config.json" ]] && CONFIG="$ROOT/.cursor/workflow.config.json"
-    bash "$ROOT/scripts/verify-unconfigured.sh" --config "${CONFIG:-/nonexistent}" --json || true
-    DETECT="$(bash "$ROOT/scripts/detect-project-type.sh" --root "$ROOT" --propose 2>/dev/null || echo '{}')"
+    bash "$ROOT/scripts/verify-unconfigured.py" --config "${CONFIG:-/nonexistent}" --json || true
+    DETECT="$(bash "$ROOT/scripts/detect-project-type.py" --root "$ROOT" --propose 2>/dev/null || echo '{}')"
     DRIFT="$(bash "$0" drift-check --config "${CONFIG:-}")"
     GH_OK="unknown"
-    if bash "$ROOT/scripts/host-doctor.sh" --root "$ROOT" >/dev/null 2>&1; then
+    if bash "$ROOT/scripts/host-doctor.py" --root "$ROOT" >/dev/null 2>&1; then
       gh="present"
     elif command -v gh >/dev/null 2>&1; then
       GH_OK="available"
@@ -160,7 +160,7 @@ accept = accept == "1"
 write_verify = write_verify == "1"
 
 detect = json.loads(subprocess.check_output(
-    ["bash", str(Path(root)/"scripts/detect-project-type.sh"), "--root", root, "--propose"],
+    ["bash", str(Path(root)/"scripts/detect-project-type.py"), "--root", root, "--propose"],
     text=True,
 ))
 
@@ -204,7 +204,7 @@ print(json.dumps({"verdict": "pass", "path": out_path, "verifyWritten": bool(dra
 PY
     ;;
   *)
-    echo '{"verdict":"fail","error":"usage: sw-configure.sh detect|schema-version|shipwright-version|drift-check|portability-check|write-draft"}' >&2
+    echo '{"verdict":"fail","error":"usage: sw-configure.py detect|schema-version|shipwright-version|drift-check|portability-check|write-draft"}' >&2
     exit 2
     ;;
 esac

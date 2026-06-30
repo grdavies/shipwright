@@ -3,15 +3,15 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STATE_HELPER="$ROOT/scripts/shipwright-state.sh"
+STATE_HELPER="$ROOT/scripts/shipwright-state.py"
 
 usage() {
   cat <<'EOF'
 Usage:
-  worktree.sh list [--json]
-  worktree.sh provision <name> [--branch <branch>] [--base <ref>] [--tier T] [--workstream W]
-  worktree.sh teardown <name|path> [--force]
-  worktree.sh ceiling-check
+  worktree.py list [--json]
+  worktree.py provision <name> [--branch <branch>] [--base <ref>] [--tier T] [--workstream W]
+  worktree.py teardown <name|path> [--force]
+  worktree.py ceiling-check
 
 Never use raw rm on a worktree path — teardown refuses unsafe deletes.
 EOF
@@ -264,8 +264,8 @@ cmd_provision() {
 
   local parent="${base:-}"
   if [[ -z "$parent" ]]; then
-    if [[ -x "$ROOT/scripts/resolve-base-branch.sh" ]]; then
-      parent="$(bash "$ROOT/scripts/resolve-base-branch.sh" resolve --quiet --name-only 2>/dev/null || true)"
+    if [[ -x "$ROOT/scripts/resolve-base-branch.py" ]]; then
+      parent="$(bash "$ROOT/scripts/resolve-base-branch.py" resolve --quiet --name-only 2>/dev/null || true)"
     fi
   fi
   if [[ -z "$parent" ]]; then
@@ -288,10 +288,10 @@ cmd_provision() {
   if [[ -n "$branch" ]]; then
     new_branch="$branch"
   else
-    new_branch="$("$ROOT/scripts/branch-name-guard.sh" derive "$name")"
+    new_branch="$("$ROOT/scripts/branch-name-guard.py" derive "$name")"
   fi
-  if ! "$ROOT/scripts/branch-name-guard.sh" validate "$new_branch"      || ! python3 "$ROOT/scripts/worktree_lib.py" validate "$new_branch" >/dev/null 2>&1; then
-    echo "worktree.sh: refusing non-conforming branch name '$new_branch'" >&2
+  if ! "$ROOT/scripts/branch-name-guard.py" validate "$new_branch"      || ! python3 "$ROOT/scripts/worktree_lib.py" validate "$new_branch" >/dev/null 2>&1; then
+    echo "worktree.py: refusing non-conforming branch name '$new_branch'" >&2
     exit 12
   fi
   local host_remote; host_remote="$(python3 "$ROOT/scripts/host_lib.py" --root "$ROOT" remote-name)"

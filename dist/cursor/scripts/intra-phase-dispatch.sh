@@ -2,10 +2,10 @@
 # Intra-phase fan-out guard + decision logging (PRD 023 R15–R17).
 #
 # Usage:
-#   intra-phase-dispatch.sh stamp-context --run-dir <path> --conductor-mode inline|background_phase
-#   intra-phase-dispatch.sh evaluate --context-json '{}' [--proposal-json '{}'] [--wave-slots N]
+#   intra-phase-dispatch.py stamp-context --run-dir <path> --conductor-mode inline|background_phase
+#   intra-phase-dispatch.py evaluate --context-json '{}' [--proposal-json '{}'] [--wave-slots N]
 #     [--active-intra-phase N] [--run-dir <path>] [--record]
-#   intra-phase-dispatch.sh check-nesting [--run-dir <path>] [--context-json '{}']
+#   intra-phase-dispatch.py check-nesting [--run-dir <path>] [--context-json '{}']
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

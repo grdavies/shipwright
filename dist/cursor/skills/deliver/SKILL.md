@@ -6,7 +6,7 @@ description: Dependency-ordered deliver waves with dependent-branch stacking and
 # Deliver orchestration
 
 Layer above `/sw-ship` for **phase-mode** (frozen task-list phases stacking onto `<type>/<slug>`) and
-**multi-feature mode** (independent features promoting via `integration/<stamp>`). Reuses `scripts/worktree.sh`
+**multi-feature mode** (independent features promoting via `integration/<stamp>`). Reuses `scripts/worktree.py`
 and `skills/parallelism/` wholesale.
 
 **Conductor:** load `skills/conductor/SKILL.md` for the shared autonomous loop (self-continuation,
@@ -14,7 +14,7 @@ legitimate halts, parallel dispatch, resumption). `/sw-deliver` is the pilot con
 `rules/sw-conductor.mdc`. Do not re-author loop logic in this skill (R1, R3).
 
 
-**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill deliver`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --skill deliver`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Deliver plan representation
 
@@ -98,7 +98,7 @@ phase provision — after worktree add and before preflight/spec-seed reads — 
 `scripts/planning_materialize.py` to copy required spec bodies into the ignored prefix
 `.cursor/planning-materialized/`. A post-materialize `secret-scan file` runs; paths register in deliver
 run-state for orphan sweep; teardown deletes the tree. Pre-commit, pre-push, and CI diff scans reject any
-staged path under the prefix (`scripts/materialized-prefix-scan.sh`) — the **commit-boundary barrier** holds
+staged path under the prefix (`scripts/materialized-prefix-scan.py`) — the **commit-boundary barrier** holds
 even under `git add -f`. Store backend + revision are pinned at provision; mid-run `planning.store` config
 changes halt with remediation. CI/host never materializes.
 
@@ -114,7 +114,7 @@ Legacy repo-wide state is adopted to the scoped path on first read (breadcrumb l
 `record-premerge`, `cleanup_lib.resolve_deliver_state`) resolve the scoped path at the git toplevel —
 never a duplicate copy under an orchestrator worktree `.cursor/`.
 
-**Freeze-time commit (PRD 013 R1–R5):** `/sw-freeze` invokes `check-frozen.sh freeze-commit` → shared
+**Freeze-time commit (PRD 013 R1–R5):** `/sw-freeze` invokes `check-frozen.py freeze-commit` → shared
 `wave_spec_seed.py` helper (same as `/sw-doc` afterTasks). Commits docs-only onto `<type>/<slug>`;
 never `main`; verdict-independent (commit failure warns; stamp still completes).
 
@@ -179,7 +179,7 @@ scripts/wave.sh state terminal --verdict complete
 ```
 
 Per-phase `/sw-ship` outcomes live in `sw-deliver-runs/<phase>/status.json` (`merge-ready-green` |
-`blocked`); `scripts/ship-phase-status.sh` syncs `blocked` into run-state when present.
+`blocked`); `scripts/ship-phase-status.py` syncs `blocked` into run-state when present.
 
 ### Orchestrator lock + merge journal (R51)
 
@@ -296,11 +296,11 @@ dependent phase branch via **merge** (never rebase a published phase branch). Co
 Dependents provision with:
 
 ```bash
-scripts/worktree.sh provision <name> --base <dependency-branch> --branch <type>/<name>
+scripts/worktree.py provision <name> --base <dependency-branch> --branch <type>/<name>
 ```
 
 `<type>` must be drawn from `release-please-config.json` `changelog-sections[].type` (e.g. `feat`, `fix`,
-`chore`). `pf/<name>` is prohibited; the branch-name guard (`scripts/branch-name-guard.sh`) refuses
+`chore`). `pf/<name>` is prohibited; the branch-name guard (`scripts/branch-name-guard.py`) refuses
 non-conforming names at creation time (R22–R25).
 
 Merge pre-flight from `skills/parallelism/` runs before stacking. No item touches `main` mid-wave.
@@ -311,7 +311,7 @@ After green leaves:
 
 1. Create `integration/<stamp>` from `main`.
 2. Merge green leaf branches.
-3. Run whole-suite check (`check-gate.sh` on integration PR head).
+3. Run whole-suite check (`check-gate.py` on integration PR head).
 4. Human gate authorizes `promote` in dependency order.
 
 ## Promotion (pre-merge validated)
@@ -320,7 +320,7 @@ For each leaf in dependency order:
 
 1. Build disposable candidate ref: `main` + already-promoted + this leaf.
 2. Push candidate branch + open short-lived PR.
-3. Run `check-gate.sh` on PR head — green only then fast-forward to `main`.
+3. Run `check-gate.py` on PR head — green only then fast-forward to `main`.
 4. Red candidate halts promotion before `main` is touched.
 
 ## Attributability
@@ -416,14 +416,14 @@ scripts/wave.sh merge ancestry-check --phase-branch feat/<slug>-phase-<phase> --
 ```
 
 - **Merge method:** true `git merge --no-ff` only (no squash/rebase) so ancestry reconciliation holds.
-- **Review barrier:** `merge gate-check` / `merge run-next` refuse until `check-gate.sh` is **green** and
+- **Review barrier:** `merge gate-check` / `merge run-next` refuse until `check-gate.py` is **green** and
   `coderabbitLanded` is not `false` (pending async review is non-green for auto-merge).
 - **Journal:** `merge run-next` opens `mergeJournal` before merge and clears on success (coordinates with
   `wave.sh journal` helpers).
 - **No-PR path:** when a phase has no open PR, `merge run-next` uses local-evidence from durable
   `status.json` (merge-ready-green + head SHA binding) plus post-merge incremental verify; remote
-  `check-gate.sh` authority applies at the terminal PR only.
-- **Push chokepoint:** workflow pushes use `scripts/git-push.sh` → `scripts/secret-scan.sh` before
+  `check-gate.py` authority applies at the terminal PR only.
+- **Push chokepoint:** workflow pushes use `scripts/git-push.py` → `scripts/secret-scan.py` before
   `git push` (including `sw-pr` and stabilize re-pushes).
 
 ## Terminal report (R24/R55/R57)
@@ -472,9 +472,9 @@ run's INDEX row, completion-log entry, and absorbed gaps (R50; parity with task-
 scripts/wave.sh living-docs reconcile --commit
 scripts/wave.sh living-docs append-terminal --commit
 scripts/wave.sh docs-currency
-bash scripts/reconcile-status.sh set-index-status --prd <NNN> --status in-progress
-bash scripts/reconcile-status.sh append-log-idempotent --prd <NNN> --phase all --pr <N> --sha <sha>
-bash scripts/reconcile-status.sh gap-resolve --absorbing-prd <NNN> --pr <N>
+python3 scripts/reconcile-status.py set-index-status --prd <NNN> --status in-progress
+python3 scripts/reconcile-status.py append-log-idempotent --prd <NNN> --phase all --pr <N> --sha <sha>
+python3 scripts/reconcile-status.py gap-resolve --absorbing-prd <NNN> --pr <N>
 ```
 
 See `skills/living-status/SKILL.md` for the canonical INDEX status enum and reconcile primitives.
@@ -508,7 +508,7 @@ When all phases are `green-merged` and none `blocked`:
 ```bash
 scripts/wave.sh resume reconcile                    # remote <type>/<slug> tip is ground truth (R29/R50)
 scripts/wave.sh terminal pr prepare                 # open/update single <type>/<slug> → main PR (R22)
-scripts/wave.sh terminal pr gate                    # check-gate.sh on terminal PR head (R23/R24)
+scripts/wave.sh terminal pr gate                    # check-gate.py on terminal PR head (R23/R24)
 scripts/wave.sh terminal pr status
 scripts/wave.sh report terminal                     # /sw-ready form when gate green
 scripts/wave.sh ack check|complete|status           # optional cadence (deliver.phaseAckCadence, R56)
@@ -567,7 +567,7 @@ scripts/wave.sh memory learnings prepare --out .cursor/sw-deliver-learnings.md
 ```
 
 Distills contention, blast-radius, revert, and blocked-phase patterns from plan + run log — never raw
-transcripts or sub-agent logs. Always pipe through `scripts/memory-redact.sh` before persist.
+transcripts or sub-agent logs. Always pipe through `scripts/memory-redact.py` before persist.
 
 ## Concurrency invariants (PRD 036 — acceptance)
 
@@ -581,7 +581,7 @@ Operator-facing guarantees enforced by CI fixtures (`run-dual-ship-fixtures.sh`,
    attempts change the durable state signature; exhaustion halts with a consolidated report.
 3. **Whole-batch merge (R9–R12):** no early single-phase merge while siblings lack validated terminal
    status; deterministic phase-id merge order; bounded auto-regen for deterministic-conflict paths only.
-4. **Status provenance (R13–R17):** `ship-phase-status.sh` emits an offline-regenerable provenance marker;
+4. **Status provenance (R13–R17):** `ship-phase-status.py` emits an offline-regenerable provenance marker;
    forged or stale `merge-ready-green` is rejected; recovery reuses `/sw-ship --phase-mode --from <step>`
    — never hand-edit `status.json`.
 

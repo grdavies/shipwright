@@ -3,7 +3,7 @@
 #
 # Single source of truth for allowed branch type prefixes: the Conventional-Commit
 # types declared in release-please-config.json (changelog-sections[].type). Used by
-# scripts/worktree.sh (provision floor) and scripts/wave_deliver.py (multi-feature
+# scripts/worktree.py (provision floor) and scripts/wave_deliver.py (multi-feature
 # derivation) so a non-conforming branch (notably the legacy `pf/` prefix) can never
 # be minted off-script (PRD 007 R22/R23/R25/R27).
 set -euo pipefail
@@ -73,15 +73,15 @@ shift || true
 case "$cmd" in
   types) load_types ;;
   validate)
-    [[ $# -ge 1 ]] || { echo "usage: branch-name-guard.sh validate <branch>" >&2; exit 2; }
+    [[ $# -ge 1 ]] || { echo "usage: branch-name-guard.py validate <branch>" >&2; exit 2; }
     validate "$1"
     ;;
   derive)
-    [[ $# -ge 1 ]] || { echo "usage: branch-name-guard.sh derive <name> [type]" >&2; exit 2; }
+    [[ $# -ge 1 ]] || { echo "usage: branch-name-guard.py derive <name> [type]" >&2; exit 2; }
     derive "$@"
     ;;
   *)
-    echo "usage: branch-name-guard.sh {types | validate <branch> | derive <name> [type]}" >&2
+    echo "usage: branch-name-guard.py {types | validate <branch> | derive <name> [type]}" >&2
     exit 2
     ;;
 esac

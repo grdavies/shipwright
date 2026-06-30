@@ -109,7 +109,7 @@ anticipated integration and test gaps.
 
 - **R11** Fixture coverage MUST assert: no `` `/caveman` `` in `session-context.md`; `sw-prd` → `lite`;
   `sw-triage` → `ultra`; `sw-doc-review` → `normal`; schema rejects wenyan intensity in routing JSON.
-- **R17** Add `scripts/communication-resolve.sh` (or equivalent) that given a command name outputs resolved
+- **R17** Add `scripts/communication-resolve.py` (or equivalent) that given a command name outputs resolved
   intensity JSON for deterministic fixture invocation.
 - **R18** `scripts/test/run-doc-fixtures.sh` (or a dedicated `run-communication-fixtures.sh`) MUST include the
   R11 scenarios; exit non-zero on failure.
@@ -133,7 +133,7 @@ anticipated integration and test gaps.
 | `core/communication/caveman-core.md` | Bundled four-level policy (≤35 lines) |
 | `core/sw-reference/communication-routing.defaults.json` | Default per-command intensity map |
 | `core/commands/sw-caveman.md` | Manual override command |
-| `scripts/communication-resolve.sh` | Deterministic intensity resolver for fixtures |
+| `scripts/communication-resolve.py` | Deterministic intensity resolver for fixtures |
 
 ### Modified files
 
@@ -201,7 +201,7 @@ Full command map lives in `communication-routing.defaults.json` (R5).
 | Scenario | Verification |
 |----------|--------------|
 | Phantom slash absent | Grep fixture: `session-context.md` has no `` `/caveman` `` |
-| Routing resolution | `communication-resolve.sh sw-prd` → `lite`; `sw-triage` → `ultra`; `sw-doc-review` → `normal` |
+| Routing resolution | `communication-resolve.py sw-prd` → `lite`; `sw-triage` → `ultra`; `sw-doc-review` → `normal` |
 | Wenyan rejection | Schema validation fails on `wenyan-full` in routing JSON |
 | Session output | `build_session_context()` fixture: no phantom slash; includes caveman-core content |
 | Command metadata | Every `sw-*.md` has **Communication intensity** line |

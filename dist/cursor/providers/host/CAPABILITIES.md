@@ -13,8 +13,8 @@ capability:
 
 # Host provider capabilities (PRD 026)
 
-Neutral contract for git-host / forge adapters. Deterministic consumers (`scripts/check-gate.sh`,
-`scripts/wave_terminal.py`, `scripts/stabilize-merge-sync.sh`) call host verbs through
+Neutral contract for git-host / forge adapters. Deterministic consumers (`scripts/check-gate.py`,
+`scripts/wave_terminal.py`, `scripts/stabilize-merge-sync.py`) call host verbs through
 `scripts/host.sh <verb>` (Phase 2+) routed by `host.provider` via capability-manifest selection.
 Agent-mediated consumers read markdown adapters (`providers/host/<id>.md`).
 

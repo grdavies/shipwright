@@ -84,7 +84,7 @@ premerge_check() {
     echo "$OUT"
     return 3
   fi
-  if ! bash "$ROOT/scripts/secret-scan.sh" stdin <"$diff_file" >/dev/null 2>&1; then
+  if ! bash "$ROOT/scripts/secret-scan.py" stdin <"$diff_file" >/dev/null 2>&1; then
     echo '{"verdict":"fail","error":"secret-scan-deny"}' >&2
     return 4
   fi
@@ -160,7 +160,7 @@ ${MARKER}"
       PR="$(gh pr list --head "$MECH" --base "$DEFAULT" --json number --jq '.[0].number' 2>/dev/null || true)"
     fi
     GATE_EC=0
-    if OUT=$(bash "$ROOT/scripts/check-gate.sh" "${PR:-}" 2>/dev/null); then GATE_EC=0; else GATE_EC=$?; fi
+    if OUT=$(bash "$ROOT/scripts/check-gate.py" "${PR:-}" 2>/dev/null); then GATE_EC=0; else GATE_EC=$?; fi
     VERDICT=$(echo "$OUT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('verdict','blocked'))" 2>/dev/null || echo blocked)
     if [[ "$VERDICT" != "green" ]]; then
       echo "{\"verdict\":\"blocked\",\"action\":\"merge-if-ready\",\"gate\":$OUT}" >&2

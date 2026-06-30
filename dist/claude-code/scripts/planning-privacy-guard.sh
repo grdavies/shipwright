@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Interim privacy guard — fails closed if formerly-gitignored bodies would become tracked (PRD 031 R18).
-# Usage: planning-privacy-guard.sh [--repo-root ROOT] [--staged] [--migration-staging] [--scan-private]
+# Usage: planning-privacy-guard.py [--repo-root ROOT] [--staged] [--migration-staging] [--scan-private]
 set -euo pipefail
 
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

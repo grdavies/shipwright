@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Root-level project-type detector + verify proposal helper (PRD 018 R1/R20).
 #
-# Usage: detect-project-type.sh [--root DIR] [--propose]
+# Usage: detect-project-type.py [--root DIR] [--propose]
 # Emits JSON: {matches:[{type,confidence}], ambiguous:bool, proposals?:{}, verifyGaps?:[], unsafe?:[]}
 set -euo pipefail
 
@@ -13,7 +13,7 @@ while [[ $# -gt 0 ]]; do
     --root) ROOT="$(cd "$2" && pwd)"; shift 2 ;;
     --propose) PROPOSE=1; shift ;;
     -h|--help)
-      echo "usage: detect-project-type.sh [--root DIR] [--propose]"
+      echo "usage: detect-project-type.py [--root DIR] [--propose]"
       exit 0
       ;;
     *) echo '{"verdict":"fail","error":"unknown argument"}' >&2; exit 2 ;;

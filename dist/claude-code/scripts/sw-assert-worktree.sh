@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fail-closed guard: block implementation entry on bare default-branch checkout (PRD 002 R6/R27).
 #
-# Usage: sw-assert-worktree.sh
+# Usage: sw-assert-worktree.py
 # Exit 0 — safe to proceed (linked worktree, non-default branch, or hotfix/release branch)
 # Exit 1 — blocked (default branch in primary checkout)
 # Exit 2 — configuration error

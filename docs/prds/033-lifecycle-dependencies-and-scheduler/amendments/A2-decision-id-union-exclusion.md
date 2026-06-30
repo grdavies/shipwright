@@ -10,10 +10,10 @@ frozen: false
 ## Overview
 
 The parent PRD 033 authored its Decision Log as enumerated `- **D1** … - **D12**` bullets. The shared
-`scripts/spec-union.sh` extractor treats that `- **D<n>**` syntax as requirement IDs (it is dual-purpose for
+`scripts/spec-union.py` extractor treats that `- **D<n>**` syntax as requirement IDs (it is dual-purpose for
 PRDs and decision records), so the effective requirement union for PRD 033 wrongly includes D1–D12 alongside
 the real requirements (parent R1–R28 plus amendment A1 R29–R36). At task-freeze this makes
-`scripts/traceability-check.sh` and `scripts/spec-rigor-check.sh` fail closed: the traceability table maps
+`scripts/traceability-check.py` and `scripts/spec-rigor-check.py` fail closed: the traceability table maps
 only requirement IDs, so D1–D12 can never be "covered" and the gates block — a failure unfixable from the
 task list.
 
@@ -32,7 +32,7 @@ change to the specification. It mirrors PRD 027 amendment A1 (`decision-id-union
   such supersession/exclusion edges are reversible, so this amendment can be retired once the tokenizer ships.
 - Sequencing note specific to PRD 033: the parent Decision Log originally used the `- **D<n>.**` (trailing
   period) variant, which the current tokenizer **hard-rejects** (so the union could not be computed at all).
-  A format-only normalization (`D1.` → `D1`) of the parent — permitted by the `check-frozen.sh`
+  A format-only normalization (`D1.` → `D1`) of the parent — permitted by the `check-frozen.py`
   format-normalization exception (semantics provably unchanged) — restores a parseable Decision Log; this A2
   then drops the now-parseable D-IDs from the requirement union. No requirement or decision text changes.
 
@@ -57,9 +57,9 @@ mis-extracted Decision-Log IDs from the effective requirement union. The decisio
 
 ## Testing Strategy
 
-- `bash scripts/spec-union.sh <parent-prd>` resolves `requirements` to exactly R1–R36 (D1–D12 appear under
+- `python3 scripts/spec-union.py <parent-prd>` resolves `requirements` to exactly R1–R36 (D1–D12 appear under
   `retracted`, not `requirements`).
-- `bash scripts/traceability-check.sh --prd <parent-prd> --tasks <task-list>` returns `complete` (exit 0)
+- `python3 scripts/traceability-check.py --prd <parent-prd> --tasks <task-list>` returns `complete` (exit 0)
   with R1–R36 fully covered.
 - Existing PRD-level `spec-rigor-check` on the parent and on this amendment remains green.
 

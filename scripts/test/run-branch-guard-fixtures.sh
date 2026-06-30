@@ -60,7 +60,7 @@ else
 fi
 
 # --- pf-matcher-migration: no pf/ matchers in reconcile/impl fixtures ---
-if ! grep -qE '\^pf/' "$ROOT/scripts/reconcile-status.sh" \
+if ! grep -qE '\^pf/' "$ROOT/scripts/reconcile.py" \
    && ! grep -qE 'pf/' "$ROOT/scripts/test/run-impl-fixtures.sh"; then
   ok "pf-matcher-migration: reconcile + impl fixtures migrated off pf/"
 else

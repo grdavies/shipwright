@@ -19,8 +19,8 @@ of `proposed` surface):
   spawn consumes it; subsequent parallel persona Tasks fail `stale-preflight-nonce` /
   `preflight-agent-mismatch`. This contradicts `skills/doc-review/SKILL.md` (R28/R31) and `/sw-doc` delegated
   Task binding (one preflight per persona in parallel).
-- **GAP-040** — `scripts/dispatch-check.sh` and `wave_preflight.py` resolve model tier via
-  `resolve-model-tier.sh --agent` only, while orchestrator prose (KD8 / `sw-subagent-dispatch.mdc`) requires
+- **GAP-040** — `scripts/dispatch-check.py` and `wave_preflight.py` resolve model tier via
+  `resolve-model-tier.py --agent` only, while orchestrator prose (KD8 / `sw-subagent-dispatch.mdc`) requires
   delegated atomics to inherit `--command` routing. Example: `--command sw-prd` → `deep`, but agent-default
   resolution → `build` / `composer-2.5`, silently down-tiering delegated PRD authoring (observed on PRD 026).
 
@@ -41,7 +41,7 @@ not optional hygiene.
 
 **GAP-040 surfaces today:**
 
-- `scripts/dispatch-check.sh` lines 67–68: `MODEL_ARGS=(--agent "$AGENT")` — `--command` affects intensity
+- `scripts/dispatch-check.py` lines 67–68: `MODEL_ARGS=(--agent "$AGENT")` — `--command` affects intensity
   only, not model tier.
 - `scripts/wave_preflight.py` line 276: `model_cmd = [..., "--agent", agent]` — same gap.
 - `core/rules/sw-subagent-dispatch.mdc` KD8: orchestrators with `inherit` routing **must** resolve delegated
@@ -102,8 +102,8 @@ Continue the program namespace (parent R18–R23 + A1 R35–R37; this amendment 
 - **R39** (closes GAP-040) When a dispatch carries `--command <sw-slug>`, model-tier resolution MUST treat the
   command routing as authoritative so orchestrator-delegated atomics are not silently down-tiered by
   agent-default fallback (KD8; `core/rules/sw-subagent-dispatch.mdc`).
-  - **R39a** When `bash scripts/wave.sh dispatch preflight` or `scripts/dispatch-check.sh` is invoked with
-    `--command <sw-slug>`, model tier resolution MUST use `resolve-model-tier.sh --command <sw-slug>` as the
+  - **R39a** When `bash scripts/wave.sh dispatch preflight` or `scripts/dispatch-check.py` is invoked with
+    `--command <sw-slug>`, model tier resolution MUST use `resolve-model-tier.py --command <sw-slug>` as the
     **primary** lookup. `--agent` alone MUST NOT down-tier a command-backed delegation.
   - **R39b** **Precedence** (single-sourced, fixture-backed):
     1. If `models.routing.agents[<agent>]` is an **explicit** entry (not merely the `roles.reviewer` default
@@ -111,8 +111,8 @@ Continue the program namespace (parent R18–R23 + A1 R35–R37; this amendment 
        panel ids), use `--agent` resolution — intentional per-persona tier.
     2. Else if `--command` is present, use `--command` resolution (KD8 — orchestrator-delegated atomics).
     3. Else use `--agent` resolution.
-  - **R39c** `scripts/resolve-model-tier.sh` MAY gain a combined `--command` + `--agent` mode implementing
-    R39b; callers (`wave_preflight.py`, `dispatch-check.sh`) MUST NOT duplicate precedence logic in ad-hoc
+  - **R39c** `scripts/resolve-model-tier.py` MAY gain a combined `--command` + `--agent` mode implementing
+    R39b; callers (`wave_preflight.py`, `dispatch-check.py`) MUST NOT duplicate precedence logic in ad-hoc
     form.
   - **R39d** The preflight record's `modelId` / `modelTier` MUST reflect the R39b-resolved tier. The hook's
     `binding:model-mismatch` check (preflight vs live resolution) MUST use the same precedence.
@@ -148,7 +148,7 @@ R38–R39 join the PRD 024 spec union (R18–R23 + A1 R35–R37 + **A2 R38–R39
 | New task | Files | R-IDs |
 |----------|-------|-------|
 | **6.0a** Keyed parallel preflight store + hook consume-by-dispatch-id | `scripts/wave_preflight.py`, `core/hooks/before_task_dispatch.py`, `.sw/layout.md` | R38 |
-| **6.0b** Command-authoritative tier in preflight + dispatch-check + resolver precedence | `scripts/dispatch-check.sh`, `scripts/resolve-model-tier.sh`, `core/rules/sw-subagent-dispatch.mdc` | R39 |
+| **6.0b** Command-authoritative tier in preflight + dispatch-check + resolver precedence | `scripts/dispatch-check.py`, `scripts/resolve-model-tier.py`, `core/rules/sw-subagent-dispatch.mdc` | R39 |
 | **6.0c** Parallel panel + command-tier fixtures | `scripts/test/run-dispatch-foundation-fixtures.sh`, `scripts/test/run-fanout-fixtures.sh` | R38, R39 |
 | **6.2** (existing) Update — doc-review halt fixtures assume parallel preflight + command tier are green | `core/commands/sw-doc.md`, `core/skills/doc-review/SKILL.md` | R19, R38, R39 |
 

@@ -16,7 +16,7 @@ from host_lib import resolve_provider
 
 
 def run_check_gate(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
-    script = SCRIPT_DIR / "check-gate.sh"
+    script = SCRIPT_DIR / "check-gate.py"
     cmd = ["bash", str(script)]
     if pr:
         cmd.append(pr)

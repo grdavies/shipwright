@@ -94,7 +94,7 @@ worktrees (GAP-048/050/074/030); (6) **operator handoffs** still bash-first (GAP
 
 ### Build-chain + verify (GAP-054, GAP-071, GAP-059, GAP-051, GAP-061, GAP-072)
 
-- **R25** `/sw-ship` verify (phase-mode and terminal) MUST run `bash scripts/build-chain-sync.sh --check`
+- **R25** `/sw-ship` verify (phase-mode and terminal) MUST run `python3 scripts/build-chain-sync.py --check`
   (or equivalent) before commit when the phase diff touches any path in `core/sw-reference/build-chain-paths.json`
   (or the PRD 038 SoT manifest). Failure is a **hard verify block**, not a post-push CI surprise. Fixture:
   `ship-without-build-chain-sync-fails`.
@@ -173,7 +173,7 @@ worktrees (GAP-048/050/074/030); (6) **operator handoffs** still bash-first (GAP
 - **R48** Post-freeze docs on the integration branch MUST commit via `wave_spec_seed` / docs-branch path
   without waiting for `deliver-loop` entry (closes data-loss window — GAP-016). `planning_legacy_projection`
   MUST refuse to wipe hand-maintained GAP-BACKLOG/INDEX without `--force` (GAP-068). Durable re-freeze
-  contract for amendment companions replaces scoped `check-frozen.sh` exceptions (GAP-057). Fixtures:
+  contract for amendment companions replaces scoped `check-frozen.py` exceptions (GAP-057). Fixtures:
   `post-freeze-docs-durability`, `projection-refuse-hand-maintained`, `re-freeze-contract-amendment`.
 
 ### Deliver deferrals + cleanup (GAP-012, GAP-025)

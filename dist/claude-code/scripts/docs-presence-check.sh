@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Assert README + docs/guides cover PRD 009 user-visible surfaces; no legacy pf- refs (R56–R57).
 #
-# Usage: docs-presence-check.sh
+# Usage: docs-presence-check.py
 # Exit: 0 pass; 1 missing surface or legacy ref; 2 usage error
 set -euo pipefail
 

@@ -2,7 +2,7 @@
 # Write durable /sw-ship phase-mode terminal status for /sw-deliver (R48/R18/R47, R13).
 #
 # Usage:
-#   ship-phase-status.sh --verdict merge-ready-green|blocked [--cause TEXT] [--phase SLUG]
+#   ship-phase-status.py --verdict merge-ready-green|blocked [--cause TEXT] [--phase SLUG]
 #     [--out PATH] [--head SHA] [--pr N] [--gate-json PATH]
 #
 # Path resolution: --out > $SW_RUN_DIR/status.json > .cursor/sw-deliver-runs/<phase>/status.json
@@ -51,8 +51,8 @@ fi
 if [[ -z "$PHASE" ]]; then
   PHASE="${SW_PHASE_SLUG:-}"
 fi
-if [[ -z "$PHASE" && -x "$ROOT/scripts/shipwright-state.sh" ]]; then
-  PHASE="$(bash "$ROOT/scripts/shipwright-state.sh" read 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('phaseSlug',''))" 2>/dev/null || true)"
+if [[ -z "$PHASE" && -x "$ROOT/scripts/shipwright-state.py" ]]; then
+  PHASE="$(bash "$ROOT/scripts/shipwright-state.py" read 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('phaseSlug',''))" 2>/dev/null || true)"
 fi
 PHASE="${PHASE:-unknown}"
 

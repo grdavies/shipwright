@@ -15,7 +15,7 @@ GATE_JSON=""
 REQUIRE_GATE=0
 
 usage() {
-  echo "Usage: feedback-closure-gate.sh --backlog PATH --signal-id ID --verify-status PATH [--gate-json PATH --require-gate]" >&2
+  echo "Usage: feedback-closure-gate.py --backlog PATH --signal-id ID --verify-status PATH [--gate-json PATH --require-gate]" >&2
   exit 2
 }
 
@@ -33,8 +33,8 @@ done
 
 [[ -n "$BACKLOG" && -n "$SIGNAL_ID" && -n "$VERIFY_STATUS" ]] || usage
 
-# shellcheck source=evidence-read.sh
-source "$ROOT/scripts/evidence-read.sh"
+# shellcheck source=evidence-read.py
+source "$ROOT/scripts/evidence-read.py"
 if [[ ! -f "$VERIFY_STATUS" ]] || ! safe_read_check "$VERIFY_STATUS"; then
   jq -n --arg id "$SIGNAL_ID" '{verdict:"inconclusive",reason:"verify status missing or rejected by safe_read",signalId:$id}'
   exit 10
@@ -54,7 +54,7 @@ root, backlog, signal_id, verify_status, gate_json, require_gate_s = sys.argv[1:
 require_gate = require_gate_s == "1"
 
 list_out = subprocess.check_output(
-    ["bash", str(Path(root) / "scripts/feedback-backlog.sh"), "list", "--open-only", "--backlog", backlog],
+    ["bash", str(Path(root) / "scripts/feedback-backlog.py"), "list", "--open-only", "--backlog", backlog],
     text=True,
 )
 items = json.loads(list_out)

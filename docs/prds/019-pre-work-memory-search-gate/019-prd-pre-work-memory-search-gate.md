@@ -90,7 +90,7 @@ receives only clarifying edits.
   assertion, so "offline" cannot be claimed to skip a reachable search.
 - **R7** The search and its outcome MUST be recorded as a durable, auditable breadcrumb (`run.log` / per-repo
   state) — including an explicit `memory:none` ("no relevant memory found") — redacted via
-  `scripts/memory-redact.sh` (R41) before persist. A raw transcript/result dump MUST NOT be the breadcrumb.
+  `scripts/memory-redact.py` (R41) before persist. A raw transcript/result dump MUST NOT be the breadcrumb.
 - **R8** Enforcement MUST be mechanical, not procedural-only, and MUST reuse the PRD 017 R23 pattern: a
   pre-mutation **search record** (resolved scope + classes + nonce, or a `memory:offline` breadcrumb) MUST be
   written for the work surface immediately before the first file-mutating tool call, and the registered
@@ -100,7 +100,7 @@ receives only clarifying edits.
 
 ### Security + cross-cutting
 
-- **R9** Memory-search results assembled into a delegated `Task` prompt MUST pass `scripts/memory-redact.sh`
+- **R9** Memory-search results assembled into a delegated `Task` prompt MUST pass `scripts/memory-redact.py`
   and be fenced (reuse PRD 017 R25); raw memory payloads MUST NOT be forwarded.
 - **R10** All behavior authored in `core/` MUST propagate to `dist/cursor` and `dist/claude-code` via
   `python3 -m sw generate --all` (freshness gate passing), be covered by fixtures (see Testing Strategy), and
@@ -115,7 +115,7 @@ receives only clarifying edits.
   `/sw-brainstorm`, `/sw-amend`, `/sw-review`, `/sw-stabilize`).
 - **TR2 — Search record + degrade-open breadcrumb.** Add a `scripts/wave.sh memory preflight` verb (or extend
   the existing dispatch-preflight from PRD 017 R23) that records a per-surface search artifact
-  (scope + classes + nonce) or a `memory:offline` / `memory:none` breadcrumb, redacted via `memory-redact.sh`
+  (scope + classes + nonce) or a `memory:offline` / `memory:none` breadcrumb, redacted via `memory-redact.py`
   (R6, R7). Single-sourced so command and dispatch paths share one recorder. The `memory:offline` breadcrumb
   MUST be gated on the adapter reachability probe (mechanical), never on an agent-supplied flag (R6).
 - **TR3 — `preToolUse` deny reuse.** Extend `core/hooks/before_task_dispatch.py` / the registered `preToolUse`
@@ -124,7 +124,7 @@ receives only clarifying edits.
 - **TR4 — Dispatch-rule obligation.** Update `core/rules/sw-subagent-dispatch.mdc` so delegated
   work-performing sub-agents carry the pre-work search obligation (perform-or-be-handed-redacted-result);
   exempt pure-exploration/mechanical non-mutating dispatch (R2).
-- **TR5 — Redaction reuse.** Forwarded memory results into delegated prompts pass `memory-redact.sh` + fencing
+- **TR5 — Redaction reuse.** Forwarded memory results into delegated prompts pass `memory-redact.py` + fencing
   via the existing PRD 017 R25 assembly path (R9).
 - **TR6 — Emitter + docs + fixtures.** Regenerate `dist/`; update R10 docs; add the Testing Strategy fixtures.
 
@@ -154,7 +154,7 @@ suites). Enforcement fixtures are integration-style (observe the record + deny),
 | `memory-prework-provider-agnostic` | the search routes through `memory-preflight` + the resolved adapter; no direct provider call | R3 |
 | `memory-prework-surface-reconcile` | hits are surfaced before mutation; a contradicting frozen rule/decision forces a recorded reconcile/blocker, not a silent ignore | R5 |
 | `memory-prework-degrade-open` | provider unreachable → `memory:offline` breadcrumb recorded and work proceeds (no block) | R6 |
-| `memory-prework-breadcrumb-audited` | search outcome (hits / `memory:none`) recorded durably and redacted via `memory-redact.sh` | R7 |
+| `memory-prework-breadcrumb-audited` | search outcome (hits / `memory:none`) recorded durably and redacted via `memory-redact.py` | R7 |
 | `memory-prework-pretooluse-deny` | the first file-mutation for a work surface is denied without a fresh search record (or offline breadcrumb); reuses the PRD 017 R23 deny path | R8 |
 | `memory-prework-prompt-redacted` | forwarded memory results into a delegated prompt are redacted + fenced; raw payloads not forwarded | R9 |
 | `memory-prework-emitter-freshness` | `dist/` regenerated and fresh | R10 |

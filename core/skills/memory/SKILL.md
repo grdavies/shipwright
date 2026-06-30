@@ -19,7 +19,7 @@ provider behind the capability spec in [`CAPABILITIES.md`](CAPABILITIES.md), so 
 config change, never a command edit.
 
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --skill memory`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill memory`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Resolve the provider (first step, always)
 
@@ -121,10 +121,10 @@ The `decision` doc class has a provider-conditional authoritative side. All othe
 Single source for freeze, compound, and audit:
 
 ```bash
-python3 scripts/memory-sot.sh resolve --class decision --json
+python3 scripts/memory-sot.py resolve --class decision --json
 # effective: repo | memory
 
-python3 scripts/memory-sot.sh resolve --class learning --json
+python3 scripts/memory-sot.py resolve --class learning --json
 # effective: distillation (scope guard)
 ```
 
@@ -145,17 +145,17 @@ Before **any** `store`, transcript distillation (`/sw-memory-sync`), or compound
 through the executable filter:
 
 ```bash
-python3 scripts/memory-redact.sh <<'EOF'
+python3 scripts/memory-redact.py <<'EOF'
 <payload>
 EOF
 ```
 
-Or: `python3 scripts/memory-redact.sh path/to/file`. The filter is deterministic (same input → same output),
+Or: `python3 scripts/memory-redact.py path/to/file`. The filter is deterministic (same input → same output),
 runs offline, and scrubs the named corpus in `rules/memory-guardrails.mdc` (AWS keys, GitHub PATs, JWTs,
 `Bearer` tokens, PEM private keys, emails). Never persist or re-inject unredacted content.
 
-**Fail-closed (R10):** if `memory-redact.sh` exits non-zero, abort the provider write **and** any snapshot
-write (`scripts/memory-decision-snapshot.sh write` propagates the failure). A provider outage after a
+**Fail-closed (R10):** if `memory-redact.py` exits non-zero, abort the provider write **and** any snapshot
+write (`scripts/memory-decision-snapshot.py write` propagates the failure). A provider outage after a
 successful snapshot stamp degrades to the committed snapshot with a warning — never block freeze/CI.
 
 ## Write mode (after substantive work)
@@ -165,7 +165,7 @@ Store distilled memories per the write contract in `CAPABILITIES.md`:
 - pick the canonical category (decision / learning / debug / design / code-context / research /
   discussion); never a generic catch-all,
 - set `relatedFiles` + stable tags (`prd-<n>`, `task-<n>`, `surface:<cmd>`),
-- **run `scripts/memory-redact.sh` on the payload first** (R41 chokepoint),
+- **run `scripts/memory-redact.py` on the payload first** (R41 chokepoint),
 - search before store; `modify` a near-duplicate instead of adding a second,
 - project scope by default; global only on explicit user direction,
 - store the distilled substance, never a raw transcript dump.
@@ -173,7 +173,7 @@ Store distilled memories per the write contract in `CAPABILITIES.md`:
 For **`decision`-class** writes, resolve the inverted pointer recipe first (R6):
 
 ```bash
-python3 scripts/memory-sot.sh pointer-recipe --path docs/decisions/<n>-<slug>.md [--memory-id <provider-id>] --json
+python3 scripts/memory-sot.py pointer-recipe --path docs/decisions/<n>-<slug>.md [--memory-id <provider-id>] --json
 ```
 
 | Effective SoT | Provider write | Git snapshot |
@@ -190,7 +190,7 @@ a notable review/CI pattern, or a distilled session recap. Do not store routine,
 
 Check the adapter's flags and adjust:
 
-- no `semanticSearch` → run `scripts/in-repo-memory-search.sh` (keyword + frontmatter filters) instead of
+- no `semanticSearch` → run `scripts/in-repo-memory-search.py` (keyword + frontmatter filters) instead of
   vector search; results feed `expand`,
 - no `tasks` → the phase board uses the local registry fallback,
 - no `filePathSearch` → semantic search on the path string,
@@ -202,7 +202,7 @@ Check the adapter's flags and adjust:
 **Read:** when `semanticSearch:false`, call:
 
 ```bash
-python3 scripts/in-repo-memory-search.sh \
+python3 scripts/in-repo-memory-search.py \
   --store .cursor/sw-memory \
   --query "<terms>" \
   [--category decision] [--tag prd-1] [--file-glob src/auth.ts]
@@ -213,7 +213,7 @@ Then `expand` by reading `memories/<id>.md` (or `rules/<id>.md` for rule categor
 **Write:**
 
 1. Lazy-create store dirs on first write: `mkdir -p .cursor/sw-memory/memories .cursor/sw-memory/rules`.
-2. Pipe payload through `scripts/memory-redact.sh` (R41) before any file write.
+2. Pipe payload through `scripts/memory-redact.py` (R41) before any file write.
 3. Default `commitMode: committed` → write non-rule files under `.cursor/sw-memory/memories/`.
 4. `commitMode: local` → non-rule files under `.cursor/sw-memory-local/memories/` (gitignored).
 5. **`category: rule` always writes to `.cursor/sw-memory/rules/`** — offline hook reads committed rules.
@@ -222,7 +222,7 @@ Then `expand` by reading `memories/<id>.md` (or `rules/<id>.md` for rule categor
 ## Planning store memory backend (PRD 034 R11/R23)
 
 When `planning.store.backend` is `memory`, unit **bodies** route through this skill's provider adapter and
-`scripts/memory-redact.sh` on read and write — **body storage only**; the memory backend does not alter
+`scripts/memory-redact.py` on read and write — **body storage only**; the memory backend does not alter
 source-of-truth for any planning class. Decision-class units under `docs/planning/decision/` still follow
 the PRD-015 committed redacted snapshot + pointer flow regardless of `visibility`. The authoritative
 decision record paths remain `docs/decisions/<n>-<slug>.md` (repo-SoT) or the provider record (memory-SoT)
@@ -232,7 +232,7 @@ per **Source of truth resolution** below — the planning-store memory backend n
 
 **Boundary rule (R32 / KTD3 + provider-conditional SoT):**
 
-Resolve authority first: `python3 scripts/memory-sot.sh resolve --class decision --json`.
+Resolve authority first: `python3 scripts/memory-sot.py resolve --class decision --json`.
 
 | Effective SoT | Authoritative artifact | Memory role |
 | --- | --- | --- |
@@ -251,17 +251,17 @@ When repo-SoT is active (default for `in-repo`):
 - Flag content-bearing `decision` memories that duplicate an existing record — they should become pointers.
 
 When memory-SoT is active, the provider record is authoritative; the committed git snapshot carries a
-forward pointer (`memoryPointer` in frontmatter — see `scripts/memory-decision-snapshot.sh write`).
+forward pointer (`memoryPointer` in frontmatter — see `scripts/memory-decision-snapshot.py write`).
 
 **Supersede reconciliation (`docs/decisions/SUPERSEDED.log`):**
 
 On record-level supersede, append the superseded path via:
 
 ```bash
-python3 scripts/reconcile-status.sh append-superseded --path docs/decisions/<old>.md --replacement docs/decisions/<new>.md
+python3 scripts/reconcile-status.py append-superseded --path docs/decisions/<old>.md --replacement docs/decisions/<new>.md
 ```
 
-`/sw-memory-sync` runs `python3 scripts/reconcile-status.sh supersede-reconcile --json` after distillation and
+`/sw-memory-sync` runs `python3 scripts/reconcile-status.py supersede-reconcile --json` after distillation and
 best-effort re-points the **non-authoritative** side per the active SoT (provider `relatedFiles` under
 repo-SoT; git snapshot pointer under memory-SoT). Pointer freshness is **auditable, not transactional**
 (provider out of CI reach).

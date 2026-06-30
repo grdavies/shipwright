@@ -2,12 +2,12 @@
 # Opt-in baseline capture for verification-gate attribution (plan 005 U3).
 #
 # Usage:
-#   verify-baseline.sh capture --from STATUS --to BASELINE [--gate-from PATH --gate-to PATH]
+#   verify-baseline.py capture --from STATUS --to BASELINE [--gate-from PATH --gate-to PATH]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck source=evidence-read.sh
-source "$ROOT/scripts/evidence-read.sh"
+# shellcheck source=evidence-read.py
+source "$ROOT/scripts/evidence-read.py"
 
 FROM=""
 TO=""
@@ -15,7 +15,7 @@ GATE_FROM=""
 GATE_TO=""
 
 usage() {
-  echo "Usage: verify-baseline.sh capture --from STATUS --to BASELINE [--gate-from PATH --gate-to PATH]" >&2
+  echo "Usage: verify-baseline.py capture --from STATUS --to BASELINE [--gate-from PATH --gate-to PATH]" >&2
   exit 2
 }
 

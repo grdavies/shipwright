@@ -38,7 +38,7 @@ _FALLBACK_TYPES = frozenset(
 
 def _load_valid_types() -> frozenset[str]:
     """Single-source allowed branch/commit types from release-please-config.json
-    (PRD 007 R24 — kept in lockstep with scripts/branch-name-guard.sh)."""
+    (PRD 007 R24 — kept in lockstep with scripts/branch-name-guard.py)."""
     cfg = SCRIPT_DIR.parent / "release-please-config.json"
     try:
         data = json.loads(cfg.read_text(encoding="utf-8"))

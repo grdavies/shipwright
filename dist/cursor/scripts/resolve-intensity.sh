@@ -7,7 +7,7 @@ DEFAULTS="$ROOT/core/sw-reference/communication-routing.defaults.json"
 
 usage() {
   cat <<'EOF'
-Usage: resolve-intensity.sh [--command <sw-*>] [--skill <name>] [--agent <id>] [--child <sw-*>] [--config <path>]
+Usage: resolve-intensity.py [--command <sw-*>] [--skill <name>] [--agent <id>] [--child <sw-*>] [--config <path>]
 
 Output: JSON { "command", "skill", "agent", "intensity", "source" }
 

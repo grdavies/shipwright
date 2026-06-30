@@ -11,11 +11,11 @@ This wrapper never changes stabilize's discipline (reply-before-resolve, verify-
 mass-resolve); it just repeats it under hard stops.
 
 
-**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill stabilize-loop`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --skill stabilize-loop`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Success predicate
 
-Stop with success when the `checks-gate` verdict (from `scripts/check-gate.sh`) is **green**:
+Stop with success when the `checks-gate` verdict (from `scripts/check-gate.py`) is **green**:
 
 - every **required** check passes under the configured all-checks policy (PR test-plan **advisory**
   job failures appear in `advisoryFailingChecks` but do not block — see `prTestPlan` in gate JSON), and
@@ -51,7 +51,7 @@ the loop is not done while reproducible findings remain unresolved.
    commit, push once.
 3. If nothing changed and the gate was already green → success.
 4. Arm the wake (see below) and wait for CI to settle and for new comments.
-5. Recompute the verdict via `scripts/check-gate.sh` (it folds in the per-head CodeRabbit barrier,
+5. Recompute the verdict via `scripts/check-gate.py` (it folds in the per-head CodeRabbit barrier,
    classified checks, and the unresolved-thread count); also re-harvest open non-inline findings from the
    review/walkthrough bodies (a fixed "Outside diff range" item should no longer recur).
    - **green** (`coderabbitLanded == true` — the re-review of this pass's fix landed clean, or CodeRabbit

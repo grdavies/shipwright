@@ -190,7 +190,7 @@ Follow PRD 004/009 discipline: edit `core/` and `scripts/`; run `python3 -m sw g
 
 ## Security & Compliance
 
-- **R41 redaction** — `scripts/memory-redact.sh` runs before `store` when `redactOnWrite: true` (default).
+- **R41 redaction** — `scripts/memory-redact.py` runs before `store` when `redactOnWrite: true` (default).
   Local storage does not eliminate re-injection or `/pf-memory-export` leak vectors.
 - **R43 trust boundary** — `ruleFetchCommand` is configurable exec; prefix allowlist is mandatory. Committed
   config cannot trigger arbitrary shell.

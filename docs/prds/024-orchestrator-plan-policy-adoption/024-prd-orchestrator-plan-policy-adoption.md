@@ -200,7 +200,7 @@ Fan-out delta only — **do not** re-document the shared 021/022 artifacts, and 
   guideline floors and asserted by the driver, not prose: a `proposed` plan that omits or reorders them is
   rejected fail-closed. Only routine post-confirmation yields are removed.
 - **`/sw-feedback` untrusted-signal chokepoint (highest risk).** Hook/monitor (`invocation ≠ human`) signals
-  hard-halt and are never auto-dispatched; the full signal JSON is redacted (`memory-redact.sh`) and wrapped as
+  hard-halt and are never auto-dispatched; the full signal JSON is redacted (`memory-redact.py`) and wrapped as
   `untrusted_payload` before any route record or memory write; routed dispatch requires a persisted human-ack
   keyed by signalId. Proven by `feedback-hook-trigger-no-autodispatch-under-proposed` and
   `feedback-proposed-redact-before-route-record`.

@@ -164,18 +164,18 @@ external-wait exhaustion, run-level budget — see conductor skill **Legitimate-
 
 **Communication intensity:** inherit
 
-**Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-deliver`.
+**Model tier:** inherit — resolve delegated atomics via `python3 scripts/resolve-model-tier.py --command <child-slug>`; do not dispatch on bare `--command sw-deliver`.
 
 ## Delegated Task binding contract
 
 Before each phase/terminal delegated Task from `/sw-deliver`:
 
 1. `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-deliver --skill conductor`
-2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-deliver --skill conductor --parent-model <parent-concrete-id> [--dispatch-id <id>]`
+2. `python3 scripts/dispatch-check.py --agent <agent-id> --command sw-deliver --skill conductor --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Dispatch Task with explicit concrete `model:` and resolved caveman intensity context; never rely on inherited model.
 
-Resolve model: `bash scripts/resolve-model-tier.sh --command <child-slug>` (or `--skill conductor`).
-Resolve intensity: `bash scripts/resolve-intensity.sh --command sw-deliver --skill conductor`.
+Resolve model: `python3 scripts/resolve-model-tier.py --command <child-slug>` (or `--skill conductor`).
+Resolve intensity: `python3 scripts/resolve-intensity.py --command sw-deliver --skill conductor`.
 
 ## Inline allowlist (closed)
 
@@ -190,7 +190,7 @@ Wave implementation/review remediation work delegates.
 ## Dispatch context redaction contract
 
 All non-config context passed to delegated Tasks (status excerpts, blocker reports, blast-radius notes,
-memory-preflight outputs, diffs) must be redacted via `bash scripts/memory-redact.sh` and fenced as
+memory-preflight outputs, diffs) must be redacted via `python3 scripts/memory-redact.py` and fenced as
 `untrusted_payload` before inclusion.
 
 
@@ -217,7 +217,7 @@ Unit-level graph primitives (in addition to phase-mode waves):
 
 ## Deliver conductor completion (PRD 035 A1)
 
-- **Build-chain ship verify (R25):** phase `/sw-ship` runs `scripts/ship-build-chain-check.sh` before commit when build-chain paths change.
+- **Build-chain ship verify (R25):** phase `/sw-ship` runs `scripts/ship-build-chain-check.py` before commit when build-chain paths change.
 - **Resume (R47):** halt payloads and `report blockers` emit `/sw-deliver run <frozen-task-list>` — never bare `deliver-loop` as operator resume.
 - **Deferrals (R49):** cross-feature waves, rich living-status dashboard, and contention feedback into `/sw-tasks` re-run remain explicit non-goals — no silent partial ship.
 - **Cleanup autonomy (R50):** when `cleanup.autonomy: auto`, `finalize-completion` applies dry-run `wouldRemove` after deterministic merge detection.

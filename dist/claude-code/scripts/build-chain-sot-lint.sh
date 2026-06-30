@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Validate core/sw-reference/build-chain-sot.json (PRD 038 R12).
 #
-# Usage: scripts/build-chain-sot-lint.sh
+# Usage: scripts/build-chain-sot-lint.py
 # Exit: 0 pass; 1 validation failure
 set -euo pipefail
 

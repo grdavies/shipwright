@@ -29,7 +29,7 @@ Body text.
 ### 1. Shared doc-format tokenizer engine — L
 
 - [ ] 1.1 Module
-  - **File:** `scripts/doc_format.py`, `scripts/doc-format-normalize.sh`
+  - **File:** `scripts/doc_format.py`, `scripts/doc-format-normalize.py`
   - **Expected:** tokenize/emit API.
 
 ### 2. Adoption — L

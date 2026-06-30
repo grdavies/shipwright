@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Planning store + visibility doctor checks (PRD 034 R16, R21, R27).
 #
-# Usage: planning-doctor.sh [--root PATH] [--no-sweep]
+# Usage: planning-doctor.py [--root PATH] [--no-sweep]
 # Exit 0 always; JSON verdict on stdout. Never prints provider tokens (R27).
 set -euo pipefail
 

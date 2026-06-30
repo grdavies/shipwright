@@ -52,7 +52,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
     reconciler never invents `in-progress` without deliver evidence. Fixture: `derived-status-from-inflight`.
   - **R-IDs:** R2
 - [ ] 1.3 DAG build + cycle detection + pre-commit whole-graph check (R4)
-  - **File:** `core/scripts/planning_graph.py`, `core/hooks/pre-commit`, `core/scripts/install-hooks.sh`
+  - **File:** `core/scripts/planning_graph.py`, `core/hooks/pre-commit`, `core/scripts/install-hooks.py`
   - **Expected:** `depends:`/`blocks:` frontmatter forms a DAG; validation fails closed with the offending
     cycle path; a pre-commit `planning-graph cycle-check --staged` runs the whole staged-frontmatter graph so a
     cycle split across two files in one commit cannot land. Fixture: `whole-graph-cycle-precommit-reject`.
@@ -108,14 +108,14 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
     read-merge-write contract so it never clobbers the `inFlight` region. Fixture: `reconcile-idempotent-regen`.
   - **R-IDs:** R21
 - [ ] 2.4 Dependency-dead flagging + doctor warning (R5)
-  - **File:** `core/scripts/planning_graph.py`, `core/scripts/host-doctor.sh`
+  - **File:** `core/scripts/planning_graph.py`, `core/scripts/host-doctor.py`
   - **Expected:** a `depends:` edge whose target is `superseded`/`cancelled` is flagged `dependency-dead` (with
     a doctor warning suggesting edge retraction or repoint) instead of leaving the dependent permanently
     `blocked`; the warning notes PRD 035's pull-in scanner may auto-*propose* the retraction (human-confirmed).
     Fixture: `dependency-dead-flagged-not-blocked`.
   - **R-IDs:** R5
 - [ ] 2.5 Sole-writer derived status drift elimination (R16)
-  - **File:** `core/scripts/planning_graph.py`, `core/scripts/reconcile-status.sh`
+  - **File:** `core/scripts/planning_graph.py`, `core/scripts/reconcile-status.py`
   - **Expected:** because the reconciler is the sole writer of derived INDEX status and no derived status is
     hand-maintained, the `gap-resolve`/living-status drift class (stale `planned`/`open` rows, GAP-043/044/046)
     is structurally eliminated and reconciles automatically. Fixture: `stale-planned-drift-reconciled`.
@@ -172,7 +172,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
     all unit/INDEX paths resolved through the PRD 031 path helper. Fixture: `deliver-dependency-preflight`.
   - **R-IDs:** R20
 - [ ] 3.5 Override durable logging + drift surfacing (R28)
-  - **File:** `core/scripts/wave_deliver.py`, `core/scripts/shipwright-state.sh`, `core/commands/sw-status.md`
+  - **File:** `core/scripts/wave_deliver.py`, `core/scripts/shipwright-state.py`, `core/commands/sw-status.md`
   - **Expected:** a dependency-gate `--override` is explicit, requires a reason, is logged to durable state
     (who/when/which edges/why), is rate-surfaced in `/sw-status` as drift, and is never the default. Fixture:
     `override-logged-rate-surfaced`.
@@ -202,7 +202,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
 ### 5. Atomic cutover (one commit with 031 Phase B + 032) — M
 
 - [ ] 5.1 GAP-BACKLOG retirement + legacy projections + canonical gap capture (R15)
-  - **File:** `core/scripts/planning_graph.py`, `core/scripts/feedback-backlog.sh`, `docs/prds/GAP-BACKLOG.md`, `docs/prds/INDEX.md`
+  - **File:** `core/scripts/planning_graph.py`, `core/scripts/feedback-backlog.py`, `docs/prds/GAP-BACKLOG.md`, `docs/prds/INDEX.md`
   - **Expected:** the hand-maintained GAP-BACKLOG table is fully replaced by gap rows in the generated unified
     INDEX (folder-per-item), with gap status driven by absorption edges (R11) not manual edits; during the
     window the reconciler also generates **read-only frontmatter-only** legacy `GAP-BACKLOG.md` + `INDEX.md`
@@ -212,7 +212,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
     `legacy-projection-frontmatter-only`.
   - **R-IDs:** R15
 - [ ] 5.2 Cutover no-regression run (R18)
-  - **File:** `core/scripts/spec-rigor-check.sh`, `core/scripts/traceability-check.sh`, `core/scripts/wave_living_docs.py`
+  - **File:** `core/scripts/spec-rigor-check.py`, `core/scripts/traceability-check.py`, `core/scripts/wave_living_docs.py`
   - **Expected:** the cutover flips living-status/INDEX maintenance to the reconciler with no regression —
     frozen immutability, traceability, and spec-rigor gates preserved, the human merge-to-`main` gate
     unchanged, and foundational frozen workflow invariants retained. Fixture:
@@ -260,8 +260,8 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
     `reconcile-complete-from-git-ancestry`, `reconcile-terminal-monotonic`.
   - **R-IDs:** R29, R30
 - [ ] 8.2 Default-branch reconcile refusal + stale-branch precedence (R31, R32)
-  - **File:** `core/scripts/planning-graph.sh`, `core/scripts/reconcile-status.sh`, `core/skills/living-status/SKILL.md`
-  - **Expected:** the maintenance reconciler and the legacy `reconcile-status.sh reconcile` shim it replaces
+  - **File:** `core/scripts/planning-graph.sh`, `core/scripts/reconcile-status.py`, `core/skills/living-status/SKILL.md`
+  - **Expected:** the maintenance reconciler and the legacy `reconcile-status.py reconcile` shim it replaces
     **refuse to commit** when the current git branch is `defaultBaseBranch` — exit non-zero with an actionable
     message naming the allowed post-merge path (`set-index-status` + `append-log-idempotent` on a docs branch
     for single units; full-corpus reconcile only via the reconciler entrypoint on a non-default branch or the
@@ -282,7 +282,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
 - [ ] 8.4 Deliver post-merge path: finalize-only, no bare reconcile suggestion (R34)
   - **File:** `core/scripts/wave_deliver_loop.py`, `core/commands/sw-retrospective.md`, `core/commands/sw-status.md`
   - **Expected:** the deliver-loop post-merge path invokes `finalize-if-merged` only; on guard failure it emits
-    a consolidated halt with `resumeCommand` and MUST NOT suggest bare `reconcile-status.sh reconcile`; operator
+    a consolidated halt with `resumeCommand` and MUST NOT suggest bare `reconcile-status.py reconcile`; operator
     docs (`sw-retrospective.md`, `sw-status.md`) state the post-merge playbook — single-unit bookkeeping on a
     **docs branch**, never full-corpus `reconcile` on `main`. Fixture: `deliver-postmerge-finalize-no-reconcile`.
   - **R-IDs:** R34
@@ -317,7 +317,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
   - **R-IDs:** R38
 - [ ] 9.3 In-flight cwd guard for work-performing commands (R39)
   - **File:** `core/scripts/deliver_cwd_guard.sh` (or module), guarded entrypoints (`wave_living_docs.py`,
-    `reconcile-status.sh`, retrospective write paths)
+    `reconcile-status.py`, retrospective write paths)
   - **Expected:** refuse primary on `defaultBaseBranch` while deliver `verdict: running` (R39). Fixture:
     `deliver-cwd-guard-blocks-main-living-doc`.
   - **R-IDs:** R39
@@ -327,7 +327,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
     halt (R40). Fixture: `terminal-reads-repo-root-state-from-orchestrator-cwd`.
   - **R-IDs:** R40
 - [ ] 9.5 Phase status repo-root mirror + SW_REPO_ROOT (R41)
-  - **File:** `core/scripts/ship-phase-status.sh`, phase dispatch env
+  - **File:** `core/scripts/ship-phase-status.py`, phase dispatch env
   - **Expected:** absolute `SW_REPO_ROOT` required; mirror `status.json` to repo root on write (R41). Fixture:
     `phase-status-repo-root-mirror`.
   - **R-IDs:** R41
@@ -406,8 +406,8 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
   stub), `core/scripts/planning_graph.py` (pure graph module), `core/scripts/planning-graph.sh` (reconciler +
   `cycle-check` entry per PRD D7), and the `core/hooks/pre-commit` whole-graph cycle check.
 - Existing surfaces touched: `core/scripts/wave_deliver.py`, `core/scripts/pilot_dependency_gate.py`,
-  `core/scripts/wave_living_doc_lock.py`, `core/scripts/wave_living_docs.py`, `core/scripts/feedback-backlog.sh`,
-  `core/scripts/reconcile-status.sh`, `core/sw-reference/config.schema.json`, `.sw/config.schema.json`,
+  `core/scripts/wave_living_doc_lock.py`, `core/scripts/wave_living_docs.py`, `core/scripts/feedback-backlog.py`,
+  `core/scripts/reconcile-status.py`, `core/sw-reference/config.schema.json`, `.sw/config.schema.json`,
   `core/scripts/copy-to-core.sh`.
 - Cross-PRD: the reconciler reads (never writes) PRD 032's `inFlight` region; the relief check + accuracy floor
   (2.7) feed PRD 031's cutover kill-criteria (031 R28); `planning.autonomy` is owned by PRD 035 and only
@@ -416,9 +416,9 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.
   (finalize-only `merged-complete` save guard, R33), `core/scripts/wave_deliver_loop.py` (post-merge
   finalize-only path, R34), `core/commands/sw-retrospective.md` + `core/commands/sw-status.md` (post-merge
   playbook, R34/R36); A1 extends the Phase 2 reconciler (`planning-graph.sh`, `planning_graph.py`) and the
-  legacy `reconcile-status.sh` shim for git-ancestry-primary, monotonic terminal status, and default-branch
+  legacy `reconcile-status.py` shim for git-ancestry-primary, monotonic terminal status, and default-branch
   reconcile refusal (R29–R32). A1 absorbs GAP-053 and GAP-055.
 - All new fixtures register in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.test`.
 - Amendment A3 (Phase 9) surfaces: `.sw/layout.md`, `core/skills/conductor/SKILL.md`,
   `core/skills/deliver/SKILL.md`, `core/scripts/deliver_cwd_guard.sh`, `wave_state.py`,
-  `wave_deliver_loop.py`, `ship-phase-status.sh`; absorbs GAP-056; complements A1 R31.
+  `wave_deliver_loop.py`, `ship-phase-status.py`; absorbs GAP-056; complements A1 R31.

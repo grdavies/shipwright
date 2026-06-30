@@ -563,7 +563,7 @@ def run_docs_currency_gate(root: Path) -> None:
     """Hard-block terminal gate on living-doc drift for the current run (R50)."""
     if os.environ.get("SW_SKIP_DOCS_CURRENCY") == "1":
         return
-    script = SCRIPT_DIR / "docs-currency-gate.sh"
+    script = SCRIPT_DIR / "docs-currency-gate.py"
     proc = subprocess.run(
         ["bash", str(script), "--state-root", str(root)],
         cwd=str(root),
@@ -585,7 +585,7 @@ def run_docs_currency_gate(root: Path) -> None:
 
 
 def run_check_gate(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
-    script = SCRIPT_DIR / "check-gate.sh"
+    script = SCRIPT_DIR / "check-gate.py"
     cmd = ["bash", str(script)]
     if pr:
         cmd.append(pr)
@@ -953,7 +953,7 @@ def cmd_terminal_pr_gate(root: Path, args: list[str]) -> None:
         "gateExitCode": gate_ec,
         "terminalGate": "ready to merge — your call" if ready else None,
         "neverAutoMergesMain": True,
-        "note": "Authoritative whole-feature verdict from check-gate.sh (R23/R24)",
+        "note": "Authoritative whole-feature verdict from check-gate.py (R23/R24)",
     }
     if not ready:
         payload["reason"] = gate.get("reason") or "gate not green"

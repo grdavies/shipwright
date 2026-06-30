@@ -67,7 +67,7 @@ ambiguity is likely.
 
 Semantic tiers (`cheap`/`build`/`deep`) live in `workflow.config.json` `models.tiers` only — not in agent
 `model:` frontmatter. Reviewer agents use `model: inherit` or a concrete platform ID. Validated by
-`scripts/model-tier-check.sh` (config + concrete models); runtime R9 for `inherit` reviewers is enforced at
+`scripts/model-tier-check.py` (config + concrete models); runtime R9 for `inherit` reviewers is enforced at
 dispatch by `/sw-doc-review` and `rules/sw-subagent-dispatch.mdc`. See `.sw/models-tiering.md`.
 
 ## Planning full-conductor boundary (PRD 035 R9)

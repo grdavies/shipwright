@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Idempotent COMPLETION-LOG writer (PRD 042 R20).
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+FAIL=0
+ok() { echo "OK  $1"; }
+bad() { echo "FAIL $1"; FAIL=1; }
+
+FIX=$(mktemp -d)
+mkdir -p "$FIX/docs/prds"
+cp "$ROOT/docs/prds/COMPLETION-LOG.md" "$FIX/docs/prds/"
+OUT1=$(cd "$FIX" && python3 "$ROOT/scripts/reconcile.py" append-log-idempotent --prd 099 --phase all --sha deadbeef --notes "test")
+OUT2=$(cd "$FIX" && python3 "$ROOT/scripts/reconcile.py" append-log-idempotent --prd 099 --phase all --sha deadbeef --notes "test")
+if echo "$OUT1" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('appended') is True" &&    echo "$OUT2" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('skipped') is True"; then
+  ok "completion-log-idempotent"
+else
+  bad "completion-log-idempotent"
+fi
+rm -rf "$FIX"
+exit "$FAIL"

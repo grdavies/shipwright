@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Untrusted-output validation before auto-applying local review fixes.
 #
-# Usage: code-review-apply-check.sh --finding JSON --repo-root PATH \
+# Usage: code-review-apply-check.py --finding JSON --repo-root PATH \
 #   [--max-fix-chars N] [--max-fix-lines N] [--max-fix-hunks N] \
 #   [--validated] [--apply-policy auto|surface|off] [--phase-mode] \
 #   [--diff-context JSON] [--patch-target PATH]
@@ -20,7 +20,7 @@ DIFF_CONTEXT="{}"
 PATCH_TARGET=""
 
 usage() {
-  echo "Usage: code-review-apply-check.sh --finding JSON --repo-root PATH [options]" >&2
+  echo "Usage: code-review-apply-check.py --finding JSON --repo-root PATH [options]" >&2
   exit 2
 }
 

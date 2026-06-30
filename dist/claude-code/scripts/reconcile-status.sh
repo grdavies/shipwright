@@ -8,15 +8,15 @@ ROOT="$(git -C "${PWD}" rev-parse --show-toplevel 2>/dev/null || echo "$_PLUGIN_
 usage() {
   cat <<'EOF'
 Usage:
-  reconcile-status.sh derive [--json]     Compute status per PRD from git facts
-  reconcile-status.sh reconcile [--dry-run] [--require-merge]  Update INDEX Status (complete only when merged if --require-merge; R11 — required for pre-merge /sw-retrospective even when compound.autonomy is auto)
-  reconcile-status.sh set-index-status --prd <NNN> --status <not-started|in-progress|complete>  Set one INDEX row (R47)
-  reconcile-status.sh append-log <prd> <phase> <notes>  Append COMPLETION-LOG entry (legacy)
-  reconcile-status.sh append-log-idempotent --prd <NNN> --phase <name> [--pr N] [--sha SHA] [--notes text]  Idempotent append (R48)
-  reconcile-status.sh gap-resolve --absorbing-prd <NNN> [--pr N]  Flip matching open gaps to resolved (R49)
-  reconcile-status.sh append-superseded --path <repo-rel> [--replacement <repo-rel>]  Append to docs/decisions/SUPERSEDED.log (idempotent)
-  reconcile-status.sh supersede-reconcile [--json] [--dry-run]  Emit best-effort re-point plan for non-authoritative side (R7)
-  reconcile-status.sh deliver-runs [--json]       List live scoped deliver runs (PRD 013 R10)
+  reconcile-status.py derive [--json]     Compute status per PRD from git facts
+  reconcile-status.py reconcile [--dry-run] [--require-merge]  Update INDEX Status (complete only when merged if --require-merge; R11 — required for pre-merge /sw-retrospective even when compound.autonomy is auto)
+  reconcile-status.py set-index-status --prd <NNN> --status <not-started|in-progress|complete>  Set one INDEX row (R47)
+  reconcile-status.py append-log <prd> <phase> <notes>  Append COMPLETION-LOG entry (legacy)
+  reconcile-status.py append-log-idempotent --prd <NNN> --phase <name> [--pr N] [--sha SHA] [--notes text]  Idempotent append (R48)
+  reconcile-status.py gap-resolve --absorbing-prd <NNN> [--pr N]  Flip matching open gaps to resolved (R49)
+  reconcile-status.py append-superseded --path <repo-rel> [--replacement <repo-rel>]  Append to docs/decisions/SUPERSEDED.log (idempotent)
+  reconcile-status.py supersede-reconcile [--json] [--dry-run]  Emit best-effort re-point plan for non-authoritative side (R7)
+  reconcile-status.py deliver-runs [--json]       List live scoped deliver runs (PRD 013 R10)
 EOF
 }
 
@@ -441,7 +441,7 @@ PY
 cmd_gap_resolve() {
   local args=()
   while [[ $# -gt 0 ]]; do args+=("$1"); shift; done
-  exec bash "$ROOT/scripts/living-status-gap-resolve.sh" "${args[@]}"
+  exec bash "$ROOT/scripts/living-status-gap-resolve.py" "${args[@]}"
 }
 
 cmd_append_superseded() {
@@ -526,7 +526,7 @@ if log_path.is_file():
         entries.append({"superseded": superseded.strip(), "replacement": replacement.strip() or None})
 
 proc = subprocess.run(
-    ["bash", str(root / "scripts/memory-sot.sh"), "resolve", "--class", "decision", "--json"],
+    ["bash", str(root / "scripts/memory-sot.py"), "resolve", "--class", "decision", "--json"],
     cwd=str(root),
     text=True,
     capture_output=True,

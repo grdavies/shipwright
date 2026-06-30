@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # CodeRabbit executable review adapter for the gate path.
-# Reads context from env (set by check-gate.sh); prints normalized JSON to stdout.
+# Reads context from env (set by check-gate.py); prints normalized JSON to stdout.
 set -euo pipefail
 
 : "${SW_PR:?}"

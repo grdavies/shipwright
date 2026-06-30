@@ -17,7 +17,7 @@ Single referenced primitive for agent-native orchestration (PRD 009 R1). Orchest
 `/sw-doc`, `/sw-ship`, `/sw-debug`, `/sw-feedback` in follow-on PRDs) **load this skill** and delegate loop
 behavior here — they do not re-implement state transitions, merge logic, or halt policy in prose (R3).
 
-**Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`.
+**Model tier:** inherit — resolve delegated atomics via `python3 scripts/resolve-model-tier.py --command <child-slug>`.
 
 ## Mechanical source of truth
 
@@ -373,7 +373,7 @@ For the current wave batch, the conductor (not phase sub-agents):
 5. A background Task that crashes or never writes terminal `status.json` becomes `blocked` via the driver
    (`background-task-timeout:<id>`) — never left stuck `in-flight` (R27).
 6. **Conductor only** calls `merge enqueue` / `merge run-next` / `lock acquire` — phase sub-agents never
-   merge or acquire locks (R41). Workflow pushes use `scripts/git-push.sh` only (R23).
+   merge or acquire locks (R41). Workflow pushes use `scripts/git-push.py` only (R23).
 
 ### 4. Intra-phase dispatch (R17, R18, R45)
 
@@ -404,11 +404,11 @@ bash scripts/wave.sh blast-radius dependents --phase-slug <slug>   # inspect
 | Single-flight merge (R21) | `mergeQueue` + `mergeJournal`; one `merge run-next` at a time |
 | Atomic lock (R41) | `wave.sh lock acquire` uses `O_EXCL` on `.cursor/sw-deliver.lock` |
 | No `main` merge (R22) | `merge run-next` target is always `<type>/<slug>` from plan |
-| Push chokepoint (R23) | `scripts/git-push.sh` only — secret-scan pre-push |
+| Push chokepoint (R23) | `scripts/git-push.py` only — secret-scan pre-push |
 | Blast radius (R24) | `status collect` → `blast-radius apply`; siblings unaffected |
 
 Phase sub-agents **must not** call `merge run-next`, `merge enqueue`, `lock acquire`, or raw `git push`.
-All workflow pushes route through `scripts/git-push.sh` (secret-scan pre-push preserved).
+All workflow pushes route through `scripts/git-push.py` (secret-scan pre-push preserved).
 
 ### Eager phase-worktree teardown (R17)
 

@@ -20,15 +20,15 @@ while [[ $# -gt 0 ]]; do
     --index-region) index_region="${2:-}"; shift 2 ;;
     --dry-run) dry_run=1; shift ;;
     -h|--help)
-      echo "usage: docs-edit-route.sh route [--path P ...] [--index-region derived|inFlight|structural] [--dry-run]" >&2
-      echo "       docs-edit-route.sh route-substantive --topic <topic> [--dry-run]" >&2
+      echo "usage: docs-edit-route.py route [--path P ...] [--index-region derived|inFlight|structural] [--dry-run]" >&2
+      echo "       docs-edit-route.py route-substantive --topic <topic> [--dry-run]" >&2
       exit 2
       ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
 
-[[ -n "$cmd" ]] || { echo "usage: docs-edit-route.sh <route|route-substantive>" >&2; exit 2; }
+[[ -n "$cmd" ]] || { echo "usage: docs-edit-route.py <route|route-substantive>" >&2; exit 2; }
 
 classify() {
   local args=(python3 "$PY" "$ROOT" classify)
@@ -57,11 +57,11 @@ case "$cmd" in
     else
       [[ -n "$topic" ]] || topic="docs-edit"
       if [[ "$dry_run" -eq 1 ]]; then
-        WT=$(bash "$ROOT/scripts/docs_worktree.sh" provision --topic "$topic" --dry-run)
+        WT=$(bash "$ROOT/scripts/docs_worktree.py" provision --topic "$topic" --dry-run)
         PR=$(bash "$ROOT/scripts/docs_pr.sh" --topic "$topic" --dry-run)
         python3 -c "import json,sys; c=json.load(sys.stdin); w=json.loads(sys.argv[1]); p=json.loads(sys.argv[2]); print(json.dumps({'verdict':'pass','track':'substantive','classify':c,'worktree':w,'pr':p}))" "$WT" "$PR" <<<"$OUT"
       else
-        WT=$(bash "$ROOT/scripts/docs_worktree.sh" provision --topic "$topic")
+        WT=$(bash "$ROOT/scripts/docs_worktree.py" provision --topic "$topic")
         PR=$(bash "$ROOT/scripts/docs_pr.sh" --topic "$topic")
         python3 -c "import json,sys; c=json.load(sys.stdin); w=json.loads(sys.argv[1]); p=json.loads(sys.argv[2]); print(json.dumps({'verdict':'pass','track':'substantive','classify':c,'worktree':w,'pr':p}))" "$WT" "$PR" <<<"$OUT"
       fi
@@ -70,11 +70,11 @@ case "$cmd" in
   route-substantive)
     [[ -n "$topic" ]] || { echo '{"verdict":"fail","error":"topic required"}' >&2; exit 2; }
     if [[ "$dry_run" -eq 1 ]]; then
-      WT=$(bash "$ROOT/scripts/docs_worktree.sh" provision --topic "$topic" --dry-run)
+      WT=$(bash "$ROOT/scripts/docs_worktree.py" provision --topic "$topic" --dry-run)
       PR=$(bash "$ROOT/scripts/docs_pr.sh" --topic "$topic" --dry-run)
       python3 -c "import json,sys; w=json.loads(sys.argv[1]); p=json.loads(sys.argv[2]); print(json.dumps({'verdict':'pass','track':'substantive','worktree':w,'pr':p}))" "$WT" "$PR"
     else
-      WT=$(bash "$ROOT/scripts/docs_worktree.sh" provision --topic "$topic")
+      WT=$(bash "$ROOT/scripts/docs_worktree.py" provision --topic "$topic")
       PR=$(bash "$ROOT/scripts/docs_pr.sh" --topic "$topic")
       python3 -c "import json,sys; w=json.loads(sys.argv[1]); p=json.loads(sys.argv[2]); print(json.dumps({'verdict':'pass','track':'substantive','worktree':w,'pr':p}))" "$WT" "$PR"
     fi

@@ -2,7 +2,7 @@
 # Deterministic capability selector entrypoint (PRD 021 TR3).
 #
 # Usage:
-#   capability-select.sh [--context PATH] [--context-json JSON] [--index PATH]
+#   capability-select.py [--context PATH] [--context-json JSON] [--index PATH]
 #     [--run-dir PATH] [--resume] [--skip-freshness]
 #
 # Exit: 0 with canonical JSON on stdout; non-zero on freshness/validation failure.

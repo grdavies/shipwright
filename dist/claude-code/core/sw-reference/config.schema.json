@@ -246,7 +246,7 @@
         "enabled": {
           "type": "boolean",
           "default": false,
-          "description": "When true, /sw-verify invokes scripts/verify-e2e.sh after static verify.* commands."
+          "description": "When true, /sw-verify invokes scripts/verify-e2e.py after static verify.* commands."
         },
         "provider": {
           "type": "string",
@@ -625,7 +625,7 @@
     "models": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Per-tier model map and role assignment. Policy tiers (cheap/build/mid/deep) map to concrete platform model IDs; agent frontmatter uses inherit or dispatch IDs only. Validated by scripts/model-tier-check.sh.",
+      "description": "Per-tier model map and role assignment. Policy tiers (cheap/build/mid/deep) map to concrete platform model IDs; agent frontmatter uses inherit or dispatch IDs only. Validated by scripts/model-tier-check.py.",
       "properties": {
         "tiers": {
           "type": "object",

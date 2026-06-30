@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Pre-freeze spec-rigor gate: clarify + checklist (PRD) or analyze (tasks).
 # Usage:
-#   spec-rigor-check.sh --artifact prd --path FILE [--tier full|standard]
-#   spec-rigor-check.sh --artifact decision --path FILE [--tier full|standard]
-#   spec-rigor-check.sh --artifact tasks --path FILE --prd PRD_PATH
+#   spec-rigor-check.py --artifact prd --path FILE [--tier full|standard]
+#   spec-rigor-check.py --artifact decision --path FILE [--tier full|standard]
+#   spec-rigor-check.py --artifact tasks --path FILE --prd PRD_PATH
 # Exit: 0 pass, 10 warn, 20 fail
 # R16 no-regression (PRD 035): frozen immutability, traceability, and spec-rigor gates feed the delivery loop — preserve pre-freeze structural checks and union/traceability completeness.
 set -euo pipefail
@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
     --tier) TIER="${2:-}"; shift 2 ;;
     --prd) PRD_PATH="${2:-}"; shift 2 ;;
     -h|--help)
-      echo "usage: spec-rigor-check.sh --artifact prd|decision|tasks --path FILE [--tier full|standard] [--prd PRD]"
+      echo "usage: spec-rigor-check.py --artifact prd|decision|tasks --path FILE [--tier full|standard] [--prd PRD]"
       exit 0
       ;;
     *) echo '{"verdict":"fail","error":"unknown argument"}' >&2; exit 2 ;;
@@ -39,7 +39,7 @@ if [[ ! -f "$PATH_FILE" ]]; then
 fi
 
 # Pre-freeze structural check (R13) — fail closed before spec-rigor gates.
-if ! STRUCT_OUT=$(bash "$ROOT/scripts/doc-format-normalize.sh" --check "$PATH_FILE" 2>&1); then
+if ! STRUCT_OUT=$(bash "$ROOT/scripts/doc-format-normalize.py" --check "$PATH_FILE" 2>&1); then
   echo "$STRUCT_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps({'verdict':'fail','gate':'structural','findings':d.get('findings',[])}))" 2>/dev/null || echo "$STRUCT_OUT"
   exit 20
 fi
@@ -151,7 +151,7 @@ elif artifact == "tasks":
     sys.exit(20)
 
   union = json.loads(
-    subprocess.check_output(["bash", str(Path(root) / "scripts/spec-union.sh"), prd_path], text=True)
+    subprocess.check_output(["bash", str(Path(root) / "scripts/spec-union.py"), prd_path], text=True)
   )
   union_ids = [r["id"] for r in union.get("requirements", [])]
 

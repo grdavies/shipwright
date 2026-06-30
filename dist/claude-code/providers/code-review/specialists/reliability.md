@@ -20,4 +20,4 @@ capability:
 
 # Code-review specialist — reliability
 
-Signal-gated native panel specialist (parity with `code-review-select.sh`).
+Signal-gated native panel specialist (parity with `code-review-select.py`).

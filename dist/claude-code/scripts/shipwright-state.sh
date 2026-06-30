@@ -7,14 +7,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  shipwright-state.sh path              Print resolved state file path for current checkout
-  shipwright-state.sh read              Print state JSON (empty object if missing)
-  shipwright-state.sh write <json|-)>   Merge JSON object into state file (- = stdin)
-  shipwright-state.sh override-add <json|-)>  Append one override record (read-modify-write)
-  shipwright-state.sh dispatch-override-add <json|-)>  Append one dispatch override audit record
-  shipwright-state.sh init <json|-)>    Replace state file with JSON object (- = stdin)
-  shipwright-state.sh sync-ship-steps   Merge phaseShip from durable ship-steps.json into state
-  shipwright-state.sh index             Aggregate state from all linked worktrees (read-only)
+  shipwright-state.py path              Print resolved state file path for current checkout
+  shipwright-state.py read              Print state JSON (empty object if missing)
+  shipwright-state.py write <json|-)>   Merge JSON object into state file (- = stdin)
+  shipwright-state.py override-add <json|-)>  Append one override record (read-modify-write)
+  shipwright-state.py dispatch-override-add <json|-)>  Append one dispatch override audit record
+  shipwright-state.py init <json|-)>    Replace state file with JSON object (- = stdin)
+  shipwright-state.py sync-ship-steps   Merge phaseShip from durable ship-steps.json into state
+  shipwright-state.py index             Aggregate state from all linked worktrees (read-only)
 EOF
 }
 
@@ -152,9 +152,9 @@ cmd_init() {
 cmd_sync_ship_steps() {
   local state steps_py sync_out
   state="$(resolve_state_path)"
-  steps_py="$ROOT/scripts/ship-phase-steps.sh"
+  steps_py="$ROOT/scripts/ship-phase-steps.py"
   if [[ ! -x "$steps_py" ]]; then
-    echo "error: ship-phase-steps.sh missing" >&2
+    echo "error: ship-phase-steps.py missing" >&2
     return 1
   fi
   sync_out="$(bash "$steps_py" sync-state 2>/dev/null)" || {

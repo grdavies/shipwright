@@ -17,11 +17,11 @@ alwaysApply: false
 - **Worktree:** `/sw-worktree provision` before implementation on bare main (R18).
 - **Phase loop:** start → execute → gaps → verify → review → commit → pr → watch-ci → stabilize → ready.
 - **`/sw-ready`:** empty `reviewDecision` is not blocking — only `CHANGES_REQUESTED`. CI truth =
-  `scripts/check-gate.sh` (all checks).
+  `scripts/check-gate.py` (all checks).
 
 ## Memory in the phase loop
 
-Use `memory-preflight` only — never a provider tool directly. Redact via `scripts/memory-redact.sh`
+Use `memory-preflight` only — never a provider tool directly. Redact via `scripts/memory-redact.py`
 before any persist.
 
 **Onboarding:** run `/sw-setup` to scaffold repo-local `workflow.config.json`, choose memory/review
@@ -30,12 +30,12 @@ zero-config in-repo memory.
 
 ## State management
 
-Per-worktree gitdir: `scripts/shipwright-state.sh` → `<git-dir>/shipwright.json`.
+Per-worktree gitdir: `scripts/shipwright-state.py` → `<git-dir>/shipwright.json`.
 
 Fields: `parentBranch`, `currentBranch`, `phaseSlug`, `branchPrefix`, `startedAt`, `issueNumbers`,
 `lastCommand`, `phaseStatus`, `iteration`, `shipStartedAt`, `tier`, `workstream`, `scaffold`.
 
-Repo-level index: `scripts/shipwright-state.sh index` (read-time aggregate — never a shared writable file).
+Repo-level index: `scripts/shipwright-state.py index` (read-time aggregate — never a shared writable file).
 
 ## Command boundaries
 
@@ -78,7 +78,7 @@ plan-policy** surface. The single-sourced classification lives in `core/sw-refer
 
 | Layer | Examples | Authority |
 | --- | --- | --- |
-| Kernel | state transitions, merge queue, `check-gate.sh`, `git-push.sh`, memory-preflight, guardrails hook | fixed; validated on every plan + re-checked at each `advance` |
+| Kernel | state transitions, merge queue, `check-gate.py`, `git-push.py`, memory-preflight, guardrails hook | fixed; validated on every plan + re-checked at each `advance` |
 | Plan policy | optional steps (simplify/gap-check), step order within guidelines, wave batching | proposed under `orchestration.planPolicy: proposed`; default `canonical` |
 
 Agent proposals validate through `bash scripts/wave.sh plan validate` before persist. Invalid proposals fall
@@ -87,7 +87,7 @@ back to the canonical chain (phase) or canonical waves / `wave.sh schedule` (wav
 ## Deliver concurrency and freeze safety (PRD 013)
 
 - **Freeze-time commit:** `/sw-freeze` commits frozen docs onto `<type>/<slug>` via the shared
-  `wave_spec_seed.py` helper (`check-frozen.sh freeze-commit`); never `main`; stamp completes even when
+  `wave_spec_seed.py` helper (`check-frozen.py freeze-commit`); never `main`; stamp completes even when
   commit warns (R4).
 - **Scoped deliver state:** per-branch `.cursor/sw-deliver-state.<slug>.json` and
   `.cursor/sw-deliver-<slug>.lock`; `/sw-status` + `/sw-cleanup` enumerate all live scoped runs.

@@ -292,7 +292,7 @@ def build_metadata(root, unit, fm, cfg):
 
 def redact_untrusted_payload(root, text):
     worktree = pp.git_root(root)
-    script = worktree / "scripts/memory-redact.sh"
+    script = worktree / "scripts/memory-redact.py"
     if not script.is_file():
         return text
     proc = subprocess.run(["bash", str(script)], input=text, text=True, capture_output=True, cwd=str(worktree))
@@ -303,7 +303,7 @@ def format_confirm_list(proposals, redacted_context):
              "```untrusted", redacted_context, "```", "", "| id | type | score | stale | route | reasons |", "| --- | --- | ---: | --- | --- | --- |"]
     for prop in proposals:
         lines.append(f"| {prop.candidate_id} | {prop.candidate_type} | {prop.score:.2f} | {'yes' if prop.stale else 'no'} | {prop.route} | {'; '.join(prop.reasons)} |")
-    lines += ["", "Confirm with: `bash scripts/planning-related.sh confirm --path <source> --accept <id>[,...]`"]
+    lines += ["", "Confirm with: `python3 scripts/planning-related.py confirm --path <source> --accept <id>[,...]`"]
     return "\n".join(lines)
 
 

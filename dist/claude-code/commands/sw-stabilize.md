@@ -39,8 +39,8 @@ GitHub will not run required checks while `mergeable == CONFLICTING`. Resolve th
 threads or interpreting a vacuous gate.
 
 ```bash
-bash scripts/stabilize-merge-sync.sh fetch-base
-STATUS=$(bash scripts/stabilize-merge-sync.sh status)
+python3 scripts/stabilize-merge-sync.py fetch-base
+STATUS=$(python3 scripts/stabilize-merge-sync.py status)
 echo "$STATUS" | jq .
 ```
 
@@ -55,8 +55,8 @@ When `verdict` is `conflicting`:
      plus main's additive changes.
    - **`dist/**`** — do not hand-merge emitted copies; resolve `core/` then run
      `python3 -m sw generate --all`.
-4. Re-run scoped `verify` on the touched surface; one focused commit; `bash scripts/git-push.sh` once.
-5. Re-run `stabilize-merge-sync.sh status` — must be `mergeable` before step 1 below.
+4. Re-run scoped `verify` on the touched surface; one focused commit; `python3 scripts/git-push.py` once.
+5. Re-run `stabilize-merge-sync.py status` — must be `mergeable` before step 1 below.
 
 When `verdict` is `mergeable`, continue to harvest.
 
@@ -79,7 +79,7 @@ Build the blocker surface for **this** `HEAD_SHA` before changing code (after an
    comments"**, **"Additional comments"**, and **"Nitpick comments"** into `/tmp/sw-stabilize-noninline.md`,
    keyed by `path:line` + the suggested change. Treat each as a first-class blocker — identical priority
    to an inline thread — the **only** difference is there is no reply/resolve handle (see the ledger).
-3. Compute the check gate with **`scripts/check-gate.sh`** (canonical — do not hand-roll host verdicts).
+3. Compute the check gate with **`scripts/check-gate.py`** (canonical — do not hand-roll host verdicts).
    Tee stdout to `/tmp/sw-stabilize-gate.json` for the RCA pass. Consume its JSON + exit code via the
    **`checks-gate`** skill (all checks, neutral allowlist applied). Pull failure logs for failing checks.
 
@@ -126,7 +126,7 @@ or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve
 
 ## Procedure
 
-0. **Merge-base sync** — `stabilize-merge-sync.sh status`; when `conflicting`, merge base, resolve,
+0. **Merge-base sync** — `stabilize-merge-sync.py status`; when `conflicting`, merge base, resolve,
    verify, push, re-probe. Do not harvest checks/threads until `mergeable`.
 1. **Pre-work search (mandatory)** — before the first substantive mutation this pass, run `memory-preflight`
    **pre-work search** per `skills/memory/SKILL.md` **Pre-work search (mandatory)** (scoped to PR paths;
@@ -156,7 +156,7 @@ or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve
    summary (and `memory-preflight` write where durable). Their "resolution" is the verified code change
    landing on `HEAD`; the next pass re-harvests the bodies and confirms the section no longer recurs.
 9. Re-run `verify` commands from config across the touched surface; log to `/tmp/sw-stabilize-verify.log`.
-10. If fixes were made: stage, create **one** focused commit for this pass, `bash scripts/git-push.sh`
+10. If fixes were made: stage, create **one** focused commit for this pass, `python3 scripts/git-push.py`
     once (never raw `git push`; secret scan runs pre-push — R41/R50).
 11. Store concise `memory-preflight` writes for durable learnings (recurring bot false positives, accepted
    review patterns, non-obvious CI fixes, file-specific debug context) with `relatedFiles`. No raw thread
@@ -167,7 +167,7 @@ or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve
 
 **Communication intensity:** full
 
-**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --command sw-stabilize`.
+**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --command sw-stabilize`.
 
 
 ## Deliver-loop remediation (PRD 036 R6–R8)

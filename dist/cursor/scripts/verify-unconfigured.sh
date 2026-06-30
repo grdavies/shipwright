@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Placeholder taxonomy for verify.* commands (PRD 018 R3/R28).
 #
-# Usage: verify-unconfigured.sh [--config PATH] [--json]
+# Usage: verify-unconfigured.py [--config PATH] [--json]
 # Exit 0 when configured; 1 when unconfigured; 2 on error.
 set -euo pipefail
 
@@ -14,7 +14,7 @@ while [[ $# -gt 0 ]]; do
     --config) CONFIG="$2"; shift 2 ;;
     --json) JSON=1; shift ;;
     -h|--help)
-      echo "usage: verify-unconfigured.sh [--config PATH] [--json]"
+      echo "usage: verify-unconfigured.py [--config PATH] [--json]"
       exit 0
       ;;
     *) echo '{"verdict":"fail","error":"unknown argument"}' >&2; exit 2 ;;

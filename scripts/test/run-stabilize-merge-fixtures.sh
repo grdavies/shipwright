@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$(dirname "${BASH_SOURCE[0]}")/fixture-lib.sh"
 SYNC="$ROOT/scripts/stabilize-merge-sync.sh"
 STABILIZE="$(content_path commands/sw-stabilize.md)"
-GATE="$ROOT/scripts/check-gate.sh"
+GATE="$ROOT/scripts/check-gate.py"
 FAIL=0
 
 chmod +x "$SYNC"

@@ -2,7 +2,7 @@
 # Deterministic native panel roster selection from a diff (R7, R33, R47, R51, R61).
 # Authoritative path: capability selector with legacy byte-parity (PRD 021 phase 6).
 #
-# Usage: code-review-select.sh --diff PATH|JSON [--diff-json INLINE]
+# Usage: code-review-select.py --diff PATH|JSON [--diff-json INLINE]
 # Exit: 0; JSON stdout with core, specialists, signals
 set -euo pipefail
 
@@ -10,7 +10,7 @@ DIFF_INPUT=""
 DIFF_INLINE=""
 
 usage() {
-  echo "Usage: code-review-select.sh --diff PATH|JSON [--diff-json INLINE]" >&2
+  echo "Usage: code-review-select.py --diff PATH|JSON [--diff-json INLINE]" >&2
   exit 2
 }
 

@@ -110,7 +110,7 @@ def resolve_worktree(root: Path, args: list[str]) -> Path:
 
 
 def run_reconcile_script(root: Path, *cmd: str) -> dict[str, Any]:
-    script = SCRIPT_DIR / "reconcile-status.sh"
+    script = SCRIPT_DIR / "reconcile-status.py"
     proc = subprocess.run(
         ["bash", str(script), *cmd],
         cwd=str(root),

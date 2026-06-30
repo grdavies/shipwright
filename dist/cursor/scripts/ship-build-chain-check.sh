@@ -31,10 +31,10 @@ if ! touches_build_chain "${CHANGED[@]}"; then
   exit 0
 fi
 
-if bash "$ROOT/scripts/build-chain-sync.sh" --check; then
+if bash "$ROOT/scripts/build-chain-sync.py" --check; then
   echo "ship-build-chain-check: build-chain parity OK"
   exit 0
 fi
 
-echo "ship-build-chain-check: FAIL — run bash scripts/build-chain-sync.sh" >&2
+echo "ship-build-chain-check: FAIL — run python3 scripts/build-chain-sync.py" >&2
 exit 20

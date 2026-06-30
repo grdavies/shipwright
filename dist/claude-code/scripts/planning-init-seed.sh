@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Seed planning visibility profile, store backend, and privacy notice (PRD 034 R21).
 #
-# Usage: planning-init-seed.sh [--root PATH] [--config PATH]
+# Usage: planning-init-seed.py [--root PATH] [--config PATH]
 # Requires an existing workflow.config.json (run after /sw-init write-draft).
 set -euo pipefail
 

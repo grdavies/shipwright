@@ -8,5 +8,5 @@ export PYTHONPATH="$ROOT:${PYTHONPATH:-}"
 if [[ -f "$ROOT/planning_materialize.py" ]]; then
   python3 "$ROOT/planning_materialize.py" --root "$PWD" guard-staged --push
 fi
-bash "$ROOT/secret-scan.sh" pre-push
+bash "$ROOT/secret-scan.py" pre-push
 exec git push "$@"

@@ -1003,9 +1003,9 @@ def trunk_base_persisted(root: Path) -> bool:
 
 
 def run_resolve_capture(root: Path) -> tuple[int, dict[str, Any]]:
-    script = root / "scripts" / "resolve-base-branch.sh"
+    script = root / "scripts" / "resolve-base-branch.py"
     if not script.is_file():
-        return 2, {"verdict": "fail", "error": "resolve-base-branch.sh missing"}
+        return 2, {"verdict": "fail", "error": "resolve-base-branch.py missing"}
     proc = subprocess.run(
         ["bash", str(script), "capture"],
         cwd=str(root),
@@ -1522,9 +1522,9 @@ def compute_next_action(
 
 
 def run_inflight_signal(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
-    script = root / "scripts" / "inflight-signal.sh"
+    script = root / "scripts" / "inflight-signal.py"
     if not script.is_file():
-        return 2, {"verdict": "fail", "error": "inflight-signal.sh missing"}
+        return 2, {"verdict": "fail", "error": "inflight-signal.py missing"}
     proc = subprocess.run(
         ["bash", str(script), *args],
         cwd=str(root),

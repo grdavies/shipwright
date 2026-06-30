@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # R-ID → task → test traceability gate (pre-task-freeze).
-# Usage: traceability-check.sh --prd PRD --tasks TASKS
+# Usage: traceability-check.py --prd PRD --tasks TASKS
 # Exit: 0 complete, 20 gaps
 # R16 no-regression (PRD 035): frozen immutability, traceability, and spec-rigor gates feed the delivery loop — preserve pre-freeze structural checks and union/traceability completeness.
 set -euo pipefail
@@ -14,7 +14,7 @@ while [[ $# -gt 0 ]]; do
     --prd) PRD_PATH="${2:-}"; shift 2 ;;
     --tasks) TASKS_PATH="${2:-}"; shift 2 ;;
     -h|--help)
-      echo "usage: traceability-check.sh --prd PRD --tasks TASKS"
+      echo "usage: traceability-check.py --prd PRD --tasks TASKS"
       exit 0
       ;;
     *) echo '{"verdict":"gaps","error":"unknown argument"}' >&2; exit 2 ;;
@@ -33,7 +33,7 @@ fi
 
 # Pre-freeze structural check (R13) on tasks before traceability parse.
 for STRUCT_PATH in "$PRD_PATH" "$TASKS_PATH"; do
-  if ! STRUCT_OUT=$(bash "$ROOT/scripts/doc-format-normalize.sh" --check "$STRUCT_PATH" 2>&1); then
+  if ! STRUCT_OUT=$(bash "$ROOT/scripts/doc-format-normalize.py" --check "$STRUCT_PATH" 2>&1); then
     echo "$STRUCT_OUT"
     exit 20
   fi
@@ -50,7 +50,7 @@ root, prd_path, tasks_path = sys.argv[1:4]
 tasks_text = Path(tasks_path).read_text()
 
 union = json.loads(
-    subprocess.check_output(["bash", str(Path(root) / "scripts/spec-union.sh"), prd_path], text=True)
+    subprocess.check_output(["bash", str(Path(root) / "scripts/spec-union.py"), prd_path], text=True)
 )
 union_ids = [r["id"] for r in union.get("requirements", [])]
 

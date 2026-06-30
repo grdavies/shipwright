@@ -8,7 +8,7 @@ description: Generate a frozen task list from a frozen PRD using the spec union 
 Port of v1 `spec-tasks` under `sw-`. Reads U8 union so amended requirements are reflected.
 
 
-**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.sh --skill tasks`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.py --skill tasks`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Path
 
@@ -17,14 +17,14 @@ Port of v1 `spec-tasks` under `sw-`. Reads U8 union so amended requirements are 
 ## Procedure
 
 1. Require frozen PRD as input.
-2. Load effective spec via `scripts/spec-union.sh` or `skills/spec-union/SKILL.md`.
+2. Load effective spec via `scripts/spec-union.py` or `skills/spec-union/SKILL.md`.
 3. In **one pass**, identify parent tasks (phases) and expand each into `- [ ]` sub-tasks with **executable shape** (IM6):
    - Parent tasks: numbered, dependency-ordered, S/M/L sizing (`### N.` headings).
    - Sub-tasks: **File**, **Expected**, **R-IDs** as below.
    - Relevant Files + Notes as needed.
 4. Emit **`## Phase Dependencies`** (required) — machine-parseable edge source for `/sw-deliver` phase-mode (R5/R6/R37). Place after `## Tasks` and before `## Traceability`.
 5. Add `## Traceability` table mapping each union R-ID → task ref → named test scenario.
-6. Save task file; run `spec-rigor-check.sh` (tasks) + `traceability-check.sh`; freeze via `/sw-freeze`.
+6. Save task file; run `spec-rigor-check.py` (tasks) + `traceability-check.py`; freeze via `/sw-freeze`.
 7. Register/refresh PRD entry in `docs/prds/INDEX.md` with status `not-started`.
 8. **Stop** — do not start implementation. Standalone `/sw-tasks` ends after freeze; `doc.afterTasks` on
    `/sw-doc` owns the boundary to implementation.
@@ -62,7 +62,7 @@ run in parallel or have non-linear dependencies — do not rely on sequential fa
 
 ```markdown
 - [ ] 1.1 Add tdd-gate script (R1)
-  - **File:** `scripts/tdd-gate.sh`
+  - **File:** `scripts/tdd-gate.py`
   - **Expected:** JSON verdict on stdout; exit 0 pass, 20 fail
   - **R-IDs:** R1
 ```

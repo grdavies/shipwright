@@ -20,9 +20,9 @@ DIRECTIVE_KEYS = frozenset({"absorbs", "supersedes", "retracts"})
 
 RUNTIME_CALL_SITES = frozenset(
     {
-        "scripts/spec-union.sh",
-        "scripts/spec-rigor-check.sh",
-        "scripts/traceability-check.sh",
+        "scripts/spec-union.py",
+        "scripts/spec-rigor-check.py",
+        "scripts/traceability-check.py",
         "scripts/wave_deliver.py",
     }
 )

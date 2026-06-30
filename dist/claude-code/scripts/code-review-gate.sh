@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Severity gate for local code-review normalized output.
 #
-# Usage: code-review-gate.sh --input PATH --gate-config PATH
+# Usage: code-review-gate.py --input PATH --gate-config PATH
 # Exit: 0 continue, 20 halt (validated P0/P1 in halting mode)
 set -euo pipefail
 
@@ -9,7 +9,7 @@ INPUT=""
 GATE_CONFIG=""
 
 usage() {
-  echo "Usage: code-review-gate.sh --input PATH --gate-config PATH" >&2
+  echo "Usage: code-review-gate.py --input PATH --gate-config PATH" >&2
   exit 2
 }
 

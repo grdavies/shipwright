@@ -2,9 +2,9 @@
 # Toggle task checkboxes on frozen task files; reject non-checkbox edits (R13/R14).
 #
 # Usage:
-#   tasks-progress.sh toggle --file PATH --ref TASK_REF [--done true|false]
-#   tasks-progress.sh check-diff --old PATH --new PATH
-#   tasks-progress.sh parse --file PATH
+#   tasks-progress.py toggle --file PATH --ref TASK_REF [--done true|false]
+#   tasks-progress.py check-diff --old PATH --new PATH
+#   tasks-progress.py parse --file PATH
 #
 # Exit: 0 pass; 1 rejected edit; 2 usage error
 set -euo pipefail

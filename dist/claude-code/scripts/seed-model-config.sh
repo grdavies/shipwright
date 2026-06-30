@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Seed models.tiers + models.routing into a workflow config draft (PRD 008).
-# Usage: seed-model-config.sh [--platform cursor|claude-code] [--config PATH] [--repair routing|tiers|all]
+# Usage: seed-model-config.py [--platform cursor|claude-code] [--config PATH] [--repair routing|tiers|all]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -14,7 +14,7 @@ while [[ $# -gt 0 ]]; do
     --config) CONFIG="$2"; shift 2 ;;
     --repair) REPAIR="$2"; shift 2 ;;
     -h|--help)
-      echo "usage: seed-model-config.sh [--platform cursor|claude-code] [--config PATH] [--repair routing|tiers|all]"
+      echo "usage: seed-model-config.py [--platform cursor|claude-code] [--config PATH] [--repair routing|tiers|all]"
       exit 0
       ;;
     *) echo '{"verdict":"fail","error":"unknown argument"}' >&2; exit 2 ;;
@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$PLATFORM" ]]; then
-  PLATFORM="$(bash "$ROOT/scripts/detect-platform.sh")"
+  PLATFORM="$(bash "$ROOT/scripts/detect-platform.py")"
 fi
 
 if [[ -z "$CONFIG" ]]; then

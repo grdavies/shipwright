@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Local pre-commit hook: block commits touching frozen artifacts.
-# Early warning only — bypassable via --no-verify. CI check-frozen.sh is authoritative.
+# Early warning only — bypassable via --no-verify. CI check-frozen.py is authoritative.
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
-CHECK="$ROOT/scripts/check-frozen.sh"
+CHECK="$ROOT/scripts/check-frozen.py"
 
 if [ ! -x "$CHECK" ]; then
-  echo "sw-freeze: check-frozen.sh missing or not executable; refusing commit" >&2
+  echo "sw-freeze: check-frozen.py missing or not executable; refusing commit" >&2
   exit 1
 fi
 

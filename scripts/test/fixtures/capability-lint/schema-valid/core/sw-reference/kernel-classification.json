@@ -7,8 +7,8 @@
       "id": "scoped-run-identity",
       "layer": "kernel",
       "enforcedBy": [
-        "shipwright-state.sh",
-        "ship-phase-steps.sh"
+        "shipwright-state.py",
+        "ship-phase-steps.py"
       ],
       "mustPrecede": [
         "merge-push",
@@ -19,7 +19,7 @@
       "id": "durable-state-transitions",
       "layer": "kernel",
       "enforcedBy": [
-        "shipwright-state.sh",
+        "shipwright-state.py",
         "wave_deliver_loop.py"
       ],
       "mustPrecede": [
@@ -40,7 +40,7 @@
       "id": "check-gate",
       "layer": "kernel",
       "enforcedBy": [
-        "check-gate.sh"
+        "check-gate.py"
       ],
       "traceAnchors": [
         "sw-stabilize",
@@ -101,7 +101,7 @@
       "id": "git-push-secret-scan",
       "layer": "kernel",
       "enforcedBy": [
-        "git-push.sh"
+        "git-push.py"
       ],
       "traceAnchors": [
         "sw-pr"
@@ -114,7 +114,7 @@
       "id": "memory-redaction-chokepoint",
       "layer": "kernel",
       "enforcedBy": [
-        "memory-redact.sh"
+        "memory-redact.py"
       ],
       "mustPrecede": [
         "memory-preflight",
@@ -438,7 +438,7 @@
               "type": "path_glob",
               "source": "task_file_paths",
               "globs": [
-                "scripts/git-push.sh",
+                "scripts/git-push.py",
                 "scripts/wave_*",
                 "core/providers/**"
               ]
@@ -447,7 +447,7 @@
               "type": "path_glob",
               "source": "signal_context_file_paths",
               "globs": [
-                "scripts/git-push.sh",
+                "scripts/git-push.py",
                 "scripts/wave_*",
                 "core/providers/**"
               ]

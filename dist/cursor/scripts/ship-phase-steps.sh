@@ -2,12 +2,12 @@
 # Durable /sw-ship step state for phase-mode resume (R58).
 #
 # Usage:
-#   ship-phase-steps.sh init --phase SLUG [--out PATH] [--head SHA]
-#   ship-phase-steps.sh get [--phase SLUG] [--out PATH]
-#   ship-phase-steps.sh attempt --step STEP [--phase SLUG] [--out PATH]
-#   ship-phase-steps.sh advance --step STEP [--phase SLUG] [--out PATH]
-#   ship-phase-steps.sh resolve-resume [--from STEP] [--last-command CMD] [--phase SLUG] [--out PATH]
-#   ship-phase-steps.sh sync-state [--phase SLUG] [--out PATH]
+#   ship-phase-steps.py init --phase SLUG [--out PATH] [--head SHA]
+#   ship-phase-steps.py get [--phase SLUG] [--out PATH]
+#   ship-phase-steps.py attempt --step STEP [--phase SLUG] [--out PATH]
+#   ship-phase-steps.py advance --step STEP [--phase SLUG] [--out PATH]
+#   ship-phase-steps.py resolve-resume [--from STEP] [--last-command CMD] [--phase SLUG] [--out PATH]
+#   ship-phase-steps.py sync-state [--phase SLUG] [--out PATH]
 #
 # Path: --out > $SW_RUN_DIR/ship-steps.json > .cursor/sw-deliver-runs/<phase>/ship-steps.json
 set -euo pipefail

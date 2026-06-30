@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Validate model tier policy (R9): config roles + reviewer agent dispatch.
-# Usage: model-tier-check.sh [--config PATH] [--agents-dir PATH]
+# Usage: model-tier-check.py [--config PATH] [--agents-dir PATH]
 # Exit: 0 pass or not configured, non-zero on violation
 set -euo pipefail
 
@@ -16,7 +16,7 @@ while [[ $# -gt 0 ]]; do
     --config) CONFIG="${2:-}"; shift 2 ;;
     --agents-dir) AGENTS_DIR="${2:-}"; shift 2 ;;
     -h|--help)
-      echo "usage: model-tier-check.sh [--config PATH] [--agents-dir PATH]"
+      echo "usage: model-tier-check.py [--config PATH] [--agents-dir PATH]"
       exit 0
       ;;
     *) echo '{"verdict":"fail","error":"unknown argument"}' >&2; exit 2 ;;

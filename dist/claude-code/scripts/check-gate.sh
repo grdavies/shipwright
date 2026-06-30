@@ -6,7 +6,7 @@
 #
 # Per-head review state comes from providers/review/<provider>.sh (executable adapter seam).
 #
-# Usage: check-gate.sh [PR_NUMBER]
+# Usage: check-gate.py [PR_NUMBER]
 # Config: .cursor/workflow.config.json or workflow.config.json
 # Env: SW_GATE_NOW — unix seconds override for deterministic tests (grace window)
 set -uo pipefail
@@ -28,8 +28,8 @@ host_data() {
 
 # --- repo + config ------------------------------------------------------------
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-# shellcheck source=sw-resolve-plugin-root.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sw-resolve-plugin-root.sh"
+# shellcheck source=sw-resolve-plugin-root.py
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sw-resolve-plugin-root.py"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(sw_resolve_plugin_root "$SCRIPT_DIR")"
 CONFIG=""
@@ -332,7 +332,7 @@ if [ "$VERDICT" = "green" ] && [ -n "${PR:-}" ] && [ -n "${HEAD_SHA:-}" ]; then
     git -C "$ROOT" fetch -q origin "$BASE_REF" 2>/dev/null || true
     MERGE_BASE="$(git -C "$ROOT" merge-base "origin/${BASE_REF}" "$HEAD_SHA" 2>/dev/null || true)"
     if [ -n "$MERGE_BASE" ] && git -C "$ROOT" diff --name-only "$MERGE_BASE" "$HEAD_SHA" 2>/dev/null | grep -q '^scripts/'; then
-      REASON="${REASON}; advisory: PR touches scripts/ — consider bash scripts/build-chain-sync.sh"
+      REASON="${REASON}; advisory: PR touches scripts/ — consider python3 scripts/build-chain-sync.py"
     fi
   fi
 fi

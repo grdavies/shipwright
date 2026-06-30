@@ -15,12 +15,12 @@ capability:
 # Code review & automation (Shipwright)
 
 Review provider selected by `review.provider` (default `none`). Gate per-head state via
-`scripts/check-gate.sh` + `providers/review/<provider>.sh`.
+`scripts/check-gate.py` + `providers/review/<provider>.sh`.
 
 ## Two-phase `/sw-review` (local → provider)
 
 1. **Phase 1 — local** (`review.local`, default-on **`native`**): Shipwright-native multi-agent panel via
-   `providers/code-review/native.md`. Resolved by `scripts/review-local-resolve.sh`. Runs **independently** of
+   `providers/code-review/native.md`. Resolved by `scripts/review-local-resolve.py`. Runs **independently** of
    `review.provider` (including `"none"`). Only `review.local.enabled: false` or
    `review.local.provider: "none"` disables phase 1.
 2. **Phase 2 — external** (`review.provider`): CodeRabbit / PR-Agent over uncommitted delta (unchanged). Emits
@@ -33,9 +33,9 @@ a binding completeness verdict.
 ### Local apply + gate
 
 - pf auto-applies eligible P1 (validated), P2, P3 per `review.local.apply` (default `auto`) after
-  `code-review-apply-check.sh`. P0 never auto-fixed. Security-sensitive targets never auto-applied.
+  `code-review-apply-check.py`. P0 never auto-fixed. Security-sensitive targets never auto-applied.
 - Severity gate: surface-only default (`haltOn: []`); promoted halting on validated P0/P1 halts `/sw-ship`.
-- `check-gate.sh` remains sole CI oracle.
+- `check-gate.py` remains sole CI oracle.
 
 ## Review priorities (in order)
 
@@ -59,12 +59,12 @@ When `coderabbit.noDefer` is true, deliver code/test fix or verified resolve-wit
 
 ## Stabilization bar (`/sw-stabilize`)
 
-Recompute unresolved actionable count at HEAD. Run `scripts/check-gate.sh` for verdict — never hand-roll green.
+Recompute unresolved actionable count at HEAD. Run `scripts/check-gate.py` for verdict — never hand-roll green.
 
 ## Native code-review panel (binding standard)
 
 The `native` local adapter (`providers/code-review/native.md`) uses **always-on core + signal-gated
-specialists** selected via the capability manifest and `scripts/code-review-select.sh` — same shape as doc
+specialists** selected via the capability manifest and `scripts/code-review-select.py` — same shape as doc
 review (`skills/doc-review/SKILL.md`):
 
 - Fixed core roster from manifest `always_on` triggers: `correctness`, `maintainability`, `scope-fidelity`,

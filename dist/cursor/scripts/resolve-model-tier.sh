@@ -7,7 +7,7 @@ DEFAULTS="$ROOT/core/sw-reference/model-routing.defaults.json"
 
 usage() {
   cat <<'EOF'
-Usage: resolve-model-tier.sh [--tier NAME | --command SLUG | --skill NAME | --agent ID] [--delegate CHILD]
+Usage: resolve-model-tier.py [--tier NAME | --command SLUG | --skill NAME | --agent ID] [--delegate CHILD]
        [--config PATH]
 
 Output: JSON { "tier", "modelId", "source" }

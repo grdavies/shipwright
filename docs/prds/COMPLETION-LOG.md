@@ -55,7 +55,7 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 | 2026-06-26 | 014 | retrospective-command-consolidation | Deliver PRD 014 |
 | 2026-06-26 | 014 | retrospective-command-consolidation | Deliver PRD 014: consolidated /sw-retrospective command |
 | 2026-06-26 | 016 | pr-test-plan-ci-enforcement | Shipped via PR #80 (squash): PR test-plan CI enforcement; 4 deliver phases; manifest single-source + CI jobs + gate advisory split + fixture suite; PR #80; SHA dcd696b |
-| 2026-06-26 | 012 | model-tier-runtime-binding | Shipped via PR #79 (squash): model-tier runtime binding; 5 deliver phases; reviewer-dispatch-check.sh enforcement floor; hook registered Option C per DL-2; PR #79; SHA 56a1de0 |
+| 2026-06-26 | 012 | model-tier-runtime-binding | Shipped via PR #79 (squash): model-tier runtime binding; 5 deliver phases; reviewer-dispatch-check.py enforcement floor; hook registered Option C per DL-2; PR #79; SHA 56a1de0 |
 | 2026-06-26 | 012 | model-tier-runtime-binding | 5 phases merged; hook deferred per DL-2 |
 | 2026-06-26 | 012 | model-tier-runtime-binding | Pre-merge compounding: model-tier runtime binding delivered in 5 phases |
 | 2026-06-26 | 011 | all | Shipped via PR #76 (squash): orchestrator UX + doc polish; four deliver phases; PR #76; SHA 392c6a4 |

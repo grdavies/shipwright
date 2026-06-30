@@ -2,8 +2,8 @@
 # Parse and mutate prdsDir/GAP-BACKLOG.md (IM8 / U9).
 #
 # Usage:
-#   feedback-backlog.sh list [--open-only] [--backlog PATH]
-#   feedback-backlog.sh close --signal-id ID [--backlog PATH] [--date YYYY-MM-DD]
+#   feedback-backlog.py list [--open-only] [--backlog PATH]
+#   feedback-backlog.py close --signal-id ID [--backlog PATH] [--date YYYY-MM-DD]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
     --signal-id) SIGNAL_ID="${2:-}"; shift 2 ;;
     --date) CLOSE_DATE="${2:-}"; shift 2 ;;
     -h|--help)
-      echo "usage: feedback-backlog.sh list|close [options]"
+      echo "usage: feedback-backlog.py list|close [options]"
       exit 0
       ;;
     *) echo "{\"error\":\"unknown arg: $1\"}" >&2; exit 2 ;;

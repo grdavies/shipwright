@@ -2,7 +2,7 @@
 # Auto-detect host provider from configured git remote (PRD 026 R6, R7).
 #
 # Usage:
-#   host-detect.sh [--root PATH]
+#   host-detect.py [--root PATH]
 #
 # Exit 0 with JSON on stdout; non-zero on resolution failure.
 set -euo pipefail

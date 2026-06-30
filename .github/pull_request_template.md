@@ -21,7 +21,7 @@ The **PR test-plan workflow** (`.github/workflows/pr-test-plan-ci.yml`) is the e
 
 Open the PR **Checks** tab for live status. Required jobs must pass before merge; advisory jobs surface under the all-checks policy but do not block merge.
 
-Source: `core/sw-reference/pr-test-plan.manifest.json` (regenerate workflow via `bash scripts/generate-pr-test-plan-ci-workflow.sh`).
+Source: `core/sw-reference/pr-test-plan.manifest.json` (regenerate workflow via `python3 scripts/generate-pr-test-plan-ci-workflow.py`).
 
 ## Test plan (advisory)
 

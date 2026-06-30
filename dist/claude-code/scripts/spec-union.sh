@@ -2,17 +2,17 @@
 # Precedence-aware frozen doc + amendments union resolver (R12).
 # Supports PRD (R-IDs, parent/amendments/) and decision records (D-IDs, sibling .amendments/).
 #
-# Usage: spec-union.sh <doc-path>
+# Usage: spec-union.py <doc-path>
 set -euo pipefail
 
 DOC="${1:-}"
-[ -z "$DOC" ] && { echo '{"error":"usage: spec-union.sh <doc-path>"}' >&2; exit 2; }
+[ -z "$DOC" ] && { echo '{"error":"usage: spec-union.py <doc-path>"}' >&2; exit 2; }
 [ -f "$DOC" ] || { echo "{\"error\":\"not found: $DOC\"}" >&2; exit 2; }
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Pre-freeze structural check (R13) — fail closed before union parse.
-if ! CHECK_OUT=$(bash "$ROOT/scripts/doc-format-normalize.sh" --check "$DOC" 2>&1); then
+if ! CHECK_OUT=$(bash "$ROOT/scripts/doc-format-normalize.py" --check "$DOC" 2>&1); then
   echo "$CHECK_OUT"
   exit 20
 fi

@@ -283,7 +283,7 @@ while IFS= read -r f; do
     echo "gh reference remains in $f"
     RUNTIME_GH=1
   fi
-done < <(printf '%s\n'   scripts/check-gate.sh   scripts/wave_terminal.py   scripts/wave_compound.py   scripts/cleanup_lib.py   scripts/reconcile-status.sh   scripts/stabilize-merge-sync.sh)
+done < <(printf '%s\n'   scripts/check-gate.py   scripts/wave_terminal.py   scripts/wave_compound.py   scripts/cleanup_lib.py   scripts/reconcile.py   scripts/stabilize-merge-sync.sh)
 if [[ "$RUNTIME_GH" -eq 0 ]]; then
   ok "gh-removal-guard"
 else
@@ -296,7 +296,7 @@ fi
   export SW_HOST_FIXTURE=green
   export SW_GATE_NOW=1577838000
   export PATH="$(echo "$PATH" | tr ':' '\n' | grep -v '/scripts/test/bin' | paste -sd: -)"
-  if OUT=$(env -u GH_TOKEN bash "$ROOT/scripts/check-gate.sh" 42 2>/dev/null) &&      echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='green'"; then
+  if OUT=$(env -u GH_TOKEN bash "$ROOT/scripts/check-gate.py" 42 2>/dev/null) &&      echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='green'"; then
     ok "gh-absent-path"
   else
     bad "gh-absent-path"
@@ -415,7 +415,7 @@ CFG
   else
     bad "noremote-local-adapter:checks"
   fi
-  if OUT=$(bash "$ROOT/scripts/check-gate.sh" 2>/dev/null) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('source')=='local-evidence' and d.get('verdict')=='green'"; then
+  if OUT=$(bash "$ROOT/scripts/check-gate.py" 2>/dev/null) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('source')=='local-evidence' and d.get('verdict')=='green'"; then
     ok "check-gate-local-verdict"
   else
     bad "check-gate-local-verdict"
@@ -424,7 +424,7 @@ CFG
   mkdir -p "$RUN_DIR"
   export SW_RUN_DIR="$RUN_DIR"
   GATE_JSON="$RUN_DIR/gate.json"
-  bash "$ROOT/scripts/check-gate.sh" > "$GATE_JSON" 2>/dev/null || true
+  bash "$ROOT/scripts/check-gate.py" > "$GATE_JSON" 2>/dev/null || true
   HEAD=$(git rev-parse HEAD)
   if OUT=$(python3 "$ROOT/scripts/local_merge_gate.py" --root "$LOCAL_FIX" write --head "$HEAD" --gate-json "$GATE_JSON" --run-dir "$RUN_DIR") &&      test -f "$RUN_DIR/local-merge-gate.json" &&      python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['source']=='local-evidence' and d['head']==sys.argv[2]" "$RUN_DIR/local-merge-gate.json" "$HEAD"; then
     ok "terminal-local-evidence-gate"

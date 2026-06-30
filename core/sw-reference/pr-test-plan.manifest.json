@@ -32,7 +32,7 @@
     },
     {
       "id": "docs-link-check",
-      "script": "scripts/docs-link-check.sh",
+      "script": "scripts/docs-link-check.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-docs-link-check"

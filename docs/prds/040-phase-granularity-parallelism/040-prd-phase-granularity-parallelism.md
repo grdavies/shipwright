@@ -116,7 +116,7 @@ Carried forward from the brainstorm (stable R-IDs).
 - **Advisory block + freeze hygiene.** Suggestions render into a `## Sizing & Split Suggestions` block in
   the **draft** task list (or operator stdout), including a structural cost estimate
   (projected waves × merge gates). `scripts/phase-sizing.sh --check-frozen` is **print-only / fail-closed**
-  on `frozen: true`. `/sw-freeze` (and `check-frozen.sh` / spec-rigor) SHALL strip or reject a
+  on `frozen: true`. `/sw-freeze` (and `check-frozen.py` / spec-rigor) SHALL strip or reject a
   `## Sizing & Split Suggestions` block from a frozen artifact; adopting a split requires an unfrozen re-run
   + re-freeze, never an in-place frozen edit.
 - **Authoring guidance (R18/R19).** `core/skills/tasks/SKILL.md` + `core/commands/sw-tasks.md` replace
@@ -137,12 +137,12 @@ Carried forward from the brainstorm (stable R-IDs).
   small-phase constraint); `core/skills/deliver/SKILL.md`, `core/commands/sw-deliver.md` (`--sizing-report`,
   reconcile the PRD 013 fallback-ladder docs, reframe the contention-feedback deferral to exclude advisory
   print-only sizing); `core/skills/parallelism/SKILL.md` (shared contention-family cross-reference).
-- **Freeze hygiene:** `scripts/check-frozen.sh` / `core/skills/spec-rigor/SKILL.md` advisory-block strip/flag.
+- **Freeze hygiene:** `scripts/check-frozen.py` / `core/skills/spec-rigor/SKILL.md` advisory-block strip/flag.
 
 ## Security & Compliance
 
 - Sizing/split output is advisory metadata derived from the task list; persisted summaries route through
-  `scripts/memory-redact.sh` (R31) before write.
+  `scripts/memory-redact.py` (R31) before write.
 - No new network egress; the scorer is a local deterministic script.
 - The scorer SHALL NOT mutate frozen artifacts (R30); `--check-frozen` is print-only/fail-closed, and the
   freeze path strips/flags any advisory block so it cannot pollute a frozen artifact's content hash.

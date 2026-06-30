@@ -33,7 +33,7 @@ half of a provider swap. It is also the committed snapshot that gates AGENTS.md 
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-memory-export`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-memory-export`.
 
 ## Guardrails
 

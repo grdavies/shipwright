@@ -12,7 +12,7 @@ Human-invoked by default (`invocation: human`). Automated capture (hook/monitor)
 later but must never auto-dispatch a route without human confirmation.
 
 
-**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.sh --skill feedback`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --skill feedback`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 
 
@@ -22,7 +22,7 @@ Single-tier orchestrator-step plan proposal, validation, and capability selectio
 `core/commands/sw-feedback.md` + `skills/conductor/SKILL.md` — this skill maps phases to step IDs
 (`normalize`, `redact`, `dedup`, `route`, `hook-trigger-halt`, `human-confirm-halt`, `handoff`, `record`).
 
-Under `proposed`, inbound signal JSON MUST be redacted via `python3 scripts/memory-redact.sh` before any persist,
+Under `proposed`, inbound signal JSON MUST be redacted via `python3 scripts/memory-redact.py` before any persist,
 route record, or handoff.  Fail-closed on redaction error.
 
 Under `proposed`, R21 surfacing writes `chosenPlan`, `capabilitySet`, and `planRejections` to
@@ -35,7 +35,7 @@ auto-dispatch without human confirmation.
 1. Classify input into `sourceClass`: `production` | `review` | `retro`.
 2. Build normalized signal per `references/signal-schema.md`.
 3. Wrap body text in `untrusted_payload` sentinels (review + retro mandatory; production logs too).
-4. **Redact** entire signal JSON string: `python3 scripts/memory-redact.sh`.
+4. **Redact** entire signal JSON string: `python3 scripts/memory-redact.py`.
 5. Compute `dedupKey`; search memory/route records — **drop** duplicates (in-loop stabilize already handled).
 
 ### Input mapping
@@ -81,7 +81,7 @@ Classify **destination** (not `002` ceremony tier):
 | gap-task | append | `docs/prds/GAP-BACKLOG.md` (U3) |
 
 Record route per `references/route-record.md` via `memory-preflight` write. Serialize the route record,
-run `python3 scripts/memory-redact.sh` on the JSON, then write — never persist raw `untrusted_payload`.
+run `python3 scripts/memory-redact.py` on the JSON, then write — never persist raw `untrusted_payload`.
 
 ## Phase 3 — Gap-capture split (U3)
 

@@ -108,7 +108,7 @@ off `rsync` early so subsequent ports build cleanly.
   - **Expected:** no `jq`; semantic parity (+ byte parity where goldens exist)
   - **R-IDs:** R7
 - [x] 3.3 Resolve twin INDEX reconciler code paths into one Python surface (R22)
-  - **File:** `scripts/reconcile.py` (consolidates `reconcile-status.sh` + `planning-graph reconcile` code paths), `scripts/test/single-reconciler.test`
+  - **File:** `scripts/reconcile.py` (consolidates `reconcile-status.py` + `planning-graph reconcile` code paths), `scripts/test/single-reconciler.test`
   - **Expected:** shared helpers, deduplicated logic; INDEX schemas/regions/lifecycle unchanged; fixture covers both INDEX behaviors
   - **R-IDs:** R22
 - [x] 3.4 JSON contract fixtures for ported verbs/gates (TR4 support)
@@ -141,15 +141,15 @@ off `rsync` early so subsequent ports build cleanly.
   - **File:** remaining `scripts/*.py` (worktree, reconcile-status, etc.; remove `.sh`)
   - **Expected:** stdout JSON, exit codes, fail-closed semantics preserved per ledger
   - **R-IDs:** R24
-- [ ] 5.2 Complete `jq` elimination across all surfaces (R7 complete)
+- [x] 5.2 Complete `jq` elimination across all surfaces (R7 complete)
   - **File:** remaining ported modules, `scripts/test/no-jq-guard.test`
   - **Expected:** zero `jq` invocations workflow-wide
   - **R-IDs:** R7
-- [ ] 5.3 Retire legacy non-idempotent `append-log` (R20)
+- [x] 5.3 Retire legacy non-idempotent `append-log` (R20)
   - **File:** `scripts/_sw/completion_log.py`, `scripts/wave_compound.py`, `scripts/test/completion-log-idempotent.test`
   - **Expected:** single idempotent COMPLETION-LOG writer; fixture asserts no duplicate rows on resume
   - **R-IDs:** R20
-- [ ] 5.4 Collapse `.sh`/`.py` sibling pairs (R21)
+- [x] 5.4 Collapse `.sh`/`.py` sibling pairs (R21)
   - **File:** ~22 sibling pairs → single Python module each; update all callers; `scripts/test/pair-collapse.test`
   - **Expected:** one module per pair; callers resolve to the Python module
   - **R-IDs:** R21

@@ -34,8 +34,8 @@ then docs/dist/fixtures.
 
 ### 3. Stabilize / gate integration (S/M)
 
-- [ ] 3.1 `check-gate.sh` enumerates promoted jobs; stabilize consumes logs (R5, R6)
-  - **File:** `scripts/check-gate.sh`, `skills/stabilize-loop/SKILL.md`, `skills/checks-gate/SKILL.md`
+- [ ] 3.1 `check-gate.py` enumerates promoted jobs; stabilize consumes logs (R5, R6)
+  - **File:** `scripts/check-gate.py`, `skills/stabilize-loop/SKILL.md`, `skills/checks-gate/SKILL.md`
   - **Expected:** `/sw-stabilize` remediates from the promoted job logs via the existing path; `checks-gate` verdict covers them under all-checks policy
 
 ### 4. Docs, dist, fixtures (S/M)

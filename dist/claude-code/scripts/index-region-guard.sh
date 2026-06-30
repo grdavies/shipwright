@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Region-integrity guard for planning INDEX dual-region seam (PRD 031 R24).
 # Usage:
-#   index-region-guard.sh [--staged] [--ci] [--repo-root ROOT]
+#   index-region-guard.py [--staged] [--ci] [--repo-root ROOT]
 # Env:
 #   SW_INDEX_REGION_WRITER=reconciler|deliver|generator|structural  (declares intended writer for this commit)
 set -euo pipefail

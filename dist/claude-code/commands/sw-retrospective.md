@@ -66,7 +66,7 @@ real merge detection (`reconcile --require-merge` pre-merge; merge detection pos
 
 ## State (per-worktree)
 
-Via `scripts/shipwright-state.sh`: record `lastCommand: sw-retrospective` and the completed sub-step when
+Via `scripts/shipwright-state.py`: record `lastCommand: sw-retrospective` and the completed sub-step when
 resuming with `--from`.
 
 Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.premergeDone` and
@@ -85,9 +85,9 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
 1. Confirm feature branch is merge-ready (all phases `green-merged` on `<type>/<slug>`).
 2. **`/sw-retro`** — learning candidates (report-only).
 3. **Compound write** — load `skills/compound/SKILL.md`; route writes through `memory-preflight` +
-   `scripts/memory-redact.sh` (internal step — not `/sw-compound`).
+   `scripts/memory-redact.py` (internal step — not `/sw-compound`).
 4. **`/sw-memory-sync`** — unless `--skip-memory-sync`; provider unreachable → **fail-closed** (R7).
-5. **`/sw-status`** — `bash scripts/reconcile-status.sh reconcile --require-merge` (INDEX `complete` only
+5. **`/sw-status`** — `python3 scripts/reconcile-status.py reconcile --require-merge` (INDEX `complete` only
    after merge detection, R11); `append-log` for COMPLETION-LOG.
 6. **Commit file outputs only** on the feature branch: COMPLETION-LOG, INDEX, CHANGELOG/version,
    learnings notes. **Never commit** memory/provider artifacts (R7).
@@ -105,11 +105,11 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
 - User halts at retro or compound approval gates when `compound.autonomy: supervised` (default).
 - Under `compound.autonomy: auto`, skip approval / "did you merge?" prompts only — not memory or rule-class gates.
 - Memory provider unreachable (fail-closed per R7).
-- `reconcile-status.sh` errors on frozen PRD guard.
+- `reconcile-status.py` errors on frozen PRD guard.
 
 **Communication intensity:** full
 
-**Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-retrospective`.
+**Model tier:** inherit — resolve delegated atomics via `python3 scripts/resolve-model-tier.py --command <child-slug>`; do not dispatch on bare `--command sw-retrospective`.
 
 ## Guardrails
 
@@ -117,7 +117,7 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
 - **Delegates** — do not bypass atomic command guardrails.
 - **Never auto-promote rule-class memories** (R8) — rule writes require user confirmation +
   `/sw-memory-audit` allowlist; pre-merge `record-premerge` stamps `ruleClassPromotion: human-gated`.
-- Redact before any memory persist (`scripts/memory-redact.sh`).
+- Redact before any memory persist (`scripts/memory-redact.py`).
 - Frozen PRDs never modified by status reconcile (except permitted checkbox progress on task files).
 - Pre-merge completion is **`completed-pending-merge`** until merge detection — a declined human merge must
   not report `complete` or `merged` (R11).
@@ -130,4 +130,4 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
 
 ## Post-merge INDEX safety (A1)
 
-Post-merge compounding uses `completion finalize-if-merged` only. On failure, resume with the printed `resumeCommand` — do **not** fall back to bare `reconcile-status.sh reconcile` on `main`. Single-unit bookkeeping belongs on a docs branch.
+Post-merge compounding uses `completion finalize-if-merged` only. On failure, resume with the printed `resumeCommand` — do **not** fall back to bare `reconcile-status.py reconcile` on `main`. Single-unit bookkeeping belongs on a docs branch.

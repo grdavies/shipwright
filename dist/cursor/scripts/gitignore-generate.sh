@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Visibility-driven .gitignore generator (PRD 034 R13).
-# Usage: gitignore-generate.sh [--repo-root ROOT] generate [--write] | verify-index
+# Usage: gitignore-generate.py [--repo-root ROOT] generate [--write] | verify-index
 set -euo pipefail
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_ROOT="$PLUGIN_ROOT"

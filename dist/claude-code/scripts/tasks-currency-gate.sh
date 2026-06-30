@@ -2,7 +2,7 @@
 # Hard-block when frozen task checkboxes diverge from durable completion ledger (R15).
 #
 # Usage:
-#   tasks-currency-gate.sh [--tasks-file PATH] [--state-root PATH]
+#   tasks-currency-gate.py [--tasks-file PATH] [--state-root PATH]
 #
 # Exit: 0 pass; 1 divergence (hard block); 2 usage/config error
 set -euo pipefail

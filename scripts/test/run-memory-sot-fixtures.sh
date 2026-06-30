@@ -70,8 +70,8 @@ fi
 
 # --- memory-sot-supersede-reconcile (R7) ---
 if [[ -f "$ROOT/docs/decisions/SUPERSEDED.log" ]] && \
-   bash "$ROOT/scripts/reconcile-status.sh" supersede-reconcile --json >/dev/null 2>&1 && \
-   grep -q 'append-superseded' "$ROOT/scripts/reconcile-status.sh"; then
+   bash "$ROOT/scripts/reconcile.py" supersede-reconcile --json >/dev/null 2>&1 && \
+   grep -q 'append-superseded' "$ROOT/scripts/reconcile.py"; then
   ok "memory-sot-supersede-reconcile"
 else
   bad "memory-sot-supersede-reconcile"

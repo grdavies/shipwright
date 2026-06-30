@@ -26,7 +26,7 @@ frozen_at: 2026-06-25
 | All commands | `core/commands/sw-*.md` (34 files) |
 | Config | `.sw/config.schema.json`, `core/sw-reference/config.schema.json`, `.sw/workflow.config.example.json` |
 | Setup | `core/commands/sw-setup.md` |
-| Resolver | `scripts/communication-resolve.sh` (new) |
+| Resolver | `scripts/communication-resolve.py` (new) |
 | Plugin manifest | `.cursor-plugin/plugin.json` |
 | Emitter | `platforms/cursor/emitter.py`, `platforms/claude-code/emitter.py` |
 | Docs | `docs/guides/configuration.md` |
@@ -35,7 +35,7 @@ frozen_at: 2026-06-25
 
 ## Notes
 
-- Effective spec union: parent PRD R1–R22 (`spec-union.sh`).
+- Effective spec union: parent PRD R1–R22 (`spec-union.py`).
 - Intensity vocabulary closed at four values; wenyan excluded everywhere (R10).
 - `communication.routing` parallels future `models.routing` key set (R14).
 - Artifact file content stays full fidelity at all chat intensities (R8/R30).
@@ -77,8 +77,8 @@ frozen_at: 2026-06-25
   - **Expected:** populated `communication` example block with `defaultIntensity` and sample routing
   - **R-IDs:** R5, R16
 
-- [x] 2.4 Add `communication-resolve.sh` (R6, R17)
-  - **File:** `scripts/communication-resolve.sh`
+- [x] 2.4 Add `communication-resolve.py` (R6, R17)
+  - **File:** `scripts/communication-resolve.py`
   - **Expected:** given command name + optional config path → JSON `{ "command", "intensity", "source" }`; handles `inherit` orchestrators
   - **R-IDs:** R6, R17
 
@@ -166,7 +166,7 @@ frozen_at: 2026-06-25
 | R14 | 2.1 | communication-routing-key-coverage fixture |
 | R15 | 1.2 | communication-normal-suspend fixture |
 | R16 | 1.3, 2.3 | communication-default-intensity fixture |
-| R17 | 2.4 | communication-resolve.sh stdout JSON |
+| R17 | 2.4 | communication-resolve.py stdout JSON |
 | R18 | 6.1 | run-doc-fixtures.sh communication scenarios |
 | R19 | 1.3 | communication-session-output-grep fixture |
 | R20 | 1.3 | communication-intensity-splice fixture |

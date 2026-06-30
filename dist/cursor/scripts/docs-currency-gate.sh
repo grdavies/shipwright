@@ -2,7 +2,7 @@
 # Hard-block when living-doc ledger drifts from durable deliver state for the current run (R50).
 #
 # Usage:
-#   docs-currency-gate.sh [--state-root PATH]
+#   docs-currency-gate.py [--state-root PATH]
 #
 # Exit: 0 pass; 1 drift (hard block); 2 usage/config error
 set -euo pipefail

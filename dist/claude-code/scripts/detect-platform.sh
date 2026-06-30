@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Detect Cursor vs Claude Code for /sw-setup model catalog selection.
-# Usage: detect-platform.sh [--json]
+# Usage: detect-platform.py [--json]
 # Exit: 0 with platform id on stdout; 2 when ambiguous without SW_SETUP_PLATFORM override.
 set -euo pipefail
 

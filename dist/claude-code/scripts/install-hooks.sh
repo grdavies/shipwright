@@ -4,14 +4,14 @@
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
-# shellcheck source=sw-resolve-plugin-root.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sw-resolve-plugin-root.sh"
+# shellcheck source=sw-resolve-plugin-root.py
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sw-resolve-plugin-root.py"
 PLUGIN_ROOT="$(sw_resolve_plugin_root "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
 HOOKS_REL="$(realpath --relative-to="$ROOT" "$PLUGIN_ROOT/hooks" 2>/dev/null || python3 -c "import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))" "$PLUGIN_ROOT/hooks" "$ROOT")"
 
 cd "$ROOT"
-chmod +x "$PLUGIN_ROOT/scripts/check-frozen.sh" "$PLUGIN_ROOT/hooks/pre-commit-frozen.sh" "$PLUGIN_ROOT/hooks/pre-commit" 2>/dev/null || true
+chmod +x "$PLUGIN_ROOT/scripts/check-frozen.py" "$PLUGIN_ROOT/hooks/pre-commit-frozen.sh" "$PLUGIN_ROOT/hooks/pre-commit" 2>/dev/null || true
 git config core.hooksPath "$HOOKS_REL"
 
 echo "Installed hooks: core.hooksPath=$HOOKS_REL"
-echo "Local freeze hook is early-warning only; CI check-frozen.sh is authoritative."
+echo "Local freeze hook is early-warning only; CI check-frozen.py is authoritative."

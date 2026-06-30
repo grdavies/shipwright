@@ -9,14 +9,14 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck source=evidence-read.sh
-source "$ROOT/scripts/evidence-read.sh"
+# shellcheck source=evidence-read.py
+source "$ROOT/scripts/evidence-read.py"
 
 BASELINE=""
 POST=""
 
 usage() {
-  echo "Usage: simplify-gate.sh --baseline-verify PATH --post-verify PATH" >&2
+  echo "Usage: simplify-gate.py --baseline-verify PATH --post-verify PATH" >&2
   exit 2
 }
 
