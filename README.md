@@ -13,7 +13,7 @@ Shipwright **never auto-merges**.
 **Plan policy:** `orchestration.planPolicy` defaults to `canonical` (byte-identical to pre-022). Live `proposed`
 on `/sw-deliver` is opt-in only — see [configuration](docs/guides/configuration.md#deliver-plan-policy-pilot-prd-023).
 
-- **Traceable specs** — frozen PRDs, tasks, and amendments live in your repo
+- **Traceable specs** — frozen PRDs, tasks, and amendments live in your repo (optional `issue-store` backend stores them as provider issues — opt-in, default unchanged)
 - **Gated ship loop** — verify, review, CI truth, stabilize; *you* merge
 - **Compounding memory** — post-ship retro and durable project learnings
 
