@@ -4,6 +4,7 @@ date: 2026-06-30
 topic: cross-platform-python-standardization
 frozen: true
 frozen_at: 2026-06-30
+visibility: public
 ---
 # Tasks — PRD 042 Cross-platform Python standardization
 
