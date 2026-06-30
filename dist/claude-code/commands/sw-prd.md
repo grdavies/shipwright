@@ -27,6 +27,12 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
    `providers/<memory.provider>.md` — no direct provider call). Surface hits and reconcile applicable
    rules/contradicting decisions before drafting.
 3. Resolve `--type` (default `prd`) and section contract from the skill.
+
+   - **Pull-in proposal (R1/R17):** before drafting, run
+     `bash scripts/planning-related.sh scan --mode creation --path <unit-artifact>`; surface the
+     **confirm-list** (never auto-absorb). Flag stale/already-resolved candidates; human confirms via
+     `bash scripts/planning-related.sh confirm --path <unit-artifact> --accept <id>[,...]`. Frozen targets
+     route to amendment without `--accept-frozen-impact`.
 4. **PRD (`--type prd`, default):**
    - Resolve tier:
      - **Full:** require brainstorm doc; refuse if missing (ordering guard).

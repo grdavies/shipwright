@@ -84,6 +84,18 @@ state from `coderabbitState` in the human summary:
 Goal: a green gate with no external review is not mistaken for a reviewed change. `/sw-ready` uses the same
 mapping in its terminal report.
 
+
+## GAP-BACKLOG append protocol (A2 — R51–R53)
+
+Binary status contract: `open` | `scheduled` | `resolved` with schedule in the Schedule column.
+Mechanical flips route through `scripts/gap-backlog.sh` only:
+
+- **Freeze** (`absorbs:` frontmatter) → `open` → `scheduled` (`PRD NNN` or `PRD NNN Ak`).
+- **PRD ship / complete** → `scheduled` → `resolved` via `living-status-gap-resolve.sh`.
+
+Append protocol: next ID is max(`GAP-NNN`)+1, never reuse; cross-links use `GAP-NNN` not row numbers.
+`gap-backlog.sh list --json` and `gap-backlog.sh check` power the docs-currency integrity guard.
+
 ## Guardrails
 
 - Never modify frozen PRD/amendment files.

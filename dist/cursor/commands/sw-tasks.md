@@ -19,6 +19,11 @@ Task list from frozen PRD + amendment union.
 1. Verify PRD has `frozen: true`.
 2. Load `skills/tasks/SKILL.md`.
 3. Read effective requirements via `scripts/spec-union.sh <prd-path>`.
+
+   - **Backlog re-scan (R2):** before drafting tasks, run
+     `bash scripts/planning-related.sh scan --mode tasks-rescan --path <prd-path>`; propose PRD amendments
+     for newly-related items; human confirms via `planning-related.sh confirm`. Edge materialization remains
+     autonomous via the PRD 033 reconciler **after** confirmed choices only (R3).
 4. In **one pass**, draft parent tasks (phases), expand executable sub-tasks, Relevant Files, and Notes.
 5. Add **`## Phase Dependencies`** table: `| Phase | Depends on |` with one row per phase (`none` or phase refs); machine-parseable by `/sw-deliver` (R5/R6/R37).
 6. Add **`## Traceability`** table: every union R-ID → task ref → named test scenario (see `skills/spec-rigor/SKILL.md`).

@@ -31,6 +31,18 @@ alwaysApply: true
 - Docs reach trunk via `scripts/docs_pr.sh` (docs-only PR), not direct push.
 - Feature-branch `spec-seed` (PRD 013) remains for implementation handoff; docs durability is separate (R32).
 
+
+
+## Two-track doc edits (PRD 035 R10–R14)
+
+- **Mechanical** — reconciler-generated artifacts only (INDEX `derived` region, SUPERSEDED manifest, gap index):
+  batched via `scripts/docs-merge.sh` with CI-gated auto-merge or direct-to-trunk when protection probe permits.
+- **Substantive** — any path under `docs/planning/<unit-id>/` (body or frontmatter): auto-driven docs worktree +
+  PR via `scripts/docs-edit-route.sh route-substantive` → `docs_worktree.sh` / `docs_pr.sh`.
+- **`inFlight` region** — never mechanically edited (PRD 032 deliver writer sole region).
+- Branch protection is detected via host API; ambiguous/missing auth fails closed to the PR path — never bypass
+  the protected trunk merge gate.
+
 ## Provenance
 
 Conventions informed by [netresearch/git-workflow-skill](https://github.com/netresearch/git-workflow-skill)

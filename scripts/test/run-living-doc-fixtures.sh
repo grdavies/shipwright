@@ -63,10 +63,16 @@ PY
 # --- set-index-status via script (temp root with docs/prds) ---
 FIX_ROOT=$(mktemp -d)
 mkdir -p "$FIX_ROOT/docs/prds"
-cp "$ROOT/docs/prds/INDEX.md" "$FIX_ROOT/docs/prds/"
 if bash -c "ROOT='$FIX_ROOT' source '$RS' 2>/dev/null" 2>/dev/null; then :; fi
 # direct python path via env hack - use subprocess from repo with modified cwd files
-(cd "$FIX_ROOT" && cp -R "$ROOT/scripts" . && cp -R "$ROOT/docs" . 2>/dev/null || true)
+(cd "$FIX_ROOT" && cp -R "$ROOT/scripts" .)
+cat >"$FIX_ROOT/docs/prds/INDEX.md" <<'INDEX'
+# PRD index
+
+| # | Slug | PRD | Tasks | Status |
+|---|------|-----|-------|--------|
+| 008 | model-tier-setup-defaults | [008-prd-model-tier-setup-defaults.md](008-model-tier-setup-defaults/008-prd-model-tier-setup-defaults.md) (frozen) | [tasks](008-model-tier-setup-defaults/tasks-008-model-tier-setup-defaults.md) (frozen) | complete |
+INDEX
 if (cd "$FIX_ROOT" && bash scripts/reconcile-status.sh set-index-status --prd 008 --status in-progress 2>/dev/null | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
@@ -94,9 +100,27 @@ fi
 rm -rf "$LOG_FIX"
 
 # --- gap-backlog-resolve-on-absorb (R49) ---
-GAP_FIX=$(mktemp -d)
-mkdir -p "$GAP_FIX/docs/prds"
-cat > "$GAP_FIX/docs/prds/GAP-BACKLOG.md" <<'EOF'
+if [[ -f "$ROOT/scripts/living-status-gap-resolve.sh" && -f "$ROOT/scripts/gap_backlog.py" ]]; then
+  GAP_FIX=$(mktemp -d)
+  GAP_CORPUS="$ROOT/scripts/test/fixtures/planning-related/corpus"
+  (cd "$GAP_FIX" && git init -q && git config user.email t@t.com && git config user.name T && cp -R "$GAP_CORPUS/"* .)
+  GR="$ROOT/scripts/living-status-gap-resolve.sh"
+  if (cd "$GAP_FIX" && bash "$GR" --absorbing-prd 035 | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert 'GAP-043' in d.get('flipped',[])
+text=open('docs/prds/GAP-BACKLOG.md').read()
+assert '| GAP-043 | resolved |' in text
+"); then
+    ok "gap-backlog-resolve-on-absorb"
+  else
+    bad "gap-backlog-resolve-on-absorb"
+  fi
+  rm -rf "$GAP_FIX"
+else
+  GAP_FIX=$(mktemp -d)
+  mkdir -p "$GAP_FIX/docs/prds"
+  cat > "$GAP_FIX/docs/prds/GAP-BACKLOG.md" <<'EOF'
 # Gap backlog
 
 | Date | Source | PRD | Gap | Absorbed-by | Status |
@@ -104,8 +128,8 @@ cat > "$GAP_FIX/docs/prds/GAP-BACKLOG.md" <<'EOF'
 | 2026-06-25 | test | 004 | sample gap | 007 | open |
 | 2026-06-25 | test | 004 | other gap | 008 | open |
 EOF
-mkdir -p "$GAP_FIX/scripts" && cp "$RS" "$GAP_FIX/scripts/"
-if (cd "$GAP_FIX" && bash scripts/reconcile-status.sh gap-resolve --absorbing-prd 007 --pr 67 | python3 -c "
+  mkdir -p "$GAP_FIX/scripts" && cp "$RS" "$GAP_FIX/scripts/"
+  if (cd "$GAP_FIX" && bash scripts/reconcile-status.sh gap-resolve --absorbing-prd 007 --pr 67 | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 assert d.get('resolved')==['004']
@@ -113,11 +137,12 @@ text=open('docs/prds/GAP-BACKLOG.md').read()
 assert 'resolved (resolved via PRD 007' in text
 assert '008' in text and text.count('open')==1
 "); then
-  ok "gap-backlog-resolve-on-absorb"
-else
-  bad "gap-backlog-resolve-on-absorb"
+    ok "gap-backlog-resolve-on-absorb"
+  else
+    bad "gap-backlog-resolve-on-absorb"
+  fi
+  rm -rf "$GAP_FIX"
 fi
-rm -rf "$GAP_FIX"
 
 # --- docs-currency-gate-block (R50) ---
 CUR_FIX=$(mktemp -d)

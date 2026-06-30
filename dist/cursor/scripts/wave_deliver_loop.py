@@ -420,6 +420,7 @@ def build_state_signature(state: dict[str, Any]) -> str:
         "lastRemediationAt": dict(sorted(last_remediation.items())),
         "stabilizePassId": dict(sorted(stabilize_pass.items())),
         "mergeQueueLength": len(state.get("mergeQueue") or []),
+        "mergeEnqueueAttempts": dict(sorted((str(k), int(v)) for k, v in (state.get("mergeEnqueueAttempts") or {}).items())),
         "mergeJournalPresent": state.get("mergeJournal") is not None,
     }
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
@@ -470,6 +471,37 @@ def sync_plan_rejection_no_progress(state: dict[str, Any]) -> None:
     state["noProgressStreak"] = max(int(state.get("noProgressStreak", 0)), threshold)
 
 
+
+def remediate_pending_for_state(root: Path, state: dict[str, Any]) -> bool:
+    """True when a blocked phase still has remediation budget (R31 — no-progress deferral)."""
+    for _pid, meta in (state.get("phases") or {}).items():
+        if not isinstance(meta, dict) or meta.get("status") != "blocked":
+            continue
+        cause = str(meta.get("cause") or "")
+        if not cause.startswith("verify:"):
+            continue
+        attempts_key = (
+            "verifyRemediationAttempts"
+            if cause.startswith("verify:environmental")
+            else "remediationAttempts"
+        )
+        attempts = state.get(attempts_key) or {}
+        count = int(attempts.get(str(_pid), 0))
+        if count < remediation_max(root):
+            return True
+    return False
+
+
+def refresh_batch_integration_head(root: Path, state: dict[str, Any]) -> None:
+    """Atomically refresh batchIntegrationHead when batch queue active (R34)."""
+    if not (state.get("mergeQueue") or state.get("mergeJournal")):
+        return
+    head = integration_branch_head(root, state)
+    if head:
+        state["batchIntegrationHead"] = head
+
+
+
 def check_budget_halt(root: Path, state: dict[str, Any]) -> str | None:
     init_budget_counters(state)
     sync_plan_rejection_no_progress(state)
@@ -492,6 +524,8 @@ def check_budget_halt(root: Path, state: dict[str, Any]) -> str | None:
                 return "conductor:max-run-minutes-exceeded"
 
     if int(state.get("noProgressStreak", 0)) >= no_progress_threshold(root):
+        if remediate_pending_for_state(root, state):
+            return None
         return "conductor:no-progress"
 
     return None
@@ -577,6 +611,7 @@ def clean_consolidated_halt(
         "budgetHalt": True,
         "lockReleased": lock_released,
         "mergeQueueLength": len(state.get("mergeQueue") or []),
+        "mergeEnqueueAttempts": dict(sorted((str(k), int(v)) for k, v in (state.get("mergeEnqueueAttempts") or {}).items())),
         "mergeJournalPresent": state.get("mergeJournal") is not None,
     }
 
@@ -1212,6 +1247,21 @@ def compute_next_action(
     statuses = phase_status_map(state)
     wave_num = int(state.get("currentWave") or 1)
     wave_ids = wave_phase_ids(effective_plan, wave_num)
+    waves = effective_plan.get("waves") or []
+
+    if wave_num > len(waves) and not wave_ids:
+        if all_phases_merged(state):
+            pass  # handled by terminal routing above
+        elif statuses and all(
+            statuses.get(pid) in (*MERGED_PHASE_STATUSES, "blocked", "rejected")
+            for pid in statuses
+        ):
+            return {
+                "action": "halt-blocked",
+                "cause": "current-wave-overflow",
+                "resume": True,
+                "note": "currentWave past plan.waves — terminal degrade (R32)",
+            }
 
     # Blocked phases awaiting remediation or halt (before watchdog — explicit blockers win)
     for pid in wave_ids:
@@ -1904,6 +1954,7 @@ def execute_mechanical(
         if ec not in (0, 10):
             fail_payload(data, "merge run-next failed", ec)
         state.update(load_state(root))
+        refresh_batch_integration_head(root, state)
         persist_cursor(root, state, "provision-phase")
         state.update(load_state(root))
         clear_batch_integration_head_if_idle(state)
@@ -2211,6 +2262,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
                 if isinstance(meta, dict):
                     meta["lastRemediationAt"] = utc_now()
                 save_state(root, state)
+                refresh_batch_integration_head(root, state)
                 persist_cursor(root, state, "remediate")
             elif step["action"] == "dispatch-batch":
                 phase_ids = [str(p) for p in step.get("phaseIds") or []]

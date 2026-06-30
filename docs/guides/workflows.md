@@ -475,7 +475,7 @@ flowchart TD
   DD -->|duplicate| DROP[Drop — already handled]
   DD -->|new| RT{Route}
   RT -->|prod fault| DB["/sw-debug"]
-  RT -->|extends PR| GAP[gap-capture / GAP-BACKLOG]
+  RT -->|extends PR| GAP[gap unit capture]
   RT -->|new scope| BR["/sw-brainstorm"]
   DB --> CONF{Human confirms}
   GAP --> CONF
@@ -492,6 +492,35 @@ Source: review comment
 ```
 
 `/sw-feedback` redacts, classifies, and proposes a route. **Confirm** before dispatch.
+
+
+## Planning autonomy and two-track edits (PRD 035)
+
+035-owned sections complement PRD 033 lifecycle/reconciler docs (033-owned).
+
+### Backlog pull-in (R1–R3)
+
+At PRD creation (`/sw-prd`) and task generation (`/sw-tasks`), `scripts/planning-related.sh` scans the graph
+and emits a **confirm-list** — never auto-absorbs. Stale/already-resolved candidates are flagged; human confirms
+via `planning-related.sh confirm`. Private units contribute metadata only (PRD 034 visibility resolver).
+
+### Autonomy posture (R6–R9)
+
+| Mode | Behavior |
+| --- | --- |
+| `maintenance-only` (default) | Mechanical INDEX `derived` / reconciler bookkeeping runs without prompts; content decisions stay human-gated |
+| `full-conductor` (opt-in) | Gap/absorption-class auto-decision under conductor legitimate-halt + mutation budget; never private/memory units; handoff-only (no nested orchestrators) |
+
+Config: `planning.autonomy` + `planning.fullConductor.*` — see [configuration](configuration.md#planning-autonomy-prd-035).
+
+### Two-track doc-edit driver (R10–R14)
+
+| Track | Allowlist | Route |
+| --- | --- | --- |
+| Mechanical | INDEX `derived` only, SUPERSEDED manifest, gap index | Batched `docs-merge.sh` with CI auto-merge |
+| Substantive | Any `docs/planning/<unit-id>/` path | Auto-driven docs worktree + PR via `docs-edit-route.sh` |
+
+`inFlight` is never mechanical. Branch protection probe fails closed to PR path.
 
 
 ## Build-chain maintenance (PRD 038)

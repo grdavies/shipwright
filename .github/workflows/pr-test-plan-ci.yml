@@ -451,3 +451,102 @@ jobs:
       - name: Run planning-visibility-acceptance-fixtures
         run: bash scripts/test/run-planning-visibility-acceptance-fixtures.sh
 
+  feat-test-plan-planning-related-fixtures:
+    name: feat-test-plan-planning-related-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-related-fixtures
+        run: bash scripts/test/run-planning-related-fixtures.sh
+
+  feat-test-plan-two-track-fixtures:
+    name: feat-test-plan-two-track-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run two-track-fixtures
+        run: bash scripts/test/run-two-track-fixtures.sh
+
+  feat-test-plan-planning-autonomy-fixtures:
+    name: feat-test-plan-planning-autonomy-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-autonomy-fixtures
+        run: bash scripts/test/run-planning-autonomy-fixtures.sh
+
+  feat-test-plan-planning-command-surface-fixtures:
+    name: feat-test-plan-planning-command-surface-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-command-surface-fixtures
+        run: bash scripts/test/run-planning-command-surface-fixtures.sh
+
+  feat-test-plan-planning-035-emitter-parity-fixtures:
+    name: feat-test-plan-planning-035-emitter-parity-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-035-emitter-parity-fixtures
+        run: bash scripts/test/run-planning-035-emitter-parity-fixtures.sh
+
+  feat-test-plan-planning-035-doc-impact-fixtures:
+    name: feat-test-plan-planning-035-doc-impact-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-035-doc-impact-fixtures
+        run: bash scripts/test/run-planning-035-doc-impact-fixtures.sh
+
+  feat-test-plan-parity-fixtures:
+    name: feat-test-plan-parity-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run parity-fixtures
+        run: bash scripts/test/run-parity-fixtures.sh
+
+  feat-test-plan-planning-035-deliver-conductor-fixtures:
+    name: feat-test-plan-planning-035-deliver-conductor-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-035-deliver-conductor-fixtures
+        run: bash scripts/test/run-planning-035-deliver-conductor-fixtures.sh
+
+  feat-test-plan-planning-035-gap-lifecycle-fixtures:
+    name: feat-test-plan-planning-035-gap-lifecycle-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-035-gap-lifecycle-fixtures
+        run: bash scripts/test/run-planning-035-gap-lifecycle-fixtures.sh
+

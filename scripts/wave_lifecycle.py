@@ -580,7 +580,22 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
         text=True,
     )
     if proc.returncode == 10:
-        fail("parallel ceiling reached", exit_code=10, halt="ceiling")
+        would_free: list[str] = []
+        for _pid, meta in (load_state(root).get("phases") or {}).items():
+            if isinstance(meta, dict) and meta.get("status") == "teardown-pending":
+                wt_info = (load_state(root).get("phaseWorktrees") or {}).get(str(_pid), {})
+                name = wt_info.get("name") if isinstance(wt_info, dict) else None
+                if name:
+                    would_free.append(str(name))
+        fail(
+            "parallel ceiling reached",
+            exit_code=10,
+            halt="ceiling",
+            wouldFree=len(would_free),
+            worktrees=would_free,
+            recommendedCommand="/sw-cleanup",
+            note="Run phase-teardown or /sw-cleanup to free slots (R45)",
+        )
     if proc.returncode != 0:
         fail(proc.stderr.strip() or proc.stdout.strip() or "phase provision failed")
 

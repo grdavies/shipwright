@@ -537,6 +537,160 @@
         "public-unit-no-regression",
         "doc-impact-visibility-store"
       ]
+    },
+    {
+      "id": "planning-related-fixtures",
+      "script": "scripts/test/run-planning-related-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-related-fixtures",
+      "scenarios": [
+        "scanner-confirm-list-not-autoabsorb",
+        "related-deterministic-rank-threshold",
+        "related-repeat-suppression",
+        "semantic-optin-flag-gated",
+        "min-recall-gap-043-044-046",
+        "private-metadata-only-proposal",
+        "frozen-pull-in-routes-amendment",
+        "prd-pull-in-proposal-confirm",
+        "tasks-rescan-amendment-proposal",
+        "absorption-edge-autonomous-choices-gated",
+        "proposal-payload-redaction"
+      ]
+    },
+    {
+      "id": "two-track-fixtures",
+      "script": "scripts/test/run-two-track-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-two-track-fixtures",
+      "scenarios": [
+        "two-track-driver-classify-route",
+        "mechanical-allowlist-derived-only",
+        "inflight-never-mechanical",
+        "planning-path-forced-substantive",
+        "frontmatter-edit-substantive-regression",
+        "mechanical-batched-auto-merge",
+        "substantive-auto-driven-pr",
+        "branch-protection-defaults-pr-path",
+        "both-region-content-hash-abort",
+        "mechanical-premerge-secret-scan"
+      ]
+    },
+    {
+      "id": "planning-autonomy-fixtures",
+      "script": "scripts/test/run-planning-autonomy-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-autonomy-fixtures",
+      "scenarios": [
+        "planning-autonomy-config-enum",
+        "maintenance-only-default-no-prompts",
+        "full-conductor-bounded-budget-halt",
+        "enqueue-handoff-no-nested-dispatch",
+        "autonomy-actions-logged-durable"
+      ]
+    },
+    {
+      "id": "planning-command-surface-fixtures",
+      "script": "scripts/test/run-planning-command-surface-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-command-surface-fixtures",
+      "scenarios": [
+        "command-surface-wired",
+        "sw-doc-reconciler-entry",
+        "sw-doc-scheduler-entry",
+        "sw-doc-posture-config",
+        "planning-graph-next-subcommand",
+        "planning-graph-posture-subcommand",
+        "planning-graph-core-parity"
+      ]
+    },
+    {
+      "id": "planning-035-emitter-parity-fixtures",
+      "script": "scripts/test/run-planning-035-emitter-parity-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-emitter-parity-fixtures",
+      "scenarios": [
+        "copy-to-core-parity-035",
+        "emitter-freshness-035"
+      ]
+    },
+    {
+      "id": "planning-035-doc-impact-fixtures",
+      "script": "scripts/test/run-planning-035-doc-impact-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-doc-impact-fixtures",
+      "scenarios": [
+        "doc-currency-035",
+        "no-regression-035"
+      ]
+    },
+    {
+      "id": "parity-fixtures",
+      "script": "scripts/test/run-parity-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-parity-fixtures",
+      "scenarios": [
+        "cursor-golden-vs-dist"
+      ]
+    },
+    {
+      "id": "planning-035-deliver-conductor-fixtures",
+      "script": "scripts/test/run-planning-035-deliver-conductor-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-deliver-conductor-fixtures",
+      "scenarios": [
+        "ship-without-build-chain-sync-fails",
+        "verify-test-includes-parity",
+        "post-merge-build-chain-environmental",
+        "merge-queue-deterministic-regen",
+        "parallel-wave-regen-before-verify",
+        "verify-failed-routes-remediate",
+        "no-progress-before-first-remediate",
+        "current-wave-overflow-terminal",
+        "whole-batch-merge-wait",
+        "batch-integration-head-reconcile",
+        "post-remediation-no-status-pause",
+        "dispatch-ship-completes-in-turn",
+        "await-agent-same-turn-continue",
+        "terminal-eligibility-teardown-green-parity",
+        "terminal-retro-before-pr-auto",
+        "terminal-ship-autonomous-watch",
+        "single-flight-phase-ship",
+        "terminal-status-provenance-reemit",
+        "terminal-pr-prepare-commitlint",
+        "eager-phase-teardown-after-merge",
+        "parallel-ceiling-would-free",
+        "status-collect-background-worktree",
+        "deliver-resume-command-is-sw",
+        "post-freeze-docs-durability",
+        "projection-refuse-hand-maintained",
+        "re-freeze-contract-amendment",
+        "cleanup-autonomy-auto-post-merge"
+      ]
+    },
+    {
+      "id": "planning-035-gap-lifecycle-fixtures",
+      "script": "scripts/test/run-planning-035-gap-lifecycle-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-gap-lifecycle-fixtures",
+      "scenarios": [
+        "gap-resolve-on-prd-ship",
+        "freeze-absorbs-flips-gap-schedule",
+        "gap-backlog-index-integrity",
+        "gap-backlog-ci-guard",
+        "doc-format-normalize-before-rigor",
+        "spec-rigor-traceability-regex-parity",
+        "min-recall-gap-043-044-046",
+        "feedback-routing-prefers-gap-units"
+      ]
     }
   ]
 }

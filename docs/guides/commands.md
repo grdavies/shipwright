@@ -37,7 +37,7 @@ Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** c
 gate. **Legitimate halts** only (see [`configuration.md`](configuration.md)). Parallel phases when the
 plan allows; outcomes from durable `status.json` only.
 
-**Living-doc currency:** INDEX / COMPLETION-LOG / GAP-BACKLOG reconcile in-loop; `docs-currency` blocks
+**Living-doc currency:** INDEX / COMPLETION-LOG / gap-index reconcile in-loop (legacy GAP-BACKLOG projection read-only); `docs-currency` blocks
 terminal merge on drift.
 
 **Frontmatter:** Full-tier PRDs require `brainstorm:`; `/sw-freeze` verifies linkage.
@@ -65,6 +65,24 @@ Call-site map: [`call-site-map.md`](../prds/022-kernel-classification-and-plan-v
 
 **Push safety:** workflow pushes route through `scripts/git-push.sh` → `scripts/secret-scan.sh`
 before `git push` (including `sw-pr` and stabilize re-pushes).
+
+### Planning surface (PRD 035)
+
+Extends `/sw-doc` — no `/sw-plan` command.
+
+| Surface | Command / script |
+| --- | --- |
+| Pull-in at PRD creation | `/sw-prd` → `planning-related.sh scan --mode creation` + confirm-list |
+| Backlog re-scan at tasks | `/sw-tasks` → `planning-related.sh scan --mode tasks-rescan` |
+| Mechanical reconciler | `bash scripts/planning-graph.sh reconcile` |
+| Scheduler | `/sw-deliver next` |
+| Autonomy posture | `planning.autonomy` (`maintenance-only` default \| `full-conductor`) |
+| Two-track doc edits | `scripts/docs-edit-route.sh` → mechanical `docs-merge.sh` or substantive docs worktree + PR |
+| Gap capture from feedback | `/sw-feedback` → `planning_gap_capture.py` (not legacy `GAP-BACKLOG.md`) |
+
+See [`core/commands/sw-doc.md`](../../core/commands/sw-doc.md) **Planning command surface** and
+[`core/skills/conductor/SKILL.md`](../../core/skills/conductor/SKILL.md) **Bounded planning full-conductor**.
+
 
 ## Entry points
 

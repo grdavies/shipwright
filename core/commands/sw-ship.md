@@ -32,6 +32,9 @@ sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review →
 Canonical chain is single-sourced from `core/sw-reference/kernel-classification.json` (`canonicalPhaseChains.sw-ship`); `scripts/ship_phase_steps.py` derives `SHIP_CHAIN` from the same artifact.
 
 
+- **build-chain verify (R25)** — before `sw-commit` when the phase diff touches paths in
+  `core/sw-reference/build-chain-paths.json`, run `bash scripts/ship-build-chain-check.sh` (hard block on drift).
+  Sync with `bash scripts/build-chain-sync.sh` when check fails.
 - **sw-tmp** — at chain start: `bash scripts/sw-tmp.sh clean` then `bash scripts/sw-tmp.sh init` (records
   `runDir` in shipwright-state). At chain end: `bash scripts/sw-tmp.sh clean`. No `trap … EXIT` (markdown-orchestrated
   chain).

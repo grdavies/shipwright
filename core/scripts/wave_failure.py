@@ -15,6 +15,11 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 FLAKY_DEFAULT_RETRIES = 1
 
 ENVIRONMENTAL_VERIFY_MARKERS = (
+    "cursor-golden-vs-dist",
+    "run-parity-fixtures",
+    "emitter freshness",
+    "build-chain-sync",
+    "build-chain-sync --check",
     "parallelceiling",
     "parallel ceiling",
     "parallel_ceiling",

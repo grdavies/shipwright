@@ -339,7 +339,10 @@ fi
 
 # --- PRD 013 A1 terminal autonomy (R20–R24) ---
 TERM_PY="$ROOT/scripts/wave_terminal.py"
-if OUT=$(python3 "$TERM_PY" "$ROOT" terminal autonomy 2>/dev/null) && echo "$OUT" | python3 -c "
+DEFAULT_CFG_FIX=$(mktemp -d)
+mkdir -p "$DEFAULT_CFG_FIX/.cursor"
+echo '{}' >"$DEFAULT_CFG_FIX/.cursor/workflow.config.json"
+if OUT=$(python3 "$TERM_PY" "$DEFAULT_CFG_FIX" terminal autonomy 2>/dev/null) && echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 assert d.get('mode')=='supervised'
@@ -349,6 +352,7 @@ assert d.get('supervisedHalts') is True
 else
   bad "deliver-terminal-autonomy-knob: default supervised"
 fi
+rm -rf "$DEFAULT_CFG_FIX"
 
 AUTO_CFG_FIX=$(mktemp -d)
 mkdir -p "$AUTO_CFG_FIX/.cursor"

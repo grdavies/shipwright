@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -275,6 +276,184 @@ def phase_mode_active() -> bool:
     return raw.lower() in ("1", "true", "yes")
 
 
+def default_base_branch(root: Path) -> str:
+    cfg = load_workflow_config(root)
+    base = cfg.get("defaultBaseBranch")
+    if isinstance(base, str) and base.strip():
+        return base.strip()
+    return "main"
+
+
+def two_track_config(root: Path) -> dict[str, Any]:
+    cfg = load_workflow_config(root)
+    docs = cfg.get("docs") if isinstance(cfg.get("docs"), dict) else {}
+    two = docs.get("twoTrack") if isinstance(docs.get("twoTrack"), dict) else {}
+    return {
+        "allowDirectTrunk": bool(two.get("allowDirectTrunk", False)),
+        "protectionProbeTtlSeconds": int(two.get("protectionProbeTtlSeconds") or 300),
+    }
+
+
+def probe_cache_path(root: Path) -> Path:
+    return root / ".cursor" / "sw-branch-protection-probe.json"
+
+
+def read_probe_cache(root: Path, branch: str, ttl_seconds: int) -> dict[str, Any] | None:
+    path = probe_cache_path(root)
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    entry = data.get(branch) if isinstance(data, dict) else None
+    if not isinstance(entry, dict):
+        return None
+    probed_at = entry.get("probedAt")
+    if not isinstance(probed_at, (int, float)):
+        return None
+    if time.time() - float(probed_at) > ttl_seconds:
+        return None
+    return entry
+
+
+def write_probe_cache(root: Path, branch: str, entry: dict[str, Any]) -> None:
+    path = probe_cache_path(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data: dict[str, Any] = {}
+    if path.is_file():
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                data = loaded
+        except json.JSONDecodeError:
+            data = {}
+    data[branch] = entry
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
+def gh_available() -> bool:
+    return subprocess.run(["command", "-v", "gh"], capture_output=True).returncode == 0
+
+
+def probe_github_branch_protection(root: Path, branch: str) -> dict[str, Any]:
+    resolved = resolve_provider(root)
+    if resolved.get("verdict") != "ok":
+        return {
+            "verdict": "ambiguous",
+            "protected": None,
+            "route": "pr",
+            "reason": "provider-unresolved",
+        }
+    provider = resolved.get("provider")
+    if provider != "github":
+        return {
+            "verdict": "ambiguous",
+            "protected": None,
+            "route": "pr",
+            "reason": f"unsupported-provider:{provider}",
+        }
+    token_env = resolved.get("tokenEnv") or ""
+    if token_env and not token_present(token_env):
+        return {
+            "verdict": "ambiguous",
+            "protected": None,
+            "route": "pr",
+            "reason": "missing-gh-auth",
+        }
+    if not gh_available():
+        return {
+            "verdict": "ambiguous",
+            "protected": None,
+            "route": "pr",
+            "reason": "gh-missing",
+        }
+    remote_url = resolved.get("remoteUrl")
+    owner_repo = parse_owner_repo(remote_url if isinstance(remote_url, str) else None)
+    if not owner_repo:
+        return {
+            "verdict": "ambiguous",
+            "protected": None,
+            "route": "pr",
+            "reason": "owner-repo-unresolved",
+        }
+    owner, repo = owner_repo
+    proc = subprocess.run(
+        ["gh", "api", f"repos/{owner}/{repo}/branches/{branch}/protection"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode == 0:
+        return {
+            "verdict": "ok",
+            "protected": True,
+            "route": "pr",
+            "reason": "branch-protected",
+        }
+    if proc.returncode == 404 or "Branch not protected" in (proc.stderr or proc.stdout):
+        return {
+            "verdict": "ok",
+            "protected": False,
+            "route": "direct",
+            "reason": "branch-unprotected",
+        }
+    return {
+        "verdict": "ambiguous",
+        "protected": None,
+        "route": "pr",
+        "reason": "probe-failed",
+        "detail": (proc.stderr or proc.stdout or "").strip()[:200],
+    }
+
+
+def is_public_remote_template(root: Path) -> bool:
+    resolved = resolve_provider(root)
+    if resolved.get("verdict") != "ok":
+        return False
+    provider = resolved.get("provider")
+    remote_url = resolved.get("remoteUrl")
+    if not isinstance(remote_url, str):
+        return False
+    detected = detect_provider_from_url(remote_url)
+    return provider in {"github", "gitlab", "bitbucket"} and detected == provider
+
+
+def probe_branch_protection(root: Path, branch: str | None = None, *, use_cache: bool = True) -> dict[str, Any]:
+    target = branch or default_base_branch(root)
+    cfg = two_track_config(root)
+    ttl = cfg["protectionProbeTtlSeconds"]
+    if use_cache:
+        cached = read_probe_cache(root, target, ttl)
+        if cached:
+            cached = dict(cached)
+            cached["cached"] = True
+            return cached
+
+    live = probe_github_branch_protection(root, target)
+    entry = {
+        **live,
+        "branch": target,
+        "probedAt": time.time(),
+        "allowDirectTrunk": cfg["allowDirectTrunk"],
+        "publicTemplate": is_public_remote_template(root),
+    }
+    if live.get("verdict") == "ok":
+        if cfg["allowDirectTrunk"] and live.get("protected") is False:
+            entry["route"] = "direct"
+        else:
+            entry["route"] = "pr"
+    else:
+        entry["route"] = "pr"
+    if entry.get("publicTemplate") and entry.get("route") == "direct":
+        entry["autoMergeAllowed"] = False
+    else:
+        entry["autoMergeAllowed"] = entry.get("route") == "pr"
+    write_probe_cache(root, target, entry)
+    entry["cached"] = False
+    return entry
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Host provider resolution helpers")
     parser.add_argument("--root", type=Path, default=Path.cwd())
@@ -286,6 +465,10 @@ def main() -> None:
 
     detect = sub.add_parser("detect-url")
     detect.add_argument("url")
+
+    protection = sub.add_parser("branch-protection-probe")
+    protection.add_argument("--branch", default=None)
+    protection.add_argument("--no-cache", action="store_true")
 
     args = parser.parse_args()
     root = args.root.resolve()
@@ -299,6 +482,13 @@ def main() -> None:
         print(json.dumps(token_status(root), indent=2))
     elif args.cmd == "detect-url":
         print(json.dumps({"provider": detect_provider_from_url(args.url)}, indent=2))
+    elif args.cmd == "branch-protection-probe":
+        print(
+            json.dumps(
+                probe_branch_protection(root, args.branch, use_cache=not args.no_cache),
+                indent=2,
+            )
+        )
     else:
         parser.error(f"unknown command: {args.cmd}")
 

@@ -1,0 +1,10 @@
+{
+  "planning": {
+    "autonomy": "maintenance-only",
+    "fullConductor": {
+      "confidenceThreshold": 0.85,
+      "mutationBudget": 2,
+      "undoWindowSeconds": 0
+    }
+  }
+}

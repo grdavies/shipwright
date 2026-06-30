@@ -41,11 +41,14 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is aut
    frozen: true
    frozen_at: YYYY-MM-DD
    ```
-4. Register in the appropriate living index:
+4. **Gap schedule flip (R52):** when frontmatter lists `absorbs: [GAP-NNN, …]`, run
+   `bash scripts/gap-backlog.sh flip --schedule --from-artifact <path>` after stamping.
+   Optional structural normalize: `bash scripts/doc-format-normalize.sh --write --inplace <path>` when `--normalize`.
+5. Register in the appropriate living index:
    - **PRDs / task lists:** add or refresh entry in `docs/prds/INDEX.md` (path, amendments, status `not-started`).
    - **Decision records:** add or refresh entry in `docs/decisions/INDEX.md` (path, amendments, status `not-started`).
      **No task list generation and no `COMPLETION-LOG` row** for decisions.
-5. **Freeze-time commit (PRD 013 R1–R5):** after stamping and index registration, invoke the shared
+6. **Freeze-time commit (PRD 013 R1–R5):** after stamping and index registration, invoke the shared
    spec-seed helper via the verdict-independent wrapper (R4 — warn-not-block; stamp is never rolled back):
 
    ```bash
@@ -56,7 +59,7 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is aut
    default branch when absent) using non-switching plumbing — the operator's current checkout is restored.
    Docs-only; excludes `docs/brainstorms/**` and untracked/ignored paths; never `main`. A branch or commit
    failure logs a warning and returns success to the freeze verdict.
-6. Report freeze complete; next step `/sw-tasks` for PRDs only.
+7. Report freeze complete; next step `/sw-tasks` for PRDs only.
 
 ## Enforcement layers
 

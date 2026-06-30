@@ -80,6 +80,16 @@ After doc freeze, durability paths diverge (R32):
 8. `/sw-freeze` on PRD (and brainstorm if applicable).
 9. `/sw-tasks` — single-pass generation; traceability + analyze gates before task freeze.
 10. `/sw-freeze` on the task list.
+10a. **Planning reconciler hook (R15):** when doc artifacts may affect the planning graph (INDEX `derived`
+    region, gap edges, or unit linkage), run the mechanical reconciler before the implementation boundary:
+
+    ```bash
+    bash scripts/planning-graph.sh reconcile --dry-run
+    ```
+
+    Commit on the docs/feature branch only (`--commit`; never on bare default branch). Living-status also
+    invokes this via `scripts/wave.sh living-docs reconcile`. Resolve artifact paths via
+    `bash scripts/planning_paths.sh` (PRD 031) — do not hardcode `docs/planning/` roots.
 11. Resolve boundary mode: `doc.afterTasks` from `workflow.config.json`, overridden by `--after-tasks=<mode>` when set.
 12. Present the frozen task-list path. Resolve `<type>/<slug>` via the shared deliver resolver (do **not**
     re-implement branch derivation in `/sw-doc`):
@@ -140,6 +150,40 @@ Begin implementation on `<type>/<slug>`? Reply with **proceed** or **yes** (case
 **Re-emit rule:** If the user returns with an unrelated message (e.g. `/sw-memory-sync`, a doc question)
 while a `confirm` halt is pending and has not sent `proceed`/`yes`, map to **`stop`** (no dispatch) and
 **re-emit the Implementation checkpoint block** so the pending acknowledgement is visible again.
+
+## Planning command surface (PRD 035 D6 / R15)
+
+The planning surface **extends `/sw-doc`** — no top-level `/sw-plan`. Commands resolve paths via the PRD 031
+helper (`bash scripts/planning_paths.sh`); the graph shell exposes thin wrappers for operator ergonomics.
+
+| Entry | Command |
+| --- | --- |
+| Mechanical reconciler | `bash scripts/planning-graph.sh reconcile [--dry-run] [--commit]` |
+| Graph-driven scheduler | `/sw-deliver next` → `python3 scripts/wave_deliver.py <repo> next` (also `planning-graph.sh next`) |
+| Autonomy posture | `planning.autonomy` in `workflow.config.json` (`maintenance-only` default \| `full-conductor`) |
+| Posture readback | `bash scripts/planning-graph.sh posture` |
+
+**Scheduler:** `/sw-deliver next` picks the highest-priority eligible frozen task list from the planning graph
+(PRD 033). Under `planning.autonomy: maintenance-only`, an explicit `--task-list` that skips a higher-priority
+unit soft-enforces a confirm prompt (see `core/commands/sw-deliver.md` **Planning scheduler**).
+
+**Posture:** `maintenance-only` runs mechanical bookkeeping (reconcile, edge status, INDEX `derived`) without
+prompts; content decisions (pull-in, amendment, priority) stay human-gated. `full-conductor` opt-in elevates
+only gap/absorption-class decisions under bounded conductor limits (`planning.fullConductor`).
+
+## Two-track doc edits (PRD 035 R10–R14)
+
+After freeze, planning graph maintenance edits route through the two-track driver — not per-edit manual PRs:
+
+| Track | Classifier (R11) | Entry |
+| --- | --- | --- |
+| Mechanical | INDEX `derived` region, SUPERSEDED manifest, generated gap index only | `bash scripts/docs-edit-route.sh route --path …` → `docs-merge.sh` |
+| Substantive | Any `docs/planning/<unit-id>/` path (body or frontmatter) | `bash scripts/docs-edit-route.sh route-substantive --topic <topic>` |
+
+The INDEX **`inFlight` region is never mechanical** (PRD 032 deliver writer). Mechanical batches embed a
+both-region content-hash at PR open; auto-merge aborts when `derived` or `inFlight` advanced since (R14).
+Branch protection is probed via host API — ambiguous detection fails closed to the PR path (R13).
+
 
 ## Flags
 

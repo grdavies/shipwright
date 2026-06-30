@@ -439,59 +439,9 @@ PY
 }
 
 cmd_gap_resolve() {
-  python3 - "$ROOT" "$@" <<'PY'
-import json
-import re
-import sys
-from pathlib import Path
-
-root = Path(sys.argv[1])
-args = sys.argv[2:]
-absorbing = pr_ref = ""
-i = 0
-while i < len(args):
-    if args[i] == "--absorbing-prd" and i + 1 < len(args):
-        absorbing = args[i + 1].zfill(3)
-        i += 2
-    elif args[i] == "--pr" and i + 1 < len(args):
-        pr_ref = args[i + 1]
-        i += 2
-    else:
-        i += 1
-if not absorbing:
-    raise SystemExit("--absorbing-prd required")
-gap_path = root / "docs" / "prds" / "GAP-BACKLOG.md"
-text = gap_path.read_text(encoding="utf-8")
-lines = []
-resolved = []
-for line in text.splitlines():
-    if not line.startswith("|") or line.startswith("| Date") or line.startswith("|---"):
-        lines.append(line)
-        continue
-    parts = [p.strip() for p in line.strip("|").split("|")]
-    if len(parts) < 5:
-        lines.append(line)
-        continue
-    # | Date | Source | PRD | Gap | [Absorbed-by] | Status |
-    status = parts[-1].lower()
-    absorbed_by = ""
-    if len(parts) >= 6:
-        absorbed_by = parts[-2].zfill(3) if parts[-2].isdigit() else parts[-2]
-    else:
-        m = re.search(rf"absorbed by PRD\s+{re.escape(absorbing.lstrip('0') or '0')}\b", parts[3], re.I)
-        if m:
-            absorbed_by = absorbing
-    if status == "open" and absorbed_by.zfill(3) == absorbing:
-        ref = f"resolved via PRD {absorbing}"
-        if pr_ref:
-            ref += f" (PR #{pr_ref})"
-        parts[-1] = f"resolved ({ref})"
-        resolved.append(parts[2])
-        line = "| " + " | ".join(parts) + " |"
-    lines.append(line)
-gap_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
-print(json.dumps({"verdict": "pass", "action": "gap-resolve", "absorbingPrd": absorbing, "resolved": resolved}))
-PY
+  local args=()
+  while [[ $# -gt 0 ]]; do args+=("$1"); shift; done
+  exec bash "$ROOT/scripts/living-status-gap-resolve.sh" "${args[@]}"
 }
 
 cmd_append_superseded() {
