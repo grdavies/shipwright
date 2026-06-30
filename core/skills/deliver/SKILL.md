@@ -14,7 +14,7 @@ legitimate halts, parallel dispatch, resumption). `/sw-deliver` is the pilot con
 `rules/sw-conductor.mdc`. Do not re-author loop logic in this skill (R1, R3).
 
 
-**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill deliver`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.sh --skill deliver`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Deliver plan representation
 
@@ -71,7 +71,7 @@ Multi-feature mode uses `"mode": "multi-feature"` with conforming type-prefixed 
 **Two-tier plan persistence (PRD 022):** validated wave-batching plans live on shared run-state
 (`waveBatchingPlan`, conductor-only); validated phase step plans live under the phase run dir
 (`phase-step-plan.json`, executor-owned). `orchestration.planPolicy` defaults to `canonical`; recorded mode
-is honored on resume. Proposals validate via `bash scripts/wave.sh plan validate` before persist — see
+is honored on resume. Proposals validate via `python3 scripts/wave.sh plan validate` before persist — see
 `skills/conductor/SKILL.md` **Two-tier plan lifecycle**.
 
 **Proposed-path (PRD 023):** live `proposed` on `/sw-deliver` requires the TR0 dependency gate
@@ -82,7 +82,7 @@ without kernel changes. Default `canonical` is byte-identical to pre-023 behavio
 
 **Benefit metric + reporting (R31):** per-phase and run-level `benefitMetric` objects (numeric/enumerated only)
 are captured at terminal phase status and rolled up on shared run-state. Operator soak comparisons use
-`bash scripts/wave.sh plan benefit-report --pairs <path>` → `scripts/wave_plan_benefit.py`. Schema and
+`python3 scripts/wave.sh plan benefit-report --pairs <path>` → `scripts/wave_plan_benefit.py`. Schema and
 decision rule: `.sw/layout.md` **Deliver pilot run records**.
 
 **Intra-phase fan-out snapshot:** `intraPhaseFanOut` on phase status / `phases.<id>` records the latest
@@ -102,7 +102,7 @@ staged path under the prefix (`scripts/materialized-prefix-scan.sh`) — the **c
 even under `git add -f`. Store backend + revision are pinned at provision; mid-run `planning.store` config
 changes halt with remediation. CI/host never materializes.
 
-Fixture suite: `bash scripts/test/run-planning-materialize-fixtures.sh` (registered as
+Fixture suite: `python3 scripts/test/run-planning-materialize-fixtures.sh` (registered as
 `planning-materialize-fixtures` in the PR test-plan manifest).
 
 **Per-branch scoping (PRD 013 R6–R11):** `<slug>` derives from the target feature branch
@@ -359,7 +359,7 @@ Terminal pause is suppressed; `/sw-deliver` must not wait on human input for per
 
 `/sw-deliver` consumes `skills/conductor/SKILL.md` for the autonomous loop. Summary:
 
-1. Run `bash scripts/wave.sh deliver-loop` from the orchestrator worktree.
+1. Run `python3 scripts/wave.sh deliver-loop` from the orchestrator worktree.
 2. While `verdict: running` and no legitimate halt:
    - `awaitAgent: false` → re-invoke `deliver-loop` immediately (same turn).
    - `awaitAgent: true` → execute `next.action` (`dispatch-ship`, `remediate`, `retrospective`, or
@@ -368,7 +368,7 @@ Terminal pause is suppressed; `/sw-deliver` must not wait on human input for per
 
 **Retrospective handoff (R9):** when `next.action` is `retrospective`, run **`/sw-retrospective --pre-merge`**
 on the orchestrator worktree only — do not inline retro/compound/memory/status. Respect `compound.autonomy`
-via `bash scripts/wave.sh retrospective autonomy`. Then re-invoke `deliver-loop` for `terminal-ship`.
+via `python3 scripts/wave.sh retrospective autonomy`. Then re-invoke `deliver-loop` for `terminal-ship`.
 
 **Self-wake (R8/R9):** terminal-PR CI uses `notify_on_output` on `^DELIVER_WAKE_<run-id>`; tear down all
 watchers on terminal halt. **Parallel-wave wait (R44):** poll or self-wake on durable `status.json` set.
@@ -472,9 +472,9 @@ run's INDEX row, completion-log entry, and absorbed gaps (R50; parity with task-
 scripts/wave.sh living-docs reconcile --commit
 scripts/wave.sh living-docs append-terminal --commit
 scripts/wave.sh docs-currency
-bash scripts/reconcile-status.sh set-index-status --prd <NNN> --status in-progress
-bash scripts/reconcile-status.sh append-log-idempotent --prd <NNN> --phase all --pr <N> --sha <sha>
-bash scripts/reconcile-status.sh gap-resolve --absorbing-prd <NNN> --pr <N>
+python3 scripts/reconcile-status.sh set-index-status --prd <NNN> --status in-progress
+python3 scripts/reconcile-status.sh append-log-idempotent --prd <NNN> --phase all --pr <N> --sha <sha>
+python3 scripts/reconcile-status.sh gap-resolve --absorbing-prd <NNN> --pr <N>
 ```
 
 See `skills/living-status/SKILL.md` for the canonical INDEX status enum and reconcile primitives.

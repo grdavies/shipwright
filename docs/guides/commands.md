@@ -53,12 +53,12 @@ chat. Default `orchestration.planPolicy: canonical` preserves today's behavior; 
 the `/sw-deliver` pilot (TR0 gate, per-run acknowledgement, non-`main` target).
 
 ```bash
-bash scripts/wave.sh plan benefit-report --pairs scripts/test/fixtures/benefit-metric/positive-pairs.json
+python3 scripts/wave.sh plan benefit-report --pairs scripts/test/fixtures/benefit-metric/positive-pairs.json
 ```
 
 ```bash
-bash scripts/wave.sh plan validate --tier phase --phase-type ship --proposal <path|json>
-bash scripts/wave.sh plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
+python3 scripts/wave.sh plan validate --tier phase --phase-type ship --proposal <path|json>
+python3 scripts/wave.sh plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
 ```
 
 Call-site map: [`call-site-map.md`](../prds/022-kernel-classification-and-plan-validation/call-site-map.md).
@@ -74,7 +74,7 @@ Extends `/sw-doc` — no `/sw-plan` command.
 | --- | --- |
 | Pull-in at PRD creation | `/sw-prd` → `planning-related.sh scan --mode creation` + confirm-list |
 | Backlog re-scan at tasks | `/sw-tasks` → `planning-related.sh scan --mode tasks-rescan` |
-| Mechanical reconciler | `bash scripts/planning-graph.sh reconcile` |
+| Mechanical reconciler | `python3 scripts/planning-graph.sh reconcile` |
 | Scheduler | `/sw-deliver next` |
 | Autonomy posture | `planning.autonomy` (`maintenance-only` default \| `full-conductor`) |
 | Two-track doc edits | `scripts/docs-edit-route.sh` → mechanical `docs-merge.sh` or substantive docs worktree + PR |
@@ -172,5 +172,5 @@ See [Getting started](getting-started.md) for boundary modes and worktree rules.
 | `/sw-doc` | **`consistency-only` default** | Canonical path + doc-review halts; proposed pack deferred unless probe shows latitude |
 | `/sw-feedback` | `full` episodic | Untrusted-signal halts; `.cursor/sw-feedback-runs/` scratch |
 
-Fixtures: `bash scripts/test/run-fanout-fixtures.sh`; A2 binding: `bash scripts/test/run-dispatch-foundation-fixtures.sh`.
+Fixtures: `python3 scripts/test/run-fanout-fixtures.sh`; A2 binding: `python3 scripts/test/run-dispatch-foundation-fixtures.sh`.
 

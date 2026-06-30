@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+TARGETS=(
+  scripts/docs_pr.py
+  scripts/docs-merge.py
+  scripts/host_lib.py
+  core/providers/review/coderabbit.py
+)
+FAIL=0
+for rel in "${TARGETS[@]}"; do
+  if python3 - <<PY2 "$ROOT/$rel"
+import re, sys
+from pathlib import Path
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+# strip module docstring
+if text.startswith("\"\"\""):
+    end = text.find("\"\"\"", 3)
+    if end != -1:
+        text = text[end+3:]
+patterns = [
+    r'\\bgh\\b',
+    r'subprocess.*\\["gh"',
+    r'command -v gh',
+    r'gh api',
+    r'gh pr',
+]
+for pat in patterns:
+    if re.search(pat, text):
+        print(pat)
+        raise SystemExit(1)
+PY2
+  then
+    :
+  else
+    echo "FAIL gh invocation remains in $rel"
+    FAIL=1
+  fi
+done
+[ "$FAIL" -eq 0 ] || exit 1
+echo "OK  no-gh-guard"

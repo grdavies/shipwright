@@ -12,7 +12,7 @@ ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
 chmod +x "$ROOT/scripts/host-detect.sh" "$ROOT/scripts/host_token.sh" \
-  "$ROOT/scripts/host_transport.sh" "$ROOT/scripts/host-doctor.sh" 2>/dev/null || true
+  "$ROOT/scripts/host_transport.py" "$ROOT/scripts/host-doctor.sh" 2>/dev/null || true
 
 # --- host-provider-select ---
 if OUT=$(python3 "$ROOT/scripts/host_lib.py" --root "$ROOT" resolve) && \
@@ -311,7 +311,7 @@ else
   tail -5 /tmp/sw-host-gate-fixtures.log >&2 || true
 fi
 
-# --- pr-list-merged-state-normalization (host_github.sh pr-list + gh_pr_to_view) ---
+# --- pr-list-merged-state-normalization (host.py pr-list + gh_pr_to_view) ---
 if python3 -c "
 def normalize(pr):
     return 'MERGED' if (pr.get('merged') or pr.get('merged_at')) else pr.get('state', '').upper()
@@ -329,12 +329,12 @@ fi
 (
   export GITHUB_TOKEN=gh_fixture_token_for_tests
   export SW_HOST_FIXTURE=green
-  if OUT=$(bash "$ROOT/scripts/host.sh" --root "$ROOT" pr-list --head feat/x --base main --state open) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and isinstance(d.get('data'), list)"; then
+  if OUT=$(python3 "$ROOT/scripts/host.py" --root "$ROOT" pr-list --head feat/x --base main --state open) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and isinstance(d.get('data'), list)"; then
     ok "terminal-flow-verbset:pr-list"
   else
     bad "terminal-flow-verbset:pr-list"
   fi
-  if OUT=$(bash "$ROOT/scripts/host.sh" --root "$ROOT" pr-create --title t --body b --head feat/x --base main) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d['data'].get('number')"; then
+  if OUT=$(python3 "$ROOT/scripts/host.py" --root "$ROOT" pr-create --title t --body b --head feat/x --base main) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d['data'].get('number')"; then
     ok "terminal-flow-verbset:pr-create"
   else
     bad "terminal-flow-verbset:pr-create"
@@ -405,12 +405,12 @@ cfg['host'] = {'provider': 'none', 'remote': 'origin'}
 json.dump(cfg, open('/dev/stdout','w'), indent=2)
 CFG
   export SW_LOCAL_GATE_FIXTURE=green
-  if OUT=$(bash "$ROOT/scripts/host.sh" --root "$LOCAL_FIX" resolve-pr-for-branch) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d['provider']=='none' and d['data'][0].get('localEvidence')"; then
+  if OUT=$(python3 "$ROOT/scripts/host.py" --root "$LOCAL_FIX" resolve-pr-for-branch) &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d['provider']=='none' and d['data'][0].get('localEvidence')"; then
     ok "noremote-local-adapter"
   else
     bad "noremote-local-adapter"
   fi
-  if OUT=$(bash "$ROOT/scripts/host.sh" --root "$LOCAL_FIX" checks --sha "$(git rev-parse HEAD)") &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and len(d['data'])>0"; then
+  if OUT=$(python3 "$ROOT/scripts/host.py" --root "$LOCAL_FIX" checks --sha "$(git rev-parse HEAD)") &&      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and len(d['data'])>0"; then
     ok "noremote-local-adapter:checks"
   else
     bad "noremote-local-adapter:checks"

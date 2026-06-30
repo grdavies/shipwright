@@ -64,8 +64,8 @@ Scaffold writes the full block from `scripts/seed-model-config.sh` and
 unless confirmed. See `.sw/models-tiering.md` for platform catalogs, `models.routing.agents`, and resolver usage.
 
 **Dispatch binding (PRD 012):** before spawning reviewer/persona Tasks, resolve
-`bash scripts/resolve-model-tier.sh --agent <id>` and run
-`bash scripts/reviewer-dispatch-check.sh --agent <id> --parent-model <parent-concrete-id>`;
+`python3 scripts/resolve-model-tier.sh --agent <id>` and run
+`python3 scripts/reviewer-dispatch-check.sh --agent <id> --parent-model <parent-concrete-id>`;
 stamp the resolved concrete `model:` on the Task (do not rely on `model: inherit` from the parent session).
 
 ### Deliver autonomy (`deliver.autonomy`)
@@ -110,13 +110,13 @@ for truly sensitive specs; keep codenames out of INDEX titles (opaque title) or 
 The memory backend routes bodies through the existing memory adapter and redaction chokepoint — it is never
 labeled encrypted or anonymized.
 
-Fixture suite: `bash scripts/test/run-visibility-fixtures.sh` (registered as `visibility-fixtures` in the PR test-plan manifest).
+Fixture suite: `python3 scripts/test/run-visibility-fixtures.sh` (registered as `visibility-fixtures` in the PR test-plan manifest).
 
 **Visibility-driven `.gitignore` (R13):** regenerate tracking rules from the resolver via
-`bash scripts/gitignore-generate.sh --write`. The generated block is delimited by
+`python3 scripts/gitignore-generate.sh --write`. The generated block is delimited by
 `# BEGIN visibility-generated` / `# END visibility-generated` markers in `.gitignore`.
 
-Fixture suite: `bash scripts/test/run-planning-visibility-acceptance-fixtures.sh` (registered as
+Fixture suite: `python3 scripts/test/run-planning-visibility-acceptance-fixtures.sh` (registered as
 `planning-visibility-acceptance-fixtures` — emitter parity, public-unit no-regression, doc-impact acceptance).
 
 ### Planning autonomy (PRD 035)
@@ -135,7 +135,7 @@ scheduler confirm when a lower-priority unit is selected under `maintenance-only
 `private`/`memory` units; enqueues handoffs only (no nested `/sw-deliver`, `/sw-doc`, or orchestrator dispatch);
 never weakens merge-to-`main`. See `core/skills/conductor/SKILL.md` **Bounded planning full-conductor**.
 
-Fixture suite: `bash scripts/test/run-planning-035-doc-impact-fixtures.sh` (`doc-currency-035`, `no-regression-035`).
+Fixture suite: `python3 scripts/test/run-planning-035-doc-impact-fixtures.sh` (`doc-currency-035`, `no-regression-035`).
 
 
 ### Orchestration plan policy (`orchestration.planPolicy`)
@@ -166,22 +166,22 @@ remains TR0 + metric-gated (PRD 023).
 | **R36** | Variance probe at authoring: `canonical ≡ proposed` → **consistency-only** (manifest + selector; proposed pack deferred); `/sw-doc` **defaults consistency-only** |
 | **R37** | Debug/feedback = episodic scratch; deliver/doc handoff = durable run-state |
 
-**Fixture suites:** `bash scripts/test/run-fanout-fixtures.sh` (program gate, per-orchestrator parity,
-consistency-only, halts, R21/R22/R23); `bash scripts/test/run-dispatch-foundation-fixtures.sh` (A2 parallel
+**Fixture suites:** `python3 scripts/test/run-fanout-fixtures.sh` (program gate, per-orchestrator parity,
+consistency-only, halts, R21/R22/R23); `python3 scripts/test/run-dispatch-foundation-fixtures.sh` (A2 parallel
 preflight + command-tier binding, R38/R39).
 
 Mechanical validation:
 
 ```bash
-bash scripts/wave.sh plan validate --tier phase --phase-type ship --proposal <path|json>
-bash scripts/wave.sh plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
-bash scripts/wave.sh plan validate --tier orchestrator --orchestrator-type debug --proposal <path|json>
+python3 scripts/wave.sh plan validate --tier phase --phase-type ship --proposal <path|json>
+python3 scripts/wave.sh plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
+python3 scripts/wave.sh plan validate --tier orchestrator --orchestrator-type debug --proposal <path|json>
 ```
 
 ### `/sw-cleanup` agent-driven confirm
 
 `/sw-cleanup` defaults to dry-run. The agent presents the `wouldRemove` set and asks for explicit confirm
-before running `bash scripts/cleanup.sh --confirm --yes` (or `SW_CLEANUP_CONFIRM=1`) on your behalf.
+before running `python3 scripts/cleanup.sh --confirm --yes` (or `SW_CLEANUP_CONFIRM=1`) on your behalf.
 All fail-closed protections (unmerged branches, in-flight deliver, indeterminate squash, no `rm -rf`) are
 unchanged — only the apply trigger moves from manual bash to agent-on-ack.
 
@@ -274,8 +274,8 @@ Wenyan variants are not supported in Shipwright — attach the external user ski
 `**Model tier:**` prose; resolve at runtime:
 
 ```bash
-bash scripts/resolve-model-tier.sh --command sw-prd
-bash scripts/resolve-model-tier.sh --command sw-doc --delegate sw-prd
+python3 scripts/resolve-model-tier.sh --command sw-prd
+python3 scripts/resolve-model-tier.sh --command sw-doc --delegate sw-prd
 ```
 
 Orchestrators (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-retrospective`) route at `inherit` — always resolve the
@@ -315,7 +315,7 @@ Deprecated aliases `/sw-compound-ship` and `/sw-compound` route to it for one re
 | **supervised** (default) | `supervised` | Preserve retro/compound approval and merge-ack prompts |
 | hands-off pre-merge | `auto` | Run the pre-merge chain when the terminal PR is green without re-prompting; merge detection still gates INDEX → `complete` |
 
-Inspect at runtime: `bash scripts/wave.sh retrospective autonomy`. Autonomy never bypasses fail-closed
+Inspect at runtime: `python3 scripts/wave.sh retrospective autonomy`. Autonomy never bypasses fail-closed
 memory writes or rule-class human gates.
 
 ## Zero-config fast path
@@ -353,7 +353,7 @@ verify presets) via the plugin bundle — not the full dev `.sw/` tree.
 ## GitHub / CI ceiling
 
 The merge-readiness gate (`/sw-watch-ci`, `/sw-stabilize`) observes **GitHub Actions** via the GitHub host
-adapter (`scripts/host.sh` over REST). Set `host.tokenEnv` (default `GITHUB_TOKEN`) — no host CLI is required.
+adapter (`scripts/host.py` over REST). Set `host.tokenEnv` (default `GITHUB_TOKEN`) — no host CLI is required.
 Repos without a token or Actions can still use local `/sw-verify`, but cannot pass the CI-readiness gate until
 GitHub CI is available — `/sw-init` host doctor warns about this honestly.
 
@@ -382,7 +382,7 @@ Provider **credentials** come from the environment or your secret store — neve
 Shipwright repos single-source the standard FEAT test-plan fixture set in
 `core/sw-reference/pr-test-plan.manifest.json` (`ci.prTestPlanManifest` in config — not under `verify.*`).
 Local `verify.test` runs the same set via `scripts/test/run-pr-test-plan-manifest.sh`; CI runs it via
-`.github/workflows/pr-test-plan-ci.yml` (regenerate with `bash scripts/generate-pr-test-plan-ci-workflow.sh`).
+`.github/workflows/pr-test-plan-ci.yml` (regenerate with `python3 scripts/generate-pr-test-plan-ci-workflow.sh`).
 
 Each manifest entry carries **`required`** (merge-blocking) or **`advisory`** (visible in the all-checks
 readiness verdict but non-blocking). `scripts/check-gate.sh` loads the manifest and exposes
@@ -390,7 +390,7 @@ readiness verdict but non-blocking). `scripts/check-gate.sh` loads the manifest 
 existing gate path. The PR template references CI **job names** as the authoritative gate — not a manual
 script checklist.
 
-Fixture suite: `bash scripts/test/run-pr-test-plan-fixtures.sh` (registered in `verify.test`).
+Fixture suite: `python3 scripts/test/run-pr-test-plan-fixtures.sh` (registered in `verify.test`).
 
 
 ## Deliver plan-policy pilot (PRD 023)
@@ -404,7 +404,7 @@ Fixture suite: `bash scripts/test/run-pr-test-plan-fixtures.sh` (registered in `
 | Driver budgets | `runStartedAt`, `driverIterationCount`, `noProgressStreak` on shared run-state |
 | Benefit metric | Numeric/enumerated `benefitMetric`; soak via `wave.sh plan benefit-report` |
 
-Fixture suite: `bash scripts/test/run-pilot-fixtures.sh` (pilot-e2e, intra-phase-*, budget-*, benefit-*).
+Fixture suite: `python3 scripts/test/run-pilot-fixtures.sh` (pilot-e2e, intra-phase-*, budget-*, benefit-*).
 After `core/` pilot prose changes: `python3 -m sw generate --all` + `run-emitter-fixtures.sh`.
 
 ## PRD 022 fixture suites (kernel / gate / plan policy)
@@ -414,7 +414,7 @@ After editing `core/sw-reference/kernel-classification.*`, `guidelines.*`, or or
 
 ```bash
 python3 -m sw generate --all
-bash scripts/test/run-emitter-fixtures.sh
+python3 scripts/test/run-emitter-fixtures.sh
 ```
 
 | Suite | Scope |

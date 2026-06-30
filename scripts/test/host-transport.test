@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+python3 - <<'PY' "$ROOT"
+import sys
+from pathlib import Path
+from _sw.host_transport import validate_url, _ssl_context
+root = Path(sys.argv[1])
+validate_url("https://api.github.com/repos/o/r", root=root)
+try:
+    validate_url("http://api.github.com/x", root=root)
+    raise SystemExit("http should fail")
+except ValueError:
+    pass
+try:
+    validate_url("https://127.0.0.1/x", root=root)
+    raise SystemExit("loopback should fail")
+except ValueError:
+    pass
+ctx = _ssl_context()
+assert ctx.verify_mode is not None
+print("OK  host-transport")
+PY

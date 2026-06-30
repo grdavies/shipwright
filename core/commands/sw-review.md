@@ -113,7 +113,7 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
     Write gate config from `review.local.gate`. Surface-only default (`haltOn: []`) logs P0–P3 and
     continues. Halting mode (`haltOn: ["P0","P1"]`) records halt signal for `/sw-ship` (validated
     P0/P1 only). Persist gate result to `/tmp/sw-local-review-gate-result.json`.
-12. **Run report (R69/R50):** resolve `runDir` via `bash scripts/sw-tmp.sh resolve` (or `shipwright-state`
+12. **Run report (R69/R50):** resolve `runDir` via `python3 scripts/sw-tmp.sh resolve` (or `shipwright-state`
     `runDir` when set). Write `$runDir/sw-local-review-run-report.json` per the contract in `native.md`:
 
     - announced roster + per-specialist selection reasons (from activation record)
@@ -131,7 +131,7 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
     (R29/R30):
 
     ```bash
-    bash scripts/memory-redact.sh "$runDir/sw-local-review-run-report.json" \
+    python3 scripts/memory-redact.sh "$runDir/sw-local-review-run-report.json" \
       > "$runDir/sw-local-review-run-report.scrubbed.json"
     mv "$runDir/sw-local-review-run-report.scrubbed.json" "$runDir/sw-local-review-run-report.json"
     ```
@@ -139,7 +139,7 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
     - Scrub `ce-code-review` run dir after parsing:
 
       ```bash
-      RUN_DIR="$(jq -r '.artifact_path // empty' /tmp/sw-local-review-raw.json)"
+      RUN_DIR="$(Python json -r '.artifact_path // empty' /tmp/sw-local-review-raw.json)"
       [[ -n "$RUN_DIR" && -d "$RUN_DIR" ]] && rm -rf "$RUN_DIR"
       ```
 
@@ -162,9 +162,9 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
 
       ```bash
       while IFS= read -r finding; do
-        REDACTED="$(printf '%s' "$finding" | bash scripts/memory-redact.sh)"
+        REDACTED="$(printf '%s' "$finding" | python3 scripts/memory-redact.sh)"
         # memory-preflight write distilled learning from $REDACTED
-      done < <(jq -c '.findings[]' /tmp/sw-local-review-normalized.json 2>/dev/null || echo '[]')
+      done < <(Python json -c '.findings[]' /tmp/sw-local-review-normalized.json 2>/dev/null || echo '[]')
       ```
 14. Phase-1-applied fixes stay in working tree for phase 2. Any phase-2 finding on a phase-1-touched line
     is annotated `contests applied fix` additively (never suppressed, R71).
@@ -184,7 +184,7 @@ Unchanged from prior single-phase flow:
 5. Run provider local review (CodeRabbit):
 
    ```bash
-   RUN_DIR=$(bash scripts/sw-tmp.sh resolve)
+   RUN_DIR=$(python3 scripts/sw-tmp.sh resolve)
    if [[ -z "$RUN_DIR" ]]; then
      RUN_DIR=/tmp
    fi
@@ -194,7 +194,7 @@ Unchanged from prior single-phase flow:
    REVIEW_EC=$?
    REVIEW_STATUS="pass"
    [[ "$REVIEW_EC" -ne 0 ]] && REVIEW_STATUS="fail"
-   jq -n --argjson ec "$REVIEW_EC" --arg st "$REVIEW_STATUS" --arg log "$LOG_FILE" \
+   Python json -n --argjson ec "$REVIEW_EC" --arg st "$REVIEW_STATUS" --arg log "$LOG_FILE" \
      '{exitCode: $ec, status: $st, logPath: $log, provider: "coderabbit"}' > "$STATUS_FILE"
    chmod 600 "$STATUS_FILE"
    ```
@@ -219,7 +219,7 @@ Unchanged from prior single-phase flow:
 
 **Communication intensity:** full
 
-**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --command sw-review`.
+**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.sh --command sw-review`.
 
 ## Guardrails
 

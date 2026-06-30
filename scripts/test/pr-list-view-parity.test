@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+python3 - <<'PY' "$ROOT"
+import json, sys
+from pathlib import Path
+from _sw.host._shape import PR_VIEW_FIELDS, github_pr_to_list_entry, github_pr_to_view, list_entry_matches_view_fields
+root = Path(sys.argv[1])
+fixture = root / "scripts/test/fixtures/host/pr-list-green.json"
+data = json.loads(fixture.read_text())["data"][0]
+assert list_entry_matches_view_fields(data)
+raw = {"number": 1, "html_url": "https://x/y/1", "head": {"ref": "h", "sha": "s"}, "base": {"ref": "b"},
+       "state": "open", "draft": False, "mergeable": True, "mergeable_state": "clean", "title": "t", "body": ""}
+entry = github_pr_to_list_entry(raw)
+view = github_pr_to_view(raw)
+assert set(entry.keys()) >= set(PR_VIEW_FIELDS)
+assert not [k for k in PR_VIEW_FIELDS if k not in entry]
+print("OK  pr-list-view-parity")
+PY

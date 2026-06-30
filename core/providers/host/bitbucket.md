@@ -15,7 +15,7 @@ capability:
 
 # Bitbucket host adapter
 
-Markdown companion to `host_bitbucket.sh` (Phase 4). Selected when `workflow.config.json` → `host.provider` is
+Markdown companion to `scripts/host.py` (Phase 4). Selected when `workflow.config.json` → `host.provider` is
 `bitbucket` or auto-detected from a `bitbucket.org` remote.
 
 ## Capability flags

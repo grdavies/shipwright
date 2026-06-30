@@ -1,0 +1,36 @@
+{
+  "/repos/": {
+    "full_name": "owner/repo",
+    "default_branch": "main",
+    "name": "repo",
+    "owner": {"login": "owner"}
+  },
+  "/pulls": [
+    {
+      "number": 42,
+      "html_url": "https://github.com/owner/repo/pull/42",
+      "head": {"ref": "feat/x", "sha": "abc123def4567890abcdef1234567890abcdef12"},
+      "base": {"ref": "main"},
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "mergeable_state": "clean",
+      "title": "t",
+      "body": "b",
+      "merged": false,
+      "merged_at": null
+    }
+  ],
+  "/pulls/42": {
+    "number": 42,
+    "html_url": "https://github.com/owner/repo/pull/42",
+    "head": {"ref": "feat/x", "sha": "abc123def4567890abcdef1234567890abcdef12"},
+    "base": {"ref": "main"},
+    "state": "open",
+    "draft": false,
+    "mergeable": true,
+    "mergeable_state": "clean",
+    "title": "t",
+    "body": "b"
+  }
+}

@@ -15,7 +15,7 @@ capability:
 
 # GitLab host adapter
 
-Markdown companion to `host_gitlab.sh` (Phase 4). Selected when `workflow.config.json` → `host.provider` is
+Markdown companion to `scripts/host.py` (Phase 4). Selected when `workflow.config.json` → `host.provider` is
 `gitlab` or auto-detected from a `gitlab.com` remote.
 
 ## Capability flags

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export GITHUB_TOKEN=gh_fixture_token_for_tests
+export SW_HOST_FIXTURE=green
+OUT=$(python3 "$ROOT/scripts/host.py" --root "$ROOT" pr-list --head feat/x --base main --state open)
+python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and isinstance(d.get('data'), list)" <<<"$OUT"
+OUT2=$(python3 "$ROOT/scripts/host.py" --root "$ROOT" pr-create --title t --body b --head feat/x --base main)
+python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d['data'].get('number')" <<<"$OUT2"
+echo "OK  host-adapter-parity"
