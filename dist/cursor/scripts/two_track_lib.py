@@ -116,9 +116,29 @@ def classify_paths(
     return Classification(TRACK_MECHANICAL, "mechanical-allowlist", tuple(rels))
 
 
+
+
+def dual_region_index_path(root: Path) -> Path | None:
+    """Resolve planning-index dual-region file (R5); tolerate legacy planningDir → prds alias."""
+    worktree = pp.git_root(root)
+    candidates: list[Path] = []
+    canonical = worktree / pp.schema_dir_default(root, "planningDir") / "INDEX.md"
+    configured = pig.index_path(root)
+    for candidate in (canonical, configured):
+        if candidate in candidates:
+            continue
+        candidates.append(candidate)
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        content = candidate.read_text(encoding="utf-8")
+        if pig.SCHEMA_MARKER in content:
+            return candidate
+    return None
+
 def both_region_content_hash(root: Path) -> str:
-    idx = pig.index_path(root)
-    if not idx.is_file():
+    idx = dual_region_index_path(root)
+    if idx is None:
         return hashlib.sha256(b"").hexdigest()
     content = idx.read_text(encoding="utf-8")
     regions = pig.parse_regions(content)
