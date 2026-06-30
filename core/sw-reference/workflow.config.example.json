@@ -164,18 +164,6 @@
       "confidenceThreshold": 0.85,
       "mutationBudget": 10,
       "undoWindowSeconds": 3600
-    },
-    "issueStoreOptInExample": {
-      "_comment": "Opt-in issue-store (PRD 043) — replace backend and configure keys below",
-      "backend": "issue-store",
-      "issuesProvider": "github-issues",
-      "projectKey": "my-project",
-      "storeLocation": {
-        "mode": "same-repo"
-      },
-      "issues": {
-        "tokenEnv": "ISSUES_GITHUB_TOKEN"
-      }
     }
   }
 }

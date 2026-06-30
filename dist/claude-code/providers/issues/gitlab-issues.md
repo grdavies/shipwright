@@ -1,0 +1,54 @@
+---
+capability:
+  version: 1
+  triggers:
+    - type: config_flag
+      selectionFamily: providers
+      key: planning.store.issuesProvider
+      equals: "gitlab-issues"
+  metadata:
+    providerFamily: issues
+    adapterId: gitlab-issues
+    selectionFamily: providers
+    gateRef: check-gate.py
+---
+
+# GitLab Issues adapter
+
+Selected when `planning.store.issuesProvider` is `gitlab-issues` (independent of `host.provider`).
+
+## Capability flags
+
+```json
+{
+  "verbs": {
+    "issue-create": true,
+    "issue-get": true,
+    "issue-update": true,
+    "issue-comment": true,
+    "issue-label": true,
+    "issue-lock": true,
+    "issue-search": true
+  },
+  "graphql": {},
+  "lcd": ["title", "body", "comments", "state", "labels"]
+}
+```
+
+## REST mapping (primary)
+
+| Verb | Transport |
+| --- | --- |
+| `issue-create` | `POST /projects/{id}/issues` |
+| `issue-get` | `GET /projects/{id}/issues/{iid}` |
+| `issue-update` | `PUT /projects/{id}/issues/{iid}` |
+| `issue-comment` | `POST /projects/{id}/issues/{iid}/notes` |
+| `issue-label` | `PUT /projects/{id}/issues/{iid}` (labels array) |
+| `issue-lock` | `PUT /projects/{id}/issues/{iid}` (`discussion_locked`) |
+| `issue-search` | `GET /projects/{id}/issues` (scoped filters) |
+
+## Auth
+
+Token from `planning.store.issues.tokenEnv` (default `ISSUES_GITLAB_TOKEN`). Minimum scope: `api`.
+Never stored in config.
+

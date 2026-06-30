@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PRD 034 Phase 3 — pluggable planning.store interface + backend registry (R5, R6, R18, R11, R25)."""
+"""PRD 034 Phase 3 + PRD 043 Phase 1 — planning.store interface + issue-store foundation."""
 
 from __future__ import annotations
 
@@ -15,16 +15,56 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
-from host_lib import load_workflow_config
+from host_lib import (
+    github_api_base,
+    git_remote_url,
+    gitlab_api_base,
+    host_section,
+    load_workflow_config,
+    parse_owner_repo,
+    remote_name,
+    resolve_provider,
+    token_present,
+)
 from memory_sot import resolve_memory_provider
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 DEFAULT_BACKEND = "in-repo-public"
-SHIPPED_BACKENDS = frozenset({"in-repo-public", "local-synced", "memory"})
+SHIPPED_BACKENDS = frozenset({"in-repo-public", "local-synced", "memory", "issue-store"})
 DEFERRED_BACKENDS = frozenset({"private-repo", "encryption-at-rest"})
 ALL_BACKENDS = SHIPPED_BACKENDS | DEFERRED_BACKENDS
+
+ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues", "jira", "none"})
+SHIPPED_ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues"})
+
+DEFAULT_ISSUES_TOKEN_ENV: dict[str, str] = {
+    "github-issues": "ISSUES_GITHUB_TOKEN",
+    "gitlab-issues": "ISSUES_GITLAB_TOKEN",
+    "jira": "ISSUES_JIRA_TOKEN",
+    "none": "",
+}
+
+MIN_ISSUES_SCOPES: dict[str, list[str]] = {
+    "github-issues": ["repo"],
+    "gitlab-issues": ["api"],
+    "jira": ["read:jira-work", "write:jira-work"],
+}
+
+ISSUE_STORE_FALLBACK_NOTICE = (
+    "issue-store configured but effective backend is in-repo-public "
+    "(issuesProvider none/unsupported or host.provider none)"
+)
+
+ISSUE_STORE_PHASE1_NOTICE = (
+    "issue-store phase-1: store ops delegate to in-repo-public until phase-2 issue CRUD is wired"
+)
+
+PROJECT_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
+PROJECT_KEY_REGISTRY = ".cursor/hooks/state/issue-store-project-keys.json"
 
 BANNED_MEMORY_CLASSES = frozenset({"discussion", "progress"})
 RAW_TRANSCRIPT_MARKERS = (
@@ -73,6 +113,11 @@ def store_section(cfg: dict[str, Any]) -> dict[str, Any]:
     return store if isinstance(store, dict) else {}
 
 
+def issues_section(cfg: dict[str, Any]) -> dict[str, Any]:
+    issues = store_section(cfg).get("issues")
+    return issues if isinstance(issues, dict) else {}
+
+
 def content_hash(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
@@ -85,19 +130,20 @@ def log_operation(
     backend: str,
     *,
     stream: Any = None,
+    notice: str | None = None,
 ) -> None:
     digest = content_hash(content) if content is not None else "none"
-    line = json.dumps(
-        {
-            "planningStore": True,
-            "op": op,
-            "unitId": unit_id,
-            "path": body_path,
-            "hash": digest,
-            "backend": backend,
-        },
-        ensure_ascii=False,
-    )
+    payload: dict[str, Any] = {
+        "planningStore": True,
+        "op": op,
+        "unitId": unit_id,
+        "path": body_path,
+        "hash": digest,
+        "backend": backend,
+    }
+    if notice:
+        payload["notice"] = notice
+    line = json.dumps(payload, ensure_ascii=False)
     target = stream if stream is not None else sys.stderr
     print(line, file=target)
 
@@ -118,6 +164,295 @@ def contains_raw_transcript(content: str) -> bool:
     return any(marker.search(content) for marker in RAW_TRANSCRIPT_MARKERS)
 
 
+def resolve_issues_provider(cfg: dict[str, Any]) -> dict[str, Any]:
+    store = store_section(cfg)
+    configured = store.get("issuesProvider")
+    if not isinstance(configured, str) or not configured.strip():
+        return {
+            "verdict": "ok",
+            "provider": "none",
+            "configured": None,
+            "supported": False,
+            "shipped": False,
+        }
+    provider = configured.strip()
+    supported = provider in ISSUES_PROVIDERS
+    shipped = provider in SHIPPED_ISSUES_PROVIDERS
+    if not supported:
+        return {
+            "verdict": "ok",
+            "provider": provider,
+            "configured": provider,
+            "supported": False,
+            "shipped": False,
+        }
+    return {
+        "verdict": "ok",
+        "provider": provider,
+        "configured": provider,
+        "supported": True,
+        "shipped": shipped,
+    }
+
+
+def resolve_issues_token_env(cfg: dict[str, Any], issues_provider: str) -> str:
+    issues = issues_section(cfg)
+    token_env = issues.get("tokenEnv")
+    if isinstance(token_env, str) and token_env.strip():
+        return token_env.strip()
+    return DEFAULT_ISSUES_TOKEN_ENV.get(issues_provider, "")
+
+
+def issue_store_fallback_reason(root: Path, cfg: dict[str, Any], *, override: str | None = None) -> str | None:
+    configured = resolve_backend_id(cfg, override=override)
+    if configured != "issue-store":
+        return None
+    issues = resolve_issues_provider(cfg)
+    if issues["provider"] in {"none", ""} or not issues.get("supported"):
+        return "issues-provider-none-or-unsupported"
+    if issues["provider"] not in SHIPPED_ISSUES_PROVIDERS:
+        return "issues-provider-not-shipped"
+    host = resolve_provider(root)
+    if host.get("verdict") != "ok" or host.get("provider") == "none":
+        return "host-provider-none"
+    return None
+
+
+def resolve_effective_backend(root: Path, cfg: dict[str, Any], *, override: str | None = None) -> dict[str, Any]:
+    configured = resolve_backend_id(cfg, override=override)
+    fallback_reason = issue_store_fallback_reason(root, cfg, override=override) if configured == "issue-store" else None
+    if fallback_reason:
+        return {
+            "verdict": "ok",
+            "configured": configured,
+            "backend": DEFAULT_BACKEND,
+            "effective": DEFAULT_BACKEND,
+            "fallback": True,
+            "fallbackReason": fallback_reason,
+            "notice": ISSUE_STORE_FALLBACK_NOTICE,
+            "shipped": True,
+            "deferred": False,
+        }
+    return {
+        "verdict": "ok",
+        "configured": configured,
+        "backend": configured,
+        "effective": configured,
+        "fallback": False,
+        "shipped": configured in SHIPPED_BACKENDS,
+        "deferred": configured in DEFERRED_BACKENDS,
+    }
+
+
+def resolve_store_location(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    store = store_section(cfg)
+    loc = store.get("storeLocation")
+    mode = "same-repo"
+    if isinstance(loc, dict):
+        raw_mode = loc.get("mode")
+        if isinstance(raw_mode, str) and raw_mode in {"same-repo", "separate-project"}:
+            mode = raw_mode
+
+    if mode == "same-repo":
+        host = resolve_provider(root)
+        remote = host.get("remote") if isinstance(host.get("remote"), str) else remote_name(cfg)
+        owner_repo = parse_owner_repo(host.get("remoteUrl") if isinstance(host.get("remoteUrl"), str) else None)
+        owner, repo = (owner_repo if owner_repo else (None, None))
+        return {
+            "verdict": "ok",
+            "mode": "same-repo",
+            "remote": remote,
+            "owner": owner,
+            "repo": repo,
+            "hostProvider": host.get("provider"),
+        }
+
+    if not isinstance(loc, dict):
+        return {"verdict": "fail", "error": "storeLocation required for separate-project mode"}
+    owner = loc.get("owner")
+    repo = loc.get("repo")
+    if not isinstance(owner, str) or not owner.strip() or not isinstance(repo, str) or not repo.strip():
+        return {"verdict": "fail", "error": "storeLocation.owner and storeLocation.repo required for separate-project"}
+    remote = loc.get("remote")
+    remote_name_out = remote.strip() if isinstance(remote, str) and remote.strip() else "origin"
+    return {
+        "verdict": "ok",
+        "mode": "separate-project",
+        "remote": remote_name_out,
+        "owner": owner.strip(),
+        "repo": repo.strip(),
+    }
+
+
+def store_location_fingerprint(location: dict[str, Any]) -> str:
+    mode = location.get("mode", "same-repo")
+    owner = location.get("owner") or ""
+    repo = location.get("repo") or ""
+    return f"{mode}:{owner}/{repo}"
+
+
+def load_project_key_registry(root: Path) -> dict[str, Any]:
+    path = root / PROJECT_KEY_REGISTRY
+    if not path.is_file():
+        return {"version": 1, "keys": {}}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {"version": 1, "keys": {}}
+    if not isinstance(data, dict):
+        return {"version": 1, "keys": {}}
+    keys = data.get("keys")
+    if not isinstance(keys, dict):
+        data["keys"] = {}
+    return data
+
+
+def validate_project_key(root: Path, cfg: dict[str, Any], *, register: bool = False) -> dict[str, Any]:
+    store = store_section(cfg)
+    raw_key = store.get("projectKey")
+    if not isinstance(raw_key, str) or not raw_key.strip():
+        return {"verdict": "fail", "error": "missing-project-key", "message": "planning.store.projectKey is required for issue-store"}
+    project_key = raw_key.strip()
+    if not PROJECT_KEY_PATTERN.fullmatch(project_key):
+        return {
+            "verdict": "fail",
+            "error": "invalid-project-key",
+            "projectKey": project_key,
+            "message": "projectKey must match ^[a-z][a-z0-9-]*$",
+        }
+
+    location = resolve_store_location(root, cfg)
+    if location.get("verdict") != "ok":
+        return location
+    fingerprint = store_location_fingerprint(location)
+    registry = load_project_key_registry(root)
+    keys: dict[str, Any] = registry.setdefault("keys", {})
+    existing = keys.get(project_key)
+    if isinstance(existing, dict):
+        existing_fp = existing.get("storeFingerprint")
+        if isinstance(existing_fp, str) and existing_fp != fingerprint:
+            return {
+                "verdict": "fail",
+                "error": "project-key-collision",
+                "projectKey": project_key,
+                "existingFingerprint": existing_fp,
+                "requestedFingerprint": fingerprint,
+                "message": "project key already registered for a different store location; choose a namespaced key",
+            }
+
+    if register and not existing:
+        keys[project_key] = {
+            "storeFingerprint": fingerprint,
+            "mode": location.get("mode"),
+            "owner": location.get("owner"),
+            "repo": location.get("repo"),
+        }
+        reg_path = root / PROJECT_KEY_REGISTRY
+        reg_path.parent.mkdir(parents=True, exist_ok=True)
+        reg_path.write_text(json.dumps(registry, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    return {
+        "verdict": "ok",
+        "projectKey": project_key,
+        "storeFingerprint": fingerprint,
+        "registered": bool(existing) or register,
+    }
+
+
+def _github_scope_probe(token: str, cfg: dict[str, Any]) -> dict[str, Any]:
+    host = host_section(cfg)
+    url = f"{github_api_base(host)}/user"
+    req = Request(url, headers={"Accept": "application/vnd.github+json", "Authorization": f"Bearer {token}", "User-Agent": "shipwright-planning-store"})
+    try:
+        with urlopen(req, timeout=15) as resp:
+            scopes_header = resp.headers.get("X-OAuth-Scopes") or resp.headers.get("x-oauth-scopes") or ""
+    except HTTPError as exc:
+        return {"verdict": "fail", "error": "auth-failed", "httpStatus": exc.code}
+    except URLError as exc:
+        return {"verdict": "fail", "error": "network-unavailable", "message": str(exc.reason)}
+    scopes = {s.strip() for s in scopes_header.split(",") if s.strip()}
+    required = set(MIN_ISSUES_SCOPES["github-issues"])
+    if scopes & required:
+        return {"verdict": "ok", "scopes": sorted(scopes), "required": sorted(required)}
+    if "repo" in scopes or "public_repo" in scopes:
+        return {"verdict": "ok", "scopes": sorted(scopes), "required": sorted(required)}
+    return {
+        "verdict": "fail",
+        "error": "insufficient-scope",
+        "scopes": sorted(scopes),
+        "required": sorted(required),
+        "message": "GitHub token lacks repo/public_repo scope for issue-store",
+    }
+
+
+def _gitlab_scope_probe(token: str, cfg: dict[str, Any]) -> dict[str, Any]:
+    host = host_section(cfg)
+    url = f"{gitlab_api_base(host)}/user"
+    req = Request(url, headers={"PRIVATE-TOKEN": token, "User-Agent": "shipwright-planning-store"})
+    try:
+        with urlopen(req, timeout=15) as resp:
+            if resp.status >= 400:
+                return {"verdict": "fail", "error": "auth-failed", "httpStatus": resp.status}
+    except HTTPError as exc:
+        return {"verdict": "fail", "error": "auth-failed", "httpStatus": exc.code}
+    except URLError as exc:
+        return {"verdict": "fail", "error": "network-unavailable", "message": str(exc.reason)}
+    return {"verdict": "ok", "required": MIN_ISSUES_SCOPES["gitlab-issues"]}
+
+
+def probe_issues_token(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    issues = resolve_issues_provider(cfg)
+    provider = issues.get("provider", "none")
+    if provider in {"none", ""} or not issues.get("supported"):
+        return {
+            "verdict": "ok",
+            "skipped": True,
+            "reason": "issues-provider-none-or-unsupported",
+            "provider": provider,
+        }
+    if provider not in SHIPPED_ISSUES_PROVIDERS:
+        return {
+            "verdict": "ok",
+            "skipped": True,
+            "reason": "issues-provider-not-shipped",
+            "provider": provider,
+        }
+    token_env = resolve_issues_token_env(cfg, provider)
+    if not token_env:
+        return {"verdict": "fail", "error": "missing-token-env", "provider": provider}
+    if not token_present(token_env):
+        return {
+            "verdict": "fail",
+            "error": "missing-token",
+            "provider": provider,
+            "tokenEnv": token_env,
+            "message": f"Set {token_env} for issue-store API access (value never logged).",
+        }
+    token = os.environ.get(token_env, "")
+    if provider == "github-issues":
+        probe = _github_scope_probe(token, cfg)
+    elif provider == "gitlab-issues":
+        probe = _gitlab_scope_probe(token, cfg)
+    else:
+        return {
+            "verdict": "fail",
+            "error": "probe-not-implemented",
+            "provider": provider,
+            "requiredScopes": MIN_ISSUES_SCOPES.get(provider, []),
+        }
+    out: dict[str, Any] = {
+        "verdict": probe.get("verdict", "fail"),
+        "provider": provider,
+        "tokenEnv": token_env,
+        "tokenPresent": True,
+        "requiredScopes": MIN_ISSUES_SCOPES.get(provider, []),
+    }
+    for key in ("error", "message", "scopes", "required", "httpStatus"):
+        if key in probe:
+            out[key] = probe[key]
+    return out
+
+
 @dataclass(frozen=True)
 class StoreResult:
     verdict: str
@@ -128,6 +463,7 @@ class StoreResult:
     hash: str | None = None
     reason: str | None = None
     inert: bool = False
+    notice: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {
@@ -144,6 +480,8 @@ class StoreResult:
             out["reason"] = self.reason
         if self.inert:
             out["inert"] = True
+        if self.notice:
+            out["notice"] = self.notice
         return out
 
 
@@ -211,6 +549,43 @@ class InRepoPublicBackend(PlanningStoreBackend):
         content = dest_path.read_text(encoding="utf-8")
         log_operation("materialize", unit_id, body_path, content, self.backend_id)
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=content_hash(content))
+
+
+class IssueStoreBackend(PlanningStoreBackend):
+    backend_id = "issue-store"
+
+    def __init__(self, root: Path, cfg: dict[str, Any]) -> None:
+        super().__init__(root, cfg)
+        self._delegate = InRepoPublicBackend(root, cfg)
+        self._notice_emitted = False
+
+    def _with_notice(self, result: StoreResult) -> StoreResult:
+        if not self._notice_emitted:
+            log_operation("phase1-delegate", result.unit_id, result.body_path, None, self.backend_id, notice=ISSUE_STORE_PHASE1_NOTICE)
+            self._notice_emitted = True
+        return StoreResult(
+            result.verdict,
+            result.unit_id,
+            result.body_path,
+            self.backend_id,
+            content=result.content,
+            hash=result.hash,
+            reason=result.reason,
+            inert=result.inert,
+            notice=ISSUE_STORE_PHASE1_NOTICE,
+        )
+
+    def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
+        return self._with_notice(self._delegate.put(unit_id, body_path, content, content_class=content_class))
+
+    def get(self, unit_id: str, body_path: str) -> StoreResult:
+        return self._with_notice(self._delegate.get(unit_id, body_path))
+
+    def exists(self, unit_id: str, body_path: str) -> StoreResult:
+        return self._with_notice(self._delegate.exists(unit_id, body_path))
+
+    def materialize(self, unit_id: str, body_path: str, dest_path: Path) -> StoreResult:
+        return self._with_notice(self._delegate.materialize(unit_id, body_path, dest_path))
 
 
 class LocalSyncedBackend(PlanningStoreBackend):
@@ -362,6 +737,7 @@ class DeferredBackend(PlanningStoreBackend):
 
 BACKEND_CLASSES: dict[str, type[PlanningStoreBackend]] = {
     "in-repo-public": InRepoPublicBackend,
+    "issue-store": IssueStoreBackend,
     "local-synced": LocalSyncedBackend,
     "memory": MemoryBackend,
     "private-repo": DeferredBackend,
@@ -384,7 +760,8 @@ def resolve_backend_id(cfg: dict[str, Any], *, override: str | None = None) -> s
 
 def get_backend(root: Path, cfg: dict[str, Any] | None = None, *, override: str | None = None) -> PlanningStoreBackend:
     cfg = cfg if cfg is not None else load_workflow_config(root)
-    backend_id = resolve_backend_id(cfg, override=override)
+    effective = resolve_effective_backend(root, cfg, override=override)
+    backend_id = effective["effective"]
     cls = BACKEND_CLASSES[backend_id]
     if backend_id in DEFERRED_BACKENDS:
         return cls(root, cfg, backend_id)
@@ -449,40 +826,69 @@ def _optional(args: list[str], flag: str) -> str | None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Planning store interface (PRD 034)")
+    parser = argparse.ArgumentParser(description="Planning store interface (PRD 034 + PRD 043)")
     parser.add_argument("--root", default=".")
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("resolve-backend", "list-backends", "put", "get", "exists", "materialize", "validate-local-synced"):
+    for name in (
+        "resolve-backend",
+        "list-backends",
+        "resolve-issues",
+        "resolve-store-location",
+        "probe-issues-token",
+        "validate-project-key",
+        "put",
+        "get",
+        "exists",
+        "materialize",
+        "validate-local-synced",
+    ):
         sub.add_parser(name)
     args, rest = parser.parse_known_args()
     root = git_root(Path(args.root).resolve())
+    cfg = load_workflow_config(root)
     if args.command == "resolve-backend":
-        cfg = load_workflow_config(root)
         override = _optional(rest, "--backend")
-        backend_id = resolve_backend_id(cfg, override=override)
-        emit({"verdict": "ok", "backend": backend_id, "shipped": backend_id in SHIPPED_BACKENDS, "deferred": backend_id in DEFERRED_BACKENDS})
+        emit(resolve_effective_backend(root, cfg, override=override))
     elif args.command == "list-backends":
-        emit({"verdict": "ok", "default": DEFAULT_BACKEND, "shipped": sorted(SHIPPED_BACKENDS), "deferred": sorted(DEFERRED_BACKENDS), "interface": ["put", "get", "exists", "materialize"]})
+        emit({
+            "verdict": "ok",
+            "default": DEFAULT_BACKEND,
+            "shipped": sorted(SHIPPED_BACKENDS),
+            "deferred": sorted(DEFERRED_BACKENDS),
+            "issuesProviders": sorted(ISSUES_PROVIDERS),
+            "interface": ["put", "get", "exists", "materialize"],
+        })
+    elif args.command == "resolve-issues":
+        emit(resolve_issues_provider(cfg))
+    elif args.command == "resolve-store-location":
+        emit(resolve_store_location(root, cfg))
+    elif args.command == "probe-issues-token":
+        result = probe_issues_token(root, cfg)
+        emit(result, 0 if result.get("verdict") == "ok" else 2)
+    elif args.command == "validate-project-key":
+        register = "--register" in rest
+        result = validate_project_key(root, cfg, register=register)
+        emit(result, 0 if result.get("verdict") == "ok" else 2)
     elif args.command == "put":
-        backend = get_backend(root, override=_optional(rest, "--backend"))
+        backend = get_backend(root, cfg, override=_optional(rest, "--backend"))
         result = backend.put(_require(rest, "--unit-id"), _require(rest, "--body-path"), _require(rest, "--content"), content_class=_optional(rest, "--content-class"))
         emit(result.as_dict())
     elif args.command == "get":
-        backend = get_backend(root, override=_optional(rest, "--backend"))
+        backend = get_backend(root, cfg, override=_optional(rest, "--backend"))
         result = backend.get(_require(rest, "--unit-id"), _require(rest, "--body-path"))
         emit(result.as_dict(), 0 if result.verdict in {"ok", "degraded"} else 2)
     elif args.command == "exists":
-        backend = get_backend(root, override=_optional(rest, "--backend"))
+        backend = get_backend(root, cfg, override=_optional(rest, "--backend"))
         emit(backend.exists(_require(rest, "--unit-id"), _require(rest, "--body-path")).as_dict())
     elif args.command == "materialize":
-        backend = get_backend(root, override=_optional(rest, "--backend"))
+        backend = get_backend(root, cfg, override=_optional(rest, "--backend"))
         result = backend.materialize(_require(rest, "--unit-id"), _require(rest, "--body-path"), Path(_require(rest, "--dest")))
         emit(result.as_dict(), 0 if result.verdict == "ok" else 2)
     elif args.command == "validate-local-synced":
         raw = _require(rest, "--path")
         allowlist_raw = _optional(rest, "--allowlist")
         allowlist = [p.strip() for p in allowlist_raw.split(",") if p.strip()] if allowlist_raw else None
-        store = store_section(load_workflow_config(root))
+        store = store_section(cfg)
         local = store.get("localSynced")
         if isinstance(local, dict) and not allowlist:
             cfg_allow = local.get("allowlist")

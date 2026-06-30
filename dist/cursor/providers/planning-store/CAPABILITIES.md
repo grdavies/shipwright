@@ -31,6 +31,7 @@ routed by `planning.store.backend` in `workflow.config.json`.
 | In-repo public | `in-repo-public` | Default; bodies live at tracked repo paths |
 | Local/synced | `local-synced` | Bodies in operator-local folder (convenience-not-security) |
 | Memory | `memory` | Adapter-only; redaction chokepoint on read+write |
+| Issue store | `issue-store` | Opt-in; PRD 043 — phase 1 delegates to in-repo-public until issue CRUD (phase 2) |
 
 Deferred seam backends (`private-repo`, `encryption-at-rest`) are present-but-inert in v1.
 

@@ -803,92 +803,6 @@
       }
     },
     {
-      "id": "provider.providers.planning-store.CAPABILITIES",
-      "kind": "provider",
-      "sourcePath": "core/providers/planning-store/CAPABILITIES.md",
-      "executable": true,
-      "capability": {
-        "version": 1,
-        "triggers": [
-          {
-            "type": "phase_default",
-            "selectionFamily": "providers",
-            "scope": "planning-store-contract"
-          }
-        ],
-        "metadata": {
-          "providerFamily": "planning-store",
-          "selectionFamily": "providers"
-        }
-      }
-    },
-    {
-      "id": "provider.providers.planning-store.in-repo",
-      "kind": "provider",
-      "sourcePath": "core/providers/planning-store/in-repo.md",
-      "executable": true,
-      "capability": {
-        "version": 1,
-        "triggers": [
-          {
-            "type": "config_flag",
-            "selectionFamily": "providers",
-            "key": "planning.store.backend",
-            "equals": "in-repo-public"
-          }
-        ],
-        "metadata": {
-          "providerFamily": "planning-store",
-          "adapterId": "in-repo-public",
-          "selectionFamily": "providers"
-        }
-      }
-    },
-    {
-      "id": "provider.providers.planning-store.local-synced",
-      "kind": "provider",
-      "sourcePath": "core/providers/planning-store/local-synced.md",
-      "executable": true,
-      "capability": {
-        "version": 1,
-        "triggers": [
-          {
-            "type": "config_flag",
-            "selectionFamily": "providers",
-            "key": "planning.store.backend",
-            "equals": "local-synced"
-          }
-        ],
-        "metadata": {
-          "providerFamily": "planning-store",
-          "adapterId": "local-synced",
-          "selectionFamily": "providers"
-        }
-      }
-    },
-    {
-      "id": "provider.providers.planning-store.memory",
-      "kind": "provider",
-      "sourcePath": "core/providers/planning-store/memory.md",
-      "executable": true,
-      "capability": {
-        "version": 1,
-        "triggers": [
-          {
-            "type": "config_flag",
-            "selectionFamily": "providers",
-            "key": "planning.store.backend",
-            "equals": "memory"
-          }
-        ],
-        "metadata": {
-          "providerFamily": "planning-store",
-          "adapterId": "memory",
-          "selectionFamily": "providers"
-        }
-      }
-    },
-    {
       "id": "provider.providers.issues.CAPABILITIES",
       "kind": "provider",
       "sourcePath": "core/providers/issues/CAPABILITIES.md",
@@ -904,8 +818,7 @@
         ],
         "metadata": {
           "providerFamily": "issues",
-          "selectionFamily": "providers",
-          "notes": "neutral issues verb contract"
+          "selectionFamily": "providers"
         }
       }
     },
@@ -979,6 +892,48 @@
       }
     },
     {
+      "id": "provider.providers.planning-store.CAPABILITIES",
+      "kind": "provider",
+      "sourcePath": "core/providers/planning-store/CAPABILITIES.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "providers",
+            "scope": "planning-store-contract"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "planning-store",
+          "selectionFamily": "providers"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.planning-store.in-repo",
+      "kind": "provider",
+      "sourcePath": "core/providers/planning-store/in-repo.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "planning.store.backend",
+            "equals": "in-repo-public"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "planning-store",
+          "adapterId": "in-repo-public",
+          "selectionFamily": "providers"
+        }
+      }
+    },
+    {
       "id": "provider.providers.planning-store.issue-store",
       "kind": "provider",
       "sourcePath": "core/providers/planning-store/issue-store.md",
@@ -996,6 +951,50 @@
         "metadata": {
           "providerFamily": "planning-store",
           "adapterId": "issue-store",
+          "selectionFamily": "providers"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.planning-store.local-synced",
+      "kind": "provider",
+      "sourcePath": "core/providers/planning-store/local-synced.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "planning.store.backend",
+            "equals": "local-synced"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "planning-store",
+          "adapterId": "local-synced",
+          "selectionFamily": "providers"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.planning-store.memory",
+      "kind": "provider",
+      "sourcePath": "core/providers/planning-store/memory.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "planning.store.backend",
+            "equals": "memory"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "planning-store",
+          "adapterId": "memory",
           "selectionFamily": "providers"
         }
       }
