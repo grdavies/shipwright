@@ -180,7 +180,7 @@
   },
   "configuredWith": {
     "shipwrightVersion": "1.7.0",
-    "schemaVersion": "a6066b4cc3b5"
+    "schemaVersion": "5c5d84df179e"
   },
   "deliver": {
     "autonomy": {
@@ -310,6 +310,17 @@
       "jitter": true,
       "nearLimitThreshold": 5,
       "mutatingMinDelayMs": 1000
+    }
+  },
+  "planning": {
+    "store": {
+      "backend": "memory"
+    },
+    "visibilityProfile": "all-private",
+    "privacyAck": {
+      "required": true,
+      "recordedAt": null,
+      "reason": "public-origin-remote"
     }
   }
 }
