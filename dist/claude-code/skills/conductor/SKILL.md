@@ -22,20 +22,20 @@ behavior here — they do not re-implement state transitions, merge logic, or ha
 ## Mechanical source of truth
 
 Every state transition, merge-queue operation, gate evaluation, and bookkeeping action runs through the
-existing `wave_*.py` primitives behind `scripts/wave.sh` — never duplicated in agent instructions:
+existing `wave_*.py` primitives behind `scripts/wave.py` — never duplicated in agent instructions:
 
 | Concern | Entrypoint |
 | --- | --- |
-| Plan + waves | `scripts/wave.sh plan`, `scripts/wave.sh schedule` |
-| Plan validation | `scripts/wave.sh plan validate` → `scripts/wave_plan_validate.py` (two-tier, closed-world) |
-| Durable driver | `scripts/wave.sh deliver-loop` |
-| Run-state R/W | `scripts/wave.sh state …` |
-| Provision / teardown | `scripts/wave.sh orchestrator provision`, `scripts/wave.sh phase provision` |
-| Phase outcomes | `scripts/wave.sh status collect` → `.cursor/sw-deliver-runs/<phase-slug>/status.json` |
-| Merge queue | `scripts/wave.sh merge enqueue`, `scripts/wave.sh merge run-next` |
-| Locks / journal | `scripts/wave.sh lock …`, `scripts/wave.sh journal …` |
-| Halt report | `scripts/wave.sh report terminal` |
-| Living-doc reconcile | `scripts/wave.sh living-docs reconcile`, `scripts/wave.sh docs-currency` |
+| Plan + waves | `scripts/wave.py plan`, `scripts/wave.py schedule` |
+| Plan validation | `scripts/wave.py plan validate` → `scripts/wave_plan_validate.py` (two-tier, closed-world) |
+| Durable driver | `scripts/wave.py deliver-loop` |
+| Run-state R/W | `scripts/wave.py state …` |
+| Provision / teardown | `scripts/wave.py orchestrator provision`, `scripts/wave.py phase provision` |
+| Phase outcomes | `scripts/wave.py status collect` → `.cursor/sw-deliver-runs/<phase-slug>/status.json` |
+| Merge queue | `scripts/wave.py merge enqueue`, `scripts/wave.py merge run-next` |
+| Locks / journal | `scripts/wave.py lock …`, `scripts/wave.py journal …` |
+| Halt report | `scripts/wave.py report terminal` |
+| Living-doc reconcile | `scripts/wave.py living-docs reconcile`, `scripts/wave.py docs-currency` |
 
 The conductor **invokes** these commands and interprets their JSON — it does not maintain parallel state.
 
@@ -64,7 +64,7 @@ Resume command (phase-mode):
 ```text
 /sw-deliver run <frozen-task-list-path>
 # inspect driver cursor (internal mechanical driver):
-python3 scripts/wave.sh deliver-loop --dry-run
+python3 scripts/wave.py deliver-loop --dry-run
 ```
 
 User-facing resume/handoff MUST use `/sw-deliver run …`. The bash `deliver-loop` driver is for
@@ -75,7 +75,7 @@ Never infer progress from chat history or ephemeral sub-agent logs (R19). Phase 
 
 ## Two-tier plan lifecycle (PRD 022)
 
-Proposals route through `python3 scripts/wave.sh plan validate` — **never** hand-author plan JSON in prose.
+Proposals route through `python3 scripts/wave.py plan validate` — **never** hand-author plan JSON in prose.
 Kernel invariants live in `core/sw-reference/kernel-classification.md` (single home — do not duplicate the
 enumeration here).
 
@@ -89,10 +89,10 @@ enumeration here).
 proposal+validate only — never partial execution.
 
 **Reject fallbacks:** phase reject → canonical chain from `kernel-classification.json`; wave contention or
-dependency violation → canonical waves re-derived from the frozen plan; over-ceiling → `wave.sh schedule`.
+dependency violation → canonical waves re-derived from the frozen plan; over-ceiling → `wave.py schedule`.
 
 **Proposed pilot wiring (PRD 023 phase 1):** `/sw-deliver` reads `orchestration.planPolicy` at wave entry and
-phase entry. Under `proposed` (after TR0 gate), the conductor proposes → `wave.sh plan validate`
+phase entry. Under `proposed` (after TR0 gate), the conductor proposes → `wave.py plan validate`
 (`--record-rejection` on shared state) → persist; `wave_deliver_loop` sets `wave-validated` after wave persist
 and routes phase entry through validate-before-persist. Default `canonical` is unchanged.
 
@@ -114,7 +114,7 @@ The conductor never ends its turn while `nextAction` is runnable and no legitima
 
 ### Driver ↔ agent handshake
 
-1. Invoke `python3 scripts/wave.sh deliver-loop` (or `--dry-run` to inspect only).
+1. Invoke `python3 scripts/wave.py deliver-loop` (or `--dry-run` to inspect only).
 2. Parse JSON:
    - **`awaitAgent: false`** — driver advanced mechanically; immediately re-invoke `deliver-loop` (same turn).
    - **`awaitAgent: true`** — perform the agent step for `next.action` (see table), then re-invoke
@@ -185,7 +185,7 @@ Register bounds in `rules/sw-subagent-dispatch.mdc` hard-stops table.
 **State signature** (canonical JSON of): `verdict`, `nextAction`, `currentWave`, sorted phase
 `id→status`, `mergeQueue` length, `mergeJournal` presence. Ignore `driverHeartbeatAt` / `updatedAt`.
 
-On circuit breaker: `python3 scripts/wave.sh report terminal` (or `report blocker`) — never spin silently.
+On circuit breaker: `python3 scripts/wave.py report terminal` (or `report blocker`) — never spin silently.
 
 ## Self-wake sentinel (R8, R9)
 
@@ -220,7 +220,7 @@ On any terminal halt (`verdict: complete|blocked|rejected`) or human stop:
 
 When a self-wake or CI watch reaches `checks.watch.maxWaitMinutes` without a terminal signal:
 
-1. Emit consolidated halt via `scripts/wave.sh report terminal` (`cause: external-wait:exhausted`).
+1. Emit consolidated halt via `scripts/wave.py report terminal` (`cause: external-wait:exhausted`).
 2. Do not trust stale log output — re-derive next action from durable state on the next wake or resume.
 3. Treat as a legitimate halt (user may merge manually or resume watch).
 
@@ -305,11 +305,11 @@ Every legitimate halt emits **one** actionable artifact — never a bare "contin
 
 ```bash
 # Blocker / mid-run halt (blocked phase, watchdog, budget exhausted):
-python3 scripts/wave.sh report blockers
+python3 scripts/wave.py report blockers
 # Written to .cursor/sw-deliver-runs/blockers.json by deliver-loop halt-blocked
 
 # All phases green — terminal human gate:
-python3 scripts/wave.sh report terminal
+python3 scripts/wave.py report terminal
 ```
 
 Each report includes `resumeCommand` (e.g. `/sw-deliver run docs/prds/…/tasks-….md`),
@@ -321,8 +321,8 @@ the user in one message.
 Config: `deliver.watchdog.phaseTimeoutMinutes` (default **240**).
 
 ```bash
-python3 scripts/wave.sh watchdog check          # exit 20 when stale/timeout
-python3 scripts/wave.sh state heartbeat         # refresh driverHeartbeatAt during long agent work
+python3 scripts/wave.py watchdog check          # exit 20 when stale/timeout
+python3 scripts/wave.py state heartbeat         # refresh driverHeartbeatAt during long agent work
 ```
 
 `deliver-loop` `compute-next` calls the watchdog internally: an in-flight phase past timeout without
@@ -336,7 +336,7 @@ with `state heartbeat` during long in-turn agent work.
 
 ### 1. Plan-time contention (R20, R39)
 
-`python3 scripts/wave.sh plan` injects `contention.injectedEdges` from phase `**File:**` paths:
+`python3 scripts/wave.py plan` injects `contention.injectedEdges` from phase `**File:**` paths:
 
 - Shared migration dirs (`db/migrate/`, `supabase/migrations/`, `prisma/migrations/`)
 - `CHANGELOG.md`, `version.txt`, `docs/prds/INDEX.md`, `docs/decisions/INDEX.md`
@@ -347,7 +347,7 @@ Contended phases are forced into different waves before dispatch. Cycles fail cl
 ### 2. Schedule consumption (R14, R15)
 
 ```bash
-python3 scripts/wave.sh schedule --plan .cursor/sw-deliver-plan.json
+python3 scripts/wave.py schedule --plan .cursor/sw-deliver-plan.json
 # optional: --ceiling N overrides worktree.parallelCeiling
 ```
 
@@ -387,14 +387,14 @@ Intra-phase dispatch never consumes `parallelCeiling` slots (R18).
 ### 5. Outcomes + blast radius (R19, R24)
 
 ```bash
-python3 scripts/wave.sh status collect --phase-slug <slug>
+python3 scripts/wave.py status collect --phase-slug <slug>
 ```
 
 - `merge-ready-green` → conductor enqueues merge (serialized queue).
 - `blocked` → `blast-radius apply` marks **transitive dependents** only; green siblings continue.
 
 ```bash
-python3 scripts/wave.sh blast-radius dependents --phase-slug <slug>   # inspect
+python3 scripts/wave.py blast-radius dependents --phase-slug <slug>   # inspect
 ```
 
 ## Safety invariants under concurrency (R21–R24)
@@ -402,7 +402,7 @@ python3 scripts/wave.sh blast-radius dependents --phase-slug <slug>   # inspect
 | Invariant | Enforcement |
 | --- | --- |
 | Single-flight merge (R21) | `mergeQueue` + `mergeJournal`; one `merge run-next` at a time |
-| Atomic lock (R41) | `wave.sh lock acquire` uses `O_EXCL` on `.cursor/sw-deliver.lock` |
+| Atomic lock (R41) | `wave.py lock acquire` uses `O_EXCL` on `.cursor/sw-deliver.lock` |
 | No `main` merge (R22) | `merge run-next` target is always `<type>/<slug>` from plan |
 | Push chokepoint (R23) | `scripts/git-push.py` only — secret-scan pre-push |
 | Blast radius (R24) | `status collect` → `blast-radius apply`; siblings unaffected |

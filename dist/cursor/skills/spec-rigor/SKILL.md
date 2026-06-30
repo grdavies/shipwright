@@ -104,7 +104,7 @@ Every frozen task list includes:
 
 | R-ID | Task | Test scenario |
 | --- | --- | --- |
-| R1 | 1.2 | run-gate-fixtures.sh frozen guard |
+| R1 | 1.2 | run_gate_fixtures.py frozen guard |
 | R2 | 2.1 | spec-union supersede fixture |
 ```
 

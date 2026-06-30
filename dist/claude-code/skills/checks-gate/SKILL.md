@@ -61,7 +61,7 @@ non-blocking), review settled for current head (`coderabbitLanded == true`), and
 ## Deterministic tests
 
 Set `SW_GATE_NOW` (unix seconds) to fix the grace-window clock. Fixture harness:
-`scripts/test/run-gate-fixtures.sh` (uses a PATH `gh` stub).
+`scripts/test/run_gate_fixtures.py` (uses a PATH `gh` stub).
 
 ## Handoff
 

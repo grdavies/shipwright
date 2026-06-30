@@ -160,7 +160,7 @@ check_doc "$ROOT/core/providers/recallium.md" recallium \
   'docs/planning/' 'storage-only|storage only|body storage'
 
 check_doc "$ROOT/core/rules/memory-guardrails.mdc" memory-guardrails \
-  'planning\.store' 'memory-redact\.sh'
+  'planning\.store' 'memory-redact\.py'
 
 check_doc "$ROOT/core/commands/sw-init.md" sw-init \
   'planning-init-seed' 'privacy' 'visibilityProfile|visibility profile'

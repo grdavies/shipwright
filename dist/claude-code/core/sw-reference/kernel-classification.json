@@ -55,7 +55,7 @@
       "id": "merge-queue-journal",
       "layer": "kernel",
       "enforcedBy": [
-        "merge-queue.sh"
+        "wave_merge.py"
       ],
       "mustPrecede": [
         "merge-push"

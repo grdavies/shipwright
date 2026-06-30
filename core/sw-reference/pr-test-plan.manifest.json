@@ -691,6 +691,19 @@
         "min-recall-gap-043-044-046",
         "feedback-routing-prefers-gap-units"
       ]
+    },
+    {
+      "id": "guardrail-rules-resolution-fixtures",
+      "script": "scripts/test/run_guardrail_rules_resolution_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-guardrail-rules-resolution-fixtures",
+      "scenarios": [
+        "resolver-picks-py-adapter",
+        "resolver-prefers-py-over-stale-sh",
+        "resolver-none-for-unknown-provider",
+        "reachable-provider-no-false-unreachable-block"
+      ]
     }
   ]
 }

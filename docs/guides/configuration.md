@@ -110,13 +110,13 @@ for truly sensitive specs; keep codenames out of INDEX titles (opaque title) or 
 The memory backend routes bodies through the existing memory adapter and redaction chokepoint — it is never
 labeled encrypted or anonymized.
 
-Fixture suite: `python3 scripts/test/run-visibility-fixtures.sh` (registered as `visibility-fixtures` in the PR test-plan manifest).
+Fixture suite: `python3 scripts/test/run_visibility_fixtures.py` (registered as `visibility-fixtures` in the PR test-plan manifest).
 
 **Visibility-driven `.gitignore` (R13):** regenerate tracking rules from the resolver via
 `python3 scripts/gitignore-generate.py --write`. The generated block is delimited by
 `# BEGIN visibility-generated` / `# END visibility-generated` markers in `.gitignore`.
 
-Fixture suite: `python3 scripts/test/run-planning-visibility-acceptance-fixtures.sh` (registered as
+Fixture suite: `python3 scripts/test/run_planning_visibility_acceptance_fixtures.py` (registered as
 `planning-visibility-acceptance-fixtures` — emitter parity, public-unit no-regression, doc-impact acceptance).
 
 ### Planning autonomy (PRD 035)
@@ -135,7 +135,7 @@ scheduler confirm when a lower-priority unit is selected under `maintenance-only
 `private`/`memory` units; enqueues handoffs only (no nested `/sw-deliver`, `/sw-doc`, or orchestrator dispatch);
 never weakens merge-to-`main`. See `core/skills/conductor/SKILL.md` **Bounded planning full-conductor**.
 
-Fixture suite: `python3 scripts/test/run-planning-035-doc-impact-fixtures.sh` (`doc-currency-035`, `no-regression-035`).
+Fixture suite: `python3 scripts/test/run_planning_035_doc_impact_fixtures.py` (`doc-currency-035`, `no-regression-035`).
 
 
 ### Orchestration plan policy (`orchestration.planPolicy`)
@@ -143,7 +143,7 @@ Fixture suite: `python3 scripts/test/run-planning-035-doc-impact-fixtures.sh` (`
 | Value | Default | Meaning |
 |-------|---------|---------|
 | `canonical` | **yes** | Byte-identical to pre-022 behavior; hardcoded chains and plan-time waves only |
-| `proposed` | no | Agent may propose phase step plans and wave batching within guideline latitude; validated by `wave.sh plan validate` |
+| `proposed` | no | Agent may propose phase step plans and wave batching within guideline latitude; validated by `wave.py plan validate` |
 
 - **Kill-switch:** per-repo instant revert to canonical behavior; composes orthogonally with
   `deliver.autonomy.mode` and `deliver.phaseAckCadence`.
@@ -166,16 +166,16 @@ remains TR0 + metric-gated (PRD 023).
 | **R36** | Variance probe at authoring: `canonical ≡ proposed` → **consistency-only** (manifest + selector; proposed pack deferred); `/sw-doc` **defaults consistency-only** |
 | **R37** | Debug/feedback = episodic scratch; deliver/doc handoff = durable run-state |
 
-**Fixture suites:** `python3 scripts/test/run-fanout-fixtures.sh` (program gate, per-orchestrator parity,
-consistency-only, halts, R21/R22/R23); `python3 scripts/test/run-dispatch-foundation-fixtures.sh` (A2 parallel
+**Fixture suites:** `python3 scripts/test/run_fanout_fixtures.py` (program gate, per-orchestrator parity,
+consistency-only, halts, R21/R22/R23); `python3 scripts/test/run_dispatch_foundation_fixtures.py` (A2 parallel
 preflight + command-tier binding, R38/R39).
 
 Mechanical validation:
 
 ```bash
-python3 scripts/wave.sh plan validate --tier phase --phase-type ship --proposal <path|json>
-python3 scripts/wave.sh plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
-python3 scripts/wave.sh plan validate --tier orchestrator --orchestrator-type debug --proposal <path|json>
+python3 scripts/wave.py plan validate --tier phase --phase-type ship --proposal <path|json>
+python3 scripts/wave.py plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
+python3 scripts/wave.py plan validate --tier orchestrator --orchestrator-type debug --proposal <path|json>
 ```
 
 ### `/sw-cleanup` agent-driven confirm
@@ -300,10 +300,10 @@ manifest `config_flag` triggers. Provider configuredness (absent / `none` / unco
 `check-gate.py` / `wave_preflight` verdicts.
 
 **Freshness:** regenerate dist after manifest edits (`python3 -m sw generate --all`); stale index fails
-`scripts/test/run-emitter-fixtures.sh` and pre-selection preflight.
+`scripts/test/run_emitter_fixtures.py` and pre-selection preflight.
 
-Fixture suites: `scripts/test/run-capability-select-fixtures.sh`,
-`scripts/test/run-capability-lint-fixtures.sh`, `scripts/test/run-migration-parity-fixtures.sh`.
+Fixture suites: `scripts/test/run_capability_select_fixtures.py`,
+`scripts/test/run_capability_lint_fixtures.py`, `scripts/test/run_migration_parity_fixtures.py`.
 
 ## Retrospective compounding (`compound.autonomy`)
 
@@ -315,7 +315,7 @@ Deprecated aliases `/sw-compound-ship` and `/sw-compound` route to it for one re
 | **supervised** (default) | `supervised` | Preserve retro/compound approval and merge-ack prompts |
 | hands-off pre-merge | `auto` | Run the pre-merge chain when the terminal PR is green without re-prompting; merge detection still gates INDEX → `complete` |
 
-Inspect at runtime: `python3 scripts/wave.sh retrospective autonomy`. Autonomy never bypasses fail-closed
+Inspect at runtime: `python3 scripts/wave.py retrospective autonomy`. Autonomy never bypasses fail-closed
 memory writes or rule-class human gates.
 
 ## Zero-config fast path
@@ -381,7 +381,7 @@ Provider **credentials** come from the environment or your secret store — neve
 
 Shipwright repos single-source the standard FEAT test-plan fixture set in
 `core/sw-reference/pr-test-plan.manifest.json` (`ci.prTestPlanManifest` in config — not under `verify.*`).
-Local `verify.test` runs the same set via `scripts/test/run-pr-test-plan-manifest.sh`; CI runs it via
+Local `verify.test` runs the same set via `scripts/test/run_pr_test_plan_manifest.py`; CI runs it via
 `.github/workflows/pr-test-plan-ci.yml` (regenerate with `python3 scripts/generate-pr-test-plan-ci-workflow.py`).
 
 Each manifest entry carries **`required`** (merge-blocking) or **`advisory`** (visible in the all-checks
@@ -390,7 +390,7 @@ readiness verdict but non-blocking). `scripts/check-gate.py` loads the manifest 
 existing gate path. The PR template references CI **job names** as the authoritative gate — not a manual
 script checklist.
 
-Fixture suite: `python3 scripts/test/run-pr-test-plan-fixtures.sh` (registered in `verify.test`).
+Fixture suite: `python3 scripts/test/run_pr_test_plan_fixtures.py` (registered in `verify.test`).
 
 
 ## Deliver plan-policy pilot (PRD 023)
@@ -402,10 +402,10 @@ Fixture suite: `python3 scripts/test/run-pr-test-plan-fixtures.sh` (registered i
 | TR0 dependency gate | `proposed` refused until PRD-022 exec-fidelity + resume fixtures pass |
 | Pilot acknowledgement | Real repos require explicit per-run opt-in + integration/non-`main` target |
 | Driver budgets | `runStartedAt`, `driverIterationCount`, `noProgressStreak` on shared run-state |
-| Benefit metric | Numeric/enumerated `benefitMetric`; soak via `wave.sh plan benefit-report` |
+| Benefit metric | Numeric/enumerated `benefitMetric`; soak via `wave.py plan benefit-report` |
 
-Fixture suite: `python3 scripts/test/run-pilot-fixtures.sh` (pilot-e2e, intra-phase-*, budget-*, benefit-*).
-After `core/` pilot prose changes: `python3 -m sw generate --all` + `run-emitter-fixtures.sh`.
+Fixture suite: `python3 scripts/test/run_pilot_fixtures.py` (pilot-e2e, intra-phase-*, budget-*, benefit-*).
+After `core/` pilot prose changes: `python3 -m sw generate --all` + `run_emitter_fixtures.py`.
 
 ## PRD 022 fixture suites (kernel / gate / plan policy)
 
@@ -414,17 +414,17 @@ After editing `core/sw-reference/kernel-classification.*`, `guidelines.*`, or or
 
 ```bash
 python3 -m sw generate --all
-python3 scripts/test/run-emitter-fixtures.sh
+python3 scripts/test/run_emitter_fixtures.py
 ```
 
 | Suite | Scope |
 | --- | --- |
-| `run-kernel-classification-fixtures.sh` | Kernel membership, ordering, completeness lint |
-| `run-guidelines-floor-fixtures.sh` | Guideline harness reuse + floor matrix |
-| `run-plan-validate-fixtures.sh` | `wave.sh plan validate` gate |
-| `run-plan-persist-fixtures.sh` | Two-tier persist + single-writer guard |
-| `run-plan-killswitch-fixtures.sh` | `orchestration.planPolicy` kill-switch + resume |
-| `run-plan-proposed-parity-fixtures.sh` | Kernel chokepoint parity under `proposed` |
+| `run_kernel_classification_fixtures.py` | Kernel membership, ordering, completeness lint |
+| `run_guidelines_floor_fixtures.py` | Guideline harness reuse + floor matrix |
+| `run_plan_validate_fixtures.py` | `wave.py plan validate` gate |
+| `run_plan_persist_fixtures.py` | Two-tier persist + single-writer guard |
+| `run_plan_killswitch_fixtures.py` | `orchestration.planPolicy` kill-switch + resume |
+| `run_plan_proposed_parity_fixtures.py` | Kernel chokepoint parity under `proposed` |
 
 All registered in `verify.test` for Shipwright dev repos.
 

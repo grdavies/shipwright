@@ -49,7 +49,7 @@ docs/decisions/
 ## Planning-unit model (PRD 031)
 
 Canonical frontmatter schema: `core/sw-reference/planning-unit.schema.json` (validated by
-`scripts/planning-unit-validate.sh`). Status enums are type-conditioned via `scripts/planning_status_enum.py`
+`scripts/planning-unit-validate.py`). Status enums are type-conditioned via `scripts/planning_status_enum.py`
 (stub values only — PRD 033 owns transition semantics).
 
 ### Unit folder layout
@@ -98,7 +98,7 @@ reserves `branchToken` (hashed suffix) for private-unit redaction. The region is
 emission-point registry handoff.
 
 **Read-merge-write:** every writer parses the existing INDEX and preserves non-owned regions **byte-for-byte**.
-Full-file regen that drops a sibling region is prohibited; `scripts/index-region-guard.sh` enforces this on
+Full-file regen that drops a sibling region is prohibited; `scripts/index-region-guard.py` enforces this on
 pre-commit and in CI.
 
 **Status precedence:** lifecycle consumers read `derived.status` when populated and fall back to structural
@@ -116,10 +116,10 @@ Atomic release train (031 + 032 + 033) cutover gates:
 
 1. Acquire migration lock; halt deliver/feedback append.
 2. Run `planning_migrate.py write` then mandatory `--verify`.
-3. Run `scripts/relief-acceptance-check.sh` (derived INDEX status vs deliver state).
+3. Run `scripts/relief-acceptance-check.py` (derived INDEX status vs deliver state).
 4. Flip `planningDir` to `docs/planning`; regenerate planning INDEX + legacy projections.
 5. Run `scripts/planning_legacy_projection.py` to emit legacy `GAP-BACKLOG.md` + `INDEX.md` shims.
-6. Run `scripts/copy-to-core.sh` then `python3 -m sw generate --all` + emitter freshness fixtures (R25).
+6. Run `scripts/copy-to-core.py` then `python3 -m sw generate --all` + emitter freshness fixtures (R25).
 
 **Kill-criteria / falsification (R28):** if PRD 032/033 slip past the release threshold or the reconciler
 misses the accuracy floor on the relief fixture corpus, fall back to shim + legacy layout; R10 supersession
@@ -183,7 +183,7 @@ prd: docs/prds/<n>-<slug>/<n>-prd-<slug>.md                      # brainstorm fo
 ```
 
 - **`brainstorm:`** (canonical) — repo-relative path to the source brainstorm. Required on every **Full-tier** PRD
-  at draft time (`/sw-prd` writes it; `/sw-freeze` + `scripts/doc-link-check.sh` verify it). Legacy alias:
+  at draft time (`/sw-prd` writes it; `/sw-freeze` + `scripts/doc-link-check.py` verify it). Legacy alias:
   `source_brainstorm:` (accepted by the gate only; new PRDs MUST use `brainstorm:`).
 - **`prd:`** — repo-relative path (or YAML list) from a **writable** brainstorm back to derived PRD(s). Written
   when the PRD is created or frozen (`/sw-prd` / `/sw-freeze`); skipped when the brainstorm is already frozen
@@ -242,22 +242,22 @@ copy under `.sw-worktrees/**/.cursor/`. `wave_compound.py record-premerge` and
 - **Frozen:** brainstorms, PRDs, task lists, amendments — immutable after `/sw-freeze`; change only via new amendments.
 - **Living:** `INDEX.md`, `COMPLETION-LOG.md` — updated as work progresses; never frozen.
 - **Gap backlog:** `GAP-BACKLOG.md` — committed, append-only, hand-appendable; not frozen, not git-derived.
-- **Generated install trees:** `dist/cursor/` and `dist/claude-code/` — committed outputs of `python3 -m sw generate`; edit `core/` then regenerate (freshness gate in `scripts/test/run-emitter-fixtures.sh`). Not hand-edited except via emitter changes.
+- **Generated install trees:** `dist/cursor/` and `dist/claude-code/` — committed outputs of `python3 -m sw generate`; edit `core/` then regenerate (freshness gate in `scripts/test/run_emitter_fixtures.py`). Not hand-edited except via emitter changes.
 
 
 ## Build-chain source of truth (PRD 038)
 
-Machine-readable map: `core/sw-reference/build-chain-sot.json` (lint: `scripts/build-chain-sot-lint.sh`).
+Machine-readable map: `core/sw-reference/build-chain-sot.json` (lint: `scripts/build-chain-sot-lint.py`).
 
 | Tree | Role | Edit where |
 | --- | --- | --- |
-| `scripts/` | Harness SoT — runtime entrypoints (`wave.sh`, gates, tests) | Repo root only |
-| `core/scripts/` | Mirrored harness (excludes `test/`, `check-frozen.sh`) | Via `copy-to-core` from `scripts/` |
+| `scripts/` | Harness SoT — runtime entrypoints (`wave.py`, gates, tests) | Repo root only |
+| `core/scripts/` | Mirrored harness (excludes `test/`, `check-frozen.py`) | Via `copy-to-core` from `scripts/` |
 | `commands/`, `skills/`, `rules/`, `agents/`, `providers/` | Emittable content SoT | Repo root → `copy-to-core` → `core/` |
 | `.sw/` | Operator-edited sw-reference inputs (subset) | Repo root `.sw/` |
 | `core/sw-reference/` | `.sw/` sync + `coreAuthoredAllowlist` artifacts | `.sw/` or allowlisted core paths |
 | `dist/cursor/`, `dist/claude-code/` | Emitter output only | `python3 -m sw generate --all` after `core/` changes |
-| `scripts/test/fixtures/parity/cursor-golden.manifest` | Committed golden parity | `scripts/snapshot-tree.sh` after dist changes |
+| `scripts/test/fixtures/parity/cursor-golden.manifest` | Committed golden parity | `scripts/snapshot-tree.py` after dist changes |
 
 **Not in repo scope:** `~/.cursor/plugins/local/shipwright/` (plugin install path). `copy-to-core` reads
 repo trees only — never the install path.
@@ -265,10 +265,10 @@ repo trees only — never the install path.
 **Unified sync:** after editing `scripts/` or emittable roots, run:
 
 ```bash
-bash scripts/build-chain-sync.sh
+python3 scripts/build-chain-sync.py
 ```
 
-Runs `copy-to-core.sh` → `python3 -m sw generate --all` → golden re-snapshot when `dist/` changes.
+Runs `copy-to-core.py` → `python3 -m sw generate --all` → golden re-snapshot when `dist/` changes.
 
 ## Capability manifest + selector (PRD 021)
 
@@ -280,11 +280,11 @@ Authoring lives under `core/`; the emitter propagates manifest artifacts into bo
 | `core/sw-reference/capability-manifest.md` | Frontmatter, precedence, trust-boundary contract |
 | `core/sw-reference/capability-index.json` | Emitter-generated aggregate (committed; freshness-gated) |
 | `core/sw-reference/signal-context.schema.json` | Versioned selector inputs |
-| `scripts/capability-select.sh` | Deterministic selector primitive |
-| `scripts/capability-manifest-lint.sh` | Author-time precedence/conflict/anti-spoof lint |
-| `scripts/doc-review-select.sh` / `scripts/code-review-select.sh` | Selection-family wrappers |
+| `scripts/capability-select.py` | Deterministic selector primitive |
+| `scripts/capability-manifest-lint.py` | Author-time precedence/conflict/anti-spoof lint |
+| `scripts/doc-review-select.py` / `scripts/code-review-select.py` | Selection-family wrappers |
 
-**Freshness:** `scripts/test/run-emitter-fixtures.sh` fails when `capability-index.json` or dist trees drift
+**Freshness:** `scripts/test/run_emitter_fixtures.py` fails when `capability-index.json` or dist trees drift
 from current frontmatter. Regenerate after manifest edits: `python3 -m sw generate --all`.
 
 **Pre-selection:** `wave_preflight` / selector entrypoints fail closed when the runtime index does not
@@ -303,15 +303,15 @@ reproduce from current sources.
   (PRD 017; default `bind-only` until Phase-2 live acceptance, else `default`).
 - `communication.routing` — `commands`, `skills`, and `agents` maps for caveman intensity; seeded from
   `core/sw-reference/communication-routing.defaults.json` via `/sw-setup`.
-- `models.routing` — command/skill/agent model tier maps; resolve at dispatch via `resolve-model-tier.sh`.
+- `models.routing` — command/skill/agent model tier maps; resolve at dispatch via `resolve-model-tier.py`.
 
 ### Dispatch preflight artifacts (PRD 017 + A2 R38/R39)
 
 Per-delegated-Task binding is recorded immediately before spawn:
 
 ```bash
-bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command <sw-*> [--skill <name>]
-bash scripts/dispatch-check.sh --agent <id> --command <sw-*> --parent-model <concrete-id> [--dispatch-id <id>]
+python3 scripts/wave.py dispatch preflight --dispatch-id <id> --agent <agent-id> --command <sw-*> [--skill <name>]
+python3 scripts/dispatch-check.py --agent <id> --command <sw-*> --parent-model <concrete-id> [--dispatch-id <id>]
 ```
 
 **Keyed store (R38):** one JSON record per dispatch under
@@ -320,7 +320,7 @@ bash scripts/dispatch-check.sh --agent <id> --command <sw-*> --parent-model <con
 the full binding payload, `expiresAt` (TTL), and `consumedAt` after the hook consumes **only** the matching
 `dispatchId`. Parallel persona panels require **N unique ids** — consuming record `A` leaves record `B` valid.
 
-Model tier uses R39b precedence via `resolve-model-tier.sh` / `dispatch-check.sh` (explicit agent routing →
+Model tier uses R39b precedence via `resolve-model-tier.py` / `dispatch-check.py` (explicit agent routing →
 `--command` → `--agent`). The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies bound `Task`
 spawns lacking a fresh, matching record. Operator-facing deliver resume: `/sw-deliver run <frozen-task-list-path>`
 — not raw `bash deliver-loop`.
@@ -332,7 +332,7 @@ Work-performing commands (`/sw-execute`, `/sw-debug`, `/sw-prd`, `/sw-brainstorm
 mutation. Record the breadcrumb mechanically:
 
 ```bash
-bash scripts/wave.sh memory prework record --surface sw-execute --scope "<paths>" [--hit-count N]
+python3 scripts/wave.py memory prework record --surface sw-execute --scope "<paths>" [--hit-count N]
 ```
 
 Artifacts:
@@ -356,7 +356,7 @@ via probe-gated `memory:offline` — never blocks work.
 | Phase step plan | `.cursor/sw-deliver-runs/<phase-slug>/phase-step-plan.json` | phase executor (`ship_phase_steps.py` / `plan_persist.py`) | per-phase run dir |
 | Wave batching plan | `waveBatchingPlan` on `.cursor/sw-deliver-state.<slug>.json` | conductor only (`plan_persist.py`; `SW_CALLER_ROLE=conductor`) | shared run-state |
 | Two-tier lifecycle | `twoTierLifecycle` on shared run-state | conductor | `wave-validated` → `phase-plan-pending` → `phase-plan-validated` |
-| Plan validation | `bash scripts/wave.sh plan validate` → `scripts/wave_plan_validate.py` | mechanical gate | proposals only |
+| Plan validation | `python3 scripts/wave.py plan validate` → `scripts/wave_plan_validate.py` | mechanical gate | proposals only |
 
 **Wave authority (single source of truth):** the conductor deliver loop reads `waveBatchingPlan` from shared
 run-state when present (`wave_deliver_loop.effective_wave_plan`); otherwise it falls back to the frozen
@@ -378,7 +378,7 @@ enumeration elsewhere.
 | Intra-phase fan-out snapshot | `intraPhaseFanOut` on phase status / `phases.<id>` | phase executor | latest partition + worker count + cap state (R15–R17) |
 | Per-phase benefit metric | `benefitMetric` on phase status / shared run-state `phases.<id>` | phase executor at terminal | R31 capture (numeric/enumerated only) |
 | Run-level benefit rollup | `benefitMetric` on `.cursor/sw-deliver-state.<slug>.json` | conductor at terminal | paired-run aggregation input |
-| Benefit report | `bash scripts/wave.sh plan benefit-report --pairs <path>` → `scripts/wave_plan_benefit.py` | operator / soak protocol | R31 decision rule (fail-closed to `canonical`) |
+| Benefit report | `python3 scripts/wave.py plan benefit-report --pairs <path>` → `scripts/wave_plan_benefit.py` | operator / soak protocol | R31 decision rule (fail-closed to `canonical`) |
 
 ### `benefitMetric` object (R31 — numeric/enumerated only)
 
@@ -419,7 +419,7 @@ contents, secrets, or free-text blobs.
 | `phaseWallClockMs` | int | phase wall-clock; secondary guard vs paired canonical |
 | `decomposed` | object | category breakdown (`stepPlanAdaptivity`, `waveSchedule`, `intraPhase`) |
 
-**Decision rule:** `wave.sh plan benefit-report` compares paired `canonical` vs `proposed` metrics at
+**Decision rule:** `wave.py plan benefit-report` compares paired `canonical` vs `proposed` metrics at
 identical `kernelVerdict`. Primary signal: `stepsSkippedWithoutRework` net-of-rework must be strictly
 positive per pair; wall-clock must not regress beyond ε at equal verdict; minimum N pairs per stratum.
 Insufficient N or non-positive benefit **fails closed** to `canonical`.
@@ -455,7 +455,7 @@ Latest validated fan-out state on phase status (not a substitute for the append-
 
 ### Phase terminal `status.json` (PRD 036 R13–R17)
 
-Written only by `scripts/ship-phase-status.sh` (or driver `canonical-reemit`). Key fields:
+Written only by `scripts/ship-phase-status.py` (or driver `canonical-reemit`). Key fields:
 
 | Field | Role |
 | --- | --- |

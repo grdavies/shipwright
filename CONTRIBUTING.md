@@ -15,7 +15,7 @@ Authoring lives under `core/`; installable plugin trees are **generated** and co
 python3 -m sw generate --all
 
 # Install to local Cursor plugin directory (default: ~/.cursor/plugins/local/shipwright)
-./scripts/install.sh
+python3 scripts/install.py
 
 # Or do both in one step
 python3 -m sw generate --all --install
@@ -46,29 +46,29 @@ PR bodies should note whether `dist/` was regenerated when `core/` changed.
 Run the fixture suites before opening a PR:
 
 ```bash
-bash scripts/test/run-emitter-fixtures.sh
-bash scripts/test/run-parity-fixtures.sh
-bash scripts/test/run-claude-golden-fixtures.sh
-bash scripts/test/run-gate-fixtures.sh
-bash scripts/test/run-capability-select-fixtures.sh
-bash scripts/test/run-capability-lint-fixtures.sh
-bash scripts/test/run-migration-parity-fixtures.sh
-bash scripts/test/run-kernel-classification-fixtures.sh
-bash scripts/test/run-guidelines-floor-fixtures.sh
-bash scripts/test/run-plan-validate-fixtures.sh
-bash scripts/test/run-plan-persist-fixtures.sh
-bash scripts/test/run-plan-killswitch-fixtures.sh
-bash scripts/test/run-plan-proposed-parity-fixtures.sh
-bash scripts/test/run-pilot-fixtures.sh
-bash scripts/test/run-fanout-fixtures.sh
-bash scripts/test/run-dispatch-foundation-fixtures.sh
-bash scripts/test/run-ux-polish-fixtures.sh
+python3 scripts/test/run_emitter_fixtures.py
+python3 scripts/test/run_parity_fixtures.py
+python3 scripts/test/run_claude_golden_fixtures.py
+python3 scripts/test/run_gate_fixtures.py
+python3 scripts/test/run_capability_select_fixtures.py
+python3 scripts/test/run_capability_lint_fixtures.py
+python3 scripts/test/run_migration_parity_fixtures.py
+python3 scripts/test/run_kernel_classification_fixtures.py
+python3 scripts/test/run_guidelines_floor_fixtures.py
+python3 scripts/test/run_plan_validate_fixtures.py
+python3 scripts/test/run_plan_persist_fixtures.py
+python3 scripts/test/run_plan_killswitch_fixtures.py
+python3 scripts/test/run_plan_proposed_parity_fixtures.py
+python3 scripts/test/run_pilot_fixtures.py
+python3 scripts/test/run_fanout_fixtures.py
+python3 scripts/test/run_dispatch_foundation_fixtures.py
+python3 scripts/test/run_ux_polish_fixtures.py
 ```
 
-**PRD 024 fan-out fixtures** (`run-fanout-fixtures.sh`): program gate (R35), consistency-only probe (R36),
+**PRD 024 fan-out fixtures** (`run_fanout_fixtures.py`): program gate (R35), consistency-only probe (R36),
 per-orchestrator canonical parity, debug/doc/feedback halts, R21 surfacing, budget trip, 022-parity subset.
 
-**A2 dispatch binding** (`run-dispatch-foundation-fixtures.sh`, R38/R39):
+**A2 dispatch binding** (`run_dispatch_foundation_fixtures.py`, R38/R39):
 
 | Fixture | R-ID |
 | --- | --- |
@@ -86,7 +86,7 @@ per-orchestrator canonical parity, debug/doc/feedback halts, R21 surfacing, budg
 
 ```bash
 python3 -m sw generate --all
-bash scripts/test/run-emitter-fixtures.sh
+python3 scripts/test/run_emitter_fixtures.py
 ```
 
 The emitter freshness gate (`emitter-stale-classification-fails`, capability-index parity) fails when

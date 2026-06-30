@@ -28,7 +28,7 @@ Decision-record routing is **floor-only** — it never subtracts a persona the c
 
 1. Load `skills/doc-review/SKILL.md`.
 2. **Dispatch binding (R9):** before each persona Task, run
-   `python3 scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <id> --command sw-doc-review --skill doc-review`,
+   `python3 scripts/wave.py dispatch preflight --dispatch-id <id> --agent <id> --command sw-doc-review --skill doc-review`,
    then `python3 scripts/dispatch-check.py --agent <id> --command sw-doc-review --skill doc-review --parent-model <parent-concrete-id> --dispatch-id <id>`.
    Stamp the resolved concrete `model:` on Task input — reviewer agents keep `model: inherit` in frontmatter
    but dispatch must not rely on session inheritance. Halt on preflight exit 20 unless `--override` has a

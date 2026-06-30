@@ -216,7 +216,7 @@ def fetch_rule_summaries(root: Path, plugin_root: Path, config: dict) -> list[st
         if provider:
             script = rules_script_for_provider(plugin_root, provider)
         if script is None:
-            script = plugin_root / "providers" / "recallium-rules.sh"
+            script = plugin_root / "providers" / "recallium-rules.py"
     if not script.is_file():
         return []
     ok, rules = fetch_rules(root, plugin_root, config, rules_script=script)

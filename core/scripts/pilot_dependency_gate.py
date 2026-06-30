@@ -16,7 +16,7 @@ REQUIRED_PERSIST_FIXTURES = frozenset(
     }
 )
 
-_PREREQ_SCRIPT = "test/pilot-022-prerequisite-check.sh"
+_PREREQ_SCRIPT = "test/pilot_022_prerequisite_check.py"
 
 
 def _gate_scripts_dir() -> Path:
@@ -44,7 +44,7 @@ def run_dependency_checks(root: Path | None = None) -> dict[str, Any]:
             "requiredFixtures": sorted(REQUIRED_PERSIST_FIXTURES),
         }
     proc = subprocess.run(
-        ["bash", str(script)],
+        [sys.executable, str(script)],
         cwd=str(repo_root),
         capture_output=True,
         text=True,

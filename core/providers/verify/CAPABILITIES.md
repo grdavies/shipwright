@@ -29,7 +29,7 @@ Invoked by `scripts/verify-e2e.py` during `/sw-verify` — runs **only when enab
 | Field | Meaning |
 | --- | --- |
 | `enabled` | When `false` or `provider: "none"`, adapter is skipped (non-blocking). |
-| `provider` | Executable id under `providers/verify/<id>.sh` + `<id>.md`. |
+| `provider` | Executable id under `providers/verify/<id>.py` + `<id>.md`. |
 | `routes` | Optional affected routes hint for smoke scoping (adapter-specific). |
 
 ## Executable adapter contract (stdout JSON)

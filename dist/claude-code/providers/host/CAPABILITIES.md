@@ -87,7 +87,7 @@ Degraded / rate-limited outcomes:
 
 ## Config
 
-`host.provider` in `workflow.config.json` selects `providers/host/<id>.md` (+ `<id>.sh` when present) via
+`host.provider` in `workflow.config.json` selects `providers/host/<id>.md` (+ `<id>.py` when present) via
 `config_flag` triggers (`selectionFamily: providers`). `host.remote` (default `origin`) names the git remote.
 `host.tokenEnv` names the environment variable holding the API token — never the secret value.
 `host.rateLimit` configures retry/backoff (see `scripts/host_ratelimit.py`).
@@ -95,5 +95,5 @@ Degraded / rate-limited outcomes:
 ## Transport
 
 All HTTP calls route through `scripts/scripts/_sw/host_transport.py` → `scripts/host_ratelimit.py` (R35–R42). Tokens
-are read at call time via `scripts/host_token.sh` and passed to `host HTTP transport` through a header file — never argv or
+are read at call time via `scripts/host_token.py` and passed to `host HTTP transport` through a header file — never argv or
 logs.

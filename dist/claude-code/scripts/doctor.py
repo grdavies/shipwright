@@ -34,7 +34,7 @@ def main(argv: list[str] | None = None) -> int:
         sh_hook = root / "hooks" / f"{hook}.sh"
         if sh_hook.is_file() and not py_hook.is_file():
             issues.append(f"missing-python-hook:{hook}")
-            remediation.append(f"Run: python3 scripts/install.py --force")
+            remediation.append("Run: python3 scripts/install.py")
 
     try:
         result = probe()

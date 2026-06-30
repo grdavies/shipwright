@@ -12,11 +12,11 @@ This guide covers three persona paths after setup, plus the key invariants that 
 
 | Where | What you do |
 |-------|-------------|
-| **This machine (once)** | Clone Shipwright, run `./scripts/install.sh`, reload your editor |
+| **This machine (once)** | Clone Shipwright, run `python3 scripts/install.py`, reload your editor |
 | **Each project repo** | Run `/sw-init` so commands know your providers, verify commands, memory store, and guardrails |
 
 The plugin lives globally; configuration and artifacts live in the **target repository** you build in.
-Running `install.sh` inside a git repo prints an opt-in reminder to run `/sw-init` for that repo only —
+Running `install.py` inside a git repo prints an opt-in reminder to run `/sw-init` for that repo only —
 the installer never configures projects for you.
 
 ## Doc → implementation boundary (`doc.afterTasks`)

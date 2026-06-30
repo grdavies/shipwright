@@ -66,7 +66,7 @@ ALLOWED_HANDOFF_PREFIXES = (
     "/sw-prd",
     "/sw-tasks",
     "/sw-amend",
-    "bash scripts/planning-graph.sh reconcile",
+    "python3 scripts/planning-graph.py reconcile",
     "python3 scripts/planning-related.py",
 )
 BUDGET_HALT_EXIT = 31
@@ -468,7 +468,7 @@ def driver_step(root: Path, *, proposals: list[dict[str, Any]] | None = None) ->
     materialize = materialize_ready(root)
     if materialize.get("ready"):
         for item in materialize["ready"]:
-            handoff_cmd = f"bash scripts/planning-graph.sh reconcile --apply-absorb {item.get('candidateId')}"
+            handoff_cmd = f"python3 scripts/planning-graph.py reconcile --apply-absorb {item.get('candidateId')}"
             handoffs.append(enqueue_handoff(root, handoff_cmd, reason="post-undo-window materialize"))
     out = {
         "verdict": "step-complete",

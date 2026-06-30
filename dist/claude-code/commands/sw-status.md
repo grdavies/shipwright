@@ -41,5 +41,5 @@ Load `skills/living-status/SKILL.md`.
 - Task checkboxes are derivation inputs only.
 ## Post-merge playbook (A1)
 
-After target merge: use `set-index-status` + `append-log-idempotent` on a **docs branch** for single-unit INDEX updates. Never run full-corpus `reconcile-status.py reconcile` on `main`. Terminal derived status is monotonic (`complete`/`superseded` do not downgrade). `merged-complete` is set only via `python3 scripts/wave.sh completion finalize-if-merged`.
+After target merge: use `set-index-status` + `append-log-idempotent` on a **docs branch** for single-unit INDEX updates. Never run full-corpus `reconcile-status.py reconcile` on `main`. Terminal derived status is monotonic (`complete`/`superseded` do not downgrade). `merged-complete` is set only via `python3 scripts/wave.py completion finalize-if-merged`.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Helpers for host_local.sh (PRD 026 Phase 3)."""
+"""Helpers for _sw/host/local.py (PRD 026 Phase 3)."""
 from __future__ import annotations
 
 import argparse

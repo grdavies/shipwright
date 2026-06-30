@@ -66,7 +66,7 @@ When `adoptionMode` is `consistency-only` (`canonical ≡ proposed`, `proposedPa
 - **`canonical`:** the tier-gated chain below is unchanged — no orchestrator-step plan artifacts are persisted.
   Manifest + selector + canonical-parity wiring land; the doc guideline pack’s **canonical** chain and halt floors
   (`doc-review-halt-manual`, `doc-review-halt-gated-auto`, `afterTasks-checkpoint`) are enforced by
-  `python3 scripts/wave.sh plan validate --tier orchestrator --orchestrator-type doc`.
+  `python3 scripts/wave.py plan validate --tier orchestrator --orchestrator-type doc`.
 - **`proposed`:** **not built** for consistency-only — all `*-proposed-*` and `*-022-parity-under-proposed` fixtures
   are N/A (R36d). Halt preservation (R19) is proven on the **canonical** path via the doc guideline pack, not a
   `proposed` surface.
@@ -93,7 +93,7 @@ Never commit brainstorm/PRD artifacts on the protected default branch. See `skil
 After doc freeze, durability paths diverge (R32):
 
 - **Docs branch** — `python3 scripts/wave_spec_seed.py <root> docs-commit --topic <topic>` (brainstorms + PRDs)
-- **Feature handoff** — `python3 scripts/wave.sh spec-seed --task-list <frozen-task-list-path>` (PRD 013)
+- **Feature handoff** — `python3 scripts/wave.py spec-seed --task-list <frozen-task-list-path>` (PRD 013)
 - **Merge docs to trunk** — `python3 scripts/docs_pr.py --topic <topic>` (docs-only PR)
 
 0. Load `skills/conductor/SKILL.md`; enforce `rules/sw-conductor.mdc`.
@@ -117,13 +117,13 @@ After doc freeze, durability paths diverge (R32):
     ```
 
     Commit on the docs/feature branch only (`--commit`; never on bare default branch). Living-status also
-    invokes this via `scripts/wave.sh living-docs reconcile`. Resolve artifact paths via
+    invokes this via `scripts/wave.py living-docs reconcile`. Resolve artifact paths via
     `python3 scripts/planning_paths.py` (PRD 031) — do not hardcode `docs/planning/` roots.
 11. Resolve boundary mode: `doc.afterTasks` from `workflow.config.json`, overridden by `--after-tasks=<mode>` when set.
 12. Present the frozen task-list path. Resolve `<type>/<slug>` via the shared deliver resolver (do **not**
     re-implement branch derivation in `/sw-doc`):
     ```bash
-    python3 scripts/wave.sh preflight --task-list <frozen-task-list-path> --skip-base-check
+    python3 scripts/wave.py preflight --task-list <frozen-task-list-path> --skip-base-check
     ```
     Read `target.branch` from the JSON (`scripts/wave_deliver.py` — same resolver `/sw-deliver run` uses).
     Derive the PRD docs dir from the task-list parent: `docs/prds/<n>-<slug>/`.
@@ -133,22 +133,22 @@ After doc freeze, durability paths diverge (R32):
       2. The target feature branch `<type>/<slug>` from preflight.
       3. The exact docs-only seed command (idempotent shared helper; never onto `main`):
 
-         `python3 scripts/wave.sh spec-seed --task-list <frozen-task-list-path>`
+         `python3 scripts/wave.py spec-seed --task-list <frozen-task-list-path>`
 
       4. The exact next command: `/sw-deliver run <frozen-task-list-path>`.
       Do **not** recommend `/sw-worktree` → `/sw-start` → `/sw-execute` or standalone `/sw-ship` as the
-      primary path. (`/sw-deliver run` invokes the underlying `python3 scripts/wave.sh deliver-loop` driver — do
+      primary path. (`/sw-deliver run` invokes the underlying `python3 scripts/wave.py deliver-loop` driver — do
       not print the raw script as the primary operator command.)
     - **`confirm`** — present the full frozen task list, then emit the **Implementation checkpoint** block
       (see below) and halt. Only case-insensitive **`proceed`** or **`yes`** to the checkpoint question
       continues. Legacy **`Go`**, silence, or any ambiguous reply maps to **`stop`** (print-only guidance per
       above; no dispatch). On ack:
-      1. **Seed commit** — `python3 scripts/wave.sh spec-seed --task-list <frozen-task-list-path>` (docs
+      1. **Seed commit** — `python3 scripts/wave.py spec-seed --task-list <frozen-task-list-path>` (docs
          under `docs/prds/<n>-<slug>/` only; excludes `docs/brainstorms/**` and untracked/ignored paths;
          never `main`; idempotent).
       2. **Dispatch** `/sw-deliver run <frozen-task-list-path>`.
     - **`auto`** — emit one line: `implementing on branch <type>/<slug>`, then in-turn (DOC-A1):
-      `python3 scripts/wave.sh spec-seed --task-list <frozen-task-list-path>`, then **dispatch**
+      `python3 scripts/wave.py spec-seed --task-list <frozen-task-list-path>`, then **dispatch**
       `/sw-deliver run <frozen-task-list-path>`.
       No second prompt. When an **agent** (not a human) invoked `/sw-doc --after-tasks=auto`, record the override via
       `scripts/shipwright-state.py override-add` (who/when/mode) and record the seed commit (branch + SHA) via
@@ -206,7 +206,7 @@ After freeze, planning graph maintenance edits route through the two-track drive
 
 | Track | Classifier (R11) | Entry |
 | --- | --- | --- |
-| Mechanical | INDEX `derived` region, SUPERSEDED manifest, generated gap index only | `python3 scripts/docs-edit-route.py route --path …` → `docs-merge.sh` |
+| Mechanical | INDEX `derived` region, SUPERSEDED manifest, generated gap index only | `python3 scripts/docs-edit-route.py route --path …` → `docs-merge.py` |
 | Substantive | Any `docs/planning/<unit-id>/` path (body or frontmatter) | `python3 scripts/docs-edit-route.py route-substantive --topic <topic>` |
 
 The INDEX **`inFlight` region is never mechanical** (PRD 032 deliver writer). Mechanical batches embed a
@@ -242,7 +242,7 @@ For `/sw-doc-review` persona panel dispatches, each parallel persona MUST use a 
 (R38/R39) and resolve tier via `--command <child-slug>` / `--agent <persona-id>` per
 `scripts/resolve-model-tier.py` — never reuse one preflight record across N Tasks.
 
-1. `python3 scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-doc --skill <active-skill>`
+1. `python3 scripts/wave.py dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-doc --skill <active-skill>`
 2. `python3 scripts/dispatch-check.py --agent <agent-id> --command sw-doc --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Pass explicit `model: <resolved-concrete-id>` on Task input (never `inherit`).
 

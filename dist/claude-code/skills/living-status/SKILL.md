@@ -36,11 +36,11 @@ python3 scripts/reconcile-status.py reconcile [--dry-run] [--require-merge]
 python3 scripts/reconcile-status.py set-index-status --prd <NNN> --status <not-started|in-progress|complete>
 python3 scripts/reconcile-status.py append-log-idempotent --prd <NNN> --phase <name> [--pr N] [--sha SHA] [--notes text]
 python3 scripts/reconcile-status.py gap-resolve --absorbing-prd <NNN> [--pr N]
-scripts/wave.sh living-docs reconcile [--commit]
-scripts/wave.sh living-docs append-terminal [--commit]
-scripts/wave.sh docs-currency
-python3 scripts/planning-graph.sh / planning_graph.py <repo> reconcile [--dry-run]
-python3 scripts/planning-graph.sh / planning_graph.py <repo> doctor
+scripts/wave.py living-docs reconcile [--commit]
+scripts/wave.py living-docs append-terminal [--commit]
+scripts/wave.py docs-currency
+python3 scripts/planning-graph.py <repo> reconcile [--dry-run]
+python3 scripts/planning-graph.py <repo> doctor
 python3 scripts/wave_deliver.py <repo> next
 ```
 
@@ -66,7 +66,7 @@ Legacy `gap-resolve --absorbing-prd` applies only before `planningDir` cutover.
 
 ## Documentation-currency gate (R50)
 
-`scripts/docs-currency-gate.py` (via `scripts/wave.sh docs-currency`) hard-blocks the terminal merge gate
+`scripts/docs-currency-gate.py` (via `scripts/wave.py docs-currency`) hard-blocks the terminal merge gate
 when the current run's INDEX row, COMPLETION-LOG entry, or absorbed gaps disagree with durable state.
 Pre-existing unrelated historical drift does not block.
 
@@ -125,5 +125,5 @@ Append protocol: next ID is max(`GAP-NNN`)+1, never reuse; cross-links use `GAP-
 
 ### Completion finalize chokepoint (R33–R34)
 
-Only `python3 scripts/wave.sh completion finalize-if-merged` may set `completion.status: merged-complete`. Out-of-band state writes are rejected at the save guard.
+Only `python3 scripts/wave.py completion finalize-if-merged` may set `completion.status: merged-complete`. Out-of-band state writes are rejected at the save guard.
 

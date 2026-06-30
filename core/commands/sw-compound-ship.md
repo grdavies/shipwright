@@ -14,7 +14,7 @@ replacedBy: sw-retrospective
 
 1. Print this deprecation notice once at the start of the run.
 2. **Route to `/sw-retrospective`** with the same flags:
-   - No flags → `/sw-retrospective` (phase auto-detect via `python3 scripts/wave.sh retrospective detect-phase`)
+   - No flags → `/sw-retrospective` (phase auto-detect via `python3 scripts/wave.py retrospective detect-phase`)
    - `--pre-merge` → `/sw-retrospective --pre-merge`
    - `--post-merge` → `/sw-retrospective --post-merge`
    - Pass through `--from`, `--skip-memory-sync`, and `--dry-run` unchanged.

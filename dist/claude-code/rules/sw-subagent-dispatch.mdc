@@ -40,30 +40,30 @@ Resolve command and skill tiers from `models.routing` in `workflow.config.json` 
 `core/sw-reference/model-routing.defaults.json`):
 
 ```bash
-bash scripts/resolve-model-tier.sh --command <slug>
-bash scripts/resolve-model-tier.sh --skill <name>
-bash scripts/resolve-model-tier.sh --agent <id>
+python3 scripts/resolve-model-tier.py --command <slug>
+python3 scripts/resolve-model-tier.py --skill <name>
+python3 scripts/resolve-model-tier.py --agent <id>
 ```
 
 Per-agent tiers for reviewers, doc-review personas, and native-panel specialists live in
 `models.routing.agents` (not prose tables here). Unmapped agents fall back to `models.roles.reviewer`.
 
-- Delegated **mechanical** work → `models.tiers.cheap` (`resolve-model-tier.sh --tier cheap`).
+- Delegated **mechanical** work → `models.tiers.cheap` (`resolve-model-tier.py --tier cheap`).
 - Implementation, RCA, review orchestration → `models.tiers.build` (`models.roles.builder`).
 - Medium-effort reasoning (gaps, simplify, memory-sync) → `models.tiers.mid`.
 - Doc authoring and high-stakes review → `models.tiers.deep`.
 - Orchestrators at routing tier `inherit` (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-compound-ship`) MUST resolve
   delegated atomics via `--command <child-slug>` — never downgrade the child (KD8).
 - **R39b precedence (mechanical):** explicit `models.routing.agents[<agent>]` for a bound reviewer/persona
-  wins → else `--command <sw-slug>` → else `--agent` alone. Single-sourced in `resolve-model-tier.sh` and
-  `dispatch-check.sh` — do not duplicate ad-hoc in callers.
+  wins → else `--command <sw-slug>` → else `--agent` alone. Single-sourced in `resolve-model-tier.py` and
+  `dispatch-check.py` — do not duplicate ad-hoc in callers.
 - **R9 runtime contract (mechanical):** before every `sw-*-reviewer` / persona / native-panel Task spawn,
-  run `scripts/dispatch-check.sh --agent <id> --parent-model <parent-concrete-id> [--command <orchestrator>] [--skill <skill>]`.
+  run `scripts/dispatch-check.py --agent <id> --parent-model <parent-concrete-id> [--command <orchestrator>] [--skill <skill>]`.
   It fails closed on `binding:*` causes and only treats `harness:*` causes as retryable backpressure.
-  Stamp the resolved concrete `model:` from `resolve-model-tier.sh --agent` and resolved caveman intensity from
-  `resolve-intensity.sh`; never rely on session inheritance.
+  Stamp the resolved concrete `model:` from `resolve-model-tier.py --agent` and resolved caveman intensity from
+  `resolve-intensity.py`; never rely on session inheritance.
 - `--override` requires a durable audit record written first via
-  `bash scripts/shipwright-state.sh dispatch-override-add '{"actor":"...","timestamp":"...","dispatchId":"...","skippedFields":["..."]}'`.
+  `python3 scripts/shipwright-state.py dispatch-override-add '{"actor":"...","timestamp":"...","dispatchId":"...","skippedFields":["..."]}'`.
 - Native panel specialists: tier per `models.routing.agents` (e.g. `correctness`/`security`/`adversarial` →
   `deep`; others → `mid`).
 
@@ -85,11 +85,11 @@ Circuit breaker: three identical failures without diff change → escalate to us
 
 ## Conductor deliver-loop (R38)
 
-When driving `bash scripts/wave.sh deliver-loop` in-turn (see `skills/conductor/SKILL.md`):
+When driving `python3 scripts/wave.py deliver-loop` in-turn (see `skills/conductor/SKILL.md`):
 
 - Count each `deliver-loop` invocation toward `deliver.autonomy.maxIterations`.
 - Track `(nextAction, stateSignature)`; on **3** consecutive repeats without signature change, halt with
-  `scripts/wave.sh report terminal` — do not churn merge-enqueue or provision loops.
+  `scripts/wave.py report terminal` — do not churn merge-enqueue or provision loops.
 - State signature excludes heartbeat timestamps; see conductor skill for canonical fields.
 
 ## Reviewer dispatch backpressure (R28, R61)
@@ -120,7 +120,7 @@ After auto-applying eligible fixes from local review:
 Delegated **work-performing** sub-agents MUST either:
 
 1. Perform the pre-work search themselves (`skills/memory/SKILL.md` **Pre-work search (mandatory)** +
-   `bash scripts/wave.sh memory prework record …`), or
+   `python3 scripts/wave.py memory prework record …`), or
 2. Receive a **fresh** redacted search result from the parent orchestrator.
 
 **Exempt:** pure exploration / mechanical non-mutating dispatch (`readonly: true`, `explore` subagents with
@@ -128,7 +128,7 @@ no file mutation, bookkeeping-only inline work).
 
 When forwarding memory-search results into a delegated `Task` prompt:
 
-- Pipe through `bash scripts/memory-redact.sh` first (R41).
+- Pipe through `python3 scripts/memory-redact.py` first (R41).
 - Fence as `untrusted_payload` — reuse the PRD 017 R25 dispatch-context contract; never forward raw provider
   payloads or transcripts.
 
@@ -143,7 +143,7 @@ Guideline-bounded intra-phase parallelism replaces fixed dispatch lists. Proposa
 `signal_context` and validate through the mechanical guard:
 
 ```bash
-bash scripts/intra-phase-dispatch.sh evaluate --context-json '<signal_context>' \
+python3 scripts/intra-phase-dispatch.py evaluate --context-json '<signal_context>' \
   --wave-slots <wave-worktrees> --active-intra-phase <running> \
   --run-dir .cursor/sw-deliver-runs/<phase-slug> --record
 ```
@@ -157,11 +157,11 @@ bash scripts/intra-phase-dispatch.sh evaluate --context-json '<signal_context>' 
   chosen parallelism, degrade reason). Latest snapshot also on phase `intraPhaseFanOut` (see `.sw/layout.md`).
 
 Pre-dispatch no-nesting (R16): when `conductor_mode: background_phase` (stamped to the per-phase run
-dir at phase entry via `wave.sh phase dispatch-env --conductor-mode background_phase`), intra-phase Task
+dir at phase entry via `wave.py phase dispatch-env --conductor-mode background_phase`), intra-phase Task
 dispatch is **refused before any spawn** and degrades to inline two-stage review:
 
 ```bash
-bash scripts/intra-phase-dispatch.sh check-nesting --run-dir .cursor/sw-deliver-runs/<phase-slug>
+python3 scripts/intra-phase-dispatch.py check-nesting --run-dir .cursor/sw-deliver-runs/<phase-slug>
 ```
 
 ## Parallel phase dispatch (R17, R18, R45)
@@ -180,8 +180,8 @@ slot for intra-phase agents.
 ## Fixture validation (PRD 017)
 
 ```bash
-bash scripts/test/run-delegation-fixtures.sh
-bash scripts/test/run-dispatch-foundation-fixtures.sh
+python3 scripts/test/run_delegation_fixtures.py
+python3 scripts/test/run_dispatch_foundation_fixtures.py
 ```
 
 ## Authority
@@ -204,11 +204,11 @@ During `/sw-execute`, **between tasks** (after TDD gate passes for the current t
    - Fail → fix within task scope or escalate (R29).
 
 Inline (no subagent) when ≤3 declared `file_paths` in `signal_context` and sequential — resolved via
-`bash scripts/migration-parity-shadow.sh --family dispatch --context-json '<signal_context>'` / selector dispatch family (see `docs/prds/021-capability-manifest-and-selector/call-site-map.md`).
+`python3 scripts/migration-parity-shadow.py --family dispatch --context-json '<signal_context>'` / selector dispatch family (see `docs/prds/021-capability-manifest-and-selector/call-site-map.md`).
 
 **Do not batch** multi-task reviews at phase end. TDD red-green runs **before** stage 1 for each task.
 
 ## Model tier for execute review
 
-- Stage 1 spec-compliance → `build` tier (`resolve-model-tier.sh --tier build`); must read union + task.
+- Stage 1 spec-compliance → `build` tier (`resolve-model-tier.py --tier build`); must read union + task.
 - Stage 2 code-quality → `mid` tier when delegating; escalate to `build` on ambiguity.

@@ -255,10 +255,10 @@ default implementation orchestrator. Mode auto-detect from input:
 **Resumption:** re-run the same `run` command after interrupt; `resume reconcile` skips
 `green-merged` phases. Use `plan --from <phase>` when upstream phases are already merged.
 
-**Dry-run:** `scripts/wave.sh plan --task-list <path> --dry-run` emits the plan JSON without writing
+**Dry-run:** `scripts/wave.py plan --task-list <path> --dry-run` emits the plan JSON without writing
 `.cursor/sw-deliver-plan.json`.
 
-**Durable autonomy (PRD 007):** the driver is `scripts/wave.sh deliver-loop` (also invoked by
+**Durable autonomy (PRD 007):** the driver is `scripts/wave.py deliver-loop` (also invoked by
 `/sw-deliver run`). It persists cursor state in **scoped** `.cursor/sw-deliver-state.<slug>.json` at the
 repo root (canonical — R28), resumes after crash without restarting from plan, and never emits manual
 “next steps” prose while work remains. Phase advancement keys off durable `status.json` in each
@@ -517,7 +517,7 @@ Config: `planning.autonomy` + `planning.fullConductor.*` — see [configuration]
 
 | Track | Allowlist | Route |
 | --- | --- | --- |
-| Mechanical | INDEX `derived` only, SUPERSEDED manifest, gap index | Batched `docs-merge.sh` with CI auto-merge |
+| Mechanical | INDEX `derived` only, SUPERSEDED manifest, gap index | Batched `docs-merge.py` with CI auto-merge |
 | Substantive | Any `docs/planning/<unit-id>/` path | Auto-driven docs worktree + PR via `docs-edit-route.py` |
 
 `inFlight` is never mechanical. Branch protection probe fails closed to PR path.
@@ -534,12 +534,12 @@ python3 scripts/build-chain-sync.py
 
 This runs, in order:
 
-1. `scripts/copy-to-core.sh` — mirror harness + content into `core/` (orphan fail-closed on `core/sw-reference/`)
+1. `scripts/copy-to-core.py` — mirror harness + content into `core/` (orphan fail-closed on `core/sw-reference/`)
 2. `python3 -m sw generate --all` — refresh `dist/cursor/` and `dist/claude-code/`
 3. `scripts/snapshot-tree.py` — update `cursor-golden.manifest` when `dist/` changed
 
 The SoT map lives in `.sw/layout.md` and `core/sw-reference/build-chain-sot.json`. CI enforces
-`scripts/`↔`core/scripts/` parity (`run-core-scripts-parity-fixtures.sh`) and dist↔golden parity.
+`scripts/`↔`core/scripts/` parity (`run_core_scripts_parity_fixtures.py`) and dist↔golden parity.
 
 ## Pre-work memory search (PRD 019)
 
@@ -550,7 +550,7 @@ Before substantive work, every **work-performing** command runs a scoped `memory
 1. **Search** — scoped file-path + semantic queries across classes `rule`, `decision`, `learning`,
    `code-context`, `design` via `providers/<memory.provider>.md` (see `skills/memory/SKILL.md`).
 2. **Surface + reconcile** — applicable rules and contradicting decisions are reconciled before mutation.
-3. **Record** — `python3 scripts/wave.sh memory prework record --surface <cmd> …` writes a redacted breadcrumb
+3. **Record** — `python3 scripts/wave.py memory prework record --surface <cmd> …` writes a redacted breadcrumb
    to `.cursor/hooks/state/memory-prework-search.json` and `run.log`.
 4. **Enforce** — the `preToolUse` hook denies the first file mutation without a fresh record; `memory:offline`
    (probe-gated provider outage) satisfies the gate.
@@ -563,12 +563,12 @@ a fresh redacted result fenced as `untrusted_payload`. Pure read-only exploratio
 
 `/sw-deliver` exercises both proposal tiers live when `orchestration.planPolicy: proposed` and pilot guards pass:
 
-- **Wave entry** — conductor proposes batching → `wave.sh plan validate --tier wave` → `waveBatchingPlan` on shared run-state.
+- **Wave entry** — conductor proposes batching → `wave.py plan validate --tier wave` → `waveBatchingPlan` on shared run-state.
 - **Phase entry** — executor proposes step plan → `plan validate --tier phase` → `phase-step-plan.json` in the phase run dir.
 - **Intra-phase fan-out** — guideline-bounded parallelism with disjoint partition validation, global cap
   `waveSlots + activeIntraPhase ≤ min(parallelCeiling, harnessLimit)`, and `dispatch-decisions.json` audit.
 - **Driver budgets** — `wave_deliver_loop.py` enforces `runStartedAt`, `driverIterationCount`, `noProgressStreak`; clean halt preserves merge-queue integrity.
-- **Benefit metric (R31)** — paired `canonical` vs `proposed` runs; `wave.sh plan benefit-report` applies the fail-closed decision rule.
+- **Benefit metric (R31)** — paired `canonical` vs `proposed` runs; `wave.py plan benefit-report` applies the fail-closed decision rule.
 
 Default remains `canonical`. PRD-024 fans the proved pattern to `/sw-doc`, `/sw-debug`, and `/sw-feedback`.
 
@@ -581,11 +581,11 @@ The classification is single-sourced in `core/sw-reference/kernel-classification
 | Mode | Config | Behavior |
 | --- | --- | --- |
 | **Canonical** (default) | `orchestration.planPolicy: canonical` | Byte-identical to pre-022: hardcoded `/sw-ship` chain and plan-time deliver waves |
-| Proposed (opt-in) | `orchestration.planPolicy: proposed` | Phase executors and the conductor may propose plans validated by `wave.sh plan validate` |
+| Proposed (opt-in) | `orchestration.planPolicy: proposed` | Phase executors and the conductor may propose plans validated by `wave.py plan validate` |
 
 **Default disclosure:** new repos seed `canonical`. Nothing observable changes until you opt into `proposed`
 with PRD-023 pilot guards on `/sw-deliver`. Invalid proposals fail closed to the canonical chain
-(phase) or canonical waves / `wave.sh schedule` (wave).
+(phase) or canonical waves / `wave.py schedule` (wave).
 
 Two-tier persistence: wave batching → shared deliver run-state (conductor-only); phase step plans → per-phase
 run dir. See [configuration](configuration.md#orchestration-plan-policy-orchestrationplanpolicy) and

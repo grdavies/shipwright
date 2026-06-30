@@ -23,16 +23,16 @@ Load `skills/conductor/SKILL.md` for the full contract. These rules are the alwa
 
 ## Invoke primitives — never re-implement state
 
-- Route every plan, provision, collect, merge, lock, and report action through `scripts/wave.sh` /
+- Route every plan, provision, collect, merge, lock, and report action through `scripts/wave.py` /
   `wave_*.py` JSON entrypoints.
 - Do not hand-edit `.cursor/sw-deliver-state.json`, phase statuses, or merge journal fields in prose.
 - Phase outcomes come from `.cursor/sw-deliver-runs/<phase-slug>/status.json` only (R19).
 
 ## Plan validation (PRD 022)
 
-- Route wave and phase **proposals** through `bash scripts/wave.sh plan validate` — never hand-author plan JSON.
+- Route wave and phase **proposals** through `python3 scripts/wave.py plan validate` — never hand-author plan JSON.
 - On reject: phase → canonical chain from `kernel-classification.json`; wave → canonical waves or
-  `wave.sh schedule` when over-ceiling.
+  `wave.py schedule` when over-ceiling.
 - The phase step driver reads persisted `phase-step-plan.json` as sole authority; `SHIP_CHAIN` is fallback only.
 - Shared run-state writes (`waveBatchingPlan`, `twoTierLifecycle`) are **conductor-only**; phase sub-agents
   writing shared state exit 20.
@@ -54,7 +54,7 @@ Load `skills/conductor/SKILL.md` for the full contract. These rules are the alwa
 ## Legitimate halts only (R10–R12)
 
 Do not end the turn or ask the human to "continue" for routine driver progression. Halt only on the
-legitimate set in `skills/conductor/SKILL.md` and emit `scripts/wave.sh report blockers` or
+legitimate set in `skills/conductor/SKILL.md` and emit `scripts/wave.py report blockers` or
 `report terminal` — never a bare continuation prompt. Every halt must include `resumeCommand`
 (`/sw-deliver run <source_task_list>` when present).
 
@@ -71,7 +71,7 @@ While `verdict: running`:
 
 ## Push and merge boundaries (R13, R23, R41)
 
-- Never raw `git push` — use `scripts/git-push.sh` (R23).
+- Never raw `git push` — use `scripts/git-push.py` (R23).
 - Never merge to `main` from the conductor (R22).
 - Phase sub-agents never call `merge enqueue`, `merge run-next`, or `lock acquire` (R41).
 - Only the conductor acquires locks and runs the merge queue.

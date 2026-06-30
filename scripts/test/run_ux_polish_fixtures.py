@@ -299,7 +299,7 @@ else
   bad "verify.test missing ux-polish (direct or via pr-test-plan manifest) in .cursor/workflow.config.json"
 fi
 
-if grep -q 'verify-require-configuration.sh' "$EXAMPLE" 2>/dev/null; then
+if grep -q 'verify-require-configuration.py' "$EXAMPLE" 2>/dev/null; then
   ok "verify.test uses neutral sentinel in workflow.config.example.json"
 elif grep -qE 'run[-_]ux[-_]polish[-_]fixtures' "$EXAMPLE" 2>/dev/null; then
   ok "verify.test registers ux-polish runner in workflow.config.example.json"

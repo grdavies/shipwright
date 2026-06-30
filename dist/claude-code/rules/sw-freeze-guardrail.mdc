@@ -16,7 +16,7 @@ Files with `frozen: true` in YAML frontmatter are **immutable**. Do not edit, re
 ## Enforcement layers
 
 - This rule — agent instruction (early warning).
-- `hooks/pre-commit-frozen.sh` — local commit block (bypassable with `--no-verify`).
-- `scripts/check-frozen.sh` — CI required-check (authoritative; not bypassable).
+- `core/hooks/pre-commit-frozen.py` — local commit block (bypassable with `--no-verify`).
+- `scripts/check-frozen.py` — CI required-check (authoritative; not bypassable).
 
 There is **no unfreeze** command.

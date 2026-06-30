@@ -71,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
         nargs="?",
         const="",
         default=None,
-        help="After generating, run scripts/install.sh [DEST] for the cursor platform",
+        help="After generating, run scripts/install.py [DEST] for the cursor platform",
     )
 
     args = parser.parse_args(argv)
@@ -95,11 +95,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"sw generate: wrote {out}")
 
     if args.install is not None and "cursor" in platforms:
-        install_script = REPO_ROOT / "scripts" / "install.sh"
+        install_script = REPO_ROOT / "scripts" / "install.py"
         if not install_script.is_file():
             print(f"sw generate: --install: script not found at {install_script}", file=sys.stderr)
             return 1
-        cmd: list[str] = ["bash", str(install_script)]
+        cmd: list[str] = [sys.executable, str(install_script)]
         if args.install:
             cmd.append(args.install)
         dest_root = args.dest or DIST_ROOT

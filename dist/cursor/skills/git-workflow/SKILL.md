@@ -30,7 +30,7 @@ Informed by and crediting [netresearch/git-workflow-skill](https://github.com/ne
   `release-please-config.json` (`feat`, `fix`, `docs`, …). Enforced by `scripts/branch-name-guard.py`.
 - **Phase branches** = `<type>/<slug>-phase-<phase-slug>` (deliver phase-mode).
 - **Docs branches** = `docs/<topic>` for brainstorm/PRD/doc-pipeline authoring (R28). Provisioned via
-  `scripts/docs_worktree.py`; merged to trunk via `scripts/docs_pr.sh` (R30).
+  `scripts/docs_worktree.py`; merged to trunk via `scripts/docs_pr.py` (R30).
 - **Integration branches** = `<type>/<slug>` stacking deliver phases before terminal merge.
 - **Worktrees** isolate concurrent efforts under `.sw-worktrees/<name>/`.
 
@@ -97,7 +97,7 @@ Host adapters apply `pr-body.md` at `pr-create` time; missing required fields fa
 2. **Author** — run `/sw-doc` chain inside the docs worktree; never commit doc artifacts on trunk.
 3. **Durability** — `python3 scripts/wave_spec_seed.py <root> docs-commit --topic <topic>` commits brainstorms
    and PRD artifacts on the docs branch (R31).
-4. **Implementation handoff** — `python3 scripts/wave.sh spec-seed --task-list <path>` still seeds frozen PRD/tasks
+4. **Implementation handoff** — `python3 scripts/wave.py spec-seed --task-list <path>` still seeds frozen PRD/tasks
    onto `<type>/<slug>` for `/sw-deliver` (PRD 013 reconcile, R32).
 5. **Merge docs** — `python3 scripts/docs_pr.py --topic <topic>` opens a docs-only PR to trunk (R30).
 
@@ -108,8 +108,8 @@ edits as **mechanical** vs **substantive**:
 
 | Track | Allowlist (R11) | Route |
 | --- | --- | --- |
-| Mechanical | INDEX **`derived` region only**, SUPERSEDED manifest, generated gap index | `docs-edit-route.py route` → batched `docs-merge.sh` (CI auto-merge or direct-to-trunk when permitted) |
-| Substantive | Any `docs/planning/<unit-id>/` path (body or frontmatter) | `docs-edit-route.py route-substantive --topic <topic>` → docs worktree + `docs_pr.sh` |
+| Mechanical | INDEX **`derived` region only**, SUPERSEDED manifest, generated gap index | `docs-edit-route.py route` → batched `docs-merge.py` (CI auto-merge or direct-to-trunk when permitted) |
+| Substantive | Any `docs/planning/<unit-id>/` path (body or frontmatter) | `docs-edit-route.py route-substantive --topic <topic>` → docs worktree + `docs_pr.py` |
 
 The INDEX **`inFlight` region is never mechanical** — it is the PRD 032 deliver writer's sole region. Branch
 protection is probed live via the host API (`scripts/host_lib.py`); when detection is ambiguous or `gh` auth

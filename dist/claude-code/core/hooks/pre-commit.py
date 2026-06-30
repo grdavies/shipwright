@@ -4,11 +4,8 @@ from __future__ import annotations
 import os, subprocess, sys
 from pathlib import Path
 
-def _run_py(script: Path, cwd: Path) -> int:
-    return subprocess.run([sys.executable, str(script)], cwd=cwd).returncode
-
-def _run_sh(script: Path, cwd: Path, *args: str) -> int:
-    return subprocess.run(["bash", str(script), *args], cwd=cwd).returncode
+def _run_py(script: Path, cwd: Path, *args: str) -> int:
+    return subprocess.run([sys.executable, str(script), *args], cwd=cwd).returncode
 
 def main() -> int:
     hook_dir = Path(__file__).resolve().parent
@@ -20,8 +17,8 @@ def main() -> int:
         helper = hook_dir / name
         if helper.is_file() and _run_py(helper, repo) != 0:
             return 1
-    for guard, args in ((scripts / "index-region-guard.sh", ("--staged",)), (scripts / "planning-privacy-guard.sh", ("--staged",))):
-        if guard.is_file() and _run_sh(guard, repo, *args) != 0:
+    for guard, args in ((scripts / "index-region-guard.py", ("--staged",)), (scripts / "planning-privacy-guard.py", ("--staged",))):
+        if guard.is_file() and _run_py(guard, repo, *args) != 0:
             return 1
     graph = scripts / "planning_graph.py"
     if graph.is_file():
