@@ -274,8 +274,8 @@ def cmd_dispatch(root: Path, args: list[str]) -> None:
     if ttl_seconds < 30:
         ttl_seconds = 30
 
-    model_cmd = ["bash", str(SCRIPT_DIR / "resolve-model-tier.py"), "--agent", agent]
-    intensity_cmd = ["bash", str(SCRIPT_DIR / "resolve-intensity.py"), "--agent", agent]
+    model_cmd = [sys.executable, str(SCRIPT_DIR / "resolve-model-tier.py"), "--agent", agent]
+    intensity_cmd = [sys.executable, str(SCRIPT_DIR / "resolve-intensity.py"), "--agent", agent]
     if command:
         model_cmd.extend(["--command", command])
         intensity_cmd.extend(["--command", command])

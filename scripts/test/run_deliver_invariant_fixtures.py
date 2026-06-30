@@ -58,7 +58,7 @@ else
   bad "human-merge-gate-unchanged"
 fi
 
-if [[ -f "$SCAN" ]] && [[ -f "$PUSH" ]] && grep -q 'secret_scan' "$PUSH"; then
+if [[ -f "$SCAN" ]] && [[ -f "$PUSH" ]] && grep -q 'secret-scan' "$PUSH"; then
   ok "secret-scan-push-chokepoint"
 else
   bad "secret-scan-push-chokepoint"

@@ -160,7 +160,7 @@ def resolve_dispatch_model(
             cause="no-model-resolved",
             remediation="scripts/resolve-model-tier.py missing",
         )
-    argv = ["bash", str(script), "--agent", agent_id]
+    argv = [sys.executable, str(script), "--agent", agent_id]
     if command:
         argv.extend(["--command", command])
     proc = subprocess.run(argv, cwd=str(root), capture_output=True, text=True, check=False)

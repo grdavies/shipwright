@@ -16,7 +16,8 @@ def main(argv=None):
     mat = SCRIPT_DIR / "planning_materialize.py"
     if mat.is_file():
         subprocess.run([sys.executable, str(mat), "--root", str(root), "guard-staged", "--push"], check=False)
-    import secret_scan
-    secret_scan.main(["pre-push"])
+    scan = subprocess.run([sys.executable, str(SCRIPT_DIR / "secret-scan.py"), "pre-push"])
+    if scan.returncode != 0:
+        return scan.returncode
     return subprocess.run(["git","push",*args]).returncode
 if __name__ == "__main__": run_module_main(main)
