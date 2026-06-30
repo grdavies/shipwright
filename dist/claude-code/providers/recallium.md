@@ -119,3 +119,11 @@ planning-store code.
   startup, then use targeted `search_memories` during the task.
 - There is no exclusion filter on raw content, which is one reason raw transcripts stay out of the
   provider (they would pollute precision search).
+
+## Issue-store brainstorm distillation (PRD 043)
+
+At PRD freeze in `issue-store` mode, rationale excerpts are redacted via `memory-redact.py` then
+stored as `memory_type: research` with `related_files` pointing at the brainstorm issue path and
+tags `prd-<unit>`, `brainstorm-<unit>`. Bidirectional pointers are recorded on the issue comments
+(`sw-memory-pointer`); the brainstorm issue is closed, not deleted.
+

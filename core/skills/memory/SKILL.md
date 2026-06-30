@@ -266,6 +266,20 @@ best-effort re-points the **non-authoritative** side per the active SoT (provide
 repo-SoT; git snapshot pointer under memory-SoT). Pointer freshness is **auditable, not transactional**
 (provider out of CI reach).
 
+
+## Issue-store brainstorm distillation (PRD 043 R19)
+
+When `planning.store.backend` is `issue-store` and a PRD is frozen via `planning_store.py freeze`:
+
+1. Linked brainstorm content (from `sw-edges` / `link-brainstorm-prd`) is excerpted and piped through
+   `scripts/memory-redact.py` — no raw transcript.
+2. Distilled `research` entry is stored via the memory backend adapter (`MemoryBackend` /
+   `planning.store.backend: memory` bodies path or configured provider).
+3. A `sw-memory-pointer` comment on the brainstorm issue links PRD ↔ memory ↔ brainstorm.
+4. Brainstorm issue is **closed+linked**, never deleted.
+
+Failure at distillation → `sw:freeze-incomplete` on the PRD issue; deliver halts fail-closed.
+
 ## Boundaries
 
 - Never call a provider tool directly from a command; always go through this skill + the adapter.

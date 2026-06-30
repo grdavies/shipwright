@@ -61,6 +61,25 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.py` is aut
    failure logs a warning and returns success to the freeze verdict.
 7. Report freeze complete; next step `/sw-tasks` for PRDs only.
 
+
+## Issue-store freeze (PRD 043 — when `planning.store.backend` is `issue-store`)
+
+When the effective backend is `issue-store`, `/sw-freeze` delegates artifact immutability to the
+issue API instead of (or in addition to) local `frozen: true` frontmatter:
+
+```bash
+python3 scripts/planning_store.py freeze --unit-id <unit-id> --body-path <artifact-path>
+```
+
+- Locks the issue, applies `sw:frozen`, records canonical hash in a `sw-freeze-record` comment
+- PRD freeze: distills linked brainstorm rationale to memory (`research`) via `memory-redact`;
+  closes+links brainstorm issue (retained, not deleted)
+- Distillation failure flags `sw:freeze-incomplete` and blocks deliver (fail-closed)
+- CI/deliver verify via `python3 scripts/planning_store.py verify-frozen-hash ...`
+
+Local `frozen: true` frontmatter and INDEX registration remain required for file-native artifacts.
+Decision-class artifacts stay file-native (D8).
+
 ## Enforcement layers
 
 | Layer | Role | Bypassable |

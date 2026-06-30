@@ -803,6 +803,95 @@
       }
     },
     {
+      "id": "provider.providers.issues.CAPABILITIES",
+      "kind": "provider",
+      "sourcePath": "core/providers/issues/CAPABILITIES.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "providers",
+            "scope": "issues-contract"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "issues",
+          "selectionFamily": "providers"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.issues.github-issues",
+      "kind": "provider",
+      "sourcePath": "core/providers/issues/github-issues.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "planning.store.issuesProvider",
+            "equals": "github-issues"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "issues",
+          "adapterId": "github-issues",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.py"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.issues.gitlab-issues",
+      "kind": "provider",
+      "sourcePath": "core/providers/issues/gitlab-issues.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "planning.store.issuesProvider",
+            "equals": "gitlab-issues"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "issues",
+          "adapterId": "gitlab-issues",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.py"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.issues.none",
+      "kind": "provider",
+      "sourcePath": "core/providers/issues/none.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "planning.store.issuesProvider",
+            "equals": "none"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "issues",
+          "adapterId": "none",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.py"
+        }
+      }
+    },
+    {
       "id": "provider.providers.planning-store.CAPABILITIES",
       "kind": "provider",
       "sourcePath": "core/providers/planning-store/CAPABILITIES.md",
@@ -840,6 +929,28 @@
         "metadata": {
           "providerFamily": "planning-store",
           "adapterId": "in-repo-public",
+          "selectionFamily": "providers"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.planning-store.issue-store",
+      "kind": "provider",
+      "sourcePath": "core/providers/planning-store/issue-store.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "planning.store.backend",
+            "equals": "issue-store"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "planning-store",
+          "adapterId": "issue-store",
           "selectionFamily": "providers"
         }
       }
