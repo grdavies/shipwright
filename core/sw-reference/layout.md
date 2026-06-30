@@ -101,6 +101,20 @@ emission-point registry handoff.
 Full-file regen that drops a sibling region is prohibited; `scripts/index-region-guard.py` enforces this on
 pre-commit and in CI.
 
+### Issue-store region disposition (PRD 043 R34)
+
+When `planning.store.backend` is `issue-store`, authoritative location per INDEX region is governed by
+`core/providers/planning-store/issue-store.md`. Phase-1 interim (adoption gated):
+
+| Region | Phase-1 authoritative | Post-adoption target |
+| --- | --- | --- |
+| `structural` | file-store (in-repo-public) | issue-derived rows |
+| `derived` | file-store (reconciler) | issue-derived lifecycle |
+| `inFlight` | deliver writer file tuple (PRD 032) | projected to issue store |
+
+Until a region is issue-derived, the file-store remains authoritative — issue-store config alone does not
+migrate regions.
+
 **Status precedence:** lifecycle consumers read `derived.status` when populated and fall back to structural
 `status`; gap units (`type: gap`) always use structural status only.
 
