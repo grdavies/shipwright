@@ -33,7 +33,7 @@ Override per run: `/sw-doc --after-tasks=<mode>` or `/sw-deliver run` at the fro
 
 After merge, `/sw-cleanup` enumerates merged branches and stale worktrees in **dry-run** mode. The agent
 presents the `wouldRemove` set and asks you to confirm before applying removals; on explicit ack it runs
-`bash scripts/cleanup.sh --confirm --yes` for you. Declined or ambiguous replies leave the dry-run report
+`python3 scripts/cleanup.sh --confirm --yes` for you. Declined or ambiguous replies leave the dry-run report
 as-is — use the manual escape hatch if you prefer to apply yourself.
 
 ## Worktree invariant
@@ -114,7 +114,7 @@ After you merge, run `/sw-compound-ship` in the target repo to capture retro lea
 memory. When `/sw-deliver` detects the feature branch has merged, it suggests `/sw-cleanup` to prune
 merged branches and stale worktrees. **`/sw-cleanup` is dry-run by default** — the agent presents the
 `wouldRemove` set and asks you to confirm; on explicit ack it runs the apply step for you (or you can
-use the manual `bash scripts/cleanup.sh --confirm --yes` escape hatch).
+use the manual `python3 scripts/cleanup.sh --confirm --yes` escape hatch).
 
 ## Migration notes
 

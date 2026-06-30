@@ -64,7 +64,7 @@ resolve_base_ref() {
 }
 
 host_verb() {
-  bash "$ROOT/scripts/host.sh" --root "$ROOT" "$@"
+  python3 "$ROOT/scripts/host.py" --root "$ROOT" "$@"
 }
 
 pr_json() {

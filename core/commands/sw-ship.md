@@ -33,10 +33,10 @@ Canonical chain is single-sourced from `core/sw-reference/kernel-classification.
 
 
 - **build-chain verify (R25)** — before `sw-commit` when the phase diff touches paths in
-  `core/sw-reference/build-chain-paths.json`, run `bash scripts/ship-build-chain-check.sh` (hard block on drift).
-  Sync with `bash scripts/build-chain-sync.sh` when check fails.
-- **sw-tmp** — at chain start: `bash scripts/sw-tmp.sh clean` then `bash scripts/sw-tmp.sh init` (records
-  `runDir` in shipwright-state). At chain end: `bash scripts/sw-tmp.sh clean`. No `trap … EXIT` (markdown-orchestrated
+  `core/sw-reference/build-chain-paths.json`, run `python3 scripts/ship-build-chain-check.sh` (hard block on drift).
+  Sync with `python3 scripts/build-chain-sync.sh` when check fails.
+- **sw-tmp** — at chain start: `python3 scripts/sw-tmp.sh clean` then `python3 scripts/sw-tmp.sh init` (records
+  `runDir` in shipwright-state). At chain end: `python3 scripts/sw-tmp.sh clean`. No `trap … EXIT` (markdown-orchestrated
   chain).
 - **verification-gate** — `Load skills/verification-gate/SKILL.md`; run `scripts/verify-evidence.sh` on
   structured status files under the resolved run dir. Policy by `inconclusiveClass`:
@@ -84,19 +84,19 @@ When `--phase-mode` / `SW_PHASE_MODE` is active, persist step-level state under 
 
 ```bash
 # At chain start (after sw-tmp init records runDir):
-bash scripts/ship-phase-steps.sh init --phase "${SW_PHASE_SLUG:-}"
+python3 scripts/ship-phase-steps.sh init --phase "${SW_PHASE_SLUG:-}"
 
 # Before each step (records attempt counter):
-bash scripts/ship-phase-steps.sh attempt --step sw-execute
+python3 scripts/ship-phase-steps.sh attempt --step sw-execute
 
 # After each green step:
-bash scripts/ship-phase-steps.sh advance --step sw-execute
+python3 scripts/ship-phase-steps.sh advance --step sw-execute
 
 # Sync into per-worktree shipwright.json for cross-agent resume:
-bash scripts/shipwright-state.sh sync-ship-steps
+python3 scripts/shipwright-state.sh sync-ship-steps
 
 # Resolve resume point (fresh agent):
-bash scripts/ship-phase-steps.sh resolve-resume [--from STEP] [--last-command "$lastCommand"]
+python3 scripts/ship-phase-steps.sh resolve-resume [--from STEP] [--last-command "$lastCommand"]
 ```
 
 Default path: `$SW_RUN_DIR/ship-steps.json`, else `.cursor/sw-deliver-runs/<phase>/ship-steps.json`.
@@ -111,7 +111,7 @@ plan is present. With default `orchestration.planPolicy: canonical`, behavior ma
 `canonical` unchanged).
 
 **Phase-entry proposed step plan (PRD 023):** under `planPolicy: proposed`, the phase executor proposes a
-step list → `bash scripts/wave.sh plan validate --tier phase --phase-type ship` → persists
+step list → `python3 scripts/wave.sh plan validate --tier phase --phase-type ship` → persists
 `phase-step-plan.json` in the phase run dir before the chain starts. `ship-phase-steps.sh` reads that plan as
 sole authority and re-checks kernel ordering at each `advance`; rejections fall back to canonical `SHIP_CHAIN`.
 
@@ -131,7 +131,7 @@ Gate (authoritative):
 ```bash
 GATE="${CURSOR_PLUGIN_ROOT:-$PWD}/scripts/check-gate.sh"
 if OUT=$(bash "$GATE"); then GATE_EC=0; else GATE_EC=$?; fi
-echo "$OUT" | jq .
+echo "$OUT" | Python json .
 ```
 
 Persist terminal green only on live `GATE_EC == 0`. Then `/sw-ready` and stop.
@@ -157,7 +157,7 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/sw-ready` and stop.
 
 **Communication intensity:** inherit
 
-**Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-ship`.
+**Model tier:** inherit — resolve delegated atomics via `python3 scripts/resolve-model-tier.sh --command <child-slug>`; do not dispatch on bare `--command sw-ship`.
 
 ## Delegated atomics
 
@@ -170,15 +170,15 @@ Substantive chain steps delegate with bound model + intensity per child slug:
 | `sw-simplify` | Task when heuristics fire | `--command sw-simplify` |
 | `sw-stabilize` | Task or in-turn chain | `--command sw-stabilize --skill stabilize` |
 
-Resolve model: `bash scripts/resolve-model-tier.sh --command <child-slug>` (or `--agent` for panel agents).
-Resolve intensity: `bash scripts/resolve-intensity.sh --command <child-slug>` (or `--agent|--skill`).
+Resolve model: `python3 scripts/resolve-model-tier.sh --command <child-slug>` (or `--agent` for panel agents).
+Resolve intensity: `python3 scripts/resolve-intensity.sh --command <child-slug>` (or `--agent|--skill`).
 
 ## Delegated Task binding contract
 
 Before any delegated Task spawn from `/sw-ship`:
 
-1. `bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-ship --skill <active-skill>`
-2. `bash scripts/dispatch-check.sh --agent <agent-id> --command sw-ship --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>]`
+1. `python3 scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-ship --skill <active-skill>`
+2. `python3 scripts/dispatch-check.sh --agent <agent-id> --command sw-ship --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Stamp Task with explicit `model: <resolved-concrete-id>`; do not use `inherit`.
 
 ## Inline allowlist (closed)
@@ -194,7 +194,7 @@ Implementation/review authoring outside these bookkeeping paths delegates.
 ## Dispatch context redaction contract
 
 Before dispatching any Task, redact non-config payloads (diff excerpts, CI/review output, feedback snippets,
-memory-preflight data) via `bash scripts/memory-redact.sh`, then include only redacted/fenced
+memory-preflight data) via `python3 scripts/memory-redact.sh`, then include only redacted/fenced
 `untrusted_payload` content.
 
 ## Guardrails
@@ -223,12 +223,12 @@ At chain end (`sw-ready` or any halt), write durable status via `scripts/ship-ph
 
 ```bash
 # Live green at merge gate (R18 — no pause, no merge):
-bash scripts/ship-phase-status.sh --verdict merge-ready-green \
+python3 scripts/ship-phase-status.sh --verdict merge-ready-green \
   --phase "${SW_PHASE_SLUG:-}" --head "$(git rev-parse HEAD)" \
   ${PR:+--pr "$PR"} [--gate-json /tmp/gate.json]
 
 # Any other halt (R48 — blocked, not interactive):
-bash scripts/ship-phase-status.sh --verdict blocked --cause "<short cause>" \
+python3 scripts/ship-phase-status.sh --verdict blocked --cause "<short cause>" \
   --phase "${SW_PHASE_SLUG:-}"
 ```
 
@@ -252,13 +252,13 @@ Phase-mode **never merges**. The human merge gate is reserved for `<type>/<slug>
 
 Before `sw-pr` touches a phase head under deliver dispatch:
 
-1. **Per-head lease** — `bash scripts/wave.sh ship-lease acquire --integration <integration> --phase-branch <head>`
+1. **Per-head lease** — `python3 scripts/wave.sh ship-lease acquire --integration <integration> --phase-branch <head>`
    (keyed `(integrationBranch, phaseBranch)` under `.cursor/sw-deliver-locks/`; heartbeat TTL
    `SW_SHIP_LEASE_STALE_SECONDS`, default 300s).
 2. **PR idempotency** — phase-mode `host_pr_create` routes through `create_or_reuse_phase_pr`: `pr-list` filtered
    by integration base under the lease, reuse open PR or create once; `openPrNumber` persisted to deliver state.
 3. **Base pin** — integration branch from durable deliver state only; `SW_INTEGRATION_BRANCH` is harness-only.
-4. **Release** — `bash scripts/wave.sh ship-lease release` after the list→create window closes.
+4. **Release** — `python3 scripts/wave.sh ship-lease release` after the list→create window closes.
 
 `dispatch-ship` runs **in-turn** in the conductor; only `dispatch-batch` backgrounds sub-agents on distinct heads.
 

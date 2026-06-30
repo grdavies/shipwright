@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+python3 - <<'PY' "$ROOT"
+import sys
+from pathlib import Path
+from _sw.host_transport import validate_url, _SameHostRedirectHandler
+from urllib.parse import urlparse
+from urllib.request import Request
+root = Path(sys.argv[1])
+for host in ("metadata.google.internal", "169.254.169.254"):
+    try:
+        validate_url(f"https://{host}/", root=root)
+        raise SystemExit(f"blocked host allowed: {host}")
+    except ValueError:
+        pass
+handler = _SameHostRedirectHandler()
+req = Request("https://api.github.com/a")
+blocked = handler.redirect_request(req, None, 302, "", {}, "https://evil.com/b")
+assert blocked is None
+print("OK  ssrf-redirect-hardening")
+PY

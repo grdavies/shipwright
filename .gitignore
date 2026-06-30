@@ -62,3 +62,4 @@ docs/planning/amendment/**/*
 
 # PRD 034 R8 — provision-time materialized private spec bodies (worktree-only, never committed)
 .cursor/planning-materialized/
+.cursor/sw-branch-protection-probe.json

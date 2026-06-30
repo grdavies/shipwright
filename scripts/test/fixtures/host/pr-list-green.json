@@ -6,10 +6,17 @@
     {
       "number": 42,
       "url": "https://github.com/owner/repo/pull/42",
-      "headRefOid": "abc123def4567890abcdef1234567890abcdef12",
       "headRefName": "feat/x",
+      "headRefOid": "abc123def4567890abcdef1234567890abcdef12",
       "baseRefName": "main",
-      "state": "OPEN"
+      "state": "OPEN",
+      "isDraft": false,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "title": "feat: test",
+      "body": "",
+      "mergedAt": null,
+      "mergeCommit": null
     }
   ]
 }

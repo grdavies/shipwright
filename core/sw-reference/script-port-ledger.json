@@ -197,8 +197,8 @@
       "path": "scripts/docs-merge.sh",
       "disposition": "port",
       "target": "scripts/docs-merge.py",
-      "phase": 5,
-      "status": "pending"
+      "phase": 2,
+      "status": "done"
     },
     {
       "path": "scripts/docs-presence-check.sh",
@@ -211,8 +211,8 @@
       "path": "scripts/docs_pr.sh",
       "disposition": "port",
       "target": "scripts/docs_pr.py",
-      "phase": 5,
-      "status": "pending"
+      "phase": 2,
+      "status": "done"
     },
     {
       "path": "scripts/docs_worktree.sh",
@@ -288,36 +288,36 @@
       "path": "scripts/host.sh",
       "disposition": "port",
       "target": "scripts/host.py",
-      "phase": 3,
-      "status": "pending"
+      "phase": 2,
+      "status": "done"
     },
     {
       "path": "scripts/host_bitbucket.sh",
       "disposition": "port",
       "target": "scripts/_sw/host/bitbucket.py",
       "phase": 2,
-      "status": "pending"
+      "status": "done"
     },
     {
       "path": "scripts/host_github.sh",
       "disposition": "port",
       "target": "scripts/_sw/host/github.py",
       "phase": 2,
-      "status": "pending"
+      "status": "done"
     },
     {
       "path": "scripts/host_gitlab.sh",
       "disposition": "port",
       "target": "scripts/_sw/host/gitlab.py",
       "phase": 2,
-      "status": "pending"
+      "status": "done"
     },
     {
       "path": "scripts/host_local.sh",
       "disposition": "port",
       "target": "scripts/_sw/host/local.py",
       "phase": 2,
-      "status": "pending"
+      "status": "done"
     },
     {
       "path": "scripts/host_token.sh",
@@ -329,9 +329,9 @@
     {
       "path": "scripts/host_transport.sh",
       "disposition": "port",
-      "target": "scripts/_sw/host/transport.py",
+      "target": "scripts/_sw/host_transport.py",
       "phase": 2,
-      "status": "pending"
+      "status": "done"
     },
     {
       "path": "scripts/in-repo-memory-search.sh",

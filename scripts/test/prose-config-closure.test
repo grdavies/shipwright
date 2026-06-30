@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+TREES=(core/commands core/skills core/rules core/providers docs/guides)
+PATTERNS=(
+  '`gh '
+  'gh pr '
+  'gh api '
+  'gh auth'
+  '`curl'
+  ' curl '
+  '`jq'
+  ' jq '
+  '`rsync'
+  'bash scripts/host'
+  'host.sh'
+  'host_transport.sh'
+)
+FAIL=0
+for tree in "${TREES[@]}"; do
+  [ -d "$ROOT/$tree" ] || continue
+  while IFS= read -r f; do
+    for pat in "${PATTERNS[@]}"; do
+      if grep -Fq "$pat" "$f" 2>/dev/null; then
+        echo "FAIL banned literal '$pat' in $f"
+        FAIL=1
+      fi
+    done
+  done < <(find "$ROOT/$tree" -type f \( -name '*.md' -o -name '*.mdc' -o -name '*.json' \) ! -path '*/prds/*')
+done
+[ "$FAIL" -eq 0 ] || exit 1
+echo "OK  prose-config-closure"

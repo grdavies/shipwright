@@ -21,10 +21,10 @@ Phase-scoped commit after `/sw-verify` (and `/sw-review` when configured).
 3. **Override record** (when inconclusive is overridden) — append via `scripts/shipwright-state.sh override-add`:
 
    ```bash
-   REASON_REDACTED=$(printf '%s' "$USER_REASON" | bash scripts/memory-redact.sh)
+   REASON_REDACTED=$(printf '%s' "$USER_REASON" | python3 scripts/memory-redact.sh)
    WHO=$(git config user.email)
    WHEN=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-   bash scripts/shipwright-state.sh override-add "$(jq -n \
+   python3 scripts/shipwright-state.sh override-add "$(Python json -n \
      --arg who "$WHO" --arg when "$WHEN" --arg ic "$INCONCLUSIVE_CLASS" \
      --arg reason "$REASON_REDACTED" --arg vo "inconclusive" \
      '{who:$who,when:$when,verdictOverridden:$vo,inconclusiveClass:$ic,reason:$reason}')"
@@ -45,7 +45,7 @@ Phase-scoped commit after `/sw-verify` (and `/sw-review` when configured).
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-commit`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --command sw-commit`.
 
 ## Guardrails
 

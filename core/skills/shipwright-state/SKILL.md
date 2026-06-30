@@ -8,7 +8,7 @@ description: Per-worktree Shipwright state read/write contract. Resolves state p
 Phase context lives in the **worktree gitdir**, not a shared repo-global file.
 
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill shipwright-state`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --skill shipwright-state`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Location
 
@@ -20,7 +20,7 @@ Phase context lives in the **worktree gitdir**, not a shared repo-global file.
 Resolve with:
 
 ```bash
-bash scripts/shipwright-state.sh path
+python3 scripts/shipwright-state.sh path
 ```
 
 ## Fields
@@ -45,9 +45,9 @@ bash scripts/shipwright-state.sh path
 ## Operations
 
 ```bash
-bash scripts/shipwright-state.sh read
-bash scripts/shipwright-state.sh write '{"phaseSlug":"auth-api","parentBranch":"main"}'
-bash scripts/shipwright-state.sh index   # read-only aggregate — never write a shared index file
+python3 scripts/shipwright-state.sh read
+python3 scripts/shipwright-state.sh write '{"phaseSlug":"auth-api","parentBranch":"main"}'
+python3 scripts/shipwright-state.sh index   # read-only aggregate — never write a shared index file
 ```
 
 ## Guardrails

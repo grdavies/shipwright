@@ -7,7 +7,7 @@ description: Derive PRD status from git and deliver state; reconcile planning IN
 
 Status is **derived from git and durable deliver state**, never hand-set on frozen artifacts.
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill living-status`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --skill living-status`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## INDEX status enum (R47 — single source)
 
@@ -31,11 +31,11 @@ The enum is enforced by `reconcile-status.sh set-index-status` and `wave_living_
 ## Commands
 
 ```bash
-bash scripts/reconcile-status.sh derive [--json]
-bash scripts/reconcile-status.sh reconcile [--dry-run] [--require-merge]
-bash scripts/reconcile-status.sh set-index-status --prd <NNN> --status <not-started|in-progress|complete>
-bash scripts/reconcile-status.sh append-log-idempotent --prd <NNN> --phase <name> [--pr N] [--sha SHA] [--notes text]
-bash scripts/reconcile-status.sh gap-resolve --absorbing-prd <NNN> [--pr N]
+python3 scripts/reconcile-status.sh derive [--json]
+python3 scripts/reconcile-status.sh reconcile [--dry-run] [--require-merge]
+python3 scripts/reconcile-status.sh set-index-status --prd <NNN> --status <not-started|in-progress|complete>
+python3 scripts/reconcile-status.sh append-log-idempotent --prd <NNN> --phase <name> [--pr N] [--sha SHA] [--notes text]
+python3 scripts/reconcile-status.sh gap-resolve --absorbing-prd <NNN> [--pr N]
 scripts/wave.sh living-docs reconcile [--commit]
 scripts/wave.sh living-docs append-terminal [--commit]
 scripts/wave.sh docs-currency
@@ -125,5 +125,5 @@ Append protocol: next ID is max(`GAP-NNN`)+1, never reuse; cross-links use `GAP-
 
 ### Completion finalize chokepoint (R33–R34)
 
-Only `bash scripts/wave.sh completion finalize-if-merged` may set `completion.status: merged-complete`. Out-of-band state writes are rejected at the save guard.
+Only `python3 scripts/wave.sh completion finalize-if-merged` may set `completion.status: merged-complete`. Out-of-band state writes are rejected at the save guard.
 

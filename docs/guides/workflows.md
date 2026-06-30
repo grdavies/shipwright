@@ -529,7 +529,7 @@ When a change touches repo-root `scripts/` or other harness/emittable paths, pro
 build chain before opening a PR:
 
 ```bash
-bash scripts/build-chain-sync.sh
+python3 scripts/build-chain-sync.sh
 ```
 
 This runs, in order:
@@ -550,7 +550,7 @@ Before substantive work, every **work-performing** command runs a scoped `memory
 1. **Search** — scoped file-path + semantic queries across classes `rule`, `decision`, `learning`,
    `code-context`, `design` via `providers/<memory.provider>.md` (see `skills/memory/SKILL.md`).
 2. **Surface + reconcile** — applicable rules and contradicting decisions are reconciled before mutation.
-3. **Record** — `bash scripts/wave.sh memory prework record --surface <cmd> …` writes a redacted breadcrumb
+3. **Record** — `python3 scripts/wave.sh memory prework record --surface <cmd> …` writes a redacted breadcrumb
    to `.cursor/hooks/state/memory-prework-search.json` and `run.log`.
 4. **Enforce** — the `preToolUse` hook denies the first file mutation without a fresh record; `memory:offline`
    (probe-gated provider outage) satisfies the gate.
