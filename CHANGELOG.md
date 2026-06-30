@@ -174,6 +174,7 @@
 * merge phase test-harness-build-chain-docs-migration-enforcement-flip-xl into feat/cross-platform-python-standardization (af526c2) <!-- sw-deliver:test-harness-build-chain-docs-migration-enforcement-flip-xl -->
 * merge phase quality-harness-contract-s-m-advisory-only-scaffold-no-default-behavior-change into feat/loop-quality-gates (dea7070) <!-- sw-deliver:quality-harness-contract-s-m-advisory-only-scaffold-no-default-behavior-change -->
 * merge phase refactor-step-built-in-provider-m-l-enforced-consideration-signal-gated-action into feat/loop-quality-gates (e3ddc8b) <!-- sw-deliver:refactor-step-built-in-provider-m-l-enforced-consideration-signal-gated-action -->
+* merge phase tdd-hardening-m-l-no-silent-skips-tamper-over-mock-detection-zombies-mutation-hook into feat/loop-quality-gates (c402357) <!-- sw-deliver:tdd-hardening-m-l-no-silent-skips-tamper-over-mock-detection-zombies-mutation-hook -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
