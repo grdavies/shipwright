@@ -80,6 +80,16 @@ After doc freeze, durability paths diverge (R32):
 8. `/sw-freeze` on PRD (and brainstorm if applicable).
 9. `/sw-tasks` — single-pass generation; traceability + analyze gates before task freeze.
 10. `/sw-freeze` on the task list.
+10a. **Planning reconciler hook (R15):** when doc artifacts may affect the planning graph (INDEX `derived`
+    region, gap edges, or unit linkage), run the mechanical reconciler before the implementation boundary:
+
+    ```bash
+    bash scripts/planning-graph.sh reconcile --dry-run
+    ```
+
+    Commit on the docs/feature branch only (`--commit`; never on bare default branch). Living-status also
+    invokes this via `scripts/wave.sh living-docs reconcile`. Resolve artifact paths via
+    `bash scripts/planning_paths.sh` (PRD 031) — do not hardcode `docs/planning/` roots.
 11. Resolve boundary mode: `doc.afterTasks` from `workflow.config.json`, overridden by `--after-tasks=<mode>` when set.
 12. Present the frozen task-list path. Resolve `<type>/<slug>` via the shared deliver resolver (do **not**
     re-implement branch derivation in `/sw-doc`):
@@ -140,6 +150,26 @@ Begin implementation on `<type>/<slug>`? Reply with **proceed** or **yes** (case
 **Re-emit rule:** If the user returns with an unrelated message (e.g. `/sw-memory-sync`, a doc question)
 while a `confirm` halt is pending and has not sent `proceed`/`yes`, map to **`stop`** (no dispatch) and
 **re-emit the Implementation checkpoint block** so the pending acknowledgement is visible again.
+
+## Planning command surface (PRD 035 D6 / R15)
+
+The planning surface **extends `/sw-doc`** — no top-level `/sw-plan`. Commands resolve paths via the PRD 031
+helper (`bash scripts/planning_paths.sh`); the graph shell exposes thin wrappers for operator ergonomics.
+
+| Entry | Command |
+| --- | --- |
+| Mechanical reconciler | `bash scripts/planning-graph.sh reconcile [--dry-run] [--commit]` |
+| Graph-driven scheduler | `/sw-deliver next` → `python3 scripts/wave_deliver.py <repo> next` (also `planning-graph.sh next`) |
+| Autonomy posture | `planning.autonomy` in `workflow.config.json` (`maintenance-only` default \| `full-conductor`) |
+| Posture readback | `bash scripts/planning-graph.sh posture` |
+
+**Scheduler:** `/sw-deliver next` picks the highest-priority eligible frozen task list from the planning graph
+(PRD 033). Under `planning.autonomy: maintenance-only`, an explicit `--task-list` that skips a higher-priority
+unit soft-enforces a confirm prompt (see `core/commands/sw-deliver.md` **Planning scheduler**).
+
+**Posture:** `maintenance-only` runs mechanical bookkeeping (reconcile, edge status, INDEX `derived`) without
+prompts; content decisions (pull-in, amendment, priority) stay human-gated. `full-conductor` opt-in elevates
+only gap/absorption-class decisions under bounded conductor limits (`planning.fullConductor`).
 
 ## Flags
 
