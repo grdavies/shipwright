@@ -159,7 +159,19 @@ def _trigger_references_signal_context(trigger: dict[str, Any]) -> bool:
 
 def check_signal_divergence(embedded: dict[str, Any], persisted: dict[str, Any]) -> list[str]:
     reasons: list[str] = []
-    for field in ("file_paths", "derived_tags", "tier", "doc_path"):
+    for field in (
+        "file_paths",
+        "derived_tags",
+        "tier",
+        "doc_path",
+        "signal_type",
+        "related_files",
+        "sentry_ref",
+        "source_class",
+        "invocation",
+        "route",
+        "orchestrator_type",
+    ):
         if field not in embedded:
             continue
         if embedded.get(field) != persisted.get(field):

@@ -5,9 +5,9 @@ with per-orchestrator proposal sites, canonical chain sources, and durable owner
 
 | Orchestrator | Proposal site | Plan tier | Canonical chain source | Guideline pack | Durable owner | signal_context snapshot | Parity fixtures |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `/sw-debug` | `sw-debug` procedure at entry | orchestrator (`debug`) | `orchestrator-step-plan.json` → `debug.canonicalChain` | `guidelines/debug.pack.json` (phase 3) | episodic session summary | before `plan validate`: signal type, relatedFiles, Sentry ref | `debug-canonical-parity`, TR7 subset |
-| `/sw-doc` | `sw-doc` procedure at entry | orchestrator (`doc`) | `orchestrator-step-plan.json` → `doc.canonicalChain` | `guidelines/doc.pack.json` (phase 3) | docs worktree + frozen PRD set | before `plan validate`: tier + doc_path | `doc-canonical-parity`, consistency-only probe |
-| `/sw-feedback` | `sw-feedback` procedure at entry | orchestrator (`feedback`) | `orchestrator-step-plan.json` → `feedback.canonicalChain` | `guidelines/feedback.pack.json` (phase 3) | episodic session summary | before `plan validate`: sourceClass + invocation + route | `feedback-canonical-parity`, TR7 subset |
+| `/sw-debug` | `sw-debug` procedure at entry | orchestrator (`debug`) | `orchestrator-step-plan.json` → `debug.canonicalChain` | `guidelines/debug.pack.json` (phase 3) | `.cursor/sw-debug-runs/<runId>/episodic-run-summary.json` | `orchestrator_signal_context.py capture` → `.cursor/sw-debug-runs/<runId>/signal_context.json` before `plan validate` | `debug-canonical-parity`, TR7 subset |
+| `/sw-doc` | `sw-doc` procedure at entry | orchestrator (`doc`) | `orchestrator-step-plan.json` → `doc.canonicalChain` | `guidelines/doc.pack.json` (phase 3) | docs worktree + frozen PRD set | `orchestrator_signal_context.py capture` → `.cursor/sw-doc-runs/<runId>/signal_context.json` before `plan validate`: tier + doc_path | `doc-canonical-parity`, consistency-only probe |
+| `/sw-feedback` | `sw-feedback` procedure at entry | orchestrator (`feedback`) | `orchestrator-step-plan.json` → `feedback.canonicalChain` | `guidelines/feedback.pack.json` (phase 3) | `.cursor/sw-feedback-runs/<runId>/episodic-run-summary.json` | `orchestrator_signal_context.py capture` → `.cursor/sw-feedback-runs/<runId>/signal_context.json` before `plan validate` | `feedback-canonical-parity`, TR7 subset |
 
 ## Mechanical primitives
 

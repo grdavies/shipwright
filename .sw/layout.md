@@ -464,3 +464,28 @@ Per-head ship leases live under `.cursor/sw-deliver-locks/<hash>-<phase>.lock` (
 Recovery command: `/sw-ship --phase-mode --from <terminal-step>`; auto re-emit counter on deliver state:
 `statusReemitAttempts`.
 
+## Episodic orchestrator scratch (PRD 024 TR6 / R37)
+
+Debug and feedback orchestrators use **ephemeral, per-invocation** namespaced scratch — not deliver-style
+durable run state. Artifacts are abandoned on terminal halt; there is no crash-resume checkpoint and no
+writes to deliver-scoped paths.
+
+| Path | Role |
+| --- | --- |
+| `.cursor/sw-debug-runs/<runId>/run-meta.json` | Episodic debug run metadata (`crashResume: false`) |
+| `.cursor/sw-debug-runs/<runId>/signal_context.json` | Entry snapshot before `plan validate` (TR3) |
+| `.cursor/sw-debug-runs/<runId>/episodic-run-summary.json` | R21 surfacing (chosen plan, capability set, rejections) |
+| `.cursor/sw-feedback-runs/<runId>/` | Same layout for `/sw-feedback` |
+| `.cursor/sw-doc-runs/<runId>/signal_context.json` | Doc entry snapshot (durable handoff remains docs-worktree scoped) |
+
+Mechanical primitives:
+
+```bash
+python3 scripts/orchestrator_signal_context.py . capture --orchestrator-type debug --run-id <id> --input '{"signal_type":"error"}'
+python3 scripts/orchestrator_run.py . provision --orchestrator-type debug --run-id <id>
+python3 scripts/orchestrator_run.py . teardown --orchestrator-type debug --run-id <id>
+```
+
+Cross-orchestrator isolation: episodic runs refuse writes under `.cursor/sw-deliver-state*`,
+`.cursor/sw-deliver-runs/`, and other deliver-scoped paths (`scripts/orchestrator_run.py assert-write`).
+
