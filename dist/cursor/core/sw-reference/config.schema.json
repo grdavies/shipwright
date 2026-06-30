@@ -880,7 +880,7 @@
             "full-conductor"
           ],
           "default": "maintenance-only",
-          "description": "Soft-enforce posture for explicit --task-list vs scheduler priority (PRD 033 R8 stub; owned by PRD 035)."
+          "description": "Planning autonomy posture (PRD 035 R19): maintenance-only default runs mechanical bookkeeping autonomously and gates content decisions; full-conductor opt-in elevates gap/absorption-class decisions under bounded conductor limits. PRD 033 soft-enforces scheduler priority on explicit --task-list."
         },
         "visibilityProfile": {
           "type": "string",
@@ -959,6 +959,32 @@
                   "description": "Optional extra allowed roots beyond the operator home."
                 }
               }
+            }
+          }
+        },
+        "fullConductor": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Bounded full-conductor limits when planning.autonomy is full-conductor (PRD 035 R8/R23).",
+          "properties": {
+            "confidenceThreshold": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.85,
+              "description": "Minimum proposal confidence before auto-deciding gap/absorption edges."
+            },
+            "mutationBudget": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 5,
+              "description": "Per-session autonomous graph mutation cap; halt + human resume when exhausted."
+            },
+            "undoWindowSeconds": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 300,
+              "description": "Reversible undo window before reconciler materializes an auto-decided absorption."
             }
           }
         }

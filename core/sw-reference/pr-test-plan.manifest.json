@@ -576,6 +576,20 @@
         "both-region-content-hash-abort",
         "mechanical-premerge-secret-scan"
       ]
+    },
+    {
+      "id": "planning-autonomy-fixtures",
+      "script": "scripts/test/run-planning-autonomy-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-autonomy-fixtures",
+      "scenarios": [
+        "planning-autonomy-config-enum",
+        "maintenance-only-default-no-prompts",
+        "full-conductor-bounded-budget-halt",
+        "enqueue-handoff-no-nested-dispatch",
+        "autonomy-actions-logged-durable"
+      ]
     }
   ]
 }

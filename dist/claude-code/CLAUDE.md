@@ -136,3 +136,12 @@ Semantic tiers (`cheap`/`build`/`deep`) live in `workflow.config.json` `models.t
 `scripts/model-tier-check.sh` (config + concrete models); runtime R9 for `inherit` reviewers is enforced at
 dispatch by `/sw-doc-review` and `rules/sw-subagent-dispatch.mdc`. See `.sw/models-tiering.md`.
 
+## Planning full-conductor boundary (PRD 035 R9)
+
+`scripts/planning_autonomy.py` under `planning.autonomy: full-conductor` is a **bounded planning driver**,
+not an orchestrator. It may enqueue atomic handoffs (`/sw-prd`, `/sw-tasks`, `planning-graph.sh reconcile`)
+but **must not** invoke `/sw-deliver`, `/sw-doc`, `/sw-ship`, `/sw-debug`, `/sw-feedback`, `/sw-cleanup`, or
+`/sw-retrospective` from within its loop. An explicit halt applies between a reconcile batch and any downstream
+dispatch. Nested orchestrator dispatch is a naming/conductor boundary violation — use enqueue-handoff-only.
+
+

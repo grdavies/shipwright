@@ -158,6 +158,12 @@
     "visibilityProfile": "specs-public",
     "store": {
       "backend": "in-repo-public"
+    },
+    "autonomy": "maintenance-only",
+    "fullConductor": {
+      "confidenceThreshold": 0.85,
+      "mutationBudget": 10,
+      "undoWindowSeconds": 3600
     }
   }
 }
