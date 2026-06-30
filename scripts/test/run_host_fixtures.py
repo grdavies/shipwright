@@ -21,7 +21,7 @@ def main() -> int:
     env = os.environ.copy()
     env["ROOT"] = str(root)
     env["PYTHONPATH"] = os.pathsep.join(
-        p for p in (str(root / "scripts"), env.get("PYTHONPATH", "")) if p
+        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
     )
     src = _patch_source(_SOURCE, root)
     completed = subprocess.run(
@@ -123,7 +123,7 @@ done
 R7_FILES=(
   scripts/wave_merge.py
   scripts/wave_terminal.py
-  scripts/stabilize-merge-sync.sh
+  scripts/stabilize-merge-sync.py
   scripts/worktree.sh
   scripts/cleanup_lib.py
 )
@@ -319,7 +319,7 @@ while IFS= read -r f; do
     echo "gh reference remains in $f"
     RUNTIME_GH=1
   fi
-done < <(printf '%s\n'   scripts/check-gate.py   scripts/wave_terminal.py   scripts/wave_compound.py   scripts/cleanup_lib.py   scripts/reconcile.py   scripts/stabilize-merge-sync.sh)
+done < <(printf '%s\n'   scripts/check-gate.py   scripts/wave_terminal.py   scripts/wave_compound.py   scripts/cleanup_lib.py   scripts/reconcile.py   scripts/stabilize-merge-sync.py)
 if [[ "$RUNTIME_GH" -eq 0 ]]; then
   ok "gh-removal-guard"
 else
@@ -340,7 +340,7 @@ fi
 )
 
 # --- check-gate-verbset ---
-if bash "$ROOT/scripts/test/run-gate-fixtures.sh" >/tmp/sw-host-gate-fixtures.log 2>&1; then
+if python3 "$ROOT/scripts/test/run_gate_fixtures.py" >/tmp/sw-host-gate-fixtures.log 2>&1; then
   ok "check-gate-verbset"
 else
   bad "check-gate-verbset"
@@ -381,7 +381,7 @@ fi
 (
   export GITHUB_TOKEN=gh_fixture_token_for_tests
   export SW_HOST_FIXTURE=green
-  if OUT=$(bash "$ROOT/scripts/stabilize-merge-sync.sh" status --pr 42) &&      echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='mergeable'"; then
+  if OUT=$(bash "$ROOT/scripts/stabilize-merge-sync.py" status --pr 42) &&      echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='mergeable'"; then
     ok "stabilize-sync-verbset"
   else
     bad "stabilize-sync-verbset"

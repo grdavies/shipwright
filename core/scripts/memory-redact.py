@@ -29,11 +29,14 @@ def repo_root() -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = list(sys.argv[1:] if argv is None else argv)
-    root = repo_root()
+    args = list(argv if argv is not None else sys.argv[1:])
     import memory_redact
-    memory_redact.main(args)
-    return 0
+    old_argv = sys.argv
+    try:
+        sys.argv = [str(Path(__file__).name), *args]
+        memory_redact.main()
+    finally:
+        sys.argv = old_argv
     return 0
 
 

@@ -21,7 +21,7 @@ def main() -> int:
     env = os.environ.copy()
     env["ROOT"] = str(root)
     env["PYTHONPATH"] = os.pathsep.join(
-        p for p in (str(root / "scripts"), env.get("PYTHONPATH", "")) if p
+        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
     )
     src = _patch_source(_SOURCE, root)
     completed = subprocess.run(
@@ -94,7 +94,7 @@ DOC_CURRENCY_OK=true
 AMEND="$(check_surface commands/sw-amend.md)" || DOC_CURRENCY_OK=false
 if [[ -n "${AMEND:-}" ]]; then
   require_patterns "inflight-doc-currency:sw-amend" "$AMEND" \
-    'authoring-guard\.sh preflight' \
+    'authoring-guard\.py preflight' \
     '\-\-handoff' \
     'refuses in-place amend|Complete-unit refusal' \
     'planned.*in-progress|in-progress.*planned' \
@@ -104,7 +104,7 @@ fi
 TASKS="$(check_surface commands/sw-tasks.md)" || DOC_CURRENCY_OK=false
 if [[ -n "${TASKS:-}" ]]; then
   require_patterns "inflight-doc-currency:sw-tasks" "$TASKS" \
-    'authoring-guard\.sh preflight' \
+    'authoring-guard\.py preflight' \
     '\-\-handoff' \
     'Complete-unit refusal|complete unit' || DOC_CURRENCY_OK=false
 fi
@@ -112,7 +112,7 @@ fi
 PRD="$(check_surface commands/sw-prd.md)" || DOC_CURRENCY_OK=false
 if [[ -n "${PRD:-}" ]]; then
   require_patterns "inflight-doc-currency:sw-prd" "$PRD" \
-    'authoring-guard\.sh preflight' \
+    'authoring-guard\.py preflight' \
     '\-\-handoff' \
     'Complete-unit refusal|complete unit' || DOC_CURRENCY_OK=false
 fi

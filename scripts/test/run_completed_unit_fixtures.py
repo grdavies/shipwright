@@ -21,7 +21,7 @@ def main() -> int:
     env = os.environ.copy()
     env["ROOT"] = str(root)
     env["PYTHONPATH"] = os.pathsep.join(
-        p for p in (str(root / "scripts"), env.get("PYTHONPATH", "")) if p
+        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
     )
     src = _patch_source(_SOURCE, root)
     completed = subprocess.run(
@@ -46,7 +46,7 @@ bad() { echo "FAIL $1"; FAIL=1; }
 AG="$ROOT/scripts/authoring-guard.sh"
 PY="$ROOT/scripts/authoring_guard.py"
 PIG="$ROOT/scripts/planning_index_gen.py"
-HOOK="$ROOT/core/hooks/pre-commit-completed-unit.sh"
+HOOK="$ROOT/core/hooks/pre-commit-completed-unit.py"
 INDEX_MARKERS_START='<!-- planning-index:derived begin -->'
 INDEX_MARKERS_END='<!-- planning-index:derived end -->'
 
@@ -288,7 +288,7 @@ TMP5=$(mktemp -d)
 ) && ok "completed-hook-graceful-degrade-warns" || bad "completed-hook-graceful-degrade-warns"
 
 # --- hook wired in pre-commit chain ---
-grep -q 'pre-commit-completed-unit.sh' "$ROOT/core/hooks/pre-commit" && \
+grep -q 'pre-commit-completed-unit.sh' "$ROOT/core/hooks/pre-commit.py" && \
 grep -q 'complete-unit' "$ROOT/core/commands/sw-freeze.md" && \
 grep -q 'complete' "$ROOT/core/commands/sw-amend.md" && \
 ok "completed-unit-hook-wired-docs" || bad "completed-unit-hook-wired-docs"

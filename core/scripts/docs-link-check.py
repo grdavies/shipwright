@@ -32,8 +32,7 @@ def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     root = repo_root()
     import docs_link_check
-    docs_link_check.main(args)
-    return 0
+    return docs_link_check.main(args)
     return 0
 
 

@@ -11,10 +11,11 @@ from _fixture_lib import repo_root
 from _harness_patch import patch_source as _patch_source
 
 def main() -> int:
+    args = sys.argv[1:]
     root = repo_root(__file__)
     env = os.environ.copy(); env['ROOT']=str(root)
     env['PYTHONPATH']=str(root/'scripts')+os.pathsep+env.get('PYTHONPATH','')
-    return subprocess.run(['bash','-c',_patch_source(_SOURCE,root)],cwd=str(root),env=env,shell=False).returncode
+    return subprocess.run(['bash','-c',_patch_source(_SOURCE,root),'parity-compare',*args],cwd=str(root),env=env,shell=False).returncode
 _SOURCE = r"""
 #!/usr/bin/env bash
 # Compare a directory tree against a parity manifest (relative-path<TAB>sha256).

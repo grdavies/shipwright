@@ -21,7 +21,7 @@ def main() -> int:
     env = os.environ.copy()
     env["ROOT"] = str(root)
     env["PYTHONPATH"] = os.pathsep.join(
-        p for p in (str(root / "scripts"), env.get("PYTHONPATH", "")) if p
+        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
     )
     src = _patch_source(_SOURCE, root)
     completed = subprocess.run(

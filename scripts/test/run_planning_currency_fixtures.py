@@ -21,7 +21,7 @@ def main() -> int:
     env = os.environ.copy()
     env["ROOT"] = str(root)
     env["PYTHONPATH"] = os.pathsep.join(
-        p for p in (str(root / "scripts"), env.get("PYTHONPATH", "")) if p
+        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
     )
     src = _patch_source(_SOURCE, root)
     completed = subprocess.run(
@@ -55,7 +55,7 @@ SPEC_RIGOR="$(content_path skills/spec-rigor/SKILL.md)"
 SPEC_UNION="$(content_path skills/spec-union/SKILL.md)"
 README="$ROOT/README.md"
 CONFIG_GUIDE="$ROOT/docs/guides/configuration.md"
-REDACT="$ROOT/scripts/memory-redact.sh"
+REDACT="$ROOT/scripts/memory-redact.py"
 GEN="python3 -m sw"
 
 CORPUS="$ROOT/scripts/test/fixtures/planning-currency/migrated-corpus"
@@ -64,23 +64,23 @@ TASKS_CORPUS="$CORPUS/tasks-099-fixture-prd.md"
 
 PLANNING_SCRIPTS=(
   doc_format.py
-  doc-format-normalize.sh
+  doc-format-normalize.py
   planning_status_enum.py
-  planning-unit-validate.sh
+  planning-unit-validate.py
   planning_paths.py
-  planning_paths.sh
+  planning_paths.py
   planning_index_gen.py
-  index-region-guard.sh
+  index-region-guard.py
   planning_migrate.py
   planning_path_redirect.py
   planning_legacy_projection.py
-  relief-acceptance-check.sh
-  planning-privacy-guard.sh
+  relief-acceptance-check.py
+  planning-privacy-guard.py
 )
 
 # --- copy-to-core-parity (R25) ---
-if bash "$ROOT/scripts/copy-to-core.sh" >/dev/null 2>&1 && \
-   bash "$ROOT/scripts/test/run-core-scripts-parity-fixtures.sh" >/dev/null 2>&1; then
+if bash "$ROOT/scripts/copy-to-core.py" >/dev/null 2>&1 && \
+   bash "$ROOT/scripts/test/run_core_scripts_parity_fixtures.py" >/dev/null 2>&1; then
   ok "copy-to-core-parity"
 else
   bad "copy-to-core-parity"
@@ -96,10 +96,10 @@ for rel in "${PLANNING_SCRIPTS[@]}"; do
 done
 [[ "$FAIL" -eq 0 ]] && ok "copy-to-core-parity: planning scripts mirrored"
 
-if [[ -f "$ROOT/core/scripts/copy-to-core.sh" ]] && cmp -s "$ROOT/scripts/copy-to-core.sh" "$ROOT/core/scripts/copy-to-core.sh"; then
-  ok "copy-to-core-parity: core/scripts/copy-to-core.sh"
+if [[ -f "$ROOT/core/scripts/copy-to-core.py" ]] && cmp -s "$ROOT/scripts/copy-to-core.py" "$ROOT/core/scripts/copy-to-core.py"; then
+  ok "copy-to-core-parity: core/scripts/copy-to-core.py"
 else
-  bad "copy-to-core-parity: core/scripts/copy-to-core.sh"
+  bad "copy-to-core-parity: core/scripts/copy-to-core.py"
 fi
 
 # --- emitter-freshness-planning-artifacts (R25) ---
@@ -119,7 +119,7 @@ for dist in "$ROOT/dist/cursor" "$ROOT/dist/claude-code"; do
   else
     bad "emitter-freshness-planning-artifacts: missing planning-unit.schema.json in $dist"
   fi
-  for rel in planning_index_gen.py planning_migrate.py planning-unit-validate.sh; do
+  for rel in planning_index_gen.py planning_migrate.py planning-unit-validate.py; do
     if [[ ! -f "$dist/scripts/$rel" ]]; then
       bad "emitter-freshness-planning-artifacts: missing dist/scripts/$rel"
     fi
@@ -176,7 +176,7 @@ if [[ -x "$REDACT" ]]; then
     ok "no-memory-writes-redaction-unchanged: redact chokepoint"
   fi
 else
-  bad "no-memory-writes-redaction-unchanged: memory-redact.sh missing"
+  bad "no-memory-writes-redaction-unchanged: memory-redact.py missing"
 fi
 
 NEW_MEMORY_SURFACES=0

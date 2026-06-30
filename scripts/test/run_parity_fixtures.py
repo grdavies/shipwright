@@ -21,7 +21,7 @@ def main() -> int:
     env = os.environ.copy()
     env["ROOT"] = str(root)
     env["PYTHONPATH"] = os.pathsep.join(
-        p for p in (str(root / "scripts"), env.get("PYTHONPATH", "")) if p
+        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
     )
     src = _patch_source(_SOURCE, root)
     completed = subprocess.run(
@@ -54,7 +54,11 @@ run_expect() {
   local name="$1" expect_ec="$2"
   shift 2
   set +e
-  OUT=$("$@" 2>&1)
+  if [[ "${1:-}" == *.py ]]; then
+    OUT=$(python3 "$@" 2>&1)
+  else
+    OUT=$("$@" 2>&1)
+  fi
   EC=$?
   set -e
   if [ "$EC" -eq "$expect_ec" ]; then
@@ -93,8 +97,8 @@ run_expect hash-diff 1 "$COMPARE" "$DIFF" "$MANIFEST_HAPPY"
 
 # Deterministic re-snapshot
 TMP_MANIFEST="$(mktemp)"
-"$SNAPSHOT" "$TMP_MANIFEST"
-"$SNAPSHOT" "${TMP_MANIFEST}.2"
+python3 "$SNAPSHOT" "$TMP_MANIFEST"
+python3 "$SNAPSHOT" "${TMP_MANIFEST}.2"
 if cmp -s "$TMP_MANIFEST" "${TMP_MANIFEST}.2"; then
   echo "OK  snapshot-deterministic identical across two runs"
 else

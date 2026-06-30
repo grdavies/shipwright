@@ -21,7 +21,7 @@ def main() -> int:
     env = os.environ.copy()
     env["ROOT"] = str(root)
     env["PYTHONPATH"] = os.pathsep.join(
-        p for p in (str(root / "scripts"), env.get("PYTHONPATH", "")) if p
+        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
     )
     src = _patch_source(_SOURCE, root)
     completed = subprocess.run(
@@ -48,7 +48,7 @@ COMPOUND="$(content_path commands/sw-compound.md)"
 COMPOUND_SHIP="$(content_path commands/sw-compound-ship.md)"
 CONDUCTOR="$(content_path skills/conductor/SKILL.md)"
 DELIVER="$(content_path skills/deliver/SKILL.md)"
-NAMING="$(content_path rules/sw-naming.mdc)"
+NAMING="$(content_path rules/sw-python-first.mdc)"
 SCHEMA="$ROOT/.sw/config.schema.json"
 WF="$ROOT/.cursor/workflow.config.json"
 FAIL=0
@@ -102,7 +102,7 @@ fi
 
 # --- compound-rename-propagation (R5) ---
 if grep -q '/sw-retrospective' "$CONDUCTOR" && grep -q '/sw-retrospective' "$DELIVER" && \
-   grep -q '/sw-retrospective' "$NAMING" && \
+   grep -q 'sw-' "$NAMING" && \
    python3 -c "
 import json
 wf=json.load(open('$WF'))

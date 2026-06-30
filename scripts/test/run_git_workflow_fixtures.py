@@ -21,7 +21,7 @@ def main() -> int:
     env = os.environ.copy()
     env["ROOT"] = str(root)
     env["PYTHONPATH"] = os.pathsep.join(
-        p for p in (str(root / "scripts"), env.get("PYTHONPATH", "")) if p
+        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
     )
     src = _patch_source(_SOURCE, root)
     completed = subprocess.run(
@@ -94,7 +94,7 @@ if bash "$COMMIT_GUARD" validate "not a conventional commit" >/dev/null 2>&1; th
 else
   ok "commit-msg-validator-reject"
 fi
-if [[ -x "$ROOT/core/hooks/commit-msg" ]]; then
+if [[ -x "$ROOT/core/hooks/commit-msg.py" ]]; then
   ok "commit-msg-validator-reject:hook-present"
 else
   bad "commit-msg-validator-reject:hook-present"
