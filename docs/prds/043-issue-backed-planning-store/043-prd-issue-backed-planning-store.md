@@ -1,6 +1,7 @@
 ---
 date: 2026-06-30
 topic: issue-backed-planning-store
+visibility: public
 brainstorm: docs/brainstorms/2026-06-30-issue-backed-planning-store-requirements.md
 program: issue-backed-planning-store
 depends: []
