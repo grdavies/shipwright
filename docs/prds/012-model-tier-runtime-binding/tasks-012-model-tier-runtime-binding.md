@@ -19,30 +19,30 @@ rewrite that depends on the preflight, then the optional hook, then docs/dist.
 - [x] 1.1 Add `models.routing.agents` to config + schema + defaults (R6)
   - **File:** `.cursor/workflow.config.json`, `.sw/config.schema.json`, `core/sw-reference/model-routing.defaults.json`
   - **Expected:** `models.routing.agents` map (agent id → semantic tier) present and schema-accepted; defaults cover doc-review personas (`build`) and native-panel specialists (high-stakes `deep`, others `mid`)
-- [x] 1.2 `resolve-model-tier.sh --agent <id>` with deterministic fallback (R1, R7)
-  - **File:** `scripts/resolve-model-tier.sh`
+- [x] 1.2 `resolve-model-tier.py --agent <id>` with deterministic fallback (R1, R7)
+  - **File:** `scripts/resolve-model-tier.py`
   - **Expected:** `--agent` resolves `models.routing.agents[id]` → `models.tiers` → concrete model ID (JSON: tier + modelId); unmapped agent falls back to `models.roles.reviewer` tier; single source for doc-review + native panel
-- [x] 1.3 `model-tier-check.sh` validates the agents map (R8)
-  - **File:** `scripts/model-tier-check.sh`
+- [x] 1.3 `model-tier-check.py` validates the agents map (R8)
+  - **File:** `scripts/model-tier-check.py`
   - **Expected:** every `models.routing.agents` value is a known tier (or alias) and resolves to a concrete ID; fails closed on an unknown tier
 
 ### 2. Dispatch preflight + parent-floor (M)
 
-- [x] 2.1 Add `scripts/reviewer-dispatch-check.sh` preflight (R2, R3)
-  - **File:** `scripts/reviewer-dispatch-check.sh`
+- [x] 2.1 Add `scripts/reviewer-dispatch-check.py` preflight (R2, R3)
+  - **File:** `scripts/reviewer-dispatch-check.py`
   - **Expected:** given target agent + resolved parent model, returns JSON `pass` only when a concrete model is resolved; otherwise exit 20 with `cause: no-model-resolved` + remediation; fixture-exercisable
 - [x] 2.2 Mechanical R9 parent-floor in the preflight (R4)
-  - **File:** `scripts/reviewer-dispatch-check.sh`
+  - **File:** `scripts/reviewer-dispatch-check.py`
   - **Expected:** parent model below `models.roles.builder` → exit 20 `cause: parent-below-builder` unless an explicit override is recorded; halts before any persona spawn
 
 ### 3. Rule + skill rewrite to call the preflight (S/M)
 
 - [x] 3.1 Point per-agent tiers at `models.routing.agents`; reference the mechanical floor (R12)
   - **File:** `rules/sw-subagent-dispatch.mdc`
-  - **Expected:** per-agent tier guidance reads from `models.routing.agents` (not a hand-maintained prose table); R9 section references `reviewer-dispatch-check.sh`
+  - **Expected:** per-agent tier guidance reads from `models.routing.agents` (not a hand-maintained prose table); R9 section references `reviewer-dispatch-check.py`
 - [x] 3.2 doc-review + native-panel dispatch call resolver + preflight before every spawn (R2, R3, R4)
   - **File:** `core/skills/doc-review/SKILL.md`, `core/commands/sw-doc-review.md`
-  - **Expected:** dispatch section requires `resolve-model-tier.sh --agent` + `reviewer-dispatch-check.sh` before each persona/specialist Task; concrete `model:` stamped from the resolved ID
+  - **Expected:** dispatch section requires `resolve-model-tier.py --agent` + `reviewer-dispatch-check.py` before each persona/specialist Task; concrete `model:` stamped from the resolved ID
 - [x] 3.3 Keep `model: inherit` in reviewer/persona agent files (R9)
   - **File:** `core/agents/sw-*-reviewer.md` (+ native panel specialist agents)
   - **Expected:** agent frontmatter retains `model: inherit`; no hardcoded model IDs introduced
@@ -52,7 +52,7 @@ rewrite that depends on the preflight, then the optional hook, then docs/dist.
 - [x] 4.1 `before-task-dispatch` hook injects resolved `modelId` (R5) — **registered (Option C, 2026-06-26)**
   - **File:** `core/hooks/before_task_dispatch.py`, `platforms/cursor/emitter.py`, `platforms/claude-code/emitter.py`, `core/sw-reference/model-tier-hook-feasibility.md`
   - **Expected:** on a Task call targeting a `sw-*-reviewer`/persona/native-panel agent, resolve via 1.2 and inject `modelId`; resolution failure logs + surfaces (never silent `inherit`); registered in both platform hooks.json files for forward compatibility
-  - **Outcome:** Logic module + fixture pass; **registered** in `hooks.json` for Cursor (`preToolUse`) and Claude Code (`PreToolUse`). Platform mutation effectiveness unverified (Cursor DL-2 confirmed; Claude Code untested). Hook fails open; mutation attempts logged to stderr. Phase 2 `reviewer-dispatch-check.sh` remains enforcement floor.
+  - **Outcome:** Logic module + fixture pass; **registered** in `hooks.json` for Cursor (`preToolUse`) and Claude Code (`PreToolUse`). Platform mutation effectiveness unverified (Cursor DL-2 confirmed; Claude Code untested). Hook fails open; mutation attempts logged to stderr. Phase 2 `reviewer-dispatch-check.py` remains enforcement floor.
 
 ### 5. Fixtures, docs, dist propagation (M)
 

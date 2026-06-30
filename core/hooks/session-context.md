@@ -38,7 +38,7 @@ prose (R30).
 - `/sw-ship` drives the chain on green and stops at the human merge gate (never merges).
 - Post-ship debug: `/sw-debug` (signal-driven RCA from Sentry/deploy/user reports; routes to worktree loop or doc pipeline — does not implement or merge).
 - Post-ship feedback: `/sw-feedback` (unified intake for production/review/retro signals; routes to debug, gap-capture, or brainstorm — does not analyze or author).
-- Shipwright state is per-worktree (`scripts/shipwright-state.sh`); repo index is read-time derived.
+- Shipwright state is per-worktree (`scripts/shipwright-state.py`); repo index is read-time derived.
 
 ## Memory
 

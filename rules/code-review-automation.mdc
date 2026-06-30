@@ -1,0 +1,77 @@
+---
+description: USE WHEN reviewing code, handling review feedback, or running /sw-review and /sw-stabilize.
+alwaysApply: false
+globs:
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: code-review
+      command: sw-review
+  metadata:
+    selectionFamily: code-review
+---
+
+# Code review & automation (Shipwright)
+
+Review provider selected by `review.provider` (default `none`). Gate per-head state via
+`scripts/check-gate.sh` + `providers/review/<provider>.sh`.
+
+## Two-phase `/sw-review` (local → provider)
+
+1. **Phase 1 — local** (`review.local`, default-on **`native`**): Shipwright-native multi-agent panel via
+   `providers/code-review/native.md`. Resolved by `scripts/review-local-resolve.sh`. Runs **independently** of
+   `review.provider` (including `"none"`). Only `review.local.enabled: false` or
+   `review.local.provider: "none"` disables phase 1.
+2. **Phase 2 — external** (`review.provider`): CodeRabbit / PR-Agent over uncommitted delta (unchanged). Emits
+   `/tmp/sw-review.status.json` for verification-gate.
+
+`gap-check` owns **binding** requirements completeness. Local adapters post-filter requirement-stage findings.
+The native `scope-fidelity` reviewer MAY surface an **advisory** defer / stub / omission signal (R13) — never
+a binding completeness verdict.
+
+### Local apply + gate
+
+- pf auto-applies eligible P1 (validated), P2, P3 per `review.local.apply` (default `auto`) after
+  `code-review-apply-check.sh`. P0 never auto-fixed. Security-sensitive targets never auto-applied.
+- Severity gate: surface-only default (`haltOn: []`); promoted halting on validated P0/P1 halts `/sw-ship`.
+- `check-gate.sh` remains sole CI oracle.
+
+## Review priorities (in order)
+
+1. Correctness 2. Security 3. Type safety 4. Error handling 5. Tests 6. Performance 7. A11y 8. Conventions
+
+## Local provider review (phase 2 — external)
+
+`coderabbit review -t uncommitted` mirrors Git tracked diff — stage `??` files first.
+
+## Non-inline findings
+
+Harvest from review summary + walkthrough bodies, not only `reviewThreads`. Same triage priority as inline.
+
+## Thread resolution
+
+Reply before resolve (mandatory). Thread-level GraphQL only. Paginate threads before asserting counts.
+
+## No-defer mode
+
+When `coderabbit.noDefer` is true, deliver code/test fix or verified resolve-with-evidence.
+
+## Stabilization bar (`/sw-stabilize`)
+
+Recompute unresolved actionable count at HEAD. Run `scripts/check-gate.sh` for verdict — never hand-roll green.
+
+## Native code-review panel (binding standard)
+
+The `native` local adapter (`providers/code-review/native.md`) uses **always-on core + signal-gated
+specialists** selected via the capability manifest and `scripts/code-review-select.sh` — same shape as doc
+review (`skills/doc-review/SKILL.md`):
+
+- Fixed core roster from manifest `always_on` triggers: `correctness`, `maintainability`, `scope-fidelity`,
+  `testing`, `security`.
+- Specialists fire from per-agent `capability` frontmatter (`core/sw-reference/capability-manifest.md`).
+- Same `signal_context` + `change_digest` → same panel; no judgment-based or load-all path.
+- `previous-comments` is excluded from phase 1.
+
+- `ce-code-review` remains a selectable adapter for repos that set it explicitly — **no change** to that path.
+- Phase 1 is default-on independent of `review.provider`; schema default `review.local.provider` is `native`.

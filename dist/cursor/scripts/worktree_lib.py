@@ -10,7 +10,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT = SCRIPT_DIR.parent
-GUARD = SCRIPT_DIR / "branch-name-guard.sh"
+GUARD = SCRIPT_DIR / "branch-name-guard.py"
 RELEASE_PLEASE = ROOT / "release-please-config.json"
 FALLBACK_TYPES = frozenset(
     {"feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"}
@@ -50,7 +50,7 @@ def _run_guard(cmd: str, *args: str) -> subprocess.CompletedProcess[str]:
     if not GUARD.is_file():
         raise FileNotFoundError(f"branch-name-guard missing: {GUARD}")
     return subprocess.run(
-        ["bash", str(GUARD), cmd, *args],
+        [sys.executable, str(GUARD), cmd, *args],
         capture_output=True,
         text=True,
         check=False,

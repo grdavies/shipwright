@@ -16,7 +16,7 @@ Watch the active PR after `/phase-pr` or any follow-up push, and report a single
 
 If no PR exists, stop and send the workflow back to `/phase-pr`.
 
-When `host.sh pr-view` reports `mergeable: CONFLICTING`, stop and hand off to `/sw-stabilize` (merge-base
+When `host.py pr-view` reports `mergeable: CONFLICTING`, stop and hand off to `/sw-stabilize` (merge-base
 sync). Do not busy-poll checks that cannot run until conflicts are resolved.
 
 
@@ -29,7 +29,7 @@ verdict via the local degradation helper instead of polling host CI:
 python3 scripts/watch_ci_lib.py --root "$(git rev-parse --show-toplevel)"
 ```
 
-The helper runs `check-gate.sh` in local-evidence mode (`source: local-evidence`, `mode: degraded-local`)
+The helper runs `check-gate.py` in local-evidence mode (`source: local-evidence`, `mode: degraded-local`)
 and reports `ciWatch: false`. Do not busy-poll a missing host API.
 
 ## Procedure
@@ -39,9 +39,9 @@ and reports `ciWatch: false`. Do not busy-poll a missing host API.
 2. Resolve the active PR:
 
 ```bash
-PR_JSON=$(bash scripts/host.sh pr-view --number "$PR")
-PR_NUMBER=$(jq -r .number <<<"$PR_JSON")
-HEAD_SHA=$(jq -r .headRefOid <<<"$PR_JSON")
+PR_JSON=$(python3 scripts/host.py pr-view --number "$PR")
+PR_NUMBER=$(Python json -r .number <<<"$PR_JSON")
+HEAD_SHA=$(Python json -r .headRefOid <<<"$PR_JSON")
 printf '%s\n' "$PR_JSON"
 ```
 
@@ -50,7 +50,7 @@ printf '%s\n' "$PR_JSON"
    counted only already-posted inline comments and missed a re-review that had not posted yet). Run:
 
 ```bash
-GATE="${CURSOR_PLUGIN_ROOT:-$HOME/.cursor/plugins/local/shipwright}/scripts/check-gate.sh"
+GATE="${CURSOR_PLUGIN_ROOT:-$HOME/.cursor/plugins/local/shipwright}/scripts/check-gate.py"
 bash "$GATE" > /tmp/sw-watch-ci-gate.json
 cat /tmp/sw-watch-ci-gate.json
 ```
@@ -77,7 +77,7 @@ cat /tmp/sw-watch-ci-gate.json
      orchestrator owns the bounded loop and re-enters here.)
 
 ```bash
-Use `bash scripts/host.sh checks --number "$PR"` in a poll loop (bounded intervals per host rate-limit policy).
+Use `python3 scripts/host.py checks --number "$PR"` in a poll loop (bounded intervals per host rate-limit policy).
 echo 'WATCH_CI_TICK {"phase":"recheck"}'
 ```
 
@@ -107,13 +107,13 @@ Per the `checks-gate` skill:
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-watch-ci`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-watch-ci`.
 
 ## Guardrails
 
 - Watch the PR tied to the current branch only.
 - Evaluate **all** checks under the configured policy — a failing non-required job blocks readiness.
-- Use `scripts/check-gate.sh` for the verdict; never substitute a hand-rolled proxy (e.g.
+- Use `scripts/check-gate.py` for the verdict; never substitute a hand-rolled proxy (e.g.
   a comment-count proxy — that shortcut can't see a not-yet-posted re-review and is what
   produced a false `green`. Trust the script's `verdict`: `green` ⟺ `coderabbitLanded == true` (reviewed,
   skipped, or absent). Do not re-gate on `coderabbitReviewedCurrentHead`.

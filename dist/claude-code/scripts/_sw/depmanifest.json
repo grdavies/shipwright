@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "description": "Allowed non-stdlib Python imports beyond the standard library (R12). Empty by default.",
+  "allowed": [],
+  "vendored": {}
+}

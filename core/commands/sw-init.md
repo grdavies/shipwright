@@ -8,7 +8,7 @@ alwaysApply: false
 Take a repo from **installed** to **configured and working**. Re-runs as a **doctor** against an existing
 config — validate, report, and offer targeted repair without a full rescaffold.
 
-All configuration logic runs through **`scripts/sw-configure.sh`** (single configurator — R29). The command
+All configuration logic runs through **`scripts/sw-configure.py`** (single configurator — R29). The command
 orchestrates interactive choices; the script holds detection, drift checks, and draft assembly.
 
 ## Scope
@@ -38,7 +38,7 @@ if [ -f "$CONFIG" ]; then
 else
   MODE=scaffold
 fi
-bash scripts/sw-configure.sh drift-check --config "$CONFIG"
+python3 scripts/sw-configure.py drift-check --config "$CONFIG"
 ```
 
 When drift-check reports `stale: true`, surface: **"config may be stale; run `/sw-init` to refresh"** and offer
@@ -65,7 +65,7 @@ For **in-repo**:
 
 - Ask **commit mode**: `committed` (default, PR-reviewable) or `local` (gitignore `.cursor/sw-memory-local/`).
 
-For **recallium**: verify reachability (`curl -fsS --max-time 3 <restBaseUrl>/health` or equivalent); warn if
+For **recallium**: verify reachability (`host HTTP transport -fsS --max-time 3 <restBaseUrl>/health` or equivalent); warn if
 unreachable but still allow save.
 
 ### 3. Review provider
@@ -138,8 +138,8 @@ Defaults (greenfield-friendly):
 ### 4b. Model tier defaults
 
 ```bash
-bash scripts/detect-platform.sh
-bash scripts/seed-model-config.sh --platform "$(bash scripts/detect-platform.sh)" --repair all
+python3 scripts/detect-platform.py
+python3 scripts/seed-model-config.py --platform "$(python3 scripts/detect-platform.py)" --repair all
 ```
 
 ### 4c. Project-type detection + verify proposals (R1/R20/R23)
@@ -147,8 +147,8 @@ bash scripts/seed-model-config.sh --platform "$(bash scripts/detect-platform.sh)
 After platform/models:
 
 ```bash
-bash scripts/detect-project-type.sh --propose
-bash scripts/sw-configure.sh detect --propose
+python3 scripts/detect-project-type.py --propose
+python3 scripts/sw-configure.py detect --propose
 ```
 
 Present a **verify proposal table** (lint / typecheck / test / build). For each key: **edit** | **keep** |
@@ -161,8 +161,8 @@ Show diff of proposed `verify.*` vs current config. Require explicit **`write`**
 Non-interactive:
 
 ```bash
-bash scripts/sw-configure.sh write-draft --accept-defaults          # gaps only, no verify write
-bash scripts/sw-configure.sh write-draft --accept-defaults --write-verify  # explicit verify write
+python3 scripts/sw-configure.py write-draft --accept-defaults          # gaps only, no verify write
+python3 scripts/sw-configure.py write-draft --accept-defaults --write-verify  # explicit verify write
 ```
 
 ### 5. Environment doctor
@@ -176,20 +176,20 @@ Detect and recommend (never hard-fail scaffold):
 - Recallium reachable when `memory.provider` is `recallium`.
 - **`orchestration.planPolicy`:** surface current value vs default (`canonical`); warn when set to
   `proposed` (fixture/adoption path — kernel envelope unchanged).
-- **`verify-unconfigured`** via `bash scripts/verify-unconfigured.sh` — CTA: run `/sw-init`.
-- Config drift vs schema → `bash scripts/sw-configure.sh drift-check`.
+- **`verify-unconfigured`** via `python3 scripts/verify-unconfigured.py` — CTA: run `/sw-init`.
+- Config drift vs schema → `python3 scripts/sw-configure.py drift-check`.
 - Missing in-repo store dir → offer `mkdir -p` repair.
 
-- **Host provider doctor** via `bash scripts/host-doctor.sh` — validates `host.provider`, configured remote, token env presence (never prints token), and rate-limit config. Warns when capability is degraded (missing token, missing remote) without blocking scaffold.
+- **Host provider doctor** via `python3 scripts/host-doctor.py` — validates `host.provider`, configured remote, token env presence (never prints token), and rate-limit config. Warns when capability is degraded (missing token, missing remote) without blocking scaffold.
 - Seed `host` config on greenfield: `provider` auto-detected, `remote: origin`, `tokenEnv` per provider (`GITHUB_TOKEN` default for GitHub). Existing GitHub repos need only `GITHUB_TOKEN` set (R33).
-- **Planning store doctor** via `bash scripts/planning-doctor.sh` — validates `planning.store` backend reachability (degrade-open when `memory` is configured but no memory provider is present), sweeps orphaned `.cursor/planning-materialized/` trees, and never prints provider tokens (R27).
+- **Planning store doctor** via `python3 scripts/planning-doctor.py` — validates `planning.store` backend reachability (degrade-open when `memory` is configured but no memory provider is present), sweeps orphaned `.cursor/planning-materialized/` trees, and never prints provider tokens (R27).
 
 ### 5b. Portability self-check (R24/R25)
 
 Before first `/sw-ship`:
 
 ```bash
-bash scripts/sw-configure.sh portability-check
+python3 scripts/sw-configure.py portability-check
 ```
 
 Summarize: verify configured (real vs gaps), base resolvable, `gh`/Actions availability, `sw-reference` paths
@@ -202,12 +202,12 @@ Assemble draft via configurator; validate against `.sw/config.schema.json`; stam
 
 ```json
 "configuredWith": {
-  "shipwrightVersion": "<from scripts/sw-configure.sh shipwright-version>",
-  "schemaVersion": "<from scripts/sw-configure.sh schema-version>"
+  "shipwrightVersion": "<from scripts/sw-configure.py shipwright-version>",
+  "schemaVersion": "<from scripts/sw-configure.py schema-version>"
 }
 ```
 
-Write `.cursor/workflow.config.json`. Merge `models` from `scripts/seed-model-config.sh` unless user opts out.
+Write `.cursor/workflow.config.json`. Merge `models` from `scripts/seed-model-config.py` unless user opts out.
 Seed `communication` from `core/sw-reference/communication-routing.defaults.json` (commands + skills + agents maps).
 
 ### 6b. Planning profile + store seeding (PRD 034 R21)
@@ -216,7 +216,7 @@ After the config file exists, seed the public-repo-aware visibility profile, def
 first-run privacy notice:
 
 ```bash
-bash scripts/planning-init-seed.sh --config "$CONFIG"
+python3 scripts/planning-init-seed.py --config "$CONFIG"
 ```
 
 This:
@@ -229,7 +229,7 @@ This:
   `.cursor/hooks/state/planning-privacy-notice.md` and mirrors profile + ack into
   `.cursor/hooks/state/planning-visibility.json`.
 
-**Doctor re-run:** `bash scripts/planning-doctor.sh` validates store reachability, degrade-opens when the
+**Doctor re-run:** `python3 scripts/planning-doctor.py` validates store reachability, degrade-opens when the
 memory backend has no provider (actionable remediation, no hard-fail), sweeps orphaned materialized trees,
 and references env-var names only — never token values (R27).
 
@@ -239,7 +239,7 @@ Print summary: providers, verify status, portability self-check, drift notice, c
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-init`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-init`.
 
 ## Guardrails
 

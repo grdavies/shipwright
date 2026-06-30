@@ -4,6 +4,7 @@ date: 2026-06-30
 topic: cross-platform-python-standardization
 frozen: true
 frozen_at: 2026-06-30
+visibility: public
 ---
 # PRD 042 — Cross-platform Python standardization
 
@@ -171,7 +172,7 @@ R1–R35 carry forward from the brainstorm with stable R-IDs. R36–R45 are adde
 - **R21** The duplicate `.sh`/`.py` sibling pairs identified in the audit (~22 direct pairs plus
   related wrappers) collapse to one Python module each, with the shell wrapper removed and all callers
   updated.
-- **R22** The two INDEX reconciliation **code paths** (`reconcile-status.sh` legacy PRD INDEX vs
+- **R22** The two INDEX reconciliation **code paths** (`reconcile-status.py` legacy PRD INDEX vs
   `planning-graph reconcile` planning INDEX) are ported and resolved into one coherent Python
   reconciler surface with shared helpers and overlapping logic deduplicated, behavior covered by
   fixtures. This does **not** merge the two INDEX schemas, regions, or lifecycle contracts (see
@@ -183,8 +184,8 @@ R1–R35 carry forward from the brainstorm with stable R-IDs. R36–R45 are adde
 ### Full shell → Python port
 
 - **R24** All production `scripts/*.sh` (thin wrappers, heredoc-Python gates, dispatchers such as
-  `wave.sh` / `host.sh` / `planning-graph.sh`, and substantive logic such as `check-gate.sh` /
-  `reconcile-status.sh` / `worktree.sh`) are ported to Python, preserving each script's stdout JSON
+  `wave.sh` / `host.sh` / `planning-graph.sh`, and substantive logic such as `check-gate.py` /
+  `reconcile-status.py` / `worktree.py`) are ported to Python, preserving each script's stdout JSON
   contract, exit codes, and fail-closed semantics.
 - **R25** The host provider adapters (`host_github.sh`, `host_gitlab.sh`, `host_bitbucket.sh`,
   `host_local.sh`, `host_transport.sh`, and the `host.sh` dispatcher) are ported to Python over

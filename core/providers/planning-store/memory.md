@@ -15,6 +15,6 @@ capability:
 # Planning store adapter: memory
 
 Routes exclusively through the provider-agnostic memory adapter (`memory_sot.resolve_memory_provider`).
-Never calls provider MCP tools directly. All bodies pass `scripts/memory-redact.sh` on read and write.
+Never calls provider MCP tools directly. All bodies pass `scripts/memory-redact.py` on read and write.
 Bans `discussion` and `progress` classes; refuses raw transcript markers. Degrades open when no provider
 is configured. Writes are scoped to `memory.project`.

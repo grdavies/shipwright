@@ -19,7 +19,7 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
 
 ## Procedure
 
-0. **Authoring-guard preflight (PRD 032 R5/R14)** — before the first substantive mutation on a planning unit, run `bash scripts/authoring-guard.sh preflight --path <unit-artifact> --command sw-prd`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6).
+0. **Authoring-guard preflight (PRD 032 R5/R14)** — before the first substantive mutation on a planning unit, run `python3 scripts/authoring-guard.py preflight --path <unit-artifact> --command sw-prd`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6).
 1. Read `workflow.config.json` (`prdsDir`, `decisionsDir`); load `skills/prd/SKILL.md`.
 2. **Pre-work search (mandatory)** — before the first substantive mutation, run `memory-preflight` **pre-work
    search** per `skills/memory/SKILL.md` **Pre-work search (mandatory)** (scoped to the feature domain and
@@ -29,9 +29,9 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
 3. Resolve `--type` (default `prd`) and section contract from the skill.
 
    - **Pull-in proposal (R1/R17):** before drafting, run
-     `bash scripts/planning-related.sh scan --mode creation --path <unit-artifact>`; surface the
+     `python3 scripts/planning-related.py scan --mode creation --path <unit-artifact>`; surface the
      **confirm-list** (never auto-absorb). Flag stale/already-resolved candidates; human confirms via
-     `bash scripts/planning-related.sh confirm --path <unit-artifact> --accept <id>[,...]`. Frozen targets
+     `python3 scripts/planning-related.py confirm --path <unit-artifact> --accept <id>[,...]`. Frozen targets
      route to amendment without `--accept-frozen-impact`.
 4. **PRD (`--type prd`, default):**
    - Resolve tier:
@@ -46,7 +46,7 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
      brainstorm `prd:` field (list when multiple) via
      `python3 scripts/doc_link.py write-forwardref --brainstorm <path> --prd <path>`; skip when frozen.
    - **Structural canonicalization (R14):** before persisting the draft, pipe body output through
-     `bash scripts/doc-format-normalize.sh --write --inplace <path>` so non-canonical structural shape cannot
+     `python3 scripts/doc-format-normalize.py --write --inplace <path>` so non-canonical structural shape cannot
      reach freeze; slot-filling templates are available via
      `python3 scripts/doc_format.py template prd_requirement` (and related kinds in `doc_format.SLOT_TEMPLATES`).
    - Save to `docs/prds/<n>-<slug>/<n>-prd-<slug>.md`.
@@ -62,7 +62,7 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
 
 **Communication intensity:** lite
 
-**Model tier:** deep — resolve via `bash scripts/resolve-model-tier.sh --command sw-prd`.
+**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.py --command sw-prd`.
 
 ## Guardrails
 

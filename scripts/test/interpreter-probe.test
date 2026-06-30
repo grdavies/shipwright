@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+"""Interpreter probe smoke — native Python."""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from _sw.interpreter import probe  # noqa: E402
+
+
+def main() -> int:
+    version = probe().version_text
+    if "3." not in version:
+        print(f"FAIL interpreter-probe: unexpected version {version!r}")
+        return 1
+    print("OK  interpreter-probe")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

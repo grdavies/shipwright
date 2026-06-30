@@ -27,7 +27,7 @@ foundational; the run index, v1 deferrals, autonomous terminal delivery, and doc
   - **File:** `scripts/wave_spec_seed.py`
   - **Expected:** commit excludes implementation files, `docs/brainstorms/**`, and untracked/ignored paths; a second freeze is a no-op
 - [ ] 1.3 Verdict-independent (warn-not-block) wrapper (R4)
-  - **File:** `core/commands/sw-freeze.md`, `scripts/check-frozen.sh`
+  - **File:** `core/commands/sw-freeze.md`, `scripts/check-frozen.py`
   - **Expected:** a branch/commit failure logs a warning; the frontmatter stamp + INDEX entry still complete; artifact never left unstamped due to commit failure
 
 ### 2. Scoped deliver state + lock resolver (L)
@@ -36,7 +36,7 @@ foundational; the run index, v1 deferrals, autonomous terminal delivery, and doc
   - **File:** `scripts/wave_state.py`
   - **Expected:** `scoped_paths(target)` → `.cursor/sw-deliver-state.<slug>.json` + `.cursor/sw-deliver-<slug>.lock`; slug derived from `--task-list`/target branch
 - [ ] 2.2 Replace every hardcoded repo-wide path with the resolver (R9)
-  - **File:** `scripts/wave_deliver.py`, `scripts/wave_deliver_loop.py`, `scripts/wave_merge.py`, `scripts/wave_lifecycle.py`, `scripts/wave_bookkeeping.py`, `scripts/wave_memory.py`, `scripts/wave_failure.py`, `scripts/wave_compound.py`, `scripts/wave_terminal.py`, `scripts/wave_living_docs.py`, `scripts/tasks-currency-gate.sh`, `scripts/docs-currency-gate.sh`, `scripts/ship-phase-status.sh`, `scripts/cleanup_lib.py`, `scripts/reconcile-status.sh`
+  - **File:** `scripts/wave_deliver.py`, `scripts/wave_deliver_loop.py`, `scripts/wave_merge.py`, `scripts/wave_lifecycle.py`, `scripts/wave_bookkeeping.py`, `scripts/wave_memory.py`, `scripts/wave_failure.py`, `scripts/wave_compound.py`, `scripts/wave_terminal.py`, `scripts/wave_living_docs.py`, `scripts/tasks-currency-gate.py`, `scripts/docs-currency-gate.py`, `scripts/ship-phase-status.py`, `scripts/cleanup_lib.py`, `scripts/reconcile-status.py`
   - **Expected:** no hardcoded `.cursor/sw-deliver-state.json` / `.cursor/sw-deliver.lock` remains; all resolve through 2.1
 - [ ] 2.3 Scoped identity + lock liveness semantics (R7, R8)
   - **File:** `scripts/wave_deliver_loop.py`, `scripts/wave_state.py`
@@ -95,7 +95,7 @@ foundational; the run index, v1 deferrals, autonomous terminal delivery, and doc
   - **Expected:** on all-phases-`green-merged`, invoke the single-sourced retrospective chain (PRD 014 `/sw-retrospective --pre-merge`; today's `/sw-compound-ship --pre-merge` until 014 lands) and commit its artifacts onto `<type>/<slug>` via the R5 seed helper **before** any PR action; no human re-prompt under `auto`; never `main`; memory writes stay fail-closed and rule-class promotion stays human-gated
 - [ ] 6.2 Autonomous PR → CI-watch → stabilize within budget (R22, R23)
   - **File:** `scripts/wave_terminal.py`, `core/skills/conductor/SKILL.md`
-  - **Expected:** terminal-ship creates/updates the PR via the `phase-pr` path, pushes head, runs a bounded `check-gate.sh` watch + `/sw-stabilize` up to `deliver.remediation.maxAttempts`; never auto-merges / force-pushes `main` / dismisses checks; halts only at exhausted budget, destructive git, or an explicit `supervised` checkpoint; conductor self-continuation (R6/R13) owns the loop
+  - **Expected:** terminal-ship creates/updates the PR via the `phase-pr` path, pushes head, runs a bounded `check-gate.py` watch + `/sw-stabilize` up to `deliver.remediation.maxAttempts`; never auto-merges / force-pushes `main` / dismisses checks; halts only at exhausted budget, destructive git, or an explicit `supervised` checkpoint; conductor self-continuation (R6/R13) owns the loop
 - [ ] 6.3 `deliver.terminal.autonomy` knob (R24)
   - **File:** `.cursor/workflow.config.json`, `.sw/config.schema.json`, `core/sw-reference/` setup defaults
   - **Expected:** `deliver.terminal.autonomy` (`supervised` | `auto`, default `supervised`) accepted by schema and seeded; `auto` runs 6.1–6.2 hands-off; `supervised` preserves today's halts

@@ -10,9 +10,9 @@ frozen: false
 ## Overview
 
 The parent PRD 027 authored its Decision Log as enumerated `- **D1**` … `- **D7**` bullets. The shared
-`scripts/spec-union.sh` extractor treats that `- **D<n>**` syntax as requirement IDs (it is dual-purpose for
+`scripts/spec-union.py` extractor treats that `- **D<n>**` syntax as requirement IDs (it is dual-purpose for
 PRDs and decision records), so the effective requirement union for PRD 027 wrongly includes D1–D7 alongside the
-real requirements R1–R13. At task-freeze this makes `scripts/traceability-check.sh` fail closed (exit 20):
+real requirements R1–R13. At task-freeze this makes `scripts/traceability-check.py` fail closed (exit 20):
 the traceability table maps only requirement IDs (`^R\d+$`), so D1–D7 can never be "covered" and the gate
 blocks — a failure unfixable from the task list.
 
@@ -29,7 +29,7 @@ change to the specification. The parent file stays byte-stable (per `/sw-amend`)
   makes the `- **D<n>**` form harmless; this amendment is the **bridge** until that lands. Per PRD 031 R28,
   such supersession/exclusion edges are reversible, so this amendment can be retired once the tokenizer ships.
 - A tooling change to the gate was explicitly declined for this work; the correction is therefore made in the
-  spec graph (amendment), leaving `scripts/spec-union.sh` / `scripts/traceability-check.sh` untouched.
+  spec graph (amendment), leaving `scripts/spec-union.py` / `scripts/traceability-check.py` untouched.
 
 ## Goals
 
@@ -51,9 +51,9 @@ Decision-Log IDs from the effective requirement union. The decisions they label 
 
 ## Testing Strategy
 
-- `bash scripts/spec-union.sh <parent-prd>` resolves `requirements` to exactly R1–R13 (D1–D7 appear under
+- `python3 scripts/spec-union.py <parent-prd>` resolves `requirements` to exactly R1–R13 (D1–D7 appear under
   `retracted`, not `requirements`).
-- `bash scripts/traceability-check.sh --prd <parent-prd> --tasks <task-list>` returns `complete` (exit 0)
+- `python3 scripts/traceability-check.py --prd <parent-prd> --tasks <task-list>` returns `complete` (exit 0)
   with R1–R13 fully covered.
 - Existing PRD-level `spec-rigor-check` on the parent and on this amendment remains green.
 
@@ -66,7 +66,7 @@ affected (no requirement or tooling change).
 
 | ID | Decision | Rationale |
 |----|----------|-----------|
-| DL-1 | Amend rather than edit/un-freeze the parent | Freeze is irreversible and `check-frozen.sh` (non-bypassable CI) blocks any modification to a frozen artifact; an amendment is the sanctioned post-freeze correction with the parent left byte-stable. |
+| DL-1 | Amend rather than edit/un-freeze the parent | Freeze is irreversible and `check-frozen.py` (non-bypassable CI) blocks any modification to a frozen artifact; an amendment is the sanctioned post-freeze correction with the parent left byte-stable. |
 | DL-2 | Use `retracts: [D1..D7]` to fix the union, not a tooling change | A gate/parser change was explicitly declined and is owned by PRD 031; `retracts` corrects the *effective union* without touching shared scripts. |
 | DL-3 | Frame as a parser-misclassification correction, not a decision retraction | D1–D7 are decisions, never requirements; only their spurious extraction as requirement IDs is removed. The decisions remain in force verbatim in the parent. |
 | DL-4 | Treat as a reversible bridge to PRD 031 | PRD 031's shared tokenizer makes `- **D<n>**` harmless; per PRD 031 R28 the edge is reversible, so this amendment can be retired post-031 with no spec loss. |

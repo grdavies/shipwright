@@ -17,14 +17,14 @@ Generated from the frozen PRD (effective spec union R20–R29, R30, R31). Phases
 
 - [ ] 1.1 Single redacting state writer (sole writer for `.cursor/sw-*` + shared-git-dir stores)
   - **File:** `scripts/sw-state-write.sh`, `core/sw-reference/layout.md`, `.sw/layout.md`
-  - **Expected:** sole writer for all new stores; pipes content through `scripts/memory-redact.sh`, validates against the target schema, atomic append/write; **fails closed** on redaction/schema error; direct `write_json` to these paths banned (fixture lint); layout registers writer + redaction + append-only semantics.
+  - **Expected:** sole writer for all new stores; pipes content through `scripts/memory-redact.py`, validates against the target schema, atomic append/write; **fails closed** on redaction/schema error; direct `write_json` to these paths banned (fixture lint); layout registers writer + redaction + append-only semantics.
   - **R-IDs:** R31
 - [ ] 1.2 Meta/dogfood channel — two-phase capture/confirm
-  - **File:** `scripts/planning_gap_capture.py`, `core/skills/feedback/SKILL.md`, `core/skills/feedback/references/signal-schema.md`, `core/commands/sw-feedback.md`, `core/skills/feedback-closure/SKILL.md`, `scripts/planning_paths.sh`
+  - **File:** `scripts/planning_gap_capture.py`, `core/skills/feedback/SKILL.md`, `core/skills/feedback/references/signal-schema.md`, `core/commands/sw-feedback.md`, `core/skills/feedback-closure/SKILL.md`, `scripts/planning_paths.py`
   - **Expected:** `meta-shipwright` destination + `plugin-self` gap class; `capture` writes redacted draft to `.cursor/sw-meta-inbox/` only (no tracked planning mutation); `materialize` creates the gap unit only after `confirm --signal-id` records a persisted ack; meta vs product routing separated in `feedback-closure`.
   - **R-IDs:** R20, R21
 - [ ] 1.3 Cross-run failure-signature store (capture half) + pinned writers
-  - **File:** `scripts/failure-signature-record.sh`, `core/sw-reference/failure-signature.schema.json`, `scripts/check-gate.sh`, `scripts/wave_failure.py`, `scripts/verify-evidence.sh`
+  - **File:** `scripts/failure-signature-record.sh`, `core/sw-reference/failure-signature.schema.json`, `scripts/check-gate.py`, `scripts/wave_failure.py`, `scripts/verify-evidence.py`
   - **Expected:** shared-git-dir authority (`${GIT_DIR}/shipwright-failure-signatures.json`, append-only via `sw-state-write.sh`); key `{check_id, exit_code, job_id}` (host-attested) + normalized message class as secondary discriminator (algorithm pinned in schema; strip temp paths/UUIDs/line numbers/timestamps; raw hash logged separately for audit); writers pinned at check-gate red, wave_failure blocked, verify-evidence not-verified, conductor `noProgressStreak`; `*-index` merge subcommand for linked worktrees.
   - **R-IDs:** R22
 
@@ -61,7 +61,7 @@ Generated from the frozen PRD (effective spec union R20–R29, R30, R31). Phases
   - **Expected:** bounded driver (parity with `planning_autonomy.py`, reuses `FORBIDDEN_ORCHESTRATORS`); produces drafts + **inert** handoff-queue entries; `enqueue_handoff` **requires** exact allowlist-prefix membership (`planning_gap_capture`, `/sw-prd` draft-only, `planning-graph.sh reconcile`) — substring forbidding insufficient; entries that can reach `/sw-deliver`/`/sw-doc`/`/sw-ship` (incl. via `doc.afterTasks`) forbidden; nothing executes without persisted human ack; `plugin-self`/`meta-shipwright` units never `eligible-auto` even under `full-conductor`; runaway containment `loop.autoPropose.{maxPerDay,dedupWindow,cooldownMinutes,maxOpenMetaUnits}` fail-closed; scheduled runs `maintenance-only` only; v1 default = manual invocation.
   - **R-IDs:** R27, R30
 - [ ] 4.3 Behavioral invariant + redaction fixtures
-  - **File:** `scripts/test/run-loop-autonomy-invariant-fixtures.sh`, `scripts/memory-redact.sh`
+  - **File:** `scripts/test/run-loop-autonomy-invariant-fixtures.sh`, `scripts/memory-redact.py`
   - **Expected:** behavioral proof of proposal-only (handoffQueue inert without ack; no tracked planning mutation under `maintenance-only` without confirm; wrapper/env-indirection dispatch fails closed; `doc.afterTasks:auto` never triggered from auto-propose; full-conductor + meta-unit → `propose` only; simulated N-cycle schedule halts via dedup/cooldown); `sw-` naming + orchestrator/atomic boundary + model-tier floor checks; redaction fail-closed across all new stores (secret-bearing input never lands on disk).
   - **R-IDs:** R30, R31
 
@@ -95,8 +95,8 @@ Generated from the frozen PRD (effective spec union R20–R29, R30, R31). Phases
 
 - `scripts/sw-state-write.sh` — sole redacting writer for all new stores (Phase 1).
 - `scripts/{failure-signature-record.sh,failure-signature-escalate.sh,inefficiency-scan.sh,behavioral-anomaly-check.sh,loop-autonomy.py}` — capture/escalate/scan/anomaly/auto-propose (Phases 1–4).
-- `scripts/planning_gap_capture.py`, `scripts/planning_paths.sh` — meta channel two-phase capture + plugin-self placement.
-- `scripts/{check-gate.sh,wave_failure.py,verify-evidence.sh}`, `scripts/wave_deliver.py` — pinned signature writers + (read-only) contention primitives.
+- `scripts/planning_gap_capture.py`, `scripts/planning_paths.py` — meta channel two-phase capture + plugin-self placement.
+- `scripts/{check-gate.py,wave_failure.py,verify-evidence.py}`, `scripts/wave_deliver.py` — pinned signature writers + (read-only) contention primitives.
 - `core/sw-reference/{anomaly-patterns.json,failure-signature.schema.json,loop-health.schema.json,config.schema.json,workflow.config.example.json,layout.md}`, `.sw/layout.md` — contracts/stores.
 - `core/skills/{feedback,feedback-closure,rca-core,verification-gate,retro,living-status}/SKILL.md`, `core/skills/feedback/references/signal-schema.md`, `core/commands/{sw-feedback,sw-debug,sw-retrospective}.md` — surfaces.
 - `core/rules/{sw-conductor,sw-naming,memory-guardrails}.mdc` — auto-propose enqueue-only/no-dispatch + redaction delta clauses.
@@ -108,7 +108,7 @@ Generated from the frozen PRD (effective spec union R20–R29, R30, R31). Phases
   merge/dispatch invariants are unchanged.
 - All autonomy invariants are **mechanically enforced** (closed allowlist, human-ack-to-execute, meta
   propose-only under full-conductor, single redacting writer) — not prose-asserted.
-- Cross-run stores use shared-git-dir authority (parity with `shipwright-state.sh`) for cross-worktree/PR
+- Cross-run stores use shared-git-dir authority (parity with `shipwright-state.py`) for cross-worktree/PR
   visibility; `.cursor/sw-*` are per-checkout projections.
 - Phases 1+2 ship together as the "recurring-failure loop" milestone (the user's top pain). Phase 4
   (auto-propose) is optional/v1.1; v1 MVP closes the loop via human triage + manual `/sw-prd`.

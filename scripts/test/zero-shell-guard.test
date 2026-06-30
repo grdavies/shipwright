@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+import os, subprocess, sys
+from pathlib import Path
+root = Path(__file__).resolve().parent.parent.parent
+env = os.environ.copy(); env['SW_ZERO_SHELL_MODE'] = 'fail'
+proc = subprocess.run([sys.executable, str(root/'scripts/zero-shell-guard.py'), '--mode', 'fail'], env=env, shell=False)
+if proc.returncode != 0:
+    raise SystemExit(proc.returncode)
+print('OK  zero-shell-guard')

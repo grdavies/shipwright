@@ -104,7 +104,7 @@ def log_operation(
 
 def redact_content(content: str) -> str:
     proc = subprocess.run(
-        [str(SCRIPT_DIR / "memory-redact.sh")],
+        [str(SCRIPT_DIR / "memory-redact.py")],
         input=content,
         text=True,
         capture_output=True,

@@ -19,7 +19,7 @@ import planning_paths as pp  # noqa: E402
 import planning_visibility as pv  # noqa: E402
 from host_lib import load_workflow_config  # noqa: E402
 
-BEGIN_MARKER = "# BEGIN visibility-generated (PRD 034 R13 — scripts/gitignore-generate.sh)"
+BEGIN_MARKER = "# BEGIN visibility-generated (PRD 034 R13 — scripts/gitignore-generate.py)"
 END_MARKER = "# END visibility-generated"
 
 STATIC_TAIL = [

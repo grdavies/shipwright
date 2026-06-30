@@ -44,7 +44,7 @@ preserved-semantics wiring + conductor single-source, then docs/dist/fixtures.
   - **File:** `skills/compound/SKILL.md`, `core/commands/sw-retrospective.md`
   - **Expected:** `auto` removes approval / "did you merge?" prompts; memory writes stay fail-closed; rule-class promotion stays human-gated under all settings
 - [x] 3.3 Preserve pending-merge + no-false-complete (R6, R11)
-  - **File:** `skills/compound/SKILL.md`, `scripts/reconcile-status.sh`
+  - **File:** `skills/compound/SKILL.md`, `scripts/reconcile-status.py`
   - **Expected:** pre-merge records `completed-pending-merge`; INDEX → `complete` only on real merge detection, even under `auto`
 - [x] 3.4 Conductor terminal-ship single-source handoff (R9)
   - **File:** `skills/conductor/SKILL.md`, `skills/deliver/SKILL.md`

@@ -15,7 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from planning_visibility import EMISSION_POINTS, REDACTED_BODY_MARKER  # noqa: E402
 
-# Phase 2 wired consumers — must import planning_visibility or call visibility-resolve.sh
+# Phase 2 wired consumers — must import planning_visibility or call visibility-resolve.py
 WIRED_POINT_SCRIPTS: dict[str, str] = {
     "index-active": "scripts/planning_index_gen.py",
     "index-archive": "scripts/planning_reconcile.py",
@@ -26,7 +26,7 @@ WIRED_POINT_SCRIPTS: dict[str, str] = {
 
 RESOLVER_MARKERS = (
     "planning_visibility",
-    "visibility-resolve.sh",
+    "visibility-resolve.py",
     "visibility_resolve",
 )
 

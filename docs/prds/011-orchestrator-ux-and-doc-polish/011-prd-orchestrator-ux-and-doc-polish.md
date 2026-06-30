@@ -19,7 +19,7 @@ low-risk command/doc fixes into one Standard-tier delivery:
    user-facing implementation entry (GAP row: PRD 005).
 2. The `doc.afterTasks: confirm` checkpoint is emitted as prose at the tail of a long pipeline summary, so
    the soft halt is easy to miss and a returning user is never re-prompted (GAP row: PRD 002).
-3. `/sw-cleanup`'s confirm step tells the operator to run `bash scripts/cleanup.sh --confirm --yes`
+3. `/sw-cleanup`'s confirm step tells the operator to run `python3 scripts/cleanup.py --confirm --yes`
    themselves instead of the agent asking for consent and running the apply step on their behalf
    (GAP row: PRD 004).
 4. PRD 001 deferred automated link verification; README + guides still rely on manual link checks
@@ -79,21 +79,21 @@ These are presentation, command-doc, and tooling changes. They do **not** alter 
 
 ### `/sw-cleanup` agent-driven confirm (PRD 004)
 
-- **R8** `core/commands/sw-cleanup.md` MUST replace the "run `bash scripts/cleanup.sh --confirm --yes`
+- **R8** `core/commands/sw-cleanup.md` MUST replace the "run `python3 scripts/cleanup.py --confirm --yes`
   yourself" hand-off with an agent-driven flow: after the dry-run report, the agent asks the operator to
   confirm, and on explicit ack the agent runs the apply step on their behalf (via
-  `bash scripts/cleanup.sh --confirm --yes` or `SW_CLEANUP_CONFIRM=1`).
+  `python3 scripts/cleanup.py --confirm --yes` or `SW_CLEANUP_CONFIRM=1`).
 - **R9** The agent-driven apply MUST preserve every fail-closed protection unchanged: current branch,
   default branch, unmerged branches, active or locked worktrees, in-flight deliver run-state, indeterminate
   squash-merge status, and the no-`rm -rf` worktree teardown. The apply MUST delete only the `wouldRemove`
   set the operator reviewed in the immediately-preceding dry run.
 - **R10** A declined, silent, or ambiguous reply MUST NOT apply any removals (dry-run stays terminal). The
-  manual `bash scripts/cleanup.sh --confirm --yes` invocation MUST remain documented as an escape hatch but
+  manual `python3 scripts/cleanup.py --confirm --yes` invocation MUST remain documented as an escape hatch but
   is no longer the primary path.
 
 ### Optional repo link-check (PRD 001)
 
-- **R11** Add `scripts/docs-link-check.sh` that verifies repo-relative markdown links and in-repo heading
+- **R11** Add `scripts/docs-link-check.py` that verifies repo-relative markdown links and in-repo heading
   anchors across `README.md` and `docs/guides/**` (and optionally `docs/prds/**`), emitting a stable JSON
   verdict on stdout (`pass` or `broken-links` with the offending file, link, and reason).
 - **R12** The checker MUST be advisory by default: a `verify.test` or doctor wiring runs it in non-blocking
@@ -124,14 +124,14 @@ These are presentation, command-doc, and tooling changes. They do **not** alter 
   heading, direct question, paused-state statement) and a re-emit rule for un-acked returns; leave the ack
   grammar table intact (R5–R7).
 - **TR3 — `sw-cleanup.md` agent-confirm.** Rewrite the procedure so step 3 is an agent consent prompt
-  followed by the agent running `bash scripts/cleanup.sh --confirm --yes` (or `SW_CLEANUP_CONFIRM=1`) on
+  followed by the agent running `python3 scripts/cleanup.py --confirm --yes` (or `SW_CLEANUP_CONFIRM=1`) on
   ack; retain the protections section verbatim and keep the manual command as a documented escape hatch
-  (R8–R10). No change to `scripts/cleanup.sh` behavior.
-- **TR4 — `scripts/docs-link-check.sh`.** New script: parse markdown for `[text](path)` relative links and
+  (R8–R10). No change to `scripts/cleanup.py` behavior.
+- **TR4 — `scripts/docs-link-check.py`.** New script: parse markdown for `[text](path)` relative links and
   `#anchor` fragments, resolve against the repo tree and generated heading slugs, emit JSON
   (`{"verdict":"pass|broken-links","findings":[...]}`); default advisory exit 0, `--strict` exit 20 on
   findings; no network calls (R11–R13).
-- **TR5 — Harness wiring.** Add `scripts/docs-link-check.sh` to the doctor/`verify.test` path in advisory
+- **TR5 — Harness wiring.** Add `scripts/docs-link-check.py` to the doctor/`verify.test` path in advisory
   mode; add fixtures under a `run-doc-link-fixtures.sh`-adjacent suite or a new `run-ux-polish-fixtures.sh`
   and register it in `workflow.config.json` `verify.test` (R12, R15).
 - **TR6 — Emitter propagation.** Regenerate `dist/` via `python3 -m sw generate --all`; freshness gate
@@ -174,7 +174,7 @@ finalized in `/sw-tasks`.
 
 - **Single feature branch** `docs/orchestrator-ux-and-doc-polish` (docs/command/script-only; no runtime
   driver changes), delivered in dependency-ordered phases: (1) `sw-doc.md` command surface + confirm
-  prominence; (2) `sw-cleanup.md` agent-confirm; (3) `scripts/docs-link-check.sh` + harness wiring;
+  prominence; (2) `sw-cleanup.md` agent-confirm; (3) `scripts/docs-link-check.py` + harness wiring;
   (4) guides + emitter + fixtures.
 - **Backward compatible.** No config schema change is required; the link checker defaults to advisory, so
   existing `verify.test` runs stay green. `--strict` is opt-in.

@@ -16,7 +16,7 @@ Run the smallest reliable verification for the current phase.
 5. **E2E/smoke adapter** (when `verifyE2e.enabled`):
 
    ```bash
-   E2E_JSON=$(bash scripts/verify-e2e.sh)
+   E2E_JSON=$(python3 scripts/verify-e2e.py)
    E2E_EC=$?
    # Merge into commands array as { "name": "e2e", "exitCode", "status", "provider", "logPath" }
    ```
@@ -26,27 +26,27 @@ Run the smallest reliable verification for the current phase.
 6. After all commands complete, resolve the run dir and write the aggregate status file:
 
    ```bash
-   RUN_DIR=$(bash scripts/sw-tmp.sh resolve)
+   RUN_DIR=$(python3 scripts/sw-tmp.py resolve)
    if [[ -z "$RUN_DIR" ]]; then
      RUN_DIR=/tmp
    fi
    STATUS_FILE="$RUN_DIR/sw-verify.status.json"
    # Aggregate: exitCode 0 + status "pass" only when every verify.* command succeeded.
-   jq -n --argjson ec "$AGG_EXIT" --arg st "$AGG_STATUS" \
+   Python json -n --argjson ec "$AGG_EXIT" --arg st "$AGG_STATUS" \
      '{exitCode: $ec, status: $st, commands: $COMMANDS_ARRAY}' > "$STATUS_FILE"
    chmod 600 "$STATUS_FILE"
    ```
 
    Shape: `{ "exitCode": 0|N, "status": "pass"|"fail", "commands": [{ "name", "exitCode", "status", ... }] }`.
-   Include the `e2e` entry when the adapter ran. The verification-gate (`scripts/verify-evidence.sh`) consumes this file — not the raw logs.
-   Optional baseline capture (off by default): `bash scripts/verify-baseline.sh capture --from "$STATUS_FILE" --to <caller-owned-baseline>`.
+   Include the `e2e` entry when the adapter ran. The verification-gate (`scripts/verify-evidence.py`) consumes this file — not the raw logs.
+   Optional baseline capture (off by default): `python3 scripts/verify-baseline.py capture --from "$STATUS_FILE" --to <caller-owned-baseline>`.
 7. Prefer scoped checks; broaden when shared config changed.
 8. Report pass/fail with log paths and `$STATUS_FILE`.
 9. On durable failure pattern → `memory-preflight` write (redact first). Stop before `/sw-commit` on fail.
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-verify`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-verify`.
 
 ## Guardrails
 

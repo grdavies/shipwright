@@ -31,8 +31,8 @@ The mandatory scoped pre-work search at work-performing command entry, with the 
 Single-sourced mechanical recorder of the search artifact / offline / none breadcrumb.
 
 - [ ] 2.1 Search-record recorder with degrade-open + audited breadcrumb
-  - **File:** `scripts/wave.sh` (`memory preflight` verb) / shared recorder; `scripts/memory-redact.sh` integration; per-repo state / `run.log`
-  - **Expected:** records a per-surface search artifact (scope + classes + nonce) on a reachable provider, or a `memory:offline` breadcrumb when the adapter reachability probe fails, or `memory:none` when the search returns nothing; all redacted via `memory-redact.sh` (R41); offline is probe-gated, never agent-asserted; single recorder shared by command + dispatch paths
+  - **File:** `scripts/wave.sh` (`memory preflight` verb) / shared recorder; `scripts/memory-redact.py` integration; per-repo state / `run.log`
+  - **Expected:** records a per-surface search artifact (scope + classes + nonce) on a reachable provider, or a `memory:offline` breadcrumb when the adapter reachability probe fails, or `memory:none` when the search returns nothing; all redacted via `memory-redact.py` (R41); offline is probe-gated, never agent-asserted; single recorder shared by command + dispatch paths
   - **R-IDs:** R6, R7
 
 ### 3. Enforcement + dispatch inheritance — M
@@ -48,7 +48,7 @@ Mechanical pre-mutation deny (reusing PRD 017 R23), dispatch-rule obligation, an
   - **Expected:** delegated work-performing sub-agents perform the pre-work search or are handed a fresh redacted result; pure-exploration / mechanical non-mutating dispatch exempt
   - **R-IDs:** R2
 - [ ] 3.3 Forwarded memory-result redaction reuse
-  - **File:** delegated dispatch-prompt assembly; `scripts/memory-redact.sh` (reuse PRD 017 R25 path)
+  - **File:** delegated dispatch-prompt assembly; `scripts/memory-redact.py` (reuse PRD 017 R25 path)
   - **Expected:** memory-search results assembled into a delegated `Task` prompt are redacted + fenced; raw payloads never forwarded
   - **R-IDs:** R9
 
@@ -96,7 +96,7 @@ Mechanical pre-mutation deny (reusing PRD 017 R23), dispatch-rule obligation, an
 - `core/skills/memory/SKILL.md` — mandatory pre-work search + scoped recipe + reconcile contract
 - `core/rules/sw-subagent-dispatch.mdc` — dispatch inheritance of the obligation
 - `core/commands/sw-execute.md`, `sw-debug.md`, `sw-prd.md`, `sw-brainstorm.md`, `sw-amend.md`, `sw-review.md`, `sw-stabilize.md` — entry hooks
-- `scripts/wave.sh` (`memory preflight`) / shared recorder, `scripts/memory-redact.sh` — record + degrade-open breadcrumb + redaction
+- `scripts/wave.sh` (`memory preflight`) / shared recorder, `scripts/memory-redact.py` — record + degrade-open breadcrumb + redaction
 - `core/hooks/before_task_dispatch.py` — `preToolUse` deny reuse (PRD 017 R23)
 - `.sw/layout.md`, memory guide — documentation
 

@@ -45,7 +45,7 @@ It derives from the frozen brainstorm `docs/brainstorms/2026-06-26-generic-repo-
   with verify detection only; it does not amend PRD 002's `doc.afterTasks`/review defaults or its other steps.
 - **PRD 016 (PR test-plan CI)** owns `prTestPlanManifest` and the CI generator. PRD 018 does **not** amend
   PRD 016; R10/TR6 only neutralize the *shipped example* and relocate the manifest reference to a
-  Shipwright-CI-only `ci.*` key, updating PRD 016's `check-gate.sh`/generator/fixtures in the same phase to
+  Shipwright-CI-only `ci.*` key, updating PRD 016's `check-gate.py`/generator/fixtures in the same phase to
   preserve its single-source invariant.
 
 ## Goals
@@ -113,7 +113,7 @@ R1–R18 carry forward from the frozen brainstorm (stable; no renumber). R19–R
   `<type>/<slug>` / worktree branch, MUST be refused or require explicit `--base`, with an **actionable error**
   naming the detected condition, the current branch, and the exact recovery command.
 - **R8** The hardcoded-`main` leaks MUST be wired to the resolved base under the R19 fail-closed contract:
-  `scripts/check-frozen.sh`, `scripts/secret-scan.sh`/`secret_scan.py`, and `scripts/wave_lifecycle.py`
+  `scripts/check-frozen.py`, `scripts/secret-scan.py`/`secret_scan.py`, and `scripts/wave_lifecycle.py`
   (primary-checkout relocation) MUST use the resolved base, never an unconditional `origin/main` or `"main"`
   fallback that weakens enforcement.
 - **R9** Operator-facing "→ main" prose in commands/skills/scripts MUST be generalized to the resolved base.
@@ -123,7 +123,7 @@ R1–R18 carry forward from the frozen brainstorm (stable; no renumber). R19–R
 - **R10** The shipped **example** config MUST NOT reference this plugin's dev harness: `verify.test` MUST be a
   neutral require-configuration sentinel, and the PR-test-plan manifest reference MUST move out of the generic
   `verify` block into a Shipwright-CI-only `ci.*` key (coordinated with PRD 016).
-- **R11** Dev-only scripts (`copy-to-core.sh`, `snapshot-tree.sh`, `model-routing-check.sh`) MUST NOT ship in
+- **R11** Dev-only scripts (`copy-to-core.sh`, `snapshot-tree.py`, `model-routing-check.py`) MUST NOT ship in
   `dist/`; no shipped command/skill may reference an excluded script (reference audit required).
 - **R12** Shipped commands/skills MUST NOT depend on files absent from a user install: the closed set of
   referenced `sw-reference` files (R20/TR8) MUST be emitted plugin-relative, or commands MUST tolerate absence
@@ -189,30 +189,30 @@ R1–R18 carry forward from the frozen brainstorm (stable; no renumber). R19–R
 
 ## Technical Requirements
 
-- **TR1 — Detection + fixed preset table.** `scripts/detect-project-type.sh` (root-only) emits matched types +
+- **TR1 — Detection + fixed preset table.** `scripts/detect-project-type.py` (root-only) emits matched types +
   confidence; proposals come from `core/sw-reference/verify-presets.json` (v1 presets: Node, Python, Go,
   Ansible, Make; conservative empty defaults for Ruby/JVM). Node allowlisted-key mapping only; no value
   embedding; metacharacter/destructive rejection (R1, R20).
 - **TR2 — Setup verify flow.** Extend `core/commands/sw-setup.md` with the R23 interaction (table → per-key
   edit → diff → confirm/write), the `--accept-defaults` path writing `verifyGaps[]` and no derived verify
   (R2, R4), and the R24 portability self-check + R25 `gh`/Actions warning.
-- **TR3 — Unconfigured-verify signal + blocking semantics.** Teach `scripts/verify-evidence.sh` /
+- **TR3 — Unconfigured-verify signal + blocking semantics.** Teach `scripts/verify-evidence.py` /
   verification-gate to apply the R3 placeholder taxonomy and emit a `verify-unconfigured` finding consumed by
   gate, doctor, `/sw-status`, `/sw-ready`; add a `verify.allowUnconfigured` boolean to the config schema and
   enforce the DL-13 hard-block under `/sw-deliver`/autonomous unless opted in (R3).
-- **TR4 — Base resolver + persistence.** `scripts/resolve-base-branch.sh` implements R5 precedence (with the
+- **TR4 — Base resolver + persistence.** `scripts/resolve-base-branch.py` implements R5 precedence (with the
   user-set predicate), R7 entry guard, and R21 capture/persistence (name + SHA to repo-level deliver state,
   propagated to worktree `parentBranch` on provision). Callers consume the persisted base:
-  `wave_spec_seed.py`, `wave_lifecycle.py`, `wave_terminal.py`, `wave_deliver.py`, `worktree.sh`. Audit (and
-  either wire or explicitly defer) the residual readers: `stabilize-merge-sync.sh`, `sw-assert-worktree.sh`,
-  `reconcile-status.sh`, `wave_preflight.py`. Distinguish trunk vs integration base (R6, R26).
-- **TR5 — Fail-closed leak wiring.** Route `check-frozen.sh`, `secret-scan.sh`/`secret_scan.py`
-  (pre-push diff), and `wave_lifecycle.py` through `resolve-base-branch.sh` under the R19 contract (OID
+  `wave_spec_seed.py`, `wave_lifecycle.py`, `wave_terminal.py`, `wave_deliver.py`, `worktree.py`. Audit (and
+  either wire or explicitly defer) the residual readers: `stabilize-merge-sync.py`, `sw-assert-worktree.py`,
+  `reconcile-status.py`, `wave_preflight.py`. Distinguish trunk vs integration base (R6, R26).
+- **TR5 — Fail-closed leak wiring.** Route `check-frozen.py`, `secret-scan.py`/`secret_scan.py`
+  (pre-push diff), and `wave_lifecycle.py` through `resolve-base-branch.py` under the R19 contract (OID
   validation, ancestor check, empty-diff/missing-base → block, CI fallback chain, `--base` trusted-only,
   push-range default for secret scan) (R8, R19).
 - **TR6 — Example neutralization + manifest relocation (PRD 016-coordinated).** Rewrite shipped example
   config (`verify.test` neutral sentinel); move the manifest reference to `ci.prTestPlanManifest`; update the
-  schema, `check-gate.sh`, the CI generator, and PRD 016 fixtures + dogfood config in the **same phase** so
+  schema, `check-gate.py`, the CI generator, and PRD 016 fixtures + dogfood config in the **same phase** so
   016's single-source invariant holds (R10).
 - **TR7 — Emitter exclusion + parity.** Extend `sw/emitter_base.py` exclusions for the three dev scripts;
   regenerate `dist/` and the golden/snapshot manifest in the same change; add the reference-audit fixture
@@ -240,7 +240,7 @@ R1–R18 carry forward from the frozen brainstorm (stable; no renumber). R19–R
   from a fixed preset table, Node maps only allowlisted *key names* (never script values), metacharacters and
   destructive patterns are rejected, and `--accept-defaults` never auto-writes derived verify. Trust model:
   `verify.*` is operator-trusted only after explicit confirmation; detection is read-only until confirm.
-- **Marker is advisory, never a security gate (R13).** Secret-scan, frozen guard, and the `git-push.sh` push
+- **Marker is advisory, never a security gate (R13).** Secret-scan, frozen guard, and the `git-push.py` push
   chokepoint MUST ignore the dev-repo marker. A user repo that accidentally contains the marker MUST NOT have
   any guardrail weakened.
 - **No new secret surface.** Detection reads existing manifest filenames/contents read-only; presets, marker,

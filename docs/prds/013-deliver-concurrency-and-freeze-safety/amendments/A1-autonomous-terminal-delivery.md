@@ -38,7 +38,7 @@ The terminal sequence the operator wants is:
 all phases green-merged on <type>/<slug>
   → retrospective chain (retro → compound/learnings → memory-sync → status), artifacts committed on <type>/<slug>
   → open/update <type>/<slug> → main PR (existing phase-pr path)
-  → push head → check-gate.sh watch loop (bounded)
+  → push head → check-gate.py watch loop (bounded)
   → on red/blocked: /sw-stabilize within deliver.remediation.maxAttempts
   → halt at the human merge gate (never auto-merge)
   → (post-merge detection) optional zero-interaction /sw-cleanup of the deterministic wouldRemove set
@@ -92,7 +92,7 @@ superseded or retracted — this amendment is purely additive (declared directiv
   promotions MUST remain human-gated — autonomy never bypasses those gates.
 - **R22** After the retrospective chain, the deliver-loop `terminal-ship` step MUST autonomously: (a) create or
   update the `<type>/<slug>` → `main` PR via the existing `phase-pr` path; (b) push the head; (c) run a bounded
-  `check-gate.sh` / `/sw-watch-ci` loop; (d) on `red`/`blocked`, run `/sw-stabilize` within the
+  `check-gate.py` / `/sw-watch-ci` loop; (d) on `red`/`blocked`, run `/sw-stabilize` within the
   `deliver.remediation.maxAttempts` budget — all without user intervention. The conductor's in-turn
   self-continuation (PRD 009 R6/R13) owns this watch/stabilize cycle until `green` or a legitimate halt.
 - **R23** The terminal path MUST NOT auto-merge to `main`, force-push `main`, or dismiss/override failing
@@ -124,7 +124,7 @@ superseded or retracted — this amendment is purely additive (declared directiv
   retrospective chain and commits its artifacts onto `<type>/<slug>` via the PRD 013 R5 idempotent seed helper
   (docs-only, never `main`) before any PR action (R20, R21).
 - **TR-A2 — Autonomous PR/watch/stabilize.** In `deliver.terminal.autonomy: auto`, terminal-ship calls the
-  existing `phase-pr` PR path, pushes head, then drives a bounded `check-gate.sh` loop with `/sw-stabilize`
+  existing `phase-pr` PR path, pushes head, then drives a bounded `check-gate.py` loop with `/sw-stabilize`
   remediation up to `deliver.remediation.maxAttempts`; legitimate-halt taxonomy is reused from PRD 007/009 (no
   new merge authority) (R22, R23).
 - **TR-A3 — Config + schema knobs.** Add `deliver.terminal.autonomy` and `cleanup.autonomy` to

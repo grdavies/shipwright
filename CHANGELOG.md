@@ -166,6 +166,12 @@
 * merge phase sw-doc-adoption-consistency-only-default-m into feat/orchestrator-plan-policy-adoption (3b20260) <!-- sw-deliver:sw-doc-adoption-consistency-only-default-m -->
 * merge phase sw-feedback-adoption-untrusted-signal-chokepoint-episodic-m into feat/orchestrator-plan-policy-adoption (7d6ae52) <!-- sw-deliver:sw-feedback-adoption-untrusted-signal-chokepoint-episodic-m -->
 * merge phase docs-emitter-propagation-freshness-m into feat/orchestrator-plan-policy-adoption (63a9bff) <!-- sw-deliver:docs-emitter-propagation-freshness-m -->
+* merge phase foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l into feat/cross-platform-python-standardization (c5cac21) <!-- sw-deliver:foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l -->
+* merge phase host-layer-gh-curl-elimination-l into feat/cross-platform-python-standardization (1cd2b23) <!-- sw-deliver:host-layer-gh-curl-elimination-l -->
+* merge phase host-layer-gh-curl-elimination-l into feat/cross-platform-python-standardization (adc7d1b) <!-- sw-deliver:host-layer-gh-curl-elimination-l -->
+* merge phase hooks-security-filters-providers-l into feat/cross-platform-python-standardization (86f9471) <!-- sw-deliver:hooks-security-filters-providers-l -->
+* merge phase remaining-production-port-consolidations-l into feat/cross-platform-python-standardization (58a4edf) <!-- sw-deliver:remaining-production-port-consolidations-l -->
+* merge phase test-harness-build-chain-docs-migration-enforcement-flip-xl into feat/cross-platform-python-standardization (af526c2) <!-- sw-deliver:test-harness-build-chain-docs-migration-enforcement-flip-xl -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

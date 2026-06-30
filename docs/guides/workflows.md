@@ -296,7 +296,7 @@ feat-test-plan-mechanical-sourcing-fixtures, feat-test-plan-deliver-invariant-fi
 **Pervasive delegation (PRD 017):** all five orchestrators (`/sw-doc`, `/sw-ship`, `/sw-deliver`,
 `/sw-debug`, `/sw-feedback`) default to **delegate-by-default** for substantive steps. Only closed
 inline allowlists (bookkeeping, driver invocations, human gates) run in-turn. Every delegated `Task`
-must carry an explicit resolved `model:` and caveman intensity — enforced by `dispatch-check.sh` and
+must carry an explicit resolved `model:` and caveman intensity — enforced by `dispatch-check.py` and
 mechanical `dispatch preflight` + `preToolUse` deny. Tune gate aggressiveness with `delegation.mode`
 (`bind-only` | `heuristic` | `default`). Intensity maps live in `communication.routing` (command → skill
 → agent → default). See `rules/sw-subagent-dispatch.mdc` and `core/sw-reference/models-tiering.md`.
@@ -310,7 +310,7 @@ See `configuration.md` for `deliver.autonomy` defaults and `skills/conductor/SKI
 contract.
 
 **Merge queue:** phases with no per-phase PR use a local-evidence merge path; phases with a PR use
-`check-gate.sh`. `status.json` binds to the phase head SHA — stale status cannot authorize a merge.
+`check-gate.py`. `status.json` binds to the phase head SHA — stale status cannot authorize a merge.
 The orchestrator worktree owns a non-detached `<type>/<slug>` checkout; phase merges advance that ref
 (no manual fast-forward on the primary checkout).
 
@@ -340,8 +340,8 @@ may gain `prd:` forward links. `/sw-freeze` verifies resolvable linkage before f
 **Branch policy:** workflow-created branches use conforming type prefixes (`feat/`, `fix/`, …) from
 `release-please-config.json` — never `pf/`.
 
-**Secret safety:** `scripts/secret-scan.sh` runs at every workflow push chokepoint (`git-push.sh`);
-range-scoped redaction is required (`scripts/redaction-guard.sh` refuses bare-branch history rewrite).
+**Secret safety:** `scripts/secret-scan.py` runs at every workflow push chokepoint (`git-push.py`);
+range-scoped redaction is required (`scripts/redaction-guard.py` refuses bare-branch history rewrite).
 
 ### `/sw-ship` — single-phase loop (manual / Quick tier)
 
@@ -500,9 +500,9 @@ Source: review comment
 
 ### Backlog pull-in (R1–R3)
 
-At PRD creation (`/sw-prd`) and task generation (`/sw-tasks`), `scripts/planning-related.sh` scans the graph
+At PRD creation (`/sw-prd`) and task generation (`/sw-tasks`), `scripts/planning-related.py` scans the graph
 and emits a **confirm-list** — never auto-absorbs. Stale/already-resolved candidates are flagged; human confirms
-via `planning-related.sh confirm`. Private units contribute metadata only (PRD 034 visibility resolver).
+via `planning-related.py confirm`. Private units contribute metadata only (PRD 034 visibility resolver).
 
 ### Autonomy posture (R6–R9)
 
@@ -518,7 +518,7 @@ Config: `planning.autonomy` + `planning.fullConductor.*` — see [configuration]
 | Track | Allowlist | Route |
 | --- | --- | --- |
 | Mechanical | INDEX `derived` only, SUPERSEDED manifest, gap index | Batched `docs-merge.sh` with CI auto-merge |
-| Substantive | Any `docs/planning/<unit-id>/` path | Auto-driven docs worktree + PR via `docs-edit-route.sh` |
+| Substantive | Any `docs/planning/<unit-id>/` path | Auto-driven docs worktree + PR via `docs-edit-route.py` |
 
 `inFlight` is never mechanical. Branch protection probe fails closed to PR path.
 
@@ -529,14 +529,14 @@ When a change touches repo-root `scripts/` or other harness/emittable paths, pro
 build chain before opening a PR:
 
 ```bash
-bash scripts/build-chain-sync.sh
+python3 scripts/build-chain-sync.py
 ```
 
 This runs, in order:
 
 1. `scripts/copy-to-core.sh` — mirror harness + content into `core/` (orphan fail-closed on `core/sw-reference/`)
 2. `python3 -m sw generate --all` — refresh `dist/cursor/` and `dist/claude-code/`
-3. `scripts/snapshot-tree.sh` — update `cursor-golden.manifest` when `dist/` changed
+3. `scripts/snapshot-tree.py` — update `cursor-golden.manifest` when `dist/` changed
 
 The SoT map lives in `.sw/layout.md` and `core/sw-reference/build-chain-sot.json`. CI enforces
 `scripts/`↔`core/scripts/` parity (`run-core-scripts-parity-fixtures.sh`) and dist↔golden parity.
@@ -550,7 +550,7 @@ Before substantive work, every **work-performing** command runs a scoped `memory
 1. **Search** — scoped file-path + semantic queries across classes `rule`, `decision`, `learning`,
    `code-context`, `design` via `providers/<memory.provider>.md` (see `skills/memory/SKILL.md`).
 2. **Surface + reconcile** — applicable rules and contradicting decisions are reconciled before mutation.
-3. **Record** — `bash scripts/wave.sh memory prework record --surface <cmd> …` writes a redacted breadcrumb
+3. **Record** — `python3 scripts/wave.sh memory prework record --surface <cmd> …` writes a redacted breadcrumb
    to `.cursor/hooks/state/memory-prework-search.json` and `run.log`.
 4. **Enforce** — the `preToolUse` hook denies the first file mutation without a fresh record; `memory:offline`
    (probe-gated provider outage) satisfies the gate.

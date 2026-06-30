@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import subprocess
+
+from _sw import interpreter
 import sys
 from pathlib import Path
 from typing import Any
@@ -16,8 +18,9 @@ from host_lib import resolve_provider
 
 
 def run_check_gate(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
-    script = SCRIPT_DIR / "check-gate.sh"
-    cmd = ["bash", str(script)]
+    script = SCRIPT_DIR / "check-gate.py"
+    probe = interpreter.probe()
+    cmd = [*probe.executable, str(script)]
     if pr:
         cmd.append(pr)
     proc = subprocess.run(cmd, cwd=str(root), text=True, capture_output=True)

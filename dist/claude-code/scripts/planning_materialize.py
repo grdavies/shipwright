@@ -166,7 +166,7 @@ def discover_private_spec_units(root: Path, task_list_rel: str) -> list[dict[str
 
 def secret_scan_file(path: Path) -> None:
     proc = subprocess.run(
-        [str(SCRIPT_DIR / "secret-scan.sh"), "file", str(path)],
+        [str(SCRIPT_DIR / "secret-scan.py"), "file", str(path)],
         capture_output=True,
         text=True,
     )

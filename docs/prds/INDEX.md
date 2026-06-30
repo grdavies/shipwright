@@ -1,4 +1,4 @@
-# PRD index
+# Planning units INDEX
 
 | # | Slug | PRD | Tasks | Status |
 |---|------|-----|-------|--------|
@@ -45,31 +45,19 @@
 | 041 | self-improving-loop | [041-prd-self-improving-loop.md](041-self-improving-loop/041-prd-self-improving-loop.md) (frozen) | [tasks](041-self-improving-loop/tasks-041-self-improving-loop.md) (frozen) | not-started |
 | 042 | cross-platform-python-standardization | [042-prd-cross-platform-python-standardization.md](042-cross-platform-python-standardization/042-prd-cross-platform-python-standardization.md) (frozen) | [tasks](042-cross-platform-python-standardization/tasks-042-cross-platform-python-standardization.md) (frozen) | in-progress |
 | 043 | issue-backed-planning-store | [043-prd-issue-backed-planning-store.md](043-issue-backed-planning-store/043-prd-issue-backed-planning-store.md) (frozen) | [tasks](043-issue-backed-planning-store/tasks-043-issue-backed-planning-store.md) (frozen) | not-started |
-| 044 | issue-store-migration | [044-prd-issue-store-migration.md](044-issue-store-migration/044-prd-issue-store-migration.md) (frozen) | [tasks](044-issue-store-migration/tasks-044-issue-store-migration.md) (frozen) | not-started |
+| 044 | issue-store-migration | [044-prd-issue-store-migration.md](044-issue-store-migration/044-prd-issue-store-migration.md) (frozen) | [tasks](044-issue-store-migration/tasks-044-issue-store-migration.md) (frozen) | complete |
 | 045 | issue-native-dev-tracking | [045-prd-issue-native-dev-tracking.md](045-issue-native-dev-tracking/045-prd-issue-native-dev-tracking.md) (frozen) | [tasks](045-issue-native-dev-tracking/tasks-045-issue-native-dev-tracking.md) (frozen) | not-started |
 | 046 | issue-store-planning-graph | [046-prd-issue-store-planning-graph.md](046-issue-store-planning-graph/046-prd-issue-store-planning-graph.md) (frozen) | [tasks](046-issue-store-planning-graph/tasks-046-issue-store-planning-graph.md) (frozen) | not-started |
 | 047 | jira-issue-store-adapter | [047-prd-jira-issue-store-adapter.md](047-jira-issue-store-adapter/047-prd-jira-issue-store-adapter.md) (frozen) | [tasks](047-jira-issue-store-adapter/tasks-047-jira-issue-store-adapter.md) (frozen) | not-started |
 
-## Supersession notes (025, 028–030)
 
-PRD 031 explicitly cancels/supersedes the point-fix PRDs **025, 028, 029, and 030**, folding their problems
-into the unified Planning & Feedback Lifecycle program (031 → 032 → 033 → 034 → 035). Frozen bodies are
-retained for traceability; do not implement these as standalone deliverables.
+<!-- planning-index:structural begin -->
+| id | type | title | status | visibility | edges |
+| --- | --- | --- | --- | --- | --- |
+<!-- planning-index:structural end -->
+<!-- planning-index:derived begin -->
 
-| PRD | Absorbed by | What moved |
-|-----|-------------|------------|
-| 025 | 031 (cancelled) | Per-phase learning + adaptive plan insertion deferred; deliver-side runtime tracked separately (see PRD 035 non-goals) |
-| 028 | 031 + 033 | GAP-BACKLOG `open → planned → resolved` lifecycle + `absorbs:` frontmatter (033 R10–R11) |
-| 029 | 031 | Shared doc-format tokenizer (031 Phase A/B; GAP-045) |
-| 030 | 032 | In-flight authoring guard + committed `inFlight` tuple (032 subsumes cancelled 030) |
+<!-- planning-index:derived end -->
+<!-- planning-index:inFlight begin -->
 
-## Recommended implementation order (remaining valid PRDs)
-
-Queue below is for PRDs still marked `not-started` with active scope. **024** is a separate
-guidelined-autonomous-orchestration track (021 → 022 → 023 → 024), not part of the planning program tail.
-
-| Order | PRD | Rationale |
-|------:|-----|-----------|
-| 1 | **024** orchestrator-plan-policy-adoption | Fan-out to `/sw-debug`, `/sw-doc`, `/sw-feedback`; **gated** on PRD 023 R31 positive + sufficient N (TR0); A2 parallel-preflight binding is prerequisite for `/sw-doc` adoption |
-
-**035** (planning-program capstone) is **complete**. **024** is the next active deliverable among remaining `not-started` PRDs with scoped work.
+<!-- planning-index:inFlight end -->

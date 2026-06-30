@@ -111,9 +111,9 @@ R-IDs carried forward from the frozen-namespace brainstorm.
   kernel** and an **agent-decidable plan policy**; every orchestration concern is classified into exactly
   one layer.
 - **R2** The safety kernel is enumerated and non-skippable. It includes, at minimum: durable state
-  transitions and **scoped run identity**; gate evaluation (`check-gate.sh`, `verification-gate`); the
+  transitions and **scoped run identity**; gate evaluation (`check-gate.py`, `verification-gate`); the
   serialized merge queue (journal + `O_EXCL` lock) and the **merge gate-check barrier**; branch/merge targets
-  (**no `main` auto-merge**, human terminal-merge gate); the **push / secret-scan chokepoint** (`git-push.sh`);
+  (**no `main` auto-merge**, human terminal-merge gate); the **push / secret-scan chokepoint** (`git-push.py`);
   the **redaction chokepoint** and the **range-scoped redaction guard** (no bare-branch filter-branch on
   shared `main`); the **`memory-preflight` routing chokepoint** (no direct provider calls); the
   **`beforeSubmitPrompt` guardrails hook** (non-selectable, non-reorderable — consistent with PRD-021 TR5
@@ -204,7 +204,7 @@ R-IDs carried forward from the frozen-namespace brainstorm.
   dispatch together), but the validation gate (R6) enforces the deterministic contention edges and
   `worktree.parallelCeiling`: enumerated contended phases (shared-migration paths, `INDEX`/doc-numbering,
   `CHANGELOG`/`version.txt`, **security-critical shared paths** — config schema, `hooks.json`,
-  `scripts/wave_*`, `git-push.sh`, secret-scan) are never co-scheduled, **and undeclared file overlaps are
+  `scripts/wave_*`, `git-push.py`, secret-scan) are never co-scheduled, **and undeclared file overlaps are
   auto-serialized** by intersecting the phases' declared `**File:**` paths at validation time (PRD-013 R14
   precedent) so a new shared mutable path cannot evade the ban. Any over-ceiling proposal fails closed to
   `wave.sh schedule`; any **contention/dependency violation** fails closed to **canonical waves** (re-derived

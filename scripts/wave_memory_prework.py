@@ -80,14 +80,14 @@ def probe_provider_reachable(root: Path, provider: str, config: dict[str, Any]) 
 
 def redact_payload(raw: str) -> str:
     proc = subprocess.run(
-        [str(SCRIPT_DIR / "memory-redact.sh")],
+        [str(SCRIPT_DIR / "memory-redact.py")],
         input=raw,
         text=True,
         capture_output=True,
         check=False,
     )
     if proc.returncode != 0:
-        fail(proc.stderr.strip() or "memory-redact.sh failed", exit_code=20)
+        fail(proc.stderr.strip() or "memory-redact.py failed", exit_code=20)
     return proc.stdout
 
 

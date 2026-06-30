@@ -133,7 +133,17 @@ class ClaudeCodeEmitter(EmitterBase):
     def _copy_runtime_support(self, core_root: Path, repo_root: Path, dest: Path) -> None:
         hooks_src = core_root / "hooks"
         if hooks_src.is_dir():
-            shutil.copytree(hooks_src, dest / "core" / "hooks")
+            dest_hooks = dest / "core" / "hooks"
+            dest_hooks.mkdir(parents=True, exist_ok=True)
+            for item in hooks_src.iterdir():
+                if item.suffix == ".sh" and (item.with_suffix(".py")).is_file():
+                    continue
+                if item.name in ("pre-commit", "pre-push", "commit-msg") and not item.suffix:
+                    continue
+                if item.is_dir():
+                    shutil.copytree(item, dest_hooks / item.name)
+                elif item.is_file():
+                    shutil.copy2(item, dest_hooks / item.name)
         adapter_src = repo_root / "platforms" / "claude-code" / "hook_adapter.py"
         if adapter_src.is_file():
             plat_dir = dest / "platforms" / "claude-code"

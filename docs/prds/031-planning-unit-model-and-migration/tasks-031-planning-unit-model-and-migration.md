@@ -31,8 +31,8 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     `absorbs`/`supersedes`/`retracts`; exposes a single tokenize/emit API. Fixture: `doc-format-grammar-tokenizes`.
   - **R-IDs:** R11
 - [x] 1.2 Normalize wrapper + enumerated call-site map (R22)
-  - **File:** `scripts/doc-format-normalize.sh`, `docs/prds/031-planning-unit-model-and-migration/call-site-map.md`
-  - **Expected:** `doc-format-normalize.sh` wraps `doc_format.py`; an explicit call-site map (per the PRD
+  - **File:** `scripts/doc-format-normalize.py`, `docs/prds/031-planning-unit-model-and-migration/call-site-map.md`
+  - **Expected:** `doc-format-normalize.py` wraps `doc_format.py`; an explicit call-site map (per the PRD
     021/022 pattern) enumerates every runtime reader/writer (`spec-union`, `spec-rigor-check`,
     `traceability-check`, `wave_deliver` incl. phase/`**File:**` parsing); cutover is gated on map exhaustion.
     Fixture: `call-site-map-exhaustion`.
@@ -46,7 +46,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
 ### 2. Tokenizer Phase A adoption on legacy `docs/prds` paths — L
 
 - [x] 2.1 `--check` / `--write` modes + pre-freeze structural check (R13)
-  - **File:** `scripts/doc_format.py`, `scripts/doc-format-normalize.sh`
+  - **File:** `scripts/doc_format.py`, `scripts/doc-format-normalize.py`
   - **Expected:** `--check` fails closed with `file:line` expected/found diagnostics (never a silent drop);
     `--write` performs structural canonicalization only (shape, never content) and is idempotent; a pre-freeze
     structural check runs before union and traceability; authoring commands pipe output through `--write`
@@ -54,7 +54,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     `write-idempotent-shape-only`.
   - **R-IDs:** R13
 - [x] 2.2 Four-consumer adoption + machine-checked exception manifest (R12)
-  - **File:** `scripts/spec-union.sh`, `scripts/spec-rigor-check.sh`, `scripts/traceability-check.sh`, `scripts/wave_deliver.py`
+  - **File:** `scripts/spec-union.py`, `scripts/spec-rigor-check.py`, `scripts/traceability-check.py`, `scripts/wave_deliver.py`
   - **Expected:** all four parse exclusively through the shared tokenizer with no independent structural regex
     retained; per-consumer baseline snapshots captured *before* adoption; divergence classes recorded in a
     machine-checked exception manifest keyed per file + per consumer + per divergence-class; the gate fails
@@ -114,7 +114,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     Fixtures: `status-type-conditioned`, `cross-enum-token-rejected`.
   - **R-IDs:** R4
 - [ ] 3.5 Validator entrypoint fails closed (R19)
-  - **File:** `scripts/planning-unit-validate.sh`
+  - **File:** `scripts/planning-unit-validate.py`
   - **Expected:** the validator fails closed on unknown keys, cross-enum/unknown status tokens (per the R4 stub
     enum), and — at migration/bootstrap time — on a `visibility: private` unit whose body path is git-tracked;
     ongoing visibility validation is deferred to PRD 034. Fixtures: `validate-unknown-key`,
@@ -124,7 +124,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
 ### 4. Config-driven path-resolution helper — M
 
 - [ ] 4.1 `planning_paths` helper + realpath containment (R23)
-  - **File:** `scripts/planning_paths.py`, `scripts/planning_paths.sh`
+  - **File:** `scripts/planning_paths.py`, `scripts/planning_paths.py`
   - **Expected:** the helper plus the `planningDir` config key route all planning-path reads/writes; resolves
     with canonical realpath, requires the resolved path to stay under the worktree root, and rejects `..`
     traversal and symlinks that escape the worktree (contained absolute paths allowed); a fixture proves no
@@ -157,7 +157,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     `region-preserve-byte-for-byte`, `status-precedence-resolves`.
   - **R-IDs:** R9
 - [ ] 5.3 Generator wired to single-writer lock + region-integrity hook (R24)
-  - **File:** `scripts/planning_index_gen.py`, `scripts/wave_living_docs.py`, `core/hooks/pre-commit`, `scripts/index-region-guard.sh`
+  - **File:** `scripts/planning_index_gen.py`, `scripts/wave_living_docs.py`, `core/hooks/pre-commit`, `scripts/index-region-guard.py`
   - **Expected:** the generator is wired into the living-doc single-writer lock and implements the R9
     read-merge-write contract; a region-integrity hook (pre-commit + CI) rejects commits that modify the
     `derived` region outside the reconciler or the `inFlight` region outside the deliver writer, and rejects an
@@ -222,7 +222,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     Fixture: `cancelled-prd-supersession-edges`.
   - **R-IDs:** R10
 - [x] 7.2 Interim privacy guard — no exposure before PRD 034 (R18)
-  - **File:** `scripts/planning-privacy-guard.sh`, `.gitignore`
+  - **File:** `scripts/planning-privacy-guard.py`, `.gitignore`
   - **Expected:** the migration backfills `visibility: private` (interim `legacy-pre-034` profile token) for every
     unit whose pre-migration source path was gitignored (brainstorms, decision bodies); the R7 `.gitignore`
     relocation preserves the ignored status of those body paths until 034; a pre-commit/cutover gate fails closed
@@ -244,7 +244,7 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     `legacy-projection-gapbacklog-index`, `no-half-migrated-merge`.
   - **R-IDs:** R27
 - [x] 7.5 Kill-criteria / falsification plan + relief acceptance check (R28)
-  - **File:** `scripts/relief-acceptance-check.sh`, `core/sw-reference/layout.md`
+  - **File:** `scripts/relief-acceptance-check.py`, `core/sw-reference/layout.md`
   - **Expected:** the cutover documents a fallback — if 032/033 slip past a defined threshold or the 033
     reconciler misses an accuracy floor on the fixture corpus, the program falls back to the shim + legacy layout
     and the R10 supersession edges are reversible; the cutover is gated on a relief acceptance check (post-reconcile
@@ -277,15 +277,15 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
     visibility-driven `.gitignore` generator). Fixture: `doc-currency-layout-config-skills-readme-guide`.
   - **R-IDs:** R26
 - [ ] 8.3 No documentation gate regresses on the migrated corpus (R17)
-  - **File:** `scripts/spec-rigor-check.sh`, `scripts/traceability-check.sh`, `core/sw-reference/pr-test-plan.manifest.json`
+  - **File:** `scripts/spec-rigor-check.py`, `scripts/traceability-check.py`, `core/sw-reference/pr-test-plan.manifest.json`
   - **Expected:** frozen immutability, traceability, and spec-rigor are preserved (re-expressed over the
     tokenizer) with no regression on the migrated corpus; the merge-to-`main` gate is unchanged; the foundational
     frozen workflow invariants (worktree isolation, freeze-at-handoff with no unfreeze, amendment-only changes,
     doc/implementation separation) are retained. Fixture: `no-regression-migrated-corpus`.
   - **R-IDs:** R17
 - [ ] 8.4 Memory guardrails + redaction chokepoint unchanged (R30)
-  - **File:** `scripts/memory-redact.sh`, `core/sw-reference/pr-test-plan.manifest.json`
-  - **Expected:** the redaction chokepoint (`memory-redact.sh`) and memory guardrails are unchanged; this PRD
+  - **File:** `scripts/memory-redact.py`, `core/sw-reference/pr-test-plan.manifest.json`
+  - **Expected:** the redaction chokepoint (`memory-redact.py`) and memory guardrails are unchanged; this PRD
     introduces no memory writes and no new credential surfaces. Fixture: `no-memory-writes-redaction-unchanged`.
   - **R-IDs:** R30
 
@@ -342,16 +342,16 @@ Every phase ships behind passing fixtures registered in `core/sw-reference/pr-te
 
 ## Notes
 
-- Existing surfaces refactored (not exhaustive): `scripts/spec-union.sh`, `scripts/spec-rigor-check.sh`,
-  `scripts/traceability-check.sh`, `scripts/wave_deliver.py`, `scripts/wave_deliver_loop.py`,
-  `scripts/wave_spec_seed.py`, `scripts/wave_living_docs.py`, `scripts/reconcile-status.sh`,
-  `scripts/feedback-backlog.sh`, `scripts/copy-to-core.sh`.
+- Existing surfaces refactored (not exhaustive): `scripts/spec-union.py`, `scripts/spec-rigor-check.py`,
+  `scripts/traceability-check.py`, `scripts/wave_deliver.py`, `scripts/wave_deliver_loop.py`,
+  `scripts/wave_spec_seed.py`, `scripts/wave_living_docs.py`, `scripts/reconcile-status.py`,
+  `scripts/feedback-backlog.py`, `scripts/copy-to-core.sh`.
 - New substrate scripts/schemas live in `core/` and propagate via `copy-to-core` to both dist trees (R25):
-  `scripts/doc_format.py`, `scripts/doc-format-normalize.sh`, `scripts/planning_status_enum.py`,
-  `scripts/planning-unit-validate.sh`, `scripts/planning_paths.{py,sh}`, `scripts/planning_index_gen.py`,
-  `scripts/index-region-guard.sh`, `scripts/planning_migrate.py`, `scripts/planning_path_redirect.py`,
-  `scripts/planning_legacy_projection.py`, `scripts/relief-acceptance-check.sh`,
-  `scripts/planning-privacy-guard.sh`, and `core/sw-reference/planning-unit.schema.json`.
+  `scripts/doc_format.py`, `scripts/doc-format-normalize.py`, `scripts/planning_status_enum.py`,
+  `scripts/planning-unit-validate.py`, `scripts/planning_paths.{py,sh}`, `scripts/planning_index_gen.py`,
+  `scripts/index-region-guard.py`, `scripts/planning_migrate.py`, `scripts/planning_path_redirect.py`,
+  `scripts/planning_legacy_projection.py`, `scripts/relief-acceptance-check.py`,
+  `scripts/planning-privacy-guard.py`, and `core/sw-reference/planning-unit.schema.json`.
 - All new fixtures register in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.test`.
 - Atomic release train (R27): 031 + 032 (guards) + 033 (reconciler) ship same-day; PRDs 034/035 `depends:` on
   this train. Phase Dependencies above are intra-PRD only.

@@ -23,7 +23,7 @@ New guard artifacts land in `core/` and propagate to both dist trees per R16; al
 ### 1. Committed in-flight signal writer — L
 
 - [ ] 1.1 In-flight tuple read/write in the committed INDEX `inFlight` region (R1)
-  - **File:** `core/scripts/inflight_signal.py`, `core/scripts/inflight-signal.sh`
+  - **File:** `core/scripts/inflight_signal.py`, `core/scripts/inflight-signal.py`
   - **Expected:** writes/reads the tuple (**run id + implementing branch + lease epoch**) into the PRD-031
     `inFlight` INDEX region via read-merge-write; readable from any clone (committed git state, never gitignored
     local deliver state); the lifecycle `in-progress` status is **absent** from the tuple (derived by PRD 033).
@@ -61,7 +61,7 @@ New guard artifacts land in `core/` and propagate to both dist trees per R16; al
     records an auditable entry and never proceeds silently.
   - **R-IDs:** R17
 - [ ] 1.6 Tuple stores no body content and no secret (R18)
-  - **File:** `core/scripts/inflight_signal.py`, `core/scripts/secret-scan.sh`
+  - **File:** `core/scripts/inflight_signal.py`, `core/scripts/secret-scan.py`
   - **Expected:** the tuple persists only run-id + branch + lease epoch metadata — no body content and no
     secret; private-unit branch redaction defers to the PRD 034 handoff (R13). Fixture
     `inflight-tuple-no-secret`: a tuple write is rejected/scrubbed if it would carry body or secret material.
@@ -70,7 +70,7 @@ New guard artifacts land in `core/` and propagate to both dist trees per R16; al
 ### 2. Self-heal, staleness TTL & escape hatch — M
 
 - [ ] 2.1 Reconcile/self-heal with terminal-run-state-only clearing (R3)
-  - **File:** `core/scripts/inflight-reconcile.sh`, `core/scripts/inflight_reconcile.py`
+  - **File:** `core/scripts/inflight-reconcile.py`, `core/scripts/inflight_reconcile.py`
   - **Expected:** a missing branch or non-live run degrades to a warning and reconcile repairs stale/missing
     markers against actual runs; a tuple is classified **stale and clearable only when the durable run-state for
     its run-id is terminal/absent AND the branch is missing** — branch-absence alone (mid-rebase, slow CI) never
@@ -78,7 +78,7 @@ New guard artifacts land in `core/` and propagate to both dist trees per R16; al
     cleared; a terminal/absent run-id with missing branch reconciles to clearable.
   - **R-IDs:** R3
 - [ ] 2.2 Bounded staleness TTL auto-clear + `clear-inflight` escape hatch (R4)
-  - **File:** `core/scripts/clear-inflight.sh`, `core/sw-reference/config.schema.json`, `core/sw-reference/workflow.config.example.json`
+  - **File:** `core/scripts/clear-inflight.py`, `core/sw-reference/config.schema.json`, `core/sw-reference/workflow.config.example.json`
   - **Expected:** when a tuple's run-id is absent from the registry, its branch is missing, and no porcelain
     deliver state exists beyond the configured TTL, reconcile auto-clears it with an audit log; an operator may
     also run `clear-inflight <unit> --reason` (logged) to clear an ambiguous tuple. Fixtures
@@ -89,7 +89,7 @@ New guard artifacts land in `core/` and propagate to both dist trees per R16; al
 ### 3. Shared authoring-guard preflight & handoff route — M
 
 - [ ] 3.1 Authoring-guard preflight: inline reconcile then fail-closed (R5)
-  - **File:** `core/scripts/authoring_guard.py`, `core/scripts/authoring-guard.sh`
+  - **File:** `core/scripts/authoring_guard.py`, `core/scripts/authoring-guard.py`
   - **Expected:** the preflight **first runs inline stale-marker reconcile** (or reads the live run registry),
     then fails closed (reporting run id + branch) only when the target unit is *provably* in-flight after
     reconcile, so a crashed run with a deleted branch does not deadlock authoring while a live run still blocks.
@@ -104,7 +104,7 @@ New guard artifacts land in `core/` and propagate to both dist trees per R16; al
     through the same module and resolves the signal via the path helper.
   - **R-IDs:** R14
 - [ ] 3.3 `--handoff` route records an artifact surfaced in `/sw-status` (R6)
-  - **File:** `core/scripts/authoring_guard.py`, `core/commands/sw-status.md`, `core/scripts/reconcile-status.sh`
+  - **File:** `core/scripts/authoring_guard.py`, `core/commands/sw-status.md`, `core/scripts/reconcile-status.py`
   - **Expected:** when the operator chooses not to wait on a genuinely in-flight unit, `--handoff` records a
     handoff artifact instead of mutating; the artifact is **surfaced in `/sw-status` and to the PRD 035 pull-in
     scan** so it is reconciled into the graph rather than orphaned. Fixture `handoff-artifact-surfaced-in-status`:
@@ -148,7 +148,7 @@ New guard artifacts land in `core/` and propagate to both dist trees per R16; al
 ### 5. Migration-bridge backfill — S
 
 - [ ] 5.1 Backfill the committed in-flight signal from legacy deliver state (R10)
-  - **File:** `core/scripts/inflight-migration-bridge.sh`, `core/scripts/inflight_migration_bridge.py`
+  - **File:** `core/scripts/inflight-migration-bridge.py`, `core/scripts/inflight_migration_bridge.py`
   - **Expected:** a migration-bridge reconcile, run once **within the cutover**, promotes legacy in-progress
     markers from gitignored deliver state into the committed `inFlight` INDEX region **without desyncing any live
     run** (reads only gitignored deliver state, commits only tuple metadata), closing the 031 D7 deferral.
@@ -221,5 +221,5 @@ New guard artifacts land in `core/` and propagate to both dist trees per R16; al
 - New guard surfaces depend on PRD-031 substrate: the `inFlight` INDEX region + region-integrity hook (031 R9/
   R24), the `planning_paths` helper (031 R23), and the type-conditioned lifecycle status enum (031 R4).
 - Existing surfaces touched (not new): `core/scripts/wave_deliver_loop.py`, `core/skills/deliver/SKILL.md`,
-  `core/hooks/pre-commit`, `core/hooks/pre-commit-frozen.sh`, `core/scripts/reconcile-status.sh`.
+  `core/hooks/pre-commit`, `core/hooks/pre-commit-frozen.sh`, `core/scripts/reconcile-status.py`.
 - All new fixtures register in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.test`.

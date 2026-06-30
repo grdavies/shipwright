@@ -85,7 +85,7 @@ panel-driven additions introduced by this PRD. Requirement text receives only cl
 ### Per-task model + caveman binding
 
 - **R4** Every delegated dispatch MUST resolve the model tier for that task from
-  `models.routing.{commands,skills,agents}` via `scripts/resolve-model-tier.sh` and pass the resolved concrete
+  `models.routing.{commands,skills,agents}` via `scripts/resolve-model-tier.py` and pass the resolved concrete
   model as an explicit `model:` argument on the `Task` call (never `model: inherit` from the parent session,
   per PRD 012 DL-2).
 - **R5** Every delegated dispatch MUST resolve the caveman intensity for that task and inject it into the
@@ -107,8 +107,8 @@ panel-driven additions introduced by this PRD. Requirement text receives only cl
 
 ### Enforcement
 
-- **R9** A generalized, fail-closed dispatch-check (a new `scripts/dispatch-check.sh` with
-  `--command|--skill|--agent`; `scripts/reviewer-dispatch-check.sh` becomes a thin wrapper) MUST validate that
+- **R9** A generalized, fail-closed dispatch-check (a new `scripts/dispatch-check.py` with
+  `--command|--skill|--agent`; `scripts/reviewer-dispatch-check.py` becomes a thin wrapper) MUST validate that
   a delegated dispatch has a resolved model and a resolved intensity, applying the builder-floor rule **only**
   to reviewer/persona agents (not to cheap-tier mechanical or `generalPurpose` dispatch). It MUST fail closed
   with actionable remediation; the only bypass is a recorded `--override` (R26).
@@ -122,7 +122,7 @@ panel-driven additions introduced by this PRD. Requirement text receives only cl
   `preToolUse` hook MUST deny a `Task` spawn for a bound target when no fresh preflight record exists for it.
   (On Cursor the hook cannot inject the model, but it CAN deny — denial is honored even though `updated_input`
   is not.)
-- **R26** The `--override` bypass MUST require a durable, audited record (`scripts/shipwright-state.sh
+- **R26** The `--override` bypass MUST require a durable, audited record (`scripts/shipwright-state.py
   override-add` or a `run.log` JSONL event) capturing actor, timestamp, dispatch id, and the binding fields
   skipped, written **before** the dispatch; the dispatch-check MUST refuse `--override` absent such a record.
   An override MUST NOT bypass redaction (R25) or the push/merge chokepoints (R13).
@@ -146,8 +146,8 @@ panel-driven additions introduced by this PRD. Requirement text receives only cl
   wave-level phase worktrees count (preserves PRD 004 R17/R18 — referenced, not restated).
 - **R13** Only the conductor MUST call `merge enqueue` / `merge run-next` / `lock acquire`. Delegated phase
   sub-agents MUST NOT merge, acquire the lock, or perform a **raw** `git push`; all workflow pushes MUST route
-  through `scripts/git-push.sh` (preserving the PRD 009 R23 / PRD 007 secret-scan push chokepoint — phase
-  ships still push via `git-push.sh`).
+  through `scripts/git-push.py` (preserving the PRD 009 R23 / PRD 007 secret-scan push chokepoint — phase
+  ships still push via `git-push.py`).
 - **R27** When multiple phases are `in-flight`, merge readiness MUST be collected and enqueued
   deterministically (e.g. phase-id sort) via an explicit `collect-all-ready` step before `merge run-next`, so
   two simultaneous `merge-ready-green` phases are both enqueued within bounded iterations. A background phase
@@ -184,10 +184,10 @@ panel-driven additions introduced by this PRD. Requirement text receives only cl
 ### Security
 
 - **R25** All non-config context assembled into a delegated `Task` prompt (feedback text, Sentry payloads,
-  diffs, run-log excerpts, memory-preflight results) MUST pass `scripts/memory-redact.sh` before dispatch, and
+  diffs, run-log excerpts, memory-preflight results) MUST pass `scripts/memory-redact.py` before dispatch, and
   untrusted blobs MUST be fenced (datamark-style) so a sub-agent cannot be prompt-injected by forwarded
   content. Raw transcript/memory payloads MUST NOT be forwarded. Delegated sub-agents that write memory MUST
-  route through `memory-preflight` + `memory-redact.sh` (never a direct provider call), and phase
+  route through `memory-preflight` + `memory-redact.py` (never a direct provider call), and phase
   `status.json` / `run.log` writes that may carry runtime text MUST be redacted before persist.
 
 ### Cross-cutting
@@ -211,16 +211,16 @@ panel-driven additions introduced by this PRD. Requirement text receives only cl
   heuristics to granularity guidance (R1–R3, R22a). Each orchestrator command enumerates its **closed**
   inline bookkeeping allowlist (R2, R18).
 - **TR2 — Intensity resolver + extended routing.** Add `communication.routing.skills`/`agents` to the bundled
-  defaults, `.sw/config.schema.json`, and `/sw-setup` seeding (R6, R7). Add `scripts/resolve-intensity.sh`
-  (or a `resolve-model-tier.sh`-adjacent verb) returning intensity for `--command|--skill|--agent` with the
+  defaults, `.sw/config.schema.json`, and `/sw-setup` seeding (R6, R7). Add `scripts/resolve-intensity.py`
+  (or a `resolve-model-tier.py`-adjacent verb) returning intensity for `--command|--skill|--agent` with the
   R6 precedence, and implement the R24 precedence (dispatch > sessionStart) in `guardrail_core` session-context
   assembly for delegated sessions.
-- **TR3 — Dispatch binding + redaction contract.** Orchestrators resolve model (`resolve-model-tier.sh`) and
+- **TR3 — Dispatch binding + redaction contract.** Orchestrators resolve model (`resolve-model-tier.py`) and
   intensity (TR2), redact/fence context (R25), and pass explicit `model:` + injected intensity on every
   `Task` (R4, R5, R25). The hook stays registered, no-op-tolerant on Cursor (R8).
-- **TR4 — Generalized dispatch-check + mechanical gate.** Add `scripts/dispatch-check.sh`
+- **TR4 — Generalized dispatch-check + mechanical gate.** Add `scripts/dispatch-check.py`
   (`--command|--skill|--agent`, model + intensity validation, structured `cause` enum, reviewer-only builder
-  floor; `reviewer-dispatch-check.sh` wraps it) (R9, R10). Add `scripts/wave.sh dispatch preflight` recording a
+  floor; `reviewer-dispatch-check.py` wraps it) (R9, R10). Add `scripts/wave.sh dispatch preflight` recording a
   per-dispatch nonce artifact, and extend `core/hooks/before_task_dispatch.py` to **deny** a bound `Task`
   spawn lacking a fresh preflight record (R23). Wire `--override` durable audit (R26).
 - **TR5 — Parallel batch driver + wiring.** Add the batch dispatch primitive to `scripts/wave_deliver_loop.py`
@@ -250,14 +250,14 @@ The new surface is **how sub-agents are dispatched and what context is injected 
 delegation and parallelism amplify that surface, so it is addressed explicitly rather than asserted unchanged.
 
 - **Dispatch-prompt assembly (R25).** Every non-config blob injected into a delegated prompt is redacted via
-  `scripts/memory-redact.sh` and untrusted content is fenced; raw transcripts/memory payloads are never
+  `scripts/memory-redact.py` and untrusted content is fenced; raw transcripts/memory payloads are never
   forwarded. This is the primary new exposure and is fail-closed (redaction failure aborts the dispatch).
 - **Override audit (R26).** `--override` is durably recorded (actor, time, dispatch id, skipped fields) and
   cannot bypass redaction or the push/merge chokepoints.
 - **Push / merge chokepoint (R13).** Conductor-only merge/lock; no raw `git push`; workflow pushes use
-  `scripts/git-push.sh` (PRD 007 secret-scan pre-push preserved). No `main` auto-merge.
+  `scripts/git-push.py` (PRD 007 secret-scan pre-push preserved). No `main` auto-merge.
 - **Memory redaction (R41) on delegated paths.** Delegated sub-agents reach memory only through
-  `memory-preflight` + `memory-redact.sh`; no direct provider calls (sw-guardrails). Phase `status.json` /
+  `memory-preflight` + `memory-redact.py`; no direct provider calls (sw-guardrails). Phase `status.json` /
   `run.log` writes are redacted (R25).
 - **Concurrency amplification (R11).** Peak concurrent background sub-agents multiply shared parent tool/env
   access and provider-bound context; sensitive context in phase-level dispatch prompts is capped, and this
@@ -291,7 +291,7 @@ binding fixtures MUST be integration-style (observe runtime dispatch/state), not
 | `parallel-background-task-failure` | a crashed/never-writing background phase Task → `blocked`, not stuck `in-flight` | R27 |
 | `ceiling-slot-accounting` | intra-step sub-agents excluded from `parallelCeiling`; only phase worktrees count | R12 |
 | `conductor-only-merge-lock` | phase sub-agents cannot `merge`/`lock acquire` | R13 |
-| `phase-push-chokepoint` | phase pushes route through `git-push.sh`; no raw `git push` | R13 |
+| `phase-push-chokepoint` | phase pushes route through `git-push.py`; no raw `git push` | R13 |
 | `conductor-no-status-pause` | proxy-halt pattern matrix: no status+scope prose turn-end while `verdict: running` | R14 |
 | `conductor-post-remediation-complete` | remediated → `merge-ready-green` is complete; in-flight remediation does not scope-pause | R15 |
 | `conductor-reinvoke-after-dispatch-ship` | no user-visible text after `dispatch-ship` until terminal phase status; driver re-invoked | R16 |

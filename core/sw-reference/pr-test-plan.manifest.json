@@ -4,42 +4,42 @@
   "fixtures": [
     {
       "id": "doc-fixtures",
-      "script": "scripts/test/run-doc-fixtures.sh",
+      "script": "scripts/test/run_doc_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-doc-fixtures"
     },
     {
       "id": "cleanup-fixtures",
-      "script": "scripts/test/run-cleanup-fixtures.sh",
+      "script": "scripts/test/run_cleanup_fixtures.py",
       "args": [],
       "classification": "advisory",
       "ciJobName": "feat-test-plan-cleanup-fixtures"
     },
     {
       "id": "ux-polish-fixtures",
-      "script": "scripts/test/run-ux-polish-fixtures.sh",
+      "script": "scripts/test/run_ux_polish_fixtures.py",
       "args": [],
       "classification": "advisory",
       "ciJobName": "feat-test-plan-ux-polish-fixtures"
     },
     {
       "id": "retrospective-fixtures",
-      "script": "scripts/test/run-retrospective-fixtures.sh",
+      "script": "scripts/test/run_retrospective_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-retrospective-fixtures"
     },
     {
       "id": "docs-link-check",
-      "script": "scripts/docs-link-check.sh",
+      "script": "scripts/docs-link-check.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-docs-link-check"
     },
     {
       "id": "host-fixtures",
-      "script": "scripts/test/run-host-fixtures.sh",
+      "script": "scripts/test/run_host_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-host-fixtures",
@@ -74,7 +74,7 @@
     },
     {
       "id": "git-workflow-fixtures",
-      "script": "scripts/test/run-git-workflow-fixtures.sh",
+      "script": "scripts/test/run_git_workflow_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-git-workflow-fixtures",
@@ -93,7 +93,7 @@
     },
     {
       "id": "planning-unit-fixtures",
-      "script": "scripts/test/run-planning-unit-fixtures.sh",
+      "script": "scripts/test/run_planning_unit_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-unit-fixtures",
@@ -110,7 +110,7 @@
     },
     {
       "id": "planning-graph-fixtures",
-      "script": "scripts/test/run-planning-graph-fixtures.sh",
+      "script": "scripts/test/run_planning_graph_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-graph-fixtures",
@@ -127,7 +127,7 @@
     },
     {
       "id": "planning-paths-fixtures",
-      "script": "scripts/test/run-planning-paths-fixtures.sh",
+      "script": "scripts/test/run_planning_paths_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-paths-fixtures",
@@ -139,7 +139,7 @@
     },
     {
       "id": "doc-format-fixtures",
-      "script": "scripts/test/run-doc-format-fixtures.sh",
+      "script": "scripts/test/run_doc_format_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-doc-format-fixtures",
@@ -161,7 +161,7 @@
     },
     {
       "id": "inflight-signal-fixtures",
-      "script": "scripts/test/run-inflight-signal-fixtures.sh",
+      "script": "scripts/test/run_inflight_signal_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-inflight-signal-fixtures",
@@ -181,7 +181,7 @@
     },
     {
       "id": "inflight-migration-bridge-fixtures",
-      "script": "scripts/test/run-inflight-migration-bridge-fixtures.sh",
+      "script": "scripts/test/run_inflight_migration_bridge_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-inflight-migration-bridge-fixtures",
@@ -192,7 +192,7 @@
     },
     {
       "id": "planning-index-fixtures",
-      "script": "scripts/test/run-planning-index-fixtures.sh",
+      "script": "scripts/test/run_planning_index_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-index-fixtures",
@@ -207,7 +207,7 @@
     },
     {
       "id": "planning-migrate-fixtures",
-      "script": "scripts/test/run-planning-migrate-fixtures.sh",
+      "script": "scripts/test/run_planning_migrate_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-migrate-fixtures",
@@ -227,7 +227,7 @@
     },
     {
       "id": "planning-cutover-fixtures",
-      "script": "scripts/test/run-planning-cutover-fixtures.sh",
+      "script": "scripts/test/run_planning_cutover_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-cutover-fixtures",
@@ -244,7 +244,7 @@
     },
     {
       "id": "planning-currency-fixtures",
-      "script": "scripts/test/run-planning-currency-fixtures.sh",
+      "script": "scripts/test/run_planning_currency_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-currency-fixtures",
@@ -258,14 +258,14 @@
     },
     {
       "id": "authoring-guard-fixtures",
-      "script": "scripts/test/run-authoring-guard-fixtures.sh",
+      "script": "scripts/test/run_authoring_guard_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-authoring-guard-fixtures"
     },
     {
       "id": "inflight-guards-parity-fixtures",
-      "script": "scripts/test/run-inflight-guards-parity-fixtures.sh",
+      "script": "scripts/test/run_inflight_guards_parity_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-inflight-guards-parity-fixtures",
@@ -276,14 +276,14 @@
     },
     {
       "id": "core-scripts-parity-fixtures",
-      "script": "scripts/test/run-core-scripts-parity-fixtures.sh",
+      "script": "scripts/test/run_core_scripts_parity_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-core-scripts-parity-fixtures"
     },
     {
       "id": "completed-unit-fixtures",
-      "script": "scripts/test/run-completed-unit-fixtures.sh",
+      "script": "scripts/test/run_completed_unit_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-completed-unit-fixtures",
@@ -297,7 +297,7 @@
     },
     {
       "id": "inflight-doc-currency-fixtures",
-      "script": "scripts/test/run-inflight-doc-currency-fixtures.sh",
+      "script": "scripts/test/run_inflight_doc_currency_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-inflight-doc-currency-fixtures",
@@ -307,7 +307,7 @@
     },
     {
       "id": "worktree-config-fixtures",
-      "script": "scripts/test/run-worktree-config-fixtures.sh",
+      "script": "scripts/test/run_worktree_config_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-worktree-config-fixtures",
@@ -319,7 +319,7 @@
     },
     {
       "id": "dual-ship-fixtures",
-      "script": "scripts/test/run-dual-ship-fixtures.sh",
+      "script": "scripts/test/run_dual_ship_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-dual-ship-fixtures",
@@ -329,7 +329,7 @@
     },
     {
       "id": "regression-remediation-fixtures",
-      "script": "scripts/test/run-regression-remediation-fixtures.sh",
+      "script": "scripts/test/run_regression_remediation_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-regression-remediation-fixtures",
@@ -341,7 +341,7 @@
     },
     {
       "id": "parallel-merge-safety-fixtures",
-      "script": "scripts/test/run-parallel-merge-safety-fixtures.sh",
+      "script": "scripts/test/run_parallel_merge_safety_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-parallel-merge-safety-fixtures",
@@ -355,7 +355,7 @@
     },
     {
       "id": "status-integrity-fixtures",
-      "script": "scripts/test/run-status-integrity-fixtures.sh",
+      "script": "scripts/test/run_status_integrity_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-status-integrity-fixtures",
@@ -369,7 +369,7 @@
     },
     {
       "id": "mechanical-sourcing-fixtures",
-      "script": "scripts/test/run-mechanical-sourcing-fixtures.sh",
+      "script": "scripts/test/run_mechanical_sourcing_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-mechanical-sourcing-fixtures",
@@ -381,7 +381,7 @@
     },
     {
       "id": "deliver-invariant-fixtures",
-      "script": "scripts/test/run-deliver-invariant-fixtures.sh",
+      "script": "scripts/test/run_deliver_invariant_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-deliver-invariant-fixtures",
@@ -394,7 +394,7 @@
     },
     {
       "id": "planning-scheduler-fixtures",
-      "script": "scripts/test/run-planning-scheduler-fixtures.sh",
+      "script": "scripts/test/run_planning_scheduler_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-scheduler-fixtures",
@@ -408,7 +408,7 @@
     },
     {
       "id": "planning-edge-effects-fixtures",
-      "script": "scripts/test/run-planning-edge-effects-fixtures.sh",
+      "script": "scripts/test/run_planning_edge_effects_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-edge-effects-fixtures",
@@ -421,7 +421,7 @@
     },
     {
       "id": "planning-cutover-phase5-fixtures",
-      "script": "scripts/test/run-planning-cutover-phase5-fixtures.sh",
+      "script": "scripts/test/run_planning_cutover_phase5_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-cutover-phase5-fixtures",
@@ -435,7 +435,7 @@
     },
     {
       "id": "planning-emitter-parity-fixtures",
-      "script": "scripts/test/run-planning-emitter-parity-fixtures.sh",
+      "script": "scripts/test/run_planning_emitter_parity_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-emitter-parity-fixtures",
@@ -445,7 +445,7 @@
     },
     {
       "id": "doc-currency-033-fixtures",
-      "script": "scripts/test/run-doc-currency-033-fixtures.sh",
+      "script": "scripts/test/run_doc_currency_033_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-doc-currency-033-fixtures",
@@ -456,7 +456,7 @@
     },
     {
       "id": "planning-postmerge-safety-fixtures",
-      "script": "scripts/test/run-planning-postmerge-safety-fixtures.sh",
+      "script": "scripts/test/run_planning_postmerge_safety_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-postmerge-safety-fixtures",
@@ -472,7 +472,7 @@
     },
     {
       "id": "visibility-fixtures",
-      "script": "scripts/test/run-visibility-fixtures.sh",
+      "script": "scripts/test/run_visibility_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-visibility-fixtures",
@@ -491,7 +491,7 @@
     },
     {
       "id": "planning-store-fixtures",
-      "script": "scripts/test/run-planning-store-fixtures.sh",
+      "script": "scripts/test/run_planning_store_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-store-fixtures",
@@ -506,7 +506,7 @@
     },
     {
       "id": "planning-materialize-fixtures",
-      "script": "scripts/test/run-planning-materialize-fixtures.sh",
+      "script": "scripts/test/run_planning_materialize_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-materialize-fixtures",
@@ -517,7 +517,7 @@
     },
     {
       "id": "planning-init-fixtures",
-      "script": "scripts/test/run-planning-init-fixtures.sh",
+      "script": "scripts/test/run_planning_init_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-init-fixtures",
@@ -528,7 +528,7 @@
     },
     {
       "id": "planning-visibility-acceptance-fixtures",
-      "script": "scripts/test/run-planning-visibility-acceptance-fixtures.sh",
+      "script": "scripts/test/run_planning_visibility_acceptance_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-visibility-acceptance-fixtures",
@@ -540,7 +540,7 @@
     },
     {
       "id": "planning-related-fixtures",
-      "script": "scripts/test/run-planning-related-fixtures.sh",
+      "script": "scripts/test/run_planning_related_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-related-fixtures",
@@ -560,7 +560,7 @@
     },
     {
       "id": "two-track-fixtures",
-      "script": "scripts/test/run-two-track-fixtures.sh",
+      "script": "scripts/test/run_two_track_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-two-track-fixtures",
@@ -579,7 +579,7 @@
     },
     {
       "id": "planning-autonomy-fixtures",
-      "script": "scripts/test/run-planning-autonomy-fixtures.sh",
+      "script": "scripts/test/run_planning_autonomy_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-autonomy-fixtures",
@@ -593,7 +593,7 @@
     },
     {
       "id": "planning-command-surface-fixtures",
-      "script": "scripts/test/run-planning-command-surface-fixtures.sh",
+      "script": "scripts/test/run_planning_command_surface_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-command-surface-fixtures",
@@ -609,7 +609,7 @@
     },
     {
       "id": "planning-035-emitter-parity-fixtures",
-      "script": "scripts/test/run-planning-035-emitter-parity-fixtures.sh",
+      "script": "scripts/test/run_planning_035_emitter_parity_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-035-emitter-parity-fixtures",
@@ -620,7 +620,7 @@
     },
     {
       "id": "planning-035-doc-impact-fixtures",
-      "script": "scripts/test/run-planning-035-doc-impact-fixtures.sh",
+      "script": "scripts/test/run_planning_035_doc_impact_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-035-doc-impact-fixtures",
@@ -631,7 +631,7 @@
     },
     {
       "id": "parity-fixtures",
-      "script": "scripts/test/run-parity-fixtures.sh",
+      "script": "scripts/test/run_parity_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-parity-fixtures",
@@ -641,7 +641,7 @@
     },
     {
       "id": "planning-035-deliver-conductor-fixtures",
-      "script": "scripts/test/run-planning-035-deliver-conductor-fixtures.sh",
+      "script": "scripts/test/run_planning_035_deliver_conductor_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-035-deliver-conductor-fixtures",
@@ -677,7 +677,7 @@
     },
     {
       "id": "planning-035-gap-lifecycle-fixtures",
-      "script": "scripts/test/run-planning-035-gap-lifecycle-fixtures.sh",
+      "script": "scripts/test/run_planning_035_gap_lifecycle_fixtures.py",
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-035-gap-lifecycle-fixtures",

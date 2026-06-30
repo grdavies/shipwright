@@ -21,7 +21,7 @@ verify evidence passes. **Requires explicit human confirmation** before mutating
 3. Run eligibility gate:
 
    ```bash
-   bash scripts/feedback-closure-gate.sh \
+   python3 scripts/feedback-closure-gate.py \
      --backlog docs/prds/GAP-BACKLOG.md \
      --signal-id <id> \
      --verify-status /tmp/sw-verify.status.json \
@@ -32,7 +32,7 @@ verify evidence passes. **Requires explicit human confirmation** before mutating
 5. On `closable`, close backlog entry:
 
    ```bash
-   bash scripts/feedback-backlog.sh close --signal-id <id> --backlog docs/prds/GAP-BACKLOG.md
+   python3 scripts/feedback-backlog.py close --signal-id <id> --backlog docs/prds/GAP-BACKLOG.md
    ```
 
 6. `memory-preflight` write closure record (redacted summary; tag `surface:feedback-closure`).
@@ -40,7 +40,7 @@ verify evidence passes. **Requires explicit human confirmation** before mutating
 
 **Communication intensity:** ultra
 
-**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --command sw-feedback-close`.
+**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --command sw-feedback-close`.
 
 ## Guardrails
 

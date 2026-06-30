@@ -105,7 +105,7 @@ while preserving zero-config delivery where it is safe.
   silently breaks delivery: it fails closed with explicit remediation guidance (keep the unit public, or
   refuse delivery of the private unit with a message), never a partial/leaky state.
 - **R11** Memory-backed visibility routes exclusively through the provider-agnostic memory adapter (never a
-  direct provider call) and preserves the redaction chokepoint (`memory-redact.sh`) on **both write (`put`)
+  direct provider call) and preserves the redaction chokepoint (`memory-redact.py`) on **both write (`put`)
   and read**; it degrades open when no provider exists or the provider cannot store the document class. A
   fixture bans direct provider MCP calls from the store memory backend (adapter-only). Store memory writes
   are scoped to the configured `memory.project`; a supersede/cancel hook requests body inactivation; the
@@ -120,7 +120,7 @@ while preserving zero-config delivery where it is safe.
 - **R13** The model governs decision-record visibility and reconciles the PRD-015 committed-snapshot vs
   `.gitignore` conflict: the `.gitignore` is **generated from the visibility resolver** (track frontmatter
   stubs + public bodies only); the migration verifier asserts zero private-body bytes in the git index, and
-  `planning-unit-validate.sh` rejects a `visibility: private` unit whose body path is tracked. (This is the
+  `planning-unit-validate.py` rejects a `visibility: private` unit whose body path is tracked. (This is the
   **visibility-profile-driven** `.gitignore` generation; PRD 031 R24 only relocated the rules mechanically.)
 - **R14** Visibility is enforced at every emission point through a single central resolver/wrapper, and a
   **machine-checked call-site map (PRD 021/022 pattern) enumerates every planning-body read/write path**; CI
@@ -167,7 +167,7 @@ while preserving zero-config delivery where it is safe.
   generation, R13), `core/skills/memory/SKILL.md` (decision paths under `docs/planning/`; memory store is
   body-only storage), `core/providers/recallium.md` (decision unit paths; storage-only note),
   **`core/rules/memory-guardrails.mdc`** (name the `planning.store` memory backend as adapter +
-  `memory-redact.sh` chokepoint only — closes the R24-vs-doc-list divergence), `core/commands/sw-init.md`
+  `memory-redact.py` chokepoint only — closes the R24-vs-doc-list divergence), `core/commands/sw-init.md`
   (public-repo-aware profile/store/privacy-notice + ack seeding), **`core/skills/deliver/SKILL.md`**
   (provision-time materialization, ignored prefix, commit-boundary barrier, teardown — coordinated with the
   032-owned `inFlight` writer section), **`core/sw-reference/config.schema.json` + both
@@ -182,12 +182,12 @@ while preserving zero-config delivery where it is safe.
   `local/synced`, sensitive codenames belong in the private store with a generic INDEX title (R4), and the
   memory backend is never labeled encrypted or anonymized.
 - **R25** The redaction chokepoint and memory guardrails are unchanged in posture; memory-routed bodies pass
-  through `memory-redact.sh` on read and write; no raw transcript or secret is ever stored; the
+  through `memory-redact.py` on read and write; no raw transcript or secret is ever stored; the
   memory-guardrails rule is updated (R23) to name the `planning.store` memory backend as routing through the
   adapter + chokepoint only.
 - **R26** Materialized private bodies live only inside the agent worktree under the ignored prefix, are never
   committed or pushed (R8 commit-boundary barrier), are swept on crash, and are removed on teardown;
-  secret-scan covers materialize-time and store-read-time via the existing `secret-scan.sh file|stdin`
+  secret-scan covers materialize-time and store-read-time via the existing `secret-scan.py file|stdin`
   chokepoints.
 - **R27** No new credential surface beyond the configured store backend's own auth (e.g. memory provider),
   which uses the existing provider-agnostic adapter; the doctor check never prints provider tokens, store

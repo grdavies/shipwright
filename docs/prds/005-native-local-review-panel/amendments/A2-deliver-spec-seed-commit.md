@@ -77,7 +77,7 @@ a PRD 004 follow-up for hardening the manual-invocation path and is not mandated
 - **R83** The R80 seed commit MUST exclude `docs/brainstorms/**` (which remains gitignored) and any other
   untracked or ignored path; only the frozen, tracked `docs/prds/<n>-<slug>/` artifacts are committed. As parity
   with A1 R79, when an agent (not a human) invokes `/sw-doc --after-tasks=auto`, the per-worktree run record
-  written via `scripts/shipwright-state.sh` MUST also record the seed commit (branch plus commit SHA) before
+  written via `scripts/shipwright-state.py` MUST also record the seed commit (branch plus commit SHA) before
   `/sw-deliver run` is invoked.
 
 ## Testing Strategy
@@ -87,7 +87,7 @@ a PRD 004 follow-up for hardening the manual-invocation path and is not mandated
 | `doc-afterTasks-seed-confirm-auto` | `sw-doc.md` confirm/auto branch commits the docs-only `docs/prds/<n>-<slug>/` set onto `<type>/<slug>` before invoking `/sw-deliver run` | R80, R81 |
 | `doc-afterTasks-seed-stop` | `sw-doc.md` stop branch is print-only and prints both the docs-only commit command onto `<type>/<slug>` and `/sw-deliver run`, naming the branch and never directing the spec onto `main` | R82 |
 | `doc-afterTasks-seed-branch-derivation` | `sw-doc.md` derives `<type>/<slug>` via the shared `/sw-deliver` resolver, not a divergent re-implementation | R81 |
-| `doc-afterTasks-seed-brainstorm-excluded` | `sw-doc.md` seed step excludes `docs/brainstorms/**` and records the seed commit (branch + SHA) via `shipwright-state.sh` for agent-triggered dispatch | R83 |
+| `doc-afterTasks-seed-brainstorm-excluded` | `sw-doc.md` seed step excludes `docs/brainstorms/**` and records the seed commit (branch + SHA) via `shipwright-state.py` for agent-triggered dispatch | R83 |
 
 ## Decision Log
 

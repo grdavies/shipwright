@@ -36,7 +36,7 @@ boundary.
 
 - [ ] 2.1 Insert refactor step into execute discipline
   - **File:** `core/skills/execute-discipline/SKILL.md`, `core/commands/sw-execute.md`, `core/rules/sw-subagent-dispatch.mdc`
-  - **Expected:** per-task loop becomes `red → green → tdd-gate → refactor → stage-1 → stage-2`; refactor re-runs verify + `simplify-gate.sh`-style pre/post comparison; `regressed` reverts refactor edits only.
+  - **Expected:** per-task loop becomes `red → green → tdd-gate → refactor → stage-1 → stage-2`; refactor re-runs verify + `simplify-gate.py`-style pre/post comparison; `regressed` reverts refactor edits only.
   - **R-IDs:** R1
 - [ ] 2.2 Refactor outcome recording + no-silent-skip + anti-gaming bar
   - **File:** per-task execute status writer, `core/sw-reference/layout.md`
@@ -54,7 +54,7 @@ boundary.
 ### 3. TDD hardening (M/L) — no silent skips, tamper + over-mock detection, ZOMBIES, mutation hook
 
 - [ ] 3.1 No-silent-skip mode in tdd-gate
-  - **File:** `scripts/tdd-gate.sh`, `scripts/test/fixtures/tdd-gate/`
+  - **File:** `scripts/tdd-gate.py`, `scripts/test/fixtures/tdd-gate/`
   - **Expected:** `--require-skip-reason` (default on under deliver/phase mode); `skipped` w/o `skipReason` → exit 20; `skipped` with bound `testScenario` → rejected.
   - **R-IDs:** R8
 - [ ] 3.2 Baseline-anchored test-tamper check
@@ -77,15 +77,15 @@ boundary.
 ### 4. Review, provenance & blocking promotion (M/L)
 
 - [ ] 4.1 Heterogeneous review providers (array) + union synthesis
-  - **File:** `scripts/review-synthesize.sh`, `scripts/check-gate.sh`, `core/skills/stabilize-loop/SKILL.md`, `core/commands/sw-review.md`, `core/rules/code-review-automation.mdc`
+  - **File:** `scripts/review-synthesize.sh`, `scripts/check-gate.py`, `core/skills/stabilize-loop/SKILL.md`, `core/commands/sw-review.md`, `core/rules/code-review-automation.mdc`
   - **Expected:** `review.providers` array supersedes scalar (scalar coerced to single-element); severity-weighted union of non-overlapping findings; provider-agnostic `reviewLanded` barrier; default single provider; Standard/Full SHOULD include ≥1 deep/external.
   - **R-IDs:** R13
 - [ ] 4.2 Decision-log / provenance capture (schema-validated, redacted)
   - **File:** `core/sw-reference/decision-log.schema.json`, `core/sw-reference/templates/pr-body.md`, `scripts/git_template_lib.py`, `core/commands/sw-ship.md`, `core/commands/sw-pr.md`
-  - **Expected:** `## Decision log` block with non-empty `intent`/`alternativesRuledOut`/`highRiskAreas`(auto-seeded from gate flags)/`taskRefs`; routed through `scripts/memory-redact.sh` (fail-closed); `/sw-ship` fails on missing/empty record.
+  - **Expected:** `## Decision log` block with non-empty `intent`/`alternativesRuledOut`/`highRiskAreas`(auto-seeded from gate flags)/`taskRefs`; routed through `scripts/memory-redact.py` (fail-closed); `/sw-ship` fails on missing/empty record.
   - **R-IDs:** R14, R31
 - [ ] 4.3 Triage-tier blocking promotion (wired last)
-  - **File:** `scripts/check-gate.sh` consumer, `quality.blockingTier` evaluation
+  - **File:** `scripts/check-gate.py` consumer, `quality.blockingTier` evaluation
   - **Expected:** when change triage tier ≥ `quality.blockingTier`, a `poor` verdict blocks commit/merge via existing gate path; never weakens an existing required check.
   - **R-IDs:** R5
 - [ ] 4.4 User-facing loop docs for red→green→refactor
@@ -126,8 +126,8 @@ boundary.
 ## Relevant Files
 
 - `core/skills/execute-discipline/SKILL.md` — refactor step insertion (Phase 2).
-- `scripts/tdd-gate.sh`, `scripts/test-tamper-check.sh` — TDD hardening (Phase 3).
-- `scripts/check-gate.sh`, `scripts/review-synthesize.sh` — heterogeneous review + blocking promotion (Phase 4).
+- `scripts/tdd-gate.py`, `scripts/test-tamper-check.sh` — TDD hardening (Phase 3).
+- `scripts/check-gate.py`, `scripts/review-synthesize.sh` — heterogeneous review + blocking promotion (Phase 4).
 - `core/sw-reference/{config.schema.json,quality-signal.schema.json,decision-log.schema.json,capability-index.json,layout.md}` — contracts.
 - `providers/quality/` — adapter contract + built-in provider.
 

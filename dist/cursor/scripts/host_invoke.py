@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Python helper to invoke host verbs via scripts/host.sh (PRD 026 Phase 2)."""
+"""Python helper to invoke host verbs via scripts/host.py (PRD 026/042)."""
+
 from __future__ import annotations
 
 import json
@@ -12,7 +13,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 def host_verb(root: Path, verb: str, **kwargs: Any) -> dict[str, Any]:
-    cmd = ["bash", str(SCRIPT_DIR / "host.sh"), "--root", str(root.resolve()), verb]
+    cmd = [sys.executable, str(SCRIPT_DIR / "host.py"), "--root", str(root.resolve()), verb]
     for key, val in kwargs.items():
         if val is None:
             continue

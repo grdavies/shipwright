@@ -58,7 +58,7 @@ signal self-heal against staleness, and proves the behavior with fixtures. It ab
 - **R5** The signal is staleness-tolerant: when the recorded implementing branch no longer exists or the
   referenced deliver run is not live, the guard degrades to a warning rather than a hard block, and surfaces
   the staleness for reconciliation.
-- **R6** A reconcile path in `/sw-status` / `reconcile-status.sh` detects and repairs stale or missing
+- **R6** A reconcile path in `/sw-status` / `reconcile-status.py` detects and repairs stale or missing
   in-flight markers by comparing INDEX markers against actual deliver runs and branch existence.
 - **R7** The guard is provider- and topology-agnostic: it reads only the committed signal (git), never the
   gitignored local deliver state, so it behaves identically across worktrees and clones.
@@ -78,7 +78,7 @@ signal self-heal against staleness, and proves the behavior with fixtures. It ab
 
 - **TR1** (R1, R2) Extend the `INDEX.md` row schema with an in-flight marker (e.g. status token
   `in-progress` plus a structured suffix `run:<id> branch:<name>`), parsed and written by the living-status
-  helper (`scripts/reconcile-status.sh` / a shared `living-status` writer), never by ad-hoc string edits.
+  helper (`scripts/reconcile-status.py` / a shared `living-status` writer), never by ad-hoc string edits.
 - **TR2** (R2) Hook the set step into the deliver run entry (`wave_deliver_loop.py` / `wave.sh` spec-seed or
   run-start) and the clear step into the terminal path (terminal merge / run abandonment), reusing the
   living-doc lock so concurrent waves serialize INDEX writes.
@@ -89,8 +89,8 @@ signal self-heal against staleness, and proves the behavior with fixtures. It ab
   intake or a `docs/prds/<n>-<slug>/HANDOFF.md`); the route flag (`--route`/`--handoff`) writes it and prints
   the path; never touches the frozen parent.
 - **TR5** (R5, R6) Liveness check resolves the recorded branch via `git rev-parse --verify` and the run via
-  the deliver run index where available; `reconcile-status.sh inflight-reconcile --json` repairs drift.
-- **TR6** (R9) Extend `docs-currency-gate.sh` with the bidirectional in-flight integrity check; fail closed
+  the deliver run index where available; `reconcile-status.py inflight-reconcile --json` repairs drift.
+- **TR6** (R9) Extend `docs-currency-gate.py` with the bidirectional in-flight integrity check; fail closed
   with actionable diagnostics; offline/degrade-open only when liveness cannot be determined (warn).
 - **TR7** (R8, R12) Update `core/commands/sw-amend.md`, `core/commands/sw-tasks.md`, `core/commands/sw-prd.md`,
   `core/skills/living-status/SKILL.md`, and `.sw/layout.md`; regenerate `dist/` via the emitter after any

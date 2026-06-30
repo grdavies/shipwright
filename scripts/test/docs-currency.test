@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+import re
+from pathlib import Path
+root = Path(__file__).resolve().parent.parent.parent
+banned = re.compile(r'\b(rsync|jq|curl)\b', re.I)
+for p in [root/'README.md', root/'CONTRIBUTING.md']:
+    if p.is_file() and banned.search(p.read_text(encoding='utf-8')):
+        raise SystemExit(f'FAIL docs-currency {p}')
+print('OK  docs-currency')

@@ -1,0 +1,214 @@
+---
+description: Delegate-by-default sub-agent dispatch, binding enforcement, and loop hard stops for Shipwright.
+alwaysApply: false
+capability:
+  version: 1
+  triggers:
+    - type: phase_default
+      selectionFamily: subagent-dispatch
+      scope: delegation-policy
+  metadata:
+    selectionFamily: subagent-dispatch
+---
+
+# Sub-agent dispatch policy
+
+## Standing gate (delegate-by-default)
+
+Default posture is **delegate**. Inline execution is allowed only by a closed allowlist declared per
+orchestrator command and by `delegation.mode`.
+
+`delegation.mode` (from `workflow.config.json`):
+
+- `bind-only` (**Phase 1 default**) — delegate-by-default + fail-closed model/intensity binding.
+- `heuristic` — same binding requirements; may use file-count heuristics as secondary guidance.
+- `default` — reserved for post-Phase-2 acceptance (DL-9); treat as `bind-only` until enabled.
+
+## Inline execution policy
+
+Inline is legal only when **all** are true:
+
+1. The current command includes the action in its explicit inline allowlist.
+2. The action is bookkeeping/control-flow only (no open "trivial" bucket).
+3. Binding requirements are still satisfied for any delegated child Task.
+
+If any condition is not met, delegate.
+
+## Model tier (R30 / R9)
+
+Resolve command and skill tiers from `models.routing` in `workflow.config.json` (seeded by `/sw-setup` from
+`core/sw-reference/model-routing.defaults.json`):
+
+```bash
+bash scripts/resolve-model-tier.sh --command <slug>
+bash scripts/resolve-model-tier.sh --skill <name>
+bash scripts/resolve-model-tier.sh --agent <id>
+```
+
+Per-agent tiers for reviewers, doc-review personas, and native-panel specialists live in
+`models.routing.agents` (not prose tables here). Unmapped agents fall back to `models.roles.reviewer`.
+
+- Delegated **mechanical** work → `models.tiers.cheap` (`resolve-model-tier.sh --tier cheap`).
+- Implementation, RCA, review orchestration → `models.tiers.build` (`models.roles.builder`).
+- Medium-effort reasoning (gaps, simplify, memory-sync) → `models.tiers.mid`.
+- Doc authoring and high-stakes review → `models.tiers.deep`.
+- Orchestrators at routing tier `inherit` (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-compound-ship`) MUST resolve
+  delegated atomics via `--command <child-slug>` — never downgrade the child (KD8).
+- **R39b precedence (mechanical):** explicit `models.routing.agents[<agent>]` for a bound reviewer/persona
+  wins → else `--command <sw-slug>` → else `--agent` alone. Single-sourced in `resolve-model-tier.sh` and
+  `dispatch-check.sh` — do not duplicate ad-hoc in callers.
+- **R9 runtime contract (mechanical):** before every `sw-*-reviewer` / persona / native-panel Task spawn,
+  run `scripts/dispatch-check.sh --agent <id> --parent-model <parent-concrete-id> [--command <orchestrator>] [--skill <skill>]`.
+  It fails closed on `binding:*` causes and only treats `harness:*` causes as retryable backpressure.
+  Stamp the resolved concrete `model:` from `resolve-model-tier.sh --agent` and resolved caveman intensity from
+  `resolve-intensity.sh`; never rely on session inheritance.
+- `--override` requires a durable audit record written first via
+  `bash scripts/shipwright-state.sh dispatch-override-add '{"actor":"...","timestamp":"...","dispatchId":"...","skippedFields":["..."]}'`.
+- Native panel specialists: tier per `models.routing.agents` (e.g. `correctness`/`security`/`adversarial` →
+  `deep`; others → `mid`).
+
+## Hard stops (R29)
+
+Every loop documents max iterations + no-progress detection:
+
+| Loop | Hard stop |
+| --- | --- |
+| `/sw-ship` CI wait | `checks.watch.maxWaitMinutes` |
+| `/sw-stabilize` | stabilize-loop max iterations + no-progress |
+| gap-check closers | one re-map pass; escalate residuals |
+| parallel dispatch | `worktree.parallelCeiling` |
+| `/sw-deliver` conductor in-turn loop | `deliver.autonomy.maxIterations` (default **500**) |
+| `/sw-deliver` no-progress breaker | **3** identical `nextAction` + unchanged durable-state signature → consolidated halt (`cause: conductor:no-progress`) |
+| Plan rejection breaker (PRD 022) | N consecutive `plan validate` rejections for a phase → consolidated halt; feeds no-progress / budget signal (enforcement in PRD-023) |
+
+Circuit breaker: three identical failures without diff change → escalate to user.
+
+## Conductor deliver-loop (R38)
+
+When driving `bash scripts/wave.sh deliver-loop` in-turn (see `skills/conductor/SKILL.md`):
+
+- Count each `deliver-loop` invocation toward `deliver.autonomy.maxIterations`.
+- Track `(nextAction, stateSignature)`; on **3** consecutive repeats without signature change, halt with
+  `scripts/wave.sh report terminal` — do not churn merge-enqueue or provision loops.
+- State signature excludes heartbeat timestamps; see conductor skill for canonical fields.
+
+## Reviewer dispatch backpressure (R28, R61)
+
+When spawning native panel reviewers (or doc-review personas), capacity errors from the harness active-subagent
+limit are **backpressure**, not reviewer failure:
+
+- Retry with bounded parallelism (respect `worktree.parallelCeiling` and harness limits).
+- Do not mark a reviewer as failed solely because dispatch was rate-limited or at capacity.
+- After bounded retries, surface degraded / blocked status — never silently skip the panel.
+
+## Local review apply loop (`/sw-review` phase 1)
+
+The **native panel apply loop** governs `native` adapter auto-apply (per-fix checkpoint + re-verify). The
+generic circuit-breaker below applies to all loops; native reconcile (R65): identical verify failure signature
+(normalized `check_id` + message, excluding timestamps / temp paths) + **absolute** attempt cap (3 per finding,
+10 per run) stops apply and escalates (phase-mode → `blocked`, R67 — not interactive prompt).
+
+After auto-applying eligible fixes from local review:
+
+- **One** bounded re-verify (`sw-verify`) pass **per applied fix** — not an unbounded nested loop.
+- Circuit breaker: identical normalized verify-failure signature without progress → count toward cap; trip at 3
+  per finding / 10 per run → escalate (interactive) or `blocked` (phase-mode, R67).
+- Never let `ce-code-review` or native reviewers commit into the worktree; pf edit machinery only.
+
+## Pre-work memory search inheritance (PRD 019 R2, R9)
+
+Delegated **work-performing** sub-agents MUST either:
+
+1. Perform the pre-work search themselves (`skills/memory/SKILL.md` **Pre-work search (mandatory)** +
+   `bash scripts/wave.sh memory prework record …`), or
+2. Receive a **fresh** redacted search result from the parent orchestrator.
+
+**Exempt:** pure exploration / mechanical non-mutating dispatch (`readonly: true`, `explore` subagents with
+no file mutation, bookkeeping-only inline work).
+
+When forwarding memory-search results into a delegated `Task` prompt:
+
+- Pipe through `bash scripts/memory-redact.sh` first (R41).
+- Fence as `untrusted_payload` — reuse the PRD 017 R25 dispatch-context contract; never forward raw provider
+  payloads or transcripts.
+
+## Parallel safety
+
+Before parallel subagents on shared directory: disjoint file sets required, or worktree isolation.
+Never parallelize shared-migration paths (`skills/parallelism`).
+
+## Intra-phase fan-out (PRD 023 R15–R17)
+
+Guideline-bounded intra-phase parallelism replaces fixed dispatch lists. Proposals consume 021
+`signal_context` and validate through the mechanical guard:
+
+```bash
+bash scripts/intra-phase-dispatch.sh evaluate --context-json '<signal_context>' \
+  --wave-slots <wave-worktrees> --active-intra-phase <running> \
+  --run-dir .cursor/sw-deliver-runs/<phase-slug> --record
+```
+
+- Every fan-out proposal declares a **disjoint file/task partition** validated **before dispatch**
+  (reject or serialize on overlap).
+- Bounded by `intraPhase.parallelBudget` and global cap
+  `waveSlots + activeIntraPhase ≤ min(worktree.parallelCeiling, intraPhase.harnessLimit)`.
+- Parallel workers are **read-only** on per-phase durable files (`ship-steps.json`, `status.json`).
+- Each decision is appended to per-phase `dispatch-decisions.json` (timestamp, signals, partition,
+  chosen parallelism, degrade reason). Latest snapshot also on phase `intraPhaseFanOut` (see `.sw/layout.md`).
+
+Pre-dispatch no-nesting (R16): when `conductor_mode: background_phase` (stamped to the per-phase run
+dir at phase entry via `wave.sh phase dispatch-env --conductor-mode background_phase`), intra-phase Task
+dispatch is **refused before any spawn** and degrades to inline two-stage review:
+
+```bash
+bash scripts/intra-phase-dispatch.sh check-nesting --run-dir .cursor/sw-deliver-runs/<phase-slug>
+```
+
+## Parallel phase dispatch (R17, R18, R45)
+
+**Ceiling accounting:** only wave-level phase worktrees (each running `/sw-ship --phase-mode`) count toward
+`worktree.parallelCeiling`. Intra-phase Task/review sub-agents never consume slots.
+
+**Background phase sub-agents** (conductor dispatches phase as parallel Task): intra-phase sub-agent dispatch
+is **disabled** — run inline two-stage review only (R45). Log the decision in the phase run record.
+
+**Inline phase** (conductor runs `/sw-ship` in-turn): normal delegate-when heuristics apply; still no ceiling
+slot for intra-phase agents.
+
+**Conductor-only merge:** phase sub-agents must not call `merge run-next` or `lock acquire` (R41).
+
+## Fixture validation (PRD 017)
+
+```bash
+bash scripts/test/run-delegation-fixtures.sh
+bash scripts/test/run-dispatch-foundation-fixtures.sh
+```
+
+## Authority
+
+Structural isolation (worktrees) is the dominant token lever (R31). This rule governs *when* to add
+sub-agents inside a worktree — not whether to provision another worktree.
+
+## Execute discipline — two-stage review (IM6 / U7)
+
+During `/sw-execute`, **between tasks** (after TDD gate passes for the current task ref):
+
+1. **Fresh subagent per task** when delegating implementation or review — do not resume a prior task's agent.
+2. **Stage 1 — spec-compliance** (dispatch with `readonly: true` when possible):
+   - Diff satisfies the active sub-task `**File:**` / `**Expected:**` contract.
+   - Changes honor spec-union R-IDs for the task; no out-of-scope files.
+   - Fail → fix or halt; do not proceed to stage 2.
+3. **Stage 2 — code-quality** (fresh subagent):
+   - Naming, structure, duplication, obvious defects.
+   - No scope expansion or new requirements.
+   - Fail → fix within task scope or escalate (R29).
+
+Inline (no subagent) when ≤3 declared `file_paths` in `signal_context` and sequential — resolved via
+`bash scripts/migration-parity-shadow.sh --family dispatch --context-json '<signal_context>'` / selector dispatch family (see `docs/prds/021-capability-manifest-and-selector/call-site-map.md`).
+
+**Do not batch** multi-task reviews at phase end. TDD red-green runs **before** stage 1 for each task.
+
+## Model tier for execute review
+
+- Stage 1 spec-compliance → `build` tier (`resolve-model-tier.sh --tier build`); must read union + task.
+- Stage 2 code-quality → `mid` tier when delegating; escalate to `build` on ambiguity.

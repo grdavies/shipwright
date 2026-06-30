@@ -228,8 +228,8 @@ def run_verify_suite(
         all_ok = True
         for cmd in commands:
             proc = subprocess.run(
-                cmd,
-                shell=True,
+                ["bash", "-c", cmd],
+                shell=False,
                 cwd=str(cwd),
                 text=True,
                 capture_output=True,

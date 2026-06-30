@@ -11,7 +11,7 @@ frozen_at: 2026-06-30
 
 PRD A of the **loop-hardening** program (successor to the 2026-06-23 nine-item loop-improvement program).
 It closes the post-green quality gap in the delivery loop: today per-task TDD reaches **green**
-(`tdd-gate.sh`) and `/sw-simplify` performs behavior-preserving deslop, but nothing evaluates whether the
+(`tdd-gate.py`) and `/sw-simplify` performs behavior-preserving deslop, but nothing evaluates whether the
 freshly-green code is *worth keeping as-is*, no third **refactor** step exists, TDD can skip silently, and
 agent-authored test/mocking weaknesses pass unflagged. This PRD adds: an explicit red→green→**refactor**
 step (enforced consideration, signal-gated action), a pluggable coupling/cohesion **metric harness** that
@@ -131,7 +131,7 @@ Carried forward from the brainstorm (stable R-IDs).
 
 - **Refactor step placement.** Extend `skills/execute-discipline` so the per-task loop is
   `red → green → tdd-gate → refactor → stage-1 review → stage-2 review`. The refactor step re-runs the
-  configured verify command and a `simplify-gate.sh`-style pre/post comparison so it stays
+  configured verify command and a `simplify-gate.py`-style pre/post comparison so it stays
   behavior-preserving; a `regressed` verdict reverts the refactor edits (not the feature) and is recorded
   as `skipped` unless a human override is present. **Anti-gaming substance bar:** when `verdict` is
   `advise`/`poor` and `refactorHints` are non-empty, a recorded `ran: true` with **no metric delta** vs the
@@ -141,7 +141,7 @@ Carried forward from the brainstorm (stable R-IDs).
   `refactor: { ran, skipped, skipReason, signalRef, verdict, metricDelta }`.
 - **Refactor-vs-simplify boundary.** Refactor (this PRD) is **per-task, pre-commit, structural-quality
   driven** by the harness signal. `/sw-simplify` deslop remains a **separate, post-review, delta-deslop**
-  concern in `/sw-ship` gated by `simplify-gate.sh`; it is not replaced or inlined. Stage-2 review remains
+  concern in `/sw-ship` gated by `simplify-gate.py`; it is not replaced or inlined. Stage-2 review remains
   spec-scope/naming, not structural redesign. Both `skills/execute-discipline` and `skills/simplify` docs
   are updated to state the boundary.
 - **Metric harness provider abstraction.** New `quality.*` config block (`quality.provider` default
@@ -156,9 +156,9 @@ Carried forward from the brainstorm (stable R-IDs).
 - **Advisory vs blocking.** The signal surfaces through the existing advisory channel used by the PR
   test-plan (`pr-test-plan.manifest.json` / `advisoryFailingChecks` in `skills/checks-gate`), non-blocking
   by default. When the change's **triage tier ≥ `quality.blockingTier`**, a `poor` verdict blocks
-  commit/merge via the **existing gate path** (`scripts/check-gate.sh` consumer; never a new bespoke gate),
+  commit/merge via the **existing gate path** (`scripts/check-gate.py` consumer; never a new bespoke gate),
   and never weakens an existing required check.
-- **TDD hardening.** `tdd-gate.sh` gains a `--require-skip-reason` mode (default on under deliver/phase
+- **TDD hardening.** `tdd-gate.py` gains a `--require-skip-reason` mode (default on under deliver/phase
   mode): `skipped` without `skipReason` → exit 20; `skipped` with a bound `testScenario` → rejected. A new
   `scripts/test-tamper-check.sh` compares the working tree and final diff against the **traceability-bind
   baseline hash** (test files + coverage config), emitting deterministic high-risk flags (R9a) and advisory
@@ -175,13 +175,13 @@ Carried forward from the brainstorm (stable R-IDs).
 - **Heterogeneous review.** `review.providers` (array) supersedes scalar `review.provider` (scalar coerced
   to single-element array). Phased: (1) array config + parallel adapter invocation + union dedupe in a new
   `scripts/review-synthesize.sh`; (2) generalize the per-head `reviewLanded` barrier in
-  `scripts/check-gate.sh` (provider-agnostic); (3) update `skills/stabilize-loop` success predicate.
+  `scripts/check-gate.py` (provider-agnostic); (3) update `skills/stabilize-loop` success predicate.
   Default single provider; Standard/Full heterogeneous mode SHOULD include at least one deep/external
   reviewer.
 - **Provenance / decision log.** `/sw-ship`/`/sw-pr` capture a `## Decision log` block on the PR body
   (extends `core/sw-reference/templates/pr-body.md`, validated by `scripts/git_template_lib.py` against
   `core/sw-reference/decision-log.schema.json`): required non-empty `intent`, `alternativesRuledOut`,
-  `highRiskAreas` (auto-seeded from gate flags), `taskRefs`. Content passes `scripts/memory-redact.sh`
+  `highRiskAreas` (auto-seeded from gate flags), `taskRefs`. Content passes `scripts/memory-redact.py`
   (R31, fail-closed) before persist. PR-body is the v1 storage; a committed append-only artifact is a
   documented fallback when PR context is absent.
 
@@ -205,7 +205,7 @@ Each phase ships its doc updates with the code (no drift):
 
 ## Security & Compliance
 
-- All provenance/decision-log and metric-output text routes through `scripts/memory-redact.sh` before
+- All provenance/decision-log and metric-output text routes through `scripts/memory-redact.py` before
   persist or PR write (fail-closed on non-zero exit) — no secrets/tokens/transcripts leak via metrics or
   decision logs.
 - Metric/quality providers are untrusted external surfaces: their output is treated as advisory data,

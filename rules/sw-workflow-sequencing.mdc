@@ -1,0 +1,95 @@
+---
+description: USE WHEN following the Shipwright workflow — command ordering, worktree isolation, and per-worktree state.
+alwaysApply: false
+---
+
+# Workflow phase sequencing (v2)
+
+## The phase loop
+
+```
+/sw-doc → /sw-start → /sw-execute → /sw-gaps → /sw-verify → /sw-review → /sw-simplify → /sw-commit → /sw-pr → /sw-watch-ci → /sw-stabilize → /sw-ready
+```
+
+`/sw-ship` drives this chain on green and stops at the human merge gate (never merges).
+
+- **Doc chain (new features):** `/sw-doc` produces frozen PRD + tasks.
+- **Worktree:** `/sw-worktree provision` before implementation on bare main (R18).
+- **Phase loop:** start → execute → gaps → verify → review → commit → pr → watch-ci → stabilize → ready.
+- **`/sw-ready`:** empty `reviewDecision` is not blocking — only `CHANGES_REQUESTED`. CI truth =
+  `scripts/check-gate.sh` (all checks).
+
+## Memory in the phase loop
+
+Use `memory-preflight` only — never a provider tool directly. Redact via `scripts/memory-redact.sh`
+before any persist.
+
+**Onboarding:** run `/sw-setup` to scaffold repo-local `workflow.config.json`, choose memory/review
+providers, and validate the in-repo store. Fresh installs can commit `.cursor/sw-memory.provider` alone for
+zero-config in-repo memory.
+
+## State management
+
+Per-worktree gitdir: `scripts/shipwright-state.sh` → `<git-dir>/shipwright.json`.
+
+Fields: `parentBranch`, `currentBranch`, `phaseSlug`, `branchPrefix`, `startedAt`, `issueNumbers`,
+`lastCommand`, `phaseStatus`, `iteration`, `shipStartedAt`, `tier`, `workstream`, `scaffold`.
+
+Repo-level index: `scripts/shipwright-state.sh index` (read-time aggregate — never a shared writable file).
+
+## Command boundaries
+
+| Command | Does | Does NOT |
+| --- | --- | --- |
+| `/sw-worktree` | provision/teardown/list | commit, merge |
+| `/sw-start` | branch + state | commit, push, PR |
+| `/sw-execute` | implement slice (spec union) | commit, push, PR |
+| `/sw-gaps` | plan vs diff | merge |
+| `/sw-verify` | run checks | fix, commit |
+| `/sw-review` | local-then-provider review | gate, stabilize |
+| `/sw-simplify` | behavior-preserving deslop | commit, merge |
+| `/sw-commit` | commit phase | push, PR |
+| `/sw-pr` | push + PR | commit, merge |
+| `/sw-watch-ci` | gate verdict | fix |
+| `/sw-stabilize` | fix blockers | merge |
+| `/sw-ready` | readiness report | push, merge |
+| `/sw-ship` | orchestrate chain | merge |
+| `/sw-retrospective` | post-delivery compounding chain (`--pre-merge` / `--post-merge`) | merge, auto-promote rules |
+| `/sw-compound-ship` | *(deprecated alias → `/sw-retrospective`)* | — |
+| `/sw-setup` | scaffold config + doctor | scaffold CI, migrate memories |
+
+## Parallelism
+
+`worktree.parallelCeiling` (~4). Beyond ceiling → recombination (`skills/parallelism`). Never parallelize
+shared migrations.
+
+## Post-merge
+
+Human merges → `/sw-retrospective` (or atomically: `/sw-retro` → compound write via `skills/compound/SKILL.md` → optional
+`/sw-memory-sync` → `/sw-status reconcile` + `append-log`). Deprecated: `/sw-compound-ship` routes to the same chain.
+
+Stacking: after merge-ready merge, update parent, `/sw-start` for next phase.
+
+## Kernel vs plan-policy boundary (PRD 022)
+
+Orchestration concerns split into a **deterministic safety kernel** (non-skippable) and an **agent-decidable
+plan-policy** surface. The single-sourced classification lives in `core/sw-reference/kernel-classification.md`
+— do not duplicate the enumeration in command prose.
+
+| Layer | Examples | Authority |
+| --- | --- | --- |
+| Kernel | state transitions, merge queue, `check-gate.sh`, `git-push.sh`, memory-preflight, guardrails hook | fixed; validated on every plan + re-checked at each `advance` |
+| Plan policy | optional steps (simplify/gap-check), step order within guidelines, wave batching | proposed under `orchestration.planPolicy: proposed`; default `canonical` |
+
+Agent proposals validate through `bash scripts/wave.sh plan validate` before persist. Invalid proposals fall
+back to the canonical chain (phase) or canonical waves / `wave.sh schedule` (wave).
+
+## Deliver concurrency and freeze safety (PRD 013)
+
+- **Freeze-time commit:** `/sw-freeze` commits frozen docs onto `<type>/<slug>` via the shared
+  `wave_spec_seed.py` helper (`check-frozen.sh freeze-commit`); never `main`; stamp completes even when
+  commit warns (R4).
+- **Scoped deliver state:** per-branch `.cursor/sw-deliver-state.<slug>.json` and
+  `.cursor/sw-deliver-<slug>.lock`; `/sw-status` + `/sw-cleanup` enumerate all live scoped runs.
+- **Terminal knobs:** `deliver.terminal.autonomy` (`supervised` | `auto`); `cleanup.autonomy`
+  (`confirm` | `auto`). Auto modes never merge to `main` or force-push.

@@ -128,7 +128,7 @@ R-IDs carried forward from the frozen-namespace brainstorm.
   (R10): doc-review keyword/heading gates as text-token predicates over the frozen body snapshot, code-review
   specialist gating over the persisted change-digest, and `sw-subagent-dispatch` *current* selection (e.g.
   file-count from declared paths, the durable `inline`/`background_phase` flag). **Model-tier binding stays in
-  `resolve-model-tier.sh` / `reviewer-dispatch-check.sh`** (referenced from manifest metadata, not re-encoded),
+  `resolve-model-tier.py` / `reviewer-dispatch-check.py`** (referenced from manifest metadata, not re-encoded),
   and the dispatch rule's *delegate/fan-out budget* widening is explicitly out of scope (PRD-023, see
   Non-Goals).
 - **R14** The selector is fixture-testable in isolation (signal inputs → resolved capability set) as part of
@@ -172,7 +172,7 @@ R-IDs carried forward from the frozen-namespace brainstorm.
   not reproduce from current frontmatter — so a stale or hand-edited local index cannot silently diverge
   before CI (R9, R24).
 - **TR3 — Deterministic selector primitive + `signal_context` schema.** A new selector
-  (`scripts/capability-select.sh` → `capability_select.py`) takes a **versioned `signal_context`** —
+  (`scripts/capability-select.py` → `capability_select.py`) takes a **versioned `signal_context`** —
   `{tier, doc_path, body_snapshot|derived_tags, file_paths[], change_digest, config, phase_type,
   conductor_mode, overrides}` with documented **fail-closed defaults** per slot — and returns the resolved
   set as **canonically serialized** JSON (capability ids sorted, fixed field order, membership hash separated
@@ -184,8 +184,8 @@ R-IDs carried forward from the frozen-namespace brainstorm.
   (duplicate id, overlapping globs/predicates at equal precedence, competing defaults), and a manifest lint
   that fails closed on unresolved conflicts; wire the lint into the test gate (R11, R14, R25).
 - **TR5 — Trust boundary + execution chokepoint.** Selector output is **non-authorizing**: every executable
-  invocation must flow through its **named** existing gate — providers → `check-gate.sh` /
-  `review-local-resolve.sh` + the adapter path under `providers/<family>/`; hooks → emitter-registered
+  invocation must flow through its **named** existing gate — providers → `check-gate.py` /
+  `review-local-resolve.py` + the adapter path under `providers/<family>/`; hooks → emitter-registered
   `hooks.json` slots only; memory → `memory-preflight`. **Kernel/safety hooks** (`beforeSubmitPrompt`
   guardrails, memory/redaction hooks) are **excluded from manifest selection and from reordering** — manifest
   hooks may only augment non-safety slots and never run before guardrails. A manifest entry (or config
@@ -195,9 +195,9 @@ R-IDs carried forward from the frozen-namespace brainstorm.
   transitional doc-sync check): (a) **doc-review personas** — tier gate, doc-type routing, security/design
   text-token gates (preserving whole-token / inflection / polysemous-exclusion rules via a shared regex
   table), overrides; (b) **code-review specialist roster** — over the persisted change-digest, parity with
-  `code-review-select.sh` / `run-code-review-fixtures.sh`; (c) **config-selected providers** — enumerated
+  `code-review-select.py` / `run-code-review-fixtures.sh`; (c) **config-selected providers** — enumerated
   per family (`review.provider`, `review.local`, `memory.provider`, `verify.provider`) with configuredness
-  (absent/`none`/unconfigured) matching `check-gate.sh` / `wave_preflight` verdicts exactly; (d)
+  (absent/`none`/unconfigured) matching `check-gate.py` / `wave_preflight` verdicts exactly; (d)
   **`sw-subagent-dispatch` current selection** — file-count from declared paths + durable
   `inline`/`background_phase` flag (delegate/fan-out budget widening deferred to PRD-023) (R13).
 - **TR7 — Run-log surfacing.** Emit the resolved capability set (inputs hash, resolved set, precedence trace,
@@ -205,7 +205,7 @@ R-IDs carried forward from the frozen-namespace brainstorm.
   dir, and alignment with the doc-review activation record (R21).
 - **TR8 — Emitter propagation.** Regenerate both dist trees; freshness gate green (R24).
 - **TR9 — Integration / call-site map + shadow cutover.** Enumerate every current selection site and its
-  replacement selector invocation (`sw-doc-review`, `sw-review` / `code-review-select.sh`, `check-gate.sh`,
+  replacement selector invocation (`sw-doc-review`, `sw-review` / `code-review-select.py`, `check-gate.py`,
   provider resolution, deliver/phase entry, `sw-subagent-dispatch` consumers). Each site cuts over only after
   a **dual-run shadow** period proves the selector output matches the legacy path on the golden corpus; legacy
   selection branches are removed per family only once its parity fixture is authoritative. Without this map,
@@ -240,7 +240,7 @@ Tasks generation must include:
   their existing trust/config gate before running. No manifest declaration **or config override** can cause
   an untrusted executable to run. The `memory` provider trust boundary and redaction chokepoint are unchanged.
 - **Execution chokepoint (TR5).** Selector output is non-authorizing: executables are invoked only through
-  their named existing gate (`check-gate.sh` / `review-local-resolve.sh` + adapter path; `hooks.json` slots;
+  their named existing gate (`check-gate.py` / `review-local-resolve.py` + adapter path; `hooks.json` slots;
   `memory-preflight`). A fixture fails if selector eligibility alone triggers execution.
 - **Kernel-hook pinning (TR5).** Kernel/safety hooks (`beforeSubmitPrompt` guardrails, memory/redaction) are
   excluded from manifest selection and reordering; manifest hooks may only augment non-safety slots and never

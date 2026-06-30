@@ -349,11 +349,11 @@
         },
         "modelTierRef": {
           "type": "string",
-          "description": "Reference to models.routing entry; resolution stays in resolve-model-tier.sh (not re-encoded here)."
+          "description": "Reference to models.routing entry; resolution stays in resolve-model-tier.py (not re-encoded here)."
         },
         "gateRef": {
           "type": "string",
-          "description": "Named execution gate for executable capabilities (e.g. check-gate.sh, memory-preflight)."
+          "description": "Named execution gate for executable capabilities (e.g. check-gate.py, memory-preflight)."
         },
         "notes": { "type": "string" }
       }

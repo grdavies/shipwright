@@ -21,7 +21,7 @@
       "source": "scripts/",
       "excludes": [
         "test/",
-        "check-frozen.sh"
+        "check-frozen.py"
       ],
       "description": "Mirrored from scripts/ with documented excludes."
     },
@@ -71,11 +71,12 @@
     "planning-unit.schema.json",
     "pr-test-plan.manifest.json",
     "schemas/",
+    "schemas/orchestrator-guideline-pack.schema.json",
     "schemas/orchestrator-step-plan.schema.json",
+    "script-port-ledger.json",
     "signal-context.schema.json",
     "templates/",
-    "verify-presets.json",
-    "schemas/orchestrator-guideline-pack.schema.json"
+    "verify-presets.json"
   ],
   "deprecatedAllowlist": []
 }

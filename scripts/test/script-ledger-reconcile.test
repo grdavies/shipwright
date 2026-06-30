@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+import os, re, subprocess, sys
+from pathlib import Path
+ROOT = Path(__file__).resolve().parent.parent.parent
+env = os.environ.copy(); env["ROOT"]=str(ROOT); env["PYTHONPATH"]=str(ROOT/"scripts")
+_src = """#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+python3 <<PY
+import json
+from pathlib import Path
+root = Path("$ROOT")
+ledger = json.loads((root / "core/sw-reference/script-port-ledger.json").read_text())
+entries = {e["path"] for e in ledger["entries"]}
+found=set()
+for rel in ["scripts","scripts/test","core/scripts","core/hooks","core/providers"]:
+    base=root/rel
+    if base.is_dir():
+        for p in base.rglob("*.sh"):
+            found.add(p.relative_to(root).as_posix())
+missing=found-entries
+if missing:
+    raise SystemExit(f"undisposed: {sorted(missing)[:5]}")
+print("OK ledger", len(found))
+PY
+echo "OK  script-ledger-reconcile"
+"""
+src = _src.replace("#!/usr/bin/env bash", "").replace("set -euo pipefail", "")
+src = re.sub(r'ROOT="[^"]*"', 'ROOT="' + str(ROOT) + '"', src, count=1)
+src = src.replace('.sh"', '.py"').replace('bash "', 'python3 "')
+rc = subprocess.run(["bash", "-c", src], cwd=str(ROOT), env=env, shell=False).returncode
+if rc == 0:
+    print("OK  script-ledger-reconcile")
+raise SystemExit(rc or 0)

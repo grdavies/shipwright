@@ -6,7 +6,7 @@ description: Dependency-ordered deliver waves with dependent-branch stacking and
 # Deliver orchestration
 
 Layer above `/sw-ship` for **phase-mode** (frozen task-list phases stacking onto `<type>/<slug>`) and
-**multi-feature mode** (independent features promoting via `integration/<stamp>`). Reuses `scripts/worktree.sh`
+**multi-feature mode** (independent features promoting via `integration/<stamp>`). Reuses `scripts/worktree.py`
 and `skills/parallelism/` wholesale.
 
 **Conductor:** load `skills/conductor/SKILL.md` for the shared autonomous loop (self-continuation,
@@ -14,7 +14,7 @@ legitimate halts, parallel dispatch, resumption). `/sw-deliver` is the pilot con
 `rules/sw-conductor.mdc`. Do not re-author loop logic in this skill (R1, R3).
 
 
-**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill deliver`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --skill deliver`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Deliver plan representation
 
@@ -71,7 +71,7 @@ Multi-feature mode uses `"mode": "multi-feature"` with conforming type-prefixed 
 **Two-tier plan persistence (PRD 022):** validated wave-batching plans live on shared run-state
 (`waveBatchingPlan`, conductor-only); validated phase step plans live under the phase run dir
 (`phase-step-plan.json`, executor-owned). `orchestration.planPolicy` defaults to `canonical`; recorded mode
-is honored on resume. Proposals validate via `bash scripts/wave.sh plan validate` before persist — see
+is honored on resume. Proposals validate via `python3 scripts/wave.sh plan validate` before persist — see
 `skills/conductor/SKILL.md` **Two-tier plan lifecycle**.
 
 **Proposed-path (PRD 023):** live `proposed` on `/sw-deliver` requires the TR0 dependency gate
@@ -82,7 +82,7 @@ without kernel changes. Default `canonical` is byte-identical to pre-023 behavio
 
 **Benefit metric + reporting (R31):** per-phase and run-level `benefitMetric` objects (numeric/enumerated only)
 are captured at terminal phase status and rolled up on shared run-state. Operator soak comparisons use
-`bash scripts/wave.sh plan benefit-report --pairs <path>` → `scripts/wave_plan_benefit.py`. Schema and
+`python3 scripts/wave.sh plan benefit-report --pairs <path>` → `scripts/wave_plan_benefit.py`. Schema and
 decision rule: `.sw/layout.md` **Deliver pilot run records**.
 
 **Intra-phase fan-out snapshot:** `intraPhaseFanOut` on phase status / `phases.<id>` records the latest
@@ -98,11 +98,11 @@ phase provision — after worktree add and before preflight/spec-seed reads — 
 `scripts/planning_materialize.py` to copy required spec bodies into the ignored prefix
 `.cursor/planning-materialized/`. A post-materialize `secret-scan file` runs; paths register in deliver
 run-state for orphan sweep; teardown deletes the tree. Pre-commit, pre-push, and CI diff scans reject any
-staged path under the prefix (`scripts/materialized-prefix-scan.sh`) — the **commit-boundary barrier** holds
+staged path under the prefix (`scripts/materialized-prefix-scan.py`) — the **commit-boundary barrier** holds
 even under `git add -f`. Store backend + revision are pinned at provision; mid-run `planning.store` config
 changes halt with remediation. CI/host never materializes.
 
-Fixture suite: `bash scripts/test/run-planning-materialize-fixtures.sh` (registered as
+Fixture suite: `python3 scripts/test/run-planning-materialize-fixtures.sh` (registered as
 `planning-materialize-fixtures` in the PR test-plan manifest).
 
 **Per-branch scoping (PRD 013 R6–R11):** `<slug>` derives from the target feature branch
@@ -114,7 +114,7 @@ Legacy repo-wide state is adopted to the scoped path on first read (breadcrumb l
 `record-premerge`, `cleanup_lib.resolve_deliver_state`) resolve the scoped path at the git toplevel —
 never a duplicate copy under an orchestrator worktree `.cursor/`.
 
-**Freeze-time commit (PRD 013 R1–R5):** `/sw-freeze` invokes `check-frozen.sh freeze-commit` → shared
+**Freeze-time commit (PRD 013 R1–R5):** `/sw-freeze` invokes `check-frozen.py freeze-commit` → shared
 `wave_spec_seed.py` helper (same as `/sw-doc` afterTasks). Commits docs-only onto `<type>/<slug>`;
 never `main`; verdict-independent (commit failure warns; stamp still completes).
 
@@ -179,7 +179,7 @@ scripts/wave.sh state terminal --verdict complete
 ```
 
 Per-phase `/sw-ship` outcomes live in `sw-deliver-runs/<phase>/status.json` (`merge-ready-green` |
-`blocked`); `scripts/ship-phase-status.sh` syncs `blocked` into run-state when present.
+`blocked`); `scripts/ship-phase-status.py` syncs `blocked` into run-state when present.
 
 ### Orchestrator lock + merge journal (R51)
 
@@ -296,11 +296,11 @@ dependent phase branch via **merge** (never rebase a published phase branch). Co
 Dependents provision with:
 
 ```bash
-scripts/worktree.sh provision <name> --base <dependency-branch> --branch <type>/<name>
+scripts/worktree.py provision <name> --base <dependency-branch> --branch <type>/<name>
 ```
 
 `<type>` must be drawn from `release-please-config.json` `changelog-sections[].type` (e.g. `feat`, `fix`,
-`chore`). `pf/<name>` is prohibited; the branch-name guard (`scripts/branch-name-guard.sh`) refuses
+`chore`). `pf/<name>` is prohibited; the branch-name guard (`scripts/branch-name-guard.py`) refuses
 non-conforming names at creation time (R22–R25).
 
 Merge pre-flight from `skills/parallelism/` runs before stacking. No item touches `main` mid-wave.
@@ -311,7 +311,7 @@ After green leaves:
 
 1. Create `integration/<stamp>` from `main`.
 2. Merge green leaf branches.
-3. Run whole-suite check (`check-gate.sh` on integration PR head).
+3. Run whole-suite check (`check-gate.py` on integration PR head).
 4. Human gate authorizes `promote` in dependency order.
 
 ## Promotion (pre-merge validated)
@@ -320,7 +320,7 @@ For each leaf in dependency order:
 
 1. Build disposable candidate ref: `main` + already-promoted + this leaf.
 2. Push candidate branch + open short-lived PR.
-3. Run `check-gate.sh` on PR head — green only then fast-forward to `main`.
+3. Run `check-gate.py` on PR head — green only then fast-forward to `main`.
 4. Red candidate halts promotion before `main` is touched.
 
 ## Attributability
@@ -359,7 +359,7 @@ Terminal pause is suppressed; `/sw-deliver` must not wait on human input for per
 
 `/sw-deliver` consumes `skills/conductor/SKILL.md` for the autonomous loop. Summary:
 
-1. Run `bash scripts/wave.sh deliver-loop` from the orchestrator worktree.
+1. Run `python3 scripts/wave.sh deliver-loop` from the orchestrator worktree.
 2. While `verdict: running` and no legitimate halt:
    - `awaitAgent: false` → re-invoke `deliver-loop` immediately (same turn).
    - `awaitAgent: true` → execute `next.action` (`dispatch-ship`, `remediate`, `retrospective`, or
@@ -368,7 +368,7 @@ Terminal pause is suppressed; `/sw-deliver` must not wait on human input for per
 
 **Retrospective handoff (R9):** when `next.action` is `retrospective`, run **`/sw-retrospective --pre-merge`**
 on the orchestrator worktree only — do not inline retro/compound/memory/status. Respect `compound.autonomy`
-via `bash scripts/wave.sh retrospective autonomy`. Then re-invoke `deliver-loop` for `terminal-ship`.
+via `python3 scripts/wave.sh retrospective autonomy`. Then re-invoke `deliver-loop` for `terminal-ship`.
 
 **Self-wake (R8/R9):** terminal-PR CI uses `notify_on_output` on `^DELIVER_WAKE_<run-id>`; tear down all
 watchers on terminal halt. **Parallel-wave wait (R44):** poll or self-wake on durable `status.json` set.
@@ -416,14 +416,14 @@ scripts/wave.sh merge ancestry-check --phase-branch feat/<slug>-phase-<phase> --
 ```
 
 - **Merge method:** true `git merge --no-ff` only (no squash/rebase) so ancestry reconciliation holds.
-- **Review barrier:** `merge gate-check` / `merge run-next` refuse until `check-gate.sh` is **green** and
+- **Review barrier:** `merge gate-check` / `merge run-next` refuse until `check-gate.py` is **green** and
   `coderabbitLanded` is not `false` (pending async review is non-green for auto-merge).
 - **Journal:** `merge run-next` opens `mergeJournal` before merge and clears on success (coordinates with
   `wave.sh journal` helpers).
 - **No-PR path:** when a phase has no open PR, `merge run-next` uses local-evidence from durable
   `status.json` (merge-ready-green + head SHA binding) plus post-merge incremental verify; remote
-  `check-gate.sh` authority applies at the terminal PR only.
-- **Push chokepoint:** workflow pushes use `scripts/git-push.sh` → `scripts/secret-scan.sh` before
+  `check-gate.py` authority applies at the terminal PR only.
+- **Push chokepoint:** workflow pushes use `scripts/git-push.py` → `scripts/secret-scan.py` before
   `git push` (including `sw-pr` and stabilize re-pushes).
 
 ## Terminal report (R24/R55/R57)
@@ -472,9 +472,9 @@ run's INDEX row, completion-log entry, and absorbed gaps (R50; parity with task-
 scripts/wave.sh living-docs reconcile --commit
 scripts/wave.sh living-docs append-terminal --commit
 scripts/wave.sh docs-currency
-bash scripts/reconcile-status.sh set-index-status --prd <NNN> --status in-progress
-bash scripts/reconcile-status.sh append-log-idempotent --prd <NNN> --phase all --pr <N> --sha <sha>
-bash scripts/reconcile-status.sh gap-resolve --absorbing-prd <NNN> --pr <N>
+python3 scripts/reconcile-status.py set-index-status --prd <NNN> --status in-progress
+python3 scripts/reconcile-status.py append-log-idempotent --prd <NNN> --phase all --pr <N> --sha <sha>
+python3 scripts/reconcile-status.py gap-resolve --absorbing-prd <NNN> --pr <N>
 ```
 
 See `skills/living-status/SKILL.md` for the canonical INDEX status enum and reconcile primitives.
@@ -508,7 +508,7 @@ When all phases are `green-merged` and none `blocked`:
 ```bash
 scripts/wave.sh resume reconcile                    # remote <type>/<slug> tip is ground truth (R29/R50)
 scripts/wave.sh terminal pr prepare                 # open/update single <type>/<slug> → main PR (R22)
-scripts/wave.sh terminal pr gate                    # check-gate.sh on terminal PR head (R23/R24)
+scripts/wave.sh terminal pr gate                    # check-gate.py on terminal PR head (R23/R24)
 scripts/wave.sh terminal pr status
 scripts/wave.sh report terminal                     # /sw-ready form when gate green
 scripts/wave.sh ack check|complete|status           # optional cadence (deliver.phaseAckCadence, R56)
@@ -567,7 +567,7 @@ scripts/wave.sh memory learnings prepare --out .cursor/sw-deliver-learnings.md
 ```
 
 Distills contention, blast-radius, revert, and blocked-phase patterns from plan + run log — never raw
-transcripts or sub-agent logs. Always pipe through `scripts/memory-redact.sh` before persist.
+transcripts or sub-agent logs. Always pipe through `scripts/memory-redact.py` before persist.
 
 ## Concurrency invariants (PRD 036 — acceptance)
 
@@ -581,7 +581,7 @@ Operator-facing guarantees enforced by CI fixtures (`run-dual-ship-fixtures.sh`,
    attempts change the durable state signature; exhaustion halts with a consolidated report.
 3. **Whole-batch merge (R9–R12):** no early single-phase merge while siblings lack validated terminal
    status; deterministic phase-id merge order; bounded auto-regen for deterministic-conflict paths only.
-4. **Status provenance (R13–R17):** `ship-phase-status.sh` emits an offline-regenerable provenance marker;
+4. **Status provenance (R13–R17):** `ship-phase-status.py` emits an offline-regenerable provenance marker;
    forged or stale `merge-ready-green` is rejected; recovery reuses `/sw-ship --phase-mode --from <step>`
    — never hand-edit `status.json`.
 

@@ -21,7 +21,7 @@ only in fixtures.
 
 - [ ] 1.1 Author the kernel-vs-plan-policy classification artifact (R1, R2, R3, R28)
   - **File:** `core/sw-reference/kernel-classification.md`, `core/sw-reference/kernel-classification.json`
-  - **Expected:** single-sourced, version-controlled, one owner of record; enumerates kernel-step **membership** (state transitions + scoped run identity; `check-gate.sh`/`verification-gate`; merge queue journal + `O_EXCL` lock + gate-check barrier; no-`main`-auto-merge + human terminal gate; push/secret-scan `git-push.sh`; redaction chokepoint + range-scoped guard; `memory-preflight` routing; `beforeSubmitPrompt` guardrails hook non-selectable; orchestrator/living-doc locks), **ordering invariants**, the **plan-policy step enumeration**, and the signal-conditional **floor matrix** (R33). Anything off the surface is kernel-owned by default.
+  - **Expected:** single-sourced, version-controlled, one owner of record; enumerates kernel-step **membership** (state transitions + scoped run identity; `check-gate.py`/`verification-gate`; merge queue journal + `O_EXCL` lock + gate-check barrier; no-`main`-auto-merge + human terminal gate; push/secret-scan `git-push.py`; redaction chokepoint + range-scoped guard; `memory-preflight` routing; `beforeSubmitPrompt` guardrails hook non-selectable; orchestrator/living-doc locks), **ordering invariants**, the **plan-policy step enumeration**, and the signal-conditional **floor matrix** (R33). Anything off the surface is kernel-owned by default.
   - **R-IDs:** R1, R2, R3, R28
 - [ ] 1.2 Single-source `SHIP_CHAIN` / canonical chain from the classification (R28, R4)
   - **File:** `scripts/ship_phase_steps.py`, `core/commands/sw-ship.md`, emitter
@@ -39,7 +39,7 @@ only in fixtures.
   - **Expected:** per-phase-type candidate step set, required vs optional, allowed reorderings, forbidden deviations, floor refs; bounded to deliver/ship phase types exercised by 022 fixtures (debug/doc/feedback packs land with PRD-024). Separate artifact type from the PRD-021 manifest.
   - **R-IDs:** R30
 - [ ] 2.2 Ride the PRD-021 manifest lint/harness (extend, not rewrite) (R30)
-  - **File:** `scripts/capability-manifest-lint.sh` (extended) / shared validation harness
+  - **File:** `scripts/capability-manifest-lint.py` (extended) / shared validation harness
   - **Expected:** guideline schema validation reuses the PRD-021 lint/harness; `guidelines-harness-reuse` fixture proves the shared harness (SC7).
   - **R-IDs:** R30
 - [ ] 2.3 Tamper-resistant signal-conditional floor (R33)

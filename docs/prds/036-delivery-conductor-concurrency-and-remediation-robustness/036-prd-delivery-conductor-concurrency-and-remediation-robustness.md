@@ -163,7 +163,7 @@ follow-on dogfood `/sw-deliver` run under `proposed`:
   semantic-by-proxy and **halts**. Regeneration runs scoped to the orchestrator worktree (never staging source
   paths outside the allowlist), and a **determinism gate** (identical hash on a repeated regen run + golden
   parity pass) must hold before the resolved result is restaged; non-convergence halts.
-- **R13** `ship-phase-status.sh` writes a verifiable provenance marker into `status.json`, and the driver
+- **R13** `ship-phase-status.py` writes a verifiable provenance marker into `status.json`, and the driver
   rejects any `status.json` lacking a valid marker (a hand-authored status is never accepted as terminal,
   closing both the stall and the faked-`merge-ready-green` holes).
 - **R14** The driver validates a terminal `status.json` for: terminal `verdict`, a full 40-char head SHA equal
@@ -208,7 +208,7 @@ follow-on dogfood `/sw-deliver` run under `proposed`:
 ## Technical Requirements
 
 - **Ship single-flight (R1–R5).** Extend the phase-ship path (`scripts/wave.sh` ship verbs, `wave_phase_pr.py`,
-  `ship-phase-status.sh`, and the `/sw-ship --phase-mode` chain) with: (a) a per-head lease built on the
+  `ship-phase-status.py`, and the `/sw-ship --phase-mode` chain) with: (a) a per-head lease built on the
   existing `wave.sh lock` O_EXCL primitive (TTL + stale-steal); (b) a `pr-list --head <branch>`
   read-before-create idempotency check filtered by integration base; (c) base pinning via deliver state /
   `SW_INTEGRATION_BRANCH` with fail-closed when `SW_PHASE_MODE` is set. Conductor dispatch discipline
@@ -225,7 +225,7 @@ follow-on dogfood `/sw-deliver` run under `proposed`:
   completion before any member merges, deterministic phase-id ordering, and a bounded
   regenerate-and-restage auto-resolution for conflicts confined to the deterministic-regeneration path set
   (e.g. `scripts/copy-to-core.sh` + `python3 -m sw generate --all` + golden re-snapshot), halting otherwise.
-- **Terminal-status integrity (R13–R17).** `ship-phase-status.sh` emits a deterministic, offline-regenerable
+- **Terminal-status integrity (R13–R17).** `ship-phase-status.py` emits a deterministic, offline-regenerable
   provenance marker over canonical status fields; the driver validates terminal `verdict`, full 40-char head
   SHA vs `git rev-parse`, and gate-JSON parseability, and adds a `stuck-stale` classifier driven by
   independent CI/PR evidence with budget-bounded canonical re-emit. A blessed recovery command (atomic or a

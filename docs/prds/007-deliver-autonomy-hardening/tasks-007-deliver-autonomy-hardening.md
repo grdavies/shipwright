@@ -16,16 +16,16 @@ Phases are dependency-ordered; foundational floor/state phases land first.
 ### 1. Branch-name conformance: floor fix + creation guard (S/M)
 
 - [x] 1.1 Add a branch-name guard single-sourcing allowed types from `release-please-config.json` (R22, R25)
-  - **File:** `scripts/branch-name-guard.sh`
+  - **File:** `scripts/branch-name-guard.py`
   - **Expected:** reads `changelog-sections[].type`; exit 0 on a conforming `<type>/<slug>` name, non-zero with remediation otherwise; no `pf/` accepted
-- [x] 1.2 Remove the `pf/<name>` default in `worktree.sh` and call the guard at provision (R23, R27)
-  - **File:** `scripts/worktree.sh`
+- [x] 1.2 Remove the `pf/<name>` default in `worktree.py` and call the guard at provision (R23, R27)
+  - **File:** `scripts/worktree.py`
   - **Expected:** no `new_branch="${branch:-pf/$name}"`; provisioning without a conforming `--branch` derives a conforming name or fails closed — never mints `pf/`
 - [x] 1.3 Conforming multi-feature derivation with single-sourced types (R24)
   - **File:** `scripts/wave_deliver.py`
   - **Expected:** item branches use a type prefix (default `feat/`) instead of `pf/{i}`; `VALID_TYPES` resolves from `release-please-config.json` (shared with the guard)
 - [x] 1.4 Migrate existing `pf/` matchers and fixtures to the conforming scheme (R26)
-  - **File:** `scripts/reconcile-status.sh`, `scripts/test/run-impl-fixtures.sh`, `core/skills/deliver/SKILL.md`, `core/skills/worktree/SKILL.md`
+  - **File:** `scripts/reconcile-status.py`, `scripts/test/run-impl-fixtures.sh`, `core/skills/deliver/SKILL.md`, `core/skills/worktree/SKILL.md`
   - **Expected:** no `pf/` literals remain; impl fixtures pass against conforming names
 
 ### 2. Crash-safe durable state core (M)
@@ -49,7 +49,7 @@ Phases are dependency-ordered; foundational floor/state phases land first.
   - **File:** `core/commands/sw-deliver.md`, `core/skills/deliver/SKILL.md`, `core/commands/sw-doc.md`
   - **Expected:** no `cd <worktree>` → `/sw-gaps…` prose emitted while progress is possible; `auto`/`confirm` hand straight to `deliver-loop`
 - [x] 3.3 Advance solely from durable per-phase status (R7)
-  - **File:** `scripts/wave.sh`, `scripts/ship-phase-status.sh`
+  - **File:** `scripts/wave.sh`, `scripts/ship-phase-status.py`
   - **Expected:** each phase `/sw-ship` runs phase-mode and writes machine-readable status; the driver never advances from chat output
 - [x] 3.4 Bounded remediation, blast-radius siblings, clean terminal + consolidated blocker (R8, R9, R10, R12)
   - **File:** `scripts/wave_deliver.py`, `scripts/wave.sh`
@@ -77,30 +77,30 @@ Phases are dependency-ordered; foundational floor/state phases land first.
   - **Expected:** reads `<phase-worktree>/.cursor/sw-deliver-runs/<phase>/status.json` — no manual copy to the orchestrator root
 - [x] 5.2 No-PR local-merge path; branch on PR presence; honor gate/barrier (R39, R54)
   - **File:** `scripts/wave_merge.py`
-  - **Expected:** `merge run-next` uses `check-gate.sh` when a PR exists, else a local-evidence path (per-phase merge-ready-green + post-merge incremental verify); never fails on "no open PR"
+  - **Expected:** `merge run-next` uses `check-gate.py` when a PR exists, else a local-evidence path (per-phase merge-ready-green + post-merge incremental verify); never fails on "no open PR"
 - [x] 5.3 Bind phase status to head SHA (R47)
-  - **File:** `scripts/ship-phase-status.sh`, `scripts/wave_merge.py`
+  - **File:** `scripts/ship-phase-status.py`, `scripts/wave_merge.py`
   - **Expected:** `status.json` records the phase head SHA; a SHA-mismatched status cannot authorize a merge
 
 ### 6. Step-granular per-phase resume (M)
 
 - [x] 6.1 Persist `/sw-ship` step-level state; resume mid-chain (R58)
-  - **File:** `core/commands/sw-ship.md`, `scripts/ship-phase-status.sh`, `scripts/shipwright-state.sh`
+  - **File:** `core/commands/sw-ship.md`, `scripts/ship-phase-status.py`, `scripts/shipwright-state.py`
   - **Expected:** current/last step + attempt counters persisted per phase; a fresh agent resumes a phase mid-`/sw-ship` from state instead of restarting the chain
 
 ### 7. Task-document currency (M)
 
 - [x] 7.1 Checkbox-only progress writer + non-checkbox-edit guard (R13, R14)
-  - **File:** `scripts/tasks-progress.sh`
+  - **File:** `scripts/tasks-progress.py`
   - **Expected:** toggles `[ ]`↔`[x]` only; rejects any non-checkbox diff (text/R-IDs/structure/frontmatter); exposes a shared `is_checkbox_only_diff` predicate
 - [x] 7.2 Frozen-guard checkbox carve-out (R48)
-  - **File:** `scripts/check-frozen.sh`, `core/hooks/pre-commit-frozen.sh`
+  - **File:** `scripts/check-frozen.py`, `core/hooks/pre-commit-frozen.sh`
   - **Expected:** both guards permit a checkbox-only diff to a `frozen: true` task file (sharing the 7.1 predicate); all other frozen edits still rejected; no `--no-verify`
 - [x] 7.3 Durable per-task completion ledger (R49)
-  - **File:** `scripts/wave_state.py`, `scripts/tasks-currency-gate.sh`
+  - **File:** `scripts/wave_state.py`, `scripts/tasks-currency-gate.py`
   - **Expected:** per-task/per-phase completion recorded durably; gate compares checkboxes to the ledger, distinguishing partial from stale
 - [x] 7.4 Currency gate hard-block + in-loop commit (R15, R16)
-  - **File:** `scripts/tasks-currency-gate.sh`, `scripts/wave.sh`
+  - **File:** `scripts/tasks-currency-gate.py`, `scripts/wave.sh`
   - **Expected:** divergence hard-blocks the terminal merge gate; checkbox updates committed on the feature branch in-loop
 
 ### 8. Pre-merge compounding + completion semantics (M)
@@ -112,31 +112,31 @@ Phases are dependency-ordered; foundational floor/state phases land first.
   - **File:** `core/commands/sw-compound-ship.md`
   - **Expected:** no auto-promotion of rule-class memory inside the loop
 - [x] 8.3 `completed-pending-merge` sub-state; completion gated on merge detection; suggest cleanup (R20, R31, R53)
-  - **File:** `scripts/reconcile-status.sh`, `scripts/wave_state.py`, `scripts/wave.sh`
+  - **File:** `scripts/reconcile-status.py`, `scripts/wave_state.py`, `scripts/wave.sh`
   - **Expected:** INDEX `complete` flip + resume terminal verdict gated on actual merge detection; declined merge never reports merged; loop prints a one-line `/sw-cleanup` suggestion when merge detected
 
 ### 9. Secret-safety guardrails (M)
 
 - [x] 9.1 Secret scan at every workflow push chokepoint (R41, R50)
-  - **File:** `scripts/secret-scan.sh`, `core/commands/sw-pr.md`, `core/commands/sw-stabilize.md`
+  - **File:** `scripts/secret-scan.py`, `core/commands/sw-pr.md`, `core/commands/sw-stabilize.md`
   - **Expected:** scan runs before every push (incl. `sw-pr`'s first push); a match blocks the push with remediation
 - [x] 9.2 Single-sourced patterns + allowlist + fail-closed (R51)
-  - **File:** `scripts/secret-scan.sh`, shared pattern module with `scripts/memory_redact.py`
+  - **File:** `scripts/secret-scan.py`, shared pattern module with `scripts/memory_redact.py`
   - **Expected:** deny-set is a superset of `memory_redact.py` coverage; allowlist keeps scanner fixtures/examples pushable; scan error fails closed
 - [x] 9.3 Mechanical range-scoped redaction guard + rule (R42, R52)
-  - **File:** `scripts/redaction-guard.sh`, `rules/sw-redaction-scope.mdc`
+  - **File:** `scripts/redaction-guard.py`, `rules/sw-redaction-scope.mdc`
   - **Expected:** a bare-branch `filter-branch` rewriting shared history is mechanically refused; range-scoped redaction required
 
 ### 10. `/sw-cleanup` command (M)
 
 - [x] 10.1 `/sw-cleanup` command + script: dry-run + confirm + report (R28, R29, R33)
-  - **File:** `core/commands/sw-cleanup.md`, `scripts/cleanup.sh`
+  - **File:** `core/commands/sw-cleanup.md`, `scripts/cleanup.py`
   - **Expected:** enumerates merged local/remote branches, stale worktrees, completed run-state; dry-run default; deletes only after confirm; emits removed/protected report
 - [x] 10.2 Protections + no `rm -rf` (R30, R32)
-  - **File:** `scripts/cleanup.sh`
+  - **File:** `scripts/cleanup.py`
   - **Expected:** protects current/default/unmerged branches, active/locked worktrees, in-flight deliver runs; uses `git worktree remove`/`prune` only
 - [x] 10.3 Squash-aware merge detection + shared-state guards (R56)
-  - **File:** `scripts/cleanup.sh`
+  - **File:** `scripts/cleanup.py`
   - **Expected:** squash-merged branches detected (patch-id / `git cherry` / host status); indeterminate status fails closed; remote deletion guarded
 - [x] 10.4 Register in plugin manifest under the `sw-` contract (R34)
   - **File:** `.cursor-plugin/plugin.json`, `core/commands/sw-cleanup.md`
