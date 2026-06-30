@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Unified build-chain sync: copy-to-core → generate --all → golden re-snapshot when dist changes (PRD 038 R7).
 #
-# Usage: scripts/build-chain-sync.sh
+# Usage: scripts/build-chain-sync.sh [--check]
+#   --check  verify parity only (no mutations); exit 20 on drift (R25).
 # Exit: 0 on success; non-zero on any step failure.
 set -euo pipefail
 
@@ -19,6 +20,31 @@ dist_hash() {
     | shasum -a 256 \
     | awk '{print $1}'
 }
+
+CHECK_ONLY=0
+if [[ "${1:-}" == "--check" ]]; then
+  CHECK_ONLY=1
+fi
+
+if [[ "$CHECK_ONLY" -eq 1 ]]; then
+  FAIL=0
+  bash "$ROOT/scripts/build-chain-sot-lint.sh" >/dev/null 2>&1 || FAIL=1
+  bash "$ROOT/scripts/test/run-core-scripts-parity-fixtures.sh" >/dev/null 2>&1 || FAIL=1
+  bash "$ROOT/scripts/test/run-parity-fixtures.sh" >/dev/null 2>&1 || FAIL=1
+  BEFORE="$(dist_hash)"
+  python3 -m sw generate --all >/dev/null 2>&1 || FAIL=1
+  AFTER="$(dist_hash)"
+  if [[ -n "$BEFORE" && "$BEFORE" != "$AFTER" ]]; then
+    FAIL=1
+  fi
+  if [[ "$FAIL" -ne 0 ]]; then
+    echo "build-chain-sync --check: parity drift detected" >&2
+    exit 20
+  fi
+  echo "build-chain-sync --check: parity OK"
+  exit 0
+fi
+
 
 BEFORE="$(dist_hash)"
 

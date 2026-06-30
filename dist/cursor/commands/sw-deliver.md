@@ -214,3 +214,10 @@ Unit-level graph primitives (in addition to phase-mode waves):
 - Promotion validates each candidate on a disposable PR head **before** merge to `main`.
 - Post-partial-promotion regression: atomic integration PR or revert promoted leaves — never half-promoted red `main`.
 - Teardown uses safe worktree/branch removal only.
+
+## Deliver conductor completion (PRD 035 A1)
+
+- **Build-chain ship verify (R25):** phase `/sw-ship` runs `scripts/ship-build-chain-check.sh` before commit when build-chain paths change.
+- **Resume (R47):** halt payloads and `report blockers` emit `/sw-deliver run <frozen-task-list>` — never bare `deliver-loop` as operator resume.
+- **Deferrals (R49):** cross-feature waves, rich living-status dashboard, and contention feedback into `/sw-tasks` re-run remain explicit non-goals — no silent partial ship.
+- **Cleanup autonomy (R50):** when `cleanup.autonomy: auto`, `finalize-completion` applies dry-run `wouldRemove` after deterministic merge detection.

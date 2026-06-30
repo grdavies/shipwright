@@ -472,9 +472,45 @@ def cmd_docs_commit(root: Path, args: list[str]) -> None:
         scope="docs-commit",
     )
 
+
+def cmd_post_freeze_durability(root: Path, args: list[str]) -> None:
+    """Eager spec-seed onto integration branch — no deliver-loop wait (R48 GAP-016)."""
+    task_list = parse_kv(args, "--task-list")
+    integration = parse_kv(args, "--integration-branch")
+    if not task_list or not integration:
+        fail("--task-list and --integration-branch required")
+    dry_run = has_flag(args, "--dry-run")
+    top = git_toplevel(root)
+    default = load_trunk_base(top)
+    if integration == default:
+        fail(f"refused: post-freeze durability never targets default branch {default!r}")
+    _branch, slug, docs_dir = resolve_target_branch(top, task_list)
+    candidate_files = docs_paths(docs_dir, top, single=None)
+    assert_no_tracked_private_bodies(top, candidate_files)
+    public_files, skipped_private = filter_public_docs(top, candidate_files)
+    doc_files = tracked_paths(top, public_files)
+    doc_rels = rel_paths(top, doc_files)
+    index_rel = ensure_redacted_index(top)
+    if index_rel and index_rel not in doc_rels:
+        doc_rels.append(index_rel)
+    if not doc_rels:
+        fail("no tracked public doc files for post-freeze durability")
+    commit_docs_seed(
+        top,
+        branch=integration,
+        slug=slug,
+        docs_dir=docs_dir,
+        doc_rels=doc_rels,
+        default=default,
+        dry_run=dry_run,
+        scope="post-freeze-durability",
+        skipped_private=skipped_private,
+    )
+
+
 def main() -> None:
     if len(sys.argv) < 2:
-        fail("usage: wave_spec_seed.py <root> {spec-seed|docs-commit} ...")
+        fail("usage: wave_spec_seed.py <root> {spec-seed|docs-commit|post-freeze-durability} ...")
     root = Path(sys.argv[1])
     cmd = sys.argv[2] if len(sys.argv) > 2 else "spec-seed"
     args = sys.argv[3:]
