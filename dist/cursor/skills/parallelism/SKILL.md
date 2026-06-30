@@ -6,21 +6,21 @@ description: Bounded parallel worktrees (~2-4 ceiling), cross-branch recombinati
 # Bounded parallelism
 
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --skill parallelism`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill parallelism`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Ceiling
 
 `workflow.config.json` → `worktree.parallelCeiling` (default 4).
 
 ```bash
-python3 scripts/worktree.sh ceiling-check
+python3 scripts/worktree.py ceiling-check
 ```
 
 Exit 10 = at ceiling → **recombination required** before another provision.
 
 ## Recombination (beyond ceiling)
 
-1. List worktrees: `python3 scripts/worktree.sh list --json`.
+1. List worktrees: `python3 scripts/worktree.py list --json`.
 2. Review cross-branch diffs between active streams (orchestrator, not parallel agents).
 3. Prefer **rebase** for linear history before dispatching long-running parallel work.
 4. Run merge pre-flight: refuse parallel dispatch when migration paths or high-risk shared files overlap.
@@ -86,7 +86,7 @@ Mechanical guard (disjoint partition, no-nesting, decision log):
 python3 scripts/wave.sh phase dispatch-env --phase-slug <slug> --conductor-mode background_phase
 
 # Evaluate / record before spawning intra-phase workers
-python3 scripts/intra-phase-dispatch.sh evaluate --context-json '<signal_context>' \
+python3 scripts/intra-phase-dispatch.py evaluate --context-json '<signal_context>' \
   --wave-slots <n> --active-intra-phase <n> \
   --run-dir .cursor/sw-deliver-runs/<slug> --record
 ```

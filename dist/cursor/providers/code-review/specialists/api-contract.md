@@ -34,4 +34,4 @@ capability:
 
 # Code-review specialist — api-contract
 
-Signal-gated native panel specialist (parity with `code-review-select.sh`).
+Signal-gated native panel specialist (parity with `code-review-select.py`).

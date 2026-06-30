@@ -6,7 +6,7 @@ alwaysApply: false
 # `/sw-start`
 
 Create a phase child branch from the current branch **inside the active worktree** and record context in
-per-worktree state (`scripts/shipwright-state.sh`).
+per-worktree state (`scripts/shipwright-state.py`).
 
 ## Branch prefix
 
@@ -23,22 +23,22 @@ Shape: `<prefix>/<stem>-phase-<slug>` — no nested refs (`feat/foo/phase-bar` w
 ## Procedure
 
 1. Read `workflow.config.json`; resolve state via `skills/shipwright-state`.
-2. Print persisted trunk base disclosure: `python3 scripts/resolve-base-branch.sh disclose --quiet` (when available).
-3. Run `python3 scripts/sw-assert-worktree.sh` — exit `1` blocks phase start on bare default branch without a
+2. Print persisted trunk base disclosure: `python3 scripts/resolve-base-branch.py disclose --quiet` (when available).
+3. Run `python3 scripts/sw-assert-worktree.py` — exit `1` blocks phase start on bare default branch without a
    linked worktree; exit `2` is a configuration error. If blocked, `/sw-worktree provision` first.
 4. `git branch --show-current` — stop on detached HEAD.
 5. `memory-preflight` read only on non-routine parent/prefix decisions.
 6. Load `agentsFile` before choosing prefix.
-7. Parent = current branch. Trunk base for forks/PRs comes from `python3 scripts/resolve-base-branch.sh resolve`
+7. Parent = current branch. Trunk base for forks/PRs comes from `python3 scripts/resolve-base-branch.py resolve`
    (persisted at workflow entry — distinct from integration base `<type>/<slug>` for phase stacking).
 8. Confirm dirty tree belongs on the new phase branch.
 9. `git checkout -b <prefix>/<stem>-phase-<slug>`.
-10. `python3 scripts/shipwright-state.sh write` with `parentBranch`, `currentBranch`, `phaseSlug`, `branchPrefix`, `startedAt`, optional `issueNumbers`.
+10. `python3 scripts/shipwright-state.py write` with `parentBranch`, `currentBranch`, `phaseSlug`, `branchPrefix`, `startedAt`, optional `issueNumbers`.
 11. Report branch + next `/sw-execute`.
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --command sw-start`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-start`.
 
 ## Guardrails
 

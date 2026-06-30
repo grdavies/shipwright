@@ -25,7 +25,7 @@ this coherent architecture.
 ship same-day as one atomic cutover**, and the compatibility layer additionally **generates legacy
 `docs/prds/GAP-BACKLOG.md` + `INDEX.md` projections** from the planning/gap units until every legacy-path
 consumer is migrated. A path alias alone is insufficient — `wave_living_docs.LIVING_PATHS`,
-`reconcile-status.sh`, and `feedback-backlog.sh` hardcode the legacy living-doc paths, and cutting over
+`reconcile-status.py`, and `feedback-backlog.py` hardcode the legacy living-doc paths, and cutting over
 without 032 would leave the committed in-flight signal empty and amendments-to-completed unguarded (the two
 most acute user pains). See R27.
 
@@ -154,7 +154,7 @@ supersession edges are reversible.
 
 ## Technical Requirements
 
-- **R19** The `planning-unit.schema.json` plus a validator entrypoint (`scripts/planning-unit-validate.sh`)
+- **R19** The `planning-unit.schema.json` plus a validator entrypoint (`scripts/planning-unit-validate.py`)
   fails closed on unknown keys, cross-enum/unknown status tokens (per the type-conditioned R4 stub enum),
   and — at migration/bootstrap time — on a `visibility: private` unit whose body path is git-tracked.
   Ongoing visibility validation is PRD 034.
@@ -173,7 +173,7 @@ supersession edges are reversible.
   `wave_deliver` preflight/plan, `wave_spec_seed`, freeze-immutability checks, phase `**File:**` touch
   detection, living-docs); the cutover checklist enumerates open feature branches/worktrees carrying
   `docs/prds` task lists and resolves or halts on them.
-- **R22** A single tokenizer module (`doc_format.py` with a `doc-format-normalize.sh` wrapper) is consumed
+- **R22** A single tokenizer module (`doc_format.py` with a `doc-format-normalize.py` wrapper) is consumed
   by `spec-union`, `spec-rigor-check`, `traceability-check`, and `wave_deliver`; an explicit **call-site
   map** (per the PRD 021/022 pattern) enumerates every runtime reader/writer, and cutover is gated on map
   exhaustion. `wave_deliver` phase/`**File:**` parsing is in tokenizer scope from Phase A.
@@ -222,7 +222,7 @@ supersession edges are reversible.
 - **R29** The migration touches documentation artifacts and the path-resolution/`.gitignore` config keys
   only; it never moves or modifies code, secrets, or other configuration. (The `.gitignore` + `planningDir`
   changes affect what git tracks — covered by the R18 interim privacy guard and the R24 region hook.)
-- **R30** The redaction chokepoint (`memory-redact.sh`) and memory guardrails are unchanged; this PRD
+- **R30** The redaction chokepoint (`memory-redact.py`) and memory guardrails are unchanged; this PRD
   introduces no memory writes and no new credential surfaces.
 - **R31** The tokenizer is deterministic and offline (no network; same input yields same output) so CI
   gates remain reproducible.

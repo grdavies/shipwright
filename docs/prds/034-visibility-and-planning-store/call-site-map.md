@@ -1,7 +1,7 @@
 # Call-site map — planning visibility emission points (PRD 034 phase 2, R14)
 
 Enumerates every planning-body read/write path that must route through `planning_visibility.py`
-(single authority, R19). CI lint: `bash scripts/visibility-callsite-lint.sh`.
+(single authority, R19). CI lint: `python3 scripts/visibility-callsite-lint.py`.
 
 | Emission point | Script / surface | Resolver wrapper | Phase | Parity / gate fixtures |
 | --- | --- | --- | --- | --- |
@@ -11,7 +11,7 @@ Enumerates every planning-body read/write path that must route through `planning
 | `legacy-prd-index` | `scripts/planning_legacy_projection.py` | `planning_index_gen.index_row_dict` | 2 (live) | `index-redaction-opaque-title` |
 | `spec-seed` | `scripts/wave_spec_seed.py` | `planning_visibility.resolve_unit_visibility` | 2 (live) | `spec-seed-visibility-route` |
 | `pr-diff` | `scripts/planning_deliver_gate.py` | *(deferred phase 5)* | — | — |
-| `dispatch-context` | `scripts/dispatch-check.sh` | *(deferred phase 5)* | — | — |
+| `dispatch-context` | `scripts/dispatch-check.py` | *(deferred phase 5)* | — | — |
 | `store-get` | `scripts/planning_store.py` | *(deferred phase 3)* | — | — |
 | `superseded-manifest` | `scripts/planning_reconcile.py` | *(deferred — metadata only)* | — | — |
 | `inflight-tuple` | `scripts/inflight_signal.py` | `planning_visibility.redact_inflight_tuple` | 1 (resolver) | `resolver-single-authority` |
@@ -25,13 +25,13 @@ Enumerates every planning-body read/write path that must route through `planning
 | Surface | Role |
 | --- | --- |
 | `scripts/planning_visibility.py` | Single authority resolver + emission-point registry |
-| `scripts/visibility-resolve.sh` | Thin CLI wrapper |
+| `scripts/visibility-resolve.py` | Thin CLI wrapper |
 | `scripts/visibility-callsite-lint.py` | Map exhaustion + wired-script bypass lint |
 
 ## Mechanical lint
 
 ```bash
-bash scripts/visibility-callsite-lint.sh \
+python3 scripts/visibility-callsite-lint.py \
   docs/prds/034-visibility-and-planning-store/call-site-map.md
 ```
 

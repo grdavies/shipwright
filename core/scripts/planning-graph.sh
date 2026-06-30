@@ -21,7 +21,7 @@ case "$cmd" in
     ;;
   paths)
     if [[ $# -eq 0 ]]; then set -- dirs; fi
-    exec bash "$_PLUGIN_ROOT/scripts/planning_paths.sh" "$@"
+    exec bash "$_PLUGIN_ROOT/scripts/planning_paths.py" "$@"
     ;;
   -h|--help|"")
     cat <<'EOF'

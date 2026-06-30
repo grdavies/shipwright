@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Zero jq invocations on phase-5 production surfaces (PRD 042 R7 complete).
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+FAIL=0
+ok() { echo "OK  $1"; }
+bad() { echo "FAIL $1"; FAIL=1; }
+
+SCAN_DIRS=(scripts core/scripts)
+for dir in "${SCAN_DIRS[@]}"; do
+  base="$ROOT/$dir"
+  [[ -d "$base" ]] || continue
+  while IFS= read -r -d '' f; do
+    [[ "$f" == *"/test/"* ]] && continue
+    [[ "$f" == *"/_sw/"* ]] && continue
+    if grep -E '\bjq\b' "$f" >/dev/null 2>&1; then
+      bad "jq-in-production: ${f#"$ROOT/"}"
+    fi
+  done < <(find "$base" -type f \( -name '*.sh' -o -name '*.py' \) -print0 2>/dev/null)
+done
+
+if [[ "$FAIL" -eq 0 ]]; then ok "no-jq-production-surfaces"; fi
+exit "$FAIL"

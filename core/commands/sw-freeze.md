@@ -5,7 +5,7 @@ alwaysApply: false
 
 # `/sw-freeze`
 
-Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is authoritative.
+Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.py` is authoritative.
 
 ## Scope
 
@@ -17,21 +17,21 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is aut
 
 1. Verify artifact exists and does **not** already have `frozen: true`.
 2. **Spec-rigor gate** (`skills/spec-rigor/SKILL.md`) — halt on `fail` (exit `20`):
-   - **PRD / brainstorm / amendment:** `python3 scripts/spec-rigor-check.sh --artifact prd --path <file> --tier <full|standard>`
+   - **PRD / brainstorm / amendment:** `python3 scripts/spec-rigor-check.py --artifact prd --path <file> --tier <full|standard>`
      (tier from triage or `--tier`; default `standard` when unknown).
    - **PRD Full-tier linkage (R55):** before stamping, run
-     `python3 scripts/doc-link-check.sh --path <file> --tier full` — halt on exit `20` when `brainstorm:` is
+     `python3 scripts/doc-link-check.py --path <file> --tier full` — halt on exit `20` when `brainstorm:` is
      missing or dangling.
-   - **Decision record / decision amendment:** `python3 scripts/spec-rigor-check.sh --artifact decision --path <file> --tier <full|standard>`
+   - **Decision record / decision amendment:** `python3 scripts/spec-rigor-check.py --artifact decision --path <file> --tier <full|standard>`
      (route by path under `docs/decisions/` or explicit `--artifact decision`).
    - **Decision snapshot (PRD 015):** after stamping `frozen: true` on a decision record, refresh the
      committed redacted snapshot (offline-safe — no provider calls):
-     `python3 scripts/memory-decision-snapshot.sh write --path <file>` stamps `authoritative: repo|memory`
-     via `memory-sot.sh` and pipes body through `memory-redact.sh`. Provider write of the authoritative
+     `python3 scripts/memory-decision-snapshot.py write --path <file>` stamps `authoritative: repo|memory`
+     via `memory-sot.py` and pipes body through `memory-redact.py`. Provider write of the authoritative
      record (memory-SoT) is best-effort post-freeze with an audit breadcrumb in
      `docs/decisions/.memory-freeze-audit.log` — never a CI gate.
-   - **Task list:** `python3 scripts/spec-rigor-check.sh --artifact tasks --path <file> --prd <frozen-prd>` then
-     `python3 scripts/traceability-check.sh --prd <frozen-prd> --tasks <file>` — both must pass before freeze.
+   - **Task list:** `python3 scripts/spec-rigor-check.py --artifact tasks --path <file> --prd <frozen-prd>` then
+     `python3 scripts/traceability-check.py --prd <frozen-prd> --tasks <file>` — both must pass before freeze.
    - `warn` (exit `10`) may proceed with logged findings.
 2b. **Brainstorm forward ref (R53):** when freezing a **Full-tier PRD**, if the source brainstorm is not frozen,
     run `python3 scripts/doc_link.py write-forwardref --brainstorm <source> --prd <prd-path>` so the
@@ -42,8 +42,8 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is aut
    frozen_at: YYYY-MM-DD
    ```
 4. **Gap schedule flip (R52):** when frontmatter lists `absorbs: [GAP-NNN, …]`, run
-   `python3 scripts/gap-backlog.sh flip --schedule --from-artifact <path>` after stamping.
-   Optional structural normalize: `python3 scripts/doc-format-normalize.sh --write --inplace <path>` when `--normalize`.
+   `python3 scripts/gap-backlog.py flip --schedule --from-artifact <path>` after stamping.
+   Optional structural normalize: `python3 scripts/doc-format-normalize.py --write --inplace <path>` when `--normalize`.
 5. Register in the appropriate living index:
    - **PRDs / task lists:** add or refresh entry in `docs/prds/INDEX.md` (path, amendments, status `not-started`).
    - **Decision records:** add or refresh entry in `docs/decisions/INDEX.md` (path, amendments, status `not-started`).
@@ -52,7 +52,7 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is aut
    spec-seed helper via the verdict-independent wrapper (R4 — warn-not-block; stamp is never rolled back):
 
    ```bash
-   python3 scripts/check-frozen.sh freeze-commit --artifact <artifact-path>
+   python3 scripts/check-frozen.py freeze-commit --artifact <artifact-path>
    ```
 
    The helper commits the frozen artifact onto the resolved `<type>/<slug>` (creating the branch from the
@@ -69,7 +69,7 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.sh` is aut
 | `rules/sw-freeze-guardrail.mdc` | agent instruction | — |
 | `hooks/pre-commit-frozen.sh` | local commit block | yes (`--no-verify`) |
 | `hooks/pre-commit-completed-unit.sh` | complete-unit folder immutability (R9/R12) | yes (`--no-verify`) |
-| `scripts/check-frozen.sh` | CI required-check | **no** |
+| `scripts/check-frozen.py` | CI required-check | **no** |
 
 
 **Completed-unit immutability (PRD 032 R9/R12):** `hooks/pre-commit-completed-unit.sh` chains from
@@ -79,14 +79,14 @@ binds to a reconcile-generation token (inline reconcile + derived-status re-read
 When the reconciler `derived` region is empty (half-applied train), the hook runs in **graceful-degraded
 structural-status mode** and emits a warning instead of blocking every write.
 
-`check-frozen.sh` and the freeze snapshot path operate on the committed git record only — the provider
+`check-frozen.py` and the freeze snapshot path operate on the committed git record only — the provider
 is never consulted during freeze or CI (PRD 015 R5).
 
-Bootstrap local hook: `python3 scripts/install-hooks.sh`.
+Bootstrap local hook: `python3 scripts/install-hooks.py`.
 
 **Communication intensity:** normal
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --command sw-freeze`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-freeze`.
 
 ## Guardrails
 

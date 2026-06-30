@@ -13,7 +13,7 @@ capability:
 
 # Review provider capabilities (R36)
 
-Neutral contract for AI code-review adapters. Deterministic consumers (`scripts/check-gate.sh`) call the
+Neutral contract for AI code-review adapters. Deterministic consumers (`scripts/check-gate.py`) call the
 **executable** adapter (`providers/review/<id>.sh`). Agent-mediated consumers (`/sw-review`, stabilize) read
 the markdown adapter (`providers/review/<id>.md`).
 
@@ -78,4 +78,4 @@ Findings shape for stabilize (markdown adapters document fetch procedure):
 
 `review.provider` in `workflow.config.json` selects `providers/review/<id>.sh` + `<id>.md` via the
 capability selector's `config_flag` triggers (`selectionFamily: providers`). Eligibility ≠ authorization —
-executables still pass `check-gate.sh` and the named adapter gate (R27).
+executables still pass `check-gate.py` and the named adapter gate (R27).

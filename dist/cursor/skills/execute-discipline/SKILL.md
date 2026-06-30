@@ -9,7 +9,7 @@ Bounded implementation loop inside `/sw-execute`. One **task ref** at a time (e.
 plan self-review → TDD red → implement → TDD green → two-stage review before the next task.
 
 
-**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.sh --skill execute-discipline`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --skill execute-discipline`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Per-task loop
 
@@ -17,14 +17,14 @@ plan self-review → TDD red → implement → TDD green → two-stage review be
 plan-self-review → TDD red → implement → TDD green → tdd-gate → stage-1 review → stage-2 review → next task
 ```
 
-1. **Plan self-review** — `python3 scripts/plan-self-review.sh --tasks <file> [--task-ref <ref>]`
+1. **Plan self-review** — `python3 scripts/plan-self-review.py --tasks <file> [--task-ref <ref>]`
    Validates executable steps (`**File:**`, `**Expected:**`) and scans for placeholders.
 2. **Resolve traceability** — from `## Traceability` (U6), load `testScenario` + `rid` for this task ref.
 3. **TDD red** — run the traced test command; record failure in `/tmp/sw-tdd.status.json` (`red.observed: true`,
    `red.exitCode != 0`). If no test scenario exists, record `skipped: true` with reason — gate returns `skipped`.
 4. **Implement** — minimal change for the task; do not weaken assertions to force green.
 5. **TDD green** — re-run the same test; record pass (`green.observed: true`, `green.exitCode: 0`).
-6. **TDD gate** — `python3 scripts/tdd-gate.sh --status /tmp/sw-tdd.status.json` must return `pass` or `skipped`.
+6. **TDD gate** — `python3 scripts/tdd-gate.py --status /tmp/sw-tdd.status.json` must return `pass` or `skipped`.
 7. **Two-stage review** (fresh subagent per task when delegated — see `rules/sw-subagent-dispatch.mdc`):
    - **Stage 1 — spec-compliance:** diff satisfies task + union R-IDs; no out-of-scope edits.
    - **Stage 2 — code-quality:** naming, structure, obvious bugs; no scope expansion.
@@ -47,7 +47,7 @@ Emit `/tmp/sw-tdd.status.json` before calling the gate:
 }
 ```
 
-### Verdict contract (`scripts/tdd-gate.sh`)
+### Verdict contract (`scripts/tdd-gate.py`)
 
 | Verdict | Meaning | Exit |
 | --- | --- | --- |
@@ -63,14 +63,14 @@ After `/sw-tasks` Go expansion, each implementable sub-task includes:
 
 ```markdown
 - [ ] 1.1 Add tdd-gate script (R1)
-  - **File:** `scripts/tdd-gate.sh`
+  - **File:** `scripts/tdd-gate.py`
   - **Expected:** JSON verdict; exit 0 on pass, 20 on fail
   - **R-IDs:** R1
 ```
 
 Parent phase items may stay checklist-only; **sub-tasks** under active phase carry `File` + `Expected`.
 
-## Self-review checks (`plan-self-review.sh`)
+## Self-review checks (`plan-self-review.py`)
 
 | Check | Severity |
 | --- | --- |

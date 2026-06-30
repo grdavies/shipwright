@@ -10,7 +10,7 @@ capability:
     providerFamily: review
     adapterId: coderabbit
     selectionFamily: providers
-    gateRef: check-gate.sh
+    gateRef: check-gate.py
 ---
 
 # CodeRabbit review adapter (agent-mediated)

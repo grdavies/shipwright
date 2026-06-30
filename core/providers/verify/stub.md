@@ -10,7 +10,7 @@ capability:
     providerFamily: verify
     adapterId: stub
     selectionFamily: providers
-    gateRef: check-gate.sh
+    gateRef: check-gate.py
 ---
 
 # verify adapter: `stub`

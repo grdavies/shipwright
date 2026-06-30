@@ -14,7 +14,7 @@ When a change is specced in this repo, the broad in-repo documentation surface â
 command/skill docs under `core/commands/` + `core/skills/`, `AGENTS.md`, `INVARIANTS.md`, config/schema docs,
 `.sw/layout.md`, and rule prose â€” can silently fall out of date. Coverage today is **partial**: living-doc
 currency gates keep `INDEX.md` / `COMPLETION-LOG.md` / `GAP-BACKLOG.md` accurate (PRD 009); `docs-presence` /
-`docs-currency` hooks and `docs-link-check.sh` check presence/links; the `comment-accuracy` code-review agent
+`docs-currency` hooks and `docs-link-check.py` check presence/links; the `comment-accuracy` code-review agent
 checks in-code comments. But **no review persona maps a proposed change to the documentation artifacts it
 affects and recommends concrete documentation updates for inclusion in the spec.**
 

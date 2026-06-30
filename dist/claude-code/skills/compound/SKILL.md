@@ -18,19 +18,19 @@ downstream status/reconcile flags differ.
 requires user approval at compound write and merge-ack prompts; `auto` removes those prompts only. Memory
 fail-closed (R7) and rule-class human gates (R8) apply under all settings.
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.sh --skill compound`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --skill compound`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Procedure
 
 1. Inputs: `/sw-retro` candidates, `/sw-feedback` route records (`surface:feedback-route`), or explicit feedback items.
-2. **Redact** each payload: `python3 scripts/memory-redact.sh`.
+2. **Redact** each payload: `python3 scripts/memory-redact.py`.
 3. `memory-preflight` **search** before store — `modify` near-duplicates.
 4. Store with canonical category (`decision` / `learning` / `debug` / `design`), `relatedFiles`, tags
    (`prd-<n>`, `surface:compound`), relationship edges when supported.
 5. **Decision record boundary (R32 / provider-conditional SoT — R8):** resolve the write recipe first:
 
 ```bash
-python3 scripts/memory-sot.sh pointer-recipe --path docs/decisions/<n>-<slug>.md [--memory-id <id>] --json
+python3 scripts/memory-sot.py pointer-recipe --path docs/decisions/<n>-<slug>.md [--memory-id <id>] --json
 ```
 
 | Effective SoT | Compound `decision` write |

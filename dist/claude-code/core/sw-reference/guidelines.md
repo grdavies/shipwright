@@ -9,7 +9,7 @@ plan-validation gate.
 ## Artifact types
 
 Guidelines and the PRD-021 capability manifest are **separate artifact types** sharing the author-time
-validation harness (`scripts/capability-manifest-lint.sh` → `capability_manifest_lint.py`). Guidelines bound
+validation harness (`scripts/capability-manifest-lint.py` → `capability_manifest_lint.py`). Guidelines bound
 step shape per phase type; the manifest selects capabilities by signal.
 
 ## Phase-type coverage (022 slice)

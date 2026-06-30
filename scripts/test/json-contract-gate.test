@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
 GATE_PY="$ROOT/scripts/check-gate.py"
-GATE_SH="$ROOT/scripts/check-gate.sh"
+GATE_SH="$ROOT/scripts/check-gate.py"
 export GITHUB_TOKEN=gh_fixture_token_for_tests
 export SW_HOST_FIXTURE="${SW_HOST_FIXTURE:-green}"
 export SW_GATE_NOW=1577838000

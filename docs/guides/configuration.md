@@ -59,13 +59,13 @@ Detect platform (`cursor` or `claude-code`) and seed the `models` block:
 | `models.routing` | Per `sw-*` command and skill tier; `inherit` for orchestrators |
 | `models.routing.agents` | Per reviewer/persona/native-panel agent id → semantic tier (`build`/`mid`/`deep`) |
 
-Scaffold writes the full block from `scripts/seed-model-config.sh` and
+Scaffold writes the full block from `scripts/seed-model-config.py` and
 `core/sw-reference/model-routing.defaults.json`. Doctor offers add/repair without overwriting user-edited tiers
 unless confirmed. See `.sw/models-tiering.md` for platform catalogs, `models.routing.agents`, and resolver usage.
 
 **Dispatch binding (PRD 012):** before spawning reviewer/persona Tasks, resolve
-`python3 scripts/resolve-model-tier.sh --agent <id>` and run
-`python3 scripts/reviewer-dispatch-check.sh --agent <id> --parent-model <parent-concrete-id>`;
+`python3 scripts/resolve-model-tier.py --agent <id>` and run
+`python3 scripts/reviewer-dispatch-check.py --agent <id> --parent-model <parent-concrete-id>`;
 stamp the resolved concrete `model:` on the Task (do not rely on `model: inherit` from the parent session).
 
 ### Deliver autonomy (`deliver.autonomy`)
@@ -88,7 +88,7 @@ legacy `prdsDir`/`tasksDir` aliases until migration cutover.
 ### Planning visibility (PRD 034)
 
 Per-unit bodies carry `visibility: public|private|memory`. When a unit omits `visibility`, the repo-level
-**profile** supplies the default via `scripts/planning_visibility.py` (wrapped by `scripts/visibility-resolve.sh`).
+**profile** supplies the default via `scripts/planning_visibility.py` (wrapped by `scripts/visibility-resolve.py`).
 
 | Key | Values | Meaning |
 |-----|--------|---------|
@@ -113,7 +113,7 @@ labeled encrypted or anonymized.
 Fixture suite: `python3 scripts/test/run-visibility-fixtures.sh` (registered as `visibility-fixtures` in the PR test-plan manifest).
 
 **Visibility-driven `.gitignore` (R13):** regenerate tracking rules from the resolver via
-`python3 scripts/gitignore-generate.sh --write`. The generated block is delimited by
+`python3 scripts/gitignore-generate.py --write`. The generated block is delimited by
 `# BEGIN visibility-generated` / `# END visibility-generated` markers in `.gitignore`.
 
 Fixture suite: `python3 scripts/test/run-planning-visibility-acceptance-fixtures.sh` (registered as
@@ -181,7 +181,7 @@ python3 scripts/wave.sh plan validate --tier orchestrator --orchestrator-type de
 ### `/sw-cleanup` agent-driven confirm
 
 `/sw-cleanup` defaults to dry-run. The agent presents the `wouldRemove` set and asks for explicit confirm
-before running `python3 scripts/cleanup.sh --confirm --yes` (or `SW_CLEANUP_CONFIRM=1`) on your behalf.
+before running `python3 scripts/cleanup.py --confirm --yes` (or `SW_CLEANUP_CONFIRM=1`) on your behalf.
 All fail-closed protections (unmerged branches, in-flight deliver, indeterminate squash, no `rm -rf`) are
 unchanged — only the apply trigger moves from manual bash to agent-on-ack.
 
@@ -274,8 +274,8 @@ Wenyan variants are not supported in Shipwright — attach the external user ski
 `**Model tier:**` prose; resolve at runtime:
 
 ```bash
-python3 scripts/resolve-model-tier.sh --command sw-prd
-python3 scripts/resolve-model-tier.sh --command sw-doc --delegate sw-prd
+python3 scripts/resolve-model-tier.py --command sw-prd
+python3 scripts/resolve-model-tier.py --command sw-doc --delegate sw-prd
 ```
 
 Orchestrators (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-retrospective`) route at `inherit` — always resolve the
@@ -285,19 +285,19 @@ delegated child command. Full policy: `.sw/models-tiering.md`.
 
 Signal-driven eligibility for skills, personas, providers, rules, and hooks is declared in per-artifact
 `capability` frontmatter, aggregated into `core/sw-reference/capability-index.json`, and resolved by
-`scripts/capability-select.sh` over a versioned `signal_context`. Contract:
+`scripts/capability-select.py` over a versioned `signal_context`. Contract:
 `core/sw-reference/capability-manifest.md`.
 
 | Concept | Meaning |
 | --- | --- |
 | **Eligibility** | Selector output — which capabilities match the snapshotted `signal_context` |
-| **Authorization** | Named trust/config gate for executables only — `check-gate.sh`, `memory-preflight`, hook slots (R27) |
-| **Model tier** | Orthogonal — `models.routing` + `resolve-model-tier.sh`; not chosen by the selector |
+| **Authorization** | Named trust/config gate for executables only — `check-gate.py`, `memory-preflight`, hook slots (R27) |
+| **Model tier** | Orthogonal — `models.routing` + `resolve-model-tier.py`; not chosen by the selector |
 
 **No new `workflow.config.json` keys** — existing keys (`review.provider`, `review.local.provider`,
 `memory.provider`, `verify.provider`, etc.) are read into `signal_context.config` at selection time via
 manifest `config_flag` triggers. Provider configuredness (absent / `none` / unconfigured) matches
-`check-gate.sh` / `wave_preflight` verdicts.
+`check-gate.py` / `wave_preflight` verdicts.
 
 **Freshness:** regenerate dist after manifest edits (`python3 -m sw generate --all`); stale index fails
 `scripts/test/run-emitter-fixtures.sh` and pre-selection preflight.
@@ -382,10 +382,10 @@ Provider **credentials** come from the environment or your secret store — neve
 Shipwright repos single-source the standard FEAT test-plan fixture set in
 `core/sw-reference/pr-test-plan.manifest.json` (`ci.prTestPlanManifest` in config — not under `verify.*`).
 Local `verify.test` runs the same set via `scripts/test/run-pr-test-plan-manifest.sh`; CI runs it via
-`.github/workflows/pr-test-plan-ci.yml` (regenerate with `python3 scripts/generate-pr-test-plan-ci-workflow.sh`).
+`.github/workflows/pr-test-plan-ci.yml` (regenerate with `python3 scripts/generate-pr-test-plan-ci-workflow.py`).
 
 Each manifest entry carries **`required`** (merge-blocking) or **`advisory`** (visible in the all-checks
-readiness verdict but non-blocking). `scripts/check-gate.sh` loads the manifest and exposes
+readiness verdict but non-blocking). `scripts/check-gate.py` loads the manifest and exposes
 `requiredFailingChecks` / `advisoryFailingChecks` in gate JSON; `/sw-stabilize` remediates through the
 existing gate path. The PR template references CI **job names** as the authoritative gate — not a manual
 script checklist.

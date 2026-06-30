@@ -43,7 +43,7 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
     proves public to `all-private`+ack and private to `specs-public`.
   - **R-IDs:** R3
 - [ ] 1.4 Visibility resolver = single authority module (R19)
-  - **File:** `scripts/planning_visibility.py`, `scripts/visibility-resolve.sh`
+  - **File:** `scripts/planning_visibility.py`, `scripts/visibility-resolve.py`
   - **Expected:** one resolver module (per-unit field over the public-repo-aware profile) is consumed by the
     INDEX generator/033 reconciler, legacy projections, spec-seed, dispatch redaction, PR-diff paths, the
     `inFlight` tuple redaction, and every R14 emission point; no caller reimplements redaction. Fixture
@@ -106,24 +106,24 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
     `store-log-id-hash-backend` greps store logs and asserts no body bytes appear.
   - **R-IDs:** R18
 - [x] 3.4 Memory backend adapter-only + redact on read+write + class bans (R11)
-  - **File:** `scripts/planning_store.py` (memory backend), `scripts/wave_memory.py`, `scripts/memory-redact.sh`
+  - **File:** `scripts/planning_store.py` (memory backend), `scripts/wave_memory.py`, `scripts/memory-redact.py`
   - **Expected:** the memory backend routes exclusively through the provider-agnostic adapter (never a direct
-    provider call), passes `memory-redact.sh` on both `put` and read, degrades open when no provider exists,
+    provider call), passes `memory-redact.py` on both `put` and read, degrades open when no provider exists,
     scopes writes to `memory.project`, requests body inactivation on supersede/cancel, and bans the
     `discussion`/`progress` classes. Fixture `memory-backend-adapter-only` bans direct provider MCP calls and
     proves redaction on read+write.
   - **R-IDs:** R11
 - [x] 3.5 `local/synced` path validation doctor check (R16)
-  - **File:** `scripts/planning-doctor.sh`
+  - **File:** `scripts/planning-doctor.py`
   - **Expected:** the path must resolve inside the operator home or a configured allowlist, reject symlinks
     and `..`, and have a directory mode no looser than `0700`; known cloud-sync roots warn; the backend is
     documented as convenience-not-security and not the public-repo template default. Fixture
     `local-synced-path-validation` rejects symlink/`..`/loose-mode and warns on a cloud root.
   - **R-IDs:** R16
 - [x] 3.6 Memory chokepoint posture unchanged on read + write (R25)
-  - **File:** `scripts/memory-redact.sh`, `core/rules/memory-guardrails.mdc`
+  - **File:** `scripts/memory-redact.py`, `core/rules/memory-guardrails.mdc`
   - **Expected:** the redaction chokepoint + memory guardrails posture is unchanged; memory-routed bodies pass
-    `memory-redact.sh` on read and write; no raw transcript or secret is ever stored. Fixture
+    `memory-redact.py` on read and write; no raw transcript or secret is ever stored. Fixture
     `memory-chokepoint-read-write` proves both directions pass the chokepoint and a raw transcript is refused.
   - **R-IDs:** R25
 
@@ -138,7 +138,7 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
     proves provision-time copy, pinned-backend validation, and the backend-swap halt.
   - **R-IDs:** R7
 - [ ] 4.2 Commit-boundary barrier (R8)
-  - **File:** `core/hooks/pre-commit`, `core/hooks/pre-push`, `scripts/materialized-prefix-scan.sh`
+  - **File:** `core/hooks/pre-commit`, `core/hooks/pre-push`, `scripts/materialized-prefix-scan.py`
   - **Expected:** materialized bodies live under a deterministic ignored prefix
     (`.cursor/planning-materialized/`) added to `.gitignore`; a post-materialize `secret-scan file` runs;
     pre-commit and pre-push reject any staged path under the prefix even with `git add -f`; a CI check scans
@@ -169,25 +169,25 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
     and a clean teardown with no residual.
   - **R-IDs:** R20
 - [ ] 4.6 Materialized bodies worktree-only + secret-scan coverage (R26)
-  - **File:** `scripts/secret-scan.sh`, `scripts/planning_materialize.py`
+  - **File:** `scripts/secret-scan.py`, `scripts/planning_materialize.py`
   - **Expected:** materialized private bodies live only inside the agent worktree under the ignored prefix, are
     never committed or pushed (R8), are swept on crash, removed on teardown, and secret-scan covers
-    materialize-time and store-read-time via the existing `secret-scan.sh file|stdin` chokepoints. Fixture
+    materialize-time and store-read-time via the existing `secret-scan.py file|stdin` chokepoints. Fixture
     `materialized-worktree-only` proves nothing is committed and secret-scan runs at both points.
   - **R-IDs:** R26
 
 ### 5. PRD-015 reconciliation + `.gitignore` generation + 032 handoff — M
 
 - [x] 5.1 Visibility-driven `.gitignore` generator + tracked-private reject (R13)
-  - **File:** `scripts/gitignore-generate.sh`, `scripts/planning-unit-validate.sh`, `.gitignore`
+  - **File:** `scripts/gitignore-generate.py`, `scripts/planning-unit-validate.py`, `.gitignore`
   - **Expected:** `.gitignore` is generated from the visibility resolver (track frontmatter stubs + public
     bodies only), reconciling the PRD-015 committed-snapshot vs `.gitignore` conflict; the migration verifier
-    asserts zero private-body bytes in the git index, and `planning-unit-validate.sh` rejects a
+    asserts zero private-body bytes in the git index, and `planning-unit-validate.py` rejects a
     `visibility: private` unit whose body path is tracked. Fixture `gitignore-visibility-no-private-bytes`
     proves zero private bytes tracked and a tracked private body is rejected.
   - **R-IDs:** R13
 - [x] 5.2 PRD-015 decision SoT + 032 in-flight redaction handoff (R12)
-  - **File:** `scripts/memory-decision-snapshot.sh`, `scripts/planning_visibility.py` (inFlight tuple redaction)
+  - **File:** `scripts/memory-decision-snapshot.py`, `scripts/planning_visibility.py` (inFlight tuple redaction)
   - **Expected:** the memory backend is body-storage only and does not alter source-of-truth; for
     `decision`-class units the PRD-015 always-committed redacted snapshot + pointer flow runs regardless of
     `visibility`; the resolver redacts the committed `inFlight` tuple's branch/run-id to the 032 R13
@@ -199,7 +199,7 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
 ### 6. `/sw-init` seeding + doctor checks — M
 
 - [x] 6.1 `/sw-init` profile + store + privacy-notice/ack seeding + doctor (R21)
-  - **File:** `core/commands/sw-init.md`, `scripts/planning-doctor.sh`
+  - **File:** `core/commands/sw-init.md`, `scripts/planning-doctor.py`
   - **Expected:** `/sw-init` resolves and seeds the public-repo-aware default profile (R3) + default store
     backend, records the first-run privacy notice + ack, and a doctor check validates store reachability
     (degrade-open with actionable remediation when the memory backend is configured but no provider is
@@ -207,7 +207,7 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
     degrade-open doctor verdict + orphan sweep.
   - **R-IDs:** R21
 - [x] 6.2 No new credential surface + token-safe doctor (R27)
-  - **File:** `scripts/planning-doctor.sh`, `scripts/planning_store.py`
+  - **File:** `scripts/planning-doctor.py`, `scripts/planning_store.py`
   - **Expected:** no new credential surface beyond the configured backend's own auth (via the existing
     provider-agnostic adapter); the doctor check never prints provider tokens, store config references env-var
     names only, and store operations never log body content (R18). Fixture `store-no-token-leak` proves the
@@ -217,14 +217,14 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
 ### 7. Emitter/dist parity + doc-impact acceptance — M
 
 - [x] 7.1 Store/visibility artifacts in `core/` + dist parity (R22)
-  - **File:** `scripts/copy-to-core.sh`, `scripts/migration-parity-shadow.sh`, `core/sw-reference/pr-test-plan.manifest.json`
+  - **File:** `scripts/copy-to-core.sh`, `scripts/migration-parity-shadow.py`, `core/sw-reference/pr-test-plan.manifest.json`
   - **Expected:** the `.gitignore` generator and store/visibility artifacts land in `core/` and propagate to
     both dist trees; `copy-to-core` parity, emitter-freshness, and secret-scan fixtures cover the new scripts
     and config keys. Fixture `store-emitter-parity` asserts core to dist parity + emitter freshness for the new
     surfaces.
   - **R-IDs:** R22
 - [x] 7.2 No regression to the delivery-loop documentation (R17)
-  - **File:** `core/scripts/spec-rigor-check.sh`, `core/scripts/traceability-check.sh`
+  - **File:** `core/scripts/spec-rigor-check.py`, `core/scripts/traceability-check.py`
   - **Expected:** public units behave exactly as today; frozen immutability, traceability, and spec-rigor
     gates are preserved; the human merge-to-`main` gate is unchanged. Fixture `public-unit-no-regression`
     proves public-unit behavior and gate preservation are unchanged.
@@ -234,7 +234,7 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
   - **Expected:** all listed docs are updated as acceptance criteria — `.gitignore` (visibility-driven
     generation), memory SKILL (decision paths under `docs/planning/`; memory store is body-only),
     `recallium.md` (decision unit paths; storage-only note), `memory-guardrails.mdc` (name the
-    `planning.store` memory backend as adapter + `memory-redact.sh` chokepoint only), `sw-init.md`
+    `planning.store` memory backend as adapter + `memory-redact.py` chokepoint only), `sw-init.md`
     (public-repo-aware profile/store/privacy-notice + ack seeding), `deliver/SKILL.md` (provision-time
     materialization, ignored prefix, commit-boundary barrier, teardown), `config.schema.json` + both
     `workflow.config.example.json` copies (the `planning.store` + visibility-profile keys), and
@@ -289,7 +289,7 @@ fixtures registered in `core/sw-reference/pr-test-plan.manifest.json` and is ind
 ## Notes
 
 - New module family: `scripts/planning_visibility.py` (resolver), `scripts/planning_store.py` (interface +
-  registry), `scripts/planning_materialize.py` (provision-time materialization), `scripts/gitignore-generate.sh`,
+  registry), `scripts/planning_materialize.py` (provision-time materialization), `scripts/gitignore-generate.py`,
   and `core/providers/planning-store/` (in-repo / local-synced / memory adapters + `CAPABILITIES.md`),
   mirroring the existing `core/providers/host/` + memory/review adapter pattern.
 - Cross-PRD seams (referenced, not reimplemented here): the PRD 031 path helper, the PRD 033 reconciler

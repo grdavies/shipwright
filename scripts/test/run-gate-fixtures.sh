@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # Host fixture mode (Phase 2 — no gh on PATH)
-GATE="$ROOT/scripts/check-gate.sh"
+GATE="$ROOT/scripts/check-gate.py"
 CONFIG_BACKUP=""
 CONFIG_PATH="$ROOT/.cursor/workflow.config.json"
 export GITHUB_TOKEN=gh_fixture_token_for_tests

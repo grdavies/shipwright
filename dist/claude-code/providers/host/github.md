@@ -10,7 +10,7 @@ capability:
     providerFamily: host
     adapterId: github
     selectionFamily: providers
-    gateRef: check-gate.sh
+    gateRef: check-gate.py
 ---
 
 # GitHub host adapter

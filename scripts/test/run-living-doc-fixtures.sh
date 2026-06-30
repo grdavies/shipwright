@@ -7,7 +7,7 @@ FAIL=0
 ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
-RS="$ROOT/scripts/reconcile-status.sh"
+RS="$ROOT/scripts/reconcile.py"
 WLD="$ROOT/scripts/wave_living_docs.py"
 DCG="$ROOT/scripts/docs-currency-gate.sh"
 
@@ -73,7 +73,7 @@ cat >"$FIX_ROOT/docs/prds/INDEX.md" <<'INDEX'
 |---|------|-----|-------|--------|
 | 008 | model-tier-setup-defaults | [008-prd-model-tier-setup-defaults.md](008-model-tier-setup-defaults/008-prd-model-tier-setup-defaults.md) (frozen) | [tasks](008-model-tier-setup-defaults/tasks-008-model-tier-setup-defaults.md) (frozen) | complete |
 INDEX
-if (cd "$FIX_ROOT" && bash scripts/reconcile-status.sh set-index-status --prd 008 --status in-progress 2>/dev/null | python3 -c "
+if (cd "$FIX_ROOT" && bash scripts/reconcile.py set-index-status --prd 008 --status in-progress 2>/dev/null | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 assert d.get('status')=='in-progress'
@@ -89,8 +89,8 @@ LOG_FIX=$(mktemp -d)
 mkdir -p "$LOG_FIX/docs/prds"
 cp "$ROOT/docs/prds/COMPLETION-LOG.md" "$LOG_FIX/docs/prds/"
 (cd "$LOG_FIX" && mkdir -p scripts && cp "$RS" scripts/)
-OUT1=$(cd "$LOG_FIX" && bash scripts/reconcile-status.sh append-log-idempotent --prd 099 --phase all --sha deadbeef --notes "test")
-OUT2=$(cd "$LOG_FIX" && bash scripts/reconcile-status.sh append-log-idempotent --prd 099 --phase all --sha deadbeef --notes "test")
+OUT1=$(cd "$LOG_FIX" && bash scripts/reconcile.py append-log-idempotent --prd 099 --phase all --sha deadbeef --notes "test")
+OUT2=$(cd "$LOG_FIX" && bash scripts/reconcile.py append-log-idempotent --prd 099 --phase all --sha deadbeef --notes "test")
 if echo "$OUT1" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('appended') is True" && \
    echo "$OUT2" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('skipped') is True"; then
   ok "completion-log-idempotent-append"
@@ -129,7 +129,7 @@ else
 | 2026-06-25 | test | 004 | other gap | 008 | open |
 EOF
   mkdir -p "$GAP_FIX/scripts" && cp "$RS" "$GAP_FIX/scripts/"
-  if (cd "$GAP_FIX" && bash scripts/reconcile-status.sh gap-resolve --absorbing-prd 007 --pr 67 | python3 -c "
+  if (cd "$GAP_FIX" && bash scripts/reconcile.py gap-resolve --absorbing-prd 007 --pr 67 | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 assert d.get('resolved')==['004']

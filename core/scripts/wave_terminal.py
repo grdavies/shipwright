@@ -565,7 +565,7 @@ def run_docs_currency_gate(root: Path) -> None:
     """Hard-block terminal gate on living-doc drift for the current run (R50)."""
     if os.environ.get("SW_SKIP_DOCS_CURRENCY") == "1":
         return
-    script = SCRIPT_DIR / "docs-currency-gate.sh"
+    script = SCRIPT_DIR / "docs-currency-gate.py"
     proc = subprocess.run(
         ["bash", str(script), "--state-root", str(root)],
         cwd=str(root),

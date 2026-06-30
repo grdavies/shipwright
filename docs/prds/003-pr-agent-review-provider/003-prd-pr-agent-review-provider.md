@@ -58,7 +58,7 @@ Requirements carry forward from the brainstorm (`R1`–`R24`) with PRD additions
 
 - **R6** `workflow.config.json` MUST accept `review.provider: "pr-agent"` and resolve adapters at `providers/review/pr-agent.{sh,md}`.
 - **R7** A `prAgent` config block MUST be added to `.sw/config.schema.json` (mirrored in `core/sw-reference/config.schema.json`) with at minimum: `reviewGraceMinutes` (integer, default 15), `llmVendor` (string enum: `openai` \| `anthropic` \| `gemini`), `model` (optional string), `actionRef` (string matching semver tag pattern `^v\d+\.\d+\.\d+$`), and `onboardingComplete` (boolean, default `false`; set `true` after first successful `landed` or `skipped` per-head state). Secrets MUST NOT be schema properties.
-- **R8** `check-gate.sh` MUST read grace minutes from `prAgent.reviewGraceMinutes` when `review.provider` is `pr-agent`.
+- **R8** `check-gate.py` MUST read grace minutes from `prAgent.reviewGraceMinutes` when `review.provider` is `pr-agent`.
 - **R9** `workflow.config.example.json` MUST include an example showing `review.provider: "pr-agent"` and a sample `prAgent` block.
 
 ### `/sw-setup` behavior
@@ -78,7 +78,7 @@ Requirements carry forward from the brainstorm (`R1`–`R24`) with PRD additions
 
 ### Gate, stabilize, and documentation
 
-- **R19** `check-gate.sh` MUST invoke `providers/review/pr-agent.sh` when `review.provider` is `pr-agent` (same dynamic adapter resolution as other providers).
+- **R19** `check-gate.py` MUST invoke `providers/review/pr-agent.sh` when `review.provider` is `pr-agent` (same dynamic adapter resolution as other providers).
 - **R20** Gate fixtures MUST include PR-Agent per-head state cases (landed, in-flight, unconfigured) under `scripts/test/fixtures/`.
 - **R21** `PROVENANCE.md` MUST list PR-Agent under runtime dependencies with adapter paths and upstream docs link.
 - **R22** `README.md` MUST mention `pr-agent` as a selectable `review.provider` value.
@@ -102,7 +102,7 @@ workflow.config.json
   review.provider: "pr-agent"
   prAgent: { reviewGraceMinutes, llmVendor, model, actionRef, onboardingComplete }
         │
-        ├─► check-gate.sh ──► providers/review/pr-agent.sh ──► perHeadState JSON
+        ├─► check-gate.py ──► providers/review/pr-agent.sh ──► perHeadState JSON
         ├─► /sw-review phase 2 ──► skipped (v1; Action-only external review)
         └─► /sw-stabilize ──► providers/review/pr-agent.md ──► findings harvest
 ```
@@ -165,7 +165,7 @@ Template at `core/templates/github/workflows/pr-agent.yml`:
 
 Setup writes rendered file to `.github/workflows/pr-agent.yml`. If file already exists, setup MUST ask before overwrite (doctor repair path).
 
-### `check-gate.sh` grace lookup
+### `check-gate.py` grace lookup
 
 When `review.provider` is `pr-agent`, read `prAgent.reviewGraceMinutes`; otherwise keep existing `coderabbit.reviewGraceMinutes` path. Gate output JSON keeps `coderabbitState` / `coderabbitLanded` field names (populated from any provider's adapter); `reviewProvider` field identifies the active adapter.
 
@@ -189,7 +189,7 @@ Per **DL-13 (option c):** PR-Agent external review is Action-mediated only in v1
 | Example config | `core/sw-reference/workflow.config.example.json`, `.sw/workflow.config.example.json` |
 | Setup | `core/commands/sw-setup.md` |
 | Review | `core/commands/sw-review.md` |
-| Gate | `core/scripts/check-gate.sh` (grace lookup only if not already generic) |
+| Gate | `core/scripts/check-gate.py` (grace lookup only if not already generic) |
 | Stabilize docs | `core/commands/sw-stabilize.md` (provider-neutral harvest note) |
 | Skills | `core/skills/stabilize-loop/SKILL.md`, `core/skills/checks-gate/SKILL.md` |
 | Template | `core/templates/github/workflows/pr-agent.yml` |
@@ -202,7 +202,7 @@ Per **DL-13 (option c):** PR-Agent external review is Action-mediated only in v1
 - **Secret handling:** Setup may call `gh secret set` only after explicit user confirmation. Never echo secret values to stdout/logs. Hybrid fallback prints secret *names* and GitHub UI path only.
 - **Fork PR policy:** Same-repo guard on workflow job (see Workflow scaffold). Setup documents that fork PRs skip automated review. Prohibit `pull_request_target` unless separately threat-modeled.
 - **Onboarding gate (M5):** `prAgent.onboardingComplete` + R3 exception — repos that chose `pr-agent` but never see Action output stay yellow until first `landed`/`skipped`.
-- **Memory redaction:** Setup and review flows route durable writes through `scripts/memory-redact.sh`; no raw PR-Agent output dumps to memory.
+- **Memory redaction:** Setup and review flows route durable writes through `scripts/memory-redact.py`; no raw PR-Agent output dumps to memory.
 - **Third-party data flow:** PR-Agent sends code diffs to the selected LLM vendor. Setup MUST surface a one-line data-privacy notice linking to [PR-Agent data privacy docs](https://docs.pr-agent.ai/) during vendor selection.
 - **Supply chain:** `actionRef` pins a semver tag — not `@main` — to reduce Action supply-chain drift. Doctor may warn when pin is behind latest release.
 
@@ -223,7 +223,7 @@ Temporarily set `review.provider: pr-agent` in test config (same pattern as `noc
 
 ### Adapter unit tests
 
-- `pr-agent.sh` stdout validates against JSON shape expected by `check-gate.sh` (jq field presence).
+- `pr-agent.sh` stdout validates against JSON shape expected by `check-gate.py` (jq field presence).
 - Grace window: `SW_GATE_NOW` + head timestamp fixtures prove `in-flight` → `unconfigured` transition.
 
 ### Regression
@@ -234,7 +234,7 @@ Temporarily set `review.provider: pr-agent` in test config (same pattern as `noc
 ### Manual smoke (post-implementation)
 
 1. `/sw-setup` → select `pr-agent` → OpenAI → confirm workflow + config written.
-2. Open PR → Action runs → `check-gate.sh` reports `landed` after review comment.
+2. Open PR → Action runs → `check-gate.py` reports `landed` after review comment.
 3. Local changes → `/sw-review` skips phase 2 with pr-agent message; phase 1 local review still runs when enabled.
 4. `/sw-stabilize` harvests at least one inline PR-Agent finding on a seeded PR.
 

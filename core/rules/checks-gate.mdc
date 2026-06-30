@@ -22,7 +22,7 @@ still surface in the readiness summary (`advisoryFailingChecks` in gate JSON).
 - Canonical algorithm: `checks-gate` skill (`skills/checks-gate/SKILL.md`). `/sw-watch-ci` and
   `/sw-stabilize` both use it.
 - Policy: `workflow.config.json` → `checks` (`policy`, `treatNeutralAsPass`, `neutralAllowlist`).
-- Review barrier: `review.provider` per-head state via `scripts/check-gate.sh`.
+- Review barrier: `review.provider` per-head state via `scripts/check-gate.py`.
 - `NEUTRAL` passes only when `treatNeutralAsPass` is true or the check is in `neutralAllowlist`.
 - Verdicts: `green` → ready; `red`/`blocked` → `/sw-stabilize`; `yellow` → keep waiting.
 

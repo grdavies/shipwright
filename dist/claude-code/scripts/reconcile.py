@@ -109,7 +109,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if cmd == "gap-resolve":
-        proc = subprocess.run(["bash", str(SCRIPT_DIR / "living-status-gap-resolve.sh"), *args], cwd=str(root))
+        proc = subprocess.run([sys.executable, str(SCRIPT_DIR / "living-status-gap-resolve.py"), *args], cwd=str(root))
         return proc.returncode
 
     if cmd in ("cycle-check", "doctor", "relief-check"):

@@ -85,8 +85,8 @@ receives only clarifying edits.
   a shared resolver — no hardcoded repo-wide `.cursor/sw-deliver-state.json` or `.cursor/sw-deliver.lock`
   may remain in `wave_deliver.py`, `wave_deliver_loop.py`, `wave_merge.py`, `wave_lifecycle.py`,
   `wave_bookkeeping.py`, `wave_memory.py`, `wave_failure.py`, `wave_compound.py`, `wave_terminal.py`,
-  `wave_living_docs.py`, `wave_state.py`, `tasks-currency-gate.sh`, `docs-currency-gate.sh`,
-  `ship-phase-status.sh`, `cleanup_lib.py`, or `reconcile-status.sh`.
+  `wave_living_docs.py`, `wave_state.py`, `tasks-currency-gate.py`, `docs-currency-gate.py`,
+  `ship-phase-status.py`, `cleanup_lib.py`, or `reconcile-status.py`.
 - **R10** A concurrent-run index MUST enumerate all live scoped runs so `/sw-status` can list and inspect
   every in-flight deliver run and `/sw-cleanup` in-flight protection covers every scoped run that holds a
   lock or open journal — not just one.

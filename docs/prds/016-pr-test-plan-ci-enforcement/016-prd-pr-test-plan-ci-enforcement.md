@@ -10,7 +10,7 @@ frozen_at: 2026-06-26
 ## Overview
 
 Shipwright `FEAT → main` PRs routinely list a test plan in the description — e.g.
-`run-ux-polish-fixtures.sh`, `run-doc-fixtures.sh`, `run-cleanup-fixtures.sh`, `docs-link-check.sh` — but those
+`run-ux-polish-fixtures.sh`, `run-doc-fixtures.sh`, `run-cleanup-fixtures.sh`, `docs-link-check.py` — but those
 commands run only if an agent executes them manually. `/sw-watch-ci` therefore cannot catch doc/workflow
 regressions: a failing test-plan item surfaces after merge, or not at all. This PRD promotes the recurring
 test-plan fixtures to CI jobs so every PR head runs the same set, classifies each as PR-blocking vs advisory
@@ -25,7 +25,7 @@ This is a **Standard-tier** PRD (bounded CI/workflow change, no brainstorm).
 1. Every PR head runs the standard FEAT test-plan fixtures as CI jobs — no reliance on manual agent execution.
 2. Each fixture is explicitly classified PR-blocking (required) or advisory, consistent with `checks-gate`.
 3. One source of truth for the standard test-plan set, shared by local `verify.test` and the CI workflow.
-4. `/sw-stabilize` consumes the new job logs through the existing `check-gate.sh` path — no new remediation
+4. `/sw-stabilize` consumes the new job logs through the existing `check-gate.py` path — no new remediation
    surface.
 
 ## Non-Goals
@@ -39,7 +39,7 @@ This is a **Standard-tier** PRD (bounded CI/workflow change, no brainstorm).
 ## Requirements
 
 - **R1** The recurring FEAT test-plan fixtures (the standard set: `run-doc-fixtures.sh`,
-  `run-cleanup-fixtures.sh`, `run-ux-polish-fixtures.sh`, `docs-link-check.sh`, and any other fixtures the audit
+  `run-cleanup-fixtures.sh`, `run-ux-polish-fixtures.sh`, `docs-link-check.py`, and any other fixtures the audit
   in R2 deems recurring) MUST run as CI jobs on every PR head, replacing the manual description checklist as the
   enforcement mechanism.
 - **R2** Each promoted fixture MUST be explicitly classified **PR-blocking (required)** or **advisory
@@ -49,7 +49,7 @@ This is a **Standard-tier** PRD (bounded CI/workflow change, no brainstorm).
   the identical fixture set — no drift between what an agent runs locally and what CI runs.
 - **R4** The PR template MUST reference the CI job names (the authoritative gate) instead of enumerating a manual
   test-plan checklist; any residual human note MUST be advisory, not the enforcement path.
-- **R5** `/sw-stabilize` MUST be able to consume the promoted CI job logs through the existing `check-gate.sh`
+- **R5** `/sw-stabilize` MUST be able to consume the promoted CI job logs through the existing `check-gate.py`
   path, so remediation works on the new jobs with no new log source or parser.
 - **R6** The `checks-gate` readiness verdict MUST evaluate the promoted jobs under its existing all-checks (not
   just required) policy, so an advisory failure is visible and a required failure blocks.
@@ -66,7 +66,7 @@ This is a **Standard-tier** PRD (bounded CI/workflow change, no brainstorm).
   on `pull_request`; required jobs gate the merge, advisory jobs report only (R1, R2).
 - **TR3 — PR template.** Update the PR template to reference the CI job names as the gate; remove the manual
   test-plan checklist as the enforcement path (R4).
-- **TR4 — Stabilize/gate integration.** Ensure `check-gate.sh` enumerates the promoted jobs and `/sw-stabilize`
+- **TR4 — Stabilize/gate integration.** Ensure `check-gate.py` enumerates the promoted jobs and `/sw-stabilize`
   remediates from their logs via the existing path; `checks-gate` verdict covers them under all-checks (R5, R6).
 - **TR5 — Emitter + docs + fixtures.** Regenerate `dist/`; update workflow YAML, checks-gate skill/rule, and the
   CI guide; add the Testing Strategy fixtures (R7).
@@ -88,7 +88,7 @@ This is a **Standard-tier** PRD (bounded CI/workflow change, no brainstorm).
 | `pr-test-plan-jobs-on-pr` | each set member runs as a named CI job on `pull_request` | R1 |
 | `pr-test-plan-blocking-classification` | each fixture is classified required/advisory; required blocks, advisory reports | R2, R6 |
 | `pr-template-references-jobs` | the PR template references CI job names, not a manual checklist, as the gate | R4 |
-| `pr-test-plan-stabilize-consumes` | `/sw-stabilize` + `check-gate.sh` consume the promoted job logs via the existing path | R5 |
+| `pr-test-plan-stabilize-consumes` | `/sw-stabilize` + `check-gate.py` consume the promoted job logs via the existing path | R5 |
 | `pr-test-plan-checks-gate-verdict` | `checks-gate` verdict covers the promoted jobs under all-checks policy | R6 |
 | `pr-test-plan-emitter-freshness` | `dist/` regenerated and fresh | R7 |
 | `pr-test-plan-docs-presence` | workflow YAML, checks-gate skill/rule, and CI guide describe the enforcement | R7 |
@@ -112,7 +112,7 @@ traceability is finalized in `/sw-tasks`.
 | DL-1 | Promote existing test-plan fixtures to CI jobs rather than rely on a manual description checklist | A manual checklist runs only if an agent remembers; CI jobs run on every PR head, catching doc/workflow regressions before merge (the row-30 complaint). |
 | DL-2 | Classify each fixture required vs advisory under the existing `checks-gate` all-checks policy | Not every fixture should hard-block immediately; advisory-first allows safe promotion to required once stable, while staying visible in the readiness verdict. |
 | DL-3 | Single-source the standard test-plan set for both `verify.test` and CI | Two lists drift; one manifest guarantees local and CI run the same fixtures. |
-| DL-4 | Reuse `check-gate.sh` / `/sw-stabilize` for the new jobs; no new remediation surface | The existing path already consumes CI logs; adding a parallel parser would duplicate and diverge. |
+| DL-4 | Reuse `check-gate.py` / `/sw-stabilize` for the new jobs; no new remediation surface | The existing path already consumes CI logs; adding a parallel parser would duplicate and diverge. |
 
 ## Open Questions
 

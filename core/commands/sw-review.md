@@ -30,7 +30,7 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
    `rule`, `decision`, `learning`, `code-context`, `design` plus known false-positives via
    `providers/<memory.provider>.md` — no direct provider call). Surface hits and reconcile applicable
    rules/contradicting decisions before review commentary.
-2. Resolve `review.local` via `scripts/review-local-resolve.sh` (schema defaults: `enabled: true`,
+2. Resolve `review.local` via `scripts/review-local-resolve.py` (schema defaults: `enabled: true`,
    `provider: "native"`, `apply: "auto"`).
    - `review.local.enabled: false` or `review.local.provider: "none"` → skip to phase 2 with message.
    - `--fast` / `--skip-local` → skip phase 1 for this run (announced).
@@ -46,7 +46,7 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
    build diff JSON for the uncommitted delta and run:
 
    ```bash
-   scripts/code-review-select.sh --diff /tmp/sw-local-review-diff.json \
+   scripts/code-review-select.py --diff /tmp/sw-local-review-diff.json \
      > /tmp/sw-local-review-roster.json
    ```
 
@@ -64,7 +64,7 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
 7. Normalize:
 
    ```bash
-   scripts/code-review-normalize.sh --input /tmp/sw-local-review-raw.json --repo-root "$PWD" \
+   scripts/code-review-normalize.py --input /tmp/sw-local-review-raw.json --repo-root "$PWD" \
      > /tmp/sw-local-review-normalized.json
    ```
 
@@ -87,7 +87,7 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
     For each finding in deterministic order (severity, file, line):
 
     ```bash
-    scripts/code-review-apply-check.sh --finding '<json>' --repo-root "$PWD" \
+    scripts/code-review-apply-check.py --finding '<json>' --repo-root "$PWD" \
       --apply-policy "$APPLY_POLICY" \
       ${PHASE_MODE:+--phase-mode} \
       ${VALIDATED:+--validated}
@@ -105,7 +105,7 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
 11. **Severity gate:**
 
     ```bash
-    scripts/code-review-gate.sh \
+    scripts/code-review-gate.py \
       --input /tmp/sw-local-review-normalized.json \
       --gate-config /tmp/sw-local-review-gate.json
     ```
@@ -113,7 +113,7 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
     Write gate config from `review.local.gate`. Surface-only default (`haltOn: []`) logs P0–P3 and
     continues. Halting mode (`haltOn: ["P0","P1"]`) records halt signal for `/sw-ship` (validated
     P0/P1 only). Persist gate result to `/tmp/sw-local-review-gate-result.json`.
-12. **Run report (R69/R50):** resolve `runDir` via `python3 scripts/sw-tmp.sh resolve` (or `shipwright-state`
+12. **Run report (R69/R50):** resolve `runDir` via `python3 scripts/sw-tmp.py resolve` (or `shipwright-state`
     `runDir` when set). Write `$runDir/sw-local-review-run-report.json` per the contract in `native.md`:
 
     - announced roster + per-specialist selection reasons (from activation record)
@@ -127,11 +127,11 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
     - `instrumentation` — `phase_2_load` (panel-touched vs untouched counts) + `contested_apply.rate` (R74);
       initialized after phase 1; finalized after phase 2 when external review runs
 
-    Announce report path in run output. Scrub report contents via `memory-redact.sh` before any memory write
+    Announce report path in run output. Scrub report contents via `memory-redact.py` before any memory write
     (R29/R30):
 
     ```bash
-    python3 scripts/memory-redact.sh "$runDir/sw-local-review-run-report.json" \
+    python3 scripts/memory-redact.py "$runDir/sw-local-review-run-report.json" \
       > "$runDir/sw-local-review-run-report.scrubbed.json"
     mv "$runDir/sw-local-review-run-report.scrubbed.json" "$runDir/sw-local-review-run-report.json"
     ```
@@ -162,7 +162,7 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
 
       ```bash
       while IFS= read -r finding; do
-        REDACTED="$(printf '%s' "$finding" | python3 scripts/memory-redact.sh)"
+        REDACTED="$(printf '%s' "$finding" | python3 scripts/memory-redact.py)"
         # memory-preflight write distilled learning from $REDACTED
       done < <(Python json -c '.findings[]' /tmp/sw-local-review-normalized.json 2>/dev/null || echo '[]')
       ```
@@ -184,7 +184,7 @@ Unchanged from prior single-phase flow:
 5. Run provider local review (CodeRabbit):
 
    ```bash
-   RUN_DIR=$(python3 scripts/sw-tmp.sh resolve)
+   RUN_DIR=$(python3 scripts/sw-tmp.py resolve)
    if [[ -z "$RUN_DIR" ]]; then
      RUN_DIR=/tmp
    fi
@@ -213,13 +213,13 @@ Unchanged from prior single-phase flow:
    - `contested_apply.applied_count` — `change_digest | length`
    - `contested_apply.rate` — `contested_count / max(applied_count, 1)`
 
-   Re-scrub the run report via `memory-redact.sh` before any memory write.
+   Re-scrub the run report via `memory-redact.py` before any memory write.
 8. `memory-preflight` write for durable review learnings only (no raw bot dumps); route through
-   `scripts/memory-redact.sh`.
+   `scripts/memory-redact.py`.
 
 **Communication intensity:** full
 
-**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.sh --command sw-review`.
+**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --command sw-review`.
 
 ## Guardrails
 
@@ -228,4 +228,4 @@ Unchanged from prior single-phase flow:
 - Do not use `--base` on CodeRabbit (branch review is a separate surface).
 - Emit `sw-review.status.json` under the resolved run dir when phase 2 runs — verification-gate depends on it.
 - Phase 1 does not replace phase-2 status signal.
-- `check-gate.sh` remains sole CI oracle — local severity gate is additive.
+- `check-gate.py` remains sole CI oracle — local severity gate is additive.

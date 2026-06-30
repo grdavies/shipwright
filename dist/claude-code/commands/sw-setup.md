@@ -8,7 +8,7 @@ alwaysApply: false
 > **Deprecated:** use **`/sw-init`** instead. This alias will be removed after one release.
 
 `/sw-setup` prints the deprecation notice above and delegates to **`/sw-init`** with identical behavior. All
-configuration logic lives in `scripts/sw-configure.sh` — this file does not duplicate the `/sw-init` body.
+configuration logic lives in `scripts/sw-configure.py` — this file does not duplicate the `/sw-init` body.
 
 ## Procedure
 
@@ -17,4 +17,4 @@ configuration logic lives in `scripts/sw-configure.sh` — this file does not du
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --command sw-init`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-init`.

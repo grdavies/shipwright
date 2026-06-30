@@ -1,32 +1,15 @@
 #!/usr/bin/env python3
-"""Mechanical guard: refuse bare-branch filter-branch rewriting shared history (R42/R52)."""
+"""Refuse bare-branch filter-branch (R42/R52)."""
 from __future__ import annotations
-import re
-import sys
+import re, sys
+from _sw.cli import run_module_main
 
-USAGE = "usage: redaction-guard.py check-command -- <git args...>"
-
-
-def check_filter_branch(args: list[str]) -> int:
-    joined = " ".join(args)
-    if "filter-branch" not in joined:
-        return 0
-    if ".." in joined:
-        return 0
-    print("redaction-guard: refuse bare-branch filter-branch — use range-scoped redaction (base..branch)", file=sys.stderr)
-    print("See rules/sw-redaction-scope.mdc", file=sys.stderr)
-    return 20
-
-
-def main() -> int:
-    if len(sys.argv) < 2 or sys.argv[1] != "check-command":
-        print(USAGE, file=sys.stderr)
-        return 2
-    args = sys.argv[2:]
-    if args and args[0] == "--":
-        args = args[1:]
-    return check_filter_branch(args)
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+def main(argv=None):
+    args = list(sys.argv[1:] if argv is None else argv)
+    if not args or args[0] != "check-command":
+        print("usage: redaction-guard check-command -- <git args...>", file=sys.stderr); return 2
+    rest = args[1:]; rest = rest[1:] if rest and rest[0]=="--" else rest
+    joined = " ".join(rest)
+    if "filter-branch" not in joined or ".." in joined: return 0
+    print("redaction-guard: refuse bare-branch filter-branch", file=sys.stderr); return 20
+if __name__ == "__main__": run_module_main(main)

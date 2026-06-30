@@ -26,4 +26,4 @@ No args: print the current resolved intensity (routing default, active command, 
 
 **Communication intensity:** full (override command; does not inherit)
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --command sw-caveman`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-caveman`.

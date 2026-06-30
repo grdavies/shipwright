@@ -7,7 +7,7 @@ description: Derive PRD status from git and deliver state; reconcile planning IN
 
 Status is **derived from git and durable deliver state**, never hand-set on frozen artifacts.
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --skill living-status`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill living-status`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## INDEX status enum (R47 — single source)
 
@@ -17,7 +17,7 @@ Status is **derived from git and durable deliver state**, never hand-set on froz
 | `in-progress` | Deliver run active or feature branch not yet merged to `main` |
 | `complete` | Target branch merged to default branch (merge detection, PRD 007 R53) |
 
-The enum is enforced by `reconcile-status.sh set-index-status` and `wave_living_docs.py reconcile`.
+The enum is enforced by `reconcile-status.py set-index-status` and `wave_living_docs.py reconcile`.
 
 ## Link mechanism
 
@@ -31,11 +31,11 @@ The enum is enforced by `reconcile-status.sh set-index-status` and `wave_living_
 ## Commands
 
 ```bash
-python3 scripts/reconcile-status.sh derive [--json]
-python3 scripts/reconcile-status.sh reconcile [--dry-run] [--require-merge]
-python3 scripts/reconcile-status.sh set-index-status --prd <NNN> --status <not-started|in-progress|complete>
-python3 scripts/reconcile-status.sh append-log-idempotent --prd <NNN> --phase <name> [--pr N] [--sha SHA] [--notes text]
-python3 scripts/reconcile-status.sh gap-resolve --absorbing-prd <NNN> [--pr N]
+python3 scripts/reconcile-status.py derive [--json]
+python3 scripts/reconcile-status.py reconcile [--dry-run] [--require-merge]
+python3 scripts/reconcile-status.py set-index-status --prd <NNN> --status <not-started|in-progress|complete>
+python3 scripts/reconcile-status.py append-log-idempotent --prd <NNN> --phase <name> [--pr N] [--sha SHA] [--notes text]
+python3 scripts/reconcile-status.py gap-resolve --absorbing-prd <NNN> [--pr N]
 scripts/wave.sh living-docs reconcile [--commit]
 scripts/wave.sh living-docs append-terminal [--commit]
 scripts/wave.sh docs-currency
@@ -46,7 +46,7 @@ python3 scripts/wave_deliver.py <repo> next
 
 ## INDEX reconciliation
 
-Archived units render in `docs/prds/INDEX-archive.md`. **Planning INDEX** (`docs/planning/INDEX.md`): `planning-graph reconcile` owns the `derived` region; deliver owns `inFlight` (read-only to reconciler). **Legacy PRD INDEX** (`docs/prds/INDEX.md`): projected table during cutover; `reconcile-status.sh` may update Status column for deliver-era rows. Frozen PRD/amendment bodies untouched.
+Archived units render in `docs/prds/INDEX-archive.md`. **Planning INDEX** (`docs/planning/INDEX.md`): `planning-graph reconcile` owns the `derived` region; deliver owns `inFlight` (read-only to reconciler). **Legacy PRD INDEX** (`docs/prds/INDEX.md`): projected table during cutover; `reconcile-status.py` may update Status column for deliver-era rows. Frozen PRD/amendment bodies untouched.
 `merge run-next` invokes `living-docs reconcile --commit` after each green phase merge (R51).
 
 ## Completion log (R48)
@@ -66,13 +66,13 @@ Legacy `gap-resolve --absorbing-prd` applies only before `planningDir` cutover.
 
 ## Documentation-currency gate (R50)
 
-`scripts/docs-currency-gate.sh` (via `scripts/wave.sh docs-currency`) hard-blocks the terminal merge gate
+`scripts/docs-currency-gate.py` (via `scripts/wave.sh docs-currency`) hard-blocks the terminal merge gate
 when the current run's INDEX row, COMPLETION-LOG entry, or absorbed gaps disagree with durable state.
 Pre-existing unrelated historical drift does not block.
 
 ## Active PR review echo (R29)
 
-When `/sw-status` or any living-status summary covers an open PR, run `scripts/check-gate.sh` and echo review
+When `/sw-status` or any living-status summary covers an open PR, run `scripts/check-gate.py` and echo review
 state from `coderabbitState` in the human summary:
 
 | `coderabbitState` | Echo |
@@ -88,13 +88,13 @@ mapping in its terminal report.
 ## GAP-BACKLOG append protocol (A2 — R51–R53)
 
 Binary status contract: `open` | `scheduled` | `resolved` with schedule in the Schedule column.
-Mechanical flips route through `scripts/gap-backlog.sh` only:
+Mechanical flips route through `scripts/gap-backlog.py` only:
 
 - **Freeze** (`absorbs:` frontmatter) → `open` → `scheduled` (`PRD NNN` or `PRD NNN Ak`).
-- **PRD ship / complete** → `scheduled` → `resolved` via `living-status-gap-resolve.sh`.
+- **PRD ship / complete** → `scheduled` → `resolved` via `living-status-gap-resolve.py`.
 
 Append protocol: next ID is max(`GAP-NNN`)+1, never reuse; cross-links use `GAP-NNN` not row numbers.
-`gap-backlog.sh list --json` and `gap-backlog.sh check` power the docs-currency integrity guard.
+`gap-backlog.py list --json` and `gap-backlog.py check` power the docs-currency integrity guard.
 
 ## Guardrails
 
@@ -118,7 +118,7 @@ Append protocol: next ID is max(`GAP-NNN`)+1, never reuse; cross-links use `GAP-
 
 ### Default-branch reconcile refusal (R31)
 
-`planning-graph reconcile` and legacy `reconcile-status.sh reconcile` **refuse to commit** on `defaultBaseBranch`. Allowed post-merge paths:
+`planning-graph reconcile` and legacy `reconcile-status.py reconcile` **refuse to commit** on `defaultBaseBranch`. Allowed post-merge paths:
 
 - **Single unit:** `set-index-status` + `append-log-idempotent` on a **docs branch**.
 - **Full corpus:** reconciler on a non-default branch, or deliver `completion finalize-if-merged` — never bare full-corpus `reconcile` on `main`.

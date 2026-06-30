@@ -26,4 +26,4 @@ capability:
 
 # Code-review specialist — ai-native
 
-Signal-gated native panel specialist (parity with `code-review-select.sh`).
+Signal-gated native panel specialist (parity with `code-review-select.py`).

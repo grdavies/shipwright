@@ -102,9 +102,9 @@ def sync(root: Path, *, force: bool = False) -> int:
             continue
         mirror.mirror(src, core / dirname, delete=True)
 
-    scripts_excludes = ["test/", "check-frozen.sh"]
+    scripts_excludes = ["test/", "check-frozen.py"]
     mirror.mirror(root / "scripts", core / "scripts", excludes=scripts_excludes, delete=True)
-    frozen = core / "scripts" / "check-frozen.sh"
+    frozen = core / "scripts" / "check-frozen.py"
     if frozen.exists():
         frozen.unlink()
 

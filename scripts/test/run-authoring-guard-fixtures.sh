@@ -103,7 +103,7 @@ root = Path(sys.argv[1])
 handoffs = json.loads((root / ".cursor/authoring-handoffs.json").read_text())["handoffs"]
 assert handoffs and handoffs[0].get("artifact")
 INNER
-  grep -q 'authoringHandoffs' "$ROOT/scripts/reconcile-status.sh"
+  grep -q 'authoringHandoffs' "$ROOT/scripts/reconcile.py"
 ) && ok "handoff-artifact-surfaced-in-status" || bad "handoff-artifact-surfaced-in-status"
 
 rm -rf "$TMP1" "$TMP2" "$TMP3"

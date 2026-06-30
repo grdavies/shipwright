@@ -10,7 +10,7 @@ capability:
     providerFamily: host
     adapterId: bitbucket
     selectionFamily: providers
-    gateRef: check-gate.sh
+    gateRef: check-gate.py
 ---
 
 # Bitbucket host adapter

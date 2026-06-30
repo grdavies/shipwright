@@ -20,12 +20,12 @@ frozen_at: 2026-06-25
 | Setup / export / import | `core/commands/pf-setup.md`, `core/commands/pf-memory-export.md`, `core/commands/pf-memory-import.md` |
 | Fixtures | `scripts/test/fixtures/mempalace-rules-stub.sh`, `scripts/test/fixtures/mempalace-*` |
 | Fixture runner | `scripts/test/run-memory-provider-fixtures.sh` |
-| Redaction | `scripts/memory-redact.sh` |
+| Redaction | `scripts/memory-redact.py` |
 | Build chain | `python3 -m sw generate --all`, `bash scripts/copy-to-core.sh`, `dist/cursor/`, `dist/claude-code/` |
 
 ## Notes
 
-- Effective spec union: parent PRD R1–R38 (`spec-union.sh`).
+- Effective spec union: parent PRD R1–R38 (`spec-union.py`).
 - Two transport paths: agent MCP (`mempalace.md`) and hook CLI (`mempalace-rules.sh`) — design and test independently.
 - Python-API `ruleFetchCommand` recipe is provisional — pin exact enumeration call in task 2.2 against installed MemPalace.
 - `softDelete: false` — inactivate is hard delete; document prominently in adapter (D7).

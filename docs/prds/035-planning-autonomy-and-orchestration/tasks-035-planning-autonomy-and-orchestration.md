@@ -27,7 +27,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 ### 1. Related-units scanner + pull-in proposal flow — L
 
 - [ ] 1.1 Related-units scanner module + confirm-list emission (R17)
-  - **File:** `scripts/planning-related.sh`, `scripts/planning_related.py`
+  - **File:** `scripts/planning-related.py`, `scripts/planning_related.py`
   - **Expected:** scanner reads the PRD 031/033 graph and produces ranked, threshold-gated absorption/amendment
     proposals consumed by `/sw-prd` and `/sw-tasks`; routes every candidate through the visibility resolver
     (R4) and emits a **confirm-list, never an auto-absorb**. Fixture `scanner-confirm-list-not-autoabsorb`
@@ -51,7 +51,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
     body never does.
   - **R-IDs:** R4
 - [ ] 1.4 Frozen-safe pull-in routing (R7)
-  - **File:** `scripts/planning_related.py`, `scripts/planning-related.sh`
+  - **File:** `scripts/planning_related.py`, `scripts/planning-related.py`
   - **Expected:** a pull-in/absorption confirm against a frozen or `planned` (frozen) unit does not mutate the
     frozen unit — it is routed to an amendment track or a new superseding unit; adding an `absorbs:` edge that
     would change frozen scope requires explicit `--accept-frozen-impact` (logged); freeze immutability (031
@@ -78,8 +78,8 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
     choice.
   - **R-IDs:** R3
 - [ ] 1.8 Proposal payload redaction (R22)
-  - **File:** `scripts/planning_related.py`, `core/scripts/memory-redact.sh`
-  - **Expected:** pull-in/amendment proposals route external/context payloads through `memory-redact.sh` and
+  - **File:** `scripts/planning_related.py`, `core/scripts/memory-redact.py`
+  - **Expected:** pull-in/amendment proposals route external/context payloads through `memory-redact.py` and
     embed them only in fenced untrusted blocks; the proposal step never forwards raw transcripts or provider
     memory payloads; private-unit bodies/opaque titles are filtered by the visibility resolver (R4). Fixture
     `proposal-payload-redaction`.
@@ -129,10 +129,10 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 ### 3. Two-track edit driver — L
 
 - [ ] 3.1 Two-track edit driver module (R18)
-  - **File:** `scripts/docs-edit-route.sh`, `scripts/two_track_lib.py`
+  - **File:** `scripts/docs-edit-route.py`, `scripts/two_track_lib.py`
   - **Expected:** the driver classifies an edit as mechanical (batched auto-merge PR / direct-to-trunk where
     permitted) vs substantive (auto-driven docs worktree + PR) using the R11 allowlist; it reuses the existing
-    `docs_worktree.sh`/`docs_pr.sh` machinery and adds the net-new `docs-merge.sh`, the host-API
+    `docs_worktree.py`/`docs_pr.sh` machinery and adds the net-new `docs-merge.sh`, the host-API
     branch-protection probe (R13), and the both-region content-hash abort (R14). Fixture
     `two-track-driver-classify-route` mirrors the merge-queue fixtures.
   - **R-IDs:** R18
@@ -152,7 +152,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
     `mechanical-batched-auto-merge`.
   - **R-IDs:** R10
 - [ ] 3.4 Substantive auto-driven docs worktree + PR (R12)
-  - **File:** `scripts/docs-edit-route.sh`, `scripts/docs_worktree.sh`, `scripts/docs_pr.sh`
+  - **File:** `scripts/docs-edit-route.py`, `scripts/docs_worktree.py`, `scripts/docs_pr.sh`
   - **Expected:** substantive authoring retains the docs-branch to docs-PR gate but is fully auto-driven
     (auto-provisioned worktree, auto-opened PR) so it is a single command rather than manual git. Fixture
     `substantive-auto-driven-pr`.
@@ -220,7 +220,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
     033-owned). Fixture `doc-currency-035`.
   - **R-IDs:** R21
 - [ ] 6.2 No-regression on delivery-feeding documentation gates (R16)
-  - **File:** `scripts/spec-rigor-check.sh`, `scripts/traceability-check.sh`
+  - **File:** `scripts/spec-rigor-check.py`, `scripts/traceability-check.py`
   - **Expected:** no regression to the documentation that feeds the delivery loop — frozen immutability,
     traceability, and spec-rigor gates are preserved; foundational frozen workflow invariants are retained.
     Fixture `no-regression-035`.
@@ -230,7 +230,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 ### 7. Deliver conductor completion (amendment A1) — L
 
 - [x] 7.1 Build-chain ship verify + parity in verify.test (R25–R26)
-  - **File:** `core/commands/sw-ship.md`, `.cursor/workflow.config.json`, `scripts/build-chain-sync.sh`
+  - **File:** `core/commands/sw-ship.md`, `.cursor/workflow.config.json`, `scripts/build-chain-sync.py`
   - **Expected:** phase/terminal ship fails when build-chain paths drift; `verify.test` includes parity fixtures.
     Fixtures: `ship-without-build-chain-sync-fails`, `verify-test-includes-parity`.
   - **R-IDs:** R25, R26
@@ -263,17 +263,17 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 ### 8. Gap lifecycle + doc format (amendment A2) — M
 
 - [x] 8.1 Mechanical gap resolve + freeze absorbs flip (R51–R52)
-  - **File:** `scripts/living-status-gap-resolve.sh`, `core/commands/sw-freeze.md`
+  - **File:** `scripts/living-status-gap-resolve.py`, `core/commands/sw-freeze.md`
   - **Expected:** PRD ship flips gap rows; freeze writes schedule from `absorbs:` frontmatter.
     Fixtures: `gap-resolve-on-prd-ship`, `freeze-absorbs-flips-gap-schedule`.
   - **R-IDs:** R51, R52
 - [x] 8.2 Gap backlog integrity guard (R53–R54)
-  - **File:** `scripts/gap-backlog.sh`, `scripts/docs-currency-gate.sh`, `core/skills/living-status/SKILL.md`
+  - **File:** `scripts/gap-backlog.py`, `scripts/docs-currency-gate.py`, `core/skills/living-status/SKILL.md`
   - **Expected:** index/table binary status consistency CI guard.
     Fixtures: `gap-backlog-index-integrity`, `gap-backlog-ci-guard`.
   - **R-IDs:** R53, R54
 - [x] 8.3 Shared doc-format tokenizer (R55–R58)
-  - **File:** `scripts/doc_format_tokenizer.py`, `scripts/spec-rigor-check.sh`, `scripts/traceability-check.sh`
+  - **File:** `scripts/doc_format_tokenizer.py`, `scripts/spec-rigor-check.py`, `scripts/traceability-check.py`
   - **Expected:** normalize-before-rigor; shared regex; minimum-recall passes; feedback routing prefers gap units.
     Fixtures: `doc-format-normalize-before-rigor`, `spec-rigor-traceability-regex-parity`, `min-recall-gap-043-044-046`.
   - **R-IDs:** R55, R56, R57, R58
@@ -362,8 +362,8 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
   scheduler `/sw-deliver next`, INDEX `derived`/`inFlight` regions, SUPERSEDED manifest, gap index), and 034
   (visibility resolver + emission-point registry). Phase 3 replaces the PRD 033 R17 interim no-auto-PR
   behavior.
-- Net-new surfaces: `scripts/planning-related.sh` + `scripts/planning_related.py` (scanner),
-  `scripts/planning_autonomy.py` (bounded full-conductor driver), `scripts/docs-edit-route.sh` +
+- Net-new surfaces: `scripts/planning-related.py` + `scripts/planning_related.py` (scanner),
+  `scripts/planning_autonomy.py` (bounded full-conductor driver), `scripts/docs-edit-route.py` +
   `scripts/two_track_lib.py` (two-track classifier/driver), and `scripts/docs-merge.sh` (merge + checks-wait,
   since `docs_pr.sh` stops at PR open). All new fixtures register in
   `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.test`.

@@ -13,7 +13,7 @@ frozen_at: 2026-06-24
 `/sw-deliver` becomes the "play button" for a frozen task list. Given `tasks-<n>-<slug>.md`, it drives every
 remaining implementation phase of a single feature to one human merge gate: dependency-ordered, parallel
 where safe, stacked where not, sub-agent-dispatched where policy allows. Each phase runs the full `/sw-ship`
-chain inside its own worktree and **auto-merges into a single feature branch `<type>/<slug>` when `check-gate.sh`
+chain inside its own worktree and **auto-merges into a single feature branch `<type>/<slug>` when `check-gate.py`
 is green** — the bot/CI gate replaces the per-phase human gate. The only human stop is the final
 `<type>/<slug> → main` pull request.
 
@@ -34,8 +34,8 @@ DAG-of-`/sw-ship`-runs engine; an auto-detected **mode** selects only the termin
 **Input:** [docs/brainstorms/2026-06-24-wave-phase-orchestrator-requirements.md](../../brainstorms/2026-06-24-wave-phase-orchestrator-requirements.md) (Full tier).
 
 **Dependency (blocking):** Sequences after [PRD 002](../002-first-run-onboarding-ux/002-prd-first-run-onboarding-ux.md)
-(worktree guard `sw-assert-worktree.sh`, single-pass `/sw-tasks`, `doc.afterTasks` boundary). The
-`sw-assert-worktree.sh` guard does **not exist in the repo yet** — PRD 004's no-bare-main guarantee (R16)
+(worktree guard `sw-assert-worktree.py`, single-pass `/sw-tasks`, `doc.afterTasks` boundary). The
+`sw-assert-worktree.py` guard does **not exist in the repo yet** — PRD 004's no-bare-main guarantee (R16)
 depends on it, so PRD 004 implementation MUST either land after PRD 002 ships that guard, or define its own
 minimal bare-main assertion so R16 is enforced regardless of 002's timing. PRD 004 does not change PRD 002
 defaults; it adds the orchestrator that the `doc.afterTasks: auto` path can eventually dispatch.
@@ -47,7 +47,7 @@ defaults; it adds the orchestrator that the `doc.afterTasks: auto` path can even
 2. **Parallel where safe** — independent phases (per authoritative task-list edges, after the shared-file
    safety net) execute concurrently in isolated worktrees, bounded by `worktree.parallelCeiling`.
 3. **Full gating preserved** — every phase runs the complete `/sw-ship` chain; auto-merge happens only on a
-   live green `check-gate.sh` verdict; no `/sw-ship` step or guardrail is bypassed.
+   live green `check-gate.py` verdict; no `/sw-ship` step or guardrail is bypassed.
 4. **Single human gate** — the only stop is `<type>/<slug> → main`; `/sw-deliver` never merges or force-pushes to
    `main`.
 5. **Honest blast radius** — a single unrecoverable phase failure continues independent siblings, blocks only
@@ -68,7 +68,7 @@ defaults; it adds the orchestrator that the `doc.afterTasks: auto` path can even
 - Changing the multi-feature promotion model or its `integration/<stamp>` machinery.
 - Sub-task-level (`1.1` / `1.2`) parallelism — within-phase work stays governed by `/sw-execute`
   execute-discipline; `/sw-deliver` orchestrates at **phase** granularity.
-- Hand-rolling any CI/merge verdict outside `check-gate.sh`.
+- Hand-rolling any CI/merge verdict outside `check-gate.py`.
 - Cross-feature waves that mix phase-mode and multi-feature units in one plan (deferred).
 - Automatic file-set edge inference as a fallback (deferred; sequential fallback only in v1).
 - A rich live dashboard / `living-status` integration for per-phase progress (deferred) — note the *minimal*
@@ -143,7 +143,7 @@ Each is testable.
 
 ### Phase integration onto `<type>/<slug>`
 
-- **R17** A phase MUST auto-merge into `<type>/<slug>` only when `check-gate.sh` returns a live `green` verdict for
+- **R17** A phase MUST auto-merge into `<type>/<slug>` only when `check-gate.py` returns a live `green` verdict for
   that phase's PR head; a non-green verdict MUST NOT merge.
 - **R18** Phase `/sw-ship` runs MUST execute under a non-interactive phase-mode contract (R48): the terminal
   "ready to merge — your call" pause is suppressed and replaced by emitting a machine-readable terminal status,
@@ -163,7 +163,7 @@ Each is testable.
   every phase in the DAG is `green-merged`** ("reachable" = the full phase set, with zero `blocked` phases). If
   any phase is `blocked`, the wave halts per R26 and MUST NOT open or advance the terminal PR. `/sw-deliver` MUST
   NOT create an `integration/<stamp>` branch in phase-mode.
-- **R23** `/sw-deliver` MUST run `check-gate.sh` on the `<type>/<slug> → main` PR head as the authoritative
+- **R23** `/sw-deliver` MUST run `check-gate.py` on the `<type>/<slug> → main` PR head as the authoritative
   whole-feature verdict and MUST halt at the human merge gate (it MUST NOT merge or force-push to `main`).
 - **R24** The terminal report MUST state the gate verdict and merge-readiness of `<type>/<slug>` in the same
   "ready to merge — your call" form used by `/sw-ship` / `/sw-ready`.
@@ -233,7 +233,7 @@ Each is testable.
   its dependencies (`Depends on:` cell with phase refs or `none`). `/sw-deliver` parses this table as the
   authoritative edge source (R5/R6); absence triggers the R8 sequential fallback.
 - **R38** The orchestrator MUST collect concurrent `/sw-ship` sub-agent outcomes via a **durable,
-  orchestrator-owned per-phase status path** (R47) — NOT the sub-agent's private `scripts/sw-tmp.sh` run dir,
+  orchestrator-owned per-phase status path** (R47) — NOT the sub-agent's private `scripts/sw-tmp.py` run dir,
   which is per-invocation, 0700, and deleted at `/sw-ship` chain end and is therefore unreadable by the
   orchestrator. Each phase `/sw-ship` MUST write a machine-readable terminal status
   (`merge-ready-green` | `blocked` + cause) to that path **before** `sw-tmp clean`. Green outcomes feed the
@@ -303,7 +303,7 @@ Each is testable.
   completed/rolled-back deterministically on resume (no double-merge, no divergence). Provisioning
   (`ceiling-check` + `worktree add` + port allocation) MUST also be serialized to avoid ceiling/port races.
 - **R52** Phase → `<type>/<slug>` auto-merge MUST wait for the async review barrier (CodeRabbit / configured
-  provider) to **settle** on the phase PR head before treating `check-gate.sh` green as merge-authorizing — a
+  provider) to **settle** on the phase PR head before treating `check-gate.py` green as merge-authorizing — a
   pending/not-yet-landed review is **non-green** for auto-merge purposes. (Closes the window where actionable
   P1 findings post after an auto-merge.)
 - **R53** `/sw-deliver` MUST materialize `<type>/<slug>` in a **dedicated orchestrator worktree** that hosts the
@@ -361,7 +361,7 @@ Each is testable.
 
 - **R62** v1 `/sw-deliver` MUST write distilled learnings from a wave run (recurring contention patterns,
   dependent-conflict patterns) to durable memory via `memory-preflight`, routed through
-  `scripts/memory-redact.sh` per `rules/memory-guardrails.mdc`; it MUST store only distilled patterns, never raw
+  `scripts/memory-redact.py` per `rules/memory-guardrails.mdc`; it MUST store only distilled patterns, never raw
   sub-agent logs, transcripts, or secrets (DL-30).
 - **R63** The phase `/sw-ship` chain's internal two-stage review MUST run **inline inside the phase worktree**
   when the platform restricts a background sub-agent from spawning child sub-agents. A pre-implementation spike
@@ -417,7 +417,7 @@ main
 - Leaf phases provision with `--base <type>/<slug>` at the current tip; dependents provision once their deps have
   merged (so they start current). If `<type>/<slug>` advances mid-flight, dependents merge `<type>/<slug>` forward
   before their PR (R40).
-- Each phase PR targets `<type>/<slug>` (not `main`); `check-gate.sh` runs on the phase PR head.
+- Each phase PR targets `<type>/<slug>` (not `main`); `check-gate.py` runs on the phase PR head.
 
 ### Concurrency, result collection, and merge queue (R14, R19, R38, R44)
 
@@ -468,7 +468,7 @@ re-present a `rejected` terminal PR (R46). An interrupted merge is completed/rol
 1. **Every** DAG phase is `green-merged` (zero `blocked`); otherwise halt per R26 (no terminal PR).
 2. Incremental whole-feature `verify.*` (R39) has already validated `<type>/<slug>` after each merge.
 3. Open/update single `<type>/<slug> → main` PR (linking each phase PR, R55).
-4. `check-gate.sh` on the PR head → authoritative whole-feature verdict.
+4. `check-gate.py` on the PR head → authoritative whole-feature verdict.
 5. Halt at human merge gate (no merge/force-push by `/sw-deliver`). On a human **NO**, apply deny semantics (R46).
 
 ### Files touched (implementation checklist)
@@ -490,11 +490,11 @@ re-present a `rejected` terminal PR (R46). An interrupted merge is completed/rol
 
 ## Security & Compliance
 
-- **No bare-main writes:** every phase runs in a worktree; `sw-assert-worktree.sh` (PRD 002) guards
+- **No bare-main writes:** every phase runs in a worktree; `sw-assert-worktree.py` (PRD 002) guards
   implementation entry **once it exists** — until then R16 enforcement rests on convention or PRD 004's own
   minimal guard (see blocking Dependency). `<type>/<slug>` is mutated only by the single locked orchestrator merge
   queue (R51).
-- **Merge-gate integrity:** `check-gate.sh` remains the sole CI/merge oracle for both per-phase and terminal
+- **Merge-gate integrity:** `check-gate.py` remains the sole CI/merge oracle for both per-phase and terminal
   gates; `/sw-deliver` never hand-rolls a green verdict and never merges/force-pushes to `main`.
 - **No auto-merge to main:** the terminal `<type>/<slug> → main` step halts for a human; auto-merge applies only
   to phase → `<type>/<slug>` and only on live green.
@@ -503,7 +503,7 @@ re-present a `rejected` terminal PR (R46). An interrupted merge is completed/rol
 - **State hygiene:** `sw-deliver-state.json` is per-run/per-worktree state — excluded from commits (R36) like
   `shipwright.json`; it records refs/PR numbers, never secrets or transcripts.
 - **Memory redaction:** v1 `/sw-deliver` writes distilled learnings (R62) through `memory-preflight`, routed via
-  `scripts/memory-redact.sh` per `rules/memory-guardrails.mdc` (the standing redaction chokepoint); it stores
+  `scripts/memory-redact.py` per `rules/memory-guardrails.mdc` (the standing redaction chokepoint); it stores
   only distilled patterns (recurring contention, dependent-conflict patterns), never raw sub-agent logs,
   transcripts, or secrets.
 - **Sub-agent boundary:** dispatched `/sw-ship` sub-agents inherit `rules/sw-subagent-dispatch.mdc` limits;
@@ -543,7 +543,7 @@ re-present a `rejected` terminal PR (R46). An interrupted merge is completed/rol
   command chain in `workflow.config.json`.
 - Multi-feature `wave.sh plan` / `integration` behavior (branch derivation, hardcoded contention set, cycle
   detection) MUST stay green once baseline fixtures exist (R1, R7).
-- `worktree.sh` provision/teardown and `ceiling-check` unchanged.
+- `worktree.py` provision/teardown and `ceiling-check` unchanged.
 
 ### Manual smoke (post-implementation)
 
@@ -597,7 +597,7 @@ frozen task lists run via sequential fallback.
 | ID | Decision | Rationale |
 |----|----------|-----------|
 | DL-1 | Unify into one `/sw-deliver`; mode auto-detected; multi-feature preserved | Shared topological-sort + worktree-stacking engine; only the terminal merge unit differs. Brainstorm Key Decision 1–2. |
-| DL-2 | Auto-merge phases into `<type>/<slug>` on live green `check-gate.sh`; single human gate at `<type>/<slug> → main` | The "play button" — minimal interaction with full per-phase gating. **Supersedes** prior design (memory #2111) "human gate between phases": that gate's original purpose was early spec-drift detection and merge approval; merge approval is now covered by `check-gate.sh` + async review (R52), and drift detection is mitigated by incremental whole-feature verify (R39) + per-phase review preservation (R55) + optional ack cadence (R56), so the per-phase **human** gate is no longer required by default. Users who want the old behavior set `deliver.phaseAckCadence: 1` (migration path). The single explicit "go" is granted at wave start. |
+| DL-2 | Auto-merge phases into `<type>/<slug>` on live green `check-gate.py`; single human gate at `<type>/<slug> → main` | The "play button" — minimal interaction with full per-phase gating. **Supersedes** prior design (memory #2111) "human gate between phases": that gate's original purpose was early spec-drift detection and merge approval; merge approval is now covered by `check-gate.py` + async review (R52), and drift detection is mitigated by incremental whole-feature verify (R39) + per-phase review preservation (R55) + optional ack cadence (R56), so the per-phase **human** gate is no longer required by default. Users who want the old behavior set `deliver.phaseAckCadence: 1` (migration path). The single explicit "go" is granted at wave start. |
 | DL-3 | Explicit phase edges authoritative in the task list via `## Phase Dependencies` table (R37) | Authoring-time, reviewable, frozen dependency truth beats runtime inference. Brainstorm Key Decision 3. |
 | DL-4 | Strict sequential fallback for metadata-less (legacy) lists | Keeps every frozen list runnable with zero edits; cost is only lost parallelism (R8). |
 | DL-5 | `<type>/<slug>` is the integration surface; one terminal PR; no `integration/<stamp>` in phase-mode | `<type>/<slug>` already holds every green phase; the terminal PR's CI is the whole-feature check (R22). |
@@ -625,7 +625,7 @@ frozen task lists run via sequential fallback.
 | DL-27 | INDEX status write reuses existing `not-started`/`complete` vocabulary; no new `in-progress` value (R43) | Avoids introducing an enum value the rest of the workflow doesn't yet understand; resolves OQ1. |
 | DL-28 | `--from <phase>` refuses when upstream deps aren't `green-merged` (R41) | Explicit, predictable resume; avoids silently auto-running prerequisites the user didn't ask for. Resolves OQ3. |
 | DL-29 | `<type>/<slug>` lives in a dedicated orchestrator worktree, not counted against `parallelCeiling` (R53) | Clean local surface for the serialized merge queue + R40 forward-merges; infrastructure shouldn't steal a phase slot. Resolves OQ4. |
-| DL-30 | v1 writes distilled learnings to durable memory via `memory-redact.sh` (R62) | Compounding value from wave runs (contention/conflict patterns) with the standing redaction chokepoint. Resolves OQ6. |
+| DL-30 | v1 writes distilled learnings to durable memory via `memory-redact.py` (R62) | Compounding value from wave runs (contention/conflict patterns) with the standing redaction chokepoint. Resolves OQ6. |
 | DL-31 | Inline-review fallback inside the phase worktree; spike confirms nested dispatch before phase 2b (R63) | Phase `/sw-ship` fidelity must not depend on unconfirmed platform nesting limits. Resolves OQ5. |
 | DL-32 | Projected `version.txt` bump written by default each merge (R58) | "Maintained throughout development" means version coherence by default, not opt-in; release-please reconciles at release. Resolves OQ7. |
 | DL-33 | Rename `/sw-wave → /sw-deliver` (skill `deliver`, config `deliver.*`); retain "wave" only as the internal dependency-ordered-batch concept + `scripts/wave.sh`; no `/sw-wave` alias | "Wave" named the multi-feature batching mechanism, not the command's new default purpose — driving a frozen task list's phases to one merge gate. `/sw-deliver` names the outcome and slots cleanly above `/sw-ship` (ship one phase → deliver the feature) as the default implementation entry point. Pre-release plugin, so no alias is needed (R64). |

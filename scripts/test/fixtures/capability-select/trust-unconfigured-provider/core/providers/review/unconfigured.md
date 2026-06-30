@@ -7,6 +7,6 @@ capability:
   metadata:
     providerFamily: review
     adapterId: coderabbit
-    gateRef: check-gate.sh
+    gateRef: check-gate.py
     selectionFamily: providers
 ---

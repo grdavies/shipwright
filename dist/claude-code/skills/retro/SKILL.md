@@ -8,7 +8,7 @@ description: Post-ship retrospective — what went well/painful/change; learning
 Run after a human merge (or at end of `/sw-ship` merge gate when user merges).
 
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.sh --skill retro`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --skill retro`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Procedure
 
@@ -16,7 +16,7 @@ Run after a human merge (or at end of `/sw-ship` merge gate when user merges).
 2. Identify: went well, painful, process changes.
 3. Compare against memory + doctrine (read-only unless user approves edits).
 4. Output **distilled learning candidates** for the compound write step in `/sw-retrospective` — no raw transcripts.
-5. Run output through `scripts/memory-redact.sh` before any persistence.
+5. Run output through `scripts/memory-redact.py` before any persistence.
 
 Structured output for `/sw-feedback` must conform to `references/output-contract.md`.
 

@@ -364,12 +364,8 @@ def cmd_compound_record_premerge(root: Path, args: list[str]) -> None:
     }
     save_state(root, state)
     if not has_flag(args, "--skip-append-log"):
-        script = root / "scripts" / "reconcile.py"
-        subprocess.run(
-            [*interpreter.probe().executable, str(script), "append-log", prd, phase, notes],
-            cwd=str(root),
-            check=False,
-        )
+        from _sw.completion_log import append_log_idempotent
+        append_log_idempotent(root, prd=prd, phase=phase, notes=notes)
     emit(
         {
             "verdict": "pass",

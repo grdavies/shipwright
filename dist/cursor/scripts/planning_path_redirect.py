@@ -20,7 +20,7 @@ REDIRECT_CONSUMERS: tuple[str, ...] = (
     "scripts/wave_deliver_loop.py",
     "scripts/wave_deliver.py",
     "scripts/wave_spec_seed.py",
-    "scripts/check-frozen.sh",
+    "scripts/check-frozen.py",
     "scripts/wave_living_docs.py",
 )
 

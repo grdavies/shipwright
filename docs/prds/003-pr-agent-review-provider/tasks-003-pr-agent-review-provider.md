@@ -16,7 +16,7 @@ frozen_at: 2026-06-25
 | Contract | `core/providers/review/CAPABILITIES.md` |
 | Schema | `.sw/config.schema.json`, `core/sw-reference/config.schema.json` |
 | Example config | `.sw/workflow.config.example.json`, `core/sw-reference/workflow.config.example.json` |
-| Gate | `core/scripts/check-gate.sh` |
+| Gate | `core/scripts/check-gate.py` |
 | Setup | `core/commands/sw-setup.md` |
 | Review / stabilize | `core/commands/sw-review.md`, `core/commands/sw-stabilize.md` |
 | Skills | `core/skills/stabilize-loop/SKILL.md`, `core/skills/checks-gate/SKILL.md` |
@@ -30,7 +30,7 @@ frozen_at: 2026-06-25
 
 ## Notes
 
-- Effective spec union: parent PRD R1–R27 + amendment A1 R28–R32 (`spec-union.sh`).
+- Effective spec union: parent PRD R1–R27 + amendment A1 R28–R32 (`spec-union.py`).
 - **DL-11:** Bot heuristic spike against live PR-Agent Action output gates Phase 1 merge — document markers in adapter header before freezing heuristics in fixtures (includes describe vs review comment shape per A1 DL-23).
 - **DL-12:** PRD 002 amendment (setup CI-scaffold exception) required before shipping 003.
 - **DL-13:** v1 is Action-only; `/sw-review` phase 2 skipped — CLI deferred until upstream uncommitted review (A1 DL-17).
@@ -68,7 +68,7 @@ frozen_at: 2026-06-25
   - **R-IDs:** R9
 
 - [ ] 1.6 Gate grace lookup for `pr-agent` provider (R8)
-  - **File:** `core/scripts/check-gate.sh`
+  - **File:** `core/scripts/check-gate.py`
   - **Expected:** reads `prAgent.reviewGraceMinutes` when `review.provider` is `pr-agent`; existing `coderabbit` path unchanged
   - **R-IDs:** R8
 
@@ -86,7 +86,7 @@ frozen_at: 2026-06-25
 
 - [ ] 2.3 Adapter JSON shape validation (R1)
   - **File:** `scripts/test/run-gate-fixtures.sh` or dedicated adapter fixture
-  - **Expected:** `pr-agent.sh` stdout has required jq fields expected by `check-gate.sh`
+  - **Expected:** `pr-agent.sh` stdout has required jq fields expected by `check-gate.py`
   - **R-IDs:** R1
 
 ### 3. Workflow template & `/sw-setup` (L)
@@ -156,7 +156,7 @@ frozen_at: 2026-06-25
   - **R-IDs:** R24
 
 - [ ] 5.4 End-to-end verify gate (R1–R32)
-  - **File:** `scripts/check-gate.sh` (via `bash scripts/check-gate.sh` or `verify.test`)
+  - **File:** `scripts/check-gate.py` (via `python3 scripts/check-gate.py` or `verify.test`)
   - **Expected:** full fixture suite green including new PR-Agent cases, A1 fixtures, and CodeRabbit regression
   - **R-IDs:** R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31, R32
 
@@ -210,7 +210,7 @@ frozen_at: 2026-06-25
 | R16 | 1.3, 4.1, 4.4 | review phase-2 skip fixture |
 | R17 | 4.1 | no `sw-review.status.json` for pr-agent phase 2 |
 | R18 | 4.1, 4.4 | review opt-out fixture (`none`/`disabled`) |
-| R19 | 1.2 | `check-gate.sh` invokes `pr-agent.sh` |
+| R19 | 1.2 | `check-gate.py` invokes `pr-agent.sh` |
 | R20 | 2.1 | `pr-agent-landed/in-flight/unconfigured/skipped` fixtures |
 | R21 | 5.1 | PROVENANCE grep fixture |
 | R22 | 5.2 | README provider mention fixture |

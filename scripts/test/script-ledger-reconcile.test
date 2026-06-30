@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
-python3 <<'PY'
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+python3 <<PY
 import json
 from pathlib import Path
-root = Path("/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l")
+root = Path("$ROOT")
 ledger = json.loads((root / "core/sw-reference/script-port-ledger.json").read_text())
 entries = {e["path"] for e in ledger["entries"]}
 found=set()

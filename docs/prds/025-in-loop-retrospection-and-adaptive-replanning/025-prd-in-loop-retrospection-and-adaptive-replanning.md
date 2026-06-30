@@ -218,7 +218,7 @@ R-IDs carried forward verbatim from the frozen-namespace brainstorm
 - **TR1 — Per-phase capture ledger + writer.** Define `phase-learnings.json` (per-phase run dir) and a run
   aggregate; a mechanical writer mines existing artifacts (`run.log`, `status.json`, `blockers.json`,
   `remediationAttempts`, gap-check/stabilize/forward-merge signals) and appends the thin qualitative record;
-  numeric/enumerated + short-text fields only. **Redaction runs via `memory-redact.sh` on every ledger
+  numeric/enumerated + short-text fields only. **Redaction runs via `memory-redact.py` on every ledger
   append and on each run-aggregate merge — before persist** (not deferred to the terminal write), so neither
   the on-disk ledger nor the R3 carry-forward pre-work input can carry unredacted secrets/PII mid-run; the
   single *provider/memory* write still occurs once at terminal synthesis (R4/R25). Schema home documented in
@@ -229,7 +229,7 @@ R-IDs carried forward verbatim from the frozen-namespace brainstorm
   mid-run (R3).
 - **TR3 — Terminal synthesis wiring.** Extend the `/sw-retrospective` pre-merge chain to read the run-scoped
   ledger, produce **phase-attributed** learning candidates, perform the single redacted compound write
-  (`memory-preflight` + `memory-redact.sh`), and route gaps via `/sw-feedback`; no new memory-write path
+  (`memory-preflight` + `memory-redact.py`), and route gaps via `/sw-feedback`; no new memory-write path
   (R4). The atomic `/sw-retro` output contract gains optional per-phase attribution fields.
 - **TR4 — Insertion engine + plan as versioned mutable artifact.** A `wave.sh plan insert` primitive
   produces a provenance-tagged inserted unit (triggering signal, severity, dependency scope, governance
@@ -317,7 +317,7 @@ R-IDs carried forward verbatim from the frozen-namespace brainstorm
   is the insertion circuit-breaker (budget/no-progress class). Conductor R11 holds.
 - **Redaction chokepoint preserved (R4, R25).** Exactly one redacted *provider/memory* write per run at
   terminal synthesis and no per-phase provider write; additionally, ledger content is scrubbed via
-  `memory-redact.sh` **on every append and aggregate merge before persist**, so mid-run carry-forward (R3)
+  `memory-redact.py` **on every append and aggregate merge before persist**, so mid-run carry-forward (R3)
   exposes no unredacted secrets/PII.
 - **Bounded self-modification (R12).** Per-run insertion cap + depth limit prevent runaway plan growth; trip
   → clean consolidated halt with resume command.

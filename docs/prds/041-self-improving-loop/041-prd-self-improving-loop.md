@@ -124,14 +124,14 @@ Carried forward from the brainstorm (stable R-IDs).
 ### Shared state writer + redaction chokepoint (R31)
 
 A single helper — `scripts/sw-state-write.sh` (Python-backed) — is the **sole writer** for all new
-`.cursor/sw-*` stores: it pipes content through `scripts/memory-redact.sh`, validates against the relevant
+`.cursor/sw-*` stores: it pipes content through `scripts/memory-redact.py`, validates against the relevant
 schema, and performs an atomic append/write, **failing closed** on any redaction or schema error. Direct
 `write_json` to these store paths is banned (fixture lint). This removes the multi-writer redaction risk.
 
 ### Cross-worktree store authority (R22/R29)
 
 Cross-run stores must be visible across worktrees/PRs. They live at a **shared git-dir authority** in parity
-with `scripts/shipwright-state.sh` (`${GIT_DIR}/shipwright-failure-signatures.json`,
+with `scripts/shipwright-state.py` (`${GIT_DIR}/shipwright-failure-signatures.json`,
 `${GIT_DIR}/shipwright-loop-health.json`), with a `*-index` merge subcommand for linked worktrees. The
 repo-root `.cursor/sw-*` paths are per-checkout projections only. The meta-inbox (`.cursor/sw-meta-inbox/`)
 is per-checkout run-state (drafts), reconciled at materialization.
@@ -141,7 +141,7 @@ is per-checkout run-state (drafts), reconciled at materialization.
 Extend the feedback normalizer (`core/skills/feedback/SKILL.md` + `core/skills/feedback/references/signal-schema.md`)
 and `scripts/planning_gap_capture.py` with a `meta-shipwright` destination class (plugin-self). Capture is
 **two-phase**: (1) `capture` writes a redacted draft to `.cursor/sw-meta-inbox/` only (no tracked planning
-mutation); (2) `materialize` creates the gap unit under the canonical planning tree (`planning_paths.sh`,
+mutation); (2) `materialize` creates the gap unit under the canonical planning tree (`planning_paths.py`,
 plugin-self tag) **only after** `planning_gap_capture confirm --signal-id <id>` records a persisted human
 ack. A fixture proves capture-without-confirm leaves **zero** tracked planning files. Distinct tag keeps meta
 separate from product GAP routing in `feedback-closure`.
@@ -151,8 +151,8 @@ separate from product GAP routing in `feedback-closure`.
 A **cross-run failure-signature store** (shared git-dir authority above, redacted, append-only) keyed by
 `{check_id, exit_code, job_id}` (host-attested) with normalized message class as a secondary discriminator
 (strip temp paths, UUIDs, line numbers, timestamps — algorithm pinned in `failure-signature.schema.json`).
-**Writers are pinned** at deterministic surfaces: `scripts/check-gate.sh` on red (`failingChecks[]`),
-`scripts/wave_failure.py` on blocked verify/remediation, `scripts/verify-evidence.sh` on `not-verified`, and
+**Writers are pinned** at deterministic surfaces: `scripts/check-gate.py` on red (`failingChecks[]`),
+`scripts/wave_failure.py` on blocked verify/remediation, `scripts/verify-evidence.py` on `not-verified`, and
 the conductor `noProgressStreak` trip — all via `scripts/failure-signature-record.sh` → `sw-state-write.sh`.
 Threshold escalation (config `recurrence.threshold`, ≥2 distinct runs) invokes
 `scripts/failure-signature-escalate.sh`, which runs the `rca-core` debug-entry procedure on **redacted**
@@ -238,7 +238,7 @@ only**. Enforcement (fail-closed, mechanical):
   `scripts/failure-signature-escalate.sh`, `scripts/inefficiency-scan.sh`,
   `scripts/behavioral-anomaly-check.sh`, `scripts/loop-autonomy.py`; plus extensions to
   `scripts/planning_gap_capture.py` (plugin-self/`meta-shipwright` tags, two-phase capture/confirm),
-  `scripts/planning_paths.sh` (plugin-self unit placement), `scripts/memory-redact.sh` (new store coverage).
+  `scripts/planning_paths.py` (plugin-self unit placement), `scripts/memory-redact.py` (new store coverage).
 - **Skills/commands/rules:** `core/skills/feedback/SKILL.md` + `core/skills/feedback/references/signal-schema.md`
   + `core/commands/sw-feedback.md` (meta channel), `core/skills/feedback-closure/SKILL.md` (meta vs product
   routing), `core/skills/rca-core/SKILL.md` (cross-run escalation + pattern catalog — **read-only consumer
@@ -255,7 +255,7 @@ only**. Enforcement (fail-closed, mechanical):
 ## Security & Compliance
 
 - All captured signatures, root-cause records, inefficiency items, loop-health data, and meta-inbox content
-  are written **only** through `scripts/sw-state-write.sh` → `scripts/memory-redact.sh` (R31, fail-closed) —
+  are written **only** through `scripts/sw-state-write.sh` → `scripts/memory-redact.py` (R31, fail-closed) —
   no secrets/transcripts in any store; a negative fixture proves secret-bearing input never lands on disk.
 - The auto-propose driver is **proposal-only**: mechanically enforced no-merge / no-promote / no-dispatch /
   no-nested-dispatch (R27/R30) via closed allowlist + human-ack-to-execute; attempts to dispatch or reach an
@@ -359,7 +359,7 @@ propose behavior runs, and the conductor/merge/dispatch invariants are unchanged
   breaker, replacing neither.
 - **2026-06-30** Behavioral anomalies use **trust-anchored evidence** (pre-agent diff snapshot, re-exec/hash);
   evidence-integrity mismatch is promoted to inconclusive/blocking — evidence-based, not assertion-based.
-- **2026-06-30** Cross-run stores use a **shared git-dir authority** (parity with `shipwright-state.sh`) so
+- **2026-06-30** Cross-run stores use a **shared git-dir authority** (parity with `shipwright-state.py`) so
   signatures/loop-health are visible across worktrees/PRs; `.cursor/sw-*` are per-checkout projections.
 - **2026-06-30** Inefficiency parallelizability detection is **retrospective** (realized vs simulated wave
   width), explicitly fenced off from PRD B authoring-time sizing; degrades with a notice when sizing is

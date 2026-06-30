@@ -155,7 +155,7 @@ def cmd_merge_if_ready(root: Path, dry_run: bool, embedded_hash: str, pr_number:
         if listed.get("verdict") == "ok" and (listed.get("data") or []):
             pr = str(listed["data"][0].get("number") or "")
     gate_proc = subprocess.run(
-        [sys.executable, str(SCRIPT_DIR / "check-gate.sh"), pr or ""],
+        [sys.executable, str(SCRIPT_DIR / "check-gate.py"), pr or ""],
         capture_output=True,
         text=True,
         check=False,

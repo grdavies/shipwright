@@ -33,18 +33,18 @@ guides, and the emitter.
 
 - [ ] 2.1 Agent consent prompt → agent runs apply on ack (R8, R10)
   - **File:** `core/commands/sw-cleanup.md`
-  - **Expected:** procedure step replaces "run `bash scripts/cleanup.sh --confirm --yes` yourself" with an agent prompt; on explicit ack the agent runs `bash scripts/cleanup.sh --confirm --yes` (or `SW_CLEANUP_CONFIRM=1`); declined/silent/ambiguous → no apply; manual command kept as documented escape hatch
+  - **Expected:** procedure step replaces "run `python3 scripts/cleanup.py --confirm --yes` yourself" with an agent prompt; on explicit ack the agent runs `python3 scripts/cleanup.py --confirm --yes` (or `SW_CLEANUP_CONFIRM=1`); declined/silent/ambiguous → no apply; manual command kept as documented escape hatch
 - [ ] 2.2 Preserve fail-closed protections verbatim (R9)
   - **File:** `core/commands/sw-cleanup.md`
-  - **Expected:** protections section (current/default/unmerged branch, active/locked worktrees, in-flight deliver run, indeterminate squash, no `rm -rf`) unchanged; apply deletes only the reviewed `wouldRemove` set; no change to `scripts/cleanup.sh`
+  - **Expected:** protections section (current/default/unmerged branch, active/locked worktrees, in-flight deliver run, indeterminate squash, no `rm -rf`) unchanged; apply deletes only the reviewed `wouldRemove` set; no change to `scripts/cleanup.py`
 
 ### 3. Optional repo link-check script + wiring (M)
 
-- [ ] 3.1 Add `scripts/docs-link-check.sh` (R11, R13)
-  - **File:** `scripts/docs-link-check.sh`
+- [ ] 3.1 Add `scripts/docs-link-check.py` (R11, R13)
+  - **File:** `scripts/docs-link-check.py`
   - **Expected:** parses repo-relative markdown links + intra-doc anchors across `README.md` and `docs/guides/**` (optionally `docs/prds/**`); emits JSON `{"verdict":"pass|broken-links","findings":[...]}`; skips `http`/`https`; no network access
 - [ ] 3.2 Advisory-by-default with `--strict` opt-in + harness wiring (R12)
-  - **File:** `scripts/docs-link-check.sh`, `.cursor/workflow.config.json`
+  - **File:** `scripts/docs-link-check.py`, `.cursor/workflow.config.json`
   - **Expected:** default exit 0 with logged findings; `--strict` exits 20 on broken links; wired into `verify.test`/doctor in advisory mode
 
 ### 4. Fixtures, guides, dist propagation (M)

@@ -22,7 +22,7 @@ VERDICT_EXIT = {"green": 0, "yellow": 10, "red": 20, "blocked": 30}
 
 
 def resolve_plugin_root(script_dir: Path | None = None) -> Path:
-    """Resolve plugin content root (mirrors sw-resolve-plugin-root.sh)."""
+    """Resolve plugin content root (mirrors sw-resolve-plugin-root.py)."""
     script_dir = script_dir or SCRIPT_DIR
     parent = script_dir.parent
     if (parent / "providers").is_dir() or (parent / "commands").is_dir():
@@ -437,7 +437,7 @@ def scripts_touch_advisory(root: Path, pr_view: dict[str, Any], head_sha: str, r
     if diff.returncode == 0 and any(
         line.startswith("scripts/") for line in diff.stdout.splitlines()
     ):
-        return f"{reason}; advisory: PR touches scripts/ — consider bash scripts/build-chain-sync.sh"
+        return f"{reason}; advisory: PR touches scripts/ — consider python3 scripts/build-chain-sync.py"
     return reason
 
 

@@ -91,7 +91,7 @@
         "scripts/wave.sh",
         "core/skills/deliver/SKILL.md",
         "core/commands/sw-deliver.md",
-        "integration with `scripts/sw-assert-worktree.sh` or minimal guard"
+        "integration with `scripts/sw-assert-worktree.py` or minimal guard"
       ]
     },
     {

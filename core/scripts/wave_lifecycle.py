@@ -135,9 +135,9 @@ def slug_from_target(target_branch: str) -> str:
 
 
 def cmd_assert_entry(root: Path, _args: list[str]) -> None:
-    script = root / "scripts" / "sw-assert-worktree.sh"
+    script = root / "scripts" / "sw-assert-worktree.py"
     if not script.is_file():
-        fail("sw-assert-worktree.sh missing", exit_code=2)
+        fail("sw-assert-worktree.py missing", exit_code=2)
     proc = subprocess.run(["bash", str(script)], cwd=str(root), capture_output=True, text=True)
     if proc.returncode == 0:
         emit({"verdict": "pass", "action": "assert-entry", "allowed": True})
@@ -563,7 +563,7 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
     name = parse_kv(args, "--name", f"{target_slug}-phase-{slug}") or f"{target_slug}-phase-{slug}"
 
     top = git_toplevel(root)
-    script = top / "scripts" / "worktree.sh"
+    script = top / "scripts" / "worktree.py"
     proc = subprocess.run(
         [
             "bash",

@@ -8,14 +8,14 @@ description: Resolve a frozen PRD or decision record plus amendments into one ef
 Single read-time view of frozen doc + amendments (R12). Parent is never mutated.
 
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --skill spec-union`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill spec-union`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 
 ## Structural tokenizer (PRD 031)
 
-`scripts/spec-union.sh` parses exclusively through `scripts/doc_format.py` (shared tokenizer). No
+`scripts/spec-union.py` parses exclusively through `scripts/doc_format.py` (shared tokenizer). No
 independent structural regex is retained. Pre-freeze docs pass through
-`python3 scripts/doc-format-normalize.sh --check|--write` before persisting.
+`python3 scripts/doc-format-normalize.py --check|--write` before persisting.
 
 Post-cutover paths live under `planningDir` (default `docs/planning`); pre-cutover repos use legacy
 `prdsDir`/`decisionsDir` until migration `--verify` passes. See `core/sw-reference/layout.md`.
@@ -63,7 +63,7 @@ coverage) is a hard error.
 ## Consumers
 
 - **Agent:** load this skill when reading spec for `/sw-execute` or gap-check.
-- **Deterministic:** `scripts/spec-union.sh <doc-path>` → JSON effective requirements.
+- **Deterministic:** `scripts/spec-union.py <doc-path>` → JSON effective requirements.
 
 ## Interface stability
 
@@ -73,6 +73,6 @@ path is additive.
 ## Examples
 
 ```bash
-python3 scripts/spec-union.sh docs/planning/prd/prd-001-feature/prd-001-feature-prd-feature.md
-python3 scripts/spec-union.sh docs/planning/decision/decision-001-my-decision/decision-001-my-decision.md
+python3 scripts/spec-union.py docs/planning/prd/prd-001-feature/prd-001-feature-prd-feature.md
+python3 scripts/spec-union.py docs/planning/decision/decision-001-my-decision/decision-001-my-decision.md
 ```

@@ -219,7 +219,7 @@ AUDITED=(
   scripts/docs-currency-gate.sh
   scripts/ship-phase-status.sh
   scripts/cleanup_lib.py
-  scripts/reconcile-status.sh
+  scripts/reconcile.py
 )
 if python3 - <<'PY' "$ROOT" "${AUDITED[@]}"
 import re, sys

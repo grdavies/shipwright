@@ -67,9 +67,9 @@ def dispatch(argv: list[str]) -> int:
     if cmd in ("state", "lock", "journal", "log", "ledger"):
         return _python("wave_state.py", root, argv)
     if cmd == "tasks-currency":
-        return _bash("tasks-currency-gate.sh", rest, cwd=root)
+        return _bash("tasks-currency-gate.py", rest, cwd=root)
     if cmd == "docs-currency":
-        return _bash("docs-currency-gate.sh", rest, cwd=root)
+        return _bash("docs-currency-gate.py", rest, cwd=root)
     if cmd == "living-docs":
         return _python("wave_living_docs.py", root, rest)
     if cmd == "inflight":

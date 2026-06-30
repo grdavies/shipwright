@@ -8,7 +8,7 @@ description: Generate a PRD or decision-record draft (Full/Standard). Does not f
 Port of v1 `spec-prd` under `sw-`. Freeze and task generation are separate steps. Generalized into a typed frozen-deliverable author via `--type`.
 
 
-**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.sh --skill prd`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.py --skill prd`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Deliverable types
 
@@ -38,7 +38,7 @@ Port of v1 `spec-prd` under `sw-`. Freeze and task generation are separate steps
 4. Alternatives
 5. Consequences
 
-The decision section contract must stay in lockstep with `scripts/spec-rigor-check.sh --artifact decision`.
+The decision section contract must stay in lockstep with `scripts/spec-rigor-check.py --artifact decision`.
 
 ## Path
 
@@ -59,7 +59,7 @@ At save time on the Full path:
 2. When the brainstorm is not frozen, write the forward `prd:` reference via
    `python3 scripts/doc_link.py write-forwardref --brainstorm <brainstorm> --prd <prd>`.
 
-`/sw-freeze` re-verifies linkage (`doc-link-check.sh`, R55) and may write the forward ref if still writable (R53).
+`/sw-freeze` re-verifies linkage (`doc-link-check.py`, R55) and may write the forward ref if still writable (R53).
 Fields are documented in `.sw/layout.md`.
 
 ## Collision policy

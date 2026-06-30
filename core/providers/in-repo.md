@@ -10,7 +10,7 @@ capability:
     providerFamily: memory
     adapterId: in-repo
     selectionFamily: providers
-    gateRef: check-gate.sh
+    gateRef: check-gate.py
 ---
 
 # Provider adapter: in-repo
@@ -73,7 +73,7 @@ memory id returned by `search` / used by `expand` / `modify`.
 }
 ```
 
-`semanticSearch` is `false`: retrieval uses `scripts/in-repo-memory-search.sh` (keyword body match +
+`semanticSearch` is `false`: retrieval uses `scripts/in-repo-memory-search.py` (keyword body match +
 frontmatter filters). `export`/`import` are native: walk the store and emit/consume neutral JSONL per
 `CAPABILITIES.md`.
 
@@ -83,9 +83,9 @@ frontmatter filters). `export`/`import` are native: walk the store and emit/cons
 | --- | --- | --- |
 | `load-context` | scan store mtime + `rules-load` | list recent files under `memories/`; load rules from `rules/` |
 | `rules-load` | read `rules/*.md` | filesystem read of committed rule files |
-| `search` | `in-repo-memory-search.sh` | `python3 scripts/in-repo-memory-search.sh --store <dir> --query <q> [--category] [--tag] [--file-glob]` |
+| `search` | `in-repo-memory-search.py` | `python3 scripts/in-repo-memory-search.py --store <dir> --query <q> [--category] [--tag] [--file-glob]` |
 | `expand` | read file body | read `memories/<id>.md` or `rules/<id>.md` by id |
-| `store` | write file after redaction | pipe payload through `scripts/memory-redact.sh`, then write one `.md` file |
+| `store` | write file after redaction | pipe payload through `scripts/memory-redact.py`, then write one `.md` file |
 | `modify` | update frontmatter / body / `inactive:true` | rewrite the target file |
 | `list-recent` | mtime sort under `memories/` | `find` + sort by mtime, cap N |
 | `export` | walk store → JSONL | one JSON object per line (frontmatter + body) |
@@ -117,7 +117,7 @@ frontmatter filters). `export`/`import` are native: walk the store and emit/cons
 
 When `semanticSearch:false` (this provider):
 
-1. Run `scripts/in-repo-memory-search.sh` with the query and optional filters.
+1. Run `scripts/in-repo-memory-search.py` with the query and optional filters.
 2. Results are ranked `{id, summary}` JSON — summary is the first line of the body (trimmed).
 3. `expand` reads the full file for selected ids.
 4. File-path search: pass `--file-glob` with a path fragment; matches `relatedFiles` frontmatter entries.
@@ -129,7 +129,7 @@ Identical inputs → identical ranked output (deterministic).
 ## Write recipe specifics
 
 1. **Lazy store create:** `mkdir -p` the store dirs on first write — no `/sw-setup` required.
-2. **Redaction (R41):** pipe every payload through `scripts/memory-redact.sh` before writing.
+2. **Redaction (R41):** pipe every payload through `scripts/memory-redact.py` before writing.
 3. **Commit mode:** `memory.inRepo.commitMode: committed` (default) writes under `.cursor/sw-memory/memories/`.
    `local` writes non-rule memories under `.cursor/sw-memory-local/memories/` (gitignored).
 4. **Rules always committed:** `category: rule` always writes to `.cursor/sw-memory/rules/` regardless of

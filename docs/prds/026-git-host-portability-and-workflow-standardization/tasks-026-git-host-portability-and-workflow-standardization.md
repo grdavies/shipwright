@@ -32,7 +32,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
     capability surfaces a typed degraded result, not a crash. `host-verb-capability-flags` asserts the matrix.
   - **R-IDs:** R2, R3
 - [x] 1.3 Provider auto-detection + configurable remote (R6, R7)
-  - **File:** `scripts/host-detect.sh`, `scripts/host_lib.py`
+  - **File:** `scripts/host-detect.py`, `scripts/host_lib.py`
   - **Expected:** provider auto-detected from the configured remote URL for public hosts; `host.remote`
     (default `origin`) replaces every hard-coded `origin` literal in the R7 script set.
     `remote-url-autodetect` maps URLs→providers; `origin-literal-guard` greps the scripts for stray `origin`.
@@ -54,7 +54,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
     `backoff-log-redaction`.
   - **R-IDs:** R35, R36, R37, R38, R39, R42
 - [x] 1.6 Doctor/setup check + GitHub migration parity (R33, R34)
-  - **File:** `core/commands/sw-init.md`, `scripts/host-doctor.sh`
+  - **File:** `core/commands/sw-init.md`, `scripts/host-doctor.py`
   - **Expected:** `/sw-init` (and `sw-configure`) validate provider, token presence, and reachability;
     degraded capability reported as a warning; an existing GitHub repo works with only a token env var set.
     `github-migration-token-only` and `doctor-degraded-warns`.
@@ -68,18 +68,18 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
     review-thread resolution); every direct `gh` invocation in runtime scripts is replaced; no host CLI is a
     prerequisite. `gh-removal-guard` greps for zero `gh` calls and `gh-absent-path` runs with `gh` off `PATH`.
   - **R-IDs:** R4, R5
-- [x] 2.2 `check-gate.sh` over the verb set (R14)
-  - **File:** `scripts/check-gate.sh`
+- [x] 2.2 `check-gate.py` over the verb set (R14)
+  - **File:** `scripts/check-gate.py`
   - **Expected:** PR number, CI checks, unresolved review threads, and repo metadata obtained via host verbs;
     no direct `gh`. `check-gate-verbset` asserts identical verdicts against recorded REST fixtures.
   - **R-IDs:** R14
 - [x] 2.3 Terminal flow over the verb set (R15)
-  - **File:** `scripts/wave_terminal.py`, `scripts/wave_compound.py`, `scripts/cleanup_lib.py`, `scripts/reconcile-status.sh`
+  - **File:** `scripts/wave_terminal.py`, `scripts/wave_compound.py`, `scripts/cleanup_lib.py`, `scripts/reconcile-status.py`
   - **Expected:** PR prepare/create/list/view/head go through host verbs across the terminal, compound,
     cleanup, and reconcile paths. `terminal-flow-verbset` exercises the flow on mocked REST.
   - **R-IDs:** R15
-- [x] 2.4 `stabilize-merge-sync.sh` over the verb set (R16)
-  - **File:** `scripts/stabilize-merge-sync.sh`
+- [x] 2.4 `stabilize-merge-sync.py` over the verb set (R16)
+  - **File:** `scripts/stabilize-merge-sync.py`
   - **Expected:** PR metadata + conflict probe run through host verbs. `stabilize-sync-verbset` on fixtures.
   - **R-IDs:** R16
 - [x] 2.5 Command/skill prose + install docs de-`gh` (R17, R5)
@@ -96,7 +96,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
     resolve to local-evidence equivalents. `noremote-local-adapter` asserts selection + verb behavior.
   - **R-IDs:** R9
 - [x] 3.2 Generalize `local_evidence_authorizing` to the terminal tier + artifact (R10)
-  - **File:** `scripts/check-gate.sh`, `scripts/local_merge_gate.py`
+  - **File:** `scripts/check-gate.py`, `scripts/local_merge_gate.py`
   - **Expected:** local-evidence path extends feature→trunk; writes a local-merge-gate artifact.
     `terminal-local-evidence-gate` asserts artifact contents.
   - **R-IDs:** R10
@@ -110,8 +110,8 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
   - **Expected:** CI-watch degrades to local checks-gate evidence and reports degraded mode.
     `ci-watch-local-degrade`.
   - **R-IDs:** R12
-- [x] 3.5 `check-gate.sh` local-evidence verdict (R13)
-  - **File:** `scripts/check-gate.sh`
+- [x] 3.5 `check-gate.py` local-evidence verdict (R13)
+  - **File:** `scripts/check-gate.py`
   - **Expected:** returns a local-evidence verdict instead of the blocked "no open PR" path in no-remote mode.
     `check-gate-local-verdict`.
   - **R-IDs:** R13
@@ -154,11 +154,11 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
     `conventions-single-source`.
   - **R-IDs:** R23, R27
 - [x] 5.2 `branch-name-guard` enforcement (R24)
-  - **File:** `scripts/branch-name-guard.sh`, `scripts/worktree_lib.py`
+  - **File:** `scripts/branch-name-guard.py`, `scripts/worktree_lib.py`
   - **Expected:** wired into worktree/branch creation; rejects non-conforming names. `branch-name-guard-reject`.
   - **R-IDs:** R24
 - [x] 5.3 Commit-message validator (Conventional Commits) (R25)
-  - **File:** `scripts/commit-msg-guard.sh`, `hooks/commit-msg`
+  - **File:** `scripts/commit-msg-guard.py`, `hooks/commit-msg`
   - **Expected:** enforces Conventional Commit types from a single source; rejects invalid messages.
     `commit-msg-validator-reject`.
   - **R-IDs:** R25
@@ -168,7 +168,7 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
     enforces required fields. `pr-template-required-fields`.
   - **R-IDs:** R26
 - [x] 5.5 Docs-on-a-branch policy + worktree provisioning (R28, R29)
-  - **File:** `core/commands/sw-doc.md`, `scripts/docs_worktree.sh`
+  - **File:** `core/commands/sw-doc.md`, `scripts/docs_worktree.py`
   - **Expected:** brainstorm/PRD/doc authoring occurs on a `docs/<topic>` branch (never the default branch);
     tooling creates/resumes a docs worktree + branch. `docs-branch-no-main-commit` + `docs-worktree-provision`.
   - **R-IDs:** R28, R29
@@ -239,8 +239,8 @@ registered in `core/sw-reference/pr-test-plan.manifest.json` and is independentl
 
 ## Notes
 
-- Relevant existing files to refactor (not exhaustive): `scripts/check-gate.sh`, `scripts/wave_terminal.py`,
-  `scripts/wave_merge.py`, `scripts/stabilize-merge-sync.sh`, `scripts/wave_compound.py`,
-  `scripts/cleanup_lib.py`, `scripts/reconcile-status.sh`.
+- Relevant existing files to refactor (not exhaustive): `scripts/check-gate.py`, `scripts/wave_terminal.py`,
+  `scripts/wave_merge.py`, `scripts/stabilize-merge-sync.py`, `scripts/wave_compound.py`,
+  `scripts/cleanup_lib.py`, `scripts/reconcile-status.py`.
 - New provider family lives under `core/providers/host/` mirroring the memory/review adapter pattern.
 - All new fixtures register in `core/sw-reference/pr-test-plan.manifest.json` and run in `verify.test`.

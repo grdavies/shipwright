@@ -18,11 +18,11 @@ internal: true
 1. Print this deprecation notice once at the start of the run.
 2. Load `skills/compound/SKILL.md` and run the compound write step (same as the internal step in
    `/sw-retrospective`).
-3. Route all writes through `memory-preflight` + `scripts/memory-redact.sh`.
+3. Route all writes through `memory-preflight` + `scripts/memory-redact.py`.
 
 **Communication intensity:** full
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.sh --command sw-compound`.
+**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --command sw-compound`.
 
 ## Guardrails
 

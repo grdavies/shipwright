@@ -13,7 +13,7 @@ frozen_at: 2026-06-28
 After PRD 036 shipped (terminal squash-merge **PR #195**), post-merge bookkeeping exposed two coupled
 defects in the legacy living-doc path that this amendment closes before the PRD 033 reconciler cutover:
 
-1. **INDEX backward regression.** A manual `reconcile-status.sh reconcile` run from repo root on `main`
+1. **INDEX backward regression.** A manual `reconcile-status.py reconcile` run from repo root on `main`
    committed local-only corruption: **11 PRD rows regressed** from `complete`/`superseded` to
    `not-started`/`in-progress` (local commit `50ce3d4`). Contributing context: stale local feature branches
    skewed active-branch detection; slug-scoped deliver state omitted older completed runs; merge-detection
@@ -71,7 +71,7 @@ post-merge operator docs depend on.
   region: the reconciler MUST NOT downgrade a row unless an explicit `--override-status` names the unit id,
   prior status, new status, and reason. Default reconcile is a no-op for terminal rows when git/deliver
   evidence still supports the terminal state.
-- **R31** The maintenance reconciler and any legacy `reconcile-status.sh reconcile` shim it replaces MUST
+- **R31** The maintenance reconciler and any legacy `reconcile-status.py reconcile` shim it replaces MUST
   **refuse to commit** when the current git branch is `defaultBaseBranch`. Exit non-zero with an actionable
   message naming the allowed post-merge path: `set-index-status` + `append-log-idempotent` on a docs branch
   for single-unit updates; full-corpus reconcile only through the reconciler entrypoint on a non-default
@@ -86,7 +86,7 @@ post-merge operator docs depend on.
   or ad-hoc `wave_state` saves that set `merged-complete` without passing the finalizer are rejected at the
   save guard (exit non-zero, no partial write).
 - **R34** The deliver-loop post-merge path invokes `finalize-if-merged` only; on guard failure it emits a
-  consolidated halt with `resumeCommand` and MUST NOT suggest bare `reconcile-status.sh reconcile`. Operator
+  consolidated halt with `resumeCommand` and MUST NOT suggest bare `reconcile-status.py reconcile`. Operator
   docs (`sw-retrospective.md`, `sw-status.md`) state the post-merge playbook: single-unit bookkeeping on a
   **docs branch**; never full-corpus `reconcile` on `main`.
 - **R35** The relief acceptance corpus (extends parent R22) MUST include, at minimum:

@@ -182,7 +182,7 @@ MERGE_FIX=$(mktemp -d)
   printf '%s\n' '| # | Slug | PRD | Tasks | Status |' '|---|---|---|---|---|' '| 007 | x | l | l | not-started |' > docs/prds/INDEX.md
   git add docs/prds/INDEX.md && git commit -q -m init
   git checkout -q -b feat/demo2
-  bash "$ROOT/scripts/reconcile-status.sh" reconcile --require-merge >/dev/null 2>&1
+  bash "$ROOT/scripts/reconcile.py" reconcile --require-merge >/dev/null 2>&1
   if grep -q '| complete |' docs/prds/INDEX.md; then
     exit 1
   fi

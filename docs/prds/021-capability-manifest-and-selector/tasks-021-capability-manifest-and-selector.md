@@ -53,7 +53,7 @@ contract per the Decision Log).
   - **Expected:** precedence `config override > signal match > default`; remaining ties resolved deterministically via a documented total order (capability-id lexicographic) so equal-precedence overlaps cannot be machine-/emitter-order-dependent.
   - **R-IDs:** R11
 - [x] 3.2 Author-time manifest lint wired into the test gate (R11, R25, R27)
-  - **File:** `scripts/capability-manifest-lint.sh` (registered in `workflow.config.json` `verify.test`)
+  - **File:** `scripts/capability-manifest-lint.py` (registered in `workflow.config.json` `verify.test`)
   - **Expected:** conflict taxonomy (duplicate id, overlapping globs/predicates at equal precedence, competing defaults) fails closed without a precedence resolution; also rejects `kind`/path mismatch and index entries referencing non-existent artifacts (anti-spoof).
   - **R-IDs:** R11, R25, R27
 - [x] 3.3 Lint failing-before / passing-after fixtures (R11, R25)
@@ -68,7 +68,7 @@ contract per the Decision Log).
   - **Expected:** `{tier, doc_path, body_snapshot|derived_tags, file_paths[], change_digest, config, phase_type, conductor_mode, overrides}`, each slot with a documented fail-closed default (missing triage → empty tags; unset provider → none); fully static (not the live working tree).
   - **R-IDs:** R10
 - [x] 4.2 Deterministic selector primitive (canonical JSON + trust fields) (R10, R14)
-  - **File:** `scripts/capability-select.sh` → `capability_select.py`
+  - **File:** `scripts/capability-select.py` → `capability_select.py`
   - **Expected:** takes a `signal_context`, returns canonically serialized JSON (ids sorted, fixed field order, membership hash separated from presentation metadata); each entry carries `eligible`, `executable`, `authorized`, `gateRef`, `refusalReason`; identical inputs ⇒ byte-identical output.
   - **R-IDs:** R10, R14
 - [x] 4.3 Snapshot `signal_context` to durable state for resume (R10)
@@ -88,7 +88,7 @@ contract per the Decision Log).
 
 - [x] 5.1 Non-authorizing selector output through named gates (R27)
   - **File:** `capability_select.py` + provider/hook/memory call sites
-  - **Expected:** every executable invocation flows through its named existing gate — providers → `check-gate.sh` / `review-local-resolve.sh` + the `providers/<family>/` adapter; hooks → emitter-registered `hooks.json` slots; memory → `memory-preflight`. Eligibility never authorizes; unknown/unconfigured executables fail closed.
+  - **Expected:** every executable invocation flows through its named existing gate — providers → `check-gate.py` / `review-local-resolve.py` + the `providers/<family>/` adapter; hooks → emitter-registered `hooks.json` slots; memory → `memory-preflight`. Eligibility never authorizes; unknown/unconfigured executables fail closed.
   - **R-IDs:** R27
 - [x] 5.2 Kernel-hook pinning (exclude safety hooks from selection/reordering) (R27)
   - **File:** emitter hooks registration + manifest lint
@@ -103,23 +103,23 @@ contract per the Decision Log).
 
 - [x] 6.1 Integration / call-site map + dual-run shadow harness (R13)
   - **File:** `docs/prds/021-capability-manifest-and-selector/` (map) + dual-run shadow runner
-  - **Expected:** enumerate every current selection site and its replacement selector invocation (`sw-doc-review`, `sw-review` / `code-review-select.sh`, `check-gate.sh`, provider resolution, deliver/phase entry, `sw-subagent-dispatch` consumers); a dual-run fixture asserts selector output equals the legacy selection on the golden corpus before any legacy branch is removed.
+  - **Expected:** enumerate every current selection site and its replacement selector invocation (`sw-doc-review`, `sw-review` / `code-review-select.py`, `check-gate.py`, provider resolution, deliver/phase entry, `sw-subagent-dispatch` consumers); a dual-run fixture asserts selector output equals the legacy selection on the golden corpus before any legacy branch is removed.
   - **R-IDs:** R13
 - [x] 6.2 Migrate doc-review personas (parity) (R13)
   - **File:** `core/skills/doc-review/SKILL.md`, `core/commands/sw-doc-review.md`
   - **Expected:** selector-in/out golden fixture covering the tier gate, doc-type routing, security/design text-token gates (shared regex table preserving whole-token / inflection / polysemous-exclusion rules), and overrides; byte-identical to legacy; remove the legacy branch once `migration-parity-doc-review` is authoritative.
   - **R-IDs:** R13
 - [x] 6.3 Migrate code-review specialist roster (parity over change-digest) (R13)
-  - **File:** `core/providers/code-review/native.md`, `code-review-select.sh`
-  - **Expected:** selection over the persisted change-digest; byte-parity with `code-review-select.sh` / `run-code-review-fixtures.sh` (`migration-parity-code-review`).
+  - **File:** `core/providers/code-review/native.md`, `code-review-select.py`
+  - **Expected:** selection over the persisted change-digest; byte-parity with `code-review-select.py` / `run-code-review-fixtures.sh` (`migration-parity-code-review`).
   - **R-IDs:** R13
 - [x] 6.4 Migrate config-selected provider families (parity) (R13)
-  - **File:** `check-gate.sh` / `wave_preflight` + `core/providers/**`
-  - **Expected:** `review.provider`, `review.local`, `memory.provider`, `verify.provider` enumerated; configuredness (absent / `none` / unconfigured) matches `check-gate.sh` / `wave_preflight` verdicts exactly (`migration-parity-providers`).
+  - **File:** `check-gate.py` / `wave_preflight` + `core/providers/**`
+  - **Expected:** `review.provider`, `review.local`, `memory.provider`, `verify.provider` enumerated; configuredness (absent / `none` / unconfigured) matches `check-gate.py` / `wave_preflight` verdicts exactly (`migration-parity-providers`).
   - **R-IDs:** R13
 - [x] 6.5 Migrate `sw-subagent-dispatch` current selection (parity, no widening) (R13)
   - **File:** `core/rules/sw-subagent-dispatch.mdc` + dispatch consumers
-  - **Expected:** file-count from declared paths + the durable `inline`/`background_phase` flag; model-tier binding stays in `resolve-model-tier.sh` / `reviewer-dispatch-check.sh` (referenced, not re-encoded); delegate/fan-out budget widening explicitly deferred to PRD-023 (`migration-parity-dispatch`).
+  - **Expected:** file-count from declared paths + the durable `inline`/`background_phase` flag; model-tier binding stays in `resolve-model-tier.py` / `reviewer-dispatch-check.py` (referenced, not re-encoded); delegate/fan-out budget widening explicitly deferred to PRD-023 (`migration-parity-dispatch`).
   - **R-IDs:** R13
 
 ### 7. Run-log surfacing — S
@@ -182,11 +182,11 @@ contract per the Decision Log).
 - `core/sw-reference/capability-manifest.md` — frontmatter/precedence/trust contract
 - `core/sw-reference/signal-context.schema.json` — versioned `signal_context` (fail-closed defaults)
 - `core/sw-reference/capability-index.json` — emitter-generated, freshness-gated index
-- `scripts/capability-select.sh` / `capability_select.py` — deterministic selector primitive
-- `scripts/capability-manifest-lint.sh` — author-time precedence/conflict/anti-spoof lint
+- `scripts/capability-select.py` / `capability_select.py` — deterministic selector primitive
+- `scripts/capability-manifest-lint.py` — author-time precedence/conflict/anti-spoof lint
 - `scripts/wave_preflight.*` — pre-selection index freshness check
 - `scripts/test/run-capability-select-fixtures.sh`, `run-capability-lint-fixtures.sh`, `run-emitter-fixtures.sh` — fixture suites
-- Migration targets: `core/skills/doc-review/SKILL.md`, `core/commands/sw-doc-review.md`, `core/providers/code-review/native.md`, `code-review-select.sh`, `check-gate.sh`, `core/rules/sw-subagent-dispatch.mdc`
+- Migration targets: `core/skills/doc-review/SKILL.md`, `core/commands/sw-doc-review.md`, `core/providers/code-review/native.md`, `code-review-select.py`, `check-gate.py`, `core/rules/sw-subagent-dispatch.mdc`
 - `.sw/layout.md`, `core/sw-reference/layout.md`, `docs/guides/configuration.md`, `CONTRIBUTING.md` — docs
 
 ## Notes

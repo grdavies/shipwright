@@ -41,7 +41,7 @@ de-overloaded vocabulary. It carries forward requirements R1–R25 from the froz
 ## Non-Goals
 
 - No new review providers and no change to CodeRabbit adapter behavior beyond default/opt-out wiring.
-- No change to `check-gate.sh` verdict (pass/fail) logic beyond renaming the opt-out output state.
+- No change to `check-gate.py` verdict (pass/fail) logic beyond renaming the opt-out output state.
 - No changes to memory, verify/CI, or worktree internals beyond enforcing the existing worktree invariant.
 - No redesign of the broader `/sw-ship` implementation loop.
 - No targeted in-place editor for an already-generated task list (see Decision Log DL5).
@@ -81,7 +81,7 @@ de-overloaded vocabulary. It carries forward requirements R1–R25 from the froz
 - **R26** The `/sw-doc` command contract and the always-applied `rules/sw-naming.mdc` documentation-orchestrator
   boundary are amended to permit the `auto`-mode auto-dispatch handoff (provision + dispatch), while keeping the
   invariant that the doc orchestrator does not inline implementation.
-- **R27** A deterministic, fail-closed guard (`scripts/sw-assert-worktree.sh` or an equivalent pre-write hook)
+- **R27** A deterministic, fail-closed guard (`scripts/sw-assert-worktree.py` or an equivalent pre-write hook)
   aborts any implementation step when `HEAD` resolves to the default branch with no active worktree gitdir; a
   negative-path fixture asserts it blocks a simulated write on bare `main`. The guard must distinguish
   legitimately-allowed-on-main flows (e.g. hotfix/release paths) from doc→implementation work.
@@ -89,7 +89,7 @@ de-overloaded vocabulary. It carries forward requirements R1–R25 from the froz
 ### Review default
 
 - **R11** The config schema's default for `review.provider` is `none`.
-- **R12** The `check-gate.sh` fallback value for an absent `review.provider` is `none` (not `coderabbit`). A
+- **R12** The `check-gate.py` fallback value for an absent `review.provider` is `none` (not `coderabbit`). A
   never-configured repo (provider resolved from the default, key unset) is reported as `unconfigured`
   ("review off by default — never configured"), distinct from an explicit opt-out — see R28.
 - **R13** The canonical `.sw/workflow.config.example.json` sets `review.provider` to `none`; derived copies
@@ -103,13 +103,13 @@ de-overloaded vocabulary. It carries forward requirements R1–R25 from the froz
 
 - **R16** `review.provider: "none"` is documented as the single canonical way to disable review gating.
 - **R17** `review.enabled: false` continues to opt out (back-compat) but emits a deprecation warning when used.
-  The warning is emitted off the `check-gate.sh` stdout JSON contract — via stderr and/or a `deprecations[]`
+  The warning is emitted off the `check-gate.py` stdout JSON contract — via stderr and/or a `deprecations[]`
   field inside the verdict JSON and/or surfaced by `/sw-setup` doctor — never as stray stdout text that would
   corrupt JSON-parsing consumers (`/sw-watch-ci`, stabilize).
 - **R18** The config schema marks `review.enabled` as deprecated, pointing to `review.provider: "none"`.
 - **R19** `/sw-setup`'s review choice presents `coderabbit | none` only; no separate `disabled` option.
 - **R20** The gate output state previously named `disabled` is renamed `off` at every literal-`disabled` site:
-  the `check-gate.sh` emitter (`CR_STATE`, `CR_STATUS`), the green-verdict reason switch (so opt-out/unconfigured
+  the `check-gate.py` emitter (`CR_STATE`, `CR_STATUS`), the green-verdict reason switch (so opt-out/unconfigured
   never fall through to "review landed"), `providers/review/CAPABILITIES.md`, any normalizer/consumer, gate
   fixtures (incl. `scripts/test/run-gate-fixtures.sh` which asserts `state=disabled`), the schema description,
   README, and emitted `dist/` copies. A grep-based test asserts no `disabled` literal remains in gate code,
@@ -158,7 +158,7 @@ de-overloaded vocabulary. It carries forward requirements R1–R25 from the froz
   described as opt-in.
 - Mark `review.enabled` deprecated in the schema description (point to `review.provider: "none"`); keep it valid
   for back-compat. The existing `allowEmptyRules`-style deprecation phrasing is the precedent.
-- `check-gate.sh`: change the `REVIEW_PROVIDER` fallback from `coderabbit` to `none`; rename the emitted opt-out
+- `check-gate.py`: change the `REVIEW_PROVIDER` fallback from `coderabbit` to `none`; rename the emitted opt-out
   state string `disabled` → `off` (`CR_STATE`, `CR_STATUS`, JSON keys/consumers, **and the green-verdict reason
   switch** so opt-out/unconfigured never fall through to a "review landed" reason). Distinguish the
   never-configured default (`unconfigured`) from the explicit opt-out (`off`) per R28. Preserve
@@ -170,12 +170,12 @@ de-overloaded vocabulary. It carries forward requirements R1–R25 from the froz
 - The review-state model was defined in memory #2074 and `providers/review/CAPABILITIES.md` (states `landed`,
   `skipped`, `clean`, `absent`, `unconfigured`, `in-flight`, `disabled`). R20 renames only the opt-out state
   `disabled` → `off`; the `unconfigured` state is **retained and made reachable** for never-configured default
-  repos (R28). All literal-`disabled` sites must be updated together: `check-gate.sh` (emitter + green-reason
+  repos (R28). All literal-`disabled` sites must be updated together: `check-gate.py` (emitter + green-reason
   switch), `CAPABILITIES.md`, normalizers, `scripts/test/run-gate-fixtures.sh` (currently asserts
   `state=disabled`), `config.schema.json` description, README, and emitted `dist/` copies — verified by a
   grep-based no-`disabled`-literal test.
 - The adapter seam (`review.provider`, memory #2069/#2058) is unchanged; `none` remains a recognized non-adapter
-  sentinel handled before adapter dispatch in `check-gate.sh`.
+  sentinel handled before adapter dispatch in `check-gate.py`.
 
 ### Orchestrator + tasks behavior
 
@@ -210,14 +210,14 @@ de-overloaded vocabulary. It carries forward requirements R1–R25 from the froz
   says "review landed" (R21/R28), and the state is surfaced to humans (R29). The `auto` + `review:none`
   combination (no human gate and no AI review) is a deliberate power-user posture; `/sw-setup` and the auto-mode
   notice surface "no review gate active" when it applies.
-- The redaction chokepoint, memory guardrails, and `check-frozen.sh` enforcement are unaffected.
+- The redaction chokepoint, memory guardrails, and `check-frozen.py` enforcement are unaffected.
 
 ## Testing Strategy
 
 - **Config schema:** fixtures validating that `doc.afterTasks` accepts only `stop|confirm|auto`, defaults to
   `confirm`; that `review.provider` defaults to `none`; and that `review.enabled` validates but is flagged
   deprecated.
-- **Gate (`check-gate.sh`):** fixtures asserting (a) never-configured default resolves to `none` and yields the
+- **Gate (`check-gate.py`):** fixtures asserting (a) never-configured default resolves to `none` and yields the
   `unconfigured` state with an honest reason (not "review landed", not a deliberate opt-out); (b) explicit
   `review.provider:"none"` / `review.enabled:false` yields `off`; (c) the opt-out/unconfigured green-verdict
   reason never reads "review landed"; (d) pass/fail verdict is unchanged from prior `disabled` behavior; (e) a
@@ -227,12 +227,12 @@ de-overloaded vocabulary. It carries forward requirements R1–R25 from the froz
   implementation write when `HEAD` is the default branch with no active worktree; positive fixture for an allowed
   on-main flow (hotfix/release).
 - **Tasks single-pass:** a doc-pipeline fixture asserting `/sw-tasks` produces a complete task list (parents +
-  sub-tasks + `## Traceability`) in one pass with no intervention prompt, and that `traceability-check.sh` passes.
+  sub-tasks + `## Traceability`) in one pass with no intervention prompt, and that `traceability-check.py` passes.
 - **Boundary modes:** `stop` halts with next-command output and never implements; `confirm` requires a
   strictly-matched ack (`proceed`/`yes`) before any implementation and treats `Go`/silence/ambiguous as stop;
   `auto` dispatches the implementation loop on a worktree. The implementing paths (`auto`, `confirm`-after-ack)
   provision a worktree; `stop` and declined-`confirm` never touch bare `main`.
-- **Deprecation channel (R17):** fixture asserting `review.enabled:false` keeps `check-gate.sh` stdout valid
+- **Deprecation channel (R17):** fixture asserting `review.enabled:false` keeps `check-gate.py` stdout valid
   single-object JSON while the warning surfaces off-stdout.
 - **Migration:** a fixture with a legacy config (`review.enabled: false`, no `doc.afterTasks`) confirming
   correct behavior + deprecation warning, no required edits.
@@ -243,7 +243,7 @@ de-overloaded vocabulary. It carries forward requirements R1–R25 from the froz
 
 ## Rollout Plan
 
-1. Land schema + canonical example-config + `check-gate.sh` changes (brainstorm decisions D4/D5/D6 — review
+1. Land schema + canonical example-config + `check-gate.py` changes (brainstorm decisions D4/D5/D6 — review
    default flip, opt-out canonicalization, gate-state rename incl. green-reason switch + `unconfigured` honesty)
    with gate fixtures — mechanically self-contained and back-compatible.
 2. Land the deterministic worktree guard (R27) with its negative-path fixture (safety floor before behavior

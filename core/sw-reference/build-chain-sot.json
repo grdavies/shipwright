@@ -21,7 +21,7 @@
       "source": "scripts/",
       "excludes": [
         "test/",
-        "check-frozen.sh"
+        "check-frozen.py"
       ],
       "description": "Mirrored from scripts/ with documented excludes."
     },

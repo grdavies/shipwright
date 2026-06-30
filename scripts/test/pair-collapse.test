@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Collapsed .sh/.py sibling pairs (PRD 042 R21).
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+FAIL=0
+ok() { echo "OK  $1"; }
+bad() { echo "FAIL $1"; FAIL=1; }
+
+PAIRS=(scripts/check-gate scripts/planning_paths scripts/visibility-callsite-lint core/scripts/planning_paths core/scripts/visibility-callsite-lint)
+for base in "${PAIRS[@]}"; do
+  sh="$ROOT/${base}.sh"; py="$ROOT/${base}.py"
+  if [[ -f "$sh" ]]; then bad "sibling-sh-remains: ${base}.sh"
+  elif [[ -f "$py" ]]; then ok "collapsed-${base##*/}"
+  else bad "missing-python-module: ${base}.py"; fi
+done
+
+for tree in core/commands core/skills core/rules; do
+  base="$ROOT/$tree"; [[ -d "$base" ]] || continue
+  if grep -rE 'scripts/(check-gate|planning_paths|visibility-callsite-lint)\.sh' "$base" >/dev/null 2>&1; then
+    bad "stale-sh-caller-in-$tree"
+  fi
+done
+ok "no-stale-sh-callers"
+exit "$FAIL"

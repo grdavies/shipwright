@@ -44,7 +44,7 @@ This amendment makes living-doc reconciliation a mechanical conductor step with 
 007 task-currency hard-block, and adds the missing brainstorm↔PRD frontmatter traceability that the
 documentation pipeline never captured. R49 changes `docs/prds/GAP-BACKLOG.md` from the "read-only /
 hand-maintained" contract documented in `core/skills/living-status/SKILL.md` to a mechanically-reconciled
-artifact; the `living-status` skill and `scripts/reconcile-status.sh` are in scope to gain that path (the
+artifact; the `living-status` skill and `scripts/reconcile-status.py` are in scope to gain that path (the
 file remains hand-appendable for new gaps — only `open` → `resolved` reconciliation becomes mechanical). The brainstorm↔PRD linkage is a documentation-pipeline integrity
 addition bundled here per maintainer direction; it is enforced by `/sw-prd` and `/sw-freeze` and a gate,
 not by the conductor loop.

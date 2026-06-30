@@ -16,7 +16,7 @@ downstream routing only.
 | `dev-time` | Local test/build/verify failures | `/sw-debug` → worktree + `/sw-start` or escalate |
 
 
-**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.sh --skill rca-core`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --skill rca-core`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Shared discipline
 
@@ -50,7 +50,7 @@ inside one stabilize pass.
 | --- | --- |
 | Review threads | `/tmp/sw-stabilize-threads.json` |
 | Non-inline findings | `/tmp/sw-stabilize-noninline.md` |
-| Gate verdict | `/tmp/sw-stabilize-gate.json` (`scripts/check-gate.sh` stdout) |
+| Gate verdict | `/tmp/sw-stabilize-gate.json` (`scripts/check-gate.py` stdout) |
 
 1. Parse failing check names + logs from `/tmp/sw-stabilize-gate.json`.
 2. Parse normalized findings from threads JSON + non-inline markdown.
@@ -59,14 +59,14 @@ inside one stabilize pass.
    the causal-chain gate — classify them straight into the ledger without forcing a trigger→symptom chain.
 4. Propose minimal fix per top surviving `fix-now` hypothesis; verify against frozen spec / PRD amendments
    union.
-5. Hand off to `/sw-stabilize` ledger + fix procedure. Gate green is determined by `check-gate.sh` on the
+5. Hand off to `/sw-stabilize` ledger + fix procedure. Gate green is determined by `check-gate.py` on the
    next pass — this entry does not declare success alone.
 
 ## Debug entry procedure
 
 Inputs: normalized signal per `references/debug-inputs.md` + optional repo context.
 
-1. **Redact** all signal text through `python3 scripts/memory-redact.sh` before analysis or memory.
+1. **Redact** all signal text through `python3 scripts/memory-redact.py` before analysis or memory.
 2. `memory-preflight` read: prior `debug` memories for `relatedFiles` / failing area.
 3. Enrich Sentry signals per `skills/debug/references/sentry.md` when `type == sentry`.
 4. Form ranked hypotheses from signal evidence (stack, breadcrumbs, log excerpt, user report).
@@ -79,7 +79,7 @@ Inputs: normalized signal per `references/debug-inputs.md` + optional repo conte
 Inputs: failing test output, build error, or `/tmp/sw-verify.status.json` + relevant log excerpt from local
 dev (not production signals).
 
-1. **Redact** failure text through `python3 scripts/memory-redact.sh`.
+1. **Redact** failure text through `python3 scripts/memory-redact.py`.
 2. `memory-preflight` read for prior `debug` / `learning` memories on the failing area.
 3. **Reproduction-first (strict)** — reproduce via the narrowest command (single test, build target, or
    verify key). If blocked, log what was tried and stop at human-decision hard stop — do not guess-fix.

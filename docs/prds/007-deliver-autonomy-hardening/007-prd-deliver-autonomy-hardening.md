@@ -116,7 +116,7 @@ which it forward-references.
 - **R18** All file-based compounding outputs (status reconcile, COMPLETION-LOG entry, CHANGELOG/version
   bookkeeping, learnings notes) MUST be committed onto the feature branch so they ride in the terminal
   PR.
-- **R19** External memory writes (via `memory-preflight` + `scripts/memory-redact.sh`) MUST still run but
+- **R19** External memory writes (via `memory-preflight` + `scripts/memory-redact.py`) MUST still run but
   are not committed; provider unreachability MUST fail-closed per existing memory guardrails without
   leaving the run in-flux.
 - **R20** The COMPLETION-LOG entry MUST record completion pre-merge on the feature branch (completion is
@@ -129,7 +129,7 @@ which it forward-references.
 - **R22** Every workflow-created branch (feature base, phase, multi-feature item, ad-hoc worktree) MUST
   use a type prefix drawn from `release-please-config.json` `changelog-sections[].type`
   (feat/fix/perf/revert/docs/chore/refactor/test); `pf/` MUST NOT be produced anywhere.
-- **R23** `scripts/worktree.sh` MUST NOT default to `pf/<name>`; provisioning without an explicit
+- **R23** `scripts/worktree.py` MUST NOT default to `pf/<name>`; provisioning without an explicit
   conforming `--branch` MUST derive a conforming name or fail closed with remediation — never silently
   mint `pf/`.
 - **R24** Multi-feature derivation in `scripts/wave_deliver.py` MUST replace `pf/<id>` with a conforming
@@ -137,9 +137,9 @@ which it forward-references.
 - **R25** A branch-name guard MUST validate any branch the workflow creates against the allowed type set
   (single-sourced from `release-please-config.json`) and reject non-conforming names at creation, so the
   regression cannot recur off-script.
-- **R26** Existing logic and fixtures that match `pf/` (`scripts/reconcile-status.sh`,
+- **R26** Existing logic and fixtures that match `pf/` (`scripts/reconcile-status.py`,
   `scripts/test/run-impl-fixtures.sh`, deliver/worktree skills) MUST be updated to the conforming scheme.
-- **R27** The fix MUST be applied at the `worktree.sh` floor plus the guard — not caller-only — since the
+- **R27** The fix MUST be applied at the `worktree.py` floor plus the guard — not caller-only — since the
   prior caller-only fix is what allowed the regression to recur.
 
 ### Cleanup command
@@ -218,7 +218,7 @@ existing `core/scripts/wave_state.py` machinery. New stable R-IDs; do not renumb
 
 ### Task-currency mechanics hardening (doc-review panel)
 
-- **R48** `scripts/check-frozen.sh` and the `pre-commit-frozen.sh` hook MUST permit a **checkbox-only**
+- **R48** `scripts/check-frozen.py` and the `pre-commit-frozen.sh` hook MUST permit a **checkbox-only**
   diff (`[ ]` ↔ `[x]` on existing task lines, no other line changes) to a `frozen: true` task file as a
   sanctioned progress mutation; the permitted-diff predicate MUST be single-sourced with the TR5 progress
   writer/guard, and checkbox commits MUST NOT use `--no-verify` (closes FEAS-01 — without this the
@@ -249,8 +249,8 @@ existing `core/scripts/wave_state.py` machinery. New stable R-IDs; do not renumb
   unconditional pre-merge flip implied by R20).
 - **R54** The local no-PR merge gate (R39) MUST explicitly evaluate per-phase merge-ready-green local
   evidence (local verification-gate + local review barrier) plus a mandatory post-merge incremental verify
-  on `<type>/<slug>`; `merge run-next` MUST branch on PR presence (PR → `check-gate.sh`; no PR → local
-  evidence path) rather than failing on "no open PR". Remote `check-gate.sh` CI authority applies at the
+  on `<type>/<slug>`; `merge run-next` MUST branch on PR presence (PR → `check-gate.py`; no PR → local
+  evidence path) rather than failing on "no open PR". Remote `check-gate.py` CI authority applies at the
   terminal PR (closes FEAS-04).
 - **R55** The orchestrator worktree MUST own a **real (non-detached)** checkout of `<type>/<slug>`; at
   provision the primary checkout MUST be asserted off that branch, and when the primary is **dirty** on it
@@ -288,18 +288,18 @@ outer wave sequencing — closing the root cause at the phase level, per prod-2.
   (`currentWave`, `nextAction`) and per-phase `remediationAttempts`. `deliver-loop` reads state on entry
   (R3) and recomputes `nextAction` deterministically; the lock + merge journal prevent double-merge on
   resume.
-- **TR3 — Branch-name guard.** Add `scripts/branch-name-guard.sh` that reads allowed types from
+- **TR3 — Branch-name guard.** Add `scripts/branch-name-guard.py` that reads allowed types from
   `release-please-config.json` (`changelog-sections[].type`) and validates a candidate branch name;
-  exit non-zero with remediation on non-conforming input. Call it from `scripts/worktree.sh` provision
-  and `scripts/wave.sh` phase/orchestrator provision. Change `worktree.sh` so the default is a conforming
+  exit non-zero with remediation on non-conforming input. Call it from `scripts/worktree.py` provision
+  and `scripts/wave.sh` phase/orchestrator provision. Change `worktree.py` so the default is a conforming
   derivation or a fail-closed error — remove the `pf/$name` fallback (R23/R27).
 - **TR4 — Multi-feature derivation.** Update `scripts/wave_deliver.py` to emit conforming
   type-prefixed branches (type from item metadata; default `feat/`), replacing `pf/{i}` (R24). The
   allowed type set MUST be single-sourced (both `wave_deliver.py` type validation and
-  `branch-name-guard.sh` read `release-please-config.json`, or a shared helper) so the two cannot drift.
-- **TR5 — Task-progress writer + currency gate.** Add `scripts/tasks-progress.sh` to toggle task
+  `branch-name-guard.py` read `release-please-config.json`, or a shared helper) so the two cannot drift.
+- **TR5 — Task-progress writer + currency gate.** Add `scripts/tasks-progress.py` to toggle task
   checkboxes (`[ ]`↔`[x]`) with a guard that rejects any non-checkbox diff to a frozen task file (R13/R14),
-  and `scripts/tasks-currency-gate.sh` to compare checkbox state against phase/task completion and exit
+  and `scripts/tasks-currency-gate.py` to compare checkbox state against phase/task completion and exit
   non-zero (hard block) on divergence before the terminal gate (R15). The driver commits checkbox updates
   on the feature branch in-loop (R16).
 - **TR6 — Pre-merge compounding.** `/sw-compound-ship` gains a pre-merge invocation used by the driver:
@@ -307,7 +307,7 @@ outer wave sequencing — closing the root cause at the phase level, per prod-2.
   COMPLETION-LOG, CHANGELOG/version, learnings notes) onto the feature branch (R17/R18/R20). External
   memory writes run via `memory-preflight` and are not committed (R19). The command's "post-merge only"
   precondition is relaxed to "pre-merge in-loop OR post-merge standalone."
-- **TR7 — `/sw-cleanup`.** Add `core/commands/sw-cleanup.md` and `scripts/cleanup.sh` (a `skills/cleanup`
+- **TR7 — `/sw-cleanup`.** Add `core/commands/sw-cleanup.md` and `scripts/cleanup.py` (a `skills/cleanup`
   skill is added only if the dry-run/protection procedure exceeds what fits in the command file, and it
   introduces no cleanup behavior beyond R28–R34): enumerate merged local branches, their merged remotes, stale
   worktrees, and completed run-state; dry-run by default; protect current/default/unmerged branches,
@@ -317,7 +317,7 @@ outer wave sequencing — closing the root cause at the phase level, per prod-2.
   directly (R38); `merge run-next` adds a no-PR local-merge path honoring the live gate/review barrier
   (R39); after each merge the driver fast-forwards the primary checkout's `<type>/<slug>` ref
   automatically (R40).
-- **TR9 — Secret scan + redaction guard.** Add `scripts/secret-scan.sh` (deny patterns
+- **TR9 — Secret scan + redaction guard.** Add `scripts/secret-scan.py` (deny patterns
   `sk_(live|test)_`, `ghp_`, PEM blocks, extensible) invoked before `git push` in `/sw-stabilize` /
   terminal-PR prep; block with remediation on match (R41). Add a `rules/` guardrail (and doc note)
   prohibiting bare-branch `filter-branch`, requiring range-scoped redaction (R42).
@@ -334,15 +334,15 @@ outer wave sequencing — closing the root cause at the phase level, per prod-2.
   consolidated blocker (R46). Bind each phase `status.json` to `git rev-parse HEAD`; `status collect` /
   merge enqueue reject SHA-mismatched status (R47).
 - **TR14 — Frozen checkbox carve-out.** Extract a shared `is_checkbox_only_diff` predicate used by both
-  `scripts/tasks-progress.sh` (TR5) and the freeze guards (`scripts/check-frozen.sh`,
+  `scripts/tasks-progress.py` (TR5) and the freeze guards (`scripts/check-frozen.py`,
   `core/hooks/pre-commit-frozen.sh`); the guards allow a checkbox-only diff to a frozen task file and
   reject anything else (R48). The driver commits checkbox updates through normal (non-`--no-verify`)
   commits.
 - **TR15 — Per-task completion ledger.** Persist a durable per-task/per-phase completion ledger under the
-  run state; `scripts/tasks-currency-gate.sh` compares the frozen task file's checkboxes against the
+  run state; `scripts/tasks-currency-gate.py` compares the frozen task file's checkboxes against the
   ledger (not chat), tolerating declared-partial phases and hard-blocking only on true divergence
   (R49, R15).
-- **TR16 — Secret-scan chokepoint.** `scripts/secret-scan.sh` is invoked at every workflow push point
+- **TR16 — Secret-scan chokepoint.** `scripts/secret-scan.py` is invoked at every workflow push point
   (`sw-pr` push step, `sw-stabilize` re-push, terminal-PR push) via a single push wrapper; patterns are
   single-sourced with `scripts/memory_redact.py` (shared pattern module), support a committed allowlist,
   and fail closed on error (R50, R51). Add a mechanical range-scoped-redaction guard refusing bare-branch
@@ -351,13 +351,13 @@ outer wave sequencing — closing the root cause at the phase level, per prod-2.
   INDEX `complete` flip and resume's terminal verdict are gated on merge detection (R31/R53). Pre-merge
   compounding (TR6) writes its file outputs but does not assert `complete` until merge is detected.
 - **TR18 — Local merge gate.** `scripts/wave_merge.py` `merge run-next` branches on PR presence: PR →
-  `check-gate.sh`; no PR → local-evidence path (per-phase merge-ready-green + post-merge incremental
+  `check-gate.py`; no PR → local-evidence path (per-phase merge-ready-green + post-merge incremental
   verify on base) (R54). Document the CI-authority boundary in the deliver skill.
 - **TR19 — Orchestrator branch ownership.** `scripts/wave_lifecycle.py` orchestrator-provision checks out
   `<type>/<slug>` **non-detached** in the orchestrator worktree; it asserts the primary checkout is off
   that branch and **fails closed** when the primary is dirty on it. Phase merges advance the ref directly;
   R40's manual-ff path is removed (R55).
-- **TR20 — Squash-aware cleanup.** `scripts/cleanup.sh` merged-detection uses a squash-aware predicate
+- **TR20 — Squash-aware cleanup.** `scripts/cleanup.py` merged-detection uses a squash-aware predicate
   (patch-id / `git cherry` / host merge status) and fails closed when indeterminate; remote deletion is
   shared-state-guarded (R56).
 - **TR21 — Single spec-seed owner.** Factor spec-seed into one idempotent helper invoked by both the
@@ -366,7 +366,7 @@ outer wave sequencing — closing the root cause at the phase level, per prod-2.
 - **TR22 — Step-granular phase resume.** Per-phase `/sw-ship` persists step-level state (current/last
   step, attempts) in the per-phase run record; the chain resumes mid-phase from that state instead of
   restarting the prose chain (R58). This extends the phase-mode status contract already written by
-  `scripts/ship-phase-status.sh`.
+  `scripts/ship-phase-status.py`.
 
 ## Security & Compliance
 
@@ -375,7 +375,7 @@ outer wave sequencing — closing the root cause at the phase level, per prod-2.
   block the push and must not be auto-bypassed.
 - **History integrity (R42).** Range-scoped redaction only; bare-branch `filter-branch` on shared `main`
   is prohibited to prevent SHA rewrites and spurious conflicts.
-- **Memory guardrails (R19/R21).** Redaction chokepoint (`scripts/memory-redact.sh`) runs before any
+- **Memory guardrails (R19/R21).** Redaction chokepoint (`scripts/memory-redact.py`) runs before any
   persist; provider unreachability fails closed; rule-class promotion stays human-gated.
 - **No destructive git (constraints, R32).** The driver never merges to `main` or force-pushes;
   `/sw-cleanup` never `rm -rf`s and protects in-flight work; deletions are confirm-gated.
@@ -399,7 +399,7 @@ All fixtures extend the existing harness invoked by `workflow.config.json` `veri
 | `tasks-currency-gate-block` | divergence hard-blocks the terminal gate | R15 |
 | `compound-ship-premerge-commit` | pre-merge chain commits file outputs on feature branch; memory not committed | R17, R18, R19, R20 |
 | `compound-ship-rule-class-gated` | no auto-promotion of rule-class memory in loop | R21 |
-| `branch-name-guard-floor` | `worktree.sh` no longer defaults to `pf/`; fail-closed/derive | R22, R23, R27 |
+| `branch-name-guard-floor` | `worktree.py` no longer defaults to `pf/`; fail-closed/derive | R22, R23, R27 |
 | `branch-name-guard-multifeature` | `wave_deliver.py` emits conforming type prefix | R24 |
 | `branch-name-guard-creation` | guard rejects non-conforming branch at creation | R25 |
 | `pf-matcher-migration` | reconcile/impl fixtures updated off `pf/` | R26 |
@@ -436,7 +436,7 @@ Per-R traceability is finalized in `/sw-tasks`.
 ## Rollout Plan
 
 - **Single feature branch** `feat/deliver-autonomy-hardening`, delivered in dependency-ordered phases:
-  (1) branch-guard + `worktree.sh` floor (R22–R27) and crash-safe state core (`wave_state.py`: R43–R45) —
+  (1) branch-guard + `worktree.py` floor (R22–R27) and crash-safe state core (`wave_state.py`: R43–R45) —
   these underpin everything that provisions worktrees or persists state; (2) durable `deliver-loop` +
   resume + heartbeat/timeout + orchestrator branch ownership (R1–R7, R46, R55, R58); (3) local merge-queue
   mechanics + status SHA-freshness (R38–R40, R47, R54); (4) task-currency + frozen carve-out + ledger
@@ -457,7 +457,7 @@ Per-R traceability is finalized in `/sw-tasks`.
 | DL-1 | Durable resumable state-machine driver replaces prose orchestration | Prose autonomy fails across long/compacting sessions; a fresh agent must resume from state alone (R1–R5). |
 | DL-2 | `/sw-compound-ship` runs fully pre-merge with all file outputs (incl. COMPLETION-LOG) committed on the feature branch | Operator wants compounding "committed along with the delivered feature"; single complete terminal PR (R17–R20). |
 | DL-3 | Bounded auto-remediation; default `maxAttempts = 2`; always end clean | "No manual intervention unless absolutely necessary" + "never in-flux" (R8–R12). |
-| DL-4 | Branch types single-sourced from `release-please-config.json`; fix at the `worktree.sh` floor + creation-time guard | Prior caller-only fix let `pf/` recur off-script (R22–R27). |
+| DL-4 | Branch types single-sourced from `release-please-config.json`; fix at the `worktree.py` floor + creation-time guard | Prior caller-only fix let `pf/` recur off-script (R22–R27). |
 | DL-5 | `/sw-cleanup` standalone, dry-run + confirm, protects in-flight work | Safe pruning that cannot break in-progress implementations (R28–R34). |
 | DL-6 | Task-checkbox divergence hard-blocks the terminal merge gate | Accurate task docs in the terminal PR; warn-and-continue would let staleness ship (R15). |
 | DL-7 | Driver entrypoint = `deliver-loop` verb on `scripts/wave.sh` (no separate script) | Reuse existing state/merge-queue/journal machinery; single source (R1). |

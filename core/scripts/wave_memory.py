@@ -129,7 +129,7 @@ def distill_learnings(root: Path) -> dict[str, Any]:
         "patterns": unique,
         "memoryGuidance": (
             "Distilled wave patterns only — route through memory-preflight after "
-            "scripts/memory-redact.sh; never store raw logs or transcripts (R62)"
+            "scripts/memory-redact.py; never store raw logs or transcripts (R62)"
         ),
     }
 
@@ -162,7 +162,7 @@ def cmd_learnings_prepare(root: Path, args: list[str]) -> None:
     lines.append(payload["memoryGuidance"])
     raw = "\n".join(lines)
     proc = subprocess.run(
-        [str(SCRIPT_DIR / "memory-redact.sh")],
+        [str(SCRIPT_DIR / "memory-redact.py")],
         input=raw,
         text=True,
         capture_output=True,

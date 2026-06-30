@@ -30,25 +30,25 @@ source. `/sw-memory-sync` only writes the *distilled* sink into the memory provi
    bug root-causes, design choices, notable review/CI patterns, distilled session recaps.
 4. Filter aggressively. Skip routine, recoverable, or already-stored content. Search-before-store: if a
    near-duplicate memory exists, `modify` it (or skip) rather than adding another.
-5. **Redact** each payload before store: pipe distilled text through `python3 scripts/memory-redact.sh`
+5. **Redact** each payload before store: pipe distilled text through `python3 scripts/memory-redact.py`
    (R41 chokepoint — same filter as `/sw-compound`).
 6. Store each kept item via the adapter `store` op with the right canonical category, `relatedFiles`,
    stable tags (`surface:sync`, plus `prd-<n>`/`task-<n>` when inferable), and a deliberate importance.
    Project scope by default; global only on explicit user direction.
 7. Update the marker (`processedMtimeMs`, `lastDistilledAt`) for each processed transcript.
-8. **Supersede reconcile (R7):** `python3 scripts/reconcile-status.sh supersede-reconcile --json` — for each
+8. **Supersede reconcile (R7):** `python3 scripts/reconcile-status.py supersede-reconcile --json` — for each
    entry in `docs/decisions/SUPERSEDED.log`, best-effort re-point the non-authoritative side:
    - **repo-SoT:** `modify` provider `decision` memories whose `relatedFiles` still reference a superseded path
      → replacement path (pointer only; never copy record body).
    - **memory-SoT:** when the provider id for the replacement is known, refresh the git snapshot
-     `memoryPointer` on the superseded path via `scripts/memory-decision-snapshot.sh write` (offline-safe;
+     `memoryPointer` on the superseded path via `scripts/memory-decision-snapshot.py write` (offline-safe;
      provider write remains best-effort).
 9. Report: transcripts scanned, memories created/updated/skipped, supersede reconcile actions, and any items
    deferred for review.
 
 **Communication intensity:** ultra
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.sh --command sw-memory-sync`.
+**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --command sw-memory-sync`.
 
 ## Guardrails
 

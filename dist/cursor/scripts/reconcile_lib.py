@@ -11,6 +11,8 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from _sw.completion_log import append_log_idempotent
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
@@ -68,7 +70,7 @@ def task_checkbox_state(task_file: Path) -> dict[str, Any]:
 
 def host_pr_list(root: Path) -> list[dict[str, Any]]:
     proc = subprocess.run(
-        ["bash", str(SCRIPT_DIR / "host.sh"), "--root", str(root), "pr-list", "--state", "closed", "--limit", "100"],
+        [sys.executable, str(SCRIPT_DIR / "host.py"), "--root", str(root), "pr-list", "--state", "closed", "--limit", "100"],
         cwd=str(root),
         capture_output=True,
         text=True,
@@ -263,31 +265,3 @@ def set_index_status(root: Path, prd: str, status: str) -> dict[str, Any]:
     index_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
     return {"verdict": "pass", "action": "set-index-status", "prd": prd, "status": status}
 
-
-def append_log_idempotent(root: Path, *, prd: str, phase: str, notes: str = "", pr: str = "", sha: str = "") -> dict[str, Any]:
-    prd = prd.zfill(3)
-    log = root / "docs/prds/COMPLETION-LOG.md"
-    text = log.read_text(encoding="utf-8")
-    id_key = f"| {prd} | {phase} |"
-    sha_key = sha[:7] if sha else ""
-    if id_key in text and (not sha_key or sha_key in text):
-        return {"verdict": "pass", "action": "append-log-idempotent", "skipped": True, "reason": "already-present"}
-    date_s = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    detail_parts = [notes or "deliver complete"]
-    if pr:
-        detail_parts.append(f"PR #{pr}")
-    if sha:
-        detail_parts.append(f"SHA {sha[:7]}")
-    detail = "; ".join(p for p in detail_parts if p)
-    line = f"| {date_s} | {prd} | {phase} | {detail} |"
-    if "_No entries yet._" in text:
-        text = text.replace("_No entries yet._\n", "")
-    marker = "| Date | PRD | Phase | Notes |"
-    idx = text.find(marker)
-    if idx == -1:
-        raise SystemExit("COMPLETION-LOG header missing")
-    insert_at = text.find("\n", idx) + 1
-    insert_at = text.find("\n", insert_at) + 1
-    text = text[:insert_at] + line + "\n" + text[insert_at:]
-    log.write_text(text, encoding="utf-8")
-    return {"verdict": "pass", "action": "append-log-idempotent", "appended": True, "line": line}
