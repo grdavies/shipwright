@@ -159,6 +159,7 @@
 * merge phase program-dependency-gate-r31-inconclusive-fail-closed-s into feat/orchestrator-plan-policy-adoption (93fab26) <!-- sw-deliver:program-dependency-gate-r31-inconclusive-fail-closed-s -->
 * merge phase orchestrator-step-plan-schema-single-tier-gate-orchestrator-tier-m into feat/orchestrator-plan-policy-adoption (d48349a) <!-- sw-deliver:orchestrator-step-plan-schema-single-tier-gate-orchestrator-tier-m -->
 * merge phase guideline-packs-deny-lists-variance-probe-consistency-only-mode-m into feat/orchestrator-plan-policy-adoption (c3fd511) <!-- sw-deliver:guideline-packs-deny-lists-variance-probe-consistency-only-mode-m -->
+* merge phase dispatch-binding-scaffolding-parallel-preflight-command-authoritative-tier-a2-m into feat/orchestrator-plan-policy-adoption (ef9423d) <!-- sw-deliver:dispatch-binding-scaffolding-parallel-preflight-command-authoritative-tier-a2-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
