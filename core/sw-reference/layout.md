@@ -265,7 +265,7 @@ repo trees only — never the install path.
 **Unified sync:** after editing `scripts/` or emittable roots, run:
 
 ```bash
-python3 scripts/build-chain-sync.sh
+bash scripts/build-chain-sync.sh
 ```
 
 Runs `copy-to-core.sh` → `python3 -m sw generate --all` → golden re-snapshot when `dist/` changes.
@@ -310,8 +310,8 @@ reproduce from current sources.
 Per-delegated-Task binding is recorded immediately before spawn:
 
 ```bash
-python3 scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command <sw-*> [--skill <name>]
-python3 scripts/dispatch-check.sh --agent <id> --command <sw-*> --parent-model <concrete-id> [--dispatch-id <id>]
+bash scripts/wave.sh dispatch preflight --dispatch-id <id> --agent <agent-id> --command <sw-*> [--skill <name>]
+bash scripts/dispatch-check.sh --agent <id> --command <sw-*> --parent-model <concrete-id> [--dispatch-id <id>]
 ```
 
 **Keyed store (R38):** one JSON record per dispatch under
@@ -332,7 +332,7 @@ Work-performing commands (`/sw-execute`, `/sw-debug`, `/sw-prd`, `/sw-brainstorm
 mutation. Record the breadcrumb mechanically:
 
 ```bash
-python3 scripts/wave.sh memory prework record --surface sw-execute --scope "<paths>" [--hit-count N]
+bash scripts/wave.sh memory prework record --surface sw-execute --scope "<paths>" [--hit-count N]
 ```
 
 Artifacts:
@@ -356,7 +356,7 @@ via probe-gated `memory:offline` — never blocks work.
 | Phase step plan | `.cursor/sw-deliver-runs/<phase-slug>/phase-step-plan.json` | phase executor (`ship_phase_steps.py` / `plan_persist.py`) | per-phase run dir |
 | Wave batching plan | `waveBatchingPlan` on `.cursor/sw-deliver-state.<slug>.json` | conductor only (`plan_persist.py`; `SW_CALLER_ROLE=conductor`) | shared run-state |
 | Two-tier lifecycle | `twoTierLifecycle` on shared run-state | conductor | `wave-validated` → `phase-plan-pending` → `phase-plan-validated` |
-| Plan validation | `python3 scripts/wave.sh plan validate` → `scripts/wave_plan_validate.py` | mechanical gate | proposals only |
+| Plan validation | `bash scripts/wave.sh plan validate` → `scripts/wave_plan_validate.py` | mechanical gate | proposals only |
 
 **Wave authority (single source of truth):** the conductor deliver loop reads `waveBatchingPlan` from shared
 run-state when present (`wave_deliver_loop.effective_wave_plan`); otherwise it falls back to the frozen
@@ -378,7 +378,7 @@ enumeration elsewhere.
 | Intra-phase fan-out snapshot | `intraPhaseFanOut` on phase status / `phases.<id>` | phase executor | latest partition + worker count + cap state (R15–R17) |
 | Per-phase benefit metric | `benefitMetric` on phase status / shared run-state `phases.<id>` | phase executor at terminal | R31 capture (numeric/enumerated only) |
 | Run-level benefit rollup | `benefitMetric` on `.cursor/sw-deliver-state.<slug>.json` | conductor at terminal | paired-run aggregation input |
-| Benefit report | `python3 scripts/wave.sh plan benefit-report --pairs <path>` → `scripts/wave_plan_benefit.py` | operator / soak protocol | R31 decision rule (fail-closed to `canonical`) |
+| Benefit report | `bash scripts/wave.sh plan benefit-report --pairs <path>` → `scripts/wave_plan_benefit.py` | operator / soak protocol | R31 decision rule (fail-closed to `canonical`) |
 
 ### `benefitMetric` object (R31 — numeric/enumerated only)
 

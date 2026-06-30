@@ -10,7 +10,7 @@ This wrapper never changes stabilize's discipline (reply-before-resolve, verify-
 mass-resolve); it just repeats it under hard stops.
 
 
-**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill stabilize-loop`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.sh --skill stabilize-loop`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Success predicate
 
@@ -67,8 +67,8 @@ the loop is not done while reproducible findings remain unresolved.
 After pushing a pass, block on CI settling rather than busy-polling:
 
 ```bash
-PR=$(gh pr view --json number --jq .number)
-gh pr checks "$PR" --watch --fail-fast >/tmp/stabilize-loop-watch.log 2>&1 || true
+PR=$(python3 scripts/host.py resolve-pr-for-branch)
+python3 scripts/host.py checks --number "$PR"
 echo 'STABILIZE_LOOP_TICK {"phase":"recheck"}'
 ```
 

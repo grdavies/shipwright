@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-hooks-security-filters-providers-l"
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+for adapter in core/providers/review/coderabbit.py core/providers/review/nocap-stub.py core/providers/verify/none.py core/providers/verify/stub.py core/providers/verify/playwright.py core/providers/verify/failstub.py core/providers/in-repo-rules.py core/providers/recallium-rules.py; do
+  test -f "$ROOT/$adapter" || { echo "FAIL missing $adapter"; exit 1; }
+done
+OUT=$(python3 "$ROOT/core/providers/review/nocap-stub.py")
+echo "$OUT" | python3 -c 'import json,sys; json.load(sys.stdin)'
+OUT=$(python3 "$ROOT/core/providers/verify/stub.py")
+echo "$OUT" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="complete"'
+python3 -c "import json; from pathlib import Path; idx=json.loads(Path(r'/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-hooks-security-filters-providers-l/core/sw-reference/capability-index.json').read_text()); assert any('providers/' in e.get('sourcePath','') for e in idx.get('capabilities',[]))"
+echo "OK  provider-selection"

@@ -18,7 +18,7 @@ Shared predicate for PR CI readiness. `/sw-watch-ci` and `/sw-stabilize` both us
 identical on both sides. Default policy is **all checks**, not just required.
 
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill checks-gate`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --skill checks-gate`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Policy (`workflow.config.json` → `checks`)
 
@@ -37,7 +37,7 @@ Do **not** free-hand the verdict from ad-hoc `gh` calls. Run the shipped script:
 ```bash
 GATE="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/plugins/local/shipwright}/scripts/check-gate.sh"
 if OUT=$(bash "$GATE"); then GATE_EC=0; else GATE_EC=$?; fi
-echo "$OUT" | jq .
+echo "$OUT" | Python json .
 ```
 
 **Exit code = verdict:**

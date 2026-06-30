@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-hooks-security-filters-providers-l"
+FAIL=0
+for tree in dist/cursor/providers dist/claude-code/providers dist/cursor/core/hooks dist/claude-code/core/hooks dist/cursor/hooks dist/claude-code/hooks; do
+  if [ -d "$ROOT/$tree" ]; then
+    while IFS= read -r f; do
+      echo "FAIL shell surface $f"; FAIL=1
+    done < <(find "$ROOT/$tree" -name '*.sh' 2>/dev/null)
+  fi
+done
+for hook in pre-commit.py pre-push.py commit-msg.py pre-commit-frozen.py pre-commit-completed-unit.py; do
+  test -f "$ROOT/core/hooks/$hook" || { echo "FAIL missing core/hooks/$hook"; FAIL=1; }
+done
+[ "$FAIL" -eq 0 ] || exit 1
+echo "OK  dist-no-shell"

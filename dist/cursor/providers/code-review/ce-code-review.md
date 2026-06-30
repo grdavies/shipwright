@@ -64,7 +64,7 @@ ce-code-review mode:agent base:<parentBranch> grouping:auto
 (`full.diff`, evidence, `review.json`, `report.md`). After parsing normalized JSON:
 
 ```bash
-RUN_DIR="$(jq -r '.artifact_path // empty' /tmp/sw-local-review-raw.json)"
+RUN_DIR="$(Python json -r '.artifact_path // empty' /tmp/sw-local-review-raw.json)"
 [[ -n "$RUN_DIR" && -d "$RUN_DIR" ]] && rm -rf "$RUN_DIR"
 ```
 

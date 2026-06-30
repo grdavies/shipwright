@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-export PYTHONPATH="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l/scripts${PYTHONPATH:+:$PYTHONPATH}"
+ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-hooks-security-filters-providers-l"
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
 export SW_ZERO_SHELL_MODE=warn
-python3 "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l/scripts/zero-shell-guard.py"
-test -f "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l/core/sw-reference/script-port-ledger.json"
+python3 "$ROOT/scripts/zero-shell-guard.py"
+test -f "$ROOT/core/sw-reference/script-port-ledger.json"
 echo "OK  reference-closure"

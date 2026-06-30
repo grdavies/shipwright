@@ -48,21 +48,21 @@ case "$cmd" in
     TRACK=$(echo "$OUT" | python3 -c "import json,sys; print(json.load(sys.stdin)['track'])")
     if [[ "$TRACK" == "mechanical" ]]; then
       if [[ "$dry_run" -eq 1 ]]; then
-        MERGE=$(bash "$ROOT/scripts/docs-merge.sh" open --dry-run)
+        MERGE=$(python3 "$ROOT/scripts/docs-merge.py" open --dry-run)
         python3 -c "import json,sys; c=json.load(sys.stdin); m=json.loads(sys.argv[1]); print(json.dumps({'verdict':'pass','track':'mechanical','classify':c,'merge':m}))" "$MERGE" <<<"$OUT"
       else
-        MERGE=$(bash "$ROOT/scripts/docs-merge.sh" open)
+        MERGE=$(python3 "$ROOT/scripts/docs-merge.py" open)
         python3 -c "import json,sys; c=json.load(sys.stdin); m=json.loads(sys.argv[1]); print(json.dumps({'verdict':'pass','track':'mechanical','classify':c,'merge':m}))" "$MERGE" <<<"$OUT"
       fi
     else
       [[ -n "$topic" ]] || topic="docs-edit"
       if [[ "$dry_run" -eq 1 ]]; then
         WT=$(bash "$ROOT/scripts/docs_worktree.sh" provision --topic "$topic" --dry-run)
-        PR=$(bash "$ROOT/scripts/docs_pr.sh" --topic "$topic" --dry-run)
+        PR=$(python3 "$ROOT/scripts/docs_pr.py" --topic "$topic" --dry-run)
         python3 -c "import json,sys; c=json.load(sys.stdin); w=json.loads(sys.argv[1]); p=json.loads(sys.argv[2]); print(json.dumps({'verdict':'pass','track':'substantive','classify':c,'worktree':w,'pr':p}))" "$WT" "$PR" <<<"$OUT"
       else
         WT=$(bash "$ROOT/scripts/docs_worktree.sh" provision --topic "$topic")
-        PR=$(bash "$ROOT/scripts/docs_pr.sh" --topic "$topic")
+        PR=$(python3 "$ROOT/scripts/docs_pr.py" --topic "$topic")
         python3 -c "import json,sys; c=json.load(sys.stdin); w=json.loads(sys.argv[1]); p=json.loads(sys.argv[2]); print(json.dumps({'verdict':'pass','track':'substantive','classify':c,'worktree':w,'pr':p}))" "$WT" "$PR" <<<"$OUT"
       fi
     fi
@@ -71,11 +71,11 @@ case "$cmd" in
     [[ -n "$topic" ]] || { echo '{"verdict":"fail","error":"topic required"}' >&2; exit 2; }
     if [[ "$dry_run" -eq 1 ]]; then
       WT=$(bash "$ROOT/scripts/docs_worktree.sh" provision --topic "$topic" --dry-run)
-      PR=$(bash "$ROOT/scripts/docs_pr.sh" --topic "$topic" --dry-run)
+      PR=$(python3 "$ROOT/scripts/docs_pr.py" --topic "$topic" --dry-run)
       python3 -c "import json,sys; w=json.loads(sys.argv[1]); p=json.loads(sys.argv[2]); print(json.dumps({'verdict':'pass','track':'substantive','worktree':w,'pr':p}))" "$WT" "$PR"
     else
       WT=$(bash "$ROOT/scripts/docs_worktree.sh" provision --topic "$topic")
-      PR=$(bash "$ROOT/scripts/docs_pr.sh" --topic "$topic")
+      PR=$(python3 "$ROOT/scripts/docs_pr.py" --topic "$topic")
       python3 -c "import json,sys; w=json.loads(sys.argv[1]); p=json.loads(sys.argv[2]); print(json.dumps({'verdict':'pass','track':'substantive','worktree':w,'pr':p}))" "$WT" "$PR"
     fi
     ;;

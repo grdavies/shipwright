@@ -81,7 +81,7 @@ plan-policy** surface. The single-sourced classification lives in `core/sw-refer
 | Kernel | state transitions, merge queue, `check-gate.sh`, `git-push.sh`, memory-preflight, guardrails hook | fixed; validated on every plan + re-checked at each `advance` |
 | Plan policy | optional steps (simplify/gap-check), step order within guidelines, wave batching | proposed under `orchestration.planPolicy: proposed`; default `canonical` |
 
-Agent proposals validate through `bash scripts/wave.sh plan validate` before persist. Invalid proposals fall
+Agent proposals validate through `python3 scripts/wave.sh plan validate` before persist. Invalid proposals fall
 back to the canonical chain (phase) or canonical waves / `wave.sh schedule` (wave).
 
 ## Deliver concurrency and freeze safety (PRD 013)

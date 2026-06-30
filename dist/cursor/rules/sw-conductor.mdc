@@ -30,7 +30,7 @@ Load `skills/conductor/SKILL.md` for the full contract. These rules are the alwa
 
 ## Plan validation (PRD 022)
 
-- Route wave and phase **proposals** through `bash scripts/wave.sh plan validate` — never hand-author plan JSON.
+- Route wave and phase **proposals** through `python3 scripts/wave.sh plan validate` — never hand-author plan JSON.
 - On reject: phase → canonical chain from `kernel-classification.json`; wave → canonical waves or
   `wave.sh schedule` when over-ceiling.
 - The phase step driver reads persisted `phase-step-plan.json` as sole authority; `SHIP_CHAIN` is fallback only.

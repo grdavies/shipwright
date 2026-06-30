@@ -17,7 +17,7 @@ Single referenced primitive for agent-native orchestration (PRD 009 R1). Orchest
 `/sw-doc`, `/sw-ship`, `/sw-debug`, `/sw-feedback` in follow-on PRDs) **load this skill** and delegate loop
 behavior here — they do not re-implement state transitions, merge logic, or halt policy in prose (R3).
 
-**Model tier:** inherit — resolve delegated atomics via `bash scripts/resolve-model-tier.sh --command <child-slug>`.
+**Model tier:** inherit — resolve delegated atomics via `python3 scripts/resolve-model-tier.sh --command <child-slug>`.
 
 ## Mechanical source of truth
 
@@ -64,7 +64,7 @@ Resume command (phase-mode):
 ```text
 /sw-deliver run <frozen-task-list-path>
 # inspect driver cursor (internal mechanical driver):
-bash scripts/wave.sh deliver-loop --dry-run
+python3 scripts/wave.sh deliver-loop --dry-run
 ```
 
 User-facing resume/handoff MUST use `/sw-deliver run …`. The bash `deliver-loop` driver is for
@@ -75,7 +75,7 @@ Never infer progress from chat history or ephemeral sub-agent logs (R19). Phase 
 
 ## Two-tier plan lifecycle (PRD 022)
 
-Proposals route through `bash scripts/wave.sh plan validate` — **never** hand-author plan JSON in prose.
+Proposals route through `python3 scripts/wave.sh plan validate` — **never** hand-author plan JSON in prose.
 Kernel invariants live in `core/sw-reference/kernel-classification.md` (single home — do not duplicate the
 enumeration here).
 
@@ -114,7 +114,7 @@ The conductor never ends its turn while `nextAction` is runnable and no legitima
 
 ### Driver ↔ agent handshake
 
-1. Invoke `bash scripts/wave.sh deliver-loop` (or `--dry-run` to inspect only).
+1. Invoke `python3 scripts/wave.sh deliver-loop` (or `--dry-run` to inspect only).
 2. Parse JSON:
    - **`awaitAgent: false`** — driver advanced mechanically; immediately re-invoke `deliver-loop` (same turn).
    - **`awaitAgent: true`** — perform the agent step for `next.action` (see table), then re-invoke
@@ -185,7 +185,7 @@ Register bounds in `rules/sw-subagent-dispatch.mdc` hard-stops table.
 **State signature** (canonical JSON of): `verdict`, `nextAction`, `currentWave`, sorted phase
 `id→status`, `mergeQueue` length, `mergeJournal` presence. Ignore `driverHeartbeatAt` / `updatedAt`.
 
-On circuit breaker: `bash scripts/wave.sh report terminal` (or `report blocker`) — never spin silently.
+On circuit breaker: `python3 scripts/wave.sh report terminal` (or `report blocker`) — never spin silently.
 
 ## Self-wake sentinel (R8, R9)
 
@@ -201,8 +201,8 @@ After `/sw-pr` on the feature branch:
 
 ```bash
 RUN_ID="sw-deliver-009-autonomous-orchestration-conductor"   # from state
-PR=$(gh pr view --json number --jq .number)
-gh pr checks "$PR" --watch --fail-fast >/tmp/${RUN_ID}-watch-ci.log 2>&1 || true
+PR=$(python3 scripts/host.py resolve-pr-for-branch)
+python3 scripts/host.py checks --number "$PR"
 echo "DELIVER_WAKE_${RUN_ID} {\"phase\":\"terminal-ci\",\"prd\":\"009\"}"
 ```
 
@@ -305,11 +305,11 @@ Every legitimate halt emits **one** actionable artifact — never a bare "contin
 
 ```bash
 # Blocker / mid-run halt (blocked phase, watchdog, budget exhausted):
-bash scripts/wave.sh report blockers
+python3 scripts/wave.sh report blockers
 # Written to .cursor/sw-deliver-runs/blockers.json by deliver-loop halt-blocked
 
 # All phases green — terminal human gate:
-bash scripts/wave.sh report terminal
+python3 scripts/wave.sh report terminal
 ```
 
 Each report includes `resumeCommand` (e.g. `/sw-deliver run docs/prds/…/tasks-….md`),
@@ -321,8 +321,8 @@ the user in one message.
 Config: `deliver.watchdog.phaseTimeoutMinutes` (default **240**).
 
 ```bash
-bash scripts/wave.sh watchdog check          # exit 20 when stale/timeout
-bash scripts/wave.sh state heartbeat         # refresh driverHeartbeatAt during long agent work
+python3 scripts/wave.sh watchdog check          # exit 20 when stale/timeout
+python3 scripts/wave.sh state heartbeat         # refresh driverHeartbeatAt during long agent work
 ```
 
 `deliver-loop` `compute-next` calls the watchdog internally: an in-flight phase past timeout without
@@ -336,7 +336,7 @@ with `state heartbeat` during long in-turn agent work.
 
 ### 1. Plan-time contention (R20, R39)
 
-`bash scripts/wave.sh plan` injects `contention.injectedEdges` from phase `**File:**` paths:
+`python3 scripts/wave.sh plan` injects `contention.injectedEdges` from phase `**File:**` paths:
 
 - Shared migration dirs (`db/migrate/`, `supabase/migrations/`, `prisma/migrations/`)
 - `CHANGELOG.md`, `version.txt`, `docs/prds/INDEX.md`, `docs/decisions/INDEX.md`
@@ -347,7 +347,7 @@ Contended phases are forced into different waves before dispatch. Cycles fail cl
 ### 2. Schedule consumption (R14, R15)
 
 ```bash
-bash scripts/wave.sh schedule --plan .cursor/sw-deliver-plan.json
+python3 scripts/wave.sh schedule --plan .cursor/sw-deliver-plan.json
 # optional: --ceiling N overrides worktree.parallelCeiling
 ```
 
@@ -387,14 +387,14 @@ Intra-phase dispatch never consumes `parallelCeiling` slots (R18).
 ### 5. Outcomes + blast radius (R19, R24)
 
 ```bash
-bash scripts/wave.sh status collect --phase-slug <slug>
+python3 scripts/wave.sh status collect --phase-slug <slug>
 ```
 
 - `merge-ready-green` → conductor enqueues merge (serialized queue).
 - `blocked` → `blast-radius apply` marks **transitive dependents** only; green siblings continue.
 
 ```bash
-bash scripts/wave.sh blast-radius dependents --phase-slug <slug>   # inspect
+python3 scripts/wave.sh blast-radius dependents --phase-slug <slug>   # inspect
 ```
 
 ## Safety invariants under concurrency (R21–R24)

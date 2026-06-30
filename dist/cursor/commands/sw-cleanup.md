@@ -19,7 +19,7 @@ Dry-run by default; deletions only after explicit confirmation.
 1. From repo root, run enumeration (default dry-run):
 
    ```bash
-   bash scripts/cleanup.sh
+   python3 scripts/cleanup.sh
    ```
 
 2. Review the report: each protected item includes a reason (current/default, unmerged, indeterminate
@@ -32,7 +32,7 @@ Dry-run by default; deletions only after explicit confirmation.
    - On explicit ack only, the agent runs:
 
      ```bash
-     bash scripts/cleanup.sh --confirm --yes
+     python3 scripts/cleanup.sh --confirm --yes
      ```
 
      Or sets `SW_CLEANUP_CONFIRM=1` for the same invocation after human ack.
@@ -41,7 +41,7 @@ Dry-run by default; deletions only after explicit confirmation.
    **Manual escape hatch** — user may run confirm directly without the agent:
 
    ```bash
-   bash scripts/cleanup.sh --confirm --yes
+   python3 scripts/cleanup.sh --confirm --yes
    ```
 
 4. Worktree teardown uses `git worktree remove` + `git worktree prune` only — never `rm -rf`.
@@ -66,12 +66,12 @@ Branches are classified via, in order:
 - `merge-base --is-ancestor` (regular merge / ff)
 - empty `default..branch` log
 - `git cherry` minus-only lines (squash-aware)
-- `bash scripts/host.sh pr-list --state closed` when host token is available
+- `python3 scripts/host.py pr-list --state closed` when host token is available
 - otherwise **indeterminate** → protected (no delete)
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-cleanup`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --command sw-cleanup`.
 
 ## Guardrails
 

@@ -16,7 +16,7 @@ downstream routing only.
 | `dev-time` | Local test/build/verify failures | `/sw-debug` → worktree + `/sw-start` or escalate |
 
 
-**Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill rca-core`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.sh --skill rca-core`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Shared discipline
 
@@ -66,7 +66,7 @@ inside one stabilize pass.
 
 Inputs: normalized signal per `references/debug-inputs.md` + optional repo context.
 
-1. **Redact** all signal text through `bash scripts/memory-redact.sh` before analysis or memory.
+1. **Redact** all signal text through `python3 scripts/memory-redact.sh` before analysis or memory.
 2. `memory-preflight` read: prior `debug` memories for `relatedFiles` / failing area.
 3. Enrich Sentry signals per `skills/debug/references/sentry.md` when `type == sentry`.
 4. Form ranked hypotheses from signal evidence (stack, breadcrumbs, log excerpt, user report).
@@ -79,7 +79,7 @@ Inputs: normalized signal per `references/debug-inputs.md` + optional repo conte
 Inputs: failing test output, build error, or `/tmp/sw-verify.status.json` + relevant log excerpt from local
 dev (not production signals).
 
-1. **Redact** failure text through `bash scripts/memory-redact.sh`.
+1. **Redact** failure text through `python3 scripts/memory-redact.sh`.
 2. `memory-preflight` read for prior `debug` / `learning` memories on the failing area.
 3. **Reproduction-first (strict)** — reproduce via the narrowest command (single test, build target, or
    verify key). If blocked, log what was tried and stop at human-decision hard stop — do not guess-fix.

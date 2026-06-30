@@ -22,7 +22,7 @@ internal: true
 
 **Communication intensity:** full
 
-**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --command sw-compound`.
+**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.sh --command sw-compound`.
 
 ## Guardrails
 

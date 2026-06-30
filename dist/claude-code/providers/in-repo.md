@@ -83,7 +83,7 @@ frontmatter filters). `export`/`import` are native: walk the store and emit/cons
 | --- | --- | --- |
 | `load-context` | scan store mtime + `rules-load` | list recent files under `memories/`; load rules from `rules/` |
 | `rules-load` | read `rules/*.md` | filesystem read of committed rule files |
-| `search` | `in-repo-memory-search.sh` | `bash scripts/in-repo-memory-search.sh --store <dir> --query <q> [--category] [--tag] [--file-glob]` |
+| `search` | `in-repo-memory-search.sh` | `python3 scripts/in-repo-memory-search.sh --store <dir> --query <q> [--category] [--tag] [--file-glob]` |
 | `expand` | read file body | read `memories/<id>.md` or `rules/<id>.md` by id |
 | `store` | write file after redaction | pipe payload through `scripts/memory-redact.sh`, then write one `.md` file |
 | `modify` | update frontmatter / body / `inactive:true` | rewrite the target file |

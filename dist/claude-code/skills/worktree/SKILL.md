@@ -7,12 +7,12 @@ description: USE WHEN following the Shipwright workflow — command ordering, wo
 Every work item runs in its own worktree (R18). Bare `main` is not an implementation surface.
 
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --skill worktree`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --skill worktree`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Provision
 
 ```bash
-bash scripts/worktree.sh provision <name> [--base <ref>] [--branch <branch>] [--tier T] [--workstream W]
+python3 scripts/worktree.sh provision <name> [--base <ref>] [--branch <branch>] [--tier T] [--workstream W]
 ```
 
 Creates `.sw-worktrees/<name>`, allocates a unique port from the configured pool, records scaffold + tier in
@@ -24,15 +24,15 @@ conforming branch name fails closed with remediation.
 ## List / index
 
 ```bash
-bash scripts/worktree.sh list
-bash scripts/worktree.sh list --json   # includes per-worktree state snapshot
-bash scripts/worktree.sh ceiling-check  # swWorktrees count (main excluded) + verdict
+python3 scripts/worktree.sh list
+python3 scripts/worktree.sh list --json   # includes per-worktree state snapshot
+python3 scripts/worktree.sh ceiling-check  # swWorktrees count (main excluded) + verdict
 ```
 
 ## Teardown (safe-by-construction)
 
 ```bash
-bash scripts/worktree.sh teardown <name|path> [--force]
+python3 scripts/worktree.sh teardown <name|path> [--force]
 ```
 
 Always `git worktree remove` + `git worktree prune`. **Never `rm` the directory** — the script refuses

@@ -16,7 +16,7 @@ ISSUE_COMMENTS="$(mktemp "${TMPDIR:-/tmp}/sw-gate-comments.XXXXXX")"
 trap 'rm -f "$CHECKS" "$ISSUE_COMMENTS"' EXIT
 
 host_verb() {
-  bash "$SCRIPT_DIR/host.sh" --root "$ROOT" "$@"
+  python3 "$SCRIPT_DIR/host.py" --root "$ROOT" "$@"
 }
 
 host_data() {
@@ -271,15 +271,20 @@ elif [ "$REVIEW_PROVIDER" = "none" ]; then
   CR_REVIEWED_HEAD=""; CR_STATUS="off"
   CR_MARKER=0; CR_SKIP=0; MINS_SINCE=0
 else
-  ADAPTER="$PLUGIN_ROOT/providers/review/${REVIEW_PROVIDER}.sh"
-  if [ ! -f "$ADAPTER" ]; then
+  ADAPTER_PY="$PLUGIN_ROOT/providers/review/${REVIEW_PROVIDER}.py"
+  ADAPTER_SH="$PLUGIN_ROOT/providers/review/${REVIEW_PROVIDER}.sh"
+  if [ -f "$ADAPTER_PY" ]; then
+    ADAPTER_RUN=(python3 "$ADAPTER_PY")
+  elif [ -f "$ADAPTER_SH" ]; then
+    ADAPTER_RUN=(bash "$ADAPTER_SH")
+  else
     echo "{\"verdict\":\"blocked\",\"reason\":\"unknown review provider: $REVIEW_PROVIDER\"}"
     exit 30
   fi
   export SW_PR="$PR" SW_HEAD_SHA="$HEAD_SHA" SW_OWNER="$OWNER" SW_REPO="$REPO"
   export SW_OWNER_REPO="$OWNER_REPO" SW_CHECKS_FILE="$CHECKS" SW_ISSUE_COMMENTS_FILE="$ISSUE_COMMENTS"
-  export SW_GRACE_MIN="$GRACE_MIN"
-  REVIEW_JSON="$(bash "$ADAPTER")"
+  export SW_GRACE_MIN="$GRACE_MIN" SW_ROOT="$ROOT"
+  REVIEW_JSON="$("${ADAPTER_RUN[@]}")"
   HAS_PER_HEAD="$(echo "$REVIEW_JSON" | jq -r '.capabilities.perHeadState // false')"
   CR_STATE="$(echo "$REVIEW_JSON" | jq -r '.perHeadState // "in-flight"')"
   CR_LANDED="$(echo "$REVIEW_JSON" | jq -r '.perHeadLanded // false')"

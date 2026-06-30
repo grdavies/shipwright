@@ -36,7 +36,7 @@
   "verify": {
     "lint": "echo 'configure verify.lint for your repo'",
     "typecheck": "echo 'configure verify.typecheck for your repo'",
-    "test": "python3 scripts/verify-require-configuration.sh"
+    "test": "bash scripts/verify-require-configuration.sh"
   },
   "verifyE2e": {
     "enabled": false,

@@ -43,7 +43,7 @@ regardless of tier, because they govern multiple plans by definition.
 
 Deterministic — same inputs → same panel. Not model judgment. **Authoritative algorithm:** per-persona
 `capability` frontmatter on `core/agents/sw-*-reviewer.md` aggregated into
-`core/sw-reference/capability-index.json`, resolved by `bash scripts/doc-review-select.sh` (wraps
+`core/sw-reference/capability-index.json`, resolved by `python3 scripts/doc-review-select.sh` (wraps
 `capability-select.sh` for the `doc-review` selection family). Contract:
 `core/sw-reference/capability-manifest.md` (triggers, precedence, trust boundary).
 
@@ -87,7 +87,7 @@ audits when wording dodges the list.
 ### Selector invocation
 
 ```bash
-bash scripts/doc-review-select.sh --context-json '<signal_context>'
+python3 scripts/doc-review-select.sh --context-json '<signal_context>'
 ```
 
 Returns canonical JSON: resolved persona ids, matched signals, and activation-record fields. Identical
@@ -124,10 +124,10 @@ Persona activation:
 PARENT_MODEL="<concrete platform model id of the dispatching agent session>"
 AGENT="sw-coherence-reviewer"   # example persona id
 
-RESOLVED=$(bash scripts/resolve-model-tier.sh --agent "$AGENT")
+RESOLVED=$(python3 scripts/resolve-model-tier.sh --agent "$AGENT")
 MODEL_ID=$(echo "$RESOLVED" | python3 -c "import json,sys; print(json.load(sys.stdin)['modelId'])")
-bash scripts/wave.sh dispatch preflight --dispatch-id "$DISPATCH_ID" --agent "$AGENT" --command sw-doc-review --skill doc-review
-bash scripts/dispatch-check.sh --agent "$AGENT" --command sw-doc-review --skill doc-review --parent-model "$PARENT_MODEL" --dispatch-id "$DISPATCH_ID"
+python3 scripts/wave.sh dispatch preflight --dispatch-id "$DISPATCH_ID" --agent "$AGENT" --command sw-doc-review --skill doc-review
+python3 scripts/dispatch-check.sh --agent "$AGENT" --command sw-doc-review --skill doc-review --parent-model "$PARENT_MODEL" --dispatch-id "$DISPATCH_ID"
 # Task spawn MUST use model: <MODEL_ID> — not inherit
 ```
 
@@ -145,7 +145,7 @@ exit 20; do not spawn on unresolved `inherit`.
    **docs-currency** per Amendment review (U7) — skip the full selection algorithm unless `--personas` / `--all`
    override.
 5. Resolve tier — if Quick, report "no panel for Quick" and stop.
-6. **PRD draft:** run `bash scripts/doc-review-select.sh --context-json '<signal_context>'`; announce activation record (core + any fired gates + matched signals).
+6. **PRD draft:** run `python3 scripts/doc-review-select.sh --context-json '<signal_context>'`; announce activation record (core + any fired gates + matched signals).
 7. **Parallel panel (R38):** for each selected persona, run a **unique** `dispatch preflight` + `dispatch-check` (see Dispatch binding) **before** spawning that persona Task — never reuse a single preflight across N spawns.
 8. Read full document (no section splitting) — each selected persona is a parallel sub-agent (R28/R31).
 9. Each agent returns JSON per `references/findings-schema.json`.

@@ -122,15 +122,15 @@ off `rsync` early so subsequent ports build cleanly.
   - **File:** `hooks/pre-commit.py`, `hooks/pre-push.py`, `hooks/commit-msg.py` + helpers (remove `.sh` hooks)
   - **Expected:** execute on Windows under git hook runner without bash; all fail-closed guards preserved
   - **R-IDs:** R3
-- [ ] 4.2 Port security filters with behavioral parity (R36)
+- [x] 4.2 Port security filters with behavioral parity (R36)
   - **File:** `scripts/secret-scan.py`, `scripts/memory-redact.py`, `scripts/redaction-guard.py`, `scripts/test/secret-scan-behavioral.test`
   - **Expected:** planted secret blocks pre-push; allowlist exit-2; git-push chain blocks on scanner failure; redaction-guard strips same fields
   - **R-IDs:** R36
-- [ ] 4.3 Port `core/providers/` review+verify adapters to Python (R26)
+- [x] 4.3 Port `core/providers/` review+verify adapters to Python (R26)
   - **File:** `core/providers/review/*.py`, `core/providers/verify/*.py` (remove `.sh`)
   - **Expected:** capability-frontmatter provider-selection contract preserved
   - **R-IDs:** R26
-- [ ] 4.4 No-shell `dist/`/`core/scripts/` for hook + Cursor/Claude adapter surfaces (R4)
+- [x] 4.4 No-shell `dist/`/`core/scripts/` for hook + Cursor/Claude adapter surfaces (R4)
   - **File:** `dist/cursor/**`, `dist/claude-code/**`, emitter wiring
   - **Expected:** adapters/emitters functional cross-platform; `dist/cursor/`+`dist/claude-code/` contain no `.sh`
   - **R-IDs:** R4

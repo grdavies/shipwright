@@ -10,7 +10,7 @@ scope expansion, no weakened tests. Complements `/sw-review` (findings) and `gap
 not replace either.
 
 
-**Model tier:** mid — resolve via `bash scripts/resolve-model-tier.sh --skill simplify`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.sh --skill simplify`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## When it runs
 
@@ -35,7 +35,7 @@ Apply only when removal/simplification cannot change observable behavior:
 2. **Scope** — `git diff` + `git diff --cached`; if empty, report `skipped` and stop.
 3. **Simplify** — edit delta only; honor `agentsFile` doctrine; no test assertion weakening.
 4. **Re-verify** — run `/sw-verify` (or equivalent config commands); refresh `/tmp/sw-verify.status.json`.
-5. **Behavior gate** — `bash scripts/simplify-gate.sh`:
+5. **Behavior gate** — `python3 scripts/simplify-gate.sh`:
    - `--baseline-verify /tmp/sw-verify.pre-simplify.json`
    - `--post-verify /tmp/sw-verify.status.json`
 6. Emit `/tmp/sw-simplify.status.json` with `{verdict, baseline, post, findings}`.
@@ -57,5 +57,5 @@ truth (`check-gate.sh` remains authoritative at merge).
 - No commits, push, PR, or merge from this step.
 - Never auto-delete tests or loosen assertions to green.
 - Security-sensitive surfaces (auth, secrets, CI config) — surface for human review; do not bulk-simplify.
-- Persisted summaries through `bash scripts/memory-redact.sh` (R41).
+- Persisted summaries through `python3 scripts/memory-redact.sh` (R41).
 - Slots alongside future local code-review (`providers/code-review/`) — does not duplicate persona review.

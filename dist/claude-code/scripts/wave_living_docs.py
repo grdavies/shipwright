@@ -110,9 +110,11 @@ def resolve_worktree(root: Path, args: list[str]) -> Path:
 
 
 def run_reconcile_script(root: Path, *cmd: str) -> dict[str, Any]:
-    script = SCRIPT_DIR / "reconcile-status.sh"
+    script = SCRIPT_DIR / "reconcile.py"
+    from _sw import interpreter
+    probe = interpreter.probe()
     proc = subprocess.run(
-        ["bash", str(script), *cmd],
+        [*probe.executable, str(script), *cmd],
         cwd=str(root),
         text=True,
         capture_output=True,
@@ -124,7 +126,7 @@ def run_reconcile_script(root: Path, *cmd: str) -> dict[str, Any]:
         data = {"raw": out, "stderr": proc.stderr.strip()}
     if proc.returncode != 0:
         fail(
-            data.get("error") or proc.stderr.strip() or "reconcile-status failed",
+            data.get("error") or proc.stderr.strip() or "reconcile failed",
             exit_code=proc.returncode,
             **{k: v for k, v in data.items() if k != "error"},
         )

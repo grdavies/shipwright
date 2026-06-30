@@ -2508,70 +2508,70 @@
       "disposition": "port",
       "target": "core/hooks/pre-commit-completed-unit.py",
       "phase": 4,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "core/hooks/pre-commit-frozen.sh",
       "disposition": "port",
       "target": "core/hooks/pre-commit-frozen.py",
       "phase": 4,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "core/providers/in-repo-rules.sh",
       "disposition": "port",
       "target": "core/providers/in-repo-rules.py",
       "phase": 4,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "core/providers/recallium-rules.sh",
       "disposition": "port",
       "target": "core/providers/recallium-rules.py",
       "phase": 4,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "core/providers/review/coderabbit.sh",
       "disposition": "port",
       "target": "core/providers/review/coderabbit.py",
       "phase": 4,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "core/providers/review/nocap-stub.sh",
       "disposition": "port",
       "target": "core/providers/review/nocap-stub.py",
       "phase": 4,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "core/providers/verify/failstub.sh",
       "disposition": "port",
       "target": "core/providers/verify/failstub.py",
       "phase": 4,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "core/providers/verify/none.sh",
       "disposition": "port",
       "target": "core/providers/verify/none.py",
       "phase": 4,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "core/providers/verify/playwright.sh",
       "disposition": "port",
       "target": "core/providers/verify/playwright.py",
       "phase": 4,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "core/providers/verify/stub.sh",
       "disposition": "port",
       "target": "core/providers/verify/stub.py",
       "phase": 4,
-      "status": "pending"
+      "status": "ported"
     },
     {
       "path": "dist/cursor/core/hooks/pre-commit-completed-unit.sh",
@@ -4214,7 +4214,7 @@
   ],
   "summary": {
     "total": 600,
-    "ported": 2,
-    "pending": 598
+    "ported": 15,
+    "pending": 585
   }
 }

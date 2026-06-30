@@ -23,7 +23,7 @@ Deterministic tier classifier for the documentation pipeline. Routes work before
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `bash scripts/resolve-model-tier.sh --command sw-triage`.
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.sh --command sw-triage`.
 
 ## Guardrails
 

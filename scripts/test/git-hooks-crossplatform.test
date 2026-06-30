@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-hooks-security-filters-providers-l"
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+for f in core/hooks/pre-commit.py core/hooks/pre-push.py core/hooks/commit-msg.py hooks/pre-commit.py; do
+  test -f "$ROOT/$f" || { echo "FAIL missing $f"; exit 1; }
+done
+TMP=$(mktemp -d)
+cat > "$TMP/violation.py" <<'PYIN'
+import sys
+sys.exit(1)
+PYIN
+set +e
+python3 "$ROOT/scripts/_sw/hook_launcher.py" "$TMP/violation.py"
+EC=$?
+set -e
+[ "$EC" -eq 1 ] || { echo FAIL hook_launcher exit; exit 1; }
+rm -rf "$TMP"
+echo "OK  git-hooks-crossplatform"

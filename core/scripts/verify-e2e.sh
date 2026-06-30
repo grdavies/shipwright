@@ -40,7 +40,7 @@ PROVIDER="$(cfg '.verifyE2e.provider' 'none')"
 ENABLED="$(cfg '.verifyE2e.enabled' 'false')"
 
 if [[ "$PROVIDER" == "none" || "$ENABLED" != "true" ]]; then
-  exec bash "$PLUGIN_ROOT/providers/verify/none.sh"
+  exec python3 "$PLUGIN_ROOT/providers/verify/none.py"
 fi
 
 case "$PROVIDER" in
@@ -51,7 +51,7 @@ case "$PROVIDER" in
     ;;
 esac
 
-ADAPTER="$PLUGIN_ROOT/providers/verify/${PROVIDER}.sh"
+ADAPTER="$PLUGIN_ROOT/providers/verify/${PROVIDER}.py"
 if [[ ! -f "$ADAPTER" ]]; then
   jq -n --arg p "$PROVIDER" '{status:"failed",exitCode:2,name:"e2e",provider:$p,skipped:false,reason:"unknown verify provider"}'
   exit 2
@@ -69,7 +69,7 @@ export SW_E2E_ROUTES="$(cfg '.verifyE2e.routes' '[]')"
 export SW_E2E_CONFIG="${CONFIG:-}"
 
 set +e
-OUT="$(bash "$ADAPTER")"
+OUT="$(python3 "$ADAPTER")"
 ADAPTER_EC=$?
 set -e
 echo "$OUT"
