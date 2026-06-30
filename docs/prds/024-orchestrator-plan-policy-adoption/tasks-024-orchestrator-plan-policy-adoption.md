@@ -79,15 +79,15 @@ consistency-only mode (R36c), so the binding defects GAP-039/GAP-040 are not gat
 
 ### 5. `/sw-debug` adoption (wire-only, episodic) — M
 
-- [ ] 5.1 Debug proposal-site wiring + canonical parity (TR4a, R18, R20)
+- [x] 5.1 Debug proposal-site wiring + canonical parity (TR4a, R18, R20)
   - **File:** `core/commands/sw-debug.md`, `core/skills/debug/SKILL.md`
   - **Expected:** read `orchestration.planPolicy`; when `proposed`, propose single-tier plan → `wave.sh plan validate` → selector → persist → drive from stored plan (kernel re-check each `advance`); `canonical` byte-identical. `debug-canonical-parity`, `debug-proposed-routes-gate-selector`.
   - **R-IDs:** R18, R20
-- [ ] 5.2 Preserve debug legitimate halts (R19)
+- [x] 5.2 Preserve debug legitimate halts (R19)
   - **File:** `core/commands/sw-debug.md`, debug guideline floor
   - **Expected:** after **one** human route confirmation continue in-turn (DBG-A1) but the route-confirm and RCA human-decision halts are **driver-asserted** (a plan omitting/reordering them is rejected fail-closed); `debug-route-confirm-halt-required`, `debug-rca-human-decision-halt-required`.
   - **R-IDs:** R19
-- [ ] 5.3 Sentry ingestion redaction + budgets + surfacing + parity (R21, R22, R23)
+- [x] 5.3 Sentry ingestion redaction + budgets + surfacing + parity (R21, R22, R23)
   - **File:** `core/skills/debug/SKILL.md`, ingestion path, `scripts/test/run-fanout-fixtures.sh`
   - **Expected:** Sentry bodies redacted before any persist/handoff incl. DBG-A2 concurrency; `debug-proposed-sentry-enrich-redact-before-preflight`; driver-enforced budget/no-progress `debug-budget-trip` (R22); chosen plan + capability set + rejections in episodic summary `debug-r21-surfacing` (R21); orchestrator-applicable 022 TR7 subset green `debug-022-parity-under-proposed` (R23).
   - **R-IDs:** R21, R22, R23
