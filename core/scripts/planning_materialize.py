@@ -344,6 +344,44 @@ def scan_diff_for_violations(root: Path, base_ref: str) -> dict[str, Any]:
     return {"verdict": "ok", "scanned": len(paths)}
 
 
+
+
+def verify_frozen_issue_store(root: Path, unit_id: str, body_path: str) -> None:
+    from planning_store import resolve_effective_backend
+
+    cfg = load_workflow_config(root)
+    effective = resolve_effective_backend(root, cfg)
+    if effective.get("effective") != "issue-store":
+        return
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "planning_store.py"),
+            "--root",
+            str(root),
+            "verify-frozen-hash",
+            "--unit-id",
+            unit_id,
+            "--body-path",
+            body_path,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        try:
+            payload = json.loads(proc.stdout or proc.stderr)
+        except json.JSONDecodeError:
+            payload = {"error": proc.stderr.strip() or "verify-frozen-hash failed"}
+        fail(payload.get("error", "verify-frozen-hash failed"), **{k: v for k, v in payload.items() if k != "error"})
+
+
+def unit_id_from_task_list_rel(task_list_rel: str) -> str:
+    parent = Path(task_list_rel).parent.name
+    if parent.startswith("prd-"):
+        return parent
+    return f"prd-{parent}"
+
 def cmd_provision(root: Path, args: argparse.Namespace) -> int:
     if is_ci_or_host():
         emit({"verdict": "skipped", "reason": "ci-or-host-never-materializes"})
@@ -365,6 +403,23 @@ def cmd_provision(root: Path, args: argparse.Namespace) -> int:
     backend = get_backend(root, cfg)
     materialized_paths: list[str] = []
     copied: list[dict[str, str]] = []
+    if backend_id == "issue-store":
+        task_unit = unit_id_from_task_list_rel(task_list)
+        verify_frozen_issue_store(root, task_unit, task_list)
+        dest = materialized_dest(worktree, task_list)
+        result = backend.materialize(task_unit, task_list, dest)
+        if result.verdict != "ok":
+            fail(
+                f"materialize failed for frozen task list {task_list}",
+                unitId=task_unit,
+                bodyPath=task_list,
+                backend=backend_id,
+                reason=result.reason,
+            )
+        secret_scan_file(dest)
+        materialized_paths.append(str(dest.relative_to(worktree)).replace("\\", "/"))
+        copied.append({"unitId": task_unit, "dest": materialized_paths[-1], "hash": result.hash or ""})
+
     for unit in units:
         body_rel = str(unit["bodyPath"])
         dest = materialized_dest(worktree, body_rel)
