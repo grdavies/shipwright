@@ -17,13 +17,13 @@ pull-in; **resolved** = done. No `partially resolved`, `planned`, or embedding s
 ## Index
 
 Stable IDs (`GAP-NNN`) are assigned at append time — **never reuse**. Cross-link gaps as `GAP-NNN`, not
-table row numbers. When appending, use the next ID: **`GAP-075`**.
+table row numbers. When appending, use the next ID: **`GAP-077`**.
 
 | Status | Count |
 |--------|------:|
 | resolved | 27 |
 | scheduled | 47 |
-| open | 0 |
+| open | 2 |
 
 | ID | Status | Schedule | Title |
 |----|--------|----------|-------|
@@ -101,3 +101,5 @@ table row numbers. When appending, use the next ID: **`GAP-075`**.
 | GAP-072 | scheduled | PRD 035 A1 | PRD 034 deliver: post-merge integration verify fails — remediation budget exhausted per phase |
 | GAP-073 | scheduled | PRD 035 A1 | PRD 034 deliver: stabilize moves integration past `batchIntegrationHead` without state reconcile |
 | GAP-074 | scheduled | PRD 035 A1 | PRD 034 deliver: cross-run parallel ceiling — stale worktrees + concurrent deliver orchestrators |
+| GAP-075 | open | — | Test-suite registration drifted across 4 independently-maintained lists (`ci.yml`, `pr-test-plan.manifest.json`, `run_verify_bundle.py` `SUITES`, `CONTRIBUTING.md`); 6/102 `run_*_fixtures.py` suites (`build_chain_sot`, `capability`, `fanout`, `guardrail_matrix`, `hook`, `relocation`) wired into none — regresses PRD 042 R27 (manifest-registration guarantee); PRD 042 merged complete (PR #256) so cannot be amended — needs triage to a fresh fix (register the 6 suites + regen `pr-test-plan-ci.yml` per `generate-pr-test-plan-ci-workflow.py`, then single-source `CONTRIBUTING.md`/`run_verify_bundle.py` from `_runner.py discover_suites()`) |
+| GAP-076 | open | — | No code-coverage tool exists for `scripts/`; introducing `pytest`/`coverage.py` conflicts with stdlib-first policy (R11/R12/R31 — `scripts/_sw/depmanifest.json` allows zero non-stdlib imports) — needs triage to a future brainstorm on approach (custom stdlib coverage vs. scoped `depmanifest.json` exception vs. status quo) before any implementation |

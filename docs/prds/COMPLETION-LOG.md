@@ -4,6 +4,7 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 
 | Date | PRD | Phase | Notes |
 |------|-----|-------|-------|
+| 2026-06-30 | 042 | all | PRD 042 cross-platform-python-standardization deliver complete — squash merged via terminal PR #256; PR #256; SHA bd9ab91 |
 | 2026-06-30 | 024 | all | PRD 024 orchestrator-plan-policy-adoption deliver complete — squash merged via terminal PR #251; PR #251; SHA 2b57e56 |
 | 2026-06-30 | 035 | all | PRD 035 planning-autonomy-and-orchestration deliver complete — squash merged via terminal PR #243; PR #243; SHA 3bea8d8 |
 | 2026-06-29 | 034 | all | PRD 034 visibility-and-planning-store deliver complete — squash merged via terminal PR #232; PR #232; SHA 139f30b |
