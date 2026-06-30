@@ -150,8 +150,10 @@ passes an argument it never accepted.
    warning, or resolve via the platform's own concrete-model capability rather than requiring `models.tiers`
    membership. Needs an explicit decision (see Open Questions) since it changes the R9 model-tier-floor
    contract's failure mode.
-3. Natural amendment home for both: PRD 024 (already has A1 + A2 in this exact area) — a new A3, since A2's own
-   "GAP-040" framing ("command-vs-agent split is residual") is the same family of dispatch-binding defect.
+3. ~~Natural amendment home for both: PRD 024 (already has A1 + A2 in this exact area).~~ Superseded — see
+   "Resolution status" below: Defects A/C were fixed directly; a PRD 024 A3 for Defect B was drafted and then
+   discarded (PRD 024 is `complete`, no active implementation vehicle — see gap-006 and the Open Questions
+   routing note for the worked design that would have been A3's content).
 4. **Defect C:** fix the `secret_scan.main(["pre-push"])` call to match the zero-arg signature (or give
    `secret_scan.main` an optional mode parameter if `git-push.py` needs to pass one) and add a regression
    fixture that actually invokes `scripts/git-push.py --dry-run`-equivalent (or imports + calls `main()`
@@ -168,17 +170,28 @@ passes an argument it never accepted.
    `dispatch.unregisteredParentModelTier` config fallback, defaulting fail-closed (today's behavior) unless
    set — preserves R9 intent but needs a one-time operator config write; (c) resolve via the platform's own
    capability metadata for the concrete model id (if the host exposes one) rather than requiring static
-   `models.tiers` membership — most correct, most implementation cost. PRD 024 A3 should decide and amend R9's
-   failure-mode language explicitly, not just patch the code.
+   `models.tiers` membership — most correct, most implementation cost. Whichever fix is chosen should amend
+   R9's failure-mode language explicitly, not just patch the code.
 2. Should `models.tiers` be extended to enumerate *all* models a human might select interactively, or kept
    scoped to internal command/skill/agent routing only (today's design) with a separate fallback path for (1)?
+
+**Worked design, not shipped (routing note):** a candidate fix was drafted in full (narrow the unconditional
+`dispatch-check.py` fail to only fire for `sw-*-reviewer`/native-panel-bound dispatches that actually consume
+`parent_rank`; add an explicit `dispatch.unregisteredParentModelTier` config fallback, default unset/fail-closed,
+with an invalid-tier-value distinct fail cause) as a PRD 024 amendment, then discarded undrafted — PRD 024 is
+`complete` in `INDEX.md` with no active implementation vehicle, and **gap-006** (filed alongside this one)
+independently found that PRD 033's most recent amendment suffered exactly this fate (frozen, "complete", never
+implemented). Per operator decision (2026-06-30 second `/sw-feedback` pass), this stays a gap-only finding —
+not a PRD amendment — until there is an active implementation vehicle for it. The worked design above is
+preserved here so a future fix does not have to re-derive it.
 
 ## Resolution status (2026-06-30, this branch)
 
 Per operator routing decision, Defects A and C were fixed directly in this branch rather than deferred to a
 separate PR, with regression fixtures. Defect B is **not** fixed here — it needs an explicit product decision
-on the R9 model-tier-floor failure mode (see Open Questions below) and is routed to a PRD 024 A3 amendment
-instead.
+on the R9 model-tier-floor failure mode (see Open Questions below) and, per a later routing decision in this
+same `/sw-feedback` pass, stays a gap-only finding rather than a PRD amendment (PRD 024 is `complete` with no
+active implementation vehicle — see the Open Questions "Worked design, not shipped" note and gap-006).
 
 ### Defect A — fixed (11 call sites + a missed 12th found while fixing)
 
@@ -246,8 +259,9 @@ matching every other script's invocation convention in this codebase.
   `prd-index-derive-shape`, `planning-index-reconcile-route` — reproduce identically on bare `origin/main`,
   confirmed unrelated to this signal and out of scope here).
 
-### Defect B — not fixed here, routed to PRD 024 A3
+### Defect B — not fixed here, stays gap-only pending an implementation vehicle
 
-No code change in this branch. See Open Questions — the fix changes the R9 model-tier-floor contract's
-failure mode and needs an explicit decision, not a unilateral inline fix.
+No code change in this branch and no PRD amendment. The fix changes the R9 model-tier-floor contract's
+failure mode and needs an explicit decision, not a unilateral inline fix — see Open Questions for the worked
+candidate design, preserved for whoever picks this up next.
 

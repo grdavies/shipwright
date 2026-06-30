@@ -91,10 +91,16 @@ primary checkout. This session's own original evidence above (two unpushed `chor
 commits on local `main`) is the same defect, reproduced independently a second time the same day.
 
 Given two independent live reproductions in one day and zero PRDs currently committed to closing the upstream
-primitives, this `/sw-feedback` pass recommends treating remediation #4 as actionable now rather than further
-deferred — see the companion handoff for the proposed target (PRD 036,
-`delivery-conductor-concurrency-and-remediation-robustness`, "complete" but thematically the closest existing
-home, vs. PRD 033 A1's own origin point).
+primitives, this `/sw-feedback` pass initially proposed routing remediation #4 to a new PRD 036 amendment
+("complete" but thematically the closest existing home, vs. PRD 033 A1's own origin point) — **and then found,
+while drafting it, that this exact routing pattern is precisely how PRD 033's own most recent amendment (A3,
+absorbing GAP-056) went unimplemented**: frozen 2026-06-29, marked `complete` in `INDEX.md`, and its R39
+requirement is the **near-identical fix** (a fail-closed in-flight cwd guard on `wave_living_docs --commit`
+and other operator-command entry points) — never built. See the new canonical gap unit **gap-006** for the
+full evidence. Per operator decision (2026-06-30), remediation #4 stays a **gap-only** finding — not a new
+PRD 036 amendment — until there is an active implementation vehicle for either this gap or PRD 033 A3 itself.
+The two should not be implemented independently of each other; whoever picks this up should read both gap-002
+and gap-006 first.
 
 Also note: GAP-077–080 are filed in the legacy `docs/prds/GAP-BACKLOG.md`, not as canonical `docs/prds/gap/*`
 units — independent corroboration of gap-003's finding that the two-namespace split is live and actively
