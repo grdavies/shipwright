@@ -19,6 +19,11 @@ from kernel_classification import (
     validate_chain_order,
 )
 from plan_floor_evaluator import floor_mandatory_steps, rule_triggered, validate_plan_against_floor
+from orchestrator_guidelines import (
+    load_orchestrator_pack,
+    pack_signal_conditional_mandatory_steps,
+    validate_pack_constraints,
+)
 from orchestrator_step_plan import (
     VALID_ORCHESTRATOR_TYPES,
     canonical_orchestrator_chain,
@@ -292,6 +297,24 @@ def orchestrator_fallback_canonical_chain(
     }
 
 
+
+def orchestrator_forbidden_deliver_steps(root: Path, orchestrator_type: str) -> set[str]:
+    forbidden: set[str] = set()
+    try:
+        spec = orchestrator_type_spec(root, orchestrator_type)
+        forbidden.update(normalize_step(str(s)) for s in spec.get("forbiddenSteps") or [] if isinstance(s, str))
+    except (OSError, ValueError, KeyError):
+        pass
+    try:
+        pack = load_orchestrator_pack(root, orchestrator_type)
+        forbidden.update(
+            normalize_step(str(s)) for s in pack.get("forbiddenDeliverOnlySteps") or [] if isinstance(s, str)
+        )
+    except (OSError, ValueError, KeyError):
+        pass
+    return forbidden
+
+
 def validate_orchestrator_plan(
     root: Path,
     proposal: dict[str, Any],
@@ -315,6 +338,14 @@ def validate_orchestrator_plan(
     if not vocabulary:
         return {"verdict": "reject", "reasons": [f"unknown orchestrator type: {orchestrator_type!r}"]}
 
+    forbidden_deliver = orchestrator_forbidden_deliver_steps(root, orchestrator_type)
+    deliver_hits = sorted({s for s in steps if s in forbidden_deliver})
+    if deliver_hits:
+        return {
+            "verdict": "reject",
+            "reasons": [f"forbidden deliver-only step present: {s}" for s in deliver_hits],
+        }
+
     unknown = sorted({s for s in steps if s not in vocabulary})
     if unknown:
         return {"verdict": "reject", "reasons": [f"unknown/extraneous step id: {s}" for s in unknown]}
@@ -327,6 +358,15 @@ def validate_orchestrator_plan(
 
     spec = orchestrator_type_spec(root, orchestrator_type)
     reasons = validate_orchestrator_constraints(spec, steps)
+    try:
+        pack = load_orchestrator_pack(root, orchestrator_type)
+        reasons.extend(validate_pack_constraints(pack, steps))
+        for mandatory in pack_signal_conditional_mandatory_steps(pack, signal_context):
+            norm = normalize_step(mandatory)
+            if norm not in steps:
+                reasons.append(f"signal-conditional floor step missing: {norm}")
+    except (OSError, ValueError, KeyError) as exc:
+        reasons.append(f"orchestrator guideline pack unavailable: {exc}")
     if reasons:
         if proposal.get("partialOrder"):
             return {"verdict": "ambiguous", "reasons": reasons + ["partial order missing orchestrator ordering pair"]}

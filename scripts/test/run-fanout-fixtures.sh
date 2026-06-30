@@ -140,5 +140,92 @@ else
 fi
 rm -f "$GOOD_PROPOSAL"
 
+# --- orchestrator-proposed-plan-rejects-deliver-only-steps (R18/SC4) ---
+for ORCH in debug doc feedback; do
+  BAD_DELIVER=$(mktemp)
+  python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, str(Path('$ROOT') / 'scripts'))
+from orchestrator_step_plan import canonical_orchestrator_chain
+steps = canonical_orchestrator_chain(Path('$ROOT'), '$ORCH')
+steps = list(steps)
+steps.insert(1, 'merge-enqueue')
+print(json.dumps({'steps': steps}))
+" > "$BAD_DELIVER"
+  if OUT=$(bash "$ROOT/scripts/wave.sh" plan validate --tier orchestrator --orchestrator-type "$ORCH" --proposal "$BAD_DELIVER" 2>/dev/null || true)     && echo "$OUT" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert d['verdict'] == 'reject', d
+assert any('forbidden deliver-only' in r for r in d.get('reasons', [])), d
+"; then
+    ok "orchestrator-proposed-plan-rejects-deliver-only-steps-$ORCH"
+  else
+    bad "orchestrator-proposed-plan-rejects-deliver-only-steps-$ORCH"
+  fi
+  rm -f "$BAD_DELIVER"
+done
+
+# --- orchestrator-consistency-only-defers-proposed-pack (R36) ---
+if OUT=$(python3 "$ROOT/scripts/variance_probe.py" "$ROOT" probe doc 2>/dev/null || true)   && echo "$OUT" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert d['verdict'] == 'pass', d
+assert d['canonicalEquivProposed'] is True, d
+assert d['adoptionMode'] == 'consistency-only', d
+assert d['proposedPackDeferred'] is True, d
+assert d['defaultsConsistencyOnly'] is True, d
+"; then
+  ok "orchestrator-consistency-only-defers-proposed-pack"
+else
+  bad "orchestrator-consistency-only-defers-proposed-pack"
+fi
+
+if OUT=$(python3 "$ROOT/scripts/variance_probe.py" "$ROOT" probe debug 2>/dev/null || true)   && echo "$OUT" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert d['adoptionMode'] == 'full', d
+assert d['proposedPackDeferred'] is False, d
+"; then
+  ok "orchestrator-consistency-only-defers-proposed-pack debug-full"
+else
+  bad "orchestrator-consistency-only-defers-proposed-pack debug-full"
+fi
+
+# --- consistency-only-exempts-proposed-fixtures (R36d) ---
+DOC_EXEMPT_FIXTURES=(
+  doc-proposed-routes-gate-selector
+  doc-022-parity-under-proposed
+  doc-review-halt-manual-required
+  doc-review-halt-gated-auto-required
+  doc-afterTasks-checkpoint-required
+)
+EXEMPT_OK=1
+for FIX in "${DOC_EXEMPT_FIXTURES[@]}"; do
+  if OUT=$(python3 "$ROOT/scripts/variance_probe.py" "$ROOT" proposed-fixture-exempt doc "$FIX" 2>/dev/null || true)     && echo "$OUT" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert d['exempt'] is True, d
+"; then
+    :
+  else
+    EXEMPT_OK=0
+    bad "consistency-only-exempts-proposed-fixtures $FIX"
+  fi
+done
+if [[ "$EXEMPT_OK" -eq 1 ]]; then
+  ok "consistency-only-exempts-proposed-fixtures"
+fi
+
+NON_EXEMPT_FIXTURE=debug-proposed-routes-gate-selector
+if OUT=$(python3 "$ROOT/scripts/variance_probe.py" "$ROOT" proposed-fixture-exempt debug "$NON_EXEMPT_FIXTURE" 2>/dev/null || true)   && echo "$OUT" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert d['exempt'] is False, d
+"; then
+  ok "consistency-only-exempts-proposed-fixtures debug-not-exempt"
+else
+  bad "consistency-only-exempts-proposed-fixtures debug-not-exempt"
+fi
 
 exit "$FAIL"

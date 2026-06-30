@@ -13,5 +13,10 @@ ok, missing = lint_orchestrator_kernel_completeness(root)
 if not ok:
     print(json.dumps({"verdict": "fail", "failures": [f"unclassified orchestrator plan steps: {', '.join(missing)}"]}, indent=2))
     sys.exit(1)
+from orchestrator_guidelines import lint_orchestrator_packs
+ok_packs, pack_failures = lint_orchestrator_packs(root)
+if not ok_packs:
+    print(json.dumps({"verdict": "fail", "failures": pack_failures}, indent=2))
+    sys.exit(1)
 print(json.dumps({"verdict": "pass"}))
 PY
