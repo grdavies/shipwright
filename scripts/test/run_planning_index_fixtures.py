@@ -40,14 +40,14 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PY="$ROOT/scripts/planning_index_gen.py"
-GUARD="$ROOT/scripts/index-region-guard.sh"
+GUARD="$ROOT/scripts/index-region-guard.py"
 FIX_SRC="$ROOT/scripts/test/fixtures/planning-index"
 FAIL=0
 ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
 [[ -f "$PY" ]] || { bad "planning_index_gen.py missing"; exit 1; }
-[[ -x "$GUARD" ]] || { bad "index-region-guard.sh missing"; exit 1; }
+[[ -f "$GUARD" ]] || { bad "index-region-guard.py missing"; exit 1; }
 
 inject_region() {
   local file="$1" region="$2" body="$3"
@@ -165,7 +165,7 @@ GIT_FIX=$(mktemp -d)
   inject_region "$INDEX" derived $'prd-031-planning-unit-model: complete\n'
   git add "$INDEX"
   set +e
-  OUT=$(bash "$GUARD" --staged --repo-root "$GIT_FIX" 2>&1)
+  OUT=$(python3 "$GUARD" --staged --repo-root "$GIT_FIX" 2>&1)
   EC=$?
   set -e
   [[ "$EC" -ne 0 ]] && echo "$OUT" | grep -q 'derived'
@@ -184,7 +184,7 @@ GIT_FIX=$(mktemp -d)
   SW_INDEX_REGION_WRITER=generator python3 "$PY" "$GIT_FIX" generate >/dev/null
   git add docs/planning
   set +e
-  OUT=$(bash "$GUARD" --staged --repo-root "$GIT_FIX" 2>&1)
+  OUT=$(python3 "$GUARD" --staged --repo-root "$GIT_FIX" 2>&1)
   EC=$?
   set -e
   [[ "$EC" -ne 0 ]] && echo "$OUT" | grep -qi 'inflight'

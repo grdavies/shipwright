@@ -1,36 +1,61 @@
 #!/usr/bin/env python3
-"""Region-integrity guard for planning INDEX dual-region seam (PRD 031 R24). Usage:"""
+"""Region-integrity guard for planning INDEX dual-region seam (PRD 031 R24)."""
 from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
 import sys
 from pathlib import Path
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
+
+import planning_index_gen as pig
+import planning_paths
+from wave_state import enumerate_scoped_runs
 from _sw.cli import run_module_main
 
-def main(argv: list[str] | None = None) -> int:
-    import json
-    import subprocess
-    import sys
-    from pathlib import Path
 
-    plugin_root = Path(sys.argv[1])
-    root = Path(sys.argv[2])
-    index_rel = sys.argv[3]
-    writer = sys.argv[4]
-    index_path = root / index_rel
+def index_rel(root: Path) -> str:
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT_DIR / "planning_paths.py"), str(root), "dirs"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode == 0 and proc.stdout.strip():
+        try:
+            data = json.loads(proc.stdout)
+            planning = data.get("dirs", {}).get("planningDir", "docs/planning").rstrip("/")
+            return f"{planning}/INDEX.md"
+        except json.JSONDecodeError:
+            pass
+    return "docs/planning/INDEX.md"
 
-    sys.path.insert(0, str(plugin_root / "scripts"))
-    import planning_index_gen as pig  # noqa: E402
-    from wave_state import enumerate_scoped_runs  # noqa: E402
 
+def collect_staged_paths(root: Path, index_rel_path: str) -> list[str]:
+    proc = subprocess.run(
+        ["git", "-C", str(root), "diff", "--cached", "--name-only", "--", index_rel_path],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+
+
+def run_guard(root: Path, index_rel_path: str, writer: str) -> int:
+    index_path = root / index_rel_path
     errors: list[str] = []
 
     def git_show(ref: str) -> str | None:
         proc = subprocess.run(
-            ["git", "-C", str(root), "show", f"{ref}:{index_rel}"],
+            ["git", "-C", str(root), "show", f"{ref}:{index_rel_path}"],
             text=True,
             capture_output=True,
+            check=False,
         )
         if proc.returncode != 0:
             return None
@@ -52,10 +77,9 @@ def main(argv: list[str] | None = None) -> int:
 
     old_text = git_show("HEAD")
     new_text_content = index_path.read_text(encoding="utf-8") if index_path.is_file() else ""
-
     if not new_text_content:
         print(json.dumps({"verdict": "pass", "note": "no INDEX content"}))
-        sys.exit(0)
+        return 0
 
     for region in ("structural", "derived", "inFlight"):
         if not region_changed(old_text, new_text_content, region):
@@ -105,10 +129,24 @@ def main(argv: list[str] | None = None) -> int:
             ),
             file=sys.stderr,
         )
-        sys.exit(1)
-
+        return 1
     print(json.dumps({"verdict": "pass", "action": "index-region-guard"}))
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="INDEX region integrity guard")
+    parser.add_argument("--repo-root", type=Path, default=SCRIPT_DIR.parent)
+    parser.add_argument("--staged", action="store_true", default=True)
+    parser.add_argument("--ci", action="store_true")
+    args = parser.parse_args(argv)
+    root = args.repo_root.resolve()
+    rel = index_rel(root)
+    if not collect_staged_paths(root, rel):
+        return 0
+    writer = os.environ.get("SW_INDEX_REGION_WRITER", "")
+    return run_guard(root, rel, writer)
+
 
 if __name__ == "__main__":
     run_module_main(main)

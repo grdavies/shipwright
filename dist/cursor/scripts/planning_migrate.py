@@ -664,7 +664,7 @@ def cmd_write(root: Path, *, force: bool = False, skip_commit: bool = False) -> 
     privacy_script = SCRIPT_DIR / "planning-privacy-guard.py"
     if privacy_script.is_file():
         proc = subprocess.run(
-            ["bash", str(privacy_script), "--repo-root", str(git_root(root)), "--migration-staging"],
+            [sys.executable, str(privacy_script), "--repo-root", str(git_root(root)), "--migration-staging"],
             text=True,
             capture_output=True,
         )

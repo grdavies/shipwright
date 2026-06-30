@@ -40,9 +40,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PY="$ROOT/scripts/planning_migrate.py"
-PRIV="$ROOT/scripts/planning-privacy-guard.sh"
+PRIV="$ROOT/scripts/planning-privacy-guard.py"
 PROJ="$ROOT/scripts/planning_legacy_projection.py"
-RELIEF="$ROOT/scripts/relief-acceptance-check.sh"
+RELIEF="$ROOT/scripts/relief-acceptance-check.py"
 IDX="$ROOT/scripts/planning_index_gen.py"
 CORPUS="$ROOT/scripts/test/fixtures/planning-cutover/corpus"
 FAIL=0
@@ -86,7 +86,7 @@ seed_repo "$TMP/repo"
   cd "$TMP/repo"
   TAG=$(python3 -c "from pathlib import Path; import re; t=Path('docs/planning/brainstorm/brainstorm-2026-01-01-cutover-private-topic-requirements/brainstorm-2026-01-01-cutover-private-topic-requirements.md').read_text(); m=re.search(r'^tags: (.+)$', t, re.M); print(m.group(1) if m else '')")
   [[ "$TAG" == *legacy-pre-034* ]]
-  bash "$PRIV" --repo-root "$TMP/repo" --scan-private >/dev/null
+  python3 "$PRIV" --repo-root "$TMP/repo" --scan-private >/dev/null
 ) && ok "privacy-backfill-legacy-token" || bad "privacy-backfill-legacy-token"
 
 # formerly-ignored-body-tracked-fails (R18)
@@ -98,7 +98,7 @@ seed_repo "$TMP2/repo2"
   python3 "$PY" "$TMP2/repo2" write --skip-commit >/dev/null
   python3 -c "from pathlib import Path; p=Path('.gitignore'); p.write_text('\n'.join(l for l in p.read_text().splitlines() if 'docs/planning/brainstorm' not in l))"
   set +e
-  OUT=$(bash "$PRIV" --repo-root "$TMP2/repo2" --scan-private 2>&1)
+  OUT=$(python3 "$PRIV" --repo-root "$TMP2/repo2" --scan-private 2>&1)
   EC=$?
   set -e
   [[ "$EC" -ne 0 ]]
@@ -146,7 +146,7 @@ derived = "prd-031-planning-unit-model-and-migration: complete\n"
 text = pig.replace_region_inner(content, "derived", derived)
 path.write_text(text)
 PY
-  bash "$RELIEF" --repo-root "$TMP/repo" --state .cursor/sw-deliver-state.json >/dev/null
+  python3 "$RELIEF" --repo-root "$TMP/repo" --state .cursor/sw-deliver-state.json >/dev/null
   grep -q 'Kill-criteria' "$ROOT/core/sw-reference/layout.md"
   grep -q 'reversible' "$ROOT/core/sw-reference/layout.md"
 ) && ok "relief-acceptance-gates-cutover" || bad "relief-acceptance-gates-cutover"

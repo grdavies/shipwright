@@ -1,33 +1,38 @@
 #!/usr/bin/env python3
-"""Relief acceptance check — gates cutover on derived-vs-deliver alignment (PRD 031 R28). Usage: relief-acceptance-check.py [--repo-root ROOT] [--state PATH]"""
+"""Relief acceptance check — gates cutover on derived-vs-deliver alignment (PRD 031 R28)."""
 from __future__ import annotations
 
+import argparse
+import json
 import sys
+from pathlib import Path
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+import planning_index_gen as pig
+import planning_paths
 from _sw.cli import run_module_main
 
 
 def main(argv: list[str] | None = None) -> int:
-    import json
-    import sys
-    from pathlib import Path
-
-    plugin_root, repo_root, state_path = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
-    sys.path.insert(0, str(plugin_root / "scripts"))
-    import planning_index_gen as pig
-    import planning_paths
-
+    parser = argparse.ArgumentParser(description="Relief acceptance check")
+    parser.add_argument("--repo-root", type=Path, default=SCRIPT_DIR.parent)
+    parser.add_argument("--state", type=Path, default=None)
+    args = parser.parse_args(argv)
+    repo_root = args.repo_root.resolve()
     worktree = planning_paths.git_root(repo_root)
     index_path = worktree / pig.index_rel(repo_root)
     if not index_path.is_file():
         print(json.dumps({"verdict": "fail", "error": "planning INDEX missing"}))
-        sys.exit(20)
+        return 20
 
     regions = pig.parse_regions(index_path.read_text(encoding="utf-8"))
     derived = pig.parse_derived_status_map(regions.derived)
 
-    state_file = Path(state_path) if state_path else worktree / ".cursor/sw-deliver-state.json"
-    deliver_status = {}
+    state_file = args.state if args.state else worktree / ".cursor/sw-deliver-state.json"
+    deliver_status: dict[str, str] = {}
     if state_file.is_file():
         state = json.loads(state_file.read_text(encoding="utf-8"))
         for meta in (state.get("phases") or {}).values():
@@ -46,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if mismatches:
         print(json.dumps({"verdict": "fail", "error": "relief acceptance mismatch", "mismatches": mismatches}))
-        sys.exit(20)
+        return 20
 
     print(json.dumps({
         "verdict": "pass",
