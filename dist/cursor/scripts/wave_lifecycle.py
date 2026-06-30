@@ -138,7 +138,7 @@ def cmd_assert_entry(root: Path, _args: list[str]) -> None:
     script = root / "scripts" / "sw-assert-worktree.py"
     if not script.is_file():
         fail("sw-assert-worktree.py missing", exit_code=2)
-    proc = subprocess.run(["bash", str(script)], cwd=str(root), capture_output=True, text=True)
+    proc = subprocess.run([sys.executable, str(script)], cwd=str(root), capture_output=True, text=True)
     if proc.returncode == 0:
         emit({"verdict": "pass", "action": "assert-entry", "allowed": True})
     if proc.returncode == 1:
@@ -566,7 +566,7 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
     script = top / "scripts" / "worktree.py"
     proc = subprocess.run(
         [
-            "bash",
+            sys.executable,
             str(script),
             "provision",
             name,
