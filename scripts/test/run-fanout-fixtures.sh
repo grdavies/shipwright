@@ -434,4 +434,97 @@ else
   bad "debug-022-parity-under-proposed"
 fi
 
+
+# --- Phase 7: /sw-feedback adoption (TR4c, R18–R23) ---
+if OUT=$(python3 "$ROOT/scripts/orchestrator_run.py" "$ROOT" canonical-parity-check --orchestrator-type feedback 2>/dev/null || true)   && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='pass', d"; then
+  ok "feedback-canonical-parity"
+else
+  bad "feedback-canonical-parity"
+fi
+
+if OUT=$(python3 "$ROOT/scripts/orchestrator_run.py" "$ROOT" proposed-routes-check --orchestrator-type feedback 2>/dev/null || true)   && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='pass', d"; then
+  ok "feedback-proposed-routes-gate-selector"
+else
+  bad "feedback-proposed-routes-gate-selector"
+fi
+
+BAD_HOOK=$(mktemp)
+python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, str(Path('$ROOT') / 'scripts'))
+from orchestrator_step_plan import canonical_orchestrator_chain
+steps = [s for s in canonical_orchestrator_chain(Path('$ROOT'), 'feedback') if s != 'hook-trigger-halt']
+print(json.dumps({'steps': steps}))
+" > "$BAD_HOOK"
+if OUT=$(bash "$ROOT/scripts/wave.sh" plan validate --tier orchestrator --orchestrator-type feedback --proposal "$BAD_HOOK" --signal-context '{"source_class":"production","invocation":"hook"}' 2>/dev/null || true)   && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='reject', d"; then
+  ok "feedback-hook-trigger-no-autodispatch-under-proposed"
+else
+  bad "feedback-hook-trigger-no-autodispatch-under-proposed"
+fi
+rm -f "$BAD_HOOK"
+
+BAD_CONFIRM=$(mktemp)
+python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, str(Path('$ROOT') / 'scripts'))
+from orchestrator_step_plan import canonical_orchestrator_chain
+steps = [s for s in canonical_orchestrator_chain(Path('$ROOT'), 'feedback') if s != 'human-confirm-halt']
+print(json.dumps({'steps': steps}))
+" > "$BAD_CONFIRM"
+if OUT=$(bash "$ROOT/scripts/wave.sh" plan validate --tier orchestrator --orchestrator-type feedback --proposal "$BAD_CONFIRM" --signal-context '{"source_class":"review","invocation":"human"}' 2>/dev/null || true)   && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='reject', d"; then
+  ok "feedback-proposed-human-confirm-before-dispatch"
+else
+  bad "feedback-proposed-human-confirm-before-dispatch"
+fi
+rm -f "$BAD_CONFIRM"
+
+FEEDBACK_LIKE=$'review note: token ghp_abcdefghijklmnopqrstuvwxyz1234567890ABCD\nemail: leak@corp.example.com'
+SCRUBBED_FB=$(echo "$FEEDBACK_LIKE" | bash "$ROOT/scripts/memory-redact.sh")
+if [[ "$SCRUBBED_FB" == *'[REDACTED:'* ]] && [[ "$SCRUBBED_FB" != *'ghp_abc'* ]]; then
+  ok "feedback-proposed-inbound-redact-fail-closed"
+else
+  bad "feedback-proposed-inbound-redact-fail-closed"
+fi
+
+if OUT=$(python3 "$ROOT/scripts/orchestrator_run.py" "$ROOT" budget-trip-check --orchestrator-type feedback 2>/dev/null || true)   && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['tripped'] is True, d"; then
+  ok "feedback-budget-trip"
+else
+  bad "feedback-budget-trip"
+fi
+
+if OUT=$(python3 "$ROOT/scripts/orchestrator_run.py" "$ROOT" r21-surfacing-check --orchestrator-type feedback 2>/dev/null || true)   && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='pass', d"; then
+  ok "feedback-r21-surfacing"
+else
+  bad "feedback-r21-surfacing"
+fi
+
+FB_PARITY022_OK=1
+if ! python3 - <<'PY022'
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1] + "/scripts")
+from wave_plan_validate import read_config_plan_policy
+assert read_config_plan_policy(Path(sys.argv[1])) == "proposed"
+from capability_trust import MEMORY_GATES
+assert "memory-preflight" in MEMORY_GATES
+from kernel_classification import load_classification
+data = load_classification(Path(sys.argv[1]))
+ids = {c.get("id") for c in data.get("kernelChokepoints") or []}
+for required in ("memory-preflight-routing", "beforeSubmitPrompt-guardrails"):
+    assert required in ids, required
+PY022
+"$ROOT"; then
+  FB_PARITY022_OK=0
+fi
+if [[ "$FB_PARITY022_OK" -eq 1 ]] \
+  && OUT=$(python3 "$ROOT/scripts/wave_plan_validate.py" "$ROOT" validate --tier orchestrator --orchestrator-type feedback --proposal '{"steps":["memory-prework","normalize"]}' 2>/dev/null || true) \
+  && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict'] in ('reject','ambiguous'), d"; then
+  ok "feedback-022-parity-under-proposed"
+else
+  bad "feedback-022-parity-under-proposed"
+fi
+
+
 exit "$FAIL"

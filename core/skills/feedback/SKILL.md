@@ -14,6 +14,18 @@ later but must never auto-dispatch a route without human confirmation.
 
 **Model tier:** build — resolve via `bash scripts/resolve-model-tier.sh --skill feedback`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
+
+
+## Orchestrator plan-policy (PRD 024)
+
+Single-tier orchestrator-step plan proposal, validation, and capability selection are owned by
+`core/commands/sw-feedback.md` + `skills/conductor/SKILL.md` — this skill maps phases to step IDs
+(`normalize`, `redact`, `dedup`, `route`, `hook-trigger-halt`, `human-confirm-halt`, `handoff`, `record`).
+
+Under `proposed`, inbound signal JSON MUST be redacted via `bash scripts/memory-redact.sh` before any persist,
+route record, or handoff. Fail-closed on redaction error. Hook/monitor `invocation` values hard-halt — never
+auto-dispatch without human confirmation.
+
 ## Phase 1 — Normalize + redact (U1)
 
 1. Classify input into `sourceClass`: `production` | `review` | `retro`.

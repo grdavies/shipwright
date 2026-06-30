@@ -108,15 +108,15 @@ consistency-only mode (R36c), so the binding defects GAP-039/GAP-040 are not gat
 
 ### 7. `/sw-feedback` adoption (untrusted-signal chokepoint, episodic) — M
 
-- [ ] 7.1 Feedback proposal-site wiring + canonical parity (TR4c, R18, R20)
+- [x] 7.1 Feedback proposal-site wiring + canonical parity (TR4c, R18, R20)
   - **File:** `core/commands/sw-feedback.md`, `core/skills/feedback/SKILL.md`
   - **Expected:** read `planPolicy`; propose single-tier plan → gate → selector → persist → drive (episodic, R37); `canonical` byte-identical. `feedback-canonical-parity`, `feedback-proposed-routes-gate-selector`.
   - **R-IDs:** R18, R20
-- [ ] 7.2 Untrusted-signal hard halt + redact-before-record + human-confirm (R19, R23)
+- [x] 7.2 Untrusted-signal hard halt + redact-before-record + human-confirm (R19, R23)
   - **File:** `core/commands/sw-feedback.md`, ingestion path
   - **Expected:** `invocation ∈ {hook, monitor}` (`≠ human`) → **hard halt**, never auto-dispatch; full signal JSON redacted (`memory-redact.sh`) and wrapped `untrusted_payload` before any route record/memory write; routed dispatch requires persisted human-ack keyed by signalId. `feedback-hook-trigger-no-autodispatch-under-proposed`, `feedback-proposed-human-confirm-before-dispatch`, `feedback-proposed-inbound-redact-fail-closed`.
   - **R-IDs:** R19, R23
-- [ ] 7.3 Feedback budgets + surfacing + parity (R21, R22, R23)
+- [x] 7.3 Feedback budgets + surfacing + parity (R21, R22, R23)
   - **File:** `core/skills/feedback/SKILL.md`, `scripts/test/run-fanout-fixtures.sh`
   - **Expected:** driver-enforced budget/no-progress `feedback-budget-trip` (R22); chosen plan + capability set + rejections in episodic summary `feedback-r21-surfacing` (R21); orchestrator-applicable 022 TR7 subset green `feedback-022-parity-under-proposed` (R23).
   - **R-IDs:** R21, R22, R23
