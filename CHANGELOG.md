@@ -150,6 +150,7 @@
 * merge phase emitter-dist-parity-doc-impact-acceptance-m into feat/planning-feedback-lifecycle (c18e9a9) <!-- sw-deliver:emitter-dist-parity-doc-impact-acceptance-m -->
 * merge phase related-units-scanner-pull-in-proposal-flow-l into feat/planning-feedback-lifecycle (9e016fb) <!-- sw-deliver:related-units-scanner-pull-in-proposal-flow-l -->
 * merge phase two-track-edit-driver-l into feat/planning-feedback-lifecycle (651d1d1) <!-- sw-deliver:two-track-edit-driver-l -->
+* merge phase autonomy-posture-bounded-full-conductor-l into feat/planning-feedback-lifecycle (e3ee6c1) <!-- sw-deliver:autonomy-posture-bounded-full-conductor-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
