@@ -2,6 +2,7 @@
 # R-ID → task → test traceability gate (pre-task-freeze).
 # Usage: traceability-check.sh --prd PRD --tasks TASKS
 # Exit: 0 complete, 20 gaps
+# R16 no-regression (PRD 035): frozen immutability, traceability, and spec-rigor gates feed the delivery loop — preserve pre-freeze structural checks and union/traceability completeness.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -101,6 +101,24 @@ Host adapters apply `pr-body.md` at `pr-create` time; missing required fields fa
    onto `<type>/<slug>` for `/sw-deliver` (PRD 013 reconcile, R32).
 5. **Merge docs** — `bash scripts/docs_pr.sh --topic <topic>` opens a docs-only PR to trunk (R30).
 
+## Two-track doc edits (PRD 035 R10–R14)
+
+The two-track driver (`scripts/docs-edit-route.sh`, `scripts/two_track_lib.py`) classifies planning graph
+edits as **mechanical** vs **substantive**:
+
+| Track | Allowlist (R11) | Route |
+| --- | --- | --- |
+| Mechanical | INDEX **`derived` region only**, SUPERSEDED manifest, generated gap index | `docs-edit-route.sh route` → batched `docs-merge.sh` (CI auto-merge or direct-to-trunk when permitted) |
+| Substantive | Any `docs/planning/<unit-id>/` path (body or frontmatter) | `docs-edit-route.sh route-substantive --topic <topic>` → docs worktree + `docs_pr.sh` |
+
+The INDEX **`inFlight` region is never mechanical** — it is the PRD 032 deliver writer's sole region. Branch
+protection is probed live via the host API (`scripts/host_lib.py`); when detection is ambiguous or `gh` auth
+is missing, the driver defaults to the PR path and never attempts a direct push to a protected default branch.
+
+Mechanical batched PRs embed a monotonic content-hash covering both INDEX regions (`derived` + `inFlight`) at
+open; auto-merge aborts if either region advanced since (R14 stale-PR guard).
+
+
 ## Guardrails
 
 - Never push directly to a protected default branch.

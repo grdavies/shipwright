@@ -5,6 +5,7 @@
 #   spec-rigor-check.sh --artifact decision --path FILE [--tier full|standard]
 #   spec-rigor-check.sh --artifact tasks --path FILE --prd PRD_PATH
 # Exit: 0 pass, 10 warn, 20 fail
+# R16 no-regression (PRD 035): frozen immutability, traceability, and spec-rigor gates feed the delivery loop — preserve pre-freeze structural checks and union/traceability completeness.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

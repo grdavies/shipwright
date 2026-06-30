@@ -10,7 +10,7 @@ Written after routing via `memory-preflight` (redacted). Consumed by `/sw-compou
   "signalId": "<from normalized signal>",
   "sourceClass": "production | review | retro",
   "dedupKey": "<class-tagged key>",
-  "target": "/sw-debug | /sw-amend | /sw-brainstorm | docs/prds/GAP-BACKLOG.md",
+  "target": "/sw-debug | /sw-amend | /sw-brainstorm | docs/planning/<gap-unit-id>/",
   "originatingSignalRef": "redacted one-line summary — no secrets",
   "relatedFiles": []
 }
