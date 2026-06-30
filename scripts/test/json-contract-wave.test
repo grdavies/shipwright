@@ -1,4 +1,9 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python3
+import os, re, subprocess, sys
+from pathlib import Path
+ROOT = Path(__file__).resolve().parent.parent.parent
+env = os.environ.copy(); env["ROOT"]=str(ROOT); env["PYTHONPATH"]=str(ROOT/"scripts")
+_src = """#!/usr/bin/env bash
 # JSON/dispatch contract for ported wave.py (PRD 042 R24 subset).
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -29,3 +34,11 @@ print('ok')
 "; then echo "OK  wave-no-shell-dispatch"; else echo "FAIL wave-no-shell-dispatch"; FAIL=1; fi
 
 exit "$FAIL"
+"""
+src = _src.replace("#!/usr/bin/env bash", "").replace("set -euo pipefail", "")
+src = re.sub(r'ROOT="[^"]*"', 'ROOT="' + str(ROOT) + '"', src, count=1)
+src = src.replace('.sh"', '.py"').replace('bash "', 'python3 "')
+rc = subprocess.run(["bash", "-c", src], cwd=str(ROOT), env=env, shell=False).returncode
+if rc == 0:
+    print("OK  json-contract-wave")
+raise SystemExit(rc or 0)

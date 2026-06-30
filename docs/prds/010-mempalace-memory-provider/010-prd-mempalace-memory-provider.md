@@ -186,7 +186,7 @@ Direct SQLite read is NOT the default recipe.
 ### Emitter & core mirror
 
 Follow PRD 004/009 discipline: edit `core/` and `scripts/`; run `python3 -m sw generate` and
-`bash scripts/copy-to-core.sh` as needed. Do not hand-edit `dist/` or `core/scripts/` without emitter/sync.
+`python3 scripts/copy-to-core.py` as needed. Do not hand-edit `dist/` or `core/scripts/` without emitter/sync.
 
 ## Security & Compliance
 

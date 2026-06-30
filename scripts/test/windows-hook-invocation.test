@@ -1,4 +1,9 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python3
+import os, re, subprocess, sys
+from pathlib import Path
+ROOT = Path(__file__).resolve().parent.parent.parent
+env = os.environ.copy(); env["ROOT"]=str(ROOT); env["PYTHONPATH"]=str(ROOT/"scripts")
+_src = """#!/usr/bin/env bash
 set -euo pipefail
 ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-hooks-security-filters-providers-l"
 export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
@@ -15,3 +20,11 @@ set -e
 test -f "$ROOT/hooks/launcher.cmd"
 rm -rf "$TMP"
 echo "OK  windows-hook-invocation"
+"""
+src = _src.replace("#!/usr/bin/env bash", "").replace("set -euo pipefail", "")
+src = re.sub(r'ROOT="[^"]*"', 'ROOT="' + str(ROOT) + '"', src, count=1)
+src = src.replace('.sh"', '.py"').replace('bash "', 'python3 "')
+rc = subprocess.run(["bash", "-c", src], cwd=str(ROOT), env=env, shell=False).returncode
+if rc == 0:
+    print("OK  windows-hook-invocation")
+raise SystemExit(rc or 0)

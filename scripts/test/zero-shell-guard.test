@@ -1,6 +1,9 @@
-#!/usr/bin/env bash
-set -euo pipefail
-export PYTHONPATH="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l/scripts${PYTHONPATH:+:$PYTHONPATH}"
-export SW_ZERO_SHELL_MODE=warn
-python3 "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l/scripts/zero-shell-guard.py"
-echo "OK  zero-shell-guard"
+#!/usr/bin/env python3
+import os, subprocess, sys
+from pathlib import Path
+root = Path(__file__).resolve().parent.parent.parent
+env = os.environ.copy(); env['SW_ZERO_SHELL_MODE'] = 'fail'
+proc = subprocess.run([sys.executable, str(root/'scripts/zero-shell-guard.py'), '--mode', 'fail'], env=env, shell=False)
+if proc.returncode != 0:
+    raise SystemExit(proc.returncode)
+print('OK  zero-shell-guard')

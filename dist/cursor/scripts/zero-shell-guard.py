@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Zero-shell enforcement guard — warn mode during port (R30, R41 scaffold)."""
+"""Zero-shell enforcement guard — hard-fail end state (R30, R41 scaffold)."""
 
 from __future__ import annotations
 
@@ -106,7 +106,7 @@ def find_stale_bash_refs(root: Path, closed: set[str]) -> list[str]:
 
 
 def mode() -> str:
-    return os.environ.get("SW_ZERO_SHELL_MODE", "warn").strip().lower()
+    return os.environ.get("SW_ZERO_SHELL_MODE", "fail").strip().lower()
 
 
 def main(argv: list[str] | None = None) -> int:

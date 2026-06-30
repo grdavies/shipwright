@@ -1,4 +1,9 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python3
+import os, re, subprocess, sys
+from pathlib import Path
+ROOT = Path(__file__).resolve().parent.parent.parent
+env = os.environ.copy(); env["ROOT"]=str(ROOT); env["PYTHONPATH"]=str(ROOT/"scripts")
+_src = """#!/usr/bin/env bash
 # Collapsed .sh/.py sibling pairs (PRD 042 R21).
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -22,3 +27,11 @@ for tree in core/commands core/skills core/rules; do
 done
 ok "no-stale-sh-callers"
 exit "$FAIL"
+"""
+src = _src.replace("#!/usr/bin/env bash", "").replace("set -euo pipefail", "")
+src = re.sub(r'ROOT="[^"]*"', 'ROOT="' + str(ROOT) + '"', src, count=1)
+src = src.replace('.sh"', '.py"').replace('bash "', 'python3 "')
+rc = subprocess.run(["bash", "-c", src], cwd=str(ROOT), env=env, shell=False).returncode
+if rc == 0:
+    print("OK  pair-collapse")
+raise SystemExit(rc or 0)

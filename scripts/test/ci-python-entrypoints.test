@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+from pathlib import Path
+root = Path(__file__).resolve().parent.parent.parent
+ci = (root/'.github/workflows/ci.yml').read_text(encoding='utf-8')
+if 'bash scripts/' in ci:
+    raise SystemExit('FAIL ci bash entrypoints')
+print('OK  ci-python-entrypoints')

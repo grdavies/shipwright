@@ -1,4 +1,9 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python3
+import os, re, subprocess, sys
+from pathlib import Path
+ROOT = Path(__file__).resolve().parent.parent.parent
+env = os.environ.copy(); env["ROOT"]=str(ROOT); env["PYTHONPATH"]=str(ROOT/"scripts")
+_src = """#!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export GITHUB_TOKEN=gh_fixture_token_for_tests
@@ -8,3 +13,11 @@ python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' a
 OUT2=$(python3 "$ROOT/scripts/host.py" --root "$ROOT" pr-create --title t --body b --head feat/x --base main)
 python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d['data'].get('number')" <<<"$OUT2"
 echo "OK  host-adapter-parity"
+"""
+src = _src.replace("#!/usr/bin/env bash", "").replace("set -euo pipefail", "")
+src = re.sub(r'ROOT="[^"]*"', 'ROOT="' + str(ROOT) + '"', src, count=1)
+src = src.replace('.sh"', '.py"').replace('bash "', 'python3 "')
+rc = subprocess.run(["bash", "-c", src], cwd=str(ROOT), env=env, shell=False).returncode
+if rc == 0:
+    print("OK  host-adapter-parity")
+raise SystemExit(rc or 0)

@@ -1,7 +1,20 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python3
+import os, re, subprocess, sys
+from pathlib import Path
+ROOT = Path(__file__).resolve().parent.parent.parent
+env = os.environ.copy(); env["ROOT"]=str(ROOT); env["PYTHONPATH"]=str(ROOT/"scripts")
+_src = """#!/usr/bin/env bash
 set -euo pipefail
 ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l"
 bash "$ROOT/scripts/test/interpreter-probe.test"
 bash "$ROOT/scripts/test/windows-hook-invocation.test"
 bash "$ROOT/scripts/test/json-determinism.test"
 echo "OK  windows-smoke-incremental"
+"""
+src = _src.replace("#!/usr/bin/env bash", "").replace("set -euo pipefail", "")
+src = re.sub(r'ROOT="[^"]*"', 'ROOT="' + str(ROOT) + '"', src, count=1)
+src = src.replace('.sh"', '.py"').replace('bash "', 'python3 "')
+rc = subprocess.run(["bash", "-c", src], cwd=str(ROOT), env=env, shell=False).returncode
+if rc == 0:
+    print("OK  windows-smoke-incremental")
+raise SystemExit(rc or 0)

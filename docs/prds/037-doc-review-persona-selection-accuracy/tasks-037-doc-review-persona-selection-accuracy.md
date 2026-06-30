@@ -49,7 +49,7 @@ Generated from the frozen PRD spec union (R1–R12). Phases follow the Rollout P
   - **Expected:** heading matching documented as whole-token or exact, not substring (R6)
   - **R-IDs:** R6
 - [ ] 3.2 Propagate to core/dist
-  - **File:** `core/scripts/capability_select.py`, `dist/cursor/**`, `dist/claude-code/**` via `bash scripts/copy-to-core.sh` + `python3 -m sw generate --all`
+  - **File:** `core/scripts/capability_select.py`, `dist/cursor/**`, `dist/claude-code/**` via `python3 scripts/copy-to-core.py` + `python3 -m sw generate --all`
   - **Expected:** emitter-freshness + parity fixtures pass (R8)
   - **R-IDs:** R8
 - [ ] 3.3 Close GAP-047 on ship

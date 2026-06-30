@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+from pathlib import Path
+root = Path(__file__).resolve().parent.parent.parent
+rule = root/'rules/sw-python-first.mdc'
+if not rule.is_file():
+    raise SystemExit('FAIL missing sw-python-first.mdc')
+print('OK  python-first-policy')

@@ -496,3 +496,8 @@ python3 scripts/orchestrator_run.py . teardown --orchestrator-type debug --run-i
 Cross-orchestrator isolation: episodic runs refuse writes under `.cursor/sw-deliver-state*`,
 `.cursor/sw-deliver-runs/`, and other deliver-scoped paths (`scripts/orchestrator_run.py assert-write`).
 
+
+## Python entrypoint model (R32)
+
+Harness scripts live under `scripts/*.py` and execute via `python3 scripts/<name>.py`.
+The build chain is `python3 scripts/copy-to-core.py` → `python3 -m sw generate --all` with golden parity under `scripts/test/fixtures/parity/`.
