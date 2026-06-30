@@ -317,6 +317,45 @@ else
 fi
 
 
+# --- Phase 6: /sw-doc adoption (consistency-only, TR4b, R18–R20, R36c) ---
+if OUT=$(python3 "$ROOT/scripts/orchestrator_run.py" "$ROOT" canonical-parity-check --orchestrator-type doc 2>/dev/null || true)   && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='pass', d"; then
+  ok "doc-canonical-parity"
+else
+  bad "doc-canonical-parity"
+fi
+
+DOC_HALT_CASES=(
+  "doc-review-halt-manual-required|doc-review-halt-manual|{\"doc_review_mode\":\"manual\"}"
+  "doc-review-halt-gated-auto-required|doc-review-halt-gated-auto|{\"doc_review_mode\":\"gated_auto\"}"
+  "doc-afterTasks-checkpoint-required|afterTasks-checkpoint|"
+)
+for CASE in "${DOC_HALT_CASES[@]}"; do
+  IFS='|' read -r FIX_NAME HALT SIG <<<"$CASE"
+  BAD=$(mktemp)
+  python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, str(Path('$ROOT') / 'scripts'))
+from orchestrator_step_plan import canonical_orchestrator_chain
+steps = [s for s in canonical_orchestrator_chain(Path('$ROOT'), 'doc') if s != '$HALT']
+print(json.dumps({'steps': steps}))
+" > "$BAD"
+  if [[ -n "$SIG" ]]; then
+    if OUT=$(bash "$ROOT/scripts/wave.sh" plan validate --tier orchestrator --orchestrator-type doc --proposal "$BAD" --signal-context "$SIG" 2>/dev/null || true)       && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='reject', d"; then
+      ok "$FIX_NAME"
+    else
+      bad "$FIX_NAME"
+    fi
+  else
+    if OUT=$(bash "$ROOT/scripts/wave.sh" plan validate --tier orchestrator --orchestrator-type doc --proposal "$BAD" 2>/dev/null || true)       && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='reject', d"; then
+      ok "$FIX_NAME"
+    else
+      bad "$FIX_NAME"
+    fi
+  fi
+  rm -f "$BAD"
+done
+
 # --- Phase 5: /sw-debug adoption fixtures (TR4a, R18–R23) ---
 if OUT=$(python3 "$ROOT/scripts/orchestrator_run.py" "$ROOT" canonical-parity-check 2>/dev/null || true)   && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='pass', d"; then
   ok "debug-canonical-parity"
