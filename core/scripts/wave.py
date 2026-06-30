@@ -38,16 +38,6 @@ def _python(script: str, root: Path, args: list[str]) -> int:
     return completed.returncode
 
 
-def _bash(script: str, args: list[str], *, cwd: Path | None = None) -> int:
-    script_path = SCRIPT_DIR / script
-    completed = proc.run(["bash", str(script_path), *args], cwd=str(cwd or PLUGIN_ROOT))
-    if completed.stdout:
-        sys.stdout.write(completed.stdout)
-    if completed.stderr:
-        sys.stderr.write(completed.stderr)
-    return completed.returncode
-
-
 def dispatch(argv: list[str]) -> int:
     root = repo_root()
     if not argv:
@@ -67,9 +57,9 @@ def dispatch(argv: list[str]) -> int:
     if cmd in ("state", "lock", "journal", "log", "ledger"):
         return _python("wave_state.py", root, argv)
     if cmd == "tasks-currency":
-        return _bash("tasks-currency-gate.py", rest, cwd=root)
+        return _python("tasks-currency-gate.py", root, rest)
     if cmd == "docs-currency":
-        return _bash("docs-currency-gate.py", rest, cwd=root)
+        return _python("docs-currency-gate.py", root, rest)
     if cmd == "living-docs":
         return _python("wave_living_docs.py", root, rest)
     if cmd == "inflight":

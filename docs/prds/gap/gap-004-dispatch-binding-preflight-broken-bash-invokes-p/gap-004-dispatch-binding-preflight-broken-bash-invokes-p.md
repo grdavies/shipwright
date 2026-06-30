@@ -160,3 +160,94 @@ passes an argument it never accepted.
    `.sh`→`.py` ports for further signature/interpreter mismatches in one pass rather than per-discovery PRs
    (PR #261 already fixed one such instance independently).
 
+## Open Questions (Defect B)
+
+1. What should `dispatch-check.py:model_to_tier()` do when the parent session's concrete model id is not a
+   value in `models.tiers`? Candidates: (a) treat as the most permissive tier (`deep`) with a logged warning —
+   simplest, but weakens the R9 floor for any unregistered model; (b) require an explicit
+   `dispatch.unregisteredParentModelTier` config fallback, defaulting fail-closed (today's behavior) unless
+   set — preserves R9 intent but needs a one-time operator config write; (c) resolve via the platform's own
+   capability metadata for the concrete model id (if the host exposes one) rather than requiring static
+   `models.tiers` membership — most correct, most implementation cost. PRD 024 A3 should decide and amend R9's
+   failure-mode language explicitly, not just patch the code.
+2. Should `models.tiers` be extended to enumerate *all* models a human might select interactively, or kept
+   scoped to internal command/skill/agent routing only (today's design) with a separate fallback path for (1)?
+
+## Resolution status (2026-06-30, this branch)
+
+Per operator routing decision, Defects A and C were fixed directly in this branch rather than deferred to a
+separate PR, with regression fixtures. Defect B is **not** fixed here — it needs an explicit product decision
+on the R9 model-tier-floor failure mode (see Open Questions below) and is routed to a PRD 024 A3 amendment
+instead.
+
+### Defect A — fixed (11 call sites + a missed 12th found while fixing)
+
+All 11 call sites in the table above were changed from `["bash", str(script), ...]` to
+`[sys.executable, str(script), ...]`:
+
+`scripts/wave_preflight.py`, `core/hooks/before_task_dispatch.py`, `scripts/wave.py` (the `_bash()` helper
+itself was removed — no `.sh` callers remained, so the indirection was dead weight, not just a wrong
+interpreter), `scripts/wave_terminal.py`, `scripts/wave_deliver_loop.py` (×2), `scripts/memory_decision_snapshot.py`
+(×2), `scripts/memory_sot_audit.py`, `scripts/planning_related.py`, `scripts/sw-configure.py`,
+`scripts/feedback-closure-gate.py`.
+
+**A 12th, previously-undocumented defect was found fixing Defect A and had to be fixed in the same pass:**
+`scripts/resolve-model-tier.py`'s `main()` unpacked `sys.argv[1:8]` as 7 *positional* arguments
+(`tier_arg, command, skill, agent, delegate, config_path, defaults_path = sys.argv[1:8]`) — every real caller
+in the table above invokes it with `--agent`/`--command`/`--skill` *flags*, not positional args, so fixing
+Defect A's interpreter alone still left every call site failing with
+`ValueError: not enough values to unpack`. Rewrote `main()` to use `argparse` (mirroring the already-correct
+`resolve-intensity.py` sibling), with the same `--tier`/`--command`/`--skill`/`--agent`/`--delegate`/`--config`/
+`--defaults` flags and the same command→skill→agent→tier precedence semantics — verified byte-identical
+output for `--agent`, `--command`, `--skill`, and `--tier` calling patterns against the pre-fix logic.
+
+**Verification:**
+- `python3 scripts/wave.py dispatch preflight --dispatch-id <id> --agent <agent> --command <cmd> --skill <skill>`
+  now returns `{"verdict": "pass", ..., "modelId": ..., "nonce": ...}` end-to-end (previously failed closed
+  with `cause: binding:no-model`, `exit 20` — exactly the `missing-preflight-nonce` blocker this signal named).
+- `core/hooks/before_task_dispatch.py:resolve_dispatch_model` (the `preToolUse` hook itself) verified directly
+  — resolves a concrete `modelId`/`tier` instead of failing closed.
+- Added `scripts/test/bash-py-invocation-guard.test`: extends the existing `scripts/zero-shell-guard.py`
+  R41 guard with a new `find_bash_py_invocations` detector (regex for `["bash", ..., "<x>.py"]` argv-list
+  literals) wired into its `main()` issue list, so this exact regression class fails CI going forward rather
+  than being rediscovered piecemeal (as it already had been once, via PR #261, before this signal). The
+  fixture both exercises the detector against a synthetic offender and asserts the real `scripts/`/`core/`
+  trees are clean.
+- `scripts/copy-to-core.py` was run to sync all fixes into the `core/scripts/` build-chain mirror (which has
+  its own independent copies per `core/sw-reference/build-chain-sot.json` — `zero-shell-guard.py` scans both
+  trees, and the mirror was still carrying every pre-fix `["bash", ...]` instance until synced).
+
+### Defect C — fixed, and the actual call was wrong in a second way
+
+Beyond the `TypeError` (zero-arg `secret_scan.main()` called with one arg), the original code also bypassed
+the **canonical CLI chokepoint**: `scripts/secret-scan.py` (hyphenated) is the actual sanctioned entrypoint —
+it subprocess-invokes `scripts/secret_scan.py` (underscore, the implementation module) itself and additionally
+handles an `inflight-tuple` mode `secret_scan.py` does not. `git-push.py`'s original `import secret_scan;
+secret_scan.main(["pre-push"])` both crashed *and* skipped the canonical entrypoint's extra handling even on a
+hypothetical correct call. Fixed to subprocess-invoke `secret-scan.py` (hyphenated) via `sys.executable`,
+matching every other script's invocation convention in this codebase.
+
+**Verification:**
+- `scripts/secret-scan.py pre-push` and `scripts/secret_scan.py pre-push` both run clean with exit 0 (no
+  `TypeError`).
+- A pre-existing repo test, `scripts/test/secret-scan-behavioral.test` (subtest `git-push-chain`, line 45:
+  `grep -q 'secret-scan.py' "$PUSH" && ok git-push-chain || bad git-push-chain`), **was already failing on
+  `origin/main`** before this fix (confirmed by running the full `scripts/test/_runner.py run-all-tests` suite
+  against a clean `origin/main` worktree) — independent, pre-existing corroboration of this exact defect that
+  nothing had connected to this signal before. It now passes with the fix.
+- Added `scripts/test/git-push-secret-scan-chokepoint.test`: monkeypatches `subprocess.run` inside
+  `git-push.py:main()` to simulate a failing secret-scan, and asserts (a) `main()` returns non-zero and
+  (b) `git push` is never invoked — i.e. the chokepoint actually blocks the push rather than silently falling
+  through, which is the failure mode this defect produced in practice.
+- Ran the full `scripts/test/_runner.py run-all-tests` suite before and after on both this worktree and a
+  disposable `origin/main` detached worktree: `git-push-chain` flips fail→pass; no other test changes state
+  in either direction (the small set of other pre-existing failures —`completion-log-idempotent`,
+  `wave-no-shell-dispatch`, four `gh invocation remains in ...`, five `missing-python-module: ...`,
+  `prd-index-derive-shape`, `planning-index-reconcile-route` — reproduce identically on bare `origin/main`,
+  confirmed unrelated to this signal and out of scope here).
+
+### Defect B — not fixed here, routed to PRD 024 A3
+
+No code change in this branch. See Open Questions — the fix changes the R9 model-tier-floor contract's
+failure mode and needs an explicit decision, not a unilateral inline fix.
+
