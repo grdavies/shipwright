@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l"
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+python3 -c "
+from _sw.poll import PollConfig, poll_until, PollTimeoutError
+n=0
+
+def pred():
+    global n
+    n+=1
+    return n>=2
+cfg=PollConfig(interval_seconds=0.01,max_wait_seconds=1.0,jitter='none')
+poll_until(pred,config=cfg,timeout_seconds=1.0)
+try:
+    poll_until(lambda: False, config=cfg, timeout_seconds=0.05)
+except PollTimeoutError:
+    pass
+else:
+    raise SystemExit(1)
+"
+echo "OK  poll-until"

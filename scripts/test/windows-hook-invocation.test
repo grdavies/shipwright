@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l"
+TMP=$(mktemp -d)
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+cat > "$TMP/violation.py" <<'PY'
+import sys
+sys.exit(1)
+PY
+set +e
+python3 "$ROOT/scripts/_sw/hook_launcher.py" "$TMP/violation.py"
+EC=$?
+set -e
+[ "$EC" -eq 1 ] || { echo FAIL exit; exit 1; }
+test -f "$ROOT/hooks/launcher.cmd"
+rm -rf "$TMP"
+echo "OK  windows-hook-invocation"

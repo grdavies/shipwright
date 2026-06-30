@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+TMP=$(mktemp -d)
+export PYTHONPATH="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l/scripts${PYTHONPATH:+:$PYTHONPATH}"
+mkdir -p "$TMP/src/sub"
+echo keep > "$TMP/src/keep.txt"
+echo drop > "$TMP/src/sub/drop.txt"
+python3 -c "from pathlib import Path; from _sw.mirror import mirror; mirror(Path('$TMP/src'), Path('$TMP/dst'), delete=True)"
+test -f "$TMP/dst/keep.txt"
+rm "$TMP/src/sub/drop.txt"
+python3 -c "from pathlib import Path; from _sw.mirror import mirror; mirror(Path('$TMP/src'), Path('$TMP/dst'), delete=True)"
+test ! -f "$TMP/dst/sub/drop.txt"
+rm -rf "$TMP"
+echo "OK  mirror-copy"

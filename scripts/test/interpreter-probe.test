@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l"
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+OUT=$(python3 -c "from _sw.interpreter import probe; print(probe().version_text)")
+echo "$OUT" | grep -q "3." || { echo FAIL; exit 1; }
+echo "OK  interpreter-probe"

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l"
+TMP=$(mktemp -d)
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+if [ -d "$ROOT/dist/cursor" ]; then export SW_INSTALL_SRC="$ROOT/dist/cursor"; else export SW_INSTALL_SRC="$ROOT/scripts"; fi
+python3 "$ROOT/scripts/install.py" "$TMP/out" --no-hooks
+test -d "$TMP/out"
+rm -rf "$TMP"
+echo "OK  install-windows"

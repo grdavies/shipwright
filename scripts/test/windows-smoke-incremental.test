@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l"
+bash "$ROOT/scripts/test/interpreter-probe.test"
+bash "$ROOT/scripts/test/windows-hook-invocation.test"
+bash "$ROOT/scripts/test/json-determinism.test"
+echo "OK  windows-smoke-incremental"

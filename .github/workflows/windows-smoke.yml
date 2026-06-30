@@ -1,0 +1,35 @@
+name: Windows Smoke
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-smoke:
+    name: windows-smoke
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Interpreter probe (R2)
+        shell: pwsh
+        run: python scripts/_sw/interpreter.py 2>$null; python -c "import sys; sys.path.insert(0,'scripts'); from _sw.interpreter import probe; r=probe(); print(r.version_text)"
+
+      - name: Hook launcher fixture (R40)
+        shell: bash
+        run: bash scripts/test/windows-hook-invocation.test
+
+      - name: JSON determinism gate (R38)
+        shell: bash
+        run: bash scripts/test/json-determinism.test
+
+      - name: Incremental smoke bundle (R45)
+        shell: bash
+        run: bash scripts/test/windows-smoke-incremental.test

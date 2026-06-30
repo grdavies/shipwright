@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+python3 -c "import json; m=json.load(open('/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l/scripts/_sw/depmanifest.json')); assert m.get('allowed')==[]"
+export PYTHONPATH="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l/scripts${PYTHONPATH:+:$PYTHONPATH}"
+python3 "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l/scripts/dep-import-guard.py"
+echo "OK  dep-import-guard"

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/cross-platform-python-standardization-phase-foundation-runtime-library-interpreter-probe-hook-launcher-ledger-guards-l"
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+FAIL=0
+check() {
+  local path="$1" label="$2"
+  doc=$(python3 - "$path" <<'PY'
+import ast, sys
+print(ast.get_docstring(ast.parse(open(sys.argv[1], encoding="utf-8").read())) or "")
+PY
+)
+  if [ -z "$doc" ]; then echo "FAIL $label missing docstring"; FAIL=1; else echo "OK  $label docstring"; fi
+  if python3 "$path" --help >/dev/null 2>&1; then echo "OK  $label --help"; else echo "FAIL $label --help"; FAIL=1; fi
+}
+check "$ROOT/scripts/_sw/cli.py" cli
+check "$ROOT/scripts/_sw/run.py" run
+check "$ROOT/scripts/install.py" install
+check "$ROOT/scripts/copy-to-core.py" copy-to-core
+check "$ROOT/scripts/dep-import-guard.py" dep-import-guard
+check "$ROOT/scripts/zero-shell-guard.py" zero-shell-guard
+exit $FAIL
