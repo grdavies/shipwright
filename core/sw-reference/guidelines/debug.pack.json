@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "guidelineVersion": "1.0.0",
+  "orchestratorType": "debug",
+  "packId": "debug",
+  "description": "Debug orchestrator guideline pack \u2014 canonical triage\u2192RCA\u2192route chain with driver-asserted halts (PRD 024 TR2).",
+  "canonicalFallbackChain": [
+    "memory-prework",
+    "triage",
+    "normalize",
+    "enrich",
+    "rca",
+    "route-confirm-halt",
+    "route",
+    "rca-human-decision-halt",
+    "record"
+  ],
+  "candidateSteps": [
+    "memory-prework",
+    "triage",
+    "normalize",
+    "enrich",
+    "rca",
+    "route-confirm-halt",
+    "route",
+    "rca-human-decision-halt",
+    "record"
+  ],
+  "requiredSteps": [
+    "memory-prework",
+    "triage",
+    "normalize",
+    "rca",
+    "route-confirm-halt",
+    "route",
+    "rca-human-decision-halt",
+    "record"
+  ],
+  "optionalSteps": [
+    "enrich"
+  ],
+  "forbiddenDeliverOnlySteps": [
+    "merge-enqueue",
+    "merge-run-next",
+    "terminal-ship",
+    "git-push",
+    "main-merge",
+    "sw-execute",
+    "lock-acquire",
+    "phase-merge",
+    "wave-plan-validate"
+  ],
+  "allowedReorderings": [],
+  "forbiddenDeviations": [
+    {
+      "id": "skip-route-confirm-halt",
+      "reason": "route confirmation must fire before in-turn continuation (R19 DBG-A1)",
+      "omitStep": "route-confirm-halt"
+    },
+    {
+      "id": "skip-rca-human-decision-halt",
+      "reason": "RCA human-decision halt is driver-asserted (R19)",
+      "omitStep": "rca-human-decision-halt"
+    },
+    {
+      "id": "route-before-confirm",
+      "reason": "route must follow route-confirm-halt",
+      "reorderBefore": "route",
+      "reorderAfter": "route-confirm-halt"
+    }
+  ],
+  "signalConditionalFloors": [
+    {
+      "id": "debug-sentry-enrich",
+      "mandatorySteps": [
+        "enrich"
+      ],
+      "triggers": {
+        "type": "signal_context",
+        "field": "signal_type",
+        "equals": [
+          "sentry",
+          "crash",
+          "error"
+        ]
+      }
+    }
+  ],
+  "floorRuleRefs": [
+    "security-sensitive-paths",
+    "kernel-scripts-providers",
+    "hooks-manifest"
+  ]
+}
