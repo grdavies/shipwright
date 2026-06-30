@@ -112,7 +112,7 @@ fi
 
 # --- override-logged-rate-surfaced (R28) ---
 setup_repo "$TMP/ovr"
-( cd "$TMP/ovr" && bash "$ROOT/scripts/shipwright-state.py" init '{}' >/dev/null )
+( cd "$TMP/ovr" && python3 "$ROOT/scripts/shipwright-state.py" init '{}' >/dev/null )
 python3 "$GATE" "$TMP/ovr" dependency-gate preflight --task-list docs/prds/prd-scheduler-blocked/tasks-prd-scheduler-blocked.md --override --override-reason "pilot waiver" >/dev/null || true
 if python3 -c "
 import json

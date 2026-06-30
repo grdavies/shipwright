@@ -45,10 +45,10 @@ ok()  { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
 SW_DELIVER="$ROOT/core/commands/sw-deliver.md"
-SCAN="$ROOT/scripts/secret-scan.sh"
-PUSH="$ROOT/scripts/git-push.sh"
+SCAN="$ROOT/scripts/secret-scan.py"
+PUSH="$ROOT/scripts/git-push.py"
 LOCK_PY="$ROOT/scripts/wave_lock.py"
-FROZEN="$ROOT/scripts/check-frozen.sh"
+FROZEN="$ROOT/scripts/check-frozen.py"
 MANIFEST="$ROOT/core/sw-reference/pr-test-plan.manifest.json"
 
 if grep -qE 'does not bypass.*main|auto-merge to `main`|human merge gate' "$SW_DELIVER" && \
@@ -58,7 +58,7 @@ else
   bad "human-merge-gate-unchanged"
 fi
 
-if [[ -x "$SCAN" ]] && [[ -x "$PUSH" ]] && grep -q 'secret-scan' "$PUSH"; then
+if [[ -f "$SCAN" ]] && [[ -f "$PUSH" ]] && grep -q 'secret_scan' "$PUSH"; then
   ok "secret-scan-push-chokepoint"
 else
   bad "secret-scan-push-chokepoint"
@@ -70,7 +70,7 @@ else
   bad "scoped-lock-single-flight"
 fi
 
-if [[ -x "$FROZEN" ]] && \
+if [[ -f "$FROZEN" ]] && \
    python3 -c "
 import json, sys
 data = json.load(open(sys.argv[1]))

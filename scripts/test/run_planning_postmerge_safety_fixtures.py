@@ -171,7 +171,7 @@ else:
 rm -rf "$TMP5"
 
 # --- deliver-postmerge-finalize-no-reconcile (R34) ---
-if grep -q "never bare reconcile-status.sh reconcile" "$ROOT/core/scripts/wave_deliver_loop.py" 2>/dev/null; then
+if grep -q "never bare reconcile" "$ROOT/core/scripts/wave_deliver_loop.py" 2>/dev/null; then
   ok "deliver-postmerge-finalize-no-reconcile"
 else
   bad "deliver-postmerge-finalize-no-reconcile"

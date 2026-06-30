@@ -56,7 +56,7 @@ WSS="$ROOT/scripts/wave_spec_seed.py"
 PLP="$ROOT/scripts/planning_legacy_projection.py"
 
 # --- 7.1 ship-without-build-chain-sync-fails (R25) ---
-if [[ -x "$ROOT/scripts/ship-build-chain-check.sh" ]] && \
+if [[ -f "$ROOT/scripts/ship-build-chain-check.py" ]] && \
    [[ -f "$ROOT/core/sw-reference/build-chain-paths.json" ]] && \
    grep -q 'ship-build-chain-check' "$ROOT/core/commands/sw-ship.md"; then
   ok "ship-without-build-chain-sync-fails"
@@ -65,8 +65,8 @@ else
 fi
 
 # --- 7.1 verify-test-includes-parity (R26) ---
-if grep -q 'run-parity-fixtures.sh' "$WF" 2>/dev/null || \
-   grep -q 'run-parity-fixtures' "$MANIFEST" 2>/dev/null; then
+if grep -q 'run_parity_fixtures' "$WF" 2>/dev/null || \
+   grep -q 'run_parity_fixtures' "$MANIFEST" 2>/dev/null; then
   ok "verify-test-includes-parity"
 else
   bad "verify-test-includes-parity"
@@ -102,7 +102,7 @@ if (
   git commit --allow-empty -q -m init
   mkdir -p .cursor/sw-deliver-runs scripts
   cp "$ROOT/scripts/"*.py scripts/ 2>/dev/null || true
-  cp "$ROOT/scripts/wave.sh" scripts/ && chmod +x scripts/wave.sh
+  cp "$ROOT/scripts/wave.py" scripts/ 2>/dev/null || true
   echo '{"deliver":{"remediation":{"maxAttempts":2}}}' >.cursor/workflow.config.json
   echo '{"mode":"phase","target":{"branch":"feat/demo"},"items":[{"id":"1","slug":"alpha","branch":"feat/demo-phase-alpha"}],"waves":[["1"]],"edges":[]}' >.cursor/sw-deliver-plan.json
   python3 -c "
@@ -314,7 +314,7 @@ else
 fi
 
 # --- manifest registration ---
-if grep -q 'run-planning-035-deliver-conductor-fixtures' "$MANIFEST"; then
+if grep -q 'run_planning_035_deliver_conductor_fixtures' "$MANIFEST"; then
   ok "manifest-registration-035-a1"
 else
   bad "manifest-registration-035-a1"

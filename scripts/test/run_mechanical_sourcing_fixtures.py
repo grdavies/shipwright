@@ -56,7 +56,7 @@ else
   bad "no-new-parallel-state-store"
 fi
 
-if grep -q 'scripts/wave.sh deliver-loop' "$CONDUCTOR" && \
+if grep -qE 'scripts/wave[.](sh|py).*deliver-loop' "$CONDUCTOR" && \
    grep -q 'does not maintain parallel state' "$CONDUCTOR" && \
    grep -q 'wave_\*\.py' "$CONDUCTOR"; then
   ok "conductor-delegates-wave-sh"

@@ -43,7 +43,7 @@ FAIL=0
 ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
-AG="$ROOT/scripts/authoring-guard.sh"
+AG="$ROOT/scripts/authoring-guard.py"
 PY="$ROOT/scripts/inflight_signal.py"
 REC="$ROOT/scripts/inflight_reconcile.py"
 
@@ -83,8 +83,8 @@ TMP1=$(mktemp -d)
   write_tuple "$ROOT/scripts" "$TMP1" "$UNIT" deliver-dead feat/dead
   mkdir -p .cursor
   echo '{"verdict":"complete"}' > .cursor/sw-deliver-state.dead.json
-  bash "$AG" preflight --unit "$UNIT" --no-commit >/dev/null
-  OUT=$(bash "$AG" preflight --path docs/prds/099-fixture-prd/tasks.md --no-commit)
+  python3 "$AG" preflight --unit "$UNIT" --no-commit >/dev/null
+  OUT=$(python3 "$AG" preflight --path docs/prds/099-fixture-prd/tasks.md --no-commit)
   echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['outcome']=='proceed'"
 ) && ok "authoring-guard-inline-reconcile-then-failclosed: stale cleared" || bad "authoring-guard-inline-reconcile-then-failclosed: stale"
 
@@ -103,7 +103,7 @@ TMP2=$(mktemp -d)
 {"verdict":"running","target":{"branch":"feat/live"},"inflightLease":{"runId":"deliver-live","epoch":1}}
 JSON
   set +e
-  OUT=$(bash "$AG" preflight --unit "$UNIT" --no-commit 2>&1)
+  OUT=$(python3 "$AG" preflight --unit "$UNIT" --no-commit 2>&1)
   EC=$?
   set -e
   [[ "$EC" -eq 20 ]]
@@ -113,7 +113,7 @@ JSON
 # --- authoring-guard-shared-across-commands (R14) ---
 for cmd in sw-amend sw-tasks sw-prd; do
   f="$ROOT/core/commands/${cmd}.md"
-  grep -q 'authoring-guard.sh preflight' "$f" && grep -q 'import planning_paths' "$ROOT/core/scripts/authoring_guard.py" || { bad "authoring-guard-shared-across-commands: $cmd"; continue; }
+  grep -qE 'authoring-guard[.]p[yh] preflight' "$f" && grep -q 'import planning_paths' "$ROOT/core/scripts/authoring_guard.py" || { bad "authoring-guard-shared-across-commands: $cmd"; continue; }
   ok "authoring-guard-shared-across-commands: $cmd"
 done
 
@@ -123,6 +123,27 @@ TMP3=$(mktemp -d)
   cd "$TMP3"
   git init -q && git config user.email t@t.com && git config user.name T
   seed_repo "$TMP3"
+  mkdir -p docs/planning/prd/prd-099-fixture-prd
+  cat >docs/planning/prd/prd-099-fixture-prd/prd-099-fixture-prd.md <<'MD'
+---
+id: prd-099-fixture-prd
+type: prd
+status: proposed
+title: Fixture PRD
+---
+# Fixture body
+MD
+  python3 - "$TMP3" <<'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[2] if len(sys.argv)>2 else '')
+idx = Path(sys.argv[1]) / "docs/planning/INDEX.md"
+text = idx.read_text(encoding="utf-8")
+needle = "<!-- region:derived -->"
+if needle in text:
+    text = text.replace(needle, needle + "\nprd-099-fixture-prd: in-progress\n")
+    idx.write_text(text)
+PY
   touch docs/prds/099-fixture-prd/tasks.md
   git add . && git commit -q -m init
   git branch -q feat/h
@@ -130,8 +151,8 @@ TMP3=$(mktemp -d)
   write_tuple "$ROOT/scripts" "$TMP3" "$UNIT" deliver-h feat/h
   mkdir -p .cursor
   echo '{"verdict":"running","inflightLease":{"runId":"deliver-h","epoch":1}}' > .cursor/sw-deliver-state.h.json
-  bash "$AG" preflight --path docs/prds/099-fixture-prd/tasks.md --command sw-amend --handoff "defer" --no-commit >/dev/null
-  bash "$AG" list-handoffs | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['handoffs']"
+  python3 "$AG" preflight --path docs/prds/099-fixture-prd/tasks.md --command sw-amend --handoff "defer" --no-commit >/dev/null
+  python3 "$AG" list-handoffs | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['handoffs']"
   python3 - "$TMP3" <<'INNER'
 import json, sys
 from pathlib import Path
@@ -139,7 +160,7 @@ root = Path(sys.argv[1])
 handoffs = json.loads((root / ".cursor/authoring-handoffs.json").read_text())["handoffs"]
 assert handoffs and handoffs[0].get("artifact")
 INNER
-  grep -q 'authoringHandoffs' "$ROOT/scripts/reconcile.py"
+  grep -q 'authoringHandoffs' "$ROOT/scripts/reconcile_lib.py"
 ) && ok "handoff-artifact-surfaced-in-status" || bad "handoff-artifact-surfaced-in-status"
 
 rm -rf "$TMP1" "$TMP2" "$TMP3"
