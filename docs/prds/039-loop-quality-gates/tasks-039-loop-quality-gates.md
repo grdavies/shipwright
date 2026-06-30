@@ -4,6 +4,7 @@ date: 2026-06-30
 topic: loop-quality-gates
 frozen: true
 frozen_at: 2026-06-30
+visibility: public
 ---
 # Tasks — PRD 039 Loop Quality Gates
 
