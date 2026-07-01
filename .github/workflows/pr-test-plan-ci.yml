@@ -605,3 +605,14 @@ jobs:
       - name: Run spec-rigor-brainstorm-profile-fixtures
         run: python3 scripts/test/run_spec_rigor_brainstorm_profile_fixtures.py
 
+  feat-test-plan-stdlib-coverage-fixtures:
+    name: feat-test-plan-stdlib-coverage-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run stdlib-coverage-fixtures
+        run: python3 scripts/test/run_stdlib_coverage_fixtures.py
+

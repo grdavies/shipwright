@@ -1039,6 +1039,15 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-spec-rigor-brainstorm-profile-fixtures"
+    },
+    {
+      "id": "stdlib-coverage-fixtures",
+      "script": "scripts/test/run_stdlib_coverage_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-stdlib-coverage-fixtures"
     }
   ]
 }
