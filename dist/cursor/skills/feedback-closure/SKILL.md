@@ -35,6 +35,14 @@ Closed:
 python3 scripts/feedback-backlog.py list --open-only --backlog docs/prds/GAP-BACKLOG.md
 ```
 
+
+## Meta vs product routing (PRD 041)
+
+- **Product gaps** — `gap-capture` destination writes tracked planning units immediately (PRD 033).
+- **Meta/dogfood** (`destination: meta-shipwright`, `gapClass: plugin-self`) — inbox draft only until
+  `planning_gap_capture.py confirm`; materialize creates the gap unit under `docs/planning/gap/`.
+  Closure and consumption paths for meta units remain human-gated; never auto-close plugin-self items.
+
 ## Closure (post-verify ship)
 
 Runs when local evidence shows the fix is verified **and** the backlog item is still open:

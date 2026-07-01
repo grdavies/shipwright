@@ -288,6 +288,12 @@ def cmd_verify_run(root: Path, args: list[str]) -> None:
         payload["cause"] = verify_failure_cause(outcome)
         payload["causeClass"] = classify_verify_failure(outcome)
         payload["recommendedCommand"] = "/sw-stabilize"
+        try:
+            import failure_signature_record_lib as fsr
+
+            fsr.maybe_record_verify_blocked(root, outcome, target=target)
+        except Exception:
+            pass
         emit(payload, exit_code=20)
     emit(payload)
 
@@ -358,6 +364,12 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
         text=True,
         capture_output=True,
     )
+    try:
+        import failure_signature_record_lib as fsr
+
+        fsr.maybe_record_verify_blocked(root, outcome, target=phase_slug)
+    except Exception:
+        pass
     emit(
         {
             "verdict": "fail",

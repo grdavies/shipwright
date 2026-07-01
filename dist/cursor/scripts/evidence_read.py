@@ -22,8 +22,8 @@ def safe_read_check(path: Path) -> bool:
     if not path.exists() or path.is_symlink(): return False
     if stat_uid(path) != caller_uid(): return False
     perms = stat_perms(path)
-    if (perms // 10) % 10 & 2: return False
-    if perms % 10 & 2: return False
+    if perms & (stat.S_IWGRP | stat.S_IWOTH):
+        return False
     return True
 
 def safe_json_load(path: Path):
