@@ -183,6 +183,7 @@
 * merge phase sizing-scorer-schema-read-only into feat/phase-granularity-parallelism (aabec63) <!-- sw-deliver:sizing-scorer-schema-read-only -->
 * merge phase split-suggestion-contention-integrity-advisory into feat/phase-granularity-parallelism (c4bf16b) <!-- sw-deliver:split-suggestion-contention-integrity-advisory -->
 * merge phase parallelism-objective-preflight-validation into feat/phase-granularity-parallelism (749df69) <!-- sw-deliver:parallelism-objective-preflight-validation -->
+* merge phase shared-writer-capture-surfaces into feat/self-improving-loop (864d11b) <!-- sw-deliver:shared-writer-capture-surfaces -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
