@@ -1,0 +1,6 @@
+{
+  "taskRef": "3.1",
+  "testScenario": "run_tdd_hardening_fixtures",
+  "skipped": true,
+  "skipReason": ""
+}

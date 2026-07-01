@@ -27,6 +27,11 @@ Push after `/sw-commit`; create/update PR against the real parent branch.
 
 **Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-pr`.
 
+
+## Decision log (required)
+
+Before PR create/update, capture a schema-valid `## Decision log` JSON block on the PR body (see `core/sw-reference/decision-log.schema.json`). Validate with `python3 scripts/decision_log.py ship-require --body-file <pr-body.md>`; missing/invalid records halt the ship chain (fail-closed; content routes through `scripts/memory-redact.py`).
+
 ## Guardrails
 
 - Does not commit, merge, or fix code.

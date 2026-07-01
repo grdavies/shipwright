@@ -16,6 +16,7 @@ from typing import Any
 from plan_persist import ROLE_PHASE, caller_role, empty_lifecycle
 from pilot_dependency_gate import proposed_pilot_enabled
 from wave_json_io import StateCorruptError, read_json, write_json
+from quality_config_freeze import pin_from_config, PIN_STATE_KEY
 from wave_plan_validate import empty_rejection_log, read_config_plan_policy
 
 VALID_PHASE_STATUSES = frozenset(
@@ -595,6 +596,16 @@ def cmd_state_init(root: Path, args: list[str]) -> None:
         "driverHeartbeatAt": utc_now(),
         "updatedAt": utc_now(),
     }
+    cfg: dict = {}
+    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
+        p = root / rel
+        if p.is_file():
+            try:
+                cfg = json.loads(p.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                cfg = {}
+            break
+    state[PIN_STATE_KEY] = pin_from_config(cfg)
     if read_config_plan_policy(root) == "proposed":
         if not proposed_pilot_enabled(root):
             fail(

@@ -514,6 +514,35 @@ python3 scripts/orchestrator_run.py . teardown --orchestrator-type debug --run-i
 Cross-orchestrator isolation: episodic runs refuse writes under `.cursor/sw-deliver-state*`,
 `.cursor/sw-deliver-runs/`, and other deliver-scoped paths (`scripts/orchestrator_run.py assert-write`).
 
+## Per-task execute status (PRD 039 R2)
+
+Per-task TDD + refactor rollup lives under `.cursor/sw-execute-runs/<sanitized-task-ref>/status.json`
+(written by `scripts/execute_task_status.py`). Schema reference:
+`core/skills/execute-discipline/references/refactor-status-schema.json`.
+
+```json
+{
+  "taskRef": "2.1",
+  "refactor": {
+    "ran": true,
+    "skipped": false,
+    "skipReason": "",
+    "signalRef": "/tmp/sw-quality.signal.json",
+    "verdict": "clean",
+    "metricDelta": { "coupling": "unavailable", "cohesion": "unavailable", "complexity": 0.0, "churn": 0 }
+  }
+}
+```
+
+| Field | Role |
+| --- | --- |
+| `refactor.ran` | Step executed (structural edit optional when signal is `none`/`clean`) |
+| `refactor.skipped` | Operational skip — requires non-empty `skipReason` |
+| `refactor.signalRef` | Path to quality harness signal consumed by the step |
+| `refactor.verdict` | `clean`, `advise`, `poor`, `regressed`, `skipped`, or `none` |
+| `refactor.metricDelta` | Delta vs pre-refactor harness snapshot; anti-gaming bar when hints non-empty |
+
+Gate: `python3 scripts/refactor-gate.py --status <path> [--signal <signal-path>]`.
 
 ## Python entrypoint model (R32)
 

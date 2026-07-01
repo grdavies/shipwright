@@ -59,3 +59,10 @@ truth (`check-gate.py` remains authoritative at merge).
 - Security-sensitive surfaces (auth, secrets, CI config) — surface for human review; do not bulk-simplify.
 - Persisted summaries through `python3 scripts/memory-redact.py` (R41).
 - Slots alongside future local code-review (`providers/code-review/`) — does not duplicate persona review.
+
+
+## Refactor-vs-simplify boundary (PRD 039 R7)
+
+`/sw-simplify` is **post-review, phase-level deslop** on the uncommitted delta. The per-task **refactor** step
+in `skills/execute-discipline` runs earlier (after green, before stage-1 review) and consumes the quality
+harness signal. This skill does not replace or inline refactor.

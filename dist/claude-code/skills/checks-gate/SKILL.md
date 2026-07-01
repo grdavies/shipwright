@@ -50,7 +50,7 @@ echo "$OUT" | Python json .
 | `30` | `blocked` |
 
 JSON includes `verdict`, `head`, `reviewProvider`, `coderabbitState` (`landed`/`skipped`/`in-flight`/`absent`),
-`coderabbitLanded`, `unresolvedActionable`, check lists, `requiredFailingChecks`, `advisoryFailingChecks`,
+`coderabbitLanded`, `unresolvedActionable`, check lists, `requiredFailingChecks`, `advisoryFailingChecks`, `qualityAdvisory` (structural-quality harness — **advisory by default**, non-blocking like PR test-plan advisory jobs; see `quality.provider` / `quality.blockingTier`),
 and `prTestPlan` (manifest job names when `core/sw-reference/pr-test-plan.manifest.json` is present), and
 `reason`.
 

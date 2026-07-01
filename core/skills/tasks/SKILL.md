@@ -23,7 +23,7 @@ Port of v1 `spec-tasks` under `sw-`. Reads U8 union so amended requirements are 
    - Sub-tasks: **File**, **Expected**, **R-IDs** as below.
    - Relevant Files + Notes as needed.
 4. Emit **`## Phase Dependencies`** (required) — machine-parseable edge source for `/sw-deliver` phase-mode (R5/R6/R37). Place after `## Tasks` and before `## Traceability`.
-5. Add `## Traceability` table mapping each union R-ID → task ref → named test scenario.
+5. Add `## Traceability` table mapping each union R-ID → task ref → named test scenario → **ZOMBIES checklist** (test-list-first; see `skills/spec-rigor/references/zombies.md`).
 6. Save task file; run `spec-rigor-check.py` (tasks) + `traceability-check.py`; freeze via `/sw-freeze`.
 7. Register/refresh PRD entry in `docs/prds/INDEX.md` with status `not-started`.
 8. **Stop** — do not start implementation. Standalone `/sw-tasks` ends after freeze; `doc.afterTasks` on

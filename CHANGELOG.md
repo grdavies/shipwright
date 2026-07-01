@@ -172,9 +172,13 @@
 * merge phase hooks-security-filters-providers-l into feat/cross-platform-python-standardization (86f9471) <!-- sw-deliver:hooks-security-filters-providers-l -->
 * merge phase remaining-production-port-consolidations-l into feat/cross-platform-python-standardization (58a4edf) <!-- sw-deliver:remaining-production-port-consolidations-l -->
 * merge phase test-harness-build-chain-docs-migration-enforcement-flip-xl into feat/cross-platform-python-standardization (af526c2) <!-- sw-deliver:test-harness-build-chain-docs-migration-enforcement-flip-xl -->
-* merge phase foundation-config-provider-abstraction-capability-token-probes-region-disposition-matrix-l into feat/issue-backed-planning-store (9a85522) <!-- sw-deliver:foundation-config-provider-abstraction-capability-token-probes-region-disposition-matrix-l -->
-* merge phase core-artifact-store-identification-canonical-serialization-l into feat/issue-backed-planning-store (f22277f) <!-- sw-deliver:core-artifact-store-identification-canonical-serialization-l -->
+* merge phase review-provenance-blocking-promotion-m-l into feat/loop-quality-gates (bf5a02d) <!-- sw-deliver:review-provenance-blocking-promotion-m-l -->
+* merge phase tdd-hardening-m-l-no-silent-skips-tamper-over-mock-detection-zombies-mutation-hook into feat/loop-quality-gates (c402357) <!-- sw-deliver:tdd-hardening-m-l-no-silent-skips-tamper-over-mock-detection-zombies-mutation-hook -->
+* merge phase refactor-step-built-in-provider-m-l-enforced-consideration-signal-gated-action into feat/loop-quality-gates (e3ddc8b) <!-- sw-deliver:refactor-step-built-in-provider-m-l-enforced-consideration-signal-gated-action -->
 * merge phase freeze-materialization-brainstorm-durability-resilience-l into feat/issue-backed-planning-store (69d2398) <!-- sw-deliver:freeze-materialization-brainstorm-durability-resilience-l -->
+* merge phase core-artifact-store-identification-canonical-serialization-l into feat/issue-backed-planning-store (f22277f) <!-- sw-deliver:core-artifact-store-identification-canonical-serialization-l -->
+* merge phase foundation-config-provider-abstraction-capability-token-probes-region-disposition-matrix-l into feat/issue-backed-planning-store (9a85522) <!-- sw-deliver:foundation-config-provider-abstraction-capability-token-probes-region-disposition-matrix-l -->
+* merge phase quality-harness-contract-s-m-advisory-only-scaffold-no-default-behavior-change into feat/loop-quality-gates (dea7070) <!-- sw-deliver:quality-harness-contract-s-m-advisory-only-scaffold-no-default-behavior-change -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

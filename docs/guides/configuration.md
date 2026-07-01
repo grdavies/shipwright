@@ -270,6 +270,8 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `memory.sourceOfTruth` | `auto` (default), `repo`, or `memory` — authority for **decision** records only (`auto`: external provider → memory, in-repo → repo) |
 | `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
 | `review.provider` | AI review adapter — default **`none`**; `coderabbit` opt-in |
+| `quality.provider` | Structural-quality harness — default **`none`** (no-op safe default; `quality:none`) |
+| `quality.blockingTier` | Optional triage tier (`quick`/`standard`/`full`) at which a `poor` verdict blocks via gate (unset = advisory only) |
 | `verify.lint` | Command `/sw-verify` runs for linting |
 | `verify.typecheck` | Command `/sw-verify` runs for type checking |
 | `verify.test` | Command `/sw-verify` runs for tests (Shipwright dev repos chain fixture suites; user installs use real project tests) |

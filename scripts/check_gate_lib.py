@@ -232,6 +232,134 @@ def build_reason(
     return f"all checks pass; review landed for head {short}; 0 actionable threads"
 
 
+def attach_quality_context(root: Path, cfg: dict, payload: dict) -> tuple[int, dict]:
+    from quality_config_freeze import load_pin_from_deliver_state, validate_pin
+    pin = load_pin_from_deliver_state(root)
+    freeze = validate_pin(pin, cfg)
+    if freeze.get("verdict") == "fail":
+        blocked = {
+            "verdict": "blocked",
+            "reason": freeze.get("reason", "quality-config-mutation"),
+            "qualityConfigFreeze": freeze,
+        }
+        jsonio.emit(blocked)
+        return 30, blocked
+    import subprocess
+    proc = subprocess.run([sys.executable, str(SCRIPT_DIR / "quality_provider.py")], capture_output=True, text=True, cwd=str(root))
+    signal = {}
+    try:
+        signal = json.loads(proc.stdout.strip() or "{}")
+    except json.JSONDecodeError:
+        signal = {"verdict": "none", "provider": "unknown", "skipped": True}
+    payload = dict(payload)
+    payload["qualityAdvisory"] = signal
+    return 0, payload
+
+
+
+TRIAGE_TIER_RANK = {"quick": 0, "standard": 1, "full": 2}
+QUALITY_BLOCKING_CHECK = "quality-harness:poor"
+
+
+def resolve_change_triage_tier(root: Path) -> str | None:
+    env = os.environ.get("SW_TRIAGE_TIER") or os.environ.get("SW_CHANGE_TIER")
+    if env:
+        tier = str(env).strip().lower()
+        if tier in TRIAGE_TIER_RANK:
+            return tier
+    run_dir = os.environ.get("SW_RUN_DIR")
+    candidates: list[Path] = []
+    if run_dir:
+        candidates.append(Path(run_dir) / "status.json")
+    phase = os.environ.get("SW_PHASE_SLUG")
+    if phase:
+        candidates.append(root / ".cursor" / "sw-deliver-runs" / phase / "status.json")
+    for cand in candidates:
+        if not cand.is_file():
+            continue
+        try:
+            data = json.loads(cand.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        if isinstance(data, dict):
+            for key in ("triageTier", "changeTier", "tier"):
+                val = data.get(key)
+                if isinstance(val, str) and val.lower() in TRIAGE_TIER_RANK:
+                    return val.lower()
+    return None
+
+
+def apply_quality_blocking_promotion(
+    cfg: dict[str, Any],
+    payload: dict[str, Any],
+    *,
+    verdict: str,
+    required_failing: list[str],
+    reason: str,
+) -> tuple[str, list[str], str, dict[str, Any]]:
+    """Promote poor quality signal to blocking when triage tier >= quality.blockingTier."""
+    payload = dict(payload)
+    quality_cfg = cfg.get("quality") if isinstance(cfg.get("quality"), dict) else {}
+    blocking_tier = quality_cfg.get("blockingTier")
+    if not blocking_tier:
+        return verdict, required_failing, reason, payload
+    floor = str(blocking_tier).strip().lower()
+    if floor not in TRIAGE_TIER_RANK:
+        return verdict, required_failing, reason, payload
+    change_tier = resolve_change_triage_tier(Path.cwd())
+    if change_tier is None:
+        return verdict, required_failing, reason, payload
+    if TRIAGE_TIER_RANK[change_tier] < TRIAGE_TIER_RANK[floor]:
+        return verdict, required_failing, reason, payload
+    signal = payload.get("qualityAdvisory")
+    if not isinstance(signal, dict) or str(signal.get("verdict")) != "poor":
+        return verdict, required_failing, reason, payload
+    req = list(required_failing)
+    if QUALITY_BLOCKING_CHECK not in req:
+        req.append(QUALITY_BLOCKING_CHECK)
+    new_verdict = "red" if verdict in ("green", "yellow") else verdict
+    if new_verdict == "red" and verdict != "red":
+        reason = f"quality harness poor at triage tier {change_tier} (blockingTier={floor})"
+    payload["qualityBlockingPromotion"] = {
+        "applied": True,
+        "changeTier": change_tier,
+        "blockingTier": floor,
+        "check": QUALITY_BLOCKING_CHECK,
+    }
+    return new_verdict, req, reason, payload
+
+
+def finalize_gate_payload(
+    root: Path,
+    cfg: dict[str, Any],
+    payload: dict[str, Any],
+    *,
+    verdict: str,
+    required_failing: list[str],
+    reason: str,
+) -> tuple[int, dict[str, Any]]:
+    ec, payload = attach_quality_context(root, cfg, payload)
+    if ec != 0:
+        return ec, payload
+    verdict, required_failing, reason, payload = apply_quality_blocking_promotion(
+        cfg,
+        payload,
+        verdict=verdict,
+        required_failing=required_failing,
+        reason=reason,
+    )
+    payload["verdict"] = verdict
+    payload["reason"] = reason
+    payload["requiredFailingChecks"] = required_failing
+    if verdict in payload.get("failingChecks", []) or QUALITY_BLOCKING_CHECK in required_failing:
+        failing = list(payload.get("failingChecks") or [])
+        if QUALITY_BLOCKING_CHECK not in failing and QUALITY_BLOCKING_CHECK in required_failing:
+            failing.append(QUALITY_BLOCKING_CHECK)
+            payload["failingChecks"] = failing
+    jsonio.emit(payload)
+    return VERDICT_EXIT.get(verdict, 1), payload
+
+
 def build_gate_payload(
     *,
     verdict: str,
@@ -257,6 +385,7 @@ def build_gate_payload(
     blocking: list[str],
     check_count: int,
     deprecations: list[str],
+    quality_advisory: Any | None = None,
     pr: int | None = None,
     branch: str | None = None,
     source: str | None = None,
@@ -286,6 +415,8 @@ def build_gate_payload(
         "blockingNeutral": blocking,
         "checkCount": check_count,
     }
+    if quality_advisory is not None:
+        payload["qualityAdvisory"] = quality_advisory
     if pr is not None:
         payload["pr"] = pr
     if branch is not None:
@@ -317,10 +448,11 @@ def resolve_review_state(
     issue_comments_file: Path,
     grace_min: int,
 ) -> tuple[dict[str, Any], list[str]]:
+    from review_synthesize import resolve_review_providers, synthesize_gate_adapters
+
     review = cfg.get("review") if isinstance(cfg.get("review"), dict) else {}
-    review_provider_raw = review.get("provider")
-    review_provider_set = "provider" in review
-    review_provider = str(review_provider_raw or "none")
+    review_provider_set = "provider" in review or "providers" in review
+    provider_ids = resolve_review_providers(review)
     review_enabled = True
     if "enabled" in review:
         review_enabled = bool(review.get("enabled"))
@@ -332,18 +464,21 @@ def resolve_review_state(
             "review.enabled is deprecated; use review.provider:\"none\""
         )
 
-    if not re.fullmatch(r"[a-z0-9-]*", review_provider):
-        return (
-            {
-                "error": True,
-                "payload": {
-                    "verdict": "blocked",
-                    "reason": f"invalid review.provider: {review_provider}",
+    review_provider = ",".join(provider_ids) if provider_ids else str(review.get("provider") or "none")
+
+    for pid in provider_ids:
+        if not re.fullmatch(r"[a-z0-9-]*", pid):
+            return (
+                {
+                    "error": True,
+                    "payload": {
+                        "verdict": "blocked",
+                        "reason": f"invalid review provider: {pid}",
+                    },
+                    "exit_code": 30,
                 },
-                "exit_code": 30,
-            },
-            deprecations,
-        )
+                deprecations,
+            )
 
     cr_state = "off"
     cr_landed = True
@@ -352,29 +487,22 @@ def resolve_review_state(
     cr_marker = False
     cr_skipped = False
     mins_since = 0
+    review_landed = True
+    review_state = "off"
 
-    if review_enabled is False or (review_provider_set and review_provider_raw == "none"):
+    if review_enabled is False or (review_provider_set and (not provider_ids or provider_ids == ["none"])):
         pass
-    elif not review_provider_set:
+    elif not review_provider_set and not provider_ids:
         cr_state = "unconfigured"
         cr_status = "unconfigured"
-    elif review_provider == "none":
+        review_state = "unconfigured"
+        review_landed = True
+    elif provider_ids == ["none"] or (len(provider_ids) == 1 and provider_ids[0] == "none"):
         pass
     else:
-        adapter = plugin_root / "providers" / "review" / f"{review_provider}.py"
-        if not adapter.is_file():
-            return (
-                {
-                    "error": True,
-                    "payload": {
-                        "verdict": "blocked",
-                        "reason": f"unknown review provider: {review_provider}",
-                    },
-                    "exit_code": 30,
-                },
-                deprecations,
-            )
-        env = {
+        active_ids = [p for p in provider_ids if p and p != "none"]
+        states: list[tuple[str, dict[str, Any]]] = []
+        env_base = {
             **os.environ,
             "SW_PR": str(pr),
             "SW_HEAD_SHA": head_sha,
@@ -386,22 +514,42 @@ def resolve_review_state(
             "SW_ISSUE_COMMENTS_FILE": str(issue_comments_file),
             "SW_GRACE_MIN": str(grace_min),
         }
-        completed = proc.run([sys.executable, str(adapter)], cwd=str(root), env=env)
-        try:
-            review_json = json.loads(completed.stdout.strip() or "{}")
-        except json.JSONDecodeError:
-            review_json = {}
-        has_per_head = review_json.get("capabilities", {}).get("perHeadState", False)
-        cr_state = str(review_json.get("perHeadState", "in-flight"))
-        cr_landed = bool(review_json.get("perHeadLanded", False))
-        cr_reviewed_head = str(review_json.get("reviewedHead") or "")
-        cr_status = str(review_json.get("statusContext", "absent"))
-        cr_marker = bool(review_json.get("inProgressMarker", False))
-        cr_skipped = bool(review_json.get("skipped", False))
-        mins_since = int(review_json.get("minutesSinceHeadPush", 0) or 0)
-        if not has_per_head:
+        for pid in active_ids:
+            adapter = plugin_root / "providers" / "review" / f"{pid}.py"
+            if not adapter.is_file():
+                return (
+                    {
+                        "error": True,
+                        "payload": {
+                            "verdict": "blocked",
+                            "reason": f"unknown review provider: {pid}",
+                        },
+                        "exit_code": 30,
+                    },
+                    deprecations,
+                )
+            completed = proc.run([sys.executable, str(adapter)], cwd=str(root), env=env_base)
+            try:
+                review_json = json.loads(completed.stdout.strip() or "{}")
+            except json.JSONDecodeError:
+                review_json = {}
+            states.append((pid, review_json))
+
+        merged = synthesize_gate_adapters(states)
+        review_landed = bool(merged.get("reviewLanded"))
+        review_state = str(merged.get("reviewState") or "in-flight")
+        cr_state = review_state
+        cr_landed = review_landed
+        cr_reviewed_head = str(merged.get("reviewedHead") or "")
+        cr_status = str((states[0][1].get("statusContext") if states else "absent") or "absent")
+        cr_marker = any(bool(st.get("inProgressMarker")) for _, st in states)
+        cr_skipped = all(bool(st.get("skipped")) for _, st in states) if states else False
+        mins_since = max(int(st.get("minutesSinceHeadPush", 0) or 0) for _, st in states) if states else 0
+        if states and not all(bool((st.get("capabilities") or {}).get("perHeadState")) for _, st in states):
             cr_state = "in-flight"
             cr_landed = False
+            review_landed = False
+            review_state = "in-flight"
 
     return (
         {
@@ -414,6 +562,8 @@ def resolve_review_state(
             "cr_marker": cr_marker,
             "cr_skipped": cr_skipped,
             "mins_since": mins_since,
+            "review_landed": review_landed,
+            "review_state": review_state,
         },
         deprecations,
     )
@@ -462,7 +612,11 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
     allowlist = cfg_value(cfg, "checks", "neutralAllowlist", default=[]) or []
     if not isinstance(allowlist, list):
         allowlist = []
-    review_provider = str(cfg_value(cfg, "review", "provider", default="none") or "none")
+    from review_synthesize import resolve_review_providers
+
+    review_cfg = cfg.get("review") if isinstance(cfg.get("review"), dict) else {}
+    ids = resolve_review_providers(review_cfg)
+    review_provider = ",".join(ids) if ids else str(cfg_value(cfg, "review", "provider", default="none") or "none")
     pr_test_plan, advisory_jobs, required_jobs = load_pr_test_plan(root, cfg)
 
     if not re.fullmatch(r"[a-z0-9-]*", review_provider):
@@ -533,8 +687,14 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
         source="local-evidence",
         pr=None,
     )
-    jsonio.emit(payload)
-    return VERDICT_EXIT.get(verdict, 1), payload
+    return finalize_gate_payload(
+        root,
+        cfg,
+        payload,
+        verdict=verdict,
+        required_failing=required_failing,
+        reason=reason,
+    )
 
 
 def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]]:
@@ -638,7 +798,7 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
         required_failing=required_failing,
         blocking=blocking,
         pending=pending,
-        cr_landed=bool(review_result["cr_landed"]),
+        cr_landed=bool(review_result.get("review_landed", review_result["cr_landed"])),
         check_count=len(classified),
         actionable=actionable,
     )
@@ -648,7 +808,7 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
         required_failing=required_failing,
         advisory_failing=advisory_failing,
         actionable=actionable,
-        cr_landed=bool(review_result["cr_landed"]),
+        cr_landed=bool(review_result.get("review_landed", review_result["cr_landed"])),
         cr_state=str(review_result["cr_state"]),
         head_sha=head_sha,
         review_provider=str(review_result["review_provider"]),
@@ -682,5 +842,11 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
         deprecations=deprecations,
         pr=int(pr),
     )
-    jsonio.emit(payload)
-    return VERDICT_EXIT.get(verdict, 1), payload
+    return finalize_gate_payload(
+        root,
+        cfg,
+        payload,
+        verdict=verdict,
+        required_failing=required_failing,
+        reason=reason,
+    )
