@@ -185,6 +185,7 @@
 * merge phase parallelism-objective-preflight-validation into feat/phase-granularity-parallelism (749df69) <!-- sw-deliver:parallelism-objective-preflight-validation -->
 * merge phase shared-writer-capture-surfaces into feat/self-improving-loop (864d11b) <!-- sw-deliver:shared-writer-capture-surfaces -->
 * merge phase recurrence-escalation-pattern-reuse into feat/self-improving-loop (9d25344) <!-- sw-deliver:recurrence-escalation-pattern-reuse -->
+* merge phase inefficiency-scanner-behavioral-anomalies into feat/self-improving-loop (88f429e) <!-- sw-deliver:inefficiency-scanner-behavioral-anomalies -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
