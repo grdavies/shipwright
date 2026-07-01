@@ -771,6 +771,17 @@
         "stdlib-coverage-mode-no-behavior-change",
         "stdlib-coverage-report-executed-and-unexecuted-lines"
       ]
+    },
+    {
+      "id": "prd-051-ship-verification-fixtures",
+      "script": "scripts/test/run_prd_051_ship_verification_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-prd-051-ship-verification-fixtures",
+      "scenarios": [
+        "manifest-registration",
+        "gap-flip-verification"
+      ]
     }
   ]
 }

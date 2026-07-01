@@ -58,7 +58,7 @@
 | 052 | test-suite-registration-single-source | [052-prd-test-suite-registration-single-source.md](052-test-suite-registration-single-source/052-prd-test-suite-registration-single-source.md) (frozen) | [tasks](052-test-suite-registration-single-source/tasks-052-test-suite-registration-single-source.md) (frozen) | complete |
 <!-- planning-index:structural begin -->| id | type | title | status | visibility | edges |
 | --- | --- | --- | --- | --- | --- |
-| gap-001-spec-rigor-check-sh-lacks-a-brainstorm-artifact- | gap | spec-rigor-check.sh lacks a brainstorm artifact profile (validates brainstorms against PRD structure) | open | public |  |
+| gap-001-spec-rigor-check-sh-lacks-a-brainstorm-artifact- | gap | spec-rigor-check.sh lacks a brainstorm artifact profile (validates brainstorms against PRD structure) | resolved | public |  |
 | gap-002-living-doc-reconcile-commits-bypass-r31-default- | gap | Living-doc reconcile commits bypass R31 default-branch refusal (wave_living_docs.py / reconcile.py set-index-status) | open | public |  |
 | gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi | gap | Gap/doc-feedback capture has two unreconciled file paths and bypasses the planning_store backend interface | open | public |  |
 | gap-004-dispatch-binding-preflight-broken-bash-invokes-p | gap | Dispatch-binding preflight broken: bash invokes .py scripts, and interactive parent models are not in models.tiers | scheduled | public |  |
