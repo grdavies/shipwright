@@ -1,0 +1,33 @@
+{
+  "tasks.sizing.thresholds": {
+    "filesTouched": {
+      "small": 6,
+      "medium": 10
+    },
+    "traceabilityScenarios": {
+      "small": 3,
+      "medium": 6
+    },
+    "subTaskCount": {
+      "small": 3,
+      "medium": 5
+    },
+    "distinctDirs": {
+      "small": 4,
+      "medium": 6
+    },
+    "depFanOut": {
+      "small": 1,
+      "medium": 2
+    }
+  },
+  "tasks.sizing.minPhaseFiles": 2,
+  "tasks.sizing.minPhaseScenarios": 1,
+  "tasks.sizing.maxPhaseCount": 13,
+  "derivation": {
+    "method": "corpus-percentiles",
+    "smallMediumCut": "p50/p75 per signal",
+    "floors": "p10 for minPhase*",
+    "maxPhaseCount": "max observed phases per task list, floored at p90+2"
+  }
+}

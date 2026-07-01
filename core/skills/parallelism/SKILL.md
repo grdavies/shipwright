@@ -25,6 +25,24 @@ Exit 10 = at ceiling → **recombination required** before another provision.
 3. Prefer **rebase** for linear history before dispatching long-running parallel work.
 4. Run merge pre-flight: refuse parallel dispatch when migration paths or high-risk shared files overlap.
 
+## Contention families (phase-mode + split suggestions)
+
+`/sw-deliver` phase-mode and PRD 040 split suggestions share the same serializing families via
+`wave_deliver.py` (`inject_contention_edges`, `paths_contend`, `expand_generator_contention_paths`). When
+authoring phases or reviewing advisory splits, treat these as mandatory serialization edges — never drop one
+to gain parallelism:
+
+| Family | Trigger |
+|--------|---------|
+| Shared migrations | Overlap under `db/migrate/`, `supabase/migrations/`, `prisma/migrations/` |
+| Release bookkeeping | Both phases touch `CHANGELOG.md` or `version.txt` |
+| Living doc numbering | `docs/prds/INDEX.md`, `docs/decisions/INDEX.md`, doc-numbering counters |
+| `**File:**` path overlap | Same normalized path in two parallel phases |
+| Generator output | `generator-output` / golden-manifest globs via `expand_generator_contention_paths` |
+
+Split suggestions from `python3 scripts/phase_sizing.py advisory` cite these families when proposing
+mandatory internal edges. Simulation uses the same primitives as `scripts/wave.py plan --dry-run`.
+
 ## Shared-migration refusal
 
 Before parallel provision/dispatch, check for overlapping:

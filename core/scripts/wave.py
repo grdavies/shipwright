@@ -102,6 +102,33 @@ def dispatch(argv: list[str]) -> int:
         if rest and rest[0] == "deny":
             return _python("wave_failure.py", root, ["terminal", *rest])
         return _python("wave_terminal.py", root, ["terminal", *rest])
+    if cmd == "sizing-report":
+        task_list = None
+        rest_args = list(rest)
+        if "--task-list" in rest_args:
+            idx = rest_args.index("--task-list")
+            if idx + 1 < len(rest_args):
+                task_list = rest_args[idx + 1]
+        if not task_list:
+            sys.stderr.write("sizing-report requires --task-list <path>\n")
+            return 2
+        probe = interpreter.probe()
+        completed = proc.run(
+            [
+                *probe.executable,
+                str(SCRIPT_DIR / "phase_sizing.py"),
+                "--root",
+                str(root),
+                "score",
+                task_list,
+            ],
+            cwd=str(root),
+        )
+        if completed.stdout:
+            sys.stdout.write(completed.stdout)
+        if completed.stderr:
+            sys.stderr.write(completed.stderr)
+        return completed.returncode
     if cmd == "plan":
         if rest and rest[0] == "validate":
             return _python("wave_plan_validate.py", root, ["validate", *rest[1:]])

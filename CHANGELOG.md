@@ -179,6 +179,10 @@
 * merge phase core-artifact-store-identification-canonical-serialization-l into feat/issue-backed-planning-store (f22277f) <!-- sw-deliver:core-artifact-store-identification-canonical-serialization-l -->
 * merge phase foundation-config-provider-abstraction-capability-token-probes-region-disposition-matrix-l into feat/issue-backed-planning-store (9a85522) <!-- sw-deliver:foundation-config-provider-abstraction-capability-token-probes-region-disposition-matrix-l -->
 * merge phase quality-harness-contract-s-m-advisory-only-scaffold-no-default-behavior-change into feat/loop-quality-gates (dea7070) <!-- sw-deliver:quality-harness-contract-s-m-advisory-only-scaffold-no-default-behavior-change -->
+* merge phase corpus-calibration-read-only-baseline-thresholds into feat/phase-granularity-parallelism (c1a1391) <!-- sw-deliver:corpus-calibration-read-only-baseline-thresholds -->
+* merge phase sizing-scorer-schema-read-only into feat/phase-granularity-parallelism (aabec63) <!-- sw-deliver:sizing-scorer-schema-read-only -->
+* merge phase split-suggestion-contention-integrity-advisory into feat/phase-granularity-parallelism (c4bf16b) <!-- sw-deliver:split-suggestion-contention-integrity-advisory -->
+* merge phase parallelism-objective-preflight-validation into feat/phase-granularity-parallelism (749df69) <!-- sw-deliver:parallelism-objective-preflight-validation -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

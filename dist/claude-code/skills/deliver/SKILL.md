@@ -52,6 +52,20 @@ Multi-feature mode uses `"mode": "multi-feature"` with conforming type-prefixed 
 - **Contention → `/sw-tasks` (R16):** plan-time serialization notices persist to run-state
   `contentionFeedback`; surface suggestions (never auto-rewrite frozen tasks) via
   `scripts/wave_deliver.py <root> tasks-suggest [--target <type>/<slug>]`.
+### Phase dependency fallback ladder (PRD 013 — authoritative)
+
+`/sw-tasks` **requires** `## Phase Dependencies` at freeze. For **legacy** frozen lists that omit the table,
+phase-mode planning applies this ladder in order (implemented in `wave_deliver.deps_to_edges` — no regression):
+
+1. **Declared edges** — when `## Phase Dependencies` is present, rows are authoritative for wave planning.
+2. **File-set inference** — when the table is absent, overlapping `**File:**` paths between phases infer
+   serializing edges (`kind: file-set`) before any sequential fallback; notices include `file-set edge`.
+3. **Sequential + notice** — when the table is absent and file-set inference finds no overlaps, strict
+   sequential edges (`1→2`, `2→3`, …) apply with a `missing Phase Dependencies table` notice.
+
+Explicit author edges always beat inference. Authors SHOULD declare parallelizable phases explicitly — do not
+rely on deliver-time fallback for new multi-phase PRDs.
+
 
 ## Run-state artifacts
 

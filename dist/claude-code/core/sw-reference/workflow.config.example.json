@@ -170,5 +170,34 @@
     "enabled": false,
     "provider": "none",
     "excludeList": []
+  },
+  "tasks": {
+    "sizing": {
+      "thresholds": {
+        "filesTouched": {
+          "small": 6,
+          "medium": 10
+        },
+        "traceabilityScenarios": {
+          "small": 3,
+          "medium": 6
+        },
+        "subTaskCount": {
+          "small": 3,
+          "medium": 5
+        },
+        "distinctDirs": {
+          "small": 4,
+          "medium": 6
+        },
+        "depFanOut": {
+          "small": 1,
+          "medium": 2
+        }
+      },
+      "minPhaseFiles": 2,
+      "minPhaseScenarios": 1,
+      "maxPhaseCount": 13
+    }
   }
 }

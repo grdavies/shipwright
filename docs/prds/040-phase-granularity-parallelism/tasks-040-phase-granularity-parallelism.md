@@ -2,6 +2,7 @@
 prd: docs/prds/040-phase-granularity-parallelism/040-prd-phase-granularity-parallelism.md
 date: 2026-06-30
 topic: phase-granularity-parallelism
+visibility: public
 frozen: true
 frozen_at: 2026-06-30
 ---

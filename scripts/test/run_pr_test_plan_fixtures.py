@@ -57,7 +57,7 @@ GENERATOR="$ROOT/scripts/generate-pr-test-plan-ci-workflow.sh"
 # --- pr-test-plan-set-single-source (R1, R3) ---
 if [[ -f "$MANIFEST" ]] && [[ -f "$WF_CONFIG" ]] && \
    jq -e '.ci.prTestPlanManifest' "$WF_CONFIG" >/dev/null 2>&1 && \
-   grep -q 'run-pr-test-plan-manifest.sh' "$WF_CONFIG"; then
+   grep -qE 'run-pr-test-plan-manifest|_runner\.py verify' "$WF_CONFIG"; then
   ok "pr-test-plan-set-single-source: verify.test + ci.prTestPlanManifest wired"
 else
   bad "pr-test-plan-set-single-source: manifest not wired (ci.prTestPlanManifest + verify.test)"

@@ -19,9 +19,10 @@ Port of v1 `spec-tasks` under `sw-`. Reads U8 union so amended requirements are 
 1. Require frozen PRD as input.
 2. Load effective spec via `scripts/spec-union.py` or `skills/spec-union/SKILL.md`.
 3. In **one pass**, identify parent tasks (phases) and expand each into `- [ ]` sub-tasks with **executable shape** (IM6):
-   - Parent tasks: numbered, dependency-ordered, S/M/L sizing (`### N.` headings).
+   - Parent tasks: numbered, dependency-ordered, `small|medium|large` sizing from the deterministic heuristic (`### N.` headings; see **Phase sizing heuristic** below).
    - Sub-tasks: **File**, **Expected**, **R-IDs** as below.
    - Relevant Files + Notes as needed.
+   - **Prefer many small phases** with explicit `## Phase Dependencies` edges over few large sequential phases (R19).
 4. Emit **`## Phase Dependencies`** (required) — machine-parseable edge source for `/sw-deliver` phase-mode (R5/R6/R37). Place after `## Tasks` and before `## Traceability`.
 5. Add `## Traceability` table mapping each union R-ID → task ref → named test scenario → **ZOMBIES checklist** (test-list-first; see `skills/spec-rigor/references/zombies.md`).
 6. Save task file; run `spec-rigor-check.py` (tasks) + `traceability-check.py`; freeze via `/sw-freeze`.
@@ -52,11 +53,49 @@ Rules:
 - Edges are authoritative for `/sw-deliver` wave planning — derive from the dependency order of parent phases.
 - Human-reviewable; lives inside the task-list artifact (no sidecar file).
 
-### Sequential fallback (R8)
+### Deliver-time fallback (PRD 013 — legacy lists only)
 
-If a task list omits `## Phase Dependencies`, `/sw-deliver` falls back to strict sequential edges (`2:1`, `3:2`, …)
-with **no parallelism** and emits a missing-edges notice. Authors SHOULD emit explicit edges whenever phases can
-run in parallel or have non-linear dependencies — do not rely on sequential fallback for multi-phase PRDs.
+**Sequential fallback (R8):** when neither declared edges nor file-set inference apply, deliver assigns strict sequential edges with a notice.
+
+`/sw-tasks` **requires** `## Phase Dependencies` at freeze (`spec-rigor-check.py` blocks missing/invalid tables).
+For **legacy** frozen lists that omit the table, `/sw-deliver` applies the PRD 013 ladder (authoritative in
+`skills/deliver/SKILL.md`):
+
+1. **Declared** — explicit `## Phase Dependencies` rows (always preferred at authoring time).
+2. **File-set inference** — overlapping `**File:**` paths infer serializing edges before wave assignment.
+3. **Sequential + notice** — strict `1→2→3…` edges with a missing-edges notice when inference finds no overlap.
+
+Authors MUST emit explicit edges for new task lists — never rely on deliver-time fallback for multi-phase PRDs.
+
+## Phase sizing heuristic (PRD 040)
+
+Replace informal S/M/L labels with the deterministic scorer:
+
+```bash
+python3 scripts/phase_sizing.py score docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
+python3 scripts/phase_sizing.py advisory docs/prds/<n>-<slug>/tasks-<n>-<slug>.md   # draft-only block
+```
+
+Per phase the scorer emits `size: small|medium|large` from structural signals (`filesTouched`,
+`traceabilityScenarios`, `depFanOut`, `subTaskCount`, `distinctDirs`) against `tasks.sizing.thresholds` in
+config. Thresholds and bounds (`minPhaseFiles`, `minPhaseScenarios`, `maxPhaseCount`) are documented in
+`core/sw-reference/phase-sizing.schema.json`.
+
+### Small-phase design constraint (R18)
+
+**Small phases are a design constraint** for reviewability and wave parallelism (Osmani on bounded change sets;
+Faros reports on agent PR size). Each phase SHOULD stay `small` or `medium` where practical. Splitting below the
+**minimum-viable-phase floor** (`belowFloor: true`) is not rewarded — avoid granularity DoS (many tiny phases
+inflating merge-gate load).
+
+### Prefer-many-small + split suggestions (R19)
+
+- Prefer **many small phases with declared dependency edges** over one large sequential phase.
+- When `overThreshold: true` or `separableSets` has multiple components, review the advisory split suggestion
+  (draft-only; stripped at freeze). Each proposed edge MUST respect contention families documented in
+  `skills/parallelism/SKILL.md` (shared migrations, living INDEX/numbering, `CHANGELOG`/`version.txt`,
+  `**File:**` overlap, generator-output / golden-manifest globs).
+- Adopting a split requires an unfrozen `/sw-tasks` re-run + `/sw-freeze` — never edit a frozen task list in place.
 
 ## Executable sub-task shape
 

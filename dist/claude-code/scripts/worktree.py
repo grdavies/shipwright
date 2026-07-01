@@ -14,6 +14,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from _sw.cli import build_parser, run_module_main
+from host_lib import remote_name
 
 
 def strip_jsonc(text: str) -> str:
@@ -328,7 +329,7 @@ def cmd_provision(argv: list[str]) -> int:
         print(f"worktree.py: refusing non-conforming branch name {new_branch!r}", file=sys.stderr)
         return 12
 
-    subprocess.run(["git", "-C", str(top), "fetch", "origin", parent], check=False)
+    subprocess.run(["git", "-C", str(top), "fetch", remote_name(cfg), parent], check=False)
     subprocess.run(
         ["git", "-C", str(top), "worktree", "add", "-b", new_branch, str(wt_path), parent],
         check=True,

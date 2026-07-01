@@ -64,6 +64,7 @@ Via `scripts/spec-rigor-check.py --artifact tasks`:
 - Task file references every effective R-ID from `scripts/spec-union.py` (union, not parent-only).
 - Parent tasks are dependency-ordered; no orphan R-IDs in union without a task reference.
 - `## Traceability` table present and parseable.
+- Task lists must not contain `## Sizing & Split Suggestions` at freeze; strip via `python3 scripts/phase_sizing.py strip-advisory --inplace <path>`.
 
 ### Traceability (R-ID → task → test — pre-task-freeze)
 

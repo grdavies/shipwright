@@ -1,0 +1,3055 @@
+{
+  "version": 1,
+  "generatedAt": "2026-07-01T00:41:26Z",
+  "summary": {
+    "taskListCount": 43,
+    "phaseSampleCount": 239,
+    "distributions": {
+      "filesTouched": {
+        "count": 239,
+        "min": 1,
+        "p10": 2.0,
+        "p25": 4.0,
+        "p50": 6.0,
+        "p75": 10.5,
+        "p90": 17.0,
+        "max": 34
+      },
+      "distinctDirs": {
+        "count": 239,
+        "min": 1,
+        "p10": 2.0,
+        "p25": 2.0,
+        "p50": 4.0,
+        "p75": 6.0,
+        "p90": 9.0,
+        "max": 18
+      },
+      "subTaskCount": {
+        "count": 239,
+        "min": 1,
+        "p10": 2.0,
+        "p25": 3.0,
+        "p50": 3.0,
+        "p75": 5.0,
+        "p90": 6.0,
+        "max": 13
+      },
+      "traceabilityScenarios": {
+        "count": 239,
+        "min": 0,
+        "p10": 1.0,
+        "p25": 2.0,
+        "p50": 3.0,
+        "p75": 6.0,
+        "p90": 9.0,
+        "max": 33
+      },
+      "depFanOut": {
+        "count": 239,
+        "min": 0,
+        "p10": 0.0,
+        "p25": 1.0,
+        "p50": 1.0,
+        "p75": 2.0,
+        "p90": 3.0,
+        "max": 7
+      },
+      "waveWidth": {
+        "count": 199,
+        "min": 1,
+        "p10": 1.0,
+        "p25": 1.0,
+        "p50": 1.0,
+        "p75": 1.0,
+        "p90": 2.0,
+        "max": 7
+      },
+      "phasesPerTaskList": {
+        "count": 43,
+        "min": 0,
+        "p10": 3.0,
+        "p25": 4.0,
+        "p50": 5.0,
+        "p75": 7.0,
+        "p90": 8.8,
+        "max": 13
+      }
+    },
+    "zeroTraceabilityPhases": 10
+  },
+  "records": [
+    {
+      "taskList": "docs/prds/001-readme-documentation/tasks-001-readme-documentation.md",
+      "phaseCount": 0,
+      "waveCount": 0,
+      "maxWaveWidth": 0,
+      "waveWidths": [],
+      "injectedEdgeCount": 0,
+      "notices": [
+        "missing Phase Dependencies table \u2014 sequential fallback edges 1\u21922, 2\u21923, \u2026"
+      ],
+      "phases": []
+    },
+    {
+      "taskList": "docs/prds/002-first-run-onboarding-ux/tasks-002-first-run-onboarding-ux.md",
+      "phaseCount": 8,
+      "waveCount": 2,
+      "maxWaveWidth": 7,
+      "waveWidths": [
+        7,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [
+        "missing Phase Dependencies table \u2014 edges inferred from overlapping **File:** paths",
+        "file-set edge 1\u21925 (commands/sw-setup.md)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Review config + gate honesty (S)",
+          "filesTouched": 7,
+          "distinctDirs": 6,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 10,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "2",
+          "title": "Deterministic worktree guard (S)",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "3",
+          "title": "`/sw-tasks` single-pass generation (S)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 3,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "4",
+          "title": "Doc boundary + orchestrator dispatch (M)",
+          "filesTouched": 6,
+          "distinctDirs": 3,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 8,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "5",
+          "title": "`/sw-setup` + review command docs (S)",
+          "filesTouched": 3,
+          "distinctDirs": 1,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 4,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "6",
+          "title": "Human surfaces + review state echo (S)",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "7",
+          "title": "Build chain regeneration (S)",
+          "filesTouched": 13,
+          "distinctDirs": 6,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "8",
+          "title": "User-facing documentation (S)",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/003-pr-agent-review-provider/tasks-003-pr-agent-review-provider.md",
+      "phaseCount": 6,
+      "waveCount": 4,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        2,
+        2,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 3 and 4 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Adapters, schema & gate grace (L)",
+          "filesTouched": 8,
+          "distinctDirs": 5,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 14,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "2",
+          "title": "Gate fixtures & adapter tests (M)",
+          "filesTouched": 8,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Workflow template & `/sw-setup` (L)",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 11,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "4",
+          "title": "Command docs & provider-neutral skills (M)",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "User docs, provenance & dist sync (S)",
+          "filesTouched": 15,
+          "distinctDirs": 5,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 3,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "6",
+          "title": "Amendment A1 \u2014 upstream docs alignment (S)",
+          "filesTouched": 6,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 0,
+          "depFanOut": 1
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md",
+      "phaseCount": 13,
+      "waveCount": 10,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        1,
+        2,
+        2,
+        1,
+        1,
+        2,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 5,
+      "notices": [
+        "contention: phases 2 and 3 serialized (core/**)",
+        "contention: phases 2 and 4 serialized (core/**)",
+        "contention: phases 3 and 4 serialized (core/**)",
+        "contention: phases 6 and 7 serialized (scripts/wave.sh)",
+        "contention: phases 8 and 12 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Rename `/sw-wave` \u2192 `/sw-deliver` and naming boundary (S)",
+          "filesTouched": 8,
+          "distinctDirs": 6,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 4,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "2",
+          "title": "Phase-mode planning in `wave.sh` (M)",
+          "filesTouched": 4,
+          "distinctDirs": 4,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 13,
+          "depFanOut": 4
+        },
+        {
+          "phaseId": "3",
+          "title": "`/sw-tasks` Phase Dependencies emission (S)",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "`/sw-ship` non-interactive phase-mode contract (M)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "State artifacts, lock, and progress surface (M)",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 5,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "6",
+          "title": "Contention preflight and parallel scheduling (M)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 5,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "7",
+          "title": "Orchestrator worktree, branches, and lifecycle (M)",
+          "filesTouched": 4,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 5,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "8",
+          "title": "Phase execution, merge queue, and review barrier (L)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 7,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "9",
+          "title": "Release bookkeeping on `<type>/<slug>` (M)",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 4,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "10",
+          "title": "Verify, failure blast radius, and stabilize routing (M)",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 5,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "11",
+          "title": "Terminal PR gate, resumption, and ack cadence (M)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 5,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "12",
+          "title": "Preflight, spec availability, and memory learnings (S)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "13",
+          "title": "Fixtures, build chain, and user documentation (M)",
+          "filesTouched": 18,
+          "distinctDirs": 10,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 2,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/005-native-local-review-panel/tasks-005-native-local-review-panel.md",
+      "phaseCount": 6,
+      "waveCount": 5,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        1,
+        2,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 2 and 6 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Contract, config & deterministic scripts (L)",
+          "filesTouched": 12,
+          "distinctDirs": 8,
+          "subTaskCount": 12,
+          "traceabilityScenarios": 33,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Roster, selection & calibration (M)",
+          "filesTouched": 5,
+          "distinctDirs": 5,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 19,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "Apply rails & autonomy (L)",
+          "filesTouched": 7,
+          "distinctDirs": 6,
+          "subTaskCount": 9,
+          "traceabilityScenarios": 11,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Gating, framing, phase-mode & run report (M)",
+          "filesTouched": 7,
+          "distinctDirs": 6,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 8,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "Memory, instrumentation, distribution & regression (M)",
+          "filesTouched": 17,
+          "distinctDirs": 9,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 4,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "6",
+          "title": "`doc.afterTasks` \u2192 `/sw-deliver run` + frozen-spec seed (S) \u2014 Amendments A1 + A2",
+          "filesTouched": 7,
+          "distinctDirs": 6,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 8,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/006-caveman-command-loading/tasks-006-caveman-command-loading.md",
+      "phaseCount": 6,
+      "waveCount": 5,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        2,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 1 and 2 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Bundled core & session hook (M)",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 9,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "2",
+          "title": "Config, schema & routing defaults (M)",
+          "filesTouched": 5,
+          "distinctDirs": 3,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 5,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "3",
+          "title": "Commands & override (L)",
+          "filesTouched": 4,
+          "distinctDirs": 2,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 3,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "4",
+          "title": "Emitter & dist propagation (S)",
+          "filesTouched": 14,
+          "distinctDirs": 5,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "Documentation (S)",
+          "filesTouched": 1,
+          "distinctDirs": 1,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "6",
+          "title": "Fixtures & verification (M)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/007-deliver-autonomy-hardening/tasks-007-deliver-autonomy-hardening.md",
+      "phaseCount": 11,
+      "waveCount": 6,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        1
+      ],
+      "injectedEdgeCount": 5,
+      "notices": [
+        "contention: phases 1 and 9 serialized (core/**)",
+        "contention: phases 3 and 10 serialized (core/**)",
+        "contention: phases 4 and 6 serialized (core/**)",
+        "contention: phases 4 and 7 serialized (core/**)",
+        "contention: phases 6 and 7 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Branch-name conformance: floor fix + creation guard (S/M)",
+          "filesTouched": 7,
+          "distinctDirs": 4,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 6,
+          "depFanOut": 5
+        },
+        {
+          "phaseId": "2",
+          "title": "Crash-safe durable state core (M)",
+          "filesTouched": 2,
+          "distinctDirs": 1,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "3",
+          "title": "Durable deliver-loop driver (L)",
+          "filesTouched": 9,
+          "distinctDirs": 4,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 12,
+          "depFanOut": 7
+        },
+        {
+          "phaseId": "4",
+          "title": "Orchestrator branch ownership + single spec-seed (M)",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 4,
+          "depFanOut": 4
+        },
+        {
+          "phaseId": "5",
+          "title": "Local phase-mode merge-queue mechanics (M)",
+          "filesTouched": 3,
+          "distinctDirs": 1,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 4,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "6",
+          "title": "Step-granular per-phase resume (M)",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "7",
+          "title": "Task-document currency (M)",
+          "filesTouched": 6,
+          "distinctDirs": 2,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 6,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "8",
+          "title": "Pre-merge compounding + completion semantics (M)",
+          "filesTouched": 4,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 7,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "9",
+          "title": "Secret-safety guardrails (M)",
+          "filesTouched": 6,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 5,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "10",
+          "title": "`/sw-cleanup` command (M)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 7,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "11",
+          "title": "Fixtures, docs, dist propagation (M)",
+          "filesTouched": 16,
+          "distinctDirs": 9,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/008-model-tier-setup-defaults/tasks-008-model-tier-setup-defaults.md",
+      "phaseCount": 6,
+      "waveCount": 6,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 3,
+      "notices": [
+        "contention: phases 3 and 4 serialized (core/**)",
+        "contention: phases 3 and 5 serialized (core/**)",
+        "contention: phases 4 and 5 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Schema & four-tier policy foundation (M)",
+          "filesTouched": 6,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 4,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Routing defaults & resolver (L)",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 7,
+          "depFanOut": 4
+        },
+        {
+          "phaseId": "3",
+          "title": "Setup integration (M)",
+          "filesTouched": 4,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 6,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "4",
+          "title": "Command & skill surfaces (L)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 5,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "5",
+          "title": "Documentation & dogfood (S)",
+          "filesTouched": 5,
+          "distinctDirs": 5,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "6",
+          "title": "Fixtures & verification (M)",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/009-autonomous-orchestration-conductor/tasks-009-autonomous-orchestration-conductor.md",
+      "phaseCount": 10,
+      "waveCount": 6,
+      "maxWaveWidth": 3,
+      "waveWidths": [
+        3,
+        1,
+        1,
+        1,
+        2,
+        2
+      ],
+      "injectedEdgeCount": 3,
+      "notices": [
+        "contention: phases 4 and 5 serialized (core/**)",
+        "contention: phases 4 and 8 serialized (core/**)",
+        "contention: phases 5 and 8 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Primitive reliability hardening (M)",
+          "filesTouched": 10,
+          "distinctDirs": 2,
+          "subTaskCount": 8,
+          "traceabilityScenarios": 9,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "2",
+          "title": "Per-orchestrator audit + adoption enumeration (S/M)",
+          "filesTouched": 1,
+          "distinctDirs": 1,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Conductor contract + config knobs (M)",
+          "filesTouched": 5,
+          "distinctDirs": 5,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 5,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "4",
+          "title": "Autonomous self-continuation + self-wake (M/L)",
+          "filesTouched": 4,
+          "distinctDirs": 4,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 9,
+          "depFanOut": 5
+        },
+        {
+          "phaseId": "5",
+          "title": "Legitimate halts + consolidated reports + liveness (M)",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 4,
+          "depFanOut": 4
+        },
+        {
+          "phaseId": "6",
+          "title": "Conductor-level parallel dispatch + safety under concurrency (L)",
+          "filesTouched": 8,
+          "distinctDirs": 3,
+          "subTaskCount": 7,
+          "traceabilityScenarios": 14,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "7",
+          "title": "Pilot validation + surface docs + emitter (M)",
+          "filesTouched": 16,
+          "distinctDirs": 9,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "8",
+          "title": "Living-doc currency hardening (M)",
+          "filesTouched": 6,
+          "distinctDirs": 4,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 5,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "9",
+          "title": "Brainstorm\u2194PRD frontmatter traceability (S/M)",
+          "filesTouched": 4,
+          "distinctDirs": 3,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 4,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "10",
+          "title": "Adopter-facing README + user-guide refresh (S/M)",
+          "filesTouched": 7,
+          "distinctDirs": 3,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/010-mempalace-memory-provider/tasks-010-mempalace-memory-provider.md",
+      "phaseCount": 5,
+      "waveCount": 5,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 2 and 3 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Schema & provider registration (M)",
+          "filesTouched": 13,
+          "distinctDirs": 6,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 4,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Hook rule-fetcher & offline fixtures (L)",
+          "filesTouched": 6,
+          "distinctDirs": 5,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 13,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "Adapter doc & capability spec (L)",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 18,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "4",
+          "title": "Export/import KG round-trip & R41 fixtures (M)",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "Command docs, emitter & dist (S)",
+          "filesTouched": 16,
+          "distinctDirs": 7,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/011-orchestrator-ux-and-doc-polish/tasks-011-orchestrator-ux-and-doc-polish.md",
+      "phaseCount": 4,
+      "waveCount": 3,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        2,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 1 and 2 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "`/sw-doc` post-freeze command surface + confirm prominence (S/M)",
+          "filesTouched": 1,
+          "distinctDirs": 1,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 7,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "`/sw-cleanup` agent-driven confirm (S)",
+          "filesTouched": 1,
+          "distinctDirs": 1,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Optional repo link-check script + wiring (M)",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Fixtures, guides, dist propagation (M)",
+          "filesTouched": 17,
+          "distinctDirs": 8,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/012-model-tier-runtime-binding/tasks-012-model-tier-runtime-binding.md",
+      "phaseCount": 5,
+      "waveCount": 5,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 3 and 4 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Config-driven per-agent tiers + resolver `--agent` (M)",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 4,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "2",
+          "title": "Dispatch preflight + parent-floor (M)",
+          "filesTouched": 1,
+          "distinctDirs": 1,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 3,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "3",
+          "title": "Rule + skill rewrite to call the preflight (S/M)",
+          "filesTouched": 4,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "4",
+          "title": "Optional pre-tool hook (feasibility-gated) (M)",
+          "filesTouched": 4,
+          "distinctDirs": 4,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "Fixtures, docs, dist propagation (M)",
+          "filesTouched": 16,
+          "distinctDirs": 9,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/013-deliver-concurrency-and-freeze-safety/tasks-013-deliver-concurrency-and-freeze-safety.md",
+      "phaseCount": 6,
+      "waveCount": 4,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        2,
+        1,
+        2,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 3 and 4 serialized (core/commands/sw-status.md)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Freeze-time commit safety (M)",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 5,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Scoped deliver state + lock resolver (L)",
+          "filesTouched": 19,
+          "distinctDirs": 2,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 6,
+          "depFanOut": 4
+        },
+        {
+          "phaseId": "3",
+          "title": "Concurrent-run index + enumeration + serialization (M)",
+          "filesTouched": 5,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 2,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "4",
+          "title": "`/sw-deliver` v1 deferrals (L)",
+          "filesTouched": 4,
+          "distinctDirs": 3,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 4,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "Fixtures, docs, dist propagation (M)",
+          "filesTouched": 19,
+          "distinctDirs": 12,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 4,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "6",
+          "title": "Autonomous terminal delivery \u2014 amendment A1 (L)",
+          "filesTouched": 10,
+          "distinctDirs": 9,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 7,
+          "depFanOut": 1
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/014-retrospective-command-consolidation/tasks-014-retrospective-command-consolidation.md",
+      "phaseCount": 4,
+      "waveCount": 4,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "New `/sw-retrospective` command + internal phase dispatch (M)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "2",
+          "title": "Deprecated aliases + rename propagation (M)",
+          "filesTouched": 7,
+          "distinctDirs": 6,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "Autonomy knob + preserved semantics + conductor single-source (M)",
+          "filesTouched": 8,
+          "distinctDirs": 8,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 6,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Docs, dist, fixtures (M)",
+          "filesTouched": 17,
+          "distinctDirs": 10,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/015-memory-source-of-truth/tasks-015-memory-source-of-truth.md",
+      "phaseCount": 5,
+      "waveCount": 5,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "SoT resolver + config/schema/defaults (M)",
+          "filesTouched": 5,
+          "distinctDirs": 5,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 4
+        },
+        {
+          "phaseId": "2",
+          "title": "Always-committed redacted snapshot + offline-safe freeze/CI (M)",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "3",
+          "title": "Pointer inversion + supersede reconcile (M)",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "4",
+          "title": "Compound SoT branch + audit conflict + migration (M)",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 4,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "Docs, dist, fixtures (M)",
+          "filesTouched": 18,
+          "distinctDirs": 11,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/016-pr-test-plan-ci-enforcement/tasks-016-pr-test-plan-ci-enforcement.md",
+      "phaseCount": 4,
+      "waveCount": 4,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Single-sourced test-plan set + classification (S/M)",
+          "filesTouched": 4,
+          "distinctDirs": 4,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 3,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "2",
+          "title": "CI workflow jobs + PR template (M)",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 1,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "Stabilize / gate integration (S/M)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 2,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Docs, dist, fixtures (S/M)",
+          "filesTouched": 17,
+          "distinctDirs": 10,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/017-pervasive-subagent-delegation/tasks-017-pervasive-subagent-delegation.md",
+      "phaseCount": 4,
+      "waveCount": 4,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Binding + enforcement foundation \u2014 M",
+          "filesTouched": 19,
+          "distinctDirs": 10,
+          "subTaskCount": 8,
+          "traceabilityScenarios": 14,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "2",
+          "title": "Deliver reliability (hard gate before Phase 3) \u2014 L",
+          "filesTouched": 14,
+          "distinctDirs": 7,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 11,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Per-orchestrator adoption \u2014 M",
+          "filesTouched": 4,
+          "distinctDirs": 3,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Docs + dist + fixtures \u2014 M",
+          "filesTouched": 23,
+          "distinctDirs": 11,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/018-generic-repo-portability/tasks-018-generic-repo-portability.md",
+      "phaseCount": 4,
+      "waveCount": 3,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        2,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 1 and 3 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Trust + verify + `/sw-init`: project-type detection, fixed presets, setup write, unconfigured signal, rename/configurator/version-stamp (L)",
+          "filesTouched": 20,
+          "distinctDirs": 8,
+          "subTaskCount": 13,
+          "traceabilityScenarios": 13,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "2",
+          "title": "Clean install / dev-product boundary (M) \u2014 depends on Phase 1",
+          "filesTouched": 34,
+          "distinctDirs": 18,
+          "subTaskCount": 9,
+          "traceabilityScenarios": 6,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Base-branch resolution + fail-closed leak fixes (L) \u2014 independent (parallel with Phases 1\u20132)",
+          "filesTouched": 17,
+          "distinctDirs": 6,
+          "subTaskCount": 7,
+          "traceabilityScenarios": 9,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Web neutrality, docs, dist consolidation, fixture closure (M) \u2014 depends on Phases 1, 2, 3",
+          "filesTouched": 22,
+          "distinctDirs": 12,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 4,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/019-pre-work-memory-search-gate/tasks-019-pre-work-memory-search-gate.md",
+      "phaseCount": 4,
+      "waveCount": 4,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Memory-preflight entry obligation \u2014 M",
+          "filesTouched": 9,
+          "distinctDirs": 3,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 4,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "2",
+          "title": "Search record + degrade-open breadcrumb \u2014 M",
+          "filesTouched": 1,
+          "distinctDirs": 1,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 2,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Enforcement + dispatch inheritance \u2014 M",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Docs + dist + fixtures \u2014 M",
+          "filesTouched": 18,
+          "distinctDirs": 10,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/020-documentation-impact-review-persona/tasks-020-documentation-impact-review-persona.md",
+      "phaseCount": 4,
+      "waveCount": 4,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Persona agent file + taxonomy \u2014 S",
+          "filesTouched": 1,
+          "distinctDirs": 1,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 2,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "2",
+          "title": "Registry, selection, and output contract \u2014 M",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 4,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Tier routing + living-doc complementarity \u2014 S",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Docs + dist + fixtures \u2014 M",
+          "filesTouched": 15,
+          "distinctDirs": 8,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/021-capability-manifest-and-selector/tasks-021-capability-manifest-and-selector.md",
+      "phaseCount": 8,
+      "waveCount": 7,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1,
+        2,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Manifest frontmatter schema + contract \u2014 M",
+          "filesTouched": 7,
+          "distinctDirs": 6,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Generated capability index + freshness gates \u2014 M",
+          "filesTouched": 13,
+          "distinctDirs": 6,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "Precedence policy + author-time lint \u2014 M",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 2,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Deterministic selector + `signal_context` \u2014 L",
+          "filesTouched": 4,
+          "distinctDirs": 4,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 2,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "5",
+          "title": "Trust boundary + execution chokepoint + kernel-hook pinning \u2014 M",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 0,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "6",
+          "title": "Migration with parity + shadow cutover + call-site map \u2014 L",
+          "filesTouched": 7,
+          "distinctDirs": 7,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "7",
+          "title": "Run-log surfacing \u2014 S",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "8",
+          "title": "Documentation + emitter propagation + freshness \u2014 M",
+          "filesTouched": 25,
+          "distinctDirs": 15,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 0,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/022-kernel-classification-and-plan-validation/tasks-022-kernel-classification-and-plan-validation.md",
+      "phaseCount": 7,
+      "waveCount": 7,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Single-sourced kernel classification + canonical chain source \u2014 L",
+          "filesTouched": 6,
+          "distinctDirs": 5,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 6,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Guidelines artifact + floor + harness reuse \u2014 M",
+          "filesTouched": 4,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 2,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Plan-validation gate + schemas + rejection breaker \u2014 L",
+          "filesTouched": 5,
+          "distinctDirs": 3,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Two-tier persist + deterministic step driver + lifecycle \u2014 L",
+          "filesTouched": 7,
+          "distinctDirs": 5,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 4,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "5",
+          "title": "`orchestration.planPolicy` flag definition + resume semantics \u2014 M",
+          "filesTouched": 5,
+          "distinctDirs": 5,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "6",
+          "title": "Safety-invariant parity fixtures (proposed) + cross-cutting \u2014 M",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "7",
+          "title": "Docs + emitter propagation + freshness + call-site map \u2014 M",
+          "filesTouched": 29,
+          "distinctDirs": 15,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 1,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/023-deliver-plan-policy-pilot/tasks-023-deliver-plan-policy-pilot.md",
+      "phaseCount": 6,
+      "waveCount": 4,
+      "maxWaveWidth": 3,
+      "waveWidths": [
+        1,
+        3,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 2 and 4 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Dependency gate + deliver pilot wiring (wire-only) + E2E \u2014 M",
+          "filesTouched": 6,
+          "distinctDirs": 5,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 4
+        },
+        {
+          "phaseId": "2",
+          "title": "Intra-phase fan-out + no-nesting + decision logging \u2014 M",
+          "filesTouched": 5,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "Driver-enforced budgets + clean-halt integrity \u2014 M",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 0,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Benefit metric capture + decision rule \u2014 M",
+          "filesTouched": 4,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "Deliver-scoped plan surfacing \u2014 S",
+          "filesTouched": 1,
+          "distinctDirs": 1,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "6",
+          "title": "Docs + emitter propagation + freshness \u2014 M",
+          "filesTouched": 28,
+          "distinctDirs": 14,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 0,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/024-orchestrator-plan-policy-adoption/tasks-024-orchestrator-plan-policy-adoption.md",
+      "phaseCount": 9,
+      "waveCount": 8,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        1,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 2,
+      "notices": [
+        "contention: phases 2 and 9 serialized (core/**)",
+        "contention: phases 3 and 4 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Program dependency gate + R31-inconclusive fail-closed \u2014 S",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 1,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Orchestrator-step-plan schema (single-tier) + gate orchestrator tier \u2014 M",
+          "filesTouched": 5,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "3",
+          "title": "Guideline packs + deny-lists + variance probe / consistency-only mode \u2014 M",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 2,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "4",
+          "title": "signal_context capture + state isolation + episodic model \u2014 M",
+          "filesTouched": 7,
+          "distinctDirs": 5,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "`/sw-debug` adoption (wire-only, episodic) \u2014 M",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 4,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "6",
+          "title": "`/sw-doc` adoption (consistency-only default) \u2014 M",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 0,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "7",
+          "title": "`/sw-feedback` adoption (untrusted-signal chokepoint, episodic) \u2014 M",
+          "filesTouched": 4,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 0,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "8",
+          "title": "Docs + emitter propagation + freshness \u2014 M",
+          "filesTouched": 30,
+          "distinctDirs": 15,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 0,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "9",
+          "title": "Dispatch-binding scaffolding \u2014 parallel preflight + command-authoritative tier (A2) \u2014 M",
+          "filesTouched": 6,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 2,
+          "depFanOut": 2
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/026-git-host-portability-and-workflow-standardization/tasks-026-git-host-portability-and-workflow-standardization.md",
+      "phaseCount": 5,
+      "waveCount": 4,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        1,
+        2,
+        1
+      ],
+      "injectedEdgeCount": 3,
+      "notices": [
+        "contention: phases 2 and 3 serialized (core/**)",
+        "contention: phases 2 and 5 serialized (core/**)",
+        "contention: phases 3 and 5 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Host adapter + rate-limit foundation \u2014 L",
+          "filesTouched": 12,
+          "distinctDirs": 5,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 15,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "2",
+          "title": "GitHub gate abstraction over REST \u2014 M",
+          "filesTouched": 14,
+          "distinctDirs": 4,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 6,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "3",
+          "title": "No-remote local mode \u2014 M",
+          "filesTouched": 7,
+          "distinctDirs": 3,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 5,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "GitLab + Bitbucket adapters + PR-automation fixes \u2014 L",
+          "filesTouched": 8,
+          "distinctDirs": 2,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 6,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "5",
+          "title": "Git-workflow skill + docs-branch standardization \u2014 L",
+          "filesTouched": 11,
+          "distinctDirs": 5,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 10,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/027-deliver-terminal-finalization-robustness/tasks-027-deliver-terminal-finalization-robustness.md",
+      "phaseCount": 4,
+      "waveCount": 4,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Completeness unification + conductor terminal clause \u2014 M",
+          "filesTouched": 5,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "2",
+          "title": "Phase status write/read path hardening \u2014 M",
+          "filesTouched": 3,
+          "distinctDirs": 1,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Contributing-factor resolution \u2014 M",
+          "filesTouched": 3,
+          "distinctDirs": 1,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 5,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Canonical-state reconciliation + fixtures + dist parity \u2014 M",
+          "filesTouched": 7,
+          "distinctDirs": 5,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 2,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/031-planning-unit-model-and-migration/tasks-031-planning-unit-model-and-migration.md",
+      "phaseCount": 8,
+      "waveCount": 7,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 2,
+      "notices": [
+        "contention: phases 1 and 3 serialized (core/**)",
+        "contention: phases 2 and 4 serialized (scripts/wave_deliver.py)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Shared doc-format tokenizer engine \u2014 L",
+          "filesTouched": 4,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Tokenizer Phase A adoption on legacy `docs/prds` paths \u2014 L",
+          "filesTouched": 9,
+          "distinctDirs": 4,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 5,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "Planning-unit schema + validator + stub enum \u2014 L",
+          "filesTouched": 4,
+          "distinctDirs": 2,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 5,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "4",
+          "title": "Config-driven path-resolution helper \u2014 M",
+          "filesTouched": 5,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "5",
+          "title": "Deterministic dual-region INDEX generator + region-integrity hook \u2014 L",
+          "filesTouched": 5,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "6",
+          "title": "Migration tool + held lock + redirect map + verification fixture \u2014 L",
+          "filesTouched": 5,
+          "distinctDirs": 3,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 6,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "7",
+          "title": "Atomic cutover \u2014 Phase B relocation, supersession, privacy, projections, kill-criteria \u2014 L",
+          "filesTouched": 9,
+          "distinctDirs": 3,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 5,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "8",
+          "title": "Documentation currency + dist propagation + no-regression + memory guardrails \u2014 L",
+          "filesTouched": 26,
+          "distinctDirs": 11,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 4,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/032-planning-mutation-safety-guards/tasks-032-planning-mutation-safety-guards.md",
+      "phaseCount": 7,
+      "waveCount": 6,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        1,
+        2,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 3,
+      "notices": [
+        "contention: phases 2 and 5 serialized (core/**)",
+        "contention: phases 3 and 4 serialized (core/**)",
+        "contention: phases 6 and 7 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Committed in-flight signal writer \u2014 L",
+          "filesTouched": 9,
+          "distinctDirs": 5,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 6,
+          "depFanOut": 6
+        },
+        {
+          "phaseId": "2",
+          "title": "Self-heal, staleness TTL & escape hatch \u2014 M",
+          "filesTouched": 5,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 4
+        },
+        {
+          "phaseId": "3",
+          "title": "Shared authoring-guard preflight & handoff route \u2014 M",
+          "filesTouched": 8,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "4",
+          "title": "Completed-unit immutability \u2014 L",
+          "filesTouched": 6,
+          "distinctDirs": 3,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 4,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "5",
+          "title": "Migration-bridge backfill \u2014 S",
+          "filesTouched": 2,
+          "distinctDirs": 1,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "6",
+          "title": "Emitter/dist parity \u2014 S",
+          "filesTouched": 12,
+          "distinctDirs": 5,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "7",
+          "title": "Doc-impact acceptance criteria \u2014 M",
+          "filesTouched": 15,
+          "distinctDirs": 5,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/033-lifecycle-dependencies-and-scheduler/tasks-033-lifecycle-dependencies-and-scheduler.md",
+      "phaseCount": 9,
+      "waveCount": 8,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 5,
+      "notices": [
+        "contention: phases 3 and 4 serialized (core/**)",
+        "contention: phases 5 and 6 serialized (core/**)",
+        "contention: phases 5 and 8 serialized (core/scripts/planning_graph.py)",
+        "contention: phases 6 and 8 serialized (core/**)",
+        "contention: phases 7 and 9 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Lifecycle enum + pure graph module (substrate) \u2014 L",
+          "filesTouched": 5,
+          "distinctDirs": 3,
+          "subTaskCount": 7,
+          "traceabilityScenarios": 8,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "2",
+          "title": "Deterministic maintenance reconciler \u2014 L",
+          "filesTouched": 9,
+          "distinctDirs": 3,
+          "subTaskCount": 8,
+          "traceabilityScenarios": 8,
+          "depFanOut": 5
+        },
+        {
+          "phaseId": "3",
+          "title": "Scheduler + `/sw-deliver` dependency gate \u2014 M",
+          "filesTouched": 7,
+          "distinctDirs": 4,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 5,
+          "depFanOut": 4
+        },
+        {
+          "phaseId": "4",
+          "title": "Supersession / absorption edge effects \u2014 M",
+          "filesTouched": 4,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "5",
+          "title": "Atomic cutover (one commit with 031 Phase B + 032) \u2014 M",
+          "filesTouched": 7,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "6",
+          "title": "Emitter / dist parity \u2014 S",
+          "filesTouched": 12,
+          "distinctDirs": 5,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "7",
+          "title": "Operator-doc acceptance criteria (033-owned) \u2014 M",
+          "filesTouched": 5,
+          "distinctDirs": 3,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "8",
+          "title": "Post-merge INDEX reconcile safety + completion-finalize chokepoint \u2014 amendment A1 \u2014 M",
+          "filesTouched": 10,
+          "distinctDirs": 4,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 8,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "9",
+          "title": "Operator worktree contract \u2014 amendment A3 \u2014 M",
+          "filesTouched": 22,
+          "distinctDirs": 10,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 7,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/034-visibility-and-planning-store/tasks-034-visibility-and-planning-store.md",
+      "phaseCount": 7,
+      "waveCount": 5,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        2,
+        2,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Visibility field + public-repo-aware resolver \u2014 M",
+          "filesTouched": 5,
+          "distinctDirs": 3,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 5,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Emission-point registry + machine-checked call-site map \u2014 L",
+          "filesTouched": 5,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Planning-store interface + backends \u2014 L",
+          "filesTouched": 11,
+          "distinctDirs": 4,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 6,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "4",
+          "title": "Provision-time materialization + commit-boundary barrier \u2014 L",
+          "filesTouched": 7,
+          "distinctDirs": 2,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 6,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "PRD-015 reconciliation + `.gitignore` generation + 032 handoff \u2014 M",
+          "filesTouched": 5,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "6",
+          "title": "`/sw-init` seeding + doctor checks \u2014 M",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "7",
+          "title": "Emitter/dist parity + doc-impact acceptance \u2014 M",
+          "filesTouched": 24,
+          "distinctDirs": 13,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/035-planning-autonomy-and-orchestration/tasks-035-planning-autonomy-and-orchestration.md",
+      "phaseCount": 8,
+      "waveCount": 7,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Related-units scanner + pull-in proposal flow \u2014 L",
+          "filesTouched": 6,
+          "distinctDirs": 4,
+          "subTaskCount": 8,
+          "traceabilityScenarios": 8,
+          "depFanOut": 5
+        },
+        {
+          "phaseId": "2",
+          "title": "Autonomy posture + bounded full-conductor \u2014 L",
+          "filesTouched": 6,
+          "distinctDirs": 5,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 5,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "3",
+          "title": "Two-track edit driver \u2014 L",
+          "filesTouched": 6,
+          "distinctDirs": 1,
+          "subTaskCount": 7,
+          "traceabilityScenarios": 7,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "4",
+          "title": "Planning command surface finalization \u2014 S",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "5",
+          "title": "Emitter + dist parity \u2014 S",
+          "filesTouched": 13,
+          "distinctDirs": 6,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "6",
+          "title": "Doc-impact acceptance + no-regression \u2014 M",
+          "filesTouched": 5,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "7",
+          "title": "Deliver conductor completion (amendment A1) \u2014 L",
+          "filesTouched": 12,
+          "distinctDirs": 4,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 26,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "8",
+          "title": "Gap lifecycle + doc format (amendment A2) \u2014 M",
+          "filesTouched": 18,
+          "distinctDirs": 6,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 8,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/036-delivery-conductor-concurrency-and-remediation-robustness/tasks-036-delivery-conductor-concurrency-and-remediation-robustness.md",
+      "phaseCount": 5,
+      "waveCount": 5,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 2 and 4 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Ship single-flight (R1\u2013R5) \u2014 L",
+          "filesTouched": 22,
+          "distinctDirs": 10,
+          "subTaskCount": 7,
+          "traceabilityScenarios": 6,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Regression remediation routing (R6\u2013R8) \u2014 M",
+          "filesTouched": 8,
+          "distinctDirs": 6,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 3,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "Parallel-merge batch safety (R9\u2013R12) \u2014 L",
+          "filesTouched": 10,
+          "distinctDirs": 7,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 4,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Terminal-status integrity + recovery (R13\u2013R17) \u2014 L",
+          "filesTouched": 10,
+          "distinctDirs": 8,
+          "subTaskCount": 7,
+          "traceabilityScenarios": 5,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "5",
+          "title": "Cross-cutting invariants, CI enforcement & dogfood (R18\u2013R22) \u2014 M",
+          "filesTouched": 20,
+          "distinctDirs": 11,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 4,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/037-doc-review-persona-selection-accuracy/tasks-037-doc-review-persona-selection-accuracy.md",
+      "phaseCount": 3,
+      "waveCount": 3,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Heading matcher fix + manifest audit \u2014 S",
+          "filesTouched": 5,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 7,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "2",
+          "title": "Fixtures + parity \u2014 M",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 4,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Docs, propagate, gap close \u2014 S",
+          "filesTouched": 16,
+          "distinctDirs": 9,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/038-build-chain-source-of-truth/tasks-038-build-chain-source-of-truth.md",
+      "phaseCount": 4,
+      "waveCount": 4,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 2 and 3 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "SoT manifest + copy-to-core hardening \u2014 M",
+          "filesTouched": 15,
+          "distinctDirs": 7,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 11,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "CI + verify.test wiring \u2014 S",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 4,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "Unified sync entrypoint + operator docs \u2014 M",
+          "filesTouched": 15,
+          "distinctDirs": 6,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 4,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "One-shot resync + gap close \u2014 S",
+          "filesTouched": 14,
+          "distinctDirs": 6,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/039-loop-quality-gates/tasks-039-loop-quality-gates.md",
+      "phaseCount": 4,
+      "waveCount": 4,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 2 and 3 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Quality harness contract (S/M) \u2014 advisory-only scaffold, no default behavior change",
+          "filesTouched": 12,
+          "distinctDirs": 8,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 4,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Refactor step + built-in provider (M/L) \u2014 enforced consideration, signal-gated action",
+          "filesTouched": 8,
+          "distinctDirs": 7,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 4,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "TDD hardening (M/L) \u2014 no silent skips, tamper + over-mock detection, ZOMBIES, mutation hook",
+          "filesTouched": 12,
+          "distinctDirs": 9,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 5,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Review, provenance & blocking promotion (M/L)",
+          "filesTouched": 14,
+          "distinctDirs": 8,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 3,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/040-phase-granularity-parallelism/tasks-040-phase-granularity-parallelism.md",
+      "phaseCount": 5,
+      "waveCount": 4,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        2
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 3 and 5 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Corpus calibration (read-only) \u2014 baseline thresholds",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 0,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "2",
+          "title": "Sizing scorer + schema (read-only)",
+          "filesTouched": 5,
+          "distinctDirs": 3,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 1,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "Split suggestion + contention integrity (advisory)",
+          "filesTouched": 6,
+          "distinctDirs": 5,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "4",
+          "title": "Parallelism objective + preflight validation",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "5",
+          "title": "Authoring guidance + fallback reconciliation",
+          "filesTouched": 7,
+          "distinctDirs": 5,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 2,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/041-self-improving-loop/tasks-041-self-improving-loop.md",
+      "phaseCount": 4,
+      "waveCount": 4,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 2 and 3 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Shared writer + capture surfaces",
+          "filesTouched": 14,
+          "distinctDirs": 7,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 4,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Recurrence escalation + pattern reuse",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 2,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "Inefficiency scanner + behavioral anomalies",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Loop-health + auto-propose driver (optional, v1.1)",
+          "filesTouched": 13,
+          "distinctDirs": 7,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/042-cross-platform-python-standardization/tasks-042-cross-platform-python-standardization.md",
+      "phaseCount": 6,
+      "waveCount": 4,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        2,
+        2,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Foundation \u2014 runtime library, interpreter probe, hook launcher, ledger, guards (L)",
+          "filesTouched": 34,
+          "distinctDirs": 10,
+          "subTaskCount": 13,
+          "traceabilityScenarios": 16,
+          "depFanOut": 5
+        },
+        {
+          "phaseId": "2",
+          "title": "Host layer & `gh`/`curl` elimination (L)",
+          "filesTouched": 21,
+          "distinctDirs": 13,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 7,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "Gate & dispatcher core (L)",
+          "filesTouched": 7,
+          "distinctDirs": 3,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 3,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "4",
+          "title": "Hooks, security filters, providers (L)",
+          "filesTouched": 12,
+          "distinctDirs": 8,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 4,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "Remaining production port + consolidations (L)",
+          "filesTouched": 9,
+          "distinctDirs": 5,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 2,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "6",
+          "title": "Test harness, build chain, docs, migration, enforcement flip (XL)",
+          "filesTouched": 19,
+          "distinctDirs": 10,
+          "subTaskCount": 7,
+          "traceabilityScenarios": 13,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/043-issue-backed-planning-store/tasks-043-issue-backed-planning-store.md",
+      "phaseCount": 3,
+      "waveCount": 3,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Foundation \u2014 config, provider abstraction, capability/token probes, region-disposition matrix (L)",
+          "filesTouched": 13,
+          "distinctDirs": 8,
+          "subTaskCount": 10,
+          "traceabilityScenarios": 19,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Core artifact store + identification + canonical serialization (L)",
+          "filesTouched": 9,
+          "distinctDirs": 7,
+          "subTaskCount": 9,
+          "traceabilityScenarios": 15,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Freeze + materialization + brainstorm durability + resilience (L)",
+          "filesTouched": 10,
+          "distinctDirs": 7,
+          "subTaskCount": 10,
+          "traceabilityScenarios": 18,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/044-issue-store-migration/tasks-044-issue-store-migration.md",
+      "phaseCount": 3,
+      "waveCount": 3,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Migration engine + dry-run default (M)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 2,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Lifecycle preservation both directions (M)",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Resilience, doctor, and quiesce (M)",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 0,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/045-issue-native-dev-tracking/tasks-045-issue-native-dev-tracking.md",
+      "phaseCount": 3,
+      "waveCount": 3,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 2 and 3 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Gaps as issues + write-through shim (M)",
+          "filesTouched": 5,
+          "distinctDirs": 5,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Linkage, safe close, and deliver annotations (L)",
+          "filesTouched": 8,
+          "distinctDirs": 6,
+          "subTaskCount": 7,
+          "traceabilityScenarios": 7,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Comment doc-review + milestones (M)",
+          "filesTouched": 9,
+          "distinctDirs": 8,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 5,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/046-issue-store-planning-graph/tasks-046-issue-store-planning-graph.md",
+      "phaseCount": 3,
+      "waveCount": 3,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Backend-pluggable discovery + region disposition + committed inFlight (L)",
+          "filesTouched": 8,
+          "distinctDirs": 7,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 7,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Derived INDEX + redaction + budget + cache safety (L)",
+          "filesTouched": 7,
+          "distinctDirs": 6,
+          "subTaskCount": 8,
+          "traceabilityScenarios": 8,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Hierarchy + cross-project recall (L)",
+          "filesTouched": 8,
+          "distinctDirs": 8,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 5,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/047-jira-issue-store-adapter/tasks-047-jira-issue-store-adapter.md",
+      "phaseCount": 3,
+      "waveCount": 3,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Jira Cloud adapter, canonicalization, placement, freeze-decoupling (L)",
+          "filesTouched": 7,
+          "distinctDirs": 6,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 7,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "DC/Server variant + auth, visibility, field, budget, lifecycle probes (L)",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 7,
+          "traceabilityScenarios": 6,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Bitbucket guidance + acceptance suite + doc-impact gate (M)",
+          "filesTouched": 6,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 2,
+          "depFanOut": 0
+        }
+      ]
+    }
+  ],
+  "defaults": {
+    "tasks.sizing.thresholds": {
+      "filesTouched": {
+        "small": 6,
+        "medium": 10
+      },
+      "traceabilityScenarios": {
+        "small": 3,
+        "medium": 6
+      },
+      "subTaskCount": {
+        "small": 3,
+        "medium": 5
+      },
+      "distinctDirs": {
+        "small": 4,
+        "medium": 6
+      },
+      "depFanOut": {
+        "small": 1,
+        "medium": 2
+      }
+    },
+    "tasks.sizing.minPhaseFiles": 2,
+    "tasks.sizing.minPhaseScenarios": 1,
+    "tasks.sizing.maxPhaseCount": 13,
+    "derivation": {
+      "method": "corpus-percentiles",
+      "smallMediumCut": "p50/p75 per signal",
+      "floors": "p10 for minPhase*",
+      "maxPhaseCount": "max observed phases per task list, floored at p90+2"
+    }
+  }
+}

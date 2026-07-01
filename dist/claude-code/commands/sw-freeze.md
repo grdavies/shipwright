@@ -36,6 +36,7 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.py` is aut
 2b. **Brainstorm forward ref (R53):** when freezing a **Full-tier PRD**, if the source brainstorm is not frozen,
     run `python3 scripts/doc_link.py write-forwardref --brainstorm <source> --prd <prd-path>` so the
     brainstorm `prd:` field points at this PRD (skip when brainstorm is frozen).
+2a. **Strip sizing advisory (PRD 040):** for task lists, remove any `## Sizing & Split Suggestions` block via `python3 scripts/phase_sizing.py strip-advisory --inplace <path>` before stamping.
 3. Stamp frontmatter:
    ```yaml
    frozen: true

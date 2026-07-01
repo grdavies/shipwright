@@ -41,7 +41,7 @@
 | 037 | doc-review-persona-selection-accuracy | [037-prd-doc-review-persona-selection-accuracy.md](037-doc-review-persona-selection-accuracy/037-prd-doc-review-persona-selection-accuracy.md) (frozen) | [tasks](037-doc-review-persona-selection-accuracy/tasks-037-doc-review-persona-selection-accuracy.md) (frozen) | complete |
 | 038 | build-chain-source-of-truth | [038-prd-build-chain-source-of-truth.md](038-build-chain-source-of-truth/038-prd-build-chain-source-of-truth.md) (frozen) | [tasks](038-build-chain-source-of-truth/tasks-038-build-chain-source-of-truth.md) (frozen) | complete |
 | 039 | loop-quality-gates | [039-prd-loop-quality-gates.md](039-loop-quality-gates/039-prd-loop-quality-gates.md) (frozen) | [tasks](039-loop-quality-gates/tasks-039-loop-quality-gates.md) (frozen) | complete |
-| 040 | phase-granularity-parallelism | [040-prd-phase-granularity-parallelism.md](040-phase-granularity-parallelism/040-prd-phase-granularity-parallelism.md) (frozen) | [tasks](040-phase-granularity-parallelism/tasks-040-phase-granularity-parallelism.md) (frozen) | not-started |
+| 040 | phase-granularity-parallelism | [040-prd-phase-granularity-parallelism.md](040-phase-granularity-parallelism/040-prd-phase-granularity-parallelism.md) (frozen) | [tasks](040-phase-granularity-parallelism/tasks-040-phase-granularity-parallelism.md) (frozen) | in-progress |
 | 041 | self-improving-loop | [041-prd-self-improving-loop.md](041-self-improving-loop/041-prd-self-improving-loop.md) (frozen) | [tasks](041-self-improving-loop/tasks-041-self-improving-loop.md) (frozen) | not-started |
 | 042 | cross-platform-python-standardization | [042-prd-cross-platform-python-standardization.md](042-cross-platform-python-standardization/042-prd-cross-platform-python-standardization.md) (frozen) | [tasks](042-cross-platform-python-standardization/tasks-042-cross-platform-python-standardization.md) (frozen) | complete |
 | 043 | issue-backed-planning-store | [043-prd-issue-backed-planning-store.md](043-issue-backed-planning-store/043-prd-issue-backed-planning-store.md) (frozen) | [tasks](043-issue-backed-planning-store/tasks-043-issue-backed-planning-store.md) (frozen) | complete |
@@ -54,6 +54,13 @@
 <!-- planning-index:structural begin -->| id | type | title | status | visibility | edges |
 | --- | --- | --- | --- | --- | --- |
 | gap-001-spec-rigor-check-sh-lacks-a-brainstorm-artifact- | gap | spec-rigor-check.sh lacks a brainstorm artifact profile (validates brainstorms against PRD structure) | open | public |  |
+| gap-002-living-doc-reconcile-commits-bypass-r31-default- | gap | Living-doc reconcile commits bypass R31 default-branch refusal (wave_living_docs.py / reconcile.py set-index-status) | open | public |  |
+| gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi | gap | Gap/doc-feedback capture has two unreconciled file paths and bypasses the planning_store backend interface | open | public |  |
+| gap-004-dispatch-binding-preflight-broken-bash-invokes-p | gap | Dispatch-binding preflight broken: bash invokes .py scripts, and interactive parent models are not in models.tiers | open | public |  |
+| gap-005-freeze-commit-spec-seed-cwd-dependent-repo-root- | gap | freeze-commit/spec-seed cwd-dependent repo-root resolution can target the shared primary checkout (extends GAP-077/078 to /sw-doc and /sw-amend) | open | public |  |
+| gap-006-prd-033-marked-complete-but-a3-r37-r39-r40-r42-r | gap | PRD 033 marked complete but A3 R37/R39/R40/R42/R43 (operator worktree contract, in-flight cwd guard) are unimplemented | open | public |  |
+| gap-007-finalize-completion-omits-terminal-living-docs-r | gap | finalize-completion omits terminal living-docs reconcile so INDEX stays in-progress | open | public |  |
+| gap-008-inflight-signal-run-complete-commits-index-on-ma | gap | inflight_signal run-complete commits INDEX on main during finalize-completion | open | public |  |
 <!-- planning-index:structural end -->
 <!-- planning-index:derived begin -->
 
