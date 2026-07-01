@@ -17,13 +17,13 @@ pull-in; **resolved** = done. No `partially resolved`, `planned`, or embedding s
 ## Index
 
 Stable IDs (`GAP-NNN`) are assigned at append time — **never reuse**. Cross-link gaps as `GAP-NNN`, not
-table row numbers. When appending, use the next ID: **`GAP-084`**.
+table row numbers. When appending, use the next ID: **`GAP-088`**.
 
 | Status | Count |
 |--------|------:|
 | resolved | 27 |
 | scheduled | 47 |
-| open | 9 |
+| open | 13 |
 
 | ID | Status | Schedule | Title |
 |----|--------|----------|-------|
@@ -111,6 +111,12 @@ table row numbers. When appending, use the next ID: **`GAP-084`**.
 | GAP-082 | open | gap-010 | PRD 041 deliver: durable state cleared before `finalize-completion`; resume on bare `main` fails; manual docs PR #285 for INDEX |
 | GAP-083 | open | gap-011 | PRD 041 deliver: **regression** of GAP-062 — `conductor:no-progress` on identical `provision-phase` / `merge-enqueue` loops |
 
+
+| GAP-084 | open | gap-012 | PRD 041 phase PR #280: stale GitHub `IN_PROGRESS` + workflow `success` → check-gate yellow while UI all green; stuck-stale blocked until manual empty commit |
+| GAP-085 | open | gap-013 | PRD 041 terminal PR #284: `terminal_pr_body` skips `git_template_lib` validation — manual `gh pr create` workaround |
+| GAP-086 | open | gap-014 | PRD 041 deliver: capability-trust fixtures reverted to `check-gate.sh` on primary checkout (PRD 042 python-first regression) |
+| GAP-087 | open | gap-015 | PRD 041: `all-private` profile needs `visibility: public` at spec-seed (`tracked-private-body`), not only assert-entry (Recallium #2282/#2285) |
+
 ### Regression notes (PRD 041 retro, 2026-07-01)
 
 Scheduled gaps **confirmed still broken** during PRD 041 terminal deliver (#284):
@@ -120,4 +126,7 @@ Scheduled gaps **confirmed still broken** during PRD 041 terminal deliver (#284)
 | GAP-062 | `no-progress` halts; manual `noProgressStreak` reset (see GAP-083 / gap-011) |
 | GAP-067 / GAP-070 | Local `main` forked during finalize; missing squash merge until `git reset --hard origin/main` |
 | gap-007 | INDEX `not-started` after terminal merge until manual docs PR #285 |
+| PRD 036 stuck-stale | Yellow gate blocks `classify_stuck_stale` while GitHub UI green (GAP-084 / gap-012) |
+| PRD 042 portability | Fixture `gateRef: check-gate.sh` drift during deliver (GAP-086 / gap-014) |
+
 
