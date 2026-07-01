@@ -191,6 +191,7 @@
 * merge phase verify-bundle-derivation-orphan-wiring-medium into feat/test-suite-registration-single-source (defefab) <!-- sw-deliver:verify-bundle-derivation-orphan-wiring-medium -->
 * merge phase docs-contributing-drift-guard-gap-close-small into feat/test-suite-registration-single-source (aca0977) <!-- sw-deliver:docs-contributing-drift-guard-gap-close-small -->
 * merge phase thread-a-spec-rigor-brainstorm-artifact-profile-s into feat/spec-rigor-brainstorm-profile-and-stdlib-coverage (07d70ef) <!-- sw-deliver:thread-a-spec-rigor-brainstorm-artifact-profile-s -->
+* merge phase thread-b-stdlib-only-coverage-tooling-m into feat/spec-rigor-brainstorm-profile-and-stdlib-coverage (feeb211) <!-- sw-deliver:thread-b-stdlib-only-coverage-tooling-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
