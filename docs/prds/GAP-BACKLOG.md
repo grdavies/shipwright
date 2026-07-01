@@ -22,9 +22,8 @@ table row numbers. When appending, use the next ID: **`GAP-089`**.
 | Status | Count |
 |--------|------:|
 | resolved | 27 |
-| scheduled | 47 |
-| open | 14 |
-
+| scheduled | 48 |
+| open | 13 |
 | ID | Status | Schedule | Title |
 |----|--------|----------|-------|
 | GAP-001 | resolved | — | Pre-push secret scan: `sk_live_` fixture string reached `git push` and w |
@@ -110,13 +109,11 @@ table row numbers. When appending, use the next ID: **`GAP-089`**.
 | GAP-081 | open | gap-009 | PRD 041 deliver: failed phase provision leaves orphan worktree path without `phaseWorktrees` state → `worktree path already exists` + `conductor:no-progress` |
 | GAP-082 | open | gap-010 | PRD 041 deliver: durable state cleared before `finalize-completion`; resume on bare `main` fails; manual docs PR #285 for INDEX |
 | GAP-083 | open | gap-011 | PRD 041 deliver: **regression** of GAP-062 — `conductor:no-progress` on identical `provision-phase` / `merge-enqueue` loops |
-
-
 | GAP-084 | open | gap-012 | PRD 041 phase PR #280: stale GitHub `IN_PROGRESS` + workflow `success` → check-gate yellow while UI all green; stuck-stale blocked until manual empty commit |
 | GAP-085 | open | gap-013 | PRD 041 terminal PR #284: `terminal_pr_body` skips `git_template_lib` validation — manual `gh pr create` workaround |
 | GAP-086 | open | gap-014 | PRD 041 deliver: capability-trust fixtures reverted to `check-gate.sh` on primary checkout (PRD 042 python-first regression) |
 | GAP-087 | open | gap-015 | PRD 041: `all-private` profile needs `visibility: public` at spec-seed (`tracked-private-body`), not only assert-entry (Recallium #2282/#2285) |
-| GAP-088 | open | gap-016 | `living-status-gap-resolve.py` R51 flip is never invoked automatically on PRD completion — GAP-021/022/043/046/062/etc. still `scheduled` against `complete` PRD 035 A1/A2 despite `absorbs:`/outcome-table claims of `resolved`; `/sw-feedback` also names amendment targets without a consumer-status pre-check, surfacing dead-end `/sw-amend` dispatches to already-`complete` PRDs (027/034/035/036/042) |
+| GAP-088 | scheduled | PRD 048 | `living-status-gap-resolve.py` R51 flip is never invoked automatically on PRD completion — GAP-021/022/043/046/062/etc. still `scheduled` against `complete` PRD 035 A1/A2 despite `absorbs:`/outcome-table claims of `resolved`; `/sw-feedback` also names amendment targets without a consumer-status pre-check, surfacing dead-end `/sw-amend` dispatches to already-`complete` PRDs (027/034/035/036/042) |
 
 ### Regression notes (PRD 041 retro, 2026-07-01)
 
