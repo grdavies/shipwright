@@ -4,12 +4,12 @@ date: 2026-07-01
 topic: deliver-concurrency-cwd-terminal-robustness
 frozen: true
 frozen_at: 2026-07-01
-amendment_union: A1-hook-state-worktree-alignment
+amendment_union: A1-hook-state-worktree-alignment, A2-unregistered-parent-model-tier-and-gap-004-closure
 visibility: public
 ---
 # Tasks — PRD 050 Deliver-loop concurrency, worktree/cwd safety & terminal-finalize robustness
 
-Single-pass task list from the frozen PRD 050 spec union (R1–R33; parent R1–R19 + amendment A1 R20–R33;
+Single-pass task list from the frozen PRD 050 spec union (R1–R42; parent R1–R19 + amendment A1 R20–R33 + amendment A2 R34–R42;
 decisions D6–D8, D-A1-1–D-A1-4). Phases mirror the PRD Rollout Plan (Thread A → B/C parallel-eligible → D →
 CI/gap verification). Amendment A1 tasks (1.6–1.9) roll into Thread A per A1 rollout note. No implementation
 starts until the `doc.afterTasks` boundary.
@@ -57,6 +57,33 @@ and concurrency regression fixtures.
   - **File:** `scripts/test/run_hook_worktree_alignment_fixtures.py` (or extend `run_memory_prework_fixtures.py`), `scripts/test/fixtures/deliver-concurrency/`, `core/sw-reference/pr-test-plan.manifest.json`
   - **Expected:** `hook-state-worktree-cwd-alignment`, `hook-state-dispatch-preflight-worktree-alignment`, `hook-state-primary-no-false-positive`, `hook-state-ambiguous-worktree-fail-closed` pass offline
   - **R-IDs:** R27, R28, R29, R30
+
+### 1.10 gap-004 Defect A/C fixture registration (S)
+
+Register existing regression fixtures; code already on `main`.
+
+- [ ] 1.10 Register bash-py and git-push chokepoint fixtures (R34, R35, R36)
+  - **File:** `core/sw-reference/pr-test-plan.manifest.json`, `.github/workflows/pr-test-plan-ci.yml`, `scripts/zero-shell-guard.py`
+  - **Expected:** `bash-py-invocation-guard.test` and `git-push-secret-scan-chokepoint.test` registered `required`; workflow regenerated; `find_bash_py_invocations` remains in zero-shell issue list
+  - **R-IDs:** R34, R35, R36
+
+### 1.11 gap-004 Defect B — unregistered parent model tier (M)
+
+Dispatch binding advisory pass + optional config fallback (A2 Thread F).
+
+- [ ] 1.11 Refactor dispatch-check tier resolution (R37–R39, TR18)
+  - **File:** `scripts/dispatch-check.py`, `core/sw-reference/config.schema.json`, `.cursor/workflow.config.example.json`
+  - **Expected:** non-reviewer/non-panel dispatches pass with advisory when parent not in `models.tiers`; reviewer/panel paths fail-closed unless `dispatch.unregisteredParentModelTier` set; invalid fallback → `binding:invalid-fallback-tier`
+  - **R-IDs:** R37, R38, R39
+- [ ] 1.12 Dispatch-binding doc + fixtures (R40–R42, TR20–TR21)
+  - **File:** `core/rules/sw-subagent-dispatch.mdc`, `core/commands/sw-doc.md`, `scripts/test/run_dispatch_binding_fixtures.py`, `core/sw-reference/pr-test-plan.manifest.json`
+  - **Expected:** docs updated + build-chain-sync; `dispatch-unregistered-parent-delegated-atomic-passes` and `dispatch-unregistered-parent-reviewer-fails-closed` registered and green
+  - **R-IDs:** R40, R41, R42
+- [ ] 1.13 gap-004 closure at ship (A2 Rollout step 4)
+  - **File:** `docs/prds/gap/gap-004-dispatch-binding-preflight-broken-bash-invokes-p/`, `docs/prds/INDEX.md`
+  - **Expected:** gap-004 unit `status: resolved` referencing PRD 050 A2 only after R34–R42 fixtures green — not narrative closure
+  - **R-IDs:** R34–R42
+
 
 ### 2. Thread B — Deliver-loop provisioning & stall classification (L)
 
@@ -183,6 +210,15 @@ Register all nine PRD fixtures and verify gap schedule/resolve at ship.
 | R31 | 1.8 | hook-state-worktree-cwd-alignment | O, I, E |
 | R32 | 1.6 | hook-state-worktree-cwd-alignment | O, I, E |
 | R33 | 5.3 | hook-state-worktree-cwd-alignment | O, I, E |
+| R34 | 1.10 | bash-py-invocation-guard | O, M, I, E |
+| R35 | 1.10 | git-push-secret-scan-chokepoint | O, M, I, E |
+| R36 | 1.10 | bash-py-invocation-guard | O, I, E |
+| R37 | 1.11 | dispatch-unregistered-parent-delegated-atomic-passes | O, B, I, E |
+| R38 | 1.11 | dispatch-unregistered-parent-reviewer-fails-closed | O, B, I, E |
+| R39 | 1.11 | dispatch-unregistered-parent-reviewer-fails-closed | O, I, E |
+| R40 | 1.12 | dispatch-unregistered-parent-delegated-atomic-passes | O, I, E |
+| R41 | 1.12 | dispatch-unregistered-parent-delegated-atomic-passes | Z, O, I, E |
+| R42 | 1.13 | dispatch-unregistered-parent-delegated-atomic-passes | O, I, E |
 
 ## Relevant Files
 
@@ -196,6 +232,7 @@ Register all nine PRD fixtures and verify gap schedule/resolve at ship.
 - `scripts/worktree_root.py`, `core/hooks/sw_hook_util.py` — hook-state worktree alignment (A1 TR14).
 - `scripts/wave_memory_prework.py`, `scripts/wave_preflight.py` — script-side root mismatch guard (A1 TR15).
 - `scripts/docs_worktree.py` — provision/resume `nextSteps` (A1 R24).
+- `scripts/dispatch-check.py` — unregistered parent model tier (A2 TR18).
 
 ## Notes
 
@@ -205,3 +242,4 @@ Register all nine PRD fixtures and verify gap schedule/resolve at ship.
 - A1 tasks 1.6–1.9 ship alongside Thread A (1.1–1.5) per amendment A1 rollout; R20 relies on Cursor
   `preToolUse` `cwd` (DL-1 resolved — absent/empty cwd → R30 fail-closed + `move_agent_to_root`).
 - Do not merge A1 hook-state alignment with PRD 049 `deliver_cwd_guard` (orthogonal primitives).
+- A2 tasks 1.10–1.13 may ship before parent Thread A when unblocking `/sw-doc` Task delegation (A2 D-A2-4).

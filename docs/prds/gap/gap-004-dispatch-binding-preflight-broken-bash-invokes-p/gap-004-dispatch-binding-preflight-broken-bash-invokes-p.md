@@ -1,7 +1,8 @@
 ---
 id: gap-004-dispatch-binding-preflight-broken-bash-invokes-p
 type: gap
-status: open
+status: scheduled
+schedule: PRD 050 A2
 title: Dispatch-binding preflight broken: bash invokes .py scripts, and interactive parent models are not in models.tiers
 visibility: public
 tags: [source:feedback, signal:feedback-dispatch-binding-bash-invocation-2026-06-30]
