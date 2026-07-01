@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "description": "Static repo-curated anomaly-pattern catalog (PRD 041 R24). Recognition and annotation only — never auto-act.",
+  "patterns": [
+    {
+      "id": "false-green",
+      "label": "False success / green without evidence",
+      "signals": [
+        "false success",
+        "false-green",
+        "verify passed but",
+        "status green without",
+        "fabricated status",
+        "claimed pass"
+      ],
+      "annotation": "Suspected false-green: claimed pass lacks verifiable evidence (recognition only).",
+      "autoAct": false
+    },
+    {
+      "id": "unauthorized-delete",
+      "label": "Unauthorized file delete",
+      "signals": [
+        "unauthorized delete",
+        "deleted outside scope",
+        "unexpected deletion",
+        "removed file not in scope"
+      ],
+      "annotation": "Suspected unauthorized delete outside declared task scope (recognition only).",
+      "autoAct": false
+    },
+    {
+      "id": "failed-rollback",
+      "label": "Failed rollback / dirty tree after revert",
+      "signals": [
+        "failed rollback",
+        "revert left dirty",
+        "tree dirty after revert",
+        "rollback incomplete"
+      ],
+      "annotation": "Suspected failed rollback leaving working tree dirty (recognition only).",
+      "autoAct": false
+    },
+    {
+      "id": "silent-skip",
+      "label": "Silent gate skip without recorded reason",
+      "signals": [
+        "silent skip",
+        "skipped without reason",
+        "gate skipped",
+        "phase skip unrecorded"
+      ],
+      "annotation": "Suspected silent skip: gate or phase skipped without recorded reason (recognition only).",
+      "autoAct": false
+    }
+  ],
+  "excluded": {
+    "test-tampering": {
+      "authoritative": "PRD A R9",
+      "note": "Not detected by this catalog. Annotate only when PRD A test-tamper flags are present on the signal."
+    }
+  }
+}
