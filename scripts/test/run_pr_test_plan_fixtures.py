@@ -69,7 +69,7 @@ bash "$GENERATOR" "$TMP_WF" >/dev/null 2>&1
 if cmp -s "$WORKFLOW" "$TMP_WF" 2>/dev/null; then
   ok "pr-test-plan-set-single-source: CI workflow matches manifest generator"
 else
-  bad "pr-test-plan-set-single-source: workflow drift — run bash scripts/generate-pr-test-plan-ci-workflow.sh"
+  bad "pr-test-plan-set-single-source: workflow drift — run python3 scripts/generate-pr-test-plan-ci-workflow.py core/sw-reference/pr-test-plan.manifest.json .github/workflows/pr-test-plan-ci.yml ."
 fi
 
 # --- pr-test-plan-jobs-on-pr (R1) ---
