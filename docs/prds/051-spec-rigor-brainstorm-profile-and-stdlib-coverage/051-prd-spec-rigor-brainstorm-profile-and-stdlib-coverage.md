@@ -1,5 +1,5 @@
 ---
-absorbs: [GAP-076]
+absorbs: [GAP-076, gap-001-spec-rigor-check-sh-lacks-a-brainstorm-artifact-]
 brainstorm: docs/brainstorms/2026-07-01-spec-rigor-brainstorm-profile-and-stdlib-coverage-requirements.md
 date: 2026-07-01
 topic: spec-rigor-brainstorm-profile-and-stdlib-coverage

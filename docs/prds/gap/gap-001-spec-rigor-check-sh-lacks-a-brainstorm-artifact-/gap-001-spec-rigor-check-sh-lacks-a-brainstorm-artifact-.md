@@ -1,7 +1,7 @@
 ---
 id: gap-001-spec-rigor-check-sh-lacks-a-brainstorm-artifact-
 type: gap
-status: open
+status: resolved
 title: spec-rigor-check.sh lacks a brainstorm artifact profile (validates brainstorms against PRD structure)
 visibility: public
 tags: [source:feedback, signal:brainstorm-freeze-spec-rigor-2026-06-30]
