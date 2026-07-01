@@ -79,6 +79,17 @@ Never materialize or dispatch without persisted human ack on the signal.
 5. **Gap split** — when `planningDir` is active, prefer canonical gap units under `docs/planning/gap/` via
    `python3 scripts/planning_gap_capture.py <repo> capture --signal-id <id> --title <title> [--pr N]`,
    then `python3 scripts/planning_graph.py <repo> reconcile --dry-run` (legacy GAP-BACKLOG is a read-only projection).
+   For **substantial** signals (amendment path), before naming `/sw-amend` in the handoff summary, run the same
+   read-only consumer-status probe `/sw-amend` uses:
+
+   ```bash
+   python3 scripts/authoring-guard.py preflight --path <unit-artifact> --command sw-amend --no-commit
+   ```
+
+   On `outcome: proceed` (`planned`/`in-progress`), handoff names `/sw-amend`. On exit `21` (`consumerStatus:
+   complete`), surface the returned `propose_complete_change_route` payload (`extends:`/`supersedes:`/gap-only)
+   instead of `/sw-amend` and record `gap-amend-blocked` with the routed `suggestedPath`. `--no-commit` is
+   required so triage never mutates `inFlight`/INDEX.
 6. **Record** route per `skills/feedback/references/route-record.md` — redact serialized JSON via
    `python3 scripts/memory-redact.py` before `memory-preflight` write.
 7. Return handoff summary with target command and normalized signal id. **Halt** for one human handoff

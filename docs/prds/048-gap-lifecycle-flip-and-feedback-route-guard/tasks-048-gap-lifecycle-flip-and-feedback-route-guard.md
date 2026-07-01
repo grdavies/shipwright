@@ -4,6 +4,7 @@ topic: gap-lifecycle-flip-and-feedback-route-guard
 prd: docs/prds/048-gap-lifecycle-flip-and-feedback-route-guard/048-prd-gap-lifecycle-flip-and-feedback-route-guard.md
 frozen: true
 frozen_at: 2026-07-01
+visibility: public
 ---
 
 # Tasks — PRD 048 Gap-lifecycle flip automation & feedback route guard
@@ -123,15 +124,15 @@ Update operator-facing docs to reflect auto-flip, corrected gate coverage, scope
 
 One-time reconciliation from a non-default-branch worktree after R1/R3 ship.
 
-- [ ] 6.1 Backfill PRD 035 absorbed rows with scope-note for GAP-062 (R6)
+- [x] 6.1 Backfill PRD 035 absorbed rows with scope-note for GAP-062 (R6)
   - **File:** `docs/prds/GAP-BACKLOG.md`
   - **Expected:** from non-`defaultBaseBranch` worktree invoke R1-fixed resolver for PRD 035 with `--scope-note` for GAP-062; record before/after row counts
   - **R-IDs:** R6
-- [ ] 6.2 Sweep other `complete` PRDs with corrected R3 gate (R6)
+- [x] 6.2 Sweep other `complete` PRDs with corrected R3 gate (R6)
   - **File:** `scripts/docs-currency-gate.py`
   - **Expected:** one-time sweep across all `complete` PRDs; if ≤5 additional PRDs have unresolved absorbed rows backfill in this PR, else backfill PRD 035 only and file follow-up gap (D9); attach full PRD list to rollout evidence
   - **R-IDs:** R6
-- [ ] 6.3 Close GAP-088 and attach gate evidence (R6)
+- [x] 6.3 Close GAP-088 and attach gate evidence (R6)
   - **File:** `docs/prds/GAP-BACKLOG.md`, `docs/prds/gap/gap-016-gap-resolve-mechanical-flip-r51-never-wired-into/`
   - **Expected:** before/after `docs-currency-gate.py` output shows PRD 035 drift list empties; flip GAP-088 to `resolved` referencing PRD 048; set gap-016 unit frontmatter `status: resolved`
   - **R-IDs:** R6

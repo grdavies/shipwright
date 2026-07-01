@@ -475,20 +475,30 @@ scripts/wave.py bookkeeping projected --types feat,fix
 
 After each green phase merge, `merge run-next` also invokes `living-docs reconcile --commit` on the
 orchestrator worktree — updating `docs/prds/INDEX.md` status from durable run state (`not-started` |
-`in-progress` | `complete`), resolving absorbed `GAP-BACKLOG` rows when the PRD completes, and committing
-the three ledger files onto `<type>/<slug>`.
+`in-progress` | `complete`) and committing the ledger files onto `<type>/<slug>`.
+
+**Absorbed-gap resolution on `complete` (PRD 048 R1):** when `reconcile-status.py set-index-status --status complete`
+writes a PRD row, `reconcile_lib.set_index_status()` runs `gap_backlog.resolve_for_prd()` in-process immediately
+after the INDEX write — flipping matching `scheduled`/`open` GAP-BACKLOG rows to `resolved` idempotently. This
+post-write hook is the primary flip path; it is **distinct** from PRD 046 A2's out-of-scope `finalize-completion`
+→ `living-docs reconcile --commit` call site (derived-status region vs. structural `set-index-status` write).
+`living-docs reconcile` may still run on `finalize-completion` as a redundant safety net but does not replace the
+in-process hook. On flip failure after a successful INDEX write, `set-index-status` returns `verdict: partial`
+(exit 21) for operator retry — see `skills/living-status/SKILL.md`.
 
 Before the terminal PR gate, `terminal pr prepare` appends an idempotent `COMPLETION-LOG` row
 (`living-docs append-terminal --commit`) and runs `docs-currency` — a hard-block on drift in the current
-run's INDEX row, completion-log entry, and absorbed gaps (R50; parity with task-currency R15).
+run's INDEX row, completion-log entry, and absorbed gaps (`open` and `scheduled` rows for the absorbing PRD;
+R50/R3; parity with task-currency R15).
 
 ```bash
 scripts/wave.py living-docs reconcile --commit
 scripts/wave.py living-docs append-terminal --commit
 scripts/wave.py docs-currency
 python3 scripts/reconcile-status.py set-index-status --prd <NNN> --status in-progress
+python3 scripts/reconcile-status.py set-index-status --prd <NNN> --status complete   # auto-flips absorbed gaps
 python3 scripts/reconcile-status.py append-log-idempotent --prd <NNN> --phase all --pr <N> --sha <sha>
-python3 scripts/reconcile-status.py gap-resolve --absorbing-prd <NNN> --pr <N>
+python3 scripts/living-status-gap-resolve.py --absorbing-prd <NNN> [--scope-note <text>]  # manual retry only
 ```
 
 See `skills/living-status/SKILL.md` for the canonical INDEX status enum and reconcile primitives.

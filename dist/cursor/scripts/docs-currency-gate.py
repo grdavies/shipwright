@@ -73,19 +73,21 @@ def main(argv: list[str] | None = None) -> int:
         if f"| {prd.lstrip('0')} |" not in log_text and f"| {prd} |" not in log_text:
             drift.append({"kind": "completion-log-missing", "prd": prd})
 
-    # GAP-BACKLOG: open rows absorbed-by this PRD when it is complete
+    # GAP-BACKLOG: unresolved rows for this PRD when it is complete (R3 / PRD 048)
     gap_path = root / "docs" / "prds" / "GAP-BACKLOG.md"
     if expected == "complete" and gap_path.is_file():
-        for line in gap_path.read_text(encoding="utf-8").splitlines():
-            if not line.startswith("|") or line.startswith("| Date") or line.startswith("|---"):
-                continue
-            parts = [p.strip() for p in line.strip("|").split("|")]
-            if len(parts) < 5:
-                continue
-            status = parts[-1].lower()
-            absorbed = parts[-2].zfill(3) if len(parts) >= 6 and parts[-2].isdigit() else ""
-            if status == "open" and absorbed == prd:
-                drift.append({"kind": "gap-still-open", "prd": prd, "row": parts[2]})
+        from gap_backlog import parse_gap_backlog
+
+        backlog = parse_gap_backlog(gap_path.read_text(encoding="utf-8"))
+        prd_n = str(int(prd)) if prd.isdigit() else prd.lstrip("0") or prd
+        sched_re = re.compile(
+            rf"^PRD\s+0*{re.escape(str(int(prd_n))) if prd_n.isdigit() else re.escape(prd_n)}(?:\s+A\d+)?$",
+            re.I,
+        )
+        for row in backlog.rows:
+            st = row.status.lower()
+            if st == "open" or (st == "scheduled" and sched_re.match(row.schedule.strip())):
+                drift.append({"kind": "gap-still-open", "prd": prd, "row": row.gap_id})
 
     # GAP-BACKLOG index/table integrity (R54)
     import subprocess
