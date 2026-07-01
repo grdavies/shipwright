@@ -471,3 +471,40 @@ python3 scripts/test/run_emitter_fixtures.py
 
 All registered in `verify.test` for Shipwright dev repos.
 
+## Task phase sizing (`tasks.sizing`)
+
+PRD 040 adds a deterministic phase-sizing heuristic for `/sw-tasks` and advisory split suggestions.
+Defaults are **calibrated from the frozen task-list corpus** (SC6) — not author-tuned.
+
+Re-run calibration (read-only):
+
+```bash
+PYTHONPATH=scripts python3 scripts/phase_sizing_corpus.py --root . audit
+```
+
+Artifacts land under `scripts/test/fixtures/phase-sizing/` (`baseline-distribution.json`,
+`corpus-manifest.json`, `sizing-defaults.json`). Fixture gate:
+`python3 scripts/test/run_phase_sizing_corpus_fixtures.py`.
+
+| Key | Calibrated default | Meaning |
+|-----|-------------------|---------|
+| `tasks.sizing.thresholds.filesTouched.small` | 6 | `small` when unique `**File:**` paths ≤ this (p50) |
+| `tasks.sizing.thresholds.filesTouched.medium` | 10 | `medium` when ≤ this (p75); above → `large` |
+| `tasks.sizing.thresholds.traceabilityScenarios.small` | 3 | Traceability rows mapped to the phase (p50) |
+| `tasks.sizing.thresholds.traceabilityScenarios.medium` | 6 | p75 cut |
+| `tasks.sizing.thresholds.subTaskCount.small` | 3 | Sub-task bullets under the phase heading (p50) |
+| `tasks.sizing.thresholds.subTaskCount.medium` | 5 | p75 cut |
+| `tasks.sizing.thresholds.distinctDirs.small` | 4 | Distinct parent directories among touched files (p50) |
+| `tasks.sizing.thresholds.distinctDirs.medium` | 6 | p75 cut |
+| `tasks.sizing.thresholds.depFanOut.small` | 1 | Outgoing dependency edges from the phase (p50) |
+| `tasks.sizing.thresholds.depFanOut.medium` | 2 | p75 cut |
+| `tasks.sizing.minPhaseFiles` | 2 | Minimum-viable-phase floor (files); splitting below is not rewarded |
+| `tasks.sizing.minPhaseScenarios` | 1 | Minimum traceability scenarios floor |
+| `tasks.sizing.maxPhaseCount` | 13 | Granularity DoS cap per task list |
+
+Corpus snapshot (2026-06-30): 43 frozen task lists, 239 phase samples. Baseline also records realized
+wave-width distribution (`waveWidth`) used to validate that split suggestions preserve throughput.
+
+The scorer (`scripts/phase-sizing.sh`, Phase 2+) reads these keys when present; unconfigured repos keep
+backward-compatible defaults from the latest corpus audit.
+
