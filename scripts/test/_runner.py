@@ -19,7 +19,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from _sw.cli import build_parser, run_module_main
-from _fixture_lib import FixtureContext, repo_root
+from _fixture_lib import FixtureContext, invoke_suite_main, repo_root
 
 
 def discover_tests(root: Path) -> list[Path]:
@@ -94,7 +94,7 @@ def run_suite_module(path: Path, *, root: Path | None = None) -> int:
         sys.modules[path.stem] = mod
         spec.loader.exec_module(mod)
         if hasattr(mod, "main"):
-            return int(mod.main())
+            return invoke_suite_main(mod)
         print(f"FAIL suite {path} missing main()", file=sys.stderr)
         return 1
     # Legacy .sh suite — delegate to bash subprocess (migration interim)

@@ -7,6 +7,10 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR.parent) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR.parent))
+from _fixture_lib import invoke_suite_main
+
 ROOT = SCRIPT_DIR.parent.parent
 
 
@@ -15,7 +19,7 @@ def run_suite(path: Path) -> int:
     mod = importlib.util.module_from_spec(spec)
     assert spec and spec.loader
     spec.loader.exec_module(mod)
-    return int(mod.main()) if hasattr(mod, "main") else 1
+    return invoke_suite_main(mod)
 
 
 def main() -> int:

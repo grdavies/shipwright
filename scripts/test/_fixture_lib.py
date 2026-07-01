@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import subprocess
+import inspect
 import sys
 import tempfile
 from collections.abc import Sequence
@@ -104,3 +105,14 @@ class FixtureContext:
 
   def exit_code(self) -> int:
       return 1 if self.failures else 0
+
+
+def invoke_suite_main(module: object) -> int:
+    """Run a fixture module's main() without inheriting parent sys.argv."""
+    main_fn = getattr(module, "main", None)
+    if not callable(main_fn):
+        return 1
+    params = list(inspect.signature(main_fn).parameters)
+    if not params:
+        return int(main_fn())
+    return int(main_fn([]))
