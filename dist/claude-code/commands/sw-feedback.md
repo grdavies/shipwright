@@ -55,6 +55,18 @@ auto-dispatch (FB-A2). Full inbound JSON is redacted via `python3 scripts/memory
 `human-confirm-halt` is driver-asserted; routed dispatch requires persisted human-ack keyed by `signalId`.
 FB-A1 in-turn continuation applies **after** handoff confirmation only.
 
+
+### Meta/dogfood two-phase handoff (PRD 041)
+
+When routing to `meta-shipwright` (`gapClass: plugin-self`):
+
+1. `python3 scripts/planning_gap_capture.py . capture --destination meta-shipwright --signal-id <id> --title <title> [--summary <text>]`
+   — writes redacted draft to `.cursor/sw-meta-inbox/` via `sw_state_write` only (no tracked planning mutation).
+2. Human confirms → `python3 scripts/planning_gap_capture.py . confirm --signal-id <id>`
+3. Materialize gap unit → `python3 scripts/planning_gap_capture.py . materialize --signal-id <id> --title <title>`
+
+Never materialize or dispatch without persisted human ack on the signal.
+
 1. **Normalize** per `skills/feedback/references/signal-schema.md` (`invocation: human` by default).
    For bare Sentry refs, expand per `skills/debug/references/sentry.md` (Sentry MCP) before building
    `untrusted_payload`; redact the fetched body before envelope wrap.

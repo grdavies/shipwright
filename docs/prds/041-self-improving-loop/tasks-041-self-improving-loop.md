@@ -16,15 +16,15 @@ Generated from the frozen PRD (effective spec union R20–R29, R30, R31). Phases
 
 ### 1. Shared writer + capture surfaces
 
-- [ ] 1.1 Single redacting state writer (sole writer for `.cursor/sw-*` + shared-git-dir stores)
+- [x] 1.1 Single redacting state writer (sole writer for `.cursor/sw-*` + shared-git-dir stores)
   - **File:** `scripts/sw-state-write.sh`, `core/sw-reference/layout.md`, `.sw/layout.md`
   - **Expected:** sole writer for all new stores; pipes content through `scripts/memory-redact.py`, validates against the target schema, atomic append/write; **fails closed** on redaction/schema error; direct `write_json` to these paths banned (fixture lint); layout registers writer + redaction + append-only semantics.
   - **R-IDs:** R31
-- [ ] 1.2 Meta/dogfood channel — two-phase capture/confirm
+- [x] 1.2 Meta/dogfood channel — two-phase capture/confirm
   - **File:** `scripts/planning_gap_capture.py`, `core/skills/feedback/SKILL.md`, `core/skills/feedback/references/signal-schema.md`, `core/commands/sw-feedback.md`, `core/skills/feedback-closure/SKILL.md`, `scripts/planning_paths.py`
   - **Expected:** `meta-shipwright` destination + `plugin-self` gap class; `capture` writes redacted draft to `.cursor/sw-meta-inbox/` only (no tracked planning mutation); `materialize` creates the gap unit only after `confirm --signal-id` records a persisted ack; meta vs product routing separated in `feedback-closure`.
   - **R-IDs:** R20, R21
-- [ ] 1.3 Cross-run failure-signature store (capture half) + pinned writers
+- [x] 1.3 Cross-run failure-signature store (capture half) + pinned writers
   - **File:** `scripts/failure-signature-record.sh`, `core/sw-reference/failure-signature.schema.json`, `scripts/check-gate.py`, `scripts/wave_failure.py`, `scripts/verify-evidence.py`
   - **Expected:** shared-git-dir authority (`${GIT_DIR}/shipwright-failure-signatures.json`, append-only via `sw-state-write.sh`); key `{check_id, exit_code, job_id}` (host-attested) + normalized message class as secondary discriminator (algorithm pinned in schema; strip temp paths/UUIDs/line numbers/timestamps; raw hash logged separately for audit); writers pinned at check-gate red, wave_failure blocked, verify-evidence not-verified, conductor `noProgressStreak`; `*-index` merge subcommand for linked worktrees.
   - **R-IDs:** R22

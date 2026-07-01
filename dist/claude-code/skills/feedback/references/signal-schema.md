@@ -57,3 +57,15 @@ the fetched payload before it enters `untrusted_payload` or downstream handoff.
 
 Before routing, search recent route records / memory for matching `dedupKey`. If an in-loop stabilize
 pass already handled the same review finding, **drop** the duplicate intake (do not re-route).
+
+## Meta/dogfood routing (PRD 041 R20)
+
+| Field | Value |
+|-------|-------|
+| `destination` | `meta-shipwright` — workflow-tool self-improvement (not product scope) |
+| `gapClass` | `plugin-self` — gap units materialize under `docs/planning/gap/` with tags `plugin-self`, `meta-shipwright` |
+
+Capture is **two-phase**: `planning_gap_capture.py capture --destination meta-shipwright` writes a redacted draft to
+`.cursor/sw-meta-inbox/{signalId}.json` only; `confirm --signal-id` persists ack; `materialize --signal-id --title`
+creates the gap unit after confirm.
+

@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "meta-inbox-draft",
+  "type": "object",
+  "required": [
+    "signalId",
+    "destination",
+    "gapClass",
+    "title",
+    "status",
+    "capturedAt"
+  ],
+  "properties": {
+    "signalId": { "type": "string", "minLength": 1 },
+    "destination": { "type": "string", "const": "meta-shipwright" },
+    "gapClass": { "type": "string", "const": "plugin-self" },
+    "title": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "confirmed", "materialized"]
+    },
+    "capturedAt": { "type": "string" },
+    "confirmedAt": { "type": "string" },
+    "materializedUnitId": { "type": "string" }
+  },
+  "additionalProperties": true
+}

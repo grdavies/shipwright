@@ -528,6 +528,12 @@ def check_budget_halt(root: Path, state: dict[str, Any]) -> str | None:
     if int(state.get("noProgressStreak", 0)) >= no_progress_threshold(root):
         if remediate_pending_for_state(root, state):
             return None
+        try:
+            import failure_signature_record_lib as fsr
+
+            fsr.maybe_record_no_progress(root, state)
+        except Exception:
+            pass
         return "conductor:no-progress"
 
     return None

@@ -60,6 +60,7 @@ Classify **destination** (not `002` ceremony tier):
 | **debug** | `production` class + error/crash/regression markers |
 | **gap-capture** | Signal extends a prior PR/PRD (`originatingArtifact.prNumber` or `prdRef` set) |
 | **brainstorm** | Genuinely new scope (no PRD linkage, requirement delta is net-new) |
+| **meta-shipwright** | Workflow-tool / plugin-self dogfood (`gapClass: plugin-self`) — inbox draft only until human confirm |
 | **gap-capture (material, no PRD)** | Shipped behavior change with no PRD capture — treat as substantial gap (Phase 3 → `/sw-amend`), not brainstorm |
 
 ### Conservative defaults (mixed signals)
