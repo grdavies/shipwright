@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import re
 import sys
 from collections import defaultdict
@@ -16,6 +17,8 @@ import wave_deliver as wd
 
 DEFAULTS_REL = Path("scripts/test/fixtures/phase-sizing/sizing-defaults.json")
 ADVISORY_HEADING = "## Sizing & Split Suggestions"
+
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 def valid_path(path: str) -> bool:
     if not path or "{" in path or "}" in path or "`" in path or "(" in path:
@@ -664,6 +667,69 @@ def cmd_strip_advisory(root: Path, args: argparse.Namespace) -> int:
     return 0
 
 
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+
+def redact_json_payload(text: str) -> tuple[str, dict[str, Any]]:
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT_DIR / "memory-redact.py")],
+        input=text,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return text, {
+            "verdict": "fail",
+            "reason": "redaction-error",
+            "stderr": proc.stderr.strip(),
+        }
+    out = proc.stdout
+    if out != text:
+        return out, {"verdict": "fail", "reason": "redaction-required"}
+    return out, {"verdict": "pass"}
+
+
+def cmd_persist(root: Path, args: argparse.Namespace) -> int:
+    task_list = resolve_task_list(root, args.task_list)
+    if not task_list.is_file():
+        emit({"verdict": "fail", "error": f"task list not found: {task_list}"}, 2)
+    out_raw = getattr(args, "out", None)
+    if not out_raw:
+        emit({"verdict": "fail", "error": "--out <path> required for persist"}, 2)
+    out_path = Path(out_raw)
+    if not out_path.is_absolute():
+        out_path = (root / out_path).resolve()
+    score = score_task_list(root, task_list, load_sizing_config(root))
+    payload = json.dumps(score, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    redacted, meta = redact_json_payload(payload)
+    if meta.get("verdict") != "pass":
+        emit(
+            {
+                "verdict": "fail",
+                "action": "phase-sizing-persist",
+                "error": meta.get("reason", "redaction-failed"),
+                "redaction": meta,
+                "taskList": rel_task_list(task_list, root),
+            },
+            20,
+        )
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(redacted, encoding="utf-8")
+    try:
+        rel_out = str(out_path.relative_to(root)).replace("\\", "/")
+    except ValueError:
+        rel_out = str(out_path)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "phase-sizing-persist",
+            "path": rel_out,
+            "taskList": rel_task_list(task_list, root),
+        }
+    )
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="phase_sizing.py")
     parser.add_argument("--root", default=".", help="Repository root")
@@ -679,6 +745,9 @@ def build_parser() -> argparse.ArgumentParser:
     strip = sub.add_parser("strip-advisory", help="Strip advisory block from a task list")
     strip.add_argument("task_list", help="Path to task-list markdown")
     strip.add_argument("--inplace", action="store_true", help="Rewrite task list in place")
+    persist = sub.add_parser("persist", help="Write redacted sizing JSON summary to path (R31)")
+    persist.add_argument("task_list", help="Path to task-list markdown")
+    persist.add_argument("--out", required=True, help="Output path for sizing JSON summary")
     return parser
 
 
@@ -693,6 +762,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_advisory(root, args)
     if args.command == "strip-advisory":
         return cmd_strip_advisory(root, args)
+    if args.command == "persist":
+        return cmd_persist(root, args)
     emit({"verdict": "fail", "error": f"unknown command {args.command!r}"}, 2)
     return 2
 

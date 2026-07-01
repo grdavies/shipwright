@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fixture gate for PRD 040 phase sizing scorer (Phase 2+3)."""
+"""Fixture gate for PRD 040 phase sizing scorer (Phase 2–5)."""
 from __future__ import annotations
 
 import json
@@ -120,6 +120,76 @@ def main() -> int:
             ok("phase-sizing-strip-advisory")
         else:
             bad("phase-sizing-strip-advisory")
+
+
+    snapshot_path = ROOT / "scripts/test/fixtures/phase-sizing/authoring-guidance-snapshot.json"
+    snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    doc_map = {
+        "tasks_skill": ROOT / "core/skills/tasks/SKILL.md",
+        "sw_tasks": ROOT / "core/commands/sw-tasks.md",
+        "parallelism_skill": ROOT / "core/skills/parallelism/SKILL.md",
+        "deliver_skill": ROOT / "core/skills/deliver/SKILL.md",
+        "sw_deliver": ROOT / "core/commands/sw-deliver.md",
+    }
+    guidance_ok = True
+    for key, doc_path in doc_map.items():
+        body = doc_path.read_text(encoding="utf-8")
+        for marker in snapshot.get(key, []):
+            if marker not in body:
+                guidance_ok = False
+                break
+    if guidance_ok:
+        ok("phase-sizing-authoring-guidance")
+    else:
+        bad("phase-sizing-authoring-guidance")
+
+    overlap_score = run_score("scripts/test/fixtures/phase-sizing/tasks-missing-deps-overlap.md")
+    overlap_notices = " ".join(overlap_score.get("notices") or [])
+    if (
+        "missing Phase Dependencies table — edges inferred from overlapping **File:** paths" in overlap_notices
+        and "file-set edge" in overlap_notices
+    ):
+        ok("phase-sizing-fallback-file-set")
+    else:
+        bad("phase-sizing-fallback-file-set")
+
+    sequential_score = run_score("scripts/test/fixtures/phase-sizing/tasks-missing-deps-sequential.md")
+    sequential_notices = " ".join(sequential_score.get("notices") or [])
+    if "missing Phase Dependencies table — sequential fallback edges" in sequential_notices:
+        ok("phase-sizing-fallback-sequential")
+    else:
+        bad("phase-sizing-fallback-sequential")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out_clean = Path(tmpdir) / "sizing-clean.json"
+        persist_clean = run_cmd(
+            "persist",
+            split_path,
+            "--out",
+            str(out_clean),
+        )
+        if persist_clean.returncode == 0 and out_clean.is_file():
+            ok("phase-sizing-persist-clean")
+        else:
+            bad("phase-sizing-persist-clean")
+
+        secret_path = Path(tmpdir) / "tasks-with-secret.md"
+        secret_body = (ROOT / split_path).read_text(encoding="utf-8")
+        secret_token = "ghp_" + ("a" * 36)
+        secret_path.write_text(
+            secret_body.replace("### 1. Separable paths", f"### 1. {secret_token} Separable paths"),
+            encoding="utf-8",
+        )
+        persist_secret = run_cmd(
+            "persist",
+            str(secret_path),
+            "--out",
+            str(Path(tmpdir) / "sizing-secret.json"),
+        )
+        if persist_secret.returncode == 20:
+            ok("phase-sizing-persist-redaction")
+        else:
+            bad("phase-sizing-persist-redaction")
 
     return FAIL
 

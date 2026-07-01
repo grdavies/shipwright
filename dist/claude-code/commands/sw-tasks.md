@@ -47,4 +47,10 @@ Task list from frozen PRD + amendment union.
 - Task list reflects union, not bare parent alone.
 - Traceability table required — `traceability-check.py` blocks freeze on uncovered R-IDs.
 - Phase Dependencies table required — `spec-rigor-check.py` blocks freeze when missing or invalid (R5/R6/R37).
+- Phase sizing uses the deterministic `small|medium|large` heuristic (`python3 scripts/phase_sizing.py score`);
+  informal S/M/L labels are deprecated. Prefer many small phases with explicit dependency edges (R19).
+- Small phases are a **design constraint** bounded by `tasks.sizing.minPhaseFiles` / `minPhaseScenarios` floor
+  and `maxPhaseCount` cap (R18). Split suggestions cite contention families in `skills/parallelism/SKILL.md`.
+- Legacy lists missing `## Phase Dependencies` at deliver time follow the PRD 013 ladder in `skills/deliver/SKILL.md`
+  (declared → file-set inference → sequential+notice) — authors must still emit the table at freeze.
 - Does not provision worktrees or run `/sw-execute`.

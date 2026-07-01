@@ -29,7 +29,9 @@ dependents on green unmerged branches, and halts at the human merge gate.
 
 1. Load `skills/deliver/SKILL.md` and `skills/conductor/SKILL.md` (conductor contract — R1/R3).
 2. Auto-detect mode: frozen `--task-list` → **phase-mode**; `--items`/`--edges` → **multi-feature**; both → disambiguation halt.
-3. Phase-mode: validate `frozen: true`, resolve `<type>/<slug>`, parse `## Phase Dependencies` (or R8 sequential fallback).
+3. Phase-mode: validate `frozen: true`, resolve `<type>/<slug>`, parse `## Phase Dependencies` (required at
+   `/sw-tasks` freeze). Legacy lists omitting the table use the PRD 013 fallback ladder at plan time:
+   declared edges → `**File:**` file-set inference → sequential+notice (see **Phase dependency fallback**).
 4. Run `scripts/wave.py preflight` to echo mode, target branch, and waves (includes CI/review
    base-branch preflight, R49); then `scripts/wave.py plan`.
 5. Supports `--type`, `--dry-run` (no mutations), and `--from <phase>` (resume guard).
@@ -208,6 +210,19 @@ Unit-level graph primitives (in addition to phase-mode waves):
 **Soft-enforce:** when `planning.autonomy` is `maintenance-only` (default) and an explicit `--task-list` targets a lower-priority eligible unit than `next` would pick, preflight returns a confirm prompt — pass `--confirmed` after operator ack.
 
 **Run-start:** both `next` and explicit `--task-list` re-validate eligibility and depends at run-start (refuses `superseded`/`cancelled` races).
+
+## Phase dependency fallback (PRD 013)
+
+`/sw-tasks` requires `## Phase Dependencies` at freeze (`spec-rigor-check.py`). Phase-mode `/sw-deliver plan`
+applies this ladder only when a **legacy** frozen list omits the table (`wave_deliver.deps_to_edges`):
+
+| Step | When | Behavior |
+|------|------|----------|
+| 1. Declared | `## Phase Dependencies` present | Table rows are authoritative |
+| 2. File-set inference | Table absent, overlapping `**File:**` | Infer serializing edges before waves |
+| 3. Sequential + notice | Table absent, no file overlap | Strict `1→2→3…` edges + missing-table notice |
+
+Explicit author edges always win. New task lists must emit the table at freeze — never rely on step 2–3.
 
 ## Guardrails
 
