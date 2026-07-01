@@ -1030,6 +1030,15 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-worktree-config-fixtures"
+    },
+    {
+      "id": "spec-rigor-brainstorm-profile-fixtures",
+      "script": "scripts/test/run_spec_rigor_brainstorm_profile_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-spec-rigor-brainstorm-profile-fixtures"
     }
   ]
 }

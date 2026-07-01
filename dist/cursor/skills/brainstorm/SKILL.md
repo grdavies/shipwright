@@ -32,7 +32,10 @@ Full-tier requirements exploration. Produces a brainstorm doc for `/sw-prd`. Doe
 1. Load `skills/brainstorm/references/requirements-sections.md`.
 2. Write to `docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md`.
 3. Assign stable R-IDs; include all required sections.
-4. Report path and next step: `/sw-prd` (after `/sw-freeze` if freezing brainstorm first).
+4. **Spec-rigor gate (hard-blocking):** run
+   `python3 scripts/spec-rigor-check.py --artifact brainstorm --path <requirements-doc>` after the write.
+   Exit `20` halts — fix findings before handoff. Advisory re-check remains available to `/sw-doc-review`.
+5. Report path and next step: `/sw-prd` (after `/sw-freeze` if freezing brainstorm first).
 
 ## Guardrails
 
