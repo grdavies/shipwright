@@ -175,6 +175,147 @@ else
   FAIL=1
 fi
 
+
+# --- R5: complete-unit route guard (PRD 048) ---
+SKILL="$(content_path skills/feedback/SKILL.md)"
+CMD="$(content_path commands/sw-feedback.md)"
+if grep -q 'authoring-guard.py preflight' "$SKILL" && \
+   grep -q 'authoring-guard.py preflight' "$CMD" && \
+   grep -q -- '--command sw-amend --no-commit' "$SKILL" && \
+   grep -q -- '--command sw-amend --no-commit' "$CMD" && \
+   grep -q 'propose_complete_change_route' "$SKILL" && \
+   grep -q 'gap-amend-blocked' "$SKILL"; then
+  echo "OK  feedback complete-unit route guard docs"
+else
+  echo "FAIL feedback complete-unit route guard docs"
+  FAIL=1
+fi
+
+AG="$ROOT/scripts/authoring-guard.py"
+PIG="$ROOT/scripts/planning_index_gen.py"
+INDEX_MARKERS_START='<!-- planning-index:derived begin -->'
+INDEX_MARKERS_END='<!-- planning-index:derived end -->'
+
+seed_index() {
+  local repo="$1"
+  mkdir -p "$repo/docs/planning"
+  cat >"$repo/docs/planning/INDEX.md" <<'IDX'
+# Planning units INDEX
+
+<!-- planning-index:schema v1 -->
+<!-- Status precedence: lifecycle units read derived.status when populated, else structural status; gap units use structural status only. -->
+
+<!-- planning-index:structural begin -->
+| id | type | title | status | visibility | edges |
+| --- | --- | --- | --- | --- | --- |
+<!-- planning-index:structural end -->
+<!-- planning-index:derived begin -->
+
+<!-- planning-index:derived end -->
+<!-- planning-index:inFlight begin -->
+
+<!-- planning-index:inFlight end -->
+IDX
+}
+
+seed_unit() {
+  local repo="$1" type="$2" id="$3" status="$4"
+  mkdir -p "$repo/docs/planning/$type/$id/amendments"
+  cat >"$repo/docs/planning/$type/$id/$id.md" <<EOF
+---
+id: $id
+type: $type
+status: $status
+title: Fixture unit
+visibility: public
+---
+# body
+EOF
+}
+
+inject_derived() {
+  local repo="$1" body="$2"
+  python3 - "$repo/docs/planning/INDEX.md" "$body" <<'PYINJ'
+import sys
+from pathlib import Path
+idx = Path(sys.argv[1])
+body = sys.argv[2]
+text = idx.read_text()
+start = "<!-- planning-index:derived begin -->"
+end = "<!-- planning-index:derived end -->"
+text = text.split(start, 1)[0] + start + "\n" + body + end + text.split(end, 1)[1]
+idx.write_text(text)
+PYINJ
+}
+
+snapshot_inflight() {
+  local repo="$1"
+  python3 - "$repo/docs/planning/INDEX.md" <<'PYSNAP'
+import sys
+from pathlib import Path
+text = Path(sys.argv[1]).read_text()
+start = "<!-- planning-index:inFlight begin -->"
+end = "<!-- planning-index:inFlight end -->"
+print(text.split(start,1)[1].split(end,1)[0])
+PYSNAP
+}
+
+# complete unit routes away from /sw-amend (exit 21 + route payload)
+TMP_R5C=$(mktemp -d)
+(
+  cd "$TMP_R5C"
+  git init -q && git config user.email t@t.com && git config user.name T
+  seed_index "$TMP_R5C"
+  seed_unit "$TMP_R5C" prd prd-048-fixture complete
+  inject_derived "$TMP_R5C" $'prd-048-fixture: complete\n'
+  git add . && git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -q -m init
+  BEFORE=$(snapshot_inflight "$TMP_R5C")
+  set +e
+  OUT=$(python3 "$AG" preflight --path docs/planning/prd/prd-048-fixture/prd-048-fixture.md --command sw-amend --no-commit 2>&1)
+  EC=$?
+  set -e
+  AFTER=$(snapshot_inflight "$TMP_R5C")
+  [[ "$EC" -eq 21 ]]
+  [[ "$BEFORE" == "$AFTER" ]]
+  echo "$OUT" | python3 -c "
+import json,sys,re
+m=re.findall(r'\{[\s\S]*\}', sys.stdin.read())
+d=json.loads(m[-1])
+assert d['outcome']=='route'
+assert 'route' in d
+r=d['route']
+assert r['kind']=='extending-unit'
+assert 'extends' in r['edges']
+assert '/sw-amend' not in json.dumps(d)
+"
+) && echo "OK  feedback-r5-complete-unit-routes-not-amend" || { echo "FAIL feedback-r5-complete-unit-routes-not-amend"; FAIL=1; }
+
+# planned unit still proceeds to /sw-amend path
+TMP_R5P=$(mktemp -d)
+(
+  cd "$TMP_R5P"
+  git init -q && git config user.email t@t.com && git config user.name T
+  seed_index "$TMP_R5P"
+  seed_unit "$TMP_R5P" prd prd-048-fixture planned
+  inject_derived "$TMP_R5P" $'prd-048-fixture: planned\n'
+  git add . && git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -q -m init
+  OUT=$(python3 "$AG" preflight --path docs/planning/prd/prd-048-fixture/prd-048-fixture.md --command sw-amend --no-commit)
+  echo "$OUT" | python3 -c "import json,sys,re; m=re.findall(r'\{[\s\S]*\}', sys.stdin.read()); d=json.loads(m[-1]); assert d['outcome']=='proceed'"
+) && echo "OK  feedback-r5-planned-unit-proceeds-amend" || { echo "FAIL feedback-r5-planned-unit-proceeds-amend"; FAIL=1; }
+
+# in-progress unit still proceeds
+TMP_R5I=$(mktemp -d)
+(
+  cd "$TMP_R5I"
+  git init -q && git config user.email t@t.com && git config user.name T
+  seed_index "$TMP_R5I"
+  seed_unit "$TMP_R5I" prd prd-048-fixture in-progress
+  inject_derived "$TMP_R5I" $'prd-048-fixture: in-progress\n'
+  git add . && git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -q -m init
+  OUT=$(python3 "$AG" preflight --path docs/planning/prd/prd-048-fixture/prd-048-fixture.md --command sw-amend --no-commit)
+  echo "$OUT" | python3 -c "import json,sys,re; m=re.findall(r'\{[\s\S]*\}', sys.stdin.read()); d=json.loads(m[-1]); assert d['outcome']=='proceed'"
+) && echo "OK  feedback-r5-in-progress-unit-proceeds-amend" || { echo "FAIL feedback-r5-in-progress-unit-proceeds-amend"; FAIL=1; }
+
 if [[ $FAIL -eq 0 ]]; then
   echo "ALL feedback fixtures passed"
 else

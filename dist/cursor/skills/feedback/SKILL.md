@@ -90,12 +90,29 @@ When destination is **gap-capture**, decide on the **freeze axis** (not ceremony
 
 | Outcome | When | Handoff |
 |---------|------|---------|
-| **Substantial** | Adds/edits/retracts R-ID, changes documented behavior, touches frozen PRD scope, or material shipped behavior with no PRD | `/sw-amend` |
+| **Substantial** | Adds/edits/retracts R-ID, changes documented behavior, touches frozen PRD scope, or material shipped behavior with no PRD | `/sw-amend` when consumer status allows; else complete-unit route (below) |
 | **Trivial in-scope** | Small gap, no requirement/behavior change | Append to `docs/prds/GAP-BACKLOG.md` |
 
 Create `docs/prds/GAP-BACKLOG.md` with a checklist header if missing before first append.
 
 **Bias:** ambiguous → **substantial** (amendment), never silent task edit.
+
+### Substantial handoff — consumer-status probe (PRD 048 R5)
+
+Before naming `/sw-amend` in the handoff summary, resolve the candidate unit's consumer status with a
+read-only probe (same dry check `/sw-amend` step 0 uses):
+
+```bash
+python3 scripts/authoring-guard.py preflight --path <unit-artifact> --command sw-amend --no-commit
+```
+
+- **`outcome: proceed`** (`consumerStatus` is `planned` or `in-progress`) → handoff names `/sw-amend`.
+- **Exit `21`** (`consumerStatus: complete`, `outcome: route`) → **do not** name `/sw-amend`; surface the
+  returned `propose_complete_change_route` payload (`extends:`/`supersedes:` unit fork or gap-only follow-up)
+  and record `route: gap-amend-blocked` with `target` set to the routed `suggestedPath` (never `/sw-amend`).
+- **`--no-commit` is mandatory** — routing must not mutate `inFlight` or INDEX during triage.
+
+The route record MUST capture which branch fired (`gap-amend` vs `gap-amend-blocked` + routed path).
 
 ### Gap backlog entry format
 
