@@ -49,6 +49,7 @@
 | 045 | issue-native-dev-tracking | [045-prd-issue-native-dev-tracking.md](045-issue-native-dev-tracking/045-prd-issue-native-dev-tracking.md) (frozen) [A1](045-issue-native-dev-tracking/amendments/A1-file-backend-gap-capture-unification.md) | [tasks](045-issue-native-dev-tracking/tasks-045-issue-native-dev-tracking.md) (frozen) | not-started |
 | 046 | issue-store-planning-graph | [046-prd-issue-store-planning-graph.md](046-issue-store-planning-graph/046-prd-issue-store-planning-graph.md) (frozen) [A1](046-issue-store-planning-graph/amendments/A1-committed-index-write-path-default-branch-safety.md) [A2](046-issue-store-planning-graph/amendments/A2-terminal-index-status-reconcile-on-finalize-completion.md) [A3](046-issue-store-planning-graph/amendments/A3-inflight-signal-default-branch-commit-safety.md) | [tasks](046-issue-store-planning-graph/tasks-046-issue-store-planning-graph.md) (frozen) | not-started |
 | 047 | jira-issue-store-adapter | [047-prd-jira-issue-store-adapter.md](047-jira-issue-store-adapter/047-prd-jira-issue-store-adapter.md) (frozen) | [tasks](047-jira-issue-store-adapter/tasks-047-jira-issue-store-adapter.md) (frozen) | not-started |
+| 049 | operator-worktree-contract-and-cwd-guard | [049-prd-operator-worktree-contract-and-cwd-guard.md](049-operator-worktree-contract-and-cwd-guard/049-prd-operator-worktree-contract-and-cwd-guard.md) (frozen) | — | not-started |
 
 
 <!-- planning-index:structural begin -->| id | type | title | status | visibility | edges |
