@@ -150,6 +150,113 @@ else
   bad "feedback-routing-prefers-gap-units"
 fi
 
+
+# --- set-index-status-complete-flips-gaps-in-process (PRD 048 R1) ---
+TMP3=$(mktemp -d)
+mk_repo "$TMP3"
+mkdir -p "$TMP3/.cursor"
+echo '{"defaultBaseBranch":"main"}' > "$TMP3/.cursor/workflow.config.json"
+cat > "$TMP3/docs/prds/INDEX.md" <<'EOF'
+# INDEX
+| # | Slug | PRD | Tasks | Status |
+|---|------|-----|-------|--------|
+| 035 | fixture | [prd](035-fixture/035-prd-fixture.md) | [tasks](035-fixture/tasks.md) | in-progress |
+EOF
+if (cd "$TMP3" && git checkout -q -b docs/r1-flip-fixture && python3 -c "
+import sys
+sys.path.insert(0,'$ROOT/scripts')
+from pathlib import Path
+import reconcile_lib as rl
+root = Path('.').resolve()
+result = rl.set_index_status(root, '035', 'complete')
+assert result['verdict'] == 'pass', result
+assert 'GAP-043' in result.get('flipped', []), result
+text = (root/'docs/prds/GAP-BACKLOG.md').read_text()
+assert '| GAP-043 | resolved |' in text
+idx = (root/'docs/prds/INDEX.md').read_text()
+assert 'complete' in idx
+"); then ok "set-index-status-complete-flips-gaps-in-process"; else bad "set-index-status-complete-flips-gaps-in-process"; fi
+rm -rf "$TMP3"
+
+# --- set-index-status-refuses-default-branch (PRD 048 R2) ---
+TMP4=$(mktemp -d)
+mk_repo "$TMP4"
+(cd "$TMP4" && git add -A && git commit -q -m "fixture init")
+mkdir -p "$TMP4/.cursor"
+echo '{"defaultBaseBranch":"main"}' > "$TMP4/.cursor/workflow.config.json"
+git -C "$TMP4" branch -M main
+cat > "$TMP4/docs/prds/INDEX.md" <<'EOF'
+# INDEX
+| # | Slug | PRD | Tasks | Status |
+|---|------|-----|-------|--------|
+| 035 | fixture | [prd](035-fixture/035-prd-fixture.md) | [tasks](035-fixture/tasks.md) | in-progress |
+EOF
+if (cd "$TMP4" && python3 -c "
+import sys
+sys.path.insert(0,'$ROOT/scripts')
+from pathlib import Path
+import reconcile_lib as rl
+root = Path('.').resolve()
+result = rl.set_index_status(root, '035', 'complete')
+assert result['verdict'] == 'fail', result
+idx = (root/'docs/prds/INDEX.md').read_text()
+assert 'in-progress' in idx and 'complete' not in idx.split('035')[1][:60]
+"); then ok "set-index-status-refuses-default-branch"; else bad "set-index-status-refuses-default-branch"; fi
+rm -rf "$TMP4"
+
+# --- set-index-status-partial-on-flip-failure (PRD 048 R1) ---
+TMP5=$(mktemp -d)
+mk_repo "$TMP5"
+mkdir -p "$TMP5/.cursor"
+echo '{"defaultBaseBranch":"main"}' > "$TMP5/.cursor/workflow.config.json"
+cat > "$TMP5/docs/prds/INDEX.md" <<'EOF'
+# INDEX
+| # | Slug | PRD | Tasks | Status |
+|---|------|-----|-------|--------|
+| 035 | fixture | [prd](035-fixture/035-prd-fixture.md) | [tasks](035-fixture/tasks.md) | in-progress |
+EOF
+if (cd "$TMP5" && git checkout -q -b docs/partial-fixture && python3 -c "
+import sys
+from unittest import mock
+sys.path.insert(0,'$ROOT/scripts')
+from pathlib import Path
+import reconcile_lib as rl
+import gap_backlog
+root = Path('.').resolve()
+with mock.patch.object(gap_backlog, 'resolve_for_prd', return_value={'verdict':'partial','flipped':[],'error':'simulated flip failure'}):
+    result = rl.set_index_status(root, '035', 'complete')
+assert result['verdict'] == 'partial', result
+assert result.get('error')
+idx = (root/'docs/prds/INDEX.md').read_text()
+assert 'complete' in idx
+"); then ok "set-index-status-partial-on-flip-failure"; else bad "set-index-status-partial-on-flip-failure"; fi
+rm -rf "$TMP5"
+
+# --- flip-resolve-scope-note-annotation (PRD 048 R4) ---
+TMP6=$(mktemp -d)
+mk_repo "$TMP6"
+if (cd "$TMP6" && python3 "$ROOT/scripts/gap-backlog.py" flip --resolve --prd 035 --scope-note "narrow fix" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert 'GAP-043' in d.get('flipped',[]), d
+text=open('docs/prds/GAP-BACKLOG.md').read()
+assert '| GAP-043 | resolved | — (narrow fix) |' in text, text
+"); then ok "flip-resolve-scope-note-annotation"; else bad "flip-resolve-scope-note-annotation"; fi
+rm -rf "$TMP6"
+
+# --- flip-resolve-bare-em-dash-without-scope-note (PRD 048 R7) ---
+TMP7=$(mktemp -d)
+mk_repo "$TMP7"
+if (cd "$TMP7" && python3 "$ROOT/scripts/gap-backlog.py" flip --resolve --prd 035 | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert 'GAP-043' in d.get('flipped',[]), d
+text=open('docs/prds/GAP-BACKLOG.md').read()
+assert '| GAP-043 | resolved | — |' in text, text
+"); then ok "flip-resolve-bare-em-dash-without-scope-note"; else bad "flip-resolve-bare-em-dash-without-scope-note"; fi
+rm -rf "$TMP7"
+
+
 exit "$FAIL"
 
 """

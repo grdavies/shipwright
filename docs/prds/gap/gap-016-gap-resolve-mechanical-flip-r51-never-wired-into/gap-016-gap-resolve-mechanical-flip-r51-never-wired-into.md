@@ -1,7 +1,7 @@
 ---
 id: gap-016-gap-resolve-mechanical-flip-r51-never-wired-into
 type: gap
-status: open
+status: resolved
 title: Gap-resolve mechanical flip (R51) never wired into PRD-ship pipeline
 visibility: public
 tags: [source:feedback, signal:feedback-gap-lifecycle-flip-unwired-2026-07-01, prd-035, plugin-self]

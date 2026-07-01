@@ -193,6 +193,12 @@
 * merge phase thread-a-spec-rigor-brainstorm-artifact-profile-s into feat/spec-rigor-brainstorm-profile-and-stdlib-coverage (07d70ef) <!-- sw-deliver:thread-a-spec-rigor-brainstorm-artifact-profile-s -->
 * merge phase thread-b-stdlib-only-coverage-tooling-m into feat/spec-rigor-brainstorm-profile-and-stdlib-coverage (feeb211) <!-- sw-deliver:thread-b-stdlib-only-coverage-tooling-m -->
 * merge phase manifest-registration-gap-verification-s into feat/spec-rigor-brainstorm-profile-and-stdlib-coverage (b5c4631) <!-- sw-deliver:manifest-registration-gap-verification-s -->
+* merge phase in-process-gap-resolve-flip-default-branch-guard-medium into feat/gap-lifecycle-flip-and-feedback-route-guard (2eb688d) <!-- sw-deliver:in-process-gap-resolve-flip-default-branch-guard-medium -->
+* merge phase docs-currency-gate-gap-still-open-rewrite-small into feat/gap-lifecycle-flip-and-feedback-route-guard (3eb2166) <!-- sw-deliver:docs-currency-gate-gap-still-open-rewrite-small -->
+* merge phase feedback-route-guard-for-complete-units-medium into feat/gap-lifecycle-flip-and-feedback-route-guard (45b2289) <!-- sw-deliver:feedback-route-guard-for-complete-units-medium -->
+* merge phase gap-backlog-flip-scope-note-annotation-small into feat/gap-lifecycle-flip-and-feedback-route-guard (1455b42) <!-- sw-deliver:gap-backlog-flip-scope-note-annotation-small -->
+* merge phase documentation-surface-updates-small into feat/gap-lifecycle-flip-and-feedback-route-guard (c1ee53a) <!-- sw-deliver:documentation-surface-updates-small -->
+* merge phase retroactive-backfill-and-gap-closure-medium into feat/gap-lifecycle-flip-and-feedback-route-guard (f3fc493) <!-- sw-deliver:retroactive-backfill-and-gap-closure-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

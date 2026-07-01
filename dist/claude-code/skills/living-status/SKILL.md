@@ -91,7 +91,24 @@ Binary status contract: `open` | `scheduled` | `resolved` with schedule in the S
 Mechanical flips route through `scripts/gap-backlog.py` only:
 
 - **Freeze** (`absorbs:` frontmatter) → `open` → `scheduled` (`PRD NNN` or `PRD NNN Ak`).
-- **PRD ship / complete** → `scheduled` → `resolved` via `living-status-gap-resolve.py`.
+- **PRD ship / complete** → `scheduled` → `resolved` via the shared in-process resolver
+  (`gap_backlog.resolve_for_prd()`), invoked automatically and idempotently when
+  `reconcile-status.py set-index-status --status complete` writes the INDEX row (PRD 048 R1). Rows already
+  `resolved` are left untouched; no matching `open`/`scheduled` rows is a no-op. If the flip raises after the
+  INDEX write succeeds, the CLI returns `{"verdict": "partial", ...}` (exit 21) — INDEX is not rolled back;
+  retry with `living-status-gap-resolve.py --absorbing-prd <NNN>` or `gap_backlog.py flip --resolve`.
+- **Manual retry / backfill** — `living-status-gap-resolve.py --absorbing-prd <NNN> [--scope-note <text>]`
+  delegates to the same shared resolver (standalone CLI; accepts `--root` for worktree-correct paths).
+
+**Scope-note annotation (R4):** `gap_backlog.py flip --resolve --scope-note <text>` (or
+`living-status-gap-resolve.py --scope-note`) writes `row.schedule = "— (<text>)"` instead of bare `"—"` when a
+fix ships narrower than the gap's original description (e.g. `— (remediate-pending phases only)`). Omitting the
+flag preserves today's bare `"—"` byte-for-byte.
+
+**`gap-still-open` drift (R3):** `scripts/docs-currency-gate.py` flags unresolved rows when the absorbing PRD
+is `complete` and `row.status` is `open`, **or** `row.status` is `scheduled` with a Schedule matching that PRD
+(`PRD <n>` or `PRD <n> Ak` — the shape that silently passed before PRD 048). Parser reuses
+`gap_backlog.parse_gap_backlog()` (4-column `ID | Status | Schedule | Title` table).
 
 Append protocol: next ID is max(`GAP-NNN`)+1, never reuse; cross-links use `GAP-NNN` not row numbers.
 `gap-backlog.py list --json` and `gap-backlog.py check` power the docs-currency integrity guard.

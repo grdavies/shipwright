@@ -73,7 +73,7 @@
 | gap-013-terminal-pr-prepare-body-skips-template-validati | gap | Terminal PR prepare body skips template validation | open | public |  |
 | gap-014-capability-trust-fixtures-regress-to-check-gate- | gap | Capability trust fixtures regress to check-gate.sh during deliver | open | public |  |
 | gap-015-all-private-profile-requires-visibility-public-a | gap | all-private profile requires visibility public at spec-seed not assert-entry only | open | public |  |
-| gap-016-gap-resolve-mechanical-flip-r51-never-wired-into | gap | Gap-resolve mechanical flip (R51) never wired into PRD-ship pipeline | open | public |  |
+| gap-016-gap-resolve-mechanical-flip-r51-never-wired-into | gap | Gap-resolve mechanical flip (R51) never wired into PRD-ship pipeline | resolved | public |  |
 <!-- planning-index:structural end -->
 <!-- planning-index:derived begin -->
 

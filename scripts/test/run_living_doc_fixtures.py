@@ -207,6 +207,92 @@ else
 fi
 rm -rf "$CUR_FIX"
 
+
+# --- gap-still-open scheduled against complete PRD (R3 / PRD 048) ---
+GAP_STILL_FIX=$(mktemp -d)
+mkdir -p "$GAP_STILL_FIX/docs/prds" "$GAP_STILL_FIX/.cursor"
+ln -s "$ROOT/scripts" "$GAP_STILL_FIX/scripts"
+cat >"$GAP_STILL_FIX/docs/prds/INDEX.md" <<'INDEX'
+| # | Slug | PRD | Tasks | Status |
+|---|------|-----|-------|--------|
+| 035 | planning-autonomy | [link](x) | [tasks](y) | complete |
+INDEX
+cat >"$GAP_STILL_FIX/docs/prds/GAP-BACKLOG.md" <<'GAP'
+| Status | Count |
+|--------|------:|
+| resolved | 0 |
+| scheduled | 1 |
+| open | 0 |
+| ID | Status | Schedule | Title |
+|----|--------|----------|-------|
+| GAP-999 | scheduled | PRD 035 A1 | fixture scheduled row |
+GAP
+(
+  cd "$GAP_STILL_FIX" && git init -q && git config user.email t@t.com && git config user.name T &&
+  git add . && git commit -q -m init && git branch -M main &&
+  git checkout -b feat/test && echo x >>README && git add README && git commit -q -m feat &&
+  git checkout main && git merge feat/test -q
+)
+cat >"$GAP_STILL_FIX/.cursor/sw-deliver-state.json" <<'STATE'
+{"prd_number":"035","phases":{"1":{"status":"green-merged"}},"target":{"branch":"feat/test"}}
+STATE
+echo '{}' >"$GAP_STILL_FIX/.cursor/sw-deliver-plan.json"
+if python3 "$ROOT/scripts/docs-currency-gate.py"   "$GAP_STILL_FIX" "$GAP_STILL_FIX"   "$GAP_STILL_FIX/.cursor/sw-deliver-state.json"   "$GAP_STILL_FIX/.cursor/sw-deliver-plan.json" 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+drift=d.get('drift') or []
+assert d.get('verdict')=='fail', d
+assert any(x.get('kind')=='gap-still-open' and x.get('row')=='GAP-999' for x in drift), drift
+"; then
+  ok "gap-still-open-scheduled-against-complete-prd"
+else
+  bad "gap-still-open-scheduled-against-complete-prd"
+fi
+rm -rf "$GAP_STILL_FIX"
+
+# --- gap-still-open four-column row parsed (R3 / PRD 048) ---
+FOUR_COL_FIX=$(mktemp -d)
+mkdir -p "$FOUR_COL_FIX/docs/prds" "$FOUR_COL_FIX/.cursor"
+ln -s "$ROOT/scripts" "$FOUR_COL_FIX/scripts"
+cat >"$FOUR_COL_FIX/docs/prds/INDEX.md" <<'INDEX'
+| # | Slug | PRD | Tasks | Status |
+|---|------|-----|-------|--------|
+| 048 | gap-lifecycle | [link](x) | [tasks](y) | complete |
+INDEX
+cat >"$FOUR_COL_FIX/docs/prds/GAP-BACKLOG.md" <<'GAP'
+| Status | Count |
+|--------|------:|
+| resolved | 0 |
+| scheduled | 1 |
+| open | 0 |
+| ID | Status | Schedule | Title |
+|----|--------|----------|-------|
+| GAP-888 | scheduled | PRD 048 A2 | four-column regression row |
+GAP
+(
+  cd "$FOUR_COL_FIX" && git init -q && git config user.email t@t.com && git config user.name T &&
+  git add . && git commit -q -m init && git branch -M main &&
+  git checkout -b feat/gap && echo x >>README && git add README && git commit -q -m feat &&
+  git checkout main && git merge feat/gap -q
+)
+cat >"$FOUR_COL_FIX/.cursor/sw-deliver-state.json" <<'STATE'
+{"prd_number":"048","phases":{"1":{"status":"green-merged"}},"target":{"branch":"feat/gap"}}
+STATE
+echo '{}' >"$FOUR_COL_FIX/.cursor/sw-deliver-plan.json"
+if python3 "$ROOT/scripts/docs-currency-gate.py"   "$FOUR_COL_FIX" "$FOUR_COL_FIX"   "$FOUR_COL_FIX/.cursor/sw-deliver-state.json"   "$FOUR_COL_FIX/.cursor/sw-deliver-plan.json" 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+drift=d.get('drift') or []
+# Pre-fix gate skipped every 4-column row (len(parts) < 5); must detect scheduled PRD row.
+assert d.get('verdict')=='fail', d
+assert any(x.get('kind')=='gap-still-open' and x.get('row')=='GAP-888' for x in drift), drift
+"; then
+  ok "gap-still-open-four-column-row-parsed"
+else
+  bad "gap-still-open-four-column-row-parsed"
+fi
+rm -rf "$FOUR_COL_FIX"
+
 # --- living-docs wave.sh dispatchers ---
 if grep -q 'living-docs)' "$ROOT/scripts/wave.sh" && grep -q 'docs-currency)' "$ROOT/scripts/wave.sh"; then
   ok "wave-sh-living-docs-dispatchers"
