@@ -354,6 +354,45 @@
       ]
     },
     {
+      "id": "phase-sizing-corpus-fixtures",
+      "script": "scripts/test/run_phase_sizing_corpus_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-phase-sizing-corpus-fixtures",
+      "scenarios": [
+        "phase-sizing-corpus-audit"
+      ]
+    },
+    {
+      "id": "phase-sizing-fixtures",
+      "script": "scripts/test/run_phase_sizing_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-phase-sizing-fixtures",
+      "scenarios": [
+        "phase-sizing-determinism",
+        "phase-sizing-classification-shape",
+        "phase-sizing-scope-under-declared",
+        "phase-sizing-check-frozen-failclosed",
+        "phase-sizing-schema-present",
+        "phase-sizing-split-proposal",
+        "phase-sizing-contention-integrity",
+        "phase-sizing-advisory-render",
+        "phase-sizing-frozen-advisory-reject",
+        "phase-sizing-strip-advisory",
+        "phase-sizing-preflight-accept",
+        "phase-sizing-max-phase-count-bound",
+        "phase-sizing-preflight-reject-cycle-or-max",
+        "phase-sizing-wave-sizing-report",
+        "phase-sizing-preflight-command",
+        "phase-sizing-authoring-guidance",
+        "phase-sizing-fallback-file-set",
+        "phase-sizing-fallback-sequential",
+        "phase-sizing-persist-clean",
+        "phase-sizing-persist-redaction"
+      ]
+    },
+    {
       "id": "status-integrity-fixtures",
       "script": "scripts/test/run_status_integrity_fixtures.py",
       "args": [],
