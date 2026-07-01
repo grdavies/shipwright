@@ -422,10 +422,29 @@ Provider **credentials** come from the environment or your secret store — neve
 
 ## PR test-plan CI enforcement (FEAT PRs)
 
-Shipwright repos single-source the standard FEAT test-plan fixture set in
-`core/sw-reference/pr-test-plan.manifest.json` (`ci.prTestPlanManifest` in config — not under `verify.*`).
-Local `verify.test` runs the same set via `scripts/test/run_pr_test_plan_manifest.py`; CI runs it via
-`.github/workflows/pr-test-plan-ci.yml` (regenerate with `python3 scripts/generate-pr-test-plan-ci-workflow.py`).
+Shipwright dev repos single-source test-suite classification in
+`core/sw-reference/suite-registry.json` (schema: `suite-registry.schema.json`). Downstream enforcement
+surfaces are **projections** of registry lanes — not independent hand lists:
+
+| Lane | Projection | Consumer |
+| --- | --- | --- |
+| `pr-ci` | `scripts/suite_registry.py` → `manifest_entries()` | `core/sw-reference/pr-test-plan.manifest.json` |
+| `pr-ci` | `scripts/generate-pr-test-plan-ci-workflow.py` | `.github/workflows/pr-test-plan-ci.yml` |
+| `verify` | `scripts/suite_registry.py` → `verify_bundle_entries()` | `scripts/test/run_verify_bundle.py` |
+| `doc` | `scripts/suite_registry.py` → `doc_lane_entries()` | `CONTRIBUTING.md` (drift-guarded) |
+
+**Regenerate workflow after manifest or registry `pr-ci` changes:**
+
+```bash
+python3 scripts/generate-pr-test-plan-ci-workflow.py \
+  core/sw-reference/pr-test-plan.manifest.json \
+  .github/workflows/pr-test-plan-ci.yml \
+  .
+```
+
+Local `verify.test` runs the PR manifest set via `scripts/test/run_pr_test_plan_manifest.py`; CI runs the
+same jobs via `.github/workflows/pr-test-plan-ci.yml`. Config key `ci.prTestPlanManifest` points at the
+manifest path — it is not under `verify.*`.
 
 Each manifest entry carries **`required`** (merge-blocking) or **`advisory`** (visible in the all-checks
 readiness verdict but non-blocking). `scripts/check-gate.py` loads the manifest and exposes
@@ -433,7 +452,9 @@ readiness verdict but non-blocking). `scripts/check-gate.py` loads the manifest 
 existing gate path. The PR template references CI **job names** as the authoritative gate — not a manual
 script checklist.
 
-Fixture suite: `python3 scripts/test/run_pr_test_plan_fixtures.py` (registered in `verify.test`).
+Drift fixtures (run locally and in CI): `python3 scripts/test/run_suite_registry_fixtures.py` (registry
+lanes, manifest, workflow, verify bundle, CONTRIBUTING `doc` lane) and
+`python3 scripts/test/run_pr_test_plan_fixtures.py` (manifest/workflow generator parity).
 
 
 ## Deliver plan-policy pilot (PRD 023)
