@@ -359,8 +359,10 @@ def finalize_gate_payload(
     if verdict == "red":
         try:
             import failure_signature_record_lib as fsr
+            import failure_signature_escalate_lib as fse
 
             fsr.maybe_record_gate(root, payload, reason=reason)
+            fse.maybe_escalate_threshold(root, cfg, failure_text=reason)
         except Exception:
             pass
     jsonio.emit(payload)

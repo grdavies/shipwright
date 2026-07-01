@@ -47,6 +47,7 @@
   },
   "coreAuthoredAllowlist": [
     "adoption-call-site-map.md",
+    "anomaly-patterns.json",
     "build-chain-paths.json",
     "build-chain-sot.json",
     "canonical-serialization.md",
@@ -75,6 +76,7 @@
     "planning-unit.schema.json",
     "pr-test-plan.manifest.json",
     "quality-signal.schema.json",
+    "root-cause-record.schema.json",
     "schemas/",
     "schemas/orchestrator-guideline-pack.schema.json",
     "schemas/orchestrator-step-plan.schema.json",

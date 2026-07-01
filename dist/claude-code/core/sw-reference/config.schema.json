@@ -1095,6 +1095,24 @@
           }
         }
       }
+    },
+    "recurrence": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Cross-run failure recurrence escalation (PRD 041 R22/R23). Unset = disabled (backward compatible).",
+      "properties": {
+        "threshold": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 3,
+          "description": "Escalate when signature count >= threshold across >=2 distinct runs."
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "When false, escalation is disabled even if threshold is set."
+        }
+      }
     }
   },
   "definitions": {

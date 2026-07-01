@@ -31,11 +31,11 @@ Generated from the frozen PRD (effective spec union R20–R29, R30, R31). Phases
 
 ### 2. Recurrence escalation + pattern reuse
 
-- [ ] 2.1 Threshold escalation → captured root-cause record + signatureClass policy
+- [x] 2.1 Threshold escalation → captured root-cause record + signatureClass policy
   - **File:** `scripts/failure-signature-escalate.sh`, `core/skills/rca-core/SKILL.md`, `core/sw-reference/config.schema.json` (`recurrence.threshold`)
   - **Expected:** on `count ≥ threshold` across ≥2 distinct runs, runs the `rca-core` debug-entry procedure on redacted failure text and files an escalated root-cause record (distinct class/status) instead of another surface fix; `signatureClass` (`flake`|`regression`|`infra`) governs policy — flakes require a human-acknowledged waiver before the remediation loop is considered closed; net-new cross-run layer above in-run `rca-core` + conductor circuit breaker (neither replaced).
   - **R-IDs:** R22, R23
-- [ ] 2.2 Static anomaly-pattern catalog (recognition only)
+- [x] 2.2 Static anomaly-pattern catalog (recognition only)
   - **File:** `core/sw-reference/anomaly-patterns.json`, `core/skills/rca-core/SKILL.md`, `core/commands/sw-debug.md`
   - **Expected:** static repo-curated seed catalog (false-green, unauthorized-delete, failed-rollback, silent-skip) the RCA consults to *recognize* + annotate the root-cause record; never auto-acts; test-tampering excluded — cross-references PRD A R9 as authoritative detector and annotates only when A's flags exist; `/sw-debug` is a **read-only consumer** (no orchestrator-step expansion).
   - **R-IDs:** R24

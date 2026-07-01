@@ -16,9 +16,10 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 STORE_SCHEMAS: dict[str, str] = {
     "failure-signatures": "core/sw-reference/failure-signature.schema.json",
+    "root-cause-records": "core/sw-reference/root-cause-record.schema.json",
     "meta-inbox-draft": "core/sw-reference/meta-inbox-draft.schema.json",
 }
-SHARED_GIT_DIR_STORES = frozenset({"failure-signatures"})
+SHARED_GIT_DIR_STORES = frozenset({"failure-signatures", "root-cause-records"})
 CURSOR_STORE_PREFIXES = (".cursor/sw-", ".cursor/sw-meta-inbox/")
 WRITER_NAME = "sw_state_write_lib"
 SHA256_RE = re.compile(r"^[a-f0-9]{64}$")
@@ -47,8 +48,10 @@ def git_dir(root: Path) -> Path:
 
 
 def resolve_store_path(root: Path, store: str, *, rel: str | None = None) -> Path:
-    if store in SHARED_GIT_DIR_STORES:
+    if store == "failure-signatures":
         return git_dir(root) / "shipwright-failure-signatures.json"
+    if store == "root-cause-records":
+        return git_dir(root) / "shipwright-root-cause-records.json"
     if store == "meta-inbox-draft":
         if not rel:
             raise StateWriteError("--rel required for meta-inbox-draft store", halt="store-path-forbidden")
@@ -131,6 +134,61 @@ def validate_failure_signatures(data: dict[str, Any]) -> None:
         _validate_failure_record(rec)
 
 
+
+
+def _validate_root_cause_record(rec: Any) -> None:
+    if not isinstance(rec, dict):
+        raise StateWriteError("root-cause record must be object", halt="schema-invalid")
+    required = (
+        "id",
+        "signatureKey",
+        "status",
+        "signatureClass",
+        "escalatedAt",
+        "source",
+        "writer",
+        "failureText",
+        "rca",
+        "anomalyPatterns",
+        "flakeWaiver",
+        "loopClosed",
+    )
+    for field in required:
+        if field not in rec:
+            raise StateWriteError(f"root-cause record missing {field}", halt="schema-invalid")
+    _validate_signature_key(rec["signatureKey"])
+    if rec.get("status") not in ("escalated", "closed"):
+        raise StateWriteError("root-cause record.status invalid", halt="schema-invalid")
+    if rec.get("signatureClass") not in ("flake", "regression", "infra"):
+        raise StateWriteError("root-cause record.signatureClass invalid", halt="schema-invalid")
+    rca = rec.get("rca")
+    if not isinstance(rca, dict):
+        raise StateWriteError("root-cause record.rca invalid", halt="schema-invalid")
+    for field in ("entry", "rootCause", "recommendedFix", "verification"):
+        if field not in rca:
+            raise StateWriteError(f"root-cause record.rca missing {field}", halt="schema-invalid")
+    waiver = rec.get("flakeWaiver")
+    if not isinstance(waiver, dict) or "acknowledged" not in waiver:
+        raise StateWriteError("root-cause record.flakeWaiver invalid", halt="schema-invalid")
+    patterns = rec.get("anomalyPatterns")
+    if not isinstance(patterns, list):
+        raise StateWriteError("root-cause record.anomalyPatterns invalid", halt="schema-invalid")
+    for pat in patterns:
+        if not isinstance(pat, dict):
+            raise StateWriteError("anomaly pattern must be object", halt="schema-invalid")
+        if pat.get("autoAct") is not False:
+            raise StateWriteError("anomaly pattern autoAct must be false", halt="schema-invalid")
+
+
+def validate_root_cause_records(data: dict[str, Any]) -> None:
+    if data.get("version") != 1:
+        raise StateWriteError("root-cause-records version must be 1", halt="schema-invalid")
+    records = data.get("records")
+    if not isinstance(records, list):
+        raise StateWriteError("root-cause-records records must be array", halt="schema-invalid")
+    for rec in records:
+        _validate_root_cause_record(rec)
+
 def validate_meta_inbox_draft(data: dict[str, Any]) -> None:
     required = (
         "signalId",
@@ -173,6 +231,8 @@ def validate_store(root: Path, store: str, data: dict[str, Any]) -> None:
         return
     if store == "failure-signatures":
         validate_failure_signatures(data)
+    elif store == "root-cause-records":
+        validate_root_cause_records(data)
     elif store == "meta-inbox-draft":
         validate_meta_inbox_draft(data)
 

@@ -199,5 +199,9 @@
       "minPhaseScenarios": 1,
       "maxPhaseCount": 13
     }
+  },
+  "recurrence": {
+    "threshold": 3,
+    "enabled": true
   }
 }

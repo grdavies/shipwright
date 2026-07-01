@@ -21,11 +21,13 @@ def seed_schemas(ctx: FixtureContext, root: Path) -> None:
     for name in (
         "meta-inbox-draft.schema.json",
         "failure-signature.schema.json",
+        "root-cause-record.schema.json",
     ):
         shutil.copy2(src / name, dest / name)
 
 import failure_signature_record_lib as fsr
 import sw_state_write_lib as writer
+import failure_signature_escalate_lib as fse
 
 
 def git_init(ctx: FixtureContext, root: Path) -> None:
@@ -39,6 +41,70 @@ def load_store(root: Path) -> dict:
     if not path.is_file():
         return {"version": 1, "records": []}
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def run_escalation_fixtures(ctx: FixtureContext) -> None:
+    threshold = 2
+    esc_tmp = ctx.mktemp("recurring-escalate-")
+    git_init(ctx, esc_tmp)
+    seed_schemas(ctx, esc_tmp)
+    shutil.copy2(
+        ctx.root / "core/sw-reference/anomaly-patterns.json",
+        esc_tmp / "core/sw-reference/anomaly-patterns.json",
+    )
+    (esc_tmp / ".cursor").mkdir(exist_ok=True)
+    (esc_tmp / ".cursor/workflow.config.json").write_text(
+        json.dumps({"recurrence": {"threshold": threshold, "enabled": True}}),
+        encoding="utf-8",
+    )
+    msg = "ci flake timeout false-green claimed pass without evidence"
+    for run_id in ("run-a", "run-b", "run-c"):
+        fsr.record_from_surface(
+            esc_tmp,
+            "fixture",
+            check_id="ci/flaky-test",
+            exit_code=1,
+            job_id="job-esc",
+            message=msg,
+            run_id=run_id,
+        )
+    escalated = fse.scan_and_escalate(
+        esc_tmp,
+        {"recurrence": {"threshold": threshold, "enabled": True}},
+        failure_text=msg,
+    )
+    if len(escalated) == 1 and escalated[0].get("status") == "escalated":
+        ctx.ok("threshold escalation creates root-cause record")
+    else:
+        ctx.bad(f"expected one escalation, got {escalated}")
+        return
+    rec = escalated[0]
+    if rec.get("signatureClass") == "flake" and rec.get("loopClosed") is False:
+        ctx.ok("flake signatureClass requires waiver before loop-close")
+    else:
+        ctx.bad(f"flake policy unexpected: {rec.get('signatureClass')} loopClosed={rec.get('loopClosed')}")
+    patterns = rec.get("anomalyPatterns") or []
+    if any(p.get("patternId") == "false-green" and p.get("autoAct") is False for p in patterns):
+        ctx.ok("catalog false-green annotates without auto-act")
+    else:
+        ctx.bad(f"false-green annotation missing: {patterns}")
+    fse.acknowledge_flake_waiver(esc_tmp, rec["id"], acknowledged_by="fixture-human")
+    closed = fse.load_root_cause_store(esc_tmp)
+    updated = next(r for r in closed["records"] if r["id"] == rec["id"])
+    if updated.get("loopClosed") is True:
+        ctx.ok("flake waiver closes remediation loop")
+    else:
+        ctx.bad("flake waiver did not close loop")
+    tamper_ann = fse.recognize_anomaly_patterns(esc_tmp, "test tampering rewrite", prd_a_flags=[])
+    if not any(p.get("patternId") == "test-tampering" for p in tamper_ann):
+        ctx.ok("test-tamper absent without PRD A flags")
+    else:
+        ctx.bad("test-tamper annotated without PRD A flags")
+    with_flag = fse.recognize_anomaly_patterns(esc_tmp, "failure", prd_a_flags=["test-tamper-detected"])
+    if any(p.get("patternId") == "test-tampering" for p in with_flag):
+        ctx.ok("test-tamper annotates only when PRD A flags exist")
+    else:
+        ctx.bad("test-tamper missing when PRD A flag present")
 
 
 def main() -> int:
@@ -93,7 +159,7 @@ def main() -> int:
         else:
             ctx.bad(f"expected single upserted record, got {records}")
 
-        other_job = fsr.record_from_surface(
+        fsr.record_from_surface(
             tmp,
             "fixture",
             check_id="ci/lint",
@@ -109,6 +175,7 @@ def main() -> int:
         else:
             ctx.bad("unrelated failures collided in store")
 
+        run_escalation_fixtures(ctx)
     finally:
         ctx.cleanup()
     return 1 if ctx.failures else 0
