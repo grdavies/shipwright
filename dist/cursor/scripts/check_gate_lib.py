@@ -356,6 +356,15 @@ def finalize_gate_payload(
         if QUALITY_BLOCKING_CHECK not in failing and QUALITY_BLOCKING_CHECK in required_failing:
             failing.append(QUALITY_BLOCKING_CHECK)
             payload["failingChecks"] = failing
+    if verdict == "red":
+        try:
+            import failure_signature_record_lib as fsr
+            import failure_signature_escalate_lib as fse
+
+            fsr.maybe_record_gate(root, payload, reason=reason)
+            fse.maybe_escalate_threshold(root, cfg, failure_text=reason)
+        except Exception:
+            pass
     jsonio.emit(payload)
     return VERDICT_EXIT.get(verdict, 1), payload
 

@@ -104,6 +104,14 @@ Before dispatching specialist/debug sub-agents from `/sw-debug`:
 Resolve model: `python3 scripts/resolve-model-tier.py --command <child-slug>` (or `--skill rca-core`).
 Resolve intensity: `python3 scripts/resolve-intensity.py --command <child-slug>` (or `--skill|--agent`).
 
+
+## Cross-run root-cause records (read-only, PRD 041 R24)
+
+`/sw-debug` may **read** escalated root-cause records from `${GIT_DIR}/shipwright-root-cause-records.json`
+and anomaly-pattern annotations for context — it does **not** expand orchestrator steps, auto-act on catalog
+matches, or write escalation records. Escalation is owned by `scripts/failure-signature-escalate.py` after
+recurrence threshold; test-tampering recognition defers to PRD A R9 flags only.
+
 ## What this command does not do
 
 - Does not run `/sw-ship`, merge PRs, or patch on bare `main`

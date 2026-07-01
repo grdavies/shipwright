@@ -4,6 +4,7 @@ date: 2026-06-30
 topic: self-improving-loop
 frozen: true
 frozen_at: 2026-06-30
+visibility: public
 ---
 # Tasks — PRD 041 Self-Improving Loop
 
@@ -15,38 +16,38 @@ Generated from the frozen PRD (effective spec union R20–R29, R30, R31). Phases
 
 ### 1. Shared writer + capture surfaces
 
-- [ ] 1.1 Single redacting state writer (sole writer for `.cursor/sw-*` + shared-git-dir stores)
+- [x] 1.1 Single redacting state writer (sole writer for `.cursor/sw-*` + shared-git-dir stores)
   - **File:** `scripts/sw-state-write.sh`, `core/sw-reference/layout.md`, `.sw/layout.md`
   - **Expected:** sole writer for all new stores; pipes content through `scripts/memory-redact.py`, validates against the target schema, atomic append/write; **fails closed** on redaction/schema error; direct `write_json` to these paths banned (fixture lint); layout registers writer + redaction + append-only semantics.
   - **R-IDs:** R31
-- [ ] 1.2 Meta/dogfood channel — two-phase capture/confirm
+- [x] 1.2 Meta/dogfood channel — two-phase capture/confirm
   - **File:** `scripts/planning_gap_capture.py`, `core/skills/feedback/SKILL.md`, `core/skills/feedback/references/signal-schema.md`, `core/commands/sw-feedback.md`, `core/skills/feedback-closure/SKILL.md`, `scripts/planning_paths.py`
   - **Expected:** `meta-shipwright` destination + `plugin-self` gap class; `capture` writes redacted draft to `.cursor/sw-meta-inbox/` only (no tracked planning mutation); `materialize` creates the gap unit only after `confirm --signal-id` records a persisted ack; meta vs product routing separated in `feedback-closure`.
   - **R-IDs:** R20, R21
-- [ ] 1.3 Cross-run failure-signature store (capture half) + pinned writers
+- [x] 1.3 Cross-run failure-signature store (capture half) + pinned writers
   - **File:** `scripts/failure-signature-record.sh`, `core/sw-reference/failure-signature.schema.json`, `scripts/check-gate.py`, `scripts/wave_failure.py`, `scripts/verify-evidence.py`
   - **Expected:** shared-git-dir authority (`${GIT_DIR}/shipwright-failure-signatures.json`, append-only via `sw-state-write.sh`); key `{check_id, exit_code, job_id}` (host-attested) + normalized message class as secondary discriminator (algorithm pinned in schema; strip temp paths/UUIDs/line numbers/timestamps; raw hash logged separately for audit); writers pinned at check-gate red, wave_failure blocked, verify-evidence not-verified, conductor `noProgressStreak`; `*-index` merge subcommand for linked worktrees.
   - **R-IDs:** R22
 
 ### 2. Recurrence escalation + pattern reuse
 
-- [ ] 2.1 Threshold escalation → captured root-cause record + signatureClass policy
+- [x] 2.1 Threshold escalation → captured root-cause record + signatureClass policy
   - **File:** `scripts/failure-signature-escalate.sh`, `core/skills/rca-core/SKILL.md`, `core/sw-reference/config.schema.json` (`recurrence.threshold`)
   - **Expected:** on `count ≥ threshold` across ≥2 distinct runs, runs the `rca-core` debug-entry procedure on redacted failure text and files an escalated root-cause record (distinct class/status) instead of another surface fix; `signatureClass` (`flake`|`regression`|`infra`) governs policy — flakes require a human-acknowledged waiver before the remediation loop is considered closed; net-new cross-run layer above in-run `rca-core` + conductor circuit breaker (neither replaced).
   - **R-IDs:** R22, R23
-- [ ] 2.2 Static anomaly-pattern catalog (recognition only)
+- [x] 2.2 Static anomaly-pattern catalog (recognition only)
   - **File:** `core/sw-reference/anomaly-patterns.json`, `core/skills/rca-core/SKILL.md`, `core/commands/sw-debug.md`
   - **Expected:** static repo-curated seed catalog (false-green, unauthorized-delete, failed-rollback, silent-skip) the RCA consults to *recognize* + annotate the root-cause record; never auto-acts; test-tampering excluded — cross-references PRD A R9 as authoritative detector and annotates only when A's flags exist; `/sw-debug` is a **read-only consumer** (no orchestrator-step expansion).
   - **R-IDs:** R24
 
 ### 3. Inefficiency scanner + behavioral anomalies
 
-- [ ] 3.1 Inefficiency scanner — action-linked items + graceful degradation
-  - **File:** `scripts/inefficiency-scan.sh`, `core/sw-reference/config.schema.json` (`inefficiency.*`), `docs/guides/configuration.md`
+- [x] 3.1 Inefficiency scanner — action-linked items + graceful degradation
+  - **File:** `scripts/inefficiency_scan.py`, `core/sw-reference/config.schema.json` (`inefficiency.*`), `docs/guides/configuration.md`
   - **Expected:** reads `benefitMetric` + deliver run-state; detects long single-threaded tests + **slow CI jobs** (timing thresholds where a host-attested capture surface exists; per-test timing parses `verify` machine-readable output e.g. JUnit XML), serialized-but-parallelizable phases (retrospective: realized `waveBatchingPlan` width vs simulated `wave_deliver.py` `apply_contention`+`greedy_wave_batches` width; flag `parallelCeiling>1` with width-1 execution lacking mandatory edges), repeated manual steps (run-state recurrence + false-positive allowlist); each item names a concrete next step (action-linked); **skips with a notice** when a timing/sizing source is absent; items route through the inbox path (drafts, human-confirmed), never auto-applied.
   - **R-IDs:** R25, R26
-- [ ] 3.2 Trust-anchored behavioral-anomaly guardrails
-  - **File:** `scripts/behavioral-anomaly-check.sh`, `core/skills/verification-gate/SKILL.md`
+- [x] 3.2 Trust-anchored behavioral-anomaly guardrails
+  - **File:** `scripts/behavioral_anomaly_check.py`, `core/skills/verification-gate/SKILL.md`
   - **Expected:** called from ship chain after execute/verify; consumes pre-agent git diff snapshot (hook baseline), `git diff --name-status`, frozen declared scope (`**File:**` + Relevant Files), `sw-verify` status, phase skip records; detects unauthorized create/delete (diff outside declared scope vs baseline), false success (evidence artifact fails re-exec/hash check), failed rollback (revert left tree dirty), silent skip (gate `skipped` w/o reason — TDD/refactor skips delegated to PRD A); emits advisory high-risk flag + feeds failure-signature store; **evidence-integrity mismatch promoted to inconclusive/blocking** within the verification-gate contract (evidence-based, not assertion-based).
   - **R-IDs:** R28
 
@@ -94,12 +95,19 @@ Generated from the frozen PRD (effective spec union R20–R29, R30, R31). Phases
 ## Relevant Files
 
 - `scripts/sw-state-write.sh` — sole redacting writer for all new stores (Phase 1).
-- `scripts/{failure-signature-record.sh,failure-signature-escalate.sh,inefficiency-scan.sh,behavioral-anomaly-check.sh,loop-autonomy.py}` — capture/escalate/scan/anomaly/auto-propose (Phases 1–4).
+- `scripts/{failure-signature-record.py,failure-signature-escalate.py,inefficiency_scan.py,inefficiency_scan_lib.py,behavioral_anomaly_check.py,behavioral_anomaly_check_lib.py,loop-autonomy.py,verify_evidence_lib.py,verify-evidence.py}` — capture/escalate/scan/anomaly/auto-propose (Phases 1–4).
 - `scripts/planning_gap_capture.py`, `scripts/planning_paths.py` — meta channel two-phase capture + plugin-self placement.
 - `scripts/{check-gate.py,wave_failure.py,verify-evidence.py}`, `scripts/wave_deliver.py` — pinned signature writers + (read-only) contention primitives.
 - `core/sw-reference/{anomaly-patterns.json,failure-signature.schema.json,loop-health.schema.json,config.schema.json,workflow.config.example.json,layout.md}`, `.sw/layout.md` — contracts/stores.
 - `core/skills/{feedback,feedback-closure,rca-core,verification-gate,retro,living-status}/SKILL.md`, `core/skills/feedback/references/signal-schema.md`, `core/commands/{sw-feedback,sw-debug,sw-retrospective}.md` — surfaces.
 - `core/rules/{sw-conductor,sw-naming,memory-guardrails}.mdc` — auto-propose enqueue-only/no-dispatch + redaction delta clauses.
+- `scripts/test/run_inefficiency_scan_fixtures.py`, `scripts/test/run_behavioral_anomaly_fixtures.py`
+- `scripts/verify_evidence_lib.py` — behavioral overlay for verification-gate.
+- `scripts/inefficiency_scan.py`, `scripts/inefficiency_scan_lib.py` — inefficiency scanner (Phase 3).
+- `scripts/behavioral_anomaly_check.py`, `scripts/behavioral_anomaly_check_lib.py` — behavioral guardrails (Phase 3).
+- `core/commands/sw-ship.md`, `core/skills/verification-gate/SKILL.md` — ship chain + verification-gate integration.
+- `core/scripts/` — build-chain mirror of new scripts.
+- `dist/` — emitter output from build-chain-sync.
 - `docs/guides/{configuration,workflows}.md` — config keys + self-improving loop section.
 
 ## Notes

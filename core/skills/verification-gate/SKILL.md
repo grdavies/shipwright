@@ -102,6 +102,21 @@ Attribution compares per-command identity sets when `commands[]` is present (sor
 files without `commands[]` fall back to `{exitCode, status}`. Gate dimension uses `verdict` + `failingChecks`.
 Rejected baseline reads → `missing-required`, never silent downgrade.
 
+
+## Behavioral-anomaly overlay (PRD 041 R28)
+
+After `/sw-verify`, the ship chain runs `python3 scripts/behavioral_anomaly_check.py` and writes
+`$RUN_DIR/behavioral-anomaly.status.json`. `scripts/verify-evidence.py` auto-reads that file (or accept
+`--behavioral-status`) and applies `behavioral_anomaly_check_lib.apply_verification_overlay`:
+
+| Condition | Verdict impact |
+| --- | --- |
+| `evidenceIntegrityMismatch: true` | Promote to `inconclusive` / `missing-required` (**halt** ship chain) |
+| Advisory anomalies only | Annotate `behavioralAnomalies[]`; continue unless other gates fail |
+
+Advisory anomalies also feed the failure-signature store. TDD/refactor skip reasons (`tdd:`, `refactor:`,
+`prd-a:` prefixes) are delegated to PRD A — not re-enforced here.
+
 ## Consumer contract
 
 - **`sw-ship`** — halt on `not-verified` and `missing-required`; log+continue on `no-baseline` / `unattributed`.

@@ -1095,6 +1095,67 @@
           }
         }
       }
+    },
+    "recurrence": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Cross-run failure recurrence escalation (PRD 041 R22/R23). Unset = disabled (backward compatible).",
+      "properties": {
+        "threshold": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 3,
+          "description": "Escalate when signature count >= threshold across >=2 distinct runs."
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "When false, escalation is disabled even if threshold is set."
+        }
+      }
+    },
+    "inefficiency": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Process inefficiency scanner (PRD 041 R25/R26). Default disabled.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, inefficiency scanner runs on deliver/retro surfaces."
+        },
+        "thresholds": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "slowTestSeconds": {
+              "type": "number",
+              "minimum": 0,
+              "default": 30,
+              "description": "Flag per-test durations at or above this threshold (JUnit XML)."
+            },
+            "slowCiJobSeconds": {
+              "type": "number",
+              "minimum": 0,
+              "default": 300,
+              "description": "Flag CI job durations at or above this threshold."
+            }
+          }
+        },
+        "allowlist": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "manualSteps": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Manual commands excluded from repeated-step detection."
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {

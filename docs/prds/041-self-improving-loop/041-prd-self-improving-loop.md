@@ -4,6 +4,7 @@ date: 2026-06-30
 topic: self-improving-loop
 frozen: true
 frozen_at: 2026-06-30
+visibility: public
 ---
 # PRD 041 — Self-Improving Loop
 

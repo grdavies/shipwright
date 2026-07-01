@@ -74,6 +74,21 @@ Inputs: normalized signal per `references/debug-inputs.md` + optional repo conte
 6. Emit root cause + proposed fix + verification plan.
 7. **Do not implement or merge** — hand off to `/sw-debug` routing (scoped phase vs brainstorm/amendment).
 
+
+## Cross-run recurrence escalation (PRD 041 R23/R24)
+
+When `scripts/failure-signature-escalate.py scan` fires (config `recurrence.threshold`, count across ≥2
+distinct runs), this skill's **debug entry** procedure applies to **redacted** failure text from the
+host-attested signature store — not agent-authored free text. The escalate helper captures a root-cause
+record in `${GIT_DIR}/shipwright-root-cause-records.json` with distinct `status` + `signatureClass`
+(`flake` | `regression` | `infra`).
+
+- **Flakes** require a human-acknowledged waiver (`failure-signature-escalate.py ack-flake-waiver`) before
+  `loopClosed` is true.
+- Consult `core/sw-reference/anomaly-patterns.json` to **recognize** known workflow classes and annotate the
+  record only — **never auto-act**. Test-tampering defers to PRD A R9; annotate only when A's flags exist.
+- This layer sits **above** in-run `rca-core` and the conductor circuit breaker — neither is replaced.
+
 ## Dev-time entry procedure
 
 Inputs: failing test output, build error, or `/tmp/sw-verify.status.json` + relevant log excerpt from local

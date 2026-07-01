@@ -562,3 +562,17 @@ strip-advisory --inplace <path>`). Frozen artifacts reject the block via `phase_
 
 Harness scripts live under `scripts/*.py` and execute via `python3 scripts/<name>.py`.
 The build chain is `python3 scripts/copy-to-core.py` → `python3 -m sw generate --all` with golden parity under `scripts/test/fixtures/parity/`.
+
+## Self-improving loop stores (PRD 041)
+
+| Store | Path | Writer | Semantics |
+| --- | --- | --- | --- |
+| Meta inbox draft | `.cursor/sw-meta-inbox/{signalId}.json` | `scripts/sw_state_write.py` (`sw_state_write_lib`) | Redacted draft; schema `core/sw-reference/meta-inbox-draft.schema.json`; per-checkout projection |
+| Failure signatures | `${GIT_DIR}/shipwright-failure-signatures.json` | `scripts/sw_state_write.py` | Shared-git-dir authority; append-only upsert via `failure_signature_record_lib`; schema `core/sw-reference/failure-signature.schema.json` |
+| Loop health | `${GIT_DIR}/shipwright-loop-health.json` | `scripts/sw_state_write.py` | Shared-git-dir authority; diagnostic-only (`gating: false`); schema `core/sw-reference/loop-health.schema.json` |
+| Root-cause records | `${GIT_DIR}/shipwright-root-cause-records.json` | `scripts/sw_state_write.py` | Shared-git-dir authority; escalation via `failure_signature_escalate_lib`; schema `core/sw-reference/root-cause-record.schema.json` |
+| Anomaly pattern catalog | `core/sw-reference/anomaly-patterns.json` | repo-curated (read-only at runtime) | Recognition/annotation only; consumed by `rca-core` + read-only `/sw-debug` |
+
+All writes pass through `memory_redact.redact` and schema validation; direct `write_json` to these paths is forbidden.
+`index-merge` on `failure-signatures` merges linked worktree stores into the shared-git-dir authority.
+
