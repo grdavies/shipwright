@@ -65,9 +65,8 @@
       "lanes": [
         "verify"
       ],
-      "verifyOrder": 1002,
-      "verifyClassification": "required",
-      "verifyActive": false
+      "verifyOrder": 52,
+      "verifyClassification": "required"
     },
     {
       "id": "capability-fixtures",
@@ -75,9 +74,8 @@
       "lanes": [
         "verify"
       ],
-      "verifyOrder": 1004,
-      "verifyClassification": "advisory",
-      "verifyActive": false
+      "verifyOrder": 55,
+      "verifyClassification": "advisory"
     },
     {
       "id": "capability-lint-fixtures",
@@ -268,9 +266,8 @@
         "doc",
         "verify"
       ],
-      "verifyOrder": 1005,
-      "verifyClassification": "advisory",
-      "verifyActive": false
+      "verifyOrder": 57,
+      "verifyClassification": "advisory"
     },
     {
       "id": "feedback-fixtures",
@@ -305,9 +302,8 @@
       "lanes": [
         "verify"
       ],
-      "verifyOrder": 1001,
-      "verifyClassification": "required",
-      "verifyActive": false
+      "verifyOrder": 54,
+      "verifyClassification": "required"
     },
     {
       "id": "guardrail-rules-resolution-fixtures",
@@ -340,9 +336,8 @@
       "lanes": [
         "verify"
       ],
-      "verifyOrder": 1000,
-      "verifyClassification": "required",
-      "verifyActive": false
+      "verifyOrder": 53,
+      "verifyClassification": "required"
     },
     {
       "id": "host-fixtures",
@@ -911,9 +906,8 @@
       "lanes": [
         "verify"
       ],
-      "verifyOrder": 1003,
-      "verifyClassification": "advisory",
-      "verifyActive": false
+      "verifyOrder": 56,
+      "verifyClassification": "advisory"
     },
     {
       "id": "retrospective-fixtures",
