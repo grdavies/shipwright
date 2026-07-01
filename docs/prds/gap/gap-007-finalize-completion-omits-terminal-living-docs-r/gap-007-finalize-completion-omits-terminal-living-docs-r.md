@@ -77,3 +77,12 @@ after successful `finalize-if-merged`, before `inflight_signal run-complete`.
 
 **Note:** Open PR #273 may carry a different `gap-007` / A2 on the same PRD — renumber on merge to avoid
 duplicate gap ids (this unit vs inflight-signal commit guard).
+
+## PRD 041 regression (2026-07-01)
+
+| PRD | Slug | Terminal PR | INDEX after merge | Manual fix |
+|-----|------|-------------|-------------------|------------|
+| 041 | self-improving-loop | #284 (`8cf2e91`) | `not-started` on `origin/main` until docs PR | [#285](https://github.com/grdavies/shipwright/pull/285) `set-index-status` + COMPLETION-LOG |
+
+Additional failure: durable deliver state cleared before `finalize-completion`; resume from bare `main` failed
+(`cannot save deliver state without feature target branch`). See **gap-010** and local-main fork (**GAP-070**).
