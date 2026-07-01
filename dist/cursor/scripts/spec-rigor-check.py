@@ -16,6 +16,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import doc_format
+from phase_sizing import has_advisory_block
 from _sw.cli import run_module_main
 
 AMBIGUITY = re.compile(r"\b(TBD|TODO|FIXME|\?\?\?|to be determined)\b", re.I)
@@ -108,6 +109,8 @@ def _run(root: Path, artifact: str, path_file: Path, tier: str, prd_path: str) -
         union_ids = [r["id"] for r in union.get("requirements", [])]
         if not re.search(r"^##\s+Traceability\s*$", text, re.M | re.I):
             add("analyze", "error", "missing ## Traceability section")
+        if has_advisory_block(text):
+            add("analyze", "error", "task list contains sizing advisory block — strip before freeze")
         phase_ids = sorted({p["id"] for p in doc_format.extract_phases(text)}, key=int)
         dep_rows_list = doc_format.extract_phase_dependencies(text)
         if dep_rows_list is None:

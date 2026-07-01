@@ -6,6 +6,7 @@ import argparse
 import json
 import re
 import sys
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ import planning_paths
 import wave_deliver as wd
 
 DEFAULTS_REL = Path("scripts/test/fixtures/phase-sizing/sizing-defaults.json")
+ADVISORY_HEADING = "## Sizing & Split Suggestions"
 
 def valid_path(path: str) -> bool:
     if not path or "{" in path or "}" in path or "`" in path or "(" in path:
@@ -56,6 +58,18 @@ def load_sizing_config(root: Path) -> dict[str, Any]:
         "minPhaseScenarios": int(defaults.get("tasks.sizing.minPhaseScenarios", 0)),
         "maxPhaseCount": int(defaults.get("tasks.sizing.maxPhaseCount", 99)),
     }
+
+
+def has_advisory_block(text: str) -> bool:
+    return bool(re.search(rf"^{re.escape(ADVISORY_HEADING)}\s*$", text, re.MULTILINE | re.IGNORECASE))
+
+
+def strip_advisory_block(text: str) -> str:
+    if not has_advisory_block(text):
+        return text
+    pattern = rf"^{re.escape(ADVISORY_HEADING)}\s*$[\s\S]*?(?=^##\s|\Z)"
+    stripped = re.sub(pattern, "", text, count=1, flags=re.MULTILINE)
+    return stripped.rstrip() + "\n"
 
 
 def has_traceability_section(text: str) -> bool:
@@ -197,10 +211,36 @@ def classify_size(metrics: dict[str, int | None], sizing: dict[str, Any]) -> tup
     return size, over_threshold, below_floor
 
 
-def separable_sets_for_phase(paths: list[str], root: Path) -> list[list[str]]:
-    if len(paths) <= 1:
-        return [paths] if paths else []
-    serialized = planning_paths.contention_serialized_defaults(planning_paths.load_planning_dirs(root))
+def serialized_defaults(root: Path) -> list[str]:
+    return planning_paths.contention_serialized_defaults(planning_paths.load_planning_dirs(root))
+
+
+def expanded_phase_paths(
+    phase_id: str,
+    phase_files: dict[str, list[str]],
+    content: str,
+    root: Path,
+) -> list[str]:
+    expanded = planning_paths.expand_generator_contention_paths(phase_files, content, root)
+    return sorted(expanded.get(phase_id, []))
+
+
+def contention_pairs(paths: list[str], root: Path) -> list[tuple[str, str]]:
+    serialized = serialized_defaults(root)
+    pairs: list[tuple[str, str]] = []
+    for i, left in enumerate(paths):
+        for right in paths[i + 1 :]:
+            contends, _ = wd.paths_contend(left, right, serialized, root)
+            if contends:
+                pairs.append((left, right))
+    return pairs
+
+
+def separable_sets_for_paths(paths: list[str], root: Path) -> list[list[str]]:
+    if not paths:
+        return []
+    if len(paths) == 1:
+        return [paths]
     parent: dict[str, str] = {path: path for path in paths}
 
     def find(node: str) -> str:
@@ -214,15 +254,266 @@ def separable_sets_for_phase(paths: list[str], root: Path) -> list[list[str]]:
         if rl != rr:
             parent[rr] = rl
 
-    for i, left in enumerate(paths):
-        for right in paths[i + 1 :]:
-            contends, _ = wd.paths_contend(left, right, serialized, root)
-            if contends:
-                union(left, right)
+    for left, right in contention_pairs(paths, root):
+        union(left, right)
     groups: dict[str, list[str]] = {}
     for path in paths:
         groups.setdefault(find(path), []).append(path)
     return [sorted(group) for group in groups.values()]
+
+
+def separable_sets_for_phase(paths: list[str], content: str, phase_id: str, root: Path) -> list[list[str]]:
+    expanded = expanded_phase_paths(phase_id, {phase_id: paths}, content, root)
+    return separable_sets_for_paths(expanded, root)
+
+
+def _sort_phase_key(item: str) -> tuple[int, str | int]:
+    return (0, int(item)) if str(item).isdigit() else (1, str(item))
+
+
+def _has_path(edges: list[dict[str, str]], src: str, dst: str) -> bool:
+    adj: dict[str, list[str]] = defaultdict(list)
+    for edge in edges:
+        adj[edge["from"]].append(edge["to"])
+    seen: set[str] = set()
+    stack = [src]
+    while stack:
+        node = stack.pop()
+        if node == dst:
+            return True
+        if node in seen:
+            continue
+        seen.add(node)
+        stack.extend(adj.get(node, []))
+    return False
+
+
+def _unit_id(phase_id: str, index: int) -> str:
+    return f"{phase_id}{chr(ord('a') + index)}"
+
+
+def _mandatory_internal_edges(units: list[dict[str, Any]], root: Path) -> list[dict[str, str]]:
+    serialized = serialized_defaults(root)
+    edges: list[dict[str, str]] = []
+    existing: set[tuple[str, str]] = set()
+    for i, left in enumerate(units):
+        for right in units[i + 1 :]:
+            contends = False
+            for fl in left["files"]:
+                for fr in right["files"]:
+                    hit, _ = wd.paths_contend(fl, fr, serialized, root)
+                    if hit:
+                        contends = True
+                        break
+                if contends:
+                    break
+            if contends:
+                pair = (left["id"], right["id"])
+                if pair not in existing:
+                    edges.append({"from": left["id"], "to": right["id"], "kind": "mandatory-contention"})
+                    existing.add(pair)
+    for i in range(len(units) - 1):
+        pair = (units[i]["id"], units[i + 1]["id"])
+        if pair not in existing:
+            edges.append({"from": units[i]["id"], "to": units[i + 1]["id"], "kind": "serial"})
+            existing.add(pair)
+    return edges
+
+
+def _external_edges_for_split(
+    phase_id: str,
+    unit_ids: list[str],
+    edges: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    if not unit_ids:
+        return []
+    first_unit = unit_ids[0]
+    last_unit = unit_ids[-1]
+    external: list[dict[str, str]] = []
+    for edge in edges:
+        if edge.get("from") == phase_id and edge.get("to") != phase_id:
+            external.append({"from": last_unit, "to": edge["to"], "kind": "split-fan-out"})
+        elif edge.get("to") == phase_id and edge.get("from") != phase_id:
+            external.append({"from": edge["from"], "to": first_unit, "kind": "split-fan-in"})
+    return external
+
+
+def _contention_closure_matches_parent(
+    parent_paths: list[str],
+    units: list[dict[str, Any]],
+    internal_edges: list[dict[str, str]],
+    root: Path,
+) -> bool:
+    parent_sets = [sorted(s) for s in separable_sets_for_paths(parent_paths, root)]
+    unit_sets = [sorted(u["files"]) for u in units]
+    if sorted(parent_sets) != sorted(unit_sets):
+        return False
+    serialized = serialized_defaults(root)
+    for i, left in enumerate(units):
+        for right in units[i + 1 :]:
+            cross_contends = any(
+                wd.paths_contend(fl, fr, serialized, root)[0]
+                for fl in left["files"]
+                for fr in right["files"]
+            )
+            if cross_contends and not (
+                _has_path(internal_edges, left["id"], right["id"])
+                or _has_path(internal_edges, right["id"], left["id"])
+            ):
+                return False
+    return True
+
+
+def propose_phase_split(
+    phase_id: str,
+    paths: list[str],
+    content: str,
+    root: Path,
+    over_threshold: bool,
+    separable_sets: list[list[str]],
+    phases: list[dict[str, str]],
+    edges: list[dict[str, str]],
+    sizing: dict[str, Any],
+) -> dict[str, Any] | None:
+    if not (len(separable_sets) > 1 or over_threshold):
+        return None
+    if len(separable_sets) <= 1:
+        return None
+    parent_paths = expanded_phase_paths(phase_id, {phase_id: paths}, content, root)
+    units = [
+        {"id": _unit_id(phase_id, idx), "files": sorted(file_set)}
+        for idx, file_set in enumerate(sorted(separable_sets, key=lambda s: s[0] if s else ""))
+    ]
+    if len(units) < 2:
+        return None
+    projected_phase_count = len(phases) - 1 + len(units)
+    if projected_phase_count > int(sizing.get("maxPhaseCount", 99)):
+        return {
+            "phase": phase_id,
+            "rejected": True,
+            "reason": "maxPhaseCount exceeded",
+            "units": units,
+        }
+    internal_edges = _mandatory_internal_edges(units, root)
+    if not _contention_closure_matches_parent(parent_paths, units, internal_edges, root):
+        return {
+            "phase": phase_id,
+            "rejected": True,
+            "reason": "contention closure differs from parent",
+            "units": units,
+        }
+    unit_ids = [unit["id"] for unit in units]
+    external_edges = _external_edges_for_split(phase_id, unit_ids, edges)
+    return {
+        "phase": phase_id,
+        "rejected": False,
+        "units": units,
+        "internalEdges": internal_edges,
+        "externalEdges": external_edges,
+    }
+
+
+def _safe_assign_waves(items: list[str], edges: list[dict[str, str]]) -> list[list[str]] | None:
+    graph_nodes = set(items)
+    for edge in edges:
+        graph_nodes.add(edge["from"])
+        graph_nodes.add(edge["to"])
+    items_list = sorted(graph_nodes, key=_sort_phase_key)
+    if wd.graph_has_cycle(items_list, edges):
+        return None
+    deps = {i: {e["from"] for e in edges if e["to"] == i} for i in items_list}
+    waves: list[list[str]] = []
+    remaining = set(items_list)
+    while remaining:
+        wave = sorted([i for i in remaining if not (deps[i] & remaining)], key=_sort_phase_key)
+        if not wave:
+            return None
+        waves.append(wave)
+        remaining -= set(wave)
+    return waves
+
+
+def cost_estimate(
+    phases: list[dict[str, str]],
+    edges: list[dict[str, str]],
+    split_suggestions: list[dict[str, Any]],
+) -> dict[str, int]:
+    phase_ids = [phase["id"] for phase in phases]
+    simulated_ids: list[str] = []
+    simulated_edges: list[dict[str, str]] = []
+    split_by_phase = {item["phase"]: item for item in split_suggestions if not item.get("rejected")}
+    for pid in phase_ids:
+        split = split_by_phase.get(pid)
+        if split:
+            simulated_ids.extend(unit["id"] for unit in split["units"])
+            simulated_edges.extend(split.get("internalEdges") or [])
+            simulated_edges.extend(split.get("externalEdges") or [])
+        else:
+            simulated_ids.append(pid)
+    for edge in edges:
+        if edge.get("from") in split_by_phase or edge.get("to") in split_by_phase:
+            continue
+        simulated_edges.append(dict(edge))
+    waves = _safe_assign_waves(simulated_ids, simulated_edges) or [simulated_ids]
+    projected_waves = len(waves)
+    merge_gates = projected_waves
+    return {
+        "projectedWaves": projected_waves,
+        "mergeGates": merge_gates,
+        "estimate": projected_waves * merge_gates,
+    }
+
+
+def render_advisory_markdown(score: dict[str, Any], root: Path) -> str:
+    splits = [
+        phase["splitSuggestion"]
+        for phase in score.get("phases", [])
+        if phase.get("splitSuggestion") and not phase["splitSuggestion"].get("rejected")
+    ]
+    cost = cost_estimate(
+        [{"id": phase["phase"], "title": phase.get("title", "")} for phase in score.get("phases", [])],
+        [],
+        splits,
+    )
+    lines = [
+        ADVISORY_HEADING,
+        "",
+        "> Draft-only advisory (stripped at freeze). Generated by `phase_sizing.py`.",
+        "",
+        "### Cost estimate",
+        "",
+        f"- Projected waves: {cost['projectedWaves']}",
+        f"- Merge gates: {cost['mergeGates']}",
+        f"- Structural cost (waves × gates): {cost['estimate']}",
+        "",
+    ]
+    if not splits:
+        lines.append("_No split suggestions at this time._")
+        lines.append("")
+        return "\n".join(lines)
+    lines.append("### Split suggestions")
+    lines.append("")
+    for split in splits:
+        phase_id = split["phase"]
+        lines.append(f"#### Phase {phase_id}")
+        lines.append("")
+        for unit in split.get("units", []):
+            files = ", ".join(f"`{path}`" for path in unit.get("files", []))
+            lines.append(f"- **{unit['id']}**: {files}")
+        internal = split.get("internalEdges") or []
+        if internal:
+            lines.append("")
+            lines.append("Internal edges:")
+            for edge in internal:
+                lines.append(f"- `{edge['from']}` → `{edge['to']}` ({edge.get('kind', 'edge')})")
+        external = split.get("externalEdges") or []
+        if external:
+            lines.append("")
+            lines.append("External edges preserved:")
+            for edge in external:
+                lines.append(f"- `{edge['from']}` → `{edge['to']}` ({edge.get('kind', 'edge')})")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def score_task_list(root: Path, task_list: Path, sizing: dict[str, Any]) -> dict[str, Any]:
@@ -253,6 +544,7 @@ def score_task_list(root: Path, task_list: Path, sizing: dict[str, Any]) -> dict
             "depFanOut": dep_fan_out(edges, pid),
         }
         size, over_threshold, below_floor = classify_size(metrics, sizing)
+        separable_sets = separable_sets_for_phase(normalized, text, pid, root)
         entry: dict[str, Any] = {
             "phase": pid,
             "title": phase["title"],
@@ -260,22 +552,41 @@ def score_task_list(root: Path, task_list: Path, sizing: dict[str, Any]) -> dict
             "size": size,
             "overThreshold": over_threshold,
             "belowFloor": below_floor,
-            "separableSets": separable_sets_for_phase(normalized, root),
+            "separableSets": separable_sets,
         }
         if under:
             entry["scopeUnderDeclared"] = under
             notices.append(
                 f"phase {pid}: scopeUnderDeclared ({len(under)} implied path(s) not in **File:** lines)"
             )
+        split = propose_phase_split(
+            pid,
+            normalized,
+            text,
+            root,
+            over_threshold,
+            separable_sets,
+            phases,
+            edges,
+            sizing,
+        )
+        if split is not None:
+            entry["splitSuggestion"] = split
         per_phase.append(entry)
+    split_suggestions = [
+        phase["splitSuggestion"]
+        for phase in per_phase
+        if phase.get("splitSuggestion")
+    ]
     return {
         "verdict": "pass",
         "action": "phase-sizing-score",
-        "taskList": str(task_list.relative_to(root)).replace("\\", "/"),
+        "taskList": rel_task_list(task_list, root),
         "frozen": wd.parse_frontmatter(text).get("frozen", "").lower() == "true",
         "phaseCount": len(per_phase),
         "notices": notices,
         "phases": per_phase,
+        "costEstimate": cost_estimate(phases, edges, split_suggestions),
         "config": {
             "minPhaseFiles": sizing.get("minPhaseFiles"),
             "minPhaseScenarios": sizing.get("minPhaseScenarios"),
@@ -284,31 +595,73 @@ def score_task_list(root: Path, task_list: Path, sizing: dict[str, Any]) -> dict
     }
 
 
-def cmd_score(root: Path, args: argparse.Namespace) -> int:
-    task_list = Path(args.task_list)
+def rel_task_list(task_list: Path, root: Path) -> str:
+    try:
+        return str(task_list.relative_to(root)).replace("\\", "/")
+    except ValueError:
+        return str(task_list)
+
+
+def resolve_task_list(root: Path, raw: str) -> Path:
+    task_list = Path(raw)
     if not task_list.is_absolute():
         task_list = (root / task_list).resolve()
+    return task_list
+
+
+def cmd_score(root: Path, args: argparse.Namespace) -> int:
+    task_list = resolve_task_list(root, args.task_list)
     if not task_list.is_file():
         emit({"verdict": "fail", "error": f"task list not found: {task_list}"}, 2)
     emit(score_task_list(root, task_list, load_sizing_config(root)))
 
 
 def cmd_check_frozen(root: Path, args: argparse.Namespace) -> int:
-    task_list = Path(args.task_list)
-    if not task_list.is_absolute():
-        task_list = (root / task_list).resolve()
+    task_list = resolve_task_list(root, args.task_list)
     text = task_list.read_text(encoding="utf-8")
+    if has_advisory_block(text) and not getattr(args, "allow_advisory", False):
+        emit(
+            {
+                "verdict": "fail",
+                "action": "phase-sizing-check-frozen",
+                "error": "advisory block present — strip before freeze (R30)",
+                "taskList": rel_task_list(task_list, root),
+            },
+            20,
+        )
     if wd.parse_frontmatter(text).get("frozen", "").lower() == "true" and not args.allow_frozen:
         emit(
             {
                 "verdict": "fail",
                 "action": "phase-sizing-check-frozen",
                 "error": "frozen task list — print-only / fail-closed (R30)",
-                "taskList": str(task_list.relative_to(root)).replace("\\", "/"),
+                "taskList": rel_task_list(task_list, root),
             },
             20,
         )
     emit(score_task_list(root, task_list, load_sizing_config(root)))
+
+
+def cmd_advisory(root: Path, args: argparse.Namespace) -> int:
+    task_list = resolve_task_list(root, args.task_list)
+    if not task_list.is_file():
+        emit({"verdict": "fail", "error": f"task list not found: {task_list}"}, 2)
+    score = score_task_list(root, task_list, load_sizing_config(root))
+    print(render_advisory_markdown(score, root), end="")
+    return 0
+
+
+def cmd_strip_advisory(root: Path, args: argparse.Namespace) -> int:
+    task_list = resolve_task_list(root, args.task_list)
+    if not task_list.is_file():
+        emit({"verdict": "fail", "error": f"task list not found: {task_list}"}, 2)
+    text = task_list.read_text(encoding="utf-8")
+    stripped = strip_advisory_block(text)
+    if args.inplace:
+        task_list.write_text(stripped, encoding="utf-8")
+    else:
+        print(stripped, end="")
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -320,6 +673,12 @@ def build_parser() -> argparse.ArgumentParser:
     frozen = sub.add_parser("check-frozen", help="Fail-closed score on frozen lists (R30)")
     frozen.add_argument("task_list", help="Path to task-list markdown")
     frozen.add_argument("--allow-frozen", action="store_true", help="Fixture-only bypass")
+    frozen.add_argument("--allow-advisory", action="store_true", help="Fixture-only bypass")
+    advisory = sub.add_parser("advisory", help="Render sizing advisory markdown")
+    advisory.add_argument("task_list", help="Path to task-list markdown")
+    strip = sub.add_parser("strip-advisory", help="Strip advisory block from a task list")
+    strip.add_argument("task_list", help="Path to task-list markdown")
+    strip.add_argument("--inplace", action="store_true", help="Rewrite task list in place")
     return parser
 
 
@@ -330,6 +689,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_score(root, args)
     if args.command == "check-frozen":
         return cmd_check_frozen(root, args)
+    if args.command == "advisory":
+        return cmd_advisory(root, args)
+    if args.command == "strip-advisory":
+        return cmd_strip_advisory(root, args)
     emit({"verdict": "fail", "error": f"unknown command {args.command!r}"}, 2)
     return 2
 

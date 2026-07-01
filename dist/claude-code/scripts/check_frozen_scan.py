@@ -6,6 +6,8 @@ import json, os, subprocess, sys, tempfile
 from pathlib import Path
 import pathlib
 
+from phase_sizing import has_advisory_block
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT = SCRIPT_DIR.parent
 
@@ -146,6 +148,23 @@ def main(argv=None):
         if is_amendment_companion_tasklist(p, amended):
             continue
         violations.append(p)
+    advisory_violations = []
+    for line in diff_out.splitlines():
+        parts = line.split("	", 1)
+        if len(parts) != 2:
+            continue
+        status, path = parts
+        if status not in ("D", "M"):
+            continue
+        if not is_frozen_at_ref(path, "HEAD"):
+            continue
+        show = subprocess.run(["git", "-C", str(root), "show", f"HEAD:{path}"], capture_output=True, text=True, check=False)
+        if show.returncode != 0:
+            continue
+        if has_advisory_block(show.stdout):
+            advisory_violations.append(path)
+    if advisory_violations:
+        print(json.dumps({"verdict":"fail","reason":"advisory block in modified frozen file","files":advisory_violations})); return 1
     if violations:
         print(json.dumps({"verdict":"fail","reason":"frozen artifact modified","files":violations})); return 1
     print(json.dumps({"verdict":"pass","reason":"no frozen artifacts modified"})); return 0

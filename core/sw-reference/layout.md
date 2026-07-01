@@ -544,6 +544,20 @@ Per-task TDD + refactor rollup lives under `.cursor/sw-execute-runs/<sanitized-t
 
 Gate: `python3 scripts/refactor-gate.py --status <path> [--signal <signal-path>]`.
 
+
+## Sizing & Split Suggestions (PRD 040)
+
+Draft-only advisory block rendered by `python3 scripts/phase_sizing.py advisory <task-list>` into unfrozen
+task lists. The block uses the heading `## Sizing & Split Suggestions`, carries structural sizing/split
+guidance and a cost estimate, and **must be stripped before freeze** (`python3 scripts/phase_sizing.py
+strip-advisory --inplace <path>`). Frozen artifacts reject the block via `phase_sizing.py check-frozen`,
+`scripts/spec-rigor-check.py`, and `scripts/check_frozen_scan.py`.
+
+| Artifact | Role |
+| --- | --- |
+| `core/sw-reference/phase-sizing.schema.json` | JSON Schema for deterministic sizing scorer output |
+| `scripts/phase_sizing.py` | Scorer, split suggestion, advisory render/strip commands |
+
 ## Python entrypoint model (R32)
 
 Harness scripts live under `scripts/*.py` and execute via `python3 scripts/<name>.py`.
