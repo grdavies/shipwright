@@ -9,8 +9,10 @@ import argparse
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -19,7 +21,52 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from _sw.cli import build_parser, run_module_main
-from _fixture_lib import FixtureContext, invoke_suite_main, repo_root
+from _fixture_lib import invoke_suite_main, repo_root
+
+
+def coverage_enabled(*, flag: bool = False) -> bool:
+    if flag:
+        return True
+    return os.environ.get("SW_COVERAGE", "").strip().lower() in ("1", "true", "yes")
+
+
+def resolve_coverdir(root: Path, run_id: str | None = None) -> Path:
+    rid = run_id or uuid.uuid4().hex[:12]
+    coverdir = root / ".cursor" / "sw-coverage" / rid
+    coverdir.mkdir(parents=True, exist_ok=True)
+    return coverdir
+
+
+def trace_command(path: Path, *, coverdir: Path) -> list[str]:
+    return [
+        sys.executable,
+        "-m",
+        "trace",
+        "--count",
+        f"--coverdir={coverdir}",
+        str(path),
+    ]
+
+
+def run_traced_subprocess(path: Path, *, root: Path, coverdir: Path, env: dict[str, str]) -> int:
+    completed = subprocess.run(
+        trace_command(path, coverdir=coverdir),
+        cwd=str(root),
+        env=env,
+        shell=False,
+    )
+    return completed.returncode
+
+
+def emit_coverage_report(coverdir: Path, *, root: Path) -> None:
+    report = root / "scripts" / "coverage_report.py"
+    if not report.is_file():
+        return
+    subprocess.run(
+        [sys.executable, str(report), "--coverdir", str(coverdir), "--scripts-root", str(root / "scripts")],
+        cwd=str(root),
+        check=False,
+    )
 
 
 def discover_tests(root: Path) -> list[Path]:
@@ -32,7 +79,13 @@ def discover_suites(root: Path) -> list[Path]:
     return py + sh
 
 
-def run_test_file(path: Path, *, root: Path | None = None) -> int:
+def run_test_file(
+    path: Path,
+    *,
+    root: Path | None = None,
+    coverage: bool = False,
+    coverdir: Path | None = None,
+) -> int:
     root = root or repo_root(path)
     env = os.environ.copy()
     env["ROOT"] = str(root)
@@ -40,7 +93,15 @@ def run_test_file(path: Path, *, root: Path | None = None) -> int:
     env["PYTHONPATH"] = os.pathsep.join(
         p for p in (str(root / "scripts"), env.get("PYTHONPATH", "")) if p
     )
-    if path.suffix == ".test" and path.read_text(encoding="utf-8", errors="replace").startswith("#!/usr/bin/env python"):
+    use_coverage = coverage_enabled(flag=coverage)
+    active_coverdir = coverdir or (resolve_coverdir(root) if use_coverage else None)
+
+    if use_coverage and active_coverdir is not None:
+        return run_traced_subprocess(path, root=root, coverdir=active_coverdir, env=env)
+
+    if path.suffix == ".test" and path.read_text(encoding="utf-8", errors="replace").startswith(
+        "#!/usr/bin/env python"
+    ):
         completed = subprocess.run(
             [sys.executable, str(path)],
             cwd=str(root),
@@ -48,25 +109,21 @@ def run_test_file(path: Path, *, root: Path | None = None) -> int:
             shell=False,
         )
         return completed.returncode
-    # Legacy bash .test — execute via pythonized inline runner
     text = path.read_text(encoding="utf-8", errors="replace")
     if text.lstrip().startswith("#!/usr/bin/env bash"):
-        # Rewrite ROOT and invoke through bash-free python exec of body
         body = text
         body = body.replace("#!/usr/bin/env bash", "")
         body = body.replace("set -euo pipefail", "")
-        for marker in ("ROOT=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")/../..\" && pwd)\"",):
+        for marker in ('ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"',):
             body = body.replace(marker, f'ROOT="{root}"')
-        # Hardcoded worktree paths → dynamic root
-        import re
         body = re.sub(
             r'ROOT="[^"]*worktrees/[^"]*"',
             f'ROOT="{root}"',
             body,
         )
-        body = body.replace('bash "', f'{sys.executable} ').replace('.test"', '.test"')
+        body = body.replace('bash "', f"{sys.executable} ").replace('.test"', '.test"')
         body = body.replace('bash "$ROOT/', f'{sys.executable} "$ROOT/')
-        body = body.replace(".sh\"", ".py\"")
+        body = body.replace('.sh"', '.py"')
         completed = subprocess.run(
             ["/bin/bash", "-c", body],
             cwd=str(root),
@@ -83,8 +140,26 @@ def run_test_file(path: Path, *, root: Path | None = None) -> int:
     return completed.returncode
 
 
-def run_suite_module(path: Path, *, root: Path | None = None) -> int:
+def run_suite_module(
+    path: Path,
+    *,
+    root: Path | None = None,
+    coverage: bool = False,
+    coverdir: Path | None = None,
+) -> int:
     root = root or repo_root(path)
+    use_coverage = coverage_enabled(flag=coverage)
+    active_coverdir = coverdir or (resolve_coverdir(root) if use_coverage else None)
+
+    if use_coverage and active_coverdir is not None and path.suffix == ".py":
+        env = os.environ.copy()
+        env["ROOT"] = str(root)
+        env["SW_REPO_ROOT"] = str(root)
+        env["PYTHONPATH"] = os.pathsep.join(
+            p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
+        )
+        return run_traced_subprocess(path, root=root, coverdir=active_coverdir, env=env)
+
     if path.suffix == ".py":
         spec = importlib.util.spec_from_file_location(path.stem, path)
         if spec is None or spec.loader is None:
@@ -97,7 +172,6 @@ def run_suite_module(path: Path, *, root: Path | None = None) -> int:
             return invoke_suite_main(mod)
         print(f"FAIL suite {path} missing main()", file=sys.stderr)
         return 1
-    # Legacy .sh suite — delegate to bash subprocess (migration interim)
     env = os.environ.copy()
     env["ROOT"] = str(root)
     completed = subprocess.run(["/bin/bash", str(path)], cwd=str(root), env=env, shell=False)
@@ -110,7 +184,9 @@ def load_manifest(root: Path) -> list[dict]:
     return list(data.get("fixtures") or [])
 
 
-def run_manifest(root: Path) -> int:
+def run_manifest(root: Path, *, coverage: bool = False, coverdir: Path | None = None) -> int:
+    use_coverage = coverage_enabled(flag=coverage)
+    active_coverdir = coverdir or (resolve_coverdir(root) if use_coverage else None)
     failures = 0
     for entry in load_manifest(root):
         script = entry.get("script", "")
@@ -123,9 +199,11 @@ def run_manifest(root: Path) -> int:
             failures += 1
             continue
         print(f"==> pr-test-plan/{entry['id']}: {path.relative_to(root)}")
-        ec = run_suite_module(path, root=root)
+        ec = run_suite_module(path, root=root, coverage=use_coverage, coverdir=active_coverdir)
         if ec != 0:
             failures += 1
+    if use_coverage and active_coverdir is not None:
+        emit_coverage_report(active_coverdir, root=root)
     if failures:
         print(f"FAIL pr-test-plan-manifest: {failures} suite(s) failed")
         return 1
@@ -133,12 +211,19 @@ def run_manifest(root: Path) -> int:
     return 0
 
 
-def run_verify(root: Path) -> int:
+def run_verify(root: Path, *, coverage: bool = False, coverdir: Path | None = None) -> int:
     """Run the shipwright plugin verify.test bundle."""
-    ec = run_suite_module(SCRIPT_DIR / "run_verify_bundle.py", root=root)
+    use_coverage = coverage_enabled(flag=coverage)
+    active_coverdir = coverdir or (resolve_coverdir(root) if use_coverage else None)
+    ec = run_suite_module(SCRIPT_DIR / "run_verify_bundle.py", root=root, coverage=use_coverage, coverdir=active_coverdir)
     if ec != 0:
+        if use_coverage and active_coverdir is not None:
+            emit_coverage_report(active_coverdir, root=root)
         return ec
-    return run_manifest(root)
+    result = run_manifest(root, coverage=use_coverage, coverdir=active_coverdir)
+    if use_coverage and active_coverdir is not None:
+        emit_coverage_report(active_coverdir, root=root)
+    return result
 
 
 def cmd_list(args: argparse.Namespace) -> int:
@@ -150,8 +235,16 @@ def cmd_list(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = build_parser(prog="test-runner", description="Python test harness runner (R27).")
+    parser = build_parser(
+        prog="test-runner",
+        description="Python test harness runner (R27). Coverage mode is opt-in via --coverage or SW_COVERAGE=1; informational baseline only — no CI threshold gate.",
+    )
     parser.add_argument("--root", default=str(REPO_ROOT))
+    parser.add_argument(
+        "--coverage",
+        action="store_true",
+        help="Run subprocess suites via python -m trace --count (informational baseline; no CI gate)",
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_test = sub.add_parser("run-test", help="Run one .test file")
@@ -164,26 +257,34 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("verify", help="Run verify.test bundle")
     sub.add_parser("list", help="List discoverable tests")
 
-    p_all = sub.add_parser("run-all-tests", help="Run all .test files")
+    sub.add_parser("run-all-tests", help="Run all .test files")
+
+    p_report = sub.add_parser("coverage-report", help="Print coverage summary from a trace coverdir")
+    p_report.add_argument("--coverdir", required=True)
+
     args = parser.parse_args(argv)
     root = Path(args.root)
+    coverage = coverage_enabled(flag=getattr(args, "coverage", False))
 
     if args.cmd == "run-test":
-        return run_test_file(Path(args.path), root=root)
+        return run_test_file(Path(args.path), root=root, coverage=coverage)
     if args.cmd == "run-suite":
-        return run_suite_module(Path(args.path), root=root)
+        return run_suite_module(Path(args.path), root=root, coverage=coverage)
     if args.cmd == "run-manifest":
-        return run_manifest(root)
+        return run_manifest(root, coverage=coverage)
     if args.cmd == "verify":
-        return run_verify(root)
+        return run_verify(root, coverage=coverage)
     if args.cmd == "list":
         return cmd_list(args)
     if args.cmd == "run-all-tests":
         failures = 0
         for test in discover_tests(SCRIPT_DIR):
-            if run_test_file(test, root=root) != 0:
+            if run_test_file(test, root=root, coverage=coverage) != 0:
                 failures += 1
         return 1 if failures else 0
+    if args.cmd == "coverage-report":
+        print_report(Path(args.coverdir), scripts_root=(root / "scripts").resolve())
+        return 0
     return 2
 
 

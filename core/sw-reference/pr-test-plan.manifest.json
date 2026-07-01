@@ -760,6 +760,17 @@
       "scenarios": [
         "spec-rigor-brainstorm-profile-required-sections"
       ]
+    },
+    {
+      "id": "stdlib-coverage-fixtures",
+      "script": "scripts/test/run_stdlib_coverage_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-stdlib-coverage-fixtures",
+      "scenarios": [
+        "stdlib-coverage-mode-no-behavior-change",
+        "stdlib-coverage-report-executed-and-unexecuted-lines"
+      ]
     }
   ]
 }
