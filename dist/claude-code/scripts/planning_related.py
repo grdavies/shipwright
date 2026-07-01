@@ -295,7 +295,7 @@ def redact_untrusted_payload(root, text):
     script = worktree / "scripts/memory-redact.py"
     if not script.is_file():
         return text
-    proc = subprocess.run(["bash", str(script)], input=text, text=True, capture_output=True, cwd=str(worktree))
+    proc = subprocess.run([sys.executable, str(script)], input=text, text=True, capture_output=True, cwd=str(worktree))
     return proc.stdout if proc.returncode == 0 else text
 
 def format_confirm_list(proposals, redacted_context):

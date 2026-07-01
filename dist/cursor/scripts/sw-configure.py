@@ -17,7 +17,7 @@ def main(argv: list[str] | None = None) -> int:
     write_verify = write_verify == "1"
 
     detect = json.loads(subprocess.check_output(
-        ["bash", str(Path(root)/"scripts/detect-project-type.py"), "--root", root, "--propose"],
+        [sys.executable, str(Path(root)/"scripts/detect-project-type.py"), "--root", root, "--propose"],
         text=True,
     ))
 

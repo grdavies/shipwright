@@ -12,13 +12,18 @@ Enumerates every planning-body read/write path that must route through `planning
 | `spec-seed` | `scripts/wave_spec_seed.py` | `planning_visibility.resolve_unit_visibility` | 2 (live) | `spec-seed-visibility-route` |
 | `pr-diff` | `scripts/planning_deliver_gate.py` | *(deferred phase 5)* | — | — |
 | `dispatch-context` | `scripts/dispatch-check.py` | *(deferred phase 5)* | — | — |
-| `store-get` | `scripts/planning_store.py` | *(deferred phase 3)* | — | — |
+| `store-get` | `scripts/planning_store.py` | `planning_visibility.issue_store_visibility_gate` | 3 (live) | `issue-store-visibility-r28` |
 | `superseded-manifest` | `scripts/planning_reconcile.py` | *(deferred — metadata only)* | — | — |
 | `inflight-tuple` | `scripts/inflight_signal.py` | `planning_visibility.redact_inflight_tuple` | 1 (resolver) | `resolver-single-authority` |
 | `reconciler-output` | `scripts/planning_reconcile.py` | *(partial — archive wired)* | 2 | — |
 | `run-log` | `scripts/wave_bookkeeping.py` | *(deferred)* | — | — |
 | `handoff-032` | `scripts/inflight_signal.py` | *(deferred)* | — | — |
 | `pull-in-confirm` | `scripts/wave_deliver.py` | *(deferred phase 5)* | — | — |
+| `issue-store-put` | `scripts/planning_store.py` | `planning_visibility.issue_store_visibility_gate` | 3 (live) | `issue-store-visibility-r28` |
+| `issue-store-comment` | `scripts/planning_store.py` | `planning_visibility.issue_store_visibility_gate` | 3 (live) | `issue-store-secret-scan-r45` |
+| `issue-store-freeze-record` | `scripts/planning_store.py` | `planning_visibility.issue_store_visibility_gate` | 3 (live) | `issue-store-freeze-r13` |
+| `issue-store-memory-pointer` | `scripts/planning_store.py` | `planning_visibility.issue_store_visibility_gate` | 3 (live) | `issue-store-freeze-r13` |
+
 
 ## Writer surfaces
 

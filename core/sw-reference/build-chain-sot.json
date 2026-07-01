@@ -52,6 +52,7 @@
     "capability-index.json",
     "capability-manifest.md",
     "capability-manifest.schema.json",
+    "canonical-serialization.md",
     "communication-routing.defaults.json",
     "decision-log.schema.json",
     "deterministic-regen-paths.json",

@@ -94,7 +94,7 @@ Per-unit bodies carry `visibility: public|private|memory`. When a unit omits `vi
 |-----|--------|---------|
 | `planning.visibilityProfile` | `all-private` \| `specs-public` (default) \| `all-public` | Closed-world default profile (schema-validated). |
 | `planning.privacyAck` | object | Durable acknowledgement gate when the origin remote is **public** (see below). |
-| `planning.store.backend` | `in-repo-public` (default) \| `local-synced` \| `memory` | Pluggable planning-unit body backend (PRD 034 R5/R18). Pinned per deliver run at provision. |
+| `planning.store.backend` | `in-repo-public` (default) \| `local-synced` \| `memory` \| `issue-store` | Pluggable planning-unit body backend (PRD 034 R5/R18; `issue-store` opt-in per PRD 043). Pinned per deliver run at provision. |
 
 **Public-repo-aware default (R3):** `/sw-init` probes `origin`. A **public** remote selects `all-private` and
 sets `planning.privacyAck.required: true` until the operator acknowledges before the first tracked spec commit.
@@ -109,6 +109,47 @@ redaction at emission points is **not** semantic anonymization — use `all-priv
 for truly sensitive specs; keep codenames out of INDEX titles (opaque title) or in private/memory backends.
 The memory backend routes bodies through the existing memory adapter and redaction chokepoint — it is never
 labeled encrypted or anonymized.
+
+
+
+### Issue-store (PRD 043 — opt-in)
+
+`issue-store` relocates planning artifacts to a provider issue system. **Default is unchanged** — unset config
+is byte-identical to today (R1).
+
+| Key | Values | Meaning |
+| --- | --- | --- |
+| `planning.store.backend` | `issue-store` | Enable issue-backed planning store |
+| `planning.store.issuesProvider` | `github-issues` \| `gitlab-issues` \| `jira` \| `none` | Issues adapter (**independent** of `host.provider`) |
+| `planning.store.projectKey` | string | Project scoping key (`^[a-z][a-z0-9-]*$`) |
+| `planning.store.storeLocation.mode` | `same-repo` \| `separate-project` | Code repo vs shared planning project |
+| `planning.store.storeLocation.owner` / `.repo` | strings | Required for `separate-project` |
+| `planning.store.issues.tokenEnv` | string | Dedicated issue API token env (**not** `host.tokenEnv`) |
+
+Example (opt-in):
+
+```json
+{
+  "planning": {
+    "store": {
+      "backend": "issue-store",
+      "issuesProvider": "github-issues",
+      "projectKey": "my-project",
+      "storeLocation": { "mode": "same-repo" },
+      "issues": { "tokenEnv": "ISSUES_GITHUB_TOKEN" }
+    }
+  }
+}
+```
+
+**Fallback matrix (R3):** effective backend falls back to `in-repo-public` when `issuesProvider` is `none`/unsupported,
+`jira` (until PRD 047 ships), or `host.provider` is `none`. A documented notice is emitted; work is never blocked.
+
+**Network dependence (R15/R41):** issue-store mode requires API connectivity for planning operations once phase 2+
+CRUD is active. Init probes token scope via `python3 scripts/planning_store.py probe-issues-token` (fail-closed on
+missing/insufficient scope).
+
+See `core/providers/planning-store/issue-store.md` and `core/providers/issues/CAPABILITIES.md`.
 
 Fixture suite: `python3 scripts/test/run_visibility_fixtures.py` (registered as `visibility-fixtures` in the PR test-plan manifest).
 

@@ -567,7 +567,7 @@ def run_docs_currency_gate(root: Path) -> None:
         return
     script = SCRIPT_DIR / "docs-currency-gate.py"
     proc = subprocess.run(
-        ["bash", str(script), "--state-root", str(root)],
+        [sys.executable, str(script), "--state-root", str(root)],
         cwd=str(root),
         text=True,
         capture_output=True,

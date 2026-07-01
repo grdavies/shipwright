@@ -66,3 +66,13 @@ exponential backoff by default (R40).
 
 Token from `host.tokenEnv` (default `BITBUCKET_TOKEN`). Repository read/write scopes.
 Never stored in config.
+
+
+## Planning / issue-store routing (PRD 043)
+
+Bitbucket Cloud does not ship a first-class issues adapter in core. For issue-backed planning, route via a
+**separate GitHub/GitLab planning project** (`planning.store.storeLocation.mode: separate-project`) or
+**Jira** (`planning.store.issuesProvider: jira`, PRD 047) — not native Bitbucket issues.
+
+Host PR/CI verbs remain on this adapter; issue-store credentials use `planning.store.issues.tokenEnv`, not
+`host.tokenEnv`.

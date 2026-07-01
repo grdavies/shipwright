@@ -34,3 +34,18 @@ Full-tier brainstorm stage. Produces `docs/brainstorms/...-requirements.md` with
 - Pipeline-order guard: refuse to draft a PRD in this command.
 - Full-fidelity authoring — no caveman/terse compression on requirements text.
 - Freezing is a separate explicit step via `/sw-freeze`.
+
+
+## Issue-store mode (PRD 043 R18)
+
+When `planning.store.backend` is `issue-store` (effective, not fallback):
+
+1. After synthesis checkpoint, persist the requirements doc via the planning store — brainstorms are
+   **`sw:brainstorm` issues**, never git-ignored or dropped.
+2. Do **not** write `docs/brainstorms/...` stub files to the code repo (R7).
+3. On `/sw-prd`, link the brainstorm issue to the spawned PRD:
+   `python3 scripts/planning_store.py link-brainstorm-prd --brainstorm-unit <id> --prd-unit <id>`
+4. Brainstorm content is recoverable from the issue after a local wipe (SC3); rationale distillation to
+   memory happens at freeze (Phase 3).
+
+Default file-based mode is unchanged when issue-store is unconfigured.
