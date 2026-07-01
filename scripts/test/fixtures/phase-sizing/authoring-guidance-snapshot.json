@@ -1,0 +1,28 @@
+{
+  "tasks_skill": [
+    "small|medium|large",
+    "design constraint",
+    "Prefer-many-small",
+    "phase_sizing.py"
+  ],
+  "sw_tasks": [
+    "Phase Dependencies",
+    "spec-rigor-check.py",
+    "declared"
+  ],
+  "parallelism_skill": [
+    "Contention families",
+    "generator-output",
+    "phase_sizing.py advisory"
+  ],
+  "deliver_skill": [
+    "Phase dependency fallback ladder",
+    "file-set inference",
+    "Sequential + notice"
+  ],
+  "sw_deliver": [
+    "Phase dependency fallback",
+    "file-set inference",
+    "sequential+notice"
+  ]
+}
