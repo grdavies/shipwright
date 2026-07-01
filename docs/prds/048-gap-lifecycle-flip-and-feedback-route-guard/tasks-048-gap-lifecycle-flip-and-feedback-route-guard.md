@@ -4,6 +4,7 @@ topic: gap-lifecycle-flip-and-feedback-route-guard
 prd: docs/prds/048-gap-lifecycle-flip-and-feedback-route-guard/048-prd-gap-lifecycle-flip-and-feedback-route-guard.md
 frozen: true
 frozen_at: 2026-07-01
+visibility: public
 ---
 
 # Tasks — PRD 048 Gap-lifecycle flip automation & feedback route guard

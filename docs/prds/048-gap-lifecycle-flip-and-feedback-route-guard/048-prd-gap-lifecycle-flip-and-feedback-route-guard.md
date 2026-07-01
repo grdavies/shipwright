@@ -4,6 +4,7 @@ topic: gap-lifecycle-flip-and-feedback-route-guard
 absorbs: [GAP-088]
 frozen: true
 frozen_at: 2026-07-01
+visibility: public
 ---
 
 # PRD 048 — Gap-lifecycle flip automation & feedback route guard
