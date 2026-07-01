@@ -750,6 +750,38 @@
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-suite-registry-fixtures"
+    },
+    {
+      "id": "spec-rigor-brainstorm-profile-fixtures",
+      "script": "scripts/test/run_spec_rigor_brainstorm_profile_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-spec-rigor-brainstorm-profile-fixtures",
+      "scenarios": [
+        "spec-rigor-brainstorm-profile-required-sections"
+      ]
+    },
+    {
+      "id": "stdlib-coverage-fixtures",
+      "script": "scripts/test/run_stdlib_coverage_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-stdlib-coverage-fixtures",
+      "scenarios": [
+        "stdlib-coverage-mode-no-behavior-change",
+        "stdlib-coverage-report-executed-and-unexecuted-lines"
+      ]
+    },
+    {
+      "id": "prd-051-ship-verification-fixtures",
+      "script": "scripts/test/run_prd_051_ship_verification_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-prd-051-ship-verification-fixtures",
+      "scenarios": [
+        "manifest-registration",
+        "gap-flip-verification"
+      ]
     }
   ]
 }

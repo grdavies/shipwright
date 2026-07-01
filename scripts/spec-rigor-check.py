@@ -72,6 +72,59 @@ def _run(root: Path, artifact: str, path_file: Path, tier: str, prd_path: str) -
         print(json.dumps({"verdict": worst, "artifact": "prd", "tier": tier, "findings": findings}, ensure_ascii=False))
         return 0 if worst == "pass" else 10 if worst == "warn" else 20
 
+    if artifact == "brainstorm":
+        rids: list[str] = []
+        for rid, body in doc_format.extract_rd_bullets(text):
+            if not rid.startswith("R"):
+                continue
+            rids.append(rid)
+            if AMBIGUITY.search(body):
+                add("checklist", "error", f"ambiguity marker in {rid}", rid)
+            if len(body) < 12:
+                add("checklist", "warn", f"requirement text very short in {rid}", rid)
+        if not rids:
+            add("checklist", "error", "no R-IDs found in Requirements bullets")
+        for d in sorted({r for r in rids if rids.count(r) > 1}):
+            add("checklist", "error", f"duplicate R-ID {d}", d)
+        prev_num = 0
+        for rid in rids:
+            try:
+                num = int(rid[1:])
+            except ValueError:
+                add("checklist", "error", f"invalid R-ID {rid}", rid)
+                continue
+            if num <= prev_num:
+                add(
+                    "checklist",
+                    "error",
+                    f"R-ID {rid} breaks monotonic increase (previous was R{prev_num})",
+                    rid,
+                )
+            prev_num = max(prev_num, num)
+        for sec in (
+            "Summary",
+            "Problem Frame",
+            "Key Decisions",
+            "Requirements",
+            "Success Criteria",
+            "Scope Boundaries",
+            "Open Questions",
+        ):
+            if not re.search(rf"^##\s+{re.escape(sec)}\s*$", text, re.M | re.I):
+                add("checklist", "error", f"missing section: {sec}")
+        worst = "pass"
+        if any(f["severity"] == "error" for f in findings):
+            worst = "fail"
+        elif any(f["severity"] == "warn" for f in findings):
+            worst = "warn"
+        print(
+            json.dumps(
+                {"verdict": worst, "artifact": "brainstorm", "tier": tier, "findings": findings},
+                ensure_ascii=False,
+            )
+        )
+        return 0 if worst == "pass" else 10 if worst == "warn" else 20
+
     if artifact == "decision":
         dids: list[str] = []
         for did, body in doc_format.extract_rd_bullets(text):
