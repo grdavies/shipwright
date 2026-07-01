@@ -74,6 +74,9 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
 
 ## Procedure
 
+When `loopHealth.enabled`, run `python3 scripts/loop_health.py --summary` during retro compounding and include the diagnostic downstream-cost summary (review effort, rework/defect, incidents, ranked meta-inbox) in the retrospective output. Loop-health never gates merge or ship.
+
+
 ### Phase resolution
 
 1. If `--pre-merge` → pre-merge mode.

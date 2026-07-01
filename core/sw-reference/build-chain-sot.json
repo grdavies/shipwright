@@ -68,6 +68,7 @@
     "inflight-signal.schema.json",
     "kernel-classification.json",
     "kernel-classification.md",
+    "loop-health.schema.json",
     "meta-inbox-draft.schema.json",
     "model-routing.defaults.json",
     "model-tier-hook-feasibility.md",

@@ -18,8 +18,9 @@ STORE_SCHEMAS: dict[str, str] = {
     "failure-signatures": "core/sw-reference/failure-signature.schema.json",
     "root-cause-records": "core/sw-reference/root-cause-record.schema.json",
     "meta-inbox-draft": "core/sw-reference/meta-inbox-draft.schema.json",
+    "loop-health": "core/sw-reference/loop-health.schema.json",
 }
-SHARED_GIT_DIR_STORES = frozenset({"failure-signatures", "root-cause-records"})
+SHARED_GIT_DIR_STORES = frozenset({"failure-signatures", "root-cause-records", "loop-health"})
 CURSOR_STORE_PREFIXES = (".cursor/sw-", ".cursor/sw-meta-inbox/")
 WRITER_NAME = "sw_state_write_lib"
 SHA256_RE = re.compile(r"^[a-f0-9]{64}$")
@@ -52,6 +53,8 @@ def resolve_store_path(root: Path, store: str, *, rel: str | None = None) -> Pat
         return git_dir(root) / "shipwright-failure-signatures.json"
     if store == "root-cause-records":
         return git_dir(root) / "shipwright-root-cause-records.json"
+    if store == "loop-health":
+        return git_dir(root) / "shipwright-loop-health.json"
     if store == "meta-inbox-draft":
         if not rel:
             raise StateWriteError("--rel required for meta-inbox-draft store", halt="store-path-forbidden")
@@ -189,6 +192,59 @@ def validate_root_cause_records(data: dict[str, Any]) -> None:
     for rec in records:
         _validate_root_cause_record(rec)
 
+
+
+def validate_loop_health(data: dict[str, Any]) -> None:
+    if data.get("version") != 1:
+        raise StateWriteError("loop-health version must be 1", halt="schema-invalid")
+    if data.get("diagnosticOnly") is not True:
+        raise StateWriteError("loop-health diagnosticOnly must be true", halt="schema-invalid")
+    if data.get("gating") is not False:
+        raise StateWriteError("loop-health gating must be false", halt="schema-invalid")
+    if not isinstance(data.get("recordedAt"), str) or not data["recordedAt"]:
+        raise StateWriteError("loop-health recordedAt invalid", halt="schema-invalid")
+    metrics = data.get("metrics")
+    if not isinstance(metrics, dict):
+        raise StateWriteError("loop-health metrics must be object", halt="schema-invalid")
+    review = metrics.get("reviewEffort")
+    if not isinstance(review, dict):
+        raise StateWriteError("loop-health reviewEffort invalid", halt="schema-invalid")
+    for field in ("reviewRounds", "stabilizeReentries"):
+        if not isinstance(review.get(field), int) or review[field] < 0:
+            raise StateWriteError(f"loop-health reviewEffort.{field} invalid", halt="schema-invalid")
+    rework = metrics.get("reworkDefect")
+    if not isinstance(rework, dict):
+        raise StateWriteError("loop-health reworkDefect invalid", halt="schema-invalid")
+    for field in ("reopenedPhases", "postMergeReverts"):
+        if not isinstance(rework.get(field), int) or rework[field] < 0:
+            raise StateWriteError(f"loop-health reworkDefect.{field} invalid", halt="schema-invalid")
+    incidents = metrics.get("incidents")
+    if not isinstance(incidents, dict):
+        raise StateWriteError("loop-health incidents invalid", halt="schema-invalid")
+    if incidents.get("status") not in ("known", "unknown"):
+        raise StateWriteError("loop-health incidents.status invalid", halt="schema-invalid")
+    if incidents.get("status") == "known":
+        count = incidents.get("count")
+        if not isinstance(count, int) or count < 0:
+            raise StateWriteError("loop-health incidents.count invalid", halt="schema-invalid")
+    inbox = metrics.get("inboxRanking")
+    if not isinstance(inbox, list):
+        raise StateWriteError("loop-health inboxRanking must be array", halt="schema-invalid")
+    for row in inbox:
+        if not isinstance(row, dict):
+            raise StateWriteError("loop-health inboxRanking row invalid", halt="schema-invalid")
+        for field in ("signalId", "score", "recurrence", "reviewRounds"):
+            if field not in row:
+                raise StateWriteError(f"loop-health inboxRanking missing {field}", halt="schema-invalid")
+        if not isinstance(row["signalId"], str) or not row["signalId"]:
+            raise StateWriteError("loop-health inboxRanking.signalId invalid", halt="schema-invalid")
+        if not isinstance(row["score"], (int, float)) or row["score"] < 0:
+            raise StateWriteError("loop-health inboxRanking.score invalid", halt="schema-invalid")
+        for field in ("recurrence", "reviewRounds"):
+            if not isinstance(row[field], int) or row[field] < 0:
+                raise StateWriteError(f"loop-health inboxRanking.{field} invalid", halt="schema-invalid")
+
+
 def validate_meta_inbox_draft(data: dict[str, Any]) -> None:
     required = (
         "signalId",
@@ -233,6 +289,8 @@ def validate_store(root: Path, store: str, data: dict[str, Any]) -> None:
         validate_failure_signatures(data)
     elif store == "root-cause-records":
         validate_root_cause_records(data)
+    elif store == "loop-health":
+        validate_loop_health(data)
     elif store == "meta-inbox-draft":
         validate_meta_inbox_draft(data)
 
