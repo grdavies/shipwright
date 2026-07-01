@@ -34,9 +34,15 @@ def main() -> int:
     sample = root / "scripts/test/fixtures/stdlib-coverage-mode-no-behavior-change/sample.test"
     target = root / "scripts/test/fixtures/coverage-target-script.py"
 
-    ec_plain = subprocess.run([sys.executable, str(runner), "run-test", str(sample)], cwd=str(root)).returncode
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        p for p in (str(root / "scripts"), env.get("PYTHONPATH", "")) if p
+    )
+    ec_plain = subprocess.run(
+        [sys.executable, str(runner), "run-test", str(sample)], cwd=str(root), env=env
+    ).returncode
     ec_cov = subprocess.run(
-        [sys.executable, str(runner), "--coverage", "run-test", str(sample)], cwd=str(root)
+        [sys.executable, str(runner), "--coverage", "run-test", str(sample)], cwd=str(root), env=env
     ).returncode
     if ec_plain == ec_cov == 0:
         ok("stdlib-coverage-mode-no-behavior-change: identical exit code")
