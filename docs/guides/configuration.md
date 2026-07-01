@@ -508,3 +508,24 @@ wave-width distribution (`waveWidth`) used to validate that split suggestions pr
 The scorer (`scripts/phase_sizing.py`, Phase 2+) reads these keys when present; unconfigured repos keep
 backward-compatible defaults from the latest corpus audit.
 
+## Self-improving loop — inefficiency scanner (PRD 041)
+
+Opt-in process inefficiency detection. Default **disabled** (`inefficiency.enabled: false`).
+
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `inefficiency.enabled` | `false` | Run scanner on deliver/retro surfaces |
+| `inefficiency.thresholds.slowTestSeconds` | `30` | Flag slow per-test durations (JUnit XML when present) |
+| `inefficiency.thresholds.slowCiJobSeconds` | `300` | Flag slow CI jobs (`.cursor/sw-ci-timing.json` or gate `checkDurations`) |
+| `inefficiency.allowlist.manualSteps` | `[]` | Manual commands excluded from repeated-step detection |
+
+Detection classes: long single-threaded tests, slow CI jobs, serialized-but-parallelizable phases
+(`waveBatchingPlan` vs `greedy_wave_batches`), repeated manual steps (`run.log`). Items route to
+`.cursor/sw-meta-inbox/` as drafts (human-confirmed); skips with a notice when timing/sizing sources are absent.
+
+Fixture suite: `python3 scripts/test/run_inefficiency_scan_fixtures.py`.
+
+Behavioral-anomaly guardrails run in the `/sw-ship` chain after execute/verify — see
+`core/skills/verification-gate/SKILL.md`. Fixture suite:
+`python3 scripts/test/run_behavioral_anomaly_fixtures.py`.
+

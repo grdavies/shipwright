@@ -280,11 +280,48 @@ def exit_code_for(verdict: dict[str, Any]) -> int:
     return VERDICT_EXIT.get(str(verdict.get("verdict")), 10)
 
 
+
+def apply_behavioral_overlay(verdict: dict[str, Any], behavioral: dict[str, Any] | None) -> dict[str, Any]:
+    if not behavioral:
+        return verdict
+    try:
+        import behavioral_anomaly_check_lib as bac
+        return bac.apply_verification_overlay(verdict, behavioral)
+    except Exception:
+        if behavioral.get("evidenceIntegrityMismatch"):
+            return {
+                **verdict,
+                "verdict": "inconclusive",
+                "reason": "behavioral-anomaly: evidence integrity mismatch",
+                "inconclusiveClass": "missing-required",
+                "behavioralAnomalies": behavioral.get("anomalies") or [],
+            }
+        return verdict
+
+
+def load_behavioral_status(path: Path | None) -> dict[str, Any] | None:
+    if path is None or not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    return data if isinstance(data, dict) else None
+
 def compute_and_record(
     root: Path,
+    *,
+    behavioral_status_path: Path | None = None,
     **kwargs: Any,
 ) -> tuple[dict[str, Any], int]:
     verdict = compute_verdict(**kwargs)
+    behavioral = load_behavioral_status(behavioral_status_path)
+    if behavioral is None and behavioral_status_path is None:
+        run_dir = kwargs.get("verify_path")
+        if isinstance(run_dir, Path):
+            candidate = run_dir.parent / "behavioral-anomaly.status.json"
+            behavioral = load_behavioral_status(candidate)
+    verdict = apply_behavioral_overlay(verdict, behavioral)
     try:
         import failure_signature_record_lib as fsr
 
