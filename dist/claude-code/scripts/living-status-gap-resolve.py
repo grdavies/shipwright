@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -12,6 +13,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from _sw.cli import run_module_main
+import gap_backlog
 
 
 def git_root() -> Path:
@@ -23,14 +25,24 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="living-status-gap-resolve.py")
     parser.add_argument("--absorbing-prd", required=True)
     parser.add_argument("--pr", default="")
+    parser.add_argument("--scope-note", default="")
+    parser.add_argument("--root", default="")
     args = parser.parse_args(argv)
-    root = git_root()
-    import gap_backlog
-    gap_args = ["--root", str(root), "flip", "--resolve", "--prd", args.absorbing_prd]
+    root = Path(args.root).resolve() if args.root else git_root()
+    scope_note = args.scope_note or None
+    result = gap_backlog.resolve_for_prd(root, args.absorbing_prd, scope_note=scope_note)
+    out = {
+        "verdict": result.get("verdict", "pass"),
+        "action": "gap-resolve",
+        "flipped": result.get("flipped", []),
+        "absorbingPrd": args.absorbing_prd,
+    }
+    if result.get("error"):
+        out["error"] = result["error"]
     if args.pr:
-        gap_args.extend(["--pr", args.pr])
-    gap_backlog.main(gap_args)
-    return 0
+        out["pr"] = args.pr
+    print(json.dumps(out))
+    return 0 if result.get("verdict") == "pass" else 1
 
 
 if __name__ == "__main__":
