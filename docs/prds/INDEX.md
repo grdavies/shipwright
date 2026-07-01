@@ -53,6 +53,7 @@
 | 048 | gap-lifecycle-flip-and-feedback-route-guard | [048-prd-gap-lifecycle-flip-and-feedback-route-guard.md](048-gap-lifecycle-flip-and-feedback-route-guard/048-prd-gap-lifecycle-flip-and-feedback-route-guard.md) (frozen) | [tasks](048-gap-lifecycle-flip-and-feedback-route-guard/tasks-048-gap-lifecycle-flip-and-feedback-route-guard.md) (frozen) | not-started |
 
 
+| 050 | deliver-concurrency-cwd-terminal-robustness | [050-prd-deliver-concurrency-cwd-terminal-robustness.md](050-deliver-concurrency-cwd-terminal-robustness/050-prd-deliver-concurrency-cwd-terminal-robustness.md) (frozen) | [tasks](050-deliver-concurrency-cwd-terminal-robustness/tasks-050-deliver-concurrency-cwd-terminal-robustness.md) (frozen) | not-started |
 <!-- planning-index:structural begin -->| id | type | title | status | visibility | edges |
 | --- | --- | --- | --- | --- | --- |
 | gap-001-spec-rigor-check-sh-lacks-a-brainstorm-artifact- | gap | spec-rigor-check.sh lacks a brainstorm artifact profile (validates brainstorms against PRD structure) | open | public |  |
