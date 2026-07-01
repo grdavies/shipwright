@@ -54,6 +54,13 @@
 <!-- planning-index:structural begin -->| id | type | title | status | visibility | edges |
 | --- | --- | --- | --- | --- | --- |
 | gap-001-spec-rigor-check-sh-lacks-a-brainstorm-artifact- | gap | spec-rigor-check.sh lacks a brainstorm artifact profile (validates brainstorms against PRD structure) | open | public |  |
+| gap-002-living-doc-reconcile-commits-bypass-r31-default- | gap | Living-doc reconcile commits bypass R31 default-branch refusal (wave_living_docs.py / reconcile.py set-index-status) | open | public |  |
+| gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi | gap | Gap/doc-feedback capture has two unreconciled file paths and bypasses the planning_store backend interface | open | public |  |
+| gap-004-dispatch-binding-preflight-broken-bash-invokes-p | gap | Dispatch-binding preflight broken: bash invokes .py scripts, and interactive parent models are not in models.tiers | open | public |  |
+| gap-005-freeze-commit-spec-seed-cwd-dependent-repo-root- | gap | freeze-commit/spec-seed cwd-dependent repo-root resolution can target the shared primary checkout (extends GAP-077/078 to /sw-doc and /sw-amend) | open | public |  |
+| gap-006-prd-033-marked-complete-but-a3-r37-r39-r40-r42-r | gap | PRD 033 marked complete but A3 R37/R39/R40/R42/R43 (operator worktree contract, in-flight cwd guard) are unimplemented | open | public |  |
+| gap-007-finalize-completion-omits-terminal-living-docs-r | gap | finalize-completion omits terminal living-docs reconcile so INDEX stays in-progress | open | public |  |
+| gap-008-inflight-signal-run-complete-commits-index-on-ma | gap | inflight_signal run-complete commits INDEX on main during finalize-completion | open | public |  |
 <!-- planning-index:structural end -->
 <!-- planning-index:derived begin -->
 

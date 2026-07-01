@@ -2,6 +2,7 @@
 brainstorm: docs/brainstorms/2026-06-30-loop-hardening-requirements.md
 date: 2026-06-30
 topic: phase-granularity-parallelism
+visibility: public
 frozen: true
 frozen_at: 2026-06-30
 ---
