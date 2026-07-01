@@ -182,6 +182,7 @@
 * merge phase corpus-calibration-read-only-baseline-thresholds into feat/phase-granularity-parallelism (c1a1391) <!-- sw-deliver:corpus-calibration-read-only-baseline-thresholds -->
 * merge phase sizing-scorer-schema-read-only into feat/phase-granularity-parallelism (aabec63) <!-- sw-deliver:sizing-scorer-schema-read-only -->
 * merge phase split-suggestion-contention-integrity-advisory into feat/phase-granularity-parallelism (c4bf16b) <!-- sw-deliver:split-suggestion-contention-integrity-advisory -->
+* merge phase parallelism-objective-preflight-validation into feat/phase-granularity-parallelism (749df69) <!-- sw-deliver:parallelism-objective-preflight-validation -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
