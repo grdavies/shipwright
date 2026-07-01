@@ -83,6 +83,8 @@
     "schemas/orchestrator-step-plan.schema.json",
     "script-port-ledger.json",
     "signal-context.schema.json",
+    "suite-registry.json",
+    "suite-registry.schema.json",
     "templates/",
     "verify-presets.json"
   ],
