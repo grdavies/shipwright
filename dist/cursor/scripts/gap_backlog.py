@@ -159,7 +159,22 @@ def flip_schedule(backlog: GapBacklog, *, gap_ids: list[str], prd: str, amendmen
     return flipped
 
 
-def flip_resolve(backlog: GapBacklog, *, prd: str) -> list[str]:
+def resolve_for_prd(root: Path, prd: str, *, scope_note: str | None = None) -> dict[str, Any]:
+    """Shared in-process gap-resolve for an absorbing PRD (PRD 048 R1)."""
+    gap_path = default_gap_path(root)
+    try:
+        if not gap_path.is_file():
+            return {"verdict": "pass", "flipped": [], "error": None}
+        backlog = parse_gap_backlog(gap_path.read_text(encoding="utf-8"))
+        flipped = flip_resolve(backlog, prd=prd, scope_note=scope_note)
+        if flipped:
+            gap_path.write_text(render_gap_backlog(backlog), encoding="utf-8")
+        return {"verdict": "pass", "flipped": flipped, "error": None}
+    except Exception as exc:
+        return {"verdict": "partial", "flipped": [], "error": str(exc)}
+
+
+def flip_resolve(backlog: GapBacklog, *, prd: str, scope_note: str | None = None) -> list[str]:
     prd_n = str(int(prd)) if prd.isdigit() else prd.lstrip("0") or prd
     sched_re = re.compile(rf"^PRD\s+0*{re.escape(str(int(prd_n))) if prd_n.isdigit() else re.escape(prd_n)}(?:\s+A\d+)?$", re.I)
     resolved: list[str] = []
@@ -168,7 +183,7 @@ def flip_resolve(backlog: GapBacklog, *, prd: str) -> list[str]:
             continue
         if sched_re.match(row.schedule.strip()):
             row.status = "resolved"
-            row.schedule = "—"
+            row.schedule = f"— ({scope_note})" if scope_note else "—"
             resolved.append(row.gap_id)
     return resolved
 

@@ -247,6 +247,25 @@ def set_index_status(root: Path, prd: str, status: str) -> dict[str, Any]:
     if status not in allowed:
         raise SystemExit(f"invalid status {status!r}; one of {sorted(allowed)}")
     prd = prd.zfill(3)
+    cfg = read_config(root)
+    branch = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--abbrev-ref", "HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    branch_name = branch.stdout.strip() if branch.returncode == 0 else ""
+    base = str(cfg.get("defaultBaseBranch") or "main")
+    from worktree_lib import refuse_default_branch
+
+    try:
+        refuse_default_branch(branch_name, base)
+    except ValueError as exc:
+        return {
+            "verdict": "fail",
+            "error": str(exc),
+            "branch": branch_name,
+            "remediation": "use set-index-status on a non-default branch worktree",
+        }
     index_path = root / "docs/prds/INDEX.md"
     text = index_path.read_text(encoding="utf-8")
     lines: list[str] = []
@@ -263,5 +282,14 @@ def set_index_status(root: Path, prd: str, status: str) -> dict[str, Any]:
     if not updated:
         raise SystemExit(f"INDEX row not found for PRD {prd}")
     index_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
-    return {"verdict": "pass", "action": "set-index-status", "prd": prd, "status": status}
+    result: dict[str, Any] = {"verdict": "pass", "action": "set-index-status", "prd": prd, "status": status}
+    if status == "complete":
+        import gap_backlog
+
+        flip_result = gap_backlog.resolve_for_prd(root, prd)
+        result["flipped"] = flip_result.get("flipped", [])
+        if flip_result.get("verdict") == "partial":
+            result["verdict"] = "partial"
+            result["error"] = flip_result.get("error")
+    return result
 

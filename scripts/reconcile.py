@@ -71,7 +71,13 @@ def main(argv: list[str] | None = None) -> int:
         if not prd or not status:
             print("usage: reconcile set-index-status --prd NNN --status <status>", file=sys.stderr)
             return 1
-        return emit(rl.set_index_status(root, prd, status))
+        result = rl.set_index_status(root, prd, status)
+        if result.get("verdict") == "fail":
+            print(json.dumps(result), file=sys.stderr)
+            return 20
+        if result.get("verdict") == "partial":
+            return emit(result, 21)
+        return emit(result)
 
     if cmd == "append-log-idempotent":
         prd = phase = notes = pr = sha = ""
