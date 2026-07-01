@@ -186,6 +186,7 @@
 * merge phase shared-writer-capture-surfaces into feat/self-improving-loop (864d11b) <!-- sw-deliver:shared-writer-capture-surfaces -->
 * merge phase recurrence-escalation-pattern-reuse into feat/self-improving-loop (9d25344) <!-- sw-deliver:recurrence-escalation-pattern-reuse -->
 * merge phase inefficiency-scanner-behavioral-anomalies into feat/self-improving-loop (88f429e) <!-- sw-deliver:inefficiency-scanner-behavioral-anomalies -->
+* merge phase loop-health-auto-propose-driver-optional-v1-1 into feat/self-improving-loop (2789d94) <!-- sw-deliver:loop-health-auto-propose-driver-optional-v1-1 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
