@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/grdavies/shipwright/core/sw-reference/phase-sizing.schema.json",
+  "title": "Phase sizing report",
+  "type": "object",
+  "required": ["verdict", "action", "taskList", "phases"],
+  "properties": {
+    "verdict": { "type": "string" },
+    "action": { "type": "string" },
+    "taskList": { "type": "string" },
+    "phases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "phase", "filesTouched", "distinctDirs", "subTaskCount",
+          "traceabilityScenarios", "depFanOut", "size", "overThreshold",
+          "belowFloor", "separableSets"
+        ]
+      }
+    }
+  }
+}
