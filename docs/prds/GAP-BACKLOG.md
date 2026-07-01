@@ -21,8 +21,8 @@ table row numbers. When appending, use the next ID: **`GAP-089`**.
 
 | Status | Count |
 |--------|------:|
-| resolved | 27 |
-| scheduled | 61 |
+| resolved | 28 |
+| scheduled | 60 |
 | open | 0 |
 | ID | Status | Schedule | Title |
 |----|--------|----------|-------|
@@ -100,7 +100,7 @@ table row numbers. When appending, use the next ID: **`GAP-089`**.
 | GAP-072 | scheduled | PRD 035 A1 | PRD 034 deliver: post-merge integration verify fails — remediation budget exhausted per phase |
 | GAP-073 | scheduled | PRD 035 A1 | PRD 034 deliver: stabilize moves integration past `batchIntegrationHead` without state reconcile |
 | GAP-074 | scheduled | PRD 035 A1 | PRD 034 deliver: cross-run parallel ceiling — stale worktrees + concurrent deliver orchestrators |
-| GAP-075 | scheduled | PRD 052 | Test-suite registration drifted across 4 independently-maintained lists (`ci.yml`, `pr-test-plan.manifest.json`, `run_verify_bundle.py` `SUITES`, `CONTRIBUTING.md`); 6 orphan suites wired into none — absorbed by PRD 052 (`suite-registry.json` single-source + drift fixtures) |
+| GAP-075 | resolved | — | PRD 052 ship: `suite-registry.json` single-source + drift fixtures (`run_suite_registry_fixtures.py`); CONTRIBUTING `doc` lane guarded |
 | GAP-076 | scheduled | PRD 051 | No code-coverage tool exists for `scripts/`; introducing `pytest`/`coverage.py` conflicts with stdlib-first policy (R11/R12/R31 — `scripts/_sw/depmanifest.json` allows zero non-stdlib imports) — needs triage to a future brainstorm on approach (custom stdlib coverage vs. scoped `depmanifest.json` exception vs. status quo) before any implementation |
 | GAP-077 | scheduled | PRD 050 | `cmd_orchestrator_provision`'s `assert_primary_off_target` (`scripts/wave_lifecycle.py`) performs `git checkout <default_branch>` directly against the single shared **primary checkout** as a side effect of provisioning a *different* deliver run's orchestrator worktree; there is no cross-run lock around this check, so provisioning `/sw-deliver` for branch B can silently switch the primary checkout's HEAD (or hard-fail if dirty) while a concurrent `/sw-deliver` session/human is actively using that same primary checkout for branch A — PRD 013 R6–R9 scopes only the deliver state/lock *files* per branch, not the primary checkout's working tree/HEAD itself |
 | GAP-078 | scheduled | PRD 050 | `skills/conductor/SKILL.md` ("**Orchestrator worktree:** run `deliver-loop` from `.sw-worktrees/<slug>-orchestrator` (**or repo root with state synced**)") explicitly sanctions running the top-level conductor loop with `cwd` = the shared primary checkout, contradicting `core/commands/sw-deliver.md`'s own R53 framing ("Orchestrator worktree (R53): `orchestrator provision` on `<type>/<slug>`") which implies mandatory provisioning; two local agent sessions each running `/sw-deliver` for a different PRD from the primary checkout path would not be isolated from each other for any conductor-level command/side-effect that depends on `cwd`. Related: GAP-056 carries `Schedule: PRD 036`, but PRD 036's frozen scope (read 2026-06-30) contains no R-ID addressing repo-root/cwd ambiguity and explicitly non-goals "multi-PRD parallel deliver-loop scoping (GAP-017)" — the GAP-056 schedule pointer appears stale and this concern remains unscheduled |

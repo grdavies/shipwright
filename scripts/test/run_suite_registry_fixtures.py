@@ -132,6 +132,23 @@ def main() -> int:
     else:
         ok("gap-075-orphans: six orphan suites registered in verify lane")
 
+    contributing_path = root / "CONTRIBUTING.md"
+    contributing_text = contributing_path.read_text(encoding="utf-8")
+    contributing_scripts = {
+        f"scripts/test/{match}"
+        for match in re.findall(r"python3 scripts/test/(run_\w+_fixtures\.py)", contributing_text)
+    }
+    doc_lane = set(sr.doc_lane_entries(root))
+    only_contributing = sorted(contributing_scripts - doc_lane)
+    only_doc_lane = sorted(doc_lane - contributing_scripts)
+    if only_contributing or only_doc_lane:
+        if only_contributing:
+            bad(f"contributing-doc-lane: CONTRIBUTING-only scripts {only_contributing[:5]}")
+        if only_doc_lane:
+            bad(f"contributing-doc-lane: registry doc lane only {only_doc_lane[:5]}")
+    else:
+        ok("contributing-doc-lane: CONTRIBUTING fixture list matches registry doc lane")
+
     return 1 if FAIL else 0
 
 
