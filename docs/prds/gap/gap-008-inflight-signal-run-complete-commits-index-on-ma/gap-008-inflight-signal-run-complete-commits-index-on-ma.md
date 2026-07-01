@@ -1,5 +1,5 @@
 ---
-id: gap-007-inflight-signal-run-complete-commits-index-on-ma
+id: gap-008-inflight-signal-run-complete-commits-index-on-ma
 type: gap
 status: open
 title: inflight_signal run-complete commits INDEX on main during finalize-completion
@@ -11,13 +11,14 @@ tags: [source:feedback, signal:feedback-inflight-run-complete-main-index-2026-06
 
 _Captured from feedback signal `feedback-inflight-run-complete-main-index-2026-06-30`._
 
-## Relationship to gap-002 and PRD 046 A1/A2
+## Relationship to gap-002, PRD 046 A1/A3, and A2
 
 This is a **third distinct call path** in the same defect class as gap-002 (unguarded INDEX commit on
 `defaultBaseBranch` during deliver). gap-002 documents `wave_living_docs.py:git_commit_living_docs` and
 `reconcile_lib.py:set_index_status`. PRD 046 A1 (R95–R97) guards the **future** R80 projection write path
-and documents upstream primitive hardening as a dependency. **PRD 046 A2** (drafted from this gap) closes the
-dependency for the **current** deliver terminal path: `inflight_signal.py` via `finalize-completion`.
+and documents upstream primitive hardening as a dependency. **PRD 046 A3** (this gap) closes the
+`git_commit_inflight` portion of that dependency. **PRD 046 A2** (merged via PR #274) addresses orthogonal
+terminal INDEX **status** currency via `living-docs reconcile` on `finalize-completion`.
 
 ## Evidence (validated in code, reproduced live)
 
@@ -62,5 +63,5 @@ run-complete`, not `living-docs reconcile --commit`.
 
 ## Remediation
 
-Implemented via **PRD 046 A2** (`amendments/A2-inflight-signal-default-branch-commit-safety.md`): R98–R99
+Implemented via **PRD 046 A3** (`amendments/A3-inflight-signal-default-branch-commit-safety.md`): R100–R101
 wire the A1 R96 shared guard into `git_commit_inflight` and name `finalize-completion` as a guarded surface.
