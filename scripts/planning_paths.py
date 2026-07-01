@@ -137,6 +137,13 @@ def load_planning_dirs(root: Path) -> PlanningDirs:
     )
 
 
+def plugin_self_gap_dir(dirs: PlanningDirs) -> str:
+    """Return the plugin-self gap unit root under planning (PRD 041 R20)."""
+    return join_rel(dirs.planning, "gap")
+
+
+
+
 def join_rel(*parts: str) -> str:
     return str(Path(*parts)).replace("\\", "/")
 

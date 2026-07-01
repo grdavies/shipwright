@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "shipwright-failure-signatures",
+  "description": "Cross-run append-only failure signature store (PRD 041 R22). Normalization algorithm pinned here.",
+  "type": "object",
+  "required": ["version", "records"],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "records": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/record" }
+    }
+  },
+  "definitions": {
+    "signatureKey": {
+      "type": "object",
+      "required": ["checkId", "exitCode", "jobId", "messageClass"],
+      "properties": {
+        "checkId": { "type": "string", "minLength": 1 },
+        "exitCode": { "type": "integer" },
+        "jobId": { "type": "string", "minLength": 1 },
+        "messageClass": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "record": {
+      "type": "object",
+      "required": [
+        "key",
+        "rawHash",
+        "count",
+        "runs",
+        "firstSeen",
+        "lastSeen",
+        "source",
+        "writer"
+      ],
+      "properties": {
+        "key": { "$ref": "#/definitions/signatureKey" },
+        "rawHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "count": { "type": "integer", "minimum": 1 },
+        "runs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "firstSeen": { "type": "string" },
+        "lastSeen": { "type": "string" },
+        "source": { "type": "string" },
+        "writer": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "normalization": {
+      "description": "Pinned message normalization: strip temp paths, UUIDs, line numbers, timestamps before hashing messageClass.",
+      "steps": [
+        "replace /tmp/*, /var/folders/*, .sw-worktrees/* path segments with <path>",
+        "replace UUID v4 with <uuid>",
+        "replace :line:NNN and line NNN with :line:<n>",
+        "replace ISO-8601 timestamps and unix epoch seconds with <ts>",
+        "collapse whitespace; lowercase"
+      ]
+    }
+  }
+}
