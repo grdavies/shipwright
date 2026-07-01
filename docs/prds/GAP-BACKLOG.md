@@ -113,4 +113,19 @@ table row numbers. When appending, use the next ID: **`GAP-089`**.
 | GAP-085 | open | gap-013 | PRD 041 terminal PR #284: `terminal_pr_body` skips `git_template_lib` validation — manual `gh pr create` workaround |
 | GAP-086 | open | gap-014 | PRD 041 deliver: capability-trust fixtures reverted to `check-gate.sh` on primary checkout (PRD 042 python-first regression) |
 | GAP-087 | open | gap-015 | PRD 041: `all-private` profile needs `visibility: public` at spec-seed (`tracked-private-body`), not only assert-entry (Recallium #2282/#2285) |
-| GAP-088 | open | gap-016 | `living-status-gap-resolve.py` R51 flip is never invoked automatically on PRD completion — GAP-021/022/043/046/062/etc. still `scheduled` against `complete` PRD 035 A1/A2 despite `absorbs:`/outcome-table claims of `resolved`; `/sw-feedback` also names amendment targets without a consumer-status pre-check, surfacing dead-end `/sw-amend` dispatches to already-`complete` PRDs (027/034/035/036/042) |
+| GAP-088 | scheduled | PRD 048 | `living-status-gap-resolve.py` R51 flip is never invoked automatically on PRD completion — GAP-021/022/043/046/062/etc. still `scheduled` against `complete` PRD 035 A1/A2 despite `absorbs:`/outcome-table claims of `resolved`; `/sw-feedback` also names amendment targets without a consumer-status pre-check, surfacing dead-end `/sw-amend` dispatches to already-`complete` PRDs (027/034/035/036/042) |
+
+### Regression notes (PRD 041 retro, 2026-07-01)
+
+Scheduled gaps **confirmed still broken** during PRD 041 terminal deliver (#284):
+
+| Scheduled gap | PRD 041 symptom |
+|---------------|-----------------|
+| GAP-062 | `no-progress` halts; manual `noProgressStreak` reset (see GAP-083 / gap-011) |
+| GAP-067 / GAP-070 | Local `main` forked during finalize; missing squash merge until `git reset --hard origin/main` |
+| gap-007 | INDEX `not-started` after terminal merge until manual docs PR #285 |
+| PRD 036 stuck-stale | Yellow gate blocks `classify_stuck_stale` while GitHub UI green (GAP-084 / gap-012) |
+| PRD 042 portability | Fixture `gateRef: check-gate.sh` drift during deliver (GAP-086 / gap-014) |
+| GAP-021/022/043/046/062 | Rows still `scheduled | PRD 035 A1/A2` though absorbing PRD + amendments are `complete` — R51 flip never invoked (GAP-088 / gap-016) |
+
+
