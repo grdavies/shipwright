@@ -209,6 +209,21 @@ Unit-level graph primitives (in addition to phase-mode waves):
 
 **Run-start:** both `next` and explicit `--task-list` re-validate eligibility and depends at run-start (refuses `superseded`/`cancelled` races).
 
+
+
+## Sizing report visibility (`--sizing-report`)
+
+Read-only operator visibility for PRD 040 phase sizing — **does not** feed scheduling,
+next-action selection, or wave batching.
+
+```bash
+python3 scripts/wave.py sizing-report --task-list <path-to-task-list.md>
+```
+
+Emits the same JSON as `python3 scripts/phase_sizing.py score <task-list>` (phase metrics,
+split suggestions, `preflight` verdicts, and `costEstimate`). Safe on draft or frozen lists;
+use `phase_sizing.py check-frozen` for fail-closed freeze hygiene.
+
 ## Guardrails
 
 - Promotion validates each candidate on a disposable PR head **before** merge to `main`.
