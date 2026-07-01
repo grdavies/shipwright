@@ -232,6 +232,30 @@ assert 'complete' in idx
 "); then ok "set-index-status-partial-on-flip-failure"; else bad "set-index-status-partial-on-flip-failure"; fi
 rm -rf "$TMP5"
 
+# --- flip-resolve-scope-note-annotation (PRD 048 R4) ---
+TMP6=$(mktemp -d)
+mk_repo "$TMP6"
+if (cd "$TMP6" && python3 "$ROOT/scripts/gap-backlog.py" flip --resolve --prd 035 --scope-note "narrow fix" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert 'GAP-043' in d.get('flipped',[]), d
+text=open('docs/prds/GAP-BACKLOG.md').read()
+assert '| GAP-043 | resolved | — (narrow fix) |' in text, text
+"); then ok "flip-resolve-scope-note-annotation"; else bad "flip-resolve-scope-note-annotation"; fi
+rm -rf "$TMP6"
+
+# --- flip-resolve-bare-em-dash-without-scope-note (PRD 048 R7) ---
+TMP7=$(mktemp -d)
+mk_repo "$TMP7"
+if (cd "$TMP7" && python3 "$ROOT/scripts/gap-backlog.py" flip --resolve --prd 035 | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert 'GAP-043' in d.get('flipped',[]), d
+text=open('docs/prds/GAP-BACKLOG.md').read()
+assert '| GAP-043 | resolved | — |' in text, text
+"); then ok "flip-resolve-bare-em-dash-without-scope-note"; else bad "flip-resolve-bare-em-dash-without-scope-note"; fi
+rm -rf "$TMP7"
+
 
 exit "$FAIL"
 
