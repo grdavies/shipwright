@@ -196,6 +196,7 @@
 * merge phase in-process-gap-resolve-flip-default-branch-guard-medium into feat/gap-lifecycle-flip-and-feedback-route-guard (2eb688d) <!-- sw-deliver:in-process-gap-resolve-flip-default-branch-guard-medium -->
 * merge phase docs-currency-gate-gap-still-open-rewrite-small into feat/gap-lifecycle-flip-and-feedback-route-guard (3eb2166) <!-- sw-deliver:docs-currency-gate-gap-still-open-rewrite-small -->
 * merge phase feedback-route-guard-for-complete-units-medium into feat/gap-lifecycle-flip-and-feedback-route-guard (45b2289) <!-- sw-deliver:feedback-route-guard-for-complete-units-medium -->
+* merge phase gap-backlog-flip-scope-note-annotation-small into feat/gap-lifecycle-flip-and-feedback-route-guard (1455b42) <!-- sw-deliver:gap-backlog-flip-scope-note-annotation-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
