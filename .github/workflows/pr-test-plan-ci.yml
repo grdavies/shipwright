@@ -297,6 +297,28 @@ jobs:
       - name: Run parallel-merge-safety-fixtures
         run: python3 scripts/test/run_parallel_merge_safety_fixtures.py
 
+  feat-test-plan-phase-sizing-corpus-fixtures:
+    name: feat-test-plan-phase-sizing-corpus-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run phase-sizing-corpus-fixtures
+        run: python3 scripts/test/run_phase_sizing_corpus_fixtures.py
+
+  feat-test-plan-phase-sizing-fixtures:
+    name: feat-test-plan-phase-sizing-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run phase-sizing-fixtures
+        run: python3 scripts/test/run_phase_sizing_fixtures.py
+
   feat-test-plan-status-integrity-fixtures:
     name: feat-test-plan-status-integrity-fixtures
     runs-on: ubuntu-latest
