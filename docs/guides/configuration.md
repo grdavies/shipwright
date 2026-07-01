@@ -529,3 +529,28 @@ Behavioral-anomaly guardrails run in the `/sw-ship` chain after execute/verify �
 `core/skills/verification-gate/SKILL.md`. Fixture suite:
 `python3 scripts/test/run_behavioral_anomaly_fixtures.py`.
 
+## Self-improving loop — loop-health (PRD 041 R29)
+
+Downstream-cost diagnostic metrics. Default **disabled** (`loopHealth.enabled: false`). Read-only — never gates CI or merge.
+
+| Key | Default | Role |
+| --- | --- | --- |
+| `loopHealth.enabled` | `false` | Persist aggregated metrics to `${GIT_DIR}/shipwright-loop-health.json` |
+| `loopHealth.staleInboxDays` | `14` | Flag meta-inbox drafts older than this in living-status |
+
+CLI: `python3 scripts/loop_health.py` (`--summary`, `--stale-alerts`).
+
+## Self-improving loop — auto-propose driver (PRD 041 R27/R30)
+
+Bounded draft-only driver (`scripts/loop_autonomy.py`). Default **disabled**.
+
+| Key | Default | Role |
+| --- | --- | --- |
+| `loop.autoPropose.enabled` | `false` | Allow draft proposals + inert handoff queue entries |
+| `loop.autoPropose.maxPerDay` | `5` | Runaway cap per UTC day |
+| `loop.autoPropose.dedupWindow` | `3600` | Seconds before repeating the same `signalId` |
+| `loop.autoPropose.cooldownMinutes` | `30` | Minimum spacing between proposals |
+| `loop.autoPropose.maxOpenMetaUnits` | `10` | Halt when open meta-inbox drafts exceed cap |
+| `loop.autoPropose.scheduler` | `manual` | `scheduled` runs are maintenance-only only |
+
+Fixture suite: `python3 scripts/test/run_loop_autonomy_invariant_fixtures.py`.

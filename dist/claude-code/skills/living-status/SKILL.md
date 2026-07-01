@@ -127,3 +127,8 @@ Append protocol: next ID is max(`GAP-NNN`)+1, never reuse; cross-links use `GAP-
 
 Only `python3 scripts/wave.py completion finalize-if-merged` may set `completion.status: merged-complete`. Out-of-band state writes are rejected at the save guard.
 
+## Loop-health inbox staleness (PRD 041 R29)
+
+When `loopHealth.enabled` is true, run `python3 scripts/loop_health.py --stale-alerts` (or read
+`shipwright-loop-health.json` inbox ranking) and surface **stale meta-inbox drafts** older than
+`loopHealth.staleInboxDays` in the status summary. These alerts are diagnostic-only — they do not gate ship or merge.
