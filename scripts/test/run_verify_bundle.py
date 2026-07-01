@@ -3,6 +3,8 @@
 from __future__ import annotations
 import importlib.util
 import sys
+
+from _fixture_lib import invoke_suite_main
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
