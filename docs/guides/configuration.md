@@ -505,6 +505,6 @@ Artifacts land under `scripts/test/fixtures/phase-sizing/` (`baseline-distributi
 Corpus snapshot (2026-06-30): 43 frozen task lists, 239 phase samples. Baseline also records realized
 wave-width distribution (`waveWidth`) used to validate that split suggestions preserve throughput.
 
-The scorer (`scripts/phase-sizing.sh`, Phase 2+) reads these keys when present; unconfigured repos keep
+The scorer (`scripts/phase_sizing.py`, Phase 2+) reads these keys when present; unconfigured repos keep
 backward-compatible defaults from the latest corpus audit.
 

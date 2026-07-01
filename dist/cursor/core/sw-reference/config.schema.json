@@ -1046,6 +1046,75 @@
           "description": "When change triage tier >= this value, a poor verdict blocks via check-gate (unset = advisory only)."
         }
       }
+    },
+    "tasks": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Task authoring and phase sizing (PRD 040).",
+      "properties": {
+        "sizing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "thresholds": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "filesTouched": {
+                  "$ref": "#/definitions/sizingThresholdPair"
+                },
+                "traceabilityScenarios": {
+                  "$ref": "#/definitions/sizingThresholdPair"
+                },
+                "subTaskCount": {
+                  "$ref": "#/definitions/sizingThresholdPair"
+                },
+                "distinctDirs": {
+                  "$ref": "#/definitions/sizingThresholdPair"
+                },
+                "depFanOut": {
+                  "$ref": "#/definitions/sizingThresholdPair"
+                }
+              }
+            },
+            "minPhaseFiles": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 2
+            },
+            "minPhaseScenarios": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 1
+            },
+            "maxPhaseCount": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 13
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "sizingThresholdPair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "small",
+        "medium"
+      ],
+      "properties": {
+        "small": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "medium": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
     }
   }
 }
