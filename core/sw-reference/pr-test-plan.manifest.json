@@ -743,6 +743,13 @@
         "resolver-none-for-unknown-provider",
         "reachable-provider-no-false-unreachable-block"
       ]
+    },
+    {
+      "id": "suite-registry-fixtures",
+      "script": "scripts/test/run_suite_registry_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-suite-registry-fixtures"
     }
   ]
 }
