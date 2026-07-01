@@ -51,6 +51,7 @@
 | 047 | jira-issue-store-adapter | [047-prd-jira-issue-store-adapter.md](047-jira-issue-store-adapter/047-prd-jira-issue-store-adapter.md) (frozen) | [tasks](047-jira-issue-store-adapter/tasks-047-jira-issue-store-adapter.md) (frozen) | not-started |
 
 
+| 050 | deliver-concurrency-cwd-terminal-robustness | [050-prd-deliver-concurrency-cwd-terminal-robustness.md](050-deliver-concurrency-cwd-terminal-robustness/050-prd-deliver-concurrency-cwd-terminal-robustness.md) (frozen) | [tasks](050-deliver-concurrency-cwd-terminal-robustness/tasks-050-deliver-concurrency-cwd-terminal-robustness.md) (frozen) | not-started |
 <!-- planning-index:structural begin -->| id | type | title | status | visibility | edges |
 | --- | --- | --- | --- | --- | --- |
 | gap-001-spec-rigor-check-sh-lacks-a-brainstorm-artifact- | gap | spec-rigor-check.sh lacks a brainstorm artifact profile (validates brainstorms against PRD structure) | open | public |  |
