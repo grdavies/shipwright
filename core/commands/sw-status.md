@@ -43,3 +43,13 @@ Load `skills/living-status/SKILL.md`.
 
 After target merge: use `set-index-status` + `append-log-idempotent` on a **docs branch** for single-unit INDEX updates. Never run full-corpus `reconcile-status.py reconcile` on `main`. Terminal derived status is monotonic (`complete`/`superseded` do not downgrade). `merged-complete` is set only via `python3 scripts/wave.py completion finalize-if-merged`.
 
+**Auto-flip on `complete` (PRD 048 R1):** `set-index-status --status complete` auto-invokes
+`gap_backlog.resolve_for_prd()` in-process after the INDEX write — absorbed `scheduled`/`open` GAP-BACKLOG rows
+flip to `resolved` idempotently with no separate manual step. Echo `flipped` in the JSON summary when present.
+
+**`verdict: partial` retry (R1):** when the INDEX write succeeds but the gap flip raises, the CLI returns
+`{"verdict": "partial", ...}` (exit 21) instead of `pass` — the INDEX row is **not** rolled back. Surface this
+in the status summary as a recoverable operator signal: retry with
+`living-status-gap-resolve.py --absorbing-prd <NNN>` (optionally `--scope-note <text>` for narrower-than-described
+fixes) or inspect `gap_backlog.py check` before re-running `set-index-status`.
+
