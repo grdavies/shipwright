@@ -194,6 +194,7 @@
 * merge phase thread-b-stdlib-only-coverage-tooling-m into feat/spec-rigor-brainstorm-profile-and-stdlib-coverage (feeb211) <!-- sw-deliver:thread-b-stdlib-only-coverage-tooling-m -->
 * merge phase manifest-registration-gap-verification-s into feat/spec-rigor-brainstorm-profile-and-stdlib-coverage (b5c4631) <!-- sw-deliver:manifest-registration-gap-verification-s -->
 * merge phase in-process-gap-resolve-flip-default-branch-guard-medium into feat/gap-lifecycle-flip-and-feedback-route-guard (2eb688d) <!-- sw-deliver:in-process-gap-resolve-flip-default-branch-guard-medium -->
+* merge phase docs-currency-gate-gap-still-open-rewrite-small into feat/gap-lifecycle-flip-and-feedback-route-guard (3eb2166) <!-- sw-deliver:docs-currency-gate-gap-still-open-rewrite-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
