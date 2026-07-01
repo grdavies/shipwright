@@ -22,8 +22,8 @@ table row numbers. When appending, use the next ID: **`GAP-089`**.
 | Status | Count |
 |--------|------:|
 | resolved | 27 |
-| scheduled | 55 |
-| open | 6 |
+| scheduled | 60 |
+| open | 1 |
 | ID | Status | Schedule | Title |
 |----|--------|----------|-------|
 | GAP-001 | resolved | — | Pre-push secret scan: `sk_live_` fixture string reached `git push` and w |
@@ -108,9 +108,9 @@ table row numbers. When appending, use the next ID: **`GAP-089`**.
 | GAP-080 | scheduled | PRD 050 | **Live reproduction of GAP-077/078 during this triage (2026-06-30 ~14:28–14:30):** the primary checkout (`/Volumes/External Storage/GitHub/shipwright`, branch `main`, otherwise clean) had a tracked file mutated in place and two new untracked tracked-path directories appear, all uncommitted, while at least 4 concurrent `/sw-deliver` runs were independently live (`.cursor/sw-deliver-state.{cross-platform-python-standardization,issue-backed-planning-store,loop-quality-gates}.json` + legacy un-scoped `.cursor/sw-deliver-state.json`, plus 10+ phase-slug dirs and a single shared 180KB+ `.cursor/sw-deliver-runs/run.log` spanning 07:49–14:30 same day): (1) `.cursor/workflow.config.json` was rewritten in place (`worktree.parallelCeiling` 4→10, `intraPhase.parallelBudget`/`harnessLimit` 2/8→4/10, `verify.lint`/`typecheck`/`test` commands changed) with no commit; (2) `docs/prds/gap/gap-002-living-doc-reconcile-commits-bypass-r31-default-/` and `docs/prds/gap/gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi/` (tagged `source:feedback`, signals `feedback-living-doc-main-commit-2026-06-30` / `feedback-gap-store-duplication-2026-06-30` — i.e. a *different concurrent `/sw-feedback` session*) appeared untracked and uncommitted. This /sw-feedback session deliberately scoped all of its own writes to a dedicated `docs_worktree.py`-provisioned worktree (`docs/deliver-concurrency-isolation-gaps`) specifically to avoid colliding with this in-flight, uncommitted state in the shared primary checkout — confirming GAP-077/078 are not theoretical |
 | GAP-081 | scheduled | PRD 050 | PRD 041 deliver: failed phase provision leaves orphan worktree path without `phaseWorktrees` state → `worktree path already exists` + `conductor:no-progress` |
 | GAP-082 | open | gap-010 | PRD 041 deliver: durable state cleared before `finalize-completion`; resume on bare `main` fails; manual docs PR #285 for INDEX |
-| GAP-083 | open | gap-011 | PRD 041 deliver: **regression** of GAP-062 — `conductor:no-progress` on identical `provision-phase` / `merge-enqueue` loops |
-| GAP-084 | open | gap-012 | PRD 041 phase PR #280: stale GitHub `IN_PROGRESS` + workflow `success` → check-gate yellow while UI all green; stuck-stale blocked until manual empty commit |
-| GAP-085 | open | gap-013 | PRD 041 terminal PR #284: `terminal_pr_body` skips `git_template_lib` validation — manual `gh pr create` workaround |
-| GAP-086 | open | gap-014 | PRD 041 deliver: capability-trust fixtures reverted to `check-gate.sh` on primary checkout (PRD 042 python-first regression) |
-| GAP-087 | open | gap-015 | PRD 041: `all-private` profile needs `visibility: public` at spec-seed (`tracked-private-body`), not only assert-entry (Recallium #2282/#2285) |
+| GAP-083 | scheduled | PRD 050 | PRD 041 deliver: **regression** of GAP-062 — `conductor:no-progress` on identical `provision-phase` / `merge-enqueue` loops |
+| GAP-084 | scheduled | PRD 050 | PRD 041 phase PR #280: stale GitHub `IN_PROGRESS` + workflow `success` → check-gate yellow while UI all green; stuck-stale blocked until manual empty commit |
+| GAP-085 | scheduled | PRD 050 | PRD 041 terminal PR #284: `terminal_pr_body` skips `git_template_lib` validation — manual `gh pr create` workaround |
+| GAP-086 | scheduled | PRD 050 | PRD 041 deliver: capability-trust fixtures reverted to `check-gate.sh` on primary checkout (PRD 042 python-first regression) |
+| GAP-087 | scheduled | PRD 050 | PRD 041: `all-private` profile needs `visibility: public` at spec-seed (`tracked-private-body`), not only assert-entry (Recallium #2282/#2285) |
 | GAP-088 | scheduled | PRD 048 | `living-status-gap-resolve.py` R51 flip is never invoked automatically on PRD completion — GAP-021/022/043/046/062/etc. still `scheduled` against `complete` PRD 035 A1/A2 despite `absorbs:`/outcome-table claims of `resolved`; `/sw-feedback` also names amendment targets without a consumer-status pre-check, surfacing dead-end `/sw-amend` dispatches to already-`complete` PRDs (027/034/035/036/042) |
