@@ -187,6 +187,9 @@
 * merge phase recurrence-escalation-pattern-reuse into feat/self-improving-loop (9d25344) <!-- sw-deliver:recurrence-escalation-pattern-reuse -->
 * merge phase inefficiency-scanner-behavioral-anomalies into feat/self-improving-loop (88f429e) <!-- sw-deliver:inefficiency-scanner-behavioral-anomalies -->
 * merge phase loop-health-auto-propose-driver-optional-v1-1 into feat/self-improving-loop (2789d94) <!-- sw-deliver:loop-health-auto-propose-driver-optional-v1-1 -->
+* merge phase suite-registry-schema-full-classification-medium into feat/test-suite-registration-single-source (ca0d457) <!-- sw-deliver:suite-registry-schema-full-classification-medium -->
+* merge phase verify-bundle-derivation-orphan-wiring-medium into feat/test-suite-registration-single-source (defefab) <!-- sw-deliver:verify-bundle-derivation-orphan-wiring-medium -->
+* merge phase docs-contributing-drift-guard-gap-close-small into feat/test-suite-registration-single-source (aca0977) <!-- sw-deliver:docs-contributing-drift-guard-gap-close-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

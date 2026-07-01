@@ -1,0 +1,1035 @@
+{
+  "version": 1,
+  "description": "Authoritative test-suite classification (PRD 052 R1).",
+  "suites": [
+    {
+      "id": "docs-link-check",
+      "script": "scripts/docs-link-check.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-docs-link-check"
+    },
+    {
+      "id": "007-docs-fixtures",
+      "script": "scripts/test/run_007_docs_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 27
+    },
+    {
+      "id": "007-fixtures",
+      "script": "scripts/test/run_007_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 28
+    },
+    {
+      "id": "authoring-guard-fixtures",
+      "script": "scripts/test/run_authoring_guard_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-authoring-guard-fixtures"
+    },
+    {
+      "id": "base-resolution-fixtures",
+      "script": "scripts/test/run_base_resolution_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 36
+    },
+    {
+      "id": "behavioral-anomaly-fixtures",
+      "script": "scripts/test/run_behavioral_anomaly_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "branch-guard-fixtures",
+      "script": "scripts/test/run_branch_guard_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 19
+    },
+    {
+      "id": "build-chain-sot-fixtures",
+      "script": "scripts/test/run_build_chain_sot_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 52,
+      "verifyClassification": "required"
+    },
+    {
+      "id": "capability-fixtures",
+      "script": "scripts/test/run_capability_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 55,
+      "verifyClassification": "advisory"
+    },
+    {
+      "id": "capability-lint-fixtures",
+      "script": "scripts/test/run_capability_lint_fixtures.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 39
+    },
+    {
+      "id": "capability-select-fixtures",
+      "script": "scripts/test/run_capability_select_fixtures.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 40
+    },
+    {
+      "id": "claude-golden-fixtures",
+      "script": "scripts/test/run_claude_golden_fixtures.py",
+      "lanes": [
+        "ci-yml",
+        "doc"
+      ]
+    },
+    {
+      "id": "cleanup-fixtures",
+      "script": "scripts/test/run_cleanup_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "advisory",
+      "ciJobName": "feat-test-plan-cleanup-fixtures"
+    },
+    {
+      "id": "code-review-fixtures",
+      "script": "scripts/test/run_code_review_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 11
+    },
+    {
+      "id": "completed-unit-fixtures",
+      "script": "scripts/test/run_completed_unit_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-completed-unit-fixtures"
+    },
+    {
+      "id": "compound-completion-fixtures",
+      "script": "scripts/test/run_compound_completion_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 25
+    },
+    {
+      "id": "core-scripts-parity-fixtures",
+      "script": "scripts/test/run_core_scripts_parity_fixtures.py",
+      "lanes": [
+        "ci-yml",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-core-scripts-parity-fixtures"
+    },
+    {
+      "id": "debug-fixtures",
+      "script": "scripts/test/run_debug_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 5
+    },
+    {
+      "id": "delegation-fixtures",
+      "script": "scripts/test/run_delegation_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 32
+    },
+    {
+      "id": "deliver-concurrency-fixtures",
+      "script": "scripts/test/run_deliver_concurrency_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 17
+    },
+    {
+      "id": "deliver-fixtures",
+      "script": "scripts/test/run_deliver_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 14
+    },
+    {
+      "id": "deliver-invariant-fixtures",
+      "script": "scripts/test/run_deliver_invariant_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-invariant-fixtures"
+    },
+    {
+      "id": "deliver-loop-fixtures",
+      "script": "scripts/test/run_deliver_loop_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 16
+    },
+    {
+      "id": "dispatch-foundation-fixtures",
+      "script": "scripts/test/run_dispatch_foundation_fixtures.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 31
+    },
+    {
+      "id": "doc-currency-033-fixtures",
+      "script": "scripts/test/run_doc_currency_033_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-doc-currency-033-fixtures"
+    },
+    {
+      "id": "doc-fixtures",
+      "script": "scripts/test/run_doc_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-doc-fixtures"
+    },
+    {
+      "id": "doc-format-fixtures",
+      "script": "scripts/test/run_doc_format_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-doc-format-fixtures"
+    },
+    {
+      "id": "doc-link-fixtures",
+      "script": "scripts/test/run_doc_link_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 3
+    },
+    {
+      "id": "dual-ship-fixtures",
+      "script": "scripts/test/run_dual_ship_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-dual-ship-fixtures"
+    },
+    {
+      "id": "emitter-fixtures",
+      "script": "scripts/test/run_emitter_fixtures.py",
+      "lanes": [
+        "ci-yml",
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 38
+    },
+    {
+      "id": "fanout-fixtures",
+      "script": "scripts/test/run_fanout_fixtures.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 57,
+      "verifyClassification": "advisory"
+    },
+    {
+      "id": "feedback-fixtures",
+      "script": "scripts/test/run_feedback_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 6
+    },
+    {
+      "id": "gate-fixtures",
+      "script": "scripts/test/run_gate_fixtures.py",
+      "lanes": [
+        "ci-yml",
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 0
+    },
+    {
+      "id": "git-workflow-fixtures",
+      "script": "scripts/test/run_git_workflow_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-git-workflow-fixtures"
+    },
+    {
+      "id": "guardrail-matrix-fixtures",
+      "script": "scripts/test/run_guardrail_matrix_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 54,
+      "verifyClassification": "required"
+    },
+    {
+      "id": "guardrail-rules-resolution-fixtures",
+      "script": "scripts/test/run_guardrail_rules_resolution_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-guardrail-rules-resolution-fixtures"
+    },
+    {
+      "id": "guidelines-floor-fixtures",
+      "script": "scripts/test/run_guidelines_floor_fixtures.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 43
+    },
+    {
+      "id": "heterogeneous-review-fixtures",
+      "script": "scripts/test/run_heterogeneous_review_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "hook-fixtures",
+      "script": "scripts/test/run_hook_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 53,
+      "verifyClassification": "required"
+    },
+    {
+      "id": "host-fixtures",
+      "script": "scripts/test/run_host_fixtures.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-host-fixtures",
+      "verifyOrder": 49
+    },
+    {
+      "id": "impl-fixtures",
+      "script": "scripts/test/run_impl_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 4
+    },
+    {
+      "id": "improvement-fixtures",
+      "script": "scripts/test/run_improvement_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 7
+    },
+    {
+      "id": "inefficiency-scan-fixtures",
+      "script": "scripts/test/run_inefficiency_scan_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "inflight-doc-currency-fixtures",
+      "script": "scripts/test/run_inflight_doc_currency_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-inflight-doc-currency-fixtures"
+    },
+    {
+      "id": "inflight-guards-parity-fixtures",
+      "script": "scripts/test/run_inflight_guards_parity_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-inflight-guards-parity-fixtures"
+    },
+    {
+      "id": "inflight-migration-bridge-fixtures",
+      "script": "scripts/test/run_inflight_migration_bridge_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-inflight-migration-bridge-fixtures"
+    },
+    {
+      "id": "inflight-signal-fixtures",
+      "script": "scripts/test/run_inflight_signal_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-inflight-signal-fixtures"
+    },
+    {
+      "id": "kernel-classification-fixtures",
+      "script": "scripts/test/run_kernel_classification_fixtures.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 42
+    },
+    {
+      "id": "living-doc-fixtures",
+      "script": "scripts/test/run_living_doc_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 29
+    },
+    {
+      "id": "loop-autonomy-invariant-fixtures",
+      "script": "scripts/test/run_loop_autonomy_invariant_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "loop-health-fixtures",
+      "script": "scripts/test/run_loop_health_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "mechanical-sourcing-fixtures",
+      "script": "scripts/test/run_mechanical_sourcing_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-mechanical-sourcing-fixtures"
+    },
+    {
+      "id": "memory-prework-fixtures",
+      "script": "scripts/test/run_memory_prework_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 10
+    },
+    {
+      "id": "memory-provider-fixtures",
+      "script": "scripts/test/run_memory_provider_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 8
+    },
+    {
+      "id": "memory-sot-fixtures",
+      "script": "scripts/test/run_memory_sot_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 9
+    },
+    {
+      "id": "merge-queue-fixtures",
+      "script": "scripts/test/run_merge_queue_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 24
+    },
+    {
+      "id": "meta-channel-fixtures",
+      "script": "scripts/test/run_meta_channel_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "migration-parity-fixtures",
+      "script": "scripts/test/run_migration_parity_fixtures.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 41
+    },
+    {
+      "id": "model-binding-fixtures",
+      "script": "scripts/test/run_model_binding_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 30
+    },
+    {
+      "id": "onboarding-ux-fixtures",
+      "script": "scripts/test/run_onboarding_ux_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 13
+    },
+    {
+      "id": "orchestrator-fixtures",
+      "script": "scripts/test/run_orchestrator_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 18
+    },
+    {
+      "id": "parallel-merge-safety-fixtures",
+      "script": "scripts/test/run_parallel_merge_safety_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-parallel-merge-safety-fixtures"
+    },
+    {
+      "id": "parity-fixtures",
+      "script": "scripts/test/run_parity_fixtures.py",
+      "lanes": [
+        "ci-yml",
+        "doc",
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-parity-fixtures",
+      "verifyOrder": 50
+    },
+    {
+      "id": "persona-selection-fixtures",
+      "script": "scripts/test/run_persona_selection_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 12
+    },
+    {
+      "id": "phase-sizing-corpus-fixtures",
+      "script": "scripts/test/run_phase_sizing_corpus_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-phase-sizing-corpus-fixtures"
+    },
+    {
+      "id": "phase-sizing-fixtures",
+      "script": "scripts/test/run_phase_sizing_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-phase-sizing-fixtures"
+    },
+    {
+      "id": "pilot-fixtures",
+      "script": "scripts/test/run_pilot_fixtures.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 48
+    },
+    {
+      "id": "plan-killswitch-fixtures",
+      "script": "scripts/test/run_plan_killswitch_fixtures.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 46
+    },
+    {
+      "id": "plan-persist-fixtures",
+      "script": "scripts/test/run_plan_persist_fixtures.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 45
+    },
+    {
+      "id": "plan-proposed-parity-fixtures",
+      "script": "scripts/test/run_plan_proposed_parity_fixtures.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 47
+    },
+    {
+      "id": "plan-validate-fixtures",
+      "script": "scripts/test/run_plan_validate_fixtures.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 44
+    },
+    {
+      "id": "planning-035-deliver-conductor-fixtures",
+      "script": "scripts/test/run_planning_035_deliver_conductor_fixtures.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-deliver-conductor-fixtures",
+      "verifyOrder": 51
+    },
+    {
+      "id": "planning-035-doc-impact-fixtures",
+      "script": "scripts/test/run_planning_035_doc_impact_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-doc-impact-fixtures"
+    },
+    {
+      "id": "planning-035-emitter-parity-fixtures",
+      "script": "scripts/test/run_planning_035_emitter_parity_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-emitter-parity-fixtures"
+    },
+    {
+      "id": "planning-035-gap-lifecycle-fixtures",
+      "script": "scripts/test/run_planning_035_gap_lifecycle_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-gap-lifecycle-fixtures"
+    },
+    {
+      "id": "planning-autonomy-fixtures",
+      "script": "scripts/test/run_planning_autonomy_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-autonomy-fixtures"
+    },
+    {
+      "id": "planning-command-surface-fixtures",
+      "script": "scripts/test/run_planning_command_surface_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-command-surface-fixtures"
+    },
+    {
+      "id": "planning-currency-fixtures",
+      "script": "scripts/test/run_planning_currency_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-currency-fixtures"
+    },
+    {
+      "id": "planning-cutover-fixtures",
+      "script": "scripts/test/run_planning_cutover_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-cutover-fixtures"
+    },
+    {
+      "id": "planning-cutover-phase5-fixtures",
+      "script": "scripts/test/run_planning_cutover_phase5_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-cutover-phase5-fixtures"
+    },
+    {
+      "id": "planning-edge-effects-fixtures",
+      "script": "scripts/test/run_planning_edge_effects_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-edge-effects-fixtures"
+    },
+    {
+      "id": "planning-emitter-parity-fixtures",
+      "script": "scripts/test/run_planning_emitter_parity_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-emitter-parity-fixtures"
+    },
+    {
+      "id": "planning-graph-fixtures",
+      "script": "scripts/test/run_planning_graph_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-graph-fixtures"
+    },
+    {
+      "id": "planning-index-fixtures",
+      "script": "scripts/test/run_planning_index_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-index-fixtures"
+    },
+    {
+      "id": "planning-init-fixtures",
+      "script": "scripts/test/run_planning_init_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-init-fixtures"
+    },
+    {
+      "id": "planning-materialize-fixtures",
+      "script": "scripts/test/run_planning_materialize_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-materialize-fixtures"
+    },
+    {
+      "id": "planning-migrate-fixtures",
+      "script": "scripts/test/run_planning_migrate_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-migrate-fixtures"
+    },
+    {
+      "id": "planning-paths-fixtures",
+      "script": "scripts/test/run_planning_paths_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-paths-fixtures"
+    },
+    {
+      "id": "planning-postmerge-safety-fixtures",
+      "script": "scripts/test/run_planning_postmerge_safety_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-postmerge-safety-fixtures"
+    },
+    {
+      "id": "planning-related-fixtures",
+      "script": "scripts/test/run_planning_related_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-related-fixtures"
+    },
+    {
+      "id": "planning-scheduler-fixtures",
+      "script": "scripts/test/run_planning_scheduler_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-scheduler-fixtures"
+    },
+    {
+      "id": "planning-store-fixtures",
+      "script": "scripts/test/run_planning_store_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-store-fixtures"
+    },
+    {
+      "id": "planning-unit-fixtures",
+      "script": "scripts/test/run_planning_unit_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-unit-fixtures"
+    },
+    {
+      "id": "planning-visibility-acceptance-fixtures",
+      "script": "scripts/test/run_planning_visibility_acceptance_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-visibility-acceptance-fixtures"
+    },
+    {
+      "id": "portability-boundary-fixtures",
+      "script": "scripts/test/run_portability_boundary_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 35
+    },
+    {
+      "id": "portability-closure-fixtures",
+      "script": "scripts/test/run_portability_closure_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 37
+    },
+    {
+      "id": "portability-setup-fixtures",
+      "script": "scripts/test/run_portability_setup_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 34
+    },
+    {
+      "id": "pr-test-plan-fixtures",
+      "script": "scripts/test/run_pr_test_plan_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 2
+    },
+    {
+      "id": "pr-test-plan-manifest",
+      "script": "scripts/test/run_pr_test_plan_manifest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 1
+    },
+    {
+      "id": "provenance-fixtures",
+      "script": "scripts/test/run_provenance_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "quality-provider-fixtures",
+      "script": "scripts/test/run_quality_provider_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "recurring-failure-fixtures",
+      "script": "scripts/test/run_recurring_failure_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "refactor-step-fixtures",
+      "script": "scripts/test/run_refactor_step_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "regression-remediation-fixtures",
+      "script": "scripts/test/run_regression_remediation_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-regression-remediation-fixtures"
+    },
+    {
+      "id": "relocation-fixtures",
+      "script": "scripts/test/run_relocation_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 56,
+      "verifyClassification": "advisory"
+    },
+    {
+      "id": "retrospective-fixtures",
+      "script": "scripts/test/run_retrospective_fixtures.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-retrospective-fixtures",
+      "verifyOrder": 33
+    },
+    {
+      "id": "secret-scan-fixtures",
+      "script": "scripts/test/run_secret_scan_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 21
+    },
+    {
+      "id": "ship-phase-fixtures",
+      "script": "scripts/test/run_ship_phase_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 22
+    },
+    {
+      "id": "stabilize-merge-fixtures",
+      "script": "scripts/test/run_stabilize_merge_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 26
+    },
+    {
+      "id": "state-fixtures",
+      "script": "scripts/test/run_state_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 20
+    },
+    {
+      "id": "status-integrity-fixtures",
+      "script": "scripts/test/run_status_integrity_fixtures.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-status-integrity-fixtures",
+      "verifyOrder": 15
+    },
+    {
+      "id": "suite-registry-fixtures",
+      "script": "scripts/test/run_suite_registry_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-suite-registry-fixtures"
+    },
+    {
+      "id": "suite-registry-fixtures",
+      "script": "scripts/test/run_suite_registry_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "tasks-currency-fixtures",
+      "script": "scripts/test/run_tasks_currency_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 23
+    },
+    {
+      "id": "tdd-hardening-fixtures",
+      "script": "scripts/test/run_tdd_hardening_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "two-track-fixtures",
+      "script": "scripts/test/run_two_track_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-two-track-fixtures"
+    },
+    {
+      "id": "ux-polish-fixtures",
+      "script": "scripts/test/run_ux_polish_fixtures.py",
+      "lanes": [
+        "doc",
+        "pr-ci"
+      ],
+      "classification": "advisory",
+      "ciJobName": "feat-test-plan-ux-polish-fixtures"
+    },
+    {
+      "id": "visibility-fixtures",
+      "script": "scripts/test/run_visibility_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-visibility-fixtures"
+    },
+    {
+      "id": "worktree-config-fixtures",
+      "script": "scripts/test/run_worktree_config_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-worktree-config-fixtures"
+    }
+  ]
+}
