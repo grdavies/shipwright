@@ -55,6 +55,8 @@ Rules:
 
 ### Deliver-time fallback (PRD 013 — legacy lists only)
 
+**Sequential fallback (R8):** when neither declared edges nor file-set inference apply, deliver assigns strict sequential edges with a notice.
+
 `/sw-tasks` **requires** `## Phase Dependencies` at freeze (`spec-rigor-check.py` blocks missing/invalid tables).
 For **legacy** frozen lists that omit the table, `/sw-deliver` applies the PRD 013 ladder (authoritative in
 `skills/deliver/SKILL.md`):
