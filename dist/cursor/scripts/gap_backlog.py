@@ -222,6 +222,7 @@ def main(argv: list[str] | None = None) -> None:
     p_flip.add_argument("--gaps", nargs="*", default=[])
     p_flip.add_argument("--prd", default="")
     p_flip.add_argument("--amendment", default="")
+    p_flip.add_argument("--scope-note", default="")
     p_flip.add_argument("--gap-path", default="")
     ns = parser.parse_args(args)
     root = Path(ns.root).resolve()
@@ -256,7 +257,8 @@ def main(argv: list[str] | None = None) -> None:
                 amendment = amendment or (am_p or "")
             changed = flip_schedule(backlog, gap_ids=gap_ids, prd=prd, amendment=amendment or None)
         elif ns.resolve:
-            changed = flip_resolve(backlog, prd=ns.prd)
+            scope_note = ns.scope_note.strip() or None
+            changed = flip_resolve(backlog, prd=ns.prd, scope_note=scope_note)
         if changed:
             gap_path.write_text(render_gap_backlog(backlog), encoding="utf-8")
         print(json.dumps({"verdict": "pass", "action": "gap-backlog-flip", "flipped": changed, "counts": backlog.counts()}))
