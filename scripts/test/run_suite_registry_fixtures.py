@@ -107,17 +107,15 @@ def main() -> int:
     finally:
         tmp_path.unlink(missing_ok=True)
 
-    verify_src = (root / "scripts/test/run_verify_bundle.py").read_text(encoding="utf-8")
-    suites_match = re.search(r"SUITES = \[(.*?)\]", verify_src, re.DOTALL)
-    if not suites_match:
-        bad("verify-order: run_verify_bundle.py missing SUITES list")
+    sys.path.insert(0, str(root / "scripts" / "test"))
+    import run_verify_bundle as rvb
+
+    expected = sr.verify_bundle_entries(root)
+    current = rvb.suites_for_verify(root)
+    if current != expected:
+        bad("verify-order: verify bundle order differs from registry verify lane projection")
     else:
-        current = re.findall(r"'([^']+)'", suites_match.group(1))
-        expected = sr.verify_bundle_entries(root, active_only=True)
-        if current != expected:
-            bad("verify-order: verify bundle order differs from registry verify lane projection")
-        else:
-            ok("verify-order: verify bundle list matches registry verify lane projection")
+        ok("verify-order: verify bundle list matches registry verify lane projection")
 
     orphans = {
         "run_build_chain_sot_fixtures.py",
