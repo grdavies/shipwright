@@ -2,6 +2,7 @@
 date: 2026-07-01
 topic: test-suite-registration-single-source
 prd: docs/prds/052-test-suite-registration-single-source/052-prd-test-suite-registration-single-source.md
+visibility: public
 frozen: true
 frozen_at: 2026-07-01
 ---
