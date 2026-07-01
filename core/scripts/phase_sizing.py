@@ -60,6 +60,12 @@ def load_sizing_config(root: Path) -> dict[str, Any]:
     }
 
 
+def load_parallel_ceiling(root: Path) -> int:
+    cfg = load_workflow_config(root)
+    worktree = cfg.get("worktree") or {}
+    return int(worktree.get("parallelCeiling", 4))
+
+
 def has_advisory_block(text: str) -> bool:
     return bool(re.search(rf"^{re.escape(ADVISORY_HEADING)}\s*$", text, re.MULTILINE | re.IGNORECASE))
 
@@ -374,7 +380,10 @@ def propose_phase_split(
     phases: list[dict[str, str]],
     edges: list[dict[str, str]],
     sizing: dict[str, Any],
+    below_floor: bool = False,
 ) -> dict[str, Any] | None:
+    if below_floor:
+        return None
     if not (len(separable_sets) > 1 or over_threshold):
         return None
     if len(separable_sets) <= 1:
@@ -404,13 +413,229 @@ def propose_phase_split(
         }
     unit_ids = [unit["id"] for unit in units]
     external_edges = _external_edges_for_split(phase_id, unit_ids, edges)
-    return {
+    split = {
         "phase": phase_id,
         "rejected": False,
         "units": units,
         "internalEdges": internal_edges,
         "externalEdges": external_edges,
     }
+    return split
+
+
+def _contention_only_internal_edges(internal_edges: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [dict(edge) for edge in internal_edges if edge.get("kind") == "mandatory-contention"]
+
+
+def _build_split_simulation(
+    split: dict[str, Any],
+    phases: list[dict[str, str]],
+    edges: list[dict[str, str]],
+    phase_files: dict[str, list[str]],
+) -> tuple[list[dict[str, str]], list[dict[str, str]], dict[str, list[str]]]:
+    phase_id = split["phase"]
+    simulated_phases: list[dict[str, str]] = []
+    simulated_files: dict[str, list[str]] = {}
+    for phase in phases:
+        if phase["id"] == phase_id:
+            for unit in split.get("units") or []:
+                simulated_phases.append(
+                    {
+                        "id": unit["id"],
+                        "title": f"{phase['title']} ({unit['id']})",
+                        "slug": unit["id"],
+                    }
+                )
+                simulated_files[unit["id"]] = list(unit.get("files") or [])
+        else:
+            simulated_phases.append(dict(phase))
+            simulated_files[phase["id"]] = list(phase_files.get(phase["id"], []))
+    split_ids = {phase_id}
+    simulated_edges: list[dict[str, str]] = []
+    for edge in edges:
+        if edge.get("from") in split_ids or edge.get("to") in split_ids:
+            continue
+        simulated_edges.append(dict(edge))
+    simulated_edges.extend(_contention_only_internal_edges(split.get("internalEdges") or []))
+    simulated_edges.extend(dict(edge) for edge in split.get("externalEdges") or [])
+    return simulated_phases, simulated_edges, simulated_files
+
+
+def _safe_inject_contention_edges(
+    phase_ids: list[str],
+    declared_edges: list[dict[str, str]],
+    phase_files: dict[str, list[str]],
+    root: Path,
+) -> tuple[list[dict[str, str]] | None, list[dict[str, str]], list[str], str | None]:
+    contention = planning_paths.contention_default(root)
+    serialized = list(
+        contention.get("serialized")
+        or planning_paths.contention_serialized_defaults(planning_paths.load_planning_dirs(root))
+    )
+    notices: list[str] = []
+    injected: list[dict[str, str]] = []
+    existing = {(e["from"], e["to"]) for e in declared_edges}
+    all_edges = [dict(e) for e in declared_edges]
+    phase_id_set = set(phase_ids)
+    graph_nodes = set(phase_ids)
+    for edge in declared_edges:
+        graph_nodes.add(edge["from"])
+        graph_nodes.add(edge["to"])
+    declared_waves = _safe_assign_waves(sorted(graph_nodes, key=_sort_phase_key), declared_edges)
+    if declared_waves is None:
+        return None, injected, notices, "dependency cycle detected before contention injection"
+
+    for wave in declared_waves:
+        phase_in_wave = [phase for phase in wave if phase in phase_id_set]
+        if len(phase_in_wave) < 2:
+            continue
+        for left in phase_in_wave:
+            for right in phase_in_wave:
+                if left.isdigit() and right.isdigit():
+                    skip = int(left) >= int(right)
+                else:
+                    skip = left >= right
+                if skip:
+                    continue
+                files_left = phase_files.get(left, [])
+                files_right = phase_files.get(right, [])
+                overlap = ""
+                contend = False
+                for fl in files_left:
+                    for fr in files_right:
+                        hit, detail = wd.paths_contend(fl, fr, serialized, root)
+                        if hit:
+                            contend = True
+                            overlap = detail or f"{fl} ⟷ {fr}"
+                            break
+                    if contend:
+                        break
+                if not contend:
+                    continue
+                if _has_path(declared_edges, right, left):
+                    return (
+                        None,
+                        injected,
+                        notices,
+                        "contention-cycle: shared-file overlap opposes declared ordering",
+                    )
+                if (left, right) in existing or _has_path(all_edges, left, right):
+                    continue
+                edge = {"from": left, "to": right, "kind": "contention"}
+                injected.append(edge)
+                all_edges.append(edge)
+                existing.add((left, right))
+                notices.append(f"contention: phases {left} and {right} serialized ({overlap})")
+
+    nodes = sorted(graph_nodes, key=_sort_phase_key)
+    if wd.graph_has_cycle(nodes, all_edges):
+        return None, injected, notices, "contention-cycle: combined declared + contention graph has a cycle"
+    return all_edges, injected, notices, None
+
+
+def _simulate_split_waves(
+    split: dict[str, Any],
+    phases: list[dict[str, str]],
+    edges: list[dict[str, str]],
+    phase_files: dict[str, list[str]],
+    root: Path,
+) -> tuple[list[list[str]] | None, list[dict[str, str]], list[str], str | None]:
+    simulated_phases, simulated_edges, simulated_files = _build_split_simulation(
+        split, phases, edges, phase_files
+    )
+    phase_ids = [phase["id"] for phase in simulated_phases]
+    if wd.graph_has_cycle(phase_ids, simulated_edges):
+        return None, simulated_edges, [], "dependency cycle in split simulation"
+    all_edges, injected, notices, error = _safe_inject_contention_edges(
+        phase_ids, simulated_edges, simulated_files, root
+    )
+    if error:
+        return None, simulated_edges, notices, error
+    assert all_edges is not None
+    waves = _safe_assign_waves(phase_ids, all_edges)
+    if waves is None:
+        return None, all_edges, notices, "unable to assign waves after contention simulation"
+    return waves, all_edges, notices + [f"contention injected {len(injected)} edge(s)"], None
+
+
+def evaluate_split_preflight(
+    split: dict[str, Any],
+    phases: list[dict[str, str]],
+    edges: list[dict[str, str]],
+    phase_files: dict[str, list[str]],
+    root: Path,
+    ceiling: int,
+    sizing: dict[str, Any],
+) -> dict[str, Any]:
+    if split.get("rejected") and split.get("reason") not in {
+        "maxPhaseCount exceeded",
+        "contention closure differs from parent",
+    }:
+        return {"verdict": "skip", "reason": split.get("reason", "split already rejected")}
+    units = split.get("units") or []
+    if len(units) < 2:
+        return {"verdict": "reject", "reason": "split has fewer than two units"}
+
+    baseline_ids = [phase["id"] for phase in phases]
+    baseline_waves = _safe_assign_waves(baseline_ids, edges) or [baseline_ids]
+    baseline_max_width = max(len(wave) for wave in baseline_waves) if baseline_waves else 0
+    baseline_phase_count = len(baseline_ids)
+
+    waves, _, notices, error = _simulate_split_waves(split, phases, edges, phase_files, root)
+    if error:
+        return {"verdict": "reject", "reason": error, "notices": notices}
+    assert waves is not None
+    max_width = max(len(wave) for wave in waves) if waves else 0
+    projected_phase_count = len(baseline_ids) - 1 + len(units)
+    max_phase_count = int(sizing.get("maxPhaseCount", 99))
+    if projected_phase_count > max_phase_count:
+        return {
+            "verdict": "reject",
+            "reason": "maxPhaseCount exceeded",
+            "projectedPhaseCount": projected_phase_count,
+            "maxPhaseCount": max_phase_count,
+            "notices": notices,
+        }
+
+    unit_ids = {unit["id"] for unit in units}
+    parallel_units_in_wave = max(len([item for item in wave if item in unit_ids]) for wave in waves)
+    if parallel_units_in_wave <= 1 and len(units) > 1:
+        return {
+            "verdict": "reject",
+            "reason": "width-1 collapse",
+            "maxWaveWidth": max_width,
+            "notices": notices,
+        }
+
+    if projected_phase_count <= baseline_phase_count:
+        return {
+            "verdict": "reject",
+            "reason": "does not raise independent-phase count",
+            "projectedPhaseCount": projected_phase_count,
+            "baselinePhaseCount": baseline_phase_count,
+            "notices": notices,
+        }
+
+    if max_width > ceiling:
+        return {
+            "verdict": "reject",
+            "reason": "exceeds parallelCeiling",
+            "maxWaveWidth": max_width,
+            "parallelCeiling": ceiling,
+            "notices": notices,
+        }
+
+    return {
+        "verdict": "pass",
+        "projectedPhaseCount": projected_phase_count,
+        "baselinePhaseCount": baseline_phase_count,
+        "maxWaveWidth": max_width,
+        "baselineMaxWaveWidth": baseline_max_width,
+        "parallelCeiling": ceiling,
+        "waves": waves,
+        "notices": notices,
+    }
+
 
 
 def _safe_assign_waves(items: list[str], edges: list[dict[str, str]]) -> list[list[str]] | None:
@@ -569,8 +794,22 @@ def score_task_list(root: Path, task_list: Path, sizing: dict[str, Any]) -> dict
             phases,
             edges,
             sizing,
+            below_floor,
         )
         if split is not None:
+            ceiling = load_parallel_ceiling(root)
+            split["preflight"] = evaluate_split_preflight(
+                split,
+                phases,
+                edges,
+                phase_files,
+                root,
+                ceiling,
+                sizing,
+            )
+            if not split.get("rejected") and split["preflight"].get("verdict") == "reject":
+                split["rejected"] = True
+                split["reason"] = split["preflight"].get("reason", "preflight rejected")
             entry["splitSuggestion"] = split
         per_phase.append(entry)
     split_suggestions = [
@@ -608,6 +847,33 @@ def resolve_task_list(root: Path, raw: str) -> Path:
         task_list = (root / task_list).resolve()
     return task_list
 
+
+
+
+def cmd_preflight(root: Path, args: argparse.Namespace) -> int:
+    task_list = resolve_task_list(root, args.task_list)
+    if not task_list.is_file():
+        emit({"verdict": "fail", "error": f"task list not found: {task_list}"}, 2)
+    sizing = load_sizing_config(root)
+    score = score_task_list(root, task_list, sizing)
+    preflights = [
+        {
+            "phase": phase["phase"],
+            "preflight": (phase.get("splitSuggestion") or {}).get("preflight"),
+        }
+        for phase in score.get("phases", [])
+        if phase.get("splitSuggestion")
+    ]
+    emit(
+        {
+            "verdict": "pass",
+            "action": "phase-sizing-preflight",
+            "taskList": rel_task_list(task_list, root),
+            "parallelCeiling": load_parallel_ceiling(root),
+            "preflights": preflights,
+            "costEstimate": score.get("costEstimate"),
+        }
+    )
 
 def cmd_score(root: Path, args: argparse.Namespace) -> int:
     task_list = resolve_task_list(root, args.task_list)
@@ -668,6 +934,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="phase_sizing.py")
     parser.add_argument("--root", default=".", help="Repository root")
     sub = parser.add_subparsers(dest="command", required=True)
+    preflight = sub.add_parser("preflight", help="Preflight split simulations (read-only JSON)")
+    preflight.add_argument("task_list", help="Path to task-list markdown")
     score = sub.add_parser("score", help="Score phases in a task list (read-only JSON)")
     score.add_argument("task_list", help="Path to task-list markdown")
     frozen = sub.add_parser("check-frozen", help="Fail-closed score on frozen lists (R30)")
@@ -685,6 +953,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     root = Path(args.root).resolve()
+    if args.command == "preflight":
+        return cmd_preflight(root, args)
     if args.command == "score":
         return cmd_score(root, args)
     if args.command == "check-frozen":
