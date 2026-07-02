@@ -105,12 +105,12 @@ def main(argv: list[str] | None = None) -> int:
         if not path.is_dir():
             print(json.dumps({"verdict": "fail", "error": "docs worktree missing — run provision first", "path": str(path)}), file=sys.stderr)
             return 1
-        print(json.dumps({"verdict": "pass", "action": "resume", "branch": branch, "path": str(path)}))
+        print(json.dumps({"verdict": "pass", "action": "resume", "branch": branch, "path": str(path), "nextSteps": {"cd": str(path), "move_agent_to_root": str(path), "memoryPrework": f"python3 scripts/wave.py memory prework record --surface sw-doc --scope docs/{topic}"}}))
         return 0
 
     # provision
     if path.is_dir():
-        print(json.dumps({"verdict": "pass", "action": "provision", "branch": branch, "path": str(path), "note": "already exists"}))
+        print(json.dumps({"verdict": "pass", "action": "provision", "branch": branch, "path": str(path), "note": "already exists", "nextSteps": {"cd": str(path), "move_agent_to_root": str(path), "memoryPrework": f"python3 scripts/wave.py memory prework record --surface sw-doc --scope docs/{topic}"}}))
         return 0
     if dry_run:
         print(json.dumps({"verdict": "pass", "action": "provision", "dry_run": True, "branch": branch, "path": str(path)}))
@@ -132,7 +132,7 @@ def main(argv: list[str] | None = None) -> int:
         subprocess.run(["git", "-C", str(root), "worktree", "add", str(path), branch], check=True, capture_output=True)
     else:
         subprocess.run(["git", "-C", str(root), "worktree", "add", "-b", branch, str(path), base_ref], check=True, capture_output=True)
-    print(json.dumps({"verdict": "pass", "action": "provision", "branch": branch, "path": str(path)}))
+    print(json.dumps({"verdict": "pass", "action": "provision", "branch": branch, "path": str(path), "nextSteps": {"cd": str(path), "move_agent_to_root": str(path), "memoryPrework": f"python3 scripts/wave.py memory prework record --surface sw-doc --scope docs/{topic}"}}))
     return 0
 
 

@@ -835,6 +835,63 @@
       "scenarios": [
         "gap-backlog-flip-schedule-force-reschedule"
       ]
+    },
+    {
+      "id": "deliver-concurrency-fixtures",
+      "script": "scripts/test/run_deliver_concurrency_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-concurrency-fixtures",
+      "scenarios": [
+        "freeze-commit-cwd-forced-primary-fails-closed",
+        "deliver-provision-does-not-mutate-concurrent-primary-checkout",
+        "slug-scoped-run-log-writes",
+        "conductor-mandatory-provisioning-contract"
+      ]
+    },
+    {
+      "id": "hook-worktree-alignment-fixtures",
+      "script": "scripts/test/run_hook_worktree_alignment_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-hook-worktree-alignment-fixtures",
+      "scenarios": [
+        "hook-state-worktree-cwd-alignment",
+        "hook-state-dispatch-preflight-worktree-alignment",
+        "hook-state-primary-no-false-positive",
+        "hook-state-ambiguous-worktree-fail-closed"
+      ]
+    },
+    {
+      "id": "dispatch-binding-fixtures",
+      "script": "scripts/test/run_dispatch_binding_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-dispatch-binding-fixtures",
+      "scenarios": [
+        "dispatch-unregistered-parent-delegated-atomic-passes",
+        "dispatch-unregistered-parent-reviewer-fails-closed"
+      ]
+    },
+    {
+      "id": "bash-py-invocation-guard",
+      "script": "scripts/test/bash-py-invocation-guard.test",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-bash-py-invocation-guard",
+      "scenarios": [
+        "bash-py-invocation-guard"
+      ]
+    },
+    {
+      "id": "git-push-secret-scan-chokepoint",
+      "script": "scripts/test/git-push-secret-scan-chokepoint.test",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-git-push-secret-scan-chokepoint",
+      "scenarios": [
+        "git-push-secret-scan-chokepoint"
+      ]
     }
   ]
 }

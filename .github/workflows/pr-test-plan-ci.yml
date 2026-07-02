@@ -682,3 +682,58 @@ jobs:
       - name: Run gap-backlog-fixtures
         run: python3 scripts/test/run_gap_backlog_fixtures.py
 
+  feat-test-plan-deliver-concurrency-fixtures:
+    name: feat-test-plan-deliver-concurrency-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run deliver-concurrency-fixtures
+        run: python3 scripts/test/run_deliver_concurrency_fixtures.py
+
+  feat-test-plan-hook-worktree-alignment-fixtures:
+    name: feat-test-plan-hook-worktree-alignment-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run hook-worktree-alignment-fixtures
+        run: python3 scripts/test/run_hook_worktree_alignment_fixtures.py
+
+  feat-test-plan-dispatch-binding-fixtures:
+    name: feat-test-plan-dispatch-binding-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run dispatch-binding-fixtures
+        run: python3 scripts/test/run_dispatch_binding_fixtures.py
+
+  feat-test-plan-bash-py-invocation-guard:
+    name: feat-test-plan-bash-py-invocation-guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run bash-py-invocation-guard
+        run: python3 scripts/test/bash-py-invocation-guard.test
+
+  feat-test-plan-git-push-secret-scan-chokepoint:
+    name: feat-test-plan-git-push-secret-scan-chokepoint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run git-push-secret-scan-chokepoint
+        run: python3 scripts/test/git-push-secret-scan-chokepoint.test
+

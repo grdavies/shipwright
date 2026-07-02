@@ -150,12 +150,21 @@ def cmd_assert_entry(root: Path, _args: list[str]) -> None:
     fail(proc.stderr.strip() or "worktree guard configuration error", exit_code=2)
 
 
-def assert_primary_off_target(top: Path, target: str) -> None:
-    """Primary checkout must not be on the orchestrator-owned branch (R55/R31)."""
-    current = git_run(["branch", "--show-current"], top, check=False).stdout.strip()
+def assert_primary_off_target(start: Path, target: str) -> None:
+    """Primary checkout must not be on the orchestrator-owned branch (PRD 050 R1/R6)."""
+    from primary_checkout_guard import (
+        acquire_primary_lock,
+        canonical_repo_root,
+        primary_worktree_path,
+        release_primary_lock,
+    )
+
+    repo_root = canonical_repo_root(start)
+    primary = primary_worktree_path(repo_root)
+    current = git_run(["branch", "--show-current"], primary, check=False).stdout.strip()
     if current != target:
         return
-    status = git_run(["status", "--porcelain"], top, check=False).stdout
+    status = git_run(["status", "--porcelain"], primary, check=False).stdout
     if status.strip():
         fail(
             f"primary checkout is dirty on {target} — commit, stash, and move off before orchestrator provision",
@@ -167,24 +176,35 @@ def assert_primary_off_target(top: Path, target: str) -> None:
         )
     default_ref = git_run(
         ["symbolic-ref", "refs/remotes/origin/HEAD"],
-        top,
+        repo_root,
         check=False,
     ).stdout.strip()
     if default_ref.startswith("refs/remotes/origin/"):
         default_branch = default_ref.removeprefix("refs/remotes/origin/")
     else:
         default_branch = "main"
-    trunk_script = top / "scripts" / "resolve_base_branch.py"
+    trunk_script = repo_root / "scripts" / "resolve_base_branch.py"
     if trunk_script.is_file():
         proc = subprocess.run(
             [sys.executable, str(trunk_script), "trunk-name"],
-            cwd=str(top),
+            cwd=str(repo_root),
             capture_output=True,
             text=True,
         )
         if proc.returncode == 0 and proc.stdout.strip():
             default_branch = proc.stdout.strip()
-    checkout = git_run(["checkout", default_branch], cwd=top, check=False)
+    lock = acquire_primary_lock(repo_root)
+    if lock.get("verdict") != "pass":
+        fail(
+            lock.get("error", "primary checkout lock held"),
+            exit_code=20,
+            halt="primary-lock-held",
+            remediation=lock.get("remediation"),
+        )
+    try:
+        checkout = git_run(["checkout", default_branch], cwd=primary, check=False)
+    finally:
+        release_primary_lock(repo_root)
     if checkout.returncode != 0:
         fail(
             f"primary checkout is on {target}; auto-checkout to {default_branch!r} failed",
