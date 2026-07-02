@@ -248,7 +248,40 @@ def cmd_capability_index_check(root: Path, args: list[str]) -> None:
     emit(run_capability_index_check(root, args))
 
 
+
+def git_toplevel(start: Path) -> Path:
+    proc = subprocess.run(
+        ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        raise ValueError("not a git repository")
+    return Path(proc.stdout.strip()).resolve()
+
+
+def assert_hook_root_aligned(root: Path) -> None:
+    from primary_checkout_guard import canonical_repo_root, primary_worktree_path
+    from worktree_root import is_shipwright_worktree
+
+    cwd_top = git_toplevel(root)
+    primary = primary_worktree_path(canonical_repo_root(root))
+    if cwd_top == primary:
+        return
+    if is_shipwright_worktree(cwd_top, primary):
+        return
+    fail(
+        "hook-state root mismatch: cwd toplevel differs from primary and is not a recognized worktree",
+        exit_code=20,
+        remediation=(
+            f"move_agent_to_root {cwd_top}  # or cd {cwd_top} and align IDE workspace"
+        ),
+        cwdToplevel=str(cwd_top),
+        primaryCheckout=str(primary),
+    )
+
 def cmd_dispatch(root: Path, args: list[str]) -> None:
+    assert_hook_root_aligned(root)
     if not args:
         fail("dispatch subcommand required: preflight")
     sub = args[0]

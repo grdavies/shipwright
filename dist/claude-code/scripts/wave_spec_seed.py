@@ -400,7 +400,7 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
     if bool(task_list) == bool(artifact):
         fail("exactly one of --task-list or --artifact required")
     dry_run = has_flag(args, "--dry-run")
-    top = git_toplevel(root)
+    top = Path.cwd().resolve()
     default = load_trunk_base(top)
 
     single: Path | None = None
@@ -415,6 +415,9 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
 
     if branch == default:
         fail(f"refused: spec-seed never targets default branch {default!r}")
+
+    from primary_checkout_guard import enforce_guard
+    enforce_guard(top, branch)
 
     candidate_files = docs_paths(docs_dir, top, single=single)
     assert_no_tracked_private_bodies(top, candidate_files)

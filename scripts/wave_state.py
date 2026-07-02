@@ -152,7 +152,7 @@ def scoped_paths(root: Path, target: str) -> dict[str, Path]:
     return {
         "state": cursor / f"sw-deliver-state.{slug}.json",
         "lock": cursor / f"sw-deliver-{slug}.lock",
-        "log": runs / "run.log",
+        "log": runs / f"run.{slug}.log",
         "runs": runs,
     }
 
@@ -163,10 +163,14 @@ def legacy_paths(root: Path) -> dict[str, Path]:
     return {
         "state": cursor / LEGACY_STATE_NAME,
         "lock": cursor / LEGACY_LOCK_NAME,
-        "log": runs / "run.log",
+        "log": runs / "run.legacy.log",
         "runs": runs,
     }
 
+
+def deliver_run_log_path(root: Path, target: str | None = None, state: dict | None = None) -> Path:
+    """Slug-scoped deliver audit log (PRD 050 R4)."""
+    return paths(root, target=target, state=state)["log"]
 
 def paths(root: Path, target: str | None = None, state: dict[str, Any] | None = None) -> dict[str, Path]:
     """Resolve durable paths; prefers scoped layout when target is a feature branch."""
