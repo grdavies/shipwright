@@ -16,6 +16,9 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.py` is aut
 ## Procedure
 
 1. Verify artifact exists and does **not** already have `frozen: true`.
+2a. **All-private visibility (PRD 050 R18):** when `planning.visibilityProfile` is `all-private`, run
+   `python3 scripts/planning_visibility.py check-freeze-visibility <artifact>` before stamping — git-tracked
+   artifacts MUST declare `visibility: public` in frontmatter or freeze halts fail-closed.
 2. **Spec-rigor gate** (`skills/spec-rigor/SKILL.md`) — halt on `fail` (exit `20`):
    - **PRD / brainstorm / amendment:** `python3 scripts/spec-rigor-check.py --artifact prd --path <file> --tier <full|standard>`
      (tier from triage or `--tier`; default `standard` when unknown).

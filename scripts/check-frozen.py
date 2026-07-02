@@ -22,6 +22,11 @@ def main(argv=None):
         from wave_spec_seed import resolve_target_from_artifact
         branch, _slug, _docs = resolve_target_from_artifact(root, artifact)
         enforce_guard(root, branch)
+        import planning_visibility as planning_vis
+        vis = planning_vis.check_tracked_public_at_freeze(root, root / artifact)
+        if vis.get("verdict") == "fail":
+            print(json.dumps({"verdict": "fail", "action": "freeze-commit", **vis}), file=sys.stderr)
+            return 20
         proc = subprocess.run([sys.executable, str(SCRIPT_DIR/"wave.py"), "spec-seed", "--artifact", artifact], capture_output=True, text=True, cwd=str(root))
         ok = proc.returncode == 0
         if ok:

@@ -1,12 +1,13 @@
 ---
 id: gap-019-parallel-deliver-verify-mutates-tracked-scripts-
 type: gap
-status: scheduled
+status: resolved
 schedule: PRD 050 A5
 title: parallel deliver verify mutates tracked scripts/test/fixtures in orchestrator worktree
 visibility: public
 tags: [source:feedback, prd-050-a5, signal:feedback-prd-048-deliver-observations-2026-07-02, prd-048, deliver, verify]
 source_pr: 48
+resolvedBy: PRD 050 A5 (R51–R54)
 absorbs: []
 ---
 

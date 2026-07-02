@@ -324,6 +324,34 @@ def orchestrator_worktree_path(root: Path, state: dict[str, Any]) -> Path | None
         path = (root / path).resolve()
     return path if path.is_dir() else None
 
+def fixture_tree_clean_or_halt(root: Path, state: dict[str, Any]) -> None:
+    """PRD 050 R52 — fail closed when orchestrator fixture tree is dirty before merge-run-next."""
+    orch = orchestrator_worktree_path(root, state)
+    if orch is None:
+        fail(
+            "cannot resolve orchestrator worktree for fixture-tree doctor",
+            exit_code=20,
+            halt="fixture-tree-doctor",
+            remediation="provision orchestrator worktree before merge-run-next",
+        )
+    proc = subprocess.run(
+        ["git", "-C", str(orch), "status", "--porcelain", "scripts/test/fixtures/"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    dirty = [line for line in (proc.stdout or "").splitlines() if line.strip()]
+    if dirty:
+        fail(
+            "tracked scripts/test/fixtures dirty in orchestrator worktree",
+            exit_code=20,
+            halt="fixture-tree-drift",
+            paths=dirty,
+            remediation="git checkout -- scripts/test/fixtures/",
+            orchestratorWorktree=str(orch),
+        )
+
+
 
 def resolve_currency_check(
     root: Path, state: dict[str, Any], plan: dict[str, Any]
@@ -2025,6 +2053,7 @@ def execute_mechanical(
         return {"executed": "merge-enqueue", "phaseSlug": slug}
 
     if action == "merge-run-next":
+        fixture_tree_clean_or_halt(root, state)
         batch_halt = batch_integration_head_halt(root, state)
         if batch_halt:
             fail(
