@@ -60,13 +60,13 @@
 | --- | --- | --- | --- | --- | --- |
 | feedback-hook-worktree-root-mismatch-2026-07-01 | gap | Hook-state worktree root mismatch causes false prework/preflight denials | resolved | public |  |
 | gap-001-spec-rigor-check-sh-lacks-a-brainstorm-artifact- | gap | spec-rigor-check.sh lacks a brainstorm artifact profile (validates brainstorms against PRD structure) | resolved | public |  |
-| gap-002-living-doc-reconcile-commits-bypass-r31-default- | gap | Living-doc reconcile commits bypass R31 default-branch refusal (wave_living_docs.py / reconcile.py set-index-status) | open | public |  |
-| gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi | gap | Gap/doc-feedback capture has two unreconciled file paths and bypasses the planning_store backend interface | open | public |  |
+| gap-002-living-doc-reconcile-commits-bypass-r31-default- | gap | Living-doc reconcile commits bypass R31 default-branch refusal (wave_living_docs.py / reconcile.py set-index-status) | scheduled | public |  |
+| gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi | gap | Gap/doc-feedback capture has two unreconciled file paths and bypasses the planning_store backend interface | scheduled | public |  |
 | gap-004-dispatch-binding-preflight-broken-bash-invokes-p | gap | Dispatch-binding preflight broken: bash invokes .py scripts, and interactive parent models are not in models.tiers | resolved | public |  |
 | gap-005-freeze-commit-spec-seed-cwd-dependent-repo-root- | gap | freeze-commit/spec-seed cwd-dependent repo-root resolution can target the shared primary checkout (extends GAP-077/078 to /sw-doc and /sw-amend) | resolved | public |  |
 | gap-006-prd-033-marked-complete-but-a3-r37-r39-r40-r42-r | gap | PRD 033 marked complete but A3 R37/R39/R40/R42/R43 (operator worktree contract, in-flight cwd guard) are unimplemented | resolved | public |  |
-| gap-007-finalize-completion-omits-terminal-living-docs-r | gap | finalize-completion omits terminal living-docs reconcile so INDEX stays in-progress | open | public |  |
-| gap-008-inflight-signal-run-complete-commits-index-on-ma | gap | inflight_signal run-complete commits INDEX on main during finalize-completion | open | public |  |
+| gap-007-finalize-completion-omits-terminal-living-docs-r | gap | finalize-completion omits terminal living-docs reconcile so INDEX stays in-progress | scheduled | public |  |
+| gap-008-inflight-signal-run-complete-commits-index-on-ma | gap | inflight_signal run-complete commits INDEX on main during finalize-completion | scheduled | public |  |
 | gap-009-failed-phase-provision-leaves-orphan-worktree-wi | gap | Failed phase provision leaves orphan worktree without phaseWorktrees state | resolved | public |  |
 | gap-010-durable-deliver-state-loss-blocks-finalize-compl | gap | Durable deliver state loss blocks finalize-completion resume on bare main | resolved | public |  |
 | gap-011-conductor-no-progress-regression-on-provision-an | gap | conductor no-progress regression on provision and merge-enqueue loops | resolved | public |  |
@@ -80,11 +80,15 @@
 | gap-019-parallel-deliver-verify-mutates-tracked-scripts- | gap | parallel deliver verify mutates tracked scripts/test/fixtures in orchestrator worktree | resolved | public |  |
 | gap-020-planning-index-gen-replace-region-inner-omits-n | gap | planning_index_gen replace_region_inner omits newline after structural marker | scheduled | public |  |
 | gap-021-fail-spreads-json-error-dict-causing-duplica | gap | fail() spreads JSON error dict causing duplicate error kwarg TypeError | resolved | public |  |
+| gap-022-prd-054-unit-tests-must-be-excluded-from-copy-to | gap | PRD 054 unit_tests must be excluded from copy-to-core and dist emitter | scheduled | public |  |
+| gap-023-sw-tasks-must-auto-emit-execute-tier-granular-su | gap | sw-tasks must auto-emit execute-tier granular sub-task refs at generation | scheduled | public |  |
+| gap-024-supersede-reconcile-subcommand-missing-after-rec | gap | supersede-reconcile subcommand missing after reconcile.py consolidation | scheduled | public |  |
+| gap-025-deliver-advances-on-ship-green-not-phase-checklist | gap | deliver advances phases on ship-green without phase checklist acceptance | scheduled | public |  |
 <!-- planning-index:structural end -->
 <!-- planning-index:derived begin -->gap-002-living-doc-reconcile-commits-bypass-r31-default-: open
-gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi: open
-gap-007-finalize-completion-omits-terminal-living-docs-r: open
-gap-008-inflight-signal-run-complete-commits-index-on-ma: open
+gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi: scheduled
+gap-007-finalize-completion-omits-terminal-living-docs-r: scheduled
+gap-008-inflight-signal-run-complete-commits-index-on-ma: scheduled
 gap-020-planning-index-gen-replace-region-inner-omits-n: scheduled
 <!-- planning-index:derived end -->
 <!-- planning-index:inFlight begin -->
