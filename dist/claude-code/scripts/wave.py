@@ -135,6 +135,11 @@ def dispatch(argv: list[str]) -> int:
         if rest and rest[0] == "benefit-report":
             return _python("wave_plan_benefit.py", root, ["benefit-report", *rest[1:]])
         return _python("wave_deliver.py", root, ["plan", *rest])
+    if cmd == "execute":
+        if rest and rest[0] == "integrate":
+            return _python("execute_integrate.py", root, ["integrate", *rest[1:]])
+        sys.stderr.write("execute subcommand required: integrate\n")
+        return 2
     return _python("wave_deliver.py", root, argv)
 
 
