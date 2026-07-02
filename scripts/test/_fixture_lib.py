@@ -26,7 +26,7 @@ def repo_root(from_file: str | Path | None = None) -> Path:
         return Path(proc.stdout.strip())
     # Fallback: scripts/test/{fixtures/,run_*.py}
     path = Path(from_file).resolve() if from_file is not None else Path(__file__).resolve()
-    depth = 4 if path.parent.name == "fixtures" else 3
+    depth = 3
     cur = path.parent
     for _ in range(depth):
         cur = cur.parent

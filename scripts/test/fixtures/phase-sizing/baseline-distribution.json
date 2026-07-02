@@ -1,22 +1,22 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-01T00:41:26Z",
+  "generatedAt": "2026-07-02T21:52:11Z",
   "summary": {
-    "taskListCount": 43,
-    "phaseSampleCount": 239,
+    "taskListCount": 50,
+    "phaseSampleCount": 276,
     "distributions": {
       "filesTouched": {
-        "count": 239,
+        "count": 276,
         "min": 1,
-        "p10": 2.0,
-        "p25": 4.0,
-        "p50": 6.0,
-        "p75": 10.5,
+        "p10": 2.5,
+        "p25": 3.0,
+        "p50": 5.0,
+        "p75": 10.0,
         "p90": 17.0,
         "max": 34
       },
       "distinctDirs": {
-        "count": 239,
+        "count": 276,
         "min": 1,
         "p10": 2.0,
         "p25": 2.0,
@@ -26,7 +26,7 @@
         "max": 18
       },
       "subTaskCount": {
-        "count": 239,
+        "count": 276,
         "min": 1,
         "p10": 2.0,
         "p25": 3.0,
@@ -36,7 +36,7 @@
         "max": 13
       },
       "traceabilityScenarios": {
-        "count": 239,
+        "count": 276,
         "min": 0,
         "p10": 1.0,
         "p25": 2.0,
@@ -46,7 +46,7 @@
         "max": 33
       },
       "depFanOut": {
-        "count": 239,
+        "count": 276,
         "min": 0,
         "p10": 0.0,
         "p25": 1.0,
@@ -56,7 +56,7 @@
         "max": 7
       },
       "waveWidth": {
-        "count": 199,
+        "count": 231,
         "min": 1,
         "p10": 1.0,
         "p25": 1.0,
@@ -66,17 +66,17 @@
         "max": 7
       },
       "phasesPerTaskList": {
-        "count": 43,
+        "count": 50,
         "min": 0,
         "p10": 3.0,
         "p25": 4.0,
         "p50": 5.0,
-        "p75": 7.0,
-        "p90": 8.8,
+        "p75": 6.75,
+        "p90": 8.1,
         "max": 13
       }
     },
-    "zeroTraceabilityPhases": 10
+    "zeroTraceabilityPhases": 16
   },
   "records": [
     {
@@ -2950,10 +2950,10 @@
         {
           "phaseId": "1",
           "title": "Backend-pluggable discovery + region disposition + committed inFlight (L)",
-          "filesTouched": 8,
-          "distinctDirs": 7,
-          "subTaskCount": 6,
-          "traceabilityScenarios": 7,
+          "filesTouched": 12,
+          "distinctDirs": 9,
+          "subTaskCount": 8,
+          "traceabilityScenarios": 11,
           "depFanOut": 2
         },
         {
@@ -3017,12 +3017,475 @@
           "depFanOut": 0
         }
       ]
+    },
+    {
+      "taskList": "docs/prds/048-gap-lifecycle-flip-and-feedback-route-guard/tasks-048-gap-lifecycle-flip-and-feedback-route-guard.md",
+      "phaseCount": 6,
+      "waveCount": 2,
+      "maxWaveWidth": 3,
+      "waveWidths": [
+        3,
+        3
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 1 and 3 serialized (scripts/test/run_planning_035_gap_lifecycle_fixtures.py)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "In-process gap-resolve flip + default-branch guard (medium)",
+          "filesTouched": 5,
+          "distinctDirs": 2,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 2,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "2",
+          "title": "docs-currency-gate gap-still-open rewrite (small)",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 1,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "gap_backlog flip --scope-note annotation (small)",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 2,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "4",
+          "title": "Feedback route guard for complete units (medium)",
+          "filesTouched": 4,
+          "distinctDirs": 4,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "Documentation surface updates (small)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 0,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "6",
+          "title": "Retroactive backfill and GAP closure (medium)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/049-operator-worktree-contract-and-cwd-guard/tasks-049-operator-worktree-contract-and-cwd-guard.md",
+      "phaseCount": 5,
+      "waveCount": 4,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        1,
+        2,
+        1
+      ],
+      "injectedEdgeCount": 3,
+      "notices": [
+        "contention: phases 1 and 2 serialized (core/**)",
+        "contention: phases 1 and 4 serialized (core/**)",
+        "contention: phases 2 and 4 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Operator worktree contract documentation (M)",
+          "filesTouched": 5,
+          "distinctDirs": 5,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 2,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "2",
+          "title": "In-flight cwd guard + canonical state read (L)",
+          "filesTouched": 7,
+          "distinctDirs": 3,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 3,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "End-to-end operator contract fixture (S)",
+          "filesTouched": 1,
+          "distinctDirs": 1,
+          "subTaskCount": 1,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "`gap_backlog.py` reschedule fix (S)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "Gap closure + definition-of-done verification (S)",
+          "filesTouched": 3,
+          "distinctDirs": 3,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 0,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/050-deliver-concurrency-cwd-terminal-robustness/tasks-050-deliver-concurrency-cwd-terminal-robustness.md",
+      "phaseCount": 5,
+      "waveCount": 5,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 3,
+      "notices": [
+        "contention: phases 2 and 3 serialized (scripts/wave_lifecycle.py)",
+        "contention: phases 2 and 4 serialized (scripts/wave_deliver_loop.py)",
+        "contention: phases 3 and 4 serialized (scripts/wave_deliver_loop.py)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Thread A \u2014 Primary-checkout & cwd safety (L)",
+          "filesTouched": 32,
+          "distinctDirs": 15,
+          "subTaskCount": 13,
+          "traceabilityScenarios": 28,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "2",
+          "title": "Thread B \u2014 Deliver-loop provisioning & stall classification (L)",
+          "filesTouched": 7,
+          "distinctDirs": 3,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 6,
+          "depFanOut": 3
+        },
+        {
+          "phaseId": "3",
+          "title": "Thread C \u2014 Terminal-finalize robustness (M)",
+          "filesTouched": 12,
+          "distinctDirs": 6,
+          "subTaskCount": 10,
+          "traceabilityScenarios": 16,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "4",
+          "title": "Thread D \u2014 Adjacent hygiene guards (S)",
+          "filesTouched": 14,
+          "distinctDirs": 8,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 7,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "Manifest registration + gap verification (S)",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/051-spec-rigor-brainstorm-profile-and-stdlib-coverage/tasks-051-spec-rigor-brainstorm-profile-and-stdlib-coverage.md",
+      "phaseCount": 3,
+      "waveCount": 3,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 1 and 2 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Thread A \u2014 spec-rigor brainstorm artifact profile (S)",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 5,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Thread B \u2014 stdlib-only coverage tooling (M)",
+          "filesTouched": 8,
+          "distinctDirs": 6,
+          "subTaskCount": 5,
+          "traceabilityScenarios": 6,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Manifest registration + gap verification (S)",
+          "filesTouched": 4,
+          "distinctDirs": 3,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 0,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/052-test-suite-registration-single-source/tasks-052-test-suite-registration-single-source.md",
+      "phaseCount": 4,
+      "waveCount": 4,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Suite registry schema + full classification (medium)",
+          "filesTouched": 4,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "2",
+          "title": "Verify bundle derivation + orphan wiring (medium)",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "PR test-plan CI alignment + generator fix (medium)",
+          "filesTouched": 5,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 2,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Docs, CONTRIBUTING drift guard, GAP close (small)",
+          "filesTouched": 4,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 2,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/053-sub-task-execute-orchestration/tasks-053-sub-task-execute-orchestration.md",
+      "phaseCount": 6,
+      "waveCount": 6,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 1,
+      "notices": [
+        "contention: phases 2 and 3 serialized (core/**)"
+      ],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Execute-plan schema, kernel registry, and shared git helper (M)",
+          "filesTouched": 10,
+          "distinctDirs": 6,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 6,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "Execute plan builder, validator, and dependency rules (L)",
+          "filesTouched": 10,
+          "distinctDirs": 5,
+          "subTaskCount": 8,
+          "traceabilityScenarios": 13,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "3",
+          "title": "Integration primitive and journal (M)",
+          "filesTouched": 4,
+          "distinctDirs": 3,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 4,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Sub-branch dispatch, failure handling, and R45 carve-out (L)",
+          "filesTouched": 12,
+          "distinctDirs": 5,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 5,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "Ship-chain gate, autonomy, resume, and default-on wiring (M)",
+          "filesTouched": 8,
+          "distinctDirs": 4,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 7,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "6",
+          "title": "Documentation, layout, and dogfood closure (M)",
+          "filesTouched": 16,
+          "distinctDirs": 12,
+          "subTaskCount": 6,
+          "traceabilityScenarios": 0,
+          "depFanOut": 0
+        }
+      ]
+    },
+    {
+      "taskList": "docs/prds/054-unit-testing-strategy/tasks-054-unit-testing-strategy.md",
+      "phaseCount": 8,
+      "waveCount": 8,
+      "maxWaveWidth": 1,
+      "waveWidths": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Pytest foundation + conftest scaffolding (medium)",
+          "filesTouched": 6,
+          "distinctDirs": 4,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "2",
+          "title": "Scope selection infrastructure (medium)",
+          "filesTouched": 5,
+          "distinctDirs": 4,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 4,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Migration wave W1 \u2014 pure-logic suites (~30) (large)",
+          "filesTouched": 7,
+          "distinctDirs": 3,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Migration wave W2 \u2014 single-repo git suites (~40) (large)",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 0,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "Migration wave W3 \u2014 deliver / multi-worktree suites (~35) (large)",
+          "filesTouched": 3,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 0,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "6",
+          "title": "Migration wave W4 \u2014 meta / registry / parity (~22) (medium)",
+          "filesTouched": 2,
+          "distinctDirs": 2,
+          "subTaskCount": 2,
+          "traceabilityScenarios": 1,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "7",
+          "title": "Harness teardown + loop wiring (medium)",
+          "filesTouched": 18,
+          "distinctDirs": 8,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 3,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "8",
+          "title": "CI shards + operator docs (small)",
+          "filesTouched": 4,
+          "distinctDirs": 4,
+          "subTaskCount": 3,
+          "traceabilityScenarios": 2,
+          "depFanOut": 0
+        }
+      ]
     }
   ],
   "defaults": {
     "tasks.sizing.thresholds": {
       "filesTouched": {
-        "small": 6,
+        "small": 5,
         "medium": 10
       },
       "traceabilityScenarios": {

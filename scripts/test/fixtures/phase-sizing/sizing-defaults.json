@@ -1,7 +1,7 @@
 {
   "tasks.sizing.thresholds": {
     "filesTouched": {
-      "small": 6,
+      "small": 5,
       "medium": 10
     },
     "traceabilityScenarios": {

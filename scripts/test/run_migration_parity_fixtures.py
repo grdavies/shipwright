@@ -16,13 +16,7 @@ from _fixture_lib import repo_root
 from _harness_patch import patch_source as _patch_source
 
 
-def main() -> int:
-    root = repo_root(__file__)
-    env = os.environ.copy()
-    env["ROOT"] = str(root)
-    env["PYTHONPATH"] = os.pathsep.join(
-        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
-    )
+def _run_capability_migration_parity(root: Path, env: dict[str, str]) -> int:
     src = _patch_source(_SOURCE, root)
     completed = subprocess.run(
         ["bash", "-c", src],
@@ -33,22 +27,50 @@ def main() -> int:
     return completed.returncode
 
 
+def _run_pytest_wave_parity(root: Path, env: dict[str, str]) -> int:
+    sys.path.insert(0, str(root / "scripts"))
+    from migration_pytest_parity import run_wave_parity
+
+    fail = 0
+    for wave in ("W1", "W2"):
+        failures = run_wave_parity(root, wave, env=env)
+        if failures:
+            fail = 1
+            for msg in failures:
+                print(f"FAIL migration-pytest-parity-{wave}: {msg}")
+        else:
+            print(f"OK  migration-pytest-parity-{wave}")
+    return fail
+
+
+def main() -> int:
+    root = repo_root(__file__)
+    env = os.environ.copy()
+    env["ROOT"] = str(root)
+    env["PYTHONPATH"] = os.pathsep.join(
+        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
+    )
+    fail = _run_capability_migration_parity(root, env)
+    fail |= _run_pytest_wave_parity(root, env)
+    return fail
+
+
 _SOURCE = r"""
 #!/usr/bin/env bash
 # Migration parity golden fixtures — dual-run shadow per family (PRD 021 R13, TR9).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-SHADOW="$ROOT/scripts/migration-parity-shadow.sh"
+SHADOW="$ROOT/scripts/migration-parity-shadow.py"
 FIX="$ROOT/scripts/test/fixtures/migration-parity"
 FAIL=0
 
-chmod +x "$SHADOW" "$ROOT/scripts/doc-review-select.sh" "$ROOT/scripts/code-review-select.sh"
+chmod +x "$ROOT/scripts/doc-review-select.sh" "$ROOT/scripts/code-review-select.sh"
 
 run_family() {
   local name="$1" family="$2" ctx="$3"
   set +e
-  OUT=$(bash "$SHADOW" --family "$family" --context-json "$ctx" 2>&1)
+  OUT=$(python3 "$SHADOW" "$ROOT" "$family" "$ctx" 2>&1)
   EC=$?
   set -e
   if [ "$EC" -eq 0 ]; then
@@ -74,7 +96,7 @@ for fixture in native-diff-minimal native-diff-selection native-diff-adversarial
 done
 
 # --- migration-parity-providers ---
-CFG=$(python3 - <<'PY' "$ROOT/.cursor/workflow.config.json"
+CFG=$(python3 - "$ROOT/.cursor/workflow.config.json" <<'PY'
 import json, sys
 print(json.dumps({"version":1,"phase_type":"sw-ship","config":json.load(open(sys.argv[1]))}))
 PY

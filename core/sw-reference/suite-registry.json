@@ -47,12 +47,13 @@
     },
     {
       "id": "authoring-guard-fixtures",
-      "script": "scripts/test/run_authoring_guard_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-authoring-guard-fixtures"
+      "ciJobName": "feat-test-plan-authoring-guard-fixtures",
+      "pytestPath": "scripts/unit_tests/capability"
     },
     {
       "id": "base-resolution-fixtures",
@@ -79,12 +80,13 @@
     },
     {
       "id": "build-chain-sot-fixtures",
-      "script": "scripts/test/run_build_chain_sot_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "verify"
       ],
       "verifyOrder": 52,
-      "verifyClassification": "required"
+      "verifyClassification": "required",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "capability-fixtures",
@@ -97,12 +99,13 @@
     },
     {
       "id": "capability-lint-fixtures",
-      "script": "scripts/test/run_capability_lint_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "doc",
         "verify"
       ],
-      "verifyOrder": 39
+      "verifyOrder": 39,
+      "pytestPath": "scripts/unit_tests/capability"
     },
     {
       "id": "capability-select-fixtures",
@@ -140,12 +143,13 @@
     },
     {
       "id": "completed-unit-fixtures",
-      "script": "scripts/test/run_completed_unit_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-completed-unit-fixtures"
+      "ciJobName": "feat-test-plan-completed-unit-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "compound-completion-fixtures",
@@ -237,23 +241,25 @@
     },
     {
       "id": "dispatch-binding-fixtures",
-      "script": "scripts/test/run_dispatch_binding_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci",
         "verify"
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-dispatch-binding-fixtures",
-      "verifyOrder": 19
+      "verifyOrder": 19,
+      "pytestPath": "scripts/unit_tests/dispatch"
     },
     {
       "id": "dispatch-foundation-fixtures",
-      "script": "scripts/test/run_dispatch_foundation_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "doc",
         "verify"
       ],
-      "verifyOrder": 31
+      "verifyOrder": 31,
+      "pytestPath": "scripts/unit_tests/dispatch"
     },
     {
       "id": "doc-currency-033-fixtures",
@@ -275,21 +281,23 @@
     },
     {
       "id": "doc-fixtures",
-      "script": "scripts/test/run_doc_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-doc-fixtures"
+      "ciJobName": "feat-test-plan-doc-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "doc-format-fixtures",
-      "script": "scripts/test/run_doc_format_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-doc-format-fixtures"
+      "ciJobName": "feat-test-plan-doc-format-fixtures",
+      "pytestPath": "scripts/unit_tests/doc"
     },
     {
       "id": "doc-link-fixtures",
@@ -301,12 +309,13 @@
     },
     {
       "id": "dual-ship-fixtures",
-      "script": "scripts/test/run_dual_ship_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-dual-ship-fixtures"
+      "ciJobName": "feat-test-plan-dual-ship-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "emitter-fixtures",
@@ -339,20 +348,22 @@
     },
     {
       "id": "feedback-fixtures",
-      "script": "scripts/test/run_feedback_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "verify"
       ],
-      "verifyOrder": 6
+      "verifyOrder": 6,
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "gap-backlog-fixtures",
-      "script": "scripts/test/run_gap_backlog_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-gap-backlog-fixtures"
+      "ciJobName": "feat-test-plan-gap-backlog-fixtures",
+      "pytestPath": "scripts/unit_tests/planning"
     },
     {
       "id": "gate-fixtures",
@@ -366,12 +377,13 @@
     },
     {
       "id": "git-workflow-fixtures",
-      "script": "scripts/test/run_git_workflow_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-git-workflow-fixtures"
+      "ciJobName": "feat-test-plan-git-workflow-fixtures",
+      "pytestPath": "scripts/unit_tests/workflow"
     },
     {
       "id": "guardrail-matrix-fixtures",
@@ -384,28 +396,31 @@
     },
     {
       "id": "guardrail-rules-resolution-fixtures",
-      "script": "scripts/test/run_guardrail_rules_resolution_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-guardrail-rules-resolution-fixtures"
+      "ciJobName": "feat-test-plan-guardrail-rules-resolution-fixtures",
+      "pytestPath": "scripts/unit_tests/guardrails"
     },
     {
       "id": "guidelines-floor-fixtures",
-      "script": "scripts/test/run_guidelines_floor_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "doc",
         "verify"
       ],
-      "verifyOrder": 43
+      "verifyOrder": 43,
+      "pytestPath": "scripts/unit_tests/guidelines"
     },
     {
       "id": "heterogeneous-review-fixtures",
-      "script": "scripts/test/run_heterogeneous_review_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "internal"
-      ]
+      ],
+      "pytestPath": "scripts/unit_tests/review"
     },
     {
       "id": "hook-fixtures",
@@ -429,14 +444,15 @@
     },
     {
       "id": "host-fixtures",
-      "script": "scripts/test/run_host_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci",
         "verify"
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-host-fixtures",
-      "verifyOrder": 49
+      "verifyOrder": 49,
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "impl-fixtures",
@@ -456,10 +472,11 @@
     },
     {
       "id": "inefficiency-scan-fixtures",
-      "script": "scripts/test/run_inefficiency_scan_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "internal"
-      ]
+      ],
+      "pytestPath": "scripts/unit_tests/meta"
     },
     {
       "id": "inflight-doc-currency-fixtures",
@@ -481,30 +498,33 @@
     },
     {
       "id": "inflight-migration-bridge-fixtures",
-      "script": "scripts/test/run_inflight_migration_bridge_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-migration-bridge-fixtures"
+      "ciJobName": "feat-test-plan-inflight-migration-bridge-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "inflight-signal-fixtures",
-      "script": "scripts/test/run_inflight_signal_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-signal-fixtures"
+      "ciJobName": "feat-test-plan-inflight-signal-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "kernel-classification-fixtures",
-      "script": "scripts/test/run_kernel_classification_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "doc",
         "verify"
       ],
-      "verifyOrder": 42
+      "verifyOrder": 42,
+      "pytestPath": "scripts/unit_tests/model_tier"
     },
     {
       "id": "living-doc-fixtures",
@@ -516,26 +536,29 @@
     },
     {
       "id": "loop-autonomy-invariant-fixtures",
-      "script": "scripts/test/run_loop_autonomy_invariant_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "internal"
-      ]
+      ],
+      "pytestPath": "scripts/unit_tests/loop"
     },
     {
       "id": "loop-health-fixtures",
-      "script": "scripts/test/run_loop_health_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "internal"
-      ]
+      ],
+      "pytestPath": "scripts/unit_tests/loop"
     },
     {
       "id": "mechanical-sourcing-fixtures",
-      "script": "scripts/test/run_mechanical_sourcing_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-mechanical-sourcing-fixtures"
+      "ciJobName": "feat-test-plan-mechanical-sourcing-fixtures",
+      "pytestPath": "scripts/unit_tests/conductor"
     },
     {
       "id": "memory-prework-fixtures",
@@ -571,10 +594,11 @@
     },
     {
       "id": "meta-channel-fixtures",
-      "script": "scripts/test/run_meta_channel_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "internal"
-      ]
+      ],
+      "pytestPath": "scripts/unit_tests/meta"
     },
     {
       "id": "migration-parity-fixtures",
@@ -587,11 +611,12 @@
     },
     {
       "id": "model-binding-fixtures",
-      "script": "scripts/test/run_model_binding_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "verify"
       ],
-      "verifyOrder": 30
+      "verifyOrder": 30,
+      "pytestPath": "scripts/unit_tests/model_tier"
     },
     {
       "id": "onboarding-ux-fixtures",
@@ -641,21 +666,23 @@
     },
     {
       "id": "phase-sizing-corpus-fixtures",
-      "script": "scripts/test/run_phase_sizing_corpus_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-phase-sizing-corpus-fixtures"
+      "ciJobName": "feat-test-plan-phase-sizing-corpus-fixtures",
+      "pytestPath": "scripts/unit_tests/phase_sizing"
     },
     {
       "id": "phase-sizing-fixtures",
-      "script": "scripts/test/run_phase_sizing_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-phase-sizing-fixtures"
+      "ciJobName": "feat-test-plan-phase-sizing-fixtures",
+      "pytestPath": "scripts/unit_tests/phase_sizing"
     },
     {
       "id": "pilot-fixtures",
@@ -695,12 +722,13 @@
     },
     {
       "id": "plan-validate-fixtures",
-      "script": "scripts/test/run_plan_validate_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "doc",
         "verify"
       ],
-      "verifyOrder": 44
+      "verifyOrder": 44,
+      "pytestPath": "scripts/unit_tests/planning"
     },
     {
       "id": "planning-035-deliver-conductor-fixtures",
@@ -733,21 +761,23 @@
     },
     {
       "id": "planning-035-gap-lifecycle-fixtures",
-      "script": "scripts/test/run_planning_035_gap_lifecycle_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-035-gap-lifecycle-fixtures"
+      "ciJobName": "feat-test-plan-planning-035-gap-lifecycle-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "planning-autonomy-fixtures",
-      "script": "scripts/test/run_planning_autonomy_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-autonomy-fixtures"
+      "ciJobName": "feat-test-plan-planning-autonomy-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "planning-command-surface-fixtures",
@@ -769,30 +799,33 @@
     },
     {
       "id": "planning-cutover-fixtures",
-      "script": "scripts/test/run_planning_cutover_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-cutover-fixtures"
+      "ciJobName": "feat-test-plan-planning-cutover-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "planning-cutover-phase5-fixtures",
-      "script": "scripts/test/run_planning_cutover_phase5_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-cutover-phase5-fixtures"
+      "ciJobName": "feat-test-plan-planning-cutover-phase5-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "planning-edge-effects-fixtures",
-      "script": "scripts/test/run_planning_edge_effects_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-edge-effects-fixtures"
+      "ciJobName": "feat-test-plan-planning-edge-effects-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "planning-emitter-parity-fixtures",
@@ -805,21 +838,23 @@
     },
     {
       "id": "planning-graph-fixtures",
-      "script": "scripts/test/run_planning_graph_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-graph-fixtures"
+      "ciJobName": "feat-test-plan-planning-graph-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "planning-index-fixtures",
-      "script": "scripts/test/run_planning_index_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-index-fixtures"
+      "ciJobName": "feat-test-plan-planning-index-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "planning-init-fixtures",
@@ -832,57 +867,63 @@
     },
     {
       "id": "planning-materialize-fixtures",
-      "script": "scripts/test/run_planning_materialize_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-materialize-fixtures"
+      "ciJobName": "feat-test-plan-planning-materialize-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "planning-migrate-fixtures",
-      "script": "scripts/test/run_planning_migrate_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-migrate-fixtures"
+      "ciJobName": "feat-test-plan-planning-migrate-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "planning-paths-fixtures",
-      "script": "scripts/test/run_planning_paths_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-paths-fixtures"
+      "ciJobName": "feat-test-plan-planning-paths-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "planning-postmerge-safety-fixtures",
-      "script": "scripts/test/run_planning_postmerge_safety_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-postmerge-safety-fixtures"
+      "ciJobName": "feat-test-plan-planning-postmerge-safety-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "planning-related-fixtures",
-      "script": "scripts/test/run_planning_related_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-related-fixtures"
+      "ciJobName": "feat-test-plan-planning-related-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "planning-scheduler-fixtures",
-      "script": "scripts/test/run_planning_scheduler_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-scheduler-fixtures"
+      "ciJobName": "feat-test-plan-planning-scheduler-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "planning-store-fixtures",
@@ -953,49 +994,55 @@
     },
     {
       "id": "prd-050-ship-verification-fixtures",
-      "script": "scripts/test/run_prd_050_ship_verification_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-prd-050-ship-verification-fixtures"
+      "ciJobName": "feat-test-plan-prd-050-ship-verification-fixtures",
+      "pytestPath": "scripts/unit_tests/ship"
     },
     {
       "id": "prd-051-ship-verification-fixtures",
-      "script": "scripts/test/run_prd_051_ship_verification_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-prd-051-ship-verification-fixtures"
+      "ciJobName": "feat-test-plan-prd-051-ship-verification-fixtures",
+      "pytestPath": "scripts/unit_tests/ship"
     },
     {
       "id": "provenance-fixtures",
-      "script": "scripts/test/run_provenance_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "internal"
-      ]
+      ],
+      "pytestPath": "scripts/unit_tests/meta"
     },
     {
       "id": "quality-provider-fixtures",
-      "script": "scripts/test/run_quality_provider_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "internal"
-      ]
+      ],
+      "pytestPath": "scripts/unit_tests/quality"
     },
     {
       "id": "recurring-failure-fixtures",
-      "script": "scripts/test/run_recurring_failure_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "internal"
-      ]
+      ],
+      "pytestPath": "scripts/unit_tests/meta"
     },
     {
       "id": "refactor-step-fixtures",
-      "script": "scripts/test/run_refactor_step_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "internal"
-      ]
+      ],
+      "pytestPath": "scripts/unit_tests/execute"
     },
     {
       "id": "regression-remediation-fixtures",
@@ -1017,14 +1064,15 @@
     },
     {
       "id": "retrospective-fixtures",
-      "script": "scripts/test/run_retrospective_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci",
         "verify"
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-retrospective-fixtures",
-      "verifyOrder": 33
+      "verifyOrder": 33,
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "secret-scan-fixtures",
@@ -1044,12 +1092,13 @@
     },
     {
       "id": "spec-rigor-brainstorm-profile-fixtures",
-      "script": "scripts/test/run_spec_rigor_brainstorm_profile_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-spec-rigor-brainstorm-profile-fixtures"
+      "ciJobName": "feat-test-plan-spec-rigor-brainstorm-profile-fixtures",
+      "pytestPath": "scripts/unit_tests/spec_rigor"
     },
     {
       "id": "stabilize-merge-fixtures",
@@ -1061,47 +1110,45 @@
     },
     {
       "id": "state-fixtures",
-      "script": "scripts/test/run_state_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "verify"
       ],
-      "verifyOrder": 20
+      "verifyOrder": 20,
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "status-integrity-fixtures",
-      "script": "scripts/test/run_status_integrity_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci",
         "verify"
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-status-integrity-fixtures",
-      "verifyOrder": 15
+      "verifyOrder": 15,
+      "pytestPath": "scripts/unit_tests/deliver"
     },
     {
       "id": "stdlib-coverage-fixtures",
-      "script": "scripts/test/run_stdlib_coverage_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-stdlib-coverage-fixtures"
+      "ciJobName": "feat-test-plan-stdlib-coverage-fixtures",
+      "pytestPath": "scripts/unit_tests/coverage"
     },
     {
       "id": "suite-registry-fixtures",
-      "script": "scripts/test/run_suite_registry_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
-        "pr-ci"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-suite-registry-fixtures"
-    },
-    {
-      "id": "suite-registry-fixtures",
-      "script": "scripts/test/run_suite_registry_fixtures.py",
-      "lanes": [
+        "pr-ci",
         "internal"
-      ]
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-suite-registry-fixtures",
+      "pytestPath": "scripts/unit_tests/meta"
     },
     {
       "id": "tasks-currency-fixtures",
@@ -1113,10 +1160,11 @@
     },
     {
       "id": "tdd-hardening-fixtures",
-      "script": "scripts/test/run_tdd_hardening_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "internal"
-      ]
+      ],
+      "pytestPath": "scripts/unit_tests/execute"
     },
     {
       "id": "terminal-state-read-fixtures",
@@ -1129,31 +1177,34 @@
     },
     {
       "id": "two-track-fixtures",
-      "script": "scripts/test/run_two_track_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-two-track-fixtures"
+      "ciJobName": "feat-test-plan-two-track-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "ux-polish-fixtures",
-      "script": "scripts/test/run_ux_polish_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "doc",
         "pr-ci"
       ],
       "classification": "advisory",
-      "ciJobName": "feat-test-plan-ux-polish-fixtures"
+      "ciJobName": "feat-test-plan-ux-polish-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "visibility-fixtures",
-      "script": "scripts/test/run_visibility_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-visibility-fixtures"
+      "ciJobName": "feat-test-plan-visibility-fixtures",
+      "pytestPath": "scripts/unit_tests/git"
     },
     {
       "id": "worktree-config-fixtures",

@@ -1,13 +1,31 @@
 {
-  "version": 1,
-  "description": "Standard FEAT PR test-plan fixture set \u2014 single source for verify.test and CI (PRD 016 R1\u2013R3).",
   "fixtures": [
     {
-      "id": "doc-fixtures",
-      "script": "scripts/test/run_doc_fixtures.py",
+      "id": "docs-link-check",
+      "script": "scripts/docs-link-check.py",
       "args": [],
       "classification": "required",
-      "ciJobName": "feat-test-plan-doc-fixtures"
+      "ciJobName": "feat-test-plan-docs-link-check"
+    },
+    {
+      "id": "bash-py-invocation-guard",
+      "script": "scripts/test/bash-py-invocation-guard.test",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-bash-py-invocation-guard",
+      "scenarios": [
+        "bash-py-invocation-guard"
+      ]
+    },
+    {
+      "id": "git-push-secret-scan-chokepoint",
+      "script": "scripts/test/git-push-secret-scan-chokepoint.test",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-git-push-secret-scan-chokepoint",
+      "scenarios": [
+        "git-push-secret-scan-chokepoint"
+      ]
     },
     {
       "id": "cleanup-fixtures",
@@ -17,264 +35,6 @@
       "ciJobName": "feat-test-plan-cleanup-fixtures"
     },
     {
-      "id": "ux-polish-fixtures",
-      "script": "scripts/test/run_ux_polish_fixtures.py",
-      "args": [],
-      "classification": "advisory",
-      "ciJobName": "feat-test-plan-ux-polish-fixtures"
-    },
-    {
-      "id": "retrospective-fixtures",
-      "script": "scripts/test/run_retrospective_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-retrospective-fixtures"
-    },
-    {
-      "id": "docs-link-check",
-      "script": "scripts/docs-link-check.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-docs-link-check"
-    },
-    {
-      "id": "host-fixtures",
-      "script": "scripts/test/run_host_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-host-fixtures",
-      "scenarios": [
-        "host-provider-select",
-        "host-verb-capability-flags",
-        "remote-url-autodetect",
-        "origin-literal-guard",
-        "missing-token-degrades",
-        "throttle-detect-not-fail",
-        "wait-priority-order",
-        "bounded-retry-exhaustion-halt",
-        "near-limit-preemptive-pause",
-        "serial-and-paced-requests",
-        "backoff-log-redaction",
-        "github-migration-token-only",
-        "doctor-degraded-warns",
-        "host-ratelimit-config",
-        "gh-removal-guard",
-        "gh-absent-path",
-        "check-gate-verbset",
-        "terminal-flow-verbset",
-        "stabilize-sync-verbset",
-        "prose-gh-free",
-        "install-docs-currency",
-        "noremote-local-adapter",
-        "terminal-local-evidence-gate",
-        "local-merge-human-halt",
-        "ci-watch-local-degrade",
-        "check-gate-local-verdict"
-      ]
-    },
-    {
-      "id": "git-workflow-fixtures",
-      "script": "scripts/test/run_git_workflow_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-git-workflow-fixtures",
-      "scenarios": [
-        "git-workflow-skill-present",
-        "conventions-single-source",
-        "branch-name-guard-reject",
-        "commit-msg-validator-reject",
-        "pr-template-required-fields",
-        "docs-branch-no-main-commit",
-        "docs-worktree-provision",
-        "docs-pr-to-default",
-        "brainstorm-durable-commit",
-        "durability-reconcile-prd013"
-      ]
-    },
-    {
-      "id": "planning-unit-fixtures",
-      "script": "scripts/test/run_planning_unit_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-unit-fixtures",
-      "scenarios": [
-        "schema-fields-and-type-enum",
-        "unit-folder-and-id-stability",
-        "gap-unit-in-unified-index",
-        "status-type-conditioned",
-        "cross-enum-token-rejected",
-        "status-enum-stub",
-        "validate-unknown-key",
-        "validate-tracked-private-rejected"
-      ]
-    },
-    {
-      "id": "planning-graph-fixtures",
-      "script": "scripts/test/run_planning_graph_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-graph-fixtures",
-      "scenarios": [
-        "enum-type-conditioned-tokens",
-        "derived-status-from-inflight",
-        "blocked-matches-unmet-edges",
-        "whole-graph-cycle-precommit-reject",
-        "priority-topo-stable-tiebreak",
-        "graph-module-deterministic",
-        "graph-offline-reproducible",
-        "enum-shared-module-no-drift"
-      ]
-    },
-    {
-      "id": "planning-paths-fixtures",
-      "script": "scripts/test/run_planning_paths_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-paths-fixtures",
-      "scenarios": [
-        "realpath-containment-reject-escape",
-        "no-hardcoded-prds-literal",
-        "paths-resolve-through-config"
-      ]
-    },
-    {
-      "id": "doc-format-fixtures",
-      "script": "scripts/test/run_doc_format_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-doc-format-fixtures",
-      "scenarios": [
-        "doc-format-grammar-tokenizes",
-        "call-site-map-exhaustion",
-        "tokenizer-deterministic-offline",
-        "check-fail-closed-diagnostics",
-        "write-idempotent-shape-only",
-        "consumers-tokenizer-only",
-        "unlisted-divergence-fails-closed",
-        "template-slot-fill",
-        "directive-zero-ids-fails-closed",
-        "golden-before-after-equivalence",
-        "four-consumer-id-agreement",
-        "write-roundtrip-stable",
-        "phaseA-legacy-paths-no-relocation"
-      ]
-    },
-    {
-      "id": "inflight-signal-fixtures",
-      "script": "scripts/test/run_inflight_signal_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-signal-fixtures",
-      "scenarios": [
-        "inflight-write-read-clear",
-        "cross-clone-cas-takeover-failclosed",
-        "runstart-writer-inflight-region-only",
-        "inflight-opaque-token-slot-reserved",
-        "override-logged-who-when-why-takeover",
-        "override-logged-who-when-why-handoff",
-        "override-logged-who-when-why-override",
-        "inflight-tuple-no-secret",
-        "branch-absence-alone-no-clear",
-        "inflight-ttl-autoclear-audit",
-        "clear-inflight-manual"
-      ]
-    },
-    {
-      "id": "inflight-migration-bridge-fixtures",
-      "script": "scripts/test/run_inflight_migration_bridge_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-migration-bridge-fixtures",
-      "scenarios": [
-        "migration-bridge-backfill-no-desync",
-        "migration-bridge-desync-failclosed"
-      ]
-    },
-    {
-      "id": "planning-index-fixtures",
-      "script": "scripts/test/run_planning_index_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-index-fixtures",
-      "scenarios": [
-        "single-unified-index-from-frontmatter",
-        "region-preserve-byte-for-byte",
-        "status-precedence-resolves",
-        "region-hook-rejects-cross-writer",
-        "empty-inflight-with-runstate-fails",
-        "living-doc-index-generator-wired"
-      ]
-    },
-    {
-      "id": "planning-migrate-fixtures",
-      "script": "scripts/test/run_planning_migrate_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-migrate-fixtures",
-      "scenarios": [
-        "migrate-atomic-staging",
-        "rollback-refuses-dirty-restores-config-inverse",
-        "migrate-relocates-all-verbatim",
-        "migration-one-to-one",
-        "gap-id-map-assertion",
-        "feedback-checklist-preserved",
-        "migration-lock-toctou",
-        "cross-worktree-runstate-detect",
-        "redirect-map-resume",
-        "migration-scope-docs-config-only",
-        "opmaps-gitignored-redacted"
-      ]
-    },
-    {
-      "id": "planning-cutover-fixtures",
-      "script": "scripts/test/run_planning_cutover_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-cutover-fixtures",
-      "scenarios": [
-        "cancelled-prd-supersession-edges",
-        "privacy-backfill-legacy-token",
-        "formerly-ignored-body-tracked-fails",
-        "private-index-row-provisional",
-        "legacy-projection-gapbacklog-index",
-        "no-half-migrated-merge",
-        "relief-acceptance-gates-cutover",
-        "kill-criteria-fallback-documented"
-      ]
-    },
-    {
-      "id": "planning-currency-fixtures",
-      "script": "scripts/test/run_planning_currency_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-currency-fixtures",
-      "scenarios": [
-        "copy-to-core-parity",
-        "emitter-freshness-planning-artifacts",
-        "doc-currency-layout-config-skills-readme-guide",
-        "no-regression-migrated-corpus",
-        "no-memory-writes-redaction-unchanged"
-      ]
-    },
-    {
-      "id": "authoring-guard-fixtures",
-      "script": "scripts/test/run_authoring_guard_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-authoring-guard-fixtures"
-    },
-    {
-      "id": "inflight-guards-parity-fixtures",
-      "script": "scripts/test/run_inflight_guards_parity_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-guards-parity-fixtures",
-      "scenarios": [
-        "inflight-guards-copy-to-core-parity",
-        "inflight-guards-emitter-freshness"
-      ]
-    },
-    {
       "id": "core-scripts-parity-fixtures",
       "script": "scripts/test/run_core_scripts_parity_fixtures.py",
       "args": [],
@@ -282,140 +42,39 @@
       "ciJobName": "feat-test-plan-core-scripts-parity-fixtures"
     },
     {
-      "id": "completed-unit-fixtures",
-      "script": "scripts/test/run_completed_unit_fixtures.py",
+      "id": "deliver-concurrency-fixtures",
+      "script": "scripts/test/run_deliver_concurrency_fixtures.py",
       "args": [],
       "classification": "required",
-      "ciJobName": "feat-test-plan-completed-unit-fixtures",
+      "ciJobName": "feat-test-plan-deliver-concurrency-fixtures",
       "scenarios": [
-        "amend-refuses-complete-allows-planned",
-        "complete-change-routes-to-new-unit",
-        "complete-unit-folder-mutation-rejected",
-        "complete-flip-toctou-caught",
-        "completed-hook-graceful-degrade-warns"
+        "freeze-commit-cwd-forced-primary-fails-closed",
+        "deliver-provision-does-not-mutate-concurrent-primary-checkout",
+        "slug-scoped-run-log-writes",
+        "conductor-mandatory-provisioning-contract",
+        "orphan-phase-worktree-adopt-or-teardown",
+        "no-progress-differentiated-stall-causes",
+        "stale-in-progress-success-check-gate-green",
+        "terminal-docs-currency-gate-invocation-valid",
+        "resume-reconcile-unpushed-local-merge-promotes",
+        "deliver-fail-payload-forwards-subprocess-error",
+        "finalize-resume-after-state-cleared-post-merge",
+        "terminal-pr-body-template-valid",
+        "finalize-living-docs-reconcile-hook",
+        "capability-gateref-no-shell",
+        "all-private-spec-seed-tracked-private-body",
+        "deliver-verify-fixture-tree-immutable"
       ]
     },
     {
-      "id": "inflight-doc-currency-fixtures",
-      "script": "scripts/test/run_inflight_doc_currency_fixtures.py",
+      "id": "deliver-cwd-guard-fixtures",
+      "script": "scripts/test/run_deliver_cwd_guard_fixtures.py",
       "args": [],
       "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-doc-currency-fixtures",
+      "ciJobName": "feat-test-plan-deliver-cwd-guard-fixtures",
       "scenarios": [
-        "inflight-doc-currency"
-      ]
-    },
-    {
-      "id": "worktree-config-fixtures",
-      "script": "scripts/test/run_worktree_config_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-worktree-config-fixtures",
-      "scenarios": [
-        "jsonc-url-preserved",
-        "jsonc-plain",
-        "read-config-emits-valid-json"
-      ]
-    },
-    {
-      "id": "dual-ship-fixtures",
-      "script": "scripts/test/run_dual_ship_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-dual-ship-fixtures",
-      "scenarios": [
-        "dual-ship-exactly-one-pr"
-      ]
-    },
-    {
-      "id": "regression-remediation-fixtures",
-      "script": "scripts/test/run_regression_remediation_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-regression-remediation-fixtures",
-      "scenarios": [
-        "verify-failed-routes-bounded-stabilize",
-        "blocked-budget-signature-distinct",
-        "remediation-exhaustion-consolidated-halt"
-      ]
-    },
-    {
-      "id": "parallel-merge-safety-fixtures",
-      "script": "scripts/test/run_parallel_merge_safety_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-parallel-merge-safety-fixtures",
-      "scenarios": [
-        "whole-batch-no-early-merge",
-        "deterministic-merge-order",
-        "contention-generator-output-separation",
-        "deterministic-conflict-autoregen",
-        "semantic-conflict-halt"
-      ]
-    },
-    {
-      "id": "phase-sizing-corpus-fixtures",
-      "script": "scripts/test/run_phase_sizing_corpus_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-phase-sizing-corpus-fixtures",
-      "scenarios": [
-        "phase-sizing-corpus-audit"
-      ]
-    },
-    {
-      "id": "phase-sizing-fixtures",
-      "script": "scripts/test/run_phase_sizing_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-phase-sizing-fixtures",
-      "scenarios": [
-        "phase-sizing-determinism",
-        "phase-sizing-classification-shape",
-        "phase-sizing-scope-under-declared",
-        "phase-sizing-check-frozen-failclosed",
-        "phase-sizing-schema-present",
-        "phase-sizing-split-proposal",
-        "phase-sizing-contention-integrity",
-        "phase-sizing-advisory-render",
-        "phase-sizing-frozen-advisory-reject",
-        "phase-sizing-strip-advisory",
-        "phase-sizing-preflight-accept",
-        "phase-sizing-max-phase-count-bound",
-        "phase-sizing-preflight-reject-cycle-or-max",
-        "phase-sizing-wave-sizing-report",
-        "phase-sizing-preflight-command",
-        "phase-sizing-authoring-guidance",
-        "phase-sizing-fallback-file-set",
-        "phase-sizing-fallback-sequential",
-        "phase-sizing-persist-clean",
-        "phase-sizing-persist-redaction"
-      ]
-    },
-    {
-      "id": "status-integrity-fixtures",
-      "script": "scripts/test/run_status_integrity_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-status-integrity-fixtures",
-      "scenarios": [
-        "provenance-marker-roundtrip",
-        "forged-merge-ready-green-rejected",
-        "abbreviated-head-rejected",
-        "stuck-stale-classification",
-        "recovery-command-documented"
-      ]
-    },
-    {
-      "id": "mechanical-sourcing-fixtures",
-      "script": "scripts/test/run_mechanical_sourcing_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-mechanical-sourcing-fixtures",
-      "scenarios": [
-        "no-new-parallel-state-store",
-        "conductor-delegates-wave-sh",
-        "state-transitions-via-wave-py"
+        "deliver-cwd-guard-blocks-main-living-doc",
+        "deliver-cwd-guard-corrupt-index-fail-closed"
       ]
     },
     {
@@ -432,54 +91,13 @@
       ]
     },
     {
-      "id": "planning-scheduler-fixtures",
-      "script": "scripts/test/run_planning_scheduler_fixtures.py",
+      "id": "deliver-worktree-contract-fixtures",
+      "script": "scripts/test/run_deliver_worktree_contract_fixtures.py",
       "args": [],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-scheduler-fixtures",
+      "ciJobName": "feat-test-plan-deliver-worktree-contract-fixtures",
       "scenarios": [
-        "dependency-gate-fail-closed",
-        "soft-enforce-confirm-stubbed-default",
-        "run-start-revalidate-supersede-refuse",
-        "deliver-dependency-preflight",
-        "override-logged-rate-surfaced"
-      ]
-    },
-    {
-      "id": "planning-edge-effects-fixtures",
-      "script": "scripts/test/run_planning_edge_effects_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-edge-effects-fixtures",
-      "scenarios": [
-        "supersedes-flip-manifest",
-        "absorbs-lifecycle-progression",
-        "terminal-excluded-from-eligible",
-        "superseded-manifest-render"
-      ]
-    },
-    {
-      "id": "planning-cutover-phase5-fixtures",
-      "script": "scripts/test/run_planning_cutover_phase5_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-cutover-phase5-fixtures",
-      "scenarios": [
-        "legacy-projection-frontmatter-only",
-        "gap-capture-canonical-unit",
-        "doctor-legacy-manual-edit-warning",
-        "frozen-traceability-no-regression",
-        "feedback-backlog-planningdir"
-      ]
-    },
-    {
-      "id": "planning-emitter-parity-fixtures",
-      "script": "scripts/test/run_planning_emitter_parity_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-emitter-parity-fixtures",
-      "scenarios": [
-        "emitter-parity-planning-autonomy"
+        "deliver-worktree-contract"
       ]
     },
     {
@@ -504,178 +122,77 @@
       ]
     },
     {
-      "id": "planning-postmerge-safety-fixtures",
-      "script": "scripts/test/run_planning_postmerge_safety_fixtures.py",
+      "id": "execute-orchestration-fixtures",
+      "script": "scripts/test/run_execute_orchestration_fixtures.py",
       "args": [],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-postmerge-safety-fixtures",
+      "ciJobName": "feat-test-plan-execute-orchestration-fixtures",
       "scenarios": [
-        "reconcile-complete-from-git-ancestry",
-        "reconcile-terminal-monotonic",
-        "reconcile-refuse-default-branch",
-        "reconcile-stale-local-branches",
-        "relief-corpus-postmerge-safety",
-        "completion-finalize-chokepoint",
-        "deliver-postmerge-finalize-no-reconcile"
+        "wave-merge-no-regression",
+        "execute-plan-linear-fallback",
+        "execute-plan-contention-serializes-shared-file",
+        "execute-dependency-rules-049-phase-2",
+        "execute-plan-dag-049-phase-2",
+        "execute-runtime-expansion-depth-cap",
+        "execute-tokenizer-deep-refs",
+        "execute-integrate-clean-merge",
+        "execute-integrate-conflict-partial-batch",
+        "execute-integrate-parallel-batch-serialized",
+        "execute-blast-radius-dependents",
+        "execute-sub-branch-ceiling-refuse",
+        "execute-ship-chain-gated",
+        "execute-autonomy-supervised-plan-halt",
+        "execute-resume-frontier",
+        "execute-resume-stale-sub-branch",
+        "execute-single-subtask-skip-tier"
       ]
     },
     {
-      "id": "visibility-fixtures",
-      "script": "scripts/test/run_visibility_fixtures.py",
+      "id": "hook-worktree-alignment-fixtures",
+      "script": "scripts/test/run_hook_worktree_alignment_fixtures.py",
       "args": [],
       "classification": "required",
-      "ciJobName": "feat-test-plan-visibility-fixtures",
+      "ciJobName": "feat-test-plan-hook-worktree-alignment-fixtures",
       "scenarios": [
-        "visibility-field-default-profile",
-        "content-class-default-visibility",
-        "public-remote-default-resolution",
-        "resolver-single-authority",
-        "failclosed-unknown-visibility",
-        "index-redaction-opaque-title",
-        "emission-callsite-map-bypass-fails",
-        "spec-seed-visibility-route",
-        "gitignore-visibility-no-private-bytes",
-        "decision-sot-inflight-redaction"
+        "hook-state-worktree-cwd-alignment",
+        "hook-state-dispatch-preflight-worktree-alignment",
+        "hook-state-primary-no-false-positive",
+        "hook-state-ambiguous-worktree-fail-closed"
       ]
     },
     {
-      "id": "planning-store-fixtures",
-      "script": "scripts/test/run_planning_store_fixtures.py",
+      "id": "inflight-doc-currency-fixtures",
+      "script": "scripts/test/run_inflight_doc_currency_fixtures.py",
       "args": [],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-store-fixtures",
+      "ciJobName": "feat-test-plan-inflight-doc-currency-fixtures",
       "scenarios": [
-        "store-interface-in-repo-default",
-        "store-backend-interface-parity",
-        "store-log-id-hash-backend",
-        "memory-backend-adapter-only",
-        "local-synced-path-validation",
-        "memory-chokepoint-read-write"
+        "inflight-doc-currency"
       ]
     },
     {
-      "id": "planning-materialize-fixtures",
-      "script": "scripts/test/run_planning_materialize_fixtures.py",
+      "id": "inflight-guards-parity-fixtures",
+      "script": "scripts/test/run_inflight_guards_parity_fixtures.py",
       "args": [],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-materialize-fixtures",
+      "ciJobName": "feat-test-plan-inflight-guards-parity-fixtures",
       "scenarios": [
-        "materialize-provision-backend-pinned",
-        "commit-boundary-barrier"
+        "inflight-guards-copy-to-core-parity",
+        "inflight-guards-emitter-freshness"
       ]
     },
     {
-      "id": "planning-init-fixtures",
-      "script": "scripts/test/run_planning_init_fixtures.py",
+      "id": "parallel-merge-safety-fixtures",
+      "script": "scripts/test/run_parallel_merge_safety_fixtures.py",
       "args": [],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-init-fixtures",
+      "ciJobName": "feat-test-plan-parallel-merge-safety-fixtures",
       "scenarios": [
-        "init-profile-store-seed",
-        "store-no-token-leak"
-      ]
-    },
-    {
-      "id": "planning-visibility-acceptance-fixtures",
-      "script": "scripts/test/run_planning_visibility_acceptance_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-visibility-acceptance-fixtures",
-      "scenarios": [
-        "store-emitter-parity",
-        "public-unit-no-regression",
-        "doc-impact-visibility-store"
-      ]
-    },
-    {
-      "id": "planning-related-fixtures",
-      "script": "scripts/test/run_planning_related_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-related-fixtures",
-      "scenarios": [
-        "scanner-confirm-list-not-autoabsorb",
-        "related-deterministic-rank-threshold",
-        "related-repeat-suppression",
-        "semantic-optin-flag-gated",
-        "min-recall-gap-043-044-046",
-        "private-metadata-only-proposal",
-        "frozen-pull-in-routes-amendment",
-        "prd-pull-in-proposal-confirm",
-        "tasks-rescan-amendment-proposal",
-        "absorption-edge-autonomous-choices-gated",
-        "proposal-payload-redaction"
-      ]
-    },
-    {
-      "id": "two-track-fixtures",
-      "script": "scripts/test/run_two_track_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-two-track-fixtures",
-      "scenarios": [
-        "two-track-driver-classify-route",
-        "mechanical-allowlist-derived-only",
-        "inflight-never-mechanical",
-        "planning-path-forced-substantive",
-        "frontmatter-edit-substantive-regression",
-        "mechanical-batched-auto-merge",
-        "substantive-auto-driven-pr",
-        "branch-protection-defaults-pr-path",
-        "both-region-content-hash-abort",
-        "mechanical-premerge-secret-scan"
-      ]
-    },
-    {
-      "id": "planning-autonomy-fixtures",
-      "script": "scripts/test/run_planning_autonomy_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-autonomy-fixtures",
-      "scenarios": [
-        "planning-autonomy-config-enum",
-        "maintenance-only-default-no-prompts",
-        "full-conductor-bounded-budget-halt",
-        "enqueue-handoff-no-nested-dispatch",
-        "autonomy-actions-logged-durable"
-      ]
-    },
-    {
-      "id": "planning-command-surface-fixtures",
-      "script": "scripts/test/run_planning_command_surface_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-command-surface-fixtures",
-      "scenarios": [
-        "command-surface-wired",
-        "sw-doc-reconciler-entry",
-        "sw-doc-scheduler-entry",
-        "sw-doc-posture-config",
-        "planning-graph-next-subcommand",
-        "planning-graph-posture-subcommand",
-        "planning-graph-core-parity"
-      ]
-    },
-    {
-      "id": "planning-035-emitter-parity-fixtures",
-      "script": "scripts/test/run_planning_035_emitter_parity_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-035-emitter-parity-fixtures",
-      "scenarios": [
-        "copy-to-core-parity-035",
-        "emitter-freshness-035"
-      ]
-    },
-    {
-      "id": "planning-035-doc-impact-fixtures",
-      "script": "scripts/test/run_planning_035_doc_impact_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-035-doc-impact-fixtures",
-      "scenarios": [
-        "doc-currency-035",
-        "no-regression-035"
+        "whole-batch-no-early-merge",
+        "deterministic-merge-order",
+        "contention-generator-output-separation",
+        "deterministic-conflict-autoregen",
+        "semantic-conflict-halt"
       ]
     },
     {
@@ -725,9 +242,404 @@
       ]
     },
     {
-      "id": "planning-035-gap-lifecycle-fixtures",
-      "script": "scripts/test/run_planning_035_gap_lifecycle_fixtures.py",
+      "id": "planning-035-doc-impact-fixtures",
+      "script": "scripts/test/run_planning_035_doc_impact_fixtures.py",
       "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-doc-impact-fixtures",
+      "scenarios": [
+        "doc-currency-035",
+        "no-regression-035"
+      ]
+    },
+    {
+      "id": "planning-035-emitter-parity-fixtures",
+      "script": "scripts/test/run_planning_035_emitter_parity_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-emitter-parity-fixtures",
+      "scenarios": [
+        "copy-to-core-parity-035",
+        "emitter-freshness-035"
+      ]
+    },
+    {
+      "id": "planning-command-surface-fixtures",
+      "script": "scripts/test/run_planning_command_surface_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-command-surface-fixtures",
+      "scenarios": [
+        "command-surface-wired",
+        "sw-doc-reconciler-entry",
+        "sw-doc-scheduler-entry",
+        "sw-doc-posture-config",
+        "planning-graph-next-subcommand",
+        "planning-graph-posture-subcommand",
+        "planning-graph-core-parity"
+      ]
+    },
+    {
+      "id": "planning-currency-fixtures",
+      "script": "scripts/test/run_planning_currency_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-currency-fixtures",
+      "scenarios": [
+        "copy-to-core-parity",
+        "emitter-freshness-planning-artifacts",
+        "doc-currency-layout-config-skills-readme-guide",
+        "no-regression-migrated-corpus",
+        "no-memory-writes-redaction-unchanged"
+      ]
+    },
+    {
+      "id": "planning-emitter-parity-fixtures",
+      "script": "scripts/test/run_planning_emitter_parity_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-emitter-parity-fixtures",
+      "scenarios": [
+        "emitter-parity-planning-autonomy"
+      ]
+    },
+    {
+      "id": "planning-init-fixtures",
+      "script": "scripts/test/run_planning_init_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-init-fixtures",
+      "scenarios": [
+        "init-profile-store-seed",
+        "store-no-token-leak"
+      ]
+    },
+    {
+      "id": "planning-store-fixtures",
+      "script": "scripts/test/run_planning_store_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-store-fixtures",
+      "scenarios": [
+        "store-interface-in-repo-default",
+        "store-backend-interface-parity",
+        "store-log-id-hash-backend",
+        "memory-backend-adapter-only",
+        "local-synced-path-validation",
+        "memory-chokepoint-read-write"
+      ]
+    },
+    {
+      "id": "planning-unit-fixtures",
+      "script": "scripts/test/run_planning_unit_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-unit-fixtures",
+      "scenarios": [
+        "schema-fields-and-type-enum",
+        "unit-folder-and-id-stability",
+        "gap-unit-in-unified-index",
+        "status-type-conditioned",
+        "cross-enum-token-rejected",
+        "status-enum-stub",
+        "validate-unknown-key",
+        "validate-tracked-private-rejected"
+      ]
+    },
+    {
+      "id": "planning-visibility-acceptance-fixtures",
+      "script": "scripts/test/run_planning_visibility_acceptance_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-visibility-acceptance-fixtures",
+      "scenarios": [
+        "store-emitter-parity",
+        "public-unit-no-regression",
+        "doc-impact-visibility-store"
+      ]
+    },
+    {
+      "id": "authoring-guard-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/capability",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-authoring-guard-fixtures"
+    },
+    {
+      "id": "completed-unit-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-completed-unit-fixtures",
+      "scenarios": [
+        "amend-refuses-complete-allows-planned",
+        "complete-change-routes-to-new-unit",
+        "complete-unit-folder-mutation-rejected",
+        "complete-flip-toctou-caught",
+        "completed-hook-graceful-degrade-warns"
+      ]
+    },
+    {
+      "id": "dispatch-binding-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/dispatch",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-dispatch-binding-fixtures",
+      "scenarios": [
+        "dispatch-unregistered-parent-delegated-atomic-passes",
+        "dispatch-unregistered-parent-reviewer-fails-closed"
+      ]
+    },
+    {
+      "id": "doc-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-doc-fixtures"
+    },
+    {
+      "id": "doc-format-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/doc",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-doc-format-fixtures",
+      "scenarios": [
+        "doc-format-grammar-tokenizes",
+        "call-site-map-exhaustion",
+        "tokenizer-deterministic-offline",
+        "check-fail-closed-diagnostics",
+        "write-idempotent-shape-only",
+        "consumers-tokenizer-only",
+        "unlisted-divergence-fails-closed",
+        "template-slot-fill",
+        "directive-zero-ids-fails-closed",
+        "golden-before-after-equivalence",
+        "four-consumer-id-agreement",
+        "write-roundtrip-stable",
+        "phaseA-legacy-paths-no-relocation"
+      ]
+    },
+    {
+      "id": "dual-ship-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-dual-ship-fixtures",
+      "scenarios": [
+        "dual-ship-exactly-one-pr"
+      ]
+    },
+    {
+      "id": "gap-backlog-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-gap-backlog-fixtures",
+      "scenarios": [
+        "gap-backlog-flip-schedule-force-reschedule"
+      ]
+    },
+    {
+      "id": "git-workflow-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/workflow",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-git-workflow-fixtures",
+      "scenarios": [
+        "git-workflow-skill-present",
+        "conventions-single-source",
+        "branch-name-guard-reject",
+        "commit-msg-validator-reject",
+        "pr-template-required-fields",
+        "docs-branch-no-main-commit",
+        "docs-worktree-provision",
+        "docs-pr-to-default",
+        "brainstorm-durable-commit",
+        "durability-reconcile-prd013"
+      ]
+    },
+    {
+      "id": "guardrail-rules-resolution-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/guardrails",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-guardrail-rules-resolution-fixtures",
+      "scenarios": [
+        "resolver-picks-py-adapter",
+        "resolver-prefers-py-over-stale-sh",
+        "resolver-none-for-unknown-provider",
+        "reachable-provider-no-false-unreachable-block"
+      ]
+    },
+    {
+      "id": "host-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-host-fixtures",
+      "scenarios": [
+        "host-provider-select",
+        "host-verb-capability-flags",
+        "remote-url-autodetect",
+        "origin-literal-guard",
+        "missing-token-degrades",
+        "throttle-detect-not-fail",
+        "wait-priority-order",
+        "bounded-retry-exhaustion-halt",
+        "near-limit-preemptive-pause",
+        "serial-and-paced-requests",
+        "backoff-log-redaction",
+        "github-migration-token-only",
+        "doctor-degraded-warns",
+        "host-ratelimit-config",
+        "gh-removal-guard",
+        "gh-absent-path",
+        "check-gate-verbset",
+        "terminal-flow-verbset",
+        "stabilize-sync-verbset",
+        "prose-gh-free",
+        "install-docs-currency",
+        "noremote-local-adapter",
+        "terminal-local-evidence-gate",
+        "local-merge-human-halt",
+        "ci-watch-local-degrade",
+        "check-gate-local-verdict"
+      ]
+    },
+    {
+      "id": "inflight-migration-bridge-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-inflight-migration-bridge-fixtures",
+      "scenarios": [
+        "migration-bridge-backfill-no-desync",
+        "migration-bridge-desync-failclosed"
+      ]
+    },
+    {
+      "id": "inflight-signal-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-inflight-signal-fixtures",
+      "scenarios": [
+        "inflight-write-read-clear",
+        "cross-clone-cas-takeover-failclosed",
+        "runstart-writer-inflight-region-only",
+        "inflight-opaque-token-slot-reserved",
+        "override-logged-who-when-why-takeover",
+        "override-logged-who-when-why-handoff",
+        "override-logged-who-when-why-override",
+        "inflight-tuple-no-secret",
+        "branch-absence-alone-no-clear",
+        "inflight-ttl-autoclear-audit",
+        "clear-inflight-manual"
+      ]
+    },
+    {
+      "id": "mechanical-sourcing-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/conductor",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-mechanical-sourcing-fixtures",
+      "scenarios": [
+        "no-new-parallel-state-store",
+        "conductor-delegates-wave-sh",
+        "state-transitions-via-wave-py"
+      ]
+    },
+    {
+      "id": "phase-sizing-corpus-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/phase_sizing",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-phase-sizing-corpus-fixtures",
+      "scenarios": [
+        "phase-sizing-corpus-audit"
+      ]
+    },
+    {
+      "id": "phase-sizing-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/phase_sizing",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-phase-sizing-fixtures",
+      "scenarios": [
+        "phase-sizing-determinism",
+        "phase-sizing-classification-shape",
+        "phase-sizing-scope-under-declared",
+        "phase-sizing-check-frozen-failclosed",
+        "phase-sizing-schema-present",
+        "phase-sizing-split-proposal",
+        "phase-sizing-contention-integrity",
+        "phase-sizing-advisory-render",
+        "phase-sizing-frozen-advisory-reject",
+        "phase-sizing-strip-advisory",
+        "phase-sizing-preflight-accept",
+        "phase-sizing-max-phase-count-bound",
+        "phase-sizing-preflight-reject-cycle-or-max",
+        "phase-sizing-wave-sizing-report",
+        "phase-sizing-preflight-command",
+        "phase-sizing-authoring-guidance",
+        "phase-sizing-fallback-file-set",
+        "phase-sizing-fallback-sequential",
+        "phase-sizing-persist-clean",
+        "phase-sizing-persist-redaction"
+      ]
+    },
+    {
+      "id": "planning-035-gap-lifecycle-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-035-gap-lifecycle-fixtures",
       "scenarios": [
@@ -742,50 +654,231 @@
       ]
     },
     {
-      "id": "guardrail-rules-resolution-fixtures",
-      "script": "scripts/test/run_guardrail_rules_resolution_fixtures.py",
-      "args": [],
+      "id": "planning-autonomy-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-guardrail-rules-resolution-fixtures",
+      "ciJobName": "feat-test-plan-planning-autonomy-fixtures",
       "scenarios": [
-        "resolver-picks-py-adapter",
-        "resolver-prefers-py-over-stale-sh",
-        "resolver-none-for-unknown-provider",
-        "reachable-provider-no-false-unreachable-block"
+        "planning-autonomy-config-enum",
+        "maintenance-only-default-no-prompts",
+        "full-conductor-bounded-budget-halt",
+        "enqueue-handoff-no-nested-dispatch",
+        "autonomy-actions-logged-durable"
       ]
     },
     {
-      "id": "suite-registry-fixtures",
-      "script": "scripts/test/run_suite_registry_fixtures.py",
-      "args": [],
+      "id": "planning-cutover-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-suite-registry-fixtures"
-    },
-    {
-      "id": "spec-rigor-brainstorm-profile-fixtures",
-      "script": "scripts/test/run_spec_rigor_brainstorm_profile_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-spec-rigor-brainstorm-profile-fixtures",
+      "ciJobName": "feat-test-plan-planning-cutover-fixtures",
       "scenarios": [
-        "spec-rigor-brainstorm-profile-required-sections"
+        "cancelled-prd-supersession-edges",
+        "privacy-backfill-legacy-token",
+        "formerly-ignored-body-tracked-fails",
+        "private-index-row-provisional",
+        "legacy-projection-gapbacklog-index",
+        "no-half-migrated-merge",
+        "relief-acceptance-gates-cutover",
+        "kill-criteria-fallback-documented"
       ]
     },
     {
-      "id": "stdlib-coverage-fixtures",
-      "script": "scripts/test/run_stdlib_coverage_fixtures.py",
-      "args": [],
+      "id": "planning-cutover-phase5-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-stdlib-coverage-fixtures",
+      "ciJobName": "feat-test-plan-planning-cutover-phase5-fixtures",
       "scenarios": [
-        "stdlib-coverage-mode-no-behavior-change",
-        "stdlib-coverage-report-executed-and-unexecuted-lines"
+        "legacy-projection-frontmatter-only",
+        "gap-capture-canonical-unit",
+        "doctor-legacy-manual-edit-warning",
+        "frozen-traceability-no-regression",
+        "feedback-backlog-planningdir"
+      ]
+    },
+    {
+      "id": "planning-edge-effects-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-edge-effects-fixtures",
+      "scenarios": [
+        "supersedes-flip-manifest",
+        "absorbs-lifecycle-progression",
+        "terminal-excluded-from-eligible",
+        "superseded-manifest-render"
+      ]
+    },
+    {
+      "id": "planning-graph-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-graph-fixtures",
+      "scenarios": [
+        "enum-type-conditioned-tokens",
+        "derived-status-from-inflight",
+        "blocked-matches-unmet-edges",
+        "whole-graph-cycle-precommit-reject",
+        "priority-topo-stable-tiebreak",
+        "graph-module-deterministic",
+        "graph-offline-reproducible",
+        "enum-shared-module-no-drift"
+      ]
+    },
+    {
+      "id": "planning-index-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-index-fixtures",
+      "scenarios": [
+        "single-unified-index-from-frontmatter",
+        "region-preserve-byte-for-byte",
+        "status-precedence-resolves",
+        "region-hook-rejects-cross-writer",
+        "empty-inflight-with-runstate-fails",
+        "living-doc-index-generator-wired"
+      ]
+    },
+    {
+      "id": "planning-materialize-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-materialize-fixtures",
+      "scenarios": [
+        "materialize-provision-backend-pinned",
+        "commit-boundary-barrier"
+      ]
+    },
+    {
+      "id": "planning-migrate-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-migrate-fixtures",
+      "scenarios": [
+        "migrate-atomic-staging",
+        "rollback-refuses-dirty-restores-config-inverse",
+        "migrate-relocates-all-verbatim",
+        "migration-one-to-one",
+        "gap-id-map-assertion",
+        "feedback-checklist-preserved",
+        "migration-lock-toctou",
+        "cross-worktree-runstate-detect",
+        "redirect-map-resume",
+        "migration-scope-docs-config-only",
+        "opmaps-gitignored-redacted"
+      ]
+    },
+    {
+      "id": "planning-paths-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-paths-fixtures",
+      "scenarios": [
+        "realpath-containment-reject-escape",
+        "no-hardcoded-prds-literal",
+        "paths-resolve-through-config"
+      ]
+    },
+    {
+      "id": "planning-postmerge-safety-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-postmerge-safety-fixtures",
+      "scenarios": [
+        "reconcile-complete-from-git-ancestry",
+        "reconcile-terminal-monotonic",
+        "reconcile-refuse-default-branch",
+        "reconcile-stale-local-branches",
+        "relief-corpus-postmerge-safety",
+        "completion-finalize-chokepoint",
+        "deliver-postmerge-finalize-no-reconcile"
+      ]
+    },
+    {
+      "id": "planning-related-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-related-fixtures",
+      "scenarios": [
+        "scanner-confirm-list-not-autoabsorb",
+        "related-deterministic-rank-threshold",
+        "related-repeat-suppression",
+        "semantic-optin-flag-gated",
+        "min-recall-gap-043-044-046",
+        "private-metadata-only-proposal",
+        "frozen-pull-in-routes-amendment",
+        "prd-pull-in-proposal-confirm",
+        "tasks-rescan-amendment-proposal",
+        "absorption-edge-autonomous-choices-gated",
+        "proposal-payload-redaction"
+      ]
+    },
+    {
+      "id": "planning-scheduler-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-scheduler-fixtures",
+      "scenarios": [
+        "dependency-gate-fail-closed",
+        "soft-enforce-confirm-stubbed-default",
+        "run-start-revalidate-supersede-refuse",
+        "deliver-dependency-preflight",
+        "override-logged-rate-surfaced"
       ]
     },
     {
       "id": "prd-050-ship-verification-fixtures",
-      "script": "scripts/test/run_prd_050_ship_verification_fixtures.py",
-      "args": [],
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/ship",
+        "-q"
+      ],
       "classification": "required",
       "ciJobName": "feat-test-plan-prd-050-ship-verification-fixtures",
       "scenarios": [
@@ -796,8 +889,11 @@
     },
     {
       "id": "prd-051-ship-verification-fixtures",
-      "script": "scripts/test/run_prd_051_ship_verification_fixtures.py",
-      "args": [],
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/ship",
+        "-q"
+      ],
       "classification": "required",
       "ciJobName": "feat-test-plan-prd-051-ship-verification-fixtures",
       "scenarios": [
@@ -806,14 +902,133 @@
       ]
     },
     {
-      "id": "deliver-cwd-guard-fixtures",
-      "script": "scripts/test/run_deliver_cwd_guard_fixtures.py",
+      "id": "retrospective-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-retrospective-fixtures"
+    },
+    {
+      "id": "spec-rigor-brainstorm-profile-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/spec_rigor",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-spec-rigor-brainstorm-profile-fixtures",
+      "scenarios": [
+        "spec-rigor-brainstorm-profile-required-sections"
+      ]
+    },
+    {
+      "id": "status-integrity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/deliver",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-status-integrity-fixtures",
+      "scenarios": [
+        "provenance-marker-roundtrip",
+        "forged-merge-ready-green-rejected",
+        "abbreviated-head-rejected",
+        "stuck-stale-classification",
+        "recovery-command-documented"
+      ]
+    },
+    {
+      "id": "stdlib-coverage-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/coverage",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-stdlib-coverage-fixtures",
+      "scenarios": [
+        "stdlib-coverage-mode-no-behavior-change",
+        "stdlib-coverage-report-executed-and-unexecuted-lines"
+      ]
+    },
+    {
+      "id": "suite-registry-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/meta",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-suite-registry-fixtures"
+    },
+    {
+      "id": "two-track-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-two-track-fixtures",
+      "scenarios": [
+        "two-track-driver-classify-route",
+        "mechanical-allowlist-derived-only",
+        "inflight-never-mechanical",
+        "planning-path-forced-substantive",
+        "frontmatter-edit-substantive-regression",
+        "mechanical-batched-auto-merge",
+        "substantive-auto-driven-pr",
+        "branch-protection-defaults-pr-path",
+        "both-region-content-hash-abort",
+        "mechanical-premerge-secret-scan"
+      ]
+    },
+    {
+      "id": "ux-polish-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "advisory",
+      "ciJobName": "feat-test-plan-ux-polish-fixtures"
+    },
+    {
+      "id": "visibility-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/git",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-visibility-fixtures",
+      "scenarios": [
+        "visibility-field-default-profile",
+        "content-class-default-visibility",
+        "public-remote-default-resolution",
+        "resolver-single-authority",
+        "failclosed-unknown-visibility",
+        "index-redaction-opaque-title",
+        "emission-callsite-map-bypass-fails",
+        "spec-seed-visibility-route",
+        "gitignore-visibility-no-private-bytes",
+        "decision-sot-inflight-redaction"
+      ]
+    },
+    {
+      "id": "regression-remediation-fixtures",
+      "script": "scripts/test/run_regression_remediation_fixtures.py",
       "args": [],
       "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-cwd-guard-fixtures",
+      "ciJobName": "feat-test-plan-regression-remediation-fixtures",
       "scenarios": [
-        "deliver-cwd-guard-blocks-main-living-doc",
-        "deliver-cwd-guard-corrupt-index-fail-closed"
+        "verify-failed-routes-bounded-stabilize",
+        "blocked-budget-signature-distinct",
+        "remediation-exhaustion-consolidated-halt"
       ]
     },
     {
@@ -829,118 +1044,15 @@
       ]
     },
     {
-      "id": "deliver-worktree-contract-fixtures",
-      "script": "scripts/test/run_deliver_worktree_contract_fixtures.py",
+      "id": "worktree-config-fixtures",
+      "script": "scripts/test/run_worktree_config_fixtures.py",
       "args": [],
       "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-worktree-contract-fixtures",
+      "ciJobName": "feat-test-plan-worktree-config-fixtures",
       "scenarios": [
-        "deliver-worktree-contract"
-      ]
-    },
-    {
-      "id": "gap-backlog-fixtures",
-      "script": "scripts/test/run_gap_backlog_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-gap-backlog-fixtures",
-      "scenarios": [
-        "gap-backlog-flip-schedule-force-reschedule"
-      ]
-    },
-    {
-      "id": "deliver-concurrency-fixtures",
-      "script": "scripts/test/run_deliver_concurrency_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-concurrency-fixtures",
-      "scenarios": [
-        "freeze-commit-cwd-forced-primary-fails-closed",
-        "deliver-provision-does-not-mutate-concurrent-primary-checkout",
-        "slug-scoped-run-log-writes",
-        "conductor-mandatory-provisioning-contract",
-        "orphan-phase-worktree-adopt-or-teardown",
-        "no-progress-differentiated-stall-causes",
-        "stale-in-progress-success-check-gate-green",
-        "terminal-docs-currency-gate-invocation-valid",
-        "resume-reconcile-unpushed-local-merge-promotes",
-        "deliver-fail-payload-forwards-subprocess-error",
-        "finalize-resume-after-state-cleared-post-merge",
-        "terminal-pr-body-template-valid",
-        "finalize-living-docs-reconcile-hook",
-        "capability-gateref-no-shell",
-        "all-private-spec-seed-tracked-private-body",
-        "deliver-verify-fixture-tree-immutable"
-      ]
-    },
-    {
-      "id": "hook-worktree-alignment-fixtures",
-      "script": "scripts/test/run_hook_worktree_alignment_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-hook-worktree-alignment-fixtures",
-      "scenarios": [
-        "hook-state-worktree-cwd-alignment",
-        "hook-state-dispatch-preflight-worktree-alignment",
-        "hook-state-primary-no-false-positive",
-        "hook-state-ambiguous-worktree-fail-closed"
-      ]
-    },
-    {
-      "id": "dispatch-binding-fixtures",
-      "script": "scripts/test/run_dispatch_binding_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-dispatch-binding-fixtures",
-      "scenarios": [
-        "dispatch-unregistered-parent-delegated-atomic-passes",
-        "dispatch-unregistered-parent-reviewer-fails-closed"
-      ]
-    },
-    {
-      "id": "bash-py-invocation-guard",
-      "script": "scripts/test/bash-py-invocation-guard.test",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-bash-py-invocation-guard",
-      "scenarios": [
-        "bash-py-invocation-guard"
-      ]
-    },
-    {
-      "id": "git-push-secret-scan-chokepoint",
-      "script": "scripts/test/git-push-secret-scan-chokepoint.test",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-git-push-secret-scan-chokepoint",
-      "scenarios": [
-        "git-push-secret-scan-chokepoint"
-      ]
-    },
-    {
-      "id": "execute-orchestration-fixtures",
-      "script": "scripts/test/run_execute_orchestration_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-execute-orchestration-fixtures",
-      "scenarios": [
-        "wave-merge-no-regression",
-        "execute-plan-linear-fallback",
-        "execute-plan-contention-serializes-shared-file",
-        "execute-dependency-rules-049-phase-2",
-        "execute-plan-dag-049-phase-2",
-        "execute-runtime-expansion-depth-cap",
-        "execute-tokenizer-deep-refs",
-        "execute-integrate-clean-merge",
-        "execute-integrate-conflict-partial-batch",
-        "execute-integrate-parallel-batch-serialized",
-        "execute-blast-radius-dependents",
-        "execute-sub-branch-ceiling-refuse",
-        "execute-ship-chain-gated",
-        "execute-autonomy-supervised-plan-halt",
-        "execute-resume-frontier",
-        "execute-resume-stale-sub-branch",
-        "execute-single-subtask-skip-tier"
+        "jsonc-url-preserved",
+        "jsonc-plain",
+        "read-config-emits-valid-json"
       ]
     }
   ]

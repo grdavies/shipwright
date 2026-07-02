@@ -11,6 +11,7 @@ if str(SCRIPT_DIR.parent) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR.parent))
 
 from _fixture_lib import repo_root
+from run_pytest import run_pytest
 
 
 def suites_for_verify(root: Path | None = None) -> list[str]:
@@ -30,14 +31,24 @@ def _run(path: Path) -> int:
 
 def main() -> int:
     root = repo_root(__file__)
+    import suite_registry
+
     failures = 0
-    for name in suites_for_verify(root):
+    for row in suite_registry.verify_bundle_rows(root):
+        suite_id = row["id"]
+        pytest_path = row.get("pytestPath")
+        if pytest_path:
+            print(f"==> verify/{suite_id} (pytest {pytest_path})")
+            if run_pytest([pytest_path, "-q"], root=root) != 0:
+                failures += 1
+            continue
+        name = Path(row["script"]).name
         path = SCRIPT_DIR / name
         if not path.is_file():
-            print(f"FAIL missing suite {name}")
+            print(f"FAIL missing suite {name} ({suite_id})")
             failures += 1
             continue
-        print(f"==> verify/{name}")
+        print(f"==> verify/{suite_id}")
         if _run(path) != 0:
             failures += 1
     return 1 if failures else 0
