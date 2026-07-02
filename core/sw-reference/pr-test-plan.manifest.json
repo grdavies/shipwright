@@ -849,7 +849,13 @@
         "conductor-mandatory-provisioning-contract",
         "orphan-phase-worktree-adopt-or-teardown",
         "no-progress-differentiated-stall-causes",
-        "stale-in-progress-success-check-gate-green"
+        "stale-in-progress-success-check-gate-green",
+        "terminal-docs-currency-gate-invocation-valid",
+        "resume-reconcile-unpushed-local-merge-promotes",
+        "deliver-fail-payload-forwards-subprocess-error",
+        "finalize-resume-after-state-cleared-post-merge",
+        "terminal-pr-body-template-valid",
+        "finalize-living-docs-reconcile-hook"
       ]
     },
     {

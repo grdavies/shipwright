@@ -250,6 +250,143 @@ print("ok")
 PY
 if [[ $? -eq 0 ]]; then ok stale-in-progress-success-check-gate-green-poll-helper; else bad stale-in-progress-success-check-gate-green-poll-helper; fi
 
+
+
+# terminal-docs-currency-gate-invocation-valid (R43/R44)
+CUR_FIX=$(mktemp -d)
+mkdir -p "$CUR_FIX/.cursor"
+echo '{"prd_number":"050","phases":{"1":{"status":"pending"}},"target":{"branch":"feat/fixture"}}' > "$CUR_FIX/.cursor/sw-deliver-state.json"
+echo '{"prd_number":"050"}' > "$CUR_FIX/.cursor/sw-deliver-plan.json"
+if python3 "$ROOT/scripts/docs-currency-gate.py" "$ROOT" "$CUR_FIX" "$CUR_FIX/.cursor/sw-deliver-state.json" "$CUR_FIX/.cursor/sw-deliver-plan.json" 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('verdict')=='pass', d
+"; then
+  ok terminal-docs-currency-gate-invocation-valid
+else
+  bad terminal-docs-currency-gate-invocation-valid
+fi
+if ! grep -q '"--state-root"' "$ROOT/scripts/wave_terminal.py" 2>/dev/null; then
+  ok terminal-docs-currency-gate-argv-no-flag-only
+else
+  bad terminal-docs-currency-gate-argv-no-flag-only
+fi
+rm -rf "$CUR_FIX"
+
+# resume-reconcile-unpushed-local-merge-promotes (R47/R49)
+UNPUSH_FIX=$(mktemp -d)
+(
+  cd "$UNPUSH_FIX"
+  git init -q && git config user.email t@t.com && git config user.name T
+  echo base >f.txt && git add f.txt && git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -q -m init
+  git branch -m main
+  git checkout -q -b feat/demo
+  git checkout -q -b feat/demo-phase-alpha
+  echo phase >>f.txt && git add f.txt && git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -q -m phase
+  git checkout -q feat/demo
+  git merge --no-ff feat/demo-phase-alpha -q -m merge
+  STALE=$(git rev-parse HEAD^)
+  git update-ref refs/remotes/origin/feat/demo "$STALE"
+  mkdir -p .cursor
+  echo '{"target":{"branch":"feat/demo"},"phases":{"1":{"id":"1","slug":"alpha","branch":"feat/demo-phase-alpha","status":"pending"}}}' > .cursor/sw-deliver-state.json
+  python3 "$ROOT/scripts/wave_terminal.py" "$UNPUSH_FIX" resume reconcile --no-fetch | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert 'alpha' in d.get('promoted',[]), d
+assert d.get('unpushedLocalMerge'), d
+"
+  python3 - <<'PYIN' "$UNPUSH_FIX"
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]).parent.parent / 'scripts') if False else '')
+import sys
+sys.path.insert(0, str(Path('$ROOT') / 'scripts'))
+from pathlib import Path
+from wave_state import load_deliver_state
+s = load_deliver_state(Path(sys.argv[1]), target='feat/demo')
+assert s['phases']['1']['status']=='green-merged', s
+assert s['phases']['1'].get('cause')=='resume:unpushed-local-merge'
+PYIN
+) && ok resume-reconcile-unpushed-local-merge-promotes || bad resume-reconcile-unpushed-local-merge-promotes
+rm -rf "$UNPUSH_FIX"
+
+# deliver-fail-payload-forwards-subprocess-error (R55/R57)
+python3 - <<'PYIN' "$ROOT"
+import json, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from wave_errors import fail_from_payload
+captured = {}
+def fail_fn(msg, exit_code=2, **extra):
+    captured['msg'] = msg
+    captured['extra'] = extra
+    captured['ec'] = exit_code
+    raise SystemExit(exit_code)
+try:
+    fail_from_payload(fail_fn, {"error": "real cause", "halt": "blocked"}, "default", 5)
+except SystemExit as exc:
+    assert exc.code == 5
+assert captured.get('msg') == 'real cause', captured
+assert captured.get('extra', {}).get('halt') == 'blocked', captured
+print('ok')
+PYIN
+if [[ $? -eq 0 ]]; then ok deliver-fail-payload-forwards-subprocess-error; else bad deliver-fail-payload-forwards-subprocess-error; fi
+
+# finalize-resume-after-state-cleared-post-merge (R13/R14)
+FIN_FIX=$(mktemp -d)
+(
+  cd "$FIN_FIX"
+  git init -q && git config user.email t@t.com && git config user.name T
+  echo base >f.txt && git add f.txt && git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -q -m init
+  git branch -m main
+  git checkout -q -b feat/demo
+  echo feature >>f.txt && git add f.txt && git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -q -m feature
+  git checkout -q main
+  git merge --no-ff feat/demo -q -m merge
+  mkdir -p .cursor
+  echo '{"migrated":true,"target":"feat/demo","scopedPath":".cursor/sw-deliver-state.demo.json"}' > .cursor/sw-deliver-state.json
+  SW_SKIP_DOCS_CURRENCY=1 python3 "$ROOT/scripts/wave_compound.py" "$FIN_FIX" completion finalize-if-merged | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('verdict')=='pass', d
+assert d.get('completion',{}).get('status')=='merged-complete', d
+"
+) && ok finalize-resume-after-state-cleared-post-merge || bad finalize-resume-after-state-cleared-post-merge
+rm -rf "$FIN_FIX"
+
+# terminal-pr-body-template-valid (R16)
+python3 - <<'PYIN' "$ROOT"
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from wave_terminal import terminal_pr_body
+state = {
+    'target': {'slug': 'demo', 'branch': 'feat/demo'},
+    'prd_number': '050',
+    'mergedPhases': [{'phaseSlug': 'alpha', 'pr': 7}],
+}
+body = terminal_pr_body(Path(sys.argv[1]), state)
+assert '<!-- required:summary -->' in body
+assert '<!-- required:decision-log -->' in body
+import subprocess, json
+proc = subprocess.run([
+    sys.executable, str(Path(sys.argv[1])/'scripts/git_template_lib.py'),
+    'validate', 'pr-body', '--body', body,
+], capture_output=True, text=True)
+assert proc.returncode == 0, proc.stdout + proc.stderr
+print('ok')
+PYIN
+if [[ $? -eq 0 ]]; then ok terminal-pr-body-template-valid; else bad terminal-pr-body-template-valid; fi
+
+# finalize-living-docs-reconcile-hook (R15)
+if grep -q 'invoke_living_docs_reconcile_finalize' "$ROOT/scripts/wave_compound.py" && \
+   grep -q 'living-docs reconcile' "$ROOT/scripts/wave_compound.py" || \
+   grep -q 'reconcile", "--commit' "$ROOT/scripts/wave_compound.py"; then
+  ok finalize-living-docs-reconcile-hook
+else
+  bad finalize-living-docs-reconcile-hook
+fi
+
 # conductor-mandatory-provisioning-contract
 CONDUCTOR="$ROOT/core/skills/conductor/SKILL.md"
 if grep -q 'repo root with state synced' "$CONDUCTOR" 2>/dev/null; then
