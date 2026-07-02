@@ -61,7 +61,7 @@
 | gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi | gap | Gap/doc-feedback capture has two unreconciled file paths and bypasses the planning_store backend interface | open | public |  |
 | gap-004-dispatch-binding-preflight-broken-bash-invokes-p | gap | Dispatch-binding preflight broken: bash invokes .py scripts, and interactive parent models are not in models.tiers | scheduled | public |  |
 | gap-005-freeze-commit-spec-seed-cwd-dependent-repo-root- | gap | freeze-commit/spec-seed cwd-dependent repo-root resolution can target the shared primary checkout (extends GAP-077/078 to /sw-doc and /sw-amend) | open | public |  |
-| gap-006-prd-033-marked-complete-but-a3-r37-r39-r40-r42-r | gap | PRD 033 marked complete but A3 R37/R39/R40/R42/R43 (operator worktree contract, in-flight cwd guard) are unimplemented | open | public |  |
+| gap-006-prd-033-marked-complete-but-a3-r37-r39-r40-r42-r | gap | PRD 033 marked complete but A3 R37/R39/R40/R42/R43 (operator worktree contract, in-flight cwd guard) are unimplemented | resolved | public |  |
 | gap-007-finalize-completion-omits-terminal-living-docs-r | gap | finalize-completion omits terminal living-docs reconcile so INDEX stays in-progress | open | public |  |
 | gap-008-inflight-signal-run-complete-commits-index-on-ma | gap | inflight_signal run-complete commits INDEX on main during finalize-completion | open | public |  |
 | gap-009-failed-phase-provision-leaves-orphan-worktree-wi | gap | Failed phase provision leaves orphan worktree without phaseWorktrees state | open | public |  |
