@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PRD 049 R5 — end-to-end operator worktree contract fixture."""
+"""PRD 049 R5 — end-to-end operator worktree contract fixtures."""
 from __future__ import annotations
 
 import os
@@ -37,68 +37,192 @@ _SOURCE = r"""
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export PYTHONPATH="$ROOT/scripts:$PYTHONPATH"
-LIFE="$ROOT/scripts/wave_lifecycle.py"
-LOOP="$ROOT/scripts/wave.py"
+LOOP_PY="$ROOT/scripts/wave_deliver_loop.py"
+LCY="$ROOT/scripts/wave_lifecycle.py"
 FAIL=0
 ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
-cd "$TMP"
-git init -q
-git config user.email test@test.com
-git config user.name Test
-git commit --allow-empty -q -m init
-git branch -M main
-git checkout -q -b feat/contract-fixture
-mkdir -p .cursor docs/prds/049-fixture
-cat > .cursor/workflow.config.json <<'JSON'
-{"defaultBaseBranch":"main","planningDir":"docs/prds"}
+
+TARGET="feat/demo-049"
+SLUG="demo-049"
+STATE_REL=".cursor/sw-deliver-state.${SLUG}.json"
+MAIN_TREE_BEFORE=""
+
+setup_repo() {
+  cd "$TMP"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  echo "tracked-on-main" >README.md
+  git add README.md
+  git commit -q -m "init on main"
+  git branch -M main
+  MAIN_TREE_BEFORE="$(git rev-parse HEAD^{tree})"
+
+  git checkout -q -b "$TARGET"
+  mkdir -p docs/prds
+  printf '%s\n' '| # | slug | prd | tasks | status |' '|---|------|-----|-------|--------|' '| 049 | operator-worktree-contract | link | link | not-started |' >docs/prds/INDEX.md
+  git add docs/prds/INDEX.md
+  git commit -q -m "feature seed"
+
+  git checkout -q main
+
+  ln -s "$ROOT/scripts" scripts
+  ln -s "$ROOT/core" core
+
+  mkdir -p .cursor docs/prds
+  printf '%s\n' '| # | slug | prd | tasks | status |' '|---|------|-----|-------|--------|' '| 049 | operator-worktree-contract | link | link | not-started |' >docs/prds/INDEX.md
+
+  cat >.cursor/workflow.config.json <<'JSON'
+{"defaultBaseBranch":"main","review":{"provider":"none"},"checks":{"treatNeutralAsPass":true}}
 JSON
-cat > .cursor/sw-deliver-plan.json <<'JSON'
-{"mode":"phase","target":{"type":"feat","slug":"contract-fixture","branch":"feat/contract-fixture"},"items":[{"id":"1","slug":"alpha","title":"A","branch":"feat/contract-fixture-phase-alpha"}],"waves":[["1"]]}
+
+  cat >.cursor/sw-deliver-plan.json <<JSON
+{
+  "verdict": "pass",
+  "mode": "phase",
+  "prd_number": "049",
+  "source_task_list": "docs/prds/049-operator-worktree-contract-and-cwd-guard/tasks-049.md",
+  "target": {"type": "feat", "slug": "${SLUG}", "branch": "${TARGET}"},
+  "items": [
+    {"id": "1", "slug": "alpha", "title": "Alpha", "branch": "${TARGET}-phase-alpha"}
+  ],
+  "edges": [],
+  "waves": [["1"]]
+}
 JSON
-git add -A && git commit -q -m seed
 
-# Primary checkout returns to main (operator shell)
-git checkout -q main
+  NOW_TS=$(python3 -c "from datetime import datetime,timezone; print(datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))")
 
-# Orchestrator provision + one deliver-loop mechanical tick from repo root
-python3 "$LIFE" "$TMP" orchestrator provision --target feat/contract-fixture >/dev/null
-STATE_FILE=$(ls "$TMP/.cursor"/sw-deliver-state.*.json 2>/dev/null | head -1)
-if [[ -n "$STATE_FILE" && -f "$STATE_FILE" ]]; then
-  ok "deliver-worktree-contract-repo-root-state-updated"
-else
-  bad "deliver-worktree-contract-repo-root-state-updated"
-fi
+  cat >"$STATE_REL" <<JSON
+{
+  "verdict": "running",
+  "prd_number": "049",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "target": {"type": "feat", "slug": "${SLUG}", "branch": "${TARGET}"},
+  "source_task_list": "docs/prds/049-operator-worktree-contract-and-cwd-guard/tasks-049.md",
+  "currentWave": 1,
+  "nextAction": "orchestrator-provision",
+  "driverHeartbeatAt": "$NOW_TS",
+  "specSeed": {"skipped": true},
+  "baseCapture": {"skipped": true},
+  "twoTierLifecycle": {"wave": "pending", "phases": {}},
+  "phases": {
+    "1": {"id": "1", "slug": "alpha", "status": "pending", "branch": "${TARGET}-phase-alpha"}
+  }
+}
+JSON
 
-BR=$(git -C "$TMP" rev-parse --abbrev-ref HEAD)
-if [[ "$BR" == "main" ]]; then
-  ok "deliver-worktree-contract-primary-on-default-base"
-else
-  bad "deliver-worktree-contract-primary-on-default-base (branch=$BR)"
-fi
+  mkdir -p .cursor/sw-deliver-runs
+  echo '{"updatedAt":"2026-01-01T00:00:00Z","runs":[{"slug":"'"${SLUG}"'","verdict":"running","statePath":"'"${STATE_REL}"'"}]}' \
+    >.cursor/sw-deliver-runs/index.json
+}
 
-if git -C "$TMP" diff --quiet main -- . ':!.cursor' 2>/dev/null || [[ -z $(git -C "$TMP" diff --name-only main -- . ':!.cursor' 2>/dev/null) ]]; then
-  ok "deliver-worktree-contract-main-tracked-clean"
-else
-  bad "deliver-worktree-contract-main-tracked-clean"
-  git -C "$TMP" diff --name-only main -- . ':!.cursor' || true
-fi
+assert_primary_on_main() {
+  local branch
+  branch="$(git -C "$TMP" branch --show-current)"
+  if [[ "$branch" == "main" ]]; then
+    ok "deliver-worktree-contract: primary checkout on defaultBaseBranch"
+  else
+    bad "deliver-worktree-contract: primary checkout on defaultBaseBranch (branch=$branch)"
+  fi
+}
 
-# Negative: guard refuses guarded surface from primary during verdict:running
-mkdir -p "$TMP/.cursor/sw-deliver-runs"
-echo '{"updatedAt":"2026-01-01T00:00:00Z","verdict":"running","target":{"branch":"feat/contract-fixture"}}' > "$TMP/.cursor/sw-deliver-state.contract-fixture.json"
-echo '{"updatedAt":"2026-01-01T00:00:00Z","runs":[{"slug":"contract-fixture","verdict":"running","statePath":".cursor/sw-deliver-state.contract-fixture.json"}]}' > "$TMP/.cursor/sw-deliver-runs/index.json"
-OUT=$(cd "$TMP" && python3 "$ROOT/scripts/reconcile.py" reconcile 2>&1) || EC=$?
-EC=${EC:-0}
-if [[ "$EC" -ne 0 ]] && echo "$OUT" | grep -qi remediation; then
-  ok "deliver-worktree-contract-guard-refusal-negative"
-else
-  bad "deliver-worktree-contract-guard-refusal-negative (ec=$EC)"
+assert_main_tracked_clean() {
+  local tree_now tracked_dirty
+  tree_now="$(git -C "$TMP" rev-parse HEAD^{tree})"
+  if [[ "$tree_now" == "$MAIN_TREE_BEFORE" ]]; then
+    ok "deliver-worktree-contract: no tracked files on main modified"
+  else
+    bad "deliver-worktree-contract: no tracked files on main modified"
+    git -C "$TMP" diff "$MAIN_TREE_BEFORE" HEAD --stat || true
+  fi
+  tracked_dirty="$(git -C "$TMP" status --porcelain --untracked-files=no)"
+  if [[ -z "$tracked_dirty" ]]; then
+    ok "deliver-worktree-contract: primary checkout tracked tree clean"
+  else
+    bad "deliver-worktree-contract: primary checkout tracked tree clean"
+    echo "$tracked_dirty"
+  fi
+}
+
+assert_repo_root_state_updated() {
+  local before after
+  before="2026-01-01T00:00:00Z"
+  after="$(python3 -c "
+import json, sys
+from pathlib import Path
+p = Path(sys.argv[1])
+data = json.loads(p.read_text())
+print(data.get('updatedAt',''))
+" "$TMP/$STATE_REL")"
+  if [[ -n "$after" && "$after" != "$before" ]]; then
+    ok "deliver-worktree-contract: repo-root scoped state updated"
+  else
+    bad "deliver-worktree-contract: repo-root scoped state updated (updatedAt=$after)"
+  fi
+  if python3 -c "
+import json, sys
+from pathlib import Path
+data = json.loads(Path(sys.argv[1]).read_text())
+assert data.get('orchestratorWorktree', {}).get('path')
+assert data.get('verdict') == 'running'
+" "$TMP/$STATE_REL"; then
+    ok "deliver-worktree-contract: scoped state carries orchestrator + running verdict"
+  else
+    bad "deliver-worktree-contract: scoped state carries orchestrator + running verdict"
+  fi
+}
+
+assert_guard_refusal() {
+  local out ec
+  set +e
+  out=$(cd "$TMP" && python3 "$ROOT/scripts/wave_living_docs.py" "$TMP" reconcile --commit 2>&1)
+  ec=$?
+  set -e
+  if [[ "$ec" -ne 0 ]] && echo "$out" | grep -qi remediation; then
+    ok "deliver-worktree-contract: R3 guard refuses primary checkout during in-flight run"
+  else
+    bad "deliver-worktree-contract: R3 guard refuses primary checkout during in-flight run (ec=$ec)"
+    echo "$out"
+  fi
+}
+
+setup_repo
+
+if ! OUT=$(python3 "$LCY" "$TMP" orchestrator provision --plan .cursor/sw-deliver-plan.json 2>/dev/null); then
+  bad "deliver-worktree-contract: orchestrator provision"
   echo "$OUT"
+else
+  echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('action')=='orchestrator-provision'
+assert d.get('path')
+" && ok "deliver-worktree-contract: orchestrator provision" || bad "deliver-worktree-contract: orchestrator provision payload"
 fi
+
+assert_primary_on_main
+
+if ! OUT=$(python3 "$LOOP_PY" "$TMP" deliver-loop --max-steps 1 2>/dev/null); then
+  bad "deliver-worktree-contract: deliver-loop tick"
+  echo "$OUT"
+else
+  echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('action')=='deliver-loop'
+assert d.get('stepsTaken')
+" && ok "deliver-worktree-contract: deliver-loop tick" || bad "deliver-worktree-contract: deliver-loop tick payload"
+fi
+
+assert_repo_root_state_updated
+assert_primary_on_main
+assert_main_tracked_clean
+assert_guard_refusal
 
 if [[ "$FAIL" -eq 0 ]]; then
   echo "deliver-worktree-contract fixtures: all passed"
