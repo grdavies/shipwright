@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PRD 050 Thread A — primary-checkout guard and provisioning fixtures."""
+"""PRD 050 deliver-concurrency fixtures — Thread A + Thread B (R7–R12)."""
 from __future__ import annotations
 
 import os
@@ -127,6 +127,128 @@ assert p.name == 'run.runlog.log', p
 print('ok')
 PY
 if [[ $? -eq 0 ]]; then ok slug-scoped-run-log-writes; else bad slug-scoped-run-log-writes; fi
+
+
+# orphan-phase-worktree-adopt-or-teardown (R7/R8)
+REPO4=$(setup_repo orphan)
+TARGET=feat/orphan
+git -C "$REPO4" branch -q feat/orphan-phase-alpha 2>/dev/null || git -C "$REPO4" branch feat/orphan-phase-alpha
+WT4="$REPO4/.sw-worktrees/orphan-phase-demo-phase-alpha"
+mkdir -p "$(dirname "$WT4")"
+git -C "$REPO4" worktree add -q "$WT4" feat/orphan-phase-alpha
+mkdir -p "$REPO4/.cursor"
+cat >"$REPO4/.cursor/sw-deliver-plan.json" <<JSON
+{"mode":"phase","target":{"branch":"$TARGET"},"source_task_list":"docs/prds/050-fixture/tasks-050-fixture.md","items":[{"id":"1","slug":"demo-phase-alpha","branch":"feat/orphan-phase-alpha"}],"waves":[["1"]],"edges":[]}
+JSON
+cat >"$REPO4/.cursor/sw-deliver-state.orphan.json" <<JSON
+{"verdict":"running","target":{"branch":"$TARGET"},"phases":{"1":{"id":"1","slug":"demo-phase-alpha","status":"pending","branch":"feat/orphan-phase-alpha"}},"nextAction":"provision-phase"}
+JSON
+if OUT=$(python3 "$ROOT/scripts/wave_lifecycle.py" "$REPO4" phase provision --phase-id 1 --plan .cursor/sw-deliver-plan.json --base main 2>&1) && \
+   echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('adopted') is True; assert d.get('action')=='phase-provision'" && \
+   python3 - <<'PY' "$REPO4"
+import json, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+from wave_state import load_deliver_state
+state = load_deliver_state(root, target='feat/orphan')
+wt = (state.get('phaseWorktrees') or {}).get('1') or {}
+assert wt.get('path'), wt
+PY
+then
+  ok orphan-phase-worktree-adopt-or-teardown
+else
+  bad orphan-phase-worktree-adopt-or-teardown
+  echo "$OUT"
+fi
+
+# dispatch-ship refuses without phaseWorktrees (R8)
+python3 - <<'PY' "$ROOT"
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from wave_deliver_loop import dispatch_or_phase_plan_entry
+state = {"phases": {"1": {"slug": "demo-phase-alpha", "status": "pending"}}, "phaseWorktrees": {}}
+plan = {"target": {"branch": "feat/orphan"}, "items": [{"id": "1", "slug": "demo-phase-alpha", "branch": "feat/orphan-phase-alpha"}]}
+step = dispatch_or_phase_plan_entry(state, plan, "1")
+assert step.get("action") == "provision-phase", step
+print("ok")
+PY
+if [[ $? -eq 0 ]]; then ok orphan-phase-worktree-adopt-or-teardown-dispatch-guard; else bad orphan-phase-worktree-adopt-or-teardown-dispatch-guard; fi
+
+# no-progress-differentiated-stall-causes (R9/R10)
+python3 - <<'PY' "$ROOT"
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from status_integrity import classify_deliver_stall_cause, is_differentiated_stall, stall_progress_key
+root = Path(sys.argv[1])
+state = {"phases": {"1": {"status": "in-flight", "backgroundDispatchedAt": "2026-01-01T00:00:00Z"}}, "mergeQueue": []}
+stall = classify_deliver_stall_cause(root, state, "await-in-flight")
+assert stall == "external-ci-wait", stall
+assert is_differentiated_stall(stall)
+state2 = dict(state)
+state2["mergeQueue"] = [{"phaseSlug": "a"}]
+stall2 = classify_deliver_stall_cause(root, state2, "merge-run-next")
+assert stall2 == "merge-queue-wait", stall2
+k1 = stall_progress_key("sig", "await-in-flight", "external-ci-wait")
+k2 = stall_progress_key("sig", "await-in-flight", "merge-queue-wait")
+assert k1 != k2
+print("ok")
+PY
+if [[ $? -eq 0 ]]; then ok no-progress-differentiated-stall-causes; else bad no-progress-differentiated-stall-causes; fi
+
+# stale-in-progress-success-check-gate-green (R11/R12)
+python3 - <<'PY' "$ROOT"
+import json, sys
+from pathlib import Path
+from datetime import datetime, timezone
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from check_gate_lib import reconcile_stale_in_progress_checks, classify_checks
+fixture = Path(sys.argv[1]) / 'scripts/test/fixtures/deliver-concurrency/stale-in-progress-success-checks.json'
+checks = json.loads(fixture.read_text())
+reconciled, settled = reconcile_stale_in_progress_checks(checks, ttl_seconds=60, now=datetime.now(timezone.utc))
+assert settled, settled
+classified = classify_checks(reconciled, neutral_pass=True, allowlist=[])
+pending = [c['name'] for c in classified if c['class'] == 'pending']
+assert not pending, pending
+print("ok")
+PY
+if [[ $? -eq 0 ]]; then ok stale-in-progress-success-check-gate-green; else bad stale-in-progress-success-check-gate-green; fi
+
+# phase-mode ship must not use gh checks --watch (R12)
+if python3 - <<'PY' "$ROOT"
+import re, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+bad = []
+pat = re.compile(r"checks\s+--watch|pr checks.*--watch")
+for rel in ("scripts/watch_ci_lib.py", "scripts/wave_deliver_loop.py"):
+    path = root / rel
+    for i, line in enumerate(path.read_text().splitlines(), 1):
+        code = line.split("#", 1)[0]
+        if pat.search(code):
+            bad.append(f"{rel}:{i}")
+if bad:
+    print("\n".join(bad))
+    raise SystemExit(1)
+print("ok")
+PY
+then
+  ok stale-in-progress-success-check-gate-green-phase-watch-ban
+else
+  bad stale-in-progress-success-check-gate-green-phase-watch-ban
+fi
+python3 - <<'PY' "$ROOT"
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from watch_ci_lib import poll_check_gate_settled
+assert callable(poll_check_gate_settled)
+from wave_deliver_loop import poll_phase_ship_gate
+assert callable(poll_phase_ship_gate)
+print("ok")
+PY
+if [[ $? -eq 0 ]]; then ok stale-in-progress-success-check-gate-green-poll-helper; else bad stale-in-progress-success-check-gate-green-poll-helper; fi
 
 # conductor-mandatory-provisioning-contract
 CONDUCTOR="$ROOT/core/skills/conductor/SKILL.md"
