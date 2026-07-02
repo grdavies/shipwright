@@ -252,7 +252,7 @@ def filter_public_docs(root: Path, paths: list[Path]) -> tuple[list[Path], list[
     return public, skipped
 
 
-def assert_no_tracked_private_bodies(root: Path, paths: list[Path]) -> None:
+def assert_no_tracked_private_bodies(root: Path, paths: list[Path], *, feature_branch: str | None = None) -> None:
     tracked_private: list[str] = []
     for p in paths:
         rel = str(p.relative_to(root))
@@ -266,7 +266,11 @@ def assert_no_tracked_private_bodies(root: Path, paths: list[Path]) -> None:
             "tracked private/memory body path(s) — remove from index or set visibility public",
             exit_code=20,
             halt="tracked-private-body",
-            remediation="git rm --cached <path> or change visibility to public",
+            remediation=(
+                f"add visibility: public on feature branch {feature_branch!r}, not on main"
+                if feature_branch
+                else "git rm --cached <path> or change visibility to public on the feature branch"
+            ),
             paths=tracked_private,
         )
 
@@ -420,7 +424,7 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
     enforce_guard(top, branch)
 
     candidate_files = docs_paths(docs_dir, top, single=single)
-    assert_no_tracked_private_bodies(top, candidate_files)
+    assert_no_tracked_private_bodies(top, candidate_files, feature_branch=branch)
     public_files, skipped_private = filter_public_docs(top, candidate_files)
     doc_files = tracked_paths(top, public_files)
     doc_rels = rel_paths(top, doc_files)
@@ -489,7 +493,7 @@ def cmd_post_freeze_durability(root: Path, args: list[str]) -> None:
         fail(f"refused: post-freeze durability never targets default branch {default!r}")
     _branch, slug, docs_dir = resolve_target_branch(top, task_list)
     candidate_files = docs_paths(docs_dir, top, single=None)
-    assert_no_tracked_private_bodies(top, candidate_files)
+    assert_no_tracked_private_bodies(top, candidate_files, feature_branch=integration)
     public_files, skipped_private = filter_public_docs(top, candidate_files)
     doc_files = tracked_paths(top, public_files)
     doc_rels = rel_paths(top, doc_files)

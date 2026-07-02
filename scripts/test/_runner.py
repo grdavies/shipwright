@@ -79,6 +79,28 @@ def discover_suites(root: Path) -> list[Path]:
     return py + sh
 
 
+
+
+def _truthy_env(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
+
+
+def _suite_env(root: Path, base_env: dict[str, str] | None = None) -> dict[str, str]:
+    env = (base_env or os.environ).copy()
+    env["ROOT"] = str(root)
+    env["SW_REPO_ROOT"] = str(root)
+    env["PYTHONPATH"] = os.pathsep.join(
+        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
+    )
+    if _truthy_env("SW_DELIVER_VERIFY"):
+        from _fixture_lib import prepare_ephemeral_fixtures
+
+        ephemeral = prepare_ephemeral_fixtures(root)
+        env["SW_FIXTURES_EPHEMERAL_ROOT"] = str(ephemeral / "fixtures")
+        env["_SW_FIXTURES_EPHEMERAL_DIR"] = str(ephemeral)
+    return env
+
+
 def run_test_file(
     path: Path,
     *,
@@ -87,12 +109,7 @@ def run_test_file(
     coverdir: Path | None = None,
 ) -> int:
     root = root or repo_root(path)
-    env = os.environ.copy()
-    env["ROOT"] = str(root)
-    env["SW_REPO_ROOT"] = str(root)
-    env["PYTHONPATH"] = os.pathsep.join(
-        p for p in (str(root / "scripts"), env.get("PYTHONPATH", "")) if p
-    )
+    env = _suite_env(root)
     use_coverage = coverage_enabled(flag=coverage)
     active_coverdir = coverdir or (resolve_coverdir(root) if use_coverage else None)
 
@@ -152,12 +169,7 @@ def run_suite_module(
     active_coverdir = coverdir or (resolve_coverdir(root) if use_coverage else None)
 
     if use_coverage and active_coverdir is not None and path.suffix == ".py":
-        env = os.environ.copy()
-        env["ROOT"] = str(root)
-        env["SW_REPO_ROOT"] = str(root)
-        env["PYTHONPATH"] = os.pathsep.join(
-            p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
-        )
+        env = _suite_env(root)
         return run_traced_subprocess(path, root=root, coverdir=active_coverdir, env=env)
 
     if path.suffix == ".py":
@@ -172,8 +184,7 @@ def run_suite_module(
             return invoke_suite_main(mod)
         print(f"FAIL suite {path} missing main()", file=sys.stderr)
         return 1
-    env = os.environ.copy()
-    env["ROOT"] = str(root)
+    env = _suite_env(root)
     completed = subprocess.run(["/bin/bash", str(path)], cwd=str(root), env=env, shell=False)
     return completed.returncode
 

@@ -387,6 +387,172 @@ else
   bad finalize-living-docs-reconcile-hook
 fi
 
+
+
+# capability-gateref-no-shell (R17)
+if python3 "$ROOT/scripts/capability-gateref-guard.py" 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('verdict')=='pass', d
+"; then
+  ok capability-gateref-no-shell
+else
+  bad capability-gateref-no-shell
+fi
+
+# capability-gateref-no-shell detects regression
+REG_FIX="$TMP/gateref-regress"
+mkdir -p "$REG_FIX/scripts/test/fixtures/capability-select/bad"
+echo '{"entries":[{"capability":{"metadata":{"gateRef":"check-gate.sh"}}}]}' > "$REG_FIX/scripts/test/fixtures/capability-select/bad/x.json"
+if python3 - <<'PYREG' "$ROOT" "$REG_FIX"
+import json, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from capability_trust import check_gateref_no_shell
+# Also need canonical .py in fake repo for detection
+scripts = Path(sys.argv[2]) / 'scripts'
+scripts.mkdir(parents=True, exist_ok=True)
+(scripts / 'check-gate.py').write_text('# stub')
+bad = check_gateref_no_shell(Path(sys.argv[2]))
+assert bad.get('verdict')=='fail' and bad.get('violations'), bad
+print('ok')
+PYREG
+then
+  ok capability-gateref-no-shell-detects-sh
+else
+  bad capability-gateref-no-shell-detects-sh
+fi
+
+# all-private-spec-seed-tracked-private-body (R18/R19)
+VIS_FIX=$(mktemp -d)
+(
+  cd "$VIS_FIX"
+  git init -q && git config user.email t@t.com && git config user.name T
+  echo base >README.md && git add README.md && git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -q -m init
+  git branch -m main
+  git checkout -q -b feat/vis-fixture
+  mkdir -p .cursor docs/prds/099-vis-fixture
+  echo '{"planning":{"visibilityProfile":"all-private"}}' > .cursor/workflow.config.json
+  cat > docs/prds/099-vis-fixture/tasks-099-vis-fixture.md <<'EOF'
+---
+prd: docs/prds/099-vis-fixture/099-prd-vis-fixture.md
+frozen: true
+topic: vis-fixture
+---
+# Tasks
+### 1. One
+EOF
+  git add docs .cursor
+  git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -q -m docs
+  set +e
+  OUT=$(python3 "$ROOT/scripts/planning_visibility.py" --root "$VIS_FIX" check-freeze-visibility docs/prds/099-vis-fixture/tasks-099-vis-fixture.md 2>&1)
+  EC=$?
+  set -e
+  if [[ "$EC" -eq 20 ]]; then
+    ok all-private-spec-seed-tracked-private-body-freeze-halt
+  else
+    bad all-private-spec-seed-tracked-private-body-freeze-halt
+    echo "$OUT"
+  fi
+  sed -i '' '2a\
+visibility: public
+' docs/prds/099-vis-fixture/tasks-099-vis-fixture.md 2>/dev/null || sed -i '2a visibility: public' docs/prds/099-vis-fixture/tasks-099-vis-fixture.md
+  git add docs/prds/099-vis-fixture/tasks-099-vis-fixture.md
+  git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -q -m 'add visibility public'
+  if python3 "$ROOT/scripts/planning_visibility.py" --root "$VIS_FIX" check-freeze-visibility docs/prds/099-vis-fixture/tasks-099-vis-fixture.md 2>/dev/null | python3 -c "
+import json,sys
+assert json.load(sys.stdin).get('verdict')=='pass'
+"; then
+    ok all-private-spec-seed-tracked-private-body-freeze-pass
+  else
+    bad all-private-spec-seed-tracked-private-body-freeze-pass
+  fi
+  if python3 - <<'PYVIS' "$ROOT" "$VIS_FIX"
+import json, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+import wave_spec_seed as wss
+root = Path(sys.argv[2])
+artifact = root / 'docs/prds/099-vis-fixture/tasks-099-vis-fixture.md'
+# strip visibility frontmatter for private resolution
+lines = artifact.read_text().splitlines()
+artifact.write_text('\n'.join([ln for ln in lines if not ln.strip().startswith('visibility:')]) + '\n')
+try:
+    wss.assert_no_tracked_private_bodies(root, [artifact], feature_branch='feat/vis-fixture')
+    raise SystemExit(1)
+except SystemExit as exc:
+    if exc.code != 20:
+        raise
+print('ok')
+PYVIS
+  then
+    ok all-private-spec-seed-tracked-private-body-remediation
+  else
+    bad all-private-spec-seed-tracked-private-body-remediation
+  fi
+) && true || bad all-private-spec-seed-tracked-private-body
+rm -rf "$VIS_FIX"
+
+# deliver-verify-fixture-tree-immutable (R51/R53)
+IMM_FIX=$(mktemp -d)
+(
+  cd "$IMM_FIX"
+  git init -q && git config user.email t@t.com && git config user.name T
+  echo base >README.md && git add README.md && git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -q -m init
+  mkdir -p scripts/test/fixtures/deliver-concurrency .cursor
+  echo probe > scripts/test/fixtures/deliver-concurrency/probe.txt
+  git add scripts/test/fixtures/deliver-concurrency/probe.txt README.md
+  git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -q -m fixtures
+  BEFORE=$(git status --porcelain scripts/test/fixtures/ || true)
+  SW_DELIVER_VERIFY=1 python3 "$ROOT/scripts/test/_runner.py" verify --root "$IMM_FIX" >/dev/null 2>&1 || true
+  AFTER=$(git status --porcelain scripts/test/fixtures/ || true)
+  if [[ -z "$AFTER" ]] || [[ "$BEFORE" == "$AFTER" ]]; then
+    ok deliver-verify-fixture-tree-immutable
+  else
+    bad deliver-verify-fixture-tree-immutable
+    echo "before=$BEFORE after=$AFTER"
+  fi
+) || bad deliver-verify-fixture-tree-immutable
+rm -rf "$IMM_FIX"
+
+# fixture-tree doctor before merge-run-next (R52)
+DOC_FIX=$(mktemp -d)
+(
+  cd "$DOC_FIX"
+  git init -q && git config user.email t@t.com && git config user.name T
+  echo base >f.txt && git add f.txt && git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -q -m init
+  mkdir -p scripts/test/fixtures .cursor
+  echo dirty > scripts/test/fixtures/dirty.txt
+  git add scripts/test/fixtures/dirty.txt f.txt && git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -q -m fixtures
+  echo changed >> scripts/test/fixtures/dirty.txt
+  echo '{"target":{"branch":"feat/demo"},"orchestratorWorktree":{"path":"'"$DOC_FIX"'"}}' > .cursor/sw-deliver-state.json
+  set +e
+  python3 - <<'PYDOC' "$ROOT" "$DOC_FIX"
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from wave_deliver_loop import fixture_tree_clean_or_halt
+from wave_state import load_deliver_state
+root = Path(sys.argv[2])
+state = load_deliver_state(root, target='feat/demo')
+try:
+    fixture_tree_clean_or_halt(root, state)
+    raise SystemExit(1)
+except SystemExit as exc:
+    if exc.code != 20:
+        raise
+print('ok')
+PYDOC
+  EC=$?
+  set -e
+  if [[ "$EC" -eq 0 ]]; then
+    ok deliver-verify-fixture-tree-doctor-halt
+  else
+    bad deliver-verify-fixture-tree-doctor-halt
+  fi
+) || bad deliver-verify-fixture-tree-doctor-halt
+rm -rf "$DOC_FIX"
+
 # conductor-mandatory-provisioning-contract
 CONDUCTOR="$ROOT/core/skills/conductor/SKILL.md"
 if grep -q 'repo root with state synced' "$CONDUCTOR" 2>/dev/null; then
