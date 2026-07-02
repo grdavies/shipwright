@@ -4,6 +4,7 @@ topic: operator-worktree-contract-and-cwd-guard
 absorbs: [GAP-056]
 frozen: true
 frozen_at: 2026-07-01
+visibility: public
 ---
 
 # PRD 049 — Operator worktree contract & in-flight cwd guard
