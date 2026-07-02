@@ -209,6 +209,7 @@
 * merge phase thread-d-adjacent-hygiene-guards-s into feat/deliver-concurrency-cwd-terminal-robustness (bd20d66) <!-- sw-deliver:thread-d-adjacent-hygiene-guards-s -->
 * merge phase manifest-registration-gap-verification-s into feat/deliver-concurrency-cwd-terminal-robustness (8647839) <!-- sw-deliver:manifest-registration-gap-verification-s -->
 * merge phase execute-plan-schema-kernel-registry-and-shared-git-helper-m into feat/sub-task-execute-orchestration (a2d1980) <!-- sw-deliver:execute-plan-schema-kernel-registry-and-shared-git-helper-m -->
+* merge phase execute-plan-builder-validator-and-dependency-rules-l into feat/sub-task-execute-orchestration (dd1e124) <!-- sw-deliver:execute-plan-builder-validator-and-dependency-rules-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
