@@ -168,6 +168,7 @@ HALT_FIX=$(mktemp -d "${TMPDIR:-/tmp}/sw-regression-halt.XXXXXX")
     >.cursor/sw-deliver-plan.json
   python3 -c "
 import json
+from pathlib import Path
 state = {
   'verdict': 'running',
   'target': {'branch': 'feat/demo', 'slug': 'demo'},
