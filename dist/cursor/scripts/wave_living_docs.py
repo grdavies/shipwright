@@ -133,6 +133,12 @@ def run_reconcile_script(root: Path, *cmd: str) -> dict[str, Any]:
     return data
 
 
+def _enforce_deliver_cwd_guard(*, allow_default_branch: bool = False) -> None:
+    import deliver_cwd_guard
+
+    deliver_cwd_guard.enforce(allow_default_branch=allow_default_branch)
+
+
 def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool, repo_root: Path | None = None) -> str | None:
     top = worktree
     proc = subprocess.run(
@@ -144,6 +150,7 @@ def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool, repo_root: P
         return None
     if dry_run:
         return "dry-run"
+    _enforce_deliver_cwd_guard()
     subprocess.run(["git", "-C", str(top), "add", *living_paths(top)], check=True)
     msg = f"chore: living-doc reconcile for PRD {prd}"
     proc = subprocess.run(
@@ -239,6 +246,8 @@ def cmd_regenerate_index(root: Path, args: list[str]) -> None:
 
 
 def cmd_reconcile(root: Path, args: list[str]) -> None:
+    if has_flag(args, "--commit") and not has_flag(args, "--dry-run"):
+        _enforce_deliver_cwd_guard()
     from wave_living_doc_lock import living_doc_write_lock
 
     state = load_state(root)
@@ -323,6 +332,8 @@ def _cmd_reconcile_locked(
 
 def cmd_append_terminal(root: Path, args: list[str]) -> None:
     """Idempotent COMPLETION-LOG append when all phases are green (R48)."""
+    if has_flag(args, "--commit") and not has_flag(args, "--dry-run"):
+        _enforce_deliver_cwd_guard()
     from wave_living_doc_lock import living_doc_write_lock
 
     state = load_state(root)

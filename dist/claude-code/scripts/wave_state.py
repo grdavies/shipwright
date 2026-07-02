@@ -72,6 +72,7 @@ def phase_complete(status: str | None) -> bool:
 
 
 LOCK_STALE_SECONDS = int(os.environ.get("SW_LOCK_STALE_SECONDS", "3600"))
+CANONICAL_STATE_SKEW_SECONDS = 300
 
 
 def utc_now() -> str:
@@ -394,6 +395,111 @@ def _read_state_optional(path: Path) -> dict[str, Any]:
         return {}
 
 
+
+def git_toplevel(start: Path | None = None) -> Path:
+    start = start or Path.cwd()
+    proc = subprocess.run(
+        ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        fail("not a git repository")
+    return Path(proc.stdout.strip()).resolve()
+
+
+def canonical_repo_root(start: Path | None = None) -> Path:
+    """Primary repository root for repo-root canonical .cursor state (PRD 049 R4)."""
+    start = start or Path.cwd()
+    proc = subprocess.run(
+        ["git", "-C", str(start), "rev-parse", "--git-common-dir"],
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        fail("not a git repository")
+    common = Path(proc.stdout.strip())
+    if not common.is_absolute():
+        common = (Path(start) / common).resolve()
+    return common.parent.resolve()
+
+
+def _parse_state_ts(ts: str) -> datetime | None:
+    try:
+        return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _state_updated_skew_seconds(left: dict[str, Any], right: dict[str, Any]) -> float | None:
+    left_at = _parse_state_ts(str(left.get("updatedAt") or ""))
+    right_at = _parse_state_ts(str(right.get("updatedAt") or ""))
+    if not left_at or not right_at:
+        return None
+    return abs((left_at - right_at).total_seconds())
+
+
+def _mirror_state_at_root(repo_root: Path, state: dict[str, Any], branch: str) -> None:
+    root_path = scoped_paths(repo_root, branch)["state"]
+    root_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(root_path, state)
+
+
+def sync_canonical_state_read(
+    start: Path,
+    *,
+    state_hint: dict[str, Any] | None = None,
+    task_list: str | None = None,
+    target: str | None = None,
+) -> dict[str, Any]:
+    """Load repo-root canonical deliver state; enforce skew + verdict precedence (PRD 049 R4)."""
+    repo_root = canonical_repo_root(start)
+    path = resolve_state_path(
+        repo_root,
+        target=target,
+        task_list=task_list,
+        state_hint=state_hint,
+    )
+    root_state = _read_state_optional(path)
+
+    mirror_state: dict[str, Any] = {}
+    orch_raw = (root_state.get("orchestratorWorktree") or state_hint or {}).get("path")
+    if isinstance(orch_raw, str) and orch_raw.strip():
+        orch_root = Path(orch_raw).resolve()
+        if orch_root != repo_root.resolve():
+            mirror_path = resolve_state_path(
+                orch_root,
+                target=target or target_branch_from_state(root_state),
+                task_list=task_list,
+                state_hint=root_state or state_hint,
+            )
+            mirror_state = _read_state_optional(mirror_path)
+
+    root_has = bool(root_state)
+    mirror_has = bool(mirror_state)
+    if root_has and mirror_has:
+        skew = _state_updated_skew_seconds(root_state, mirror_state)
+        if skew is not None and skew > CANONICAL_STATE_SKEW_SECONDS:
+            fail(
+                "canonical deliver state skew exceeds threshold",
+                exit_code=20,
+                remediation=(
+                    "sync state from repo-root canonical copy before terminal deliver steps; "
+                    f"skewSeconds={skew}, threshold={CANONICAL_STATE_SKEW_SECONDS}"
+                ),
+                repoRoot=str(repo_root),
+                skewSeconds=skew,
+            )
+        root_verdict = root_state.get("verdict")
+        mirror_verdict = mirror_state.get("verdict")
+        if root_verdict != mirror_verdict:
+            return root_state
+
+    if root_has:
+        return root_state
+    return mirror_state
+
+
 def load_deliver_state(
     root: Path,
     *,
@@ -450,6 +556,10 @@ def save_deliver_state(
     state["updatedAt"] = utc_now()
     write_json(path, state)
     _write_legacy_breadcrumb(root, target=branch, scoped_state=path)
+    if state.get("orchestratorWorktree"):
+        repo_root = canonical_repo_root(root)
+        if repo_root.resolve() != root.resolve():
+            _mirror_state_at_root(repo_root, state, branch)
     return path
 
 

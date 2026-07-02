@@ -638,3 +638,25 @@ jobs:
       - name: Run prd-051-ship-verification-fixtures
         run: python3 scripts/test/run_prd_051_ship_verification_fixtures.py
 
+  feat-test-plan-deliver-cwd-guard-fixtures:
+    name: feat-test-plan-deliver-cwd-guard-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run deliver-cwd-guard-fixtures
+        run: python3 scripts/test/run_deliver_cwd_guard_fixtures.py
+
+  feat-test-plan-terminal-state-read-fixtures:
+    name: feat-test-plan-terminal-state-read-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run terminal-state-read-fixtures
+        run: python3 scripts/test/run_terminal_state_read_fixtures.py
+
