@@ -41,7 +41,7 @@ after migration waves W1–W4.
 
 ### 1. Pytest foundation + conftest scaffolding (medium)
 
-- [ ] 1.1 Pin/vendor pytest in depmanifest (R1, TR10)
+- [x] 1.1 Pin/vendor pytest in depmanifest (R1, TR10)
   - **File:** `scripts/_sw/depmanifest.json`, `scripts/_sw/vendor/`
   - **Expected:** pytest importable; zero-shell-guard passes
   - **R-IDs:** R1, TR10
@@ -60,7 +60,7 @@ after migration waves W1–W4.
 
 ### 2. Scope selection infrastructure (medium)
 
-- [ ] 2.1 Registry schema: pytestMarker/pytestPath + pathTriggers (R7, TR12)
+- [x] 2.1 Registry schema: pytestMarker/pytestPath + pathTriggers (R7, TR12)
   - **File:** `core/sw-reference/suite-registry.schema.json`, `suite-registry.json`
   - **Expected:** schema validates; dual `script` field deprecated with migration shim
   - **R-IDs:** R7, TR12
@@ -79,7 +79,7 @@ after migration waves W1–W4.
 
 ### 3. Migration wave W1 — pure-logic suites (~30) (large)
 
-- [ ] 3.1 Port W1 suite list to pytest modules (R13, R15, R16, TR11)
+- [x] 3.1 Port W1 suite list to pytest modules (R13, R15, R16, TR11)
   - **File:** `scripts/unit_tests/doc/`, `scripts/unit_tests/model_tier/`, etc.
   - **Expected:** parametrized + negative cases; legacy W1 `run_*_fixtures.py` still present (shadow)
   - **R-IDs:** R13, R15, R16, TR11
@@ -94,7 +94,7 @@ after migration waves W1–W4.
 
 ### 4. Migration wave W2 — single-repo git suites (~40) (large)
 
-- [ ] 4.1 Port W2 suites with `tmp_git_repo` fixtures (R13, R15, R16, TR11)
+- [x] 4.1 Port W2 suites with `tmp_git_repo` fixtures (R13, R15, R16, TR11)
   - **File:** `scripts/unit_tests/git/`, `scripts/unit_tests/workflow/`
   - **Expected:** git init/commit/branch scenarios under pytest; negative paths covered
   - **R-IDs:** R13, R15, R16, TR11

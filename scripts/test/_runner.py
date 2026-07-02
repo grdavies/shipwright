@@ -22,6 +22,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from _sw.cli import build_parser, run_module_main
 from _fixture_lib import invoke_suite_main, repo_root
+from run_pytest import run_pytest
 
 
 def coverage_enabled(*, flag: bool = False) -> bool:
@@ -222,6 +223,18 @@ def run_manifest(root: Path, *, coverage: bool = False, coverdir: Path | None = 
     return 0
 
 
+def run_pytest_scope(root: Path, *, scope: str = "full", pytest_args: list[str] | None = None) -> int:
+    """Skeleton scope dispatch for vendored pytest (PRD 054 phase 1).
+
+    Phase 2 wires fast|phase|full to test_scope.py and registry markers.
+    """
+    _ = scope  # reserved for phase 2 scope selection
+    args = list(pytest_args or [])
+    if not args:
+        args = ["scripts/unit_tests"]
+    return run_pytest(args, root=repo_root(root))
+
+
 def run_verify(root: Path, *, coverage: bool = False, coverdir: Path | None = None) -> int:
     """Run the shipwright plugin verify.test bundle."""
     use_coverage = coverage_enabled(flag=coverage)
@@ -268,6 +281,10 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("verify", help="Run verify.test bundle")
     sub.add_parser("list", help="List discoverable tests")
 
+    p_pytest = sub.add_parser("run-pytest", help="Run vendored pytest (skeleton scope dispatch)")
+    p_pytest.add_argument("--scope", default="full", choices=["fast", "phase", "full"])
+    p_pytest.add_argument("pytest_args", nargs=argparse.REMAINDER)
+
     sub.add_parser("run-all-tests", help="Run all .test files")
 
     p_report = sub.add_parser("coverage-report", help="Print coverage summary from a trace coverdir")
@@ -285,6 +302,11 @@ def main(argv: list[str] | None = None) -> int:
         return run_manifest(root, coverage=coverage)
     if args.cmd == "verify":
         return run_verify(root, coverage=coverage)
+    if args.cmd == "run-pytest":
+        forwarded = args.pytest_args
+        if forwarded and forwarded[0] == "--":
+            forwarded = forwarded[1:]
+        return run_pytest_scope(root, scope=args.scope, pytest_args=forwarded or None)
     if args.cmd == "list":
         return cmd_list(args)
     if args.cmd == "run-all-tests":

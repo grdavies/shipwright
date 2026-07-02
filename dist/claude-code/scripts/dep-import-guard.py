@@ -66,6 +66,8 @@ def build_local_roots(root: Path) -> dict[str, set[str]]:
         for path in base.rglob("*.py"):
             if rel == "scripts" and "/test/" in f"/{path.relative_to(base).as_posix()}/":
                 continue
+            if rel == "scripts" and "/_sw/vendor/" in f"/{path.relative_to(base).as_posix()}/":
+                continue
             names.add(path.stem)
             if path.parent.name not in {"scripts", "hooks", "providers", "test"}:
                 names.add(path.parent.name)
@@ -80,7 +82,8 @@ def iter_python_files(root: Path) -> list[tuple[str, Path]]:
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.py")):
-            if rel == "scripts" and "/test/" in f"/{path.relative_to(base).as_posix()}/":
+            rel_posix = f"/{path.relative_to(base).as_posix()}/"
+            if rel == "scripts" and ("/test/" in rel_posix or "/_sw/vendor/" in rel_posix):
                 continue
             files.append((rel, path))
     return files
