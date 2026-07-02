@@ -59,6 +59,7 @@ ROUTE_FIX=$(mktemp -d "${TMPDIR:-/tmp}/sw-regression-route.XXXXXX")
     >.cursor/sw-deliver-plan.json
   python3 -c "
 import json
+from pathlib import Path
 state = {
   'verdict': 'running',
   'target': {'branch': 'feat/demo', 'slug': 'demo'},
@@ -68,7 +69,7 @@ state = {
   'waveBatchingPlan': {'waves': [['1']]},
   'mergeQueue': [{'phaseSlug': 'alpha', 'head': 'abc', 'pr': 1}],
   'phases': {'1': {'slug': 'alpha', 'status': 'in-flight', 'branch': 'feat/demo-phase-alpha'}},
-  'orchestratorWorktree': {'path': '/tmp/orch'},
+  'orchestratorWorktree': {'path': str(Path('.').resolve())},
 }
 open('.cursor/sw-deliver-state.demo.json','w').write(json.dumps(state, indent=2))
 "
@@ -177,7 +178,7 @@ state = {
   'waveBatchingPlan': {'waves': [['1']]},
   'remediationAttempts': {'1': 2},
   'phases': {'1': {'slug': 'alpha', 'status': 'blocked', 'cause': 'verify:failed', 'branch': 'feat/demo-phase-alpha'}},
-  'orchestratorWorktree': {'path': '/tmp/orch'},
+  'orchestratorWorktree': {'path': str(Path('.').resolve())},
 }
 open('.cursor/sw-deliver-state.demo.json','w').write(json.dumps(state, indent=2))
 "
