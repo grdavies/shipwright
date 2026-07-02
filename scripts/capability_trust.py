@@ -2,13 +2,38 @@
 
 from __future__ import annotations
 
-import argparse
-import json
 import re
-import sys
 from pathlib import Path
 from typing import Any, Callable
-import re
+
+# Kernel/safety hooks — excluded from manifest selection and reordering (TR5).
+KERNEL_HOOK_SLOTS = frozenset({"beforeSubmitPrompt", "stop"})
+
+KERNEL_HOOK_SOURCE_MARKERS = (
+    "before-submit-guardrails",
+    "before_submit_guardrails",
+    "memory-sync-stop",
+    "memory_sync_stop",
+    "memory_prework_gate",
+    "guardrail_core",
+    "memory-redact",
+)
+
+# Manifest hooks may only augment non-safety emitter slots.
+MANIFEST_HOOK_SLOTS = frozenset({"sessionStart", "preToolUse"})
+
+PROVIDER_GATES = frozenset({"check-gate.py", "review-local-resolve.py"})
+MEMORY_GATES = frozenset({"check-gate.py", "memory-preflight"})
+HOOK_GATE_PREFIX = "hooks.json:"
+
+PROVIDER_FAMILY_KEYS: dict[str, str] = {
+    "review": "review.provider",
+    "review.local": "review.local.provider",
+    "memory": "memory.provider",
+    "verify": "verify.provider",
+    "quality": "quality.provider",
+    "code-review": "code-review.provider",
+}
 
 GAT_REF_FIXTURE_DIRS = (
     "scripts/test/fixtures/capability-select",
@@ -31,6 +56,7 @@ def _py_canonical_exists(repo_root: Path, gate_ref: str) -> bool:
 
 
 def scan_gateref_no_shell(repo_root: Path) -> list[dict[str, str]]:
+    """Fail-closed scan for .sh gateRef where canonical .py exists (PRD 050 R17)."""
     violations: list[dict[str, str]] = []
     for rel_dir in GAT_REF_FIXTURE_DIRS:
         base = repo_root / rel_dir
@@ -40,22 +66,24 @@ def scan_gateref_no_shell(repo_root: Path) -> list[dict[str, str]]:
             if not path.is_file() or path.suffix not in {".md", ".json", ".yaml", ".yml"}:
                 continue
             try:
-                content = path.read_text(encoding="utf-8")
+                text = path.read_text(encoding="utf-8")
             except OSError:
                 continue
             for pattern in (_GAT_REF_PATTERN, _GAT_REF_JSON_PATTERN):
-                for match in pattern.finditer(content):
+                for match in pattern.finditer(text):
                     gate_ref = match.group(1)
                     if _py_canonical_exists(repo_root, gate_ref):
-                        violations.append({
-                            "path": str(path.relative_to(repo_root)),
-                            "gateRef": gate_ref,
-                            "canonical": gate_ref.replace(".sh", ".py"),
-                        })
+                        violations.append(
+                            {
+                                "path": str(path.relative_to(repo_root)),
+                                "gateRef": gate_ref,
+                                "canonical": gate_ref.replace(".sh", ".py"),
+                            }
+                        )
     return violations
 
 
-def check_gateref_no_shell(repo_root: Path) -> dict:
+def check_gateref_no_shell(repo_root: Path) -> dict[str, Any]:
     violations = scan_gateref_no_shell(repo_root)
     if violations:
         return {
