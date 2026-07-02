@@ -815,6 +815,16 @@
         "terminal-state-skew-boundary-equal-passes",
         "terminal-state-skew-boundary-over-refuses"
       ]
+    },
+    {
+      "id": "gap-backlog-fixtures",
+      "script": "scripts/test/run_gap_backlog_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-gap-backlog-fixtures",
+      "scenarios": [
+        "gap-backlog-flip-schedule-force-reschedule"
+      ]
     }
   ]
 }

@@ -143,14 +143,25 @@ def prd_from_path(path: Path) -> tuple[str, str | None]:
     return prd, am
 
 
-def flip_schedule(backlog: GapBacklog, *, gap_ids: list[str], prd: str, amendment: str | None = None) -> list[str]:
+def flip_schedule(
+    backlog: GapBacklog,
+    *,
+    gap_ids: list[str],
+    prd: str,
+    amendment: str | None = None,
+    force: bool = False,
+) -> list[str]:
     label = schedule_label(prd, amendment)
     flipped: list[str] = []
     want = {g.upper() for g in gap_ids}
     for row in backlog.rows:
         if row.gap_id.upper() not in want:
             continue
-        if row.is_open:
+        if force:
+            row.status = "scheduled"
+            row.schedule = label
+            flipped.append(row.gap_id)
+        elif row.is_open:
             row.status = "scheduled"
             row.schedule = label
             flipped.append(row.gap_id)
@@ -217,6 +228,7 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("check")
     p_flip = sub.add_parser("flip")
     p_flip.add_argument("--schedule", action="store_true")
+    p_flip.add_argument("--force", action="store_true")
     p_flip.add_argument("--resolve", action="store_true")
     p_flip.add_argument("--from-artifact", default="")
     p_flip.add_argument("--gaps", nargs="*", default=[])
@@ -255,7 +267,7 @@ def main(argv: list[str] | None = None) -> None:
                 prd_p, am_p = prd_from_path(art)
                 prd = prd or prd_p
                 amendment = amendment or (am_p or "")
-            changed = flip_schedule(backlog, gap_ids=gap_ids, prd=prd, amendment=amendment or None)
+            changed = flip_schedule(backlog, gap_ids=gap_ids, prd=prd, amendment=amendment or None, force=bool(ns.force))
         elif ns.resolve:
             scope_note = ns.scope_note.strip() or None
             changed = flip_resolve(backlog, prd=ns.prd, scope_note=scope_note)
