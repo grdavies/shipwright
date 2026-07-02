@@ -99,7 +99,7 @@ def subtask_counts_by_phase(text: str, phase_ids: list[str]) -> dict[str, int]:
         if phase_id not in counts:
             continue
         counts[phase_id] += len(
-            re.findall(r"^-\s+\[[ x]\]\s+\d+\.\d+", chunk, flags=re.MULTILINE)
+            re.findall(r"^-\s+\[[ x]\]\s+\d+(?:\.\d+)+", chunk, flags=re.MULTILINE)
         )
     return counts
 
@@ -835,6 +835,46 @@ def score_task_list(root: Path, task_list: Path, sizing: dict[str, Any]) -> dict
             "maxPhaseCount": sizing.get("maxPhaseCount"),
         },
     }
+
+
+
+
+def score_execute_ref(
+    root: Path,
+    content: str,
+    phase_id: str,
+    ref_id: str,
+    thresholds: dict[str, int],
+) -> dict[str, object]:
+    """Single-ref structural scorer for execute runtime expansion (PRD 053 R9, R29)."""
+    subtasks = doc_format.extract_executable_subtasks(content, phase_id)
+    task = next((st for st in subtasks if st["id"] == ref_id), None)
+    if not task:
+        return {"overThreshold": False, "separableSets": []}
+    files = list(task.get("files") or [])
+    scenarios = 0
+    if has_traceability_section(content):
+        for row in doc_format.extract_traceability_rows(content):
+            if ref_id in re.findall(r"\d+(?:\.\d+)+", row.get("task", "")):
+                scenarios += 1
+    metrics = {
+        "filesTouched": len(files),
+        "distinctDirs": distinct_dir_count(files),
+        "traceabilityScenarios": scenarios,
+    }
+    over = any(
+        metrics[key] > int(thresholds.get(key, 0))
+        for key in ("filesTouched", "distinctDirs", "traceabilityScenarios")
+    )
+    separable_sets: list[list[str]] = []
+    if over and len(files) >= 2:
+        by_dir: dict[str, list[str]] = {}
+        for file_path in files:
+            parent = str(Path(file_path).parent)
+            by_dir.setdefault(parent if parent and parent != "." else ".", []).append(file_path)
+        if len(by_dir) >= 2:
+            separable_sets = [sorted(vals) for vals in by_dir.values()]
+    return {"overThreshold": over, "metrics": metrics, "separableSets": separable_sets}
 
 
 def rel_task_list(task_list: Path, root: Path) -> str:

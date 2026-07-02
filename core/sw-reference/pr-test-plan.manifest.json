@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Standard FEAT PR test-plan fixture set — single source for verify.test and CI (PRD 016 R1–R3).",
+  "description": "Standard FEAT PR test-plan fixture set \u2014 single source for verify.test and CI (PRD 016 R1\u2013R3).",
   "fixtures": [
     {
       "id": "doc-fixtures",
@@ -924,7 +924,12 @@
       "classification": "required",
       "ciJobName": "feat-test-plan-execute-orchestration-fixtures",
       "scenarios": [
-        "wave-merge-no-regression"
+        "wave-merge-no-regression",
+        "execute-plan-linear-fallback",
+        "execute-plan-contention-serializes-shared-file",
+        "execute-dependency-rules-049-phase-2",
+        "execute-runtime-expansion-depth-cap",
+        "execute-tokenizer-deep-refs"
       ]
     }
   ]
