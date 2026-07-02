@@ -57,6 +57,7 @@
     "communication-routing.defaults.json",
     "decision-log.schema.json",
     "deterministic-regen-paths.json",
+    "execute-dependency-rules.json",
     "execute-step-plan.schema.json",
     "failure-signature.schema.json",
     "guidelines.json",

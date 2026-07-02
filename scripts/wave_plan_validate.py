@@ -776,8 +776,8 @@ def apply_wave_fallback(result: dict[str, Any], root: Path, frozen_plan: dict[st
 
 def cmd_validate(root: Path, args: list[str]) -> None:
     tier = parse_kv(args, "--tier")
-    if tier not in {"phase", "wave", "orchestrator"}:
-        fail("--tier phase|wave|orchestrator required")
+    if tier not in {"phase", "wave", "orchestrator", "execute"}:
+        fail("--tier phase|wave|orchestrator|execute required")
 
     proposal = load_json_arg(root, parse_kv(args, "--proposal"))
     if proposal is None:
@@ -802,6 +802,47 @@ def cmd_validate(root: Path, args: list[str]) -> None:
             task_file_paths=task_file_paths,
         )
         result = apply_phase_fallback(result, root, phase_type, phase_id)
+    elif tier == "execute":
+        task_list = parse_kv(args, "--task-list")
+        phase_slug = parse_kv(args, "--phase-slug") or str(proposal.get("phaseSlug") or phase_id)
+        if not task_list:
+            fail("--task-list required for execute tier")
+        from execute_plan import (
+            apply_execute_fallback,
+            persist_execute_plan,
+            propose_execute_plan,
+            resolve_run_dir,
+            validate_execute_plan,
+        )
+
+        if has_flag(args, "--propose") or not proposal.get("refs"):
+            proposal = propose_execute_plan(
+                root,
+                task_list=task_list,
+                phase_id=str(phase_id),
+                phase_slug=phase_slug,
+            )
+        result = validate_execute_plan(
+            root,
+            proposal,
+            task_list=task_list,
+            phase_id=str(phase_id),
+        )
+        result = apply_execute_fallback(
+            result,
+            root,
+            task_list=task_list,
+            phase_id=str(phase_id),
+            phase_slug=phase_slug,
+        )
+        if result.get("verdict") == "pass":
+            plan = result.get("plan") or proposal
+            if has_flag(args, "--record"):
+                run_dir = resolve_run_dir(phase_slug, parse_kv(args, "--run-dir"))
+                result["path"] = str(persist_execute_plan(run_dir, plan))
+        elif result.get("fallback"):
+            result["plan"] = result["fallback"]
+
     elif tier == "orchestrator":
         orchestrator_type = parse_kv(args, "--orchestrator-type")
         if not orchestrator_type or orchestrator_type not in VALID_ORCHESTRATOR_TYPES:
