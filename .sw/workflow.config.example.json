@@ -203,5 +203,17 @@
   "recurrence": {
     "threshold": 3,
     "enabled": true
+  },
+  "execute": {
+    "enabled": true,
+    "subBranchCeiling": null,
+    "maxExpansionDepth": 2,
+    "sizing": {
+      "thresholds": {
+        "filesTouched": 3,
+        "distinctDirs": 2,
+        "traceabilityScenarios": 2
+      }
+    }
   }
 }

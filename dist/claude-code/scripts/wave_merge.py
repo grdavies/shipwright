@@ -28,6 +28,7 @@ from host_lib import load_workflow_config, remote_name, remote_ref, remote_heads
 from wave_json_io import StateCorruptError, read_json, write_json
 from wave_state import assert_phase_status
 import planning_paths
+from _sw.git_integrate import abort_merge, list_merge_conflict_paths, merge_branch_into
 from status_integrity import (
     VALID_STATUS_VERDICTS,
     check_status_sha,
@@ -361,18 +362,6 @@ def paths_within_allowlist(paths: list[str], allowlist: list[str]) -> bool:
     return bool(paths) and all(path_in_allowlist(p, allowlist) for p in paths)
 
 
-def list_merge_conflict_paths(wt: Path) -> list[str]:
-    proc = git_run(["diff", "--name-only", "--diff-filter=U"], cwd=wt, check=False)
-    paths = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
-    if paths:
-        return paths
-    proc = git_run(["ls-files", "-u"], cwd=wt, check=False)
-    seen: set[str] = set()
-    for line in proc.stdout.splitlines():
-        parts = line.split(None, 2)
-        if len(parts) >= 4:
-            seen.add(parts[3].strip())
-    return sorted(seen)
 
 
 def item_files_for_slug(plan: dict[str, Any], slug: str) -> list[str]:
@@ -993,23 +982,20 @@ def cmd_merge_exec(root: Path, args: list[str]) -> None:
 
     msg = parse_kv(args, "--message") or f"merge({target.split('/')[-1]}): phase {phase_slug}"
     state = load_state(root)
-    proc = git_run(
-        ["merge", "--no-ff", merge_ref, "-m", msg],
-        cwd=wt,
-        check=False,
-    )
-    if proc.returncode != 0:
-        conflict_paths = list_merge_conflict_paths(wt)
+    merge_result = merge_branch_into(wt, merge_ref, message=msg, abort_on_conflict=False)
+    if merge_result.get("verdict") != "pass":
+        conflict_paths = list(merge_result.get("conflicts") or [])
         resolved = False
         resolve_detail: dict[str, Any] = {}
         if conflict_paths:
             resolved, resolve_detail = attempt_deterministic_conflict_resolve(
                 root, wt, state, conflict_paths, phase_slug
             )
+        proc = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
         if resolved:
             proc = git_run(["commit", "-m", msg], cwd=wt, check=False)
-        if proc.returncode != 0:
-            git_run(["merge", "--abort"], cwd=wt, check=False)
+        if not resolved or proc.returncode != 0:
+            abort_merge(wt)
             fail_detail = dict(resolve_detail)
             fail_detail.setdefault("conflictPaths", conflict_paths)
             fail(
@@ -1017,7 +1003,7 @@ def cmd_merge_exec(root: Path, args: list[str]) -> None:
                 exit_code=20,
                 halt="blocked",
                 cause="merge-queue:conflict",
-                stderr=proc.stderr.strip(),
+                stderr=str(merge_result.get("stderr") or proc.stderr or "").strip(),
                 **fail_detail,
             )
     head = git_run(["rev-parse", "HEAD"], cwd=wt).stdout.strip()

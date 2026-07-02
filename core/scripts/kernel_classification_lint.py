@@ -23,6 +23,31 @@ def emit(obj: dict[str, Any], code: int = 0) -> None:
     sys.exit(code)
 
 
+
+
+def lint_execute_tier(root: Path, classification: dict[str, Any]) -> tuple[bool, list[str]]:
+    failures: list[str] = []
+    execute_entries = [
+        item
+        for item in (classification.get("planPolicySteps") or [])
+        if isinstance(item, dict) and item.get("phaseType") == "execute"
+    ]
+    if not execute_entries:
+        failures.append("no planPolicySteps entry with phaseType: execute")
+    schema = root / "core/sw-reference/execute-step-plan.schema.json"
+    if not schema.is_file():
+        failures.append("missing core/sw-reference/execute-step-plan.schema.json")
+    sot = root / "core/sw-reference/build-chain-sot.json"
+    if sot.is_file():
+        try:
+            allow = json.loads(sot.read_text(encoding="utf-8")).get("coreAuthoredAllowlist") or []
+            if "execute-step-plan.schema.json" not in allow:
+                failures.append("execute-step-plan.schema.json not registered in build-chain-sot.json")
+        except json.JSONDecodeError:
+            failures.append("invalid build-chain-sot.json while linting execute tier")
+    return (len(failures) == 0, failures)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Lint kernel classification artifact")
     parser.add_argument("--root", type=Path, default=Path.cwd())
@@ -52,6 +77,10 @@ def main() -> None:
         failures.append(f"unreachable chokepoints: {', '.join(reach_missing)}")
     if not ok_parity:
         failures.append(parity_msg)
+
+    ok_execute, execute_failures = lint_execute_tier(root, data)
+    if not ok_execute:
+        failures.extend(execute_failures)
 
     if failures:
         emit({"verdict": "fail", "failures": failures}, 1)

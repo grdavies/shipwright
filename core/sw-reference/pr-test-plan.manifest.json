@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Standard FEAT PR test-plan fixture set \u2014 single source for verify.test and CI (PRD 016 R1\u2013R3).",
+  "description": "Standard FEAT PR test-plan fixture set — single source for verify.test and CI (PRD 016 R1–R3).",
   "fixtures": [
     {
       "id": "doc-fixtures",
@@ -915,6 +915,16 @@
       "ciJobName": "feat-test-plan-git-push-secret-scan-chokepoint",
       "scenarios": [
         "git-push-secret-scan-chokepoint"
+      ]
+    },
+    {
+      "id": "execute-orchestration-fixtures",
+      "script": "scripts/test/run_execute_orchestration_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-execute-orchestration-fixtures",
+      "scenarios": [
+        "wave-merge-no-regression"
       ]
     }
   ]

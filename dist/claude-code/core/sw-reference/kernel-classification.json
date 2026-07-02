@@ -345,6 +345,26 @@
       "id": "handoff",
       "phaseType": "feedback",
       "required": true
+    },
+    {
+      "id": "execute-plan-validate",
+      "phaseType": "execute",
+      "required": true
+    },
+    {
+      "id": "execute-fan-out",
+      "phaseType": "execute",
+      "required": true
+    },
+    {
+      "id": "execute-integrate",
+      "phaseType": "execute",
+      "required": true
+    },
+    {
+      "id": "execute-terminal-gate",
+      "phaseType": "execute",
+      "required": true
     }
   ],
   "canonicalPhaseChains": {

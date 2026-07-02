@@ -48,7 +48,7 @@
             "auto"
           ],
           "default": "confirm",
-          "description": "Doc\u2192implementation boundary after /sw-tasks freeze: stop halts; confirm prompts before dispatch; auto dispatches the implementation loop."
+          "description": "Doc→implementation boundary after /sw-tasks freeze: stop halts; confirm prompts before dispatch; auto dispatches the implementation loop."
         }
       }
     },
@@ -129,7 +129,7 @@
               "type": "integer",
               "minimum": 1,
               "default": 240,
-              "description": "In-flight phase exceeds this duration \u2192 consolidated blocker."
+              "description": "In-flight phase exceeds this duration → consolidated blocker."
             }
           }
         },
@@ -151,7 +151,7 @@
               "type": "integer",
               "minimum": 1,
               "default": 1440,
-              "description": "Run-level wall-clock ceiling; exceeded \u2192 clean consolidated halt (R42)."
+              "description": "Run-level wall-clock ceiling; exceeded → clean consolidated halt (R42)."
             },
             "maxIterations": {
               "type": "integer",
@@ -173,7 +173,7 @@
                 "auto"
               ],
               "default": "supervised",
-              "description": "auto runs retrospective \u2192 PR \u2192 watch/stabilize hands-off; supervised preserves halts."
+              "description": "auto runs retrospective → PR → watch/stabilize hands-off; supervised preserves halts."
             }
           }
         }
@@ -182,7 +182,7 @@
     "cleanup": {
       "type": "object",
       "additionalProperties": false,
-      "description": "/sw-cleanup apply autonomy (PRD 013 A1 R25\u2013R26).",
+      "description": "/sw-cleanup apply autonomy (PRD 013 A1 R25–R26).",
       "properties": {
         "autonomy": {
           "type": "string",
@@ -198,7 +198,7 @@
     "compound": {
       "type": "object",
       "additionalProperties": false,
-      "description": "/sw-retrospective compounding autonomy (R10). Gates approval prompts only \u2014 never memory or rule-class safety.",
+      "description": "/sw-retrospective compounding autonomy (R10). Gates approval prompts only — never memory or rule-class safety.",
       "properties": {
         "autonomy": {
           "type": "string",
@@ -265,7 +265,7 @@
     "review": {
       "type": "object",
       "additionalProperties": false,
-      "description": "AI code-review provider selection. Credentials are never stored here \u2014 use env/secret store at runtime.",
+      "description": "AI code-review provider selection. Credentials are never stored here — use env/secret store at runtime.",
       "properties": {
         "provider": {
           "type": "string",
@@ -275,7 +275,7 @@
         "enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Deprecated \u2014 use review.provider:\"none\" instead. When false, review gating is disabled (gate state off, non-blocking). Equivalent to provider:\"none\"."
+          "description": "Deprecated — use review.provider:\"none\" instead. When false, review gating is disabled (gate state off, non-blocking). Equivalent to provider:\"none\"."
         },
         "local": {
           "type": "object",
@@ -537,7 +537,7 @@
             "auto"
           ],
           "default": "auto",
-          "description": "Authoritative store for decision-class records. auto derives from provider (external\u2192memory, in-repo/none\u2192repo)."
+          "description": "Authoritative store for decision-class records. auto derives from provider (external→memory, in-repo/none→repo)."
         },
         "inRepo": {
           "type": "object",
@@ -615,12 +615,12 @@
             "requireRuleClass": {
               "type": "boolean",
               "default": false,
-              "description": "When true, block until at least one allowlisted rule-class memory exists. Default false \u2014 empty memory is normal for new repos."
+              "description": "When true, block until at least one allowlisted rule-class memory exists. Default false — empty memory is normal for new repos."
             },
             "allowEmptyRules": {
               "type": "boolean",
               "default": true,
-              "description": "Deprecated \u2014 use requireRuleClass (inverted). When false, equivalent to requireRuleClass:true."
+              "description": "Deprecated — use requireRuleClass (inverted). When false, equivalent to requireRuleClass:true."
             }
           }
         }
@@ -640,14 +640,14 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Tier name \u2192 concrete model id (e.g. deep, build, mid, cheap)."
+          "description": "Tier name → concrete model id (e.g. deep, build, mid, cheap)."
         },
         "aliases": {
           "type": "object",
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Frontmatter alias \u2192 tier name (e.g. fast \u2192 cheap)."
+          "description": "Frontmatter alias → tier name (e.g. fast → cheap)."
         },
         "roles": {
           "type": "object",
@@ -705,7 +705,7 @@
                   "deep"
                 ]
               },
-              "description": "Agent or native-panel specialist id \u2192 semantic tier (no inherit)."
+              "description": "Agent or native-panel specialist id → semantic tier (no inherit)."
             }
           }
         }
@@ -768,7 +768,7 @@
                   "inherit"
                 ]
               },
-              "description": "Agent id \u2192 caveman intensity. Used after command/skill routing during delegated Task binding."
+              "description": "Agent id → caveman intensity. Used after command/skill routing during delegated Task binding."
             }
           }
         }
@@ -1152,6 +1152,60 @@
                 "type": "string"
               },
               "description": "Manual commands excluded from repeated-step detection."
+            }
+          }
+        }
+      }
+    },
+    "execute": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Execute-tier sub-task orchestration (PRD 053 R32, R35). Default-on; escape hatch execute.enabled: false.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, multi-sub-task phases use execute-plan fan-out before sw-verify."
+        },
+        "subBranchCeiling": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "default": null,
+          "description": "Max concurrent execute sub-branches; null resolves to intraPhase.parallelBudget."
+        },
+        "maxExpansionDepth": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 2,
+          "description": "Runtime recursive expansion depth cap (R11)."
+        },
+        "sizing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "thresholds": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "filesTouched": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 3
+                },
+                "distinctDirs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 2
+                },
+                "traceabilityScenarios": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 2
+                }
+              }
             }
           }
         }
