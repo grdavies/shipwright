@@ -29,7 +29,7 @@ def setup() -> tuple[Path, Path]:
     primary = tmp / "repo"
     primary.mkdir()
     _git(["init", "-q"], primary)
-    _git(["config", "user.email", "t@t.com"], primary)
+    _git(["config", "user.email", "test@test.com"], primary)
     _git(["config", "user.name", "t"], primary)
     (primary / "README.md").write_text("x\n", encoding="utf-8")
     _git(["add", "README.md"], primary)
