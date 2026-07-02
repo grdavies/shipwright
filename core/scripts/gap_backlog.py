@@ -157,12 +157,11 @@ def flip_schedule(
     for row in backlog.rows:
         if row.gap_id.upper() not in want:
             continue
-        if force:
+        if row.is_open:
             row.status = "scheduled"
             row.schedule = label
             flipped.append(row.gap_id)
-        elif row.is_open:
-            row.status = "scheduled"
+        elif force and row.is_scheduled:
             row.schedule = label
             flipped.append(row.gap_id)
         elif row.is_scheduled and row.schedule == label:
