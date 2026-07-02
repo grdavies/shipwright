@@ -557,6 +557,14 @@ def cmd_write(args: argparse.Namespace) -> int:
         ship_steps=ship_steps,
         ship_steps_path=ship_steps_path,
     )
+    try:
+        from execute_ship import attach_benefit_metric_to_status, load_execute_plan, resolve_run_dir
+        run_dir = resolve_run_dir(args.phase, ship_steps_path and str(Path(ship_steps_path).parent) or None)
+        execute_plan = load_execute_plan(run_dir)
+        if execute_plan:
+            doc = attach_benefit_metric_to_status(doc, execute_plan)
+    except Exception:
+        pass
     out_path = Path(args.out)
     stamped = write_status_atomic(out_path, doc)
     print(json.dumps(stamped, ensure_ascii=False, indent=2))

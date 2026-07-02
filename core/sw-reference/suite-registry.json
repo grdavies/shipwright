@@ -12,6 +12,24 @@
       "ciJobName": "feat-test-plan-docs-link-check"
     },
     {
+      "id": "bash-py-invocation-guard",
+      "script": "scripts/test/bash-py-invocation-guard.test",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-bash-py-invocation-guard"
+    },
+    {
+      "id": "git-push-secret-scan-chokepoint",
+      "script": "scripts/test/git-push-secret-scan-chokepoint.test",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-git-push-secret-scan-chokepoint"
+    },
+    {
       "id": "007-docs-fixtures",
       "script": "scripts/test/run_007_docs_fixtures.py",
       "lanes": [
@@ -175,6 +193,15 @@
       "ciJobName": "feat-test-plan-deliver-concurrency-fixtures"
     },
     {
+      "id": "deliver-cwd-guard-fixtures",
+      "script": "scripts/test/run_deliver_cwd_guard_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-cwd-guard-fixtures"
+    },
+    {
       "id": "deliver-fixtures",
       "script": "scripts/test/run_deliver_fixtures.py",
       "lanes": [
@@ -198,6 +225,26 @@
         "verify"
       ],
       "verifyOrder": 16
+    },
+    {
+      "id": "deliver-worktree-contract-fixtures",
+      "script": "scripts/test/run_deliver_worktree_contract_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-worktree-contract-fixtures"
+    },
+    {
+      "id": "dispatch-binding-fixtures",
+      "script": "scripts/test/run_dispatch_binding_fixtures.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-dispatch-binding-fixtures",
+      "verifyOrder": 19
     },
     {
       "id": "dispatch-foundation-fixtures",
@@ -272,6 +319,15 @@
       "verifyOrder": 38
     },
     {
+      "id": "execute-orchestration-fixtures",
+      "script": "scripts/test/run_execute_orchestration_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-execute-orchestration-fixtures"
+    },
+    {
       "id": "fanout-fixtures",
       "script": "scripts/test/run_fanout_fixtures.py",
       "lanes": [
@@ -288,6 +344,15 @@
         "verify"
       ],
       "verifyOrder": 6
+    },
+    {
+      "id": "gap-backlog-fixtures",
+      "script": "scripts/test/run_gap_backlog_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-gap-backlog-fixtures"
     },
     {
       "id": "gate-fixtures",
@@ -350,6 +415,17 @@
       ],
       "verifyOrder": 53,
       "verifyClassification": "required"
+    },
+    {
+      "id": "hook-worktree-alignment-fixtures",
+      "script": "scripts/test/run_hook_worktree_alignment_fixtures.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-hook-worktree-alignment-fixtures",
+      "verifyOrder": 18
     },
     {
       "id": "host-fixtures",
@@ -876,6 +952,24 @@
       "verifyOrder": 1
     },
     {
+      "id": "prd-050-ship-verification-fixtures",
+      "script": "scripts/test/run_prd_050_ship_verification_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-prd-050-ship-verification-fixtures"
+    },
+    {
+      "id": "prd-051-ship-verification-fixtures",
+      "script": "scripts/test/run_prd_051_ship_verification_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-prd-051-ship-verification-fixtures"
+    },
+    {
       "id": "provenance-fixtures",
       "script": "scripts/test/run_provenance_fixtures.py",
       "lanes": [
@@ -949,6 +1043,15 @@
       "verifyOrder": 22
     },
     {
+      "id": "spec-rigor-brainstorm-profile-fixtures",
+      "script": "scripts/test/run_spec_rigor_brainstorm_profile_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-spec-rigor-brainstorm-profile-fixtures"
+    },
+    {
       "id": "stabilize-merge-fixtures",
       "script": "scripts/test/run_stabilize_merge_fixtures.py",
       "lanes": [
@@ -974,6 +1077,15 @@
       "classification": "required",
       "ciJobName": "feat-test-plan-status-integrity-fixtures",
       "verifyOrder": 15
+    },
+    {
+      "id": "stdlib-coverage-fixtures",
+      "script": "scripts/test/run_stdlib_coverage_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-stdlib-coverage-fixtures"
     },
     {
       "id": "suite-registry-fixtures",
@@ -1005,6 +1117,15 @@
       "lanes": [
         "internal"
       ]
+    },
+    {
+      "id": "terminal-state-read-fixtures",
+      "script": "scripts/test/run_terminal_state_read_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-terminal-state-read-fixtures"
     },
     {
       "id": "two-track-fixtures",
@@ -1042,118 +1163,6 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-worktree-config-fixtures"
-    },
-    {
-      "id": "spec-rigor-brainstorm-profile-fixtures",
-      "script": "scripts/test/run_spec_rigor_brainstorm_profile_fixtures.py",
-      "lanes": [
-        "pr-ci"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-spec-rigor-brainstorm-profile-fixtures"
-    },
-    {
-      "id": "stdlib-coverage-fixtures",
-      "script": "scripts/test/run_stdlib_coverage_fixtures.py",
-      "lanes": [
-        "pr-ci"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-stdlib-coverage-fixtures"
-    },
-    {
-      "id": "prd-050-ship-verification-fixtures",
-      "script": "scripts/test/run_prd_050_ship_verification_fixtures.py",
-      "lanes": [
-        "pr-ci"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-prd-050-ship-verification-fixtures"
-    },
-    {
-      "id": "prd-051-ship-verification-fixtures",
-      "script": "scripts/test/run_prd_051_ship_verification_fixtures.py",
-      "lanes": [
-        "pr-ci"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-prd-051-ship-verification-fixtures"
-    },
-    {
-      "id": "deliver-cwd-guard-fixtures",
-      "script": "scripts/test/run_deliver_cwd_guard_fixtures.py",
-      "lanes": [
-        "pr-ci"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-cwd-guard-fixtures"
-    },
-    {
-      "id": "terminal-state-read-fixtures",
-      "script": "scripts/test/run_terminal_state_read_fixtures.py",
-      "lanes": [
-        "pr-ci"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-terminal-state-read-fixtures"
-    },
-    {
-      "id": "deliver-worktree-contract-fixtures",
-      "script": "scripts/test/run_deliver_worktree_contract_fixtures.py",
-      "lanes": [
-        "pr-ci"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-worktree-contract-fixtures"
-    },
-    {
-      "id": "gap-backlog-fixtures",
-      "script": "scripts/test/run_gap_backlog_fixtures.py",
-      "lanes": [
-        "pr-ci"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-gap-backlog-fixtures"
-    },
-    {
-      "id": "hook-worktree-alignment-fixtures",
-      "script": "scripts/test/run_hook_worktree_alignment_fixtures.py",
-      "lanes": [
-        "pr-ci",
-        "verify"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-hook-worktree-alignment-fixtures",
-      "verifyOrder": 18
-    },
-    {
-      "id": "dispatch-binding-fixtures",
-      "script": "scripts/test/run_dispatch_binding_fixtures.py",
-      "lanes": [
-        "pr-ci",
-        "verify"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-dispatch-binding-fixtures",
-      "verifyOrder": 19
-    },
-    {
-      "id": "bash-py-invocation-guard",
-      "script": "scripts/test/bash-py-invocation-guard.test",
-      "lanes": [
-        "pr-ci"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-bash-py-invocation-guard"
-    },
-    {
-      "id": "git-push-secret-scan-chokepoint",
-      "script": "scripts/test/git-push-secret-scan-chokepoint.test",
-      "lanes": [
-        "pr-ci"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-git-push-secret-scan-chokepoint"
     }
   ]
 }

@@ -178,6 +178,22 @@ context belongs in `run.log` / consolidated halt reports only.
 Subjective ambiguity is not an inline halt. Only driver-detected conditions qualify; other uncertainty
 routes through `report blockers` with a `cause`.
 
+
+## Execute tier fan-out (PRD 053)
+
+Phase executor (not conductor) owns execute-tier lifecycle:
+
+| Step | Owner | Primitive |
+| --- | --- | --- |
+| Execute plan validate | Phase executor | `wave.py plan validate --tier execute` |
+| Per-ref Task dispatch | Phase executor | `intra_phase_dispatch.py` with `conductorMode: execute_fan_out` |
+| Sub-branch integrate | Phase executor | `wave.py execute integrate` → `execute_integrate.py` |
+| Terminal gate | Phase executor | `execute_ship.py gate-check` before `sw-verify` |
+
+Conductor merge queue (`wave_merge.py`) handles phase→target only. Execute integrate is **never** enqueued
+on the conductor merge queue. Background-phase nested Task carve-out: see
+`rules/sw-dispatch-background-phase.mdc` execute partition.
+
 ## Conductor loop hard-stop (R38)
 
 Register bounds in `rules/sw-subagent-dispatch.mdc` hard-stops table.

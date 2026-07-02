@@ -916,6 +916,32 @@
       "scenarios": [
         "git-push-secret-scan-chokepoint"
       ]
+    },
+    {
+      "id": "execute-orchestration-fixtures",
+      "script": "scripts/test/run_execute_orchestration_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-execute-orchestration-fixtures",
+      "scenarios": [
+        "wave-merge-no-regression",
+        "execute-plan-linear-fallback",
+        "execute-plan-contention-serializes-shared-file",
+        "execute-dependency-rules-049-phase-2",
+        "execute-plan-dag-049-phase-2",
+        "execute-runtime-expansion-depth-cap",
+        "execute-tokenizer-deep-refs",
+        "execute-integrate-clean-merge",
+        "execute-integrate-conflict-partial-batch",
+        "execute-integrate-parallel-batch-serialized",
+        "execute-blast-radius-dependents",
+        "execute-sub-branch-ceiling-refuse",
+        "execute-ship-chain-gated",
+        "execute-autonomy-supervised-plan-halt",
+        "execute-resume-frontier",
+        "execute-resume-stale-sub-branch",
+        "execute-single-subtask-skip-tier"
+      ]
     }
   ]
 }

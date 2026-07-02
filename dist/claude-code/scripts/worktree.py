@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import subprocess
 import sys
@@ -15,6 +16,8 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from _sw.cli import build_parser, run_module_main
 from host_lib import remote_name
+
+EXECUTE_SUB_BRANCH_ROLE = "execute-sub-branch"
 
 
 def strip_jsonc(text: str) -> str:
@@ -97,42 +100,103 @@ def _resolve_state_path(worktree: str, gitdir: str) -> Path | None:
     return gd / "shipwright.json"
 
 
-def _counts_toward_ceiling(worktree: str, gitdir: str) -> bool:
+def _read_worktree_state(worktree: str, gitdir: str) -> dict:
     sp = _resolve_state_path(worktree, gitdir)
     if sp and sp.is_file():
         try:
             data = json.loads(sp.read_text(encoding="utf-8"))
-            if data.get("worktreeRole") == "orchestrator":
-                return False
-            if data.get("countsTowardCeiling") is False:
-                return False
+            return data if isinstance(data, dict) else {}
         except (json.JSONDecodeError, OSError):
-            pass
+            return {}
+    return {}
+
+
+def _counts_toward_ceiling(worktree: str, gitdir: str) -> bool:
+    data = _read_worktree_state(worktree, gitdir)
+    if data.get("worktreeRole") == "orchestrator":
+        return False
+    if data.get("countsTowardCeiling") is False:
+        return False
     return True
 
 
-def active_worktree_count() -> int:
+def iter_worktree_blocks() -> list[dict[str, str]]:
     try:
         out = subprocess.check_output(["git", "worktree", "list", "--porcelain"], text=True)
     except subprocess.CalledProcessError:
-        return 0
-    count = 0
+        return []
+    blocks: list[dict[str, str]] = []
     block: dict[str, str] = {}
     for line in out.splitlines():
         if not line.strip():
             if block:
-                wt = block.get("worktree", "")
-                if "/.sw-worktrees/" in wt and _counts_toward_ceiling(wt, block.get("gitdir", "")):
-                    count += 1
+                blocks.append(block)
                 block = {}
             continue
         key, _, val = line.partition(" ")
         block[key] = val
     if block:
+        blocks.append(block)
+    return blocks
+
+
+def active_worktree_count() -> int:
+    count = 0
+    for block in iter_worktree_blocks():
         wt = block.get("worktree", "")
         if "/.sw-worktrees/" in wt and _counts_toward_ceiling(wt, block.get("gitdir", "")):
             count += 1
     return count
+
+
+def active_execute_sub_branch_count(phase_slug: str | None = None) -> int:
+    override = os.environ.get("SW_TEST_ACTIVE_SUB_BRANCHES")
+    if override is not None:
+        try:
+            return max(0, int(override))
+        except ValueError:
+            pass
+    count = 0
+    for block in iter_worktree_blocks():
+        wt = block.get("worktree", "")
+        if "/.sw-worktrees/" not in wt:
+            continue
+        state = _read_worktree_state(wt, block.get("gitdir", ""))
+        if state.get("worktreeRole") != EXECUTE_SUB_BRANCH_ROLE:
+            continue
+        if phase_slug and str(state.get("phaseSlug") or "") != phase_slug:
+            continue
+        count += 1
+    return count
+
+
+def resolve_sub_branch_ceiling(cfg: dict | None = None) -> int:
+    cfg = cfg or load_workflow_config_dict()
+    execute = cfg.get("execute") or {}
+    raw = execute.get("subBranchCeiling")
+    if raw is not None:
+        try:
+            return max(1, int(raw))
+        except (TypeError, ValueError):
+            pass
+    intra = cfg.get("intraPhase") or {}
+    try:
+        return max(1, int(intra.get("parallelBudget", 2)))
+    except (TypeError, ValueError):
+        return 2
+
+
+def sub_branch_ceiling_check(phase_slug: str | None = None, cfg: dict | None = None) -> dict:
+    cfg = cfg or load_workflow_config_dict()
+    active = active_execute_sub_branch_count(phase_slug)
+    ceiling = resolve_sub_branch_ceiling(cfg)
+    verdict = "ok" if active < ceiling else "at-ceiling"
+    return {
+        "activeSubBranches": active,
+        "subBranchCeiling": ceiling,
+        "phaseSlug": phase_slug,
+        "verdict": verdict,
+    }
 
 
 def _validate_branch_name(branch: str) -> bool:
@@ -260,6 +324,10 @@ def cmd_provision(argv: list[str]) -> int:
     base = ""
     tier = "standard"
     workstream = "implementation"
+    worktree_role = ""
+    phase_slug = ""
+    task_ref = ""
+    counts_toward_ceiling = True
     i = 0
     while i < len(argv):
         arg = argv[i]
@@ -279,6 +347,22 @@ def cmd_provision(argv: list[str]) -> int:
             workstream = argv[i + 1]
             i += 2
             continue
+        if arg == "--worktree-role" and i + 1 < len(argv):
+            worktree_role = argv[i + 1]
+            i += 2
+            continue
+        if arg == "--phase-slug" and i + 1 < len(argv):
+            phase_slug = argv[i + 1]
+            i += 2
+            continue
+        if arg == "--task-ref" and i + 1 < len(argv):
+            task_ref = argv[i + 1]
+            i += 2
+            continue
+        if arg == "--counts-toward-ceiling" and i + 1 < len(argv):
+            counts_toward_ceiling = argv[i + 1].lower() not in {"0", "false", "no"}
+            i += 2
+            continue
         if arg.startswith("-"):
             print(f"unknown flag: {arg}", file=sys.stderr)
             return 1
@@ -294,7 +378,16 @@ def cmd_provision(argv: list[str]) -> int:
         return 1
 
     cfg = load_workflow_config_dict()
-    if ceiling_check() != 0:
+    role = worktree_role or ("execute-sub-branch" if not counts_toward_ceiling else "")
+    if role == EXECUTE_SUB_BRANCH_ROLE or not counts_toward_ceiling:
+        check = sub_branch_ceiling_check(phase_slug or None, cfg)
+        if check["verdict"] != "ok":
+            print(
+                json.dumps({"verdict": "refuse", "cause": "execute:sub-branch-ceiling", **check}),
+                file=sys.stderr,
+            )
+            return 20
+    elif ceiling_check() != 0:
         print(
             "parallel ceiling reached — run recombination before provisioning another worktree",
             file=sys.stderr,
@@ -338,23 +431,31 @@ def cmd_provision(argv: list[str]) -> int:
     port = allocate_port(cfg)
     db_strategy = str(cfg.get("worktree", {}).get("scaffold", {}).get("dbStrategy", "schema-prefix"))
     db_template = str(cfg.get("worktree", {}).get("scaffold", {}).get("dbTemplate", ""))
-    state_payload = json.dumps(
-        {
-            "worktreeName": name,
-            "worktreePath": str(wt_path),
-            "tier": tier,
-            "workstream": workstream,
-            "parentBranch": parent,
-            "currentBranch": new_branch,
-            "scaffold": {
-                "port": port,
-                "dbStrategy": db_strategy,
-                "dbTemplate": db_template,
-                "dbInstance": re.sub(r"[^a-zA-Z0-9]", "_", name),
-            },
-            "startedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        }
-    )
+    state_doc = {
+        "worktreeName": name,
+        "worktreePath": str(wt_path),
+        "tier": tier,
+        "workstream": workstream,
+        "parentBranch": parent,
+        "currentBranch": new_branch,
+        "countsTowardCeiling": counts_toward_ceiling,
+        "scaffold": {
+            "port": port,
+            "dbStrategy": db_strategy,
+            "dbTemplate": db_template,
+            "dbInstance": re.sub(r"[^a-zA-Z0-9]", "_", name),
+        },
+        "startedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    if worktree_role:
+        state_doc["worktreeRole"] = worktree_role
+    elif not counts_toward_ceiling:
+        state_doc["worktreeRole"] = EXECUTE_SUB_BRANCH_ROLE
+    if phase_slug:
+        state_doc["phaseSlug"] = phase_slug
+    if task_ref:
+        state_doc["taskRef"] = task_ref
+    state_payload = json.dumps(state_doc)
     init_proc = subprocess.run(
         [sys.executable, str(SCRIPT_DIR / "shipwright-state.py"), "init", state_payload],
         cwd=str(wt_path),
@@ -375,6 +476,8 @@ def cmd_provision(argv: list[str]) -> int:
                 "parent": parent,
                 "port": port,
                 "dbStrategy": db_strategy,
+                "countsTowardCeiling": counts_toward_ceiling,
+                "worktreeRole": state_doc.get("worktreeRole"),
             },
             indent=2,
         )
@@ -435,6 +538,13 @@ def cmd_teardown(argv: list[str]) -> int:
     return 0
 
 
+def cmd_sub_branch_ceiling_check(ns: argparse.Namespace) -> int:
+    phase = ns.phase_slug or None
+    result = sub_branch_ceiling_check(phase)
+    print(json.dumps(result, indent=2))
+    return 0 if result.get("verdict") == "ok" else 20
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if args and args[0] == "provision":
@@ -450,6 +560,9 @@ def main(argv: list[str] | None = None) -> int:
     p_list.set_defaults(handler=cmd_list)
 
     sub.add_parser("ceiling-check").set_defaults(handler=cmd_ceiling_check)
+    p_sub = sub.add_parser("sub-branch-ceiling-check")
+    p_sub.add_argument("--phase-slug", default="")
+    p_sub.set_defaults(handler=cmd_sub_branch_ceiling_check)
     sub.add_parser("read-config").set_defaults(handler=cmd_read_config)
 
     ns = parser.parse_args(args)

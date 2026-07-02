@@ -23,6 +23,20 @@ re-implement loop or halt policy in this file.
 Human gates unchanged: interactive merge pause (non-phase-mode), validated P0/P1 local review halt, branch/scope
 ambiguity, optional `--signal-id` feedback close.
 
+
+## Execute tier (PRD 053)
+
+When `execute.enabled` is true (default) and the active phase has ≥2 executable sub-tasks, phase entry:
+
+1. Validates `execute-step-plan.json` via `python3 scripts/wave.py plan validate --tier execute`.
+2. Fans out one bound `/sw-execute` Task per ref (`execute_fan_out` conductor mode).
+3. Integrates green refs via `python3 scripts/wave.py execute integrate` (phase worktree, not merge queue).
+4. Gates `sw-verify` until all refs are terminal (`execute_ship.py gate-check`).
+
+`supervised` autonomy halts once per phase for DAG confirm; `autonomous` proceeds without plan halt.
+Single-sub-task phases skip execute tier and use monolithic `/sw-execute`. Escape hatch:
+`execute.enabled: false`.
+
 ## Chain
 
 ```

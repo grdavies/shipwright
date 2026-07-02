@@ -191,6 +191,7 @@ def cmd_attempt(root: Path, args: list[str]) -> None:
         doc = load_steps(path)
     chain, _, _ = authoritative_chain(root, phase, out)
     plan_index(chain, norm)
+    _execute_verify_gate(root, phase, out, norm)
     current = doc.get("currentStep")
     if current and normalize_step(str(current)) != norm:
         fail(
@@ -209,6 +210,31 @@ def cmd_attempt(root: Path, args: list[str]) -> None:
     emit({"verdict": "pass", "action": "ship-steps-attempt", "step": norm, "attempts": attempts[norm]})
 
 
+
+
+def _execute_verify_gate(root: Path, phase: str, out: str | None, norm: str) -> None:
+    if norm != "sw-verify":
+        return
+    import execute_ship
+
+    task_list = os.environ.get("SW_TASK_LIST", "").strip() or None
+    phase_id = os.environ.get("SW_PHASE_ID", "").strip()
+    run_dir = resolve_steps_path(root, phase, out).parent
+    gate = execute_ship.ship_verify_gate_ok(
+        root,
+        run_dir,
+        task_list=task_list,
+        phase_id=phase_id,
+    )
+    if gate.get("verdict") == "blocked":
+        fail(
+            gate.get("cause") or "execute refs not terminal",
+            exit_code=20,
+            halt=gate.get("halt") or "execute:refs-not-terminal",
+            **{k: v for k, v in gate.items() if k not in ("verdict", "halt", "cause")},
+        )
+
+
 def cmd_advance(root: Path, args: list[str]) -> None:
     step = _parse_kv(args, "--step")
     if not step:
@@ -221,6 +247,7 @@ def cmd_advance(root: Path, args: list[str]) -> None:
     if not doc:
         fail("ship-steps missing; run init first", path=str(path))
     chain, source, _ = authoritative_chain(root, phase, out)
+    _execute_verify_gate(root, phase, out, norm)
     assert_advance_fidelity(root, chain, norm, doc)
     doc["lastCompletedStep"] = norm
     nxt = expected_next_step(chain, norm)
@@ -410,6 +437,76 @@ def cmd_sync_state(root: Path, args: list[str]) -> None:
     emit({"verdict": "pass", "action": "sync-state", "phaseShip": phase_ship})
 
 
+
+def cmd_execute_fan_out(root: Path, args: list[str]) -> None:
+    import subprocess
+
+    sub = args[0] if args else ""
+    rest = args[1:]
+    phase = _parse_kv(rest, "--phase") or os.environ.get("SW_PHASE_SLUG", "unknown")
+    run_dir = os.environ.get("SW_RUN_DIR", "").strip()
+    if sub == "stamp":
+        run_dir_arg = _parse_kv(rest, "--run-dir") or run_dir
+        if not run_dir_arg:
+            fail("--run-dir or SW_RUN_DIR required")
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(root / "scripts" / "intra_phase_dispatch.py"),
+                str(root),
+                "stamp-context",
+                "--run-dir",
+                run_dir_arg,
+                "--conductor-mode",
+                "execute_fan_out",
+            ],
+            cwd=str(root),
+            text=True,
+            capture_output=True,
+        )
+        if proc.returncode != 0:
+            fail(proc.stderr.strip() or proc.stdout.strip() or "stamp-context failed", exit_code=proc.returncode)
+        emit(json.loads(proc.stdout))
+    elif sub == "frontier":
+        cmd = [
+            sys.executable,
+            str(root / "scripts" / "execute_plan.py"),
+            str(root),
+            "dispatch-frontier",
+            "--phase-slug",
+            phase,
+        ]
+        rd = _parse_kv(rest, "--run-dir") or run_dir
+        if rd:
+            cmd.extend(["--run-dir", rd])
+        proc = subprocess.run(cmd, cwd=str(root), text=True, capture_output=True)
+        if proc.returncode != 0:
+            fail(proc.stderr.strip() or proc.stdout.strip() or "dispatch-frontier failed", exit_code=proc.returncode)
+        emit(json.loads(proc.stdout))
+    elif sub == "binding":
+        task_ref = _parse_kv(rest, "--task-ref")
+        if not task_ref:
+            fail("--task-ref required")
+        cmd = [
+            sys.executable,
+            str(root / "scripts" / "execute_plan.py"),
+            str(root),
+            "dispatch-binding",
+            "--task-ref",
+            task_ref,
+            "--phase-slug",
+            phase,
+        ]
+        rd = _parse_kv(rest, "--run-dir") or run_dir
+        if rd:
+            cmd.extend(["--run-dir", rd])
+        proc = subprocess.run(cmd, cwd=str(root), text=True, capture_output=True)
+        if proc.returncode != 0:
+            fail(proc.stderr.strip() or proc.stdout.strip() or "dispatch-binding failed", exit_code=proc.returncode)
+        emit(json.loads(proc.stdout))
+    else:
+        fail("execute-fan-out subcommand required: stamp|frontier|binding")
+
 def _parse_kv(args: list[str], flag: str) -> str | None:
     if flag in args:
         i = args.index(flag)
@@ -434,7 +531,7 @@ def main() -> None:
     if len(sys.argv) < 3:
         fail(
             "usage: ship_phase_steps.py <root> "
-            "<init|get|attempt|advance|resolve-resume|validate-plan|persist-plan|lifecycle-phase|sync-state> [args...]"
+            "<init|get|attempt|advance|resolve-resume|validate-plan|persist-plan|lifecycle-phase|sync-state|execute-fan-out|execute-gate-check|adapt-phase-plan|resume-frontier> [args...]"
         )
     root = Path(sys.argv[1])
     cmd = sys.argv[2]
@@ -450,6 +547,10 @@ def main() -> None:
         "persist-plan": cmd_persist_plan,
         "lifecycle-phase": cmd_lifecycle_phase,
         "sync-state": cmd_sync_state,
+        "execute-fan-out": cmd_execute_fan_out,
+        "execute-gate-check": lambda r, a: __import__("execute_ship").cmd_gate_check(r, a),
+        "adapt-phase-plan": lambda r, a: __import__("execute_ship").cmd_adapt_phase_plan(r, a),
+        "resume-frontier": lambda r, a: __import__("execute_ship").cmd_resume_frontier(r, a),
     }
     handler = handlers.get(cmd)
     if not handler:

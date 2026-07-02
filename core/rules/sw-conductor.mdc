@@ -16,6 +16,13 @@ capability:
 Load `skills/conductor/SKILL.md` for the full contract. These rules are the always-on enforcement subset
 (R1, R3).
 
+
+## Execute integrate boundary (PRD 053)
+
+- `execute_integrate.py` / `wave.py execute integrate` merges sub-branch tips into the **phase branch** only.
+- Conductor merge queue (`wave_merge.py`) owns phase→target merges — execute integrate never enqueues there.
+- Phase executor gates `sw-verify` via `execute_ship.py gate-check` when execute tier is active.
+
 ## Episodic vs durable runs (PRD 024 R37)
 
 - **Durable:** `/sw-deliver` (+ `/sw-doc` → deliver handoff) owns PRD 007/013 run-state.

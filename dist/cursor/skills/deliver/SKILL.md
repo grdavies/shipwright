@@ -79,8 +79,20 @@ rely on deliver-time fallback for new multi-phase PRDs.
 | Per-phase `/sw-ship` status | `.cursor/sw-deliver-runs/<phase-slug>/status.json` |
 | Dispatch decisions | `.cursor/sw-deliver-runs/<phase-slug>/dispatch-decisions.json` |
 | Phase step plan | `.cursor/sw-deliver-runs/<phase-slug>/phase-step-plan.json` |
+| Execute step plan | `.cursor/sw-deliver-runs/<phase-slug>/execute-step-plan.json` |
+| Integrate journal | `.cursor/sw-deliver-runs/<phase-slug>/integrate-journal.json` |
 | Append-only progress log | `.cursor/sw-deliver-runs/run.log` |
 | Legacy (migration only) | `.cursor/sw-deliver-state.json`, `.cursor/sw-deliver.lock` |
+
+
+**Three-tier plan persistence (PRD 053):** wave batching → phase step plan → execute step plan. Phase entry
+validates execute plan before fan-out when `execute.enabled` (default true) and the phase has ≥2 executable
+sub-tasks; single-sub-task phases skip to monolithic `/sw-execute`. Sub-branches use
+`feat/<slug>-phase-<phase-slug>--task-<ref>` and do not count toward `worktree.parallelCeiling`. Integrate
+via `python3 scripts/wave.py execute integrate` is phase-executor scoped — never the conductor merge queue.
+
+**PRD 004 supersede (D-053-7):** sub-task parallelism lives at the execute tier under `/sw-ship` when
+`execute.enabled`; wave-tier batching is unchanged.
 
 **Two-tier plan persistence (PRD 022):** validated wave-batching plans live on shared run-state
 (`waveBatchingPlan`, conductor-only); validated phase step plans live under the phase run dir

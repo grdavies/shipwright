@@ -76,6 +76,41 @@ stamp the resolved concrete `model:` on the Task (do not rely on `model: inherit
 | `deliver.autonomy.maxRunMinutes` | unset | Run-level wall-clock ceiling → consolidated halt |
 | `deliver.autonomy.maxIterations` | `500` | In-turn `deliver-loop` hard stop |
 
+
+### Execute tier (`execute.*`) — PRD 053
+
+Sub-task orchestration under `/sw-ship --phase-mode`. **Default-on** (`execute.enabled: true`); escape hatch
+`execute.enabled: false` restores monolithic `/sw-execute`.
+
+Frozen docs still hand off via `/sw-deliver run <frozen-tasks>` per `doc.afterTasks` (Step 3) — execute tier only subdivides phase work inside `/sw-ship --phase-mode`.
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `execute.enabled` | `true` | When true and phase has ≥2 executable sub-tasks, validate execute plan and fan out per ref before `sw-verify` |
+| `execute.subBranchCeiling` | `null` | Max concurrent execute sub-branches; `null` resolves to `intraPhase.parallelBudget` |
+| `execute.maxExpansionDepth` | `2` | Runtime recursive expansion depth cap for oversized refs |
+| `execute.sizing.thresholds` | see schema | Scorer thresholds for runtime synthetic child refs |
+
+**Sub-branch naming:** `feat/<slug>-phase-<phase-slug>--task-<ref>` — does not count toward `worktree.parallelCeiling`.
+
+**Autonomy × execute halts:**
+
+| `deliver.autonomy.mode` | Execute behavior |
+| --- | --- |
+| `autonomous` | Auto-propose/dispatch/remediate to budget; no plan-confirmation halt |
+| `supervised` | One DAG confirm halt per phase (`execute:supervised-plan-confirm`); fail-fast on first sub-task failure |
+
+**`planPolicy` interaction:** `orchestration.planPolicy: canonical` emits linear execute batches (width 1)
+except contention-forced serial edges. `proposed` allows parallel batches within `intraPhase.parallelBudget`
+and global cap. Recorded `planPolicy` on the execute plan is authoritative on resume.
+
+**PRD 004 supersede (D-053-7):** sub-task parallelism is execute-tier under `/sw-ship`; wave-tier batching
+unchanged.
+
+Fixture suite: `python3 scripts/test/run_execute_orchestration_fixtures.py` (registered as
+`execute-orchestration-fixtures` in the PR test-plan manifest).
+
+
 **Legitimate halts:** terminal merge to `main`; remediation budget exhausted; merge conflict /
 destructive git; `doc.afterTasks: confirm` or supervised mode; phase liveness timeout; CI/external wait
 exhausted; run-level budget. Every halt emits one report with an exact resume command.

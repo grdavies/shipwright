@@ -792,6 +792,38 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
     emit({"verdict": "pass", "action": "phase-provision", **payload})
 
 
+
+def cmd_execute_provision_sub_branch(root: Path, args: list[str]) -> None:
+    import subprocess
+
+    script = root / "scripts" / "execute_plan.py"
+    proc = subprocess.run(
+        [sys.executable, str(script), str(root), "provision-sub-branch", *args],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    if proc.stdout:
+        sys.stdout.write(proc.stdout)
+    if proc.returncode != 0:
+        fail(proc.stderr.strip() or proc.stdout.strip() or "execute sub-branch provision failed", exit_code=proc.returncode)
+
+
+def cmd_execute_teardown_sub_branch(root: Path, args: list[str]) -> None:
+    import subprocess
+
+    script = root / "scripts" / "execute_plan.py"
+    proc = subprocess.run(
+        [sys.executable, str(script), str(root), "teardown-sub-branch", *args],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    if proc.stdout:
+        sys.stdout.write(proc.stdout)
+    if proc.returncode != 0:
+        fail(proc.stderr.strip() or proc.stdout.strip() or "execute sub-branch teardown failed", exit_code=proc.returncode)
+
 def main() -> None:
     if len(sys.argv) < 3:
         fail("usage: wave_lifecycle.py <root> <command> [args...]")
@@ -816,6 +848,15 @@ def main() -> None:
         cmd_phase_teardown(root, args)
     elif cmd == "phase-teardown-run":
         cmd_phase_teardown_run(root, args)
+    elif cmd == "execute":
+        sub = args[0] if args else ""
+        rest = args[1:]
+        if sub == "provision-sub-branch":
+            cmd_execute_provision_sub_branch(root, rest)
+        elif sub == "teardown-sub-branch":
+            cmd_execute_teardown_sub_branch(root, rest)
+        else:
+            fail("execute subcommand required: provision-sub-branch|teardown-sub-branch")
     elif cmd == "phase":
         sub = args[0] if args else ""
         rest = args[1:]

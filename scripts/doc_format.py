@@ -198,6 +198,71 @@ TRACEABILITY_HEADER = re.compile(r"^##\s+Traceability\s*$", re.I)
 PHASE_DEPS_HEADER = re.compile(r"^##\s+Phase Dependencies\s*$", re.I)
 TRACE_ROW = re.compile(r"^\|([^|]+)\|([^|]+)\|([^|]+)\|")
 PHASE_DEP_ROW = re.compile(r"^\|([^|]+)\|([^|]+)\|")
+SUBTASK_CHECKBOX = re.compile(r"^-\s+\[([ xX])\]\s+(\d+(?:\.\d+)+)\s+(.+)$")
+REF_ID_PATTERN = re.compile(r"^\d+(?:\.\d+)+$")
+
+
+def ref_sort_key(ref_id: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in ref_id.split("."))
+
+
+def extract_executable_subtasks(text: str, phase_id: str) -> list[dict[str, Any]]:
+    """Parse executable sub-tasks for one phase (PRD 053 R5, R29)."""
+    chunk = phase_section_text(text, phase_id)
+    if not chunk:
+        return []
+    subtasks: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    for line in chunk.splitlines():
+        match = SUBTASK_CHECKBOX.match(line)
+        if match:
+            if current:
+                subtasks.append(current)
+            ref_id = match.group(2)
+            if not REF_ID_PATTERN.match(ref_id):
+                continue
+            current = {
+                "id": ref_id,
+                "title": match.group(3).strip(),
+                "files": [],
+                "checked": match.group(1).lower() == "x",
+            }
+            continue
+        if current and "**File:**" in line:
+            raw = re.sub(r"^\s*-?\s*\*\*File:\*\*\s*", "", line).strip()
+            backtick_paths = re.findall(r"`([^`]+)`", raw)
+            if backtick_paths:
+                paths = [normalize_file_path(p) for p in backtick_paths if p.strip()]
+            else:
+                paths = [
+                    normalize_file_path(p.strip())
+                    for p in re.split(r"[,]|(?:\s+and\s+)|(?:\s+or\s+)", raw)
+                    if p.strip()
+                ]
+            current["files"].extend(paths)
+    if current:
+        subtasks.append(current)
+  # keep only unchecked executable items with at least one file
+    return [
+        {
+            "id": st["id"],
+            "title": st["title"],
+            "files": sorted(set(st.get("files") or [])),
+        }
+        for st in subtasks
+        if not st.get("checked") and st.get("files")
+    ]
+
+
+def phase_section_text(text: str, phase_id: str) -> str:
+    body = split_frontmatter(text)[1]
+    sections = re.split(r"^###\s+(\d+)\.", body, flags=re.MULTILINE)
+    for idx in range(1, len(sections), 2):
+        if sections[idx] == phase_id:
+            return sections[idx + 1] if idx + 1 < len(sections) else ""
+    return ""
+
+
 
 
 def normalize_file_path(raw: str) -> str:

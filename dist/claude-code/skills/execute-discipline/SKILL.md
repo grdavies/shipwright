@@ -11,6 +11,12 @@ plan self-review → TDD red → implement → TDD green → two-stage review be
 
 **Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --skill execute-discipline`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
+
+## Ref-scoped dispatch (PRD 053)
+
+When `/sw-execute` is dispatched with a single `--task-ref`, run the per-task loop for **that ref only**.
+Persist status via `execute_task_status.py`. Sibling refs are scheduled by the phase executor execute plan.
+
 ## Per-task loop
 
 ```

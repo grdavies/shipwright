@@ -43,6 +43,9 @@ docs/decisions/
 │       ├── status.json
 │       ├── ship-steps.json
 │       ├── phase-step-plan.json
+│       ├── execute-step-plan.json
+│       ├── integrate-journal.json
+│       ├── execute-supervised-confirmed.json
 │       └── dispatch-decisions.json
 ```
 
@@ -418,6 +421,40 @@ sole step authority (`ship_phase_steps.authoritative_chain`); canonical `SHIP_CH
 
 **Invariants home:** `core/sw-reference/kernel-classification.md` — cross-link; do not duplicate the kernel
 enumeration elsewhere.
+### Three-tier plan lifecycle (PRD 053 — wave / phase / execute)
+
+| Tier | Artifact | Proposer | Validate | Resume owner |
+| --- | --- | --- | --- | --- |
+| Wave | `waveBatchingPlan` on shared run-state | Conductor at wave entry | `wave.py plan validate --tier wave` | Conductor |
+| Phase | `phase-step-plan.json` | Phase executor at phase entry | `wave.py plan validate --tier phase` | Phase executor (`ship_phase_steps.py`) |
+| Execute | `execute-step-plan.json` | Phase executor before fan-out | `wave.py plan validate --tier execute` | Phase executor (`execute_plan.py`) |
+
+Phase entry lifecycle (ordered): `phase-step-plan` validate → `execute-step-plan` validate (when
+`execute.enabled`) → execute fan-out → per-ref integrate → resume phase chain at `sw-verify`.
+
+| Artifact | Path | Writer | Role |
+| --- | --- | --- | --- |
+| Execute step plan | `.cursor/sw-deliver-runs/<phase-slug>/execute-step-plan.json` | `execute_plan.py` / `wave_plan_validate.py` | Closed-world DAG of sub-task refs, batches, edges |
+| Integrate journal | `.cursor/sw-deliver-runs/<phase-slug>/integrate-journal.json` | `execute_integrate.py` | Append-only per-ref merge audit (separate from conductor `mergeQueue` / `mergeJournal`) |
+| Per-ref execute status | `.cursor/sw-execute-runs/<sanitized-ref>/status.json` | `execute_task_status.py` | TDD + refactor rollup per sub-task ref |
+| Supervised plan confirm | `.cursor/sw-deliver-runs/<phase-slug>/execute-supervised-confirmed.json` | `execute_ship.py` | One halt marker per phase under `deliver.autonomy.mode: supervised` |
+
+**Sub-branch naming:** `feat/<slug>-phase-<phase-slug>--task-<ref>` (sanitized ref; `countsTowardCeiling: false`).
+Provisioned by `execute_plan.py provision-sub-branch`; torn down after successful integrate.
+
+**Integrate vs merge-queue boundary:** `execute_integrate.py` (phase-executor scoped, single-flight per phase
+worktree) merges sub-branch tips into the phase branch. Conductor `wave_merge.py` phase→target merge is
+unchanged — execute integrate never enqueues on the conductor merge queue.
+
+**`benefitMetric.decomposed.stepPlanAdaptivity` execute fields** (numeric only):
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `refsParallelized` | int | Batches with width > 1 |
+| `runtimeExpansions` | int | Synthetic child refs from runtime expansion |
+| `skippedRefs` | int | Terminal `skipped` refs |
+| `parallelBatchWidth` | int | Max batch width in execute plan |
+| `refCount` | int | Total refs in execute plan |
 
 ## Deliver pilot run records (PRD 023)
 
