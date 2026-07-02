@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import sys
+from wave_errors import fail_from_payload
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -505,7 +506,7 @@ def cmd_phase_teardown_run(root: Path, args: list[str]) -> None:
                 err = json.loads(proc.stdout)
             except json.JSONDecodeError:
                 err = {"error": proc.stderr or proc.stdout}
-            fail(err.get("error", "forward-merge failed"), exit_code=proc.returncode, **err)
+            fail_from_payload(fail, err, "forward-merge failed", proc.returncode)
 
     if dependent_references_worktree(state, plan, phase_id, wt_path):
         fail(
@@ -534,7 +535,7 @@ def cmd_phase_teardown_run(root: Path, args: list[str]) -> None:
             err = json.loads(proc.stdout)
         except json.JSONDecodeError:
             err = {"error": proc.stderr or proc.stdout}
-        fail(err.get("error", "phase teardown failed"), exit_code=proc.returncode, **err)
+        fail_from_payload(fail, err, "phase teardown failed", proc.returncode)
 
     state = load_deliver_state(root)
     phases = state.setdefault("phases", {})
@@ -660,7 +661,7 @@ def reconcile_orphan_phase_worktree(
                 err = json.loads(proc.stdout)
             except json.JSONDecodeError:
                 err = {"error": proc.stderr or proc.stdout}
-            fail(err.get("error", "orphan worktree teardown failed"), exit_code=proc.returncode, **err)
+            fail_from_payload(fail, err, "orphan worktree teardown failed", proc.returncode)
     return None
 
 def cmd_phase_provision(root: Path, args: list[str]) -> None:
@@ -775,7 +776,7 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
                 err = json.loads(mat_proc.stdout)
             except json.JSONDecodeError:
                 err = {"error": mat_proc.stderr or mat_proc.stdout}
-            fail(err.get("error", "materialize provision failed"), exit_code=20, **err)
+            fail_from_payload(fail, err, "materialize provision failed", 20)
         if mat_proc.returncode not in (0,):
             fail(
                 mat_proc.stderr.strip() or mat_proc.stdout.strip() or "materialize provision failed",

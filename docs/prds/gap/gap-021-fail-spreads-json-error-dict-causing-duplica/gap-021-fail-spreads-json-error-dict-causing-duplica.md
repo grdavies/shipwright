@@ -1,10 +1,11 @@
 ---
 id: gap-021-fail-spreads-json-error-dict-causing-duplica
 type: gap
-status: scheduled
+status: resolved
 schedule: PRD 050 A6
 title: fail() spreads JSON error dict causing duplicate error kwarg TypeError
 visibility: public
+resolvedBy: PRD 050 A6
 tags: [source:feedback, recallium:2280, recallium:2295, signal:feedback-recallium-debug-2026-07-02]
 source_pr:
 absorbs: []
