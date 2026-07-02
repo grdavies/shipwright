@@ -215,6 +215,15 @@
       "ciJobName": "feat-test-plan-doc-currency-033-fixtures"
     },
     {
+      "id": "doc-currency-049-fixtures",
+      "script": "scripts/test/run_doc_currency_049_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-doc-currency-049-fixtures"
+    },
+    {
       "id": "doc-fixtures",
       "script": "scripts/test/run_doc_fixtures.py",
       "lanes": [
