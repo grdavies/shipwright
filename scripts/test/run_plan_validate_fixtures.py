@@ -231,7 +231,7 @@ else
 fi
 
 # --- verify.test registration ---
-if grep -q 'run-plan-validate-fixtures.sh' "$WF" 2>/dev/null; then
+if grep -q 'run_plan_validate_fixtures.py' "$ROOT/core/sw-reference/suite-registry.json" 2>/dev/null; then
   ok "plan-validate-verify-registration"
 else
   bad "plan-validate-verify-registration"

@@ -159,7 +159,7 @@ else
 fi
 
 # --- verify.test registration ---
-if grep -q 'run-guidelines-floor-fixtures.sh' "$WF" 2>/dev/null; then
+if grep -q 'run_guidelines_floor_fixtures.py' "$ROOT/core/sw-reference/suite-registry.json" 2>/dev/null; then
   ok "guidelines-floor-verify-registration"
 else
   bad "guidelines-floor-verify-registration"
