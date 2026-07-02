@@ -835,9 +835,7 @@
       "scenarios": [
         "gap-backlog-flip-schedule-force-reschedule"
       ]
-    }
-  ],
-  "suites": [
+    },
     {
       "id": "deliver-concurrency-fixtures",
       "script": "scripts/test/run_deliver_concurrency_fixtures.py",
