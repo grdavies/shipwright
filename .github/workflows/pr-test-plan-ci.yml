@@ -671,3 +671,14 @@ jobs:
       - name: Run deliver-worktree-contract-fixtures
         run: python3 scripts/test/run_deliver_worktree_contract_fixtures.py
 
+  feat-test-plan-gap-backlog-fixtures:
+    name: feat-test-plan-gap-backlog-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run gap-backlog-fixtures
+        run: python3 scripts/test/run_gap_backlog_fixtures.py
+

@@ -1093,6 +1093,15 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-deliver-worktree-contract-fixtures"
+    },
+    {
+      "id": "gap-backlog-fixtures",
+      "script": "scripts/test/run_gap_backlog_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-gap-backlog-fixtures"
     }
   ]
 }
