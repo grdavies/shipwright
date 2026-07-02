@@ -846,7 +846,10 @@
         "freeze-commit-cwd-forced-primary-fails-closed",
         "deliver-provision-does-not-mutate-concurrent-primary-checkout",
         "slug-scoped-run-log-writes",
-        "conductor-mandatory-provisioning-contract"
+        "conductor-mandatory-provisioning-contract",
+        "orphan-phase-worktree-adopt-or-teardown",
+        "no-progress-differentiated-stall-causes",
+        "stale-in-progress-success-check-gate-green"
       ]
     },
     {

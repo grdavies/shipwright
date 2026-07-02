@@ -49,7 +49,10 @@ from wave_merge import (
     status_file_for,
 )
 from status_integrity import (
+    classify_deliver_stall_cause,
     DEFAULT_REEMIT_MAX,
+    is_differentiated_stall,
+    stall_progress_key,
     DEFAULT_TIP_QUIESCENCE_SECONDS,
     build_status_document,
     classify_stuck_stale,
@@ -442,9 +445,17 @@ def record_budget_tick(root: Path, state: dict[str, Any], next_action: str) -> N
         counters["executionIterationCount"] = int(
             counters.get("executionIterationCount", 0)
         ) + 1
-        progress_key = json.dumps(
-            {"signature": build_state_signature(state), "nextAction": next_action},
-            sort_keys=True,
+        stall_cause = classify_deliver_stall_cause(
+            root,
+            state,
+            next_action,
+            phase_id=str(state.get("_stallPhaseId") or ""),
+            worktree_name=state.get("_stallWorktreeName"),
+        )
+        progress_key = stall_progress_key(
+            build_state_signature(state),
+            next_action,
+            stall_cause,
         )
         if progress_key == state.get("lastProgressKey"):
             state["noProgressStreak"] = int(state.get("noProgressStreak", 0)) + 1
@@ -453,6 +464,10 @@ def record_budget_tick(root: Path, state: dict[str, Any], next_action: str) -> N
                 supersede_stale_blockers(root)
             state["noProgressStreak"] = 0
             state["lastProgressKey"] = progress_key
+        if stall_cause:
+            state["lastStallCause"] = stall_cause
+        else:
+            state.pop("lastStallCause", None)
 
 
 def plan_rejection_halt_cause(state: dict[str, Any]) -> str | None:
@@ -527,6 +542,15 @@ def check_budget_halt(root: Path, state: dict[str, Any]) -> str | None:
                 return "conductor:max-run-minutes-exceeded"
 
     if int(state.get("noProgressStreak", 0)) >= no_progress_threshold(root):
+        stall = classify_deliver_stall_cause(
+            root,
+            state,
+            str(state.get("nextAction") or ""),
+            phase_id=str(state.get("_stallPhaseId") or ""),
+            worktree_name=state.get("_stallWorktreeName"),
+        )
+        if is_differentiated_stall(stall):
+            return None
         if remediate_pending_for_state(root, state):
             return None
         try:
@@ -750,6 +774,29 @@ def all_phases_merged(state: dict[str, Any]) -> bool:
 def in_flight_count(statuses: dict[str, str], wave_ids: list[str]) -> int:
     return sum(1 for pid in wave_ids if statuses.get(pid) == "in-flight")
 
+
+
+
+def phase_worktree_provisioned(state: dict[str, Any], phase_id: str) -> bool:
+    """dispatch-ship requires phaseWorktrees path on disk (R8)."""
+    wt = (state.get("phaseWorktrees") or {}).get(str(phase_id))
+    if not isinstance(wt, dict):
+        return False
+    path = wt.get("path")
+    return bool(path) and Path(str(path)).is_dir()
+
+
+def phase_worktree_name_for(state: dict[str, Any], plan: dict[str, Any], phase_id: str) -> str | None:
+    item = item_for_phase(plan, phase_id) or {}
+    slug = item.get("slug") or phase_id
+    target_slug = slug_from_target((plan.get("target") or {}).get("branch", "feat/x"))
+    return f"{target_slug}-phase-{slug}"
+
+
+def slug_from_target(target_branch: str) -> str:
+    if "/" not in target_branch:
+        return target_branch
+    return target_branch.split("/", 1)[1]
 
 def phase_dispatch_payload(
     plan: dict[str, Any], phase_id: str
@@ -1191,6 +1238,14 @@ def dispatch_or_phase_plan_entry(
 ) -> dict[str, Any]:
     item = item_for_phase(plan, phase_id) or {}
     slug = item.get("slug") or phase_id
+    if not phase_worktree_provisioned(state, phase_id):
+        return {
+            "action": "provision-phase",
+            "phaseId": phase_id,
+            "phaseSlug": slug,
+            "resume": True,
+            "note": "dispatch-ship refused until phaseWorktrees records provisioned path (R8)",
+        }
     if needs_phase_plan_proposal(state, phase_id):
         return {
             "action": "phase-plan-entry",
@@ -1805,6 +1860,8 @@ def execute_mechanical(
 
     if action == "provision-phase":
         pid = str(step.get("phaseId", ""))
+        state["_stallPhaseId"] = pid
+        state["_stallWorktreeName"] = phase_worktree_name_for(state, plan, pid)
         ec, data = run_wave(
             root,
             "phase",
@@ -2273,6 +2330,10 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
             state["source_task_list"] = task_list
         init_budget_counters(state)
         step = compute_next_action(root, state, plan)
+        if step.get("phaseId"):
+            pid = str(step["phaseId"])
+            state["_stallPhaseId"] = pid
+            state["_stallWorktreeName"] = phase_worktree_name_for(state, plan, pid)
         if step["action"] != "halt-blocked":
             record_budget_tick(root, state, step["action"])
             save_state(root, state)
@@ -2483,6 +2544,14 @@ def main() -> None:
         emit({"verdict": "pass", "action": "living-doc-reconcile-suggestion", **manual_living_doc_reconcile_suggestion(root, state)})
     else:
         fail(f"unknown command: {cmd}")
+
+
+
+def poll_phase_ship_gate(root: Path, pr: str | None = None) -> dict[str, Any]:
+    """Phase-mode CI poll via check-gate backoff — never blocking blocking host watch (R12)."""
+    from watch_ci_lib import poll_check_gate_settled
+
+    return poll_check_gate_settled(root, pr)
 
 
 if __name__ == "__main__":

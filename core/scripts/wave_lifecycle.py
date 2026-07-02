@@ -563,6 +563,106 @@ def cmd_phase_teardown_run(root: Path, args: list[str]) -> None:
     )
 
 
+
+
+def worktree_current_branch(wt_path: Path) -> str | None:
+    proc = subprocess.run(
+        ["git", "-C", str(wt_path), "branch", "--show-current"],
+        text=True,
+        capture_output=True,
+    )
+    branch = proc.stdout.strip() if proc.returncode == 0 else ""
+    return branch or None
+
+
+def adopt_orphan_phase_worktree(
+    root: Path,
+    *,
+    phase_id: str,
+    wt_path: Path,
+    name: str,
+    branch: str,
+    slug: str,
+    base: str,
+) -> dict[str, Any]:
+    """Register an existing matching orphan worktree in durable state (R7)."""
+    state = load_deliver_state(root)
+    worktrees = state.setdefault("phaseWorktrees", {})
+    worktrees[str(phase_id)] = {"name": name, "path": str(wt_path)}
+    state["phaseWorktrees"] = worktrees
+    save_deliver_state(root, state)
+    if wt_path.is_dir():
+        write_shipwright_state(
+            wt_path,
+            {
+                "worktreeName": name,
+                "worktreePath": str(wt_path),
+                "worktreeRole": PHASE_ROLE,
+                "countsTowardCeiling": True,
+                "parentBranch": base,
+                "currentBranch": branch,
+                "phaseId": phase_id,
+                "phaseSlug": slug,
+                "startedAt": utc_now(),
+            },
+        )
+    return {
+        "verdict": "pass",
+        "action": "phase-provision",
+        "adopted": True,
+        "path": str(wt_path),
+        "name": name,
+        "worktreeName": name,
+        "branch": branch,
+        "countsTowardCeiling": True,
+        "worktreeRole": PHASE_ROLE,
+    }
+
+
+def reconcile_orphan_phase_worktree(
+    root: Path,
+    *,
+    phase_id: str,
+    wt_path: Path,
+    name: str,
+    expected_branch: str,
+    slug: str,
+    base: str,
+) -> dict[str, Any] | None:
+    """Adopt matching orphan into state or teardown mismatch before retry (R7/R8)."""
+    if not wt_path.is_dir():
+        return None
+    state = load_deliver_state(root)
+    recorded = (state.get("phaseWorktrees") or {}).get(str(phase_id))
+    if isinstance(recorded, dict) and recorded.get("path"):
+        return None
+    actual = worktree_current_branch(wt_path)
+    if actual == expected_branch:
+        return adopt_orphan_phase_worktree(
+            root,
+            phase_id=str(phase_id),
+            wt_path=wt_path,
+            name=name,
+            branch=expected_branch,
+            slug=slug,
+            base=base,
+        )
+    teardown_args = ["phase-teardown", "--worktree", str(wt_path)]
+    if actual and actual != expected_branch:
+        proc = subprocess.run(
+            [sys.executable, str(Path(__file__).resolve()), str(root), *teardown_args],
+            cwd=str(root),
+            text=True,
+            capture_output=True,
+        )
+        if proc.returncode != 0:
+            try:
+                err = json.loads(proc.stdout)
+            except json.JSONDecodeError:
+                err = {"error": proc.stderr or proc.stdout}
+            fail(err.get("error", "orphan worktree teardown failed"), exit_code=proc.returncode, **err)
+    return None
+
 def cmd_phase_provision(root: Path, args: list[str]) -> None:
     phase_id = parse_kv(args, "--phase-id")
     if not phase_id:
@@ -583,6 +683,20 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
     name = parse_kv(args, "--name", f"{target_slug}-phase-{slug}") or f"{target_slug}-phase-{slug}"
 
     top = git_toplevel(root)
+    wt_path = top / ".sw-worktrees" / name
+    adopted = reconcile_orphan_phase_worktree(
+        root,
+        phase_id=str(phase_id),
+        wt_path=wt_path,
+        name=name,
+        expected_branch=str(branch),
+        slug=str(slug),
+        base=str(base),
+    )
+    if adopted is not None:
+        emit(adopted)
+        return
+
     script = top / "scripts" / "worktree.py"
     proc = subprocess.run(
         [

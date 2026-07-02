@@ -7,6 +7,7 @@ import os
 import re
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -128,6 +129,66 @@ def load_pr_test_plan(root: Path, cfg: dict[str, Any]) -> tuple[Any, list[str], 
             pr_test_plan = None
     return pr_test_plan, advisory_jobs, required_jobs
 
+
+
+
+DEFAULT_STALE_IN_PROGRESS_TTL_SECONDS = 600
+
+
+def _parse_iso8601(value: str) -> datetime | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    if raw.endswith("Z"):
+        raw = raw[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def stale_in_progress_ttl_seconds(cfg: dict[str, Any]) -> int:
+    override = os.environ.get("SW_STALE_IN_PROGRESS_TTL_SECONDS", "").strip()
+    if override:
+        try:
+            return max(0, int(override))
+        except ValueError:
+            pass
+    raw = cfg_value(cfg, "checks", "staleInProgressTtlSeconds", default=DEFAULT_STALE_IN_PROGRESS_TTL_SECONDS)
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return DEFAULT_STALE_IN_PROGRESS_TTL_SECONDS
+
+
+def reconcile_stale_in_progress_checks(
+    checks: list[dict[str, Any]],
+    *,
+    ttl_seconds: int,
+    now: datetime | None = None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Settle stale IN_PROGRESS checks whose workflow conclusion is SUCCESS (R11)."""
+    now = now or datetime.now(timezone.utc)
+    settled: list[str] = []
+    out: list[dict[str, Any]] = []
+    for item in checks:
+        if not isinstance(item, dict):
+            continue
+        row = dict(item)
+        state = str(row.get("state") or "").upper()
+        conclusion = str(row.get("conclusion") or "").upper()
+        if state in PENDING_STATES and conclusion == "SUCCESS":
+            started = _parse_iso8601(str(row.get("startedAt") or ""))
+            age_seconds = (now - started).total_seconds() if started else float("inf")
+            if age_seconds >= float(ttl_seconds):
+                row["state"] = "SUCCESS"
+                row["staleInProgressSettled"] = True
+                settled.append(str(row.get("name") or "check"))
+        out.append(row)
+    return out, settled
 
 def classify_checks(
     checks: list[dict[str, Any]],
@@ -641,6 +702,11 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
     checks_raw = host_data(root, "checks", "--sha", head_sha) or []
     if not isinstance(checks_raw, list):
         checks_raw = []
+    ttl = stale_in_progress_ttl_seconds(cfg)
+    checks_raw, _stale_settled = reconcile_stale_in_progress_checks(
+        checks_raw,
+        ttl_seconds=ttl,
+    )
 
     classified = classify_checks(checks_raw, neutral_pass=neutral_pass, allowlist=allowlist)
     failing = [c["name"] for c in classified if c["class"] == "fail"]
@@ -764,6 +830,11 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     checks_raw = host_data(root, "checks", "--number", pr, "--sha", head_sha) or []
     if not isinstance(checks_raw, list):
         checks_raw = []
+    ttl = stale_in_progress_ttl_seconds(cfg)
+    checks_raw, stale_settled = reconcile_stale_in_progress_checks(
+        checks_raw,
+        ttl_seconds=ttl,
+    )
     classified = classify_checks(checks_raw, neutral_pass=neutral_pass, allowlist=allowlist)
     failing = [c["name"] for c in classified if c["class"] == "fail"]
     pending = [c["name"] for c in classified if c["class"] == "pending"]
