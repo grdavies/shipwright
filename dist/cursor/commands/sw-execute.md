@@ -8,6 +8,19 @@ alwaysApply: false
 Implement exactly one planned phase on the current branch inside the worktree. Uses **per-task execute
 discipline** (`skills/execute-discipline/SKILL.md`): plan self-review → TDD red-green → two-stage review.
 
+
+## Ref-scoped mode (PRD 053)
+
+When dispatched from `/sw-ship` under execute tier fan-out, scope is **one task ref only** (e.g. `2.1`):
+
+- Bind Task to `--task-ref <ref>`; implement only that sub-task from the frozen task list.
+- Write per-ref status to `.cursor/sw-execute-runs/<ref>/status.json` via `execute_task_status.py`.
+- Do not implement sibling refs — integrate is phase-executor owned after all refs terminal.
+- Sub-branch: `feat/<slug>-phase-<phase-slug>--task-<ref>` when provisioned by `execute_plan.py`.
+
+Monolithic mode (no `--task-ref`) implements the full phase checklist in one invocation — used when
+`execute.enabled: false` or the phase has a single executable sub-task.
+
 ## Procedure
 
 1. **Worktree guard** — run `python3 scripts/sw-assert-worktree.py` before any implementation write. Exit `1` → halt

@@ -50,6 +50,7 @@
     "anomaly-patterns.json",
     "build-chain-paths.json",
     "build-chain-sot.json",
+    "call-site-map.md",
     "canonical-serialization.md",
     "capability-index.json",
     "capability-manifest.md",

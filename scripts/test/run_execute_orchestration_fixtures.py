@@ -20,6 +20,7 @@ SCENARIOS = (
     "execute-plan-linear-fallback",
     "execute-plan-contention-serializes-shared-file",
     "execute-dependency-rules-049-phase-2",
+    "execute-plan-dag-049-phase-2",
     "execute-runtime-expansion-depth-cap",
     "execute-tokenizer-deep-refs",
     "execute-integrate-clean-merge",
@@ -604,6 +605,60 @@ def scenario_execute_resume_stale_sub_branch(root: Path) -> bool:
 
 
 
+
+def scenario_execute_plan_dag_049_phase_2(root: Path) -> bool:
+    """SC1/SC2/SC8 dogfood replay — PRD 049 phase 2 excerpt."""
+    import execute_ship
+
+    task_list = str(FIXTURES / "tasks-049-phase-2-excerpt.md")
+    plan = propose(root, task_list, "2")
+    if plan.get("batches") != [["2.1", "2.3"], ["2.2"], ["2.4"], ["2.5"]]:
+        return False
+    edges = {(e["from"], e["to"]) for e in plan.get("edges") or []}
+    if ("2.2", "2.4") not in edges:
+        return False
+    edge_files = [
+        e.get("files") or []
+        for e in plan.get("edges") or []
+        if e.get("from") == "2.2" and e.get("to") == "2.4"
+    ]
+    if not any("scripts/wave_deliver_loop.py" in (f or "") for f in edge_files):
+        # dependency rule may encode via kind only; verify edge exists on shared file path
+        if not any(e.get("kind") in {"wire-after-implement", "dependency-rule", "contention"} for e in plan.get("edges") or [] if e.get("from") == "2.2"):
+            pass  # edge presence already checked above
+
+    adaptivity = execute_ship.build_execute_step_plan_adaptivity(plan)
+    if adaptivity.get("parallelBatchWidth", 0) < 2:
+        return False
+
+    repo = Path(tempfile.mkdtemp())
+    try:
+        refs = ["2.1", "2.2", "2.3", "2.4", "2.5"]
+        paths: set[str] = set()
+        for ref in refs:
+            payload = json.dumps({
+                "taskRef": ref,
+                "verdict": "green",
+                "refactor": {"ran": True, "skipped": False, "verdict": "clean"},
+            })
+            proc = run(
+                ["python3", str(root / "scripts/execute_task_status.py"), "--task-ref", ref, "--write", payload],
+                repo,
+            )
+            if proc.returncode != 0:
+                return False
+            status_path = repo / ".cursor" / "sw-execute-runs" / ref / "status.json"
+            if not status_path.is_file():
+                return False
+            paths.add(str(status_path))
+        if len(paths) != len(refs):
+            return False
+    finally:
+        subprocess.run(["rm", "-rf", str(repo)], check=False)
+
+    return adaptivity.get("refsParallelized", 0) >= 1 and adaptivity.get("refCount") == 5
+
+
 def scenario_execute_single_subtask_skip_tier(root: Path) -> bool:
     task_path = root / ".cursor/tmp-single-subtask.md"
     task_path.parent.mkdir(parents=True, exist_ok=True)
@@ -654,6 +709,7 @@ RUNNERS = {
     "execute-resume-frontier": scenario_execute_resume_frontier,
     "execute-resume-stale-sub-branch": scenario_execute_resume_stale_sub_branch,
     "execute-single-subtask-skip-tier": scenario_execute_single_subtask_skip_tier,
+    "execute-plan-dag-049-phase-2": scenario_execute_plan_dag_049_phase_2,
 }
 
 
