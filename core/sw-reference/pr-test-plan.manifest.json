@@ -932,7 +932,9 @@
         "execute-tokenizer-deep-refs",
         "execute-integrate-clean-merge",
         "execute-integrate-conflict-partial-batch",
-        "execute-integrate-parallel-batch-serialized"
+        "execute-integrate-parallel-batch-serialized",
+        "execute-blast-radius-dependents",
+        "execute-sub-branch-ceiling-refuse"
       ]
     }
   ]
