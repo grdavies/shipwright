@@ -18,6 +18,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from host_invoke import host_verb
+from wave_errors import fail_from_payload
 from host_lib import load_workflow_config, remote_name, remote_ref, resolve_provider
 from wave_state import phase_complete
 
@@ -32,6 +33,7 @@ def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
 
 
 def fail(error: Any, exit_code: int = 2, **extra: Any) -> None:
+    extra.pop("error", None)
     emit({"verdict": "fail", "error": str(error), **extra}, exit_code)
 
 
@@ -561,13 +563,30 @@ def run_tasks_currency_gate(root: Path, state: dict[str, Any]) -> None:
         )
 
 
+def resolve_docs_currency_paths(root: Path) -> tuple[Path, Path, Path, Path]:
+    from wave_state import load_deliver_state, resolve_state_path
+
+    state = load_deliver_state(root)
+    state_path = resolve_state_path(root, state_hint=state if state else None)
+    plan_path = root / ".cursor" / "sw-deliver-plan.json"
+    return root, root, state_path, plan_path
+
+
 def run_docs_currency_gate(root: Path) -> None:
-    """Hard-block terminal gate on living-doc drift for the current run (R50)."""
+    """Hard-block terminal gate on living-doc drift for the current run (R50/R43)."""
     if os.environ.get("SW_SKIP_DOCS_CURRENCY") == "1":
         return
     script = SCRIPT_DIR / "docs-currency-gate.py"
+    repo_root, state_root, state_path, plan_path = resolve_docs_currency_paths(root)
     proc = subprocess.run(
-        [sys.executable, str(script), "--state-root", str(root)],
+        [
+            sys.executable,
+            str(script),
+            str(repo_root),
+            str(state_root),
+            str(state_path),
+            str(plan_path),
+        ],
         cwd=str(root),
         text=True,
         capture_output=True,
@@ -577,12 +596,13 @@ def run_docs_currency_gate(root: Path) -> None:
             err = json.loads(proc.stdout)
         except json.JSONDecodeError:
             err = {"error": proc.stderr.strip() or proc.stdout.strip() or "docs-currency gate failed"}
-        fail(
-            err.get("error", "living-doc currency drift"),
-            exit_code=proc.returncode or 1,
+        fail_from_payload(
+            fail,
+            err,
+            "living-doc currency drift",
+            proc.returncode or 1,
             halt="blocked",
             cause="docs-currency:drift",
-            **{k: v for k, v in err.items() if k != "error"},
         )
 
 
@@ -630,7 +650,7 @@ def host_pr_create(root: Path, *, title: str, body: str, head: str, base: str) -
 
     resolved = enforce_phase_pr_base(root, base)
     if resolved.get("verdict") != "ok":
-        fail(resolved.get("error", "phase-pr-base"), exit_code=20, **{k: v for k, v in resolved.items() if k != "verdict"})
+        fail_from_payload(fail, resolved, "phase-pr-base", 20)
     base = str(resolved.get("base") or base)
 
     if phase_mode_active():
@@ -645,7 +665,7 @@ def host_pr_create(root: Path, *, title: str, body: str, head: str, base: str) -
             body=body,
         )
         if out.get("verdict") != "ok":
-            fail(out.get("error") or out.get("reason", "phase-pr-create-failed"), exit_code=20, **out)
+            fail_from_payload(fail, out, out.get("reason", "phase-pr-create-failed"), 20)
         data = out.get("pr") if isinstance(out.get("pr"), dict) else {}
         return data
 
@@ -688,14 +708,21 @@ def cmd_resume_reconcile(root: Path, args: list[str]) -> None:
     remote_ref_name = remote_ref(host_remote, target)
     remote_tip = resolve_ref(top, remote_ref_name)
     local_tip = resolve_ref(top, target)
-    ground_tip = remote_tip or local_tip
-    if not ground_tip:
+    if not remote_tip and not local_tip:
         fail(f"cannot resolve tip for {target!r} (fetch {host_remote}/{target} first)")
+
+    promotion_tip = local_tip or remote_tip
+    if remote_tip and local_tip and is_ancestor(remote_tip, local_tip, top):
+        promotion_tip = local_tip
+    elif remote_tip:
+        promotion_tip = remote_tip
+    demotion_tip = remote_tip or local_tip
 
     phases = state.get("phases") or {}
     promoted: list[str] = []
     demoted: list[str] = []
     skipped: list[str] = []
+    advisories: list[str] = []
 
     for pid, meta in phases.items():
         slug = meta.get("slug", pid)
@@ -715,7 +742,8 @@ def cmd_resume_reconcile(root: Path, args: list[str]) -> None:
                     meta["cause"] = "resume:missing-phase-branch"
                 demoted.append(slug)
             continue
-        merged_on_remote = is_ancestor(phase_sha, ground_tip, top)
+        merged_on_remote = bool(demotion_tip and is_ancestor(phase_sha, demotion_tip, top))
+        merged_for_promotion = bool(promotion_tip and is_ancestor(phase_sha, promotion_tip, top))
         if status == "green-merged":
             if merged_on_remote:
                 skipped.append(slug)
@@ -727,16 +755,21 @@ def cmd_resume_reconcile(root: Path, args: list[str]) -> None:
                     meta["cause"] = "resume:unpushed-local-merge"
                 demoted.append(slug)
             continue
-        if merged_on_remote:
+        if merged_for_promotion:
+            unpushed_local = bool(local_tip and remote_tip and not merged_on_remote)
             if not dry_run:
                 meta["status"] = "green-merged"
                 meta["updatedAt"] = utc_now()
-                meta["reconciledFrom"] = remote_ref if remote_tip else target
+                meta["reconciledFrom"] = remote_ref_name if merged_on_remote else target
+                if unpushed_local:
+                    meta["cause"] = "resume:unpushed-local-merge"
+            if unpushed_local:
+                advisories.append(slug)
             promoted.append(slug)
 
     if not dry_run:
         state["phases"] = phases
-        state["remoteTargetTip"] = ground_tip
+        state["remoteTargetTip"] = promotion_tip
         state["reconciledAt"] = utc_now()
         save_state(root, state)
         append_log(
@@ -745,37 +778,97 @@ def cmd_resume_reconcile(root: Path, args: list[str]) -> None:
                 "event": "resume-reconcile",
                 "promoted": promoted,
                 "demoted": demoted,
-                "groundTip": ground_tip,
+                "groundTip": promotion_tip,
+                "promotionTip": promotion_tip,
+                "remoteTip": remote_tip,
+                "localTip": local_tip,
             },
         )
 
-    emit(
-        {
-            "verdict": "pass",
-            "action": "resume-reconcile",
-            "dry_run": dry_run,
-            "target": target,
-            "groundTip": ground_tip,
-            "promoted": promoted,
-            "demoted": demoted,
-            "skippedGreenMerged": skipped,
-            "note": "Remote pushed tip is ground truth (R29/R50)",
-        }
-    )
+    payload = {
+        "verdict": "pass",
+        "action": "resume-reconcile",
+        "dry_run": dry_run,
+        "target": target,
+        "groundTip": promotion_tip,
+        "promotionTip": promotion_tip,
+        "remoteTip": remote_tip,
+        "localTip": local_tip,
+        "promoted": promoted,
+        "demoted": demoted,
+        "skippedGreenMerged": skipped,
+        "note": "Promotion uses local tip when ahead; demotion uses remote ground truth (R47/R48)",
+    }
+    if advisories:
+        payload["unpushedLocalMerge"] = advisories
+        payload["remediation"] = f"git push {host_remote} {target}"
+    emit(payload)
 
 
-def terminal_pr_body(state: dict[str, Any]) -> str:
-    lines = ["## Phase PRs", ""]
+def terminal_pr_body(root: Path, state: dict[str, Any]) -> str:
+    phase_lines: list[str] = []
     for record in state.get("mergedPhases") or []:
         slug = record.get("phaseSlug", "?")
         pr = record.get("pr")
         if pr:
-            lines.append(f"- {slug}: #{pr}")
+            phase_lines.append(f"- {slug}: #{pr}")
         else:
-            lines.append(f"- {slug}")
-    lines.append("")
-    lines.append("Delivered via `/sw-deliver` phase-mode. Human merge gate — do not auto-merge.")
-    return "\n".join(lines)
+            phase_lines.append(f"- {slug}")
+    summary = "Delivered via `/sw-deliver` phase-mode."
+    if phase_lines:
+        summary += "\n\n## Phase PRs\n\n" + "\n".join(phase_lines)
+    summary += "\n\nHuman merge gate — do not auto-merge."
+    test_plan = "- [ ] Review phase PR list\n- [ ] Confirm deliver-concurrency fixtures green"
+    slug = (state.get("target") or {}).get("slug") or "deliver-wave"
+    prd = str(state.get("prd_number") or "050")
+    decision = json.dumps(
+        {
+            "intent": "Terminal deliver wave PR for phase-mode delivery",
+            "alternativesRuledOut": ["Direct push to main"],
+            "highRiskAreas": ["Merge gate bypass"],
+            "taskRefs": [f"prd-{prd.lstrip('0') or prd}"],
+        }
+    )
+    ctx = json.dumps(
+        {
+            "summary": summary,
+            "test_plan": test_plan,
+            "prd_slug": slug,
+            "decision_log_json": decision,
+        }
+    )
+    render = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "git_template_lib.py"),
+            "render",
+            "pr-body",
+            "--context-json",
+            ctx,
+        ],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    if render.returncode != 0:
+        fail(render.stderr.strip() or "terminal PR body render failed", exit_code=20)
+    body = render.stdout
+    validate = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "git_template_lib.py"),
+            "validate",
+            "pr-body",
+            "--body",
+            body,
+        ],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    if validate.returncode != 0:
+        fail("terminal PR body failed template validation", exit_code=20, detail=validate.stdout.strip())
+    return body
 
 
 def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
@@ -878,7 +971,7 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
 
     prd_number = state.get("prd_number")
     title = parse_kv(args, "--title") or commitlint_safe_title(commit_type, slug, prd_number)
-    body = terminal_pr_body(state)
+    body = terminal_pr_body(root, state)
 
     if dry_run:
         emit(
