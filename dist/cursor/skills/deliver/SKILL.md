@@ -281,10 +281,17 @@ scripts/wave.py blast-radius apply --phase-slug <upstream-slug>
 
 ## Branch topology (R35/R53)
 
-| Role | Branch | Worktree path |
-|------|--------|---------------|
-| Feature base | `<type>/<slug>` | `.sw-worktrees/<slug>-orchestrator` (infrastructure) |
-| Phase unit | `<type>/<slug>-phase-<phase-slug>` | `.sw-worktrees/<slug>-phase-<phase-slug>` |
+Operator worktree contract (PRD 049 R1/R2 — full table in `.sw/layout.md`):
+
+| Role | Branch | Worktree path | Agent cwd |
+|------|--------|---------------|-----------|
+| Primary | `defaultBaseBranch` | repo root | operator shell only — no implementation commits during deliver |
+| Feature base | `<type>/<slug>` | `.sw-worktrees/<slug>-orchestrator` | conductor loop (`deliver-loop`) |
+| Phase unit | `<type>/<slug>-phase-<phase-slug>` | `.sw-worktrees/<slug>-phase-<phase-slug>` | `/sw-ship` / `/sw-execute` |
+
+Repo-root `.cursor/` is **conductor runtime** (canonical deliver state, locks, run logs) — updates during
+deliver are expected and must not be committed as feature work. `status.json` mirrors **phase → repo root**
+only; never a general root→worktree sync.
 
 Phase branches come from the deliver plan `items[].branch`. The orchestrator worktree checks out
 `<type>/<slug>` (detached at the target tip when that branch is already checked out elsewhere) and does

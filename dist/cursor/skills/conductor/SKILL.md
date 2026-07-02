@@ -135,8 +135,12 @@ The conductor never ends its turn while `nextAction` is runnable and no legitima
 `deliver.remediation.maxAttempts`). Merge to `main` stays human-gated. Optional `cleanup.autonomy: auto`
 applies safe post-merge cleanup when deterministic.
 
-**Orchestrator worktree:** run `deliver-loop` from `.sw-worktrees/<slug>-orchestrator` (or repo root with
-state synced). Never hand off with "run deliver-loop next" as the only instruction — run it in-turn.
+**Orchestrator worktree:** run `deliver-loop` from `.sw-worktrees/<slug>-orchestrator` (mandatory
+orchestrator provisioning — repo root is not an alternate conductor-loop cwd). Repo-root `.cursor/`
+updates during deliver are expected conductor runtime, not feature implementation; tracked
+`defaultBaseBranch` must not accumulate implementation commits during a run. See `.sw/layout.md`
+**Operator worktree contract**. Never hand off with "run deliver-loop next" as the only instruction —
+run it in-turn.
 
 ### Progress rule (R7)
 

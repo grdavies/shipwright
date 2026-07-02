@@ -68,6 +68,7 @@ from wave_state import (
     save_deliver_state,
     scoped_paths,
     target_branch_from_state,
+    sync_canonical_state_read,
 )
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -658,6 +659,56 @@ def save_state(root: Path, state: dict[str, Any]) -> None:
     save_deliver_state(root, state)
 
 
+
+def sync_terminal_state(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """Canonical repo-root state read before terminal deliver actions (PRD 049 R4)."""
+    synced = sync_canonical_state_read(root, state_hint=state)
+    if synced:
+        state.clear()
+        state.update(synced)
+    return state
+
+
+def manual_living_doc_reconcile_suggestion(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """Operator-facing living-doc reconcile suggestion with in-flight cwd guard (PRD 049 R3)."""
+    import deliver_cwd_guard
+
+    guard = deliver_cwd_guard.check()
+    orch = orchestrator_worktree_path(root, state)
+    orch_flag = f" --orchestrator-worktree {orch}" if orch else ""
+    command = f"python3 scripts/wave.py living-docs reconcile --commit{orch_flag}"
+    payload: dict[str, Any] = {
+        "command": command,
+        "orchestratorWorktree": str(orch) if orch else None,
+    }
+    if guard.get("verdict") == "fail":
+        payload["guardBlocked"] = True
+        payload["remediation"] = guard.get("remediation")
+        payload["error"] = guard.get("error")
+    return payload
+
+
+def cmd_manual_living_doc_reconcile(root: Path, args: list[str]) -> None:
+    """Run guarded manual living-doc reconcile from deliver-loop suggestions."""
+    import deliver_cwd_guard
+
+    deliver_cwd_guard.enforce()
+    state = load_state(root)
+    orch = orchestrator_worktree_path(root, state)
+    living_args = ["reconcile", "--commit"]
+    if orch is not None:
+        living_args.extend(["--orchestrator-worktree", str(orch)])
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT_DIR / "wave_living_docs.py"), str(root), *living_args],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0:
+        fail(proc.stderr.strip() or proc.stdout.strip() or "living-doc reconcile failed", exit_code=proc.returncode)
+    emit(json.loads(proc.stdout) if proc.stdout.strip().startswith("{") else {"raw": proc.stdout})
+
+
 def ensure_driver_fields(state: dict[str, Any]) -> None:
     state.setdefault("currentWave", 1)
     state.setdefault("nextAction", "plan")
@@ -941,6 +992,7 @@ def in_flight_merge_halt(
                 "action": "halt-blocked",
                 "cause": cause,
                 "resume": True,
+                "livingDocReconcile": manual_living_doc_reconcile_suggestion(root, state),
             }
     return None
 
@@ -1975,6 +2027,7 @@ def execute_mechanical(
         return {"executed": "advance-wave", "currentWave": wave_num}
 
     if action == "all-phases-complete":
+        sync_terminal_state(root, state)
         persist_cursor(root, state, "inflight-signal-clear")
         return {"executed": "all-phases-complete", "next": "inflight-signal-clear"}
 
@@ -2300,6 +2353,9 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
                     20,
                 )
             else:
+                if step["action"] in ("retrospective", "terminal-ship"):
+                    sync_terminal_state(root, state)
+                    save_state(root, state)
                 persist_cursor(root, state, step["action"])
             emit(
                 {
@@ -2420,6 +2476,11 @@ def main() -> None:
         if not args or args[0] != "check":
             fail("watchdog subcommand required: check")
         cmd_watchdog_check(root, args[1:])
+    elif cmd == "living-doc-reconcile":
+        cmd_manual_living_doc_reconcile(root, args)
+    elif cmd == "living-doc-reconcile-suggestion":
+        state = load_state(root)
+        emit({"verdict": "pass", "action": "living-doc-reconcile-suggestion", **manual_living_doc_reconcile_suggestion(root, state)})
     else:
         fail(f"unknown command: {cmd}")
 
