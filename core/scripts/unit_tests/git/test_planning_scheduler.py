@@ -1,28 +1,44 @@
-"""Pytest port of run_planning_scheduler_fixtures.py (PRD 054 W2 shadow)."""
+"""Pytest port of run_planning_scheduler_fixtures.py (PRD 054 W2 behavioral)."""
 from __future__ import annotations
 
-import subprocess
+import importlib.util
 import sys
 from pathlib import Path
 
 import pytest
 
-_LEGACY = "scripts/test/run_planning_scheduler_fixtures.py"
+_PKG = "scripts/unit_tests/git"
+_HARNESS = "harness_planning_scheduler.py"
 
 
-def test_planning_scheduler_legacy_parity(repo_root: Path, sw_env: dict[str, str]) -> None:
-    script = repo_root / _LEGACY
-    assert script.is_file(), f"missing legacy script {script}"
-    proc = subprocess.run(
-        [sys.executable, str(script)],
-        cwd=str(repo_root),
-        env=sw_env,
-        capture_output=True,
-        text=True,
-    )
-    assert proc.returncode == 0, proc.stdout + proc.stderr
+def _load_harness(repo_root: Path):
+    path = repo_root / _PKG / _HARNESS
+    for entry in (str(repo_root / "scripts" / "test"), str(repo_root / "scripts")):
+        if entry not in sys.path:
+            sys.path.insert(0, entry)
+    spec = importlib.util.spec_from_file_location("harness_planning_scheduler", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load harness {path}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
-def test_planning_scheduler_negative_smoke(repo_root: Path) -> None:
-    """R16 — pytest collection path exists for W2 inventory."""
-    assert (repo_root / _LEGACY).is_file()
+@pytest.mark.git
+def test_planning_scheduler_tmp_git_repo_ready(tmp_git_repo: Path) -> None:
+    """R15 — shared tmp_git_repo fixture is usable for W2 git scenarios."""
+    assert (tmp_git_repo / ".git").is_dir()
+
+
+@pytest.mark.git
+def test_planning_scheduler_behavior(repo_root: Path, sw_env: dict[str, str], monkeypatch: pytest.MonkeyPatch) -> None:
+    for key, value in sw_env.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.chdir(repo_root)
+    mod = _load_harness(repo_root)
+    assert int(mod.main()) == 0
+
+
+def test_planning_scheduler_harness_present(repo_root: Path) -> None:
+    """R16 — harness module must exist (fail-closed if port regresses)."""
+    assert (repo_root / _PKG / _HARNESS).is_file()

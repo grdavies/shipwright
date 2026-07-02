@@ -45,15 +45,15 @@ after migration waves W1–W4.
   - **File:** `scripts/_sw/depmanifest.json`, `scripts/_sw/vendor/`
   - **Expected:** pytest importable; zero-shell-guard passes
   - **R-IDs:** R1, TR10
-- [ ] 1.2 Pytest config + markers policy (R1, R17, TR10)
+- [x] 1.2 Pytest config + markers policy (R1, R17, TR10)
   - **File:** `pytest.ini` or `pyproject.toml`, `scripts/unit_tests/conftest.py`
   - **Expected:** markers `integration`, `git`, `slow` registered; `testpaths` = `scripts/unit_tests`
   - **R-IDs:** R1, R17, TR10
-- [ ] 1.3 Shared fixtures: tmp_git_repo, env, repo_root (R15, TR10)
+- [x] 1.3 Shared fixtures: tmp_git_repo, env, repo_root (R15, TR10)
   - **File:** `scripts/unit_tests/conftest.py`
   - **Expected:** replaces `_fixture_lib` patterns for W1; documented in testing.md
   - **R-IDs:** R15, TR10
-- [ ] 1.4 Unified `run_pytest.py` entry + `_runner.py` stub (R17, TR10)
+- [x] 1.4 Unified `run_pytest.py` entry + `_runner.py` stub (R17, TR10)
   - **File:** `scripts/test/run_pytest.py`, `scripts/test/_runner.py` (skeleton scope dispatch)
   - **Expected:** `pytest` collection runs green on empty/minimal tree
   - **R-IDs:** R17, TR10
@@ -83,11 +83,11 @@ after migration waves W1–W4.
   - **File:** `scripts/unit_tests/doc/`, `scripts/unit_tests/model_tier/`, etc.
   - **Expected:** parametrized + negative cases; legacy W1 `run_*_fixtures.py` still present (shadow)
   - **R-IDs:** R13, R15, R16, TR11
-- [ ] 3.2 `run_migration_parity_fixtures.py` for W1 shadow (TR14)
+- [x] 3.2 `run_migration_parity_fixtures.py` for W1 shadow (TR14)
   - **File:** `scripts/test/run_migration_parity_fixtures.py` (temporary)
   - **Expected:** legacy vs pytest parity green for W1 inventory
   - **R-IDs:** TR14
-- [ ] 3.3 Delete W1 legacy scripts + update registry (R14, TR12)
+- [x] 3.3 Delete W1 legacy scripts + update registry (R14, TR12)
   - **File:** remove ported `run_*_fixtures.py`; update `suite-registry.json`, manifest, workflow regen
   - **Expected:** no W1 legacy files on disk; CI jobs point at pytest shards/markers
   - **R-IDs:** R14, TR12
@@ -98,7 +98,7 @@ after migration waves W1–W4.
   - **File:** `scripts/unit_tests/git/`, `scripts/unit_tests/workflow/`
   - **Expected:** git init/commit/branch scenarios under pytest; negative paths covered
   - **R-IDs:** R13, R15, R16, TR11
-- [ ] 4.2 W2 parity shadow + delete legacy (R14, TR14)
+- [x] 4.2 W2 parity shadow + delete legacy (R14, TR14)
   - **File:** W2 `run_*_fixtures.py` removals; registry/manifest update
   - **Expected:** parity green; legacy deleted
   - **R-IDs:** R14, TR14

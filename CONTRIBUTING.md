@@ -51,18 +51,18 @@ python3 scripts/test/run_parity_fixtures.py
 python3 scripts/test/run_claude_golden_fixtures.py
 python3 scripts/test/run_gate_fixtures.py
 python3 scripts/test/run_capability_select_fixtures.py
-python3 scripts/test/run_capability_lint_fixtures.py
+python3 scripts/test/run_pytest.py scripts/unit_tests/capability -q
 python3 scripts/test/run_migration_parity_fixtures.py
-python3 scripts/test/run_kernel_classification_fixtures.py
-python3 scripts/test/run_guidelines_floor_fixtures.py
-python3 scripts/test/run_plan_validate_fixtures.py
+python3 scripts/test/run_pytest.py scripts/unit_tests/model_tier -q
+python3 scripts/test/run_pytest.py scripts/unit_tests/guidelines -q
+python3 scripts/test/run_pytest.py scripts/unit_tests/planning -q
 python3 scripts/test/run_plan_persist_fixtures.py
 python3 scripts/test/run_plan_killswitch_fixtures.py
 python3 scripts/test/run_plan_proposed_parity_fixtures.py
 python3 scripts/test/run_pilot_fixtures.py
 python3 scripts/test/run_fanout_fixtures.py
-python3 scripts/test/run_dispatch_foundation_fixtures.py
-python3 scripts/test/run_ux_polish_fixtures.py
+python3 scripts/test/run_pytest.py scripts/unit_tests/dispatch -q
+python3 scripts/test/run_pytest.py scripts/unit_tests/git -q
 ```
 
 **PRD 024 fan-out fixtures** (`run_fanout_fixtures.py`): program gate (R35), consistency-only probe (R36),

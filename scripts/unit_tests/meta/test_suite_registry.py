@@ -1,28 +1,12 @@
-"""Pytest port of run_suite_registry_fixtures.py (PRD 054 W1 shadow)."""
+"""Pytest port of run_suite_registry_fixtures.py (PRD 054 W1)."""
 from __future__ import annotations
 
-import subprocess
-import sys
 from pathlib import Path
 
-import pytest
-
-_LEGACY = "scripts/test/run_suite_registry_fixtures.py"
+from suite_registry_check import run_suite_registry_check
 
 
-def test_suite_registry_legacy_parity(repo_root: Path, sw_env: dict[str, str]) -> None:
-    script = repo_root / _LEGACY
-    assert script.is_file(), f"missing legacy script {script}"
-    proc = subprocess.run(
-        [sys.executable, str(script)],
-        cwd=str(repo_root),
-        env=sw_env,
-        capture_output=True,
-        text=True,
-    )
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-
-
-def test_suite_registry_negative_smoke(repo_root: Path) -> None:
-  """R16 — pytest collection path exists for W1 inventory."""
-  assert (repo_root / _LEGACY).is_file()
+def test_suite_registry_drift_checks(repo_root: Path) -> None:
+    code, lines = run_suite_registry_check(repo_root)
+    output = "\n".join(lines)
+    assert code == 0, output
