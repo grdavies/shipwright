@@ -1258,7 +1258,12 @@ def mechanical_phase_plan(
         batching = state.get("waveBatchingPlan")
         if isinstance(batching, dict):
             recorded_parent = batching
-    return phase_fallback_canonical_chain(root, "ship", phase_id, recorded_parent=recorded_parent)
+    plan = phase_fallback_canonical_chain(root, "ship", phase_id, recorded_parent=recorded_parent)
+    task_list = str(state.get("source_task_list") or "") if state else ""
+    if task_list:
+        from execute_ship import adapt_phase_plan_for_execute_tier
+        plan = adapt_phase_plan_for_execute_tier(root, plan, task_list=task_list, phase_id=phase_id)
+    return plan
 
 
 def dispatch_or_phase_plan_entry(
@@ -2262,7 +2267,21 @@ def execute_mechanical(
             phase_slug=slug,
             phase_plan=phase_plan,
         )
-        persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
+        if task_list_from(state, plan):
+            from execute_ship import supervised_plan_halt_required, resolve_run_dir
+            run_dir = phase_run_dir_for_slug(root, slug)
+            if supervised_plan_halt_required(root, run_dir):
+                persist_cursor(root, state, "dispatch-ship")
+                return {
+                    "executed": "phase-plan-entry",
+                    "phaseId": pid,
+                    "phaseSlug": slug,
+                    "planPath": str(phase_plan_path(run_dir)),
+                    "lifecycle": get_lifecycle(state),
+                    "supervisedHalt": True,
+                    "halt": "execute:supervised-plan-confirm",
+                }
+                persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
         return {
             "executed": "phase-plan-entry",
             "phaseId": pid,

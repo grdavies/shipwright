@@ -683,6 +683,9 @@ def build_parser() -> argparse.ArgumentParser:
     frontier = sub.add_parser("dispatch-frontier")
     frontier.add_argument("--phase-slug", required=True)
     frontier.add_argument("--run-dir", default="")
+    resume = sub.add_parser("resume-frontier")
+    resume.add_argument("--phase-slug", required=True)
+    resume.add_argument("--run-dir", default="")
     return parser
 
 
@@ -706,6 +709,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_dispatch_binding(root, args)
     if args.command == "dispatch-frontier":
         return cmd_dispatch_frontier(root, args)
+    if args.command == "resume-frontier":
+        import execute_ship
+        execute_ship.cmd_resume_frontier(root, ["--phase-slug", args.phase_slug] + (["--run-dir", args.run_dir] if args.run_dir else []))
+        return 0
     fail(f"unknown command: {args.command}")
     return 2
 

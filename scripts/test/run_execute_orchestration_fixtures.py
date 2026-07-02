@@ -27,6 +27,11 @@ SCENARIOS = (
     "execute-integrate-parallel-batch-serialized",
     "execute-blast-radius-dependents",
     "execute-sub-branch-ceiling-refuse",
+    "execute-ship-chain-gated",
+    "execute-autonomy-supervised-plan-halt",
+    "execute-resume-frontier",
+    "execute-resume-stale-sub-branch",
+    "execute-single-subtask-skip-tier",
 )
 
 FIXTURES = Path("scripts/test/fixtures/execute-orchestration")
@@ -482,6 +487,156 @@ def scenario_execute_sub_branch_ceiling_refuse(plugin_root: Path) -> bool:
         else:
             cfg_path.write_text(backup, encoding="utf-8")
 
+
+
+def scenario_execute_ship_chain_gated(root: Path) -> bool:
+    repo = Path(tempfile.mkdtemp())
+    run_dir = repo / ".cursor/sw-deliver-runs/fixture"
+    try:
+        write_execute_plan(
+            repo,
+            run_dir,
+            [
+                {"id": "1.1", "branch": "b1", "status": "green"},
+                {"id": "1.2", "branch": "b2", "status": "pending"},
+            ],
+        )
+        proc = run(
+            ["python3", "scripts/execute_ship.py", str(repo), "gate-check", "--phase-slug", "fixture", "--run-dir", str(run_dir)],
+            root,
+        )
+        if proc.returncode != 20:
+            return False
+        data = json.loads(proc.stdout)
+        return data.get("cause") == "execute-refs-not-terminal" and data.get("pendingRefs") == ["1.2"]
+    finally:
+        subprocess.run(["rm", "-rf", str(repo)], check=False)
+
+
+def scenario_execute_autonomy_supervised_plan_halt(root: Path) -> bool:
+    cfg_path = root / ".cursor/workflow.config.json"
+    backup = cfg_path.read_text(encoding="utf-8") if cfg_path.is_file() else None
+    repo = Path(tempfile.mkdtemp())
+    run_dir = repo / ".cursor/sw-deliver-runs/fixture"
+    try:
+        cfg_path.parent.mkdir(parents=True, exist_ok=True)
+        cfg_path.write_text(json.dumps({"deliver": {"autonomy": {"mode": "supervised"}}}), encoding="utf-8")
+        write_execute_plan(repo, run_dir, [{"id": "1.1", "branch": "b1", "status": "pending"}])
+        proc = run(
+            ["python3", "scripts/execute_ship.py", str(root), "supervised-halt", "--phase-slug", "fixture", "--run-dir", str(run_dir)],
+            root,
+        )
+        if proc.returncode != 20:
+            return False
+        data = json.loads(proc.stdout)
+        if data.get("halt") != "execute:supervised-plan-confirm":
+            return False
+        confirm = run(
+            ["python3", "scripts/execute_ship.py", str(root), "supervised-confirm", "--phase-slug", "fixture", "--run-dir", str(run_dir)],
+            root,
+        )
+        if confirm.returncode != 0:
+            return False
+        proc2 = run(
+            ["python3", "scripts/execute_ship.py", str(root), "supervised-halt", "--phase-slug", "fixture", "--run-dir", str(run_dir)],
+            root,
+        )
+        return proc2.returncode == 0 and json.loads(proc2.stdout).get("required") is False
+    finally:
+        subprocess.run(["rm", "-rf", str(repo)], check=False)
+        if backup is None:
+            if cfg_path.is_file():
+                cfg_path.unlink()
+        else:
+            cfg_path.write_text(backup, encoding="utf-8")
+
+
+def scenario_execute_resume_frontier(root: Path) -> bool:
+    repo = Path(tempfile.mkdtemp())
+    run_dir = repo / ".cursor/sw-deliver-runs/fixture"
+    try:
+        write_execute_plan(
+            repo,
+            run_dir,
+            [
+                {"id": "1.1", "branch": "b1", "status": "green"},
+                {"id": "1.2", "branch": "b2", "status": "pending"},
+                {"id": "1.3", "branch": "b3", "status": "pending"},
+            ],
+        )
+        plan = json.loads((run_dir / "execute-step-plan.json").read_text(encoding="utf-8"))
+        plan["edges"] = [{"from": "1.1", "to": "1.2", "kind": "test"}, {"from": "1.2", "to": "1.3", "kind": "test"}]
+        (run_dir / "execute-step-plan.json").write_text(json.dumps(plan, indent=2) + "\n", encoding="utf-8")
+        proc = run(
+            ["python3", "scripts/execute_ship.py", str(repo), "resume-frontier", "--phase-slug", "fixture", "--run-dir", str(run_dir)],
+            root,
+        )
+        if proc.returncode != 0:
+            return False
+        data = json.loads(proc.stdout)
+        return data.get("readyRefs") == ["1.2"] and "1.1" in data.get("terminalRefs", [])
+    finally:
+        subprocess.run(["rm", "-rf", str(repo)], check=False)
+
+
+def scenario_execute_resume_stale_sub_branch(root: Path) -> bool:
+    repo = Path(tempfile.mkdtemp())
+    run_dir = repo / ".cursor/sw-deliver-runs/fixture"
+    try:
+        write_execute_plan(
+            repo,
+            run_dir,
+            [
+                {"id": "1.1", "branch": "feat/missing-branch", "status": "pending"},
+            ],
+        )
+        proc = run(
+            ["python3", "scripts/execute_ship.py", str(repo), "resume-frontier", "--phase-slug", "fixture", "--run-dir", str(run_dir)],
+            root,
+        )
+        if proc.returncode != 0:
+            return False
+        data = json.loads(proc.stdout)
+        stale = data.get("staleSubBranches") or []
+        return len(stale) == 1 and stale[0].get("taskRef") == "1.1"
+    finally:
+        subprocess.run(["rm", "-rf", str(repo)], check=False)
+
+
+
+def scenario_execute_single_subtask_skip_tier(root: Path) -> bool:
+    task_path = root / ".cursor/tmp-single-subtask.md"
+    task_path.parent.mkdir(parents=True, exist_ok=True)
+    task_path.write_text(
+        """---
+frozen: true
+---
+
+### 1. One task phase
+
+- [ ] 1.1 Only task
+  - **File:** `scripts/foo.py`
+""",
+        encoding="utf-8",
+    )
+    proc = run(
+        [
+            "python3",
+            "scripts/execute_ship.py",
+            ".",
+            "should-use-execute-tier",
+            "--task-list",
+            str(task_path.relative_to(root)),
+            "--phase-id",
+            "1",
+        ],
+        root,
+    )
+    if proc.returncode != 0:
+        return False
+    data = json.loads(proc.stdout)
+    return data.get("executeTierActive") is False and data.get("executableSubtasks") == 1
+
 RUNNERS = {
     "wave-merge-no-regression": scenario_wave_merge_no_regression,
     "execute-plan-linear-fallback": scenario_execute_plan_linear_fallback,
@@ -494,6 +649,11 @@ RUNNERS = {
     "execute-integrate-parallel-batch-serialized": scenario_execute_integrate_parallel_batch_serialized,
     "execute-blast-radius-dependents": scenario_execute_blast_radius_dependents,
     "execute-sub-branch-ceiling-refuse": scenario_execute_sub_branch_ceiling_refuse,
+    "execute-ship-chain-gated": scenario_execute_ship_chain_gated,
+    "execute-autonomy-supervised-plan-halt": scenario_execute_autonomy_supervised_plan_halt,
+    "execute-resume-frontier": scenario_execute_resume_frontier,
+    "execute-resume-stale-sub-branch": scenario_execute_resume_stale_sub_branch,
+    "execute-single-subtask-skip-tier": scenario_execute_single_subtask_skip_tier,
 }
 
 

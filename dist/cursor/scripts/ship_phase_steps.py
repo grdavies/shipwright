@@ -191,6 +191,7 @@ def cmd_attempt(root: Path, args: list[str]) -> None:
         doc = load_steps(path)
     chain, _, _ = authoritative_chain(root, phase, out)
     plan_index(chain, norm)
+    _execute_verify_gate(root, phase, out, norm)
     current = doc.get("currentStep")
     if current and normalize_step(str(current)) != norm:
         fail(
@@ -209,6 +210,31 @@ def cmd_attempt(root: Path, args: list[str]) -> None:
     emit({"verdict": "pass", "action": "ship-steps-attempt", "step": norm, "attempts": attempts[norm]})
 
 
+
+
+def _execute_verify_gate(root: Path, phase: str, out: str | None, norm: str) -> None:
+    if norm != "sw-verify":
+        return
+    import execute_ship
+
+    task_list = os.environ.get("SW_TASK_LIST", "").strip() or None
+    phase_id = os.environ.get("SW_PHASE_ID", "").strip()
+    run_dir = resolve_steps_path(root, phase, out).parent
+    gate = execute_ship.ship_verify_gate_ok(
+        root,
+        run_dir,
+        task_list=task_list,
+        phase_id=phase_id,
+    )
+    if gate.get("verdict") == "blocked":
+        fail(
+            gate.get("cause") or "execute refs not terminal",
+            exit_code=20,
+            halt=gate.get("halt") or "execute:refs-not-terminal",
+            **{k: v for k, v in gate.items() if k not in ("verdict", "halt", "cause")},
+        )
+
+
 def cmd_advance(root: Path, args: list[str]) -> None:
     step = _parse_kv(args, "--step")
     if not step:
@@ -221,6 +247,7 @@ def cmd_advance(root: Path, args: list[str]) -> None:
     if not doc:
         fail("ship-steps missing; run init first", path=str(path))
     chain, source, _ = authoritative_chain(root, phase, out)
+    _execute_verify_gate(root, phase, out, norm)
     assert_advance_fidelity(root, chain, norm, doc)
     doc["lastCompletedStep"] = norm
     nxt = expected_next_step(chain, norm)
@@ -504,7 +531,7 @@ def main() -> None:
     if len(sys.argv) < 3:
         fail(
             "usage: ship_phase_steps.py <root> "
-            "<init|get|attempt|advance|resolve-resume|validate-plan|persist-plan|lifecycle-phase|sync-state|execute-fan-out> [args...]"
+            "<init|get|attempt|advance|resolve-resume|validate-plan|persist-plan|lifecycle-phase|sync-state|execute-fan-out|execute-gate-check|adapt-phase-plan|resume-frontier> [args...]"
         )
     root = Path(sys.argv[1])
     cmd = sys.argv[2]
@@ -521,6 +548,9 @@ def main() -> None:
         "lifecycle-phase": cmd_lifecycle_phase,
         "sync-state": cmd_sync_state,
         "execute-fan-out": cmd_execute_fan_out,
+        "execute-gate-check": lambda r, a: __import__("execute_ship").cmd_gate_check(r, a),
+        "adapt-phase-plan": lambda r, a: __import__("execute_ship").cmd_adapt_phase_plan(r, a),
+        "resume-frontier": lambda r, a: __import__("execute_ship").cmd_resume_frontier(r, a),
     }
     handler = handlers.get(cmd)
     if not handler:
