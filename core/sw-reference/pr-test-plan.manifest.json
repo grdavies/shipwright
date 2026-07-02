@@ -815,6 +815,16 @@
         "terminal-state-skew-boundary-equal-passes",
         "terminal-state-skew-boundary-over-refuses"
       ]
+    },
+    {
+      "id": "deliver-worktree-contract-fixtures",
+      "script": "scripts/test/run_deliver_worktree_contract_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-worktree-contract-fixtures",
+      "scenarios": [
+        "deliver-worktree-contract"
+      ]
     }
   ]
 }
