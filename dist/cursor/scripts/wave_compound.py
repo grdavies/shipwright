@@ -340,6 +340,9 @@ def cmd_compound_premerge_env(root: Path, args: list[str], *, domain: str = "ret
 
 
 def cmd_compound_record_premerge(root: Path, args: list[str]) -> None:
+    import deliver_cwd_guard
+
+    deliver_cwd_guard.enforce()
     prd = parse_kv(args, "--prd")
     phase = parse_kv(args, "--phase") or "deliver"
     notes = parse_kv(args, "--notes") or "pre-merge compounding complete"

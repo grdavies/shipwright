@@ -792,6 +792,29 @@
         "manifest-registration",
         "gap-flip-verification"
       ]
+    },
+    {
+      "id": "deliver-cwd-guard-fixtures",
+      "script": "scripts/test/run_deliver_cwd_guard_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-cwd-guard-fixtures",
+      "scenarios": [
+        "deliver-cwd-guard-blocks-main-living-doc",
+        "deliver-cwd-guard-corrupt-index-fail-closed"
+      ]
+    },
+    {
+      "id": "terminal-state-read-fixtures",
+      "script": "scripts/test/run_terminal_state_read_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-terminal-state-read-fixtures",
+      "scenarios": [
+        "terminal-reads-repo-root-state-from-orchestrator-cwd",
+        "terminal-state-skew-boundary-equal-passes",
+        "terminal-state-skew-boundary-over-refuses"
+      ]
     }
   ]
 }

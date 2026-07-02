@@ -1066,6 +1066,24 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-prd-051-ship-verification-fixtures"
+    },
+    {
+      "id": "deliver-cwd-guard-fixtures",
+      "script": "scripts/test/run_deliver_cwd_guard_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-cwd-guard-fixtures"
+    },
+    {
+      "id": "terminal-state-read-fixtures",
+      "script": "scripts/test/run_terminal_state_read_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-terminal-state-read-fixtures"
     }
   ]
 }
