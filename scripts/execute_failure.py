@@ -177,10 +177,18 @@ def cmd_blast_radius_apply(root: Path, args: argparse.Namespace) -> int:
 
     plan["refs"] = list(refs.values())
     persist_execute_plan(run_dir, plan)
+    from execute_ship import memory_safe_failure_report
+    safe_report = memory_safe_failure_report(root, {
+        "taskRef": task_ref,
+        "phaseSlug": args.phase_slug,
+        "blockedRefs": blocked,
+        "integratedBeforeBlock": integrated,
+    })
     emit(
         {
             "verdict": "pass",
             "action": "blast-radius-apply",
+            "memorySafeReport": safe_report,
             "taskRef": task_ref,
             "phaseSlug": args.phase_slug,
             "blockedRefs": blocked,

@@ -934,7 +934,12 @@
         "execute-integrate-conflict-partial-batch",
         "execute-integrate-parallel-batch-serialized",
         "execute-blast-radius-dependents",
-        "execute-sub-branch-ceiling-refuse"
+        "execute-sub-branch-ceiling-refuse",
+        "execute-ship-chain-gated",
+        "execute-autonomy-supervised-plan-halt",
+        "execute-resume-frontier",
+        "execute-resume-stale-sub-branch",
+        "execute-single-subtask-skip-tier"
       ]
     }
   ]
