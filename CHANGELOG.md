@@ -202,6 +202,7 @@
 * merge phase operator-worktree-contract-documentation-m into feat/operator-worktree-contract-and-cwd-guard (7e3e479) <!-- sw-deliver:operator-worktree-contract-documentation-m -->
 * merge phase operator-worktree-contract-documentation-m into feat/operator-worktree-contract-and-cwd-guard (5589e23) <!-- sw-deliver:operator-worktree-contract-documentation-m -->
 * merge phase in-flight-cwd-guard-canonical-state-read-l into feat/operator-worktree-contract-and-cwd-guard (be8e780) <!-- sw-deliver:in-flight-cwd-guard-canonical-state-read-l -->
+* merge phase end-to-end-operator-contract-fixture-s into feat/operator-worktree-contract-and-cwd-guard (dcb0d9d) <!-- sw-deliver:end-to-end-operator-contract-fixture-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
