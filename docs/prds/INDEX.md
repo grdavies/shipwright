@@ -82,7 +82,6 @@
 gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi: open
 gap-004-dispatch-binding-preflight-broken-bash-invokes-p: scheduled
 gap-005-freeze-commit-spec-seed-cwd-dependent-repo-root-: open
-gap-006-prd-033-marked-complete-but-a3-r37-r39-r40-r42-r: open
 gap-007-finalize-completion-omits-terminal-living-docs-r: open
 gap-008-inflight-signal-run-complete-commits-index-on-ma: open
 gap-009-failed-phase-provision-leaves-orphan-worktree-wi: open
