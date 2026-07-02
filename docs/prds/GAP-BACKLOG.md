@@ -21,8 +21,8 @@ table row numbers. When appending, use the next ID: **`GAP-089`**.
 
 | Status | Count |
 |--------|------:|
-| resolved | 66 |
-| scheduled | 22 |
+| resolved | 67 |
+| scheduled | 21 |
 | open | 0 |
 | ID | Status | Schedule | Title |
 |----|--------|----------|-------|
@@ -81,7 +81,7 @@ table row numbers. When appending, use the next ID: **`GAP-089`**.
 | GAP-053 | scheduled | PRD 033 A1 (INDEX `complete` derivation; R29/R35) | PRD-unit INDEX status staleness (merged-to-`main` units marked `not-started`: 013/017/018/023) is a **distinct surface** from GAP-043/046 (gap-rows) — covered only *implicitly* by PRD 033 R2/R22; plus a COMPLETION-LOG post-merge logging gap (018 missing PR #87 line) that would defeat any log-based `complete` derivation — **absorbed by PRD 033 A1 (R29/R35)** |
 | GAP-054 | resolved | — | `scripts/`↔`core/scripts/` parity wired into CI + verify.test; one-shot resync cleared latent drift |
 | GAP-055 | scheduled | PRD 033 A1 (post-merge finalize guard; R33–R35) | Post-merge completion-state bypass disables `finalize-if-merged` and cascades to manual `reconcile` on `main` (PRD 036) — **absorbed by PRD 033 A1 (R33–R35)** |
-| GAP-056 | scheduled | PRD 033 A3 (operator worktree contract) | Repo-root `.cursor/` writes during deliver look like `main` mutations — intentional canonical state vs cwd/isolation bugs (PRD 036) |
+| GAP-056 | resolved | — | Repo-root `.cursor/` writes during deliver look like `main` mutations — intentional canonical state vs cwd/isolation bugs (PRD 036) |
 | GAP-057 | resolved | — | No sanctioned post-merge refresh path for an already-merged frozen task list when an amendment adds requirements — `check-frozen.py` blocked it (PRD 013's pre-merge refresh worked only because the task list was an added file). Bridged by two scoped `check-frozen.py` exceptions (format-normalization-only; amendment-companion task-list); durable design (re-freeze contract + PRD 031 tokenizer) deferred |
 | GAP-058 | resolved | — | PRD 033 deliver: conductor ends turn on `awaitAgent: true` instead of same-turn `deliver-loop` re-invoke (R13 recurrence) |
 | GAP-059 | resolved | — | PRD 033 deliver: parallel waves 6+7 golden-manifest / generated CI workflow conflict — union fixture jobs + regen on integration |

@@ -407,6 +407,17 @@ jobs:
       - name: Run doc-currency-033-fixtures
         run: python3 scripts/test/run_doc_currency_033_fixtures.py
 
+  feat-test-plan-doc-currency-049-fixtures:
+    name: feat-test-plan-doc-currency-049-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run doc-currency-049-fixtures
+        run: python3 scripts/test/run_doc_currency_049_fixtures.py
+
   feat-test-plan-planning-postmerge-safety-fixtures:
     name: feat-test-plan-planning-postmerge-safety-fixtures
     runs-on: ubuntu-latest
@@ -626,4 +637,48 @@ jobs:
           python-version: "3.12"
       - name: Run prd-051-ship-verification-fixtures
         run: python3 scripts/test/run_prd_051_ship_verification_fixtures.py
+
+  feat-test-plan-deliver-cwd-guard-fixtures:
+    name: feat-test-plan-deliver-cwd-guard-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run deliver-cwd-guard-fixtures
+        run: python3 scripts/test/run_deliver_cwd_guard_fixtures.py
+
+  feat-test-plan-terminal-state-read-fixtures:
+    name: feat-test-plan-terminal-state-read-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run terminal-state-read-fixtures
+        run: python3 scripts/test/run_terminal_state_read_fixtures.py
+
+  feat-test-plan-deliver-worktree-contract-fixtures:
+    name: feat-test-plan-deliver-worktree-contract-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run deliver-worktree-contract-fixtures
+        run: python3 scripts/test/run_deliver_worktree_contract_fixtures.py
+
+  feat-test-plan-gap-backlog-fixtures:
+    name: feat-test-plan-gap-backlog-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run gap-backlog-fixtures
+        run: python3 scripts/test/run_gap_backlog_fixtures.py
 

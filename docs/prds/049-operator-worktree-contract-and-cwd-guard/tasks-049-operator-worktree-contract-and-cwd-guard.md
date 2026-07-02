@@ -4,6 +4,7 @@ topic: operator-worktree-contract-and-cwd-guard
 prd: docs/prds/049-operator-worktree-contract-and-cwd-guard/049-prd-operator-worktree-contract-and-cwd-guard.md
 frozen: true
 frozen_at: 2026-07-01
+visibility: public
 ---
 
 # Tasks — PRD 049 Operator worktree contract & in-flight cwd guard

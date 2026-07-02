@@ -39,6 +39,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if cmd == "reconcile":
+        if "--allow-default-branch" not in args and "--dry-run" not in args:
+            import deliver_cwd_guard
+
+            deliver_cwd_guard.enforce()
         dry_run = "--dry-run" in args
         require_merge = "--require-merge" in args
         allow_default = "--allow-default-branch" in args

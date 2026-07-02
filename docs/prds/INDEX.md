@@ -50,19 +50,18 @@
 | 046 | issue-store-planning-graph | [046-prd-issue-store-planning-graph.md](046-issue-store-planning-graph/046-prd-issue-store-planning-graph.md) (frozen) [A1](046-issue-store-planning-graph/amendments/A1-committed-index-write-path-default-branch-safety.md) [A2](046-issue-store-planning-graph/amendments/A2-terminal-index-status-reconcile-on-finalize-completion.md) [A3](046-issue-store-planning-graph/amendments/A3-inflight-signal-default-branch-commit-safety.md) [A4](046-issue-store-planning-graph/amendments/A4-planning-index-gen-region-marker-newline-invariant.md) | [tasks](046-issue-store-planning-graph/tasks-046-issue-store-planning-graph.md) (frozen) | not-started |
 | 047 | jira-issue-store-adapter | [047-prd-jira-issue-store-adapter.md](047-jira-issue-store-adapter/047-prd-jira-issue-store-adapter.md) (frozen) | [tasks](047-jira-issue-store-adapter/tasks-047-jira-issue-store-adapter.md) (frozen) | not-started |
 | 048 | gap-lifecycle-flip-and-feedback-route-guard | [048-prd-gap-lifecycle-flip-and-feedback-route-guard.md](048-gap-lifecycle-flip-and-feedback-route-guard/048-prd-gap-lifecycle-flip-and-feedback-route-guard.md) (frozen) | [tasks](048-gap-lifecycle-flip-and-feedback-route-guard/tasks-048-gap-lifecycle-flip-and-feedback-route-guard.md) (frozen) | complete |
-| 049 | operator-worktree-contract-and-cwd-guard | [049-prd-operator-worktree-contract-and-cwd-guard.md](049-operator-worktree-contract-and-cwd-guard/049-prd-operator-worktree-contract-and-cwd-guard.md) (frozen) | [tasks](049-operator-worktree-contract-and-cwd-guard/tasks-049-operator-worktree-contract-and-cwd-guard.md) (frozen) | not-started |
+| 049 | operator-worktree-contract-and-cwd-guard | [049-prd-operator-worktree-contract-and-cwd-guard.md](049-operator-worktree-contract-and-cwd-guard/049-prd-operator-worktree-contract-and-cwd-guard.md) (frozen) | [tasks](049-operator-worktree-contract-and-cwd-guard/tasks-049-operator-worktree-contract-and-cwd-guard.md) (frozen) | complete |
 | 050 | deliver-concurrency-cwd-terminal-robustness | [050-prd-deliver-concurrency-cwd-terminal-robustness.md](050-deliver-concurrency-cwd-terminal-robustness/050-prd-deliver-concurrency-cwd-terminal-robustness.md) (frozen) [A1](050-deliver-concurrency-cwd-terminal-robustness/amendments/A1-hook-state-worktree-alignment.md) [A2](050-deliver-concurrency-cwd-terminal-robustness/amendments/A2-unregistered-parent-model-tier-and-gap-004-closure.md) [A3](050-deliver-concurrency-cwd-terminal-robustness/amendments/A3-wave-terminal-docs-currency-gate-argv-contract.md) [A4](050-deliver-concurrency-cwd-terminal-robustness/amendments/A4-resume-reconcile-unpushed-local-merge-ground-tip.md) [A5](050-deliver-concurrency-cwd-terminal-robustness/amendments/A5-deliver-verify-fixture-tree-immutability.md) [A6](050-deliver-concurrency-cwd-terminal-robustness/amendments/A6-subprocess-json-fail-payload-forwarding.md) | [tasks](050-deliver-concurrency-cwd-terminal-robustness/tasks-050-deliver-concurrency-cwd-terminal-robustness.md) (frozen) | not-started |
 | 051 | spec-rigor-brainstorm-profile-and-stdlib-coverage | [051-prd-spec-rigor-brainstorm-profile-and-stdlib-coverage.md](051-spec-rigor-brainstorm-profile-and-stdlib-coverage/051-prd-spec-rigor-brainstorm-profile-and-stdlib-coverage.md) (frozen) | [tasks](051-spec-rigor-brainstorm-profile-and-stdlib-coverage/tasks-051-spec-rigor-brainstorm-profile-and-stdlib-coverage.md) (frozen) | complete |
 | 052 | test-suite-registration-single-source | [052-prd-test-suite-registration-single-source.md](052-test-suite-registration-single-source/052-prd-test-suite-registration-single-source.md) (frozen) | [tasks](052-test-suite-registration-single-source/tasks-052-test-suite-registration-single-source.md) (frozen) | complete |
-<!-- planning-index:structural begin -->
-| id | type | title | status | visibility | edges |
+<!-- planning-index:structural begin -->| id | type | title | status | visibility | edges |
 | --- | --- | --- | --- | --- | --- |
 | gap-001-spec-rigor-check-sh-lacks-a-brainstorm-artifact- | gap | spec-rigor-check.sh lacks a brainstorm artifact profile (validates brainstorms against PRD structure) | resolved | public |  |
 | gap-002-living-doc-reconcile-commits-bypass-r31-default- | gap | Living-doc reconcile commits bypass R31 default-branch refusal (wave_living_docs.py / reconcile.py set-index-status) | open | public |  |
 | gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi | gap | Gap/doc-feedback capture has two unreconciled file paths and bypasses the planning_store backend interface | open | public |  |
 | gap-004-dispatch-binding-preflight-broken-bash-invokes-p | gap | Dispatch-binding preflight broken: bash invokes .py scripts, and interactive parent models are not in models.tiers | scheduled | public |  |
 | gap-005-freeze-commit-spec-seed-cwd-dependent-repo-root- | gap | freeze-commit/spec-seed cwd-dependent repo-root resolution can target the shared primary checkout (extends GAP-077/078 to /sw-doc and /sw-amend) | open | public |  |
-| gap-006-prd-033-marked-complete-but-a3-r37-r39-r40-r42-r | gap | PRD 033 marked complete but A3 R37/R39/R40/R42/R43 (operator worktree contract, in-flight cwd guard) are unimplemented | open | public |  |
+| gap-006-prd-033-marked-complete-but-a3-r37-r39-r40-r42-r | gap | PRD 033 marked complete but A3 R37/R39/R40/R42/R43 (operator worktree contract, in-flight cwd guard) are unimplemented | resolved | public |  |
 | gap-007-finalize-completion-omits-terminal-living-docs-r | gap | finalize-completion omits terminal living-docs reconcile so INDEX stays in-progress | open | public |  |
 | gap-008-inflight-signal-run-complete-commits-index-on-ma | gap | inflight_signal run-complete commits INDEX on main during finalize-completion | open | public |  |
 | gap-009-failed-phase-provision-leaves-orphan-worktree-wi | gap | Failed phase provision leaves orphan worktree without phaseWorktrees state | open | public |  |
@@ -79,8 +78,24 @@
 | gap-020-planning-index-gen-replace-region-inner-omits-n | gap | planning_index_gen replace_region_inner omits newline after structural marker | scheduled | public |  |
 | gap-021-fail-spreads-json-error-dict-causing-duplica | gap | fail() spreads JSON error dict causing duplicate error kwarg TypeError | scheduled | public |  |
 <!-- planning-index:structural end -->
-<!-- planning-index:derived begin -->
-
+<!-- planning-index:derived begin -->gap-002-living-doc-reconcile-commits-bypass-r31-default-: open
+gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi: open
+gap-004-dispatch-binding-preflight-broken-bash-invokes-p: scheduled
+gap-005-freeze-commit-spec-seed-cwd-dependent-repo-root-: open
+gap-007-finalize-completion-omits-terminal-living-docs-r: open
+gap-008-inflight-signal-run-complete-commits-index-on-ma: open
+gap-009-failed-phase-provision-leaves-orphan-worktree-wi: open
+gap-010-durable-deliver-state-loss-blocks-finalize-compl: open
+gap-011-conductor-no-progress-regression-on-provision-an: open
+gap-012-stale-github-check-in-progress-blocks-stuck-stal: open
+gap-013-terminal-pr-prepare-body-skips-template-validati: open
+gap-014-capability-trust-fixtures-regress-to-check-gate-: open
+gap-015-all-private-profile-requires-visibility-public-a: open
+gap-017-wave-terminal-docs-currency-gate-invocation-uses: scheduled
+gap-018-resume-reconcile-ignores-unpushed-local-phase-me: scheduled
+gap-019-parallel-deliver-verify-mutates-tracked-scripts-: scheduled
+gap-020-planning-index-gen-replace-region-inner-omits-n: scheduled
+gap-021-fail-spreads-json-error-dict-causing-duplica: scheduled
 <!-- planning-index:derived end -->
 <!-- planning-index:inFlight begin -->
 

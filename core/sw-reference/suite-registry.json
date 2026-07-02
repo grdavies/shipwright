@@ -215,6 +215,15 @@
       "ciJobName": "feat-test-plan-doc-currency-033-fixtures"
     },
     {
+      "id": "doc-currency-049-fixtures",
+      "script": "scripts/test/run_doc_currency_049_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-doc-currency-049-fixtures"
+    },
+    {
       "id": "doc-fixtures",
       "script": "scripts/test/run_doc_fixtures.py",
       "lanes": [
@@ -1057,6 +1066,42 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-prd-051-ship-verification-fixtures"
+    },
+    {
+      "id": "deliver-cwd-guard-fixtures",
+      "script": "scripts/test/run_deliver_cwd_guard_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-cwd-guard-fixtures"
+    },
+    {
+      "id": "terminal-state-read-fixtures",
+      "script": "scripts/test/run_terminal_state_read_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-terminal-state-read-fixtures"
+    },
+    {
+      "id": "deliver-worktree-contract-fixtures",
+      "script": "scripts/test/run_deliver_worktree_contract_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-worktree-contract-fixtures"
+    },
+    {
+      "id": "gap-backlog-fixtures",
+      "script": "scripts/test/run_gap_backlog_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-gap-backlog-fixtures"
     }
   ]
 }

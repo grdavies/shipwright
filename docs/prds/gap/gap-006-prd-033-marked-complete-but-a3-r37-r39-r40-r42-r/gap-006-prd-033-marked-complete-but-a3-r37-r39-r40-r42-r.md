@@ -1,7 +1,7 @@
 ---
 id: gap-006-prd-033-marked-complete-but-a3-r37-r39-r40-r42-r
 type: gap
-status: open
+status: resolved
 title: PRD 033 marked complete but A3 R37/R39/R40/R42/R43 (operator worktree contract, in-flight cwd guard) are unimplemented
 visibility: public
 tags: [source:feedback, signal:feedback-prd033-a3-r39-unimplemented-2026-06-30]
