@@ -22,6 +22,9 @@ SCENARIOS = (
     "execute-dependency-rules-049-phase-2",
     "execute-runtime-expansion-depth-cap",
     "execute-tokenizer-deep-refs",
+    "execute-integrate-clean-merge",
+    "execute-integrate-conflict-partial-batch",
+    "execute-integrate-parallel-batch-serialized",
 )
 
 FIXTURES = Path("scripts/test/fixtures/execute-orchestration")
@@ -215,6 +218,180 @@ def scenario_execute_tokenizer_deep_refs(root: Path) -> bool:
     return sorted(r["id"] for r in plan.get("refs") or []) == ["2.10.1", "2.10.2"]
 
 
+
+def git_init_repo(repo: Path) -> None:
+    for step in (
+        ["git", "init", "-q"],
+        ["git", "config", "user.email", "test@test.com"],
+        ["git", "config", "user.name", "Test"],
+    ):
+        subprocess.run(step, cwd=str(repo), check=True)
+
+
+def write_execute_plan(repo: Path, run_dir: Path, refs: list[dict]) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    plan = {
+        "version": 1,
+        "tier": "execute",
+        "phaseId": "1",
+        "phaseSlug": "fixture",
+        "refs": refs,
+        "edges": [],
+        "batches": [[r["id"]] for r in refs],
+        "planPolicy": "canonical",
+        "kernelVersion": "1.0.0",
+        "guidelineVersion": "1.0.0",
+        "validatedAt": "2026-07-02T00:00:00Z",
+    }
+    (run_dir / "execute-step-plan.json").write_text(json.dumps(plan, indent=2) + "\n", encoding="utf-8")
+
+
+def integrate_cmd(root: Path, repo: Path, task_ref: str, *, run_dir: Path, extra: list[str] | None = None) -> subprocess.CompletedProcess[str]:
+    cmd = [
+        "python3",
+        str(root / "scripts/execute_integrate.py"),
+        str(repo),
+        "integrate",
+        "--task-ref",
+        task_ref,
+        "--phase-slug",
+        "fixture",
+        "--run-dir",
+        str(run_dir),
+    ]
+    if extra:
+        cmd.extend(extra)
+    return run(cmd, root)
+
+
+def scenario_execute_integrate_clean_merge(plugin_root: Path) -> bool:
+    repo = Path(tempfile.mkdtemp())
+    run_dir = repo / ".cursor/sw-deliver-runs/fixture"
+    try:
+        git_init_repo(repo)
+        (repo / "shared.txt").write_text("base\n", encoding="utf-8")
+        subprocess.run(["git", "add", "shared.txt"], cwd=str(repo), check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=str(repo), check=True)
+        subprocess.run(["git", "branch", "-m", "feat/demo-phase-fixture"], cwd=str(repo), check=True)
+        branch = "feat/demo-phase-fixture--task-1-1"
+        subprocess.run(["git", "checkout", "-q", "-b", branch], cwd=str(repo), check=True)
+        (repo / "shared.txt").write_text("base\nfrom task 1.1\n", encoding="utf-8")
+        subprocess.run(["git", "add", "shared.txt"], cwd=str(repo), check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "task 1.1"], cwd=str(repo), check=True)
+        subprocess.run(["git", "checkout", "-q", "feat/demo-phase-fixture"], cwd=str(repo), check=True)
+        write_execute_plan(repo, run_dir, [{"id": "1.1", "branch": branch, "files": ["shared.txt"], "status": "pending"}])
+        proc = integrate_cmd(plugin_root, repo, "1.1", run_dir=run_dir)
+        if proc.returncode != 0:
+            return False
+        data = json.loads(proc.stdout)
+        if data.get("verdict") != "pass":
+            return False
+        journal = json.loads((run_dir / "integrate-journal.json").read_text(encoding="utf-8"))
+        if len(journal.get("entries") or []) != 1:
+            return False
+        return "from task 1.1" in (repo / "shared.txt").read_text(encoding="utf-8")
+    finally:
+        subprocess.run(["rm", "-rf", str(repo)], check=False)
+
+
+def scenario_execute_integrate_conflict_partial_batch(plugin_root: Path) -> bool:
+    repo = Path(tempfile.mkdtemp())
+    run_dir = repo / ".cursor/sw-deliver-runs/fixture"
+    try:
+        git_init_repo(repo)
+        (repo / "shared.txt").write_text("line\n", encoding="utf-8")
+        subprocess.run(["git", "add", "shared.txt"], cwd=str(repo), check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=str(repo), check=True)
+        subprocess.run(["git", "branch", "-m", "feat/demo-phase-fixture"], cwd=str(repo), check=True)
+        branch_a = "feat/demo-phase-fixture--task-1-1"
+        subprocess.run(["git", "checkout", "-q", "-b", branch_a], cwd=str(repo), check=True)
+        (repo / "shared.txt").write_text("line\nfrom A\n", encoding="utf-8")
+        subprocess.run(["git", "add", "shared.txt"], cwd=str(repo), check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "task 1.1"], cwd=str(repo), check=True)
+        subprocess.run(["git", "checkout", "-q", "feat/demo-phase-fixture"], cwd=str(repo), check=True)
+        branch_b = "feat/demo-phase-fixture--task-1-2"
+        subprocess.run(["git", "checkout", "-q", "-b", branch_b], cwd=str(repo), check=True)
+        (repo / "shared.txt").write_text("line\nfrom B\n", encoding="utf-8")
+        subprocess.run(["git", "add", "shared.txt"], cwd=str(repo), check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "task 1.2"], cwd=str(repo), check=True)
+        subprocess.run(["git", "checkout", "-q", "feat/demo-phase-fixture"], cwd=str(repo), check=True)
+        write_execute_plan(
+            repo,
+            run_dir,
+            [
+                {"id": "1.1", "branch": branch_a, "files": ["shared.txt"], "status": "pending"},
+                {"id": "1.2", "branch": branch_b, "files": ["shared.txt"], "status": "pending"},
+            ],
+        )
+        ok = integrate_cmd(plugin_root, repo, "1.1", run_dir=run_dir)
+        if ok.returncode != 0:
+            return False
+        conflict = integrate_cmd(plugin_root, repo, "1.2", run_dir=run_dir)
+        if conflict.returncode != 20:
+            return False
+        conflict_data = json.loads(conflict.stdout)
+        if conflict_data.get("cause") != "integrate:conflict":
+            return False
+        if "from A" not in (repo / "shared.txt").read_text(encoding="utf-8"):
+            return False
+        journal = json.loads((run_dir / "integrate-journal.json").read_text(encoding="utf-8"))
+        entries = journal.get("entries") or []
+        return len(entries) == 2 and entries[0].get("verdict") == "pass" and entries[1].get("verdict") == "conflict"
+    finally:
+        subprocess.run(["rm", "-rf", str(repo)], check=False)
+
+
+def scenario_execute_integrate_parallel_batch_serialized(plugin_root: Path) -> bool:
+    repo = Path(tempfile.mkdtemp())
+    run_dir = repo / ".cursor/sw-deliver-runs/fixture"
+    try:
+        git_init_repo(repo)
+        (repo / "a.txt").write_text("a\n", encoding="utf-8")
+        subprocess.run(["git", "add", "a.txt"], cwd=str(repo), check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=str(repo), check=True)
+        subprocess.run(["git", "branch", "-m", "feat/demo-phase-fixture"], cwd=str(repo), check=True)
+        branches = {}
+        for ref, fname in (("1.1", "a.txt"), ("1.2", "b.txt")):
+            branch = f"feat/demo-phase-fixture--task-{ref.replace('.', '-')}"
+            subprocess.run(["git", "checkout", "-q", "-b", branch], cwd=str(repo), check=True)
+            (repo / fname).write_text(f"{fname}\n", encoding="utf-8")
+            subprocess.run(["git", "add", fname], cwd=str(repo), check=True)
+            subprocess.run(["git", "commit", "-q", "-m", ref], cwd=str(repo), check=True)
+            subprocess.run(["git", "checkout", "-q", "feat/demo-phase-fixture"], cwd=str(repo), check=True)
+            branches[ref] = branch
+        write_execute_plan(
+            repo,
+            run_dir,
+            [
+                {"id": "1.1", "branch": branches["1.1"], "files": ["a.txt"], "status": "pending"},
+                {"id": "1.2", "branch": branches["1.2"], "files": ["b.txt"], "status": "pending"},
+            ],
+        )
+        lock_path = run_dir / "integrate.lock"
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        lock_path.write_text(
+            json.dumps({"pid": 999999, "host": "fixture", "acquiredAt": now, "heartbeatAt": now}) + "\n",
+            encoding="utf-8",
+        )
+        blocked = integrate_cmd(plugin_root, repo, "1.1", run_dir=run_dir, extra=["--nonblock"])
+        if blocked.returncode != 20:
+            return False
+        blocked_data = json.loads(blocked.stdout)
+        if blocked_data.get("cause") != "integrate:lock-held":
+            return False
+        lock_path.unlink(missing_ok=True)
+        first = integrate_cmd(plugin_root, repo, "1.1", run_dir=run_dir)
+        second = integrate_cmd(plugin_root, repo, "1.2", run_dir=run_dir)
+        if first.returncode != 0 or second.returncode != 0:
+            return False
+        journal = json.loads((run_dir / "integrate-journal.json").read_text(encoding="utf-8"))
+        refs = [e.get("taskRef") for e in journal.get("entries") or []]
+        return refs == ["1.1", "1.2"]
+    finally:
+        subprocess.run(["rm", "-rf", str(repo)], check=False)
+
 RUNNERS = {
     "wave-merge-no-regression": scenario_wave_merge_no_regression,
     "execute-plan-linear-fallback": scenario_execute_plan_linear_fallback,
@@ -222,6 +399,9 @@ RUNNERS = {
     "execute-dependency-rules-049-phase-2": scenario_execute_dependency_rules_049,
     "execute-runtime-expansion-depth-cap": scenario_execute_runtime_expansion_depth_cap,
     "execute-tokenizer-deep-refs": scenario_execute_tokenizer_deep_refs,
+    "execute-integrate-clean-merge": scenario_execute_integrate_clean_merge,
+    "execute-integrate-conflict-partial-batch": scenario_execute_integrate_conflict_partial_batch,
+    "execute-integrate-parallel-batch-serialized": scenario_execute_integrate_parallel_batch_serialized,
 }
 
 

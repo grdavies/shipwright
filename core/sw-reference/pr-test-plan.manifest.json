@@ -929,7 +929,10 @@
         "execute-plan-contention-serializes-shared-file",
         "execute-dependency-rules-049-phase-2",
         "execute-runtime-expansion-depth-cap",
-        "execute-tokenizer-deep-refs"
+        "execute-tokenizer-deep-refs",
+        "execute-integrate-clean-merge",
+        "execute-integrate-conflict-partial-batch",
+        "execute-integrate-parallel-batch-serialized"
       ]
     }
   ]
