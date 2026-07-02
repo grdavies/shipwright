@@ -82,6 +82,8 @@ stamp the resolved concrete `model:` on the Task (do not rely on `model: inherit
 Sub-task orchestration under `/sw-ship --phase-mode`. **Default-on** (`execute.enabled: true`); escape hatch
 `execute.enabled: false` restores monolithic `/sw-execute`.
 
+Frozen docs still hand off via `/sw-deliver run <frozen-tasks>` per `doc.afterTasks` (Step 3) — execute tier only subdivides phase work inside `/sw-ship --phase-mode`.
+
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `execute.enabled` | `true` | When true and phase has ≥2 executable sub-tasks, validate execute plan and fan out per ref before `sw-verify` |
