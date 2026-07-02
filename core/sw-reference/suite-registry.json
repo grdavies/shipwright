@@ -1163,6 +1163,24 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-worktree-config-fixtures"
+    },
+    {
+      "id": "test-scope-fixtures",
+      "script": "scripts/test/run_test_scope_fixtures.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 4,
+      "pathTriggers": [
+        "scripts/test_scope.py",
+        "scripts/unit_tests/scope/**",
+        "core/sw-reference/suite-registry.schema.json"
+      ],
+      "pytestPath": "scripts/unit_tests/scope",
+      "tags": [
+        "pytest",
+        "scope"
+      ]
     }
   ]
 }

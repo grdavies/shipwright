@@ -64,15 +64,15 @@ after migration waves W1–W4.
   - **File:** `core/sw-reference/suite-registry.schema.json`, `suite-registry.json`
   - **Expected:** schema validates; dual `script` field deprecated with migration shim
   - **R-IDs:** R7, TR12
-- [ ] 2.2 Implement `scripts/test_scope.py` for pytest collection (R7, parent TR3)
+- [x] 2.2 Implement `scripts/test_scope.py` for pytest collection (R7, parent TR3)
   - **File:** `scripts/test_scope.py`
   - **Expected:** JSON plan → pytest args; widen list; marker closure
   - **R-IDs:** R5, R7
-- [ ] 2.3 Wire `_runner.py` scopes fast|phase|full to pytest (R4, R17)
+- [x] 2.3 Wire `_runner.py` scopes fast|phase|full to pytest (R4, R17)
   - **File:** `scripts/test/_runner.py`
   - **Expected:** full scope runs entire collection; phase narrows; fast skips integration marker
   - **R-IDs:** R4, R17
-- [ ] 2.4 `run_test_scope_fixtures.py` (R10)
+- [x] 2.4 `run_test_scope_fixtures.py` (R10)
   - **File:** `scripts/test/run_test_scope_fixtures.py` → port to `scripts/unit_tests/scope/`
   - **Expected:** selection + widen tests pass under pytest
   - **R-IDs:** R10

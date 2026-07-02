@@ -46,3 +46,19 @@ python3 scripts/test/_runner.py run-pytest
 
 See [pytest documentation](https://docs.pytest.org/en/stable/example/index.html) for fixtures, parametrization,
 and `tmp_path` usage.
+
+## Scoped verify tiers
+
+| Scope | Invocation | Behavior |
+|-------|------------|----------|
+| `fast` | `SW_TEST_SCOPE=fast` or `--scope fast` | `pytest -m "not integration"` on `scripts/unit_tests` |
+| `phase` | default for deliver phase verify | `test_scope.py` maps git diff → registry `pathTriggers` / markers |
+| `full` | pre-merge / nightly | entire `scripts/unit_tests` collection |
+
+Widen to `full` when changes touch global infra paths (registry, `_runner.py`, `test_scope.py`, CI workflow, etc.) — see `scripts/test_scope.py` `WIDEN_GLOBS`.
+
+```bash
+python3 scripts/test_scope.py --scope phase path/to/changed.py
+PYTHONPATH=scripts python3 scripts/test/_runner.py run-pytest --scope phase
+```
+

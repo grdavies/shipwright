@@ -223,16 +223,37 @@ def run_manifest(root: Path, *, coverage: bool = False, coverdir: Path | None = 
     return 0
 
 
-def run_pytest_scope(root: Path, *, scope: str = "full", pytest_args: list[str] | None = None) -> int:
-    """Skeleton scope dispatch for vendored pytest (PRD 054 phase 1).
+def _resolve_scope() -> str:
+    import os
 
-    Phase 2 wires fast|phase|full to test_scope.py and registry markers.
-    """
-    _ = scope  # reserved for phase 2 scope selection
-    args = list(pytest_args or [])
-    if not args:
-        args = ["scripts/unit_tests"]
-    return run_pytest(args, root=repo_root(root))
+    explicit = os.environ.get("SW_TEST_SCOPE", "").strip().lower()
+    if explicit in {"fast", "phase", "full"}:
+        return explicit
+    return "full"
+
+
+def run_pytest_scope(
+    root: Path,
+    *,
+    scope: str | None = None,
+    pytest_args: list[str] | None = None,
+    changed_paths: list[str] | None = None,
+) -> int:
+    """Dispatch vendored pytest by tier (PRD 054 R4/R17)."""
+    import test_scope as ts
+
+    resolved_root = repo_root(root)
+    effective_scope = (scope or _resolve_scope()).lower()
+    if pytest_args:
+        return run_pytest(pytest_args, root=resolved_root)
+
+    paths = changed_paths
+    if paths is None:
+        paths = ts.resolve_changed_paths(resolved_root, None)
+    plan = ts.build_plan(paths, scope=effective_scope, root=resolved_root)
+    for advisory in plan.get("advisories") or []:
+        print(f"ADVISORY test-scope: {advisory}")
+    return run_pytest(plan.get("pytestArgs") or ["scripts/unit_tests"], root=resolved_root)
 
 
 def run_verify(root: Path, *, coverage: bool = False, coverdir: Path | None = None) -> int:
@@ -278,10 +299,11 @@ def main(argv: list[str] | None = None) -> int:
     p_suite.add_argument("path")
 
     sub.add_parser("run-manifest", help="Run pr-test-plan manifest fixtures")
-    sub.add_parser("verify", help="Run verify.test bundle")
+    p_verify = sub.add_parser("verify", help="Run verify.test bundle")
+    p_verify.add_argument("--scope", default=None, choices=["fast", "phase", "full"])
     sub.add_parser("list", help="List discoverable tests")
 
-    p_pytest = sub.add_parser("run-pytest", help="Run vendored pytest (skeleton scope dispatch)")
+    p_pytest = sub.add_parser("run-pytest", help="Run vendored pytest with scope dispatch")
     p_pytest.add_argument("--scope", default="full", choices=["fast", "phase", "full"])
     p_pytest.add_argument("pytest_args", nargs=argparse.REMAINDER)
 
@@ -301,6 +323,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "run-manifest":
         return run_manifest(root, coverage=coverage)
     if args.cmd == "verify":
+        scope = args.scope or _resolve_scope()
+        if scope in {"fast", "phase"}:
+            return run_pytest_scope(root, scope=scope)
+        if scope == "full":
+            ec = run_pytest_scope(root, scope="full")
+            if ec != 0:
+                return ec
         return run_verify(root, coverage=coverage)
     if args.cmd == "run-pytest":
         forwarded = args.pytest_args
