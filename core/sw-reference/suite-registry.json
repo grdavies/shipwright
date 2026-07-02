@@ -1062,6 +1062,15 @@
       "ciJobName": "feat-test-plan-stdlib-coverage-fixtures"
     },
     {
+      "id": "prd-050-ship-verification-fixtures",
+      "script": "scripts/test/run_prd_050_ship_verification_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-prd-050-ship-verification-fixtures"
+    },
+    {
       "id": "prd-051-ship-verification-fixtures",
       "script": "scripts/test/run_prd_051_ship_verification_fixtures.py",
       "lanes": [

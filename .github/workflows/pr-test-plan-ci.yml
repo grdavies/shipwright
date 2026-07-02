@@ -627,6 +627,17 @@ jobs:
       - name: Run stdlib-coverage-fixtures
         run: python3 scripts/test/run_stdlib_coverage_fixtures.py
 
+  feat-test-plan-prd-050-ship-verification-fixtures:
+    name: feat-test-plan-prd-050-ship-verification-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run prd-050-ship-verification-fixtures
+        run: python3 scripts/test/run_prd_050_ship_verification_fixtures.py
+
   feat-test-plan-prd-051-ship-verification-fixtures:
     name: feat-test-plan-prd-051-ship-verification-fixtures
     runs-on: ubuntu-latest

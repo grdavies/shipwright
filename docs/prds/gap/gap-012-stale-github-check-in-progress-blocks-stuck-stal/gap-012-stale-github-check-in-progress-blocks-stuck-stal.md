@@ -1,7 +1,9 @@
 ---
 id: gap-012-stale-github-check-in-progress-blocks-stuck-stal
 type: gap
-status: open
+status: resolved
+schedule: PRD 050
+resolvedBy: PRD 050
 title: Stale GitHub check IN_PROGRESS blocks stuck-stale while UI shows green
 visibility: public
 tags: [source:feedback, signal:feedback-prd-041-stale-ci-yellow-2026-07-01, prd-041, plugin-self]
