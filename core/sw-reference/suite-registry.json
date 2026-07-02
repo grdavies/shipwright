@@ -167,9 +167,12 @@
       "id": "deliver-concurrency-fixtures",
       "script": "scripts/test/run_deliver_concurrency_fixtures.py",
       "lanes": [
-        "verify"
+        "verify",
+        "pr-ci"
       ],
-      "verifyOrder": 17
+      "verifyOrder": 17,
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-concurrency-fixtures"
     },
     {
       "id": "deliver-fixtures",
@@ -1059,6 +1062,15 @@
       "ciJobName": "feat-test-plan-stdlib-coverage-fixtures"
     },
     {
+      "id": "prd-050-ship-verification-fixtures",
+      "script": "scripts/test/run_prd_050_ship_verification_fixtures.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-prd-050-ship-verification-fixtures"
+    },
+    {
       "id": "prd-051-ship-verification-fixtures",
       "script": "scripts/test/run_prd_051_ship_verification_fixtures.py",
       "lanes": [
@@ -1102,6 +1114,46 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-gap-backlog-fixtures"
+    },
+    {
+      "id": "hook-worktree-alignment-fixtures",
+      "script": "scripts/test/run_hook_worktree_alignment_fixtures.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-hook-worktree-alignment-fixtures",
+      "verifyOrder": 18
+    },
+    {
+      "id": "dispatch-binding-fixtures",
+      "script": "scripts/test/run_dispatch_binding_fixtures.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-dispatch-binding-fixtures",
+      "verifyOrder": 19
+    },
+    {
+      "id": "bash-py-invocation-guard",
+      "script": "scripts/test/bash-py-invocation-guard.test",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-bash-py-invocation-guard"
+    },
+    {
+      "id": "git-push-secret-scan-chokepoint",
+      "script": "scripts/test/git-push-secret-scan-chokepoint.test",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-git-push-secret-scan-chokepoint"
     }
   ]
 }

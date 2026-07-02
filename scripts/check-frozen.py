@@ -9,7 +9,7 @@ from _sw.cli import run_module_main
 
 def main(argv=None):
     args = list(sys.argv[1:] if argv is None else argv)
-    root = SCRIPT_DIR.parent
+    root = Path.cwd().resolve()
     if args and args[0] == "freeze-commit":
         artifact = ""
         i = 1
@@ -18,6 +18,15 @@ def main(argv=None):
             else: print(json.dumps({"verdict":"fail","reason":"unknown arg"}), file=sys.stderr); return 2
         if not artifact:
             print(json.dumps({"verdict":"fail","reason":"--artifact required"}), file=sys.stderr); return 2
+        from primary_checkout_guard import enforce_guard
+        from wave_spec_seed import resolve_target_from_artifact
+        branch, _slug, _docs = resolve_target_from_artifact(root, artifact)
+        enforce_guard(root, branch)
+        import planning_visibility as planning_vis
+        vis = planning_vis.check_tracked_public_at_freeze(root, root / artifact)
+        if vis.get("verdict") == "fail":
+            print(json.dumps({"verdict": "fail", "action": "freeze-commit", **vis}), file=sys.stderr)
+            return 20
         proc = subprocess.run([sys.executable, str(SCRIPT_DIR/"wave.py"), "spec-seed", "--artifact", artifact], capture_output=True, text=True, cwd=str(root))
         ok = proc.returncode == 0
         if ok:

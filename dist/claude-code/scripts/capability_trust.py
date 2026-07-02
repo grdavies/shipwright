@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Callable
 
@@ -33,6 +34,65 @@ PROVIDER_FAMILY_KEYS: dict[str, str] = {
     "quality": "quality.provider",
     "code-review": "code-review.provider",
 }
+
+GAT_REF_FIXTURE_DIRS = (
+    "scripts/test/fixtures/capability-select",
+    "scripts/test/fixtures/capability-lint",
+)
+
+_GAT_REF_PATTERN = re.compile(r"gateRef\s*:\s*([^\s\"']+\.sh)\b")
+_GAT_REF_JSON_PATTERN = re.compile(r'"gateRef"\s*:\s*"([^"]+\.sh)"')
+
+
+def _py_canonical_exists(repo_root: Path, gate_ref: str) -> bool:
+    name = Path(gate_ref).name
+    if not name.endswith(".sh"):
+        return False
+    py_name = name[:-3] + ".py"
+    for scripts_dir in (repo_root / "scripts", repo_root / "core" / "scripts"):
+        if (scripts_dir / py_name).is_file():
+            return True
+    return False
+
+
+def scan_gateref_no_shell(repo_root: Path) -> list[dict[str, str]]:
+    """Fail-closed scan for .sh gateRef where canonical .py exists (PRD 050 R17)."""
+    violations: list[dict[str, str]] = []
+    for rel_dir in GAT_REF_FIXTURE_DIRS:
+        base = repo_root / rel_dir
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*")):
+            if not path.is_file() or path.suffix not in {".md", ".json", ".yaml", ".yml"}:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            for pattern in (_GAT_REF_PATTERN, _GAT_REF_JSON_PATTERN):
+                for match in pattern.finditer(text):
+                    gate_ref = match.group(1)
+                    if _py_canonical_exists(repo_root, gate_ref):
+                        violations.append(
+                            {
+                                "path": str(path.relative_to(repo_root)),
+                                "gateRef": gate_ref,
+                                "canonical": gate_ref.replace(".sh", ".py"),
+                            }
+                        )
+    return violations
+
+
+def check_gateref_no_shell(repo_root: Path) -> dict[str, Any]:
+    violations = scan_gateref_no_shell(repo_root)
+    if violations:
+        return {
+            "verdict": "fail",
+            "halt": "gateref-no-shell",
+            "violations": violations,
+            "remediation": "restore gateRef to canonical .py script names",
+        }
+    return {"verdict": "pass", "scanned": list(GAT_REF_FIXTURE_DIRS)}
 
 
 def is_kernel_hook_source(source_path: str) -> bool:

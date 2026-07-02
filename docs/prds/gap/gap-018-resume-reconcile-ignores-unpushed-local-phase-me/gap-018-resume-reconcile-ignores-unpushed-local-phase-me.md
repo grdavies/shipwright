@@ -1,10 +1,11 @@
 ---
 id: gap-018-resume-reconcile-ignores-unpushed-local-phase-me
 type: gap
-status: scheduled
+status: resolved
 schedule: PRD 050 A4
 title: resume-reconcile ignores unpushed local phase merges when remote tip exists
 visibility: public
+resolvedBy: PRD 050 A4
 tags: [source:feedback, prd-050-a4, signal:feedback-prd-051-deliver-observations-2026-07-02, prd-051, deliver, resume-reconcile]
 source_pr: 51
 absorbs: []

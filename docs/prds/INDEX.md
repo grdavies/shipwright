@@ -56,46 +56,34 @@
 | 052 | test-suite-registration-single-source | [052-prd-test-suite-registration-single-source.md](052-test-suite-registration-single-source/052-prd-test-suite-registration-single-source.md) (frozen) | [tasks](052-test-suite-registration-single-source/tasks-052-test-suite-registration-single-source.md) (frozen) | complete |
 <!-- planning-index:structural begin -->| id | type | title | status | visibility | edges |
 | --- | --- | --- | --- | --- | --- |
+| feedback-hook-worktree-root-mismatch-2026-07-01 | gap | Hook-state worktree root mismatch causes false prework/preflight denials | resolved | public |  |
 | gap-001-spec-rigor-check-sh-lacks-a-brainstorm-artifact- | gap | spec-rigor-check.sh lacks a brainstorm artifact profile (validates brainstorms against PRD structure) | resolved | public |  |
 | gap-002-living-doc-reconcile-commits-bypass-r31-default- | gap | Living-doc reconcile commits bypass R31 default-branch refusal (wave_living_docs.py / reconcile.py set-index-status) | open | public |  |
 | gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi | gap | Gap/doc-feedback capture has two unreconciled file paths and bypasses the planning_store backend interface | open | public |  |
-| gap-004-dispatch-binding-preflight-broken-bash-invokes-p | gap | Dispatch-binding preflight broken: bash invokes .py scripts, and interactive parent models are not in models.tiers | scheduled | public |  |
-| gap-005-freeze-commit-spec-seed-cwd-dependent-repo-root- | gap | freeze-commit/spec-seed cwd-dependent repo-root resolution can target the shared primary checkout (extends GAP-077/078 to /sw-doc and /sw-amend) | open | public |  |
+| gap-004-dispatch-binding-preflight-broken-bash-invokes-p | gap | Dispatch-binding preflight broken: bash invokes .py scripts, and interactive parent models are not in models.tiers | resolved | public |  |
+| gap-005-freeze-commit-spec-seed-cwd-dependent-repo-root- | gap | freeze-commit/spec-seed cwd-dependent repo-root resolution can target the shared primary checkout (extends GAP-077/078 to /sw-doc and /sw-amend) | resolved | public |  |
 | gap-006-prd-033-marked-complete-but-a3-r37-r39-r40-r42-r | gap | PRD 033 marked complete but A3 R37/R39/R40/R42/R43 (operator worktree contract, in-flight cwd guard) are unimplemented | resolved | public |  |
 | gap-007-finalize-completion-omits-terminal-living-docs-r | gap | finalize-completion omits terminal living-docs reconcile so INDEX stays in-progress | open | public |  |
 | gap-008-inflight-signal-run-complete-commits-index-on-ma | gap | inflight_signal run-complete commits INDEX on main during finalize-completion | open | public |  |
-| gap-009-failed-phase-provision-leaves-orphan-worktree-wi | gap | Failed phase provision leaves orphan worktree without phaseWorktrees state | open | public |  |
-| gap-010-durable-deliver-state-loss-blocks-finalize-compl | gap | Durable deliver state loss blocks finalize-completion resume on bare main | open | public |  |
-| gap-011-conductor-no-progress-regression-on-provision-an | gap | conductor no-progress regression on provision and merge-enqueue loops | open | public |  |
-| gap-012-stale-github-check-in-progress-blocks-stuck-stal | gap | Stale GitHub check IN_PROGRESS blocks stuck-stale while UI shows green | open | public |  |
-| gap-013-terminal-pr-prepare-body-skips-template-validati | gap | Terminal PR prepare body skips template validation | open | public |  |
-| gap-014-capability-trust-fixtures-regress-to-check-gate- | gap | Capability trust fixtures regress to check-gate.sh during deliver | open | public |  |
-| gap-015-all-private-profile-requires-visibility-public-a | gap | all-private profile requires visibility public at spec-seed not assert-entry only | open | public |  |
+| gap-009-failed-phase-provision-leaves-orphan-worktree-wi | gap | Failed phase provision leaves orphan worktree without phaseWorktrees state | resolved | public |  |
+| gap-010-durable-deliver-state-loss-blocks-finalize-compl | gap | Durable deliver state loss blocks finalize-completion resume on bare main | resolved | public |  |
+| gap-011-conductor-no-progress-regression-on-provision-an | gap | conductor no-progress regression on provision and merge-enqueue loops | resolved | public |  |
+| gap-012-stale-github-check-in-progress-blocks-stuck-stal | gap | Stale GitHub check IN_PROGRESS blocks stuck-stale while UI shows green | resolved | public |  |
+| gap-013-terminal-pr-prepare-body-skips-template-validati | gap | Terminal PR prepare body skips template validation | resolved | public |  |
+| gap-014-capability-trust-fixtures-regress-to-check-gate- | gap | Capability trust fixtures regress to check-gate.sh during deliver | resolved | public |  |
+| gap-015-all-private-profile-requires-visibility-public-a | gap | all-private profile requires visibility public at spec-seed not assert-entry only | resolved | public |  |
 | gap-016-gap-resolve-mechanical-flip-r51-never-wired-into | gap | Gap-resolve mechanical flip (R51) never wired into PRD-ship pipeline | resolved | public |  |
-| gap-017-wave-terminal-docs-currency-gate-invocation-uses | gap | wave-terminal docs-currency-gate invocation uses wrong argv contract | scheduled | public |  |
-| gap-018-resume-reconcile-ignores-unpushed-local-phase-me | gap | resume-reconcile ignores unpushed local phase merges when remote tip exists | scheduled | public |  |
-| gap-019-parallel-deliver-verify-mutates-tracked-scripts- | gap | parallel deliver verify mutates tracked scripts/test/fixtures in orchestrator worktree | scheduled | public |  |
+| gap-017-wave-terminal-docs-currency-gate-invocation-uses | gap | wave-terminal docs-currency-gate invocation uses wrong argv contract | resolved | public |  |
+| gap-018-resume-reconcile-ignores-unpushed-local-phase-me | gap | resume-reconcile ignores unpushed local phase merges when remote tip exists | resolved | public |  |
+| gap-019-parallel-deliver-verify-mutates-tracked-scripts- | gap | parallel deliver verify mutates tracked scripts/test/fixtures in orchestrator worktree | resolved | public |  |
 | gap-020-planning-index-gen-replace-region-inner-omits-n | gap | planning_index_gen replace_region_inner omits newline after structural marker | scheduled | public |  |
-| gap-021-fail-spreads-json-error-dict-causing-duplica | gap | fail() spreads JSON error dict causing duplicate error kwarg TypeError | scheduled | public |  |
+| gap-021-fail-spreads-json-error-dict-causing-duplica | gap | fail() spreads JSON error dict causing duplicate error kwarg TypeError | resolved | public |  |
 <!-- planning-index:structural end -->
 <!-- planning-index:derived begin -->gap-002-living-doc-reconcile-commits-bypass-r31-default-: open
 gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi: open
-gap-004-dispatch-binding-preflight-broken-bash-invokes-p: scheduled
-gap-005-freeze-commit-spec-seed-cwd-dependent-repo-root-: open
 gap-007-finalize-completion-omits-terminal-living-docs-r: open
 gap-008-inflight-signal-run-complete-commits-index-on-ma: open
-gap-009-failed-phase-provision-leaves-orphan-worktree-wi: open
-gap-010-durable-deliver-state-loss-blocks-finalize-compl: open
-gap-011-conductor-no-progress-regression-on-provision-an: open
-gap-012-stale-github-check-in-progress-blocks-stuck-stal: open
-gap-013-terminal-pr-prepare-body-skips-template-validati: open
-gap-014-capability-trust-fixtures-regress-to-check-gate-: open
-gap-015-all-private-profile-requires-visibility-public-a: open
-gap-017-wave-terminal-docs-currency-gate-invocation-uses: scheduled
-gap-018-resume-reconcile-ignores-unpushed-local-phase-me: scheduled
-gap-019-parallel-deliver-verify-mutates-tracked-scripts-: scheduled
 gap-020-planning-index-gen-replace-region-inner-omits-n: scheduled
-gap-021-fail-spreads-json-error-dict-causing-duplica: scheduled
 <!-- planning-index:derived end -->
 <!-- planning-index:inFlight begin -->
 <!-- planning-index:inFlight end -->

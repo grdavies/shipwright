@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import sys
+from wave_errors import fail_from_payload
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -150,12 +151,21 @@ def cmd_assert_entry(root: Path, _args: list[str]) -> None:
     fail(proc.stderr.strip() or "worktree guard configuration error", exit_code=2)
 
 
-def assert_primary_off_target(top: Path, target: str) -> None:
-    """Primary checkout must not be on the orchestrator-owned branch (R55/R31)."""
-    current = git_run(["branch", "--show-current"], top, check=False).stdout.strip()
+def assert_primary_off_target(start: Path, target: str) -> None:
+    """Primary checkout must not be on the orchestrator-owned branch (PRD 050 R1/R6)."""
+    from primary_checkout_guard import (
+        acquire_primary_lock,
+        canonical_repo_root,
+        primary_worktree_path,
+        release_primary_lock,
+    )
+
+    repo_root = canonical_repo_root(start)
+    primary = primary_worktree_path(repo_root)
+    current = git_run(["branch", "--show-current"], primary, check=False).stdout.strip()
     if current != target:
         return
-    status = git_run(["status", "--porcelain"], top, check=False).stdout
+    status = git_run(["status", "--porcelain"], primary, check=False).stdout
     if status.strip():
         fail(
             f"primary checkout is dirty on {target} — commit, stash, and move off before orchestrator provision",
@@ -167,24 +177,35 @@ def assert_primary_off_target(top: Path, target: str) -> None:
         )
     default_ref = git_run(
         ["symbolic-ref", "refs/remotes/origin/HEAD"],
-        top,
+        repo_root,
         check=False,
     ).stdout.strip()
     if default_ref.startswith("refs/remotes/origin/"):
         default_branch = default_ref.removeprefix("refs/remotes/origin/")
     else:
         default_branch = "main"
-    trunk_script = top / "scripts" / "resolve_base_branch.py"
+    trunk_script = repo_root / "scripts" / "resolve_base_branch.py"
     if trunk_script.is_file():
         proc = subprocess.run(
             [sys.executable, str(trunk_script), "trunk-name"],
-            cwd=str(top),
+            cwd=str(repo_root),
             capture_output=True,
             text=True,
         )
         if proc.returncode == 0 and proc.stdout.strip():
             default_branch = proc.stdout.strip()
-    checkout = git_run(["checkout", default_branch], cwd=top, check=False)
+    lock = acquire_primary_lock(repo_root)
+    if lock.get("verdict") != "pass":
+        fail(
+            lock.get("error", "primary checkout lock held"),
+            exit_code=20,
+            halt="primary-lock-held",
+            remediation=lock.get("remediation"),
+        )
+    try:
+        checkout = git_run(["checkout", default_branch], cwd=primary, check=False)
+    finally:
+        release_primary_lock(repo_root)
     if checkout.returncode != 0:
         fail(
             f"primary checkout is on {target}; auto-checkout to {default_branch!r} failed",
@@ -485,7 +506,7 @@ def cmd_phase_teardown_run(root: Path, args: list[str]) -> None:
                 err = json.loads(proc.stdout)
             except json.JSONDecodeError:
                 err = {"error": proc.stderr or proc.stdout}
-            fail(err.get("error", "forward-merge failed"), exit_code=proc.returncode, **err)
+            fail_from_payload(fail, err, "forward-merge failed", proc.returncode)
 
     if dependent_references_worktree(state, plan, phase_id, wt_path):
         fail(
@@ -514,7 +535,7 @@ def cmd_phase_teardown_run(root: Path, args: list[str]) -> None:
             err = json.loads(proc.stdout)
         except json.JSONDecodeError:
             err = {"error": proc.stderr or proc.stdout}
-        fail(err.get("error", "phase teardown failed"), exit_code=proc.returncode, **err)
+        fail_from_payload(fail, err, "phase teardown failed", proc.returncode)
 
     state = load_deliver_state(root)
     phases = state.setdefault("phases", {})
@@ -543,6 +564,106 @@ def cmd_phase_teardown_run(root: Path, args: list[str]) -> None:
     )
 
 
+
+
+def worktree_current_branch(wt_path: Path) -> str | None:
+    proc = subprocess.run(
+        ["git", "-C", str(wt_path), "branch", "--show-current"],
+        text=True,
+        capture_output=True,
+    )
+    branch = proc.stdout.strip() if proc.returncode == 0 else ""
+    return branch or None
+
+
+def adopt_orphan_phase_worktree(
+    root: Path,
+    *,
+    phase_id: str,
+    wt_path: Path,
+    name: str,
+    branch: str,
+    slug: str,
+    base: str,
+) -> dict[str, Any]:
+    """Register an existing matching orphan worktree in durable state (R7)."""
+    state = load_deliver_state(root)
+    worktrees = state.setdefault("phaseWorktrees", {})
+    worktrees[str(phase_id)] = {"name": name, "path": str(wt_path)}
+    state["phaseWorktrees"] = worktrees
+    save_deliver_state(root, state)
+    if wt_path.is_dir():
+        write_shipwright_state(
+            wt_path,
+            {
+                "worktreeName": name,
+                "worktreePath": str(wt_path),
+                "worktreeRole": PHASE_ROLE,
+                "countsTowardCeiling": True,
+                "parentBranch": base,
+                "currentBranch": branch,
+                "phaseId": phase_id,
+                "phaseSlug": slug,
+                "startedAt": utc_now(),
+            },
+        )
+    return {
+        "verdict": "pass",
+        "action": "phase-provision",
+        "adopted": True,
+        "path": str(wt_path),
+        "name": name,
+        "worktreeName": name,
+        "branch": branch,
+        "countsTowardCeiling": True,
+        "worktreeRole": PHASE_ROLE,
+    }
+
+
+def reconcile_orphan_phase_worktree(
+    root: Path,
+    *,
+    phase_id: str,
+    wt_path: Path,
+    name: str,
+    expected_branch: str,
+    slug: str,
+    base: str,
+) -> dict[str, Any] | None:
+    """Adopt matching orphan into state or teardown mismatch before retry (R7/R8)."""
+    if not wt_path.is_dir():
+        return None
+    state = load_deliver_state(root)
+    recorded = (state.get("phaseWorktrees") or {}).get(str(phase_id))
+    if isinstance(recorded, dict) and recorded.get("path"):
+        return None
+    actual = worktree_current_branch(wt_path)
+    if actual == expected_branch:
+        return adopt_orphan_phase_worktree(
+            root,
+            phase_id=str(phase_id),
+            wt_path=wt_path,
+            name=name,
+            branch=expected_branch,
+            slug=slug,
+            base=base,
+        )
+    teardown_args = ["phase-teardown", "--worktree", str(wt_path)]
+    if actual and actual != expected_branch:
+        proc = subprocess.run(
+            [sys.executable, str(Path(__file__).resolve()), str(root), *teardown_args],
+            cwd=str(root),
+            text=True,
+            capture_output=True,
+        )
+        if proc.returncode != 0:
+            try:
+                err = json.loads(proc.stdout)
+            except json.JSONDecodeError:
+                err = {"error": proc.stderr or proc.stdout}
+            fail_from_payload(fail, err, "orphan worktree teardown failed", proc.returncode)
+    return None
+
 def cmd_phase_provision(root: Path, args: list[str]) -> None:
     phase_id = parse_kv(args, "--phase-id")
     if not phase_id:
@@ -563,6 +684,20 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
     name = parse_kv(args, "--name", f"{target_slug}-phase-{slug}") or f"{target_slug}-phase-{slug}"
 
     top = git_toplevel(root)
+    wt_path = top / ".sw-worktrees" / name
+    adopted = reconcile_orphan_phase_worktree(
+        root,
+        phase_id=str(phase_id),
+        wt_path=wt_path,
+        name=name,
+        expected_branch=str(branch),
+        slug=str(slug),
+        base=str(base),
+    )
+    if adopted is not None:
+        emit(adopted)
+        return
+
     script = top / "scripts" / "worktree.py"
     proc = subprocess.run(
         [
@@ -641,7 +776,7 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
                 err = json.loads(mat_proc.stdout)
             except json.JSONDecodeError:
                 err = {"error": mat_proc.stderr or mat_proc.stdout}
-            fail(err.get("error", "materialize provision failed"), exit_code=20, **err)
+            fail_from_payload(fail, err, "materialize provision failed", 20)
         if mat_proc.returncode not in (0,):
             fail(
                 mat_proc.stderr.strip() or mat_proc.stdout.strip() or "materialize provision failed",

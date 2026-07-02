@@ -40,7 +40,10 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SELECT="$ROOT/scripts/capability-select.sh"
-FIX="$ROOT/scripts/test/fixtures/capability-select"
+FIX="${SW_FIXTURES_EPHEMERAL_ROOT:-$ROOT/scripts/test/fixtures/capability-select}"
+FIX="${FIX%/}/"
+FIX="${FIX%/capability-select}"
+FIX="$FIX/capability-select"
 FAIL=0
 
 chmod +x "$SELECT"
@@ -316,7 +319,7 @@ capability:
   metadata:
     providerFamily: review
     adapterId: coderabbit
-    gateRef: check-gate.sh
+    gateRef: check-gate.py
     selectionFamily: providers
 ---
 YAML
@@ -369,7 +372,7 @@ capability:
   metadata:
     providerFamily: review
     adapterId: coderabbit
-    gateRef: check-gate.sh
+    gateRef: check-gate.py
     selectionFamily: providers
 ---
 YAML
@@ -403,7 +406,7 @@ index = {
       'metadata': {
         'providerFamily': 'review',
         'adapterId': 'coderabbit',
-        'gateRef': 'check-gate.sh',
+        'gateRef': 'check-gate.py',
         'selectionFamily': 'providers',
       },
     },

@@ -389,7 +389,7 @@ Artifacts:
 | Path | Role |
 | --- | --- |
 | `.cursor/hooks/state/memory-prework-search.json` | Redacted per-surface search record (or `memory:offline` / `memory:none`) |
-| `.cursor/sw-deliver-runs/run.log` | Append-only audit breadcrumb |
+| `.cursor/sw-deliver-runs/run.<slug>.log` | Per-deliver-run append-only audit breadcrumb (PRD 050 R4) |
 
 The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies the first file-mutating tool call
 when no fresh record exists. Delegated work sub-agents inherit the obligation per
@@ -607,3 +607,19 @@ The build chain is `python3 scripts/copy-to-core.py` → `python3 -m sw generate
 All writes pass through `memory_redact.redact` and schema validation; direct `write_json` to these paths is forbidden.
 `index-merge` on `failure-signatures` merges linked worktree stores into the shared-git-dir authority.
 
+
+
+## Primary-checkout guard convention (PRD 050 D6)
+
+Scripts that mutate git state against the shared primary checkout MUST:
+
+1. Resolve working root from `Path.cwd()` (never `__file__`-derived paths).
+2. Call `scripts/primary_checkout_guard.py` `guard()` / `enforce_guard()` with `(resolved_root, artifact_branch)` before any checkout/commit.
+3. Acquire `primary-checkout.lock` under `.cursor/sw-deliver-runs/` before mutating primary checkout HEAD.
+
+## Hook-state vs deliver durable state (PRD 050 A1 R31)
+
+| State class | Canonical root |
+| --- | --- |
+| Deliver durable state (`.cursor/sw-deliver-state.<slug>.json`, locks, merge queue) | Repo root (primary checkout) |
+| Hook ephemeral state (`.cursor/hooks/state/*`) | R20-resolved active root (worktree when aligned) |

@@ -61,6 +61,8 @@ def _dash_fixtures(name: str) -> str:
 
 
 def patch_source(src: str, root: Path) -> str:
+    import os
+    ephemeral = os.environ.get("SW_FIXTURES_EPHEMERAL_ROOT", "").strip()
     src = src.replace("#!/usr/bin/env bash", "")
     src = src.replace("set -euo pipefail", "set -eu")
     src = re.sub(
@@ -83,6 +85,9 @@ def patch_source(src: str, root: Path) -> str:
         f'ROOT="{root}"',
         src,
     )
+    if ephemeral:
+        src = src.replace(f'"{root}/scripts/test/fixtures', f'"{ephemeral}')
+        src = src.replace("scripts/test/fixtures/", ephemeral.rstrip("/") + "/")
     src = re.sub(r'ROOT="[^"]*worktrees/[^"]*"', f'ROOT="{root}"', src)
     src = re.sub(r"# shellcheck source=[^\n]*\n", "", src)
     src = re.sub(

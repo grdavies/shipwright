@@ -1,10 +1,11 @@
 ---
 id: gap-017-wave-terminal-docs-currency-gate-invocation-uses
 type: gap
-status: scheduled
+status: resolved
 schedule: PRD 050 A3
 title: wave-terminal docs-currency-gate invocation uses wrong argv contract
 visibility: public
+resolvedBy: PRD 050 A3
 tags: [source:feedback, prd-050-a3, signal:feedback-prd-052-deliver-terminal-observations-2026-07-02, prd-052]
 source_pr: 52
 absorbs: []

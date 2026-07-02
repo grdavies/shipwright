@@ -27,9 +27,11 @@ Task list from frozen PRD + amendment union.
 4. In **one pass**, draft parent tasks (phases), expand executable sub-tasks, Relevant Files, and Notes.
 5. Add **`## Phase Dependencies`** table: `| Phase | Depends on |` with one row per phase (`none` or phase refs); machine-parseable by `/sw-deliver` (R5/R6/R37).
 6. Add **`## Traceability`** table: every union R-ID → task ref → named test scenario → **ZOMBIES checklist** column (see `skills/spec-rigor/references/zombies.md`).
-7. Save; run spec-rigor + traceability gates, then `/sw-freeze` on task list.
-8. Update `docs/prds/INDEX.md` entry (status `not-started`).
-9. **Stop** — standalone runs end here without implementation. The human checkpoint between documentation
+7. Save; run spec-rigor + traceability gates; when `planning.visibilityProfile` is `all-private`, run
+   `python3 scripts/planning_visibility.py check-freeze-visibility <task-list>` before `/sw-freeze`.
+8. `/sw-freeze` on task list.
+9. Update `docs/prds/INDEX.md` entry (status `not-started`).
+10. **Stop** — standalone runs end here without implementation. The human checkpoint between documentation
    and implementation is `doc.afterTasks` on `/sw-doc` (or `--after-tasks` on `/sw-ship`), not a gate inside
    `/sw-tasks`.
 

@@ -108,7 +108,7 @@ if (
   python3 -c "
 import json
 from pathlib import Path
-state={'verdict':'running','target':{'branch':'feat/demo'},'nextAction':'merge-run-next','currentWave':1,'baseCapture':{'branch':'main','sha':'abc'},'waveBatchingPlan':{'waves':[['1']]},'mergeQueue':[{'phaseSlug':'alpha'}],'phases':{'1':{'slug':'alpha','status':'in-flight','branch':'feat/demo-phase-alpha'}},'orchestratorWorktree':{'path':'/tmp/orch'}}
+state={'verdict':'running','target':{'branch':'feat/demo'},'nextAction':'merge-run-next','currentWave':1,'baseCapture':{'branch':'main','sha':'abc'},'waveBatchingPlan':{'waves':[['1']]},'mergeQueue':[{'phaseSlug':'alpha'}],'phases':{'1':{'slug':'alpha','status':'in-flight','branch':'feat/demo-phase-alpha'}},'orchestratorWorktree':{'path':str(Path('.').resolve())}}
 Path('.cursor/sw-deliver-state.demo.json').write_text(json.dumps(state))
 "
   python3 -c "
