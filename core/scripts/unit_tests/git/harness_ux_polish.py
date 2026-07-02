@@ -246,18 +246,16 @@ check_guide_aligned() {
     bad "ux-polish-guides-aligned: missing $label at $path"
     return
   fi
-  local body
-  body="$(cat "$path")"
   local pass=1
-  if ! echo "$body" | grep -q '/sw-deliver run'; then
+  if ! grep -qF '/sw-deliver run' "$path"; then
     bad "ux-polish-guides-aligned: $label missing /sw-deliver run"
     pass=0
   fi
-  if ! echo "$body" | grep -qiE 'Implementation checkpoint|confirm checkpoint|prominent.*confirm|doc\.afterTasks.*confirm'; then
+  if ! grep -qiE 'Implementation checkpoint|confirm checkpoint|prominent.*confirm|doc\.afterTasks.*confirm' "$path"; then
     bad "ux-polish-guides-aligned: $label missing prominent confirm checkpoint"
     pass=0
   fi
-  if ! echo "$body" | grep -qiE 'agent-driven|agent asks|agent presents.*confirm|/sw-cleanup.*confirm'; then
+  if ! grep -qiE 'agent-driven|agent asks|agent presents.*confirm|/sw-cleanup.*confirm' "$path"; then
     bad "ux-polish-guides-aligned: $label missing agent-driven /sw-cleanup confirm"
     pass=0
   fi
