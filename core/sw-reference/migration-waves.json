@@ -216,6 +216,200 @@
           "legacyBasename": "run_status_integrity_fixtures.py"
         }
       ]
+    },
+    "W2": {
+      "label": "Single-repo git",
+      "suites": [
+        {
+          "id": "build-chain-sot-fixtures",
+          "legacy": "scripts/test/run_build_chain_sot_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_build_chain_sot_fixtures.py"
+        },
+        {
+          "id": "completed-unit-fixtures",
+          "legacy": "scripts/test/run_completed_unit_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_completed_unit_fixtures.py"
+        },
+        {
+          "id": "doc-fixtures",
+          "legacy": "scripts/test/run_doc_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_doc_fixtures.py"
+        },
+        {
+          "id": "dual-ship-fixtures",
+          "legacy": "scripts/test/run_dual_ship_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_dual_ship_fixtures.py"
+        },
+        {
+          "id": "feedback-fixtures",
+          "legacy": "scripts/test/run_feedback_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_feedback_fixtures.py"
+        },
+        {
+          "id": "git-workflow-fixtures",
+          "legacy": "scripts/test/run_git_workflow_fixtures.py",
+          "pytestPath": "scripts/unit_tests/workflow",
+          "kind": "python",
+          "legacyBasename": "run_git_workflow_fixtures.py"
+        },
+        {
+          "id": "host-fixtures",
+          "legacy": "scripts/test/run_host_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_host_fixtures.py"
+        },
+        {
+          "id": "inflight-migration-bridge-fixtures",
+          "legacy": "scripts/test/run_inflight_migration_bridge_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_inflight_migration_bridge_fixtures.py"
+        },
+        {
+          "id": "inflight-signal-fixtures",
+          "legacy": "scripts/test/run_inflight_signal_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_inflight_signal_fixtures.py"
+        },
+        {
+          "id": "planning-035-gap-lifecycle-fixtures",
+          "legacy": "scripts/test/run_planning_035_gap_lifecycle_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_planning_035_gap_lifecycle_fixtures.py"
+        },
+        {
+          "id": "planning-autonomy-fixtures",
+          "legacy": "scripts/test/run_planning_autonomy_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_planning_autonomy_fixtures.py"
+        },
+        {
+          "id": "planning-cutover-fixtures",
+          "legacy": "scripts/test/run_planning_cutover_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_planning_cutover_fixtures.py"
+        },
+        {
+          "id": "planning-cutover-phase5-fixtures",
+          "legacy": "scripts/test/run_planning_cutover_phase5_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_planning_cutover_phase5_fixtures.py"
+        },
+        {
+          "id": "planning-edge-effects-fixtures",
+          "legacy": "scripts/test/run_planning_edge_effects_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_planning_edge_effects_fixtures.py"
+        },
+        {
+          "id": "planning-graph-fixtures",
+          "legacy": "scripts/test/run_planning_graph_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_planning_graph_fixtures.py"
+        },
+        {
+          "id": "planning-index-fixtures",
+          "legacy": "scripts/test/run_planning_index_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_planning_index_fixtures.py"
+        },
+        {
+          "id": "planning-materialize-fixtures",
+          "legacy": "scripts/test/run_planning_materialize_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_planning_materialize_fixtures.py"
+        },
+        {
+          "id": "planning-migrate-fixtures",
+          "legacy": "scripts/test/run_planning_migrate_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_planning_migrate_fixtures.py"
+        },
+        {
+          "id": "planning-paths-fixtures",
+          "legacy": "scripts/test/run_planning_paths_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_planning_paths_fixtures.py"
+        },
+        {
+          "id": "planning-postmerge-safety-fixtures",
+          "legacy": "scripts/test/run_planning_postmerge_safety_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_planning_postmerge_safety_fixtures.py"
+        },
+        {
+          "id": "planning-related-fixtures",
+          "legacy": "scripts/test/run_planning_related_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_planning_related_fixtures.py"
+        },
+        {
+          "id": "planning-scheduler-fixtures",
+          "legacy": "scripts/test/run_planning_scheduler_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_planning_scheduler_fixtures.py"
+        },
+        {
+          "id": "retrospective-fixtures",
+          "legacy": "scripts/test/run_retrospective_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_retrospective_fixtures.py"
+        },
+        {
+          "id": "state-fixtures",
+          "legacy": "scripts/test/run_state_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_state_fixtures.py"
+        },
+        {
+          "id": "two-track-fixtures",
+          "legacy": "scripts/test/run_two_track_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_two_track_fixtures.py"
+        },
+        {
+          "id": "ux-polish-fixtures",
+          "legacy": "scripts/test/run_ux_polish_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_ux_polish_fixtures.py"
+        },
+        {
+          "id": "visibility-fixtures",
+          "legacy": "scripts/test/run_visibility_fixtures.py",
+          "pytestPath": "scripts/unit_tests/git",
+          "kind": "python",
+          "legacyBasename": "run_visibility_fixtures.py"
+        }
+      ]
     }
   }
 }
