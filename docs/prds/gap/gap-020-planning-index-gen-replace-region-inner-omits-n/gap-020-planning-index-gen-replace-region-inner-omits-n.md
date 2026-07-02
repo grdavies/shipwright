@@ -2,7 +2,7 @@
 id: gap-020-planning-index-gen-replace-region-inner-omits-n
 type: gap
 status: scheduled
-schedule: PRD 046 A4
+schedule: PRD 055
 title: planning_index_gen replace_region_inner omits newline after structural marker
 visibility: public
 tags: [source:feedback, recallium:2300, signal:feedback-recallium-debug-2026-07-02]

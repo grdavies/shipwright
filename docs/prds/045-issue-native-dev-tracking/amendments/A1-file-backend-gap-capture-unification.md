@@ -1,4 +1,5 @@
 ---
+superseded-by: PRD 055
 date: 2026-06-30
 amends: docs/prds/045-issue-native-dev-tracking/045-prd-issue-native-dev-tracking.md
 absorbs: [gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi]
