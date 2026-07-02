@@ -205,6 +205,7 @@
 * merge phase end-to-end-operator-contract-fixture-s into feat/operator-worktree-contract-and-cwd-guard (dcb0d9d) <!-- sw-deliver:end-to-end-operator-contract-fixture-s -->
 * merge phase thread-a-primary-checkout-cwd-safety-l into feat/deliver-concurrency-cwd-terminal-robustness (39f7858) <!-- sw-deliver:thread-a-primary-checkout-cwd-safety-l -->
 * merge phase thread-b-deliver-loop-provisioning-stall-classification-l into feat/deliver-concurrency-cwd-terminal-robustness (7f47787) <!-- sw-deliver:thread-b-deliver-loop-provisioning-stall-classification-l -->
+* merge phase thread-c-terminal-finalize-robustness-m into feat/deliver-concurrency-cwd-terminal-robustness (72b4157) <!-- sw-deliver:thread-c-terminal-finalize-robustness-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
