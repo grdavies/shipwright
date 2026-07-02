@@ -928,6 +928,7 @@
         "execute-plan-linear-fallback",
         "execute-plan-contention-serializes-shared-file",
         "execute-dependency-rules-049-phase-2",
+        "execute-plan-dag-049-phase-2",
         "execute-runtime-expansion-depth-cap",
         "execute-tokenizer-deep-refs",
         "execute-integrate-clean-merge",

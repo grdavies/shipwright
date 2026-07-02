@@ -73,6 +73,15 @@ scripts/wave.py plan --task-list docs/prds/<n>-<slug>/tasks-<n>-<slug>.md --dry-
 3. Rebase parent branches current?
 4. Recombination review complete if at ceiling?
 
+
+## Execute sub-branches (PRD 053)
+
+Execute-tier sub-branches (`feat/<slug>-phase-<pslug>--task-<ref>`) are provisioned by `execute_plan.py` and
+**do not count** toward `worktree.parallelCeiling` (`countsTowardCeiling: false`). Concurrent sub-branches
+are capped by `execute.subBranchCeiling` (default: `intraPhase.parallelBudget`). Integrate is single-flight
+per phase worktree (`execute_integrate.py`). Parallel execute batches respect `intraPhase.parallelBudget` and
+global `min(worktree.parallelCeiling, intraPhase.harnessLimit)`.
+
 ## Integration
 
 - `/sw-worktree provision` enforces ceiling.
