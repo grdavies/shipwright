@@ -4,6 +4,7 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 
 | Date | PRD | Phase | Notes |
 |------|-----|-------|-------|
+| 2026-07-02 | 049 | all | deliver complete — awaiting terminal merge; SHA c479826 |
 | 2026-07-02 | 049 | all | deliver complete — awaiting terminal merge; SHA 5d15543 |
 | 2026-07-02 | 049 | all | deliver complete — awaiting terminal merge; SHA 771ac81 |
 | 2026-07-01 | 048 | all | PRD 048 gap-lifecycle flip deliver complete — squash merged via terminal PR #313; SHA bc5a547 |
