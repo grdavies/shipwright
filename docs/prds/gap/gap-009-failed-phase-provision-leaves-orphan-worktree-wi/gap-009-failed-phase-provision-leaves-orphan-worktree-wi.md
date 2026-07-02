@@ -1,7 +1,9 @@
 ---
 id: gap-009-failed-phase-provision-leaves-orphan-worktree-wi
 type: gap
-status: open
+status: resolved
+schedule: PRD 050
+resolvedBy: PRD 050
 title: Failed phase provision leaves orphan worktree without phaseWorktrees state
 visibility: public
 tags: [source:feedback, signal:feedback-prd-041-retro-orphan-worktree-2026-07-01, prd-041, plugin-self]

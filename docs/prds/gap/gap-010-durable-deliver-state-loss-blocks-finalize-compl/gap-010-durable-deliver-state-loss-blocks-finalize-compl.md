@@ -1,7 +1,9 @@
 ---
 id: gap-010-durable-deliver-state-loss-blocks-finalize-compl
 type: gap
-status: open
+status: resolved
+schedule: PRD 050
+resolvedBy: PRD 050
 title: Durable deliver state loss blocks finalize-completion resume on bare main
 visibility: public
 tags: [source:feedback, signal:feedback-prd-041-retro-state-loss-finalize-2026-07-01, prd-041, plugin-self]

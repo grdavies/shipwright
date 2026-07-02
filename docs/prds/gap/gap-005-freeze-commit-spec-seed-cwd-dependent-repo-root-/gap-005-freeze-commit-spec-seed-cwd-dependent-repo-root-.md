@@ -1,7 +1,9 @@
 ---
 id: gap-005-freeze-commit-spec-seed-cwd-dependent-repo-root-
 type: gap
-status: open
+status: resolved
+schedule: PRD 050
+resolvedBy: PRD 050
 title: freeze-commit/spec-seed cwd-dependent repo-root resolution can target the shared primary checkout (extends GAP-077/078 to /sw-doc and /sw-amend)
 visibility: public
 tags: [source:feedback, signal:feedback-freeze-commit-cwd-primary-checkout-risk-2026-06-30]
