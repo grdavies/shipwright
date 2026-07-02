@@ -4,12 +4,12 @@ date: 2026-07-01
 topic: deliver-concurrency-cwd-terminal-robustness
 frozen: true
 frozen_at: 2026-07-01
-amendment_union: A1-hook-state-worktree-alignment, A2-unregistered-parent-model-tier-and-gap-004-closure
+amendment_union: A1-hook-state-worktree-alignment, A2-unregistered-parent-model-tier-and-gap-004-closure, A3-wave-terminal-docs-currency-gate-argv-contract
 visibility: public
 ---
 # Tasks — PRD 050 Deliver-loop concurrency, worktree/cwd safety & terminal-finalize robustness
 
-Single-pass task list from the frozen PRD 050 spec union (R1–R42; parent R1–R19 + amendment A1 R20–R33 + amendment A2 R34–R42;
+Single-pass task list from the frozen PRD 050 spec union (R1–R46; parent R1–R19 + amendment A1 R20–R33 + amendment A2 R34–R42 + amendment A3 R43–R46;
 decisions D6–D8, D-A1-1–D-A1-4). Phases mirror the PRD Rollout Plan (Thread A → B/C parallel-eligible → D →
 CI/gap verification). Amendment A1 tasks (1.6–1.9) roll into Thread A per A1 rollout note. No implementation
 starts until the `doc.afterTasks` boundary.
@@ -124,6 +124,15 @@ body template validation.
   - **File:** `scripts/wave_terminal.py`, `scripts/git_template_lib.py`
   - **Expected:** `terminal_pr_body()` routed through `render pr-body` / `validate pr-body` mirroring `docs_pr.py`; fail closed before `host_pr_create` on validation failure
   - **R-IDs:** R16
+- [ ] 3.5 Terminal docs-currency-gate argv alignment (R43, TR22)
+  - **File:** `scripts/wave_terminal.py`
+  - **Expected:** `run_docs_currency_gate` invokes `docs-currency-gate.py` with four positional args (repo root, state root, state JSON, plan JSON); no `--state-root`-only invocation; fail-closed JSON error surfacing preserved
+  - **R-IDs:** R43
+- [ ] 3.6 gap-017 closure fixtures (R44–R46, TR23–TR24)
+  - **File:** `scripts/test/fixtures/deliver-concurrency/`, `scripts/docs-currency-gate.py` (optional argparse shim), `core/sw-reference/pr-test-plan.manifest.json`, `docs/prds/gap/gap-017-wave-terminal-docs-currency-gate-invocation-uses/`
+  - **Expected:** `terminal-docs-currency-gate-invocation-valid` registered and green; optional `--state-root` shim delegates to canonical path with deprecation advisory; gap-017 `status: resolved` only after fixtures green
+  - **R-IDs:** R44, R45, R46
+
 - [ ] 3.4 Thread C regression fixtures (R13–R16)
   - **File:** `scripts/test/fixtures/deliver-concurrency/`, `core/sw-reference/pr-test-plan.manifest.json`
   - **Expected:** `finalize-resume-after-state-cleared-post-merge`, `terminal-pr-body-template-valid` pass offline
@@ -150,10 +159,10 @@ Capability fixture shell regression CI guard and all-private visibility freeze-t
 
 Register all nine PRD fixtures and verify gap schedule/resolve at ship.
 
-- [ ] 5.1 Register all thirteen fixtures in pr-test-plan manifest
+- [ ] 5.1 Register all fourteen fixtures in pr-test-plan manifest
   - **File:** `core/sw-reference/pr-test-plan.manifest.json`, `.github/workflows/pr-test-plan-ci.yml`
-  - **Expected:** all thirteen named scenarios from PRD + A1 Testing Strategy registered `required` (nine parent + four A1 hook-state alignment); workflow regenerated if needed
-  - **R-IDs:** R5, R6, R7, R9, R11, R13, R16, R17, R18, R27, R28, R29, R30
+  - **Expected:** all fourteen named scenarios from PRD + A1 + A3 Testing Strategy registered `required` (nine parent + four A1 hook-state alignment + one A3 terminal docs-currency gate); workflow regenerated if needed
+  - **R-IDs:** R5, R6, R7, R9, R11, R13, R16, R17, R18, R27, R28, R29, R30, R44
 - [ ] 5.2 Gap flip verification at ship
   - **File:** `scripts/gap_backlog.py`, `scripts/docs-currency-gate.py`
   - **Expected:** `gap_backlog.py check` / `docs-currency-gate.py` confirm GAP-077, GAP-078, GAP-079, gap-005, gap-009–gap-015 show `resolved` after implementation ships (not narratively closed)
@@ -219,6 +228,10 @@ Register all nine PRD fixtures and verify gap schedule/resolve at ship.
 | R40 | 1.12 | dispatch-unregistered-parent-delegated-atomic-passes | O, I, E |
 | R41 | 1.12 | dispatch-unregistered-parent-delegated-atomic-passes | Z, O, I, E |
 | R42 | 1.13 | dispatch-unregistered-parent-delegated-atomic-passes | O, I, E |
+| R43 | 3.5 | terminal-docs-currency-gate-invocation-valid | O, B, I, E |
+| R44 | 3.6 | terminal-docs-currency-gate-invocation-valid | Z, O, I, E |
+| R45 | 3.6 | terminal-docs-currency-gate-invocation-valid | O, I, E |
+| R46 | 3.6 | terminal-docs-currency-gate-invocation-valid | O, I, E |
 
 ## Relevant Files
 

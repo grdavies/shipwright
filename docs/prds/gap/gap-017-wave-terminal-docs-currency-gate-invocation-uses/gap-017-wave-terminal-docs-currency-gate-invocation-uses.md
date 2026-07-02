@@ -1,10 +1,11 @@
 ---
 id: gap-017-wave-terminal-docs-currency-gate-invocation-uses
 type: gap
-status: open
+status: scheduled
+schedule: PRD 050 A3
 title: wave-terminal docs-currency-gate invocation uses wrong argv contract
 visibility: public
-tags: [source:feedback, signal:feedback-prd-052-deliver-terminal-observations-2026-07-02, prd-052]
+tags: [source:feedback, prd-050-a3, signal:feedback-prd-052-deliver-terminal-observations-2026-07-02, prd-052]
 source_pr: 52
 absorbs: []
 ---
@@ -66,4 +67,4 @@ def run_docs_currency_gate(root: Path) -> None:
 
 ## Schedule
 
-Triage to **PRD 050** (deliver concurrency / terminal robustness) or **PRD 027** (terminal finalization).
+**PRD 050 A3** (`A3-wave-terminal-docs-currency-gate-argv-contract.md`) — absorbed 2026-07-02.
