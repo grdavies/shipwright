@@ -41,6 +41,14 @@ Single shared discovery path, issue-derived region disposition, committed cross-
   - **File:** `scripts/tests/run-planning-046-parity-fixtures.sh`
   - **Expected:** issue-derived INDEX/living-status semantically matches file-store output (not byte-compare); reconciler divergence doctor fails closed beyond tolerance
   - **R-IDs:** R92
+- [ ] 1.7 Region-marker newline invariant (R100, TR-A4-1)
+  - **File:** `scripts/planning_index_gen.py`
+  - **Expected:** `replace_region_inner` matches `render_region` newline contract for `structural`/`derived`/`inFlight`; no glued `<!-- planning-index:* begin -->` markers after generate or reconcile splice
+  - **R-IDs:** R100
+- [ ] 1.8 gap-020 closure fixtures + glued-marker guard (R101–R103, TR-A4-2–TR-A4-4)
+  - **File:** `scripts/test/run_planning_index_fixtures.py`, `scripts/index-region-guard.py`, `core/sw-reference/pr-test-plan.manifest.json`, `docs/prds/gap/gap-020-planning-index-gen-replace-region-inner-omits-n/`
+  - **Expected:** `planning-index-region-marker-newline-valid` and `index-region-guard-glued-marker-refuse` registered and green; gap-020 `status: resolved` only after fixtures green
+  - **R-IDs:** R101, R102, R103
 - [ ] 1.6 Phase-1 documentation exit-gate (PRD 043 R49)
   - **File:** `.sw/layout.md`, `core/skills/shipwright-state/SKILL.md`
   - **Expected:** `run-planning-046-doc-impact-fixtures.sh` asserts dual-mode INDEX/region-disposition + mechanical-region note updated before phase ship
@@ -143,4 +151,8 @@ Epic/sub-issue hierarchy with portable fallback, aggregate parent status, redact
 | R89 | 3.5 | private/`memory` tracking issue opaque or refused on public/shared store |
 | D22 | 1.2 | `inFlight` run-state sole writer + committed read-only projection (cross-clone surface) |
 | D23 | 1.2 | committed read-only projection supersedes R34 interim, preserves PRD 043 R7 no-stub-files |
+| R100 | 1.7 | `replace_region_inner` preserves marker newline; generate does not glue structural begin to table header |
+| R101 | 1.8 | `planning-index-region-marker-newline-valid` passes |
+| R102 | 1.8 | `index-region-guard-glued-marker-refuse` fails closed on glued seam |
+| R103 | 1.8 | gap-020 resolved after R100–R102 green |
 | D24 | 2.1 | derived views read-only (never author annotations/linkage/close); budget composes with R39/R74 |

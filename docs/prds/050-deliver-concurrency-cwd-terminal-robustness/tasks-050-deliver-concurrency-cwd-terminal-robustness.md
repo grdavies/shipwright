@@ -4,12 +4,12 @@ date: 2026-07-01
 topic: deliver-concurrency-cwd-terminal-robustness
 frozen: true
 frozen_at: 2026-07-01
-amendment_union: A1-hook-state-worktree-alignment, A2-unregistered-parent-model-tier-and-gap-004-closure, A3-wave-terminal-docs-currency-gate-argv-contract
+amendment_union: A1-hook-state-worktree-alignment, A2-unregistered-parent-model-tier-and-gap-004-closure, A3-wave-terminal-docs-currency-gate-argv-contract, A4-resume-reconcile-unpushed-local-merge-ground-tip, A5-deliver-verify-fixture-tree-immutability
 visibility: public
 ---
 # Tasks — PRD 050 Deliver-loop concurrency, worktree/cwd safety & terminal-finalize robustness
 
-Single-pass task list from the frozen PRD 050 spec union (R1–R46; parent R1–R19 + amendment A1 R20–R33 + amendment A2 R34–R42 + amendment A3 R43–R46;
+Single-pass task list from the frozen PRD 050 spec union (R1–R54; parent R1–R19 + amendment A1 R20–R33 + amendment A2 R34–R42 + amendment A3 R43–R46 + amendment A4 R47–R50 + amendment A5 R51–R54;
 decisions D6–D8, D-A1-1–D-A1-4). Phases mirror the PRD Rollout Plan (Thread A → B/C parallel-eligible → D →
 CI/gap verification). Amendment A1 tasks (1.6–1.9) roll into Thread A per A1 rollout note. No implementation
 starts until the `doc.afterTasks` boundary.
@@ -133,6 +133,24 @@ body template validation.
   - **Expected:** `terminal-docs-currency-gate-invocation-valid` registered and green; optional `--state-root` shim delegates to canonical path with deprecation advisory; gap-017 `status: resolved` only after fixtures green
   - **R-IDs:** R44, R45, R46
 
+- [ ] 3.7 Resume-reconcile local-merge ground tip (R47–R48, TR25)
+  - **File:** `scripts/wave_terminal.py`
+  - **Expected:** `resume reconcile` promotes pending phases merged into `local_tip` when `remote_tip` is stale; demotion of `green-merged` rows still uses remote ground truth; `cause: resume:unpushed-local-merge` advisory on unpushed-local promotion path
+  - **R-IDs:** R47, R48
+- [ ] 3.8 gap-018 closure fixtures (R49–R50, TR26–TR27)
+  - **File:** `scripts/test/run_deliver_fixtures.py`, `scripts/test/fixtures/deliver-concurrency/`, `core/sw-reference/pr-test-plan.manifest.json`, `docs/prds/gap/gap-018-resume-reconcile-ignores-unpushed-local-phase-me/`
+  - **Expected:** `resume-reconcile-unpushed-local-merge-promotes` registered and green; gap-018 `status: resolved` only after fixtures green
+  - **R-IDs:** R49, R50
+
+- [ ] 3.9 Subprocess JSON fail-payload forwarding (R55–R56, TR31–TR32)
+  - **File:** `scripts/wave_lifecycle.py`, `scripts/wave_terminal.py`, `scripts/wave_failure.py` or new `scripts/wave_errors.py`
+  - **Expected:** shared `fail_from_payload` (or `extra.pop("error", None)` contract) replaces unsafe `fail(..., **err)` at forward-merge, phase-teardown, materialize-provision, and `host_pr_create` call sites; grep sweep on deliver-surface wave modules
+  - **R-IDs:** R55, R56
+- [ ] 3.10 gap-021 closure fixtures (R57–R58, TR33)
+  - **File:** `scripts/test/fixtures/deliver-concurrency/`, `core/sw-reference/pr-test-plan.manifest.json`, `docs/prds/gap/gap-021-fail-spreads-json-error-dict-causing-duplica/`
+  - **Expected:** `deliver-fail-payload-forwards-subprocess-error` registered and green; gap-021 `status: resolved` only after fixtures green
+  - **R-IDs:** R57, R58
+
 - [ ] 3.4 Thread C regression fixtures (R13–R16)
   - **File:** `scripts/test/fixtures/deliver-concurrency/`, `core/sw-reference/pr-test-plan.manifest.json`
   - **Expected:** `finalize-resume-after-state-cleared-post-merge`, `terminal-pr-body-template-valid` pass offline
@@ -155,14 +173,23 @@ Capability fixture shell regression CI guard and all-private visibility freeze-t
   - **Expected:** `capability-gateref-no-shell`, `all-private-spec-seed-tracked-private-body` pass offline
   - **R-IDs:** R17, R18
 
+- [ ] 4.4 Deliver verify fixture-tree immutability (R51, TR28)
+  - **File:** `scripts/test/_runner.py`, `scripts/test/run_*_fixtures.py` (deliver-verify call sites), `scripts/test/run_verify_bundle.py`
+  - **Expected:** parallel-wave deliver verify uses ephemeral roots; tracked `scripts/test/fixtures/` unchanged in orchestrator worktree after verify
+  - **R-IDs:** R51
+- [ ] 4.5 gap-019 closure doctor + fixtures (R52–R54, TR29–TR30)
+  - **File:** `scripts/wave_deliver_loop.py`, `scripts/test/fixtures/deliver-concurrency/`, `core/sw-reference/pr-test-plan.manifest.json`, `docs/prds/gap/gap-019-parallel-deliver-verify-mutates-tracked-scripts-/`
+  - **Expected:** pre-`merge-run-next` fixture-tree doctor fails closed with remediation; `deliver-verify-fixture-tree-immutable` registered and green; gap-019 `status: resolved` only after fixtures green
+  - **R-IDs:** R52, R53, R54
+
 ### 5. Manifest registration + gap verification (S)
 
 Register all nine PRD fixtures and verify gap schedule/resolve at ship.
 
-- [ ] 5.1 Register all fourteen fixtures in pr-test-plan manifest
+- [ ] 5.1 Register all seventeen fixtures in pr-test-plan manifest
   - **File:** `core/sw-reference/pr-test-plan.manifest.json`, `.github/workflows/pr-test-plan-ci.yml`
-  - **Expected:** all fourteen named scenarios from PRD + A1 + A3 Testing Strategy registered `required` (nine parent + four A1 hook-state alignment + one A3 terminal docs-currency gate); workflow regenerated if needed
-  - **R-IDs:** R5, R6, R7, R9, R11, R13, R16, R17, R18, R27, R28, R29, R30, R44
+  - **Expected:** all eighteen named scenarios from PRD + A1 + A3 + A4 + A5 Testing Strategy registered `required` (nine parent + four A1 hook-state alignment + one A3 terminal docs-currency gate + one A4 resume-reconcile local merge + one A5 deliver-verify fixture-tree immutability + one A6 fail-payload forwarding); workflow regenerated if needed
+  - **R-IDs:** R5, R6, R7, R9, R11, R13, R16, R17, R18, R27, R28, R29, R30, R44, R49, R53, R57
 - [ ] 5.2 Gap flip verification at ship
   - **File:** `scripts/gap_backlog.py`, `scripts/docs-currency-gate.py`
   - **Expected:** `gap_backlog.py check` / `docs-currency-gate.py` confirm GAP-077, GAP-078, GAP-079, gap-005, gap-009–gap-015 show `resolved` after implementation ships (not narratively closed)
@@ -232,6 +259,18 @@ Register all nine PRD fixtures and verify gap schedule/resolve at ship.
 | R44 | 3.6 | terminal-docs-currency-gate-invocation-valid | Z, O, I, E |
 | R45 | 3.6 | terminal-docs-currency-gate-invocation-valid | O, I, E |
 | R46 | 3.6 | terminal-docs-currency-gate-invocation-valid | O, I, E |
+| R47 | 3.7 | resume-reconcile-unpushed-local-merge-promotes | O, B, I, E |
+| R48 | 3.7 | resume-reconcile-unpushed-local-merge-promotes | O, I, E |
+| R49 | 3.8 | resume-reconcile-unpushed-local-merge-promotes | Z, O, I, E |
+| R50 | 3.8 | resume-reconcile-unpushed-local-merge-promotes | O, I, E |
+| R51 | 4.4 | deliver-verify-fixture-tree-immutable | O, M, I, E |
+| R52 | 4.5 | deliver-verify-fixture-tree-immutable | O, B, I, E |
+| R53 | 4.5 | deliver-verify-fixture-tree-immutable | Z, O, I, E |
+| R54 | 4.5 | deliver-verify-fixture-tree-immutable | O, I, E |
+| R55 | 3.9 | `deliver-fail-payload-forwards-subprocess-error` surfaces subprocess error, not TypeError |
+| R56 | 3.9 | five lifecycle/terminal call sites use safe fail-payload forwarding |
+| R57 | 3.10 | `deliver-fail-payload-forwards-subprocess-error` passes |
+| R58 | 3.10 | gap-021 resolved after R55–R57 green |
 
 ## Relevant Files
 
