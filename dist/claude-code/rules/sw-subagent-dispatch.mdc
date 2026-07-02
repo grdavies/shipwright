@@ -189,6 +189,19 @@ python3 scripts/test/run_dispatch_foundation_fixtures.py
 Structural isolation (worktrees) is the dominant token lever (R31). This rule governs *when* to add
 sub-agents inside a worktree — not whether to provision another worktree.
 
+
+## Execute-tier dispatch (PRD 053)
+
+Under `conductorMode: execute_fan_out` (stamped by `intra_phase_dispatch.py`):
+
+- One bound `/sw-execute` Task per execute-plan ref; scope limited to that ref only.
+- Nested execute Tasks are permitted under this mode (R45 carve-out when `background_phase` + parallel batches).
+- Per-ref status at `.cursor/sw-execute-runs/<ref>/status.json` is mandatory before integrate.
+- Do not dispatch sibling refs from a single Task — execute tier owns frontier scheduling.
+
+**PRD 004 supersede (D-053-7):** intra-phase sub-task parallelism is execute-tier under `/sw-ship`; wave-tier
+unchanged.
+
 ## Execute discipline — two-stage review (IM6 / U7)
 
 During `/sw-execute`, **between tasks** (after TDD gate and **refactor** step pass for the current task ref):
