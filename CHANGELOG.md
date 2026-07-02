@@ -217,6 +217,7 @@
 * merge phase scope-selection-infrastructure-medium into feat/unit-testing-strategy (5b2d764) <!-- sw-deliver:scope-selection-infrastructure-medium -->
 * merge phase migration-wave-w1-pure-logic-suites-30-large into feat/unit-testing-strategy (367c69f) <!-- sw-deliver:migration-wave-w1-pure-logic-suites-30-large -->
 * merge phase migration-wave-w1-pure-logic-suites-30-large into feat/unit-testing-strategy (da187a2) <!-- sw-deliver:migration-wave-w1-pure-logic-suites-30-large -->
+* merge phase migration-wave-w2-single-repo-git-suites-40-large into feat/unit-testing-strategy (79a7124) <!-- sw-deliver:migration-wave-w2-single-repo-git-suites-40-large -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
