@@ -208,8 +208,8 @@ fi
 
 # --- model-binding-docs-presence ---
 if grep -q 'models.routing.agents' "$DISPATCH" && \
-   grep -q 'dispatch-check.sh' "$DISPATCH" && \
-   grep -q 'resolve-model-tier.sh --agent' "$DOC_REVIEW" && \
+   grep -q 'dispatch-check.py' "$DISPATCH" && \
+   grep -q 'resolve-model-tier.py' "$DOC_REVIEW" && \
    grep -q 'models.routing.agents' "$TIERING"; then
   ok "model-binding-docs-presence"
 else
