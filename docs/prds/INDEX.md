@@ -80,22 +80,9 @@
 <!-- planning-index:structural end -->
 <!-- planning-index:derived begin -->gap-002-living-doc-reconcile-commits-bypass-r31-default-: open
 gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi: open
-gap-004-dispatch-binding-preflight-broken-bash-invokes-p: scheduled
-gap-005-freeze-commit-spec-seed-cwd-dependent-repo-root-: open
 gap-007-finalize-completion-omits-terminal-living-docs-r: open
 gap-008-inflight-signal-run-complete-commits-index-on-ma: open
-gap-009-failed-phase-provision-leaves-orphan-worktree-wi: open
-gap-010-durable-deliver-state-loss-blocks-finalize-compl: open
-gap-011-conductor-no-progress-regression-on-provision-an: open
-gap-012-stale-github-check-in-progress-blocks-stuck-stal: open
-gap-013-terminal-pr-prepare-body-skips-template-validati: open
-gap-014-capability-trust-fixtures-regress-to-check-gate-: open
-gap-015-all-private-profile-requires-visibility-public-a: open
-gap-017-wave-terminal-docs-currency-gate-invocation-uses: scheduled
-gap-018-resume-reconcile-ignores-unpushed-local-phase-me: scheduled
-gap-019-parallel-deliver-verify-mutates-tracked-scripts-: scheduled
 gap-020-planning-index-gen-replace-region-inner-omits-n: scheduled
-gap-021-fail-spreads-json-error-dict-causing-duplica: scheduled
 <!-- planning-index:derived end -->
 <!-- planning-index:inFlight begin -->
 <!-- planning-index:inFlight end -->
