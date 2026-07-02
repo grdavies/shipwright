@@ -4,6 +4,7 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 
 | Date | PRD | Phase | Notes |
 |------|-----|-------|-------|
+| 2026-07-02 | 049 | all | PRD 049 operator worktree contract and cwd guard deliver complete — squash merged via terminal PR #321; PR #321; SHA 2a5799f |
 | 2026-07-02 | 049 | all | deliver complete — awaiting terminal merge; SHA c479826 |
 | 2026-07-02 | 049 | all | deliver complete — awaiting terminal merge; SHA 5d15543 |
 | 2026-07-02 | 049 | all | deliver complete — awaiting terminal merge; SHA 771ac81 |
