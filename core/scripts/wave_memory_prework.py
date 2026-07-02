@@ -91,8 +91,42 @@ def redact_payload(raw: str) -> str:
     return proc.stdout
 
 
+
+def git_toplevel(start: Path) -> Path:
+    proc = subprocess.run(
+        ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        raise ValueError("not a git repository")
+    return Path(proc.stdout.strip()).resolve()
+
+
+def assert_hook_root_aligned(root: Path) -> None:
+    """Fail closed when cwd toplevel is unrecognized vs primary (PRD 050 A1 R25)."""
+    from primary_checkout_guard import canonical_repo_root, primary_worktree_path
+    from worktree_root import is_shipwright_worktree
+
+    cwd_top = git_toplevel(root)
+    primary = primary_worktree_path(canonical_repo_root(root))
+    if cwd_top == primary:
+        return
+    if is_shipwright_worktree(cwd_top, primary):
+        return
+    fail(
+        "hook-state root mismatch: cwd toplevel differs from primary and is not a recognized worktree",
+        exit_code=20,
+        remediation=(
+            f"move_agent_to_root {cwd_top}  # or cd {cwd_top} and align IDE workspace"
+        ),
+        cwdToplevel=str(cwd_top),
+        primaryCheckout=str(primary),
+    )
+
 def append_run_log(root: Path, entry: dict[str, Any]) -> None:
-    log_path = root / ".cursor" / "sw-deliver-runs" / "run.log"
+    from wave_state import deliver_run_log_path
+    log_path = deliver_run_log_path(root)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -111,6 +145,7 @@ def parse_scope(raw: str | None) -> list[str]:
 
 
 def cmd_record(root: Path, args: list[str]) -> None:
+    assert_hook_root_aligned(root)
     surface = parse_kv(args, "--surface")
     if not surface:
         fail("--surface <sw-command> required (e.g. sw-execute)")

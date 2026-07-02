@@ -1,7 +1,9 @@
 ---
 id: gap-011-conductor-no-progress-regression-on-provision-an
 type: gap
-status: open
+status: resolved
+schedule: PRD 050
+resolvedBy: PRD 050
 title: conductor no-progress regression on provision and merge-enqueue loops
 visibility: public
 tags: [source:feedback, signal:feedback-prd-041-retro-no-progress-regression-2026-07-01, prd-041, plugin-self]

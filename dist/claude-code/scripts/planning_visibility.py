@@ -297,6 +297,67 @@ def resolve_default_profile(root: Path, *, write: bool = False) -> dict[str, Any
     return result
 
 
+
+
+def _parse_file_frontmatter(path: Path) -> dict[str, str]:
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    if not content.startswith("---"):
+        return {}
+    end = content.find("\n---", 3)
+    if end == -1:
+        return {}
+    block = content[4:end]
+    out: dict[str, str] = {}
+    for line in block.splitlines():
+        if ":" in line:
+            key, val = line.split(":", 1)
+            out[key.strip()] = val.strip()
+    return out
+
+
+def _git_tracked(root: Path, rel: str) -> bool:
+    import subprocess
+
+    proc = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "--error-unmatch", rel],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return proc.returncode == 0
+
+
+def check_tracked_public_at_freeze(root: Path, artifact_path: Path) -> dict[str, Any]:
+    """PRD 050 R18 — all-private profile requires visibility: public on tracked freeze artifacts."""
+    cfg = load_workflow_config(root)
+    profile = visibility_profile(cfg)
+    if profile != "all-private":
+        return {"verdict": "pass", "skipped": True, "reason": "profile-not-all-private"}
+    artifact = artifact_path.resolve()
+    if not artifact.is_file():
+        return {"verdict": "fail", "error": "artifact-missing", "path": str(artifact_path)}
+    rel = str(artifact.relative_to(root.resolve()))
+    if not _git_tracked(root, rel):
+        return {"verdict": "pass", "skipped": True, "reason": "not-tracked", "path": rel}
+    fm = _parse_file_frontmatter(artifact)
+    resolved = resolve_unit_visibility(fm, cfg)["visibility"]
+    if body_is_redacted(resolved):
+        return {
+            "verdict": "fail",
+            "halt": "tracked-private-at-freeze",
+            "path": rel,
+            "visibilityProfile": profile,
+            "resolvedVisibility": resolved,
+            "remediation": (
+                "add visibility: public to frontmatter before freeze when planning.visibilityProfile is all-private"
+            ),
+        }
+    return {"verdict": "pass", "path": rel, "visibility": resolved}
+
+
 def body_is_redacted(visibility: str) -> bool:
     return normalize_visibility(visibility) in {"private", "memory"}
 
@@ -372,6 +433,13 @@ def _cmd_resolve_default_profile(args: argparse.Namespace) -> int:
     return 0 if result.get("verdict") == "ok" else 1
 
 
+def _cmd_check_freeze_visibility(args: argparse.Namespace) -> int:
+    root = Path(args.root)
+    result = check_tracked_public_at_freeze(root, root / args.artifact)
+    print(json.dumps(result, indent=2))
+    return 0 if result.get("verdict") == "pass" else 20
+
+
 def _cmd_probe_remote(args: argparse.Namespace) -> int:
     print(json.dumps(probe_remote_visibility(Path(args.root)), indent=2))
     return 0
@@ -411,6 +479,10 @@ def main(argv: list[str] | None = None) -> int:
 
     p_probe = sub.add_parser("probe-remote", help="Probe origin remote visibility")
     p_probe.set_defaults(func=_cmd_probe_remote)
+
+    p_freeze = sub.add_parser("check-freeze-visibility", help="PRD 050 R18 freeze-time tracked-public guard")
+    p_freeze.add_argument("artifact", help="Path to artifact relative to --root")
+    p_freeze.set_defaults(func=_cmd_check_freeze_visibility)
 
     p_redact = sub.add_parser("redact-body", help="Redact a body for a visibility token")
     p_redact.add_argument("--visibility", required=True)

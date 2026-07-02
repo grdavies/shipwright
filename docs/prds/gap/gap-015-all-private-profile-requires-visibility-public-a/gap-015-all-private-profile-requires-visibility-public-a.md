@@ -1,7 +1,9 @@
 ---
 id: gap-015-all-private-profile-requires-visibility-public-a
 type: gap
-status: open
+status: resolved
+schedule: PRD 050
+resolvedBy: PRD 050
 title: all-private profile requires visibility public at spec-seed not assert-entry only
 visibility: public
 tags: [source:feedback, signal:feedback-prd-041-visibility-spec-seed-2026-07-01, prd-041, prd-034]

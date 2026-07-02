@@ -1,7 +1,9 @@
 ---
 id: gap-014-capability-trust-fixtures-regress-to-check-gate-
 type: gap
-status: open
+status: resolved
+schedule: PRD 050
+resolvedBy: PRD 050
 title: Capability trust fixtures regress to check-gate.sh during deliver
 visibility: public
 tags: [source:feedback, signal:feedback-prd-041-capability-fixture-sh-regression-2026-07-01, prd-041, prd-042]

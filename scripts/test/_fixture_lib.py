@@ -116,3 +116,27 @@ def invoke_suite_main(module: object) -> int:
     if not params:
         return int(main_fn())
     return int(main_fn([]))
+
+def deliver_verify_active() -> bool:
+    return os.environ.get("SW_DELIVER_VERIFY", "").strip().lower() in ("1", "true", "yes")
+
+
+def fixtures_base(root: Path) -> Path:
+    """Resolve writable fixtures root (ephemeral during deliver verify — PRD 050 R51)."""
+    ep = os.environ.get("SW_FIXTURES_EPHEMERAL_ROOT", "").strip()
+    if ep:
+        return Path(ep)
+    return root / "scripts" / "test" / "fixtures"
+
+
+def prepare_ephemeral_fixtures(root: Path) -> Path:
+    """Copy tracked fixtures tree to a temp root for deliver verify (R51)."""
+    import shutil
+    import tempfile
+
+    td = Path(tempfile.mkdtemp(prefix="sw-fixtures-ephemeral-"))
+    src = root / "scripts" / "test" / "fixtures"
+    if src.is_dir():
+        shutil.copytree(src, td / "fixtures")
+    return td
+

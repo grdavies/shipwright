@@ -30,8 +30,9 @@ def read_json(path: Path) -> dict[str, Any]:
         return {}
 
 
-def deliver_run_log_path(root: Path) -> Path:
-    return root / ".cursor" / "sw-deliver-runs" / "run.log"
+def deliver_run_log_path(root: Path, target: str | None = None, state: dict | None = None) -> Path:
+    from wave_state import deliver_run_log_path as _path
+    return _path(root, target=target, state=state)
 
 
 def phase_run_dir(root: Path, slug: str) -> Path:

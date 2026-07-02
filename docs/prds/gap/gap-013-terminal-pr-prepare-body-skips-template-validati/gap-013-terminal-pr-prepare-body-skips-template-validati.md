@@ -1,7 +1,9 @@
 ---
 id: gap-013-terminal-pr-prepare-body-skips-template-validati
 type: gap
-status: open
+status: resolved
+schedule: PRD 050
+resolvedBy: PRD 050
 title: Terminal PR prepare body skips template validation
 visibility: public
 tags: [source:feedback, signal:feedback-prd-041-terminal-pr-template-2026-07-01, prd-041, plugin-self]

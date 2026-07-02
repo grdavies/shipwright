@@ -20,15 +20,40 @@ def read_stdin_json() -> dict:
 
 def workspace_root(payload: dict) -> Path:
     roots = payload.get("workspace_roots")
+    primary: Path | None = None
     if isinstance(roots, list):
         for root in roots:
             if isinstance(root, str) and root.strip():
                 candidate = Path(root)
                 if candidate.is_dir():
-                    return candidate
-    cwd = payload.get("cwd")
-    if isinstance(cwd, str) and cwd.strip():
-        candidate = Path(cwd)
+                    primary = candidate
+                    break
+
+    cwd_raw = payload.get("cwd")
+    if isinstance(cwd_raw, str) and cwd_raw.strip():
+        cwd = Path(cwd_raw)
+        if cwd.is_dir():
+            try:
+                import subprocess
+                import sys
+
+                scripts = primary / "scripts" if primary else Path.cwd() / "scripts"
+                if str(scripts) not in sys.path and scripts.is_dir():
+                    sys.path.insert(0, str(scripts))
+                from worktree_root import git_toplevel, is_shipwright_worktree
+                from primary_checkout_guard import primary_worktree_path, canonical_repo_root
+
+                cwd_top = git_toplevel(cwd)
+                primary_top = primary_worktree_path(canonical_repo_root(primary or cwd_top))
+                if cwd_top != primary_top and is_shipwright_worktree(cwd_top, primary_top):
+                    return cwd_top
+            except (ValueError, OSError, ImportError):
+                pass
+
+    if primary is not None:
+        return primary
+    if isinstance(cwd_raw, str) and cwd_raw.strip():
+        candidate = Path(cwd_raw)
         if candidate.is_dir():
             return candidate
     return Path.cwd()

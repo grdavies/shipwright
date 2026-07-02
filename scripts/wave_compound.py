@@ -55,6 +55,7 @@ def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
 
 
 def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
+    extra.pop("error", None)
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 
@@ -118,12 +119,70 @@ def resolve_default_ref(top: Path, default: str) -> tuple[str, str]:
     return default, ""
 
 
+def _breadcrumb_target_branch(root: Path) -> str | None:
+    legacy = root / ".cursor" / "sw-deliver-state.json"
+    if not legacy.is_file():
+        return None
+    try:
+        data = read_json(legacy)
+    except StateCorruptError:
+        return None
+    from wave_state import _is_migration_breadcrumb
+
+    if not _is_migration_breadcrumb(data):
+        return target_branch_from_state(data)
+    target = data.get("target")
+    if isinstance(target, str) and target:
+        return target
+    return None
+
+
+def merged_terminal_pr_by_head(root: Path, target: str) -> dict[str, Any] | None:
+    """Discover merged terminal PR via host list when durable state is cleared (R13)."""
+    top = git_top(root)
+    default = load_default_branch(top)
+    for state_filter in ("merged", "closed", "all"):
+        out = host_verb(root, "pr-list", head=target, base=default, state=state_filter)
+        if out.get("verdict") != "ok":
+            continue
+        items = out.get("data") if isinstance(out.get("data"), list) else []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            pr_state = str(item.get("state") or "").upper()
+            if pr_state and pr_state not in ("MERGED", "CLOSED"):
+                continue
+            number = item.get("number")
+            if number is None:
+                continue
+            viewed = host_verb(root, "pr-view", number=str(number))
+            if viewed.get("verdict") != "ok":
+                continue
+            payload = viewed.get("data") or {}
+            if str(payload.get("state") or "").upper() != "MERGED":
+                continue
+            merge_commit = payload.get("mergeCommit") or {}
+            return {
+                "number": number,
+                "url": item.get("url") or payload.get("url"),
+                "mergedAt": payload.get("mergedAt"),
+                "mergeCommit": merge_commit.get("oid") if isinstance(merge_commit, dict) else merge_commit,
+            }
+    return None
+
+
 def terminal_pr_merged_via_host(root: Path, state: dict[str, Any]) -> dict[str, Any] | None:
     """Authoritative merge signal for squash-merged terminal PRs (R53)."""
     terminal = state.get("terminalPr") or {}
     number = terminal.get("number")
     if number is None:
-        return None
+        target = target_branch_from_state(state) or _breadcrumb_target_branch(root)
+        if target:
+            discovered = merged_terminal_pr_by_head(root, target)
+            if discovered:
+                number = discovered.get("number")
+        if number is None:
+            return None
     out = host_verb(root, "pr-view", number=str(number))
     if out.get("verdict") != "ok":
         return None
@@ -141,14 +200,32 @@ def terminal_pr_merged_via_host(root: Path, state: dict[str, Any]) -> dict[str, 
     }
 
 
+def enrich_state_for_merge_check(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """Recover target/terminalPr hints when branch-scoped state was cleared (R13/R14)."""
+    enriched = dict(state)
+    if not target_branch_from_state(enriched):
+        breadcrumb = _breadcrumb_target_branch(root)
+        if breadcrumb:
+            enriched.setdefault("target", {})["branch"] = breadcrumb
+    terminal = enriched.get("terminalPr") or {}
+    if not terminal.get("number"):
+        target = target_branch_from_state(enriched)
+        if target:
+            discovered = merged_terminal_pr_by_head(root, target)
+            if discovered:
+                enriched["terminalPr"] = discovered
+    return enriched
+
+
 def target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
-    target = target_branch_from_state(state)
+    work_state = enrich_state_for_merge_check(root, state)
+    target = target_branch_from_state(work_state) or _breadcrumb_target_branch(root)
     if not target:
         return {"merged": False, "reason": "no-target-branch"}
     top = git_top(root)
     default = load_default_branch(top)
 
-    gh_info = terminal_pr_merged_via_host(root, state)
+    gh_info = terminal_pr_merged_via_host(root, work_state)
     if gh_info:
         return {**gh_info, "target": target, "default": default}
 
@@ -415,33 +492,96 @@ def cmd_completion_check_merge(root: Path, _args: list[str]) -> None:
     emit({"verdict": "pass", "action": "completion-check-merge", **info})
 
 
+def invoke_living_docs_reconcile_finalize(root: Path, state: dict[str, Any]) -> dict[str, Any] | None:
+    """PRD 046 A2 hook at finalize — feature-detected fallback when entrypoint missing (R15)."""
+    script = SCRIPT_DIR / "wave_living_docs.py"
+    if not script.is_file():
+        return {"skipped": True, "reason": "wave_living_docs.py missing", "crossLink": "PRD 046 A2"}
+    proc = subprocess.run(
+        [sys.executable, str(script), str(root), "reconcile", "--commit"],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode in (0, 10):
+        try:
+            return json.loads(proc.stdout or "{}")
+        except json.JSONDecodeError:
+            return {"verdict": "pass", "raw": proc.stdout.strip()}
+    try:
+        err = json.loads(proc.stdout or proc.stderr or "{}")
+    except json.JSONDecodeError:
+        err = {"error": proc.stderr.strip() or proc.stdout.strip() or "living-docs reconcile failed"}
+    return {
+        "skipped": True,
+        "reason": err.get("error", "living-docs reconcile failed"),
+        "crossLink": "PRD 046 A2",
+        "exitCode": proc.returncode,
+    }
+
+
+def _persist_finalize_state(root: Path, state: dict[str, Any], info: dict[str, Any]) -> dict[str, Any]:
+    now = utc_now()
+    completion = dict(state.get("completion") or {})
+    completion.update(
+        {
+            "status": "merged-complete",
+            "mergedAt": now,
+            "mergeDetail": info.get("detail"),
+        }
+    )
+    if not completion.get("at"):
+        completion["at"] = now
+    state["completion"] = completion
+    state["verdict"] = "complete"
+    target = target_branch_from_state(state) or info.get("target")
+    if target and not target_branch_from_state(state):
+        state["target"] = {"branch": target}
+    with completion_finalize_authorization():
+        save_state(root, state)
+    return completion
+
+
 def cmd_completion_finalize_if_merged(root: Path, args: list[str]) -> None:
-    state = load_state(root)
-    completion = state.get("completion") or {}
-    if completion.get("status") != "completed-pending-merge":
-        fail("completion not in completed-pending-merge state")
-    info = target_merge_detected(root, state)
-    if not info["merged"]:
+    state = load_state(root) if state_path(root).is_file() else {}
+    work_state = enrich_state_for_merge_check(root, state)
+    info = target_merge_detected(root, work_state)
+    if not info.get("merged"):
+        completion = work_state.get("completion") or {}
+        if completion.get("status") != "completed-pending-merge":
+            fail(
+                "completion not in completed-pending-merge state and host merge not detected",
+                exit_code=10 if completion else 2,
+                halt="wait" if completion else "blocked",
+                **info,
+            )
         fail(
             "target branch not merged — cannot finalize completion",
             exit_code=10,
             halt="wait",
             **info,
         )
-    state["completion"]["status"] = "merged-complete"
-    state["completion"]["mergedAt"] = utc_now()
-    state["completion"]["mergeDetail"] = info.get("detail")
-    state["verdict"] = "complete"
-    with completion_finalize_authorization():
-        save_state(root, state)
-    emit(
-        {
-            "verdict": "pass",
-            "action": "completion-finalize",
-            "cleanupSuggestion": "Run `/sw-cleanup` to prune merged branches and stale worktrees.",
-            "completion": state["completion"],
+    living_docs = invoke_living_docs_reconcile_finalize(root, work_state)
+    if state:
+        completion = _persist_finalize_state(root, state, info)
+    else:
+        completion = {
+            "status": "merged-complete",
+            "mergedAt": utc_now(),
+            "mergeDetail": info.get("detail"),
+            "persistSkipped": True,
+            "reason": "durable-state-cleared",
         }
-    )
+    payload: dict[str, Any] = {
+        "verdict": "pass",
+        "action": "completion-finalize",
+        "cleanupSuggestion": "Run `/sw-cleanup` to prune merged branches and stale worktrees.",
+        "completion": completion,
+        "mergeDetected": info,
+    }
+    if living_docs is not None:
+        payload["livingDocsReconcile"] = living_docs
+    emit(payload)
 
 
 def cmd_completion_status(root: Path, _args: list[str]) -> None:

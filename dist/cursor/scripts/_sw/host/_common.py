@@ -270,6 +270,8 @@ def map_github_checks(body_text: str) -> list[dict[str, Any]]:
         entry = {
             "name": run.get("name") or "check",
             "state": state,
+            "conclusion": conclusion or "",
+            "startedAt": run.get("started_at") or "",
             "bucket": "pass"
             if state in ("SUCCESS", "SKIPPED", "NEUTRAL")
             else ("fail" if state == "FAILURE" else "pending"),

@@ -26,6 +26,14 @@ GATE_SUBSET_KEYS = ("verdict", "coderabbitLanded", "head")
 DEFAULT_REEMIT_MAX = 2
 DEFAULT_TIP_QUIESCENCE_SECONDS = 60
 
+DIFFERENTIATED_STALL_CAUSES = frozenset(
+    {
+        "orphan-worktree-adopt-pending",
+        "merge-queue-wait",
+        "external-ci-wait",
+    }
+)
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -413,6 +421,68 @@ def classify_stuck_stale(
     detail["reason"] = "stuck-stale"
     detail["unifiedHead"] = branch_head
     return True, detail
+
+
+
+def is_differentiated_stall(stall_cause: str | None) -> bool:
+    return bool(stall_cause and stall_cause in DIFFERENTIATED_STALL_CAUSES)
+
+
+def orphan_worktree_pending(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    phase_id: str,
+    worktree_name: str,
+) -> bool:
+    """True when disk has a phase worktree path absent from phaseWorktrees (R7/R9)."""
+    worktrees = state.get("phaseWorktrees") or {}
+    if str(phase_id) in worktrees:
+        return False
+    wt_path = root / ".sw-worktrees" / worktree_name
+    return wt_path.is_dir()
+
+
+def classify_deliver_stall_cause(
+    root: Path,
+    state: dict[str, Any],
+    next_action: str,
+    *,
+    phase_id: str | None = None,
+    worktree_name: str | None = None,
+) -> str | None:
+    """Classify recoverable stall causes before budgetHalt (PRD 050 R9/R10)."""
+    action = str(next_action or "")
+    if action == "provision-phase" and phase_id and worktree_name:
+        if orphan_worktree_pending(root, state, phase_id=str(phase_id), worktree_name=worktree_name):
+            return "orphan-worktree-adopt-pending"
+    if action in ("merge-run-next", "merge-enqueue") or state.get("mergeQueue") or state.get(
+        "mergeJournal"
+    ):
+        return "merge-queue-wait"
+    if action in ("await-in-flight", "collect-status", "dispatch-ship"):
+        for meta in (state.get("phases") or {}).values():
+            if not isinstance(meta, dict):
+                continue
+            if meta.get("status") != "in-flight":
+                continue
+            if meta.get("backgroundDispatchedAt"):
+                return "external-ci-wait"
+    return None
+
+
+def stall_progress_key(
+    state_signature: str,
+    next_action: str,
+    stall_cause: str | None,
+) -> str:
+    """Progress key includes stall predicate so predicate change resets noProgressStreak (R10)."""
+    payload = {
+        "signature": state_signature,
+        "nextAction": next_action,
+        "stallCause": stall_cause,
+    }
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
 def build_status_document(

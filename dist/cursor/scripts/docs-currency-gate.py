@@ -8,16 +8,35 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 from _sw.cli import run_module_main
 
+def _resolve_argv(argv: list[str]) -> list[str]:
+    if len(argv) >= 3 and argv[1] == "--state-root":
+        import sys as _sys
+        _sys.stderr.write(
+            "DEPRECATION: docs-currency-gate.py --state-root is deprecated; "
+            "use four positional args (repo_root state_root state.json plan.json)\n"
+        )
+        state_root = Path(argv[2])
+        state_path = state_root / ".cursor" / "sw-deliver-state.json"
+        if not state_path.is_file():
+            matches = sorted((state_root / ".cursor").glob("sw-deliver-state.*.json"))
+            state_path = matches[0] if len(matches) == 1 else state_path
+        plan_path = state_root / ".cursor" / "sw-deliver-plan.json"
+        return [argv[0], str(state_root), str(state_root), str(state_path), str(plan_path)]
+    return argv
+
+
 def main(argv: list[str] | None = None) -> int:
     import json
     import re
     import sys
     from pathlib import Path
 
-    root = Path(sys.argv[1])
-    state_root = Path(sys.argv[2])
-    state = json.loads(Path(sys.argv[3]).read_text())
-    plan = json.loads(Path(sys.argv[4]).read_text()) if Path(sys.argv[4]).is_file() else {}
+    raw_argv = list(argv if argv is not None else sys.argv)
+    resolved = _resolve_argv(raw_argv)
+    root = Path(resolved[1])
+    state_root = Path(resolved[2])
+    state = json.loads(Path(resolved[3]).read_text())
+    plan = json.loads(Path(resolved[4]).read_text()) if Path(resolved[4]).is_file() else {}
 
     prd = str(state.get("prd_number") or plan.get("prd_number") or "").zfill(3)
     if not prd or prd == "000":

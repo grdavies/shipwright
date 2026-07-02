@@ -160,24 +160,24 @@ body template validation.
 
 Capability fixture shell regression CI guard and all-private visibility freeze-time enforcement.
 
-- [ ] 4.1 Capability gateRef no-shell CI guard (R17)
+- [x] 4.1 Capability gateRef no-shell CI guard (R17)
   - **File:** `scripts/capability_trust.py` (or new CI script), `scripts/test/fixtures/capability-select/**`, `scripts/test/fixtures/capability-lint/**`
   - **Expected:** CI fails when `gateRef` points at `.sh` where canonical `.py` exists; restore six gap-014 fixtures to `.py` gateRef values
   - **R-IDs:** R17
-- [ ] 4.2 All-private visibility at freeze + spec-seed remediation (R18, R19)
+- [x] 4.2 All-private visibility at freeze + spec-seed remediation (R18, R19)
   - **File:** `scripts/check-frozen.py`, `scripts/wave_spec_seed.py`, `core/commands/sw-freeze.md`, `core/commands/sw-tasks.md`
   - **Expected:** `/sw-tasks` freeze and `/sw-freeze` require `visibility: public` on git-tracked artifacts when `planning.visibilityProfile: all-private`; `assert_no_tracked_private_bodies` error points at feature branch not bare `main`
   - **R-IDs:** R18, R19
-- [ ] 4.3 Thread D regression fixtures (R17–R19)
+- [x] 4.3 Thread D regression fixtures (R17–R19)
   - **File:** `scripts/test/fixtures/deliver-concurrency/`, `core/sw-reference/pr-test-plan.manifest.json`
   - **Expected:** `capability-gateref-no-shell`, `all-private-spec-seed-tracked-private-body` pass offline
   - **R-IDs:** R17, R18
 
-- [ ] 4.4 Deliver verify fixture-tree immutability (R51, TR28)
+- [x] 4.4 Deliver verify fixture-tree immutability (R51, TR28)
   - **File:** `scripts/test/_runner.py`, `scripts/test/run_*_fixtures.py` (deliver-verify call sites), `scripts/test/run_verify_bundle.py`
   - **Expected:** parallel-wave deliver verify uses ephemeral roots; tracked `scripts/test/fixtures/` unchanged in orchestrator worktree after verify
   - **R-IDs:** R51
-- [ ] 4.5 gap-019 closure doctor + fixtures (R52–R54, TR29–TR30)
+- [x] 4.5 gap-019 closure doctor + fixtures (R52–R54, TR29–TR30)
   - **File:** `scripts/wave_deliver_loop.py`, `scripts/test/fixtures/deliver-concurrency/`, `core/sw-reference/pr-test-plan.manifest.json`, `docs/prds/gap/gap-019-parallel-deliver-verify-mutates-tracked-scripts-/`
   - **Expected:** pre-`merge-run-next` fixture-tree doctor fails closed with remediation; `deliver-verify-fixture-tree-immutable` registered and green; gap-019 `status: resolved` only after fixtures green
   - **R-IDs:** R52, R53, R54

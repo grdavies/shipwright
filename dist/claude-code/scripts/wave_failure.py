@@ -227,12 +227,14 @@ def run_verify_suite(
         last_results = []
         all_ok = True
         for cmd in commands:
+            env = {**os.environ, "SW_DELIVER_VERIFY": "1"}
             proc = subprocess.run(
                 ["bash", "-c", cmd],
                 shell=False,
                 cwd=str(cwd),
                 text=True,
                 capture_output=True,
+                env=env,
             )
             last_results.append(
                 {
