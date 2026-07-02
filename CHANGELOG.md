@@ -199,6 +199,7 @@
 * merge phase gap-backlog-flip-scope-note-annotation-small into feat/gap-lifecycle-flip-and-feedback-route-guard (1455b42) <!-- sw-deliver:gap-backlog-flip-scope-note-annotation-small -->
 * merge phase documentation-surface-updates-small into feat/gap-lifecycle-flip-and-feedback-route-guard (c1ee53a) <!-- sw-deliver:documentation-surface-updates-small -->
 * merge phase retroactive-backfill-and-gap-closure-medium into feat/gap-lifecycle-flip-and-feedback-route-guard (f3fc493) <!-- sw-deliver:retroactive-backfill-and-gap-closure-medium -->
+* merge phase operator-worktree-contract-documentation-m into feat/operator-worktree-contract-and-cwd-guard (7e3e479) <!-- sw-deliver:operator-worktree-contract-documentation-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
