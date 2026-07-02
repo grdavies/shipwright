@@ -214,6 +214,7 @@
 * merge phase sub-branch-dispatch-failure-handling-and-r45-carve-out-l into feat/sub-task-execute-orchestration (dde7b18) <!-- sw-deliver:sub-branch-dispatch-failure-handling-and-r45-carve-out-l -->
 * merge phase sub-branch-dispatch-failure-handling-and-r45-carve-out-l into feat/sub-task-execute-orchestration (a0bb0c9) <!-- sw-deliver:sub-branch-dispatch-failure-handling-and-r45-carve-out-l -->
 * merge phase pytest-foundation-conftest-scaffolding-medium into feat/unit-testing-strategy (be9e331) <!-- sw-deliver:pytest-foundation-conftest-scaffolding-medium -->
+* merge phase scope-selection-infrastructure-medium into feat/unit-testing-strategy (5b2d764) <!-- sw-deliver:scope-selection-infrastructure-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
