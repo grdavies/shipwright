@@ -212,6 +212,57 @@ def resolve_merge_ref(phase_wt: Path, source_ref: str) -> str:
     fail(f"source ref not found: {source_ref}", exit_code=20, cause="integrate:missing-source")
 
 
+
+def feature_slug_from_branch(branch: str) -> str:
+    if branch.startswith("feat/") and "-phase-" in branch:
+        return branch[len("feat/") :].split("-phase-", 1)[0]
+    return ""
+
+
+def teardown_sub_branch_after_integrate(root: Path, plan: dict[str, Any], task_ref: str, phase_slug: str) -> None:
+    import subprocess
+
+    from execute_plan import sub_branch_worktree_name
+    from wave_deliver import feature_slug, parse_frontmatter, resolve_task_list_path
+
+    feature = ""
+    slug = str(plan.get("phaseSlug") or phase_slug)
+    ref = ref_entry_for_task(plan, task_ref)
+    branch = str(ref.get("branch") or "")
+    feature = feature_slug_from_branch(branch)
+    task_list = os.environ.get("SW_TASK_LIST", "").strip()
+    if not feature and task_list:
+        content = resolve_task_list_path(root, task_list).read_text(encoding="utf-8")
+        fm = parse_frontmatter(content)
+        feature = feature_slug(fm, resolve_task_list_path(root, task_list))
+    if not feature:
+        feature = slug.split("-")[0] if slug else "feature"
+    name = sub_branch_worktree_name(feature, slug, task_ref)
+    plugin_root = Path(__file__).resolve().parent.parent
+    wt_path = plugin_root / ".sw-worktrees" / name
+    if not wt_path.is_dir():
+        return
+    script = Path(__file__).resolve().parent / "execute_plan.py"
+    subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            str(root),
+            "teardown-sub-branch",
+            "--task-ref",
+            task_ref,
+            "--phase-slug",
+            phase_slug,
+            "--feature-slug",
+            feature,
+            "--worktree-name",
+            name,
+        ],
+        cwd=str(plugin_root),
+        capture_output=True,
+        text=True,
+    )
+
 def cmd_integrate(root: Path, args: argparse.Namespace) -> int:
     phase_wt = resolve_phase_worktree(root, args.phase_worktree)
     run_dir = resolve_run_dir(args.phase_slug, args.run_dir)
@@ -260,6 +311,7 @@ def cmd_integrate(root: Path, args: argparse.Namespace) -> int:
                 "retry": bool(args.retry),
             }
             path = append_journal(run_dir, journal_entry)
+            teardown_sub_branch_after_integrate(root, plan, args.task_ref, args.phase_slug)
             emit(
                 {
                     "verdict": "pass",

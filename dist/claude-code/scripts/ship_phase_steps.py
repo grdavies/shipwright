@@ -410,6 +410,76 @@ def cmd_sync_state(root: Path, args: list[str]) -> None:
     emit({"verdict": "pass", "action": "sync-state", "phaseShip": phase_ship})
 
 
+
+def cmd_execute_fan_out(root: Path, args: list[str]) -> None:
+    import subprocess
+
+    sub = args[0] if args else ""
+    rest = args[1:]
+    phase = _parse_kv(rest, "--phase") or os.environ.get("SW_PHASE_SLUG", "unknown")
+    run_dir = os.environ.get("SW_RUN_DIR", "").strip()
+    if sub == "stamp":
+        run_dir_arg = _parse_kv(rest, "--run-dir") or run_dir
+        if not run_dir_arg:
+            fail("--run-dir or SW_RUN_DIR required")
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(root / "scripts" / "intra_phase_dispatch.py"),
+                str(root),
+                "stamp-context",
+                "--run-dir",
+                run_dir_arg,
+                "--conductor-mode",
+                "execute_fan_out",
+            ],
+            cwd=str(root),
+            text=True,
+            capture_output=True,
+        )
+        if proc.returncode != 0:
+            fail(proc.stderr.strip() or proc.stdout.strip() or "stamp-context failed", exit_code=proc.returncode)
+        emit(json.loads(proc.stdout))
+    elif sub == "frontier":
+        cmd = [
+            sys.executable,
+            str(root / "scripts" / "execute_plan.py"),
+            str(root),
+            "dispatch-frontier",
+            "--phase-slug",
+            phase,
+        ]
+        rd = _parse_kv(rest, "--run-dir") or run_dir
+        if rd:
+            cmd.extend(["--run-dir", rd])
+        proc = subprocess.run(cmd, cwd=str(root), text=True, capture_output=True)
+        if proc.returncode != 0:
+            fail(proc.stderr.strip() or proc.stdout.strip() or "dispatch-frontier failed", exit_code=proc.returncode)
+        emit(json.loads(proc.stdout))
+    elif sub == "binding":
+        task_ref = _parse_kv(rest, "--task-ref")
+        if not task_ref:
+            fail("--task-ref required")
+        cmd = [
+            sys.executable,
+            str(root / "scripts" / "execute_plan.py"),
+            str(root),
+            "dispatch-binding",
+            "--task-ref",
+            task_ref,
+            "--phase-slug",
+            phase,
+        ]
+        rd = _parse_kv(rest, "--run-dir") or run_dir
+        if rd:
+            cmd.extend(["--run-dir", rd])
+        proc = subprocess.run(cmd, cwd=str(root), text=True, capture_output=True)
+        if proc.returncode != 0:
+            fail(proc.stderr.strip() or proc.stdout.strip() or "dispatch-binding failed", exit_code=proc.returncode)
+        emit(json.loads(proc.stdout))
+    else:
+        fail("execute-fan-out subcommand required: stamp|frontier|binding")
+
 def _parse_kv(args: list[str], flag: str) -> str | None:
     if flag in args:
         i = args.index(flag)
@@ -434,7 +504,7 @@ def main() -> None:
     if len(sys.argv) < 3:
         fail(
             "usage: ship_phase_steps.py <root> "
-            "<init|get|attempt|advance|resolve-resume|validate-plan|persist-plan|lifecycle-phase|sync-state> [args...]"
+            "<init|get|attempt|advance|resolve-resume|validate-plan|persist-plan|lifecycle-phase|sync-state|execute-fan-out> [args...]"
         )
     root = Path(sys.argv[1])
     cmd = sys.argv[2]
@@ -450,6 +520,7 @@ def main() -> None:
         "persist-plan": cmd_persist_plan,
         "lifecycle-phase": cmd_lifecycle_phase,
         "sync-state": cmd_sync_state,
+        "execute-fan-out": cmd_execute_fan_out,
     }
     handler = handlers.get(cmd)
     if not handler:

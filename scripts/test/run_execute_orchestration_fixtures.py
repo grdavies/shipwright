@@ -25,6 +25,8 @@ SCENARIOS = (
     "execute-integrate-clean-merge",
     "execute-integrate-conflict-partial-batch",
     "execute-integrate-parallel-batch-serialized",
+    "execute-blast-radius-dependents",
+    "execute-sub-branch-ceiling-refuse",
 )
 
 FIXTURES = Path("scripts/test/fixtures/execute-orchestration")
@@ -392,6 +394,94 @@ def scenario_execute_integrate_parallel_batch_serialized(plugin_root: Path) -> b
     finally:
         subprocess.run(["rm", "-rf", str(repo)], check=False)
 
+
+def scenario_execute_blast_radius_dependents(plugin_root: Path) -> bool:
+    repo = Path(tempfile.mkdtemp())
+    run_dir = repo / ".cursor/sw-deliver-runs/fixture"
+    try:
+        write_execute_plan(
+            repo,
+            run_dir,
+            [
+                {"id": "1.1", "branch": "b1", "status": "pending"},
+                {"id": "1.2", "branch": "b2", "status": "pending"},
+                {"id": "1.3", "branch": "b3", "status": "pending"},
+            ],
+        )
+        plan = json.loads((run_dir / "execute-step-plan.json").read_text(encoding="utf-8"))
+        plan["edges"] = [
+            {"from": "1.1", "to": "1.2", "kind": "test"},
+            {"from": "1.2", "to": "1.3", "kind": "test"},
+        ]
+        plan["batches"] = [["1.1"], ["1.2"], ["1.3"]]
+        (run_dir / "execute-step-plan.json").write_text(json.dumps(plan, indent=2) + "\n", encoding="utf-8")
+        proc = run(
+            [
+                "python3",
+                str(plugin_root / "scripts/execute_failure.py"),
+                str(repo),
+                "blast-radius",
+                "apply",
+                "--task-ref",
+                "1.1",
+                "--phase-slug",
+                "fixture",
+                "--run-dir",
+                str(run_dir),
+            ],
+            plugin_root,
+        )
+        if proc.returncode != 0:
+            return False
+        data = json.loads(proc.stdout)
+        blocked = {item.get("taskRef") for item in data.get("blockedRefs") or []}
+        if blocked != {"1.1", "1.2", "1.3"}:
+            return False
+        updated = json.loads((run_dir / "execute-step-plan.json").read_text(encoding="utf-8"))
+        statuses = {ref["id"]: ref["status"] for ref in updated.get("refs") or []}
+        return statuses == {"1.1": "blocked", "1.2": "blocked", "1.3": "blocked"}
+    finally:
+        subprocess.run(["rm", "-rf", str(repo)], check=False)
+
+
+def scenario_execute_sub_branch_ceiling_refuse(plugin_root: Path) -> bool:
+    cfg_path = plugin_root / ".cursor/workflow.config.json"
+    backup = cfg_path.read_text(encoding="utf-8") if cfg_path.is_file() else None
+    try:
+        cfg_path.parent.mkdir(parents=True, exist_ok=True)
+        cfg_path.write_text(
+            json.dumps({"execute": {"subBranchCeiling": 1}, "intraPhase": {"parallelBudget": 2}}),
+            encoding="utf-8",
+        )
+        proc = run(
+            [
+                "python3",
+                "scripts/execute_plan.py",
+                str(plugin_root),
+                "provision-sub-branch",
+                "--task-ref",
+                "1.2",
+                "--phase-slug",
+                "fixture",
+                "--feature-slug",
+                "demo",
+                "--base",
+                "main",
+            ],
+            plugin_root,
+            env={"SW_TEST_ACTIVE_SUB_BRANCHES": "1"},
+        )
+        if proc.returncode != 20:
+            return False
+        blob = proc.stdout + proc.stderr
+        return "execute:sub-branch-ceiling" in blob or "sub-branch-ceiling" in blob
+    finally:
+        if backup is None:
+            if cfg_path.is_file():
+                cfg_path.unlink()
+        else:
+            cfg_path.write_text(backup, encoding="utf-8")
+
 RUNNERS = {
     "wave-merge-no-regression": scenario_wave_merge_no_regression,
     "execute-plan-linear-fallback": scenario_execute_plan_linear_fallback,
@@ -402,6 +492,8 @@ RUNNERS = {
     "execute-integrate-clean-merge": scenario_execute_integrate_clean_merge,
     "execute-integrate-conflict-partial-batch": scenario_execute_integrate_conflict_partial_batch,
     "execute-integrate-parallel-batch-serialized": scenario_execute_integrate_parallel_batch_serialized,
+    "execute-blast-radius-dependents": scenario_execute_blast_radius_dependents,
+    "execute-sub-branch-ceiling-refuse": scenario_execute_sub_branch_ceiling_refuse,
 }
 
 

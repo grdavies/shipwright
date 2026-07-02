@@ -20,6 +20,7 @@ DURABLE_PHASE_FILES = frozenset({"ship-steps.json", "status.json"})
 DEFAULT_PARALLEL_BUDGET = 2
 DEFAULT_HARNESS_LIMIT = 8
 DECISION_VERSION = 1
+EXECUTE_PLAN_FILENAME = "execute-step-plan.json"
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
@@ -248,6 +249,32 @@ def propose_fan_out(
     }
 
 
+
+def execute_plan_parallel_batches(run_dir: Path | None) -> bool:
+    if run_dir is None:
+        return False
+    path = run_dir / EXECUTE_PLAN_FILENAME
+    if not path.is_file():
+        return False
+    try:
+        plan = read_json(path)
+    except (json.JSONDecodeError, OSError):
+        return False
+    for batch in plan.get("batches") or []:
+        if isinstance(batch, list) and len(batch) > 1:
+            return True
+    refs = plan.get("refs") or []
+    return isinstance(refs, list) and len(refs) > 1
+
+
+def execute_tier_carve_out(signal_context: dict[str, Any], run_dir: Path | None) -> bool:
+    normalized = normalize_signal_context(signal_context)
+    tier = str(normalized.get("tier") or normalized.get("dispatch_tier") or "").lower()
+    partition = str(normalized.get("partition") or normalized.get("partitionKey") or "").lower()
+    if tier == "execute" or partition == "execute" or normalized.get("phase_type") == "execute":
+        return execute_plan_parallel_batches(run_dir)
+    return False
+
 def evaluate_dispatch(
     *,
     root: Path,
@@ -264,6 +291,37 @@ def evaluate_dispatch(
     mode = resolve_conductor_mode(normalized, run_dir)
 
     if mode == "background_phase":
+        carve_out = execute_tier_carve_out(normalized, run_dir)
+        if carve_out:
+            decision = {
+                "timestamp": utc_now(),
+                "signals": {
+                    "conductorMode": mode,
+                    "fileCount": len(normalize_files(normalized.get("file_paths"))),
+                    "executeCarveOut": True,
+                },
+                "declaredPartition": [],
+                "chosenParallelism": {
+                    "mode": "parallel",
+                    "workers": 1,
+                    "taskSpawnAllowed": True,
+                    "partition": "execute",
+                },
+                "degradeReason": None,
+                "readOnlyDurableFiles": sorted(DURABLE_PHASE_FILES),
+            }
+            result = {
+                "verdict": "parallel",
+                "cause": "execute-carve-out",
+                "taskSpawnAllowed": True,
+                "workers": 1,
+                "partition": "execute",
+                "decision": decision,
+                "reason": "background_phase execute-tier carve-out when execute plan has parallel batches (R14/R45)",
+            }
+            if record and run_dir is not None:
+                append_decision(run_dir, decision)
+            return result
         decision = {
             "timestamp": utc_now(),
             "signals": {
@@ -285,6 +343,57 @@ def evaluate_dispatch(
             "taskSpawnAllowed": False,
             "decision": decision,
             "reason": "background_phase refuses intra-phase Task dispatch before spawn (R16)",
+        }
+        if record and run_dir is not None:
+            append_decision(run_dir, decision)
+        return result
+
+    if mode == "execute_fan_out":
+        partitions = list((proposal or {}).get("partitions") or [])
+        if not partitions and normalized.get("task_ref"):
+            partitions = [
+                {
+                    "workerId": str(normalized.get("task_ref")),
+                    "files": normalize_files(normalized.get("file_paths")),
+                    "tasks": [str(normalized.get("task_ref"))],
+                    "partitionKey": "execute",
+                }
+            ]
+        proposed_workers = max(1, int((proposal or {}).get("proposedWorkers") or len(partitions) or 1))
+        cap_check = check_global_cap(wave_slots, active_intra_phase, proposed_workers, settings)
+        if cap_check["verdict"] == "reject":
+            decision = _decision_record(
+                normalized,
+                partitions,
+                {"mode": "inline", "workers": 0, "taskSpawnAllowed": False},
+                cap_check.get("cause"),
+            )
+            result = {
+                "verdict": "reject",
+                "cause": cap_check["cause"],
+                "taskSpawnAllowed": False,
+                "cap": cap_check,
+                "decision": decision,
+            }
+            if record and run_dir is not None:
+                append_decision(run_dir, decision)
+            return result
+        chosen = {
+            "mode": "parallel",
+            "workers": proposed_workers,
+            "taskSpawnAllowed": True,
+            "partition": "execute",
+        }
+        decision = _decision_record(normalized, partitions, chosen, None)
+        decision["readOnlyDurableFiles"] = sorted(DURABLE_PHASE_FILES)
+        result = {
+            "verdict": "parallel",
+            "taskSpawnAllowed": True,
+            "workers": proposed_workers,
+            "partition": "execute",
+            "cap": cap_check,
+            "decision": decision,
+            "reason": "execute_fan_out permits nested execute Tasks (R14)",
         }
         if record and run_dir is not None:
             append_decision(run_dir, decision)
@@ -424,8 +533,8 @@ def cmd_stamp_context(args: argparse.Namespace) -> None:
     if not args.run_dir:
         fail("--run-dir required")
     mode = str(args.conductor_mode or "inline").strip().lower()
-    if mode not in {"inline", "background_phase"}:
-        fail("--conductor-mode must be inline or background_phase")
+    if mode not in {"inline", "background_phase", "execute_fan_out"}:
+        fail("--conductor-mode must be inline, background_phase, or execute_fan_out")
     path = stamp_phase_context(Path(args.run_dir), mode)
     emit({"verdict": "pass", "action": "stamp-context", "path": str(path), "conductorMode": mode})
 

@@ -461,6 +461,189 @@ def cmd_validate(root: Path, args: argparse.Namespace) -> int:
     emit(result, 0)
 
 
+
+def sub_branch_worktree_name(feature_slug_value: str, phase_slug: str, ref_id: str) -> str:
+    return f"{feature_slug_value}-phase-{phase_slug}--task-{sanitize_ref_for_branch(ref_id)}"
+
+
+def resolve_sub_branch_ceiling(root: Path) -> int:
+    from worktree import resolve_sub_branch_ceiling as _resolve
+
+    return _resolve(load_workflow_config(root))
+
+
+def active_sub_branch_count(phase_slug: str | None = None) -> int:
+    from worktree import active_execute_sub_branch_count
+
+    return active_execute_sub_branch_count(phase_slug)
+
+
+def cmd_provision_sub_branch(root: Path, args: argparse.Namespace) -> int:
+    import subprocess
+
+    ceiling = resolve_sub_branch_ceiling(root)
+    active = active_sub_branch_count(args.phase_slug)
+    if active >= ceiling:
+        fail(
+            "execute sub-branch ceiling reached",
+            exit_code=20,
+            cause="execute:sub-branch-ceiling",
+            activeSubBranches=active,
+            subBranchCeiling=ceiling,
+            phaseSlug=args.phase_slug,
+        )
+    name = args.worktree_name or sub_branch_worktree_name(args.feature_slug, args.phase_slug, args.task_ref)
+    branch = args.branch or sub_branch_name(args.feature_slug, args.phase_slug, args.task_ref)
+    base = args.base
+    if not base:
+        fail("--base required for sub-branch provision")
+    script = Path(__file__).resolve().parent / "worktree.py"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "provision",
+            name,
+            "--branch",
+            branch,
+            "--base",
+            base,
+            "--counts-toward-ceiling",
+            "false",
+            "--worktree-role",
+            "execute-sub-branch",
+            "--phase-slug",
+            args.phase_slug,
+            "--task-ref",
+            args.task_ref,
+        ],
+        cwd=str(Path(__file__).resolve().parent.parent),
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0:
+        detail = proc.stderr.strip() or proc.stdout.strip() or "provision failed"
+        fail(detail, exit_code=proc.returncode or 20, cause="execute:provision-failed")
+    payload = json.loads(proc.stdout)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "provision-sub-branch",
+            "taskRef": args.task_ref,
+            "phaseSlug": args.phase_slug,
+            "branch": branch,
+            "worktreeName": name,
+            **payload,
+        }
+    )
+
+
+def cmd_teardown_sub_branch(root: Path, args: argparse.Namespace) -> int:
+    import subprocess
+
+    name = args.worktree_name
+    if not name:
+        name = sub_branch_worktree_name(args.feature_slug, args.phase_slug, args.task_ref)
+    script = Path(__file__).resolve().parent / "worktree.py"
+    proc = subprocess.run(
+        [sys.executable, str(script), "teardown", name, "--force"],
+        cwd=str(Path(__file__).resolve().parent.parent),
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0:
+        fail(proc.stderr.strip() or proc.stdout.strip() or "teardown failed", exit_code=proc.returncode or 20)
+    payload = json.loads(proc.stdout) if proc.stdout.strip().startswith("{") else {"raw": proc.stdout.strip()}
+    emit({"verdict": "pass", "action": "teardown-sub-branch", "taskRef": args.task_ref, **payload})
+
+
+def cmd_sub_branch_ceiling_check(root: Path, args: argparse.Namespace) -> int:
+    from worktree import sub_branch_ceiling_check
+
+    result = sub_branch_ceiling_check(args.phase_slug or None, load_workflow_config(root))
+    emit({"verdict": "pass" if result.get("verdict") == "ok" else "refuse", **result}, 0 if result.get("verdict") == "ok" else 20)
+
+
+def execute_plan_has_parallel_batches(run_dir: Path) -> bool:
+    path = run_dir / EXECUTE_PLAN_FILENAME
+    if not path.is_file():
+        return False
+    try:
+        plan = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return False
+    for batch in plan.get("batches") or []:
+        if isinstance(batch, list) and len(batch) > 1:
+            return True
+    refs = plan.get("refs") or []
+    return isinstance(refs, list) and len(refs) > 1
+
+
+def frontier_refs(plan: dict[str, Any]) -> list[str]:
+    refs = {str(r.get("id")): r for r in plan.get("refs") or [] if isinstance(r, dict) and r.get("id")}
+    edges = plan_edges_from_plan(plan)
+    deps = {rid: {e["from"] for e in edges if e["to"] == rid} for rid in refs}
+    ready = []
+    for rid, ref in refs.items():
+        status = str(ref.get("status") or "pending")
+        if status in {"green", "integrated", "skipped", "blocked"}:
+            continue
+        if not (deps.get(rid, set()) - {d for d, r in refs.items() if str(r.get("status")) in {"green", "integrated", "skipped"}}):
+            ready.append(rid)
+    return sorted(ready, key=ref_sort_key)
+
+
+def plan_edges_from_plan(plan: dict[str, Any]) -> list[dict[str, str]]:
+    edges: list[dict[str, str]] = []
+    for edge in plan.get("edges") or []:
+        if isinstance(edge, dict) and edge.get("from") and edge.get("to"):
+            edges.append({"from": str(edge["from"]), "to": str(edge["to"]), "kind": str(edge.get("kind") or "")})
+    return edges
+
+
+def cmd_dispatch_binding(root: Path, args: argparse.Namespace) -> int:
+    run_dir = resolve_run_dir(args.phase_slug, args.run_dir)
+    plan_path = run_dir / EXECUTE_PLAN_FILENAME
+    if not plan_path.is_file():
+        fail(f"missing execute plan: {plan_path}", exit_code=20)
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    refs = {str(r.get("id")): r for r in plan.get("refs") or [] if isinstance(r, dict)}
+    ref = refs.get(args.task_ref)
+    if not ref:
+        fail(f"unknown task ref: {args.task_ref}", exit_code=20)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "execute-dispatch-binding",
+            "taskRef": args.task_ref,
+            "phaseSlug": args.phase_slug,
+            "branch": ref.get("branch"),
+            "files": ref.get("files") or [],
+            "command": "sw-execute",
+            "statusPath": str(__import__("execute_task_status").status_path(root, args.task_ref)),
+            "conductorMode": "execute_fan_out",
+        }
+    )
+
+
+def cmd_dispatch_frontier(root: Path, args: argparse.Namespace) -> int:
+    run_dir = resolve_run_dir(args.phase_slug, args.run_dir)
+    plan_path = run_dir / EXECUTE_PLAN_FILENAME
+    if not plan_path.is_file():
+        fail(f"missing execute plan: {plan_path}", exit_code=20)
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    ready = frontier_refs(plan)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "execute-dispatch-frontier",
+            "phaseSlug": args.phase_slug,
+            "readyRefs": ready,
+            "runDir": str(run_dir),
+        }
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Execute-plan builder (PRD 053)")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -479,6 +662,27 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("--phase-slug", default="")
     validate.add_argument("--record", action="store_true")
     validate.add_argument("--run-dir", default="")
+    provision = sub.add_parser("provision-sub-branch")
+    provision.add_argument("--task-ref", required=True)
+    provision.add_argument("--phase-slug", required=True)
+    provision.add_argument("--feature-slug", required=True)
+    provision.add_argument("--base", required=True)
+    provision.add_argument("--branch", default="")
+    provision.add_argument("--worktree-name", default="")
+    teardown = sub.add_parser("teardown-sub-branch")
+    teardown.add_argument("--task-ref", required=True)
+    teardown.add_argument("--phase-slug", required=True)
+    teardown.add_argument("--feature-slug", required=True)
+    teardown.add_argument("--worktree-name", default="")
+    ceiling = sub.add_parser("sub-branch-ceiling-check")
+    ceiling.add_argument("--phase-slug", default="")
+    binding = sub.add_parser("dispatch-binding")
+    binding.add_argument("--task-ref", required=True)
+    binding.add_argument("--phase-slug", required=True)
+    binding.add_argument("--run-dir", default="")
+    frontier = sub.add_parser("dispatch-frontier")
+    frontier.add_argument("--phase-slug", required=True)
+    frontier.add_argument("--run-dir", default="")
     return parser
 
 
@@ -492,6 +696,16 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_propose(root, args)
     if args.command == "validate":
         return cmd_validate(root, args)
+    if args.command == "provision-sub-branch":
+        return cmd_provision_sub_branch(root, args)
+    if args.command == "teardown-sub-branch":
+        return cmd_teardown_sub_branch(root, args)
+    if args.command == "sub-branch-ceiling-check":
+        return cmd_sub_branch_ceiling_check(root, args)
+    if args.command == "dispatch-binding":
+        return cmd_dispatch_binding(root, args)
+    if args.command == "dispatch-frontier":
+        return cmd_dispatch_frontier(root, args)
     fail(f"unknown command: {args.command}")
     return 2
 
