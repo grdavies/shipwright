@@ -255,6 +255,37 @@ The live deliver run-state file exists **once** at the repo-root scoped path
 copy under `.sw-worktrees/**/.cursor/`. `wave_compound.py record-premerge` and
 `cleanup_lib.resolve_deliver_state()` use the same resolver.
 
+## Operator worktree contract (PRD 049 R1)
+
+Single authority for which checkout owns implementation versus conductor runtime during `/sw-deliver`.
+
+| Checkout | Path / branch | Role |
+| --- | --- | --- |
+| Primary | Repo root (usually `defaultBaseBranch` after orchestrator provision) | Operator shell; **must not** accumulate tracked implementation commits during a deliver run |
+| Orchestrator | `.sw-worktrees/<slug>-orchestrator` → `<type>/<slug>` | Conductor loop cwd; merge queue, living-doc reconcile, terminal retro/ship |
+| Phase | `.sw-worktrees/<slug>-phase-*` → `<type>/<slug>-phase-<phase-slug>` | `/sw-ship` / `/sw-execute` implementation; isolated phase branch |
+| Conductor runtime | Repo-root `.cursor/` (gitignored) | Canonical deliver state, locks, run logs — **not** feature implementation |
+
+```text
+repo-root/                          primary checkout (defaultBaseBranch)
+├── .cursor/                        conductor runtime (canonical; gitignored)
+│   ├── sw-deliver-state.<slug>.json
+│   ├── sw-deliver-runs/<phase>/status.json   ← mirrored from phase worktree
+│   └── …
+└── .sw-worktrees/
+    ├── <slug>-orchestrator/        conductor-loop cwd (<type>/<slug>)
+    └── <slug>-phase-<phase>/       ship/execute cwd (phase branch)
+```
+
+**Invariants:**
+
+- Repo-root `.cursor/` updates during deliver are **expected** — agents must not treat them as
+  implementation artifacts to commit.
+- `status.json` copy direction is **phase worktree → repo root** (mirror for collection/merge only).
+  Never a general root→worktree state sync.
+- Ship and execute run in the **phase worktree**; the conductor loop runs from the **orchestrator
+  worktree** (mandatory provisioning — not repo root as an alternate cwd).
+
 ## Living vs frozen layers
 
 - **Frozen:** brainstorms, PRDs, task lists, amendments — immutable after `/sw-freeze`; change only via new amendments.
