@@ -724,7 +724,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Run bash-py-invocation-guard
-        run: bash scripts/test/bash-py-invocation-guard.test
+        run: python3 scripts/test/bash-py-invocation-guard.test
 
   feat-test-plan-git-push-secret-scan-chokepoint:
     name: feat-test-plan-git-push-secret-scan-chokepoint
@@ -735,5 +735,5 @@ jobs:
         with:
           python-version: "3.12"
       - name: Run git-push-secret-scan-chokepoint
-        run: bash scripts/test/git-push-secret-scan-chokepoint.test
+        run: python3 scripts/test/git-push-secret-scan-chokepoint.test
 

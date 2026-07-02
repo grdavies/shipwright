@@ -35,7 +35,7 @@ def main(argv: list[str] | None = None) -> int:
         script = entry["script"]
         args = entry.get("args") or []
         classification = entry.get("classification", "required")
-        runner = "python3" if script.endswith(".py") else "bash"
+        runner = "python3" if script.endswith((".py", ".test")) else "bash"
         cmd = runner + " " + script + (" " + " ".join(args) if args else "")
         lines.append(f"  {job_id}:")
         lines.append(f"    name: {job_id}")
