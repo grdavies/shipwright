@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Ported fixture suite (R27) — embedded harness executed without on-disk shell files."""
+from __future__ import annotations
+
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+_SCRIPTS_ROOT = SCRIPT_DIR.parents[1]
+_TEST_DIR = _SCRIPTS_ROOT / "test"
+for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
+    if _entry not in sys.path:
+        sys.path.insert(0, _entry)
+
+from _fixture_lib import repo_root
+from _harness_patch import patch_source as _patch_source
+
+
+def main() -> int:
+    root = repo_root(__file__)
+    env = os.environ.copy()
+    env["ROOT"] = str(root)
+    env["PYTHONPATH"] = os.pathsep.join(
+        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
+    )
+    src = _patch_source(_SOURCE, root)
+    completed = subprocess.run(
+        ["bash", "-c", src],
+        cwd=str(root),
+        env=env,
+        shell=False,
+    )
+    return completed.returncode
+
+
+_SOURCE = r"""
+#!/usr/bin/env bash
+# PRD 033 phase 6 — emitter/copy-to-core parity for planning scheduler artifacts (R24).
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+FAIL=0
+ok() { echo "OK  $1"; }
+bad() { echo "FAIL $1"; FAIL=1; }
+GEN="python3 -m sw"
+
+SCRIPTS_033=(
+  planning_graph.py
+  planning_reconcile.py
+  planning_deliver_gate.py
+  planning_gap_capture.py
+  planning_lifecycle.py
+)
+
+# --- emitter-parity-planning-autonomy (R24) ---
+for rel in "${SCRIPTS_033[@]}"; do
+  if [[ -f "$ROOT/scripts/$rel" && -f "$ROOT/core/scripts/$rel" ]] && cmp -s "$ROOT/scripts/$rel" "$ROOT/core/scripts/$rel"; then
+    :
+  else
+    bad "emitter-parity-planning-autonomy: core/scripts/$rel"
+  fi
+done
+[[ "$FAIL" -eq 0 ]] && ok "emitter-parity-planning-autonomy: copy-to-core parity"
+
+python3 -c "
+import json
+from pathlib import Path
+for p in (Path('$ROOT/.sw/config.schema.json'), Path('$ROOT/core/sw-reference/config.schema.json')):
+    s=json.loads(p.read_text())
+    pa=s['properties']['planning']['properties']['autonomy']
+    assert pa['default']=='maintenance-only'
+    assert 'full-conductor' in pa['enum']
+" && ok "emitter-parity-planning-autonomy: schema stub" || bad "emitter-parity-planning-autonomy: schema stub"
+
+$GEN generate --all >/dev/null 2>&1 || bad "emitter-parity-planning-autonomy: generate failed"
+for dist in "$ROOT/dist/cursor" "$ROOT/dist/claude-code"; do
+  for rel in "${SCRIPTS_033[@]}"; do
+    [[ -f "$dist/scripts/$rel" ]] || bad "emitter-parity-planning-autonomy: missing $dist/scripts/$rel"
+  done
+  for schema in .sw/config.schema.json core/sw-reference/config.schema.json; do
+  if [[ -f "$dist/$schema" ]]; then
+    python3 -c "import json; json.load(open('$dist/$schema'))" || bad "emitter-parity-planning-autonomy: invalid $dist/$schema"
+  fi
+  done
+done
+[[ "$FAIL" -eq 0 ]] && ok "emitter-parity-planning-autonomy: dist propagation"
+
+bash "$ROOT/scripts/test/run-emitter-fixtures.sh" >/dev/null 2>&1 && ok "emitter-parity-planning-autonomy: emitter-freshness" || bad "emitter-parity-planning-autonomy: emitter-freshness"
+
+exit "$FAIL"
+
+"""
+
+if __name__ == "__main__":
+    raise SystemExit(main())

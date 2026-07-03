@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "hook.augment-hook",
+      "kind": "hook",
+      "sourcePath": "core/hooks/augment-hook.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "always_on",
+            "selectionFamily": "hooks"
+          }
+        ],
+        "metadata": {
+          "selectionFamily": "hooks",
+          "gateRef": "hooks.json:unknownSlot"
+        }
+      }
+    }
+  ]
+}

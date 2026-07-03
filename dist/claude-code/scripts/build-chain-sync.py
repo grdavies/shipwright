@@ -24,8 +24,8 @@ def main(argv=None):
     if check_only:
         fail = 0
         for cmd in ([sys.executable, str(root/"scripts/build-chain-sot-lint.py")],
-                    [sys.executable, str(root/"scripts/test/run_core_scripts_parity_fixtures.py")],
-                    [sys.executable, str(root/"scripts/test/run_parity_fixtures.py")]):
+                    [sys.executable, str(root/"scripts/test/run_pytest.py"), "scripts/unit_tests/meta/test_core_scripts_parity.py", "-q"],
+                    [sys.executable, str(root/"scripts/test/run_pytest.py"), "scripts/unit_tests/meta/test_parity.py", "-q"]):
             if subprocess.run(cmd, cwd=str(root), capture_output=True).returncode != 0: fail = 1
         before = dist_hash(root)
         if subprocess.run([sys.executable,"-m","sw","generate","--all"], cwd=str(root), capture_output=True).returncode != 0: fail = 1

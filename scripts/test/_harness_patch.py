@@ -22,8 +22,8 @@ _BARE_SCRIPT_RENAMES = {
     "rules-empty.sh": "rules-empty.py",
     "rules-fail.sh": "rules-fail.py",
     "rules-ok.sh": "rules-ok.py",
-    "run-gate-fixtures.sh": "run_gate_fixtures.py",
-    "run-core-scripts-parity-fixtures.sh": "run_core_scripts_parity_fixtures.py",
+    "run-gate-fixtures.sh": "scripts/unit_tests/meta/harness_gate.py",
+    "run-core-scripts-parity-fixtures.sh": "scripts/unit_tests/meta/harness_core_scripts_parity.py",
     "pre-commit-completed-unit.sh": "pre-commit-completed-unit.py",
     "authoring-guard.sh": "authoring-guard.py",
     "rules-*.sh": "rules-*.py",
@@ -51,6 +51,49 @@ content_path() {
   fi
 }
 """.strip()
+
+
+
+_META = frozenset({"emitter", "parity", "claude_golden", "pr_test_plan", "core_scripts_parity", "gate", "inflight_guards_parity", "living_doc"})
+_PLANNING = frozenset({"plan_killswitch", "plan_persist", "plan_proposed_parity"})
+
+
+def _harness_pkg(stem: str) -> str:
+    if stem in _META:
+        return "meta"
+    if stem.startswith("planning_") or stem in _PLANNING:
+        return "planning"
+    _W3 = {
+        "deliver": "deliver", "deliver_concurrency": "deliver", "deliver_cwd_guard": "deliver",
+        "deliver_invariant": "deliver", "deliver_loop": "deliver", "deliver_worktree_contract": "deliver",
+        "merge_queue": "deliver", "parallel_merge_safety": "deliver", "status_integrity": "deliver",
+        "terminal_state_read": "deliver", "hook": "hooks", "hook_worktree_alignment": "hooks",
+        "fanout": "dispatch", "execute_orchestration": "execute", "delegation": "dispatch",
+    }
+    if stem in _W3:
+        return _W3[stem]
+    _W2 = {
+        "state": "git", "branch_guard": "w4", "doc": "git", "host": "git", "feedback": "git",
+        "retrospective": "git", "git_workflow": "workflow", "two_track": "git", "visibility": "git",
+        "ux_polish": "git", "planning_autonomy": "git", "planning_graph": "git",
+    }
+    if stem in _W2:
+        return _W2[stem]
+    return "w4"
+
+
+def _remap_legacy_fixture_scripts(src: str) -> str:
+    def repl(match: re.Match[str]) -> str:
+        stem = match.group(1)
+        pkg = _harness_pkg(stem)
+        return f'scripts/unit_tests/{pkg}/harness_{stem}.py'
+
+    src = re.sub(
+        r"scripts/test/run_([a-z0-9_]+)_fixtures\.py",
+        repl,
+        src,
+    )
+    return src
 
 
 def _dash_fixtures(name: str) -> str:
@@ -103,6 +146,7 @@ def patch_source(src: str, root: Path) -> str:
         src,
     )
     src = _apply_bare_renames(src)
+    src = _remap_legacy_fixture_scripts(src)
     src = re.sub(r'bash\s+"\$DOC_AFTER/\$\{fx\}\.sh"', r'python3 "$DOC_AFTER/${fx}.py"', src)
     src = re.sub(r"scripts/[A-Za-z0-9_./-]+\.sh", lambda m: m.group(0)[:-3] + ".py", src)
     src = re.sub(r'bash\s+"([^"]+\.py)"', r'python3 "\1"', src)

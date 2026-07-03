@@ -28,189 +28,6 @@
       ]
     },
     {
-      "id": "cleanup-fixtures",
-      "script": "scripts/test/run_cleanup_fixtures.py",
-      "args": [],
-      "classification": "advisory",
-      "ciJobName": "feat-test-plan-cleanup-fixtures"
-    },
-    {
-      "id": "core-scripts-parity-fixtures",
-      "script": "scripts/test/run_core_scripts_parity_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-core-scripts-parity-fixtures"
-    },
-    {
-      "id": "doc-currency-033-fixtures",
-      "script": "scripts/test/run_doc_currency_033_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-doc-currency-033-fixtures",
-      "scenarios": [
-        "doc-currency-033-sections",
-        "doc-currency-033-a1-sections"
-      ]
-    },
-    {
-      "id": "doc-currency-049-fixtures",
-      "script": "scripts/test/run_doc_currency_049_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-doc-currency-049-fixtures",
-      "scenarios": [
-        "doc-currency-049-contract-sections"
-      ]
-    },
-    {
-      "id": "inflight-doc-currency-fixtures",
-      "script": "scripts/test/run_inflight_doc_currency_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-doc-currency-fixtures",
-      "scenarios": [
-        "inflight-doc-currency"
-      ]
-    },
-    {
-      "id": "inflight-guards-parity-fixtures",
-      "script": "scripts/test/run_inflight_guards_parity_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-guards-parity-fixtures",
-      "scenarios": [
-        "inflight-guards-copy-to-core-parity",
-        "inflight-guards-emitter-freshness"
-      ]
-    },
-    {
-      "id": "parity-fixtures",
-      "script": "scripts/test/run_parity_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-parity-fixtures",
-      "scenarios": [
-        "cursor-golden-vs-dist"
-      ]
-    },
-    {
-      "id": "planning-035-doc-impact-fixtures",
-      "script": "scripts/test/run_planning_035_doc_impact_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-035-doc-impact-fixtures",
-      "scenarios": [
-        "doc-currency-035",
-        "no-regression-035"
-      ]
-    },
-    {
-      "id": "planning-035-emitter-parity-fixtures",
-      "script": "scripts/test/run_planning_035_emitter_parity_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-035-emitter-parity-fixtures",
-      "scenarios": [
-        "copy-to-core-parity-035",
-        "emitter-freshness-035"
-      ]
-    },
-    {
-      "id": "planning-command-surface-fixtures",
-      "script": "scripts/test/run_planning_command_surface_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-command-surface-fixtures",
-      "scenarios": [
-        "command-surface-wired",
-        "sw-doc-reconciler-entry",
-        "sw-doc-scheduler-entry",
-        "sw-doc-posture-config",
-        "planning-graph-next-subcommand",
-        "planning-graph-posture-subcommand",
-        "planning-graph-core-parity"
-      ]
-    },
-    {
-      "id": "planning-currency-fixtures",
-      "script": "scripts/test/run_planning_currency_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-currency-fixtures",
-      "scenarios": [
-        "copy-to-core-parity",
-        "emitter-freshness-planning-artifacts",
-        "doc-currency-layout-config-skills-readme-guide",
-        "no-regression-migrated-corpus",
-        "no-memory-writes-redaction-unchanged"
-      ]
-    },
-    {
-      "id": "planning-emitter-parity-fixtures",
-      "script": "scripts/test/run_planning_emitter_parity_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-emitter-parity-fixtures",
-      "scenarios": [
-        "emitter-parity-planning-autonomy"
-      ]
-    },
-    {
-      "id": "planning-init-fixtures",
-      "script": "scripts/test/run_planning_init_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-init-fixtures",
-      "scenarios": [
-        "init-profile-store-seed",
-        "store-no-token-leak"
-      ]
-    },
-    {
-      "id": "planning-store-fixtures",
-      "script": "scripts/test/run_planning_store_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-store-fixtures",
-      "scenarios": [
-        "store-interface-in-repo-default",
-        "store-backend-interface-parity",
-        "store-log-id-hash-backend",
-        "memory-backend-adapter-only",
-        "local-synced-path-validation",
-        "memory-chokepoint-read-write"
-      ]
-    },
-    {
-      "id": "planning-unit-fixtures",
-      "script": "scripts/test/run_planning_unit_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-unit-fixtures",
-      "scenarios": [
-        "schema-fields-and-type-enum",
-        "unit-folder-and-id-stability",
-        "gap-unit-in-unified-index",
-        "status-type-conditioned",
-        "cross-enum-token-rejected",
-        "status-enum-stub",
-        "validate-unknown-key",
-        "validate-tracked-private-rejected"
-      ]
-    },
-    {
-      "id": "planning-visibility-acceptance-fixtures",
-      "script": "scripts/test/run_planning_visibility_acceptance_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-visibility-acceptance-fixtures",
-      "scenarios": [
-        "store-emitter-parity",
-        "public-unit-no-regression",
-        "doc-impact-visibility-store"
-      ]
-    },
-    {
       "id": "authoring-guard-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -219,6 +36,16 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-authoring-guard-fixtures"
+    },
+    {
+      "id": "cleanup-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/w4",
+        "-q"
+      ],
+      "classification": "advisory",
+      "ciJobName": "feat-test-plan-cleanup-fixtures"
     },
     {
       "id": "completed-unit-fixtures",
@@ -236,6 +63,16 @@
         "complete-flip-toctou-caught",
         "completed-hook-graceful-degrade-warns"
       ]
+    },
+    {
+      "id": "core-scripts-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/meta",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-core-scripts-parity-fixtures"
     },
     {
       "id": "deliver-concurrency-fixtures",
@@ -320,6 +157,33 @@
       "scenarios": [
         "dispatch-unregistered-parent-delegated-atomic-passes",
         "dispatch-unregistered-parent-reviewer-fails-closed"
+      ]
+    },
+    {
+      "id": "doc-currency-033-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/w4",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-doc-currency-033-fixtures",
+      "scenarios": [
+        "doc-currency-033-sections",
+        "doc-currency-033-a1-sections"
+      ]
+    },
+    {
+      "id": "doc-currency-049-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/w4",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-doc-currency-049-fixtures",
+      "scenarios": [
+        "doc-currency-049-contract-sections"
       ]
     },
     {
@@ -505,6 +369,33 @@
       ]
     },
     {
+      "id": "inflight-doc-currency-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/w4",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-inflight-doc-currency-fixtures",
+      "scenarios": [
+        "inflight-doc-currency"
+      ]
+    },
+    {
+      "id": "inflight-guards-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/meta",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-inflight-guards-parity-fixtures",
+      "scenarios": [
+        "inflight-guards-copy-to-core-parity",
+        "inflight-guards-emitter-freshness"
+      ]
+    },
+    {
       "id": "inflight-migration-bridge-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -571,6 +462,19 @@
         "contention-generator-output-separation",
         "deterministic-conflict-autoregen",
         "semantic-conflict-halt"
+      ]
+    },
+    {
+      "id": "parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/meta",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-parity-fixtures",
+      "scenarios": [
+        "cursor-golden-vs-dist"
       ]
     },
     {
@@ -658,6 +562,34 @@
       ]
     },
     {
+      "id": "planning-035-doc-impact-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-doc-impact-fixtures",
+      "scenarios": [
+        "doc-currency-035",
+        "no-regression-035"
+      ]
+    },
+    {
+      "id": "planning-035-emitter-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-emitter-parity-fixtures",
+      "scenarios": [
+        "copy-to-core-parity-035",
+        "emitter-freshness-035"
+      ]
+    },
+    {
       "id": "planning-035-gap-lifecycle-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -692,6 +624,42 @@
         "full-conductor-bounded-budget-halt",
         "enqueue-handoff-no-nested-dispatch",
         "autonomy-actions-logged-durable"
+      ]
+    },
+    {
+      "id": "planning-command-surface-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-command-surface-fixtures",
+      "scenarios": [
+        "command-surface-wired",
+        "sw-doc-reconciler-entry",
+        "sw-doc-scheduler-entry",
+        "sw-doc-posture-config",
+        "planning-graph-next-subcommand",
+        "planning-graph-posture-subcommand",
+        "planning-graph-core-parity"
+      ]
+    },
+    {
+      "id": "planning-currency-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-currency-fixtures",
+      "scenarios": [
+        "copy-to-core-parity",
+        "emitter-freshness-planning-artifacts",
+        "doc-currency-layout-config-skills-readme-guide",
+        "no-regression-migrated-corpus",
+        "no-memory-writes-redaction-unchanged"
       ]
     },
     {
@@ -748,6 +716,19 @@
       ]
     },
     {
+      "id": "planning-emitter-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-emitter-parity-fixtures",
+      "scenarios": [
+        "emitter-parity-planning-autonomy"
+      ]
+    },
+    {
       "id": "planning-graph-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -783,6 +764,20 @@
         "region-hook-rejects-cross-writer",
         "empty-inflight-with-runstate-fails",
         "living-doc-index-generator-wired"
+      ]
+    },
+    {
+      "id": "planning-init-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-init-fixtures",
+      "scenarios": [
+        "init-profile-store-seed",
+        "store-no-token-leak"
       ]
     },
     {
@@ -897,6 +892,59 @@
       ]
     },
     {
+      "id": "planning-store-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-store-fixtures",
+      "scenarios": [
+        "store-interface-in-repo-default",
+        "store-backend-interface-parity",
+        "store-log-id-hash-backend",
+        "memory-backend-adapter-only",
+        "local-synced-path-validation",
+        "memory-chokepoint-read-write"
+      ]
+    },
+    {
+      "id": "planning-unit-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-unit-fixtures",
+      "scenarios": [
+        "schema-fields-and-type-enum",
+        "unit-folder-and-id-stability",
+        "gap-unit-in-unified-index",
+        "status-type-conditioned",
+        "cross-enum-token-rejected",
+        "status-enum-stub",
+        "validate-unknown-key",
+        "validate-tracked-private-rejected"
+      ]
+    },
+    {
+      "id": "planning-visibility-acceptance-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-visibility-acceptance-fixtures",
+      "scenarios": [
+        "store-emitter-parity",
+        "public-unit-no-regression",
+        "doc-impact-visibility-store"
+      ]
+    },
+    {
       "id": "prd-050-ship-verification-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -923,6 +971,21 @@
       "scenarios": [
         "manifest-registration",
         "gap-flip-verification"
+      ]
+    },
+    {
+      "id": "regression-remediation-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/w4",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-regression-remediation-fixtures",
+      "scenarios": [
+        "verify-failed-routes-bounded-stabilize",
+        "blocked-budget-signature-distinct",
+        "remediation-exhaustion-consolidated-halt"
       ]
     },
     {
@@ -1059,21 +1122,12 @@
       ]
     },
     {
-      "id": "regression-remediation-fixtures",
-      "script": "scripts/test/run_regression_remediation_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-regression-remediation-fixtures",
-      "scenarios": [
-        "verify-failed-routes-bounded-stabilize",
-        "blocked-budget-signature-distinct",
-        "remediation-exhaustion-consolidated-halt"
-      ]
-    },
-    {
       "id": "worktree-config-fixtures",
-      "script": "scripts/test/run_worktree_config_fixtures.py",
-      "args": [],
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/w4",
+        "-q"
+      ],
       "classification": "required",
       "ciJobName": "feat-test-plan-worktree-config-fixtures",
       "scenarios": [

@@ -116,11 +116,11 @@ after migration waves W1–W4.
 
 ### 6. Migration wave W4 — meta / registry / parity (~22) (medium)
 
-- [ ] 6.1 Port W4 meta suites (suite-registry, pr-test-plan, emitter, golden) (R13, TR11)
+- [x] 6.1 Port W4 meta suites (suite-registry, pr-test-plan, emitter, golden) (R13, TR11)
   - **File:** `scripts/unit_tests/meta/`
   - **Expected:** registry drift checks run under pytest
   - **R-IDs:** R13, TR11
-- [ ] 6.2 Final parity + delete `run_migration_parity_fixtures.py` (R14, TR18, TR14)
+- [x] 6.2 Final parity + delete `run_migration_parity_fixtures.py` (R14, TR18, TR14)
   - **File:** remove all remaining `run_*_fixtures.py`; delete parity runner
   - **Expected:** zero `run_*_fixtures.py` on disk; `run_suite_registry_fixtures` asserts no legacy scripts
   - **R-IDs:** R14, R18, TR12

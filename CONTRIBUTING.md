@@ -46,21 +46,13 @@ PR bodies should note whether `dist/` was regenerated when `core/` changed.
 Run the fixture suites before opening a PR:
 
 ```bash
-python3 scripts/test/run_emitter_fixtures.py
-python3 scripts/test/run_parity_fixtures.py
-python3 scripts/test/run_claude_golden_fixtures.py
-python3 scripts/test/run_gate_fixtures.py
-python3 scripts/test/run_capability_select_fixtures.py
+python3 scripts/test/run_pytest.py scripts/unit_tests/meta -q
+python3 scripts/test/run_pytest.py scripts/unit_tests/w4 -q
 python3 scripts/test/run_pytest.py scripts/unit_tests/capability -q
-python3 scripts/test/run_migration_parity_fixtures.py
+python3 scripts/test/run_pytest.py scripts/unit_tests/dispatch -q
 python3 scripts/test/run_pytest.py scripts/unit_tests/model_tier -q
 python3 scripts/test/run_pytest.py scripts/unit_tests/guidelines -q
 python3 scripts/test/run_pytest.py scripts/unit_tests/planning -q
-python3 scripts/test/run_plan_persist_fixtures.py
-python3 scripts/test/run_plan_killswitch_fixtures.py
-python3 scripts/test/run_plan_proposed_parity_fixtures.py
-python3 scripts/test/run_pilot_fixtures.py
-python3 scripts/test/run_pytest.py scripts/unit_tests/dispatch -q
 python3 scripts/test/run_pytest.py scripts/unit_tests/git -q
 ```
 
@@ -85,14 +77,13 @@ per-orchestrator canonical parity, debug/doc/feedback halts, R21 surfacing, budg
 
 ```bash
 python3 -m sw generate --all
-python3 scripts/test/run_emitter_fixtures.py
+python3 scripts/test/run_pytest.py scripts/unit_tests/meta -q
 ```
 
 The emitter freshness gate (`emitter-stale-classification-fails`, capability-index parity) fails when
 committed `dist/` drifts from `core/`.
 
-Additional domain fixtures (doc, impl, debug, feedback, etc.) live under `scripts/test/` and can be run
-individually as needed.
+Additional domain suites live under `scripts/unit_tests/` and are run via `scripts/test/run_pytest.py`.
 
 ## Code style
 

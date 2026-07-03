@@ -45,7 +45,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GATE_PY="$ROOT/scripts/fanout_gate.py"
 PREREQ="$ROOT/scripts/test/pilot_022_prerequisite_check.py"
-PILOT_FIX="$ROOT/scripts/test/run_pilot_fixtures.py"
+PILOT_FIX="$ROOT/scripts/unit_tests/w4/harness_pilot.py"
 POSITIVE_PAIRS="$ROOT/scripts/test/fixtures/benefit-metric/positive-pairs.json"
 INSUFFICIENT_PAIRS="$ROOT/scripts/test/fixtures/benefit-metric/insufficient-n-pairs.json"
 FAIL=0

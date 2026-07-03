@@ -131,8 +131,8 @@ def run_wave_parity(
 
 def main(argv: list[str] | None = None) -> int:
     args = list(argv or sys.argv[1:])
-    if len(args) != 1 or args[0] not in {"W1", "W2", "W3"}:
-        print("usage: migration_pytest_parity.py <W1|W2|W3>", file=sys.stderr)
+    if len(args) != 1 or args[0] not in {"W1", "W2", "W3", "W4"}:
+        print("usage: migration_pytest_parity.py <W1|W2|W3|W4>", file=sys.stderr)
         return 2
     root = repo_root()
     failures = run_wave_parity(root, args[0])
