@@ -20,6 +20,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--finding")
     p.add_argument("--repo-root", default=".")
     p.add_argument("--validated", action="store_true")
+    p.add_argument("--phase-mode", action="store_true")
+    p.add_argument("--diff-context")
+    p.add_argument("--patch-target")
+    p.add_argument("--apply-policy")
     ns = p.parse_args(list(sys.argv[1:] if argv is None else argv))
     if ns.finding is not None:
         os.environ["FINDING"] = ns.finding
@@ -27,6 +31,14 @@ def main(argv: list[str] | None = None) -> int:
         os.environ["REPO_ROOT"] = ns.repo_root
     if ns.validated:
         os.environ["VALIDATED"] = "true"
+    if ns.phase_mode:
+        os.environ["PHASE_MODE"] = "true"
+    if ns.diff_context is not None:
+        os.environ["DIFF_CONTEXT"] = ns.diff_context
+    if ns.patch_target is not None:
+        os.environ["PATCH_TARGET"] = ns.patch_target
+    if ns.apply_policy is not None:
+        os.environ["APPLY_POLICY"] = ns.apply_policy
 
     finding_raw = os.environ.get("FINDING", "")
     repo_root = os.environ.get("REPO_ROOT", ".")
