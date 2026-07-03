@@ -533,20 +533,36 @@ else
 fi
 
 # --- intra-phase-global-cap (R15) ---
+GLOBAL_CAP=$(python3 - <<'PY'
+import json
+from pathlib import Path
+cfg = {}
+p = Path(__import__("os").environ["ROOT"]) / ".cursor/workflow.config.json"
+if p.is_file():
+    cfg = json.loads(p.read_text(encoding="utf-8"))
+worktree = cfg.get("worktree") or {}
+intra = cfg.get("intraPhase") or {}
+ceiling = int(worktree.get("parallelCeiling") or 4)
+harness = int(intra.get("harnessLimit") or 8)
+print(max(1, min(ceiling, harness)))
+PY
+)
+WAVE_SLOTS=$((GLOBAL_CAP - 1))
+export GLOBAL_CAP WAVE_SLOTS
 set +e
-OUT=$(python3 "$INTRA_PY" "$ROOT" evaluate \
-  --context-json '{"file_paths":["a.py","b.py","c.py"],"derived_tags":["review-panel"]}' \
-  --wave-slots 4 --active-intra-phase 0 2>/dev/null)
+OUT=$(python3 "$INTRA_PY" "$ROOT" evaluate   --context-json '{"file_paths":["a.py","b.py","c.py"],"derived_tags":["review-panel"]}'   --wave-slots "$WAVE_SLOTS" --active-intra-phase 0 2>/dev/null)
 EC=$?
 set -e
 if [[ "$EC" -eq 20 ]] && echo "$OUT" | python3 -c "
-import json,sys
+import json,sys,os
 d=json.load(sys.stdin)
+expected=int(os.environ['GLOBAL_CAP'])
+wave=int(os.environ['WAVE_SLOTS'])
 assert d.get('verdict')=='reject', d
 assert d.get('cause')=='cap:global', d
 cap=d.get('cap',{})
-assert cap.get('globalCap') == 4, cap
-assert cap.get('waveSlots') == 4, cap
+assert cap.get('globalCap') == expected, cap
+assert cap.get('waveSlots') == wave, cap
 "; then
   ok "intra-phase-global-cap"
 else
