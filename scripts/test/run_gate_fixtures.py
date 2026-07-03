@@ -195,7 +195,7 @@ fi
 restore_config
 trap - EXIT
 
-bash "$ROOT/scripts/test/run-hook-fixtures.sh" || FAIL=1
+python3 "$ROOT/scripts/test/run_pytest.py" "$ROOT/scripts/unit_tests/hooks" -q || FAIL=1
 
 exit "$FAIL"
 

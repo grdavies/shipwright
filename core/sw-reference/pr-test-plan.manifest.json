@@ -42,65 +42,6 @@
       "ciJobName": "feat-test-plan-core-scripts-parity-fixtures"
     },
     {
-      "id": "deliver-concurrency-fixtures",
-      "script": "scripts/test/run_deliver_concurrency_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-concurrency-fixtures",
-      "scenarios": [
-        "freeze-commit-cwd-forced-primary-fails-closed",
-        "deliver-provision-does-not-mutate-concurrent-primary-checkout",
-        "slug-scoped-run-log-writes",
-        "conductor-mandatory-provisioning-contract",
-        "orphan-phase-worktree-adopt-or-teardown",
-        "no-progress-differentiated-stall-causes",
-        "stale-in-progress-success-check-gate-green",
-        "terminal-docs-currency-gate-invocation-valid",
-        "resume-reconcile-unpushed-local-merge-promotes",
-        "deliver-fail-payload-forwards-subprocess-error",
-        "finalize-resume-after-state-cleared-post-merge",
-        "terminal-pr-body-template-valid",
-        "finalize-living-docs-reconcile-hook",
-        "capability-gateref-no-shell",
-        "all-private-spec-seed-tracked-private-body",
-        "deliver-verify-fixture-tree-immutable"
-      ]
-    },
-    {
-      "id": "deliver-cwd-guard-fixtures",
-      "script": "scripts/test/run_deliver_cwd_guard_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-cwd-guard-fixtures",
-      "scenarios": [
-        "deliver-cwd-guard-blocks-main-living-doc",
-        "deliver-cwd-guard-corrupt-index-fail-closed"
-      ]
-    },
-    {
-      "id": "deliver-invariant-fixtures",
-      "script": "scripts/test/run_deliver_invariant_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-invariant-fixtures",
-      "scenarios": [
-        "human-merge-gate-unchanged",
-        "secret-scan-push-chokepoint",
-        "scoped-lock-single-flight",
-        "frozen-doc-ci-gates-unchanged"
-      ]
-    },
-    {
-      "id": "deliver-worktree-contract-fixtures",
-      "script": "scripts/test/run_deliver_worktree_contract_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-worktree-contract-fixtures",
-      "scenarios": [
-        "deliver-worktree-contract"
-      ]
-    },
-    {
       "id": "doc-currency-033-fixtures",
       "script": "scripts/test/run_doc_currency_033_fixtures.py",
       "args": [],
@@ -119,45 +60,6 @@
       "ciJobName": "feat-test-plan-doc-currency-049-fixtures",
       "scenarios": [
         "doc-currency-049-contract-sections"
-      ]
-    },
-    {
-      "id": "execute-orchestration-fixtures",
-      "script": "scripts/test/run_execute_orchestration_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-execute-orchestration-fixtures",
-      "scenarios": [
-        "wave-merge-no-regression",
-        "execute-plan-linear-fallback",
-        "execute-plan-contention-serializes-shared-file",
-        "execute-dependency-rules-049-phase-2",
-        "execute-plan-dag-049-phase-2",
-        "execute-runtime-expansion-depth-cap",
-        "execute-tokenizer-deep-refs",
-        "execute-integrate-clean-merge",
-        "execute-integrate-conflict-partial-batch",
-        "execute-integrate-parallel-batch-serialized",
-        "execute-blast-radius-dependents",
-        "execute-sub-branch-ceiling-refuse",
-        "execute-ship-chain-gated",
-        "execute-autonomy-supervised-plan-halt",
-        "execute-resume-frontier",
-        "execute-resume-stale-sub-branch",
-        "execute-single-subtask-skip-tier"
-      ]
-    },
-    {
-      "id": "hook-worktree-alignment-fixtures",
-      "script": "scripts/test/run_hook_worktree_alignment_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-hook-worktree-alignment-fixtures",
-      "scenarios": [
-        "hook-state-worktree-cwd-alignment",
-        "hook-state-dispatch-preflight-worktree-alignment",
-        "hook-state-primary-no-false-positive",
-        "hook-state-ambiguous-worktree-fail-closed"
       ]
     },
     {
@@ -182,20 +84,6 @@
       ]
     },
     {
-      "id": "parallel-merge-safety-fixtures",
-      "script": "scripts/test/run_parallel_merge_safety_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-parallel-merge-safety-fixtures",
-      "scenarios": [
-        "whole-batch-no-early-merge",
-        "deterministic-merge-order",
-        "contention-generator-output-separation",
-        "deterministic-conflict-autoregen",
-        "semantic-conflict-halt"
-      ]
-    },
-    {
       "id": "parity-fixtures",
       "script": "scripts/test/run_parity_fixtures.py",
       "args": [],
@@ -203,42 +91,6 @@
       "ciJobName": "feat-test-plan-parity-fixtures",
       "scenarios": [
         "cursor-golden-vs-dist"
-      ]
-    },
-    {
-      "id": "planning-035-deliver-conductor-fixtures",
-      "script": "scripts/test/run_planning_035_deliver_conductor_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-035-deliver-conductor-fixtures",
-      "scenarios": [
-        "ship-without-build-chain-sync-fails",
-        "verify-test-includes-parity",
-        "post-merge-build-chain-environmental",
-        "merge-queue-deterministic-regen",
-        "parallel-wave-regen-before-verify",
-        "verify-failed-routes-remediate",
-        "no-progress-before-first-remediate",
-        "current-wave-overflow-terminal",
-        "whole-batch-merge-wait",
-        "batch-integration-head-reconcile",
-        "post-remediation-no-status-pause",
-        "dispatch-ship-completes-in-turn",
-        "await-agent-same-turn-continue",
-        "terminal-eligibility-teardown-green-parity",
-        "terminal-retro-before-pr-auto",
-        "terminal-ship-autonomous-watch",
-        "single-flight-phase-ship",
-        "terminal-status-provenance-reemit",
-        "terminal-pr-prepare-commitlint",
-        "eager-phase-teardown-after-merge",
-        "parallel-ceiling-would-free",
-        "status-collect-background-worktree",
-        "deliver-resume-command-is-sw",
-        "post-freeze-docs-durability",
-        "projection-refuse-hand-maintained",
-        "re-freeze-contract-amendment",
-        "cleanup-autonomy-auto-post-merge"
       ]
     },
     {
@@ -386,6 +238,77 @@
       ]
     },
     {
+      "id": "deliver-concurrency-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/deliver",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-concurrency-fixtures",
+      "scenarios": [
+        "freeze-commit-cwd-forced-primary-fails-closed",
+        "deliver-provision-does-not-mutate-concurrent-primary-checkout",
+        "slug-scoped-run-log-writes",
+        "conductor-mandatory-provisioning-contract",
+        "orphan-phase-worktree-adopt-or-teardown",
+        "no-progress-differentiated-stall-causes",
+        "stale-in-progress-success-check-gate-green",
+        "terminal-docs-currency-gate-invocation-valid",
+        "resume-reconcile-unpushed-local-merge-promotes",
+        "deliver-fail-payload-forwards-subprocess-error",
+        "finalize-resume-after-state-cleared-post-merge",
+        "terminal-pr-body-template-valid",
+        "finalize-living-docs-reconcile-hook",
+        "capability-gateref-no-shell",
+        "all-private-spec-seed-tracked-private-body",
+        "deliver-verify-fixture-tree-immutable"
+      ]
+    },
+    {
+      "id": "deliver-cwd-guard-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/deliver",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-cwd-guard-fixtures",
+      "scenarios": [
+        "deliver-cwd-guard-blocks-main-living-doc",
+        "deliver-cwd-guard-corrupt-index-fail-closed"
+      ]
+    },
+    {
+      "id": "deliver-invariant-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/deliver",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-invariant-fixtures",
+      "scenarios": [
+        "human-merge-gate-unchanged",
+        "secret-scan-push-chokepoint",
+        "scoped-lock-single-flight",
+        "frozen-doc-ci-gates-unchanged"
+      ]
+    },
+    {
+      "id": "deliver-worktree-contract-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/deliver",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-deliver-worktree-contract-fixtures",
+      "scenarios": [
+        "deliver-worktree-contract"
+      ]
+    },
+    {
       "id": "dispatch-binding-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -448,6 +371,35 @@
       ]
     },
     {
+      "id": "execute-orchestration-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/execute",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-execute-orchestration-fixtures",
+      "scenarios": [
+        "wave-merge-no-regression",
+        "execute-plan-linear-fallback",
+        "execute-plan-contention-serializes-shared-file",
+        "execute-dependency-rules-049-phase-2",
+        "execute-plan-dag-049-phase-2",
+        "execute-runtime-expansion-depth-cap",
+        "execute-tokenizer-deep-refs",
+        "execute-integrate-clean-merge",
+        "execute-integrate-conflict-partial-batch",
+        "execute-integrate-parallel-batch-serialized",
+        "execute-blast-radius-dependents",
+        "execute-sub-branch-ceiling-refuse",
+        "execute-ship-chain-gated",
+        "execute-autonomy-supervised-plan-halt",
+        "execute-resume-frontier",
+        "execute-resume-stale-sub-branch",
+        "execute-single-subtask-skip-tier"
+      ]
+    },
+    {
       "id": "gap-backlog-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -496,6 +448,22 @@
         "resolver-prefers-py-over-stale-sh",
         "resolver-none-for-unknown-provider",
         "reachable-provider-no-false-unreachable-block"
+      ]
+    },
+    {
+      "id": "hook-worktree-alignment-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/hooks",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-hook-worktree-alignment-fixtures",
+      "scenarios": [
+        "hook-state-worktree-cwd-alignment",
+        "hook-state-dispatch-preflight-worktree-alignment",
+        "hook-state-primary-no-false-positive",
+        "hook-state-ambiguous-worktree-fail-closed"
       ]
     },
     {
@@ -589,6 +557,23 @@
       ]
     },
     {
+      "id": "parallel-merge-safety-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/deliver",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-parallel-merge-safety-fixtures",
+      "scenarios": [
+        "whole-batch-no-early-merge",
+        "deterministic-merge-order",
+        "contention-generator-output-separation",
+        "deterministic-conflict-autoregen",
+        "semantic-conflict-halt"
+      ]
+    },
+    {
       "id": "phase-sizing-corpus-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -631,6 +616,45 @@
         "phase-sizing-fallback-sequential",
         "phase-sizing-persist-clean",
         "phase-sizing-persist-redaction"
+      ]
+    },
+    {
+      "id": "planning-035-deliver-conductor-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/conductor",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-035-deliver-conductor-fixtures",
+      "scenarios": [
+        "ship-without-build-chain-sync-fails",
+        "verify-test-includes-parity",
+        "post-merge-build-chain-environmental",
+        "merge-queue-deterministic-regen",
+        "parallel-wave-regen-before-verify",
+        "verify-failed-routes-remediate",
+        "no-progress-before-first-remediate",
+        "current-wave-overflow-terminal",
+        "whole-batch-merge-wait",
+        "batch-integration-head-reconcile",
+        "post-remediation-no-status-pause",
+        "dispatch-ship-completes-in-turn",
+        "await-agent-same-turn-continue",
+        "terminal-eligibility-teardown-green-parity",
+        "terminal-retro-before-pr-auto",
+        "terminal-ship-autonomous-watch",
+        "single-flight-phase-ship",
+        "terminal-status-provenance-reemit",
+        "terminal-pr-prepare-commitlint",
+        "eager-phase-teardown-after-merge",
+        "parallel-ceiling-would-free",
+        "status-collect-background-worktree",
+        "deliver-resume-command-is-sw",
+        "post-freeze-docs-durability",
+        "projection-refuse-hand-maintained",
+        "re-freeze-contract-amendment",
+        "cleanup-autonomy-auto-post-merge"
       ]
     },
     {
@@ -966,6 +990,21 @@
       "ciJobName": "feat-test-plan-suite-registry-fixtures"
     },
     {
+      "id": "terminal-state-read-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/deliver",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-terminal-state-read-fixtures",
+      "scenarios": [
+        "terminal-reads-repo-root-state-from-orchestrator-cwd",
+        "terminal-state-skew-boundary-equal-passes",
+        "terminal-state-skew-boundary-over-refuses"
+      ]
+    },
+    {
       "id": "two-track-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -1029,18 +1068,6 @@
         "verify-failed-routes-bounded-stabilize",
         "blocked-budget-signature-distinct",
         "remediation-exhaustion-consolidated-halt"
-      ]
-    },
-    {
-      "id": "terminal-state-read-fixtures",
-      "script": "scripts/test/run_terminal_state_read_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-terminal-state-read-fixtures",
-      "scenarios": [
-        "terminal-reads-repo-root-state-from-orchestrator-cwd",
-        "terminal-state-skew-boundary-equal-passes",
-        "terminal-state-skew-boundary-over-refuses"
       ]
     },
     {
