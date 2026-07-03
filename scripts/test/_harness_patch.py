@@ -175,8 +175,13 @@ def _apply_grep_py_aliases(src: str) -> str:
         ("playwright.sh", "playwright.py"),
         ("failstub.sh", "failstub.py"),
     ]
-    for old, new in pairs:
-        src = src.replace(old, new)
+    out_lines: list[str] = []
+    for line in src.splitlines(keepends=True):
+        if "grep" in line:
+            for old, new_name in pairs:
+                line = line.replace(old, new_name)
+        out_lines.append(line)
+    src = "".join(out_lines)
     src = re.sub(r'\[\[ -x "\$([A-Z_][A-Z0-9_]*)" \]\]', r'[[ -f "$\1" ]]', src)
     src = src.replace('OUT=$("$VALIDATE"', 'OUT=$(python3 "$VALIDATE"')
     src = src.replace('OUT=$("$SHIP_STATUS"', 'OUT=$(python3 "$SHIP_STATUS"')
