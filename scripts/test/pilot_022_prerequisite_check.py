@@ -12,8 +12,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR.parent) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR.parent))
 
-from _fixture_lib import repo_root
-from _harness_patch import patch_source as _patch_source
+from _sw.vendor_paths import repo_root
+from unit_tests._harness_runtime import patch_source as _patch_source
 
 
 def main() -> int:

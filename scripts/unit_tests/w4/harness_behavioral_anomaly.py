@@ -16,7 +16,7 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
 
-from _fixture_lib import FixtureContext
+from unit_tests._harness_runtime import FixtureContext
 import behavioral_anomaly_check_lib as bac
 import verify_evidence_lib as vel
 
