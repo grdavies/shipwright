@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Hard-block when frozen task checkboxes diverge from durable completion ledger (R15). """
+"""Hard-block when frozen task checkboxes diverge from durable completion ledger (R15)."""
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -24,17 +25,51 @@ def git_root() -> Path:
     return SCRIPT_DIR.parent
 
 
-def repo_root() -> Path:
-    return git_root()
-
-
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
-    root = repo_root()
-    import wave_state
-    wave_state.main(args)
-    return 0
-    return 0
+    tasks_file = ""
+    state_root = str(git_root())
+    i = 0
+    while i < len(args):
+        if args[i] == "--tasks-file" and i + 1 < len(args):
+            tasks_file = args[i + 1]
+            i += 2
+            continue
+        if args[i] == "--state-root" and i + 1 < len(args):
+            state_root = args[i + 1]
+            i += 2
+            continue
+        if args[i] in ("-h", "--help"):
+            print(
+                "usage: tasks-currency-gate.py [--tasks-file PATH] [--state-root PATH]",
+                file=sys.stderr,
+            )
+            return 0
+        print(json.dumps({"verdict": "fail", "error": "unknown argument"}), file=sys.stderr)
+        return 2
+
+    if not tasks_file:
+        state_json = Path(state_root) / ".cursor" / "sw-deliver-state.json"
+        if not state_json.is_file():
+            print(json.dumps({"verdict": "fail", "error": "no --tasks-file and no deliver state"}), file=sys.stderr)
+            return 2
+        state = json.loads(state_json.read_text(encoding="utf-8"))
+        tasks_file = str(state.get("source_task_list") or "")
+
+    if not tasks_file or not Path(tasks_file).is_file():
+        print(json.dumps({"verdict": "fail", "error": "task file not found"}), file=sys.stderr)
+        return 2
+
+    cmd = [
+        sys.executable,
+        str(SCRIPT_DIR / "wave_state.py"),
+        state_root,
+        "ledger",
+        "check",
+        "--tasks-file",
+        tasks_file,
+    ]
+    return subprocess.run(cmd).returncode
 
 
 if __name__ == "__main__":

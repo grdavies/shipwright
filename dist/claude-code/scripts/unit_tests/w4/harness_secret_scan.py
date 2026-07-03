@@ -43,7 +43,7 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCAN="$ROOT/scripts/secret-scan.sh"
-PUSH="$ROOT/scripts/git-push.sh"
+PUSH="$ROOT/scripts/git-push.py"
 GUARD="$ROOT/scripts/redaction-guard.sh"
 FAIL=0
 
@@ -115,11 +115,12 @@ allowlist = load_allowlist(root)
 doc = "Resolve `review.local` from workflow.config.json"
 assert not scan_text(doc, allowlist=allowlist, path="docs/guide.md"), "review.local should not match INTERNAL_HOST"
 
-fixture_diff = \"\"\"diff --git a/scripts/test/run-secret-scan-fixtures.sh b/scripts/test/run-secret-scan-fixtures.sh
---- a/scripts/test/run-secret-scan-fixtures.sh
-+++ b/scripts/test/run-secret-scan-fixtures.sh
-+echo 'api_key=ghp_deadbeefdeadbeefdeadbeefdeadbeefdead' > leak.txt
-\"\"\"
+fixture_diff = (
+    "diff --git a/scripts/test/fixtures/secret-scan/leak.txt b/scripts/test/fixtures/secret-scan/leak.txt\n"
+    "--- a/scripts/test/fixtures/secret-scan/leak.txt\n"
+    "+++ b/scripts/test/fixtures/secret-scan/leak.txt\n"
+    "+echo 'api_key=ghp_deadbeefdeadbeefdeadbeefdeadbeefdead' > leak.txt\n"
+)
 assert not scan_diff(fixture_diff, allowlist=allowlist), "fixture path allowlist should apply per diff file"
 PY
 EC_PATH=$?
@@ -143,7 +144,7 @@ else
 fi
 
 # --- secret-scan-at-sw-pr-push: sw-pr documents git-push wrapper ---
-if grep -qE 'git-push\.sh' "$ROOT/core/commands/sw-pr.md"; then
+if grep -qE 'git-push\.py' "$ROOT/core/commands/sw-pr.md"; then
   ok "secret-scan-at-sw-pr-push: sw-pr uses git-push wrapper"
 else
   bad "secret-scan-at-sw-pr-push: sw-pr missing git-push.sh"
@@ -155,7 +156,7 @@ else
 fi
 
 # git-push.sh invokes scan before push (dry-run: scan only path)
-if grep -qE 'secret-scan\.sh' "$ROOT/scripts/git-push.sh"; then
+if grep -qE 'secret-scan\.py' "$ROOT/scripts/git-push.py"; then
   ok "secret-scan-at-sw-pr-push: git-push.sh invokes secret-scan"
 else
   bad "secret-scan-at-sw-pr-push: git-push.sh missing secret-scan"

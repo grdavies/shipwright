@@ -45,8 +45,8 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GATE_PY="$ROOT/scripts/pilot_dependency_gate.py"
 PREREQ="$ROOT/scripts/test/pilot-022-prerequisite-check.sh"
-PERSIST_FIX="$ROOT/scripts/test/run-plan-persist-fixtures.sh"
-PARITY_FIX="$ROOT/scripts/test/run-plan-proposed-parity-fixtures.sh"
+PERSIST_FIX="$ROOT/scripts/unit_tests/planning/harness_plan_persist.py"
+PARITY_FIX="$ROOT/scripts/unit_tests/planning/harness_plan_proposed_parity.py"
 INTRA_PY="$ROOT/scripts/intra_phase_dispatch.py"
 INTRA_SH="$ROOT/scripts/intra-phase-dispatch.sh"
 LOOP_PY="$ROOT/scripts/wave_deliver_loop.py"
@@ -62,14 +62,15 @@ ok()  { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
 # --- pilot-dependency-gate: verify.test ordering ---
-if grep -q 'run-plan-persist-fixtures.sh' "$WF" 2>/dev/null \
-  && grep -q 'run-pilot-fixtures.sh' "$WF" 2>/dev/null; then
+if python3 -c "import json; r=json.load(open('$ROOT/core/sw-reference/suite-registry.json')); assert any(s['id']=='pilot-fixtures' for s in r.get('suites',[]))" 2>/dev/null; then
   if python3 - <<PY
+import json
 from pathlib import Path
-text = Path("$WF").read_text()
-persist = text.index("run-plan-persist-fixtures.sh")
-pilot = text.index("run-pilot-fixtures.sh")
-assert persist < pilot, "run-plan-persist-fixtures must precede run-pilot-fixtures in verify.test"
+reg = json.loads(Path("$ROOT/core/sw-reference/suite-registry.json").read_text())
+by_id = {s["id"]: s for s in reg.get("suites", [])}
+assert by_id["plan-persist-fixtures"]["script"] == "scripts/test/run_pytest.py"
+assert by_id["pilot-fixtures"]["script"] == "scripts/test/run_pytest.py"
+assert by_id["plan-persist-fixtures"].get("verifyOrder", 9999) < by_id["pilot-fixtures"].get("verifyOrder", 9999)
 PY
   then
     ok "pilot-dependency-gate verify-ordering"
@@ -626,7 +627,7 @@ SURF_FIX=$(mktemp -d)
   cat >"$RUN_DIR/phase-step-plan.json" <<'JSON'
 {"version":1,"tier":"phase","phaseType":"ship","phaseId":"1","steps":["sw-tmp-init","sw-execute","sw-commit","sw-ready"],"planPolicy":"proposed","kernelVersion":"1.0.0","guidelineVersion":"1.0.0"}
 JSON
-  cat >"$SURF_FIX/.cursor/sw-deliver-runs/run.log" <<'JSON'
+  cat >"$SURF_FIX/.cursor/sw-deliver-runs/run.surf-test.log" <<'JSON'
 {"event":"capability-selection","resolvedCapabilities":["persona.sw-security-reviewer"],"inputsHash":"abc123","precedenceTrace":["phase_default"],"phaseType":"sw-doc-review","at":"2026-06-27T00:00:00Z"}
 JSON
   cat >"$SURF_FIX/.cursor/sw-deliver-state.surf-test.json" <<'JSON'
@@ -666,7 +667,7 @@ assert caps and caps[0].get("resolvedCapabilities"), snapshot
 report = {}
 attach_plan_surfacing_to_report(root, state, report, report_kind=REPORT_KIND_TERMINAL)
 assert report.get("planSurfacing"), report
-log = Path("$SURF_FIX/.cursor/sw-deliver-runs/run.log").read_text(encoding="utf-8")
+log = Path("$SURF_FIX/.cursor/sw-deliver-runs/run.surf-test.log").read_text(encoding="utf-8")
 assert any(json.loads(line).get("event") == "deliver-plan-surfacing" for line in log.splitlines() if line.strip()), log
 PY2
   then

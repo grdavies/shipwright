@@ -114,17 +114,26 @@ else
 fi
 
 # --- verify.test registration (R17) ---
-for runner in \
-  run-portability-setup-fixtures.sh \
-  run-portability-boundary-fixtures.sh \
-  run-base-resolution-fixtures.sh \
-  run-portability-closure-fixtures.sh; do
-  if grep -q "$runner" "$WF" 2>/dev/null; then
-    ok "verify.test registers $runner"
-  else
-    bad "verify.test missing $runner"
-  fi
-done
+if python3 - <<PY
+import json
+from pathlib import Path
+reg = json.loads(Path("$ROOT/core/sw-reference/suite-registry.json").read_text())
+by_id = {s["id"]: s for s in reg.get("suites", [])}
+for sid in (
+    "portability-setup-fixtures",
+    "portability-boundary-fixtures",
+    "base-resolution-fixtures",
+    "portability-closure-fixtures",
+):
+    s = by_id[sid]
+    assert s.get("script") == "scripts/test/run_pytest.py", sid
+    assert s.get("pytestPath"), sid
+PY
+then
+  ok "verify.test registers portability pytest suites"
+else
+  bad "verify.test missing portability pytest suites"
+fi
 
 if [[ "$FAIL" -ne 0 ]]; then
   echo "run-portability-closure-fixtures: FAIL"

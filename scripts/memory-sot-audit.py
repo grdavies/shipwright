@@ -29,12 +29,9 @@ def repo_root() -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = list(sys.argv[1:] if argv is None else argv)
-    root = repo_root()
     import memory_sot_audit
-    memory_sot_audit.main(args)
-    return 0
-    return 0
+    from _sw.cli import delegate_argv_main
+    return delegate_argv_main(memory_sot_audit.main, argv, prog="memory-sot-audit.py")
 
 
 if __name__ == "__main__":

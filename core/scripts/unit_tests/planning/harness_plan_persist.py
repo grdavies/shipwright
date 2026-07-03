@@ -168,7 +168,7 @@ state = {
   },
   "currentWave": 1,
   "nextAction": "dispatch-ship",
-  "phaseWorktrees": {"1": {"path": "/tmp/phase"}},
+  "phaseWorktrees": {"1": {"path": "/var/folders/vv/zfgmk2z11cn6cg8ppf_4310w0000gn/T/tmp.6tsVCF5XdT/.cursor/sw-deliver-runs/alpha"}},
   "waveBatchingPlan": {
     "version": 1,
     "tier": "wave",
@@ -193,7 +193,7 @@ else
   bad "resume-between-tiers-rerun-phase-only"
 fi
 
-if grep -q 'run-plan-persist-fixtures.sh' "$WF" 2>/dev/null; then
+if python3 -c "import json; r=json.load(open('$ROOT/core/sw-reference/suite-registry.json')); assert any(s['id']=='plan-persist-fixtures' for s in r.get('suites',[]))" 2>/dev/null; then
   ok "plan-persist-verify-registration"
 else
   bad "plan-persist-verify-registration"

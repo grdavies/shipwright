@@ -1,23 +1,54 @@
 #!/usr/bin/env python3
-"""Root-level project-type detector + verify proposal helper (PRD 018 R1/R20). """
+"""Root-level project-type detector + verify proposal helper (PRD 018 R1/R20)."""
 from __future__ import annotations
 
+import json
+import os
+import re
 import sys
+from pathlib import Path
 
 from _sw.cli import run_module_main
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
+
+
+def _resolve_presets(root: Path) -> Path:
+    presets_path = root / "core/sw-reference/verify-presets.json"
+    if presets_path.is_file():
+        return presets_path
+    for env_key in ("CURSOR_PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT"):
+        candidate = Path(os.environ.get(env_key, "")) / "core/sw-reference/verify-presets.json"
+        if candidate.is_file():
+            return candidate
+    return presets_path
+
 
 def main(argv: list[str] | None = None) -> int:
-    import json
-    import re
-    import sys
-    from pathlib import Path
+    args = list(argv if argv is not None else sys.argv[1:])
+    root = REPO_ROOT
+    propose = False
+    i = 0
+    while i < len(args):
+        token = args[i]
+        if token == "--root" and i + 1 < len(args):
+            root = Path(args[i + 1]).resolve()
+            i += 2
+            continue
+        if token == "--propose":
+            propose = True
+            i += 1
+            continue
+        if token in ("-h", "--help"):
+            print("usage: detect-project-type.py [--root DIR] [--propose]")
+            return 0
+        print(json.dumps({"verdict": "fail", "error": "unknown argument"}), file=sys.stderr)
+        return 2
 
-    root = Path(sys.argv[1])
-    presets_path = Path(sys.argv[2])
-    propose = sys.argv[3] == "1"
+    presets_path = _resolve_presets(root)
 
-    MARKERS = [
+    markers = [
         ("node", ["package.json"], "high"),
         ("python", ["pyproject.toml", "setup.py", "setup.cfg"], "high"),
         ("go", ["go.mod"], "high"),
@@ -29,19 +60,18 @@ def main(argv: list[str] | None = None) -> int:
     ]
 
     matches = []
-    for ptype, files, confidence in MARKERS:
+    for ptype, files, confidence in markers:
         for name in files:
             if (root / name).is_file():
                 matches.append({"type": ptype, "confidence": confidence, "marker": name})
                 break
 
     ambiguous = len({m["type"] for m in matches}) > 1
-
-    out = {"matches": matches, "ambiguous": ambiguous}
+    out: dict = {"matches": matches, "ambiguous": ambiguous}
 
     if not propose:
         print(json.dumps(out, indent=2))
-        raise SystemExit(0)
+        return 0
 
     presets_doc = {}
     if presets_path.is_file():
@@ -50,27 +80,18 @@ def main(argv: list[str] | None = None) -> int:
     preset_table = presets_doc.get("presets", {})
     allowlisted = presets_doc.get("nodeAllowlistedKeys", ["lint", "test", "build", "typecheck"])
     key_pattern = re.compile(presets_doc.get("nodeKeyPattern", r"^[a-zA-Z0-9_-]+$"))
-
-    UNSAFE_RE = re.compile(r"[;&|`$()]")
-    DESTRUCTIVE_RE = re.compile(
-        r"\b(rm\s+-rf|mkfs|dd\s+if=|:\(\)\{|fork\s+bomb)\b", re.I
-    )
-
+    unsafe_re = re.compile(r"[;&|`$()]")
+    destructive_re = re.compile(r"\b(rm\s+-rf|mkfs|dd\s+if=|:\(\)\{|fork\s+bomb)\b", re.I)
 
     def is_unsafe(cmd: str) -> bool:
         if not cmd or not cmd.strip():
             return True
-        if UNSAFE_RE.search(cmd):
-            return True
-        if DESTRUCTIVE_RE.search(cmd):
+        if unsafe_re.search(cmd) or destructive_re.search(cmd):
             return True
         stripped = cmd.strip()
         if stripped in (":", "true", "exit 0"):
             return True
-        if stripped.startswith("echo "):
-            return True
-        return False
-
+        return stripped.startswith("echo ")
 
     def node_proposals() -> tuple[dict, list, list]:
         proposals: dict = {}
@@ -83,7 +104,6 @@ def main(argv: list[str] | None = None) -> int:
                 scripts = json.loads(pkg.read_text(encoding="utf-8")).get("scripts") or {}
             except json.JSONDecodeError:
                 scripts = {}
-
         node_presets = preset_table.get("node", {})
         for key in allowlisted:
             cmd = None
@@ -106,7 +126,6 @@ def main(argv: list[str] | None = None) -> int:
             proposals[key] = entry
         return proposals, gaps, unsafe
 
-
     def preset_proposals(ptype: str) -> tuple[dict, list, list]:
         proposals: dict = {}
         gaps: list = []
@@ -124,13 +143,11 @@ def main(argv: list[str] | None = None) -> int:
             gaps.extend(["lint", "test", "build"])
         return proposals, gaps, unsafe
 
-
     types = [m["type"] for m in matches]
     primary = types[0] if len(types) == 1 else None
     proposals: dict = {}
     gaps: list = []
     unsafe: list = []
-
     if primary == "node":
         proposals, gaps, unsafe = node_proposals()
     elif primary:

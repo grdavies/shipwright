@@ -42,7 +42,7 @@ _SOURCE = r"""
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CHECK="$ROOT/scripts/doc-link-check.sh"
+CHECK="$ROOT/scripts/doc-link-check.py"
 DOC_LINK="$ROOT/scripts/doc_link.py"
 LAYOUT="$ROOT/.sw/layout.md"
 SW_PRD="$(find "$ROOT/core" -path '*/commands/sw-prd.md' | head -1)"
@@ -136,7 +136,7 @@ else
 fi
 
 # --- freeze-verifies-doc-linkage (R55) ---
-if grep -q 'doc-link-check.sh' "$SW_FREEZE" && grep -q '\-\-tier full' "$SW_FREEZE"; then
+if grep -q 'doc-link-check.py' "$SW_FREEZE" && grep -q '\-\-tier full' "$SW_FREEZE"; then
   ok "freeze-verifies-doc-linkage: sw-freeze documents doc-link-check"
 else
   bad "freeze-verifies-doc-linkage: sw-freeze missing doc-link-check"

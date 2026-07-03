@@ -70,7 +70,7 @@ PY
 
 # --- no literal disabled in gate emitter (root script) ---
 if grep -nE 'CR_STATE="disabled"|state=disabled|case.*disabled\)' \
-  "$ROOT/scripts/check-gate.py" "$ROOT/scripts/test/run-gate-fixtures.sh" 2>/dev/null; then
+  "$ROOT/scripts/check-gate.py" 2>/dev/null; then
   echo "FAIL gate files still contain disabled literal"
   FAIL=1
 else
@@ -105,24 +105,24 @@ bash "$ROOT/scripts/test/fixtures/onboarding-ux/build-chain-regen.sh" || FAIL=1
 bash "$ROOT/scripts/test/fixtures/onboarding-ux/user-docs-onboarding.sh" || FAIL=1
 
 # --- worktree guard (phase 2) ---
-if [[ -x "$ROOT/scripts/sw-assert-worktree.sh" ]]; then
+if [[ -f "$ROOT/scripts/sw-assert-worktree.py" ]]; then
   bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-negative.sh" || FAIL=1
   bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-positive-linked.sh" || FAIL=1
   bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-positive-hotfix.sh" || FAIL=1
-  if bash "$ROOT/scripts/sw-assert-worktree.sh" >/dev/null 2>&1; then
+  if bash "$ROOT/scripts/sw-assert-worktree.py" >/dev/null 2>&1; then
     echo "OK  worktree-guard: active worktree checkout passes"
   else
     echo "FAIL worktree-guard active worktree should pass"
     FAIL=1
   fi
 else
-  echo "FAIL sw-assert-worktree.sh missing or not executable"
+  echo "FAIL sw-assert-worktree.py missing or not executable"
   FAIL=1
 fi
 
 # --- verify.test registration ---
 WF="$ROOT/.cursor/workflow.config.json"
-if grep -q 'run-onboarding-ux-fixtures.sh' "$WF" 2>/dev/null; then
+if python3 -c "import json; r=json.load(open('$ROOT/core/sw-reference/suite-registry.json')); assert any(s['id']=='onboarding-ux-fixtures' for s in r.get('suites',[]))" 2>/dev/null; then
   echo "OK  verify.test registers onboarding-ux runner"
 else
   echo "FAIL verify.test missing onboarding-ux runner"

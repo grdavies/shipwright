@@ -74,14 +74,14 @@ fi
 
 if [[ -f .cursor/hooks/state/memory-prework-search.json ]] && \
    grep -q 'memory:offline' .cursor/hooks/state/memory-prework-search.json && \
-   [[ -f .cursor/sw-deliver-runs/run.log ]]; then
+   [[ -f .cursor/sw-deliver-runs/run.legacy.log ]]; then
   ok "memory-prework-breadcrumb-audited"
 else
   bad "memory-prework-breadcrumb-audited"
 fi
 
 # memory:none path (reachable in-repo provider)
-rm -f .cursor/hooks/state/memory-prework-search.json .cursor/sw-deliver-runs/run.log
+rm -f .cursor/hooks/state/memory-prework-search.json .cursor/sw-deliver-runs/run.legacy.log
 mkdir -p .cursor/sw-memory/memories
 echo in-repo > .cursor/sw-memory.provider
 if OUT=$(bash "$WAVE" memory prework record --surface sw-execute --hit-count 0 2>/dev/null) && \

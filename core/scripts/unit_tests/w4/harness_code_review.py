@@ -1001,7 +1001,7 @@ fi
 
 # verify.test registration
 WF="$ROOT/.cursor/workflow.config.json"
-if grep -q 'run-code-review-fixtures.sh' "$WF" 2>/dev/null; then
+if python3 -c "import json; r=json.load(open('$ROOT/core/sw-reference/suite-registry.json')); assert any(s['id']=='code-review-fixtures' for s in r.get('suites',[]))" 2>/dev/null; then
   echo "OK  verify.test includes code-review fixtures"
 else
   echo "FAIL U5 verify.test registration"

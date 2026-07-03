@@ -228,7 +228,7 @@ else
 fi
 
 # --- verify.test registration ---
-if grep -q 'run-persona-selection-fixtures.sh' "$WORKFLOW_CONFIG"; then
+if python3 -c "import json; r=json.load(open('$ROOT/core/sw-reference/suite-registry.json')); assert any(s['id']=='persona-selection-fixtures' for s in r.get('suites',[]))" 2>/dev/null; then
   echo "OK  verify.test registers persona-selection runner"
 else
   echo "FAIL verify.test missing persona-selection runner"

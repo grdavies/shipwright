@@ -87,7 +87,7 @@ for dist in "$ROOT/dist/cursor" "$ROOT/dist/claude-code"; do
 done
 [[ "$FAIL" -eq 0 ]] && ok "emitter-parity-planning-autonomy: dist propagation"
 
-bash "$ROOT/scripts/test/run-emitter-fixtures.sh" >/dev/null 2>&1 && ok "emitter-parity-planning-autonomy: emitter-freshness" || bad "emitter-parity-planning-autonomy: emitter-freshness"
+python3 "$ROOT/scripts/unit_tests/meta/harness_emitter.py" >/dev/null 2>&1 && ok "emitter-parity-planning-autonomy: emitter-freshness" || bad "emitter-parity-planning-autonomy: emitter-freshness"
 
 exit "$FAIL"
 

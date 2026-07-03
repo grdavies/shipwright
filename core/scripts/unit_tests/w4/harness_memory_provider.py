@@ -42,12 +42,10 @@ _SOURCE = r"""
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-# shellcheck source=../sw-resolve-plugin-root.sh
-source "$ROOT/scripts/sw-resolve-plugin-root.sh"
-CONTENT="$(sw_resolve_plugin_root "$ROOT/scripts")"
+CONTENT="$(python3 "$ROOT/scripts/sw-resolve-plugin-root.py" "$ROOT/scripts")"
 CURSOR_DIST="$ROOT/dist/cursor"
-SEARCH="$ROOT/scripts/in-repo-memory-search.sh"
-IN_REPO_RULES="$CONTENT/providers/in-repo-rules.sh"
+SEARCH="$ROOT/scripts/in-repo-memory-search.py"
+IN_REPO_RULES="$CONTENT/providers/in-repo-rules.py"
 HOOK="$CURSOR_DIST/hooks/before-submit-guardrails.py"
 FIX="$ROOT/scripts/test/fixtures/in-repo-memory"
 FIX_RULES="$ROOT/scripts/test/fixtures/in-repo-rules"
@@ -296,7 +294,7 @@ fi
 
 # --- U7: runner registered ---
 WF_CFG="$ROOT/.cursor/workflow.config.json"
-if grep -q 'run-memory-provider-fixtures.sh' "$WF_CFG" 2>/dev/null || grep -q 'run-memory-provider-fixtures' "$CONTENT/sw-reference/workflow.config.example.json" 2>/dev/null; then
+if python3 -c "import json; r=json.load(open('$ROOT/core/sw-reference/suite-registry.json')); assert any(s['id']=='memory-provider-fixtures' for s in r.get('suites',[]))" 2>/dev/null; then
   echo "OK  verify.test registration present or pending"
 else
   # Will register below — check after update

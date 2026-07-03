@@ -622,7 +622,7 @@ else
 fi
 
 # --- delegation-emitter-freshness (R19) ---
-if bash "$ROOT/scripts/test/run-emitter-fixtures.sh" >/dev/null 2>&1; then
+if python3 "$ROOT/scripts/unit_tests/meta/harness_emitter.py" >/dev/null 2>&1; then
   ok "delegation-emitter-freshness"
 else
   bad "delegation-emitter-freshness"

@@ -23,14 +23,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 FAIL=0
 
-if [[ -x "$ROOT/core/scripts/sw-assert-worktree.sh" ]]; then
+if [[ -f "$ROOT/core/scripts/sw-assert-worktree.py" ]]; then
   echo "OK  build-chain-regen: sw-assert-worktree synced to core/scripts"
 else
-  echo "FAIL build-chain-regen: core/scripts/sw-assert-worktree.sh missing"
+  echo "FAIL build-chain-regen: core/scripts/sw-assert-worktree.py missing"
   FAIL=1
 fi
 
-if [[ -x "$ROOT/scripts/check-frozen.sh" ]] && [[ ! -f "$ROOT/core/scripts/check-frozen.sh" ]]; then
+if [[ -f "$ROOT/scripts/check-frozen.py" ]] && [[ ! -f "$ROOT/core/scripts/check-frozen.py" ]]; then
   echo "OK  build-chain-regen: check-frozen harness at scripts/ root only (not emitted)"
 else
   echo "FAIL build-chain-regen: check-frozen should be root harness only, not in core/scripts"

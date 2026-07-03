@@ -45,10 +45,10 @@ for label_path in "sw-ready:$SW_READY" "sw-status:$SW_STATUS" "living-status:$LI
   fi
 done
 
-if grep -q 'check-gate.sh' "$SW_READY" && grep -q 'check-gate.sh' "$LIVING"; then
+if grep -q 'check-gate.py' "$SW_READY" && grep -q 'check-gate.py' "$LIVING"; then
   echo "OK  ready-review-echo: gate script referenced for review echo"
 else
-  echo "FAIL ready-review-echo: check-gate.sh must drive review echo"
+  echo "FAIL ready-review-echo: check-gate.py must drive review echo"
   FAIL=1
 fi
 

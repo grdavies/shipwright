@@ -42,14 +42,14 @@ _SOURCE = r"""
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RESOLVE="$ROOT/scripts/resolve-base-branch.sh"
+RESOLVE="$ROOT/scripts/resolve-base-branch.py"
 PY="$ROOT/scripts/resolve_base_branch.py"
 FAIL=0
 
 ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
-[[ -x "$RESOLVE" ]] || { bad "resolve-base-branch.sh missing"; exit 1; }
+[[ -f "$RESOLVE" ]] || { bad "resolve-base-branch.py missing"; exit 1; }
 
 FIX=$(mktemp -d)
 trap 'rm -rf "$FIX"' EXIT
@@ -137,7 +137,7 @@ else
 fi
 
 # --- frozen-secretscan-failclosed wiring ---
-if grep -q 'resolve-base-branch' "$ROOT/scripts/check-frozen.sh" && \
+if grep -q 'resolve-base-branch' "$ROOT/scripts/check-frozen.py" && \
    grep -q 'resolve_base_branch' "$ROOT/scripts/secret_scan.py"; then
   ok "frozen-secretscan-failclosed"
 else

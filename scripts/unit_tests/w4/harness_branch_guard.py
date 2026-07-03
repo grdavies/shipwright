@@ -68,12 +68,12 @@ else
   bad "branch-name-guard-creation: non-conforming (incl. pf/) rejected"
 fi
 
-# --- branch-name-guard-floor: worktree.sh has no pf/ default; calls the guard ---
-if ! grep -qE ':-pf/' "$ROOT/scripts/worktree.sh" \
-   && grep -qE 'branch-name-guard\.sh' "$ROOT/scripts/worktree.sh"; then
-  ok "branch-name-guard-floor: worktree.sh floor fixed + guarded"
+# --- branch-name-guard-floor: worktree.py has no pf/ default; calls the guard ---
+if ! grep -qE ':-pf/' "$ROOT/scripts/worktree.py" \
+   && grep -qE 'branch-name-guard.py' "$ROOT/scripts/worktree.py"; then
+  ok "branch-name-guard-floor: worktree.py floor fixed + guarded"
 else
-  bad "branch-name-guard-floor: worktree.sh floor fixed + guarded"
+  bad "branch-name-guard-floor: worktree.py floor fixed + guarded"
 fi
 
 # --- types single-sourced from release-please-config.json ---
@@ -100,7 +100,7 @@ fi
 
 # --- pf-matcher-migration: no pf/ matchers in reconcile/impl fixtures ---
 if ! grep -qE '\^pf/' "$ROOT/scripts/reconcile.py" \
-   && ! grep -qE 'pf/' "$ROOT/scripts/test/run-impl-fixtures.sh"; then
+   && ! grep -qE 'pf/' "$ROOT/scripts/unit_tests/w4/harness_impl.py"; then
   ok "pf-matcher-migration: reconcile + impl fixtures migrated off pf/"
 else
   bad "pf-matcher-migration: reconcile + impl fixtures migrated off pf/"

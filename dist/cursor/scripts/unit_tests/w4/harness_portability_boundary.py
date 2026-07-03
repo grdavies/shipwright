@@ -49,7 +49,7 @@ bad() { echo "FAIL $1"; FAIL=1; }
 EXAMPLE="$ROOT/core/sw-reference/workflow.config.example.json"
 SW_EXAMPLE="$ROOT/.sw/workflow.config.example.json"
 DIST_CURSOR="$ROOT/dist/cursor"
-DEV_SCRIPTS=(copy-to-core.sh snapshot-tree.sh model-routing-check.sh)
+DEV_SCRIPTS=(copy-to-core.py snapshot-tree.py model-routing-check.py)
 CLOSED_SWREF=(
   config.schema.json
   layout.md
@@ -61,8 +61,8 @@ CLOSED_SWREF=(
 
 # --- example-config-neutral ---
 if [[ -f "$EXAMPLE" ]] && \
-   grep -q 'verify-require-configuration.sh' "$EXAMPLE" && \
-   ! grep -q 'run-pr-test-plan-manifest.sh' "$EXAMPLE" && \
+   grep -q 'verify-require-configuration.py' "$EXAMPLE" && \
+   ! grep -q 'run-pr-test-plan-manifest.py' "$EXAMPLE" && \
    ! grep -q 'prTestPlanManifest' "$EXAMPLE" && \
    grep -q 'http://localhost:8001' "$EXAMPLE"; then
   ok "example-config-neutral"
@@ -100,7 +100,7 @@ for name in "${CLOSED_SWREF[@]}"; do
     EMIT_FAIL=1
   fi
 done
-if bash "$ROOT/scripts/sw-configure.sh" schema-version >/dev/null 2>&1; then
+if python3 "$ROOT/scripts/sw-configure.py" schema-version >/dev/null 2>&1; then
   :
 else
   bad "swref-closed-emit-and-tolerance: sw-configure schema-version failed"
@@ -110,16 +110,16 @@ fi
 
 # --- dev-repo-marker ---
 if [[ -f "$ROOT/.shipwright-dev" ]] && \
-   bash "$ROOT/scripts/is-shipwright-dev-repo.sh" "$ROOT"; then
+   python3 "$ROOT/scripts/is-shipwright-dev-repo.py" "$ROOT"; then
   ok "dev-repo-marker"
 else
   bad "dev-repo-marker"
 fi
 
 # --- install-offers-init-in-repo ---
-if grep -q '/sw-init' "$ROOT/scripts/install.sh" && \
-   grep -q 'is-inside-work-tree' "$ROOT/scripts/install.sh" && \
-   ! grep -q 'sw-configure.sh' "$ROOT/scripts/install.sh"; then
+if grep -q '/sw-init' "$ROOT/scripts/install.py" && \
+   grep -q 'workflow.config.json' "$ROOT/scripts/install.py" && \
+   ! grep -q 'sw-configure.py' "$ROOT/scripts/install.py"; then
   ok "install-offers-init-in-repo"
 else
   bad "install-offers-init-in-repo"

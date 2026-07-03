@@ -117,7 +117,7 @@ else
 fi
 
 # --- memory-sot-snapshot-always-committed (R4, R6) ---
-if [[ -x "$ROOT/scripts/memory-decision-snapshot.sh" ]] && \
+if [[ -f "$ROOT/scripts/memory-decision-snapshot.py" ]] && \
    grep -q 'snapshotRole' "$ROOT/scripts/memory_decision_snapshot.py" && \
    grep -q 'authoritative' "$ROOT/scripts/memory_decision_snapshot.py"; then
   ok "memory-sot-snapshot-always-committed"
@@ -187,7 +187,7 @@ else
 fi
 
 # --- verify.test registration ---
-if grep -q 'run-memory-sot-fixtures.sh' "$WF" 2>/dev/null; then
+if python3 -c "import json; r=json.load(open('$ROOT/core/sw-reference/suite-registry.json')); assert any(s['id']=='memory-sot-fixtures' for s in r.get('suites',[]))" 2>/dev/null; then
   ok "memory-sot-verify-registration"
 else
   bad "memory-sot-verify-registration"

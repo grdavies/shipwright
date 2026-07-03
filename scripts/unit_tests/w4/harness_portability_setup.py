@@ -94,8 +94,8 @@ else
 fi
 
 # --- setup-writes-real-verify ---
-if [[ -x "$ROOT/scripts/sw-configure.sh" ]] && \
-   OUT=$(bash "$ROOT/scripts/sw-configure.sh" write-draft --write-verify 2>/dev/null) && \
+if [[ -x "$ROOT/scripts/sw-configure.py" ]] && \
+   OUT=$(bash "$ROOT/scripts/sw-configure.py" write-draft --write-verify 2>/dev/null) && \
    python3 - "$OUT" <<'PY'
 import json, sys
 d = json.loads(sys.argv[1])
@@ -108,7 +108,7 @@ else
 fi
 
 # --- setup-accept-defaults-no-write ---
-if OUT=$(bash "$ROOT/scripts/sw-configure.sh" write-draft --accept-defaults 2>/dev/null) && \
+if OUT=$(bash "$ROOT/scripts/sw-configure.py" write-draft --accept-defaults 2>/dev/null) && \
    python3 - "/tmp/sw-init-draft.json" <<'PY'
 import json, sys
 from pathlib import Path
@@ -124,16 +124,17 @@ else
 fi
 
 # --- gate-flags-unconfigured-verify ---
-if grep -q 'verify-unconfigured' "$ROOT/scripts/verify-evidence.sh" && \
-   [[ -x "$ROOT/scripts/verify-unconfigured.sh" ]]; then
+if grep -q 'verify-unconfigured' "$ROOT/scripts/verify-unconfigured.py" && \
+   [[ -f "$ROOT/scripts/verify-evidence.py" ]] && \
+   [[ -f "$ROOT/scripts/verify-unconfigured.py" ]]; then
   ok "gate-flags-unconfigured-verify"
 else
   bad "gate-flags-unconfigured-verify"
 fi
 
 # --- portability-self-check ---
-if [[ -x "$ROOT/scripts/sw-configure.sh" ]] && \
-   bash "$ROOT/scripts/sw-configure.sh" portability-check >/dev/null 2>&1; then
+if [[ -x "$ROOT/scripts/sw-configure.py" ]] && \
+   bash "$ROOT/scripts/sw-configure.py" portability-check >/dev/null 2>&1; then
   ok "portability-self-check"
 else
   bad "portability-self-check"
@@ -150,8 +151,8 @@ else
 fi
 
 # --- init-single-configurator ---
-if [[ -x "$ROOT/scripts/sw-configure.sh" ]] && \
-   grep -q 'sw-configure.sh' "$ROOT/core/commands/sw-init.md"; then
+if [[ -x "$ROOT/scripts/sw-configure.py" ]] && \
+   grep -q 'sw-configure.py' "$ROOT/core/commands/sw-init.md"; then
   ok "init-single-configurator"
 else
   bad "init-single-configurator"

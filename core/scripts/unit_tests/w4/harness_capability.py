@@ -42,7 +42,7 @@ _SOURCE = r"""
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-VALIDATE="$ROOT/scripts/test/validate-descriptor.sh"
+VALIDATE="$ROOT/scripts/validate_descriptor.py"
 FIX="$ROOT/scripts/test/fixtures/capability"
 
 chmod +x "$VALIDATE"
@@ -53,7 +53,7 @@ FAIL=0
 run_expect() {
   local name="$1" expect_ec="$2" desc="$3"
   set +e
-  OUT=$("$VALIDATE" "$desc" 2>&1)
+  OUT=$(python3 "$VALIDATE" "$desc" 2>&1)
   EC=$?
   set -e
   if [ "$EC" -eq "$expect_ec" ]; then

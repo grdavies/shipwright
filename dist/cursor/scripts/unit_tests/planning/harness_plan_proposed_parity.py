@@ -152,7 +152,7 @@ sys.path.insert(0, "$FIX/scripts")
 from capability_trust import KERNEL_HOOK_SOURCE_MARKERS, is_kernel_hook_source
 
 assert any("memory-redact" in m for m in KERNEL_HOOK_SOURCE_MARKERS)
-assert is_kernel_hook_source("scripts/memory-redact.sh")
+assert is_kernel_hook_source("scripts/memory-redact.py")
 PY
 then
   ok "plan-proposed-memory-redact-fail-closed kernel-hook-marker"
@@ -162,7 +162,7 @@ fi
 
 # --- plan-proposed-secret-scan-before-push ---
 assert_proposed_chokepoint "plan-proposed-secret-scan-before-push" "git-push-secret-scan"
-if grep -qE 'secret-scan\.sh' "$PUSH"; then
+if grep -qE 'secret-scan\.py' "$PUSH"; then
   ok "plan-proposed-secret-scan-before-push git-push-wrapper"
 else
   bad "plan-proposed-secret-scan-before-push git-push-wrapper"
@@ -304,7 +304,7 @@ else
 fi
 
 # --- verify.test registration ---
-if grep -q 'run-plan-proposed-parity-fixtures.sh' "$WF" 2>/dev/null; then
+if python3 -c "import json; r=json.load(open('$ROOT/core/sw-reference/suite-registry.json')); assert any(s['id']=='plan-proposed-parity-fixtures' for s in r.get('suites',[]))" 2>/dev/null; then
   ok "plan-proposed-verify-registration"
 else
   bad "plan-proposed-verify-registration"

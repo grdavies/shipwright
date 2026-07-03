@@ -77,7 +77,7 @@ else
   bad "copy-to-core-parity-035: copy-to-core.sh failed"
 fi
 
-if bash "$ROOT/scripts/test/run-core-scripts-parity-fixtures.sh" >/dev/null 2>&1; then
+if python3 "$ROOT/scripts/unit_tests/meta/harness_core_scripts_parity.py" >/dev/null 2>&1; then
   ok "copy-to-core-parity-035: core-scripts parity"
 else
   bad "copy-to-core-parity-035: core-scripts parity"

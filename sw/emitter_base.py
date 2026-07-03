@@ -13,8 +13,11 @@ EMITTABLE_DIRS = ("commands", "skills", "rules", "agents", "providers", "scripts
 EXCLUDE_DIR_NAMES = {"__pycache__", "test", ".git", "node_modules"}
 DEV_ONLY_SCRIPT_RELPATHS = (
     "scripts/copy-to-core.sh",
+    "scripts/copy-to-core.py",
     "scripts/snapshot-tree.sh",
+    "scripts/snapshot-tree.py",
     "scripts/model-routing-check.sh",
+    "scripts/model-routing-check.py",
 )
 
 EXCLUDE_REL_PATHS = frozenset({"scripts/install.sh", *DEV_ONLY_SCRIPT_RELPATHS})
