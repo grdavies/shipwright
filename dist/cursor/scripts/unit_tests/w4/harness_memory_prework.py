@@ -84,6 +84,18 @@ fi
 rm -f .cursor/hooks/state/memory-prework-search.json .cursor/sw-deliver-runs/run.legacy.log
 mkdir -p .cursor/sw-memory/memories
 echo in-repo > .cursor/sw-memory.provider
+python3 - <<'PY'
+import json
+from pathlib import Path
+cfg_path = Path(".cursor/workflow.config.json")
+if cfg_path.is_file():
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+else:
+    cfg = {}
+cfg.setdefault("memory", {})["provider"] = "in-repo"
+cfg_path.parent.mkdir(parents=True, exist_ok=True)
+cfg_path.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+PY
 if OUT=$(bash "$WAVE" memory prework record --surface sw-execute --hit-count 0 2>/dev/null) && \
    echo "$OUT" | python3 -c "
 import json,sys
