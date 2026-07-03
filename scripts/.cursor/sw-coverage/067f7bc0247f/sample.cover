@@ -1,0 +1,3 @@
+       #!/usr/bin/env python3
+    1: import sys
+    1: raise SystemExit(0)
