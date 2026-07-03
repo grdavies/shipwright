@@ -43,7 +43,8 @@ _BARE_SCRIPT_RENAMES = {
     "shipwright-state.sh": "shipwright-state.py",
     "sw-assert-worktree.sh": "sw-assert-worktree.py",
     "docs_worktree.sh": "docs_worktree.py",
-    "doc-link-check.sh": "doc-link-check.py",
+    "doc-link-check.sh": "docs_link_check.py",
+    "docs-link-check.sh": "docs_link_check.py",
     "intra-phase-dispatch.sh": "intra_phase_dispatch.py",
     "wave.sh": "wave.py",
     "sw-resolve-plugin-root.sh": "sw-resolve-plugin-root.py",
@@ -164,7 +165,7 @@ def _apply_grep_py_aliases(src: str) -> str:
     pairs = [
         ("git-push.sh", "git-push.py"),
         ("secret-scan.sh", "secret-scan.py"),
-        ("doc-link-check.sh", "doc-link-check.py"),
+        ("doc-link-check.sh", "docs_link_check.py"),
         ("branch-name-guard.sh", "branch-name-guard.py"),
         ("worktree.sh", "worktree.py"),
         ("check-gate.sh", "check-gate.py"),
@@ -248,6 +249,8 @@ def patch_source(src: str, root: Path) -> str:
     src = _remap_legacy_fixture_scripts(src)
     src = re.sub(r'bash\s+"\$DOC_AFTER/\$\{fx\}\.sh"', r'python3 "$DOC_AFTER/${fx}.py"', src)
     src = re.sub(r"scripts/[A-Za-z0-9_./-]+\.sh", lambda m: m.group(0)[:-3] + ".py", src)
+    src = src.replace("scripts/doc-link-check.py", "scripts/docs_link_check.py")
+    src = src.replace("scripts/docs-link-check.py", "scripts/docs_link_check.py")
     src = re.sub(r'bash\s+"([^"]+\.py)"', r'python3 "\1"', src)
     src = re.sub(r'\bbash scripts/([A-Za-z0-9_./-]+\.py)\b', r'python3 scripts/\1', src)
     src = re.sub(r'bash\s+"\$([A-Z_][A-Z0-9_]*)"', r'python3 "$\1"', src)
