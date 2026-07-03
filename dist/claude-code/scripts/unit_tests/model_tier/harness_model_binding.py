@@ -220,7 +220,7 @@ else
 fi
 
 # --- model-binding-emitter-freshness ---
-if bash "$ROOT/scripts/test/run-emitter-fixtures.sh" >/dev/null 2>&1; then
+if python3 "$ROOT/scripts/unit_tests/meta/harness_emitter.py" >/dev/null 2>&1; then
   ok "model-binding-emitter-freshness"
 else
   bad "model-binding-emitter-freshness"

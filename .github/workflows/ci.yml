@@ -18,16 +18,16 @@ jobs:
           python-version: "3.12"
 
       - name: Emitter fixtures
-        run: python3 scripts/test/run_emitter_fixtures.py
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta/test_emitter.py -q
 
       - name: Core scripts parity fixtures
-        run: python3 scripts/test/run_core_scripts_parity_fixtures.py
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta/test_core_scripts_parity.py -q
 
       - name: Parity fixtures
-        run: python3 scripts/test/run_parity_fixtures.py
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta/test_parity.py -q
 
       - name: Claude golden fixtures
-        run: python3 scripts/test/run_claude_golden_fixtures.py
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta/test_claude_golden.py -q
 
       - name: Gate fixtures
-        run: python3 scripts/test/run_gate_fixtures.py
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta/test_gate.py -q

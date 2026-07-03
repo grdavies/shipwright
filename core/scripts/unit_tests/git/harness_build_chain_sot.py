@@ -83,7 +83,7 @@ fi
 
 
 # --- ci-yml-includes-core-scripts-parity (R5) ---
-if grep -q 'run-core-scripts-parity-fixtures.sh' "$ROOT/.github/workflows/ci.yml"; then
+if grep -q 'test_core_scripts_parity.py' "$ROOT/.github/workflows/ci.yml"; then
   ok "ci-yml-includes-core-scripts-parity"
 else
   bad "ci-yml-includes-core-scripts-parity"
@@ -96,7 +96,9 @@ m=json.load(open('$ROOT/core/sw-reference/pr-test-plan.manifest.json'))
 ids=[f['id'] for f in m.get('fixtures',[])]
 assert 'core-scripts-parity-fixtures' in ids
 match=[f for f in m['fixtures'] if f['id']=='core-scripts-parity-fixtures'][0]
-assert match['script']=='scripts/test/run-core-scripts-parity-fixtures.sh'
+assert match['script']=='scripts/test/run_pytest.py'
+args=match.get('args') or []
+assert any('test_core_scripts_parity' in str(a) or 'unit_tests/meta' in str(a) for a in args)
 "; then
   ok "verify-test-registers-core-scripts-parity"
 else

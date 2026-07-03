@@ -368,7 +368,7 @@ fi
 )
 
 # --- check-gate-verbset ---
-if python3 "$ROOT/scripts/test/run_gate_fixtures.py" >/tmp/sw-host-gate-fixtures.log 2>&1; then
+if python3 "$ROOT/scripts/unit_tests/meta/harness_gate.py" >/tmp/sw-host-gate-fixtures.log 2>&1; then
   ok "check-gate-verbset"
 else
   bad "check-gate-verbset"

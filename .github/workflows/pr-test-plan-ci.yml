@@ -42,183 +42,6 @@ jobs:
       - name: Run git-push-secret-scan-chokepoint
         run: python3 scripts/test/git-push-secret-scan-chokepoint.test
 
-  feat-test-plan-cleanup-fixtures:
-    name: feat-test-plan-cleanup-fixtures
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run cleanup-fixtures
-        run: python3 scripts/test/run_cleanup_fixtures.py
-
-  feat-test-plan-core-scripts-parity-fixtures:
-    name: feat-test-plan-core-scripts-parity-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run core-scripts-parity-fixtures
-        run: python3 scripts/test/run_core_scripts_parity_fixtures.py
-
-  feat-test-plan-doc-currency-033-fixtures:
-    name: feat-test-plan-doc-currency-033-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run doc-currency-033-fixtures
-        run: python3 scripts/test/run_doc_currency_033_fixtures.py
-
-  feat-test-plan-doc-currency-049-fixtures:
-    name: feat-test-plan-doc-currency-049-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run doc-currency-049-fixtures
-        run: python3 scripts/test/run_doc_currency_049_fixtures.py
-
-  feat-test-plan-inflight-doc-currency-fixtures:
-    name: feat-test-plan-inflight-doc-currency-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run inflight-doc-currency-fixtures
-        run: python3 scripts/test/run_inflight_doc_currency_fixtures.py
-
-  feat-test-plan-inflight-guards-parity-fixtures:
-    name: feat-test-plan-inflight-guards-parity-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run inflight-guards-parity-fixtures
-        run: python3 scripts/test/run_inflight_guards_parity_fixtures.py
-
-  feat-test-plan-parity-fixtures:
-    name: feat-test-plan-parity-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run parity-fixtures
-        run: python3 scripts/test/run_parity_fixtures.py
-
-  feat-test-plan-planning-035-doc-impact-fixtures:
-    name: feat-test-plan-planning-035-doc-impact-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run planning-035-doc-impact-fixtures
-        run: python3 scripts/test/run_planning_035_doc_impact_fixtures.py
-
-  feat-test-plan-planning-035-emitter-parity-fixtures:
-    name: feat-test-plan-planning-035-emitter-parity-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run planning-035-emitter-parity-fixtures
-        run: python3 scripts/test/run_planning_035_emitter_parity_fixtures.py
-
-  feat-test-plan-planning-command-surface-fixtures:
-    name: feat-test-plan-planning-command-surface-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run planning-command-surface-fixtures
-        run: python3 scripts/test/run_planning_command_surface_fixtures.py
-
-  feat-test-plan-planning-currency-fixtures:
-    name: feat-test-plan-planning-currency-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run planning-currency-fixtures
-        run: python3 scripts/test/run_planning_currency_fixtures.py
-
-  feat-test-plan-planning-emitter-parity-fixtures:
-    name: feat-test-plan-planning-emitter-parity-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run planning-emitter-parity-fixtures
-        run: python3 scripts/test/run_planning_emitter_parity_fixtures.py
-
-  feat-test-plan-planning-init-fixtures:
-    name: feat-test-plan-planning-init-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run planning-init-fixtures
-        run: python3 scripts/test/run_planning_init_fixtures.py
-
-  feat-test-plan-planning-store-fixtures:
-    name: feat-test-plan-planning-store-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run planning-store-fixtures
-        run: python3 scripts/test/run_planning_store_fixtures.py
-
-  feat-test-plan-planning-unit-fixtures:
-    name: feat-test-plan-planning-unit-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run planning-unit-fixtures
-        run: python3 scripts/test/run_planning_unit_fixtures.py
-
-  feat-test-plan-planning-visibility-acceptance-fixtures:
-    name: feat-test-plan-planning-visibility-acceptance-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run planning-visibility-acceptance-fixtures
-        run: python3 scripts/test/run_planning_visibility_acceptance_fixtures.py
-
   feat-test-plan-authoring-guard-fixtures:
     name: feat-test-plan-authoring-guard-fixtures
     runs-on: ubuntu-latest
@@ -230,6 +53,18 @@ jobs:
       - name: Run authoring-guard-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/capability -q
 
+  feat-test-plan-cleanup-fixtures:
+    name: feat-test-plan-cleanup-fixtures
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run cleanup-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/w4 -q
+
   feat-test-plan-completed-unit-fixtures:
     name: feat-test-plan-completed-unit-fixtures
     runs-on: ubuntu-latest
@@ -240,6 +75,17 @@ jobs:
           python-version: "3.12"
       - name: Run completed-unit-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/git -q
+
+  feat-test-plan-core-scripts-parity-fixtures:
+    name: feat-test-plan-core-scripts-parity-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run core-scripts-parity-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta -q
 
   feat-test-plan-deliver-concurrency-fixtures:
     name: feat-test-plan-deliver-concurrency-fixtures
@@ -295,6 +141,28 @@ jobs:
           python-version: "3.12"
       - name: Run dispatch-binding-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/dispatch -q
+
+  feat-test-plan-doc-currency-033-fixtures:
+    name: feat-test-plan-doc-currency-033-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run doc-currency-033-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/w4 -q
+
+  feat-test-plan-doc-currency-049-fixtures:
+    name: feat-test-plan-doc-currency-049-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run doc-currency-049-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/w4 -q
 
   feat-test-plan-doc-fixtures:
     name: feat-test-plan-doc-fixtures
@@ -395,6 +263,28 @@ jobs:
       - name: Run host-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/git -q
 
+  feat-test-plan-inflight-doc-currency-fixtures:
+    name: feat-test-plan-inflight-doc-currency-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run inflight-doc-currency-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/w4 -q
+
+  feat-test-plan-inflight-guards-parity-fixtures:
+    name: feat-test-plan-inflight-guards-parity-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run inflight-guards-parity-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta -q
+
   feat-test-plan-inflight-migration-bridge-fixtures:
     name: feat-test-plan-inflight-migration-bridge-fixtures
     runs-on: ubuntu-latest
@@ -439,6 +329,17 @@ jobs:
       - name: Run parallel-merge-safety-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/deliver -q
 
+  feat-test-plan-parity-fixtures:
+    name: feat-test-plan-parity-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run parity-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta -q
+
   feat-test-plan-phase-sizing-corpus-fixtures:
     name: feat-test-plan-phase-sizing-corpus-fixtures
     runs-on: ubuntu-latest
@@ -472,6 +373,28 @@ jobs:
       - name: Run planning-035-deliver-conductor-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/conductor -q
 
+  feat-test-plan-planning-035-doc-impact-fixtures:
+    name: feat-test-plan-planning-035-doc-impact-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-035-doc-impact-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/planning -q
+
+  feat-test-plan-planning-035-emitter-parity-fixtures:
+    name: feat-test-plan-planning-035-emitter-parity-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-035-emitter-parity-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/planning -q
+
   feat-test-plan-planning-035-gap-lifecycle-fixtures:
     name: feat-test-plan-planning-035-gap-lifecycle-fixtures
     runs-on: ubuntu-latest
@@ -493,6 +416,28 @@ jobs:
           python-version: "3.12"
       - name: Run planning-autonomy-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/git -q
+
+  feat-test-plan-planning-command-surface-fixtures:
+    name: feat-test-plan-planning-command-surface-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-command-surface-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/planning -q
+
+  feat-test-plan-planning-currency-fixtures:
+    name: feat-test-plan-planning-currency-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-currency-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/planning -q
 
   feat-test-plan-planning-cutover-fixtures:
     name: feat-test-plan-planning-cutover-fixtures
@@ -527,6 +472,17 @@ jobs:
       - name: Run planning-edge-effects-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/git -q
 
+  feat-test-plan-planning-emitter-parity-fixtures:
+    name: feat-test-plan-planning-emitter-parity-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-emitter-parity-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/planning -q
+
   feat-test-plan-planning-graph-fixtures:
     name: feat-test-plan-planning-graph-fixtures
     runs-on: ubuntu-latest
@@ -548,6 +504,17 @@ jobs:
           python-version: "3.12"
       - name: Run planning-index-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/git -q
+
+  feat-test-plan-planning-init-fixtures:
+    name: feat-test-plan-planning-init-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-init-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/planning -q
 
   feat-test-plan-planning-materialize-fixtures:
     name: feat-test-plan-planning-materialize-fixtures
@@ -615,6 +582,39 @@ jobs:
       - name: Run planning-scheduler-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/git -q
 
+  feat-test-plan-planning-store-fixtures:
+    name: feat-test-plan-planning-store-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-store-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/planning -q
+
+  feat-test-plan-planning-unit-fixtures:
+    name: feat-test-plan-planning-unit-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-unit-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/planning -q
+
+  feat-test-plan-planning-visibility-acceptance-fixtures:
+    name: feat-test-plan-planning-visibility-acceptance-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-visibility-acceptance-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/planning -q
+
   feat-test-plan-prd-050-ship-verification-fixtures:
     name: feat-test-plan-prd-050-ship-verification-fixtures
     runs-on: ubuntu-latest
@@ -636,6 +636,17 @@ jobs:
           python-version: "3.12"
       - name: Run prd-051-ship-verification-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/ship -q
+
+  feat-test-plan-regression-remediation-fixtures:
+    name: feat-test-plan-regression-remediation-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run regression-remediation-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/w4 -q
 
   feat-test-plan-retrospective-fixtures:
     name: feat-test-plan-retrospective-fixtures
@@ -737,17 +748,6 @@ jobs:
       - name: Run visibility-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/git -q
 
-  feat-test-plan-regression-remediation-fixtures:
-    name: feat-test-plan-regression-remediation-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run regression-remediation-fixtures
-        run: python3 scripts/test/run_regression_remediation_fixtures.py
-
   feat-test-plan-worktree-config-fixtures:
     name: feat-test-plan-worktree-config-fixtures
     runs-on: ubuntu-latest
@@ -757,5 +757,5 @@ jobs:
         with:
           python-version: "3.12"
       - name: Run worktree-config-fixtures
-        run: python3 scripts/test/run_worktree_config_fixtures.py
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/w4 -q
 

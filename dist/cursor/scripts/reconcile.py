@@ -132,6 +132,30 @@ def main(argv: list[str] | None = None) -> int:
             pg.main([str(root), "relief-check", *args])
         return 0
 
+
+    if cmd == "append-superseded":
+        path = replacement = ""
+        i = 0
+        while i < len(args):
+            if args[i] == "--path" and i + 1 < len(args):
+                path = args[i + 1]
+                i += 2
+            elif args[i] == "--replacement" and i + 1 < len(args):
+                replacement = args[i + 1]
+                i += 2
+            else:
+                i += 1
+        if not path or not replacement:
+            print("usage: reconcile append-superseded --path <old> --replacement <new>", file=sys.stderr)
+            return 1
+        return emit(rl.append_superseded(root, path=path, replacement=replacement))
+
+    if cmd == "supersede-reconcile":
+        result = rl.supersede_reconcile(root)
+        if "--json" in args:
+            return emit(result)
+        return 0 if result.get("verdict") == "pass" else 1
+
     print(f"unknown command: {cmd}", file=sys.stderr)
     return 1
 

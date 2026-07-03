@@ -36,7 +36,24 @@ def main(argv=None):
             print(json.dumps({"verdict":"warn","action":"freeze-commit","exitCode":proc.returncode,"detail":proc.stdout.strip()})); return 0
         sys.stdout.write(proc.stdout); return 0
     base = args[0] if args else None
-    cmd = [sys.executable, str(SCRIPT_DIR/"check_frozen_scan.py")]
+    if not base:
+        resolver = SCRIPT_DIR / "resolve-base-branch.py"
+        if resolver.is_file():
+            proc = subprocess.run(
+                [sys.executable, str(resolver), "diff-base"],
+                capture_output=True,
+                text=True,
+                cwd=str(root),
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                try:
+                    data = json.loads(proc.stdout)
+                    rng = str(data.get("range") or "")
+                    if ".." in rng:
+                        base = rng.split("..", 1)[0]
+                except json.JSONDecodeError:
+                    pass
+    cmd = [sys.executable, str(SCRIPT_DIR / "check_frozen_scan.py")]
     if base: cmd.append(base)
     return subprocess.run(cmd).returncode
 

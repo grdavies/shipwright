@@ -69,8 +69,8 @@ else
 fi
 
 # --- 7.1 verify-test-includes-parity (R26) ---
-if grep -q 'run_parity_fixtures' "$WF" 2>/dev/null || \
-   grep -q 'run_parity_fixtures' "$MANIFEST" 2>/dev/null; then
+if python3 -c "import json; r=json.load(open('$ROOT/core/sw-reference/suite-registry.json')); assert any(s.get('id')=='parity-fixtures' and s.get('script')=='scripts/test/run_pytest.py' for s in r.get('suites',[]))" 2>/dev/null || \
+   grep -q 'parity-fixtures' "$MANIFEST" 2>/dev/null; then
   ok "verify-test-includes-parity"
 else
   bad "verify-test-includes-parity"
@@ -327,3 +327,5 @@ fi
 exit "$FAIL"
 
 """
+if __name__ == "__main__":
+    raise SystemExit(main())
