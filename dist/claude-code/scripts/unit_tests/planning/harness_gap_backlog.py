@@ -15,7 +15,7 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
 
-from _fixture_lib import repo_root
+from _sw.vendor_paths import repo_root
 
 
 def main() -> int:

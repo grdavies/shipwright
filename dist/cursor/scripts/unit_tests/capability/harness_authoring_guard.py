@@ -15,9 +15,9 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
 
-from _fixture_lib import repo_root
-from _harness_patch import harness_subprocess_env as _harness_env
-from _harness_patch import patch_source as _patch_source
+from _sw.vendor_paths import repo_root
+from unit_tests._harness_runtime import harness_subprocess_env as _harness_env
+from unit_tests._harness_runtime import patch_source as _patch_source
 
 
 def main() -> int:

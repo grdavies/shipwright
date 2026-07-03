@@ -198,22 +198,22 @@ def append_log(root: Path, entry: dict[str, Any]) -> None:
     os.chmod(log_path, 0o600)
 
 
-def verify_commands(root: Path) -> list[str]:
-    cfg = load_workflow_config(root)
-    verify = cfg.get("verify") or {}
-    if verify.get("test"):
-        return [str(verify["test"])]
-    cmds: list[str] = []
-    for key in ("lint", "typecheck", "test"):
-        if verify.get(key):
-            cmds.append(str(verify[key]))
-    return cmds
+def verify_command(root: Path, scope: str = "phase") -> str | None:
+    cfg = load_workflow_config(root).get("verify") or {}
+    if scope == "full":
+        return cfg.get("fullTest") or cfg.get("test")
+    return cfg.get("test")
+
+
+def verify_commands(root: Path, scope: str = "phase") -> list[str]:
+    cmd = verify_command(root, scope)
+    return [str(cmd)] if cmd else []
 
 
 def run_verify_suite(
-    root: Path, cwd: Path, flaky_retries: int = FLAKY_DEFAULT_RETRIES
+    root: Path, cwd: Path, flaky_retries: int = FLAKY_DEFAULT_RETRIES, *, scope: str = "phase"
 ) -> dict[str, Any]:
-    commands = verify_commands(root)
+    commands = verify_commands(root, scope)
     if not commands:
         return {
             "verdict": "pass",
@@ -228,6 +228,8 @@ def run_verify_suite(
         all_ok = True
         for cmd in commands:
             env = {**os.environ, "SW_DELIVER_VERIFY": "1"}
+            if scope == "phase":
+                env.setdefault("SW_TEST_SCOPE", "phase")
             proc = subprocess.run(
                 ["bash", "-c", cmd],
                 shell=False,
@@ -310,6 +312,7 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
         root,
         resolve_orchestrator_worktree(root, args),
         flaky_retries=int(parse_kv(args, "--flaky-retries", str(FLAKY_DEFAULT_RETRIES)) or "1"),
+        scope="full",
     )
     if outcome["verdict"] == "pass":
         emit(

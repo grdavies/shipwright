@@ -1,4 +1,4 @@
-"""Bash harness source patching for embedded fixture ports (R27)."""
+"""Embedded bash harness runtime for pytest ports (PRD 054 phase 7)."""
 from __future__ import annotations
 
 import os
@@ -326,3 +326,95 @@ def patch_source(src: str, root: Path) -> str:
         'CONTENT="$(python3 "$ROOT/scripts/sw-resolve-plugin-root.py" "$ROOT/scripts")"',
     )
     return src
+
+def content_path(root: Path, rel: str) -> Path:
+    for base in (root, root / "core"):
+        candidate = base / rel
+        if candidate.is_file():
+            return candidate
+    return root / rel
+
+
+class FixtureContext:
+    """Fixture runner context for remaining embedded-python harness ports."""
+
+    def __init__(self, from_file: str | Path) -> None:
+        import sys
+        from _sw.vendor_paths import repo_root as sw_repo_root
+
+        self.root = sw_repo_root(from_file)
+        self.failures = 0
+        self._cleanups: list[Path] = []
+        self.env = os.environ.copy()
+        self.env.setdefault("PYTHONPATH", str(self.root / "scripts"))
+        scripts = str(self.root / "scripts")
+        if scripts not in self.env.get("PYTHONPATH", "").split(os.pathsep):
+            self.env["PYTHONPATH"] = scripts + os.pathsep + self.env.get("PYTHONPATH", "")
+
+    def ok(self, name: str) -> None:
+        print(f"OK  {name}")
+
+    def bad(self, name: str) -> None:
+        print(f"FAIL {name}")
+        self.failures += 1
+
+    def mktemp(self, prefix: str = "sw-fix-") -> Path:
+        import tempfile
+
+        path = Path(tempfile.mkdtemp(prefix=prefix))
+        self._cleanups.append(path)
+        return path
+
+    def cleanup(self) -> None:
+        import shutil
+
+        for path in self._cleanups:
+            shutil.rmtree(path, ignore_errors=True)
+        self._cleanups.clear()
+
+    def script_path(self, rel: str) -> Path:
+        rel = rel.replace(".sh", ".py")
+        return self.root / rel
+
+    def run_py(
+        self,
+        rel: str,
+        *args: str,
+        cwd: Path | None = None,
+        env: dict[str, str] | None = None,
+        input_text: str | None = None,
+        check: bool = False,
+    ):
+        import sys
+        from _sw import proc
+
+        path = self.script_path(rel)
+        cmd = [sys.executable, str(path), *args]
+        merged = self.env.copy()
+        if env:
+            merged.update(env)
+        return proc.run(cmd, cwd=str(cwd or self.root), env=merged, input_text=input_text, check=check)
+
+    def run_git(self, *args: str, cwd: Path) -> None:
+        from _sw import proc
+
+        proc.run(["git", *args], cwd=str(cwd), env=self.env, check=False)
+
+    def jq(self, text: str, expr: str) -> str:
+        import sys
+        from _sw import proc
+
+        completed = proc.run(
+            [sys.executable, "-c", f"import json,sys; d=json.load(sys.stdin); print({expr})"],
+            input_text=text,
+        )
+        return completed.stdout.strip()
+
+    def load_json(self, text: str) -> object:
+        import json
+
+        return json.loads(text)
+
+    def exit_code(self) -> int:
+        return 1 if self.failures else 0
+

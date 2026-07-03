@@ -138,10 +138,10 @@ def _patch_harness_source(content: str) -> str:
         'PY = SCRIPT_DIR.parent / "loop_autonomy.py"',
         'PY = _SCRIPTS_ROOT / "loop_autonomy.py"',
     )
-    if "from _fixture_lib import repo_root" not in content:
+    if "from _sw.vendor_paths import repo_root" not in content:
         content = content.replace(
             "from pathlib import Path\n",
-            "from pathlib import Path\n\nfrom _fixture_lib import repo_root\n",
+            "from pathlib import Path\n\nfrom _sw.vendor_paths import repo_root\n",
             1,
         )
     for pattern in (

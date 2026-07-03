@@ -16,13 +16,15 @@ import uuid
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from _sw.cli import build_parser, run_module_main
-from _fixture_lib import invoke_suite_main, repo_root
+from _runner_lib import invoke_suite_main, prepare_ephemeral_fixtures
+from _sw.vendor_paths import repo_root
 from run_pytest import run_pytest
+
+REPO_ROOT = repo_root()
 
 
 def coverage_enabled(*, flag: bool = False) -> bool:
@@ -94,8 +96,6 @@ def _suite_env(root: Path, base_env: dict[str, str] | None = None) -> dict[str, 
         p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
     )
     if _truthy_env("SW_DELIVER_VERIFY"):
-        from _fixture_lib import prepare_ephemeral_fixtures
-
         ephemeral = prepare_ephemeral_fixtures(root)
         env["SW_FIXTURES_EPHEMERAL_ROOT"] = str(ephemeral / "fixtures")
         env["_SW_FIXTURES_EPHEMERAL_DIR"] = str(ephemeral)
@@ -173,6 +173,9 @@ def run_suite_module(
         env = _suite_env(root)
         return run_traced_subprocess(path, root=root, coverdir=active_coverdir, env=env)
 
+    if path.suffix == ".test":
+        return run_test_file(path, root=root, coverage=coverage, coverdir=coverdir)
+
     if path.suffix == ".py":
         spec = importlib.util.spec_from_file_location(path.stem, path)
         if spec is None or spec.loader is None:
@@ -242,7 +245,7 @@ def run_pytest_scope(
     """Dispatch vendored pytest by tier (PRD 054 R4/R17)."""
     import test_scope as ts
 
-    resolved_root = repo_root(root)
+    resolved_root = root if (root / "scripts" / "unit_tests").is_dir() else repo_root()
     effective_scope = (scope or _resolve_scope()).lower()
     if pytest_args:
         return run_pytest(pytest_args, root=resolved_root)
@@ -257,10 +260,10 @@ def run_pytest_scope(
 
 
 def run_verify(root: Path, *, coverage: bool = False, coverdir: Path | None = None) -> int:
-    """Run the shipwright plugin verify.test bundle."""
+    """Run pytest full collection plus pr-test-plan manifest (PRD 054 R17/R18)."""
     use_coverage = coverage_enabled(flag=coverage)
     active_coverdir = coverdir or (resolve_coverdir(root) if use_coverage else None)
-    ec = run_suite_module(SCRIPT_DIR / "run_verify_bundle.py", root=root, coverage=use_coverage, coverdir=active_coverdir)
+    ec = run_pytest_scope(root, scope="full")
     if ec != 0:
         if use_coverage and active_coverdir is not None:
             emit_coverage_report(active_coverdir, root=root)
@@ -326,10 +329,6 @@ def main(argv: list[str] | None = None) -> int:
         scope = args.scope or _resolve_scope()
         if scope in {"fast", "phase"}:
             return run_pytest_scope(root, scope=scope)
-        if scope == "full":
-            ec = run_pytest_scope(root, scope="full")
-            if ec != 0:
-                return ec
         return run_verify(root, coverage=coverage)
     if args.cmd == "run-pytest":
         forwarded = args.pytest_args
