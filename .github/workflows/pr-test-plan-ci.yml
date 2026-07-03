@@ -65,50 +65,6 @@ jobs:
       - name: Run core-scripts-parity-fixtures
         run: python3 scripts/test/run_core_scripts_parity_fixtures.py
 
-  feat-test-plan-deliver-concurrency-fixtures:
-    name: feat-test-plan-deliver-concurrency-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run deliver-concurrency-fixtures
-        run: python3 scripts/test/run_deliver_concurrency_fixtures.py
-
-  feat-test-plan-deliver-cwd-guard-fixtures:
-    name: feat-test-plan-deliver-cwd-guard-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run deliver-cwd-guard-fixtures
-        run: python3 scripts/test/run_deliver_cwd_guard_fixtures.py
-
-  feat-test-plan-deliver-invariant-fixtures:
-    name: feat-test-plan-deliver-invariant-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run deliver-invariant-fixtures
-        run: python3 scripts/test/run_deliver_invariant_fixtures.py
-
-  feat-test-plan-deliver-worktree-contract-fixtures:
-    name: feat-test-plan-deliver-worktree-contract-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run deliver-worktree-contract-fixtures
-        run: python3 scripts/test/run_deliver_worktree_contract_fixtures.py
-
   feat-test-plan-doc-currency-033-fixtures:
     name: feat-test-plan-doc-currency-033-fixtures
     runs-on: ubuntu-latest
@@ -130,28 +86,6 @@ jobs:
           python-version: "3.12"
       - name: Run doc-currency-049-fixtures
         run: python3 scripts/test/run_doc_currency_049_fixtures.py
-
-  feat-test-plan-execute-orchestration-fixtures:
-    name: feat-test-plan-execute-orchestration-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run execute-orchestration-fixtures
-        run: python3 scripts/test/run_execute_orchestration_fixtures.py
-
-  feat-test-plan-hook-worktree-alignment-fixtures:
-    name: feat-test-plan-hook-worktree-alignment-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run hook-worktree-alignment-fixtures
-        run: python3 scripts/test/run_hook_worktree_alignment_fixtures.py
 
   feat-test-plan-inflight-doc-currency-fixtures:
     name: feat-test-plan-inflight-doc-currency-fixtures
@@ -175,17 +109,6 @@ jobs:
       - name: Run inflight-guards-parity-fixtures
         run: python3 scripts/test/run_inflight_guards_parity_fixtures.py
 
-  feat-test-plan-parallel-merge-safety-fixtures:
-    name: feat-test-plan-parallel-merge-safety-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run parallel-merge-safety-fixtures
-        run: python3 scripts/test/run_parallel_merge_safety_fixtures.py
-
   feat-test-plan-parity-fixtures:
     name: feat-test-plan-parity-fixtures
     runs-on: ubuntu-latest
@@ -196,17 +119,6 @@ jobs:
           python-version: "3.12"
       - name: Run parity-fixtures
         run: python3 scripts/test/run_parity_fixtures.py
-
-  feat-test-plan-planning-035-deliver-conductor-fixtures:
-    name: feat-test-plan-planning-035-deliver-conductor-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run planning-035-deliver-conductor-fixtures
-        run: python3 scripts/test/run_planning_035_deliver_conductor_fixtures.py
 
   feat-test-plan-planning-035-doc-impact-fixtures:
     name: feat-test-plan-planning-035-doc-impact-fixtures
@@ -329,6 +241,50 @@ jobs:
       - name: Run completed-unit-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/git -q
 
+  feat-test-plan-deliver-concurrency-fixtures:
+    name: feat-test-plan-deliver-concurrency-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run deliver-concurrency-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/deliver -q
+
+  feat-test-plan-deliver-cwd-guard-fixtures:
+    name: feat-test-plan-deliver-cwd-guard-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run deliver-cwd-guard-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/deliver -q
+
+  feat-test-plan-deliver-invariant-fixtures:
+    name: feat-test-plan-deliver-invariant-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run deliver-invariant-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/deliver -q
+
+  feat-test-plan-deliver-worktree-contract-fixtures:
+    name: feat-test-plan-deliver-worktree-contract-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run deliver-worktree-contract-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/deliver -q
+
   feat-test-plan-dispatch-binding-fixtures:
     name: feat-test-plan-dispatch-binding-fixtures
     runs-on: ubuntu-latest
@@ -373,6 +329,17 @@ jobs:
       - name: Run dual-ship-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/git -q
 
+  feat-test-plan-execute-orchestration-fixtures:
+    name: feat-test-plan-execute-orchestration-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run execute-orchestration-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/execute -q
+
   feat-test-plan-gap-backlog-fixtures:
     name: feat-test-plan-gap-backlog-fixtures
     runs-on: ubuntu-latest
@@ -405,6 +372,17 @@ jobs:
           python-version: "3.12"
       - name: Run guardrail-rules-resolution-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/guardrails -q
+
+  feat-test-plan-hook-worktree-alignment-fixtures:
+    name: feat-test-plan-hook-worktree-alignment-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run hook-worktree-alignment-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/hooks -q
 
   feat-test-plan-host-fixtures:
     name: feat-test-plan-host-fixtures
@@ -450,6 +428,17 @@ jobs:
       - name: Run mechanical-sourcing-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/conductor -q
 
+  feat-test-plan-parallel-merge-safety-fixtures:
+    name: feat-test-plan-parallel-merge-safety-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run parallel-merge-safety-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/deliver -q
+
   feat-test-plan-phase-sizing-corpus-fixtures:
     name: feat-test-plan-phase-sizing-corpus-fixtures
     runs-on: ubuntu-latest
@@ -471,6 +460,17 @@ jobs:
           python-version: "3.12"
       - name: Run phase-sizing-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/phase_sizing -q
+
+  feat-test-plan-planning-035-deliver-conductor-fixtures:
+    name: feat-test-plan-planning-035-deliver-conductor-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run planning-035-deliver-conductor-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/conductor -q
 
   feat-test-plan-planning-035-gap-lifecycle-fixtures:
     name: feat-test-plan-planning-035-gap-lifecycle-fixtures
@@ -692,6 +692,17 @@ jobs:
       - name: Run suite-registry-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta -q
 
+  feat-test-plan-terminal-state-read-fixtures:
+    name: feat-test-plan-terminal-state-read-fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run terminal-state-read-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/deliver -q
+
   feat-test-plan-two-track-fixtures:
     name: feat-test-plan-two-track-fixtures
     runs-on: ubuntu-latest
@@ -736,17 +747,6 @@ jobs:
           python-version: "3.12"
       - name: Run regression-remediation-fixtures
         run: python3 scripts/test/run_regression_remediation_fixtures.py
-
-  feat-test-plan-terminal-state-read-fixtures:
-    name: feat-test-plan-terminal-state-read-fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Run terminal-state-read-fixtures
-        run: python3 scripts/test/run_terminal_state_read_fixtures.py
 
   feat-test-plan-worktree-config-fixtures:
     name: feat-test-plan-worktree-config-fixtures

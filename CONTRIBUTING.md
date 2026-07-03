@@ -60,12 +60,11 @@ python3 scripts/test/run_plan_persist_fixtures.py
 python3 scripts/test/run_plan_killswitch_fixtures.py
 python3 scripts/test/run_plan_proposed_parity_fixtures.py
 python3 scripts/test/run_pilot_fixtures.py
-python3 scripts/test/run_fanout_fixtures.py
 python3 scripts/test/run_pytest.py scripts/unit_tests/dispatch -q
 python3 scripts/test/run_pytest.py scripts/unit_tests/git -q
 ```
 
-**PRD 024 fan-out fixtures** (`run_fanout_fixtures.py`): program gate (R35), consistency-only probe (R36),
+**PRD 024 fan-out fixtures** (pytest: `scripts/unit_tests/dispatch`): program gate (R35), consistency-only probe (R36),
 per-orchestrator canonical parity, debug/doc/feedback halts, R21 surfacing, budget trip, 022-parity subset.
 
 **A2 dispatch binding** (`run_dispatch_foundation_fixtures.py`, R38/R39):

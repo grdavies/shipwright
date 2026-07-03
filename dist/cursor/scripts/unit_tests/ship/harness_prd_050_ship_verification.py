@@ -20,26 +20,26 @@ from _fixture_lib import repo_root
 FAIL = 0
 
 REQUIRED_SCENARIOS: dict[str, str] = {
-    "freeze-commit-cwd-forced-primary-fails-closed": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "deliver-provision-does-not-mutate-concurrent-primary-checkout": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "slug-scoped-run-log-writes": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "conductor-mandatory-provisioning-contract": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "orphan-phase-worktree-adopt-or-teardown": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "no-progress-differentiated-stall-causes": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "stale-in-progress-success-check-gate-green": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "finalize-resume-after-state-cleared-post-merge": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "terminal-pr-body-template-valid": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "finalize-living-docs-reconcile-hook": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "terminal-docs-currency-gate-invocation-valid": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "resume-reconcile-unpushed-local-merge-promotes": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "deliver-fail-payload-forwards-subprocess-error": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "deliver-verify-fixture-tree-immutable": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "capability-gateref-no-shell": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "all-private-spec-seed-tracked-private-body": "scripts/test/run_deliver_concurrency_fixtures.py",
-    "hook-state-worktree-cwd-alignment": "scripts/test/run_hook_worktree_alignment_fixtures.py",
-    "hook-state-dispatch-preflight-worktree-alignment": "scripts/test/run_hook_worktree_alignment_fixtures.py",
-    "hook-state-primary-no-false-positive": "scripts/test/run_hook_worktree_alignment_fixtures.py",
-    "hook-state-ambiguous-worktree-fail-closed": "scripts/test/run_hook_worktree_alignment_fixtures.py",
+    "freeze-commit-cwd-forced-primary-fails-closed": "deliver-concurrency-fixtures",
+    "deliver-provision-does-not-mutate-concurrent-primary-checkout": "deliver-concurrency-fixtures",
+    "slug-scoped-run-log-writes": "deliver-concurrency-fixtures",
+    "conductor-mandatory-provisioning-contract": "deliver-concurrency-fixtures",
+    "orphan-phase-worktree-adopt-or-teardown": "deliver-concurrency-fixtures",
+    "no-progress-differentiated-stall-causes": "deliver-concurrency-fixtures",
+    "stale-in-progress-success-check-gate-green": "deliver-concurrency-fixtures",
+    "finalize-resume-after-state-cleared-post-merge": "deliver-concurrency-fixtures",
+    "terminal-pr-body-template-valid": "deliver-concurrency-fixtures",
+    "finalize-living-docs-reconcile-hook": "deliver-concurrency-fixtures",
+    "terminal-docs-currency-gate-invocation-valid": "deliver-concurrency-fixtures",
+    "resume-reconcile-unpushed-local-merge-promotes": "deliver-concurrency-fixtures",
+    "deliver-fail-payload-forwards-subprocess-error": "deliver-concurrency-fixtures",
+    "deliver-verify-fixture-tree-immutable": "deliver-concurrency-fixtures",
+    "capability-gateref-no-shell": "deliver-concurrency-fixtures",
+    "all-private-spec-seed-tracked-private-body": "deliver-concurrency-fixtures",
+    "hook-state-worktree-cwd-alignment": "hook-worktree-alignment-fixtures",
+    "hook-state-dispatch-preflight-worktree-alignment": "hook-worktree-alignment-fixtures",
+    "hook-state-primary-no-false-positive": "hook-worktree-alignment-fixtures",
+    "hook-state-ambiguous-worktree-fail-closed": "hook-worktree-alignment-fixtures",
 }
 
 LEGACY_GAPS = ("GAP-077", "GAP-078", "GAP-079", "GAP-080")
@@ -67,21 +67,21 @@ def bad(msg: str) -> None:
     FAIL = 1
 
 
-def _manifest_by_script(manifest: dict) -> dict[str, dict]:
-    return {row["script"]: row for row in manifest.get("fixtures") or []}
+def _manifest_by_id(manifest: dict) -> dict[str, dict]:
+    return {row["id"]: row for row in manifest.get("fixtures") or []}
 
 
 def check_manifest_registration(root: Path) -> None:
     manifest = json.loads((root / "core/sw-reference/pr-test-plan.manifest.json").read_text(encoding="utf-8"))
-    by_script = _manifest_by_script(manifest)
-    for scenario, script in REQUIRED_SCENARIOS.items():
-        row = by_script.get(script)
+    by_id = _manifest_by_id(manifest)
+    for scenario, suite_id in REQUIRED_SCENARIOS.items():
+        row = by_id.get(suite_id)
         if not row or row.get("classification") != "required":
-            bad(f"manifest-registration: {scenario} missing required entry for {script}")
+            bad(f"manifest-registration: {scenario} missing required entry for {suite_id}")
             continue
         scenarios = row.get("scenarios") or []
         if scenario not in scenarios:
-            bad(f"manifest-registration: scenario {scenario} not listed on {row.get('id')}")
+            bad(f"manifest-registration: scenario {scenario} not listed on {suite_id}")
         else:
             ok(f"manifest-registration: {scenario}")
 

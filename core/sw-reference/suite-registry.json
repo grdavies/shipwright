@@ -179,65 +179,72 @@
     },
     {
       "id": "delegation-fixtures",
-      "script": "scripts/test/run_delegation_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "verify"
       ],
-      "verifyOrder": 32
+      "verifyOrder": 32,
+      "pytestPath": "scripts/unit_tests/dispatch"
     },
     {
       "id": "deliver-concurrency-fixtures",
-      "script": "scripts/test/run_deliver_concurrency_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "verify",
         "pr-ci"
       ],
       "verifyOrder": 17,
       "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-concurrency-fixtures"
+      "ciJobName": "feat-test-plan-deliver-concurrency-fixtures",
+      "pytestPath": "scripts/unit_tests/deliver"
     },
     {
       "id": "deliver-cwd-guard-fixtures",
-      "script": "scripts/test/run_deliver_cwd_guard_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-cwd-guard-fixtures"
+      "ciJobName": "feat-test-plan-deliver-cwd-guard-fixtures",
+      "pytestPath": "scripts/unit_tests/deliver"
     },
     {
       "id": "deliver-fixtures",
-      "script": "scripts/test/run_deliver_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "verify"
       ],
-      "verifyOrder": 14
+      "verifyOrder": 14,
+      "pytestPath": "scripts/unit_tests/deliver"
     },
     {
       "id": "deliver-invariant-fixtures",
-      "script": "scripts/test/run_deliver_invariant_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-invariant-fixtures"
+      "ciJobName": "feat-test-plan-deliver-invariant-fixtures",
+      "pytestPath": "scripts/unit_tests/deliver"
     },
     {
       "id": "deliver-loop-fixtures",
-      "script": "scripts/test/run_deliver_loop_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "verify"
       ],
-      "verifyOrder": 16
+      "verifyOrder": 16,
+      "pytestPath": "scripts/unit_tests/deliver"
     },
     {
       "id": "deliver-worktree-contract-fixtures",
-      "script": "scripts/test/run_deliver_worktree_contract_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-worktree-contract-fixtures"
+      "ciJobName": "feat-test-plan-deliver-worktree-contract-fixtures",
+      "pytestPath": "scripts/unit_tests/deliver"
     },
     {
       "id": "dispatch-binding-fixtures",
@@ -329,22 +336,24 @@
     },
     {
       "id": "execute-orchestration-fixtures",
-      "script": "scripts/test/run_execute_orchestration_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-execute-orchestration-fixtures"
+      "ciJobName": "feat-test-plan-execute-orchestration-fixtures",
+      "pytestPath": "scripts/unit_tests/execute"
     },
     {
       "id": "fanout-fixtures",
-      "script": "scripts/test/run_fanout_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "doc",
         "verify"
       ],
       "verifyOrder": 57,
-      "verifyClassification": "advisory"
+      "verifyClassification": "advisory",
+      "pytestPath": "scripts/unit_tests/dispatch"
     },
     {
       "id": "feedback-fixtures",
@@ -424,23 +433,25 @@
     },
     {
       "id": "hook-fixtures",
-      "script": "scripts/test/run_hook_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "verify"
       ],
       "verifyOrder": 53,
-      "verifyClassification": "required"
+      "verifyClassification": "required",
+      "pytestPath": "scripts/unit_tests/hooks"
     },
     {
       "id": "hook-worktree-alignment-fixtures",
-      "script": "scripts/test/run_hook_worktree_alignment_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci",
         "verify"
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-hook-worktree-alignment-fixtures",
-      "verifyOrder": 18
+      "verifyOrder": 18,
+      "pytestPath": "scripts/unit_tests/hooks"
     },
     {
       "id": "host-fixtures",
@@ -586,11 +597,12 @@
     },
     {
       "id": "merge-queue-fixtures",
-      "script": "scripts/test/run_merge_queue_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "verify"
       ],
-      "verifyOrder": 24
+      "verifyOrder": 24,
+      "pytestPath": "scripts/unit_tests/deliver"
     },
     {
       "id": "meta-channel-fixtures",
@@ -628,20 +640,22 @@
     },
     {
       "id": "orchestrator-fixtures",
-      "script": "scripts/test/run_orchestrator_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "verify"
       ],
-      "verifyOrder": 18
+      "verifyOrder": 18,
+      "pytestPath": "scripts/unit_tests/conductor"
     },
     {
       "id": "parallel-merge-safety-fixtures",
-      "script": "scripts/test/run_parallel_merge_safety_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-parallel-merge-safety-fixtures"
+      "ciJobName": "feat-test-plan-parallel-merge-safety-fixtures",
+      "pytestPath": "scripts/unit_tests/deliver"
     },
     {
       "id": "parity-fixtures",
@@ -732,14 +746,15 @@
     },
     {
       "id": "planning-035-deliver-conductor-fixtures",
-      "script": "scripts/test/run_planning_035_deliver_conductor_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci",
         "verify"
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-planning-035-deliver-conductor-fixtures",
-      "verifyOrder": 51
+      "verifyOrder": 51,
+      "pytestPath": "scripts/unit_tests/conductor"
     },
     {
       "id": "planning-035-doc-impact-fixtures",
@@ -1102,11 +1117,12 @@
     },
     {
       "id": "stabilize-merge-fixtures",
-      "script": "scripts/test/run_stabilize_merge_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "verify"
       ],
-      "verifyOrder": 26
+      "verifyOrder": 26,
+      "pytestPath": "scripts/unit_tests/ship"
     },
     {
       "id": "state-fixtures",
@@ -1168,12 +1184,13 @@
     },
     {
       "id": "terminal-state-read-fixtures",
-      "script": "scripts/test/run_terminal_state_read_fixtures.py",
+      "script": "scripts/test/run_pytest.py",
       "lanes": [
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-terminal-state-read-fixtures"
+      "ciJobName": "feat-test-plan-terminal-state-read-fixtures",
+      "pytestPath": "scripts/unit_tests/deliver"
     },
     {
       "id": "two-track-fixtures",

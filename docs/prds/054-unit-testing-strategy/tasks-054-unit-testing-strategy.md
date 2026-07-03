@@ -105,11 +105,11 @@ after migration waves W1–W4.
 
 ### 5. Migration wave W3 — deliver / multi-worktree suites (~35) (large)
 
-- [ ] 5.1 Port W3 deliver/wave/concurrency suites (R13, R15, R16, TR11)
+- [x] 5.1 Port W3 deliver/wave/concurrency suites (R13, R15, R16, TR11)
   - **File:** `scripts/unit_tests/deliver/`, `scripts/unit_tests/hooks/`
   - **Expected:** multi-repo/worktree fixtures; SW_DELIVER_VERIFY ephemeral patterns preserved
   - **R-IDs:** R13, R15, R16, TR11
-- [ ] 5.2 W3 parity shadow + delete legacy (R14, TR14)
+- [x] 5.2 W3 parity shadow + delete legacy (R14, TR14)
   - **File:** W3 legacy removals; extend `run_deliver_fixtures` coverage under pytest
   - **Expected:** deliver phase verify scenarios pass under pytest collection
   - **R-IDs:** R14, TR14
