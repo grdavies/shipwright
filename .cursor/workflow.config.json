@@ -1,12 +1,199 @@
 {
   "$schema": "../.sw/config.schema.json",
-  "review": { "provider": "none" },
+  "review": {
+    "provider": "none"
+  },
   "verify": {
     "test": "PYTHONPATH=scripts python3 scripts/test/_runner.py verify"
   },
   "ci": {
     "prTestPlanManifest": "core/sw-reference/pr-test-plan.manifest.json"
   },
-  "coderabbit": { "reviewGraceMinutes": 15 },
-  "checks": { "treatNeutralAsPass": true, "neutralAllowlist": [] }
+  "coderabbit": {
+    "reviewGraceMinutes": 15
+  },
+  "checks": {
+    "treatNeutralAsPass": true,
+    "neutralAllowlist": []
+  },
+  "models": {
+    "tiers": {
+      "cheap": "composer-2.5-fast",
+      "build": "composer-2.5",
+      "mid": "gpt-5.5-medium",
+      "deep": "claude-opus-4-8-thinking-high"
+    },
+    "aliases": {
+      "fast": "cheap"
+    },
+    "roles": {
+      "builder": "build",
+      "reviewer": "build"
+    },
+    "routing": {
+      "commands": {
+        "sw-amend": "deep",
+        "sw-brainstorm": "deep",
+        "sw-caveman": "cheap",
+        "sw-cleanup": "cheap",
+        "sw-commit": "cheap",
+        "sw-compound": "mid",
+        "sw-compound-ship": "inherit",
+        "sw-debug": "build",
+        "sw-deliver": "inherit",
+        "sw-doc": "inherit",
+        "sw-doc-review": "build",
+        "sw-execute": "build",
+        "sw-feedback": "build",
+        "sw-feedback-close": "mid",
+        "sw-freeze": "cheap",
+        "sw-gaps": "mid",
+        "sw-memory-audit": "mid",
+        "sw-memory-export": "cheap",
+        "sw-memory-import": "cheap",
+        "sw-memory-sync": "mid",
+        "sw-pr": "cheap",
+        "sw-prd": "deep",
+        "sw-ready": "cheap",
+        "sw-retro": "mid",
+        "sw-retrospective": "inherit",
+        "sw-review": "build",
+        "sw-setup": "cheap",
+        "sw-ship": "inherit",
+        "sw-simplify": "mid",
+        "sw-stabilize": "build",
+        "sw-start": "cheap",
+        "sw-status": "cheap",
+        "sw-tasks": "deep",
+        "sw-triage": "cheap",
+        "sw-verify": "cheap",
+        "sw-watch-ci": "cheap",
+        "sw-worktree": "cheap",
+        "sw-init": "cheap"
+      },
+      "agents": {
+        "sw-coherence-reviewer": "build",
+        "sw-feasibility-reviewer": "build",
+        "sw-scope-guardian-reviewer": "build",
+        "sw-product-reviewer": "build",
+        "sw-adversarial-reviewer": "build",
+        "sw-docs-currency-reviewer": "build",
+        "sw-security-reviewer": "build",
+        "sw-design-reviewer": "build",
+        "correctness": "deep",
+        "security": "deep",
+        "adversarial": "deep",
+        "data-migration": "deep",
+        "maintainability": "mid",
+        "scope-fidelity": "mid",
+        "testing": "mid",
+        "performance": "mid",
+        "api-contract": "mid",
+        "reliability": "mid",
+        "ui-ux": "mid",
+        "type-design": "mid",
+        "comment-accuracy": "mid",
+        "ai-native": "mid"
+      },
+      "skills": {
+        "brainstorm": "deep",
+        "checks-gate": "cheap",
+        "compound": "mid",
+        "conductor": "inherit",
+        "debug": "build",
+        "deliver": "build",
+        "doc-review": "inherit",
+        "execute-discipline": "build",
+        "feedback": "build",
+        "feedback-closure": "mid",
+        "gap-check": "mid",
+        "git-workflow": "cheap",
+        "living-status": "cheap",
+        "memory": "cheap",
+        "parallelism": "cheap",
+        "prd": "deep",
+        "rca-core": "build",
+        "retro": "mid",
+        "shipwright-state": "cheap",
+        "simplify": "mid",
+        "spec-rigor": "cheap",
+        "spec-union": "cheap",
+        "stabilize-loop": "build",
+        "tasks": "deep",
+        "triage": "cheap",
+        "verification-gate": "cheap",
+        "worktree": "cheap"
+      }
+    }
+  },
+  "host": {
+    "provider": "github",
+    "remote": "origin",
+    "tokenEnv": "GITHUB_TOKEN",
+    "rateLimit": {
+      "maxAttempts": 5,
+      "baseBackoffMs": 1000,
+      "capBackoffMs": 60000,
+      "maxCumulativeWaitMs": 300000,
+      "jitter": true,
+      "nearLimitThreshold": 5,
+      "mutatingMinDelayMs": 1000
+    }
+  },
+  "deliver": {
+    "autonomy": {
+      "mode": "autonomous",
+      "maxRunMinutes": 1440,
+      "maxIterations": 500
+    },
+    "terminal": {
+      "autonomy": "auto"
+    }
+  },
+  "planning": {
+    "store": {
+      "backend": "memory"
+    },
+    "visibilityProfile": "all-private",
+    "privacyAck": {
+      "required": true,
+      "recordedAt": null,
+      "reason": "public-origin-remote"
+    }
+  },
+  "orchestration": {
+    "planPolicy": "proposed"
+  },
+  "memory": {
+    "provider": "recallium",
+    "sourceOfTruth": "auto",
+    "project": "shipwright",
+    "defaultScope": "project",
+    "connection": {
+      "restBaseUrl": "http://localhost:8001"
+    },
+    "autoSync": {
+      "enabled": true,
+      "minTurns": 10,
+      "minMinutes": 120
+    },
+    "guardrails": {
+      "enforceBeforeSubmit": true,
+      "requireRuleClass": false
+    }
+  },
+  "defaultBaseBranch": "main",
+  "worktree": {
+    "parallelCeiling": 10,
+    "scaffold": {
+      "portRangeStart": 9100,
+      "portRangeEnd": 9199,
+      "dbStrategy": "schema-prefix",
+      "dbTemplate": ""
+    }
+  },
+  "configuredWith": {
+    "shipwrightVersion": "1.7.0",
+    "schemaVersion": "5c5d84df179e"
+  }
 }
