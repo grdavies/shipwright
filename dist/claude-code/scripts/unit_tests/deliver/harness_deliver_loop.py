@@ -16,16 +16,13 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
         sys.path.insert(0, _entry)
 
 from _fixture_lib import repo_root
+from _harness_patch import harness_subprocess_env as _harness_env
 from _harness_patch import patch_source as _patch_source
 
 
 def main() -> int:
     root = repo_root(__file__)
-    env = os.environ.copy()
-    env["ROOT"] = str(root)
-    env["PYTHONPATH"] = os.pathsep.join(
-        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
-    )
+    env = _harness_env(root)
     src = _patch_source(_SOURCE, root)
     completed = subprocess.run(
         ["bash", "-c", src],
@@ -456,6 +453,7 @@ assert 'gate-watch' in d.get('steps',[])
   ok "deliver-terminal-no-auto-merge: dry-run declares human gate"
 else
   SHIP_FIX=$(mktemp -d)
+  (
   cd "$SHIP_FIX"
   git init -q
   git config user.email t@t.com
@@ -471,10 +469,11 @@ import json,sys
 d=json.load(sys.stdin)
 assert d.get('neverAutoMergesMain') is True
 "; then
-    ok "deliver-terminal-no-auto-merge: dry-run declares human gate"
+    :
   else
-    bad "deliver-terminal-no-auto-merge"
+    exit 1
   fi
+  ) && ok "deliver-terminal-no-auto-merge: dry-run declares human gate" || bad "deliver-terminal-no-auto-merge"
   rm -rf "$SHIP_FIX"
 fi
 
@@ -547,17 +546,7 @@ for pid in n['phaseIds']:
 rm -rf "$BATCH_FIX"
 
 # --- PRD 017 Phase 2: deliver-resume-command-is-sw (R29) ---
-if python3 - <<'PY' "$ROOT"
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
-from wave_failure import resume_deliver_command
-cmd = resume_deliver_command({"source_task_list": "docs/prds/017-x/tasks.md"})
-assert cmd.startswith("/sw-deliver run "), cmd
-assert "bash" not in cmd, cmd
-assert resume_deliver_command({}) == "/sw-deliver run"
-PY
-then
+if python3 -c 'import os,sys; from pathlib import Path; r=Path(os.environ["ROOT"]); sys.path.insert(0,str(r/"scripts")); from wave_failure import resume_deliver_command as rdc; c=rdc({"source_task_list":"docs/prds/017-x/tasks.md"}); assert c.startswith("/sw-deliver run "),c; assert "bash" not in c,c; assert rdc({})=="/sw-deliver run"'; then
   ok "deliver-resume-command-is-sw"
 else
   bad "deliver-resume-command-is-sw"

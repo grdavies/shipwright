@@ -68,6 +68,7 @@ should_skip_relpath() {
   case "$relpath" in
     */__pycache__/* | */__pycache__ | *.pyc | *.bak) return 0 ;;
     scripts/test/* | scripts/test) return 0 ;;
+    scripts/.cursor/sw-coverage/* | scripts/.cursor/sw-coverage) return 0 ;;
     scripts/install.sh) return 0 ;;
     hooks/* | hooks) return 0 ;;
   esac

@@ -24,10 +24,39 @@ def repo_root() -> Path:
     return sw_repo_root()
 
 
+def _hermetic_test_env(env: dict[str, str]) -> dict[str, str]:
+    """Drop deliver phase-mode and broken interpreter hints from inherited agent env."""
+    cleaned = dict(env)
+    for key in list(cleaned):
+        if key.startswith("SW_PHASE") or key in (
+            "SW_RUN_DIR",
+            "SW_REPO_ROOT",
+            "SW_INTEGRATION_BRANCH",
+            "PYTHONHOME",
+        ):
+            cleaned.pop(key, None)
+    return cleaned
+
+
 @pytest.fixture
 def sw_env(repo_root: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     """Environment with PYTHONPATH and repo roots for subprocess helpers."""
-    env = os.environ.copy()
+    base = os.environ.copy()
+    strip_keys = [
+        key
+        for key in base
+        if key.startswith("SW_PHASE")
+        or key
+        in (
+            "SW_RUN_DIR",
+            "SW_REPO_ROOT",
+            "SW_INTEGRATION_BRANCH",
+            "PYTHONHOME",
+        )
+    ]
+    for key in strip_keys:
+        monkeypatch.delenv(key, raising=False)
+    env = _hermetic_test_env(base)
     scripts = str(repo_root / "scripts")
     existing = env.get("PYTHONPATH", "")
     parts = [p for p in (scripts, existing) if p]

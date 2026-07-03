@@ -1,8 +1,33 @@
 """Bash harness source patching for embedded fixture ports (R27)."""
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
+
+
+def harness_subprocess_env(root: Path, base: dict[str, str] | None = None) -> dict[str, str]:
+    """Hermetic env for embedded bash harnesses — drop deliver phase-mode pollution."""
+    env = dict(base if base is not None else os.environ)
+    for key in list(env):
+        if key.startswith("SW_PHASE") or key in (
+            "SW_RUN_DIR",
+            "SW_REPO_ROOT",
+            "SW_INTEGRATION_BRANCH",
+            "PYTHONHOME",
+        ):
+            env.pop(key, None)
+    env["ROOT"] = str(root)
+    env["PYTHONPATH"] = os.pathsep.join(
+        p
+        for p in (
+            str(root / "scripts" / "test"),
+            str(root / "scripts"),
+            env.get("PYTHONPATH", ""),
+        )
+        if p
+    )
+    return env
 
 
 _BARE_SCRIPT_RENAMES = {
@@ -208,6 +233,13 @@ def patch_source(src: str, root: Path) -> str:
     ephemeral = os.environ.get("SW_FIXTURES_EPHEMERAL_ROOT", "").strip()
     src = src.replace("#!/usr/bin/env bash", "")
     src = src.replace("set -euo pipefail", "set -eu")
+    if "unset SW_PHASE_MODE" not in src:
+        src = re.sub(
+            r"(set -eu\s*\n)",
+            r"\1unset SW_PHASE_MODE SW_PHASE_SLUG SW_RUN_DIR SW_REPO_ROOT SW_INTEGRATION_BRANCH 2>/dev/null || true\n",
+            src,
+            count=1,
+        )
     src = re.sub(
         r'ROOT="\$\(cd "\$\(dirname "\$\{BASH_SOURCE\[0\]\}"\)/\.\./\.\." && pwd\)"',
         f'ROOT="{root}"',

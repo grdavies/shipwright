@@ -16,16 +16,13 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
         sys.path.insert(0, _entry)
 
 from _fixture_lib import repo_root
+from _harness_patch import harness_subprocess_env as _harness_env
 from _harness_patch import patch_source as _patch_source
 
 
 def main() -> int:
     root = repo_root(__file__)
-    env = os.environ.copy()
-    env["ROOT"] = str(root)
-    env["PYTHONPATH"] = os.pathsep.join(
-        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
-    )
+    env = _harness_env(root)
     src = _patch_source(_SOURCE, root)
     completed = subprocess.run(
         ["bash", "-c", src],

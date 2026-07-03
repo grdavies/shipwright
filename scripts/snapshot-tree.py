@@ -12,6 +12,7 @@ def should_skip(relpath: str) -> bool:
     if relpath.endswith(".bak"): return True
     if "/.git/" in relpath or "/node_modules/" in relpath: return True
     if "/.cursor/sw-coverage/" in relpath or relpath.startswith(".cursor/sw-coverage/"): return True
+    if relpath.startswith("scripts/.cursor/sw-coverage/"): return True
     if relpath == "scripts/test" or relpath.startswith("scripts/test/"): return True
     if relpath == "scripts/install.py": return True
     if relpath.startswith("hooks"): return True
