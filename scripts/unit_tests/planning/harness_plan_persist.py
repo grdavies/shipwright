@@ -154,8 +154,8 @@ PY2
 cat > .cursor/sw-deliver-plan.json <<'JSON'
 {"mode":"phase","waves":[["1"]],"items":[{"id":"1","slug":"alpha"}],"edges":[],"target":{"branch":"feat/resume-tier"}}
 JSON
-python3 - <<'PY2'
-import json
+python3 - <<PY2
+import json, os
 from pathlib import Path
 state = {
   "target": {"branch": "feat/resume-tier"},
@@ -168,7 +168,7 @@ state = {
   },
   "currentWave": 1,
   "nextAction": "dispatch-ship",
-  "phaseWorktrees": {"1": {"path": "/var/folders/vv/zfgmk2z11cn6cg8ppf_4310w0000gn/T/tmp.6tsVCF5XdT/.cursor/sw-deliver-runs/alpha"}},
+  "phaseWorktrees": {"1": {"path": os.environ["SW_RUN_DIR"]}},
   "waveBatchingPlan": {
     "version": 1,
     "tier": "wave",
