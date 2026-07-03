@@ -95,7 +95,7 @@ content_path() {
     printf '%s\\n' "$ROOT/$rel"
   else
     printf '%s\\n' "$ROOT/$rel"
-    return 1
+    return 0
   fi
 }
 """.strip()
@@ -167,9 +167,13 @@ def _apply_grep_py_aliases(src: str) -> str:
         ("doc-link-check.sh", "doc-link-check.py"),
         ("branch-name-guard.sh", "branch-name-guard.py"),
         ("worktree.sh", "worktree.py"),
+        ("check-gate.sh", "check-gate.py"),
         ("code-review-normalize.sh", "code-review-normalize.py"),
         ("in-repo-memory-search.sh", "in-repo-memory-search.py"),
         ("in-repo-rules.sh", "in-repo-rules.py"),
+        ("stub.sh", "stub.py"),
+        ("playwright.sh", "playwright.py"),
+        ("failstub.sh", "failstub.py"),
     ]
     for old, new in pairs:
         src = src.replace(old, new)

@@ -1,5 +1,12 @@
 {
-  "review": { "enabled": false },
+  "$schema": "../.sw/config.schema.json",
+  "review": { "provider": "none" },
+  "verify": {
+    "test": "PYTHONPATH=scripts python3 scripts/test/_runner.py verify"
+  },
+  "ci": {
+    "prTestPlanManifest": "core/sw-reference/pr-test-plan.manifest.json"
+  },
   "coderabbit": { "reviewGraceMinutes": 15 },
   "checks": { "treatNeutralAsPass": true, "neutralAllowlist": [] }
 }

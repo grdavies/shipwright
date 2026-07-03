@@ -578,3 +578,5 @@ else
   exit 1
 fi
 """
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -130,3 +130,5 @@ fi
 echo "terminal-state-read fixtures: $FAIL failure(s)"
 exit 1
 """
+if __name__ == "__main__":
+    raise SystemExit(main())

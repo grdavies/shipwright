@@ -174,3 +174,5 @@ fi
 echo "orchestrator fixtures: PASS"
 
 """
+if __name__ == "__main__":
+    raise SystemExit(main())
