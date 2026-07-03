@@ -47,7 +47,7 @@ FAIL=0
 ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
-FIX_DIR="$(mktemp -d)"
+FIX_DIR="$(mktemp -d "${TMPDIR:-/tmp}/sw-memory-prework.XXXXXX")"
 trap 'rm -rf "$FIX_DIR"' EXIT
 
 mkdir -p "$FIX_DIR/.cursor"

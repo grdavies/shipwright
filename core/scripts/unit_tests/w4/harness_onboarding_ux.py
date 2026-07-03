@@ -109,7 +109,10 @@ if [[ -f "$ROOT/scripts/sw-assert-worktree.py" ]]; then
   bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-negative.sh" || FAIL=1
   bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-positive-linked.sh" || FAIL=1
   bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-positive-hotfix.sh" || FAIL=1
-  if bash "$ROOT/scripts/sw-assert-worktree.py" >/dev/null 2>&1; then
+  CURRENT_BRANCH=$(git -C "$ROOT" branch --show-current 2>/dev/null || true)
+  if [[ -z "$CURRENT_BRANCH" ]]; then
+    echo "OK  worktree-guard: skipped active check (detached HEAD)"
+  elif python3 "$ROOT/scripts/sw-assert-worktree.py" >/dev/null 2>&1; then
     echo "OK  worktree-guard: active worktree checkout passes"
   else
     echo "FAIL worktree-guard active worktree should pass"

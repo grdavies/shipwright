@@ -253,6 +253,16 @@ def patch_source(src: str, root: Path) -> str:
     src = src.replace("providers/verify/stub.sh", "providers/verify/stub.py")
     src = src.replace("providers/verify/playwright.sh", "providers/verify/playwright.py")
     src = src.replace("providers/verify/failstub.sh", "providers/verify/failstub.py")
+    src = re.sub(
+        r"PERMS=\$\(stat -f '%Lp' \"\$RUN_DIR\" 2>/dev/null \|\| stat -c '%a' \"\$RUN_DIR\" 2>/dev/null\)",
+        'PERMS=$(python3 -c "import os,sys; print(oct(os.stat(sys.argv[1]).st_mode & 0o777)[-3:])" "$RUN_DIR")',
+        src,
+    )
+    src = re.sub(
+        r'git init -q "(\$TMP/[^"]+)"\n  git -C "\1" commit',
+        r'git init -q "\1"\n  git -C "\1" config user.email "fixture@shipwright.local"\n  git -C "\1" config user.name "fixture"\n  git -C "\1" commit',
+        src,
+    )
     src = re.sub(r'bash\s+"([^"]+\.py)"', r'python3 "\1"', src)
     src = re.sub(r'\bbash scripts/([A-Za-z0-9_./-]+\.py)\b', r'python3 scripts/\1', src)
     src = re.sub(r'bash\s+"\$([A-Z_][A-Z0-9_]*)"', r'python3 "$\1"', src)
