@@ -220,6 +220,7 @@
 * merge phase migration-wave-w2-single-repo-git-suites-40-large into feat/unit-testing-strategy (79a7124) <!-- sw-deliver:migration-wave-w2-single-repo-git-suites-40-large -->
 * merge phase migration-wave-w3-deliver-multi-worktree-suites-35-large into feat/unit-testing-strategy (fa09bcd) <!-- sw-deliver:migration-wave-w3-deliver-multi-worktree-suites-35-large -->
 * merge phase migration-wave-w4-meta-registry-parity-22-medium into feat/unit-testing-strategy (fed8857) <!-- sw-deliver:migration-wave-w4-meta-registry-parity-22-medium -->
+* merge phase harness-teardown-loop-wiring-medium into feat/unit-testing-strategy (16cf87b) <!-- sw-deliver:harness-teardown-loop-wiring-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
