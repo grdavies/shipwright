@@ -4,7 +4,8 @@
     "provider": "none"
   },
   "verify": {
-    "test": "PYTHONPATH=scripts python3 scripts/test/_runner.py verify"
+    "test": "SW_TEST_SCOPE=phase PYTHONPATH=scripts python3 scripts/test/_runner.py verify --scope phase",
+    "fullTest": "PYTHONPATH=scripts python3 scripts/test/_runner.py verify --scope full"
   },
   "ci": {
     "prTestPlanManifest": "core/sw-reference/pr-test-plan.manifest.json"

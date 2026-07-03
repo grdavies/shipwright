@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from _fixture_lib import repo_root
+from _sw.vendor_paths import repo_root
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 _SCRIPTS_ROOT = SCRIPT_DIR.parents[1]
@@ -17,7 +17,7 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
 
-from _fixture_lib import FixtureContext
+from unit_tests._harness_runtime import FixtureContext
 import loop_autonomy as la
 import sw_state_write_lib as writer
 

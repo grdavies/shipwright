@@ -15,7 +15,7 @@ import sys
 for _e in (str(_SCRIPTS_ROOT / "test"), str(_SCRIPTS_ROOT)):
     if _e not in sys.path: sys.path.insert(0, _e)
 
-from _fixture_lib import repo_root
+from _sw.vendor_paths import repo_root
 
 SCENARIOS = (
     "wave-merge-no-regression",

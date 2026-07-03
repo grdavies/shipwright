@@ -127,15 +127,15 @@ after migration waves W1–W4.
 
 ### 7. Harness teardown + loop wiring (medium)
 
-- [ ] 7.1 Delete legacy harness (`_fixture_lib`, `_harness_patch`, `run_verify_bundle.py`) (R18)
+- [x] 7.1 Delete legacy harness (`_fixture_lib`, `_harness_patch`, `run_verify_bundle.py`) (R18)
   - **File:** `scripts/test/_fixture_lib.py`, `scripts/test/run_verify_bundle.py`, bash `.test` shims
   - **Expected:** grep finds no consumers; full pytest collection is sole verify path
   - **R-IDs:** R18
-- [ ] 7.2 workflow.config + deliver verify scope defaults (R6, R12, parent TR6)
+- [x] 7.2 workflow.config + deliver verify scope defaults (R6, R12, parent TR6)
   - **File:** `.cursor/workflow.config.json`, `core/scripts/wave_failure.py`, `wave_deliver_loop.py`
   - **Expected:** phase scope default; pre-merge full widen
   - **R-IDs:** R6, R12
-- [ ] 7.3 `/sw-verify` doc + dist propagation (R5, R9, TR9)
+- [x] 7.3 `/sw-verify` doc + dist propagation (R5, R9, TR9)
   - **File:** `core/commands/sw-verify.md`, `python3 -m sw generate --all`
   - **Expected:** docs match scoped pytest invocation
   - **R-IDs:** R5, R9

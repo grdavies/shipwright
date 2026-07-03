@@ -7,7 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from _fixture_lib import repo_root
+from _sw.vendor_paths import repo_root
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 _SCRIPTS_ROOT = SCRIPT_DIR.parents[1]

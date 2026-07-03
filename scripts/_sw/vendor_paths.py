@@ -9,8 +9,22 @@ from pathlib import Path
 _BOOTSTRAPPED = False
 
 
-def repo_root() -> Path:
-    return Path(__file__).resolve().parent.parent.parent
+def repo_root(anchor: str | Path | None = None) -> Path:
+    """Resolve repository root from vendor_paths or an anchor file/dir."""
+    default = Path(__file__).resolve().parent.parent.parent
+    if anchor is None:
+        return default
+    current = Path(anchor).resolve()
+    if current.is_file():
+        current = current.parent
+    for _ in range(12):
+        if (current / "scripts" / "unit_tests").is_dir():
+            return current
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+    return default
 
 
 def vendor_roots(root: Path | None = None) -> list[Path]:

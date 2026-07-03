@@ -20,7 +20,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from _fixture_lib import repo_root
+from _sw.vendor_paths import repo_root
 
 ROOT = repo_root(__file__)
 CORE_HOOKS = ROOT / "core" / "hooks"

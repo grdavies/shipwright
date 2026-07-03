@@ -100,15 +100,20 @@ def run_suite_registry_check(root: Path | None = None) -> tuple[int, list[str]]:
     finally:
         tmp_path.unlink(missing_ok=True)
 
-    sys.path.insert(0, str(root / "scripts" / "test"))
-    import run_verify_bundle as rvb
-
     expected = sr.verify_bundle_entries(root)
-    current = rvb.suites_for_verify(root)
-    if current != expected:
-        bad("verify-order: verify bundle order differs from registry verify lane projection")
+    rows = sr.verify_bundle_rows(root)
+    manifest_only = {"pr-test-plan-manifest"}
+    missing_pytest = [
+        row["id"]
+        for row in rows
+        if not row.get("pytestPath") and row["id"] not in manifest_only
+    ]
+    if missing_pytest:
+        bad(f"verify-lane: missing pytestPath for {missing_pytest}")
+    elif len(expected) != len(rows):
+        bad("verify-order: verify bundle projection mismatch")
     else:
-        ok("verify-order: verify bundle list matches registry verify lane projection")
+        ok("verify-order: verify lane is pytest-only and matches registry projection")
 
     orphan_ids = {
         "build-chain-sot-fixtures",

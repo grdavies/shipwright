@@ -12,7 +12,9 @@ Run the smallest reliable verification for the current phase.
 1. Union changed paths: staged, unstaged, untracked (`git diff --name-only`, `git ls-files --others --exclude-standard`).
 2. `memory-preflight` read for verification footguns on changed paths.
 3. Load `agentsFile` + relevant doctrine.
-4. Run `workflow.config.json` → `verify.*` commands; tee each to `/tmp/sw-verify.*.log`.
+4. Run `workflow.config.json` → `verify.test` (default **phase** scope via `SW_TEST_SCOPE=phase` and
+   `scripts/test/_runner.py verify --scope phase`). Use `verify.fullTest` when a full collection is required
+   (pre-merge widen, global infra paths per TR2). Tee each command to `/tmp/sw-verify.*.log`.
 5. **E2E/smoke adapter** (when `verifyE2e.enabled`):
 
    ```bash
