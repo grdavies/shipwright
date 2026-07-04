@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 from abc import ABC, abstractmethod
@@ -157,6 +158,24 @@ class EmitterBase(ABC):
 
 
 def ensure_clean_dir(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
+    if not path.exists():
+        path.mkdir(parents=True, exist_ok=True)
+        return
+
+    def _on_rm_error(func, p: str, exc_info: object) -> None:
+        import stat
+
+        if not os.access(p, os.W_OK):
+            os.chmod(p, stat.S_IWUSR | stat.S_IRUSR | stat.S_IXUSR)
+            func(p)
+        else:
+            raise exc_info[1]  # type: ignore[index]
+
+    trash = path.parent / f".{path.name}.delete.{os.getpid()}"
+    suffix = 0
+    while trash.exists():
+        suffix += 1
+        trash = path.parent / f".{path.name}.delete.{os.getpid()}.{suffix}"
+    path.rename(trash)
+    shutil.rmtree(trash, onerror=_on_rm_error, ignore_errors=True)
     path.mkdir(parents=True, exist_ok=True)

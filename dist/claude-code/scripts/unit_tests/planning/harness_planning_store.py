@@ -265,6 +265,7 @@ Path("$ISSUE_CFG").write_text(json.dumps({
 PY
 cp "$ISSUE_CFG" "$ROOT/.cursor/workflow.config.json"
 python3 "$PY" --root "$ROOT" clear-issue-fixture >/dev/null
+rm -rf "$ROOT/docs/prds/099-fixture" 2>/dev/null || true
 PRD_BODY='# fixture prd'
 if OUT=$(python3 "$PY" --root "$ROOT" put --backend issue-store --unit-id fixture-prd --body-path docs/prds/099-fixture/099-prd-fixture.md --content "$PRD_BODY") && \
    echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='ok' and d['backend']=='issue-store'"; then
