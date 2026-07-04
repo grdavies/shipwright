@@ -1,4 +1,4 @@
-"""Pytest port — PRD 044 issue-store migration harness (SC4, SC4a, SC4b)."""
+"""Pytest port — PRD 044 issue-store migration harness (SC4, SC4a, SC4b, SC17a–SC17d)."""
 from __future__ import annotations
 
 import importlib.util
