@@ -56,7 +56,7 @@
 | 052 | test-suite-registration-single-source | [052-prd-test-suite-registration-single-source.md](052-test-suite-registration-single-source/052-prd-test-suite-registration-single-source.md) (frozen) | [tasks](052-test-suite-registration-single-source/tasks-052-test-suite-registration-single-source.md) (frozen) | complete |
 | 053 | sub-task-execute-orchestration | [053-prd-sub-task-execute-orchestration.md](053-sub-task-execute-orchestration/053-prd-sub-task-execute-orchestration.md) (frozen) [A1](053-sub-task-execute-orchestration/amendments/A1-close-open-questions-default-on-mvp.md) | [tasks](053-sub-task-execute-orchestration/tasks-053-sub-task-execute-orchestration.md) (frozen) | complete |
 | 054 | unit-testing-strategy | [054-prd-unit-testing-strategy.md](054-unit-testing-strategy/054-prd-unit-testing-strategy.md) (frozen) [A1](054-unit-testing-strategy/amendments/A1-full-pytest-migration.md) | [tasks](054-unit-testing-strategy/tasks-054-unit-testing-strategy.md) (frozen) | complete |
-| 055 | workflow-fidelity-gap-closure | [055-prd-workflow-fidelity-gap-closure.md](055-workflow-fidelity-gap-closure/055-prd-workflow-fidelity-gap-closure.md) (frozen) | [tasks](055-workflow-fidelity-gap-closure/tasks-055-workflow-fidelity-gap-closure.md) (frozen) | not-started |
+| 055 | workflow-fidelity-gap-closure | [055-prd-workflow-fidelity-gap-closure.md](055-workflow-fidelity-gap-closure/055-prd-workflow-fidelity-gap-closure.md) (frozen) [A1](055-workflow-fidelity-gap-closure/amendments/A1-prd054-verify-parity-performance.md) | [tasks](055-workflow-fidelity-gap-closure/tasks-055-workflow-fidelity-gap-closure.md) (frozen) | not-started |
 <!-- planning-index:structural begin -->| id | type | title | status | visibility | edges |
 | --- | --- | --- | --- | --- | --- |
 | feedback-hook-worktree-root-mismatch-2026-07-01 | gap | Hook-state worktree root mismatch causes false prework/preflight denials | resolved | public |  |
@@ -85,6 +85,8 @@
 | gap-023-sw-tasks-must-auto-emit-execute-tier-granular-su | gap | sw-tasks must auto-emit execute-tier granular sub-task refs at generation | scheduled | public |  |
 | gap-024-supersede-reconcile-subcommand-missing-after-rec | gap | supersede-reconcile subcommand missing after reconcile.py consolidation | scheduled | public |  |
 | gap-025-deliver-advances-on-ship-green-not-phase-checklist | gap | deliver advances phases on ship-green without phase checklist acceptance | scheduled | public |  |
+| gap-026-parity-compare-full-dist-bash-subprocess-per-file | gap | Parity compare full-dist scan is O(n) bash subprocess per file | scheduled | public |  |
+| gap-027-post-merge-full-verify-lacks-wall-clock-budget | gap | Post-merge full verify lacks wall-clock budget and progress signal | scheduled | public |  |
 <!-- planning-index:structural end -->
 <!-- planning-index:derived begin -->gap-002-living-doc-reconcile-commits-bypass-r31-default-: scheduled
 gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi: scheduled

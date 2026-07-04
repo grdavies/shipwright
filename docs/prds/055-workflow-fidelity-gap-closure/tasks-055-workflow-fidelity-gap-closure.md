@@ -25,6 +25,7 @@ in phase 1).
 - `scripts/wave_state.py`, `scripts/execute_plan.py` — R12, R14
 - `scripts/phase_sizing.py`, `core/skills/tasks/SKILL.md`, `core/commands/sw-tasks.md` — gap-023 (R16–R20)
 - `scripts/planning_gap_capture.py`, `scripts/gap_backlog.py`, `scripts/planning_store.py` — gap-003 (R21–R27)
+- `scripts/test/parity_compare.py`, `scripts/test/_runner.py`, `scripts/test_scope.py`, `scripts/wave_failure.py` — gap-026/027 (R28–R32)
 - `scripts/test/run_emitter_fixtures.py`, `run_memory_sot_fixtures.py`, `run-deliver-fixtures.sh`, `run_planning_035_gap_lifecycle_fixtures.py`
 
 ## Tasks
@@ -214,6 +215,40 @@ Thread E (gap-003). Clean file-side source before PRD 044; GAP-BACKLOG persists 
   - **Expected:** all nine absorbed units `status: resolved` / `schedule: — (PRD 055)` after terminal PR merge
   - **R-IDs:** R23, R24, R27
 
+
+### 6. Verify performance — parity compare and post-merge watchdog (medium)
+
+Thread F (gap-026, gap-027). PRD 054 dogfood; amendment A1.
+
+- [ ] 6.1 Port parity_compare.py to pure Python (R28, TR10)
+  - **File:** `scripts/test/parity_compare.py`, `scripts/unit_tests/meta/harness_parity.py`
+  - **Expected:** compare hot path uses stdlib `hashlib` + tree walk; no bash subprocess; harness calls module directly
+  - **R-IDs:** R28
+- [ ] 6.2 Tier-gate full dist compare to full scope (R29)
+  - **File:** `scripts/test_scope.py`, `scripts/test/_runner.py`
+  - **Expected:** `phase`/`fast` skip 841-file `dist/cursor` golden compare unless PRD 054 TR2 widen list matches
+  - **R-IDs:** R29
+- [ ] 6.3 Add parity-compare-correctness fixture (R30)
+  - **File:** `scripts/unit_tests/meta/test_parity.py` or `scripts/test/run_parity_fixtures.py`
+  - **Expected:** happy/missing/extra/hash-diff cases pass after Python port
+  - **R-IDs:** R30
+- [ ] 6.4 Add verify watchdog and progress logging (R31, TR11)
+  - **File:** `scripts/test/_runner.py`, `scripts/wave_failure.py`
+  - **Expected:** per-suite elapsed logging; consolidated halt on budget exhaustion with last suite id + resumeCommand
+  - **R-IDs:** R31
+- [ ] 6.5 Add verify.watchdog.maxMinutes config and scoped post-merge default (R32)
+  - **File:** `.cursor/workflow.config.json`, `.sw/config.schema.json`, `docs/guides/testing.md`
+  - **Expected:** post-merge verify uses scoped path when widen list absent; budget documented
+  - **R-IDs:** R32
+- [ ] 6.6 Add verify-watchdog-exhaustion fixture (R31)
+  - **File:** `scripts/test/run_test_scope_fixtures.py` or deliver fixtures
+  - **Expected:** simulated slow verify triggers halt report with resume command
+  - **R-IDs:** R31
+- [ ] 6.7 Resolve gap-026 and gap-027 on terminal merge
+  - **File:** `docs/prds/gap/gap-026-*`, `docs/prds/gap/gap-027-*`
+  - **Expected:** both units `status: resolved`, schedule `PRD 055`
+  - **R-IDs:** R28, R31
+
 ## Phase Dependencies
 
 | Phase | Depends on |
@@ -223,6 +258,7 @@ Thread E (gap-003). Clean file-side source before PRD 044; GAP-BACKLOG persists 
 | 3 | 2 |
 | 4 | 3 |
 | 5 | 4 |
+| 6 | 1 |
 
 ## Traceability
 
@@ -255,6 +291,12 @@ Thread E (gap-003). Clean file-side source before PRD 044; GAP-BACKLOG persists 
 | R25 | 3.2, 3.7, 3.10 | `deliver-gap-check-no-fast-skip` — merge path rejects --fast | O, I, E |
 | R26 | 1.0 | frozen 046 A2/A3/A4 and 045 A1 carry `superseded-by: PRD 055` | O, I |
 | R27 | 5.5, 5.6, 5.7 | `gap-backlog-migration-complete` gate before projection retirement | Z, O, E, S |
+| R28 | 6.1, 6.2 | `parity-compare-correctness` — Python compare, no bash hot path | Z, O, B, E |
+| R29 | 6.2 | phase scope skips full dist compare unless widen | O, I, S |
+| R30 | 6.3 | parity happy/missing/extra/hash-diff unchanged | Z, O, B, E |
+| R31 | 6.4, 6.6 | `verify-watchdog-exhaustion` — halt on budget with resume | O, I, E, S |
+| R32 | 6.5 | scoped post-merge verify when widen absent | O, I, S |
+
 
 ## Notes
 
