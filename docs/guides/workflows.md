@@ -412,8 +412,57 @@ flowchart LR
 | `/sw-stabilize` | Clear failing checks and review threads |
 | `/sw-ready` | Final readiness report (never merges) |
 | `/sw-compound-ship` | Post-merge retro → compound → memory sync |
-
 ---
+
+## Issue-store migration lifecycle preservation (PRD 044 Phase 2)
+
+When migrating between in-repo markdown artifacts and the configured `issue-store`, lifecycle metadata
+survives in **both directions** (`files-to-issues` and `issues-to-files`). Bodies are content-hash verified
+(PRD 043 R35) before any source is removed; lifecycle fields are checked as part of verification.
+
+### Open / frozen status
+
+- **Files → issues:** `frozen: true` (and optional `frozen_at`) in frontmatter becomes the `sw:frozen` label
+  on the issue, issue lock, and a freeze-record comment when applicable. Open vs closed issue state follows
+  artifact `status` (gaps with `status: resolved` close the issue).
+- **Issues → files:** `sw:frozen` and `sw:frozen-at:*` labels restore `frozen: true` and `frozen_at` in
+  frontmatter. Issue `open`/`closed` state maps back to artifact lifecycle fields.
+
+### `sw-edges` and native links
+
+- **Files → issues:** The canonical `sw-edges` fenced block (and any frontmatter edge keys) is composed
+  into the issue body; provider-native link projections are stored alongside canonical edges.
+- **Issues → files:** Edges and native projections round-trip into the `sw-edges` block (and frontmatter
+  edge keys when present). Divergence beyond tolerance fails verification.
+
+### Gap status
+
+- **Files → issues:** Gap units carry `status` (`open`, `planned`/`scheduled`, `resolved`) as issue labels
+  (`open`, `gap-scheduled`, `resolved`) plus optional `sw:gap-schedule:*` labels.
+- **Issues → files:** Labels restore `status` and `schedule` frontmatter on gap artifacts under
+  `docs/planning/gap/`.
+
+### Visibility gate (per create)
+
+Every migration **create** resolves visibility via PRD 043 R43 before any API write. A private or
+`memory`-class artifact targeting a public/shared issue store is **refused** for that item only: it is
+reported in the migration plan (`refusedCount`, action `refused`, reason `visibility`), its source file
+remains untouched, and the rest of the batch continues.
+
+### Bidirectional guarantees
+
+| Concern | Files → issues | Issues → files |
+| --- | --- | --- |
+| Body | Hash-verified after create | Hash-verified after write |
+| Frozen | `sw:frozen` + lock + freeze record | `frozen: true` in frontmatter |
+| Edges | `sw-edges` block + native links on issue | `sw-edges` block restored |
+| Gap status | Status labels on issue | `status` / `schedule` frontmatter |
+| Visibility | Refused before create if private | `visibility` frontmatter from labels |
+
+Operator entry: `/sw-migrate` and `python3 scripts/planning_migrate.py <repo> store-files-to-issues`
+(dry-run default; `--apply` to mutate). Journal:
+`.cursor/hooks/state/issue-store-migration-journal.json`.
+
 
 ## Debug workstream
 
