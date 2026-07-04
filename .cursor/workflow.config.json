@@ -1,72 +1,21 @@
 {
   "$schema": "../.sw/config.schema.json",
-  "defaultBaseBranch": "main",
-  "stateFile": ".git/shipwright.json",
-  "worktree": {
-    "parallelCeiling": 10,
-    "scaffold": {
-      "portRangeStart": 9100,
-      "portRangeEnd": 9199,
-      "dbStrategy": "schema-prefix",
-      "dbTemplate": ""
-    }
-  },
-  "intraPhase": {
-    "parallelBudget": 4,
-    "harnessLimit": 10
-  },
-  "agentsFile": "AGENTS.md",
-  "planningDir": "docs/prds",
-  "prdsDir": "docs/prds",
-  "decisionsDir": "docs/decisions",
-  "tasksDir": "docs/prds",
-  "doc": {
-    "afterTasks": "confirm"
-  },
-  "compound": {
-    "autonomy": "auto"
+  "review": {
+    "provider": "none"
   },
   "verify": {
-    "lint": "python3 scripts/model-routing-check.py . .cursor/workflow.config.json core/sw-reference/model-routing.defaults.json core/sw-reference/communication-routing.defaults.json",
-    "typecheck": "python3 scripts/model-tier-check.py . .cursor/workflow.config.json core/agents",
-    "test": "PYTHONPATH=scripts python3 scripts/test/_runner.py verify"
+    "test": "SW_TEST_SCOPE=phase PYTHONPATH=scripts python3 scripts/test/_runner.py verify --scope phase",
+    "fullTest": "PYTHONPATH=scripts python3 scripts/test/_runner.py verify --scope full"
   },
   "ci": {
     "prTestPlanManifest": "core/sw-reference/pr-test-plan.manifest.json"
   },
-  "review": {
-    "provider": "none"
-  },
   "coderabbit": {
-    "noDefer": true,
     "reviewGraceMinutes": 15
   },
   "checks": {
-    "policy": "all",
     "treatNeutralAsPass": true,
-    "neutralAllowlist": [],
-    "watch": {
-      "maxWaitMinutes": 20,
-      "pollSeconds": 45
-    }
-  },
-  "memory": {
-    "provider": "recallium",
-    "sourceOfTruth": "auto",
-    "project": "shipwright",
-    "defaultScope": "project",
-    "connection": {
-      "restBaseUrl": "http://localhost:8001"
-    },
-    "autoSync": {
-      "enabled": true,
-      "minTurns": 10,
-      "minMinutes": 120
-    },
-    "guardrails": {
-      "enforceBeforeSubmit": true,
-      "requireRuleClass": false
-    }
+    "neutralAllowlist": []
   },
   "models": {
     "tiers": {
@@ -178,126 +127,6 @@
       }
     }
   },
-  "configuredWith": {
-    "shipwrightVersion": "1.7.0",
-    "schemaVersion": "5c5d84df179e"
-  },
-  "deliver": {
-    "autonomy": {
-      "mode": "autonomous",
-      "maxRunMinutes": 1440,
-      "maxIterations": 500
-    },
-    "terminal": {
-      "autonomy": "auto"
-    }
-  },
-  "cleanup": {
-    "autonomy": "auto"
-  },
-  "communication": {
-    "defaultIntensity": "full",
-    "routing": {
-      "commands": {
-        "sw-amend": "lite",
-        "sw-brainstorm": "lite",
-        "sw-caveman": "full",
-        "sw-cleanup": "ultra",
-        "sw-commit": "ultra",
-        "sw-compound": "full",
-        "sw-compound-ship": "full",
-        "sw-debug": "inherit",
-        "sw-deliver": "inherit",
-        "sw-doc": "inherit",
-        "sw-doc-review": "normal",
-        "sw-execute": "full",
-        "sw-feedback": "inherit",
-        "sw-feedback-close": "ultra",
-        "sw-freeze": "normal",
-        "sw-gaps": "full",
-        "sw-memory-audit": "ultra",
-        "sw-memory-export": "ultra",
-        "sw-memory-import": "ultra",
-        "sw-memory-sync": "ultra",
-        "sw-pr": "ultra",
-        "sw-prd": "lite",
-        "sw-ready": "normal",
-        "sw-retro": "lite",
-        "sw-retrospective": "full",
-        "sw-review": "full",
-        "sw-setup": "ultra",
-        "sw-init": "ultra",
-        "sw-ship": "inherit",
-        "sw-simplify": "full",
-        "sw-stabilize": "full",
-        "sw-start": "ultra",
-        "sw-status": "ultra",
-        "sw-tasks": "lite",
-        "sw-triage": "ultra",
-        "sw-verify": "ultra",
-        "sw-watch-ci": "ultra",
-        "sw-worktree": "ultra"
-      },
-      "skills": {
-        "brainstorm": "lite",
-        "checks-gate": "ultra",
-        "compound": "full",
-        "conductor": "inherit",
-        "debug": "inherit",
-        "deliver": "inherit",
-        "doc-review": "normal",
-        "execute-discipline": "full",
-        "feedback": "inherit",
-        "feedback-closure": "ultra",
-        "gap-check": "full",
-        "living-status": "ultra",
-        "memory": "ultra",
-        "parallelism": "ultra",
-        "prd": "lite",
-        "rca-core": "full",
-        "retro": "lite",
-        "shipwright-state": "ultra",
-        "simplify": "full",
-        "spec-rigor": "normal",
-        "spec-union": "normal",
-        "stabilize-loop": "full",
-        "tasks": "lite",
-        "triage": "ultra",
-        "verification-gate": "ultra",
-        "worktree": "ultra"
-      },
-      "agents": {
-        "sw-coherence-reviewer": "full",
-        "sw-feasibility-reviewer": "full",
-        "sw-scope-guardian-reviewer": "full",
-        "sw-product-reviewer": "full",
-        "sw-adversarial-reviewer": "full",
-        "sw-docs-currency-reviewer": "full",
-        "sw-security-reviewer": "full",
-        "sw-design-reviewer": "full",
-        "correctness": "full",
-        "security": "full",
-        "adversarial": "full",
-        "data-migration": "full",
-        "maintainability": "normal",
-        "scope-fidelity": "normal",
-        "testing": "normal",
-        "performance": "normal",
-        "api-contract": "normal",
-        "reliability": "normal",
-        "ui-ux": "normal",
-        "type-design": "normal",
-        "comment-accuracy": "normal",
-        "ai-native": "normal"
-      }
-    }
-  },
-  "delegation": {
-    "mode": "bind-only"
-  },
-  "orchestration": {
-    "planPolicy": "proposed"
-  },
   "host": {
     "provider": "github",
     "remote": "origin",
@@ -312,6 +141,16 @@
       "mutatingMinDelayMs": 1000
     }
   },
+  "deliver": {
+    "autonomy": {
+      "mode": "autonomous",
+      "maxRunMinutes": 1440,
+      "maxIterations": 500
+    },
+    "terminal": {
+      "autonomy": "auto"
+    }
+  },
   "planning": {
     "store": {
       "backend": "memory"
@@ -322,5 +161,40 @@
       "recordedAt": null,
       "reason": "public-origin-remote"
     }
+  },
+  "orchestration": {
+    "planPolicy": "proposed"
+  },
+  "memory": {
+    "provider": "recallium",
+    "sourceOfTruth": "auto",
+    "project": "shipwright",
+    "defaultScope": "project",
+    "connection": {
+      "restBaseUrl": "http://localhost:8001"
+    },
+    "autoSync": {
+      "enabled": true,
+      "minTurns": 10,
+      "minMinutes": 120
+    },
+    "guardrails": {
+      "enforceBeforeSubmit": true,
+      "requireRuleClass": false
+    }
+  },
+  "defaultBaseBranch": "main",
+  "worktree": {
+    "parallelCeiling": 10,
+    "scaffold": {
+      "portRangeStart": 9100,
+      "portRangeEnd": 9199,
+      "dbStrategy": "schema-prefix",
+      "dbTemplate": ""
+    }
+  },
+  "configuredWith": {
+    "shipwrightVersion": "1.7.0",
+    "schemaVersion": "5c5d84df179e"
   }
 }

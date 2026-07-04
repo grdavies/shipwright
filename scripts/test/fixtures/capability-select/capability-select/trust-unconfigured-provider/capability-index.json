@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "provider.providers.review.unconfigured",
+      "kind": "provider",
+      "sourcePath": "core/providers/review/unconfigured.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "always_on",
+            "selectionFamily": "providers"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "review",
+          "adapterId": "coderabbit",
+          "gateRef": "check-gate.py",
+          "selectionFamily": "providers"
+        }
+      }
+    }
+  ]
+}

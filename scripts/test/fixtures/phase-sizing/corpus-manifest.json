@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-01T00:41:26Z",
+  "generatedAt": "2026-07-03T22:03:46Z",
   "taskLists": [
     "docs/prds/001-readme-documentation/tasks-001-readme-documentation.md",
     "docs/prds/002-first-run-onboarding-ux/tasks-002-first-run-onboarding-ux.md",
@@ -44,7 +44,14 @@
     "docs/prds/044-issue-store-migration/tasks-044-issue-store-migration.md",
     "docs/prds/045-issue-native-dev-tracking/tasks-045-issue-native-dev-tracking.md",
     "docs/prds/046-issue-store-planning-graph/tasks-046-issue-store-planning-graph.md",
-    "docs/prds/047-jira-issue-store-adapter/tasks-047-jira-issue-store-adapter.md"
+    "docs/prds/047-jira-issue-store-adapter/tasks-047-jira-issue-store-adapter.md",
+    "docs/prds/048-gap-lifecycle-flip-and-feedback-route-guard/tasks-048-gap-lifecycle-flip-and-feedback-route-guard.md",
+    "docs/prds/049-operator-worktree-contract-and-cwd-guard/tasks-049-operator-worktree-contract-and-cwd-guard.md",
+    "docs/prds/050-deliver-concurrency-cwd-terminal-robustness/tasks-050-deliver-concurrency-cwd-terminal-robustness.md",
+    "docs/prds/051-spec-rigor-brainstorm-profile-and-stdlib-coverage/tasks-051-spec-rigor-brainstorm-profile-and-stdlib-coverage.md",
+    "docs/prds/052-test-suite-registration-single-source/tasks-052-test-suite-registration-single-source.md",
+    "docs/prds/053-sub-task-execute-orchestration/tasks-053-sub-task-execute-orchestration.md",
+    "docs/prds/054-unit-testing-strategy/tasks-054-unit-testing-strategy.md"
   ],
-  "taskListCount": 43
+  "taskListCount": 50
 }

@@ -14,10 +14,9 @@ The **PR test-plan workflow** (`.github/workflows/pr-test-plan-ci.yml`) is the e
 
 | Job | Classification |
 |-----|----------------|
-| `feat-test-plan-doc-fixtures` | required |
+| `feat-test-plan-pytest-required-shard-1` | required |
 | `feat-test-plan-docs-link-check` | required |
-| `feat-test-plan-cleanup-fixtures` | advisory |
-| `feat-test-plan-ux-polish-fixtures` | advisory |
+| `feat-test-plan-pytest-advisory-shard-1` | advisory |
 
 Open the PR **Checks** tab for live status. Required jobs must pass before merge; advisory jobs surface under the all-checks policy but do not block merge.
 

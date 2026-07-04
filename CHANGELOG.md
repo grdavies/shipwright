@@ -213,6 +213,16 @@
 * merge phase integration-primitive-and-journal-m into feat/sub-task-execute-orchestration (e1e8e35) <!-- sw-deliver:integration-primitive-and-journal-m -->
 * merge phase sub-branch-dispatch-failure-handling-and-r45-carve-out-l into feat/sub-task-execute-orchestration (dde7b18) <!-- sw-deliver:sub-branch-dispatch-failure-handling-and-r45-carve-out-l -->
 * merge phase sub-branch-dispatch-failure-handling-and-r45-carve-out-l into feat/sub-task-execute-orchestration (a0bb0c9) <!-- sw-deliver:sub-branch-dispatch-failure-handling-and-r45-carve-out-l -->
+* merge phase pytest-foundation-conftest-scaffolding-medium into feat/unit-testing-strategy (be9e331) <!-- sw-deliver:pytest-foundation-conftest-scaffolding-medium -->
+* merge phase scope-selection-infrastructure-medium into feat/unit-testing-strategy (5b2d764) <!-- sw-deliver:scope-selection-infrastructure-medium -->
+* merge phase migration-wave-w1-pure-logic-suites-30-large into feat/unit-testing-strategy (367c69f) <!-- sw-deliver:migration-wave-w1-pure-logic-suites-30-large -->
+* merge phase migration-wave-w1-pure-logic-suites-30-large into feat/unit-testing-strategy (da187a2) <!-- sw-deliver:migration-wave-w1-pure-logic-suites-30-large -->
+* merge phase migration-wave-w2-single-repo-git-suites-40-large into feat/unit-testing-strategy (79a7124) <!-- sw-deliver:migration-wave-w2-single-repo-git-suites-40-large -->
+* merge phase migration-wave-w3-deliver-multi-worktree-suites-35-large into feat/unit-testing-strategy (fa09bcd) <!-- sw-deliver:migration-wave-w3-deliver-multi-worktree-suites-35-large -->
+* merge phase migration-wave-w4-meta-registry-parity-22-medium into feat/unit-testing-strategy (fed8857) <!-- sw-deliver:migration-wave-w4-meta-registry-parity-22-medium -->
+* merge phase harness-teardown-loop-wiring-medium into feat/unit-testing-strategy (16cf87b) <!-- sw-deliver:harness-teardown-loop-wiring-medium -->
+* merge phase harness-teardown-loop-wiring-medium into feat/unit-testing-strategy (228a9d0) <!-- sw-deliver:harness-teardown-loop-wiring-medium -->
+* merge phase ci-shards-operator-docs-small into feat/unit-testing-strategy (d19ef1d) <!-- sw-deliver:ci-shards-operator-docs-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

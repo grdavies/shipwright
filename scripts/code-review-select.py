@@ -9,14 +9,25 @@ if str(SCRIPT_DIR) not in sys.path:
 from _sw.cli import run_module_main
 
 def main(argv: list[str] | None = None) -> int:
-    import json, os, sys
+    import argparse
+    import json
+    import os
+    import sys
     from pathlib import Path
 
-    sys.path.insert(0, os.path.join(sys.argv[1], "scripts"))
+    p = argparse.ArgumentParser()
+    p.add_argument("--diff")
+    p.add_argument("--repo-root", default=".")
+    ns = p.parse_args(list(sys.argv[1:] if argv is None else argv))
+
+    root = Path(ns.repo_root).resolve()
+    sys.path.insert(0, str(root / "scripts"))
     from capability_migration_parity import select_family
 
-    root = Path(sys.argv[1])
-    raw = os.environ.get("DIFF_JSON", "")
+    if ns.diff:
+        raw = Path(ns.diff).read_text(encoding="utf-8")
+    else:
+        raw = os.environ.get("DIFF_JSON", "")
     try:
         digest = json.loads(raw)
     except json.JSONDecodeError:

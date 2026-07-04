@@ -16,12 +16,15 @@ import uuid
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from _sw.cli import build_parser, run_module_main
-from _fixture_lib import invoke_suite_main, repo_root
+from _runner_lib import invoke_suite_main, prepare_ephemeral_fixtures
+from _sw.vendor_paths import repo_root
+from run_pytest import run_pytest
+
+REPO_ROOT = repo_root()
 
 
 def coverage_enabled(*, flag: bool = False) -> bool:
@@ -93,8 +96,6 @@ def _suite_env(root: Path, base_env: dict[str, str] | None = None) -> dict[str, 
         p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
     )
     if _truthy_env("SW_DELIVER_VERIFY"):
-        from _fixture_lib import prepare_ephemeral_fixtures
-
         ephemeral = prepare_ephemeral_fixtures(root)
         env["SW_FIXTURES_EPHEMERAL_ROOT"] = str(ephemeral / "fixtures")
         env["_SW_FIXTURES_EPHEMERAL_DIR"] = str(ephemeral)
@@ -172,6 +173,9 @@ def run_suite_module(
         env = _suite_env(root)
         return run_traced_subprocess(path, root=root, coverdir=active_coverdir, env=env)
 
+    if path.suffix == ".test":
+        return run_test_file(path, root=root, coverage=coverage, coverdir=coverdir)
+
     if path.suffix == ".py":
         spec = importlib.util.spec_from_file_location(path.stem, path)
         if spec is None or spec.loader is None:
@@ -222,11 +226,44 @@ def run_manifest(root: Path, *, coverage: bool = False, coverdir: Path | None = 
     return 0
 
 
+def _resolve_scope() -> str:
+    import os
+
+    explicit = os.environ.get("SW_TEST_SCOPE", "").strip().lower()
+    if explicit in {"fast", "phase", "full"}:
+        return explicit
+    return "full"
+
+
+def run_pytest_scope(
+    root: Path,
+    *,
+    scope: str | None = None,
+    pytest_args: list[str] | None = None,
+    changed_paths: list[str] | None = None,
+) -> int:
+    """Dispatch vendored pytest by tier (PRD 054 R4/R17)."""
+    import test_scope as ts
+
+    resolved_root = root if (root / "scripts" / "unit_tests").is_dir() else repo_root()
+    effective_scope = (scope or _resolve_scope()).lower()
+    if pytest_args:
+        return run_pytest(pytest_args, root=resolved_root)
+
+    paths = changed_paths
+    if paths is None:
+        paths = ts.resolve_changed_paths(resolved_root, None)
+    plan = ts.build_plan(paths, scope=effective_scope, root=resolved_root)
+    for advisory in plan.get("advisories") or []:
+        print(f"ADVISORY test-scope: {advisory}")
+    return run_pytest(plan.get("pytestArgs") or ["scripts/unit_tests"], root=resolved_root)
+
+
 def run_verify(root: Path, *, coverage: bool = False, coverdir: Path | None = None) -> int:
-    """Run the shipwright plugin verify.test bundle."""
+    """Run pytest full collection plus pr-test-plan manifest (PRD 054 R17/R18)."""
     use_coverage = coverage_enabled(flag=coverage)
     active_coverdir = coverdir or (resolve_coverdir(root) if use_coverage else None)
-    ec = run_suite_module(SCRIPT_DIR / "run_verify_bundle.py", root=root, coverage=use_coverage, coverdir=active_coverdir)
+    ec = run_pytest_scope(root, scope="full")
     if ec != 0:
         if use_coverage and active_coverdir is not None:
             emit_coverage_report(active_coverdir, root=root)
@@ -265,8 +302,13 @@ def main(argv: list[str] | None = None) -> int:
     p_suite.add_argument("path")
 
     sub.add_parser("run-manifest", help="Run pr-test-plan manifest fixtures")
-    sub.add_parser("verify", help="Run verify.test bundle")
+    p_verify = sub.add_parser("verify", help="Run verify.test bundle")
+    p_verify.add_argument("--scope", default=None, choices=["fast", "phase", "full"])
     sub.add_parser("list", help="List discoverable tests")
+
+    p_pytest = sub.add_parser("run-pytest", help="Run vendored pytest with scope dispatch")
+    p_pytest.add_argument("--scope", default="full", choices=["fast", "phase", "full"])
+    p_pytest.add_argument("pytest_args", nargs=argparse.REMAINDER)
 
     sub.add_parser("run-all-tests", help="Run all .test files")
 
@@ -284,7 +326,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "run-manifest":
         return run_manifest(root, coverage=coverage)
     if args.cmd == "verify":
+        scope = args.scope or _resolve_scope()
+        if scope in {"fast", "phase"}:
+            return run_pytest_scope(root, scope=scope)
         return run_verify(root, coverage=coverage)
+    if args.cmd == "run-pytest":
+        forwarded = args.pytest_args
+        if forwarded and forwarded[0] == "--":
+            forwarded = forwarded[1:]
+        return run_pytest_scope(root, scope=args.scope, pytest_args=forwarded or None)
     if args.cmd == "list":
         return cmd_list(args)
     if args.cmd == "run-all-tests":

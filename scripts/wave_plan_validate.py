@@ -121,8 +121,16 @@ def has_flag(args: list[str], flag: str) -> bool:
 def load_json_arg(root: Path, raw: str | None) -> dict[str, Any] | None:
     if not raw:
         return None
+    stripped = raw.lstrip()
+    if stripped.startswith(("{", "[")):
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else None
     path = Path(raw)
-    if path.is_file():
+    try:
+        is_file = path.is_file()
+    except OSError:
+        is_file = False
+    if is_file:
         data = json.loads(path.read_text(encoding="utf-8"))
     else:
         data = json.loads(raw)

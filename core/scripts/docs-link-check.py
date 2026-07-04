@@ -29,11 +29,9 @@ def repo_root() -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = list(sys.argv[1:] if argv is None else argv)
-    root = repo_root()
     import docs_link_check
-    return docs_link_check.main(args)
-    return 0
+    from _sw.cli import delegate_argv_main
+    return delegate_argv_main(docs_link_check.main, argv, prog="docs-link-check.py")
 
 
 if __name__ == "__main__":

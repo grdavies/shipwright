@@ -248,21 +248,29 @@ def check_guidelines_artifact(repo_root: Path) -> list[str]:
     ok, errors = lint_guidelines(repo_root)
     return [] if ok else errors
 
-def lint_core(repo_root: Path, core_root: Path, *, index_path: Path | None = None) -> tuple[bool, list[str]]:
+def lint_core(
+    repo_root: Path,
+    core_root: Path,
+    *,
+    index_path: Path | None = None,
+    fixture_core: bool = False,
+) -> tuple[bool, list[str]]:
     path = index_path or (core_root / "sw-reference" / "capability-index.json")
     if index_path and index_path.is_file():
         index = load_index(index_path)
     else:
         index = build_index(core_root)
-    errors = lint_index(repo_root, index)
-    errors.extend(check_kernel_hook_manifests(repo_root, core_root))
+    artifact_root = core_root.parent if fixture_core else repo_root
+    errors = lint_index(artifact_root, index)
+    errors.extend(check_kernel_hook_manifests(artifact_root, core_root))
     if index_path is None:
         errors.extend(check_manifest_schema(core_root))
-        errors.extend(check_guidelines_artifact(repo_root))
-    from guidelines_validate import lint_orchestrator_packs
-    ok_packs, pack_errors = lint_orchestrator_packs(repo_root)
-    if not ok_packs:
-        errors.extend(pack_errors)
+        errors.extend(check_guidelines_artifact(artifact_root))
+    if not fixture_core:
+        from guidelines_validate import lint_orchestrator_packs
+        ok_packs, pack_errors = lint_orchestrator_packs(repo_root)
+        if not ok_packs:
+            errors.extend(pack_errors)
     return (len(errors) == 0, errors)
 
 
@@ -277,7 +285,12 @@ def main() -> int:
 
     repo_root = args.root.resolve()
     core_root = (args.core or (repo_root / "core")).resolve()
-    ok, errors = lint_core(repo_root, core_root, index_path=args.index.resolve() if args.index else None)
+    ok, errors = lint_core(
+        repo_root,
+        core_root,
+        index_path=args.index.resolve() if args.index else None,
+        fixture_core=args.core is not None,
+    )
     if ok:
         print("capability-manifest-lint: pass")
         return 0

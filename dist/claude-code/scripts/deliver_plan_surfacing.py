@@ -39,8 +39,8 @@ def phase_run_dir(root: Path, slug: str) -> Path:
     return root / ".cursor" / "sw-deliver-runs" / slug
 
 
-def append_run_log(root: Path, entry: dict[str, Any]) -> None:
-    log_path = deliver_run_log_path(root)
+def append_run_log(root: Path, entry: dict[str, Any], *, state: dict[str, Any] | None = None) -> None:
+    log_path = deliver_run_log_path(root, state=state)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps({**entry, "at": utc_now()}, ensure_ascii=False) + "\n"
     with log_path.open("a", encoding="utf-8") as handle:
@@ -48,8 +48,8 @@ def append_run_log(root: Path, entry: dict[str, Any]) -> None:
     os.chmod(log_path, 0o600)
 
 
-def read_run_log_events(root: Path, event: str | None = None) -> list[dict[str, Any]]:
-    log_path = deliver_run_log_path(root)
+def read_run_log_events(root: Path, event: str | None = None, *, state: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    log_path = deliver_run_log_path(root, state=state)
     if not log_path.is_file():
         return []
     rows: list[dict[str, Any]] = []
@@ -143,7 +143,7 @@ def collect_resolved_capabilities(root: Path, state: dict[str, Any]) -> list[dic
             slug_by_type[str(phase_type)] = slug
 
     rows: list[dict[str, Any]] = []
-    for entry in read_run_log_events(root, "capability-selection"):
+    for entry in read_run_log_events(root, "capability-selection", state=state):
         phase_slug = entry.get("phaseSlug")
         phase_type = entry.get("phaseType")
         if not phase_slug and phase_type:
@@ -219,6 +219,7 @@ def attach_plan_surfacing_to_report(
             "reportKind": report_kind,
             "snapshot": snapshot,
         },
+        state=state,
     )
     report["planSurfacing"] = snapshot
     return report

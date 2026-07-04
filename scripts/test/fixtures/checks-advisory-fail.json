@@ -1,4 +1,4 @@
 [
-  {"name": "feat-test-plan-cleanup-fixtures", "state": "FAILURE", "bucket": "fail", "link": "", "workflow": "pr-test-plan"},
+  {"name": "feat-test-plan-pytest-advisory-shard-1", "state": "FAILURE", "bucket": "fail", "link": "", "workflow": "pr-test-plan"},
   {"name": "CodeRabbit", "state": "SUCCESS", "bucket": "pass", "link": "", "workflow": "review"}
 ]

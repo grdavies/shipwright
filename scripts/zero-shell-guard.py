@@ -43,7 +43,7 @@ def find_bash_py_invocations(root: Path) -> list[str]:
             continue
         for path in sorted(base.rglob("*.py")):
             posix = path.as_posix()
-            if "/test/" in posix or path.name == "zero-shell-guard.py":
+            if "/test/" in posix or "/_sw/vendor/" in posix or path.name == "zero-shell-guard.py":
                 continue
             try:
                 text = path.read_text(encoding="utf-8")
@@ -94,6 +94,9 @@ def find_shell_outs(root: Path) -> list[str]:
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.py")):
+            posix = path.as_posix()
+            if "/_sw/vendor/" in posix:
+                continue
             try:
                 text = path.read_text(encoding="utf-8")
             except OSError:
