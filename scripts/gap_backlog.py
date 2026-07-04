@@ -417,6 +417,22 @@ def check_integrity(backlog: GapBacklog) -> list[dict[str, Any]]:
     return issues
 
 
+
+
+def assert_gap_backlog_writable(root: Path) -> None:
+  try:
+    from planning_migrate_issue_store import gap_backlog_is_readonly
+  except ImportError:
+    return
+  if gap_backlog_is_readonly(root):
+    print(json.dumps({
+      "verdict": "fail",
+      "error": "GAP-BACKLOG is read-only during issue-store migration transition",
+      "halt": "gap-backlog-readonly-shim",
+      "remediation": "capture gaps via planning_gap_capture.py or complete migration",
+    }))
+    sys.exit(20)
+
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     parser = argparse.ArgumentParser(prog="gap_backlog.py")
@@ -463,6 +479,7 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(out))
         sys.exit(1 if issues else 0)
     if ns.cmd == "flip":
+        assert_gap_backlog_writable(root)
         changed: list[str] = []
         legacy_changed = False
         if ns.schedule:

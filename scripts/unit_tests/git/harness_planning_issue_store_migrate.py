@@ -387,6 +387,85 @@ else
   bad "SC17d:migrate-invoke"
 fi
 
+
+# --- SC38a: doctor detects created-but-unverified ---
+seed_repo "$REPO"
+python3 "$PY_STORE" --root "$REPO" clear-issue-fixture >/dev/null
+rm -f "$JOURNAL"
+export SW_MIGRATE_INJECT_FAIL_AFTER=created
+set +e
+python3 "$PY_MIG" "$REPO" store-files-to-issues --apply >/dev/null 2>&1
+set -e
+unset SW_MIGRATE_INJECT_FAIL_AFTER
+if OUT=$(python3 "$PY_MIG" "$REPO" store-doctor 2>/dev/null); then
+  if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('action')=='store-doctor' and d.get('issueCount',0)>=1"; then
+    ok "SC38a:doctor-detects"
+  else
+    bad "SC38a:doctor-detects"
+  fi
+else
+  bad "SC38a:doctor-invoke"
+fi
+python3 "$PY_MIG" "$REPO" store-doctor --apply >/dev/null
+python3 "$PY_MIG" "$REPO" store-files-to-issues --apply >/dev/null
+if [[ ! -f "$ARTIFACT" ]]; then
+  ok "SC38a:doctor-repair-resume"
+else
+  bad "SC38a:doctor-repair-resume"
+fi
+
+# --- SC38b: quiesce refuses active deliver run-state ---
+seed_repo "$REPO"
+mkdir -p "$REPO/.cursor/sw-deliver-runs/active-phase"
+echo '{"verdict":"running"}' >"$REPO/.cursor/sw-deliver-runs/active-phase/status.json"
+set +e
+python3 "$PY_MIG" "$REPO" store-files-to-issues --apply >/dev/null 2>&1
+RC=$?
+set -e
+if [[ "$RC" -ne 0 ]]; then
+  ok "SC38b:quiesce-refuses-deliver"
+else
+  bad "SC38b:quiesce-refuses-deliver"
+fi
+rm -rf "$REPO/.cursor/sw-deliver-runs"
+
+# --- SC38c: GAP-BACKLOG shim read-only during transition ---
+seed_repo "$REPO"
+mkdir -p "$REPO/docs/planning/gap/gap-shim-fixture"
+cat >"$REPO/docs/planning/gap/gap-shim-fixture/gap-shim-fixture.md" <<'EOF'
+---
+id: gap-shim-fixture
+type: gap
+status: open
+visibility: public
+title: Shim fixture gap
+---
+# GAP_SHIM_BODY
+EOF
+commit_repo "$REPO" "sc38c seed"
+python3 "$PY_STORE" --root "$REPO" clear-issue-fixture >/dev/null
+rm -f "$JOURNAL"
+export SW_MIGRATE_INJECT_FAIL_AFTER=created
+set +e
+python3 "$PY_MIG" "$REPO" store-files-to-issues --apply >/dev/null 2>&1
+set -e
+unset SW_MIGRATE_INJECT_FAIL_AFTER
+GAP_BACKLOG="$REPO/docs/prds/GAP-BACKLOG.md"
+if [[ -f "$GAP_BACKLOG" ]] && grep -q "issue-store-migration-gap-shim" "$GAP_BACKLOG"; then
+  ok "SC38c:gap-shim-written"
+else
+  bad "SC38c:gap-shim-written"
+fi
+set +e
+python3 "$ROOT/scripts/gap_backlog.py" --root "$REPO" flip --resolve --prd test 2>/dev/null
+RC=$?
+set -e
+if [[ "$RC" -ne 0 ]]; then
+  ok "SC38c:gap-shim-readonly"
+else
+  bad "SC38c:gap-shim-readonly"
+fi
+
 exit $FAIL
 """
 

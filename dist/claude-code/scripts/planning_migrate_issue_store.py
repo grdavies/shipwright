@@ -7,6 +7,7 @@ import json
 import os
 import re
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -78,6 +79,9 @@ from planning_store import (  # noqa: E402
 )
 
 JOURNAL_REL = ".cursor/hooks/state/issue-store-migration-journal.json"
+ISSUE_STORE_LOCK_REL = ".cursor/hooks/state/issue-store-migration.lock"
+TRANSITION_STAMP_REL = ".cursor/hooks/state/issue-store-migration-transition.json"
+GAP_BACKLOG_SHIM_MARKER = "<!-- issue-store-migration-gap-shim: generated v1 -->"
 DIRECTION_FILES_TO_ISSUES = "files-to-issues"
 DIRECTION_ISSUES_TO_FILES = "issues-to-files"
 DIRECTIONS = frozenset({DIRECTION_FILES_TO_ISSUES, DIRECTION_ISSUES_TO_FILES})
@@ -160,6 +164,436 @@ def save_journal(root: Path, journal: dict[str, Any], *, apply: bool) -> None:
     path = journal_path(root)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(journal, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+
+def transition_stamp_path(root: Path) -> Path:
+    return root / TRANSITION_STAMP_REL
+
+
+def issue_store_lock_path(root: Path) -> Path:
+    return root / ISSUE_STORE_LOCK_REL
+
+
+def write_transition_stamp(root: Path, journal: dict[str, Any], *, apply: bool) -> None:
+    if not apply:
+        return
+    incomplete = journal_incomplete_keys(journal)
+    path = transition_stamp_path(root)
+    if incomplete:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "direction": journal.get("direction"),
+                    "incompleteCount": len(incomplete),
+                    "updatedAt": time.time(),
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    elif path.is_file():
+        path.unlink()
+
+
+def journal_incomplete_keys(journal: dict[str, Any]) -> list[str]:
+    entries = journal.get("entries", {})
+    if not isinstance(entries, dict):
+        return []
+    return [
+        key
+        for key, entry in entries.items()
+        if isinstance(entry, dict) and entry.get("state") != "source-removed"
+    ]
+
+
+def migration_in_transition(root: Path) -> bool:
+    journal = load_journal(root)
+    if journal.get("direction") and journal_incomplete_keys(journal):
+        return True
+    return transition_stamp_path(root).is_file()
+
+
+def gap_backlog_is_readonly(root: Path) -> bool:
+    if migration_in_transition(root):
+        return True
+    dirs = pp_load_planning_dirs(root)
+    gap_path = root / dirs.prds / "GAP-BACKLOG.md"
+    if not gap_path.is_file():
+        return False
+    return GAP_BACKLOG_SHIM_MARKER in gap_path.read_text(encoding="utf-8")
+
+
+def pp_load_planning_dirs(root: Path) -> Any:
+    import planning_paths as pp
+
+    return pp.load_planning_dirs(root)
+
+
+def scan_quiesce_blockers(root: Path) -> list[dict[str, Any]]:
+    from planning_migrate import scan_runstate
+    from wave_living_doc_lock import lock_path as living_lock_path
+    from wave_state import lock_is_stale, lock_owner_live, read_lock_meta
+
+    blockers: list[dict[str, Any]] = list(scan_runstate(root))
+    living = living_lock_path(root)
+    if living.is_file():
+        meta = read_lock_meta(living)
+        if not lock_is_stale(living) and lock_owner_live(meta):
+            blockers.append(
+                {
+                    "kind": "reconcile",
+                    "path": str(living.relative_to(root)).replace("\\", "/"),
+                    "holder": meta,
+                }
+            )
+    lock = issue_store_lock_path(root)
+    if lock.is_file():
+        try:
+            held = json.loads(lock.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            held = {}
+        if held.get("pid") != os.getpid():
+            blockers.append(
+                {
+                    "kind": "issue-store-migration-lock",
+                    "path": ISSUE_STORE_LOCK_REL,
+                    "holder": held,
+                }
+            )
+    return blockers
+
+
+def assert_quiesced(root: Path) -> None:
+    blockers = scan_quiesce_blockers(root)
+    if blockers:
+        fail(
+            "quiesce-required",
+            exit_code=20,
+            blockers=blockers,
+            remediation="wait for active deliver runs and reconciler to finish before migrating",
+        )
+
+
+def acquire_issue_store_lock(root: Path) -> None:
+    path = issue_store_lock_path(root)
+    if path.is_file():
+        fail("issue-store-migration-lock-held", exit_code=20, lock=ISSUE_STORE_LOCK_REL)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "heldAt": time.time(),
+        "pid": os.getpid(),
+        "host": os.uname().nodename,
+    }
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def release_issue_store_lock(root: Path) -> None:
+    issue_store_lock_path(root).unlink(missing_ok=True)
+
+
+def _source_exists(root: Path, direction: str, artifact: MigrationArtifact) -> bool:
+    if direction == DIRECTION_FILES_TO_ISSUES:
+        return (root / artifact.source_path).is_file()
+    if artifact.issue_id:
+        try:
+            cfg_issues_client(root).issue_get(artifact.issue_id)
+            return True
+        except IssueNotFound:
+            return False
+    return False
+
+
+def _gap_legacy_id(unit_id: str) -> str:
+    m = re.match(r"^gap-(\d+)-", unit_id)
+    if m:
+        return f"GAP-{m.group(1)}"
+    return unit_id.upper()
+
+
+def _gap_status_label(lifecycle: ArtifactLifecycle) -> str:
+    if lifecycle.gap_status:
+        lowered = lifecycle.gap_status.lower()
+        if lowered in {"planned", "scheduled"}:
+            return "scheduled"
+        if lowered == "resolved":
+            return "resolved"
+        return "open"
+    return "open"
+
+
+def refresh_gap_backlog_shim(root: Path, cfg: dict[str, Any] | None = None, *, apply: bool = True) -> dict[str, Any]:
+    if not migration_in_transition(root):
+        return {"skipped": True, "reason": "not-in-transition"}
+    cfg = cfg or load_workflow_config(root)
+    dirs = pp_load_planning_dirs(root)
+    direction = str(load_journal(root).get("direction") or DIRECTION_FILES_TO_ISSUES)
+    gaps = [a for a in discover_artifacts(root, direction, cfg) if a.artifact_type == "gap"]
+    lines = [
+        GAP_BACKLOG_SHIM_MARKER,
+        "",
+        "Read-only projection during issue-store migration (PRD 044 R38).",
+        "Edit canonical gap units or issues — not this file.",
+        "",
+        "| ID | Status | Title |",
+        "|----|--------|-------|",
+    ]
+    for gap in sorted(gaps, key=lambda a: a.unit_id):
+        gid = _gap_legacy_id(gap.unit_id)
+        status = _gap_status_label(gap.lifecycle)
+        title = gap.title or gap.unit_id
+        lines.append(f"| {gid} | {status} | {title} |")
+    lines.append("")
+    content = "\n".join(lines)
+    gap_path = root / dirs.prds / "GAP-BACKLOG.md"
+    if apply:
+        gap_path.parent.mkdir(parents=True, exist_ok=True)
+        gap_path.write_text(content, encoding="utf-8")
+    return {
+        "gapBacklog": str(gap_path.relative_to(root)),
+        "gapRows": len(gaps),
+        "readonly": True,
+    }
+
+
+def remove_gap_backlog_shim(root: Path, *, apply: bool = True) -> dict[str, Any]:
+    dirs = pp_load_planning_dirs(root)
+    gap_path = root / dirs.prds / "GAP-BACKLOG.md"
+    stamp = transition_stamp_path(root)
+    removed = False
+    if apply:
+        if gap_path.is_file() and GAP_BACKLOG_SHIM_MARKER in gap_path.read_text(encoding="utf-8"):
+            gap_path.unlink()
+            removed = True
+        if stamp.is_file():
+            stamp.unlink()
+    return {"removed": removed, "gapBacklog": str(gap_path.relative_to(root))}
+
+
+def diagnose_migration(root: Path, direction: str, cfg: dict[str, Any]) -> list[dict[str, Any]]:
+    journal = load_journal(root)
+    file_backend = InRepoPublicBackend(root, cfg)
+    issue_backend = IssueStoreBackend(root, cfg)
+    issues: list[dict[str, Any]] = []
+    for artifact in discover_artifacts(root, direction, cfg):
+        entry = _journal_entry(journal, artifact)
+        state = str(entry.get("state", "pending"))
+        source_present = _source_exists(root, direction, artifact)
+        target_ok = _verify_target(
+            root, direction, artifact, file_backend, issue_backend, cfg, apply=True
+        )
+        if state == "created" and not target_ok:
+            issues.append(
+                {
+                    "kind": "created-but-unverified",
+                    "unitId": artifact.unit_id,
+                    "sourcePath": artifact.source_path,
+                    "repair": "rollback-target",
+                }
+            )
+        elif state == "created" and target_ok:
+            issues.append(
+                {
+                    "kind": "created-ready-to-verify",
+                    "unitId": artifact.unit_id,
+                    "sourcePath": artifact.source_path,
+                    "repair": "advance-to-verified",
+                }
+            )
+        elif state in {"verified", "source-removed"} and source_present:
+            issues.append(
+                {
+                    "kind": "verified-but-source-present",
+                    "unitId": artifact.unit_id,
+                    "sourcePath": artifact.source_path,
+                    "state": state,
+                    "repair": "complete-source-removal" if target_ok else "rollback-target",
+                }
+            )
+        elif state == "pending" and target_ok and not source_present:
+            issues.append(
+                {
+                    "kind": "target-without-journal",
+                    "unitId": artifact.unit_id,
+                    "sourcePath": artifact.source_path,
+                    "repair": "advance-journal",
+                }
+            )
+    return issues
+
+
+def repair_migration_issue(
+    root: Path,
+    cfg: dict[str, Any],
+    direction: str,
+    issue: dict[str, Any],
+    journal: dict[str, Any],
+    file_backend: InRepoPublicBackend,
+    issue_backend: IssueStoreBackend,
+    *,
+    apply: bool,
+) -> dict[str, Any]:
+    unit_id = str(issue.get("unitId", ""))
+    artifacts = [a for a in discover_artifacts(root, direction, cfg) if a.unit_id == unit_id]
+    if not artifacts:
+        return {"unitId": unit_id, "action": "skip", "reason": "artifact-missing"}
+    artifact = artifacts[0]
+    entry = _journal_entry(journal, artifact)
+    repair = str(issue.get("repair", ""))
+    if repair == "advance-to-verified":
+        entry["state"] = "verified"
+        _set_entry(journal, artifact, entry)
+        save_journal(root, journal, apply=apply)
+        return {"unitId": unit_id, "action": "advance-to-verified"}
+    if repair == "complete-source-removal" and apply:
+        _remove_source(root, direction, artifact, apply=True)
+        entry["state"] = "source-removed"
+        _set_entry(journal, artifact, entry)
+        save_journal(root, journal, apply=apply)
+        return {"unitId": unit_id, "action": "complete-source-removal"}
+    if repair == "rollback-target" and apply:
+        if direction == DIRECTION_FILES_TO_ISSUES:
+            provider = str(cfg.get("planning", {}).get("store", {}).get("issuesProvider", "none"))
+            client = IssuesClient(root, provider)
+            try:
+                record = _lookup_issue_record(
+                    root,
+                    issue_backend.project_key,
+                    artifact.unit_id,
+                    artifact.body_path,
+                    client,
+                )
+                client.mark_tombstone(record.id)
+            except IssueNotFound:
+                pass
+        else:
+            path = root / artifact.body_path
+            if path.is_file():
+                path.unlink()
+        entry["state"] = "pending"
+        entry.pop("targetRef", None)
+        _set_entry(journal, artifact, entry)
+        save_journal(root, journal, apply=apply)
+        return {"unitId": unit_id, "action": "rollback-target"}
+    if repair == "advance-journal":
+        entry["state"] = "source-removed"
+        _set_entry(journal, artifact, entry)
+        save_journal(root, journal, apply=apply)
+        return {"unitId": unit_id, "action": "advance-journal"}
+    return {"unitId": unit_id, "action": "noop", "repair": repair}
+
+
+ROLLBACK_INVARIANTS = [
+    "Rollback removes unverified targets and resets journal entries to pending.",
+    "Verified targets with sources still present complete source removal when repair applies.",
+    "source-removed entries are terminal — rollback recreates sources from verified targets only via doctor repair.",
+    "After rollback or repair, every artifact has either a verified target or its source — never neither.",
+]
+
+
+def run_store_doctor(root: Path, *, apply: bool = False) -> None:
+    root = root.resolve()
+    cfg = load_workflow_config(root)
+    journal = load_journal(root)
+    direction = str(journal.get("direction") or DIRECTION_FILES_TO_ISSUES)
+    if direction not in DIRECTIONS:
+        fail("invalid-direction", direction=direction)
+    issues = diagnose_migration(root, direction, cfg)
+    repairs: list[dict[str, Any]] = []
+    if apply and issues:
+        file_backend = InRepoPublicBackend(root, cfg)
+        issue_backend = IssueStoreBackend(root, cfg)
+        for issue in issues:
+            repairs.append(
+                repair_migration_issue(
+                    root,
+                    cfg,
+                    direction,
+                    issue,
+                    journal,
+                    file_backend,
+                    issue_backend,
+                    apply=True,
+                )
+            )
+            journal = load_journal(root)
+        write_transition_stamp(root, journal, apply=True)
+        refresh_gap_backlog_shim(root, cfg, apply=True)
+    emit(
+        {
+            "verdict": "pass",
+            "mode": "apply" if apply else "dry-run",
+            "action": "store-doctor",
+            "direction": direction,
+            "issueCount": len(issues),
+            "issues": issues,
+            "repairs": repairs,
+            "rollbackInvariants": ROLLBACK_INVARIANTS,
+        }
+    )
+
+
+def rollback_store_migration(root: Path, *, apply: bool = False) -> None:
+    root = root.resolve()
+    assert_quiesced(root)
+    cfg = load_workflow_config(root)
+    journal = load_journal(root)
+    direction = str(journal.get("direction") or DIRECTION_FILES_TO_ISSUES)
+    if direction not in DIRECTIONS:
+        fail("invalid-direction", direction=direction)
+    issues = [
+        issue
+        for issue in diagnose_migration(root, direction, cfg)
+        if issue.get("kind")
+        in {"created-but-unverified", "verified-but-source-present", "target-without-journal"}
+    ]
+    repairs: list[dict[str, Any]] = []
+    if apply:
+        acquire_issue_store_lock(root)
+        try:
+            file_backend = InRepoPublicBackend(root, cfg)
+            issue_backend = IssueStoreBackend(root, cfg)
+            for issue in issues:
+                mutated = dict(issue)
+                if issue.get("kind") == "verified-but-source-present":
+                    mutated["repair"] = "rollback-target"
+                repairs.append(
+                    repair_migration_issue(
+                        root,
+                        cfg,
+                        direction,
+                        mutated,
+                        journal,
+                        file_backend,
+                        issue_backend,
+                        apply=True,
+                    )
+                )
+                journal = load_journal(root)
+            incomplete = journal_incomplete_keys(journal)
+            if not incomplete:
+                remove_gap_backlog_shim(root, apply=True)
+                journal_path(root).unlink(missing_ok=True)
+            else:
+                write_transition_stamp(root, journal, apply=True)
+                refresh_gap_backlog_shim(root, cfg, apply=True)
+        finally:
+            release_issue_store_lock(root)
+    emit(
+        {
+            "verdict": "pass",
+            "mode": "apply" if apply else "dry-run",
+            "action": "store-rollback",
+            "direction": direction,
+            "issueCount": len(issues),
+            "repairs": repairs,
+            "rollbackInvariants": ROLLBACK_INVARIANTS,
+        }
+    )
+
 
 
 def _parse_fm_list(value: str) -> list[str]:
@@ -950,6 +1384,7 @@ def run_store_migration(root: Path, direction: str, *, apply: bool = False) -> N
     root = root.resolve()
     if direction not in DIRECTIONS:
         fail("invalid-direction", direction=direction)
+    assert_quiesced(root)
     cfg = load_workflow_config(root)
     journal = load_journal(root)
     if journal.get("direction") and journal["direction"] != direction:
@@ -971,20 +1406,36 @@ def run_store_migration(root: Path, direction: str, *, apply: bool = False) -> N
     file_backend = InRepoPublicBackend(root, cfg)
     issue_backend = IssueStoreBackend(root, cfg)
 
-    artifacts = discover_artifacts(root, direction, cfg)
+    lock_held = False
+    if apply:
+        acquire_issue_store_lock(root)
+        lock_held = True
+    artifacts: list[MigrationArtifact] = []
     plan: list[dict[str, Any]] = []
-    for artifact in artifacts:
-        process_artifact(
-            root,
-            cfg,
-            direction,
-            artifact,
-            journal,
-            file_backend,
-            issue_backend,
-            apply=apply,
-            plan=plan,
-        )
+    try:
+        artifacts = discover_artifacts(root, direction, cfg)
+        for artifact in artifacts:
+            process_artifact(
+                root,
+                cfg,
+                direction,
+                artifact,
+                journal,
+                file_backend,
+                issue_backend,
+                apply=apply,
+                plan=plan,
+            )
+            journal = load_journal(root)
+    finally:
+        if apply:
+            journal = load_journal(root)
+            write_transition_stamp(root, journal, apply=True)
+            refresh_gap_backlog_shim(root, cfg, apply=True)
+            if not journal_incomplete_keys(journal):
+                remove_gap_backlog_shim(root, apply=True)
+        if lock_held:
+            release_issue_store_lock(root)
 
     refused_count = sum(1 for item in plan if item.get("action") == "refused")
 
@@ -997,6 +1448,7 @@ def run_store_migration(root: Path, direction: str, *, apply: bool = False) -> N
             "refusedCount": refused_count,
             "plan": plan,
             "journalPath": JOURNAL_REL,
+            "rollbackInvariants": ROLLBACK_INVARIANTS,
         }
     )
 
@@ -1006,7 +1458,23 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Issue-store migration engine")
     parser.add_argument("repo_root")
-    parser.add_argument("direction", choices=sorted(DIRECTIONS))
+    parser.add_argument(
+        "command",
+        nargs="?",
+        choices=["migrate", "doctor", "rollback", "scan-quiesce"],
+        default="migrate",
+    )
+    parser.add_argument("direction", nargs="?", choices=sorted(DIRECTIONS))
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args()
-    run_store_migration(Path(args.repo_root), args.direction, apply=args.apply)
+    root = Path(args.repo_root)
+    if args.command == "doctor":
+        run_store_doctor(root, apply=args.apply)
+    elif args.command == "rollback":
+        rollback_store_migration(root, apply=args.apply)
+    elif args.command == "scan-quiesce":
+        emit({"verdict": "pass", "blockers": scan_quiesce_blockers(root)})
+    else:
+        if not args.direction:
+            fail("direction required for migrate")
+        run_store_migration(root, args.direction, apply=args.apply)
