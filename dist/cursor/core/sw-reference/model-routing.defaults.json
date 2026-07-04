@@ -38,7 +38,8 @@
       "sw-triage": "cheap",
       "sw-verify": "cheap",
       "sw-watch-ci": "cheap",
-      "sw-worktree": "cheap"
+      "sw-worktree": "cheap",
+      "sw-migrate": "cheap"
     },
     "agents": {
       "sw-coherence-reviewer": "build",

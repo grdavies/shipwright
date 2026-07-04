@@ -43,3 +43,7 @@ Restart-safe resume uses idempotency keys; sources are removed only after hash v
 
 `SW_MIGRATE_INJECT_FAIL_AFTER` — inject failure after journal reaches `created`, `verified`, or
 `source-removed` (partial-failure resume tests).
+
+**Communication intensity:** inherit
+
+**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-migrate`.
