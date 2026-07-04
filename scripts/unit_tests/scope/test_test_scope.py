@@ -146,3 +146,10 @@ def test_fast_and_full_scope_shapes(
 def test_path_matches_glob() -> None:
     assert ts.path_matches_glob("docs/guides/testing.md", "docs/**")
     assert not ts.path_matches_glob("scripts/host.py", "docs/**")
+
+
+def test_full_dist_compare_tier_gate() -> None:
+    assert ts.should_run_full_dist_compare("full", []) is True
+    assert ts.should_run_full_dist_compare("phase", ["docs/foo.md"]) is False
+    assert ts.should_run_full_dist_compare("phase", ["scripts/test_scope.py"]) is True
+    assert ts.should_run_full_dist_compare("fast", ["core/sw-reference/suite-registry.json"]) is True
