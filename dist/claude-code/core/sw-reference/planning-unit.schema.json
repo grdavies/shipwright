@@ -1,0 +1,184 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/grdavies/shipwright/core/sw-reference/planning-unit.schema.json",
+  "title": "Shipwright planning-unit frontmatter",
+  "description": "Canonical frontmatter for every planning unit under docs/planning/. Status validation is type-conditioned (PRD 031 R1, R4). The token planned is a homonym: gap units use planned in the gap sense (scheduled for work); lifecycle units use planned in the lifecycle sense (accepted but not started).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "type",
+    "status",
+    "title",
+    "visibility"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Stable monotonic unit id; never reused; all cross-references use this id."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "brainstorm",
+        "gap",
+        "prd",
+        "decision",
+        "amendment"
+      ],
+      "description": "Planning-unit artifact type."
+    },
+    "status": {
+      "type": "string",
+      "description": "Type-conditioned status \u2014 see allOf branches for allowed values per type."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable unit title."
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "private",
+        "memory"
+      ],
+      "description": "Per-unit visibility token (PRD 034). Resolved through scripts/planning_visibility.py when unset."
+    },
+    "depends": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "uniqueItems": true,
+      "default": [],
+      "description": "Unit ids this unit depends on."
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "uniqueItems": true,
+      "default": [],
+      "description": "Unit ids blocked by this unit."
+    },
+    "supersedes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "uniqueItems": true,
+      "default": [],
+      "description": "Unit ids this unit supersedes."
+    },
+    "extends": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "uniqueItems": true,
+      "default": [],
+      "description": "Unit ids this unit extends."
+    },
+    "absorbs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "uniqueItems": true,
+      "default": [],
+      "description": "Unit ids absorbed by this unit. Cancelled PRD supersession edges (R10) are reversible per R28."
+    },
+    "priority": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Optional scheduling priority (PRD 033 owns enforcement)."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "default": [],
+      "description": "Free-form classification tags."
+    },
+    "inflightTuple": {
+      "$ref": "inflight-tuple.schema.json",
+      "description": "Reserved cross-reference shape for committed INDEX inFlight tuples (PRD 032 R13). Not stored in unit frontmatter."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "gap"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "status": {
+            "enum": [
+              "open",
+              "planned",
+              "partially resolved",
+              "resolved"
+            ],
+            "description": "Gap lifecycle enum (stub \u2014 PRD 033 owns transitions)."
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "enum": [
+              "brainstorm",
+              "prd",
+              "decision",
+              "amendment"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "status": {
+            "enum": [
+              "proposed",
+              "planned",
+              "in-progress",
+              "complete",
+              "superseded",
+              "cancelled",
+              "deferred",
+              "blocked"
+            ],
+            "description": "Lifecycle enum (stub \u2014 PRD 033 owns transitions). planned here means accepted-but-not-started, distinct from gap planned."
+          }
+        }
+      }
+    }
+  ]
+}

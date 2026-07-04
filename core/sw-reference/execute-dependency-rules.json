@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "description": "Closed-world execute-tier dependency rules (PRD 053 R7, R33). No open-ended NLP.",
+  "rules": [
+    {
+      "id": "wire-after-implement",
+      "kind": "wire-after-implement",
+      "wireTitlePattern": "(?i)^Wire\\b",
+      "implementTitlePattern": "(?i)^(Implement|Add)\\b",
+      "matchOn": [
+        "shared-file",
+        "shared-backtick"
+      ]
+    },
+    {
+      "id": "fixtures-after-prior-work",
+      "kind": "fixtures-after-prior-work",
+      "fixturesTitlePattern": "(?i)\\bFixtures?\\b"
+    },
+    {
+      "id": "traceability-row-order",
+      "kind": "traceability-row-order"
+    }
+  ]
+}

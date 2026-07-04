@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "description": "Path prefixes that require build-chain-sync before phase/terminal ship commit (PRD 035 A1 R25).",
+  "pathPrefixes": [
+    "scripts/",
+    "core/",
+    "dist/",
+    "commands/",
+    "skills/",
+    "rules/",
+    "agents/",
+    "providers/"
+  ]
+}

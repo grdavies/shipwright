@@ -107,7 +107,7 @@ def sync(root: Path, *, force: bool = False) -> int:
     scripts_excludes = list(core_scripts.get("excludes") or ["test/", "check-frozen.py"])
     if "*.bak" not in scripts_excludes:
         scripts_excludes.append("*.bak")
-    mirror.mirror(root / "scripts", core / "scripts", excludes=scripts_excludes, delete=True)
+    mirror.mirror(root / "scripts", core / "scripts", excludes=scripts_excludes, delete=True, purge_excludes=True)
     frozen = core / "scripts" / "check-frozen.py"
     if frozen.exists():
         frozen.unlink()

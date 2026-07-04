@@ -49,10 +49,6 @@ def _prune_orphans(src: Path, dst: Path, excludes: list[str], rel_prefix: str = 
     for entry in sorted(dst.iterdir(), key=lambda p: p.name):
         rel = f"{rel_prefix}{entry.name}" if not rel_prefix else f"{rel_prefix}/{entry.name}"
         if _matches_excludes(rel, excludes):
-            if entry.is_dir() and not entry.is_symlink():
-                shutil.rmtree(entry)
-            else:
-                entry.unlink()
             continue
         src_entry = src / entry.name
         if not src_entry.exists():
@@ -65,12 +61,28 @@ def _prune_orphans(src: Path, dst: Path, excludes: list[str], rel_prefix: str = 
             _prune_orphans(src_entry, entry, excludes, rel)
 
 
+def _purge_excluded(dst: Path, excludes: list[str], rel_prefix: str = "") -> None:
+    if not dst.exists():
+        return
+    for entry in sorted(dst.iterdir(), key=lambda p: p.name):
+        rel = f"{rel_prefix}{entry.name}" if not rel_prefix else f"{rel_prefix}/{entry.name}"
+        if _matches_excludes(rel, excludes):
+            if entry.is_dir() and not entry.is_symlink():
+                shutil.rmtree(entry)
+            else:
+                entry.unlink()
+            continue
+        if entry.is_dir() and not entry.is_symlink():
+            _purge_excluded(entry, excludes, rel)
+
+
 def mirror(
     src: Path,
     dst: Path,
     *,
     excludes: list[str] | None = None,
     delete: bool = True,
+    purge_excludes: bool = False,
 ) -> None:
     """Replicate ``rsync -a --delete`` semantics for directory trees."""
     excludes = list(excludes or [])
@@ -80,3 +92,5 @@ def mirror(
     _copy_tree(src, dst, excludes)
     if delete:
         _prune_orphans(src, dst, excludes)
+    if purge_excludes:
+        _purge_excluded(dst, excludes)

@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "roles": {
+    "harness": {
+      "path": "scripts/",
+      "description": "Canonical harness source; runtime entrypoints execute from repo root. MUST NOT be edited only under core/scripts/."
+    },
+    "coreContentDirs": {
+      "paths": [
+        "core/commands/",
+        "core/skills/",
+        "core/rules/",
+        "core/agents/",
+        "core/providers/"
+      ],
+      "source": "repo-root siblings",
+      "description": "Mirrored from commands/, skills/, rules/, agents/, providers/ via copy-to-core."
+    },
+    "coreScripts": {
+      "path": "core/scripts/",
+      "source": "scripts/",
+      "excludes": [
+        "test/",
+        "tests/",
+        "unit_tests/",
+        "check-frozen.py"
+      ],
+      "description": "Mirrored from scripts/ with documented excludes."
+    },
+    "swReferenceInput": {
+      "path": ".sw/",
+      "description": "Operator-edited sw-reference inputs (strict subset)."
+    },
+    "swReferenceOutput": {
+      "path": "core/sw-reference/",
+      "description": "Union of .sw/ sync output plus coreAuthoredAllowlist entries."
+    },
+    "dist": {
+      "paths": [
+        "dist/cursor/",
+        "dist/claude-code/"
+      ],
+      "description": "Emitter output only; never hand-edited."
+    },
+    "goldenManifest": {
+      "path": "scripts/test/fixtures/parity/cursor-golden.manifest",
+      "description": "Committed golden; updated only via sanctioned snapshot command."
+    }
+  },
+  "coreAuthoredAllowlist": [
+    "adoption-call-site-map.md",
+    "anomaly-patterns.json",
+    "build-chain-paths.json",
+    "build-chain-sot.json",
+    "call-site-map.md",
+    "canonical-serialization.md",
+    "capability-index.json",
+    "capability-manifest.md",
+    "capability-manifest.schema.json",
+    "communication-routing.defaults.json",
+    "decision-log.schema.json",
+    "deterministic-regen-paths.json",
+    "execute-dependency-rules.json",
+    "execute-step-plan.schema.json",
+    "failure-signature.schema.json",
+    "guidelines.json",
+    "guidelines.md",
+    "guidelines.schema.json",
+    "guidelines/",
+    "guidelines/debug.pack.json",
+    "guidelines/doc.pack.json",
+    "guidelines/feedback.pack.json",
+    "inflight-signal.schema.json",
+    "kernel-classification.json",
+    "kernel-classification.md",
+    "loop-health.schema.json",
+    "meta-inbox-draft.schema.json",
+    "migration-waves.json",
+    "model-routing.defaults.json",
+    "model-tier-hook-feasibility.md",
+    "orchestrator-step-plan.json",
+    "planning-privacy-notice.md",
+    "planning-unit.schema.json",
+    "pr-test-plan.manifest.json",
+    "quality-signal.schema.json",
+    "root-cause-record.schema.json",
+    "schemas/",
+    "schemas/orchestrator-guideline-pack.schema.json",
+    "schemas/orchestrator-step-plan.schema.json",
+    "script-port-ledger.json",
+    "signal-context.schema.json",
+    "suite-registry.json",
+    "suite-registry.schema.json",
+    "templates/",
+    "verify-presets.json"
+  ],
+  "deprecatedAllowlist": []
+}

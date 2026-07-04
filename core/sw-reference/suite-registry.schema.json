@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/grdavies/shipwright/core/sw-reference/suite-registry.schema.json",
+  "title": "Shipwright test-suite registry",
+  "description": "Authoritative classification of scripts/test/run_*_fixtures.py and related non-suite scripts (PRD 052 R1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "suites"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "suites": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/suiteEntry"
+      }
+    }
+  },
+  "definitions": {
+    "lane": {
+      "type": "string",
+      "enum": [
+        "pr-ci",
+        "verify",
+        "ci-yml",
+        "doc",
+        "internal"
+      ]
+    },
+    "classification": {
+      "type": "string",
+      "enum": [
+        "required",
+        "advisory"
+      ]
+    },
+    "suiteEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "script",
+        "lanes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "script": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lanes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/definitions/lane"
+          }
+        },
+        "classification": {
+          "$ref": "#/definitions/classification"
+        },
+        "ciJobName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verifyClassification": {
+          "$ref": "#/definitions/classification"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "pathTriggers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "pytestMarker": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pytestPath": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "lanes": {
+                "contains": {
+                  "const": "pr-ci"
+                }
+              }
+            },
+            "required": [
+              "lanes"
+            ]
+          },
+          "then": {
+            "required": [
+              "classification",
+              "ciJobName"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

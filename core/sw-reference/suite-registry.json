@@ -1,0 +1,1363 @@
+{
+  "version": 1,
+  "description": "Authoritative test-suite classification (PRD 052 R1).",
+  "suites": [
+    {
+      "id": "docs-link-check",
+      "script": "scripts/docs-link-check.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-docs-link-check"
+    },
+    {
+      "id": "bash-py-invocation-guard",
+      "script": "scripts/test/bash-py-invocation-guard.test",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-bash-py-invocation-guard"
+    },
+    {
+      "id": "git-push-secret-scan-chokepoint",
+      "script": "scripts/test/git-push-secret-scan-chokepoint.test",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-git-push-secret-scan-chokepoint"
+    },
+    {
+      "id": "007-docs-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 27,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "007-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 28,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "authoring-guard-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/capability",
+      "ciShard": 1
+    },
+    {
+      "id": "base-resolution-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 36,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "behavioral-anomaly-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "internal"
+      ],
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "branch-guard-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 19,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "build-chain-sot-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 52,
+      "verifyClassification": "required",
+      "pytestPath": "scripts/unit_tests/git"
+    },
+    {
+      "id": "capability-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 55,
+      "verifyClassification": "advisory",
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "capability-lint-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 39,
+      "pytestPath": "scripts/unit_tests/capability"
+    },
+    {
+      "id": "capability-select-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 40,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "claude-golden-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "ci-yml",
+        "doc"
+      ],
+      "pytestPath": "scripts/unit_tests/meta"
+    },
+    {
+      "id": "cleanup-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "advisory",
+      "ciJobName": "feat-test-plan-pytest-advisory-shard-1",
+      "pytestPath": "scripts/unit_tests/w4",
+      "ciShard": 1
+    },
+    {
+      "id": "code-review-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 11,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "completed-unit-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 1
+    },
+    {
+      "id": "compound-completion-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 25,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "core-scripts-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "ci-yml",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/meta",
+      "ciShard": 1
+    },
+    {
+      "id": "debug-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 5,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "delegation-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 32,
+      "pytestPath": "scripts/unit_tests/dispatch"
+    },
+    {
+      "id": "deliver-concurrency-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "verifyOrder": 17,
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/deliver",
+      "ciShard": 1
+    },
+    {
+      "id": "deliver-cwd-guard-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/deliver",
+      "ciShard": 1
+    },
+    {
+      "id": "deliver-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 14,
+      "pytestPath": "scripts/unit_tests/deliver"
+    },
+    {
+      "id": "deliver-invariant-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/deliver",
+      "ciShard": 1
+    },
+    {
+      "id": "deliver-loop-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 16,
+      "pytestPath": "scripts/unit_tests/deliver"
+    },
+    {
+      "id": "deliver-worktree-contract-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/deliver",
+      "ciShard": 1
+    },
+    {
+      "id": "dispatch-binding-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "verifyOrder": 19,
+      "pytestPath": "scripts/unit_tests/dispatch",
+      "ciShard": 1
+    },
+    {
+      "id": "dispatch-foundation-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 31,
+      "pytestPath": "scripts/unit_tests/dispatch"
+    },
+    {
+      "id": "doc-currency-033-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/w4",
+      "ciShard": 1
+    },
+    {
+      "id": "doc-currency-049-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/w4",
+      "ciShard": 1
+    },
+    {
+      "id": "doc-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 1
+    },
+    {
+      "id": "doc-format-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/doc",
+      "ciShard": 1
+    },
+    {
+      "id": "doc-link-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 3,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "dual-ship-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 1
+    },
+    {
+      "id": "emitter-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "ci-yml",
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 38,
+      "pytestPath": "scripts/unit_tests/meta"
+    },
+    {
+      "id": "execute-orchestration-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/execute",
+      "ciShard": 1
+    },
+    {
+      "id": "fanout-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 57,
+      "verifyClassification": "advisory",
+      "pytestPath": "scripts/unit_tests/dispatch"
+    },
+    {
+      "id": "feedback-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 6,
+      "pytestPath": "scripts/unit_tests/git"
+    },
+    {
+      "id": "gap-backlog-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 1
+    },
+    {
+      "id": "gate-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "ci-yml",
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 0,
+      "pytestPath": "scripts/unit_tests/meta"
+    },
+    {
+      "id": "git-workflow-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/workflow",
+      "ciShard": 1
+    },
+    {
+      "id": "guardrail-matrix-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 54,
+      "verifyClassification": "required",
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "guardrail-rules-resolution-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/guardrails",
+      "ciShard": 2
+    },
+    {
+      "id": "guidelines-floor-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 43,
+      "pytestPath": "scripts/unit_tests/guidelines"
+    },
+    {
+      "id": "heterogeneous-review-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "internal"
+      ],
+      "pytestPath": "scripts/unit_tests/review"
+    },
+    {
+      "id": "hook-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 53,
+      "verifyClassification": "required",
+      "pytestPath": "scripts/unit_tests/hooks"
+    },
+    {
+      "id": "hook-worktree-alignment-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 18,
+      "pytestPath": "scripts/unit_tests/hooks",
+      "ciShard": 2
+    },
+    {
+      "id": "host-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 49,
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 2
+    },
+    {
+      "id": "impl-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 4,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "improvement-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 7,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "inefficiency-scan-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "internal"
+      ],
+      "pytestPath": "scripts/unit_tests/meta"
+    },
+    {
+      "id": "inflight-doc-currency-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/w4",
+      "ciShard": 2
+    },
+    {
+      "id": "inflight-guards-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/meta",
+      "ciShard": 2
+    },
+    {
+      "id": "inflight-migration-bridge-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 2
+    },
+    {
+      "id": "inflight-signal-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 2
+    },
+    {
+      "id": "kernel-classification-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 42,
+      "pytestPath": "scripts/unit_tests/model_tier"
+    },
+    {
+      "id": "living-doc-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 29,
+      "pytestPath": "scripts/unit_tests/meta"
+    },
+    {
+      "id": "loop-autonomy-invariant-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "internal"
+      ],
+      "pytestPath": "scripts/unit_tests/loop"
+    },
+    {
+      "id": "loop-health-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "internal"
+      ],
+      "pytestPath": "scripts/unit_tests/loop"
+    },
+    {
+      "id": "mechanical-sourcing-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/conductor",
+      "ciShard": 2
+    },
+    {
+      "id": "memory-prework-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 10,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "memory-provider-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 8,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "memory-sot-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 9,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "merge-queue-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 24,
+      "pytestPath": "scripts/unit_tests/deliver"
+    },
+    {
+      "id": "meta-channel-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "internal"
+      ],
+      "pytestPath": "scripts/unit_tests/meta"
+    },
+    {
+      "id": "model-binding-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 30,
+      "pytestPath": "scripts/unit_tests/model_tier"
+    },
+    {
+      "id": "onboarding-ux-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 13,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "orchestrator-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 18,
+      "pytestPath": "scripts/unit_tests/conductor"
+    },
+    {
+      "id": "parallel-merge-safety-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/deliver",
+      "ciShard": 2
+    },
+    {
+      "id": "parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "ci-yml",
+        "doc",
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 50,
+      "pytestPath": "scripts/unit_tests/meta",
+      "ciShard": 2
+    },
+    {
+      "id": "persona-selection-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 12,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "phase-sizing-corpus-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/phase_sizing",
+      "ciShard": 2
+    },
+    {
+      "id": "phase-sizing-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/phase_sizing",
+      "ciShard": 2
+    },
+    {
+      "id": "pilot-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 48,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "plan-killswitch-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 46,
+      "pytestPath": "scripts/unit_tests/planning"
+    },
+    {
+      "id": "plan-persist-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 45,
+      "pytestPath": "scripts/unit_tests/planning"
+    },
+    {
+      "id": "plan-proposed-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 47,
+      "pytestPath": "scripts/unit_tests/planning"
+    },
+    {
+      "id": "plan-validate-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "doc",
+        "verify"
+      ],
+      "verifyOrder": 44,
+      "pytestPath": "scripts/unit_tests/planning"
+    },
+    {
+      "id": "planning-035-deliver-conductor-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 51,
+      "pytestPath": "scripts/unit_tests/conductor",
+      "ciShard": 2
+    },
+    {
+      "id": "planning-035-doc-impact-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 2
+    },
+    {
+      "id": "planning-035-emitter-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 2
+    },
+    {
+      "id": "planning-035-gap-lifecycle-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 2
+    },
+    {
+      "id": "planning-autonomy-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-command-surface-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-currency-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-cutover-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-cutover-phase5-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-edge-effects-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-emitter-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-graph-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-index-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-init-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-materialize-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-migrate-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-paths-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-postmerge-safety-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-related-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-scheduler-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
+    },
+    {
+      "id": "planning-store-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 4
+    },
+    {
+      "id": "planning-unit-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 4
+    },
+    {
+      "id": "planning-visibility-acceptance-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 4
+    },
+    {
+      "id": "portability-boundary-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 35,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "portability-closure-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 37,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "portability-setup-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 34,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "pr-test-plan-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 2,
+      "pytestPath": "scripts/unit_tests/meta"
+    },
+    {
+      "id": "pr-test-plan-manifest",
+      "script": "scripts/test/run_pr_test_plan_manifest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 1
+    },
+    {
+      "id": "prd-050-ship-verification-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/ship",
+      "ciShard": 4
+    },
+    {
+      "id": "prd-051-ship-verification-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/ship",
+      "ciShard": 4
+    },
+    {
+      "id": "provenance-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "internal"
+      ],
+      "pytestPath": "scripts/unit_tests/meta"
+    },
+    {
+      "id": "quality-provider-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "internal"
+      ],
+      "pytestPath": "scripts/unit_tests/quality"
+    },
+    {
+      "id": "recurring-failure-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "internal"
+      ],
+      "pytestPath": "scripts/unit_tests/meta"
+    },
+    {
+      "id": "refactor-step-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "internal"
+      ],
+      "pytestPath": "scripts/unit_tests/execute"
+    },
+    {
+      "id": "regression-remediation-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/w4",
+      "ciShard": 4
+    },
+    {
+      "id": "relocation-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 56,
+      "verifyClassification": "advisory",
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "retrospective-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 33,
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 4
+    },
+    {
+      "id": "secret-scan-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 21,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "ship-phase-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 22,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "spec-rigor-brainstorm-profile-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/spec_rigor",
+      "ciShard": 4
+    },
+    {
+      "id": "stabilize-merge-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 26,
+      "pytestPath": "scripts/unit_tests/ship"
+    },
+    {
+      "id": "state-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 20,
+      "pytestPath": "scripts/unit_tests/git"
+    },
+    {
+      "id": "status-integrity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 15,
+      "pytestPath": "scripts/unit_tests/deliver",
+      "ciShard": 4
+    },
+    {
+      "id": "stdlib-coverage-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/coverage",
+      "ciShard": 4
+    },
+    {
+      "id": "suite-registry-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "internal"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/meta",
+      "ciShard": 4
+    },
+    {
+      "id": "tasks-currency-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 23,
+      "pytestPath": "scripts/unit_tests/w4"
+    },
+    {
+      "id": "tdd-hardening-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "internal"
+      ],
+      "pytestPath": "scripts/unit_tests/execute"
+    },
+    {
+      "id": "terminal-state-read-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/deliver",
+      "ciShard": 4
+    },
+    {
+      "id": "two-track-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 4
+    },
+    {
+      "id": "ux-polish-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "doc",
+        "pr-ci"
+      ],
+      "classification": "advisory",
+      "ciJobName": "feat-test-plan-pytest-advisory-shard-1",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 1
+    },
+    {
+      "id": "visibility-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 4
+    },
+    {
+      "id": "worktree-config-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/w4",
+      "ciShard": 4
+    },
+    {
+      "id": "test-scope-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 4,
+      "pathTriggers": [
+        "scripts/test_scope.py",
+        "scripts/unit_tests/scope/**",
+        "core/sw-reference/suite-registry.schema.json"
+      ],
+      "pytestPath": "scripts/unit_tests/scope",
+      "tags": [
+        "pytest",
+        "scope"
+      ]
+    }
+  ]
+}
