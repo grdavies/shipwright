@@ -49,6 +49,10 @@ def _prune_orphans(src: Path, dst: Path, excludes: list[str], rel_prefix: str = 
     for entry in sorted(dst.iterdir(), key=lambda p: p.name):
         rel = f"{rel_prefix}{entry.name}" if not rel_prefix else f"{rel_prefix}/{entry.name}"
         if _matches_excludes(rel, excludes):
+            if entry.is_dir() and not entry.is_symlink():
+                shutil.rmtree(entry)
+            else:
+                entry.unlink()
             continue
         src_entry = src / entry.name
         if not src_entry.exists():
