@@ -160,6 +160,12 @@
       "required": true,
       "recordedAt": null,
       "reason": "public-origin-remote"
+    },
+    "autonomy": "full-conductor",
+    "fullConductor": {
+      "confidenceThreshold": 0.85,
+      "mutationBudget": 10,
+      "undoWindowSeconds": 3600
     }
   },
   "orchestration": {
@@ -195,6 +201,26 @@
   },
   "configuredWith": {
     "shipwrightVersion": "1.7.0",
-    "schemaVersion": "5c5d84df179e"
+    "schemaVersion": "4d6718900610"
+  },
+  "compound": {
+    "autonomy": "auto"
+  },
+  "inefficiency": {
+    "enabled": true
+  },
+  "loopHealth": {
+    "enabled": true,
+    "staleInboxDays": 14
+  },
+  "loop": {
+    "autoPropose": {
+      "enabled": true,
+      "maxPerDay": 5,
+      "dedupWindow": 3600,
+      "cooldownMinutes": 30,
+      "maxOpenMetaUnits": 10,
+      "scheduler": "manual"
+    }
   }
 }
