@@ -57,10 +57,11 @@ are green.
 
 ## Gap units and legacy GAP-BACKLOG (PRD 033 R15/R49)
 
-Canonical gaps live under `docs/planning/gap/<unit-id>/`. Status flips are mechanical via `absorbs:` edges
-and the maintenance reconciler — not manual edits to `docs/prds/GAP-BACKLOG.md`. During the cutover window
-`GAP-BACKLOG.md` is a **read-only legacy projection** (frontmatter-only). Trivial `/sw-feedback` gaps use
-`planning_gap_capture.py`; substantial gaps route to `/sw-amend`.
+Canonical gaps live under `docs/prds/gap/<unit-id>/`. New capture writes via `planning_store.put()`
+(`planning_gap_capture.py`); status flips are mechanical via `absorbs:` edges and `gap_backlog.py` on canonical
+unit ids — not manual edits to `docs/prds/GAP-BACKLOG.md`. During the cutover window `GAP-BACKLOG.md` is a
+**read-only legacy projection** until the R27 migration gate passes (`gap_backlog.py migration-gate`).
+Trivial `/sw-feedback` gaps use `planning_gap_capture.py`; substantial gaps route to `/sw-amend`.
 
 Legacy `gap-resolve --absorbing-prd` applies only before `planningDir` cutover.
 

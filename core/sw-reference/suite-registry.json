@@ -1381,6 +1381,13 @@
       ]
     },
     {
+      "id": "planning-035-gap-lifecycle-runner-fixtures",
+      "script": "scripts/test/run_planning_035_gap_lifecycle_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
       "id": "tasks-currency-phase-gate-fixtures",
       "script": "scripts/test/run_tasks_currency_fixtures.py",
       "lanes": [

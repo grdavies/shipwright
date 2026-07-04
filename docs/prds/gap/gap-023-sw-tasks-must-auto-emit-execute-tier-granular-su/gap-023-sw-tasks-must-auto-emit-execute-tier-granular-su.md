@@ -1,8 +1,8 @@
 ---
 id: gap-023-sw-tasks-must-auto-emit-execute-tier-granular-su
 type: gap
-status: scheduled
-schedule: PRD 055
+status: resolved
+schedule: — (PRD 055)
 title: sw-tasks must auto-emit execute-tier granular sub-task refs at generation
 visibility: public
 tags: [source:feedback, signal:feedback-sw-tasks-execute-granularity-2026-07-02, prd-053, prd-040, prd-054, sw-tasks, execute-tier]
