@@ -54,8 +54,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-authoring-guard-fixtures",
-      "pytestPath": "scripts/unit_tests/capability"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/capability",
+      "ciShard": 1
     },
     {
       "id": "base-resolution-fixtures",
@@ -139,8 +140,9 @@
         "pr-ci"
       ],
       "classification": "advisory",
-      "ciJobName": "feat-test-plan-cleanup-fixtures",
-      "pytestPath": "scripts/unit_tests/w4"
+      "ciJobName": "feat-test-plan-pytest-advisory-shard-1",
+      "pytestPath": "scripts/unit_tests/w4",
+      "ciShard": 1
     },
     {
       "id": "code-review-fixtures",
@@ -158,8 +160,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-completed-unit-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 1
     },
     {
       "id": "compound-completion-fixtures",
@@ -178,8 +181,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-core-scripts-parity-fixtures",
-      "pytestPath": "scripts/unit_tests/meta"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/meta",
+      "ciShard": 1
     },
     {
       "id": "debug-fixtures",
@@ -208,8 +212,9 @@
       ],
       "verifyOrder": 17,
       "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-concurrency-fixtures",
-      "pytestPath": "scripts/unit_tests/deliver"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/deliver",
+      "ciShard": 1
     },
     {
       "id": "deliver-cwd-guard-fixtures",
@@ -218,8 +223,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-cwd-guard-fixtures",
-      "pytestPath": "scripts/unit_tests/deliver"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/deliver",
+      "ciShard": 1
     },
     {
       "id": "deliver-fixtures",
@@ -237,8 +243,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-invariant-fixtures",
-      "pytestPath": "scripts/unit_tests/deliver"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/deliver",
+      "ciShard": 1
     },
     {
       "id": "deliver-loop-fixtures",
@@ -256,8 +263,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-worktree-contract-fixtures",
-      "pytestPath": "scripts/unit_tests/deliver"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/deliver",
+      "ciShard": 1
     },
     {
       "id": "dispatch-binding-fixtures",
@@ -267,9 +275,10 @@
         "verify"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-dispatch-binding-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
       "verifyOrder": 19,
-      "pytestPath": "scripts/unit_tests/dispatch"
+      "pytestPath": "scripts/unit_tests/dispatch",
+      "ciShard": 1
     },
     {
       "id": "dispatch-foundation-fixtures",
@@ -288,8 +297,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-doc-currency-033-fixtures",
-      "pytestPath": "scripts/unit_tests/w4"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/w4",
+      "ciShard": 1
     },
     {
       "id": "doc-currency-049-fixtures",
@@ -298,8 +308,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-doc-currency-049-fixtures",
-      "pytestPath": "scripts/unit_tests/w4"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/w4",
+      "ciShard": 1
     },
     {
       "id": "doc-fixtures",
@@ -308,8 +319,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-doc-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 1
     },
     {
       "id": "doc-format-fixtures",
@@ -318,8 +330,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-doc-format-fixtures",
-      "pytestPath": "scripts/unit_tests/doc"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/doc",
+      "ciShard": 1
     },
     {
       "id": "doc-link-fixtures",
@@ -337,8 +350,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-dual-ship-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 1
     },
     {
       "id": "emitter-fixtures",
@@ -358,8 +372,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-execute-orchestration-fixtures",
-      "pytestPath": "scripts/unit_tests/execute"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/execute",
+      "ciShard": 1
     },
     {
       "id": "fanout-fixtures",
@@ -388,8 +403,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-gap-backlog-fixtures",
-      "pytestPath": "scripts/unit_tests/planning"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 1
     },
     {
       "id": "gate-fixtures",
@@ -409,8 +425,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-git-workflow-fixtures",
-      "pytestPath": "scripts/unit_tests/workflow"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/workflow",
+      "ciShard": 1
     },
     {
       "id": "guardrail-matrix-fixtures",
@@ -429,8 +446,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-guardrail-rules-resolution-fixtures",
-      "pytestPath": "scripts/unit_tests/guardrails"
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/guardrails",
+      "ciShard": 2
     },
     {
       "id": "guidelines-floor-fixtures",
@@ -468,9 +486,10 @@
         "verify"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-hook-worktree-alignment-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "verifyOrder": 18,
-      "pytestPath": "scripts/unit_tests/hooks"
+      "pytestPath": "scripts/unit_tests/hooks",
+      "ciShard": 2
     },
     {
       "id": "host-fixtures",
@@ -480,9 +499,10 @@
         "verify"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-host-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "verifyOrder": 49,
-      "pytestPath": "scripts/unit_tests/git"
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 2
     },
     {
       "id": "impl-fixtures",
@@ -517,8 +537,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-doc-currency-fixtures",
-      "pytestPath": "scripts/unit_tests/w4"
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/w4",
+      "ciShard": 2
     },
     {
       "id": "inflight-guards-parity-fixtures",
@@ -527,8 +548,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-guards-parity-fixtures",
-      "pytestPath": "scripts/unit_tests/meta"
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/meta",
+      "ciShard": 2
     },
     {
       "id": "inflight-migration-bridge-fixtures",
@@ -537,8 +559,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-migration-bridge-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 2
     },
     {
       "id": "inflight-signal-fixtures",
@@ -547,8 +570,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-signal-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 2
     },
     {
       "id": "kernel-classification-fixtures",
@@ -592,8 +616,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-mechanical-sourcing-fixtures",
-      "pytestPath": "scripts/unit_tests/conductor"
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/conductor",
+      "ciShard": 2
     },
     {
       "id": "memory-prework-fixtures",
@@ -673,8 +698,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-parallel-merge-safety-fixtures",
-      "pytestPath": "scripts/unit_tests/deliver"
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/deliver",
+      "ciShard": 2
     },
     {
       "id": "parity-fixtures",
@@ -686,9 +712,10 @@
         "verify"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-parity-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "verifyOrder": 50,
-      "pytestPath": "scripts/unit_tests/meta"
+      "pytestPath": "scripts/unit_tests/meta",
+      "ciShard": 2
     },
     {
       "id": "persona-selection-fixtures",
@@ -706,8 +733,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-phase-sizing-corpus-fixtures",
-      "pytestPath": "scripts/unit_tests/phase_sizing"
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/phase_sizing",
+      "ciShard": 2
     },
     {
       "id": "phase-sizing-fixtures",
@@ -716,8 +744,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-phase-sizing-fixtures",
-      "pytestPath": "scripts/unit_tests/phase_sizing"
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/phase_sizing",
+      "ciShard": 2
     },
     {
       "id": "pilot-fixtures",
@@ -777,9 +806,10 @@
         "verify"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-035-deliver-conductor-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "verifyOrder": 51,
-      "pytestPath": "scripts/unit_tests/conductor"
+      "pytestPath": "scripts/unit_tests/conductor",
+      "ciShard": 2
     },
     {
       "id": "planning-035-doc-impact-fixtures",
@@ -788,8 +818,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-035-doc-impact-fixtures",
-      "pytestPath": "scripts/unit_tests/planning"
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 2
     },
     {
       "id": "planning-035-emitter-parity-fixtures",
@@ -798,8 +829,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-035-emitter-parity-fixtures",
-      "pytestPath": "scripts/unit_tests/planning"
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 2
     },
     {
       "id": "planning-035-gap-lifecycle-fixtures",
@@ -808,8 +840,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-035-gap-lifecycle-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 2
     },
     {
       "id": "planning-autonomy-fixtures",
@@ -818,8 +851,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-autonomy-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
     },
     {
       "id": "planning-command-surface-fixtures",
@@ -828,8 +862,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-command-surface-fixtures",
-      "pytestPath": "scripts/unit_tests/planning"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 3
     },
     {
       "id": "planning-currency-fixtures",
@@ -838,8 +873,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-currency-fixtures",
-      "pytestPath": "scripts/unit_tests/planning"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 3
     },
     {
       "id": "planning-cutover-fixtures",
@@ -848,8 +884,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-cutover-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
     },
     {
       "id": "planning-cutover-phase5-fixtures",
@@ -858,8 +895,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-cutover-phase5-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
     },
     {
       "id": "planning-edge-effects-fixtures",
@@ -868,8 +906,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-edge-effects-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
     },
     {
       "id": "planning-emitter-parity-fixtures",
@@ -878,8 +917,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-emitter-parity-fixtures",
-      "pytestPath": "scripts/unit_tests/planning"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 3
     },
     {
       "id": "planning-graph-fixtures",
@@ -888,8 +928,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-graph-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
     },
     {
       "id": "planning-index-fixtures",
@@ -898,8 +939,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-index-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
     },
     {
       "id": "planning-init-fixtures",
@@ -908,8 +950,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-init-fixtures",
-      "pytestPath": "scripts/unit_tests/planning"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 3
     },
     {
       "id": "planning-materialize-fixtures",
@@ -918,8 +961,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-materialize-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
     },
     {
       "id": "planning-migrate-fixtures",
@@ -928,8 +972,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-migrate-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
     },
     {
       "id": "planning-paths-fixtures",
@@ -938,8 +983,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-paths-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
     },
     {
       "id": "planning-postmerge-safety-fixtures",
@@ -948,8 +994,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-postmerge-safety-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
     },
     {
       "id": "planning-related-fixtures",
@@ -958,8 +1005,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-related-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
     },
     {
       "id": "planning-scheduler-fixtures",
@@ -968,8 +1016,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-scheduler-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 3
     },
     {
       "id": "planning-store-fixtures",
@@ -978,8 +1027,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-store-fixtures",
-      "pytestPath": "scripts/unit_tests/planning"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 4
     },
     {
       "id": "planning-unit-fixtures",
@@ -988,8 +1038,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-unit-fixtures",
-      "pytestPath": "scripts/unit_tests/planning"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 4
     },
     {
       "id": "planning-visibility-acceptance-fixtures",
@@ -998,8 +1049,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-visibility-acceptance-fixtures",
-      "pytestPath": "scripts/unit_tests/planning"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 4
     },
     {
       "id": "portability-boundary-fixtures",
@@ -1052,8 +1104,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-prd-050-ship-verification-fixtures",
-      "pytestPath": "scripts/unit_tests/ship"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/ship",
+      "ciShard": 4
     },
     {
       "id": "prd-051-ship-verification-fixtures",
@@ -1062,8 +1115,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-prd-051-ship-verification-fixtures",
-      "pytestPath": "scripts/unit_tests/ship"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/ship",
+      "ciShard": 4
     },
     {
       "id": "provenance-fixtures",
@@ -1104,8 +1158,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-regression-remediation-fixtures",
-      "pytestPath": "scripts/unit_tests/w4"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/w4",
+      "ciShard": 4
     },
     {
       "id": "relocation-fixtures",
@@ -1125,9 +1180,10 @@
         "verify"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-retrospective-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "verifyOrder": 33,
-      "pytestPath": "scripts/unit_tests/git"
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 4
     },
     {
       "id": "secret-scan-fixtures",
@@ -1154,8 +1210,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-spec-rigor-brainstorm-profile-fixtures",
-      "pytestPath": "scripts/unit_tests/spec_rigor"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/spec_rigor",
+      "ciShard": 4
     },
     {
       "id": "stabilize-merge-fixtures",
@@ -1183,9 +1240,10 @@
         "verify"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-status-integrity-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "verifyOrder": 15,
-      "pytestPath": "scripts/unit_tests/deliver"
+      "pytestPath": "scripts/unit_tests/deliver",
+      "ciShard": 4
     },
     {
       "id": "stdlib-coverage-fixtures",
@@ -1194,8 +1252,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-stdlib-coverage-fixtures",
-      "pytestPath": "scripts/unit_tests/coverage"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/coverage",
+      "ciShard": 4
     },
     {
       "id": "suite-registry-fixtures",
@@ -1205,8 +1264,9 @@
         "internal"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-suite-registry-fixtures",
-      "pytestPath": "scripts/unit_tests/meta"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/meta",
+      "ciShard": 4
     },
     {
       "id": "tasks-currency-fixtures",
@@ -1232,8 +1292,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-terminal-state-read-fixtures",
-      "pytestPath": "scripts/unit_tests/deliver"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/deliver",
+      "ciShard": 4
     },
     {
       "id": "two-track-fixtures",
@@ -1242,8 +1303,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-two-track-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 4
     },
     {
       "id": "ux-polish-fixtures",
@@ -1253,8 +1315,9 @@
         "pr-ci"
       ],
       "classification": "advisory",
-      "ciJobName": "feat-test-plan-ux-polish-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-advisory-shard-1",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 1
     },
     {
       "id": "visibility-fixtures",
@@ -1263,8 +1326,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-visibility-fixtures",
-      "pytestPath": "scripts/unit_tests/git"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/git",
+      "ciShard": 4
     },
     {
       "id": "worktree-config-fixtures",
@@ -1273,8 +1337,9 @@
         "pr-ci"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-worktree-config-fixtures",
-      "pytestPath": "scripts/unit_tests/w4"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/w4",
+      "ciShard": 4
     },
     {
       "id": "test-scope-fixtures",

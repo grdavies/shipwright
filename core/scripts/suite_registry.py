@@ -90,6 +90,8 @@ def manifest_entries(root: Path | None = None) -> list[dict[str, Any]]:
             "classification": row.get("classification", "required"),
             "ciJobName": row["ciJobName"],
         }
+        if row.get("ciShard") is not None:
+            item["ciShard"] = row["ciShard"]
         if row.get("scenarios"):
             item["scenarios"] = row["scenarios"]
         out.append(item)
@@ -160,4 +162,6 @@ def validate_lanes(registry: dict[str, Any]) -> list[str]:
                 errors.append(f"{row.get('id')}: pr-ci missing classification")
             if not row.get("ciJobName"):
                 errors.append(f"{row.get('id')}: pr-ci missing ciJobName")
+            if row.get("pytestPath") and row.get("ciShard") is None:
+                errors.append(f"{row.get('id')}: pr-ci pytest row missing ciShard")
     return errors

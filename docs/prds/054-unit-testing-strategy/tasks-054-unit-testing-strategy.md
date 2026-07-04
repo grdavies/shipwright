@@ -142,15 +142,15 @@ after migration waves W1–W4.
 
 ### 8. CI shards + operator docs (small)
 
-- [ ] 8.1 CI: pytest shards or marker groups preserving required/advisory (R8, TR13)
+- [x] 8.1 CI: pytest shards or marker groups preserving required/advisory (R8, TR13)
   - **File:** `.github/workflows/pr-test-plan-ci.yml`, `ci.yml`
   - **Expected:** classifications preserved; optional consolidated full job on main/nightly
   - **R-IDs:** R8, TR13
-- [ ] 8.2 `docs/guides/testing.md` — single-pattern guide (R9, R11)
+- [x] 8.2 `docs/guides/testing.md` — single-pattern guide (R9, R11)
   - **File:** `docs/guides/testing.md`
   - **Expected:** pytest-only authoring; tier matrix; fixtures/parametrize/negative patterns
   - **R-IDs:** R9, R11
-- [ ] 8.3 INDEX amendment link + close program (R9)
+- [x] 8.3 INDEX amendment link + close program (R9)
   - **File:** `docs/prds/INDEX.md`
   - **Expected:** row 054 lists A1 amendment
   - **R-IDs:** R9

@@ -35,7 +35,8 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-authoring-guard-fixtures"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "ciShard": 1
     },
     {
       "id": "cleanup-fixtures",
@@ -45,7 +46,8 @@
         "-q"
       ],
       "classification": "advisory",
-      "ciJobName": "feat-test-plan-cleanup-fixtures"
+      "ciJobName": "feat-test-plan-pytest-advisory-shard-1",
+      "ciShard": 1
     },
     {
       "id": "completed-unit-fixtures",
@@ -55,14 +57,15 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-completed-unit-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
       "scenarios": [
         "amend-refuses-complete-allows-planned",
         "complete-change-routes-to-new-unit",
         "complete-unit-folder-mutation-rejected",
         "complete-flip-toctou-caught",
         "completed-hook-graceful-degrade-warns"
-      ]
+      ],
+      "ciShard": 1
     },
     {
       "id": "core-scripts-parity-fixtures",
@@ -72,7 +75,8 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-core-scripts-parity-fixtures"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "ciShard": 1
     },
     {
       "id": "deliver-concurrency-fixtures",
@@ -82,7 +86,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-concurrency-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
       "scenarios": [
         "freeze-commit-cwd-forced-primary-fails-closed",
         "deliver-provision-does-not-mutate-concurrent-primary-checkout",
@@ -100,7 +104,8 @@
         "capability-gateref-no-shell",
         "all-private-spec-seed-tracked-private-body",
         "deliver-verify-fixture-tree-immutable"
-      ]
+      ],
+      "ciShard": 1
     },
     {
       "id": "deliver-cwd-guard-fixtures",
@@ -110,11 +115,12 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-cwd-guard-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
       "scenarios": [
         "deliver-cwd-guard-blocks-main-living-doc",
         "deliver-cwd-guard-corrupt-index-fail-closed"
-      ]
+      ],
+      "ciShard": 1
     },
     {
       "id": "deliver-invariant-fixtures",
@@ -124,13 +130,14 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-invariant-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
       "scenarios": [
         "human-merge-gate-unchanged",
         "secret-scan-push-chokepoint",
         "scoped-lock-single-flight",
         "frozen-doc-ci-gates-unchanged"
-      ]
+      ],
+      "ciShard": 1
     },
     {
       "id": "deliver-worktree-contract-fixtures",
@@ -140,10 +147,11 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-deliver-worktree-contract-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
       "scenarios": [
         "deliver-worktree-contract"
-      ]
+      ],
+      "ciShard": 1
     },
     {
       "id": "dispatch-binding-fixtures",
@@ -153,11 +161,12 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-dispatch-binding-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
       "scenarios": [
         "dispatch-unregistered-parent-delegated-atomic-passes",
         "dispatch-unregistered-parent-reviewer-fails-closed"
-      ]
+      ],
+      "ciShard": 1
     },
     {
       "id": "doc-currency-033-fixtures",
@@ -167,11 +176,12 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-doc-currency-033-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
       "scenarios": [
         "doc-currency-033-sections",
         "doc-currency-033-a1-sections"
-      ]
+      ],
+      "ciShard": 1
     },
     {
       "id": "doc-currency-049-fixtures",
@@ -181,10 +191,11 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-doc-currency-049-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
       "scenarios": [
         "doc-currency-049-contract-sections"
-      ]
+      ],
+      "ciShard": 1
     },
     {
       "id": "doc-fixtures",
@@ -194,7 +205,8 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-doc-fixtures"
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "ciShard": 1
     },
     {
       "id": "doc-format-fixtures",
@@ -204,7 +216,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-doc-format-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
       "scenarios": [
         "doc-format-grammar-tokenizes",
         "call-site-map-exhaustion",
@@ -219,7 +231,8 @@
         "four-consumer-id-agreement",
         "write-roundtrip-stable",
         "phaseA-legacy-paths-no-relocation"
-      ]
+      ],
+      "ciShard": 1
     },
     {
       "id": "dual-ship-fixtures",
@@ -229,10 +242,11 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-dual-ship-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
       "scenarios": [
         "dual-ship-exactly-one-pr"
-      ]
+      ],
+      "ciShard": 1
     },
     {
       "id": "execute-orchestration-fixtures",
@@ -242,7 +256,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-execute-orchestration-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
       "scenarios": [
         "wave-merge-no-regression",
         "execute-plan-linear-fallback",
@@ -261,7 +275,8 @@
         "execute-resume-frontier",
         "execute-resume-stale-sub-branch",
         "execute-single-subtask-skip-tier"
-      ]
+      ],
+      "ciShard": 1
     },
     {
       "id": "gap-backlog-fixtures",
@@ -271,10 +286,11 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-gap-backlog-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
       "scenarios": [
         "gap-backlog-flip-schedule-force-reschedule"
-      ]
+      ],
+      "ciShard": 1
     },
     {
       "id": "git-workflow-fixtures",
@@ -284,7 +300,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-git-workflow-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
       "scenarios": [
         "git-workflow-skill-present",
         "conventions-single-source",
@@ -296,7 +312,8 @@
         "docs-pr-to-default",
         "brainstorm-durable-commit",
         "durability-reconcile-prd013"
-      ]
+      ],
+      "ciShard": 1
     },
     {
       "id": "guardrail-rules-resolution-fixtures",
@@ -306,13 +323,14 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-guardrail-rules-resolution-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "resolver-picks-py-adapter",
         "resolver-prefers-py-over-stale-sh",
         "resolver-none-for-unknown-provider",
         "reachable-provider-no-false-unreachable-block"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "hook-worktree-alignment-fixtures",
@@ -322,13 +340,14 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-hook-worktree-alignment-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "hook-state-worktree-cwd-alignment",
         "hook-state-dispatch-preflight-worktree-alignment",
         "hook-state-primary-no-false-positive",
         "hook-state-ambiguous-worktree-fail-closed"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "host-fixtures",
@@ -338,7 +357,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-host-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "host-provider-select",
         "host-verb-capability-flags",
@@ -366,7 +385,8 @@
         "local-merge-human-halt",
         "ci-watch-local-degrade",
         "check-gate-local-verdict"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "inflight-doc-currency-fixtures",
@@ -376,10 +396,11 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-doc-currency-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "inflight-doc-currency"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "inflight-guards-parity-fixtures",
@@ -389,11 +410,12 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-guards-parity-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "inflight-guards-copy-to-core-parity",
         "inflight-guards-emitter-freshness"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "inflight-migration-bridge-fixtures",
@@ -403,11 +425,12 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-migration-bridge-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "migration-bridge-backfill-no-desync",
         "migration-bridge-desync-failclosed"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "inflight-signal-fixtures",
@@ -417,7 +440,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-inflight-signal-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "inflight-write-read-clear",
         "cross-clone-cas-takeover-failclosed",
@@ -430,7 +453,8 @@
         "branch-absence-alone-no-clear",
         "inflight-ttl-autoclear-audit",
         "clear-inflight-manual"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "mechanical-sourcing-fixtures",
@@ -440,12 +464,13 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-mechanical-sourcing-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "no-new-parallel-state-store",
         "conductor-delegates-wave-sh",
         "state-transitions-via-wave-py"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "parallel-merge-safety-fixtures",
@@ -455,14 +480,15 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-parallel-merge-safety-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "whole-batch-no-early-merge",
         "deterministic-merge-order",
         "contention-generator-output-separation",
         "deterministic-conflict-autoregen",
         "semantic-conflict-halt"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "parity-fixtures",
@@ -472,10 +498,11 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-parity-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "cursor-golden-vs-dist"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "phase-sizing-corpus-fixtures",
@@ -485,10 +512,11 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-phase-sizing-corpus-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "phase-sizing-corpus-audit"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "phase-sizing-fixtures",
@@ -498,7 +526,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-phase-sizing-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "phase-sizing-determinism",
         "phase-sizing-classification-shape",
@@ -520,7 +548,8 @@
         "phase-sizing-fallback-sequential",
         "phase-sizing-persist-clean",
         "phase-sizing-persist-redaction"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "planning-035-deliver-conductor-fixtures",
@@ -530,7 +559,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-035-deliver-conductor-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "ship-without-build-chain-sync-fails",
         "verify-test-includes-parity",
@@ -559,7 +588,8 @@
         "projection-refuse-hand-maintained",
         "re-freeze-contract-amendment",
         "cleanup-autonomy-auto-post-merge"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "planning-035-doc-impact-fixtures",
@@ -569,11 +599,12 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-035-doc-impact-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "doc-currency-035",
         "no-regression-035"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "planning-035-emitter-parity-fixtures",
@@ -583,11 +614,12 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-035-emitter-parity-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "copy-to-core-parity-035",
         "emitter-freshness-035"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "planning-035-gap-lifecycle-fixtures",
@@ -597,7 +629,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-035-gap-lifecycle-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "gap-resolve-on-prd-ship",
         "freeze-absorbs-flips-gap-schedule",
@@ -607,7 +639,8 @@
         "spec-rigor-traceability-regex-parity",
         "min-recall-gap-043-044-046",
         "feedback-routing-prefers-gap-units"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "planning-autonomy-fixtures",
@@ -617,14 +650,15 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-autonomy-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "planning-autonomy-config-enum",
         "maintenance-only-default-no-prompts",
         "full-conductor-bounded-budget-halt",
         "enqueue-handoff-no-nested-dispatch",
         "autonomy-actions-logged-durable"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-command-surface-fixtures",
@@ -634,7 +668,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-command-surface-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "command-surface-wired",
         "sw-doc-reconciler-entry",
@@ -643,7 +677,8 @@
         "planning-graph-next-subcommand",
         "planning-graph-posture-subcommand",
         "planning-graph-core-parity"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-currency-fixtures",
@@ -653,14 +688,15 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-currency-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "copy-to-core-parity",
         "emitter-freshness-planning-artifacts",
         "doc-currency-layout-config-skills-readme-guide",
         "no-regression-migrated-corpus",
         "no-memory-writes-redaction-unchanged"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-cutover-fixtures",
@@ -670,7 +706,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-cutover-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "cancelled-prd-supersession-edges",
         "privacy-backfill-legacy-token",
@@ -680,7 +716,8 @@
         "no-half-migrated-merge",
         "relief-acceptance-gates-cutover",
         "kill-criteria-fallback-documented"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-cutover-phase5-fixtures",
@@ -690,14 +727,15 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-cutover-phase5-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "legacy-projection-frontmatter-only",
         "gap-capture-canonical-unit",
         "doctor-legacy-manual-edit-warning",
         "frozen-traceability-no-regression",
         "feedback-backlog-planningdir"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-edge-effects-fixtures",
@@ -707,13 +745,14 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-edge-effects-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "supersedes-flip-manifest",
         "absorbs-lifecycle-progression",
         "terminal-excluded-from-eligible",
         "superseded-manifest-render"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-emitter-parity-fixtures",
@@ -723,10 +762,11 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-emitter-parity-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "emitter-parity-planning-autonomy"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-graph-fixtures",
@@ -736,7 +776,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-graph-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "enum-type-conditioned-tokens",
         "derived-status-from-inflight",
@@ -746,7 +786,8 @@
         "graph-module-deterministic",
         "graph-offline-reproducible",
         "enum-shared-module-no-drift"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-index-fixtures",
@@ -756,7 +797,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-index-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "single-unified-index-from-frontmatter",
         "region-preserve-byte-for-byte",
@@ -764,7 +805,8 @@
         "region-hook-rejects-cross-writer",
         "empty-inflight-with-runstate-fails",
         "living-doc-index-generator-wired"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-init-fixtures",
@@ -774,11 +816,12 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-init-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "init-profile-store-seed",
         "store-no-token-leak"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-materialize-fixtures",
@@ -788,11 +831,12 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-materialize-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "materialize-provision-backend-pinned",
         "commit-boundary-barrier"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-migrate-fixtures",
@@ -802,7 +846,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-migrate-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "migrate-atomic-staging",
         "rollback-refuses-dirty-restores-config-inverse",
@@ -815,7 +859,8 @@
         "redirect-map-resume",
         "migration-scope-docs-config-only",
         "opmaps-gitignored-redacted"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-paths-fixtures",
@@ -825,12 +870,13 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-paths-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "realpath-containment-reject-escape",
         "no-hardcoded-prds-literal",
         "paths-resolve-through-config"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-postmerge-safety-fixtures",
@@ -840,7 +886,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-postmerge-safety-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "reconcile-complete-from-git-ancestry",
         "reconcile-terminal-monotonic",
@@ -849,7 +895,8 @@
         "relief-corpus-postmerge-safety",
         "completion-finalize-chokepoint",
         "deliver-postmerge-finalize-no-reconcile"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-related-fixtures",
@@ -859,7 +906,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-related-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "scanner-confirm-list-not-autoabsorb",
         "related-deterministic-rank-threshold",
@@ -872,7 +919,8 @@
         "tasks-rescan-amendment-proposal",
         "absorption-edge-autonomous-choices-gated",
         "proposal-payload-redaction"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-scheduler-fixtures",
@@ -882,14 +930,15 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-scheduler-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-3",
       "scenarios": [
         "dependency-gate-fail-closed",
         "soft-enforce-confirm-stubbed-default",
         "run-start-revalidate-supersede-refuse",
         "deliver-dependency-preflight",
         "override-logged-rate-surfaced"
-      ]
+      ],
+      "ciShard": 3
     },
     {
       "id": "planning-store-fixtures",
@@ -899,7 +948,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-store-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "scenarios": [
         "store-interface-in-repo-default",
         "store-backend-interface-parity",
@@ -907,7 +956,8 @@
         "memory-backend-adapter-only",
         "local-synced-path-validation",
         "memory-chokepoint-read-write"
-      ]
+      ],
+      "ciShard": 4
     },
     {
       "id": "planning-unit-fixtures",
@@ -917,7 +967,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-unit-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "scenarios": [
         "schema-fields-and-type-enum",
         "unit-folder-and-id-stability",
@@ -927,7 +977,8 @@
         "status-enum-stub",
         "validate-unknown-key",
         "validate-tracked-private-rejected"
-      ]
+      ],
+      "ciShard": 4
     },
     {
       "id": "planning-visibility-acceptance-fixtures",
@@ -937,12 +988,13 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-visibility-acceptance-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "scenarios": [
         "store-emitter-parity",
         "public-unit-no-regression",
         "doc-impact-visibility-store"
-      ]
+      ],
+      "ciShard": 4
     },
     {
       "id": "prd-050-ship-verification-fixtures",
@@ -952,12 +1004,13 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-prd-050-ship-verification-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "scenarios": [
         "manifest-registration",
         "gap-flip-verification",
         "feedback-signal-gap-flip"
-      ]
+      ],
+      "ciShard": 4
     },
     {
       "id": "prd-051-ship-verification-fixtures",
@@ -967,11 +1020,12 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-prd-051-ship-verification-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "scenarios": [
         "manifest-registration",
         "gap-flip-verification"
-      ]
+      ],
+      "ciShard": 4
     },
     {
       "id": "regression-remediation-fixtures",
@@ -981,12 +1035,13 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-regression-remediation-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "scenarios": [
         "verify-failed-routes-bounded-stabilize",
         "blocked-budget-signature-distinct",
         "remediation-exhaustion-consolidated-halt"
-      ]
+      ],
+      "ciShard": 4
     },
     {
       "id": "retrospective-fixtures",
@@ -996,7 +1051,8 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-retrospective-fixtures"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "ciShard": 4
     },
     {
       "id": "spec-rigor-brainstorm-profile-fixtures",
@@ -1006,10 +1062,11 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-spec-rigor-brainstorm-profile-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "scenarios": [
         "spec-rigor-brainstorm-profile-required-sections"
-      ]
+      ],
+      "ciShard": 4
     },
     {
       "id": "status-integrity-fixtures",
@@ -1019,14 +1076,15 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-status-integrity-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "scenarios": [
         "provenance-marker-roundtrip",
         "forged-merge-ready-green-rejected",
         "abbreviated-head-rejected",
         "stuck-stale-classification",
         "recovery-command-documented"
-      ]
+      ],
+      "ciShard": 4
     },
     {
       "id": "stdlib-coverage-fixtures",
@@ -1036,11 +1094,12 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-stdlib-coverage-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "scenarios": [
         "stdlib-coverage-mode-no-behavior-change",
         "stdlib-coverage-report-executed-and-unexecuted-lines"
-      ]
+      ],
+      "ciShard": 4
     },
     {
       "id": "suite-registry-fixtures",
@@ -1050,7 +1109,8 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-suite-registry-fixtures"
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "ciShard": 4
     },
     {
       "id": "terminal-state-read-fixtures",
@@ -1060,12 +1120,13 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-terminal-state-read-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "scenarios": [
         "terminal-reads-repo-root-state-from-orchestrator-cwd",
         "terminal-state-skew-boundary-equal-passes",
         "terminal-state-skew-boundary-over-refuses"
-      ]
+      ],
+      "ciShard": 4
     },
     {
       "id": "two-track-fixtures",
@@ -1075,7 +1136,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-two-track-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "scenarios": [
         "two-track-driver-classify-route",
         "mechanical-allowlist-derived-only",
@@ -1087,7 +1148,8 @@
         "branch-protection-defaults-pr-path",
         "both-region-content-hash-abort",
         "mechanical-premerge-secret-scan"
-      ]
+      ],
+      "ciShard": 4
     },
     {
       "id": "ux-polish-fixtures",
@@ -1097,7 +1159,8 @@
         "-q"
       ],
       "classification": "advisory",
-      "ciJobName": "feat-test-plan-ux-polish-fixtures"
+      "ciJobName": "feat-test-plan-pytest-advisory-shard-1",
+      "ciShard": 1
     },
     {
       "id": "visibility-fixtures",
@@ -1107,7 +1170,7 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-visibility-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "scenarios": [
         "visibility-field-default-profile",
         "content-class-default-visibility",
@@ -1119,7 +1182,8 @@
         "spec-seed-visibility-route",
         "gitignore-visibility-no-private-bytes",
         "decision-sot-inflight-redaction"
-      ]
+      ],
+      "ciShard": 4
     },
     {
       "id": "worktree-config-fixtures",
@@ -1129,12 +1193,13 @@
         "-q"
       ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-worktree-config-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "scenarios": [
         "jsonc-url-preserved",
         "jsonc-plain",
         "read-config-emits-valid-json"
-      ]
+      ],
+      "ciShard": 4
     }
   ]
 }

@@ -109,7 +109,7 @@ PY
 # --- pr-template-references-jobs (R4) ---
 if [[ -f "$PR_TEMPLATE" ]] && \
    grep -q 'pr-test-plan-ci.yml' "$PR_TEMPLATE" && \
-   grep -q 'feat-test-plan-doc-fixtures' "$PR_TEMPLATE" && \
+   grep -qE 'feat-test-plan-pytest-(required|advisory)-shard-' "$PR_TEMPLATE" && \
    ! grep -q 'run-doc-fixtures.sh' "$PR_TEMPLATE"; then
   ok "pr-template-references-jobs: template cites CI job names not manual scripts"
 else
