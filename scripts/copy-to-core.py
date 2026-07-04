@@ -102,8 +102,12 @@ def sync(root: Path, *, force: bool = False) -> int:
             continue
         mirror.mirror(src, core / dirname, delete=True)
 
-    scripts_excludes = ["test/", "check-frozen.py", "*.bak"]
-    mirror.mirror(root / "scripts", core / "scripts", excludes=scripts_excludes, delete=True)
+    roles = manifest.get("roles") or {}
+    core_scripts = roles.get("coreScripts") or {}
+    scripts_excludes = list(core_scripts.get("excludes") or ["test/", "check-frozen.py"])
+    if "*.bak" not in scripts_excludes:
+        scripts_excludes.append("*.bak")
+    mirror.mirror(root / "scripts", core / "scripts", excludes=scripts_excludes, delete=True, purge_excludes=True)
     frozen = core / "scripts" / "check-frozen.py"
     if frozen.exists():
         frozen.unlink()

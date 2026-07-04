@@ -21,6 +21,8 @@
       "source": "scripts/",
       "excludes": [
         "test/",
+        "tests/",
+        "unit_tests/",
         "check-frozen.py"
       ],
       "description": "Mirrored from scripts/ with documented excludes."

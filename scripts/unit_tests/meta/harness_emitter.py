@@ -220,6 +220,24 @@ sys.exit(0 if ok else 1)
   fi
 fi
 
+# emitter-excludes-developer-test-trees (PRD 055 R1/R2)
+if [ -d "$ROOT/dist/cursor/scripts" ] && [ -d "$ROOT/dist/claude-code/scripts" ]; then
+  BAD=0
+  for platform in cursor claude-code; do
+    for bad_dir in unit_tests tests test; do
+      if find "$ROOT/dist/$platform/scripts" -type d -name "$bad_dir" 2>/dev/null | grep -q .; then
+        echo "FAIL emitter-excludes-developer-test-trees found $bad_dir under dist/$platform/scripts/"
+        BAD=1
+      fi
+    done
+  done
+  if [ "$BAD" -eq 0 ]; then
+    echo "OK  emitter-excludes-developer-test-trees"
+  else
+    FAIL=1
+  fi
+fi
+
 # Kernel/guidelines dist freshness (PRD 022 R24 — emitter-stale-classification-fails)
 classification_dist_fresh() {
   local platform="$1"

@@ -190,6 +190,24 @@ GIT_FIX=$(mktemp -d)
   [[ "$EC" -ne 0 ]] && echo "$OUT" | grep -qi 'inflight'
 ) && ok "empty-inflight-with-runstate-fails" || bad "empty-inflight-with-runstate-fails"
 
+# --- planning-index-marker-newline (PRD 055 R5) ---
+if python3 -c "
+import sys
+sys.path.insert(0,'$ROOT/scripts')
+import planning_index_gen as pig
+start = '<!-- planning-index:structural begin -->'
+end = '<!-- planning-index:structural end -->'
+text = start + '\nold\n' + end
+inner = '| col | val |\n| --- | --- |'
+result = pig.replace_region_inner(text, 'structural', inner)
+assert start + '\n|' in result, result
+assert start + '|' not in result, result
+"; then
+  ok "planning-index-marker-newline"
+else
+  bad "planning-index-marker-newline"
+fi
+
 # --- living-doc lock wiring ---
 if python3 -c "
 import sys

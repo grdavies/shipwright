@@ -135,7 +135,7 @@ def replace_region_inner(content: str, region: str, new_inner: str) -> str:
         raise ValueError(f"missing {region} region markers")
     pre, rest = content.split(start, 1)
     _, post = rest.split(end, 1)
-    return pre + start + new_inner + end + post
+    return pre + start + "\n" + new_inner + end + post
 
 def assemble_index(regions: IndexRegions) -> str:
     header = regions.prefix.rstrip("\n")

@@ -111,3 +111,7 @@ PYTHONPATH=scripts python3 scripts/test/_runner.py run-pytest --scope phase
 
 See [pytest documentation](https://docs.pytest.org/en/stable/example/index.html) for fixtures, parametrization,
 and `tmp_path` usage.
+## Developer test trees (repo-only)
+
+The `scripts/unit_tests/`, `scripts/tests/`, and `scripts/test/` trees are **repo-only** harness sources. They are excluded from `core/scripts/` and from emitted `dist/*/scripts/` per `core/sw-reference/build-chain-sot.json` — never ship them in plugin install trees.
+
