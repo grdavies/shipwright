@@ -76,17 +76,20 @@ else
   bad "planning-graph-core-parity"
 fi
 
-# --- command-surface-wired: live posture readback ---
+# --- command-surface-wired: live posture readback matches workflow config ---
 if OUT=$(python3 "$GRAPH" posture 2>/dev/null) && echo "$OUT" | python3 -c "
 import json,sys
+from pathlib import Path
 d=json.load(sys.stdin)
 assert d.get('verdict')=='ok'
 posture=d['posture']
-assert posture['mode']=='maintenance-only'
+cfg=json.loads((Path('$ROOT')/'.cursor/workflow.config.json').read_text())
+expected=cfg.get('planning',{}).get('autonomy') or 'maintenance-only'
+assert posture['mode']==expected
 "; then
-  ok "command-surface-wired: posture-default"
+  ok "command-surface-wired: posture-readback"
 else
-  bad "command-surface-wired: posture-default"
+  bad "command-surface-wired: posture-readback"
 fi
 
 # --- command-surface-wired: paths helper delegation ---
