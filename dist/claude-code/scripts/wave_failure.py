@@ -216,6 +216,30 @@ def verify_commands(root: Path, scope: str = "phase") -> list[str]:
     return [str(cmd)] if cmd else []
 
 
+
+
+def verify_watchdog_max_minutes(root: Path) -> float | None:
+    cfg = load_workflow_config(root).get("verify") or {}
+    watchdog = cfg.get("watchdog") or {}
+    raw = watchdog.get("maxMinutes")
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def post_merge_verify_scope(root: Path) -> str:
+    """Scoped post-merge verify when widen list absent (PRD 055 R32)."""
+    import test_scope as ts
+
+    changed = ts.resolve_changed_paths(root, None)
+    if ts.widen_reason(changed):
+        return "full"
+    return "phase"
+
+
 def run_verify_suite(
     root: Path, cwd: Path, flaky_retries: int = FLAKY_DEFAULT_RETRIES, *, scope: str = "phase"
 ) -> dict[str, Any]:
@@ -229,13 +253,15 @@ def run_verify_suite(
         }
     attempts = flaky_retries + 1
     last_results: list[dict[str, Any]] = []
+    budget_minutes = verify_watchdog_max_minutes(root)
     for attempt in range(1, attempts + 1):
         last_results = []
         all_ok = True
         for cmd in commands:
             env = {**os.environ, "SW_DELIVER_VERIFY": "1"}
-            if scope == "phase":
-                env.setdefault("SW_TEST_SCOPE", "phase")
+            env.setdefault("SW_TEST_SCOPE", scope)
+            if budget_minutes is not None:
+                env.setdefault("SW_VERIFY_WATCHDOG_MINUTES", str(budget_minutes))
             proc = subprocess.run(
                 ["bash", "-c", cmd],
                 shell=False,
@@ -326,11 +352,12 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
 
     if has_flag(args, "--dry-run"):
         cmd_verify_run(root, args)
+    merge_scope = post_merge_verify_scope(root)
     outcome = run_verify_suite(
         root,
         resolve_orchestrator_worktree(root, args),
         flaky_retries=int(parse_kv(args, "--flaky-retries", str(FLAKY_DEFAULT_RETRIES)) or "1"),
-        scope="full",
+        scope=merge_scope,
     )
     if outcome["verdict"] == "pass":
         emit(
@@ -338,6 +365,7 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
                 "verdict": "pass",
                 "action": "verify-run-after-merge",
                 "phase": phase_slug,
+                "scope": merge_scope,
                 **outcome,
             }
         )

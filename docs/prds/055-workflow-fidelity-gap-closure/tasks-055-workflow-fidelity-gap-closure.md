@@ -220,31 +220,31 @@ Thread E (gap-003). Clean file-side source before PRD 044; GAP-BACKLOG persists 
 
 Thread F (gap-026, gap-027). PRD 054 dogfood; amendment A1.
 
-- [ ] 6.1 Port parity_compare.py to pure Python (R28, TR10)
+- [x] 6.1 Port parity_compare.py to pure Python (R28, TR10)
   - **File:** `scripts/test/parity_compare.py`, `scripts/unit_tests/meta/harness_parity.py`
   - **Expected:** compare hot path uses stdlib `hashlib` + tree walk; no bash subprocess; harness calls module directly
   - **R-IDs:** R28
-- [ ] 6.2 Tier-gate full dist compare to full scope (R29)
+- [x] 6.2 Tier-gate full dist compare to full scope (R29)
   - **File:** `scripts/test_scope.py`, `scripts/test/_runner.py`
   - **Expected:** `phase`/`fast` skip 841-file `dist/cursor` golden compare unless PRD 054 TR2 widen list matches
   - **R-IDs:** R29
-- [ ] 6.3 Add parity-compare-correctness fixture (R30)
+- [x] 6.3 Add parity-compare-correctness fixture (R30)
   - **File:** `scripts/unit_tests/meta/test_parity.py` or `scripts/test/run_parity_fixtures.py`
   - **Expected:** happy/missing/extra/hash-diff cases pass after Python port
   - **R-IDs:** R30
-- [ ] 6.4 Add verify watchdog and progress logging (R31, TR11)
+- [x] 6.4 Add verify watchdog and progress logging (R31, TR11)
   - **File:** `scripts/test/_runner.py`, `scripts/wave_failure.py`
   - **Expected:** per-suite elapsed logging; consolidated halt on budget exhaustion with last suite id + resumeCommand
   - **R-IDs:** R31
-- [ ] 6.5 Add verify.watchdog.maxMinutes config and scoped post-merge default (R32)
+- [x] 6.5 Add verify.watchdog.maxMinutes config and scoped post-merge default (R32)
   - **File:** `.cursor/workflow.config.json`, `.sw/config.schema.json`, `docs/guides/testing.md`
   - **Expected:** post-merge verify uses scoped path when widen list absent; budget documented
   - **R-IDs:** R32
-- [ ] 6.6 Add verify-watchdog-exhaustion fixture (R31)
+- [x] 6.6 Add verify-watchdog-exhaustion fixture (R31)
   - **File:** `scripts/test/run_test_scope_fixtures.py` or deliver fixtures
   - **Expected:** simulated slow verify triggers halt report with resume command
   - **R-IDs:** R31
-- [ ] 6.7 Resolve gap-026 and gap-027 on terminal merge
+- [x] 6.7 Resolve gap-026 and gap-027 on terminal merge
   - **File:** `docs/prds/gap/gap-026-*`, `docs/prds/gap/gap-027-*`
   - **Expected:** both units `status: resolved`, schedule `PRD 055`
   - **R-IDs:** R28, R31
