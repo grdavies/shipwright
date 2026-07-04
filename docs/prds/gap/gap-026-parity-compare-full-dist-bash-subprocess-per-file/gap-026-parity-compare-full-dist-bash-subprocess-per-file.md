@@ -1,8 +1,8 @@
 ---
 id: gap-026-parity-compare-full-dist-bash-subprocess-per-file
 type: gap
-status: scheduled
-schedule: PRD 055
+status: resolved
+schedule: — (PRD 055)
 title: Parity compare full-dist scan is O(n) bash subprocess per file
 visibility: public
 tags: [source:feedback, signal:feedback-prd054-parity-perf-2026-07-04, prd-054, build-chain, testing, parity]

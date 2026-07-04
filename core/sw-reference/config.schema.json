@@ -227,15 +227,34 @@
     "verify": {
       "type": "object",
       "description": "Shell commands run during /sw-phase-verify (repo-specific).",
+      "additionalProperties": false,
       "properties": {
         "allowUnconfigured": {
           "type": "boolean",
           "default": false,
           "description": "When true, vacuous/placeholder verify commands do not hard-block under /sw-deliver or autonomous mode (R28/DL-13)."
+        },
+        "test": {
+          "type": "string",
+          "description": "Phase-scope verify command (default deliver path)."
+        },
+        "fullTest": {
+          "type": "string",
+          "description": "Full verify command for CI, pre-merge, and widen-triggered post-merge."
+        },
+        "watchdog": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Wall-clock budget for full verify manifest loop (PRD 055 R31).",
+          "properties": {
+            "maxMinutes": {
+              "type": "number",
+              "minimum": 0.01,
+              "default": 120,
+              "description": "Halt full verify with consolidated resume report when exceeded."
+            }
+          }
         }
-      },
-      "additionalProperties": {
-        "type": "string"
       }
     },
     "verifyE2e": {

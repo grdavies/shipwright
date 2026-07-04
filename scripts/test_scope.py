@@ -159,6 +159,13 @@ def pytest_targets_for_suites(registry: dict[str, Any], suite_ids: set[str]) -> 
     return markers, paths
 
 
+def should_run_full_dist_compare(scope: str, changed_paths: list[str]) -> bool:
+    """Full dist/cursor golden compare only in full scope or widen (PRD 055 R29)."""
+    if scope.strip().lower() == "full":
+        return True
+    return widen_reason(changed_paths) is not None
+
+
 def build_plan(
     changed_paths: list[str],
     *,
