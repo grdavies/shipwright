@@ -1,6 +1,7 @@
 ---
 date: 2026-06-30
 topic: issue-store-migration
+visibility: public
 prd: docs/prds/044-issue-store-migration/044-prd-issue-store-migration.md
 program: issue-backed-planning-store
 frozen: true
