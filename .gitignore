@@ -8,6 +8,7 @@
 .cursor/sw-deliver.lock
 .cursor/sw-deliver-runs/
 .cursor/planning-legacy-projection-stamp.json
+.cursor/sw-memory/planning-bodies/
 
 # Generated deliver-phase fixture temps (superseded by deliver-phase-mode/tasks/)
 scripts/test/fixtures/deliver-phase/
