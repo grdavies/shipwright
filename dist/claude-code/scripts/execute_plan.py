@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Execute-plan builder, dependency rules, and runtime expansion (PRD 053)."""
+"""Execute-plan builder, dependency rules, and runtime expansion (PRD 053).
+
+Runtime expansion is the escape hatch for **already frozen** coarse task lists (PRD 055 R20): oversized
+refs may be split into synthetic child refs at deliver time without mutating the frozen task file.
+Authoring-time decomposition is handled by ``tasks_generate.py apply-granularity`` before freeze."""
 from __future__ import annotations
 
 import argparse

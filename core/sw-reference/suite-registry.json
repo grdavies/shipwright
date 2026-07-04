@@ -1278,6 +1278,13 @@
       "pytestPath": "scripts/unit_tests/w4"
     },
     {
+      "id": "tasks-authoring-fixtures",
+      "script": "scripts/test/run_tasks_authoring_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
       "id": "tdd-hardening-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
