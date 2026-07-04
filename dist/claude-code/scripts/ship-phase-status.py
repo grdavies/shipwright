@@ -36,6 +36,16 @@ def main(argv: list[str] | None = None) -> int:
         head = p.stdout.strip() if p.returncode==0 else ""
     if verdict == "merge-ready-green" and not head:
         print(json.dumps({"verdict":"fail","error":"could not resolve HEAD for merge-ready-green"}), file=sys.stderr); return 2
+    if verdict == "merge-ready-green":
+        import importlib.util
+        gap_gate = SCRIPT_DIR / "gap-check-gate.py"
+        spec = importlib.util.spec_from_file_location("gap_check_gate", gap_gate)
+        if spec is not None and spec.loader is not None:
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            if mod.gap_check_halt_blocks_merge_ready(root, phase):
+                print(json.dumps({"verdict":"fail","error":"gap-check-gate:halt-blocks-merge-ready"}), file=sys.stderr)
+                return 2
     if not out:
         sw_run = os.environ.get("SW_RUN_DIR","")
         out = f"{sw_run.rstrip('/')}/status.json" if sw_run else str(root/f".cursor/sw-deliver-runs/{phase}/status.json")

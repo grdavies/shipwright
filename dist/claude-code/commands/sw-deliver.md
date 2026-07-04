@@ -100,6 +100,24 @@ python3 scripts/wave.py deliver-loop --dry-run
 4. Per wave: `phase provision` → `phase dispatch-env` → full `/sw-ship --phase-mode` in phase worktree
    (agent step; orchestrator never bypasses `/sw-ship`).
 5. `status collect` from durable path; advance only from `status.json` (R7).
+### Phase acceptance + gap-check gates (PRD 055 R11–R13, R25)
+
+Before `merge-enqueue`, the deliver kernel enforces **in order**:
+
+1. **Phase acceptance** (`scripts/phase_acceptance_gate.py`) — all executable sub-task refs for the active
+   phase slug are `done` in `taskLedger` **and** checkboxes toggled in the frozen task file. `declared-partial`
+   requires a durable `taskLedger.phases[slug].declaredPartial` record plus explicit `skippedRefs`; silent
+   all-open fails closed.
+2. **Tasks currency** (`wave_state.py ledger check`) — checkbox↔ledger alignment; with `--merge-ready` +
+   `--phase-id`, fails the all-unchecked completed-work case (R12).
+3. **Gap-check gate** (`scripts/gap-check-gate.py`) — durable `.cursor/sw-deliver-runs/{slug}/gap-check.status.json`
+   with binding `pass|halt`. `ship-phase-status.py` refuses `merge-ready-green` when verdict is `halt`.
+
+**`--fast` gap-check skip is prohibited** on the deliver merge path (`--deliver-merge`). Ship-only fast path
+unchanged. On execute ref terminal `green`, `execute_task_status.py` auto-records ledger + checkbox when
+`SW_TASK_LIST` and `SW_PHASE_SLUG` are set (R14).
+
+
 6. **Whole-batch merge (R10):** no phase in a parallel batch merges until every in-flight batch member
    publishes a validated terminal `status.json` (`merge-ready-green` or `blocked`). Multiple greens enqueue via
    `collect-all-ready` in phase-id order; integration HEAD is frozen at `batchIntegrationHead` until the batch
