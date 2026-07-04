@@ -225,6 +225,7 @@
 * merge phase ci-shards-operator-docs-small into feat/unit-testing-strategy (d19ef1d) <!-- sw-deliver:ci-shards-operator-docs-small -->
 * merge phase mechanical-primitives-build-chain-supersede-reconcile-index-newline-medium into feat/workflow-fidelity-gap-closure (858c999) <!-- sw-deliver:mechanical-primitives-build-chain-supersede-reconcile-index-newline-medium -->
 * merge phase index-commit-safety-and-terminal-currency-medium into feat/workflow-fidelity-gap-closure (67d8e6b) <!-- sw-deliver:index-commit-safety-and-terminal-currency-medium -->
+* merge phase index-commit-safety-and-terminal-currency-medium into feat/workflow-fidelity-gap-closure (861d9a3) <!-- sw-deliver:index-commit-safety-and-terminal-currency-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
