@@ -497,8 +497,12 @@ def invoke_living_docs_reconcile_finalize(root: Path, state: dict[str, Any]) -> 
     script = SCRIPT_DIR / "wave_living_docs.py"
     if not script.is_file():
         return {"skipped": True, "reason": "wave_living_docs.py missing", "crossLink": "PRD 046 A2"}
+    cmd = [sys.executable, str(script), str(root), "reconcile", "--commit"]
+    orch = (state.get("orchestratorWorktree") or {}).get("path")
+    if orch:
+        cmd.extend(["--orchestrator-worktree", str(orch)])
     proc = subprocess.run(
-        [sys.executable, str(script), str(root), "reconcile", "--commit"],
+        cmd,
         cwd=str(root),
         text=True,
         capture_output=True,

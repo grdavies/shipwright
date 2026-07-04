@@ -2135,6 +2135,21 @@ def execute_mechanical(
                 ),
             )
         state.update(load_state(root))
+        orch = orchestrator_worktree_path(root, state)
+        living_args = ["living-docs", "reconcile", "--commit"]
+        if orch is not None:
+            living_args.extend(["--orchestrator-worktree", str(orch)])
+        living_ec, living_data = run_wave(root, *living_args)
+        if living_ec != 0:
+            fail_payload(
+                living_data,
+                "living-docs reconcile failed during finalize-completion",
+                living_ec,
+                remediation=(
+                    "ensure orchestrator worktree is on a non-default branch; "
+                    "retry via /sw-deliver run after fixing INDEX currency"
+                ),
+            )
         target = (state.get("target") or {}).get("branch")
         task_list = task_list_from(state, plan)
         clear_args = ["run-complete"]
