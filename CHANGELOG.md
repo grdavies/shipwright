@@ -222,6 +222,7 @@
 * merge phase migration-wave-w4-meta-registry-parity-22-medium into feat/unit-testing-strategy (fed8857) <!-- sw-deliver:migration-wave-w4-meta-registry-parity-22-medium -->
 * merge phase harness-teardown-loop-wiring-medium into feat/unit-testing-strategy (16cf87b) <!-- sw-deliver:harness-teardown-loop-wiring-medium -->
 * merge phase harness-teardown-loop-wiring-medium into feat/unit-testing-strategy (228a9d0) <!-- sw-deliver:harness-teardown-loop-wiring-medium -->
+* merge phase ci-shards-operator-docs-small into feat/unit-testing-strategy (d19ef1d) <!-- sw-deliver:ci-shards-operator-docs-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
