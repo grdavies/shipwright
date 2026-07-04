@@ -227,6 +227,7 @@
 * merge phase index-commit-safety-and-terminal-currency-medium into feat/workflow-fidelity-gap-closure (67d8e6b) <!-- sw-deliver:index-commit-safety-and-terminal-currency-medium -->
 * merge phase index-commit-safety-and-terminal-currency-medium into feat/workflow-fidelity-gap-closure (861d9a3) <!-- sw-deliver:index-commit-safety-and-terminal-currency-medium -->
 * merge phase verify-performance-parity-compare-and-post-merge-watchdog-medium into feat/workflow-fidelity-gap-closure (4a82693) <!-- sw-deliver:verify-performance-parity-compare-and-post-merge-watchdog-medium -->
+* merge phase deliver-phase-acceptance-gates-large into feat/workflow-fidelity-gap-closure (080ac12) <!-- sw-deliver:deliver-phase-acceptance-gates-large -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
