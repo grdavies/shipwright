@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import planning_index_gen as pig
 import planning_paths as pp
+import planning_store as ps
 import sw_state_write_lib as writer
 
 
@@ -47,6 +48,18 @@ def load_meta_draft(root: Path, signal_id: str) -> dict[str, Any]:
     return writer.load_store(path)
 
 
+
+
+def gap_body_rel(dirs: pp.PlanningDirs, unit_id: str) -> str:
+    return pp.join_rel(dirs.prds, "gap", unit_id, f"{unit_id}.md")
+
+
+def store_put_gap(root: Path, unit_id: str, body_path_rel: str, content: str) -> None:
+    backend = ps.get_backend(root)
+    result = backend.put(unit_id, body_path_rel, content)
+    if result.verdict not in ("ok", "deferred"):
+        fail("planning_store.put failed", unitId=unit_id, backend=result.backend, reason=result.reason)
+
 def next_gap_number(units: list[pig.PlanningUnit]) -> int:
     max_n = 0
     for unit in units:
@@ -65,12 +78,10 @@ def capture_gap(
     dry_run: bool = False,
 ) -> dict[str, Any]:
     dirs = pp.load_planning_dirs(root)
-    worktree = pp.git_root(root)
     units = pig.discover_units(root)
     num = next_gap_number(units)
     unit_id = f"gap-{num:03d}-{slugify(title)}"
-    unit_dir = worktree / dirs.planning / "gap" / unit_id
-    body_path = unit_dir / f"{unit_id}.md"
+    body_path_rel = gap_body_rel(dirs, unit_id)
     fm = [
         "---",
         f"id: {unit_id}",
@@ -85,9 +96,8 @@ def capture_gap(
     fm.extend(["---", "", f"# {title}", "", f"_Captured from feedback signal `{signal_id}`._", ""])
     content = "\n".join(fm) + "\n"
     if not dry_run:
-        unit_dir.mkdir(parents=True, exist_ok=True)
-        body_path.write_text(content, encoding="utf-8")
-    return {"unitId": unit_id, "path": str(body_path.relative_to(worktree)), "signalId": signal_id}
+        store_put_gap(root, unit_id, body_path_rel, content)
+    return {"unitId": unit_id, "path": body_path_rel, "signalId": signal_id}
 
 
 def capture_meta_draft(
@@ -146,13 +156,10 @@ def materialize_meta_gap(
     if draft.get("status") != "confirmed":
         fail("materialize requires confirmed draft", signalId=signal_id, status=draft.get("status"))
     dirs = pp.load_planning_dirs(root)
-    worktree = pp.git_root(root)
-    gap_root = Path(pp.plugin_self_gap_dir(dirs))
     units = pig.discover_units(root)
     num = next_gap_number(units)
     unit_id = f"gap-{num:03d}-{slugify(title)}"
-    unit_dir = worktree / gap_root / unit_id
-    body_path = unit_dir / f"{unit_id}.md"
+    body_path_rel = pp.join_rel(pp.plugin_self_gap_dir(dirs), unit_id, f"{unit_id}.md")
     fm = [
         "---",
         f"id: {unit_id}",
@@ -172,8 +179,7 @@ def materialize_meta_gap(
         fm.extend(["## Summary", "", str(draft["summary"]), ""])
     content = "\n".join(fm) + "\n"
     if not dry_run:
-        unit_dir.mkdir(parents=True, exist_ok=True)
-        body_path.write_text(content, encoding="utf-8")
+        store_put_gap(root, unit_id, body_path_rel, content)
         draft["status"] = "materialized"
         draft["materializedUnitId"] = unit_id
         writer.cmd_write(
@@ -184,7 +190,7 @@ def materialize_meta_gap(
         )
     return {
         "unitId": unit_id,
-        "path": str(body_path.relative_to(worktree)),
+        "path": body_path_rel,
         "signalId": signal_id,
         "gapClass": "plugin-self",
     }

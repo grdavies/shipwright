@@ -1,7 +1,8 @@
 # Gap backlog (living, append-only)
 
-Committed trivial in-scope gaps written out-of-loop by `/sw-feedback` (Phase 2). Unlike frozen task
-lists, this file is hand-appendable and not subject to the freeze CI check.
+Legacy gap table (read-only during cutover — PRD 055 R22/R27). New trivial gaps are captured via
+`planning_gap_capture.py` into canonical `docs/prds/gap/<unit-id>/` through `planning_store.put()`; do **not**
+hand-append rows here. Generated projection replaces this file only after `gap_backlog.py migration-gate` passes.
 
 **Status contract (ternary):**
 

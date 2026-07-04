@@ -1,8 +1,8 @@
 ---
 id: gap-022-prd-054-unit-tests-must-be-excluded-from-copy-to
 type: gap
-status: scheduled
-schedule: PRD 055
+status: resolved
+schedule: — (PRD 055)
 title: PRD 054 unit_tests must be excluded from copy-to-core and dist emitter
 visibility: public
 tags: [source:feedback, signal:feedback-prd054-dist-harness-clarity-2026-07-02, prd-054, build-chain, emitter, testing]

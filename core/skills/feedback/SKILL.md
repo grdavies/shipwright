@@ -79,7 +79,7 @@ Classify **destination** (not `002` ceremony tier):
 | debug | `/sw-debug` | production signal ref or excerpt |
 | brainstorm | `/sw-brainstorm` | redacted summary + `untrusted_payload` envelope |
 | gap-amend | `/sw-amend` | PRD ref + redacted delta summary |
-| gap-task | append | `docs/prds/GAP-BACKLOG.md` (U3) |
+| gap-task | capture | `python3 scripts/planning_gap_capture.py` → canonical `docs/prds/gap/<unit-id>/` (U3) |
 
 Record route per `references/route-record.md` via `memory-preflight` write. Serialize the route record,
 run `python3 scripts/memory-redact.py` on the JSON, then write — never persist raw `untrusted_payload`.
@@ -91,9 +91,9 @@ When destination is **gap-capture**, decide on the **freeze axis** (not ceremony
 | Outcome | When | Handoff |
 |---------|------|---------|
 | **Substantial** | Adds/edits/retracts R-ID, changes documented behavior, touches frozen PRD scope, or material shipped behavior with no PRD | `/sw-amend` when consumer status allows; else complete-unit route (below) |
-| **Trivial in-scope** | Small gap, no requirement/behavior change | Append to `docs/prds/GAP-BACKLOG.md` |
+| **Trivial in-scope** | Small gap, no requirement/behavior change | `python3 scripts/planning_gap_capture.py` → `planning_store.put()` under `docs/prds/gap/<unit-id>/` |
 
-Create `docs/prds/GAP-BACKLOG.md` with a checklist header if missing before first append.
+Do **not** hand-append to `docs/prds/GAP-BACKLOG.md` — it is a read-only legacy projection during cutover (PRD 055 R22/R27).
 
 **Bias:** ambiguous → **substantial** (amendment), never silent task edit.
 
@@ -114,13 +114,15 @@ python3 scripts/authoring-guard.py preflight --path <unit-artifact> --command sw
 
 The route record MUST capture which branch fired (`gap-amend` vs `gap-amend-blocked` + routed path).
 
-### Gap backlog entry format
+### Trivial gap capture (canonical)
 
-Append to `docs/prds/GAP-BACKLOG.md` table + checklist:
-
-```markdown
-- [ ] source:feedback pr:#<n> signal:<signalId> — <redacted one-line gap>
+```bash
+python3 scripts/planning_gap_capture.py <repo-root> capture \
+  --signal-id <signalId> --title "<redacted one-line gap>" [--pr <n>]
 ```
+
+Routes through `planning_store.put()` for every configured backend (file-store and issue-store). Writes
+`docs/prds/gap/<unit-id>/<unit-id>.md` — never hand-append to `docs/prds/GAP-BACKLOG.md`.
 
 Never edit frozen task lists or frozen PRDs directly.
 
@@ -130,7 +132,7 @@ Return: normalized signal id, route, target command/path, dedup status, next ste
 
 **Agent callers:** set `invocation: human` when acting on an explicit user instruction. Surface the
 handoff summary and **await explicit user confirmation** before invoking `/sw-debug`, `/sw-amend`,
-`/sw-brainstorm`, or appending to `docs/prds/GAP-BACKLOG.md` — even when the user invoked `/sw-feedback`
+`/sw-brainstorm`, or running `planning_gap_capture.py` — even when the user invoked `/sw-feedback`
 in chat (the hook/monitor auto-dispatch ban applies to all non-confirmed dispatches).
 
 ## Guardrails

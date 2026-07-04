@@ -1,11 +1,11 @@
 ---
 id: gap-003-gap-doc-feedback-capture-has-two-unreconciled-fi
 type: gap
-status: scheduled
+status: resolved
 title: Gap/doc-feedback capture has two unreconciled file paths and bypasses the planning_store backend interface
 visibility: public
 tags: [source:feedback, signal:feedback-gap-store-duplication-2026-06-30]
-schedule: PRD 055
+schedule: — (PRD 055)
 ---
 
 # Gap/doc-feedback capture has two unreconciled file paths and bypasses the planning_store backend interface
