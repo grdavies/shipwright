@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Per-task execute status writer (TDD + refactor rollup, PRD 039 R2)."""
 from __future__ import annotations
-import argparse, json, re, sys
+import argparse, json, os, re, sys
 from pathlib import Path
 from _sw.cli import run_module_main
 
@@ -32,6 +32,20 @@ def main(argv: list[str] | None = None) -> int:
     data.setdefault("taskRef", ns.task_ref)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    verdict = str(data.get("verdict") or "")
+    task_list = os.environ.get("SW_TASK_LIST", "")
+    phase_slug = os.environ.get("SW_PHASE_SLUG", "")
+    if verdict in ("green", "pass") and task_list and phase_slug:
+        import importlib.util
+        gate = Path(__file__).resolve().parent / "phase_acceptance_gate.py"
+        spec = importlib.util.spec_from_file_location("phase_acceptance_gate", gate)
+        if spec is not None and spec.loader is not None:
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            completion = mod.record_ref_completion(root, ns.task_ref, task_list, phase_slug)
+            if completion.get("verdict") != "pass":
+                print(json.dumps(completion))
+                return 1
     print(json.dumps({"verdict": "pass", "path": str(path)}))
     return 0
 

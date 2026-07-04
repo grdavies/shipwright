@@ -1372,6 +1372,13 @@
       "lanes": [
         "internal"
       ]
+    },
+    {
+      "id": "tasks-currency-phase-gate-fixtures",
+      "script": "scripts/test/run_tasks_currency_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
     }
   ]
 }

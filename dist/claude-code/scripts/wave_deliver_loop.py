@@ -928,6 +928,12 @@ def merge_ready_in_flight_phases(
         ok, _cause = tasks_currency_ok(root, state, plan)
         if not ok:
             continue
+        ok, _cause = phase_acceptance_ok(root, state, plan, str(pid), str(slug))
+        if not ok:
+            continue
+        ok, _cause = gap_check_gate_ok(root, state, plan, str(slug))
+        if not ok:
+            continue
         ready.append({"phaseId": pid, "phaseSlug": slug})
     return ready
 
@@ -970,6 +976,12 @@ def phase_has_validated_terminal(
     if not authorized:
         return False
     ok, _ = tasks_currency_ok(root, state, plan)
+    if not ok:
+        return False
+    ok, _ = phase_acceptance_ok(root, state, plan, phase_id, slug)
+    if not ok:
+        return False
+    ok, _ = gap_check_gate_ok(root, state, plan, slug)
     return ok
 
 
@@ -1068,6 +1080,20 @@ def in_flight_merge_halt(
                 "cause": cause,
                 "resume": True,
                 "livingDocReconcile": manual_living_doc_reconcile_suggestion(root, state),
+            }
+        ok, cause = phase_acceptance_ok(root, state, plan, str(pid), str(slug))
+        if not ok:
+            return {
+                "action": "halt-blocked",
+                "cause": cause,
+                "resume": True,
+            }
+        ok, cause = gap_check_gate_ok(root, state, plan, str(slug))
+        if not ok:
+            return {
+                "action": "halt-blocked",
+                "cause": cause,
+                "resume": True,
             }
     return None
 
@@ -1204,6 +1230,38 @@ def _target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {"merged": False, "reason": "check-merge-failed"}
 
+
+
+
+def phase_acceptance_ok(
+    root: Path,
+    state: dict[str, Any],
+    plan: dict[str, Any],
+    phase_id: str,
+    phase_slug: str,
+) -> tuple[bool, str | None]:
+    from phase_acceptance_gate import check_phase_acceptance
+
+    return check_phase_acceptance(root, state, plan, phase_id, phase_slug)
+
+
+def gap_check_gate_ok(
+    root: Path,
+    state: dict[str, Any],
+    plan: dict[str, Any],
+    phase_slug: str,
+) -> tuple[bool, str | None]:
+    if not task_list_from(state, plan):
+        return True, None
+    import importlib.util
+
+    gate_path = SCRIPT_DIR / "gap-check-gate.py"
+    spec = importlib.util.spec_from_file_location("gap_check_gate", gate_path)
+    if spec is None or spec.loader is None:
+        return False, "gap-check-gate-missing"
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.deliver_gap_check_ok(root, phase_slug, require_status=True)
 
 def tasks_currency_ok(
     root: Path, state: dict[str, Any], plan: dict[str, Any]
