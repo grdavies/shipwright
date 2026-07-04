@@ -231,6 +231,7 @@
 * merge phase execute-tier-task-authoring-granularity-medium into feat/workflow-fidelity-gap-closure (584f7c8) <!-- sw-deliver:execute-tier-task-authoring-granularity-medium -->
 * merge phase migration-engine-dry-run-default-m into feat/issue-store-migration (c1d5f6f) <!-- sw-deliver:migration-engine-dry-run-default-m -->
 * merge phase lifecycle-preservation-both-directions-m into feat/issue-store-migration (6442573) <!-- sw-deliver:lifecycle-preservation-both-directions-m -->
+* merge phase lifecycle-preservation-both-directions-m into feat/issue-store-migration (ed2efac) <!-- sw-deliver:lifecycle-preservation-both-directions-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
