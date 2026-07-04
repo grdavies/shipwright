@@ -106,10 +106,16 @@ def state_path(root: Path, state: dict[str, Any] | None = None) -> Path:
     return resolve_state_path(root, state_hint=state)
 
 
-def load_state(root: Path) -> dict[str, Any]:
+def load_state_for_deliver(root: Path, *, target: str | None = None) -> dict[str, Any]:
     from wave_state import load_deliver_state
 
+    if target:
+        return load_deliver_state(root, target=target)
     return load_deliver_state(root)
+
+
+def load_state(root: Path) -> dict[str, Any]:
+    return load_state_for_deliver(root)
 
 
 def save_state(root: Path, state: dict[str, Any]) -> None:
@@ -306,6 +312,18 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
     phase_slug = parse_kv(args, "--phase-slug") or parse_kv(args, "--phase")
     if not phase_slug:
         fail("--phase-slug required")
+    state_hint = load_state(root)
+    target_branch = (state_hint.get("target") or {}).get("branch")
+    if not (state_hint.get("phases") or {}):
+        fail(
+            "deliver state missing phases; fix .cursor/sw-deliver-state.json breadcrumb",
+            exit_code=2,
+            target=target_branch,
+        )
+
+    def reload_state() -> dict[str, Any]:
+        return load_state_for_deliver(root, target=target_branch)
+
     if has_flag(args, "--dry-run"):
         cmd_verify_run(root, args)
     outcome = run_verify_suite(
@@ -326,7 +344,7 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
     cause = verify_failure_cause(outcome)
     cause_class = classify_verify_failure(outcome)
     if cause == "verify:environmental":
-        state = load_state(root)
+        state = reload_state()
         pid, _meta = find_phase(state, None, phase_slug)
         attempts_map = state.setdefault("verifyRemediationAttempts", {})
         count = int(attempts_map.get(pid, 0))
@@ -349,7 +367,7 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
                 },
                 exit_code=10,
             )
-    state = load_state(root)
+    state = reload_state()
     pid, _meta = find_phase(state, None, phase_slug)
     phase_meta = state["phases"][pid]
     phase_meta["status"] = "blocked"

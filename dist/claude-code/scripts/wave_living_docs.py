@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import planning_paths
 VALID_INDEX_STATUSES = frozenset({"not-started", "in-progress", "complete"})
+TERMINAL_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
 
 def living_paths(root: Path) -> tuple[str, ...]:
     return planning_paths.living_paths_rel(planning_paths.load_planning_dirs(root))
@@ -78,6 +79,10 @@ def derive_index_status(state: dict[str, Any], merged_to_main: bool) -> str:
     statuses = [str((meta or {}).get("status") or "pending") for meta in phases.values()]
     if merged_to_main:
         return "complete"
+    if all(s in TERMINAL_PHASE_STATUSES for s in statuses):
+        completion = state.get("completion") or {}
+        if completion.get("status") == "completed-pending-merge":
+            return "complete"
     if any(s not in ("pending",) for s in statuses):
         return "in-progress"
     return "not-started"
