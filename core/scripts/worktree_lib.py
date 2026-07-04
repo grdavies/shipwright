@@ -79,8 +79,9 @@ def is_docs_branch(branch: str) -> bool:
 
 
 def refuse_default_branch(branch: str, default: str) -> None:
-    if branch == default:
-        raise ValueError(f"refused: operation targets protected default branch {default!r}")
+    from default_branch_commit_guard import refuse_default_branch as _refuse
+
+    _refuse(branch, default)
 
 
 

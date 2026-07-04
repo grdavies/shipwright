@@ -390,6 +390,10 @@ def cas_check(
 
 
 def git_commit_inflight(root: Path, unit_id: str, dry_run: bool) -> str | None:
+    if not dry_run:
+        import default_branch_commit_guard
+
+        default_branch_commit_guard.refuse_default_branch_commit(root, worktree=root)
     rel = pig.index_rel(root)
     proc = subprocess.run(
         ["git", "-C", str(root), "status", "--porcelain", "--", rel],
@@ -400,6 +404,9 @@ def git_commit_inflight(root: Path, unit_id: str, dry_run: bool) -> str | None:
         return None
     if dry_run:
         return "dry-run"
+    import default_branch_commit_guard
+
+    default_branch_commit_guard.refuse_default_branch_commit(root, worktree=root)
     env = {**os.environ, "SW_INDEX_REGION_WRITER": "deliver"}
     subprocess.run(["git", "-C", str(root), "add", rel], check=True, env=env)
     msg = f"chore(planning): inFlight signal for {unit_id}"

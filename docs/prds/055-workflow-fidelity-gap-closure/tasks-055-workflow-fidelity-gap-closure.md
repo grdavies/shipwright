@@ -79,31 +79,31 @@ Thread A (gap-022, gap-024, gap-020). Low blast radius; unblocks honest dist/ver
 
 Thread B (gap-002, gap-007, gap-008). Hard prerequisite for PRD 046.
 
-- [ ] 2.1 Add shared default_branch_commit_guard primitive (R6, TR4, SC1)
+- [x] 2.1 Add shared default_branch_commit_guard primitive (R6, TR4, SC1)
   - **File:** `scripts/default_branch_commit_guard.py` (new) or `scripts/worktree_lib.py` extension
   - **Expected:** single Python-first helper refuses commits when resolved branch is `defaultBaseBranch`; fail closed
   - **R-IDs:** R6, R9
-- [ ] 2.2 Wire guard into wave_living_docs commit paths (R6)
+- [x] 2.2 Wire guard into wave_living_docs commit paths (R6)
   - **File:** `scripts/wave_living_docs.py`
   - **Expected:** `cmd_reconcile`, `cmd_append_terminal`, `git_commit_living_docs` call guard before commit
   - **R-IDs:** R6
-- [ ] 2.3 Wire guard into reconcile_lib.set_index_status (R6)
+- [x] 2.3 Wire guard into reconcile_lib.set_index_status (R6)
   - **File:** `scripts/reconcile_lib.py`
   - **Expected:** `set_index_status` refuses default-branch commits matching `reconcile_prd_index` guard
   - **R-IDs:** R6
-- [ ] 2.4 Add living-docs-reconcile-refuses-default-branch fixture (R7)
+- [x] 2.4 Add living-docs-reconcile-refuses-default-branch fixture (R7)
   - **File:** `scripts/test/run_living_doc_fixtures.py` or deliver fixtures
   - **Expected:** `living-docs reconcile --commit` on `defaultBaseBranch` fails closed, never commits
   - **R-IDs:** R7
-- [ ] 2.5 Wire terminal living-docs reconcile in finalize-completion (R8, TR5)
+- [x] 2.5 Wire terminal living-docs reconcile in finalize-completion (R8, TR5)
   - **File:** `scripts/wave_deliver_loop.py`
   - **Expected:** after `finalize-if-merged`, before `inflight_signal run-complete`, invoke `living-docs reconcile --commit` with orchestrator worktree; INDEX flips `complete` when merge detected
   - **R-IDs:** R8
-- [ ] 2.6 Wire guard into inflight_signal.git_commit_inflight (R9)
+- [x] 2.6 Wire guard into inflight_signal.git_commit_inflight (R9)
   - **File:** `scripts/inflight_signal.py`
   - **Expected:** same `defaultBaseBranch` refusal as R6; `finalize-completion` call site explicitly guarded
   - **R-IDs:** R9
-- [ ] 2.7 Add terminal INDEX currency fixtures (R10)
+- [x] 2.7 Add terminal INDEX currency fixtures (R10)
   - **File:** `scripts/test/run-deliver-fixtures.sh`
   - **Expected:** `finalize-completion-index-complete` and `inflight-run-complete-refuses-default-branch` pass
   - **R-IDs:** R10

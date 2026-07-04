@@ -1358,6 +1358,20 @@
         "pytest",
         "scope"
       ]
+    },
+    {
+      "id": "living-doc-runner-fixtures",
+      "script": "scripts/test/run_living_doc_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "deliver-runner-fixtures",
+      "script": "scripts/test/run_deliver_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
     }
   ]
 }

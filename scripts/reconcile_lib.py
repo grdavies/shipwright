@@ -255,7 +255,7 @@ def set_index_status(root: Path, prd: str, status: str) -> dict[str, Any]:
     )
     branch_name = branch.stdout.strip() if branch.returncode == 0 else ""
     base = str(cfg.get("defaultBaseBranch") or "main")
-    from worktree_lib import refuse_default_branch
+    from default_branch_commit_guard import refuse_default_branch
 
     try:
         refuse_default_branch(branch_name, base)
