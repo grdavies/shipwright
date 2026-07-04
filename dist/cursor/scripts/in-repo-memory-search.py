@@ -29,11 +29,17 @@ def main(argv: list[str] | None = None) -> int:
             if line.startswith(field+":"):
                 return line.split(":",1)[1].strip()
         return ""
+
+    def related_files_match(text: str, glob: str) -> bool:
+        rf = parse_fm(text, "relatedFiles")
+        return bool(rf) and glob in rf
+
     def scan_dir(base: Path):
         if not base.is_dir(): return
         for f in sorted(base.rglob("*.md")):
-            if ns.file_glob and not f.match(ns.file_glob): continue
             text = f.read_text(encoding="utf-8", errors="replace")
+            if ns.file_glob and not related_files_match(text, ns.file_glob):
+                continue
             cat = parse_fm(text, "category"); tag = parse_fm(text, "tags")
             if ns.category and ns.category not in cat: continue
             if ns.tag and ns.tag not in tag: continue

@@ -64,9 +64,21 @@ def main(argv: list[str] | None = None) -> int:
         cout.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(out, cout); os.chmod(cout, 0o600)
     if verdict == "blocked":
-        import wave_state
-        wave_state.main([str(root),"state","phase","--slug",phase,"--status","blocked"])
-    return 0
+        subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT_DIR / "wave_state.py"),
+                str(root),
+                "state",
+                "phase",
+                "--slug",
+                phase,
+                "--status",
+                "blocked",
+            ],
+            capture_output=True,
+            text=True,
+        )
     return 0
 
 if __name__ == "__main__":

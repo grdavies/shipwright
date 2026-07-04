@@ -73,6 +73,7 @@
     "kernel-classification.md",
     "loop-health.schema.json",
     "meta-inbox-draft.schema.json",
+    "migration-waves.json",
     "model-routing.defaults.json",
     "model-tier-hook-feasibility.md",
     "orchestrator-step-plan.json",

@@ -1,6 +1,27 @@
 {
   "version": 1,
-  "description": "Allowed non-stdlib Python imports beyond the standard library (R12). Empty by default.",
+  "description": "Allowed non-stdlib Python imports beyond the standard library (R12).",
   "allowed": [],
-  "vendored": {}
+  "vendored": {
+    "pytest": {
+      "version": "8.3.5",
+      "path": "scripts/_sw/vendor/pytest",
+      "justification": "PRD 054 R1 — sole test runner (amendment A1)"
+    },
+    "pluggy": {
+      "version": "1.6.0",
+      "path": "scripts/_sw/vendor/pluggy",
+      "justification": "pytest runtime dependency"
+    },
+    "iniconfig": {
+      "version": "2.3.0",
+      "path": "scripts/_sw/vendor/iniconfig",
+      "justification": "pytest runtime dependency"
+    },
+    "packaging": {
+      "version": "26.2",
+      "path": "scripts/_sw/vendor/packaging",
+      "justification": "pytest runtime dependency"
+    }
+  }
 }

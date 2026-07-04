@@ -11,9 +11,19 @@ def main(argv: list[str] | None = None) -> int:
     import json, re, sys
     from pathlib import Path
 
-    root, config_path, agents_dir = sys.argv[1:4]
-    config_file = Path(config_path)
-    agents_path = Path(agents_dir)
+    from _sw.cli import build_parser
+
+    script_dir = Path(__file__).resolve().parent
+    root = script_dir.parent
+    parser = build_parser(prog="model-tier-check", description="Validate model tier policy (R9)")
+    parser.add_argument("--config", default=str(root / ".cursor" / "workflow.config.json"))
+    parser.add_argument("--agents-dir", default="")
+    args = parser.parse_args(argv)
+
+    config_file = Path(args.config)
+    agents_path = Path(args.agents_dir) if args.agents_dir else root / "core" / "agents"
+    if not agents_path.is_dir() and (root / "agents").is_dir():
+        agents_path = root / "agents"
 
     INHERIT = "inherit"
     CANONICAL_TIER_ORDER = ("cheap", "build", "mid", "deep")

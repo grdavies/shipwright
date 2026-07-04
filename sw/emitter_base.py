@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 from abc import ABC, abstractmethod
@@ -13,8 +14,11 @@ EMITTABLE_DIRS = ("commands", "skills", "rules", "agents", "providers", "scripts
 EXCLUDE_DIR_NAMES = {"__pycache__", "test", ".git", "node_modules"}
 DEV_ONLY_SCRIPT_RELPATHS = (
     "scripts/copy-to-core.sh",
+    "scripts/copy-to-core.py",
     "scripts/snapshot-tree.sh",
+    "scripts/snapshot-tree.py",
     "scripts/model-routing-check.sh",
+    "scripts/model-routing-check.py",
 )
 
 EXCLUDE_REL_PATHS = frozenset({"scripts/install.sh", *DEV_ONLY_SCRIPT_RELPATHS})
@@ -154,6 +158,24 @@ class EmitterBase(ABC):
 
 
 def ensure_clean_dir(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
+    if not path.exists():
+        path.mkdir(parents=True, exist_ok=True)
+        return
+
+    def _on_rm_error(func, p: str, exc_info: object) -> None:
+        import stat
+
+        if not os.access(p, os.W_OK):
+            os.chmod(p, stat.S_IWUSR | stat.S_IRUSR | stat.S_IXUSR)
+            func(p)
+        else:
+            raise exc_info[1]  # type: ignore[index]
+
+    trash = path.parent / f".{path.name}.delete.{os.getpid()}"
+    suffix = 0
+    while trash.exists():
+        suffix += 1
+        trash = path.parent / f".{path.name}.delete.{os.getpid()}.{suffix}"
+    path.rename(trash)
+    shutil.rmtree(trash, onerror=_on_rm_error, ignore_errors=True)
     path.mkdir(parents=True, exist_ok=True)

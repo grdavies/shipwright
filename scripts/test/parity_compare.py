@@ -6,9 +6,9 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR.parent) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR.parent))
-from _fixture_lib import repo_root
+from _sw.vendor_paths import repo_root
 
-from _harness_patch import patch_source as _patch_source
+from unit_tests._harness_runtime import patch_source as _patch_source
 
 def main() -> int:
     args = sys.argv[1:]
@@ -68,6 +68,7 @@ should_skip_relpath() {
   case "$relpath" in
     */__pycache__/* | */__pycache__ | *.pyc | *.bak) return 0 ;;
     scripts/test/* | scripts/test) return 0 ;;
+    scripts/.cursor/sw-coverage/* | scripts/.cursor/sw-coverage) return 0 ;;
     scripts/install.sh) return 0 ;;
     hooks/* | hooks) return 0 ;;
   esac

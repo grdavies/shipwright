@@ -36,8 +36,8 @@ def main(argv=None):
         for c in (root/".cursor/workflow.config.json", root/"workflow.config.json"):
             if c.is_file(): config = c; break
     provider = cfg(config, "verifyE2e.provider", "none")
-    enabled = cfg(config, "verifyE2e.enabled", "false")
-    if provider == "none" or enabled != "true":
+    enabled = str(cfg(config, "verifyE2e.enabled", "false")).lower() == "true"
+    if provider == "none" or not enabled:
         adapter = plugin_root/"providers/verify/none.sh"
         if (plugin_root/"providers/verify/none.py").is_file(): adapter = plugin_root/"providers/verify/none.py"
         return subprocess.run(["bash" if adapter.suffix==".sh" else sys.executable, str(adapter)]).returncode
@@ -58,5 +58,5 @@ def main(argv=None):
         ec = json.loads(proc.stdout).get("exitCode")
         if ec is None: ec = proc.returncode
     except json.JSONDecodeError: ec = proc.returncode
-    return int(ec or 1)
+    return int(ec if ec is not None else proc.returncode)
 if __name__ == "__main__": run_module_main(main)

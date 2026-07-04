@@ -1,4 +1,5 @@
 ---
+superseded-by: PRD 055
 date: 2026-07-02
 amends: docs/prds/046-issue-store-planning-graph/046-prd-issue-store-planning-graph.md
 absorbs: [gap-020-planning-index-gen-replace-region-inner-omits-n]

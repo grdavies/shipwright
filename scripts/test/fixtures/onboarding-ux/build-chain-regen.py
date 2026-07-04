@@ -6,9 +6,9 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR.parent) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR.parent))
-from _fixture_lib import repo_root
+from _sw.vendor_paths import repo_root
 
-from _harness_patch import patch_source as _patch_source
+from unit_tests._harness_runtime import patch_source as _patch_source
 
 def main() -> int:
     root = repo_root(__file__)
@@ -23,14 +23,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 FAIL=0
 
-if [[ -x "$ROOT/core/scripts/sw-assert-worktree.sh" ]]; then
+if [[ -f "$ROOT/core/scripts/sw-assert-worktree.py" ]]; then
   echo "OK  build-chain-regen: sw-assert-worktree synced to core/scripts"
 else
-  echo "FAIL build-chain-regen: core/scripts/sw-assert-worktree.sh missing"
+  echo "FAIL build-chain-regen: core/scripts/sw-assert-worktree.py missing"
   FAIL=1
 fi
 
-if [[ -x "$ROOT/scripts/check-frozen.sh" ]] && [[ ! -f "$ROOT/core/scripts/check-frozen.sh" ]]; then
+if [[ -f "$ROOT/scripts/check-frozen.py" ]] && [[ ! -f "$ROOT/core/scripts/check-frozen.py" ]]; then
   echo "OK  build-chain-regen: check-frozen harness at scripts/ root only (not emitted)"
 else
   echo "FAIL build-chain-regen: check-frozen should be root harness only, not in core/scripts"

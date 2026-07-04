@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import planning_paths
 VALID_INDEX_STATUSES = frozenset({"not-started", "in-progress", "complete"})
+TERMINAL_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
 
 def living_paths(root: Path) -> tuple[str, ...]:
     return planning_paths.living_paths_rel(planning_paths.load_planning_dirs(root))
@@ -78,6 +79,10 @@ def derive_index_status(state: dict[str, Any], merged_to_main: bool) -> str:
     statuses = [str((meta or {}).get("status") or "pending") for meta in phases.values()]
     if merged_to_main:
         return "complete"
+    if all(s in TERMINAL_PHASE_STATUSES for s in statuses):
+        completion = state.get("completion") or {}
+        if completion.get("status") == "completed-pending-merge":
+            return "complete"
     if any(s not in ("pending",) for s in statuses):
         return "in-progress"
     return "not-started"
@@ -348,11 +353,11 @@ def _cmd_append_terminal_locked(root: Path, args: list[str], state: dict[str, An
     if not prd:
         fail("prd_number missing from deliver state/plan")
 
+    from wave_state import phase_complete
+
     phases = state.get("phases") or {}
-    if phases and not all(
-        (meta or {}).get("status") == "green-merged" for meta in phases.values()
-    ):
-        fail("not all phases green-merged; skip terminal append", exit_code=10)
+    if phases and not all(phase_complete((meta or {}).get("status")) for meta in phases.values()):
+        fail("not all phases terminal-complete; skip terminal append", exit_code=10)
 
     worktree = resolve_worktree(root, args)
     phase = parse_kv(args, "--phase") or "all"

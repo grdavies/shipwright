@@ -25,8 +25,7 @@ def load_config(root: Path) -> tuple[str, str]:
 def parse_frontmatter_category(text: str) -> str | None:
     if not text.startswith("---"):
         return None
-    end = text.find("
----", 3)
+    end = text.find("\n---", 3)
     if end == -1:
         return None
     block = text[3:end]
@@ -40,8 +39,7 @@ def body_after_frontmatter(text: str) -> str:
     if not text.startswith("---"):
         return text
     parts = text.split("---", 2)
-    return parts[2].lstrip("
-") if len(parts) >= 3 else ""
+    return parts[2].lstrip("\n") if len(parts) >= 3 else ""
 
 
 def main() -> int:
