@@ -26,12 +26,13 @@ Task list from frozen PRD + amendment union.
      autonomous via the PRD 033 reconciler **after** confirmed choices only (R3).
 4. In **one pass**, draft parent tasks (phases), expand executable sub-tasks, Relevant Files, and Notes.
 5. Add **`## Phase Dependencies`** table: `| Phase | Depends on |` with one row per phase (`none` or phase refs); machine-parseable by `/sw-deliver` (R5/R6/R37).
-6. Add **`## Traceability`** table: every union R-ID → task ref → named test scenario → **ZOMBIES checklist** column (see `skills/spec-rigor/references/zombies.md`).
-7. Save; run spec-rigor + traceability gates; when `planning.visibilityProfile` is `all-private`, run
+6. Run **`python3 scripts/tasks_generate.py apply-granularity --task-list <task-list> --inplace`** then **`python3 scripts/tasks_generate.py check --task-list <task-list>`** — execute-tier granularity is required alongside Phase Dependencies and Traceability (R16–R18).
+7. Add **`## Traceability`** table: every union R-ID → task ref → named test scenario → **ZOMBIES checklist** column (see `skills/spec-rigor/references/zombies.md`).
+8. Save; run spec-rigor + traceability gates; when `planning.visibilityProfile` is `all-private`, run
    `python3 scripts/planning_visibility.py check-freeze-visibility <task-list>` before `/sw-freeze`.
-8. `/sw-freeze` on task list.
-9. Update `docs/prds/INDEX.md` entry (status `not-started`).
-10. **Stop** — standalone runs end here without implementation. The human checkpoint between documentation
+9. `/sw-freeze` on task list.
+10. Update `docs/prds/INDEX.md` entry (status `not-started`).
+11. **Stop** — standalone runs end here without implementation. The human checkpoint between documentation
    and implementation is `doc.afterTasks` on `/sw-doc` (or `--after-tasks` on `/sw-ship`), not a gate inside
    `/sw-tasks`.
 
@@ -48,6 +49,7 @@ Task list from frozen PRD + amendment union.
 - Overwrite of an existing **frozen** task list still requires explicit confirmation before replacing.
 - Task list reflects union, not bare parent alone.
 - Traceability table required — `traceability-check.py` blocks freeze on uncovered R-IDs.
+- Execute-tier granularity required — `tasks_generate.py apply-granularity` before freeze; durable `## Execute-tier granularity` section (not advisory sizing block); `tasks_generate.py check` passes (R16–R18).
 - Phase Dependencies table required — `spec-rigor-check.py` blocks freeze when missing or invalid (R5/R6/R37).
 - Phase sizing uses the deterministic `small|medium|large` heuristic (`python3 scripts/phase_sizing.py score`);
   informal S/M/L labels are deprecated. Prefer many small phases with explicit dependency edges (R19).
