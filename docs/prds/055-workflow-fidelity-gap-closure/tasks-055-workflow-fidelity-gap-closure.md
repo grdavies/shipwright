@@ -38,39 +38,39 @@ Thread A (gap-022, gap-024, gap-020). Low blast radius; unblocks honest dist/ver
   - **File:** `docs/prds/046-issue-store-planning-graph/amendments/A2-*.md`, `A3-*.md`, `A4-*.md`, `docs/prds/045-issue-native-dev-tracking/amendments/A1-*.md`
   - **Expected:** each carries `superseded-by: PRD 055` in frontmatter; parents unchanged
   - **R-IDs:** R26
-- [ ] 1.1 Extend build-chain SoT excludes for developer test trees (R1)
+- [x] 1.1 Extend build-chain SoT excludes for developer test trees (R1)
   - **File:** `core/sw-reference/build-chain-sot.json`
   - **Expected:** `coreScripts.excludes` lists `unit_tests/` and `tests/`; manifest is sole source for copy/emitter
   - **R-IDs:** R1
-- [ ] 1.2 Align copy-to-core and emitter with SoT excludes (R1)
+- [x] 1.2 Align copy-to-core and emitter with SoT excludes (R1)
   - **File:** `scripts/copy-to-core.py`, `sw/emitter_base.py`
   - **Expected:** neither copies `unit_tests/`, `tests/`, or `test/` into `core/scripts/` or `dist/*/scripts/`
   - **R-IDs:** R1
-- [ ] 1.3 Regenerate dist and document repo-only harness (TR1)
+- [x] 1.3 Regenerate dist and document repo-only harness (TR1)
   - **File:** `scripts/build-chain-sync.py`, `docs/guides/testing.md`
   - **Expected:** `build-chain-sync.py` green; `dist/{cursor,claude-code}/scripts/` has no developer test trees; testing guide states harness is repo-only
   - **R-IDs:** R1, R2
-- [ ] 1.4 Add emitter-excludes-developer-test-trees fixture (R2)
+- [x] 1.4 Add emitter-excludes-developer-test-trees fixture (R2)
   - **File:** `scripts/test/run_emitter_fixtures.py`
   - **Expected:** fixture fails closed if `unit_tests/`, `tests/`, or `test/` appear under `dist/*/scripts/`
   - **R-IDs:** R2
-- [ ] 1.5 Port supersede subcommands to reconcile.py (R3, TR2)
+- [x] 1.5 Port supersede subcommands to reconcile.py (R3, TR2)
   - **File:** `scripts/reconcile.py`
   - **Expected:** `append-superseded` and `supersede-reconcile` subcommands per PRD 015 contract; exit 0 on valid input
   - **R-IDs:** R3
-- [ ] 1.6 Refresh supersede docs and script-port-ledger (R4)
+- [x] 1.6 Refresh supersede docs and script-port-ledger (R4)
   - **File:** `core/commands/sw-memory-sync.md`, `core/sw-reference/script-port-ledger.json`, optional `scripts/reconcile-status.py` shim
   - **Expected:** supersede ops point at `reconcile.py`; memory-sync step 8 needs no agent deferral; one-release shim delegates if present
   - **R-IDs:** R4
-- [ ] 1.7 Add memory-sot-supersede-reconcile fixture (R4)
+- [x] 1.7 Add memory-sot-supersede-reconcile fixture (R4)
   - **File:** `scripts/test/run_memory_sot_fixtures.py`
   - **Expected:** `supersede-reconcile` exits 0 through redaction chokepoint
   - **R-IDs:** R4
-- [ ] 1.8 Fix planning_index_gen.replace_region_inner newline contract (R5, TR3)
+- [x] 1.8 Fix planning_index_gen.replace_region_inner newline contract (R5, TR3)
   - **File:** `scripts/planning_index_gen.py`, `scripts/index-region-guard.py` (if present)
   - **Expected:** structural markers remain on their own line after regenerate; matches `render_region` contract
   - **R-IDs:** R5
-- [ ] 1.9 Add planning-index-marker-newline fixture (R5)
+- [x] 1.9 Add planning-index-marker-newline fixture (R5)
   - **File:** `scripts/test/run_planning_index_fixtures.py` or extension thereof
   - **Expected:** regenerate does not glue structural markers to table headers
   - **R-IDs:** R5
