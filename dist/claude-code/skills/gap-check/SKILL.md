@@ -35,6 +35,17 @@ git diff "$PARENT"...HEAD
 5. Ambiguous/out-of-scope → escalate (toward feedback workstream `005`); never absorb silently.
 6. Re-map once; escalate residuals.
 
+
+## Deliver binding (PRD 055 R13, R25)
+
+On the **deliver merge path** (`merge-enqueue` / `merge_ready_in_flight_phases`), gap-check is **mechanical**
+via `scripts/gap-check-gate.py`:
+
+- Emits/consumes `.cursor/sw-deliver-runs/{phaseSlug}/gap-check.status.json` with binding `pass|halt`.
+- `ship-phase-status.py` refuses `merge-ready-green` when the durable verdict is `halt`.
+- **`--fast` is prohibited** for deliver merge decisions (`--deliver-merge --fast` fails closed with
+  `deliver-gap-check-no-fast-skip`). Standalone `/sw-ship` may still use `--fast` per ship skill contract.
+
 ## Modes
 
 - **Default (`/sw-ship`):** after execute; `--fast` skips.

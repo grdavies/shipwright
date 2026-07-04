@@ -1105,9 +1105,32 @@ def cmd_ledger_check(root: Path, args: list[str]) -> None:
     ledger_tasks = ((state.get("taskLedger") or {}).get("tasks") or {}) if state else {}
 
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import doc_format
     from checkbox_diff import parse_task_checkboxes
 
-    checkboxes = parse_task_checkboxes(path.read_text(encoding="utf-8"))
+    tasks_text = path.read_text(encoding="utf-8")
+    phase_id = parse_kv(args, "--phase-id")
+    merge_ready = "--merge-ready" in args
+    if merge_ready and phase_id:
+        phase_refs = parse_task_checkboxes(doc_format.phase_section_text(tasks_text, phase_id))
+        if phase_refs:
+            all_unchecked = all(not checked for checked in phase_refs.values())
+            any_ledger_done = any(
+                isinstance(ledger_tasks.get(ref), dict) and ledger_tasks[ref].get("done")
+                for ref in phase_refs
+            )
+            if all_unchecked and not any_ledger_done:
+                emit(
+                    {
+                        "verdict": "fail",
+                        "error": "tasks-currency-unchecked-completed-work",
+                        "phaseId": phase_id,
+                        "refs": sorted(phase_refs.keys()),
+                    },
+                    exit_code=1,
+                )
+
+    checkboxes = parse_task_checkboxes(tasks_text)
     divergences: list[dict[str, Any]] = []
 
     for ref, checked in checkboxes.items():
