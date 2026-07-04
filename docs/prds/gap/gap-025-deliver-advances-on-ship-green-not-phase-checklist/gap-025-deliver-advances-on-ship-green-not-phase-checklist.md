@@ -1,8 +1,8 @@
 ---
 id: gap-025-deliver-advances-on-ship-green-not-phase-checklist
 type: gap
-status: scheduled
-schedule: PRD 055
+status: resolved
+schedule: — (PRD 055)
 title: deliver advances phases on ship-green without phase checklist acceptance
 visibility: public
 tags: [source:feedback, signal:feedback-deliver-checklist-bypass-2026-07-02, prd-054, prd-007, prd-035, deliver, gap-check, tasks-currency]

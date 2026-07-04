@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Ported fixture suite (R27) — embedded harness executed without on-disk shell files."""
+"""Parity harness — pure Python compare (PRD 055 R28)."""
 from __future__ import annotations
 
 import os
-import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -16,108 +16,108 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
         sys.path.insert(0, _entry)
 
 from _sw.vendor_paths import repo_root
-from unit_tests._harness_runtime import harness_subprocess_env as _harness_env
-from unit_tests._harness_runtime import patch_source as _patch_source
+from parity_compare import compare_tree, file_sha256
+
+import test_scope as ts
+
+
+def _run_expect(name: str, expect_ec: int, target: Path, manifest: Path) -> bool:
+    code, out = compare_tree(target, manifest)
+    if code == expect_ec:
+        print(f"OK  {name} exit={code}")
+        return True
+    print(f"FAIL {name} expected exit={expect_ec} got exit={code}")
+    print(out)
+    return False
+
+
+def _should_run_full_dist_compare(root: Path) -> bool:
+    scope = os.environ.get("SW_TEST_SCOPE", "full").strip().lower()
+    if scope == "full":
+        return True
+    changed = ts.resolve_changed_paths(root, None)
+    return ts.widen_reason(changed) is not None
 
 
 def main() -> int:
     root = repo_root(__file__)
-    env = _harness_env(root)
-    src = _patch_source(_SOURCE, root)
-    completed = subprocess.run(
-        ["bash", "-c", src],
-        cwd=str(root),
-        env=env,
-        shell=False,
-    )
-    return completed.returncode
+    fail = 0
+    tmp_base = Path(tempfile.mkdtemp(prefix="sw-parity-fix."))
 
+    try:
+        happy = tmp_base / "happy-tree"
+        (happy / "commands").mkdir(parents=True)
+        test_file = happy / "commands" / "sw-test.md"
+        test_file.write_text("cmd body\n", encoding="utf-8")
+        manifest_happy = tmp_base / "happy.manifest"
+        digest = file_sha256(test_file)
+        manifest_happy.write_text(f"commands/sw-test.md\t{digest}\n", encoding="utf-8")
 
-_SOURCE = r"""
-#!/usr/bin/env bash
-# Golden tests for the byte-parity harness (snapshot + compare).
-set -euo pipefail
+        if not _run_expect("happy-match", 0, happy, manifest_happy):
+            fail = 1
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-SNAPSHOT="$ROOT/scripts/snapshot-tree.sh"
-COMPARE="$ROOT/scripts/test/parity-compare.sh"
-FIX="$ROOT/scripts/test/fixtures/parity"
-GOLDEN="$FIX/cursor-golden.manifest"
+        missing = tmp_base / "missing-tree"
+        (missing / "commands").mkdir(parents=True)
+        if not _run_expect("missing-file", 1, missing, manifest_happy):
+            fail = 1
 
-chmod +x "$SNAPSHOT" "$COMPARE"
+        extra = tmp_base / "extra-tree"
+        import shutil
 
-FAIL=0
-TMP_BASE="$(mktemp -d "${TMPDIR:-/tmp}/sw-parity-fix.XXXXXX")"
-trap 'rm -rf "$TMP_BASE"' EXIT
+        shutil.copytree(happy, extra)
+        (extra / "commands" / "extra.md").write_text("extra\n", encoding="utf-8")
+        if not _run_expect("extra-file", 1, extra, manifest_happy):
+            fail = 1
 
-run_expect() {
-  local name="$1" expect_ec="$2"
-  shift 2
-  set +e
-  if [[ "${1:-}" == *.py ]]; then
-    OUT=$(python3 "$@" 2>&1)
-  else
-    OUT=$("$@" 2>&1)
-  fi
-  EC=$?
-  set -e
-  if [ "$EC" -eq "$expect_ec" ]; then
-    echo "OK  $name exit=$EC"
-  else
-    echo "FAIL $name expected exit=$expect_ec got exit=$EC"
-    echo "$OUT"
-    FAIL=1
-  fi
-}
+        diff = tmp_base / "diff-tree"
+        shutil.copytree(happy, diff)
+        (diff / "commands" / "sw-test.md").write_text("changed\n", encoding="utf-8")
+        if not _run_expect("hash-diff", 1, diff, manifest_happy):
+            fail = 1
 
-# Fixture tree: happy match
-HAPPY="$TMP_BASE/happy-tree"
-mkdir -p "$HAPPY/commands"
-echo 'cmd body' >"$HAPPY/commands/sw-test.md"
-MANIFEST_HAPPY="$TMP_BASE/happy.manifest"
-printf 'commands/sw-test.md\t%s\n' "$(shasum -a 256 "$HAPPY/commands/sw-test.md" | awk '{print $1}')" >"$MANIFEST_HAPPY"
-run_expect happy-match 0 "$COMPARE" "$HAPPY" "$MANIFEST_HAPPY"
+        snapshot = root / "scripts" / "snapshot-tree.py"
+        if snapshot.is_file():
+            tmp_manifest = tmp_base / "snap1.manifest"
+            tmp_manifest2 = tmp_base / "snap2.manifest"
+            subprocess.run(
+                [sys.executable, str(snapshot), str(tmp_manifest)],
+                cwd=str(root),
+                check=False,
+            )
+            subprocess.run(
+                [sys.executable, str(snapshot), str(tmp_manifest2)],
+                cwd=str(root),
+                check=False,
+            )
+            if tmp_manifest.read_bytes() == tmp_manifest2.read_bytes():
+                print("OK  snapshot-deterministic identical across two runs")
+            else:
+                print("FAIL snapshot-deterministic manifests differ between runs")
+                fail = 1
 
-# Missing file
-MISSING="$TMP_BASE/missing-tree"
-mkdir -p "$MISSING/commands"
-run_expect missing-file 1 "$COMPARE" "$MISSING" "$MANIFEST_HAPPY"
+        golden = root / "scripts" / "test" / "fixtures" / "parity" / "cursor-golden.manifest"
+        if _should_run_full_dist_compare(root):
+            if not golden.is_file():
+                print(f"FAIL cursor-golden.manifest missing at {golden}")
+                fail = 1
+            else:
+                code, out = compare_tree(root / "dist" / "cursor", golden)
+                if code == 0:
+                    print(f"OK  cursor-golden-vs-dist exit={code}")
+                else:
+                    print(f"FAIL cursor-golden-vs-dist expected exit=0 got exit={code}")
+                    print(out)
+                    fail = 1
+        else:
+            print("OK  cursor-golden-vs-dist skipped (scope tier-gate)")
 
-# Extra file
-EXTRA="$TMP_BASE/extra-tree"
-cp -R "$HAPPY" "$EXTRA"
-echo 'extra' >"$EXTRA/commands/extra.md"
-run_expect extra-file 1 "$COMPARE" "$EXTRA" "$MANIFEST_HAPPY"
+    finally:
+        import shutil
 
-# Hash diff
-DIFF="$TMP_BASE/diff-tree"
-cp -R "$HAPPY" "$DIFF"
-echo 'changed' >"$DIFF/commands/sw-test.md"
-run_expect hash-diff 1 "$COMPARE" "$DIFF" "$MANIFEST_HAPPY"
+        shutil.rmtree(tmp_base, ignore_errors=True)
 
-# Deterministic re-snapshot
-TMP_MANIFEST="$(mktemp)"
-python3 "$SNAPSHOT" "$TMP_MANIFEST"
-python3 "$SNAPSHOT" "${TMP_MANIFEST}.2"
-if cmp -s "$TMP_MANIFEST" "${TMP_MANIFEST}.2"; then
-  echo "OK  snapshot-deterministic identical across two runs"
-else
-  echo "FAIL snapshot-deterministic manifests differ between runs"
-  FAIL=1
-fi
-rm -f "$TMP_MANIFEST" "${TMP_MANIFEST}.2"
+    return fail
 
-# Live repo golden manifest matches dist/cursor/ (post-flip install source).
-if [ ! -f "$GOLDEN" ]; then
-  echo "FAIL cursor-golden.manifest missing at $GOLDEN"
-  FAIL=1
-else
-  run_expect cursor-golden-vs-dist 0 "$COMPARE" "$ROOT/dist/cursor" "$GOLDEN"
-fi
-
-exit "$FAIL"
-
-"""
 
 if __name__ == "__main__":
     raise SystemExit(main())

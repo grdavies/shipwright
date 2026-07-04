@@ -1,11 +1,11 @@
 ---
 id: gap-007-finalize-completion-omits-terminal-living-docs-r
 type: gap
-status: scheduled
+status: resolved
 title: finalize-completion omits terminal living-docs reconcile so INDEX stays in-progress
 visibility: public
 tags: [source:feedback, signal:feedback-index-status-stale-after-deliver-complete-2026-06-30]
-schedule: PRD 055
+schedule: — (PRD 055)
 ---
 
 # finalize-completion omits terminal living-docs reconcile so INDEX stays in-progress

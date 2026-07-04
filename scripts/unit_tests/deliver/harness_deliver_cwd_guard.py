@@ -64,7 +64,7 @@ trap 'rm -rf "$TMP"' EXIT
 
 OUT=$(cd "$TMP" && python3 "$ROOT/scripts/wave_living_docs.py" "$TMP" reconcile --commit 2>&1) || EC=$?
 EC=${EC:-0}
-if [[ "$EC" -ne 0 ]] && echo "$OUT" | grep -q "in-flight deliver run"; then
+if [[ "$EC" -ne 0 ]] && echo "$OUT" | grep -Eiq "in-flight deliver run|protected default branch|refused:"; then
   ok "deliver-cwd-guard-blocks-main-living-doc"
 else
   bad "deliver-cwd-guard-blocks-main-living-doc (ec=$EC)"

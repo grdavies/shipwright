@@ -11,6 +11,7 @@ import json
 import os
 import re
 import subprocess
+import time
 import sys
 import uuid
 from pathlib import Path
@@ -199,22 +200,102 @@ def load_manifest(root: Path) -> list[dict]:
     return list(data.get("fixtures") or [])
 
 
+
+
+def load_workflow_config(root: Path) -> dict:
+    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
+        cfg_path = root / rel
+        if cfg_path.is_file():
+            try:
+                return json.loads(cfg_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+    return {}
+
+
+def verify_watchdog_budget_seconds(root: Path) -> float | None:
+    """Wall-clock budget for full verify manifest loop (PRD 055 R31)."""
+    env_raw = os.environ.get("SW_VERIFY_WATCHDOG_MINUTES", "").strip()
+    if env_raw:
+        try:
+            return max(0.1, float(env_raw) * 60.0)
+        except ValueError:
+            pass
+    cfg = load_workflow_config(root).get("verify") or {}
+    watchdog = cfg.get("watchdog") or {}
+    raw = watchdog.get("maxMinutes")
+    if raw is None:
+        return None
+    try:
+        return max(0.1, float(raw) * 60.0)
+    except (TypeError, ValueError):
+        return None
+
+
+def build_verify_watchdog_halt(
+    root: Path,
+    *,
+    last_suite_id: str,
+    elapsed_seconds: float,
+    budget_seconds: float,
+) -> dict:
+    budget_minutes = budget_seconds / 60.0
+    return {
+        "verdict": "fail",
+        "halt": "verify-watchdog-exhausted",
+        "lastSuiteId": last_suite_id,
+        "elapsedSeconds": round(elapsed_seconds, 1),
+        "budgetMinutes": budget_minutes,
+        "resumeCommand": (
+            "PYTHONPATH=scripts python3 scripts/test/_runner.py verify --scope full"
+            f"  # resume after {last_suite_id}"
+        ),
+    }
+
+
+def emit_verify_watchdog_halt(root: Path, report: dict) -> int:
+    print(json.dumps(report, indent=2))
+    out = root / ".cursor" / "sw-verify-watchdog-halt.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    return 1
+
+
 def run_manifest(root: Path, *, coverage: bool = False, coverdir: Path | None = None) -> int:
     use_coverage = coverage_enabled(flag=coverage)
     active_coverdir = coverdir or (resolve_coverdir(root) if use_coverage else None)
     failures = 0
-    for entry in load_manifest(root):
+    entries = load_manifest(root)
+    budget_seconds = verify_watchdog_budget_seconds(root)
+    started = time.monotonic()
+    for entry in entries:
+        suite_id = str(entry.get("id") or "unknown")
+        if budget_seconds is not None:
+            elapsed = time.monotonic() - started
+            if elapsed >= budget_seconds:
+                return emit_verify_watchdog_halt(
+                    root,
+                    build_verify_watchdog_halt(
+                        root,
+                        last_suite_id=suite_id,
+                        elapsed_seconds=elapsed,
+                        budget_seconds=budget_seconds,
+                    ),
+                )
         script = entry.get("script", "")
         rel = script.replace(".sh", ".py")
         path = root / rel
         if not path.is_file() and (root / script).is_file():
             path = root / script
         if not path.is_file():
-            print(f"FAIL manifest/{entry.get('id')}: missing {rel}")
+            print(f"FAIL manifest/{suite_id}: missing {rel}")
             failures += 1
             continue
-        print(f"==> pr-test-plan/{entry['id']}: {path.relative_to(root)}")
+        print(f"==> pr-test-plan/{suite_id}: {path.relative_to(root)}")
+        suite_started = time.monotonic()
         ec = run_suite_module(path, root=root, coverage=use_coverage, coverdir=active_coverdir)
+        suite_elapsed = time.monotonic() - suite_started
+        print(f"    suite {suite_id} elapsed {suite_elapsed:.1f}s")
         if ec != 0:
             failures += 1
     if use_coverage and active_coverdir is not None:
@@ -222,7 +303,7 @@ def run_manifest(root: Path, *, coverage: bool = False, coverdir: Path | None = 
     if failures:
         print(f"FAIL pr-test-plan-manifest: {failures} suite(s) failed")
         return 1
-    print(f"OK  pr-test-plan-manifest: all {len(load_manifest(root))} fixtures passed")
+    print(f"OK  pr-test-plan-manifest: all {len(entries)} fixtures passed")
     return 0
 
 
@@ -259,15 +340,26 @@ def run_pytest_scope(
     return run_pytest(plan.get("pytestArgs") or ["scripts/unit_tests"], root=resolved_root)
 
 
-def run_verify(root: Path, *, coverage: bool = False, coverdir: Path | None = None) -> int:
-    """Run pytest full collection plus pr-test-plan manifest (PRD 054 R17/R18)."""
+def run_verify(
+    root: Path,
+    *,
+    coverage: bool = False,
+    coverdir: Path | None = None,
+    scope: str = "full",
+) -> int:
+    """Run pytest collection plus pr-test-plan manifest (PRD 054 R17/R18)."""
     use_coverage = coverage_enabled(flag=coverage)
     active_coverdir = coverdir or (resolve_coverdir(root) if use_coverage else None)
-    ec = run_pytest_scope(root, scope="full")
+    os.environ["SW_TEST_SCOPE"] = scope
+    ec = run_pytest_scope(root, scope=scope)
     if ec != 0:
         if use_coverage and active_coverdir is not None:
             emit_coverage_report(active_coverdir, root=root)
         return ec
+    if scope in {"fast", "phase"}:
+        if use_coverage and active_coverdir is not None:
+            emit_coverage_report(active_coverdir, root=root)
+        return 0
     result = run_manifest(root, coverage=use_coverage, coverdir=active_coverdir)
     if use_coverage and active_coverdir is not None:
         emit_coverage_report(active_coverdir, root=root)
@@ -329,7 +421,7 @@ def main(argv: list[str] | None = None) -> int:
         scope = args.scope or _resolve_scope()
         if scope in {"fast", "phase"}:
             return run_pytest_scope(root, scope=scope)
-        return run_verify(root, coverage=coverage)
+        return run_verify(root, coverage=coverage, scope=scope)
     if args.cmd == "run-pytest":
         forwarded = args.pytest_args
         if forwarded and forwarded[0] == "--":

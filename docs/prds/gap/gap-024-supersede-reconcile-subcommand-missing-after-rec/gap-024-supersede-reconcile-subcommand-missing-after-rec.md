@@ -1,8 +1,8 @@
 ---
 id: gap-024-supersede-reconcile-subcommand-missing-after-rec
 type: gap
-status: scheduled
-schedule: PRD 055
+status: resolved
+schedule: — (PRD 055)
 title: supersede-reconcile subcommand missing after reconcile.py consolidation
 visibility: public
 tags: [source:feedback, signal:feedback-supersede-reconcile-missing-2026-07-02, prd-015, prd-042, memory-sot, sw-memory-sync]

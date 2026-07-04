@@ -15,9 +15,12 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import doc_format
+import planning_paths as pp
 
 GAP_ID = re.compile(r"^GAP-(\d+)$", re.I)
+CANONICAL_GAP_ID = re.compile(r"^gap-\d+-", re.I)
 INDEX_COUNTS = re.compile(r"^\|\s*(resolved|scheduled|open)\s*\|\s*(\d+)\s*\|", re.I)
+POLICY_SCHEDULE_PREFIXES = ("deferred", "config:")
 
 
 @dataclass
@@ -52,8 +55,131 @@ class GapBacklog:
         return out
 
 
+def _worktree_base(root: Path) -> Path:
+    try:
+        return pp.git_root(root)
+    except pp.PathEscapeError:
+        return root.resolve()
+
+
 def default_gap_path(root: Path) -> Path:
-    return root / "docs" / "prds" / "GAP-BACKLOG.md"
+    dirs = pp.load_planning_dirs(root)
+    return _worktree_base(root) / dirs.prds / "GAP-BACKLOG.md"
+
+
+def canonical_gap_root(root: Path) -> Path:
+    dirs = pp.load_planning_dirs(root)
+    return _worktree_base(root) / dirs.prds / "gap"
+
+
+def is_legacy_gap_id(gap_id: str) -> bool:
+    return bool(GAP_ID.match(gap_id))
+
+
+def is_canonical_gap_ref(ref: str) -> bool:
+    return bool(CANONICAL_GAP_ID.match(ref.strip()))
+
+
+def partition_gap_refs(gap_ids: list[str]) -> tuple[list[str], list[str]]:
+    legacy: list[str] = []
+    canonical: list[str] = []
+    for ref in gap_ids:
+        ref = ref.strip()
+        if not ref:
+            continue
+        if is_legacy_gap_id(ref):
+            legacy.append(ref)
+        else:
+            canonical.append(ref)
+    return legacy, canonical
+
+
+def update_frontmatter_field(content: str, key: str, value: str) -> str:
+    fm, body = doc_format.split_frontmatter(content)
+    if fm is None:
+        return content
+    lines = fm.splitlines()
+    out_lines: list[str] = []
+    found = False
+    for line in lines:
+        if line.split(":", 1)[0].strip() == key:
+            out_lines.append(f"{key}: {value}")
+            found = True
+        else:
+            out_lines.append(line)
+    if not found:
+        out_lines.append(f"{key}: {value}")
+    return "---\n" + "\n".join(out_lines) + "\n---\n" + body
+
+
+def resolve_canonical_unit_id(root: Path, ref: str) -> str | None:
+    ref = ref.strip()
+    gap_root = canonical_gap_root(root)
+    if not gap_root.is_dir():
+        return None
+    exact = gap_root / ref / f"{ref}.md"
+    if exact.is_file():
+        return ref
+    for unit_dir in sorted(gap_root.iterdir()):
+        if not unit_dir.is_dir():
+            continue
+        if unit_dir.name == ref or unit_dir.name.startswith(ref):
+            body = unit_dir / f"{unit_dir.name}.md"
+            if body.is_file():
+                return unit_dir.name
+    return None
+
+
+def canonical_gap_body_path(root: Path, unit_id: str) -> Path:
+    return canonical_gap_root(root) / unit_id / f"{unit_id}.md"
+
+
+def build_legacy_canonical_alias_map(root: Path) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    gap_root = canonical_gap_root(root)
+    if not gap_root.is_dir():
+        return mapping
+    for unit_dir in gap_root.iterdir():
+        if not unit_dir.is_dir():
+            continue
+        body = unit_dir / f"{unit_dir.name}.md"
+        if not body.is_file():
+            continue
+        text = body.read_text(encoding="utf-8")
+        legacy_id = doc_format.parse_frontmatter_scalar(text, "legacy_gap_id")
+        if legacy_id:
+            mapping[legacy_id.upper()] = unit_dir.name
+    return mapping
+
+
+def unresolved_legacy_rows(root: Path, backlog: GapBacklog | None = None) -> list[dict[str, str]]:
+    if backlog is None:
+        gap_path = default_gap_path(root)
+        if not gap_path.is_file():
+            return []
+        backlog = parse_gap_backlog(gap_path.read_text(encoding="utf-8"))
+    alias = build_legacy_canonical_alias_map(root)
+    unresolved: list[dict[str, str]] = []
+    for row in backlog.rows:
+        if row.status.lower() not in ("open", "scheduled"):
+            continue
+        if row.gap_id in alias:
+            continue
+        sched = row.schedule.strip().lower()
+        if sched.startswith(POLICY_SCHEDULE_PREFIXES):
+            continue
+        unresolved.append({"gapId": row.gap_id, "status": row.status, "schedule": row.schedule})
+    return unresolved
+
+
+def migration_gate_check(root: Path) -> dict[str, Any]:
+    unresolved = unresolved_legacy_rows(root)
+    return {
+        "verdict": "pass" if not unresolved else "fail",
+        "action": "gap-backlog-migration-gate",
+        "unresolved": unresolved,
+        "unresolvedCount": len(unresolved),
+    }
 
 
 def parse_gap_backlog(text: str) -> GapBacklog:
@@ -169,15 +295,88 @@ def flip_schedule(
     return flipped
 
 
+def flip_canonical_schedule(
+    root: Path,
+    *,
+    unit_refs: list[str],
+    prd: str,
+    amendment: str | None = None,
+    force: bool = False,
+) -> list[str]:
+    label = schedule_label(prd, amendment)
+    flipped: list[str] = []
+    for ref in unit_refs:
+        unit_id = resolve_canonical_unit_id(root, ref)
+        if not unit_id:
+            continue
+        path = canonical_gap_body_path(root, unit_id)
+        text = path.read_text(encoding="utf-8")
+        status = (doc_format.parse_frontmatter_scalar(text, "status") or "open").lower()
+        if status == "open":
+            text = update_frontmatter_field(text, "status", "scheduled")
+            text = update_frontmatter_field(text, "schedule", label)
+            path.write_text(text, encoding="utf-8")
+            flipped.append(unit_id)
+        elif force and status == "scheduled":
+            text = update_frontmatter_field(text, "schedule", label)
+            path.write_text(text, encoding="utf-8")
+            flipped.append(unit_id)
+        elif status == "scheduled" and (doc_format.parse_frontmatter_scalar(text, "schedule") or "") == label:
+            flipped.append(unit_id)
+    return flipped
+
+
+def flip_canonical_resolve(
+    root: Path,
+    *,
+    prd: str,
+    scope_note: str | None = None,
+    unit_refs: list[str] | None = None,
+) -> list[str]:
+    prd_n = str(int(prd)) if prd.isdigit() else prd.lstrip("0") or prd
+    sched_re = re.compile(
+        rf"^PRD\s+0*{re.escape(str(int(prd_n))) if prd_n.isdigit() else re.escape(prd_n)}(?:\s+A\d+)?$",
+        re.I,
+    )
+    resolved: list[str] = []
+    gap_root = canonical_gap_root(root)
+    if not gap_root.is_dir():
+        return resolved
+    want = {resolve_canonical_unit_id(root, r) for r in (unit_refs or []) if r}
+    want.discard(None)
+    for unit_dir in sorted(gap_root.iterdir()):
+        if not unit_dir.is_dir():
+            continue
+        unit_id = unit_dir.name
+        if want and unit_id not in want and not any(unit_id.startswith(w) for w in want if w):
+            continue
+        path = unit_dir / f"{unit_id}.md"
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        status = (doc_format.parse_frontmatter_scalar(text, "status") or "").lower()
+        schedule = (doc_format.parse_frontmatter_scalar(text, "schedule") or "").strip()
+        if status != "scheduled":
+            continue
+        if sched_re.match(schedule):
+            new_schedule = f"— ({scope_note})" if scope_note else "—"
+            text = update_frontmatter_field(text, "status", "resolved")
+            text = update_frontmatter_field(text, "schedule", new_schedule)
+            path.write_text(text, encoding="utf-8")
+            resolved.append(unit_id)
+    return resolved
+
+
 def resolve_for_prd(root: Path, prd: str, *, scope_note: str | None = None) -> dict[str, Any]:
     """Shared in-process gap-resolve for an absorbing PRD (PRD 048 R1)."""
     gap_path = default_gap_path(root)
     try:
+        flipped: list[str] = flip_canonical_resolve(root, prd=prd, scope_note=scope_note)
         if not gap_path.is_file():
-            return {"verdict": "pass", "flipped": [], "error": None}
+            return {"verdict": "pass", "flipped": flipped, "error": None}
         backlog = parse_gap_backlog(gap_path.read_text(encoding="utf-8"))
-        flipped = flip_resolve(backlog, prd=prd, scope_note=scope_note)
-        if flipped:
+        flipped.extend(flip_resolve(backlog, prd=prd, scope_note=scope_note))
+        if flipped and gap_path.is_file():
             gap_path.write_text(render_gap_backlog(backlog), encoding="utf-8")
         return {"verdict": "pass", "flipped": flipped, "error": None}
     except Exception as exc:
@@ -225,6 +424,8 @@ def main(argv: list[str] | None = None) -> None:
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list")
     sub.add_parser("check")
+    sub.add_parser("migration-gate")
+    sub.add_parser("projection-cutover-ready")
     p_flip = sub.add_parser("flip")
     p_flip.add_argument("--schedule", action="store_true")
     p_flip.add_argument("--force", action="store_true")
@@ -237,7 +438,18 @@ def main(argv: list[str] | None = None) -> None:
     p_flip.add_argument("--gap-path", default="")
     ns = parser.parse_args(args)
     root = Path(ns.root).resolve()
-    gap_path = Path(getattr(ns, "gap_path", "") or getattr(ns, "gap_path_global", "")) if (getattr(ns, "gap_path", "") or getattr(ns, "gap_path_global", "")) else default_gap_path(root)
+    if ns.cmd == "migration-gate":
+        out = migration_gate_check(root)
+        print(json.dumps(out))
+        sys.exit(0 if out["verdict"] == "pass" else 1)
+        return
+    if ns.cmd == "projection-cutover-ready":
+        out = migration_gate_check(root)
+        out["action"] = "projection-cutover-ready"
+        print(json.dumps(out))
+        sys.exit(0 if out["verdict"] == "pass" else 1)
+        return
+    gap_path = Path(getattr(ns, "gap_path", "") or "") if getattr(ns, "gap_path", "") else default_gap_path(root)
     if not gap_path.is_file():
         print(json.dumps({"verdict": "fail", "error": f"GAP-BACKLOG not found: {gap_path}"}))
         sys.exit(2)
@@ -252,12 +464,15 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(1 if issues else 0)
     if ns.cmd == "flip":
         changed: list[str] = []
+        legacy_changed = False
         if ns.schedule:
             gap_ids = list(ns.gaps)
             prd = ns.prd
             amendment = ns.amendment or None
             if ns.from_artifact:
                 art = Path(ns.from_artifact)
+                if not art.is_absolute():
+                    art = root / art
                 directives = doc_format.parse_frontmatter_directives(art.read_text(encoding="utf-8"))
                 gap_ids = directives.get("absorbs") or []
                 if not gap_ids:
@@ -266,11 +481,30 @@ def main(argv: list[str] | None = None) -> None:
                 prd_p, am_p = prd_from_path(art)
                 prd = prd or prd_p
                 amendment = amendment or (am_p or "")
-            changed = flip_schedule(backlog, gap_ids=gap_ids, prd=prd, amendment=amendment or None, force=bool(ns.force))
+            legacy_ids, canonical_ids = partition_gap_refs(gap_ids)
+            if legacy_ids:
+                flipped_legacy = flip_schedule(backlog, gap_ids=legacy_ids, prd=prd, amendment=amendment, force=bool(ns.force))
+                if flipped_legacy:
+                    legacy_changed = True
+                changed.extend(flipped_legacy)
+            if canonical_ids:
+                changed.extend(
+                    flip_canonical_schedule(
+                        root,
+                        unit_refs=canonical_ids,
+                        prd=prd,
+                        amendment=amendment,
+                        force=bool(ns.force),
+                    )
+                )
         elif ns.resolve:
             scope_note = ns.scope_note.strip() or None
-            changed = flip_resolve(backlog, prd=ns.prd, scope_note=scope_note)
-        if changed:
+            changed.extend(flip_canonical_resolve(root, prd=ns.prd, scope_note=scope_note))
+            flipped_legacy = flip_resolve(backlog, prd=ns.prd, scope_note=scope_note)
+            if flipped_legacy:
+                legacy_changed = True
+            changed.extend(flipped_legacy)
+        if legacy_changed:
             gap_path.write_text(render_gap_backlog(backlog), encoding="utf-8")
         print(json.dumps({"verdict": "pass", "action": "gap-backlog-flip", "flipped": changed, "counts": backlog.counts()}))
         return

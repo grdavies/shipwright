@@ -163,6 +163,22 @@
       "mustPrecede": [
         "living-doc-merge"
       ]
+    },
+    {
+      "id": "gap-check-gate-deliver",
+      "layer": "kernel",
+      "enforcedBy": [
+        "gap-check-gate.py"
+      ],
+      "statusArtifact": ".cursor/sw-deliver-runs/{phaseSlug}/gap-check.status.json",
+      "bindingVerdicts": [
+        "pass",
+        "halt"
+      ],
+      "fastSkipProhibitedOnDeliverMerge": true,
+      "mustPrecede": [
+        "merge-enqueue"
+      ]
     }
   ],
   "planPolicySteps": [
@@ -627,5 +643,18 @@
       "handoff",
       "record"
     ]
+  },
+  "deliverMergeGates": {
+    "ordering": [
+      "phase-acceptance-gate",
+      "tasks-currency-gate",
+      "gap-check-gate"
+    ],
+    "enforcedBy": [
+      "phase_acceptance_gate.py",
+      "wave_state.py",
+      "gap-check-gate.py"
+    ],
+    "gapCheckStatusPath": ".cursor/sw-deliver-runs/{phaseSlug}/gap-check.status.json"
   }
 }

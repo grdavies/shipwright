@@ -1,100 +1,102 @@
 #!/usr/bin/env python3
-"""Ported harness (R27)."""
+"""Compare a directory tree against a parity manifest (relative-path<TAB>sha256)."""
 from __future__ import annotations
-import os, re, subprocess, sys
+
+import hashlib
+import sys
 from pathlib import Path
-SCRIPT_DIR = Path(__file__).resolve().parent
-if str(SCRIPT_DIR.parent) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR.parent))
-from _sw.vendor_paths import repo_root
 
-from unit_tests._harness_runtime import patch_source as _patch_source
+EMITTABLE_ROOTS: tuple[str, ...] = (
+    "commands",
+    "skills",
+    "rules",
+    "agents",
+    "providers",
+    "scripts",
+)
 
-def main() -> int:
-    args = sys.argv[1:]
-    root = repo_root(__file__)
-    env = os.environ.copy(); env['ROOT']=str(root)
-    env['PYTHONPATH']=str(root/'scripts')+os.pathsep+env.get('PYTHONPATH','')
-    return subprocess.run(['bash','-c',_patch_source(_SOURCE,root),'parity-compare',*args],cwd=str(root),env=env,shell=False).returncode
-_SOURCE = r"""
-#!/usr/bin/env bash
-# Compare a directory tree against a parity manifest (relative-path<TAB>sha256).
-#
-# Usage: scripts/test/parity-compare.sh <target-dir> <manifest>
-# Exit 0 on full match; non-zero with a named mismatch on first failure.
-set -euo pipefail
 
-TARGET="${1:?target directory required}"
-MANIFEST="${2:?manifest path required}"
+def should_skip_relpath(relpath: str) -> bool:
+    norm = relpath.replace("\\", "/")
+    if "/__pycache__/" in f"/{norm}/" or norm.endswith("/__pycache__") or norm == "__pycache__":
+        return True
+    if norm.endswith(".pyc") or norm.endswith(".bak"):
+        return True
+    if norm.startswith("scripts/test/") or norm == "scripts/test":
+        return True
+    if norm.startswith("scripts/.cursor/sw-coverage/") or norm == "scripts/.cursor/sw-coverage":
+        return True
+    if norm in ("scripts/install.sh", "scripts/install.py"):
+        return True
+    if norm.startswith("hooks/") or norm == "hooks":
+        return True
+    return False
 
-if [ ! -d "$TARGET" ]; then
-  echo "parity-compare: target is not a directory: $TARGET" >&2
-  exit 2
-fi
-if [ ! -f "$MANIFEST" ]; then
-  echo "parity-compare: manifest not found: $MANIFEST" >&2
-  exit 2
-fi
 
-TARGET="$(cd "$TARGET" && pwd)"
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
-manifest_hash_for() {
-  local path="$1"
-  awk -F '\t' -v p="$path" '$1 == p { print $2; exit }' "$MANIFEST"
-}
 
-manifest_count() {
-  awk -F '\t' 'NF >= 2 && $1 != "" { c++ } END { print c + 0 }' "$MANIFEST"
-}
+def load_manifest(manifest_path: Path) -> dict[str, str]:
+    entries: dict[str, str] = {}
+    for line in manifest_path.read_text(encoding="utf-8").splitlines():
+        if "\t" not in line:
+            continue
+        rel_path, expected_hash = line.split("\t", 1)
+        rel_path = rel_path.strip()
+        expected_hash = expected_hash.strip()
+        if rel_path:
+            entries[rel_path] = expected_hash
+    return entries
 
-# Check every manifest entry exists with matching hash.
-while IFS=$'\t' read -r path expected_hash; do
-  [ -n "$path" ] || continue
-  target_file="$TARGET/$path"
-  if [ ! -f "$target_file" ]; then
-    echo "parity-mismatch: missing file: $path"
-    exit 1
-  fi
-  actual_hash="$(shasum -a 256 "$target_file" | awk '{print $1}')"
-  if [ "$actual_hash" != "$expected_hash" ]; then
-    echo "parity-mismatch: hash diff: $path"
-    exit 1
-  fi
-done <"$MANIFEST"
 
-# Detect extra files under emittable roots (same rules as snapshot-tree.sh).
-should_skip_relpath() {
-  local relpath="$1"
-  case "$relpath" in
-    */__pycache__/* | */__pycache__ | *.pyc | *.bak) return 0 ;;
-    scripts/test/* | scripts/test) return 0 ;;
-    scripts/.cursor/sw-coverage/* | scripts/.cursor/sw-coverage) return 0 ;;
-    scripts/install.sh) return 0 ;;
-    hooks/* | hooks) return 0 ;;
-  esac
-  return 1
-}
+def compare_tree(target_dir: Path, manifest_path: Path) -> tuple[int, str]:
+    """Return (exit_code, message). Exit 0 on full match."""
+    if not target_dir.is_dir():
+        return 2, f"parity-compare: target is not a directory: {target_dir}"
+    if not manifest_path.is_file():
+        return 2, f"parity-compare: manifest not found: {manifest_path}"
 
-check_extra_under() {
-  local root="$1"
-  [ -d "$TARGET/$root" ] || return 0
-  local f rel
-  while IFS= read -r -d '' f; do
-    rel="${f#"$TARGET"/}"
-    should_skip_relpath "$rel" && continue
-    if [ -z "$(manifest_hash_for "$rel")" ]; then
-      echo "parity-mismatch: extra file: $rel"
-      exit 1
-    fi
-  done < <(find "$TARGET/$root" -type f -print0)
-}
+    resolved_target = target_dir.resolve()
+    manifest = load_manifest(manifest_path)
 
-for root in commands skills rules agents providers scripts; do
-  check_extra_under "$root"
-done
+    for rel_path, expected_hash in manifest.items():
+        target_file = resolved_target / rel_path
+        if not target_file.is_file():
+            return 1, f"parity-mismatch: missing file: {rel_path}"
+        actual_hash = file_sha256(target_file)
+        if actual_hash != expected_hash:
+            return 1, f"parity-mismatch: hash diff: {rel_path}"
 
-echo "parity-match: tree matches manifest ($(manifest_count) files)"
-exit 0
+    for root_name in EMITTABLE_ROOTS:
+        root_path = resolved_target / root_name
+        if not root_path.is_dir():
+            continue
+        for file_path in root_path.rglob("*"):
+            if not file_path.is_file():
+                continue
+            rel = str(file_path.relative_to(resolved_target)).replace("\\", "/")
+            if should_skip_relpath(rel):
+                continue
+            if rel not in manifest:
+                return 1, f"parity-mismatch: extra file: {rel}"
 
-"""
-if __name__=="__main__": raise SystemExit(main())
+    return 0, f"parity-match: tree matches manifest ({len(manifest)} files)"
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = list(argv if argv is not None else sys.argv[1:])
+    if len(args) < 2:
+        print("usage: parity_compare.py <target-dir> <manifest>", file=sys.stderr)
+        return 2
+    code, message = compare_tree(Path(args[0]), Path(args[1]))
+    print(message)
+    return code
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

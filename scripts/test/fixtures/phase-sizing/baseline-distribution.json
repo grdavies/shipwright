@@ -1,42 +1,42 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-03T22:03:46Z",
+  "generatedAt": "2026-07-04T20:20:14Z",
   "summary": {
-    "taskListCount": 50,
-    "phaseSampleCount": 276,
+    "taskListCount": 51,
+    "phaseSampleCount": 282,
     "distributions": {
       "filesTouched": {
-        "count": 276,
+        "count": 282,
         "min": 1,
-        "p10": 2.5,
-        "p25": 3.0,
-        "p50": 5.0,
+        "p10": 3.0,
+        "p25": 4.0,
+        "p50": 6.0,
         "p75": 10.0,
         "p90": 17.0,
         "max": 34
       },
       "distinctDirs": {
-        "count": 276,
+        "count": 282,
         "min": 1,
         "p10": 2.0,
-        "p25": 2.0,
+        "p25": 2.25,
         "p50": 4.0,
         "p75": 6.0,
         "p90": 9.0,
         "max": 18
       },
       "subTaskCount": {
-        "count": 276,
+        "count": 282,
         "min": 1,
         "p10": 2.0,
         "p25": 3.0,
         "p50": 3.0,
         "p75": 5.0,
-        "p90": 6.0,
+        "p90": 7.0,
         "max": 13
       },
       "traceabilityScenarios": {
-        "count": 276,
+        "count": 282,
         "min": 0,
         "p10": 1.0,
         "p25": 2.0,
@@ -46,7 +46,7 @@
         "max": 33
       },
       "depFanOut": {
-        "count": 276,
+        "count": 282,
         "min": 0,
         "p10": 0.0,
         "p25": 1.0,
@@ -56,7 +56,7 @@
         "max": 7
       },
       "waveWidth": {
-        "count": 231,
+        "count": 236,
         "min": 1,
         "p10": 1.0,
         "p25": 1.0,
@@ -66,13 +66,13 @@
         "max": 7
       },
       "phasesPerTaskList": {
-        "count": 50,
+        "count": 51,
         "min": 0,
         "p10": 3.0,
         "p25": 4.0,
         "p50": 5.0,
-        "p75": 6.75,
-        "p90": 8.1,
+        "p75": 6.5,
+        "p90": 8.0,
         "max": 13
       }
     },
@@ -3480,12 +3480,83 @@
           "depFanOut": 0
         }
       ]
+    },
+    {
+      "taskList": "docs/prds/055-workflow-fidelity-gap-closure/tasks-055-workflow-fidelity-gap-closure.md",
+      "phaseCount": 6,
+      "waveCount": 5,
+      "maxWaveWidth": 2,
+      "waveWidths": [
+        1,
+        2,
+        1,
+        1,
+        1
+      ],
+      "injectedEdgeCount": 0,
+      "notices": [],
+      "phases": [
+        {
+          "phaseId": "1",
+          "title": "Mechanical primitives \u2014 build-chain, supersede reconcile, INDEX newline (medium)",
+          "filesTouched": 28,
+          "distinctDirs": 13,
+          "subTaskCount": 10,
+          "traceabilityScenarios": 6,
+          "depFanOut": 2
+        },
+        {
+          "phaseId": "2",
+          "title": "INDEX commit safety and terminal currency (medium)",
+          "filesTouched": 7,
+          "distinctDirs": 3,
+          "subTaskCount": 7,
+          "traceabilityScenarios": 5,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "3",
+          "title": "Deliver phase acceptance gates (large)",
+          "filesTouched": 12,
+          "distinctDirs": 5,
+          "subTaskCount": 10,
+          "traceabilityScenarios": 6,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "4",
+          "title": "Execute-tier task authoring granularity (medium)",
+          "filesTouched": 6,
+          "distinctDirs": 4,
+          "subTaskCount": 4,
+          "traceabilityScenarios": 5,
+          "depFanOut": 1
+        },
+        {
+          "phaseId": "5",
+          "title": "Gap capture unification and legacy backlog migration (large)",
+          "filesTouched": 9,
+          "distinctDirs": 6,
+          "subTaskCount": 9,
+          "traceabilityScenarios": 5,
+          "depFanOut": 0
+        },
+        {
+          "phaseId": "6",
+          "title": "Verify performance \u2014 parity compare and post-merge watchdog (medium)",
+          "filesTouched": 12,
+          "distinctDirs": 8,
+          "subTaskCount": 7,
+          "traceabilityScenarios": 5,
+          "depFanOut": 0
+        }
+      ]
     }
   ],
   "defaults": {
     "tasks.sizing.thresholds": {
       "filesTouched": {
-        "small": 5,
+        "small": 6,
         "medium": 10
       },
       "traceabilityScenarios": {
@@ -3505,7 +3576,7 @@
         "medium": 2
       }
     },
-    "tasks.sizing.minPhaseFiles": 2,
+    "tasks.sizing.minPhaseFiles": 3,
     "tasks.sizing.minPhaseScenarios": 1,
     "tasks.sizing.maxPhaseCount": 13,
     "derivation": {

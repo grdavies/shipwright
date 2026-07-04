@@ -151,7 +151,7 @@ fi
 # --- U3: gap-capture split ---
 if grep -q '/sw-amend' "$(content_path skills/feedback/SKILL.md)" && \
    grep -q 'GAP-BACKLOG' "$(content_path skills/feedback/SKILL.md)" && \
-   grep -q 'source:feedback' "$(content_path skills/feedback/SKILL.md)"; then
+   grep -q 'planning_gap_capture.py' "$(content_path skills/feedback/SKILL.md)"; then
   echo "OK  gap-capture amend vs backlog"
 else
   echo "FAIL gap-capture split"

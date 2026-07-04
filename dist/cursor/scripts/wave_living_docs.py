@@ -144,6 +144,21 @@ def _enforce_deliver_cwd_guard(*, allow_default_branch: bool = False) -> None:
     deliver_cwd_guard.enforce(allow_default_branch=allow_default_branch)
 
 
+def _enforce_default_branch_commit_guard(
+    root: Path,
+    worktree: Path,
+    *,
+    allow_default_branch: bool = False,
+) -> None:
+    import default_branch_commit_guard
+
+    default_branch_commit_guard.enforce(
+        root,
+        worktree=worktree,
+        allow_default=allow_default_branch,
+    )
+
+
 def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool, repo_root: Path | None = None) -> str | None:
     top = worktree
     proc = subprocess.run(
@@ -155,6 +170,8 @@ def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool, repo_root: P
         return None
     if dry_run:
         return "dry-run"
+    repo = (repo_root or top).resolve()
+    _enforce_default_branch_commit_guard(repo, top)
     _enforce_deliver_cwd_guard()
     subprocess.run(["git", "-C", str(top), "add", *living_paths(top)], check=True)
     msg = f"chore: living-doc reconcile for PRD {prd}"
@@ -252,6 +269,8 @@ def cmd_regenerate_index(root: Path, args: list[str]) -> None:
 
 def cmd_reconcile(root: Path, args: list[str]) -> None:
     if has_flag(args, "--commit") and not has_flag(args, "--dry-run"):
+        worktree = resolve_worktree(root, args)
+        _enforce_default_branch_commit_guard(root, worktree)
         _enforce_deliver_cwd_guard()
     from wave_living_doc_lock import living_doc_write_lock
 
@@ -338,6 +357,8 @@ def _cmd_reconcile_locked(
 def cmd_append_terminal(root: Path, args: list[str]) -> None:
     """Idempotent COMPLETION-LOG append when all phases are green (R48)."""
     if has_flag(args, "--commit") and not has_flag(args, "--dry-run"):
+        worktree = resolve_worktree(root, args)
+        _enforce_default_branch_commit_guard(root, worktree)
         _enforce_deliver_cwd_guard()
     from wave_living_doc_lock import living_doc_write_lock
 

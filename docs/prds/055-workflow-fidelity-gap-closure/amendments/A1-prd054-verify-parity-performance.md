@@ -6,6 +6,7 @@ absorbs:
   - gap-027-post-merge-full-verify-lacks-wall-clock-budget
 frozen: true
 frozen_at: 2026-07-04
+visibility: public
 ---
 
 # Amendment A1: PRD 054 verify performance gaps (parity compare + post-merge watchdog)

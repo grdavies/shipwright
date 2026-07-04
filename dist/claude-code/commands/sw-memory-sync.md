@@ -36,7 +36,7 @@ source. `/sw-memory-sync` only writes the *distilled* sink into the memory provi
    stable tags (`surface:sync`, plus `prd-<n>`/`task-<n>` when inferable), and a deliberate importance.
    Project scope by default; global only on explicit user direction.
 7. Update the marker (`processedMtimeMs`, `lastDistilledAt`) for each processed transcript.
-8. **Supersede reconcile (R7):** `python3 scripts/reconcile-status.py supersede-reconcile --json` — for each
+8. **Supersede reconcile (R7):** `python3 scripts/reconcile.py supersede-reconcile --json` — for each
    entry in `docs/decisions/SUPERSEDED.log`, best-effort re-point the non-authoritative side:
    - **repo-SoT:** `modify` provider `decision` memories whose `relatedFiles` still reference a superseded path
      → replacement path (pointer only; never copy record body).

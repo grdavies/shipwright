@@ -223,6 +223,12 @@
 * merge phase harness-teardown-loop-wiring-medium into feat/unit-testing-strategy (16cf87b) <!-- sw-deliver:harness-teardown-loop-wiring-medium -->
 * merge phase harness-teardown-loop-wiring-medium into feat/unit-testing-strategy (228a9d0) <!-- sw-deliver:harness-teardown-loop-wiring-medium -->
 * merge phase ci-shards-operator-docs-small into feat/unit-testing-strategy (d19ef1d) <!-- sw-deliver:ci-shards-operator-docs-small -->
+* merge phase mechanical-primitives-build-chain-supersede-reconcile-index-newline-medium into feat/workflow-fidelity-gap-closure (858c999) <!-- sw-deliver:mechanical-primitives-build-chain-supersede-reconcile-index-newline-medium -->
+* merge phase index-commit-safety-and-terminal-currency-medium into feat/workflow-fidelity-gap-closure (67d8e6b) <!-- sw-deliver:index-commit-safety-and-terminal-currency-medium -->
+* merge phase index-commit-safety-and-terminal-currency-medium into feat/workflow-fidelity-gap-closure (861d9a3) <!-- sw-deliver:index-commit-safety-and-terminal-currency-medium -->
+* merge phase verify-performance-parity-compare-and-post-merge-watchdog-medium into feat/workflow-fidelity-gap-closure (4a82693) <!-- sw-deliver:verify-performance-parity-compare-and-post-merge-watchdog-medium -->
+* merge phase deliver-phase-acceptance-gates-large into feat/workflow-fidelity-gap-closure (080ac12) <!-- sw-deliver:deliver-phase-acceptance-gates-large -->
+* merge phase execute-tier-task-authoring-granularity-medium into feat/workflow-fidelity-gap-closure (584f7c8) <!-- sw-deliver:execute-tier-task-authoring-granularity-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

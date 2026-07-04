@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
 import planning_index_gen as pig  # noqa: E402
 import planning_paths  # noqa: E402
 import planning_visibility as pv  # noqa: E402
+import gap_backlog as gb  # noqa: E402
 
 LEGACY_GENERATED_MARKER = "<!-- planning-legacy-projection: generated v1 -->"
 
@@ -151,6 +152,32 @@ def legacy_manual_edit_warnings(root: Path) -> list[dict[str, str]]:
             })
     return warnings
 
+
+
+def migration_gate_blocks_cutover(root: Path) -> dict[str, Any]:
+    dirs = planning_paths.load_planning_dirs(root)
+    worktree = planning_paths.git_root(root)
+    gap_path = worktree / dirs.prds / "GAP-BACKLOG.md"
+    if not gap_path.is_file():
+        return {"blocked": False, "reason": "no-legacy-backlog"}
+    content = gap_path.read_text(encoding="utf-8")
+    if LEGACY_GENERATED_MARKER in content:
+        return {"blocked": False, "reason": "already-generated"}
+    gate = gb.migration_gate_check(root)
+    return {"blocked": gate.get("verdict") != "pass", **gate}
+
+
+def cmd_projection_cutover_ready(root: Path) -> None:
+    gate = migration_gate_blocks_cutover(root)
+    if gate.get("blocked"):
+        fail(
+            "projection cutover blocked: unresolved legacy backlog rows",
+            exit_code=20,
+            halt="migration-gate",
+            **{k: v for k, v in gate.items() if k != "blocked"},
+        )
+    emit({"verdict": "pass", "action": "projection-cutover-ready"})
+
 def hand_maintained_legacy_paths(worktree: Path, dirs: Any) -> list[str]:
     """Paths missing generated marker — refuse wipe without --force (R48)."""
     hand: list[str] = []
@@ -170,6 +197,16 @@ def project_all(root: Path, *, dry_run: bool = False, force: bool = False) -> di
     worktree = planning_paths.git_root(root)
     units = pig.discover_units(root)
     hand = hand_maintained_legacy_paths(worktree, dirs)
+    gate = migration_gate_blocks_cutover(root)
+    if gate.get("blocked") and not force and not dry_run:
+        fail(
+            "migration gate blocks projection cutover",
+            exit_code=20,
+            halt="migration-gate",
+            unresolved=gate.get("unresolved", []),
+            unresolvedCount=gate.get("unresolvedCount", 0),
+            remediation="resolve or map legacy rows before cutover",
+        )
     if hand and not force and not dry_run:
         fail(
             "refuse to overwrite hand-maintained legacy projection",
@@ -226,7 +263,7 @@ def cmd_check_half_migrated(root: Path) -> None:
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     if len(args) < 2:
-        fail("usage: planning_legacy_projection.py <repo-root> <project|check-half-migrated|verify-frontmatter-only>")
+        fail("usage: planning_legacy_projection.py <repo-root> <project|check-half-migrated|verify-frontmatter-only|projection-cutover-ready>")
     root = Path(args[0]).resolve()
     cmd = args[1]
     if cmd == "project":
@@ -246,6 +283,8 @@ def main(argv: list[str] | None = None) -> None:
         emit({"verdict": "pass", "action": "verify-frontmatter-only"})
     elif cmd == "check-half-migrated":
         cmd_check_half_migrated(root)
+    elif cmd == "projection-cutover-ready":
+        cmd_projection_cutover_ready(root)
     else:
         fail(f"unknown command: {cmd}")
 

@@ -1278,6 +1278,13 @@
       "pytestPath": "scripts/unit_tests/w4"
     },
     {
+      "id": "tasks-authoring-fixtures",
+      "script": "scripts/test/run_tasks_authoring_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
       "id": "tdd-hardening-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
@@ -1357,6 +1364,34 @@
       "tags": [
         "pytest",
         "scope"
+      ]
+    },
+    {
+      "id": "living-doc-runner-fixtures",
+      "script": "scripts/test/run_living_doc_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "deliver-runner-fixtures",
+      "script": "scripts/test/run_deliver_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "planning-035-gap-lifecycle-runner-fixtures",
+      "script": "scripts/test/run_planning_035_gap_lifecycle_fixtures.py",
+      "lanes": [
+        "internal"
+      ]
+    },
+    {
+      "id": "tasks-currency-phase-gate-fixtures",
+      "script": "scripts/test/run_tasks_currency_fixtures.py",
+      "lanes": [
+        "internal"
       ]
     }
   ]

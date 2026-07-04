@@ -88,7 +88,7 @@ MD
   cd "$TMP"
   OUT=$(python3 "$CAP" "$TMP" capture --signal-id sig-phase5 --title "Feedback gap item" --pr 42)
   echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='pass'"
-  test -f docs/planning/gap/gap-100-feedback-gap-item/gap-100-feedback-gap-item.md
+  test -f docs/prds/gap/gap-100-feedback-gap-item/gap-100-feedback-gap-item.md
 ) && ok "gap-capture-canonical-unit" || bad "gap-capture-canonical-unit"
 
 # doctor warns on manual legacy edit

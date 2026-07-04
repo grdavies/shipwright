@@ -1,8 +1,8 @@
 ---
 id: gap-027-post-merge-full-verify-lacks-wall-clock-budget
 type: gap
-status: scheduled
-schedule: PRD 055
+status: resolved
+schedule: — (PRD 055)
 title: Post-merge full verify lacks wall-clock budget and progress signal
 visibility: public
 tags: [source:feedback, signal:feedback-prd054-verify-timeout-2026-07-04, prd-054, verify, deliver, testing]

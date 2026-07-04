@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-03T22:03:46Z",
+  "generatedAt": "2026-07-04T20:20:14Z",
   "taskLists": [
     "docs/prds/001-readme-documentation/tasks-001-readme-documentation.md",
     "docs/prds/002-first-run-onboarding-ux/tasks-002-first-run-onboarding-ux.md",
@@ -51,7 +51,8 @@
     "docs/prds/051-spec-rigor-brainstorm-profile-and-stdlib-coverage/tasks-051-spec-rigor-brainstorm-profile-and-stdlib-coverage.md",
     "docs/prds/052-test-suite-registration-single-source/tasks-052-test-suite-registration-single-source.md",
     "docs/prds/053-sub-task-execute-orchestration/tasks-053-sub-task-execute-orchestration.md",
-    "docs/prds/054-unit-testing-strategy/tasks-054-unit-testing-strategy.md"
+    "docs/prds/054-unit-testing-strategy/tasks-054-unit-testing-strategy.md",
+    "docs/prds/055-workflow-fidelity-gap-closure/tasks-055-workflow-fidelity-gap-closure.md"
   ],
-  "taskListCount": 50
+  "taskListCount": 51
 }

@@ -111,3 +111,28 @@ PYTHONPATH=scripts python3 scripts/test/_runner.py run-pytest --scope phase
 
 See [pytest documentation](https://docs.pytest.org/en/stable/example/index.html) for fixtures, parametrization,
 and `tmp_path` usage.
+## Developer test trees (repo-only)
+
+The `scripts/unit_tests/`, `scripts/tests/`, and `scripts/test/` trees are **repo-only** harness sources. They are excluded from `core/scripts/` and from emitted `dist/*/scripts/` per `core/sw-reference/build-chain-sot.json` — never ship them in plugin install trees.
+
+## Parity compare tier gate (PRD 055)
+
+`scripts/test/parity_compare.py` compares `dist/cursor` against `scripts/test/fixtures/parity/cursor-golden.manifest`
+using pure Python (`hashlib` + tree walk). The **841-file** golden compare runs only when:
+
+| Trigger | Full dist compare |
+|---------|-------------------|
+| `verify --scope full` | yes |
+| CI / `build-chain-sync --check` | yes |
+| `phase` / `fast` with widen-list paths | yes |
+| `phase` / `fast` on typical phase diffs | **skipped** |
+
+Widen globs are defined in `scripts/test_scope.py` (`WIDEN_GLOBS`). Post-merge verify defaults to **phase**
+scope when the merge-base diff does not match the widen list.
+
+## Verify watchdog (PRD 055)
+
+`verify.watchdog.maxMinutes` in `.cursor/workflow.config.json` bounds wall-clock time for the pr-test-plan
+manifest loop during full verify. When exceeded, `_runner.py` emits a consolidated halt JSON with
+`lastSuiteId` and `resumeCommand`. Per-suite elapsed seconds are logged during manifest execution.
+

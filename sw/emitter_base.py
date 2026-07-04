@@ -11,7 +11,8 @@ from pathlib import Path
 
 EMITTABLE_DIRS = ("commands", "skills", "rules", "agents", "providers", "scripts", "communication")
 
-EXCLUDE_DIR_NAMES = {"__pycache__", "test", ".git", "node_modules"}
+EXCLUDE_DIR_NAMES = {"__pycache__", "test", "tests", "unit_tests", ".git", "node_modules"}
+DEV_TEST_SCRIPT_DIRS = frozenset({"test", "tests", "unit_tests"})
 DEV_ONLY_SCRIPT_RELPATHS = (
     "scripts/copy-to-core.sh",
     "scripts/copy-to-core.py",
@@ -106,7 +107,7 @@ class EmitterBase(ABC):
                     py_sibling = path.with_suffix(".py")
                     if py_sibling.is_file():
                         continue
-                if dirname == "scripts" and parts and parts[0] == "test":
+                if dirname == "scripts" and parts and parts[0] in DEV_TEST_SCRIPT_DIRS:
                     continue
                 out_path = dest / out_rel
                 out_path.parent.mkdir(parents=True, exist_ok=True)
