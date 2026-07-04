@@ -84,6 +84,18 @@ See [`core/commands/sw-doc.md`](../../core/commands/sw-doc.md) **Planning comman
 [`core/skills/conductor/SKILL.md`](../../core/skills/conductor/SKILL.md) **Bounded planning full-conductor**.
 
 
+
+### Issue-store migration (PRD 044)
+
+| Command | Role |
+| --- | --- |
+| [`/sw-migrate`](../../core/commands/sw-migrate.md) | Bidirectional files ⇄ issues migration; dry-run default |
+| `store-doctor` | Detect/repair half-migrated journal states |
+| `store-scan-quiesce` | Inspect deliver/reconcile blockers before migrating |
+
+Quiesce deliver and reconciler before `--apply`. During transition `GAP-BACKLOG.md` is a read-only
+projection — use `planning_gap_capture.py` for new gaps (see [`feedback` skill](../../core/skills/feedback/SKILL.md)).
+
 ## Entry points
 
 | Command | When to use | Does not |

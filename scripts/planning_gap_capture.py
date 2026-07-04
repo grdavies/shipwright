@@ -59,6 +59,13 @@ def store_put_gap(root: Path, unit_id: str, body_path_rel: str, content: str) ->
     result = backend.put(unit_id, body_path_rel, content)
     if result.verdict not in ("ok", "deferred"):
         fail("planning_store.put failed", unitId=unit_id, backend=result.backend, reason=result.reason)
+    try:
+        from planning_migrate_issue_store import migration_in_transition, refresh_gap_backlog_shim
+
+        if migration_in_transition(root):
+            refresh_gap_backlog_shim(root)
+    except ImportError:
+        pass
 
 def next_gap_number(units: list[pig.PlanningUnit]) -> int:
     max_n = 0

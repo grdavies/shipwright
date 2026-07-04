@@ -813,6 +813,24 @@ def _run_store_migration(root: Path, direction: str, *, apply: bool) -> None:
     run_store_migration(root, direction, apply=apply)
 
 
+def _run_store_doctor(root: Path, *, apply: bool) -> None:
+    from planning_migrate_issue_store import run_store_doctor
+
+    run_store_doctor(root, apply=apply)
+
+
+def _run_store_rollback(root: Path, *, apply: bool) -> None:
+    from planning_migrate_issue_store import rollback_store_migration
+
+    rollback_store_migration(root, apply=apply)
+
+
+def _run_store_scan_quiesce(root: Path) -> None:
+    from planning_migrate_issue_store import scan_quiesce_blockers, emit
+
+    emit({"verdict": "pass", "blockers": scan_quiesce_blockers(root)})
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Planning corpus migration tool")
     parser.add_argument("repo_root")
@@ -828,6 +846,9 @@ def main() -> None:
             "scan-runstate",
             "store-files-to-issues",
             "store-issues-to-files",
+            "store-doctor",
+            "store-rollback",
+            "store-scan-quiesce",
         ],
     )
     parser.add_argument("--force", action="store_true")
@@ -854,6 +875,9 @@ def main() -> None:
         "store-issues-to-files": lambda: _run_store_migration(
             root, "issues-to-files", apply=args.apply
         ),
+        "store-doctor": lambda: _run_store_doctor(root, apply=args.apply),
+        "store-rollback": lambda: _run_store_rollback(root, apply=args.apply),
+        "store-scan-quiesce": lambda: _run_store_scan_quiesce(root),
     }
     handlers[args.command]()
 

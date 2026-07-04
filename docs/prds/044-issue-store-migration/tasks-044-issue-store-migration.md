@@ -63,23 +63,23 @@ Bodies and full lifecycle state survive migration in either direction.
 
 Resumable, rollback-safe migration with conflict quiesce and a half-migrated repair tool.
 
-- [ ] 3.1 Idempotent resume + rollback invariants (R38)
+- [x] 3.1 Idempotent resume + rollback invariants (R38)
   - **File:** `scripts/planning_migrate.py`
   - **Expected:** injected mid-migration failure resumes idempotently from journal; documented rollback invariants leave a clean final state
   - **R-IDs:** R38
-- [ ] 3.2 Quiesce against deliver/reconcile (R38)
+- [x] 3.2 Quiesce against deliver/reconcile (R38)
   - **File:** `scripts/planning_migrate.py`
   - **Expected:** migration acquires an exclusive planning lock; refuses to run while a deliver run or reconcile is active and instructs the operator to quiesce; one direction at a time
   - **R-IDs:** R38
-- [ ] 3.3 `migrate doctor` half-migration repair (R38)
+- [x] 3.3 `migrate doctor` half-migration repair (R38)
   - **File:** `scripts/planning_migrate.py`, `core/commands/sw-migrate.md`
   - **Expected:** `doctor` enumerates inconsistent journal states (created-but-unverified, verified-but-source-present) and offers idempotent repair or rollback with documented invariants
   - **R-IDs:** R38
-- [ ] 3.4 GAP-BACKLOG read-only shim during transition (R38)
+- [x] 3.4 GAP-BACKLOG read-only shim during transition (R38)
   - **File:** `scripts/planning_gap_capture.py`, `core/skills/feedback/SKILL.md`
   - **Expected:** `GAP-BACKLOG.md` becomes a read-only projection of gap issues during transition; removed cleanly once a project completes migration (native gaps-as-issues is PRD 045)
   - **R-IDs:** R38
-- [ ] 3.5 Phase-3 documentation exit-gate (PRD 043 R49)
+- [x] 3.5 Phase-3 documentation exit-gate (PRD 043 R49)
   - **File:** `docs/guides/commands.md`, `core/skills/feedback/SKILL.md`
   - **Expected:** doctor/quiesce/resume + GAP-BACKLOG shim transition documented before phase ship
   - **R-IDs:** R38
