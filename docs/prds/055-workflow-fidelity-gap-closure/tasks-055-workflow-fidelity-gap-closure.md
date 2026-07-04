@@ -112,43 +112,43 @@ Thread B (gap-002, gap-007, gap-008). Hard prerequisite for PRD 046.
 
 Thread C (gap-025). Prevents merge-on-partial repeat of PRD 054 dogfood.
 
-- [ ] 3.1 Implement phase_acceptance_gate (R11, TR6)
+- [x] 3.1 Implement phase_acceptance_gate (R11, TR6)
   - **File:** `scripts/phase_acceptance_gate.py` (new or extend `tasks-currency-gate.py`)
   - **Expected:** before merge-enqueue, verifies phase sub-task refs are ledger `done` + checkbox toggled; `declared-partial` requires durable ledger record; silent all-open fails closed
   - **R-IDs:** R11
-- [ ] 3.2 Wire acceptance gate into merge_ready_in_flight_phases (R11, R25)
+- [x] 3.2 Wire acceptance gate into merge_ready_in_flight_phases (R11, R25)
   - **File:** `scripts/wave_deliver_loop.py`
   - **Expected:** `merge_ready_in_flight_phases` calls acceptance gate; invokes gap-check without `--fast` on deliver kernel path
   - **R-IDs:** R11, R25
-- [ ] 3.3 Harden wave_state ledger check for all-unchecked case (R12)
+- [x] 3.3 Harden wave_state ledger check for all-unchecked case (R12)
   - **File:** `scripts/wave_state.py`, `scripts/tasks-currency-gate.py`
   - **Expected:** ledger check fails when merge-ready-green but phase refs unchecked with no ledger `done`
   - **R-IDs:** R12
-- [ ] 3.4 Add tasks-currency-unchecked-completed-work fixture (R12)
+- [x] 3.4 Add tasks-currency-unchecked-completed-work fixture (R12)
   - **File:** `scripts/test/run_tasks_currency_fixtures.py`
   - **Expected:** negative case fails closed (PRD 007 R15 gap)
   - **R-IDs:** R12
-- [ ] 3.5 Bind gap-check-gate to durable status.json (R13)
+- [x] 3.5 Bind gap-check-gate to durable status.json (R13)
   - **File:** `scripts/gap-check-gate.py`, `core/sw-reference/kernel-classification.json`
   - **Expected:** emits `gap-check.status.json` with binding `pass|halt`; kernel registry lists deliver binding
   - **R-IDs:** R13
-- [ ] 3.6 Refuse merge-ready-green on gap-check halt (R13)
+- [x] 3.6 Refuse merge-ready-green on gap-check halt (R13)
   - **File:** `scripts/ship-phase-status.py`
   - **Expected:** will not emit/consume `merge-ready-green` when gap-check verdict is `halt`
   - **R-IDs:** R13
-- [ ] 3.7 Add gap-check deliver fixtures (R13, R25)
+- [x] 3.7 Add gap-check deliver fixtures (R13, R25)
   - **File:** `scripts/test/run-deliver-fixtures.sh`
   - **Expected:** `gap-check-gate-blocks-merge-ready` and `deliver-gap-check-no-fast-skip` pass
   - **R-IDs:** R13, R25
-- [ ] 3.8 Auto ledger record + checkbox on execute ref green (R14)
+- [x] 3.8 Auto ledger record + checkbox on execute ref green (R14)
   - **File:** `scripts/wave_deliver_loop.py`, `scripts/execute_plan.py` or ship terminal hook
   - **Expected:** execute ref terminal `green` writes `ledger record` and toggles matching checkbox in frozen task file
   - **R-IDs:** R14
-- [ ] 3.9 Add deliver-phase-blocked-open-subtasks fixture (R15)
+- [x] 3.9 Add deliver-phase-blocked-open-subtasks fixture (R15)
   - **File:** `scripts/test/run-deliver-fixtures.sh`
   - **Expected:** `merge-ready-green` with open sub-tasks (e.g. 3.2/3.3) does not enqueue merge
   - **R-IDs:** R15
-- [ ] 3.10 Update deliver and gap-check operator docs (TR9)
+- [x] 3.10 Update deliver and gap-check operator docs (TR9)
   - **File:** `core/commands/sw-deliver.md`, `core/skills/gap-check/SKILL.md`
   - **Expected:** documents phase acceptance ordering, gap-check binding, `--fast` prohibited on deliver merge path
   - **R-IDs:** R11, R13, R25
@@ -157,19 +157,19 @@ Thread C (gap-025). Prevents merge-on-partial repeat of PRD 054 dogfood.
 
 Thread D (gap-023). Authoring contract for future PRDs.
 
-- [ ] 4.1 Emit bounded intra-phase refs at generation time (R16, R17, TR7)
+- [x] 4.1 Emit bounded intra-phase refs at generation time (R16, R17, TR7)
   - **File:** `scripts/tasks_generate.py` or tasks authoring pipeline, `scripts/phase_sizing.py`
   - **Expected:** `/sw-tasks` output decomposes list-shaped PRD prose into bounded file-set refs; `phase_sizing.py` splits are part of frozen artifact not advisory-only stdout
   - **R-IDs:** R16, R17
-- [ ] 4.2 Update tasks skill and command for execute-tier granularity (R18, TR9)
+- [x] 4.2 Update tasks skill and command for execute-tier granularity (R18, TR9)
   - **File:** `core/skills/tasks/SKILL.md`, `core/commands/sw-tasks.md`
   - **Expected:** execute-tier granularity documented alongside Phase Dependencies and Traceability
   - **R-IDs:** R18
-- [ ] 4.3 Add sw-tasks-execute-granularity fixture (R19)
+- [x] 4.3 Add sw-tasks-execute-granularity fixture (R19)
   - **File:** `scripts/test/run_tasks_authoring_fixtures.py` (new or existing harness)
   - **Expected:** PRD with "port N suites" yields ≥N bounded refs or documented serial edges when contention forbids parallelism
   - **R-IDs:** R19
-- [ ] 4.4 Document execute_plan runtime expansion escape hatch (R20)
+- [x] 4.4 Document execute_plan runtime expansion escape hatch (R20)
   - **File:** `core/skills/tasks/SKILL.md`, `scripts/execute_plan.py` module docstring
   - **Expected:** frozen coarse lists expand at runtime only; no frozen-task mutation
   - **R-IDs:** R20
@@ -178,39 +178,39 @@ Thread D (gap-023). Authoring contract for future PRDs.
 
 Thread E (gap-003). Clean file-side source before PRD 044; GAP-BACKLOG persists until migration complete (DL-5).
 
-- [ ] 5.1 Route gap capture through planning_store for all backends (R21)
+- [x] 5.1 Route gap capture through planning_store for all backends (R21)
   - **File:** `scripts/planning_gap_capture.py`
   - **Expected:** `planning_store.put()` for file-store and issue-store; no bypass path for trivial gaps
   - **R-IDs:** R21
-- [ ] 5.2 Reconcile feedback and living-status gap protocols (R22, TR9)
+- [x] 5.2 Reconcile feedback and living-status gap protocols (R22, TR9)
   - **File:** `core/skills/feedback/SKILL.md`, `core/skills/living-status/SKILL.md`
   - **Expected:** new capture writes canonical `docs/prds/gap/<unit-id>/`; GAP-BACKLOG is projection not hand-append target
   - **R-IDs:** R22
-- [ ] 5.3 Canonical-id flip_schedule and flip_resolve (R23, TR8)
+- [x] 5.3 Canonical-id flip_schedule and flip_resolve (R23, TR8)
   - **File:** `scripts/gap_backlog.py`
   - **Expected:** keys on `docs/prds/gap/<unit-id>/` `id:` / `absorbs:` slugs; legacy `GAP-NNN` disjoint namespace handled via alias map or explicit migration
   - **R-IDs:** R23
-- [ ] 5.4 Add gap-flip-schedule-canonical-id fixture (R23)
+- [x] 5.4 Add gap-flip-schedule-canonical-id fixture (R23)
   - **File:** `scripts/test/run_planning_035_gap_lifecycle_fixtures.py`
   - **Expected:** `flip --schedule` from PRD `absorbs:` flips canonical units without legacy `GAP-NNN` collision
   - **R-IDs:** R23
-- [ ] 5.5 Migrate open/scheduled legacy GAP-BACKLOG rows (R24, R27)
+- [x] 5.5 Migrate open/scheduled legacy GAP-BACKLOG rows (R24, R27)
   - **File:** `docs/prds/GAP-BACKLOG.md`, `docs/prds/gap/<unit-id>/`
   - **Expected:** each legacy open/scheduled row has canonical unit or resolved closure with evidence before retirement
   - **R-IDs:** R24, R27
-- [ ] 5.6 Add gap-backlog-migration-complete fixture (R24, R27)
+- [x] 5.6 Add gap-backlog-migration-complete fixture (R24, R27)
   - **File:** `scripts/test/run_planning_035_gap_lifecycle_fixtures.py`
   - **Expected:** fails closed while unresolved legacy rows remain; passes only when migration gate satisfied
   - **R-IDs:** R24, R27
-- [ ] 5.7 Conditional generated GAP-BACKLOG projection cutover (R22, R27)
+- [x] 5.7 Conditional generated GAP-BACKLOG projection cutover (R22, R27)
   - **File:** `scripts/planning_legacy_projection.py` or gap_backlog renderer
   - **Expected:** generated read-only projection replaces hand rows only after R27 gate; no delete while open/scheduled legacy rows remain
   - **R-IDs:** R22, R27
-- [ ] 5.8 Add gap-capture-planning-store-routing fixture (R21)
+- [x] 5.8 Add gap-capture-planning-store-routing fixture (R21)
   - **File:** `scripts/test/run_planning_035_gap_lifecycle_fixtures.py`
   - **Expected:** file backend trivial gap routes through `planning_store.put()`
   - **R-IDs:** R21
-- [ ] 5.9 Resolve absorbed gap units on terminal merge (Success criteria)
+- [x] 5.9 Resolve absorbed gap units on terminal merge (Success criteria)
   - **File:** `docs/prds/gap/gap-*`, `scripts/gap_backlog.py`
   - **Expected:** all nine absorbed units `status: resolved` / `schedule: — (PRD 055)` after terminal PR merge
   - **R-IDs:** R23, R24, R27
