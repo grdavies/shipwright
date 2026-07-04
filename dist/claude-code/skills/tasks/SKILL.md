@@ -24,10 +24,11 @@ Port of v1 `spec-tasks` under `sw-`. Reads U8 union so amended requirements are 
    - Relevant Files + Notes as needed.
    - **Prefer many small phases** with explicit `## Phase Dependencies` edges over few large sequential phases (R19).
 4. Emit **`## Phase Dependencies`** (required) — machine-parseable edge source for `/sw-deliver` phase-mode (R5/R6/R37). Place after `## Tasks` and before `## Traceability`.
-5. Add `## Traceability` table mapping each union R-ID → task ref → named test scenario → **ZOMBIES checklist** (test-list-first; see `skills/spec-rigor/references/zombies.md`).
-6. Save task file; run `spec-rigor-check.py` (tasks) + `traceability-check.py`; freeze via `/sw-freeze`.
-7. Register/refresh PRD entry in `docs/prds/INDEX.md` with status `not-started`.
-8. **Stop** — do not start implementation. Standalone `/sw-tasks` ends after freeze; `doc.afterTasks` on
+5. Run execute-tier granularity pass (see **Execute-tier granularity** below).
+6. Add `## Traceability` table mapping each union R-ID → task ref → named test scenario → **ZOMBIES checklist** (test-list-first; see `skills/spec-rigor/references/zombies.md`).
+7. Save task file; run `spec-rigor-check.py` (tasks) + `traceability-check.py`; freeze via `/sw-freeze`.
+8. Register/refresh PRD entry in `docs/prds/INDEX.md` with status `not-started`.
+9. **Stop** — do not start implementation. Standalone `/sw-tasks` ends after freeze; `doc.afterTasks` on
    `/sw-doc` owns the boundary to implementation.
 
 ## Phase Dependencies table (required)
@@ -108,6 +109,42 @@ inflating merge-gate load).
 
 Parent phase items (`1.`, `2.`) may remain summary-level; **numbered sub-tasks** (`1.1`, `1.2`) carry File +
 Expected for `/sw-execute` plan-self-review.
+
+
+## Execute-tier granularity (PRD 055 R16–R20)
+
+Every generated task list MUST include bounded intra-phase sub-task refs sized for PRD 053 execute-tier
+fan-out. This is a **first-class generation requirement** alongside `## Phase Dependencies` and
+`## Traceability`.
+
+### Authoring procedure
+
+After drafting sub-tasks and before `/sw-freeze`:
+
+```bash
+python3 scripts/tasks_generate.py apply-granularity --task-list docs/prds/<n>-<slug>/tasks-<n>-<slug>.md --inplace
+python3 scripts/tasks_generate.py check --task-list docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
+```
+
+`apply-granularity` decomposes list-shaped `**File:**` fields (comma/and-separated paths, glob lists)
+into one ref per bounded file-set when contention rules permit parallelism. It emits a durable
+`## Execute-tier granularity` section with split preflight JSON — part of the frozen artifact, **not**
+the advisory-only `## Sizing & Split Suggestions` block stripped at freeze.
+
+Re-numbering: when a ref splits (e.g. `3.1` → three units), refs within the phase are renumbered in order
+(`3.1`, `3.2`, `3.3`, …) preserving phase-local sequence.
+
+### Contention and serial edges
+
+When `phase_sizing.separable_sets_for_paths()` groups paths into one contention family, parallelism is
+forbidden — `apply-granularity` documents serial edges in the `## Execute-tier granularity` JSON rather
+than emitting parallel refs.
+
+### Runtime escape hatch (R20)
+
+**Already frozen** coarse lists are never mutated. `execute_plan.py` runtime expansion remains the
+sanctioned fallback for in-flight deliver runs until the task list can be re-generated.
+
 
 ## Collision policy
 
