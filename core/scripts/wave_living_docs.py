@@ -353,11 +353,11 @@ def _cmd_append_terminal_locked(root: Path, args: list[str], state: dict[str, An
     if not prd:
         fail("prd_number missing from deliver state/plan")
 
+    from wave_state import phase_complete
+
     phases = state.get("phases") or {}
-    if phases and not all(
-        (meta or {}).get("status") == "green-merged" for meta in phases.values()
-    ):
-        fail("not all phases green-merged; skip terminal append", exit_code=10)
+    if phases and not all(phase_complete((meta or {}).get("status")) for meta in phases.values()):
+        fail("not all phases terminal-complete; skip terminal append", exit_code=10)
 
     worktree = resolve_worktree(root, args)
     phase = parse_kv(args, "--phase") or "all"
