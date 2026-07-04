@@ -807,15 +807,57 @@ def cmd_scan_runstate(root: Path) -> None:
     emit({"verdict": "pass", "runs": runs, "count": len(runs)})
 
 
+def _run_store_migration(root: Path, direction: str, *, apply: bool) -> None:
+    from planning_migrate_issue_store import run_store_migration
+
+    run_store_migration(root, direction, apply=apply)
+
+
+def _run_store_doctor(root: Path, *, apply: bool) -> None:
+    from planning_migrate_issue_store import run_store_doctor
+
+    run_store_doctor(root, apply=apply)
+
+
+def _run_store_rollback(root: Path, *, apply: bool) -> None:
+    from planning_migrate_issue_store import rollback_store_migration
+
+    rollback_store_migration(root, apply=apply)
+
+
+def _run_store_scan_quiesce(root: Path) -> None:
+    from planning_migrate_issue_store import scan_quiesce_blockers, emit
+
+    emit({"verdict": "pass", "blockers": scan_quiesce_blockers(root)})
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Planning corpus migration tool")
     parser.add_argument("repo_root")
     parser.add_argument(
         "command",
-        choices=["dry-run", "write", "verify", "rollback", "lock-acquire", "lock-release", "scan-runstate"],
+        choices=[
+            "dry-run",
+            "write",
+            "verify",
+            "rollback",
+            "lock-acquire",
+            "lock-release",
+            "scan-runstate",
+            "store-files-to-issues",
+            "store-issues-to-files",
+            "store-doctor",
+            "store-rollback",
+            "store-scan-quiesce",
+        ],
     )
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--skip-commit", action="store_true")
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Apply issue-store migration mutations (default is dry-run).",
+    )
     args = parser.parse_args()
     root = Path(args.repo_root).resolve()
 
@@ -827,6 +869,15 @@ def main() -> None:
         "lock-acquire": lambda: cmd_lock_acquire(root),
         "lock-release": lambda: cmd_lock_release(root),
         "scan-runstate": lambda: cmd_scan_runstate(root),
+        "store-files-to-issues": lambda: _run_store_migration(
+            root, "files-to-issues", apply=args.apply
+        ),
+        "store-issues-to-files": lambda: _run_store_migration(
+            root, "issues-to-files", apply=args.apply
+        ),
+        "store-doctor": lambda: _run_store_doctor(root, apply=args.apply),
+        "store-rollback": lambda: _run_store_rollback(root, apply=args.apply),
+        "store-scan-quiesce": lambda: _run_store_scan_quiesce(root),
     }
     handlers[args.command]()
 

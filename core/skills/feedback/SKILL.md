@@ -93,7 +93,7 @@ When destination is **gap-capture**, decide on the **freeze axis** (not ceremony
 | **Substantial** | Adds/edits/retracts R-ID, changes documented behavior, touches frozen PRD scope, or material shipped behavior with no PRD | `/sw-amend` when consumer status allows; else complete-unit route (below) |
 | **Trivial in-scope** | Small gap, no requirement/behavior change | `python3 scripts/planning_gap_capture.py` → `planning_store.put()` under `docs/prds/gap/<unit-id>/` |
 
-Do **not** hand-append to `docs/prds/GAP-BACKLOG.md` — it is a read-only legacy projection during cutover (PRD 055 R22/R27).
+Do **not** hand-append to `docs/prds/GAP-BACKLOG.md` — it is a read-only legacy projection during cutover (PRD 055 R22/R27) and during **issue-store migration** (PRD 044 R38 shim; marker `issue-store-migration-gap-shim`).
 
 **Bias:** ambiguous → **substantial** (amendment), never silent task edit.
 
@@ -122,7 +122,9 @@ python3 scripts/planning_gap_capture.py <repo-root> capture \
 ```
 
 Routes through `planning_store.put()` for every configured backend (file-store and issue-store). Writes
-`docs/prds/gap/<unit-id>/<unit-id>.md` — never hand-append to `docs/prds/GAP-BACKLOG.md`.
+`docs/prds/gap/<unit-id>/<unit-id>.md` — never hand-append to `docs/prds/GAP-BACKLOG.md`. During an
+incomplete issue-store migration, `planning_gap_capture.py` refreshes the read-only GAP-BACKLOG shim
+after each capture.
 
 Never edit frozen task lists or frozen PRDs directly.
 

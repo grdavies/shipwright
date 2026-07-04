@@ -40,7 +40,8 @@
       "sw-triage": "ultra",
       "sw-verify": "ultra",
       "sw-watch-ci": "ultra",
-      "sw-worktree": "ultra"
+      "sw-worktree": "ultra",
+      "sw-migrate": "inherit"
     },
     "skills": {
       "brainstorm": "lite",

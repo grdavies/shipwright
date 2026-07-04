@@ -229,6 +229,10 @@
 * merge phase verify-performance-parity-compare-and-post-merge-watchdog-medium into feat/workflow-fidelity-gap-closure (4a82693) <!-- sw-deliver:verify-performance-parity-compare-and-post-merge-watchdog-medium -->
 * merge phase deliver-phase-acceptance-gates-large into feat/workflow-fidelity-gap-closure (080ac12) <!-- sw-deliver:deliver-phase-acceptance-gates-large -->
 * merge phase execute-tier-task-authoring-granularity-medium into feat/workflow-fidelity-gap-closure (584f7c8) <!-- sw-deliver:execute-tier-task-authoring-granularity-medium -->
+* merge phase migration-engine-dry-run-default-m into feat/issue-store-migration (c1d5f6f) <!-- sw-deliver:migration-engine-dry-run-default-m -->
+* merge phase lifecycle-preservation-both-directions-m into feat/issue-store-migration (6442573) <!-- sw-deliver:lifecycle-preservation-both-directions-m -->
+* merge phase lifecycle-preservation-both-directions-m into feat/issue-store-migration (ed2efac) <!-- sw-deliver:lifecycle-preservation-both-directions-m -->
+* merge phase resilience-doctor-and-quiesce-m into feat/issue-store-migration (9bcecbc) <!-- sw-deliver:resilience-doctor-and-quiesce-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
