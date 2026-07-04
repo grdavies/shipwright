@@ -59,13 +59,23 @@ def _entries_for_lane(registry: dict[str, Any], lane: str) -> list[dict[str, Any
     return sorted(matched, key=lambda row: row.get("script", ""))
 
 
-def verify_bundle_entries(root: Path | None = None, *, active_only: bool = False) -> list[str]:
-    """Basenames of scripts in verify lane, stable sort order."""
+def verify_bundle_rows(root: Path | None = None, *, active_only: bool = False) -> list[dict[str, Any]]:
+    """Verify-lane registry rows in stable sort order."""
     registry = load_registry(root)
     rows = _entries_for_lane(registry, "verify")
     if active_only:
         rows = [row for row in rows if row.get("verifyActive", True)]
-    return [Path(row["script"]).name for row in rows]
+    return rows
+
+
+def verify_bundle_entries(root: Path | None = None, *, active_only: bool = False) -> list[str]:
+    """Stable verify-lane suite ids (pytest-migrated and legacy)."""
+    return [row["id"] for row in verify_bundle_rows(root, active_only=active_only)]
+
+
+def _legacy_verify_bundle_entries(root: Path | None = None, *, active_only: bool = False) -> list[str]:
+    """Basenames of scripts in verify lane — legacy helper for pre-migration callers."""
+    return [Path(row["script"]).name for row in verify_bundle_rows(root, active_only=active_only)]
 
 
 def manifest_entries(root: Path | None = None) -> list[dict[str, Any]]:
@@ -76,12 +86,30 @@ def manifest_entries(root: Path | None = None) -> list[dict[str, Any]]:
         item: dict[str, Any] = {
             "id": row["id"],
             "script": row["script"],
-            "args": [],
+            "args": [row["pytestPath"], "-q"] if row.get("pytestPath") else [],
             "classification": row.get("classification", "required"),
             "ciJobName": row["ciJobName"],
         }
+        if row.get("ciShard") is not None:
+            item["ciShard"] = row["ciShard"]
+        if row.get("scenarios"):
+            item["scenarios"] = row["scenarios"]
         out.append(item)
     return out
+
+
+def regen_manifest_preserving_scenarios(root: Path) -> dict[str, Any]:
+    """Merge registry projection with existing manifest scenarios metadata."""
+    manifest_path = root / "core/sw-reference/pr-test-plan.manifest.json"
+    existing = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.is_file() else {"fixtures": []}
+    prior = {row["id"]: row for row in existing.get("fixtures") or []}
+    merged: list[dict[str, Any]] = []
+    for projected in manifest_entries(root):
+        row = {**prior.get(projected["id"], {}), **projected}
+        if "scenarios" in prior.get(projected["id"], {}) and "scenarios" not in projected:
+            row["scenarios"] = prior[projected["id"]]["scenarios"]
+        merged.append(row)
+    return {"fixtures": merged}
 
 
 def pr_ci_entries(root: Path | None = None) -> list[dict[str, Any]]:
@@ -90,13 +118,29 @@ def pr_ci_entries(root: Path | None = None) -> list[dict[str, Any]]:
 
 
 def doc_lane_entries(root: Path | None = None) -> list[str]:
-    """Script paths listed in doc lane."""
+    """Script or pytest paths listed in doc lane."""
     registry = load_registry(root)
-    return [row["script"] for row in _entries_for_lane(registry, "doc")]
+    out: list[str] = []
+    for row in _entries_for_lane(registry, "doc"):
+        if row.get("pytestPath"):
+            out.append(str(row["pytestPath"]))
+        else:
+            out.append(row["script"])
+    return out
 
 
 def registry_script_set(registry: dict[str, Any]) -> set[str]:
     return {row["script"] for row in registry.get("suites") or []}
+
+
+def registry_legacy_fixture_set(registry: dict[str, Any]) -> set[str]:
+    """Registry rows still backed by on-disk run_*_fixtures.py scripts."""
+    out: set[str] = set()
+    for row in registry.get("suites") or []:
+        script = str(row.get("script") or "")
+        if script.startswith("scripts/test/") and script.endswith("_fixtures.py"):
+            out.add(script)
+    return out
 
 
 def disk_script_set(root: Path) -> set[str]:
@@ -118,4 +162,6 @@ def validate_lanes(registry: dict[str, Any]) -> list[str]:
                 errors.append(f"{row.get('id')}: pr-ci missing classification")
             if not row.get("ciJobName"):
                 errors.append(f"{row.get('id')}: pr-ci missing ciJobName")
+            if row.get("pytestPath") and row.get("ciShard") is None:
+                errors.append(f"{row.get('id')}: pr-ci pytest row missing ciShard")
     return errors

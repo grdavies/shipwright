@@ -3,6 +3,8 @@ from __future__ import annotations
 import json, subprocess, sys
 from pathlib import Path
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+
 def resolve_state_path(start: Path | None = None) -> Path:
     start = start or Path.cwd()
     proc = subprocess.run(["git","-C",str(start),"rev-parse","--git-dir"], capture_output=True, text=True)
@@ -71,15 +73,34 @@ def cmd_init(start: Path, arg: str) -> int:
     print(state); return 0
 
 def cmd_sync_ship_steps(root: Path, start: Path) -> int:
-    import ship_phase_steps
-    # invoke sync-state via ship_phase_steps
-    from io import StringIO
-    old = sys.argv
+    steps_py = SCRIPT_DIR / "ship-phase-steps.py"
+    if not steps_py.is_file():
+        print("error: ship-phase-steps.py missing", file=sys.stderr)
+        return 1
+    proc = subprocess.run(
+        [sys.executable, str(steps_py), "sync-state"],
+        cwd=str(start),
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        print("error: ship-phase-steps sync-state failed", file=sys.stderr)
+        return 1
     try:
-        sys.argv = ["ship_phase_steps.py", str(root), "sync-state"]
-        ship_phase_steps.main()
-    finally:
-        sys.argv = old
+        raw = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        print("error: ship-phase-steps sync-state returned invalid JSON", file=sys.stderr)
+        return 1
+    phase_ship = raw.get("phaseShip")
+    if not phase_ship:
+        print(resolve_state_path(start))
+        return 0
+    state = resolve_state_path(start)
+    current = json.loads(state.read_text(encoding="utf-8")) if state.is_file() else {}
+    current["phaseShip"] = phase_ship
+    state.parent.mkdir(parents=True, exist_ok=True)
+    state.write_text(json.dumps(current, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(state)
     return 0
 
 def cmd_index(root: Path) -> int:

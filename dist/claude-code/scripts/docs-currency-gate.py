@@ -44,9 +44,10 @@ def main(argv: list[str] | None = None) -> int:
         sys.exit(2)
 
     phases = state.get("phases") or {}
-    all_green = bool(phases) and all(
-        (m or {}).get("status") == "green-merged" for m in phases.values()
-    )
+    from wave_living_docs import derive_index_status
+    from wave_state import phase_complete
+
+    all_green = bool(phases) and all(phase_complete((m or {}).get("status")) for m in phases.values())
     merged_main = False
     try:
         import subprocess
@@ -61,12 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     except Exception:
         pass
 
-    if merged_main:
-        expected = "complete"
-    elif any((m or {}).get("status") not in ("pending",) for m in phases.values()):
-        expected = "in-progress"
-    else:
-        expected = "not-started"
+    expected = derive_index_status(state, merged_main)
 
     index_path = root / "docs" / "prds" / "INDEX.md"
     index_status = None

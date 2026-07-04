@@ -1,24 +1,39 @@
 #!/usr/bin/env python3
-"""Executable-plan self-review for task sub-items (IM6 / U7). """
+"""Executable-plan self-review for task sub-items (IM6 / U7)."""
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 from _sw.cli import run_module_main
 
 
 def main(argv: list[str] | None = None) -> int:
-    import json, re, sys
-    from pathlib import Path
+    import argparse
+    import json
+    import re
 
-    tasks_file, task_ref = sys.argv[1], sys.argv[2]
-    text = Path(tasks_file).read_text()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--tasks", required=True)
+    parser.add_argument("--task-ref", default="")
+    ns = parser.parse_args(list(sys.argv[1:] if argv is None else argv))
+
+    tasks_file = ns.tasks
+    task_ref = ns.task_ref
+    path = Path(tasks_file)
+    if not path.is_file():
+        print(json.dumps({"verdict": "fail", "error": "tasks file not found"}))
+        return 20
+
+    text = path.read_text(encoding="utf-8")
     findings = []
+    placeholder = re.compile(r"\b(TBD|TODO|FIXME|\.\.\.|placeholder)\b", re.I)
 
-    PLACEHOLDER = re.compile(r"\b(TBD|TODO|FIXME|\.\.\.|placeholder)\b", re.I)
-
-    def add(severity, message, ref=None):
-        f = {"severity": severity, "message": message}
+    def add(severity: str, message: str, ref: str | None = None) -> None:
+        f: dict = {"severity": severity, "message": message}
         if ref:
             f["taskRef"] = ref
         findings.append(f)
@@ -27,9 +42,8 @@ def main(argv: list[str] | None = None) -> int:
         lines = text.splitlines()
         blocks = []
         current_ref = None
-        current_lines = []
+        current_lines: list[str] = []
         item_re = re.compile(r"^\s*-\s+\[[ xX]\]\s+(\d+(?:\.\d+)?)\b")
-
         for line in lines:
             m = item_re.match(line)
             if m:
@@ -56,7 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     if not blocks:
         add("error", "no checklist items found" + (f" for ref {task_ref}" if task_ref else ""))
         print(json.dumps({"verdict": "fail", "findings": findings}))
-        sys.exit(20)
+        return 20
 
     for ref, lines in blocks:
         if "." not in ref:
@@ -65,14 +79,14 @@ def main(argv: list[str] | None = None) -> int:
         has_file = bool(re.search(r"\*\*File(s)?:\*\*", body, re.I)) or "`" in body
         has_expected = bool(re.search(r"\*\*Expected:\*\*", body, re.I))
         if not has_file:
-            add("error", f"missing **File:** or path for executable sub-task", ref)
+            add("error", "missing **File:** or path for executable sub-task", ref)
         if not has_expected:
-            add("error", f"missing **Expected:** for executable sub-task", ref)
-        if PLACEHOLDER.search(body):
-            add("error", f"placeholder marker in executable sub-task", ref)
+            add("error", "missing **Expected:** for executable sub-task", ref)
+        if placeholder.search(body):
+            add("error", "placeholder marker in executable sub-task", ref)
         em = re.search(r"\*\*Expected:\*\*\s*(.+)", body, re.I)
         if em and len(em.group(1).strip()) < 8:
-            add("warn", f"Expected text very short", ref)
+            add("warn", "Expected text very short", ref)
 
     worst = "pass"
     if any(f["severity"] == "error" for f in findings):
@@ -82,8 +96,7 @@ def main(argv: list[str] | None = None) -> int:
 
     out = {"verdict": worst, "findings": findings, "taskRef": task_ref or None}
     print(json.dumps(out, ensure_ascii=False))
-    sys.exit(0 if worst == "pass" else 10 if worst == "warn" else 20)
-    return 0
+    return 0 if worst == "pass" else 10 if worst == "warn" else 20
 
 
 if __name__ == "__main__":

@@ -1,10 +1,11 @@
 ---
 id: gap-008-inflight-signal-run-complete-commits-index-on-ma
 type: gap
-status: open
+status: scheduled
 title: inflight_signal run-complete commits INDEX on main during finalize-completion
 visibility: public
 tags: [source:feedback, signal:feedback-inflight-run-complete-main-index-2026-06-30]
+schedule: PRD 055
 ---
 
 # inflight_signal run-complete commits INDEX on main during finalize-completion

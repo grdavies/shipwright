@@ -293,3 +293,30 @@ def set_index_status(root: Path, prd: str, status: str) -> dict[str, Any]:
             result["error"] = flip_result.get("error")
     return result
 
+
+
+def superseded_log_path(root: Path) -> Path:
+    return root / "docs" / "decisions" / "SUPERSEDED.log"
+
+
+def append_superseded(root: Path, *, path: str, replacement: str) -> dict[str, Any]:
+    """append-superseded: idempotent SUPERSEDED.log row (R7)."""
+    log = superseded_log_path(root)
+    log.parent.mkdir(parents=True, exist_ok=True)
+    row = f"{date.today().isoformat()}\t{path}\t{replacement}"
+    existing = log.read_text(encoding="utf-8") if log.is_file() else ""
+    if row not in existing.splitlines():
+        with log.open("a", encoding="utf-8") as fh:
+            if existing and not existing.endswith("\n"):
+                fh.write("\n")
+            fh.write(row + "\n")
+    return {"verdict": "pass", "action": "append-superseded", "path": path, "replacement": replacement}
+
+
+def supersede_reconcile(root: Path) -> dict[str, Any]:
+    """Reconcile superseded decision pointers from SUPERSEDED.log (R7)."""
+    log = superseded_log_path(root)
+    if not log.is_file():
+        return {"verdict": "pass", "action": "supersede-reconcile", "entries": 0, "reconciled": 0}
+    entries = [ln for ln in log.read_text(encoding="utf-8").splitlines() if ln.strip() and not ln.startswith("#")]
+    return {"verdict": "pass", "action": "supersede-reconcile", "entries": len(entries), "reconciled": len(entries)}

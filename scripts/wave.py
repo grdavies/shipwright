@@ -57,7 +57,17 @@ def dispatch(argv: list[str]) -> int:
     if cmd in ("state", "lock", "journal", "log", "ledger"):
         return _python("wave_state.py", root, argv)
     if cmd == "tasks-currency":
-        return _python("tasks-currency-gate.py", root, rest)
+        probe = interpreter.probe()
+        script_path = SCRIPT_DIR / "tasks-currency-gate.py"
+        completed = proc.run(
+            [*probe.executable, str(script_path), *rest],
+            cwd=str(root),
+        )
+        if completed.stdout:
+            sys.stdout.write(completed.stdout)
+        if completed.stderr:
+            sys.stderr.write(completed.stderr)
+        return completed.returncode
     if cmd == "docs-currency":
         return _python("docs-currency-gate.py", root, rest)
     if cmd == "living-docs":

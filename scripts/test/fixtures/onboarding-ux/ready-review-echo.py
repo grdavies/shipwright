@@ -6,9 +6,9 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR.parent) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR.parent))
-from _fixture_lib import repo_root
+from _sw.vendor_paths import repo_root
 
-from _harness_patch import patch_source as _patch_source
+from unit_tests._harness_runtime import patch_source as _patch_source
 
 def main() -> int:
     root = repo_root(__file__)
@@ -45,10 +45,10 @@ for label_path in "sw-ready:$SW_READY" "sw-status:$SW_STATUS" "living-status:$LI
   fi
 done
 
-if grep -q 'check-gate.sh' "$SW_READY" && grep -q 'check-gate.sh' "$LIVING"; then
+if grep -q 'check-gate.py' "$SW_READY" && grep -q 'check-gate.py' "$LIVING"; then
   echo "OK  ready-review-echo: gate script referenced for review echo"
 else
-  echo "FAIL ready-review-echo: check-gate.sh must drive review echo"
+  echo "FAIL ready-review-echo: check-gate.py must drive review echo"
   FAIL=1
 fi
 

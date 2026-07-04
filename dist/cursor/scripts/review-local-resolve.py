@@ -9,9 +9,14 @@ if str(SCRIPT_DIR) not in sys.path:
 from _sw.cli import run_module_main
 
 def main(argv: list[str] | None = None) -> int:
-    import json, sys
+    import argparse
+    import json
+    import sys
 
-    config_path = sys.argv[1]
+    p = argparse.ArgumentParser()
+    p.add_argument("--config", dest="config_path", required=True)
+    ns = p.parse_args(list(sys.argv[1:] if argv is None else argv))
+    config_path = ns.config_path
     try:
         with open(config_path, encoding="utf-8") as f:
             cfg = json.load(f)

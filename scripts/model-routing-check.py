@@ -8,12 +8,34 @@ from _sw.cli import run_module_main
 
 
 def main(argv: list[str] | None = None) -> int:
+    import argparse
     import json
     import sys
     from pathlib import Path
 
-    root, config_path, defaults_path, comm_defaults_path = sys.argv[1:5]
-    root_p = Path(root)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", required=True, help="Example workflow config JSON")
+    parser.add_argument(
+        "--defaults",
+        default="",
+        help="model-routing.defaults.json (default: core/sw-reference/...)",
+    )
+    parser.add_argument(
+        "--communication-defaults",
+        default="",
+        help="communication-routing.defaults.json (optional parity check)",
+    )
+    parser.add_argument("--root", default="", help="Repository root (inferred from --config)")
+    ns = parser.parse_args(list(sys.argv[1:] if argv is None else argv))
+    config_path = ns.config
+    cfg_p = Path(config_path).resolve()
+    root_p = Path(ns.root).resolve() if ns.root else cfg_p.parents[2]
+    defaults_path = ns.defaults or str(root_p / "core/sw-reference/model-routing.defaults.json")
+    comm_defaults_path = ns.communication_defaults or str(
+        root_p / "core/sw-reference/communication-routing.defaults.json"
+    )
+    root = str(root_p)
+    config_path = str(cfg_p)
     violations = []
 
     defaults = json.loads(Path(defaults_path).read_text())
