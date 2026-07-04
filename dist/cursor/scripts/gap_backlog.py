@@ -55,14 +55,21 @@ class GapBacklog:
         return out
 
 
+def _worktree_base(root: Path) -> Path:
+    try:
+        return pp.git_root(root)
+    except pp.PathEscapeError:
+        return root.resolve()
+
+
 def default_gap_path(root: Path) -> Path:
     dirs = pp.load_planning_dirs(root)
-    return pp.git_root(root) / dirs.prds / "GAP-BACKLOG.md"
+    return _worktree_base(root) / dirs.prds / "GAP-BACKLOG.md"
 
 
 def canonical_gap_root(root: Path) -> Path:
     dirs = pp.load_planning_dirs(root)
-    return pp.git_root(root) / dirs.prds / "gap"
+    return _worktree_base(root) / dirs.prds / "gap"
 
 
 def is_legacy_gap_id(gap_id: str) -> bool:
