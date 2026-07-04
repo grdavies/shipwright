@@ -4,7 +4,7 @@
   "provider": "github",
   "data": [
     {
-      "name": "feat-test-plan-cleanup-fixtures",
+      "name": "feat-test-plan-pytest-advisory-shard-1",
       "state": "FAILURE",
       "bucket": "fail",
       "link": "",
