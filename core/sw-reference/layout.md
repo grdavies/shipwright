@@ -654,6 +654,17 @@ Scripts that mutate git state against the shared primary checkout MUST:
 2. Call `scripts/primary_checkout_guard.py` `guard()` / `enforce_guard()` with `(resolved_root, artifact_branch)` before any checkout/commit.
 3. Acquire `primary-checkout.lock` under `.cursor/sw-deliver-runs/` before mutating primary checkout HEAD.
 
+## Issue-store migration journal (PRD 044 Phase 1)
+
+Bidirectional file ⇄ issue migration records durable per-artifact state under hook ephemeral state:
+
+| Path | Writer | Semantics |
+| --- | --- | --- |
+| `.cursor/hooks/state/issue-store-migration-journal.json` | `scripts/planning_migrate_issue_store.py` (`run_store_migration`) | Per-artifact state machine `pending` → `created` → `verified` → `source-removed`; idempotency key `source_path:content_hash`; verify-then-delete ordering |
+
+Dry-run (no `--apply`) must not create or update this file. Command surface: `/sw-migrate` /
+`scripts/planning_migrate.py` `store-files-to-issues` | `store-issues-to-files`.
+
 ## Hook-state vs deliver durable state (PRD 050 A1 R31)
 
 | State class | Canonical root |
