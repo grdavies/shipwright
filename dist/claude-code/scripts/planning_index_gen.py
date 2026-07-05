@@ -293,10 +293,13 @@ def write_generation_state(root: Path, state: dict[str, Any]) -> None:
 
 
 def mark_index_incomplete(root: Path, reason: str) -> None:
+    """Always persist fail-closed incomplete signal (R86), even in hermetic repos."""
     state = read_generation_state(root)
     state["indexIncomplete"] = True
     state["indexIncompleteReason"] = reason
-    write_generation_state(root, state)
+    path = generation_state_path(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
 
 
 def clear_index_incomplete(root: Path) -> None:
