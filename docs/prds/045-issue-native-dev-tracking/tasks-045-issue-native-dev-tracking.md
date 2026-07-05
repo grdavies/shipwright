@@ -71,23 +71,23 @@ Location-aware commit/PR linkage and allowlisted close-on-merge with a fail-clos
 
 Integrity-checked issue-comment doc-review with IDE fallback, and capability-gated milestone grouping.
 
-- [ ] 3.1 Doc-review via issue comments + fallback (R24)
+- [x] 3.1 Doc-review via issue comments + fallback (R24)
   - **File:** `core/commands/sw-doc-review.md`, `core/skills/doc-review/SKILL.md`
   - **Expected:** under issue-store, persona + human doc-review via PRD-issue comments (subject to R69); `backend != issue-store` falls back to in-IDE parallel sub-agent panel + JSON synthesis with no regression
   - **R-IDs:** R24
-- [ ] 3.2 Comment integrity + review-round manifest (R69)
+- [x] 3.2 Comment integrity + review-round manifest (R69)
   - **File:** `core/skills/doc-review/references/synthesis.md`, `core/skills/doc-review/SKILL.md`
   - **Expected:** bot-only marker-delimited persona comments; review-round manifest pins ordered comment IDs+revisions under PRD 043 R33 checkpoint; fails closed on any add/edit/delete before synthesis; read-time author/marker verification; `sw:doc-review` marker excluded from PRD 043 R35 canonicalization
   - **R-IDs:** R69
-- [ ] 3.3 Milestone/iteration grouping (R26)
+- [x] 3.3 Milestone/iteration grouping (R26)
   - **File:** `.sw/config.schema.json`, `docs/guides/configuration.md`
   - **Expected:** release grouping maps to provider milestones/iterations where available, degrading gracefully per PRD 043 R31
   - **R-IDs:** R26
-- [ ] 3.4 Capability-gated `issue-milestone` verb + matrix (R71)
+- [x] 3.4 Capability-gated `issue-milestone` verb + matrix (R71)
   - **File:** `core/sw-reference/capability-index.json`, `core/providers/issues/CAPABILITIES.md`
   - **Expected:** `issue-milestone` verb + per-provider matrix entry; groups `sw:prd` units by milestone (flat-label fallback); absent capability → skip with operator notice, deliver continues (normative degradation table)
   - **R-IDs:** R71
-- [ ] 3.5 Phase-3 documentation exit-gate (PRD 043 R49)
+- [x] 3.5 Phase-3 documentation exit-gate (PRD 043 R49)
   - **File:** `docs/guides/workflows.md`, `README.md`
   - **Expected:** doc-impact fixture asserts doc-review + milestone + getting-started notes updated before phase ship
   - **R-IDs:** R24
