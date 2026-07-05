@@ -21,15 +21,15 @@ call-site map, visibility resolver, secret-scan registry) and is inert when `bac
 
 Native gap lifecycle under issue-store; legacy backlog becomes an issue-derived projection only.
 
-- [ ] 1.1 Native gap-issue capture + status model (R21)
+- [x] 1.1 Native gap-issue capture + status model (R21)
   - **File:** `scripts/planning_gap_capture.py`, `core/skills/feedback/SKILL.md`
   - **Expected:** under issue-store, gap capture creates `sw:gap` issues; status via issue state + labels (`open`/`gap-scheduled`/`resolved`); absorbed-by-PRD via native link/close; vocabulary disjoint from PRD 046 scheduler labels
   - **R-IDs:** R21
-- [ ] 1.2 `GAP-BACKLOG.md` write-through projection + doctor + sunset (R72)
+- [x] 1.2 `GAP-BACKLOG.md` write-through projection + doctor + sunset (R72)
   - **File:** `scripts/planning_gap_capture.py`, `core/skills/feedback-closure/SKILL.md`
   - **Expected:** backlog is issue-derived write-through only, never authoritative input; `/sw-feedback` capture routes to gap issues; `planning-graph doctor` fails closed on issue-vs-projection divergence; sunset gate removes projection at zero file-native open gaps
   - **R-IDs:** R72
-- [ ] 1.3 Phase-1 documentation exit-gate (PRD 043 R49)
+- [x] 1.3 Phase-1 documentation exit-gate (PRD 043 R49)
   - **File:** `.sw/layout.md`, `core/skills/living-status/SKILL.md`
   - **Expected:** `run-planning-045-doc-impact-fixtures.sh` asserts gap-status + emission-point doc updates before phase ship
   - **R-IDs:** R21

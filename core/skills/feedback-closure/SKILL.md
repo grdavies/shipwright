@@ -5,8 +5,13 @@ description: Consume GAP-BACKLOG into implementation loop and close routed signa
 
 # Feedback closure loop (IM8)
 
-Closes the loop from `/sw-feedback` trivial-gap routing → `docs/prds/GAP-BACKLOG.md` → implementation → verified
-ship. Complements `skills/feedback` (intake/route) and `skills/gap-check` (plan vs diff).
+Closes the loop from `/sw-feedback` trivial-gap routing → canonical gap issues (issue-store) or gap units
+(file-backend) → implementation → verified ship. Complements `skills/feedback` (intake/route) and
+`skills/gap-check` (plan vs diff).
+
+Under **issue-store**, `docs/prds/GAP-BACKLOG.md` is a **read-only issue-derived write-through projection**
+refreshed by `planning_gap_capture.py` / `planning_migrate_issue_store.refresh_gap_backlog_projection` —
+never authoritative input. `planning-graph doctor` fails closed on issue-vs-projection divergence (PRD 045 R72).
 
 
 **Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --skill feedback-closure`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
@@ -34,6 +39,9 @@ Closed:
 ```bash
 python3 scripts/feedback-backlog.py list --open-only --backlog docs/prds/GAP-BACKLOG.md
 ```
+
+Issue-store adopters: prefer `python3 scripts/planning_gap_capture.py refresh-projection <repo-root>` when the
+projection drifts; closure still keys on `signal-id` via the projected backlog row or linked gap issue.
 
 
 ## Meta vs product routing (PRD 041)

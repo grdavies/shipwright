@@ -60,10 +60,16 @@ def store_put_gap(root: Path, unit_id: str, body_path_rel: str, content: str) ->
     if result.verdict not in ("ok", "deferred"):
         fail("planning_store.put failed", unitId=unit_id, backend=result.backend, reason=result.reason)
     try:
-        from planning_migrate_issue_store import migration_in_transition, refresh_gap_backlog_shim
+        from planning_migrate_issue_store import (
+            issue_store_effective,
+            refresh_gap_backlog_projection,
+            sync_gap_issue_labels,
+            try_sunset_gap_backlog_projection,
+        )
 
-        if migration_in_transition(root):
-            refresh_gap_backlog_shim(root)
+        if issue_store_effective(root):
+            sync_gap_issue_labels(root, unit_id, content)
+            refresh_gap_backlog_projection(root, apply=True)
     except ImportError:
         pass
 
@@ -284,6 +290,18 @@ def main(argv: list[str] | None = None) -> None:
             dry_run=bool(flags.get("dry_run")),
         )
         emit({"verdict": "pass", "action": "meta-materialize", **out})
+
+    if command == "refresh-projection":
+        try:
+            from planning_migrate_issue_store import (
+                refresh_gap_backlog_projection,
+                try_sunset_gap_backlog_projection,
+            )
+        except ImportError as exc:
+            fail(f"refresh-projection unavailable: {exc}")
+        projection = refresh_gap_backlog_projection(root, apply=not bool(flags.get("dry_run")))
+        sunset = try_sunset_gap_backlog_projection(root, apply=not bool(flags.get("dry_run")))
+        emit({"verdict": "pass", "action": "refresh-projection", "projection": projection, "sunset": sunset})
 
     fail(f"unknown command: {command}")
 

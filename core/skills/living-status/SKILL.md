@@ -55,13 +55,20 @@ Append-only rows in `docs/prds/COMPLETION-LOG.md`. `append-log-idempotent` keys 
 resume never double-appends. Terminal prepare calls `living-docs append-terminal --commit` when all phases
 are green.
 
-## Gap units and legacy GAP-BACKLOG (PRD 033 R15/R49)
+## Gap units and legacy GAP-BACKLOG (PRD 033 R15/R49; PRD 045 R21/R72)
 
-Canonical gaps live under `docs/prds/gap/<unit-id>/`. New capture writes via `planning_store.put()`
-(`planning_gap_capture.py`); status flips are mechanical via `absorbs:` edges and `gap_backlog.py` on canonical
-unit ids — not manual edits to `docs/prds/GAP-BACKLOG.md`. During the cutover window `GAP-BACKLOG.md` is a
-**read-only legacy projection** until the R27 migration gate passes (`gap_backlog.py migration-gate`).
-Trivial `/sw-feedback` gaps use `planning_gap_capture.py`; substantial gaps route to `/sw-amend`.
+Canonical gaps under **file-backend** live under `docs/prds/gap/<unit-id>/` (or `docs/planning/gap/` after
+cutover). New capture writes via `planning_store.put()` (`planning_gap_capture.py`).
+
+Under **issue-store** (PRD 045 R21), gap capture creates native `sw:gap` provider issues; status is expressed
+via issue state + labels (`open`, `gap-scheduled`, `resolved`) and absorbed-by-PRD via native link/close.
+`GAP-BACKLOG.md` is an **issue-derived write-through projection only** — refreshed after capture, never
+hand-appended. `planning-graph doctor` fails closed on issue-vs-projection divergence; a sunset gate removes
+the projection once zero file-native open gaps remain.
+
+During the cutover window before issue-store, `GAP-BACKLOG.md` is a read-only legacy projection until the
+R27 migration gate passes (`gap_backlog.py migration-gate`). Trivial `/sw-feedback` gaps use
+`planning_gap_capture.py`; substantial gaps route to `/sw-amend`.
 
 Legacy `gap-resolve --absorbing-prd` applies only before `planningDir` cutover.
 

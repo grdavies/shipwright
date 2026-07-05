@@ -7,7 +7,7 @@ private/memory bodies through the resolver before emit.
 | --- | --- |
 | `index-active` | Unified INDEX active rows |
 | `index-archive` | Unified INDEX archived rows |
-| `legacy-gap-backlog` | 033 legacy GAP-BACKLOG projection |
+| `legacy-gap-backlog` | 033/045 legacy GAP-BACKLOG projection (issue-derived write-through under issue-store) |
 | `legacy-prd-index` | 033 legacy PRD INDEX projection |
 | `pr-diff` | PR diff planning-body paths |
 | `dispatch-context` | Dispatch / subagent planning context |
