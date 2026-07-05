@@ -1404,6 +1404,30 @@
       "lanes": [
         "internal"
       ]
+    },
+    {
+      "id": "planning-046-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 52,
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 2
+    },
+    {
+      "id": "planning-046-doc-impact-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 53,
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 2
     }
   ]
 }

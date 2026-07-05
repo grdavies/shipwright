@@ -152,3 +152,7 @@ Emission points: `issue-store-put`, `issue-store-comment`, `issue-store-freeze-r
 Issue-store mode requires network connectivity for planning operations; outages fail closed with
 idempotent retry on reconnect.
 
+
+## discover_units (PRD 046 R83)
+
+`scripts/planning_discover.py` provides backend-pluggable discovery (`file` | `issue`) shared by `planning_index_gen`, `planning_graph`, `inflight_signal`, and `authoring_guard`. Issue source feeds the same visibility-resolution path before issue-mode INDEX behavior is enabled.
