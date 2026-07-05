@@ -41,6 +41,22 @@ python3 scripts/shipwright-state.py path
 | `workstream` | e.g. `implementation` |
 | `scaffold` | Port/DB/deps from `/sw-worktree` |
 | `worktreeName` / `worktreePath` | Provisioning metadata |
+| `deliverIssueBatch` | **045 R74** — active deliver issue-batch journal path (under run dir) |
+| `deliverRunId` | **045 R70** — original `runId` for batch resume (inherited on resume, never rotated) |
+
+### Deliver issue-batch journal (PRD 045 R74/R70)
+
+Multi-issue annotation and close operations persist an append-only journal under the phase run dir
+(`.cursor/sw-deliver-runs/<phase>/issue-batch-journal.json`). Journal states mirror PRD 044 migration journal
+(`pending` → `annotated` → `closed` | `skipped` | `failed`). Partial API failure →
+`deliver-aborted-inconsistent` halt; resume inherits the original `deliverRunId` and upserts annotations
+by deterministic marker hash (no duplicates).
+
+```bash
+python3 scripts/shipwright-state.py read   # inspect deliverIssueBatch + deliverRunId
+```
+
+Never commit journal files — they live under `.cursor/sw-deliver-runs/` (excluded by `/sw-commit`).
 
 ## Operations
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PRD 045 phase 1 — doc-impact acceptance (R49) + gap-issue projection contract."""
+"""PRD 045 — doc-impact acceptance (R49) + gap-issue projection + phase-2 linkage contract."""
 from __future__ import annotations
 
 import subprocess
@@ -33,7 +33,7 @@ def main() -> int:
 
 _SOURCE = r"""
 #!/usr/bin/env bash
-# PRD 045 phase 1 — doc-impact acceptance (R49).
+# PRD 045 — doc-impact acceptance (R49): phase 1 gap issues + phase 2 linkage/close/annotations.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -51,12 +51,21 @@ LAYOUT="$ROOT/.sw/layout.md"
 EMIT="$(content_path skills/visibility/references/emission-points.md)"
 GAP_CAPTURE="$ROOT/scripts/planning_gap_capture.py"
 MIGRATE="$ROOT/scripts/planning_migrate_issue_store.py"
+GIT_WF="$(content_path skills/git-workflow/SKILL.md)"
+SW_COMMIT="$(content_path commands/sw-commit.md)"
+SW_PR="$(content_path commands/sw-pr.md)"
+SW_SHIP="$(content_path commands/sw-ship.md)"
+DELIVER="$(content_path skills/deliver/SKILL.md)"
+SHIP_STATE="$(content_path skills/shipwright-state/SKILL.md)"
+ISSUES_CAP="$(content_path providers/issues/CAPABILITIES.md)"
+CAP_INDEX="$ROOT/core/sw-reference/capability-index.json"
 
 check() {
   local name="$1" file="$2" pattern="$3"
   if grep -qE "$pattern" "$file" 2>/dev/null; then ok "$name"; else bad "$name"; fi
 }
 
+# --- Phase 1 (gap issues + write-through) ---
 check "doc-currency-045:feedback-sw-gap" "$FEEDBACK" "sw:gap"
 check "doc-currency-045:feedback-gap-labels" "$FEEDBACK" "gap-scheduled"
 check "doc-currency-045:feedback-issue-store" "$FEEDBACK" "issue-store"
@@ -67,6 +76,29 @@ check "doc-currency-045:living-status-labels" "$LIVING" "gap-scheduled"
 check "doc-currency-045:living-status-doctor" "$LIVING" "planning-graph doctor"
 check "doc-currency-045:layout-write-through" "$LAYOUT" "write-through"
 check "doc-currency-045:emission-gap-backlog" "$EMIT" "issue-derived write-through"
+
+# --- Phase 2 (linkage, safe close, deliver annotations) ---
+check "doc-currency-045-p2:git-workflow-linkage" "$GIT_WF" "Planning-issue linkage"
+check "doc-currency-045-p2:git-workflow-location-mode" "$GIT_WF" "same-repo"
+check "doc-currency-045-p2:git-workflow-deliver-annotate" "$GIT_WF" "sw:deliver-annotate"
+check "doc-currency-045-p2:sw-commit-planning-issues" "$SW_COMMIT" "Planning-Issues:"
+check "doc-currency-045-p2:sw-pr-linked-planning" "$SW_PR" "Linked planning issues"
+check "doc-currency-045-p2:sw-pr-unlinked-closes" "$SW_PR" "unlinked.*Closes"
+check "doc-currency-045-p2:sw-ship-annotate-close" "$SW_SHIP" "issue-batch annotate"
+check "doc-currency-045-p2:sw-ship-allowlist" "$SW_SHIP" "sw:deliver-link"
+check "doc-currency-045-p2:deliver-annotation-batch" "$DELIVER" "sw:deliver-annotate"
+check "doc-currency-045-p2:deliver-safe-close" "$DELIVER" "close-on-merge"
+check "doc-currency-045-p2:deliver-issue-batch-journal" "$DELIVER" "issue-batch-journal"
+check "doc-currency-045-p2:deliver-aborted-inconsistent" "$DELIVER" "deliver-aborted-inconsistent"
+check "doc-currency-045-p2:deliver-upsert-marker" "$DELIVER" "upsert-by-marker"
+check "doc-currency-045-p2:deliver-linkage-sot" "$DELIVER" "verify-only"
+check "doc-currency-045-p2:deliver-redaction" "$DELIVER" "deliver-annotation-ingest"
+check "doc-currency-045-p2:ship-state-journal" "$SHIP_STATE" "deliverIssueBatch"
+check "doc-currency-045-p2:emission-deliver-annotation" "$EMIT" "deliver-annotation"
+check "doc-currency-045-p2:emission-issue-close" "$EMIT" "issue-close-batch"
+check "doc-currency-045-p2:issues-cap-close" "$ISSUES_CAP" "issue-close"
+check "doc-currency-045-p2:issues-cap-linked-pr" "$ISSUES_CAP" "linked-pr-introspection"
+check "doc-currency-045-p2:cap-index-linkage-sot" "$CAP_INDEX" "linkageSoT"
 
 # Behavioral: issue-store gap capture + projection refresh (R21/R72)
 export SW_ISSUES_FIXTURE=1

@@ -11,6 +11,8 @@ capability:
     adapterId: github-issues
     selectionFamily: providers
     gateRef: check-gate.py
+    linkedPrGraphqlScopes: ["read:project", "read:org"]
+    linkageSoT: sw:deliver-annotate
 ---
 
 # GitHub Issues adapter
@@ -28,11 +30,14 @@ Selected when `planning.store.issuesProvider` is `github-issues` (independent of
     "issue-comment": true,
     "issue-label": true,
     "issue-lock": true,
-    "issue-search": true
+    "issue-search": true,
+    "issue-close": true,
+    "linked-pr-introspection": true
   },
   "graphql": {
     "issue-lock": false,
-    "issue-search": false
+    "issue-search": false,
+    "linked-pr": false
   },
   "lcd": ["title", "body", "comments", "state", "labels"]
 }

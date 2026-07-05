@@ -19,3 +19,6 @@ private/memory bodies through the resolver before emit.
 | `run-log` | Deliver run logs |
 | `handoff-032` | 032 handoff artifacts |
 | `pull-in-confirm` | **035 pull-in confirm lists** — ranked absorption/amendment proposals from `scripts/planning-related.py`; metadata-only for private units; never auto-absorb |
+| `deliver-annotation` | **045 R68** — `/sw-deliver` and `/sw-ship` issue annotation comments (`sw:deliver-annotate` marker); opaque PR refs for private/memory units via PRD 043 R28 resolver |
+| `deliver-annotation-ingest` | **045 R68** — host-sourced annotation fields (branch, PR title, author, URL) scanned as PRD 043 R45 ingest before write; redacted/refused on secret hit |
+| `issue-close-batch` | **045 R67** — allowlisted close-on-merge and separate-repo `issue-close` API batch |
