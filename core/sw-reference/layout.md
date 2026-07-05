@@ -149,7 +149,7 @@ edges recorded in `.cursor/planning-migration-supersession-map.json` are **rever
 ### Gaps as first-class units (R3)
 
 Gap artifacts are planning units with `type: gap` (folder + frontmatter) on file-backend, or native `sw:gap`
-provider issues under **issue-store** (PRD 045 R21). They render as rows in the unified INDEX. Legacy
+provider issues under **issue-store** (PRD 045 R21). They render as rows in the **single generated unified INDEX** — not a separate gap-only index. Legacy
 `docs/prds/GAP-BACKLOG.md` is a **write-through projection** from gap issues when issue-store is active (PRD
 045 R72) or a compatibility projection until consumers migrate (R27).
 
