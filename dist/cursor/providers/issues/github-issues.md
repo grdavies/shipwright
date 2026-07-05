@@ -11,6 +11,10 @@ capability:
     adapterId: github-issues
     selectionFamily: providers
     gateRef: check-gate.py
+    linkedPrGraphqlScopes:
+      - "read:project"
+      - "read:org"
+    linkageSoT: sw:deliver-annotate
 ---
 
 # GitHub Issues adapter
