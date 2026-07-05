@@ -40,7 +40,7 @@ DEFERRED_BACKENDS = frozenset({"private-repo", "encryption-at-rest"})
 ALL_BACKENDS = SHIPPED_BACKENDS | DEFERRED_BACKENDS
 
 ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues", "jira", "none"})
-SHIPPED_ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues"})
+SHIPPED_ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues", "jira"})
 
 DEFAULT_ISSUES_TOKEN_ENV: dict[str, str] = {
     "github-issues": "ISSUES_GITHUB_TOKEN",
@@ -66,6 +66,9 @@ ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
 
 from issues_lib import (  # noqa: E402
     IssueBudgetExhausted,
+    IssueLifecycleDrift,
+    IssueArchivedProject,
+    IssueTypeConverted,
     IssueCapabilityError,
     IssueNotFound,
     IssueRevisionConflict,
@@ -461,6 +464,8 @@ def probe_issues_token(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         probe = _github_scope_probe(token, cfg)
     elif provider == "gitlab-issues":
         probe = _gitlab_scope_probe(token, cfg)
+    elif provider == "jira":
+        probe = _jira_scope_probe(root, cfg, token)
     else:
         return {
             "verdict": "fail",
@@ -480,6 +485,45 @@ def probe_issues_token(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
             out[key] = probe[key]
     return out
 
+
+
+def _jira_scope_probe(root: Path, cfg: dict[str, Any], token: str) -> dict[str, Any]:
+    from planning_jira_probe import probe_jira_init
+
+    return probe_jira_init(cfg, token, root)
+
+
+def jira_privacy_create_gate(root: Path, cfg: dict[str, Any], unit_id: str, body_path: str, content: str) -> None:
+    """R105 — fail-closed on create when shared Jira project + private/memory unit."""
+    issues = resolve_issues_provider(cfg)
+    if issues.get("provider") != "jira":
+        return
+    from planning_jira_probe import probe_jira_privacy
+
+    artifact_type = infer_artifact_type(body_path)
+    unit: dict[str, Any] = {"id": unit_id, "type": artifact_type, "bodyPath": body_path}
+    explicit = parse_visibility_from_content(content)
+    if explicit:
+        unit["visibility"] = explicit
+    resolved = planning_visibility.resolve_unit_visibility(unit, cfg)
+    if not planning_visibility.body_is_redacted(resolved["visibility"]):
+        return
+    probe = probe_jira_privacy(cfg, root)
+    if probe.get("verdict") != "ok":
+        fail(
+            probe.get("error", "per-issue-privacy-unsupported"),
+            code="visibility-refused",
+            visibility=resolved["visibility"],
+            unitId=unit_id,
+            remediation=probe.get("remediation"),
+        )
+    fail(
+        "per-issue-privacy-unsupported-on-jira",
+        code="visibility-refused",
+        visibility=resolved["visibility"],
+        unitId=unit_id,
+        remediation="use separate Jira project per visibility tier or reroute per PRD 043 R28/R43",
+    )
 
 
 def parse_visibility_from_content(content: str) -> str | None:
@@ -542,6 +586,12 @@ def handle_issue_client_error(exc: Exception) -> None:
         fail(str(exc), code="lifecycle-tombstone")
     if isinstance(exc, IssueTransferred):
         fail(str(exc), code="issue-transferred")
+    if isinstance(exc, IssueLifecycleDrift):
+        fail(str(exc), code="lifecycle-drift")
+    if isinstance(exc, IssueArchivedProject):
+        fail(str(exc), code="archived-project")
+    if isinstance(exc, IssueTypeConverted):
+        fail(str(exc), code="issue-type-converted")
     if isinstance(exc, IssueCapabilityError):
         fail(str(exc), code="issues-capability")
 
@@ -1251,6 +1301,7 @@ def main() -> None:
         "resolve-issues",
         "resolve-store-location",
         "probe-issues-token",
+        "probe-jira-init",
         "validate-project-key",
         "put",
         "get",
@@ -1287,6 +1338,16 @@ def main() -> None:
         emit(resolve_store_location(root, cfg))
     elif args.command == "probe-issues-token":
         result = probe_issues_token(root, cfg)
+        emit(result, 0 if result.get("verdict") == "ok" else 2)
+    elif args.command == "probe-jira-init":
+        issues = resolve_issues_provider(cfg)
+        if issues.get("provider") != "jira":
+            emit({"verdict": "ok", "skipped": True, "reason": "not-jira"})
+        token_env = resolve_issues_token_env(cfg, "jira")
+        if not token_env or not token_present(token_env):
+            fail("missing-token", tokenEnv=token_env)
+        from planning_jira_probe import probe_jira_init
+        result = probe_jira_init(cfg, os.environ.get(token_env, ""), root)
         emit(result, 0 if result.get("verdict") == "ok" else 2)
     elif args.command == "validate-project-key":
         register = "--register" in rest
