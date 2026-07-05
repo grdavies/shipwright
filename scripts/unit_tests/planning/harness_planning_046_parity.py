@@ -91,6 +91,9 @@ assert 'Parser parity gap' in f and 'Parser parity gap' in i
 
 (
   cd "$TMP"
+  echo ".cursor/hooks/state/" >> .gitignore
+  git add .gitignore
+  git commit -q -m "gitignore generation state" --allow-empty 2>/dev/null || true
   python3 -c "from pathlib import Path; import sys; sys.path.insert(0,'$ROOT/scripts'); import planning_index_gen as pig; r=Path('$TMP'); g1=pig.bump_generation(r); g2=pig.bump_generation(r); assert g2>g1; assert pig.validate_generation(r,g1)"
 ) && ok "generation-token-monotonic" || bad "generation-token-monotonic"
 

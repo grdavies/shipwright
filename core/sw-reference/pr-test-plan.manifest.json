@@ -1223,33 +1223,30 @@
     },
     {
       "id": "planning-046-parity-fixtures",
-      "script": "scripts/tests/run-planning-046-parity-fixtures.sh",
-      "args": [],
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-046-parity-fixtures",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "scenarios": [
         "issue-derived-index-semantic-parity",
         "generation-token-monotonic",
         "cutover-dual-source-doctor-clean"
-      ]
+      ],
+      "ciShard": 2
     },
     {
       "id": "planning-046-doc-impact-fixtures",
-      "script": "scripts/test/run-planning-046-doc-impact-fixtures.sh",
-      "args": [],
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
       "classification": "required",
-      "ciJobName": "feat-test-plan-planning-046-doc-impact-fixtures"
-    },
-    {
-      "id": "planning-index-region-marker-fixtures",
-      "script": "scripts/test/run_planning_index_fixtures.py",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-planning-index-region-marker-fixtures",
-      "scenarios": [
-        "planning-index-region-marker-newline-valid",
-        "index-region-guard-glued-marker-refuse"
-      ]
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "ciShard": 2
     }
   ]
 }

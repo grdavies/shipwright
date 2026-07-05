@@ -278,9 +278,24 @@ def read_generation(root: Path) -> int:
     except (json.JSONDecodeError, TypeError, ValueError):
         return 0
 
+def _generation_persist_allowed(root: Path) -> bool:
+    """Skip durable generation state when path is not gitignored (hermetic temp repos)."""
+    import subprocess
+
+    state_path = generation_state_path(root)
+    worktree = planning_paths.git_root(root)
+    proc = subprocess.run(
+        ["git", "-C", str(worktree), "check-ignore", "-q", str(state_path)],
+        capture_output=True,
+    )
+    return proc.returncode == 0
+
+
 
 def bump_generation(root: Path) -> int:
     """Monotonic generation token for serialized INDEX regeneration (R88)."""
+    if not _generation_persist_allowed(root):
+        return read_generation(root)
     path = generation_state_path(root)
     path.parent.mkdir(parents=True, exist_ok=True)
     current = read_generation(root)
@@ -377,23 +392,22 @@ def read_merge_write(
 
 
 def generate_index(root: Path, *, writer: str = "generator") -> str:
-    prior = read_generation(root)
     units = discover_units(root)
     structural = render_structural_table(units, root)
     path = index_path(root)
     existing = path.read_text(encoding="utf-8") if path.is_file() else None
-    content = read_merge_write(existing, writer=writer, new_region_body=structural, root=root)
-    generation = bump_generation(root)
-    if prior and not validate_generation(root, prior):
-        fail("non-monotonic generation token", prior=prior, current=generation)
-    return content
+    return read_merge_write(existing, writer=writer, new_region_body=structural, root=root)
 
 
 def write_index(root: Path, content: str, *, dry_run: bool = False) -> Path:
     path = index_path(root)
     path.parent.mkdir(parents=True, exist_ok=True)
     if not dry_run:
+        prior = read_generation(root)
         path.write_text(content, encoding="utf-8")
+        generation = bump_generation(root)
+        if prior and not validate_generation(root, prior):
+            fail("non-monotonic generation token", prior=prior, current=generation)
     return path
 
 

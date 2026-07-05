@@ -73,7 +73,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Run guardrail-rules-resolution-fixtures, hook-worktree-alignment-fixtures, host-fixtures, inflight-doc-currency-fixtures, inflight-guards-parity-fixtures, inflight-migration-bridge-fixtures, inflight-signal-fixtures, mechanical-sourcing-fixtures, parallel-merge-safety-fixtures, parity-fixtures, phase-sizing-corpus-fixtures, phase-sizing-fixtures, planning-035-deliver-conductor-fixtures, planning-035-doc-impact-fixtures, planning-045-doc-impact-fixtures, planning-035-emitter-parity-fixtures, planning-035-gap-lifecycle-fixtures
+      - name: Run guardrail-rules-resolution-fixtures, hook-worktree-alignment-fixtures, host-fixtures, inflight-doc-currency-fixtures, inflight-guards-parity-fixtures, inflight-migration-bridge-fixtures, inflight-signal-fixtures, mechanical-sourcing-fixtures, parallel-merge-safety-fixtures, parity-fixtures, phase-sizing-corpus-fixtures, phase-sizing-fixtures, planning-035-deliver-conductor-fixtures, planning-035-doc-impact-fixtures, planning-045-doc-impact-fixtures, planning-035-emitter-parity-fixtures, planning-035-gap-lifecycle-fixtures, planning-046-parity-fixtures, planning-046-doc-impact-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/guardrails scripts/unit_tests/hooks scripts/unit_tests/git scripts/unit_tests/w4 scripts/unit_tests/meta scripts/unit_tests/conductor scripts/unit_tests/deliver scripts/unit_tests/phase_sizing scripts/unit_tests/planning -q
 
   feat-test-plan-pytest-required-shard-3:
