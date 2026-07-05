@@ -222,6 +222,44 @@ Fixture suite: `python3 scripts/test/run_visibility_fixtures.py` (registered as 
 Fixture suite: `python3 scripts/test/run_planning_visibility_acceptance_fixtures.py` (registered as
 `planning-visibility-acceptance-fixtures` — emitter parity, public-unit no-regression, doc-impact acceptance).
 
+### Issue-store request budget + query cache (PRD 046 R81, R84, R93)
+
+When `planning.store.backend` is `issue-store`, derived INDEX refresh and `/sw-deliver next` share a
+documented per-provider request budget. Budget keys live under `planning.store.requestBudget.<provider>`:
+
+| Key | Default (github-issues) | Meaning |
+|-----|----------------------|---------|
+| `maxCalls` | 500 | Per-run API call ceiling composing with `SW_ISSUES_CALL_BUDGET` (R39) |
+| `maxPaginationDepth` | 10 | Pagination pages before fail-closed `index-incomplete` (R86) |
+| `alertThreshold` | 0.8 | Operator-observable alert ratio before ceiling breach (R93) |
+| `cacheTtlSeconds` | 300 | Poll-on-reconcile query cache TTL floor (R85) |
+
+Example:
+
+```json
+{
+  "planning": {
+    "store": {
+      "backend": "issue-store",
+      "issuesProvider": "github-issues",
+      "projectKey": "my-project",
+      "requestBudget": {
+        "github-issues": {
+          "maxCalls": 500,
+          "maxPaginationDepth": 10,
+          "alertThreshold": 0.8,
+          "cacheTtlSeconds": 300
+        }
+      }
+    }
+  }
+}
+```
+
+Inspect live ledger (counts only — no bodies/tokens): `python3 scripts/planning_request_budget.py . status`.
+
+Fixture suite: `python3 scripts/test/run_pytest.py scripts/unit_tests/planning/test_planning_046_phase2.py -q`.
+
 ### Planning autonomy (PRD 035)
 
 Posture for planning graph bookkeeping vs content decisions. PRD 033 reads this key and soft-enforces
