@@ -246,14 +246,19 @@ def resolved_visibility(unit: PlanningUnit, root: Path) -> str:
 
 def index_row_dict(unit: PlanningUnit, root: Path) -> dict[str, Any]:
     vis = resolved_visibility(unit, root)
+    title = unit.title
+    opaque = unit.opaque_title
+    if pv.body_is_redacted(vis):
+        title = f"{unit.id}: [private]"
+        opaque = True
     row: dict[str, Any] = {
         "id": unit.id,
         "type": unit.type,
-        "title": unit.title,
+        "title": title,
         "status": unit.status,
         "visibility": vis,
     }
-    if unit.opaque_title:
+    if opaque:
         row["opaqueTitle"] = True
     if unit.edge_map:
         for key in EDGE_KEYS:
@@ -268,14 +273,47 @@ def generation_state_path(root: Path) -> Path:
     return planning_paths.git_root(root) / GENERATION_STATE_REL
 
 
-def read_generation(root: Path) -> int:
+def read_generation_state(root: Path) -> dict[str, Any]:
     path = generation_state_path(root)
     if not path.is_file():
-        return 0
+        return {"version": 1, "generation": 0}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        return int(data.get("generation", 0))
-    except (json.JSONDecodeError, TypeError, ValueError):
+    except (json.JSONDecodeError, TypeError):
+        return {"version": 1, "generation": 0}
+    return data if isinstance(data, dict) else {"version": 1, "generation": 0}
+
+
+def write_generation_state(root: Path, state: dict[str, Any]) -> None:
+    if not _generation_persist_allowed(root):
+        return
+    path = generation_state_path(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(state, indent=2) + chr(10), encoding="utf-8")
+
+
+def mark_index_incomplete(root: Path, reason: str) -> None:
+    state = read_generation_state(root)
+    state["indexIncomplete"] = True
+    state["indexIncompleteReason"] = reason
+    write_generation_state(root, state)
+
+
+def clear_index_incomplete(root: Path) -> None:
+    state = read_generation_state(root)
+    state.pop("indexIncomplete", None)
+    state.pop("indexIncompleteReason", None)
+    write_generation_state(root, state)
+
+
+def index_is_complete(root: Path) -> bool:
+    return not bool(read_generation_state(root).get("indexIncomplete"))
+
+
+def read_generation(root: Path) -> int:
+    try:
+        return int(read_generation_state(root).get("generation", 0))
+    except (TypeError, ValueError):
         return 0
 
 def _generation_persist_allowed(root: Path) -> bool:
@@ -392,6 +430,8 @@ def read_merge_write(
 
 
 def generate_index(root: Path, *, writer: str = "generator") -> str:
+    if not index_is_complete(root):
+        fail("index-incomplete: refuse partial INDEX generation", exit_code=20)
     units = discover_units(root)
     structural = render_structural_table(units, root)
     path = index_path(root)

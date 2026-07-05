@@ -59,35 +59,35 @@ Single shared discovery path, issue-derived region disposition, committed cross-
 
 Read-only issue-derived INDEX and scheduler within a fail-closed request budget and a redaction-safe cache.
 
-- [ ] 2.1 Issue-derived INDEX/living-status + scheduler (R25, D24)
+- [x] 2.1 Issue-derived INDEX/living-status + scheduler (R25, D24)
   - **File:** `scripts/planning_index_gen.py`, `core/commands/sw-deliver.md`
   - **Expected:** status/tier/priority labels drive `/sw-deliver next`; INDEX/living-status is a read-only derived view per PRD 043 R34/R43; derives from issue state/labels + PRD 045 R22 annotations, never authors them
   - **R-IDs:** R25
-- [ ] 2.2 Request-budget model + shared ledger (R81)
+- [x] 2.2 Request-budget model + shared ledger (R81)
   - **File:** `scripts/planning_graph.py`, `core/sw-reference/config.schema.json`
   - **Expected:** per-operation call counts, max pagination depth, content-hash-keyed cache TTL documented per provider; composes with (not replaces) PRD 043 R39 + PRD 045 R74 via a shared accounting ledger; scheduler-critical budget reserved from bulk refresh
   - **R-IDs:** R81
-- [ ] 2.3 Derived-INDEX redaction at ingest (R82)
+- [x] 2.3 Derived-INDEX redaction at ingest (R82)
   - **File:** `scripts/planning_index_gen.py`, `core/skills/visibility/references/emission-points.md`
   - **Expected:** rows resolve visibility via PRD 043 R43 + PRD 034 R4 at ingest; `private`/`memory` emit opaque titles (`{id}: [private]`) + id/status/edges only; edge metadata redacted per PRD 043 R29
   - **R-IDs:** R82
-- [ ] 2.4 Redaction-safe namespaced query cache (R84)
+- [x] 2.4 Redaction-safe namespaced query cache (R84)
   - **File:** `scripts/planning_graph.py`
   - **Expected:** cache stores only post-redaction projections; secret-scan (PRD 043 R45) on issue-derived ingest before redaction and before any cache write; key `projectKey + queryFingerprint + generationEpoch`, distinct from artifact canonical-hash namespace
   - **R-IDs:** R84
-- [ ] 2.5 Poll-on-reconcile cache invalidation (R85)
+- [x] 2.5 Poll-on-reconcile cache invalidation (R85)
   - **File:** `scripts/planning_graph.py`
   - **Expected:** cache hit at deliver run-start and `/sw-deliver next` revalidates live open/closed + labels against lightweight search metadata; scheduler never schedules a frozen/closed unit from stale entry; TTL floor + forced-refresh triggers bound staleness
   - **R-IDs:** R85
-- [ ] 2.6 Fail-closed partial derivation (R86)
+- [x] 2.6 Fail-closed partial derivation (R86)
   - **File:** `scripts/planning_index_gen.py`
   - **Expected:** pagination ceiling with `hasNextPage` marks refresh `index-incomplete`; scheduler/reconciler refuse partial INDEX without operator-acknowledged degraded mode (PRD 043 R39 halt semantics); budget exhaustion is fail-closed, never silent truncation
   - **R-IDs:** R86
-- [ ] 2.7 Operator-observable budget (R93)
+- [x] 2.7 Operator-observable budget (R93)
   - **File:** `scripts/planning_graph.py`
   - **Expected:** counts-only logging (no bodies/tokens), alert threshold before ceiling breach, documented throttle/halt surface so a shared high-churn store degrades visibly
   - **R-IDs:** R93
-- [ ] 2.8 Phase-2 documentation exit-gate (PRD 043 R49)
+- [x] 2.8 Phase-2 documentation exit-gate (PRD 043 R49)
   - **File:** `docs/guides/configuration.md`, `core/providers/planning-store/issue-store.md`
   - **Expected:** doc-impact fixture asserts scheduler + request-budget/cache-TTL + redaction docs updated before phase ship
   - **R-IDs:** R25

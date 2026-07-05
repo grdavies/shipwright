@@ -162,6 +162,18 @@ Hard stops: `deliver.autonomy.maxIterations` (default 500) and no-progress circu
 
 `run` is an alias for `deliver-loop --task-list <path>`.
 
+## Issue-store scheduler (PRD 046 R25)
+
+When issue-store is active and cutover permits issue-derived discovery,
+`/sw-deliver next` resolves the next schedulable unit via:
+
+```bash
+python3 scripts/planning_scheduler.py <repo-root> next (`schedule-next` action) [--force-refresh]
+```
+
+Issue labels (`sw:tier:*`, `sw:priority:*`) drive ordering; frozen/closed units are never
+scheduled from stale cache entries. Refuses when derived INDEX is `index-incomplete`.
+
 ## Autonomy and parallelism (user surface — R36)
 
 | Knob / concept | Default | User-visible behavior |
