@@ -148,3 +148,55 @@ Planning artifacts (PRD/gap/tasks/brainstorm) are created via `issue-create` wit
 
 Mutations use `issue-update` with optimistic concurrency (R36). Hermetic CI uses `SW_ISSUES_FIXTURE=1` —
 no live API calls.
+
+
+## Auth probes (R101)
+
+- Dedicated `planning.store.issues.tokenEnv` (default `ISSUES_JIRA_TOKEN`) — **never** `host.tokenEnv`.
+- Cloud: email (`ISSUES_JIRA_EMAIL`) + API token (Basic).
+- DC/Server: PAT required; password/basic auth **rejected** at init.
+- Minimum scopes: `read:jira-work`, `write:jira-work`.
+- Probed via `python3 scripts/planning_store.py probe-jira-init` (fail-closed).
+
+## Per-issue privacy (R105)
+
+Jira has **no per-issue privacy**. The init probe rejects a multi-tenant shared Jira project when any unit
+resolves `private`/`memory`. Private/`memory` units require a separate Jira project per visibility tier or
+reroute per PRD 043 R28/R43. Create path is fail-closed (not only init).
+
+## Request budget (R106)
+
+Jira composes with PRD 043 R39 and PRD 046 R81 via `planning_request_budget.py`:
+
+| Flavor | Default max calls | JQL pagination cap |
+| --- | --- | --- |
+| Cloud | 300 | 5 pages |
+| DC/Server | 200 | 5 pages |
+
+429 handling uses exponential backoff + jitter — **no** `Retry-After` reliance. Partial-page abort mid-refresh
+fails closed (`deliver-aborted-inconsistent`).
+
+## Lifecycle edges (R107)
+
+| Edge | Halt code | Recovery |
+| --- | --- | --- |
+| Issue move / key change (changelog) | `issue-key-changed` / `issue-transferred` | re-link by stable provider id + project key |
+| Archived project (404/410) | `archived-project` | tombstone + operator remediation |
+| Issue-type conversion | `issue-type-converted` | tombstone + re-create with mapped type |
+
+Distinct from PRD 043 R37 tamper and R104 `lifecycle-drift`.
+
+## Createmeta / field-schema probe (R108)
+
+Init runs createmeta per mapped issue type (`planning.store.issues.issueType`, default `Task`). Required custom
+fields blocking `issue-create` fail closed with a field manifest + admin remediation, or are satisfied by
+allowlisted `planning.store.issues.fieldDefaults` — never a runtime 400 mid-pipeline.
+
+## Label degradation ladder (R109)
+
+1. **labels** (primary)
+2. **components** (degraded)
+3. **configured custom field** (`planning.store.issues.labelCustomField`)
+
+Init probe validates label-write permission. PRD 043 R42 body marker remains authoritative for project
+isolation regardless of label surface.
