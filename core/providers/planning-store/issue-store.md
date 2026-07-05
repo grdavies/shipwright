@@ -62,10 +62,12 @@ Phase 1 does not migrate regions — only documents the contract.
 Effective backend falls back to `in-repo-public` when:
 
 - `issuesProvider` is `none`, unset, or unsupported
-- `issuesProvider` is not yet shipped (`jira` until PRD 047)
 - `host.provider` is `none` (local/no-remote)
 
 Fallback emits a notice and never blocks work.
+
+Jira adapter (PRD 047): see `core/providers/issues/jira.md` for Cloud/DC configuration, canonical
+hash (ADF/wiki post-refetch), artifact placement, and freeze decoupled from Jira status.
 
 
 
