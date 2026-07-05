@@ -49,7 +49,7 @@ automatically. For manual paths, use a linked worktree and phase branch (`/sw-wo
 Opt-in via `planning.store.backend: issue-store` in `.cursor/workflow.config.json` (default unchanged).
 Under issue-store, `/sw-doc-review` posts persona findings as integrity-checked issue comments on the PRD
 artifact issue; file-store users keep the in-IDE review panel. Release grouping (`planning.releaseGrouping`)
-maps PRDs to provider milestones where supported. See [configuration](configuration.md#issue-store-prd-043--opt-in)
+maps PRDs to provider milestones where supported. See [configuration](configuration.md#issue-store-prd-043-opt-in)
 and [workflow guide](workflows.md#issue-native-doc-review-and-release-grouping-prd-045-phase-3).
 
 ## Single-pass `/sw-tasks`
