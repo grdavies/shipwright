@@ -22,27 +22,27 @@ model) without re-specifying them; inert for non-issue-store users.
 
 REST-primary Cloud adapter implementing the PRD 043 `issues.*` verbs with render-independent freeze hashing.
 
-- [ ] 1.1 Jira `issues.*` adapter + LCD mapping (R32a)
+- [x] 1.1 Jira `issues.*` adapter + LCD mapping (R32a)
   - **File:** `core/providers/issues/jira.md`, `core/providers/issues/CAPABILITIES.md`
   - **Expected:** Jira REST implements PRD 043 `issues.*` verbs; LCD mapping (title→summary, body→description, comments, open/closed→status category, flat labels→labels); `issue-lock` registered as degraded (hash-authoritative, R104)
   - **R-IDs:** R32a
-- [ ] 1.2 Cloud-vs-DC parity/degradation matrix (R100)
+- [x] 1.2 Cloud-vs-DC parity/degradation matrix (R100)
   - **File:** `core/providers/issues/CAPABILITIES.md`, `core/sw-reference/capability-index.json`
   - **Expected:** per-verb Cloud-vs-DC/Server parity matrix (endpoint/auth/serialization/capability splits) behind a Jira-flavor capability flag; Jira links/sub-tasks mapped to PRD 043 R29 edges + PRD 046 R23 hierarchy (consumed, not owned)
   - **R-IDs:** R100
-- [ ] 1.3 Canonical hash for ADF/wiki, post-refetch (R102, D27)
+- [x] 1.3 Canonical hash for ADF/wiki, post-refetch (R102, D27)
   - **File:** `core/providers/issues/jira.md`, `scripts/tests/fixtures/canonical/jira/`
   - **Expected:** ADF (Cloud)/wiki (DC) normalized to canonical markdown subset; freeze hash over post-write re-fetched canonical form so benign server re-serialization is absorbed (no false PRD 043 R37 tamper); out-of-subset drift classified distinctly + fails closed; secret-scan (PRD 043 R45) on post-normalization plaintext; Jira golden vectors incl. server-mutated-ADF round-trip
   - **R-IDs:** R102
-- [ ] 1.4 Artifact placement for single description field (R103)
+- [x] 1.4 Artifact placement for single description field (R103)
   - **File:** `core/providers/issues/jira.md`
   - **Expected:** description carries artifact markdown + PRD 043 R29 `sw-edges` + R42 body marker in ADF-safe fence; PRD 043 R13 freeze-record in write-once custom field/description footer (reserved marker, excluded from canonicalization); R46 overflow in ordered comments pinned by immutable comment IDs; missing freeze-record/deleted overflow = PRD 043 R40 tombstone, not hash mismatch
   - **R-IDs:** R103
-- [ ] 1.5 Freeze decoupled from Jira status (R104, D26)
+- [x] 1.5 Freeze decoupled from Jira status (R104, D26)
   - **File:** `core/providers/issues/jira.md`, `core/commands/sw-freeze.md`
   - **Expected:** `sw:frozen` label + content-hash authoritative for immutability; status read for display + probed for workflow constraint; external/automation transition of a frozen issue = `lifecycle-drift` halt (distinct from PRD 043 R37); `issue-lock` degrades to hash-authoritative tamper-evidence
   - **R-IDs:** R104
-- [ ] 1.6 Phase-1 documentation exit-gate (PRD 043 R49)
+- [x] 1.6 Phase-1 documentation exit-gate (PRD 043 R49)
   - **File:** `docs/guides/configuration.md`, `core/providers/planning-store/issue-store.md`
   - **Expected:** doc-impact fixture asserts Jira config keys + canonicalization/placement docs updated before phase ship
   - **R-IDs:** R32a
