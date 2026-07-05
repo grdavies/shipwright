@@ -11,6 +11,9 @@ capability:
     adapterId: github-issues
     selectionFamily: providers
     gateRef: check-gate.py
+    linkedPrGraphqlScopes: ["read:project", "read:org"]
+    linkageSoT: sw:deliver-annotate
+    issueMilestoneVerb: issue-milestone
 ---
 
 # GitHub Issues adapter
@@ -28,11 +31,15 @@ Selected when `planning.store.issuesProvider` is `github-issues` (independent of
     "issue-comment": true,
     "issue-label": true,
     "issue-lock": true,
-    "issue-search": true
+    "issue-search": true,
+    "issue-close": true,
+    "linked-pr-introspection": true,
+    "issue-milestone": true
   },
   "graphql": {
     "issue-lock": false,
-    "issue-search": false
+    "issue-search": false,
+    "linked-pr": false
   },
   "lcd": ["title", "body", "comments", "state", "labels"]
 }
@@ -49,6 +56,7 @@ Selected when `planning.store.issuesProvider` is `github-issues` (independent of
 | `issue-label` | `POST /repos/{owner}/{repo}/issues/{n}/labels` |
 | `issue-lock` | `PUT /repos/{owner}/{repo}/issues/{n}/lock` |
 | `issue-search` | `GET /search/issues` (project-scoped query) |
+| `issue-milestone` | `PATCH /repos/{owner}/{repo}/issues/{n}` (`milestone` field) |
 
 ## Auth
 

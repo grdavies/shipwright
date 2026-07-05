@@ -53,10 +53,8 @@ check_doc() {
     bad "007-docs-$label: missing file $file"
     return
   fi
-  local text
-  text="$(cat "$file")"
   for term in "$@"; do
-    if ! echo "$text" | grep -qiE "$term"; then
+    if ! grep -qiF -- "$term" "$file"; then
       bad "007-docs-$label: missing topic '$term' in $file"
       return
     fi

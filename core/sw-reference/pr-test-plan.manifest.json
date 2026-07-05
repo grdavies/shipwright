@@ -607,6 +607,24 @@
       "ciShard": 2
     },
     {
+      "id": "planning-045-doc-impact-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "doc-currency-045",
+        "gap-capture-issue-store",
+        "gap-backlog-write-through",
+        "gap-projection-doctor-pass",
+        "gap-projection-doctor-divergence"
+      ],
+      "ciShard": 2
+    },
+    {
       "id": "planning-035-emitter-parity-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [

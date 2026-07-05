@@ -841,7 +841,10 @@
           "providerFamily": "issues",
           "adapterId": "github-issues",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.py"
+          "gateRef": "check-gate.py",
+          "linkedPrGraphqlScopes": "[\"read:project\", \"read:org\"]",
+          "linkageSoT": "sw:deliver-annotate",
+          "issueMilestoneVerb": "issue-milestone"
         }
       }
     },
@@ -864,7 +867,8 @@
           "providerFamily": "issues",
           "adapterId": "gitlab-issues",
           "selectionFamily": "providers",
-          "gateRef": "check-gate.py"
+          "gateRef": "check-gate.py",
+          "issueMilestoneVerb": "issue-milestone"
         }
       }
     },

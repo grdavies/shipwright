@@ -19,6 +19,34 @@ Multi-persona review for PRDs and decision records. Pattern borrowed from compou
 
 **Model tier:** inherit — runtime parent floor (R9); `resolve-model-tier.py --skill doc-review` returns inherit with `modelId: null`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
+## Transport (PRD 045 R24/R69)
+
+| `planning.store.backend` | Findings transport |
+| --- | --- |
+| `issue-store` | Marker-delimited `sw:doc-review` comments on the PRD artifact issue via `issue-comment` verb |
+| default (file-store) | In-IDE parallel sub-agent panel + JSON synthesis (unchanged) |
+
+Under issue-store, persona selection and dispatch binding are identical to file-store; only the **transport**
+changes. Human review feedback uses a separate comment channel (no `sw:doc-review` marker).
+
+### Issue-store transport
+
+1. Resolve the PRD artifact issue ref from the planning store (`planning_store` + PRD 043 identification).
+2. For each selected persona, dispatch the review Task (binding unchanged) and post findings as a structured
+   comment on the PRD issue:
+   - **Author:** plugin token only (bot-authored; PRD 043 R12 read-time verification).
+   - **Marker:** `sw:doc-review` system marker delimits persona payload — **excluded** from PRD 043 R35
+     canonicalization (cannot poison freeze verification).
+   - **Payload:** JSON findings per `references/findings-schema.json` inside marker fences.
+3. **Human channel:** operator notes post as plain comments without the `sw:doc-review` marker.
+4. **Synthesis:** open a **review-round manifest** at checkpoint (PRD 043 R33 exclusive checkpoint) pinning
+   ordered persona-comment IDs + revisions; fail closed on any add/edit/delete before synthesis completes.
+   See `references/synthesis.md` **Review-round manifest (R69)**.
+5. Apply `safe_auto` / gate `gated_auto` / `manual` identically to file-store synthesis.
+
+**IDE fallback:** when `backend != issue-store`, the procedure below (parallel panel + JSON synthesis) is the
+sole transport — byte-identical behavior to pre-045.
+
 ## Doc types
 
 | Doc type | Path pattern | Panel |

@@ -950,6 +950,28 @@
             }
           }
         },
+        "releaseGrouping": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Release/milestone grouping for issue-store planning units (PRD 045 R26/R71). Inert when backend != issue-store.",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "milestone",
+                "iteration",
+                "label"
+              ],
+              "default": "milestone",
+              "description": "Provider-native grouping when issue-milestone capability is present; flat-label fallback (label mode) when absent."
+            },
+            "labelPrefix": {
+              "type": "string",
+              "default": "sw:release:",
+              "description": "Flat-label prefix for label-mode fallback when issue-milestone verb is unavailable (R71)."
+            }
+          }
+        },
         "store": {
           "type": "object",
           "additionalProperties": false,

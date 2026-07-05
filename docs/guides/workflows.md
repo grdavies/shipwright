@@ -463,6 +463,29 @@ Operator entry: `/sw-migrate` and `python3 scripts/planning_migrate.py <repo> st
 (dry-run default; `--apply` to mutate). Journal:
 `.cursor/hooks/state/issue-store-migration-journal.json`.
 
+## Issue-native doc-review and release grouping (PRD 045 Phase 3)
+
+Inert when `planning.store.backend != issue-store`.
+
+### Doc-review via issue comments (R24, R69)
+
+Under issue-store, `/sw-doc-review` posts persona findings as marker-delimited `sw:doc-review` comments on the
+PRD artifact issue. Synthesis opens a **review-round manifest** pinning ordered comment IDs + revisions at
+checkpoint; any add/edit/delete before synthesis **fails closed**. Persona comments are excluded from PRD 043
+R35 canonicalization. When `backend != issue-store`, the in-IDE parallel sub-agent panel + JSON synthesis is
+unchanged (no regression).
+
+Human review notes use a separate comment channel (no `sw:doc-review` marker).
+
+### Release grouping (R26, R71)
+
+`planning.releaseGrouping.mode` maps `sw:prd` units to provider milestones (`github-issues`) or iterations
+(`gitlab-issues`) via the capability-gated `issue-milestone` verb. Absent capability → skip with operator
+notice; deliver continues with flat-label fallback (`planning.releaseGrouping.labelPrefix`). Scheduler wiring
+is PRD 046 — 045 is grouping/annotation only.
+
+See `core/commands/sw-doc-review.md`, `core/skills/doc-review/SKILL.md`, and
+`docs/guides/configuration.md` **Release grouping**.
 
 ## Debug workstream
 

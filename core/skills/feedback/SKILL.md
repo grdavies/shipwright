@@ -79,7 +79,7 @@ Classify **destination** (not `002` ceremony tier):
 | debug | `/sw-debug` | production signal ref or excerpt |
 | brainstorm | `/sw-brainstorm` | redacted summary + `untrusted_payload` envelope |
 | gap-amend | `/sw-amend` | PRD ref + redacted delta summary |
-| gap-task | capture | `python3 scripts/planning_gap_capture.py` → canonical `docs/prds/gap/<unit-id>/` (U3) |
+| gap-task | capture | `python3 scripts/planning_gap_capture.py` → `planning_store.put()` (R21: native `sw:gap` issues when `backend: issue-store`; labels `open`/`gap-scheduled`/`resolved`; schedule refs use `sw:gap-schedule:` — disjoint from PRD 046 deliver-scheduler labels) |
 
 Record route per `references/route-record.md` via `memory-preflight` write. Serialize the route record,
 run `python3 scripts/memory-redact.py` on the JSON, then write — never persist raw `untrusted_payload`.
@@ -91,9 +91,9 @@ When destination is **gap-capture**, decide on the **freeze axis** (not ceremony
 | Outcome | When | Handoff |
 |---------|------|---------|
 | **Substantial** | Adds/edits/retracts R-ID, changes documented behavior, touches frozen PRD scope, or material shipped behavior with no PRD | `/sw-amend` when consumer status allows; else complete-unit route (below) |
-| **Trivial in-scope** | Small gap, no requirement/behavior change | `python3 scripts/planning_gap_capture.py` → `planning_store.put()` under `docs/prds/gap/<unit-id>/` |
+| **Trivial in-scope** | Small gap, no requirement/behavior change | `python3 scripts/planning_gap_capture.py` → `planning_store.put()`; under **issue-store** creates native `sw:gap` issues (status via issue state + labels) and refreshes the `GAP-BACKLOG.md` write-through projection — never a hand-append |
 
-Do **not** hand-append to `docs/prds/GAP-BACKLOG.md` — it is a read-only legacy projection during cutover (PRD 055 R22/R27) and during **issue-store migration** (PRD 044 R38 shim; marker `issue-store-migration-gap-shim`).
+Do **not** hand-append to `docs/prds/GAP-BACKLOG.md` — under **issue-store** it is an issue-derived write-through projection only (PRD 045 R72; marker `issue-store-migration-gap-shim`); during file-backend cutover it is a read-only legacy projection (PRD 044 R38 / PRD 055 R22/R27).
 
 **Bias:** ambiguous → **substantial** (amendment), never silent task edit.
 

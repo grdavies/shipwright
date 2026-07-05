@@ -70,6 +70,12 @@ Canonical chain is single-sourced from `core/sw-reference/kernel-classification.
 - `gap-check` default-on (`skills/gap-check`); `--fast` skips.
 - `sw-stabilize` uses `stabilize-loop` when present.
 - Terminal pause at merge gate — "ready to merge — your call" (suppressed under **phase-mode**; see below).
+- **Issue annotation + safe close (PRD 045 R67/R70)** — under issue-store, after `sw-ready` on live green and
+  before durable `merge-ready-green` status, invoke the deliver issue-batch annotate path
+  (`wave.py issue-batch annotate`) so linked artifact issues receive PR links + phase status. Close-on-merge
+  runs only after default-branch merge verification + deliver allowlist (`projectKey` + `sw:deliver-link`);
+  separate-repo stores use explicit `issue-close` API (never unlinked `Closes`/`Fixes` keywords). Unverifiable
+  close fails closed — write `blocked` status with cause, not interactive pause.
 
 ## Flags
 

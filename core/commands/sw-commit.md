@@ -40,8 +40,12 @@ Phase-scoped commit after `/sw-verify` (and `/sw-review` when configured).
 7. **Exclude** per-worktree state (`shipwright.json`), memory-sync markers, provider cache, and
    `/sw-deliver` living artifacts (`.cursor/sw-deliver-plan.json`, `.cursor/sw-deliver-state.json`,
    `.cursor/sw-deliver.lock`, `.cursor/sw-deliver-runs/`).
-8. Commit with heredoc message matching repo style (include override trailer when applicable).
-9. Hand off to `/sw-pr`.
+8. **Planning-issue linkage (PRD 045 R22)** — when `planning.store.backend` is `issue-store`, append a
+   `Planning-Issues:` commit trailer with location-mode-encoded refs for artifact issues touched in this phase
+   (same-repo `#id` vs separate-repo `owner/repo#id`). Validate encoding via
+   `python3 scripts/commit-msg-guard.py validate "<message>"`. File-store mode skips this step.
+9. Commit with heredoc message matching repo style (include override trailer when applicable).
+10. Hand off to `/sw-pr`.
 
 **Communication intensity:** ultra
 

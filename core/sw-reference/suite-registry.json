@@ -823,6 +823,17 @@
       "ciShard": 2
     },
     {
+      "id": "planning-045-doc-impact-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 2
+    },
+    {
       "id": "planning-035-emitter-parity-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [

@@ -118,6 +118,31 @@ is missing, the driver defaults to the PR path and never attempts a direct push 
 Mechanical batched PRs embed a monotonic content-hash covering both INDEX regions (`derived` + `inFlight`) at
 open; auto-merge aborts if either region advanced since (R14 stale-PR guard).
 
+## Planning-issue linkage (PRD 045 R22)
+
+When `planning.store.backend` is `issue-store`, commits and PRs link to artifact issues via a **location-mode
+aware** encoding. `/sw-deliver` and `/sw-ship` annotate linked issues with PR URLs and phase status — linkage
+comments are the source of truth (R73); host PR-body keywords alone never close planning artifacts (R67).
+
+### Location modes (PRD 043 R4)
+
+| Mode | Store location | Commit / PR ref encoding |
+| --- | --- | --- |
+| **same-repo** | Planning issues live in the code repo | `#<n>` (host issue number in-repo) |
+| **separate-repo** | Planning issues live in a dedicated planning project | `owner/repo#<n>` or pointer-record id from `planning_store` |
+
+Resolve mode at init via `python3 scripts/planning_store.py resolve-location`. Encoding is validated by
+`commit-msg-guard.py` (commit trailers) and `git_template_lib.py` / host PR-body templates (PR linkage section).
+
+### Normative markers
+
+- **Commit trailer:** `Planning-Issues: <encoded-ref>[,<encoded-ref>…]` (same encoding as PR body).
+- **PR body:** `## Linked planning issues` block listing encoded refs + optional `sw:deliver-link` body marker
+  (PRD 043 R12 `projectKey` + marker verification).
+- **Deliver annotation comment:** marker-delimited `sw:deliver-annotate` comment on each linked issue (SoT for
+  PR↔issue linkage — see `skills/deliver/SKILL.md`).
+
+`/sw-commit` and `/sw-pr` invoke linkage encoding when issue-store is active; file-store mode is inert (no-op).
 
 ## Guardrails
 

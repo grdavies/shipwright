@@ -217,14 +217,223 @@ def migration_in_transition(root: Path) -> bool:
     return transition_stamp_path(root).is_file()
 
 
+def issue_store_effective(root: Path, cfg: dict[str, Any] | None = None) -> bool:
+    from planning_store import resolve_effective_backend
+
+    cfg = cfg or load_workflow_config(root)
+    effective = resolve_effective_backend(root, cfg)
+    return str(effective.get("effective", "")) == "issue-store"
+
+
 def gap_backlog_is_readonly(root: Path) -> bool:
     if migration_in_transition(root):
+        return True
+    cfg = load_workflow_config(root)
+    if issue_store_effective(root, cfg):
         return True
     dirs = pp_load_planning_dirs(root)
     gap_path = root / dirs.prds / "GAP-BACKLOG.md"
     if not gap_path.is_file():
         return False
     return GAP_BACKLOG_SHIM_MARKER in gap_path.read_text(encoding="utf-8")
+
+
+def is_gap_projection_content(content: str) -> bool:
+    return GAP_BACKLOG_SHIM_MARKER in content
+
+
+def _gap_title_from_record(record: Any) -> str:
+    title = str(getattr(record, "title", "") or "")
+    prefix = title_prefix(str(getattr(record, "project_key", "") or ""))
+    artifact = f" gap:{getattr(record, 'unit_id', '')}"
+    if title.startswith(prefix) and artifact in title:
+        return title.split(artifact, 1)[-1].strip() or getattr(record, "unit_id", "")
+    return title or str(getattr(record, "unit_id", ""))
+
+
+def _gap_table_status_from_lifecycle(lifecycle: ArtifactLifecycle) -> str:
+    return _gap_status_label(lifecycle)
+
+
+def list_gap_issue_records(root: Path, cfg: dict[str, Any] | None = None) -> list[Any]:
+    cfg = cfg or load_workflow_config(root)
+    key_result = validate_project_key(root, cfg)
+    if key_result.get("verdict") != "ok":
+        return []
+    project_key = str(key_result["projectKey"])
+    client = cfg_issues_client(root)
+    return client.issue_search(project_key=project_key, artifact_type="gap")
+
+
+def render_gap_backlog_from_issue_records(records: list[Any]) -> str:
+    lines = [
+        GAP_BACKLOG_SHIM_MARKER,
+        "",
+        "Read-only issue-derived projection (PRD 045 R21/R72).",
+        "Edit canonical gap issues — not this file.",
+        "",
+        "| ID | Status | Title |",
+        "|----|--------|-------|",
+    ]
+    for record in sorted(records, key=lambda item: str(getattr(item, "unit_id", ""))):
+        lifecycle = extract_lifecycle_from_record(record)
+        gid = _gap_legacy_id(str(getattr(record, "unit_id", "")))
+        status = _gap_table_status_from_lifecycle(lifecycle)
+        title = _gap_title_from_record(record)
+        lines.append(f"| {gid} | {status} | {title} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def parse_gap_backlog_projection_rows(content: str) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for line in content.splitlines():
+        if not line.startswith("| GAP-"):
+            continue
+        parts = [part.strip() for part in line.strip("|").split("|")]
+        if len(parts) < 3:
+            continue
+        rows.append({"gapId": parts[0].upper(), "status": parts[1].lower(), "title": parts[2]})
+    return rows
+
+
+def expected_gap_backlog_rows_from_issues(root: Path, cfg: dict[str, Any] | None = None) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for record in list_gap_issue_records(root, cfg):
+        lifecycle = extract_lifecycle_from_record(record)
+        rows.append(
+            {
+                "gapId": _gap_legacy_id(str(record.unit_id)),
+                "status": _gap_table_status_from_lifecycle(lifecycle),
+                "title": _gap_title_from_record(record),
+            }
+        )
+    rows.sort(key=lambda row: row["gapId"])
+    return rows
+
+
+def diagnose_gap_projection_divergence(root: Path, cfg: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    cfg = cfg or load_workflow_config(root)
+    if not issue_store_effective(root, cfg):
+        return []
+    dirs = pp_load_planning_dirs(root)
+    gap_path = root / dirs.prds / "GAP-BACKLOG.md"
+    if not gap_path.is_file():
+        expected = expected_gap_backlog_rows_from_issues(root, cfg)
+        if expected:
+            return [
+                {
+                    "kind": "projection-missing",
+                    "expectedRows": len(expected),
+                    "repair": "refresh-gap-backlog-projection",
+                }
+            ]
+        return []
+    content = gap_path.read_text(encoding="utf-8")
+    if not is_gap_projection_content(content):
+        return []
+    expected = expected_gap_backlog_rows_from_issues(root, cfg)
+    actual = parse_gap_backlog_projection_rows(content)
+    issues: list[dict[str, Any]] = []
+    expected_by_id = {row["gapId"]: row for row in expected}
+    actual_by_id = {row["gapId"]: row for row in actual}
+    for gap_id, row in expected_by_id.items():
+        other = actual_by_id.get(gap_id)
+        if not other:
+            issues.append({"kind": "projection-row-missing", "gapId": gap_id, "expected": row})
+            continue
+        if other["status"] != row["status"]:
+            issues.append(
+                {
+                    "kind": "projection-status-mismatch",
+                    "gapId": gap_id,
+                    "expectedStatus": row["status"],
+                    "actualStatus": other["status"],
+                }
+            )
+    for gap_id in sorted(set(actual_by_id) - set(expected_by_id)):
+        issues.append({"kind": "projection-row-stale", "gapId": gap_id, "actual": actual_by_id[gap_id]})
+    return issues
+
+
+def count_file_native_open_gaps(root: Path) -> int:
+    import planning_index_gen as pig
+
+    open_count = 0
+    for unit in pig.discover_units(root):
+        if unit.type != "gap":
+            continue
+        body = root / unit.body_path
+        if not body.is_file():
+            continue
+        lifecycle = extract_lifecycle_from_file(body.read_text(encoding="utf-8"), "gap")
+        if _gap_table_status_from_lifecycle(lifecycle) == "open":
+            open_count += 1
+    return open_count
+
+
+def refresh_gap_backlog_projection(
+    root: Path, cfg: dict[str, Any] | None = None, *, apply: bool = True
+) -> dict[str, Any]:
+    cfg = cfg or load_workflow_config(root)
+    if migration_in_transition(root):
+        return refresh_gap_backlog_shim(root, cfg, apply=apply)
+    if not issue_store_effective(root, cfg):
+        return {"skipped": True, "reason": "not-issue-store"}
+    dirs = pp_load_planning_dirs(root)
+    records = list_gap_issue_records(root, cfg)
+    content = render_gap_backlog_from_issue_records(records)
+    gap_path = root / dirs.prds / "GAP-BACKLOG.md"
+    if apply:
+        gap_path.parent.mkdir(parents=True, exist_ok=True)
+        gap_path.write_text(content, encoding="utf-8")
+    return {
+        "gapBacklog": str(gap_path.relative_to(root)),
+        "gapRows": len(records),
+        "readonly": True,
+        "source": "issue-derived",
+    }
+
+
+def try_sunset_gap_backlog_projection(root: Path, *, apply: bool = True) -> dict[str, Any]:
+    cfg = load_workflow_config(root)
+    if not issue_store_effective(root, cfg):
+        return {"skipped": True, "reason": "not-issue-store"}
+    if migration_in_transition(root):
+        return {"skipped": True, "reason": "migration-in-transition"}
+    if count_file_native_open_gaps(root) > 0:
+        return {"skipped": True, "reason": "file-native-open-gaps-remain"}
+    if list_gap_issue_records(root, cfg):
+        return {"skipped": True, "reason": "gap-issues-remain"}
+    dirs = pp_load_planning_dirs(root)
+    gap_path = root / dirs.prds / "GAP-BACKLOG.md"
+    if not gap_path.is_file():
+        return {"removed": False, "reason": "no-projection"}
+    content = gap_path.read_text(encoding="utf-8")
+    if not is_gap_projection_content(content):
+        return {"removed": False, "reason": "not-generated-projection"}
+    if apply:
+        gap_path.unlink()
+    return {"removed": True, "gapBacklog": str(gap_path.relative_to(root))}
+
+
+def sync_gap_issue_labels(root: Path, unit_id: str, content: str, cfg: dict[str, Any] | None = None) -> dict[str, Any]:
+    cfg = cfg or load_workflow_config(root)
+    if not issue_store_effective(root, cfg):
+        return {"skipped": True, "reason": "not-issue-store"}
+    key_result = validate_project_key(root, cfg)
+    if key_result.get("verdict") != "ok":
+        fail(key_result.get("message") or key_result.get("error", "invalid-project-key"))
+    project_key = str(key_result["projectKey"])
+    client = cfg_issues_client(root)
+    matches = client.issue_search(project_key=project_key, unit_id=unit_id, artifact_type="gap")
+    if not matches:
+        fail("gap-issue-missing", unitId=unit_id)
+    record = matches[0]
+    lifecycle = extract_lifecycle_from_file(content, "gap")
+    labels = _apply_gap_labels(list(record.labels), lifecycle, "gap")
+    updated = client.issue_update(record.id, labels=labels, if_match=record.etag)
+    return {"unitId": unit_id, "issueId": updated.id, "labels": labels}
 
 
 def pp_load_planning_dirs(root: Path) -> Any:

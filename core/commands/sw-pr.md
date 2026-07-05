@@ -21,7 +21,11 @@ Push after `/sw-commit`; create/update PR against the real parent branch.
    `git push` in workflow; the wrapper runs `secret-scan.py` pre-push (R41/R50).
 4. Create/update PR with Summary, Issues (`issueNumbers`), Verification, Next (`/sw-watch-ci`).
 5. PR body may include `prd:<slug>` for living-status linkage (R14).
-6. Return PR URL → `/sw-watch-ci`.
+6. **Planning-issue linkage (PRD 045 R22)** — when `planning.store.backend` is `issue-store`, include a
+   `## Linked planning issues` section with location-mode-encoded refs and `sw:deliver-link` markers for
+   deliver-linked artifacts. Reject or warn on unlinked `Closes`/`Fixes` refs that target planning issues
+   outside the deliver allowlist (R67) — never rely on raw provider keywords to close planning artifacts.
+7. Return PR URL → `/sw-watch-ci`.
 
 **Communication intensity:** ultra
 
