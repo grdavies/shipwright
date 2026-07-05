@@ -1265,6 +1265,64 @@
         "tracking-issue-refused-private-public-store"
       ],
       "ciShard": 2
+    },
+    {
+      "id": "planning-047-doc-impact-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_planning_047_doc_impact.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "doc-currency-047",
+        "doc-currency-047-p3"
+      ],
+      "ciShard": 2
+    },
+    {
+      "id": "planning-047-phase2-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_planning_047_phase2.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "jira-init-probe"
+      ],
+      "ciShard": 2
+    },
+    {
+      "id": "planning-047-phase3-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_planning_047_phase3.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "bitbucket-guidance",
+        "bitbucket-jira-e2e"
+      ],
+      "ciShard": 2
+    },
+    {
+      "id": "planning-047-conformance-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_planning_047_conformance.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "jira-conformance"
+      ],
+      "ciShard": 2
     }
   ]
 }

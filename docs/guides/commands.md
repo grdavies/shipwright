@@ -96,6 +96,22 @@ See [`core/commands/sw-doc.md`](../../core/commands/sw-doc.md) **Planning comman
 Quiesce deliver and reconciler before `--apply`. During transition `GAP-BACKLOG.md` is a read-only
 projection — use `planning_gap_capture.py` for new gaps (see [`feedback` skill](../../core/skills/feedback/SKILL.md)).
 
+
+### Issue-store probes (PRD 043 / PRD 047)
+
+| Probe | Command |
+| --- | --- |
+| Effective backend + Bitbucket guidance | `python3 scripts/planning_store.py resolve-backend` |
+| Bitbucket routing when `issuesProvider` unset | `python3 scripts/planning_store.py bitbucket-issue-store-guidance` |
+| Jira init (auth, privacy, createmeta, labels) | `python3 scripts/planning_store.py probe-jira-init` |
+| Issues token scope | `python3 scripts/planning_store.py probe-issues-token` |
+
+Jira Cloud is the default Jira flavor; DC/Server expands on validated demand. Bitbucket code repos default
+to a **separate** GitHub/GitLab planning project — Jira is opt-in. See
+[`configuration.md`](configuration.md#issue-store-prd-043-opt-in) and
+[`workflows.md`](workflows.md#issue-store-on-bitbucket-hosts-prd-047-d25).
+
+
 ## Entry points
 
 | Command | When to use | Does not |

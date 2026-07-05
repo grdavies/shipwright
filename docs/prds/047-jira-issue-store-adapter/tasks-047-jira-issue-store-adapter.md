@@ -84,15 +84,15 @@ Self-hosted variant and fail-closed init/create probes for auth, privacy, requir
 
 End-to-end Bitbucket→Jira (and Bitbucket→separate-project) acceptance and the cross-provider conformance gate.
 
-- [ ] 3.1 Bitbucket guidance wiring + end-to-end acceptance (R32b, D25)
+- [x] 3.1 Bitbucket guidance wiring + end-to-end acceptance (R32b, D25)
   - **File:** `core/providers/host/bitbucket.md`, `scripts/tests/run-planning-047-doc-impact-fixtures.sh`
   - **Expected:** `host.provider == bitbucket` with unset `issuesProvider` emits Jira / separate-planning-project guidance (PRD 043 Phase 1) and never falls back to native Bitbucket issues; Bitbucket→Jira and Bitbucket→separate-project paths work end to end; default = separate GH/GL project, Jira opt-in, Cloud first (D25)
   - **R-IDs:** R32b
-- [ ] 3.2 Cross-provider conformance against Jira fixtures
+- [x] 3.2 Cross-provider conformance against Jira fixtures
   - **File:** `scripts/tests/run-planning-047-conformance.sh`, `core/sw-reference/pr-test-plan.manifest.json`
   - **Expected:** PRD 043 cross-provider acceptance suite passes against recorded Jira Cloud + DC/Server fixtures; verb mapping + degradation (incl. degraded `issue-lock`) asserted
   - **R-IDs:** R32b
-- [ ] 3.3 Phase-3 documentation exit-gate (PRD 043 R49)
+- [x] 3.3 Phase-3 documentation exit-gate (PRD 043 R49)
   - **File:** `docs/guides/workflows.md`, `docs/guides/commands.md`
   - **Expected:** doc-impact fixture asserts Bitbucket EOL/routing + Jira workflow notes updated before phase ship
   - **R-IDs:** R32b

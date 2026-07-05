@@ -633,6 +633,23 @@ Config: `planning.autonomy` + `planning.fullConductor.*` — see [configuration]
 `inFlight` is never mechanical. Branch protection probe fails closed to PR path.
 
 
+
+## Issue-store on Bitbucket hosts (PRD 047 D25)
+
+Bitbucket Cloud repos use this host adapter for PR/CI only — **not** native Bitbucket issues for planning.
+
+| Planning path | Config |
+| --- | --- |
+| **Default** — separate GitHub/GitLab planning project | `planning.store.storeLocation.mode: separate-project` + `issuesProvider: github-issues` or `gitlab-issues` |
+| **Opt-in** — Jira (Cloud first) | `planning.store.issuesProvider: jira` + `planning.store.issues.*` |
+
+When `issuesProvider` is unset on a Bitbucket host with `backend: issue-store`, run
+`python3 scripts/planning_store.py bitbucket-issue-store-guidance` for structured routing guidance before
+enabling issue-store. Init probes for Jira: `python3 scripts/planning_store.py probe-jira-init`.
+
+Fixture suites: `scripts/test/run-planning-047-doc-impact-fixtures.sh`,
+`scripts/test/run-planning-047-conformance.sh`, `scripts/test/run-planning-047-phase3-fixtures.sh`.
+
 ## Build-chain maintenance (PRD 038)
 
 When a change touches repo-root `scripts/` or other harness/emittable paths, propagate through the

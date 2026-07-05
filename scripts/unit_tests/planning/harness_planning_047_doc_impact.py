@@ -101,6 +101,21 @@ for fx in prd-open adf-roundtrip server-mutated-adf wiki-dc; do
   [[ -f "$FX_DIR/${fx}.json" ]] && ok "doc-currency-047:fixture-${fx}" || bad "doc-currency-047:fixture-${fx}"
 done
 
+
+BITBUCKET="$(content_path providers/host/bitbucket.md)"
+WORKFLOWS="$ROOT/docs/guides/workflows.md"
+COMMANDS="$ROOT/docs/guides/commands.md"
+check "doc-currency-047-p3:bitbucket-eol-routing" "$BITBUCKET" "never.*route to native"
+check "doc-currency-047-p3:bitbucket-separate-project-default" "$BITBUCKET" "separate-project"
+check "doc-currency-047-p3:bitbucket-jira-opt-in" "$BITBUCKET" "issuesProvider: jira"
+check "doc-currency-047-p3:bitbucket-guidance-command" "$BITBUCKET" "bitbucket-issue-store-guidance"
+check "doc-currency-047-p3:workflows-bitbucket-hosts" "$WORKFLOWS" "Bitbucket hosts"
+check "doc-currency-047-p3:workflows-jira-opt-in" "$WORKFLOWS" "Jira \(Cloud first\)"
+check "doc-currency-047-p3:workflows-separate-planning" "$WORKFLOWS" "separate.*planning"
+check "doc-currency-047-p3:commands-jira-probe" "$COMMANDS" "probe-jira-init"
+check "doc-currency-047-p3:commands-bitbucket-guidance" "$COMMANDS" "bitbucket-issue-store-guidance"
+[[ -f "$ROOT/scripts/unit_tests/planning/harness_planning_047_conformance.py" ]] && ok "doc-currency-047-p3:conformance-runner" || bad "doc-currency-047-p3:conformance-runner"
+
 exit "$FAIL"
 """
 
