@@ -7,7 +7,7 @@ program: issue-backed-planning-store
 depends: [043-issue-backed-planning-store, 044-issue-store-migration, 045-issue-native-dev-tracking]
 frozen: true
 frozen_at: 2026-06-30
-
+---
 
 # PRD 046 — Issue-store planning-graph derivation
 

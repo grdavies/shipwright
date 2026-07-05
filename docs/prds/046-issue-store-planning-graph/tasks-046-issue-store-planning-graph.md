@@ -6,7 +6,7 @@ prd: docs/prds/046-issue-store-planning-graph/046-prd-issue-store-planning-graph
 program: issue-backed-planning-store
 frozen: true
 frozen_at: 2026-06-30
-
+---
 
 # Tasks — PRD 046 Issue-store planning-graph derivation
 
