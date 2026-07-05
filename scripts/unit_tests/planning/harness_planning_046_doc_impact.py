@@ -61,6 +61,23 @@ check "doc-currency-046:emission-issue-derived-ingest" "$ROOT/core/skills/visibi
 [[ -f "$ROOT/scripts/planning_discover.py" ]] && ok "doc-currency-046:planning-discover-present" || bad "doc-currency-046:planning-discover-present"
 [[ -f "$ROOT/scripts/planning_region_disposition.py" ]] && ok "doc-currency-046:region-disposition-present" || bad "doc-currency-046:region-disposition-present"
 
+
+WORKFLOWS="$ROOT/docs/guides/workflows.md"
+README="$ROOT/README.md"
+MEMORY_SKILL="$(content_path skills/memory/SKILL.md)"
+RECALLIUM="$(content_path providers/recallium.md)"
+check "doc-currency-046:workflows-hierarchy" "$WORKFLOWS" "epic/sub-issue"
+check "doc-currency-046:workflows-recall" "$WORKFLOWS" "cross-project recall"
+check "doc-currency-046:workflows-tracking" "$WORKFLOWS" "tracking-issue"
+check "doc-currency-046:readme-issue-graph" "$README" "issue-derived planning graph"
+check "doc-currency-046:memory-cross-project-recall" "$MEMORY_SKILL" "Cross-project recall"
+check "doc-currency-046:recallium-cross-project" "$RECALLIUM" "Cross-project recall"
+check "doc-currency-046:deliver-hierarchy" "$DELIVER" "Task-list hierarchy"
+check "doc-currency-046:issues-capabilities-hierarchy" "$(content_path providers/issues/CAPABILITIES.md)" "issue-epic-create"
+[[ -f "$ROOT/scripts/planning_hierarchy.py" ]] && ok "doc-currency-046:planning-hierarchy-present" || bad "doc-currency-046:planning-hierarchy-present"
+[[ -f "$ROOT/scripts/planning_tracking_issue.py" ]] && ok "doc-currency-046:planning-tracking-issue-present" || bad "doc-currency-046:planning-tracking-issue-present"
+[[ -f "$ROOT/scripts/planning_cross_project_recall.py" ]] && ok "doc-currency-046:cross-project-recall-present" || bad "doc-currency-046:cross-project-recall-present"
+
 exit "$FAIL"
 """
 

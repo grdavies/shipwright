@@ -280,6 +280,26 @@ When `planning.store.backend` is `issue-store` and a PRD is frozen via `planning
 
 Failure at distillation → `sw:freeze-incomplete` on the PRD issue; deliver halts fail-closed.
 
+## Cross-project recall (PRD 046 R90 / PRD 043 R27)
+
+When issue-store is active, rationale and distilled learnings may be recalled across `projectKey`
+boundaries via memory pointers — never by duplicating deliverable bodies into memory.
+
+```bash
+python3 scripts/planning_cross_project_recall.py recall   --payload-json '{"sourceProjectKey":"proj-a","callerProjectKey":"proj-b","query":"rationale","pointers":[...],"authorizedProjects":["proj-a"]}'
+```
+
+- **Scope:** queries are keyed by source `projectKey` + caller authorization (`authorizedProjects`).
+- **Redaction:** pointer dereference passes through `scripts/memory-redact.py` on read; `private`/`memory`
+  visibility emits opaque excerpts (`{unitId}: [private]`) — project B cannot read project A private rationale.
+- **Ranking:** deterministic tie-break (`projectKey`, `unitId`, `memoryId`).
+- **No duplication:** deliverable content stays in planning artifacts; memory holds pointers and redacted
+  distillations only.
+
+Route all cross-project recall through this skill + `providers/<memory.provider>.md` — never direct provider
+calls from deliver or planning-graph code.
+
+
 ## Boundaries
 
 - Never call a provider tool directly from a command; always go through this skill + the adapter.

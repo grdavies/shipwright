@@ -1428,6 +1428,18 @@
       "verifyOrder": 53,
       "pytestPath": "scripts/unit_tests/planning",
       "ciShard": 2
+    },
+    {
+      "id": "planning-046-phase3-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 54,
+      "pytestPath": "scripts/unit_tests/planning/test_planning_046_phase3.py",
+      "ciShard": 2
     }
   ]
 }
