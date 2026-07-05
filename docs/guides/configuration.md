@@ -177,12 +177,48 @@ Example (opt-in):
 }
 ```
 
-**Fallback matrix (R3):** effective backend falls back to `in-repo-public` when `issuesProvider` is `none`/unsupported,
-`jira` (until PRD 047 ships), or `host.provider` is `none`. A documented notice is emitted; work is never blocked.
+**Fallback matrix (R3):** effective backend falls back to `in-repo-public` when `issuesProvider` is `none`/unsupported
+or `host.provider` is `none`. A documented notice is emitted; work is never blocked.
 
 **Network dependence (R15/R41):** issue-store mode requires API connectivity for planning operations once phase 2+
 CRUD is active. Init probes token scope via `python3 scripts/planning_store.py probe-issues-token` (fail-closed on
 missing/insufficient scope).
+
+
+
+### Jira Cloud issue-store (PRD 047)
+
+When `planning.store.issuesProvider` is `jira`, configure the Jira adapter keys under `planning.store.issues`:
+
+| Key | Values | Meaning |
+| --- | --- | --- |
+| `planning.store.issues.endpoint` | URL | Jira base URL (`https://<org>.atlassian.net` for Cloud) |
+| `planning.store.issues.flavor` | `cloud` (default) \| `dc` | Serialization + auth variant (ADF vs wiki) |
+| `planning.store.issues.tokenEnv` | string | Dedicated token env (default `ISSUES_JIRA_TOKEN`) |
+| `planning.store.issues.freezeRecordField` | string | Custom field id for write-once freeze record (Cloud) |
+
+Example (Jira Cloud + separate planning project — typical for Bitbucket code repos per D25):
+
+```json
+{
+  "planning": {
+    "store": {
+      "backend": "issue-store",
+      "issuesProvider": "jira",
+      "projectKey": "my-project",
+      "storeLocation": { "mode": "separate-project" },
+      "issues": {
+        "endpoint": "https://my-org.atlassian.net",
+        "flavor": "cloud",
+        "tokenEnv": "ISSUES_JIRA_TOKEN",
+        "freezeRecordField": "customfield_10042"
+      }
+    }
+  }
+}
+```
+
+See `core/providers/issues/jira.md` for LCD mapping, canonical hash, and freeze-decoupling semantics.
 
 See `core/providers/planning-store/issue-store.md` and `core/providers/issues/CAPABILITIES.md`.
 

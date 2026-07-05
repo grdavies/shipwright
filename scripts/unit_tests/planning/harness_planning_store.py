@@ -330,6 +330,23 @@ else
   bad "canonical-hash-golden:cross-provider-parity"
 fi
 
+JIRA_CANON="$ROOT/scripts/planning_jira_canonical.py"
+for fx in jira/prd-open jira/adf-roundtrip jira/server-mutated-adf jira/wiki-dc; do
+  FPATH="$ROOT/scripts/tests/fixtures/canonical/${fx}.json"
+  if OUT=$(python3 "$JIRA_CANON" normalize --fixture "$FPATH") && \
+     echo "$OUT" | python3 -c "import json,sys,pathlib; d=json.load(sys.stdin); exp=json.loads(pathlib.Path(sys.argv[1]).read_text())['expectedHash']; assert d['hash']==exp" "$FPATH"; then
+    ok "canonical-hash-golden:${fx}"
+  else
+    bad "canonical-hash-golden:${fx}"
+  fi
+done
+JIRA_H=$(python3 -c "import json; print(json.load(open('$ROOT/scripts/tests/fixtures/canonical/jira/prd-open.json'))['expectedHash'])")
+if [[ "$GH" == "$JIRA_H" ]]; then
+  ok "canonical-hash-golden:jira-cross-provider-parity"
+else
+  bad "canonical-hash-golden:jira-cross-provider-parity"
+fi
+
 # --- brainstorm-durability-link (R18) ---
 python3 "$PY" --root "$ROOT" clear-issue-fixture >/dev/null
 cp "$ISSUE_CFG" "$ROOT/.cursor/workflow.config.json"

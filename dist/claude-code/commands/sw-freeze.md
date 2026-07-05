@@ -81,6 +81,15 @@ python3 scripts/planning_store.py freeze --unit-id <unit-id> --body-path <artifa
 - Distillation failure flags `sw:freeze-incomplete` and blocks deliver (fail-closed)
 - CI/deliver verify via `python3 scripts/planning_store.py verify-frozen-hash ...`
 
+
+
+### Jira lifecycle-drift (PRD 047 R104)
+
+When `planning.store.issuesProvider` is `jira`, freeze immutability is **decoupled from Jira workflow status**
+(D26): `sw:frozen` + canonical content-hash are authoritative; Jira `status` is display/probe only. An
+external or automation status transition on a frozen issue is classified as **`lifecycle-drift`** — distinct
+from PRD 043 R37 `tamper-detected`. `issue-lock` is degraded (hash-authoritative tamper-evidence only).
+
 Local `frozen: true` frontmatter and INDEX registration remain required for file-native artifacts.
 Decision-class artifacts stay file-native (D8).
 
