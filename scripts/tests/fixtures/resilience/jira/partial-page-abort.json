@@ -1,0 +1,6 @@
+{
+  "scenario": "partial-page-abort",
+  "pagesFetched": 2,
+  "pageCap": 5,
+  "expect": "deliver-aborted-inconsistent"
+}

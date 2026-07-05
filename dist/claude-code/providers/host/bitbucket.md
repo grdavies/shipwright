@@ -68,11 +68,20 @@ Token from `host.tokenEnv` (default `BITBUCKET_TOKEN`). Repository read/write sc
 Never stored in config.
 
 
-## Planning / issue-store routing (PRD 043)
+## Planning / issue-store routing (PRD 043 / PRD 047 D25)
 
-Bitbucket Cloud does not ship a first-class issues adapter in core. For issue-backed planning, route via a
-**separate GitHub/GitLab planning project** (`planning.store.storeLocation.mode: separate-project`) or
-**Jira** (`planning.store.issuesProvider: jira`, PRD 047) — not native Bitbucket issues.
+Bitbucket Cloud **does not** ship a first-class issues adapter in core — **never** route to native
+Bitbucket issues for planning.
+
+| Path | When | Config |
+| --- | --- | --- |
+| **Separate GitHub/GitLab planning project** (default) | Bitbucket code repo + issue-store without `issuesProvider` | `storeLocation.mode: separate-project` + `issuesProvider: github-issues` or `gitlab-issues` |
+| **Jira** (opt-in; Cloud first) | Jira-standardized org on Bitbucket host | `issuesProvider: jira` + `planning.store.issues.*` keys (PRD 047) |
+
+When `host.provider == bitbucket` and `planning.store.backend == issue-store` with unset/`none`
+`issuesProvider`, `python3 scripts/planning_store.py resolve-backend` falls back to `in-repo-public` and
+emits structured guidance via `bitbucket-issue-store-guidance` — separate-project default, Jira opt-in,
+never native Bitbucket issues.
 
 Host PR/CI verbs remain on this adapter; issue-store credentials use `planning.store.issues.tokenEnv`, not
 `host.tokenEnv`.

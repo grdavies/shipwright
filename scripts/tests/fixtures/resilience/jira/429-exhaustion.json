@@ -1,0 +1,5 @@
+{
+  "scenario": "429-exhaustion",
+  "attempts": 4,
+  "expect": "deliver-aborted-inconsistent"
+}

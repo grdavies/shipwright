@@ -1,0 +1,13 @@
+{
+  "title": "[acme] prd:001-sample",
+  "state": "open",
+  "labels": [
+    "sw:prd",
+    "sw:project:acme"
+  ],
+  "comments": [],
+  "provider": "jira",
+  "expectedHash": "b3fb3bcf9d4ca0435f3642138854b59c7aa0ec618c9503510db2bb6c401b80a6",
+  "flavor": "dc",
+  "submitWiki": "<!-- sw-project-key: acme -->\n<!-- sw-artifact-type: prd -->\n<!-- sw-unit-id: 001-sample -->\n<!-- sw-canonical-version: 1 -->\n\n\nh1. Sample PRD\n\nh2. Overview\n\nCross-provider golden vector."
+}

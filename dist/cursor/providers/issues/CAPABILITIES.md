@@ -72,20 +72,20 @@ Selector requires the verb capability; absent capability → fail-closed halt.
 
 | Verb / feature | github-issues | gitlab-issues | jira | none |
 | --- | --- | --- | --- | --- |
-| `issue-create` | REST | REST | REST (047) | — (fallback) |
-| `issue-get` | REST | REST | REST (047) | — |
-| `issue-update` | REST + ETag | REST + ETag | REST (047) | — |
-| `issue-comment` | REST | REST | REST (047) | — |
-| `issue-label` | REST | REST | REST (047) | — |
-| `issue-lock` | REST (lock conversation) | REST (issue lock) | REST (047) | — |
-| `issue-search` | REST | REST | REST (047) | — |
-| `issue-close` | REST (`PATCH` state=closed) | REST | REST (047) | — |
+| `issue-create` | REST | REST | REST (`/rest/api/3/issue` Cloud; `/rest/api/2/issue` DC) | — (fallback) |
+| `issue-get` | REST | REST | REST (`GET /rest/api/3/issue/{key}`) | — |
+| `issue-update` | REST + ETag | REST + ETag | REST (`PUT /rest/api/3/issue/{key}`) | — |
+| `issue-comment` | REST | REST | REST (`POST .../comment`) | — |
+| `issue-label` | REST | REST | REST (`update.labels`) | — |
+| `issue-lock` | REST (lock conversation) | REST (issue lock) | **degraded** (hash-authoritative; R104) | — |
+| `issue-search` | REST | REST | REST (JQL `POST /rest/api/3/search`) | — |
+| `issue-close` | REST (`PATCH` state=closed) | REST | REST (transition idempotent close) | — |
 | `linked-pr-introspection` | gated `graphql.linked-pr` + REST fallback | REST (notes) | — | — |
 | `issue-milestone` | REST (milestone field) | REST (iteration) | — (047 TBD) | — (skip+notice) |
 | `issue-lock` GraphQL fallback | gated `graphql.issue-lock` | — | — | — |
 | `issue-search` GraphQL fallback | gated `graphql.issue-search` | — | — | — |
-| Native confidential/private issues | not portable guarantee | bonus only | project-dependent | — |
-| Flat labels | yes | yes | mapped | — |
+| Native confidential/private issues | not portable guarantee | bonus only | **unsupported** (project-level; R105) | — |
+| Flat labels | yes | yes | labels → components → custom field (R109) | — |
 
 `none` always routes to `in-repo-public` file-store fallback (R3) with a documented notice — never blocks work.
 
@@ -130,3 +130,28 @@ When `planning.releaseGrouping.mode` is `milestone` or `iteration` but the confi
 | `jira` | pending (047) | fixVersion / sprint |
 | `none` | skip+notice | flat-label only |
 
+
+
+## Jira Cloud vs DC/Server (PRD 047 R100)
+
+| Concern | Cloud | DC/Server |
+| --- | --- | --- |
+| Description format | ADF | Wiki markup |
+| Auth | Email + API token | PAT required (password/basic rejected) |
+| REST API | `/rest/api/3/` | `/rest/api/2/` |
+| `issue-lock` | degraded (hash-authoritative) | degraded |
+| Per-issue privacy | unsupported | unsupported |
+| Canonical normalization | `adf_to_markdown` | `wiki_to_markdown` |
+
+Adapter spec: `core/providers/issues/jira.md`.
+
+
+### Label degradation ladder (R109)
+
+| Step | Surface | When |
+| --- | --- | --- |
+| 1 | `labels` | default; init probe validates write permission |
+| 2 | `components` | when label write denied |
+| 3 | custom field | `planning.store.issues.labelCustomField` |
+
+PRD 043 R42 body marker is authoritative for isolation on shared Jira projects regardless of label surface.
