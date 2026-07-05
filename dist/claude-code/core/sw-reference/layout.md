@@ -148,9 +148,10 @@ edges recorded in `.cursor/planning-migration-supersession-map.json` are **rever
 
 ### Gaps as first-class units (R3)
 
-Gap artifacts are planning units with `type: gap` (folder + frontmatter). They **replace** `GAP-BACKLOG.md`
-table rows at cutover and render as rows in the **single generated unified INDEX** — not a separate gap-only
-index. Legacy `docs/prds/GAP-BACKLOG.md` is a compatibility projection until consumers migrate (R27).
+Gap artifacts are planning units with `type: gap` (folder + frontmatter) on file-backend, or native `sw:gap`
+provider issues under **issue-store** (PRD 045 R21). They render as rows in the unified INDEX. Legacy
+`docs/prds/GAP-BACKLOG.md` is a **write-through projection** from gap issues when issue-store is active (PRD
+045 R72) or a compatibility projection until consumers migrate (R27).
 
 ## Naming conventions
 
@@ -166,7 +167,7 @@ index. Legacy `docs/prds/GAP-BACKLOG.md` is a compatibility projection until con
 | Living index | `docs/prds/INDEX.md` | `/sw-freeze`, `/sw-tasks` | never |
 | Decision index | `docs/decisions/INDEX.md` | `/sw-freeze` | never |
 | Completion log | `docs/prds/COMPLETION-LOG.md` | implementation workstream | never |
-| Gap backlog | `docs/prds/GAP-BACKLOG.md` | `/sw-feedback` (Phase 2) | never |
+| Gap backlog | `docs/prds/GAP-BACKLOG.md` | issue-derived write-through projection (issue-store) or legacy reconciler | never |
 
 ### PRD numbering (`<n>`)
 
@@ -293,7 +294,7 @@ repo-root/                          primary checkout (defaultBaseBranch)
 
 - **Frozen:** brainstorms, PRDs, task lists, amendments — immutable after `/sw-freeze`; change only via new amendments.
 - **Living:** `INDEX.md`, `COMPLETION-LOG.md` — updated as work progresses; never frozen.
-- **Gap backlog:** `GAP-BACKLOG.md` — committed, append-only, hand-appendable; not frozen, not git-derived.
+- **Gap backlog:** `GAP-BACKLOG.md` — under issue-store, issue-derived write-through projection only (PRD 045 R72); file-backend legacy projection until cutover; never hand-appendable; not frozen.
 - **Generated install trees:** `dist/cursor/` and `dist/claude-code/` — committed outputs of `python3 -m sw generate`; edit `core/` then regenerate (freshness gate in `scripts/test/run_emitter_fixtures.py`). Not hand-edited except via emitter changes.
 
 
