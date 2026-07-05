@@ -822,7 +822,9 @@
         "status-precedence-resolves",
         "region-hook-rejects-cross-writer",
         "empty-inflight-with-runstate-fails",
-        "living-doc-index-generator-wired"
+        "living-doc-index-generator-wired",
+        "planning-index-region-marker-newline-valid",
+        "index-region-guard-glued-marker-refuse"
       ],
       "ciShard": 3
     },
@@ -1218,6 +1220,33 @@
         "read-config-emits-valid-json"
       ],
       "ciShard": 4
+    },
+    {
+      "id": "planning-046-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "issue-derived-index-semantic-parity",
+        "generation-token-monotonic",
+        "cutover-dual-source-doctor-clean"
+      ],
+      "ciShard": 2
+    },
+    {
+      "id": "planning-046-doc-impact-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "ciShard": 2
     }
   ]
 }

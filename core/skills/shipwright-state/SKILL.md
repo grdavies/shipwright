@@ -71,3 +71,5 @@ python3 scripts/shipwright-state.py index   # read-only aggregate — never writ
 - Commands read/write state only through this contract.
 - Never commit `shipwright.json` or memory-sync markers.
 - Two worktrees must never share or overwrite each other's state file.
+
+Phase-mode deliver runs persist status under `.cursor/sw-deliver-runs/<phase-slug>/status.json` with `merge-ready-green` or `blocked` verdicts (PRD 046 phase ship).

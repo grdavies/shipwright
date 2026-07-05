@@ -46,6 +46,24 @@ def collect_staged_paths(root: Path, index_rel_path: str) -> list[str]:
     return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
 
 
+
+def detect_glued_markers(content: str) -> list[str]:
+    """Fail closed on region start marker glued to inner body (PRD 046 R102)."""
+    violations: list[str] = []
+    for region, (start, _end) in pig.REGION_MARKERS.items():
+        idx = 0
+        while True:
+            pos = content.find(start, idx)
+            if pos == -1:
+                break
+            after = pos + len(start)
+            if after < len(content) and content[after] != "\n":
+                violations.append(
+                    f"glued marker for {region}: start marker not followed by newline"
+                )
+            idx = after
+    return violations
+
 def run_guard(root: Path, index_rel_path: str, writer: str) -> int:
     index_path = root / index_rel_path
     errors: list[str] = []
@@ -94,6 +112,10 @@ def run_guard(root: Path, index_rel_path: str, writer: str) -> int:
                 f"region {region} modified without authorized writer "
                 f"(got {writer!r}, allowed {sorted(allowed)})"
             )
+
+    glued = detect_glued_markers(new_text_content)
+    for violation in glued:
+        errors.append(violation)
 
     try:
         inflight_body = pig.parse_regions(new_text_content).inFlight

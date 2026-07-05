@@ -222,6 +222,76 @@ else
   bad "living-doc-index-generator-wired"
 fi
 
+# --- planning-index-region-marker-newline-valid (PRD 046 R101) ---
+TMP_MARKER=$(mktemp -d)
+(
+  cd "$TMP_MARKER"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  mkdir -p docs/planning/gap/gap-marker-newline
+  cat > docs/planning/gap/gap-marker-newline/gap-marker-newline.md <<'MD'
+---
+id: gap-marker-newline
+type: gap
+status: open
+title: Marker newline
+visibility: public
+---
+# body
+MD
+  python3 "$PY" "$TMP_MARKER" generate >/dev/null
+  INDEX=docs/planning/INDEX.md
+  for region in structural derived inFlight; do
+    python3 -c "
+import sys
+sys.path.insert(0,'$ROOT/scripts')
+import planning_index_gen as pig
+text = open('$TMP_MARKER/$INDEX').read()
+start = pig.REGION_MARKERS['$region'][0]
+pos = text.find(start)
+assert pos != -1
+after = pos + len(start)
+assert text[after] == chr(10), repr(text[after:after+20])
+"
+  done
+) && ok "planning-index-region-marker-newline-valid" || bad "planning-index-region-marker-newline-valid"
+
+# --- index-region-guard-glued-marker-refuse (PRD 046 R102) ---
+TMP_GLUE=$(mktemp -d)
+(
+  cd "$TMP_GLUE"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  mkdir -p docs/planning
+  cp -R "$FIX_SRC/units/"* docs/planning/
+  python3 "$PY" "$TMP_GLUE" generate >/dev/null
+  git add docs/planning
+  git commit -q -m "seed"
+  INDEX=docs/planning/INDEX.md
+  python3 -c "
+from pathlib import Path
+import sys
+sys.path.insert(0,'$ROOT/scripts')
+import planning_index_gen as pig
+p = Path('$TMP_GLUE/$INDEX')
+text = p.read_text()
+start = pig.REGION_MARKERS['structural'][0]
+end = pig.REGION_MARKERS['structural'][1]
+inner_start = text.index(start) + len(start)
+inner_end = text.index(end)
+# glue marker to table header
+p.write_text(text[:inner_start] + '| id |' + text[inner_end:])
+"
+  git add "$INDEX"
+  set +e
+  OUT=$(python3 "$GUARD" --staged --repo-root "$TMP_GLUE" 2>&1)
+  EC=$?
+  set -e
+  [[ "$EC" -ne 0 ]] && echo "$OUT" | grep -qi 'glued'
+) && ok "index-region-guard-glued-marker-refuse" || bad "index-region-guard-glued-marker-refuse"
+
 exit "$FAIL"
 
 """
