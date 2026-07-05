@@ -14,6 +14,7 @@ on `/sw-deliver` is opt-in only — see [configuration](docs/guides/configuratio
 
 - **Traceable specs** — frozen PRDs, tasks, and amendments live in your repo (optional `issue-store` backend stores them as provider issues — opt-in, default unchanged)
 - **issue-native dev-tracking** — under `issue-store`: gap issues, commit/PR linkage with safe close-on-merge, doc-review via integrity-checked issue comments, and milestone grouping (PRD 045; inert for file-store users)
+- **issue-derived planning graph** — under `issue-store`: read-only INDEX/living-status from issue labels, epic/sub-issue phase hierarchy with checkbox fallback, redacted cross-project recall, and inFlight tracking-issue safety (PRD 046; inert for file-store users)
 - **Gated ship loop** — verify, review, CI truth, stabilize; *you* merge
 - **Compounding memory** — post-ship retro and durable project learnings
 

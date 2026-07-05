@@ -96,27 +96,27 @@ Read-only issue-derived INDEX and scheduler within a fail-closed request budget 
 
 Epic/sub-issue hierarchy with portable fallback, aggregate parent status, redacted cross-project recall, and inFlight tracking-issue safety.
 
-- [ ] 3.1 Epic + sub-issue hierarchy with checkbox fallback (R23)
+- [x] 3.1 Epic + sub-issue hierarchy with checkbox fallback (R23)
   - **File:** `core/skills/deliver/SKILL.md`, `scripts/planning_graph.py`
   - **Expected:** task lists map to provider epic + sub-issue-per-phase where supported (PRD 043 R30/R31), degrading to checkbox/body-encoded phase list where not; deliver updates sub-issue/checkbox state as phases merge under PRD 043 R39 + PRD 045 R70 budget
   - **R-IDs:** R23
-- [ ] 3.2 Aggregate parent status, fail-closed on conflict (R91)
+- [x] 3.2 Aggregate parent status, fail-closed on conflict (R91)
   - **File:** `scripts/planning_graph.py`
   - **Expected:** epic/parent status is aggregate of children via read-time label reconciliation; fails closed when children contradict parent tier/status; body-encoded `sw-edges` (PRD 043 R47) authoritative on conflict, native links reconciled on read
   - **R-IDs:** R91
-- [ ] 3.3 Hierarchy capability matrix + budget + fallback (R94)
+- [x] 3.3 Hierarchy capability matrix + budget + fallback (R94)
   - **File:** `core/sw-reference/capability-index.json`, `core/providers/issues/CAPABILITIES.md`
   - **Expected:** epic/sub-issue projection bound to PRD 043 R31 matrix with per-provider verb table (REST vs capability-gated GraphQL per R50), per-phase API budget (R81), mandatory checkbox/body fallback (incl. GitHub-only); absent capability degrades with operator notice, deliver continues
   - **R-IDs:** R94
-- [ ] 3.4 Cross-project recall, redacted (R90)
+- [x] 3.4 Cross-project recall, redacted (R90)
   - **File:** `core/skills/memory/SKILL.md`, `core/providers/recallium.md`
   - **Expected:** implements PRD 043 R27; recall scoped by source `projectKey` + caller authorization; pointer dereference through `memory-redact` so project B cannot read project A private rationale/raw excerpts; deterministic ranking/tie-break; no deliverable duplication into memory
   - **R-IDs:** R90
-- [ ] 3.5 inFlight tracking-issue redaction/refusal (R89)
+- [x] 3.5 inFlight tracking-issue redaction/refusal (R89)
   - **File:** `scripts/planning_graph.py`, `core/skills/deliver/SKILL.md`
   - **Expected:** tracking issue routes through PRD 034 `redact_inflight_tuple` + resolver: opaque title/body for `private`/`memory`, confidential type where supported, refusal to create on public/shared store for private/`memory` (PRD 043 R28 fail-closed)
   - **R-IDs:** R89
-- [ ] 3.6 Phase-3 documentation exit-gate (PRD 043 R49)
+- [x] 3.6 Phase-3 documentation exit-gate (PRD 043 R49)
   - **File:** `docs/guides/workflows.md`, `README.md`
   - **Expected:** doc-impact fixture asserts hierarchy + recall + getting-started notes updated before phase ship
   - **R-IDs:** R23

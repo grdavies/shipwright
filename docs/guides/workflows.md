@@ -487,6 +487,44 @@ is PRD 046 — 045 is grouping/annotation only.
 See `core/commands/sw-doc-review.md`, `core/skills/doc-review/SKILL.md`, and
 `docs/guides/configuration.md` **Release grouping**.
 
+
+## Issue-derived graph, hierarchy, and cross-project recall (PRD 046 Phase 3)
+
+Inert when `planning.store.backend != issue-store`.
+
+### Task-list hierarchy (R23, R91, R94)
+
+Frozen task lists project to provider epic/sub-issue hierarchy where supported; providers lacking
+hierarchy verbs degrade to checkbox/body-encoded phase lists with operator notice — deliver continues.
+
+```bash
+python3 scripts/planning_hierarchy.py <repo> resolve-mode
+python3 scripts/planning_hierarchy.py <repo> project docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
+python3 scripts/planning_hierarchy.py <repo> aggregate-status --payload-json '<parent+children>'
+```
+
+Parent epic status aggregates from children on read; contradictions fail closed. Body `sw-edges` blocks are
+authoritative over native sub-issue links on conflict.
+
+### Cross-project recall (R90)
+
+Rationale pointers may be recalled across `projectKey` boundaries when authorized; dereference is redacted
+via `memory-redact` so project B cannot read project A private rationale.
+
+```bash
+python3 scripts/planning_cross_project_recall.py recall --payload-json '{"sourceProjectKey":"a","callerProjectKey":"b",...}'
+```
+
+See `core/skills/memory/SKILL.md` **Cross-project recall**.
+
+### inFlight tracking-issue safety (R89)
+
+Optional tracking issues for committed `inFlight` tuples route through `planning_tracking_issue.py` and
+`redact_inflight_tuple`; private/`memory` units are refused on public origin stores.
+
+See `core/skills/deliver/SKILL.md` **Task-list hierarchy and inFlight tracking issues**.
+
+
 ## Debug workstream
 
 Use when something is broken in production or you need RCA before fixing.

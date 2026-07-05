@@ -1247,6 +1247,24 @@
       "classification": "required",
       "ciJobName": "feat-test-plan-pytest-required-shard-2",
       "ciShard": 2
+    },
+    {
+      "id": "planning-046-phase3-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_planning_046_phase3.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "epic-sub-issue-dry-run-github",
+        "checkbox-fallback-provider-none",
+        "aggregate-parent-status-ok-and-conflict",
+        "cross-project-recall-private-opaque",
+        "tracking-issue-refused-private-public-store"
+      ],
+      "ciShard": 2
     }
   ]
 }
