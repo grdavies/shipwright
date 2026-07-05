@@ -237,6 +237,7 @@
 * merge phase linkage-safe-close-and-deliver-annotations-l into feat/issue-native-dev-tracking (92d17cd) <!-- sw-deliver:linkage-safe-close-and-deliver-annotations-l -->
 * merge phase comment-doc-review-milestones-m into feat/issue-native-dev-tracking (ec3ab76) <!-- sw-deliver:comment-doc-review-milestones-m -->
 * merge phase backend-pluggable-discovery-region-disposition-committed-inflight-l into feat/issue-store-planning-graph (a4236d9) <!-- sw-deliver:backend-pluggable-discovery-region-disposition-committed-inflight-l -->
+* merge phase derived-index-redaction-budget-cache-safety-l into feat/issue-store-planning-graph (691c879) <!-- sw-deliver:derived-index-redaction-budget-cache-safety-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
