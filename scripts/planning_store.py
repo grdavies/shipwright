@@ -59,6 +59,28 @@ ISSUE_STORE_FALLBACK_NOTICE = (
     "issue-store configured but effective backend is in-repo-public "
     "(issuesProvider none/unsupported or host.provider none)"
 )
+BITBUCKET_ISSUE_STORE_GUIDANCE = {
+    "defaultPath": "separate-project",
+    "summary": (
+        "Bitbucket Cloud has no native issues adapter in core. Default planning store is a separate "
+        "GitHub/GitLab project; Jira is opt-in (Cloud first). Never route to native Bitbucket issues."
+    ),
+    "options": [
+        {
+            "path": "separate-project",
+            "issuesProvider": "github-issues",
+            "storeLocation": {"mode": "separate-project"},
+            "doc": "core/providers/host/bitbucket.md",
+        },
+        {
+            "path": "jira",
+            "issuesProvider": "jira",
+            "storeLocation": {"mode": "separate-project"},
+            "doc": "core/providers/issues/jira.md",
+        },
+    ],
+    "never": "native-bitbucket-issues",
+}
 
 PROJECT_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
 PROJECT_KEY_REGISTRY = ".cursor/hooks/state/issue-store-project-keys.json"
@@ -234,12 +256,39 @@ def resolve_issues_token_env(cfg: dict[str, Any], issues_provider: str) -> str:
     return DEFAULT_ISSUES_TOKEN_ENV.get(issues_provider, "")
 
 
+def bitbucket_host_active(root: Path, cfg: dict[str, Any]) -> bool:
+    host = host_section(cfg)
+    configured = host.get("provider")
+    if isinstance(configured, str) and configured.strip() == "bitbucket":
+        return True
+    resolved = resolve_provider(root)
+    return resolved.get("verdict") == "ok" and resolved.get("provider") == "bitbucket"
+
+
+def bitbucket_issue_store_guidance(root: Path, cfg: dict[str, Any]) -> dict[str, Any] | None:
+    if resolve_backend_id(cfg) != "issue-store":
+        return None
+    if not bitbucket_host_active(root, cfg):
+        return None
+    issues = resolve_issues_provider(cfg)
+    if issues["provider"] not in {"none", ""} and issues.get("supported"):
+        return None
+    return {
+        "verdict": "ok",
+        "hostProvider": "bitbucket",
+        "fallbackReason": "bitbucket-issues-unavailable",
+        **BITBUCKET_ISSUE_STORE_GUIDANCE,
+    }
+
+
 def issue_store_fallback_reason(root: Path, cfg: dict[str, Any], *, override: str | None = None) -> str | None:
     configured = resolve_backend_id(cfg, override=override)
     if configured != "issue-store":
         return None
     issues = resolve_issues_provider(cfg)
     if issues["provider"] in {"none", ""} or not issues.get("supported"):
+        if bitbucket_host_active(root, cfg):
+            return "bitbucket-issues-unavailable"
         return "issues-provider-none-or-unsupported"
     if issues["provider"] not in SHIPPED_ISSUES_PROVIDERS:
         return "issues-provider-not-shipped"
@@ -253,7 +302,7 @@ def resolve_effective_backend(root: Path, cfg: dict[str, Any], *, override: str 
     configured = resolve_backend_id(cfg, override=override)
     fallback_reason = issue_store_fallback_reason(root, cfg, override=override) if configured == "issue-store" else None
     if fallback_reason:
-        return {
+        out: dict[str, Any] = {
             "verdict": "ok",
             "configured": configured,
             "backend": DEFAULT_BACKEND,
@@ -264,6 +313,10 @@ def resolve_effective_backend(root: Path, cfg: dict[str, Any], *, override: str 
             "shipped": True,
             "deferred": False,
         }
+        guidance = bitbucket_issue_store_guidance(root, cfg)
+        if guidance:
+            out["guidance"] = guidance
+        return out
     return {
         "verdict": "ok",
         "configured": configured,
@@ -1302,6 +1355,7 @@ def main() -> None:
         "resolve-store-location",
         "probe-issues-token",
         "probe-jira-init",
+        "bitbucket-issue-store-guidance",
         "validate-project-key",
         "put",
         "get",
@@ -1349,6 +1403,11 @@ def main() -> None:
         from planning_jira_probe import probe_jira_init
         result = probe_jira_init(cfg, os.environ.get(token_env, ""), root)
         emit(result, 0 if result.get("verdict") == "ok" else 2)
+    elif args.command == "bitbucket-issue-store-guidance":
+        guidance = bitbucket_issue_store_guidance(root, cfg)
+        if guidance:
+            emit(guidance)
+        emit({"verdict": "ok", "skipped": True, "reason": "not-bitbucket-or-issues-configured"})
     elif args.command == "validate-project-key":
         register = "--register" in rest
         result = validate_project_key(root, cfg, register=register)
