@@ -5,6 +5,7 @@ prd: docs/prds/045-issue-native-dev-tracking/045-prd-issue-native-dev-tracking.m
 program: issue-backed-planning-store
 frozen: true
 frozen_at: 2026-06-30
+visibility: public
 ---
 
 # Tasks — PRD 045 Issue-native dev-tracking

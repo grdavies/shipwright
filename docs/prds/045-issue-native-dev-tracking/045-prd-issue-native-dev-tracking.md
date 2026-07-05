@@ -6,6 +6,7 @@ program: issue-backed-planning-store
 depends: [043-issue-backed-planning-store]
 frozen: true
 frozen_at: 2026-06-30
+visibility: public
 ---
 
 # PRD 045 — Issue-native dev-tracking
