@@ -233,6 +233,7 @@
 * merge phase lifecycle-preservation-both-directions-m into feat/issue-store-migration (6442573) <!-- sw-deliver:lifecycle-preservation-both-directions-m -->
 * merge phase lifecycle-preservation-both-directions-m into feat/issue-store-migration (ed2efac) <!-- sw-deliver:lifecycle-preservation-both-directions-m -->
 * merge phase resilience-doctor-and-quiesce-m into feat/issue-store-migration (9bcecbc) <!-- sw-deliver:resilience-doctor-and-quiesce-m -->
+* merge phase gaps-as-issues-write-through-shim-m into feat/issue-native-dev-tracking (c50901f) <!-- sw-deliver:gaps-as-issues-write-through-shim-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
