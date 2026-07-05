@@ -239,6 +239,7 @@
 * merge phase backend-pluggable-discovery-region-disposition-committed-inflight-l into feat/issue-store-planning-graph (a4236d9) <!-- sw-deliver:backend-pluggable-discovery-region-disposition-committed-inflight-l -->
 * merge phase derived-index-redaction-budget-cache-safety-l into feat/issue-store-planning-graph (691c879) <!-- sw-deliver:derived-index-redaction-budget-cache-safety-l -->
 * merge phase hierarchy-cross-project-recall-l into feat/issue-store-planning-graph (ff797b9) <!-- sw-deliver:hierarchy-cross-project-recall-l -->
+* merge phase jira-cloud-adapter-canonicalization-placement-freeze-decoupling-l into feat/jira-issue-store-adapter (7737da7) <!-- sw-deliver:jira-cloud-adapter-canonicalization-placement-freeze-decoupling-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
