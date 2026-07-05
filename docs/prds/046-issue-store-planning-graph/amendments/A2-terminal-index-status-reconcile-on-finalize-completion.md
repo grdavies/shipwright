@@ -1,11 +1,12 @@
 ---
 superseded-by: PRD 055
 date: 2026-06-30
+visibility: public
 amends: docs/prds/046-issue-store-planning-graph/046-prd-issue-store-planning-graph.md
 absorbs: [gap-007-finalize-completion-omits-terminal-living-docs-r]
 frozen: true
 frozen_at: 2026-06-30
----
+
 
 # Amendment A2: Terminal INDEX status reconcile on finalize-completion
 

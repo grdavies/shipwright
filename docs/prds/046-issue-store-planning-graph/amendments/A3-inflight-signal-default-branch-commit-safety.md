@@ -1,11 +1,12 @@
 ---
 superseded-by: PRD 055
 date: 2026-06-30
+visibility: public
 amends: docs/prds/046-issue-store-planning-graph/046-prd-issue-store-planning-graph.md
 absorbs: [gap-008-inflight-signal-run-complete-commits-index-on-ma]
 frozen: true
 frozen_at: 2026-06-30
----
+
 
 # Amendment A3: Current inFlight commit path inherits default-branch refusal
 
