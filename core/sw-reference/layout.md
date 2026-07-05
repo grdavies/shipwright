@@ -106,6 +106,24 @@ pre-commit and in CI.
 
 ### Issue-store region disposition (PRD 043 R34)
 
+### PRD 046 phase-1 region disposition (committed inFlight)
+
+When `planning.store.backend` is `issue-store` and the cutover gate permits issue discovery:
+
+| Region | Phase-1 authority | Writer | Notes |
+| --- | --- | --- | --- |
+| `structural` | file or issue (gated) | generator / issue-derived | `planning_discover.py` single source |
+| `derived` | file (gated) | reconciler | issue-derived read-only when cutover open |
+| `inFlight` | deliver run-state | deliver | sole writer; committed INDEX projection read-only |
+
+Deliver writes the `inFlight` tuple to durable run-state and projects it read-only into the committed
+INDEX `inFlight` region (`planning_region_disposition.py project`). The `inFlight` region is **never
+mechanically edited** by reconciler or docs-merge — deliver writer only.
+
+Dual-mode INDEX: file-store users remain inert; issue-store derives read-only views via `discover_units`
+backend plug (`file` | `issue`). Generation token serializes concurrent INDEX regeneration (R88). The `inFlight` region is never mechanically edited by reconciler or docs-merge.
+
+
 When `planning.store.backend` is `issue-store`, authoritative location per INDEX region is governed by
 `core/providers/planning-store/issue-store.md`. Phase-1 interim (adoption gated):
 

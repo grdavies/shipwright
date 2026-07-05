@@ -822,7 +822,9 @@
         "status-precedence-resolves",
         "region-hook-rejects-cross-writer",
         "empty-inflight-with-runstate-fails",
-        "living-doc-index-generator-wired"
+        "living-doc-index-generator-wired",
+        "planning-index-region-marker-newline-valid",
+        "index-region-guard-glued-marker-refuse"
       ],
       "ciShard": 3
     },
@@ -1218,6 +1220,36 @@
         "read-config-emits-valid-json"
       ],
       "ciShard": 4
+    },
+    {
+      "id": "planning-046-parity-fixtures",
+      "script": "scripts/tests/run-planning-046-parity-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-046-parity-fixtures",
+      "scenarios": [
+        "issue-derived-index-semantic-parity",
+        "generation-token-monotonic",
+        "cutover-dual-source-doctor-clean"
+      ]
+    },
+    {
+      "id": "planning-046-doc-impact-fixtures",
+      "script": "scripts/test/run-planning-046-doc-impact-fixtures.sh",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-046-doc-impact-fixtures"
+    },
+    {
+      "id": "planning-index-region-marker-fixtures",
+      "script": "scripts/test/run_planning_index_fixtures.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-planning-index-region-marker-fixtures",
+      "scenarios": [
+        "planning-index-region-marker-newline-valid",
+        "index-region-guard-glued-marker-refuse"
+      ]
     }
   ]
 }
