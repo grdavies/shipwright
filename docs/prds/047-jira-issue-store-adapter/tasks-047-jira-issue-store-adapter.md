@@ -5,6 +5,7 @@ prd: docs/prds/047-jira-issue-store-adapter/047-prd-jira-issue-store-adapter.md
 program: issue-backed-planning-store
 frozen: true
 frozen_at: 2026-06-30
+visibility: public
 ---
 
 # Tasks — PRD 047 Jira issue-store adapter

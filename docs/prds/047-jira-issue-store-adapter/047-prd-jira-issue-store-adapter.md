@@ -6,6 +6,7 @@ program: issue-backed-planning-store
 depends: [043]
 frozen: true
 frozen_at: 2026-06-30
+visibility: public
 ---
 
 # PRD 047 — Jira issue-store adapter
