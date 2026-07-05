@@ -53,7 +53,7 @@ cat > "$ROOT/.cursor/workflow.config.json" <<'JSON'
 JSON
 export SW_ISSUES_FIXTURE=1
 export ISSUES_JIRA_TOKEN=fixture-token
-export ISSUES_JIRA_EMAIL=fixture@example.com
+export ISSUES_JIRA_EMAIL=fixture-local
 
 if OUT=$(python3 "$PY" --root "$ROOT" probe-jira-init) && echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='ok'"; then
   ok "jira-init-probe:fixture-pass"
