@@ -1,7 +1,7 @@
 {
   "tasks.sizing.thresholds": {
     "filesTouched": {
-      "small": 6,
+      "small": 5,
       "medium": 10
     },
     "traceabilityScenarios": {
@@ -21,7 +21,7 @@
       "medium": 2
     }
   },
-  "tasks.sizing.minPhaseFiles": 3,
+  "tasks.sizing.minPhaseFiles": 2,
   "tasks.sizing.minPhaseScenarios": 1,
   "tasks.sizing.maxPhaseCount": 13,
   "derivation": {
