@@ -533,6 +533,25 @@ def cmd_reconcile(root: Path, args: list[str]) -> None:
 def cmd_doctor(root: Path, _args: list[str]) -> None:
     units = pg.discover_units(root)
     warnings = dependency_dead_warnings(units) + plp.legacy_manual_edit_warnings(root)
+    try:
+        from planning_migrate_issue_store import diagnose_gap_projection_divergence
+
+        divergences = diagnose_gap_projection_divergence(root)
+    except ImportError:
+        divergences = []
+    if divergences:
+        emit(
+            {
+                "verdict": "fail",
+                "action": "planning-graph-doctor",
+                "halt": "gap-projection-divergence",
+                "issues": divergences,
+                "warnings": warnings,
+                "dependencyDeadCount": len(warnings),
+                "remediation": "python3 scripts/planning_gap_capture.py refresh-projection <repo-root>",
+            },
+            exit_code=20,
+        )
     emit(
         {
             "verdict": "pass",
