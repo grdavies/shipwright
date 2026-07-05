@@ -1,5 +1,6 @@
 ---
 date: 2026-06-30
+visibility: public
 amends: docs/prds/046-issue-store-planning-graph/046-prd-issue-store-planning-graph.md
 absorbs: [gap-002-living-doc-reconcile-commits-bypass-r31-default-]
 frozen: true

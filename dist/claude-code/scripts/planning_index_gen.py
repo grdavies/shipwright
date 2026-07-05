@@ -17,6 +17,8 @@ if str(SCRIPT_DIR) not in sys.path:
 import planning_paths  # noqa: E402
 import planning_visibility as pv  # noqa: E402
 
+GENERATION_STATE_REL = ".cursor/hooks/state/planning-index-generation.json"
+
 SCHEMA_MARKER = "<!-- planning-index:schema v1 -->"
 PRIVATE_INDEX_NOTE = (
     "<!-- Private/memory rows redact body bytes via planning_visibility (PRD 034 R4). -->"
@@ -244,14 +246,19 @@ def resolved_visibility(unit: PlanningUnit, root: Path) -> str:
 
 def index_row_dict(unit: PlanningUnit, root: Path) -> dict[str, Any]:
     vis = resolved_visibility(unit, root)
+    title = unit.title
+    opaque = unit.opaque_title
+    if pv.body_is_redacted(vis):
+        title = f"{unit.id}: [private]"
+        opaque = True
     row: dict[str, Any] = {
         "id": unit.id,
         "type": unit.type,
-        "title": unit.title,
+        "title": title,
         "status": unit.status,
         "visibility": vis,
     }
-    if unit.opaque_title:
+    if opaque:
         row["opaqueTitle"] = True
     if unit.edge_map:
         for key in EDGE_KEYS:
@@ -262,46 +269,94 @@ def index_row_dict(unit: PlanningUnit, root: Path) -> dict[str, Any]:
 
 
 
-def discover_units(root: Path) -> list[PlanningUnit]:
+def generation_state_path(root: Path) -> Path:
+    return planning_paths.git_root(root) / GENERATION_STATE_REL
+
+
+def read_generation_state(root: Path) -> dict[str, Any]:
+    path = generation_state_path(root)
+    if not path.is_file():
+        return {"version": 1, "generation": 0}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, TypeError):
+        return {"version": 1, "generation": 0}
+    return data if isinstance(data, dict) else {"version": 1, "generation": 0}
+
+
+def write_generation_state(root: Path, state: dict[str, Any]) -> None:
+    if not _generation_persist_allowed(root):
+        return
+    path = generation_state_path(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(state, indent=2) + chr(10), encoding="utf-8")
+
+
+def mark_index_incomplete(root: Path, reason: str) -> None:
+    """Always persist fail-closed incomplete signal (R86), even in hermetic repos."""
+    state = read_generation_state(root)
+    state["indexIncomplete"] = True
+    state["indexIncompleteReason"] = reason
+    path = generation_state_path(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+
+
+def clear_index_incomplete(root: Path) -> None:
+    state = read_generation_state(root)
+    state.pop("indexIncomplete", None)
+    state.pop("indexIncompleteReason", None)
+    write_generation_state(root, state)
+
+
+def index_is_complete(root: Path) -> bool:
+    return not bool(read_generation_state(root).get("indexIncomplete"))
+
+
+def read_generation(root: Path) -> int:
+    try:
+        return int(read_generation_state(root).get("generation", 0))
+    except (TypeError, ValueError):
+        return 0
+
+def _generation_persist_allowed(root: Path) -> bool:
+    """Skip durable generation state when path is not gitignored (hermetic temp repos)."""
+    import subprocess
+
+    state_path = generation_state_path(root)
     worktree = planning_paths.git_root(root)
-    dirs = planning_paths.load_planning_dirs(root)
-    planning_root = worktree / dirs.planning
-    if not planning_root.is_dir():
-        return []
-    units: list[PlanningUnit] = []
-    for type_dir in sorted(planning_root.iterdir()):
-        if not type_dir.is_dir() or type_dir.name.startswith("."):
-            continue
-        if type_dir.name not in UNIT_TYPES:
-            continue
-        for unit_dir in sorted(type_dir.iterdir()):
-            if not unit_dir.is_dir():
-                continue
-            body = body_file_for_unit_dir(unit_dir)
-            if not body:
-                continue
-            fm = parse_frontmatter(body.read_text(encoding="utf-8"))
-            if not fm:
-                continue
-            unit_id = str(fm.get("id", "")).strip()
-            if not unit_id:
-                continue
-            edge_map = {key: fm.get(key) for key in EDGE_KEYS if fm.get(key)}
-            units.append(
-                PlanningUnit(
-                    id=unit_id,
-                    type=str(fm.get("type", type_dir.name)),
-                    status=str(fm.get("status", "")),
-                    title=str(fm.get("title", "")),
-                    visibility=str(fm.get("visibility", "")),
-                    edges=format_edges(fm),
-                    body_path=str(body.relative_to(worktree)),
-                    opaque_title=parse_opaque_title(fm.get("opaqueTitle")),
-                    edge_map=edge_map or None,
-                )
-            )
-    units.sort(key=lambda u: (u.type, u.id))
-    return units
+    proc = subprocess.run(
+        ["git", "-C", str(worktree), "check-ignore", "-q", str(state_path)],
+        capture_output=True,
+    )
+    return proc.returncode == 0
+
+
+
+def bump_generation(root: Path) -> int:
+    """Monotonic generation token for serialized INDEX regeneration (R88)."""
+    if not _generation_persist_allowed(root):
+        return read_generation(root)
+    path = generation_state_path(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    current = read_generation(root)
+    next_gen = current + 1
+    path.write_text(
+        json.dumps({"version": 1, "generation": next_gen}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return next_gen
+
+
+def validate_generation(root: Path, expected: int) -> bool:
+    """Readers reject non-monotonic generation (R88)."""
+    return read_generation(root) >= expected
+
+
+def discover_units(root: Path) -> list[PlanningUnit]:
+    from planning_discover import discover_units as shared_discover
+
+    return shared_discover(root)
 
 
 def render_index_table(units: list[PlanningUnit], root: Path) -> str:
@@ -378,6 +433,8 @@ def read_merge_write(
 
 
 def generate_index(root: Path, *, writer: str = "generator") -> str:
+    if not index_is_complete(root):
+        fail("index-incomplete: refuse partial INDEX generation", exit_code=20)
     units = discover_units(root)
     structural = render_structural_table(units, root)
     path = index_path(root)
@@ -389,7 +446,11 @@ def write_index(root: Path, content: str, *, dry_run: bool = False) -> Path:
     path = index_path(root)
     path.parent.mkdir(parents=True, exist_ok=True)
     if not dry_run:
+        prior = read_generation(root)
         path.write_text(content, encoding="utf-8")
+        generation = bump_generation(root)
+        if prior and not validate_generation(root, prior):
+            fail("non-monotonic generation token", prior=prior, current=generation)
     return path
 
 

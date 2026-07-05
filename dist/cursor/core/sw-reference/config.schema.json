@@ -1020,6 +1020,33 @@
                   "description": "Optional extra allowed roots beyond the operator home."
                 }
               }
+            },
+            "requestBudget": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "maxCalls": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "maxPaginationDepth": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "alertThreshold": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 1.0
+                  },
+                  "cacheTtlSeconds": {
+                    "type": "integer",
+                    "minimum": 30
+                  }
+                }
+              },
+              "description": "Per-provider derived-view request budget + cache TTL (PRD 046 R81/R93)."
             }
           }
         },

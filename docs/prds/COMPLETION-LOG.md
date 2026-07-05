@@ -4,6 +4,23 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 
 | Date | PRD | Phase | Notes |
 |------|-----|-------|-------|
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA 25583c8 |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA cc8f66b |
+| 2026-07-05 | 046 | issue-store-planning-graph | pre-merge compounding complete |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA b80c01d |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA c4a15b0 |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA 6d7b12a |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA f3efafb |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA db11893 |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA 60aa337 |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA 8cb8d36 |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA 13abbf0 |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA dc47c2c |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA 0638fa5 |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA 85f10f5 |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA 5454218 |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA c3b6e14 |
+| 2026-07-05 | 046 | all | deliver complete — awaiting terminal merge; SHA 1a99a87 |
 | 2026-07-05 | 045 | all | deliver complete — awaiting terminal merge; SHA 34df247 |
 | 2026-07-04 | 044 | all | deliver complete — awaiting terminal merge; SHA 7479398 |
 | 2026-07-04 | 055 | all | deliver complete — awaiting terminal merge; SHA 6ec50e0 |

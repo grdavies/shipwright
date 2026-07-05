@@ -89,6 +89,34 @@ Selector requires the verb capability; absent capability → fail-closed halt.
 
 `none` always routes to `in-repo-public` file-store fallback (R3) with a documented notice — never blocks work.
 
+
+### Epic/sub-issue hierarchy (R94)
+
+Task lists map to a provider **epic** with one **sub-issue per phase** where the hierarchy verbs are
+present; otherwise deliver degrades to a checkbox/body-encoded phase list embedded in the epic body
+(mandatory fallback — deliver continues with operator notice).
+
+| Verb | Purpose |
+| --- | --- |
+| `issue-epic-create` | Create parent epic for frozen task list |
+| `issue-sub-issue-create` | Create per-phase child issue |
+| `issue-sub-issue-update` | Update child state/labels as phases merge |
+| `issue-sub-issue-link` | Link child to parent (native link or body `sw-edges`) |
+
+GraphQL is permitted only behind an explicit per-verb capability flag when REST lacks parity (R50).
+
+| Verb / feature | github-issues | gitlab-issues | jira | none |
+| --- | --- | --- | --- | --- |
+| `issue-epic-create` | REST | REST | pending (047) | — (checkbox fallback) |
+| `issue-sub-issue-create` | REST | REST | pending (047) | — |
+| `issue-sub-issue-update` | REST | REST | pending (047) | — |
+| `issue-sub-issue-link` | REST | REST | pending (047) | — |
+| Checkbox/body fallback | yes | yes | yes | yes (only path) |
+| Per-phase API budget (R81) | composes with requestBudget | composes | composes | n/a |
+
+`none` and providers lacking hierarchy verbs emit a single skip notice and continue with checkbox/body
+fallback — never block deliver.
+
 ### `issue-milestone` degradation (R71)
 
 When `planning.releaseGrouping.mode` is `milestone` or `iteration` but the configured provider lacks

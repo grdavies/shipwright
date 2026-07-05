@@ -254,7 +254,21 @@ def discover_units(root: Path) -> list[GraphUnit]:
     units: list[GraphUnit] = []
     worktree = pp.git_root(root)
     for du in discovered:
+        if du.body_path.startswith("issue:") or du.body_path.startswith("issue-cache:"):
+            priority = 0
+            fm = {
+                "id": du.id,
+                "type": du.type,
+                "status": du.status,
+                "priority": priority,
+            }
+            if du.edge_map:
+                fm.update(du.edge_map)
+            units.append(unit_from_frontmatter(fm, du.body_path))
+            continue
         body = worktree / du.body_path
+        if not body.is_file():
+            continue
         fm = pig.parse_frontmatter(body.read_text(encoding="utf-8")) or {}
         units.append(unit_from_frontmatter(fm, du.body_path))
     return units
@@ -332,6 +346,10 @@ def main(argv: list[str] | None = None) -> None:
         from planning_reconcile import cmd_relief_check
 
         cmd_relief_check(root, rest)
+    elif command == "schedule-next":
+        from planning_scheduler import cmd_next
+
+        cmd_next(root, rest)
     else:
         fail(f"unknown command: {command}")
 

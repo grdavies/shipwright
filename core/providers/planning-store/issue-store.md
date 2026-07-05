@@ -152,3 +152,21 @@ Emission points: `issue-store-put`, `issue-store-comment`, `issue-store-freeze-r
 Issue-store mode requires network connectivity for planning operations; outages fail closed with
 idempotent retry on reconnect.
 
+
+## discover_units (PRD 046 R83)
+
+`scripts/planning_discover.py` provides backend-pluggable discovery (`file` | `issue`) shared by `planning_index_gen`, `planning_graph`, `inflight_signal`, and `authoring_guard`. Issue source feeds the same visibility-resolution path before issue-mode INDEX behavior is enabled.
+
+
+## Phase 2 — derived INDEX scheduler + budget + cache (R25, R81–R86, R93)
+
+| Component | Script | Contract |
+| --- | --- | --- |
+| Scheduler | `planning_scheduler.py next` | `/sw-deliver next` schedules from issue labels (`sw:tier:*`, `sw:priority:*`); refuses `index-incomplete` |
+| Request budget | `planning_request_budget.py` | Shared ledger; composes with R39/R74; scheduler reserve |
+| Query cache | `planning_query_cache.py` | Post-redaction projections only; key `projectKey + fingerprint + generationEpoch` |
+| Redaction | `planning_index_gen.index_row_dict` | Private/memory opaque at ingest (`{id}: [private]`) per R82 |
+
+Per-provider `cacheTtlSeconds` (default 300) bounds query-cache TTL floor (R85). Poll-on-reconcile invalidation runs at deliver run-start and `/sw-deliver next` (R85). Secret-scan runs on
+issue ingest before cache write (R45/R84). Pagination ceiling with remaining results → `index-incomplete`
+fail-closed (R86).

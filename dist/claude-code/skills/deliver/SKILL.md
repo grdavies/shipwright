@@ -673,6 +673,46 @@ Linked-PR introspection uses GraphQL only behind the PRD 043 R5 capability flag 
 `github-issues`) with REST/body-encoded fallback. Minimum GraphQL scopes are documented in
 `core/providers/issues/CAPABILITIES.md` (R37 table) and probed at init.
 
+
+## Task-list hierarchy and inFlight tracking issues (PRD 046 R23, R89, R91, R94)
+
+Inert when `planning.store.backend != issue-store`.
+
+### Epic/sub-issue projection (R23, R94)
+
+Frozen task lists map to a provider **epic** with one **sub-issue per phase** when hierarchy verbs are
+supported; absent capability degrades to checkbox/body-encoded phase list with operator notice — deliver
+continues.
+
+```bash
+python3 scripts/planning_hierarchy.py --root <repo> resolve-mode
+python3 scripts/planning_hierarchy.py --root <repo> project docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
+python3 scripts/planning_hierarchy.py --root <repo> matrix
+```
+
+- **Capability matrix:** `core/providers/issues/CAPABILITIES.md` epic/sub-issue verb table (REST vs
+  capability-gated GraphQL per R50).
+- **Budget:** per-phase API calls compose with `planning.store.requestBudget` (R81) — never exhaust
+  scheduler-critical reserve.
+- **Parent status (R91):** `aggregate-status` reconciles epic labels from children on read; fails closed when
+  children contradict parent tier/status; `sw-edges` body block is authoritative on native-link conflict.
+
+### inFlight tracking issue (R89)
+
+Optional read-only projection of committed `inFlight` tuples to a tracking issue routes through PRD 034
+`redact_inflight_tuple` + visibility resolver:
+
+```bash
+python3 scripts/planning_tracking_issue.py prepare --payload-json '{"unitId":"<id>","tuple":{"runId":"r1","epoch":1,"branch":"feat/x"},"visibility":"private"}'
+```
+
+- **Redaction:** `private`/`memory` units emit opaque title/body and hashed `branchToken`/`runId`.
+- **Refusal:** private/`memory` tracking issues are **refused** on public/shared origin stores
+  (`probe_remote_visibility` → `public`) — fail-closed per PRD 043 R28.
+- **Committed projection:** run-state → INDEX `inFlight` region remains the cross-clone SoT (R80); tracking
+  issue is an optional downstream projection only.
+
+
 ## Concurrency invariants (PRD 036 — acceptance)
 
 Operator-facing guarantees enforced by CI fixtures (`run_dual_ship_fixtures.py`,

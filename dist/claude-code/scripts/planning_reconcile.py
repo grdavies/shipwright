@@ -491,6 +491,8 @@ def git_commit_reconcile(root: Path, *, dry_run: bool = False) -> str | None:
 
 
 def cmd_reconcile(root: Path, args: list[str]) -> None:
+    if not pig.index_is_complete(root):
+        fail("index-incomplete: reconciler refuses partial INDEX", exit_code=20)
     dry_run = has_flag(args, "--dry-run")
     do_commit = has_flag(args, "--commit")
     override = parse_override_status(args)

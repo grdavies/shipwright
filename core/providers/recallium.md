@@ -112,6 +112,21 @@ at `docs/decisions/<n>-<slug>.md` (repo-SoT) or the provider record (memory-SoT)
 through the provider-agnostic memory adapter and `scripts/memory-redact.py` — never direct MCP calls from
 planning-store code.
 
+## Cross-project recall (PRD 046 R90)
+
+Recallium-backed cross-project recall is routed through `scripts/planning_cross_project_recall.py` and the
+memory skill — not direct MCP calls from planning code.
+
+| Requirement | Recallium mapping |
+| --- | --- |
+| Project scope | `project_name` on `search_memories` / `expand_memories` |
+| Authorization | Caller `projectKey` must match source or appear in `authorizedProjects` |
+| Redaction | `expand` output piped through `memory-redact.py`; private units opaque |
+| Ranking | Deterministic sort before filter (`projectKey`, `unitId`, `memoryId`) |
+
+`private`/`memory` pointers return `{unitId}: [private]` to unauthorized callers — never raw excerpts.
+
+
 ## Notes / gotchas
 
 - Recallium runs locally with Ollama embeddings here — no external API cost or data egress.
