@@ -85,15 +85,30 @@ PY
 ) && ok "cache-post-redaction-only" || bad "cache-post-redaction-only"
 
 (
-  cd "$TMP"
-  export SW_ISSUES_PAGE_SIZE=1 SW_PLANNING_FORCE_REFRESH=1
-  python3 -c "import sys; sys.path.insert(0,'$ROOT/scripts'); from pathlib import Path; from planning_discover import discover_units; import planning_index_gen as pig; root=Path('$TMP');
-try:
-    discover_units(root)
-    raise SystemExit(1)
-except SystemExit as e:
-    assert e.code != 0
-assert pig.read_generation_state(root).get('indexIncomplete')"
+  PTMP=$(mktemp -d)
+  trap 'rm -rf "$PTMP"' EXIT
+  cd "$PTMP"
+  git init -q && git config user.email test@test.com && git config user.name Test
+  mkdir -p docs/planning .cursor/hooks/state
+  echo ".cursor/hooks/state/" >> .gitignore && git add .gitignore && git commit -q -m init
+  cat > .cursor/workflow.config.json <<'CFG'
+{"version":1,"planning":{"store":{"backend":"issue-store","issuesProvider":"github-issues","projectKey":"phase2046p","requestBudget":{"github-issues":{"maxCalls":50,"maxPaginationDepth":2,"alertThreshold":0.5,"cacheTtlSeconds":60}}}},"host":{"provider":"github"}}
+CFG
+  export SW_ISSUES_FIXTURE=1 SW_DISCOVER_SOURCE=issue SW_ISSUES_PAGE_SIZE=1 SW_PLANNING_FORCE_REFRESH=1
+  python3 - <<PY
+import sys
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+from issues_lib import get_fixture_store
+from planning_canonical import compose_issue_body, project_label, type_label
+root = Path("$PTMP")
+store = get_fixture_store(root)
+for uid in ("prd-a", "prd-b"):
+    body = compose_issue_body("phase2046p", "prd", uid, f"---\nid: {uid}\ntype: prd\nstatus: proposed\ntitle: T\nvisibility: public\n---\n")
+    store.create(title=f"[sw] prd:{uid}", body=body, labels=sorted({project_label("phase2046p"), type_label("prd"), "sw:visibility:public"}), project_key="phase2046p", artifact_type="prd", unit_id=uid)
+PY
+  if python3 "$PY" "$PTMP" generate >/dev/null 2>&1; then exit 1; fi
+  python3 -c "import sys; sys.path.insert(0,'$ROOT/scripts'); import planning_index_gen as pig; assert pig.read_generation_state(__import__('pathlib').Path('$PTMP')).get('indexIncomplete')"
 ) && ok "pagination-ceiling-index-incomplete" || bad "pagination-ceiling-index-incomplete"
 
 (
