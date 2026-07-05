@@ -262,7 +262,7 @@ if [[ $? -eq 0 ]]; then ok stale-in-progress-success-check-gate-green-poll-helpe
 # terminal-docs-currency-gate-invocation-valid (R43/R44)
 CUR_FIX=$(mktemp -d)
 mkdir -p "$CUR_FIX/.cursor"
-echo '{"prd_number":"047","phases":{"1":{"status":"pending"}},"target":{"branch":"feat/fixture"}}' > "$CUR_FIX/.cursor/sw-deliver-state.json"
+echo '{"prd_number":"047","phases":{"1":{"status":"green-merged"}},"completion":{"status":"completed-pending-merge"},"target":{"branch":"feat/jira-issue-store-adapter"}}' > "$CUR_FIX/.cursor/sw-deliver-state.json"
 echo '{"prd_number":"047"}' > "$CUR_FIX/.cursor/sw-deliver-plan.json"
 if python3 "$ROOT/scripts/docs-currency-gate.py" "$ROOT" "$CUR_FIX" "$CUR_FIX/.cursor/sw-deliver-state.json" "$CUR_FIX/.cursor/sw-deliver-plan.json" 2>/dev/null | python3 -c "
 import json,sys
