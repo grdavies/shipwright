@@ -38,31 +38,31 @@ Native gap lifecycle under issue-store; legacy backlog becomes an issue-derived 
 
 Location-aware commit/PR linkage and allowlisted close-on-merge with a fail-closed deliver batch.
 
-- [ ] 2.1 Location-aware commit/PR ↔ issue linkage encoding (R22)
+- [x] 2.1 Location-aware commit/PR ↔ issue linkage encoding (R22)
   - **File:** `core/skills/git-workflow/SKILL.md`, `core/commands/sw-commit.md`, `core/commands/sw-pr.md`
   - **Expected:** normative linkage encoding per location mode (same-repo `#id` vs separate-repo `owner/repo#id`/pointer-record id); `/sw-deliver` and `/sw-ship` annotate issues with PR links + phase status
   - **R-IDs:** R22
-- [ ] 2.2 Location-aware allowlisted close-on-merge (R67)
+- [x] 2.2 Location-aware allowlisted close-on-merge (R67)
   - **File:** `core/skills/deliver/SKILL.md`, `core/commands/sw-ship.md`
   - **Expected:** same-repo keyword close gated on default-branch merge + `projectKey`+body-marker allowlist; separate-repo explicit idempotent `issue-close` keyed `runId+issueRef`; unlinked `Closes`/`Fixes` rejected/warned; keep-open override; unverifiable close fails closed + doctor for merged-but-open
   - **R-IDs:** R67
-- [ ] 2.3 Annotation redaction + ingest secret-scan (R68)
+- [x] 2.3 Annotation redaction + ingest secret-scan (R68)
   - **File:** `core/skills/deliver/SKILL.md`, `core/skills/visibility/references/emission-points.md`
   - **Expected:** private/`memory` units emit opaque PR refs via PRD 043 R28 resolver; host-sourced fields (branch/title/author/URL) scanned as PRD 043 R45 ingest, redacted/refused on hit; annotation write points join emission registry
   - **R-IDs:** R68
-- [ ] 2.4 Deliver multi-issue transaction journal (R74)
+- [x] 2.4 Deliver multi-issue transaction journal (R74)
   - **File:** `core/skills/deliver/SKILL.md`, `core/skills/shipwright-state/SKILL.md`
   - **Expected:** multi-issue updates use idempotent phase markers + deliver issue-batch journal; partial failure → `deliver-aborted-inconsistent` halt + repair/resume; linked-PR introspection GraphQL only behind PRD 043 R5 flag with REST/body-encoded fallback
   - **R-IDs:** R74
-- [ ] 2.5 Batch resume, upsert-by-marker, skew doctor (R70)
+- [x] 2.5 Batch resume, upsert-by-marker, skew doctor (R70)
   - **File:** `core/skills/deliver/SKILL.md`
   - **Expected:** batch reuses PRD 044-style journal states; resume inherits original `runId`; annotation writes upsert-by-marker (deterministic hash) so resume never duplicates; tolerates closed-during-batch; doctor repairs annotation↔close skew; annotate-before-merge-gate ordering
   - **R-IDs:** R70
-- [ ] 2.6 Annotation comments as linkage source-of-truth (R73)
+- [x] 2.6 Annotation comments as linkage source-of-truth (R73)
   - **File:** `core/skills/deliver/SKILL.md`, `core/sw-reference/capability-index.json`
   - **Expected:** marker-delimited annotation comments are SoT for PR↔issue linkage; host introspection (GraphQL behind PRD 043 R5 flag / REST fallback) is verify-only, fails closed on disagreement; GraphQL min scopes added to PRD 043 R37 table and probed at init
   - **R-IDs:** R73
-- [ ] 2.7 Phase-2 documentation exit-gate (PRD 043 R49)
+- [x] 2.7 Phase-2 documentation exit-gate (PRD 043 R49)
   - **File:** `core/skills/git-workflow/SKILL.md`, `core/sw-reference/capability-index.json`
   - **Expected:** doc-impact fixture asserts linkage/close/annotation docs updated before phase ship
   - **R-IDs:** R22
