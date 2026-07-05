@@ -57,19 +57,31 @@ check "doc-currency-047:jira-config-endpoint" "$JIRA" "endpoint"
 check "doc-currency-047:jira-config-flavor" "$JIRA" "flavor"
 check "doc-currency-047:jira-config-tokenEnv" "$JIRA" "tokenEnv"
 check "doc-currency-047:jira-config-freezeRecordField" "$JIRA" "freezeRecordField"
+check "doc-currency-047:jira-auth-probes" "$JIRA" "Auth probes"
+check "doc-currency-047:jira-privacy-R105" "$JIRA" "per-issue privacy"
+check "doc-currency-047:jira-request-budget" "$JIRA" "Request budget"
+check "doc-currency-047:jira-lifecycle-R107" "$JIRA" "Lifecycle edges"
+check "doc-currency-047:jira-createmeta-R108" "$JIRA" "createmeta"
+check "doc-currency-047:jira-label-ladder-R109" "$JIRA" "Label degradation ladder"
 
 check "doc-currency-047:capabilities-jira-rest" "$CAP" "degraded.*hash-authoritative"
 check "doc-currency-047:capabilities-cloud-dc" "$CAP" "Jira Cloud vs DC"
+check "doc-currency-047:capabilities-label-ladder" "$CAP" "Label degradation ladder"
 
 check "doc-currency-047:issue-store-jira-crossref" "$ISSUE_STORE" "core/providers/issues/jira.md"
 if grep -q "until PRD 047" "$ISSUE_STORE" 2>/dev/null; then bad "doc-currency-047:issue-store-no-jira-fallback"; else ok "doc-currency-047:issue-store-no-jira-fallback"; fi
 
+INIT="$(content_path commands/sw-init.md)"
+check "doc-currency-047:sw-init-jira-probe" "$INIT" "probe-jira-init"
 check "doc-currency-047:sw-freeze-lifecycle-drift" "$FREEZE" "lifecycle-drift"
 
 check "doc-currency-047:configuration-jira-endpoint" "$CONFIG" "issues\.endpoint"
 check "doc-currency-047:configuration-jira-flavor" "$CONFIG" "issues\.flavor"
 check "doc-currency-047:configuration-jira-tokenEnv" "$CONFIG" "issues\.tokenEnv"
 check "doc-currency-047:configuration-jira-freezeRecordField" "$CONFIG" "freezeRecordField"
+check "doc-currency-047:configuration-jira-probe-init" "$CONFIG" "probe-jira-init"
+check "doc-currency-047:configuration-jira-fieldDefaults" "$CONFIG" "fieldDefaults"
+check "doc-currency-047:configuration-jira-labelSurface" "$CONFIG" "labelSurface"
 grep -q "until PRD 047" "$CONFIG" 2>/dev/null && bad "doc-currency-047:configuration-no-jira-fallback" || ok "doc-currency-047:configuration-no-jira-fallback"
 
 [[ -f "$CANON" ]] && ok "doc-currency-047:planning-jira-canonical-present" || bad "doc-currency-047:planning-jira-canonical-present"
@@ -79,6 +91,12 @@ grep -q "snapshot_from_fixture" "$CANON" && ok "doc-currency-047:snapshot-from-f
 
 python3 -c "import json; d=json.load(open('$CAP_INDEX')); assert any(c.get('id')=='provider.providers.issues.jira' for c in d['capabilities'])"   && ok "doc-currency-047:capability-index-jira" || bad "doc-currency-047:capability-index-jira"
 
+PROBE="$ROOT/scripts/planning_jira_probe.py"
+[[ -f "$PROBE" ]] && ok "doc-currency-047:planning-jira-probe-present" || bad "doc-currency-047:planning-jira-probe-present"
+FX_RES="$ROOT/scripts/tests/fixtures/resilience/jira"
+for fx in createmeta-required 429-exhaustion partial-page-abort; do
+  [[ -f "$FX_RES/${fx}.json" ]] && ok "doc-currency-047:resilience-${fx}" || bad "doc-currency-047:resilience-${fx}"
+done
 for fx in prd-open adf-roundtrip server-mutated-adf wiki-dc; do
   [[ -f "$FX_DIR/${fx}.json" ]] && ok "doc-currency-047:fixture-${fx}" || bad "doc-currency-047:fixture-${fx}"
 done

@@ -51,31 +51,31 @@ REST-primary Cloud adapter implementing the PRD 043 `issues.*` verbs with render
 
 Self-hosted variant and fail-closed init/create probes for auth, privacy, required fields, budget, and lifecycle edges.
 
-- [ ] 2.1 Auth + min-scope init probe (R101)
+- [x] 2.1 Auth + min-scope init probe (R101)
   - **File:** `core/providers/issues/jira.md`, `core/commands/sw-init.md`
   - **Expected:** dedicated PRD 043 R44 `issues.tokenEnv` (never `host.tokenEnv`); Cloud email+API-token, DC/Server PAT required + password/basic rejected; min project+write scopes documented and probed at init (fail-closed)
   - **R-IDs:** R101
-- [ ] 2.2 No per-issue privacy → reject/reroute (R105)
+- [x] 2.2 No per-issue privacy → reject/reroute (R105)
   - **File:** `core/providers/issues/jira.md`, `scripts/planning_store.py`
   - **Expected:** init probe rejects a multi-tenant shared Jira project when any unit resolves `private`/`memory`; matrix marks per-issue privacy unsupported; private/`memory` require a separate Jira project per tier or reroute per PRD 043 R28/R43 (fail-closed on create, not only init)
   - **R-IDs:** R105
-- [ ] 2.3 Jira request-budget binding (R106)
+- [x] 2.3 Jira request-budget binding (R106)
   - **File:** `core/providers/issues/jira.md`, `scripts/planning_store.py`
   - **Expected:** Cloud vs DC rate-limit ceilings, JQL pagination caps, 429 handling without `Retry-After` reliance (exponential backoff + jitter); per-run/per-CI budgets; partial-page abort → `deliver-aborted-inconsistent`; resilience fixtures for 429 exhaustion + partial-page abort
   - **R-IDs:** R106
-- [ ] 2.4 Lifecycle edge detection (R107)
+- [x] 2.4 Lifecycle edge detection (R107)
   - **File:** `core/providers/issues/jira.md`, `scripts/planning_store.py`
   - **Expected:** issue move/key change (via changelog), archived-project 404/410, issue-type conversion each classified as distinct tombstone/transfer halt codes with recovery path, keyed on stable provider id + project key (PRD 043 R40)
   - **R-IDs:** R107
-- [ ] 2.5 Createmeta / field-schema probe (R108)
+- [x] 2.5 Createmeta / field-schema probe (R108)
   - **File:** `core/providers/issues/jira.md`, `core/commands/sw-init.md`
   - **Expected:** init createmeta/field-schema probe per mapped issue type; required custom fields blocking `issue-create` fail closed with field manifest + admin remediation, or satisfied by allowlisted configured defaults; never a runtime 400 mid-pipeline
   - **R-IDs:** R108
-- [ ] 2.6 Label degradation ladder (R109)
+- [x] 2.6 Label degradation ladder (R109)
   - **File:** `core/providers/issues/jira.md`, `core/providers/issues/CAPABILITIES.md`
   - **Expected:** labels (primary) → components (degraded) → optional configured custom field; init probe validates label-write permission; PRD 043 R42 body marker authoritative for isolation regardless of label surface
   - **R-IDs:** R109
-- [ ] 2.7 Phase-2 documentation exit-gate (PRD 043 R49)
+- [x] 2.7 Phase-2 documentation exit-gate (PRD 043 R49)
   - **File:** `core/sw-reference/capability-index.json`, `core/commands/sw-init.md`
   - **Expected:** doc-impact fixture asserts DC/Server + probe behavior docs + capability-index regen before phase ship
   - **R-IDs:** R101

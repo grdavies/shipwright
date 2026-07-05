@@ -25,6 +25,9 @@ ISSUE_VERBS = frozenset({
 })
 
 DEFAULT_CALL_BUDGET = 500
+JIRA_CLOUD_CALL_BUDGET = 300
+JIRA_DC_CALL_BUDGET = 200
+JIRA_JQL_PAGE_CAP = 5
 MAX_BACKOFF_ATTEMPTS = 4
 BASE_BACKOFF_SECONDS = 0.05
 
@@ -52,6 +55,18 @@ class IssueTransferred(Exception):
 
 class IssueCapabilityError(Exception):
     pass
+
+
+class IssueLifecycleDrift(Exception):
+    """External workflow transition on frozen issue (R104)."""
+
+
+class IssueArchivedProject(IssueTombstone):
+    """Archived Jira project 404/410 (R107)."""
+
+
+class IssueTypeConverted(IssueTombstone):
+    """Issue type conversion tombstone (R107)."""
 
 
 class IssueBudgetExhausted(Exception):
@@ -176,6 +191,11 @@ class FixtureIssuesStore:
         if record.transferred:
             raise IssueTransferred(f"issue transferred: {issue_id}")
         if record.tombstoned:
+            body = record.body or ""
+            if "lifecycle:archived-project" in body:
+                raise IssueArchivedProject(f"archived project: {issue_id}")
+            if "lifecycle:issue-type-converted" in body:
+                raise IssueTypeConverted(f"issue type converted: {issue_id}")
             raise IssueTombstone(f"issue tombstoned: {issue_id}")
         return record
 
@@ -316,6 +336,31 @@ class FixtureIssuesStore:
         record.transferred = True
         self._persist()
 
+
+    def mark_archived_project(self, issue_id: str) -> None:
+        record = self._issues.get(issue_id)
+        if record is None:
+            raise IssueNotFound(f"issue not found: {issue_id}")
+        record.tombstoned = True
+        record.body = (record.body or "") + "\n<!-- lifecycle:archived-project -->"
+        self._persist()
+
+    def mark_type_converted(self, issue_id: str) -> None:
+        record = self._issues.get(issue_id)
+        if record is None:
+            raise IssueNotFound(f"issue not found: {issue_id}")
+        record.tombstoned = True
+        record.body = (record.body or "") + "\n<!-- lifecycle:issue-type-converted -->"
+        self._persist()
+
+    def mark_key_changed(self, issue_id: str, new_key: str) -> None:
+        record = self._issues.get(issue_id)
+        if record is None:
+            raise IssueNotFound(f"issue not found: {issue_id}")
+        record.transferred = True
+        record.body = (record.body or "") + f"\n<!-- lifecycle:key-changed:{new_key} -->"
+        self._persist()
+
     def clear(self) -> None:
         self._issues.clear()
         self._counter = 0
@@ -411,3 +456,19 @@ class IssuesClient:
 
     def mark_transferred(self, issue_id: str) -> None:
         self._with_resilience("issue-transfer", lambda: self._require_fixture().mark_transferred(issue_id))
+
+
+def classify_lifecycle_error(record: IssueRecord) -> str:
+    """R107 — distinct tombstone/transfer halt codes."""
+    body = record.body or ""
+    if record.transferred:
+        if "lifecycle:key-changed" in body:
+            return "issue-key-changed"
+        return "issue-transferred"
+    if record.tombstoned:
+        if "lifecycle:archived-project" in body:
+            return "archived-project"
+        if "lifecycle:issue-type-converted" in body:
+            return "issue-type-converted"
+        return "lifecycle-tombstone"
+    return ""

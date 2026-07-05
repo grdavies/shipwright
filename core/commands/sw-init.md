@@ -182,6 +182,7 @@ Detect and recommend (never hard-fail scaffold):
 
 - **Host provider doctor** via `python3 scripts/host-doctor.py` — validates `host.provider`, configured remote, token env presence (never prints token), and rate-limit config. Warns when capability is degraded (missing token, missing remote) without blocking scaffold.
 - Seed `host` config on greenfield: `provider` auto-detected, `remote: origin`, `tokenEnv` per provider (`GITHUB_TOKEN` default for GitHub). Existing GitHub repos need only `GITHUB_TOKEN` set (R33).
+- **Jira issue-store init probes (PRD 047 R101/R105/R108/R109):** when `planning.store.issuesProvider` is `jira`, run `python3 scripts/planning_store.py probe-jira-init` — auth (Cloud email+token / DC PAT), per-issue privacy classification, createmeta required fields, and label-write permission (fail-closed).
 - **Planning store doctor** via `python3 scripts/planning-doctor.py` — validates `planning.store` backend reachability (degrade-open when `memory` is configured but no memory provider is present), sweeps orphaned `.cursor/planning-materialized/` trees, and never prints provider tokens (R27).
 
 ### 5b. Portability self-check (R24/R25)

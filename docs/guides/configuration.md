@@ -196,6 +196,12 @@ When `planning.store.issuesProvider` is `jira`, configure the Jira adapter keys 
 | `planning.store.issues.flavor` | `cloud` (default) \| `dc` | Serialization + auth variant (ADF vs wiki) |
 | `planning.store.issues.tokenEnv` | string | Dedicated token env (default `ISSUES_JIRA_TOKEN`) |
 | `planning.store.issues.freezeRecordField` | string | Custom field id for write-once freeze record (Cloud) |
+| `planning.store.issues.issueType` | string | Mapped issue type for createmeta probe (default `Task`) |
+| `planning.store.issues.fieldDefaults` | object | Allowlisted defaults for required custom fields (R108) |
+| `planning.store.issues.labelSurface` | `labels` \| `components` \| `customField` | Label degradation ladder entry (R109) |
+| `planning.store.issues.labelCustomField` | string | Optional custom field for label ladder step 3 |
+| `planning.store.issues.emailEnv` | string | Cloud auth email env (default `ISSUES_JIRA_EMAIL`) |
+| `planning.store.jiraProjectVisibility` | `public` \| `shared` \| `private` | Shared-project privacy probe input (R105) |
 
 Example (Jira Cloud + separate planning project — typical for Bitbucket code repos per D25):
 
@@ -218,7 +224,9 @@ Example (Jira Cloud + separate planning project — typical for Bitbucket code r
 }
 ```
 
-See `core/providers/issues/jira.md` for LCD mapping, canonical hash, and freeze-decoupling semantics.
+Init probes (fail-closed): `python3 scripts/planning_store.py probe-jira-init` — auth, privacy, createmeta, label-write.
+
+See `core/providers/issues/jira.md` for LCD mapping, canonical hash, freeze-decoupling, budget, and lifecycle semantics.
 
 See `core/providers/planning-store/issue-store.md` and `core/providers/issues/CAPABILITIES.md`.
 

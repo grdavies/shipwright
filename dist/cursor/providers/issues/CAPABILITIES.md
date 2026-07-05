@@ -144,3 +144,14 @@ When `planning.releaseGrouping.mode` is `milestone` or `iteration` but the confi
 | Canonical normalization | `adf_to_markdown` | `wiki_to_markdown` |
 
 Adapter spec: `core/providers/issues/jira.md`.
+
+
+### Label degradation ladder (R109)
+
+| Step | Surface | When |
+| --- | --- | --- |
+| 1 | `labels` | default; init probe validates write permission |
+| 2 | `components` | when label write denied |
+| 3 | custom field | `planning.store.issues.labelCustomField` |
+
+PRD 043 R42 body marker is authoritative for isolation on shared Jira projects regardless of label surface.
