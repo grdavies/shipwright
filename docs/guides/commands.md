@@ -108,7 +108,7 @@ projection — use `planning_gap_capture.py` for new gaps (see [`feedback` skill
 
 Jira Cloud is the default Jira flavor; DC/Server expands on validated demand. Bitbucket code repos default
 to a **separate** GitHub/GitLab planning project — Jira is opt-in. See
-[`configuration.md`](configuration.md#issue-store-prd-043--opt-in) and
+[`configuration.md`](configuration.md#issue-store-prd-043-opt-in) and
 [`workflows.md`](workflows.md#issue-store-on-bitbucket-hosts-prd-047-d25).
 
 
