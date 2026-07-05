@@ -28,6 +28,7 @@ adapters are selected by `planning.store.issuesProvider` (independent of `host.p
 | `issue-search` | Project-scoped issue queries |
 | `issue-close` | **045 R67** — explicit idempotent close for separate-repo planning store (`runId+issueRef` key) |
 | `linked-pr-introspection` | **045 R73** — verify-only PR↔issue linkage (GraphQL behind flag; REST/body fallback) |
+| `issue-milestone` | **045 R71** — assign `sw:prd` units to provider milestone/iteration; flat-label fallback when absent |
 
 GraphQL is permitted **only** behind an explicit per-verb capability flag when REST lacks parity (R50).
 The selector fails closed when a required capability is absent — no silent partial behavior (R31).
@@ -80,10 +81,24 @@ Selector requires the verb capability; absent capability → fail-closed halt.
 | `issue-search` | REST | REST | REST (047) | — |
 | `issue-close` | REST (`PATCH` state=closed) | REST | REST (047) | — |
 | `linked-pr-introspection` | gated `graphql.linked-pr` + REST fallback | REST (notes) | — | — |
+| `issue-milestone` | REST (milestone field) | REST (iteration) | — (047 TBD) | — (skip+notice) |
 | `issue-lock` GraphQL fallback | gated `graphql.issue-lock` | — | — | — |
 | `issue-search` GraphQL fallback | gated `graphql.issue-search` | — | — | — |
 | Native confidential/private issues | not portable guarantee | bonus only | project-dependent | — |
 | Flat labels | yes | yes | mapped | — |
 
 `none` always routes to `in-repo-public` file-store fallback (R3) with a documented notice — never blocks work.
+
+### `issue-milestone` degradation (R71)
+
+When `planning.releaseGrouping.mode` is `milestone` or `iteration` but the configured provider lacks
+`issue-milestone`, `/sw-deliver` emits a single skip with operator notice and continues with flat-label fallback
+(`planning.releaseGrouping.labelPrefix`, default `sw:release:`). Deliver is never blocked.
+
+| Provider | `issue-milestone` | Native field |
+| --- | --- | --- |
+| `github-issues` | yes | GitHub milestone |
+| `gitlab-issues` | yes | GitLab iteration |
+| `jira` | pending (047) | fixVersion / sprint |
+| `none` | skip+notice | flat-label only |
 

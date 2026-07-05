@@ -186,6 +186,33 @@ missing/insufficient scope).
 
 See `core/providers/planning-store/issue-store.md` and `core/providers/issues/CAPABILITIES.md`.
 
+### Release grouping (PRD 045 R26/R71)
+
+When `planning.store.backend` is `issue-store`, release grouping maps `sw:prd` planning units to provider
+milestones or iterations where the `issue-milestone` verb is available. Absent capability → **skip with operator
+notice**; deliver continues (normative degradation per PRD 043 R31).
+
+| Key | Values | Meaning |
+| --- | --- | --- |
+| `planning.releaseGrouping.mode` | `milestone` (default) \| `iteration` \| `label` | Native provider grouping; `label` is the flat-label fallback |
+| `planning.releaseGrouping.labelPrefix` | string (default `sw:release:`) | Label prefix when falling back to flat labels |
+
+Example (GitHub milestones):
+
+```json
+{
+  "planning": {
+    "store": { "backend": "issue-store", "issuesProvider": "github-issues", "projectKey": "my-project" },
+    "releaseGrouping": { "mode": "milestone" }
+  }
+}
+```
+
+`/sw-deliver` applies grouping at phase provision when capability is present; otherwise emits a single
+operator notice and proceeds. Scheduler integration is owned by PRD 046 — 045 is annotation/grouping only.
+
+Fixture suite: `python3 scripts/test/run-planning-045-doc-impact-fixtures.sh` (`doc-currency-045-p3`).
+
 Fixture suite: `python3 scripts/test/run_visibility_fixtures.py` (registered as `visibility-fixtures` in the PR test-plan manifest).
 
 **Visibility-driven `.gitignore` (R13):** regenerate tracking rules from the resolver via

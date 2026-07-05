@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PRD 045 — doc-impact acceptance (R49) + gap-issue projection + phase-2 linkage contract."""
+"""PRD 045 — doc-impact acceptance (R49) + gap-issue projection + phase-2 linkage + phase-3 doc-review/milestones."""
 from __future__ import annotations
 
 import subprocess
@@ -33,7 +33,7 @@ def main() -> int:
 
 _SOURCE = r"""
 #!/usr/bin/env bash
-# PRD 045 — doc-impact acceptance (R49): phase 1 gap issues + phase 2 linkage/close/annotations.
+# PRD 045 — doc-impact acceptance (R49): phase 1 gap issues + phase 2 linkage/close/annotations + phase 3 doc-review/milestones.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -99,6 +99,35 @@ check "doc-currency-045-p2:emission-issue-close" "$EMIT" "issue-close-batch"
 check "doc-currency-045-p2:issues-cap-close" "$ISSUES_CAP" "issue-close"
 check "doc-currency-045-p2:issues-cap-linked-pr" "$ISSUES_CAP" "linked-pr-introspection"
 check "doc-currency-045-p2:cap-index-linkage-sot" "$CAP_INDEX" "linkageSoT"
+
+# --- Phase 3 (doc-review via comments + milestones) ---
+SW_DOC_REVIEW="$(content_path commands/sw-doc-review.md)"
+DOC_REVIEW="$(content_path skills/doc-review/SKILL.md)"
+SYNTHESIS="$(content_path skills/doc-review/references/synthesis.md)"
+CONFIG_SCHEMA="$ROOT/.sw/config.schema.json"
+CONFIG_GUIDE="$ROOT/docs/guides/configuration.md"
+WORKFLOWS="$ROOT/docs/guides/workflows.md"
+README="$ROOT/README.md"
+GETTING_STARTED="$ROOT/docs/guides/getting-started.md"
+
+check "doc-currency-045-p3:sw-doc-review-issue-store" "$SW_DOC_REVIEW" "issue-store"
+check "doc-currency-045-p3:sw-doc-review-ide-fallback" "$SW_DOC_REVIEW" "IDE panel"
+check "doc-currency-045-p3:doc-review-transport" "$DOC_REVIEW" "sw:doc-review"
+check "doc-currency-045-p3:doc-review-manifest" "$DOC_REVIEW" "review-round manifest"
+check "doc-currency-045-p3:doc-review-canonicalization-exclude" "$DOC_REVIEW" "excluded.*R35"
+check "doc-currency-045-p3:synthesis-manifest" "$SYNTHESIS" "review-round manifest"
+check "doc-currency-045-p3:synthesis-fail-closed" "$SYNTHESIS" "fail closed"
+check "doc-currency-045-p3:config-release-grouping" "$CONFIG_SCHEMA" "releaseGrouping"
+check "doc-currency-045-p3:config-milestone-mode" "$CONFIG_SCHEMA" "milestone"
+check "doc-currency-045-p3:guide-release-grouping" "$CONFIG_GUIDE" "issue-milestone"
+check "doc-currency-045-p3:guide-skip-notice" "$CONFIG_GUIDE" "skip with operator"
+check "doc-currency-045-p3:issues-cap-milestone" "$ISSUES_CAP" "issue-milestone"
+check "doc-currency-045-p3:issues-cap-milestone-degrade" "$ISSUES_CAP" "skip with operator"
+check "doc-currency-045-p3:cap-index-milestone-verb" "$CAP_INDEX" "issueMilestoneVerb"
+check "doc-currency-045-p3:workflows-doc-review" "$WORKFLOWS" "sw:doc-review"
+check "doc-currency-045-p3:workflows-milestone" "$WORKFLOWS" "issue-milestone"
+check "doc-currency-045-p3:readme-dev-tracking" "$README" "issue-native dev-tracking"
+check "doc-currency-045-p3:getting-started-issue-store" "$GETTING_STARTED" "issue-store"
 
 # Behavioral: issue-store gap capture + projection refresh (R21/R72)
 export SW_ISSUES_FIXTURE=1

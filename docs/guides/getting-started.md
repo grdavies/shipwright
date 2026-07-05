@@ -44,6 +44,14 @@ as-is — use the manual escape hatch if you prefer to apply yourself.
 automatically. For manual paths, use a linked worktree and phase branch (`/sw-worktree`, `/sw-start`).
 `scripts/sw-assert-worktree.py` enforces this at implementation entry.
 
+## Issue-store adopters (PRD 043/045)
+
+Opt-in via `planning.store.backend: issue-store` in `.cursor/workflow.config.json` (default unchanged).
+Under issue-store, `/sw-doc-review` posts persona findings as integrity-checked issue comments on the PRD
+artifact issue; file-store users keep the in-IDE review panel. Release grouping (`planning.releaseGrouping`)
+maps PRDs to provider milestones where supported. See [configuration](configuration.md#issue-store-prd-043-opt-in)
+and [workflow guide](workflows.md#issue-native-doc-review-and-release-grouping-prd-045-phase-3).
+
 ## Single-pass `/sw-tasks`
 
 `/sw-tasks` generates the **complete** frozen task list in one pass (parent phases, executable

@@ -1,10 +1,24 @@
 # Synthesis pipeline
 
-Post-persona merge for `/sw-doc-review`.
+Post-persona merge for `/sw-doc-review`. Transport-aware: file-store collects in-IDE JSON; issue-store reads
+marker-delimited `sw:doc-review` comments under a review-round manifest (R69).
+
+## Review-round manifest (R69) — issue-store only
+
+At synthesis checkpoint open (PRD 043 R33 exclusive checkpoint):
+
+1. **Pin** — record ordered persona-comment IDs + revisions in a review-round manifest (checkpoint-scoped).
+2. **Read-back** — paginated, concurrency-checked fetch of pinned comments only.
+3. **Verify** — each comment: bot authorship + `sw:doc-review` marker present; forged/non-bot comments rejected.
+4. **Fail closed** — any add/edit/delete to pinned comments before synthesis completes **fail closed** with
+   `doc-review-comment-drift`.
+5. **Exclude from freeze hash** — `sw:doc-review` marker comments are excluded from PRD 043 R35 canonicalization.
+
+Manifest shape mirrors PRD 043 R9 freeze-record pinning (ordered IDs + revisions at checkpoint open).
 
 ## Steps
 
-1. **Collect** — gather JSON findings from each dispatched persona.
+1. **Collect** — gather JSON findings from each dispatched persona (in-IDE JSON or issue-store comments under manifest).
 2. **Validate** — drop findings that fail `findings-schema.json`.
 3. **Dedup/merge** — same section + same issue from multiple personas → single finding (highest severity wins).
 4. **Route by `autofix_class`:**

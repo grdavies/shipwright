@@ -1,4 +1,4 @@
-"""Pytest port of run-planning-045-doc-impact-fixtures.sh (PRD 045 phases 1–2)."""
+"""Pytest port of run-planning-045-doc-impact-fixtures.sh (PRD 045 phases 1–3)."""
 from __future__ import annotations
 
 import importlib.util

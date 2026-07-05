@@ -11,6 +11,7 @@ capability:
     adapterId: gitlab-issues
     selectionFamily: providers
     gateRef: check-gate.py
+    issueMilestoneVerb: issue-milestone
 ---
 
 # GitLab Issues adapter
@@ -28,7 +29,9 @@ Selected when `planning.store.issuesProvider` is `gitlab-issues` (independent of
     "issue-comment": true,
     "issue-label": true,
     "issue-lock": true,
-    "issue-search": true
+    "issue-search": true,
+    "issue-close": true,
+    "issue-milestone": true
   },
   "graphql": {},
   "lcd": ["title", "body", "comments", "state", "labels"]
@@ -46,6 +49,7 @@ Selected when `planning.store.issuesProvider` is `gitlab-issues` (independent of
 | `issue-label` | `PUT /projects/{id}/issues/{iid}` (labels array) |
 | `issue-lock` | `PUT /projects/{id}/issues/{iid}` (`discussion_locked`) |
 | `issue-search` | `GET /projects/{id}/issues` (scoped filters) |
+| `issue-milestone` | `PUT /projects/{id}/issues/{iid}` (`iteration_id` when available) |
 
 ## Auth
 
