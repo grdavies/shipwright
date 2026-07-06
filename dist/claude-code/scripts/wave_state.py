@@ -1056,6 +1056,23 @@ def _task_ledger(state: dict[str, Any]) -> dict[str, Any]:
     return ledger
 
 
+def _hierarchy_map(state: dict[str, Any]) -> dict[str, Any]:
+    hmap = state.get("hierarchyMap")
+    if not isinstance(hmap, dict):
+        hmap = {}
+    return hmap
+
+
+def load_hierarchy_map(state: dict[str, Any]) -> dict[str, Any]:
+    """Return durable hierarchyMap from deliver state (PRD 056 R5, R7)."""
+    return dict(_hierarchy_map(state))
+
+
+def set_hierarchy_map(state: dict[str, Any], hmap: dict[str, Any]) -> None:
+    """Persist hierarchyMap on deliver state (additive field only)."""
+    state["hierarchyMap"] = hmap
+
+
 def cmd_ledger_record(root: Path, args: list[str]) -> None:
     task_ref = parse_kv(args, "--task")
     phase_slug = parse_kv(args, "--phase")

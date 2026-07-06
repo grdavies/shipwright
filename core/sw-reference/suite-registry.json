@@ -1524,6 +1524,31 @@
         "planning",
         "native-links"
       ]
+    },
+    {
+      "id": "planning-deliver-progress-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 59,
+      "pytestPath": "scripts/unit_tests/planning/test_planning_deliver_progress.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_progress.py",
+        "scripts/wave_state.py",
+        "scripts/wave_deliver_loop.py",
+        "scripts/planning_hierarchy.py",
+        "scripts/unit_tests/planning/harness_planning_deliver_progress.py"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "deliver-progress"
+      ]
     }
   ]
 }
