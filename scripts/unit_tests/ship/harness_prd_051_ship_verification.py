@@ -20,7 +20,23 @@ from _sw.vendor_paths import repo_root
 FAIL = 0
 
 
+def _gap_backlog_text(root: Path) -> str:
+    path = root / "docs/prds/GAP-BACKLOG.md"
+    return path.read_text(encoding="utf-8") if path.is_file() else ""
+
+
 def _issue_store_cutover(root: Path) -> bool:
+    """Issue-backed planning: legacy projection, local INDEX, or cutover gate."""
+    backlog = _gap_backlog_text(root)
+    if backlog and "planning-legacy-projection" in backlog[:400]:
+        return True
+    index = root / "docs/planning/INDEX.md"
+    if index.is_file():
+        try:
+            if "planning-index:structural" in index.read_text(encoding="utf-8"):
+                return True
+        except OSError:
+            pass
     gate = root / ".cursor/hooks/state/planning-cutover-gate.json"
     if not gate.is_file():
         return False
@@ -68,12 +84,24 @@ def main() -> int:
     if _issue_store_cutover(root):
         index_path = root / "docs/planning/INDEX.md"
         index = index_path.read_text(encoding="utf-8") if index_path.is_file() else ""
-        if re.search(
-            rf"\|\s*{re.escape(gap_unit)}[^|]*\|\s*gap\s*\|[^|]*\|\s*resolved\s*\|",
-            index,
-            re.I,
-        ):
-            ok("gap-flip-verification: gap-001 planning unit resolved in INDEX")
+        backlog = _gap_backlog_text(root)
+        index_ok = bool(
+            index
+            and re.search(
+                rf"\|\s*{re.escape(gap_unit)}[^|]*\|\s*gap\s*\|[^|]*\|\s*resolved\s*\|",
+                index,
+                re.I,
+            )
+        )
+        backlog_ok = bool(
+            re.search(
+                rf"\|\s*GAP-001\s*\|\s*resolved\s*\|\s*{re.escape(gap_unit)}",
+                backlog,
+                re.I,
+            )
+        )
+        if index_ok or backlog_ok:
+            ok("gap-flip-verification: gap-001 planning unit resolved")
         else:
             bad("gap-flip-verification: gap-001 not resolved in INDEX")
     else:
