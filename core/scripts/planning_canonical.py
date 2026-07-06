@@ -265,6 +265,51 @@ def reconcile_edges(
     }
 
 
+
+
+_EDGE_REL_TO_NATIVE_TYPE: dict[str, str] = {
+    "depends": "depends-on",
+    "blocks": "blocks",
+    "sub-issue-of": "sub-issue-of",
+    "extends": "extends",
+    "supersedes": "supersedes",
+    "absorbs": "absorbs",
+    "prd": "prd",
+    "amends": "amends",
+    "brainstorm": "brainstorm",
+}
+
+
+def native_links_from_edges(
+    edge_list: list[dict[str, Any]],
+    index: dict[str, str],
+    *,
+    project_key: str,
+) -> list[dict[str, Any]]:
+    """Resolve sw-edges unit targets to provider issue ids via the issue unit index."""
+    out: list[dict[str, Any]] = []
+    for edge in edge_list or []:
+        if not isinstance(edge, dict):
+            continue
+        rel = str(edge.get("rel") or edge.get("type") or "").strip()
+        target_raw = edge.get("target")
+        if not rel or target_raw is None:
+            continue
+        targets = target_raw if isinstance(target_raw, list) else [target_raw]
+        link_type = _EDGE_REL_TO_NATIVE_TYPE.get(rel, rel)
+        for target_unit in targets:
+            unit_id = str(target_unit).strip()
+            if not unit_id:
+                continue
+            idx_key = f"{project_key}:{unit_id}"
+            issue_id = index.get(idx_key)
+            if not issue_id:
+                continue
+            entry = {"type": link_type, "target": issue_id}
+            if entry not in out:
+                out.append(entry)
+    return out
+
 def compose_issue_body(
     project_key: str,
     artifact_type: str,

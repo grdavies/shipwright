@@ -166,6 +166,199 @@ else
   bad "probe:nativeLinksCapable"
 fi
 
+
+if python3 - <<'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+from planning_canonical import native_links_from_edges
+
+index = {"fixture-native:epic-u": "1", "fixture-native:child-u": "2"}
+edges = [{"rel": "depends", "target": "epic-u"}]
+links = native_links_from_edges(edges, index, project_key="fixture-native")
+assert links == [{"type": "depends-on", "target": "1"}], links
+print("native-links-from-edges-ok")
+PY
+then
+  ok "canonical:native_links_from_edges"
+else
+  bad "canonical:native_links_from_edges"
+fi
+
+if python3 - <<'PY'
+import json, sys
+from pathlib import Path
+from unittest.mock import MagicMock
+sys.path.insert(0, "$ROOT/scripts")
+import issues_http
+import planning_gitlab_client as glc
+
+calls = []
+issue_counter = {"n": 0}
+
+def fake_urlopen(req, timeout=30):
+    method = req.method
+    url = req.full_url
+    payload = None
+    if req.data:
+        payload = json.loads(req.data.decode("utf-8"))
+    calls.append((method, url, payload))
+    if method == "GET" and "/projects/" in url and url.endswith("/projects/o%2Fr"):
+        body = json.dumps({"id": 42})
+        return MagicMock(status=200, headers={}, read=lambda b=body: b.encode(), __enter__=lambda s: s, __exit__=lambda *a: None)
+    if method == "POST" and "/issues" in url and "/links" not in url and "/notes" not in url:
+        issue_counter["n"] += 1
+        num = issue_counter["n"]
+        body = json.dumps({"iid": num, "id": 9000 + num, "title": "t", "description": payload.get("description", ""), "state": "opened", "labels": [], "updated_at": "2026-01-01T00:00:00Z"})
+        return MagicMock(status=200, headers={}, read=lambda b=body: b.encode(), __enter__=lambda s: s, __exit__=lambda *a: None)
+    if method == "POST" and "/links" in url:
+        return MagicMock(status=201, headers={}, read=lambda: b"{}", __enter__=lambda s: s, __exit__=lambda *a: None)
+    if method == "GET" and "/notes" in url:
+        return MagicMock(status=200, headers={}, read=lambda: b"[]", __enter__=lambda s: s, __exit__=lambda *a: None)
+    if method == "GET" and "/links" in url:
+        body = json.dumps([{"link_type": "relates_to", "target_issue": {"iid": 1}}])
+        return MagicMock(status=200, headers={}, read=lambda b=body: b.encode(), __enter__=lambda s: s, __exit__=lambda *a: None)
+    if method == "GET" and "/issues/" in url:
+        num = int(url.rstrip("/").split("/")[-1])
+        body = json.dumps({"iid": num, "id": 9000 + num, "title": "t", "description": "<!-- sw-unit-id: child -->", "state": "opened", "labels": [], "updated_at": "2026-01-01T00:00:00Z"})
+        return MagicMock(status=200, headers={}, read=lambda b=body: b.encode(), __enter__=lambda s: s, __exit__=lambda *a: None)
+    raise AssertionError(f"unexpected {method} {url}")
+
+issues_http._urlopen = fake_urlopen
+cfg = {"planning": {"store": {"projectKey": "fixture-native", "storeLocation": {"mode": "separate-project", "owner": "o", "repo": "r"}, "issues": {"tokenEnv": "ISSUES_GITLAB_TOKEN"}}}, "host": {"provider": "gitlab"}}
+import os
+os.environ["ISSUES_GITLAB_TOKEN"] = "token"
+os.environ["SW_NATIVE_LINKS_CAPABLE"] = "1"
+glc.load_workflow_config = lambda _r: cfg
+client = glc.GitLabIssuesClient(Path("$ROOT"))
+created = client.create(title="child", body="<!-- sw-unit-id: child -->", labels=[], project_key="fixture-native", artifact_type="tasks", unit_id="child", native_links=[{"type": "sub-issue-of", "target": "1"}])
+assert any("/links" in c[1] for c in calls if c[0] == "POST"), calls
+got = client.get(created.id)
+assert got.native_links, got.native_links
+from planning_canonical import reconcile_edges
+reconciled = reconcile_edges({"version": 1, "edges": [], "native": got.native_links}, got.native_links)
+assert reconciled["native"]
+print("gitlab-stub-round-trip-ok")
+PY
+then
+  ok "gitlab-stub:create-get-reconcile"
+else
+  bad "gitlab-stub:create-get-reconcile"
+fi
+
+if python3 - <<'PY'
+import json, sys
+from pathlib import Path
+from unittest.mock import MagicMock
+sys.path.insert(0, "$ROOT/scripts")
+import issues_http
+import planning_jira_client as jc
+
+calls = []
+
+def fake_urlopen(req, timeout=30):
+    method = req.method
+    url = req.full_url
+    payload = None
+    if req.data:
+        payload = json.loads(req.data.decode("utf-8"))
+    calls.append((method, url, payload))
+    if method == "POST" and url.endswith("/issue") and "/issueLink" not in url:
+        body = json.dumps({"key": "FIX-9", "id": "10009"})
+        return MagicMock(status=201, headers={}, read=lambda b=body: b.encode(), __enter__=lambda s: s, __exit__=lambda *a: None)
+    if method == "POST" and url.endswith("/issueLink"):
+        return MagicMock(status=201, headers={}, read=lambda: b"", __enter__=lambda s: s, __exit__=lambda *a: None)
+    if method == "GET" and "/issue/FIX-" in url:
+        key = url.split("/issue/")[1].split("?")[0]
+        body = json.dumps({"key": key, "fields": {"summary": "t", "description": "<!-- sw-unit-id: child -->", "labels": [], "updated": "2026-01-01T00:00:00Z", "status": {"statusCategory": {"key": "new"}}, "comment": {"comments": []}, "issuelinks": [{"type": {"name": "Relates"}, "inwardIssue": {"key": key}, "outwardIssue": {"key": "FIX-1"}}]}})
+        return MagicMock(status=200, headers={}, read=lambda b=body: b.encode(), __enter__=lambda s: s, __exit__=lambda *a: None)
+    raise AssertionError(f"unexpected {method} {url}")
+
+issues_http._urlopen = fake_urlopen
+cfg = {"planning": {"store": {"projectKey": "fixture-native", "issues": {"tokenEnv": "ISSUES_JIRA_TOKEN", "emailEnv": "ISSUES_JIRA_EMAIL", "endpoint": "https://example.atlassian.net", "issueType": "Task", "linkDefaults": {"sub-issue-of": "Relates"}}}}, "host": {"provider": "none"}}
+import os
+os.environ["ISSUES_JIRA_TOKEN"] = "token"
+os.environ["ISSUES_JIRA_EMAIL"] = "user@example.com"
+os.environ["SW_NATIVE_LINKS_CAPABLE"] = "1"
+jc.load_workflow_config = lambda _r: cfg
+client = jc.JiraIssuesClient(Path("$ROOT"))
+created = client.create(title="child", body="<!-- sw-unit-id: child -->", labels=[], project_key="fixture-native", artifact_type="tasks", unit_id="child", native_links=[{"type": "sub-issue-of", "target": "FIX-1"}])
+assert any("/issueLink" in c[1] for c in calls if c[0] == "POST"), calls
+got = client.get(created.id)
+assert got.native_links, got.native_links
+from planning_canonical import reconcile_edges
+reconciled = reconcile_edges({"version": 1, "edges": [], "native": got.native_links}, got.native_links)
+assert reconciled["native"]
+print("jira-stub-round-trip-ok")
+PY
+then
+  ok "jira-stub:create-get-reconcile"
+else
+  bad "jira-stub:create-get-reconcile"
+fi
+
+if python3 - <<'PY'
+import sys
+from pathlib import Path
+from unittest.mock import MagicMock
+sys.path.insert(0, "$ROOT/scripts")
+import issues_http
+import planning_store as ps
+
+def fake_urlopen(req, timeout=15):
+    if "/projects/o%2Fr/issues/1/links" in req.full_url:
+        return MagicMock(status=200, read=lambda: b"[]", __enter__=lambda s: s, __exit__=lambda *a: None)
+    if req.full_url.endswith("/user"):
+        return MagicMock(status=200, read=lambda: b"{}", __enter__=lambda s: s, __exit__=lambda *a: None)
+    raise AssertionError(req.full_url)
+
+issues_http._urlopen = fake_urlopen
+cfg = {"planning": {"store": {"backend": "issue-store", "issuesProvider": "gitlab-issues", "projectKey": "fixture-native", "storeLocation": {"mode": "separate-project", "owner": "o", "repo": "r"}, "issues": {"tokenEnv": "ISSUES_GITLAB_TOKEN"}}}, "host": {"provider": "gitlab"}}
+import os
+os.environ["ISSUES_GITLAB_TOKEN"] = "token"
+out = ps.probe_issues_token(Path("$ROOT"), cfg)
+assert out.get("nativeLinksCapable") is True, out
+print("gitlab-probe-capable-ok")
+PY
+then
+  ok "probe:gitlab-nativeLinksCapable"
+else
+  bad "probe:gitlab-nativeLinksCapable"
+fi
+
+if python3 - <<'PY'
+import json, sys
+from pathlib import Path
+from unittest.mock import MagicMock
+sys.path.insert(0, "$ROOT/scripts")
+import issues_http
+import planning_store as ps
+import planning_jira_probe as jp
+
+def fake_urlopen(req, timeout=15):
+    if req.full_url.endswith("/issueLinkType"):
+        body = json.dumps({"issueLinkTypes": [{"name": "Relates"}]})
+        return MagicMock(status=200, read=lambda b=body: b.encode(), __enter__=lambda s: s, __exit__=lambda *a: None)
+    if req.full_url.endswith("/myself"):
+        return MagicMock(status=200, read=lambda: b"{}", __enter__=lambda s: s, __exit__=lambda *a: None)
+    raise AssertionError(req.full_url)
+
+issues_http._urlopen = fake_urlopen
+jp.probe_jira_init = lambda c, t, root=None: {"verdict": "ok"}
+cfg = {"planning": {"store": {"backend": "issue-store", "issuesProvider": "jira", "projectKey": "fixture-native", "issues": {"tokenEnv": "ISSUES_JIRA_TOKEN", "emailEnv": "ISSUES_JIRA_EMAIL", "endpoint": "https://example.atlassian.net"}}}, "host": {"provider": "none"}}
+import os
+os.environ["ISSUES_JIRA_TOKEN"] = "token"
+os.environ["ISSUES_JIRA_EMAIL"] = "user@example.com"
+out = ps.probe_issues_token(Path("$ROOT"), cfg)
+assert out.get("nativeLinksCapable") is True, out
+print("jira-probe-capable-ok")
+PY
+then
+  ok "probe:jira-nativeLinksCapable"
+else
+  bad "probe:jira-nativeLinksCapable"
+fi
+
 exit "$FAIL"
 """
 
