@@ -377,10 +377,74 @@ def verify_frozen_issue_store(root: Path, unit_id: str, body_path: str) -> None:
 
 
 def unit_id_from_task_list_rel(task_list_rel: str) -> str:
-    parent = Path(task_list_rel).parent.name
-    if parent.startswith("prd-"):
-        return parent
-    return f"prd-{parent}"
+    """Derive the frozen task list store unit id from its filename stem (gap-051)."""
+    return Path(task_list_rel).stem
+
+def ensure_run_entry_materialized(
+    root: Path,
+    task_list_rel: str,
+    *,
+    target: str | None = None,
+) -> dict[str, Any]:
+    """Materialize frozen task list at deliver run-entry when issue-store is effective (R17, R19)."""
+    if is_ci_or_host():
+        return {"verdict": "skipped", "reason": "ci-or-host-never-materializes"}
+    worktree = git_root(root)
+    task_list_rel = planning_path_redirect.resolve_path(worktree, task_list_rel)
+    try:
+        logical = planning_paths.resolve_contained(worktree, task_list_rel)
+    except planning_paths.PathEscapeError as exc:
+        fail(str(exc))
+    cfg = load_workflow_config(root)
+    from planning_store import get_backend, resolve_backend_id, resolve_effective_backend
+
+    if resolve_effective_backend(root, cfg).get("effective") != "issue-store":
+        return {"verdict": "skipped", "reason": "file-store-byte-identical"}
+    if logical.is_file():
+        return {"verdict": "skipped", "reason": "logical-path-present", "bodyPath": task_list_rel}
+    pin_check = validate_store_pin(root)
+    if pin_check.get("verdict") == "fail":
+        return pin_check
+    unit_id = unit_id_from_task_list_rel(task_list_rel)
+    verify_frozen_issue_store(root, unit_id, task_list_rel)
+    backend = get_backend(root, cfg)
+    dest = materialized_dest(worktree, task_list_rel)
+    result = backend.materialize(unit_id, task_list_rel, dest)
+    if result.verdict != "ok":
+        fail(
+            f"run-entry materialize failed for {task_list_rel}",
+            unitId=unit_id,
+            bodyPath=task_list_rel,
+            reason=result.reason,
+        )
+    secret_scan_file(dest)
+    rel_dest = str(dest.relative_to(worktree)).replace("\\", "/")
+    state = load_deliver_state(root, target=target)
+    write_pin(
+        state,
+        backend=resolve_backend_id(cfg),
+        revision=store_revision(cfg),
+        paths=[rel_dest],
+    )
+    save_deliver_state(root, state, target=target)
+    return {
+        "verdict": "ok",
+        "action": "run-entry-materialize",
+        "bodyPath": task_list_rel,
+        "dest": rel_dest,
+        "unitId": unit_id,
+        "hash": result.hash or "",
+    }
+
+
+def cmd_run_entry(root: Path, args: argparse.Namespace) -> int:
+    task_list = args.task_list
+    if not task_list:
+        fail("--task-list required")
+    result = ensure_run_entry_materialized(root, task_list, target=args.target)
+    emit(result, 0 if result.get("verdict") in {"ok", "skipped"} else 20)
+    return 0
+
 
 def cmd_provision(root: Path, args: argparse.Namespace) -> int:
     if is_ci_or_host():
@@ -524,6 +588,10 @@ def main() -> None:
     parser.add_argument("--root", default=".")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    p_run_entry = sub.add_parser("run-entry")
+    p_run_entry.add_argument("--task-list", required=True)
+    p_run_entry.add_argument("--target")
+
     p_provision = sub.add_parser("provision")
     p_provision.add_argument("--worktree", required=True)
     p_provision.add_argument("--task-list", required=True)
@@ -546,7 +614,9 @@ def main() -> None:
     args = parser.parse_args()
     root = git_root(Path(args.root).resolve())
 
-    if args.command == "provision":
+    if args.command == "run-entry":
+        cmd_run_entry(root, args)
+    elif args.command == "provision":
         cmd_provision(root, args)
     elif args.command == "validate-pin":
         cmd_validate_pin(root, args)
