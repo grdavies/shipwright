@@ -716,7 +716,7 @@ with PRD-023 pilot guards on `/sw-deliver`. Invalid proposals fail closed to the
 
 Two-tier persistence: wave batching → shared deliver run-state (conductor-only); phase step plans → per-phase
 run dir. See [configuration](configuration.md#orchestration-plan-policy-orchestrationplanpolicy) and
-[call-site map](../prds/022-kernel-classification-and-plan-validation/call-site-map.md).
+[call-site map](../../scripts/test/fixtures/planning-post-migration/022-kernel-classification-and-plan-validation/call-site-map.md).
 
 ## Orchestrator plan-policy fan-out (PRD 024)
 

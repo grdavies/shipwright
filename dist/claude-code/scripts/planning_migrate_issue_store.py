@@ -976,7 +976,7 @@ def _frontmatter_status_for_lifecycle(lifecycle: ArtifactLifecycle, artifact_typ
     if lifecycle.issue_state == "closed":
         return "complete"
     if artifact_type in {"prd", "amendment", "tasks"}:
-        return "not-started"
+        return None
     return None
 
 
@@ -1038,12 +1038,6 @@ def extract_lifecycle_from_record(record: Any) -> ArtifactLifecycle:
             consumer_status = "complete" if record.state == "closed" else None
         elif not consumer_status and record.state == "closed":
             consumer_status = "complete"
-        elif (
-            not consumer_status
-            and record.state == "open"
-            and artifact_type in {"prd", "amendment", "tasks"}
-        ):
-            consumer_status = "not-started"
 
     return ArtifactLifecycle(
         issue_state=record.state,

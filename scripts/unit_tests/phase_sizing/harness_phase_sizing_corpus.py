@@ -23,7 +23,7 @@ def main() -> int:
     root = repo_root(__file__)
     env = {"PYTHONPATH": str(root / "scripts"), **dict(__import__("os").environ)}
     proc = subprocess.run(
-        [sys.executable, str(root / "scripts" / "phase_sizing_corpus.py"), "--root", str(root), "audit"],
+        [sys.executable, str(root / "scripts" / "phase_sizing_corpus.py"), "--root", str(root), "audit", "--stdout-only"],
         cwd=str(root),
         env=env,
         capture_output=True,
