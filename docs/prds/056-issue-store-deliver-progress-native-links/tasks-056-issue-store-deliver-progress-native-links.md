@@ -106,17 +106,17 @@ rescan: A3-deliver-run-entry-materialize
 
 ### 4. Deliver provision hierarchy wiring (medium)
 
-- [ ] **4.1** Add `planning_progress.py` scaffold + hierarchyMap state shape
+- [x] 4.1 Add `planning_progress.py` scaffold + hierarchyMap state shape
   - **File:** `scripts/planning_progress.py`, `scripts/wave_state.py`
   - **Expected:** durable `hierarchyMap` on deliver state; load/save helpers
   - **R-IDs:** R5, R7
 
-- [ ] **4.2** Invoke hierarchy apply from phase provision
+- [x] 4.2 Invoke hierarchy apply from phase provision
   - **File:** `scripts/wave_deliver_loop.py` (or `wave.py phase provision`)
   - **Expected:** issue-store effective → non-dry-run hierarchy; checkbox fallback notice only
   - **R-IDs:** R5, R9
 
-- [ ] **4.3** Fixture: provision calls hierarchy when issue-store configured
+- [x] 4.3 Fixture: provision calls hierarchy when issue-store configured
   - **File:** `scripts/unit_tests/planning/harness_planning_deliver_progress.py`
   - **Expected:** stub client records epic + sub-issue creates
   - **R-IDs:** R10
