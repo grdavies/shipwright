@@ -77,17 +77,17 @@ rescan: A3-deliver-run-entry-materialize
 
 ### 2. GitLab and Jira native links (medium)
 
-- [x] **2.1** GitLab client native link implementation
+- [x] 2.1 GitLab client native link implementation
   - **File:** `scripts/planning_gitlab_client.py`
   - **Expected:** same contract as GitHub; degradation notice on missing capability
   - **R-IDs:** R1, R2, R3
 
-- [x] **2.2** Jira client issue-link implementation
+- [x] 2.2 Jira client issue-link implementation
   - **File:** `scripts/planning_jira_client.py`
   - **Expected:** `linkDefaults` config; createmeta-driven link type; notice on failure
   - **R-IDs:** R1, R2, R3
 
-- [x] **2.3** `native_links_from_edges` resolver in planning_canonical
+- [x] 2.3 `native_links_from_edges` resolver in planning_canonical
   - **File:** `scripts/planning_canonical.py`
   - **Expected:** resolves unit ids → issue ids via issue unit index
   - **R-IDs:** R4
