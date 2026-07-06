@@ -394,6 +394,7 @@ def reconcile_core(
     dry_run: bool = False,
     before_serialize_hook: Callable[[], None] | None = None,
     override: dict[str, str] | None = None,
+    force_legacy_projection: bool = False,
 ) -> dict[str, Any]:
     worktree = pp.git_root(root)
     units = pg.discover_units(root)
@@ -438,7 +439,7 @@ def reconcile_core(
     if not dry_run:
         superseded_path.write_text(render_superseded_manifest(units, derived, effects), encoding="utf-8")
 
-    legacy = plp.project_all(root, dry_run=dry_run)
+    legacy = plp.project_all(root, dry_run=dry_run, force=force_legacy_projection)
     relief = relief_acceptance_check(root, derived)
 
     archived = [uid for uid, st in derived.items() if st in ARCHIVE_VIEW_STATUSES]
@@ -521,7 +522,12 @@ def cmd_reconcile(root: Path, args: list[str]) -> None:
         }
 
     with living_doc_write_lock(root, holder="planning-graph-reconcile"):
-        result = reconcile_core(root, dry_run=dry_run, override=override)
+        result = reconcile_core(
+            root,
+            dry_run=dry_run,
+            override=override,
+            force_legacy_projection=has_flag(args, "--force"),
+        )
         if allow_log:
             result["allowDefaultBranch"] = allow_log
         commit_sha = None

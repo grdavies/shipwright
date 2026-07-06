@@ -41,8 +41,8 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DOC_FORMAT="$ROOT/scripts/doc_format.py"
 NORMALIZE="$ROOT/scripts/doc-format-normalize.sh"
-MAP="$ROOT/docs/prds/031-planning-unit-model-and-migration/call-site-map.md"
-MANIFEST="$ROOT/docs/prds/031-planning-unit-model-and-migration/tokenizer-exception-manifest.json"
+MAP="$ROOT/scripts/test/fixtures/planning-post-migration/031-planning-unit-model-and-migration/call-site-map.md"
+MANIFEST="$ROOT/scripts/test/fixtures/planning-post-migration/031-planning-unit-model-and-migration/tokenizer-exception-manifest.json"
 FIX="$ROOT/scripts/test/fixtures/doc-format"
 FAIL=0
 

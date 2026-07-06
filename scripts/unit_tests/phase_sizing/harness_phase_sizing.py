@@ -45,7 +45,7 @@ def run_score(task_list: str) -> dict:
 
 
 def main() -> int:
-    task_list = "docs/prds/040-phase-granularity-parallelism/tasks-040-phase-granularity-parallelism.md"
+    task_list = "scripts/test/fixtures/planning-post-migration/040-phase-granularity-parallelism/tasks-040-phase-granularity-parallelism.md"
     first = run_score(task_list)
     second = run_score(task_list)
     if json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True):

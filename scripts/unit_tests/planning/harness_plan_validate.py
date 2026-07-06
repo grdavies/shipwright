@@ -43,7 +43,7 @@ WAVE="$ROOT/scripts/wave.sh"
 VALIDATE="$ROOT/scripts/wave_plan_validate.py"
 FIX="$ROOT/scripts/test/fixtures/plan-validate"
 WF="$ROOT/.cursor/workflow.config.json"
-TASK_FROZEN="$ROOT/docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md"
+TASK_FROZEN="$ROOT/scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md"
 FAIL=0
 
 mkdir -p "$FIX"
@@ -105,7 +105,7 @@ fi
 
 # --- Build frozen plan for wave fixtures ---
 FROZEN_PLAN="$FIX/frozen-plan.json"
-"$WAVE" plan --task-list docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md --dry-run >"$FROZEN_PLAN" 2>/dev/null || true
+"$WAVE" plan --task-list scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md --dry-run >"$FROZEN_PLAN" 2>/dev/null || true
 if [[ ! -s "$FROZEN_PLAN" ]]; then
   bad "wave-fixture-setup: frozen plan"
 else
@@ -222,7 +222,7 @@ else
 fi
 
 # --- bare plan still routes to wave_deliver ---
-if OUT=$("$WAVE" plan --task-list docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md --dry-run 2>/dev/null) \
+if OUT=$("$WAVE" plan --task-list scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md --dry-run 2>/dev/null) \
   && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['mode']=='phase'";
 then
   ok "wave-sh-bare-plan-routing"

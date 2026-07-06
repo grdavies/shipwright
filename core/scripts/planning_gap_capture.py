@@ -73,10 +73,17 @@ def store_put_gap(root: Path, unit_id: str, body_path_rel: str, content: str) ->
     except ImportError:
         pass
 
-def next_gap_number(units: list[pig.PlanningUnit]) -> int:
+def next_gap_number(root: Path, units: list[pig.PlanningUnit]) -> int:
     max_n = 0
     for unit in units:
         m = re.match(r"gap-(\d+)-", unit.id)
+        if m:
+            max_n = max(max_n, int(m.group(1)))
+    for key in ps.load_issue_unit_index(root):
+        if not key.startswith("planning:gap-"):
+            continue
+        uid = key.split(":", 1)[1]
+        m = re.match(r"gap-(\d+)-", uid)
         if m:
             max_n = max(max_n, int(m.group(1)))
     return max_n + 1
@@ -92,7 +99,7 @@ def capture_gap(
 ) -> dict[str, Any]:
     dirs = pp.load_planning_dirs(root)
     units = pig.discover_units(root)
-    num = next_gap_number(units)
+    num = next_gap_number(root, units)
     unit_id = f"gap-{num:03d}-{slugify(title)}"
     body_path_rel = gap_body_rel(dirs, unit_id)
     fm = [
@@ -170,7 +177,7 @@ def materialize_meta_gap(
         fail("materialize requires confirmed draft", signalId=signal_id, status=draft.get("status"))
     dirs = pp.load_planning_dirs(root)
     units = pig.discover_units(root)
-    num = next_gap_number(units)
+    num = next_gap_number(root, units)
     unit_id = f"gap-{num:03d}-{slugify(title)}"
     body_path_rel = pp.join_rel(pp.plugin_self_gap_dir(dirs), unit_id, f"{unit_id}.md")
     fm = [

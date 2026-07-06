@@ -512,7 +512,7 @@ def stage_relocations(root: Path, plan: MigrationPlan) -> Path:
                 fields = {"id": "gap-feedback-checklist", "type": "gap", "status": "open", "title": "Feedback checklist", "visibility": "public"}
             elif item.kind == "brainstorm":
                 uid = Path(item.dst).parent.name
-                fields = {"id": uid, "type": "brainstorm", "status": "proposed", "title": uid, **private_profile_fields()}
+                fields = {"id": uid, "type": "brainstorm", "status": "complete", "title": uid, **private_profile_fields()}
             elif item.kind == "decision":
                 uid = Path(item.dst).parent.name
                 fields = {"id": uid, "type": "decision", "status": "proposed", "title": uid, **private_profile_fields()}
@@ -825,6 +825,12 @@ def _run_store_rollback(root: Path, *, apply: bool) -> None:
     rollback_store_migration(root, apply=apply)
 
 
+def _run_store_backfill_edges(root: Path, *, apply: bool = False) -> None:
+    from planning_migrate_issue_store import run_backfill_edges
+
+    run_backfill_edges(root, apply=apply)
+
+
 def _run_store_scan_quiesce(root: Path) -> None:
     from planning_migrate_issue_store import scan_quiesce_blockers, emit
 
@@ -849,6 +855,7 @@ def main() -> None:
             "store-doctor",
             "store-rollback",
             "store-scan-quiesce",
+            "store-backfill-edges",
         ],
     )
     parser.add_argument("--force", action="store_true")
@@ -878,6 +885,7 @@ def main() -> None:
         "store-doctor": lambda: _run_store_doctor(root, apply=args.apply),
         "store-rollback": lambda: _run_store_rollback(root, apply=args.apply),
         "store-scan-quiesce": lambda: _run_store_scan_quiesce(root),
+        "store-backfill-edges": lambda: _run_store_backfill_edges(root, apply=args.apply),
     }
     handlers[args.command]()
 

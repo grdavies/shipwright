@@ -122,6 +122,51 @@ def cmd_doctor(root: Path, _args: list[str]) -> None:
     emit({"verdict": "pass", "action": "cutover-doctor"})
 
 
+
+def _parse_gate_overrides(args: list[str]) -> dict[str, str]:
+    overrides: dict[str, str] = {}
+    i = 0
+    while i < len(args):
+        token = args[i]
+        if token == "--discover-source" and i + 1 < len(args):
+            overrides["discoverSource"] = args[i + 1]
+            i += 2
+            continue
+        if token == "--structural" and i + 1 < len(args):
+            overrides["structural"] = args[i + 1]
+            i += 2
+            continue
+        if token == "--derived" and i + 1 < len(args):
+            overrides["derived"] = args[i + 1]
+            i += 2
+            continue
+        if token == "--in-flight" and i + 1 < len(args):
+            overrides["inFlight"] = args[i + 1]
+            i += 2
+            continue
+        if token == "--flip-to-issue":
+            overrides.update({
+                "discoverSource": "issue",
+                "structural": "issue",
+                "derived": "file",
+                "inFlight": "deliver",
+            })
+            i += 1
+            continue
+        fail(f"unknown set flag: {token}")
+    return overrides
+
+
+def cmd_set(root: Path, args: list[str]) -> None:
+    overrides = _parse_gate_overrides(args)
+    if not overrides:
+        fail("usage: planning_cutover.py <root> set [--flip-to-issue | --discover-source issue ...]")
+    gate = load_cutover_gate(root)
+    gate.update(overrides)
+    save_cutover_gate(root, gate)
+    emit({"verdict": "pass", "action": "cutover-set", "gate": gate})
+
+
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     if len(args) < 2:
@@ -131,6 +176,8 @@ def main(argv: list[str] | None = None) -> None:
         cmd_doctor(root, args[2:])
     elif args[1] == "show":
         emit({"verdict": "pass", "gate": load_cutover_gate(root)})
+    elif args[1] == "set":
+        cmd_set(root, args[2:])
     else:
         fail(f"unknown command: {args[1]}")
 

@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+import issues_http
 
 from host_lib import (
     github_api_base,
@@ -443,23 +443,153 @@ def validate_project_key(root: Path, cfg: dict[str, Any], *, register: bool = Fa
     }
 
 
-def _github_scope_probe(token: str, cfg: dict[str, Any]) -> dict[str, Any]:
+
+
+def _probe_rate_limited_result(exc: Exception) -> dict[str, Any] | None:
+    from issues_lib import IssueRateLimited
+
+    if not isinstance(exc, IssueRateLimited):
+        return None
+    return {
+        "verdict": "fail",
+        "error": "rate-limited",
+        "retryable": bool(exc.retryable),
+        "reason": exc.reason,
+        "cumulativeWaitMs": exc.cumulative_wait_ms,
+        "message": str(exc),
+    }
+
+def _github_probe_headers(token: str) -> dict[str, str]:
+    return {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {token}",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "shipwright-planning-store",
+    }
+
+
+def _github_fine_grained_probe(
+    token: str,
+    cfg: dict[str, Any],
+    root: Path,
+    *,
+    required: set[str],
+) -> dict[str, Any]:
+    """Fine-grained PATs omit X-OAuth-Scopes — verify issue-store repo access functionally."""
+    location = resolve_store_location(root, cfg)
+    if location.get("verdict") != "ok":
+        return {
+            "verdict": "fail",
+            "error": "store-location-unresolved",
+            "message": str(location.get("error") or "unable to resolve store location for probe"),
+        }
+    owner = location.get("owner")
+    repo = location.get("repo")
+    if not isinstance(owner, str) or not owner.strip() or not isinstance(repo, str) or not repo.strip():
+        return {
+            "verdict": "fail",
+            "error": "store-location-unresolved",
+            "message": "store location missing owner/repo for fine-grained probe",
+        }
+    owner = owner.strip()
+    repo = repo.strip()
+    api_base = github_api_base(host_section(cfg))
+    headers = _github_probe_headers(token)
+    probes = (
+        (f"{api_base}/repos/{owner}/{repo}", "metadata"),
+        (f"{api_base}/repos/{owner}/{repo}/issues?state=all&per_page=1", "issues"),
+    )
+    for probe_url, probe_kind in probes:
+        try:
+            status, _, _body = issues_http.http_request(
+                "GET",
+                probe_url,
+                headers,
+                root=root,
+                issues_provider="github-issues",
+                timeout=15,
+            )
+        except ConnectionError as exc:
+            return {"verdict": "fail", "error": "network-unavailable", "message": str(exc)}
+        except Exception as exc:
+            limited = _probe_rate_limited_result(exc)
+            if limited is not None:
+                limited["probe"] = probe_kind
+                return limited
+            raise
+        else:
+            if status >= 400:
+                if status in {401, 403}:
+                    return {
+                        "verdict": "fail",
+                        "error": "insufficient-scope",
+                        "probe": probe_kind,
+                        "httpStatus": status,
+                        "scopes": [],
+                        "required": sorted(required),
+                        "message": f"GitHub fine-grained token lacks {probe_kind} access to {owner}/{repo}",
+                    }
+                if status == 404:
+                    return {
+                        "verdict": "fail",
+                        "error": "repo-not-found",
+                        "httpStatus": 404,
+                        "owner": owner,
+                        "repo": repo,
+                        "message": f"Repository {owner}/{repo} not found or not accessible with this token",
+                    }
+                return {"verdict": "fail", "error": "auth-failed", "httpStatus": status}
+    return {
+        "verdict": "ok",
+        "scopes": [],
+        "required": sorted(required),
+        "tokenKind": "fine-grained",
+        "probeRepo": f"{owner}/{repo}",
+    }
+
+
+def _github_scope_probe(token: str, cfg: dict[str, Any], root: Path) -> dict[str, Any]:
     host = host_section(cfg)
     url = f"{github_api_base(host)}/user"
-    req = Request(url, headers={"Accept": "application/vnd.github+json", "Authorization": f"Bearer {token}", "User-Agent": "shipwright-planning-store"})
+    headers = _github_probe_headers(token)
     try:
-        with urlopen(req, timeout=15) as resp:
-            scopes_header = resp.headers.get("X-OAuth-Scopes") or resp.headers.get("x-oauth-scopes") or ""
-    except HTTPError as exc:
-        return {"verdict": "fail", "error": "auth-failed", "httpStatus": exc.code}
-    except URLError as exc:
-        return {"verdict": "fail", "error": "network-unavailable", "message": str(exc.reason)}
+        status, resp_headers, _body = issues_http.http_request(
+            "GET",
+            url,
+            headers,
+            root=root,
+            issues_provider="github-issues",
+            timeout=15,
+        )
+    except ConnectionError as exc:
+        return {"verdict": "fail", "error": "network-unavailable", "message": str(exc)}
+    except Exception as exc:
+        limited = _probe_rate_limited_result(exc)
+        if limited is not None:
+            return limited
+        raise
+    else:
+        if status >= 400:
+            return {"verdict": "fail", "error": "auth-failed", "httpStatus": status}
+        scopes_header = resp_headers.get("x-oauth-scopes") or resp_headers.get("X-OAuth-Scopes") or ""
     scopes = {s.strip() for s in scopes_header.split(",") if s.strip()}
     required = set(MIN_ISSUES_SCOPES["github-issues"])
     if scopes & required:
-        return {"verdict": "ok", "scopes": sorted(scopes), "required": sorted(required)}
+        return {
+            "verdict": "ok",
+            "scopes": sorted(scopes),
+            "required": sorted(required),
+            "tokenKind": "classic",
+        }
     if "repo" in scopes or "public_repo" in scopes:
-        return {"verdict": "ok", "scopes": sorted(scopes), "required": sorted(required)}
+        return {
+            "verdict": "ok",
+            "scopes": sorted(scopes),
+            "required": sorted(required),
+            "tokenKind": "classic",
+        }
+    if not scopes:
+        return _github_fine_grained_probe(token, cfg, root, required=required)
     return {
         "verdict": "fail",
         "error": "insufficient-scope",
@@ -469,18 +599,29 @@ def _github_scope_probe(token: str, cfg: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _gitlab_scope_probe(token: str, cfg: dict[str, Any]) -> dict[str, Any]:
+def _gitlab_scope_probe(token: str, cfg: dict[str, Any], root: Path) -> dict[str, Any]:
     host = host_section(cfg)
     url = f"{gitlab_api_base(host)}/user"
-    req = Request(url, headers={"PRIVATE-TOKEN": token, "User-Agent": "shipwright-planning-store"})
+    headers = {"PRIVATE-TOKEN": token, "User-Agent": "shipwright-planning-store"}
     try:
-        with urlopen(req, timeout=15) as resp:
-            if resp.status >= 400:
-                return {"verdict": "fail", "error": "auth-failed", "httpStatus": resp.status}
-    except HTTPError as exc:
-        return {"verdict": "fail", "error": "auth-failed", "httpStatus": exc.code}
-    except URLError as exc:
-        return {"verdict": "fail", "error": "network-unavailable", "message": str(exc.reason)}
+        status, _, _body = issues_http.http_request(
+            "GET",
+            url,
+            headers,
+            root=root,
+            issues_provider="gitlab-issues",
+            timeout=15,
+        )
+    except ConnectionError as exc:
+        return {"verdict": "fail", "error": "network-unavailable", "message": str(exc)}
+    except Exception as exc:
+        limited = _probe_rate_limited_result(exc)
+        if limited is not None:
+            return limited
+        raise
+    else:
+        if status >= 400:
+            return {"verdict": "fail", "error": "auth-failed", "httpStatus": status}
     return {"verdict": "ok", "required": MIN_ISSUES_SCOPES["gitlab-issues"]}
 
 
@@ -514,9 +655,9 @@ def probe_issues_token(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         }
     token = os.environ.get(token_env, "")
     if provider == "github-issues":
-        probe = _github_scope_probe(token, cfg)
+        probe = _github_scope_probe(token, cfg, root)
     elif provider == "gitlab-issues":
-        probe = _gitlab_scope_probe(token, cfg)
+        probe = _gitlab_scope_probe(token, cfg, root)
     elif provider == "jira":
         probe = _jira_scope_probe(root, cfg, token)
     else:
@@ -533,7 +674,7 @@ def probe_issues_token(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         "tokenPresent": True,
         "requiredScopes": MIN_ISSUES_SCOPES.get(provider, []),
     }
-    for key in ("error", "message", "scopes", "required", "httpStatus"):
+    for key in ("error", "message", "scopes", "required", "httpStatus", "tokenKind", "probeRepo", "probe", "owner", "repo"):
         if key in probe:
             out[key] = probe[key]
     return out
@@ -606,13 +747,203 @@ def secret_scan_text(text: str, *, path_hint: str | None = None) -> None:
         )
 
 
-def issue_store_visibility_gate(
+def _store_host_privacy_override() -> str | None:
+    raw = os.environ.get("SW_STORE_HOST_PRIVACY", "").strip().lower()
+    if raw in {"private", "public"}:
+        return raw
+    return None
+
+
+def _github_store_repo_private(root: Path, cfg: dict[str, Any], owner: str, repo: str) -> bool | None:
+    from issues_lib import IssueRateLimited
+
+    provider = "github-issues"
+    token_env = resolve_issues_token_env(cfg, provider)
+    api_token = os.environ.get(token_env, "") if token_env else ""
+    host = host_section(cfg)
+    url = f"{github_api_base(host)}/repos/{owner}/{repo}"
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "shipwright-planning-store",
+    }
+    if api_token:
+        headers["Authorization"] = f"Bearer {api_token}"
+    try:
+        status, _, body = issues_http.http_request(
+            "GET",
+            url,
+            headers,
+            root=root,
+            issues_provider=provider,
+            timeout=15,
+        )
+        if status >= 400:
+            return None
+        data = json.loads(body)
+    except (IssueRateLimited, ConnectionError, json.JSONDecodeError, TimeoutError):
+        return None
+    if isinstance(data, dict) and "private" in data:
+        return bool(data["private"])
+    return None
+
+
+def _gitlab_store_project_private(root: Path, cfg: dict[str, Any], owner: str, project: str) -> bool | None:
+    from issues_lib import IssueRateLimited
+    from urllib.parse import quote
+
+    provider = "gitlab-issues"
+    token_env = resolve_issues_token_env(cfg, provider)
+    api_token = os.environ.get(token_env, "") if token_env else ""
+    host = host_section(cfg)
+    encoded = quote(f"{owner}/{project}", safe="")
+    url = f"{gitlab_api_base(host)}/projects/{encoded}"
+    headers = {"PRIVATE-TOKEN": api_token, "User-Agent": "shipwright-planning-store"}
+    if not api_token:
+        return None
+    try:
+        status, _, body = issues_http.http_request(
+            "GET",
+            url,
+            headers,
+            root=root,
+            issues_provider=provider,
+            timeout=15,
+        )
+        if status >= 400:
+            return None
+        data = json.loads(body)
+    except (IssueRateLimited, ConnectionError, json.JSONDecodeError, TimeoutError):
+        return None
+    if isinstance(data, dict):
+        visibility = str(data.get("visibility", "")).strip().lower()
+        if visibility == "private":
+            return True
+        if visibility in {"public", "internal"}:
+            return False
+    return None
+
+
+def probe_store_host_privacy(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Resolve whether the configured issue store host can hold private-tier units."""
+    override = _store_host_privacy_override()
+    if override:
+        return {"verdict": "ok", "storeHostPrivacy": override, "source": "SW_STORE_HOST_PRIVACY"}
+
+    store = store_section(cfg)
+    declared = store.get("storeHostPrivacy")
+    if isinstance(declared, str) and declared.strip().lower() in {"private", "public"}:
+        return {
+            "verdict": "ok",
+            "storeHostPrivacy": declared.strip().lower(),
+            "source": "config-declared",
+        }
+
+    provider = str(store.get("issuesProvider", "none")).strip().lower()
+    if provider not in SHIPPED_ISSUES_PROVIDERS:
+        return {
+            "verdict": "ok",
+            "storeHostPrivacy": "public",
+            "source": "issues-provider-none",
+            "provider": provider,
+        }
+
+    if provider == "jira":
+        jpv = store.get("jiraProjectVisibility")
+        if isinstance(jpv, str):
+            vis = jpv.strip().lower()
+            if vis == "private":
+                return {"verdict": "ok", "storeHostPrivacy": "private", "source": "jiraProjectVisibility"}
+            if vis in {"public", "shared"}:
+                return {"verdict": "ok", "storeHostPrivacy": "public", "source": "jiraProjectVisibility"}
+
+    location = resolve_store_location(root, cfg)
+    if location.get("verdict") != "ok":
+        return {
+            "verdict": "fail",
+            "error": location.get("error", "store-location-unresolved"),
+            "storeHostPrivacy": "unknown",
+        }
+
+    owner = str(location.get("owner") or "").strip()
+    repo = str(location.get("repo") or "").strip()
+    if not owner or not repo:
+        return {"verdict": "ok", "storeHostPrivacy": "unknown", "source": "store-location-incomplete"}
+
+    if provider == "github-issues":
+        is_private = _github_store_repo_private(root, cfg, owner, repo)
+        if is_private is True:
+            return {
+                "verdict": "ok",
+                "storeHostPrivacy": "private",
+                "source": "host-api",
+                "owner": owner,
+                "repo": repo,
+                "provider": provider,
+            }
+        if is_private is False:
+            return {
+                "verdict": "ok",
+                "storeHostPrivacy": "public",
+                "source": "host-api",
+                "owner": owner,
+                "repo": repo,
+                "provider": provider,
+            }
+        return {
+            "verdict": "ok",
+            "storeHostPrivacy": "unknown",
+            "source": "probe-inconclusive",
+            "owner": owner,
+            "repo": repo,
+            "provider": provider,
+        }
+
+    if provider == "gitlab-issues":
+        is_private = _gitlab_store_project_private(root, cfg, owner, repo)
+        if is_private is True:
+            return {
+                "verdict": "ok",
+                "storeHostPrivacy": "private",
+                "source": "host-api",
+                "owner": owner,
+                "repo": repo,
+                "provider": provider,
+            }
+        if is_private is False:
+            return {
+                "verdict": "ok",
+                "storeHostPrivacy": "public",
+                "source": "host-api",
+                "owner": owner,
+                "repo": repo,
+                "provider": provider,
+            }
+        return {
+            "verdict": "ok",
+            "storeHostPrivacy": "unknown",
+            "source": "probe-inconclusive",
+            "owner": owner,
+            "repo": repo,
+            "provider": provider,
+        }
+
+    return {"verdict": "ok", "storeHostPrivacy": "unknown", "source": "unsupported-provider", "provider": provider}
+
+
+def issue_store_private_enough(cfg: dict[str, Any], root: Path | None = None) -> bool:
+    """True when private/memory artifacts may be written to the configured issue store."""
+    worktree = root if root is not None else git_root()
+    probe = probe_store_host_privacy(worktree, cfg)
+    return probe.get("storeHostPrivacy") == "private"
+
+
+def issue_store_visibility_allowed(
     root: Path,
     cfg: dict[str, Any],
     unit_id: str,
     body_path: str,
     content: str,
-) -> None:
+) -> bool:
     artifact_type = infer_artifact_type(body_path)
     unit: dict[str, Any] = {
         "id": unit_id,
@@ -624,12 +955,35 @@ def issue_store_visibility_gate(
         unit["visibility"] = explicit
     resolved = planning_visibility.resolve_unit_visibility(unit, cfg)
     if planning_visibility.body_is_redacted(resolved["visibility"]):
-        fail(
-            "private-visibility-refused-for-public-issue-store",
-            code="visibility-refused",
-            visibility=resolved["visibility"],
-            unitId=unit_id,
-        )
+        return issue_store_private_enough(cfg, root)
+    return True
+
+
+def issue_store_visibility_gate(
+    root: Path,
+    cfg: dict[str, Any],
+    unit_id: str,
+    body_path: str,
+    content: str,
+) -> None:
+    if issue_store_visibility_allowed(root, cfg, unit_id, body_path, content):
+        return
+    artifact_type = infer_artifact_type(body_path)
+    unit: dict[str, Any] = {
+        "id": unit_id,
+        "type": artifact_type,
+        "bodyPath": body_path,
+    }
+    explicit = parse_visibility_from_content(content)
+    if explicit:
+        unit["visibility"] = explicit
+    resolved = planning_visibility.resolve_unit_visibility(unit, cfg)
+    fail(
+        "private-visibility-refused-for-public-issue-store",
+        code="visibility-refused",
+        visibility=resolved["visibility"],
+        unitId=unit_id,
+    )
 
 
 def handle_issue_client_error(exc: Exception) -> None:

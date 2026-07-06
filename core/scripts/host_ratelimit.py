@@ -97,18 +97,36 @@ def is_near_limit(headers: dict[str, str], provider: str, threshold: int) -> boo
     return rem is not None and rem <= threshold
 
 
-def is_throttled(status_code: int, headers: dict[str, str], provider: str) -> bool:
+def _github_rate_limit_body_hint(body: str) -> bool:
+    lower = body.lower()
+    return any(
+        phrase in lower
+        for phrase in (
+            "rate limit exceeded",
+            "secondary rate limit",
+            "abuse detection",
+        )
+    )
+
+
+def is_throttled(
+    status_code: int,
+    headers: dict[str, str],
+    provider: str,
+    *,
+    body: str = "",
+) -> bool:
     if status_code == 429:
         return True
     if status_code == 403 and provider == "github":
-        rem = remaining_count(headers, provider)
-        if rem == 0:
+        resource = headers.get("x-ratelimit-resource", "").lower()
+        if resource in {"search", "graphql", "integration_manifest"}:
+            rem = remaining_count(headers, provider)
+            if rem == 0:
+                return True
+        if _github_rate_limit_body_hint(body):
             return True
-        body_hint = headers.get("x-github-authentication-token-type", "")
-        if body_hint:
-            return False
-        if headers.get("x-ratelimit-resource", "").lower() == "core":
-            return rem == 0
+        rem = remaining_count(headers, provider)
         if rem == 0:
             return True
     return False
@@ -128,9 +146,10 @@ def compute_wait_seconds(
     attempt: int,
     provider: str,
     config: dict[str, Any],
+    body: str = "",
 ) -> tuple[float, str]:
     norm = normalize_headers(headers)
-    if is_throttled(status_code, norm, provider):
+    if is_throttled(status_code, norm, provider, body=body):
         retry_after = parse_retry_after(norm)
         if retry_after is not None:
             return retry_after, "retry-after"
@@ -257,7 +276,7 @@ def execute_with_retry(
             gate.release()
 
         headers = normalize_headers(result.headers)
-        if not is_throttled(result.status_code, headers, provider):
+        if not is_throttled(result.status_code, headers, provider, body=result.body or ""):
             near_threshold = int(config.get("nearLimitThreshold", DEFAULT_RATE_LIMIT["nearLimitThreshold"]))
             if is_near_limit(headers, provider, near_threshold) and attempt < max_attempts:
                 wait_s, reason = compute_wait_seconds(
@@ -266,6 +285,7 @@ def execute_with_retry(
                     attempt=attempt,
                     provider=provider,
                     config=config,
+                    body=result.body or "",
                 )
                 if wait_s > 0 and reason == "near-limit":
                     wait_ms = int(math.ceil(wait_s * 1000))
@@ -300,6 +320,7 @@ def execute_with_retry(
             attempt=attempt,
             provider=provider,
             config=config,
+            body=result.body or "",
         )
         wait_ms = int(math.ceil(wait_s * 1000))
         if wait_ms <= 0:

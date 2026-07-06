@@ -4,12 +4,12 @@ from __future__ import annotations
 import base64, json, os
 from pathlib import Path
 from typing import Any
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+import issues_http
 JIRA_CLOUD_API = "/rest/api/3"
 JIRA_DC_API = "/rest/api/2"
 MIN_JIRA_SCOPES = ["read:jira-work", "write:jira-work"]
 LABEL_DEGRADATION_LADDER = ("labels", "components", "customField")
+CLIENT_SATISFIED_CREATE_FIELDS = frozenset({"summary", "project", "reporter", "issuetype", "description"})
 
 def use_fixture_mode() -> bool:
     return os.environ.get("SW_ISSUES_FIXTURE", "").strip().lower() in {"1", "true", "yes"}
@@ -33,6 +33,40 @@ def resolve_jira_project_key(cfg):
     from planning_store import store_section
     raw = store_section(cfg).get("projectKey")
     return raw.strip() if isinstance(raw, str) else ""
+
+def resolve_jira_api_project_key(cfg, token: str | None = None, root: Path | None = None):
+    """Canonical Jira project key for REST writes (createmeta may differ in case from config)."""
+    config_key = resolve_jira_project_key(cfg)
+    if not config_key:
+        return ""
+    if use_fixture_mode():
+        return config_key.upper()
+    from planning_store import issues_section
+
+    issues = issues_section(cfg)
+    raw_env = issues.get("tokenEnv")
+    token_env = raw_env.strip() if isinstance(raw_env, str) and raw_env.strip() else "ISSUES_JIRA_TOKEN"
+    auth_token = (token or os.environ.get(token_env, "")).strip()
+    if not auth_token:
+        return config_key
+    headers = _auth_header(cfg, auth_token)
+    base = _api_base(cfg)
+    if not base or not headers:
+        return config_key
+    status, payload = _http_get(
+        f"{base}/issue/createmeta?projectKeys={config_key}",
+        headers,
+        root=root,
+    )
+    if status >= 400 or not isinstance(payload, dict):
+        return config_key
+    for project in payload.get("projects") or []:
+        if not isinstance(project, dict):
+            continue
+        api_key = project.get("key")
+        if isinstance(api_key, str) and api_key.strip():
+            return api_key.strip()
+    return config_key
 
 def resolve_jira_issue_type(cfg):
     from planning_store import issues_section
@@ -67,23 +101,24 @@ def _auth_header(cfg, token):
     cred = base64.b64encode(f"{email}:{token}".encode()).decode()
     return {"Authorization": f"Basic {cred}", "Accept": "application/json"}
 
-def _http_get(url, headers, timeout=15):
-    req = Request(url, headers={**headers, "User-Agent": "shipwright-jira-probe"})
+def _http_get(url, headers, timeout=15, root: Path | None = None):
+    root = root or Path.cwd()
+    hdrs = {**headers, "User-Agent": "shipwright-jira-probe"}
+    status, _hdrs, body = issues_http.http_request(
+        "GET",
+        url,
+        hdrs,
+        root=root,
+        issues_provider="jira",
+        timeout=timeout,
+    )
     try:
-        with urlopen(req, timeout=timeout) as resp:
-            body = resp.read().decode("utf-8")
-            return resp.status, json.loads(body) if body.strip() else {}
-    except HTTPError as exc:
-        raw = exc.read().decode("utf-8", errors="replace")
-        try:
-            payload = json.loads(raw) if raw.strip() else {}
-        except json.JSONDecodeError:
-            payload = {"message": raw[:200]}
-        return exc.code, payload if isinstance(payload, dict) else {"message": str(payload)}
-    except URLError as exc:
-        raise ConnectionError(str(exc.reason)) from exc
+        payload = json.loads(body) if body.strip() else {}
+    except json.JSONDecodeError:
+        payload = {"message": body[:200]}
+    return status, payload if isinstance(payload, dict) else {"message": str(payload)}
 
-def probe_jira_auth(cfg, token):
+def probe_jira_auth(cfg, token, root: Path | None = None):
     flavor = resolve_jira_flavor(cfg)
     if use_fixture_mode():
         if flavor == "dc" and token.startswith("basic:"):
@@ -98,12 +133,12 @@ def probe_jira_auth(cfg, token):
     base = _api_base(cfg)
     if not base:
         return {"verdict": "fail", "error": "missing-endpoint", "flavor": flavor}
-    status, _ = _http_get(f"{base}/myself", headers)
+    status, _ = _http_get(f"{base}/myself", headers, root=root)
     if status >= 400:
         return {"verdict": "fail", "error": "auth-failed", "flavor": flavor, "httpStatus": status}
     return {"verdict": "ok", "flavor": flavor, "requiredScopes": MIN_JIRA_SCOPES}
 
-def probe_jira_createmeta(cfg, token):
+def probe_jira_createmeta(cfg, token, root: Path | None = None):
     issue_type = resolve_jira_issue_type(cfg)
     defaults = resolve_field_defaults(cfg)
     if use_fixture_mode():
@@ -120,7 +155,7 @@ def probe_jira_createmeta(cfg, token):
     project_key = resolve_jira_project_key(cfg)
     if not base or not project_key:
         return {"verdict": "fail", "error": "missing-config", "probe": "createmeta"}
-    status, payload = _http_get(f"{base}/issue/createmeta?projectKeys={project_key}&expand=projects.issuetypes.fields", headers)
+    status, payload = _http_get(f"{base}/issue/createmeta?projectKeys={project_key}&expand=projects.issuetypes.fields", headers, root=root)
     if status >= 400:
         return {"verdict": "fail", "error": "createmeta-failed", "httpStatus": status}
     required_fields = []
@@ -131,13 +166,18 @@ def probe_jira_createmeta(cfg, token):
             if not isinstance(itype, dict) or str(itype.get("name", "")).lower() != issue_type.lower():
                 continue
             for field_id, meta in (itype.get("fields") or {}).items():
-                if isinstance(meta, dict) and meta.get("required") and field_id not in defaults:
+                if (
+                    isinstance(meta, dict)
+                    and meta.get("required")
+                    and field_id not in defaults
+                    and field_id not in CLIENT_SATISFIED_CREATE_FIELDS
+                ):
                     required_fields.append(str(field_id))
     if required_fields:
         return {"verdict": "fail", "error": "required-fields-unmet", "requiredFields": sorted(required_fields), "fieldDefaults": defaults, "remediation": "configure planning.store.issues.fieldDefaults or satisfy fields in Jira admin"}
     return {"verdict": "ok", "issueType": issue_type, "satisfiedDefaults": list(defaults.keys())}
 
-def probe_jira_label_write(cfg, token):
+def probe_jira_label_write(cfg, token, root: Path | None = None):
     surface = resolve_label_surface(cfg)
     if use_fixture_mode():
         denied = os.environ.get("SW_JIRA_LABEL_WRITE_DENIED", "").strip().lower() in {"1", "true", "yes"}
@@ -147,7 +187,7 @@ def probe_jira_label_write(cfg, token):
                 return {"verdict": "fail", "error": "label-write-denied", "surface": surface, "message": "no writable label surface available"}
             return {"verdict": "ok", "fixture": True, "surface": next_surface, "degraded": True, "ladder": list(LABEL_DEGRADATION_LADDER)}
         return {"verdict": "ok", "fixture": True, "surface": surface, "ladder": list(LABEL_DEGRADATION_LADDER)}
-    auth = probe_jira_auth(cfg, token)
+    auth = probe_jira_auth(cfg, token, root=root)
     if auth.get("verdict") != "ok":
         return auth
     return {"verdict": "ok", "surface": surface, "ladder": list(LABEL_DEGRADATION_LADDER), "bodyMarkerAuthoritative": True}
@@ -184,9 +224,9 @@ def probe_jira_privacy(cfg, root):
     return {"verdict": "ok", "perIssuePrivacy": False, "sharedProject": shared}
 
 def probe_jira_init(cfg, token, root):
-    for probe in (lambda: probe_jira_auth(cfg, token), lambda: probe_jira_privacy(cfg, root), lambda: probe_jira_createmeta(cfg, token), lambda: probe_jira_label_write(cfg, token)):
+    for probe in (lambda: probe_jira_auth(cfg, token, root), lambda: probe_jira_privacy(cfg, root), lambda: probe_jira_createmeta(cfg, token, root), lambda: probe_jira_label_write(cfg, token, root)):
         result = probe()
         if result.get("verdict") != "ok":
             return result
-    labels = probe_jira_label_write(cfg, token)
+    labels = probe_jira_label_write(cfg, token, root)
     return {"verdict": "ok", "flavor": resolve_jira_flavor(cfg), "requiredScopes": MIN_JIRA_SCOPES, "perIssuePrivacy": False, "labelSurface": labels.get("surface", "labels"), "labelLadder": labels.get("ladder", list(LABEL_DEGRADATION_LADDER)), "bodyMarkerAuthoritative": True}

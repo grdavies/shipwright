@@ -73,6 +73,25 @@ class IssueBudgetExhausted(Exception):
     """Per-run API call budget exhausted (R39)."""
 
 
+class IssueRateLimited(Exception):
+    """Issues API rate limit exhausted after bounded retries (PRD 026 R35–R42)."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        cumulative_wait_ms: int = 0,
+        reason: str = "",
+        status_code: int | None = None,
+        retryable: bool = True,
+    ) -> None:
+        super().__init__(message)
+        self.cumulative_wait_ms = cumulative_wait_ms
+        self.reason = reason
+        self.status_code = status_code
+        self.retryable = retryable
+
+
 @dataclass
 class IssueRecord:
     id: str
@@ -393,8 +412,29 @@ class IssuesClient:
         self.root = root
         self.provider = provider
         self._fixture = get_fixture_store(root) if use_fixture_mode() else None
+        self._jira: Any = None
+        self._github: Any = None
         self._call_count = 0
         self._budget = resolve_call_budget()
+
+    def _live_backend(self) -> FixtureIssuesStore | Any:
+        if self._fixture is not None:
+            return self._fixture
+        if self.provider == "jira":
+            if self._jira is None:
+                from planning_jira_client import JiraIssuesClient
+
+                self._jira = JiraIssuesClient(self.root)
+            return self._jira
+        if self.provider == "github-issues":
+            if self._github is None:
+                from planning_github_client import GitHubIssuesClient
+
+                self._github = GitHubIssuesClient(self.root)
+            return self._github
+        raise IssueCapabilityError(
+            f"live {self.provider} API not available without SW_ISSUES_FIXTURE=1 in CI"
+        )
 
     def _charge_budget(self) -> None:
         if self._call_count >= self._budget:
@@ -407,7 +447,14 @@ class IssuesClient:
             self._charge_budget()
             try:
                 return fn()
-            except (IssueRevisionConflict, IssueNotFound, IssueTombstone, IssueTransferred, IssueBudgetExhausted):
+            except (
+                IssueRevisionConflict,
+                IssueNotFound,
+                IssueTombstone,
+                IssueTransferred,
+                IssueBudgetExhausted,
+                IssueRateLimited,
+            ):
                 raise
             except IssueCapabilityError as exc:
                 last_exc = exc
@@ -424,35 +471,51 @@ class IssuesClient:
         raise IssueCapabilityError(f"{verb} failed after retries")
 
     def _require_fixture(self) -> FixtureIssuesStore:
-        if self._fixture is None:
-            raise IssueCapabilityError(
-                f"live {self.provider} API not available without SW_ISSUES_FIXTURE=1 in CI"
-            )
-        return self._fixture
+        backend = self._live_backend()
+        if not isinstance(backend, FixtureIssuesStore):
+            raise IssueCapabilityError(f"fixture-only verb on live {self.provider} backend")
+        return backend
 
     def issue_create(self, **kwargs: Any) -> IssueRecord:
-        return self._with_resilience("issue-create", lambda: self._require_fixture().create(**kwargs))
+        return self._with_resilience("issue-create", lambda: self._live_backend().create(**kwargs))
 
     def issue_get(self, issue_id: str) -> IssueRecord:
-        return self._with_resilience("issue-get", lambda: self._require_fixture().get(issue_id))
+        return self._with_resilience("issue-get", lambda: self._live_backend().get(issue_id))
 
     def issue_update(self, issue_id: str, **kwargs: Any) -> IssueRecord:
-        return self._with_resilience("issue-update", lambda: self._require_fixture().update(issue_id, **kwargs))
+        return self._with_resilience("issue-update", lambda: self._live_backend().update(issue_id, **kwargs))
 
     def issue_comment(self, issue_id: str, body: str, *, markers: list[str] | None = None) -> CommentRecord:
-        return self._with_resilience("issue-comment", lambda: self._require_fixture().add_comment(issue_id, body, markers=markers))
+        return self._with_resilience(
+            "issue-comment",
+            lambda: self._live_backend().add_comment(issue_id, body, markers=markers),
+        )
 
     def issue_label(self, issue_id: str, labels: list[str], *, if_match: str | None = None) -> IssueRecord:
-        return self._with_resilience("issue-label", lambda: self._require_fixture().set_labels(issue_id, labels, if_match=if_match))
+        return self._with_resilience(
+            "issue-label",
+            lambda: self._live_backend().set_labels(issue_id, labels, if_match=if_match),
+        )
 
     def issue_lock(self, issue_id: str, *, if_match: str | None = None) -> IssueRecord:
-        return self._with_resilience("issue-lock", lambda: self._require_fixture().lock(issue_id, if_match=if_match))
+        return self._with_resilience("issue-lock", lambda: self._live_backend().lock(issue_id, if_match=if_match))
 
     def issue_search(self, **kwargs: Any) -> list[IssueRecord]:
-        return self._with_resilience("issue-search", lambda: self._require_fixture().search(**kwargs))
+        return self._with_resilience("issue-search", lambda: self._live_backend().search(**kwargs))
 
     def mark_tombstone(self, issue_id: str) -> None:
-        self._with_resilience("issue-tombstone", lambda: self._require_fixture().mark_tombstone(issue_id))
+        def _run() -> None:
+            backend = self._live_backend()
+            if isinstance(backend, FixtureIssuesStore):
+                backend.mark_tombstone(issue_id)
+                return
+            tombstone = getattr(backend, "mark_tombstone", None)
+            if callable(tombstone):
+                tombstone(issue_id)
+                return
+            raise IssueCapabilityError(f"tombstone unsupported on live {self.provider} backend")
+
+        self._with_resilience("issue-tombstone", _run)
 
     def mark_transferred(self, issue_id: str) -> None:
         self._with_resilience("issue-transfer", lambda: self._require_fixture().mark_transferred(issue_id))

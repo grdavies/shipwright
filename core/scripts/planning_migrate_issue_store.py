@@ -8,6 +8,7 @@ import os
 import re
 import sys
 import time
+from urllib.parse import quote, unquote
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -19,11 +20,29 @@ _EDGE_FM_KEYS = {
     "supersedes": "supersedes",
     "extends": "extends",
     "absorbs": "absorbs",
+    "prd": "prd",
+    "amends": "amends",
+    "brainstorm": "brainstorm",
 }
-_GAP_STATUS_LABELS = frozenset({"open", "gap-scheduled", "resolved"})
+_EDGE_INVERSE_REL = {
+    "blocks": "depends",
+    "depends": "blocks",
+}
+_GAP_STATUS_LABELS = frozenset({"open", "gap-scheduled", "resolved", "sw:gap-open", "sw:gap-scheduled", "sw:gap-resolved"})
 _GAP_SCHEDULE_LABEL_PREFIX = "sw:gap-schedule:"
 _FROZEN_AT_LABEL_PREFIX = "sw:frozen-at:"
 _VISIBILITY_LABEL_PREFIX = "sw:visibility:"
+_STATUS_LABEL_PREFIX = "sw:status:"
+
+
+
+def _encode_gap_schedule_for_label(schedule: str) -> str:
+    """Jira labels cannot contain spaces; percent-encode schedule payload."""
+    return quote(schedule, safe="")
+
+
+def _decode_gap_schedule_from_label(suffix: str) -> str:
+    return unquote(suffix)
 
 
 def parse_frontmatter_fields(content: str) -> dict[str, str]:
@@ -55,16 +74,22 @@ from planning_canonical import (  # noqa: E402
     canonical_hash,
     chunk_body_if_needed,
     compose_issue_body,
+    gap_status_from_labels,
+    gap_status_label,
     infer_artifact_type,
     normalize_body,
     parse_edges_block,
     parse_freeze_record_hash,
     project_label,
     reassemble_body,
+    slugify,
+    status_from_labels,
+    status_label,
     strip_markers_and_edges,
     title_prefix,
     type_label,
 )
+from planning_jira_canonical import chunk_body_for_jira_cloud, jira_markdown_canonical, rewrite_chunk_manifest  # noqa: E402
 from planning_store import (  # noqa: E402
     InRepoPublicBackend,
     IssueStoreBackend,
@@ -90,12 +115,14 @@ ARTIFACT_STATES = ("pending", "created", "verified", "source-removed")
 SKIP_BASENAMES = frozenset(
     {
         "INDEX.md",
+        "INDEX-archive.md",
+        "SUPERSEDED.md",
         "COMPLETION-LOG.md",
         "GAP-BACKLOG.md",
         "FEEDBACK-CHECKLIST.md",
     }
 )
-WALK_ROOTS = ("docs/planning", "docs/prds")
+WALK_ROOTS = ("docs/planning", "docs/prds", "docs/brainstorms", "docs/decisions")
 
 
 @dataclass(frozen=True)
@@ -109,6 +136,7 @@ class ArtifactLifecycle:
     gap_status: str | None = None
     gap_schedule: str | None = None
     visibility: str | None = None
+    consumer_status: str | None = None
 
 
 @dataclass(frozen=True)
@@ -426,10 +454,19 @@ def sync_gap_issue_labels(root: Path, unit_id: str, content: str, cfg: dict[str,
         fail(key_result.get("message") or key_result.get("error", "invalid-project-key"))
     project_key = str(key_result["projectKey"])
     client = cfg_issues_client(root)
-    matches = client.issue_search(project_key=project_key, unit_id=unit_id, artifact_type="gap")
-    if not matches:
-        fail("gap-issue-missing", unitId=unit_id)
-    record = matches[0]
+    record = None
+    idx_key = issue_index_key(project_key, unit_id)
+    issue_id = load_issue_unit_index(root).get(idx_key)
+    if issue_id:
+        try:
+            record = client.issue_get(str(issue_id))
+        except IssueNotFound:
+            record = None
+    if record is None:
+        matches = client.issue_search(project_key=project_key, unit_id=unit_id, artifact_type="gap")
+        if not matches:
+            fail("gap-issue-missing", unitId=unit_id)
+        record = matches[0]
     lifecycle = extract_lifecycle_from_file(content, "gap")
     labels = _apply_gap_labels(list(record.labels), lifecycle, "gap")
     updated = client.issue_update(record.id, labels=labels, if_match=record.etag)
@@ -855,31 +892,17 @@ def _norm_edge_list(edges: list[dict[str, Any]]) -> list[str]:
 
 
 def _gap_status_to_label(status: str | None) -> str | None:
-    if not status:
-        return None
-    lowered = status.lower()
-    if lowered in {"planned", "scheduled"}:
-        return "gap-scheduled"
-    if lowered == "resolved":
-        return "resolved"
-    return "open"
+    return gap_status_label(status)
 
 
 def _gap_status_from_labels(labels: list[str]) -> str | None:
-    label_set = set(labels)
-    if "resolved" in label_set:
-        return "resolved"
-    if "gap-scheduled" in label_set:
-        return "planned"
-    if "open" in label_set:
-        return "open"
-    return None
+    return gap_status_from_labels(labels)
 
 
 def _gap_schedule_from_labels(labels: list[str]) -> str | None:
     for label in labels:
         if label.startswith(_GAP_SCHEDULE_LABEL_PREFIX):
-            return label[len(_GAP_SCHEDULE_LABEL_PREFIX) :]
+            return _decode_gap_schedule_from_label(label[len(_GAP_SCHEDULE_LABEL_PREFIX) :])
     return None
 
 
@@ -912,7 +935,7 @@ def _apply_gap_labels(labels: list[str], lifecycle: ArtifactLifecycle, artifact_
             out.append(gap_label)
         if lifecycle.gap_schedule:
             out = [label for label in out if not label.startswith(_GAP_SCHEDULE_LABEL_PREFIX)]
-            out.append(f"{_GAP_SCHEDULE_LABEL_PREFIX}{lifecycle.gap_schedule}")
+            out.append(f"{_GAP_SCHEDULE_LABEL_PREFIX}{_encode_gap_schedule_for_label(lifecycle.gap_schedule)}")
     return sorted(set(out))
 
 
@@ -942,6 +965,19 @@ def _issue_state_from_frontmatter(fm: dict[str, str], artifact_type: str) -> str
     if status in {"complete", "resolved", "cancelled", "superseded"}:
         return "closed"
     return "open"
+
+
+def _frontmatter_status_for_lifecycle(lifecycle: ArtifactLifecycle, artifact_type: str) -> str | None:
+    """Map issue-store lifecycle to file ``status`` frontmatter (inverse of ``_issue_state_from_frontmatter``)."""
+    if artifact_type == "gap":
+        return lifecycle.gap_status or "open"
+    if lifecycle.consumer_status:
+        return lifecycle.consumer_status
+    if lifecycle.issue_state == "closed":
+        return "complete"
+    if artifact_type in {"prd", "amendment", "tasks"}:
+        return "not-started"
+    return None
 
 
 def extract_lifecycle_from_file(raw: str, artifact_type: str) -> ArtifactLifecycle:
@@ -995,6 +1031,20 @@ def extract_lifecycle_from_record(record: Any) -> ArtifactLifecycle:
     content = strip_markers_and_edges(full_body)
     visibility = _visibility_from_labels(record.labels) or parse_visibility_from_content(content)
 
+    consumer_status: str | None = None
+    if artifact_type != "gap":
+        consumer_status = status_from_labels(list(record.labels))
+        if artifact_type == "brainstorm" and not consumer_status:
+            consumer_status = "complete" if record.state == "closed" else None
+        elif not consumer_status and record.state == "closed":
+            consumer_status = "complete"
+        elif (
+            not consumer_status
+            and record.state == "open"
+            and artifact_type in {"prd", "amendment", "tasks"}
+        ):
+            consumer_status = "not-started"
+
     return ArtifactLifecycle(
         issue_state=record.state,
         frozen=frozen,
@@ -1005,6 +1055,7 @@ def extract_lifecycle_from_record(record: Any) -> ArtifactLifecycle:
         gap_status=gap_status,
         gap_schedule=gap_schedule,
         visibility=visibility,
+        consumer_status=consumer_status,
     )
 
 
@@ -1020,8 +1071,9 @@ def render_file_with_lifecycle(
     if artifact_type != "prd":
         fm_lines.append(f"type: {artifact_type}")
 
-    if artifact_type == "gap":
-        fm_lines.append(f"status: {lifecycle.gap_status or 'open'}")
+    file_status = _frontmatter_status_for_lifecycle(lifecycle, artifact_type)
+    if file_status is not None:
+        fm_lines.append(f"status: {file_status}")
 
     if lifecycle.visibility:
         fm_lines.append(f"visibility: {lifecycle.visibility}")
@@ -1058,6 +1110,128 @@ def lifecycle_equal(left: ArtifactLifecycle, right: ArtifactLifecycle) -> bool:
     )
 
 
+
+
+_INDEX_STATUS_CACHE: dict[str, str] | None = None
+
+
+_COMPLETION_LOG_STATUS_CACHE: dict[str, str] | None = None
+
+
+def _completion_log_status_map(root: Path) -> dict[str, str]:
+    global _COMPLETION_LOG_STATUS_CACHE
+    if _COMPLETION_LOG_STATUS_CACHE is not None:
+        return _COMPLETION_LOG_STATUS_CACHE
+    mapping: dict[str, str] = {}
+    log_path = root / "docs" / "prds" / "COMPLETION-LOG.md"
+    if log_path.is_file():
+        notes_by_prd: dict[str, list[str]] = {}
+        for line in log_path.read_text(encoding="utf-8").splitlines():
+            if not line.startswith("|") or "---" in line:
+                continue
+            cols = [c.strip() for c in line.strip("|").split("|")]
+            if len(cols) < 4 or not re.match(r"^\d{3}$", cols[1]):
+                continue
+            notes_by_prd.setdefault(cols[1], []).append(cols[3].lower())
+        complete_markers = (
+            "deliver complete",
+            "shipped via",
+            "deliver-terminal",
+            "deliver merged",
+            "squash-merged",
+            "squash merged",
+        )
+        for num, notes in notes_by_prd.items():
+            blob = " ".join(notes)
+            if any(marker in blob for marker in complete_markers):
+                mapping[num] = "complete"
+    _COMPLETION_LOG_STATUS_CACHE = mapping
+    return mapping
+
+
+def _legacy_index_status_map(root: Path) -> dict[str, str]:
+    global _INDEX_STATUS_CACHE
+    if _INDEX_STATUS_CACHE is not None:
+        return _INDEX_STATUS_CACHE
+    mapping: dict[str, str] = {}
+    index_path = root / "docs" / "prds" / "INDEX.md"
+    if index_path.is_file():
+        for line in index_path.read_text(encoding="utf-8").splitlines():
+            if not line.startswith("|") or "---" in line:
+                continue
+            cols = [c.strip() for c in line.strip("|").split("|")]
+            if len(cols) < 5 or not re.match(r"^\d{3}$", cols[0]):
+                continue
+            num, status = cols[0], cols[4].lower()
+            if "complete" in status:
+                mapping[num] = "complete"
+            elif "superseded" in status:
+                mapping[num] = "superseded"
+            elif "not-started" in status:
+                mapping[num] = "not-started"
+    _INDEX_STATUS_CACHE = mapping
+    return mapping
+
+
+def _prd_number_for_status(unit_id: str, artifact_type: str, body_path: str | None = None) -> str | None:
+    m = re.match(r"^(\d{3})-", unit_id)
+    if m:
+        return m.group(1)
+    norm = (body_path or "").replace("\\", "/")
+    if artifact_type == "amendment":
+        path_match = re.search(r"/(\d{3})-[^/]+/amendments/", norm)
+        if path_match:
+            return path_match.group(1)
+    if artifact_type == "tasks":
+        path_match = re.search(r"/(\d{3})-[^/]+/tasks-", norm)
+        if path_match:
+            return path_match.group(1)
+    return None
+
+
+def _consumer_status_for_prd_number(root: Path, num: str) -> str | None:
+    index_status = _legacy_index_status_map(root).get(num)
+    if index_status == "superseded":
+        return "superseded"
+    log_status = _completion_log_status_map(root).get(num)
+    if log_status:
+        return log_status
+    return index_status
+
+
+def _consumer_status_for_artifact(
+    root: Path,
+    unit_id: str,
+    artifact_type: str,
+    *,
+    body_path: str | None = None,
+) -> str | None:
+    if artifact_type == "brainstorm":
+        # Brainstorms are requirements capture — not deliverable work (R52/R53).
+        return "complete"
+    if artifact_type not in {"prd", "tasks", "amendment"}:
+        return None
+    num = _prd_number_for_status(unit_id, artifact_type, body_path)
+    if not num:
+        return None
+    return _consumer_status_for_prd_number(root, num)
+
+
+def _workflow_state_for_consumer_status(consumer_status: str | None) -> str | None:
+    if consumer_status in {"complete", "superseded", "cancelled", "resolved"}:
+        return "closed"
+    if consumer_status == "not-started":
+        return "open"
+    return None
+
+
+def _apply_status_labels(labels: list[str], consumer_status: str | None) -> list[str]:
+    out = [label for label in labels if not label.startswith(_STATUS_LABEL_PREFIX)]
+    if consumer_status:
+        out.append(status_label(consumer_status))
+    return sorted(set(out))
+
+
 def infer_unit_id(rel_path: str, content: str) -> str:
     if content.startswith("---"):
         end = content.find("\n---", 3)
@@ -1066,6 +1240,15 @@ def infer_unit_id(rel_path: str, content: str) -> str:
             unit = fm.get("id", "").strip()
             if unit:
                 return unit
+    norm = rel_path.replace("\\", "/")
+    if "/planning/brainstorm/" in norm:
+        return Path(norm).parent.name
+    if norm.startswith("docs/brainstorms/"):
+        return f"brainstorm-{slugify(Path(norm).stem)[:48]}"
+    if "/planning/decision/" in norm:
+        return Path(norm).parent.name
+    if norm.startswith("docs/decisions/") and not norm.endswith("INDEX.md"):
+        return f"decision-{slugify(Path(norm).stem)[:48]}"
     stem = Path(rel_path).stem
     if stem.startswith("tasks-"):
         return stem[len("tasks-") :]
@@ -1081,6 +1264,8 @@ def should_skip_file(rel: str) -> bool:
     if base in SKIP_BASENAMES:
         return True
     if rel.startswith("docs/prds/_fixture-materialize/"):
+        return True
+    if rel.endswith("docs/decisions/INDEX.md") or rel.endswith("docs/decisions/SUPERSEDED.log"):
         return True
     return False
 
@@ -1106,7 +1291,7 @@ def discover_file_artifacts(root: Path) -> list[MigrationArtifact]:
                 MigrationArtifact(
                     source_path=rel,
                     body_path=rel,
-                    unit_id=infer_unit_id(raw, raw),
+                    unit_id=infer_unit_id(rel, raw),
                     content=content,
                     digest=content_hash(content),
                     artifact_type=artifact_type,
@@ -1148,7 +1333,13 @@ def title_from_journal(root: Path, unit_id: str) -> str | None:
 
 def default_body_path(unit_id: str, artifact_type: str) -> str:
     if artifact_type == "brainstorm":
+        if unit_id.startswith("brainstorm-"):
+            return f"docs/planning/brainstorm/{unit_id}/{unit_id}.md"
         return f"docs/brainstorms/{unit_id}.md"
+    if artifact_type == "decision":
+        if unit_id.startswith("decision-"):
+            return f"docs/planning/decision/{unit_id}/{unit_id}.md"
+        return f"docs/decisions/{unit_id}.md"
     if artifact_type == "gap":
         return f"docs/planning/gap/{unit_id}.md"
     if artifact_type == "tasks":
@@ -1232,15 +1423,11 @@ def _visibility_gate_content(artifact: MigrationArtifact) -> str:
 
 
 def _visibility_ok(root: Path, cfg: dict[str, Any], artifact: MigrationArtifact) -> bool:
-    try:
-        issue_store_visibility_gate(
-            root, cfg, artifact.unit_id, artifact.body_path, _visibility_gate_content(artifact)
-        )
-    except SystemExit:
-        return False
-    except BaseException:
-        return False
-    return True
+    from planning_store import issue_store_visibility_allowed
+
+    return issue_store_visibility_allowed(
+        root, cfg, artifact.unit_id, artifact.body_path, _visibility_gate_content(artifact)
+    )
 
 
 def _guard_create_secrets(artifact: MigrationArtifact, *, path_hint: str) -> None:
@@ -1305,16 +1492,20 @@ def _create_issue_with_lifecycle(
     provider = str(cfg.get("planning", {}).get("store", {}).get("issuesProvider", "none"))
     client = IssuesClient(root, provider)
 
-    labels = _apply_visibility_label(
-        _apply_frozen_labels(
-            _apply_gap_labels(
-                sorted({project_label(project_key), type_label(artifact.artifact_type)}),
+    consumer_status = _consumer_status_for_artifact(root, artifact.unit_id, artifact.artifact_type, body_path=artifact.body_path)
+    labels = _apply_status_labels(
+        _apply_visibility_label(
+            _apply_frozen_labels(
+                _apply_gap_labels(
+                    sorted({project_label(project_key), type_label(artifact.artifact_type)}),
+                    artifact.lifecycle,
+                    artifact.artifact_type,
+                ),
                 artifact.lifecycle,
-                artifact.artifact_type,
             ),
-            artifact.lifecycle,
+            artifact.lifecycle.visibility,
         ),
-        artifact.lifecycle.visibility,
+        consumer_status,
     )
     title = f"{title_prefix(project_key)} {artifact.artifact_type}:{artifact.unit_id}"
     body = compose_issue_body(
@@ -1325,7 +1516,10 @@ def _create_issue_with_lifecycle(
         edges=artifact.lifecycle.edge_list or None,
         native_links=artifact.lifecycle.native_links or None,
     )
-    body, extra_comments = chunk_body_if_needed(body, [])
+    if provider == "jira":
+        body, extra_comments = chunk_body_for_jira_cloud(body, [])
+    else:
+        body, extra_comments = chunk_body_if_needed(body, [])
 
     try:
         record = _lookup_issue_record(root, project_key, artifact.unit_id, artifact.body_path, client)
@@ -1341,14 +1535,16 @@ def _create_issue_with_lifecycle(
         )
     else:
         try:
+            workflow_state = _workflow_state_for_consumer_status(consumer_status) or artifact.lifecycle.issue_state
             record = client.issue_update(
                 record.id,
                 title=title,
                 body=body,
                 labels=labels,
-                state=artifact.lifecycle.issue_state,
+                state=workflow_state,
                 native_links=artifact.lifecycle.native_links or None,
                 if_match=record.etag,
+                allow_locked=True,
             )
         except IssueRevisionConflict as exc:
             fail(
@@ -1358,20 +1554,32 @@ def _create_issue_with_lifecycle(
                 actual=exc.actual,
             )
 
+    chunk_comment_ids: list[str] = []
     for comment in extra_comments:
         secret_scan_text(comment.body, path_hint=artifact.body_path)
-        client.issue_comment(record.id, comment.body, markers=comment.markers)
+        posted = client.issue_comment(record.id, comment.body, markers=comment.markers)
+        chunk_comment_ids.append(posted.id)
         record = client.issue_get(record.id)
+    if chunk_comment_ids:
+        manifest_body = rewrite_chunk_manifest(body, chunk_comment_ids)
+        if manifest_body != record.body:
+            record = client.issue_update(
+                record.id,
+                body=manifest_body,
+                if_match=record.etag,
+                allow_locked=True,
+            )
 
     if artifact.lifecycle.frozen:
         record = client.issue_lock(record.id, if_match=record.etag)
         record = client.issue_label(record.id, labels, if_match=record.etag)
         snapshot = _record_to_snapshot(record)
         digest = artifact.lifecycle.freeze_hash or canonical_hash(snapshot)
-        freeze_body = build_freeze_record_body(digest)
-        secret_scan_text(freeze_body, path_hint="sw-freeze-record")
-        client.issue_comment(record.id, freeze_body, markers=["sw-freeze-record"])
-        record = client.issue_get(record.id)
+        if not parse_freeze_record_hash(record.comments):
+            freeze_body = build_freeze_record_body(digest)
+            secret_scan_text(freeze_body, path_hint="sw-freeze-record")
+            client.issue_comment(record.id, freeze_body, markers=["sw-freeze-record"])
+            record = client.issue_get(record.id)
     elif artifact.lifecycle.issue_state == "closed":
         record = client.issue_update(record.id, state="closed", if_match=record.etag)
 
@@ -1424,6 +1632,41 @@ def _create_target(
     return _create_file_with_lifecycle(artifact, file_backend, apply=apply)
 
 
+
+
+def _expected_issue_verify_content(content: str, provider: str) -> str:
+  """Provider-aware body form for files-to-issues verify (GitHub stores markdown as-is)."""
+  if provider == "jira":
+    return jira_markdown_canonical(content)
+  return normalize_body(content)
+
+
+def _expected_verify_lifecycle(
+    root: Path,
+    artifact: MigrationArtifact,
+    *,
+    freeze_hash: str | None,
+) -> ArtifactLifecycle:
+    consumer_status = _consumer_status_for_artifact(
+        root,
+        artifact.unit_id,
+        artifact.artifact_type,
+        body_path=artifact.body_path,
+    )
+    issue_state = _workflow_state_for_consumer_status(consumer_status) or artifact.lifecycle.issue_state
+    return ArtifactLifecycle(
+        issue_state=issue_state,
+        frozen=artifact.lifecycle.frozen,
+        freeze_hash=freeze_hash,
+        frozen_at=artifact.lifecycle.frozen_at,
+        edge_list=artifact.lifecycle.edge_list,
+        native_links=artifact.lifecycle.native_links,
+        gap_status=artifact.lifecycle.gap_status,
+        gap_schedule=artifact.lifecycle.gap_schedule,
+        visibility=artifact.lifecycle.visibility,
+        consumer_status=consumer_status,
+    )
+
 def _verify_target(
     root: Path,
     direction: str,
@@ -1451,24 +1694,15 @@ def _verify_target(
             return False
         got_content = extract_issue_content(record)
         got_lifecycle = extract_lifecycle_from_record(record)
-        if content_hash(got_content) != artifact.digest:
+        expected_content = _expected_issue_verify_content(artifact.content, provider)
+        if content_hash(got_content) != content_hash(expected_content):
             return False
         if artifact.lifecycle.frozen and not got_lifecycle.frozen:
             return False
         if artifact.lifecycle.freeze_hash and got_lifecycle.freeze_hash != artifact.lifecycle.freeze_hash:
             return False
         return lifecycle_equal(
-            ArtifactLifecycle(
-                issue_state=artifact.lifecycle.issue_state,
-                frozen=artifact.lifecycle.frozen,
-                freeze_hash=got_lifecycle.freeze_hash,
-                frozen_at=artifact.lifecycle.frozen_at,
-                edge_list=artifact.lifecycle.edge_list,
-                native_links=artifact.lifecycle.native_links,
-                gap_status=artifact.lifecycle.gap_status,
-                gap_schedule=artifact.lifecycle.gap_schedule,
-                visibility=artifact.lifecycle.visibility,
-            ),
+            _expected_verify_lifecycle(root, artifact, freeze_hash=got_lifecycle.freeze_hash),
             got_lifecycle,
         )
 
@@ -1565,6 +1799,10 @@ def process_artifact(
 
         if state == "created":
             plan.append({"unitId": artifact.unit_id, "sourcePath": artifact.source_path, "action": "verify"})
+            if apply:
+                _create_target(
+                    root, cfg, direction, artifact, file_backend, issue_backend, apply=True
+                )
             if not _verify_target(
                 root, direction, artifact, file_backend, issue_backend, cfg, apply=apply
             ):
@@ -1662,6 +1900,193 @@ def run_store_migration(root: Path, direction: str, *, apply: bool = False) -> N
     )
 
 
+
+def run_backfill_labels(root: Path, *, apply: bool = False) -> None:
+    """Refresh type/status/gap labels on existing Jira issues from legacy INDEX + paths."""
+    root = root.resolve()
+    cfg = load_workflow_config(root)
+    issue_backend = IssueStoreBackend(root, cfg)
+    provider = str(cfg.get("planning", {}).get("store", {}).get("issuesProvider", "none"))
+    client = IssuesClient(root, provider)
+    journal = load_journal(root)
+    unit_to_path: dict[str, str] = {}
+    for entry in journal.get("entries", {}).values():
+        if isinstance(entry, dict) and entry.get("unitId") and entry.get("bodyPath"):
+            unit_to_path[str(entry["unitId"])] = str(entry["bodyPath"])
+    records = client.issue_search(project_key=issue_backend.project_key)
+    updated = 0
+    for record in records:
+        body_path = unit_to_path.get(record.unit_id or "", "")
+        artifact_type = record.artifact_type or infer_artifact_type(body_path or record.unit_id)
+        if body_path:
+            artifact_type = infer_artifact_type(body_path)
+        consumer_status = _consumer_status_for_artifact(root, record.unit_id or "", artifact_type, body_path=body_path or None)
+        labels = sorted(set(record.labels))
+        labels = [l for l in labels if not l.startswith("sw:prd") and not l.startswith("sw:amendment") and not l.startswith("sw:brainstorm") and not l.startswith("sw:decision")]
+        labels.append(type_label(artifact_type))
+        if artifact_type == "gap":
+            gap_stat = _gap_status_from_labels(record.labels) or "open"
+            labels = _apply_gap_labels(labels, ArtifactLifecycle(
+                issue_state=record.state, frozen=False, freeze_hash=None, frozen_at=None,
+                gap_status=gap_stat,
+            ), "gap")
+        labels = _apply_status_labels(labels, consumer_status)
+        workflow_state = _workflow_state_for_consumer_status(consumer_status)
+        labels_changed = sorted(set(labels)) != sorted(set(record.labels))
+        state_changed = workflow_state is not None and workflow_state != record.state
+        if not labels_changed and not state_changed:
+            continue
+        update_kwargs: dict[str, Any] = {
+            "labels": labels,
+            "if_match": record.etag,
+            "allow_locked": True,
+        }
+        if state_changed:
+            update_kwargs["state"] = workflow_state
+        if apply:
+            client.issue_update(record.id, **update_kwargs)
+        updated += 1
+    emit({
+        "verdict": "pass",
+        "action": "backfill-labels",
+        "mode": "apply" if apply else "dry-run",
+        "issueCount": len(records),
+        "updatedCount": updated,
+    })
+
+
+def _normalize_edge_target(target: str, path_to_unit: dict[str, str]) -> str:
+    t = target.strip()
+    if not t:
+        return t
+    if "/" not in t and not t.endswith(".md"):
+        return t
+    norm = t.replace("\\", "/")
+    if norm in path_to_unit:
+        return path_to_unit[norm]
+    return infer_unit_id(norm, "")
+
+
+def _build_path_to_unit_map(root: Path, journal: dict[str, Any], records: list[Any]) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for entry in journal.get("entries", {}).values():
+        if not isinstance(entry, dict):
+            continue
+        uid = entry.get("unitId")
+        body_path = entry.get("bodyPath")
+        if isinstance(uid, str) and isinstance(body_path, str):
+            mapping[body_path.replace("\\", "/")] = uid
+    for record in records:
+        uid = str(record.unit_id or "").strip()
+        if not uid:
+            continue
+        body_path = body_path_from_journal(root, uid) or default_body_path(
+            uid, record.artifact_type or infer_artifact_type(uid)
+        )
+        mapping[body_path.replace("\\", "/")] = uid
+    return mapping
+
+
+def _normalize_edge_list(edge_list: list[dict[str, Any]], path_to_unit: dict[str, str]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for edge in edge_list:
+        if not isinstance(edge, dict):
+            continue
+        rel = edge.get("rel")
+        target = edge.get("target")
+        if not isinstance(rel, str) or not isinstance(target, str):
+            continue
+        normalized_target = _normalize_edge_target(target, path_to_unit)
+        key = json.dumps({"rel": rel, "target": normalized_target}, sort_keys=True)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append({"rel": rel, "target": normalized_target})
+    return out
+
+
+def _reciprocal_edges(unit_id: str, artifact_type: str, edge_list: list[dict[str, Any]]) -> list[tuple[str, dict[str, Any]]]:
+    implied: list[tuple[str, dict[str, Any]]] = []
+    for edge in edge_list:
+        rel = str(edge.get("rel", ""))
+        target = str(edge.get("target", ""))
+        if not rel or not target:
+            continue
+        inverse = _EDGE_INVERSE_REL.get(rel)
+        if inverse:
+            implied.append((target, {"rel": inverse, "target": unit_id}))
+        if rel == "prd" and artifact_type == "brainstorm":
+            implied.append((target, {"rel": "brainstorm", "target": unit_id}))
+        if rel == "amends" and artifact_type == "amendment":
+            implied.append((target, {"rel": "extends", "target": unit_id}))
+    return implied
+
+
+def run_backfill_edges(root: Path, *, apply: bool = False) -> None:
+    """Normalize sw-edges targets to unit ids and add reciprocals across the issue store."""
+    root = root.resolve()
+    cfg = load_workflow_config(root)
+    issue_backend = IssueStoreBackend(root, cfg)
+    provider = str(cfg.get("planning", {}).get("store", {}).get("issuesProvider", "none"))
+    client = IssuesClient(root, provider)
+    journal = load_journal(root)
+    records = client.issue_search(project_key=issue_backend.project_key)
+    path_to_unit = _build_path_to_unit_map(root, journal, records)
+    unit_edges: dict[str, list[dict[str, Any]]] = {}
+    unit_types: dict[str, str] = {}
+    unit_records: dict[str, Any] = {}
+    for record in records:
+        uid = str(record.unit_id or "").strip()
+        if not uid:
+            continue
+        artifact_type = record.artifact_type or infer_artifact_type(uid)
+        unit_types[uid] = artifact_type
+        unit_records[uid] = record
+        lifecycle = extract_lifecycle_from_record(record)
+        unit_edges[uid] = _normalize_edge_list(lifecycle.edge_list, path_to_unit)
+
+    for uid, edges in list(unit_edges.items()):
+        for target_uid, reciprocal in _reciprocal_edges(uid, unit_types.get(uid, "prd"), edges):
+            if target_uid not in unit_edges:
+                continue
+            existing = {(e["rel"], e["target"]) for e in unit_edges[target_uid]}
+            pair = (reciprocal["rel"], reciprocal["target"])
+            if pair not in existing:
+                unit_edges[target_uid].append(reciprocal)
+
+    updated = 0
+    for uid, edges in unit_edges.items():
+        record = unit_records.get(uid)
+        if record is None:
+            continue
+        lifecycle = extract_lifecycle_from_record(record)
+        if _norm_edge_list(edges) == _norm_edge_list(lifecycle.edge_list):
+            continue
+        content = strip_markers_and_edges(reassemble_body(record.body, record.comments))
+        body_path = body_path_from_journal(root, uid) or default_body_path(uid, unit_types.get(uid, "prd"))
+        artifact_type = unit_types.get(uid, infer_artifact_type(body_path))
+        new_body = compose_issue_body(
+            issue_backend.project_key,
+            artifact_type,
+            uid,
+            content,
+            edges=edges,
+            native_links=lifecycle.native_links or None,
+        )
+        if apply:
+            client.issue_update(record.id, body=new_body, if_match=record.etag, allow_locked=True)
+        updated += 1
+
+    emit({
+        "verdict": "pass",
+        "action": "backfill-edges",
+        "mode": "apply" if apply else "dry-run",
+        "issueCount": len(records),
+        "updatedCount": updated,
+    })
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -1670,7 +2095,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "command",
         nargs="?",
-        choices=["migrate", "doctor", "rollback", "scan-quiesce"],
+        choices=["migrate", "doctor", "rollback", "scan-quiesce", "backfill-labels"],
         default="migrate",
     )
     parser.add_argument("direction", nargs="?", choices=sorted(DIRECTIONS))
@@ -1683,6 +2108,8 @@ if __name__ == "__main__":
         rollback_store_migration(root, apply=args.apply)
     elif args.command == "scan-quiesce":
         emit({"verdict": "pass", "blockers": scan_quiesce_blockers(root)})
+    elif args.command == "backfill-labels":
+        run_backfill_labels(root, apply=args.apply)
     else:
         if not args.direction:
             fail("direction required for migrate")

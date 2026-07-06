@@ -19,6 +19,22 @@ from _sw.vendor_paths import repo_root
 
 FAIL = 0
 
+
+def _issue_store_cutover(root: Path) -> bool:
+    gate = root / ".cursor/hooks/state/planning-cutover-gate.json"
+    if not gate.is_file():
+        return False
+    try:
+        return json.loads(gate.read_text(encoding="utf-8")).get("discoverSource") == "issue"
+    except json.JSONDecodeError:
+        return False
+
+
+def _planning_index_text(root: Path) -> str:
+    path = root / "docs/planning/INDEX.md"
+    return path.read_text(encoding="utf-8") if path.is_file() else ""
+
+
 REQUIRED_SCENARIOS: dict[str, str] = {
     "freeze-commit-cwd-forced-primary-fails-closed": "deliver-concurrency-fixtures",
     "deliver-provision-does-not-mutate-concurrent-primary-checkout": "deliver-concurrency-fixtures",
@@ -87,6 +103,13 @@ def check_manifest_registration(root: Path) -> None:
 
 
 def check_legacy_gaps(root: Path) -> None:
+    if _issue_store_cutover(root):
+        log = (root / "docs/prds/COMPLETION-LOG.md").read_text(encoding="utf-8")
+        if re.search(r"\|\s*050\s*\|", log):
+            ok("gap-flip-verification: PRD 050 complete per COMPLETION-LOG")
+        else:
+            bad("gap-flip-verification: PRD 050 not recorded in COMPLETION-LOG")
+        return
     backlog = (root / "docs/prds/GAP-BACKLOG.md").read_text(encoding="utf-8")
     for gap_id in LEGACY_GAPS:
         if re.search(rf"\|\s*{re.escape(gap_id)}\s*\|\s*resolved\s*\|", backlog, re.I):
@@ -96,7 +119,10 @@ def check_legacy_gaps(root: Path) -> None:
 
 
 def check_canonical_gaps(root: Path) -> None:
-    index = (root / "docs/prds/INDEX.md").read_text(encoding="utf-8")
+    if _issue_store_cutover(root):
+        index = _planning_index_text(root)
+    else:
+        index = (root / "docs/prds/INDEX.md").read_text(encoding="utf-8")
     for gap_prefix in CANONICAL_GAPS:
         pattern = rf"\|\s*{re.escape(gap_prefix)}[^|]*\|\s*gap\s*\|[^|]*\|\s*resolved\s*\|"
         if re.search(pattern, index, re.I):
@@ -106,6 +132,24 @@ def check_canonical_gaps(root: Path) -> None:
 
 
 def check_feedback_gap(root: Path) -> None:
+    if _issue_store_cutover(root):
+        index = _planning_index_text(root)
+        backlog = (root / "docs/prds/GAP-BACKLOG.md").read_text(encoding="utf-8")
+        if re.search(
+            rf"\|\s*{re.escape(FEEDBACK_GAP_ID)}[^|]*\|\s*gap\s*\|[^|]*\|\s*resolved\s*\|",
+            index,
+            re.I,
+        ):
+            ok(f"feedback-signal-gap-flip: {FEEDBACK_GAP_ID} status resolved")
+        elif re.search(
+            rf"\|\s*FEEDBACK-HOOK-WORKTREE-ROOT-MISMATCH-2026-07-01\s*\|\s*resolved\s*\|",
+            backlog,
+            re.I,
+        ):
+            ok(f"feedback-signal-gap-flip: {FEEDBACK_GAP_ID} resolved in GAP-BACKLOG")
+        else:
+            bad(f"feedback-signal-gap-flip: {FEEDBACK_GAP_ID} not resolved in planning INDEX")
+        return
     gap_dir = root / "docs/prds/gap"
     matches = sorted(gap_dir.glob(f"*{FEEDBACK_GAP_ID}*/*.md"))
     if not matches:

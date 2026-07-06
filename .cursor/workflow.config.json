@@ -156,9 +156,19 @@
   },
   "planning": {
     "store": {
-      "backend": "memory"
+      "backend": "issue-store",
+      "issuesProvider": "github-issues",
+      "projectKey": "planning",
+      "storeLocation": {
+        "mode": "separate-project",
+        "owner": "grdavies",
+        "repo": "planning"
+      },
+      "issues": {
+        "tokenEnv": "GITHUB_TOKEN"
+      }
     },
-    "visibilityProfile": "all-private",
+    "visibilityProfile": "all-public",
     "privacyAck": {
       "required": true,
       "recordedAt": null,

@@ -18,6 +18,7 @@ import planning_index_gen as pig  # noqa: E402
 import planning_paths as pp  # noqa: E402
 from host_lib import load_workflow_config  # noqa: E402
 from issues_lib import IssuesClient, use_fixture_mode  # noqa: E402
+from planning_canonical import GAP_LABEL_RESOLVED  # noqa: E402
 from planning_discover import resolve_discover_source  # noqa: E402
 from planning_query_cache import get_entry, invalidate_all, revalidate_live_metadata, resolve_ttl  # noqa: E402
 from planning_request_budget import RequestBudgetLedger  # noqa: E402
@@ -26,7 +27,7 @@ from planning_store import validate_project_key  # noqa: E402
 _TIER_LABEL = re.compile(r"^sw:tier:(?P<tier>[A-Za-z]+)$")
 _PRIORITY_LABEL = re.compile(r"^sw:priority:(?P<priority>-?\d+)$")
 _FROZEN_LABELS = frozenset({"sw:frozen", "sw:freeze-incomplete"})
-_TERMINAL_LABELS = frozenset({"sw:gap-resolved"})
+_TERMINAL_LABELS = frozenset({"sw:gap-resolved", "resolved"})
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:

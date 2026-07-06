@@ -320,7 +320,7 @@ GAP_ARTIFACT="$REPO/docs/planning/gap/gap-resolved-fixture/gap-resolved-fixture.
 python3 "$PY_STORE" --root "$REPO" clear-issue-fixture >/dev/null
 rm -f "$JOURNAL"
 python3 "$PY_MIG" "$REPO" store-files-to-issues --apply >/dev/null
-if fixture_has_label "$FIXTURE" "gap-resolved-fixture" "resolved"; then
+if fixture_has_label "$FIXTURE" "gap-resolved-fixture" "sw:gap-resolved"; then
   ok "SC17c:gap-resolved-label-on-issue"
 else
   bad "SC17c:gap-resolved-label-on-issue"
