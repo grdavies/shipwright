@@ -1499,6 +1499,31 @@
       "verifyOrder": 57,
       "pytestPath": "scripts/unit_tests/planning/test_planning_047_conformance.py",
       "ciShard": 2
+    },
+    {
+      "id": "planning-native-links-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 58,
+      "pytestPath": "scripts/unit_tests/planning/test_planning_native_links.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_github_client.py",
+        "scripts/issues_lib.py",
+        "scripts/planning_store.py",
+        "scripts/planning_canonical.py",
+        "scripts/unit_tests/planning/harness_planning_native_links.py"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "native-links"
+      ]
     }
   ]
 }

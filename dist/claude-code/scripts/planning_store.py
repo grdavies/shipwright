@@ -545,8 +545,69 @@ def _github_fine_grained_probe(
         "required": sorted(required),
         "tokenKind": "fine-grained",
         "probeRepo": f"{owner}/{repo}",
+        "owner": owner,
+        "repo": repo,
     }
 
+
+
+
+def _github_native_links_capable_probe(
+    token: str,
+    cfg: dict[str, Any],
+    root: Path,
+    *,
+    owner: str,
+    repo: str,
+) -> bool:
+    api_base = github_api_base(host_section(cfg))
+    headers = _github_probe_headers(token)
+    headers["X-GitHub-Api-Version"] = "2026-03-10"
+    url = f"{api_base}/repos/{owner}/{repo}/issues/1/sub_issues"
+    try:
+        status, _, _body = issues_http.http_request(
+            "GET",
+            url,
+            headers,
+            root=root,
+            issues_provider="github-issues",
+            timeout=15,
+        )
+    except Exception:
+        return False
+    if status == 403:
+        return False
+    return status < 400 or status == 404
+
+
+def _attach_github_native_links_capable(
+    probe: dict[str, Any],
+    token: str,
+    cfg: dict[str, Any],
+    root: Path,
+) -> None:
+    if probe.get("verdict") != "ok":
+        probe["nativeLinksCapable"] = False
+        return
+    owner = probe.get("owner")
+    repo = probe.get("repo")
+    probe_repo = probe.get("probeRepo")
+    if (not owner or not repo) and isinstance(probe_repo, str) and "/" in probe_repo:
+        owner, repo = probe_repo.split("/", 1)
+    if not isinstance(owner, str) or not isinstance(repo, str) or not owner or not repo:
+        location = resolve_store_location(root, cfg)
+        owner = location.get("owner") if isinstance(location.get("owner"), str) else ""
+        repo = location.get("repo") if isinstance(location.get("repo"), str) else ""
+    if owner and repo:
+        probe["nativeLinksCapable"] = _github_native_links_capable_probe(
+            token,
+            cfg,
+            root,
+            owner=owner.strip(),
+            repo=repo.strip(),
+        )
+    else:
+        probe["nativeLinksCapable"] = False
 
 def _github_scope_probe(token: str, cfg: dict[str, Any], root: Path) -> dict[str, Any]:
     host = host_section(cfg)
@@ -677,6 +738,10 @@ def probe_issues_token(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     for key in ("error", "message", "scopes", "required", "httpStatus", "tokenKind", "probeRepo", "probe", "owner", "repo"):
         if key in probe:
             out[key] = probe[key]
+    if provider == "github-issues":
+        _attach_github_native_links_capable(out, token, cfg, root)
+    else:
+        out["nativeLinksCapable"] = False
     return out
 
 
