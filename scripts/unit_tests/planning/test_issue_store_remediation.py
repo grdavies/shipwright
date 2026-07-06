@@ -360,7 +360,7 @@ def test_expected_verify_lifecycle_uses_index_consumer_status(repo_root: Path) -
         artifact_type="prd",
         lifecycle=lifecycle,
     )
-    expected = _expected_verify_lifecycle(repo_root, artifact, freeze_hash=None)
+    expected = _expected_verify_lifecycle(repo_root, artifact, {}, "test", freeze_hash=None)
     assert expected.consumer_status == "complete"
     assert expected.issue_state == "closed"
 
