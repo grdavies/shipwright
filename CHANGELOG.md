@@ -361,6 +361,7 @@
 * merge phase jira-cloud-adapter-canonicalization-placement-freeze-decoupling-l into feat/jira-issue-store-adapter (7737da7) <!-- sw-deliver:jira-cloud-adapter-canonicalization-placement-freeze-decoupling-l -->
 * merge phase dc-server-variant-auth-visibility-field-budget-lifecycle-probes-l into feat/jira-issue-store-adapter (236035b) <!-- sw-deliver:dc-server-variant-auth-visibility-field-budget-lifecycle-probes-l -->
 * merge phase bitbucket-guidance-acceptance-suite-doc-impact-gate-m into feat/jira-issue-store-adapter (41c1e78) <!-- sw-deliver:bitbucket-guidance-acceptance-suite-doc-impact-gate-m -->
+* merge phase run-entry-materialize-small-amendment-a3 into feat/issue-store-deliver-progress-native-links (3e23fb7) <!-- sw-deliver:run-entry-materialize-small-amendment-a3 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
