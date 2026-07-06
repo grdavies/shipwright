@@ -1323,6 +1323,33 @@
         "jira-conformance"
       ],
       "ciShard": 2
+    },
+    {
+      "id": "planning-native-links-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_planning_native_links.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "scenarios": [
+        "fixture:create-get-reconcile",
+        "github-stub:create-get-reconcile",
+        "probe:nativeLinksCapable"
+      ],
+      "ciShard": 4
+    },
+    {
+      "id": "planning-deliver-run-entry-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "ciShard": 4
     }
   ]
 }

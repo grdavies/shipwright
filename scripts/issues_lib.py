@@ -22,6 +22,7 @@ ISSUE_VERBS = frozenset({
     "issue-label",
     "issue-lock",
     "issue-search",
+    "issue-link-sync",
 })
 
 DEFAULT_CALL_BUDGET = 500
@@ -502,6 +503,26 @@ class IssuesClient:
 
     def issue_search(self, **kwargs: Any) -> list[IssueRecord]:
         return self._with_resilience("issue-search", lambda: self._live_backend().search(**kwargs))
+
+    def sync_native_links(
+        self,
+        issue_id: str,
+        native_links: list[dict[str, Any]],
+        *,
+        if_match: str | None = None,
+    ) -> IssueRecord:
+        def _run() -> IssueRecord:
+            backend = self._live_backend()
+            sync = getattr(backend, "sync_native_links", None)
+            if callable(sync):
+                return sync(issue_id, native_links, if_match=if_match)
+            return backend.update(issue_id, native_links=native_links, if_match=if_match)
+
+        return self._with_resilience("issue-link-sync", _run)
+
+    def issue_link_sync(self, issue_id: str, native_links: list[dict[str, Any]], *, if_match: str | None = None) -> IssueRecord:
+        return self.sync_native_links(issue_id, native_links, if_match=if_match)
+
 
     def mark_tombstone(self, issue_id: str) -> None:
         def _run() -> None:

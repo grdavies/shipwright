@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -30,6 +31,9 @@ from planning_canonical import (
 SEARCH_PAGE_SIZE = 100
 DEFAULT_MAX_PAGES = 10
 ISSUE_NUMBER_RE = re.compile(r"(\d+)$")
+SUB_ISSUE_API_VERSION = "2026-03-10"
+NATIVE_LINK_MARKER = re.compile(r"<!--\s*sw-native-link:([^:\s]+):(\d+)\s*-->")
+_NATIVE_LINKS_DEGRADED_EMITTED = False
 
 
 def _store_section(cfg: dict[str, Any]) -> dict[str, Any]:
@@ -76,15 +80,43 @@ def _search_max_pages() -> int:
     return DEFAULT_MAX_PAGES
 
 
-def _github_headers(token: str, cfg: dict[str, Any]) -> dict[str, str]:
+def _github_headers(token: str, cfg: dict[str, Any], *, api_version: str = "2022-11-28") -> dict[str, str]:
     del cfg
     return {
         "Accept": "application/vnd.github+json",
         "Authorization": f"Bearer {token}",
-        "X-GitHub-Api-Version": "2022-11-28",
+        "X-GitHub-Api-Version": api_version,
         "User-Agent": "shipwright-github-issues-client",
         "Content-Type": "application/json",
     }
+
+
+def _emit_native_links_degraded(message: str = "native-links-degraded") -> None:
+    global _NATIVE_LINKS_DEGRADED_EMITTED
+    if _NATIVE_LINKS_DEGRADED_EMITTED:
+        return
+    _NATIVE_LINKS_DEGRADED_EMITTED = True
+    payload = {"verdict": "notice", "notice": "native-links-degraded", "message": message}
+    print(json.dumps(payload, ensure_ascii=False), file=sys.stderr)
+
+
+def _norm_native_links(links: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for link in links or []:
+        if not isinstance(link, dict):
+            continue
+        link_type = str(link.get("type") or "").strip()
+        target = str(link.get("target") or "").strip()
+        if not link_type or not target:
+            continue
+        entry = {"type": link_type, "target": target}
+        if entry not in out:
+            out.append(entry)
+    return out
+
+
+def _cross_reference_body(link_type: str, target: str) -> str:
+    return f"<!-- sw-native-link:{link_type}:{target} -->\nCross-reference: #{target} ({link_type})"
 
 
 def _label_names(payload: dict[str, Any]) -> list[str]:
@@ -114,11 +146,22 @@ def _parse_comment(raw: dict[str, Any]) -> CommentRecord:
     )
 
 
+def _native_links_from_comments(comments: list[CommentRecord]) -> list[dict[str, Any]]:
+    links: list[dict[str, Any]] = []
+    for comment in comments:
+        for match in NATIVE_LINK_MARKER.finditer(comment.body):
+            entry = {"type": match.group(1), "target": match.group(2)}
+            if entry not in links:
+                links.append(entry)
+    return links
+
+
 def _record_from_issue(
     payload: dict[str, Any],
     *,
     comments: list[CommentRecord] | None = None,
     project_key: str = "",
+    native_links: list[dict[str, Any]] | None = None,
 ) -> Any:
     from issues_lib import IssueRecord
 
@@ -132,6 +175,7 @@ def _record_from_issue(
     artifact_type = parse_body_marker(body, MARKER_ARTIFACT_TYPE) or ""
     unit_id = parse_body_marker(body, MARKER_UNIT_ID) or ""
     locked = bool(payload.get("locked")) or FROZEN_LABEL in labels
+    resolved_links = list(native_links if native_links is not None else _native_links_from_comments(comments or []))
     record = IssueRecord(
         id=str(number),
         number=number,
@@ -140,7 +184,7 @@ def _record_from_issue(
         state=state,
         labels=labels,
         comments=list(comments or []),
-        native_links=[],
+        native_links=resolved_links,
         locked=locked,
         updated_at=updated,
         project_key=project_key,
@@ -168,11 +212,29 @@ class GitHubIssuesClient:
         token = os.environ.get(_token_env(self.cfg), "").strip()
         if not token:
             raise RuntimeError(f"missing GitHub issues token env {_token_env(self.cfg)}")
+        self._token = token
         self.headers = _github_headers(token, self.cfg)
         self.api_base = github_api_base(host_section(self.cfg))
         store = _store_section(self.cfg)
         raw_key = store.get("projectKey")
         self.project_key = raw_key.strip() if isinstance(raw_key, str) else ""
+        self._native_links_capable_cache: bool | None = None
+
+    def _sub_issue_headers(self) -> dict[str, str]:
+        return _github_headers(self._token, self.cfg, api_version=SUB_ISSUE_API_VERSION)
+
+    def _native_links_capable(self) -> bool:
+        if self._native_links_capable_cache is not None:
+            return self._native_links_capable_cache
+        raw = os.environ.get("SW_NATIVE_LINKS_CAPABLE", "").strip().lower()
+        if raw in {"1", "true", "yes"}:
+            self._native_links_capable_cache = True
+            return True
+        if raw in {"0", "false", "no"}:
+            self._native_links_capable_cache = False
+            return False
+        self._native_links_capable_cache = True
+        return True
 
     def _http_json(
         self,
@@ -180,7 +242,23 @@ class GitHubIssuesClient:
         url: str,
         headers: dict[str, str],
         payload: dict[str, Any] | list[Any] | None = None,
+        *,
+        allow_404: bool = False,
     ) -> Any:
+        if allow_404:
+            status, _hdrs, body = issues_http.http_request(
+                method,
+                url,
+                headers,
+                payload,
+                root=self.root,
+                issues_provider="github-issues",
+            )
+            if status == 404:
+                return None
+            if status >= 400:
+                raise RuntimeError(f"HTTP {status}: {body[:300]}")
+            return json.loads(body) if body.strip() else {}
         return issues_http.http_json(
             method,
             url,
@@ -219,6 +297,84 @@ class GitHubIssuesClient:
             return []
         return [_parse_comment(item) for item in payload if isinstance(item, dict)]
 
+    def _read_parent_issue_number(self, issue_number: int) -> str | None:
+        if not self._native_links_capable():
+            return None
+        payload = self._http_json(
+            "GET",
+            self._issue_url(issue_number, "/parent"),
+            self._sub_issue_headers(),
+            allow_404=True,
+        )
+        if not isinstance(payload, dict):
+            return None
+        parent_number = payload.get("number")
+        if parent_number is None:
+            return None
+        return str(parent_number)
+
+    def _read_native_links(self, issue_number: int, comments: list[CommentRecord]) -> list[dict[str, Any]]:
+        links = _native_links_from_comments(comments)
+        parent = self._read_parent_issue_number(issue_number)
+        if parent:
+            entry = {"type": "sub-issue-of", "target": parent}
+            if entry not in links:
+                links.append(entry)
+        return links
+
+    def _add_sub_issue_link(self, parent_number: int, child_db_id: int) -> bool:
+        try:
+            self._http_json(
+                "POST",
+                self._issue_url(parent_number, "/sub_issues"),
+                self._sub_issue_headers(),
+                {"sub_issue_id": child_db_id},
+            )
+            return True
+        except RuntimeError as exc:
+            message = str(exc)
+            if "HTTP 403" in message or "HTTP 404" in message:
+                self._native_links_capable_cache = False
+                _emit_native_links_degraded()
+                return False
+            raise
+
+    def _add_cross_reference_link(self, issue_number: int, link_type: str, target: str) -> None:
+        body = _cross_reference_body(link_type, target)
+        existing = self._list_comments(issue_number)
+        marker = f"<!-- sw-native-link:{link_type}:{target} -->"
+        if any(marker in comment.body for comment in existing):
+            return
+        self._http_json(
+            "POST",
+            self._issue_url(issue_number, "/comments"),
+            self.headers,
+            {"body": body},
+        )
+
+    def _sync_native_links(
+        self,
+        issue_number: int,
+        issue_db_id: int,
+        want: list[dict[str, Any]],
+        *,
+        current: list[dict[str, Any]] | None = None,
+    ) -> None:
+        want_norm = _norm_native_links(want)
+        if not want_norm:
+            return
+        current_norm = _norm_native_links(current)
+        for link in want_norm:
+            if link in current_norm:
+                continue
+            link_type = str(link.get("type") or "")
+            target = str(link.get("target") or "")
+            if link_type == "sub-issue-of" and self._native_links_capable():
+                parent_number = _issue_number(target)
+                if self._add_sub_issue_link(parent_number, issue_db_id):
+                    continue
+            self._add_cross_reference_link(issue_number, link_type, target)
+
     def _get_issue(self, issue_id: str) -> Any:
         number = _issue_number(issue_id)
         payload = self._http_json("GET", self._issue_url(number), self.headers)
@@ -227,7 +383,13 @@ class GitHubIssuesClient:
 
             raise IssueNotFound(f"issue not found: {issue_id}")
         comments = self._list_comments(number)
-        return _record_from_issue(payload, comments=comments, project_key=self.project_key)
+        native_links = self._read_native_links(number, comments)
+        return _record_from_issue(
+            payload,
+            comments=comments,
+            project_key=self.project_key,
+            native_links=native_links,
+        )
 
     def create(
         self,
@@ -240,7 +402,7 @@ class GitHubIssuesClient:
         unit_id: str,
         native_links: list[dict[str, Any]] | None = None,
     ) -> Any:
-        del native_links, artifact_type, unit_id
+        del artifact_type, unit_id
         merged_labels = sorted(set(labels) | {project_label(project_key)})
         created = self._http_json(
             "POST",
@@ -250,9 +412,36 @@ class GitHubIssuesClient:
         )
         if not isinstance(created, dict) or not created.get("number"):
             raise RuntimeError("GitHub issue-create returned no number")
-        return self._get_issue(str(created["number"]))
+        number = int(created["number"])
+        db_id = int(created.get("id") or 0)
+        if native_links and db_id:
+            self._sync_native_links(number, db_id, native_links)
+        return self._get_issue(str(number))
 
     def get(self, issue_id: str) -> Any:
+        return self._get_issue(issue_id)
+
+    def sync_native_links(
+        self,
+        issue_id: str,
+        native_links: list[dict[str, Any]],
+        *,
+        if_match: str | None = None,
+    ) -> Any:
+        from issues_lib import IssueRevisionConflict
+
+        current = self._get_issue(issue_id)
+        if if_match and current.etag != if_match:
+            raise IssueRevisionConflict(
+                "revision-conflict",
+                expected=if_match,
+                actual=current.etag,
+            )
+        number = _issue_number(issue_id)
+        payload = self._http_json("GET", self._issue_url(number), self.headers)
+        db_id = int(payload.get("id") or 0) if isinstance(payload, dict) else 0
+        if db_id:
+            self._sync_native_links(number, db_id, native_links, current=current.native_links)
         return self._get_issue(issue_id)
 
     def _sync_labels(self, issue_number: int, want: list[str], *, current: list[str]) -> None:
@@ -282,7 +471,6 @@ class GitHubIssuesClient:
     ) -> Any:
         from issues_lib import IssueRevisionConflict
 
-        del native_links
         current = self._get_issue(issue_id)
         if if_match and current.etag != if_match:
             raise IssueRevisionConflict(
@@ -304,6 +492,11 @@ class GitHubIssuesClient:
             self._http_json("PATCH", self._issue_url(number), self.headers, patch)
         if labels is not None:
             self._sync_labels(number, sorted(set(labels)), current=current.labels)
+        if native_links is not None:
+            payload = self._http_json("GET", self._issue_url(number), self.headers)
+            db_id = int(payload.get("id") or 0) if isinstance(payload, dict) else 0
+            if db_id:
+                self._sync_native_links(number, db_id, native_links, current=current.native_links)
         return self._get_issue(issue_id)
 
     def add_comment(self, issue_id: str, body: str, *, markers: list[str] | None = None) -> CommentRecord:

@@ -60,17 +60,17 @@ rescan: A3-deliver-run-entry-materialize
 
 ### 1. GitHub native links adapter (small)
 
-- [ ] **1.1** Implement native link create/sync in `planning_github_client.py`
+- [x] 1.1 Implement native link create/sync in `planning_github_client.py`
   - **File:** `scripts/planning_github_client.py`, `scripts/issues_lib.py`
   - **Expected:** `create`/`update` accept `native_links`; `get` returns persisted links; no `del native_links`
   - **R-IDs:** R1, R2
 
-- [ ] **1.2** Extend `probe-issues-token` for link/sub-issue scope
+- [x] 1.2 Extend `probe-issues-token` for link/sub-issue scope
   - **File:** `scripts/planning_store.py`
   - **Expected:** probe JSON includes `nativeLinksCapable: true|false`
   - **R-IDs:** R3, R10
 
-- [ ] **1.3** Add `planning-native-links-fixtures` harness (GitHub fixture tree)
+- [x] 1.3 Add `planning-native-links-fixtures` harness (GitHub fixture tree)
   - **File:** `scripts/unit_tests/planning/harness_planning_native_links.py`, `core/sw-reference/suite-registry.json`
   - **Expected:** round-trip create → get → reconcile_edges pass
   - **R-IDs:** R10
