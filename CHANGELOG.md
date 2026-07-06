@@ -365,6 +365,7 @@
 * merge phase github-native-links-adapter-small into feat/issue-store-deliver-progress-native-links (f8d57b8) <!-- sw-deliver:github-native-links-adapter-small -->
 * merge phase github-native-links-adapter-small into feat/issue-store-deliver-progress-native-links (c45fe3b) <!-- sw-deliver:github-native-links-adapter-small -->
 * merge phase gitlab-and-jira-native-links-medium into feat/issue-store-deliver-progress-native-links (e74a7fd) <!-- sw-deliver:gitlab-and-jira-native-links-medium -->
+* merge phase emit-native-links-on-planning-writes-medium into feat/issue-store-deliver-progress-native-links (a675155) <!-- sw-deliver:emit-native-links-on-planning-writes-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
