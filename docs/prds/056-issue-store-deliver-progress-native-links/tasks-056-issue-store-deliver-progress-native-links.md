@@ -94,12 +94,12 @@ rescan: A3-deliver-run-entry-materialize
 
 ### 3. Emit native links on planning writes (medium)
 
-- [ ] **3.1** Migration create passes native projections
+- [x] 3.1 Migration create passes native projections
   - **File:** `scripts/planning_migrate_issue_store.py`
   - **Expected:** files-to-issues verify includes native link parity
   - **R-IDs:** R4
 
-- [ ] **3.2** Gap capture + hierarchy create emit native links
+- [x] 3.2 Gap capture + hierarchy create emit native links
   - **File:** `scripts/planning_gap_capture.py`, `scripts/planning_hierarchy.py`
   - **Expected:** sub-issue-of and depends edges create provider links
   - **R-IDs:** R4

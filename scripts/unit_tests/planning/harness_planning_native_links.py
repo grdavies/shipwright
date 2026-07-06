@@ -359,6 +359,140 @@ else
   bad "probe:jira-nativeLinksCapable"
 fi
 
+
+if python3 - <<'PY'
+import json, os, sys
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+from issues_lib import IssuesClient
+from planning_canonical import parse_edges_block, normalize_body
+from planning_migrate_issue_store import resolved_native_links_for_edges
+from planning_store import issue_index_key, load_issue_unit_index, save_issue_unit_index
+
+root = Path("$ROOT")
+os.environ["SW_ISSUES_FIXTURE"] = "1"
+cfg = {"planning": {"store": {"backend": "issue-store", "issuesProvider": "github-issues", "projectKey": "fixture-native"}}}
+client = IssuesClient(root, "github-issues")
+parent = client.issue_create(title="parent", body="<!-- sw-unit-id: parent-u -->", labels=[], project_key="fixture-native", artifact_type="prd", unit_id="parent-u")
+index = {issue_index_key("fixture-native", "parent-u"): parent.id}
+save_issue_unit_index(root, index)
+links = resolved_native_links_for_edges(root, cfg, [{"rel": "depends", "target": "parent-u"}], [], "fixture-native")
+assert links == [{"type": "depends-on", "target": parent.id}], links
+child = client.issue_create(title="child", body="<!-- sw-unit-id: child-u -->", labels=[], project_key="fixture-native", artifact_type="prd", unit_id="child-u", native_links=links)
+assert child.native_links == links
+print("migrate-resolver-ok")
+PY
+then
+  ok "migration:resolved-native-links"
+else
+  bad "migration:resolved-native-links"
+fi
+
+if python3 - <<'PY'
+import json, os, sys, tempfile
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+from issues_lib import IssuesClient
+from planning_gap_capture import store_put_gap
+from planning_store import issue_index_key, save_issue_unit_index
+
+root = Path(tempfile.mkdtemp())
+import subprocess
+subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=root, check=True)
+subprocess.run(["git", "config", "user.name", "T"], cwd=root, check=True)
+(root / ".cursor" / "hooks" / "state").mkdir(parents=True)
+(root / ".cursor").mkdir(exist_ok=True)
+(root / "docs" / "prds" / "gap").mkdir(parents=True)
+(root / ".cursor" / "workflow.config.json").write_text(json.dumps({
+  "version": 1,
+  "planning": {"store": {"backend": "issue-store", "issuesProvider": "github-issues", "projectKey": "fixture-native"}},
+  "host": {"provider": "github"},
+}), encoding="utf-8")
+subprocess.run(["git", "remote", "add", "origin", "https://github.com/o/r.git"], cwd=root, check=True)
+subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=root, check=True)
+os.environ["SW_ISSUES_FIXTURE"] = "1"
+client = IssuesClient(root, "github-issues")
+parent = client.issue_create(title="parent", body="<!-- sw-unit-id: parent-gap -->", labels=[], project_key="fixture-native", artifact_type="prd", unit_id="parent-gap")
+save_issue_unit_index(root, {issue_index_key("fixture-native", "parent-gap"): parent.id})
+content = (
+    "---\n"
+    "id: gap-001-test\n"
+    "type: gap\n"
+    "status: open\n"
+    "title: Gap with depends\n"
+    "visibility: public\n"
+    "---\n"
+    "# Gap body\n\n"
+    "```sw-edges\n"
+    '{"version": 1, "edges": [{"rel": "depends", "target": "parent-gap"}], "native": []}\n'
+    "```\n"
+)
+store_put_gap(root, "gap-001-test", "docs/prds/gap/gap-001-test/gap-001-test.md", content)
+rec = IssuesClient(root, "github-issues").issue_search(project_key="fixture-native", unit_id="gap-001-test")[0]
+assert rec.native_links == [{"type": "depends-on", "target": parent.id}], rec.native_links
+print("gap-native-ok")
+PY
+then
+  ok "gap-capture:native-links"
+else
+  bad "gap-capture:native-links"
+fi
+
+if python3 - <<'PY'
+import json, os, sys, tempfile
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+import planning_hierarchy as ph
+from issues_lib import IssuesClient
+
+tmp = Path(tempfile.mkdtemp())
+import subprocess
+subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
+subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp, check=True)
+subprocess.run(["git", "config", "user.name", "T"], cwd=tmp, check=True)
+(tmp / ".cursor" / "hooks" / "state").mkdir(parents=True)
+(tmp / "docs" / "prds" / "046-test").mkdir(parents=True)
+(tmp / ".cursor" / "workflow.config.json").write_text(json.dumps({
+  "version": 1,
+  "planning": {"store": {"backend": "issue-store", "issuesProvider": "github-issues", "projectKey": "phase3046"}},
+  "host": {"provider": "github"},
+}), encoding="utf-8")
+(tmp / "docs/prds/046-test/tasks-046-test.md").write_text("---\nfrozen: true\n---\n### 1. Alpha\n", encoding="utf-8")
+os.environ["SW_ISSUES_FIXTURE"] = "1"
+out = ph.project_task_list_hierarchy(tmp, tmp / "docs/prds/046-test/tasks-046-test.md", dry_run=False)
+client = IssuesClient(tmp, "github-issues")
+subs = out.get("subIssues") or []
+assert subs, subs
+child = client.issue_get(subs[0]["issueId"])
+assert child.native_links and child.native_links[0]["type"] == "sub-issue-of"
+print("hierarchy-native-ok")
+PY
+then
+  ok "hierarchy:sub-issue-native-links"
+else
+  bad "hierarchy:sub-issue-native-links"
+fi
+
+if python3 - <<'PY'
+import json, os, sys
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+from planning_migrate_issue_store import resolved_native_links_for_edges
+
+root = Path("$ROOT")
+cfg = {"planning": {"store": {"backend": "file-store", "issuesProvider": "github-issues", "projectKey": "fixture-native"}}}
+links = resolved_native_links_for_edges(root, cfg, [{"rel": "depends", "target": "parent-u"}], [], "fixture-native")
+assert links == [], links
+print("file-store-skip-ok")
+PY
+then
+  ok "file-store:no-native-links"
+else
+  bad "file-store:no-native-links"
+fi
+
 exit "$FAIL"
 """
 

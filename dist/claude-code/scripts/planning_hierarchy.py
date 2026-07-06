@@ -18,8 +18,14 @@ import doc_format  # noqa: E402
 import planning_paths as pp  # noqa: E402
 from host_lib import load_workflow_config  # noqa: E402
 from issues_lib import IssuesClient  # noqa: E402
-from planning_canonical import compose_issue_body, project_label, type_label  # noqa: E402
-from planning_store import store_section  # noqa: E402
+from planning_canonical import compose_issue_body, native_links_from_edges, project_label, type_label  # noqa: E402
+from planning_store import (  # noqa: E402
+    issue_index_key,
+    load_issue_unit_index,
+    resolve_effective_backend,
+    save_issue_unit_index,
+    store_section,
+)
 
 HIERARCHY_VERBS = frozenset({
     "issue-epic-create",
@@ -302,6 +308,8 @@ def project_task_list_hierarchy(
         result["projection"] = {"kind": "epic-sub-issue", "plan": plan}
         return result
 
+    cfg = load_workflow_config(worktree)
+    issue_store = resolve_effective_backend(worktree, cfg).get("effective") == "issue-store"
     client = IssuesClient(worktree, provider)
     epic_body = compose_issue_body(
         project_key,
@@ -317,23 +325,41 @@ def project_task_list_hierarchy(
         artifact_type="tasks",
         unit_id=uid,
     )
+    if issue_store:
+        index = load_issue_unit_index(worktree)
+        index[issue_index_key(project_key, uid)] = epic.id
+        save_issue_unit_index(worktree, index)
     sub_refs: list[dict[str, Any]] = []
     for sub in plan["subIssues"]:
+        phase_unit_id = f"{uid}-phase-{sub['phaseId']}"
         phase_body = compose_issue_body(
             project_key,
             "tasks",
-            f"{uid}-phase-{sub['phaseId']}",
+            phase_unit_id,
             f"Phase {sub['phaseId']}: {sub['title']}\n",
+            edges=[{"rel": "sub-issue-of", "target": uid}] if issue_store else None,
         )
+        native_links: list[dict[str, Any]] | None = None
+        if issue_store:
+            index = load_issue_unit_index(worktree)
+            native_links = native_links_from_edges(
+                [{"rel": "sub-issue-of", "target": uid}],
+                index,
+                project_key=project_key,
+            ) or None
         child = client.issue_create(
             title=sub["title"],
             body=phase_body,
             labels=sorted({project_label(project_key), type_label("tasks"), f"sw:phase:{sub['phaseId']}"}),
             project_key=project_key,
             artifact_type="tasks",
-            unit_id=f"{uid}-phase-{sub['phaseId']}",
-            native_links=[{"type": "sub-issue-of", "target": epic.id}],
+            unit_id=phase_unit_id,
+            native_links=native_links,
         )
+        if issue_store:
+            index = load_issue_unit_index(worktree)
+            index[issue_index_key(project_key, phase_unit_id)] = child.id
+            save_issue_unit_index(worktree, index)
         sub_refs.append({"phaseId": sub["phaseId"], "issueId": child.id, "number": child.number})
     result["epicIssueId"] = epic.id
     result["subIssues"] = sub_refs
