@@ -57,12 +57,18 @@ def distribution(values: list[int]) -> dict[str, float | int]:
 
 def discover_frozen_task_lists(root: Path) -> list[Path]:
     found: list[Path] = []
-    for path in sorted(root.glob("docs/prds/**/tasks-*.md")):
-        if not path.is_file():
-            continue
-        fm = wd.parse_frontmatter(path.read_text(encoding="utf-8"))
-        if fm.get("frozen", "").lower() == "true":
-            found.append(path)
+    globs = (
+        "docs/prds/**/tasks-*.md",
+        "scripts/test/fixtures/planning-post-migration/**/tasks-*.md",
+        "scripts/test/fixtures/phase-sizing/**/tasks-*.md",
+    )
+    for pattern in globs:
+        for path in sorted(root.glob(pattern)):
+            if not path.is_file():
+                continue
+            fm = wd.parse_frontmatter(path.read_text(encoding="utf-8"))
+            if fm.get("frozen", "").lower() == "true":
+                found.append(path)
     return found
 
 

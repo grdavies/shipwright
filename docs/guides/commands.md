@@ -61,7 +61,7 @@ python3 scripts/wave.py plan validate --tier phase --phase-type ship --proposal 
 python3 scripts/wave.py plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
 ```
 
-Call-site map: [`call-site-map.md`](../prds/022-kernel-classification-and-plan-validation/call-site-map.md).
+Call-site map: [`call-site-map.md`](../../scripts/test/fixtures/planning-post-migration/022-kernel-classification-and-plan-validation/call-site-map.md).
 
 **Push safety:** workflow pushes route through `scripts/git-push.py` → `scripts/secret-scan.py`
 before `git push` (including `sw-pr` and stabilize re-pushes).

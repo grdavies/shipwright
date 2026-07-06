@@ -26,6 +26,7 @@ SW_EDGES_FENCE = re.compile(
     r"```sw-edges\s*\n(.*?)\n```",
     re.DOTALL,
 )
+GENERIC_CODE_FENCE = re.compile(r"```(?:\w+)?\s*\n(.*?)\n```", re.DOTALL)
 
 EXCLUDED_COMMENT_MARKERS = frozenset({"sw-freeze-record", "sw-chunk-overflow"})
 FREEZE_RECORD_MARKER = "sw-freeze-record"
@@ -33,13 +34,21 @@ FROZEN_LABEL = "sw:frozen"
 FREEZE_INCOMPLETE_LABEL = "sw:freeze-incomplete"
 FREEZE_HASH_PATTERN = re.compile(r"sw-freeze-hash:\s*([a-f0-9]{64})")
 
-ARTIFACT_TYPES = frozenset({"prd", "gap", "tasks", "brainstorm"})
+ARTIFACT_TYPES = frozenset({"prd", "gap", "tasks", "brainstorm", "decision", "amendment"})
 TYPE_LABELS = {
     "prd": "sw:prd",
     "gap": "sw:gap",
     "tasks": "sw:tasks",
     "brainstorm": "sw:brainstorm",
+    "decision": "sw:decision",
+    "amendment": "sw:amendment",
 }
+STATUS_LABEL_PREFIX = "sw:status:"
+GAP_LABEL_OPEN = "sw:gap-open"
+GAP_LABEL_SCHEDULED = "sw:gap-scheduled"
+GAP_LABEL_RESOLVED = "sw:gap-resolved"
+SOURCE_REMOVED_LABEL = "sw:source-removed"
+LEGACY_GAP_LABELS = frozenset({"open", "gap-scheduled", "resolved"})
 
 
 @dataclass
@@ -77,18 +86,67 @@ def normalize_body(text: str) -> str:
     return "\n".join(line.rstrip() for line in lines).strip("\n")
 
 
+def slugify(text: str) -> str:
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9]+", "-", text)
+    return text.strip("-")
+
+
 def infer_artifact_type(body_path: str) -> str:
     rel = body_path.replace("\\", "/").lower()
     if "/brainstorms/" in rel or rel.startswith("docs/brainstorms/"):
         return "brainstorm"
+    if "/planning/brainstorm/" in rel:
+        return "brainstorm"
+    if "/planning/decision/" in rel:
+        return "decision"
+    if rel.startswith("docs/decisions/") and rel.endswith(".md") and not rel.endswith("/index.md"):
+        return "decision"
     if "/gap/" in rel or "/planning/gap/" in rel or rel.startswith("docs/planning/gap/"):
         return "gap"
+    if "/amendments/" in rel:
+        return "amendment"
     base = rel.rsplit("/", 1)[-1]
     if base.startswith("tasks-"):
         return "tasks"
     if "-prd-" in base or ("/prds/" in rel and base.endswith(".md") and not base.startswith("tasks-")):
         return "prd"
     return "prd"
+
+
+def gap_status_label(status: str | None) -> str | None:
+    if not status:
+        return None
+    lowered = status.strip().lower()
+    if lowered == "resolved":
+        return GAP_LABEL_RESOLVED
+    if lowered in {"planned", "scheduled"}:
+        return GAP_LABEL_SCHEDULED
+    if lowered == "open":
+        return GAP_LABEL_OPEN
+    return None
+
+
+def gap_status_from_labels(labels: list[str]) -> str | None:
+    label_set = set(labels)
+    if GAP_LABEL_RESOLVED in label_set or "resolved" in label_set:
+        return "resolved"
+    if GAP_LABEL_SCHEDULED in label_set or "gap-scheduled" in label_set:
+        return "planned"
+    if GAP_LABEL_OPEN in label_set or "open" in label_set:
+        return "open"
+    return None
+
+
+def status_from_labels(labels: list[str]) -> str | None:
+    for label in labels:
+        if label.startswith(STATUS_LABEL_PREFIX):
+            return label[len(STATUS_LABEL_PREFIX) :]
+    return None
+
+
+def status_label(consumer_status: str) -> str:
+    return f"{STATUS_LABEL_PREFIX}{consumer_status}"
 
 
 def project_label(project_key: str) -> str:
@@ -112,6 +170,23 @@ def build_markers(project_key: str, artifact_type: str, unit_id: str) -> str:
     )
 
 
+def is_sw_edges_payload(data: Any) -> bool:
+    return (
+        isinstance(data, dict)
+        and isinstance(data.get("version"), int)
+        and isinstance(data.get("edges"), list)
+        and isinstance(data.get("native"), list)
+    )
+
+
+def parse_edges_fence_inner(inner: str) -> dict[str, Any] | None:
+    try:
+        data = json.loads(inner.strip())
+    except json.JSONDecodeError:
+        return None
+    return data if is_sw_edges_payload(data) else None
+
+
 def build_edges_block(edges: list[dict[str, Any]] | None, native: list[dict[str, Any]] | None = None) -> str:
     payload = {
         "version": 1,
@@ -132,6 +207,9 @@ def strip_markers_and_edges(body: str) -> str:
     ):
         text = pattern.sub("", text)
     text = SW_EDGES_FENCE.sub("", text)
+    for match in list(GENERIC_CODE_FENCE.finditer(text)):
+        if parse_edges_fence_inner(match.group(1)):
+            text = text[: match.start()] + text[match.end() :]
     return normalize_body(text)
 
 
@@ -142,13 +220,14 @@ def parse_body_marker(body: str, pattern: re.Pattern[str]) -> str | None:
 
 def parse_edges_block(body: str) -> dict[str, Any] | None:
     match = SW_EDGES_FENCE.search(body)
-    if not match:
-        return None
-    try:
-        data = json.loads(match.group(1))
-    except json.JSONDecodeError:
-        return None
-    return data if isinstance(data, dict) else None
+    if match:
+        data = parse_edges_fence_inner(match.group(1))
+        return data
+    for generic in GENERIC_CODE_FENCE.finditer(body):
+        data = parse_edges_fence_inner(generic.group(1))
+        if data:
+            return data
+    return None
 
 
 def reconcile_edges(
@@ -205,6 +284,16 @@ def compose_issue_body(
     return "\n\n".join(p for p in parts if p)
 
 
+def append_chunk_manifest_marker(head: str, marker: str) -> str:
+    """Append manifest HTML comment without stripping trailing paragraph breaks."""
+    if MARKER_CHUNK_MANIFEST.search(head):
+        return MARKER_CHUNK_MANIFEST.sub(marker, head)
+    trimmed = head.rstrip(" \t\r")
+    if not trimmed.endswith("\n"):
+        trimmed += "\n"
+    return trimmed + marker
+
+
 def chunk_body_if_needed(
     body: str,
     comments: list[CommentRecord],
@@ -228,9 +317,67 @@ def chunk_body_if_needed(
             head,
         )
     else:
-        head = head.rstrip() + f"\n<!-- sw-chunk-manifest: {json.dumps(manifest, sort_keys=True, ensure_ascii=False)} -->"
+        marker = f"<!-- sw-chunk-manifest: {json.dumps(manifest, sort_keys=True, ensure_ascii=False)} -->"
+        head = append_chunk_manifest_marker(head, marker)
     return head, new_comments
 
+
+def _overflow_chunk_comments(comments: list[CommentRecord]) -> list[CommentRecord]:
+    ordered = sorted(
+        [
+            c
+            for c in comments
+            if "sw-chunk-overflow" in c.markers
+            or "<!-- sw-chunk-overflow -->" in c.body
+            or "<!--sw-chunk-overflow-->" in c.body
+        ],
+        key=lambda c: (c.created_at, c.id),
+    )
+    unique: list[CommentRecord] = []
+    seen: set[str] = set()
+    for comment in ordered:
+        body = re.sub(r"<!--\s*sw-chunk-overflow\s*-->\n?", "", comment.body)
+        digest = hashlib.sha256(normalize_body(body).encode("utf-8")).hexdigest()
+        if digest in seen:
+            continue
+        seen.add(digest)
+        unique.append(comment)
+    return unique
+
+
+
+
+def _last_line(text: str) -> str:
+    lines = text.rstrip("\n").split("\n")
+    return lines[-1] if lines else ""
+
+
+def _needs_extra_paragraph_break(merged: str, stripped_part: str) -> bool:
+    if not merged.endswith("\n") or merged.endswith("\n\n"):
+        return False
+    last = _last_line(merged).strip()
+    if not last or not stripped_part:
+        return False
+    first = stripped_part.split("\n", 1)[0].strip()
+    if first.startswith("#") and not last.startswith("#"):
+        return True
+    if first.startswith("- ") and last.startswith("#"):
+        return True
+    if first.startswith("```") and last and not last.startswith("```"):
+        return True
+    return False
+
+
+def _append_reassembled_part(merged: str, part: str) -> str:
+    if not part:
+        return merged
+    if merged and not merged.endswith("\n"):
+        merged += "\n"
+    stripped = part.lstrip("\n")
+    if _needs_extra_paragraph_break(merged, stripped):
+        merged += "\n"
+    merged += stripped
+    return merged
 
 def reassemble_body(body: str, comments: list[CommentRecord]) -> str:
     text = normalize_body(body)
@@ -245,21 +392,27 @@ def reassemble_body(body: str, comments: list[CommentRecord]) -> str:
     if not isinstance(chunks, list):
         return text
     comment_by_id = {c.id: c for c in comments}
+    overflow_comments = _overflow_chunk_comments(comments)
     overflow_parts: list[str] = []
     for entry in sorted(chunks, key=lambda x: x.get("index", 0) if isinstance(x, dict) else 0):
         if not isinstance(entry, dict):
             continue
         cid = entry.get("commentId")
-        if not isinstance(cid, str):
-            continue
-        comment = comment_by_id.get(cid)
+        comment = comment_by_id.get(cid) if isinstance(cid, str) else None
+        if comment is None:
+            index = entry.get("index")
+            if isinstance(index, int) and 0 <= index < len(overflow_comments):
+                comment = overflow_comments[index]
         if comment is None:
             continue
         chunk_text = comment.body
         chunk_text = re.sub(r"<!--\s*sw-chunk-overflow\s*-->\n?", "", chunk_text)
         overflow_parts.append(chunk_text)
     base = MARKER_CHUNK_MANIFEST.sub("", text)
-    return normalize_body(base + "".join(overflow_parts))
+    merged = base
+    for part in overflow_parts:
+        merged = _append_reassembled_part(merged, part)
+    return normalize_body(merged)
 
 
 def canonical_comments(comments: list[CommentRecord]) -> list[dict[str, str]]:

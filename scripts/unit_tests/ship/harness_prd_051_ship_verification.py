@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -17,6 +18,33 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
 from _sw.vendor_paths import repo_root
 
 FAIL = 0
+
+
+def _gap_backlog_text(root: Path) -> str:
+    path = root / "docs/prds/GAP-BACKLOG.md"
+    return path.read_text(encoding="utf-8") if path.is_file() else ""
+
+
+def _issue_store_cutover(root: Path) -> bool:
+    """Issue-backed planning: legacy projection, local INDEX, or cutover gate."""
+    backlog = _gap_backlog_text(root)
+    if backlog and "planning-legacy-projection" in backlog[:400]:
+        return True
+    index = root / "docs/planning/INDEX.md"
+    if index.is_file():
+        try:
+            if "planning-index:structural" in index.read_text(encoding="utf-8"):
+                return True
+        except OSError:
+            pass
+    gate = root / ".cursor/hooks/state/planning-cutover-gate.json"
+    if not gate.is_file():
+        return False
+    try:
+        return json.loads(gate.read_text(encoding="utf-8")).get("discoverSource") == "issue"
+    except json.JSONDecodeError:
+        return False
+
 
 REQUIRED_SCENARIOS: dict[str, str] = {
     "spec-rigor-brainstorm-profile-required-sections": "spec-rigor-brainstorm-profile-fixtures",
@@ -52,16 +80,40 @@ def main() -> int:
             ok(f"manifest-registration: {scenario}")
 
     backlog = (root / "docs/prds/GAP-BACKLOG.md").read_text(encoding="utf-8")
-    if "| GAP-076 | resolved |" in backlog:
-        ok("gap-flip-verification: GAP-076 resolved in GAP-BACKLOG")
+    gap_unit = "gap-001-spec-rigor-check-sh-lacks-a-brainstorm-artifact-"
+    if _issue_store_cutover(root):
+        index_path = root / "docs/planning/INDEX.md"
+        index = index_path.read_text(encoding="utf-8") if index_path.is_file() else ""
+        backlog = _gap_backlog_text(root)
+        index_ok = bool(
+            index
+            and re.search(
+                rf"\|\s*{re.escape(gap_unit)}[^|]*\|\s*gap\s*\|[^|]*\|\s*resolved\s*\|",
+                index,
+                re.I,
+            )
+        )
+        backlog_ok = bool(
+            re.search(
+                rf"\|\s*GAP-001\s*\|\s*resolved\s*\|\s*{re.escape(gap_unit)}",
+                backlog,
+                re.I,
+            )
+        )
+        if index_ok or backlog_ok:
+            ok("gap-flip-verification: gap-001 planning unit resolved")
+        else:
+            bad("gap-flip-verification: gap-001 not resolved in INDEX")
     else:
-        bad("gap-flip-verification: GAP-076 not resolved in GAP-BACKLOG")
-
-    index = (root / "docs/prds/INDEX.md").read_text(encoding="utf-8")
-    if "gap-001-spec-rigor-check-sh-lacks-a-brainstorm-artifact-" in index and "| resolved |" in index.split("gap-001")[1][:200]:
-        ok("gap-flip-verification: gap-001 planning unit resolved in INDEX")
-    else:
-        bad("gap-flip-verification: gap-001 not resolved in INDEX")
+        if "| GAP-076 | resolved |" in backlog:
+            ok("gap-flip-verification: GAP-076 resolved in GAP-BACKLOG")
+        else:
+            bad("gap-flip-verification: GAP-076 not resolved in GAP-BACKLOG")
+        index = (root / "docs/prds/INDEX.md").read_text(encoding="utf-8")
+        if gap_unit in index and "| resolved |" in index.split("gap-001")[1][:200]:
+            ok("gap-flip-verification: gap-001 planning unit resolved in INDEX")
+        else:
+            bad("gap-flip-verification: gap-001 not resolved in INDEX")
 
     proc = subprocess.run(
         [sys.executable, str(root / "scripts/gap_backlog.py"), "check"],

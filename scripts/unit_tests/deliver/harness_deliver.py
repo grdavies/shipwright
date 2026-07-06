@@ -44,7 +44,7 @@ WAVE="$ROOT/scripts/wave.sh"
 FIX="$ROOT/scripts/test/fixtures/deliver-phase-mode/tasks"
 MANIFEST="$ROOT/scripts/test/fixtures/deliver-phase-mode/manifest.txt"
 MULTI_FIX="$ROOT/scripts/test/fixtures/deliver-multi-feature"
-TASK_FROZEN="$ROOT/docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md"
+TASK_FROZEN="$ROOT/scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md"
 FAIL=0
 
 mkdir -p "$FIX"
@@ -67,8 +67,8 @@ run_json() {
 
 # --- mode detect: task-list → phase-mode ---
 run_json deliver-mode-detect-phase 0 "$WAVE" preflight \
-  --task-list docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md
-if "$WAVE" preflight --task-list docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md 2>/dev/null \
+  --task-list scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md
+if "$WAVE" preflight --task-list scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md 2>/dev/null \
   | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['mode']=='phase' and d['target']['branch']=='feat/wave-phase-orchestrator'"; then
   echo "OK  deliver-mode-detect: phase target branch"
 else
@@ -88,11 +88,11 @@ fi
 
 # --- disambiguation halt ---
 run_json deliver-mode-detect-ambiguous 2 "$WAVE" preflight \
-  --task-list docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md \
+  --task-list scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md \
   --items 'A,B'
 
 # --- explicit phase DAG from task list ---
-if OUT=$("$WAVE" plan --task-list docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md --dry-run 2>/dev/null) && echo "$OUT" | python3 -c "
+if OUT=$("$WAVE" plan --task-list scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md --dry-run 2>/dev/null) && echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 assert d['mode']=='phase'
@@ -177,7 +177,7 @@ trap 'rm -rf "$DRYDIR"' EXIT
   git init -q && git commit --allow-empty -m init -q
   mkdir -p docs/prds/004-wave-phase-orchestrator
   cp "$TASK_FROZEN" docs/prds/004-wave-phase-orchestrator/
-  "$WAVE" plan --task-list docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md --dry-run >/dev/null
+  "$WAVE" plan --task-list scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md --dry-run >/dev/null
   test ! -f .cursor/sw-deliver-plan.json
 ) && echo "OK  deliver-phase-dry-run" || { echo "FAIL deliver-phase-dry-run"; FAIL=1; }
 
@@ -289,7 +289,7 @@ STATE_FIX=$(mktemp -d)
   fi
   mkdir -p .cursor docs/prds/004-wave-phase-orchestrator
   cp "$TASK_FROZEN" docs/prds/004-wave-phase-orchestrator/
-  "$WAVE" plan --task-list docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md >/dev/null
+  "$WAVE" plan --task-list scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md >/dev/null
   "$WAVE" state init --plan .cursor/sw-deliver-plan.json >/dev/null
   "$WAVE" lock acquire --target feat/wave-phase-orchestrator --nonblock >/dev/null
   set +e
@@ -1069,7 +1069,7 @@ else
 fi
 rm -rf "$PF_FAIL"
 
-if grep -q '!docs/prds/\*\*' "$ROOT/.gitignore" && git -C "$ROOT" ls-files docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md >/dev/null; then
+if grep -q '!docs/prds/\*\*' "$ROOT/.gitignore" && git -C "$ROOT" ls-files scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md >/dev/null; then
   echo "OK  deliver-phase-spec-tracked"
 else
   echo "FAIL deliver-phase-spec-tracked"

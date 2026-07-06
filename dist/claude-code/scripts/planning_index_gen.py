@@ -55,7 +55,7 @@ WRITER_REGION: dict[str, str] = {
 }
 
 UNIT_TYPES = frozenset({"brainstorm", "gap", "prd", "decision", "amendment"})
-EDGE_KEYS = ("depends", "blocks", "supersedes", "extends", "absorbs")
+EDGE_KEYS = ("depends", "blocks", "supersedes", "extends", "absorbs", "prd", "amends", "brainstorm")
 
 
 @dataclass(frozen=True)

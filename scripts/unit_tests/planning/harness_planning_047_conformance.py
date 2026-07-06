@@ -60,6 +60,17 @@ JIRA_H=$(python3 -c "import json; print(json.load(open('$FX/prd-open.json'))['ex
 [[ "$GH" == "$JIRA_H" ]] && ok "jira-conformance:cross-provider-parity" || bad "jira-conformance:cross-provider-parity"
 
 # --- fixture CRUD + freeze with degraded lock (hash-authoritative) ---
+CFG_BAK="$ROOT/.cursor/hooks/state/workflow.config.harness-bak.json"
+restore_workflow_config() {
+  if [[ -f "$CFG_BAK" ]]; then
+    mv "$CFG_BAK" "$ROOT/.cursor/workflow.config.json"
+  fi
+}
+trap restore_workflow_config EXIT
+mkdir -p "$ROOT/.cursor/hooks/state"
+if [[ -f "$ROOT/.cursor/workflow.config.json" ]]; then
+  cp "$ROOT/.cursor/workflow.config.json" "$CFG_BAK"
+fi
 export SW_ISSUES_FIXTURE=1
 export ISSUES_JIRA_TOKEN=fixture-token
 export ISSUES_JIRA_EMAIL=fixture-local

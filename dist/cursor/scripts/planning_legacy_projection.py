@@ -70,7 +70,7 @@ def render_prd_index(units: list[pig.PlanningUnit], root: Path) -> str:
         "|---|------|-----|-------|--------|",
     ]
     for prd in sorted(prds, key=lambda u: u.id):
-        m = re.match(r"prd-(\d+)-(.+)", prd.id)
+        m = re.match(r"(\d{3})-prd-(.+)", prd.id) or re.match(r"prd-(\d{3})-(.+)", prd.id)
         if not m:
             continue
         num, slug = m.group(1), m.group(2)

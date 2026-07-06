@@ -1,7 +1,7 @@
 {
   "verdict": "pass",
   "mode": "phase",
-  "source_task_list": "docs/prds/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md",
+  "source_task_list": "scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md",
   "prd_number": "004",
   "target": {
     "type": "feat",

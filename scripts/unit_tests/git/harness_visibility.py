@@ -212,7 +212,7 @@ else
 fi
 
 # --- emission-callsite-map-bypass-fails (R14) ---
-MAP="$ROOT/docs/prds/034-visibility-and-planning-store/call-site-map.md"
+MAP="$ROOT/scripts/test/fixtures/planning-post-migration/034-visibility-and-planning-store/call-site-map.md"
 LINT="$ROOT/scripts/visibility-callsite-lint.py"
 PROBE="$ROOT/scripts/test/fixtures/visibility-lint/bypass-probe.py"
 if python3 "$LINT" --root "$ROOT" --map "$MAP" >/dev/null 2>&1; then

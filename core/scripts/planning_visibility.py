@@ -10,6 +10,7 @@ import os
 import re
 import sys
 import urllib.error
+import issues_http
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -167,23 +168,35 @@ def _probe_override() -> str | None:
 def _github_repo_private(
     root: Path, owner: str, repo: str, host: dict[str, Any], provider: str
 ) -> bool | None:
+    from issues_lib import IssueRateLimited
+
     token_env = resolve_token_env(host, provider)
     api_token = os.environ.get(token_env, "") if token_env else ""
     base = github_api_base(host)
     url = f"{base}/repos/{owner}/{repo}"
-    req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json"})
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "shipwright-planning-visibility",
+    }
     if api_token:
-        req.add_header("Authorization", f"Bearer {api_token}")
+        headers["Authorization"] = f"Bearer {api_token}"
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        if exc.code == 404:
+        status, _, body = issues_http.http_request(
+            "GET",
+            url,
+            headers,
+            root=root,
+            issues_provider="github-issues",
+            timeout=15,
+        )
+        if status == 404:
             return None
-        if exc.code == 403 and not api_token:
+        if status >= 400:
+            if status == 403 and not api_token:
+                return None
             return None
-        return None
-    except (urllib.error.URLError, json.JSONDecodeError, TimeoutError):
+        data = json.loads(body)
+    except (IssueRateLimited, ConnectionError, json.JSONDecodeError, TimeoutError):
         return None
     if isinstance(data, dict) and "private" in data:
         return bool(data["private"])

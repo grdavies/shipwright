@@ -19,6 +19,8 @@ import planning_paths as pp  # noqa: E402
 from host_lib import load_workflow_config  # noqa: E402
 from issues_lib import IssuesClient  # noqa: E402
 from planning_canonical import (  # noqa: E402
+    gap_status_from_labels,
+    status_from_labels,
     MARKER_ARTIFACT_TYPE,
     MARKER_UNIT_ID,
     infer_artifact_type,
@@ -146,11 +148,12 @@ def _visibility_from_labels(labels: list[str]) -> str:
 
 
 def _gap_status_from_labels(labels: list[str]) -> str:
-    if "sw:gap-resolved" in labels:
+    mapped = gap_status_from_labels(labels)
+    if mapped == "resolved":
         return "resolved"
-    if "sw:gap-scheduled" in labels:
+    if mapped == "planned":
         return "scheduled"
-    if "sw:gap-open" in labels:
+    if mapped == "open":
         return "open"
     return "open"
 
@@ -167,8 +170,14 @@ def _title_from_record(record: Any) -> str:
 
 def _status_from_record(record: Any, content: str) -> str:
     artifact_type = record.artifact_type or infer_artifact_type(record.unit_id)
+    if artifact_type == "brainstorm":
+        labeled = status_from_labels(list(record.labels))
+        return labeled or "complete"
     if artifact_type == "gap":
         return _gap_status_from_labels(list(record.labels))
+    labeled = status_from_labels(list(record.labels))
+    if labeled:
+        return labeled
     if content.startswith("---"):
         fm = pig.parse_frontmatter(content)
         if fm and fm.get("status"):
@@ -196,6 +205,9 @@ def _edges_from_record(record: Any, content: str) -> dict[str, Any]:
                 "supersedes": "supersedes",
                 "extends": "extends",
                 "absorbs": "absorbs",
+                "prd": "prd",
+                "amends": "amends",
+                "brainstorm": "brainstorm",
             }.get(rel, rel)
             existing = edge_map.get(key)
             if existing is None:

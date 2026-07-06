@@ -339,7 +339,7 @@ Fixture suite: `python3 scripts/test/run_planning_035_doc_impact_fixtures.py` (`
 - **Default canonical:** nothing observable changes until you set `proposed` **and** pass the PRD-023
   pilot guards (TR0 gate, per-run acknowledgement, safe target branch). `/sw-deliver` is the live pilot;
   PRD-024 fans out to other orchestrators. Call-site map:
-  `docs/prds/022-kernel-classification-and-plan-validation/call-site-map.md`.
+  `scripts/test/fixtures/planning-post-migration/022-kernel-classification-and-plan-validation/call-site-map.md`.
 
 **PRD 024 fan-out (all four orchestrators):** `/sw-deliver`, `/sw-debug`, `/sw-doc`, and `/sw-feedback`
 read `orchestration.planPolicy` (default `canonical`). Enabling `proposed` on non-deliver orchestrators
