@@ -141,9 +141,12 @@ def resolve_target_branch(root: Path, task_list_rel: str) -> tuple[str, str, Pat
     branch = (data.get("target") or {}).get("branch")
     if not branch:
         fail("preflight missing target.branch")
-    task_list_rel = planning_path_redirect.resolve_path(root, task_list_rel)
-    task_path = (root / task_list_rel).resolve()
-    if not task_path.is_file():
+    import planning_materialize as pm
+
+    pm.ensure_run_entry_materialized(root, task_list_rel)
+    _resolved_rel, task_path = planning_path_redirect.resolve_readable_path(root, task_list_rel)
+    if task_path is None:
+        task_list_rel = planning_path_redirect.resolve_path(root, task_list_rel)
         fail(f"task list not found: {task_list_rel}")
     docs_dir = task_path.parent
     slug = branch.split("/", 1)[1] if "/" in branch else branch

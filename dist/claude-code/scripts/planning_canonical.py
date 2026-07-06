@@ -458,14 +458,16 @@ def verify_unit_id(body: str, unit_id: str) -> bool:
 
 
 def parse_freeze_record_hash(comments: list[CommentRecord]) -> str | None:
-    for comment in comments:
+    """Return the hash from the most recent `sw-freeze-record` comment (gap-052)."""
+    latest_hash: str | None = None
+    for comment in sorted(comments, key=lambda c: (c.created_at, c.id)):
         if FREEZE_RECORD_MARKER not in comment.markers and not comment.excluded_from_canonical():
             if f"<!-- {FREEZE_RECORD_MARKER} -->" not in comment.body and f"<!--{FREEZE_RECORD_MARKER}-->" not in comment.body:
                 continue
         match = FREEZE_HASH_PATTERN.search(comment.body)
         if match:
-            return match.group(1)
-    return None
+            latest_hash = match.group(1)
+    return latest_hash
 
 
 def build_freeze_record_body(content_hash: str) -> str:

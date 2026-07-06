@@ -1847,6 +1847,9 @@ def execute_mechanical(
     if action == "plan":
         if not task_list:
             fail("deliver-loop requires --task-list on first run or state.source_task_list")
+        import planning_materialize as pm
+
+        pm.ensure_run_entry_materialized(root, str(task_list))
         plan_args = ["plan", "--task-list", str(task_list)]
         if has_flag(loop_args, "--skip-base-check"):
             plan_args.append("--skip-base-check")
