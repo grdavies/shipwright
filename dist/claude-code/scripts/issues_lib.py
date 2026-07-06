@@ -415,6 +415,7 @@ class IssuesClient:
         self._fixture = get_fixture_store(root) if use_fixture_mode() else None
         self._jira: Any = None
         self._github: Any = None
+        self._gitlab: Any = None
         self._call_count = 0
         self._budget = resolve_call_budget()
 
@@ -433,6 +434,12 @@ class IssuesClient:
 
                 self._github = GitHubIssuesClient(self.root)
             return self._github
+        if self.provider == "gitlab-issues":
+            if self._gitlab is None:
+                from planning_gitlab_client import GitLabIssuesClient
+
+                self._gitlab = GitLabIssuesClient(self.root)
+            return self._gitlab
         raise IssueCapabilityError(
             f"live {self.provider} API not available without SW_ISSUES_FIXTURE=1 in CI"
         )

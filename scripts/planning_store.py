@@ -609,6 +609,93 @@ def _attach_github_native_links_capable(
     else:
         probe["nativeLinksCapable"] = False
 
+
+
+def _gitlab_native_links_capable_probe(
+    token: str,
+    cfg: dict[str, Any],
+    root: Path,
+    *,
+    owner: str,
+    project: str,
+) -> bool:
+    from urllib.parse import quote
+
+    api_base = gitlab_api_base(host_section(cfg))
+    encoded = quote(f"{owner}/{project}", safe="")
+    url = f"{api_base}/projects/{encoded}/issues/1/links"
+    headers = {"PRIVATE-TOKEN": token, "User-Agent": "shipwright-planning-store"}
+    try:
+        status, _, _body = issues_http.http_request(
+            "GET",
+            url,
+            headers,
+            root=root,
+            issues_provider="gitlab-issues",
+            timeout=15,
+        )
+    except Exception:
+        return False
+    if status == 403:
+        return False
+    return status < 400 or status == 404
+
+
+def _jira_native_links_capable_probe(token: str, cfg: dict[str, Any], root: Path) -> bool:
+    from planning_jira_probe import _api_base, _auth_header, _http_get
+
+    base = _api_base(cfg)
+    headers = _auth_header(cfg, token)
+    if not base or not headers:
+        return False
+    try:
+        status, _payload = _http_get(f"{base}/issueLinkType", headers, root=root)
+    except Exception:
+        return False
+    return status < 400
+
+
+def _attach_gitlab_native_links_capable(
+    probe: dict[str, Any],
+    token: str,
+    cfg: dict[str, Any],
+    root: Path,
+) -> None:
+    if probe.get("verdict") != "ok":
+        probe["nativeLinksCapable"] = False
+        return
+    owner = probe.get("owner")
+    repo = probe.get("repo")
+    probe_repo = probe.get("probeRepo")
+    if (not owner or not repo) and isinstance(probe_repo, str) and "/" in probe_repo:
+        owner, repo = probe_repo.split("/", 1)
+    if not isinstance(owner, str) or not isinstance(repo, str) or not owner or not repo:
+        location = resolve_store_location(root, cfg)
+        owner = location.get("owner") if isinstance(location.get("owner"), str) else ""
+        repo = location.get("repo") if isinstance(location.get("repo"), str) else ""
+    if owner and repo:
+        probe["nativeLinksCapable"] = _gitlab_native_links_capable_probe(
+            token,
+            cfg,
+            root,
+            owner=owner.strip(),
+            project=repo.strip(),
+        )
+    else:
+        probe["nativeLinksCapable"] = False
+
+
+def _attach_jira_native_links_capable(
+    probe: dict[str, Any],
+    token: str,
+    cfg: dict[str, Any],
+    root: Path,
+) -> None:
+    if probe.get("verdict") != "ok":
+        probe["nativeLinksCapable"] = False
+        return
+    probe["nativeLinksCapable"] = _jira_native_links_capable_probe(token, cfg, root)
+
 def _github_scope_probe(token: str, cfg: dict[str, Any], root: Path) -> dict[str, Any]:
     host = host_section(cfg)
     url = f"{github_api_base(host)}/user"
@@ -740,6 +827,10 @@ def probe_issues_token(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
             out[key] = probe[key]
     if provider == "github-issues":
         _attach_github_native_links_capable(out, token, cfg, root)
+    elif provider == "gitlab-issues":
+        _attach_gitlab_native_links_capable(out, token, cfg, root)
+    elif provider == "jira":
+        _attach_jira_native_links_capable(out, token, cfg, root)
     else:
         out["nativeLinksCapable"] = False
     return out
