@@ -22,6 +22,7 @@ import planning_path_redirect
 import planning_index_gen as planning_index
 import planning_visibility as planning_vis
 from host_lib import load_workflow_config
+from planning_artifact_handle import issue_store_separate_project_effective
 
 _VALID_TYPES = frozenset(
     {"feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"}
@@ -279,6 +280,16 @@ def assert_no_tracked_private_bodies(root: Path, paths: list[Path], *, feature_b
 
 
 def ensure_redacted_index(root: Path) -> str | None:
+    """Regenerate + write the redacted planning INDEX for spec-seed.
+
+    Guarded by the effective backend (PRD 057 R2): under issue-store
+    ``separate-project`` the code-repo INDEX is not the authoritative surface
+    (deliver run-entry materialize and the issue store itself supply task
+    content), so the local write is skipped entirely — never a tracked write
+    in that mode. ``same-repo`` and non-issue-store backends are unaffected.
+    """
+    if issue_store_separate_project_effective(root):
+        return None
     rel = planning_index.index_rel(root)
     index = root / rel
     content = planning_index.generate_index(root)
@@ -416,8 +427,6 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
     # materialize, which is a deliberate no-op under CI/host (R19) — a fixture
     # or CI-only frozen unit would otherwise never resolve and this skip would
     # be unreachable (gap discovered post-Phase-9 CI run).
-    from planning_artifact_handle import issue_store_separate_project_effective
-
     if issue_store_separate_project_effective(top):
         current = git_run(["branch", "--show-current"], top, check=False).stdout.strip()
         branch = current if current and current != default else f"{scope}-separate-project-skip"

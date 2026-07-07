@@ -17,11 +17,14 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import planning_graph as pg  # noqa: E402
 import planning_index_gen as pig  # noqa: E402
+import planning_index_issue as pii  # noqa: E402
 import planning_legacy_projection as plp  # noqa: E402
 import planning_visibility as pv  # noqa: E402
 import planning_lifecycle as plc  # noqa: E402
 import planning_paths as pp  # noqa: E402
+from host_lib import load_workflow_config  # noqa: E402
 from inflight_signal import InflightTuple, read_tuples  # noqa: E402
+from planning_migrate_issue_store import issue_store_separate_project  # noqa: E402
 from wave_living_doc_lock import living_doc_write_lock  # noqa: E402
 
 ARCHIVE_VIEW_STATUSES = frozenset({"complete", "superseded", "cancelled", "resolved"})
@@ -397,6 +400,11 @@ def reconcile_core(
     force_legacy_projection: bool = False,
 ) -> dict[str, Any]:
     worktree = pp.git_root(root)
+    cfg = load_workflow_config(worktree)
+    # PRD 057 R3: separate-project issue-store never writes tracked derived
+    # planning artifacts (INDEX.md / INDEX-archive.md / SUPERSEDED.md / legacy
+    # projection); same-repo retains local writes unchanged (gap-041).
+    separate_project = issue_store_separate_project(worktree, cfg)
     units = pg.discover_units(root)
     cycle = pg.detect_cycle(units)
     if cycle:
@@ -406,44 +414,59 @@ def reconcile_core(
     git_complete = resolve_git_complete_unit_ids(root, units)
 
     index_path = pig.index_path(root)
-    if not index_path.is_file():
-        content_seed = pig.generate_index(root)
-        if not dry_run:
-            pig.write_index(root, content_seed, dry_run=False)
-        existing = content_seed
-    else:
-        existing = index_path.read_text(encoding="utf-8")
-    inflight_bytes_before = pig.parse_regions(existing).inFlight
+    existing = ""
+    inflight_bytes_before = ""
+    if not separate_project:
+        if not index_path.is_file():
+            content_seed = pig.generate_index(root)
+            if not dry_run:
+                pig.write_index(root, content_seed, dry_run=False)
+            existing = content_seed
+        else:
+            existing = index_path.read_text(encoding="utf-8")
+        inflight_bytes_before = pig.parse_regions(existing).inFlight
 
     if before_serialize_hook:
         before_serialize_hook()
 
-    if index_path.is_file():
+    if not separate_project and index_path.is_file():
         existing = index_path.read_text(encoding="utf-8")
     inflight_final = read_tuples(root)
-    final_inflight_bytes = pig.parse_regions(existing).inFlight
+    final_inflight_bytes = pig.parse_regions(existing).inFlight if existing else inflight_bytes_before
     effects = edge_effects_for_units(units, inflight_final, git_complete)
     derived = apply_monotonic_terminal(prior_derived, effects.derived, override)
     derived_body = render_derived_body(derived, active_only=True)
-    content = pig.read_merge_write(existing, writer="reconciler", new_region_body=derived_body)
-    pig.write_index(root, content, dry_run=dry_run)
+
+    store_projection: dict[str, Any] | None = None
+    if separate_project:
+        store_projection = pii.project_derived_map(worktree, derived, dry_run=dry_run)
+    else:
+        content = pig.read_merge_write(existing, writer="reconciler", new_region_body=derived_body)
+        pig.write_index(root, content, dry_run=dry_run)
 
     archive_path = archive_index_path(root)
-    archive_content = render_archive_markdown(root, units, derived)
-    if not dry_run:
-        archive_path.parent.mkdir(parents=True, exist_ok=True)
-        archive_path.write_text(archive_content, encoding="utf-8")
+    if not separate_project:
+        archive_content = render_archive_markdown(root, units, derived)
+        if not dry_run:
+            archive_path.parent.mkdir(parents=True, exist_ok=True)
+            archive_path.write_text(archive_content, encoding="utf-8")
 
     dirs = pp.load_planning_dirs(root)
     superseded_path = worktree / dirs.prds / "SUPERSEDED.md"
-    if not dry_run:
+    if not separate_project and not dry_run:
         superseded_path.write_text(render_superseded_manifest(units, derived, effects), encoding="utf-8")
 
-    legacy = plp.project_all(root, dry_run=dry_run, force=force_legacy_projection)
+    if separate_project:
+        legacy: dict[str, Any] = {
+            "skipped": True,
+            "reason": "separate-project-issue-store",
+        }
+    else:
+        legacy = plp.project_all(root, dry_run=dry_run, force=force_legacy_projection)
     relief = relief_acceptance_check(root, derived)
 
     archived = [uid for uid, st in derived.items() if st in ARCHIVE_VIEW_STATUSES]
-    return {
+    result: dict[str, Any] = {
         "verdict": "pass",
         "action": "reconcile",
         "unitCount": len(units),
@@ -456,6 +479,9 @@ def reconcile_core(
         "relief": relief,
         "dependencyDead": dependency_dead_warnings(units),
     }
+    if store_projection is not None:
+        result["storeProjection"] = store_projection
+    return result
 
 
 def git_commit_reconcile(root: Path, *, dry_run: bool = False) -> str | None:

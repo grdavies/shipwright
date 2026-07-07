@@ -37,6 +37,11 @@ alwaysApply: true
 
 - **Mechanical** — reconciler-generated artifacts only (INDEX `derived` region, SUPERSEDED manifest, gap index):
   batched via `scripts/docs-merge.py` with CI-gated auto-merge or direct-to-trunk when protection probe permits.
+  Under issue-store `separate-project` (PRD 057 R1–R3) the mechanical allowlist **projects to the authoritative
+  store** instead — gap capture write-through (R1), spec-seed skips the local INDEX write (R2), and
+  `reconcile_core` skips tracked `INDEX.md`/`INDEX-archive.md`/`SUPERSEDED.md`/legacy-projection writes and
+  projects the derived map to the store or a gitignored cache (R3). `same-repo` retains local mechanical writes
+  unchanged.
 - **Substantive** — any path under `docs/planning/<unit-id>/` (body or frontmatter): auto-driven docs worktree +
   PR via `scripts/docs-edit-route.py route-substantive` → `docs_worktree.py` / `docs_pr.py`.
 - **`inFlight` region** — never mechanically edited (PRD 032 deliver writer sole region).
