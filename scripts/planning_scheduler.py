@@ -85,6 +85,12 @@ def is_schedulable(unit: pg.GraphUnit, labels: list[str]) -> bool:
     return True
 
 
+def runnable_task_list(root: Path, unit_id: str) -> str | None:
+    from planning_deliver_gate import task_list_for_unit
+
+    return task_list_for_unit(root, unit_id)
+
+
 def schedule_next(root: Path, *, force_refresh: bool = False) -> dict[str, Any]:
     incomplete, reason = index_incomplete(root)
     if incomplete:
@@ -94,7 +100,13 @@ def schedule_next(root: Path, *, force_refresh: bool = False) -> dict[str, Any]:
     if resolve_discover_source(root) != "issue":
         units = pg.discover_units(root)
         eligible = pg.order_eligible(units)
-        return {"verdict": "pass", "action": "schedule-next", "source": "file", "next": eligible[0] if eligible else None, "eligible": eligible}
+        nxt = eligible[0] if eligible else None
+    payload: dict[str, Any] = {"verdict": "pass", "action": "schedule-next", "source": "file", "next": nxt, "eligible": eligible}
+    if nxt:
+        task_list = runnable_task_list(root, nxt)
+        if task_list:
+            payload["taskList"] = task_list
+    return payload
 
     cfg = load_workflow_config(worktree)
     key_result = validate_project_key(worktree, cfg)
@@ -124,7 +136,13 @@ def schedule_next(root: Path, *, force_refresh: bool = False) -> dict[str, Any]:
         scored.append((tier_rank(labels), unit.priority + priority_from_labels(labels), unit.id))
     scored.sort(key=lambda row: (-row[0], -row[1], row[2]))
     eligible = [row[2] for row in scored]
-    return {"verdict": "pass", "action": "schedule-next", "source": "issue", "next": eligible[0] if eligible else None, "eligible": eligible, "ledger": ledger.snapshot()}
+    nxt = eligible[0] if eligible else None
+    payload = {"verdict": "pass", "action": "schedule-next", "source": "issue", "next": nxt, "eligible": eligible, "ledger": ledger.snapshot()}
+    if nxt:
+        task_list = runnable_task_list(root, nxt)
+        if task_list:
+            payload["taskList"] = task_list
+    return payload
 
 
 def cmd_next(root: Path, args: list[str]) -> None:

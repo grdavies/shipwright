@@ -545,8 +545,156 @@ def _github_fine_grained_probe(
         "required": sorted(required),
         "tokenKind": "fine-grained",
         "probeRepo": f"{owner}/{repo}",
+        "owner": owner,
+        "repo": repo,
     }
 
+
+
+
+def _github_native_links_capable_probe(
+    token: str,
+    cfg: dict[str, Any],
+    root: Path,
+    *,
+    owner: str,
+    repo: str,
+) -> bool:
+    api_base = github_api_base(host_section(cfg))
+    headers = _github_probe_headers(token)
+    headers["X-GitHub-Api-Version"] = "2026-03-10"
+    url = f"{api_base}/repos/{owner}/{repo}/issues/1/sub_issues"
+    try:
+        status, _, _body = issues_http.http_request(
+            "GET",
+            url,
+            headers,
+            root=root,
+            issues_provider="github-issues",
+            timeout=15,
+        )
+    except Exception:
+        return False
+    if status == 403:
+        return False
+    return status < 400 or status == 404
+
+
+def _attach_github_native_links_capable(
+    probe: dict[str, Any],
+    token: str,
+    cfg: dict[str, Any],
+    root: Path,
+) -> None:
+    if probe.get("verdict") != "ok":
+        probe["nativeLinksCapable"] = False
+        return
+    owner = probe.get("owner")
+    repo = probe.get("repo")
+    probe_repo = probe.get("probeRepo")
+    if (not owner or not repo) and isinstance(probe_repo, str) and "/" in probe_repo:
+        owner, repo = probe_repo.split("/", 1)
+    if not isinstance(owner, str) or not isinstance(repo, str) or not owner or not repo:
+        location = resolve_store_location(root, cfg)
+        owner = location.get("owner") if isinstance(location.get("owner"), str) else ""
+        repo = location.get("repo") if isinstance(location.get("repo"), str) else ""
+    if owner and repo:
+        probe["nativeLinksCapable"] = _github_native_links_capable_probe(
+            token,
+            cfg,
+            root,
+            owner=owner.strip(),
+            repo=repo.strip(),
+        )
+    else:
+        probe["nativeLinksCapable"] = False
+
+
+
+def _gitlab_native_links_capable_probe(
+    token: str,
+    cfg: dict[str, Any],
+    root: Path,
+    *,
+    owner: str,
+    project: str,
+) -> bool:
+    from urllib.parse import quote
+
+    api_base = gitlab_api_base(host_section(cfg))
+    encoded = quote(f"{owner}/{project}", safe="")
+    url = f"{api_base}/projects/{encoded}/issues/1/links"
+    headers = {"PRIVATE-TOKEN": token, "User-Agent": "shipwright-planning-store"}
+    try:
+        status, _, _body = issues_http.http_request(
+            "GET",
+            url,
+            headers,
+            root=root,
+            issues_provider="gitlab-issues",
+            timeout=15,
+        )
+    except Exception:
+        return False
+    if status == 403:
+        return False
+    return status < 400 or status == 404
+
+
+def _jira_native_links_capable_probe(token: str, cfg: dict[str, Any], root: Path) -> bool:
+    from planning_jira_probe import _api_base, _auth_header, _http_get
+
+    base = _api_base(cfg)
+    headers = _auth_header(cfg, token)
+    if not base or not headers:
+        return False
+    try:
+        status, _payload = _http_get(f"{base}/issueLinkType", headers, root=root)
+    except Exception:
+        return False
+    return status < 400
+
+
+def _attach_gitlab_native_links_capable(
+    probe: dict[str, Any],
+    token: str,
+    cfg: dict[str, Any],
+    root: Path,
+) -> None:
+    if probe.get("verdict") != "ok":
+        probe["nativeLinksCapable"] = False
+        return
+    owner = probe.get("owner")
+    repo = probe.get("repo")
+    probe_repo = probe.get("probeRepo")
+    if (not owner or not repo) and isinstance(probe_repo, str) and "/" in probe_repo:
+        owner, repo = probe_repo.split("/", 1)
+    if not isinstance(owner, str) or not isinstance(repo, str) or not owner or not repo:
+        location = resolve_store_location(root, cfg)
+        owner = location.get("owner") if isinstance(location.get("owner"), str) else ""
+        repo = location.get("repo") if isinstance(location.get("repo"), str) else ""
+    if owner and repo:
+        probe["nativeLinksCapable"] = _gitlab_native_links_capable_probe(
+            token,
+            cfg,
+            root,
+            owner=owner.strip(),
+            project=repo.strip(),
+        )
+    else:
+        probe["nativeLinksCapable"] = False
+
+
+def _attach_jira_native_links_capable(
+    probe: dict[str, Any],
+    token: str,
+    cfg: dict[str, Any],
+    root: Path,
+) -> None:
+    if probe.get("verdict") != "ok":
+        probe["nativeLinksCapable"] = False
+        return
+    probe["nativeLinksCapable"] = _jira_native_links_capable_probe(token, cfg, root)
 
 def _github_scope_probe(token: str, cfg: dict[str, Any], root: Path) -> dict[str, Any]:
     host = host_section(cfg)
@@ -677,6 +825,14 @@ def probe_issues_token(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     for key in ("error", "message", "scopes", "required", "httpStatus", "tokenKind", "probeRepo", "probe", "owner", "repo"):
         if key in probe:
             out[key] = probe[key]
+    if provider == "github-issues":
+        _attach_github_native_links_capable(out, token, cfg, root)
+    elif provider == "gitlab-issues":
+        _attach_gitlab_native_links_capable(out, token, cfg, root)
+    elif provider == "jira":
+        _attach_jira_native_links_capable(out, token, cfg, root)
+    else:
+        out["nativeLinksCapable"] = False
     return out
 
 
@@ -1682,6 +1838,47 @@ def validate_local_synced_path(path: Path, *, allowlist: list[str] | None = None
     return {"verdict": "ok", "path": str(resolved), "checks": checks, "warnings": warnings}
 
 
+PLANNING_BODY_SCAN_PREFIXES = ("docs/brainstorms/", "docs/prds/")
+
+
+def tracked_planning_body_paths(root: Path) -> list[str]:
+    proc = subprocess.run(
+        ["git", "-C", str(root), "ls-files", *PLANNING_BODY_SCAN_PREFIXES],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return []
+    return sorted(line.strip() for line in proc.stdout.splitlines() if line.strip())
+
+
+def doctor_separate_project_local_writes(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    from planning_artifact_handle import issue_store_separate_project_effective
+
+    if not issue_store_separate_project_effective(root, cfg):
+        return {
+            "verdict": "pass",
+            "action": "doctor",
+            "skipped": True,
+            "reason": "not-separate-project-issue-store",
+        }
+    stray = tracked_planning_body_paths(root)
+    if stray:
+        return {
+            "verdict": "fail",
+            "action": "doctor",
+            "halt": "local-planning-body-drift",
+            "error": "tracked planning-body files present in code repo under separate-project issue-store",
+            "paths": stray,
+            "remediation": (
+                "remove tracked docs/brainstorms and docs/prds bodies from the code repo; "
+                "authoring lives in the planning-project issue store"
+            ),
+        }
+    return {"verdict": "pass", "action": "doctor", "checks": ["no-tracked-planning-bodies"]}
+
+
 def _require(args: list[str], flag: str) -> str:
     if flag not in args:
         fail(f"missing required flag: {flag}")
@@ -1723,6 +1920,7 @@ def main() -> None:
         "mark-issue-tombstone",
         "mark-issue-transferred",
         "clear-issue-fixture",
+        "doctor",
     ):
         sub.add_parser(name)
     args, rest = parser.parse_known_args()
@@ -1837,6 +2035,9 @@ def main() -> None:
                 allowlist = [str(x) for x in cfg_allow]
         result = validate_local_synced_path(Path(os.path.expanduser(raw)), allowlist=allowlist)
         emit(result, 0 if result["verdict"] == "ok" else 2)
+    elif args.command == "doctor":
+        result = doctor_separate_project_local_writes(root, cfg)
+        emit(result, 0 if result.get("verdict") == "pass" else 20)
 
 
 if __name__ == "__main__":

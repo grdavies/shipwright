@@ -961,6 +961,17 @@
       "ciShard": 3
     },
     {
+      "id": "planning-deliver-run-entry-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "ciShard": 4
+    },
+    {
       "id": "planning-store-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -1323,6 +1334,44 @@
         "jira-conformance"
       ],
       "ciShard": 2
+    },
+    {
+      "id": "planning-native-links-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_planning_native_links.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "scenarios": [
+        "fixture:create-get-reconcile",
+        "github-stub:create-get-reconcile",
+        "probe:nativeLinksCapable"
+      ],
+      "ciShard": 4
+    },
+    {
+      "id": "planning-deliver-progress-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_planning_deliver_progress.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "ciShard": 4
+    },
+    {
+      "id": "planning-doc-issue-store-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_planning_doc_issue_store.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "ciShard": 4
     }
   ]
 }

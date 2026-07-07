@@ -40,6 +40,24 @@ Port of v1 `spec-prd` under `sw-`. Freeze and task generation are separate steps
 
 The decision section contract must stay in lockstep with `scripts/spec-rigor-check.py --artifact decision`.
 
+
+## Issue-store authoring (PRD 056 R11–R12)
+
+When effective backend is `issue-store`:
+
+1. **Never** create or edit files under `docs/prds/` in the code repo.
+2. Allocate the next PRD number by scanning the issue index / planning graph (not `docs/prds/` directory listing).
+3. Persist via `planning_store.put` with stable unit id `<n>-prd-<slug>` and virtual body-path `docs/prds/<n>-<slug>/<n>-prd-<slug>.md`.
+4. Frontmatter traceability uses the same virtual paths; write refs via:
+
+   ```bash
+   python3 scripts/doc_link.py write-backref --brainstorm <body-path> --prd <body-path>      [--brainstorm-unit-id <id>] [--prd-unit-id <id>]
+   ```
+
+5. Handoffs cite **unit id** + virtual `body-path` — not code-repo file paths.
+
+File-store repos: unchanged — paths and file writes below apply.
+
 ## Path
 
 - PRD: `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` per `.sw/layout.md`.
@@ -55,7 +73,7 @@ The decision section contract must stay in lockstep with `scripts/spec-rigor-che
 At save time on the Full path:
 
 1. Write `brainstorm: <repo-relative-path>` on the PRD via
-   `python3 scripts/doc_link.py write-backref --brainstorm <brainstorm> --prd <prd>`.
+   `python3 scripts/doc_link.py write-backref --brainstorm <body-path> --prd <body-path> [--brainstorm-unit-id …] [--prd-unit-id …]`.
 2. When the brainstorm is not frozen, write the forward `prd:` reference via
    `python3 scripts/doc_link.py write-forwardref --brainstorm <brainstorm> --prd <prd>`.
 

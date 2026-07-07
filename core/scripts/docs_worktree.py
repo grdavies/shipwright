@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -35,6 +36,50 @@ def load_default_branch(root: Path) -> str:
             except (json.JSONDecodeError, OSError):
                 pass
     return "main"
+
+
+def separate_project_handoff(root: Path, topic: str) -> dict[str, Any]:
+    from host_lib import load_workflow_config
+    from planning_artifact_handle import issue_store_separate_project_effective
+    from planning_store import resolve_store_location, store_section
+
+    cfg = load_workflow_config(root)
+    loc = resolve_store_location(root, cfg)
+    store = store_section(cfg)
+    project_key = store.get("projectKey", "")
+    return {
+        "verdict": "pass",
+        "skipped": True,
+        "reason": "separate-project-issue-store",
+        "handoff": {
+            "topic": topic,
+            "issueRefsOnly": True,
+            "projectKey": project_key if isinstance(project_key, str) else "",
+            "storeLocation": {
+                "owner": loc.get("owner"),
+                "repo": loc.get("repo"),
+            },
+        },
+        "nextSteps": {
+            "authoring": "planning_store.put with unit-id handles (no code-repo docs/)",
+            "deliver": "/sw-deliver run <frozen-task-list-path>",
+        },
+    }
+
+
+def emit_separate_project_skip(
+    root: Path,
+    cmd: str,
+    topic: str,
+    *,
+    dry_run: bool = False,
+) -> int:
+    payload = separate_project_handoff(root, topic)
+    payload["action"] = cmd
+    if dry_run:
+        payload["dry_run"] = True
+    print(json.dumps(payload))
+    return 0
 
 
 def run_worktree_lib(root: Path, *args: str) -> str:
@@ -77,6 +122,20 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     root = git_root()
+    from host_lib import load_workflow_config
+    from planning_artifact_handle import issue_store_separate_project_effective
+
+    cfg = load_workflow_config(root)
+    if issue_store_separate_project_effective(root, cfg):
+        if cmd == "status":
+            payload = separate_project_handoff(root, topic)
+            payload["action"] = "status"
+            payload["exists"] = False
+            print(json.dumps(payload))
+            return 0
+        if cmd in ("provision", "resume"):
+            return emit_separate_project_skip(root, cmd, topic, dry_run=dry_run)
+
     branch = run_worktree_lib(root, "docs-branch", topic)
     default = load_default_branch(root)
     wt_name = "docs-" + re.sub(r"[^a-z0-9]+", "-", topic.lower()).strip("-")

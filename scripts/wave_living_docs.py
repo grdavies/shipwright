@@ -13,6 +13,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+import planning_index_issue as pii
 import planning_paths
 VALID_INDEX_STATUSES = frozenset({"not-started", "in-progress", "complete"})
 TERMINAL_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
@@ -294,14 +295,25 @@ def _cmd_reconcile_locked(
     dry_run = has_flag(args, "--dry-run")
     do_commit = has_flag(args, "--commit")
 
-    index_out = run_reconcile_script(
+    slug = str((state.get("target") or {}).get("slug") or plan.get("slug") or "")
+    issue_projection = pii.project_index_status(
         worktree,
-        "set-index-status",
-        "--prd",
         prd,
-        "--status",
         index_status,
+        slug=slug or None,
+        dry_run=dry_run,
     )
+    if issue_projection.get("verdict") == "skipped":
+        index_out = run_reconcile_script(
+            worktree,
+            "set-index-status",
+            "--prd",
+            prd,
+            "--status",
+            index_status,
+        )
+    else:
+        index_out = issue_projection
 
 
     planning_graph_out: dict[str, Any] | None = None

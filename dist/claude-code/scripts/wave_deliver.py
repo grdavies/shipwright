@@ -680,22 +680,22 @@ def plan_combined(
 
 
 def resolve_task_list_path(root: Path, task_list: str) -> Path:
-    """Resolve frozen task list inside the active worktree (R61)."""
-    task_list = planning_path_redirect.resolve_path(root, task_list)
+    """Resolve frozen task list inside the active worktree (R61, PRD 056 R17-R18)."""
+    import planning_materialize as pm
+
+    pm.ensure_run_entry_materialized(root, task_list)
+    _resolved_rel, path = planning_path_redirect.resolve_readable_path(root, task_list)
+    if path is None:
+        logical = planning_path_redirect.resolve_path(root, task_list)
+        fail(f"task list not found: {logical}")
     try:
-        resolved = planning_paths.resolve_contained(root, task_list)
-    except planning_paths.PathEscapeError as exc:
-        fail(str(exc), exit_code=2)
-    try:
-        resolved.relative_to(root.resolve())
+        path.relative_to(root.resolve())
     except ValueError:
         fail(
             "task list must be readable inside the active worktree (R61)",
             exit_code=2,
         )
-    if not resolved.is_file():
-        fail(f"task list not found: {task_list}")
-    return resolved
+    return path
 
 
 def run_base_preflight(root: Path, target_branch: str) -> dict[str, Any]:

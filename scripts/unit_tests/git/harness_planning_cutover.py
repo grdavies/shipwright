@@ -152,6 +152,106 @@ PY
 ) && ok "relief-acceptance-gates-cutover" || bad "relief-acceptance-gates-cutover"
 ok "kill-criteria-fallback-documented"
 
+
+# living-docs-issue-projection-derived-issue (R8/R10)
+TMP3=$(mktemp -d)
+(
+  cd "$TMP3"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  mkdir -p docs/planning/prd/prd-099-living-docs-projection docs/prds .cursor/hooks/state
+  cat > docs/planning/prd/prd-099-living-docs-projection/prd-099-living-docs-projection.md <<'MD'
+---
+id: prd-099-living-docs-projection
+type: prd
+status: planned
+title: Living docs projection fixture
+visibility: public
+---
+# Body
+MD
+  cat > docs/prds/INDEX.md <<'IDX'
+| # | Slug | PRD | Tasks | Status |
+|---|---|---|---|---|
+| 099 | living-docs-projection | [link](x) | [tasks](x) | not-started |
+IDX
+  cat > .cursor/workflow.config.json <<'CFG'
+{"version":1,"planning":{"store":{"backend":"issue-store","issuesProvider":"github-issues","projectKey":"cutover099"}},"host":{"provider":"github"}}
+CFG
+  cat > .cursor/hooks/state/planning-cutover-gate.json <<'GATE'
+{"version":1,"discoverSource":"issue","structural":"issue","derived":"issue","inFlight":"deliver"}
+GATE
+  export SW_ISSUES_FIXTURE=1
+  INDEX_BEFORE=$(cat docs/prds/INDEX.md)
+  python3 - "$TMP3" "$ROOT/scripts" <<'PYISSUE'
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[2])
+root = Path(sys.argv[1])
+import planning_index_issue as pii
+from issues_lib import get_fixture_store
+store = get_fixture_store(root)
+store.clear()
+result = pii.project_index_status(root, "099", "in-progress", slug="living-docs-projection")
+assert result["verdict"] == "pass", result
+assert result.get("authority") == "issue", result
+store = get_fixture_store(root)
+assert store._issues, "expected planning_store.put via fixture"
+PYISSUE
+  INDEX_AFTER=$(cat docs/prds/INDEX.md)
+  [[ "$INDEX_BEFORE" == "$INDEX_AFTER" ]]
+  grep -q 'not-started' docs/prds/INDEX.md
+) && ok "living-docs-issue-projection-derived-issue" || bad "living-docs-issue-projection-derived-issue"
+
+# living-docs-file-authority-index-unchanged-behavior (R9/R10)
+TMP4=$(mktemp -d)
+(
+  cd "$TMP4"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  git checkout -q -b feat/living-docs-projection
+  mkdir -p docs/planning/prd/prd-099-living-docs-projection docs/prds .cursor/hooks/state
+  cat > docs/planning/prd/prd-099-living-docs-projection/prd-099-living-docs-projection.md <<'MD'
+---
+id: prd-099-living-docs-projection
+type: prd
+status: planned
+title: Living docs projection fixture
+visibility: public
+---
+# Body
+MD
+  cat > docs/prds/INDEX.md <<'IDX'
+| # | Slug | PRD | Tasks | Status |
+|---|---|---|---|---|
+| 099 | living-docs-projection | [link](x) | [tasks](x) | not-started |
+IDX
+  cat > .cursor/workflow.config.json <<'CFG'
+{"version":1,"defaultBaseBranch":"main"}
+CFG
+  cat > .cursor/hooks/state/planning-cutover-gate.json <<'GATE'
+{"version":1,"discoverSource":"file","structural":"file","derived":"file","inFlight":"deliver"}
+GATE
+  python3 - "$TMP4" "$ROOT/scripts" <<'PYFILE'
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[2])
+root = Path(sys.argv[1])
+import planning_index_issue as pii
+import reconcile_lib as rl
+skipped = pii.project_index_status(root, "099", "in-progress", slug="living-docs-projection")
+assert skipped.get("verdict") == "skipped", skipped
+assert skipped.get("authority") == "file", skipped
+result = rl.set_index_status(root, "099", "in-progress")
+assert result.get("verdict") == "pass", result
+text = (root / "docs/prds/INDEX.md").read_text(encoding="utf-8")
+assert "| in-progress |" in text, text
+PYFILE
+) && ok "living-docs-file-authority-index-unchanged-behavior" || bad "living-docs-file-authority-index-unchanged-behavior"
+
+
 exit "$FAIL"
 
 """

@@ -64,11 +64,13 @@ def store_put_gap(root: Path, unit_id: str, body_path_rel: str, content: str) ->
             issue_store_effective,
             refresh_gap_backlog_projection,
             sync_gap_issue_labels,
+            sync_issue_native_links_from_content,
             try_sunset_gap_backlog_projection,
         )
 
         if issue_store_effective(root):
             sync_gap_issue_labels(root, unit_id, content)
+            sync_issue_native_links_from_content(root, unit_id, content)
             refresh_gap_backlog_projection(root, apply=True)
     except ImportError:
         pass

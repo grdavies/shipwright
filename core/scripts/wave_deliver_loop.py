@@ -1847,6 +1847,9 @@ def execute_mechanical(
     if action == "plan":
         if not task_list:
             fail("deliver-loop requires --task-list on first run or state.source_task_list")
+        import planning_materialize as pm
+
+        pm.ensure_run_entry_materialized(root, str(task_list))
         plan_args = ["plan", "--task-list", str(task_list)]
         if has_flag(loop_args, "--skip-base-check"):
             plan_args.append("--skip-base-check")
@@ -1969,6 +1972,11 @@ def execute_mechanical(
             wt_name = data.get("worktreeName") or data.get("name")
             if wt_name:
                 wt_path = str((root / ".sw-worktrees" / wt_name).resolve())
+        from planning_progress import provision_deliver_hierarchy
+
+        hier = provision_deliver_hierarchy(root, state)
+        if hier.get("verdict") == "fail":
+            fail_payload(hier, "hierarchy provision failed", 20)
         worktrees = state.setdefault("phaseWorktrees", {})
         worktrees[pid] = {
             "name": data.get("name") or data.get("worktreeName"),
@@ -1976,7 +1984,16 @@ def execute_mechanical(
         }
         save_state(root, state)
         persist_cursor(root, state, "dispatch-ship", phaseWorktrees=worktrees)
-        return {"executed": "provision-phase", "phaseId": pid, **data}
+        out: dict[str, Any] = {"executed": "provision-phase", "phaseId": pid, **data}
+        if hier.get("notice"):
+            out["hierarchyNotice"] = hier["notice"]
+        if hier.get("hierarchyMap"):
+            out["hierarchyMap"] = hier["hierarchyMap"]
+        if hier.get("skipped"):
+            out["hierarchySkipped"] = True
+        if hier.get("idempotent"):
+            out["hierarchyIdempotent"] = True
+        return out
 
     if action == "collect-all-ready":
         head = integration_branch_head(root, state)

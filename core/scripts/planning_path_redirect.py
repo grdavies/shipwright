@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
 import planning_paths  # noqa: E402
 
 REDIRECT_MAP_REL = ".cursor/planning-path-redirect-map.json"
+MATERIALIZED_PREFIX = ".cursor/planning-materialized"
 
 REDIRECT_CONSUMERS: tuple[str, ...] = (
     "scripts/wave_deliver_loop.py",
@@ -22,6 +23,7 @@ REDIRECT_CONSUMERS: tuple[str, ...] = (
     "scripts/wave_spec_seed.py",
     "scripts/check-frozen.py",
     "scripts/wave_living_docs.py",
+    "scripts/planning_deliver_gate.py",
 )
 
 
@@ -67,6 +69,37 @@ def resolve_path(root: Path, rel_path: str) -> str:
             base = migrated.rstrip("/")
             return f"{base}/{suffix}" if suffix else base
     return norm
+
+
+def materialized_candidate(root: Path, rel_path: str) -> Path:
+    """Return the materialized mirror path for a logical body-path (PRD 056 R18)."""
+    norm = rel_path.replace("\\", "/").lstrip("./")
+    if ".." in norm.split("/"):
+        fail("body path contains ..", bodyPath=rel_path)
+    return planning_paths.git_root(root) / MATERIALIZED_PREFIX / norm
+
+
+def resolve_readable_path(root: Path, rel_path: str) -> tuple[str, Path] | tuple[None, None]:
+    """Resolve a readable path: redirect map, logical file, then materialized fallback."""
+    resolved_rel = resolve_path(root, rel_path)
+    worktree = planning_paths.git_root(root)
+    try:
+        logical = planning_paths.resolve_contained(worktree, resolved_rel)
+    except planning_paths.PathEscapeError:
+        return None, None
+    if logical.is_file():
+        return resolved_rel, logical
+    from host_lib import load_workflow_config
+    from planning_store import resolve_effective_backend
+
+    cfg = load_workflow_config(worktree)
+    if resolve_effective_backend(worktree, cfg).get("effective") != "issue-store":
+        return None, None
+    materialized = materialized_candidate(worktree, resolved_rel)
+    if materialized.is_file():
+        mat_rel = f"{MATERIALIZED_PREFIX}/{resolved_rel}"
+        return mat_rel, materialized
+    return None, None
 
 
 def cmd_resolve(root: Path, args: list[str]) -> None:

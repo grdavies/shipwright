@@ -87,6 +87,50 @@ def resolve_field_defaults(cfg):
     raw = issues_section(cfg).get("fieldDefaults")
     return {str(k): str(v) for k, v in raw.items() if isinstance(raw, dict) and isinstance(k, str) and isinstance(v, str)} if isinstance(raw, dict) else {}
 
+def resolve_link_defaults(cfg):
+    from planning_store import issues_section
+    raw = issues_section(cfg).get("linkDefaults")
+    if isinstance(raw, dict):
+        return {str(k): str(v) for k, v in raw.items() if isinstance(k, str) and isinstance(v, str)}
+    return {}
+
+
+def resolve_jira_link_type_name(cfg, native_type: str, *, token: str | None = None, root: Path | None = None) -> str:
+    """Resolve Jira issue-link type name from linkDefaults or createmeta (D5)."""
+    defaults = resolve_link_defaults(cfg)
+    if native_type in defaults:
+        return defaults[native_type]
+    if native_type in defaults.values():
+        return native_type
+    fallback = defaults.get("default") or defaults.get("*") or "Relates"
+    if use_fixture_mode():
+        return fallback
+    auth_token = token
+    if not auth_token:
+        from planning_store import issues_section
+        issues = issues_section(cfg)
+        raw_env = issues.get("tokenEnv")
+        token_env = raw_env.strip() if isinstance(raw_env, str) and raw_env.strip() else "ISSUES_JIRA_TOKEN"
+        auth_token = __import__('os').environ.get(token_env, "").strip()
+    headers = _auth_header(cfg, auth_token) if auth_token else {}
+    base = _api_base(cfg)
+    if not base or not headers:
+        return fallback
+    status, payload = _http_get(f"{base}/issueLinkType", headers, root=root)
+    if status >= 400 or not isinstance(payload, dict):
+        return fallback
+    names = []
+    for entry in payload.get("issueLinkTypes") or []:
+        if isinstance(entry, dict) and isinstance(entry.get("name"), str):
+            names.append(entry["name"])
+    if fallback in names:
+        return fallback
+    for candidate in ("Relates", "relates to", "Related"):
+        if candidate in names:
+            return candidate
+    return names[0] if names else fallback
+
+
 def _api_base(cfg):
     endpoint = resolve_jira_endpoint(cfg)
     suffix = JIRA_DC_API if resolve_jira_flavor(cfg) == "dc" else JIRA_CLOUD_API

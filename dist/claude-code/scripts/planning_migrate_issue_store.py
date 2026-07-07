@@ -77,6 +77,7 @@ from planning_canonical import (  # noqa: E402
     gap_status_from_labels,
     gap_status_label,
     infer_artifact_type,
+    native_links_from_edges,
     normalize_body,
     parse_edges_block,
     parse_freeze_record_hash,
@@ -251,6 +252,79 @@ def issue_store_effective(root: Path, cfg: dict[str, Any] | None = None) -> bool
     cfg = cfg or load_workflow_config(root)
     effective = resolve_effective_backend(root, cfg)
     return str(effective.get("effective", "")) == "issue-store"
+
+
+def project_native_links_from_edges(
+    root: Path,
+    edge_list: list[dict[str, Any]],
+    explicit_native: list[dict[str, Any]],
+    project_key: str,
+) -> list[dict[str, Any]]:
+    """Project sw-edges to provider native links via the issue unit index."""
+    index = load_issue_unit_index(root)
+    projected = native_links_from_edges(edge_list, index, project_key=project_key)
+    out = list(projected)
+    for link in explicit_native:
+        if isinstance(link, dict) and link not in out:
+            out.append(link)
+    return out
+
+
+def resolved_native_links_for_edges(
+    root: Path,
+    cfg: dict[str, Any],
+    edge_list: list[dict[str, Any]],
+    explicit_native: list[dict[str, Any]],
+    project_key: str,
+) -> list[dict[str, Any]]:
+    """Project sw-edges to provider native links when issue-store is effective (PRD 056 R4)."""
+    if not issue_store_effective(root, cfg):
+        return list(explicit_native)
+    return project_native_links_from_edges(root, edge_list, explicit_native, project_key)
+
+
+def sync_issue_native_links_from_content(
+    root: Path,
+    unit_id: str,
+    content: str,
+    cfg: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Sync provider native links from sw-edges on an existing issue (gap/hierarchy writes)."""
+    cfg = cfg or load_workflow_config(root)
+    if not issue_store_effective(root, cfg):
+        return {"skipped": True, "reason": "not-issue-store"}
+    key_result = validate_project_key(root, cfg)
+    if key_result.get("verdict") != "ok":
+        return {"skipped": True, "reason": "invalid-project-key"}
+    project_key = str(key_result["projectKey"])
+    edges_data = parse_edges_block(normalize_body(content)) or {}
+    edge_list = list(edges_data.get("edges") or [])
+    explicit_native = list(edges_data.get("native") or [])
+    native_links = resolved_native_links_for_edges(
+        root, cfg, edge_list, explicit_native, project_key
+    )
+    if not native_links:
+        return {"skipped": True, "reason": "no-native-links"}
+    client = cfg_issues_client(root)
+    idx_key = issue_index_key(project_key, unit_id)
+    issue_id = load_issue_unit_index(root).get(idx_key)
+    record = None
+    if issue_id:
+        try:
+            record = client.issue_get(str(issue_id))
+        except IssueNotFound:
+            record = None
+    if record is None:
+        matches = client.issue_search(project_key=project_key, unit_id=unit_id)
+        if not matches:
+            return {"skipped": True, "reason": "issue-missing", "unitId": unit_id}
+        record = matches[0]
+    updated = client.issue_update(
+        record.id,
+        native_links=native_links,
+        if_match=record.etag,
+    )
+    return {"unitId": unit_id, "issueId": updated.id, "nativeLinks": native_links}
 
 
 def gap_backlog_is_readonly(root: Path) -> bool:
@@ -1375,6 +1449,38 @@ def discover_issue_artifacts(root: Path, cfg: dict[str, Any]) -> list[MigrationA
     return artifacts
 
 
+_MIGRATION_LINK_RELS = frozenset({"depends", "sub-issue-of", "blocks"})
+
+
+def _migration_create_order(artifacts: list[MigrationArtifact]) -> list[MigrationArtifact]:
+    """Order file artifacts so link targets exist before sources (PRD 056 R4)."""
+    by_id = {artifact.unit_id: artifact for artifact in artifacts}
+    prereqs: dict[str, set[str]] = {artifact.unit_id: set() for artifact in artifacts}
+    for artifact in artifacts:
+        for edge in artifact.lifecycle.edge_list:
+            if not isinstance(edge, dict):
+                continue
+            rel = str(edge.get("rel", ""))
+            target = str(edge.get("target", ""))
+            if rel in _MIGRATION_LINK_RELS and target in by_id:
+                prereqs[artifact.unit_id].add(target)
+    ordered: list[MigrationArtifact] = []
+    seen: set[str] = set()
+
+    def visit(unit_id: str) -> None:
+        if unit_id in seen or unit_id not in by_id:
+            return
+        for dep in prereqs.get(unit_id, ()):
+            visit(dep)
+        if unit_id not in seen:
+            seen.add(unit_id)
+            ordered.append(by_id[unit_id])
+
+    for artifact in artifacts:
+        visit(artifact.unit_id)
+    return ordered
+
+
 def discover_artifacts(root: Path, direction: str, cfg: dict[str, Any]) -> list[MigrationArtifact]:
     if direction == DIRECTION_FILES_TO_ISSUES:
         return discover_file_artifacts(root)
@@ -1502,13 +1608,19 @@ def _create_issue_with_lifecycle(
         consumer_status,
     )
     title = f"{title_prefix(project_key)} {artifact.artifact_type}:{artifact.unit_id}"
+    native_links = project_native_links_from_edges(
+        root,
+        artifact.lifecycle.edge_list,
+        artifact.lifecycle.native_links,
+        project_key,
+    )
     body = compose_issue_body(
         project_key,
         artifact.artifact_type,
         artifact.unit_id,
         artifact.content,
         edges=artifact.lifecycle.edge_list or None,
-        native_links=artifact.lifecycle.native_links or None,
+        native_links=native_links or None,
     )
     if provider == "jira":
         body, extra_comments = chunk_body_for_jira_cloud(body, [])
@@ -1525,7 +1637,7 @@ def _create_issue_with_lifecycle(
             project_key=project_key,
             artifact_type=artifact.artifact_type,
             unit_id=artifact.unit_id,
-            native_links=artifact.lifecycle.native_links or None,
+            native_links=native_links or None,
         )
     else:
         try:
@@ -1536,7 +1648,7 @@ def _create_issue_with_lifecycle(
                 body=body,
                 labels=labels,
                 state=workflow_state,
-                native_links=artifact.lifecycle.native_links or None,
+                native_links=native_links or None,
                 if_match=record.etag,
                 allow_locked=True,
             )
@@ -1638,6 +1750,8 @@ def _expected_issue_verify_content(content: str, provider: str) -> str:
 def _expected_verify_lifecycle(
     root: Path,
     artifact: MigrationArtifact,
+    cfg: dict[str, Any],
+    project_key: str,
     *,
     freeze_hash: str | None,
 ) -> ArtifactLifecycle:
@@ -1648,13 +1762,19 @@ def _expected_verify_lifecycle(
         body_path=artifact.body_path,
     )
     issue_state = _workflow_state_for_consumer_status(consumer_status) or artifact.lifecycle.issue_state
+    native_links = project_native_links_from_edges(
+        root,
+        artifact.lifecycle.edge_list,
+        artifact.lifecycle.native_links,
+        project_key,
+    )
     return ArtifactLifecycle(
         issue_state=issue_state,
         frozen=artifact.lifecycle.frozen,
         freeze_hash=freeze_hash,
         frozen_at=artifact.lifecycle.frozen_at,
         edge_list=artifact.lifecycle.edge_list,
-        native_links=artifact.lifecycle.native_links,
+        native_links=native_links,
         gap_status=artifact.lifecycle.gap_status,
         gap_schedule=artifact.lifecycle.gap_schedule,
         visibility=artifact.lifecycle.visibility,
@@ -1696,7 +1816,13 @@ def _verify_target(
         if artifact.lifecycle.freeze_hash and got_lifecycle.freeze_hash != artifact.lifecycle.freeze_hash:
             return False
         return lifecycle_equal(
-            _expected_verify_lifecycle(root, artifact, freeze_hash=got_lifecycle.freeze_hash),
+            _expected_verify_lifecycle(
+                root,
+                artifact,
+                cfg,
+                issue_backend.project_key,
+                freeze_hash=got_lifecycle.freeze_hash,
+            ),
             got_lifecycle,
         )
 
@@ -1855,6 +1981,8 @@ def run_store_migration(root: Path, direction: str, *, apply: bool = False) -> N
     plan: list[dict[str, Any]] = []
     try:
         artifacts = discover_artifacts(root, direction, cfg)
+        if direction == DIRECTION_FILES_TO_ISSUES:
+            artifacts = _migration_create_order(artifacts)
         for artifact in artifacts:
             process_artifact(
                 root,

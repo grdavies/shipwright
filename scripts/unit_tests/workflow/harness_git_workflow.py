@@ -114,8 +114,16 @@ else
 fi
 
 # --- docs-branch-no-main-commit (R28) ---
+# Accepts either the classic docs/<topic> worktree branch, or the PRD 056 A2
+# separate-project skip (no local docs worktree at all) — both satisfy "no main commit".
 if OUT=$(bash "$ROOT/scripts/docs_worktree.sh" provision --topic fixture-topic --dry-run 2>/dev/null) \
-   && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['branch'].startswith('docs/')"; then
+   && echo "$OUT" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+if d.get('skipped') and d.get('reason') == 'separate-project-issue-store':
+    sys.exit(0)
+assert d['branch'].startswith('docs/')
+"; then
   ok "docs-branch-no-main-commit"
 else
   bad "docs-branch-no-main-commit"

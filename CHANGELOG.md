@@ -361,6 +361,17 @@
 * merge phase jira-cloud-adapter-canonicalization-placement-freeze-decoupling-l into feat/jira-issue-store-adapter (7737da7) <!-- sw-deliver:jira-cloud-adapter-canonicalization-placement-freeze-decoupling-l -->
 * merge phase dc-server-variant-auth-visibility-field-budget-lifecycle-probes-l into feat/jira-issue-store-adapter (236035b) <!-- sw-deliver:dc-server-variant-auth-visibility-field-budget-lifecycle-probes-l -->
 * merge phase bitbucket-guidance-acceptance-suite-doc-impact-gate-m into feat/jira-issue-store-adapter (41c1e78) <!-- sw-deliver:bitbucket-guidance-acceptance-suite-doc-impact-gate-m -->
+* merge phase run-entry-materialize-small-amendment-a3 into feat/issue-store-deliver-progress-native-links (3e23fb7) <!-- sw-deliver:run-entry-materialize-small-amendment-a3 -->
+* merge phase github-native-links-adapter-small into feat/issue-store-deliver-progress-native-links (f8d57b8) <!-- sw-deliver:github-native-links-adapter-small -->
+* merge phase github-native-links-adapter-small into feat/issue-store-deliver-progress-native-links (c45fe3b) <!-- sw-deliver:github-native-links-adapter-small -->
+* merge phase gitlab-and-jira-native-links-medium into feat/issue-store-deliver-progress-native-links (e74a7fd) <!-- sw-deliver:gitlab-and-jira-native-links-medium -->
+* merge phase emit-native-links-on-planning-writes-medium into feat/issue-store-deliver-progress-native-links (a675155) <!-- sw-deliver:emit-native-links-on-planning-writes-medium -->
+* merge phase deliver-provision-hierarchy-wiring-medium into feat/issue-store-deliver-progress-native-links (116632d) <!-- sw-deliver:deliver-provision-hierarchy-wiring-medium -->
+* merge phase phase-green-progress-sync-medium into feat/issue-store-deliver-progress-native-links (db7b0de) <!-- sw-deliver:phase-green-progress-sync-medium -->
+* merge phase living-docs-issue-projection-small into feat/issue-store-deliver-progress-native-links (6d467b4) <!-- sw-deliver:living-docs-issue-projection-small -->
+* merge phase doc-currency-and-gap-closure-small into feat/issue-store-deliver-progress-native-links (5ac0135) <!-- sw-deliver:doc-currency-and-gap-closure-small -->
+* merge phase issue-store-doc-pipeline-authoring-medium-amendment-a1 into feat/issue-store-deliver-progress-native-links (0d09562) <!-- sw-deliver:issue-store-doc-pipeline-authoring-medium-amendment-a1 -->
+* merge phase separate-project-docs-bypass-small-amendment-a2 into feat/issue-store-deliver-progress-native-links (262b879) <!-- sw-deliver:separate-project-docs-bypass-small-amendment-a2 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
