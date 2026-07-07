@@ -290,11 +290,11 @@ Wave map:
 
 ### 12. Memory backend local-only rename/document — 21a (Wave 2 · R21)
 
-- [ ] 12.1 Rename + document the local-only planning-bodies cache (R21 / 21a)
+- [x] 12.1 Rename + document the local-only planning-bodies cache (R21 / 21a)
   - **File:** `scripts/planning_store.py`
   - **Expected:** the memory backend's local-only `.cursor/sw-memory/planning-bodies/` behavior is renamed so its local-only, gitignored nature is explicit and no longer presents as a provider round-trip, removing the CI false-failure and misleading-durability surface.
   - **R-IDs:** R21
-- [ ] 12.2 Docs: memory skill + planning-store memory provider (21a) (R32)
+- [x] 12.2 Docs: memory skill + planning-store memory provider (21a) (R32)
   - **File:** `core/skills/memory/SKILL.md`, `core/providers/planning-store/memory.md`
   - **Expected:** documents the local-only cache (21a) and references the later provider round-trip contract (21b).
   - **R-IDs:** R21
@@ -397,23 +397,23 @@ Wave map:
 
 ### 17. Terminal gap auto-capture + feature-named titles (Wave 5 · R19, R20)
 
-- [ ] 17.1 Terminal auto-capture of unaddressed planning-store pain (R19) (unit 1/2)
+- [x] 17.1 Terminal auto-capture of unaddressed planning-store pain (R19) (unit 1/2)
   - **File:** `scripts/planning_gap_capture.py`
   - **Expected:** at termination, scan run-log + loop-health and auto-capture unaddressed pain as gap units with dedup against open gap titles; suppress on fail/abort verdicts; cap captures per run; human confirmation for substantial items via a substantial-vs-noise heuristic.
   - **R-IDs:** R19
-- [ ] 17.2 Terminal auto-capture of unaddressed planning-store pain (R19) (unit 2/2)
+- [x] 17.2 Terminal auto-capture of unaddressed planning-store pain (R19) (unit 2/2)
   - **File:** `scripts/wave_terminal.py`
   - **Expected:** at termination, scan run-log + loop-health and auto-capture unaddressed pain as gap units with dedup against open gap titles; suppress on fail/abort verdicts; cap captures per run; human confirmation for substantial items via a substantial-vs-noise heuristic.
   - **R-IDs:** R19
-- [ ] 17.3 Feature-named PR + release-please changelog titles (R20)
+- [x] 17.3 Feature-named PR + release-please changelog titles (R20)
   - **File:** `scripts/wave_terminal.py`
   - **Expected:** `commitlint_safe_title` derives PR/changelog titles from the PRD title or task-list slug instead of the fixed `feat(prd-<n>): deliver wave` text.
   - **R-IDs:** R20
-- [ ] 17.4 Terminal gap-capture + title fixtures (R19, R20) (unit 1/2)
+- [x] 17.4 Terminal gap-capture + title fixtures (R19, R20) (unit 1/2)
   - **File:** `scripts/test/fixtures/deliver-terminal-gapcapture/harness.py`
   - **Expected:** terminal auto-captures deduped gap units with a confirmation gate; PR/changelog titles name the landed feature, not `deliver wave`.
   - **R-IDs:** R20
-- [ ] 17.5 Terminal gap-capture + title fixtures (R19, R20) (unit 2/2)
+- [x] 17.5 Terminal gap-capture + title fixtures (R19, R20) (unit 2/2)
   - **File:** `scripts/test/fixtures/terminal-title/harness.py`
   - **Expected:** terminal auto-captures deduped gap units with a confirmation gate; PR/changelog titles name the landed feature, not `deliver wave`.
   - **R-IDs:** R20
