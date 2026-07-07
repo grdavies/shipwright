@@ -35,7 +35,7 @@ def _run(
 ) -> int:
     content, source = pah.resolve_artifact_text(root, body_path, unit_id=unit_id)
     if content is None:
-        print(json.dumps({"verdict": "fail", "error": f"artifact not found: {rel}", "artifact": artifact}))
+        print(json.dumps({"verdict": "fail", "error": f"artifact not found: {body_path}", "artifact": artifact}))
         return 20
     text = content
     findings: list[dict] = []
@@ -169,8 +169,7 @@ def _run(
             add("analyze", "error", "--prd required for tasks analyze")
             print(json.dumps({"verdict": "fail", "artifact": "tasks", "findings": findings}))
             return 20
-        prd_rel = pah.normalize_body_path(prd_path)
-        prd_file = pah.materialize_artifact_file(root, prd_rel, unit_id=prd_unit_id)
+        prd_file = pah.materialize_artifact_file(root, prd_path, unit_id=prd_unit_id)
         if prd_file is None:
             add("analyze", "error", "--prd required and must exist for tasks analyze")
             print(json.dumps({"verdict": "fail", "artifact": "tasks", "findings": findings}))
