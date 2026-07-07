@@ -29,23 +29,23 @@ Wave map:
 
 ### 1. Cross-cutting invariants & test scaffolding (Wave 1 · R22, R23, R24, R32)
 
-- [ ] 1.1 Extend traceability/union check to load PRD 056 union from the store and block restated 056 text (R22) (unit 1/2)
+- [x] 1.1 Extend traceability/union check to load PRD 056 union from the store and block restated 056 text (R22) (unit 1/2)
   - **File:** `scripts/spec-union.py`
   - **Expected:** the check loads the PRD 056 union from the authoritative issue store (issue #218) and fails when a new R-ID restates PRD 056 union R1–R20 text; JSON verdict.
   - **R-IDs:** R22
-- [ ] 1.2 Extend traceability/union check to load PRD 056 union from the store and block restated 056 text (R22) (unit 2/2)
+- [x] 1.2 Extend traceability/union check to load PRD 056 union from the store and block restated 056 text (R22) (unit 2/2)
   - **File:** `scripts/traceability-check.py`
   - **Expected:** the check loads the PRD 056 union from the authoritative issue store (issue #218) and fails when a new R-ID restates PRD 056 union R1–R20 text; JSON verdict.
   - **R-IDs:** R22
-- [ ] 1.3 File-store parity golden-output fixture harness (R23)
+- [x] 1.3 File-store parity golden-output fixture harness (R23)
   - **File:** `scripts/test/fixtures/planning-file-store-parity/harness.py`
   - **Expected:** per-command golden outputs (gap capture, reconcile, spec-seed) are byte-identical (or structurally equivalent) before/after each guard when the effective backend is not an issue-store.
   - **R-IDs:** R23
-- [ ] 1.4 Per-wave incremental parity fixture + wave-sequencing assertion (R24)
+- [x] 1.4 Per-wave incremental parity fixture + wave-sequencing assertion (R24)
   - **File:** `scripts/test/fixtures/planning-deliver-parity/wave_incremental.py`
   - **Expected:** each wave asserts no file-store-only write for the artifacts it guards; assertion that blockers (R7/R16/R18) land in the earliest wave and R6 is exempted to Wave 5.
   - **R-IDs:** R24
-- [ ] 1.5 Doc-impact fixture mapping each requirement to Documentation Impact paths per wave (R32)
+- [x] 1.5 Doc-impact fixture mapping each requirement to Documentation Impact paths per wave (R32)
   - **File:** `scripts/test/fixtures/planning-057-doc-impact/harness.py`
   - **Expected:** fixture maps each requirement to its doc paths and fails when a behavior change merges without its paired doc update in the same wave.
   - **R-IDs:** R32
