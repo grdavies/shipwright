@@ -55,8 +55,8 @@ def main(argv: list[str] | None = None) -> int:
         return json.loads(p.read_text(encoding="utf-8"))
 
 
-    def fail(msg: str, code: int = 20) -> None:
-        print(json.dumps({"verdict": "fail", "error": msg}))
+    def fail(msg: str, code: int = 20, **extra: object) -> None:
+        print(json.dumps({"verdict": "fail", "error": msg, **extra}))
         sys.exit(code)
 
 
@@ -106,6 +106,27 @@ def main(argv: list[str] | None = None) -> int:
         return agent_id in agent_routing
 
 
+    def resolve_inherit_agent_fallback(cmd: str, agent_id: str, source: str) -> None:
+        """R18: an `inherit` orchestrator dispatching a concrete sub-agent must not dead-end
+        on `binding:no-model` for an agent absent from `models.routing.agents`. Resolution
+        order: agent map -> `models.roles` fallback -> actionable remediation (never a bare
+        inherit/None pass-through, and never forces the caller into inline authoring)."""
+        if agent_id in agent_routing:
+            resolve_tier_name(agent_routing[agent_id], f"{source}:agent-map:{agent_id}")
+        role_tier = roles.get("builder")
+        if role_tier:
+            resolve_tier_name(role_tier, f"{source}:roles.builder-fallback")
+        fail(
+            f"inherit orchestrator {cmd!r} has no concrete-model route for unmapped agent {agent_id!r}",
+            cause="no-model:remediation",
+            agent=agent_id,
+            command=cmd,
+            remediation=(
+                f"add models.routing.agents.{agent_id!r} or set models.roles.builder "
+                "in workflow.config.json"
+            ),
+        )
+
     def resolve_command_tier(cmd: str) -> None:
         if cmd not in cmd_routing:
             fail(f"missing routing.commands entry for {cmd!r}")
@@ -120,6 +141,8 @@ def main(argv: list[str] | None = None) -> int:
                 if child_raw == "inherit":
                     fail(f"delegate {delegate!r} also inherits — cannot resolve")
                 resolve_tier_name(child_raw, source)
+            if agent:
+                resolve_inherit_agent_fallback(cmd, agent, source)
             resolve_tier_name("inherit", source)
         resolve_tier_name(raw, source)
 
