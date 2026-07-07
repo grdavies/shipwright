@@ -65,3 +65,6 @@ docs/planning/amendment/**/*
 .cursor/planning-materialized/
 .cursor/sw-branch-protection-probe.json
 .cursor/sw-coverage/
+
+# PRD 057 R28 — local scheduler park registry (backend-neutral, never committed)
+.cursor/planning-parked.json

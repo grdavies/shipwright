@@ -171,6 +171,19 @@ provider issues under **issue-store** (PRD 045 R21). They render as rows in the 
 `docs/prds/GAP-BACKLOG.md` is a **write-through projection** from gap issues when issue-store is active (PRD
 045 R72) or a compatibility projection until consumers migrate (R27).
 
+### Scheduler park state (PRD 057 R16, R28)
+
+The scheduler frontier skips units that cannot run and can **park** units out of scheduling:
+
+- **`sw:parked` label** — under issue-store, a unit carrying this provider-native label is dropped from the
+  frontier so legacy migrated units no longer stall `next` (R16, D4).
+- **`.cursor/planning-parked.json`** — a local, backend-neutral, git-ignored park registry
+  (`unit-id → {reason, actor, at}`) written only on an explicit `planning-graph.py park`/`unpark`. When
+  empty, the file-store scheduling path is unchanged (R23). Parking is authorized only for actors in
+  `planning.scheduler.parkAllowlist` and requires a reason (fail-closed).
+- An empty post-filter frontier yields an explicit `scheduler-exhausted` scheduler halt and an
+  `over-parked-frontier` `planning-doctor.py` drift finding — never a silent empty result.
+
 ## Naming conventions
 
 | Artifact | Path pattern | Written by | Frozen |
