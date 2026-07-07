@@ -172,3 +172,55 @@ idempotent retry on reconnect.
 Per-provider `cacheTtlSeconds` (default 300) bounds query-cache TTL floor (R85). Poll-on-reconcile invalidation runs at deliver run-start and `/sw-deliver next` (R85). Secret-scan runs on
 issue ingest before cache write (R45/R84). Pagination ceiling with remaining results → `index-incomplete`
 fail-closed (R86).
+
+
+## Native provider links (PRD 056 R1–R4)
+
+When `issue-store` is effective, issues adapters forward `native_links` on create/update and return them on
+read for `planning_canonical.reconcile_edges`. The canonical `sw-edges` block in the issue body remains
+authoritative on conflict; native links are UI projections only.
+
+| Provider | Client | Capability probe |
+| --- | --- | --- |
+| `github-issues` | `planning_github_client.py` | `probe-issues-token` → `nativeLinksCapable`; sub-issue REST or comment `cross-reference` fallback |
+| `gitlab-issues` | `planning_gitlab_client.py` | Same probe field; GitLab issue-link API |
+| `jira` | `planning_jira_client.py` | Issue-link create; default link name from createmeta / `planning.store.issues.linkDefaults` |
+
+`planning_canonical.native_links_from_edges(edge_list, index, project_key=…)` resolves unit ids to issue ids.
+Wired on migration create, gap capture, hierarchy sub-issue create, and edge reconciliation.
+
+**Degradation (R3):** missing link capability or API 403/404 → one stderr JSON notice per run
+(`notice: native-links-degraded`); mutations that do not require links continue. Never blocks deliver on link
+failure alone.
+
+```bash
+python3 scripts/planning_store.py probe-issues-token
+```
+
+
+## Deliver progress sync (PRD 056 R5–R7)
+
+Requires issue-store effective and a prior hierarchy apply (non-dry-run `planning_hierarchy`).
+
+| Step | Entry | Behavior |
+| --- | --- | --- |
+| Provision | `planning_progress.provision_deliver_hierarchy` (from `wave_deliver_loop` phase provision) | Creates epic + phase sub-issues; stores `hierarchyMap` on deliver state |
+| Phase green | `planning_progress.sync_phase_done` (from `wave_merge.py` status collect) | Adds `sw:phase:<phaseId>:done` label to mapped sub-issue |
+| Checkbox | `planning_progress.propagate_checkbox_to_issue_store` (from acceptance / execute status) | Rewrites sub-issue body from frozen task-list phase section |
+
+Skipped entirely when `resolve_effective_backend` ≠ `issue-store`. Label/body capability gaps emit
+`progress-label-degraded` / `progress-body-degraded` once per run (deliver continues).
+
+Deliver state field: `hierarchyMap` with `epicIssueId`, `phases`, `unitId`, `provider`, `projectKey`.
+
+
+## Living-docs derived projection (PRD 056 R8)
+
+When cutover authority for region `derived` is `issue`, `planning_index_issue.project_index_status` writes
+PRD INDEX status to the planning store (`planning-index-derived` unit) instead of mutating
+`docs/prds/INDEX.md`. Invoked from `wave_living_docs.py reconcile`. File-store repos and `derived=file`
+authority are unchanged (R9).
+
+```bash
+python3 scripts/planning_index_issue.py project-index-status --prd <n> --status <not-started|in-progress|complete>
+```

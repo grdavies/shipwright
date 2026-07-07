@@ -152,12 +152,12 @@ rescan: A3-deliver-run-entry-materialize
 
 ### 7. Doc-currency and gap closure (small)
 
-- [ ] **7.1** Update workflows.md + issue-store provider docs for native links + deliver sync
+- [x] **7.1** Update workflows.md + issue-store provider docs for native links + deliver sync
   - **File:** `docs/guides/workflows.md`, `core/providers/planning-store/issue-store.md`
   - **Expected:** documents hook points and degradation notices
   - **R-IDs:** R1–R8
 
-- [ ] **7.2** Mark gap-033 and gap-037 resolved via reconcile after merge
+- [x] **7.2** Mark gap-033 and gap-037 resolved via reconcile after merge
   - **File:** `docs/prds/GAP-BACKLOG.md` projection / issue-store gap units
   - **Expected:** gap status `resolved` with absorbs PRD 056 reference
   - **R-IDs:** R10

@@ -525,6 +525,58 @@ Optional tracking issues for committed `inFlight` tuples route through `planning
 See `core/skills/deliver/SKILL.md` **Task-list hierarchy and inFlight tracking issues**.
 
 
+## Issue-store deliver progress and native links (PRD 056)
+
+Inert when `resolve_effective_backend` ≠ `issue-store` (file-store paths unchanged — R9).
+
+### Native provider links (R1–R4, gap-037)
+
+Issues adapters implement `native_links` on create/update/read — no discard on write. `sw-edges` in the
+issue body stays authoritative; native links are projections for provider UI readability.
+
+| Provider | Adapter | Native link verbs |
+| --- | --- | --- |
+| GitHub | `planning_github_client.py` | Sub-issue REST when capable; `cross-reference` comment fallback |
+| GitLab | `planning_gitlab_client.py` | Issue link API where available |
+| Jira | `planning_jira_client.py` | Issue links via REST; link type from createmeta / `planning.store.issues.linkDefaults` |
+
+`planning_canonical.native_links_from_edges()` resolves `sw-edges` unit targets to issue ids via the issue
+unit index. Emission paths: migration create, `planning_gap_capture`, `planning_hierarchy` sub-issue create,
+and edge reconciliation.
+
+`python3 scripts/planning_store.py probe-issues-token` includes `nativeLinksCapable: true|false`. When the
+provider lacks link scope or the API returns 403/404, adapters emit one per-run stderr notice
+`native-links-degraded` and deliver continues — body edges remain authoritative (R3).
+
+### Deliver hierarchy and progress sync (R5–R7, gap-033)
+
+| Hook | Module | Action |
+| --- | --- | --- |
+| Phase provision | `wave_deliver_loop.py` → `planning_progress.provision_deliver_hierarchy` | Apply `planning_hierarchy.project_task_list_hierarchy`; persist `hierarchyMap` on deliver state |
+| Phase `merge-ready-green` | `wave_merge.py` → `planning_progress.sync_phase_done` | Apply `sw:phase:<id>:done` label on phase sub-issue |
+| Checkbox toggle | `phase_acceptance_gate.py` / `execute_task_status.py` → `planning_progress.propagate_checkbox_to_issue_store` | Mirror phase task checkboxes onto sub-issue body when `hierarchyMap` present |
+
+Deliver state shape: `hierarchyMap: { epicIssueId, phases: { "<id>": { issueId, unitId, doneSynced? } } }`.
+Providers without hierarchy verbs degrade to checkbox/body-encoded phase lists with operator notice — deliver
+continues. Label/body sync failures emit `progress-label-degraded` or `progress-body-degraded` once per run.
+
+Run-entry materialize (`planning_materialize.py`) still verifies frozen task-list hash before `plan`/`preflight`
+when the logical `body-path` is issue-backed only (PRD 056 Phase 0).
+
+### Living-docs issue projection (R8)
+
+When `planning_cutover` marks the `derived` region `issue`, `wave_living_docs.py reconcile` calls
+`planning_index_issue.project_index_status` instead of file `set-index-status` — INDEX PRD status is written
+via `planning_store.put` on the derived artifact unit. File authority unchanged when `derived` ≠ `issue`.
+
+Terminal reconcile still runs `gap-resolve` for absorbing PRDs when INDEX status is `complete`; gap rows are
+edited on canonical gap **issues** — `docs/prds/GAP-BACKLOG.md` is a read-only projection refreshed by
+`planning_gap_capture.py refresh-projection`.
+
+Fixture suites: `planning-native-links-fixtures`, `planning-deliver-progress-fixtures`; extend
+`planning-cutover-fixtures` for issue-derived INDEX projection.
+
+
 ## Debug workstream
 
 Use when something is broken in production or you need RCA before fixing.
