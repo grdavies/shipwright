@@ -95,6 +95,13 @@ def invalidate_all(root: Path) -> None:
 
 
 def revalidate_live_metadata(root: Path, client: Any, entry: dict[str, Any]) -> bool:
+    """True iff the cached entry still matches the live view (PRD 057 R10).
+
+    Invalidates (returns False) on any symmetric-diff between the live and
+    cached unit-id sets — a unit created or removed remotely since the cache
+    was written is never masked by a same-membership state/label check — as
+    well as on any state/label drift for units present in both sets.
+    """
     metadata = entry.get("metadata")
     if not isinstance(metadata, dict):
         return False
@@ -104,12 +111,10 @@ def revalidate_live_metadata(root: Path, client: Any, entry: dict[str, Any]) -> 
     project_key = str(entry.get("projectKey", ""))
     live = client.issue_search(project_key=project_key)
     live_map = {str(r.unit_id or r.id): {"state": r.state, "labels": sorted(r.labels), "updated_at": r.updated_at} for r in live if str(r.unit_id or r.id)}
+    if set(cached_by_unit.keys()) ^ set(live_map.keys()):
+        return False
     for unit_id, snap in cached_by_unit.items():
-        live_row = live_map.get(unit_id)
-        if live_row is None:
-            if snap.get("state") == "open":
-                return False
-            continue
+        live_row = live_map[unit_id]
         if live_row["state"] != snap.get("state"):
             return False
         if live_row["labels"] != snap.get("labels"):

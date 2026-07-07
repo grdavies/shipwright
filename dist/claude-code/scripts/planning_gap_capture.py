@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -17,6 +18,10 @@ import planning_index_gen as pig
 import planning_paths as pp
 import planning_store as ps
 import sw_state_write_lib as writer
+from planning_query_cache import invalidate_all
+
+GAP_CLAIM_DIR_REL = ".cursor/hooks/state/planning-gap-claims"
+MAX_GAP_ALLOCATION_ATTEMPTS = 50
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
@@ -91,6 +96,57 @@ def next_gap_number(root: Path, units: list[pig.PlanningUnit]) -> int:
     return max_n + 1
 
 
+def _gap_claim_dir(root: Path) -> Path:
+    path = pp.git_root(root) / GAP_CLAIM_DIR_REL
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _claim_gap_number(root: Path, number: int) -> bool:
+    """Atomic claim-by-create for a candidate gap number (PRD 057 R25).
+
+    ``O_CREAT | O_EXCL`` serializes concurrent allocators against the same
+    worktree: the first caller to create the claim file wins the number, and
+    every other concurrent caller observes ``FileExistsError`` and retries
+    with the next candidate instead of racing the remote issue-store create.
+    """
+    claim_path = _gap_claim_dir(root) / f"{number:03d}.claim"
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+    try:
+        fd = os.open(claim_path, flags, 0o600)
+    except FileExistsError:
+        return False
+    os.write(fd, f"{os.getpid()}\n".encode("utf-8"))
+    os.close(fd)
+    return True
+
+
+def allocate_gap_unit_id(root: Path, title: str, body_path_for: Callable[[str], str]) -> tuple[str, str]:
+    """Atomic gap-number allocation (PRD 057 R25).
+
+    Invalidates the query cache before every allocation attempt so
+    ``next_gap_number`` is computed against the freshest live unit-id set
+    (R10), then claims the candidate number by create; a collision — either a
+    local claim already held by a concurrent allocator, or a monotonic
+    candidate below the last locally-attempted number — retries with the
+    next number so concurrent writers never persist duplicate gap ids or
+    split ``absorbs`` edges.
+    """
+    last_candidate = 0
+    for _attempt in range(MAX_GAP_ALLOCATION_ATTEMPTS):
+        invalidate_all(root)
+        units = pig.discover_units(root)
+        candidate = max(next_gap_number(root, units), last_candidate + 1)
+        if _claim_gap_number(root, candidate):
+            unit_id = f"gap-{candidate:03d}-{slugify(title)}"
+            return unit_id, body_path_for(unit_id)
+        last_candidate = candidate
+    fail(
+        "gap-number-allocation-exhausted-retries",
+        attempts=MAX_GAP_ALLOCATION_ATTEMPTS,
+    )
+
+
 def capture_gap(
     root: Path,
     *,
@@ -100,10 +156,7 @@ def capture_gap(
     dry_run: bool = False,
 ) -> dict[str, Any]:
     dirs = pp.load_planning_dirs(root)
-    units = pig.discover_units(root)
-    num = next_gap_number(root, units)
-    unit_id = f"gap-{num:03d}-{slugify(title)}"
-    body_path_rel = gap_body_rel(dirs, unit_id)
+    unit_id, body_path_rel = allocate_gap_unit_id(root, title, lambda uid: gap_body_rel(dirs, uid))
     fm = [
         "---",
         f"id: {unit_id}",
@@ -178,10 +231,9 @@ def materialize_meta_gap(
     if draft.get("status") != "confirmed":
         fail("materialize requires confirmed draft", signalId=signal_id, status=draft.get("status"))
     dirs = pp.load_planning_dirs(root)
-    units = pig.discover_units(root)
-    num = next_gap_number(root, units)
-    unit_id = f"gap-{num:03d}-{slugify(title)}"
-    body_path_rel = pp.join_rel(pp.plugin_self_gap_dir(dirs), unit_id, f"{unit_id}.md")
+    unit_id, body_path_rel = allocate_gap_unit_id(
+        root, title, lambda uid: pp.join_rel(pp.plugin_self_gap_dir(dirs), uid, f"{uid}.md")
+    )
     fm = [
         "---",
         f"id: {unit_id}",
