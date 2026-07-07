@@ -169,7 +169,13 @@ def record_ref_completion(
         except json.JSONDecodeError:
             detail = {"error": proc.stderr.strip() or proc.stdout.strip()}
         return {"verdict": "fail", "action": "ledger-record", **detail}
-    return {"verdict": "pass", "action": "record-ref-completion", "task": task_ref}
+    from planning_progress import propagate_checkbox_to_issue_store
+
+    issue_sync = propagate_checkbox_to_issue_store(root, task_ref, task_list, phase_slug)
+    out = {"verdict": "pass", "action": "record-ref-completion", "task": task_ref}
+    if issue_sync.get("synced") or issue_sync.get("degraded"):
+        out["issueSync"] = issue_sync
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -27,13 +27,37 @@ Full-tier requirements exploration. Produces a brainstorm doc for `/sw-prd`. Doe
 3. Explore alternatives; challenge assumptions; resolve product decisions here.
 4. Run synthesis checkpoint: restate scope, tier, key decisions; confirm with user before write.
 
+
+## Issue-store authoring (PRD 056 R11–R12)
+
+When `python3 scripts/planning_store.py resolve-backend` reports effective `issue-store`:
+
+1. **Never** write under `docs/brainstorms/` in the code repo — no local stub files.
+2. Persist via `planning_store.put` only:
+
+   ```bash
+   python3 scripts/planning_store.py put --unit-id <unit-id> --body-path docs/brainstorms/<filename>.md --content "$(cat <<'EOF'
+   ...
+   EOF
+   )"
+   ```
+
+3. Use a stable **unit id** (e.g. `brainstorm-2026-07-06-<topic>-requirements`) in handoffs — cite unit id + virtual `body-path`, not a git file path.
+4. Run spec-rigor against the handle (no on-disk file required):
+
+   ```bash
+   python3 scripts/spec-rigor-check.py --artifact brainstorm --path docs/brainstorms/<filename>.md --unit-id <unit-id>
+   ```
+
+File-store repos: unchanged — write to `docs/brainstorms/` as below.
+
 ### Phase 2: Write requirements doc
 
 1. Load `skills/brainstorm/references/requirements-sections.md`.
-2. Write to `docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md`.
+2. **File-store:** write to `docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md`. **Issue-store:** `planning_store.put` only (see above).
 3. Assign stable R-IDs; include all required sections.
 4. **Spec-rigor gate (hard-blocking):** run
-   `python3 scripts/spec-rigor-check.py --artifact brainstorm --path <requirements-doc>` after the write.
+   `python3 scripts/spec-rigor-check.py --artifact brainstorm --path <body-path> [--unit-id <unit-id>]` after the put/write.
    Exit `20` halts — fix findings before handoff. Advisory re-check remains available to `/sw-doc-review`.
 5. Report path and next step: `/sw-prd` (after `/sw-freeze` if freezing brainstorm first).
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -48,28 +49,62 @@ def planning_autonomy(root: Path) -> str:
 
 
 def unit_id_from_task_list(task_path: Path) -> str:
+    """Derive the PRD-level graph unit id that owns this task list directory (gap-051)."""
     parent = task_path.parent.name
     if parent.startswith("prd-"):
         return parent
+    match = re.match(r"^(\d+)-(.+)$", parent)
+    if match:
+        return f"{match.group(1)}-prd-{match.group(2)}"
     return f"prd-{parent}"
 
 
 def task_list_for_unit(root: Path, unit_id: str) -> str | None:
-    dirs = pp.load_planning_dirs(root)
     worktree = pp.git_root(root)
+    candidates = logical_task_list_candidates(root, unit_id)
+    for rel in candidates:
+        path = worktree / rel
+        if path.is_file():
+            return rel
+    from host_lib import load_workflow_config
+    from planning_store import get_backend, resolve_effective_backend
+
+    cfg = load_workflow_config(worktree)
+    if resolve_effective_backend(worktree, cfg).get("effective") != "issue-store":
+        return None
+    backend = get_backend(worktree, cfg)
+    for rel in candidates:
+        task_unit = Path(rel).stem
+        exists = backend.exists(task_unit, rel)
+        if exists.verdict == "ok":
+            return rel
+    return None
+
+
+def logical_task_list_candidates(root: Path, unit_id: str) -> list[str]:
+    dirs = pp.load_planning_dirs(root)
     slug = unit_id[4:] if unit_id.startswith("prd-") else unit_id
-    candidates = [
+    match = re.match(r"^(\d+)-prd-(.+)$", unit_id)
+    if match:
+        slug = f"{match.group(1)}-{match.group(2)}"
+    return [
         pp.join_rel(dirs.prds, unit_id, f"tasks-{unit_id}.md"),
         pp.join_rel(dirs.prds, slug, f"tasks-{slug}.md"),
         pp.join_rel(dirs.prds, slug, f"tasks-{unit_id}.md"),
         pp.join_rel(dirs.planning, "prd", unit_id, f"tasks-{slug}.md"),
         pp.join_rel(dirs.planning, "prd", unit_id, f"tasks-{unit_id}.md"),
     ]
-    for rel in candidates:
-        path = worktree / rel
-        if path.is_file():
-            return rel
-    return None
+
+
+def resolve_task_list_path(root: Path, task_rel: str) -> Path:
+    import planning_materialize as pm
+    import planning_path_redirect as ppr
+
+    pm.ensure_run_entry_materialized(root, task_rel)
+    _resolved_rel, path = ppr.resolve_readable_path(root, task_rel)
+    if path is None:
+        fail(f"task list not found: {task_rel}")
+    return path
 
 
 def units_with_derived_status(root: Path) -> tuple[list[pg.GraphUnit], dict[str, pg.GraphUnit]]:
@@ -214,7 +249,7 @@ def cmd_next(root: Path, args: list[str]) -> None:
     task_rel = task_list_for_unit(root, unit_id)
     if not task_rel:
         fail(f"no frozen task list for unit {unit_id}", unitId=unit_id)
-    task_path = pp.resolve_contained(root, task_rel)
+    task_path = resolve_task_list_path(root, task_rel)
     content = task_path.read_text(encoding="utf-8")
     if "frozen: true" not in content:
         fail(f"task list not frozen for {unit_id}", taskList=task_rel)
@@ -233,7 +268,7 @@ def cmd_dependency_gate(root: Path, args: list[str]) -> None:
         task_list = rest[i + 1] if i + 1 < len(rest) else None
     if not task_list:
         fail("--task-list required")
-    task_path = pp.resolve_contained(root, task_list)
+    task_path = resolve_task_list_path(root, task_list)
     flags = parse_gate_flags(rest)
     if sub == "preflight":
         gate_out = dependency_gate(

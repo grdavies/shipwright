@@ -57,3 +57,5 @@
 | 053 | sub-task-execute-orchestration | [053-prd-sub-task-execute-orchestration](issue-cache:053-prd-sub-task-execute-orchestration) | — | complete |
 | 054 | unit-testing-strategy | [054-prd-unit-testing-strategy](issue-cache:054-prd-unit-testing-strategy) | — | complete |
 | 055 | workflow-fidelity-gap-closure | [055-prd-workflow-fidelity-gap-closure](issue-cache:055-prd-workflow-fidelity-gap-closure) | — | complete |
+| 056 | issue-store-deliver-progress-native-links | [056-prd-issue-store-deliver-progress-native-links](issue-cache:056-prd-issue-store-deliver-progress-native-links) | — | proposed |
+| 057 | planning-store-hardening | [057-prd-planning-store-hardening](issue-cache:057-prd-planning-store-hardening) | — | proposed |

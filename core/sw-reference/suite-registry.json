@@ -1032,6 +1032,17 @@
       "ciShard": 3
     },
     {
+      "id": "planning-deliver-run-entry-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "pytestPath": "scripts/unit_tests/planning",
+      "ciShard": 4
+    },
+    {
       "id": "planning-store-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
@@ -1488,6 +1499,84 @@
       "verifyOrder": 57,
       "pytestPath": "scripts/unit_tests/planning/test_planning_047_conformance.py",
       "ciShard": 2
+    },
+    {
+      "id": "planning-native-links-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 58,
+      "pytestPath": "scripts/unit_tests/planning/test_planning_native_links.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_github_client.py",
+        "scripts/issues_lib.py",
+        "scripts/planning_store.py",
+        "scripts/planning_canonical.py",
+        "scripts/unit_tests/planning/harness_planning_native_links.py"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "native-links"
+      ]
+    },
+    {
+      "id": "planning-deliver-progress-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 59,
+      "pytestPath": "scripts/unit_tests/planning/test_planning_deliver_progress.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_progress.py",
+        "scripts/wave_state.py",
+        "scripts/wave_deliver_loop.py",
+        "scripts/planning_hierarchy.py",
+        "scripts/unit_tests/planning/harness_planning_deliver_progress.py"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "deliver-progress"
+      ]
+    },
+    {
+      "id": "planning-doc-issue-store-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 60,
+      "pytestPath": "scripts/unit_tests/planning/test_planning_doc_issue_store.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_artifact_handle.py",
+        "scripts/spec-rigor-check.py",
+        "scripts/doc_link.py",
+        "scripts/unit_tests/planning/harness_planning_doc_issue_store.py",
+        "core/skills/brainstorm/SKILL.md",
+        "core/skills/prd/SKILL.md",
+        "core/skills/tasks/SKILL.md",
+        "core/commands/sw-doc.md"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "doc-pipeline"
+      ]
     }
   ]
 }

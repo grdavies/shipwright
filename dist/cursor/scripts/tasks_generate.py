@@ -21,7 +21,9 @@ import wave_deliver as wd
 from execute_plan import load_execute_config
 
 GRANULARITY_HEADING = "## Execute-tier granularity"
-SUBTASK_CHECKBOX = re.compile(r"^-\s+\[([ xX])\]\s+(\d+(?:\.\d+)+)\s+(.+)$")
+SUBTASK_CHECKBOX = re.compile(
+    r"^-\s+\[([ xX])\]\s+(?:\*\*)?(\d+(?:\.\d+)+)(?:\*\*)?\s+(.+)$"
+)
 FILE_LINE = re.compile(r"^(\s*-?\s*\*\*File:\*\*\s*)(.+)$")
 REF_ID_PATTERN = re.compile(r"^\d+(?:\.\d+)+$")
 

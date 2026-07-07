@@ -141,9 +141,12 @@ def resolve_target_branch(root: Path, task_list_rel: str) -> tuple[str, str, Pat
     branch = (data.get("target") or {}).get("branch")
     if not branch:
         fail("preflight missing target.branch")
-    task_list_rel = planning_path_redirect.resolve_path(root, task_list_rel)
-    task_path = (root / task_list_rel).resolve()
-    if not task_path.is_file():
+    import planning_materialize as pm
+
+    pm.ensure_run_entry_materialized(root, task_list_rel)
+    _resolved_rel, task_path = planning_path_redirect.resolve_readable_path(root, task_list_rel)
+    if task_path is None:
+        task_list_rel = planning_path_redirect.resolve_path(root, task_list_rel)
         fail(f"task list not found: {task_list_rel}")
     docs_dir = task_path.parent
     slug = branch.split("/", 1)[1] if "/" in branch else branch
@@ -406,16 +409,40 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run")
     top = Path.cwd().resolve()
     default = load_trunk_base(top)
+    scope = "artifact" if artifact else "task-list"
+
+    # Separate-project issue-store: check *before* resolving the branch, since
+    # branch resolution reads the frozen task-list body via run-entry
+    # materialize, which is a deliberate no-op under CI/host (R19) — a fixture
+    # or CI-only frozen unit would otherwise never resolve and this skip would
+    # be unreachable (gap discovered post-Phase-9 CI run).
+    from planning_artifact_handle import issue_store_separate_project_effective
+
+    if issue_store_separate_project_effective(top):
+        current = git_run(["branch", "--show-current"], top, check=False).stdout.strip()
+        branch = current if current and current != default else f"{scope}-separate-project-skip"
+        emit(
+            {
+                "verdict": "pass",
+                "action": "spec-seed",
+                "skipped": True,
+                "reason": "separate-project-issue-store",
+                "branch": branch,
+                "scope": scope,
+                "note": (
+                    "code-repo doc copy skipped; deliver run-entry materialize supplies "
+                    "task content from issue store"
+                ),
+            }
+        )
 
     single: Path | None = None
     if artifact:
         branch, slug, docs_dir = resolve_target_from_artifact(top, artifact)
         single = (top / artifact).resolve()
-        scope = "artifact"
     else:
         assert task_list is not None
         branch, slug, docs_dir = resolve_target_branch(top, task_list)
-        scope = "task-list"
 
     if branch == default:
         fail(f"refused: spec-seed never targets default branch {default!r}")

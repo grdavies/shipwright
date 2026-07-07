@@ -466,6 +466,64 @@ else
   bad "SC38c:gap-shim-readonly"
 fi
 
+
+
+# --- SC56: migration create projects native depends links ---
+seed_repo "$REPO"
+rm -f "$REPO/docs/prds/099-fixture-migrate/099-prd-migrate-roundtrip.md"
+cat >"$REPO/docs/prds/099-fixture-migrate/099-prd-migrate-parent.md" <<'EOF'
+---
+id: migrate-parent
+visibility: public
+title: Parent for native links
+---
+# PARENT_NATIVE_BODY
+EOF
+cat >"$REPO/docs/prds/099-fixture-migrate/099-prd-migrate-child-native.md" <<'EOF'
+---
+id: migrate-child-native
+visibility: public
+title: Child with depends native projection
+---
+# CHILD_NATIVE_BODY
+
+```sw-edges
+{
+  "version": 1,
+  "edges": [{"rel": "depends", "target": "migrate-parent"}],
+  "native": []
+}
+```
+EOF
+commit_repo "$REPO" "sc56 seed"
+python3 "$PY_STORE" --root "$REPO" clear-issue-fixture >/dev/null
+rm -f "$JOURNAL"
+python3 "$PY_MIG" "$REPO" store-files-to-issues --apply >/dev/null
+if python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+from planning_store import issue_index_key
+
+data = json.loads(Path('$FIXTURE').read_text(encoding='utf-8'))
+parent_id = None
+child = None
+for rec in data.get('issues', {}).values():
+    if rec.get('unit_id') == 'migrate-parent':
+        parent_id = rec.get('id')
+    if rec.get('unit_id') == 'migrate-child-native':
+        child = rec
+if not parent_id or not child:
+    sys.exit(1)
+links = child.get('native_links') or []
+ok = links == [{'type': 'depends-on', 'target': parent_id}]
+sys.exit(0 if ok else 1)
+"; then
+  ok "SC56:migrate-native-link-parity"
+else
+  bad "SC56:migrate-native-link-parity"
+fi
+
 exit $FAIL
 """
 

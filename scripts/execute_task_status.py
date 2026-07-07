@@ -46,6 +46,11 @@ def main(argv: list[str] | None = None) -> int:
             if completion.get("verdict") != "pass":
                 print(json.dumps(completion))
                 return 1
+            status_out = {"verdict": "pass", "path": str(path)}
+            if completion.get("issueSync"):
+                status_out["issueSync"] = completion["issueSync"]
+            print(json.dumps(status_out))
+            return 0
     print(json.dumps({"verdict": "pass", "path": str(path)}))
     return 0
 

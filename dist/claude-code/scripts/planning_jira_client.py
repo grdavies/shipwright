@@ -6,6 +6,7 @@ import base64
 import json
 import os
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -34,11 +35,55 @@ from planning_jira_probe import (
     resolve_jira_api_project_key,
     resolve_jira_issue_type,
     resolve_jira_project_key,
+    resolve_link_defaults,
+    resolve_jira_link_type_name,
 )
 
 JIRA_CLOUD_API = "/rest/api/3"
 JIRA_DC_API = "/rest/api/2"
 ISSUE_KEY_NUM = re.compile(r"-(\d+)$")
+
+NATIVE_LINK_MARKER = re.compile(r"<!--\s*sw-native-link:([^:\s]+):([^\s]+)\s*-->")
+_NATIVE_LINKS_DEGRADED_EMITTED = False
+
+
+def _emit_native_links_degraded(message: str = "native-links-degraded") -> None:
+    global _NATIVE_LINKS_DEGRADED_EMITTED
+    if _NATIVE_LINKS_DEGRADED_EMITTED:
+        return
+    _NATIVE_LINKS_DEGRADED_EMITTED = True
+    payload = {"verdict": "notice", "notice": "native-links-degraded", "message": message}
+    print(json.dumps(payload, ensure_ascii=False), file=sys.stderr)
+
+
+def _norm_native_links(links: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for link in links or []:
+        if not isinstance(link, dict):
+            continue
+        link_type = str(link.get("type") or "").strip()
+        target = str(link.get("target") or "").strip()
+        if not link_type or not target:
+            continue
+        entry = {"type": link_type, "target": target}
+        if entry not in out:
+            out.append(entry)
+    return out
+
+
+def _cross_reference_body(link_type: str, target: str) -> str:
+    return f"<!-- sw-native-link:{link_type}:{target} -->\nCross-reference: {target} ({link_type})"
+
+
+def _native_links_from_comments(comments: list[Any]) -> list[dict[str, Any]]:
+    links: list[dict[str, Any]] = []
+    for comment in comments:
+        for match in NATIVE_LINK_MARKER.finditer(comment.body):
+            entry = {"type": match.group(1), "target": match.group(2)}
+            if entry not in links:
+                links.append(entry)
+    return links
+
 SEARCH_PAGE_SIZE = 50
 
 
@@ -102,7 +147,12 @@ def _issue_state(fields: dict[str, Any]) -> str:
     return "closed" if key == "done" else "open"
 
 
-def _record_from_issue(payload: dict[str, Any], *, flavor: str) -> Any:
+def _record_from_issue(
+    payload: dict[str, Any],
+    *,
+    flavor: str,
+    native_links: list[dict[str, Any]] | None = None,
+) -> Any:
     from issues_lib import IssueRecord
 
     fields = payload.get("fields") if isinstance(payload.get("fields"), dict) else {}
@@ -128,7 +178,7 @@ def _record_from_issue(payload: dict[str, Any], *, flavor: str) -> Any:
         state=_issue_state(fields),
         labels=labels,
         comments=comments,
-        native_links=[],
+        native_links=list(native_links if native_links is not None else []),
         locked=locked,
         updated_at=updated,
         project_key="",
@@ -161,6 +211,8 @@ class JiraIssuesClient:
         self.api_project_key = resolve_jira_api_project_key(self.cfg, token, root)
         self.issue_type = resolve_jira_issue_type(self.cfg)
         self.field_defaults = resolve_field_defaults(self.cfg)
+        self.link_defaults = resolve_link_defaults(self.cfg)
+        self._native_links_capable_cache: bool | None = None
 
     def _http_json(
         self,
@@ -186,13 +238,119 @@ class JiraIssuesClient:
             raise RuntimeError(f"Jira HTTP {status}: {body[:300]}")
         return json.loads(body) if body.strip() else {}
 
+
+    def _native_links_capable(self) -> bool:
+        if self._native_links_capable_cache is not None:
+            return self._native_links_capable_cache
+        raw = os.environ.get("SW_NATIVE_LINKS_CAPABLE", "").strip().lower()
+        if raw in {"1", "true", "yes"}:
+            self._native_links_capable_cache = True
+            return True
+        if raw in {"0", "false", "no"}:
+            self._native_links_capable_cache = False
+            return False
+        self._native_links_capable_cache = True
+        return True
+
+    def _read_native_links(self, issue_id: str, fields: dict[str, Any], comments: list[Any]) -> list[dict[str, Any]]:
+        links = _native_links_from_comments(comments)
+        if not self._native_links_capable():
+            return links
+        issue_links = fields.get("issuelinks")
+        if not isinstance(issue_links, list):
+            return links
+        for item in issue_links:
+            if not isinstance(item, dict):
+                continue
+            link_type = item.get("type") if isinstance(item.get("type"), dict) else {}
+            type_name = str(link_type.get("name") or "").strip()
+            inward = item.get("inwardIssue") if isinstance(item.get("inwardIssue"), dict) else {}
+            outward = item.get("outwardIssue") if isinstance(item.get("outwardIssue"), dict) else {}
+            inward_key = str(inward.get("key") or "")
+            outward_key = str(outward.get("key") or "")
+            target_key = ""
+            native_type = type_name or "relates-to"
+            if inward_key == issue_id and outward_key:
+                target_key = outward_key
+                if type_name.lower() == "blocks":
+                    native_type = "depends-on"
+            elif outward_key == issue_id and inward_key:
+                target_key = inward_key
+                if type_name.lower() == "blocks":
+                    native_type = "blocks"
+            elif outward_key:
+                target_key = outward_key
+            if not target_key:
+                continue
+            entry = {"type": native_type, "target": target_key}
+            if entry not in links:
+                links.append(entry)
+        return links
+
+    def _create_issue_link(self, issue_id: str, link_type: str, target: str) -> bool:
+        jira_type = resolve_jira_link_type_name(self.cfg, link_type, token=os.environ.get(_token_env(self.cfg), ""), root=self.root)
+        body = {
+            "type": {"name": jira_type},
+            "inwardIssue": {"key": issue_id},
+            "outwardIssue": {"key": target},
+        }
+        try:
+            self._http_json("POST", f"{self.base}/issueLink", self.headers, body)
+            return True
+        except RuntimeError as exc:
+            message = str(exc)
+            if "HTTP 403" in message or "HTTP 404" in message or "HTTP 405" in message:
+                self._native_links_capable_cache = False
+                _emit_native_links_degraded()
+                return False
+            raise
+
+    def _add_cross_reference_link(self, issue_id: str, link_type: str, target: str) -> None:
+        body = _cross_reference_body(link_type, target)
+        record = self._get_issue(issue_id)
+        marker = f"<!-- sw-native-link:{link_type}:{target} -->"
+        if any(marker in comment.body for comment in record.comments):
+            return
+        self.add_comment(issue_id, body, markers=[])
+
+    def _sync_native_links(
+        self,
+        issue_id: str,
+        want: list[dict[str, Any]],
+        *,
+        current: list[dict[str, Any]] | None = None,
+    ) -> None:
+        want_norm = _norm_native_links(want)
+        if not want_norm:
+            return
+        current_norm = _norm_native_links(current)
+        for link in want_norm:
+            if link in current_norm:
+                continue
+            link_type = str(link.get("type") or "")
+            target = str(link.get("target") or "")
+            if self._native_links_capable() and self._create_issue_link(issue_id, link_type, target):
+                continue
+            self._add_cross_reference_link(issue_id, link_type, target)
+
     def _get_issue(self, issue_id: str) -> Any:
-        payload = self._http_json("GET", f"{self.base}/issue/{issue_id}?expand=comments", self.headers)
+        payload = self._http_json(
+            "GET",
+            f"{self.base}/issue/{issue_id}?expand=comments&fields=summary,description,labels,status,comment,updated,issuelinks",
+            self.headers,
+        )
         if not isinstance(payload, dict):
             from issues_lib import IssueNotFound
 
             raise IssueNotFound(f"issue not found: {issue_id}")
-        return _record_from_issue(payload, flavor=self.flavor)
+        fields = payload.get("fields") if isinstance(payload.get("fields"), dict) else {}
+        comments_raw = []
+        comment_block = fields.get("comment")
+        if isinstance(comment_block, dict):
+            comments_raw = comment_block.get("comments") or []
+        comments = [_parse_comment(c, flavor=self.flavor) for c in comments_raw if isinstance(c, dict)]
+        native_links = self._read_native_links(issue_id, fields, comments)
+        return _record_from_issue(payload, flavor=self.flavor, native_links=native_links)
 
     def create(
         self,
@@ -205,7 +363,7 @@ class JiraIssuesClient:
         unit_id: str,
         native_links: list[dict[str, Any]] | None = None,
     ) -> Any:
-        del native_links, artifact_type, unit_id
+        del artifact_type, unit_id
         api_key = self.api_project_key if project_key == self.project_key else project_key
         fields: dict[str, Any] = {
             "project": {"key": api_key},
@@ -224,6 +382,8 @@ class JiraIssuesClient:
         key = str((created or {}).get("key", ""))
         if not key:
             raise RuntimeError("Jira issue-create returned no key")
+        if native_links:
+            self._sync_native_links(key, native_links)
         return self._get_issue(key)
 
     def get(self, issue_id: str) -> Any:
@@ -233,6 +393,26 @@ class JiraIssuesClient:
             return self._get_issue(issue_id)
         except IssueArchivedProject as exc:
             raise IssueNotFound(str(exc)) from exc
+
+
+    def sync_native_links(
+        self,
+        issue_id: str,
+        native_links: list[dict[str, Any]],
+        *,
+        if_match: str | None = None,
+    ) -> Any:
+        from issues_lib import IssueRevisionConflict
+
+        current = self._get_issue(issue_id)
+        if if_match and current.etag != if_match:
+            raise IssueRevisionConflict(
+                "revision-conflict",
+                expected=if_match,
+                actual=current.etag,
+            )
+        self._sync_native_links(issue_id, native_links, current=current.native_links)
+        return self._get_issue(issue_id)
 
     def update(
         self,
@@ -248,7 +428,6 @@ class JiraIssuesClient:
     ) -> Any:
         from issues_lib import IssueRevisionConflict
 
-        del native_links
         current = self._get_issue(issue_id)
         if if_match and current.etag != if_match:
             raise IssueRevisionConflict(
@@ -275,6 +454,8 @@ class JiraIssuesClient:
             self._transition_close(issue_id)
         elif state == "open" and current.state == "closed":
             self._transition_open(issue_id)
+        if native_links is not None:
+            self._sync_native_links(issue_id, native_links, current=current.native_links)
         return self._get_issue(issue_id)
 
     def add_comment(self, issue_id: str, body: str, *, markers: list[str] | None = None) -> Any:

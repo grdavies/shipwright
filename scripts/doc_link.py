@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
-import re
 import sys
 from pathlib import Path
 from typing import Any
+
+import planning_artifact_handle as pah
 
 EXIT_PASS = 0
 EXIT_FAIL = 20
@@ -61,16 +62,13 @@ def is_truthy_frozen(fm: dict[str, str]) -> bool:
     return str(fm.get("frozen", "")).lower() in ("true", "yes", "1")
 
 
-def resolve_repo_path(root: Path, rel: str) -> Path | None:
+def link_target_resolves(root: Path, rel: str) -> bool:
     rel = rel.strip().strip("'\"")
     if not rel or rel.startswith("http"):
-        return None
-    candidate = (root / rel).resolve()
-    try:
-        candidate.relative_to(root.resolve())
-    except ValueError:
-        return None
-    return candidate if candidate.is_file() else None
+        return False
+    if pah.resolve_repo_file(root, rel) is not None:
+        return True
+    return pah.artifact_handle_resolves(root, rel)
 
 
 def brainstorm_backref(fm: dict[str, str]) -> str | None:
@@ -87,14 +85,13 @@ def prd_forward_refs(fm: dict[str, str]) -> list[str]:
     return out
 
 
-def infer_tier(path: Path, tier: str | None) -> str:
+def infer_tier_from_rel(rel: str, tier: str | None) -> str:
     if tier in ("full", "standard"):
         return tier
     return "full"
 
 
-def check_prd(root: Path, path: Path, tier: str) -> dict[str, Any]:
-    text = path.read_text(encoding="utf-8")
+def check_prd_content(root: Path, rel: str, text: str, tier: str) -> dict[str, Any]:
     fm, _ = split_frontmatter(text)
     findings: list[dict[str, str]] = []
 
@@ -108,44 +105,43 @@ def check_prd(root: Path, path: Path, tier: str) -> dict[str, Any]:
                 }
             )
         else:
-            for rel in parse_link_paths(back):
-                if resolve_repo_path(root, rel) is None:
+            for target in parse_link_paths(back):
+                if not link_target_resolves(root, target):
                     findings.append(
                         {
                             "code": "dangling-brainstorm-backref",
-                            "message": f"brainstorm back-reference does not resolve: {rel}",
+                            "message": f"brainstorm back-reference does not resolve: {target}",
                         }
                     )
 
-    for rel in prd_forward_refs(fm):
-        if resolve_repo_path(root, rel) is None:
+    for target in prd_forward_refs(fm):
+        if not link_target_resolves(root, target):
             findings.append(
                 {
                     "code": "dangling-prd-forwardref",
-                    "message": f"prd forward reference does not resolve: {rel}",
+                    "message": f"prd forward reference does not resolve: {target}",
                 }
             )
 
     verdict = "pass" if not findings else "fail"
-    return {"verdict": verdict, "artifact": "prd", "path": str(path), "tier": tier, "findings": findings}
+    return {"verdict": verdict, "artifact": "prd", "path": rel, "tier": tier, "findings": findings}
 
 
-def check_brainstorm(root: Path, path: Path) -> dict[str, Any]:
-    text = path.read_text(encoding="utf-8")
+def check_brainstorm_content(root: Path, rel: str, text: str) -> dict[str, Any]:
     fm, _ = split_frontmatter(text)
     findings: list[dict[str, str]] = []
 
-    for rel in prd_forward_refs(fm):
-        if resolve_repo_path(root, rel) is None:
+    for target in prd_forward_refs(fm):
+        if not link_target_resolves(root, target):
             findings.append(
                 {
                     "code": "dangling-prd-forwardref",
-                    "message": f"prd forward reference does not resolve: {rel}",
+                    "message": f"prd forward reference does not resolve: {target}",
                 }
             )
 
     back = brainstorm_backref(fm)
-    if back and resolve_repo_path(root, back) is None:
+    if back and not link_target_resolves(root, back):
         findings.append(
             {
                 "code": "dangling-brainstorm-selfref",
@@ -154,47 +150,84 @@ def check_brainstorm(root: Path, path: Path) -> dict[str, Any]:
         )
 
     verdict = "pass" if not findings else "fail"
-    return {"verdict": verdict, "artifact": "brainstorm", "path": str(path), "findings": findings}
+    return {"verdict": verdict, "artifact": "brainstorm", "path": rel, "findings": findings}
 
 
-def check_artifact(root: Path, path: Path, tier: str | None = None) -> dict[str, Any]:
-    rel = str(path)
-    if "docs/brainstorms/" in rel.replace("\\", "/"):
-        return check_brainstorm(root, path)
-    if "/prd-" in path.name or rel.endswith("-prd.md"):
-        return check_prd(root, path, infer_tier(path, tier))
-    if "docs/prds/" in rel.replace("\\", "/") and "prd" in path.name:
-        return check_prd(root, path, infer_tier(path, tier))
+def check_artifact(
+    root: Path,
+    body_path: str,
+    tier: str | None = None,
+    *,
+    unit_id: str | None = None,
+) -> dict[str, Any]:
+    rel = pah.normalize_body_path(body_path)
+    text, _ = pah.resolve_artifact_text(root, rel, unit_id=unit_id)
+    if text is None:
+        return {"verdict": "fail", "path": rel, "error": f"artifact not found: {rel}"}
+    norm = rel.replace("\\", "/")
+    if "docs/brainstorms/" in norm:
+        return check_brainstorm_content(root, rel, text)
+    name = Path(norm).name
+    if "/prd-" in name or norm.endswith("-prd.md"):
+        return check_prd_content(root, rel, text, infer_tier_from_rel(rel, tier))
+    if "docs/prds/" in norm and "prd" in name:
+        return check_prd_content(root, rel, text, infer_tier_from_rel(rel, tier))
     return {"verdict": "pass", "path": rel, "note": "not a PRD/brainstorm — skipped"}
 
 
-def rel_from_root(root: Path, path: Path) -> str:
-    path = path.resolve()
-    root = root.resolve()
-    try:
-        return str(path.relative_to(root))
-    except ValueError:
-        return str(path)
+def normalize_body_ref(root: Path, ref: str) -> tuple[str, str | None]:
+    ref = ref.strip()
+    path = Path(ref)
+    if path.is_absolute() and path.is_file():
+        try:
+            return str(path.resolve().relative_to(root.resolve())), None
+        except ValueError:
+            pass
+    rel = pah.normalize_body_path(ref)
+    return rel, pah.default_unit_id_from_body_path(rel)
 
 
-def write_backref(root: Path, brainstorm: Path, prd: Path) -> dict[str, Any]:
-    prd = prd.resolve()
-    brainstorm = brainstorm.resolve()
-    bs_rel = rel_from_root(root, brainstorm)
-    text = prd.read_text(encoding="utf-8")
-    fm, body = split_frontmatter(text)
+def write_backref(
+    root: Path,
+    brainstorm: str,
+    prd: str,
+    *,
+    brainstorm_unit_id: str | None = None,
+    prd_unit_id: str | None = None,
+) -> dict[str, Any]:
+    bs_rel, bs_uid = normalize_body_ref(root, brainstorm)
+    prd_rel, prd_uid = normalize_body_ref(root, prd)
+    bs_uid = brainstorm_unit_id or bs_uid
+    prd_uid = prd_unit_id or prd_uid
+    prd_text, _ = pah.resolve_artifact_text(root, prd_rel, unit_id=prd_uid)
+    if prd_text is None:
+        return {"verdict": "fail", "error": f"PRD not found: {prd_rel}"}
+    fm, body = split_frontmatter(prd_text)
     fm["brainstorm"] = bs_rel
     fm.pop("source_brainstorm", None)
-    prd.write_text(join_frontmatter(fm, body), encoding="utf-8")
-    return {"verdict": "pass", "action": "write-backref", "prd": rel_from_root(root, prd), "brainstorm": bs_rel}
+    updated = join_frontmatter(fm, body)
+    put = pah.put_artifact_text(root, prd_uid or pah.default_unit_id_from_body_path(prd_rel), prd_rel, updated)
+    if put.get("verdict") != "ok":
+        return {"verdict": "fail", "error": "failed to persist PRD back-reference", **put}
+    return {"verdict": "pass", "action": "write-backref", "prd": prd_rel, "brainstorm": bs_rel, "backend": put.get("backend")}
 
 
-def write_forwardref(root: Path, brainstorm: Path, prd: Path) -> dict[str, Any]:
-    prd = prd.resolve()
-    brainstorm = brainstorm.resolve()
-    prd_rel = rel_from_root(root, prd)
-    text = brainstorm.read_text(encoding="utf-8")
-    fm, body = split_frontmatter(text)
+def write_forwardref(
+    root: Path,
+    brainstorm: str,
+    prd: str,
+    *,
+    brainstorm_unit_id: str | None = None,
+    prd_unit_id: str | None = None,
+) -> dict[str, Any]:
+    bs_rel, bs_uid = normalize_body_ref(root, brainstorm)
+    prd_rel, prd_uid = normalize_body_ref(root, prd)
+    bs_uid = brainstorm_unit_id or bs_uid
+    prd_uid = prd_unit_id or prd_uid
+    bs_text, _ = pah.resolve_artifact_text(root, bs_rel, unit_id=bs_uid)
+    if bs_text is None:
+        return {"verdict": "fail", "error": f"brainstorm not found: {bs_rel}"}
+    fm, body = split_frontmatter(bs_text)
     if is_truthy_frozen(fm):
         return {
             "verdict": "pass",
@@ -209,12 +242,16 @@ def write_forwardref(root: Path, brainstorm: Path, prd: Path) -> dict[str, Any]:
         fm["prd"] = existing[0]
     else:
         fm["prd"] = "[" + ", ".join(existing) + "]"
-    brainstorm.write_text(join_frontmatter(fm, body), encoding="utf-8")
+    updated = join_frontmatter(fm, body)
+    put = pah.put_artifact_text(root, bs_uid or pah.default_unit_id_from_body_path(bs_rel), bs_rel, updated)
+    if put.get("verdict") != "ok":
+        return {"verdict": "fail", "error": "failed to persist brainstorm forward-reference", **put}
     return {
         "verdict": "pass",
         "action": "write-forwardref",
-        "brainstorm": rel_from_root(root, brainstorm),
+        "brainstorm": bs_rel,
         "prd": prd_rel,
+        "backend": put.get("backend"),
     }
 
 
@@ -244,11 +281,9 @@ def main() -> None:
         root_override = kv("--root")
         if root_override:
             root = Path(root_override).resolve()
-        path = (root / path_s).resolve() if not Path(path_s).is_absolute() else Path(path_s)
-        if not path.is_file():
-            emit({"verdict": "fail", "error": f"not found: {path}"}, EXIT_ERROR)
+        unit_id = kv("--unit-id")
         tier = kv("--tier")
-        result = check_artifact(root, path, tier)
+        result = check_artifact(root, path_s, tier, unit_id=unit_id)
         code = EXIT_PASS if result.get("verdict") == "pass" else EXIT_FAIL
         emit(result, code)
 
@@ -260,7 +295,15 @@ def main() -> None:
         root_override = kv("--root")
         if root_override:
             root = Path(root_override).resolve()
-        emit(write_backref(root, Path(bs), Path(prd)))
+        emit(
+            write_backref(
+                root,
+                bs,
+                prd,
+                brainstorm_unit_id=kv("--brainstorm-unit-id"),
+                prd_unit_id=kv("--prd-unit-id"),
+            )
+        )
 
     if cmd == "write-forwardref":
         bs = kv("--brainstorm")
@@ -270,7 +313,15 @@ def main() -> None:
         root_override = kv("--root")
         if root_override:
             root = Path(root_override).resolve()
-        emit(write_forwardref(root, Path(bs), Path(prd)))
+        emit(
+            write_forwardref(
+                root,
+                bs,
+                prd,
+                brainstorm_unit_id=kv("--brainstorm-unit-id"),
+                prd_unit_id=kv("--prd-unit-id"),
+            )
+        )
 
     emit({"verdict": "fail", "error": f"unknown command: {cmd}"}, EXIT_ERROR)
 
