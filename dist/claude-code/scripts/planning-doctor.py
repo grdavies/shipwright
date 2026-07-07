@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from _sw.cli import run_module_main
+import planning_visibility
 
 TOKEN_PATTERNS = (
     re.compile(r"ghp_[A-Za-z0-9_]{20,}"),
@@ -178,6 +179,63 @@ def parked_frontier_finding(root: Path) -> dict | None:
     }
 
 
+PRIVACY_NOTICE_REL = Path("core/sw-reference/planning-privacy-notice.md")
+PRIVACY_ACK_REMEDIATION = "python3 scripts/planning_visibility.py --root . record-privacy-ack"
+
+
+def planning_visibility_deprecation_finding(cfg: dict) -> dict | None:
+    """R29 (gap-028) — surfaces `planning_visibility.deprecated_visibility_key_warning`
+    as a doctor finding when the live config still sets the deprecated
+    `visibilityProfile` key directly."""
+    return planning_visibility.deprecated_visibility_key_warning(cfg)
+
+
+def privacy_ack_required_finding(cfg: dict) -> dict | None:
+    """R15 (gap-046) — flags a live config with `privacyAck.required: true` and
+    `recordedAt: null`: the operator has not yet acknowledged the privacy notice for
+    a public-origin remote (or public store host), so private-tier planning bodies
+    should not be assumed safe. Names the exact remediation command. Pure function
+    over the loaded config; no I/O beyond what the caller already did."""
+    planning = cfg.get("planning") if isinstance(cfg.get("planning"), dict) else {}
+    ack = planning.get("privacyAck") if isinstance(planning.get("privacyAck"), dict) else {}
+    if not ack.get("required"):
+        return None
+    if ack.get("recordedAt"):
+        return None
+    return {
+        "check": "privacy-ack-required",
+        "status": "action-required",
+        "reason": ack.get("reason"),
+        "remediation": PRIVACY_ACK_REMEDIATION,
+    }
+
+
+def privacy_notice_key_reconciliation_finding(root: Path) -> dict | None:
+    """R15 (gap-046) — reconciles the notice-doc's acknowledgement wording against
+    the `recordedAt` key that `planning_visibility.py` actually writes (the doc
+    historically described a since-renamed `ackedAt` key). Fail-open (returns
+    ``None``) when the doc is missing or already reconciled."""
+    path = root / PRIVACY_NOTICE_REL
+    if not path.is_file():
+        return None
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    if "recordedAt" in text:
+        return None
+    if "ackedAt" not in text:
+        return None
+    return {
+        "check": "privacy-notice-key-stale",
+        "status": "drift",
+        "path": str(PRIVACY_NOTICE_REL),
+        "staleKey": "ackedAt",
+        "expectedKey": "recordedAt",
+        "remediation": f"update {PRIVACY_NOTICE_REL} to reference planning.privacyAck.recordedAt (the key planning_visibility.py writes), not ackedAt",
+    }
+
+
 def doctor(root: Path, *, sweep: bool) -> dict:
     checks: list[dict] = []
     warnings: list[str] = []
@@ -283,6 +341,27 @@ def doctor(root: Path, *, sweep: bool) -> dict:
             "hostTokenEnv": host.get("tokenEnv"),
             "note": "env-var names only; no secrets in config",
         })
+
+        deprecated_visibility_finding = planning_visibility_deprecation_finding(cfg)
+        if deprecated_visibility_finding is not None:
+            checks.append(deprecated_visibility_finding)
+            warnings.append("visibility-tier-key-deprecated")
+            if verdict == "ok":
+                verdict = "degraded"
+
+        ack_finding = privacy_ack_required_finding(cfg)
+        if ack_finding is not None:
+            checks.append(ack_finding)
+            warnings.append("privacy-ack-required")
+            if verdict == "ok":
+                verdict = "degraded"
+
+    notice_finding = privacy_notice_key_reconciliation_finding(root)
+    if notice_finding is not None:
+        checks.append(notice_finding)
+        warnings.append("privacy-notice-key-stale")
+        if verdict == "ok":
+            verdict = "degraded"
 
     parked_finding = parked_frontier_finding(root)
     if parked_finding is not None:

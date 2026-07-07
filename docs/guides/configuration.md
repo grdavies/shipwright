@@ -120,24 +120,50 @@ plus legacy projections `docs/prds/INDEX.md`, `COMPLETION-LOG.md`, and `GAP-BACK
 branch; `docs-currency` gate hard-blocks terminal merge on drift. Resolve paths via `planningDir` with
 legacy `prdsDir`/`tasksDir` aliases until migration cutover.
 
-### Planning visibility (PRD 034)
+### Planning visibility (PRD 034, three orthogonal axes per PRD 057 R13)
 
-Per-unit bodies carry `visibility: public|private|memory`. When a unit omits `visibility`, the repo-level
-**profile** supplies the default via `scripts/planning_visibility.py` (wrapped by `scripts/visibility-resolve.py`).
+Per-unit bodies carry `visibility: public|private|memory`. When a unit omits `visibility`, a repo-level
+**tier** supplies the default via `scripts/planning_visibility.py` (wrapped by `scripts/visibility-resolve.py`).
 
-| Key | Values | Meaning |
-|-----|--------|---------|
-| `planning.visibilityProfile` | `all-private` \| `specs-public` (default) \| `all-public` | Closed-world default profile (schema-validated). |
-| `planning.privacyAck` | object | Durable acknowledgement gate when the origin remote is **public** (see below). |
-| `planning.store.backend` | `in-repo-public` (default) \| `local-synced` \| `memory` \| `issue-store` | Pluggable planning-unit body backend (PRD 034 R5/R18; `issue-store` opt-in per PRD 043). Pinned per deliver run at provision. |
+Visibility configuration is modeled as **three orthogonal axes** (PRD 057 R13) rather than one flat
+profile — each is resolved and can be reasoned about independently:
 
-**Public-repo-aware default (R3):** `/sw-init` probes `origin`. A **public** remote selects `all-private` and
-sets `planning.privacyAck.required: true` until the operator acknowledges before the first tracked spec commit.
-A private, absent, or inconclusive remote selects `specs-public`. Resolved profile + ack are written to
-`.cursor/workflow.config.json` and `.cursor/hooks/state/planning-visibility.json` when seeding with `--write`.
+| Axis | Key | Values | Meaning |
+|------|-----|--------|---------|
+| Visibility (redaction) tier | `planning.visibilityTier` | `all-private` \| `specs-public` (default) \| `all-public` | Closed-world default redaction tier (schema-validated). |
+| Store location | `planning.store.storeLocation.mode` | `same-repo` \| `separate-project` | Whether the planning store lives in the code repo or a separate project (see Issue-store section below). |
+| Store-host privacy | `planning.store.storeHostPrivacy` (or provider-probed) | `private` \| `public` \| `unknown` | Whether the configured issue-store host itself is private, evaluated per shipped provider via `probe_store_host_privacy` (PRD 057 R14). `not-applicable` for non-issue-store backends (file-store parity, R23). |
+| — | `planning.privacyAck` | object | Durable acknowledgement gate — see below. |
+| — | `planning.store.backend` | `in-repo-public` (default) \| `local-synced` \| `memory` \| `issue-store` | Pluggable planning-unit body backend (PRD 034 R5/R18; `issue-store` opt-in per PRD 043). Pinned per deliver run at provision. |
+
+**Tier-first rename + one-release alias map (R13/R29):** `planning.visibilityTier` is the current key.
+`planning.visibilityProfile` is a **deprecated, one-release back-compat alias** — both are accepted, but
+resolution is deterministic: the new key wins when both are set, *except* a mixed old/new config never
+resolves to a **less private** tier than the deprecated value (the redaction default is never weakened). A
+live config that still sets only the deprecated key resolves identically to pre-rename behavior and emits a
+`planning-doctor.py` deprecation finding (`visibility-tier-key-deprecated`) naming the exact rename remediation.
+
+**Public-repo-aware default (R3, extended by R13/R14):** `/sw-init` (and `planning_visibility.py
+resolve-default-profile`) probes `origin` **and**, when the effective backend is an issue-store, the
+configured store host's privacy — `probe_remote_visibility` is one input, not the sole migration gate. A
+**public** origin remote *or* a **public** store host selects `all-private` and sets
+`planning.privacyAck.required: true` until the operator acknowledges before the first tracked spec commit (or
+first store write). A private/absent/inconclusive remote with a private-or-not-applicable store host selects
+`specs-public`. Resolved axes + ack are written to `.cursor/workflow.config.json` and
+`.cursor/hooks/state/planning-visibility.json` when seeding with `--write`.
 
 Under `specs-public`, advisory classes (`brainstorm`, `decision`, `learnings`, `gap`) default to `private`;
 spec classes (`prd`, `tasks`, `amendment`) default to `public`. Per-unit `visibility` always wins.
+
+**Store-host privacy override is CI-only (R14):** `SW_STORE_HOST_PRIVACY` (`private`\|`public`) is honored only
+when an explicit CI-context probe passes (`CI` or `GITHUB_ACTIONS` env set) — never in an operator's
+local/interactive run, so a stale override can never silently misclassify a shared/public store host as
+private.
+
+**Privacy acknowledgement (`privacyAck`, R15):** `planning.privacyAck.recordedAt` — not `ackedAt` — is the key
+`planning_visibility.py` actually writes; run `python3 scripts/planning_visibility.py --root . record-privacy-ack`
+to set it. `planning-doctor.py` flags a live config with `privacyAck.required: true` and `recordedAt: null` as
+an `action-required` finding naming that exact remediation command. See `core/sw-reference/planning-privacy-notice.md`.
 
 **Fail-closed limits (R24):** unknown or unresolved visibility tokens normalize to `private`. Regex/body
 redaction at emission points is **not** semantic anonymization — use `all-private` plus `local/synced` store
