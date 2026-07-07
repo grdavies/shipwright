@@ -38,24 +38,11 @@ def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | No
 
 
 def git_toplevel(start: Path) -> Path:
-    """Canonical shared repo root, not the calling worktree's own toplevel.
-
-    Worktree creation and deliver-state resolution must anchor to the primary
-    checkout shared by all worktrees (PRD 049 R4/R28, `.sw/layout.md` "Deliver
-    state canonicalization"). `git rev-parse --show-toplevel` returns the
-    *calling* worktree's private root when invoked from a linked worktree,
-    which would nest orchestrator/phase worktrees under themselves instead of
-    the shared `.sw-worktrees/` directory. `--git-common-dir` always resolves
-    to the shared `.git` regardless of which worktree is calling.
-    """
     out = subprocess.check_output(
-        ["git", "-C", str(start), "rev-parse", "--git-common-dir"],
+        ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
         text=True,
     ).strip()
-    common = Path(out)
-    if not common.is_absolute():
-        common = (Path(start) / common).resolve()
-    return common.parent.resolve()
+    return Path(out)
 
 
 def git_run(
