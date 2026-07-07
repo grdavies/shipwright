@@ -171,6 +171,25 @@ provider issues under **issue-store** (PRD 045 R21). They render as rows in the 
 `docs/prds/GAP-BACKLOG.md` is a **write-through projection** from gap issues when issue-store is active (PRD
 045 R72) or a compatibility projection until consumers migrate (R27).
 
+### Issue-store separate-project write guards (PRD 057 R1–R3)
+
+Under issue-store `separate-project` (`planning.store.storeLocation.mode`), the code repo is no longer the
+authoritative surface for derived/generated planning artifacts — the shared predicate
+`issue_store_separate_project(root)` (`scripts/planning_migrate_issue_store.py`, delegating to
+`planning_artifact_handle.issue_store_separate_project_effective`) gates every write below to skip the tracked
+local file and project to the authoritative store (or a gitignored cache) instead. `same-repo` deployments are
+unaffected — local writes are retained exactly as before this guard existed.
+
+| Artifact | `same-repo` / non-issue-store | issue-store `separate-project` |
+|----------|-------------------------------|----------------------------------|
+| `docs/prds/GAP-BACKLOG.md` | local write-through projection (R1) | write-through to the issue store only; local write skipped (sunset stub once no open gaps remain) |
+| `docs/prds/INDEX.md` (spec-seed) | `wave_spec_seed.ensure_redacted_index` writes it (R2) | skipped — deliver run-entry materialize + the issue store supply task content |
+| `docs/prds/INDEX.md` / `INDEX-archive.md` / `SUPERSEDED.md` / legacy projection (reconcile) | `planning_reconcile.reconcile_core` writes all four (R3) | none written; derived map projects to the store via `planning_index_issue.project_derived_map` (PRD 056 R8), additionally cached at the gitignored `.cursor/hooks/state/planning-index-derived.json` when the cutover `derived` region authority is issue |
+
+The two-track mechanical allowlist (see `core/rules/sw-git-conventions.mdc` **Two-track doc edits**) is
+clarified accordingly: under issue-store authority the mechanical write projects to the store rather than a
+tracked local file.
+
 ### Scheduler park state (PRD 057 R16, R28)
 
 The scheduler frontier skips units that cannot run and can **park** units out of scheduling:

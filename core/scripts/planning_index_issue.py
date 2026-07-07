@@ -176,6 +176,69 @@ def project_index_status(
         }
 
 
+def project_derived_map(
+    root: Path,
+    derived: dict[str, str],
+    *,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Project the full reconciler derived-status map to the issue store (PRD 056 R8)
+    when the effective backend is issue-store (PRD 057 R3 reconcile guard). The
+    authoritative-store update always runs for an effective issue-store backend;
+    the gitignored derived cache is additionally refreshed only when the cutover
+    ``derived`` region authority is issue (``derived_authority_is_issue``), so a
+    reader (``read_derived_status_map``) sees a consistent view without ever
+    requiring a tracked local write.
+    """
+    worktree = pp.git_root(root)
+    cfg = load_workflow_config(worktree)
+    effective = resolve_effective_backend(worktree, cfg)
+    if effective.get("effective") != "issue-store":
+        return {"verdict": "skipped", "action": "project-derived-map", "reason": "not-issue-store"}
+
+    cache_authority = derived_authority_is_issue(worktree)
+    if dry_run:
+        return {
+            "verdict": "pass",
+            "action": "project-derived-map",
+            "authority": "issue" if cache_authority else "store-only",
+            "unitCount": len(derived),
+            "dryRun": True,
+        }
+
+    derived_body = render_derived_body(derived)
+    try:
+        backend = get_backend(worktree, cfg)
+        put_result = backend.put(DERIVED_ARTIFACT_UNIT, DERIVED_ARTIFACT_BODY, derived_body)
+        if put_result.verdict not in {"ok", "degraded"}:
+            return {
+                "verdict": "degraded",
+                "action": "project-derived-map",
+                "notice": put_result.reason or "planning-store-put-failed",
+                "unitCount": len(derived),
+            }
+        if cache_authority:
+            save_derived_cache(worktree, derived)
+        out: dict[str, Any] = {
+            "verdict": "pass",
+            "action": "project-derived-map",
+            "authority": "issue" if cache_authority else "store-only",
+            "unitCount": len(derived),
+            "backend": put_result.backend,
+            "cached": cache_authority,
+        }
+        if put_result.verdict == "degraded":
+            out["notice"] = put_result.reason or "planning-store-degraded"
+        return out
+    except Exception as exc:  # noqa: BLE001 — graceful degradation for unreachable store
+        return {
+            "verdict": "degraded",
+            "action": "project-derived-map",
+            "notice": f"issue-store-unreachable:{exc}",
+            "unitCount": len(derived),
+        }
+
+
 def read_derived_status_map(root: Path) -> dict[str, str]:
     """Read derived status map from cache when issue authority is active."""
     if not derived_authority_is_issue(root):
