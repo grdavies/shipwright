@@ -46,6 +46,47 @@ def run_json(cmd: list[str]) -> dict:
         return {"verdict": "fail", "error": "invalid-json", "raw": raw[:200]}
 
 
+def classify_issue_store_probe(probe: dict) -> dict:
+    """Classify an issue-store token/reachability probe outcome (PRD 057 R30).
+
+    Distinguishes an absent token (``store-token-absent`` — advisory, never a
+    silent pass) from any other probe failure (``probe-failed`` — fail-closed).
+    Pure function over the ``probe-issues-token`` result shape; no I/O.
+    """
+    if probe.get("verdict") == "ok":
+        if probe.get("skipped"):
+            return {"check": "store-reachability", "status": "ok", "reason": probe.get("reason")}
+        return {"check": "store-reachability", "status": "ok", "provider": probe.get("provider")}
+    error = probe.get("error")
+    if error in {"missing-token", "missing-token-env"}:
+        token_env = probe.get("tokenEnv")
+        return {
+            "check": "store-token-absent",
+            "status": "advisory",
+            "provider": probe.get("provider"),
+            "tokenEnv": token_env,
+            "remediation": f"Set {token_env or '<tokenEnv>'} to enable live issue-store checks (advisory only; file-store parity unaffected).",
+        }
+    return {
+        "check": "probe-failed",
+        "status": "fail",
+        "provider": probe.get("provider"),
+        "error": error,
+        "message": probe.get("message"),
+    }
+
+
+def wave_regression_check(root: Path) -> dict | None:
+    """Wave-rollback local/store drift finding (PRD 057 R31). Fail-open, advisory-only wiring."""
+    try:
+        import planning_store as ps
+
+        cfg = ps.load_workflow_config(root)
+        return ps.wave_regression_finding(root, cfg)
+    except Exception:  # noqa: BLE001 — doctor check is advisory / fail-open
+        return None
+
+
 def parked_frontier_finding(root: Path) -> dict | None:
     """Over-parked-frontier drift finding (PRD 057 R28).
 
@@ -173,6 +214,20 @@ def doctor(root: Path, *, sweep: bool) -> dict:
         else:
             checks.append({"check": "memory-provider", "status": "ok", "provider": provider})
             checks.append({"check": "store-reachability", "status": "ok", "backend": store_backend, "provider": provider})
+    elif store_backend == "issue-store":
+        probe = run_json([
+            sys.executable, str(SCRIPT_DIR / "planning_store.py"), "--root", str(root), "probe-issues-token",
+        ])
+        finding = classify_issue_store_probe(probe)
+        finding["backend"] = store_backend
+        checks.append(finding)
+        if finding["check"] == "store-token-absent":
+            warnings.append("store-token-absent")
+            if verdict == "ok":
+                verdict = "degraded"
+        elif finding["check"] == "probe-failed":
+            warnings.append("probe-failed")
+            verdict = "fail"
 
     cfg_path = root / ".cursor/workflow.config.json"
     if cfg_path.is_file():
@@ -194,6 +249,13 @@ def doctor(root: Path, *, sweep: bool) -> dict:
             warnings.append("over-parked-frontier")
             if verdict == "ok":
                 verdict = "degraded"
+
+    regression_finding = wave_regression_check(root)
+    if regression_finding is not None:
+        checks.append(regression_finding)
+        if regression_finding.get("status") == "drift":
+            warnings.append("wave-regression")
+            verdict = "fail"
 
     swept: list[str] = []
     if sweep:
