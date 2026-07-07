@@ -385,6 +385,7 @@
 * merge phase visibility-axes-alias-precedence-store-host-privacy-privacy-ack-wave-2-r13-r14-r15-r29 into feat/planning-store-hardening (f1089f6) <!-- sw-deliver:visibility-axes-alias-precedence-store-host-privacy-privacy-ack-wave-2-r13-r14-r15-r29 -->
 * merge phase product-source-tags-schedule-hint-reconciliation-wave-4-r12-r17 into feat/planning-store-hardening (e611fad) <!-- sw-deliver:product-source-tags-schedule-hint-reconciliation-wave-4-r12-r17 -->
 * merge phase memory-backend-local-only-rename-document-21a-wave-2-r21 into feat/planning-store-hardening (4015f5b) <!-- sw-deliver:memory-backend-local-only-rename-document-21a-wave-2-r21 -->
+* merge phase terminal-gap-auto-capture-feature-named-titles-wave-5-r19-r20 into feat/planning-store-hardening (6cef4ff) <!-- sw-deliver:terminal-gap-auto-capture-feature-named-titles-wave-5-r19-r20 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
