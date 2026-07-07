@@ -961,6 +961,17 @@
       "ciShard": 3
     },
     {
+      "id": "planning-deliver-run-entry-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "ciShard": 4
+    },
+    {
       "id": "planning-store-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -1341,10 +1352,10 @@
       "ciShard": 4
     },
     {
-      "id": "planning-deliver-run-entry-fixtures",
+      "id": "planning-deliver-progress-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
-        "scripts/unit_tests/planning",
+        "scripts/unit_tests/planning/test_planning_deliver_progress.py",
         "-q"
       ],
       "classification": "required",
