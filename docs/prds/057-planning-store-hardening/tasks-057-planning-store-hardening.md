@@ -102,188 +102,188 @@ Wave map:
 
 ### 4. Dispatch-preflight concrete-model resolution (Wave 1 · R18)
 
-- [ ] 4.1 `cmd_dispatch` fallback resolution order for inherit orchestrators (R18) (unit 1/2)
+- [x] 4.1 `cmd_dispatch` fallback resolution order for inherit orchestrators (R18) (unit 1/2)
   - **File:** `scripts/resolve-model-tier.py`
   - **Expected:** for an `inherit` orchestrator with an unmapped agent, resolve agent map → `models.roles` fallback → actionable remediation; `binding:no-model` no longer fires (e.g. `--agent explore --command sw-doc`) and inline authoring is no longer forced.
   - **R-IDs:** R18
-- [ ] 4.2 `cmd_dispatch` fallback resolution order for inherit orchestrators (R18) (unit 2/2)
+- [x] 4.2 `cmd_dispatch` fallback resolution order for inherit orchestrators (R18) (unit 2/2)
   - **File:** `scripts/wave_preflight.py`
   - **Expected:** for an `inherit` orchestrator with an unmapped agent, resolve agent map → `models.roles` fallback → actionable remediation; `binding:no-model` no longer fires (e.g. `--agent explore --command sw-doc`) and inline authoring is no longer forced.
   - **R-IDs:** R18
-- [ ] 4.3 Dispatch-preflight inherit+unmapped fixture (R18)
+- [x] 4.3 Dispatch-preflight inherit+unmapped fixture (R18)
   - **File:** `scripts/test/fixtures/dispatch-preflight/inherit_unmapped.py`
   - **Expected:** `--agent explore --command sw-doc` resolves a concrete model or emits an actionable remediation.
   - **R-IDs:** R18
-- [ ] 4.4 Docs: models-tiering resolution order (R32)
+- [x] 4.4 Docs: models-tiering resolution order (R32)
   - **File:** `core/sw-reference/models-tiering.md`
   - **Expected:** documents the `cmd_dispatch` resolution order (agent map → `models.roles` → remediation) and notes it prevents forced inline authoring.
   - **R-IDs:** R18
 
 ### 5. CI token-absent degraded mode + rollback kill-switch (Wave 1 · R30, R31)
 
-- [ ] 5.1 Test-harness gating: skip-with-advisory when store token absent (R30)
+- [x] 5.1 Test-harness gating: skip-with-advisory when store token absent (R30)
   - **File:** `scripts/test/fixtures/planning-ci-token-absent/harness.py`
   - **Expected:** with the token env unset, issue-store integration fixtures skip-with-advisory (green) while file-store parity fixtures always run.
   - **R-IDs:** R30
-- [ ] 5.2 Doctor `store-token-absent` (advisory) vs `probe-failed` (fail-closed) (R30)
+- [x] 5.2 Doctor `store-token-absent` (advisory) vs `probe-failed` (fail-closed) (R30)
   - **File:** `scripts/planning-doctor.py`
   - **Expected:** doctor distinguishes `store-token-absent` (advisory) from `probe-failed` (fail closed); a missing token is never a silent pass and never fail-closed.
   - **R-IDs:** R30
-- [ ] 5.3 `effective-backend` kill-switch + materialize-from-store (R31)
+- [x] 5.3 `effective-backend` kill-switch + materialize-from-store (R31)
   - **File:** `scripts/planning_store.py`
   - **Expected:** an `effective-backend` kill-switch restores prior behavior and re-materializes local projections from the authoritative store on demand, without loss of store data.
   - **R-IDs:** R31
-- [ ] 5.4 Doctor `wave-regression` finding + per-wave rollback fixture (R31)
+- [x] 5.4 Doctor `wave-regression` finding + per-wave rollback fixture (R31)
   - **File:** `scripts/test/fixtures/planning-wave-rollback/harness.py`
   - **Expected:** reverting a wave's code with the kill-switch set restores prior behavior; doctor emits a `wave-regression` finding on inconsistent local/store state.
   - **R-IDs:** R31
 
 ### 6. Shared predicate + gap-capture write-through guard (Wave 2 · R1)
 
-- [ ] 6.1 Add shared `issue_store_separate_project(root)` predicate (R1)
+- [x] 6.1 Add shared `issue_store_separate_project(root)` predicate (R1)
   - **File:** `scripts/planning_migrate_issue_store.py`
   - **Expected:** predicate built on `resolve_store_location(...).mode` (issue-store effective AND `separate-project`); used across the R1–R4 pollution/currency guards.
   - **R-IDs:** R1
-- [ ] 6.2 Guard `refresh_gap_backlog_projection` + `--projection` flag + sunset stub (R1) (unit 1/2)
+- [x] 6.2 Guard `refresh_gap_backlog_projection` + `--projection` flag + sunset stub (R1) (unit 1/2)
   - **File:** `scripts/gap_backlog.py`
   - **Expected:** under issue-store `separate-project`, gap capture writes through to the store and skips the local `GAP-BACKLOG.md` write; `--projection` retains the legacy row; projection reduced to a documented sunset stub when no open gaps remain; `same-repo` unchanged.
   - **R-IDs:** R1
-- [ ] 6.3 Guard `refresh_gap_backlog_projection` + `--projection` flag + sunset stub (R1) (unit 2/2)
+- [x] 6.3 Guard `refresh_gap_backlog_projection` + `--projection` flag + sunset stub (R1) (unit 2/2)
   - **File:** `scripts/planning_migrate_issue_store.py`
   - **Expected:** under issue-store `separate-project`, gap capture writes through to the store and skips the local `GAP-BACKLOG.md` write; `--projection` retains the legacy row; projection reduced to a documented sunset stub when no open gaps remain; `same-repo` unchanged.
   - **R-IDs:** R1
-- [ ] 6.4 Gap-capture parity fixture + feedback/emission-point docs (R32) (unit 1/2)
+- [x] 6.4 Gap-capture parity fixture + feedback/emission-point docs (R32) (unit 1/2)
   - **File:** `core/skills/feedback/SKILL.md`
   - **Expected:** gap-capture golden output equivalent when backend ≠ issue-store; feedback skill documents store-only capture and the sunset stub; retains file-store/cutover behavior verbatim.
   - **R-IDs:** R1
-- [ ] 6.5 Gap-capture parity fixture + feedback/emission-point docs (R32) (unit 2/2)
+- [x] 6.5 Gap-capture parity fixture + feedback/emission-point docs (R32) (unit 2/2)
   - **File:** `scripts/test/fixtures/planning-file-store-parity/gap_capture_golden.py`
   - **Expected:** gap-capture golden output equivalent when backend ≠ issue-store; feedback skill documents store-only capture and the sunset stub; retains file-store/cutover behavior verbatim.
   - **R-IDs:** R1
 
 ### 7. spec-seed + reconcile local-write guards (Wave 2 · R2, R3)
 
-- [ ] 7.1 Guard `docs/prds/INDEX.md` writes in `wave_spec_seed` (R2)
+- [x] 7.1 Guard `docs/prds/INDEX.md` writes in `wave_spec_seed` (R2)
   - **File:** `scripts/wave_spec_seed.py`
   - **Expected:** `ensure_redacted_index` and the seed-time index write are guarded by the effective backend and skip under issue-store `separate-project`.
   - **R-IDs:** R2
-- [ ] 7.2 Guard `reconcile_core` derived-artifact writes (R3)
+- [x] 7.2 Guard `reconcile_core` derived-artifact writes (R3)
   - **File:** `scripts/planning_reconcile.py`
   - **Expected:** no tracked `INDEX.md`/`INDEX-archive.md`/`SUPERSEDED.md`/legacy projection writes under issue-store `separate-project`; project derived status to the store (PRD 056 R8) or a gitignored cache; `same-repo` retains local writes.
   - **R-IDs:** R3
-- [ ] 7.3 spec-seed + reconcile parity fixtures (R23)
+- [x] 7.3 spec-seed + reconcile parity fixtures (R23)
   - **File:** `scripts/test/fixtures/planning-file-store-parity/spec_seed_reconcile_golden.py`
   - **Expected:** spec-seed and reconcile golden outputs equivalent when the effective backend is not an issue-store.
   - **R-IDs:** R2
-- [ ] 7.4 Docs: layout + git-conventions + conductor reconcile scope (R32) (unit 1/2)
+- [x] 7.4 Docs: layout + git-conventions + conductor reconcile scope (R32) (unit 1/2)
   - **File:** `.sw/layout.md`
   - **Expected:** issue-store `separate-project` writes no tracked INDEX/GAP-BACKLOG/SUPERSEDED; two-track mechanical allowlist clarified to project to store under issue-store authority.
   - **R-IDs:** R3
-- [ ] 7.5 Docs: layout + git-conventions + conductor reconcile scope (R32) (unit 2/2)
+- [x] 7.5 Docs: layout + git-conventions + conductor reconcile scope (R32) (unit 2/2)
   - **File:** `core/rules/sw-git-conventions.mdc`
   - **Expected:** issue-store `separate-project` writes no tracked INDEX/GAP-BACKLOG/SUPERSEDED; two-track mechanical allowlist clarified to project to store under issue-store authority.
   - **R-IDs:** R3
 
 ### 8. Gap-resolution store close + label (Wave 2 · R4)
 
-- [ ] 8.1 `set_index_status` closes gap issue + applies resolution label (R4)
+- [x] 8.1 `set_index_status` closes gap issue + applies resolution label (R4)
   - **File:** `scripts/reconcile_lib.py`
   - **Expected:** under issue-store `separate-project`, call shared `close_gap_issue(root, unit_id)` (issue close + resolution label) instead of the local INDEX/frontmatter edit; `resolution-partial` verdict on partial failure.
   - **R-IDs:** R4
-- [ ] 8.2 `resolve_for_prd` idempotent close + label (R4)
+- [x] 8.2 `resolve_for_prd` idempotent close + label (R4)
   - **File:** `scripts/gap_backlog.py`
   - **Expected:** close the gap issue and apply the resolution label idempotently (reuse `_apply_gap_labels`/`GAP_LABEL_RESOLVED` + `issue_update(..., state="closed")`); `same-repo` retains frontmatter/row edits.
   - **R-IDs:** R4
-- [ ] 8.3 Doctor resolution-partial reconciliation + living-status docs (R32) (unit 1/2)
+- [x] 8.3 Doctor resolution-partial reconciliation + living-status docs (R32) (unit 1/2)
   - **File:** `core/skills/living-status/SKILL.md`
   - **Expected:** doctor reconciles the open-issue-plus-resolved-label mismatch; living-status doc separates store authority from the file-store byte-identical path.
   - **R-IDs:** R4
-- [ ] 8.4 Doctor resolution-partial reconciliation + living-status docs (R32) (unit 2/2)
+- [x] 8.4 Doctor resolution-partial reconciliation + living-status docs (R32) (unit 2/2)
   - **File:** `scripts/planning-doctor.py`
   - **Expected:** doctor reconciles the open-issue-plus-resolved-label mismatch; living-status doc separates store authority from the file-store byte-identical path.
   - **R-IDs:** R4
 
 ### 9. gitignore auto-config + committed cutover signal (Wave 2 · R5)
 
-- [ ] 9.1 `/sw-init` gitignore-generate + committed cutover derivation (R5) (unit 1/2)
+- [x] 9.1 `/sw-init` gitignore-generate + committed cutover derivation (R5) (unit 1/2)
   - **File:** `core/commands/sw-init.md`
   - **Expected:** `/sw-init` runs `gitignore-generate --write` for planning-store paths; the cutover-gate signal is derived from `workflow.config.json` backend + structural markers (no new tracked file), so the gitignored state file no longer causes CI false failures.
   - **R-IDs:** R5
-- [ ] 9.2 `/sw-init` gitignore-generate + committed cutover derivation (R5) (unit 2/2)
+- [x] 9.2 `/sw-init` gitignore-generate + committed cutover derivation (R5) (unit 2/2)
   - **File:** `scripts/planning_cutover.py`
   - **Expected:** `/sw-init` runs `gitignore-generate --write` for planning-store paths; the cutover-gate signal is derived from `workflow.config.json` backend + structural markers (no new tracked file), so the gitignored state file no longer causes CI false failures.
   - **R-IDs:** R5
-- [ ] 9.3 Update `load_cutover_gate` call sites (R5) (unit 1/2)
+- [x] 9.3 Update `load_cutover_gate` call sites (R5) (unit 1/2)
   - **File:** `scripts/planning_discover.py`
   - **Expected:** all `load_cutover_gate` consumers stop treating `.cursor/hooks/state/planning-cutover-gate.json` as a CI authority and derive from committed state.
   - **R-IDs:** R5
-- [ ] 9.4 Update `load_cutover_gate` call sites (R5) (unit 2/2)
+- [x] 9.4 Update `load_cutover_gate` call sites (R5) (unit 2/2)
   - **File:** `scripts/planning_region_disposition.py`
   - **Expected:** all `load_cutover_gate` consumers stop treating `.cursor/hooks/state/planning-cutover-gate.json` as a CI authority and derive from committed state.
   - **R-IDs:** R5
-- [ ] 9.5 Docs: configuration guide committed cutover (R32)
+- [x] 9.5 Docs: configuration guide committed cutover (R32)
   - **File:** `docs/guides/configuration.md`
   - **Expected:** documents the committed cutover derivation replacing the gitignored state file.
   - **R-IDs:** R5
 
 ### 10. Query-cache revalidation + atomic gap allocation (Wave 2 · R10, R25)
 
-- [ ] 10.1 Symmetric-diff cache revalidation in discover (R10) (unit 1/2)
+- [x] 10.1 Symmetric-diff cache revalidation in discover (R10) (unit 1/2)
   - **File:** `scripts/planning_discover.py`
   - **Expected:** `revalidate_live_metadata` invalidates the cache on symmetric set-diff of live vs cached unit-id sets; `discover_units_issue` revalidates before returning cached projections.
   - **R-IDs:** R10
-- [ ] 10.2 Symmetric-diff cache revalidation in discover (R10) (unit 2/2)
+- [x] 10.2 Symmetric-diff cache revalidation in discover (R10) (unit 2/2)
   - **File:** `scripts/planning_query_cache.py`
   - **Expected:** `revalidate_live_metadata` invalidates the cache on symmetric set-diff of live vs cached unit-id sets; `discover_units_issue` revalidates before returning cached projections.
   - **R-IDs:** R10
-- [ ] 10.3 Atomic gap-number allocation (claim-by-create / retry-on-collision) (R25)
+- [x] 10.3 Atomic gap-number allocation (claim-by-create / retry-on-collision) (R25)
   - **File:** `scripts/planning_gap_capture.py`
   - **Expected:** `next_gap_number`/create invalidates the query cache before allocation and claims by create or retries on collision, so concurrent writers never persist duplicate gap ids or split `absorbs` edges.
   - **R-IDs:** R25
-- [ ] 10.4 Query-cache freshness + multi-writer allocation fixtures (R10, R25) (unit 1/2)
+- [x] 10.4 Query-cache freshness + multi-writer allocation fixtures (R10, R25) (unit 1/2)
   - **File:** `scripts/test/fixtures/planning-gap-alloc-multiwriter/harness.py`
   - **Expected:** new remote units by other writers are visible before TTL expiry; two concurrent allocate+create sequences yield two distinct gap ids with the cache invalidated before reading.
   - **R-IDs:** R25
-- [ ] 10.5 Query-cache freshness + multi-writer allocation fixtures (R10, R25) (unit 2/2)
+- [x] 10.5 Query-cache freshness + multi-writer allocation fixtures (R10, R25) (unit 2/2)
   - **File:** `scripts/test/fixtures/planning-query-cache/freshness.py`
   - **Expected:** new remote units by other writers are visible before TTL expiry; two concurrent allocate+create sequences yield two distinct gap ids with the cache invalidated before reading.
   - **R-IDs:** R10
 
 ### 11. Visibility axes + alias precedence + store-host privacy + privacy-ack (Wave 2 · R13, R14, R15, R29)
 
-- [ ] 11.1 Three orthogonal visibility axes + tier-first rename (R13)
+- [x] 11.1 Three orthogonal visibility axes + tier-first rename (R13)
   - **File:** `scripts/planning_visibility.py`
   - **Expected:** `resolve_default_profile` splits into visibility (redaction) tier / `storeLocation` / store-host privacy with a tier-first rename and one-release back-compat; `probe_remote_visibility` is no longer the sole migration gate.
   - **R-IDs:** R13
-- [ ] 11.2 Deterministic old→new alias precedence (R29)
+- [x] 11.2 Deterministic old→new alias precedence (R29)
   - **File:** `scripts/planning_visibility.py`
   - **Expected:** new keys win over deprecated aliases; a deprecated profile name emits a doctor deprecation warning; a mixed old/new config never weakens the redaction default.
   - **R-IDs:** R29
-- [ ] 11.3 Store-host privacy per shipped provider + CI-only override (R14)
+- [x] 11.3 Store-host privacy per shipped provider + CI-only override (R14)
   - **File:** `scripts/planning_store.py`
   - **Expected:** `probe_store_host_privacy` is evaluated for every shipped provider with no placeholder always-false branches; `SW_STORE_HOST_PRIVACY` is honored only under an explicit CI-context probe.
   - **R-IDs:** R14
-- [ ] 11.4 Doctor privacy-ack recording + key-naming reconciliation (R15) (unit 1/2)
+- [x] 11.4 Doctor privacy-ack recording + key-naming reconciliation (R15) (unit 1/2)
   - **File:** `core/sw-reference/planning-privacy-notice.md`
   - **Expected:** doctor flags `privacyAck.required: true` with `recordedAt: null`, reconciles notice-doc `ackedAt` wording against the `recordedAt` key, and emits the exact remediation command per finding.
   - **R-IDs:** R15
-- [ ] 11.5 Doctor privacy-ack recording + key-naming reconciliation (R15) (unit 2/2)
+- [x] 11.5 Doctor privacy-ack recording + key-naming reconciliation (R15) (unit 2/2)
   - **File:** `scripts/planning-doctor.py`
   - **Expected:** doctor flags `privacyAck.required: true` with `recordedAt: null`, reconciles notice-doc `ackedAt` wording against the `recordedAt` key, and emits the exact remediation command per finding.
   - **R-IDs:** R15
-- [ ] 11.6 Visibility axes + aliases fixtures (R13, R29) (unit 1/2)
+- [x] 11.6 Visibility axes + aliases fixtures (R13, R29) (unit 1/2)
   - **File:** `scripts/test/fixtures/planning-visibility-aliases/harness.py`
   - **Expected:** three axes modeled/named distinctly with one-release alias resolution; deprecated+new keys resolve to the new-key value with a deprecation warning; deprecated-only matches pre-rename behavior.
   - **R-IDs:** R29
-- [ ] 11.7 Visibility axes + aliases fixtures (R13, R29) (unit 2/2)
+- [x] 11.7 Visibility axes + aliases fixtures (R13, R29) (unit 2/2)
   - **File:** `scripts/test/fixtures/planning-visibility-axes/harness.py`
   - **Expected:** three axes modeled/named distinctly with one-release alias resolution; deprecated+new keys resolve to the new-key value with a deprecation warning; deprecated-only matches pre-rename behavior.
   - **R-IDs:** R29
-- [ ] 11.8 Docs: configuration guide visibility axes + privacy notice (R32) (unit 1/2)
+- [x] 11.8 Docs: configuration guide visibility axes + privacy notice (R32) (unit 1/2)
   - **File:** `core/sw-reference/planning-privacy-notice.md`
   - **Expected:** configuration guide replaces the single visibility profile with three orthogonal axes + alias map; privacy notice documents `privacyAck.recordedAt`.
   - **R-IDs:** R15
-- [ ] 11.9 Docs: configuration guide visibility axes + privacy notice (R32) (unit 2/2)
+- [x] 11.9 Docs: configuration guide visibility axes + privacy notice (R32) (unit 2/2)
   - **File:** `docs/guides/configuration.md`
   - **Expected:** configuration guide replaces the single visibility profile with three orthogonal axes + alias map; privacy notice documents `privacyAck.recordedAt`.
   - **R-IDs:** R14
@@ -374,23 +374,23 @@ Wave map:
 
 ### 16. Product source tags + schedule-hint reconciliation (Wave 4 · R12, R17)
 
-- [ ] 16.1 Support and filter `sw:source:<owner>/<repo>` scoping (R12) (unit 1/2)
+- [x] 16.1 Support and filter `sw:source:<owner>/<repo>` scoping (R12) (unit 1/2)
   - **File:** `scripts/planning_discover.py`
   - **Expected:** discovery/scheduler/gap-capture support `sw:source:<owner>/<repo>` scoping; default scope includes untagged legacy units with a `sw:source-missing` doctor warning rather than silently hiding them.
   - **R-IDs:** R12
-- [ ] 16.2 Support and filter `sw:source:<owner>/<repo>` scoping (R12) (unit 2/2)
+- [x] 16.2 Support and filter `sw:source:<owner>/<repo>` scoping (R12) (unit 2/2)
   - **File:** `scripts/planning_scheduler.py`
   - **Expected:** discovery/scheduler/gap-capture support `sw:source:<owner>/<repo>` scoping; default scope includes untagged legacy units with a `sw:source-missing` doctor warning rather than silently hiding them.
   - **R-IDs:** R12
-- [ ] 16.3 Schedule-hint reconciliation surfaces `sw:schedule-stale` (R17)
+- [x] 16.3 Schedule-hint reconciliation surfaces `sw:schedule-stale` (R17)
   - **File:** `scripts/planning-graph.py`
   - **Expected:** reconcile validates each unit's `schedule:` hint (or `sw:gap-schedule:*` label) against its actual `absorbs` edges and surfaces `sw:schedule-stale` on mismatch.
   - **R-IDs:** R17
-- [ ] 16.4 Source-tag + schedule-hint fixtures (R12, R17) (unit 1/2)
+- [x] 16.4 Source-tag + schedule-hint fixtures (R12, R17) (unit 1/2)
   - **File:** `scripts/test/fixtures/planning-schedule-hint/harness.py`
   - **Expected:** source-tag scoping filters discovery/scheduler/gap-capture; stale `schedule:` hints surface `sw:schedule-stale` against actual absorbs edges.
   - **R-IDs:** R17
-- [ ] 16.5 Source-tag + schedule-hint fixtures (R12, R17) (unit 2/2)
+- [x] 16.5 Source-tag + schedule-hint fixtures (R12, R17) (unit 2/2)
   - **File:** `scripts/test/fixtures/planning-source-tag/harness.py`
   - **Expected:** source-tag scoping filters discovery/scheduler/gap-capture; stale `schedule:` hints surface `sw:schedule-stale` against actual absorbs edges.
   - **R-IDs:** R17
