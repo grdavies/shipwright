@@ -135,6 +135,148 @@ else
   bad "issue-store:epic-and-sub-issues"
 fi
 
+
+if python3 - <<'PY'
+import json, os, sys, tempfile
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+import planning_progress as pp
+from issues_lib import FixtureIssuesStore
+from wave_state import load_hierarchy_map
+
+tmp = Path(tempfile.mkdtemp())
+import subprocess
+subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
+subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp, check=True)
+subprocess.run(["git", "config", "user.name", "T"], cwd=tmp, check=True)
+(tmp / ".cursor" / "hooks" / "state").mkdir(parents=True)
+(tmp / "docs" / "prds" / "056-test").mkdir(parents=True)
+(tmp / "docs/prds/056-test/tasks-056-test.md").write_text(
+    "---\nfrozen: true\n---\n### 1. Alpha phase\n- [ ] 1.1 First task\n### 2. Beta phase\n- [ ] 2.1 Second task\n",
+    encoding="utf-8",
+)
+(tmp / ".cursor/workflow.config.json").write_text(json.dumps({
+    "version": 1,
+    "planning": {
+        "store": {
+            "backend": "issue-store",
+            "issuesProvider": "github-issues",
+            "projectKey": "deliver-progress-056",
+        }
+    },
+    "host": {"provider": "github"},
+}), encoding="utf-8")
+os.environ["SW_ISSUES_FIXTURE"] = "1"
+fixture_path = tmp / ".cursor/hooks/state/issue-store-fixture.json"
+if fixture_path.is_file():
+    fixture_path.unlink()
+state = {"source_task_list": "docs/prds/056-test/tasks-056-test.md"}
+out = pp.provision_deliver_hierarchy(tmp, state)
+assert out.get("applied"), out
+hmap = load_hierarchy_map(state)
+phase1 = (hmap.get("phases") or {}).get("1")
+assert phase1 and phase1.get("issueId"), hmap
+sync1 = pp.sync_phase_done(tmp, state, "1")
+assert sync1.get("synced") and sync1.get("label") == "sw:phase:1:done", sync1
+store = FixtureIssuesStore(fixture_path)
+issue = store.get(str(phase1["issueId"]))
+assert "sw:phase:1:done" in issue.labels, issue.labels
+sync2 = pp.sync_phase_done(tmp, state, "1")
+assert sync2.get("idempotent"), sync2
+print("phase-green-label-ok")
+PY
+then
+  ok "issue-store:phase-green-label"
+else
+  bad "issue-store:phase-green-label"
+fi
+
+if python3 - <<'PY'
+import json, sys, tempfile
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+import planning_progress as pp
+
+tmp = Path(tempfile.mkdtemp())
+(tmp / ".cursor").mkdir(parents=True)
+(tmp / ".cursor/workflow.config.json").write_text(json.dumps({
+    "version": 1,
+    "planning": {"store": {"backend": "in-repo-public"}},
+}), encoding="utf-8")
+state = {
+    "hierarchyMap": {
+        "applied": True,
+        "phases": {"1": {"issueId": "x", "phaseId": "1"}},
+    }
+}
+out = pp.sync_phase_done(tmp, state, "1")
+assert out.get("skipped") and out.get("reason") == "file-store", out
+out2 = pp.sync_task_checkbox(tmp, state, phase_id="1", task_list="missing.md")
+assert out2.get("skipped") and out2.get("reason") == "file-store", out2
+print("file-store-sync-skip-ok")
+PY
+then
+  ok "file-store:sync-phase-noop"
+else
+  bad "file-store:sync-phase-noop"
+fi
+
+if python3 - <<'PY'
+import json, os, sys, tempfile
+from pathlib import Path
+sys.path.insert(0, "$ROOT/scripts")
+import planning_progress as pp
+from issues_lib import FixtureIssuesStore
+from wave_state import load_hierarchy_map
+
+tmp = Path(tempfile.mkdtemp())
+import subprocess
+subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
+subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp, check=True)
+subprocess.run(["git", "config", "user.name", "T"], cwd=tmp, check=True)
+(tmp / ".cursor" / "hooks" / "state").mkdir(parents=True)
+(tmp / "docs" / "prds" / "056-test").mkdir(parents=True)
+task_rel = "docs/prds/056-test/tasks-056-test.md"
+(tmp / task_rel).write_text(
+    "---\nfrozen: true\n---\n### 1. Alpha phase\n- [ ] 1.1 First task\n### 2. Beta phase\n",
+    encoding="utf-8",
+)
+(tmp / ".cursor/workflow.config.json").write_text(json.dumps({
+    "version": 1,
+    "planning": {
+        "store": {
+            "backend": "issue-store",
+            "issuesProvider": "github-issues",
+            "projectKey": "deliver-progress-056",
+        }
+    },
+    "host": {"provider": "github"},
+}), encoding="utf-8")
+os.environ["SW_ISSUES_FIXTURE"] = "1"
+fixture_path = tmp / ".cursor/hooks/state/issue-store-fixture.json"
+if fixture_path.is_file():
+    fixture_path.unlink()
+state = {"source_task_list": task_rel, "phases": {"1": {"slug": "alpha-phase"}}}
+pp.provision_deliver_hierarchy(tmp, state)
+hmap = load_hierarchy_map(state)
+phase1 = (hmap.get("phases") or {}).get("1")
+task_path = tmp / task_rel
+text = task_path.read_text(encoding="utf-8")
+text = text.replace("- [ ] 1.1", "- [x] 1.1", 1)
+task_path.write_text(text, encoding="utf-8")
+sync = pp.sync_task_checkbox(tmp, state, phase_id="1", task_list=task_rel, task_ref="1.1")
+assert sync.get("synced"), sync
+store = FixtureIssuesStore(fixture_path)
+issue = store.get(str(phase1["issueId"]))
+assert "- [x] 1.1" in issue.body, issue.body
+print("checkbox-sync-ok")
+PY
+then
+  ok "issue-store:checkbox-body-sync"
+else
+  bad "issue-store:checkbox-body-sync"
+fi
+
 exit "$FAIL"
 """
 
