@@ -940,11 +940,82 @@ def secret_scan_text(text: str, *, path_hint: str | None = None) -> None:
         )
 
 
+def _store_host_privacy_ci_context() -> bool:
+    """R14 — explicit CI-context probe. Mirrors `planning_materialize.is_ci_or_host`'s
+    env-var signals; kept local (not imported) so this override gate has no dependency
+    on `planning_materialize`'s materialize-skip semantics, only on CI detection."""
+    if os.environ.get("CI", "").strip().lower() in {"1", "true", "yes"}:
+        return True
+    if os.environ.get("GITHUB_ACTIONS", "").strip().lower() in {"1", "true", "yes"}:
+        return True
+    return False
+
+
 def _store_host_privacy_override() -> str | None:
+    """R14 — SW_STORE_HOST_PRIVACY is an override intended for CI fixtures/hermetic
+    runs only; it MUST NOT be honored in an operator's local/interactive run, where a
+    stale or mistaken override could silently misclassify a shared/public store host
+    as private and admit private-tier bodies to it."""
+    if not _store_host_privacy_ci_context():
+        return None
     raw = os.environ.get("SW_STORE_HOST_PRIVACY", "").strip().lower()
     if raw in {"private", "public"}:
         return raw
     return None
+
+
+def _jira_store_project_browse_private(root: Path, cfg: dict[str, Any], project_key: str) -> bool | None:
+    """R14 — real host-privacy probe for the Jira shipped provider (was previously a
+    placeholder that always fell through to ``unknown`` when ``jiraProjectVisibility``
+    was not declared). Inspects the project's permission scheme BROWSE_PROJECTS grants:
+    a grant to an unrestricted holder (``anyone`` / any authenticated Jira user) means
+    the project is effectively public within the Jira instance; grants scoped only to
+    specific groups, roles, or users mean the project is private. Returns ``None``
+    (probe-inconclusive) when unauthenticated, unreachable, or the scheme carries no
+    BROWSE_PROJECTS entries."""
+    from planning_jira_probe import _api_base, _auth_header, resolve_jira_flavor
+
+    token_env = resolve_issues_token_env(cfg, "jira")
+    api_token = os.environ.get(token_env, "") if token_env else ""
+    if not api_token:
+        return None
+    if resolve_jira_flavor(cfg) == "dc":
+        headers = {"Authorization": f"Bearer {api_token}", "Accept": "application/json"}
+    else:
+        headers = _auth_header(cfg, api_token)
+    base = _api_base(cfg)
+    if not base or not headers:
+        return None
+    url = f"{base}/project/{project_key}/permissionscheme"
+    request_headers = {**headers, "User-Agent": "shipwright-planning-store"}
+    try:
+        status, _resp_headers, body = issues_http.http_request(
+            "GET",
+            url,
+            request_headers,
+            root=root,
+            issues_provider="jira",
+            timeout=15,
+        )
+        if status >= 400:
+            return None
+        data = json.loads(body)
+    except (ConnectionError, json.JSONDecodeError, TimeoutError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    browse_holders = [
+        entry.get("holder")
+        for entry in data.get("permissions") or []
+        if isinstance(entry, dict) and entry.get("permission") == "BROWSE_PROJECTS"
+    ]
+    browse_holders = [h for h in browse_holders if isinstance(h, dict)]
+    if not browse_holders:
+        return None
+    unrestricted_holder_types = {"anyone", "loggedin", "authenticated"}
+    if any(str(h.get("type", "")).strip().lower() in unrestricted_holder_types for h in browse_holders):
+        return False
+    return True
 
 
 def _github_store_repo_private(root: Path, cfg: dict[str, Any], owner: str, repo: str) -> bool | None:
@@ -1048,6 +1119,36 @@ def probe_store_host_privacy(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
                 return {"verdict": "ok", "storeHostPrivacy": "private", "source": "jiraProjectVisibility"}
             if vis in {"public", "shared"}:
                 return {"verdict": "ok", "storeHostPrivacy": "public", "source": "jiraProjectVisibility"}
+        # R14 — no placeholder always-unknown fallback: probe the live permission
+        # scheme before giving up, so Jira gets the same host-API evaluation as the
+        # other shipped providers rather than a config-declared-only check.
+        from planning_jira_probe import resolve_jira_api_project_key
+
+        project_key = resolve_jira_api_project_key(cfg, root=root)
+        if project_key:
+            is_private = _jira_store_project_browse_private(root, cfg, project_key)
+            if is_private is True:
+                return {
+                    "verdict": "ok",
+                    "storeHostPrivacy": "private",
+                    "source": "host-api",
+                    "provider": provider,
+                    "projectKey": project_key,
+                }
+            if is_private is False:
+                return {
+                    "verdict": "ok",
+                    "storeHostPrivacy": "public",
+                    "source": "host-api",
+                    "provider": provider,
+                    "projectKey": project_key,
+                }
+        return {
+            "verdict": "ok",
+            "storeHostPrivacy": "unknown",
+            "source": "probe-inconclusive",
+            "provider": provider,
+        }
 
     location = resolve_store_location(root, cfg)
     if location.get("verdict") != "ok":
@@ -1091,35 +1192,11 @@ def probe_store_host_privacy(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
             "provider": provider,
         }
 
-    if provider == "gitlab-issues":
-        is_private = _gitlab_store_project_private(root, cfg, owner, repo)
-        if is_private is True:
-            return {
-                "verdict": "ok",
-                "storeHostPrivacy": "private",
-                "source": "host-api",
-                "owner": owner,
-                "repo": repo,
-                "provider": provider,
-            }
-        if is_private is False:
-            return {
-                "verdict": "ok",
-                "storeHostPrivacy": "public",
-                "source": "host-api",
-                "owner": owner,
-                "repo": repo,
-                "provider": provider,
-            }
-        return {
-            "verdict": "ok",
-            "storeHostPrivacy": "unknown",
-            "source": "probe-inconclusive",
-            "owner": owner,
-            "repo": repo,
-            "provider": provider,
-        }
-
+    # R14 — no other shipped provider reaches this point: jira returns early above,
+    # and gitlab-issues is deferred/fail-closed (R7) and excluded from
+    # SHIPPED_ISSUES_PROVIDERS, so it never reaches probe_store_host_privacy at all.
+    # This is a defensive guard for a future shipped provider, not a placeholder
+    # always-false branch for a provider that is (misleadingly) advertised as shipped.
     return {"verdict": "ok", "storeHostPrivacy": "unknown", "source": "unsupported-provider", "provider": provider}
 
 

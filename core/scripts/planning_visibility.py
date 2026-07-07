@@ -12,6 +12,7 @@ import sys
 import urllib.error
 import issues_http
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,14 @@ from host_lib import (
 
 VISIBILITY_VALUES = frozenset({"public", "private", "memory"})
 VISIBILITY_PROFILES = frozenset({"all-private", "specs-public", "all-public"})
+
+# PRD 057 R13 — tier-first rename. `visibilityTier` is the current key name for the
+# visibility (redaction) axis; `visibilityProfile` is the deprecated one-release alias.
+VISIBILITY_TIER_KEY = "visibilityTier"
+DEPRECATED_VISIBILITY_PROFILE_KEY = "visibilityProfile"
+# PRD 057 R29 — privacy ordering used to enforce "never weaken the redaction default"
+# when a mixed old/new config resolves the alias precedence.
+_TIER_PRIVACY_RANK: dict[str, int] = {"all-public": 0, "specs-public": 1, "all-private": 2}
 
 ADVISORY_CONTENT_CLASSES = frozenset({"brainstorm", "decision", "learnings", "gap"})
 SPEC_CONTENT_CLASSES = frozenset({"prd", "tasks", "amendment"})
@@ -113,12 +122,54 @@ def content_class_for_unit(unit: dict[str, Any]) -> str:
     return "prd"
 
 
-def visibility_profile(cfg: dict[str, Any]) -> str:
+def visibility_tier(cfg: dict[str, Any]) -> str:
+    """R13/R29 — resolve the visibility (redaction) tier axis, independent of the
+    `storeLocation` and store-host-privacy axes. Deterministic old->new alias
+    precedence: the current `visibilityTier` key wins over the deprecated
+    `visibilityProfile` alias when both are present, except a mixed old/new config
+    never resolves to a *less private* tier than the deprecated value — the
+    redaction default is never weakened during the one-release back-compat window.
+    """
     planning = planning_section(cfg)
-    profile = planning.get("visibilityProfile")
-    if isinstance(profile, str) and profile in VISIBILITY_PROFILES:
-        return profile
+    new_val = planning.get(VISIBILITY_TIER_KEY)
+    old_val = planning.get(DEPRECATED_VISIBILITY_PROFILE_KEY)
+    new_ok = isinstance(new_val, str) and new_val in VISIBILITY_PROFILES
+    old_ok = isinstance(old_val, str) and old_val in VISIBILITY_PROFILES
+    if new_ok and old_ok:
+        return new_val if _TIER_PRIVACY_RANK[new_val] >= _TIER_PRIVACY_RANK[old_val] else old_val
+    if new_ok:
+        return new_val
+    if old_ok:
+        return old_val
     return "specs-public"
+
+
+def visibility_profile(cfg: dict[str, Any]) -> str:
+    """Deprecated one-release alias for `visibility_tier` (PRD 057 R13 tier-first
+    rename). Retained so existing callers (`gitignore_generate.py`,
+    `planning-init-seed.py`) keep working unchanged during the back-compat window.
+    """
+    return visibility_tier(cfg)
+
+
+def deprecated_visibility_key_warning(cfg: dict[str, Any]) -> dict[str, Any] | None:
+    """R29 — a live config that still sets the deprecated `visibilityProfile` key
+    (directly, not merely as the back-compat alias this module writes) emits a
+    doctor deprecation warning naming the exact remediation."""
+    planning = planning_section(cfg)
+    if DEPRECATED_VISIBILITY_PROFILE_KEY not in planning:
+        return None
+    return {
+        "check": "visibility-tier-key-deprecated",
+        "status": "deprecated",
+        "deprecatedKey": DEPRECATED_VISIBILITY_PROFILE_KEY,
+        "replacementKey": VISIBILITY_TIER_KEY,
+        "remediation": (
+            f"rename planning.{DEPRECATED_VISIBILITY_PROFILE_KEY} to "
+            f"planning.{VISIBILITY_TIER_KEY} in .cursor/workflow.config.json "
+            "(one-release back-compat alias; new key takes precedence when both are set)"
+        ),
+    }
 
 
 def profile_default_visibility(profile: str, content_class: str) -> str:
@@ -141,7 +192,7 @@ def resolve_unit_visibility(
     profile: str | None = None,
 ) -> dict[str, Any]:
     cfg = cfg or {}
-    prof = profile if profile in VISIBILITY_PROFILES else visibility_profile(cfg)
+    prof = profile if profile in VISIBILITY_PROFILES else visibility_tier(cfg)
     explicit = unit.get("visibility")
     cc = content_class_for_unit(unit)
     if explicit is not None and str(explicit).strip():
@@ -262,21 +313,84 @@ def probe_remote_visibility(root: Path) -> dict[str, Any]:
     }
 
 
+def _configured_store_location_mode(cfg: dict[str, Any]) -> str:
+    store = planning_section(cfg).get("store")
+    store = store if isinstance(store, dict) else {}
+    loc = store.get("storeLocation")
+    if isinstance(loc, dict):
+        mode = loc.get("mode")
+        if isinstance(mode, str) and mode in {"same-repo", "separate-project"}:
+            return mode
+    return "same-repo"
+
+
+def _store_host_privacy_probe(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """R14 — lazy import to avoid a circular dependency: `planning_store` imports this
+    module (`planning_visibility`) at module load time, so this module cannot import
+    `planning_store` at module scope without a cycle. Fails open (``not-applicable``)
+    rather than raising when `planning_store` cannot be imported, e.g. under a minimal
+    test sys.path, or when the effective backend is not an issue-store — R23 requires
+    file-store behavior to stay unchanged, so store-host privacy (an issue-store-only
+    concern) MUST NOT influence the default-profile migration gate for file-store
+    backends (in-repo-public / local-synced / memory)."""
+    try:
+        import planning_store
+    except ImportError:
+        return {"verdict": "ok", "storeHostPrivacy": "not-applicable", "source": "planning-store-unavailable"}
+    effective = planning_store.resolve_effective_backend(root, cfg)
+    if str(effective.get("effective")) != "issue-store":
+        return {
+            "verdict": "ok",
+            "storeHostPrivacy": "not-applicable",
+            "source": "backend-not-issue-store",
+            "effectiveBackend": effective.get("effective"),
+        }
+    return planning_store.probe_store_host_privacy(root, cfg)
+
+
 def resolve_default_profile(root: Path, *, write: bool = False) -> dict[str, Any]:
-    probe = probe_remote_visibility(root)
-    remote_vis = probe.get("remoteVisibility", "absent")
-    if remote_vis == "public":
-        profile = "all-private"
-        ack = {"required": True, "recordedAt": None, "reason": "public-origin-remote"}
+    """R13 — public-repo-aware default resolution across three orthogonal axes:
+    visibility (redaction) tier, `storeLocation`, and store-host privacy.
+    `probe_remote_visibility` is one input among several, not the sole migration
+    gate — an independently public store host (R14) also forces the private tier,
+    even when the git origin remote itself is not public.
+    """
+    cfg = load_workflow_config(root)
+    remote_probe = probe_remote_visibility(root)
+    remote_vis = remote_probe.get("remoteVisibility", "absent")
+    host_probe = _store_host_privacy_probe(root, cfg)
+    store_host_privacy = host_probe.get("storeHostPrivacy", "unknown")
+
+    remote_public = remote_vis == "public"
+    host_public = store_host_privacy == "public"
+    if remote_public or host_public:
+        tier = "all-private"
+        if remote_public and host_public:
+            reason = "public-origin-remote+public-store-host"
+        elif host_public:
+            reason = "public-store-host"
+        else:
+            reason = "public-origin-remote"
+        ack = {"required": True, "recordedAt": None, "reason": reason}
     else:
-        profile = "specs-public"
+        tier = "specs-public"
         ack = {"required": False, "recordedAt": None, "reason": None}
+
+    configured_mode = _configured_store_location_mode(cfg)
+    # A private-tier default with a store host that is not confirmed private should
+    # steer new adopters toward `separate-project` isolation rather than sharing a
+    # public/unknown-privacy host with private-tier bodies.
+    recommended_mode = "separate-project" if (tier == "all-private" and store_host_privacy != "private") else configured_mode
 
     result: dict[str, Any] = {
         "verdict": "ok",
-        "visibilityProfile": profile,
+        "visibilityTier": tier,
+        "visibilityProfile": tier,  # deprecated one-release alias (R13/R29)
+        "storeLocation": {"mode": configured_mode, "recommendedMode": recommended_mode},
+        "storeHostPrivacy": store_host_privacy,
         "privacyAck": ack,
-        "remoteProbe": probe,
+        "remoteProbe": remote_probe,
+        "storeHostProbe": host_probe,
     }
 
     if not write:
@@ -288,22 +402,26 @@ def resolve_default_profile(root: Path, *, write: bool = False) -> dict[str, Any
         result["error"] = "missing-workflow-config"
         return result
 
-    cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
-    if not isinstance(cfg, dict):
+    on_disk_cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    if not isinstance(on_disk_cfg, dict):
         result["verdict"] = "fail"
         result["error"] = "invalid-workflow-config"
         return result
 
-    planning = planning_section(cfg)
-    planning["visibilityProfile"] = profile
+    planning = planning_section(on_disk_cfg)
+    planning[VISIBILITY_TIER_KEY] = tier
+    planning[DEPRECATED_VISIBILITY_PROFILE_KEY] = tier
     planning["privacyAck"] = ack
-    cfg["planning"] = planning
-    cfg_path.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+    on_disk_cfg["planning"] = planning
+    cfg_path.write_text(json.dumps(on_disk_cfg, indent=2) + "\n", encoding="utf-8")
 
     state = load_state(root)
-    state["visibilityProfile"] = profile
+    state["visibilityTier"] = tier
+    state["visibilityProfile"] = tier
+    state["storeLocation"] = result["storeLocation"]
+    state["storeHostPrivacy"] = store_host_privacy
     state["privacyAck"] = ack
-    state["remoteProbe"] = probe
+    state["remoteProbe"] = remote_probe
     write_state(root, state)
 
     result["written"] = {"config": str(cfg_path.relative_to(root)), "state": str(STATE_REL)}
@@ -458,6 +576,34 @@ def _cmd_probe_remote(args: argparse.Namespace) -> int:
     return 0
 
 
+def record_privacy_ack(root: Path) -> dict[str, Any]:
+    """R15 — record the operator's privacy-notice acknowledgement by setting
+    `planning.privacyAck.recordedAt` to the current UTC timestamp. This is the exact
+    remediation the doctor's `privacy-ack-required` finding names (gap-046)."""
+    cfg_path = config_path(root)
+    if cfg_path is None:
+        return {"verdict": "fail", "error": "missing-workflow-config"}
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    if not isinstance(cfg, dict):
+        return {"verdict": "fail", "error": "invalid-workflow-config"}
+    planning = planning_section(cfg)
+    ack = planning.get("privacyAck")
+    ack = dict(ack) if isinstance(ack, dict) else {}
+    ack.setdefault("required", True)
+    ack.setdefault("reason", None)
+    ack["recordedAt"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    planning["privacyAck"] = ack
+    cfg["planning"] = planning
+    cfg_path.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+    return {"verdict": "ok", "privacyAck": ack, "written": str(cfg_path.relative_to(root))}
+
+
+def _cmd_record_privacy_ack(args: argparse.Namespace) -> int:
+    result = record_privacy_ack(Path(args.root))
+    print(json.dumps(result, indent=2))
+    return 0 if result.get("verdict") == "ok" else 1
+
+
 def _cmd_redact_body(args: argparse.Namespace) -> int:
     body = sys.stdin.read() if args.body is None else args.body
     print(redact_body(body, args.visibility))
@@ -492,6 +638,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p_probe = sub.add_parser("probe-remote", help="Probe origin remote visibility")
     p_probe.set_defaults(func=_cmd_probe_remote)
+
+    p_ack = sub.add_parser("record-privacy-ack", help="Record planning.privacyAck.recordedAt (R15)")
+    p_ack.set_defaults(func=_cmd_record_privacy_ack)
 
     p_freeze = sub.add_parser("check-freeze-visibility", help="PRD 050 R18 freeze-time tracked-public guard")
     p_freeze.add_argument("artifact", help="Path to artifact relative to --root")
