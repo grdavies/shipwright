@@ -64,6 +64,17 @@ ISSUE_STORE_FALLBACK_NOTICE = (
     "issue-store configured but effective backend is in-repo-public "
     "(issuesProvider none/unsupported or host.provider none)"
 )
+
+# PRD 057 R31: operator-facing effective-backend kill-switch. Setting this env var
+# forces effective-backend resolution back to the file-store default regardless of
+# `planning.store.backend`, so a regressed issue-store wave can be rolled back
+# without editing committed config. Never mutates or deletes store data — pair
+# with `materialize_from_store` to re-sync local projections on demand.
+KILL_SWITCH_ENV = "SW_PLANNING_KILL_SWITCH"
+KILL_SWITCH_NOTICE = (
+    f"{KILL_SWITCH_ENV} set — effective backend forced to file-store default "
+    "for wave rollback; no store data was modified"
+)
 BITBUCKET_ISSUE_STORE_GUIDANCE = {
     "defaultPath": "separate-project",
     "summary": (
@@ -303,8 +314,29 @@ def issue_store_fallback_reason(root: Path, cfg: dict[str, Any], *, override: st
     return None
 
 
+def _effective_backend_kill_switch() -> bool:
+    return os.environ.get(KILL_SWITCH_ENV, "").strip().lower() in {"1", "true", "yes"}
+
+
 def resolve_effective_backend(root: Path, cfg: dict[str, Any], *, override: str | None = None) -> dict[str, Any]:
     configured = resolve_backend_id(cfg, override=override)
+    # PRD 057 R31: an explicit per-call --backend override is a deliberate operator
+    # choice for that one invocation and takes precedence over the blanket kill-switch
+    # (e.g. `materialize_from_store` reads the real issue store while the kill-switch
+    # is globally active).
+    if override is None and configured != DEFAULT_BACKEND and _effective_backend_kill_switch():
+        return {
+            "verdict": "ok",
+            "configured": configured,
+            "backend": DEFAULT_BACKEND,
+            "effective": DEFAULT_BACKEND,
+            "fallback": True,
+            "fallbackReason": "kill-switch",
+            "killSwitch": True,
+            "notice": KILL_SWITCH_NOTICE,
+            "shipped": True,
+            "deferred": False,
+        }
     fallback_reason = issue_store_fallback_reason(root, cfg, override=override) if configured == "issue-store" else None
     if fallback_reason:
         out: dict[str, Any] = {
@@ -1511,7 +1543,6 @@ class IssueStoreBackend(PlanningStoreBackend):
         log_operation("materialize", unit_id, body_path, got.content, self.backend_id)
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=got.content, hash=got.hash)
 
-
     def freeze(self, unit_id: str, body_path: str, *, distill: bool = True) -> dict[str, Any]:
         try:
             record = self._lookup_record(unit_id, body_path)
@@ -1802,6 +1833,123 @@ def get_backend(root: Path, cfg: dict[str, Any] | None = None, *, override: str 
     return cls(root, cfg)
 
 
+def materialize_from_store(
+    root: Path,
+    cfg: dict[str, Any],
+    units: list[dict[str, str]],
+) -> dict[str, Any]:
+    """Re-materialize local file-store projections from the authoritative issue store.
+
+    PRD 057 R31 wave-rollback recovery: after flipping the ``effective-backend``
+    kill-switch back to the file-store default, an operator re-syncs local
+    projections from the still-intact issue store so no authored content is lost.
+    Reads the issue store explicitly (bypasses the kill-switch via
+    ``override="issue-store"``); writes are local-only, idempotent, and never
+    mutate or delete store data.
+    """
+    issue_backend = get_backend(root, cfg, override="issue-store")
+    if not isinstance(issue_backend, IssueStoreBackend):
+        return {"verdict": "fail", "action": "materialize-from-store", "error": "issue-store-backend-required"}
+    local_backend = InRepoPublicBackend(root, cfg)
+    results: list[dict[str, Any]] = []
+    ok = True
+    for unit in units:
+        unit_id = str(unit.get("unitId", "") or "")
+        body_path = str(unit.get("bodyPath", "") or "")
+        if not unit_id or not body_path:
+            results.append({"unitId": unit_id, "bodyPath": body_path, "verdict": "fail", "error": "missing-unit-or-path"})
+            ok = False
+            continue
+        fetched = issue_backend.get(unit_id, body_path)
+        if fetched.verdict != "ok" or fetched.content is None:
+            results.append({"unitId": unit_id, "bodyPath": body_path, "verdict": fetched.verdict, "reason": fetched.reason})
+            ok = False
+            continue
+        written = local_backend.put(unit_id, body_path, fetched.content)
+        results.append({"unitId": unit_id, "bodyPath": body_path, "verdict": "ok", "hash": written.hash})
+    return {
+        "verdict": "ok" if ok else "partial",
+        "action": "materialize-from-store",
+        "count": len(units),
+        "results": results,
+        "dataLoss": False,
+    }
+
+
+def wave_regression_finding(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    tracked_units: list[dict[str, str]] | None = None,
+) -> dict[str, Any] | None:
+    """Detect drift between local file-store projections and the issue store.
+
+    PRD 057 R31: only meaningful while the ``effective-backend`` kill-switch is
+    active (the code path that would normally keep them in sync is the thing
+    being rolled back). Returns ``None`` (inert) when the kill-switch is off, the
+    configured backend is not issue-store, or no units are under rollback
+    supervision — never a false positive on ordinary file-store repos.
+    """
+    if not _effective_backend_kill_switch():
+        return None
+    if resolve_backend_id(cfg) != "issue-store":
+        return None
+    if tracked_units is None:
+        rollback = store_section(cfg).get("waveRollback")
+        tracked_units = rollback.get("trackedUnits") if isinstance(rollback, dict) else None
+        if not isinstance(tracked_units, list):
+            tracked_units = []
+    if not tracked_units:
+        return {"check": "wave-regression", "status": "ok", "reason": "no-tracked-units", "killSwitch": True}
+    try:
+        issue_backend = get_backend(root, cfg, override="issue-store")
+    except SystemExit:
+        return {"check": "wave-regression", "status": "unknown", "reason": "store-unreachable", "killSwitch": True}
+    if not isinstance(issue_backend, IssueStoreBackend):
+        return None
+    local_backend = InRepoPublicBackend(root, cfg)
+    drift: list[dict[str, Any]] = []
+    checked = 0
+    for unit in tracked_units:
+        unit_id = str(unit.get("unitId", "") or "")
+        body_path = str(unit.get("bodyPath", "") or "")
+        if not unit_id or not body_path:
+            continue
+        try:
+            store_result = issue_backend.get(unit_id, body_path)
+        except SystemExit:
+            continue
+        if store_result.verdict != "ok":
+            continue  # not this check's concern — reachability is covered separately
+        checked += 1
+        local_result = local_backend.get(unit_id, body_path)
+        # Compare canonical *content*, not the raw `.hash` field: each backend
+        # hashes with a different scheme (issue-store hashes the full record
+        # snapshot via `canonical_hash`; in-repo-public truncates a sha256 of
+        # the body only) so the hashes are never comparable across backends.
+        if local_result.verdict != "ok" or local_result.content != store_result.content:
+            drift.append({
+                "unitId": unit_id,
+                "bodyPath": body_path,
+                "storeContentHash": content_hash(store_result.content or ""),
+                "localContentHash": content_hash(local_result.content or "") if local_result.verdict == "ok" else None,
+                "localVerdict": local_result.verdict,
+            })
+    if drift:
+        return {
+            "check": "wave-regression",
+            "status": "drift",
+            "killSwitch": True,
+            "checkedUnits": checked,
+            "driftedUnits": drift,
+            "remediation": (
+                "run `planning_store.py materialize-from-store --units-json ...` "
+                "to re-sync local projections from the store"
+            ),
+        }
+    return {"check": "wave-regression", "status": "ok", "killSwitch": True, "checkedUnits": checked}
+
+
 def validate_local_synced_path(path: Path, *, allowlist: list[str] | None = None) -> dict[str, Any]:
     warnings: list[str] = []
     checks: list[dict[str, Any]] = []
@@ -1917,6 +2065,7 @@ def main() -> None:
         "get",
         "exists",
         "materialize",
+        "materialize-from-store",
         "validate-local-synced",
         "canonical-hash",
         "freeze",
@@ -1984,6 +2133,17 @@ def main() -> None:
         backend = get_backend(root, cfg, override=_optional(rest, "--backend"))
         result = backend.materialize(_require(rest, "--unit-id"), _require(rest, "--body-path"), Path(_require(rest, "--dest")))
         emit(result.as_dict(), 0 if result.verdict == "ok" else 2)
+    elif args.command == "materialize-from-store":
+        units_file = _optional(rest, "--units-file")
+        units_raw = _optional(rest, "--units-json")
+        if units_file:
+            units = json.loads(Path(units_file).read_text(encoding="utf-8"))
+        elif units_raw:
+            units = json.loads(units_raw)
+        else:
+            units = []
+        result = materialize_from_store(root, cfg, units)
+        emit(result, 0 if result.get("verdict") == "ok" else 2)
 
     elif args.command == "canonical-hash":
         from planning_canonical import CommentRecord, IssueSnapshot, canonical_form, canonical_hash as ch
