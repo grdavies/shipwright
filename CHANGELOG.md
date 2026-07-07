@@ -380,6 +380,7 @@
 * merge phase shared-predicate-gap-capture-write-through-guard-wave-2-r1 into feat/planning-store-hardening (89632d0) <!-- sw-deliver:shared-predicate-gap-capture-write-through-guard-wave-2-r1 -->
 * merge phase spec-seed-reconcile-local-write-guards-wave-2-r2-r3 into feat/planning-store-hardening (11b0dba) <!-- sw-deliver:spec-seed-reconcile-local-write-guards-wave-2-r2-r3 -->
 * merge phase gitignore-auto-config-committed-cutover-signal-wave-2-r5 into feat/planning-store-hardening (bfcb705) <!-- sw-deliver:gitignore-auto-config-committed-cutover-signal-wave-2-r5 -->
+* merge phase query-cache-revalidation-atomic-gap-allocation-wave-2-r10-r25 into feat/planning-store-hardening (42a27b0) <!-- sw-deliver:query-cache-revalidation-atomic-gap-allocation-wave-2-r10-r25 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
