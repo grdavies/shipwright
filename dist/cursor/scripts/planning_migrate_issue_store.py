@@ -619,6 +619,83 @@ def sync_gap_issue_labels(root: Path, unit_id: str, content: str, cfg: dict[str,
     return {"unitId": unit_id, "issueId": updated.id, "labels": labels}
 
 
+def gap_unit_ids_scheduled_for_prd(root: Path, prd: str, cfg: dict[str, Any] | None = None) -> list[str]:
+    """Gap issue unit ids scheduled for ``prd`` under issue-store (PRD 057 R4).
+
+    Mirrors ``gap_backlog.flip_resolve``'s schedule-label matching so
+    ``gap_backlog.resolve_for_prd`` can locate the gap issues an absorbing PRD
+    should close when there is no local canonical gap file to inspect
+    (issue-store ``separate-project``).
+    """
+    cfg = cfg or load_workflow_config(root)
+    prd_n = str(int(prd)) if prd.isdigit() else prd.lstrip("0") or prd
+    sched_re = re.compile(
+        rf"^PRD\s+0*{re.escape(str(int(prd_n))) if prd_n.isdigit() else re.escape(prd_n)}(?:\s+A\d+)?$",
+        re.I,
+    )
+    unit_ids: list[str] = []
+    for record in list_gap_issue_records(root, cfg):
+        schedule = _gap_schedule_from_labels(list(getattr(record, "labels", [])))
+        if schedule and sched_re.match(schedule.strip()):
+            unit_ids.append(str(getattr(record, "unit_id", "")))
+    return unit_ids
+
+
+def close_gap_issue(root: Path, unit_id: str, cfg: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Close the gap issue for ``unit_id`` and apply the resolved label idempotently
+    (PRD 057 R4).
+
+    Shared by ``gap_backlog.resolve_for_prd`` (in turn used by both
+    ``reconcile_lib.set_index_status`` and the standalone ``gap-backlog.py flip
+    --resolve`` CLI) under issue-store ``separate-project`` — the issue is the
+    sole resolution record there, so this replaces the local frontmatter/row edit
+    that ``same-repo`` keeps. Returns ``{"verdict": "resolution-partial", ...}``
+    (never raises) on any lookup or update failure so callers can aggregate
+    partial outcomes across multiple gap units without losing already-applied
+    progress.
+    """
+    cfg = cfg or load_workflow_config(root)
+    if not issue_store_effective(root, cfg):
+        return {"verdict": "pass", "skipped": True, "reason": "not-issue-store", "unitId": unit_id}
+    key_result = validate_project_key(root, cfg)
+    if key_result.get("verdict") != "ok":
+        return {
+            "verdict": "resolution-partial",
+            "unitId": unit_id,
+            "error": key_result.get("message") or key_result.get("error", "invalid-project-key"),
+        }
+    project_key = str(key_result["projectKey"])
+    client = cfg_issues_client(root)
+    record = None
+    idx_key = issue_index_key(project_key, unit_id)
+    issue_id = load_issue_unit_index(root).get(idx_key)
+    if issue_id:
+        try:
+            record = client.issue_get(str(issue_id))
+        except IssueNotFound:
+            record = None
+    if record is None:
+        matches = client.issue_search(project_key=project_key, unit_id=unit_id, artifact_type="gap")
+        if not matches:
+            return {"verdict": "resolution-partial", "unitId": unit_id, "error": "gap-issue-missing"}
+        record = matches[0]
+    lifecycle = ArtifactLifecycle(
+        issue_state="closed",
+        frozen=False,
+        freeze_hash=None,
+        frozen_at=None,
+        gap_status="resolved",
+    )
+    labels = _apply_gap_labels(list(record.labels), lifecycle, "gap")
+    if record.state == "closed" and set(labels) == set(record.labels):
+        return {"verdict": "pass", "unitId": unit_id, "issueId": record.id, "labels": labels, "alreadyClosed": True}
+    try:
+        updated = client.issue_update(record.id, labels=labels, state="closed", if_match=record.etag)
+    except Exception as exc:  # noqa: BLE001 — any close/label failure is a resolution-partial finding, not a crash
+        return {"verdict": "resolution-partial", "unitId": unit_id, "error": str(exc), "labels": labels}
+    return {"verdict": "pass", "unitId": unit_id, "issueId": updated.id, "labels": labels}
+
+
 def pp_load_planning_dirs(root: Path) -> Any:
     import planning_paths as pp
 

@@ -121,6 +121,36 @@ is `complete` and `row.status` is `open`, **or** `row.status` is `scheduled` wit
 Append protocol: next ID is max(`GAP-NNN`)+1, never reuse; cross-links use `GAP-NNN` not row numbers.
 `gap-backlog.py list --json` and `gap-backlog.py check` power the docs-currency integrity guard.
 
+## Issue-store gap resolution: store authority vs. file-store parity (R4)
+
+`gap_backlog.resolve_for_prd()` — the shared resolver invoked by `set_index_status --status complete`
+(above) and by `living-status-gap-resolve.py` — branches on `issue_store_separate_project(root)`:
+
+- **File-store / issue-store `same-repo`** — byte-identical to pre-R4 behavior: flips the canonical
+  gap frontmatter and the `GAP-BACKLOG.md` row(s) scheduled for the absorbing PRD from `scheduled` to
+  `resolved`.
+- **Issue-store `separate-project`** — there is no local canonical gap file to flip, so the issue
+  **is** the sole resolution record. The resolver closes each scheduled gap issue and applies the
+  resolved label (`GAP_LABEL_RESOLVED`) directly via `close_gap_issue(root, unit_id)`
+  (`scripts/planning_migrate_issue_store.py`), reusing the same `_apply_gap_labels` lifecycle helper
+  the freeze/schedule path already uses. Idempotent — an already-closed, already-labeled issue is a
+  no-op (`alreadyClosed: true`).
+
+**`resolution-partial` verdict.** Any per-issue close/label failure under `separate-project` (network
+error, stale `etag`, missing issue) aggregates into an overall `resolution-partial` verdict rather than
+raising — distinct from the generic exception-based `partial` the `same-repo`/file-store path still
+raises on I/O failure. `set_index_status` propagates whichever verdict the resolver returns, so a
+partial issue-store failure surfaces as `resolution-partial` at the INDEX-write call site while the
+INDEX write itself is never rolled back (same non-rollback contract as `partial`). Retry with
+`gap_backlog.py flip --resolve` or `living-status-gap-resolve.py --absorbing-prd <NNN>` — both call the
+same idempotent resolver, so retrying only re-attempts the still-open issues.
+
+**Doctor reconciliation.** Because `separate-project` has no local file to cross-check, a gap issue left
+labeled `sw:gap-resolved` while still `open` (a partial `close_gap_issue` interrupted mid-update) has no
+other detection surface. `planning-doctor.py`'s `gap-resolution-partial` check scans gap issues for this
+open-issue-plus-resolved-label mismatch and reports it as an advisory `drift` finding (downgrades verdict
+to `degraded`, never `fail`) naming the affected unit ids, with the same retry remediation above.
+
 ## Guardrails
 
 - Never modify frozen PRD/amendment files.

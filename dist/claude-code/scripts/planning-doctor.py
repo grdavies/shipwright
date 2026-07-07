@@ -87,6 +87,48 @@ def wave_regression_check(root: Path) -> dict | None:
         return None
 
 
+def gap_resolution_partial_finding(root: Path) -> dict | None:
+    """Open-issue-plus-resolved-label mismatch finding (PRD 057 R4).
+
+    ``close_gap_issue`` (``scripts/planning_migrate_issue_store.py``) closes the
+    gap issue and applies the ``sw:gap-resolved`` label in a single
+    ``issue_update`` call; if that call fails or is interrupted after the
+    provider applies part of the update, a gap issue can be left with the
+    resolved label but still open. Under issue-store ``separate-project`` there
+    is no local canonical gap file to cross-check against, so this mismatch has
+    no other detection surface. Fail-open (returns ``None``) so an
+    unreachable/non-issue-store backend never breaks the doctor sweep.
+    """
+    try:
+        import planning_store as ps
+        from planning_canonical import GAP_LABEL_RESOLVED
+        from planning_migrate_issue_store import issue_store_effective, list_gap_issue_records
+
+        cfg = ps.load_workflow_config(root)
+        if not issue_store_effective(root, cfg):
+            return None
+        records = list_gap_issue_records(root, cfg)
+    except Exception:  # noqa: BLE001 — doctor check is advisory / fail-open
+        return None
+    mismatched = sorted(
+        str(getattr(record, "unit_id", ""))
+        for record in records
+        if GAP_LABEL_RESOLVED in getattr(record, "labels", [])
+        and getattr(record, "state", "") != "closed"
+    )
+    if not mismatched:
+        return None
+    return {
+        "check": "gap-resolution-partial",
+        "status": "drift",
+        "unitIds": mismatched,
+        "remediation": (
+            "retry close_gap_issue(root, unit_id) via `gap-backlog.py flip --resolve` "
+            "or `living-status-gap-resolve.py --absorbing-prd <NNN>`"
+        ),
+    }
+
+
 def parked_frontier_finding(root: Path) -> dict | None:
     """Over-parked-frontier drift finding (PRD 057 R28).
 
@@ -256,6 +298,14 @@ def doctor(root: Path, *, sweep: bool) -> dict:
         if regression_finding.get("status") == "drift":
             warnings.append("wave-regression")
             verdict = "fail"
+
+    gap_resolution_finding = gap_resolution_partial_finding(root)
+    if gap_resolution_finding is not None:
+        checks.append(gap_resolution_finding)
+        if gap_resolution_finding.get("status") == "drift":
+            warnings.append("gap-resolution-partial")
+            if verdict == "ok":
+                verdict = "degraded"
 
     swept: list[str] = []
     if sweep:
