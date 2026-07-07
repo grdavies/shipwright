@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Single-authority cutover gate for planning discovery (PRD 046 R87)."""
+"""Single-authority cutover gate for planning discovery (PRD 046 R87, PRD 057 R5).
+
+The gate's *default* signal is derived from committed state — the effective planning-store
+backend (`workflow.config.json`, resolved via `resolve_effective_backend`) plus a structural
+marker (whether the local file-store planning tree still holds tracked unit bodies) — so a
+fresh CI checkout (which never has the gitignored state file below) computes the correct
+authority without it. ``.cursor/hooks/state/planning-cutover-gate.json`` remains a supported
+**local, gitignored override** for manual/operator testing (`cutover set`), but it is no longer
+a CI authority: its absence must never produce a wrong default (PRD 057 D2).
+"""
 
 from __future__ import annotations
 
@@ -33,9 +42,48 @@ def gate_path(root: Path) -> Path:
     return pp.git_root(root) / CUTOVER_STATE_REL
 
 
-def load_cutover_gate(root: Path) -> dict[str, str]:
-    path = gate_path(root)
+def _has_tracked_structural_units(root: Path) -> bool:
+    """Structural marker: does the local file-store planning tree still hold unit bodies?
+
+    Used to avoid flipping structural authority to ``issue`` purely off configured backend
+    while a migration is mid-flight and local bodies are still tracked (PRD 057 R5).
+    """
+    worktree = pp.git_root(root)
+    dirs = pp.load_planning_dirs(worktree)
+    planning_root = worktree / dirs.planning
+    if not planning_root.is_dir():
+        return False
+    for type_dir in planning_root.iterdir():
+        if not type_dir.is_dir() or type_dir.name.startswith("."):
+            continue
+        for unit_dir in type_dir.iterdir():
+            if unit_dir.is_dir() and any(unit_dir.iterdir()):
+                return True
+    return False
+
+
+def derive_committed_gate(root: Path, cfg: dict[str, Any] | None = None) -> dict[str, str]:
+    """Derive the cutover-gate default from committed config + structural markers (R5).
+
+    No new tracked file is introduced: the effective backend comes from the committed
+    ``workflow.config.json`` and the structural signal comes from whether the file-store
+    planning tree still holds tracked unit bodies on disk. This is the CI-authoritative
+    default; ``load_cutover_gate`` may still layer a local override on top of it.
+    """
+    worktree = pp.git_root(root)
+    workflow_cfg = cfg if cfg is not None else load_workflow_config(worktree)
+    effective = resolve_effective_backend(worktree, workflow_cfg)
     gate = dict(DEFAULT_GATE)
+    if effective.get("effective") == "issue-store" and not _has_tracked_structural_units(worktree):
+        gate["discoverSource"] = "issue"
+        gate["structural"] = "issue"
+    return gate
+
+
+def load_cutover_gate(root: Path, cfg: dict[str, Any] | None = None) -> dict[str, str]:
+    worktree = pp.git_root(root)
+    gate = derive_committed_gate(worktree, cfg)
+    path = gate_path(worktree)
     if path.is_file():
         try:
             data = json.loads(path.read_text(encoding="utf-8"))

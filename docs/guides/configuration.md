@@ -304,6 +304,29 @@ Inspect live ledger (counts only — no bodies/tokens): `python3 scripts/plannin
 
 Fixture suite: `python3 scripts/test/run_pytest.py scripts/unit_tests/planning/test_planning_046_phase2.py -q`.
 
+### Cutover-gate committed derivation (PRD 057 R5)
+
+Planning discovery (`scripts/planning_discover.py`, `scripts/planning_region_disposition.py`) needs to know
+whether to read planning units from local files or from the configured issue-store backend. That signal —
+the **cutover gate** — is derived by `scripts/planning_cutover.py`'s `load_cutover_gate`, and its default is
+computed entirely from **committed state**, not from a tracked file:
+
+- **Effective backend** — `planning.store.backend` in `.cursor/workflow.config.json`, resolved via
+  `planning_store.resolve_effective_backend` (provider support + host reachability).
+- **Structural marker** — whether the local file-store planning tree (`docs/planning/<type>/<unit-id>/`)
+  still holds tracked unit bodies on disk. If bodies are still present, the gate stays on `file` even when
+  the committed backend says `issue-store`, so a mid-flight migration never silently drops units.
+
+When the effective backend is `issue-store` and no tracked file-store bodies remain, `discoverSource` and
+`structural` both resolve to `issue`. Otherwise they resolve to `file`. No new tracked file is introduced —
+a fresh CI checkout (which never has any local override) always computes the correct default.
+
+`.cursor/hooks/state/planning-cutover-gate.json` remains a **local, gitignored override** for manual/operator
+testing (`python3 scripts/planning_cutover.py . set --discover-source issue`, for example) — `load_cutover_gate`
+layers it on top of the committed default when present. It is **not** a CI authority: its absence must never
+produce a wrong default, and `/sw-init` auto-configures it into `.gitignore` via `gitignore-generate --write`
+(see `core/commands/sw-init.md`) so it never accidentally lands in the git index.
+
 ### Planning autonomy (PRD 035)
 
 Posture for planning graph bookkeeping vs content decisions. PRD 033 reads this key and soft-enforces

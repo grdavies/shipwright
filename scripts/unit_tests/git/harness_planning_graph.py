@@ -40,6 +40,12 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export PYTHONPATH="$ROOT/scripts:$ROOT/core/scripts"
+# PRD 057 R5: the "reconciler-no-private-bodies" check below calls pg.discover_units directly
+# against this repo's real root (not an isolated seed_planning_repo fixture); this repo's
+# committed backend is issue-store, so the cutover-gate default now correctly routes there —
+# but the reconciler's frontmatter-only invariant is scoped to local discovery, not live
+# issue-store reachability/tokens. Pin "file" explicitly to preserve that scope.
+export SW_DISCOVER_SOURCE=file
 FAIL=0
 ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
