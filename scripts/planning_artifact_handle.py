@@ -7,12 +7,20 @@ from pathlib import Path
 from typing import Any
 
 from host_lib import load_workflow_config
-from planning_store import get_backend, resolve_effective_backend
+from planning_store import get_backend, resolve_effective_backend, resolve_store_location
 
 
 def issue_store_is_effective(root: Path, cfg: dict[str, Any] | None = None) -> bool:
     cfg = cfg if cfg is not None else load_workflow_config(root)
     return resolve_effective_backend(root, cfg).get("effective") == "issue-store"
+
+
+def issue_store_separate_project_effective(root: Path, cfg: dict[str, Any] | None = None) -> bool:
+    cfg = cfg if cfg is not None else load_workflow_config(root)
+    if not issue_store_is_effective(root, cfg):
+        return False
+    loc = resolve_store_location(root, cfg)
+    return loc.get("verdict") == "ok" and loc.get("mode") == "separate-project"
 
 
 def default_unit_id_from_body_path(body_path: str) -> str:

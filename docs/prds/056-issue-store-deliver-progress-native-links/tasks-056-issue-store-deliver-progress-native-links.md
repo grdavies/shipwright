@@ -182,17 +182,17 @@ rescan: A3-deliver-run-entry-materialize
 
 ### 9. Separate-project docs bypass (small) — Amendment A2
 
-- [ ] **9.1** Guard `docs_worktree.py` and `/sw-doc` for separate-project
+- [x] **9.1** Guard `docs_worktree.py` and `/sw-doc` for separate-project
   - **File:** `scripts/docs_worktree.py`, `core/commands/sw-doc.md`
   - **Expected:** provision skipped; handoff lists issue refs only
   - **R-IDs:** R14
 
-- [ ] **9.2** Doctor detects local planning file writes under separate-project
+- [x] **9.2** Doctor detects local planning file writes under separate-project
   - **File:** `scripts/planning_store.py` (doctor subcommand)
   - **Expected:** exit 20 when tracked planning bodies appear in code repo
   - **R-IDs:** R15
 
-- [ ] **9.3** Spec-seed bypass for separate-project (phase-provision materialize only)
+- [x] **9.3** Spec-seed bypass for separate-project (phase-provision materialize only)
   - **File:** `scripts/wave_spec_seed.py`, `scripts/planning_materialize.py`
   - **Expected:** `spec-seed` skips code-repo doc copy; phase-provision materialize unchanged; run-entry covered by Phase 0
   - **R-IDs:** R16

@@ -423,6 +423,24 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
     if branch == default:
         fail(f"refused: spec-seed never targets default branch {default!r}")
 
+    from planning_artifact_handle import issue_store_separate_project_effective
+
+    if issue_store_separate_project_effective(top):
+        emit(
+            {
+                "verdict": "pass",
+                "action": "spec-seed",
+                "skipped": True,
+                "reason": "separate-project-issue-store",
+                "branch": branch,
+                "scope": scope,
+                "note": (
+                    "code-repo doc copy skipped; deliver run-entry materialize supplies "
+                    "task content from issue store"
+                ),
+            }
+        )
+
     from primary_checkout_guard import enforce_guard
     enforce_guard(top, branch)
 

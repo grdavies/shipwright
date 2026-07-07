@@ -1838,6 +1838,47 @@ def validate_local_synced_path(path: Path, *, allowlist: list[str] | None = None
     return {"verdict": "ok", "path": str(resolved), "checks": checks, "warnings": warnings}
 
 
+PLANNING_BODY_SCAN_PREFIXES = ("docs/brainstorms/", "docs/prds/")
+
+
+def tracked_planning_body_paths(root: Path) -> list[str]:
+    proc = subprocess.run(
+        ["git", "-C", str(root), "ls-files", *PLANNING_BODY_SCAN_PREFIXES],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return []
+    return sorted(line.strip() for line in proc.stdout.splitlines() if line.strip())
+
+
+def doctor_separate_project_local_writes(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    from planning_artifact_handle import issue_store_separate_project_effective
+
+    if not issue_store_separate_project_effective(root, cfg):
+        return {
+            "verdict": "pass",
+            "action": "doctor",
+            "skipped": True,
+            "reason": "not-separate-project-issue-store",
+        }
+    stray = tracked_planning_body_paths(root)
+    if stray:
+        return {
+            "verdict": "fail",
+            "action": "doctor",
+            "halt": "local-planning-body-drift",
+            "error": "tracked planning-body files present in code repo under separate-project issue-store",
+            "paths": stray,
+            "remediation": (
+                "remove tracked docs/brainstorms and docs/prds bodies from the code repo; "
+                "authoring lives in the planning-project issue store"
+            ),
+        }
+    return {"verdict": "pass", "action": "doctor", "checks": ["no-tracked-planning-bodies"]}
+
+
 def _require(args: list[str], flag: str) -> str:
     if flag not in args:
         fail(f"missing required flag: {flag}")
@@ -1879,6 +1920,7 @@ def main() -> None:
         "mark-issue-tombstone",
         "mark-issue-transferred",
         "clear-issue-fixture",
+        "doctor",
     ):
         sub.add_parser(name)
     args, rest = parser.parse_known_args()
@@ -1993,6 +2035,9 @@ def main() -> None:
                 allowlist = [str(x) for x in cfg_allow]
         result = validate_local_synced_path(Path(os.path.expanduser(raw)), allowlist=allowlist)
         emit(result, 0 if result["verdict"] == "ok" else 2)
+    elif args.command == "doctor":
+        result = doctor_separate_project_local_writes(root, cfg)
+        emit(result, 0 if result.get("verdict") == "pass" else 20)
 
 
 if __name__ == "__main__":
