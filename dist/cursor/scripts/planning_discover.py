@@ -32,7 +32,15 @@ from planning_canonical import (  # noqa: E402
 from planning_cutover import load_cutover_gate  # noqa: E402
 from planning_store import validate_project_key  # noqa: E402
 from planning_request_budget import BudgetExhausted, RequestBudgetLedger  # noqa: E402
-from planning_query_cache import DEFAULT_QUERY_FINGERPRINT, get_entry, put_entry, query_fingerprint, resolve_ttl  # noqa: E402
+from planning_query_cache import (  # noqa: E402
+    DEFAULT_QUERY_FINGERPRINT,
+    get_entry,
+    invalidate_all,
+    put_entry,
+    query_fingerprint,
+    resolve_ttl,
+    revalidate_live_metadata,
+)
 from secret_scan import load_allowlist, scan_text  # noqa: E402
 
 DiscoverSource = Literal["file", "issue"]
@@ -301,25 +309,31 @@ def discover_units_issue(root: Path) -> list[pig.PlanningUnit]:
     if not force_refresh:
         cached = get_entry(root, project_key=project_key, fingerprint=fingerprint, ttl_seconds=resolve_ttl(root, provider))
         if cached and isinstance(cached.get("projections"), list):
-            units: list[pig.PlanningUnit] = []
-            for proj in cached["projections"]:
-                if not isinstance(proj, dict) or not proj.get("id"):
-                    continue
-                units.append(
-                    pig.PlanningUnit(
-                        id=str(proj["id"]),
-                        type=str(proj.get("type", "")),
-                        status=str(proj.get("status", "")),
-                        title=str(proj.get("title", "")),
-                        visibility=str(proj.get("visibility", "")),
-                        edges=str(proj.get("edges", "")),
-                        body_path=f"issue-cache:{proj['id']}",
-                        opaque_title=bool(proj.get("opaqueTitle")),
+            ledger.charge("discover-revalidate", critical=True)
+            if revalidate_live_metadata(root, client, cached):
+                units: list[pig.PlanningUnit] = []
+                for proj in cached["projections"]:
+                    if not isinstance(proj, dict) or not proj.get("id"):
+                        continue
+                    units.append(
+                        pig.PlanningUnit(
+                            id=str(proj["id"]),
+                            type=str(proj.get("type", "")),
+                            status=str(proj.get("status", "")),
+                            title=str(proj.get("title", "")),
+                            visibility=str(proj.get("visibility", "")),
+                            edges=str(proj.get("edges", "")),
+                            body_path=f"issue-cache:{proj['id']}",
+                            opaque_title=bool(proj.get("opaqueTitle")),
+                        )
                     )
-                )
-            if units:
-                units.sort(key=lambda u: (u.type, u.id))
-                return units
+                if units:
+                    units.sort(key=lambda u: (u.type, u.id))
+                    return units
+            else:
+                # Symmetric-diff / state drift detected — the cache is stale
+                # for every fingerprint, not just this query (R10).
+                invalidate_all(root)
     ledger.charge("issue-search")
     all_records = list(client.issue_search(project_key=project_key))
     page_size_raw = os.environ.get("SW_ISSUES_PAGE_SIZE", "").strip()
