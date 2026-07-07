@@ -4,6 +4,7 @@ Shipped-phase entries appended by the implementation workstream on merge. This f
 
 | Date | PRD | Phase | Notes |
 |------|-----|-------|-------|
+| 2026-07-07 | 056 | all | deliver complete — awaiting terminal merge; SHA a40578e |
 | 2026-07-07 | 056 | all | deliver complete — awaiting terminal merge; SHA dfdaa95 |
 | 2026-07-07 | 056 | all | deliver complete — awaiting terminal merge; SHA 85cb91f |
 | 2026-07-05 | 047 | all | deliver merged to main; PR #377; SHA 50e3b9c |
