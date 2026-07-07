@@ -782,6 +782,20 @@ def cmd_status_collect(root: Path, args: list[str]) -> None:
         expected = phase_branch_head_optional(root, state, phase_slug, str(phase_branch))
         if expected:
             validate_status_sha(status, expected, phase_slug)
+    progress_sync = None
+    if verdict == "merge-ready-green":
+        from planning_progress import sync_phase_done
+
+        run_state = load_state(root)
+        collect_phase_id = None
+        for pid, meta in (run_state.get("phases") or {}).items():
+            if meta.get("slug") == phase_slug:
+                collect_phase_id = str(pid)
+                break
+        if collect_phase_id:
+            progress_sync = sync_phase_done(root, run_state, collect_phase_id)
+            if progress_sync.get("synced") or progress_sync.get("idempotent"):
+                save_state(root, run_state)
     if verdict == "blocked":
         state = load_state(root)
         phases = state.get("phases") or {}
@@ -809,15 +823,16 @@ def cmd_status_collect(root: Path, args: list[str]) -> None:
             text=True,
             capture_output=True,
         )
-    emit(
-        {
-            "verdict": "pass",
-            "action": "status-collect",
-            "phase": phase_slug,
-            "statusPath": str(path),
-            "status": status,
-        }
-    )
+    payload = {
+        "verdict": "pass",
+        "action": "status-collect",
+        "phase": phase_slug,
+        "statusPath": str(path),
+        "status": status,
+    }
+    if progress_sync is not None:
+        payload["progressSync"] = progress_sync
+    emit(payload)
 
 
 def cmd_phase_dispatch_env(root: Path, args: list[str]) -> None:
@@ -1335,8 +1350,15 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
         state = load_state(root)
         pr_close = close_superseded_phase_prs(root, state, phase_slug=phase_slug)
 
-        emit(
-            {
+        progress_sync = None
+        if phase_id:
+            from planning_progress import sync_phase_done
+
+            progress_sync = sync_phase_done(root, state, str(phase_id))
+            if progress_sync.get("synced") or progress_sync.get("idempotent"):
+                save_state(root, state)
+
+        merge_payload = {
                 "verdict": "pass",
                 "action": "merge-run-next",
                 "forwardMergedDependencies": forward_merged,
@@ -1350,7 +1372,9 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
                 "ack": ack_out,
                 "authPath": auth_path,
             }
-        )
+        if progress_sync is not None:
+            merge_payload["progressSync"] = progress_sync
+        emit(merge_payload)
     except Exception:
         state = load_state(root)
         state["mergeJournal"] = None

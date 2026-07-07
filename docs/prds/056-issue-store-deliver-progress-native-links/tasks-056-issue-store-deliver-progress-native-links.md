@@ -123,17 +123,17 @@ rescan: A3-deliver-run-entry-materialize
 
 ### 5. Phase-green progress sync (medium)
 
-- [ ] **5.1** `sync_phase_done` updates sub-issue labels/state
+- [x] **5.1** `sync_phase_done` updates sub-issue labels/state
   - **File:** `scripts/planning_progress.py`, `scripts/wave_merge.py`
   - **Expected:** after merge-ready-green, `sw:phase:<id>:done` label applied
   - **R-IDs:** R6, R7
 
-- [ ] **5.2** Checkbox toggle propagation from phase acceptance / execute status
+- [x] **5.2** Checkbox toggle propagation from phase acceptance / execute status
   - **File:** `scripts/phase_acceptance_gate.py`, `scripts/execute_task_status.py`
   - **Expected:** toggles sync when hierarchyMap present
   - **R-IDs:** R7
 
-- [ ] **5.3** Deliver progress fixtures (simulated phase green)
+- [x] **5.3** Deliver progress fixtures (simulated phase green)
   - **File:** `scripts/unit_tests/planning/harness_planning_deliver_progress.py`
   - **Expected:** phase 1 green → sub-issue label delta asserted
   - **R-IDs:** R10
