@@ -245,14 +245,14 @@ else
   bad "terminal-status-provenance-reemit"
 fi
 
-# --- 7.4 terminal-pr-prepare-commitlint (R43) ---
+# --- 7.4 terminal-pr-prepare-commitlint (R43; superseded fixed-text by R20 feature-named titles) ---
 if python3 -c "
 import sys
 sys.path.insert(0,'$ROOT/scripts')
 from wave_terminal import commitlint_safe_title
 t=commitlint_safe_title('feat','Slug','035')
-assert t=='feat(prd-35): deliver wave'
-assert commitlint_safe_title('feat','X',None)== 'feat(x): deliver wave'
+assert t=='feat(prd-35): slug', t
+assert commitlint_safe_title('feat','X',None)== 'feat(x): x'
 "; then ok "terminal-pr-prepare-commitlint"; else bad "terminal-pr-prepare-commitlint"; fi
 
 # --- 7.5 eager-phase-teardown-after-merge (R44) ---
