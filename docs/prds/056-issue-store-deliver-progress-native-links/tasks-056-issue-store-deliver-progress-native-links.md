@@ -140,12 +140,12 @@ rescan: A3-deliver-run-entry-materialize
 
 ### 6. Living-docs issue projection (small)
 
-- [ ] **6.1** Issue-store projection in living-docs reconcile
+- [x] **6.1** Issue-store projection in living-docs reconcile
   - **File:** `scripts/wave_living_docs.py`, `scripts/planning_index_issue.py` (new or extend planning_index_gen)
   - **Expected:** when cutover derived=issue, INDEX status written via `planning_store.put`
   - **R-IDs:** R8, R9
 
-- [ ] **6.2** Extend planning-cutover fixtures for reconcile projection
+- [x] **6.2** Extend planning-cutover fixtures for reconcile projection
   - **File:** `scripts/unit_tests/git/harness_planning_cutover.py`
   - **Expected:** derived=issue → put called; file-store unchanged when file authority
   - **R-IDs:** R8, R10
