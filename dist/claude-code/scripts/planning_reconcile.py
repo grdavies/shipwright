@@ -9,7 +9,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -24,6 +24,7 @@ import planning_lifecycle as plc  # noqa: E402
 import planning_paths as pp  # noqa: E402
 from host_lib import load_workflow_config  # noqa: E402
 from inflight_signal import InflightTuple, read_tuples  # noqa: E402
+from planning_canonical import SCHEDULE_STALE_LABEL  # noqa: E402
 from planning_migrate_issue_store import issue_store_separate_project  # noqa: E402
 from wave_living_doc_lock import living_doc_write_lock  # noqa: E402
 
@@ -391,6 +392,72 @@ def dependency_dead_warnings(units: list[pg.GraphUnit]) -> list[dict[str, str]]:
     return warnings
 
 
+_SCHEDULE_HINT_IGNORE_PREFIXES = ("deferred", "config:")
+
+
+def _schedule_hint_target(schedule: str) -> str:
+    """Normalize a `schedule:` hint (or decoded `sw:gap-schedule:*` label) to
+    the absorber's numeric id prefix for comparison (PRD 057 R17).
+
+    Accepts both the legacy `gap_backlog.schedule_label` form (``PRD 057`` /
+    ``PRD 057 A1``) and the canonical `<NNN>-<slug>` unit-id form; an empty,
+    placeholder (``—``/``-``), or policy-prefixed (``deferred``/``config:``)
+    hint has no absorber to reconcile against and is skipped.
+    """
+    schedule = schedule.strip()
+    if not schedule or schedule in {"—", "-"}:
+        return ""
+    if schedule.lower().startswith(_SCHEDULE_HINT_IGNORE_PREFIXES):
+        return ""
+    m = re.match(r"^PRD\s+0*(\d+)", schedule, re.I)
+    if m:
+        return m.group(1)
+    m = re.match(r"^0*(\d+)-", schedule)
+    if m:
+        return m.group(1)
+    return schedule
+
+
+def _unit_number_prefix(unit_id: str) -> str:
+    m = re.match(r"^0*(\d+)-", unit_id)
+    return m.group(1) if m else ""
+
+
+def schedule_stale_findings(units: Iterable[pg.GraphUnit]) -> list[dict[str, Any]]:
+    """R17 -- flag gap units whose `schedule:` hint no longer matches an
+    actual `absorbs` edge (gap-049).
+
+    A gap's schedule hint names the absorber it expects to resolve it; the
+    absorber's own `absorbs` edges are the ground truth. When the two
+    disagree -- the hinted absorber doesn't currently absorb this gap, or no
+    unit absorbs it at all -- surface `sw:schedule-stale` rather than trusting
+    the (possibly rebased/renumbered) hint silently.
+    """
+    all_units = list(units)
+    findings: list[dict[str, Any]] = []
+    for unit in all_units:
+        if unit.unit_type != "gap" or not unit.schedule:
+            continue
+        target = _schedule_hint_target(unit.schedule)
+        if not target:
+            continue
+        absorbers = sorted(u.id for u in all_units if unit.id in u.absorbs)
+        actual_targets = {_unit_number_prefix(a) for a in absorbers}
+        if target in actual_targets:
+            continue
+        findings.append(
+            {
+                "unit": unit.id,
+                "cause": "schedule-stale",
+                "label": SCHEDULE_STALE_LABEL,
+                "scheduleHint": unit.schedule,
+                "actualAbsorbers": absorbers,
+                "hint": "update the `schedule:` hint (or sw:gap-schedule:* label) to match the unit's actual absorbs edges",
+            }
+        )
+    return findings
+
+
 def reconcile_core(
     root: Path,
     *,
@@ -478,6 +545,7 @@ def reconcile_core(
         "legacy": legacy,
         "relief": relief,
         "dependencyDead": dependency_dead_warnings(units),
+        "scheduleStale": schedule_stale_findings(units),
     }
     if store_projection is not None:
         result["storeProjection"] = store_projection
@@ -566,7 +634,11 @@ def cmd_reconcile(root: Path, args: list[str]) -> None:
 
 def cmd_doctor(root: Path, _args: list[str]) -> None:
     units = pg.discover_units(root)
-    warnings = dependency_dead_warnings(units) + plp.legacy_manual_edit_warnings(root)
+    warnings = (
+        dependency_dead_warnings(units)
+        + plp.legacy_manual_edit_warnings(root)
+        + schedule_stale_findings(units)
+    )
     try:
         from planning_migrate_issue_store import diagnose_gap_projection_divergence
 
@@ -592,6 +664,7 @@ def cmd_doctor(root: Path, _args: list[str]) -> None:
             "action": "planning-graph-doctor",
             "warnings": warnings,
             "dependencyDeadCount": len(warnings),
+            "scheduleStaleCount": len(schedule_stale_findings(units)),
         }
     )
 

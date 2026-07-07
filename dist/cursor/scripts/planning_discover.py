@@ -19,7 +19,9 @@ import planning_paths as pp  # noqa: E402
 from host_lib import load_workflow_config  # noqa: E402
 from issues_lib import IssuesClient  # noqa: E402
 from planning_canonical import (  # noqa: E402
+    gap_schedule_from_labels,
     gap_status_from_labels,
+    source_tag_from_labels,
     status_from_labels,
     MARKER_ARTIFACT_TYPE,
     MARKER_UNIT_ID,
@@ -139,6 +141,8 @@ def discover_units_file(root: Path) -> list[pig.PlanningUnit]:
                     body_path=str(body.relative_to(worktree)),
                     opaque_title=pig.parse_opaque_title(fm.get("opaqueTitle")),
                     edge_map=edge_map or None,
+                    source=str(fm.get("source", "")).strip(),
+                    schedule=str(fm.get("schedule", "")).strip(),
                 )
             )
     units.sort(key=lambda u: (u.type, u.id))
@@ -246,6 +250,10 @@ def _issue_record_to_unit(root: Path, record: Any) -> pig.PlanningUnit | None:
         fm = pig.parse_frontmatter(content)
         if fm:
             visibility = str(fm.get("visibility", ""))
+    # PRD 057 R12/R17 -- provider-native label is authoritative; frontmatter is
+    # the dual-read fallback (same precedence as `visibility` above).
+    source = source_tag_from_labels(list(record.labels))
+    schedule = gap_schedule_from_labels(list(record.labels))
     edge_map = _edges_from_record(record, content)
     status = _status_from_record(record, content)
     title = _title_from_record(record)
@@ -256,6 +264,10 @@ def _issue_record_to_unit(root: Path, record: Any) -> pig.PlanningUnit | None:
                 title = str(fm["title"])
             if fm.get("visibility") and not visibility:
                 visibility = str(fm["visibility"])
+            if fm.get("source") and not source:
+                source = str(fm["source"]).strip()
+            if fm.get("schedule") and not schedule:
+                schedule = str(fm["schedule"]).strip()
     body_path = f"issue:{record.id}"
     return pig.PlanningUnit(
         id=unit_id,
@@ -267,6 +279,8 @@ def _issue_record_to_unit(root: Path, record: Any) -> pig.PlanningUnit | None:
         body_path=body_path,
         opaque_title=False,
         edge_map=edge_map or None,
+        source=source,
+        schedule=schedule,
     )
 
 
@@ -290,6 +304,8 @@ def _projection_from_unit(unit: pig.PlanningUnit, root: Path) -> dict[str, Any]:
         "status": row.get("status", ""),
         "visibility": row.get("visibility", ""),
         "edges": unit.edges,
+        "source": unit.source,
+        "schedule": unit.schedule,
     }
 
 
@@ -325,6 +341,8 @@ def discover_units_issue(root: Path) -> list[pig.PlanningUnit]:
                             edges=str(proj.get("edges", "")),
                             body_path=f"issue-cache:{proj['id']}",
                             opaque_title=bool(proj.get("opaqueTitle")),
+                            source=str(proj.get("source", "")),
+                            schedule=str(proj.get("schedule", "")),
                         )
                     )
                 if units:
@@ -370,6 +388,8 @@ def discover_units_issue(root: Path) -> list[pig.PlanningUnit]:
                 body_path=unit.body_path,
                 opaque_title=True,
                 edge_map=None,
+                source=unit.source,
+                schedule=unit.schedule,
             )
         units.append(unit)
         metadata_units[unit.id] = {"state": record.state, "labels": sorted(record.labels)}
@@ -388,6 +408,50 @@ def discover_units(root: Path) -> list[pig.PlanningUnit]:
             pig.mark_index_incomplete(root, str(exc))
             fail(str(exc), exit_code=20, indexIncomplete=True)
     return discover_units_file(root)
+
+
+_SOURCE_SCOPE_ENV = "SW_PLANNING_SOURCE_SCOPE"
+
+
+def resolve_source_scope(root: Path) -> list[str]:
+    """PRD 057 R12 -- explicit `sw:source:<owner>/<repo>` scope for a shared
+    planning repository.
+
+    An env override (comma-separated, for one-off CLI invocations) takes
+    precedence over `planning.store.sourceScope` in committed config. An empty
+    result (the default) means every source is in scope -- see
+    `filter_units_by_source` for the untagged-legacy-unit guarantee this pairs
+    with, and `planning-doctor.py`'s `sw:source-missing` finding for the
+    companion advisory.
+    """
+    env = os.environ.get(_SOURCE_SCOPE_ENV, "").strip()
+    if env:
+        return [s.strip() for s in env.split(",") if s.strip()]
+    worktree = pp.git_root(root)
+    cfg = load_workflow_config(worktree)
+    store = (cfg.get("planning") or {}).get("store") or {}
+    scope = store.get("sourceScope")
+    if isinstance(scope, list):
+        return [str(s).strip() for s in scope if str(s).strip()]
+    if isinstance(scope, str) and scope.strip():
+        return [scope.strip()]
+    return []
+
+
+def filter_units_by_source(units: list[Any], scope: list[str]) -> list[Any]:
+    """PRD 057 R12 -- scope discovery/scheduler/gap-capture to `sw:source:*`.
+
+    A non-empty scope keeps every unit tagged with a matching source AND every
+    untagged legacy unit -- scoping never silently hides an untagged unit
+    (that gap is instead surfaced via the `sw:source-missing` doctor finding).
+    An empty scope (the default) is a no-op. Generic over any sequence of
+    objects exposing a `.source` attribute (`planning_index_gen.PlanningUnit`
+    or `planning_graph.GraphUnit`).
+    """
+    if not scope:
+        return units
+    scope_set = set(scope)
+    return [u for u in units if not getattr(u, "source", "") or u.source in scope_set]
 
 
 def cmd_resolve(root: Path, _args: list[str]) -> None:

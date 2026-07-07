@@ -20,7 +20,11 @@ import planning_paths as pp  # noqa: E402
 from host_lib import load_workflow_config  # noqa: E402
 from issues_lib import IssuesClient, use_fixture_mode  # noqa: E402
 from planning_canonical import GAP_LABEL_RESOLVED  # noqa: E402
-from planning_discover import resolve_discover_source  # noqa: E402
+from planning_discover import (  # noqa: E402
+    filter_units_by_source,
+    resolve_discover_source,
+    resolve_source_scope,
+)
 from planning_query_cache import get_entry, invalidate_all, revalidate_live_metadata, resolve_ttl  # noqa: E402
 from planning_request_budget import RequestBudgetLedger  # noqa: E402
 from planning_store import validate_project_key  # noqa: E402
@@ -100,15 +104,23 @@ def runnable_task_list(root: Path, unit_id: str) -> str | None:
     return task_list_for_unit(root, unit_id)
 
 
-def schedule_next(root: Path, *, force_refresh: bool = False) -> dict[str, Any]:
+def schedule_next(
+    root: Path,
+    *,
+    force_refresh: bool = False,
+    source_scope: list[str] | None = None,
+) -> dict[str, Any]:
     incomplete, reason = index_incomplete(root)
     if incomplete:
         fail(reason or "index-incomplete", exit_code=20, indexIncomplete=True)
 
     worktree = pp.git_root(root)
     parked = park.load_parked(root)
+    # PRD 057 R12 -- an explicit `--source` override wins for this invocation;
+    # otherwise fall back to the committed/env scope (empty = every source).
+    scope = source_scope if source_scope is not None else resolve_source_scope(root)
     if resolve_discover_source(root) != "issue":
-        units = pg.discover_units(root)
+        units = filter_units_by_source(pg.discover_units(root), scope)
         graph_eligible = pg.order_eligible(units)
         eligible: list[str] = []
         skipped: list[dict[str, Any]] = []
@@ -130,6 +142,8 @@ def schedule_next(root: Path, *, force_refresh: bool = False) -> dict[str, Any]:
             )
         nxt = eligible[0] if eligible else None
         payload: dict[str, Any] = {"verdict": "pass", "action": "schedule-next", "source": "file", "next": nxt, "eligible": eligible}
+        if scope:
+            payload["sourceScope"] = scope
         if skipped:
             payload["skipped"] = skipped
         if nxt:
@@ -154,7 +168,7 @@ def schedule_next(root: Path, *, force_refresh: bool = False) -> dict[str, Any]:
         if entry and not revalidate_live_metadata(root, client, entry):
             invalidate_all(root)
 
-    units = pg.discover_units(root)
+    units = filter_units_by_source(pg.discover_units(root), scope)
     by_id = pg.index_units(units)
     scored: list[tuple[int, int, str]] = []
     skipped = []
@@ -192,6 +206,8 @@ def schedule_next(root: Path, *, force_refresh: bool = False) -> dict[str, Any]:
         )
     nxt = eligible[0] if eligible else None
     payload = {"verdict": "pass", "action": "schedule-next", "source": "issue", "next": nxt, "eligible": eligible, "ledger": ledger.snapshot()}
+    if scope:
+        payload["sourceScope"] = scope
     if skipped:
         payload["skipped"] = skipped
     if nxt:
@@ -202,7 +218,12 @@ def schedule_next(root: Path, *, force_refresh: bool = False) -> dict[str, Any]:
 
 
 def cmd_next(root: Path, args: list[str]) -> None:
-    emit(schedule_next(root, force_refresh="--force-refresh" in args))
+    source_scope = None
+    if "--source" in args:
+        idx = args.index("--source")
+        raw = args[idx + 1] if idx + 1 < len(args) else ""
+        source_scope = [s.strip() for s in raw.split(",") if s.strip()]
+    emit(schedule_next(root, force_refresh="--force-refresh" in args, source_scope=source_scope))
 
 
 def main(argv: list[str] | None = None) -> None:

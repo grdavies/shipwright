@@ -236,6 +236,34 @@ def privacy_notice_key_reconciliation_finding(root: Path) -> dict | None:
     }
 
 
+def source_missing_finding(root: Path) -> dict | None:
+    """Untagged-legacy-unit finding for shared planning repos (PRD 057 R12).
+
+    Discovery/scheduler/gap-capture scoping never hides an untagged unit from
+    the default (or an explicit) `sw:source:<owner>/<repo>` scope; this
+    advisory finding is the companion surfacing so an operator can decide
+    whether to backfill a `source:` tag. Fail-open (returns ``None``) if
+    discovery cannot run, so the doctor never crashes on this check.
+    """
+    try:
+        import planning_discover as pdisc
+
+        untagged = sorted(u.id for u in pdisc.discover_units(root) if not u.source)
+    except Exception:  # noqa: BLE001 — doctor check is advisory / fail-open
+        return None
+    if not untagged:
+        return None
+    return {
+        "check": "sw:source-missing",
+        "status": "advisory",
+        "untaggedUnits": untagged,
+        "remediation": (
+            "add a `source:` frontmatter hint (or sw:source:<owner>/<repo> label) to scope "
+            "these units to a product repo"
+        ),
+    }
+
+
 def doctor(root: Path, *, sweep: bool) -> dict:
     checks: list[dict] = []
     warnings: list[str] = []
@@ -370,6 +398,13 @@ def doctor(root: Path, *, sweep: bool) -> dict:
             warnings.append("over-parked-frontier")
             if verdict == "ok":
                 verdict = "degraded"
+
+    source_finding = source_missing_finding(root)
+    if source_finding is not None:
+        checks.append(source_finding)
+        warnings.append("sw:source-missing")
+        if verdict == "ok":
+            verdict = "degraded"
 
     regression_finding = wave_regression_check(root)
     if regression_finding is not None:
