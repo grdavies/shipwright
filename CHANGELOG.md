@@ -377,6 +377,7 @@
 * merge phase gitlab-issues-demotion-fail-closed-wave-1-r7 into feat/planning-store-hardening (82bd788) <!-- sw-deliver:gitlab-issues-demotion-fail-closed-wave-1-r7 -->
 * merge phase dispatch-preflight-concrete-model-resolution-wave-1-r18 into feat/planning-store-hardening (3228432) <!-- sw-deliver:dispatch-preflight-concrete-model-resolution-wave-1-r18 -->
 * merge phase ci-token-absent-degraded-mode-rollback-kill-switch-wave-1-r30-r31 into feat/planning-store-hardening (3a9714d) <!-- sw-deliver:ci-token-absent-degraded-mode-rollback-kill-switch-wave-1-r30-r31 -->
+* merge phase shared-predicate-gap-capture-write-through-guard-wave-2-r1 into feat/planning-store-hardening (89632d0) <!-- sw-deliver:shared-predicate-gap-capture-write-through-guard-wave-2-r1 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
