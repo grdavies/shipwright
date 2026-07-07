@@ -409,23 +409,18 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run")
     top = Path.cwd().resolve()
     default = load_trunk_base(top)
+    scope = "artifact" if artifact else "task-list"
 
-    single: Path | None = None
-    if artifact:
-        branch, slug, docs_dir = resolve_target_from_artifact(top, artifact)
-        single = (top / artifact).resolve()
-        scope = "artifact"
-    else:
-        assert task_list is not None
-        branch, slug, docs_dir = resolve_target_branch(top, task_list)
-        scope = "task-list"
-
-    if branch == default:
-        fail(f"refused: spec-seed never targets default branch {default!r}")
-
+    # Separate-project issue-store: check *before* resolving the branch, since
+    # branch resolution reads the frozen task-list body via run-entry
+    # materialize, which is a deliberate no-op under CI/host (R19) — a fixture
+    # or CI-only frozen unit would otherwise never resolve and this skip would
+    # be unreachable (gap discovered post-Phase-9 CI run).
     from planning_artifact_handle import issue_store_separate_project_effective
 
     if issue_store_separate_project_effective(top):
+        current = git_run(["branch", "--show-current"], top, check=False).stdout.strip()
+        branch = current if current and current != default else f"{scope}-separate-project-skip"
         emit(
             {
                 "verdict": "pass",
@@ -440,6 +435,17 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
                 ),
             }
         )
+
+    single: Path | None = None
+    if artifact:
+        branch, slug, docs_dir = resolve_target_from_artifact(top, artifact)
+        single = (top / artifact).resolve()
+    else:
+        assert task_list is not None
+        branch, slug, docs_dir = resolve_target_branch(top, task_list)
+
+    if branch == default:
+        fail(f"refused: spec-seed never targets default branch {default!r}")
 
     from primary_checkout_guard import enforce_guard
     enforce_guard(top, branch)
