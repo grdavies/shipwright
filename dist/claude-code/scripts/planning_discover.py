@@ -29,7 +29,8 @@ from planning_canonical import (  # noqa: E402
     reassemble_body,
     strip_markers_and_edges,
 )
-from planning_store import resolve_effective_backend, validate_project_key  # noqa: E402
+from planning_cutover import load_cutover_gate  # noqa: E402
+from planning_store import validate_project_key  # noqa: E402
 from planning_request_budget import BudgetExhausted, RequestBudgetLedger  # noqa: E402
 from planning_query_cache import DEFAULT_QUERY_FINGERPRINT, get_entry, put_entry, query_fingerprint, resolve_ttl  # noqa: E402
 from secret_scan import load_allowlist, scan_text  # noqa: E402
@@ -86,12 +87,8 @@ def resolve_discover_source(root: Path) -> DiscoverSource:
     if pinned:
         return pinned
     worktree = pp.git_root(root)
-    cfg = load_workflow_config(worktree)
-    effective = resolve_effective_backend(worktree, cfg)
-    if effective.get("effective") != "issue-store":
-        return "file"
-    from planning_cutover import load_cutover_gate
-
+    # PRD 057 R5: load_cutover_gate derives the default from committed config (effective
+    # backend) + structural markers — no gitignored-state-file dependency for CI correctness.
     gate = load_cutover_gate(worktree)
     if gate.get("discoverSource") == "issue":
         return "issue"
