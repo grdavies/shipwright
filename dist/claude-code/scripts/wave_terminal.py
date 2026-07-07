@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 
 from _sw import interpreter
@@ -21,6 +22,8 @@ from host_invoke import host_verb
 from wave_errors import fail_from_payload
 from host_lib import load_workflow_config, remote_name, remote_ref, resolve_provider
 from wave_state import phase_complete
+import loop_health_lib
+import planning_gap_capture as pgc
 
 
 def utc_now() -> str:
@@ -37,14 +40,112 @@ def fail(error: Any, exit_code: int = 2, **extra: Any) -> None:
     emit({"verdict": "fail", "error": str(error), **extra}, exit_code)
 
 
-def commitlint_safe_title(commit_type: str, slug: str, prd_number: str | None = None) -> str:
-    """Conventional-commit title with lowercase prd scope (R43)."""
+_H1_HEADING_RE = re.compile(r"^#\s+(.+?)\s*$")
+_PRD_HEADING_PREFIX_RE = re.compile(r"^PRD\s+\d+[A-Za-z]?\s*[—\-:]\s*", re.I)
+
+
+def _first_markdown_h1(path: Path) -> str | None:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    lines = text.splitlines()
+    i = 0
+    if lines and lines[0].strip() == "---":
+        i = 1
+        while i < len(lines) and lines[i].strip() != "---":
+            i += 1
+        i += 1
+    for line in lines[i:]:
+        match = _H1_HEADING_RE.match(line)
+        if match:
+            return match.group(1).strip()
+    return None
+
+
+def prd_feature_title(root: Path, prd_number: str) -> str | None:
+    """Resolve the PRD's human-readable feature name from its H1 heading (R20).
+
+    Strips a leading ``PRD <n>[<letter>] — `` (or ``-``/``:``) prefix so the
+    title names the landed feature rather than restating the PRD number.
+    """
+    padded = str(prd_number).zfill(3)
+    prds_dir = root / "docs" / "prds"
+    if not prds_dir.is_dir():
+        return None
+    for unit_dir in sorted(prds_dir.glob(f"{padded}-*")):
+        if not unit_dir.is_dir():
+            continue
+        for md in sorted(unit_dir.glob(f"{padded}-prd-*.md")):
+            heading = _first_markdown_h1(md)
+            if heading:
+                stripped = _PRD_HEADING_PREFIX_RE.sub("", heading).strip()
+                return stripped or heading
+    return None
+
+
+def slug_feature_title(slug: str) -> str:
+    """Title-case a task-list/target slug into a feature name fallback (R20)."""
+    words = [w for w in re.split(r"[-_]+", slug.strip()) if w]
+    if not words:
+        return "deliver wave"
+    return " ".join(w if w.isupper() else w.capitalize() for w in words)
+
+
+def resolve_feature_title(root: Path, *, prd_number: str | None, slug: str) -> str:
+    """PRD title, falling back to the task-list/target slug (R20)."""
+    if prd_number:
+        title = prd_feature_title(root, prd_number)
+        if title:
+            return title
+    return slug_feature_title(slug)
+
+
+def commit_description(feature_title: str, *, prefix_len: int, max_header: int = 100) -> str:
+    """Lowercase, length-budgeted commit description naming the feature (R20).
+
+    Fully lowercased (not just the leading letter) so the description never
+    trips commitlint's ``subject-case`` rule (which forbids start-case) and
+    so the release-please changelog line it feeds reads like a normal
+    conventional-commit subject.
+    """
+    desc = feature_title.strip().lower()
+    if not desc:
+        return "deliver wave"
+    budget = max(10, max_header - prefix_len)
+    if len(desc) > budget:
+        truncated = desc[:budget].rstrip()
+        if " " in truncated:
+            truncated = truncated.rsplit(" ", 1)[0]
+        desc = truncated or desc[:budget]
+    return desc
+
+
+def commitlint_safe_title(
+    commit_type: str,
+    slug: str,
+    prd_number: str | None = None,
+    *,
+    root: Path | None = None,
+) -> str:
+    """Conventional-commit title naming the landed feature (R20; R43 lowercase prd scope).
+
+    Derives the description from the PRD title (its H1 heading) when a
+    ``root`` is supplied and a PRD file resolves; otherwise falls back to a
+    title-cased rendering of ``slug``. Replaces the previous fixed
+    ``deliver wave`` text so terminal PR titles and release-please changelog
+    entries (which release-please derives from this same commit message)
+    name what actually landed.
+    """
+    feature_title = resolve_feature_title(root, prd_number=prd_number, slug=slug) if root else slug_feature_title(slug)
     if prd_number:
         num = str(prd_number).lstrip("0") or "0"
         scope = f"prd-{num}".lower()
-        return f"{commit_type}({scope}): deliver wave"
+        prefix = f"{commit_type}({scope}): "
+        return f"{prefix}{commit_description(feature_title, prefix_len=len(prefix))}"
     safe_slug = slug.lower().replace("_", "-")
-    return f"{commit_type}({safe_slug}): deliver wave"
+    prefix = f"{commit_type}({safe_slug}): "
+    return f"{prefix}{commit_description(feature_title, prefix_len=len(prefix))}"
 
 
 def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | None:
@@ -116,6 +217,223 @@ def terminal_autonomy_mode(root: Path) -> str:
     terminal = deliver.get("terminal") or {}
     mode = terminal.get("autonomy", "supervised")
     return mode if mode in ("supervised", "auto") else "supervised"
+
+
+def terminal_gap_capture_config(root: Path) -> dict[str, Any]:
+    """`deliver.terminal.gapCapture` settings (R19), defaulting to enabled."""
+    deliver = load_workflow_config(root).get("deliver") or {}
+    terminal = deliver.get("terminal") or {}
+    cfg = terminal.get("gapCapture") or {}
+    max_captures = cfg.get("maxCapturesPerRun")
+    if not isinstance(max_captures, int) or max_captures < 0:
+        max_captures = pgc.DEFAULT_MAX_TERMINAL_CAPTURES
+    return {
+        "enabled": cfg.get("enabled") is not False,
+        "maxCapturesPerRun": max_captures,
+    }
+
+
+_FRICTION_LOG_EVENT_ACK_PENDING = "ack-pending"
+_FRICTION_LOG_EVENT_RESUME_RECONCILE = "resume-reconcile"
+
+
+def scan_run_log_friction(root: Path) -> dict[str, int]:
+    """Tally recurring friction signals from the deliver run log (R19).
+
+    Counts repeated phase-ack-cadence halts and resume-reconcile demotions
+    (unpushed local phase merges) — both are evidence of unaddressed
+    planning-store/process pain rather than one-off noise.
+    """
+    counts = {"ackPending": 0, "resumeDemotions": 0}
+    log_path = root / ".cursor" / "sw-deliver-runs" / "run.log"
+    if not log_path.is_file():
+        return counts
+    try:
+        lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return counts
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(entry, dict):
+            continue
+        event = entry.get("event")
+        if event == _FRICTION_LOG_EVENT_ACK_PENDING:
+            counts["ackPending"] += 1
+        elif event == _FRICTION_LOG_EVENT_RESUME_RECONCILE:
+            demoted = entry.get("demoted")
+            if isinstance(demoted, list):
+                counts["resumeDemotions"] += len(demoted)
+    return counts
+
+
+def derive_terminal_pain_items(root: Path, state: dict[str, Any]) -> list[dict[str, Any]]:
+    """Translate run-log friction + loop-health metrics into candidate gap-capture
+    pain items for the terminal auto-capture engine (R19).
+
+    Each item carries a stable ``signalId`` (idempotent across repeated
+    terminal runs), a human ``title`` (the candidate gap title),
+    ``category``/``severity``/``recurrence`` for
+    :func:`planning_gap_capture.classify_pain_item`, and ``source`` for
+    provenance.
+    """
+    items: list[dict[str, Any]] = []
+    friction = scan_run_log_friction(root)
+    if friction["ackPending"] >= 2:
+        items.append(
+            {
+                "signalId": "terminal-friction:ack-pending",
+                "title": "Deliver phase-ack cadence repeatedly pending human review",
+                "category": "ack-pending",
+                "severity": "medium",
+                "recurrence": friction["ackPending"],
+                "source": "run-log",
+            }
+        )
+    if friction["resumeDemotions"] >= 1:
+        items.append(
+            {
+                "signalId": "terminal-friction:resume-demotion",
+                "title": "Deliver resume repeatedly demoted unpushed phase merges",
+                "category": "resume-reconcile",
+                "severity": "high" if friction["resumeDemotions"] >= 2 else "medium",
+                "recurrence": friction["resumeDemotions"],
+                "source": "run-log",
+            }
+        )
+    record = loop_health_lib.build_record(root)
+    metrics = record.get("metrics") if isinstance(record.get("metrics"), dict) else {}
+    rework = metrics.get("reworkDefect") if isinstance(metrics.get("reworkDefect"), dict) else {}
+    reopened = int(rework.get("reopenedPhases") or 0)
+    reverts = int(rework.get("postMergeReverts") or 0)
+    if reopened >= 1:
+        items.append(
+            {
+                "signalId": "terminal-friction:reopened-phases",
+                "title": "Deliver run reopened previously green phases",
+                "category": "reopened-phases",
+                "severity": "high" if reopened >= 2 else "medium",
+                "recurrence": reopened,
+                "source": "loop-health",
+            }
+        )
+    if reverts >= 1:
+        items.append(
+            {
+                "signalId": "terminal-friction:post-merge-revert",
+                "title": "Deliver run required a post-merge revert",
+                "category": "post-merge-revert",
+                "severity": "critical",
+                "recurrence": reverts,
+                "source": "loop-health",
+            }
+        )
+    review = metrics.get("reviewEffort") if isinstance(metrics.get("reviewEffort"), dict) else {}
+    stabilize = int(review.get("stabilizeReentries") or 0)
+    if stabilize >= 2:
+        items.append(
+            {
+                "signalId": "terminal-friction:stabilize-reentry",
+                "title": "Deliver run re-entered stabilization repeatedly",
+                "category": "stabilize-reentry",
+                "severity": "high" if stabilize >= 3 else "medium",
+                "recurrence": stabilize,
+                "source": "loop-health",
+            }
+        )
+    return items
+
+
+def run_terminal_gap_capture(
+    root: Path,
+    *,
+    verdict: str,
+    dry_run: bool = False,
+    confirmed_signal_ids: frozenset[str] | set[str] | None = None,
+) -> dict[str, Any]:
+    """Terminal auto-capture engine entry point (R19, gap-032).
+
+    Diagnostic and best-effort by design: scans run-log + loop-health for
+    unaddressed planning-store pain and hands the candidates to
+    :func:`planning_gap_capture.terminal_capture`, which suppresses on
+    fail/aborted verdicts, dedups against open gap titles, applies the
+    substantial-vs-noise heuristic, and caps captures per run.
+    """
+    cfg = terminal_gap_capture_config(root)
+    if not cfg["enabled"]:
+        return {"skipped": True, "reason": "deliver.terminal.gapCapture.enabled is false"}
+    state = load_state(root)
+    items = derive_terminal_pain_items(root, state)
+    result = pgc.terminal_capture(
+        root,
+        verdict=verdict,
+        pain_items=items,
+        max_captures=cfg["maxCapturesPerRun"],
+        dry_run=dry_run,
+        confirmed_signal_ids=confirmed_signal_ids,
+    )
+    if not dry_run:
+        append_log(
+            root,
+            {
+                "event": "terminal-gap-capture",
+                "verdict": verdict,
+                "captured": len(result.get("captured") or []),
+                "pending": len(result.get("pending") or []),
+                "skippedNoise": len(result.get("skippedNoise") or []),
+                "skippedDuplicate": len(result.get("skippedDuplicate") or []),
+            },
+        )
+    return result
+
+
+def parse_repeated_kv(args: list[str], flag: str) -> set[str]:
+    """Collect every value passed for a repeatable ``--flag value`` pair."""
+    out: set[str] = set()
+    i = 0
+    while i < len(args):
+        if args[i] == flag and i + 1 < len(args):
+            out.add(args[i + 1])
+            i += 2
+        else:
+            i += 1
+    return out
+
+
+def terminal_gap_capture_best_effort(root: Path, *, verdict: str) -> dict[str, Any] | None:
+    """Fire-and-forget wrapper for the terminal-ready call sites (R19).
+
+    Diagnostic and non-gating by design (matches loop-health's
+    ``diagnosticOnly``/``gating: false`` posture): a failure here must never
+    block the actual terminal ship gate, so any exception is swallowed and
+    logged rather than propagated.
+    """
+    try:
+        return run_terminal_gap_capture(root, verdict=verdict)
+    except Exception as exc:  # noqa: BLE001 — best-effort, never blocks terminal ship (R19)
+        try:
+            append_log(root, {"event": "terminal-gap-capture-error", "error": str(exc)})
+        except Exception:  # noqa: BLE001 — logging itself must never raise here
+            pass
+        return None
+
+
+def cmd_terminal_gap_capture_run(root: Path, args: list[str]) -> None:
+    dry_run = has_flag(args, "--dry-run")
+    verdict = parse_kv(args, "--verdict") or str(load_state(root).get("verdict") or "running")
+    confirm_ids = parse_repeated_kv(args, "--confirm")
+    result = run_terminal_gap_capture(
+        root,
+        verdict=verdict,
+        dry_run=dry_run,
+        confirmed_signal_ids=confirm_ids or None,
+    )
+    emit({"verdict": "pass", "action": "terminal-gap-capture", **result})
 
 
 def remediation_max_attempts(root: Path) -> int:
@@ -368,6 +686,8 @@ def cmd_terminal_ship_run(root: Path, args: list[str]) -> None:
         save_state(root, state)
         payload = terminal_local_gate_payload(root, gate_ec, gate, action="terminal-ship-run")
         append_log(root, {"event": "terminal-ship-local", "gateVerdict": gate.get("verdict")})
+        if payload["verdict"] == "pass":
+            terminal_gap_capture_best_effort(root, verdict="pass")
         emit(payload, 0 if payload["verdict"] == "pass" else 10)
     cmd_terminal_pr_prepare(root, [])
     state = load_state(root)
@@ -399,6 +719,7 @@ def cmd_terminal_ship_run(root: Path, args: list[str]) -> None:
     save_state(root, state)
     if ready:
         append_log(root, {"event": "terminal-ship-gate-green", "pr": pr})
+        terminal_gap_capture_best_effort(root, verdict="pass")
         emit(
             {
                 "verdict": "pass",
@@ -891,7 +1212,7 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
 
     if is_local_host_mode(root):
         prd_number = state.get("prd_number")
-        title = parse_kv(args, "--title") or commitlint_safe_title(commit_type, slug, prd_number)
+        title = parse_kv(args, "--title") or commitlint_safe_title(commit_type, slug, prd_number, root=root)
         if dry_run:
             emit(
                 {
@@ -970,7 +1291,7 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
         run_docs_currency_gate(root)
 
     prd_number = state.get("prd_number")
-    title = parse_kv(args, "--title") or commitlint_safe_title(commit_type, slug, prd_number)
+    title = parse_kv(args, "--title") or commitlint_safe_title(commit_type, slug, prd_number, root=root)
     body = terminal_pr_body(root, state)
 
     if dry_run:
@@ -1170,8 +1491,15 @@ def main() -> None:
                 cmd_terminal_pr_status(root, pr_rest)
             else:
                 fail("terminal pr subcommand required: prepare|gate|status")
+        elif sub == "gap-capture":
+            gc_sub = rest[0] if rest else ""
+            gc_rest = rest[1:]
+            if gc_sub == "run":
+                cmd_terminal_gap_capture_run(root, gc_rest)
+            else:
+                fail("terminal gap-capture subcommand required: run")
         else:
-            fail("terminal subcommand required: pr")
+            fail("terminal subcommand required: pr|gap-capture")
     elif domain == "ack":
         sub = args[0] if args else ""
         rest = args[1:]
