@@ -370,6 +370,7 @@
 * merge phase phase-green-progress-sync-medium into feat/issue-store-deliver-progress-native-links (db7b0de) <!-- sw-deliver:phase-green-progress-sync-medium -->
 * merge phase living-docs-issue-projection-small into feat/issue-store-deliver-progress-native-links (6d467b4) <!-- sw-deliver:living-docs-issue-projection-small -->
 * merge phase doc-currency-and-gap-closure-small into feat/issue-store-deliver-progress-native-links (5ac0135) <!-- sw-deliver:doc-currency-and-gap-closure-small -->
+* merge phase issue-store-doc-pipeline-authoring-medium-amendment-a1 into feat/issue-store-deliver-progress-native-links (0d09562) <!-- sw-deliver:issue-store-doc-pipeline-authoring-medium-amendment-a1 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
