@@ -66,6 +66,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from host_lib import load_workflow_config  # noqa: E402
 from issues_lib import IssueNotFound, IssueRevisionConflict, IssuesClient  # noqa: E402
+from planning_artifact_handle import issue_store_separate_project_effective  # noqa: E402
 from planning_canonical import (  # noqa: E402
     FROZEN_LABEL,
     IssueSnapshot,
@@ -254,6 +255,19 @@ def issue_store_effective(root: Path, cfg: dict[str, Any] | None = None) -> bool
     return str(effective.get("effective", "")) == "issue-store"
 
 
+def issue_store_separate_project(root: Path, cfg: dict[str, Any] | None = None) -> bool:
+    """Shared R1-R4 guard predicate: issue-store effective AND ``storeLocation.mode``
+    (via ``resolve_store_location``) is ``separate-project`` (PRD 057 R1).
+
+    Single source of truth for the pollution/currency guards across this wave —
+    gap-backlog write-through here (R1); spec-seed INDEX guard (R2), reconcile
+    derived-artifact guard (R3), and gap-resolution store close (R4) reuse it in
+    later phases — so ``same-repo`` deployments keep retaining local writes and
+    only ``separate-project`` deployments skip them.
+    """
+    return issue_store_separate_project_effective(root, cfg)
+
+
 def project_native_links_from_edges(
     root: Path,
     edge_list: list[dict[str, Any]],
@@ -331,7 +345,9 @@ def gap_backlog_is_readonly(root: Path) -> bool:
     if migration_in_transition(root):
         return True
     cfg = load_workflow_config(root)
-    if issue_store_effective(root, cfg):
+    # PRD 057 R1: only separate-project makes the legacy row read-only —
+    # same-repo issue-store deployments retain local GAP-BACKLOG.md writes.
+    if issue_store_separate_project(root, cfg):
         return True
     dirs = pp_load_planning_dirs(root)
     gap_path = root / dirs.prds / "GAP-BACKLOG.md"
@@ -474,8 +490,37 @@ def count_file_native_open_gaps(root: Path) -> int:
     return open_count
 
 
+GAP_BACKLOG_SUNSET_STUB_MARKER = "<!-- issue-store-gap-backlog-sunset: v1 -->"
+
+
+def render_gap_backlog_sunset_stub() -> str:
+    """Documented sunset stub for GAP-BACKLOG.md under issue-store separate-project
+    once no open gaps remain (PRD 057 R1). Replaces outright file removal so a path
+    still referenced by docs/tooling resolves to an explanation instead of a 404."""
+    return (
+        "\n".join(
+            [
+                GAP_BACKLOG_SUNSET_STUB_MARKER,
+                "",
+                "# GAP-BACKLOG (sunset)",
+                "",
+                "This local projection is retired under issue-store `separate-project` "
+                "(PRD 057 R1). Gap units are captured and resolved directly in the "
+                "planning-project issue store; no open gaps remain to project locally. "
+                "See `core/skills/feedback/SKILL.md` for the store-only capture contract.",
+                "",
+            ]
+        )
+        + "\n"
+    )
+
+
 def refresh_gap_backlog_projection(
-    root: Path, cfg: dict[str, Any] | None = None, *, apply: bool = True
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+    *,
+    apply: bool = True,
+    projection: bool = False,
 ) -> dict[str, Any]:
     cfg = cfg or load_workflow_config(root)
     if migration_in_transition(root):
@@ -483,9 +528,20 @@ def refresh_gap_backlog_projection(
     if not issue_store_effective(root, cfg):
         return {"skipped": True, "reason": "not-issue-store"}
     dirs = pp_load_planning_dirs(root)
+    gap_path = root / dirs.prds / "GAP-BACKLOG.md"
+    if issue_store_separate_project(root, cfg) and not projection:
+        # PRD 057 R1: gap capture already writes through to the issue store under
+        # separate-project; skip the legacy local projection write unless the
+        # operator explicitly retains it via --projection.
+        return {
+            "gapBacklog": str(gap_path.relative_to(root)),
+            "readonly": True,
+            "source": "issue-derived",
+            "skipped": True,
+            "reason": "separate-project-write-through",
+        }
     records = list_gap_issue_records(root, cfg)
     content = render_gap_backlog_from_issue_records(records)
-    gap_path = root / dirs.prds / "GAP-BACKLOG.md"
     if apply:
         gap_path.parent.mkdir(parents=True, exist_ok=True)
         gap_path.write_text(content, encoding="utf-8")
@@ -497,8 +553,10 @@ def refresh_gap_backlog_projection(
     }
 
 
-def try_sunset_gap_backlog_projection(root: Path, *, apply: bool = True) -> dict[str, Any]:
-    cfg = load_workflow_config(root)
+def try_sunset_gap_backlog_projection(
+    root: Path, cfg: dict[str, Any] | None = None, *, apply: bool = True
+) -> dict[str, Any]:
+    cfg = cfg or load_workflow_config(root)
     if not issue_store_effective(root, cfg):
         return {"skipped": True, "reason": "not-issue-store"}
     if migration_in_transition(root):
@@ -509,11 +567,25 @@ def try_sunset_gap_backlog_projection(root: Path, *, apply: bool = True) -> dict
         return {"skipped": True, "reason": "gap-issues-remain"}
     dirs = pp_load_planning_dirs(root)
     gap_path = root / dirs.prds / "GAP-BACKLOG.md"
+    # PRD 057 R1: same-repo keeps removing the generated projection outright;
+    # separate-project reduces it to a documented sunset stub instead.
+    separate_project = issue_store_separate_project(root, cfg)
     if not gap_path.is_file():
-        return {"removed": False, "reason": "no-projection"}
+        if not separate_project:
+            return {"removed": False, "reason": "no-projection"}
+        if apply:
+            gap_path.parent.mkdir(parents=True, exist_ok=True)
+            gap_path.write_text(render_gap_backlog_sunset_stub(), encoding="utf-8")
+        return {"removed": False, "stubbed": True, "gapBacklog": str(gap_path.relative_to(root))}
     content = gap_path.read_text(encoding="utf-8")
+    if GAP_BACKLOG_SUNSET_STUB_MARKER in content:
+        return {"removed": False, "stubbed": True, "reason": "already-sunset-stub"}
     if not is_gap_projection_content(content):
         return {"removed": False, "reason": "not-generated-projection"}
+    if separate_project:
+        if apply:
+            gap_path.write_text(render_gap_backlog_sunset_stub(), encoding="utf-8")
+        return {"removed": False, "stubbed": True, "gapBacklog": str(gap_path.relative_to(root))}
     if apply:
         gap_path.unlink()
     return {"removed": True, "gapBacklog": str(gap_path.relative_to(root))}
