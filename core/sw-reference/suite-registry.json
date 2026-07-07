@@ -1549,6 +1549,34 @@
         "planning",
         "deliver-progress"
       ]
+    },
+    {
+      "id": "planning-doc-issue-store-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 60,
+      "pytestPath": "scripts/unit_tests/planning/test_planning_doc_issue_store.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_artifact_handle.py",
+        "scripts/spec-rigor-check.py",
+        "scripts/doc_link.py",
+        "scripts/unit_tests/planning/harness_planning_doc_issue_store.py",
+        "core/skills/brainstorm/SKILL.md",
+        "core/skills/prd/SKILL.md",
+        "core/skills/tasks/SKILL.md",
+        "core/commands/sw-doc.md"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "doc-pipeline"
+      ]
     }
   ]
 }
