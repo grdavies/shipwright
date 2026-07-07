@@ -219,14 +219,24 @@ Then `expand` by reading `memories/<id>.md` (or `rules/<id>.md` for rule categor
 5. **`category: rule` always writes to `.cursor/sw-memory/rules/`** — offline hook reads committed rules.
 6. Never auto-seed starter rules; store starts empty.
 
-## Planning store memory backend (PRD 034 R11/R23)
+## Planning store memory backend (PRD 034 R11/R23; PRD 057 R21 — 21a local-only cache)
 
-When `planning.store.backend` is `memory`, unit **bodies** route through this skill's provider adapter and
-`scripts/memory-redact.py` on read and write — **body storage only**; the memory backend does not alter
-source-of-truth for any planning class. Decision-class units under `docs/planning/decision/` still follow
-the PRD-015 committed redacted snapshot + pointer flow regardless of `visibility`. The authoritative
-decision record paths remain `docs/decisions/<n>-<slug>.md` (repo-SoT) or the provider record (memory-SoT)
-per **Source of truth resolution** below — the planning-store memory backend never replaces that contract.
+When `planning.store.backend` is `memory`, unit **bodies** are cached under a **local-only, gitignored**
+directory (`.cursor/sw-memory/planning-bodies/<memory.project>/`, `MemoryLocalCacheBackend` in
+`scripts/planning_store.py`) that always passes content through `scripts/memory-redact.py` on read and
+write — **body storage only**; the memory backend does not alter source-of-truth for any planning class.
+
+This local cache is **not** a round-trip through `memory.provider` (or any other provider adapter): it is
+plain local disk storage, available unconditionally regardless of whether a memory provider is configured
+(21a — PRD 057 R21). The `configuredProvider` field recorded in each cached body's frontmatter is
+informational only, naming whichever provider is configured for this skill's other memory operations; it is
+never a durability claim about the planning body itself. A true provider round-trip, with this cache
+retained as a fallback, is a separate later unit (21b — see `core/providers/planning-store/memory.md`).
+
+Decision-class units under `docs/planning/decision/` still follow the PRD-015 committed redacted snapshot +
+pointer flow regardless of `visibility`. The authoritative decision record paths remain
+`docs/decisions/<n>-<slug>.md` (repo-SoT) or the provider record (memory-SoT) per **Source of truth
+resolution** below — the planning-store memory backend never replaces that contract.
 
 ## Decision records (file-linked deliverables)
 
@@ -273,8 +283,8 @@ When `planning.store.backend` is `issue-store` and a PRD is frozen via `planning
 
 1. Linked brainstorm content (from `sw-edges` / `link-brainstorm-prd`) is excerpted and piped through
    `scripts/memory-redact.py` — no raw transcript.
-2. Distilled `research` entry is stored via the memory backend adapter (`MemoryBackend` /
-   `planning.store.backend: memory` bodies path or configured provider).
+2. Distilled `research` entry is stored via the memory backend's local-only cache
+   (`MemoryLocalCacheBackend` / `planning.store.backend: memory` bodies path — 21a, see above).
 3. A `sw-memory-pointer` comment on the brainstorm issue links PRD ↔ memory ↔ brainstorm.
 4. Brainstorm issue is **closed+linked**, never deleted.
 
