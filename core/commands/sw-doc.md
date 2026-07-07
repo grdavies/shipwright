@@ -112,11 +112,22 @@ python3 scripts/docs_worktree.py provision --topic <topic>
 Operate inside the provisioned worktree (`.sw-worktrees/docs-<topic>/`) on branch `docs/<topic>`.
 Never commit brainstorm/PRD artifacts on the protected default branch. See `skills/git-workflow/SKILL.md`.
 
+**Separate-project bypass (PRD 056 R14):** when `planning.store.storeLocation.mode` is `separate-project`
+and issue-store is effective (`issue_store_separate_project_effective`), skip docs-worktree provisioning,
+`docs-commit`, and `docs_pr.py` entirely — authoring routes through `planning_store.put` into the planning
+project. `docs_worktree.py provision|resume|status` returns `skipped: true` with **issue references only**
+(`projectKey`, `storeLocation.owner/repo`, topic) — no local file paths or `.sw-worktrees/docs-*` paths in
+handoff output. Run `python3 scripts/planning_store.py doctor` to fail closed (exit 20) on tracked
+`docs/brainstorms/` or `docs/prds/` bodies in the code repo.
+
 After doc freeze, durability paths diverge (R32):
 
-- **Docs branch** — `python3 scripts/wave_spec_seed.py <root> docs-commit --topic <topic>` (brainstorms + PRDs)
-- **Feature handoff** — `python3 scripts/wave.py spec-seed --task-list <frozen-task-list-path>` (PRD 013)
-- **Merge docs to trunk** — `python3 scripts/docs_pr.py --topic <topic>` (docs-only PR)
+- **Docs branch** — `python3 scripts/wave_spec_seed.py <root> docs-commit --topic <topic>` (brainstorms + PRDs;
+  skipped under separate-project)
+- **Feature handoff** — `python3 scripts/wave.py spec-seed --task-list <frozen-task-list-path>` (PRD 013;
+  skipped under separate-project — deliver run-entry materialize supplies content from issue store)
+- **Merge docs to trunk** — `python3 scripts/docs_pr.py --topic <topic>` (docs-only PR; skipped under
+  separate-project)
 
 0. Load `skills/conductor/SKILL.md`; enforce `rules/sw-conductor.mdc`.
 1. Run `/sw-triage` (or accept pre-classified tier).
