@@ -374,23 +374,23 @@ Wave map:
 
 ### 16. Product source tags + schedule-hint reconciliation (Wave 4 · R12, R17)
 
-- [ ] 16.1 Support and filter `sw:source:<owner>/<repo>` scoping (R12) (unit 1/2)
+- [x] 16.1 Support and filter `sw:source:<owner>/<repo>` scoping (R12) (unit 1/2)
   - **File:** `scripts/planning_discover.py`
   - **Expected:** discovery/scheduler/gap-capture support `sw:source:<owner>/<repo>` scoping; default scope includes untagged legacy units with a `sw:source-missing` doctor warning rather than silently hiding them.
   - **R-IDs:** R12
-- [ ] 16.2 Support and filter `sw:source:<owner>/<repo>` scoping (R12) (unit 2/2)
+- [x] 16.2 Support and filter `sw:source:<owner>/<repo>` scoping (R12) (unit 2/2)
   - **File:** `scripts/planning_scheduler.py`
   - **Expected:** discovery/scheduler/gap-capture support `sw:source:<owner>/<repo>` scoping; default scope includes untagged legacy units with a `sw:source-missing` doctor warning rather than silently hiding them.
   - **R-IDs:** R12
-- [ ] 16.3 Schedule-hint reconciliation surfaces `sw:schedule-stale` (R17)
+- [x] 16.3 Schedule-hint reconciliation surfaces `sw:schedule-stale` (R17)
   - **File:** `scripts/planning-graph.py`
   - **Expected:** reconcile validates each unit's `schedule:` hint (or `sw:gap-schedule:*` label) against its actual `absorbs` edges and surfaces `sw:schedule-stale` on mismatch.
   - **R-IDs:** R17
-- [ ] 16.4 Source-tag + schedule-hint fixtures (R12, R17) (unit 1/2)
+- [x] 16.4 Source-tag + schedule-hint fixtures (R12, R17) (unit 1/2)
   - **File:** `scripts/test/fixtures/planning-schedule-hint/harness.py`
   - **Expected:** source-tag scoping filters discovery/scheduler/gap-capture; stale `schedule:` hints surface `sw:schedule-stale` against actual absorbs edges.
   - **R-IDs:** R17
-- [ ] 16.5 Source-tag + schedule-hint fixtures (R12, R17) (unit 2/2)
+- [x] 16.5 Source-tag + schedule-hint fixtures (R12, R17) (unit 2/2)
   - **File:** `scripts/test/fixtures/planning-source-tag/harness.py`
   - **Expected:** source-tag scoping filters discovery/scheduler/gap-capture; stale `schedule:` hints surface `sw:schedule-stale` against actual absorbs edges.
   - **R-IDs:** R17

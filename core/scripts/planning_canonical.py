@@ -8,6 +8,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import quote, unquote
 
 CANONICAL_VERSION = "1"
 BODY_SIZE_LIMIT = 60_000
@@ -49,6 +50,19 @@ GAP_LABEL_SCHEDULED = "sw:gap-scheduled"
 GAP_LABEL_RESOLVED = "sw:gap-resolved"
 SOURCE_REMOVED_LABEL = "sw:source-removed"
 LEGACY_GAP_LABELS = frozenset({"open", "gap-scheduled", "resolved"})
+
+# PRD 057 R12 -- product source tags (`sw:source:<owner>/<repo>`) so a shared
+# planning repository can filter discovery/scheduler/gap-capture by the
+# product code repo a unit originated from.
+SOURCE_TAG_LABEL_PREFIX = "sw:source:"
+SOURCE_MISSING_LABEL = "sw:source-missing"
+
+# PRD 057 R17 -- schedule-hint reconciliation. Gap units carry a `schedule:`
+# frontmatter hint (file-store) or an equivalent `sw:gap-schedule:` label
+# (issue-store); reconcile compares the hint against the unit's actual
+# `absorbs` edges and surfaces this label on mismatch.
+GAP_SCHEDULE_LABEL_PREFIX = "sw:gap-schedule:"
+SCHEDULE_STALE_LABEL = "sw:schedule-stale"
 
 
 @dataclass
@@ -159,6 +173,40 @@ def type_label(artifact_type: str) -> str:
 
 def title_prefix(project_key: str) -> str:
     return f"[{project_key}]"
+
+
+def source_tag_label(source: str) -> str:
+    """R12 -- provider-native label form of a `sw:source:<owner>/<repo>` tag.
+
+    GitHub labels accept `/` verbatim; Jira labels do not (spaces or `/` are
+    invalid), so the Jira client percent-encodes the payload the same way it
+    already does for `sw:gap-schedule:` (see `gap_schedule_label`).
+    """
+    return f"{SOURCE_TAG_LABEL_PREFIX}{source}"
+
+
+def source_tag_from_labels(labels: list[str]) -> str:
+    """Decode a `sw:source:<owner>/<repo>` tag from provider-native labels.
+
+    Percent-decoding a raw (GitHub-style) label with no `%` is a no-op, so
+    this handles both the GitHub and Jira label encodings.
+    """
+    for label in labels:
+        if label.startswith(SOURCE_TAG_LABEL_PREFIX):
+            return unquote(label[len(SOURCE_TAG_LABEL_PREFIX) :])
+    return ""
+
+
+def gap_schedule_label(schedule: str) -> str:
+    """Jira labels cannot contain spaces or `/`; percent-encode the payload."""
+    return f"{GAP_SCHEDULE_LABEL_PREFIX}{quote(schedule, safe='')}"
+
+
+def gap_schedule_from_labels(labels: list[str]) -> str:
+    for label in labels:
+        if label.startswith(GAP_SCHEDULE_LABEL_PREFIX):
+            return unquote(label[len(GAP_SCHEDULE_LABEL_PREFIX) :])
+    return ""
 
 
 def build_markers(project_key: str, artifact_type: str, unit_id: str) -> str:
