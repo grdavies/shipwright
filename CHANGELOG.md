@@ -375,6 +375,7 @@
 * merge phase separate-project-docs-bypass-small-amendment-a2 into feat/issue-store-deliver-progress-native-links (262b879) <!-- sw-deliver:separate-project-docs-bypass-small-amendment-a2 -->
 * merge phase scheduler-frontier-skip-park-governance-wave-1-r16-r28 into feat/planning-store-hardening (dcbafd4) <!-- sw-deliver:scheduler-frontier-skip-park-governance-wave-1-r16-r28 -->
 * merge phase gitlab-issues-demotion-fail-closed-wave-1-r7 into feat/planning-store-hardening (82bd788) <!-- sw-deliver:gitlab-issues-demotion-fail-closed-wave-1-r7 -->
+* merge phase dispatch-preflight-concrete-model-resolution-wave-1-r18 into feat/planning-store-hardening (3228432) <!-- sw-deliver:dispatch-preflight-concrete-model-resolution-wave-1-r18 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
