@@ -369,6 +369,7 @@
 * merge phase deliver-provision-hierarchy-wiring-medium into feat/issue-store-deliver-progress-native-links (116632d) <!-- sw-deliver:deliver-provision-hierarchy-wiring-medium -->
 * merge phase phase-green-progress-sync-medium into feat/issue-store-deliver-progress-native-links (db7b0de) <!-- sw-deliver:phase-green-progress-sync-medium -->
 * merge phase living-docs-issue-projection-small into feat/issue-store-deliver-progress-native-links (6d467b4) <!-- sw-deliver:living-docs-issue-projection-small -->
+* merge phase doc-currency-and-gap-closure-small into feat/issue-store-deliver-progress-native-links (5ac0135) <!-- sw-deliver:doc-currency-and-gap-closure-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
