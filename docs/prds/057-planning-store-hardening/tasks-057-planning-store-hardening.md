@@ -52,27 +52,27 @@ Wave map:
 
 ### 2. Scheduler frontier skip + park governance (Wave 1 · R16, R28)
 
-- [ ] 2.1 File-path `cmd_next` skip-with-reasons for unrunnable units (R16)
+- [x] 2.1 File-path `cmd_next` skip-with-reasons for unrunnable units (R16)
   - **File:** `scripts/planning_deliver_gate.py`
   - **Expected:** units without a frozen task list are skipped with reasons instead of failing the whole frontier; `planning-graph.py next` delegates here via `wave_deliver.py`.
   - **R-IDs:** R16
-- [ ] 2.2 Issue-store frontier honors `sw:parked` label + unrunnable filtering (R16)
+- [x] 2.2 Issue-store frontier honors `sw:parked` label + unrunnable filtering (R16)
   - **File:** `scripts/planning_scheduler.py`
   - **Expected:** `is_schedulable` drops parked/unrunnable legacy units (e.g. `003-prd-pr-agent-review-provider`) from the frontier via the label-aware path.
   - **R-IDs:** R16
-- [ ] 2.3 Park governance: allowlist + reason + `scheduler-exhausted` halt (R28) (unit 1/2)
+- [x] 2.3 Park governance: allowlist + reason + `scheduler-exhausted` halt (R28) (unit 1/2)
   - **File:** `scripts/planning-graph.py`
   - **Expected:** parking requires a local-config allowlist actor + park reason; an empty post-filter frontier emits an explicit `scheduler-exhausted` halt naming parked/unrunnable units and the unpark remediation.
   - **R-IDs:** R28
-- [ ] 2.4 Park governance: allowlist + reason + `scheduler-exhausted` halt (R28) (unit 2/2)
+- [x] 2.4 Park governance: allowlist + reason + `scheduler-exhausted` halt (R28) (unit 2/2)
   - **File:** `scripts/planning_scheduler.py`
   - **Expected:** parking requires a local-config allowlist actor + park reason; an empty post-filter frontier emits an explicit `scheduler-exhausted` halt naming parked/unrunnable units and the unpark remediation.
   - **R-IDs:** R28
-- [ ] 2.5 Doctor over-parked-frontier drift finding + scheduler/park fixtures (R28) (unit 1/2)
+- [x] 2.5 Doctor over-parked-frontier drift finding + scheduler/park fixtures (R28) (unit 1/2)
   - **File:** `scripts/planning-doctor.py`
   - **Expected:** doctor surfaces an over-parked-frontier drift finding; fixture proves all-parked/unrunnable frontier yields `scheduler-exhausted`, unauthorized park is refused, and `next` skips unrunnable units with reasons.
   - **R-IDs:** R28
-- [ ] 2.6 Doctor over-parked-frontier drift finding + scheduler/park fixtures (R28) (unit 2/2)
+- [x] 2.6 Doctor over-parked-frontier drift finding + scheduler/park fixtures (R28) (unit 2/2)
   - **File:** `scripts/test/fixtures/planning-parked-governance/harness.py`
   - **Expected:** doctor surfaces an over-parked-frontier drift finding; fixture proves all-parked/unrunnable frontier yields `scheduler-exhausted`, unauthorized park is refused, and `next` skips unrunnable units with reasons.
   - **R-IDs:** R28

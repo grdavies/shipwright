@@ -46,6 +46,55 @@ def run_json(cmd: list[str]) -> dict:
         return {"verdict": "fail", "error": "invalid-json", "raw": raw[:200]}
 
 
+def parked_frontier_finding(root: Path) -> dict | None:
+    """Over-parked-frontier drift finding (PRD 057 R28).
+
+    When the graph-eligible frontier is non-empty but every candidate is parked
+    or unrunnable (no frozen task list), scheduling would be exhausted — surface
+    it as drift with the exact unpark remediation. Fail-open (returns ``None``)
+    if the graph cannot be read, so the doctor never crashes on this check.
+    """
+    try:
+        import planning_deliver_gate as pdg
+        import planning_graph as pg
+        import planning_park as park
+
+        eligible = pg.order_eligible(pg.discover_units(root))
+        if not eligible:
+            return None
+        parked_map = park.load_parked(root)
+        parked: list[str] = []
+        unrunnable: list[str] = []
+        runnable: list[str] = []
+        for unit_id in eligible:
+            if unit_id in parked_map:
+                parked.append(unit_id)
+            elif not pdg.task_list_for_unit(root, unit_id):
+                unrunnable.append(unit_id)
+            else:
+                runnable.append(unit_id)
+    except Exception:  # noqa: BLE001 — doctor check is advisory / fail-open
+        return None
+    if runnable:
+        # Frontier still has a runnable candidate; report parked count only when present.
+        if not parked:
+            return None
+        return {
+            "check": "parked-frontier",
+            "status": "ok",
+            "parkedUnits": parked,
+            "runnableUnits": runnable,
+        }
+    return {
+        "check": "over-parked-frontier",
+        "status": "drift",
+        "parkedUnits": parked,
+        "unrunnableUnits": unrunnable,
+        "eligible": eligible,
+        "remediation": park.UNPARK_REMEDIATION,
+    }
+
+
 def doctor(root: Path, *, sweep: bool) -> dict:
     checks: list[dict] = []
     warnings: list[str] = []
@@ -137,6 +186,14 @@ def doctor(root: Path, *, sweep: bool) -> dict:
             "hostTokenEnv": host.get("tokenEnv"),
             "note": "env-var names only; no secrets in config",
         })
+
+    parked_finding = parked_frontier_finding(root)
+    if parked_finding is not None:
+        checks.append(parked_finding)
+        if parked_finding.get("status") == "drift":
+            warnings.append("over-parked-frontier")
+            if verdict == "ok":
+                verdict = "degraded"
 
     swept: list[str] = []
     if sweep:

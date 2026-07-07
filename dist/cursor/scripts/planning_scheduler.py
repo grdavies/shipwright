@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import planning_graph as pg  # noqa: E402
 import planning_index_gen as pig  # noqa: E402
+import planning_park as park  # noqa: E402
 import planning_paths as pp  # noqa: E402
 from host_lib import load_workflow_config  # noqa: E402
 from issues_lib import IssuesClient, use_fixture_mode  # noqa: E402
@@ -77,8 +78,16 @@ def unit_labels_from_issue_path(body_path: str, client: IssuesClient) -> list[st
 
 
 def is_schedulable(unit: pg.GraphUnit, labels: list[str]) -> bool:
+    """Frontier eligibility for a unit given its provider-native labels.
+
+    Drops frozen/terminal units and units carrying the ``sw:parked`` label so
+    parked legacy units (e.g. ``003-prd-pr-agent-review-provider``) fall out of
+    the issue-store frontier (R16, D4).
+    """
     label_set = set(labels)
     if label_set & _FROZEN_LABELS:
+        return False
+    if park.is_parked_label(label_set):
         return False
     if unit.status in {"complete", "resolved", "cancelled", "superseded"}:
         return False
@@ -97,16 +106,37 @@ def schedule_next(root: Path, *, force_refresh: bool = False) -> dict[str, Any]:
         fail(reason or "index-incomplete", exit_code=20, indexIncomplete=True)
 
     worktree = pp.git_root(root)
+    parked = park.load_parked(root)
     if resolve_discover_source(root) != "issue":
         units = pg.discover_units(root)
-        eligible = pg.order_eligible(units)
+        graph_eligible = pg.order_eligible(units)
+        eligible: list[str] = []
+        skipped: list[dict[str, Any]] = []
+        for unit_id in graph_eligible:
+            park_entry = parked.get(unit_id)
+            if park_entry:
+                skipped.append(park.parked_skip_record(unit_id, park_entry))
+                continue
+            task_list = runnable_task_list(root, unit_id)
+            if not task_list:
+                skipped.append({"unitId": unit_id, "reason": "no-frozen-task-list"})
+                continue
+            eligible.append(unit_id)
+        if not eligible and skipped:
+            # Frontier non-empty but fully parked/unrunnable → explicit halt (R28).
+            emit(
+                park.scheduler_exhausted_payload(source="file", eligible=graph_eligible, skipped=skipped),
+                park.SCHEDULER_EXHAUSTED_EXIT,
+            )
         nxt = eligible[0] if eligible else None
-    payload: dict[str, Any] = {"verdict": "pass", "action": "schedule-next", "source": "file", "next": nxt, "eligible": eligible}
-    if nxt:
-        task_list = runnable_task_list(root, nxt)
-        if task_list:
-            payload["taskList"] = task_list
-    return payload
+        payload: dict[str, Any] = {"verdict": "pass", "action": "schedule-next", "source": "file", "next": nxt, "eligible": eligible}
+        if skipped:
+            payload["skipped"] = skipped
+        if nxt:
+            task_list = runnable_task_list(root, nxt)
+            if task_list:
+                payload["taskList"] = task_list
+        return payload
 
     cfg = load_workflow_config(worktree)
     key_result = validate_project_key(worktree, cfg)
@@ -127,17 +157,43 @@ def schedule_next(root: Path, *, force_refresh: bool = False) -> dict[str, Any]:
     units = pg.discover_units(root)
     by_id = pg.index_units(units)
     scored: list[tuple[int, int, str]] = []
+    skipped = []
+    graph_eligible_ids: list[str] = []
     for unit in by_id.values():
-        labels = unit_labels_from_issue_path(unit.source_path, client)
         if not pg.is_eligible(unit, by_id):
             continue
+        graph_eligible_ids.append(unit.id)
+        labels = unit_labels_from_issue_path(unit.source_path, client)
+        park_entry = parked.get(unit.id)
+        if park_entry or park.is_parked_label(labels):
+            skipped.append({
+                "unitId": unit.id,
+                "reason": "parked",
+                "parkReason": (park_entry or {}).get("reason") if park_entry else "sw:parked",
+                "parkedBy": (park_entry or {}).get("actor") if park_entry else None,
+            })
+            continue
         if not is_schedulable(unit, labels):
+            continue
+        if not runnable_task_list(root, unit.id):
+            skipped.append({"unitId": unit.id, "reason": "no-frozen-task-list"})
             continue
         scored.append((tier_rank(labels), unit.priority + priority_from_labels(labels), unit.id))
     scored.sort(key=lambda row: (-row[0], -row[1], row[2]))
     eligible = [row[2] for row in scored]
+    if not eligible and skipped:
+        # Frontier non-empty but fully parked/unrunnable → explicit halt (R28).
+        emit(
+            {
+                **park.scheduler_exhausted_payload(source="issue", eligible=graph_eligible_ids, skipped=skipped),
+                "ledger": ledger.snapshot(),
+            },
+            park.SCHEDULER_EXHAUSTED_EXIT,
+        )
     nxt = eligible[0] if eligible else None
     payload = {"verdict": "pass", "action": "schedule-next", "source": "issue", "next": nxt, "eligible": eligible, "ledger": ledger.snapshot()}
+    if skipped:
+        payload["skipped"] = skipped
     if nxt:
         task_list = runnable_task_list(root, nxt)
         if task_list:
