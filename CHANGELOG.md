@@ -368,6 +368,7 @@
 * merge phase emit-native-links-on-planning-writes-medium into feat/issue-store-deliver-progress-native-links (a675155) <!-- sw-deliver:emit-native-links-on-planning-writes-medium -->
 * merge phase deliver-provision-hierarchy-wiring-medium into feat/issue-store-deliver-progress-native-links (116632d) <!-- sw-deliver:deliver-provision-hierarchy-wiring-medium -->
 * merge phase phase-green-progress-sync-medium into feat/issue-store-deliver-progress-native-links (db7b0de) <!-- sw-deliver:phase-green-progress-sync-medium -->
+* merge phase living-docs-issue-projection-small into feat/issue-store-deliver-progress-native-links (6d467b4) <!-- sw-deliver:living-docs-issue-projection-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
