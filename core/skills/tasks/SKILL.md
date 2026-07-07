@@ -10,6 +10,24 @@ Port of v1 `spec-tasks` under `sw-`. Reads U8 union so amended requirements are 
 
 **Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.py --skill tasks`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
+
+## Issue-store authoring (PRD 056 R11–R12)
+
+When effective backend is `issue-store`:
+
+1. **Never** write task lists under `docs/prds/` in the code repo.
+2. Persist via `planning_store.put` with unit id `tasks-<n>-<slug>` and virtual body-path `docs/prds/<n>-<slug>/tasks-<n>-<slug>.md`.
+3. Run gates on handles (materialize is deliver-time only):
+
+   ```bash
+   python3 scripts/spec-rigor-check.py --artifact tasks --path <body-path> --unit-id <tasks-unit-id>      --prd <prd-body-path> --prd-unit-id <prd-unit-id>
+   python3 scripts/traceability-check.py --prd <prd-body-path> --tasks <body-path> [--prd-unit-id …] [--tasks-unit-id …]
+   ```
+
+4. INDEX registration is mechanical reconcile / living-docs — not a local `docs/prds/INDEX.md` write.
+
+File-store repos: unchanged — path and file save below apply.
+
 ## Path
 
 `docs/prds/<n>-<slug>/tasks-<n>-<slug>.md` per `.sw/layout.md`.

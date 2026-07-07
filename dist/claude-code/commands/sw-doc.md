@@ -48,13 +48,26 @@ No brainstorm required; no task generation after freeze.
 
 Each remains independently runnable.
 
-## Issue-store dual-mode (PRD 043)
+## Issue-store dual-mode (PRD 043 / 056 R11–R13)
 
-When `planning.store.backend` is `issue-store`, doc commands write artifacts to issues (no repo
-stub files). Freeze uses `planning_store.py freeze` (lock + hash + optional brainstorm
-distillation). Task lists materialize to `.cursor/planning-materialized/` at deliver start with
-`verify-frozen-hash`. Private/memory units are refused against a public issue store — route to
-`memory` or `local-synced` backends instead.
+When `planning.store.backend` is `issue-store` (effective, no fallback), the doc pipeline routes
+**all** brainstorm / PRD / task authoring through `planning_store.put` — **no** local writes under
+`docs/brainstorms/` or `docs/prds/` in the code repo (R11). Skills hand off **unit ids** and virtual
+`body-path` handles, not git file paths (R12).
+
+| Stage | Issue-store contract |
+| --- | --- |
+| `/sw-brainstorm` | `put` brainstorm issue; spec-rigor on `--path` + `--unit-id` |
+| `/sw-prd` | `put` PRD issue; `doc_link.py write-backref` / `write-forwardref` via store |
+| `/sw-tasks` | `put` task-list issue; spec-rigor + traceability on virtual handles |
+| `/sw-freeze` | `planning_store.py freeze` (lock + hash + optional brainstorm distillation) |
+| Deliver handoff | Materialize to `.cursor/planning-materialized/` at run-entry with `verify-frozen-hash` |
+
+`spec-rigor-check.py` and `doc_link.py` accept virtual body-path + unit id when the git file is
+absent (R13). File-store repos: byte-identical file authoring (R9).
+
+Private/memory units are refused against a public issue store — route to `memory` or
+`local-synced` backends instead.
 
 
 ## Procedure

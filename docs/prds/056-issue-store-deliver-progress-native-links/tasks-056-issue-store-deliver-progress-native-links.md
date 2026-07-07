@@ -165,17 +165,17 @@ rescan: A3-deliver-run-entry-materialize
 
 ### 8. Issue-store doc pipeline authoring (medium) — Amendment A1
 
-- [ ] **8.1** Route `/sw-brainstorm`, `/sw-prd`, `/sw-tasks` through `planning_store.put`
+- [x] **8.1** Route `/sw-brainstorm`, `/sw-prd`, `/sw-tasks` through `planning_store.put`
   - **File:** `core/skills/brainstorm/SKILL.md`, `core/skills/prd/SKILL.md`, `core/skills/tasks/SKILL.md`, `core/commands/sw-doc.md`
   - **Expected:** issue-store effective → put only; no local `docs/brainstorms` or `docs/prds` writes
   - **R-IDs:** R11, R12
 
-- [ ] **8.2** Extend spec-rigor + doc_link for issue-store handles
+- [x] **8.2** Extend spec-rigor + doc_link for issue-store handles
   - **File:** `scripts/spec-rigor-check.py`, `scripts/doc_link.py`
   - **Expected:** gates pass on virtual body-path + unit id without git file
   - **R-IDs:** R13
 
-- [ ] **8.3** Fixture: sw-doc dry-run creates issues not files
+- [x] **8.3** Fixture: sw-doc dry-run creates issues not files
   - **File:** `scripts/unit_tests/planning/harness_planning_doc_issue_store.py`
   - **Expected:** separate-project config → zero code-repo doc diff
   - **R-IDs:** R11, R13

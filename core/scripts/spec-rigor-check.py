@@ -16,14 +16,28 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import doc_format
+import planning_artifact_handle as pah
 from phase_sizing import has_advisory_block
 from _sw.cli import run_module_main
 
 AMBIGUITY = re.compile(r"\b(TBD|TODO|FIXME|\?\?\?|to be determined)\b", re.I)
 
 
-def _run(root: Path, artifact: str, path_file: Path, tier: str, prd_path: str) -> int:
-    text = path_file.read_text(encoding="utf-8")
+def _run(
+    root: Path,
+    artifact: str,
+    body_path: str,
+    tier: str,
+    prd_path: str,
+    *,
+    unit_id: str | None = None,
+    prd_unit_id: str | None = None,
+) -> int:
+    content, source = pah.resolve_artifact_text(root, body_path, unit_id=unit_id)
+    if content is None:
+        print(json.dumps({"verdict": "fail", "error": f"artifact not found: {rel}", "artifact": artifact}))
+        return 20
+    text = content
     findings: list[dict] = []
 
     def add(gate: str, severity: str, message: str, rid: str | None = None) -> None:
@@ -151,13 +165,18 @@ def _run(root: Path, artifact: str, path_file: Path, tier: str, prd_path: str) -
         return 0 if worst == "pass" else 10 if worst == "warn" else 20
 
     if artifact == "tasks":
-        prd = Path(prd_path)
-        if not prd.is_file():
+        if not prd_path:
+            add("analyze", "error", "--prd required for tasks analyze")
+            print(json.dumps({"verdict": "fail", "artifact": "tasks", "findings": findings}))
+            return 20
+        prd_rel = pah.normalize_body_path(prd_path)
+        prd_file = pah.materialize_artifact_file(root, prd_rel, unit_id=prd_unit_id)
+        if prd_file is None:
             add("analyze", "error", "--prd required and must exist for tasks analyze")
             print(json.dumps({"verdict": "fail", "artifact": "tasks", "findings": findings}))
             return 20
         union = json.loads(
-            subprocess.check_output([sys.executable, str(root / "scripts/spec-union.py"), str(prd)], text=True)
+            subprocess.check_output([sys.executable, str(root / "scripts/spec-union.py"), str(prd_file)], text=True)
         )
         union_ids = [r["id"] for r in union.get("requirements", [])]
         if not re.search(r"^##\s+Traceability\s*$", text, re.M | re.I):
@@ -207,9 +226,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--path", required=True)
     parser.add_argument("--tier", default="standard")
     parser.add_argument("--prd", default="")
+    parser.add_argument("--unit-id", default="")
+    parser.add_argument("--prd-unit-id", default="")
     args = parser.parse_args(argv)
     root = SCRIPT_DIR.parent
-    return _run(root, args.artifact, Path(args.path), args.tier, args.prd)
+    return _run(
+        root,
+        args.artifact,
+        args.path,
+        args.tier,
+        args.prd,
+        unit_id=args.unit_id or None,
+        prd_unit_id=args.prd_unit_id or None,
+    )
 
 
 if __name__ == "__main__":
