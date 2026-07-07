@@ -32,6 +32,22 @@ JIRA_JQL_PAGE_CAP = 5
 MAX_BACKOFF_ATTEMPTS = 4
 BASE_BACKOFF_SECONDS = 0.05
 
+# PRD 057 R7 / D1: gitlab-issues is demoted to deferred / fail-closed until a live
+# planning_gitlab_client.py adapter ships in a follow-up unit (originating gap-039).
+# It is intentionally absent from SHIPPED_ISSUES_PROVIDERS; selecting it for a live
+# backend fails closed with a clear operator message instead of a partial round-trip.
+DEFERRED_ISSUES_PROVIDERS = frozenset({"gitlab-issues"})
+
+
+def deferred_provider_message(provider: str) -> str:
+    return (
+        f"issue provider {provider!r} is deferred (fail-closed): no live adapter is "
+        "shipped in this release. Select a shipped provider (github-issues or jira), "
+        "or use the file-store fallback. A follow-up unit will implement the live "
+        "planning_gitlab_client.py adapter and re-add it to the shipped set "
+        "(PRD 057 R7 / D1; gap-039)."
+    )
+
 T = TypeVar("T")
 
 
@@ -434,12 +450,10 @@ class IssuesClient:
 
                 self._github = GitHubIssuesClient(self.root)
             return self._github
-        if self.provider == "gitlab-issues":
-            if self._gitlab is None:
-                from planning_gitlab_client import GitLabIssuesClient
-
-                self._gitlab = GitLabIssuesClient(self.root)
-            return self._gitlab
+        if self.provider in DEFERRED_ISSUES_PROVIDERS:
+            # PRD 057 R7 / D1: fail closed for deferred providers (gitlab-issues)
+            # rather than instantiating an unshipped adapter.
+            raise IssueCapabilityError(deferred_provider_message(self.provider))
         raise IssueCapabilityError(
             f"live {self.provider} API not available without SW_ISSUES_FIXTURE=1 in CI"
         )

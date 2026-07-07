@@ -40,7 +40,12 @@ DEFERRED_BACKENDS = frozenset({"private-repo", "encryption-at-rest"})
 ALL_BACKENDS = SHIPPED_BACKENDS | DEFERRED_BACKENDS
 
 ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues", "jira", "none"})
-SHIPPED_ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues", "jira"})
+# PRD 057 R7 / D1: gitlab-issues is a known-but-deferred provider — supported for
+# config validation yet absent from the shipped set until a live adapter ships in a
+# follow-up unit (originating gap-039). Selection therefore fails closed with the
+# issues-provider-not-shipped fallback reason instead of an advertised round-trip.
+DEFERRED_ISSUES_PROVIDERS = frozenset({"gitlab-issues"})
+SHIPPED_ISSUES_PROVIDERS = frozenset({"github-issues", "jira"})
 
 DEFAULT_ISSUES_TOKEN_ENV: dict[str, str] = {
     "github-issues": "ISSUES_GITHUB_TOKEN",

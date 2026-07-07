@@ -79,23 +79,23 @@ Wave map:
 
 ### 3. gitlab-issues demotion / fail-closed (Wave 1 · R7)
 
-- [ ] 3.1 Remove `gitlab-issues` from shipped set and demote to deferred/fail-closed (R7) (unit 1/2)
+- [x] 3.1 Remove `gitlab-issues` from shipped set and demote to deferred/fail-closed (R7) (unit 1/2)
   - **File:** `scripts/issues_lib.py`
   - **Expected:** `SHIPPED_ISSUES_PROVIDERS` no longer advertises `gitlab-issues`; `_live_backend` keeps a fail-closed raise for unimplemented providers with a clear operator message.
   - **R-IDs:** R7
-- [ ] 3.2 Remove `gitlab-issues` from shipped set and demote to deferred/fail-closed (R7) (unit 2/2)
+- [x] 3.2 Remove `gitlab-issues` from shipped set and demote to deferred/fail-closed (R7) (unit 2/2)
   - **File:** `scripts/planning_store.py`
   - **Expected:** `SHIPPED_ISSUES_PROVIDERS` no longer advertises `gitlab-issues`; `_live_backend` keeps a fail-closed raise for unimplemented providers with a clear operator message.
   - **R-IDs:** R7
-- [ ] 3.3 gitlab demotion fixture (R7)
+- [x] 3.3 gitlab demotion fixture (R7)
   - **File:** `scripts/test/fixtures/planning-gitlab-demotion/harness.py`
   - **Expected:** `gitlab-issues` is absent from the shipped set and selecting it fails closed with a clear message.
   - **R-IDs:** R7
-- [ ] 3.4 Docs: gitlab deferred banner + shipped capability matrix (R32) (unit 1/2)
+- [x] 3.4 Docs: gitlab deferred banner + shipped capability matrix (R32) (unit 1/2)
   - **File:** `CAPABILITIES.md`
   - **Expected:** deferred/fail-closed banner with operator message and follow-up-unit pointer; shipped matrix removes `gitlab-issues` and marks it deferred.
   - **R-IDs:** R7
-- [ ] 3.5 Docs: gitlab deferred banner + shipped capability matrix (R32) (unit 2/2)
+- [x] 3.5 Docs: gitlab deferred banner + shipped capability matrix (R32) (unit 2/2)
   - **File:** `core/providers/issues/gitlab-issues.md`
   - **Expected:** deferred/fail-closed banner with operator message and follow-up-unit pointer; shipped matrix removes `gitlab-issues` and marks it deferred.
   - **R-IDs:** R7
