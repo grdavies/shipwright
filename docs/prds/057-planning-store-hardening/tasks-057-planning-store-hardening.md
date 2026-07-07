@@ -186,19 +186,19 @@ Wave map:
 
 ### 8. Gap-resolution store close + label (Wave 2 · R4)
 
-- [ ] 8.1 `set_index_status` closes gap issue + applies resolution label (R4)
+- [x] 8.1 `set_index_status` closes gap issue + applies resolution label (R4)
   - **File:** `scripts/reconcile_lib.py`
   - **Expected:** under issue-store `separate-project`, call shared `close_gap_issue(root, unit_id)` (issue close + resolution label) instead of the local INDEX/frontmatter edit; `resolution-partial` verdict on partial failure.
   - **R-IDs:** R4
-- [ ] 8.2 `resolve_for_prd` idempotent close + label (R4)
+- [x] 8.2 `resolve_for_prd` idempotent close + label (R4)
   - **File:** `scripts/gap_backlog.py`
   - **Expected:** close the gap issue and apply the resolution label idempotently (reuse `_apply_gap_labels`/`GAP_LABEL_RESOLVED` + `issue_update(..., state="closed")`); `same-repo` retains frontmatter/row edits.
   - **R-IDs:** R4
-- [ ] 8.3 Doctor resolution-partial reconciliation + living-status docs (R32) (unit 1/2)
+- [x] 8.3 Doctor resolution-partial reconciliation + living-status docs (R32) (unit 1/2)
   - **File:** `core/skills/living-status/SKILL.md`
   - **Expected:** doctor reconciles the open-issue-plus-resolved-label mismatch; living-status doc separates store authority from the file-store byte-identical path.
   - **R-IDs:** R4
-- [ ] 8.4 Doctor resolution-partial reconciliation + living-status docs (R32) (unit 2/2)
+- [x] 8.4 Doctor resolution-partial reconciliation + living-status docs (R32) (unit 2/2)
   - **File:** `scripts/planning-doctor.py`
   - **Expected:** doctor reconciles the open-issue-plus-resolved-label mismatch; living-status doc separates store authority from the file-store byte-identical path.
   - **R-IDs:** R4
