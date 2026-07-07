@@ -17,6 +17,13 @@ if str(SCRIPT_DIR) not in sys.path:
 import doc_format
 import planning_paths as pp
 
+try:
+    # PRD 057 R1: optional dependency — gap_backlog.py stays importable in
+    # vendored/standalone contexts where the migration engine isn't present.
+    from planning_migrate_issue_store import gap_backlog_is_readonly
+except ImportError:  # pragma: no cover - defensive fallback, see try_sunset below
+    gap_backlog_is_readonly = None  # type: ignore[assignment]
+
 GAP_ID = re.compile(r"^GAP-(\d+)$", re.I)
 CANONICAL_GAP_ID = re.compile(r"^gap-\d+-", re.I)
 INDEX_COUNTS = re.compile(r"^\|\s*(resolved|scheduled|open)\s*\|\s*(\d+)\s*\|", re.I)
@@ -419,17 +426,17 @@ def check_integrity(backlog: GapBacklog) -> list[dict[str, Any]]:
 
 
 
-def assert_gap_backlog_writable(root: Path) -> None:
-  try:
-    from planning_migrate_issue_store import gap_backlog_is_readonly
-  except ImportError:
+def assert_gap_backlog_writable(root: Path, *, projection: bool = False) -> None:
+  # PRD 057 R1: --projection is an explicit operator opt-in to retain the legacy
+  # row even when the store-authoritative guard would otherwise block the write.
+  if projection or gap_backlog_is_readonly is None:
     return
   if gap_backlog_is_readonly(root):
     print(json.dumps({
       "verdict": "fail",
-      "error": "GAP-BACKLOG is read-only during issue-store migration transition",
+      "error": "GAP-BACKLOG is read-only under issue-store separate-project (or migration transition)",
       "halt": "gap-backlog-readonly-shim",
-      "remediation": "capture gaps via planning_gap_capture.py or complete migration",
+      "remediation": "capture gaps via planning_gap_capture.py, complete migration, or pass --projection to retain the legacy row",
     }))
     sys.exit(20)
 
@@ -452,6 +459,7 @@ def main(argv: list[str] | None = None) -> None:
     p_flip.add_argument("--amendment", default="")
     p_flip.add_argument("--scope-note", default="")
     p_flip.add_argument("--gap-path", default="")
+    p_flip.add_argument("--projection", action="store_true")
     ns = parser.parse_args(args)
     root = Path(ns.root).resolve()
     if ns.cmd == "migration-gate":
@@ -479,7 +487,7 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(out))
         sys.exit(1 if issues else 0)
     if ns.cmd == "flip":
-        assert_gap_backlog_writable(root)
+        assert_gap_backlog_writable(root, projection=bool(ns.projection))
         changed: list[str] = []
         legacy_changed = False
         if ns.schedule:
