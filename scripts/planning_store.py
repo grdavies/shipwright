@@ -1496,7 +1496,7 @@ class IssueStoreBackend(PlanningStoreBackend):
             raise RuntimeError("raw-transcript-in-brainstorm")
         excerpt = content[:4000]
         redacted = redact_content(excerpt)
-        mem = MemoryBackend(self.root, self.cfg)
+        mem = MemoryLocalCacheBackend(self.root, self.cfg)
         mem_result = mem.put(
             f"brainstorm-{brainstorm.unit_id}",
             f"docs/brainstorms/{brainstorm.unit_id}.md",
@@ -1778,7 +1778,29 @@ class LocalSyncedBackend(PlanningStoreBackend):
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=content_hash(content))
 
 
-class MemoryBackend(PlanningStoreBackend):
+class MemoryLocalCacheBackend(PlanningStoreBackend):
+    """PRD 057 R21 / 21a — the `memory` backend's planning-body store.
+
+    This is a local-only, gitignored cache (`.cursor/sw-memory/planning-bodies/`, see
+    `.gitignore`) — it never round-trips body content through `memory.provider` (or
+    any other provider) and is available unconditionally, independent of whether a
+    memory provider happens to be configured. `configured_provider()` is informational
+    only: it names whichever provider is configured for the skill's other memory
+    operations (rules/decisions/etc. — see `core/skills/memory/SKILL.md`), and is
+    recorded in the frontmatter purely for operator context, never as a durability or
+    round-trip claim.
+
+    Prior to this rename, `_store_dir()` unconditionally called `fail(..., verdict=
+    "degraded")` (which `emit()` turns into `sys.exit(2)`) whenever no memory provider
+    was configured — a hard CI failure for a purely local disk write, and it made the
+    "degraded" branches below dead code (they could never be reached, since the process
+    had already exited by the time they ran). Removing that gate fixes both the
+    CI false-failure and the misleading-durability framing described in R21.
+
+    A true provider round-trip (with this cache retained as a fallback) is deferred to
+    21b — see `core/providers/planning-store/memory.md`.
+    """
+
     backend_id = "memory"
 
     def memory_project(self) -> str:
@@ -1787,17 +1809,15 @@ class MemoryBackend(PlanningStoreBackend):
             return memory["project"].strip()
         return self.root.name
 
-    def provider(self) -> str | None:
+    def configured_provider(self) -> str | None:
         return resolve_memory_provider(self.root, self.cfg)
 
-    def _store_dir(self) -> Path:
-        if self.provider() is None:
-            fail("memory backend degraded: no memory provider configured", verdict="degraded")
+    def _local_cache_dir(self) -> Path:
         return self.root / ".cursor" / "sw-memory" / "planning-bodies" / self.memory_project()
 
     def _unit_path(self, unit_id: str) -> Path:
         safe_id = re.sub(r"[^a-zA-Z0-9._-]+", "_", unit_id)
-        return self._store_dir() / f"{safe_id}.md"
+        return self._local_cache_dir() / f"{safe_id}.md"
 
     def _validate_class(self, content_class: str | None) -> None:
         if content_class and content_class.lower() in BANNED_MEMORY_CLASSES:
@@ -1811,7 +1831,7 @@ class MemoryBackend(PlanningStoreBackend):
         self._validate_class(content_class)
         self._validate_content(content)
         redacted = redact_content(content)
-        store_dir = self._store_dir()
+        store_dir = self._local_cache_dir()
         store_dir.mkdir(parents=True, exist_ok=True)
         target = self._unit_path(unit_id)
         frontmatter = (
@@ -1819,7 +1839,8 @@ class MemoryBackend(PlanningStoreBackend):
             f"unitId: {unit_id}\n"
             f"bodyPath: {body_path}\n"
             f"project: {self.memory_project()}\n"
-            f"provider: {self.provider() or 'none'}\n"
+            "localOnlyCache: true\n"
+            f"configuredProvider: {self.configured_provider() or 'none'}\n"
             "---\n"
         )
         target.write_text(frontmatter + redacted, encoding="utf-8")
@@ -1829,8 +1850,6 @@ class MemoryBackend(PlanningStoreBackend):
     def get(self, unit_id: str, body_path: str) -> StoreResult:
         path = self._unit_path(unit_id)
         if not path.is_file():
-            if self.provider() is None:
-                return StoreResult("degraded", unit_id, body_path, self.backend_id, reason="no-provider")
             return StoreResult("missing", unit_id, body_path, self.backend_id, reason="not-found")
         raw = path.read_text(encoding="utf-8")
         body = raw.split("---", 2)[-1].lstrip("\n") if raw.startswith("---") else raw
@@ -1841,8 +1860,6 @@ class MemoryBackend(PlanningStoreBackend):
     def exists(self, unit_id: str, body_path: str) -> StoreResult:
         present = self._unit_path(unit_id).is_file()
         log_operation("exists", unit_id, body_path, None, self.backend_id)
-        if not present and self.provider() is None:
-            return StoreResult("degraded", unit_id, body_path, self.backend_id, reason="no-provider")
         return StoreResult("ok" if present else "missing", unit_id, body_path, self.backend_id, reason=None if present else "not-found")
 
     def materialize(self, unit_id: str, body_path: str, dest_path: Path) -> StoreResult:
@@ -1881,7 +1898,7 @@ BACKEND_CLASSES: dict[str, type[PlanningStoreBackend]] = {
     "in-repo-public": InRepoPublicBackend,
     "issue-store": IssueStoreBackend,
     "local-synced": LocalSyncedBackend,
-    "memory": MemoryBackend,
+    "memory": MemoryLocalCacheBackend,
     "private-repo": DeferredBackend,
     "encryption-at-rest": DeferredBackend,
 }
