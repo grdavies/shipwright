@@ -317,13 +317,15 @@ cfg = {"planning": {"store": {"backend": "issue-store", "issuesProvider": "gitla
 import os
 os.environ["ISSUES_GITLAB_TOKEN"] = "token"
 out = ps.probe_issues_token(Path("$ROOT"), cfg)
-assert out.get("nativeLinksCapable") is True, out
-print("gitlab-probe-capable-ok")
+# PRD 057 R7 / D1: gitlab-issues is demoted to deferred / fail-closed, so its
+# token probe short-circuits as not-shipped instead of advertising capability.
+assert out.get("skipped") is True and out.get("reason") == "issues-provider-not-shipped", out
+print("gitlab-probe-deferred-ok")
 PY
 then
-  ok "probe:gitlab-nativeLinksCapable"
+  ok "probe:gitlab-deferred-not-shipped"
 else
-  bad "probe:gitlab-nativeLinksCapable"
+  bad "probe:gitlab-deferred-not-shipped"
 fi
 
 if python3 - <<'PY'
