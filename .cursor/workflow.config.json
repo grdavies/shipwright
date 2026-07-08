@@ -20,9 +20,12 @@
     "treatNeutralAsPass": true,
     "neutralAllowlist": []
   },
+  "dispatch": {
+    "unregisteredParentModelTier": "deep"
+  },
   "models": {
     "tiers": {
-      "cheap": "composer-2.5-fast",
+      "cheap": "composer-2.5",
       "build": "composer-2.5",
       "mid": "gpt-5.5-medium",
       "deep": "claude-opus-4-8-thinking-high"
@@ -44,8 +47,8 @@
         "sw-compound": "mid",
         "sw-compound-ship": "inherit",
         "sw-debug": "build",
-        "sw-deliver": "inherit",
-        "sw-doc": "inherit",
+        "sw-deliver": "build",
+        "sw-doc": "deep",
         "sw-doc-review": "build",
         "sw-execute": "build",
         "sw-feedback": "build",
@@ -60,10 +63,10 @@
         "sw-prd": "deep",
         "sw-ready": "cheap",
         "sw-retro": "mid",
-        "sw-retrospective": "inherit",
+        "sw-retrospective": "mid",
         "sw-review": "build",
         "sw-setup": "cheap",
-        "sw-ship": "inherit",
+        "sw-ship": "build",
         "sw-simplify": "mid",
         "sw-stabilize": "build",
         "sw-start": "cheap",
@@ -168,7 +171,7 @@
         "tokenEnv": "GITHUB_TOKEN"
       }
     },
-    "visibilityProfile": "all-public",
+    "visibilityProfile": "all-private",
     "privacyAck": {
       "required": true,
       "recordedAt": null,
@@ -179,7 +182,8 @@
       "confidenceThreshold": 0.85,
       "mutationBudget": 10,
       "undoWindowSeconds": 3600
-    }
+    },
+    "visibilityTier": "all-private"
   },
   "orchestration": {
     "planPolicy": "proposed"
@@ -213,8 +217,8 @@
     }
   },
   "configuredWith": {
-    "shipwrightVersion": "1.7.0",
-    "schemaVersion": "4d6718900610"
+    "shipwrightVersion": "1.8.0",
+    "schemaVersion": "79a07876aa95"
   },
   "compound": {
     "autonomy": "auto"
@@ -234,6 +238,115 @@
       "cooldownMinutes": 30,
       "maxOpenMetaUnits": 10,
       "scheduler": "manual"
+    }
+  },
+  "doc": {
+    "afterTasks": "confirm"
+  },
+  "delegation": {
+    "mode": "bind-only"
+  },
+  "guardrails": {
+    "enforceBeforeSubmit": true,
+    "requireRuleClass": false
+  },
+  "communication": {
+    "defaultIntensity": "full",
+    "routing": {
+      "commands": {
+        "sw-amend": "lite",
+        "sw-brainstorm": "lite",
+        "sw-caveman": "full",
+        "sw-cleanup": "ultra",
+        "sw-commit": "ultra",
+        "sw-compound": "full",
+        "sw-compound-ship": "full",
+        "sw-debug": "lite",
+        "sw-deliver": "lite",
+        "sw-doc": "lite",
+        "sw-doc-review": "normal",
+        "sw-execute": "full",
+        "sw-feedback": "lite",
+        "sw-feedback-close": "ultra",
+        "sw-freeze": "normal",
+        "sw-gaps": "full",
+        "sw-memory-audit": "ultra",
+        "sw-memory-export": "ultra",
+        "sw-memory-import": "ultra",
+        "sw-memory-sync": "ultra",
+        "sw-pr": "ultra",
+        "sw-prd": "lite",
+        "sw-ready": "normal",
+        "sw-retro": "lite",
+        "sw-retrospective": "full",
+        "sw-review": "full",
+        "sw-setup": "ultra",
+        "sw-init": "ultra",
+        "sw-ship": "lite",
+        "sw-simplify": "full",
+        "sw-stabilize": "full",
+        "sw-start": "ultra",
+        "sw-status": "ultra",
+        "sw-tasks": "lite",
+        "sw-triage": "ultra",
+        "sw-verify": "ultra",
+        "sw-watch-ci": "ultra",
+        "sw-worktree": "ultra",
+        "sw-migrate": "lite"
+      },
+      "skills": {
+        "brainstorm": "lite",
+        "checks-gate": "ultra",
+        "compound": "full",
+        "conductor": "lite",
+        "debug": "lite",
+        "deliver": "lite",
+        "doc-review": "normal",
+        "execute-discipline": "full",
+        "feedback": "lite",
+        "feedback-closure": "ultra",
+        "gap-check": "full",
+        "git-workflow": "normal",
+        "living-status": "ultra",
+        "memory": "ultra",
+        "parallelism": "ultra",
+        "prd": "lite",
+        "rca-core": "full",
+        "retro": "lite",
+        "shipwright-state": "ultra",
+        "simplify": "full",
+        "spec-rigor": "normal",
+        "spec-union": "normal",
+        "stabilize-loop": "full",
+        "tasks": "lite",
+        "triage": "ultra",
+        "verification-gate": "ultra",
+        "worktree": "ultra"
+      },
+      "agents": {
+        "sw-coherence-reviewer": "full",
+        "sw-feasibility-reviewer": "full",
+        "sw-scope-guardian-reviewer": "full",
+        "sw-product-reviewer": "full",
+        "sw-adversarial-reviewer": "full",
+        "sw-docs-currency-reviewer": "full",
+        "sw-security-reviewer": "full",
+        "sw-design-reviewer": "full",
+        "correctness": "full",
+        "security": "full",
+        "adversarial": "full",
+        "data-migration": "full",
+        "maintainability": "normal",
+        "scope-fidelity": "normal",
+        "testing": "normal",
+        "performance": "normal",
+        "api-contract": "normal",
+        "reliability": "normal",
+        "ui-ux": "normal",
+        "type-design": "normal",
+        "comment-accuracy": "normal",
+        "ai-native": "normal"
+      }
     }
   }
 }

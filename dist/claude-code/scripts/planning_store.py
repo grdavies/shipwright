@@ -1715,7 +1715,21 @@ class IssueStoreBackend(PlanningStoreBackend):
                 sorted(set(record.labels) | missing),
                 if_match=record.etag,
             )
-        except (IssueRevisionConflict, IssueCapabilityError, IssueBudgetExhausted, IssueTombstone, IssueTransferred):
+        except (
+            IssueRevisionConflict,
+            IssueCapabilityError,
+            IssueBudgetExhausted,
+            IssueTombstone,
+            IssueTransferred,
+        ):
+            return record
+        except RuntimeError:
+            # Provider-level HTTP error (e.g. GitHub 422 invalid-label-name on an
+            # oversized `sw:unit:<id>` -- gap-085): the label projection is a
+            # purely additive optimization over the frontmatter/body-marker dual
+            # -read source of truth, never the read/put's source of truth itself,
+            # so degrade to a no-op exactly as this method's own docstring
+            # promises rather than propagating an uncaught traceback.
             return record
         return updated
 

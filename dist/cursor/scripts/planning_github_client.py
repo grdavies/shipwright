@@ -37,6 +37,18 @@ SUB_ISSUE_API_VERSION = "2026-03-10"
 NATIVE_LINK_MARKER = re.compile(r"<!--\s*sw-native-link:([^:\s]+):(\d+)\s*-->")
 _NATIVE_LINKS_DEGRADED_EMITTED = False
 
+# GitHub enforces a 50-character label name limit (gap-085). Structural label
+# projections (sw:unit:<id>, sw:absorbs:<id>, ...) are purely additive
+# optimizations over the frontmatter/body-marker dual-read source of truth
+# (planning_canonical.structural_labels_from_content) -- dropping an
+# oversized one here never loses data, it just skips the fast-path label
+# index for that value.
+GITHUB_LABEL_MAX_LEN = 50
+
+
+def _fits_label_limit(name: str) -> bool:
+    return len(name) <= GITHUB_LABEL_MAX_LEN
+
 
 def _store_section(cfg: dict[str, Any]) -> dict[str, Any]:
     planning = cfg.get("planning") if isinstance(cfg.get("planning"), dict) else {}
@@ -409,7 +421,9 @@ class GitHubIssuesClient:
         native_links: list[dict[str, Any]] | None = None,
     ) -> Any:
         del artifact_type, unit_id
-        merged_labels = sorted(set(labels) | {project_label(project_key)})
+        merged_labels = sorted(
+            {name for name in set(labels) | {project_label(project_key)} if _fits_label_limit(name)}
+        )
         created = self._http_json(
             "POST",
             f"{self.api_base}/repos/{self.owner}/{self.repo}/issues",
@@ -451,7 +465,7 @@ class GitHubIssuesClient:
         return self._get_issue(issue_id)
 
     def _sync_labels(self, issue_number: int, want: list[str], *, current: list[str]) -> None:
-        want_set = set(want)
+        want_set = {name for name in want if _fits_label_limit(name)}
         have_set = set(current)
         for name in sorted(have_set - want_set):
             self._http_empty(
