@@ -522,6 +522,13 @@ python3 scripts/living-status-gap-resolve.py --absorbing-prd <NNN> [--scope-note
 
 See `skills/living-status/SKILL.md` for the canonical INDEX status enum and reconcile primitives.
 
+**Deliver-chain parity matrix (PRD 057 R6):** the published command×artifact×backend audit for
+planning-store emission parity lives at `core/sw-reference/planning-deliver-parity-matrix.md`.
+Under issue-store `separate-project`, pollution/currency guards skip tracked local derived writes
+(`GAP-BACKLOG.md`, `INDEX.md`, `INDEX-archive.md`, `SUPERSEDED.md`); the matrix names each guarded
+command surface and the CI fixture (`scripts/test/fixtures/planning-deliver-parity/full_matrix.py`)
+that asserts no file-store-only write path runs when the effective backend is issue-store authoritative.
+
 ## Incremental verify + failure routing (R25–R27, R39, R45–R46)
 
 After each phase merge into `<type>/<slug>`, `merge run-next` runs configured `verify.*` on the orchestrator
