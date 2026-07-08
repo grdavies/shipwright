@@ -67,7 +67,7 @@ from before_task_dispatch import evaluate_pre_tool_use
 root = Path(sys.argv[1])
 payload = {
     "tool_name": "Task",
-    "tool_input": {"subagent_type": "sw-coherence-reviewer", "prompt": "review doc"},
+    "tool_input": {"subagent_type": "sw-coherence-reviewer", "prompt": "**Resolved intensity:** `normal` (dispatch-preflight)\nreview doc"},
     "cwd": str(root),
     "workspace_roots": [str(root)],
 }

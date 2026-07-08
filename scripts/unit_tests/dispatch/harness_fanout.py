@@ -282,7 +282,7 @@ import json, sys
 from pathlib import Path
 sys.path.insert(0, str(Path(sys.argv[1]) / 'core' / 'hooks'))
 from before_task_dispatch import evaluate_pre_tool_use
-payload = {'tool_name': 'Task', 'tool_input': {'subagent_type': sys.argv[3], 'metadata': {'dispatchId': sys.argv[2]}}}
+payload = {'tool_name': 'Task', 'tool_input': {'subagent_type': sys.argv[3], 'metadata': {'dispatchId': sys.argv[2]}, 'prompt': '**Resolved intensity:** `normal` (dispatch-preflight)\nfixture task'}}
 result = evaluate_pre_tool_use(payload, Path(sys.argv[1]))
 print(json.dumps({'verdict': result.verdict, 'cause': result.cause}))
 PY
