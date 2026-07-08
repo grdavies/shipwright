@@ -128,6 +128,7 @@ from planning_canonical import (  # noqa: E402
     project_label,
     reconcile_edges,
     reassemble_body,
+    rewrite_chunk_manifest_ids,
     strip_markers_and_edges,
     title_prefix,
     type_label,
@@ -1546,7 +1547,7 @@ class IssueStoreBackend(PlanningStoreBackend):
         title = self._issue_title(artifact_type, unit_id)
         labels = self._labels_for(artifact_type)
         body = compose_issue_body(self.project_key, artifact_type, unit_id, content)
-        body, extra_comments = chunk_body_if_needed(body, [])
+        body, extra_comments = chunk_body_if_needed(body, [], provider=self.issues_provider)
         try:
             record = self._lookup_record(unit_id, body_path)
         except IssueNotFound:
@@ -1574,10 +1575,35 @@ class IssueStoreBackend(PlanningStoreBackend):
                     expected=exc.expected,
                     actual=exc.actual,
                 )
+        chunk_comment_ids: list[str] = []
         for comment in extra_comments:
             self._guard_write_secrets(comment.body, path_hint=body_path)
-            self._client.issue_comment(record.id, comment.body, markers=comment.markers)
+            posted = self._client.issue_comment(record.id, comment.body, markers=comment.markers)
+            chunk_comment_ids.append(posted.id)
             record = self._client.issue_get(record.id)
+        if chunk_comment_ids:
+            # R8: `body` still carries the synthetic placeholder chunk ids
+            # assigned before the provider issued real comment ids above;
+            # rewrite the manifest with the real ids before persisting so
+            # `reassemble_body` matches comments directly instead of falling
+            # back to positional matching, which can select a stale overflow
+            # comment left over from an earlier put.
+            rewritten_body = rewrite_chunk_manifest_ids(body, chunk_comment_ids)
+            if rewritten_body != record.body:
+                try:
+                    record = self._client.issue_update(
+                        record.id,
+                        body=rewritten_body,
+                        if_match=record.etag,
+                    )
+                except IssueRevisionConflict as exc:
+                    fail(
+                        "revision-conflict",
+                        code="revision-conflict",
+                        expected=exc.expected,
+                        actual=exc.actual,
+                    )
+                record = self._client.issue_get(record.id)
         idx_key = issue_index_key(self.project_key, unit_id)
         self._index[idx_key] = record.id
         save_issue_unit_index(self.root, self._index)
