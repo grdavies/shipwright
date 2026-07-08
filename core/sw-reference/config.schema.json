@@ -1291,6 +1291,48 @@
         }
       }
     },
+    "contextCompression": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Task-dispatch context compression (PRD 058 gap-083 R26). Default off.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "thresholdTokens": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 8000
+        },
+        "strategies": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "json": {
+              "type": "string",
+              "enum": ["compress", "path-reference", "passthrough"],
+              "default": "compress"
+            },
+            "diff": {
+              "type": "string",
+              "enum": ["compress", "path-reference", "passthrough"],
+              "default": "path-reference"
+            },
+            "log": {
+              "type": "string",
+              "enum": ["compress", "path-reference", "passthrough"],
+              "default": "compress"
+            },
+            "prose": {
+              "type": "string",
+              "enum": ["compress", "path-reference", "passthrough"],
+              "default": "compress"
+            }
+          }
+        }
+      }
+    },
     "loopHealth": {
       "type": "object",
       "additionalProperties": false,
