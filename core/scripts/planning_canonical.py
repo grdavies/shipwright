@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import quote, unquote
 
+import planning_index_gen as pig
+
 CANONICAL_VERSION = "1"
 BODY_SIZE_LIMIT = 60_000
 EDGE_DIVERGENCE_TOLERANCE = 0
@@ -221,6 +223,179 @@ def gap_schedule_from_labels(labels: list[str]) -> str:
         if label.startswith(GAP_SCHEDULE_LABEL_PREFIX):
             return unquote(label[len(GAP_SCHEDULE_LABEL_PREFIX) :])
     return ""
+
+
+# PRD 057 R11 (gap-030, D5) -- provider-native label projections for the
+# structural frontmatter keys (type/unit-id/status/topic/depends/absorbs/
+# amends/visibility). These are ADDITIVE: the doc's own frontmatter block
+# stays embedded in the issue body for the one-release dual-read window
+# (frontmatter remains authoritative there per the Wave 4 revert path) --
+# labels are the vendor-native read/discover projection, letting search and
+# list operations resolve unit metadata without fetching/parsing full issue
+# bodies, and letting an old (pre-R11) issue's frontmatter-only metadata
+# still resolve correctly via the body-marker/frontmatter fallback already
+# used throughout this module and its callers.
+UNIT_LABEL_PREFIX = "sw:unit:"
+TOPIC_LABEL_PREFIX = "sw:topic:"
+VISIBILITY_LABEL_PREFIX = "sw:visibility:"
+EDGE_LABEL_PREFIXES: dict[str, str] = {
+    "depends": "sw:depends:",
+    "absorbs": "sw:absorbs:",
+    "amends": "sw:amends:",
+}
+# GitHub allows up to 100 labels/issue -- comfortably enough headroom for the
+# handful of structural labels plus a generous edge-label allowance. Jira has
+# no hard per-issue label *count* limit, but (matching the existing
+# `gap_schedule_label` / `source_tag_label` percent-encoding convention)
+# label *values* cannot contain spaces, so multi-word edge targets are
+# percent-encoded here too. This cap keeps the label projection well inside
+# both providers' practical limits; a unit with more edges than the cap
+# never loses data -- the authoritative `sw-edges` body fence (D5, PRD 056
+# D2) always carries every edge regardless of what the label projection can
+# fit, so a truncated label set degrades discovery convenience only.
+MAX_EDGE_LABELS_PER_RELATION = 20
+
+STRUCTURAL_FRONTMATTER_KEYS = (
+    "type",
+    "unit-id",
+    "status",
+    "topic",
+    "depends",
+    "absorbs",
+    "amends",
+    "visibility",
+)
+
+
+def unit_id_label(unit_id: str) -> str:
+    return f"{UNIT_LABEL_PREFIX}{quote(unit_id, safe='')}"
+
+
+def unit_id_from_labels(labels: list[str]) -> str:
+    for label in labels:
+        if label.startswith(UNIT_LABEL_PREFIX):
+            return unquote(label[len(UNIT_LABEL_PREFIX) :])
+    return ""
+
+
+def artifact_type_from_labels(labels: list[str]) -> str:
+    """Reverse-lookup of `type_label` -- the label side of the R11 dual-read
+    projection for `artifact_type` (body-marker fallback lives in callers)."""
+    label_set = set(labels)
+    for artifact_type, label in TYPE_LABELS.items():
+        if label in label_set:
+            return artifact_type
+    return ""
+
+
+def topic_label(topic: str) -> str:
+    return f"{TOPIC_LABEL_PREFIX}{quote(topic, safe='')}"
+
+
+def topic_from_labels(labels: list[str]) -> str:
+    for label in labels:
+        if label.startswith(TOPIC_LABEL_PREFIX):
+            return unquote(label[len(TOPIC_LABEL_PREFIX) :])
+    return ""
+
+
+def visibility_label(visibility: str) -> str:
+    return f"{VISIBILITY_LABEL_PREFIX}{quote(visibility, safe='')}"
+
+
+def visibility_from_labels(labels: list[str]) -> str:
+    for label in labels:
+        if label.startswith(VISIBILITY_LABEL_PREFIX):
+            return unquote(label[len(VISIBILITY_LABEL_PREFIX) :])
+    return ""
+
+
+def edge_labels_for(rel: str, targets: list[str]) -> list[str]:
+    """Provider-native label projection of a `depends`/`absorbs`/`amends`
+    edge list (R11). Silently caps at `MAX_EDGE_LABELS_PER_RELATION` -- see
+    that constant's docstring for why truncation here never loses data."""
+    prefix = EDGE_LABEL_PREFIXES.get(rel)
+    if not prefix:
+        return []
+    out: list[str] = []
+    for target in targets[:MAX_EDGE_LABELS_PER_RELATION]:
+        cleaned = str(target).strip()
+        if not cleaned:
+            continue
+        out.append(f"{prefix}{quote(cleaned, safe='')}")
+    return out
+
+
+def edges_from_labels(labels: list[str], rel: str) -> list[str]:
+    prefix = EDGE_LABEL_PREFIXES.get(rel)
+    if not prefix:
+        return []
+    out: list[str] = []
+    for label in labels:
+        if label.startswith(prefix):
+            value = unquote(label[len(prefix) :])
+            if value and value not in out:
+                out.append(value)
+    return out
+
+
+def structural_labels_from_content(content: str) -> list[str]:
+    """R11 write-side -- promote a doc's structural frontmatter keys (type/
+    unit-id/status/topic/depends/absorbs/amends/visibility) to provider-
+    native labels. Purely additive: `content`'s own frontmatter block is
+    untouched by this function and keeps being embedded in the issue body
+    (dual-read window, D5) -- this only computes the label projection of it.
+    """
+    if not content.startswith("---"):
+        return []
+    fm = pig.parse_frontmatter(content)
+    if not fm:
+        return []
+    labels: list[str] = []
+    if fm.get("type"):
+        labels.append(type_label(str(fm["type"])))
+    if fm.get("unit-id"):
+        labels.append(unit_id_label(str(fm["unit-id"])))
+    if fm.get("status"):
+        labels.append(status_label(str(fm["status"])))
+    if fm.get("topic"):
+        labels.append(topic_label(str(fm["topic"])))
+    if fm.get("visibility"):
+        labels.append(visibility_label(str(fm["visibility"])))
+    for rel in ("depends", "absorbs", "amends"):
+        value = fm.get(rel)
+        targets = value if isinstance(value, list) else ([value] if value else [])
+        labels.extend(edge_labels_for(rel, [str(t) for t in targets]))
+    return labels
+
+
+def human_readable_title(content: str, artifact_type: str, unit_id: str) -> str:
+    """R11 -- issue title without the legacy `[project] type:unit-id`
+    prefix (see `title_prefix`, still used by the one-time migration writer
+    for its own separate cutover path). The provider-assigned id is a
+    storage pointer only, so nothing about unit identity depends on this
+    title being unique, stable, or parseable -- it exists purely so a human
+    operator browsing the tracker sees the document's own name instead of a
+    synthetic `type:unit-id` string.
+
+    Prefers an explicit frontmatter `title:` key, then the document's first
+    H1 heading, then falls back to a plain (still bracket-free) `type:
+    unit-id` string for a stub write that has neither yet.
+    """
+    body = content
+    fm = pig.parse_frontmatter(content) if content.startswith("---") else None
+    if fm and fm.get("title"):
+        return str(fm["title"]).strip()[:250]
+    if fm:
+        parts = content.split("---", 2)
+        body = parts[2] if len(parts) >= 3 else content
+    for line in normalize_body(body).split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("# "):
+            heading = stripped[2:].strip()
+            if heading:
+                return heading[:250]
+    return f"{artifact_type}: {unit_id}"[:250]
 
 
 def build_markers(project_key: str, artifact_type: str, unit_id: str) -> str:

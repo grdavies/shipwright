@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any, Literal
@@ -167,11 +168,19 @@ def _gap_status_from_labels(labels: list[str]) -> str:
     return "open"
 
 
+# PRD 057 R11 -- matches only the pre-R11 `[project] type:unit-id` issue
+# title format (see `planning_canonical.title_prefix`). A post-R11
+# human-readable title (`planning_canonical.human_readable_title`) never
+# starts with a bracketed project prefix, so it is returned unchanged below
+# even when it legitimately contains a colon (e.g. "Fix: race condition").
+_LEGACY_BRACKETED_TITLE_RE = re.compile(r"^\[[^\]]+\]\s+[A-Za-z][\w-]*:(.+)$")
+
+
 def _title_from_record(record: Any) -> str:
     title = str(record.title or "")
-    if ":" in title:
-        _, _, tail = title.partition(":")
-        tail = tail.strip()
+    match = _LEGACY_BRACKETED_TITLE_RE.match(title)
+    if match:
+        tail = match.group(1).strip()
         if tail:
             return tail
     return title
