@@ -402,6 +402,7 @@
 * merge phase gap-083-shared-prompt-construction-module-config-schema-recoverable-path-r19-r24-r25-r26 into feat/dispatch-loop-hardening (ba06dde) <!-- sw-deliver:gap-083-shared-prompt-construction-module-config-schema-recoverable-path-r19-r24-r25-r26 -->
 * merge phase gap-083-telemetry-default-off-gating-r28-r29 into feat/dispatch-loop-hardening (87a2f75) <!-- sw-deliver:gap-083-telemetry-default-off-gating-r28-r29 -->
 * merge phase gap-083-tests-resolve-r31-r32 into feat/dispatch-loop-hardening (29ecc59) <!-- sw-deliver:gap-083-tests-resolve-r31-r32 -->
+* merge phase gap-083-default-flip-quality-parity-milestone-r30 into feat/dispatch-loop-hardening (f148e87) <!-- sw-deliver:gap-083-default-flip-quality-parity-milestone-r30 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
