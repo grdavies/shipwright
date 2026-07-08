@@ -1,10 +1,362 @@
 {
-  "version": 1,
+  "$schema": "../.sw/config.schema.json",
+  "review": {
+    "provider": "none"
+  },
+  "verify": {
+    "test": "SW_TEST_SCOPE=phase PYTHONPATH=scripts python3 scripts/test/_runner.py verify --scope phase",
+    "fullTest": "PYTHONPATH=scripts python3 scripts/test/_runner.py verify --scope full",
+    "watchdog": {
+      "maxMinutes": 120
+    }
+  },
+  "ci": {
+    "prTestPlanManifest": "core/sw-reference/pr-test-plan.manifest.json"
+  },
+  "coderabbit": {
+    "reviewGraceMinutes": 15
+  },
+  "checks": {
+    "treatNeutralAsPass": true,
+    "neutralAllowlist": []
+  },
+  "dispatch": {
+    "unregisteredParentModelTier": "deep"
+  },
+  "models": {
+    "tiers": {
+      "cheap": "composer-2.5",
+      "build": "composer-2.5",
+      "mid": "gpt-5.5-medium",
+      "deep": "claude-opus-4-8-thinking-high"
+    },
+    "aliases": {
+      "fast": "cheap"
+    },
+    "roles": {
+      "builder": "build",
+      "reviewer": "build"
+    },
+    "routing": {
+      "commands": {
+        "sw-amend": "deep",
+        "sw-brainstorm": "deep",
+        "sw-caveman": "cheap",
+        "sw-cleanup": "cheap",
+        "sw-commit": "cheap",
+        "sw-compound": "mid",
+        "sw-compound-ship": "inherit",
+        "sw-debug": "build",
+        "sw-deliver": "build",
+        "sw-doc": "deep",
+        "sw-doc-review": "build",
+        "sw-execute": "build",
+        "sw-feedback": "build",
+        "sw-feedback-close": "mid",
+        "sw-freeze": "cheap",
+        "sw-gaps": "mid",
+        "sw-memory-audit": "mid",
+        "sw-memory-export": "cheap",
+        "sw-memory-import": "cheap",
+        "sw-memory-sync": "mid",
+        "sw-pr": "cheap",
+        "sw-prd": "deep",
+        "sw-ready": "cheap",
+        "sw-retro": "mid",
+        "sw-retrospective": "mid",
+        "sw-review": "build",
+        "sw-setup": "cheap",
+        "sw-ship": "build",
+        "sw-simplify": "mid",
+        "sw-stabilize": "build",
+        "sw-start": "cheap",
+        "sw-status": "cheap",
+        "sw-tasks": "deep",
+        "sw-triage": "cheap",
+        "sw-verify": "cheap",
+        "sw-watch-ci": "cheap",
+        "sw-worktree": "cheap",
+        "sw-init": "cheap"
+      },
+      "agents": {
+        "sw-coherence-reviewer": "build",
+        "sw-feasibility-reviewer": "build",
+        "sw-scope-guardian-reviewer": "build",
+        "sw-product-reviewer": "build",
+        "sw-adversarial-reviewer": "build",
+        "sw-docs-currency-reviewer": "build",
+        "sw-security-reviewer": "build",
+        "sw-design-reviewer": "build",
+        "correctness": "deep",
+        "security": "deep",
+        "adversarial": "deep",
+        "data-migration": "deep",
+        "maintainability": "mid",
+        "scope-fidelity": "mid",
+        "testing": "mid",
+        "performance": "mid",
+        "api-contract": "mid",
+        "reliability": "mid",
+        "ui-ux": "mid",
+        "type-design": "mid",
+        "comment-accuracy": "mid",
+        "ai-native": "mid"
+      },
+      "skills": {
+        "brainstorm": "deep",
+        "checks-gate": "cheap",
+        "compound": "mid",
+        "conductor": "inherit",
+        "debug": "build",
+        "deliver": "build",
+        "doc-review": "inherit",
+        "execute-discipline": "build",
+        "feedback": "build",
+        "feedback-closure": "mid",
+        "gap-check": "mid",
+        "git-workflow": "cheap",
+        "living-status": "cheap",
+        "memory": "cheap",
+        "parallelism": "cheap",
+        "prd": "deep",
+        "rca-core": "build",
+        "retro": "mid",
+        "shipwright-state": "cheap",
+        "simplify": "mid",
+        "spec-rigor": "cheap",
+        "spec-union": "cheap",
+        "stabilize-loop": "build",
+        "tasks": "deep",
+        "triage": "cheap",
+        "verification-gate": "cheap",
+        "worktree": "cheap"
+      }
+    }
+  },
+  "host": {
+    "provider": "github",
+    "remote": "origin",
+    "tokenEnv": "GITHUB_TOKEN",
+    "rateLimit": {
+      "maxAttempts": 5,
+      "baseBackoffMs": 1000,
+      "capBackoffMs": 60000,
+      "maxCumulativeWaitMs": 300000,
+      "jitter": true,
+      "nearLimitThreshold": 5,
+      "mutatingMinDelayMs": 1000
+    }
+  },
+  "deliver": {
+    "autonomy": {
+      "mode": "autonomous",
+      "maxRunMinutes": 1440,
+      "maxIterations": 500
+    },
+    "terminal": {
+      "autonomy": "auto"
+    }
+  },
   "planning": {
     "store": {
       "backend": "issue-store",
       "issuesProvider": "github-issues",
-      "projectKey": "fixture-alpha"
+      "projectKey": "planning",
+      "storeLocation": {
+        "mode": "separate-project",
+        "owner": "grdavies",
+        "repo": "planning"
+      },
+      "issues": {
+        "tokenEnv": "GITHUB_TOKEN"
+      }
+    },
+    "visibilityProfile": "all-private",
+    "privacyAck": {
+      "required": true,
+      "recordedAt": null,
+      "reason": "public-origin-remote"
+    },
+    "autonomy": "full-conductor",
+    "fullConductor": {
+      "confidenceThreshold": 0.85,
+      "mutationBudget": 10,
+      "undoWindowSeconds": 3600
+    },
+    "visibilityTier": "all-private"
+  },
+  "orchestration": {
+    "planPolicy": "proposed"
+  },
+  "memory": {
+    "provider": "recallium",
+    "sourceOfTruth": "auto",
+    "project": "shipwright",
+    "defaultScope": "project",
+    "connection": {
+      "restBaseUrl": "http://localhost:8001"
+    },
+    "autoSync": {
+      "enabled": true,
+      "minTurns": 10,
+      "minMinutes": 120
+    },
+    "guardrails": {
+      "enforceBeforeSubmit": true,
+      "requireRuleClass": false
+    }
+  },
+  "defaultBaseBranch": "main",
+  "worktree": {
+    "parallelCeiling": 10,
+    "scaffold": {
+      "portRangeStart": 9100,
+      "portRangeEnd": 9199,
+      "dbStrategy": "schema-prefix",
+      "dbTemplate": ""
+    }
+  },
+  "configuredWith": {
+    "shipwrightVersion": "1.8.0",
+    "schemaVersion": "79a07876aa95"
+  },
+  "compound": {
+    "autonomy": "auto"
+  },
+  "inefficiency": {
+    "enabled": true
+  },
+  "loopHealth": {
+    "enabled": true,
+    "staleInboxDays": 14
+  },
+  "loop": {
+    "autoPropose": {
+      "enabled": true,
+      "maxPerDay": 5,
+      "dedupWindow": 3600,
+      "cooldownMinutes": 30,
+      "maxOpenMetaUnits": 10,
+      "scheduler": "manual"
+    }
+  },
+  "doc": {
+    "afterTasks": "confirm"
+  },
+  "delegation": {
+    "mode": "bind-only"
+  },
+  "guardrails": {
+    "enforceBeforeSubmit": true,
+    "requireRuleClass": false
+  },
+  "communication": {
+    "defaultIntensity": "full",
+    "routing": {
+      "commands": {
+        "sw-amend": "lite",
+        "sw-brainstorm": "lite",
+        "sw-caveman": "full",
+        "sw-cleanup": "ultra",
+        "sw-commit": "ultra",
+        "sw-compound": "full",
+        "sw-compound-ship": "full",
+        "sw-debug": "lite",
+        "sw-deliver": "lite",
+        "sw-doc": "lite",
+        "sw-doc-review": "normal",
+        "sw-execute": "full",
+        "sw-feedback": "lite",
+        "sw-feedback-close": "ultra",
+        "sw-freeze": "normal",
+        "sw-gaps": "full",
+        "sw-memory-audit": "ultra",
+        "sw-memory-export": "ultra",
+        "sw-memory-import": "ultra",
+        "sw-memory-sync": "ultra",
+        "sw-pr": "ultra",
+        "sw-prd": "lite",
+        "sw-ready": "normal",
+        "sw-retro": "lite",
+        "sw-retrospective": "full",
+        "sw-review": "full",
+        "sw-setup": "ultra",
+        "sw-init": "ultra",
+        "sw-ship": "lite",
+        "sw-simplify": "full",
+        "sw-stabilize": "full",
+        "sw-start": "ultra",
+        "sw-status": "ultra",
+        "sw-tasks": "lite",
+        "sw-triage": "ultra",
+        "sw-verify": "ultra",
+        "sw-watch-ci": "ultra",
+        "sw-worktree": "ultra",
+        "sw-migrate": "lite"
+      },
+      "skills": {
+        "brainstorm": "lite",
+        "checks-gate": "ultra",
+        "compound": "full",
+        "conductor": "lite",
+        "debug": "lite",
+        "deliver": "lite",
+        "doc-review": "normal",
+        "execute-discipline": "full",
+        "feedback": "lite",
+        "feedback-closure": "ultra",
+        "gap-check": "full",
+        "git-workflow": "normal",
+        "living-status": "ultra",
+        "memory": "ultra",
+        "parallelism": "ultra",
+        "prd": "lite",
+        "rca-core": "full",
+        "retro": "lite",
+        "shipwright-state": "ultra",
+        "simplify": "full",
+        "spec-rigor": "normal",
+        "spec-union": "normal",
+        "stabilize-loop": "full",
+        "tasks": "lite",
+        "triage": "ultra",
+        "verification-gate": "ultra",
+        "worktree": "ultra"
+      },
+      "agents": {
+        "sw-coherence-reviewer": "full",
+        "sw-feasibility-reviewer": "full",
+        "sw-scope-guardian-reviewer": "full",
+        "sw-product-reviewer": "full",
+        "sw-adversarial-reviewer": "full",
+        "sw-docs-currency-reviewer": "full",
+        "sw-security-reviewer": "full",
+        "sw-design-reviewer": "full",
+        "correctness": "full",
+        "security": "full",
+        "adversarial": "full",
+        "data-migration": "full",
+        "maintainability": "normal",
+        "scope-fidelity": "normal",
+        "testing": "normal",
+        "performance": "normal",
+        "api-contract": "normal",
+        "reliability": "normal",
+        "ui-ux": "normal",
+        "type-design": "normal",
+        "comment-accuracy": "normal",
+        "ai-native": "normal"
+      }
+    }
+  },
+  "contextCompression": {
+    "enabled": false,
+    "thresholdTokens": 8000,
+    "strategies": {
+      "json": "compress",
+      "diff": "path-reference",
+      "log": "compress",
+      "prose": "compress"
     }
   }
 }
