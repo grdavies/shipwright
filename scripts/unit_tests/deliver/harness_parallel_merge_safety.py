@@ -130,8 +130,8 @@ CONT_FIX=$(mktemp -d)
   git config user.email test@test.com
   git config user.name Test
   git commit --allow-empty -q -m init
-  mkdir -p docs/prds/036-x
-  cat >docs/prds/036-x/tasks.md <<'MD'
+  mkdir -p scripts/test/fixtures/contention-harness
+  cat >scripts/test/fixtures/contention-harness/tasks-036-x.md <<'MD'
 ---
 frozen: true
 ---
@@ -152,7 +152,7 @@ frozen: true
   - **File:** `scripts/wave_deliver_loop.py`
   - Run `python3 -m sw generate --all` after edits.
 MD
-  python3 "$DELIVER_PY" "$CONT_FIX" plan --task-list docs/prds/036-x/tasks.md --type feat --skip-base-check >/dev/null
+  python3 "$DELIVER_PY" "$CONT_FIX" plan --task-list scripts/test/fixtures/contention-harness/tasks-036-x.md --type feat --skip-base-check >/dev/null
   python3 - <<PY
 import json
 from pathlib import Path

@@ -24,6 +24,8 @@ SOFT_ENFORCE_EXIT = 30
 GATE_FAIL_EXIT = 20
 CANONICAL_PRDS_TASK_LIST = re.compile(r"^docs/prds/\d+-[^/]+/tasks-[^/]+\.md$")
 
+HARNESS_FIXTURE_TASK_LIST = re.compile(r"^scripts/test/fixtures/.+/tasks-[^/]+\.md$")
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -73,12 +75,19 @@ def is_canonical_prds_task_list(task_rel: str) -> bool:
     return bool(CANONICAL_PRDS_TASK_LIST.match(task_rel.replace("\\", "/")))
 
 
+def is_harness_fixture_task_list(task_rel: str) -> bool:
+    """Hermetic harness fixtures under scripts/test/fixtures/ (gap-051 R5 allowlist)."""
+    return bool(HARNESS_FIXTURE_TASK_LIST.match(task_rel.replace("\\", "/")))
+
+
 def allowlist_unit_absent_from_graph(task_path: Path, task_rel: str) -> bool:
     """Documented allowlist for unit-not-in-graph pass (gap-051 R5).
 
     A task list on the canonical docs/prds/<n>-<slug>/ layout that is not yet
     frozen may legitimately be absent from the planning graph during spec seeding.
     """
+    if is_harness_fixture_task_list(task_rel):
+        return True
     if not is_canonical_prds_task_list(task_rel):
         return False
     if not task_path.is_file():
