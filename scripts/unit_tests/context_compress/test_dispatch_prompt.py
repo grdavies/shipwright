@@ -166,5 +166,33 @@ class DispatchPromptTests(unittest.TestCase):
         self.assertEqual(payload["dispatchId"], dispatch_id)
         self.assertEqual(payload["surface"], SURFACE_DOC_REVIEW)
 
+    def test_end_to_end_compression_enabled_with_retrieve_round_trip(self) -> None:
+        cfg = json.loads(self.config_path.read_text(encoding="utf-8"))
+        cfg["contextCompression"]["enabled"] = True
+        cfg["contextCompression"]["thresholdTokens"] = 15
+        self.config_path.write_text(json.dumps(cfg), encoding="utf-8")
+
+        large_diff = (
+            "diff --git a/report.json b/report.json\n"
+            "--- a/report.json\n+++ b/report.json\n"
+            "@@ -1,3 +1,4 @@\n"
+            + "\n".join(f"+line {i} added context" for i in range(200))
+        )
+        result = build_task_dispatch_prompt(
+            intensity="full",
+            intensity_source="routing.commands",
+            body="Analyze the diff.",
+            context_blocks=[ContextBlock(text=large_diff, label="report-diff")],
+            config_path=str(self.config_path),
+            root=self.root,
+        )
+        self.assertTrue(result.compression_applied)
+        self.assertTrue(result.retrieve_keys)
+        guard = validate_retrieve_key_guard(result.prompt)
+        self.assertEqual(guard.verdict, "pass")
+        restored = recover_compressed_context(result.retrieve_keys[0], root=self.root)
+        self.assertIn("line 0 added context", restored)
+
+
 if __name__ == "__main__":
     unittest.main()
