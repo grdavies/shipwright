@@ -7,6 +7,9 @@ from dataclasses import dataclass
 
 ALLOWED_INTENSITIES = frozenset({"normal", "lite", "full", "ultra"})
 
+_RETRIEVE_KEY_PATTERN = re.compile(r"\bretrieveKey\b")
+_RETRIEVE_CALL_PATTERN = re.compile(r"\bretrieve\s*\(")
+
 # Canonical literal line sourced from guardrail_core.build_session_context().
 _INTENSITY_LINE_RE = re.compile(
     r"^\*\*Resolved intensity:\*\* `(?P<intensity>normal|lite|full|ultra)` \((?P<source>[^)]+)\)\s*(?:\n|$)"
@@ -20,6 +23,41 @@ class DirectiveAnchorResult:
     source: str | None = None
     cause: str | None = None
     remediation: str | None = None
+
+
+@dataclass(frozen=True)
+class RetrieveKeyGuardResult:
+    verdict: str  # pass | fail
+    cause: str | None = None
+    remediation: str | None = None
+
+
+def validate_retrieve_key_guard(prompt: str) -> RetrieveKeyGuardResult:
+    """Confirm retrieveKey/retrieve() never appear in outbound Task prompt text (R23)."""
+    if not isinstance(prompt, str):
+        return RetrieveKeyGuardResult(verdict="pass")
+
+    if _RETRIEVE_KEY_PATTERN.search(prompt):
+        return RetrieveKeyGuardResult(
+            verdict="fail",
+            cause="binding:retrieve-key-in-prompt",
+            remediation=(
+                "retrieveKey is orchestrator-only; keep cache keys out of subagent-visible "
+                "prompt text and use orchestrator-side retrieve() re-dispatch"
+            ),
+        )
+
+    if _RETRIEVE_CALL_PATTERN.search(prompt):
+        return RetrieveKeyGuardResult(
+            verdict="fail",
+            cause="binding:retrieve-call-in-prompt",
+            remediation=(
+                "retrieve() is orchestrator-only; never embed cache retrieval calls in "
+                "subagent-visible prompt text"
+            ),
+        )
+
+    return RetrieveKeyGuardResult(verdict="pass")
 
 
 def format_intensity_directive(intensity: str, source: str) -> str:
