@@ -41,6 +41,7 @@ STATIC_HEAD = """# Shipwright local hook state (machine-local, not shared)
 .cursor/sw-deliver-state.*.json
 .cursor/sw-deliver.lock
 .cursor/sw-deliver-runs/
+.cursor/doc-review-runs/
 .cursor/planning-legacy-projection-stamp.json
 
 # Generated deliver-phase fixture temps (superseded by deliver-phase-mode/tasks/)
