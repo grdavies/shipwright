@@ -401,6 +401,7 @@
 * merge phase gap-083-reversible-cache-compress-retrieve-ccr-with-redaction-collision-safety-r20-r21-r22-r23 into feat/dispatch-loop-hardening (f5b5a71) <!-- sw-deliver:gap-083-reversible-cache-compress-retrieve-ccr-with-redaction-collision-safety-r20-r21-r22-r23 -->
 * merge phase gap-083-shared-prompt-construction-module-config-schema-recoverable-path-r19-r24-r25-r26 into feat/dispatch-loop-hardening (ba06dde) <!-- sw-deliver:gap-083-shared-prompt-construction-module-config-schema-recoverable-path-r19-r24-r25-r26 -->
 * merge phase gap-083-telemetry-default-off-gating-r28-r29 into feat/dispatch-loop-hardening (87a2f75) <!-- sw-deliver:gap-083-telemetry-default-off-gating-r28-r29 -->
+* merge phase gap-083-tests-resolve-r31-r32 into feat/dispatch-loop-hardening (29ecc59) <!-- sw-deliver:gap-083-tests-resolve-r31-r32 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
