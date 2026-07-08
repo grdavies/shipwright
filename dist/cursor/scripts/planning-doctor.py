@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -264,6 +265,122 @@ def source_missing_finding(root: Path) -> dict | None:
     }
 
 
+def put_partial_finding(root: Path) -> dict | None:
+    """Resumable partial-write journal entries from an interrupted chunked
+    issue-store `put` (PRD 057 R26).
+
+    A chunked put journals the issue id + step before posting overflow
+    comments and rewriting the manifest with real ids; the entry is only
+    cleared once that rewrite succeeds. Surfacing it here tells an operator a
+    retry of `put` for that unit id resumes against the SAME journaled issue
+    rather than minting a duplicate. Fail-open (returns ``None``) if the
+    store cannot be read, so this never breaks the doctor sweep for a
+    non-issue-store backend or an unreadable journal file.
+    """
+    try:
+        import planning_store as ps
+        from planning_migrate_issue_store import issue_store_effective
+
+        cfg = ps.load_workflow_config(root)
+        if not issue_store_effective(root, cfg):
+            return None
+        journal = ps.load_put_journal(root)
+    except Exception:  # noqa: BLE001 -- doctor check is advisory / fail-open
+        return None
+    if not journal:
+        return None
+    units = sorted(
+        (
+            {
+                "unitId": entry.get("unitId"),
+                "issueId": entry.get("issueId"),
+                "step": entry.get("step"),
+                "postedChunks": len(entry.get("postedCommentIds") or []),
+                "expectedChunks": entry.get("expectedChunks"),
+            }
+            for entry in journal.values()
+            if isinstance(entry, dict)
+        ),
+        key=lambda u: str(u.get("unitId") or ""),
+    )
+    if not units:
+        return None
+    return {
+        "check": "put-partial",
+        "status": "drift",
+        "units": units,
+        "remediation": (
+            "retry `planning_store.py put` for the listed unit id(s); the store resumes "
+            "against the journaled issue id instead of creating a duplicate issue"
+        ),
+    }
+
+
+def chunk_cardinality_finding(root: Path) -> dict | None:
+    """Manifest/comment cardinality-mismatch finding for chunked issue-store
+    bodies (PRD 057 R26).
+
+    A chunk manifest's `commentId` entries must each resolve to a real
+    comment actually present on the issue; a manifest that still names a
+    synthetic `chunk-N` placeholder (or any other id no longer on the issue)
+    cannot be reassembled exactly — this is exactly the durable state a
+    crash between posting overflow comments and rewriting the manifest with
+    real ids (R26) leaves behind. Fail-open (returns ``None``) if the store
+    cannot be read, so this never breaks the doctor sweep for a
+    non-issue-store backend or an unreachable provider.
+    """
+    try:
+        import planning_store as ps
+        from planning_canonical import MARKER_CHUNK_MANIFEST
+        from planning_migrate_issue_store import cfg_issues_client, issue_store_effective
+        from planning_store import validate_project_key
+
+        cfg = ps.load_workflow_config(root)
+        if not issue_store_effective(root, cfg):
+            return None
+        key_result = validate_project_key(root, cfg)
+        if key_result.get("verdict") != "ok":
+            return None
+        project_key = str(key_result["projectKey"])
+        client = cfg_issues_client(root)
+        records = client.issue_search(project_key=project_key)
+    except Exception:  # noqa: BLE001 -- doctor check is advisory / fail-open
+        return None
+    mismatched: list[dict[str, Any]] = []
+    for record in records:
+        match = MARKER_CHUNK_MANIFEST.search(record.body or "")
+        if not match:
+            continue
+        try:
+            manifest = json.loads(match.group(1))
+        except json.JSONDecodeError:
+            continue
+        chunks = manifest.get("chunks") if isinstance(manifest, dict) else None
+        if not isinstance(chunks, list) or not chunks:
+            continue
+        declared_ids = [c.get("commentId") for c in chunks if isinstance(c, dict)]
+        have_ids = {c.id for c in record.comments}
+        missing = [cid for cid in declared_ids if cid not in have_ids]
+        if missing:
+            mismatched.append({
+                "unitId": record.unit_id,
+                "issueId": record.id,
+                "declaredChunks": len(declared_ids),
+                "missingCommentIds": missing,
+            })
+    if not mismatched:
+        return None
+    return {
+        "check": "chunk-cardinality-mismatch",
+        "status": "drift",
+        "units": sorted(mismatched, key=lambda u: str(u.get("unitId") or "")),
+        "remediation": (
+            "retry `planning_store.py put` for the listed unit id(s) to rewrite the chunk "
+            "manifest against the currently posted overflow comments"
+        ),
+    }
+
+
 def doctor(root: Path, *, sweep: bool) -> dict:
     checks: list[dict] = []
     warnings: list[str] = []
@@ -420,6 +537,20 @@ def doctor(root: Path, *, sweep: bool) -> dict:
             warnings.append("gap-resolution-partial")
             if verdict == "ok":
                 verdict = "degraded"
+
+    put_partial = put_partial_finding(root)
+    if put_partial is not None:
+        checks.append(put_partial)
+        warnings.append("put-partial")
+        if verdict == "ok":
+            verdict = "degraded"
+
+    cardinality_finding = chunk_cardinality_finding(root)
+    if cardinality_finding is not None:
+        checks.append(cardinality_finding)
+        warnings.append("chunk-cardinality-mismatch")
+        if verdict == "ok":
+            verdict = "degraded"
 
     swept: list[str] = []
     if sweep:
