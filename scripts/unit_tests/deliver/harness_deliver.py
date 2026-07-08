@@ -296,8 +296,9 @@ STATE_FIX=$(mktemp -d)
     mkdir -p .github/workflows
     cp "$ROOT"/.github/workflows/* .github/workflows/ 2>/dev/null || true
   fi
-  mkdir -p .cursor docs/prds/004-wave-phase-orchestrator
+  mkdir -p .cursor docs/prds/004-wave-phase-orchestrator scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator
   cp "$TASK_FROZEN" docs/prds/004-wave-phase-orchestrator/
+  cp "$TASK_FROZEN" scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/
   "$WAVE" plan --task-list scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md >/dev/null
   "$WAVE" state init --plan .cursor/sw-deliver-plan.json >/dev/null
   "$WAVE" lock acquire --target feat/wave-phase-orchestrator --nonblock >/dev/null

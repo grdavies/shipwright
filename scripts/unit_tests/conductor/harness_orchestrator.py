@@ -116,7 +116,6 @@ SEED_FIX=$(mktemp -d)
   mkdir -p docs/prds/099-demo
   cat >docs/prds/099-demo/tasks-099-demo.md <<'EOF'
 ---
-frozen: true
 topic: demo
 prd: docs/prds/099-demo/099-prd-demo.md
 ---
