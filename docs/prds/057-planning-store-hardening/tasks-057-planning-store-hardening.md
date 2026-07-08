@@ -301,23 +301,23 @@ Wave map:
 
 ### 13. Chunk-manifest id rewrite + Jira chunking (Wave 3 · R8, R9)
 
-- [ ] 13.1 Rewrite chunk manifest with real provider comment ids on put (R8) (unit 1/2)
+- [x] 13.1 Rewrite chunk manifest with real provider comment ids on put (R8) (unit 1/2)
   - **File:** `scripts/planning_canonical.py`
   - **Expected:** after posting overflow comments and `issue_get`, `put` rewrites the chunk manifest with real provider comment ids before persisting; `reassemble_body` consumes the rewritten ids so reassembly never selects stale comments.
   - **R-IDs:** R8
-- [ ] 13.2 Rewrite chunk manifest with real provider comment ids on put (R8) (unit 2/2)
+- [x] 13.2 Rewrite chunk manifest with real provider comment ids on put (R8) (unit 2/2)
   - **File:** `scripts/planning_store.py`
   - **Expected:** after posting overflow comments and `issue_get`, `put` rewrites the chunk manifest with real provider comment ids before persisting; `reassemble_body` consumes the rewritten ids so reassembly never selects stale comments.
   - **R-IDs:** R8
-- [ ] 13.3 Provider-aware Jira chunking in the standard write path (R9)
+- [x] 13.3 Provider-aware Jira chunking in the standard write path (R9)
   - **File:** `scripts/planning_canonical.py`
   - **Expected:** `chunk_body_if_needed` applies Jira payload-size limits (port `chunk_body_for_jira_cloud`) so oversized Jira bodies chunk before the client rejects them.
   - **R-IDs:** R9
-- [ ] 13.4 Chunk-reassembly + Jira-chunking fixtures (R8, R9) (unit 1/2)
+- [x] 13.4 Chunk-reassembly + Jira-chunking fixtures (R8, R9) (unit 1/2)
   - **File:** `scripts/test/fixtures/planning-chunk-reassembly/harness.py`
   - **Expected:** repeated large updates reassemble correctly using rewritten provider comment ids (no stale comments); oversized Jira bodies chunk in the standard write path.
   - **R-IDs:** R9
-- [ ] 13.5 Chunk-reassembly + Jira-chunking fixtures (R8, R9) (unit 2/2)
+- [x] 13.5 Chunk-reassembly + Jira-chunking fixtures (R8, R9) (unit 2/2)
   - **File:** `scripts/test/fixtures/planning-jira-chunking/harness.py`
   - **Expected:** repeated large updates reassemble correctly using rewritten provider comment ids (no stale comments); oversized Jira bodies chunk in the standard write path.
   - **R-IDs:** R9
