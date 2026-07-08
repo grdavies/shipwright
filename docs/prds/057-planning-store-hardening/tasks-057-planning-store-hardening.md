@@ -431,11 +431,11 @@ Wave map:
 
 ### 19. Deliver-chain parity audit + published matrix (Wave 5 · R6)
 
-- [ ] 19.1 Published command×artifact×backend parity matrix (R6)
+- [x] 19.1 Published command×artifact×backend parity matrix (R6)
   - **File:** `core/sw-reference/planning-deliver-parity-matrix.md`
   - **Expected:** the full `/sw-deliver` chain is audited for planning-store artifact emission parity, producing a published command×artifact×backend matrix linked from the deliver skill + configuration guide.
   - **R-IDs:** R6
-- [ ] 19.2 Full-matrix CI parity fixture (R6)
+- [x] 19.2 Full-matrix CI parity fixture (R6)
   - **File:** `scripts/test/fixtures/planning-deliver-parity/full_matrix.py`
   - **Expected:** a CI fixture asserts that no file-store-only write path executes when the effective backend is issue-store authoritative; a full brainstorm→PRD→tasks→deliver cycle writes no tracked local planning artifact.
   - **R-IDs:** R6

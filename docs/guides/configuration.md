@@ -210,7 +210,11 @@ or `host.provider` is `none`. A documented notice is emitted; work is never bloc
 CRUD is active. Init probes token scope via `python3 scripts/planning_store.py probe-issues-token` (fail-closed on
 missing/insufficient scope).
 
-
+**Deliver-chain parity matrix (PRD 057 R6):** when `storeLocation.mode` is `separate-project`, pollution/currency
+guards skip tracked local derived planning artifacts in the code repo — gap capture, spec-seed, reconcile, and gap
+resolution write through to the issue store instead. The full command×artifact×backend matrix and CI fixture are
+published at `core/sw-reference/planning-deliver-parity-matrix.md` (verified by
+`scripts/test/fixtures/planning-deliver-parity/full_matrix.py`).
 
 ### Jira Cloud issue-store (PRD 047)
 
