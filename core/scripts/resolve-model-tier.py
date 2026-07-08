@@ -157,11 +157,16 @@ def main(argv: list[str] | None = None) -> int:
     if tier_arg:
         resolve_tier_name(tier_arg, "tier")
 
-    # R39b precedence: explicit bound-agent routing → command → agent
+    # R39b precedence: explicit bound-agent routing → command → skill → agent.
+    # A bound agent with an explicit routing.agents entry wins over both --command
+    # and --skill (gap-088) — a persona's own model tier must not be displaced by
+    # the orchestrating skill's (often `inherit`) tier just because both were passed
+    # to the same dispatch-check call.
+    agent_wins = bool(agent) and is_bound_agent(agent) and has_explicit_agent_routing(agent)
     lookup_command = command
     lookup_agent = agent
     if agent and command:
-        if is_bound_agent(agent) and has_explicit_agent_routing(agent):
+        if agent_wins:
             lookup_command = ""
         else:
             lookup_agent = ""
@@ -169,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
     if lookup_command:
         resolve_command_tier(lookup_command)
 
-    if skill:
+    if skill and not agent_wins:
         if skill not in skill_routing:
             fail(f"missing routing.skills entry for {skill!r}")
         raw = skill_routing[skill]
