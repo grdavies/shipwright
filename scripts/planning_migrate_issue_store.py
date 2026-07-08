@@ -66,6 +66,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from host_lib import load_workflow_config  # noqa: E402
 from issues_lib import IssueNotFound, IssueRevisionConflict, IssuesClient  # noqa: E402
+from planning_artifact_handle import issue_store_separate_project_effective  # noqa: E402
 from planning_canonical import (  # noqa: E402
     FROZEN_LABEL,
     IssueSnapshot,
@@ -254,6 +255,19 @@ def issue_store_effective(root: Path, cfg: dict[str, Any] | None = None) -> bool
     return str(effective.get("effective", "")) == "issue-store"
 
 
+def issue_store_separate_project(root: Path, cfg: dict[str, Any] | None = None) -> bool:
+    """Shared R1-R4 guard predicate: issue-store effective AND ``storeLocation.mode``
+    (via ``resolve_store_location``) is ``separate-project`` (PRD 057 R1).
+
+    Single source of truth for the pollution/currency guards across this wave —
+    gap-backlog write-through here (R1); spec-seed INDEX guard (R2), reconcile
+    derived-artifact guard (R3), and gap-resolution store close (R4) reuse it in
+    later phases — so ``same-repo`` deployments keep retaining local writes and
+    only ``separate-project`` deployments skip them.
+    """
+    return issue_store_separate_project_effective(root, cfg)
+
+
 def project_native_links_from_edges(
     root: Path,
     edge_list: list[dict[str, Any]],
@@ -331,7 +345,9 @@ def gap_backlog_is_readonly(root: Path) -> bool:
     if migration_in_transition(root):
         return True
     cfg = load_workflow_config(root)
-    if issue_store_effective(root, cfg):
+    # PRD 057 R1: only separate-project makes the legacy row read-only —
+    # same-repo issue-store deployments retain local GAP-BACKLOG.md writes.
+    if issue_store_separate_project(root, cfg):
         return True
     dirs = pp_load_planning_dirs(root)
     gap_path = root / dirs.prds / "GAP-BACKLOG.md"
@@ -474,8 +490,37 @@ def count_file_native_open_gaps(root: Path) -> int:
     return open_count
 
 
+GAP_BACKLOG_SUNSET_STUB_MARKER = "<!-- issue-store-gap-backlog-sunset: v1 -->"
+
+
+def render_gap_backlog_sunset_stub() -> str:
+    """Documented sunset stub for GAP-BACKLOG.md under issue-store separate-project
+    once no open gaps remain (PRD 057 R1). Replaces outright file removal so a path
+    still referenced by docs/tooling resolves to an explanation instead of a 404."""
+    return (
+        "\n".join(
+            [
+                GAP_BACKLOG_SUNSET_STUB_MARKER,
+                "",
+                "# GAP-BACKLOG (sunset)",
+                "",
+                "This local projection is retired under issue-store `separate-project` "
+                "(PRD 057 R1). Gap units are captured and resolved directly in the "
+                "planning-project issue store; no open gaps remain to project locally. "
+                "See `core/skills/feedback/SKILL.md` for the store-only capture contract.",
+                "",
+            ]
+        )
+        + "\n"
+    )
+
+
 def refresh_gap_backlog_projection(
-    root: Path, cfg: dict[str, Any] | None = None, *, apply: bool = True
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+    *,
+    apply: bool = True,
+    projection: bool = False,
 ) -> dict[str, Any]:
     cfg = cfg or load_workflow_config(root)
     if migration_in_transition(root):
@@ -483,9 +528,20 @@ def refresh_gap_backlog_projection(
     if not issue_store_effective(root, cfg):
         return {"skipped": True, "reason": "not-issue-store"}
     dirs = pp_load_planning_dirs(root)
+    gap_path = root / dirs.prds / "GAP-BACKLOG.md"
+    if issue_store_separate_project(root, cfg) and not projection:
+        # PRD 057 R1: gap capture already writes through to the issue store under
+        # separate-project; skip the legacy local projection write unless the
+        # operator explicitly retains it via --projection.
+        return {
+            "gapBacklog": str(gap_path.relative_to(root)),
+            "readonly": True,
+            "source": "issue-derived",
+            "skipped": True,
+            "reason": "separate-project-write-through",
+        }
     records = list_gap_issue_records(root, cfg)
     content = render_gap_backlog_from_issue_records(records)
-    gap_path = root / dirs.prds / "GAP-BACKLOG.md"
     if apply:
         gap_path.parent.mkdir(parents=True, exist_ok=True)
         gap_path.write_text(content, encoding="utf-8")
@@ -497,8 +553,10 @@ def refresh_gap_backlog_projection(
     }
 
 
-def try_sunset_gap_backlog_projection(root: Path, *, apply: bool = True) -> dict[str, Any]:
-    cfg = load_workflow_config(root)
+def try_sunset_gap_backlog_projection(
+    root: Path, cfg: dict[str, Any] | None = None, *, apply: bool = True
+) -> dict[str, Any]:
+    cfg = cfg or load_workflow_config(root)
     if not issue_store_effective(root, cfg):
         return {"skipped": True, "reason": "not-issue-store"}
     if migration_in_transition(root):
@@ -509,11 +567,25 @@ def try_sunset_gap_backlog_projection(root: Path, *, apply: bool = True) -> dict
         return {"skipped": True, "reason": "gap-issues-remain"}
     dirs = pp_load_planning_dirs(root)
     gap_path = root / dirs.prds / "GAP-BACKLOG.md"
+    # PRD 057 R1: same-repo keeps removing the generated projection outright;
+    # separate-project reduces it to a documented sunset stub instead.
+    separate_project = issue_store_separate_project(root, cfg)
     if not gap_path.is_file():
-        return {"removed": False, "reason": "no-projection"}
+        if not separate_project:
+            return {"removed": False, "reason": "no-projection"}
+        if apply:
+            gap_path.parent.mkdir(parents=True, exist_ok=True)
+            gap_path.write_text(render_gap_backlog_sunset_stub(), encoding="utf-8")
+        return {"removed": False, "stubbed": True, "gapBacklog": str(gap_path.relative_to(root))}
     content = gap_path.read_text(encoding="utf-8")
+    if GAP_BACKLOG_SUNSET_STUB_MARKER in content:
+        return {"removed": False, "stubbed": True, "reason": "already-sunset-stub"}
     if not is_gap_projection_content(content):
         return {"removed": False, "reason": "not-generated-projection"}
+    if separate_project:
+        if apply:
+            gap_path.write_text(render_gap_backlog_sunset_stub(), encoding="utf-8")
+        return {"removed": False, "stubbed": True, "gapBacklog": str(gap_path.relative_to(root))}
     if apply:
         gap_path.unlink()
     return {"removed": True, "gapBacklog": str(gap_path.relative_to(root))}
@@ -545,6 +617,83 @@ def sync_gap_issue_labels(root: Path, unit_id: str, content: str, cfg: dict[str,
     labels = _apply_gap_labels(list(record.labels), lifecycle, "gap")
     updated = client.issue_update(record.id, labels=labels, if_match=record.etag)
     return {"unitId": unit_id, "issueId": updated.id, "labels": labels}
+
+
+def gap_unit_ids_scheduled_for_prd(root: Path, prd: str, cfg: dict[str, Any] | None = None) -> list[str]:
+    """Gap issue unit ids scheduled for ``prd`` under issue-store (PRD 057 R4).
+
+    Mirrors ``gap_backlog.flip_resolve``'s schedule-label matching so
+    ``gap_backlog.resolve_for_prd`` can locate the gap issues an absorbing PRD
+    should close when there is no local canonical gap file to inspect
+    (issue-store ``separate-project``).
+    """
+    cfg = cfg or load_workflow_config(root)
+    prd_n = str(int(prd)) if prd.isdigit() else prd.lstrip("0") or prd
+    sched_re = re.compile(
+        rf"^PRD\s+0*{re.escape(str(int(prd_n))) if prd_n.isdigit() else re.escape(prd_n)}(?:\s+A\d+)?$",
+        re.I,
+    )
+    unit_ids: list[str] = []
+    for record in list_gap_issue_records(root, cfg):
+        schedule = _gap_schedule_from_labels(list(getattr(record, "labels", [])))
+        if schedule and sched_re.match(schedule.strip()):
+            unit_ids.append(str(getattr(record, "unit_id", "")))
+    return unit_ids
+
+
+def close_gap_issue(root: Path, unit_id: str, cfg: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Close the gap issue for ``unit_id`` and apply the resolved label idempotently
+    (PRD 057 R4).
+
+    Shared by ``gap_backlog.resolve_for_prd`` (in turn used by both
+    ``reconcile_lib.set_index_status`` and the standalone ``gap-backlog.py flip
+    --resolve`` CLI) under issue-store ``separate-project`` — the issue is the
+    sole resolution record there, so this replaces the local frontmatter/row edit
+    that ``same-repo`` keeps. Returns ``{"verdict": "resolution-partial", ...}``
+    (never raises) on any lookup or update failure so callers can aggregate
+    partial outcomes across multiple gap units without losing already-applied
+    progress.
+    """
+    cfg = cfg or load_workflow_config(root)
+    if not issue_store_effective(root, cfg):
+        return {"verdict": "pass", "skipped": True, "reason": "not-issue-store", "unitId": unit_id}
+    key_result = validate_project_key(root, cfg)
+    if key_result.get("verdict") != "ok":
+        return {
+            "verdict": "resolution-partial",
+            "unitId": unit_id,
+            "error": key_result.get("message") or key_result.get("error", "invalid-project-key"),
+        }
+    project_key = str(key_result["projectKey"])
+    client = cfg_issues_client(root)
+    record = None
+    idx_key = issue_index_key(project_key, unit_id)
+    issue_id = load_issue_unit_index(root).get(idx_key)
+    if issue_id:
+        try:
+            record = client.issue_get(str(issue_id))
+        except IssueNotFound:
+            record = None
+    if record is None:
+        matches = client.issue_search(project_key=project_key, unit_id=unit_id, artifact_type="gap")
+        if not matches:
+            return {"verdict": "resolution-partial", "unitId": unit_id, "error": "gap-issue-missing"}
+        record = matches[0]
+    lifecycle = ArtifactLifecycle(
+        issue_state="closed",
+        frozen=False,
+        freeze_hash=None,
+        frozen_at=None,
+        gap_status="resolved",
+    )
+    labels = _apply_gap_labels(list(record.labels), lifecycle, "gap")
+    if record.state == "closed" and set(labels) == set(record.labels):
+        return {"verdict": "pass", "unitId": unit_id, "issueId": record.id, "labels": labels, "alreadyClosed": True}
+    try:
+        updated = client.issue_update(record.id, labels=labels, state="closed", if_match=record.etag)
+    except Exception as exc:  # noqa: BLE001 — any close/label failure is a resolution-partial finding, not a crash
+        return {"verdict": "resolution-partial", "unitId": unit_id, "error": str(exc), "labels": labels}
+    return {"verdict": "pass", "unitId": unit_id, "issueId": updated.id, "labels": labels}
 
 
 def pp_load_planning_dirs(root: Path) -> Any:

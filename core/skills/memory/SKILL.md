@@ -219,14 +219,30 @@ Then `expand` by reading `memories/<id>.md` (or `rules/<id>.md` for rule categor
 5. **`category: rule` always writes to `.cursor/sw-memory/rules/`** — offline hook reads committed rules.
 6. Never auto-seed starter rules; store starts empty.
 
-## Planning store memory backend (PRD 034 R11/R23)
+## Planning store memory backend (PRD 034 R11/R23; PRD 057 R21 — 21a local cache + 21b provider round-trip)
 
-When `planning.store.backend` is `memory`, unit **bodies** route through this skill's provider adapter and
-`scripts/memory-redact.py` on read and write — **body storage only**; the memory backend does not alter
-source-of-truth for any planning class. Decision-class units under `docs/planning/decision/` still follow
-the PRD-015 committed redacted snapshot + pointer flow regardless of `visibility`. The authoritative
-decision record paths remain `docs/decisions/<n>-<slug>.md` (repo-SoT) or the provider record (memory-SoT)
-per **Source of truth resolution** below — the planning-store memory backend never replaces that contract.
+When `planning.store.backend` is `memory`, unit **bodies** are cached under a **gitignored** directory
+(`.cursor/sw-memory/planning-bodies/<memory.project>/`, `MemoryLocalCacheBackend` in
+`scripts/planning_store.py`) that always passes content through `scripts/memory-redact.py` on read and
+write — **body storage only**; the memory backend does not alter source-of-truth for any planning class.
+
+This local cache is always written unconditionally regardless of whether a memory provider is configured
+(21a — PRD 057 R21), and is never bypassed: it remains the fast-path read and the fallback whenever the
+provider round-trip below is unavailable. On top of it, 21b adds a real round-trip through the configured
+provider's REST adapter (Recallium only, at present): `put()` best-effort mirrors the redacted body to a
+dedicated `/planning-bodies/<unitId>` REST resource guarded by the same loopback-only base-URL check as
+`providers/recallium-rules.py`, and `get()` recovers content through that same adapter when the local cache
+is absent (e.g. a fresh checkout on another machine). Each cached body's frontmatter records
+`configuredProvider` (informational — names whichever provider is configured for this skill's other memory
+operations), plus `providerRoundTrip`/`providerRoundTripReason` (whether *this* body actually round-tripped,
+and why not when it didn't). See `core/providers/planning-store/memory.md` for the full contract and
+`scripts/test/fixtures/memory-roundtrip/harness.py` for the offline fixture covering both the round-trip and
+every fallback path.
+
+Decision-class units under `docs/planning/decision/` still follow the PRD-015 committed redacted snapshot +
+pointer flow regardless of `visibility`. The authoritative decision record paths remain
+`docs/decisions/<n>-<slug>.md` (repo-SoT) or the provider record (memory-SoT) per **Source of truth
+resolution** below — the planning-store memory backend never replaces that contract.
 
 ## Decision records (file-linked deliverables)
 
@@ -273,8 +289,8 @@ When `planning.store.backend` is `issue-store` and a PRD is frozen via `planning
 
 1. Linked brainstorm content (from `sw-edges` / `link-brainstorm-prd`) is excerpted and piped through
    `scripts/memory-redact.py` — no raw transcript.
-2. Distilled `research` entry is stored via the memory backend adapter (`MemoryBackend` /
-   `planning.store.backend: memory` bodies path or configured provider).
+2. Distilled `research` entry is stored via the memory backend's local-only cache
+   (`MemoryLocalCacheBackend` / `planning.store.backend: memory` bodies path — 21a, see above).
 3. A `sw-memory-pointer` comment on the brainstorm issue links PRD ↔ memory ↔ brainstorm.
 4. Brainstorm issue is **closed+linked**, never deleted.
 

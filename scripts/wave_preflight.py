@@ -203,6 +203,20 @@ def run_json_cmd(root: Path, argv: list[str]) -> dict[str, Any]:
     except json.JSONDecodeError:
         parsed = {}
     if proc.returncode != 0:
+        # R18: propagate a resolver-emitted remediation (agent map -> models.roles ->
+        # remediation, see resolve-model-tier.py resolve_inherit_agent_fallback) verbatim
+        # instead of collapsing every nonzero resolver exit onto the generic
+        # binding:no-model cause — an inherit orchestrator + unmapped agent gets an
+        # actionable remediation, never a bare binding:no-model dead end.
+        if isinstance(parsed, dict) and parsed.get("remediation"):
+            fail(
+                parsed.get("error") or "dispatch preflight resolver failed",
+                exit_code=20,
+                cause=parsed.get("cause") or "no-model:remediation",
+                command=parsed.get("command") or argv[0],
+                agent=parsed.get("agent"),
+                remediation=parsed["remediation"],
+            )
         fail(
             "dispatch preflight resolver failed",
             exit_code=20,

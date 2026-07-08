@@ -288,8 +288,12 @@ def set_index_status(root: Path, prd: str, status: str) -> dict[str, Any]:
 
         flip_result = gap_backlog.resolve_for_prd(root, prd)
         result["flipped"] = flip_result.get("flipped", [])
-        if flip_result.get("verdict") == "partial":
-            result["verdict"] = "partial"
+        if flip_result.get("verdict") != "pass":
+            # PRD 057 R4: propagate whatever verdict the resolver returns —
+            # "resolution-partial" under issue-store separate-project (a gap
+            # issue close/label failure) is distinct from the generic
+            # exception-based "partial" the same-repo file path can still raise.
+            result["verdict"] = flip_result.get("verdict", "partial")
             result["error"] = flip_result.get("error")
     return result
 

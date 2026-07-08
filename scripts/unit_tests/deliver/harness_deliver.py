@@ -47,6 +47,15 @@ MULTI_FIX="$ROOT/scripts/test/fixtures/deliver-multi-feature"
 TASK_FROZEN="$ROOT/scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md"
 FAIL=0
 
+# PRD 057 R5: this harness runs `wave preflight`/`wave plan` directly against the real repo
+# root (not an isolated fixture clone), so dependency-gate/eligibility checks now go through
+# the committed-config cutover derivation. This repo's own committed backend is issue-store,
+# and the fixture's synthetic unit id ("004-wave-phase-orchestrator") collides with a real,
+# already-completed historical PRD 004 in that live issue store — pin "file" discovery so
+# this fixture keeps exercising local wave/deliver plan routing, not live issue-store
+# eligibility for an unrelated real unit.
+export SW_DISCOVER_SOURCE=file
+
 mkdir -p "$FIX"
 
 run_json() {

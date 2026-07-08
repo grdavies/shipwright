@@ -9,7 +9,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -17,11 +17,15 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import planning_graph as pg  # noqa: E402
 import planning_index_gen as pig  # noqa: E402
+import planning_index_issue as pii  # noqa: E402
 import planning_legacy_projection as plp  # noqa: E402
 import planning_visibility as pv  # noqa: E402
 import planning_lifecycle as plc  # noqa: E402
 import planning_paths as pp  # noqa: E402
+from host_lib import load_workflow_config  # noqa: E402
 from inflight_signal import InflightTuple, read_tuples  # noqa: E402
+from planning_canonical import SCHEDULE_STALE_LABEL  # noqa: E402
+from planning_migrate_issue_store import issue_store_separate_project  # noqa: E402
 from wave_living_doc_lock import living_doc_write_lock  # noqa: E402
 
 ARCHIVE_VIEW_STATUSES = frozenset({"complete", "superseded", "cancelled", "resolved"})
@@ -388,6 +392,72 @@ def dependency_dead_warnings(units: list[pg.GraphUnit]) -> list[dict[str, str]]:
     return warnings
 
 
+_SCHEDULE_HINT_IGNORE_PREFIXES = ("deferred", "config:")
+
+
+def _schedule_hint_target(schedule: str) -> str:
+    """Normalize a `schedule:` hint (or decoded `sw:gap-schedule:*` label) to
+    the absorber's numeric id prefix for comparison (PRD 057 R17).
+
+    Accepts both the legacy `gap_backlog.schedule_label` form (``PRD 057`` /
+    ``PRD 057 A1``) and the canonical `<NNN>-<slug>` unit-id form; an empty,
+    placeholder (``—``/``-``), or policy-prefixed (``deferred``/``config:``)
+    hint has no absorber to reconcile against and is skipped.
+    """
+    schedule = schedule.strip()
+    if not schedule or schedule in {"—", "-"}:
+        return ""
+    if schedule.lower().startswith(_SCHEDULE_HINT_IGNORE_PREFIXES):
+        return ""
+    m = re.match(r"^PRD\s+0*(\d+)", schedule, re.I)
+    if m:
+        return m.group(1)
+    m = re.match(r"^0*(\d+)-", schedule)
+    if m:
+        return m.group(1)
+    return schedule
+
+
+def _unit_number_prefix(unit_id: str) -> str:
+    m = re.match(r"^0*(\d+)-", unit_id)
+    return m.group(1) if m else ""
+
+
+def schedule_stale_findings(units: Iterable[pg.GraphUnit]) -> list[dict[str, Any]]:
+    """R17 -- flag gap units whose `schedule:` hint no longer matches an
+    actual `absorbs` edge (gap-049).
+
+    A gap's schedule hint names the absorber it expects to resolve it; the
+    absorber's own `absorbs` edges are the ground truth. When the two
+    disagree -- the hinted absorber doesn't currently absorb this gap, or no
+    unit absorbs it at all -- surface `sw:schedule-stale` rather than trusting
+    the (possibly rebased/renumbered) hint silently.
+    """
+    all_units = list(units)
+    findings: list[dict[str, Any]] = []
+    for unit in all_units:
+        if unit.unit_type != "gap" or not unit.schedule:
+            continue
+        target = _schedule_hint_target(unit.schedule)
+        if not target:
+            continue
+        absorbers = sorted(u.id for u in all_units if unit.id in u.absorbs)
+        actual_targets = {_unit_number_prefix(a) for a in absorbers}
+        if target in actual_targets:
+            continue
+        findings.append(
+            {
+                "unit": unit.id,
+                "cause": "schedule-stale",
+                "label": SCHEDULE_STALE_LABEL,
+                "scheduleHint": unit.schedule,
+                "actualAbsorbers": absorbers,
+                "hint": "update the `schedule:` hint (or sw:gap-schedule:* label) to match the unit's actual absorbs edges",
+            }
+        )
+    return findings
+
+
 def reconcile_core(
     root: Path,
     *,
@@ -397,6 +467,11 @@ def reconcile_core(
     force_legacy_projection: bool = False,
 ) -> dict[str, Any]:
     worktree = pp.git_root(root)
+    cfg = load_workflow_config(worktree)
+    # PRD 057 R3: separate-project issue-store never writes tracked derived
+    # planning artifacts (INDEX.md / INDEX-archive.md / SUPERSEDED.md / legacy
+    # projection); same-repo retains local writes unchanged (gap-041).
+    separate_project = issue_store_separate_project(worktree, cfg)
     units = pg.discover_units(root)
     cycle = pg.detect_cycle(units)
     if cycle:
@@ -406,44 +481,59 @@ def reconcile_core(
     git_complete = resolve_git_complete_unit_ids(root, units)
 
     index_path = pig.index_path(root)
-    if not index_path.is_file():
-        content_seed = pig.generate_index(root)
-        if not dry_run:
-            pig.write_index(root, content_seed, dry_run=False)
-        existing = content_seed
-    else:
-        existing = index_path.read_text(encoding="utf-8")
-    inflight_bytes_before = pig.parse_regions(existing).inFlight
+    existing = ""
+    inflight_bytes_before = ""
+    if not separate_project:
+        if not index_path.is_file():
+            content_seed = pig.generate_index(root)
+            if not dry_run:
+                pig.write_index(root, content_seed, dry_run=False)
+            existing = content_seed
+        else:
+            existing = index_path.read_text(encoding="utf-8")
+        inflight_bytes_before = pig.parse_regions(existing).inFlight
 
     if before_serialize_hook:
         before_serialize_hook()
 
-    if index_path.is_file():
+    if not separate_project and index_path.is_file():
         existing = index_path.read_text(encoding="utf-8")
     inflight_final = read_tuples(root)
-    final_inflight_bytes = pig.parse_regions(existing).inFlight
+    final_inflight_bytes = pig.parse_regions(existing).inFlight if existing else inflight_bytes_before
     effects = edge_effects_for_units(units, inflight_final, git_complete)
     derived = apply_monotonic_terminal(prior_derived, effects.derived, override)
     derived_body = render_derived_body(derived, active_only=True)
-    content = pig.read_merge_write(existing, writer="reconciler", new_region_body=derived_body)
-    pig.write_index(root, content, dry_run=dry_run)
+
+    store_projection: dict[str, Any] | None = None
+    if separate_project:
+        store_projection = pii.project_derived_map(worktree, derived, dry_run=dry_run)
+    else:
+        content = pig.read_merge_write(existing, writer="reconciler", new_region_body=derived_body)
+        pig.write_index(root, content, dry_run=dry_run)
 
     archive_path = archive_index_path(root)
-    archive_content = render_archive_markdown(root, units, derived)
-    if not dry_run:
-        archive_path.parent.mkdir(parents=True, exist_ok=True)
-        archive_path.write_text(archive_content, encoding="utf-8")
+    if not separate_project:
+        archive_content = render_archive_markdown(root, units, derived)
+        if not dry_run:
+            archive_path.parent.mkdir(parents=True, exist_ok=True)
+            archive_path.write_text(archive_content, encoding="utf-8")
 
     dirs = pp.load_planning_dirs(root)
     superseded_path = worktree / dirs.prds / "SUPERSEDED.md"
-    if not dry_run:
+    if not separate_project and not dry_run:
         superseded_path.write_text(render_superseded_manifest(units, derived, effects), encoding="utf-8")
 
-    legacy = plp.project_all(root, dry_run=dry_run, force=force_legacy_projection)
+    if separate_project:
+        legacy: dict[str, Any] = {
+            "skipped": True,
+            "reason": "separate-project-issue-store",
+        }
+    else:
+        legacy = plp.project_all(root, dry_run=dry_run, force=force_legacy_projection)
     relief = relief_acceptance_check(root, derived)
 
     archived = [uid for uid, st in derived.items() if st in ARCHIVE_VIEW_STATUSES]
-    return {
+    result: dict[str, Any] = {
         "verdict": "pass",
         "action": "reconcile",
         "unitCount": len(units),
@@ -455,7 +545,11 @@ def reconcile_core(
         "legacy": legacy,
         "relief": relief,
         "dependencyDead": dependency_dead_warnings(units),
+        "scheduleStale": schedule_stale_findings(units),
     }
+    if store_projection is not None:
+        result["storeProjection"] = store_projection
+    return result
 
 
 def git_commit_reconcile(root: Path, *, dry_run: bool = False) -> str | None:
@@ -540,7 +634,11 @@ def cmd_reconcile(root: Path, args: list[str]) -> None:
 
 def cmd_doctor(root: Path, _args: list[str]) -> None:
     units = pg.discover_units(root)
-    warnings = dependency_dead_warnings(units) + plp.legacy_manual_edit_warnings(root)
+    warnings = (
+        dependency_dead_warnings(units)
+        + plp.legacy_manual_edit_warnings(root)
+        + schedule_stale_findings(units)
+    )
     try:
         from planning_migrate_issue_store import diagnose_gap_projection_divergence
 
@@ -566,6 +664,7 @@ def cmd_doctor(root: Path, _args: list[str]) -> None:
             "action": "planning-graph-doctor",
             "warnings": warnings,
             "dependencyDeadCount": len(warnings),
+            "scheduleStaleCount": len(schedule_stale_findings(units)),
         }
     )
 

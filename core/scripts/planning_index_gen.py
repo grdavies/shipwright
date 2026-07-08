@@ -78,6 +78,8 @@ class PlanningUnit:
     body_path: str
     opaque_title: bool = False
     edge_map: dict[str, Any] | None = None
+    source: str = ""
+    schedule: str = ""
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:

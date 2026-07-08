@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -115,11 +116,17 @@ def main() -> int:
         else:
             bad("gap-flip-verification: gap-001 not resolved in INDEX")
 
+    # PRD 057 R5: these subprocess calls run against this repo's real root (not an isolated
+    # fixture); this repo's committed backend is issue-store, so the cutover-gate default now
+    # correctly routes discovery there — but this check exercises frontmatter-only reconciler
+    # invariants, not live issue-store reachability/tokens. Pin "file" explicitly.
+    subprocess_env = {**os.environ, "SW_DISCOVER_SOURCE": "file"}
     proc = subprocess.run(
         [sys.executable, str(root / "scripts/gap_backlog.py"), "check"],
         cwd=str(root),
         capture_output=True,
         text=True,
+        env=subprocess_env,
     )
     if proc.returncode == 0:
         ok("gap-flip-verification: gap_backlog.py check passes")
@@ -131,6 +138,7 @@ def main() -> int:
         cwd=str(root),
         capture_output=True,
         text=True,
+        env=subprocess_env,
     )
     if proc2.returncode == 0:
         ok("gap-flip-verification: planning-graph reconcile dry-run passes")

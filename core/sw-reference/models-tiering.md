@@ -66,6 +66,27 @@ python3 scripts/resolve-model-tier.py --agent sw-coherence-reviewer
 Config `models.routing` (including `models.routing.agents` for per-reviewer/native-panel tiers) overrides
 bundled defaults; missing keys fall back to `core/sw-reference/model-routing.defaults.json`.
 
+### Inherit-orchestrator agent fallback (R18)
+
+`wave_preflight.py cmd_dispatch` (`scripts/wave_preflight.py dispatch preflight`) resolves the concrete
+model for a sub-agent dispatched under an `inherit` orchestrator command (e.g. `sw-doc`, `sw-ship`). When the
+agent has **no** `models.routing.agents` entry, `resolve-model-tier.py` no longer dead-ends on a bare
+`inherit`/`modelId: null` pass-through (which `cmd_dispatch` used to reject with the generic
+`binding:no-model` cause). Instead it walks a fixed fallback order before giving up:
+
+1. **Agent map** — `models.routing.agents[<agent>]`, when present, wins outright.
+2. **`models.roles` fallback** — `models.roles.builder` resolves the dispatch when the agent is unmapped.
+3. **Actionable remediation** — when neither resolves (no agent-map entry and no `models.roles.builder`),
+   the resolver fails with a distinct `no-model:remediation` cause (never `binding:no-model`) naming the
+   exact config fix (add `models.routing.agents.<agent>` or set `models.roles.builder`).
+
+This order applies only when a concrete `--agent` accompanies an `inherit` command; pure top-level
+orchestrator dispatch (`resolve-model-tier.py --command sw-ship`, no `--agent`) keeps the intentional
+`{"tier": "inherit", "modelId": null}` pass-through unchanged — callers resolve the child command
+themselves via `--delegate`. Because the fallback always yields either a concrete model or a clear
+remediation, `cmd_dispatch` never forces the caller into inline (non-delegated) authoring merely because an
+agent id was absent from the routing map (PRD 057 R18, gap-047).
+
 ## Layer 2 — Dispatch (`commands/`, `skills/`, `agents/`)
 
 **Capability selection is orthogonal** — manifest-driven eligibility (`scripts/capability-select.py`,

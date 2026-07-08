@@ -13,12 +13,29 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+import spec_union_056
 from _sw.cli import run_module_main
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="spec-union.py")
     parser.add_argument("doc")
+    parser.add_argument(
+        "--no-restate-056",
+        action="store_true",
+        help="Gate: fail when a union R-ID restates PRD 056 union R1-R20 text (R22).",
+    )
+    parser.add_argument(
+        "--union-056-source",
+        default=None,
+        help="Local PRD 056 union doc override for the no-restatement gate (fixtures/offline).",
+    )
+    parser.add_argument(
+        "--restate-ratio",
+        type=float,
+        default=spec_union_056.RESTATEMENT_RATIO,
+        help="Similarity threshold (0-1) for the no-restatement gate.",
+    )
     args = parser.parse_args(argv)
     root = SCRIPT_DIR.parent
     doc = Path(args.doc)
@@ -161,8 +178,20 @@ def main(argv: list[str] | None = None) -> int:
     if record_superseded:
         out["superseded"] = {**superseded, **record_superseded}
 
+    rc = 0
+    if args.no_restate_056:
+        gate = spec_union_056.evaluate(
+            out["requirements"],
+            root,
+            source=args.union_056_source,
+            ratio=args.restate_ratio,
+        )
+        out["restatement056"] = gate
+        if gate["verdict"] == "restated":
+            rc = 20
+
     print(json.dumps(out, ensure_ascii=False))
-    return 0
+    return rc
 
 
 if __name__ == "__main__":

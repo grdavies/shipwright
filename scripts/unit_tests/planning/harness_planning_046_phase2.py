@@ -77,6 +77,11 @@ PY
 
 (
   cd "$TMP"
+  # PRD 057 R5: this fixture repo's committed backend is "issue-store", but this block only
+  # exercises the post-redaction cache invariant (not the issue-store discovery path) — pin
+  # "file" explicitly to preserve this test's original scope and avoid an unrelated live
+  # GitHub call.
+  export SW_DISCOVER_SOURCE=file
   export SW_PLANNING_FORCE_REFRESH=1
   python3 "$PY" "$TMP" generate >/dev/null
   CACHE="$TMP/.cursor/hooks/state/planning-query-cache.json"
@@ -114,6 +119,13 @@ PY
 (
   cd "$TMP"
   unset SW_ISSUES_PAGE_SIZE
+  # PRD 057 R5: cutover-gate default now derives from committed config (this fixture's
+  # backend is "issue-store"), so discover would otherwise resolve to "issue" here by
+  # default. This block only exercises the scheduler's "next" plumbing (not issue-store
+  # discovery, which blocks 1/3 already cover) — pin "file" explicitly to preserve this
+  # test's original scope and avoid the unrelated no-frozen-task-list scheduler gap that
+  # a real issue-store lookup of these fixture PRDs would hit.
+  export SW_DISCOVER_SOURCE=file
   python3 -c "import sys; sys.path.insert(0,'$ROOT/scripts'); import planning_index_gen as pig; from pathlib import Path; root=Path('$TMP'); s=pig.read_generation_state(root); s.pop('indexIncomplete',None); s.pop('indexIncompleteReason',None); s['generation']=max(1,int(s.get('generation',0))); pig.write_generation_state(root,s); from planning_query_cache import invalidate_all; invalidate_all(root)"
   export SW_PLANNING_FORCE_REFRESH=1
   python3 "$PY" "$TMP" generate >/dev/null

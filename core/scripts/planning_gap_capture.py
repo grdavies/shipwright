@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -17,6 +18,30 @@ import planning_index_gen as pig
 import planning_paths as pp
 import planning_store as ps
 import sw_state_write_lib as writer
+from planning_query_cache import invalidate_all
+
+GAP_CLAIM_DIR_REL = ".cursor/hooks/state/planning-gap-claims"
+MAX_GAP_ALLOCATION_ATTEMPTS = 50
+
+# Terminal auto-capture (PRD 057 R19, gap-032): a deliver run whose verdict
+# lands in this set never mints gap units — a broken or aborted wave is noise
+# about the wave itself, not evidence of unaddressed planning-store pain.
+SUPPRESS_TERMINAL_VERDICTS = frozenset({"fail", "aborted", "blocked", "rejected"})
+# Statuses short of "resolved" are still open for dedup purposes — a gap
+# already scheduled into a wave is tracked, so terminal capture must not
+# mint a second unit for the same pain.
+STILL_OPEN_GAP_STATUSES = frozenset({"open", "scheduled", ""})
+SUBSTANTIAL_SEVERITIES = frozenset({"high", "critical"})
+SUBSTANTIAL_CATEGORIES = frozenset(
+    {
+        "post-merge-revert",
+        "reopened-phases",
+        "remediation-exhausted",
+        "watchdog-halt",
+    }
+)
+SUBSTANTIAL_MIN_RECURRENCE = 2
+DEFAULT_MAX_TERMINAL_CAPTURES = 3
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
@@ -91,6 +116,129 @@ def next_gap_number(root: Path, units: list[pig.PlanningUnit]) -> int:
     return max_n + 1
 
 
+def _gap_claim_dir(root: Path) -> Path:
+    path = pp.git_root(root) / GAP_CLAIM_DIR_REL
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _claim_gap_number(root: Path, number: int) -> bool:
+    """Atomic claim-by-create for a candidate gap number (PRD 057 R25).
+
+    ``O_CREAT | O_EXCL`` serializes concurrent allocators against the same
+    worktree: the first caller to create the claim file wins the number, and
+    every other concurrent caller observes ``FileExistsError`` and retries
+    with the next candidate instead of racing the remote issue-store create.
+    """
+    claim_path = _gap_claim_dir(root) / f"{number:03d}.claim"
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+    try:
+        fd = os.open(claim_path, flags, 0o600)
+    except FileExistsError:
+        return False
+    os.write(fd, f"{os.getpid()}\n".encode("utf-8"))
+    os.close(fd)
+    return True
+
+
+def allocate_gap_unit_id(root: Path, title: str, body_path_for: Callable[[str], str]) -> tuple[str, str]:
+    """Atomic gap-number allocation (PRD 057 R25).
+
+    Invalidates the query cache before every allocation attempt so
+    ``next_gap_number`` is computed against the freshest live unit-id set
+    (R10), then claims the candidate number by create; a collision — either a
+    local claim already held by a concurrent allocator, or a monotonic
+    candidate below the last locally-attempted number — retries with the
+    next number so concurrent writers never persist duplicate gap ids or
+    split ``absorbs`` edges.
+    """
+    last_candidate = 0
+    for _attempt in range(MAX_GAP_ALLOCATION_ATTEMPTS):
+        invalidate_all(root)
+        units = pig.discover_units(root)
+        candidate = max(next_gap_number(root, units), last_candidate + 1)
+        if _claim_gap_number(root, candidate):
+            unit_id = f"gap-{candidate:03d}-{slugify(title)}"
+            return unit_id, body_path_for(unit_id)
+        last_candidate = candidate
+    fail(
+        "gap-number-allocation-exhausted-retries",
+        attempts=MAX_GAP_ALLOCATION_ATTEMPTS,
+    )
+
+
+def normalize_gap_title(title: str) -> str:
+    """Comparable key for title-based gap dedup (R19)."""
+    return re.sub(r"\s+", " ", title.strip().lower())
+
+
+def _scan_gap_titles_under(type_root: Path) -> dict[str, str]:
+    """Direct frontmatter scan of a ``<root>/gap/*`` tree for still-open titles."""
+    out: dict[str, str] = {}
+    gap_root = type_root / "gap"
+    if not gap_root.is_dir():
+        return out
+    for unit_dir in sorted(gap_root.iterdir()):
+        if not unit_dir.is_dir():
+            continue
+        body = pig.body_file_for_unit_dir(unit_dir)
+        if not body:
+            continue
+        try:
+            fm = pig.parse_frontmatter(body.read_text(encoding="utf-8"))
+        except OSError:
+            continue
+        if not fm:
+            continue
+        unit_id = str(fm.get("id", "")).strip()
+        title = str(fm.get("title", "")).strip()
+        status = str(fm.get("status", "")).strip()
+        if not unit_id or not title or status not in STILL_OPEN_GAP_STATUSES:
+            continue
+        out.setdefault(normalize_gap_title(title), unit_id)
+    return out
+
+
+def list_open_gap_titles(root: Path) -> dict[str, str]:
+    """Normalized still-open gap title -> unit id (R19).
+
+    Considers ``open`` and ``scheduled`` gaps — i.e. anything short of
+    ``resolved`` — so terminal auto-capture never mints a duplicate for pain
+    that is already tracked, whether or not it has been scheduled into a
+    wave yet. Invalidates the query cache first so the picture is fresh
+    (R10), matching the freshness discipline ``allocate_gap_unit_id`` already
+    applies before every allocation attempt.
+
+    ``discover_units`` is authoritative for the issue-store backend. For
+    file-backed corpora it only scans ``dirs.planning`` (the R7 migration
+    target), while ``capture_gap``/``gap_body_rel`` still write under the
+    legacy ``dirs.prds`` alias — so this also scans both roots directly to
+    guarantee terminal capture always sees gaps this same mechanism wrote,
+    regardless of which side of that in-flight migration is active.
+    """
+    invalidate_all(root)
+    out: dict[str, str] = {}
+    for unit in pig.discover_units(root):
+        if unit.type != "gap":
+            continue
+        if unit.status not in STILL_OPEN_GAP_STATUSES:
+            continue
+        title = (unit.title or "").strip()
+        if not title:
+            continue
+        out.setdefault(normalize_gap_title(title), unit.id)
+    worktree = pp.git_root(root)
+    dirs = pp.load_planning_dirs(root)
+    for type_dir in {dirs.planning, dirs.prds}:
+        for key, unit_id in _scan_gap_titles_under(worktree / type_dir).items():
+            out.setdefault(key, unit_id)
+    return out
+
+
+def find_duplicate_open_gap(title: str, open_titles: dict[str, str]) -> str | None:
+    return open_titles.get(normalize_gap_title(title))
+
+
 def capture_gap(
     root: Path,
     *,
@@ -98,12 +246,15 @@ def capture_gap(
     title: str,
     pr_number: int | None = None,
     dry_run: bool = False,
+    dedupe: bool = False,
+    open_titles: dict[str, str] | None = None,
 ) -> dict[str, Any]:
+    if dedupe:
+        existing = find_duplicate_open_gap(title, open_titles if open_titles is not None else list_open_gap_titles(root))
+        if existing:
+            return {"unitId": existing, "signalId": signal_id, "deduped": True}
     dirs = pp.load_planning_dirs(root)
-    units = pig.discover_units(root)
-    num = next_gap_number(root, units)
-    unit_id = f"gap-{num:03d}-{slugify(title)}"
-    body_path_rel = gap_body_rel(dirs, unit_id)
+    unit_id, body_path_rel = allocate_gap_unit_id(root, title, lambda uid: gap_body_rel(dirs, uid))
     fm = [
         "---",
         f"id: {unit_id}",
@@ -119,7 +270,130 @@ def capture_gap(
     content = "\n".join(fm) + "\n"
     if not dry_run:
         store_put_gap(root, unit_id, body_path_rel, content)
-    return {"unitId": unit_id, "path": body_path_rel, "signalId": signal_id}
+    return {"unitId": unit_id, "path": body_path_rel, "signalId": signal_id, "deduped": False}
+
+
+def classify_pain_item(item: dict[str, Any]) -> str:
+    """Substantial-vs-noise heuristic (R19, gap-032).
+
+    A single low-severity blip is noise — never captured, so a broken wave
+    cannot flood the shared planning repo. Anything that already carries
+    high/critical severity, matches a category that always matters, or has
+    recurred at least :data:`SUBSTANTIAL_MIN_RECURRENCE` times is substantial
+    and requires human confirmation before a gap unit is minted.
+    """
+    severity = str(item.get("severity") or "low").strip().lower()
+    category = str(item.get("category") or "").strip().lower()
+    try:
+        recurrence = int(item.get("recurrence") or 1)
+    except (TypeError, ValueError):
+        recurrence = 1
+    if severity in SUBSTANTIAL_SEVERITIES:
+        return "substantial"
+    if category in SUBSTANTIAL_CATEGORIES:
+        return "substantial"
+    if recurrence >= SUBSTANTIAL_MIN_RECURRENCE:
+        return "substantial"
+    return "noise"
+
+
+def terminal_capture(
+    root: Path,
+    *,
+    verdict: str,
+    pain_items: list[dict[str, Any]],
+    max_captures: int = DEFAULT_MAX_TERMINAL_CAPTURES,
+    dry_run: bool = False,
+    pr_number: int | None = None,
+    confirmed_signal_ids: frozenset[str] | set[str] | None = None,
+) -> dict[str, Any]:
+    """Terminal auto-capture of unaddressed planning-store pain (R19, gap-032).
+
+    Scans caller-supplied ``pain_items`` (the caller derives these from its
+    own run-log + loop-health scan) and, unless ``verdict`` is one of
+    :data:`SUPPRESS_TERMINAL_VERDICTS`:
+
+    - dedups every candidate against currently open gap titles — not only
+      signal ids — so repeated terminal runs never mint duplicates;
+    - classifies each remaining candidate via :func:`classify_pain_item`;
+      noise is silently skipped;
+    - never auto-captures a substantial item: it is recorded in ``pending``
+      unless its ``signalId`` appears in ``confirmed_signal_ids`` (or the
+      item itself carries ``confirmed: true``), modeling the required human
+      confirmation gate;
+    - caps the number of gap units actually written in one run at
+      ``max_captures`` — confirmed items beyond the cap also land in
+      ``pending`` (reason ``cap-reached``) rather than being dropped.
+    """
+    verdict_key = str(verdict or "").strip().lower()
+    if verdict_key in SUPPRESS_TERMINAL_VERDICTS:
+        return {
+            "verdict": "suppressed",
+            "reason": f"deliver verdict {verdict_key!r} suppresses terminal gap capture",
+            "captured": [],
+            "pending": [],
+            "skippedDuplicate": [],
+            "skippedNoise": [],
+        }
+    confirmed = confirmed_signal_ids or frozenset()
+    open_titles = list_open_gap_titles(root)
+    captured: list[dict[str, Any]] = []
+    pending: list[dict[str, Any]] = []
+    skipped_duplicate: list[dict[str, Any]] = []
+    skipped_noise: list[dict[str, Any]] = []
+    for item in pain_items:
+        title = str(item.get("title") or "").strip()
+        if not title:
+            continue
+        signal_id = str(item.get("signalId") or item.get("signal_id") or title)
+        existing = find_duplicate_open_gap(title, open_titles)
+        if existing:
+            skipped_duplicate.append({"title": title, "signalId": signal_id, "existingUnitId": existing})
+            continue
+        classification = classify_pain_item(item)
+        if classification == "noise":
+            skipped_noise.append({"title": title, "signalId": signal_id, "classification": classification})
+            continue
+        if not (item.get("confirmed") or signal_id in confirmed):
+            pending.append(
+                {
+                    "title": title,
+                    "signalId": signal_id,
+                    "classification": classification,
+                    "reason": "awaiting-human-confirmation",
+                }
+            )
+            continue
+        if len(captured) >= max_captures:
+            pending.append(
+                {
+                    "title": title,
+                    "signalId": signal_id,
+                    "classification": classification,
+                    "reason": "cap-reached",
+                }
+            )
+            continue
+        out = capture_gap(
+            root,
+            signal_id=signal_id,
+            title=title,
+            pr_number=pr_number,
+            dry_run=dry_run,
+            dedupe=True,
+            open_titles=open_titles,
+        )
+        captured.append(out)
+        if not out.get("deduped") and out.get("unitId"):
+            open_titles[normalize_gap_title(title)] = out["unitId"]
+    return {
+        "verdict": "pass",
+        "captured": captured,
+        "pending": pending,
+        "skippedDuplicate": skipped_duplicate,
+        "skippedNoise": skipped_noise,
+        "maxCaptures": max_captures,
+    }
 
 
 def capture_meta_draft(
@@ -178,10 +452,9 @@ def materialize_meta_gap(
     if draft.get("status") != "confirmed":
         fail("materialize requires confirmed draft", signalId=signal_id, status=draft.get("status"))
     dirs = pp.load_planning_dirs(root)
-    units = pig.discover_units(root)
-    num = next_gap_number(root, units)
-    unit_id = f"gap-{num:03d}-{slugify(title)}"
-    body_path_rel = pp.join_rel(pp.plugin_self_gap_dir(dirs), unit_id, f"{unit_id}.md")
+    unit_id, body_path_rel = allocate_gap_unit_id(
+        root, title, lambda uid: pp.join_rel(pp.plugin_self_gap_dir(dirs), uid, f"{uid}.md")
+    )
     fm = [
         "---",
         f"id: {unit_id}",

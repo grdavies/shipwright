@@ -6,8 +6,12 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import uuid
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import quote, unquote
+
+import planning_index_gen as pig
 
 CANONICAL_VERSION = "1"
 BODY_SIZE_LIMIT = 60_000
@@ -49,6 +53,32 @@ GAP_LABEL_SCHEDULED = "sw:gap-scheduled"
 GAP_LABEL_RESOLVED = "sw:gap-resolved"
 SOURCE_REMOVED_LABEL = "sw:source-removed"
 LEGACY_GAP_LABELS = frozenset({"open", "gap-scheduled", "resolved"})
+
+# PRD 057 R12 -- product source tags (`sw:source:<owner>/<repo>`) so a shared
+# planning repository can filter discovery/scheduler/gap-capture by the
+# product code repo a unit originated from.
+SOURCE_TAG_LABEL_PREFIX = "sw:source:"
+SOURCE_MISSING_LABEL = "sw:source-missing"
+
+# PRD 057 R17 -- schedule-hint reconciliation. Gap units carry a `schedule:`
+# frontmatter hint (file-store) or an equivalent `sw:gap-schedule:` label
+# (issue-store); reconcile compares the hint against the unit's actual
+# `absorbs` edges and surfaces this label on mismatch.
+GAP_SCHEDULE_LABEL_PREFIX = "sw:gap-schedule:"
+SCHEDULE_STALE_LABEL = "sw:schedule-stale"
+
+# PRD 057 R27 -- last-writer-wins body+comment consistency. Each generic
+# (non-Jira) chunk_body_if_needed call mints one write-token spanning the
+# whole comment set it produces, carried in the manifest's writeToken field
+# and in each overflow comment's sw-chunk-token:<token> marker. Deliberately
+# a comment *marker* (structural metadata), never literal body text: the
+# fixture issue store preserves markers verbatim, so token-scoped reassembly
+# works end-to-end offline, without perturbing the byte-for-byte overflow
+# body content other fixtures (R8) already assert on. Live provider clients
+# (GitHub/Jira) only round-trip a small fixed marker set from body text today
+# and will not carry this token -- reassembly there simply falls back to the
+# pre-existing (unscoped) behavior, never a regression.
+CHUNK_TOKEN_MARKER_PREFIX = "sw-chunk-token:"
 
 
 @dataclass
@@ -159,6 +189,213 @@ def type_label(artifact_type: str) -> str:
 
 def title_prefix(project_key: str) -> str:
     return f"[{project_key}]"
+
+
+def source_tag_label(source: str) -> str:
+    """R12 -- provider-native label form of a `sw:source:<owner>/<repo>` tag.
+
+    GitHub labels accept `/` verbatim; Jira labels do not (spaces or `/` are
+    invalid), so the Jira client percent-encodes the payload the same way it
+    already does for `sw:gap-schedule:` (see `gap_schedule_label`).
+    """
+    return f"{SOURCE_TAG_LABEL_PREFIX}{source}"
+
+
+def source_tag_from_labels(labels: list[str]) -> str:
+    """Decode a `sw:source:<owner>/<repo>` tag from provider-native labels.
+
+    Percent-decoding a raw (GitHub-style) label with no `%` is a no-op, so
+    this handles both the GitHub and Jira label encodings.
+    """
+    for label in labels:
+        if label.startswith(SOURCE_TAG_LABEL_PREFIX):
+            return unquote(label[len(SOURCE_TAG_LABEL_PREFIX) :])
+    return ""
+
+
+def gap_schedule_label(schedule: str) -> str:
+    """Jira labels cannot contain spaces or `/`; percent-encode the payload."""
+    return f"{GAP_SCHEDULE_LABEL_PREFIX}{quote(schedule, safe='')}"
+
+
+def gap_schedule_from_labels(labels: list[str]) -> str:
+    for label in labels:
+        if label.startswith(GAP_SCHEDULE_LABEL_PREFIX):
+            return unquote(label[len(GAP_SCHEDULE_LABEL_PREFIX) :])
+    return ""
+
+
+# PRD 057 R11 (gap-030, D5) -- provider-native label projections for the
+# structural frontmatter keys (type/unit-id/status/topic/depends/absorbs/
+# amends/visibility). These are ADDITIVE: the doc's own frontmatter block
+# stays embedded in the issue body for the one-release dual-read window
+# (frontmatter remains authoritative there per the Wave 4 revert path) --
+# labels are the vendor-native read/discover projection, letting search and
+# list operations resolve unit metadata without fetching/parsing full issue
+# bodies, and letting an old (pre-R11) issue's frontmatter-only metadata
+# still resolve correctly via the body-marker/frontmatter fallback already
+# used throughout this module and its callers.
+UNIT_LABEL_PREFIX = "sw:unit:"
+TOPIC_LABEL_PREFIX = "sw:topic:"
+VISIBILITY_LABEL_PREFIX = "sw:visibility:"
+EDGE_LABEL_PREFIXES: dict[str, str] = {
+    "depends": "sw:depends:",
+    "absorbs": "sw:absorbs:",
+    "amends": "sw:amends:",
+}
+# GitHub allows up to 100 labels/issue -- comfortably enough headroom for the
+# handful of structural labels plus a generous edge-label allowance. Jira has
+# no hard per-issue label *count* limit, but (matching the existing
+# `gap_schedule_label` / `source_tag_label` percent-encoding convention)
+# label *values* cannot contain spaces, so multi-word edge targets are
+# percent-encoded here too. This cap keeps the label projection well inside
+# both providers' practical limits; a unit with more edges than the cap
+# never loses data -- the authoritative `sw-edges` body fence (D5, PRD 056
+# D2) always carries every edge regardless of what the label projection can
+# fit, so a truncated label set degrades discovery convenience only.
+MAX_EDGE_LABELS_PER_RELATION = 20
+
+STRUCTURAL_FRONTMATTER_KEYS = (
+    "type",
+    "unit-id",
+    "status",
+    "topic",
+    "depends",
+    "absorbs",
+    "amends",
+    "visibility",
+)
+
+
+def unit_id_label(unit_id: str) -> str:
+    return f"{UNIT_LABEL_PREFIX}{quote(unit_id, safe='')}"
+
+
+def unit_id_from_labels(labels: list[str]) -> str:
+    for label in labels:
+        if label.startswith(UNIT_LABEL_PREFIX):
+            return unquote(label[len(UNIT_LABEL_PREFIX) :])
+    return ""
+
+
+def artifact_type_from_labels(labels: list[str]) -> str:
+    """Reverse-lookup of `type_label` -- the label side of the R11 dual-read
+    projection for `artifact_type` (body-marker fallback lives in callers)."""
+    label_set = set(labels)
+    for artifact_type, label in TYPE_LABELS.items():
+        if label in label_set:
+            return artifact_type
+    return ""
+
+
+def topic_label(topic: str) -> str:
+    return f"{TOPIC_LABEL_PREFIX}{quote(topic, safe='')}"
+
+
+def topic_from_labels(labels: list[str]) -> str:
+    for label in labels:
+        if label.startswith(TOPIC_LABEL_PREFIX):
+            return unquote(label[len(TOPIC_LABEL_PREFIX) :])
+    return ""
+
+
+def visibility_label(visibility: str) -> str:
+    return f"{VISIBILITY_LABEL_PREFIX}{quote(visibility, safe='')}"
+
+
+def visibility_from_labels(labels: list[str]) -> str:
+    for label in labels:
+        if label.startswith(VISIBILITY_LABEL_PREFIX):
+            return unquote(label[len(VISIBILITY_LABEL_PREFIX) :])
+    return ""
+
+
+def edge_labels_for(rel: str, targets: list[str]) -> list[str]:
+    """Provider-native label projection of a `depends`/`absorbs`/`amends`
+    edge list (R11). Silently caps at `MAX_EDGE_LABELS_PER_RELATION` -- see
+    that constant's docstring for why truncation here never loses data."""
+    prefix = EDGE_LABEL_PREFIXES.get(rel)
+    if not prefix:
+        return []
+    out: list[str] = []
+    for target in targets[:MAX_EDGE_LABELS_PER_RELATION]:
+        cleaned = str(target).strip()
+        if not cleaned:
+            continue
+        out.append(f"{prefix}{quote(cleaned, safe='')}")
+    return out
+
+
+def edges_from_labels(labels: list[str], rel: str) -> list[str]:
+    prefix = EDGE_LABEL_PREFIXES.get(rel)
+    if not prefix:
+        return []
+    out: list[str] = []
+    for label in labels:
+        if label.startswith(prefix):
+            value = unquote(label[len(prefix) :])
+            if value and value not in out:
+                out.append(value)
+    return out
+
+
+def structural_labels_from_content(content: str) -> list[str]:
+    """R11 write-side -- promote a doc's structural frontmatter keys (type/
+    unit-id/status/topic/depends/absorbs/amends/visibility) to provider-
+    native labels. Purely additive: `content`'s own frontmatter block is
+    untouched by this function and keeps being embedded in the issue body
+    (dual-read window, D5) -- this only computes the label projection of it.
+    """
+    if not content.startswith("---"):
+        return []
+    fm = pig.parse_frontmatter(content)
+    if not fm:
+        return []
+    labels: list[str] = []
+    if fm.get("type"):
+        labels.append(type_label(str(fm["type"])))
+    if fm.get("unit-id"):
+        labels.append(unit_id_label(str(fm["unit-id"])))
+    if fm.get("status"):
+        labels.append(status_label(str(fm["status"])))
+    if fm.get("topic"):
+        labels.append(topic_label(str(fm["topic"])))
+    if fm.get("visibility"):
+        labels.append(visibility_label(str(fm["visibility"])))
+    for rel in ("depends", "absorbs", "amends"):
+        value = fm.get(rel)
+        targets = value if isinstance(value, list) else ([value] if value else [])
+        labels.extend(edge_labels_for(rel, [str(t) for t in targets]))
+    return labels
+
+
+def human_readable_title(content: str, artifact_type: str, unit_id: str) -> str:
+    """R11 -- issue title without the legacy `[project] type:unit-id`
+    prefix (see `title_prefix`, still used by the one-time migration writer
+    for its own separate cutover path). The provider-assigned id is a
+    storage pointer only, so nothing about unit identity depends on this
+    title being unique, stable, or parseable -- it exists purely so a human
+    operator browsing the tracker sees the document's own name instead of a
+    synthetic `type:unit-id` string.
+
+    Prefers an explicit frontmatter `title:` key, then the document's first
+    H1 heading, then falls back to a plain (still bracket-free) `type:
+    unit-id` string for a stub write that has neither yet.
+    """
+    body = content
+    fm = pig.parse_frontmatter(content) if content.startswith("---") else None
+    if fm and fm.get("title"):
+        return str(fm["title"]).strip()[:250]
+    if fm:
+        parts = content.split("---", 2)
+        body = parts[2] if len(parts) >= 3 else content
+    for line in normalize_body(body).split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("# "):
+            heading = stripped[2:].strip()
+            if heading:
+                return heading[:250]
+    return f"{artifact_type}: {unit_id}"[:250]
 
 
 def build_markers(project_key: str, artifact_type: str, unit_id: str) -> str:
@@ -339,23 +576,66 @@ def append_chunk_manifest_marker(head: str, marker: str) -> str:
     return trimmed + marker
 
 
+def _manifest_write_token(body: str) -> str | None:
+    """Extract the writeToken (if any) from the sw-chunk-manifest already
+    embedded in ``body``, so a manifest rewrite (real ids replacing synthetic
+    placeholders) preserves the write-session token instead of dropping it
+    (R27)."""
+    match = MARKER_CHUNK_MANIFEST.search(body)
+    if not match:
+        return None
+    try:
+        existing = json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return None
+    token = existing.get("writeToken") if isinstance(existing, dict) else None
+    return token if isinstance(token, str) and token else None
+
+
 def chunk_body_if_needed(
     body: str,
     comments: list[CommentRecord],
+    *,
+    provider: str | None = None,
 ) -> tuple[str, list[CommentRecord]]:
+    if provider == "jira":
+        # R9: Jira Cloud's ADF description/comment payload limits (~32KB) are
+        # far tighter than the generic BODY_SIZE_LIMIT below, so a body that
+        # fits under the generic limit can still overflow Jira's own
+        # client-side check and be rejected at issue_create/issue_update time.
+        # Delegate to the Jira-aware splitter so oversized-for-Jira bodies
+        # chunk here, before the client ever sees them.
+        #
+        # Lazy import: `planning_jira_canonical` imports the generic markers
+        # and helpers from this module at top level, so importing it back
+        # here at module scope would create a circular import. Deferring the
+        # import until this branch actually runs is safe -- both modules are
+        # already fully loaded by the time `chunk_body_if_needed` executes.
+        from planning_jira_canonical import chunk_body_for_jira_cloud
+
+        return chunk_body_for_jira_cloud(body, comments)
     if len(body.encode("utf-8")) <= BODY_SIZE_LIMIT:
         return body, comments
     encoded = body.encode("utf-8")
     head = encoded[:BODY_SIZE_LIMIT].decode("utf-8", errors="ignore")
     overflow = encoded[BODY_SIZE_LIMIT:].decode("utf-8", errors="ignore")
     chunk_id = f"chunk-{len(comments)}"
+    # R27: one write-token per chunking call, spanning this whole comment set
+    # (see CHUNK_TOKEN_MARKER_PREFIX docstring above) -- a concurrent writer's
+    # own (differently-tokened) overflow comments are never picked up by this
+    # session's positional-fallback reassembly.
+    write_token = uuid.uuid4().hex[:12]
     chunk_comment = CommentRecord(
         id=chunk_id,
         body=f"<!-- sw-chunk-overflow -->\n{overflow}",
-        markers=["sw-chunk-overflow"],
+        markers=["sw-chunk-overflow", f"{CHUNK_TOKEN_MARKER_PREFIX}{write_token}"],
     )
     new_comments = list(comments) + [chunk_comment]
-    manifest = {"version": 1, "chunks": [{"index": 0, "commentId": chunk_id}]}
+    manifest = {
+        "version": 1,
+        "chunks": [{"index": 0, "commentId": chunk_id}],
+        "writeToken": write_token,
+    }
     if MARKER_CHUNK_MANIFEST.search(head):
         head = MARKER_CHUNK_MANIFEST.sub(
             f"<!-- sw-chunk-manifest: {json.dumps(manifest, sort_keys=True, ensure_ascii=False)} -->",
@@ -367,17 +647,61 @@ def chunk_body_if_needed(
     return head, new_comments
 
 
-def _overflow_chunk_comments(comments: list[CommentRecord]) -> list[CommentRecord]:
-    ordered = sorted(
-        [
-            c
-            for c in comments
-            if "sw-chunk-overflow" in c.markers
-            or "<!-- sw-chunk-overflow -->" in c.body
-            or "<!--sw-chunk-overflow-->" in c.body
-        ],
-        key=lambda c: (c.created_at, c.id),
-    )
+def rewrite_chunk_manifest_ids(body: str, comment_ids: list[str]) -> str:
+    """R8 -- replace synthetic placeholder chunk ids with real provider ids.
+
+    ``chunk_body_if_needed`` assigns synthetic placeholder ids (``chunk-N``)
+    before the provider has created the overflow comments and issued real
+    ids. Call this once those comments are actually posted (in the same order
+    they were generated, so ``comment_ids[i]`` is the real id for chunk index
+    ``i``) so the manifest baked into the persisted body carries the real ids
+    that ``reassemble_body`` can match directly -- instead of falling back to
+    positional matching against every ``sw-chunk-overflow`` comment on the
+    issue, which can select a stale comment left over from an earlier put.
+
+    R27: preserves the write-token (if any) already embedded in ``body``'s
+    manifest, so a rewritten manifest still scopes positional-fallback
+    reassembly to this write session's own overflow comments.
+    """
+    if not comment_ids:
+        return body
+    manifest: dict[str, Any] = {
+        "version": 1,
+        "chunks": [{"index": index, "commentId": cid} for index, cid in enumerate(comment_ids)],
+    }
+    token = _manifest_write_token(body)
+    if token:
+        manifest["writeToken"] = token
+    marker = f"<!-- sw-chunk-manifest: {json.dumps(manifest, sort_keys=True, ensure_ascii=False)} -->"
+    return append_chunk_manifest_marker(body, marker)
+
+
+def overflow_chunk_comments(
+    comments: list[CommentRecord],
+    *,
+    token: str | None = None,
+) -> list[CommentRecord]:
+    """Overflow comments eligible for positional-fallback reassembly.
+
+    R27: when ``token`` is given (the current manifest's ``writeToken``),
+    scope the result to comments carrying a matching ``sw-chunk-token:``
+    marker -- excluding another writer's (or a superseded write attempt's)
+    overflow comments left on the same issue, so reassembly never builds a
+    hybrid body out of two different write sessions. ``token=None`` (no
+    token on the manifest -- Jira-built or pre-R27 manifests) keeps the
+    original unscoped behavior.
+    """
+    candidates = [
+        c
+        for c in comments
+        if "sw-chunk-overflow" in c.markers
+        or "<!-- sw-chunk-overflow -->" in c.body
+        or "<!--sw-chunk-overflow-->" in c.body
+    ]
+    if token:
+        token_marker = f"{CHUNK_TOKEN_MARKER_PREFIX}{token}"
+        candidates = [c for c in candidates if token_marker in c.markers]
+    ordered = sorted(candidates, key=lambda c: (c.created_at, c.id))
     unique: list[CommentRecord] = []
     seen: set[str] = set()
     for comment in ordered:
@@ -436,8 +760,14 @@ def reassemble_body(body: str, comments: list[CommentRecord]) -> str:
     chunks = manifest.get("chunks") if isinstance(manifest, dict) else None
     if not isinstance(chunks, list):
         return text
+    write_token = manifest.get("writeToken") if isinstance(manifest, dict) else None
     comment_by_id = {c.id: c for c in comments}
-    overflow_comments = _overflow_chunk_comments(comments)
+    # R27: direct commentId matches below are unambiguous regardless of
+    # write-token (real provider ids are globally unique); the positional
+    # fallback is the only path a stray concurrent/superseded write session's
+    # overflow comment could leak into, so scope that list to this
+    # manifest's own write-token.
+    overflow_comments = overflow_chunk_comments(comments, token=write_token)
     overflow_parts: list[str] = []
     for entry in sorted(chunks, key=lambda x: x.get("index", 0) if isinstance(x, dict) else 0):
         if not isinstance(entry, dict):

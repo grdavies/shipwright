@@ -16,6 +16,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import planning_graph as pg
+import planning_park as park
 import planning_paths as pp
 
 RUN_START_INELIGIBLE = frozenset({"superseded", "cancelled"})
@@ -240,22 +241,66 @@ def soft_enforce_confirm(root: Path, task_path: Path, *, confirmed: bool = False
     }, exit_code=SOFT_ENFORCE_EXIT)
 
 
+def unit_runnable_or_skip(root: Path, unit_id: str) -> tuple[str | None, dict[str, Any] | None]:
+    """Resolve a runnable frozen task list for a unit or a skip-with-reason record (R16).
+
+    Returns ``(task_rel, None)`` when the unit has a frozen, resolvable task list;
+    otherwise ``(None, skip_record)`` naming why the unit is unrunnable so the
+    frontier can skip it instead of failing the whole scheduler.
+    """
+    task_rel = task_list_for_unit(root, unit_id)
+    if not task_rel:
+        return None, {"unitId": unit_id, "reason": "no-frozen-task-list"}
+    try:
+        task_path = resolve_task_list_path(root, task_rel)
+    except SystemExit:
+        return None, {"unitId": unit_id, "reason": "task-list-unresolvable", "taskList": task_rel}
+    try:
+        content = task_path.read_text(encoding="utf-8")
+    except OSError:
+        return None, {"unitId": unit_id, "reason": "task-list-unreadable", "taskList": task_rel}
+    if "frozen: true" not in content:
+        return None, {"unitId": unit_id, "reason": "task-list-not-frozen", "taskList": task_rel}
+    return task_rel, None
+
+
+def scan_frontier(root: Path, eligible: list[str], parked: dict[str, Any]) -> tuple[str | None, str | None, list[dict[str, Any]]]:
+    """Skip parked/unrunnable units with reasons; return first runnable + skips (R16/R28)."""
+    skipped: list[dict[str, Any]] = []
+    for unit_id in eligible:
+        park_entry = parked.get(unit_id)
+        if park_entry:
+            skipped.append(park.parked_skip_record(unit_id, park_entry))
+            continue
+        task_rel, skip = unit_runnable_or_skip(root, unit_id)
+        if skip is not None:
+            skipped.append(skip)
+            continue
+        return unit_id, task_rel, skipped
+    return None, None, skipped
+
+
 def cmd_next(root: Path, args: list[str]) -> None:
     flags = parse_gate_flags(args)
     eligible = pg.order_eligible(units_with_derived_status(root)[0])
     if not eligible:
         fail("no eligible planning units", halt="scheduler-empty")
-    unit_id = eligible[0]
-    task_rel = task_list_for_unit(root, unit_id)
-    if not task_rel:
-        fail(f"no frozen task list for unit {unit_id}", unitId=unit_id)
+    parked = park.load_parked(root)
+    unit_id, task_rel, skipped = scan_frontier(root, eligible, parked)
+    if unit_id is None or task_rel is None:
+        # Distinct scheduler-exhausted halt (R28): the frontier is non-empty but
+        # every eligible unit is parked or unrunnable — never a silent empty pass.
+        emit(
+            park.scheduler_exhausted_payload(source="file", eligible=eligible, skipped=skipped),
+            park.SCHEDULER_EXHAUSTED_EXIT,
+        )
     task_path = resolve_task_list_path(root, task_rel)
-    content = task_path.read_text(encoding="utf-8")
-    if "frozen: true" not in content:
-        fail(f"task list not frozen for {unit_id}", taskList=task_rel)
     run_start_revalidate(root, task_path)
     dependency_gate(root, task_path, override=bool(flags["override"]), override_reason=flags["override_reason"])
-    emit({"verdict": "pass", "action": "next", "unitId": unit_id, "taskList": task_rel, "eligible": eligible})
+    payload = {"verdict": "pass", "action": "next", "unitId": unit_id, "taskList": task_rel, "eligible": eligible}
+    if skipped:
+        payload["skipped"] = skipped
+    emit(payload)
 
 
 def cmd_dependency_gate(root: Path, args: list[str]) -> None:

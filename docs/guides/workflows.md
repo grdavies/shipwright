@@ -685,6 +685,36 @@ Config: `planning.autonomy` + `planning.fullConductor.*` — see [configuration]
 `inFlight` is never mechanical. Branch protection probe fails closed to PR path.
 
 
+## Scheduler frontier skip + park governance (PRD 057 R16, R28)
+
+`planning-graph.py next` (file path, via `wave_deliver.py` → `planning_deliver_gate.cmd_next`) and the
+issue-store scheduler (`planning_scheduler.py`) **skip** units that cannot run — instead of failing the
+whole frontier — and report why:
+
+- A unit with no frozen task list is skipped as `no-frozen-task-list`; the scheduler advances to the next
+  runnable unit and lists the skips under `skipped` in its JSON payload (R16).
+- The issue-store frontier additionally drops units carrying the `sw:parked` label, so legacy migrated
+  units (e.g. `003-prd-pr-agent-review-provider`) no longer stall scheduling (R16, D4).
+
+**Park governance (R28).** Parking is deliberately gated so a unit cannot be silently removed:
+
+```bash
+# allowlisted actor + reason required; refused fail-closed otherwise
+python3 scripts/planning-graph.py park <unit-id> --reason "<why>" [--actor <actor>]
+python3 scripts/planning-graph.py unpark <unit-id> [--actor <actor>]
+```
+
+- The acting operator must be listed in `planning.scheduler.parkAllowlist` (see
+  [configuration](configuration.md)); an empty allowlist authorizes no one, and a park with no reason is
+  refused.
+- Parked units are recorded in the local, backend-neutral registry `.cursor/planning-parked.json`
+  (`unit-id → {reason, actor, at}`); the file-store path is unchanged when nothing is parked (R23).
+
+**Scheduler-exhausted halt.** When the eligible frontier is non-empty but every candidate is parked or
+unrunnable, the scheduler emits an explicit `scheduler-exhausted` halt (exit 40) naming the parked and
+unrunnable units plus the unpark remediation — never a silent empty result. `planning-doctor.py` surfaces
+the same condition as an `over-parked-frontier` drift finding.
+
 
 ## Issue-store on Bitbucket hosts (PRD 047 D25)
 

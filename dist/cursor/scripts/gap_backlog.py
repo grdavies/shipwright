@@ -17,6 +17,21 @@ if str(SCRIPT_DIR) not in sys.path:
 import doc_format
 import planning_paths as pp
 
+try:
+    # PRD 057 R1/R4: optional dependency — gap_backlog.py stays importable in
+    # vendored/standalone contexts where the migration engine isn't present.
+    from planning_migrate_issue_store import (
+        close_gap_issue,
+        gap_backlog_is_readonly,
+        gap_unit_ids_scheduled_for_prd,
+        issue_store_separate_project,
+    )
+except ImportError:  # pragma: no cover - defensive fallback, see try_sunset below
+    close_gap_issue = None  # type: ignore[assignment]
+    gap_backlog_is_readonly = None  # type: ignore[assignment]
+    gap_unit_ids_scheduled_for_prd = None  # type: ignore[assignment]
+    issue_store_separate_project = None  # type: ignore[assignment]
+
 GAP_ID = re.compile(r"^GAP-(\d+)$", re.I)
 CANONICAL_GAP_ID = re.compile(r"^gap-\d+-", re.I)
 INDEX_COUNTS = re.compile(r"^\|\s*(resolved|scheduled|open)\s*\|\s*(\d+)\s*\|", re.I)
@@ -368,7 +383,14 @@ def flip_canonical_resolve(
 
 
 def resolve_for_prd(root: Path, prd: str, *, scope_note: str | None = None) -> dict[str, Any]:
-    """Shared in-process gap-resolve for an absorbing PRD (PRD 048 R1)."""
+    """Shared in-process gap-resolve for an absorbing PRD (PRD 048 R1; PRD 057 R4).
+
+    Issue-store ``separate-project`` has no local canonical gap file to flip, so
+    resolution closes + labels the scheduled gap issues directly instead of
+    silently no-oping; ``same-repo`` keeps the pre-existing frontmatter/row edits.
+    """
+    if issue_store_separate_project is not None and issue_store_separate_project(root):
+        return _resolve_for_prd_issue_store(root, prd)
     gap_path = default_gap_path(root)
     try:
         flipped: list[str] = flip_canonical_resolve(root, prd=prd, scope_note=scope_note)
@@ -381,6 +403,32 @@ def resolve_for_prd(root: Path, prd: str, *, scope_note: str | None = None) -> d
         return {"verdict": "pass", "flipped": flipped, "error": None}
     except Exception as exc:
         return {"verdict": "partial", "flipped": [], "error": str(exc)}
+
+
+def _resolve_for_prd_issue_store(root: Path, prd: str) -> dict[str, Any]:
+    """Issue-store ``separate-project`` resolution path for ``resolve_for_prd`` (R4).
+
+    Closes + labels every gap issue scheduled for ``prd`` via the shared
+    ``close_gap_issue`` helper (idempotent — already-closed/labeled issues are a
+    no-op). Any per-issue failure aggregates into an overall ``resolution-partial``
+    verdict rather than raising, so callers (``reconcile_lib.set_index_status``)
+    can distinguish this from a generic exception-based ``partial``.
+    """
+    try:
+        unit_ids = gap_unit_ids_scheduled_for_prd(root, prd)
+    except Exception as exc:
+        return {"verdict": "resolution-partial", "flipped": [], "error": str(exc)}
+    flipped: list[str] = []
+    errors: list[str] = []
+    for unit_id in unit_ids:
+        outcome = close_gap_issue(root, unit_id)
+        if outcome.get("verdict") == "pass":
+            flipped.append(unit_id)
+        else:
+            errors.append(f"{unit_id}: {outcome.get('error')}")
+    if errors:
+        return {"verdict": "resolution-partial", "flipped": flipped, "error": "; ".join(errors)}
+    return {"verdict": "pass", "flipped": flipped, "error": None}
 
 
 def flip_resolve(backlog: GapBacklog, *, prd: str, scope_note: str | None = None) -> list[str]:
@@ -419,17 +467,17 @@ def check_integrity(backlog: GapBacklog) -> list[dict[str, Any]]:
 
 
 
-def assert_gap_backlog_writable(root: Path) -> None:
-  try:
-    from planning_migrate_issue_store import gap_backlog_is_readonly
-  except ImportError:
+def assert_gap_backlog_writable(root: Path, *, projection: bool = False) -> None:
+  # PRD 057 R1: --projection is an explicit operator opt-in to retain the legacy
+  # row even when the store-authoritative guard would otherwise block the write.
+  if projection or gap_backlog_is_readonly is None:
     return
   if gap_backlog_is_readonly(root):
     print(json.dumps({
       "verdict": "fail",
-      "error": "GAP-BACKLOG is read-only during issue-store migration transition",
+      "error": "GAP-BACKLOG is read-only under issue-store separate-project (or migration transition)",
       "halt": "gap-backlog-readonly-shim",
-      "remediation": "capture gaps via planning_gap_capture.py or complete migration",
+      "remediation": "capture gaps via planning_gap_capture.py, complete migration, or pass --projection to retain the legacy row",
     }))
     sys.exit(20)
 
@@ -452,6 +500,7 @@ def main(argv: list[str] | None = None) -> None:
     p_flip.add_argument("--amendment", default="")
     p_flip.add_argument("--scope-note", default="")
     p_flip.add_argument("--gap-path", default="")
+    p_flip.add_argument("--projection", action="store_true")
     ns = parser.parse_args(args)
     root = Path(ns.root).resolve()
     if ns.cmd == "migration-gate":
@@ -479,7 +528,7 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(out))
         sys.exit(1 if issues else 0)
     if ns.cmd == "flip":
-        assert_gap_backlog_writable(root)
+        assert_gap_backlog_writable(root, projection=bool(ns.projection))
         changed: list[str] = []
         legacy_changed = False
         if ns.schedule:

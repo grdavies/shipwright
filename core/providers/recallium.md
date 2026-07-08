@@ -103,14 +103,24 @@ genuine shippable-capability recaps if ever needed (not a default).
 - Search before store; on a near-duplicate use `modify_memory` with `action: "update"`.
 - Never auto-store `rule`; never re-store rules just read from `get_rules`/`recallium`.
 
-## Planning store adapter (PRD 034 R11/R23)
+## Planning store adapter (PRD 034 R11/R23; PRD 057 R21 — 21b provider round-trip)
 
 When selected as the `planning.store` **memory** backend, Recallium is **storage-only** for planning-unit
 bodies — it does not alter source-of-truth for decision-class units. Decision paths under
 `docs/planning/decision/` follow the PRD-015 committed snapshot flow; authoritative decision records remain
 at `docs/decisions/<n>-<slug>.md` (repo-SoT) or the provider record (memory-SoT). All body reads/writes pass
 through the provider-agnostic memory adapter and `scripts/memory-redact.py` — never direct MCP calls from
-planning-store code.
+planning-store code (`scripts/planning_store.py` calls the REST base directly, the same pattern
+`providers/recallium-rules.py` uses for hook-context rule fetches — never an MCP tool).
+
+**Dedicated REST resource (21b):** planning bodies round-trip via `PUT`/`GET
+{restBaseUrl}/api/projects/<project>/planning-bodies/<unitId>` — a document-style resource keyed by
+`unitId`, deliberately separate from the `/memories` operation mapping above. A full planning body is not a
+distilled memory note; indexing it alongside `store`/`search` targets would pollute semantic search (see
+"Notes / gotchas" below). `restBaseUrl` is validated loopback-only (same guard as `providers/
+recallium-rules.py`); any outage, disallowed host, or non-2xx response degrades to the planning store's
+local-only cache (`MemoryLocalCacheBackend` 21a fallback) — never a hard failure. See
+`core/providers/planning-store/memory.md` for the full backend-side contract.
 
 ## Cross-project recall (PRD 046 R90)
 

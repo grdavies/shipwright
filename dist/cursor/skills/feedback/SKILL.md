@@ -91,9 +91,9 @@ When destination is **gap-capture**, decide on the **freeze axis** (not ceremony
 | Outcome | When | Handoff |
 |---------|------|---------|
 | **Substantial** | Adds/edits/retracts R-ID, changes documented behavior, touches frozen PRD scope, or material shipped behavior with no PRD | `/sw-amend` when consumer status allows; else complete-unit route (below) |
-| **Trivial in-scope** | Small gap, no requirement/behavior change | `python3 scripts/planning_gap_capture.py` → `planning_store.put()`; under **issue-store** creates native `sw:gap` issues (status via issue state + labels) and refreshes the `GAP-BACKLOG.md` write-through projection — never a hand-append |
+| **Trivial in-scope** | Small gap, no requirement/behavior change | `python3 scripts/planning_gap_capture.py` → `planning_store.put()`; under **issue-store** creates native `sw:gap` issues (status via issue state + labels) and refreshes the `GAP-BACKLOG.md` write-through projection — never a hand-append. Under issue-store **`separate-project`** (PRD 057 R1), the write-through skips the local `GAP-BACKLOG.md` write entirely (store-only capture) unless `--projection` retains the legacy row; **`same-repo`** keeps the projection write unchanged |
 
-Do **not** hand-append to `docs/prds/GAP-BACKLOG.md` — under **issue-store** it is an issue-derived write-through projection only (PRD 045 R72; marker `issue-store-migration-gap-shim`); during file-backend cutover it is a read-only legacy projection (PRD 044 R38 / PRD 055 R22/R27).
+Do **not** hand-append to `docs/prds/GAP-BACKLOG.md` — under **issue-store** it is an issue-derived write-through projection only (PRD 045 R72; marker `issue-store-migration-gap-shim`); during file-backend cutover it is a read-only legacy projection (PRD 044 R38 / PRD 055 R22/R27). Under issue-store **`separate-project`** the store is the sole authority for gap capture: `refresh_gap_backlog_projection` (`scripts/planning_migrate_issue_store.py`) skips the local write by default, and once no open gap issues remain `try_sunset_gap_backlog_projection` reduces the file to a documented sunset stub (marker `issue-store-gap-backlog-sunset`) rather than deleting it outright — a path readers may still have bookmarked resolves to an explanation instead of a 404 (PRD 057 R1).
 
 **Bias:** ambiguous → **substantial** (amendment), never silent task edit.
 
@@ -125,6 +125,10 @@ Routes through `planning_store.put()` for every configured backend (file-store a
 `docs/prds/gap/<unit-id>/<unit-id>.md` — never hand-append to `docs/prds/GAP-BACKLOG.md`. During an
 incomplete issue-store migration, `planning_gap_capture.py` refreshes the read-only GAP-BACKLOG shim
 after each capture.
+
+Under issue-store `separate-project` this is store-only capture (PRD 057 R1): the unit body is written
+through to the store, and the local `GAP-BACKLOG.md` refresh is skipped by default. `same-repo` and the
+file-backend cutover shim above are unaffected.
 
 Never edit frozen task lists or frozen PRDs directly.
 

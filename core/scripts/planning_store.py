@@ -5,17 +5,20 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import ipaddress
 import json
 import os
 import re
 import shutil
 import subprocess
 import sys
+import urllib.parse
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 import issues_http
 
 from host_lib import (
@@ -40,7 +43,12 @@ DEFERRED_BACKENDS = frozenset({"private-repo", "encryption-at-rest"})
 ALL_BACKENDS = SHIPPED_BACKENDS | DEFERRED_BACKENDS
 
 ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues", "jira", "none"})
-SHIPPED_ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues", "jira"})
+# PRD 057 R7 / D1: gitlab-issues is a known-but-deferred provider — supported for
+# config validation yet absent from the shipped set until a live adapter ships in a
+# follow-up unit (originating gap-039). Selection therefore fails closed with the
+# issues-provider-not-shipped fallback reason instead of an advertised round-trip.
+DEFERRED_ISSUES_PROVIDERS = frozenset({"gitlab-issues"})
+SHIPPED_ISSUES_PROVIDERS = frozenset({"github-issues", "jira"})
 
 DEFAULT_ISSUES_TOKEN_ENV: dict[str, str] = {
     "github-issues": "ISSUES_GITHUB_TOKEN",
@@ -58,6 +66,17 @@ MIN_ISSUES_SCOPES: dict[str, list[str]] = {
 ISSUE_STORE_FALLBACK_NOTICE = (
     "issue-store configured but effective backend is in-repo-public "
     "(issuesProvider none/unsupported or host.provider none)"
+)
+
+# PRD 057 R31: operator-facing effective-backend kill-switch. Setting this env var
+# forces effective-backend resolution back to the file-store default regardless of
+# `planning.store.backend`, so a regressed issue-store wave can be rolled back
+# without editing committed config. Never mutates or deletes store data — pair
+# with `materialize_from_store` to re-sync local projections on demand.
+KILL_SWITCH_ENV = "SW_PLANNING_KILL_SWITCH"
+KILL_SWITCH_NOTICE = (
+    f"{KILL_SWITCH_ENV} set — effective backend forced to file-store default "
+    "for wave rollback; no store data was modified"
 )
 BITBUCKET_ISSUE_STORE_GUIDANCE = {
     "defaultPath": "separate-project",
@@ -86,6 +105,18 @@ PROJECT_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
 PROJECT_KEY_REGISTRY = ".cursor/hooks/state/issue-store-project-keys.json"
 ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
 
+# PRD 057 R26 -- partial-write journal for chunked `IssueStoreBackend.put`
+# calls. A chunked put cannot commit the head body, the overflow comments,
+# and the real-id manifest rewrite as one atomic provider transaction, so a
+# crash/exception between those steps must still (a) resolve a retry back to
+# the SAME issue -- never mint a duplicate -- and (b) stay visibly flagged
+# until the manifest rewrite completes. The journal entry (keyed the same as
+# ISSUE_UNIT_INDEX) records the issue id + step + posted comment ids so a
+# retry (or the doctor) can see exactly how far a put got; PUT_INCOMPLETE_LABEL
+# is the durable, provider-side twin of that same signal.
+PUT_JOURNAL_PATH = ".cursor/hooks/state/issue-store-put-journal.json"
+PUT_INCOMPLETE_LABEL = "sw:put-incomplete"
+
 from issues_lib import (  # noqa: E402
     IssueBudgetExhausted,
     IssueLifecycleDrift,
@@ -102,19 +133,24 @@ from planning_canonical import (  # noqa: E402
     FREEZE_INCOMPLETE_LABEL,
     FROZEN_LABEL,
     IssueSnapshot,
+    artifact_type_from_labels,
     build_freeze_record_body,
     canonical_hash,
     chunk_body_if_needed,
     compose_issue_body,
+    human_readable_title,
     infer_artifact_type,
     parse_edges_block,
     parse_freeze_record_hash,
     project_label,
     reconcile_edges,
     reassemble_body,
+    rewrite_chunk_manifest_ids,
     strip_markers_and_edges,
-    title_prefix,
+    structural_labels_from_content,
     type_label,
+    unit_id_from_labels,
+    unit_id_label,
     verify_project_scope,
     verify_unit_id,
 )
@@ -213,6 +249,127 @@ def redact_content(content: str) -> str:
     return proc.stdout
 
 
+# PRD 057 R21 / 21b -- memory backend provider round-trip (planning bodies only).
+#
+# `_urlopen` is a module-level indirection (mirrors `issues_http._urlopen`) so unit
+# tests can monkeypatch the transport without a live Recallium server.
+_urlopen = urlopen
+PLANNING_BODY_PROVIDER_TIMEOUT_SECONDS = 5
+_RECALLIUM_ALLOWED_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+
+
+def _is_allowed_recallium_base(url: str) -> bool:
+    """Localhost-only SSRF guard for `memory.connection.restBaseUrl`.
+
+    Deliberately reimplemented rather than imported from
+    `core/hooks/sw_recallium_url.is_allowed_recallium_base`: `scripts/` and
+    `core/hooks/` are independent sync trees (`scripts/build-chain-sync.py` /
+    `scripts/copy-to-core.py` do not model a cross-tree import here), so this
+    keeps the guard's semantics local to the tree that ships it. Same rules:
+    http(s) only, no embedded credentials, loopback host only.
+    """
+    if not url or not isinstance(url, str):
+        return False
+    try:
+        parsed = urllib.parse.urlparse(url.strip())
+    except ValueError:
+        return False
+    if parsed.scheme not in ("http", "https"):
+        return False
+    if parsed.username or parsed.password:
+        return False
+    host = parsed.hostname
+    if not host:
+        return False
+    if host in _RECALLIUM_ALLOWED_HOSTS:
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def _recallium_rest_base(cfg: dict[str, Any]) -> str | None:
+    memory = cfg.get("memory")
+    if not isinstance(memory, dict):
+        return None
+    connection = memory.get("connection")
+    if not isinstance(connection, dict):
+        return None
+    base = str(connection.get("restBaseUrl") or "").strip().rstrip("/")
+    if not base or not _is_allowed_recallium_base(base):
+        return None
+    return base
+
+
+def _planning_body_provider_url(base: str, project: str, unit_id: str) -> str:
+    # Dedicated document-style resource, deliberately separate from the
+    # semantically-indexed memory-note REST collection (see
+    # `core/providers/recallium.md` operation mapping): a full planning body
+    # is not a distilled memory note, and mixing the two would pollute
+    # semantic search (see that doc's "Notes / gotchas"). Keyed by `unitId`
+    # for a deterministic get, since note search has no exact-key guarantee.
+    quoted_project = urllib.parse.quote(project, safe="")
+    quoted_unit = urllib.parse.quote(unit_id, safe="")
+    return f"{base}/api/projects/{quoted_project}/planning-bodies/{quoted_unit}"
+
+
+def _provider_round_trip_put(base: str, project: str, unit_id: str, body_path: str, content: str) -> tuple[bool, str]:
+    """Best-effort PUT of a redacted planning body through the Recallium REST adapter.
+
+    Never raises -- any failure (unreachable, timeout, non-2xx) degrades to a
+    `(False, reason)` tuple so the caller always has the R21a local cache to
+    fall back to.
+    """
+    url = _planning_body_provider_url(base, project, unit_id)
+    payload = json.dumps({"content": content, "bodyPath": body_path}).encode("utf-8")
+    req = Request(url, data=payload, headers={"Content-Type": "application/json"}, method="PUT")
+    try:
+        with _urlopen(req, timeout=PLANNING_BODY_PROVIDER_TIMEOUT_SECONDS) as resp:
+            status = getattr(resp, "status", 200)
+            if not (200 <= status < 300):
+                return False, f"provider-http-{status}"
+    except HTTPError as exc:
+        exc.close()
+        return False, f"provider-http-{exc.code}"
+    except (URLError, OSError, ValueError) as exc:
+        return False, f"provider-unreachable:{type(exc).__name__}"
+    return True, "ok"
+
+
+def _provider_round_trip_get(base: str, project: str, unit_id: str) -> tuple[bool, str, str | None]:
+    """Best-effort GET of a planning body through the Recallium REST adapter.
+
+    Returns `(ok, reason, content)`; `content` is only set when `ok` is True.
+    Never raises.
+    """
+    url = _planning_body_provider_url(base, project, unit_id)
+    req = Request(url, method="GET")
+    try:
+        with _urlopen(req, timeout=PLANNING_BODY_PROVIDER_TIMEOUT_SECONDS) as resp:
+            status = getattr(resp, "status", 200)
+            if not (200 <= status < 300):
+                return False, f"provider-http-{status}", None
+            raw = resp.read()
+            raw = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+    except HTTPError as exc:
+        code = exc.code
+        exc.close()
+        if code == 404:
+            return False, "provider-not-found", None
+        return False, f"provider-http-{code}", None
+    except (URLError, OSError, ValueError) as exc:
+        return False, f"provider-unreachable:{type(exc).__name__}", None
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return False, "provider-invalid-response", None
+    content = data.get("content") if isinstance(data, dict) else None
+    if not isinstance(content, str):
+        return False, "provider-invalid-response", None
+    return True, "ok", content
+
+
 def contains_raw_transcript(content: str) -> bool:
     return any(marker.search(content) for marker in RAW_TRANSCRIPT_MARKERS)
 
@@ -298,8 +455,29 @@ def issue_store_fallback_reason(root: Path, cfg: dict[str, Any], *, override: st
     return None
 
 
+def _effective_backend_kill_switch() -> bool:
+    return os.environ.get(KILL_SWITCH_ENV, "").strip().lower() in {"1", "true", "yes"}
+
+
 def resolve_effective_backend(root: Path, cfg: dict[str, Any], *, override: str | None = None) -> dict[str, Any]:
     configured = resolve_backend_id(cfg, override=override)
+    # PRD 057 R31: an explicit per-call --backend override is a deliberate operator
+    # choice for that one invocation and takes precedence over the blanket kill-switch
+    # (e.g. `materialize_from_store` reads the real issue store while the kill-switch
+    # is globally active).
+    if override is None and configured != DEFAULT_BACKEND and _effective_backend_kill_switch():
+        return {
+            "verdict": "ok",
+            "configured": configured,
+            "backend": DEFAULT_BACKEND,
+            "effective": DEFAULT_BACKEND,
+            "fallback": True,
+            "fallbackReason": "kill-switch",
+            "killSwitch": True,
+            "notice": KILL_SWITCH_NOTICE,
+            "shipped": True,
+            "deferred": False,
+        }
     fallback_reason = issue_store_fallback_reason(root, cfg, override=override) if configured == "issue-store" else None
     if fallback_reason:
         out: dict[str, Any] = {
@@ -903,11 +1081,82 @@ def secret_scan_text(text: str, *, path_hint: str | None = None) -> None:
         )
 
 
+def _store_host_privacy_ci_context() -> bool:
+    """R14 — explicit CI-context probe. Mirrors `planning_materialize.is_ci_or_host`'s
+    env-var signals; kept local (not imported) so this override gate has no dependency
+    on `planning_materialize`'s materialize-skip semantics, only on CI detection."""
+    if os.environ.get("CI", "").strip().lower() in {"1", "true", "yes"}:
+        return True
+    if os.environ.get("GITHUB_ACTIONS", "").strip().lower() in {"1", "true", "yes"}:
+        return True
+    return False
+
+
 def _store_host_privacy_override() -> str | None:
+    """R14 — SW_STORE_HOST_PRIVACY is an override intended for CI fixtures/hermetic
+    runs only; it MUST NOT be honored in an operator's local/interactive run, where a
+    stale or mistaken override could silently misclassify a shared/public store host
+    as private and admit private-tier bodies to it."""
+    if not _store_host_privacy_ci_context():
+        return None
     raw = os.environ.get("SW_STORE_HOST_PRIVACY", "").strip().lower()
     if raw in {"private", "public"}:
         return raw
     return None
+
+
+def _jira_store_project_browse_private(root: Path, cfg: dict[str, Any], project_key: str) -> bool | None:
+    """R14 — real host-privacy probe for the Jira shipped provider (was previously a
+    placeholder that always fell through to ``unknown`` when ``jiraProjectVisibility``
+    was not declared). Inspects the project's permission scheme BROWSE_PROJECTS grants:
+    a grant to an unrestricted holder (``anyone`` / any authenticated Jira user) means
+    the project is effectively public within the Jira instance; grants scoped only to
+    specific groups, roles, or users mean the project is private. Returns ``None``
+    (probe-inconclusive) when unauthenticated, unreachable, or the scheme carries no
+    BROWSE_PROJECTS entries."""
+    from planning_jira_probe import _api_base, _auth_header, resolve_jira_flavor
+
+    token_env = resolve_issues_token_env(cfg, "jira")
+    api_token = os.environ.get(token_env, "") if token_env else ""
+    if not api_token:
+        return None
+    if resolve_jira_flavor(cfg) == "dc":
+        headers = {"Authorization": f"Bearer {api_token}", "Accept": "application/json"}
+    else:
+        headers = _auth_header(cfg, api_token)
+    base = _api_base(cfg)
+    if not base or not headers:
+        return None
+    url = f"{base}/project/{project_key}/permissionscheme"
+    request_headers = {**headers, "User-Agent": "shipwright-planning-store"}
+    try:
+        status, _resp_headers, body = issues_http.http_request(
+            "GET",
+            url,
+            request_headers,
+            root=root,
+            issues_provider="jira",
+            timeout=15,
+        )
+        if status >= 400:
+            return None
+        data = json.loads(body)
+    except (ConnectionError, json.JSONDecodeError, TimeoutError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    browse_holders = [
+        entry.get("holder")
+        for entry in data.get("permissions") or []
+        if isinstance(entry, dict) and entry.get("permission") == "BROWSE_PROJECTS"
+    ]
+    browse_holders = [h for h in browse_holders if isinstance(h, dict)]
+    if not browse_holders:
+        return None
+    unrestricted_holder_types = {"anyone", "loggedin", "authenticated"}
+    if any(str(h.get("type", "")).strip().lower() in unrestricted_holder_types for h in browse_holders):
+        return False
+    return True
 
 
 def _github_store_repo_private(root: Path, cfg: dict[str, Any], owner: str, repo: str) -> bool | None:
@@ -1011,6 +1260,36 @@ def probe_store_host_privacy(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
                 return {"verdict": "ok", "storeHostPrivacy": "private", "source": "jiraProjectVisibility"}
             if vis in {"public", "shared"}:
                 return {"verdict": "ok", "storeHostPrivacy": "public", "source": "jiraProjectVisibility"}
+        # R14 — no placeholder always-unknown fallback: probe the live permission
+        # scheme before giving up, so Jira gets the same host-API evaluation as the
+        # other shipped providers rather than a config-declared-only check.
+        from planning_jira_probe import resolve_jira_api_project_key
+
+        project_key = resolve_jira_api_project_key(cfg, root=root)
+        if project_key:
+            is_private = _jira_store_project_browse_private(root, cfg, project_key)
+            if is_private is True:
+                return {
+                    "verdict": "ok",
+                    "storeHostPrivacy": "private",
+                    "source": "host-api",
+                    "provider": provider,
+                    "projectKey": project_key,
+                }
+            if is_private is False:
+                return {
+                    "verdict": "ok",
+                    "storeHostPrivacy": "public",
+                    "source": "host-api",
+                    "provider": provider,
+                    "projectKey": project_key,
+                }
+        return {
+            "verdict": "ok",
+            "storeHostPrivacy": "unknown",
+            "source": "probe-inconclusive",
+            "provider": provider,
+        }
 
     location = resolve_store_location(root, cfg)
     if location.get("verdict") != "ok":
@@ -1054,35 +1333,11 @@ def probe_store_host_privacy(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
             "provider": provider,
         }
 
-    if provider == "gitlab-issues":
-        is_private = _gitlab_store_project_private(root, cfg, owner, repo)
-        if is_private is True:
-            return {
-                "verdict": "ok",
-                "storeHostPrivacy": "private",
-                "source": "host-api",
-                "owner": owner,
-                "repo": repo,
-                "provider": provider,
-            }
-        if is_private is False:
-            return {
-                "verdict": "ok",
-                "storeHostPrivacy": "public",
-                "source": "host-api",
-                "owner": owner,
-                "repo": repo,
-                "provider": provider,
-            }
-        return {
-            "verdict": "ok",
-            "storeHostPrivacy": "unknown",
-            "source": "probe-inconclusive",
-            "owner": owner,
-            "repo": repo,
-            "provider": provider,
-        }
-
+    # R14 — no other shipped provider reaches this point: jira returns early above,
+    # and gitlab-issues is deferred/fail-closed (R7) and excluded from
+    # SHIPPED_ISSUES_PROVIDERS, so it never reaches probe_store_host_privacy at all.
+    # This is a defensive guard for a future shipped provider, not a placeholder
+    # always-false branch for a provider that is (misleadingly) advertised as shipped.
     return {"verdict": "ok", "storeHostPrivacy": "unknown", "source": "unsupported-provider", "provider": provider}
 
 
@@ -1282,6 +1537,28 @@ def issue_index_key(project_key: str, unit_id: str) -> str:
     return f"{project_key}:{unit_id}"
 
 
+def load_put_journal(root: Path) -> dict[str, Any]:
+    """R26 -- load the partial-write journal (keyed by ``issue_index_key``)."""
+    path = root / PUT_JOURNAL_PATH
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    entries = data.get("units") if isinstance(data, dict) else None
+    return entries if isinstance(entries, dict) else {}
+
+
+def save_put_journal(root: Path, journal: dict[str, Any]) -> None:
+    path = root / PUT_JOURNAL_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({"version": 1, "units": journal}, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
 class IssueStoreBackend(PlanningStoreBackend):
     backend_id = "issue-store"
 
@@ -1295,15 +1572,28 @@ class IssueStoreBackend(PlanningStoreBackend):
         self.issues_provider = str(issues.get("provider", "none"))
         self._client = IssuesClient(root, self.issues_provider)
         self._index = load_issue_unit_index(root)
+        self._journal = load_put_journal(root)
 
     def _artifact_type(self, body_path: str) -> str:
         return infer_artifact_type(body_path)
 
-    def _issue_title(self, artifact_type: str, unit_id: str) -> str:
-        return f"{title_prefix(self.project_key)} {artifact_type}:{unit_id}"
+    def _issue_title(self, artifact_type: str, unit_id: str, content: str) -> str:
+        # R11: human-readable title (doc H1 / frontmatter `title:`) instead of
+        # the legacy `[project] type:unit-id` prefix -- see
+        # `planning_canonical.human_readable_title` for the fallback chain.
+        return human_readable_title(content, artifact_type, unit_id)
 
-    def _labels_for(self, artifact_type: str) -> list[str]:
-        return sorted({project_label(self.project_key), type_label(artifact_type)})
+    def _labels_for(self, artifact_type: str, unit_id: str, content: str) -> list[str]:
+        # R11: `unit_id_label` plus the doc's structural frontmatter keys
+        # (status/topic/depends/absorbs/amends/visibility) are additive
+        # provider-native label projections -- never a substitute for the
+        # frontmatter itself, which stays embedded in `content` (dual-read
+        # window, D5). Recomputed on every put() so an old (pre-R11) issue's
+        # labels are backfilled the next time it is written through this
+        # path, in addition to the read-time backfill in `_lookup_record`.
+        labels = {project_label(self.project_key), type_label(artifact_type), unit_id_label(unit_id)}
+        labels.update(structural_labels_from_content(content))
+        return sorted(labels)
 
     def _record_to_snapshot(self, record: Any) -> IssueSnapshot:
         return IssueSnapshot(
@@ -1382,7 +1672,7 @@ class IssueStoreBackend(PlanningStoreBackend):
             raise RuntimeError("raw-transcript-in-brainstorm")
         excerpt = content[:4000]
         redacted = redact_content(excerpt)
-        mem = MemoryBackend(self.root, self.cfg)
+        mem = MemoryLocalCacheBackend(self.root, self.cfg)
         mem_result = mem.put(
             f"brainstorm-{brainstorm.unit_id}",
             f"docs/brainstorms/{brainstorm.unit_id}.md",
@@ -1400,6 +1690,35 @@ class IssueStoreBackend(PlanningStoreBackend):
         closed = self._client.issue_update(brainstorm.id, state="closed", if_match=brainstorm.etag)
         return {"memoryUnitId": mem_result.unit_id, "brainstormUnitId": brainstorm.unit_id, "etag": closed.etag}
 
+    def _maybe_backfill_labels(self, record: Any, unit_id: str) -> Any:
+        """R11 dual-read backfill: an issue resolved via the pre-R11 body-
+        marker/frontmatter fallback (no `sw:unit:*` / `sw:<type>` label yet)
+        gets those structural labels written back immediately, so the next
+        read/discover pass no longer needs the body fallback for it. Best
+        effort only -- a frozen/put-incomplete issue, a stale etag, or a
+        provider error here must never block the read or put already in
+        progress; the label projection simply catches up on the next write.
+        """
+        if FROZEN_LABEL in record.labels or PUT_INCOMPLETE_LABEL in record.labels:
+            return record
+        artifact_type = record.artifact_type or infer_artifact_type(unit_id)
+        missing: set[str] = set()
+        if not unit_id_from_labels(record.labels):
+            missing.add(unit_id_label(unit_id))
+        if artifact_type and not artifact_type_from_labels(record.labels):
+            missing.add(type_label(artifact_type))
+        if not missing:
+            return record
+        try:
+            updated = self._client.issue_label(
+                record.id,
+                sorted(set(record.labels) | missing),
+                if_match=record.etag,
+            )
+        except (IssueRevisionConflict, IssueCapabilityError, IssueBudgetExhausted, IssueTombstone, IssueTransferred):
+            return record
+        return updated
+
     def _lookup_record(self, unit_id: str, body_path: str) -> Any:
         idx_key = issue_index_key(self.project_key, unit_id)
         issue_id = self._index.get(idx_key)
@@ -1412,7 +1731,7 @@ class IssueStoreBackend(PlanningStoreBackend):
                 handle_issue_client_error(exc)
             else:
                 if verify_project_scope(record.body, self.project_key):
-                    return record
+                    return self._maybe_backfill_labels(record, unit_id)
         matches = self._client.issue_search(
             project_key=self.project_key,
             unit_id=unit_id,
@@ -1423,23 +1742,33 @@ class IssueStoreBackend(PlanningStoreBackend):
         record = matches[0]
         self._index[idx_key] = record.id
         save_issue_unit_index(self.root, self._index)
-        return record
+        return self._maybe_backfill_labels(record, unit_id)
 
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
         self._guard_write_visibility(unit_id, body_path, content)
         self._guard_write_secrets(content, path_hint=body_path)
         artifact_type = self._artifact_type(body_path)
-        title = self._issue_title(artifact_type, unit_id)
-        labels = self._labels_for(artifact_type)
+        title = self._issue_title(artifact_type, unit_id, content)
+        labels = self._labels_for(artifact_type, unit_id, content)
         body = compose_issue_body(self.project_key, artifact_type, unit_id, content)
-        body, extra_comments = chunk_body_if_needed(body, [])
+        body, extra_comments = chunk_body_if_needed(body, [], provider=self.issues_provider)
+        idx_key = issue_index_key(self.project_key, unit_id)
+        chunked = bool(extra_comments)
+        # R26: a chunked put cannot commit its head body, its overflow
+        # comments, and its real-id manifest rewrite in one atomic provider
+        # call. Mark the issue `sw:put-incomplete` for the duration of that
+        # multi-step write so a crash mid-flight leaves a durable, doctor-
+        # visible signal instead of a manifest silently pointing at synthetic
+        # ids that were never a real comment. Cleared only once the manifest
+        # rewrite below actually succeeds.
+        head_labels = sorted(set(labels) | {PUT_INCOMPLETE_LABEL}) if chunked else labels
         try:
             record = self._lookup_record(unit_id, body_path)
         except IssueNotFound:
             record = self._client.issue_create(
                 title=title,
                 body=body,
-                labels=labels,
+                labels=head_labels,
                 project_key=self.project_key,
                 artifact_type=artifact_type,
                 unit_id=unit_id,
@@ -1450,7 +1779,7 @@ class IssueStoreBackend(PlanningStoreBackend):
                     record.id,
                     title=title,
                     body=body,
-                    labels=labels,
+                    labels=head_labels,
                     if_match=record.etag,
                 )
             except IssueRevisionConflict as exc:
@@ -1460,13 +1789,64 @@ class IssueStoreBackend(PlanningStoreBackend):
                     expected=exc.expected,
                     actual=exc.actual,
                 )
-        for comment in extra_comments:
-            self._guard_write_secrets(comment.body, path_hint=body_path)
-            self._client.issue_comment(record.id, comment.body, markers=comment.markers)
-            record = self._client.issue_get(record.id)
-        idx_key = issue_index_key(self.project_key, unit_id)
+        # R26: persist the unit->issue index (and, for a chunked body, a
+        # journal entry) immediately after the head write succeeds -- before
+        # posting a single overflow comment -- so a crash anywhere past this
+        # point still resolves a retry of this same unit id back to THIS
+        # issue instead of minting a duplicate (idempotent resume).
         self._index[idx_key] = record.id
         save_issue_unit_index(self.root, self._index)
+        if chunked:
+            self._journal[idx_key] = {
+                "unitId": unit_id,
+                "issueId": record.id,
+                "step": "body-written",
+                "expectedChunks": len(extra_comments),
+                "postedCommentIds": [],
+            }
+            save_put_journal(self.root, self._journal)
+        chunk_comment_ids: list[str] = []
+        for comment in extra_comments:
+            self._guard_write_secrets(comment.body, path_hint=body_path)
+            posted = self._client.issue_comment(record.id, comment.body, markers=comment.markers)
+            chunk_comment_ids.append(posted.id)
+            record = self._client.issue_get(record.id)
+            self._journal[idx_key]["step"] = "comments-pending"
+            self._journal[idx_key]["postedCommentIds"] = list(chunk_comment_ids)
+            save_put_journal(self.root, self._journal)
+        if chunk_comment_ids:
+            # R8: `body` still carries the synthetic placeholder chunk ids
+            # assigned before the provider issued real comment ids above;
+            # rewrite the manifest with the real ids before persisting so
+            # `reassemble_body` matches comments directly instead of falling
+            # back to positional matching, which can select a stale overflow
+            # comment left over from an earlier put.
+            rewritten_body = rewrite_chunk_manifest_ids(body, chunk_comment_ids)
+            final_labels = sorted(set(record.labels) - {PUT_INCOMPLETE_LABEL})
+            if rewritten_body != record.body or final_labels != sorted(record.labels):
+                try:
+                    record = self._client.issue_update(
+                        record.id,
+                        body=rewritten_body,
+                        labels=final_labels,
+                        if_match=record.etag,
+                    )
+                except IssueRevisionConflict as exc:
+                    # R26: fail closed -- the issue is left at its prior
+                    # (pre-this-update) etag, still carrying
+                    # PUT_INCOMPLETE_LABEL and its journal entry, both
+                    # visible to `planning-doctor.py` (`put-partial`,
+                    # `chunk-cardinality-mismatch`) until a retry converges.
+                    fail(
+                        "revision-conflict",
+                        code="revision-conflict",
+                        expected=exc.expected,
+                        actual=exc.actual,
+                    )
+                record = self._client.issue_get(record.id)
+        if chunked:
+            self._journal.pop(idx_key, None)
+            save_put_journal(self.root, self._journal)
         digest = canonical_hash(self._record_to_snapshot(record))
         log_operation("put", unit_id, body_path, content, self.backend_id)
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=digest)
@@ -1505,7 +1885,6 @@ class IssueStoreBackend(PlanningStoreBackend):
         dest_path.write_text(got.content, encoding="utf-8")
         log_operation("materialize", unit_id, body_path, got.content, self.backend_id)
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=got.content, hash=got.hash)
-
 
     def freeze(self, unit_id: str, body_path: str, *, distill: bool = True) -> dict[str, Any]:
         try:
@@ -1665,7 +2044,45 @@ class LocalSyncedBackend(PlanningStoreBackend):
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=content_hash(content))
 
 
-class MemoryBackend(PlanningStoreBackend):
+class MemoryLocalCacheBackend(PlanningStoreBackend):
+    """PRD 057 R21 — the `memory` backend's planning-body store.
+
+    21a made the local cache (`.cursor/sw-memory/planning-bodies/`, gitignored per
+    `.gitignore`) available unconditionally, independent of whether a memory provider
+    is configured — see the R21a history below. 21b (this revision) adds a *real*
+    round-trip through the configured provider's REST adapter on top of that cache:
+
+    - `put()` always writes the local cache first (the R21a guarantee never
+      regresses), then best-effort round-trips the redacted body through the
+      Recallium REST adapter (`memory.provider: recallium` + a loopback-only
+      `memory.connection.restBaseUrl`) via `_provider_round_trip_put`.
+    - `get()` reads the local cache when present (fast path, unchanged from 21a).
+      When the cache is missing — e.g. a fresh checkout on another machine, since
+      the cache dir is gitignored — it attempts recovery through the same provider
+      adapter (`_provider_round_trip_get`) and repopulates the local cache on
+      success, before falling back to `missing`.
+    - Any provider outage, timeout, non-2xx response, disallowed/unconfigured REST
+      base, or non-`recallium` provider degrades to the R21a local-cache-only
+      behavior — never a hard failure. See `_provider_round_trip_put`/`_get` and
+      `_is_allowed_recallium_base`.
+    - Round-trip bodies use a dedicated `/planning-bodies/<unitId>` REST resource,
+      not the semantically-indexed memory-note REST collection: a full planning
+      body is not a distilled memory note, and indexing raw bodies alongside them
+      would pollute semantic search (see `core/providers/recallium.md`).
+
+    `configured_provider()` still names whichever provider is configured for the
+    skill's other memory operations (rules/decisions/etc. — see
+    `core/skills/memory/SKILL.md`); frontmatter also records whether *this* body
+    actually round-tripped (`providerRoundTrip`) and why not when it didn't
+    (`providerRoundTripReason`).
+
+    **R21a history:** prior to 21a, `_store_dir()` unconditionally called
+    `fail(..., verdict="degraded")` (which `emit()` turns into `sys.exit(2)`)
+    whenever no memory provider was configured — a hard CI failure for a purely
+    local disk write. Removing that gate fixed the CI false-failure and the
+    misleading-durability framing described in R21.
+    """
+
     backend_id = "memory"
 
     def memory_project(self) -> str:
@@ -1674,17 +2091,28 @@ class MemoryBackend(PlanningStoreBackend):
             return memory["project"].strip()
         return self.root.name
 
-    def provider(self) -> str | None:
+    def configured_provider(self) -> str | None:
         return resolve_memory_provider(self.root, self.cfg)
 
-    def _store_dir(self) -> Path:
-        if self.provider() is None:
-            fail("memory backend degraded: no memory provider configured", verdict="degraded")
+    def _provider_rest_base(self) -> str | None:
+        if self.configured_provider() != "recallium":
+            return None
+        return _recallium_rest_base(self.cfg)
+
+    def _round_trip_unavailable_reason(self) -> str:
+        provider = self.configured_provider()
+        if not provider:
+            return "provider-not-configured"
+        if provider != "recallium":
+            return f"provider-not-round-trippable:{provider}"
+        return "provider-rest-base-unavailable"
+
+    def _local_cache_dir(self) -> Path:
         return self.root / ".cursor" / "sw-memory" / "planning-bodies" / self.memory_project()
 
     def _unit_path(self, unit_id: str) -> Path:
         safe_id = re.sub(r"[^a-zA-Z0-9._-]+", "_", unit_id)
-        return self._store_dir() / f"{safe_id}.md"
+        return self._local_cache_dir() / f"{safe_id}.md"
 
     def _validate_class(self, content_class: str | None) -> None:
         if content_class and content_class.lower() in BANNED_MEMORY_CLASSES:
@@ -1694,11 +2122,16 @@ class MemoryBackend(PlanningStoreBackend):
         if contains_raw_transcript(content):
             fail("raw transcript content refused by memory backend", code="raw-transcript")
 
-    def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
-        self._validate_class(content_class)
-        self._validate_content(content)
-        redacted = redact_content(content)
-        store_dir = self._store_dir()
+    def _write_cache_file(
+        self,
+        unit_id: str,
+        body_path: str,
+        redacted: str,
+        *,
+        provider_round_trip: bool,
+        round_trip_reason: str,
+    ) -> Path:
+        store_dir = self._local_cache_dir()
         store_dir.mkdir(parents=True, exist_ok=True)
         target = self._unit_path(unit_id)
         frontmatter = (
@@ -1706,30 +2139,78 @@ class MemoryBackend(PlanningStoreBackend):
             f"unitId: {unit_id}\n"
             f"bodyPath: {body_path}\n"
             f"project: {self.memory_project()}\n"
-            f"provider: {self.provider() or 'none'}\n"
+            f"configuredProvider: {self.configured_provider() or 'none'}\n"
+            f"providerRoundTrip: {'true' if provider_round_trip else 'false'}\n"
+            f"providerRoundTripReason: {round_trip_reason}\n"
+            "localCacheFallback: true\n"
             "---\n"
         )
         target.write_text(frontmatter + redacted, encoding="utf-8")
-        log_operation("put", unit_id, body_path, redacted, self.backend_id)
-        return StoreResult("ok", unit_id, body_path, self.backend_id, content=redacted, hash=content_hash(redacted))
+        return target
+
+    def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
+        self._validate_class(content_class)
+        self._validate_content(content)
+        redacted = redact_content(content)
+
+        base = self._provider_rest_base()
+        if base is not None:
+            round_trip_ok, round_trip_reason = _provider_round_trip_put(
+                base, self.memory_project(), unit_id, body_path, redacted
+            )
+        else:
+            round_trip_ok = False
+            round_trip_reason = self._round_trip_unavailable_reason()
+
+        self._write_cache_file(
+            unit_id, body_path, redacted, provider_round_trip=round_trip_ok, round_trip_reason=round_trip_reason
+        )
+        notice = (
+            "provider round-trip ok (recallium); local cache also updated"
+            if round_trip_ok
+            else f"provider round-trip unavailable ({round_trip_reason}) -- served from R21a local cache"
+        )
+        log_operation("put", unit_id, body_path, redacted, self.backend_id, notice=notice)
+        return StoreResult(
+            "ok", unit_id, body_path, self.backend_id, content=redacted, hash=content_hash(redacted), notice=notice
+        )
 
     def get(self, unit_id: str, body_path: str) -> StoreResult:
         path = self._unit_path(unit_id)
-        if not path.is_file():
-            if self.provider() is None:
-                return StoreResult("degraded", unit_id, body_path, self.backend_id, reason="no-provider")
-            return StoreResult("missing", unit_id, body_path, self.backend_id, reason="not-found")
-        raw = path.read_text(encoding="utf-8")
-        body = raw.split("---", 2)[-1].lstrip("\n") if raw.startswith("---") else raw
-        redacted = redact_content(body)
-        log_operation("get", unit_id, body_path, redacted, self.backend_id)
-        return StoreResult("ok", unit_id, body_path, self.backend_id, content=redacted, hash=content_hash(redacted))
+        if path.is_file():
+            raw = path.read_text(encoding="utf-8")
+            body = raw.split("---", 2)[-1].lstrip("\n") if raw.startswith("---") else raw
+            redacted = redact_content(body)
+            log_operation("get", unit_id, body_path, redacted, self.backend_id)
+            return StoreResult("ok", unit_id, body_path, self.backend_id, content=redacted, hash=content_hash(redacted))
+
+        # 21b: the local cache is gitignored, so a fresh checkout on another
+        # machine (or a wiped `.cursor/sw-memory/`) never had it. Attempt genuine
+        # recovery through the provider adapter before declaring the unit missing.
+        base = self._provider_rest_base()
+        if base is not None:
+            ok, reason, recovered = _provider_round_trip_get(base, self.memory_project(), unit_id)
+            if ok and recovered is not None:
+                redacted = redact_content(recovered)
+                self._write_cache_file(
+                    unit_id, body_path, redacted, provider_round_trip=True, round_trip_reason="ok"
+                )
+                notice = "recovered via provider round-trip (recallium); local cache repopulated"
+                log_operation("get", unit_id, body_path, redacted, self.backend_id, notice=notice)
+                return StoreResult(
+                    "ok", unit_id, body_path, self.backend_id, content=redacted, hash=content_hash(redacted), notice=notice
+                )
+
+        return StoreResult("missing", unit_id, body_path, self.backend_id, reason="not-found")
 
     def exists(self, unit_id: str, body_path: str) -> StoreResult:
         present = self._unit_path(unit_id).is_file()
+        if not present:
+            base = self._provider_rest_base()
+            if base is not None:
+                ok, _reason, _content = _provider_round_trip_get(base, self.memory_project(), unit_id)
+                present = ok
         log_operation("exists", unit_id, body_path, None, self.backend_id)
-        if not present and self.provider() is None:
-            return StoreResult("degraded", unit_id, body_path, self.backend_id, reason="no-provider")
         return StoreResult("ok" if present else "missing", unit_id, body_path, self.backend_id, reason=None if present else "not-found")
 
     def materialize(self, unit_id: str, body_path: str, dest_path: Path) -> StoreResult:
@@ -1768,7 +2249,7 @@ BACKEND_CLASSES: dict[str, type[PlanningStoreBackend]] = {
     "in-repo-public": InRepoPublicBackend,
     "issue-store": IssueStoreBackend,
     "local-synced": LocalSyncedBackend,
-    "memory": MemoryBackend,
+    "memory": MemoryLocalCacheBackend,
     "private-repo": DeferredBackend,
     "encryption-at-rest": DeferredBackend,
 }
@@ -1795,6 +2276,123 @@ def get_backend(root: Path, cfg: dict[str, Any] | None = None, *, override: str 
     if backend_id in DEFERRED_BACKENDS:
         return cls(root, cfg, backend_id)
     return cls(root, cfg)
+
+
+def materialize_from_store(
+    root: Path,
+    cfg: dict[str, Any],
+    units: list[dict[str, str]],
+) -> dict[str, Any]:
+    """Re-materialize local file-store projections from the authoritative issue store.
+
+    PRD 057 R31 wave-rollback recovery: after flipping the ``effective-backend``
+    kill-switch back to the file-store default, an operator re-syncs local
+    projections from the still-intact issue store so no authored content is lost.
+    Reads the issue store explicitly (bypasses the kill-switch via
+    ``override="issue-store"``); writes are local-only, idempotent, and never
+    mutate or delete store data.
+    """
+    issue_backend = get_backend(root, cfg, override="issue-store")
+    if not isinstance(issue_backend, IssueStoreBackend):
+        return {"verdict": "fail", "action": "materialize-from-store", "error": "issue-store-backend-required"}
+    local_backend = InRepoPublicBackend(root, cfg)
+    results: list[dict[str, Any]] = []
+    ok = True
+    for unit in units:
+        unit_id = str(unit.get("unitId", "") or "")
+        body_path = str(unit.get("bodyPath", "") or "")
+        if not unit_id or not body_path:
+            results.append({"unitId": unit_id, "bodyPath": body_path, "verdict": "fail", "error": "missing-unit-or-path"})
+            ok = False
+            continue
+        fetched = issue_backend.get(unit_id, body_path)
+        if fetched.verdict != "ok" or fetched.content is None:
+            results.append({"unitId": unit_id, "bodyPath": body_path, "verdict": fetched.verdict, "reason": fetched.reason})
+            ok = False
+            continue
+        written = local_backend.put(unit_id, body_path, fetched.content)
+        results.append({"unitId": unit_id, "bodyPath": body_path, "verdict": "ok", "hash": written.hash})
+    return {
+        "verdict": "ok" if ok else "partial",
+        "action": "materialize-from-store",
+        "count": len(units),
+        "results": results,
+        "dataLoss": False,
+    }
+
+
+def wave_regression_finding(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    tracked_units: list[dict[str, str]] | None = None,
+) -> dict[str, Any] | None:
+    """Detect drift between local file-store projections and the issue store.
+
+    PRD 057 R31: only meaningful while the ``effective-backend`` kill-switch is
+    active (the code path that would normally keep them in sync is the thing
+    being rolled back). Returns ``None`` (inert) when the kill-switch is off, the
+    configured backend is not issue-store, or no units are under rollback
+    supervision — never a false positive on ordinary file-store repos.
+    """
+    if not _effective_backend_kill_switch():
+        return None
+    if resolve_backend_id(cfg) != "issue-store":
+        return None
+    if tracked_units is None:
+        rollback = store_section(cfg).get("waveRollback")
+        tracked_units = rollback.get("trackedUnits") if isinstance(rollback, dict) else None
+        if not isinstance(tracked_units, list):
+            tracked_units = []
+    if not tracked_units:
+        return {"check": "wave-regression", "status": "ok", "reason": "no-tracked-units", "killSwitch": True}
+    try:
+        issue_backend = get_backend(root, cfg, override="issue-store")
+    except SystemExit:
+        return {"check": "wave-regression", "status": "unknown", "reason": "store-unreachable", "killSwitch": True}
+    if not isinstance(issue_backend, IssueStoreBackend):
+        return None
+    local_backend = InRepoPublicBackend(root, cfg)
+    drift: list[dict[str, Any]] = []
+    checked = 0
+    for unit in tracked_units:
+        unit_id = str(unit.get("unitId", "") or "")
+        body_path = str(unit.get("bodyPath", "") or "")
+        if not unit_id or not body_path:
+            continue
+        try:
+            store_result = issue_backend.get(unit_id, body_path)
+        except SystemExit:
+            continue
+        if store_result.verdict != "ok":
+            continue  # not this check's concern — reachability is covered separately
+        checked += 1
+        local_result = local_backend.get(unit_id, body_path)
+        # Compare canonical *content*, not the raw `.hash` field: each backend
+        # hashes with a different scheme (issue-store hashes the full record
+        # snapshot via `canonical_hash`; in-repo-public truncates a sha256 of
+        # the body only) so the hashes are never comparable across backends.
+        if local_result.verdict != "ok" or local_result.content != store_result.content:
+            drift.append({
+                "unitId": unit_id,
+                "bodyPath": body_path,
+                "storeContentHash": content_hash(store_result.content or ""),
+                "localContentHash": content_hash(local_result.content or "") if local_result.verdict == "ok" else None,
+                "localVerdict": local_result.verdict,
+            })
+    if drift:
+        return {
+            "check": "wave-regression",
+            "status": "drift",
+            "killSwitch": True,
+            "checkedUnits": checked,
+            "driftedUnits": drift,
+            "remediation": (
+                "run `planning_store.py materialize-from-store --units-json ...` "
+                "to re-sync local projections from the store"
+            ),
+        }
+    return {"check": "wave-regression", "status": "ok", "killSwitch": True, "checkedUnits": checked}
 
 
 def validate_local_synced_path(path: Path, *, allowlist: list[str] | None = None) -> dict[str, Any]:
@@ -1912,6 +2510,7 @@ def main() -> None:
         "get",
         "exists",
         "materialize",
+        "materialize-from-store",
         "validate-local-synced",
         "canonical-hash",
         "freeze",
@@ -1979,6 +2578,17 @@ def main() -> None:
         backend = get_backend(root, cfg, override=_optional(rest, "--backend"))
         result = backend.materialize(_require(rest, "--unit-id"), _require(rest, "--body-path"), Path(_require(rest, "--dest")))
         emit(result.as_dict(), 0 if result.verdict == "ok" else 2)
+    elif args.command == "materialize-from-store":
+        units_file = _optional(rest, "--units-file")
+        units_raw = _optional(rest, "--units-json")
+        if units_file:
+            units = json.loads(Path(units_file).read_text(encoding="utf-8"))
+        elif units_raw:
+            units = json.loads(units_raw)
+        else:
+            units = []
+        result = materialize_from_store(root, cfg, units)
+        emit(result, 0 if result.get("verdict") == "ok" else 2)
 
     elif args.command == "canonical-hash":
         from planning_canonical import CommentRecord, IssueSnapshot, canonical_form, canonical_hash as ch

@@ -47,6 +47,13 @@ class GraphUnit:
     extends: tuple[str, ...] = ()
     absorbs: tuple[str, ...] = ()
     source_path: str = ""
+    # PRD 057 R17 -- the gap's `schedule:` hint (or decoded `sw:gap-schedule:*`
+    # label); reconcile validates this against `absorbs` edges (see
+    # `planning_reconcile.schedule_stale_findings`).
+    schedule: str = ""
+    # PRD 057 R12 -- `sw:source:<owner>/<repo>` product source tag, used by
+    # `planning_discover.filter_units_by_source` scoping in the scheduler.
+    source: str = ""
 
     @property
     def is_terminal(self) -> bool:
@@ -81,6 +88,8 @@ def unit_from_frontmatter(fm: dict[str, Any], source_path: str = "") -> GraphUni
         extends=parse_edge_list(fm.get("extends")),
         absorbs=parse_edge_list(fm.get("absorbs")),
         source_path=source_path,
+        schedule=str(fm.get("schedule") or "").strip(),
+        source=str(fm.get("source") or "").strip(),
     )
 
 
@@ -264,6 +273,10 @@ def discover_units(root: Path) -> list[GraphUnit]:
             }
             if du.edge_map:
                 fm.update(du.edge_map)
+            if du.schedule:
+                fm["schedule"] = du.schedule
+            if du.source:
+                fm["source"] = du.source
             units.append(unit_from_frontmatter(fm, du.body_path))
             continue
         body = worktree / du.body_path

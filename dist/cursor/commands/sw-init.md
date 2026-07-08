@@ -230,6 +230,19 @@ This:
   `.cursor/hooks/state/planning-privacy-notice.md` and mirrors profile + ack into
   `.cursor/hooks/state/planning-visibility.json`.
 
+Then auto-configure `.gitignore` for planning-store paths from the resolved visibility profile:
+
+```bash
+python3 scripts/gitignore-generate.py generate --write
+```
+
+This regenerates the `# BEGIN visibility-generated … # END visibility-generated` block (private/memory unit
+bodies) plus the static `.cursor/hooks/state/` local-hook-state exclusion — the same directory that holds
+`.cursor/hooks/state/planning-cutover-gate.json` (PRD 057 R5). That gate file is a **local override only**;
+the CI-authoritative cutover signal is derived at read time from committed `workflow.config.json`
+(`planning.store.backend`) + structural markers (see `docs/guides/configuration.md`), so its absence in a
+fresh, gitignored checkout never causes a false "file mode" default.
+
 **Doctor re-run:** `python3 scripts/planning-doctor.py` validates store reachability, degrade-opens when the
 memory backend has no provider (actionable remediation, no hard-fail), sweeps orphaned materialized trees,
 and references env-var names only — never token values (R27).

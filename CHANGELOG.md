@@ -361,6 +361,7 @@
 * merge phase jira-cloud-adapter-canonicalization-placement-freeze-decoupling-l into feat/jira-issue-store-adapter (7737da7) <!-- sw-deliver:jira-cloud-adapter-canonicalization-placement-freeze-decoupling-l -->
 * merge phase dc-server-variant-auth-visibility-field-budget-lifecycle-probes-l into feat/jira-issue-store-adapter (236035b) <!-- sw-deliver:dc-server-variant-auth-visibility-field-budget-lifecycle-probes-l -->
 * merge phase bitbucket-guidance-acceptance-suite-doc-impact-gate-m into feat/jira-issue-store-adapter (41c1e78) <!-- sw-deliver:bitbucket-guidance-acceptance-suite-doc-impact-gate-m -->
+* merge phase cross-cutting-invariants-test-scaffolding-wave-1-r22-r23-r24-r32 into feat/planning-store-hardening (71667d6) <!-- sw-deliver:cross-cutting-invariants-test-scaffolding-wave-1-r22-r23-r24-r32 -->
 * merge phase run-entry-materialize-small-amendment-a3 into feat/issue-store-deliver-progress-native-links (3e23fb7) <!-- sw-deliver:run-entry-materialize-small-amendment-a3 -->
 * merge phase github-native-links-adapter-small into feat/issue-store-deliver-progress-native-links (f8d57b8) <!-- sw-deliver:github-native-links-adapter-small -->
 * merge phase github-native-links-adapter-small into feat/issue-store-deliver-progress-native-links (c45fe3b) <!-- sw-deliver:github-native-links-adapter-small -->
@@ -372,6 +373,24 @@
 * merge phase doc-currency-and-gap-closure-small into feat/issue-store-deliver-progress-native-links (5ac0135) <!-- sw-deliver:doc-currency-and-gap-closure-small -->
 * merge phase issue-store-doc-pipeline-authoring-medium-amendment-a1 into feat/issue-store-deliver-progress-native-links (0d09562) <!-- sw-deliver:issue-store-doc-pipeline-authoring-medium-amendment-a1 -->
 * merge phase separate-project-docs-bypass-small-amendment-a2 into feat/issue-store-deliver-progress-native-links (262b879) <!-- sw-deliver:separate-project-docs-bypass-small-amendment-a2 -->
+* merge phase scheduler-frontier-skip-park-governance-wave-1-r16-r28 into feat/planning-store-hardening (dcbafd4) <!-- sw-deliver:scheduler-frontier-skip-park-governance-wave-1-r16-r28 -->
+* merge phase gitlab-issues-demotion-fail-closed-wave-1-r7 into feat/planning-store-hardening (82bd788) <!-- sw-deliver:gitlab-issues-demotion-fail-closed-wave-1-r7 -->
+* merge phase dispatch-preflight-concrete-model-resolution-wave-1-r18 into feat/planning-store-hardening (3228432) <!-- sw-deliver:dispatch-preflight-concrete-model-resolution-wave-1-r18 -->
+* merge phase ci-token-absent-degraded-mode-rollback-kill-switch-wave-1-r30-r31 into feat/planning-store-hardening (3a9714d) <!-- sw-deliver:ci-token-absent-degraded-mode-rollback-kill-switch-wave-1-r30-r31 -->
+* merge phase shared-predicate-gap-capture-write-through-guard-wave-2-r1 into feat/planning-store-hardening (89632d0) <!-- sw-deliver:shared-predicate-gap-capture-write-through-guard-wave-2-r1 -->
+* merge phase spec-seed-reconcile-local-write-guards-wave-2-r2-r3 into feat/planning-store-hardening (11b0dba) <!-- sw-deliver:spec-seed-reconcile-local-write-guards-wave-2-r2-r3 -->
+* merge phase gitignore-auto-config-committed-cutover-signal-wave-2-r5 into feat/planning-store-hardening (bfcb705) <!-- sw-deliver:gitignore-auto-config-committed-cutover-signal-wave-2-r5 -->
+* merge phase query-cache-revalidation-atomic-gap-allocation-wave-2-r10-r25 into feat/planning-store-hardening (42a27b0) <!-- sw-deliver:query-cache-revalidation-atomic-gap-allocation-wave-2-r10-r25 -->
+* merge phase gap-resolution-store-close-label-wave-2-r4 into feat/planning-store-hardening (4ce4f6a) <!-- sw-deliver:gap-resolution-store-close-label-wave-2-r4 -->
+* merge phase visibility-axes-alias-precedence-store-host-privacy-privacy-ack-wave-2-r13-r14-r15-r29 into feat/planning-store-hardening (f1089f6) <!-- sw-deliver:visibility-axes-alias-precedence-store-host-privacy-privacy-ack-wave-2-r13-r14-r15-r29 -->
+* merge phase product-source-tags-schedule-hint-reconciliation-wave-4-r12-r17 into feat/planning-store-hardening (e611fad) <!-- sw-deliver:product-source-tags-schedule-hint-reconciliation-wave-4-r12-r17 -->
+* merge phase memory-backend-local-only-rename-document-21a-wave-2-r21 into feat/planning-store-hardening (4015f5b) <!-- sw-deliver:memory-backend-local-only-rename-document-21a-wave-2-r21 -->
+* merge phase terminal-gap-auto-capture-feature-named-titles-wave-5-r19-r20 into feat/planning-store-hardening (6cef4ff) <!-- sw-deliver:terminal-gap-auto-capture-feature-named-titles-wave-5-r19-r20 -->
+* merge phase chunk-manifest-id-rewrite-jira-chunking-wave-3-r8-r9 into feat/planning-store-hardening (f243680) <!-- sw-deliver:chunk-manifest-id-rewrite-jira-chunking-wave-3-r8-r9 -->
+* merge phase put-journal-concurrent-chunked-put-integrity-wave-3-r26-r27 into feat/planning-store-hardening (d77b74c) <!-- sw-deliver:put-journal-concurrent-chunked-put-integrity-wave-3-r26-r27 -->
+* merge phase provider-native-labels-human-readable-titles-wave-4-r11 into feat/planning-store-hardening (78712b6) <!-- sw-deliver:provider-native-labels-human-readable-titles-wave-4-r11 -->
+* merge phase memory-backend-provider-round-trip-21b-wave-5-r21 into feat/planning-store-hardening (82e0752) <!-- sw-deliver:memory-backend-provider-round-trip-21b-wave-5-r21 -->
+* merge phase deliver-chain-parity-audit-published-matrix-wave-5-r6 into feat/planning-store-hardening (c6aebbc) <!-- sw-deliver:deliver-chain-parity-audit-published-matrix-wave-5-r6 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

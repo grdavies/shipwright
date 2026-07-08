@@ -119,6 +119,9 @@ def doctor_inflight_divergence(root: Path) -> list[dict[str, Any]]:
 
 
 def region_disposition_matrix(root: Path) -> dict[str, str]:
+    # PRD 057 R5: load_cutover_gate derives its default from committed config (effective
+    # backend) + structural markers, so this matrix is correct even without the gitignored
+    # `.cursor/hooks/state/planning-cutover-gate.json` local-override file present.
     gate = load_cutover_gate(pp.git_root(root))
     return {
         "structural": gate.get("structural", "file"),

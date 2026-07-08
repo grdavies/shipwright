@@ -16,9 +16,11 @@ from planning_canonical import (
     MARKER_ARTIFACT_TYPE,
     MARKER_UNIT_ID,
     SOURCE_REMOVED_LABEL,
+    artifact_type_from_labels,
     compute_etag,
     parse_body_marker,
     type_label,
+    unit_id_from_labels,
 )
 from planning_jira_canonical import (
     JIRA_CLOUD_DESCRIPTION_LIMIT,
@@ -165,8 +167,14 @@ def _record_from_issue(
         comments_raw = comment_block.get("comments") or []
     comments = [_parse_comment(c, flavor=flavor) for c in comments_raw if isinstance(c, dict)]
     updated = str(fields.get("updated") or "")
-    artifact_type = parse_body_marker(body, MARKER_ARTIFACT_TYPE) or ""
-    unit_id = parse_body_marker(body, MARKER_UNIT_ID) or ""
+    # R11: provider-native label is the primary projection; the body marker
+    # is the one-release dual-read fallback -- Jira's label surface can be
+    # degraded to components/customField (see `planning_jira_probe.
+    # resolve_label_surface`, `bodyMarkerAuthoritative`), in which case
+    # `labels` here simply won't carry `sw:unit:*`/`sw:<type>` and this
+    # falls through to the body marker exactly as before.
+    artifact_type = artifact_type_from_labels(labels) or parse_body_marker(body, MARKER_ARTIFACT_TYPE) or ""
+    unit_id = unit_id_from_labels(labels) or parse_body_marker(body, MARKER_UNIT_ID) or ""
     num_match = ISSUE_KEY_NUM.search(key)
     number = int(num_match.group(1)) if num_match else 0
     locked = "sw:frozen" in labels

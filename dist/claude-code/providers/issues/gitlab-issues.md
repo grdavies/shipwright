@@ -16,6 +16,26 @@ capability:
 
 # GitLab Issues adapter
 
+> **⛔ Deferred / fail-closed (PRD 057 R7 / D1, gap-039).** `gitlab-issues` is
+> **not shipped**: it is removed from `SHIPPED_ISSUES_PROVIDERS` and no live
+> `planning_gitlab_client.py` adapter is wired into `issues_lib._live_backend`
+> for the standard write path. Selecting it for a live issue-store backend
+> **fails closed** with the operator message:
+>
+> > issue provider `gitlab-issues` is deferred (fail-closed): no live adapter is
+> > shipped in this release. Select a shipped provider (`github-issues` or `jira`),
+> > or use the file-store fallback. A follow-up unit will implement the live
+> > `planning_gitlab_client.py` adapter and re-add it to the shipped set
+> > (PRD 057 R7 / D1; gap-039).
+>
+> `gitlab-issues` stays a *recognized* provider (kept in `ISSUES_PROVIDERS` for
+> config validation), so an issue-store config that names it resolves to the
+> `issues-provider-not-shipped` fallback rather than a partial round-trip.
+> **Follow-up unit:** a dedicated unit will land the live adapter at parity and
+> re-add `gitlab-issues` to the shipped set. The verb/REST mapping below is the
+> target contract for that follow-up and does not describe currently shipped
+> behavior.
+
 Selected when `planning.store.issuesProvider` is `gitlab-issues` (independent of `host.provider`).
 
 ## Capability flags
