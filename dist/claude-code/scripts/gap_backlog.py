@@ -431,6 +431,47 @@ def _resolve_for_prd_issue_store(root: Path, prd: str) -> dict[str, Any]:
     return {"verdict": "pass", "flipped": flipped, "error": None}
 
 
+GAP_051_LEGACY_ID = "GAP-051"
+PRD_058_GAP_051_PHASE_SLUG = "gap-051-dependency-gate-unit-id-derivation-regression-coverage-r1-r6"
+
+
+def flip_resolve_by_gap_ids(
+    backlog: GapBacklog,
+    *,
+    gap_ids: list[str],
+    scope_note: str | None = None,
+) -> list[str]:
+    """Resolve explicit legacy GAP-xxx rows (PRD 058 R6 partial phase delivery)."""
+    want = {gid.strip().upper() for gid in gap_ids if gid.strip()}
+    resolved: list[str] = []
+    for row in backlog.rows:
+        if row.gap_id.upper() not in want:
+            continue
+        if row.status.lower() not in ("open", "scheduled"):
+            continue
+        row.status = "resolved"
+        row.schedule = f"— ({scope_note})" if scope_note else "—"
+        resolved.append(row.gap_id)
+    return resolved
+
+
+def resolve_gap_051_for_prd_058(root: Path, *, scope_note: str | None = None) -> dict[str, Any]:
+    """Close GAP-051 after PRD 058 gap-051 phase verification (R6)."""
+    note = scope_note or "PRD 058 gap-051"
+    gap_path = default_gap_path(root)
+    if not gap_path.is_file():
+        return {"verdict": "pass", "flipped": [], "error": None}
+    backlog = parse_gap_backlog(gap_path.read_text(encoding="utf-8"))
+    for row in backlog.rows:
+        if row.gap_id.upper() == GAP_051_LEGACY_ID and row.is_open:
+            row.status = "scheduled"
+            row.schedule = schedule_label("058")
+    flipped = flip_resolve_by_gap_ids(backlog, gap_ids=[GAP_051_LEGACY_ID], scope_note=note)
+    if flipped:
+        gap_path.write_text(render_gap_backlog(backlog), encoding="utf-8")
+    return {"verdict": "pass", "flipped": flipped, "error": None}
+
+
 def flip_resolve(backlog: GapBacklog, *, prd: str, scope_note: str | None = None) -> list[str]:
     prd_n = str(int(prd)) if prd.isdigit() else prd.lstrip("0") or prd
     sched_re = re.compile(rf"^PRD\s+0*{re.escape(str(int(prd_n))) if prd_n.isdigit() else re.escape(prd_n)}(?:\s+A\d+)?$", re.I)

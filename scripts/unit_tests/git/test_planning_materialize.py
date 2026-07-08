@@ -42,3 +42,22 @@ def test_planning_materialize_behavior(repo_root: Path, sw_env: dict[str, str], 
 def test_planning_materialize_harness_present(repo_root: Path) -> None:
     """R16 — harness module must exist (fail-closed if port regresses)."""
     assert (repo_root / _PKG / _HARNESS).is_file()
+
+def _import_planning_materialize():
+    import sys
+
+    scripts = Path(__file__).resolve().parents[2]
+    if str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
+    import planning_materialize as pm
+
+    return pm
+
+
+def test_unit_id_from_task_list_rel_uses_filename_stem() -> None:
+    """R2 — filename stem is the store unit id, not a PRD-shaped parent id."""
+    pm = _import_planning_materialize()
+    rel = "docs/prds/058-dispatch-loop-hardening/tasks-058-dispatch-loop-hardening.md"
+    unit_id = pm.unit_id_from_task_list_rel(rel)
+    assert unit_id == "tasks-058-dispatch-loop-hardening"
+    assert unit_id != "058-prd-dispatch-loop-hardening"

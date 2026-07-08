@@ -130,6 +130,23 @@ changes halt with remediation. CI/host never materializes.
 
 Fixture suite: `python3 scripts/test/run_planning_materialize_fixtures.py` (registered as
 `planning-materialize-fixtures` in the PR test-plan manifest).
+### Unit-id derivation (gap-051 / PRD 058 R1–R2)
+
+Frozen task lists participate in **two distinct unit-id derivations** — do not conflate them:
+
+| Function | Module | Input | Derived id | Consumer |
+| --- | --- | --- | --- | --- |
+| `unit_id_from_task_list` | `scripts/planning_deliver_gate.py` | Task-list **parent directory** under `docs/prds/<n>-<slug>/` | `<n>-prd-<slug>` (legacy `prd-<slug>` dirs unchanged) | Planning-graph dependency gate / scheduler |
+| `unit_id_from_task_list_rel` | `scripts/planning_materialize.py` | Task-list **filename stem** | `tasks-<n>-<slug>` | Issue-store materialize / run-entry pin |
+
+Example path `docs/prds/058-dispatch-loop-hardening/tasks-058-dispatch-loop-hardening.md`:
+- graph unit id → `058-prd-dispatch-loop-hardening`
+- materialize/store unit id → `tasks-058-dispatch-loop-hardening`
+
+`dependency_gate` / `run_start_revalidate` fail closed when the derived graph unit is missing and the path is
+outside the canonical `docs/prds/<n>-<slug>/` layout; pre-freeze canonical task lists are allowlisted (R5).
+
+See also `core/commands/sw-deliver.md` **Unit-id derivation**.
 
 **Per-branch scoping (PRD 013 R6–R11):** `<slug>` derives from the target feature branch
 (`feat/<slug>` → `sw-deliver-state.<slug>.json`). Orthogonal branches run concurrently with
