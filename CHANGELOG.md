@@ -392,6 +392,7 @@
 * merge phase memory-backend-provider-round-trip-21b-wave-5-r21 into feat/planning-store-hardening (82e0752) <!-- sw-deliver:memory-backend-provider-round-trip-21b-wave-5-r21 -->
 * merge phase deliver-chain-parity-audit-published-matrix-wave-5-r6 into feat/planning-store-hardening (c6aebbc) <!-- sw-deliver:deliver-chain-parity-audit-published-matrix-wave-5-r6 -->
 * merge phase gap-051-dependency-gate-unit-id-derivation-regression-coverage-r1-r6 into feat/dispatch-loop-hardening (719bd36) <!-- sw-deliver:gap-051-dependency-gate-unit-id-derivation-regression-coverage-r1-r6 -->
+* merge phase gap-082-shared-intensity-directive-helper-module-r7-r8-r12 into feat/dispatch-loop-hardening (e4fc664) <!-- sw-deliver:gap-082-shared-intensity-directive-helper-module-r7-r8-r12 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
