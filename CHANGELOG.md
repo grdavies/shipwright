@@ -396,6 +396,7 @@
 * merge phase gap-083-native-compression-module-core-r18-r27 into feat/dispatch-loop-hardening (8f612e8) <!-- sw-deliver:gap-083-native-compression-module-core-r18-r27 -->
 * merge phase gap-082-hook-fail-closed-enforcement-scope-r9-r10-r11-r13 into feat/dispatch-loop-hardening (39b803f) <!-- sw-deliver:gap-082-hook-fail-closed-enforcement-scope-r9-r10-r11-r13 -->
 * merge phase gap-082-dispatch-check-py-prompt-validation-surface-r15 into feat/dispatch-loop-hardening (989ad61) <!-- sw-deliver:gap-082-dispatch-check-py-prompt-validation-surface-r15 -->
+* merge phase gap-082-embedder-call-site-updates-r14 into feat/dispatch-loop-hardening (507792e) <!-- sw-deliver:gap-082-embedder-call-site-updates-r14 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
