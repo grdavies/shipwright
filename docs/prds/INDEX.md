@@ -59,3 +59,4 @@
 | 055 | workflow-fidelity-gap-closure | [055-prd-workflow-fidelity-gap-closure](issue-cache:055-prd-workflow-fidelity-gap-closure) | — | complete |
 | 056 | issue-store-deliver-progress-native-links | [056-prd-issue-store-deliver-progress-native-links](issue-cache:056-prd-issue-store-deliver-progress-native-links) | — | proposed |
 | 057 | planning-store-hardening | [057-prd-planning-store-hardening](issue-cache:057-prd-planning-store-hardening) | — | complete |
+| 058 | dispatch-loop-hardening | [058-prd-dispatch-loop-hardening](issue-cache:058-prd-dispatch-loop-hardening) | [tasks-058-dispatch-loop-hardening](issue-cache:tasks-058-dispatch-loop-hardening) | in-progress |
