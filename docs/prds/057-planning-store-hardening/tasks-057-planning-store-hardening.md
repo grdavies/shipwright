@@ -420,11 +420,11 @@ Wave map:
 
 ### 18. Memory backend provider round-trip — 21b (Wave 5 · R21)
 
-- [ ] 18.1 True provider round-trip through the memory adapter with local cache (R21 / 21b)
+- [x] 18.1 True provider round-trip through the memory adapter with local cache (R21 / 21b)
   - **File:** `scripts/planning_store.py`
   - **Expected:** the memory backend planning-body path round-trips through the provider adapter with a local cache (21b), building on the 21a local-only rename.
   - **R-IDs:** R21
-- [ ] 18.2 Memory round-trip fixture (R21 / 21b)
+- [x] 18.2 Memory round-trip fixture (R21 / 21b)
   - **File:** `scripts/test/fixtures/memory-roundtrip/harness.py`
   - **Expected:** planning bodies round-trip through the provider adapter (falling back to the R21a local cache when the provider is unavailable).
   - **R-IDs:** R21
