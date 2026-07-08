@@ -2,13 +2,16 @@
 .cursor/hooks/state/
 
 # /sw-deliver runtime artifacts (living, per-worktree — not committed)
-.cursor/sw-deliver-plan.json
-.cursor/sw-deliver-state.json
-.cursor/sw-deliver-state.*.json
-.cursor/sw-deliver.lock
-.cursor/sw-deliver-runs/
-.cursor/planning-legacy-projection-stamp.json
-.cursor/sw-memory/planning-bodies/
+# .cursor/sw-deliver-plan.json
+# .cursor/sw-deliver-state.json
+# .cursor/sw-deliver-state.*.json
+# .cursor/sw-deliver.lock
+# .cursor/sw-deliver-runs/
+# .cursor/planning-legacy-projection-stamp.json
+# .cursor/sw-memory/planning-bodies/
+# .cursor/sw-feedback-runs/
+.cursor/**
+!.cursor/workflow.config.json
 
 # Generated deliver-phase fixture temps (superseded by deliver-phase-mode/tasks/)
 scripts/test/fixtures/deliver-phase/
