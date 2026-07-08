@@ -102,6 +102,18 @@ PROJECT_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
 PROJECT_KEY_REGISTRY = ".cursor/hooks/state/issue-store-project-keys.json"
 ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
 
+# PRD 057 R26 -- partial-write journal for chunked `IssueStoreBackend.put`
+# calls. A chunked put cannot commit the head body, the overflow comments,
+# and the real-id manifest rewrite as one atomic provider transaction, so a
+# crash/exception between those steps must still (a) resolve a retry back to
+# the SAME issue -- never mint a duplicate -- and (b) stay visibly flagged
+# until the manifest rewrite completes. The journal entry (keyed the same as
+# ISSUE_UNIT_INDEX) records the issue id + step + posted comment ids so a
+# retry (or the doctor) can see exactly how far a put got; PUT_INCOMPLETE_LABEL
+# is the durable, provider-side twin of that same signal.
+PUT_JOURNAL_PATH = ".cursor/hooks/state/issue-store-put-journal.json"
+PUT_INCOMPLETE_LABEL = "sw:put-incomplete"
+
 from issues_lib import (  # noqa: E402
     IssueBudgetExhausted,
     IssueLifecycleDrift,
@@ -1397,6 +1409,28 @@ def issue_index_key(project_key: str, unit_id: str) -> str:
     return f"{project_key}:{unit_id}"
 
 
+def load_put_journal(root: Path) -> dict[str, Any]:
+    """R26 -- load the partial-write journal (keyed by ``issue_index_key``)."""
+    path = root / PUT_JOURNAL_PATH
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    entries = data.get("units") if isinstance(data, dict) else None
+    return entries if isinstance(entries, dict) else {}
+
+
+def save_put_journal(root: Path, journal: dict[str, Any]) -> None:
+    path = root / PUT_JOURNAL_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({"version": 1, "units": journal}, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
 class IssueStoreBackend(PlanningStoreBackend):
     backend_id = "issue-store"
 
@@ -1410,6 +1444,7 @@ class IssueStoreBackend(PlanningStoreBackend):
         self.issues_provider = str(issues.get("provider", "none"))
         self._client = IssuesClient(root, self.issues_provider)
         self._index = load_issue_unit_index(root)
+        self._journal = load_put_journal(root)
 
     def _artifact_type(self, body_path: str) -> str:
         return infer_artifact_type(body_path)
@@ -1548,13 +1583,23 @@ class IssueStoreBackend(PlanningStoreBackend):
         labels = self._labels_for(artifact_type)
         body = compose_issue_body(self.project_key, artifact_type, unit_id, content)
         body, extra_comments = chunk_body_if_needed(body, [], provider=self.issues_provider)
+        idx_key = issue_index_key(self.project_key, unit_id)
+        chunked = bool(extra_comments)
+        # R26: a chunked put cannot commit its head body, its overflow
+        # comments, and its real-id manifest rewrite in one atomic provider
+        # call. Mark the issue `sw:put-incomplete` for the duration of that
+        # multi-step write so a crash mid-flight leaves a durable, doctor-
+        # visible signal instead of a manifest silently pointing at synthetic
+        # ids that were never a real comment. Cleared only once the manifest
+        # rewrite below actually succeeds.
+        head_labels = sorted(set(labels) | {PUT_INCOMPLETE_LABEL}) if chunked else labels
         try:
             record = self._lookup_record(unit_id, body_path)
         except IssueNotFound:
             record = self._client.issue_create(
                 title=title,
                 body=body,
-                labels=labels,
+                labels=head_labels,
                 project_key=self.project_key,
                 artifact_type=artifact_type,
                 unit_id=unit_id,
@@ -1565,7 +1610,7 @@ class IssueStoreBackend(PlanningStoreBackend):
                     record.id,
                     title=title,
                     body=body,
-                    labels=labels,
+                    labels=head_labels,
                     if_match=record.etag,
                 )
             except IssueRevisionConflict as exc:
@@ -1575,12 +1620,31 @@ class IssueStoreBackend(PlanningStoreBackend):
                     expected=exc.expected,
                     actual=exc.actual,
                 )
+        # R26: persist the unit->issue index (and, for a chunked body, a
+        # journal entry) immediately after the head write succeeds -- before
+        # posting a single overflow comment -- so a crash anywhere past this
+        # point still resolves a retry of this same unit id back to THIS
+        # issue instead of minting a duplicate (idempotent resume).
+        self._index[idx_key] = record.id
+        save_issue_unit_index(self.root, self._index)
+        if chunked:
+            self._journal[idx_key] = {
+                "unitId": unit_id,
+                "issueId": record.id,
+                "step": "body-written",
+                "expectedChunks": len(extra_comments),
+                "postedCommentIds": [],
+            }
+            save_put_journal(self.root, self._journal)
         chunk_comment_ids: list[str] = []
         for comment in extra_comments:
             self._guard_write_secrets(comment.body, path_hint=body_path)
             posted = self._client.issue_comment(record.id, comment.body, markers=comment.markers)
             chunk_comment_ids.append(posted.id)
             record = self._client.issue_get(record.id)
+            self._journal[idx_key]["step"] = "comments-pending"
+            self._journal[idx_key]["postedCommentIds"] = list(chunk_comment_ids)
+            save_put_journal(self.root, self._journal)
         if chunk_comment_ids:
             # R8: `body` still carries the synthetic placeholder chunk ids
             # assigned before the provider issued real comment ids above;
@@ -1589,14 +1653,21 @@ class IssueStoreBackend(PlanningStoreBackend):
             # back to positional matching, which can select a stale overflow
             # comment left over from an earlier put.
             rewritten_body = rewrite_chunk_manifest_ids(body, chunk_comment_ids)
-            if rewritten_body != record.body:
+            final_labels = sorted(set(record.labels) - {PUT_INCOMPLETE_LABEL})
+            if rewritten_body != record.body or final_labels != sorted(record.labels):
                 try:
                     record = self._client.issue_update(
                         record.id,
                         body=rewritten_body,
+                        labels=final_labels,
                         if_match=record.etag,
                     )
                 except IssueRevisionConflict as exc:
+                    # R26: fail closed -- the issue is left at its prior
+                    # (pre-this-update) etag, still carrying
+                    # PUT_INCOMPLETE_LABEL and its journal entry, both
+                    # visible to `planning-doctor.py` (`put-partial`,
+                    # `chunk-cardinality-mismatch`) until a retry converges.
                     fail(
                         "revision-conflict",
                         code="revision-conflict",
@@ -1604,9 +1675,9 @@ class IssueStoreBackend(PlanningStoreBackend):
                         actual=exc.actual,
                     )
                 record = self._client.issue_get(record.id)
-        idx_key = issue_index_key(self.project_key, unit_id)
-        self._index[idx_key] = record.id
-        save_issue_unit_index(self.root, self._index)
+        if chunked:
+            self._journal.pop(idx_key, None)
+            save_put_journal(self.root, self._journal)
         digest = canonical_hash(self._record_to_snapshot(record))
         log_operation("put", unit_id, body_path, content, self.backend_id)
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=digest)

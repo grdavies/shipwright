@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import uuid
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import quote, unquote
@@ -63,6 +64,19 @@ SOURCE_MISSING_LABEL = "sw:source-missing"
 # `absorbs` edges and surfaces this label on mismatch.
 GAP_SCHEDULE_LABEL_PREFIX = "sw:gap-schedule:"
 SCHEDULE_STALE_LABEL = "sw:schedule-stale"
+
+# PRD 057 R27 -- last-writer-wins body+comment consistency. Each generic
+# (non-Jira) chunk_body_if_needed call mints one write-token spanning the
+# whole comment set it produces, carried in the manifest's writeToken field
+# and in each overflow comment's sw-chunk-token:<token> marker. Deliberately
+# a comment *marker* (structural metadata), never literal body text: the
+# fixture issue store preserves markers verbatim, so token-scoped reassembly
+# works end-to-end offline, without perturbing the byte-for-byte overflow
+# body content other fixtures (R8) already assert on. Live provider clients
+# (GitHub/Jira) only round-trip a small fixed marker set from body text today
+# and will not carry this token -- reassembly there simply falls back to the
+# pre-existing (unscoped) behavior, never a regression.
+CHUNK_TOKEN_MARKER_PREFIX = "sw-chunk-token:"
 
 
 @dataclass
@@ -387,6 +401,22 @@ def append_chunk_manifest_marker(head: str, marker: str) -> str:
     return trimmed + marker
 
 
+def _manifest_write_token(body: str) -> str | None:
+    """Extract the writeToken (if any) from the sw-chunk-manifest already
+    embedded in ``body``, so a manifest rewrite (real ids replacing synthetic
+    placeholders) preserves the write-session token instead of dropping it
+    (R27)."""
+    match = MARKER_CHUNK_MANIFEST.search(body)
+    if not match:
+        return None
+    try:
+        existing = json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return None
+    token = existing.get("writeToken") if isinstance(existing, dict) else None
+    return token if isinstance(token, str) and token else None
+
+
 def chunk_body_if_needed(
     body: str,
     comments: list[CommentRecord],
@@ -415,13 +445,22 @@ def chunk_body_if_needed(
     head = encoded[:BODY_SIZE_LIMIT].decode("utf-8", errors="ignore")
     overflow = encoded[BODY_SIZE_LIMIT:].decode("utf-8", errors="ignore")
     chunk_id = f"chunk-{len(comments)}"
+    # R27: one write-token per chunking call, spanning this whole comment set
+    # (see CHUNK_TOKEN_MARKER_PREFIX docstring above) -- a concurrent writer's
+    # own (differently-tokened) overflow comments are never picked up by this
+    # session's positional-fallback reassembly.
+    write_token = uuid.uuid4().hex[:12]
     chunk_comment = CommentRecord(
         id=chunk_id,
         body=f"<!-- sw-chunk-overflow -->\n{overflow}",
-        markers=["sw-chunk-overflow"],
+        markers=["sw-chunk-overflow", f"{CHUNK_TOKEN_MARKER_PREFIX}{write_token}"],
     )
     new_comments = list(comments) + [chunk_comment]
-    manifest = {"version": 1, "chunks": [{"index": 0, "commentId": chunk_id}]}
+    manifest = {
+        "version": 1,
+        "chunks": [{"index": 0, "commentId": chunk_id}],
+        "writeToken": write_token,
+    }
     if MARKER_CHUNK_MANIFEST.search(head):
         head = MARKER_CHUNK_MANIFEST.sub(
             f"<!-- sw-chunk-manifest: {json.dumps(manifest, sort_keys=True, ensure_ascii=False)} -->",
@@ -444,28 +483,50 @@ def rewrite_chunk_manifest_ids(body: str, comment_ids: list[str]) -> str:
     that ``reassemble_body`` can match directly -- instead of falling back to
     positional matching against every ``sw-chunk-overflow`` comment on the
     issue, which can select a stale comment left over from an earlier put.
+
+    R27: preserves the write-token (if any) already embedded in ``body``'s
+    manifest, so a rewritten manifest still scopes positional-fallback
+    reassembly to this write session's own overflow comments.
     """
     if not comment_ids:
         return body
-    manifest = {
+    manifest: dict[str, Any] = {
         "version": 1,
         "chunks": [{"index": index, "commentId": cid} for index, cid in enumerate(comment_ids)],
     }
+    token = _manifest_write_token(body)
+    if token:
+        manifest["writeToken"] = token
     marker = f"<!-- sw-chunk-manifest: {json.dumps(manifest, sort_keys=True, ensure_ascii=False)} -->"
     return append_chunk_manifest_marker(body, marker)
 
 
-def _overflow_chunk_comments(comments: list[CommentRecord]) -> list[CommentRecord]:
-    ordered = sorted(
-        [
-            c
-            for c in comments
-            if "sw-chunk-overflow" in c.markers
-            or "<!-- sw-chunk-overflow -->" in c.body
-            or "<!--sw-chunk-overflow-->" in c.body
-        ],
-        key=lambda c: (c.created_at, c.id),
-    )
+def overflow_chunk_comments(
+    comments: list[CommentRecord],
+    *,
+    token: str | None = None,
+) -> list[CommentRecord]:
+    """Overflow comments eligible for positional-fallback reassembly.
+
+    R27: when ``token`` is given (the current manifest's ``writeToken``),
+    scope the result to comments carrying a matching ``sw-chunk-token:``
+    marker -- excluding another writer's (or a superseded write attempt's)
+    overflow comments left on the same issue, so reassembly never builds a
+    hybrid body out of two different write sessions. ``token=None`` (no
+    token on the manifest -- Jira-built or pre-R27 manifests) keeps the
+    original unscoped behavior.
+    """
+    candidates = [
+        c
+        for c in comments
+        if "sw-chunk-overflow" in c.markers
+        or "<!-- sw-chunk-overflow -->" in c.body
+        or "<!--sw-chunk-overflow-->" in c.body
+    ]
+    if token:
+        token_marker = f"{CHUNK_TOKEN_MARKER_PREFIX}{token}"
+        candidates = [c for c in candidates if token_marker in c.markers]
+    ordered = sorted(candidates, key=lambda c: (c.created_at, c.id))
     unique: list[CommentRecord] = []
     seen: set[str] = set()
     for comment in ordered:
@@ -524,8 +585,14 @@ def reassemble_body(body: str, comments: list[CommentRecord]) -> str:
     chunks = manifest.get("chunks") if isinstance(manifest, dict) else None
     if not isinstance(chunks, list):
         return text
+    write_token = manifest.get("writeToken") if isinstance(manifest, dict) else None
     comment_by_id = {c.id: c for c in comments}
-    overflow_comments = _overflow_chunk_comments(comments)
+    # R27: direct commentId matches below are unambiguous regardless of
+    # write-token (real provider ids are globally unique); the positional
+    # fallback is the only path a stray concurrent/superseded write session's
+    # overflow comment could leak into, so scope that list to this
+    # manifest's own write-token.
+    overflow_comments = overflow_chunk_comments(comments, token=write_token)
     overflow_parts: list[str] = []
     for entry in sorted(chunks, key=lambda x: x.get("index", 0) if isinstance(x, dict) else 0):
         if not isinstance(entry, dict):
