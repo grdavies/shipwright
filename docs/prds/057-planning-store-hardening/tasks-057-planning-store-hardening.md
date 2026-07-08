@@ -324,23 +324,23 @@ Wave map:
 
 ### 14. Put journal + concurrent chunked-put integrity (Wave 3 · R26, R27)
 
-- [ ] 14.1 Partial-write journal + fail-closed manifest rewrite (R26)
+- [x] 14.1 Partial-write journal + fail-closed manifest rewrite (R26)
   - **File:** `scripts/planning_store.py`
   - **Expected:** `put` records a partial-write journal (unit-id, step, provider ids) enabling idempotent resume; a failed manifest rewrite fails closed (prior etag or `sw:put-incomplete`), never leaving durable synthetic ids.
   - **R-IDs:** R26
-- [ ] 14.2 Last-writer-wins body+comment consistency (R27)
+- [x] 14.2 Last-writer-wins body+comment consistency (R27)
   - **File:** `scripts/planning_canonical.py`
   - **Expected:** body + overflow-comment updates apply atomically (version token spanning the comment set, or delete-and-replace under the body etag) so reassembly never interleaves chunks from two writers.
   - **R-IDs:** R27
-- [ ] 14.3 Doctor put-partial + cardinality-mismatch findings + fixtures (R26) (unit 1/2)
+- [x] 14.3 Doctor put-partial + cardinality-mismatch findings + fixtures (R26) (unit 1/2)
   - **File:** `scripts/planning-doctor.py`
   - **Expected:** doctor surfaces `put-partial` with remediation and flags manifest/comment cardinality mismatch; fixture: failure after `issue_create` leaves a resumable journal and retry converges to one issue.
   - **R-IDs:** R26
-- [ ] 14.4 Doctor put-partial + cardinality-mismatch findings + fixtures (R26) (unit 2/2)
+- [x] 14.4 Doctor put-partial + cardinality-mismatch findings + fixtures (R26) (unit 2/2)
   - **File:** `scripts/test/fixtures/planning-put-journal/harness.py`
   - **Expected:** doctor surfaces `put-partial` with remediation and flags manifest/comment cardinality mismatch; fixture: failure after `issue_create` leaves a resumable journal and retry converges to one issue.
   - **R-IDs:** R26
-- [ ] 14.5 Concurrent chunked-put integrity fixture (R27)
+- [x] 14.5 Concurrent chunked-put integrity fixture (R27)
   - **File:** `scripts/test/fixtures/planning-concurrent-chunk/harness.py`
   - **Expected:** interleaved concurrent large puts reassemble to exactly one writer's body (no hybrid); doctor flags any cardinality mismatch.
   - **R-IDs:** R27
