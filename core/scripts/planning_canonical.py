@@ -390,7 +390,25 @@ def append_chunk_manifest_marker(head: str, marker: str) -> str:
 def chunk_body_if_needed(
     body: str,
     comments: list[CommentRecord],
+    *,
+    provider: str | None = None,
 ) -> tuple[str, list[CommentRecord]]:
+    if provider == "jira":
+        # R9: Jira Cloud's ADF description/comment payload limits (~32KB) are
+        # far tighter than the generic BODY_SIZE_LIMIT below, so a body that
+        # fits under the generic limit can still overflow Jira's own
+        # client-side check and be rejected at issue_create/issue_update time.
+        # Delegate to the Jira-aware splitter so oversized-for-Jira bodies
+        # chunk here, before the client ever sees them.
+        #
+        # Lazy import: `planning_jira_canonical` imports the generic markers
+        # and helpers from this module at top level, so importing it back
+        # here at module scope would create a circular import. Deferring the
+        # import until this branch actually runs is safe -- both modules are
+        # already fully loaded by the time `chunk_body_if_needed` executes.
+        from planning_jira_canonical import chunk_body_for_jira_cloud
+
+        return chunk_body_for_jira_cloud(body, comments)
     if len(body.encode("utf-8")) <= BODY_SIZE_LIMIT:
         return body, comments
     encoded = body.encode("utf-8")
@@ -413,6 +431,28 @@ def chunk_body_if_needed(
         marker = f"<!-- sw-chunk-manifest: {json.dumps(manifest, sort_keys=True, ensure_ascii=False)} -->"
         head = append_chunk_manifest_marker(head, marker)
     return head, new_comments
+
+
+def rewrite_chunk_manifest_ids(body: str, comment_ids: list[str]) -> str:
+    """R8 -- replace synthetic placeholder chunk ids with real provider ids.
+
+    ``chunk_body_if_needed`` assigns synthetic placeholder ids (``chunk-N``)
+    before the provider has created the overflow comments and issued real
+    ids. Call this once those comments are actually posted (in the same order
+    they were generated, so ``comment_ids[i]`` is the real id for chunk index
+    ``i``) so the manifest baked into the persisted body carries the real ids
+    that ``reassemble_body`` can match directly -- instead of falling back to
+    positional matching against every ``sw-chunk-overflow`` comment on the
+    issue, which can select a stale comment left over from an earlier put.
+    """
+    if not comment_ids:
+        return body
+    manifest = {
+        "version": 1,
+        "chunks": [{"index": index, "commentId": cid} for index, cid in enumerate(comment_ids)],
+    }
+    marker = f"<!-- sw-chunk-manifest: {json.dumps(manifest, sort_keys=True, ensure_ascii=False)} -->"
+    return append_chunk_manifest_marker(body, marker)
 
 
 def _overflow_chunk_comments(comments: list[CommentRecord]) -> list[CommentRecord]:
