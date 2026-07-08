@@ -435,6 +435,8 @@ GAP_051_LEGACY_ID = "GAP-051"
 PRD_058_GAP_051_PHASE_SLUG = "gap-051-dependency-gate-unit-id-derivation-regression-coverage-r1-r6"
 GAP_082_LEGACY_ID = "GAP-082"
 PRD_058_GAP_082_PHASE_SLUG = "gap-082-tests-resolve-r16-r17"
+GAP_083_LEGACY_ID = "GAP-083"
+PRD_058_GAP_083_PHASE_SLUG = "gap-083-tests-resolve-r31-r32"
 
 
 def flip_resolve_by_gap_ids(
@@ -490,6 +492,29 @@ def resolve_gap_082_for_prd_058(root: Path, *, scope_note: str | None = None) ->
         gap_path.write_text(render_gap_backlog(backlog), encoding="utf-8")
     return {"verdict": "pass", "flipped": flipped, "error": None}
 
+
+
+def resolve_gap_083_for_prd_058(root: Path, *, scope_note: str | None = None) -> dict[str, Any]:
+    """Close gap-083 after PRD 058 Task-dispatch compression verification (R32).
+
+    Resolution is scoped to the Task-dispatch boundary only and does not wait on
+    the R30 default-flip parity milestone (Phase 12).
+    """
+    note = scope_note or "PRD 058 gap-083 Task-dispatch boundary"
+    flipped = flip_canonical_resolve(root, prd="058", scope_note=note, unit_refs=["gap-083"])
+    gap_path = default_gap_path(root)
+    if not gap_path.is_file():
+        return {"verdict": "pass", "flipped": flipped, "error": None}
+    backlog = parse_gap_backlog(gap_path.read_text(encoding="utf-8"))
+    for row in backlog.rows:
+        if row.gap_id.upper() == GAP_083_LEGACY_ID and row.is_open:
+            row.status = "scheduled"
+            row.schedule = schedule_label("058")
+    legacy = flip_resolve_by_gap_ids(backlog, gap_ids=[GAP_083_LEGACY_ID], scope_note=note)
+    if legacy:
+        gap_path.write_text(render_gap_backlog(backlog), encoding="utf-8")
+    flipped.extend(legacy)
+    return {"verdict": "pass", "flipped": flipped, "error": None}
 
 def flip_resolve(backlog: GapBacklog, *, prd: str, scope_note: str | None = None) -> list[str]:
     prd_n = str(int(prd)) if prd.isdigit() else prd.lstrip("0") or prd
