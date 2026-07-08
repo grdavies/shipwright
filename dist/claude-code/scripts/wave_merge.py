@@ -1240,10 +1240,9 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
             "--merge-commit",
             merge_commit or "",
             "--commit",
+            "--worktree",
+            str(orch_wt),
         ]
-        orch = parse_kv(args, "--orchestrator-worktree")
-        if orch:
-            bk_args.extend(["--worktree", orch])
         bk_proc = subprocess.run(bk_args, cwd=str(root), text=True, capture_output=True)
         if bk_proc.returncode != 0:
             try:
@@ -1263,9 +1262,9 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
             str(root),
             "reconcile",
             "--commit",
+            "--worktree",
+            str(orch_wt),
         ]
-        if orch:
-            living_args.extend(["--worktree", orch])
         living_proc = subprocess.run(living_args, cwd=str(root), text=True, capture_output=True)
         living_docs = {}
         if living_proc.stdout.strip():
