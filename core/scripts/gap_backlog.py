@@ -433,6 +433,8 @@ def _resolve_for_prd_issue_store(root: Path, prd: str) -> dict[str, Any]:
 
 GAP_051_LEGACY_ID = "GAP-051"
 PRD_058_GAP_051_PHASE_SLUG = "gap-051-dependency-gate-unit-id-derivation-regression-coverage-r1-r6"
+GAP_082_LEGACY_ID = "GAP-082"
+PRD_058_GAP_082_PHASE_SLUG = "gap-082-tests-resolve-r16-r17"
 
 
 def flip_resolve_by_gap_ids(
@@ -467,6 +469,23 @@ def resolve_gap_051_for_prd_058(root: Path, *, scope_note: str | None = None) ->
             row.status = "scheduled"
             row.schedule = schedule_label("058")
     flipped = flip_resolve_by_gap_ids(backlog, gap_ids=[GAP_051_LEGACY_ID], scope_note=note)
+    if flipped:
+        gap_path.write_text(render_gap_backlog(backlog), encoding="utf-8")
+    return {"verdict": "pass", "flipped": flipped, "error": None}
+
+
+def resolve_gap_082_for_prd_058(root: Path, *, scope_note: str | None = None) -> dict[str, Any]:
+    """Close GAP-082 after PRD 058 gap-082 phase verification (R17)."""
+    note = scope_note or "PRD 058 gap-082"
+    gap_path = default_gap_path(root)
+    if not gap_path.is_file():
+        return {"verdict": "pass", "flipped": [], "error": None}
+    backlog = parse_gap_backlog(gap_path.read_text(encoding="utf-8"))
+    for row in backlog.rows:
+        if row.gap_id.upper() == GAP_082_LEGACY_ID and row.is_open:
+            row.status = "scheduled"
+            row.schedule = schedule_label("058")
+    flipped = flip_resolve_by_gap_ids(backlog, gap_ids=[GAP_082_LEGACY_ID], scope_note=note)
     if flipped:
         gap_path.write_text(render_gap_backlog(backlog), encoding="utf-8")
     return {"verdict": "pass", "flipped": flipped, "error": None}

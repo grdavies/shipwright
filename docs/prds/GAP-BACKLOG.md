@@ -61,3 +61,5 @@ Generated compatibility projection from planning gap units (PRD 031 R27).
 | GAP-050 | open | Memory backend must round-trip planning bodies through the provider adapter |
 | GAP-051 | open | Dependency gate and materialize unit-id derivation must match current `<n>-prd-<slug>` convention |
 | GAP-052 | open | Freeze-record hash lookup must use the latest sw-freeze-record comment, not the first |
+| GAP-082 | open | Task dispatch intensity directive fail-closed enforcement |
+
