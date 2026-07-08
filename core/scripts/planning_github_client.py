@@ -22,10 +22,12 @@ from planning_canonical import (
     MARKER_UNIT_ID,
     SOURCE_REMOVED_LABEL,
     CommentRecord,
+    artifact_type_from_labels,
     compute_etag,
     parse_body_marker,
     project_label,
     type_label,
+    unit_id_from_labels,
 )
 
 SEARCH_PAGE_SIZE = 100
@@ -172,8 +174,12 @@ def _record_from_issue(
     number = int(payload.get("number") or 0)
     updated = str(payload.get("updated_at") or "")
     title = str(payload.get("title") or "")
-    artifact_type = parse_body_marker(body, MARKER_ARTIFACT_TYPE) or ""
-    unit_id = parse_body_marker(body, MARKER_UNIT_ID) or ""
+    # R11: provider-native label is the primary projection; the body marker
+    # is the one-release dual-read fallback for issues written before this
+    # phase (labels not yet backfilled -- see `IssueStoreBackend._maybe_
+    # backfill_labels`).
+    artifact_type = artifact_type_from_labels(labels) or parse_body_marker(body, MARKER_ARTIFACT_TYPE) or ""
+    unit_id = unit_id_from_labels(labels) or parse_body_marker(body, MARKER_UNIT_ID) or ""
     locked = bool(payload.get("locked")) or FROZEN_LABEL in labels
     resolved_links = list(native_links if native_links is not None else _native_links_from_comments(comments or []))
     record = IssueRecord(
@@ -579,10 +585,13 @@ class GitHubIssuesClient:
             if not number:
                 continue
             body = str(item.get("body") or "")
-            parsed_unit = parse_body_marker(body, MARKER_UNIT_ID) or ""
-            parsed_type = parse_body_marker(body, MARKER_ARTIFACT_TYPE) or ""
+            item_labels = _label_names(item)
+            # R11: label-first projection with body-marker fallback, same
+            # precedence as `_record_from_issue` (dual-read window).
+            parsed_unit = unit_id_from_labels(item_labels) or parse_body_marker(body, MARKER_UNIT_ID) or ""
+            parsed_type = artifact_type_from_labels(item_labels) or parse_body_marker(body, MARKER_ARTIFACT_TYPE) or ""
             if unit_id and parsed_unit != unit_id:
-                if not body:
+                if not parsed_unit and not body:
                     record = self._get_issue(str(number))
                     if record.unit_id != unit_id:
                         continue

@@ -130,10 +130,12 @@ from planning_canonical import (  # noqa: E402
     FREEZE_INCOMPLETE_LABEL,
     FROZEN_LABEL,
     IssueSnapshot,
+    artifact_type_from_labels,
     build_freeze_record_body,
     canonical_hash,
     chunk_body_if_needed,
     compose_issue_body,
+    human_readable_title,
     infer_artifact_type,
     parse_edges_block,
     parse_freeze_record_hash,
@@ -142,8 +144,10 @@ from planning_canonical import (  # noqa: E402
     reassemble_body,
     rewrite_chunk_manifest_ids,
     strip_markers_and_edges,
-    title_prefix,
+    structural_labels_from_content,
     type_label,
+    unit_id_from_labels,
+    unit_id_label,
     verify_project_scope,
     verify_unit_id,
 )
@@ -1449,11 +1453,23 @@ class IssueStoreBackend(PlanningStoreBackend):
     def _artifact_type(self, body_path: str) -> str:
         return infer_artifact_type(body_path)
 
-    def _issue_title(self, artifact_type: str, unit_id: str) -> str:
-        return f"{title_prefix(self.project_key)} {artifact_type}:{unit_id}"
+    def _issue_title(self, artifact_type: str, unit_id: str, content: str) -> str:
+        # R11: human-readable title (doc H1 / frontmatter `title:`) instead of
+        # the legacy `[project] type:unit-id` prefix -- see
+        # `planning_canonical.human_readable_title` for the fallback chain.
+        return human_readable_title(content, artifact_type, unit_id)
 
-    def _labels_for(self, artifact_type: str) -> list[str]:
-        return sorted({project_label(self.project_key), type_label(artifact_type)})
+    def _labels_for(self, artifact_type: str, unit_id: str, content: str) -> list[str]:
+        # R11: `unit_id_label` plus the doc's structural frontmatter keys
+        # (status/topic/depends/absorbs/amends/visibility) are additive
+        # provider-native label projections -- never a substitute for the
+        # frontmatter itself, which stays embedded in `content` (dual-read
+        # window, D5). Recomputed on every put() so an old (pre-R11) issue's
+        # labels are backfilled the next time it is written through this
+        # path, in addition to the read-time backfill in `_lookup_record`.
+        labels = {project_label(self.project_key), type_label(artifact_type), unit_id_label(unit_id)}
+        labels.update(structural_labels_from_content(content))
+        return sorted(labels)
 
     def _record_to_snapshot(self, record: Any) -> IssueSnapshot:
         return IssueSnapshot(
@@ -1550,6 +1566,35 @@ class IssueStoreBackend(PlanningStoreBackend):
         closed = self._client.issue_update(brainstorm.id, state="closed", if_match=brainstorm.etag)
         return {"memoryUnitId": mem_result.unit_id, "brainstormUnitId": brainstorm.unit_id, "etag": closed.etag}
 
+    def _maybe_backfill_labels(self, record: Any, unit_id: str) -> Any:
+        """R11 dual-read backfill: an issue resolved via the pre-R11 body-
+        marker/frontmatter fallback (no `sw:unit:*` / `sw:<type>` label yet)
+        gets those structural labels written back immediately, so the next
+        read/discover pass no longer needs the body fallback for it. Best
+        effort only -- a frozen/put-incomplete issue, a stale etag, or a
+        provider error here must never block the read or put already in
+        progress; the label projection simply catches up on the next write.
+        """
+        if FROZEN_LABEL in record.labels or PUT_INCOMPLETE_LABEL in record.labels:
+            return record
+        artifact_type = record.artifact_type or infer_artifact_type(unit_id)
+        missing: set[str] = set()
+        if not unit_id_from_labels(record.labels):
+            missing.add(unit_id_label(unit_id))
+        if artifact_type and not artifact_type_from_labels(record.labels):
+            missing.add(type_label(artifact_type))
+        if not missing:
+            return record
+        try:
+            updated = self._client.issue_label(
+                record.id,
+                sorted(set(record.labels) | missing),
+                if_match=record.etag,
+            )
+        except (IssueRevisionConflict, IssueCapabilityError, IssueBudgetExhausted, IssueTombstone, IssueTransferred):
+            return record
+        return updated
+
     def _lookup_record(self, unit_id: str, body_path: str) -> Any:
         idx_key = issue_index_key(self.project_key, unit_id)
         issue_id = self._index.get(idx_key)
@@ -1562,7 +1607,7 @@ class IssueStoreBackend(PlanningStoreBackend):
                 handle_issue_client_error(exc)
             else:
                 if verify_project_scope(record.body, self.project_key):
-                    return record
+                    return self._maybe_backfill_labels(record, unit_id)
         matches = self._client.issue_search(
             project_key=self.project_key,
             unit_id=unit_id,
@@ -1573,14 +1618,14 @@ class IssueStoreBackend(PlanningStoreBackend):
         record = matches[0]
         self._index[idx_key] = record.id
         save_issue_unit_index(self.root, self._index)
-        return record
+        return self._maybe_backfill_labels(record, unit_id)
 
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
         self._guard_write_visibility(unit_id, body_path, content)
         self._guard_write_secrets(content, path_hint=body_path)
         artifact_type = self._artifact_type(body_path)
-        title = self._issue_title(artifact_type, unit_id)
-        labels = self._labels_for(artifact_type)
+        title = self._issue_title(artifact_type, unit_id, content)
+        labels = self._labels_for(artifact_type, unit_id, content)
         body = compose_issue_body(self.project_key, artifact_type, unit_id, content)
         body, extra_comments = chunk_body_if_needed(body, [], provider=self.issues_provider)
         idx_key = issue_index_key(self.project_key, unit_id)

@@ -86,6 +86,38 @@ under `.cursor/hooks/state/` only.
 
 Decision-class artifacts remain file-native (D8) — not routed to issue-store.
 
+### Provider-native labels + human-readable titles (R11)
+
+Structural frontmatter keys (`type` / `unit-id` / `status` / `topic` / `depends` / `absorbs` / `amends` /
+`visibility`) are promoted to provider-native labels on every `put()`
+(`planning_canonical.structural_labels_from_content`), in addition to the artifact `sw:<type>` and
+`sw:project:<key>` labels above:
+
+| Key | Label prefix |
+| --- | --- |
+| `unit-id` | `sw:unit:<url-encoded-unit-id>` |
+| `topic` | `sw:topic:<url-encoded-topic>` |
+| `visibility` | `sw:visibility:<value>` |
+| `depends` / `absorbs` / `amends` | `sw:<rel>:<url-encoded-target>` (capped at `MAX_EDGE_LABELS_PER_RELATION` = 20 labels/relation per provider) |
+
+Issue titles are human-readable (`planning_canonical.human_readable_title`): the doc's frontmatter `title:`
+key, else its first H1 heading, else a plain `<type>: <unit-id>` fallback — never the legacy
+`[project] type:unit-id` bracketed prefix. The provider-assigned issue id/number is a storage pointer only;
+`unit-id` (from the `sw-unit-id` body marker, or the `sw:unit:*` label) remains authoritative for identity.
+
+**Body stays authoritative for content.** Labels are an *additive* discovery/read-performance projection —
+the doc's own frontmatter block and the authoritative `sw-edges` body fence are unchanged and still fully
+embedded in the issue body (edge labels are a search aid only; `sw-edges` is the source of truth for edge
+reads, same precedence as native links above). Read/discover paths (`planning_github_client.py`,
+`planning_jira_client.py`, `planning_discover.py`) prefer the label projection and fall back to the pre-R11
+body-marker/frontmatter parse for one release, so issues written before R11 remain fully readable without a
+migration step.
+
+**Backfill.** `IssueStoreBackend._maybe_backfill_labels` opportunistically adds the missing `sw:unit:*` /
+`sw:<type>` labels to a pre-R11 issue the first time it is resolved through `get`/`put` (best-effort — a
+frozen or put-incomplete issue, a stale etag, or a provider error leaves the issue untouched and is simply
+retried on a later read).
+
 ### Hermetic fixtures
 
 Set `SW_ISSUES_FIXTURE=1` for in-memory issue adapter (CI). Clear with
