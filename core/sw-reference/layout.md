@@ -444,6 +444,7 @@ Artifacts:
 | --- | --- |
 | `.cursor/hooks/state/memory-prework-search.json` | Redacted per-surface search record (or `memory:offline` / `memory:none`) |
 | `.cursor/sw-deliver-runs/run.<slug>.log` | Per-deliver-run append-only audit breadcrumb (PRD 050 R4) |
+| `.cursor/doc-review-runs/<dispatch-id>.json` | Per-dispatch token-estimate telemetry for `/sw-doc-review` persona panels (PRD 058 R28) |
 
 The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies the first file-mutating tool call
 when no fresh record exists. Delegated work sub-agents inherit the obligation per

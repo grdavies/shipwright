@@ -9,9 +9,12 @@ from pathlib import Path
 from dispatch_intensity_check import parse_anchored_directive, validate_retrieve_key_guard
 from dispatch_prompt import (
     ContextBlock,
+    SURFACE_DOC_REVIEW,
+    SURFACE_SHIP_PHASE,
     build_task_dispatch_prompt,
     load_context_compression_config,
     process_context_block,
+    record_dispatch_telemetry,
     recover_compressed_context,
 )
 
@@ -111,6 +114,57 @@ class DispatchPromptTests(unittest.TestCase):
         restored = recover_compressed_context(result.retrieve_keys[0], root=self.root)
         self.assertIn("payload", restored)
 
+
+    def test_context_compression_default_off_without_block(self) -> None:
+        empty_cfg = self.root / "empty.config.json"
+        empty_cfg.write_text("{}", encoding="utf-8")
+        config = load_context_compression_config(self.root, str(empty_cfg))
+        self.assertFalse(config["enabled"])
+
+    def test_telemetry_ship_phase_run_log(self) -> None:
+        result = build_task_dispatch_prompt(
+            intensity="lite",
+            intensity_source="defaultIntensity",
+            body="task body",
+            config_path=str(self.config_path),
+            root=self.root,
+        )
+        slug = "telemetry-fixture-phase"
+        phase_run = self.root / ".cursor" / "sw-deliver-runs" / slug
+        phase_run.mkdir(parents=True, exist_ok=True)
+        (phase_run / "status.json").write_text('{"verdict":"in-flight","phase":"' + slug + '"}', encoding="utf-8")
+        record_dispatch_telemetry(
+            result,
+            root=self.root,
+            surface=SURFACE_SHIP_PHASE,
+            phase_slug=slug,
+            compression_enabled=False,
+        )
+        log = (self.root / ".cursor" / "sw-deliver-runs" / "run.log").read_text(encoding="utf-8")
+        self.assertIn("dispatch-token-estimate", log)
+        status = json.loads((phase_run / "status.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(status["dispatchTelemetry"]), 1)
+
+    def test_telemetry_doc_review_sink(self) -> None:
+        result = build_task_dispatch_prompt(
+            intensity="normal",
+            intensity_source="routing.commands",
+            body="review task",
+            config_path=str(self.config_path),
+            root=self.root,
+        )
+        dispatch_id = "panel-abc123"
+        sink = record_dispatch_telemetry(
+            result,
+            root=self.root,
+            surface=SURFACE_DOC_REVIEW,
+            dispatch_id=dispatch_id,
+            compression_enabled=False,
+        )
+        self.assertTrue(sink.is_file())
+        payload = json.loads(sink.read_text(encoding="utf-8"))
+        self.assertEqual(payload["dispatchId"], dispatch_id)
+        self.assertEqual(payload["surface"], SURFACE_DOC_REVIEW)
 
 if __name__ == "__main__":
     unittest.main()

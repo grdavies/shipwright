@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -15,8 +17,16 @@ from context_compress import compress, detect_content_type, estimate_tokens, ret
 from dispatch_intensity_check import format_intensity_directive, validate_retrieve_key_guard
 
 DEFAULT_THRESHOLD_TOKENS = 8000
+DEFAULT_CONTEXT_COMPRESSION_ENABLED = False
 CONTENT_STRATEGIES = ("json", "diff", "log", "prose")
 DEFAULT_STRATEGIES = {name: "compress" for name in CONTENT_STRATEGIES}
+SURFACE_SHIP_PHASE = "ship-phase"
+SURFACE_DOC_REVIEW = "doc-review"
+TELEMETRY_SURFACES = frozenset({SURFACE_SHIP_PHASE, SURFACE_DOC_REVIEW})
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 @dataclass(frozen=True)
@@ -63,7 +73,7 @@ def load_context_compression_config(
     if not isinstance(block, dict):
         block = {}
 
-    enabled = block.get("enabled", False)
+    enabled = block.get("enabled", DEFAULT_CONTEXT_COMPRESSION_ENABLED)
     if isinstance(enabled, str):
         enabled = enabled.lower() in ("true", "1", "yes")
 
@@ -124,7 +134,7 @@ def process_context_block(
     threshold = config.get("thresholdTokens", DEFAULT_THRESHOLD_TOKENS)
     token_count = estimate_tokens(text)
 
-    if not config.get("enabled", False):
+    if not config.get("enabled", DEFAULT_CONTEXT_COMPRESSION_ENABLED):
         return ProcessedBlock(text=f"{_format_block_header(label)}{text}")
 
     strategies = config.get("strategies", DEFAULT_STRATEGIES)
@@ -229,6 +239,96 @@ def write_dispatch_prompt(result: DispatchPromptResult, output_path: str | Path)
     return path
 
 
+
+
+def build_dispatch_telemetry_entry(
+    result: DispatchPromptResult,
+    *,
+    surface: str,
+    dispatch_id: str | None = None,
+    phase_slug: str | None = None,
+    compression_enabled: bool | None = None,
+) -> dict[str, Any]:
+    """Build a token-estimate telemetry record (PRD 058 R28)."""
+    if surface not in TELEMETRY_SURFACES:
+        raise ValueError(f"unsupported telemetry surface: {surface!r}")
+    entry: dict[str, Any] = {
+        "event": "dispatch-token-estimate",
+        "surface": surface,
+        "tokensBefore": result.tokens_before,
+        "tokensAfter": result.tokens_after,
+        "compressionApplied": result.compression_applied,
+    }
+    if dispatch_id:
+        entry["dispatchId"] = dispatch_id
+    if phase_slug:
+        entry["phaseSlug"] = phase_slug
+    if compression_enabled is not None:
+        entry["contextCompressionEnabled"] = compression_enabled
+    return entry
+
+
+def _append_jsonl_log(path: Path, entry: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps({**entry, "at": utc_now()}, ensure_ascii=False) + "\n"
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(line)
+    os.chmod(path, 0o600)
+
+
+def _patch_status_dispatch_telemetry(status_path: Path, entry: dict[str, Any]) -> None:
+    if not status_path.is_file():
+        return
+    doc = json.loads(status_path.read_text(encoding="utf-8"))
+    records = doc.get("dispatchTelemetry")
+    if not isinstance(records, list):
+        records = []
+    records.append({**entry, "at": utc_now()})
+    doc["dispatchTelemetry"] = records
+    status_path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+    os.chmod(status_path, 0o600)
+
+
+def record_dispatch_telemetry(
+    result: DispatchPromptResult,
+    *,
+    root: Path,
+    surface: str,
+    dispatch_id: str | None = None,
+    phase_slug: str | None = None,
+    run_dir: Path | None = None,
+    compression_enabled: bool | None = None,
+) -> Path:
+    """Record before/after token estimates per surface convention (R28)."""
+    entry = build_dispatch_telemetry_entry(
+        result,
+        surface=surface,
+        dispatch_id=dispatch_id,
+        phase_slug=phase_slug,
+        compression_enabled=compression_enabled,
+    )
+    repo = root.resolve()
+
+    if surface == SURFACE_DOC_REVIEW:
+        if not dispatch_id:
+            raise ValueError("dispatch_id required for doc-review telemetry")
+        sink = repo / ".cursor" / "doc-review-runs" / f"{dispatch_id}.json"
+        sink.parent.mkdir(parents=True, exist_ok=True)
+        sink.write_text(json.dumps({**entry, "at": utc_now()}, indent=2) + "\n", encoding="utf-8")
+        os.chmod(sink, 0o600)
+        return sink
+
+    deliver_log = repo / ".cursor" / "sw-deliver-runs" / "run.log"
+    _append_jsonl_log(deliver_log, entry)
+    if run_dir is not None:
+        _append_jsonl_log(run_dir / "run.log", entry)
+    if phase_slug:
+        phase_run = repo / ".cursor" / "sw-deliver-runs" / phase_slug
+        _append_jsonl_log(phase_run / "run.log", entry)
+        _patch_status_dispatch_telemetry(phase_run / "status.json", entry)
+    return deliver_log
+
+
 def _context_block_from_json(data: dict[str, Any]) -> ContextBlock:
     return ContextBlock(
         text=data.get("text"),
@@ -253,6 +353,14 @@ def main(argv: list[str] | None = None) -> int:
     build_p.add_argument("--root", help="Repository root")
     build_p.add_argument("--out", required=True, help="Output prompt path")
     build_p.add_argument("--json", action="store_true", help="Emit build metadata JSON to stdout")
+    build_p.add_argument(
+        "--surface",
+        choices=sorted(TELEMETRY_SURFACES),
+        help="Telemetry sink: ship-phase (run.log/status.json) or doc-review",
+    )
+    build_p.add_argument("--dispatch-id", help="Dispatch id (required for doc-review surface)")
+    build_p.add_argument("--phase-slug", help="Phase slug for ship-phase telemetry")
+    build_p.add_argument("--run-dir", help="Optional per-phase run directory for run.log mirror")
 
     recover_p = sub.add_parser("recover", help="Orchestrator-side CCR retrieve (R24)")
     recover_p.add_argument("--key", required=True)
@@ -278,6 +386,7 @@ def main(argv: list[str] | None = None) -> int:
         if isinstance(payload, list):
             blocks = [_context_block_from_json(item) for item in payload if isinstance(item, dict)]
 
+    config = load_context_compression_config(root, args.config_path)
     result = build_task_dispatch_prompt(
         intensity=args.intensity,
         intensity_source=args.intensity_source,
@@ -287,19 +396,31 @@ def main(argv: list[str] | None = None) -> int:
         root=root,
     )
     write_dispatch_prompt(result, args.out)
-    if args.json:
-        print(
-            json.dumps(
-                {
-                    "out": str(args.out),
-                    "retrieveKeys": result.retrieve_keys,
-                    "tokensBefore": result.tokens_before,
-                    "tokensAfter": result.tokens_after,
-                    "compressionApplied": result.compression_applied,
-                },
-                indent=2,
-            )
+    telemetry_sink: str | None = None
+    if args.surface:
+        run_dir = Path(args.run_dir).resolve() if args.run_dir else None
+        sink = record_dispatch_telemetry(
+            result,
+            root=root,
+            surface=args.surface,
+            dispatch_id=args.dispatch_id,
+            phase_slug=args.phase_slug,
+            run_dir=run_dir,
+            compression_enabled=config.get("enabled"),
         )
+        telemetry_sink = str(sink)
+    if args.json:
+        payload: dict[str, Any] = {
+            "out": str(args.out),
+            "retrieveKeys": result.retrieve_keys,
+            "tokensBefore": result.tokens_before,
+            "tokensAfter": result.tokens_after,
+            "compressionApplied": result.compression_applied,
+            "contextCompressionEnabled": config.get("enabled"),
+        }
+        if telemetry_sink:
+            payload["telemetrySink"] = telemetry_sink
+        print(json.dumps(payload, indent=2))
     return 0
 
 
