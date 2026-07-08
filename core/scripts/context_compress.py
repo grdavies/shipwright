@@ -1,11 +1,25 @@
 #!/usr/bin/env python3
-"""Native context compression for Task-dispatch prompt blocks (PRD 058 gap-083 R18, R27)."""
+"""Native context compression for Task-dispatch prompt blocks (PRD 058 gap-083 R18, R27, R20-R22)."""
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import re
+import sys
+import time
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Callable
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Callable, Iterator
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from planning_store import contains_raw_transcript, redact_content
+from wave_json_io import read_json, write_json
 
 CONTENT_JSON = "json"
 CONTENT_DIFF = "diff"
@@ -14,6 +28,11 @@ CONTENT_PROSE = "prose"
 CONTENT_TYPES = frozenset({CONTENT_JSON, CONTENT_DIFF, CONTENT_LOG, CONTENT_PROSE})
 
 _CHARS_PER_TOKEN = 4
+CACHE_DIR_REL = Path(".cursor/hooks/state/context-compress-cache")
+CACHE_TTL_SECONDS = 7 * 24 * 3600
+_CACHE_KEY_RE = re.compile(r"^[a-f0-9]{64}$")
+_CACHE_LOCK_RETRIES = 50
+_CACHE_LOCK_SLEEP_S = 0.01
 
 _DIFF_FILE_HEADER = re.compile(r"^(diff --git |--- |\+\+\+ )", re.MULTILINE)
 _DIFF_HUNK = re.compile(r"^@@ .+ @@", re.MULTILINE)
@@ -35,6 +54,34 @@ class CompressResult:
     text: str
     contentType: str
     retrieveKey: str | None = None
+
+
+class ContextRetrieveError(Exception):
+    """Base class for CCR retrieval failures."""
+
+
+class RawTranscriptRejected(ContextRetrieveError):
+    """Raised when raw transcript markers block a CCR cache write."""
+
+
+class ContextRetrieveKeyUnknown(ContextRetrieveError):
+    """Raised when a retrieve key is absent from the CCR cache."""
+
+    def __init__(self, key: str) -> None:
+        self.key = key
+        super().__init__(f"unknown retrieve key: {key}")
+
+
+class ContextRetrieveKeyExpired(ContextRetrieveError):
+    """Raised when a cache entry was pruned or exceeded TTL."""
+
+    def __init__(self, key: str) -> None:
+        self.key = key
+        super().__init__(f"expired or pruned retrieve key: {key}")
+
+
+class ContextCacheWriteError(ContextRetrieveError):
+    """Raised when a concurrent cache write cannot be completed safely."""
 
 
 def estimate_tokens(text: str) -> int:
@@ -67,6 +114,7 @@ def compress(
     *,
     content_type: str | None = None,
     budget_tokens: int | None = None,
+    root: Path | None = None,
 ) -> CompressResult:
     """Compress *text* when it exceeds *budget_tokens* using a type-appropriate strategy."""
     ctype = content_type or detect_content_type(text)
@@ -76,15 +124,123 @@ def compress(
     if budget_tokens is None or estimate_tokens(text) <= budget_tokens:
         return CompressResult(compressed=False, text=text, contentType=ctype, retrieveKey=None)
 
+    redacted = _prepare_for_cache(text)
     strategy = _STRATEGIES.get(ctype, _compress_prose)
-    compressed_text = strategy(text, budget_tokens)
-    changed = compressed_text != text
+    compressed_text = strategy(redacted, budget_tokens)
+    changed = compressed_text != redacted
+    retrieve_key: str | None = None
+    if changed:
+        retrieve_key = _cache_store(redacted, root=root)
     return CompressResult(
         compressed=changed,
         text=compressed_text,
         contentType=ctype,
-        retrieveKey=None,
+        retrieveKey=retrieve_key,
     )
+
+
+def retrieve(retrieve_key: str, *, root: Path | None = None) -> str:
+    """Return the full redacted content for *retrieve_key* (or raise a typed error)."""
+    if not _CACHE_KEY_RE.fullmatch(retrieve_key):
+        raise ContextRetrieveKeyUnknown(retrieve_key)
+
+    repo = (root or Path.cwd()).resolve()
+    entry_path = _cache_entry_path(_cache_dir(repo), retrieve_key)
+    if not entry_path.is_file():
+        raise ContextRetrieveKeyUnknown(retrieve_key)
+
+    data = read_json(entry_path, absent_ok=False)
+    content = data.get("content")
+    if not isinstance(content, str):
+        raise ContextRetrieveKeyUnknown(retrieve_key)
+
+    created_at = data.get("createdAt")
+    if isinstance(created_at, str) and _is_cache_expired(created_at):
+        raise ContextRetrieveKeyExpired(retrieve_key)
+
+    return content
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _is_cache_expired(created_at: str) -> bool:
+    try:
+        created = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return True
+    age = datetime.now(timezone.utc) - created
+    return age.total_seconds() > CACHE_TTL_SECONDS
+
+
+def _cache_dir(root: Path) -> Path:
+    return root / CACHE_DIR_REL
+
+
+def _cache_entry_path(cache_dir: Path, key: str) -> Path:
+    return cache_dir / f"{key}.json"
+
+
+def _cache_key(redacted: str) -> str:
+    return hashlib.sha256(redacted.encode("utf-8")).hexdigest()
+
+
+def _prepare_for_cache(content: str) -> str:
+    if contains_raw_transcript(content):
+        raise RawTranscriptRejected("raw transcript content refused before CCR cache write")
+    return redact_content(content)
+
+
+def _cache_store(redacted: str, *, root: Path | None = None) -> str:
+    repo = (root or Path.cwd()).resolve()
+    key = _cache_key(redacted)
+    cache_dir = _cache_dir(repo)
+    entry_path = _cache_entry_path(cache_dir, key)
+    if entry_path.is_file():
+        _assert_cache_entry_matches(entry_path, redacted, key)
+        return key
+
+    with _cache_write_lock(cache_dir, key):
+        if entry_path.is_file():
+            _assert_cache_entry_matches(entry_path, redacted, key)
+            return key
+        write_json(entry_path, {"content": redacted, "createdAt": _utc_now()})
+    return key
+
+
+def _assert_cache_entry_matches(entry_path: Path, redacted: str, key: str) -> None:
+    data = read_json(entry_path, absent_ok=False)
+    existing = data.get("content")
+    if existing != redacted:
+        raise ContextCacheWriteError(
+            f"cache key collision for {key}: existing entry content mismatch"
+        )
+
+
+@contextmanager
+def _cache_write_lock(cache_dir: Path, key: str) -> Iterator[None]:
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    lock_path = cache_dir / f"{key}.lock"
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+    acquired = False
+    for _ in range(_CACHE_LOCK_RETRIES):
+        try:
+            fd = os.open(lock_path, flags, 0o600)
+            os.close(fd)
+            acquired = True
+            break
+        except FileExistsError:
+            if _cache_entry_path(cache_dir, key).is_file():
+                yield
+                return
+            time.sleep(_CACHE_LOCK_SLEEP_S)
+    if not acquired:
+        raise ContextCacheWriteError(f"cache write lock timeout for key {key}")
+    try:
+        yield
+    finally:
+        lock_path.unlink(missing_ok=True)
 
 
 def _looks_like_diff(text: str) -> bool:

@@ -712,6 +712,7 @@ Bidirectional file ⇄ issue migration records durable per-artifact state under 
 | Path | Writer | Semantics |
 | --- | --- | --- |
 | `.cursor/hooks/state/issue-store-migration-journal.json` | `scripts/planning_migrate_issue_store.py` (`run_store_migration`) | Per-artifact state machine `pending` → `created` → `verified` → `source-removed`; idempotency key `source_path:content_hash`; verify-then-delete ordering |
+| `.cursor/hooks/state/context-compress-cache/` | `scripts/context_compress.py` | Gitignored CCR cache keyed by full SHA-256 of redacted content; orchestrator-only `retrieve()` (PRD 058 R20–R22) |
 
 Dry-run (no `--apply`) must not create or update this file. Command surface: `/sw-migrate` /
 `scripts/planning_migrate.py` `store-files-to-issues` | `store-issues-to-files`.
