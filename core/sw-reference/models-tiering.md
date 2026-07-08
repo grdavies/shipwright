@@ -113,15 +113,18 @@ Do **not** put `cheap`/`build`/`mid`/`deep` or vendor aliases like `sonnet` in s
 | `scripts/resolve-model-tier.py` | Runtime tier → concrete ID; `inherit` → `modelId: null` exit 0 |
 | `scripts/resolve-intensity.py` | Runtime intensity resolution with command → skill → agent → default precedence |
 | `/sw-doc-review`, `sw-subagent-dispatch` | **Runtime R9:** parent model tier ≥ builder when dispatching `inherit` reviewers |
-| `scripts/dispatch-check.py` | Fail-closed binding check (`binding:no-model`, `binding:no-intensity`, `harness:capacity`) before Task spawn |
+| `scripts/dispatch-check.py` | Fail-closed binding check (`binding:no-model`, `binding:no-intensity`, `binding:*-directive*`, `harness:capacity`) before Task spawn; `--prompt` validates the embedded directive |
+| `scripts/dispatch_intensity_check.py` | Canonical `format_intensity_directive()` builder + structural anchor validator (R7/R8) shared by hook, CLI, and embedder call sites |
+| `before_task_dispatch.py` | Fail-closed prompt-literal intensity enforcement (R9–R11); registered and live |
 
-### Optional Task hook (R5 — deferred)
+### Task hook — model mutation still deferred; intensity enforcement live (R5/R14)
 
-A `preToolUse` hook (`core/hooks/before_task_dispatch.py`) can compute `updated_input.model`
-from `resolve-model-tier.py --agent`, but **Cursor does not apply `updated_input` for the Task
-tool** and `subagentStart` cannot set model. Spike record:
-`core/sw-reference/model-tier-hook-feasibility.md`. **Not registered** in plugin `hooks.json`
-until the platform supports Task model mutation. Enforcement remains dispatcher + preflight only.
+A `preToolUse` hook (`core/hooks/before_task_dispatch.py`) still emits `updated_input.model` from
+`resolve-model-tier.py --agent`, but **Cursor does not apply `updated_input` for the Task tool** (DL-2).
+**Intensity enforcement is live** via prompt-literal structural validation: embedder call sites prepend
+`format_intensity_directive()` to `tool_input.prompt`; the hook and `dispatch-check.py --prompt` share
+`dispatch_intensity_check.py` so pre-flight and post-hoc checks cannot diverge. Spike record:
+`core/sw-reference/model-tier-hook-feasibility.md`.
 
 `inherit` reviewers cannot be fully R9-verified in CI — orchestrator must not run doc-review on a sub-`build` parent.
 

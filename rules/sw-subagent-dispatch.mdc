@@ -57,11 +57,14 @@ Per-agent tiers for reviewers, doc-review personas, and native-panel specialists
 - **R39b precedence (mechanical):** explicit `models.routing.agents[<agent>]` for a bound reviewer/persona
   wins → else `--command <sw-slug>` → else `--agent` alone. Single-sourced in `resolve-model-tier.py` and
   `dispatch-check.py` — do not duplicate ad-hoc in callers.
-- **R9 runtime contract (mechanical):** before every `sw-*-reviewer` / persona / native-panel Task spawn,
-  run `scripts/dispatch-check.py --agent <id> --parent-model <parent-concrete-id> [--command <orchestrator>] [--skill <skill>]`.
+- **R9 runtime contract (mechanical):** before every `sw-*-reviewer` / persona / native-panel / closer Task
+  spawn, run `scripts/dispatch-check.py --agent <id> --parent-model <parent-concrete-id> [--command <orchestrator>] [--skill <skill>] [--prompt <path>]`.
   It fails closed on `binding:*` causes and only treats `harness:*` causes as retryable backpressure.
-  Stamp the resolved concrete `model:` from `resolve-model-tier.py --agent` and resolved caveman intensity from
-  `resolve-intensity.py`; never rely on session inheritance.
+  Stamp the resolved concrete `model:` from `resolve-model-tier.py --agent`; never rely on session inheritance.
+- **R14 embed-before-spawn (mechanical):** resolve intensity via `resolve-intensity.py`, prepend
+  `format_intensity_directive(intensity, source)` from `scripts/dispatch_intensity_check.py` as the **first line**
+  of `tool_input.prompt`, write the full prompt to disk, pass `--prompt` to `dispatch-check.py`, then spawn.
+  Hook post-hoc validation is additive — callers must not rely on hook injection alone.
 - `--override` requires a durable audit record written first via
   `python3 scripts/shipwright-state.py dispatch-override-add '{"actor":"...","timestamp":"...","dispatchId":"...","skippedFields":["..."]}'`.
 - Native panel specialists: tier per `models.routing.agents` (e.g. `correctness`/`security`/`adversarial` →

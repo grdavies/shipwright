@@ -35,6 +35,32 @@ git diff "$PARENT"...HEAD
 5. Ambiguous/out-of-scope → escalate (toward feedback workstream `005`); never absorb silently.
 6. Re-map once; escalate residuals.
 
+## Closer dispatch binding (R14)
+
+Before each bounded closer Task spawn (one in-scope gap each):
+
+```bash
+PARENT_MODEL="<concrete platform model id of the dispatching agent session>"
+AGENT="generalPurpose"   # or a scoped closer agent when declared
+DISPATCH_ID="<unique-id-per-closer>"
+PROMPT_PATH=".cursor/sw-gap-check-runs/${DISPATCH_ID}-prompt.md"
+
+python3 scripts/wave.py dispatch preflight --dispatch-id "$DISPATCH_ID" --agent "$AGENT" \
+  --command sw-gaps --skill gap-check
+
+INTENSITY_JSON=$(python3 scripts/resolve-intensity.py --agent "$AGENT" --command sw-gaps --skill gap-check)
+INTENSITY=$(echo "$INTENSITY_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['intensity'])")
+INTENSITY_SOURCE=$(echo "$INTENSITY_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['source'])")
+DIRECTIVE=$(python3 -c "import sys; sys.path.insert(0,'scripts'); from dispatch_intensity_check import format_intensity_directive; sys.stdout.write(format_intensity_directive(sys.argv[1], sys.argv[2]))" "$INTENSITY" "$INTENSITY_SOURCE")
+# After redacting gap context into TASK_BODY:
+printf '%s%s' "$DIRECTIVE" "$TASK_BODY" > "$PROMPT_PATH"
+
+python3 scripts/dispatch-check.py --agent "$AGENT" --command sw-gaps --skill gap-check \
+  --parent-model "$PARENT_MODEL" --dispatch-id "$DISPATCH_ID" --prompt "$PROMPT_PATH"
+# Task spawn MUST use tool_input.prompt = contents of $PROMPT_PATH
+```
+
+Halt on preflight or `dispatch-check` exit 20; do not spawn without a validated leading directive.
 
 ## Deliver binding (PRD 055 R13, R25)
 
