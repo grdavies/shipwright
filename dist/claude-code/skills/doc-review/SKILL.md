@@ -161,9 +161,14 @@ python3 scripts/wave.py dispatch preflight --dispatch-id "$DISPATCH_ID" --agent 
 INTENSITY_JSON=$(python3 scripts/resolve-intensity.py --agent "$AGENT" --command sw-doc-review --skill doc-review)
 INTENSITY=$(echo "$INTENSITY_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['intensity'])")
 INTENSITY_SOURCE=$(echo "$INTENSITY_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['source'])")
-DIRECTIVE=$(python3 -c "import sys; sys.path.insert(0,'scripts'); from dispatch_intensity_check import format_intensity_directive; sys.stdout.write(format_intensity_directive(sys.argv[1], sys.argv[2]))" "$INTENSITY" "$INTENSITY_SOURCE")
 # After redacting persona context into TASK_BODY (memory-redact + untrusted_payload fence):
-printf '%s%s' "$DIRECTIVE" "$TASK_BODY" > "$PROMPT_PATH"
+printf '%s' "$TASK_BODY" > "${PROMPT_PATH}.body"
+python3 scripts/dispatch_prompt.py build \
+  --intensity "$INTENSITY" \
+  --intensity-source "$INTENSITY_SOURCE" \
+  --body-file "${PROMPT_PATH}.body" \
+  --context-json "${CONTEXT_BLOCKS_JSON:-[]}" \
+  --out "$PROMPT_PATH"
 
 python3 scripts/dispatch-check.py --agent "$AGENT" --command sw-doc-review --skill doc-review \
   --parent-model "$PARENT_MODEL" --dispatch-id "$DISPATCH_ID" --prompt "$PROMPT_PATH"
@@ -185,8 +190,8 @@ exit 20; do not spawn on unresolved `inherit`.
    override.
 5. Resolve tier — if Quick, report "no panel for Quick" and stop.
 6. **PRD draft:** run `python3 scripts/doc-review-select.py --context-json '<signal_context>'`; announce activation record (core + any fired gates + matched signals).
-7. **Parallel panel (R38/R14):** for each selected persona, run a **unique** `dispatch preflight` → embed
-   `format_intensity_directive()` → `dispatch-check --prompt` (see Dispatch binding) **before** spawning
+7. **Parallel panel (R38/R14):** for each selected persona, run a **unique** `dispatch preflight` → assemble via
+   `scripts/dispatch_prompt.py build` → `dispatch-check --prompt` (see Dispatch binding) **before** spawning
    that persona Task — never reuse a single preflight across N spawns.
 8. Read full document (no section splitting) — each selected persona is a parallel sub-agent (R28/R31).
 9. Each agent returns JSON per `references/findings-schema.json`.

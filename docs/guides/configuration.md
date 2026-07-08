@@ -111,6 +111,27 @@ Fixture suite: `python3 scripts/test/run_execute_orchestration_fixtures.py` (reg
 `execute-orchestration-fixtures` in the PR test-plan manifest).
 
 
+### Context compression (`contextCompression.*`) — PRD 058 gap-083
+
+Task-dispatch prompt construction for `/sw-doc-review`, `/sw-ship`, and gap-check closer dispatches routes
+through `scripts/dispatch_prompt.py`. Compression is **available but default-off** — the shipped posture keeps
+`contextCompression.enabled: false` until the Phase 12 parity milestone (R30) passes.
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `contextCompression.enabled` | `false` | When `true`, large context blocks may be summarized before spawn |
+| `contextCompression.thresholdTokens` | `8000` | Token-estimate ceiling before compression/path-ref policy applies |
+| `contextCompression.strategies.json` | `compress` | Strategy for JSON blocks: `compress`, `path-reference`, or `passthrough` |
+| `contextCompression.strategies.diff` | `path-reference` | Unified-diff blocks prefer path references when file-backed |
+| `contextCompression.strategies.log` | `compress` | Log excerpt strategy |
+| `contextCompression.strategies.prose` | `compress` | Prose strategy |
+
+**Path-reference policy (R19):** file-backed blocks that do not need summarization emit a path reference
+instead of inlining content. **Recoverable path (R24):** lossy compression stores orchestrator-only CCR keys;
+`python3 scripts/dispatch_prompt.py recover --key <key>` retrieves full redacted content for re-dispatch.
+`retrieveKey` never appears in subagent-visible prompt text (R23).
+
+
 **Legitimate halts:** terminal merge to `main`; remediation budget exhausted; merge conflict /
 destructive git; `doc.afterTasks: confirm` or supervised mode; phase liveness timeout; CI/external wait
 exhausted; run-level budget. Every halt emits one report with an exact resume command.

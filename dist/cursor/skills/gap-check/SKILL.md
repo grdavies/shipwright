@@ -51,9 +51,14 @@ python3 scripts/wave.py dispatch preflight --dispatch-id "$DISPATCH_ID" --agent 
 INTENSITY_JSON=$(python3 scripts/resolve-intensity.py --agent "$AGENT" --command sw-gaps --skill gap-check)
 INTENSITY=$(echo "$INTENSITY_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['intensity'])")
 INTENSITY_SOURCE=$(echo "$INTENSITY_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['source'])")
-DIRECTIVE=$(python3 -c "import sys; sys.path.insert(0,'scripts'); from dispatch_intensity_check import format_intensity_directive; sys.stdout.write(format_intensity_directive(sys.argv[1], sys.argv[2]))" "$INTENSITY" "$INTENSITY_SOURCE")
 # After redacting gap context into TASK_BODY:
-printf '%s%s' "$DIRECTIVE" "$TASK_BODY" > "$PROMPT_PATH"
+printf '%s' "$TASK_BODY" > "${PROMPT_PATH}.body"
+python3 scripts/dispatch_prompt.py build \
+  --intensity "$INTENSITY" \
+  --intensity-source "$INTENSITY_SOURCE" \
+  --body-file "${PROMPT_PATH}.body" \
+  --context-json "${CONTEXT_BLOCKS_JSON:-[]}" \
+  --out "$PROMPT_PATH"
 
 python3 scripts/dispatch-check.py --agent "$AGENT" --command sw-gaps --skill gap-check \
   --parent-model "$PARENT_MODEL" --dispatch-id "$DISPATCH_ID" --prompt "$PROMPT_PATH"
