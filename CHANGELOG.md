@@ -388,6 +388,7 @@
 * merge phase terminal-gap-auto-capture-feature-named-titles-wave-5-r19-r20 into feat/planning-store-hardening (6cef4ff) <!-- sw-deliver:terminal-gap-auto-capture-feature-named-titles-wave-5-r19-r20 -->
 * merge phase chunk-manifest-id-rewrite-jira-chunking-wave-3-r8-r9 into feat/planning-store-hardening (f243680) <!-- sw-deliver:chunk-manifest-id-rewrite-jira-chunking-wave-3-r8-r9 -->
 * merge phase put-journal-concurrent-chunked-put-integrity-wave-3-r26-r27 into feat/planning-store-hardening (d77b74c) <!-- sw-deliver:put-journal-concurrent-chunked-put-integrity-wave-3-r26-r27 -->
+* merge phase provider-native-labels-human-readable-titles-wave-4-r11 into feat/planning-store-hardening (78712b6) <!-- sw-deliver:provider-native-labels-human-readable-titles-wave-4-r11 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
