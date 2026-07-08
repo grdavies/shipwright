@@ -347,27 +347,27 @@ Wave map:
 
 ### 15. Provider-native labels + human-readable titles (Wave 4 · R11)
 
-- [ ] 15.1 Serialize planning metadata as provider-native labels (write-side) (R11) (unit 1/2)
+- [x] 15.1 Serialize planning metadata as provider-native labels (write-side) (R11) (unit 1/2)
   - **File:** `scripts/planning_canonical.py`
   - **Expected:** structural frontmatter keys (type/unit-id/status/topic/depends/absorbs/amends/visibility) promoted to provider-native labels; human-readable titles without `[planning] type:unit-id`; provider id treated as a storage pointer only (unit-id stays authoritative).
   - **R-IDs:** R11
-- [ ] 15.2 Serialize planning metadata as provider-native labels (write-side) (R11) (unit 2/2)
+- [x] 15.2 Serialize planning metadata as provider-native labels (write-side) (R11) (unit 2/2)
   - **File:** `scripts/planning_store.py`
   - **Expected:** structural frontmatter keys (type/unit-id/status/topic/depends/absorbs/amends/visibility) promoted to provider-native labels; human-readable titles without `[planning] type:unit-id`; provider id treated as a storage pointer only (unit-id stays authoritative).
   - **R-IDs:** R11
-- [ ] 15.3 Labels→unit read projection with body fallback + dual-read backfill (R11) (unit 1/2)
+- [x] 15.3 Labels→unit read projection with body fallback + dual-read backfill (R11) (unit 1/2)
   - **File:** `scripts/planning_github_client.py`
   - **Expected:** read/discover paths project unit metadata from labels with body fallback; a one-release dual-read (labels + frontmatter) window and a backfill for existing issues; multi-value edges encoded within provider label-cardinality limits.
   - **R-IDs:** R11
-- [ ] 15.4 Labels→unit read projection with body fallback + dual-read backfill (R11) (unit 2/2)
+- [x] 15.4 Labels→unit read projection with body fallback + dual-read backfill (R11) (unit 2/2)
   - **File:** `scripts/planning_jira_client.py`
   - **Expected:** read/discover paths project unit metadata from labels with body fallback; a one-release dual-read (labels + frontmatter) window and a backfill for existing issues; multi-value edges encoded within provider label-cardinality limits.
   - **R-IDs:** R11
-- [ ] 15.5 Native-labels fixture + issue-store provider docs (R32) (unit 1/2)
+- [x] 15.5 Native-labels fixture + issue-store provider docs (R32) (unit 1/2)
   - **File:** `core/providers/planning-store/issue-store.md`
   - **Expected:** metadata serialized as labels; titles human-readable; provider id canonical where supplied; docs describe labels carrying metadata with body holding prose + authoritative `sw-edges`.
   - **R-IDs:** R11
-- [ ] 15.6 Native-labels fixture + issue-store provider docs (R32) (unit 2/2)
+- [x] 15.6 Native-labels fixture + issue-store provider docs (R32) (unit 2/2)
   - **File:** `scripts/test/fixtures/planning-native-labels/harness.py`
   - **Expected:** metadata serialized as labels; titles human-readable; provider id canonical where supplied; docs describe labels carrying metadata with body holding prose + authoritative `sw-edges`.
   - **R-IDs:** R11
