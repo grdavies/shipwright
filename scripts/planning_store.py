@@ -5,17 +5,20 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import ipaddress
 import json
 import os
 import re
 import shutil
 import subprocess
 import sys
+import urllib.parse
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 import issues_http
 
 from host_lib import (
@@ -244,6 +247,127 @@ def redact_content(content: str) -> str:
     if proc.returncode != 0:
         fail(proc.stderr.strip() or "memory-redact failed", code="redact-failed")
     return proc.stdout
+
+
+# PRD 057 R21 / 21b -- memory backend provider round-trip (planning bodies only).
+#
+# `_urlopen` is a module-level indirection (mirrors `issues_http._urlopen`) so unit
+# tests can monkeypatch the transport without a live Recallium server.
+_urlopen = urlopen
+PLANNING_BODY_PROVIDER_TIMEOUT_SECONDS = 5
+_RECALLIUM_ALLOWED_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+
+
+def _is_allowed_recallium_base(url: str) -> bool:
+    """Localhost-only SSRF guard for `memory.connection.restBaseUrl`.
+
+    Deliberately reimplemented rather than imported from
+    `core/hooks/sw_recallium_url.is_allowed_recallium_base`: `scripts/` and
+    `core/hooks/` are independent sync trees (`scripts/build-chain-sync.py` /
+    `scripts/copy-to-core.py` do not model a cross-tree import here), so this
+    keeps the guard's semantics local to the tree that ships it. Same rules:
+    http(s) only, no embedded credentials, loopback host only.
+    """
+    if not url or not isinstance(url, str):
+        return False
+    try:
+        parsed = urllib.parse.urlparse(url.strip())
+    except ValueError:
+        return False
+    if parsed.scheme not in ("http", "https"):
+        return False
+    if parsed.username or parsed.password:
+        return False
+    host = parsed.hostname
+    if not host:
+        return False
+    if host in _RECALLIUM_ALLOWED_HOSTS:
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def _recallium_rest_base(cfg: dict[str, Any]) -> str | None:
+    memory = cfg.get("memory")
+    if not isinstance(memory, dict):
+        return None
+    connection = memory.get("connection")
+    if not isinstance(connection, dict):
+        return None
+    base = str(connection.get("restBaseUrl") or "").strip().rstrip("/")
+    if not base or not _is_allowed_recallium_base(base):
+        return None
+    return base
+
+
+def _planning_body_provider_url(base: str, project: str, unit_id: str) -> str:
+    # Dedicated document-style resource, deliberately separate from the
+    # semantically-indexed memory-note REST collection (see
+    # `core/providers/recallium.md` operation mapping): a full planning body
+    # is not a distilled memory note, and mixing the two would pollute
+    # semantic search (see that doc's "Notes / gotchas"). Keyed by `unitId`
+    # for a deterministic get, since note search has no exact-key guarantee.
+    quoted_project = urllib.parse.quote(project, safe="")
+    quoted_unit = urllib.parse.quote(unit_id, safe="")
+    return f"{base}/api/projects/{quoted_project}/planning-bodies/{quoted_unit}"
+
+
+def _provider_round_trip_put(base: str, project: str, unit_id: str, body_path: str, content: str) -> tuple[bool, str]:
+    """Best-effort PUT of a redacted planning body through the Recallium REST adapter.
+
+    Never raises -- any failure (unreachable, timeout, non-2xx) degrades to a
+    `(False, reason)` tuple so the caller always has the R21a local cache to
+    fall back to.
+    """
+    url = _planning_body_provider_url(base, project, unit_id)
+    payload = json.dumps({"content": content, "bodyPath": body_path}).encode("utf-8")
+    req = Request(url, data=payload, headers={"Content-Type": "application/json"}, method="PUT")
+    try:
+        with _urlopen(req, timeout=PLANNING_BODY_PROVIDER_TIMEOUT_SECONDS) as resp:
+            status = getattr(resp, "status", 200)
+            if not (200 <= status < 300):
+                return False, f"provider-http-{status}"
+    except HTTPError as exc:
+        exc.close()
+        return False, f"provider-http-{exc.code}"
+    except (URLError, OSError, ValueError) as exc:
+        return False, f"provider-unreachable:{type(exc).__name__}"
+    return True, "ok"
+
+
+def _provider_round_trip_get(base: str, project: str, unit_id: str) -> tuple[bool, str, str | None]:
+    """Best-effort GET of a planning body through the Recallium REST adapter.
+
+    Returns `(ok, reason, content)`; `content` is only set when `ok` is True.
+    Never raises.
+    """
+    url = _planning_body_provider_url(base, project, unit_id)
+    req = Request(url, method="GET")
+    try:
+        with _urlopen(req, timeout=PLANNING_BODY_PROVIDER_TIMEOUT_SECONDS) as resp:
+            status = getattr(resp, "status", 200)
+            if not (200 <= status < 300):
+                return False, f"provider-http-{status}", None
+            raw = resp.read()
+            raw = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+    except HTTPError as exc:
+        code = exc.code
+        exc.close()
+        if code == 404:
+            return False, "provider-not-found", None
+        return False, f"provider-http-{code}", None
+    except (URLError, OSError, ValueError) as exc:
+        return False, f"provider-unreachable:{type(exc).__name__}", None
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return False, "provider-invalid-response", None
+    content = data.get("content") if isinstance(data, dict) else None
+    if not isinstance(content, str):
+        return False, "provider-invalid-response", None
+    return True, "ok", content
 
 
 def contains_raw_transcript(content: str) -> bool:
@@ -1921,26 +2045,42 @@ class LocalSyncedBackend(PlanningStoreBackend):
 
 
 class MemoryLocalCacheBackend(PlanningStoreBackend):
-    """PRD 057 R21 / 21a — the `memory` backend's planning-body store.
+    """PRD 057 R21 — the `memory` backend's planning-body store.
 
-    This is a local-only, gitignored cache (`.cursor/sw-memory/planning-bodies/`, see
-    `.gitignore`) — it never round-trips body content through `memory.provider` (or
-    any other provider) and is available unconditionally, independent of whether a
-    memory provider happens to be configured. `configured_provider()` is informational
-    only: it names whichever provider is configured for the skill's other memory
-    operations (rules/decisions/etc. — see `core/skills/memory/SKILL.md`), and is
-    recorded in the frontmatter purely for operator context, never as a durability or
-    round-trip claim.
+    21a made the local cache (`.cursor/sw-memory/planning-bodies/`, gitignored per
+    `.gitignore`) available unconditionally, independent of whether a memory provider
+    is configured — see the R21a history below. 21b (this revision) adds a *real*
+    round-trip through the configured provider's REST adapter on top of that cache:
 
-    Prior to this rename, `_store_dir()` unconditionally called `fail(..., verdict=
-    "degraded")` (which `emit()` turns into `sys.exit(2)`) whenever no memory provider
-    was configured — a hard CI failure for a purely local disk write, and it made the
-    "degraded" branches below dead code (they could never be reached, since the process
-    had already exited by the time they ran). Removing that gate fixes both the
-    CI false-failure and the misleading-durability framing described in R21.
+    - `put()` always writes the local cache first (the R21a guarantee never
+      regresses), then best-effort round-trips the redacted body through the
+      Recallium REST adapter (`memory.provider: recallium` + a loopback-only
+      `memory.connection.restBaseUrl`) via `_provider_round_trip_put`.
+    - `get()` reads the local cache when present (fast path, unchanged from 21a).
+      When the cache is missing — e.g. a fresh checkout on another machine, since
+      the cache dir is gitignored — it attempts recovery through the same provider
+      adapter (`_provider_round_trip_get`) and repopulates the local cache on
+      success, before falling back to `missing`.
+    - Any provider outage, timeout, non-2xx response, disallowed/unconfigured REST
+      base, or non-`recallium` provider degrades to the R21a local-cache-only
+      behavior — never a hard failure. See `_provider_round_trip_put`/`_get` and
+      `_is_allowed_recallium_base`.
+    - Round-trip bodies use a dedicated `/planning-bodies/<unitId>` REST resource,
+      not the semantically-indexed memory-note REST collection: a full planning
+      body is not a distilled memory note, and indexing raw bodies alongside them
+      would pollute semantic search (see `core/providers/recallium.md`).
 
-    A true provider round-trip (with this cache retained as a fallback) is deferred to
-    21b — see `core/providers/planning-store/memory.md`.
+    `configured_provider()` still names whichever provider is configured for the
+    skill's other memory operations (rules/decisions/etc. — see
+    `core/skills/memory/SKILL.md`); frontmatter also records whether *this* body
+    actually round-tripped (`providerRoundTrip`) and why not when it didn't
+    (`providerRoundTripReason`).
+
+    **R21a history:** prior to 21a, `_store_dir()` unconditionally called
+    `fail(..., verdict="degraded")` (which `emit()` turns into `sys.exit(2)`)
+    whenever no memory provider was configured — a hard CI failure for a purely
+    local disk write. Removing that gate fixed the CI false-failure and the
+    misleading-durability framing described in R21.
     """
 
     backend_id = "memory"
@@ -1953,6 +2093,19 @@ class MemoryLocalCacheBackend(PlanningStoreBackend):
 
     def configured_provider(self) -> str | None:
         return resolve_memory_provider(self.root, self.cfg)
+
+    def _provider_rest_base(self) -> str | None:
+        if self.configured_provider() != "recallium":
+            return None
+        return _recallium_rest_base(self.cfg)
+
+    def _round_trip_unavailable_reason(self) -> str:
+        provider = self.configured_provider()
+        if not provider:
+            return "provider-not-configured"
+        if provider != "recallium":
+            return f"provider-not-round-trippable:{provider}"
+        return "provider-rest-base-unavailable"
 
     def _local_cache_dir(self) -> Path:
         return self.root / ".cursor" / "sw-memory" / "planning-bodies" / self.memory_project()
@@ -1969,10 +2122,15 @@ class MemoryLocalCacheBackend(PlanningStoreBackend):
         if contains_raw_transcript(content):
             fail("raw transcript content refused by memory backend", code="raw-transcript")
 
-    def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
-        self._validate_class(content_class)
-        self._validate_content(content)
-        redacted = redact_content(content)
+    def _write_cache_file(
+        self,
+        unit_id: str,
+        body_path: str,
+        redacted: str,
+        *,
+        provider_round_trip: bool,
+        round_trip_reason: str,
+    ) -> Path:
         store_dir = self._local_cache_dir()
         store_dir.mkdir(parents=True, exist_ok=True)
         target = self._unit_path(unit_id)
@@ -1981,26 +2139,77 @@ class MemoryLocalCacheBackend(PlanningStoreBackend):
             f"unitId: {unit_id}\n"
             f"bodyPath: {body_path}\n"
             f"project: {self.memory_project()}\n"
-            "localOnlyCache: true\n"
             f"configuredProvider: {self.configured_provider() or 'none'}\n"
+            f"providerRoundTrip: {'true' if provider_round_trip else 'false'}\n"
+            f"providerRoundTripReason: {round_trip_reason}\n"
+            "localCacheFallback: true\n"
             "---\n"
         )
         target.write_text(frontmatter + redacted, encoding="utf-8")
-        log_operation("put", unit_id, body_path, redacted, self.backend_id)
-        return StoreResult("ok", unit_id, body_path, self.backend_id, content=redacted, hash=content_hash(redacted))
+        return target
+
+    def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
+        self._validate_class(content_class)
+        self._validate_content(content)
+        redacted = redact_content(content)
+
+        base = self._provider_rest_base()
+        if base is not None:
+            round_trip_ok, round_trip_reason = _provider_round_trip_put(
+                base, self.memory_project(), unit_id, body_path, redacted
+            )
+        else:
+            round_trip_ok = False
+            round_trip_reason = self._round_trip_unavailable_reason()
+
+        self._write_cache_file(
+            unit_id, body_path, redacted, provider_round_trip=round_trip_ok, round_trip_reason=round_trip_reason
+        )
+        notice = (
+            "provider round-trip ok (recallium); local cache also updated"
+            if round_trip_ok
+            else f"provider round-trip unavailable ({round_trip_reason}) -- served from R21a local cache"
+        )
+        log_operation("put", unit_id, body_path, redacted, self.backend_id, notice=notice)
+        return StoreResult(
+            "ok", unit_id, body_path, self.backend_id, content=redacted, hash=content_hash(redacted), notice=notice
+        )
 
     def get(self, unit_id: str, body_path: str) -> StoreResult:
         path = self._unit_path(unit_id)
-        if not path.is_file():
-            return StoreResult("missing", unit_id, body_path, self.backend_id, reason="not-found")
-        raw = path.read_text(encoding="utf-8")
-        body = raw.split("---", 2)[-1].lstrip("\n") if raw.startswith("---") else raw
-        redacted = redact_content(body)
-        log_operation("get", unit_id, body_path, redacted, self.backend_id)
-        return StoreResult("ok", unit_id, body_path, self.backend_id, content=redacted, hash=content_hash(redacted))
+        if path.is_file():
+            raw = path.read_text(encoding="utf-8")
+            body = raw.split("---", 2)[-1].lstrip("\n") if raw.startswith("---") else raw
+            redacted = redact_content(body)
+            log_operation("get", unit_id, body_path, redacted, self.backend_id)
+            return StoreResult("ok", unit_id, body_path, self.backend_id, content=redacted, hash=content_hash(redacted))
+
+        # 21b: the local cache is gitignored, so a fresh checkout on another
+        # machine (or a wiped `.cursor/sw-memory/`) never had it. Attempt genuine
+        # recovery through the provider adapter before declaring the unit missing.
+        base = self._provider_rest_base()
+        if base is not None:
+            ok, reason, recovered = _provider_round_trip_get(base, self.memory_project(), unit_id)
+            if ok and recovered is not None:
+                redacted = redact_content(recovered)
+                self._write_cache_file(
+                    unit_id, body_path, redacted, provider_round_trip=True, round_trip_reason="ok"
+                )
+                notice = "recovered via provider round-trip (recallium); local cache repopulated"
+                log_operation("get", unit_id, body_path, redacted, self.backend_id, notice=notice)
+                return StoreResult(
+                    "ok", unit_id, body_path, self.backend_id, content=redacted, hash=content_hash(redacted), notice=notice
+                )
+
+        return StoreResult("missing", unit_id, body_path, self.backend_id, reason="not-found")
 
     def exists(self, unit_id: str, body_path: str) -> StoreResult:
         present = self._unit_path(unit_id).is_file()
+        if not present:
+            base = self._provider_rest_base()
+            if base is not None:
+                ok, _reason, _content = _provider_round_trip_get(base, self.memory_project(), unit_id)
+                present = ok
         log_operation("exists", unit_id, body_path, None, self.backend_id)
         return StoreResult("ok" if present else "missing", unit_id, body_path, self.backend_id, reason=None if present else "not-found")
 
