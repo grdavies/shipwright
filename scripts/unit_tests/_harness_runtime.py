@@ -358,6 +358,14 @@ class FixtureContext:
         print(f"FAIL {name}")
         self.failures += 1
 
+    def baseline_path_for(self, run_id: str) -> Path:
+        """Caller-owned per-run verify baseline path (PRD 060 R15)."""
+        safe = re.sub(r"[^a-zA-Z0-9._-]+", "-", run_id).strip("-") or "run"
+        base = self.mktemp(prefix=f"sw-baseline-{safe[:24]}-")
+        path = base / "baseline.verify.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
     def mktemp(self, prefix: str = "sw-fix-") -> Path:
         import tempfile
 
