@@ -1785,7 +1785,7 @@ def write_blocker_report(root: Path, state: dict[str, Any], cause: str) -> Path:
     ec, report_payload = run_wave(root, "report", "blockers")
     report = report_payload.get("report") or {}
     if "resumeCommand" not in report:
-        report["resumeCommand"] = resume_deliver_command(state)
+        report["resumeCommand"] = resume_deliver_command(root, state)
     out = {
         "verdict": "halt",
         "cause": cause,
