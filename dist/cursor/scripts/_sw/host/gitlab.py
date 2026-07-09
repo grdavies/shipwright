@@ -32,6 +32,7 @@ def dispatch(root: Path, verb: str, args: list[str]) -> tuple[dict[str, Any], in
         "checks": _checks,
         "review-threads": _review_threads,
         "merge": _merge,
+        "remote-ref-exists": _remote_ref_exists,
     }
     handler = handlers.get(verb)
     if handler is None:
@@ -225,3 +226,22 @@ def _merge(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[dict[str, 
     if "body" not in transport:
         return common.fail_json("merge", PROVIDER, "transport-failed"), 30
     return common.emit_verb_ok("merge", PROVIDER, json.loads(common.parse_transport_body(transport))), 0
+
+def _remote_ref_exists(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[dict[str, Any], int]:
+    branch = common.kv_get(args, "branch")
+    if not branch:
+        return common.fail_json("remote-ref-exists", PROVIDER, "missing-branch"), 30
+    mocked = common.mock_fixture(root, f"remote-ref-exists-{common.fixture_name()}")
+    if mocked:
+        return mocked, 0
+    project = ctx.get("project")
+    if not project:
+        return common.fail_json("remote-ref-exists", PROVIDER, "missing-repo"), 30
+    from urllib.parse import quote
+    encoded = quote(str(project), safe="")
+    branch_enc = quote(branch, safe="")
+    url = f"{ctx['apiBase']}/projects/{encoded}/repository/branches/{branch_enc}"
+    transport = common.http_request(root=root, provider=PROVIDER, method="GET", url=url, token_env=ctx["tokenEnv"])
+    return common.remote_ref_exists_from_transport(verb="remote-ref-exists", provider=PROVIDER, branch=branch, transport=transport)
+
+

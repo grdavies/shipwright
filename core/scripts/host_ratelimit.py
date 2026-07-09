@@ -217,6 +217,61 @@ class TransportOutcome:
         return payload
 
 
+class HostRateLimited(Exception):
+    """Host API rate limit exhausted after bounded retries (PRD 026 R35–R42)."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        cumulative_wait_ms: int = 0,
+        reason: str = "",
+        status_code: int | None = None,
+        retryable: bool = True,
+    ) -> None:
+        super().__init__(message)
+        self.cumulative_wait_ms = cumulative_wait_ms
+        self.reason = reason
+        self.status_code = status_code
+        self.retryable = retryable
+
+
+class HostProbeInconclusive(Exception):
+    """Host remote-ref probe could not distinguish exists vs absent (PRD 059 R14)."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        reason: str = "probe-inconclusive",
+        status_code: int | None = None,
+        retryable: bool = True,
+    ) -> None:
+        super().__init__(message)
+        self.reason = reason
+        self.status_code = status_code
+        self.retryable = retryable
+
+
+def raise_for_transport_outcome(outcome: TransportOutcome, *, provider: str, verb: str) -> RequestResult:
+    """Map a transport outcome to a result or raise host probe exceptions."""
+    if outcome.verdict == "rate-limited":
+        raise HostRateLimited(
+            f"{provider} host transport rate limited for {verb} ({outcome.reason})",
+            cumulative_wait_ms=outcome.cumulative_wait_ms or 0,
+            reason=outcome.reason or "rate-limited",
+            status_code=outcome.status_code,
+            retryable=bool(outcome.retryable),
+        )
+    if outcome.result is None:
+        raise HostProbeInconclusive(
+            f"{provider} host transport failed for {verb}: {outcome.reason or 'unknown'}",
+            reason=outcome.reason or "probe-inconclusive",
+            status_code=outcome.status_code,
+        )
+    return outcome.result
+
+
 class SerialGate:
     def __init__(self, lock_path: Path | None = None):
         self.lock_path = lock_path

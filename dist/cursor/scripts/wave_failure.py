@@ -497,6 +497,24 @@ def cmd_blast_radius_apply(root: Path, args: list[str]) -> None:
     )
 
 
+
+_BLOCKER_RECOVERY_BY_CAUSE = {
+    "terminal-branch-missing": (
+        "bash scripts/wave.py terminal pr prepare  # recreate/reprovision target branch, then retry"
+    ),
+    "terminal-branch-unresolvable": (
+        "python3 scripts/host.py repo-meta  # retry when host reachable; check host auth/token"
+    ),
+}
+
+
+def blocker_recovery_command(cause: str, meta: dict[str, Any], target: str) -> str:
+    mapped = _BLOCKER_RECOVERY_BY_CAUSE.get(cause)
+    if mapped:
+        return mapped
+    return stabilize_command_for_phase(meta, target)
+
+
 def stabilize_command_for_phase(meta: dict[str, Any], target: str) -> str:
     branch = meta.get("branch") or target
     return f"/sw-stabilize  # phase branch {branch}"
@@ -546,7 +564,7 @@ def cmd_stabilize_route(root: Path, args: list[str]) -> None:
             "phaseSlug": meta.get("slug"),
             "branch": meta.get("branch"),
             "cause": meta.get("cause"),
-            "recommendedCommand": stabilize_command_for_phase(meta, target),
+            "recommendedCommand": blocker_recovery_command(str(meta.get("cause") or ""), meta, target),
             "note": "Per-phase stabilize budget obeys dispatch hard stops (R27)",
         }
     )
