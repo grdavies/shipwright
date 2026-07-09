@@ -156,9 +156,10 @@ After doc freeze, durability paths diverge (R32):
 12. Present the frozen task-list path (materialized location when issue-store redirects apply). Resolve `<type>/<slug>` via the shared deliver resolver (do **not**
     re-implement branch derivation in `/sw-doc`):
     ```bash
-    python3 scripts/wave.py preflight <deliver-entry-ref> --skip-base-check
-    where `<deliver-entry-ref>` is `--unit-id <id>` or `--issue <n>` under issue-store, else `--task-list <materialized-path>`
+    python3 scripts/wave.py preflight --task-list <frozen-task-list-path> --skip-base-check
+    # issue-store: prefer `python3 scripts/wave.py preflight --unit-id <id>` or `--issue <n>`
     ```
+    `<deliver-entry-ref>` is `--unit-id <id>`, `--issue <n>`, or `--task-list <materialized-path>` (same resolver `scripts/wave_deliver.py` and `/sw-deliver run` use).
     Read `target.branch` from the JSON (`scripts/wave_deliver.py` — same resolver `/sw-deliver run` uses).
     Derive the PRD docs dir from the task-list parent: `docs/prds/<n>-<slug>/`.
 13. Branch on `doc.afterTasks`:
@@ -169,7 +170,7 @@ After doc freeze, durability paths diverge (R32):
 
          `python3 scripts/wave.py spec-seed <deliver-entry-ref>`
 
-      4. The exact next command: `/sw-deliver run <deliver-entry-ref>`.
+      4. The exact next command: `/sw-deliver run <deliver-entry-ref>` (file-store: `/sw-deliver run <frozen-task-list-path>`).
       Do **not** recommend `/sw-worktree` → `/sw-start` → `/sw-execute` or standalone `/sw-ship` as the
       primary path. (`/sw-deliver run` invokes the underlying `python3 scripts/wave.py deliver-loop` driver — do
       not print the raw script as the primary operator command.)
@@ -180,10 +181,10 @@ After doc freeze, durability paths diverge (R32):
       1. **Seed commit** — `python3 scripts/wave.py spec-seed <deliver-entry-ref>` (docs
          under `docs/prds/<n>-<slug>/` only; excludes `docs/brainstorms/**` and untracked/ignored paths;
          never `main`; idempotent).
-      2. **Dispatch** `/sw-deliver run <deliver-entry-ref>`.
+      2. **Dispatch** `/sw-deliver run <deliver-entry-ref>` (file-store: `/sw-deliver run <frozen-task-list-path>`).
     - **`auto`** — emit one line: `implementing on branch <type>/<slug>`, then in-turn (DOC-A1):
       `python3 scripts/wave.py spec-seed <deliver-entry-ref>`, then **dispatch**
-      `/sw-deliver run <deliver-entry-ref>`.
+      `/sw-deliver run <deliver-entry-ref>` (file-store: `/sw-deliver run <frozen-task-list-path>`).
       No second prompt. When an **agent** (not a human) invoked `/sw-doc --after-tasks=auto`, record the override via
       `scripts/shipwright-state.py override-add` (who/when/mode) and record the seed commit (branch + SHA) via
       `scripts/shipwright-state.py write` **before** dispatch.
