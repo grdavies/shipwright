@@ -19,7 +19,7 @@ import planning_paths as pp  # noqa: E402
 import planning_path_redirect as ppr  # noqa: E402
 import planning_visibility as pv  # noqa: E402
 from host_lib import load_workflow_config  # noqa: E402
-from issues_lib import IssueNotFound, IssuesClient  # noqa: E402
+from issues_lib import IssueBudgetExhausted, IssueCapabilityError, IssueNotFound, IssuesClient  # noqa: E402
 from planning_deliver_gate import task_list_for_unit  # noqa: E402
 from planning_store import get_backend, resolve_effective_backend, validate_project_key  # noqa: E402
 
@@ -236,9 +236,16 @@ def issue_ref_for_task_list(root: Path, task_list_rel: str) -> str | None:
 
     provider = str(resolve_issues_provider(cfg).get("provider", "none"))
     client = IssuesClient(root, provider)
-    record = client.find_by_unit(str(key_result["projectKey"]), unit_id)
-    if record is None:
+    try:
+        matches = client.issue_search(
+            project_key=str(key_result["projectKey"]),
+            unit_id=unit_id,
+        )
+    except (IssueCapabilityError, IssueBudgetExhausted):
         return None
+    if not matches:
+        return None
+    record = matches[0]
     number = getattr(record, "number", None)
     return str(number) if number is not None else str(record.id)
 
