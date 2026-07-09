@@ -99,6 +99,24 @@ When `loopHealth.enabled`, run `python3 scripts/loop_health.py --summary` during
 
 ### Post-merge (`--post-merge` or auto-detected)
 
+### Planning closure preview (any mode)
+
+Before post-merge apply, operators may preview:
+
+```bash
+python3 scripts/planning_store.py close-delivery-units --prd-unit <prd-unit-id> --dry-run
+```
+
+Use printed `resumeCommand` on partial apply.
+
+### Deliver completion semantics (PRD 060 R16–R17)
+
+- Phase PRs may merge independently when green (`merge-ready-green` + phase acceptance + gap-check pass).
+- `living-docs reconcile` runs after each phase merge; `gap-resolve` flips absorbed backlog rows only when INDEX status is `complete` (all phases terminal — last phase on integration, or target merged to default).
+- PRD-absorbed implementation gaps (e.g. `gap-105`…`gap-099`) resolve only after the owning phase passes `phase_acceptance_gate` — not at raw ship-green.
+- Under file contention, prefer landing phases 1–2 before later doc-only phases.
+- Issue-store gap units reach **resolved** via this post-merge closure loop (`close-delivery-units`), not from INDEX projection edits alone (see `living-status` timing gate).
+
 1. Confirm post-merge context (merged PR or explicit user acknowledgment).
 2. Run the same chain; `reconcile` without `--require-merge` may mark INDEX `complete` when appropriate.
 3. **Planning-store closure (PRD 059 R16–R24)** — resolve linked PRD, tasks, brainstorm, and gap
@@ -109,7 +127,10 @@ When `loopHealth.enabled`, run `python3 scripts/loop_health.py --summary` during
    ```
 
    Preview without mutation: add `--dry-run`. On partial failure, retry with the printed `resumeCommand`.
-   Gap units close last (snapshot-first ordering). Cache invalidation runs unconditionally after the loop.
+   The JSON report includes `considered`, `closed`, and `skipped` (with `reason` per skip); phase sub-issues
+   close via deliver-ledger refs with live issue-store fallback (`wave_deliver.py closure-close-phases`).
+   Gap units close last (delivery-grade evidence only — related-only gaps are skipped with reason).
+   Cache invalidation runs unconditionally after the loop.
    COMPLETION-LOG/INDEX file updates below remain additive — this step does not replace them.
 4. Report memories written/updated and handoff to next phase.
 

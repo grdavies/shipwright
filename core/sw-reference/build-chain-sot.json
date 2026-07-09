@@ -59,6 +59,7 @@
     "capability-manifest.schema.json",
     "communication-routing.defaults.json",
     "decision-log.schema.json",
+    "deprecated-surface-manifest.json",
     "deterministic-regen-paths.json",
     "execute-dependency-rules.json",
     "execute-step-plan.schema.json",

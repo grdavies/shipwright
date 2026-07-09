@@ -152,6 +152,20 @@ open-issue-plus-resolved-label mismatch and reports it as an advisory `drift` fi
 to `degraded`, never `fail`) naming the affected unit ids, with the same retry remediation above.
 
 
+
+### Absorbed-gap resolve timing (PRD 060 R16–R17)
+
+| Layer | When | Mechanism |
+| --- | --- | --- |
+| GAP-BACKLOG row flip | INDEX → `complete` (last phase landed or target merged) | `gap-resolve --absorbing-prd` via `living-docs reconcile` |
+| Issue-store gap unit | Post-merge retrospective | `close-delivery-units` |
+| PRD-absorbed implementation gap | Owning phase passes acceptance | Blocked until `phase_acceptance_gate` green |
+
+Independent phase merges are allowed; PRD INDEX `complete` requires all phases
+`green-merged` (or target on default branch). `merge run-next` calls
+`living-docs reconcile --commit` after each phase merge — gap-resolve runs
+only when derived status reaches `complete`, not per intermediate phase.
+
 ## Gap closure timing gate (PRD 059 R23)
 
 Under issue-store, gap units reach **resolved** status in the planning store only via the

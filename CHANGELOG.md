@@ -409,6 +409,11 @@
 * merge phase gap-102-terminal-pr-branch-validation into feat/deliver-loop-planning-store-closure-hardening (ddbbc0b) <!-- sw-deliver:gap-102-terminal-pr-branch-validation -->
 * merge phase gap-103-retrospective-closes-planning-store-units into feat/deliver-loop-planning-store-closure-hardening (4fc1775) <!-- sw-deliver:gap-103-retrospective-closes-planning-store-units -->
 * merge phase regression-coverage-and-documentation-impact into feat/deliver-loop-planning-store-closure-hardening (b1642fe) <!-- sw-deliver:regression-coverage-and-documentation-impact -->
+* merge phase gap-105-opaque-locator-type-hygiene-r1-r3 into feat/planning-store-build-verify-hygiene (99ba9f1) <!-- sw-deliver:gap-105-opaque-locator-type-hygiene-r1-r3 -->
+* merge phase gap-112-post-deliver-post-merge-closure-completeness-r4-r7 into feat/planning-store-build-verify-hygiene (49e65e0) <!-- sw-deliver:gap-112-post-deliver-post-merge-closure-completeness-r4-r7 -->
+* merge phase gap-096-gap-100-build-chain-sot-sync-and-freshness-r11-r13 into feat/planning-store-build-verify-hygiene (8b5f91f) <!-- sw-deliver:gap-096-gap-100-build-chain-sot-sync-and-freshness-r11-r13 -->
+* merge phase gap-081-gap-099-verify-override-follow-up-and-harness-isolation-r8-r10-r14-r15 into feat/planning-store-build-verify-hygiene (54c98db) <!-- sw-deliver:gap-081-gap-099-verify-override-follow-up-and-harness-isolation-r8-r10-r14-r15 -->
+* merge phase docs-skill-remediation-and-gap-resolve-wiring-r16-r17 into feat/planning-store-build-verify-hygiene (9fd9eb8) <!-- sw-deliver:docs-skill-remediation-and-gap-resolve-wiring-r16-r17 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

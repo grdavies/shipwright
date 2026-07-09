@@ -46,6 +46,13 @@ Run the smallest reliable verification for the current phase.
 8. Report pass/fail with log paths and `$STATUS_FILE`.
 9. On durable failure pattern → `memory-preflight` write (redact first). Stop before `/sw-commit` on fail.
 
+### Baseline isolation (PRD 060 R15)
+
+Capture baselines at caller-owned paths scoped to the phase/run
+(e.g. `.cursor/sw-deliver-runs/<phase>/baseline.verify.json`) — never a shared
+repo-root `.shipwright/baseline.*` across concurrent phases. Harness fixtures
+must use isolated temp paths (`harness_isolation_lint.py` enforces).
+
 **Communication intensity:** ultra
 
 **Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-verify`.
