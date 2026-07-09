@@ -20,6 +20,8 @@ if str(_SCRIPTS_DIR) not in sys.path:
 from _sw import jsonio  # noqa: E402
 from _sw.host import bitbucket, github, gitlab, local  # noqa: E402
 from host_lib import resolve_provider  # noqa: E402
+from host_invoke import host_verb  # noqa: E402
+from host_ratelimit import HostProbeInconclusive, HostRateLimited  # noqa: E402
 
 ADAPTERS = {
     "github": github,
@@ -28,6 +30,46 @@ ADAPTERS = {
     "none": local,
     "local": local,
 }
+
+
+def probe_remote_ref_exists(root: Path, *, branch: str, remote: str | None = None) -> bool:
+    """Return True when the remote ref is confirmed to exist, False when confirmed absent."""
+    kwargs: dict[str, str] = {"branch": branch}
+    if remote:
+        kwargs["remote"] = remote
+    payload = host_verb(root, "remote-ref-exists", **kwargs)
+    verdict = payload.get("verdict")
+    reason = str(payload.get("reason") or "")
+    if verdict == "ok":
+        data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+        return bool(data.get("exists"))
+    if reason == "rate-limited" or payload.get("_exitCode") == 37:
+        raise HostRateLimited(
+            f"remote-ref-exists rate limited ({reason})",
+            reason=reason or "rate-limited",
+            status_code=payload.get("statusCode"),
+        )
+    if reason in {"probe-inconclusive", "transport-failed", "missing-token", "capability-missing"}:
+        raise HostProbeInconclusive(
+            f"remote-ref-exists probe inconclusive ({reason})",
+            reason=reason or "probe-inconclusive",
+            status_code=payload.get("statusCode"),
+        )
+    if verdict == "degraded":
+        raise HostProbeInconclusive(
+            f"remote-ref-exists degraded ({reason})",
+            reason=reason or "probe-inconclusive",
+        )
+    if verdict == "fail":
+        raise HostProbeInconclusive(
+            str(payload.get("message") or f"remote-ref-exists failed ({reason})"),
+            reason=reason or "probe-inconclusive",
+            status_code=payload.get("statusCode"),
+        )
+    raise HostProbeInconclusive(
+        "remote-ref-exists returned unexpected payload",
+        reason="probe-inconclusive",
+    )
 
 
 def dispatch(root: Path, verb: str, args: list[str]) -> tuple[dict, int]:

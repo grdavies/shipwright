@@ -21,6 +21,8 @@ if str(SCRIPT_DIR) not in sys.path:
 from host_invoke import host_verb
 from wave_errors import fail_from_payload
 from host_lib import load_workflow_config, remote_name, remote_ref, resolve_provider
+from host import probe_remote_ref_exists
+from host_ratelimit import HostProbeInconclusive, HostRateLimited
 from wave_state import phase_complete
 import loop_health_lib
 import planning_gap_capture as pgc
@@ -1192,6 +1194,62 @@ def terminal_pr_body(root: Path, state: dict[str, Any]) -> str:
     return body
 
 
+
+TERMINAL_BRANCH_EXISTS = "confirmed-exists"
+TERMINAL_BRANCH_ABSENT = "confirmed-absent"
+TERMINAL_BRANCH_UNRESOLVABLE = "probe-inconclusive"
+
+
+def ensure_target_branch_pushed(root: Path, target: str, host_remote: str, top: Path) -> None:
+    """Push target branch before remote existence validation (PRD 059 R13)."""
+    remote_ref_name = remote_ref(host_remote, target)
+    local_tip = resolve_ref(top, target)
+    remote_tip = resolve_ref(top, remote_ref_name)
+    if remote_tip and local_tip and remote_tip == local_tip:
+        return
+    push = git_run(["push", "-u", host_remote, target], cwd=top, check=False)
+    if push.returncode != 0:
+        fail(
+            push.stderr.strip() or "git push failed",
+            exit_code=push.returncode,
+            halt="blocked",
+            cause="terminal-ship:push-failed",
+        )
+
+
+def classify_target_branch_existence(root: Path, target: str, host_remote: str, top: Path) -> str:
+    """Classify local + remote ref probes into three terminal outcomes (PRD 059 R14)."""
+    local_tip = resolve_ref(top, target)
+    if not local_tip:
+        return TERMINAL_BRANCH_ABSENT
+    try:
+        remote_exists = probe_remote_ref_exists(root, branch=target, remote=host_remote)
+    except (HostProbeInconclusive, HostRateLimited):
+        return TERMINAL_BRANCH_UNRESOLVABLE
+    if remote_exists:
+        return TERMINAL_BRANCH_EXISTS
+    return TERMINAL_BRANCH_ABSENT
+
+
+def halt_terminal_branch_outcome(outcome: str, *, target: str) -> None:
+    if outcome == TERMINAL_BRANCH_ABSENT:
+        fail(
+            f"terminal target branch missing on remote: {target!r}",
+            exit_code=20,
+            halt="blocked",
+            cause="terminal-branch-missing",
+            targetBranch=target,
+        )
+    if outcome == TERMINAL_BRANCH_UNRESOLVABLE:
+        fail(
+            f"terminal target branch existence probe inconclusive for {target!r}",
+            exit_code=20,
+            halt="blocked",
+            cause="terminal-branch-unresolvable",
+            targetBranch=target,
+        )
+
+
 def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run") or os.environ.get("SW_DELIVER_DRY_RUN") == "1"
     state = load_state(root)
@@ -1308,6 +1366,11 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
         )
 
     top = git_top(root)
+    host_remote = remote_name(load_workflow_config(root))
+    ensure_target_branch_pushed(root, target, host_remote, top)
+    outcome = classify_target_branch_existence(root, target, host_remote, top)
+    halt_terminal_branch_outcome(outcome, target=target)
+
     items = host_pr_list(root, head=target, base=base, state="open")
     pr_info: dict[str, Any] | None = None
     if items:

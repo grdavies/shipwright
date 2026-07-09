@@ -147,6 +147,38 @@ def transport_ok(transport: dict[str, Any]) -> bool:
     )
 
 
+def remote_ref_exists_from_transport(
+    *,
+    verb: str,
+    provider: str,
+    branch: str,
+    transport: dict[str, Any],
+) -> tuple[dict[str, Any], int]:
+    """Classify a ref-probe HTTP transport into exists / absent / probe-inconclusive."""
+    verdict = transport.get("verdict")
+    if verdict == "rate-limited":
+        payload: dict[str, Any] = {
+            "verdict": "fail",
+            "verb": verb,
+            "provider": provider,
+            "reason": "rate-limited",
+            "retryable": True,
+        }
+        if transport.get("statusCode") is not None:
+            payload["statusCode"] = transport.get("statusCode")
+        return payload, 37
+    if "body" not in transport and verdict not in ("ok",):
+        return fail_json(verb, provider, "probe-inconclusive"), 30
+    status = int(transport.get("status", 200))
+    if status == 404:
+        return emit_verb_ok(verb, provider, {"exists": False, "branch": branch}), 0
+    if 200 <= status < 300:
+        return emit_verb_ok(verb, provider, {"exists": True, "branch": branch}), 0
+    if status in (401, 402, 403):
+        return fail_json(verb, provider, "probe-inconclusive", message="host auth required"), 30
+    return fail_json(verb, provider, "probe-inconclusive"), 30
+
+
 def emit(payload: dict[str, Any]) -> None:
     jsonio.emit(payload, indent=2)
 
