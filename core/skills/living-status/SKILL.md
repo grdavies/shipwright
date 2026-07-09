@@ -151,6 +151,15 @@ other detection surface. `planning-doctor.py`'s `gap-resolution-partial` check s
 open-issue-plus-resolved-label mismatch and reports it as an advisory `drift` finding (downgrades verdict
 to `degraded`, never `fail`) naming the affected unit ids, with the same retry remediation above.
 
+
+## Gap closure timing gate (PRD 059 R23)
+
+Under issue-store, gap units reach **resolved** status in the planning store only via the
+`/sw-retrospective --post-merge` closure loop (`planning_store.py close-delivery-units`) — not from
+derived-status reads, per-theme deliver verification, `gap_backlog.resolve_for_prd`, or manual INDEX
+projection edits alone. Per-theme delivery may record intermediate verified markers; final resolved state
+is stamped only when the retrospective closure loop runs end to end.
+
 ## Guardrails
 
 - Never modify frozen PRD/amendment files.
