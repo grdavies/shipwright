@@ -26,12 +26,12 @@
 | 022 | kernel-classification-and-plan-validation | [022-prd-kernel-classification-and-plan-validation](issue-cache:022-prd-kernel-classification-and-plan-validation) | — | complete |
 | 023 | deliver-plan-policy-pilot | [023-prd-deliver-plan-policy-pilot](issue-cache:023-prd-deliver-plan-policy-pilot) | — | complete |
 | 024 | orchestrator-plan-policy-adoption | [024-prd-orchestrator-plan-policy-adoption](issue-cache:024-prd-orchestrator-plan-policy-adoption) | — | complete |
-| 025 | in-loop-retrospection-and-adaptive-replanning | [025-prd-in-loop-retrospection-and-adaptive-replanning](issue-cache:025-prd-in-loop-retrospection-and-adaptive-replanning) | — | superseded |
+| 025 | in-loop-retrospection-and-adaptive-replanning | [025-prd-in-loop-retrospection-and-adaptive-replanning](issue-cache:025-prd-in-loop-retrospection-and-adaptive-replanning) | — | not-started |
 | 026 | git-host-portability-and-workflow-standardization | [026-prd-git-host-portability-and-workflow-standardization](issue-cache:026-prd-git-host-portability-and-workflow-standardization) | — | complete |
 | 027 | deliver-terminal-finalization-robustness | [027-prd-deliver-terminal-finalization-robustness](issue-cache:027-prd-deliver-terminal-finalization-robustness) | — | complete |
-| 028 | living-status-backlog-lifecycle | [028-prd-living-status-backlog-lifecycle](issue-cache:028-prd-living-status-backlog-lifecycle) | — | superseded |
-| 029 | doc-format-parser-robustness | [029-prd-doc-format-parser-robustness](issue-cache:029-prd-doc-format-parser-robustness) | — | superseded |
-| 030 | spec-mutation-safety | [030-prd-spec-mutation-safety](issue-cache:030-prd-spec-mutation-safety) | — | superseded |
+| 028 | living-status-backlog-lifecycle | [028-prd-living-status-backlog-lifecycle](issue-cache:028-prd-living-status-backlog-lifecycle) | — | not-started |
+| 029 | doc-format-parser-robustness | [029-prd-doc-format-parser-robustness](issue-cache:029-prd-doc-format-parser-robustness) | — | not-started |
+| 030 | spec-mutation-safety | [030-prd-spec-mutation-safety](issue-cache:030-prd-spec-mutation-safety) | — | not-started |
 | 031 | planning-unit-model-and-migration | [031-prd-planning-unit-model-and-migration](issue-cache:031-prd-planning-unit-model-and-migration) | — | complete |
 | 032 | planning-mutation-safety-guards | [032-prd-planning-mutation-safety-guards](issue-cache:032-prd-planning-mutation-safety-guards) | — | complete |
 | 033 | lifecycle-dependencies-and-scheduler | [033-prd-lifecycle-dependencies-and-scheduler](issue-cache:033-prd-lifecycle-dependencies-and-scheduler) | — | complete |
@@ -57,6 +57,7 @@
 | 053 | sub-task-execute-orchestration | [053-prd-sub-task-execute-orchestration](issue-cache:053-prd-sub-task-execute-orchestration) | — | complete |
 | 054 | unit-testing-strategy | [054-prd-unit-testing-strategy](issue-cache:054-prd-unit-testing-strategy) | — | complete |
 | 055 | workflow-fidelity-gap-closure | [055-prd-workflow-fidelity-gap-closure](issue-cache:055-prd-workflow-fidelity-gap-closure) | — | complete |
-| 056 | issue-store-deliver-progress-native-links | [056-prd-issue-store-deliver-progress-native-links](issue-cache:056-prd-issue-store-deliver-progress-native-links) | — | proposed |
+| 056 | issue-store-deliver-progress-native-links | [056-prd-issue-store-deliver-progress-native-links](issue-cache:056-prd-issue-store-deliver-progress-native-links) | — | complete |
 | 057 | planning-store-hardening | [057-prd-planning-store-hardening](issue-cache:057-prd-planning-store-hardening) | — | complete |
-| 058 | dispatch-loop-hardening | [058-prd-dispatch-loop-hardening](issue-cache:058-prd-dispatch-loop-hardening) | [tasks-058-dispatch-loop-hardening](issue-cache:tasks-058-dispatch-loop-hardening) | in-progress |
+| 058 | dispatch-loop-hardening | [058-prd-dispatch-loop-hardening](issue-cache:058-prd-dispatch-loop-hardening) | [tasks-058-dispatch-loop-hardening](issue-cache:tasks-058-dispatch-loop-hardening) | complete |
+| 059 | deliver-loop-planning-store-closure-hardening | [059-prd-deliver-loop-planning-store-closure-hardening](issue-cache:059-prd-deliver-loop-planning-store-closure-hardening) | [tasks-059-deliver-loop-planning-store-closure-hardening](issue-cache:tasks-059-deliver-loop-planning-store-closure-hardening) | in-progress |
