@@ -39,15 +39,55 @@ def cmd_write(start: Path, arg: str) -> int:
     _merge_write(state, json.loads(read_json_arg(arg)))
     print(state); return 0
 
+def _git_head(start: Path) -> str | None:
+    proc = subprocess.run(
+        ["git", "-C", str(start), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    return proc.stdout.strip() if proc.returncode == 0 else None
+
+
+def _repo_root_from_start(start: Path) -> Path:
+    proc = subprocess.run(
+        ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return start
+    return Path(proc.stdout.strip())
+
+
 def cmd_override_add(start: Path, arg: str) -> int:
     state = resolve_state_path(start)
     current = json.loads(state.read_text(encoding="utf-8")) if state.is_file() else {}
     overrides = current.get("overrides") if isinstance(current.get("overrides"), list) else []
-    overrides.append(json.loads(read_json_arg(arg)))
+    entry = json.loads(read_json_arg(arg))
+    overrides.append(entry)
     current["overrides"] = overrides
     state.parent.mkdir(parents=True, exist_ok=True)
     state.write_text(json.dumps(current, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(state); return 0
+    try:
+        import planning_gap_capture as pgc
+
+        root = _repo_root_from_start(start)
+        pr_number = current.get("pr") or current.get("prNumber")
+        if isinstance(pr_number, str) and pr_number.isdigit():
+            pr_number = int(pr_number)
+        gap_out = pgc.capture_verify_override(
+            root,
+            entry,
+            unit_id=str(current.get("unitId") or "") or None,
+            pr_number=pr_number if isinstance(pr_number, int) else None,
+            commit_sha=_git_head(start),
+        )
+        if gap_out.get("action") in ("created", "reused"):
+            print(json.dumps({"verdict": "pass", "verifyOverrideGap": gap_out}))
+    except Exception as exc:  # noqa: BLE001 — override record must persist even if gap capture fails
+        print(json.dumps({"verdict": "warn", "verifyOverrideGapError": str(exc)}), file=sys.stderr)
+    print(state)
+    return 0
 
 def cmd_dispatch_override_add(start: Path, arg: str) -> int:
     state = resolve_state_path(start)
