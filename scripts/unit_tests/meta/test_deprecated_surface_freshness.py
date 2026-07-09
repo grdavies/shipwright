@@ -14,8 +14,8 @@ def test_empty_manifest_passes(tmp_path: Path) -> None:
     manifest = tmp_path / "core/sw-reference/deprecated-surface-manifest.json"
     manifest.parent.mkdir(parents=True)
     manifest.write_text(json.dumps({"version": 1, "surfaces": []}), encoding="utf-8")
-    (tmp_path / "scripts/unit_tests").mkdir(parents=True)
     harness = tmp_path / "scripts/unit_tests/nested/sample.py"
+    harness.parent.mkdir(parents=True, exist_ok=True)
     harness.write_text("REDACT=scripts/memory-redact.sh\n", encoding="utf-8")
     assert dsf.check(tmp_path)["verdict"] == "pass"
 
