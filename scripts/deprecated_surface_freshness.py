@@ -30,10 +30,19 @@ def load_manifest(root: Path) -> dict:
 
 def iter_harness_files(root: Path, globs: list[str]) -> list[Path]:
     files: list[Path] = []
+    allowed_suffixes = {".py", ".sh", ".md"}
     for pattern in globs:
-        for path in root.glob(pattern):
-            if path.is_file() and path.suffix in {".py", ".sh", ".md"}:
-                files.append(path)
+        if "**" in pattern:
+            prefix = pattern.split("**", 1)[0].rstrip("/")
+            base = root / prefix
+            if base.is_dir():
+                for candidate in base.rglob("*"):
+                    if candidate.is_file() and candidate.suffix in allowed_suffixes:
+                        files.append(candidate)
+            continue
+        for candidate in root.glob(pattern):
+            if candidate.is_file() and candidate.suffix in allowed_suffixes:
+                files.append(candidate)
     return sorted(set(files))
 
 
