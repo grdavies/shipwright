@@ -46,8 +46,16 @@ docs/decisions/
 │       ├── execute-step-plan.json
 │       ├── integrate-journal.json
 │       ├── execute-supervised-confirmed.json
+│       ├── gap-check.status.json
 │       └── dispatch-decisions.json
 ```
+
+### Deliver run-state ledger (PRD 059 R9–R11)
+
+`taskLedger` on `.cursor/sw-deliver-state.<slug>.json` records per-subtask `done` state used by
+`planning_store.py materialize --resync`. Pre-resync backups land beside the materialized destination as
+`*.pre-resync.bak`. Planning query cache state: `.cursor/hooks/state/planning-query-cache.json`.
+
 
 ## Planning-unit model (PRD 031)
 
