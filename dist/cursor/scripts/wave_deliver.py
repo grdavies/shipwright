@@ -1211,6 +1211,25 @@ def wave_plan_serialize_undeclared_overlaps(root: Path, task_list: str) -> dict[
     return apply_undeclared_overlap_serialization(root, task_list)
 
 
+
+
+def cmd_closure_close_phases(root: Path, args: list[str]) -> None:
+    """Close done phase sub-issues from deliver ledger + issue-store fallback (PRD 060 R5)."""
+    from host_lib import load_workflow_config
+    from planning_store import close_done_phase_sub_issues
+    from wave_state import load_deliver_state
+
+    prd_unit = parse_kv(args, "--prd-unit")
+    if not prd_unit:
+        fail("--prd-unit required")
+    dry_run = "--dry-run" in args
+    cfg = load_workflow_config(root)
+    state = load_deliver_state(root)
+    result = close_done_phase_sub_issues(root, cfg, prd_unit, state=state, dry_run=dry_run)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    if result.get("verdict") == "fail":
+        fail(result.get("error", "closure-close-phases failed"))
+
 def cmd_integration(root: Path, args: list[str]) -> None:
     stamp = parse_kv(args, "--stamp")
     branches_raw = parse_kv(args, "--branches", "")
@@ -1250,6 +1269,8 @@ def main() -> None:
         cmd_next(root, args)
     elif cmd == "dependency-gate":
         cmd_dependency_gate(root, args)
+    elif cmd == "closure-close-phases":
+        cmd_closure_close_phases(root, args)
     else:
         fail(f"unknown command: {cmd}")
 
