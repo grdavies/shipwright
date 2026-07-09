@@ -2,6 +2,7 @@
 """Canonical gap unit capture from feedback signals (PRD 033 R15; PRD 041 meta channel)."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -42,6 +43,8 @@ SUBSTANTIAL_CATEGORIES = frozenset(
 )
 SUBSTANTIAL_MIN_RECURRENCE = 2
 DEFAULT_MAX_TERMINAL_CAPTURES = 3
+VERIFY_OVERRIDE_CLASSES = frozenset({"no-baseline", "unattributed"})
+VERIFY_OVERRIDE_SOURCE = "verify-override"
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
@@ -237,6 +240,179 @@ def list_open_gap_titles(root: Path) -> dict[str, str]:
 
 def find_duplicate_open_gap(title: str, open_titles: dict[str, str]) -> str | None:
     return open_titles.get(normalize_gap_title(title))
+
+
+def redact_override_reason(reason: str) -> str:
+    from memory_redact import redact
+
+    return redact(reason)
+
+
+def _normalize_override_anchor(
+    *,
+    unit_id: str | None,
+    pr_number: int | None,
+    commit_sha: str | None,
+) -> str:
+    parts: list[str] = []
+    if unit_id:
+        parts.append(f"unit:{unit_id}")
+    if pr_number is not None:
+        parts.append(f"pr:{pr_number}")
+    if commit_sha:
+        parts.append(f"commit:{commit_sha[:12]}")
+    return "|".join(parts) or "global"
+
+
+def verify_override_signature(
+    override: dict[str, Any],
+    *,
+    unit_id: str | None = None,
+    pr_number: int | None = None,
+    commit_sha: str | None = None,
+) -> str:
+    """Deterministic verify-override signature (PRD 060 R9)."""
+    inconclusive = str(override.get("inconclusiveClass") or "").strip().lower()
+    anchor = _normalize_override_anchor(
+        unit_id=unit_id,
+        pr_number=pr_number,
+        commit_sha=commit_sha,
+    )
+    raw = f"{inconclusive}|{anchor}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
+
+
+def _gap_tags_from_frontmatter(fm: dict[str, Any]) -> list[str]:
+    tags = fm.get("tags")
+    if isinstance(tags, list):
+        return [str(t).strip() for t in tags if str(t).strip()]
+    if isinstance(tags, str) and tags.strip():
+        return [tags.strip()]
+    return []
+
+
+def _scan_open_gap_signals(type_root: Path) -> dict[str, str]:
+    out: dict[str, str] = {}
+    gap_root = type_root / "gap"
+    if not gap_root.is_dir():
+        return out
+    for unit_dir in sorted(gap_root.iterdir()):
+        if not unit_dir.is_dir():
+            continue
+        body = pig.body_file_for_unit_dir(unit_dir)
+        if not body:
+            continue
+        try:
+            fm = pig.parse_frontmatter(body.read_text(encoding="utf-8"))
+        except OSError:
+            continue
+        if not fm:
+            continue
+        unit_id = str(fm.get("id", "")).strip()
+        status = str(fm.get("status", "")).strip()
+        if not unit_id or status not in STILL_OPEN_GAP_STATUSES:
+            continue
+        for tag in _gap_tags_from_frontmatter(fm):
+            if tag.startswith("signal:"):
+                out.setdefault(tag.split(":", 1)[1], unit_id)
+    return out
+
+
+def list_open_gap_signals(root: Path) -> dict[str, str]:
+    invalidate_all(root)
+    out: dict[str, str] = {}
+    worktree = pp.git_root(root)
+    dirs = pp.load_planning_dirs(root)
+    for type_dir in {dirs.planning, dirs.prds}:
+        for signal, unit_id in _scan_open_gap_signals(worktree / type_dir).items():
+            out.setdefault(signal, unit_id)
+    return out
+
+
+def find_open_gap_by_signal(root: Path, signal_id: str) -> str | None:
+    return list_open_gap_signals(root).get(signal_id)
+
+
+def capture_verify_override(
+    root: Path,
+    override: dict[str, Any],
+    *,
+    unit_id: str | None = None,
+    pr_number: int | None = None,
+    commit_sha: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Auto-file durable follow-up gap for verify/ship overrides (PRD 060 R8–R9)."""
+    inconclusive = str(override.get("inconclusiveClass") or "").strip().lower()
+    if inconclusive not in VERIFY_OVERRIDE_CLASSES:
+        return {
+            "action": "skipped",
+            "reason": f"inconclusiveClass {inconclusive!r} does not require verify-override gap",
+        }
+    signature = verify_override_signature(
+        override,
+        unit_id=unit_id,
+        pr_number=pr_number,
+        commit_sha=commit_sha,
+    )
+    existing = find_open_gap_by_signal(root, signature)
+    if existing:
+        return {
+            "action": "reused",
+            "unitId": existing,
+            "signature": signature,
+            "deduped": True,
+        }
+    redacted_reason = redact_override_reason(str(override.get("reason") or ""))
+    who = str(override.get("who") or "unknown").strip()
+    title = f"Verify override follow-up: {inconclusive}"
+    dirs = pp.load_planning_dirs(root)
+    new_unit_id, body_path_rel = allocate_gap_unit_id(
+        root, title, lambda uid: gap_body_rel(dirs, uid)
+    )
+    tags = [
+        f"source:{VERIFY_OVERRIDE_SOURCE}",
+        f"inconclusive:{inconclusive}",
+        f"signal:{signature}",
+    ]
+    fm = [
+        "---",
+        f"id: {new_unit_id}",
+        "type: gap",
+        "status: open",
+        f"title: {title}",
+        "visibility: public",
+        f"tags: [{', '.join(tags)}]",
+    ]
+    if pr_number is not None:
+        fm.append(f"source_pr: {pr_number}")
+    fm.extend(
+        [
+            "---",
+            "",
+            f"# {title}",
+            "",
+            "_Captured from verification override — override alone is insufficient; "
+            "this gap tracks durable follow-up._",
+            "",
+            "## Override evidence (redacted)",
+            "",
+            f"- who: {who}",
+            f"- inconclusiveClass: {inconclusive}",
+            f"- reason: {redacted_reason}",
+            "",
+        ]
+    )
+    content = "\n".join(fm) + "\n"
+    if not dry_run:
+        store_put_gap(root, new_unit_id, body_path_rel, content)
+    return {
+        "action": "created",
+        "unitId": new_unit_id,
+        "path": body_path_rel,
+        "signature": signature,
+        "deduped": False,
+    }
 
 
 def capture_gap(
@@ -514,6 +690,12 @@ def parse_flags(rest: list[str]) -> dict[str, Any]:
         elif tok == "--pr" and i + 1 < len(rest):
             out["pr_number"] = int(rest[i + 1])
             i += 2
+        elif tok == "--unit-id" and i + 1 < len(rest):
+            out["unit_id"] = rest[i + 1]
+            i += 2
+        elif tok == "--override" and i + 1 < len(rest):
+            out["override_json"] = rest[i + 1]
+            i += 2
         else:
             i += 1
     return out
@@ -524,7 +706,7 @@ def main(argv: list[str] | None = None) -> None:
     if len(args) < 2:
         fail(
             "usage: planning_gap_capture.py <repo-root> "
-            "<capture|confirm|materialize> [options]"
+            "<capture|confirm|materialize|capture-verify-override> [options]"
         )
     root = Path(args[0]).resolve()
     command = args[1]
@@ -572,6 +754,24 @@ def main(argv: list[str] | None = None) -> None:
             dry_run=bool(flags.get("dry_run")),
         )
         emit({"verdict": "pass", "action": "meta-materialize", **out})
+
+
+    if command == "capture-verify-override":
+        override_json = flags.get("override_json")
+        if not override_json:
+            fail("--override required for capture-verify-override")
+        payload = json.loads(override_json)
+        if not isinstance(payload, dict):
+            fail("capture-verify-override requires JSON override object")
+        out = capture_verify_override(
+            root,
+            payload,
+            unit_id=flags.get("unit_id"),
+            pr_number=flags.get("pr_number"),
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit({"verdict": "pass", "action": "capture-verify-override", **out})
+        return
 
     if command == "refresh-projection":
         try:
