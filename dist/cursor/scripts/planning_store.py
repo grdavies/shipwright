@@ -2719,6 +2719,74 @@ def _normalize_prd_unit_id(prd_unit_id: str) -> str:
     return unit
 
 
+def _prd_unit_id_alias_candidates(prd_unit_id: str) -> list[str]:
+    """PRD 060 R4 — canonical ``<n>-prd-<slug>`` plus legacy alias forms for closure lookup."""
+    unit = prd_unit_id.strip()
+    out: list[str] = []
+
+    def _add(candidate: str) -> None:
+        if candidate and candidate not in out:
+            out.append(candidate)
+
+    _add(unit)
+    _add(_normalize_prd_unit_id(unit))
+    m = re.match(r"^(\d{3})-prd-(.+)$", unit)
+    if m:
+        prd_num, slug = m.group(1), m.group(2)
+        _add(f"prd-{prd_num}-{slug}")
+        _add(f"{prd_num}-{slug}")
+    m = re.match(r"^prd-(\d{3})-(.+)$", unit)
+    if m:
+        prd_num, slug = m.group(1), m.group(2)
+        _add(f"{prd_num}-prd-{slug}")
+        _add(f"{prd_num}-{slug}")
+    m = re.match(r"^(\d{3})-(.+)$", unit)
+    if m and "-prd-" not in unit:
+        prd_num, slug = m.group(1), m.group(2)
+        _add(f"{prd_num}-prd-{slug}")
+        _add(f"prd-{prd_num}-{slug}")
+    return out
+
+
+def _gap_closure_evidence(
+    fm: dict[str, str],
+    edges: dict[str, Any] | None,
+    prd_num: str | None,
+    root: Path,
+    cfg: dict[str, Any],
+) -> tuple[set[str], list[dict[str, str]]]:
+    """Classify gap units for closure: delivery-grade vs related-only skip (PRD 060 R6)."""
+    delivery_grade: set[str] = set()
+    skipped: list[dict[str, str]] = []
+
+    for target in _parse_absorbs_targets(fm.get("absorbs", "")):
+        if "gap" in target or target.startswith("gap-"):
+            delivery_grade.add(target)
+
+    related_only: set[str] = set()
+    for edge in (edges or {}).get("edges") or []:
+        if not isinstance(edge, dict):
+            continue
+        target = str(edge.get("target", "")).strip()
+        if not target or ("gap" not in target and not target.startswith("gap-")):
+            continue
+        rel = str(edge.get("rel") or edge.get("relationship") or "depends").strip().lower()
+        if rel == "absorbs":
+            delivery_grade.add(target)
+        else:
+            related_only.add(target)
+
+    if prd_num:
+        for gap_id in _migrate_issue_store().gap_unit_ids_scheduled_for_prd(root, prd_num, cfg):
+            if gap_id:
+                delivery_grade.add(gap_id)
+
+    for gap_id in sorted(related_only - delivery_grade):
+        skipped.append({"unitId": gap_id, "reason": "related-only-not-delivery-grade"})
+
+    return delivery_grade, skipped
+
+
 def _prd_number_from_unit_id(unit_id: str) -> str | None:
     m = re.match(r"^prd-(\d{3})-", unit_id)
     if m:
@@ -2816,11 +2884,8 @@ def resolve_delivery_linked_units(
         return {"verdict": "fail", "error": "issue-store-backend-required", "prdUnitId": prd_unit_id}
 
     normalized = _normalize_prd_unit_id(prd_unit_id)
-    candidates = [normalized, prd_unit_id.strip()]
+    candidates = _prd_unit_id_alias_candidates(prd_unit_id)
     prd_num = _prd_number_from_unit_id(normalized)
-    if prd_num:
-        slug = _slug_from_prd_unit(normalized, prd_num)
-        candidates.extend([f"prd-{prd_num}-{slug}", f"{prd_num}-{slug}"])
     seen: set[str] = set()
     prd_record = None
     prd_unit = ""
@@ -2840,11 +2905,6 @@ def resolve_delivery_linked_units(
     raw_content = strip_markers_and_edges(full_body)
     fm = _migrate_issue_store().parse_frontmatter_fields(raw_content)
     edges = parse_edges_block(full_body) or {}
-    edge_targets = [
-        str(edge.get("target", "")).strip()
-        for edge in (edges.get("edges") or [])
-        if isinstance(edge, dict) and edge.get("target")
-    ]
 
     units: dict[str, dict[str, str]] = {}
     units[prd_unit] = {
@@ -2877,12 +2937,7 @@ def resolve_delivery_linked_units(
             "bodyPath": _default_body_path(brainstorm_unit, "brainstorm"),
         }
 
-    gap_ids: set[str] = set()
-    for target in _parse_absorbs_targets(fm.get("absorbs", "")) + edge_targets:
-        if "gap" in target:
-            gap_ids.add(target)
-    if prd_num:
-        gap_ids.update(_migrate_issue_store().gap_unit_ids_scheduled_for_prd(root, prd_num, cfg))
+    gap_ids, gap_skipped = _gap_closure_evidence(fm, edges, prd_num, root, cfg)
     for gap_id in sorted(gap_ids):
         if gap_id in units:
             continue
@@ -2902,6 +2957,179 @@ def resolve_delivery_linked_units(
         "prdUnitId": prd_unit,
         "snapshot": ordered,
         "count": len(ordered),
+        "skipped": gap_skipped,
+    }
+
+
+def _phase_done_from_state(state: dict[str, Any] | None, phase_id: str) -> bool:
+    if not state:
+        return False
+    phases = state.get("phases") or {}
+    meta = phases.get(str(phase_id)) if isinstance(phases, dict) else None
+    if isinstance(meta, dict):
+        status = str(meta.get("status") or "")
+        if status in {"green-merged", "merge-ready-green", "complete"}:
+            return True
+    ledger = (state.get("taskLedger") or {}).get("phases") or {}
+    phase_ledger = ledger.get(str(phase_id)) if isinstance(ledger, dict) else None
+    if isinstance(phase_ledger, dict) and phase_ledger.get("declaredPartial"):
+        return bool(phase_ledger.get("skippedRefs"))
+    return False
+
+
+def _collect_phase_sub_issue_candidates(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    state: dict[str, Any] | None,
+    tasks_unit_id: str | None,
+) -> list[dict[str, str]]:
+    """Resolve phase sub-issues from deliver ledger hierarchyMap with live store fallback (PRD 060 R5)."""
+    from planning_progress import phase_done_label
+    from wave_state import load_hierarchy_map
+
+    candidates: list[dict[str, str]] = []
+    seen: set[str] = set()
+
+    def _add(phase_id: str, issue_id: str, unit_id: str) -> None:
+        key = issue_id or unit_id
+        if not phase_id or key in seen:
+            return
+        seen.add(key)
+        candidates.append({"phaseId": phase_id, "issueId": issue_id, "unitId": unit_id})
+
+    hmap = load_hierarchy_map(state) if state else {}
+    for phase_id, entry in sorted((hmap.get("phases") or {}).items()):
+        if not isinstance(entry, dict):
+            continue
+        issue_id = str(entry.get("issueId") or "")
+        unit_id = str(entry.get("unitId") or "")
+        if not unit_id and tasks_unit_id:
+            unit_id = f"{tasks_unit_id}-phase-{phase_id}"
+        _add(str(phase_id), issue_id, unit_id)
+
+    if candidates or not tasks_unit_id:
+        return candidates
+
+    pmis = _migrate_issue_store()
+    if not pmis.issue_store_effective(root, cfg):
+        return candidates
+    key_result = pmis.validate_project_key(root, cfg)
+    if key_result.get("verdict") != "ok":
+        return candidates
+    project_key = str(key_result["projectKey"])
+    client = pmis.cfg_issues_client(root)
+    prefix = f"{tasks_unit_id}-phase-"
+    search = getattr(client, "issue_search", None)
+    if not callable(search):
+        return candidates
+    for record in search(project_key=project_key, artifact_type="tasks"):
+        unit_id = str(getattr(record, "unit_id", "") or "")
+        if not unit_id.startswith(prefix):
+            continue
+        phase_id = unit_id[len(prefix) :]
+        if not phase_id.isdigit():
+            continue
+        done_label = phase_done_label(phase_id)
+        if done_label not in list(getattr(record, "labels", [])):
+            continue
+        _add(phase_id, str(record.id), unit_id)
+    return candidates
+
+
+def close_done_phase_sub_issues(
+    root: Path,
+    cfg: dict[str, Any],
+    prd_unit_id: str,
+    *,
+    state: dict[str, Any] | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Close phase sub-issues marked done in deliver ledger or via ``sw:phase:N:done`` (PRD 060 R5)."""
+    from planning_progress import phase_done_label
+
+    pmis = _migrate_issue_store()
+    if not pmis.issue_store_effective(root, cfg):
+        return {"verdict": "ok", "skipped": True, "reason": "issue-store-required", "prdUnitId": prd_unit_id}
+
+    backend = get_backend(root, cfg, override="issue-store")
+    if not isinstance(backend, IssueStoreBackend):
+        return {"verdict": "fail", "error": "issue-store-backend-required", "prdUnitId": prd_unit_id}
+
+    snapshot = resolve_delivery_linked_units(root, cfg, prd_unit_id)
+    if snapshot.get("verdict") != "ok":
+        return snapshot
+    tasks_unit_id = next(
+        (item["unitId"] for item in snapshot.get("snapshot") or [] if item.get("artifactType") == "tasks"),
+        None,
+    )
+
+    if state is None:
+        try:
+            from wave_state import load_deliver_state
+
+            state = load_deliver_state(root)
+        except Exception:  # noqa: BLE001
+            state = None
+
+    considered: list[dict[str, Any]] = []
+    closed: list[dict[str, Any]] = []
+    skipped: list[dict[str, str]] = []
+    failures: list[dict[str, Any]] = []
+
+    for entry in _collect_phase_sub_issue_candidates(root, cfg, state=state, tasks_unit_id=tasks_unit_id):
+        phase_id = entry["phaseId"]
+        issue_id = entry.get("issueId") or ""
+        unit_id = entry.get("unitId") or f"{tasks_unit_id}-phase-{phase_id}"
+        body_path = _default_body_path(unit_id, "tasks")
+        record = None
+        if issue_id:
+            try:
+                record = backend._client.issue_get(str(issue_id))
+            except IssueNotFound:
+                record = None
+        if record is None:
+            record = _lookup_issue_record(backend, unit_id, body_path)
+        if record is None:
+            skipped.append({"unitId": unit_id, "reason": "phase-sub-issue-not-found"})
+            continue
+
+        done_label = phase_done_label(phase_id)
+        labels = list(record.labels)
+        is_done = done_label in labels or _phase_done_from_state(state, phase_id)
+        considered.append({"unitId": unit_id, "phaseId": phase_id, "issueId": record.id, "done": is_done})
+        if not is_done:
+            skipped.append({"unitId": unit_id, "reason": "phase-not-done"})
+            continue
+
+        unit = {"unitId": unit_id, "artifactType": "tasks", "bodyPath": body_path}
+        outcome = _close_issue_store_unit(backend, unit, dry_run=dry_run)
+        if outcome.get("verdict") == "fail":
+            failures.append(outcome)
+        elif outcome.get("action") in {"close", "would-close", "noop"}:
+            closed.append(outcome)
+        else:
+            failures.append(outcome)
+
+    open_remaining = [item["unitId"] for item in failures if item.get("unitId")]
+    resume = (
+        f"python3 scripts/planning_store.py close-delivery-units --prd-unit {snapshot['prdUnitId']}"
+        if open_remaining
+        else None
+    )
+    verdict = "ready" if not failures else "not-ready"
+    if dry_run:
+        verdict = "dry-run"
+    return {
+        "verdict": verdict,
+        "action": "close-done-phase-sub-issues",
+        "prdUnitId": snapshot["prdUnitId"],
+        "dryRun": dry_run,
+        "considered": considered,
+        "closed": closed,
+        "skipped": skipped,
+        "openRemaining": open_remaining,
+        "resumeCommand": resume,
     }
 
 
@@ -3025,6 +3253,7 @@ def close_delivery_units(
     prd_unit_id: str,
     *,
     dry_run: bool = False,
+    state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Close linked PRD/tasks/brainstorm/gap units after retrospective merge (PRD 059 R16-R24)."""
     snapshot = resolve_delivery_linked_units(root, cfg, prd_unit_id)
@@ -3034,14 +3263,26 @@ def close_delivery_units(
     if not isinstance(backend, IssueStoreBackend):
         return {"verdict": "fail", "error": "issue-store-backend-required", "prdUnitId": prd_unit_id}
 
+    phase_closure = close_done_phase_sub_issues(
+        root, cfg, prd_unit_id, state=state, dry_run=dry_run
+    )
+
     units = list(snapshot.get("snapshot") or [])
     results: list[dict[str, Any]] = []
     failures: list[dict[str, Any]] = []
+    considered: list[dict[str, str]] = [
+        {"unitId": item["unitId"], "artifactType": item["artifactType"]} for item in units
+    ]
+    closed: list[dict[str, Any]] = list(phase_closure.get("closed") or [])
+    skipped: list[dict[str, str]] = list(snapshot.get("skipped") or []) + list(phase_closure.get("skipped") or [])
+
     for unit in units:
         outcome = _close_issue_store_unit(backend, unit, dry_run=dry_run)
         results.append(outcome)
         if outcome.get("verdict") == "fail" or outcome.get("detail", {}).get("verdict") == "resolution-partial":
             failures.append(outcome)
+        elif outcome.get("action") in {"close", "would-close", "noop", "would-close-gap", "close-gap"}:
+            closed.append(outcome)
 
     cache_status = "skipped-dry-run" if dry_run else "invalidated"
     if not dry_run:
@@ -3052,12 +3293,15 @@ def close_delivery_units(
         for item in results
         if item.get("verdict") == "fail" or item.get("detail", {}).get("verdict") == "resolution-partial"
     ]
+    open_remaining.extend(phase_closure.get("openRemaining") or [])
+    open_remaining = sorted(set(open_remaining))
     resume = (
         f"python3 scripts/planning_store.py close-delivery-units --prd-unit {snapshot['prdUnitId']}"
         if open_remaining
         else None
     )
-    verdict = "ready" if not failures else "not-ready"
+    phase_ok = phase_closure.get("verdict") in {"ready", "dry-run", "ok"}
+    verdict = "ready" if not failures and phase_ok else "not-ready"
     if dry_run:
         verdict = "dry-run"
     return {
@@ -3066,7 +3310,11 @@ def close_delivery_units(
         "prdUnitId": snapshot["prdUnitId"],
         "dryRun": dry_run,
         "snapshotCount": len(units),
+        "considered": considered + list(phase_closure.get("considered") or []),
+        "closed": closed,
+        "skipped": skipped,
         "units": results,
+        "phaseClosure": phase_closure,
         "openRemaining": open_remaining,
         "cacheInvalidation": cache_status,
         "resumeCommand": resume,

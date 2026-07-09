@@ -109,7 +109,10 @@ When `loopHealth.enabled`, run `python3 scripts/loop_health.py --summary` during
    ```
 
    Preview without mutation: add `--dry-run`. On partial failure, retry with the printed `resumeCommand`.
-   Gap units close last (snapshot-first ordering). Cache invalidation runs unconditionally after the loop.
+   The JSON report includes `considered`, `closed`, and `skipped` (with `reason` per skip); phase sub-issues
+   close via deliver-ledger refs with live issue-store fallback (`wave_deliver.py closure-close-phases`).
+   Gap units close last (delivery-grade evidence only — related-only gaps are skipped with reason).
+   Cache invalidation runs unconditionally after the loop.
    COMPLETION-LOG/INDEX file updates below remain additive — this step does not replace them.
 4. Report memories written/updated and handoff to next phase.
 
