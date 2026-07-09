@@ -407,6 +407,7 @@
 * merge phase gap-097-gap-101-merge-loop-discovery-and-sha-validation into feat/deliver-loop-planning-store-closure-hardening (db7b32e) <!-- sw-deliver:gap-097-gap-101-merge-loop-discovery-and-sha-validation -->
 * merge phase gap-098-rematerialize-with-resync into feat/deliver-loop-planning-store-closure-hardening (606cebf) <!-- sw-deliver:gap-098-rematerialize-with-resync -->
 * merge phase gap-102-terminal-pr-branch-validation into feat/deliver-loop-planning-store-closure-hardening (ddbbc0b) <!-- sw-deliver:gap-102-terminal-pr-branch-validation -->
+* merge phase gap-103-retrospective-closes-planning-store-units into feat/deliver-loop-planning-store-closure-hardening (4fc1775) <!-- sw-deliver:gap-103-retrospective-closes-planning-store-units -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
