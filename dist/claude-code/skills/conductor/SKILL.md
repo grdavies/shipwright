@@ -73,6 +73,25 @@ conductor in-turn mechanical re-invocation only — never surface it as the oper
 Never infer progress from chat history or ephemeral sub-agent logs (R19). Phase outcomes come solely from
 `status.json`.
 
+
+## Phase status discovery and disambiguation (PRD 059 R5–R6)
+
+Per-phase durable status and gap-check binding use the shared discovery chain
+(`scripts/phase_status_discovery.py`): **canonical repo root → phase worktree → glob** under
+`.sw-worktrees/*/.cursor/sw-deliver-runs/<phase-slug>/`. Gap-check and merge paths share the helper;
+HEAD-stamp disambiguation prefers the current phase head, and **binding halt verdicts win** over stale pass
+candidates.
+
+## Terminal blocker recovery shape (PRD 059 R14–R15)
+
+`scripts/wave.py report blockers` maps terminal branch causes to recovery commands without schema changes:
+
+| `cause` | Recovery hint |
+| --- | --- |
+| `terminal-branch-missing` | Recreate/reprovision target branch, then retry `terminal pr prepare` |
+| `terminal-branch-unresolvable` | Retry when host reachable; verify host auth/token via `scripts/host.py` |
+
+
 ## Two-tier plan lifecycle (PRD 022)
 
 Proposals route through `python3 scripts/wave.py plan validate` — **never** hand-author plan JSON in prose.

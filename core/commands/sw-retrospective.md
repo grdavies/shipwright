@@ -101,7 +101,17 @@ When `loopHealth.enabled`, run `python3 scripts/loop_health.py --summary` during
 
 1. Confirm post-merge context (merged PR or explicit user acknowledgment).
 2. Run the same chain; `reconcile` without `--require-merge` may mark INDEX `complete` when appropriate.
-3. Report memories written/updated and handoff to next phase.
+3. **Planning-store closure (PRD 059 R16–R24)** — resolve linked PRD, tasks, brainstorm, and gap
+   units via `sw-edges`/frontmatter linkage, then close them in the planning store:
+
+   ```bash
+   python3 scripts/planning_store.py close-delivery-units --prd-unit <prd-unit-id>
+   ```
+
+   Preview without mutation: add `--dry-run`. On partial failure, retry with the printed `resumeCommand`.
+   Gap units close last (snapshot-first ordering). Cache invalidation runs unconditionally after the loop.
+   COMPLETION-LOG/INDEX file updates below remain additive — this step does not replace them.
+4. Report memories written/updated and handoff to next phase.
 
 ## Stop conditions
 

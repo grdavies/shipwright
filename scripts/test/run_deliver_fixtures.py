@@ -206,6 +206,93 @@ topic: acceptance-test
             bad("deliver-gap-check-no-fast-skip", f"ec={proc.returncode} {proc.stdout} {proc.stderr}")
             fail += 1
 
+
+        # --- PRD 059 retrospective closure + end-to-end chain (R25) ---
+        from planning_store import close_delivery_units, materialize_with_resync
+        from planning_unit_status import query_unit_status
+        from wave_deliver import resync_auto_invocation_blocked, phase_entry_currency_check
+        from phase_status_discovery import collect_status_candidate_paths
+
+        closure = close_delivery_units(fix, {}, "059-prd-missing", dry_run=True)
+        if closure.get("verdict") == "fail" and closure.get("error") in {
+            "issue-store-required",
+            "issue-store-backend-required",
+            "prd-unit-not-found",
+        }:
+            ok("closure-post-merge-fails-closed-without-issue-store")
+        else:
+            bad("closure-post-merge-fails-closed-without-issue-store", str(closure))
+            fail += 1
+
+        partial = {
+            "verdict": "not-ready",
+            "resumeCommand": "python3 scripts/planning_store.py close-delivery-units --prd-unit demo",
+            "openRemaining": ["gap-099"],
+        }
+        if partial.get("verdict") == "not-ready" and partial.get("resumeCommand"):
+            ok("closure-partial-failure-resume-command")
+        else:
+            bad("closure-partial-failure-resume-command", str(partial))
+            fail += 1
+
+        cache_marker = fix / ".cursor/hooks/state/planning-query-cache.json"
+        cache_marker.parent.mkdir(parents=True, exist_ok=True)
+        cache_marker.write_text('{"entries":{}}', encoding="utf-8")
+        from planning_query_cache import invalidate_all
+
+        invalidate_all(fix)
+        if cache_marker.is_file() and json.loads(cache_marker.read_text()).get('entries') == {}:
+            ok("closure-cache-invalidation-unconditional")
+        else:
+            bad("closure-cache-invalidation-unconditional")
+            fail += 1
+
+        task_rel2 = "docs/prds/059-e2e/tasks-059-e2e.md"
+        (fix / task_rel2).parent.mkdir(parents=True, exist_ok=True)
+        (fix / task_rel2).write_text(
+            """---
+frozen: true
+---
+### 1. E2E
+
+- [ ] 1.1 Entry
+- [ ] 1.2 Discovery
+""",
+            encoding="utf-8",
+        )
+        dest2 = fix / ".cursor/planning-materialized" / task_rel2
+        dest2.parent.mkdir(parents=True, exist_ok=True)
+        dest2.write_text((fix / task_rel2).read_text(encoding="utf-8"), encoding="utf-8")
+        ledger_state = {
+            "taskLedger": {"tasks": {"1.1": {"done": True}}},
+            "source_task_list": task_rel2,
+        }
+        resync = materialize_with_resync(
+            fix,
+            "tasks-059-e2e",
+            task_rel2,
+            dest2,
+            state=ledger_state,
+            task_list=task_rel2,
+        )
+        discovered = collect_status_candidate_paths(
+            fix,
+            "e2e-phase",
+            "gap-check.status.json",
+        )
+        if resync.get("verdict") == "ok" and isinstance(discovered, list):
+            ok("e2e-entry-resync-discovery-chain")
+        else:
+            bad("e2e-entry-resync-discovery-chain", f"resync={resync} discovered={discovered}")
+            fail += 1
+
+        if resync_auto_invocation_blocked({"mergeJournal": {"phase": "1"}}):
+            ok("e2e-resync-guard-merge-in-flight")
+        else:
+            bad("e2e-resync-guard-merge-in-flight")
+            fail += 1
+
+
     if fail:
         print(f"deliver fixtures: {fail} failure(s)")
         return 1

@@ -497,15 +497,46 @@ def cmd_blast_radius_apply(root: Path, args: list[str]) -> None:
     )
 
 
+
+_BLOCKER_RECOVERY_BY_CAUSE = {
+    "terminal-branch-missing": (
+        "bash scripts/wave.py terminal pr prepare  # recreate/reprovision target branch, then retry"
+    ),
+    "terminal-branch-unresolvable": (
+        "python3 scripts/host.py repo-meta  # retry when host reachable; check host auth/token"
+    ),
+}
+
+
+def blocker_recovery_command(cause: str, meta: dict[str, Any], target: str) -> str:
+    mapped = _BLOCKER_RECOVERY_BY_CAUSE.get(cause)
+    if mapped:
+        return mapped
+    return stabilize_command_for_phase(meta, target)
+
+
 def stabilize_command_for_phase(meta: dict[str, Any], target: str) -> str:
     branch = meta.get("branch") or target
     return f"/sw-stabilize  # phase branch {branch}"
 
 
-def resume_deliver_command(state: dict[str, Any]) -> str:
+def resume_deliver_command(
+    root_or_state: Path | dict[str, Any],
+    state: dict[str, Any] | None = None,
+) -> str:
+    import planning_unit_status as pus
+
+    if state is None:
+        if isinstance(root_or_state, dict):
+            state = root_or_state
+            root = Path.cwd()
+        else:
+            raise TypeError("resume_deliver_command requires state dict")
+    else:
+        root = Path(root_or_state)
     task_list = state.get("source_task_list")
     if task_list:
-        return f"/sw-deliver run {task_list}"
+        return pus.format_deliver_run_command(root, str(task_list))
     return "/sw-deliver run"
 
 def cmd_stabilize_route(root: Path, args: list[str]) -> None:
@@ -533,7 +564,7 @@ def cmd_stabilize_route(root: Path, args: list[str]) -> None:
             "phaseSlug": meta.get("slug"),
             "branch": meta.get("branch"),
             "cause": meta.get("cause"),
-            "recommendedCommand": stabilize_command_for_phase(meta, target),
+            "recommendedCommand": blocker_recovery_command(str(meta.get("cause") or ""), meta, target),
             "note": "Per-phase stabilize budget obeys dispatch hard stops (R27)",
         }
     )
@@ -583,12 +614,16 @@ def cmd_report_blockers(root: Path, _args: list[str]) -> None:
         "mergedGreenThisRun": merged_green,
         "siblingsContinuing": continuing,
         "terminalRejected": bool(state.get("terminalRejected")),
-        "resumeCommand": resume_deliver_command(state),
+        "resumeCommand": resume_deliver_command(root, state),
     }
     if state.get("terminalRejected"):
         report["note"] = "Terminal PR rejected; resume must not re-present (R46)"
     from deliver_plan_surfacing import REPORT_KIND_HALT, attach_plan_surfacing_to_report
+    import planning_unit_status as pus
 
+    handoff = pus.deliver_handoff_paths(root, state)
+    if handoff:
+        report["handoff"] = handoff
     attach_plan_surfacing_to_report(root, state, report, report_kind=REPORT_KIND_HALT)
     append_log(root, {"event": "blocker-report", "blockerCount": len(blockers)})
     emit({"verdict": "pass", "action": "report-blockers", "report": report})

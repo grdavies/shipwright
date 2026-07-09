@@ -11,7 +11,16 @@ Load `skills/living-status/SKILL.md`.
 
 ## Procedure
 
-1. `python3 scripts/reconcile-status.py derive` — show per-PRD status + task/PR linkage.
+1. **Planning-store unit status (R2, PRD 059)** — for a single planning unit, query the unified
+   status surface (no `docs/prds/INDEX.md` read, no ad hoc `gh issue view`):
+   ```bash
+   python3 scripts/planning-graph.py status --unit-id <unit-id>
+   # or, under issue-store:
+   python3 scripts/planning-graph.py status --issue <issue-number>
+   ```
+   Returns one of `backlog`, `planned`, `in-progress`, `complete`, or `unauthorized` — the same value
+   `/sw-status` reports for planning-unit queries regardless of backend.
+2. `python3 scripts/reconcile-status.py derive` — show per-PRD status + task/PR linkage.
 2. On user request or post-merge: `reconcile` to update INDEX Status column.
 3. After shipped phase: `append-log` for completion log entry.
 4. Include gap-unit index echo from `docs/planning/INDEX.md` (derived region) and legacy GAP-BACKLOG projection summary (read-only).

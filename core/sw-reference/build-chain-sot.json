@@ -79,6 +79,7 @@
     "model-routing.defaults.json",
     "model-tier-hook-feasibility.md",
     "orchestrator-step-plan.json",
+    "planning-deliver-parity-matrix.md",
     "planning-privacy-notice.md",
     "planning-unit.schema.json",
     "pr-test-plan.manifest.json",

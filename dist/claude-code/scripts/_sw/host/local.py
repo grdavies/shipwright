@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,7 @@ def dispatch(root: Path, verb: str, args: list[str]) -> tuple[dict[str, Any], in
         "pr-create": _capability_missing,
         "merge": _capability_missing,
         "pr-close": _capability_missing,
+        "remote-ref-exists": _remote_ref_exists,
     }
     handler = handlers.get(verb)
     if handler is None:
@@ -105,3 +107,21 @@ def _review_threads(root: Path, args: list[str]) -> tuple[dict[str, Any], int]:
         "provider": PROVIDER,
         "data": {"unresolved": 0, "actionable": 0, "localEvidence": True},
     }, 0
+
+
+def _remote_ref_exists(root: Path, args: list[str]) -> tuple[dict[str, Any], int]:
+    branch = common.kv_get(args, "branch")
+    if not branch:
+        return common.fail_json("remote-ref-exists", PROVIDER, "missing-branch"), 30
+    proc = subprocess.run(
+        ["git", "-C", str(root), "show-ref", "--verify", f"refs/heads/{branch}"],
+        capture_output=True,
+        text=True,
+    )
+    proc_exists = proc.returncode == 0
+    return common.emit_verb_ok(
+        "remote-ref-exists",
+        PROVIDER,
+        {"exists": proc_exists, "branch": branch, "localEvidence": True},
+    ), 0
+

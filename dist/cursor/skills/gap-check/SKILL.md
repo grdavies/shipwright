@@ -67,6 +67,15 @@ python3 scripts/dispatch-check.py --agent "$AGENT" --command sw-gaps --skill gap
 
 Halt on preflight or `dispatch-check` exit 20; do not spawn without a validated leading directive.
 
+
+## Status discovery (PRD 059 R5–R6)
+
+On the deliver merge path, `scripts/gap-check-gate.py` discovers
+`.cursor/sw-deliver-runs/{phaseSlug}/gap-check.status.json` via the shared phase-status discovery chain
+(canonical → worktree-local → glob) — worktree-only writes are visible without manual sync. Writes include a
+`head` field (same contract as phase `status.json`). Among multiple candidates, **binding halt** verdicts
+block merge regardless of HEAD-match tiebreak.
+
 ## Deliver binding (PRD 055 R13, R25)
 
 On the **deliver merge path** (`merge-enqueue` / `merge_ready_in_flight_phases`), gap-check is **mechanical**

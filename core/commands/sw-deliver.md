@@ -77,6 +77,31 @@ Default `canonical` is unchanged for all repos. Enabling `proposed` on `/sw-deli
 Benefit metric soak and default-flip decisions use `python3 scripts/wave.py plan benefit-report --pairs <path>`
 (`scripts/wave_plan_benefit.py`); insufficient evidence fails closed to `canonical` (R31).
 
+
+## Planning-store entry and status (PRD 059 R1–R4)
+
+Phase-mode `run` / `plan` accept **one** of:
+
+```bash
+/sw-deliver run <frozen-task-list-path>
+/sw-deliver run --unit-id <planning-unit-id>
+/sw-deliver run --issue <issue-number>    # issue-store only
+```
+
+`--unit-id` / `--issue` materialize through `planning_materialize` to the same local path `--task-list`
+would produce. Passing both `--task-list` and `--unit-id`/`--issue` fails closed.
+
+Unified unit status (no `docs/prds/INDEX.md` read):
+
+```bash
+python3 scripts/planning-graph.py status --unit-id <unit-id>
+# `/sw-status` delegates to the same surface for planning-unit queries (R2).
+```
+
+Consolidated blocker/terminal reports prefer the `--unit-id` / `--issue` reference form under issue-store
+when surfacing `resumeCommand` (R4).
+
+
 ## Procedure (`deliver-loop` / `run`)
 
 Phase-mode runs MUST enter through the durable driver — never a manual worktree handoff while progress is

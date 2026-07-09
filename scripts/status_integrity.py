@@ -92,6 +92,17 @@ def is_full_head_sha(head: Any) -> bool:
     return isinstance(head, str) and bool(SHA_PATTERN.match(head))
 
 
+def resolve_write_head(cwd: Path | None = None) -> str:
+    """Resolve git HEAD for durable status writes (phase status.json and gap-check)."""
+    root = cwd or Path.cwd()
+    proc = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    return proc.stdout.strip() if proc.returncode == 0 else ""
+
+
 def validate_gate_json(gate: Any) -> tuple[bool, str | None]:
     if gate is None:
         return True, None

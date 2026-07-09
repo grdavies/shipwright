@@ -502,8 +502,14 @@ def phase_status_map(state: dict[str, Any]) -> dict[str, str]:
     return {}
 
 
+def resolve_task_list_arg(root: Path, args: list[str]) -> str | None:
+    import planning_unit_status as pus
+
+    return pus.resolve_task_list_reference(root, args, parse_kv=parse_kv, has_flag=has_flag)
+
+
 def detect_mode(args: list[str]) -> str:
-    task_list = parse_kv(args, "--task-list")
+    task_list = parse_kv(args, "--task-list") or parse_kv(args, "--unit-id") or parse_kv(args, "--issue")
     items = parse_kv(args, "--items", "")
     edges = parse_kv(args, "--edges", "")
     plan_file = parse_kv(args, "--plan")
@@ -521,7 +527,7 @@ def detect_mode(args: list[str]) -> str:
         return "phase"
     if has_multi or has_flag(args, "--items"):
         return "multi-feature"
-    fail("mode undetected: provide --task-list or --items")
+    fail("mode undetected: provide --task-list, --unit-id, --issue, or --items")
 
 
 def parse_multi_edges(edges_raw: str) -> list[dict[str, str]]:
@@ -608,7 +614,7 @@ def plan_combined(
     dry_run: bool,
 ) -> dict[str, Any]:
     """Cross-feature plan: frozen phase list + multi-feature units (PRD 013 R13)."""
-    task_list = parse_kv(args, "--task-list")
+    task_list = resolve_task_list_arg(root, args)
     assert task_list
     task_path = resolve_task_list_path(root, task_list)
     content = task_path.read_text(encoding="utf-8")
@@ -692,6 +698,91 @@ def plan_combined(
     return out
 
 
+TERMINAL_IN_FLIGHT_ACTIONS = frozenset(
+    {
+        "terminal",
+        "terminal-ship",
+        "terminal-checkpoint",
+        "finalize-completion",
+        "all-phases-complete",
+        "suggest-cleanup",
+    }
+)
+
+
+def resync_auto_invocation_blocked(state: dict[str, Any]) -> bool:
+    """Guard auto-resync while merge or terminal work is in-flight (PRD 059 R11)."""
+    if state.get("mergeJournal"):
+        return True
+    if state.get("nextAction") in TERMINAL_IN_FLIGHT_ACTIONS:
+        return True
+    terminal_ship = state.get("terminalShip") or {}
+    if isinstance(terminal_ship, dict) and terminal_ship.get("status") in {
+        "watching",
+        "gate-green",
+        "local-evidence",
+    }:
+        return True
+    return False
+
+
+def phase_entry_currency_check(
+    root: Path,
+    task_list: str,
+    *,
+    state: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Phase-entry currency check with optional auto-resync (PRD 059 R11)."""
+    from planning_store import materialize_with_resync, resolve_effective_backend
+    from wave_deliver_loop import load_plan, tasks_currency_ok
+    from wave_state import load_deliver_state, resolve_state_path
+
+    if state is None:
+        state_path = resolve_state_path(root)
+        if not state_path.is_file():
+            return None
+        state = load_deliver_state(root)
+    plan_path = root / ".cursor" / PLAN_PATH_NAME
+    plan: dict[str, Any] = {}
+    if plan_path.is_file():
+        try:
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            plan = {}
+    if not plan.get("source_task_list"):
+        plan = dict(plan)
+        plan["source_task_list"] = task_list
+
+    ok, cause = tasks_currency_ok(root, state, plan)
+    if ok:
+        return None
+
+    cfg = load_workflow_config(root)
+    if resolve_effective_backend(root, cfg).get("effective") != "issue-store":
+        return {"verdict": "report-only", "cause": cause or "tasks-currency-divergence"}
+
+    if resync_auto_invocation_blocked(state):
+        return {
+            "verdict": "report-only",
+            "cause": cause or "tasks-currency-divergence",
+            "reason": "merge-or-terminal-in-flight",
+        }
+
+    import planning_materialize as pm
+
+    unit_id = pm.unit_id_from_task_list_rel(task_list)
+    worktree = planning_paths.git_root(root)
+    dest = pm.materialized_dest(worktree, task_list)
+    return materialize_with_resync(
+        root,
+        unit_id,
+        task_list,
+        dest,
+        state=state,
+        task_list=task_list,
+    )
+
+
 def resolve_task_list_path(root: Path, task_list: str) -> Path:
     """Resolve frozen task list inside the active worktree (R61, PRD 056 R17-R18)."""
     import planning_materialize as pm
@@ -763,17 +854,36 @@ def run_capability_index_preflight(root: Path) -> dict[str, Any]:
     return payload
 
 
+def cmd_run(root: Path, args: list[str]) -> None:
+    """Resolve deliver entry reference and materialize frozen task list (PRD 059 R1)."""
+    import planning_materialize as pm
+
+    task_list = resolve_task_list_arg(root, args)
+    if not task_list:
+        fail("provide --task-list, --unit-id, or --issue", exit_code=2, halt="disambiguation")
+    result = pm.ensure_run_entry_materialized(root, task_list)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "deliver-run-entry",
+            "taskList": task_list,
+            **result,
+        }
+    )
+
+
 def cmd_preflight(root: Path, args: list[str]) -> None:
     mode = detect_mode(args)
     result: dict[str, Any] = {"verdict": "pass", "mode": mode}
 
     if mode == "phase":
-        task_list = parse_kv(args, "--task-list")
+        task_list = resolve_task_list_arg(root, args)
         assert task_list
         task_path = resolve_task_list_path(root, task_list)
         content = task_path.read_text(encoding="utf-8")
         fm = parse_frontmatter(content)
         run_unit_planning_gate(root, task_list, args)
+        phase_entry_currency_check(root, task_list)
         branch_type = resolve_type(args, fm)
         slug = feature_slug(fm, task_path)
         branch = f"{branch_type}/{slug}"
@@ -898,7 +1008,7 @@ def cmd_plan(root: Path, args: list[str]) -> None:
         emit(out, 0)
 
     if mode == "phase":
-        task_list = parse_kv(args, "--task-list")
+        task_list = resolve_task_list_arg(root, args)
         assert task_list
         task_path = resolve_task_list_path(root, task_list)
         content = task_path.read_text(encoding="utf-8")
@@ -906,6 +1016,7 @@ def cmd_plan(root: Path, args: list[str]) -> None:
         require_task_list_frozen(root, task_list, fm)
 
         run_unit_planning_gate(root, task_list, args)
+        phase_entry_currency_check(root, task_list)
 
         branch_type = resolve_type(args, fm)
         slug = feature_slug(fm, task_path)
@@ -1123,7 +1234,9 @@ def main() -> None:
     cmd = sys.argv[2]
     args = sys.argv[3:]
 
-    if cmd == "plan":
+    if cmd == "run":
+        cmd_run(root, args)
+    elif cmd == "plan":
         cmd_plan(root, args)
     elif cmd == "preflight":
         cmd_preflight(root, args)
