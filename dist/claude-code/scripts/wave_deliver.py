@@ -110,6 +110,20 @@ def parse_frontmatter(content: str) -> dict[str, str]:
     return out
 
 
+def task_list_is_frozen(root: Path, task_list: str, fm: dict[str, str]) -> bool:
+    """File-native frozen frontmatter or issue-store verify-frozen-hash (PRD 043)."""
+    if fm.get("frozen", "").lower() == "true":
+        return True
+    import planning_materialize as pm
+
+    return pm.issue_store_frozen_verified(root, task_list)
+
+
+def require_task_list_frozen(root: Path, task_list: str, fm: dict[str, str]) -> None:
+    if not task_list_is_frozen(root, task_list, fm):
+        fail("task list is not frozen; run /sw-freeze first", exit_code=2, halt="unfrozen")
+
+
 def parse_phases(content: str) -> list[dict[str, str]]:
     return doc_format.extract_phases(content)
 
@@ -599,8 +613,7 @@ def plan_combined(
     task_path = resolve_task_list_path(root, task_list)
     content = task_path.read_text(encoding="utf-8")
     fm = parse_frontmatter(content)
-    if fm.get("frozen", "").lower() != "true":
-        fail("task list is not frozen; run /sw-freeze first", exit_code=2, halt="unfrozen")
+    require_task_list_frozen(root, task_list, fm)
 
     branch_type = resolve_type(args, fm)
     slug = feature_slug(fm, task_path)
@@ -890,13 +903,7 @@ def cmd_plan(root: Path, args: list[str]) -> None:
         task_path = resolve_task_list_path(root, task_list)
         content = task_path.read_text(encoding="utf-8")
         fm = parse_frontmatter(content)
-
-        if fm.get("frozen", "").lower() != "true":
-            fail(
-                "task list is not frozen; run /sw-freeze first",
-                exit_code=2,
-                halt="unfrozen",
-            )
+        require_task_list_frozen(root, task_list, fm)
 
         run_unit_planning_gate(root, task_list, args)
 
