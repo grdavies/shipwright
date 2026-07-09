@@ -313,7 +313,7 @@ def check_stale_etag_racer_rejected_full_put_path() -> dict:
         backend_b = ps.get_backend(root, cfg)
         real_lookup = backend_b._lookup_record
 
-        def stale_lookup(unit_id: str, body_path: str):
+        def stale_lookup(unit_id: str, body_path: str, **kwargs: object):
             record = real_lookup(unit_id, body_path)
             return dataclasses.replace(record, etag=stale_etag)
 
