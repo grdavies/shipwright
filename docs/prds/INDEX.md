@@ -60,4 +60,4 @@
 | 056 | issue-store-deliver-progress-native-links | [056-prd-issue-store-deliver-progress-native-links](issue-cache:056-prd-issue-store-deliver-progress-native-links) | — | complete |
 | 057 | planning-store-hardening | [057-prd-planning-store-hardening](issue-cache:057-prd-planning-store-hardening) | — | complete |
 | 058 | dispatch-loop-hardening | [058-prd-dispatch-loop-hardening](issue-cache:058-prd-dispatch-loop-hardening) | [tasks-058-dispatch-loop-hardening](issue-cache:tasks-058-dispatch-loop-hardening) | complete |
-| 059 | deliver-loop-planning-store-closure-hardening | [059-prd-deliver-loop-planning-store-closure-hardening](issue-cache:059-prd-deliver-loop-planning-store-closure-hardening) | [tasks-059-deliver-loop-planning-store-closure-hardening](issue-cache:tasks-059-deliver-loop-planning-store-closure-hardening) | in-progress |
+| 059 | deliver-loop-planning-store-closure-hardening | [059-prd-deliver-loop-planning-store-closure-hardening](issue-cache:059-prd-deliver-loop-planning-store-closure-hardening) | [tasks-059-deliver-loop-planning-store-closure-hardening](issue-cache:tasks-059-deliver-loop-planning-store-closure-hardening) | complete |
