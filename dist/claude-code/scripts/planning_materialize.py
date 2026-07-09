@@ -346,6 +346,40 @@ def scan_diff_for_violations(root: Path, base_ref: str) -> dict[str, Any]:
 
 
 
+def issue_store_frozen_verified(root: Path, task_list_rel: str) -> bool:
+    """True when issue-store is effective and verify-frozen-hash passes (PRD 043)."""
+    from planning_store import resolve_effective_backend
+
+    cfg = load_workflow_config(root)
+    if resolve_effective_backend(root, cfg).get("effective") != "issue-store":
+        return False
+    worktree = git_root(root)
+    body_path = planning_path_redirect.resolve_path(worktree, task_list_rel)
+    unit_id = unit_id_from_task_list_rel(task_list_rel)
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "planning_store.py"),
+            "--root",
+            str(root),
+            "verify-frozen-hash",
+            "--unit-id",
+            unit_id,
+            "--body-path",
+            body_path,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return False
+    try:
+        payload = json.loads(proc.stdout or "{}")
+    except json.JSONDecodeError:
+        return False
+    return payload.get("verdict") == "ok"
+
+
 def verify_frozen_issue_store(root: Path, unit_id: str, body_path: str) -> None:
     from planning_store import resolve_effective_backend
 

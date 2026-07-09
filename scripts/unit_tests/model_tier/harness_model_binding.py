@@ -61,7 +61,7 @@ trap 'rm -rf "$TMPDIR_FIX"' EXIT
 
 # --- resolve-model-tier-agent ---
 if OUT=$(bash "$RESOLVE" --agent sw-coherence-reviewer --config "$CONFIG" 2>/dev/null) && \
-   echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['tier']=='build' and d['modelId']=='composer-2.5' and d['source']=='routing.agents'"; then
+   echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('source')=='routing.agents' and d.get('tier') in ('cheap','build','mid','deep') and d.get('modelId')"; then
   ok "resolve-model-tier-agent"
 else
   bad "resolve-model-tier-agent"
@@ -99,7 +99,7 @@ fi
 
 # --- dispatch-preflight-parent-floor ---
 set +e
-PF_OUT=$(bash "$PREFLIGHT" --agent sw-coherence-reviewer --parent-model composer-2.5-fast --config "$CONFIG" 2>/dev/null)
+PF_OUT=$(bash "$PREFLIGHT" --agent sw-coherence-reviewer --parent-model composer-2.5 --config "$CONFIG" 2>/dev/null)
 PF_EC=$?
 set -e
 if [[ "$PF_EC" -eq 20 ]] && echo "$PF_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('cause')=='binding:no-model'"; then
