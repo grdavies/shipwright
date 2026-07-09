@@ -33,6 +33,21 @@ def _parse_flag(rest: list[str], flag: str) -> str | None:
     return None
 
 
+
+
+def cmd_status(root: Path, rest: list[str]) -> int:
+    """Unified planning-unit status query (PRD 059 R2)."""
+    import planning_unit_status as pus
+
+    unit_id = _parse_flag(rest, "--unit-id")
+    issue = _parse_flag(rest, "--issue")
+    if not unit_id and not issue:
+        print(json.dumps({"verdict": "fail", "error": "usage: planning-graph.py status --unit-id <id> | --issue <n>"}))
+        return 2
+    result = pus.query_unit_status(root, unit_id=unit_id, issue=issue)
+    print(result["status"])
+    return 0
+
 def cmd_park(root: Path, action: str, rest: list[str]) -> int:
     """Park/unpark a unit under local-config allowlist + reason governance (R28).
 
@@ -66,11 +81,12 @@ def main(argv: list[str] | None = None) -> int:
     root = git_root(plugin_root)
     if not args or args[0] in {"-h", "--help"}:
         print(
-            "usage: planning-graph.py reconcile|cycle-check|doctor|relief-check|next|park|unpark|posture|paths ...\n"
+            "usage: planning-graph.py reconcile|cycle-check|doctor|relief-check|next|status|park|unpark|posture|paths ...\n"
             "  planning-graph.py reconcile [--dry-run]\n"
             "  planning-graph.py next [--override]   # empty post-filter frontier → scheduler-exhausted halt\n"
             "  planning-graph.py park <unit-id> --reason <why> [--actor <actor>]\n"
             "  planning-graph.py unpark <unit-id> [--actor <actor>]\n"
+            "  planning-graph.py status --unit-id <id> | --issue <n>\n"
             "  planning-graph.py posture\n"
         )
         return 0
@@ -85,6 +101,8 @@ def main(argv: list[str] | None = None) -> int:
         return subprocess.run([py, str(plugin_root / "scripts/wave_deliver.py"), str(root), "next", *rest], shell=False).returncode
     if cmd in {"park", "unpark"}:
         return cmd_park(root, cmd, rest)
+    if cmd == "status":
+        return cmd_status(root, rest)
     if cmd == "posture":
         return subprocess.run([py, str(plugin_root / "scripts/planning_autonomy.py"), str(root), "posture"], shell=False).returncode
     if cmd == "paths":

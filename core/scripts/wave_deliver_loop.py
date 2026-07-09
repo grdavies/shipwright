@@ -2444,7 +2444,9 @@ def cmd_watchdog_check(root: Path, _args: list[str]) -> None:
 def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run")
     max_steps = int(parse_kv(args, "--max-steps", "12") or "12")
-    task_list = parse_kv(args, "--task-list")
+    from wave_deliver import resolve_task_list_arg
+
+    task_list = resolve_task_list_arg(root, args) or parse_kv(args, "--task-list")
 
     state = load_state(root, task_list)
     plan = load_plan(root)

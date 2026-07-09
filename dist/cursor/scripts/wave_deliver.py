@@ -502,8 +502,14 @@ def phase_status_map(state: dict[str, Any]) -> dict[str, str]:
     return {}
 
 
+def resolve_task_list_arg(root: Path, args: list[str]) -> str | None:
+    import planning_unit_status as pus
+
+    return pus.resolve_task_list_reference(root, args, parse_kv=parse_kv, has_flag=has_flag)
+
+
 def detect_mode(args: list[str]) -> str:
-    task_list = parse_kv(args, "--task-list")
+    task_list = parse_kv(args, "--task-list") or parse_kv(args, "--unit-id") or parse_kv(args, "--issue")
     items = parse_kv(args, "--items", "")
     edges = parse_kv(args, "--edges", "")
     plan_file = parse_kv(args, "--plan")
@@ -521,7 +527,7 @@ def detect_mode(args: list[str]) -> str:
         return "phase"
     if has_multi or has_flag(args, "--items"):
         return "multi-feature"
-    fail("mode undetected: provide --task-list or --items")
+    fail("mode undetected: provide --task-list, --unit-id, --issue, or --items")
 
 
 def parse_multi_edges(edges_raw: str) -> list[dict[str, str]]:
@@ -608,7 +614,7 @@ def plan_combined(
     dry_run: bool,
 ) -> dict[str, Any]:
     """Cross-feature plan: frozen phase list + multi-feature units (PRD 013 R13)."""
-    task_list = parse_kv(args, "--task-list")
+    task_list = resolve_task_list_arg(root, args)
     assert task_list
     task_path = resolve_task_list_path(root, task_list)
     content = task_path.read_text(encoding="utf-8")
@@ -763,12 +769,30 @@ def run_capability_index_preflight(root: Path) -> dict[str, Any]:
     return payload
 
 
+def cmd_run(root: Path, args: list[str]) -> None:
+    """Resolve deliver entry reference and materialize frozen task list (PRD 059 R1)."""
+    import planning_materialize as pm
+
+    task_list = resolve_task_list_arg(root, args)
+    if not task_list:
+        fail("provide --task-list, --unit-id, or --issue", exit_code=2, halt="disambiguation")
+    result = pm.ensure_run_entry_materialized(root, task_list)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "deliver-run-entry",
+            "taskList": task_list,
+            **result,
+        }
+    )
+
+
 def cmd_preflight(root: Path, args: list[str]) -> None:
     mode = detect_mode(args)
     result: dict[str, Any] = {"verdict": "pass", "mode": mode}
 
     if mode == "phase":
-        task_list = parse_kv(args, "--task-list")
+        task_list = resolve_task_list_arg(root, args)
         assert task_list
         task_path = resolve_task_list_path(root, task_list)
         content = task_path.read_text(encoding="utf-8")
@@ -898,7 +922,7 @@ def cmd_plan(root: Path, args: list[str]) -> None:
         emit(out, 0)
 
     if mode == "phase":
-        task_list = parse_kv(args, "--task-list")
+        task_list = resolve_task_list_arg(root, args)
         assert task_list
         task_path = resolve_task_list_path(root, task_list)
         content = task_path.read_text(encoding="utf-8")
@@ -1123,7 +1147,9 @@ def main() -> None:
     cmd = sys.argv[2]
     args = sys.argv[3:]
 
-    if cmd == "plan":
+    if cmd == "run":
+        cmd_run(root, args)
+    elif cmd == "plan":
         cmd_plan(root, args)
     elif cmd == "preflight":
         cmd_preflight(root, args)
