@@ -29,12 +29,16 @@ from wave_json_io import StateCorruptError, read_json, write_json
 from wave_state import assert_phase_status
 import planning_paths
 from _sw.git_integrate import abort_merge, list_merge_conflict_paths, merge_branch_into
+from phase_status_discovery import (
+    discover_phase_status,
+    first_existing_status_path,
+    resolve_phase_worktree,
+)
 from status_integrity import (
     VALID_STATUS_VERDICTS,
     check_status_sha,
     live_host_evidence_ok,
     resolve_pr_number,
-    resolve_status_candidates,
     validate_terminal_status_shape,
 )
 
@@ -574,14 +578,6 @@ def merge_authorizing(gate_ec: int, gate: dict[str, Any]) -> bool:
     return True
 
 
-def _glob_phase_status_paths(root: Path, phase_slug: str) -> list[Path]:
-    """Discover worktree-local status files when state lookup misses (PRD 027 R5)."""
-    wt_root = root / ".sw-worktrees"
-    if not wt_root.is_dir():
-        return []
-    return sorted(wt_root.glob(f"*/.cursor/sw-deliver-runs/{phase_slug}/status.json"))
-
-
 def status_file_for(
     root: Path,
     phase_slug: str,
@@ -592,20 +588,10 @@ def status_file_for(
         return Path(explicit).resolve()
     if state is None and state_path(root).is_file():
         state = load_state(root)
-    canonical = root / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json"
     wt = resolve_phase_worktree(root, phase_slug, state or {})
-    if wt is not None:
-        candidate = wt / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json"
-        if candidate.is_file():
-            return candidate
-    if canonical.is_file():
-        return canonical
-    for candidate in _glob_phase_status_paths(root, phase_slug):
-        if candidate.is_file():
-            return candidate
-    if wt is not None:
-        return wt / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json"
-    return canonical
+    return first_existing_status_path(
+        root, phase_slug, "status.json", worktree=wt
+    )
 
 
 def read_phase_status_optional(
@@ -617,57 +603,20 @@ def read_phase_status_optional(
     if state is None and state_path(root).is_file():
         state = load_state(root)
     state = state or {}
-    candidate_paths: list[Path] = []
-    canonical = root / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json"
-    candidate_paths.append(canonical)
     wt = resolve_phase_worktree(root, phase_slug, state)
-    if wt is not None:
-        candidate_paths.append(wt / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json")
-    candidate_paths.extend(_glob_phase_status_paths(root, phase_slug))
-    seen: set[str] = set()
-    loaded: list[tuple[Path, dict[str, Any]]] = []
-    for path in candidate_paths:
-        key = str(path.resolve())
-        if key in seen:
-            continue
-        seen.add(key)
-        if not path.is_file():
-            continue
-        try:
-            loaded.append((path, read_json(path)))
-        except (StateCorruptError, json.JSONDecodeError, OSError):
-            continue
-    if not loaded:
-        return None, None
     _, meta = phase_meta_for_slug(state, phase_slug)
     phase_branch = meta.get("branch")
     expected_head: str | None = None
     if phase_branch:
         expected_head = phase_branch_head_optional(root, state, phase_slug, str(phase_branch))
-    return resolve_status_candidates(loaded, expected_head)
-
-
-def resolve_phase_worktree(
-    root: Path, phase_slug: str, state: dict[str, Any]
-) -> Path | None:
-    phases = state.get("phases") or {}
-    phase_id: str | None = None
-    for pid, meta in phases.items():
-        if isinstance(meta, dict) and meta.get("slug") == phase_slug:
-            phase_id = str(pid)
-            break
-    if not phase_id:
-        return None
-    wt_info = (state.get("phaseWorktrees") or {}).get(phase_id) or {}
-    if not isinstance(wt_info, dict):
-        return None
-    raw = wt_info.get("path")
-    if not raw:
-        return None
-    path = Path(str(raw))
-    if not path.is_absolute():
-        path = (root / path).resolve()
-    return path if path.is_dir() else None
+    # R8: exact-string SHA equality at read site — reject bad input at write site only.
+    return discover_phase_status(
+        root,
+        phase_slug,
+        "status.json",
+        worktree=wt,
+        expected_head=expected_head,
+    )
 
 
 def phase_meta_for_slug(state: dict[str, Any], phase_slug: str) -> tuple[str | None, dict[str, Any]]:
@@ -700,6 +649,7 @@ def phase_branch_head_optional(
 
 
 def validate_status_sha(status: dict[str, Any], expected_head: str, phase_slug: str) -> None:
+    # R8: exact-string comparison against git rev-parse HEAD — never relaxed at read site.
     ok, cause = check_status_sha(status, expected_head)
     if not ok:
         fail(
