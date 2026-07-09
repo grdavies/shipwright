@@ -1446,6 +1446,31 @@ class StoreResult:
         return out
 
 
+
+
+def _native_status_from_content(content: str, *, artifact_type: str, state: str = "open", labels: list[str] | None = None) -> str:
+    import planning_discover as pd
+
+    class _Record:
+        def __init__(self, body: str, lbls: list[str], st: str, unit_id: str, atype: str) -> None:
+            self.body = body
+            self.labels = lbls
+            self.state = st
+            self.unit_id = unit_id
+            self.artifact_type = atype
+
+    return pd._status_from_record(
+        _Record(content, list(labels or []), state, "", artifact_type),
+        content,
+    )
+
+
+def _unified_status_from_native(native_status: str, artifact_type: str) -> str:
+    import planning_unit_status as pus
+
+    return pus.map_native_status_to_unified(native_status, artifact_type)
+
+
 class PlanningStoreBackend(ABC):
     backend_id: str
 
@@ -1468,6 +1493,16 @@ class PlanningStoreBackend(ABC):
     @abstractmethod
     def materialize(self, unit_id: str, body_path: str, dest_path: Path) -> StoreResult:
         raise NotImplementedError
+
+    def derive_unit_status(self, unit_id: str, body_path: str) -> str:
+        """Map backend-native state to the unified four-state surface (+ unknown)."""
+        result = self.get(unit_id, body_path)
+        if result.verdict != "ok" or not result.content:
+            return "unknown"
+        artifact_type = infer_artifact_type(body_path)
+        native = _native_status_from_content(result.content, artifact_type=artifact_type)
+        return _unified_status_from_native(native, artifact_type)
+
 
 
 class InRepoPublicBackend(PlanningStoreBackend):
@@ -1573,6 +1608,19 @@ class IssueStoreBackend(PlanningStoreBackend):
         self._client = IssuesClient(root, self.issues_provider)
         self._index = load_issue_unit_index(root)
         self._journal = load_put_journal(root)
+
+
+    def derive_unit_status(self, unit_id: str, body_path: str) -> str:
+        import planning_discover as pd
+        try:
+            record = self._lookup_record(unit_id, body_path)
+        except IssueNotFound:
+            return "unknown"
+        if record is None:
+            return "unknown"
+        content = strip_markers_and_edges(reassemble_body(record.body, record.comments))
+        native = pd._status_from_record(record, content)
+        return _unified_status_from_native(native, record.artifact_type or infer_artifact_type(body_path))
 
     def _artifact_type(self, body_path: str) -> str:
         return infer_artifact_type(body_path)

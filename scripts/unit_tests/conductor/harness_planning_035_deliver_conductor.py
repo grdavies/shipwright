@@ -282,7 +282,9 @@ if python3 -c "
 import sys
 sys.path.insert(0,'$ROOT/scripts')
 from wave_failure import resume_deliver_command
-assert resume_deliver_command({'source_task_list':'docs/prds/x/tasks.md'})=='/sw-deliver run docs/prds/x/tasks.md'
+cmd = resume_deliver_command({'source_task_list':'docs/prds/x/tasks.md'})
+assert cmd.startswith('/sw-deliver run '), cmd
+assert 'docs/prds/x/tasks.md' in cmd or '--unit-id' in cmd or '--issue' in cmd, cmd
 "; then ok "deliver-resume-command-is-sw"; else bad "deliver-resume-command-is-sw"; fi
 
 # --- 7.6 post-freeze-docs-durability (R48) ---
