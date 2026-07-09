@@ -2340,6 +2340,182 @@ def get_backend(root: Path, cfg: dict[str, Any] | None = None, *, override: str 
     return cls(root, cfg)
 
 
+def _resync_backup_path(dest_path: Path) -> Path:
+    return dest_path.parent / f"{dest_path.name}.pre-resync.bak"
+
+
+def _apply_ledger_checks(body: str, ledger_tasks: dict[str, Any]) -> tuple[str, int, int]:
+    """Re-apply ledger-recorded checks onto a freshly materialized body (PRD 059 R9)."""
+    from checkbox_diff import parse_task_checkboxes, toggle_checkbox
+
+    applied = 0
+    already_matching = 0
+    checkboxes = parse_task_checkboxes(body)
+    updated = body
+    for ref, entry in sorted(ledger_tasks.items()):
+        if not isinstance(entry, dict) or not entry.get("done"):
+            continue
+        if checkboxes.get(ref, False):
+            already_matching += 1
+            continue
+        try:
+            updated = toggle_checkbox(updated, ref, done=True)
+            applied += 1
+            checkboxes[ref] = True
+        except ValueError:
+            continue
+    return updated, applied, already_matching
+
+
+def _local_checked_ledger_unchecked(
+    pre_resync_checkboxes: dict[str, bool],
+    ledger_tasks: dict[str, Any],
+) -> list[str]:
+    """Subtasks checked locally before resync but absent or open in the ledger (PRD 059 R10)."""
+    findings: list[str] = []
+    for ref, checked in sorted(pre_resync_checkboxes.items()):
+        if not checked:
+            continue
+        entry = ledger_tasks.get(ref) if isinstance(ledger_tasks, dict) else None
+        if not isinstance(entry, dict) or not entry.get("done"):
+            findings.append(ref)
+    return findings
+
+
+def _ledger_check_divergences(body: str, ledger_tasks: dict[str, Any]) -> list[dict[str, Any]]:
+    from checkbox_diff import parse_task_checkboxes
+
+    checkboxes = parse_task_checkboxes(body)
+    divergences: list[dict[str, Any]] = []
+    for ref, checked in checkboxes.items():
+        entry = ledger_tasks.get(ref) if isinstance(ledger_tasks, dict) else None
+        if not entry:
+            if checked:
+                divergences.append(
+                    {"ref": ref, "kind": "stale", "reason": "checkbox-checked-missing-ledger"}
+                )
+            continue
+        ledger_done = bool(entry.get("done"))
+        if ledger_done != checked:
+            divergences.append(
+                {
+                    "ref": ref,
+                    "kind": "divergence",
+                    "reason": "checkbox-ledger-mismatch",
+                    "checkbox": checked,
+                    "ledger": ledger_done,
+                }
+            )
+    if isinstance(ledger_tasks, dict):
+        for ref, entry in ledger_tasks.items():
+            if not isinstance(entry, dict) or not entry.get("done"):
+                continue
+            if not checkboxes.get(ref, False):
+                if not any(d.get("ref") == ref for d in divergences):
+                    divergences.append(
+                        {"ref": ref, "kind": "stale", "reason": "ledger-done-checkbox-open"}
+                    )
+    return divergences
+
+
+def materialize_with_resync(
+    root: Path,
+    unit_id: str,
+    body_path: str,
+    dest_path: Path,
+    *,
+    state: dict[str, Any] | None = None,
+    target: str | None = None,
+    task_list: str | None = None,
+) -> dict[str, Any]:
+    """Rematerialize from store and re-apply deliver run-state ledger checks (PRD 059 R9-R12)."""
+    from checkbox_diff import parse_task_checkboxes
+    from planning_materialize import store_revision
+    from wave_state import load_task_ledger
+
+    cfg = load_workflow_config(root)
+    backend = get_backend(root, cfg)
+    dest_path = dest_path.resolve()
+    pre_resync_text = dest_path.read_text(encoding="utf-8") if dest_path.is_file() else ""
+    pre_resync_checkboxes = parse_task_checkboxes(pre_resync_text) if pre_resync_text else {}
+
+    backup_path: Path | None = None
+    if pre_resync_text:
+        backup_path = _resync_backup_path(dest_path)
+        backup_path.parent.mkdir(parents=True, exist_ok=True)
+        backup_path.write_text(pre_resync_text, encoding="utf-8")
+
+    materialized = backend.materialize(unit_id, body_path, dest_path)
+    if materialized.verdict != "ok" or materialized.content is None:
+        return {
+            "verdict": "fail",
+            "action": "materialize-resync",
+            "error": materialized.reason or "materialize-failed",
+            "unitId": unit_id,
+            "bodyPath": body_path,
+            "dest": str(dest_path),
+        }
+
+    ledger = load_task_ledger(root, target=target, task_list=task_list, state=state)
+    ledger_tasks = ledger.get("tasks") or {}
+    if not isinstance(ledger_tasks, dict):
+        ledger_tasks = {}
+
+    local_only = _local_checked_ledger_unchecked(pre_resync_checkboxes, ledger_tasks)
+    body, checks_applied, checks_already_matching = _apply_ledger_checks(
+        materialized.content, ledger_tasks
+    )
+    dest_path.write_text(body, encoding="utf-8")
+
+    divergences = _ledger_check_divergences(body, ledger_tasks)
+    divergence_refs = sorted(
+        {
+            *(local_only or []),
+            *(
+                d["ref"]
+                for d in divergences
+                if d.get("reason") == "checkbox-checked-missing-ledger"
+            ),
+        }
+    )
+
+    rel_dest = str(dest_path)
+    try:
+        rel_dest = str(dest_path.relative_to(git_root(root))).replace("\\", "/")
+    except ValueError:
+        pass
+
+    follow_up = f"python3 scripts/wave_state.py {root} ledger check --tasks-file {body_path}"
+    if divergence_refs:
+        sample = divergence_refs[0]
+        follow_up = (
+            f"python3 scripts/wave_state.py {root} ledger record --task {sample} "
+            f"--done true  # repeat for: {', '.join(divergence_refs)}"
+        )
+
+    result: dict[str, Any] = {
+        "verdict": "ok" if not divergence_refs else "fail",
+        "action": "materialize-resync",
+        "dest": rel_dest,
+        "unitId": unit_id,
+        "bodyPath": body_path,
+        "ledgerSource": {
+            "unitId": unit_id,
+            "revision": store_revision(cfg),
+        },
+        "checksApplied": checks_applied,
+        "checksAlreadyMatching": checks_already_matching,
+        "divergences": divergence_refs,
+        "divergenceDetails": divergences,
+        "localOnlyChecked": local_only,
+        "backupPath": str(backup_path).replace("\\", "/") if backup_path else None,
+        "followUpCommand": follow_up,
+    }
+    if divergence_refs:
+        result["error"] = "local-checked-but-ledger-unchecked"
+    return result
+
+
 def materialize_from_store(
     root: Path,
     cfg: dict[str, Any],
@@ -2637,8 +2813,15 @@ def main() -> None:
         backend = get_backend(root, cfg, override=_optional(rest, "--backend"))
         emit(backend.exists(_require(rest, "--unit-id"), _require(rest, "--body-path")).as_dict())
     elif args.command == "materialize":
+        unit_id = _require(rest, "--unit-id")
+        body_path = _require(rest, "--body-path")
+        dest = Path(_require(rest, "--dest"))
+        if "--resync" in rest:
+            result = materialize_with_resync(root, unit_id, body_path, dest)
+            exit_code = 0 if result.get("verdict") == "ok" else 1
+            emit(result, exit_code)
         backend = get_backend(root, cfg, override=_optional(rest, "--backend"))
-        result = backend.materialize(_require(rest, "--unit-id"), _require(rest, "--body-path"), Path(_require(rest, "--dest")))
+        result = backend.materialize(unit_id, body_path, dest)
         emit(result.as_dict(), 0 if result.verdict == "ok" else 2)
     elif args.command == "materialize-from-store":
         units_file = _optional(rest, "--units-file")

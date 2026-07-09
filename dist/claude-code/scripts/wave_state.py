@@ -1056,6 +1056,25 @@ def _task_ledger(state: dict[str, Any]) -> dict[str, Any]:
     return ledger
 
 
+def load_task_ledger(
+    root: Path,
+    *,
+    target: str | None = None,
+    task_list: str | None = None,
+    state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Reusable accessor for ``state.taskLedger`` on deliver run-state (PRD 059 R9)."""
+    if state is None:
+        state = load_deliver_state(root, target=target, task_list=task_list)
+    return dict(_task_ledger(state))
+
+
+def task_ledger_tasks(state: dict[str, Any]) -> dict[str, Any]:
+    """Return the ``tasks`` map from durable deliver run-state ledger."""
+    tasks = load_task_ledger(root=Path("."), state=state).get("tasks") or {}
+    return tasks if isinstance(tasks, dict) else {}
+
+
 def _hierarchy_map(state: dict[str, Any]) -> dict[str, Any]:
     hmap = state.get("hierarchyMap")
     if not isinstance(hmap, dict):
