@@ -22,6 +22,9 @@ import planning_paths as pp
 RUN_START_INELIGIBLE = frozenset({"superseded", "cancelled"})
 SOFT_ENFORCE_EXIT = 30
 GATE_FAIL_EXIT = 20
+CANONICAL_PRDS_TASK_LIST = re.compile(r"^docs/prds/\d+-[^/]+/tasks-[^/]+\.md$")
+
+HARNESS_FIXTURE_TASK_LIST = re.compile(r"^scripts/test/fixtures/.+/tasks-[^/]+\.md$")
 
 
 def utc_now() -> str:
@@ -58,6 +61,63 @@ def unit_id_from_task_list(task_path: Path) -> str:
     if match:
         return f"{match.group(1)}-prd-{match.group(2)}"
     return f"prd-{parent}"
+
+
+def task_list_rel(root: Path, task_path: Path) -> str:
+    try:
+        return str(task_path.relative_to(pp.git_root(root))).replace("\\", "/")
+    except ValueError:
+        return str(task_path).replace("\\", "/")
+
+
+def is_canonical_prds_task_list(task_rel: str) -> bool:
+    """True when the task list sits under docs/prds/<n>-<slug>/ (PRD 058 R5)."""
+    return bool(CANONICAL_PRDS_TASK_LIST.match(task_rel.replace("\\", "/")))
+
+
+def is_harness_fixture_task_list(task_rel: str) -> bool:
+    """Hermetic harness fixtures under scripts/test/fixtures/ (gap-051 R5 allowlist)."""
+    return bool(HARNESS_FIXTURE_TASK_LIST.match(task_rel.replace("\\", "/")))
+
+
+def allowlist_unit_absent_from_graph(task_path: Path, task_rel: str) -> bool:
+    """Documented allowlist for unit-not-in-graph pass (gap-051 R5).
+
+    A task list on the canonical docs/prds/<n>-<slug>/ layout that is not yet
+    frozen may legitimately be absent from the planning graph during spec seeding.
+    """
+    if is_harness_fixture_task_list(task_rel):
+        return True
+    if not is_canonical_prds_task_list(task_rel):
+        return False
+    if not task_path.is_file():
+        return False
+    try:
+        content = task_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return "frozen: true" not in content
+
+
+def handle_unit_not_in_graph(root: Path, task_path: Path, *, action: str) -> dict[str, Any]:
+    """Fail closed on unknown layout; allowlist only pre-freeze canonical paths (gap-051 R5)."""
+    unit_id = unit_id_from_task_list(task_path)
+    rel = task_list_rel(root, task_path)
+    if allowlist_unit_absent_from_graph(task_path, rel):
+        return {
+            "verdict": "pass",
+            "action": action,
+            "unitId": unit_id,
+            "note": "unit-not-in-graph-allowlisted",
+            "taskList": rel,
+        }
+    fail(
+        "task list unit not found in planning graph",
+        halt="dependency-gate",
+        unitId=unit_id,
+        taskList=rel,
+        cause="unknown-layout-or-unmapped-unit",
+    )
 
 
 def task_list_for_unit(root: Path, unit_id: str) -> str | None:
@@ -187,9 +247,8 @@ def log_dependency_override(root: Path, *, unit_id: str, task_list: str, blockin
 
 def dependency_gate(root: Path, task_path: Path, *, override: bool = False, override_reason: str | None = None) -> dict[str, Any]:
     unit = resolve_unit(root, task_path)
-    unit_id = unit_id_from_task_list(task_path)
     if unit is None:
-        return {"verdict": "pass", "action": "dependency-gate", "unitId": unit_id, "note": "unit-not-in-graph"}
+        return handle_unit_not_in_graph(root, task_path, action="dependency-gate")
     _, by_id = units_with_derived_status(root)
     blocking = pg.unmet_dependencies(unit, by_id)
     if not blocking:
@@ -209,9 +268,8 @@ def dependency_gate(root: Path, task_path: Path, *, override: bool = False, over
 
 def run_start_revalidate(root: Path, task_path: Path) -> dict[str, Any]:
     unit = resolve_unit(root, task_path)
-    unit_id = unit_id_from_task_list(task_path)
     if unit is None:
-        return {"verdict": "pass", "action": "run-start-revalidate", "unitId": unit_id, "note": "unit-not-in-graph"}
+        return handle_unit_not_in_graph(root, task_path, action="run-start-revalidate")
     if unit.status in RUN_START_INELIGIBLE:
         fail(f"unit {unit.id} is {unit.status} at run-start", halt="run-start-ineligible", unitId=unit.id, status=unit.status)
     _, by_id = units_with_derived_status(root)

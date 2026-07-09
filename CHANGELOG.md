@@ -391,6 +391,18 @@
 * merge phase provider-native-labels-human-readable-titles-wave-4-r11 into feat/planning-store-hardening (78712b6) <!-- sw-deliver:provider-native-labels-human-readable-titles-wave-4-r11 -->
 * merge phase memory-backend-provider-round-trip-21b-wave-5-r21 into feat/planning-store-hardening (82e0752) <!-- sw-deliver:memory-backend-provider-round-trip-21b-wave-5-r21 -->
 * merge phase deliver-chain-parity-audit-published-matrix-wave-5-r6 into feat/planning-store-hardening (c6aebbc) <!-- sw-deliver:deliver-chain-parity-audit-published-matrix-wave-5-r6 -->
+* merge phase gap-051-dependency-gate-unit-id-derivation-regression-coverage-r1-r6 into feat/dispatch-loop-hardening (719bd36) <!-- sw-deliver:gap-051-dependency-gate-unit-id-derivation-regression-coverage-r1-r6 -->
+* merge phase gap-082-shared-intensity-directive-helper-module-r7-r8-r12 into feat/dispatch-loop-hardening (e4fc664) <!-- sw-deliver:gap-082-shared-intensity-directive-helper-module-r7-r8-r12 -->
+* merge phase gap-083-native-compression-module-core-r18-r27 into feat/dispatch-loop-hardening (8f612e8) <!-- sw-deliver:gap-083-native-compression-module-core-r18-r27 -->
+* merge phase gap-082-hook-fail-closed-enforcement-scope-r9-r10-r11-r13 into feat/dispatch-loop-hardening (39b803f) <!-- sw-deliver:gap-082-hook-fail-closed-enforcement-scope-r9-r10-r11-r13 -->
+* merge phase gap-082-dispatch-check-py-prompt-validation-surface-r15 into feat/dispatch-loop-hardening (989ad61) <!-- sw-deliver:gap-082-dispatch-check-py-prompt-validation-surface-r15 -->
+* merge phase gap-082-embedder-call-site-updates-r14 into feat/dispatch-loop-hardening (507792e) <!-- sw-deliver:gap-082-embedder-call-site-updates-r14 -->
+* merge phase gap-082-tests-resolve-r16-r17 into feat/dispatch-loop-hardening (409da3e) <!-- sw-deliver:gap-082-tests-resolve-r16-r17 -->
+* merge phase gap-083-reversible-cache-compress-retrieve-ccr-with-redaction-collision-safety-r20-r21-r22-r23 into feat/dispatch-loop-hardening (f5b5a71) <!-- sw-deliver:gap-083-reversible-cache-compress-retrieve-ccr-with-redaction-collision-safety-r20-r21-r22-r23 -->
+* merge phase gap-083-shared-prompt-construction-module-config-schema-recoverable-path-r19-r24-r25-r26 into feat/dispatch-loop-hardening (ba06dde) <!-- sw-deliver:gap-083-shared-prompt-construction-module-config-schema-recoverable-path-r19-r24-r25-r26 -->
+* merge phase gap-083-telemetry-default-off-gating-r28-r29 into feat/dispatch-loop-hardening (87a2f75) <!-- sw-deliver:gap-083-telemetry-default-off-gating-r28-r29 -->
+* merge phase gap-083-tests-resolve-r31-r32 into feat/dispatch-loop-hardening (29ecc59) <!-- sw-deliver:gap-083-tests-resolve-r31-r32 -->
+* merge phase gap-083-default-flip-quality-parity-milestone-r30 into feat/dispatch-loop-hardening (f148e87) <!-- sw-deliver:gap-083-default-flip-quality-parity-milestone-r30 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from _sw.cli import run_module_main
+from dispatch_intensity_check import validate_directive_anchor
 
 TIER_ORDER = ["cheap", "build", "mid", "deep"]
 NATIVE_PANEL_AGENTS = frozenset({
@@ -153,6 +154,62 @@ def _run_json_cmd(cmd: list[str]) -> dict:
     return payload if isinstance(payload, dict) else {}
 
 
+
+def _validate_prompt_surface(
+    prompt_path: Path,
+    *,
+    intensity: str,
+    intensity_source: str,
+    agent: str,
+    command_name: str | None,
+    skill_name: str | None,
+) -> dict | None:
+    """Validate a constructed prompt via the shared intensity-directive helper (R15)."""
+    if not prompt_path.is_file():
+        return {
+            "verdict": "fail",
+            "cause": "binding:prompt-missing",
+            "agent": agent,
+            "command": command_name,
+            "skill": skill_name,
+            "promptPath": str(prompt_path),
+            "retryable": False,
+            "remediation": f"write the constructed Task prompt to {prompt_path} before dispatch-check",
+        }
+    try:
+        prompt_text = prompt_path.read_text(encoding="utf-8")
+        anchor = validate_directive_anchor(
+            prompt_text,
+            expected_intensity=intensity,
+            expected_source=intensity_source,
+        )
+    except Exception:
+        return {
+            "verdict": "fail",
+            "cause": "binding:prompt-validation-error",
+            "agent": agent,
+            "command": command_name,
+            "skill": skill_name,
+            "promptPath": str(prompt_path),
+            "retryable": False,
+            "remediation": "fix prompt construction and re-run dispatch-check with --prompt",
+        }
+    if anchor.verdict != "pass":
+        return {
+            "verdict": "fail",
+            "cause": anchor.cause,
+            "agent": agent,
+            "command": command_name,
+            "skill": skill_name,
+            "intensity": intensity,
+            "intensitySource": intensity_source,
+            "promptPath": str(prompt_path),
+            "retryable": False,
+            "remediation": anchor.remediation,
+        }
+    return None
+
+
 def _has_override_audit(start: Path, dispatch_id: str) -> bool:
     import shipwright_state_lib as ssl
 
@@ -237,6 +294,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--override", action="store_true")
     parser.add_argument("--config", default="")
     parser.add_argument("--simulate-capacity", action="store_true")
+    parser.add_argument(
+        "--prompt",
+        default="",
+        metavar="PATH",
+        help="validate a constructed Task prompt via the shared intensity-directive helper (R15)",
+    )
     args = parser.parse_args(argv)
 
     script_dir = Path(__file__).resolve().parent
@@ -275,6 +338,7 @@ def main(argv: list[str] | None = None) -> int:
     model_id = str(model_payload.get("modelId") or "")
     model_tier = str(model_payload.get("tier") or "")
     intensity = str(intensity_payload.get("intensity") or "")
+    intensity_source = str(intensity_payload.get("source") or "")
 
     if not model_id or model_tier == "inherit":
         print(json.dumps({
@@ -299,6 +363,19 @@ def main(argv: list[str] | None = None) -> int:
             "remediation": "set communication.routing (command/skill/agent) or communication.defaultIntensity to normal|lite|full|ultra",
         }))
         return 20
+
+    if args.prompt:
+        prompt_fail = _validate_prompt_surface(
+            Path(args.prompt),
+            intensity=intensity,
+            intensity_source=intensity_source,
+            agent=agent,
+            command_name=command_name,
+            skill_name=skill_name,
+        )
+        if prompt_fail:
+            print(json.dumps(prompt_fail))
+            return 20
 
     if override:
         if not dispatch_id:
@@ -350,6 +427,11 @@ def main(argv: list[str] | None = None) -> int:
         command_name=command_name,
         skill_name=skill_name,
     )
+    if args.prompt:
+        result["intensity"] = intensity
+        result["intensitySource"] = intensity_source
+        result["promptValidation"] = "pass"
+        result["promptPath"] = str(Path(args.prompt))
     print(json.dumps(result))
     if result.get("verdict") == "fail":
         return 20

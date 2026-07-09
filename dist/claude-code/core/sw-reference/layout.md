@@ -444,6 +444,7 @@ Artifacts:
 | --- | --- |
 | `.cursor/hooks/state/memory-prework-search.json` | Redacted per-surface search record (or `memory:offline` / `memory:none`) |
 | `.cursor/sw-deliver-runs/run.<slug>.log` | Per-deliver-run append-only audit breadcrumb (PRD 050 R4) |
+| `.cursor/doc-review-runs/<dispatch-id>.json` | Per-dispatch token-estimate telemetry for `/sw-doc-review` persona panels (PRD 058 R28) |
 
 The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies the first file-mutating tool call
 when no fresh record exists. Delegated work sub-agents inherit the obligation per
@@ -712,6 +713,7 @@ Bidirectional file ⇄ issue migration records durable per-artifact state under 
 | Path | Writer | Semantics |
 | --- | --- | --- |
 | `.cursor/hooks/state/issue-store-migration-journal.json` | `scripts/planning_migrate_issue_store.py` (`run_store_migration`) | Per-artifact state machine `pending` → `created` → `verified` → `source-removed`; idempotency key `source_path:content_hash`; verify-then-delete ordering |
+| `.cursor/hooks/state/context-compress-cache/` | `scripts/context_compress.py` | Gitignored CCR cache keyed by full SHA-256 of redacted content; orchestrator-only `retrieve()` (PRD 058 R20–R22) |
 
 Dry-run (no `--apply`) must not create or update this file. Command surface: `/sw-migrate` /
 `scripts/planning_migrate.py` `store-files-to-issues` | `store-issues-to-files`.

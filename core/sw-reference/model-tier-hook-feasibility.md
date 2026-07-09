@@ -28,7 +28,14 @@ Optional belt-and-suspenders (R5): a `preToolUse` hook that injects a resolved c
 | Mechanism | Cursor | Claude Code |
 | --- | --- | --- |
 | `preToolUse` `updated_input` on Task | Documented; **not applied by platform** (DL-2 spike confirmed) | **Unverified** — no Claude Code environment available |
+| `tool_input.prompt` intensity directive (R14) | ✅ live — structural anchor validated by hook + `dispatch-check.py --prompt` | ✅ live (same prompt-literal channel) |
 | `dispatch-check.py` preflight (phase 2–3) | ✅ enforcement floor | ✅ enforcement floor |
+
+**DL-2 clarification (PRD 058):** model binding via `updated_input` remains dead on Cursor Task, but
+**intensity enforcement does not depend on `updated_input`**. Callers embed
+`format_intensity_directive()` as the leading line of `tool_input.prompt`; `before_task_dispatch.py` denies
+when the anchor is missing, malformed, or spoofed. This is prompt-literal structural validation — not metadata
+mutation.
 
 ## Decision — Option C (2026-06-26)
 

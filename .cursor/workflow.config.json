@@ -348,5 +348,15 @@
         "ai-native": "normal"
       }
     }
+  },
+  "contextCompression": {
+    "enabled": false,
+    "thresholdTokens": 8000,
+    "strategies": {
+      "json": "compress",
+      "diff": "path-reference",
+      "log": "compress",
+      "prose": "compress"
+    }
   }
 }

@@ -30,6 +30,18 @@ with `/sw-caveman <normal|lite|full|ultra>`.
 Bundled policy: `core/communication/caveman-core.md`. Artifact file content always uses normal complete
 prose (R30).
 
+## Task-dispatch intensity enforcement (R9, R14)
+
+Delegated Task prompts carry a **leading-line intensity directive** built by
+`scripts/dispatch_intensity_check.py:format_intensity_directive()` and validated structurally by
+`before_task_dispatch.py` and `scripts/dispatch-check.py --prompt`.
+
+- Dispatching skills/commands (`/sw-doc-review`, `/sw-ship`, gap-check closers) MUST embed the directive in
+  `tool_input.prompt` **before** spawn — not in `updated_input.metadata` (Cursor ignores metadata mutation on
+  Task; see `core/sw-reference/model-tier-hook-feasibility.md` DL-2).
+- A fresh `dispatch preflight` record still gates model binding; the directive is an additional prompt-literal
+  channel enforced fail-closed by the hook.
+
 ## Workflow
 
 - Doc chain: `/sw-doc` (or atomic `/sw-brainstorm` -> `/sw-prd` -> `/sw-freeze` -> `/sw-tasks`).

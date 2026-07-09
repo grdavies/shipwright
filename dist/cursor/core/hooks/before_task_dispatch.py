@@ -8,7 +8,8 @@ and injects concrete model metadata.
 Cursor and Claude Code. Whether the platform honors updated_input.model on Task calls is
 unverified for both platforms (DL-2 spike confirmed Cursor silently ignores it; Claude Code
 unverified due to missing environment). The hook fires, logs its mutation attempt to stderr,
-and fails open on unexpected errors. `scripts/dispatch-check.py` remains the
+and fails closed on intensity-directive validation errors (PRD 058 R9–R11). Unexpected
+errors outside directive enforcement still fail open; `scripts/dispatch-check.py` remains the
 enforcement floor regardless of hook effectiveness.
 """
 
@@ -121,6 +122,142 @@ def is_bound_agent(agent_id: str) -> bool:
     if _REVIEWER_AGENT.match(agent_id):
         return True
     return agent_id in _NATIVE_PANEL_IDS
+
+
+def _ensure_scripts_on_path(root: Path) -> None:
+    scripts = root / "scripts"
+    if scripts.is_dir() and str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
+
+
+def _has_command_or_skill(tool_input: dict[str, Any]) -> bool:
+    meta = tool_input.get("metadata")
+    if isinstance(meta, dict):
+        for key in ("command", "skill"):
+            raw = meta.get(key)
+            if isinstance(raw, str) and raw.strip():
+                return True
+    for key in ("command", "skill"):
+        raw = tool_input.get(key)
+        if isinstance(raw, str) and raw.strip():
+            return True
+    return False
+
+
+def _task_has_intensity_inheritance_scope(tool_input: dict[str, Any], agent_id: str) -> bool:
+    """Work-performing delegation per sw-subagent-dispatch pre-work inheritance (R13)."""
+    if agent_id == "explore":
+        return _has_command_or_skill(tool_input)
+    prompt = tool_input.get("prompt")
+    if isinstance(prompt, str) and prompt.strip():
+        return True
+    return _has_command_or_skill(tool_input)
+
+
+def requires_intensity_directive(tool_input: dict[str, Any]) -> bool:
+    """R13: directive enforcement beyond is_bound_agent; exempt readonly/explore-only."""
+    if tool_input.get("readonly") is True:
+        return False
+    agent_id = agent_id_from_task_input(tool_input)
+    if not agent_id:
+        return False
+    if is_bound_agent(agent_id):
+        return True
+    return _task_has_intensity_inheritance_scope(tool_input, agent_id)
+
+
+def _expected_directive_intensity(
+    root: Path,
+    *,
+    dispatch_id: str | None,
+) -> str | None:
+    if not dispatch_id:
+        return None
+    preflight = _load_preflight_by_dispatch_id(root, dispatch_id)
+    if not preflight:
+        return None
+    intensity = str(preflight.get("intensity") or "")
+    if intensity in {"normal", "lite", "full", "ultra"}:
+        return intensity
+    return None
+
+
+def validate_intensity_directive(
+    root: Path,
+    tool_input: dict[str, Any],
+    *,
+    agent_id: str,
+    dispatch_id: str | None = None,
+) -> DispatchResult:
+    """R9/R10/R11: fail-closed directive presence + structural anchor validation."""
+    try:
+        _ensure_scripts_on_path(root)
+        from dispatch_intensity_check import (
+            format_intensity_directive,
+            validate_directive_anchor,
+        )
+    except Exception:
+        return DispatchResult(
+            verdict="fail",
+            agent=agent_id,
+            dispatch_id=dispatch_id,
+            cause="binding:intensity-directive-error",
+            remediation="ensure scripts/dispatch_intensity_check.py is importable",
+        )
+
+    prompt = tool_input.get("prompt")
+    prompt_text = prompt if isinstance(prompt, str) else ""
+    expected_intensity = _expected_directive_intensity(root, dispatch_id=dispatch_id)
+
+    try:
+        anchor = validate_directive_anchor(
+            prompt_text,
+            expected_intensity=expected_intensity,
+        )
+    except Exception:
+        remediation = None
+        if expected_intensity:
+            try:
+                remediation = format_intensity_directive(
+                    expected_intensity,
+                    "dispatch-preflight",
+                ).rstrip("\n")
+            except ValueError:
+                remediation = None
+        return DispatchResult(
+            verdict="fail",
+            agent=agent_id,
+            dispatch_id=dispatch_id,
+            cause="binding:intensity-directive-error",
+            remediation=remediation
+            or "prepend format_intensity_directive(intensity, source) to tool_input.prompt",
+        )
+
+    if anchor.verdict != "pass":
+        remediation = anchor.remediation
+        if not remediation and expected_intensity:
+            try:
+                remediation = format_intensity_directive(
+                    expected_intensity,
+                    anchor.source or "dispatch-preflight",
+                ).rstrip("\n")
+            except ValueError:
+                remediation = anchor.remediation
+        return DispatchResult(
+            verdict="fail",
+            agent=agent_id,
+            dispatch_id=dispatch_id,
+            cause=anchor.cause,
+            remediation=remediation
+            or "prepend format_intensity_directive(intensity, source) to tool_input.prompt",
+        )
+
+    return DispatchResult(
+        verdict="pass",
+        agent=agent_id,
+        dispatch_id=dispatch_id,
+        intensity=anchor.intensity,
+    )
 
 
 # Native panel specialist ids (models.routing.agents defaults).
@@ -386,9 +523,18 @@ def evaluate_pre_tool_use(payload: dict[str, Any], root: Path) -> DispatchResult
     if not isinstance(tool_input, dict):
         return DispatchResult(verdict="skip")
     agent_id = agent_id_from_task_input(tool_input)
+    dispatch_id = dispatch_id_from_task_input(tool_input)
+    if agent_id and requires_intensity_directive(tool_input):
+        directive = validate_intensity_directive(
+            root,
+            tool_input,
+            agent_id=agent_id,
+            dispatch_id=dispatch_id,
+        )
+        if directive.verdict != "pass":
+            return directive
     if not agent_id or not is_bound_agent(agent_id):
         return DispatchResult(verdict="skip")
-    dispatch_id = dispatch_id_from_task_input(tool_input)
     preflight = validate_dispatch_preflight(root, agent_id, dispatch_id)
     if preflight.verdict != "pass":
         return preflight
@@ -434,7 +580,7 @@ def run_stdio() -> int:
                 file=sys.stderr,
             )
         print(json.dumps(result.to_hook_output(), ensure_ascii=False))
-    except Exception:  # noqa: BLE001 — fail-open; preflight check is the enforcement floor
+    except Exception:  # noqa: BLE001 — fail-open outside directive enforcement (R11)
         print(json.dumps({"permission": "allow"}))
     return 0
 

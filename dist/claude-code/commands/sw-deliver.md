@@ -227,6 +227,22 @@ memory-preflight outputs, diffs) must be redacted via `python3 scripts/memory-re
 
 
 ## Planning scheduler and dependency gate (PRD 033)
+### Unit-id derivation (gap-051 / PRD 058 R1–R2)
+
+Frozen task lists participate in **two distinct unit-id derivations** — do not conflate them:
+
+| Function | Module | Input | Derived id | Consumer |
+| --- | --- | --- | --- | --- |
+| `unit_id_from_task_list` | `scripts/planning_deliver_gate.py` | Task-list **parent directory** under `docs/prds/<n>-<slug>/` | `<n>-prd-<slug>` (legacy `prd-<slug>` dirs unchanged) | Planning-graph dependency gate / scheduler |
+| `unit_id_from_task_list_rel` | `scripts/planning_materialize.py` | Task-list **filename stem** | `tasks-<n>-<slug>` | Issue-store materialize / run-entry pin |
+
+Example path `docs/prds/058-dispatch-loop-hardening/tasks-058-dispatch-loop-hardening.md`:
+- graph unit id → `058-prd-dispatch-loop-hardening`
+- materialize/store unit id → `tasks-058-dispatch-loop-hardening`
+
+`dependency_gate` / `run_start_revalidate` fail closed when the derived graph unit is missing and the path is
+outside the canonical `docs/prds/<n>-<slug>/` layout; pre-freeze canonical task lists are allowlisted (R5).
+
 
 Unit-level graph primitives (in addition to phase-mode waves):
 

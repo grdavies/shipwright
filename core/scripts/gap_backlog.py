@@ -431,6 +431,91 @@ def _resolve_for_prd_issue_store(root: Path, prd: str) -> dict[str, Any]:
     return {"verdict": "pass", "flipped": flipped, "error": None}
 
 
+GAP_051_LEGACY_ID = "GAP-051"
+PRD_058_GAP_051_PHASE_SLUG = "gap-051-dependency-gate-unit-id-derivation-regression-coverage-r1-r6"
+GAP_082_LEGACY_ID = "GAP-082"
+PRD_058_GAP_082_PHASE_SLUG = "gap-082-tests-resolve-r16-r17"
+GAP_083_LEGACY_ID = "GAP-083"
+PRD_058_GAP_083_PHASE_SLUG = "gap-083-tests-resolve-r31-r32"
+
+
+def flip_resolve_by_gap_ids(
+    backlog: GapBacklog,
+    *,
+    gap_ids: list[str],
+    scope_note: str | None = None,
+) -> list[str]:
+    """Resolve explicit legacy GAP-xxx rows (PRD 058 R6 partial phase delivery)."""
+    want = {gid.strip().upper() for gid in gap_ids if gid.strip()}
+    resolved: list[str] = []
+    for row in backlog.rows:
+        if row.gap_id.upper() not in want:
+            continue
+        if row.status.lower() not in ("open", "scheduled"):
+            continue
+        row.status = "resolved"
+        row.schedule = f"— ({scope_note})" if scope_note else "—"
+        resolved.append(row.gap_id)
+    return resolved
+
+
+def resolve_gap_051_for_prd_058(root: Path, *, scope_note: str | None = None) -> dict[str, Any]:
+    """Close GAP-051 after PRD 058 gap-051 phase verification (R6)."""
+    note = scope_note or "PRD 058 gap-051"
+    gap_path = default_gap_path(root)
+    if not gap_path.is_file():
+        return {"verdict": "pass", "flipped": [], "error": None}
+    backlog = parse_gap_backlog(gap_path.read_text(encoding="utf-8"))
+    for row in backlog.rows:
+        if row.gap_id.upper() == GAP_051_LEGACY_ID and row.is_open:
+            row.status = "scheduled"
+            row.schedule = schedule_label("058")
+    flipped = flip_resolve_by_gap_ids(backlog, gap_ids=[GAP_051_LEGACY_ID], scope_note=note)
+    if flipped:
+        gap_path.write_text(render_gap_backlog(backlog), encoding="utf-8")
+    return {"verdict": "pass", "flipped": flipped, "error": None}
+
+
+def resolve_gap_082_for_prd_058(root: Path, *, scope_note: str | None = None) -> dict[str, Any]:
+    """Close GAP-082 after PRD 058 gap-082 phase verification (R17)."""
+    note = scope_note or "PRD 058 gap-082"
+    gap_path = default_gap_path(root)
+    if not gap_path.is_file():
+        return {"verdict": "pass", "flipped": [], "error": None}
+    backlog = parse_gap_backlog(gap_path.read_text(encoding="utf-8"))
+    for row in backlog.rows:
+        if row.gap_id.upper() == GAP_082_LEGACY_ID and row.is_open:
+            row.status = "scheduled"
+            row.schedule = schedule_label("058")
+    flipped = flip_resolve_by_gap_ids(backlog, gap_ids=[GAP_082_LEGACY_ID], scope_note=note)
+    if flipped:
+        gap_path.write_text(render_gap_backlog(backlog), encoding="utf-8")
+    return {"verdict": "pass", "flipped": flipped, "error": None}
+
+
+
+def resolve_gap_083_for_prd_058(root: Path, *, scope_note: str | None = None) -> dict[str, Any]:
+    """Close gap-083 after PRD 058 Task-dispatch compression verification (R32).
+
+    Resolution is scoped to the Task-dispatch boundary only and does not wait on
+    the R30 default-flip parity milestone (Phase 12).
+    """
+    note = scope_note or "PRD 058 gap-083 Task-dispatch boundary"
+    flipped = flip_canonical_resolve(root, prd="058", scope_note=note, unit_refs=["gap-083"])
+    gap_path = default_gap_path(root)
+    if not gap_path.is_file():
+        return {"verdict": "pass", "flipped": flipped, "error": None}
+    backlog = parse_gap_backlog(gap_path.read_text(encoding="utf-8"))
+    for row in backlog.rows:
+        if row.gap_id.upper() == GAP_083_LEGACY_ID and row.is_open:
+            row.status = "scheduled"
+            row.schedule = schedule_label("058")
+    legacy = flip_resolve_by_gap_ids(backlog, gap_ids=[GAP_083_LEGACY_ID], scope_note=note)
+    if legacy:
+        gap_path.write_text(render_gap_backlog(backlog), encoding="utf-8")
+    flipped.extend(legacy)
+    return {"verdict": "pass", "flipped": flipped, "error": None}
+
 def flip_resolve(backlog: GapBacklog, *, prd: str, scope_note: str | None = None) -> list[str]:
     prd_n = str(int(prd)) if prd.isdigit() else prd.lstrip("0") or prd
     sched_re = re.compile(rf"^PRD\s+0*{re.escape(str(int(prd_n))) if prd_n.isdigit() else re.escape(prd_n)}(?:\s+A\d+)?$", re.I)

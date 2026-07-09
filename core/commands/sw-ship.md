@@ -200,8 +200,30 @@ Resolve intensity: `python3 scripts/resolve-intensity.py --command <child-slug>`
 Before any delegated Task spawn from `/sw-ship`:
 
 1. `python3 scripts/wave.py dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-ship --skill <active-skill>`
-2. `python3 scripts/dispatch-check.py --agent <agent-id> --command sw-ship --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>]`
-3. Stamp Task with explicit `model: <resolved-concrete-id>`; do not use `inherit`.
+2. Assemble the constructed Task prompt via `scripts/dispatch_prompt.py build` (R14/R25) — directive,
+   optional context-block compression/path-ref, and redacted task body; write to a run-scoped path under
+   `$SW_RUN_DIR/` or `.cursor/sw-deliver-runs/<phase>/`.
+3. `python3 scripts/dispatch-check.py --agent <agent-id> --command sw-ship --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>] --prompt <constructed-prompt-path>`
+4. Stamp Task with explicit `model: <resolved-concrete-id>` and `tool_input.prompt` equal to the validated
+   prompt file; do not use `inherit`.
+
+Example (phase-dispatch child Task):
+
+```bash
+PROMPT_PATH="${SW_RUN_DIR:-.cursor/sw-deliver-runs/${SW_PHASE_SLUG:-phase}}/dispatch-${DISPATCH_ID}-prompt.md"
+INTENSITY_JSON=$(python3 scripts/resolve-intensity.py --agent "$AGENT" --command sw-ship --skill "$SKILL")
+INTENSITY=$(echo "$INTENSITY_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['intensity'])")
+INTENSITY_SOURCE=$(echo "$INTENSITY_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['source'])")
+printf '%s' "$TASK_BODY" > "${PROMPT_PATH}.body"
+python3 scripts/dispatch_prompt.py build \
+  --intensity "$INTENSITY" \
+  --intensity-source "$INTENSITY_SOURCE" \
+  --body-file "${PROMPT_PATH}.body" \
+  --context-json "${CONTEXT_BLOCKS_JSON:-[]}" \
+  --out "$PROMPT_PATH"
+python3 scripts/dispatch-check.py --agent "$AGENT" --command sw-ship --skill "$SKILL" \
+  --parent-model "$PARENT_MODEL" --dispatch-id "$DISPATCH_ID" --prompt "$PROMPT_PATH"
+```
 
 ## Inline allowlist (closed)
 
