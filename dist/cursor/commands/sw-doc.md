@@ -153,22 +153,23 @@ After doc freeze, durability paths diverge (R32):
     invokes this via `scripts/wave.py living-docs reconcile`. Resolve artifact paths via
     `python3 scripts/planning_paths.py` (PRD 031) — do not hardcode `docs/planning/` roots.
 11. Resolve boundary mode: `doc.afterTasks` from `workflow.config.json`, overridden by `--after-tasks=<mode>` when set.
-12. Present the frozen task-list path. Resolve `<type>/<slug>` via the shared deliver resolver (do **not**
+12. Present the frozen task-list path (materialized location when issue-store redirects apply). Resolve `<type>/<slug>` via the shared deliver resolver (do **not**
     re-implement branch derivation in `/sw-doc`):
     ```bash
-    python3 scripts/wave.py preflight --task-list <frozen-task-list-path> --skip-base-check
+    python3 scripts/wave.py preflight <deliver-entry-ref> --skip-base-check
+    where `<deliver-entry-ref>` is `--unit-id <id>` or `--issue <n>` under issue-store, else `--task-list <materialized-path>`
     ```
     Read `target.branch` from the JSON (`scripts/wave_deliver.py` — same resolver `/sw-deliver run` uses).
     Derive the PRD docs dir from the task-list parent: `docs/prds/<n>-<slug>/`.
 13. Branch on `doc.afterTasks`:
     - **`stop`** — halt (print-only; **no repository mutation**). Print:
-      1. The frozen task-list path.
+      1. The materialized task-list path (and issue-store `--unit-id` / `--issue` reference when applicable).
       2. The target feature branch `<type>/<slug>` from preflight.
       3. The exact docs-only seed command (idempotent shared helper; never onto `main`):
 
-         `python3 scripts/wave.py spec-seed --task-list <frozen-task-list-path>`
+         `python3 scripts/wave.py spec-seed <deliver-entry-ref>`
 
-      4. The exact next command: `/sw-deliver run <frozen-task-list-path>`.
+      4. The exact next command: `/sw-deliver run <deliver-entry-ref>`.
       Do **not** recommend `/sw-worktree` → `/sw-start` → `/sw-execute` or standalone `/sw-ship` as the
       primary path. (`/sw-deliver run` invokes the underlying `python3 scripts/wave.py deliver-loop` driver — do
       not print the raw script as the primary operator command.)
@@ -176,13 +177,13 @@ After doc freeze, durability paths diverge (R32):
       (see below) and halt. Only case-insensitive **`proceed`** or **`yes`** to the checkpoint question
       continues. Legacy **`Go`**, silence, or any ambiguous reply maps to **`stop`** (print-only guidance per
       above; no dispatch). On ack:
-      1. **Seed commit** — `python3 scripts/wave.py spec-seed --task-list <frozen-task-list-path>` (docs
+      1. **Seed commit** — `python3 scripts/wave.py spec-seed <deliver-entry-ref>` (docs
          under `docs/prds/<n>-<slug>/` only; excludes `docs/brainstorms/**` and untracked/ignored paths;
          never `main`; idempotent).
-      2. **Dispatch** `/sw-deliver run <frozen-task-list-path>`.
+      2. **Dispatch** `/sw-deliver run <deliver-entry-ref>`.
     - **`auto`** — emit one line: `implementing on branch <type>/<slug>`, then in-turn (DOC-A1):
-      `python3 scripts/wave.py spec-seed --task-list <frozen-task-list-path>`, then **dispatch**
-      `/sw-deliver run <frozen-task-list-path>`.
+      `python3 scripts/wave.py spec-seed <deliver-entry-ref>`, then **dispatch**
+      `/sw-deliver run <deliver-entry-ref>`.
       No second prompt. When an **agent** (not a human) invoked `/sw-doc --after-tasks=auto`, record the override via
       `scripts/shipwright-state.py override-add` (who/when/mode) and record the seed commit (branch + SHA) via
       `scripts/shipwright-state.py write` **before** dispatch.
@@ -204,7 +205,7 @@ Begin implementation on `<type>/<slug>`? Reply with **proceed** or **yes** (case
 
 | Reply | Result |
 |-------|--------|
-| `proceed` / `yes` | Seed docs (if needed), then dispatch `/sw-deliver run <frozen-task-list-path>` |
+| `proceed` / `yes` | Seed docs (if needed), then dispatch `/sw-deliver run <deliver-entry-ref>` |
 | `Go`, silence, ambiguous, or unrelated message | `stop` — print-only guidance (no dispatch); re-emit this checkpoint on the next turn while still un-acked |
 | Any other text | Treated as unrelated → same as silence (`stop` + re-emit checkpoint) |
 ```
