@@ -161,7 +161,7 @@ def _lookup_issue_record(root: Path, issue_ref: str):
     provider = str(resolve_issues_provider(cfg).get("provider", "none"))
     client = IssuesClient(root, provider)
     try:
-        return client.get(issue_ref)
+        return client.issue_get(issue_ref)
     except IssueNotFound:
         fail(
             f"issue {issue_ref!r} not found or outside project scope",
