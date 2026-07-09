@@ -20,6 +20,11 @@ def main(argv: list[str] | None = None) -> int:
     verdict, cause, phase, out, head, pr, gate_json = ns.verdict, ns.cause, ns.phase, ns.out, ns.head, ns.pr, ns.gate_json
     if verdict not in ("merge-ready-green","blocked"):
         print(json.dumps({"verdict":"fail","error":"--verdict merge-ready-green|blocked required"}), file=sys.stderr); return 2
+    if head:
+        from status_integrity import is_full_head_sha
+        if not is_full_head_sha(head):
+            print(json.dumps({"verdict":"fail","error":"--head must be a 40-character hexadecimal SHA"}), file=sys.stderr)
+            return 2
     if verdict == "blocked" and not cause:
         print(json.dumps({"verdict":"fail","error":"--cause required when verdict is blocked"}), file=sys.stderr); return 2
     if not phase: phase = os.environ.get("SW_PHASE_SLUG","")
@@ -32,8 +37,8 @@ def main(argv: list[str] | None = None) -> int:
         except Exception: phase = ""
     phase = phase or "unknown"
     if not head:
-        p = subprocess.run(["git","-C",str(root),"rev-parse","HEAD"], capture_output=True, text=True)
-        head = p.stdout.strip() if p.returncode==0 else ""
+        from status_integrity import resolve_write_head
+        head = resolve_write_head(root)
     if verdict == "merge-ready-green" and not head:
         print(json.dumps({"verdict":"fail","error":"could not resolve HEAD for merge-ready-green"}), file=sys.stderr); return 2
     if verdict == "merge-ready-green":
