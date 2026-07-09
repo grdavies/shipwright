@@ -153,12 +153,21 @@ def extract_relevant_files(text: str) -> list[str]:
 
 
 
+def _bounded_phase_chunk(sections: list[str], idx: int) -> str:
+    chunk = sections[idx + 1] if idx + 1 < len(sections) else ""
+    # The last phase's chunk otherwise runs to EOF, swallowing trailing level-2
+    # sections (Phase Dependencies, Traceability, Execute-tier granularity)
+    # that a "### N." split alone does not bound.
+    boundary = re.search(r"^##\s", chunk, flags=re.MULTILINE)
+    return chunk[: boundary.start()] if boundary else chunk
+
+
 def phase_section_text(text: str, phase_id: str) -> str:
     body = doc_format.split_frontmatter(text)[1]
     sections = re.split(r"^###\s+(\d+)\.", body, flags=re.MULTILINE)
     for idx in range(1, len(sections), 2):
         if sections[idx] == phase_id:
-            return sections[idx + 1] if idx + 1 < len(sections) else ""
+            return _bounded_phase_chunk(sections, idx)
     return ""
 
 
@@ -168,7 +177,7 @@ def phase_prose_paths(text: str, phase_id: str) -> list[str]:
     chunk = ""
     for idx in range(1, len(sections), 2):
         if sections[idx] == phase_id:
-            chunk = sections[idx + 1] if idx + 1 < len(sections) else ""
+            chunk = _bounded_phase_chunk(sections, idx)
             break
     paths: list[str] = []
     for line in chunk.splitlines():
