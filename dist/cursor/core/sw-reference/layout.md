@@ -383,6 +383,24 @@ Runs `python3 -m sw generate --all` → golden re-snapshot when `dist/` changes 
 `copy-to-core --force` is **fixture/CI-only** (set `SW_BUILD_CHAIN_FORCE=1` or run under CI); operator
 workflows must remediate via `.sw/` instead. Last-synced provenance lives at `.sw/build-chain-last-synced.json`.
 
+### Refuse + `--check` (PRD 060 R11–R13)
+
+- `copy-to-core` refuses when `core/sw-reference/` drifted without matching `.sw/` edits — remediate in `.sw/`, then re-run sync (not `--force`).
+- `python3 scripts/build-chain-sync.py --check` — parity-only; failures emit `{"remediation":"python3 scripts/build-chain-sync.py"}`.
+- Ship-time drift: `scripts/ship-build-chain-check.py` before commit when build-chain paths change.
+
+### Post-merge closure + verify override (PRD 060 R7–R9)
+
+- Preview: `python3 scripts/planning_store.py close-delivery-units --prd-unit <id> --dry-run`
+- Apply: omit `--dry-run`; JSON includes `considered`, `closed`, `skipped`, `resumeCommand` when incomplete.
+- Verify override (`no-baseline`/`unattributed`): `override-add` auto-files gap via `capture_verify_override`; identical signature → `action: reused`, else `action: created`.
+
+### Harness test hygiene (PRD 060 R10–R15)
+
+- Deprecated surfaces: `core/sw-reference/deprecated-surface-manifest.json` + `scripts/deprecated_surface_freshness.py --check`
+- Shared config + baseline I/O: `scripts/harness_isolation_lint.py --check`
+- Verify baselines: caller-owned per-phase/run paths (not shared `.shipwright/baseline.*`).
+
 ## Capability manifest + selector (PRD 021)
 
 Authoring lives under `core/`; the emitter propagates manifest artifacts into both dist trees.

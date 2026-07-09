@@ -48,7 +48,8 @@ Canonical chain is single-sourced from `core/sw-reference/kernel-classification.
 
 - **build-chain verify (R25)** — before `sw-commit` when the phase diff touches paths in
   `core/sw-reference/build-chain-paths.json`, run `python3 scripts/ship-build-chain-check.py` (hard block on drift).
-  Sync with `python3 scripts/build-chain-sync.py` when check fails.
+  Sync with full `python3 scripts/build-chain-sync.py` when check fails (not `copy-to-core` alone).
+  `--force` is never an operator escape.
 - **sw-tmp** — at chain start: `python3 scripts/sw-tmp.py clean` then `python3 scripts/sw-tmp.py init` (records
   `runDir` in shipwright-state). At chain end: `python3 scripts/sw-tmp.py clean`. No `trap … EXIT` (markdown-orchestrated
   chain).
@@ -59,6 +60,8 @@ Canonical chain is single-sourced from `core/sw-reference/kernel-classification.
   - **Halt** on `not-verified` or `missing-required`.
   - **`no-baseline` / `unattributed`** — log loudly and **continue** into `sw-commit` (which owns the logged
     decision prompt). Does not override `check-gate.py`.
+  - Logged overrides at `sw-commit` auto-file a durable follow-up gap (`capture_verify_override`);
+    ship must not treat override as closure.
 - **sw-simplify** — behavior-preserving deslop after review; re-runs verify + `simplify-gate.py`. **Halt** on
   `regressed`; **log and continue** on `inconclusive`. Skipped by `--fast` / `--skip-simplify`.
 - **`sw-review`** — native phase-1 panel runs **in-chain by default** (resolved via

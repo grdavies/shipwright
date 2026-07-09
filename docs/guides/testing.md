@@ -111,6 +111,36 @@ PYTHONPATH=scripts python3 scripts/test/_runner.py run-pytest --scope phase
 
 See [pytest documentation](https://docs.pytest.org/en/stable/example/index.html) for fixtures, parametrization,
 and `tmp_path` usage.
+
+## Build-chain freshness (PRD 060)
+
+After editing `scripts/`, emittable roots, or `core/`:
+
+```bash
+python3 scripts/build-chain-sync.py
+```
+
+Check-only (CI / pre-ship):
+
+```bash
+python3 scripts/build-chain-sync.py --check
+```
+
+Failures emit exact remediation `python3 scripts/build-chain-sync.py`.
+`copy-to-core --force` is fixture/CI-only — never use on a real checkout.
+Core-only `core/sw-reference/` edits without `.sw/` provenance are refused;
+remediate in `.sw/` then re-sync.
+
+Regression: `scripts/unit_tests/git/test_build_chain_hygiene.py`
+
+## Harness isolation + deprecated surfaces (PRD 060 R10–R15)
+
+- `python3 scripts/deprecated_surface_freshness.py --check`
+- `python3 scripts/harness_isolation_lint.py --check`
+- Verify override gaps: `scripts/unit_tests/planning/test_verify_override_gap.py`
+- Closure completeness: `scripts/unit_tests/planning/test_closure_completeness.py`
+- Baselines: per-phase/run paths under `.cursor/sw-deliver-runs/<phase>/` — not shared `.shipwright/baseline.*`
+
 ## Developer test trees (repo-only)
 
 The `scripts/unit_tests/`, `scripts/tests/`, and `scripts/test/` trees are **repo-only** harness sources. They are excluded from `core/scripts/` and from emitted `dist/*/scripts/` per `core/sw-reference/build-chain-sot.json` — never ship them in plugin install trees.
