@@ -132,6 +132,7 @@ from issues_lib import (  # noqa: E402
 from planning_canonical import (  # noqa: E402
     FREEZE_INCOMPLETE_LABEL,
     FROZEN_LABEL,
+    GAP_LABEL_RESOLVED,
     IssueSnapshot,
     artifact_type_from_labels,
     build_freeze_record_body,
@@ -152,6 +153,9 @@ from planning_canonical import (  # noqa: E402
     unit_id_from_labels,
     unit_id_label,
     verify_project_scope,
+    gap_status_from_labels,
+    status_from_labels,
+    status_label,
     verify_unit_id,
 )
 
@@ -2633,6 +2637,384 @@ def wave_regression_finding(
     return {"check": "wave-regression", "status": "ok", "killSwitch": True, "checkedUnits": checked}
 
 
+
+
+
+def _migrate_issue_store():
+    import planning_migrate_issue_store as pmis
+    return pmis
+
+
+def _invalidate_query_cache(root: Path) -> None:
+    from planning_query_cache import invalidate_all
+    invalidate_all(root)
+
+
+CLOSURE_NON_GAP_ORDER = ("prd", "tasks", "brainstorm", "amendment", "decision")
+CLOSURE_ARTIFACT_ORDER = {artifact: idx for idx, artifact in enumerate((*CLOSURE_NON_GAP_ORDER, "gap"))}
+
+
+def _normalize_prd_unit_id(prd_unit_id: str) -> str:
+    unit = prd_unit_id.strip()
+    if unit.startswith("prd-"):
+        return unit
+    return unit
+
+
+def _prd_number_from_unit_id(unit_id: str) -> str | None:
+    m = re.match(r"^prd-(\d{3})-", unit_id)
+    if m:
+        return m.group(1)
+    m = re.match(r"^(\d{3})-", unit_id)
+    if m:
+        return m.group(1)
+    return None
+
+
+def _slug_from_prd_unit(unit_id: str, prd_num: str) -> str:
+    for prefix in (f"prd-{prd_num}-", f"{prd_num}-", "prd-"):
+        if unit_id.startswith(prefix):
+            return unit_id[len(prefix) :]
+    return unit_id
+
+
+def _parse_absorbs_targets(raw: str) -> list[str]:
+    value = raw.strip()
+    if not value:
+        return []
+    if value.startswith("["):
+        try:
+            parsed = json.loads(value.replace("'", '"'))
+        except json.JSONDecodeError:
+            parsed = [part.strip().strip("'\"") for part in value.strip("[]").split(",") if part.strip()]
+        if isinstance(parsed, list):
+            return [str(item).strip() for item in parsed if str(item).strip()]
+    return [part.strip() for part in value.split(",") if part.strip()]
+
+
+def _record_prior_state(record: Any, artifact_type: str) -> str:
+    if artifact_type == "gap":
+        return gap_status_from_labels(list(record.labels)) or record.state
+    return status_from_labels(list(record.labels)) or record.state
+
+
+def _record_is_closed(record: Any, artifact_type: str) -> bool:
+    if artifact_type == "gap":
+        return record.state == "closed" and GAP_LABEL_RESOLVED in list(record.labels)
+    return record.state == "closed" and status_from_labels(list(record.labels)) == "complete"
+
+
+def _closure_labels_for(record: Any, artifact_type: str) -> list[str]:
+    labels = list(record.labels)
+    if artifact_type == "gap":
+        pmis = _migrate_issue_store()
+        return pmis._apply_gap_labels(labels, pmis.ArtifactLifecycle(issue_state="closed", gap_status="resolved"), "gap")
+    out = [label for label in labels if not label.startswith("sw:status:")]
+    out.append(status_label("complete"))
+    return sorted(set(out))
+
+
+def _lookup_issue_record(backend: "IssueStoreBackend", unit_id: str, body_path: str) -> Any:
+    try:
+        return backend._lookup_record(unit_id, body_path)
+    except IssueNotFound:
+        return None
+    except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
+        handle_issue_client_error(exc)
+        return None
+
+
+def _default_body_path(unit_id: str, artifact_type: str) -> str:
+    if artifact_type == "brainstorm":
+        return f"docs/brainstorms/{unit_id}.md"
+    if artifact_type == "tasks":
+        prd_num = _prd_number_from_unit_id(unit_id)
+        if prd_num and unit_id.startswith(f"{prd_num}-"):
+            slug = unit_id[len(prd_num) + 1 :]
+            return f"docs/prds/{prd_num}-{slug}/tasks-{unit_id}.md"
+        return f"docs/prds/tasks-{unit_id}.md"
+    if artifact_type == "gap":
+        return f"docs/planning/gap/{unit_id}/{unit_id}.md"
+    if artifact_type == "prd":
+        prd_num = _prd_number_from_unit_id(unit_id)
+        if prd_num:
+            slug = _slug_from_prd_unit(unit_id, prd_num)
+            name = unit_id if unit_id.startswith("prd-") else f"prd-{unit_id}"
+            return f"docs/prds/{prd_num}-{slug}/{name}.md"
+    return f"docs/prds/{unit_id}/{unit_id}.md"
+
+
+def resolve_delivery_linked_units(
+    root: Path,
+    cfg: dict[str, Any],
+    prd_unit_id: str,
+) -> dict[str, Any]:
+    """Snapshot the complete linked-unit set for retrospective closure (PRD 059 R17)."""
+    pmis = _migrate_issue_store()
+    if not pmis.issue_store_effective(root, cfg):
+        return {"verdict": "fail", "error": "issue-store-required", "prdUnitId": prd_unit_id}
+    backend = get_backend(root, cfg, override="issue-store")
+    if not isinstance(backend, IssueStoreBackend):
+        return {"verdict": "fail", "error": "issue-store-backend-required", "prdUnitId": prd_unit_id}
+
+    normalized = _normalize_prd_unit_id(prd_unit_id)
+    candidates = [normalized, prd_unit_id.strip()]
+    prd_num = _prd_number_from_unit_id(normalized)
+    if prd_num:
+        slug = _slug_from_prd_unit(normalized, prd_num)
+        candidates.extend([f"prd-{prd_num}-{slug}", f"{prd_num}-{slug}"])
+    seen: set[str] = set()
+    prd_record = None
+    prd_unit = ""
+    for candidate in candidates:
+        if not candidate or candidate in seen:
+            continue
+        seen.add(candidate)
+        body_path = _default_body_path(candidate, "prd")
+        prd_record = _lookup_issue_record(backend, candidate, body_path)
+        if prd_record is not None:
+            prd_unit = candidate
+            break
+    if prd_record is None:
+        return {"verdict": "fail", "error": "prd-unit-not-found", "prdUnitId": prd_unit_id}
+
+    full_body = reassemble_body(prd_record.body, prd_record.comments)
+    raw_content = strip_markers_and_edges(full_body)
+    fm = _migrate_issue_store().parse_frontmatter_fields(raw_content)
+    edges = parse_edges_block(full_body) or {}
+    edge_targets = [
+        str(edge.get("target", "")).strip()
+        for edge in (edges.get("edges") or [])
+        if isinstance(edge, dict) and edge.get("target")
+    ]
+
+    units: dict[str, dict[str, str]] = {}
+    units[prd_unit] = {
+        "unitId": prd_unit,
+        "artifactType": "prd",
+        "bodyPath": _default_body_path(prd_unit, "prd"),
+    }
+
+    if prd_num:
+        slug = _slug_from_prd_unit(prd_unit, prd_num)
+        for tasks_id in {f"tasks-{prd_unit}", f"{prd_num}-{slug}", f"tasks-{prd_num}-{slug}"}:
+            body_path = _default_body_path(tasks_id, "tasks")
+            if _lookup_issue_record(backend, tasks_id, body_path) is not None:
+                units[tasks_id] = {"unitId": tasks_id, "artifactType": "tasks", "bodyPath": body_path}
+                break
+
+    brainstorm_ref = (fm.get("brainstorm") or "").strip()
+    brainstorm_unit = ""
+    if brainstorm_ref:
+        brainstorm_unit = Path(brainstorm_ref).stem
+        if not brainstorm_unit.startswith("brainstorm"):
+            brainstorm_unit = f"brainstorm-{brainstorm_unit}"
+    linked = backend._find_linked_brainstorm(prd_unit)
+    if linked is not None:
+        brainstorm_unit = str(getattr(linked, "unit_id", "") or brainstorm_unit)
+    if brainstorm_unit and brainstorm_unit not in units:
+        units[brainstorm_unit] = {
+            "unitId": brainstorm_unit,
+            "artifactType": "brainstorm",
+            "bodyPath": _default_body_path(brainstorm_unit, "brainstorm"),
+        }
+
+    gap_ids: set[str] = set()
+    for target in _parse_absorbs_targets(fm.get("absorbs", "")) + edge_targets:
+        if "gap" in target:
+            gap_ids.add(target)
+    if prd_num:
+        gap_ids.update(_migrate_issue_store().gap_unit_ids_scheduled_for_prd(root, prd_num, cfg))
+    for gap_id in sorted(gap_ids):
+        if gap_id in units:
+            continue
+        body_path = _default_body_path(gap_id, "gap")
+        if _lookup_issue_record(backend, gap_id, body_path) is not None:
+            units[gap_id] = {"unitId": gap_id, "artifactType": "gap", "bodyPath": body_path}
+
+    ordered = sorted(
+        units.values(),
+        key=lambda item: (
+            CLOSURE_ARTIFACT_ORDER.get(item["artifactType"], 99),
+            item["unitId"],
+        ),
+    )
+    return {
+        "verdict": "ok",
+        "prdUnitId": prd_unit,
+        "snapshot": ordered,
+        "count": len(ordered),
+    }
+
+
+def _close_issue_store_unit(
+    backend: "IssueStoreBackend",
+    unit: dict[str, str],
+    *,
+    dry_run: bool,
+) -> dict[str, Any]:
+    unit_id = unit["unitId"]
+    artifact_type = unit["artifactType"]
+    body_path = unit["bodyPath"]
+    if artifact_type == "gap":
+        if dry_run:
+            record = _lookup_issue_record(backend, unit_id, body_path)
+            prior = _record_prior_state(record, artifact_type) if record else "unknown"
+            return {
+                "unitId": unit_id,
+                "artifactType": artifact_type,
+                "priorState": prior,
+                "resultingState": "resolved",
+                "action": "would-close-gap",
+                "verdict": "pass",
+            }
+        outcome = _migrate_issue_store().close_gap_issue(backend.root, unit_id, backend.cfg)
+        return {
+            "unitId": unit_id,
+            "artifactType": artifact_type,
+            "priorState": "open",
+            "resultingState": "resolved" if outcome.get("verdict") == "pass" else "open",
+            "action": "noop" if outcome.get("alreadyClosed") else "close-gap",
+            "verdict": outcome.get("verdict", "fail"),
+            "detail": outcome,
+        }
+
+    record = _lookup_issue_record(backend, unit_id, body_path)
+    if record is None:
+        return {
+            "unitId": unit_id,
+            "artifactType": artifact_type,
+            "verdict": "fail",
+            "error": "unit-not-found",
+        }
+    prior_state = _record_prior_state(record, artifact_type)
+    target_labels = _closure_labels_for(record, artifact_type)
+    if _record_is_closed(record, artifact_type):
+        return {
+            "unitId": unit_id,
+            "artifactType": artifact_type,
+            "priorState": prior_state,
+            "resultingState": "complete",
+            "action": "noop",
+            "verdict": "pass",
+            "alreadyClosed": True,
+        }
+    if dry_run:
+        return {
+            "unitId": unit_id,
+            "artifactType": artifact_type,
+            "priorState": prior_state,
+            "resultingState": "complete",
+            "action": "would-close",
+            "verdict": "pass",
+            "locked": FROZEN_LABEL in list(record.labels) or bool(record.locked),
+        }
+    before_hash = None
+    before_body = None
+    if FROZEN_LABEL in list(record.labels) or bool(record.locked):
+        before_hash = parse_freeze_record_hash(record.comments)
+        before_body = reassemble_body(record.body, record.comments)
+    try:
+        updated = backend._client.issue_update(
+            record.id,
+            labels=target_labels,
+            state="closed",
+            if_match=record.etag,
+            allow_locked=True,
+        )
+    except IssueRevisionConflict as exc:
+        return {
+            "unitId": unit_id,
+            "artifactType": artifact_type,
+            "priorState": prior_state,
+            "verdict": "fail",
+            "error": "revision-conflict",
+            "detail": {"expected": exc.expected, "actual": exc.actual},
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "unitId": unit_id,
+            "artifactType": artifact_type,
+            "priorState": prior_state,
+            "verdict": "fail",
+            "error": str(exc),
+        }
+    if before_body is not None:
+        after = backend._client.issue_get(updated.id)
+        after_hash = parse_freeze_record_hash(after.comments)
+        after_body = reassemble_body(after.body, after.comments)
+        if before_body != after_body or before_hash != after_hash:
+            return {
+                "unitId": unit_id,
+                "artifactType": artifact_type,
+                "priorState": prior_state,
+                "verdict": "fail",
+                "error": "locked-body-mutated",
+            }
+    return {
+        "unitId": unit_id,
+        "artifactType": artifact_type,
+        "priorState": prior_state,
+        "resultingState": "complete",
+        "action": "close",
+        "verdict": "pass",
+    }
+
+
+def close_delivery_units(
+    root: Path,
+    cfg: dict[str, Any],
+    prd_unit_id: str,
+    *,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Close linked PRD/tasks/brainstorm/gap units after retrospective merge (PRD 059 R16-R24)."""
+    snapshot = resolve_delivery_linked_units(root, cfg, prd_unit_id)
+    if snapshot.get("verdict") != "ok":
+        return snapshot
+    backend = get_backend(root, cfg, override="issue-store")
+    if not isinstance(backend, IssueStoreBackend):
+        return {"verdict": "fail", "error": "issue-store-backend-required", "prdUnitId": prd_unit_id}
+
+    units = list(snapshot.get("snapshot") or [])
+    results: list[dict[str, Any]] = []
+    failures: list[dict[str, Any]] = []
+    for unit in units:
+        outcome = _close_issue_store_unit(backend, unit, dry_run=dry_run)
+        results.append(outcome)
+        if outcome.get("verdict") == "fail" or outcome.get("detail", {}).get("verdict") == "resolution-partial":
+            failures.append(outcome)
+
+    cache_status = "skipped-dry-run" if dry_run else "invalidated"
+    if not dry_run:
+        _invalidate_query_cache(root)
+
+    open_remaining = [
+        item["unitId"]
+        for item in results
+        if item.get("verdict") == "fail" or item.get("detail", {}).get("verdict") == "resolution-partial"
+    ]
+    resume = (
+        f"python3 scripts/planning_store.py close-delivery-units --prd-unit {snapshot['prdUnitId']}"
+        if open_remaining
+        else None
+    )
+    verdict = "ready" if not failures else "not-ready"
+    if dry_run:
+        verdict = "dry-run"
+    return {
+        "verdict": verdict,
+        "action": "close-delivery-units",
+        "prdUnitId": snapshot["prdUnitId"],
+        "dryRun": dry_run,
+        "snapshotCount": len(units),
+        "units": results,
+        "openRemaining": open_remaining,
+        "cacheInvalidation": cache_status,
+        "resumeCommand": resume,
+    }
+
+
 def validate_local_synced_path(path: Path, *, allowlist: list[str] | None = None) -> dict[str, Any]:
     warnings: list[str] = []
     checks: list[dict[str, Any]] = []
@@ -2757,6 +3139,7 @@ def main() -> None:
         "mark-issue-tombstone",
         "mark-issue-transferred",
         "clear-issue-fixture",
+        "close-delivery-units",
         "doctor",
     ):
         sub.add_parser(name)
@@ -2890,6 +3273,10 @@ def main() -> None:
                 allowlist = [str(x) for x in cfg_allow]
         result = validate_local_synced_path(Path(os.path.expanduser(raw)), allowlist=allowlist)
         emit(result, 0 if result["verdict"] == "ok" else 2)
+    elif args.command == "close-delivery-units":
+        dry_run = "--dry-run" in rest
+        result = close_delivery_units(root, cfg, _require(rest, "--prd-unit"), dry_run=dry_run)
+        emit(result, 0 if result.get("verdict") in {"ready", "dry-run"} else 2)
     elif args.command == "doctor":
         result = doctor_separate_project_local_writes(root, cfg)
         emit(result, 0 if result.get("verdict") == "pass" else 20)
