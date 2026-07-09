@@ -130,10 +130,13 @@ from issues_lib import (  # noqa: E402
     IssuesClient,
 )
 from planning_canonical import (  # noqa: E402
+    ARTIFACT_TYPE_UNRESOLVED,
     FREEZE_INCOMPLETE_LABEL,
     FROZEN_LABEL,
     GAP_LABEL_RESOLVED,
     IssueSnapshot,
+    ArtifactTypeUnresolved,
+    artifact_type_from_content,
     artifact_type_from_labels,
     build_freeze_record_body,
     canonical_hash,
@@ -141,11 +144,13 @@ from planning_canonical import (  # noqa: E402
     compose_issue_body,
     human_readable_title,
     infer_artifact_type,
+    is_resolved_artifact_type,
     parse_edges_block,
     parse_freeze_record_hash,
     project_label,
     reconcile_edges,
     reassemble_body,
+    require_artifact_type,
     rewrite_chunk_manifest_ids,
     strip_markers_and_edges,
     structural_labels_from_content,
@@ -1032,7 +1037,7 @@ def jira_privacy_create_gate(root: Path, cfg: dict[str, Any], unit_id: str, body
         return
     from planning_jira_probe import probe_jira_privacy
 
-    artifact_type = infer_artifact_type(body_path)
+    artifact_type = require_artifact_type(body_path, content=content)
     unit: dict[str, Any] = {"id": unit_id, "type": artifact_type, "bodyPath": body_path}
     explicit = parse_visibility_from_content(content)
     if explicit:
@@ -1359,7 +1364,7 @@ def issue_store_visibility_allowed(
     body_path: str,
     content: str,
 ) -> bool:
-    artifact_type = infer_artifact_type(body_path)
+    artifact_type = require_artifact_type(body_path, content=content)
     unit: dict[str, Any] = {
         "id": unit_id,
         "type": artifact_type,
@@ -1383,7 +1388,7 @@ def issue_store_visibility_gate(
 ) -> None:
     if issue_store_visibility_allowed(root, cfg, unit_id, body_path, content):
         return
-    artifact_type = infer_artifact_type(body_path)
+    artifact_type = require_artifact_type(body_path, content=content)
     unit: dict[str, Any] = {
         "id": unit_id,
         "type": artifact_type,
@@ -1624,10 +1629,40 @@ class IssueStoreBackend(PlanningStoreBackend):
             return "unknown"
         content = strip_markers_and_edges(reassemble_body(record.body, record.comments))
         native = pd._status_from_record(record, content)
-        return _unified_status_from_native(native, record.artifact_type or infer_artifact_type(body_path))
+        artifact_type = self._resolve_artifact_type(
+            body_path, record=record, content=content, unit_id=unit_id
+        )
+        return _unified_status_from_native(native, artifact_type)
 
-    def _artifact_type(self, body_path: str) -> str:
-        return infer_artifact_type(body_path)
+    def _resolve_artifact_type(
+        self,
+        body_path: str,
+        *,
+        record: Any | None = None,
+        content: str | None = None,
+        caller_type: str | None = None,
+        unit_id: str | None = None,
+    ) -> str:
+        record_type = record.artifact_type if record is not None and record.artifact_type else None
+        record_labels = list(record.labels) if record is not None and record.labels else None
+        record_content = content
+        if record is not None and not artifact_type_from_content(content or ""):
+            record_content = strip_markers_and_edges(reassemble_body(record.body, record.comments))
+        try:
+            return require_artifact_type(
+                body_path,
+                record_type=record_type,
+                content=record_content,
+                caller_type=caller_type,
+                labels=record_labels,
+            )
+        except ArtifactTypeUnresolved:
+            fail(
+                "artifact-type-unresolved",
+                code="artifact-type-unresolved",
+                bodyPath=body_path,
+                unitId=unit_id,
+            )
 
     def _issue_title(self, artifact_type: str, unit_id: str, content: str) -> str:
         # R11: human-readable title (doc H1 / frontmatter `title:`) instead of
@@ -1753,7 +1788,14 @@ class IssueStoreBackend(PlanningStoreBackend):
         """
         if FROZEN_LABEL in record.labels or PUT_INCOMPLETE_LABEL in record.labels:
             return record
-        artifact_type = record.artifact_type or infer_artifact_type(unit_id)
+        content = strip_markers_and_edges(reassemble_body(record.body, record.comments))
+        artifact_type = (
+            record.artifact_type
+            or artifact_type_from_labels(record.labels)
+            or artifact_type_from_content(content)
+        )
+        if not is_resolved_artifact_type(artifact_type):
+            return record
         missing: set[str] = set()
         if not unit_id_from_labels(record.labels):
             missing.add(unit_id_label(unit_id))
@@ -1785,7 +1827,7 @@ class IssueStoreBackend(PlanningStoreBackend):
             return record
         return updated
 
-    def _lookup_record(self, unit_id: str, body_path: str) -> Any:
+    def _lookup_record(self, unit_id: str, body_path: str, *, content: str | None = None) -> Any:
         idx_key = issue_index_key(self.project_key, unit_id)
         issue_id = self._index.get(idx_key)
         if issue_id:
@@ -1798,11 +1840,18 @@ class IssueStoreBackend(PlanningStoreBackend):
             else:
                 if verify_project_scope(record.body, self.project_key):
                     return self._maybe_backfill_labels(record, unit_id)
-        matches = self._client.issue_search(
-            project_key=self.project_key,
-            unit_id=unit_id,
-            artifact_type=self._artifact_type(body_path),
-        )
+        search_kwargs: dict[str, Any] = {
+            "project_key": self.project_key,
+            "unit_id": unit_id,
+        }
+        path_inferred = infer_artifact_type(body_path)
+        if path_inferred != ARTIFACT_TYPE_UNRESOLVED:
+            search_kwargs["artifact_type"] = path_inferred
+        elif content:
+            content_type = artifact_type_from_content(content)
+            if content_type:
+                search_kwargs["artifact_type"] = content_type
+        matches = self._client.issue_search(**search_kwargs)
         if not matches:
             raise IssueNotFound(f"no issue for unit {unit_id}")
         record = matches[0]
@@ -1813,7 +1862,14 @@ class IssueStoreBackend(PlanningStoreBackend):
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
         self._guard_write_visibility(unit_id, body_path, content)
         self._guard_write_secrets(content, path_hint=body_path)
-        artifact_type = self._artifact_type(body_path)
+        existing: Any | None
+        try:
+            existing = self._lookup_record(unit_id, body_path, content=content)
+        except IssueNotFound:
+            existing = None
+        artifact_type = self._resolve_artifact_type(
+            body_path, record=existing, content=content, unit_id=unit_id
+        )
         title = self._issue_title(artifact_type, unit_id, content)
         labels = self._labels_for(artifact_type, unit_id, content)
         body = compose_issue_body(self.project_key, artifact_type, unit_id, content)
@@ -1828,9 +1884,7 @@ class IssueStoreBackend(PlanningStoreBackend):
         # ids that were never a real comment. Cleared only once the manifest
         # rewrite below actually succeeds.
         head_labels = sorted(set(labels) | {PUT_INCOMPLETE_LABEL}) if chunked else labels
-        try:
-            record = self._lookup_record(unit_id, body_path)
-        except IssueNotFound:
+        if existing is None:
             record = self._client.issue_create(
                 title=title,
                 body=body,
@@ -1840,6 +1894,7 @@ class IssueStoreBackend(PlanningStoreBackend):
                 unit_id=unit_id,
             )
         else:
+            record = existing
             try:
                 record = self._client.issue_update(
                     record.id,
@@ -1977,7 +2032,10 @@ class IssueStoreBackend(PlanningStoreBackend):
             handle_issue_client_error(exc)
 
         distillation: dict[str, Any] | None = None
-        artifact_type = self._artifact_type(body_path)
+        freeze_content = self._extract_content(record)
+        artifact_type = self._resolve_artifact_type(
+            body_path, record=record, content=freeze_content, unit_id=unit_id
+        )
         if distill and artifact_type == "prd":
             brainstorm = self._find_linked_brainstorm(unit_id)
             if brainstorm is not None:

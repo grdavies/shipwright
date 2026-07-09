@@ -39,6 +39,9 @@ FREEZE_INCOMPLETE_LABEL = "sw:freeze-incomplete"
 FREEZE_HASH_PATTERN = re.compile(r"sw-freeze-hash:\s*([a-f0-9]{64})")
 
 ARTIFACT_TYPES = frozenset({"prd", "gap", "tasks", "brainstorm", "decision", "amendment"})
+# Sentinel returned by ``infer_artifact_type`` for opaque issue-store locators
+# (``issue:<n>`` / ``issue-cache:<n>``) that carry no path-shape type signal.
+ARTIFACT_TYPE_UNRESOLVED = "__unresolved__"
 TYPE_LABELS = {
     "prd": "sw:prd",
     "gap": "sw:gap",
@@ -122,7 +125,39 @@ def slugify(text: str) -> str:
     return text.strip("-")
 
 
+def is_opaque_body_path(body_path: str) -> bool:
+    norm = body_path.replace("\\", "/").lower().strip()
+    return norm.startswith("issue:") or norm.startswith("issue-cache:")
+
+
+def is_resolved_artifact_type(artifact_type: str | None) -> bool:
+    return bool(artifact_type) and artifact_type in ARTIFACT_TYPES
+
+
+def artifact_type_from_content(content: str) -> str | None:
+    """Read artifact type from body marker or frontmatter ``type:`` (R1/R2)."""
+    marker = parse_body_marker(content, MARKER_ARTIFACT_TYPE)
+    if marker and marker in ARTIFACT_TYPES:
+        return marker
+    if content.startswith("---"):
+        fm = pig.parse_frontmatter(content)
+        if fm and fm.get("type"):
+            candidate = str(fm["type"]).strip().lower()
+            if candidate in ARTIFACT_TYPES:
+                return candidate
+    return None
+
+
+class ArtifactTypeUnresolved(ValueError):
+    def __init__(self, body_path: str, *, unit_id: str | None = None) -> None:
+        self.body_path = body_path
+        self.unit_id = unit_id
+        super().__init__(f"artifact type unresolved for body path {body_path!r}")
+
+
 def infer_artifact_type(body_path: str) -> str:
+    if is_opaque_body_path(body_path):
+        return ARTIFACT_TYPE_UNRESOLVED
     rel = body_path.replace("\\", "/").lower()
     if "/brainstorms/" in rel or rel.startswith("docs/brainstorms/"):
         return "brainstorm"
@@ -286,6 +321,34 @@ def artifact_type_from_labels(labels: list[str]) -> str:
         if label in label_set:
             return artifact_type
     return ""
+
+
+def require_artifact_type(
+    body_path: str,
+    *,
+    record_type: str | None = None,
+    content: str | None = None,
+    caller_type: str | None = None,
+    labels: list[str] | None = None,
+) -> str:
+    """Resolve a concrete artifact type (R1/R2).
+
+    Preference: existing record type → content/frontmatter → caller hint →
+    type labels → path-shape inference (non-opaque paths only). Fail closed
+    when none resolve.
+    """
+    for candidate in (
+        record_type,
+        artifact_type_from_content(content) if content else None,
+        caller_type,
+        artifact_type_from_labels(labels) if labels else None,
+    ):
+        if is_resolved_artifact_type(candidate):
+            return candidate  # type: ignore[return-value]
+    inferred = infer_artifact_type(body_path)
+    if is_resolved_artifact_type(inferred):
+        return inferred
+    raise ArtifactTypeUnresolved(body_path)
 
 
 def topic_label(topic: str) -> str:
