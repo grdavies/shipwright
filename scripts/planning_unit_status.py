@@ -241,7 +241,7 @@ def issue_ref_for_task_list(root: Path, task_list_rel: str) -> str | None:
             project_key=str(key_result["projectKey"]),
             unit_id=unit_id,
         )
-    except (IssueCapabilityError, IssueBudgetExhausted):
+    except (IssueCapabilityError, IssueBudgetExhausted, RuntimeError):
         return None
     if not matches:
         return None
