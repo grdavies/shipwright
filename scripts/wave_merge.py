@@ -1487,7 +1487,12 @@ def cmd_report_terminal(root: Path, args: list[str]) -> None:
         report["terminalRejected"] = True
         report["note"] = "Terminal PR rejected; resume must not re-present (R46)"
     from deliver_plan_surfacing import REPORT_KIND_TERMINAL, attach_plan_surfacing_to_report
+    import planning_unit_status as pus
 
+    handoff = pus.deliver_handoff_paths(root, state)
+    if handoff:
+        report["handoff"] = handoff
+        report["resumeCommand"] = handoff["resumeCommand"]
     attach_plan_surfacing_to_report(root, state, report, report_kind=REPORT_KIND_TERMINAL)
     emit({"verdict": "pass", "action": "report-terminal", "report": report})
 
