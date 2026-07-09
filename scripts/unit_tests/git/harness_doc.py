@@ -512,8 +512,9 @@ else
   FAIL=1
 fi
 
-if grep -q '"sw-docs-currency-reviewer": "build"' "$WORKFLOW_CONFIG" && \
-   grep -q '"sw-docs-currency-reviewer": "build"' "$MODEL_DEFAULTS" && \
+if OUT=$(bash "$ROOT/scripts/resolve-model-tier.sh" --agent sw-docs-currency-reviewer --config "$WORKFLOW_CONFIG" 2>/dev/null) && \
+   echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('source')=='routing.agents' and d.get('tier') in ('cheap','build','mid','deep') and d.get('modelId')" && \
+   grep -q '"sw-docs-currency-reviewer"' "$MODEL_DEFAULTS" && \
    grep -q 'dispatch-check' "$DOC_REVIEW_SKILL"; then
   echo "OK  docs-currency-tier-build"
 else

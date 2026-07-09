@@ -169,7 +169,9 @@ else
 fi
 
 # --- dispatch-agent-explicit-override-wins (R39b) ---
-if OUT=$(bash "$DISPATCH" --agent sw-coherence-reviewer --command sw-prd --parent-model claude-opus-4-8-thinking-high --config "$CONFIG" 2>/dev/null) &&    echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('tier')=='build' and d.get('modelId')=='composer-2.5'"; then
+AGENT_EXPECT=$(bash "$RESOLVE" --agent sw-coherence-reviewer --config "$CONFIG" 2>/dev/null)
+if OUT=$(bash "$DISPATCH" --agent sw-coherence-reviewer --command sw-prd --parent-model claude-opus-4-8-thinking-high --config "$CONFIG" 2>/dev/null) && \
+   printf '%s\n' "$OUT" "$AGENT_EXPECT" | python3 -c "import json,sys; out, agent = [json.loads(x) for x in sys.stdin.read().splitlines()]; assert out.get('tier')==agent.get('tier') and out.get('modelId')==agent.get('modelId')"; then
   ok "dispatch-agent-explicit-override-wins"
 else
   bad "dispatch-agent-explicit-override-wins"

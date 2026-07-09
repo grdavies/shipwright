@@ -75,13 +75,15 @@ r = evaluate_pre_tool_use(payload, root)
 print(json.dumps({"verdict": r.verdict, "model_id": r.model_id, "hook": r.to_hook_output()}))
 PY
 )
+EXPECTED_MODEL=$(bash "$ROOT/scripts/resolve-model-tier.sh" --agent sw-coherence-reviewer --config "$ROOT/.cursor/workflow.config.json" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['modelId'])")
 if echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
+want=sys.argv[1]
 assert d['verdict']=='pass'
-assert d['model_id']=='composer-2.5'
-assert d['hook']['updated_input']['model']=='composer-2.5'
-"; then
+assert d['model_id']==want
+assert d['hook']['updated_input']['model']==want
+" "$EXPECTED_MODEL"; then
   ok "hook-logic-resolves-reviewer-agent"
 else
   bad "hook-logic-resolves-reviewer-agent"
