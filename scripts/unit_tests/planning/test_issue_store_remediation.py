@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from planning_canonical import (
+    ARTIFACT_TYPE_UNRESOLVED,
     GAP_LABEL_RESOLVED,
     gap_status_from_labels,
     gap_status_label,
@@ -36,6 +37,7 @@ def test_infer_artifact_type_planning_unit_paths() -> None:
     assert infer_artifact_type("docs/planning/brainstorm/brainstorm-x/brainstorm-x.md") == "brainstorm"
     assert infer_artifact_type("docs/planning/decision/decision-x/decision-x.md") == "decision"
     assert infer_artifact_type("docs/prds/005/foo/amendments/A1-bar.md") == "amendment"
+    assert infer_artifact_type("issue:297") == ARTIFACT_TYPE_UNRESOLVED
 
 
 def test_infer_unit_id_brainstorm_slug() -> None:

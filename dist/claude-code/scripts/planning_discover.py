@@ -20,8 +20,11 @@ import planning_paths as pp  # noqa: E402
 from host_lib import load_workflow_config  # noqa: E402
 from issues_lib import IssuesClient  # noqa: E402
 from planning_canonical import (  # noqa: E402
+    artifact_type_from_content,
+    artifact_type_from_labels,
     gap_schedule_from_labels,
     gap_status_from_labels,
+    require_artifact_type,
     source_tag_from_labels,
     status_from_labels,
     MARKER_ARTIFACT_TYPE,
@@ -187,7 +190,12 @@ def _title_from_record(record: Any) -> str:
 
 
 def _status_from_record(record: Any, content: str) -> str:
-    artifact_type = record.artifact_type or infer_artifact_type(record.unit_id)
+    artifact_type = (
+        record.artifact_type
+        or artifact_type_from_labels(list(record.labels))
+        or artifact_type_from_content(content)
+        or require_artifact_type(record.unit_id, content=content)
+    )
     if artifact_type == "brainstorm":
         labeled = status_from_labels(list(record.labels))
         return labeled or "complete"
