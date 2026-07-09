@@ -379,7 +379,9 @@ repo trees only — never the install path.
 python3 scripts/build-chain-sync.py
 ```
 
-Runs `copy-to-core.py` → `python3 -m sw generate --all` → golden re-snapshot when `dist/` changes.
+Runs `python3 -m sw generate --all` → golden re-snapshot when `dist/` changes → `copy-to-core.py`.
+`copy-to-core --force` is **fixture/CI-only** (set `SW_BUILD_CHAIN_FORCE=1` or run under CI); operator
+workflows must remediate via `.sw/` instead. Last-synced provenance lives at `.sw/build-chain-last-synced.json`.
 
 ## Capability manifest + selector (PRD 021)
 

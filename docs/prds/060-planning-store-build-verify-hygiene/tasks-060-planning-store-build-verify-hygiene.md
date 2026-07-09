@@ -76,28 +76,28 @@ status: not-started
 
 ### 3. `gap-096` + `gap-100` — Build-chain SoT sync and freshness (R11–R13)
 
-- [ ] 3.1 Detect core-side divergence via last-synced provenance; refuse discard of manual `core/sw-reference/` edits (R11)
+- [x] 3.1 Detect core-side divergence via last-synced provenance; refuse discard of manual `core/sw-reference/` edits (R11)
   - **File:** `scripts/copy-to-core.py`
   - **Expected:** Refuse when core changed since last sync and changes absent from `.sw/`; print `.sw/` remediation; normal forward-sync succeeds without `--force`
   - **R-IDs:** R11
-- [ ] 3.2 Restrict `--force` to fixture/CI-only escape (explicit, logged); refresh last-synced on success and force (R11) (unit 1/2)
+- [x] 3.2 Restrict `--force` to fixture/CI-only escape (explicit, logged); refresh last-synced on success and force (R11) (unit 1/2)
   - **File:** `.sw/layout.md`
   - **Expected:** Operator docs do not present `--force` as real-repo workflow; provenance location documented
   - **R-IDs:** R11
-- [ ] 3.3 Restrict `--force` to fixture/CI-only escape (explicit, logged); refresh last-synced on success and force (R11) (unit 2/2)
+- [x] 3.3 Restrict `--force` to fixture/CI-only escape (explicit, logged); refresh last-synced on success and force (R11) (unit 2/2)
   - **File:** `scripts/copy-to-core.py`
   - **Expected:** Operator docs do not present `--force` as real-repo workflow; provenance location documented
   - **R-IDs:** R11
-- [ ] 3.4 Add single sync entrypoint running allowlist generate → golden-manifest refresh → copy-to-core (R12)
+- [x] 3.4 Add single sync entrypoint running allowlist generate → golden-manifest refresh → copy-to-core (R12)
   - **File:** `scripts/`
   - **Expected:** Exact allowlist order; structured success/failure with remediation commands per failure mode
   - **R-IDs:** R12
-- [ ] 3.5 Fail-closed harness/CI freshness checks emit exact remediation invocations (R13) (unit 1/2)
+- [x] 3.5 Fail-closed harness/CI freshness checks emit exact remediation invocations (R13) (unit 1/2)
   - **File:** `scripts/`
   - **Expected:** Skipped generate/golden/copy-to-core fails with exact remediation, not vague “run generate”
   - **R-IDs:** R13
 
-- [ ] 3.6 Fail-closed harness/CI freshness checks emit exact remediation invocations (R13) (unit 2/2)
+- [x] 3.6 Fail-closed harness/CI freshness checks emit exact remediation invocations (R13) (unit 2/2)
   - **File:** `scripts/unit_tests/`
   - **Expected:** Skipped generate/golden/copy-to-core fails with exact remediation, not vague “run generate”
   - **R-IDs:** R13
