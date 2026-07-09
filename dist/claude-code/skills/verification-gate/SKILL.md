@@ -141,6 +141,14 @@ reference **redacted** override evidence only — never raw logs or secrets.
 Reuse semantics: identical signature → `action: reused` + existing `unitId`;
 new signature → `action: created`.
 
+### Test-freshness obligations (PRD 060 R10, R14–R15)
+
+- Plugin harness must pass `scripts/deprecated_surface_freshness.py --check` against
+  `core/sw-reference/deprecated-surface-manifest.json` (explicit manifest only).
+- Fixtures sharing `workflow.config.json` with baseline I/O must isolate paths;
+  `scripts/harness_isolation_lint.py --check` fails closed otherwise.
+- Inspect override gaps: `python3 scripts/planning_gap_capture.py <repo> capture-verify-override --override '<json>'`
+
 ## Reuse points
 
 - `/sw-commit` / `/sw-ship` — pre-CI boundary gate

@@ -99,6 +99,24 @@ When `loopHealth.enabled`, run `python3 scripts/loop_health.py --summary` during
 
 ### Post-merge (`--post-merge` or auto-detected)
 
+### Planning closure preview (any mode)
+
+Before post-merge apply, operators may preview:
+
+```bash
+python3 scripts/planning_store.py close-delivery-units --prd-unit <prd-unit-id> --dry-run
+```
+
+Use printed `resumeCommand` on partial apply.
+
+### Deliver completion semantics (PRD 060 R16–R17)
+
+- Phase PRs may merge independently when green (`merge-ready-green` + phase acceptance + gap-check pass).
+- `living-docs reconcile` runs after each phase merge; `gap-resolve` flips absorbed backlog rows only when INDEX status is `complete` (all phases terminal — last phase on integration, or target merged to default).
+- PRD-absorbed implementation gaps (e.g. `gap-105`…`gap-099`) resolve only after the owning phase passes `phase_acceptance_gate` — not at raw ship-green.
+- Under file contention, prefer landing phases 1–2 before later doc-only phases.
+- Issue-store gap units reach **resolved** via this post-merge closure loop (`close-delivery-units`), not from INDEX projection edits alone (see `living-status` timing gate).
+
 1. Confirm post-merge context (merged PR or explicit user acknowledgment).
 2. Run the same chain; `reconcile` without `--require-merge` may mark INDEX `complete` when appropriate.
 3. **Planning-store closure (PRD 059 R16–R24)** — resolve linked PRD, tasks, brainstorm, and gap

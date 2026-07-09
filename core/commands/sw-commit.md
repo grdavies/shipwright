@@ -33,6 +33,10 @@ Phase-scoped commit after `/sw-verify` (and `/sw-review` when configured).
    Emit the same redacted fields in a **commit trailer** (`Verification-Override:`). Any lightweight/trivial
    path writes this same record — no unlogged exception. Override **never** suppresses a red
    `check-gate.py`/CI verdict.
+
+   `override-add` also invokes `planning_gap_capture.capture_verify_override` for
+   `no-baseline` / `unattributed`. Returned JSON includes `action: created|reused`, `unitId`,
+   `signature`. Override alone does not clear the follow-up obligation.
 4. Complete `/sw-review` when review is enabled; address actionable findings; re-run the verification gate if
    review or fixes changed the delta materially.
 5. `memory-preflight` checkpoint for durable learnings (redact before store).
