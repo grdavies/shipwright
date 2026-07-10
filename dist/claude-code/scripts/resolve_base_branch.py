@@ -141,6 +141,15 @@ def is_shipwright_work_branch(name: str) -> bool:
     return bool(SHIPWRIGHT_BRANCH_RE.match(name or ""))
 
 
+def resolve_trunk_branch_name(root: Path, cfg: dict[str, Any] | None = None) -> tuple[str, str]:
+    """Resolve trunk branch name when HEAD is on a Shipwright work branch (R6)."""
+    cfg = cfg if cfg is not None else load_workflow_config(root)
+    user_set, user_value = is_user_set_default_base(cfg, root)
+    if user_set and user_value:
+        return user_value, "defaultBaseBranch"
+    return schema_default_base(root), "schema-default"
+
+
 def entry_guard(root: Path, *, explicit_base: str | None) -> None:
     if is_detached(root):
         fail(
@@ -151,16 +160,20 @@ def entry_guard(root: Path, *, explicit_base: str | None) -> None:
         )
     branch, _ = current_head(root)
     if branch and is_shipwright_work_branch(branch) and not explicit_base:
-        fail(
-            f"HEAD on Shipwright work branch {branch!r} — unsafe base capture",
-            exit_code=20,
-            halt="work-branch-head",
-            remediation=(
-                f"git checkout $(python3 scripts/resolve-base-branch.py resolve --quiet --name-only) "
-                f"&& python3 scripts/resolve-base-branch.py capture"
-            ),
-            currentBranch=branch,
-        )
+        cfg = load_workflow_config(root)
+        trunk_name, _ = resolve_trunk_branch_name(root, cfg)
+        trunk_sha, _ = resolve_ref_name(root, trunk_name)
+        if not trunk_sha:
+            fail(
+                f"HEAD on Shipwright work branch {branch!r} and trunk {trunk_name!r} is unresolvable",
+                exit_code=20,
+                halt="work-branch-head",
+                remediation=(
+                    f"python3 scripts/resolve-base-branch.py capture --base {trunk_name}"
+                ),
+                currentBranch=branch,
+                trunkBranch=trunk_name,
+            )
 
 
 def compute_resolution(root: Path, *, explicit_base: str | None = None) -> dict[str, Any]:
@@ -187,12 +200,32 @@ def compute_resolution(root: Path, *, explicit_base: str | None = None) -> dict[
                 "source": "defaultBaseBranch",
             }
 
-    branch, sha = current_head(root)
+    branch, head_sha = current_head(root)
     if not branch:
         fail("cannot capture base from detached HEAD")
+    if is_shipwright_work_branch(branch):
+        cfg = load_workflow_config(root)
+        trunk_name, _ = resolve_trunk_branch_name(root, cfg)
+        trunk_sha, ref = resolve_ref_name(root, trunk_name)
+        if not trunk_sha:
+            fail(f"trunk branch not found: {trunk_name!r}")
+        if trunk_sha == head_sha:
+            fail(
+                "trunk SHA equals work-branch HEAD — unsafe base capture",
+                exit_code=20,
+                halt="work-branch-head",
+                currentBranch=branch,
+                trunkBranch=trunk_name,
+            )
+        return {
+            "name": trunk_name,
+            "sha": trunk_sha,
+            "ref": ref,
+            "source": "trunk-ref-from-work-branch",
+        }
     return {
         "name": branch,
-        "sha": sha,
+        "sha": head_sha,
         "ref": "HEAD",
         "source": "captured-from-head",
     }
@@ -260,6 +293,7 @@ def format_disclosure(trunk: dict[str, Any]) -> str:
         "explicit-base": "--base",
         "defaultBaseBranch": "defaultBaseBranch",
         "captured-from-head": "captured from HEAD",
+        "trunk-ref-from-work-branch": "trunk ref while on work branch",
     }.get(source, source)
     return f"base: {name} ({source_label})"
 

@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from check_gate_lib import validate_pr_test_plan_gate
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
@@ -103,7 +105,7 @@ def resolve_write_head(cwd: Path | None = None) -> str:
     return proc.stdout.strip() if proc.returncode == 0 else ""
 
 
-def validate_gate_json(gate: Any) -> tuple[bool, str | None]:
+def validate_gate_json(gate: Any, root: Path | None = None) -> tuple[bool, str | None]:
     if gate is None:
         return True, None
     if not isinstance(gate, dict):
@@ -112,6 +114,11 @@ def validate_gate_json(gate: Any) -> tuple[bool, str | None]:
         json.loads(json.dumps(gate))
     except (TypeError, ValueError):
         return False, "phase-status:invalid-gate"
+    pr_test_plan = gate.get("prTestPlan")
+    if pr_test_plan is not None and root is not None:
+        manifest_err = validate_pr_test_plan_gate(root, pr_test_plan)
+        if manifest_err:
+            return False, f"phase-status:prTestPlan-{manifest_err}"
     return True, None
 
 
@@ -124,7 +131,7 @@ def validate_terminal_status_shape(status: dict[str, Any]) -> tuple[bool, str | 
         return False, cause
     if verdict == "merge-ready-green" and not is_full_head_sha(status.get("head")):
         return False, "phase-status:abbreviated-head"
-    ok_gate, gate_cause = validate_gate_json(status.get("gate"))
+    ok_gate, gate_cause = validate_gate_json(status.get("gate"), root)
     if not ok_gate:
         return False, gate_cause
     return True, None
