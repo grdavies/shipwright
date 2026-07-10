@@ -422,6 +422,7 @@
 * merge phase amend-docs-gap-prereq-amend-decisions-docs-gap-pre-req-write-back-r16-r23-r26-r29 into feat/planning-store-interface-architecture (d7b57d5) <!-- sw-deliver:amend-docs-gap-prereq-amend-decisions-docs-gap-pre-req-write-back-r16-r23-r26-r29 -->
 * merge phase correctness-issue-store-deliver-entry-r1-r3-small into feat/deliver-issue-store-hardening-and-loop-perf (0f7be8a) <!-- sw-deliver:correctness-issue-store-deliver-entry-r1-r3-small -->
 * merge phase terminal-docs-currency-and-prepare-degrade-r4-r5-small into feat/deliver-issue-store-hardening-and-loop-perf (be2561f) <!-- sw-deliver:terminal-docs-currency-and-prepare-degrade-r4-r5-small -->
+* merge phase perf-base-capture-drain-slim-status-timing-r6-r9-medium into feat/deliver-issue-store-hardening-and-loop-perf (0db7e96) <!-- sw-deliver:perf-base-capture-drain-slim-status-timing-r6-r9-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
