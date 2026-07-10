@@ -19,11 +19,18 @@ import planning_paths as pp  # noqa: E402
 import planning_path_redirect as ppr  # noqa: E402
 import planning_visibility as pv  # noqa: E402
 from host_lib import load_workflow_config  # noqa: E402
-from issues_lib import IssueBudgetExhausted, IssueCapabilityError, IssueNotFound, IssuesClient  # noqa: E402
 from planning_deliver_gate import task_list_for_unit  # noqa: E402
-from planning_store import get_backend, resolve_effective_backend, validate_project_key  # noqa: E402
+from planning_store import (  # noqa: E402
+    get_backend,
+    issue_get_facade,
+    issue_search_by_unit_facade,
+    resolve_effective_backend,
+    validate_project_key,
+)
 
-UNIFIED_STATUSES = frozenset({"backlog", "planned", "in-progress", "complete", "unauthorized", "unknown"})
+CANONICAL_STATUSES = frozenset({"backlog", "planned", "in-progress", "complete"})
+META_STATUSES = frozenset({"unauthorized", "unknown"})
+UNIFIED_STATUSES = CANONICAL_STATUSES | META_STATUSES
 
 _COMPLETE = frozenset({"complete", "resolved", "superseded", "cancelled", "closed"})
 _IN_PROGRESS = frozenset({"in-progress"})
@@ -85,6 +92,29 @@ def derive_unified_status_for_unit(root: Path, unit: pig.PlanningUnit) -> str:
     return map_native_status_to_unified(unit.status, unit.type)
 
 
+def canonical_status(status: str) -> str:
+    lowered = (status or "").strip().lower()
+    if lowered in CANONICAL_STATUSES:
+        return lowered
+    # Unknown and unauthorized are explicitly non-terminal.
+    return "planned"
+
+
+def status_is_complete(status: str) -> bool:
+    return is_terminal_unified_status(status)
+
+
+def is_non_terminal_meta_status(status: str) -> bool:
+    return (status or "").strip().lower() in META_STATUSES
+
+
+def is_terminal_unified_status(status: str) -> bool:
+    lowered = (status or "").strip().lower()
+    if is_non_terminal_meta_status(lowered):
+        return False
+    return canonical_status(lowered) == "complete" and lowered == "complete"
+
+
 def query_unit_status(root: Path, *, unit_id: str | None = None, issue: str | None = None) -> dict[str, Any]:
     resolved_id, issue_ref = resolve_unit_reference(root, unit_id=unit_id, issue=issue)
     unit = _find_discover_unit(root, resolved_id)
@@ -107,6 +137,8 @@ def query_unit_status(root: Path, *, unit_id: str | None = None, issue: str | No
         "unitId": resolved_id,
         "unitType": unit.type,
         "status": status,
+        "canonicalStatus": canonical_status(status),
+        "isComplete": status_is_complete(status),
         "nativeStatus": unit.status,
     }
     if issue_ref:
@@ -146,29 +178,29 @@ def resolve_unit_reference(
 
 def _lookup_issue_record(root: Path, issue_ref: str):
     cfg = load_workflow_config(root)
-    effective = resolve_effective_backend(root, cfg)
-    if effective.get("effective") != "issue-store":
+    lookup = issue_get_facade(root, cfg, issue_ref)
+    if lookup.get("verdict") != "ok":
+        error = str(lookup.get("error") or "issue lookup failed")
+        if error == "issue-not-found-or-outside-scope":
+            fail(
+                f"issue {issue_ref!r} not found or outside project scope",
+                exit_code=2,
+                issue=issue_ref,
+                remediation="verify issue number belongs to the configured planning project",
+            )
+        if error == "--issue requires issue-store effective backend":
+            fail(
+                "--issue requires issue-store effective backend",
+                exit_code=2,
+                effectiveBackend=lookup.get("effectiveBackend"),
+            )
+        # Auth/capability/budget failures remain fail-closed.
         fail(
-            "--issue requires issue-store effective backend",
+            f"issue lookup failed for {issue_ref!r}",
             exit_code=2,
-            effectiveBackend=effective.get("effective"),
+            errorClass=error,
         )
-    key_result = validate_project_key(root, cfg)
-    if key_result.get("verdict") != "ok":
-        fail(key_result.get("message") or "invalid project key", exit_code=2)
-    from planning_store import resolve_issues_provider
-
-    provider = str(resolve_issues_provider(cfg).get("provider", "none"))
-    client = IssuesClient(root, provider)
-    try:
-        return client.issue_get(issue_ref)
-    except IssueNotFound:
-        fail(
-            f"issue {issue_ref!r} not found or outside project scope",
-            exit_code=2,
-            issue=issue_ref,
-            remediation="verify issue number belongs to the configured planning project",
-        )
+    return lookup["record"]
 
 
 def resolve_task_list_reference(
@@ -232,17 +264,10 @@ def issue_ref_for_task_list(root: Path, task_list_rel: str) -> str | None:
     key_result = validate_project_key(root, cfg)
     if key_result.get("verdict") != "ok":
         return None
-    from planning_store import resolve_issues_provider
-
-    provider = str(resolve_issues_provider(cfg).get("provider", "none"))
-    client = IssuesClient(root, provider)
-    try:
-        matches = client.issue_search(
-            project_key=str(key_result["projectKey"]),
-            unit_id=unit_id,
-        )
-    except (IssueCapabilityError, IssueBudgetExhausted, RuntimeError):
+    result = issue_search_by_unit_facade(root, cfg, unit_id=unit_id)
+    if result.get("verdict") != "ok":
         return None
+    matches = result.get("records") or []
     if not matches:
         return None
     record = matches[0]
