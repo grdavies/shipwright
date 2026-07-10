@@ -83,11 +83,12 @@ MD
   ! grep -q "$SENTINEL" docs/prds/INDEX.md
 ) && ok "legacy-projection-frontmatter-only" || bad "legacy-projection-frontmatter-only"
 
-# gap capture writes canonical unit
+# gap capture writes canonical unit (R17: stub → draft inbox → materialize)
 (
   cd "$TMP"
   OUT=$(python3 "$CAP" "$TMP" capture --signal-id sig-phase5 --title "Feedback gap item" --pr 42)
-  echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='pass'"
+  echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='pass' and d.get('action')=='draft-inbox'"
+  python3 "$CAP" "$TMP" materialize-draft --signal-id sig-phase5 --problem "Feedback gap item" --context "Captured from PR 42" >/dev/null
   test -f docs/prds/gap/gap-100-feedback-gap-item/gap-100-feedback-gap-item.md
 ) && ok "gap-capture-canonical-unit" || bad "gap-capture-canonical-unit"
 

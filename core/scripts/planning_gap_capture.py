@@ -823,24 +823,17 @@ def materialize_meta_gap(
     unit_id, body_path_rel = allocate_gap_unit_id(
         root, title, lambda uid: pp.join_rel(pp.plugin_self_gap_dir(dirs), uid, f"{uid}.md")
     )
-    fm = [
-        "---",
-        f"id: {unit_id}",
-        "type: gap",
-        "status: open",
-        f"title: {title}",
-        "visibility: public",
-        "tags: [plugin-self, meta-shipwright, source:feedback, signal:" + signal_id + "]",
-        "---",
-        "",
-        f"# {title}",
-        "",
-        f"_Materialized from meta-shipwright signal `{signal_id}`._",
-        "",
-    ]
-    if draft.get("summary"):
-        fm.extend(["## Summary", "", str(draft["summary"]), ""])
-    content = "\n".join(fm) + "\n"
+    summary = str(draft.get("summary") or "").strip()
+    context = summary or f"_Materialized from meta-shipwright signal `{signal_id}`._"
+    content = build_enriched_gap_content(
+        unit_id=unit_id,
+        title=title,
+        problem=title,
+        context=context,
+        related="none",
+        next_step="triage",
+        tags=["plugin-self", "meta-shipwright", "source:feedback", f"signal:{signal_id}"],
+    )
     if not dry_run:
         store_put_gap(root, unit_id, body_path_rel, content)
         draft["status"] = "materialized"
