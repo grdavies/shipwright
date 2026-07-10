@@ -17,11 +17,30 @@ import doc_format  # noqa: E402
 import planning_materialize as pm  # noqa: E402
 import planning_path_redirect  # noqa: E402
 from host_lib import load_workflow_config  # noqa: E402
-from issues_lib import IssueCapabilityError, IssuesClient  # noqa: E402
-from planning_canonical import compose_issue_body  # noqa: E402
 from planning_hierarchy import project_task_list_hierarchy  # noqa: E402
-from planning_store import resolve_effective_backend  # noqa: E402
+from planning_store import progress_update, resolve_effective_backend  # noqa: E402
 from wave_state import load_deliver_state, load_hierarchy_map, set_hierarchy_map  # noqa: E402
+
+
+_PROVISION_APPLY_COUNT = 0
+
+
+def _checked_phase_ids(hmap: dict[str, Any], phase_id: str) -> list[str]:
+    checked: list[str] = []
+    phases = hmap.get("phases")
+    if isinstance(phases, dict):
+        for pid, entry in phases.items():
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("doneSynced") or str(pid) == str(phase_id):
+                checked.append(str(pid))
+    if str(phase_id) not in checked:
+        checked.append(str(phase_id))
+    return sorted(set(checked))
+
+
+def _parent_progress_mode(hmap: dict[str, Any]) -> bool:
+    return str(hmap.get("mode") or "") in {"parent-checkbox", "checkbox"}
 
 CHECKBOX_FALLBACK_NOTICE = (
     "issue-store not effective; deliver hierarchy uses checkbox/body fallback only"
@@ -35,19 +54,29 @@ def utc_now() -> str:
 
 
 def hierarchy_map_from_apply(result: dict[str, Any]) -> dict[str, Any]:
-    """Build durable hierarchyMap from hierarchy apply projection (PRD 056 R5)."""
+    """Build durable hierarchyMap from hierarchy apply projection (PRD 056 R5, PRD 061 R6)."""
     phases: dict[str, Any] = {}
-    for sub in result.get("subIssues") or []:
-        if not isinstance(sub, dict):
-            continue
-        pid = str(sub.get("phaseId", ""))
-        if not pid:
-            continue
-        phases[pid] = {
-            "phaseId": pid,
-            "issueId": sub.get("issueId"),
-            "number": sub.get("number"),
-        }
+    mode = str(result.get("mode") or "")
+    if mode == "epic-sub-issue":
+        for sub in result.get("subIssues") or []:
+            if not isinstance(sub, dict):
+                continue
+            pid = str(sub.get("phaseId", ""))
+            if not pid:
+                continue
+            phases[pid] = {
+                "phaseId": pid,
+                "issueId": sub.get("issueId"),
+                "number": sub.get("number"),
+            }
+    else:
+        for phase in result.get("phases") or []:
+            if not isinstance(phase, dict):
+                continue
+            pid = str(phase.get("id", ""))
+            if not pid:
+                continue
+            phases[pid] = {"phaseId": pid}
     return {
         "unitId": result.get("unitId"),
         "mode": result.get("mode"),
@@ -93,11 +122,14 @@ def provision_deliver_hierarchy(root: Path, state: dict[str, Any]) -> dict[str, 
     if not task_path.is_file():
         return {"verdict": "fail", "error": f"task list not found: {task_rel}"}
 
+    global _PROVISION_APPLY_COUNT
+    _PROVISION_APPLY_COUNT += 1
     result = project_task_list_hierarchy(root, task_path, dry_run=False)
     if result.get("verdict") != "ok":
         return result
 
     hmap = hierarchy_map_from_apply(result)
+    hmap["provisionApplyCount"] = _PROVISION_APPLY_COUNT
     set_hierarchy_map(state, hmap)
     out: dict[str, Any] = {
         "verdict": "ok",
@@ -178,7 +210,7 @@ def resolve_phase_id(
 
 
 def sync_phase_done(root: Path, state: dict[str, Any], phase_id: str) -> dict[str, Any]:
-    """Apply sw:phase:<id>:done label to the phase sub-issue (PRD 056 R6, R7)."""
+    """Apply phase-done progress on parent or opt-in sub-issue (PRD 056 R6, PRD 061 R6–R8)."""
     if not _issue_store_effective(root):
         return {"verdict": "ok", "skipped": True, "reason": "file-store"}
 
@@ -190,62 +222,58 @@ def sync_phase_done(root: Path, state: dict[str, Any], phase_id: str) -> dict[st
     if entry is None:
         return {"verdict": "ok", "skipped": True, "reason": "phase-not-in-map", "phaseId": phase_id}
 
-    issue_id = entry.get("issueId")
-    if not issue_id:
-        return {"verdict": "ok", "skipped": True, "reason": "missing-sub-issue", "phaseId": phase_id}
-
     if entry.get("doneSynced"):
+        target = entry.get("issueId") or hmap.get("epicIssueId")
         return {
             "verdict": "ok",
             "idempotent": True,
             "phaseId": phase_id,
-            "issueId": issue_id,
+            "issueId": target,
         }
 
-    done_label = phase_done_label(phase_id)
-    provider = str(hmap.get("provider") or "none")
-    client = IssuesClient(root, provider)
-    try:
-        current = client.issue_get(str(issue_id))
-        labels = list(current.labels)
-        if done_label in labels:
+    if _parent_progress_mode(hmap):
+        parent_id = hmap.get("epicIssueId")
+        if not parent_id:
+            return {"verdict": "ok", "skipped": True, "reason": "missing-parent-issue", "phaseId": phase_id}
+        task_rel = state.get("source_task_list")
+        task_list = str(task_rel) if isinstance(task_rel, str) else None
+        out = progress_update(
+            root,
+            parent_issue_id=str(parent_id),
+            phase_id=str(phase_id),
+            action="phase-done",
+            provider=str(hmap.get("provider") or "none"),
+            project_key=str(hmap.get("projectKey") or ""),
+            task_list=task_list,
+            checked_phase_ids=_checked_phase_ids(hmap, phase_id),
+        )
+        if out.get("degraded"):
+            _emit_progress_notice("label", str(out.get("error") or out.get("notice") or "progress-update-degraded"))
+        if out.get("verdict") == "ok" and not out.get("skipped"):
             _mark_phase_done_synced(state, phase_id)
-            return {
-                "verdict": "ok",
-                "idempotent": True,
-                "phaseId": phase_id,
-                "issueId": issue_id,
-                "label": done_label,
-            }
-        new_labels = sorted(set(labels) | {done_label})
-        client.issue_label(str(issue_id), new_labels, if_match=current.etag)
+        out.setdefault("phaseId", phase_id)
+        out.setdefault("issueId", parent_id)
+        return out
+
+    issue_id = entry.get("issueId")
+    if not issue_id:
+        return {"verdict": "ok", "skipped": True, "reason": "missing-sub-issue", "phaseId": phase_id}
+
+    out = progress_update(
+        root,
+        parent_issue_id=str(issue_id),
+        phase_id=str(phase_id),
+        action="phase-done",
+        provider=str(hmap.get("provider") or "none"),
+        project_key=str(hmap.get("projectKey") or ""),
+    )
+    if out.get("degraded"):
+        _emit_progress_notice("label", str(out.get("error") or out.get("notice") or "progress-update-degraded"))
+    if out.get("verdict") == "ok" and not out.get("skipped"):
         _mark_phase_done_synced(state, phase_id)
-        return {
-            "verdict": "ok",
-            "synced": True,
-            "phaseId": phase_id,
-            "issueId": issue_id,
-            "label": done_label,
-        }
-    except IssueCapabilityError as exc:
-        _emit_progress_notice("label", str(exc))
-        return {
-            "verdict": "ok",
-            "degraded": True,
-            "notice": "progress-label-degraded",
-            "phaseId": phase_id,
-            "issueId": issue_id,
-        }
-    except Exception as exc:
-        _emit_progress_notice("label", str(exc))
-        return {
-            "verdict": "ok",
-            "degraded": True,
-            "notice": "progress-label-degraded",
-            "phaseId": phase_id,
-            "issueId": issue_id,
-            "error": str(exc),
-        }
+    out.setdefault("phaseId", phase_id)
+    out.setdefault("issueId", issue_id)
+    return out
 
 
 def sync_task_checkbox(
@@ -265,65 +293,27 @@ def sync_task_checkbox(
         return {"verdict": "ok", "skipped": True, "reason": "no-hierarchy-map"}
 
     entry = _phase_map_entry(hmap, phase_id)
-    issue_id = entry.get("issueId") if entry else None
-    if not issue_id:
-        return {"verdict": "ok", "skipped": True, "reason": "missing-sub-issue", "phaseId": phase_id}
+    target_id = hmap.get("epicIssueId") if _parent_progress_mode(hmap) else (entry.get("issueId") if entry else None)
+    if not target_id:
+        return {"verdict": "ok", "skipped": True, "reason": "missing-progress-target", "phaseId": phase_id}
 
-    task_path = Path(task_list)
-    if not task_path.is_absolute():
-        task_path = (root / task_list).resolve()
-    if not task_path.is_file():
-        return {"verdict": "fail", "error": f"task list not found: {task_list}"}
-
-    text = task_path.read_text(encoding="utf-8")
-    section = doc_format.phase_section_text(text, phase_id).strip()
-    if not section:
-        return {"verdict": "ok", "skipped": True, "reason": "empty-phase-section", "phaseId": phase_id}
-
-    unit_id = str(hmap.get("unitId") or "")
-    phase_unit_id = f"{unit_id}-phase-{phase_id}" if unit_id else f"phase-{phase_id}"
-    project_key = str(hmap.get("projectKey") or "")
-    body = compose_issue_body(project_key, "tasks", phase_unit_id, section)
-
-    provider = str(hmap.get("provider") or "none")
-    client = IssuesClient(root, provider)
-    try:
-        current = client.issue_get(str(issue_id))
-        client.issue_update(str(issue_id), body=body, if_match=current.etag)
-        out: dict[str, Any] = {
-            "verdict": "ok",
-            "synced": True,
-            "phaseId": phase_id,
-            "issueId": issue_id,
-        }
-        if task_ref:
-            out["taskRef"] = task_ref
-        return out
-    except IssueCapabilityError as exc:
-        _emit_progress_notice("body", str(exc))
-        out = {
-            "verdict": "ok",
-            "degraded": True,
-            "notice": "progress-body-degraded",
-            "phaseId": phase_id,
-            "issueId": issue_id,
-        }
-        if task_ref:
-            out["taskRef"] = task_ref
-        return out
-    except Exception as exc:
-        _emit_progress_notice("body", str(exc))
-        out = {
-            "verdict": "ok",
-            "degraded": True,
-            "notice": "progress-body-degraded",
-            "phaseId": phase_id,
-            "issueId": issue_id,
-            "error": str(exc),
-        }
-        if task_ref:
-            out["taskRef"] = task_ref
-        return out
+    out = progress_update(
+        root,
+        parent_issue_id=str(target_id),
+        phase_id=str(phase_id),
+        action="task-checkbox",
+        provider=str(hmap.get("provider") or "none"),
+        project_key=str(hmap.get("projectKey") or ""),
+        task_list=task_list,
+        task_ref=task_ref,
+    )
+    if out.get("degraded"):
+        _emit_progress_notice("body", str(out.get("error") or out.get("notice") or "progress-body-degraded"))
+    out.setdefault("phaseId", phase_id)
+    out.setdefault("issueId", target_id)
+    if task_ref:
+        out.setdefault("taskRef", task_ref)
+    return out
 
 
 def propagate_checkbox_to_issue_store(

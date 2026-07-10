@@ -104,6 +104,7 @@ subprocess.run(["git", "config", "user.name", "T"], cwd=tmp, check=True)
             "backend": "issue-store",
             "issuesProvider": "github-issues",
             "projectKey": "deliver-progress-056",
+            "hierarchy": {"epicSubIssues": True},
         }
     },
     "host": {"provider": "github"},
@@ -162,6 +163,7 @@ subprocess.run(["git", "config", "user.name", "T"], cwd=tmp, check=True)
             "backend": "issue-store",
             "issuesProvider": "github-issues",
             "projectKey": "deliver-progress-056",
+            "hierarchy": {"epicSubIssues": True},
         }
     },
     "host": {"provider": "github"},
@@ -248,6 +250,7 @@ task_rel = "docs/prds/056-test/tasks-056-test.md"
             "backend": "issue-store",
             "issuesProvider": "github-issues",
             "projectKey": "deliver-progress-056",
+            "hierarchy": {"epicSubIssues": True},
         }
     },
     "host": {"provider": "github"},

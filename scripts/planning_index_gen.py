@@ -54,7 +54,7 @@ WRITER_REGION: dict[str, str] = {
     "inFlight": "inFlight",
 }
 
-UNIT_TYPES = frozenset({"brainstorm", "gap", "prd", "decision", "amendment"})
+UNIT_TYPES = frozenset({"brainstorm", "gap", "prd", "decision", "amendment", "tasks"})
 EDGE_KEYS = ("depends", "blocks", "supersedes", "extends", "absorbs", "prd", "amends", "brainstorm")
 
 
