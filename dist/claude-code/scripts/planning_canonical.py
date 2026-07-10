@@ -15,6 +15,7 @@ import planning_index_gen as pig
 
 CANONICAL_VERSION = "1"
 HYBRID_FRONTMATTER_MARKER = "<!-- sw-hybrid-frontmatter -->"
+FRONTMATTER_EXTRA_MARKER = re.compile(r"<!--\s*sw-frontmatter-extra:\s*(\{.*?\})\s*-->", re.DOTALL)
 BODY_SIZE_LIMIT = 60_000
 EDGE_DIVERGENCE_TOLERANCE = 0
 
@@ -502,8 +503,16 @@ def operator_body_from_canonical(content: str) -> str:
     fm, body = split_frontmatter(content)
     if not fm:
         return content
-    marker = HYBRID_FRONTMATTER_MARKER
-    return f"{marker}\n{body}" if body else marker
+    structural = set(STRUCTURAL_FRONTMATTER_KEYS) | {"id", "title", "type", "status", "visibility"}
+    extra = {k: v for k, v in fm.items() if k not in structural}
+    parts = [HYBRID_FRONTMATTER_MARKER]
+    if extra:
+        parts.append(
+            f"<!-- sw-frontmatter-extra: {json.dumps(extra, sort_keys=True, ensure_ascii=False)} -->"
+        )
+    if body:
+        parts.append(body)
+    return "\n".join(parts)
 
 
 def has_raw_yaml_frontmatter(content: str) -> bool:
@@ -515,10 +524,23 @@ def is_hybrid_operator_body(content: str) -> bool:
 
 
 def strip_hybrid_operator_body(content: str) -> str:
-    return normalize_body(content.replace(HYBRID_FRONTMATTER_MARKER, ""))
+    stripped = FRONTMATTER_EXTRA_MARKER.sub("", content)
+    stripped = stripped.replace(HYBRID_FRONTMATTER_MARKER, "")
+    return normalize_body(stripped)
 
 
-def frontmatter_from_labels(labels: list[str], *, unit_id: str | None = None) -> dict[str, Any]:
+def _extra_frontmatter_from_operator(operator_body: str) -> dict[str, Any]:
+    match = FRONTMATTER_EXTRA_MARKER.search(operator_body)
+    if not match:
+        return {}
+    try:
+        data = json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def frontmatter_from_labels(labels: list[str], *, unit_id: str | None = None, operator_body: str = "") -> dict[str, Any]:
     """R20/R21 read-side -- rebuild frontmatter from provider-native labels."""
     fm: dict[str, Any] = {}
     artifact_type = artifact_type_from_labels(labels)
@@ -544,6 +566,7 @@ def frontmatter_from_labels(labels: list[str], *, unit_id: str | None = None) ->
         edges = edges_from_labels(labels, rel)
         if edges:
             fm[rel] = edges if len(edges) > 1 else edges[0]
+    fm.update(_extra_frontmatter_from_operator(operator_body))
     return fm
 
 
@@ -554,10 +577,11 @@ def canonical_content_from_operator(
     unit_id: str | None = None,
 ) -> str:
     """R20 -- agents receive full canonical content (frontmatter + body) on `get`."""
-    fm = frontmatter_from_labels(labels, unit_id=unit_id)
+    fm = frontmatter_from_labels(labels, unit_id=unit_id, operator_body=operator_body)
+    body = strip_hybrid_operator_body(operator_body)
     if not fm:
-        return normalize_body(operator_body)
-    return compose_canonical_document(fm, operator_body)
+        return normalize_body(body)
+    return compose_canonical_document(fm, body)
 
 
 def human_readable_title(content: str, artifact_type: str, unit_id: str) -> str:

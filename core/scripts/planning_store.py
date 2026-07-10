@@ -1707,7 +1707,7 @@ class IssueStoreBackend(PlanningStoreBackend):
         if is_hybrid_operator_body(operator_content):
             return canonical_content_from_operator(
                 list(record.labels),
-                strip_hybrid_operator_body(operator_content),
+                operator_content,
                 unit_id=unit_id,
             )
         return operator_content
