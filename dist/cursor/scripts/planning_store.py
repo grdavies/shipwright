@@ -154,6 +154,11 @@ from planning_canonical import (  # noqa: E402
     require_artifact_type,
     rewrite_chunk_manifest_ids,
     strip_markers_and_edges,
+    canonical_content_from_operator,
+    has_raw_yaml_frontmatter,
+    is_hybrid_operator_body,
+    operator_body_from_canonical,
+    strip_hybrid_operator_body,
     structural_labels_from_content,
     type_label,
     unit_id_from_labels,
@@ -1695,6 +1700,18 @@ class IssueStoreBackend(PlanningStoreBackend):
             updated_at=record.updated_at,
         )
 
+    def _canonical_content_from_record(self, record: Any, unit_id: str) -> str:
+        operator_content = self._extract_content(record)
+        if has_raw_yaml_frontmatter(operator_content):
+            return operator_content
+        if is_hybrid_operator_body(operator_content):
+            return canonical_content_from_operator(
+                list(record.labels),
+                operator_content,
+                unit_id=unit_id,
+            )
+        return operator_content
+
     def _extract_content(self, record: Any) -> str:
         full_body = reassemble_body(record.body, record.comments)
         if not verify_project_scope(full_body, self.project_key):
@@ -1873,7 +1890,8 @@ class IssueStoreBackend(PlanningStoreBackend):
         )
         title = self._issue_title(artifact_type, unit_id, content)
         labels = self._labels_for(artifact_type, unit_id, content)
-        body = compose_issue_body(self.project_key, artifact_type, unit_id, content)
+        store_content = operator_body_from_canonical(content) if has_raw_yaml_frontmatter(content) else content
+        body = compose_issue_body(self.project_key, artifact_type, unit_id, store_content)
         body, extra_comments = chunk_body_if_needed(body, [], provider=self.issues_provider)
         idx_key = issue_index_key(self.project_key, unit_id)
         chunked = bool(extra_comments)
@@ -1983,7 +2001,7 @@ class IssueStoreBackend(PlanningStoreBackend):
         except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
             handle_issue_client_error(exc)
         self._verify_frozen_integrity(record)
-        content = self._extract_content(record)
+        content = self._canonical_content_from_record(record, unit_id)
         digest = canonical_hash(self._record_to_snapshot(record))
         log_operation("get", unit_id, body_path, content, self.backend_id)
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=digest)
@@ -2015,7 +2033,7 @@ class IssueStoreBackend(PlanningStoreBackend):
             fail("issue-not-found", code="not-found", unitId=unit_id)
         except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
             handle_issue_client_error(exc)
-        self._guard_write_visibility(unit_id, body_path, self._extract_content(record))
+        self._guard_write_visibility(unit_id, body_path, self._canonical_content_from_record(record, unit_id))
         if FROZEN_LABEL in record.labels:
             fail("already-frozen", code="already-frozen", unitId=unit_id)
         try:
@@ -2098,7 +2116,7 @@ class IssueStoreBackend(PlanningStoreBackend):
         except IssueNotFound:
             fail("brainstorm-issue-missing", code="brainstorm-missing")
         edges = [{"rel": "spawned", "target": prd_unit_id, "targetType": "prd"}]
-        raw_content = strip_markers_and_edges(reassemble_body(brainstorm.body, brainstorm.comments))
+        raw_content = self._canonical_content_from_record(brainstorm, brainstorm_unit_id)
         self._guard_write_visibility(brainstorm_unit_id, f"docs/brainstorms/{brainstorm_unit_id}.md", raw_content)
         self._guard_write_secrets(raw_content, path_hint=f"docs/brainstorms/{brainstorm_unit_id}.md")
         body = compose_issue_body(
@@ -3520,6 +3538,55 @@ def refuse_banned_living_doc_write(root: Path, *, action: str) -> dict[str, Any]
         "halt": "banned-living-doc-write",
         "error": "living-doc file writes banned under issue-store",
         "remediation": "route through wave_living_docs facade helpers or planning_store facade",
+    }
+
+
+
+def backfill_frontmatter_hybrid(root: Path, cfg: dict[str, Any], *, apply: bool = False) -> dict[str, Any]:
+    """PRD 061 R21 -- idempotent lazy migrate/backfill for YAML-embedded issues."""
+    backend = get_backend(root, cfg)
+    if backend.backend_id != "issue-store":
+        return {
+            "verdict": "ok",
+            "action": "backfill-frontmatter",
+            "skipped": True,
+            "reason": "issue-store-only",
+            "counts": {"migrated": 0, "skipped": 0, "failed": 0},
+        }
+    migrated = 0
+    skipped = 0
+    failed = 0
+    details: list[dict[str, Any]] = []
+    index = load_issue_unit_index(root)
+    for idx_key, issue_id in sorted(index.items()):
+        unit_id = idx_key.split(":", 1)[-1]
+        body_path = f"docs/planning/gap/{unit_id}/{unit_id}.md"
+        try:
+            record = backend._lookup_record(unit_id, body_path)  # type: ignore[attr-defined]
+        except Exception as exc:  # noqa: BLE001
+            failed += 1
+            details.append({"unitId": unit_id, "verdict": "failed", "error": str(exc)})
+            continue
+        raw = strip_markers_and_edges(reassemble_body(record.body, record.comments))
+        if not has_raw_yaml_frontmatter(raw):
+            skipped += 1
+            details.append({"unitId": unit_id, "verdict": "skipped"})
+            continue
+        if apply:
+            try:
+                backend.put(unit_id, body_path, raw)
+            except Exception as exc:  # noqa: BLE001
+                failed += 1
+                details.append({"unitId": unit_id, "verdict": "failed", "error": str(exc)})
+                continue
+        migrated += 1
+        details.append({"unitId": unit_id, "verdict": "migrated" if apply else "would-migrate"})
+    return {
+        "verdict": "ok",
+        "action": "backfill-frontmatter",
+        "dryRun": not apply,
+        "counts": {"migrated": migrated, "skipped": skipped, "failed": failed},
+        "details": details,
     }
 
 

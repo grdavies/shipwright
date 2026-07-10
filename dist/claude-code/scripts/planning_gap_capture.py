@@ -46,6 +46,17 @@ DEFAULT_MAX_TERMINAL_CAPTURES = 3
 VERIFY_OVERRIDE_CLASSES = frozenset({"no-baseline", "unattributed"})
 VERIFY_OVERRIDE_SOURCE = "verify-override"
 
+GAP_DRAFT_INBOX_REL = ".cursor/sw-gap-draft-inbox"
+DEFAULT_DRAFT_STALE_DAYS = 14
+
+GAP_SECTION_PATTERNS: dict[str, re.Pattern[str]] = {
+    "problem": re.compile(r"^##\s+Problem\s*$", re.MULTILINE | re.IGNORECASE),
+    "context": re.compile(r"^##\s+Context(?:/evidence)?\s*$", re.MULTILINE | re.IGNORECASE),
+    "related": re.compile(r"^##\s+Related units\s*$", re.MULTILINE | re.IGNORECASE),
+    "next": re.compile(r"^##\s+Suggested next step\s*$", re.MULTILINE | re.IGNORECASE),
+}
+
+
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
     print(json.dumps(obj, ensure_ascii=False, indent=2))
@@ -78,11 +89,162 @@ def load_meta_draft(root: Path, signal_id: str) -> dict[str, Any]:
 
 
 
+
+def gap_enrichment_status(content: str) -> dict[str, bool]:
+    """Return which PRD 061 R17 enrichment sections are present."""
+    return {key: bool(pat.search(content)) for key, pat in GAP_SECTION_PATTERNS.items()}
+
+
+def require_gap_enrichment(content: str) -> None:
+    """Fail closed when authoritative gap content lacks required sections (R17)."""
+    status = gap_enrichment_status(content)
+    missing = [key for key in ("problem", "context", "related", "next") if not status[key]]
+    if missing:
+        fail(
+            "gap-enrichment-required",
+            halt="gap-enrichment-required",
+            missing=missing,
+        )
+
+
+def gap_draft_inbox_dir(root: Path) -> Path:
+    path = pp.git_root(root) / GAP_DRAFT_INBOX_REL
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def gap_draft_inbox_path(root: Path, signal_id: str) -> Path:
+    return gap_draft_inbox_dir(root) / f"{signal_id}.json"
+
+
+def put_gap_draft(root: Path, *, signal_id: str, title: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """Durable store-backed gap draft inbox (PRD 061 R17)."""
+    draft = {
+        "signalId": signal_id,
+        "title": title,
+        "status": "draft",
+        "capturedAt": utc_now(),
+        **payload,
+    }
+    path = gap_draft_inbox_path(root, signal_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(draft, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return {
+        "signalId": signal_id,
+        "path": str(gap_draft_inbox_path(root, signal_id).resolve().relative_to(pp.git_root(root).resolve())),
+        "status": "draft",
+    }
+
+
+def load_gap_draft(root: Path, signal_id: str) -> dict[str, Any]:
+    path = gap_draft_inbox_path(root, signal_id)
+    if not path.is_file():
+        fail("gap draft inbox entry not found", signalId=signal_id, halt="gap-draft-missing")
+    return writer.load_store(path)
+
+
+def list_gap_drafts(root: Path, *, stale_days: int = DEFAULT_DRAFT_STALE_DAYS) -> dict[str, Any]:
+    """Queryable inbox with staleness notice policy (R17a)."""
+    inbox = gap_draft_inbox_dir(root)
+    drafts: list[dict[str, Any]] = []
+    stale: list[dict[str, Any]] = []
+    now = datetime.now(timezone.utc)
+    for path in sorted(inbox.glob("*.json")):
+        try:
+            draft = writer.load_store(path)
+        except Exception:
+            continue
+        if draft.get("status") == "materialized":
+            continue
+        entry = {
+            "signalId": draft.get("signalId") or path.stem,
+            "title": draft.get("title", ""),
+            "status": draft.get("status", "draft"),
+            "capturedAt": draft.get("capturedAt", ""),
+        }
+        drafts.append(entry)
+        captured = str(draft.get("capturedAt") or "")
+        if captured:
+            try:
+                captured_at = datetime.strptime(captured, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                age_days = (now - captured_at).days
+                if age_days >= stale_days:
+                    stale.append({**entry, "ageDays": age_days})
+            except ValueError:
+                pass
+    return {
+        "verdict": "ok",
+        "drafts": drafts,
+        "stale": stale,
+        "staleNoticePolicy": f"operator-notice-after-{stale_days}-days",
+    }
+
+
+def build_enriched_gap_content(
+    *,
+    unit_id: str,
+    title: str,
+    problem: str,
+    context: str,
+    related: str = "none",
+    next_step: str = "triage",
+    tags: list[str] | None = None,
+    extra_frontmatter: list[str] | None = None,
+) -> str:
+    tag_list = tags or []
+    fm = [
+        "---",
+        f"id: {unit_id}",
+        "type: gap",
+        "status: open",
+        f"title: {title}",
+        "visibility: public",
+    ]
+    if tag_list:
+        fm.append(f"tags: [{', '.join(tag_list)}]")
+    if extra_frontmatter:
+        fm.extend(extra_frontmatter)
+    fm.extend(
+        [
+            "---",
+            "",
+            f"# {title}",
+            "",
+            "## Problem",
+            "",
+            problem.strip(),
+            "",
+            "## Context/evidence",
+            "",
+            context.strip(),
+            "",
+            "## Related units",
+            "",
+            related.strip(),
+            "",
+            "## Suggested next step",
+            "",
+            next_step.strip(),
+            "",
+        ]
+    )
+    return "\n".join(fm) + "\n"
+
+
 def gap_body_rel(dirs: pp.PlanningDirs, unit_id: str) -> str:
     return pp.join_rel(dirs.prds, "gap", unit_id, f"{unit_id}.md")
 
 
-def store_put_gap(root: Path, unit_id: str, body_path_rel: str, content: str) -> None:
+def store_put_gap(
+    root: Path,
+    unit_id: str,
+    body_path_rel: str,
+    content: str,
+    *,
+    skip_enrichment: bool = False,
+) -> None:
+    if not skip_enrichment:
+        require_gap_enrichment(content)
     backend = ps.get_backend(root)
     result = backend.put(unit_id, body_path_rel, content)
     if result.verdict not in ("ok", "deferred"):
@@ -395,11 +557,23 @@ def capture_verify_override(
             "_Captured from verification override — override alone is insufficient; "
             "this gap tracks durable follow-up._",
             "",
-            "## Override evidence (redacted)",
+            "## Problem",
+            "",
+            f"Verification override ({inconclusive}) requires durable follow-up.",
+            "",
+            "## Context/evidence",
             "",
             f"- who: {who}",
             f"- inconclusiveClass: {inconclusive}",
             f"- reason: {redacted_reason}",
+            "",
+            "## Related units",
+            "",
+            "none",
+            "",
+            "## Suggested next step",
+            "",
+            "triage",
             "",
         ]
     )
@@ -424,29 +598,47 @@ def capture_gap(
     dry_run: bool = False,
     dedupe: bool = False,
     open_titles: dict[str, str] | None = None,
+    problem: str | None = None,
+    context: str | None = None,
+    authoritative: bool = False,
 ) -> dict[str, Any]:
     if dedupe:
         existing = find_duplicate_open_gap(title, open_titles if open_titles is not None else list_open_gap_titles(root))
         if existing:
             return {"unitId": existing, "signalId": signal_id, "deduped": True}
+    if not authoritative and (not problem or not context):
+        if dry_run:
+            return {
+                "signalId": signal_id,
+                "action": "draft-inbox",
+                "title": title,
+                "deduped": False,
+            }
+        draft = put_gap_draft(
+            root,
+            signal_id=signal_id,
+            title=title,
+            payload={
+                "prNumber": pr_number,
+                "stub": True,
+            },
+        )
+        return {"signalId": signal_id, "action": "draft-inbox", "deduped": False, **draft}
     dirs = pp.load_planning_dirs(root)
     unit_id, body_path_rel = allocate_gap_unit_id(root, title, lambda uid: gap_body_rel(dirs, uid))
-    fm = [
-        "---",
-        f"id: {unit_id}",
-        "type: gap",
-        "status: open",
-        f"title: {title}",
-        "visibility: public",
-        f"tags: [source:feedback, signal:{signal_id}]",
-    ]
-    if pr_number is not None:
-        fm.append(f"source_pr: {pr_number}")
-    fm.extend(["---", "", f"# {title}", "", f"_Captured from feedback signal `{signal_id}`._", ""])
-    content = "\n".join(fm) + "\n"
+    content = build_enriched_gap_content(
+        unit_id=unit_id,
+        title=title,
+        problem=problem or title,
+        context=context or f"_Captured from feedback signal `{signal_id}`._",
+        related="none",
+        next_step="triage",
+        tags=[f"source:feedback", f"signal:{signal_id}"],
+        extra_frontmatter=[f"source_pr: {pr_number}"] if pr_number is not None else None,
+    )
     if not dry_run:
         store_put_gap(root, unit_id, body_path_rel, content)
-    return {"unitId": unit_id, "path": body_path_rel, "signalId": signal_id, "deduped": False}
+    return {"unitId": unit_id, "path": body_path_rel, "signalId": signal_id, "deduped": False, "action": "gap-capture"}
 
 
 def classify_pain_item(item: dict[str, Any]) -> str:
@@ -631,24 +823,17 @@ def materialize_meta_gap(
     unit_id, body_path_rel = allocate_gap_unit_id(
         root, title, lambda uid: pp.join_rel(pp.plugin_self_gap_dir(dirs), uid, f"{uid}.md")
     )
-    fm = [
-        "---",
-        f"id: {unit_id}",
-        "type: gap",
-        "status: open",
-        f"title: {title}",
-        "visibility: public",
-        "tags: [plugin-self, meta-shipwright, source:feedback, signal:" + signal_id + "]",
-        "---",
-        "",
-        f"# {title}",
-        "",
-        f"_Materialized from meta-shipwright signal `{signal_id}`._",
-        "",
-    ]
-    if draft.get("summary"):
-        fm.extend(["## Summary", "", str(draft["summary"]), ""])
-    content = "\n".join(fm) + "\n"
+    summary = str(draft.get("summary") or "").strip()
+    context = summary or f"_Materialized from meta-shipwright signal `{signal_id}`._"
+    content = build_enriched_gap_content(
+        unit_id=unit_id,
+        title=title,
+        problem=title,
+        context=context,
+        related="none",
+        next_step="triage",
+        tags=["plugin-self", "meta-shipwright", "source:feedback", f"signal:{signal_id}"],
+    )
     if not dry_run:
         store_put_gap(root, unit_id, body_path_rel, content)
         draft["status"] = "materialized"
@@ -664,6 +849,52 @@ def materialize_meta_gap(
         "path": body_path_rel,
         "signalId": signal_id,
         "gapClass": "plugin-self",
+    }
+
+
+
+def materialize_gap_draft(
+    root: Path,
+    *,
+    signal_id: str,
+    problem: str,
+    context: str,
+    related: str = "none",
+    next_step: str = "triage",
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    draft = load_gap_draft(root, signal_id)
+    if draft.get("status") == "materialized":
+        fail("draft already materialized", signalId=signal_id)
+    title = str(draft.get("title") or signal_id)
+    dirs = pp.load_planning_dirs(root)
+    unit_id, body_path_rel = allocate_gap_unit_id(root, title, lambda uid: gap_body_rel(dirs, uid))
+    tags = [f"source:feedback", f"signal:{signal_id}"]
+    extra: list[str] = []
+    if draft.get("prNumber") is not None:
+        extra.append(f"source_pr: {draft['prNumber']}")
+    content = build_enriched_gap_content(
+        unit_id=unit_id,
+        title=title,
+        problem=problem,
+        context=context,
+        related=related,
+        next_step=next_step,
+        tags=tags,
+        extra_frontmatter=extra or None,
+    )
+    if not dry_run:
+        store_put_gap(root, unit_id, body_path_rel, content)
+        draft["status"] = "materialized"
+        draft["materializedUnitId"] = unit_id
+        draft["materializedAt"] = utc_now()
+        path = gap_draft_inbox_path(root, signal_id)
+        path.write_text(json.dumps(draft, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return {
+        "unitId": unit_id,
+        "path": body_path_rel,
+        "signalId": signal_id,
+        "action": "gap-materialize",
     }
 
 
@@ -696,6 +927,24 @@ def parse_flags(rest: list[str]) -> dict[str, Any]:
         elif tok == "--override" and i + 1 < len(rest):
             out["override_json"] = rest[i + 1]
             i += 2
+        elif tok == "--problem" and i + 1 < len(rest):
+            out["problem"] = rest[i + 1]
+            i += 2
+        elif tok == "--context" and i + 1 < len(rest):
+            out["context"] = rest[i + 1]
+            i += 2
+        elif tok == "--related" and i + 1 < len(rest):
+            out["related"] = rest[i + 1]
+            i += 2
+        elif tok == "--next-step" and i + 1 < len(rest):
+            out["next_step"] = rest[i + 1]
+            i += 2
+        elif tok == "--content" and i + 1 < len(rest):
+            out["content"] = rest[i + 1]
+            i += 2
+        elif tok == "--stale-days" and i + 1 < len(rest):
+            out["stale_days"] = int(rest[i + 1])
+            i += 2
         else:
             i += 1
     return out
@@ -706,7 +955,7 @@ def main(argv: list[str] | None = None) -> None:
     if len(args) < 2:
         fail(
             "usage: planning_gap_capture.py <repo-root> "
-            "<capture|confirm|materialize|capture-verify-override> [options]"
+            "<capture|confirm|materialize|materialize-draft|draft-inbox-list|validate-enrichment|capture-verify-override> [options]"
         )
     root = Path(args[0]).resolve()
     command = args[1]
@@ -732,8 +981,11 @@ def main(argv: list[str] | None = None) -> None:
             title=title,
             pr_number=flags.get("pr_number"),
             dry_run=bool(flags.get("dry_run")),
+            problem=flags.get("problem"),
+            context=flags.get("context"),
+            authoritative=bool(flags.get("authoritative")),
         )
-        emit({"verdict": "pass", "action": "gap-capture", **out})
+        emit({"verdict": "pass", **out})
 
     if command == "confirm":
         signal_id = flags.get("signal_id")
@@ -755,6 +1007,38 @@ def main(argv: list[str] | None = None) -> None:
         )
         emit({"verdict": "pass", "action": "meta-materialize", **out})
 
+
+
+    if command == "draft-inbox-list":
+        stale_days = int(flags.get("stale_days") or DEFAULT_DRAFT_STALE_DAYS)
+        emit(list_gap_drafts(root, stale_days=stale_days))
+        return
+
+    if command == "materialize-draft":
+        signal_id = flags.get("signal_id")
+        problem = flags.get("problem")
+        context = flags.get("context")
+        if not signal_id or not problem or not context:
+            fail("--signal-id, --problem, and --context required for materialize-draft")
+        out = materialize_gap_draft(
+            root,
+            signal_id=signal_id,
+            problem=problem,
+            context=context,
+            related=str(flags.get("related") or "none"),
+            next_step=str(flags.get("next_step") or "triage"),
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit({"verdict": "pass", **out})
+        return
+
+    if command == "validate-enrichment":
+        content = flags.get("content")
+        if not content:
+            fail("--content required for validate-enrichment")
+        require_gap_enrichment(content)
+        emit({"verdict": "pass", "action": "validate-enrichment"})
+        return
 
     if command == "capture-verify-override":
         override_json = flags.get("override_json")
