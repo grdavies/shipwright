@@ -317,6 +317,114 @@ else
   bad "living-docs-committed-in-loop-docs"
 fi
 
+
+# --- PRD 061 facade living-doc ban (R3–R5) ---
+export SW_ISSUES_FIXTURE=1
+PY_STORE="$ROOT/scripts/planning_store.py"
+WLD_PY="$ROOT/scripts/wave_living_docs.py"
+DCG_PY="$ROOT/scripts/docs-currency-gate.py"
+ISSUE_FIX=$(mktemp -d)
+mkdir -p "$ISSUE_FIX/.cursor" "$ISSUE_FIX/docs/planning/prd/prd-061-living-doc-fixture"
+git -C "$ISSUE_FIX" init -q
+git -C "$ISSUE_FIX" config user.email t@t.com
+git -C "$ISSUE_FIX" config user.name T
+python3 - <<PY
+import json
+from pathlib import Path
+cfg = {
+  "version": 1,
+  "host": {"provider": "github"},
+  "planning": {
+    "store": {
+      "backend": "issue-store",
+      "issuesProvider": "github-issues",
+      "projectKey": "fixture-061",
+    }
+  },
+}
+p = Path("$ISSUE_FIX/.cursor/workflow.config.json")
+p.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+PY
+cat >"$ISSUE_FIX/docs/planning/prd/prd-061-living-doc-fixture/prd-061-living-doc-fixture.md" <<'EOF'
+---
+id: prd-061-living-doc-fixture
+type: prd
+status: draft
+---
+# PRD 061 living-doc fixture
+EOF
+cp "$ROOT/docs/prds/INDEX.md" "$ISSUE_FIX/docs/prds/INDEX.md" 2>/dev/null || mkdir -p "$ISSUE_FIX/docs/prds" && printf '# index\n' >"$ISSUE_FIX/docs/prds/INDEX.md"
+cp "$ROOT/docs/prds/COMPLETION-LOG.md" "$ISSUE_FIX/docs/prds/COMPLETION-LOG.md" 2>/dev/null || printf '# log\n' >"$ISSUE_FIX/docs/prds/COMPLETION-LOG.md"
+git -C "$ISSUE_FIX" add . && git -C "$ISSUE_FIX" commit -q -m init
+INDEX_BEFORE=$(git -C "$ISSUE_FIX" status --porcelain -- docs/prds/INDEX.md docs/prds/COMPLETION-LOG.md docs/prds/GAP-BACKLOG.md | wc -l | tr -d ' ')
+if python3 - <<PY
+import json
+import os
+import sys
+from pathlib import Path
+root = Path("$ISSUE_FIX")
+os.chdir(root)
+sys.path.insert(0, str(Path("$ROOT/scripts")))
+os.environ["SW_ISSUES_FIXTURE"] = "1"
+import wave_living_docs as wld
+out = wld.facade_set_index_status(root, "061", "in-progress", slug="living-doc-fixture")
+assert out.get("authority") == "issue", out
+assert out.get("verdict") in {"pass", "degraded"}, out
+ev = wld.read_index_status_evidence(root, "061", slug="living-doc-fixture")
+assert ev and ev.get("status") == "in-progress", ev
+print("ok")
+PY
+then
+  ok "living-status-store-evidence"
+else
+  bad "living-status-store-evidence"
+fi
+if python3 - <<PY
+import json
+import os
+import sys
+from pathlib import Path
+root = Path("$ISSUE_FIX")
+sys.path.insert(0, str(Path("$ROOT/scripts")))
+os.environ["SW_ISSUES_FIXTURE"] = "1"
+import wave_living_docs as wld
+out = wld.facade_append_completion(root, prd="061", unit_id="prd-061-living-doc-fixture", phase="all", notes="fixture")
+assert out.get("verdict") == "stored", out
+ev = wld.read_completion_evidence(root, "061")
+assert ev and ev.get("prd_id") == "061", ev
+print("ok")
+PY
+then
+  ok "completion-store-events"
+else
+  bad "completion-store-events"
+fi
+INDEX_AFTER=$(git -C "$ISSUE_FIX" status --porcelain -- docs/prds/INDEX.md docs/prds/COMPLETION-LOG.md docs/prds/GAP-BACKLOG.md | wc -l | tr -d ' ')
+if [[ "$INDEX_BEFORE" == "$INDEX_AFTER" ]]; then
+  ok "completion-store-events:no-banned-file-mutation"
+else
+  bad "completion-store-events:no-banned-file-mutation"
+fi
+if python3 - <<PY
+import os, sys
+from pathlib import Path
+root = Path("$ISSUE_FIX")
+sys.path.insert(0, str(Path("$ROOT/scripts")))
+os.environ["SW_ISSUES_FIXTURE"] = "1"
+import wave_living_docs as wld
+assert wld.doctor_banned_living_path_drift(root).get("verdict") == "pass"
+idx = root / "docs/prds/INDEX.md"
+idx.write_text(idx.read_text() + "\n# dirty\n", encoding="utf-8")
+assert wld.doctor_banned_living_path_drift(root).get("verdict") == "fail"
+print("ok")
+PY
+then
+  ok "doctor-dirty-banned-path"
+else
+  bad "doctor-dirty-banned-path"
+fi
+rm -rf "$ISSUE_FIX"
+
 # --- wave_living_docs.py compiles ---
 if python3 -m py_compile "$WLD" 2>/dev/null; then
   ok "wave-living-docs-py-compile"

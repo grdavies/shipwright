@@ -218,7 +218,17 @@ def apply_prd_index_status(index_path: Path, status_map: dict[str, str]) -> str:
     return "\n".join(lines) + ("\n" if lines else "")
 
 
+
+
+def _refuse_banned_living_doc_write(root: Path, *, action: str) -> dict[str, Any] | None:
+    from planning_store import refuse_banned_living_doc_write
+
+    return refuse_banned_living_doc_write(root, action=action)
+
 def reconcile_prd_index(root: Path, *, dry_run: bool = False, require_merge: bool = False, allow_default: bool = False) -> dict[str, Any]:
+    refusal = _refuse_banned_living_doc_write(root, action="reconcile-prd-index")
+    if refusal:
+        return refusal
     if require_merge:
         os.environ["SW_RECONCILE_REQUIRE_MERGE"] = "1"
     cfg = read_config(root)
@@ -243,6 +253,9 @@ def reconcile_prd_index(root: Path, *, dry_run: bool = False, require_merge: boo
 
 
 def set_index_status(root: Path, prd: str, status: str) -> dict[str, Any]:
+    refusal = _refuse_banned_living_doc_write(root, action="set-index-status")
+    if refusal:
+        return refusal
     allowed = {"not-started", "in-progress", "complete"}
     if status not in allowed:
         raise SystemExit(f"invalid status {status!r}; one of {sorted(allowed)}")
