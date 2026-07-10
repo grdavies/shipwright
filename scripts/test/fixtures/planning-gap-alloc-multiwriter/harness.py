@@ -156,8 +156,8 @@ def check_sequential_capture_persists_distinct_issues() -> dict:
     """Two sequential full ``capture_gap`` calls persist two distinct gap issues."""
     with _FixtureEnv():
         root = _sandbox()
-        first = pgc.capture_gap(root, signal_id="sig-a", title="first captured gap", dry_run=False)
-        second = pgc.capture_gap(root, signal_id="sig-b", title="second captured gap", dry_run=False)
+        first = pgc.capture_gap(root, signal_id="sig-a", title="first captured gap", problem="first captured gap", context="fixture", dry_run=False)
+        second = pgc.capture_gap(root, signal_id="sig-b", title="second captured gap", problem="second captured gap", context="fixture", dry_run=False)
         units = [u.id for u in pig.discover_units(root)]
     ok = (
         first["unitId"] != second["unitId"]
@@ -177,7 +177,7 @@ def check_stale_cache_never_wins() -> dict:
     allocated gap number — invalidate-before-allocate always wins (R10)."""
     with _FixtureEnv():
         root = _sandbox()
-        real = pgc.capture_gap(root, signal_id="sig-real", title="already captured gap", dry_run=False)
+        real = pgc.capture_gap(root, signal_id="sig-real", title="already captured gap", problem="already captured gap", context="fixture", dry_run=False)
         real_number = _gap_number(real["unitId"])
 
         # Poison the query cache with a stale snapshot claiming zero units,

@@ -173,7 +173,7 @@ restore_fixtures() {
   python3 "$ROOT/scripts/planning_store.py" --root "$ROOT" clear-issue-fixture >/dev/null || true
 }
 trap 'restore_fixtures' EXIT
-if python3 "$GAP_CAPTURE" "$ROOT" capture --signal-id fb-045-001 --title "Fixture gap projection" | python3 -c "
+if python3 "$GAP_CAPTURE" "$ROOT" capture --signal-id fb-045-001 --title "Fixture gap projection" --problem "Fixture gap projection" --context "Doc impact fixture" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 assert d.get('verdict')=='pass'
