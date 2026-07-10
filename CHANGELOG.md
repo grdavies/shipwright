@@ -417,6 +417,7 @@
 * merge phase facade-living-doc-ban-facade-living-doc-write-ban-mvp-r1-r5-r2a-r3a into feat/planning-store-interface-architecture (03c0de8) <!-- sw-deliver:facade-living-doc-ban-facade-living-doc-write-ban-mvp-r1-r5-r2a-r3a -->
 * merge phase progress-no-phase-mint-progress-model-no-phase-mint-mvp-r6-r9-r8a-r24 into feat/planning-store-interface-architecture (1180319) <!-- sw-deliver:progress-no-phase-mint-progress-model-no-phase-mint-mvp-r6-r9-r8a-r24 -->
 * merge phase gap-enrichment-frontmatter-gap-enrichment-frontmatter-hybrid-r17-r22-r17a into feat/planning-store-interface-architecture (434e5a6) <!-- sw-deliver:gap-enrichment-frontmatter-gap-enrichment-frontmatter-hybrid-r17-r22-r17a -->
+* merge phase github-projects-matrix-github-projects-v2-matrix-r10-r15-r11a-r11b-r29a into feat/planning-store-interface-architecture (5f02895) <!-- sw-deliver:github-projects-matrix-github-projects-v2-matrix-r10-r15-r11a-r11b-r29a -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
