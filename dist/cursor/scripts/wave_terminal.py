@@ -960,6 +960,7 @@ def run_living_docs_append_terminal(root: Path) -> tuple[list[dict[str, Any]], d
 def run_docs_currency_gate_for_prepare(root: Path) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     if os.environ.get("SW_SKIP_DOCS_CURRENCY") == "1":
         return [], None
+    ensure_terminal_index_projection(root)
     script = SCRIPT_DIR / "docs-currency-gate.py"
     repo_root, state_root, state_path, plan_path = resolve_docs_currency_paths(root)
     proc = subprocess.run(
@@ -1043,10 +1044,48 @@ def resolve_docs_currency_paths(root: Path) -> tuple[Path, Path, Path, Path]:
     return root, root, state_path, plan_path
 
 
+def ensure_terminal_index_projection(root: Path) -> None:
+    """Project INDEX + completion evidence for issue-store before docs-currency (R4/R50)."""
+    from wave_living_docs import (
+        append_completion_store_event,
+        derive_index_status,
+        living_doc_write_banned,
+        read_completion_evidence,
+    )
+    from wave_state import load_deliver_state
+    import planning_index_issue as pii
+    import planning_paths as pp
+
+    if not living_doc_write_banned(root):
+        return
+    state = load_deliver_state(root) or {}
+    prd = str(state.get("prd_number") or "").zfill(3)
+    if not prd or prd == "000":
+        return
+    if derive_index_status(state, False) != "complete":
+        return
+    slug = str((state.get("target") or {}).get("slug") or "") or None
+    pii.project_index_status(root, prd, "complete", slug=slug, force_issue_store=True)
+    worktree = pp.git_root(root)
+    unit_id = pii.resolve_prd_unit_id(root, prd, slug=slug) or pii._unit_id_from_derived_cache(
+        worktree, prd, slug=slug
+    )
+    if unit_id and read_completion_evidence(root, prd) is None:
+        notes = str((state.get("completion") or {}).get("notes") or "pre-merge compounding complete")
+        append_completion_store_event(
+            root,
+            prd_id=prd,
+            unit_id=unit_id,
+            status="complete",
+            evidence={"phase": "deliver-terminal", "notes": notes},
+        )
+
+
 def run_docs_currency_gate(root: Path) -> None:
     """Hard-block terminal gate on living-doc drift for the current run (R50/R43)."""
     if os.environ.get("SW_SKIP_DOCS_CURRENCY") == "1":
         return
+    ensure_terminal_index_projection(root)
     script = SCRIPT_DIR / "docs-currency-gate.py"
     repo_root, state_root, state_path, plan_path = resolve_docs_currency_paths(root)
     proc = subprocess.run(
