@@ -69,22 +69,35 @@ def main(argv: list[str] | None = None) -> int:
 
     expected = derive_index_status(state, merged_main)
 
+    def _index_status_from_file() -> str | None:
+        index_path = root / "docs" / "prds" / "INDEX.md"
+        if not index_path.is_file():
+            return None
+        for line in index_path.read_text(encoding="utf-8").splitlines():
+            if not line.startswith("|") or line.startswith("| #") or line.startswith("|---"):
+                continue
+            parts = [p.strip() for p in line.strip("|").split("|")]
+            if len(parts) >= 4 and parts[0].zfill(3) == prd:
+                return parts[4] if len(parts) >= 5 else parts[3]
+        return None
+
+    def _completion_in_log() -> bool:
+        log_path = root / "docs" / "prds" / "COMPLETION-LOG.md"
+        if not log_path.is_file():
+            return False
+        log_text = log_path.read_text(encoding="utf-8")
+        return f"| {prd.lstrip('0')} |" in log_text or f"| {prd} |" in log_text
+
     banned = living_doc_write_banned(root)
     index_status = None
     if banned:
         ev = read_index_status_evidence(root, prd)
         if ev:
             index_status = str(ev.get("status") or "")
+        else:
+            index_status = _index_status_from_file()
     else:
-        index_path = root / "docs" / "prds" / "INDEX.md"
-        if index_path.is_file():
-            for line in index_path.read_text(encoding="utf-8").splitlines():
-                if not line.startswith("|") or line.startswith("| #") or line.startswith("|---"):
-                    continue
-                parts = [p.strip() for p in line.strip("|").split("|")]
-                if len(parts) >= 4 and parts[0].zfill(3) == prd:
-                    index_status = parts[4] if len(parts) >= 5 else parts[3]
-                    break
+        index_status = _index_status_from_file()
 
     drift = []
     if index_status is None:
@@ -94,15 +107,13 @@ def main(argv: list[str] | None = None) -> int:
 
     # COMPLETION-LOG / store completion events
     if all_green:
-        if banned:
-            if read_completion_evidence(root, prd) is None:
-                drift.append({"kind": "completion-log-missing", "prd": prd})
-        else:
-            log_path = root / "docs" / "prds" / "COMPLETION-LOG.md"
-            if log_path.is_file():
-                log_text = log_path.read_text(encoding="utf-8")
-                if f"| {prd.lstrip('0')} |" not in log_text and f"| {prd} |" not in log_text:
-                    drift.append({"kind": "completion-log-missing", "prd": prd})
+        has_completion = read_completion_evidence(root, prd) is not None if banned else False
+        if banned and not has_completion:
+            has_completion = _completion_in_log()
+        elif not banned:
+            has_completion = _completion_in_log()
+        if not has_completion:
+            drift.append({"kind": "completion-log-missing", "prd": prd})
 
     # GAP-BACKLOG: unresolved rows for this PRD when it is complete (R3 / PRD 048)
     gap_path = root / "docs" / "prds" / "GAP-BACKLOG.md"
