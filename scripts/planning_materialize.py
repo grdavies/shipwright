@@ -146,10 +146,14 @@ def is_private_spec(path: Path, root: Path) -> bool:
 
 
 def discover_private_spec_units(root: Path, task_list_rel: str) -> list[dict[str, Any]]:
+    import planning_path_redirect as ppr
+
     task_list_rel = planning_path_redirect.resolve_path(root, task_list_rel)
-    task_path = planning_paths.resolve_contained(root, task_list_rel)
-    if not task_path.is_file():
-        fail(f"task list not found: {task_list_rel}")
+    ensure_run_entry_materialized(root, task_list_rel)
+    _resolved_rel, task_path = ppr.resolve_readable_path(root, task_list_rel)
+    if task_path is None or not task_path.is_file():
+        logical = planning_paths.resolve_contained(root, task_list_rel)
+        fail(f"task list not found: {task_list_rel}", logicalPath=str(logical))
     docs_dir = task_path.parent
     units: list[dict[str, Any]] = []
     if not docs_dir.is_dir():
@@ -494,7 +498,6 @@ def cmd_provision(root: Path, args: argparse.Namespace) -> int:
     if pin_check.get("verdict") == "fail":
         emit(pin_check, 20)
     state = load_deliver_state(root, target=args.target)
-    units = discover_private_spec_units(root, task_list)
     cfg = load_workflow_config(root)
     backend_id = resolve_backend_id(cfg)
     revision = store_revision(cfg)
@@ -518,6 +521,7 @@ def cmd_provision(root: Path, args: argparse.Namespace) -> int:
         materialized_paths.append(str(dest.relative_to(worktree)).replace("\\", "/"))
         copied.append({"unitId": task_unit, "dest": materialized_paths[-1], "hash": result.hash or ""})
 
+    units = discover_private_spec_units(root, task_list)
     for unit in units:
         body_rel = str(unit["bodyPath"])
         dest = materialized_dest(worktree, body_rel)

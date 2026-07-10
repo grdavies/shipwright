@@ -54,8 +54,14 @@ def planning_autonomy(root: Path) -> str:
 
 def unit_id_from_task_list(task_path: Path) -> str:
     """Derive the PRD-level graph unit id that owns this task list directory (gap-051)."""
-    parent = task_path.parent.name
+    rel = str(task_path).replace("\\", "/")
+    marker = ".cursor/planning-materialized/"
+    if marker in rel:
+        rel = rel.split(marker, 1)[1]
+    parent = Path(rel).parent.name
     if parent.startswith("prd-"):
+        return parent
+    if re.match(r"^\d+-prd-", parent):
         return parent
     match = re.match(r"^(\d+)-(.+)$", parent)
     if match:
@@ -142,19 +148,44 @@ def task_list_for_unit(root: Path, unit_id: str) -> str | None:
     return None
 
 
+TASK_LIST_STORE_UNIT_ID = re.compile(r"^tasks-(\d+)-(.+)$")
+
+
+def task_list_path_parts(unit_id: str) -> tuple[str, str]:
+    """Return (directory_slug, task_filename) for logical task-list paths (gap-114)."""
+    uid = unit_id.strip()
+    tasks_match = TASK_LIST_STORE_UNIT_ID.match(uid)
+    if tasks_match:
+        dir_slug = f"{tasks_match.group(1)}-{tasks_match.group(2)}"
+        return dir_slug, f"{uid}.md"
+    prd_match = re.match(r"^(\d+)-prd-(.+)$", uid)
+    if prd_match:
+        dir_slug = f"{prd_match.group(1)}-{prd_match.group(2)}"
+        return dir_slug, f"tasks-{dir_slug}.md"
+    if uid.startswith("prd-"):
+        slug = uid[4:]
+        return slug, f"tasks-{uid}.md"
+    return uid, f"tasks-{uid}.md"
+
+
 def logical_task_list_candidates(root: Path, unit_id: str) -> list[str]:
     dirs = pp.load_planning_dirs(root)
-    slug = unit_id[4:] if unit_id.startswith("prd-") else unit_id
-    match = re.match(r"^(\d+)-prd-(.+)$", unit_id)
-    if match:
-        slug = f"{match.group(1)}-{match.group(2)}"
-    return [
-        pp.join_rel(dirs.prds, unit_id, f"tasks-{unit_id}.md"),
-        pp.join_rel(dirs.prds, slug, f"tasks-{slug}.md"),
-        pp.join_rel(dirs.prds, slug, f"tasks-{unit_id}.md"),
-        pp.join_rel(dirs.planning, "prd", unit_id, f"tasks-{slug}.md"),
-        pp.join_rel(dirs.planning, "prd", unit_id, f"tasks-{unit_id}.md"),
+    dir_slug, task_file = task_list_path_parts(unit_id)
+    seen: set[str] = set()
+    out: list[str] = []
+    rels = [
+        pp.join_rel(dirs.prds, dir_slug, task_file),
+        pp.join_rel(dirs.prds, unit_id, task_file),
+        pp.join_rel(dirs.planning, "prd", unit_id, task_file),
+        pp.join_rel(dirs.planning, "prd", dir_slug, task_file),
     ]
+    if not TASK_LIST_STORE_UNIT_ID.match(unit_id.strip()):
+        rels.insert(2, pp.join_rel(dirs.prds, dir_slug, f"tasks-{unit_id}.md"))
+    for rel in rels:
+        if rel not in seen:
+            seen.add(rel)
+            out.append(rel)
+    return out
 
 
 def resolve_task_list_path(root: Path, task_rel: str) -> Path:
