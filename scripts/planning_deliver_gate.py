@@ -54,8 +54,14 @@ def planning_autonomy(root: Path) -> str:
 
 def unit_id_from_task_list(task_path: Path) -> str:
     """Derive the PRD-level graph unit id that owns this task list directory (gap-051)."""
-    parent = task_path.parent.name
+    rel = str(task_path).replace("\\", "/")
+    marker = ".cursor/planning-materialized/"
+    if marker in rel:
+        rel = rel.split(marker, 1)[1]
+    parent = Path(rel).parent.name
     if parent.startswith("prd-"):
+        return parent
+    if re.match(r"^\d+-prd-", parent):
         return parent
     match = re.match(r"^(\d+)-(.+)$", parent)
     if match:
