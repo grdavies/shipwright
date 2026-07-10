@@ -76,6 +76,37 @@ stamp the resolved concrete `model:` on the Task (do not rely on `model: inherit
 | `deliver.autonomy.maxRunMinutes` | unset | Run-level wall-clock ceiling → consolidated halt |
 | `deliver.autonomy.maxIterations` | `500` | In-turn `deliver-loop` hard stop |
 
+### Deliver loop drain (`deliver.loop`) — PRD 062 R7/R19
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `deliver.loop.drainMechanical` | `true` | When true, `wave_deliver_loop` drains mechanical actions in-process until `awaitAgent`, `awaitInFlight`, or halt; `false` restores one step per invocation |
+
+Log events (`run.log`) include `elapsedMs` on `driver-transition` and `execute-mechanical` for operator timing
+(R9) — numeric only, no secret argv.
+
+### Cleanup autonomy (`cleanup.autonomy`) — PRD 062 R10/R11
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `cleanup.autonomy` | `confirm` | `confirm` — agent-driven ack before apply; `auto` — post-merge autonomous apply when deliver verdict is terminal (`complete`/`rejected`) and merge status is not `indeterminate` |
+
+Inflight protection is **scoped** to the active deliver run/worktree — unrelated in-flight runs do not block
+terminal orchestrator cleanup. Non-terminal verdicts (`running`, `blocked`, `halted`, `watching`) remain protected.
+
+### Planning unit status vocabulary (PRD 062 R13) — four-state reference map
+
+Unified status surface (`scripts/planning_unit_status.py`):
+
+| Canonical state | Meaning | Gates |
+| --- | --- | --- |
+| `backlog` | Not yet scheduled / open gap | Non-terminal |
+| `planned` | Eligible but not in-flight | Non-terminal |
+| `in-progress` | Active deliver or implementation | Non-terminal |
+| `complete` | Terminal success | May green-light dependency gates |
+| `unknown` / `unauthorized` | Backend miss or auth failure | **Non-terminal** — never treated as complete; auth errors fail-closed |
+
+Backend-native strings map into the canonical four-state surface; cross-backend string identity is not required.
 
 ### Execute tier (`execute.*`) — PRD 053
 
@@ -324,10 +355,10 @@ documented per-provider request budget. Budget keys live under `planning.store.r
 
 | Key | Default (github-issues) | Meaning |
 |-----|----------------------|---------|
-| `maxCalls` | 500 | Per-run API call ceiling composing with `SW_ISSUES_CALL_BUDGET` (R39) |
+| `maxCalls` | **750** | Per-run API call ceiling composing with `SW_ISSUES_CALL_BUDGET` (R39); parallel runs use isolated ledgers (R12) |
 | `maxPaginationDepth` | 10 | Pagination pages before fail-closed `index-incomplete` (R86) |
 | `alertThreshold` | 0.8 | Operator-observable alert ratio before ceiling breach (R93) |
-| `cacheTtlSeconds` | 300 | Poll-on-reconcile query cache TTL floor (R85) |
+| `cacheTtlSeconds` | 300 | Poll-on-reconcile query cache TTL floor (R85); `critical=True` ops bypass cache within TTL |
 
 Example:
 
@@ -340,7 +371,7 @@ Example:
       "projectKey": "my-project",
       "requestBudget": {
         "github-issues": {
-          "maxCalls": 500,
+          "maxCalls": 750,
           "maxPaginationDepth": 10,
           "alertThreshold": 0.8,
           "cacheTtlSeconds": 300

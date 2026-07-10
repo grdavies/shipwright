@@ -46,9 +46,16 @@ Dry-run by default; deletions only after explicit confirmation.
 
 4. Worktree teardown uses `git worktree remove` + `git worktree prune` only — never `rm -rf`.
 
-5. **Autonomous apply (R25/R26)** — when `cleanup.autonomy` is `auto` in
+5. **Scoped in-flight protection (PRD 062 R10/R11)** — deliver run-state enumeration scopes inflight checks
+   to the **active run/worktree** (`_run_in_active_scope` + `_scoped_run_inflight`). Unrelated scoped runs with
+   terminal verdicts do not block orchestrator cleanup. Non-terminal verdicts protected: `running`, `blocked`,
+   `halted`, `watching` (shared `RESUMABLE_DELIVER_VERDICTS` constant). Dry-run is **terminal-class only** for
+   `cleanup.autonomy: auto` — autonomous apply deletes only when deliver `verdict` ∈ `{complete, rejected}` and
+   merge detection is not `indeterminate`.
+
+6. **Autonomous apply (R25/R26)** — when `cleanup.autonomy` is `auto` in
    `.cursor/workflow.config.json`, a deterministic post-merge path may apply the dry-run `wouldRemove` set
-   without human confirm when: no in-flight scoped deliver run, merge status is not `indeterminate`, and
+   without human confirm when: no in-flight **scoped** deliver run, merge status is not `indeterminate`, and
    targets are not the current/default branch. Invocation:
 
    ```bash
@@ -57,7 +64,7 @@ Dry-run by default; deletions only after explicit confirmation.
 
    `indeterminate` merge status always falls back to the human gate (step 3).
 
-6. Remote branch deletion is guarded: indeterminate squash-merge status fails closed (branch protected).
+7. Remote branch deletion is guarded: indeterminate squash-merge status fails closed (branch protected).
 
 ## Merge detection (R56)
 
