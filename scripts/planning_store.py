@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import ipaddress
 import json
@@ -3403,6 +3404,159 @@ def doctor_separate_project_local_writes(root: Path, cfg: dict[str, Any]) -> dic
     return {"verdict": "pass", "action": "doctor", "checks": ["no-tracked-planning-bodies"]}
 
 
+
+# PRD 061 R1/R2/R2a — planning-store facade contract + IssuesClient import allowlist.
+# Workflow scripts MUST route planning mutations through this module; only allowlisted
+# store/provider modules may import IssuesClient directly.
+FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
+    {"name": "put", "status": "shipped", "description": "Authoritative unit body write"},
+    {"name": "get", "status": "shipped", "description": "Canonical unit body read"},
+    {"name": "exists", "status": "shipped", "description": "Unit presence probe"},
+    {"name": "materialize", "status": "shipped", "description": "Project store body to local path"},
+    {"name": "materialize_from_store", "status": "shipped", "description": "Batch materialize for deliver"},
+    {"name": "freeze", "status": "shipped", "description": "Lock unit + freeze record"},
+    {"name": "verify_frozen_hash", "status": "shipped", "description": "Tamper check for frozen units"},
+    {"name": "link_brainstorm_prd", "status": "shipped", "description": "Durability edge between brainstorm and PRD"},
+    {"name": "close_delivery_units", "status": "shipped", "description": "Deliver closure hooks for planning units"},
+    {"name": "doctor", "status": "shipped", "description": "Fail-closed hygiene for separate-project drift"},
+    {"name": "derive_unit_status", "status": "shipped", "description": "Unified status from store evidence"},
+    {"name": "progress_update", "status": "planned", "description": "Semantic phase/task progress without ad hoc issue_create"},
+    {"name": "comment_sync", "status": "planned", "description": "Inbound/outbound provider comment sync"},
+    {"name": "projection_refresh", "status": "planned", "description": "Rebuild operator projection (Projects v2, hierarchy)"},
+)
+
+ISSUES_CLIENT_ALLOWLIST = frozenset({
+    "scripts/planning_store.py",
+    "scripts/issues_lib.py",
+    "scripts/planning_github_client.py",
+    "scripts/planning_gitlab_client.py",
+    "scripts/planning_jira_client.py",
+    "scripts/planning_migrate_issue_store.py",
+})
+
+FACADE_WORKFLOW_SCAN_GLOB = "scripts/*.py"
+
+FACADE_BYPASS_BASELINE = frozenset({
+    "scripts/planning_discover.py",
+    "scripts/planning_hierarchy.py",
+    "scripts/planning_progress.py",
+    "scripts/planning_scheduler.py",
+    "scripts/planning_unit_status.py",
+})
+
+_ISSUES_CLIENT_IMPORT_ROOTS = frozenset({"issues_lib"})
+
+
+def facade_surface() -> dict[str, Any]:
+    shipped = [op["name"] for op in FACADE_OPERATIONS if op["status"] == "shipped"]
+    planned = [op["name"] for op in FACADE_OPERATIONS if op["status"] == "planned"]
+    return {
+        "verdict": "ok",
+        "action": "list-facade",
+        "operations": list(FACADE_OPERATIONS),
+        "shipped": shipped,
+        "planned": planned,
+        "allowlist": sorted(ISSUES_CLIENT_ALLOWLIST),
+        "workflowScan": FACADE_WORKFLOW_SCAN_GLOB,
+        "bypassBaseline": sorted(FACADE_BYPASS_BASELINE),
+    }
+
+
+def _rel_script_path(root: Path, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _imports_issues_client(path: Path) -> list[int]:
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (OSError, SyntaxError):
+        return []
+    lines: list[int] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                root_name = alias.name.split(".")[0]
+                if root_name in _ISSUES_CLIENT_IMPORT_ROOTS or alias.name == "IssuesClient":
+                    lines.append(node.lineno)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            root_name = node.module.split(".")[0]
+            imported = {alias.name for alias in node.names}
+            if root_name in _ISSUES_CLIENT_IMPORT_ROOTS or "IssuesClient" in imported:
+                lines.append(node.lineno)
+    return sorted(set(lines))
+
+
+def scan_facade_import_violations(root: Path, *, extra_paths: list[Path] | None = None) -> list[dict[str, Any]]:
+    violations: list[dict[str, Any]] = []
+    candidates: list[Path] = []
+    if extra_paths:
+        candidates.extend(extra_paths)
+    else:
+        candidates.extend(sorted(root.glob(FACADE_WORKFLOW_SCAN_GLOB)))
+    for script in candidates:
+        if not script.is_file() or script.suffix != ".py":
+            continue
+        rel = _rel_script_path(root, script)
+        if rel in ISSUES_CLIENT_ALLOWLIST:
+            continue
+        hit_lines = _imports_issues_client(script)
+        if hit_lines:
+            violations.append({"path": rel, "lines": hit_lines})
+    return sorted(violations, key=lambda row: row["path"])
+
+
+def lint_facade_imports(root: Path, *, scope: str | None = None) -> dict[str, Any]:
+    if scope:
+        target = Path(scope)
+        if not target.is_absolute():
+            target = root / target
+        violations = scan_facade_import_violations(root, extra_paths=[target])
+        rel = _rel_script_path(root, target)
+        allowed = rel in ISSUES_CLIENT_ALLOWLIST
+        if allowed and not violations:
+            return {
+                "verdict": "pass",
+                "action": "lint-facade-imports",
+                "path": rel,
+                "allowed": True,
+                "violations": [],
+            }
+        if violations:
+            return {
+                "verdict": "fail",
+                "action": "lint-facade-imports",
+                "path": rel,
+                "allowed": allowed,
+                "error": "issues-client-import-outside-allowlist",
+                "violations": violations,
+            }
+        return {
+            "verdict": "pass",
+            "action": "lint-facade-imports",
+            "path": rel,
+            "allowed": allowed,
+            "violations": [],
+        }
+
+    violations = scan_facade_import_violations(root)
+    result: dict[str, Any] = {
+        "verdict": "pass" if not violations else "fail",
+        "action": "lint-facade-imports",
+        "allowlist": sorted(ISSUES_CLIENT_ALLOWLIST),
+        "violations": violations,
+        "bypassBaseline": sorted(FACADE_BYPASS_BASELINE),
+    }
+    if violations:
+        found = {row["path"] for row in violations}
+        result["error"] = "issues-client-import-outside-allowlist"
+        result["baselineMissing"] = sorted(FACADE_BYPASS_BASELINE - found)
+        result["unexpected"] = sorted(found - FACADE_BYPASS_BASELINE - ISSUES_CLIENT_ALLOWLIST)
+    return result
+
+
 def _require(args: list[str], flag: str) -> str:
     if flag not in args:
         fail(f"missing required flag: {flag}")
@@ -3426,6 +3580,8 @@ def main() -> None:
     for name in (
         "resolve-backend",
         "list-backends",
+        "list-facade",
+        "lint-facade-imports",
         "resolve-issues",
         "resolve-store-location",
         "probe-issues-token",
@@ -3452,7 +3608,14 @@ def main() -> None:
     args, rest = parser.parse_known_args()
     root = git_root(Path(args.root).resolve())
     cfg = load_workflow_config(root)
-    if args.command == "resolve-backend":
+    if args.command == "list-facade":
+        emit(facade_surface())
+    elif args.command == "lint-facade-imports":
+        scope = _optional(rest, "--path")
+        result = lint_facade_imports(root, scope=scope)
+        emit(result, 0 if result.get("verdict") == "pass" else 20)
+    elif args.command == "resolve-backend":
+
         override = _optional(rest, "--backend")
         emit(resolve_effective_backend(root, cfg, override=override))
     elif args.command == "list-backends":
