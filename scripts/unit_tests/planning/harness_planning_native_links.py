@@ -427,6 +427,10 @@ content = (
     "visibility: public\n"
     "---\n"
     "# Gap body\n\n"
+    "## Problem\n\nDepends linkage test.\n\n"
+    "## Context/evidence\n\nFixture harness.\n\n"
+    "## Related units\n\nnone\n\n"
+    "## Suggested next step\n\ntriage\n\n"
     "```sw-edges\n"
     '{"version": 1, "edges": [{"rel": "depends", "target": "parent-gap"}], "native": []}\n'
     "```\n"
@@ -458,7 +462,7 @@ subprocess.run(["git", "config", "user.name", "T"], cwd=tmp, check=True)
 (tmp / "docs" / "prds" / "046-test").mkdir(parents=True)
 (tmp / ".cursor" / "workflow.config.json").write_text(json.dumps({
   "version": 1,
-  "planning": {"store": {"backend": "issue-store", "issuesProvider": "github-issues", "projectKey": "phase3046"}},
+  "planning": {"store": {"backend": "issue-store", "issuesProvider": "github-issues", "projectKey": "phase3046", "hierarchy": {"epicSubIssues": True}}},
   "host": {"provider": "github"},
 }), encoding="utf-8")
 (tmp / "docs/prds/046-test/tasks-046-test.md").write_text("---\nfrozen: true\n---\n### 1. Alpha\n", encoding="utf-8")

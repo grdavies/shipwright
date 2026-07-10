@@ -1551,6 +1551,32 @@
       ]
     },
     {
+      "id": "planning-061-progress-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 60,
+      "pytestPath": "scripts/unit_tests/planning/test_planning_061_progress.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_hierarchy.py",
+        "scripts/planning_progress.py",
+        "scripts/planning_store.py",
+        "scripts/planning_discover.py",
+        "scripts/planning_index_gen.py",
+        "scripts/unit_tests/planning/harness_planning_061_progress.py"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "prd-061"
+      ]
+    },
+    {
       "id": "planning-doc-issue-store-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
@@ -1576,6 +1602,80 @@
         "pytest",
         "planning",
         "doc-pipeline"
+      ]
+    },
+    {
+      "id": "planning-061-github-projects-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 61,
+      "pytestPath": "scripts/unit_tests/planning/test_planning_061_github_projects.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_github_projects_v2.py",
+        "scripts/planning_store.py",
+        "scripts/planning_cutover.py",
+        "core/providers/issues/CAPABILITIES.md",
+        "core/sw-reference/planning-deliver-parity-matrix.md",
+        "docs/guides/workflows.md",
+        "scripts/unit_tests/planning/harness_planning_061_github_projects.py"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "prd-061"
+      ]
+    },
+    {
+      "id": "planning-061-inbound-native-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 62,
+      "pytestPath": "scripts/unit_tests/planning/test_planning_061_inbound_native.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_store.py",
+        "scripts/planning_canonical.py",
+        "scripts/unit_tests/planning/harness_planning_061_inbound_native.py"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "prd-061"
+      ]
+    },
+    {
+      "id": "planning-061-amend-docs-gap-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 63,
+      "pytestPath": "scripts/unit_tests/planning/test_planning_061_amend_docs_gap.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "core/commands/sw-amend.md",
+        "README.md",
+        "scripts/planning_store.py",
+        "scripts/unit_tests/planning/harness_planning_061_amend_docs_gap.py"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "prd-061"
       ]
     }
   ]

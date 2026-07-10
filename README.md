@@ -111,10 +111,13 @@ checkpoints (`doc.afterTasks`, supervised mode), phase timeout, external-wait ex
 budget (`deliver.autonomy.maxRunMinutes` / `maxIterations`). Parallel phases dispatch within
 `worktree.parallelCeiling` when the plan allows.
 
-**Living-doc currency:** post-cutover `docs/planning/INDEX.md` (unified INDEX) plus legacy projections
-`docs/prds/INDEX.md`, `COMPLETION-LOG.md`, and `GAP-BACKLOG.md` reconcile in-loop on the feature branch;
-drift hard-blocks the terminal gate. Path keys: `planningDir` (canonical) with legacy `prdsDir`/`tasksDir`
-aliases pre-cutover.
+**Living-doc currency:** under **file-store**, post-cutover `docs/planning/INDEX.md` (unified INDEX) plus legacy
+projections `docs/prds/INDEX.md`, `COMPLETION-LOG.md`, and `GAP-BACKLOG.md` reconcile in-loop on the feature
+branch; drift hard-blocks the terminal gate. Under **issue-store** (`planning.store.backend`), those surfaces
+are **derived or projected from the planning store** — doc commands (`/sw-amend`, `/sw-freeze`, `/sw-tasks`)
+must not instruct hand-edits to INDEX/COMPLETION-LOG/GAP-BACKLOG in the code repo; mechanical reconcile
+projects to the store (or a gitignored cache) instead. Path keys: `planningDir` (canonical) with legacy
+`prdsDir`/`tasksDir` aliases pre-cutover.
 
 **Doc traceability:** Full-tier PRDs carry `brainstorm:` frontmatter; writable brainstorms gain `prd:`
 back-links at draft/freeze time.

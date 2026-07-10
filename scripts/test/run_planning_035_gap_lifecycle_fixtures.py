@@ -190,6 +190,9 @@ def scenario_gap_capture_planning_store_routing(root: Path) -> bool:
                 fix,
                 signal_id="fixture-signal",
                 title="store routing test",
+                problem="Fixture routing problem",
+                context="Fixture routing context",
+                authoritative=True,
                 dry_run=False,
             )
         if not calls:

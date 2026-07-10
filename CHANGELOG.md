@@ -414,6 +414,12 @@
 * merge phase gap-096-gap-100-build-chain-sot-sync-and-freshness-r11-r13 into feat/planning-store-build-verify-hygiene (8b5f91f) <!-- sw-deliver:gap-096-gap-100-build-chain-sot-sync-and-freshness-r11-r13 -->
 * merge phase gap-081-gap-099-verify-override-follow-up-and-harness-isolation-r8-r10-r14-r15 into feat/planning-store-build-verify-hygiene (54c98db) <!-- sw-deliver:gap-081-gap-099-verify-override-follow-up-and-harness-isolation-r8-r10-r14-r15 -->
 * merge phase docs-skill-remediation-and-gap-resolve-wiring-r16-r17 into feat/planning-store-build-verify-hygiene (9fd9eb8) <!-- sw-deliver:docs-skill-remediation-and-gap-resolve-wiring-r16-r17 -->
+* merge phase facade-living-doc-ban-facade-living-doc-write-ban-mvp-r1-r5-r2a-r3a into feat/planning-store-interface-architecture (03c0de8) <!-- sw-deliver:facade-living-doc-ban-facade-living-doc-write-ban-mvp-r1-r5-r2a-r3a -->
+* merge phase progress-no-phase-mint-progress-model-no-phase-mint-mvp-r6-r9-r8a-r24 into feat/planning-store-interface-architecture (1180319) <!-- sw-deliver:progress-no-phase-mint-progress-model-no-phase-mint-mvp-r6-r9-r8a-r24 -->
+* merge phase gap-enrichment-frontmatter-gap-enrichment-frontmatter-hybrid-r17-r22-r17a into feat/planning-store-interface-architecture (434e5a6) <!-- sw-deliver:gap-enrichment-frontmatter-gap-enrichment-frontmatter-hybrid-r17-r22-r17a -->
+* merge phase github-projects-matrix-github-projects-v2-matrix-r10-r15-r11a-r11b-r29a into feat/planning-store-interface-architecture (5f02895) <!-- sw-deliver:github-projects-matrix-github-projects-v2-matrix-r10-r15-r11a-r11b-r29a -->
+* merge phase inbound-comments-native-ids-inbound-comments-native-ids-r18-r19 into feat/planning-store-interface-architecture (19f35ed) <!-- sw-deliver:inbound-comments-native-ids-inbound-comments-native-ids-r18-r19 -->
+* merge phase amend-docs-gap-prereq-amend-decisions-docs-gap-pre-req-write-back-r16-r23-r26-r29 into feat/planning-store-interface-architecture (d7b57d5) <!-- sw-deliver:amend-docs-gap-prereq-amend-decisions-docs-gap-pre-req-write-back-r16-r23-r26-r29 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

@@ -14,6 +14,8 @@ from urllib.parse import quote, unquote
 import planning_index_gen as pig
 
 CANONICAL_VERSION = "1"
+HYBRID_FRONTMATTER_MARKER = "<!-- sw-hybrid-frontmatter -->"
+FRONTMATTER_EXTRA_MARKER = re.compile(r"<!--\s*sw-frontmatter-extra:\s*(\{.*?\})\s*-->", re.DOTALL)
 BODY_SIZE_LIMIT = 60_000
 EDGE_DIVERGENCE_TOLERANCE = 0
 
@@ -33,6 +35,10 @@ SW_EDGES_FENCE = re.compile(
 GENERIC_CODE_FENCE = re.compile(r"```(?:\w+)?\s*\n(.*?)\n```", re.DOTALL)
 
 EXCLUDED_COMMENT_MARKERS = frozenset({"sw-freeze-record", "sw-chunk-overflow"})
+# PRD 061 R18 — structural/provider markers excluded from inbound authoring sync.
+INBOUND_COMMENT_EXCLUDED_MARKERS = frozenset(
+    {"sw-freeze-record", "sw-chunk-overflow", "sw-memory-pointer", "sw-doc-review"}
+)
 FREEZE_RECORD_MARKER = "sw-freeze-record"
 FROZEN_LABEL = "sw:frozen"
 FREEZE_INCOMPLETE_LABEL = "sw:freeze-incomplete"
@@ -277,7 +283,12 @@ EDGE_LABEL_PREFIXES: dict[str, str] = {
     "depends": "sw:depends:",
     "absorbs": "sw:absorbs:",
     "amends": "sw:amends:",
+    "blocks": "sw:blocks:",
+    "extends": "sw:extends:",
+    "supersedes": "sw:supersedes:",
 }
+TAG_LABEL_PREFIX = "sw:tag:"
+MAX_TAG_LABELS = 20
 # GitHub allows up to 100 labels/issue -- comfortably enough headroom for the
 # handful of structural labels plus a generous edge-label allowance. Jira has
 # no hard per-issue label *count* limit, but (matching the existing
@@ -298,7 +309,11 @@ STRUCTURAL_FRONTMATTER_KEYS = (
     "depends",
     "absorbs",
     "amends",
+    "blocks",
+    "extends",
+    "supersedes",
     "visibility",
+    "tags",
 )
 
 
@@ -402,12 +417,37 @@ def edges_from_labels(labels: list[str], rel: str) -> list[str]:
     return out
 
 
+def tag_label(tag: str) -> str:
+    return f"{TAG_LABEL_PREFIX}{quote(tag.strip(), safe='')}"
+
+
+def tags_from_labels(labels: list[str]) -> list[str]:
+    out: list[str] = []
+    for label in labels:
+        if label.startswith(TAG_LABEL_PREFIX):
+            value = unquote(label[len(TAG_LABEL_PREFIX) :])
+            if value and value not in out:
+                out.append(value)
+    return out
+
+
+def tag_labels_from_frontmatter(fm: dict[str, Any]) -> list[str]:
+    tags = fm.get("tags")
+    values: list[str] = []
+    if isinstance(tags, list):
+        values = [str(t).strip() for t in tags if str(t).strip()]
+    elif isinstance(tags, str) and tags.strip():
+        raw = tags.strip()
+        if raw.startswith("[") and raw.endswith("]"):
+            raw = raw[1:-1]
+        values = [t.strip() for t in raw.split(",") if t.strip()]
+    return [tag_label(t) for t in values[:MAX_TAG_LABELS]]
+
+
 def structural_labels_from_content(content: str) -> list[str]:
-    """R11 write-side -- promote a doc's structural frontmatter keys (type/
-    unit-id/status/topic/depends/absorbs/amends/visibility) to provider-
-    native labels. Purely additive: `content`'s own frontmatter block is
-    untouched by this function and keeps being embedded in the issue body
-    (dual-read window, D5) -- this only computes the label projection of it.
+    """R11/R22 write-side -- promote structural frontmatter keys to provider-
+    native labels. Purely additive: the frontmatter block stays authoritative
+    for canonical `get` during the dual-read window (D5).
     """
     if not content.startswith("---"):
         return []
@@ -425,11 +465,127 @@ def structural_labels_from_content(content: str) -> list[str]:
         labels.append(topic_label(str(fm["topic"])))
     if fm.get("visibility"):
         labels.append(visibility_label(str(fm["visibility"])))
-    for rel in ("depends", "absorbs", "amends"):
+    labels.extend(tag_labels_from_frontmatter(fm))
+    for rel in EDGE_LABEL_PREFIXES:
         value = fm.get(rel)
         targets = value if isinstance(value, list) else ([value] if value else [])
         labels.extend(edge_labels_for(rel, [str(t) for t in targets]))
     return labels
+
+
+def split_frontmatter(content: str) -> tuple[dict[str, Any] | None, str]:
+    """Split canonical document into frontmatter dict and markdown body."""
+    if not content.startswith("---"):
+        return None, normalize_body(content)
+    fm = pig.parse_frontmatter(content)
+    if not fm:
+        return None, normalize_body(content)
+    parts = content.split("---", 2)
+    body = parts[2] if len(parts) >= 3 else ""
+    return fm, normalize_body(body)
+
+
+def render_frontmatter(fm: dict[str, Any]) -> str:
+    lines = ["---"]
+    for key, value in fm.items():
+        if value is None:
+            continue
+        if isinstance(value, list):
+            lines.append(f"{key}: [{', '.join(str(v) for v in value)}]")
+        else:
+            lines.append(f"{key}: {value}")
+    lines.append("---")
+    return "\n".join(lines)
+
+
+def compose_canonical_document(fm: dict[str, Any], body: str) -> str:
+    return f"{render_frontmatter(fm)}\n\n{normalize_body(body)}\n"
+
+
+def operator_body_from_canonical(content: str) -> str:
+    """R20 -- operator-visible body without raw YAML frontmatter."""
+    fm, body = split_frontmatter(content)
+    if not fm:
+        return content
+    structural = set(STRUCTURAL_FRONTMATTER_KEYS) | {"id", "title", "type", "status", "visibility"}
+    extra = {k: v for k, v in fm.items() if k not in structural}
+    parts = [HYBRID_FRONTMATTER_MARKER]
+    if extra:
+        parts.append(
+            f"<!-- sw-frontmatter-extra: {json.dumps(extra, sort_keys=True, ensure_ascii=False)} -->"
+        )
+    if body:
+        parts.append(body)
+    return "\n".join(parts)
+
+
+def has_raw_yaml_frontmatter(content: str) -> bool:
+    return content.startswith("---") and pig.parse_frontmatter(content) is not None
+
+
+def is_hybrid_operator_body(content: str) -> bool:
+    return HYBRID_FRONTMATTER_MARKER in content
+
+
+def strip_hybrid_operator_body(content: str) -> str:
+    stripped = FRONTMATTER_EXTRA_MARKER.sub("", content)
+    stripped = stripped.replace(HYBRID_FRONTMATTER_MARKER, "")
+    return normalize_body(stripped)
+
+
+def _extra_frontmatter_from_operator(operator_body: str) -> dict[str, Any]:
+    match = FRONTMATTER_EXTRA_MARKER.search(operator_body)
+    if not match:
+        return {}
+    try:
+        data = json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def frontmatter_from_labels(labels: list[str], *, unit_id: str | None = None, operator_body: str = "") -> dict[str, Any]:
+    """R20/R21 read-side -- rebuild frontmatter from provider-native labels."""
+    fm: dict[str, Any] = {}
+    artifact_type = artifact_type_from_labels(labels)
+    if artifact_type:
+        fm["type"] = artifact_type
+    uid = unit_id_from_labels(labels) or unit_id
+    if uid:
+        fm["id"] = uid
+        fm["unit-id"] = uid
+    status = status_from_labels(labels)
+    if status:
+        fm["status"] = status
+    topic = topic_from_labels(labels)
+    if topic:
+        fm["topic"] = topic
+    visibility = visibility_from_labels(labels)
+    if visibility:
+        fm["visibility"] = visibility
+    tags = tags_from_labels(labels)
+    if tags:
+        fm["tags"] = tags
+    for rel in EDGE_LABEL_PREFIXES:
+        edges = edges_from_labels(labels, rel)
+        if edges:
+            fm[rel] = edges if len(edges) > 1 else edges[0]
+    fm.update(_extra_frontmatter_from_operator(operator_body))
+    return fm
+
+
+def canonical_content_from_operator(
+    labels: list[str],
+    operator_body: str,
+    *,
+    unit_id: str | None = None,
+) -> str:
+    """R20 -- agents receive full canonical content (frontmatter + body) on `get`."""
+    fm = frontmatter_from_labels(labels, unit_id=unit_id, operator_body=operator_body)
+    body = strip_hybrid_operator_body(operator_body)
+    if not fm:
+        return normalize_body(body)
+    return compose_canonical_document(fm, body)
 
 
 def human_readable_title(content: str, artifact_type: str, unit_id: str) -> str:
@@ -857,6 +1013,28 @@ def canonical_comments(comments: list[CommentRecord]) -> list[dict[str, str]]:
     included = [c for c in comments if not c.excluded_from_canonical()]
     included.sort(key=lambda c: (c.created_at, c.id))
     return [{"id": c.id, "body": normalize_body(c.body)} for c in included]
+
+
+def is_inbound_authoring_comment(comment: CommentRecord) -> bool:
+    """R18 — human/operator comments suitable for authoring/deliver consumers."""
+    if comment.excluded_from_canonical():
+        return False
+    if any(marker in INBOUND_COMMENT_EXCLUDED_MARKERS for marker in comment.markers):
+        return False
+    body = comment.body
+    for marker in INBOUND_COMMENT_EXCLUDED_MARKERS:
+        if f"<!-- {marker}" in body or f"<!--{marker}" in body:
+            return False
+    if CHUNK_TOKEN_MARKER_PREFIX in body or "sw-chunk-manifest:" in body:
+        return False
+    return bool(normalize_body(body))
+
+
+def inbound_authoring_comments(comments: list[CommentRecord]) -> list[CommentRecord]:
+    """Return provider comments consumable by brainstorm/PRD/amendment/deliver flows (R18)."""
+    included = [comment for comment in comments if is_inbound_authoring_comment(comment)]
+    included.sort(key=lambda comment: (comment.created_at, comment.id))
+    return included
 
 
 def canonical_form(snapshot: IssueSnapshot) -> str:

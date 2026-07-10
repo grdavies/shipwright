@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import ipaddress
 import json
@@ -116,6 +117,15 @@ ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
 # is the durable, provider-side twin of that same signal.
 PUT_JOURNAL_PATH = ".cursor/hooks/state/issue-store-put-journal.json"
 PUT_INCOMPLETE_LABEL = "sw:put-incomplete"
+LEGACY_UNIT_MAP_PATH = ".cursor/hooks/state/issue-store-legacy-unit-map.json"
+NATIVE_UNIT_ID_PREFIX: dict[str, str] = {
+    "github-issues": "gh:",
+    "jira": "jira:",
+    "gitlab-issues": "gl:",
+}
+NATIVE_UNIT_ID_PATTERN = re.compile(r"^(gh|jira|gl):(\d+)$")
+BARE_INTEGER_UNIT_ID = re.compile(r"^\d{3}$")
+
 
 from issues_lib import (  # noqa: E402
     IssueBudgetExhausted,
@@ -153,6 +163,11 @@ from planning_canonical import (  # noqa: E402
     require_artifact_type,
     rewrite_chunk_manifest_ids,
     strip_markers_and_edges,
+    canonical_content_from_operator,
+    has_raw_yaml_frontmatter,
+    is_hybrid_operator_body,
+    operator_body_from_canonical,
+    strip_hybrid_operator_body,
     structural_labels_from_content,
     type_label,
     unit_id_from_labels,
@@ -162,6 +177,7 @@ from planning_canonical import (  # noqa: E402
     status_from_labels,
     status_label,
     verify_unit_id,
+    inbound_authoring_comments,
 )
 
 BANNED_MEMORY_CLASSES = frozenset({"discussion", "progress"})
@@ -1694,6 +1710,18 @@ class IssueStoreBackend(PlanningStoreBackend):
             updated_at=record.updated_at,
         )
 
+    def _canonical_content_from_record(self, record: Any, unit_id: str) -> str:
+        operator_content = self._extract_content(record)
+        if has_raw_yaml_frontmatter(operator_content):
+            return operator_content
+        if is_hybrid_operator_body(operator_content):
+            return canonical_content_from_operator(
+                list(record.labels),
+                operator_content,
+                unit_id=unit_id,
+            )
+        return operator_content
+
     def _extract_content(self, record: Any) -> str:
         full_body = reassemble_body(record.body, record.comments)
         if not verify_project_scope(full_body, self.project_key):
@@ -1828,6 +1856,13 @@ class IssueStoreBackend(PlanningStoreBackend):
         return updated
 
     def _lookup_record(self, unit_id: str, body_path: str, *, content: str | None = None) -> Any:
+        for candidate in unit_id_lookup_candidates(self.root, unit_id):
+            record = self._lookup_record_candidate(candidate, body_path, content=content)
+            if record is not None:
+                return record
+        raise IssueNotFound(f"no issue for unit {unit_id}")
+
+    def _lookup_record_candidate(self, unit_id: str, body_path: str, *, content: str | None = None) -> Any | None:
         idx_key = issue_index_key(self.project_key, unit_id)
         issue_id = self._index.get(idx_key)
         if issue_id:
@@ -1853,13 +1888,29 @@ class IssueStoreBackend(PlanningStoreBackend):
                 search_kwargs["artifact_type"] = content_type
         matches = self._client.issue_search(**search_kwargs)
         if not matches:
-            raise IssueNotFound(f"no issue for unit {unit_id}")
+            return None
         record = matches[0]
         self._index[idx_key] = record.id
         save_issue_unit_index(self.root, self._index)
+        self._register_native_unit_alias(unit_id, record)
         return self._maybe_backfill_labels(record, unit_id)
 
+
+    def _register_native_unit_alias(self, caller_unit_id: str, record: Any) -> None:
+        """R19 — index namespaced native ids and legacy compatibility aliases."""
+        native_id = format_native_unit_id(self.issues_provider, int(record.number))
+        if is_namespaced_native_unit_id(caller_unit_id):
+            canonical = caller_unit_id
+        else:
+            canonical = native_id
+            register_legacy_unit_mapping(self.root, caller_unit_id, native_id)
+        self._index[issue_index_key(self.project_key, canonical)] = record.id
+        if caller_unit_id != canonical:
+            self._index[issue_index_key(self.project_key, caller_unit_id)] = record.id
+        save_issue_unit_index(self.root, self._index)
+
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
+        reject_bare_integer_unit_id(unit_id)
         self._guard_write_visibility(unit_id, body_path, content)
         self._guard_write_secrets(content, path_hint=body_path)
         existing: Any | None
@@ -1872,7 +1923,8 @@ class IssueStoreBackend(PlanningStoreBackend):
         )
         title = self._issue_title(artifact_type, unit_id, content)
         labels = self._labels_for(artifact_type, unit_id, content)
-        body = compose_issue_body(self.project_key, artifact_type, unit_id, content)
+        store_content = operator_body_from_canonical(content) if has_raw_yaml_frontmatter(content) else content
+        body = compose_issue_body(self.project_key, artifact_type, unit_id, store_content)
         body, extra_comments = chunk_body_if_needed(body, [], provider=self.issues_provider)
         idx_key = issue_index_key(self.project_key, unit_id)
         chunked = bool(extra_comments)
@@ -1917,6 +1969,7 @@ class IssueStoreBackend(PlanningStoreBackend):
         # issue instead of minting a duplicate (idempotent resume).
         self._index[idx_key] = record.id
         save_issue_unit_index(self.root, self._index)
+        self._register_native_unit_alias(unit_id, record)
         if chunked:
             self._journal[idx_key] = {
                 "unitId": unit_id,
@@ -1982,7 +2035,7 @@ class IssueStoreBackend(PlanningStoreBackend):
         except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
             handle_issue_client_error(exc)
         self._verify_frozen_integrity(record)
-        content = self._extract_content(record)
+        content = self._canonical_content_from_record(record, unit_id)
         digest = canonical_hash(self._record_to_snapshot(record))
         log_operation("get", unit_id, body_path, content, self.backend_id)
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=digest)
@@ -2014,7 +2067,7 @@ class IssueStoreBackend(PlanningStoreBackend):
             fail("issue-not-found", code="not-found", unitId=unit_id)
         except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
             handle_issue_client_error(exc)
-        self._guard_write_visibility(unit_id, body_path, self._extract_content(record))
+        self._guard_write_visibility(unit_id, body_path, self._canonical_content_from_record(record, unit_id))
         if FROZEN_LABEL in record.labels:
             fail("already-frozen", code="already-frozen", unitId=unit_id)
         try:
@@ -2097,7 +2150,7 @@ class IssueStoreBackend(PlanningStoreBackend):
         except IssueNotFound:
             fail("brainstorm-issue-missing", code="brainstorm-missing")
         edges = [{"rel": "spawned", "target": prd_unit_id, "targetType": "prd"}]
-        raw_content = strip_markers_and_edges(reassemble_body(brainstorm.body, brainstorm.comments))
+        raw_content = self._canonical_content_from_record(brainstorm, brainstorm_unit_id)
         self._guard_write_visibility(brainstorm_unit_id, f"docs/brainstorms/{brainstorm_unit_id}.md", raw_content)
         self._guard_write_secrets(raw_content, path_hint=f"docs/brainstorms/{brainstorm_unit_id}.md")
         body = compose_issue_body(
@@ -3377,6 +3430,55 @@ def tracked_planning_body_paths(root: Path) -> list[str]:
     return sorted(line.strip() for line in proc.stdout.splitlines() if line.strip())
 
 
+def _porcelain_path(line: str) -> str | None:
+    line = line.rstrip("\n")
+    if len(line) < 4:
+        return None
+    return line[3:].strip() or None
+
+
+def _is_planning_body_mutation_line(line: str) -> bool:
+    """True for staged/committed/worktree mutations — not untracked-only (??)."""
+    if len(line) < 4:
+        return False
+    if line.startswith("??"):
+        return False
+    index_status, worktree_status = line[0], line[1]
+    return index_status != " " or worktree_status != " "
+
+
+def planning_body_porcelain_paths(root: Path) -> list[str]:
+    """Return banned-prefix paths with dirty/staged mutations (PRD 061 R3a)."""
+    proc = subprocess.run(
+        ["git", "-C", str(root), "status", "--porcelain", "--", *PLANNING_BODY_SCAN_PREFIXES],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return []
+    paths: list[str] = []
+    for line in proc.stdout.splitlines():
+        if not _is_planning_body_mutation_line(line):
+            continue
+        path = _porcelain_path(line)
+        if path and not path.endswith("/"):
+            paths.append(path)
+    return sorted(set(paths))
+
+
+def classify_banned_repo_paths(root: Path) -> dict[str, list[str]]:
+    """Classify code-repo banned paths: legacy-tracked vs newly-written (PRD 061 R3a)."""
+    tracked = tracked_planning_body_paths(root)
+    porcelain = planning_body_porcelain_paths(root)
+    newly_written = sorted(set(porcelain))
+    legacy = sorted(path for path in tracked if path not in newly_written)
+    return {
+        "legacy-tracked-pending-cleanup": legacy,
+        "newly-written": newly_written,
+    }
+
+
 def doctor_separate_project_local_writes(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     from planning_artifact_handle import issue_store_separate_project_effective
 
@@ -3387,20 +3489,699 @@ def doctor_separate_project_local_writes(root: Path, cfg: dict[str, Any]) -> dic
             "skipped": True,
             "reason": "not-separate-project-issue-store",
         }
-    stray = tracked_planning_body_paths(root)
-    if stray:
+    classified = classify_banned_repo_paths(root)
+    newly_written = classified["newly-written"]
+    legacy = classified["legacy-tracked-pending-cleanup"]
+    if newly_written:
         return {
             "verdict": "fail",
             "action": "doctor",
             "halt": "local-planning-body-drift",
-            "error": "tracked planning-body files present in code repo under separate-project issue-store",
-            "paths": stray,
+            "error": "newly-written planning-body paths present in code repo under separate-project issue-store",
+            "paths": newly_written,
+            "classification": "newly-written",
             "remediation": (
-                "remove tracked docs/brainstorms and docs/prds bodies from the code repo; "
-                "authoring lives in the planning-project issue store"
+                "revert or remove newly-written docs/brainstorms and docs/prds mutations; "
+                "run planning_store cleanup for legacy tracked bodies"
             ),
         }
-    return {"verdict": "pass", "action": "doctor", "checks": ["no-tracked-planning-bodies"]}
+    checks = ["no-newly-written-planning-bodies"]
+    result: dict[str, Any] = {"verdict": "pass", "action": "doctor", "checks": checks}
+    if legacy:
+        result["legacyPendingCleanup"] = legacy
+        result["counts"] = {"legacy-tracked-pending-cleanup": len(legacy)}
+    else:
+        checks.append("no-tracked-planning-bodies")
+    return result
+
+
+def cleanup_separate_project_local_writes(root: Path, cfg: dict[str, Any], *, apply: bool = False) -> dict[str, Any]:
+    """PRD 061 R3a — untrack legacy banned planning bodies in the code repo (idempotent)."""
+    from planning_artifact_handle import issue_store_separate_project_effective
+
+    if not issue_store_separate_project_effective(root, cfg):
+        return {
+            "verdict": "ok",
+            "action": "cleanup",
+            "skipped": True,
+            "reason": "not-separate-project-issue-store",
+        }
+    classified = classify_banned_repo_paths(root)
+    legacy = classified["legacy-tracked-pending-cleanup"]
+    newly_written = classified["newly-written"]
+    applied: list[str] = []
+    if apply and legacy:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "rm", "--cached", "-f", "--", *legacy],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            return {
+                "verdict": "fail",
+                "action": "cleanup",
+                "error": "git-rm-cached-failed",
+                "stderr": proc.stderr.strip(),
+                "legacy": legacy,
+            }
+        applied = list(legacy)
+    return {
+        "verdict": "ok",
+        "action": "cleanup",
+        "dryRun": not apply,
+        "counts": {
+            "legacy-tracked-pending-cleanup": len(legacy),
+            "newly-written": len(newly_written),
+        },
+        "legacy": legacy,
+        "newlyWritten": newly_written,
+        "applied": applied,
+    }
+
+
+def refuse_banned_living_doc_write(root: Path, *, action: str) -> dict[str, Any] | None:
+    """PRD 061 R3 — fail closed when living-doc file writes are banned under issue-store."""
+    from wave_living_docs import living_doc_write_banned
+
+    if not living_doc_write_banned(root):
+        return None
+    return {
+        "verdict": "fail",
+        "action": action,
+        "halt": "banned-living-doc-write",
+        "error": "living-doc file writes banned under issue-store",
+        "remediation": "route through wave_living_docs facade helpers or planning_store facade",
+    }
+
+
+
+def backfill_frontmatter_hybrid(root: Path, cfg: dict[str, Any], *, apply: bool = False) -> dict[str, Any]:
+    """PRD 061 R21 -- idempotent lazy migrate/backfill for YAML-embedded issues."""
+    backend = get_backend(root, cfg)
+    if backend.backend_id != "issue-store":
+        return {
+            "verdict": "ok",
+            "action": "backfill-frontmatter",
+            "skipped": True,
+            "reason": "issue-store-only",
+            "counts": {"migrated": 0, "skipped": 0, "failed": 0},
+        }
+    migrated = 0
+    skipped = 0
+    failed = 0
+    details: list[dict[str, Any]] = []
+    index = load_issue_unit_index(root)
+    for idx_key, issue_id in sorted(index.items()):
+        unit_id = idx_key.split(":", 1)[-1]
+        body_path = f"docs/planning/gap/{unit_id}/{unit_id}.md"
+        try:
+            record = backend._lookup_record(unit_id, body_path)  # type: ignore[attr-defined]
+        except Exception as exc:  # noqa: BLE001
+            failed += 1
+            details.append({"unitId": unit_id, "verdict": "failed", "error": str(exc)})
+            continue
+        raw = strip_markers_and_edges(reassemble_body(record.body, record.comments))
+        if not has_raw_yaml_frontmatter(raw):
+            skipped += 1
+            details.append({"unitId": unit_id, "verdict": "skipped"})
+            continue
+        if apply:
+            try:
+                backend.put(unit_id, body_path, raw)
+            except Exception as exc:  # noqa: BLE001
+                failed += 1
+                details.append({"unitId": unit_id, "verdict": "failed", "error": str(exc)})
+                continue
+        migrated += 1
+        details.append({"unitId": unit_id, "verdict": "migrated" if apply else "would-migrate"})
+    return {
+        "verdict": "ok",
+        "action": "backfill-frontmatter",
+        "dryRun": not apply,
+        "counts": {"migrated": migrated, "skipped": skipped, "failed": failed},
+        "details": details,
+    }
+
+
+def doctor(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Aggregate issue-store hygiene checks (PRD 061 R3)."""
+    checks: list[str] = []
+    skipped_reasons: list[str] = []
+
+    sep = doctor_separate_project_local_writes(root, cfg)
+    if sep.get("verdict") == "fail":
+        return sep
+    if sep.get("skipped"):
+        skipped_reasons.append(str(sep.get("reason") or "separate-project-skipped"))
+    else:
+        checks.extend(sep.get("checks", []))
+
+    from wave_living_docs import doctor_banned_living_path_drift
+
+    banned = doctor_banned_living_path_drift(root)
+    if banned.get("verdict") == "fail":
+        return banned
+    if banned.get("skipped"):
+        skipped_reasons.append("not-issue-store")
+    else:
+        checks.extend(banned.get("checks", []))
+
+    from planning_github_projects_v2 import projection_health
+
+    projection = projection_health(root, cfg)
+    if not projection.get("skipped"):
+        checks.append(f"projection-state:{projection.get('state', 'unknown')}")
+        if projection.get("state") == "projection-unavailable":
+            checks.append("projection-unavailable")
+
+    if not checks and skipped_reasons:
+        return {
+            "verdict": "pass",
+            "action": "doctor",
+            "skipped": True,
+            "reason": "; ".join(skipped_reasons),
+        }
+    return {"verdict": "pass", "action": "doctor", "checks": checks, "projection": projection}
+
+
+
+def projection_refresh(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    dry_run: bool = False,
+    items: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Facade entry for GitHub Projects v2 operator projection (PRD 061 R11)."""
+    from planning_github_projects_v2 import refresh_projection, sample_projection_items
+
+    payload = items if items is not None else sample_projection_items(root, cfg)
+    return refresh_projection(root, cfg, dry_run=dry_run, items=payload)
+
+
+_PROGRESS_FACADE_NOTICE_EMITTED = False
+ORPHAN_MIGRATED_LABEL = "sw:phase-orphan-migrated"
+
+
+def _emit_progress_update_notice(notice: str, message: str) -> None:
+    global _PROGRESS_FACADE_NOTICE_EMITTED
+    if _PROGRESS_FACADE_NOTICE_EMITTED:
+        return
+    _PROGRESS_FACADE_NOTICE_EMITTED = True
+    print(json.dumps({"verdict": "notice", "notice": notice, "message": message}), file=sys.stderr)
+
+
+def _replace_checkbox_block(body: str, checkbox_block: str) -> str:
+    marker = "## Phase checklist (body-encoded fallback)"
+    if marker in body:
+        start = body.index(marker)
+        end = body.find("\n```sw-edges", start)
+        if end == -1:
+            end = len(body)
+        else:
+            end = body.find("\n```", end + 1)
+            end = end + 4 if end != -1 else len(body)
+        return body[:start] + checkbox_block + body[end:]
+    return body + "\n\n" + checkbox_block
+
+
+def progress_update(
+    root: Path,
+    *,
+    parent_issue_id: str,
+    phase_id: str,
+    action: str = "phase-done",
+    provider: str | None = None,
+    project_key: str | None = None,
+    task_list: str | Path | None = None,
+    checked_phase_ids: list[str] | None = None,
+    task_ref: str | None = None,
+) -> dict[str, Any]:
+    """Facade progress_update — parent labels/checkboxes without phase peer mint (PRD 061 R6–R8)."""
+    from planning_hierarchy import build_checkbox_phase_block, parse_task_list_phases
+    from planning_progress import phase_done_label
+
+    cfg = load_workflow_config(root)
+    backend = resolve_effective_backend(root, cfg)
+    if backend.get("effective") != "issue-store":
+        return {"verdict": "ok", "skipped": True, "reason": "file-store"}
+
+    resolved_provider = provider
+    if not resolved_provider:
+        resolved_provider = str(resolve_issues_provider(cfg).get("provider") or "none")
+    resolved_project_key = project_key
+    if not resolved_project_key:
+        pk = validate_project_key(root, cfg)
+        if pk.get("verdict") != "ok":
+            return pk
+        resolved_project_key = str(pk["projectKey"])
+
+    client = IssuesClient(root, resolved_provider)
+    done_label = phase_done_label(str(phase_id))
+    try:
+        current = client.issue_get(str(parent_issue_id))
+    except Exception as exc:  # noqa: BLE001
+        _emit_progress_update_notice("progress-update-degraded", str(exc))
+        return {
+            "verdict": "ok",
+            "degraded": True,
+            "notice": "progress-update-degraded",
+            "error": str(exc),
+            "phaseId": phase_id,
+            "issueId": parent_issue_id,
+        }
+
+    labels = list(current.labels)
+    new_labels = labels
+    body = current.body
+    if action == "phase-done":
+        if done_label in labels:
+            return {
+                "verdict": "ok",
+                "idempotent": True,
+                "phaseId": phase_id,
+                "issueId": parent_issue_id,
+                "label": done_label,
+            }
+        new_labels = sorted(set(labels) | {done_label})
+        if task_list:
+            task_path = Path(task_list)
+            if not task_path.is_absolute():
+                task_path = (root / task_list).resolve()
+            if task_path.is_file():
+                phases = parse_task_list_phases(task_path)
+                checked = list(checked_phase_ids or [])
+                checkbox_block = build_checkbox_phase_block(phases, checked)
+                body = _replace_checkbox_block(body, checkbox_block)
+    elif action == "task-checkbox" and task_list:
+        task_path = Path(task_list)
+        if not task_path.is_absolute():
+            task_path = (root / task_list).resolve()
+        if task_path.is_file():
+            import doc_format
+
+            section = doc_format.phase_section_text(task_path.read_text(encoding="utf-8"), str(phase_id)).strip()
+            if section:
+                from planning_canonical import compose_issue_body
+
+                record_unit = str(getattr(current, "unit_id", "") or "")
+                if record_unit.endswith(f"-phase-{phase_id}"):
+                    body = compose_issue_body(resolved_project_key, "tasks", record_unit, section)
+                else:
+                    marker = f"### {phase_id}."
+                    if marker in body:
+                        start = body.index(marker)
+                        nxt = body.find("\n### ", start + 1)
+                        end = nxt if nxt != -1 else len(body)
+                        body = body[:start] + section + "\n" + body[end:]
+                    else:
+                        body = body.rstrip() + "\n\n" + section + "\n"
+
+    try:
+        if new_labels != labels:
+            client.issue_label(str(parent_issue_id), new_labels, if_match=current.etag)
+            current = client.issue_get(str(parent_issue_id))
+        if body != current.body:
+            client.issue_update(str(parent_issue_id), body=body, if_match=current.etag)
+        out: dict[str, Any] = {
+            "verdict": "ok",
+            "synced": True,
+            "phaseId": phase_id,
+            "issueId": parent_issue_id,
+            "action": action,
+        }
+        if action == "phase-done":
+            out["label"] = done_label
+        if task_ref:
+            out["taskRef"] = task_ref
+        return out
+    except Exception as exc:  # noqa: BLE001
+        _emit_progress_update_notice("progress-update-degraded", str(exc))
+        out = {
+            "verdict": "ok",
+            "degraded": True,
+            "notice": "progress-update-degraded",
+            "phaseId": phase_id,
+            "issueId": parent_issue_id,
+            "error": str(exc),
+        }
+        if task_ref:
+            out["taskRef"] = task_ref
+        return out
+
+
+def migrate_orphan_phase_issues(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+    *,
+    tasks_unit_id: str | None = None,
+    dry_run: bool = True,
+) -> dict[str, Any]:
+    """Close/relabel pre-061 minted phase peer issues; idempotent (PRD 061 R8a)."""
+    cfg = cfg or load_workflow_config(root)
+    if resolve_effective_backend(root, cfg).get("effective") != "issue-store":
+        return {"verdict": "ok", "skipped": True, "reason": "file-store"}
+    pk = validate_project_key(root, cfg)
+    if pk.get("verdict") != "ok":
+        return pk
+    project_key = str(pk["projectKey"])
+    provider = str(resolve_issues_provider(cfg).get("provider") or "none")
+    client = IssuesClient(root, provider)
+    search = getattr(client, "issue_search", None)
+    if not callable(search):
+        return {"verdict": "ok", "skipped": True, "reason": "issue-search-unavailable"}
+
+    migrated: list[dict[str, str]] = []
+    skipped: list[dict[str, str]] = []
+    prefix = f"{tasks_unit_id}-phase-" if tasks_unit_id else None
+    for record in search(project_key=project_key, artifact_type="tasks"):
+        unit_id = str(getattr(record, "unit_id", "") or "")
+        if prefix and not unit_id.startswith(prefix):
+            continue
+        if not prefix and "-phase-" not in unit_id:
+            continue
+        labels = list(getattr(record, "labels", []))
+        if ORPHAN_MIGRATED_LABEL in labels:
+            skipped.append({"unitId": unit_id, "reason": "already-migrated"})
+            continue
+        issue_id = str(getattr(record, "id", "") or "")
+        if dry_run:
+            migrated.append({"unitId": unit_id, "issueId": issue_id, "dryRun": True})
+            continue
+        new_labels = sorted(set(labels) | {ORPHAN_MIGRATED_LABEL})
+        try:
+            client.issue_label(issue_id, new_labels, if_match=getattr(record, "etag", None))
+            if getattr(record, "state", "open") == "open":
+                client.issue_update(issue_id, state="closed")
+            migrated.append({"unitId": unit_id, "issueId": issue_id})
+        except Exception as exc:  # noqa: BLE001
+            skipped.append({"unitId": unit_id, "reason": str(exc)})
+    return {
+        "verdict": "ok",
+        "action": "migrate-orphan-phase-issues",
+        "dryRun": dry_run,
+        "migrated": migrated,
+        "skipped": skipped,
+        "count": len(migrated),
+    }
+
+
+
+def native_unit_id_prefix(provider: str) -> str:
+    return NATIVE_UNIT_ID_PREFIX.get(provider, f"{provider}:")
+
+
+def format_native_unit_id(provider: str, issue_number: int) -> str:
+    """R19 — namespaced provider-native unit id (e.g. gh:352)."""
+    return f"{native_unit_id_prefix(provider)}{issue_number}"
+
+
+def is_namespaced_native_unit_id(unit_id: str) -> bool:
+    return bool(NATIVE_UNIT_ID_PATTERN.match((unit_id or "").strip()))
+
+
+def is_bare_integer_unit_id(unit_id: str) -> bool:
+    """Detect bare PRD numbers like 061 that collide with sequential ids (R19)."""
+    return bool(BARE_INTEGER_UNIT_ID.match((unit_id or "").strip()))
+
+
+def reject_bare_integer_unit_id(unit_id: str) -> None:
+    if is_bare_integer_unit_id(unit_id):
+        fail(
+            "bare-integer-unit-id-collision",
+            code="bare-integer-unit-id",
+            unitId=unit_id,
+        )
+
+
+def load_legacy_unit_map(root: Path) -> dict[str, str]:
+    path = root / LEGACY_UNIT_MAP_PATH
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    mapping = data.get("legacyToNative") if isinstance(data, dict) else None
+    if not isinstance(mapping, dict):
+        return {}
+    return {str(k): str(v) for k, v in mapping.items() if isinstance(k, str) and isinstance(v, str)}
+
+
+def save_legacy_unit_map(root: Path, mapping: dict[str, str]) -> None:
+    path = root / LEGACY_UNIT_MAP_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "version": 1,
+        "legacyToNative": dict(sorted(mapping.items())),
+        "nativeToLegacy": {v: k for k, v in sorted(mapping.items())},
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def register_legacy_unit_mapping(root: Path, legacy_id: str, native_id: str) -> None:
+    if not legacy_id or not native_id or legacy_id == native_id:
+        return
+    mapping = load_legacy_unit_map(root)
+    mapping[legacy_id] = native_id
+    save_legacy_unit_map(root, mapping)
+
+
+def resolve_legacy_unit_id(root: Path, unit_id: str) -> str | None:
+    return load_legacy_unit_map(root).get(unit_id)
+
+
+def reverse_resolve_legacy_unit_id(root: Path, native_id: str) -> str | None:
+    for legacy, native in load_legacy_unit_map(root).items():
+        if native == native_id:
+            return legacy
+    return None
+
+
+def unit_id_lookup_candidates(root: Path, unit_id: str) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for candidate in (
+        unit_id,
+        resolve_legacy_unit_id(root, unit_id),
+        reverse_resolve_legacy_unit_id(root, unit_id),
+    ):
+        if candidate and candidate not in seen:
+            seen.add(candidate)
+            ordered.append(candidate)
+    return ordered or [unit_id]
+
+
+def comment_sync(
+    root: Path,
+    *,
+    unit_id: str,
+    body_path: str,
+    consumer: str = "authoring",
+) -> dict[str, Any]:
+    """R18 — inbound provider comments for authoring/deliver consumers via facade."""
+    cfg = load_workflow_config(root)
+    backend = resolve_effective_backend(root, cfg)
+    if backend.get("effective") != "issue-store":
+        return {
+            "verdict": "ok",
+            "skipped": True,
+            "reason": "file-store",
+            "consumer": consumer,
+            "unitId": unit_id,
+        }
+    store = get_backend(root, cfg)
+    if store.backend_id != "issue-store":
+        return {
+            "verdict": "ok",
+            "skipped": True,
+            "reason": "not-issue-store",
+            "consumer": consumer,
+            "unitId": unit_id,
+        }
+    reject_bare_integer_unit_id(unit_id)
+    try:
+        record = store._lookup_record(unit_id, body_path)  # type: ignore[attr-defined]
+    except IssueNotFound:
+        return {
+            "verdict": "fail",
+            "error": "unit-not-found",
+            "consumer": consumer,
+            "unitId": unit_id,
+            "bodyPath": body_path,
+        }
+    inbound = inbound_authoring_comments(list(record.comments))
+    payload = [
+        {
+            "id": comment.id,
+            "body": comment.body,
+            "createdAt": comment.created_at,
+            "markers": list(comment.markers),
+        }
+        for comment in inbound
+    ]
+    return {
+        "verdict": "ok",
+        "action": "comment-sync",
+        "consumer": consumer,
+        "unitId": unit_id,
+        "issueId": record.id,
+        "comments": payload,
+        "count": len(payload),
+    }
+
+
+# PRD 061 R1/R2/R2a — planning-store facade contract + IssuesClient import allowlist.
+# Workflow scripts MUST route planning mutations through this module; only allowlisted
+# store/provider modules may import IssuesClient directly.
+FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
+    {"name": "put", "status": "shipped", "description": "Authoritative unit body write"},
+    {"name": "get", "status": "shipped", "description": "Canonical unit body read"},
+    {"name": "exists", "status": "shipped", "description": "Unit presence probe"},
+    {"name": "materialize", "status": "shipped", "description": "Project store body to local path"},
+    {"name": "materialize_from_store", "status": "shipped", "description": "Batch materialize for deliver"},
+    {"name": "freeze", "status": "shipped", "description": "Lock unit + freeze record"},
+    {"name": "verify_frozen_hash", "status": "shipped", "description": "Tamper check for frozen units"},
+    {"name": "link_brainstorm_prd", "status": "shipped", "description": "Durability edge between brainstorm and PRD"},
+    {"name": "close_delivery_units", "status": "shipped", "description": "Deliver closure hooks for planning units"},
+    {"name": "doctor", "status": "shipped", "description": "Fail-closed hygiene for separate-project drift"},
+    {"name": "cleanup", "status": "shipped", "description": "Idempotent legacy planning-body untrack under separate-project"},
+    {"name": "derive_unit_status", "status": "shipped", "description": "Unified status from store evidence"},
+    {"name": "progress_update", "status": "shipped", "description": "Semantic phase/task progress without ad hoc issue_create"},
+    {"name": "comment_sync", "status": "shipped", "description": "Inbound/outbound provider comment sync"},
+    {"name": "projection_refresh", "status": "shipped", "description": "Rebuild operator projection (Projects v2, hierarchy)"},
+)
+
+ISSUES_CLIENT_ALLOWLIST = frozenset({
+    "scripts/planning_store.py",
+    "scripts/issues_lib.py",
+    "scripts/planning_github_client.py",
+    "scripts/planning_gitlab_client.py",
+    "scripts/planning_jira_client.py",
+    "scripts/planning_github_projects_v2.py",
+    "scripts/planning_migrate_issue_store.py",
+})
+
+FACADE_WORKFLOW_SCAN_GLOB = "scripts/*.py"
+
+FACADE_BYPASS_BASELINE = frozenset({
+    "scripts/planning_discover.py",
+    "scripts/planning_scheduler.py",
+    "scripts/planning_unit_status.py",
+})
+
+_ISSUES_CLIENT_IMPORT_ROOTS = frozenset({"issues_lib"})
+
+
+def facade_surface() -> dict[str, Any]:
+    shipped = [op["name"] for op in FACADE_OPERATIONS if op["status"] == "shipped"]
+    planned = [op["name"] for op in FACADE_OPERATIONS if op["status"] == "planned"]
+    return {
+        "verdict": "ok",
+        "action": "list-facade",
+        "operations": list(FACADE_OPERATIONS),
+        "shipped": shipped,
+        "planned": planned,
+        "allowlist": sorted(ISSUES_CLIENT_ALLOWLIST),
+        "workflowScan": FACADE_WORKFLOW_SCAN_GLOB,
+        "bypassBaseline": sorted(FACADE_BYPASS_BASELINE),
+    }
+
+
+def _rel_script_path(root: Path, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _imports_issues_client(path: Path) -> list[int]:
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (OSError, SyntaxError):
+        return []
+    lines: list[int] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                root_name = alias.name.split(".")[0]
+                if root_name in _ISSUES_CLIENT_IMPORT_ROOTS or alias.name == "IssuesClient":
+                    lines.append(node.lineno)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            root_name = node.module.split(".")[0]
+            imported = {alias.name for alias in node.names}
+            if root_name in _ISSUES_CLIENT_IMPORT_ROOTS or "IssuesClient" in imported:
+                lines.append(node.lineno)
+    return sorted(set(lines))
+
+
+def scan_facade_import_violations(root: Path, *, extra_paths: list[Path] | None = None) -> list[dict[str, Any]]:
+    violations: list[dict[str, Any]] = []
+    candidates: list[Path] = []
+    if extra_paths:
+        candidates.extend(extra_paths)
+    else:
+        candidates.extend(sorted(root.glob(FACADE_WORKFLOW_SCAN_GLOB)))
+    for script in candidates:
+        if not script.is_file() or script.suffix != ".py":
+            continue
+        rel = _rel_script_path(root, script)
+        if rel in ISSUES_CLIENT_ALLOWLIST:
+            continue
+        hit_lines = _imports_issues_client(script)
+        if hit_lines:
+            violations.append({"path": rel, "lines": hit_lines})
+    return sorted(violations, key=lambda row: row["path"])
+
+
+def lint_facade_imports(root: Path, *, scope: str | None = None) -> dict[str, Any]:
+    if scope:
+        target = Path(scope)
+        if not target.is_absolute():
+            target = root / target
+        violations = scan_facade_import_violations(root, extra_paths=[target])
+        rel = _rel_script_path(root, target)
+        allowed = rel in ISSUES_CLIENT_ALLOWLIST
+        if allowed and not violations:
+            return {
+                "verdict": "pass",
+                "action": "lint-facade-imports",
+                "path": rel,
+                "allowed": True,
+                "violations": [],
+            }
+        if violations:
+            return {
+                "verdict": "fail",
+                "action": "lint-facade-imports",
+                "path": rel,
+                "allowed": allowed,
+                "error": "issues-client-import-outside-allowlist",
+                "violations": violations,
+            }
+        return {
+            "verdict": "pass",
+            "action": "lint-facade-imports",
+            "path": rel,
+            "allowed": allowed,
+            "violations": [],
+        }
+
+    violations = scan_facade_import_violations(root)
+    result: dict[str, Any] = {
+        "verdict": "pass" if not violations else "fail",
+        "action": "lint-facade-imports",
+        "allowlist": sorted(ISSUES_CLIENT_ALLOWLIST),
+        "violations": violations,
+        "bypassBaseline": sorted(FACADE_BYPASS_BASELINE),
+    }
+    if violations:
+        found = {row["path"] for row in violations}
+        result["error"] = "issues-client-import-outside-allowlist"
+        result["baselineMissing"] = sorted(FACADE_BYPASS_BASELINE - found)
+        result["unexpected"] = sorted(found - FACADE_BYPASS_BASELINE - ISSUES_CLIENT_ALLOWLIST)
+    return result
 
 
 def _require(args: list[str], flag: str) -> str:
@@ -3419,6 +4200,171 @@ def _optional(args: list[str], flag: str) -> str | None:
     return args[idx + 1] if idx + 1 < len(args) else None
 
 
+
+PRD_061_DEPENDS_TARGET = "061-prd-planning-store-interface-architecture"
+GAP_PREREQ_NUMBERS = frozenset({"078", "079"})
+ABSORB_GAP_NUMBERS = frozenset({"077", "104", "109"})
+PRD_060_GAP_ABSORB_DENY = frozenset({"081", "096", "099", "100", "105", "112"})
+
+
+def _gap_number_from_unit_id(unit_id: str) -> str | None:
+    m = re.match(r"^gap-(\d{3})", unit_id, re.I)
+    return m.group(1) if m else None
+
+
+def _parse_depends_list(raw: str) -> list[str]:
+    return _parse_absorbs_targets(raw or "")
+
+
+def _depends_includes_061(depends: list[str]) -> bool:
+    for item in depends:
+        lowered = item.lower()
+        if lowered in {"061", PRD_061_DEPENDS_TARGET.lower()}:
+            return True
+        if lowered.startswith("061-") or lowered.startswith("prd-061"):
+            return True
+    return False
+
+
+def _merge_depends_frontmatter(content: str, target: str) -> tuple[str, bool]:
+    pmis = _migrate_issue_store()
+    fm = pmis.parse_frontmatter_fields(content)
+    body = content
+    if content.startswith("---"):
+        end = content.find("\n---", 3)
+        if end != -1:
+            body = content[end + 4 :].lstrip("\n")
+    depends = _parse_depends_list(fm.get("depends", ""))
+    if _depends_includes_061(depends):
+        return content, False
+    depends.append(target)
+    lines = ["---"]
+    for key, value in fm.items():
+        if key == "depends":
+            continue
+        lines.append(f"{key}: {value}")
+    lines.append("depends: [" + ", ".join(depends) + "]")
+    lines.append("---")
+    return "\n".join(lines) + "\n" + body.lstrip("\n"), True
+
+
+def gate_prd_060_r1_r7(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    from planning_canonical import ARTIFACT_TYPE_UNRESOLVED, infer_artifact_type
+
+    checks: list[dict[str, str]] = []
+    ok = True
+    if infer_artifact_type("issue:42") != ARTIFACT_TYPE_UNRESOLVED:
+        checks.append({"check": "infer-artifact-type-opaque", "status": "fail"})
+        ok = False
+    else:
+        checks.append({"check": "infer-artifact-type-opaque", "status": "ok"})
+    if not callable(close_delivery_units):
+        checks.append({"check": "close-delivery-units-present", "status": "fail"})
+        ok = False
+    else:
+        checks.append({"check": "close-delivery-units-present", "status": "ok"})
+    pmis = _migrate_issue_store()
+    if not pmis.issue_store_effective(root, cfg):
+        checks.append({"check": "issue-store-effective", "status": "skipped"})
+    return {"verdict": "pass" if ok else "fail", "action": "rollout-after-060-r1-r7", "checks": checks}
+
+
+def write_back_gap_prereqs_061(root: Path, cfg: dict[str, Any], *, dry_run: bool = False) -> dict[str, Any]:
+    pmis = _migrate_issue_store()
+    if not pmis.issue_store_effective(root, cfg):
+        return {"verdict": "skipped", "action": "write-back-gap-prereqs", "reason": "not-issue-store"}
+    gate = gate_prd_060_r1_r7(root, cfg)
+    if gate.get("verdict") != "pass":
+        return {
+            "verdict": "fail",
+            "action": "write-back-gap-prereqs",
+            "error": "prd-060-gate",
+            "gate": gate,
+        }
+    backend = get_backend(root, cfg, override="issue-store")
+    if not isinstance(backend, IssueStoreBackend):
+        return {"verdict": "fail", "action": "write-back-gap-prereqs", "error": "issue-store-backend-required"}
+    results: list[dict[str, Any]] = []
+    for record in pmis.list_gap_issue_records(root, cfg):
+        unit_id = str(getattr(record, "unit_id", "") or "")
+        num = _gap_number_from_unit_id(unit_id)
+        if num not in GAP_PREREQ_NUMBERS:
+            continue
+        body_path = _default_body_path(unit_id, "gap")
+        fetched = backend.get(unit_id, body_path)
+        if fetched.verdict != "ok" or not fetched.content:
+            results.append({"unitId": unit_id, "verdict": "fail", "error": "missing-content"})
+            continue
+        new_content, changed = _merge_depends_frontmatter(fetched.content, PRD_061_DEPENDS_TARGET)
+        if not changed:
+            results.append({"unitId": unit_id, "verdict": "ok", "skipped": True, "reason": "depends-present"})
+            continue
+        if dry_run:
+            results.append({"unitId": unit_id, "verdict": "dry-run", "wouldUpdate": True})
+            continue
+        put_result = backend.put(unit_id, body_path, new_content)
+        pmis.sync_gap_issue_labels(root, unit_id, new_content, cfg)
+        results.append({"unitId": unit_id, "verdict": put_result.verdict, "hash": put_result.hash})
+    if not results:
+        return {"verdict": "ok", "action": "write-back-gap-prereqs", "dryRun": dry_run, "results": [], "note": "no-gap-078-079"}
+    ok = all(r.get("verdict") in {"ok", "dry-run"} or r.get("skipped") for r in results)
+    return {"verdict": "ok" if ok else "partial", "action": "write-back-gap-prereqs", "dryRun": dry_run, "results": results}
+
+
+def resolve_absorbed_gaps_061(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    dry_run: bool = False,
+    force: bool = False,
+    unit_id: str | None = None,
+) -> dict[str, Any]:
+    pmis = _migrate_issue_store()
+    if not pmis.issue_store_effective(root, cfg):
+        return {"verdict": "skipped", "action": "resolve-absorbed-gaps-061", "reason": "not-issue-store"}
+    if unit_id:
+        num = _gap_number_from_unit_id(unit_id)
+        if num in PRD_060_GAP_ABSORB_DENY:
+            return {
+                "verdict": "fail",
+                "action": "resolve-absorbed-gaps-061",
+                "error": "prd-060-gap-denylist",
+                "unitId": unit_id,
+            }
+        targets = [unit_id]
+    else:
+        targets = []
+        for record in pmis.list_gap_issue_records(root, cfg):
+            uid = str(getattr(record, "unit_id", "") or "")
+            num = _gap_number_from_unit_id(uid)
+            if num in ABSORB_GAP_NUMBERS:
+                targets.append(uid)
+    gate = gate_prd_060_r1_r7(root, cfg)
+    if not force and gate.get("verdict") != "pass":
+        return {
+            "verdict": "fail",
+            "action": "resolve-absorbed-gaps-061",
+            "error": "prd-060-gate",
+            "gate": gate,
+        }
+    results: list[dict[str, Any]] = []
+    for uid in sorted(set(targets)):
+        num = _gap_number_from_unit_id(uid)
+        if num in PRD_060_GAP_ABSORB_DENY:
+            return {
+                "verdict": "fail",
+                "action": "resolve-absorbed-gaps-061",
+                "error": "prd-060-gap-denylist",
+                "unitId": uid,
+            }
+        if dry_run:
+            results.append({"unitId": uid, "verdict": "dry-run"})
+            continue
+        results.append(pmis.close_gap_issue(root, uid, cfg))
+    ok = all(r.get("verdict") in {"pass", "dry-run"} for r in results)
+    return {"verdict": "ok" if ok else "partial", "action": "resolve-absorbed-gaps-061", "dryRun": dry_run, "results": results}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Planning store interface (PRD 034 + PRD 043)")
     parser.add_argument("--root", default=".")
@@ -3426,6 +4372,8 @@ def main() -> None:
     for name in (
         "resolve-backend",
         "list-backends",
+        "list-facade",
+        "lint-facade-imports",
         "resolve-issues",
         "resolve-store-location",
         "probe-issues-token",
@@ -3447,12 +4395,26 @@ def main() -> None:
         "clear-issue-fixture",
         "close-delivery-units",
         "doctor",
+        "cleanup",
+        "progress-update",
+        "migrate-orphan-phase-issues",
+        "projection-refresh",
+        "probe-projection",
+        "write-back-gap-prereqs",
+        "resolve-absorbed-gaps-061",
     ):
         sub.add_parser(name)
     args, rest = parser.parse_known_args()
     root = git_root(Path(args.root).resolve())
     cfg = load_workflow_config(root)
-    if args.command == "resolve-backend":
+    if args.command == "list-facade":
+        emit(facade_surface())
+    elif args.command == "lint-facade-imports":
+        scope = _optional(rest, "--path")
+        result = lint_facade_imports(root, scope=scope)
+        emit(result, 0 if result.get("verdict") == "pass" else 20)
+    elif args.command == "resolve-backend":
+
         override = _optional(rest, "--backend")
         emit(resolve_effective_backend(root, cfg, override=override))
     elif args.command == "list-backends":
@@ -3583,9 +4545,62 @@ def main() -> None:
         dry_run = "--dry-run" in rest
         result = close_delivery_units(root, cfg, _require(rest, "--prd-unit"), dry_run=dry_run)
         emit(result, 0 if result.get("verdict") in {"ready", "dry-run"} else 2)
+    elif args.command == "projection-refresh":
+        from planning_github_projects_v2 import refresh_projection, sample_projection_items
+
+        dry_run = "--dry-run" in rest
+        result = refresh_projection(root, cfg, dry_run=dry_run, items=sample_projection_items(root, cfg))
+        emit(result, 0 if result.get("verdict") == "ok" else 20)
+    elif args.command == "probe-projection":
+        from planning_github_projects_v2 import projection_health
+
+        result = projection_health(root, cfg)
+        emit(result)
+    elif args.command == "write-back-gap-prereqs":
+        dry_run = "--dry-run" in rest
+        result = write_back_gap_prereqs_061(root, cfg, dry_run=dry_run)
+        emit(result, 0 if result.get("verdict") in {"ok", "skipped"} else 20)
+    elif args.command == "resolve-absorbed-gaps-061":
+        dry_run = "--dry-run" in rest
+        force = "--force" in rest
+        unit_id = _optional(rest, "--unit-id")
+        result = resolve_absorbed_gaps_061(root, cfg, dry_run=dry_run, force=force, unit_id=unit_id)
+        emit(result, 0 if result.get("verdict") in {"ok", "skipped"} else 20)
     elif args.command == "doctor":
-        result = doctor_separate_project_local_writes(root, cfg)
+        result = doctor(root, cfg)
         emit(result, 0 if result.get("verdict") == "pass" else 20)
+
+    elif args.command == "progress-update":
+        parent = _require(rest, "--parent-issue-id")
+        phase_id = _require(rest, "--phase-id")
+        action = _optional(rest, "--action") or "phase-done"
+        provider = _optional(rest, "--provider")
+        project_key = _optional(rest, "--project-key")
+        task_list = _optional(rest, "--task-list")
+        task_ref = _optional(rest, "--task-ref")
+        checked_raw = _optional(rest, "--checked-phase-ids")
+        checked = [x.strip() for x in checked_raw.split(",") if x.strip()] if checked_raw else None
+        result = progress_update(
+            root,
+            parent_issue_id=parent,
+            phase_id=phase_id,
+            action=action,
+            provider=provider,
+            project_key=project_key,
+            task_list=task_list,
+            checked_phase_ids=checked,
+            task_ref=task_ref,
+        )
+        emit(result, 0 if result.get("verdict") == "ok" else 20)
+    elif args.command == "migrate-orphan-phase-issues":
+        unit_id = _optional(rest, "--tasks-unit-id")
+        dry_run = "--apply" not in rest
+        result = migrate_orphan_phase_issues(root, cfg, tasks_unit_id=unit_id, dry_run=dry_run)
+        emit(result, 0 if result.get("verdict") == "ok" else 20)
+    elif args.command == "cleanup":
+        apply = "--apply" in rest
+        result = cleanup_separate_project_local_writes(root, cfg, apply=apply)
+        emit(result, 0 if result.get("verdict") == "ok" else 20)
 
 
 if __name__ == "__main__":

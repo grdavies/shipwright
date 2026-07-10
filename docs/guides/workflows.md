@@ -816,3 +816,32 @@ See `docs/guides/configuration.md` (R35–R36) and `core/sw-reference/layout.md`
 ## Execute loop
 
 Per-task discipline: **red → green → tdd-gate → refactor → stage-1 review → stage-2 review** (refactor re-runs verify; `quality:none` skips structural signal). Ship adds **decision-log provenance** on the PR.
+
+## GitHub Projects v2 operator browse (PRD 061 R11b, R29a)
+
+When `planning.store.backend` is `issue-store` with `issuesProvider: github-issues`,
+Shipwright projects the semantic planning graph into a GitHub Project for product-owner
+browse. Configure `planning.store.operatorProjection.githubProjects` (`ownerLogin`,
+`projectNumber`, optional `fieldMap`, `budget`).
+
+### Required Project fields / views
+
+Map these semantic keys to Project custom fields (names are defaults; override via `fieldMap`):
+
+| Field | Answers PO question |
+| --- | --- |
+| `Absorbs` (multi) | Which gaps a PRD absorbs |
+| `Brainstorms` (relation) | Which brainstorms feed a PRD |
+| `Phases` (text/checkbox) | Task/phase completion for an in-flight PRD |
+| `Status` (single select) | Backlog vs in-flight vs done at program level |
+
+### Dogfood / fixture walkthrough
+
+1. `python3 scripts/planning_store.py probe-projection` — expect `available` with scoped token or `projection-unavailable` with loud notice (R11a).
+2. `SW_ISSUES_FIXTURE=1 python3 scripts/planning_store.py projection-refresh` — idempotent upsert in fixture mode.
+3. Open the configured GitHub Project and verify the four R11 questions without opening issue YAML bodies.
+4. `python3 scripts/planning_cutover.py projection-gate` — R29a living-doc cutover stays blocked until projection is `ready`.
+
+Living-doc operator cutover (local INDEX/COMPLETION-LOG authority) MUST NOT proceed until
+`projection-gate` reports `ready: true` (pair with `planning_cutover` committed gate).
+

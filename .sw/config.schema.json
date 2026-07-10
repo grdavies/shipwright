@@ -984,7 +984,8 @@
                 "local-synced",
                 "memory",
                 "private-repo",
-                "encryption-at-rest"
+                "encryption-at-rest",
+                "issue-store"
               ],
               "default": "in-repo-public",
               "description": "Active planning.store backend for unit bodies."
@@ -1000,6 +1001,7 @@
                 "memory",
                 "private-repo",
                 "encryption-at-rest",
+                "issue-store",
                 null
               ],
               "description": "Run-pinned backend override (PRD 034 R7)."
@@ -1047,6 +1049,100 @@
                 }
               },
               "description": "Per-provider derived-view request budget + cache TTL (PRD 046 R81/R93)."
+            },
+            "issuesProvider": {
+              "type": "string",
+              "enum": [
+                "none",
+                "github-issues",
+                "gitlab-issues",
+                "jira"
+              ],
+              "description": "Issue-backed planning provider when backend is issue-store (PRD 043)."
+            },
+            "projectKey": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "description": "Namespaced planning project key for issue-store isolation (PRD 043 R42)."
+            },
+            "storeLocation": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "same-repo",
+                    "separate-project"
+                  ]
+                },
+                "owner": {
+                  "type": "string"
+                },
+                "repo": {
+                  "type": "string"
+                }
+              }
+            },
+            "issues": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "tokenEnv": {
+                  "type": "string",
+                  "description": "Env var for issue-store token (distinct from host token)."
+                },
+                "rateLimit": {
+                  "type": "object"
+                }
+              }
+            },
+            "operatorProjection": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Operator browse projection config (PRD 061 R11/R11a).",
+              "properties": {
+                "githubProjects": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "ownerLogin": {
+                      "type": "string"
+                    },
+                    "projectNumber": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "projectId": {
+                      "type": "string"
+                    },
+                    "fieldMap": {
+                      "type": "object"
+                    },
+                    "budget": {
+                      "type": "object",
+                      "properties": {
+                        "maxCalls": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "maxPaginationDepth": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "cacheTtlSeconds": {
+                          "type": "integer",
+                          "minimum": 30
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         },
@@ -1311,22 +1407,38 @@
           "properties": {
             "json": {
               "type": "string",
-              "enum": ["compress", "path-reference", "passthrough"],
+              "enum": [
+                "compress",
+                "path-reference",
+                "passthrough"
+              ],
               "default": "compress"
             },
             "diff": {
               "type": "string",
-              "enum": ["compress", "path-reference", "passthrough"],
+              "enum": [
+                "compress",
+                "path-reference",
+                "passthrough"
+              ],
               "default": "path-reference"
             },
             "log": {
               "type": "string",
-              "enum": ["compress", "path-reference", "passthrough"],
+              "enum": [
+                "compress",
+                "path-reference",
+                "passthrough"
+              ],
               "default": "compress"
             },
             "prose": {
               "type": "string",
-              "enum": ["compress", "path-reference", "passthrough"],
+              "enum": [
+                "compress",
+                "path-reference",
+                "passthrough"
+              ],
               "default": "compress"
             }
           }

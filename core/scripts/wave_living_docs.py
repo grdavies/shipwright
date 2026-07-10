@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import planning_index_issue as pii
 import planning_paths
+from planning_artifact_handle import issue_store_is_effective
 VALID_INDEX_STATUSES = frozenset({"not-started", "in-progress", "complete"})
 TERMINAL_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
 
@@ -161,6 +162,8 @@ def _enforce_default_branch_commit_guard(
 
 
 def git_commit_living_docs(worktree: Path, prd: str, dry_run: bool, repo_root: Path | None = None) -> str | None:
+    if living_doc_write_banned(worktree):
+        return None
     top = worktree
     proc = subprocess.run(
         ["git", "-C", str(top), "status", "--porcelain", "--", *living_paths(top)],
@@ -268,6 +271,156 @@ def cmd_regenerate_index(root: Path, args: list[str]) -> None:
         )
 
 
+def living_doc_write_banned(root: Path) -> bool:
+    """PRD 061 R3: ban tracked living-doc writes when issue-store is effective."""
+    return issue_store_is_effective(root)
+
+
+def _completion_events_cache_path(root: Path) -> Path:
+    return root / ".cursor" / "hooks" / "state" / "planning-completion-events.json"
+
+
+def append_completion_store_event(
+    root: Path,
+    *,
+    prd_id: str,
+    unit_id: str,
+    status: str,
+    evidence: dict[str, object] | None = None,
+) -> dict[str, object]:
+    """PRD 061 R5: append completion as a store event (not COMPLETION-LOG file)."""
+    from host_lib import load_workflow_config
+    from planning_store import get_backend
+
+    event = {
+        "prd_id": prd_id,
+        "unit_id": unit_id,
+        "status": status,
+        "evidence": evidence or {},
+    }
+    cache = _completion_events_cache_path(root)
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    events: list[dict] = []
+    if cache.is_file():
+        events = json.loads(cache.read_text(encoding="utf-8"))
+    events.append(event)
+    cache.write_text(json.dumps(events, indent=2) + "\n", encoding="utf-8")
+
+    worktree = planning_paths.git_root(root)
+    cfg = load_workflow_config(worktree)
+    backend = get_backend(worktree, cfg)
+    backend.put(
+        "planning-completion-log",
+        ".cursor/hooks/state/planning-completion-events.json",
+        json.dumps({"events": events}, indent=2) + "\n",
+    )
+    return {"verdict": "stored", "action": "completion-store-event", "event_count": len(events)}
+
+
+def read_completion_evidence(root: Path, prd_id: str) -> dict[str, object] | None:
+    """PRD 061 R4/R5: read completion evidence from store cache under issue-store."""
+    if not living_doc_write_banned(root):
+        return None
+    cache = _completion_events_cache_path(root)
+    if not cache.is_file():
+        return None
+    events = json.loads(cache.read_text(encoding="utf-8"))
+    prd = prd_id.zfill(3)
+    for ev in reversed(events):
+        if str(ev.get("prd_id", "")).zfill(3) == prd:
+            return ev
+    return None
+
+
+def read_index_status_evidence(root: Path, prd_id: str, *, slug: str | None = None) -> dict[str, object] | None:
+    """PRD 061 R4: read index status from store projection cache under issue-store."""
+    if not living_doc_write_banned(root):
+        return None
+    return pii.read_projected_index_status(root, prd_id, slug=slug)
+
+
+def facade_set_index_status(
+    root: Path,
+    prd: str,
+    status: str,
+    *,
+    slug: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, object]:
+    """Route index status writes through planning store facade under issue-store."""
+    if living_doc_write_banned(root):
+        return pii.project_index_status(
+            root, prd, status, slug=slug, dry_run=dry_run, force_issue_store=True
+        )
+    return pii.project_index_status(root, prd, status, slug=slug, dry_run=dry_run)
+
+
+def facade_gap_resolve(root: Path, prd: str) -> dict[str, object]:
+    """Route gap resolve through issue-store facade under issue-store."""
+    if living_doc_write_banned(root):
+        import gap_backlog
+
+        return gap_backlog._resolve_for_prd_issue_store(root, prd)
+    return run_reconcile_script(root, "gap-resolve", "--absorbing-prd", prd)
+
+
+def facade_append_completion(
+    root: Path,
+    *,
+    prd: str,
+    unit_id: str,
+    phase: str,
+    notes: str = "",
+    pr: str = "",
+    sha: str = "",
+) -> dict[str, object]:
+    """Route completion append through store events under issue-store."""
+    if living_doc_write_banned(root):
+        return append_completion_store_event(
+            root,
+            prd_id=prd,
+            unit_id=unit_id,
+            status="complete",
+            evidence={"phase": phase, "notes": notes, "pr": pr, "sha": sha},
+        )
+    append_args = [
+        "append-log-idempotent",
+        "--prd",
+        prd,
+        "--phase",
+        phase,
+        "--notes",
+        notes,
+    ]
+    if pr:
+        append_args.extend(["--pr", pr])
+    if sha:
+        append_args.extend(["--sha", sha])
+    return run_reconcile_script(root, *append_args)
+
+
+def doctor_banned_living_path_drift(root: Path) -> dict[str, object]:
+    """PRD 061 R3: fail when tracked living-doc paths are dirty under issue-store."""
+    if not living_doc_write_banned(root):
+        return {"verdict": "pass", "action": "doctor-banned-living-paths", "skipped": True}
+    worktree = planning_paths.git_root(root)
+    proc = subprocess.run(
+        ["git", "-C", str(worktree), "status", "--porcelain", "--", *living_paths(worktree)],
+        text=True,
+        capture_output=True,
+    )
+    dirty = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+    if dirty:
+        return {
+            "verdict": "fail",
+            "action": "doctor-banned-living-paths",
+            "halt": "banned-living-doc-drift",
+            "error": "tracked living-doc paths mutated under issue-store",
+            "paths": dirty,
+        }
+    return {"verdict": "pass", "action": "doctor-banned-living-paths", "checks": ["banned-living-paths-clean"]}
+
+
 def cmd_reconcile(root: Path, args: list[str]) -> None:
     if has_flag(args, "--commit") and not has_flag(args, "--dry-run"):
         worktree = resolve_worktree(root, args)
@@ -296,24 +449,33 @@ def _cmd_reconcile_locked(
     do_commit = has_flag(args, "--commit")
 
     slug = str((state.get("target") or {}).get("slug") or plan.get("slug") or "")
-    issue_projection = pii.project_index_status(
-        worktree,
-        prd,
-        index_status,
-        slug=slug or None,
-        dry_run=dry_run,
-    )
-    if issue_projection.get("verdict") == "skipped":
-        index_out = run_reconcile_script(
+    if living_doc_write_banned(worktree):
+        index_out = facade_set_index_status(
             worktree,
-            "set-index-status",
-            "--prd",
             prd,
-            "--status",
             index_status,
+            slug=slug or None,
+            dry_run=dry_run,
         )
     else:
-        index_out = issue_projection
+        issue_projection = pii.project_index_status(
+            worktree,
+            prd,
+            index_status,
+            slug=slug or None,
+            dry_run=dry_run,
+        )
+        if issue_projection.get("verdict") == "skipped":
+            index_out = run_reconcile_script(
+                worktree,
+                "set-index-status",
+                "--prd",
+                prd,
+                "--status",
+                index_status,
+            )
+        else:
+            index_out = issue_projection
 
 
     planning_graph_out: dict[str, Any] | None = None
@@ -333,17 +495,20 @@ def _cmd_reconcile_locked(
 
     gap_out: dict[str, Any] | None = None
     if index_status == "complete":
-        pr_ref = ""
-        terminal = state.get("terminalPr") or {}
-        if terminal.get("number"):
-            pr_ref = str(terminal["number"])
-        gap_out = run_reconcile_script(
-            worktree,
-            "gap-resolve",
-            "--absorbing-prd",
-            prd,
-            *(["--pr", pr_ref] if pr_ref else []),
-        )
+        if living_doc_write_banned(worktree):
+            gap_out = facade_gap_resolve(worktree, prd)
+        else:
+            pr_ref = ""
+            terminal = state.get("terminalPr") or {}
+            if terminal.get("number"):
+                pr_ref = str(terminal["number"])
+            gap_out = run_reconcile_script(
+                worktree,
+                "gap-resolve",
+                "--absorbing-prd",
+                prd,
+                *(["--pr", pr_ref] if pr_ref else []),
+            )
 
     commit_sha = None
     if do_commit and not dry_run:
@@ -422,7 +587,20 @@ def _cmd_append_terminal_locked(root: Path, args: list[str], state: dict[str, An
     if head:
         append_args.extend(["--sha", head])
 
-    out = run_reconcile_script(worktree, *append_args)
+    slug = str((state.get("target") or {}).get("slug") or plan.get("slug") or "")
+    unit_id = pii.resolve_prd_unit_id(worktree, prd, slug=slug or None) or f"prd-{prd}"
+    if living_doc_write_banned(worktree):
+        out = facade_append_completion(
+            worktree,
+            prd=prd,
+            unit_id=unit_id,
+            phase=phase,
+            notes=notes,
+            pr=pr,
+            sha=head,
+        )
+    else:
+        out = run_reconcile_script(worktree, *append_args)
     commit_sha = None
     if has_flag(args, "--commit"):
         commit_sha = git_commit_living_docs(worktree, prd, dry_run=False)

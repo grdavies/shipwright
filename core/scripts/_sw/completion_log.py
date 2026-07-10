@@ -1,10 +1,25 @@
 """Idempotent COMPLETION-LOG writer (PRD 042 R20)."""
 from __future__ import annotations
+
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+
+def _refuse_banned_living_doc_write(root: Path, *, action: str) -> dict[str, Any] | None:
+    scripts = Path(__file__).resolve().parents[1]
+    if str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
+    from planning_store import refuse_banned_living_doc_write
+
+    return refuse_banned_living_doc_write(root, action=action)
+
+
 def append_log_idempotent(root: Path, *, prd: str, phase: str, notes: str = "", pr: str = "", sha: str = "") -> dict[str, Any]:
+    refusal = _refuse_banned_living_doc_write(root, action="append-log-idempotent")
+    if refusal:
+        return refusal
     prd = prd.zfill(3)
     log = root / "docs" / "prds" / "COMPLETION-LOG.md"
     text = log.read_text(encoding="utf-8")
