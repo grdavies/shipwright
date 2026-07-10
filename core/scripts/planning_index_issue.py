@@ -72,7 +72,7 @@ def _discover_units_for_index(worktree: Path) -> list[pig.PlanningUnit]:
     if issue_store_is_effective(worktree):
         try:
             return planning_discover.discover_units(worktree)
-        except SystemExit:
+        except (SystemExit, RuntimeError):
             return []
     return units
 
@@ -89,8 +89,14 @@ def _unit_id_from_derived_cache(worktree: Path, prd: str, *, slug: str | None = 
 
 def resolve_prd_unit_id(root: Path, prd: str, *, slug: str | None = None) -> str | None:
     """Map a legacy PRD number to a planning unit id."""
+    from planning_artifact_handle import issue_store_is_effective
+
     prd = prd.zfill(3)
     worktree = pp.git_root(root)
+    if issue_store_is_effective(worktree):
+        cached = _unit_id_from_derived_cache(worktree, prd, slug=slug)
+        if cached:
+            return cached
     if slug:
         for candidate in (f"prd-{prd}-{slug}", f"{prd}-prd-{slug}"):
             for unit in _discover_units_for_index(worktree):
@@ -267,7 +273,7 @@ def project_derived_map(
 
 def read_derived_status_map(root: Path) -> dict[str, str]:
     """Read derived status map from cache when issue authority is active."""
-    if not force_issue_store and not derived_authority_is_issue(root):
+    if not derived_authority_is_issue(root):
         index_path = pig.index_path(root)
         if not index_path.is_file():
             return {}
@@ -283,9 +289,11 @@ def read_projected_index_status(
 
     prd = prd.zfill(3)
     worktree = pp.git_root(root)
-    unit_id = resolve_prd_unit_id(root, prd, slug=slug)
-    if not unit_id and issue_store_is_effective(worktree):
+    unit_id = None
+    if issue_store_is_effective(worktree):
         unit_id = _unit_id_from_derived_cache(worktree, prd, slug=slug)
+    if not unit_id:
+        unit_id = resolve_prd_unit_id(root, prd, slug=slug)
     if not unit_id:
         return None
     if issue_store_is_effective(worktree):
