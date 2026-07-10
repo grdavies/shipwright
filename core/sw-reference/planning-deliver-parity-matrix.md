@@ -36,3 +36,21 @@ the predicate is false, output MUST remain equivalent to pre-057 file-store beha
 
 - Deliver orchestrator: `core/skills/deliver/SKILL.md` (living-doc currency + terminal gate).
 - Configuration: `docs/guides/configuration.md` (issue-store axes and `storeLocation.mode`).
+
+## Operator projection matrix (PRD 061 R10–R15)
+
+Portable semantic graph projections for product-owner browse surfaces. Pattern-only
+rows document integration contracts for adapters not yet shipped.
+
+| Backend | PRD / brainstorm / gap / tasks | Phases | Progress | Edges | Release grouping | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| `github-issues` | Issues + Projects v2 fields | Parent + Project fields; native sub-issues opt-in | Parent labels/checkboxes + Projects | `sw-edges` / native links / Project relations | Milestone and/or Project fields | **Live** — R11/R11a |
+| `jira` | Issue types + links + labels | Sub-task when verbs ship; else checkbox via facade | Facade progress + labels/status | Store graph → issue links | fixVersion/sprint or labels | Target matrix row (R12) |
+| `gitlab-issues` | Issues + labels (spec) | Sub-issue (spec) | Labels/status | Store graph → links (spec) | Iteration / labels | Target fail-closed (R13) |
+| `in-repo-public` | File bodies under `docs/planning/` | `### N.` checkboxes | Checkbox + derived INDEX | Frontmatter + `sw-edges` | `sw:release:*` labels | File-native projection |
+| `none` | Same as `in-repo-public` fallback | Checkbox bodies | Checkbox + derived INDEX | Frontmatter + `sw-edges` | `sw:release:*` labels | issuesProvider none |
+| `linear` (pattern) | Project / Document / Issue | Milestones + sub-issues | Native status | IssueRelation | Cycle / Milestone | Prerequisite PRD 061 (R14) |
+| `notion` (pattern) | Database per artifact type | Relation children | Status property | dual_property relations | Date/select properties | Prerequisite PRD 061 (R15) |
+
+Conformance fixtures: `scripts/unit_tests/planning/harness_planning_061_github_projects.py`.
+

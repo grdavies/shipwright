@@ -163,6 +163,13 @@ def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 
+def cmd_projection_gate(root: Path, _args: list[str]) -> None:
+    cfg = load_workflow_config(pp.git_root(root))
+    from planning_github_projects_v2 import projection_cutover_ready
+
+    emit(projection_cutover_ready(root, cfg))
+
+
 def cmd_doctor(root: Path, _args: list[str]) -> None:
     issues = doctor_dual_source(root)
     if issues:
