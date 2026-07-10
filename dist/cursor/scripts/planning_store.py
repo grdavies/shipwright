@@ -155,6 +155,8 @@ from planning_canonical import (  # noqa: E402
     human_readable_title,
     infer_artifact_type,
     is_resolved_artifact_type,
+    MARKER_ARTIFACT_TYPE,
+    parse_body_marker,
     parse_edges_block,
     parse_freeze_record_hash,
     project_label,
@@ -2851,10 +2853,44 @@ def _prd_number_from_unit_id(unit_id: str) -> str | None:
 
 
 def _slug_from_prd_unit(unit_id: str, prd_num: str) -> str:
+    canonical = f"{prd_num}-prd-"
+    if unit_id.startswith(canonical):
+        return unit_id[len(canonical) :]
     for prefix in (f"prd-{prd_num}-", f"{prd_num}-", "prd-"):
         if unit_id.startswith(prefix):
             return unit_id[len(prefix) :]
     return unit_id
+
+
+def _tasks_unit_id_candidates(prd_unit: str, prd_num: str | None) -> list[str]:
+    """Ordered tasks unit-id aliases for retrospective closure (PRD 060 R4)."""
+    if not prd_num:
+        return [f"tasks-{prd_unit}"]
+    slug = _slug_from_prd_unit(prd_unit, prd_num)
+    candidates = [
+        f"tasks-{prd_num}-{slug}",
+        f"tasks-{prd_unit}",
+    ]
+    legacy = f"{prd_num}-{slug}"
+    if legacy != prd_unit:
+        candidates.append(legacy)
+    out: list[str] = []
+    for candidate in candidates:
+        if candidate and candidate not in out:
+            out.append(candidate)
+    return out
+
+
+def _record_artifact_type(record: Any) -> str:
+    labels = list(getattr(record, "labels", []) or [])
+    from_labels = artifact_type_from_labels(labels)
+    if from_labels:
+        return from_labels
+    record_type = str(getattr(record, "artifact_type", "") or "").strip()
+    if record_type:
+        return record_type
+    body = str(getattr(record, "body", "") or "")
+    return parse_body_marker(body, MARKER_ARTIFACT_TYPE) or ""
 
 
 def _parse_absorbs_targets(raw: str) -> list[str]:
@@ -2907,9 +2943,12 @@ def _default_body_path(unit_id: str, artifact_type: str) -> str:
     if artifact_type == "brainstorm":
         return f"docs/brainstorms/{unit_id}.md"
     if artifact_type == "tasks":
-        prd_num = _prd_number_from_unit_id(unit_id)
-        if prd_num and unit_id.startswith(f"{prd_num}-"):
-            slug = unit_id[len(prd_num) + 1 :]
+        tasks_unit = unit_id
+        if unit_id.startswith("tasks-"):
+            tasks_unit = unit_id[len("tasks-") :]
+        prd_num = _prd_number_from_unit_id(tasks_unit)
+        if prd_num and tasks_unit.startswith(f"{prd_num}-"):
+            slug = _slug_from_prd_unit(tasks_unit, prd_num)
             return f"docs/prds/{prd_num}-{slug}/tasks-{unit_id}.md"
         return f"docs/prds/tasks-{unit_id}.md"
     if artifact_type == "gap":
@@ -2948,9 +2987,12 @@ def resolve_delivery_linked_units(
         seen.add(candidate)
         body_path = _default_body_path(candidate, "prd")
         prd_record = _lookup_issue_record(backend, candidate, body_path)
-        if prd_record is not None:
-            prd_unit = candidate
-            break
+        if prd_record is None:
+            continue
+        if _record_artifact_type(prd_record) != "prd":
+            continue
+        prd_unit = candidate
+        break
     if prd_record is None:
         return {"verdict": "fail", "error": "prd-unit-not-found", "prdUnitId": prd_unit_id}
 
@@ -2967,12 +3009,20 @@ def resolve_delivery_linked_units(
     }
 
     if prd_num:
-        slug = _slug_from_prd_unit(prd_unit, prd_num)
-        for tasks_id in {f"tasks-{prd_unit}", f"{prd_num}-{slug}", f"tasks-{prd_num}-{slug}"}:
+        for tasks_id in _tasks_unit_id_candidates(prd_unit, prd_num):
             body_path = _default_body_path(tasks_id, "tasks")
-            if _lookup_issue_record(backend, tasks_id, body_path) is not None:
-                units[tasks_id] = {"unitId": tasks_id, "artifactType": "tasks", "bodyPath": body_path}
-                break
+            record = _lookup_issue_record(backend, tasks_id, body_path)
+            if record is None:
+                continue
+            if _record_artifact_type(record) != "tasks":
+                continue
+            resolved_id = str(getattr(record, "unit_id", "") or tasks_id).strip() or tasks_id
+            units[resolved_id] = {
+                "unitId": resolved_id,
+                "artifactType": "tasks",
+                "bodyPath": _default_body_path(resolved_id, "tasks"),
+            }
+            break
 
     brainstorm_ref = (fm.get("brainstorm") or "").strip()
     brainstorm_unit = ""
