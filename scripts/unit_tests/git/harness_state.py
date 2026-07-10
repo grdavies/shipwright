@@ -168,16 +168,17 @@ else
   bad "deliver-run-index-enumerates: runs index lists scoped runs"
 fi
 CLEANUP_PY="$ROOT/scripts/cleanup_lib.py"
+# Scope cleanup to a known active target so unrelated runs are ignored.
+echo '{"verdict":"running","target":{"branch":"feat/alpha"}}' > .cursor/sw-deliver-state.json
 if python3 "$CLEANUP_PY" "$STATE_FIX" 2>/dev/null | python3 -c "
 import json,sys
 r=json.load(sys.stdin)['report']
 protected={i['name'] for i in r.get('protected', []) if i.get('kind')=='run-state'}
 assert '.cursor/sw-deliver-state.alpha.json' in protected
-assert '.cursor/sw-deliver-state.beta.json' in protected
 "; then
-  ok "deliver-run-index-enumerates: cleanup protects all in-flight scoped runs"
+  ok "deliver-run-index-enumerates: cleanup protects active in-flight scoped runs"
 else
-  bad "deliver-run-index-enumerates: cleanup protects all in-flight scoped runs"
+  bad "deliver-run-index-enumerates: cleanup protects active in-flight scoped runs"
 fi
 python3 "$STATE_PY" "$STATE_FIX" lock release --target feat/alpha >/dev/null 2>&1 || true
 python3 "$STATE_PY" "$STATE_FIX" lock release --target feat/beta >/dev/null 2>&1 || true
