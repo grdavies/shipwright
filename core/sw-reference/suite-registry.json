@@ -1603,6 +1603,33 @@
         "planning",
         "doc-pipeline"
       ]
+    },
+    {
+      "id": "planning-061-github-projects-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 61,
+      "pytestPath": "scripts/unit_tests/planning/test_planning_061_github_projects.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_github_projects_v2.py",
+        "scripts/planning_store.py",
+        "scripts/planning_cutover.py",
+        "core/providers/issues/CAPABILITIES.md",
+        "core/sw-reference/planning-deliver-parity-matrix.md",
+        "docs/guides/workflows.md",
+        "scripts/unit_tests/planning/harness_planning_061_github_projects.py"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "prd-061"
+      ]
     }
   ]
 }

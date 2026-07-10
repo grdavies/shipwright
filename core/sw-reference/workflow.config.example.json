@@ -157,7 +157,27 @@
     },
     "visibilityProfile": "specs-public",
     "store": {
-      "backend": "in-repo-public"
+      "backend": "in-repo-public",
+      "operatorProjection": {
+        "githubProjects": {
+          "enabled": true,
+          "ownerLogin": "acme",
+          "projectNumber": 1,
+          "fieldMap": {
+            "status": "Status",
+            "artifactType": "Artifact",
+            "unitId": "Unit",
+            "absorbs": "Absorbs",
+            "brainstormFeed": "Brainstorms",
+            "phaseProgress": "Phases"
+          },
+          "budget": {
+            "maxCalls": 40,
+            "maxPaginationDepth": 5,
+            "cacheTtlSeconds": 300
+          }
+        }
+      }
     },
     "autonomy": "maintenance-only",
     "fullConductor": {

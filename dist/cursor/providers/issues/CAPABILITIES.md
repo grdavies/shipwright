@@ -27,6 +27,24 @@ adapters are selected by `planning.store.issuesProvider` (independent of `host.p
 | `issue-lock` | Lock issue at freeze |
 | `issue-search` | Project-scoped issue queries |
 | `issue-close` | **045 R67** — explicit idempotent close for separate-repo planning store (`runId+issueRef` key) |
+
+| `projects-projection` | **061 R11** — GitHub Projects v2 operator browse surface (GraphQL behind flag) |
+
+### GraphQL Projects v2 scopes (PRD 061 R11a)
+
+| Verb | GraphQL flag | Minimum scopes (GitHub) |
+| --- | --- | --- |
+| `projects-projection` | `graphql.projects-v2` | `read:project`, `project` |
+
+Probe via `python3 scripts/planning_store.py probe-projection` and
+`python3 scripts/planning_github_projects_v2.py probe-scope`. When scopes or
+`planning.store.operatorProjection.githubProjects` are absent, runtime emits
+`projection-unavailable` and deliver continues on parent-progress (R11a) — never
+hard-fails headless CI.
+
+Required discovery keys: `ownerLogin`, `projectNumber` or `projectId`, optional
+`fieldMap` for PO browse fields, and `budget` caps for idempotent upsert.
+
 | `linked-pr-introspection` | **045 R73** — verify-only PR↔issue linkage (GraphQL behind flag; REST/body fallback) |
 | `issue-milestone` | **045 R71** — assign `sw:prd` units to provider milestone/iteration; flat-label fallback when absent |
 
@@ -82,6 +100,7 @@ Selector requires the verb capability; absent capability → fail-closed halt.
 | `issue-close` | REST (`PATCH` state=closed) | REST | REST (transition idempotent close) | — |
 | `linked-pr-introspection` | gated `graphql.linked-pr` + REST fallback | REST (notes) | — | — |
 | `issue-milestone` | REST (milestone field) | REST (iteration) | — (047 TBD) | — (skip+notice) |
+| `projects-projection` | gated `graphql.projects-v2` | — | — | — |
 | `issue-lock` GraphQL fallback | gated `graphql.issue-lock` | — | — | — |
 | `issue-search` GraphQL fallback | gated `graphql.issue-search` | — | — | — |
 | Native confidential/private issues | not portable guarantee | bonus only | **unsupported** (project-level; R105) | — |

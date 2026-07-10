@@ -3613,6 +3613,14 @@ def doctor(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     else:
         checks.extend(banned.get("checks", []))
 
+    from planning_github_projects_v2 import projection_health
+
+    projection = projection_health(root, cfg)
+    if not projection.get("skipped"):
+        checks.append(f"projection-state:{projection.get('state', 'unknown')}")
+        if projection.get("state") == "projection-unavailable":
+            checks.append("projection-unavailable")
+
     if not checks and skipped_reasons:
         return {
             "verdict": "pass",
@@ -3620,8 +3628,22 @@ def doctor(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
             "skipped": True,
             "reason": "; ".join(skipped_reasons),
         }
-    return {"verdict": "pass", "action": "doctor", "checks": checks}
+    return {"verdict": "pass", "action": "doctor", "checks": checks, "projection": projection}
 
+
+
+def projection_refresh(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    dry_run: bool = False,
+    items: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Facade entry for GitHub Projects v2 operator projection (PRD 061 R11)."""
+    from planning_github_projects_v2 import refresh_projection, sample_projection_items
+
+    payload = items if items is not None else sample_projection_items(root, cfg)
+    return refresh_projection(root, cfg, dry_run=dry_run, items=payload)
 
 
 _PROGRESS_FACADE_NOTICE_EMITTED = False
@@ -3849,7 +3871,7 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
     {"name": "derive_unit_status", "status": "shipped", "description": "Unified status from store evidence"},
     {"name": "progress_update", "status": "shipped", "description": "Semantic phase/task progress without ad hoc issue_create"},
     {"name": "comment_sync", "status": "planned", "description": "Inbound/outbound provider comment sync"},
-    {"name": "projection_refresh", "status": "planned", "description": "Rebuild operator projection (Projects v2, hierarchy)"},
+    {"name": "projection_refresh", "status": "shipped", "description": "Rebuild operator projection (Projects v2, hierarchy)"},
 )
 
 ISSUES_CLIENT_ALLOWLIST = frozenset({
@@ -3858,6 +3880,7 @@ ISSUES_CLIENT_ALLOWLIST = frozenset({
     "scripts/planning_github_client.py",
     "scripts/planning_gitlab_client.py",
     "scripts/planning_jira_client.py",
+    "scripts/planning_github_projects_v2.py",
     "scripts/planning_migrate_issue_store.py",
 })
 
@@ -4031,6 +4054,8 @@ def main() -> None:
         "cleanup",
         "progress-update",
         "migrate-orphan-phase-issues",
+        "projection-refresh",
+        "probe-projection",
     ):
         sub.add_parser(name)
     args, rest = parser.parse_known_args()
@@ -4174,6 +4199,17 @@ def main() -> None:
         dry_run = "--dry-run" in rest
         result = close_delivery_units(root, cfg, _require(rest, "--prd-unit"), dry_run=dry_run)
         emit(result, 0 if result.get("verdict") in {"ready", "dry-run"} else 2)
+    elif args.command == "projection-refresh":
+        from planning_github_projects_v2 import refresh_projection, sample_projection_items
+
+        dry_run = "--dry-run" in rest
+        result = refresh_projection(root, cfg, dry_run=dry_run, items=sample_projection_items(root, cfg))
+        emit(result, 0 if result.get("verdict") == "ok" else 20)
+    elif args.command == "probe-projection":
+        from planning_github_projects_v2 import projection_health
+
+        result = projection_health(root, cfg)
+        emit(result)
     elif args.command == "doctor":
         result = doctor(root, cfg)
         emit(result, 0 if result.get("verdict") == "pass" else 20)

@@ -1383,6 +1383,17 @@
       "classification": "required",
       "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "ciShard": 4
+    },
+    {
+      "id": "planning-061-github-projects-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_planning_061_github_projects.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "ciShard": 4
     }
   ]
 }
