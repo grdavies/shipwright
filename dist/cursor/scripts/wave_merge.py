@@ -674,7 +674,7 @@ def authorize_merge(
     phase_branch: str,
 ) -> tuple[bool, dict[str, Any], str]:
     expected_head = phase_branch_head(root, state, phase_slug, phase_branch)
-    ok_shape, shape_cause = validate_terminal_status_shape(status)
+    ok_shape, shape_cause = validate_terminal_status_shape(status, root)
     if not ok_shape:
         fail(
             "invalid terminal status",
@@ -719,7 +719,7 @@ def cmd_status_collect(root: Path, args: list[str]) -> None:
         )
     _, meta = phase_meta_for_slug(state, phase_slug)
     phase_branch = meta.get("branch")
-    ok_shape, shape_cause = validate_terminal_status_shape(status)
+    ok_shape, shape_cause = validate_terminal_status_shape(status, root)
     if not ok_shape:
         fail(
             "invalid terminal status",
@@ -870,7 +870,7 @@ def cmd_merge_enqueue(root: Path, args: list[str]) -> None:
     if not phase_branch:
         fail("missing phase branch for enqueue", exit_code=20, phase=phase_slug)
     expected = phase_branch_head(root, state, phase_slug, str(phase_branch))
-    ok_shape, shape_cause = validate_terminal_status_shape(status)
+    ok_shape, shape_cause = validate_terminal_status_shape(status, root)
     if not ok_shape:
         fail(
             "invalid terminal status",
