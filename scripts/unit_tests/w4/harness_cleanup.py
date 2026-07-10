@@ -157,7 +157,68 @@ else
   bad "cleanup-protects-inflight: worktree remove"
 fi
 
-# --- cleanup-squash-merge-aware ---
+# --- cleanup-halted-awaiting-human (PRD 062 R10/R11) ---
+HALT_FIX=$(mktemp -d)
+cd "$HALT_FIX"
+git init -q
+git config user.email test@test.com
+git config user.name Test
+git commit --allow-empty -q -m init
+git branch -M main
+git checkout -q -b feat/halted-demo
+mkdir -p .cursor
+cat >.cursor/sw-deliver-state.halted-demo.json <<'JSON'
+{"verdict":"halted","updatedAt":"2026-07-10T00:00:00Z","target":{"branch":"feat/halted-demo"}}
+JSON
+if python3 "$CLEANUP_PY" "$HALT_FIX" 2>/dev/null | python3 -c "
+import json,sys
+r=json.load(sys.stdin)['report']
+prot=[i for i in r['protected'] if i['kind']=='run-state']
+assert prot, prot
+assert any('halted' in i.get('detail','') for i in prot)
+assert any('resumable deliver halt detected' in n for n in r.get('notes',[]))
+assert not any(i['kind']=='run-state' for i in r['wouldRemove'])
+"; then
+  ok "cleanup-halted-awaiting-human-protected"
+else
+  bad "cleanup-halted-awaiting-human-protected"
+fi
+rm -rf "$HALT_FIX"
+cd "$FIX"
+
+# --- cleanup-terminal-allowlist-auto (PRD 062 R11) ---
+AUTO_BLOCK=$(mktemp -d)
+cd "$AUTO_BLOCK"
+git init -q
+git config user.email test@test.com
+git config user.name Test
+git commit --allow-empty -q -m init
+git branch -M main
+git checkout -q -b feat/blocked-auto
+mkdir -p .cursor
+cat >.cursor/workflow.config.json <<'JSON'
+{"defaultBaseBranch":"main","cleanup":{"autonomy":"auto"}}
+JSON
+cat >.cursor/sw-deliver-state.blocked-auto.json <<'JSON'
+{"verdict":"blocked","updatedAt":"2026-07-10T00:00:00Z","target":{"branch":"feat/blocked-auto"}}
+JSON
+set +e
+OUT=$(python3 "$CLEANUP_PY" "$AUTO_BLOCK" --autonomous 2>/dev/null)
+RC=$?
+set -e
+if [[ "$RC" -eq 11 ]] && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('verdict')=='halt'
+assert 'verdict=blocked' in d.get('reason','')
+"; then
+  ok "cleanup-terminal-allowlist-auto-blocked"
+else
+  bad "cleanup-terminal-allowlist-auto-blocked"
+fi
+rm -rf "$AUTO_BLOCK"
+cd "$FIX"
+
 SQ=$(mktemp -d)
 cd "$SQ"
 git init -q
