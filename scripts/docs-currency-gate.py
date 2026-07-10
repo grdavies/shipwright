@@ -95,15 +95,26 @@ def main(argv: list[str] | None = None) -> int:
 
     banned = living_doc_write_banned(root)
     slug = str((state.get("target") or {}).get("slug") or "")
+    file_row_status = _index_status_from_file()
     index_status = None
     if banned:
         ev = read_index_status_evidence(root, prd, slug=slug)
         if ev:
             index_status = str(ev.get("status") or "")
         else:
-            index_status = _index_status_from_file()
+            index_status = file_row_status
     else:
-        index_status = _index_status_from_file()
+        index_status = file_row_status
+
+    # When issue projection lags but tracked INDEX + deliver state say complete, reconcile (R4).
+    if (
+        banned
+        and all_green
+        and expected == "complete"
+        and index_status not in (None, expected)
+        and file_row_status == expected
+    ):
+        index_status = file_row_status
 
     drift = []
     if index_status is None:
