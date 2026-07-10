@@ -21,6 +21,7 @@ DEFAULT_CONTEXT_COMPRESSION_ENABLED = False
 CONTENT_STRATEGIES = ("json", "diff", "log", "prose")
 DEFAULT_STRATEGIES = {name: "compress" for name in CONTENT_STRATEGIES}
 SURFACE_SHIP_PHASE = "ship-phase"
+INTENSITY_SOURCE_DELIVER_PHASE_SHIP = "deliver.phase-ship"
 SURFACE_DOC_REVIEW = "doc-review"
 TELEMETRY_SURFACES = frozenset({SURFACE_SHIP_PHASE, SURFACE_DOC_REVIEW})
 
@@ -179,6 +180,26 @@ def process_context_block(
         text=f"{_format_block_header(label, summarized=result.compressed)}{body}",
         compressed=result.compressed,
         retrieve_keys=retrieve_keys,
+    )
+
+
+def build_deliver_phase_ship_prompt(
+    *,
+    intensity: str,
+    body: str,
+    intensity_source: str = INTENSITY_SOURCE_DELIVER_PHASE_SHIP,
+    context_blocks: list[ContextBlock] | None = None,
+    config_path: str | None = None,
+    root: Path | None = None,
+) -> DispatchPromptResult:
+    """Assemble deliver phase-ship Task prompt with required intensity directive (gap-115, R3)."""
+    return build_task_dispatch_prompt(
+        intensity=intensity,
+        intensity_source=intensity_source,
+        body=body,
+        context_blocks=context_blocks,
+        config_path=config_path,
+        root=root,
     )
 
 
