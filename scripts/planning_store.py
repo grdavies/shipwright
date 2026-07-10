@@ -117,6 +117,15 @@ ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
 # is the durable, provider-side twin of that same signal.
 PUT_JOURNAL_PATH = ".cursor/hooks/state/issue-store-put-journal.json"
 PUT_INCOMPLETE_LABEL = "sw:put-incomplete"
+LEGACY_UNIT_MAP_PATH = ".cursor/hooks/state/issue-store-legacy-unit-map.json"
+NATIVE_UNIT_ID_PREFIX: dict[str, str] = {
+    "github-issues": "gh:",
+    "jira": "jira:",
+    "gitlab-issues": "gl:",
+}
+NATIVE_UNIT_ID_PATTERN = re.compile(r"^(gh|jira|gl):(\d+)$")
+BARE_INTEGER_UNIT_ID = re.compile(r"^\d{3}$")
+
 
 from issues_lib import (  # noqa: E402
     IssueBudgetExhausted,
@@ -168,6 +177,7 @@ from planning_canonical import (  # noqa: E402
     status_from_labels,
     status_label,
     verify_unit_id,
+    inbound_authoring_comments,
 )
 
 BANNED_MEMORY_CLASSES = frozenset({"discussion", "progress"})
@@ -1846,6 +1856,13 @@ class IssueStoreBackend(PlanningStoreBackend):
         return updated
 
     def _lookup_record(self, unit_id: str, body_path: str, *, content: str | None = None) -> Any:
+        for candidate in unit_id_lookup_candidates(self.root, unit_id):
+            record = self._lookup_record_candidate(candidate, body_path, content=content)
+            if record is not None:
+                return record
+        raise IssueNotFound(f"no issue for unit {unit_id}")
+
+    def _lookup_record_candidate(self, unit_id: str, body_path: str, *, content: str | None = None) -> Any | None:
         idx_key = issue_index_key(self.project_key, unit_id)
         issue_id = self._index.get(idx_key)
         if issue_id:
@@ -1871,13 +1888,29 @@ class IssueStoreBackend(PlanningStoreBackend):
                 search_kwargs["artifact_type"] = content_type
         matches = self._client.issue_search(**search_kwargs)
         if not matches:
-            raise IssueNotFound(f"no issue for unit {unit_id}")
+            return None
         record = matches[0]
         self._index[idx_key] = record.id
         save_issue_unit_index(self.root, self._index)
+        self._register_native_unit_alias(unit_id, record)
         return self._maybe_backfill_labels(record, unit_id)
 
+
+    def _register_native_unit_alias(self, caller_unit_id: str, record: Any) -> None:
+        """R19 — index namespaced native ids and legacy compatibility aliases."""
+        native_id = format_native_unit_id(self.issues_provider, int(record.number))
+        if is_namespaced_native_unit_id(caller_unit_id):
+            canonical = caller_unit_id
+        else:
+            canonical = native_id
+            register_legacy_unit_mapping(self.root, caller_unit_id, native_id)
+        self._index[issue_index_key(self.project_key, canonical)] = record.id
+        if caller_unit_id != canonical:
+            self._index[issue_index_key(self.project_key, caller_unit_id)] = record.id
+        save_issue_unit_index(self.root, self._index)
+
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
+        reject_bare_integer_unit_id(unit_id)
         self._guard_write_visibility(unit_id, body_path, content)
         self._guard_write_secrets(content, path_hint=body_path)
         existing: Any | None
@@ -1936,6 +1969,7 @@ class IssueStoreBackend(PlanningStoreBackend):
         # issue instead of minting a duplicate (idempotent resume).
         self._index[idx_key] = record.id
         save_issue_unit_index(self.root, self._index)
+        self._register_native_unit_alias(unit_id, record)
         if chunked:
             self._journal[idx_key] = {
                 "unitId": unit_id,
@@ -3853,6 +3887,151 @@ def migrate_orphan_phase_issues(
     }
 
 
+
+def native_unit_id_prefix(provider: str) -> str:
+    return NATIVE_UNIT_ID_PREFIX.get(provider, f"{provider}:")
+
+
+def format_native_unit_id(provider: str, issue_number: int) -> str:
+    """R19 — namespaced provider-native unit id (e.g. gh:352)."""
+    return f"{native_unit_id_prefix(provider)}{issue_number}"
+
+
+def is_namespaced_native_unit_id(unit_id: str) -> bool:
+    return bool(NATIVE_UNIT_ID_PATTERN.match((unit_id or "").strip()))
+
+
+def is_bare_integer_unit_id(unit_id: str) -> bool:
+    """Detect bare PRD numbers like 061 that collide with sequential ids (R19)."""
+    return bool(BARE_INTEGER_UNIT_ID.match((unit_id or "").strip()))
+
+
+def reject_bare_integer_unit_id(unit_id: str) -> None:
+    if is_bare_integer_unit_id(unit_id):
+        fail(
+            "bare-integer-unit-id-collision",
+            code="bare-integer-unit-id",
+            unitId=unit_id,
+        )
+
+
+def load_legacy_unit_map(root: Path) -> dict[str, str]:
+    path = root / LEGACY_UNIT_MAP_PATH
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    mapping = data.get("legacyToNative") if isinstance(data, dict) else None
+    if not isinstance(mapping, dict):
+        return {}
+    return {str(k): str(v) for k, v in mapping.items() if isinstance(k, str) and isinstance(v, str)}
+
+
+def save_legacy_unit_map(root: Path, mapping: dict[str, str]) -> None:
+    path = root / LEGACY_UNIT_MAP_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "version": 1,
+        "legacyToNative": dict(sorted(mapping.items())),
+        "nativeToLegacy": {v: k for k, v in sorted(mapping.items())},
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def register_legacy_unit_mapping(root: Path, legacy_id: str, native_id: str) -> None:
+    if not legacy_id or not native_id or legacy_id == native_id:
+        return
+    mapping = load_legacy_unit_map(root)
+    mapping[legacy_id] = native_id
+    save_legacy_unit_map(root, mapping)
+
+
+def resolve_legacy_unit_id(root: Path, unit_id: str) -> str | None:
+    return load_legacy_unit_map(root).get(unit_id)
+
+
+def reverse_resolve_legacy_unit_id(root: Path, native_id: str) -> str | None:
+    for legacy, native in load_legacy_unit_map(root).items():
+        if native == native_id:
+            return legacy
+    return None
+
+
+def unit_id_lookup_candidates(root: Path, unit_id: str) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for candidate in (
+        unit_id,
+        resolve_legacy_unit_id(root, unit_id),
+        reverse_resolve_legacy_unit_id(root, unit_id),
+    ):
+        if candidate and candidate not in seen:
+            seen.add(candidate)
+            ordered.append(candidate)
+    return ordered or [unit_id]
+
+
+def comment_sync(
+    root: Path,
+    *,
+    unit_id: str,
+    body_path: str,
+    consumer: str = "authoring",
+) -> dict[str, Any]:
+    """R18 — inbound provider comments for authoring/deliver consumers via facade."""
+    cfg = load_workflow_config(root)
+    backend = resolve_effective_backend(root, cfg)
+    if backend.get("effective") != "issue-store":
+        return {
+            "verdict": "ok",
+            "skipped": True,
+            "reason": "file-store",
+            "consumer": consumer,
+            "unitId": unit_id,
+        }
+    store = get_backend(root, cfg)
+    if store.backend_id != "issue-store":
+        return {
+            "verdict": "ok",
+            "skipped": True,
+            "reason": "not-issue-store",
+            "consumer": consumer,
+            "unitId": unit_id,
+        }
+    reject_bare_integer_unit_id(unit_id)
+    try:
+        record = store._lookup_record(unit_id, body_path)  # type: ignore[attr-defined]
+    except IssueNotFound:
+        return {
+            "verdict": "fail",
+            "error": "unit-not-found",
+            "consumer": consumer,
+            "unitId": unit_id,
+            "bodyPath": body_path,
+        }
+    inbound = inbound_authoring_comments(list(record.comments))
+    payload = [
+        {
+            "id": comment.id,
+            "body": comment.body,
+            "createdAt": comment.created_at,
+            "markers": list(comment.markers),
+        }
+        for comment in inbound
+    ]
+    return {
+        "verdict": "ok",
+        "action": "comment-sync",
+        "consumer": consumer,
+        "unitId": unit_id,
+        "issueId": record.id,
+        "comments": payload,
+        "count": len(payload),
+    }
+
+
 # PRD 061 R1/R2/R2a — planning-store facade contract + IssuesClient import allowlist.
 # Workflow scripts MUST route planning mutations through this module; only allowlisted
 # store/provider modules may import IssuesClient directly.
@@ -3870,7 +4049,7 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
     {"name": "cleanup", "status": "shipped", "description": "Idempotent legacy planning-body untrack under separate-project"},
     {"name": "derive_unit_status", "status": "shipped", "description": "Unified status from store evidence"},
     {"name": "progress_update", "status": "shipped", "description": "Semantic phase/task progress without ad hoc issue_create"},
-    {"name": "comment_sync", "status": "planned", "description": "Inbound/outbound provider comment sync"},
+    {"name": "comment_sync", "status": "shipped", "description": "Inbound/outbound provider comment sync"},
     {"name": "projection_refresh", "status": "shipped", "description": "Rebuild operator projection (Projects v2, hierarchy)"},
 )
 

@@ -35,6 +35,10 @@ SW_EDGES_FENCE = re.compile(
 GENERIC_CODE_FENCE = re.compile(r"```(?:\w+)?\s*\n(.*?)\n```", re.DOTALL)
 
 EXCLUDED_COMMENT_MARKERS = frozenset({"sw-freeze-record", "sw-chunk-overflow"})
+# PRD 061 R18 — structural/provider markers excluded from inbound authoring sync.
+INBOUND_COMMENT_EXCLUDED_MARKERS = frozenset(
+    {"sw-freeze-record", "sw-chunk-overflow", "sw-memory-pointer", "sw-doc-review"}
+)
 FREEZE_RECORD_MARKER = "sw-freeze-record"
 FROZEN_LABEL = "sw:frozen"
 FREEZE_INCOMPLETE_LABEL = "sw:freeze-incomplete"
@@ -1009,6 +1013,28 @@ def canonical_comments(comments: list[CommentRecord]) -> list[dict[str, str]]:
     included = [c for c in comments if not c.excluded_from_canonical()]
     included.sort(key=lambda c: (c.created_at, c.id))
     return [{"id": c.id, "body": normalize_body(c.body)} for c in included]
+
+
+def is_inbound_authoring_comment(comment: CommentRecord) -> bool:
+    """R18 — human/operator comments suitable for authoring/deliver consumers."""
+    if comment.excluded_from_canonical():
+        return False
+    if any(marker in INBOUND_COMMENT_EXCLUDED_MARKERS for marker in comment.markers):
+        return False
+    body = comment.body
+    for marker in INBOUND_COMMENT_EXCLUDED_MARKERS:
+        if f"<!-- {marker}" in body or f"<!--{marker}" in body:
+            return False
+    if CHUNK_TOKEN_MARKER_PREFIX in body or "sw-chunk-manifest:" in body:
+        return False
+    return bool(normalize_body(body))
+
+
+def inbound_authoring_comments(comments: list[CommentRecord]) -> list[CommentRecord]:
+    """Return provider comments consumable by brainstorm/PRD/amendment/deliver flows (R18)."""
+    included = [comment for comment in comments if is_inbound_authoring_comment(comment)]
+    included.sort(key=lambda comment: (comment.created_at, comment.id))
+    return included
 
 
 def canonical_form(snapshot: IssueSnapshot) -> str:

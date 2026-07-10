@@ -1630,6 +1630,29 @@
         "planning",
         "prd-061"
       ]
+    },
+    {
+      "id": "planning-061-inbound-native-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 62,
+      "pytestPath": "scripts/unit_tests/planning/test_planning_061_inbound_native.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_store.py",
+        "scripts/planning_canonical.py",
+        "scripts/unit_tests/planning/harness_planning_061_inbound_native.py"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "prd-061"
+      ]
     }
   ]
 }
