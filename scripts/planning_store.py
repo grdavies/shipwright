@@ -3378,6 +3378,55 @@ def tracked_planning_body_paths(root: Path) -> list[str]:
     return sorted(line.strip() for line in proc.stdout.splitlines() if line.strip())
 
 
+def _porcelain_path(line: str) -> str | None:
+    line = line.rstrip("\n")
+    if len(line) < 4:
+        return None
+    return line[3:].strip() or None
+
+
+def _is_planning_body_mutation_line(line: str) -> bool:
+    """True for staged/committed/worktree mutations — not untracked-only (??)."""
+    if len(line) < 4:
+        return False
+    if line.startswith("??"):
+        return False
+    index_status, worktree_status = line[0], line[1]
+    return index_status != " " or worktree_status != " "
+
+
+def planning_body_porcelain_paths(root: Path) -> list[str]:
+    """Return banned-prefix paths with dirty/staged mutations (PRD 061 R3a)."""
+    proc = subprocess.run(
+        ["git", "-C", str(root), "status", "--porcelain", "--", *PLANNING_BODY_SCAN_PREFIXES],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return []
+    paths: list[str] = []
+    for line in proc.stdout.splitlines():
+        if not _is_planning_body_mutation_line(line):
+            continue
+        path = _porcelain_path(line)
+        if path and not path.endswith("/"):
+            paths.append(path)
+    return sorted(set(paths))
+
+
+def classify_banned_repo_paths(root: Path) -> dict[str, list[str]]:
+    """Classify code-repo banned paths: legacy-tracked vs newly-written (PRD 061 R3a)."""
+    tracked = tracked_planning_body_paths(root)
+    porcelain = planning_body_porcelain_paths(root)
+    newly_written = sorted(set(porcelain))
+    legacy = sorted(path for path in tracked if path not in newly_written)
+    return {
+        "legacy-tracked-pending-cleanup": legacy,
+        "newly-written": newly_written,
+    }
+
+
 def doctor_separate_project_local_writes(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     from planning_artifact_handle import issue_store_separate_project_effective
 
@@ -3388,20 +3437,75 @@ def doctor_separate_project_local_writes(root: Path, cfg: dict[str, Any]) -> dic
             "skipped": True,
             "reason": "not-separate-project-issue-store",
         }
-    stray = tracked_planning_body_paths(root)
-    if stray:
+    classified = classify_banned_repo_paths(root)
+    newly_written = classified["newly-written"]
+    legacy = classified["legacy-tracked-pending-cleanup"]
+    if newly_written:
         return {
             "verdict": "fail",
             "action": "doctor",
             "halt": "local-planning-body-drift",
-            "error": "tracked planning-body files present in code repo under separate-project issue-store",
-            "paths": stray,
+            "error": "newly-written planning-body paths present in code repo under separate-project issue-store",
+            "paths": newly_written,
+            "classification": "newly-written",
             "remediation": (
-                "remove tracked docs/brainstorms and docs/prds bodies from the code repo; "
-                "authoring lives in the planning-project issue store"
+                "revert or remove newly-written docs/brainstorms and docs/prds mutations; "
+                "run planning_store cleanup for legacy tracked bodies"
             ),
         }
-    return {"verdict": "pass", "action": "doctor", "checks": ["no-tracked-planning-bodies"]}
+    checks = ["no-newly-written-planning-bodies"]
+    result: dict[str, Any] = {"verdict": "pass", "action": "doctor", "checks": checks}
+    if legacy:
+        result["legacyPendingCleanup"] = legacy
+        result["counts"] = {"legacy-tracked-pending-cleanup": len(legacy)}
+    else:
+        checks.append("no-tracked-planning-bodies")
+    return result
+
+
+def cleanup_separate_project_local_writes(root: Path, cfg: dict[str, Any], *, apply: bool = False) -> dict[str, Any]:
+    """PRD 061 R3a — untrack legacy banned planning bodies in the code repo (idempotent)."""
+    from planning_artifact_handle import issue_store_separate_project_effective
+
+    if not issue_store_separate_project_effective(root, cfg):
+        return {
+            "verdict": "ok",
+            "action": "cleanup",
+            "skipped": True,
+            "reason": "not-separate-project-issue-store",
+        }
+    classified = classify_banned_repo_paths(root)
+    legacy = classified["legacy-tracked-pending-cleanup"]
+    newly_written = classified["newly-written"]
+    applied: list[str] = []
+    if apply and legacy:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "rm", "--cached", "-f", "--", *legacy],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            return {
+                "verdict": "fail",
+                "action": "cleanup",
+                "error": "git-rm-cached-failed",
+                "stderr": proc.stderr.strip(),
+                "legacy": legacy,
+            }
+        applied = list(legacy)
+    return {
+        "verdict": "ok",
+        "action": "cleanup",
+        "dryRun": not apply,
+        "counts": {
+            "legacy-tracked-pending-cleanup": len(legacy),
+            "newly-written": len(newly_written),
+        },
+        "legacy": legacy,
+        "newlyWritten": newly_written,
+        "applied": applied,
+    }
 
 
 def refuse_banned_living_doc_write(root: Path, *, action: str) -> dict[str, Any] | None:
@@ -3466,6 +3570,7 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
     {"name": "link_brainstorm_prd", "status": "shipped", "description": "Durability edge between brainstorm and PRD"},
     {"name": "close_delivery_units", "status": "shipped", "description": "Deliver closure hooks for planning units"},
     {"name": "doctor", "status": "shipped", "description": "Fail-closed hygiene for separate-project drift"},
+    {"name": "cleanup", "status": "shipped", "description": "Idempotent legacy planning-body untrack under separate-project"},
     {"name": "derive_unit_status", "status": "shipped", "description": "Unified status from store evidence"},
     {"name": "progress_update", "status": "planned", "description": "Semantic phase/task progress without ad hoc issue_create"},
     {"name": "comment_sync", "status": "planned", "description": "Inbound/outbound provider comment sync"},
@@ -3650,6 +3755,7 @@ def main() -> None:
         "clear-issue-fixture",
         "close-delivery-units",
         "doctor",
+        "cleanup",
     ):
         sub.add_parser(name)
     args, rest = parser.parse_known_args()
@@ -3796,6 +3902,10 @@ def main() -> None:
     elif args.command == "doctor":
         result = doctor(root, cfg)
         emit(result, 0 if result.get("verdict") == "pass" else 20)
+    elif args.command == "cleanup":
+        apply = "--apply" in rest
+        result = cleanup_separate_project_local_writes(root, cfg, apply=apply)
+        emit(result, 0 if result.get("verdict") == "ok" else 20)
 
 
 if __name__ == "__main__":
