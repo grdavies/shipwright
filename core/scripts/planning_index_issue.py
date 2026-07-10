@@ -89,12 +89,13 @@ def project_index_status(
     *,
     slug: str | None = None,
     dry_run: bool = False,
+    force_issue_store: bool = False,
 ) -> dict[str, Any]:
     """Project legacy PRD INDEX status to issue store when derived authority is issue."""
     if status not in VALID_INDEX_STATUSES:
         return {"verdict": "fail", "error": f"invalid status {status!r}"}
     prd = prd.zfill(3)
-    if not derived_authority_is_issue(root):
+    if not force_issue_store and not derived_authority_is_issue(root):
         return {
             "verdict": "skipped",
             "action": "project-index-status",
@@ -241,10 +242,39 @@ def project_derived_map(
 
 def read_derived_status_map(root: Path) -> dict[str, str]:
     """Read derived status map from cache when issue authority is active."""
-    if not derived_authority_is_issue(root):
+    if not force_issue_store and not derived_authority_is_issue(root):
         index_path = pig.index_path(root)
         if not index_path.is_file():
             return {}
         regions = pig.parse_regions(index_path.read_text(encoding="utf-8"))
         return pig.parse_derived_status_map(regions.derived)
     return load_derived_cache(root)
+
+def read_projected_index_status(
+    root: Path, prd: str, *, slug: str | None = None
+) -> dict[str, Any] | None:
+    """Read INDEX status evidence from store projection cache (PRD 061 R4)."""
+    from planning_artifact_handle import issue_store_is_effective
+
+    prd = prd.zfill(3)
+    unit_id = resolve_prd_unit_id(root, prd, slug=slug)
+    if not unit_id:
+        return None
+    worktree = pp.git_root(root)
+    if issue_store_is_effective(worktree):
+        statuses = load_derived_cache(worktree)
+        authority = "issue"
+    else:
+        statuses = read_derived_status_map(worktree)
+        authority = "file"
+    status = statuses.get(unit_id)
+    if status is None:
+        return None
+    return {
+        "verdict": "pass",
+        "prd": prd,
+        "unitId": unit_id,
+        "status": status,
+        "authority": authority,
+    }
+
