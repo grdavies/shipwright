@@ -423,6 +423,7 @@
 * merge phase correctness-issue-store-deliver-entry-r1-r3-small into feat/deliver-issue-store-hardening-and-loop-perf (0f7be8a) <!-- sw-deliver:correctness-issue-store-deliver-entry-r1-r3-small -->
 * merge phase terminal-docs-currency-and-prepare-degrade-r4-r5-small into feat/deliver-issue-store-hardening-and-loop-perf (be2561f) <!-- sw-deliver:terminal-docs-currency-and-prepare-degrade-r4-r5-small -->
 * merge phase perf-base-capture-drain-slim-status-timing-r6-r9-medium into feat/deliver-issue-store-hardening-and-loop-perf (0db7e96) <!-- sw-deliver:perf-base-capture-drain-slim-status-timing-r6-r9-medium -->
+* merge phase ops-contract-cleanup-budget-isolation-status-vocab-facade-r10-r13-r16-medium into feat/deliver-issue-store-hardening-and-loop-perf (9f07f10) <!-- sw-deliver:ops-contract-cleanup-budget-isolation-status-vocab-facade-r10-r13-r16-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
