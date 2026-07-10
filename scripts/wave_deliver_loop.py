@@ -920,7 +920,7 @@ def merge_ready_in_flight_phases(
             continue
         if status.get("verdict") != "merge-ready-green":
             continue
-        ok_shape, _shape_cause = validate_terminal_status_shape(status)
+        ok_shape, _shape_cause = validate_terminal_status_shape(status, root)
         if not ok_shape:
             continue
         phase_branch = meta.get("branch")
@@ -970,7 +970,7 @@ def phase_has_validated_terminal(
         return status_is_consumable_terminal(status)
     if status.get("verdict") != "merge-ready-green":
         return False
-    ok_shape, _ = validate_terminal_status_shape(status)
+    ok_shape, _ = validate_terminal_status_shape(status, root)
     if not ok_shape:
         return False
     phase_branch = meta.get("branch")
@@ -1066,7 +1066,7 @@ def in_flight_merge_halt(
             continue
         if status.get("verdict") != "merge-ready-green":
             continue
-        ok_shape, shape_cause = validate_terminal_status_shape(status)
+        ok_shape, shape_cause = validate_terminal_status_shape(status, root)
         if not ok_shape:
             return {
                 "action": "halt-blocked",

@@ -122,7 +122,20 @@ def validate_gate_json(gate: Any, root: Path | None = None) -> tuple[bool, str |
     return True, None
 
 
-def validate_terminal_status_shape(status: dict[str, Any]) -> tuple[bool, str | None]:
+def repo_root_for_path(path: Path) -> Path | None:
+    proc = subprocess.run(
+        ["git", "-C", str(path.parent), "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode == 0 and proc.stdout.strip():
+        return Path(proc.stdout.strip())
+    return None
+
+
+def validate_terminal_status_shape(
+    status: dict[str, Any], root: Path | None = None
+) -> tuple[bool, str | None]:
     verdict = status.get("verdict")
     if verdict not in VALID_STATUS_VERDICTS:
         return False, "phase-status:invalid-verdict"
@@ -590,8 +603,10 @@ def cmd_write(args: argparse.Namespace) -> int:
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    status = json.loads(Path(args.path).read_text(encoding="utf-8"))
-    ok, cause = validate_terminal_status_shape(status)
+    status_path = Path(args.path)
+    status = json.loads(status_path.read_text(encoding="utf-8"))
+    root = repo_root_for_path(status_path)
+    ok, cause = validate_terminal_status_shape(status, root)
     payload = {"verdict": "pass" if ok else "fail", "cause": cause}
     print(json.dumps(payload, indent=2))
     return 0 if ok else 2
