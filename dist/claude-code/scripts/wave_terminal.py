@@ -865,6 +865,154 @@ def is_ancestor(ancestor: str, descendant: str, cwd: Path) -> bool:
     return proc.returncode == 0
 
 
+TERMINAL_PREPARE_RECOVERABLE_MARKERS = (
+    "issue-store-unreachable",
+    "planning-store-degraded",
+    "prd-unit-not-found",
+    "planning-store-put-failed",
+)
+
+
+def is_recoverable_planning_failure(payload: dict[str, Any] | None) -> bool:
+    """Classify non-fatal planning_store / living-doc failures for terminal prepare (R5)."""
+    if not isinstance(payload, dict):
+        return False
+    if payload.get("verdict") == "degraded":
+        return True
+    for key in ("notice", "error", "reason"):
+        text = str(payload.get(key) or "")
+        if any(marker in text for marker in TERMINAL_PREPARE_RECOVERABLE_MARKERS):
+            return True
+    append = payload.get("append")
+    if isinstance(append, dict) and is_recoverable_planning_failure(append):
+        return True
+    return False
+
+
+def _parse_subprocess_json(proc: subprocess.CompletedProcess[str]) -> dict[str, Any]:
+    try:
+        payload = json.loads(proc.stdout)
+        if isinstance(payload, dict):
+            return payload
+    except json.JSONDecodeError:
+        pass
+    return {"error": proc.stderr.strip() or proc.stdout.strip() or "subprocess failed"}
+
+
+def run_prepare_subprocess_recoverable(
+    proc: subprocess.CompletedProcess[str],
+    *,
+    step: str,
+) -> tuple[bool, dict[str, Any] | None, dict[str, Any] | None]:
+    """Return (continue_ok, fatal_payload, degradation_notice)."""
+    if proc.returncode == 0:
+        payload = _parse_subprocess_json(proc)
+        if is_recoverable_planning_failure(payload):
+            return True, None, {"step": step, **payload}
+        return True, None, None
+    payload = _parse_subprocess_json(proc)
+    if is_recoverable_planning_failure(payload):
+        return True, None, {"step": step, **payload}
+    return False, payload, None
+
+
+def record_terminal_prepare_degradations(
+    root: Path, state: dict[str, Any], notices: list[dict[str, Any]]
+) -> None:
+    if not notices:
+        return
+    state["terminalPrepareDegraded"] = {
+        "notices": notices,
+        "updatedAt": utc_now(),
+    }
+    save_state(root, state)
+
+
+def run_living_docs_append_terminal(root: Path) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "wave_living_docs.py"),
+            str(root),
+            "append-terminal",
+            "--commit",
+        ],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode in (0, 10):
+        notices: list[dict[str, Any]] = []
+        if proc.returncode == 0 and proc.stdout.strip():
+            payload = _parse_subprocess_json(proc)
+            if is_recoverable_planning_failure(payload):
+                notices.append({"step": "append-terminal", **payload})
+            append = payload.get("append")
+            if isinstance(append, dict) and is_recoverable_planning_failure(append):
+                notices.append({"step": "append-terminal", **append})
+        return notices, None
+    ok, fatal, notice = run_prepare_subprocess_recoverable(proc, step="append-terminal")
+    if ok:
+        return ([notice] if notice else []), None
+    return [], fatal
+
+
+def run_docs_currency_gate_for_prepare(root: Path) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    if os.environ.get("SW_SKIP_DOCS_CURRENCY") == "1":
+        return [], None
+    script = SCRIPT_DIR / "docs-currency-gate.py"
+    repo_root, state_root, state_path, plan_path = resolve_docs_currency_paths(root)
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            str(repo_root),
+            str(state_root),
+            str(state_path),
+            str(plan_path),
+        ],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode == 0:
+        return [], None
+    ok, fatal, notice = run_prepare_subprocess_recoverable(proc, step="docs-currency-gate")
+    if ok:
+        return ([notice] if notice else []), None
+    return [], fatal or _parse_subprocess_json(proc)
+
+
+def run_terminal_prepare_living_docs_gates(
+    root: Path, state: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Run append-terminal + currency gates; degrade recoverable planning failures (R5)."""
+    notices: list[dict[str, Any]] = []
+    append_notices, append_fatal = run_living_docs_append_terminal(root)
+    if append_fatal:
+        fail_from_payload(
+            fail,
+            append_fatal,
+            "living-docs append-terminal failed",
+            1,
+        )
+    notices.extend(append_notices)
+    run_tasks_currency_gate(root, state)
+    docs_notices, docs_fatal = run_docs_currency_gate_for_prepare(root)
+    if docs_fatal:
+        fail_from_payload(
+            fail,
+            docs_fatal,
+            "living-doc currency drift",
+            1,
+            halt="blocked",
+            cause="docs-currency:drift",
+        )
+    notices.extend(docs_notices)
+    record_terminal_prepare_degradations(root, state, notices)
+    return notices
+
+
 def run_tasks_currency_gate(root: Path, state: dict[str, Any]) -> None:
     """Hard-block terminal gate when task-list currency diverges (R7)."""
     from wave_deliver_loop import load_plan, tasks_currency_ok
@@ -1284,26 +1432,7 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
                 }
             )
         if not dry_run:
-            append_proc = subprocess.run(
-                [
-                    sys.executable,
-                    str(SCRIPT_DIR / "wave_living_docs.py"),
-                    str(root),
-                    "append-terminal",
-                    "--commit",
-                ],
-                cwd=str(root),
-                text=True,
-                capture_output=True,
-            )
-            if append_proc.returncode not in (0, 10):
-                try:
-                    err = json.loads(append_proc.stdout)
-                except json.JSONDecodeError:
-                    err = {"error": append_proc.stderr or append_proc.stdout}
-                fail(err.get("error", "living-docs append-terminal failed"), exit_code=append_proc.returncode)
-            run_tasks_currency_gate(root, state)
-        run_docs_currency_gate(root)
+            run_terminal_prepare_living_docs_gates(root, state)
         state = load_state(root)
         state["terminalLocalGate"] = {
             "mode": "local-evidence",
@@ -1327,26 +1456,7 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
         )
 
     if not dry_run:
-        append_proc = subprocess.run(
-            [
-                sys.executable,
-                str(SCRIPT_DIR / "wave_living_docs.py"),
-                str(root),
-                "append-terminal",
-                "--commit",
-            ],
-            cwd=str(root),
-            text=True,
-            capture_output=True,
-        )
-        if append_proc.returncode not in (0, 10):
-            try:
-                err = json.loads(append_proc.stdout)
-            except json.JSONDecodeError:
-                err = {"error": append_proc.stderr or append_proc.stdout}
-            fail(err.get("error", "living-docs append-terminal failed"), exit_code=append_proc.returncode)
-        run_tasks_currency_gate(root, state)
-        run_docs_currency_gate(root)
+        run_terminal_prepare_living_docs_gates(root, state)
 
     prd_number = state.get("prd_number")
     title = parse_kv(args, "--title") or commitlint_safe_title(commit_type, slug, prd_number, root=root)
@@ -1398,14 +1508,20 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
     }
     save_state(root, state)
     append_log(root, {"event": "terminal-pr-prepare", "pr": pr_info.get("number"), "url": pr_info.get("url")})
-    emit(
-        {
-            "verdict": "pass",
-            "action": "terminal-pr-prepare",
-            "terminalPr": state["terminalPr"],
-            "note": "Single <type>/<slug> → main PR; halt at human gate (R23)",
-        }
-    )
+    prepare_payload: dict[str, Any] = {
+        "verdict": "pass",
+        "action": "terminal-pr-prepare",
+        "terminalPr": state["terminalPr"],
+        "note": "Single <type>/<slug> → main PR; halt at human gate (R23)",
+    }
+    degraded = state.get("terminalPrepareDegraded")
+    if degraded:
+        prepare_payload["degraded"] = True
+        prepare_payload["terminalPrepareDegraded"] = degraded
+        prepare_payload["note"] = (
+            "Prepare degraded — gate path continues; not unqualified green (R5)"
+        )
+    emit(prepare_payload)
 
 
 def cmd_terminal_pr_gate(root: Path, args: list[str]) -> None:
