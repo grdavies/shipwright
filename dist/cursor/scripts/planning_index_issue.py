@@ -70,8 +70,21 @@ def _discover_units_for_index(worktree: Path) -> list[pig.PlanningUnit]:
     from planning_artifact_handle import issue_store_is_effective
 
     if issue_store_is_effective(worktree):
-        return planning_discover.discover_units(worktree)
+        try:
+            return planning_discover.discover_units(worktree)
+        except SystemExit:
+            return []
     return units
+
+
+def _unit_id_from_derived_cache(worktree: Path, prd: str, *, slug: str | None = None) -> str | None:
+    """Resolve unit id from projected cache without live issue discover (terminal gate)."""
+    for unit_id in load_derived_cache(worktree):
+        if slug and unit_id in (f"prd-{prd}-{slug}", f"{prd}-prd-{slug}"):
+            return unit_id
+        if unit_id.startswith(f"prd-{prd}-") or unit_id.startswith(f"{prd}-prd-"):
+            return unit_id
+    return None
 
 
 def resolve_prd_unit_id(root: Path, prd: str, *, slug: str | None = None) -> str | None:
@@ -269,10 +282,12 @@ def read_projected_index_status(
     from planning_artifact_handle import issue_store_is_effective
 
     prd = prd.zfill(3)
+    worktree = pp.git_root(root)
     unit_id = resolve_prd_unit_id(root, prd, slug=slug)
+    if not unit_id and issue_store_is_effective(worktree):
+        unit_id = _unit_id_from_derived_cache(worktree, prd, slug=slug)
     if not unit_id:
         return None
-    worktree = pp.git_root(root)
     if issue_store_is_effective(worktree):
         statuses = load_derived_cache(worktree)
         authority = "issue"
