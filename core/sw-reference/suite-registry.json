@@ -1559,7 +1559,7 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-pytest-required-shard-4",
-      "verifyOrder": 59.5,
+      "verifyOrder": 60,
       "pytestPath": "scripts/unit_tests/planning/test_planning_061_progress.py",
       "ciShard": 4,
       "pathTriggers": [

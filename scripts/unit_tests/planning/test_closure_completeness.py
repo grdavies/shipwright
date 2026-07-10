@@ -34,6 +34,7 @@ def _issue_store_cfg(project_key: str = "closure-060") -> dict:
                 "backend": "issue-store",
                 "issuesProvider": "github-issues",
                 "projectKey": project_key,
+                "hierarchy": {"epicSubIssues": True},
             }
         },
         "host": {"provider": "github"},
