@@ -11,10 +11,14 @@ import pytest
 from issues_lib import FixtureIssuesStore
 from planning_progress import phase_done_label, sync_phase_done
 from planning_store import (
+    IssueStoreBackend,
     _gap_closure_evidence,
     _prd_unit_id_alias_candidates,
+    _slug_from_prd_unit,
+    _tasks_unit_id_candidates,
     close_delivery_units,
     close_done_phase_sub_issues,
+    resolve_delivery_linked_units,
 )
 import planning_progress as pp
 
@@ -53,6 +57,57 @@ def test_prd_unit_id_alias_candidates(unit_id: str, expected: set[str]) -> None:
     assert set(_prd_unit_id_alias_candidates(unit_id)) == expected
 
 
+@pytest.mark.parametrize(
+    ("unit_id", "prd_num", "expected_slug"),
+    [
+        ("062-prd-deliver-issue-store-hardening-and-loop-perf", "062", "deliver-issue-store-hardening-and-loop-perf"),
+        ("prd-062-deliver-issue-store-hardening-and-loop-perf", "062", "deliver-issue-store-hardening-and-loop-perf"),
+        ("062-deliver-issue-store-hardening-and-loop-perf", "062", "deliver-issue-store-hardening-and-loop-perf"),
+    ],
+)
+def test_slug_from_prd_unit_canonical_nnn_prd_slug(unit_id: str, prd_num: str, expected_slug: str) -> None:
+    assert _slug_from_prd_unit(unit_id, prd_num) == expected_slug
+
+
+def test_tasks_unit_id_candidates_exclude_prd_unit_alias() -> None:
+    prd_unit = "062-prd-deliver-issue-store-hardening-and-loop-perf"
+    candidates = _tasks_unit_id_candidates(prd_unit, "062")
+    assert "tasks-062-deliver-issue-store-hardening-and-loop-perf" in candidates
+    assert prd_unit not in candidates
+
+
+def test_resolve_delivery_linked_units_resolves_tasks_not_prd_alias(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
+    root = tmp_path
+    _init_repo(root)
+    cfg = _issue_store_cfg("closure-062-tasks-alias")
+    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+
+    prd_unit = "062-prd-deliver-issue-store-hardening-and-loop-perf"
+    tasks_unit = "tasks-062-deliver-issue-store-hardening-and-loop-perf"
+    slug = "deliver-issue-store-hardening-and-loop-perf"
+    prd_dir = root / "docs" / "prds" / f"062-{slug}"
+    prd_dir.mkdir(parents=True)
+    prd_path = f"docs/prds/062-{slug}/{prd_unit}.md"
+    tasks_path = f"docs/prds/062-{slug}/{tasks_unit}.md"
+    prd_content = (
+        f"---\ntype: prd\nid: {prd_unit}\nstatus: complete\n---\n# PRD 062\n"
+    )
+    tasks_content = "---\nfrozen: true\n---\n### 1. Phase one\n- [ ] 1.1 First\n"
+
+    backend = IssueStoreBackend(root, cfg)
+    assert backend.put(prd_unit, prd_path, prd_content).verdict == "ok"
+    assert backend.put(tasks_unit, tasks_path, tasks_content).verdict == "ok"
+
+    snap = resolve_delivery_linked_units(root, cfg, prd_unit)
+    assert snap["verdict"] == "ok", snap
+    tasks_entries = [item for item in snap["snapshot"] if item["artifactType"] == "tasks"]
+    assert len(tasks_entries) == 1
+    assert tasks_entries[0]["unitId"] == tasks_unit
+
+
 def test_gap_closure_evidence_skips_related_only() -> None:
     fm = {"absorbs": "gap-absorbed"}
     edges = {
@@ -77,6 +132,14 @@ def test_close_done_phase_sub_issues_from_hierarchy_map(
     (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
 
     (root / "docs" / "prds" / "060-test").mkdir(parents=True)
+    prd_path = "docs/prds/060-test/prd-060-test.md"
+    (root / prd_path).write_text(
+        "---\ntype: prd\nid: 060-prd-test\nstatus: in-progress\n---\n# PRD\n",
+        encoding="utf-8",
+    )
+    backend = IssueStoreBackend(root, cfg)
+    assert backend.put("060-prd-test", prd_path, (root / prd_path).read_text(encoding="utf-8")).verdict == "ok"
+
     task_rel = "docs/prds/060-test/tasks-060-test.md"
     (root / task_rel).write_text(
         "---\nfrozen: true\n---\n### 1. Alpha phase\n- [ ] 1.1 First\n",
