@@ -415,6 +415,7 @@
 * merge phase gap-081-gap-099-verify-override-follow-up-and-harness-isolation-r8-r10-r14-r15 into feat/planning-store-build-verify-hygiene (54c98db) <!-- sw-deliver:gap-081-gap-099-verify-override-follow-up-and-harness-isolation-r8-r10-r14-r15 -->
 * merge phase docs-skill-remediation-and-gap-resolve-wiring-r16-r17 into feat/planning-store-build-verify-hygiene (9fd9eb8) <!-- sw-deliver:docs-skill-remediation-and-gap-resolve-wiring-r16-r17 -->
 * merge phase facade-living-doc-ban-facade-living-doc-write-ban-mvp-r1-r5-r2a-r3a into feat/planning-store-interface-architecture (03c0de8) <!-- sw-deliver:facade-living-doc-ban-facade-living-doc-write-ban-mvp-r1-r5-r2a-r3a -->
+* merge phase progress-no-phase-mint-progress-model-no-phase-mint-mvp-r6-r9-r8a-r24 into feat/planning-store-interface-architecture (1180319) <!-- sw-deliver:progress-no-phase-mint-progress-model-no-phase-mint-mvp-r6-r9-r8a-r24 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
