@@ -260,8 +260,9 @@ if [[ $? -eq 0 ]]; then ok stale-in-progress-success-check-gate-green-poll-helpe
 
 
 # terminal-docs-currency-gate-invocation-valid (R43/R44)
-rm -f "$ROOT/.cursor/hooks/state/planning-index-derived.json"
-rm -f "$ROOT/.cursor/hooks/state/planning-completion-events.json"
+mkdir -p "$ROOT/.cursor/hooks/state"
+printf '%s\n' '{"version":1,"statuses":{"047-prd-jira-issue-store-adapter":"complete"}}' > "$ROOT/.cursor/hooks/state/planning-index-derived.json"
+printf '%s\n' '[]' > "$ROOT/.cursor/hooks/state/planning-completion-events.json"
 CUR_FIX=$(mktemp -d)
 mkdir -p "$CUR_FIX/.cursor"
 echo '{"prd_number":"047","phases":{"1":{"status":"green-merged"}},"completion":{"status":"completed-pending-merge"},"target":{"branch":"feat/jira-issue-store-adapter"}}' > "$CUR_FIX/.cursor/sw-deliver-state.json"
