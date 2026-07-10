@@ -427,6 +427,10 @@ content = (
     "visibility: public\n"
     "---\n"
     "# Gap body\n\n"
+    "## Problem\n\nDepends linkage test.\n\n"
+    "## Context/evidence\n\nFixture harness.\n\n"
+    "## Related units\n\nnone\n\n"
+    "## Suggested next step\n\ntriage\n\n"
     "```sw-edges\n"
     '{"version": 1, "edges": [{"rel": "depends", "target": "parent-gap"}], "native": []}\n'
     "```\n"
