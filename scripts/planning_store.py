@@ -3404,6 +3404,53 @@ def doctor_separate_project_local_writes(root: Path, cfg: dict[str, Any]) -> dic
     return {"verdict": "pass", "action": "doctor", "checks": ["no-tracked-planning-bodies"]}
 
 
+def refuse_banned_living_doc_write(root: Path, *, action: str) -> dict[str, Any] | None:
+    """PRD 061 R3 — fail closed when living-doc file writes are banned under issue-store."""
+    from wave_living_docs import living_doc_write_banned
+
+    if not living_doc_write_banned(root):
+        return None
+    return {
+        "verdict": "fail",
+        "action": action,
+        "halt": "banned-living-doc-write",
+        "error": "living-doc file writes banned under issue-store",
+        "remediation": "route through wave_living_docs facade helpers or planning_store facade",
+    }
+
+
+def doctor(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Aggregate issue-store hygiene checks (PRD 061 R3)."""
+    checks: list[str] = []
+    skipped_reasons: list[str] = []
+
+    sep = doctor_separate_project_local_writes(root, cfg)
+    if sep.get("verdict") == "fail":
+        return sep
+    if sep.get("skipped"):
+        skipped_reasons.append(str(sep.get("reason") or "separate-project-skipped"))
+    else:
+        checks.extend(sep.get("checks", []))
+
+    from wave_living_docs import doctor_banned_living_path_drift
+
+    banned = doctor_banned_living_path_drift(root)
+    if banned.get("verdict") == "fail":
+        return banned
+    if banned.get("skipped"):
+        skipped_reasons.append("not-issue-store")
+    else:
+        checks.extend(banned.get("checks", []))
+
+    if not checks and skipped_reasons:
+        return {
+            "verdict": "pass",
+            "action": "doctor",
+            "skipped": True,
+            "reason": "; ".join(skipped_reasons),
+        }
+    return {"verdict": "pass", "action": "doctor", "checks": checks}
+
 
 # PRD 061 R1/R2/R2a — planning-store facade contract + IssuesClient import allowlist.
 # Workflow scripts MUST route planning mutations through this module; only allowlisted
@@ -3747,7 +3794,7 @@ def main() -> None:
         result = close_delivery_units(root, cfg, _require(rest, "--prd-unit"), dry_run=dry_run)
         emit(result, 0 if result.get("verdict") in {"ready", "dry-run"} else 2)
     elif args.command == "doctor":
-        result = doctor_separate_project_local_writes(root, cfg)
+        result = doctor(root, cfg)
         emit(result, 0 if result.get("verdict") == "pass" else 20)
 
 
