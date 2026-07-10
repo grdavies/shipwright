@@ -176,6 +176,18 @@
               "description": "auto runs retrospective \u2192 PR \u2192 watch/stabilize hands-off; supervised preserves halts."
             }
           }
+        },
+        "loop": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Deliver-loop driver tuning (PRD 062 R7).",
+          "properties": {
+            "drainMechanical": {
+              "type": "boolean",
+              "default": true,
+              "description": "When true (default), deliver-loop drains mechanical actions in-process until awaitAgent, awaitInFlight, or halt. When false, one mechanical step per invocation."
+            }
+          }
         }
       }
     },
