@@ -62,16 +62,28 @@ def render_derived_body(status_map: dict[str, str]) -> str:
     return "\n".join(lines) + ("\n" if lines else "")
 
 
+def _discover_units_for_index(worktree: Path) -> list[pig.PlanningUnit]:
+    """File-tree discover first; under issue-store fall back to issue projection (R4)."""
+    units = planning_discover.discover_units_file(worktree)
+    if units:
+        return units
+    from planning_artifact_handle import issue_store_is_effective
+
+    if issue_store_is_effective(worktree):
+        return planning_discover.discover_units(worktree)
+    return units
+
+
 def resolve_prd_unit_id(root: Path, prd: str, *, slug: str | None = None) -> str | None:
     """Map a legacy PRD number to a planning unit id."""
     prd = prd.zfill(3)
     worktree = pp.git_root(root)
     if slug:
         for candidate in (f"prd-{prd}-{slug}", f"{prd}-prd-{slug}"):
-            for unit in planning_discover.discover_units_file(worktree):
+            for unit in _discover_units_for_index(worktree):
                 if unit.id == candidate and unit.type == "prd":
                     return unit.id
-    for unit in planning_discover.discover_units_file(worktree):
+    for unit in _discover_units_for_index(worktree):
         if unit.type != "prd":
             continue
         if unit.id.startswith(f"prd-{prd}-") or unit.id.startswith(f"{prd}-prd-"):

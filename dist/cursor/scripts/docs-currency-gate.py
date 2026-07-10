@@ -94,6 +94,7 @@ def main(argv: list[str] | None = None) -> int:
         return f"| {prd.lstrip('0')} |" in log_text or f"| {prd} |" in log_text
 
     banned = living_doc_write_banned(root)
+    slug = str((state.get("target") or {}).get("slug") or "")
     index_status = None
     if banned:
         ev = read_index_status_evidence(root, prd, slug=slug)
