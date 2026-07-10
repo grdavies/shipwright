@@ -34,8 +34,29 @@ Post-freeze correction path. Parent stays byte-stable.
 6. Run `/sw-doc-review` — floor per doc type (PRD amendment: coherence + scope-guardian; decision amendment:
    raised floor per `skills/doc-review/SKILL.md`).
 7. Freeze amendment via `/sw-freeze`.
-8. Update `docs/prds/INDEX.md` or `docs/decisions/INDEX.md` amendment links.
+8. **File-store only:** update `docs/prds/INDEX.md` or `docs/decisions/INDEX.md` amendment links. Under
+   issue-store (below), INDEX rows are issue-derived — never hand-edit living projections in the code repo.
 9. On decision record-level supersede: `python3 scripts/reconcile-status.py append-superseded --path <parent-record> --replacement <replacement-record>`.
+
+## Issue-store mode (PRD 061 R23)
+
+When `planning.store.backend` is `issue-store` (effective):
+
+1. **PRD amendments** — persist via the planning store facade only; do not author tracked bodies under
+   `docs/prds/<n>-<slug>/amendments/` in the code repo when `storeLocation.mode` is `separate-project`:
+   ```bash
+   python3 scripts/planning_store.py put \
+     --unit-id <parent-prd-unit>-amend-A<k>-<short> \
+     --body-path docs/prds/<n>-<slug>/amendments/A<k>-<short>.md \
+     --content @amendment-draft.md
+   ```
+   Carry `amends:` / `sw:amends:` edges on the parent issue via store-native label projection (same as PRD
+   `depends` edges).
+2. **Freeze** — `python3 scripts/planning_store.py freeze --unit-id <amendment-unit> --body-path <virtual-path>`.
+3. **Decision amendments** remain **file-native** (D8) — `docs/decisions/.../amendments/` in the code repo;
+   only PRD amendments are store-only under issue-store.
+4. **Doctor** — `python3 scripts/planning_store.py doctor` fails closed on dirty banned-path writes if a local
+   amendment body appears under `separate-project`.
 
 **Communication intensity:** lite
 

@@ -113,15 +113,15 @@ prd: docs/prds/061-planning-store-interface-architecture/061-prd-planning-store-
 
 ### 6. `amend-docs-gap-prereq` — Amend/decisions + docs + gap pre-req write-back (R16, R23, R26–R29)
 
-- [ ] 6.1 Route amend/decisions through facade under issue-store (R23)
+- [x] 6.1 Route amend/decisions through facade under issue-store (R23)
   - **File:** `core/commands/sw-amend.md`
   - **Expected:** Amend/decision put leaves no code-repo docs body under issue-store
   - **R-IDs:** R23
-- [ ] 6.2 Remediate skills/commands/README/config/parity docs (R28)
+- [x] 6.2 Remediate skills/commands/README/config/parity docs (R28)
   - **File:** `README.md`
   - **Expected:** R28 surfaces updated; no local living-doc mutation instructions under issue-store
   - **R-IDs:** R28
-- [ ] 6.3 Write-back gap-078/079 depends on 061; resolve 077/104/109 when green; enforce 060 gate (R16, R26, R27, R29)
+- [x] 6.3 Write-back gap-078/079 depends on 061; resolve 077/104/109 when green; enforce 060 gate (R16, R26, R27, R29)
   - **File:** `scripts/planning_store.py`
   - **Expected:** gap-078/079 frontmatter depends includes 061; absorbed gaps close only after checks
   - **R-IDs:** R16, R26, R27, R29
