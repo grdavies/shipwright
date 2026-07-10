@@ -1046,6 +1046,9 @@ def resolve_docs_currency_paths(root: Path) -> tuple[Path, Path, Path, Path]:
 
 def ensure_terminal_index_projection(root: Path) -> None:
     """Project INDEX + completion evidence for issue-store before docs-currency (R4/R50)."""
+    import contextlib
+    import io
+
     from wave_living_docs import (
         append_completion_store_event,
         derive_index_status,
@@ -1065,20 +1068,21 @@ def ensure_terminal_index_projection(root: Path) -> None:
     if derive_index_status(state, False) != "complete":
         return
     slug = str((state.get("target") or {}).get("slug") or "") or None
-    pii.project_index_status(root, prd, "complete", slug=slug, force_issue_store=True)
-    worktree = pp.git_root(root)
-    unit_id = pii.resolve_prd_unit_id(root, prd, slug=slug) or pii._unit_id_from_derived_cache(
-        worktree, prd, slug=slug
-    )
-    if unit_id and read_completion_evidence(root, prd) is None:
-        notes = str((state.get("completion") or {}).get("notes") or "pre-merge compounding complete")
-        append_completion_store_event(
-            root,
-            prd_id=prd,
-            unit_id=unit_id,
-            status="complete",
-            evidence={"phase": "deliver-terminal", "notes": notes},
+    with contextlib.redirect_stdout(io.StringIO()):
+        pii.project_index_status(root, prd, "complete", slug=slug, force_issue_store=True)
+        worktree = pp.git_root(root)
+        unit_id = pii.resolve_prd_unit_id(root, prd, slug=slug) or pii._unit_id_from_derived_cache(
+            worktree, prd, slug=slug
         )
+        if unit_id and read_completion_evidence(root, prd) is None:
+            notes = str((state.get("completion") or {}).get("notes") or "pre-merge compounding complete")
+            append_completion_store_event(
+                root,
+                prd_id=prd,
+                unit_id=unit_id,
+                status="complete",
+                evidence={"phase": "deliver-terminal", "notes": notes},
+            )
 
 
 def run_docs_currency_gate(root: Path) -> None:
