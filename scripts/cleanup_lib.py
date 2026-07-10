@@ -353,26 +353,41 @@ def deliver_inflight(repo_root: Path) -> tuple[bool, str]:
     return False, ""
 
 
+def _run_state_item_protected(repo_root: Path, rel_path: str) -> tuple[bool, str]:
+    from wave_state import enumerate_scoped_runs, _read_state_optional
+
+    view = resolve_deliver_state(repo_root)
+    stale = _stale_state_rel_paths(view, repo_root)
+    if rel_path in stale:
+        return False, ""
+    for run in enumerate_scoped_runs(repo_root):
+        if run.get("statePath") != rel_path:
+            continue
+        return _scoped_run_inflight(repo_root, run)
+    path = repo_root / rel_path
+    state = _read_state_optional(path)
+    if not state:
+        return False, ""
+    verdict = str(state.get("verdict") or "")
+    if verdict in RESUMABLE_DELIVER_VERDICTS:
+        return True, f"deliver run verdict={verdict}"
+    if verdict and verdict not in TERMINAL_DELIVER_VERDICTS:
+        return True, f"deliver run verdict={verdict}"
+    return False, ""
+
 def _protect_inflight_scoped_runs(report: Report, repo_root: Path) -> None:
     from wave_state import enumerate_scoped_runs
 
     view = resolve_deliver_state(repo_root)
     stale = _stale_state_rel_paths(view, repo_root)
-    active_slugs = _active_scope_slugs(repo_root, view)
     for run in enumerate_scoped_runs(repo_root):
         if run.get("statePath") in stale:
-            continue
-        if not _run_in_active_scope(run, active_slugs):
             continue
         inflight, reason = _scoped_run_inflight(repo_root, run)
         if inflight:
             report.protected.append(
                 Item("run-state", run["statePath"], "protected", reason)
             )
-            if any(f"verdict={token}" in reason for token in ("blocked", "halted", "watching")):
-                report.notes.append(
-                    "resumable deliver halt detected; preserving run-state hygiene files"
-                )
 
 
 def parent_wave_branch(branch: str) -> str | None:
@@ -565,6 +580,17 @@ def enumerate_cleanup(root: Path) -> Report:
     from wave_state import resolve_state_path
 
     _protect_inflight_scoped_runs(report, root)
+    if any(
+        item.kind == "run-state"
+        and any(
+            token in item.detail
+            for token in ("verdict=blocked", "verdict=halted", "verdict=watching")
+        )
+        for item in report.protected
+    ):
+        report.notes.append(
+            "resumable deliver halt detected; preserving run-state hygiene files"
+        )
     if inflight:
         state_rel = rel_to_repo(root, resolve_state_path(root, state_hint=deliver_view.state))
         if not any(
@@ -580,10 +606,6 @@ def enumerate_cleanup(root: Path) -> Report:
         elif verdict:
             state_rel = rel_to_repo(root, resolve_state_path(root, state_hint=deliver_view.state))
             report.protected.append(Item("run-state", state_rel, "protected", verdict))
-            if verdict in RESUMABLE_DELIVER_VERDICTS:
-                report.notes.append(
-                    "resumable deliver halt detected; preserving run-state hygiene files"
-                )
 
     return report
 
@@ -622,8 +644,8 @@ def apply_report(root: Path, report: Report) -> Report:
                 git(root, "worktree", "prune")
                 report.removed.append(item)
             elif item.kind == "run-state":
-                inflight, inflight_reason = deliver_inflight(root)
-                if inflight:
+                protected, inflight_reason = _run_state_item_protected(root, item.name)
+                if protected:
                     report.protected.append(
                         Item("run-state", item.name, "protected", inflight_reason)
                     )
