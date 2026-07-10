@@ -98,14 +98,16 @@ else
   bad "base-persist-name-and-sha"
 fi
 
-# --- base-entry-guard-actionable ---
+# --- base-entry-guard-actionable (R6: trunk capture from feat/* when trunk resolves) ---
 cd "$FIX/repo"
 git checkout -q -b feat/demo-work
-set +e
-OUT=$(bash "$RESOLVE" capture 2>&1)
-EC=$?
-set -e
-if [[ "$EC" -ne 0 ]] && echo "$OUT" | grep -qi 'work branch'; then
+if OUT=$(bash "$RESOLVE" capture --force 2>/dev/null) && echo "$OUT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+t=d.get('trunkBase',{})
+assert t.get('source')=='trunk-ref-from-work-branch', t.get('source')
+assert t.get('name')=='main', t.get('name')
+"; then
   ok "base-entry-guard-actionable"
 else
   bad "base-entry-guard-actionable"
