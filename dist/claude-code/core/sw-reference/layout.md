@@ -56,6 +56,20 @@ docs/decisions/
 `planning_store.py materialize --resync`. Pre-resync backups land beside the materialized destination as
 `*.pre-resync.bak`. Planning query cache state: `.cursor/hooks/state/planning-query-cache.json`.
 
+### Slim gate manifest + request budget (PRD 062 R8, R12, R19)
+
+| Concern | Location | Semantics |
+| --- | --- | --- |
+| Slim `prTestPlan` | `status.json` carries `manifestPath` + `manifestSha256` only | Full manifest snapshot at `.cursor/sw-gate-cache/pr-test-plan.manifest.json` (cleanup-safe under repo root) |
+| Fail-closed load | `check_gate_lib.validate_pr_test_plan_gate` | Missing path/hash mismatch → gate `blocked` (`prTestPlan:slim-manifest-incomplete`) |
+| Request budget ledger | `.cursor/hooks/state/planning-request-budget.json` | Per-run isolation; `github-issues` default `maxCalls: 750` |
+| Critical revalidate | `planning_request_budget.RequestBudgetLedger.charge(critical=True)` | `critical=True` bypasses TTL cache (`cacheTtlSeconds` → 0) for authoritative status ops |
+| Deliver-loop drain | `deliver.loop.drainMechanical` (default `true`) | See `core/skills/conductor/SKILL.md` **Deliver-loop mechanical drain** |
+| Driver timing | `run.log` `driver-transition` / `execute-mechanical` events | `elapsedMs` numeric only (R9) |
+
+Scoped cleanup inflight: `cleanup_lib.deliver_inflight` scopes protection to active run slugs; terminal
+`complete`/`rejected` verdicts allow run-state removal when merge detection is deterministic.
+
 
 ## Planning-unit model (PRD 031)
 
