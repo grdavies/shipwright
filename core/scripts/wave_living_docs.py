@@ -324,7 +324,12 @@ def read_completion_evidence(root: Path, prd_id: str) -> dict[str, object] | Non
     cache = _completion_events_cache_path(root)
     if not cache.is_file():
         return None
-    events = json.loads(cache.read_text(encoding="utf-8"))
+    try:
+        events = json.loads(cache.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(events, list):
+        return None
     prd = prd_id.zfill(3)
     for ev in reversed(events):
         if str(ev.get("prd_id", "")).zfill(3) == prd:

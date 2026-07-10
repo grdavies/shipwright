@@ -122,5 +122,6 @@ def revalidate_live_metadata(root: Path, client: Any, entry: dict[str, Any]) -> 
     return True
 
 
-def resolve_ttl(root: Path, provider: str) -> int:
-    return RequestBudgetLedger.from_config(root, provider).cache_ttl_seconds
+def resolve_ttl(root: Path, provider: str, *, critical: bool = False) -> int:
+    ledger = RequestBudgetLedger.from_config(root, provider)
+    return ledger.cache_ttl(critical=critical)

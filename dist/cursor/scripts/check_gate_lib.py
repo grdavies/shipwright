@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -20,6 +21,66 @@ PENDING_STATES = frozenset(
 )
 
 VERDICT_EXIT = {"green": 0, "yellow": 10, "red": 20, "blocked": 30}
+
+
+GATE_MANIFEST_CACHE_REL = Path(".cursor/sw-gate-cache/pr-test-plan.manifest.json")
+
+
+def manifest_sha256(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
+
+
+def persist_gate_manifest_snapshot(root: Path, manifest: Any) -> dict[str, str]:
+    """Persist manifest under repo-root cache (R8 — outside ephemeral worktrees)."""
+    cache_dir = root / ".cursor" / "sw-gate-cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_path = cache_dir / "pr-test-plan.manifest.json"
+    canonical = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
+    written = (canonical + "\n").encode("utf-8")
+    cache_path.write_bytes(written)
+    rel = str(cache_path.relative_to(root))
+    return {"manifestPath": rel, "manifestSha256": manifest_sha256(written)}
+
+
+def slim_pr_test_plan_gate(
+    root: Path,
+    pr_test_plan: Any,
+    required_jobs: list[str],
+    advisory_jobs: list[str],
+) -> dict[str, Any] | None:
+    if pr_test_plan is None:
+        return None
+    refs = persist_gate_manifest_snapshot(root, pr_test_plan)
+    return {
+        **refs,
+        "requiredJobs": required_jobs,
+        "advisoryJobs": advisory_jobs,
+    }
+
+
+def validate_pr_test_plan_gate(root: Path, pr_test_plan_gate: Any) -> str | None:
+    """Fail-closed validation for slim or embedded prTestPlan refs (R8)."""
+    if pr_test_plan_gate is None:
+        return None
+    if not isinstance(pr_test_plan_gate, dict):
+        return "invalid-prTestPlan"
+    if "manifest" in pr_test_plan_gate:
+        return None
+    path_rel = pr_test_plan_gate.get("manifestPath")
+    expected_sha = pr_test_plan_gate.get("manifestSha256")
+    if not path_rel or not expected_sha:
+        return "slim-manifest-incomplete"
+    path = root / str(path_rel)
+    if not path.is_file():
+        return "manifest-missing"
+    content = path.read_bytes()
+    if manifest_sha256(content) != str(expected_sha):
+        return "manifest-hash-mismatch"
+    try:
+        json.loads(content.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return "manifest-invalid-json"
+    return None
 
 
 def resolve_plugin_root(script_dir: Path | None = None) -> Path:
@@ -431,6 +492,7 @@ def finalize_gate_payload(
 
 
 def build_gate_payload(
+    root: Path,
     *,
     verdict: str,
     reason: str,
@@ -494,11 +556,12 @@ def build_gate_payload(
     if source is not None:
         payload["source"] = source
     if pr_test_plan is not None:
-        payload["prTestPlan"] = {
-            "manifest": pr_test_plan,
-            "requiredJobs": required_jobs,
-            "advisoryJobs": advisory_jobs,
-        }
+        payload["prTestPlan"] = slim_pr_test_plan_gate(
+            root,
+            pr_test_plan,
+            required_jobs,
+            advisory_jobs,
+        )
     else:
         payload["prTestPlan"] = None
     return payload
@@ -688,6 +751,16 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
     ids = resolve_review_providers(review_cfg)
     review_provider = ",".join(ids) if ids else str(cfg_value(cfg, "review", "provider", default="none") or "none")
     pr_test_plan, advisory_jobs, required_jobs = load_pr_test_plan(root, cfg)
+    slim_ref = slim_pr_test_plan_gate(root, pr_test_plan, required_jobs, advisory_jobs) if pr_test_plan is not None else None
+    manifest_err = validate_pr_test_plan_gate(root, slim_ref)
+    if manifest_err:
+        payload = {
+            "verdict": "blocked",
+            "reason": f"prTestPlan:{manifest_err}",
+            "source": "local-evidence",
+        }
+        jsonio.emit(payload)
+        return 30, payload
 
     if not re.fullmatch(r"[a-z0-9-]*", review_provider):
         payload = {
@@ -735,6 +808,7 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
         )
 
     payload = build_gate_payload(
+        root,
         verdict=verdict,
         reason=reason,
         head_sha=head_sha,
@@ -787,6 +861,16 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     if not isinstance(allowlist, list):
         allowlist = []
     pr_test_plan, advisory_jobs, required_jobs = load_pr_test_plan(root, cfg)
+    slim_ref = (
+        slim_pr_test_plan_gate(root, pr_test_plan, required_jobs, advisory_jobs)
+        if pr_test_plan is not None
+        else None
+    )
+    manifest_err = validate_pr_test_plan_gate(root, slim_ref)
+    if manifest_err:
+        payload = {"verdict": "blocked", "reason": f"prTestPlan:{manifest_err}"}
+        jsonio.emit(payload)
+        return 30, payload
 
     resolved = resolve_provider(root)
     host_provider = str(resolved.get("provider") or "")
@@ -897,6 +981,7 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
         reason = scripts_touch_advisory(root, pr_view, head_sha, reason)
 
     payload = build_gate_payload(
+        root,
         verdict=verdict,
         reason=reason,
         head_sha=head_sha,

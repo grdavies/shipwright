@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import time
 
 from _sw import interpreter
 import sys
@@ -127,6 +128,8 @@ DEFAULT_BACKGROUND_TASK_TIMEOUT_MIN = int(
 MERGED_PHASE_STATUSES = TERMINAL_PHASE_STATUSES  # re-export (R1); do not redefine locally
 DEFAULT_MAX_ITERATIONS = 500
 DEFAULT_NO_PROGRESS_THRESHOLD = 3
+DRAIN_STEP_BUDGET_HALT = "conductor:drain-step-budget-exceeded"
+_MECH_TIMER_START: float | None = None
 PROPOSAL_OVERHEAD_ACTIONS = frozenset({"wave-plan-persist", "phase-plan-entry"})
 BUDGET_HALT_CAUSES = frozenset(
     {
@@ -135,6 +138,7 @@ BUDGET_HALT_CAUSES = frozenset(
         "conductor:no-progress",
         "conductor:plan-rejection-breaker",
         "plan-rejection-breaker",
+        DRAIN_STEP_BUDGET_HALT,
     }
 )
 
@@ -259,6 +263,13 @@ def max_run_minutes(root: Path) -> int | None:
 
 def no_progress_threshold(_root: Path) -> int:
     return DEFAULT_NO_PROGRESS_THRESHOLD
+
+
+def drain_mechanical_enabled(root: Path) -> bool:
+    deliver = load_workflow_config(root).get("deliver") or {}
+    loop = deliver.get("loop") or {}
+    raw = loop.get("drainMechanical", True)
+    return raw if isinstance(raw, bool) else True
 
 
 def status_reemit_max(root: Path) -> int:
@@ -909,7 +920,7 @@ def merge_ready_in_flight_phases(
             continue
         if status.get("verdict") != "merge-ready-green":
             continue
-        ok_shape, _shape_cause = validate_terminal_status_shape(status)
+        ok_shape, _shape_cause = validate_terminal_status_shape(status, root)
         if not ok_shape:
             continue
         phase_branch = meta.get("branch")
@@ -959,7 +970,7 @@ def phase_has_validated_terminal(
         return status_is_consumable_terminal(status)
     if status.get("verdict") != "merge-ready-green":
         return False
-    ok_shape, _ = validate_terminal_status_shape(status)
+    ok_shape, _ = validate_terminal_status_shape(status, root)
     if not ok_shape:
         return False
     phase_branch = meta.get("branch")
@@ -1055,7 +1066,7 @@ def in_flight_merge_halt(
             continue
         if status.get("verdict") != "merge-ready-green":
             continue
-        ok_shape, shape_cause = validate_terminal_status_shape(status)
+        ok_shape, shape_cause = validate_terminal_status_shape(status, root)
         if not ok_shape:
             return {
                 "action": "halt-blocked",
@@ -1776,7 +1787,11 @@ def persist_cursor(root: Path, state: dict[str, Any], action: str, **extra: Any)
     for key, val in extra.items():
         state[key] = val
     save_state(root, state)
-    append_log(root, {"event": "driver-transition", "nextAction": action, **extra}, state)
+    entry: dict[str, Any] = {"event": "driver-transition", "nextAction": action, **extra}
+    global _MECH_TIMER_START
+    if _MECH_TIMER_START is not None:
+        entry["elapsedMs"] = int((time.perf_counter() - _MECH_TIMER_START) * 1000)
+    append_log(root, entry, state)
 
 
 def write_blocker_report(root: Path, state: dict[str, Any], cause: str) -> Path:
@@ -1833,6 +1848,27 @@ def reload_state_from_path(state: dict[str, Any], state_path: Path) -> None:
 
 
 def execute_mechanical(
+    root: Path,
+    state: dict[str, Any],
+    plan: dict[str, Any],
+    step: dict[str, Any],
+    *,
+    loop_args: list[str] | None = None,
+) -> dict[str, Any]:
+    global _MECH_TIMER_START
+    _MECH_TIMER_START = time.perf_counter()
+    try:
+        result = _execute_mechanical_inner(root, state, plan, step, loop_args=loop_args)
+        elapsed_ms = int((time.perf_counter() - _MECH_TIMER_START) * 1000)
+        if isinstance(result, dict):
+            result = dict(result)
+            result["elapsedMs"] = elapsed_ms
+        return result
+    finally:
+        _MECH_TIMER_START = None
+
+
+def _execute_mechanical_inner(
     root: Path,
     state: dict[str, Any],
     plan: dict[str, Any],
@@ -2401,6 +2437,13 @@ def execute_mechanical(
     fail(f"unknown mechanical action: {action}")
 
 
+def _mechanical_elapsed_ms() -> int:
+    global _MECH_TIMER_START
+    if _MECH_TIMER_START is None:
+        return 0
+    return int((time.perf_counter() - _MECH_TIMER_START) * 1000)
+
+
 def cmd_watchdog_check(root: Path, _args: list[str]) -> None:
     state = load_state(root)
     cause = check_watchdog(root, state)
@@ -2589,7 +2632,48 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
         result = execute_mechanical(root, state, plan, step, loop_args=args)
         steps_taken.append(result)
         resumed = True
+        state_append_log(
+            root,
+            {
+                "event": "execute-mechanical",
+                "action": step["action"],
+                "executed": result.get("executed"),
+                "elapsedMs": result.get("elapsedMs"),
+            },
+            load_state(root, task_list),
+        )
+        if not drain_mechanical_enabled(root):
+            next_after = compute_next_action(root, load_state(root, task_list), load_plan(root))
+            emit(
+                {
+                    "verdict": "pass",
+                    "action": "deliver-loop",
+                    "resumed": resumed,
+                    "awaitAgent": False,
+                    "drainMechanical": False,
+                    "next": next_after,
+                    "stepsTaken": steps_taken,
+                }
+            )
 
+    next_after = compute_next_action(root, load_state(root, task_list), load_plan(root))
+    if (
+        drain_mechanical_enabled(root)
+        and next_after.get("action") in MECHANICAL_ACTIONS
+    ):
+        emit(
+            {
+                "verdict": "blocked",
+                "action": "deliver-loop",
+                "resumed": resumed,
+                "halt": True,
+                "cause": DRAIN_STEP_BUDGET_HALT,
+                "note": f"step budget ({max_steps}) reached while next action is still mechanical",
+                "stepsTaken": steps_taken,
+                "next": next_after,
+            },
+            20,
+        )
     emit(
         {
             "verdict": "pass",
@@ -2597,7 +2681,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
             "resumed": resumed,
             "note": f"step budget ({max_steps}) reached",
             "stepsTaken": steps_taken,
-            "next": compute_next_action(root, load_state(root, task_list), load_plan(root)),
+            "next": next_after,
         }
     )
 

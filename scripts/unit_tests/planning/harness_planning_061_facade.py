@@ -97,7 +97,6 @@ paths = {v.get('path') for v in d.get('violations', [])}
 expected = {
     'scripts/planning_discover.py',
     'scripts/planning_scheduler.py',
-    'scripts/planning_unit_status.py',
 }
 missing = expected - paths
 assert not missing, f'lint missed baseline violators: {missing}'

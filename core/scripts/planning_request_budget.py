@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,9 +18,10 @@ import planning_paths as pp  # noqa: E402
 from host_lib import load_workflow_config  # noqa: E402
 
 LEDGER_STATE_REL = ".cursor/hooks/state/planning-request-budget.json"
+RUN_LEDGER_FILE = "planning-request-budget.json"
 
 DEFAULT_PROVIDER_CEILINGS: dict[str, dict[str, float | int]] = {
-    "github-issues": {"maxCalls": 500, "maxPaginationDepth": 10, "alertThreshold": 0.8, "cacheTtlSeconds": 300},
+    "github-issues": {"maxCalls": 750, "maxPaginationDepth": 10, "alertThreshold": 0.8, "cacheTtlSeconds": 300},
     "gitlab-issues": {"maxCalls": 500, "maxPaginationDepth": 10, "alertThreshold": 0.8, "cacheTtlSeconds": 300},
     "jira": {"maxCalls": 300, "maxPaginationDepth": 5, "alertThreshold": 0.8, "cacheTtlSeconds": 180},
 }
@@ -32,7 +34,17 @@ class BudgetExhausted(Exception):
 
 
 def ledger_path(root: Path) -> Path:
-    return pp.git_root(root) / LEDGER_STATE_REL
+    repo_root = pp.git_root(root)
+    run_dir = (os.environ.get("SW_RUN_DIR") or "").strip()
+    if run_dir:
+        run_path = Path(run_dir)
+        if not run_path.is_absolute():
+            run_path = repo_root / run_path
+        return run_path / RUN_LEDGER_FILE
+    phase_slug = (os.environ.get("SW_PHASE_SLUG") or "").strip()
+    if phase_slug:
+        return repo_root / ".cursor" / "sw-deliver-runs" / phase_slug / RUN_LEDGER_FILE
+    return repo_root / LEDGER_STATE_REL
 
 
 def _provider_budget_cfg(cfg: dict[str, Any], provider: str) -> dict[str, float | int]:
@@ -115,6 +127,10 @@ class RequestBudgetLedger:
             self._record_alert(operation, next_total, ceiling)
         self._operations[operation] = self._operations.get(operation, 0) + count
         self._persist()
+
+    def cache_ttl(self, *, critical: bool = False) -> int:
+        """Critical call-sites must bypass TTL cache and revalidate live."""
+        return 0 if critical else self.cache_ttl_seconds
 
     def _record_alert(self, operation: str, charged: int, ceiling: int) -> None:
         ledger = load_ledger(self.root)

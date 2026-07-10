@@ -4068,7 +4068,6 @@ FACADE_WORKFLOW_SCAN_GLOB = "scripts/*.py"
 FACADE_BYPASS_BASELINE = frozenset({
     "scripts/planning_discover.py",
     "scripts/planning_scheduler.py",
-    "scripts/planning_unit_status.py",
 })
 
 _ISSUES_CLIENT_IMPORT_ROOTS = frozenset({"issues_lib"})
@@ -4114,6 +4113,57 @@ def _imports_issues_client(path: Path) -> list[int]:
             if root_name in _ISSUES_CLIENT_IMPORT_ROOTS or "IssuesClient" in imported:
                 lines.append(node.lineno)
     return sorted(set(lines))
+
+
+def issue_get_facade(root: Path, cfg: dict[str, Any], issue_ref: str) -> dict[str, Any]:
+    """Facade wrapper for issue lookup used by non-allowlisted workflow scripts."""
+    effective = resolve_effective_backend(root, cfg)
+    if effective.get("effective") != "issue-store":
+        return {
+            "verdict": "fail",
+            "error": "--issue requires issue-store effective backend",
+            "effectiveBackend": effective.get("effective"),
+        }
+    key_result = validate_project_key(root, cfg)
+    if key_result.get("verdict") != "ok":
+        return {"verdict": "fail", "error": key_result.get("message") or "invalid project key"}
+    provider = str(resolve_issues_provider(cfg).get("provider", "none"))
+    client = IssuesClient(root, provider)
+    try:
+        record = client.issue_get(issue_ref)
+    except IssueNotFound:
+        return {
+            "verdict": "fail",
+            "error": "issue-not-found-or-outside-scope",
+            "issue": issue_ref,
+        }
+    except IssueCapabilityError:
+        return {"verdict": "fail", "error": "issue-capability-error", "issue": issue_ref}
+    except IssueBudgetExhausted:
+        return {"verdict": "fail", "error": "issue-budget-exhausted", "issue": issue_ref}
+    return {"verdict": "ok", "record": record}
+
+
+def issue_search_by_unit_facade(root: Path, cfg: dict[str, Any], *, unit_id: str) -> dict[str, Any]:
+    """Facade wrapper for issue search by unit id."""
+    effective = resolve_effective_backend(root, cfg)
+    if effective.get("effective") != "issue-store":
+        return {"verdict": "ok", "records": []}
+    key_result = validate_project_key(root, cfg)
+    if key_result.get("verdict") != "ok":
+        return {"verdict": "ok", "records": []}
+    provider = str(resolve_issues_provider(cfg).get("provider", "none"))
+    client = IssuesClient(root, provider)
+    try:
+        records = list(
+            client.issue_search(
+                project_key=str(key_result["projectKey"]),
+                unit_id=unit_id,
+            )
+        )
+    except (IssueCapabilityError, IssueBudgetExhausted, RuntimeError):
+        return {"verdict": "fail", "error": "issue-search-failed", "records": []}
+    return {"verdict": "ok", "records": records}
 
 
 def scan_facade_import_violations(root: Path, *, extra_paths: list[Path] | None = None) -> list[dict[str, Any]]:

@@ -500,7 +500,42 @@ Read from `.cursor/workflow.config.json`:
 | `deliver.autonomy.maxIterations` | `500` | Run-level driver-loop iteration ceiling (R42) |
 | `deliver.phaseAckCadence` | `0` | Pause every K phase merges (checkpoint) |
 | `deliver.remediation.maxAttempts` | `2` | Per-phase stabilize budget |
+| `deliver.loop.drainMechanical` | `true` | Drain mechanical steps in-process until agent wait or halt (PRD 062 R7) |
 | `worktree.parallelCeiling` | `4` | Max concurrent phase worktrees |
+
+## Deliver-loop mechanical drain + timing (PRD 062 R7, R9, R19)
+
+`wave_deliver_loop.py` reads `deliver.loop.drainMechanical` (default **`true`**):
+
+| `drainMechanical` | Behavior |
+| --- | --- |
+| `true` (default) | `deliver-loop` executes mechanical actions in-process until `awaitAgent`, `awaitInFlight`, or a legitimate halt — reduces driver re-invocation churn |
+| `false` | One mechanical step per `deliver-loop` invocation (legacy one-step posture) |
+
+**Termination / halt surfaces:**
+
+- **`--max-steps` budget** (default 12 per invocation) — when still mechanical after the budget,
+  `conductor:drain-step-budget-exceeded` halts fail-closed (not an unqualified pass).
+- **No-progress circuit breaker** — identical `nextAction` + state signature 3× → `conductor:no-progress`.
+- **Identical mechanical signature N×** without state advance → stall halt (not pass).
+
+**`elapsedMs` (R9):** `driver-transition` log events and `execute-mechanical` results include wall-clock
+`elapsedMs` (optional subprocess timings). Values are numeric only — no secret-bearing argv in logs. Gate
+semantics unchanged; timing is diagnostic/operator-observable only.
+
+## PRD 062 release acceptance metrics (R18)
+
+PRD 062 is **not complete** until all R1–R19 harnesses pass **and** these four operator acceptance checks
+are green on the integration branch (record in verify notes / `benefitMetric` soak where applicable):
+
+| # | Metric | Pass criterion | R-IDs |
+| --- | --- | --- | --- |
+| 1 | Issue-store deliver entry | Provision materializes frozen task list before discover; `--issue` normalize stable | R1, R2 |
+| 2 | Terminal ship on separate-project | Docs-currency slug fallback + readonly gap-backlog skip unblock phase ship | R4, R5 |
+| 3 | Loop drain without spin | `deliver.loop.drainMechanical: true` drains mechanical steps; no spurious `conductor:no-progress` on happy path | R7, R9 |
+| 4 | Scoped cleanup hygiene | Unrelated in-flight scoped run does not block terminal orch cleanup; `cleanup.autonomy: auto` respects terminal allowlist | R10, R11 |
+
+Meta gate: `scripts/unit_tests/deliver/test_prd062_release_completeness.py` (R20).
 
 ## Orchestrator adoption
 

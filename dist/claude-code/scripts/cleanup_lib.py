@@ -23,7 +23,8 @@ def host_remote_name(root: Path) -> str:
     return remote_name(load_workflow_config(root))
 
 MergeStatus = Literal["merged", "unmerged", "indeterminate", "gone", "protected"]
-TERMINAL_DELIVER_VERDICTS = frozenset({"complete", "blocked", "rejected"})
+TERMINAL_DELIVER_VERDICTS = frozenset({"complete", "rejected"})
+RESUMABLE_DELIVER_VERDICTS = frozenset({"running", "blocked", "halted", "watching"})
 
 
 @dataclass
@@ -48,6 +49,7 @@ class Report:
     protected: list[Item] = field(default_factory=list)
     removed: list[Item] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         def items(xs: list[Item]) -> list[dict[str, str]]:
@@ -59,6 +61,7 @@ class Report:
             "protected": items(self.protected),
             "removed": items(self.removed),
             "errors": self.errors,
+            "notes": self.notes,
         }
 
 
@@ -284,11 +287,53 @@ def _scoped_run_inflight(repo_root: Path, run: dict[str, Any]) -> tuple[bool, st
     if run.get("lockHeld"):
         return True, f"deliver lock present ({run.get('slug')})"
     verdict = str(state.get("verdict") or run.get("verdict") or "")
-    if verdict == "running":
-        if state.get("mergeJournal"):
-            return True, f"open merge journal ({run.get('slug')})"
-        return True, f"deliver run verdict=running ({run.get('slug')})"
+    if state.get("mergeJournal"):
+        return True, f"open merge journal ({run.get('slug')})"
+    if verdict in RESUMABLE_DELIVER_VERDICTS:
+        return True, f"deliver run verdict={verdict} ({run.get('slug')})"
     return False, ""
+
+
+def _slug_from_target(target: str) -> str | None:
+    if not target or "/" not in target:
+        return None
+    return target.split("/", 1)[1]
+
+
+def _active_scope_slugs(repo_root: Path, view: DeliverStateView) -> set[str]:
+    active: set[str] = set()
+    current = current_branch(repo_root)
+    if current:
+        current_slug = _slug_from_target(current)
+        if current_slug:
+            active.add(current_slug)
+        parent = parent_wave_branch(current)
+        if parent:
+            parent_slug = _slug_from_target(parent)
+            if parent_slug:
+                active.add(parent_slug)
+    if not active:
+        target = (view.state.get("target") or {}).get("branch")
+        if isinstance(target, str):
+            target_slug = _slug_from_target(target)
+            if target_slug:
+                active.add(target_slug)
+    return active
+
+
+def _run_slug(run: dict[str, Any]) -> str | None:
+    slug = str(run.get("slug") or "").strip()
+    if slug and slug != "(legacy)":
+        return slug
+    target = str(run.get("target") or "").strip()
+    return _slug_from_target(target)
+
+
+def _run_in_active_scope(run: dict[str, Any], active_slugs: set[str]) -> bool:
+    if not active_slugs:
+        return True
+    slug = _run_slug(run)
+    return bool(slug and slug in active_slugs)
 
 
 def deliver_inflight(repo_root: Path) -> tuple[bool, str]:
@@ -296,14 +341,39 @@ def deliver_inflight(repo_root: Path) -> tuple[bool, str]:
 
     view = resolve_deliver_state(repo_root)
     stale = _stale_state_rel_paths(view, repo_root)
+    active_slugs = _active_scope_slugs(repo_root, view)
     for run in enumerate_scoped_runs(repo_root):
         if run.get("statePath") in stale:
+            continue
+        if not _run_in_active_scope(run, active_slugs):
             continue
         inflight, reason = _scoped_run_inflight(repo_root, run)
         if inflight:
             return True, reason
     return False, ""
 
+
+def _run_state_item_protected(repo_root: Path, rel_path: str) -> tuple[bool, str]:
+    from wave_state import enumerate_scoped_runs, _read_state_optional
+
+    view = resolve_deliver_state(repo_root)
+    stale = _stale_state_rel_paths(view, repo_root)
+    if rel_path in stale:
+        return False, ""
+    for run in enumerate_scoped_runs(repo_root):
+        if run.get("statePath") != rel_path:
+            continue
+        return _scoped_run_inflight(repo_root, run)
+    path = repo_root / rel_path
+    state = _read_state_optional(path)
+    if not state:
+        return False, ""
+    verdict = str(state.get("verdict") or "")
+    if verdict in RESUMABLE_DELIVER_VERDICTS:
+        return True, f"deliver run verdict={verdict}"
+    if verdict and verdict not in TERMINAL_DELIVER_VERDICTS:
+        return True, f"deliver run verdict={verdict}"
+    return False, ""
 
 def _protect_inflight_scoped_runs(report: Report, repo_root: Path) -> None:
     from wave_state import enumerate_scoped_runs
@@ -510,6 +580,17 @@ def enumerate_cleanup(root: Path) -> Report:
     from wave_state import resolve_state_path
 
     _protect_inflight_scoped_runs(report, root)
+    if any(
+        item.kind == "run-state"
+        and any(
+            token in item.detail
+            for token in ("verdict=blocked", "verdict=halted", "verdict=watching")
+        )
+        for item in report.protected
+    ):
+        report.notes.append(
+            "resumable deliver halt detected; preserving run-state hygiene files"
+        )
     if inflight:
         state_rel = rel_to_repo(root, resolve_state_path(root, state_hint=deliver_view.state))
         if not any(
@@ -563,6 +644,15 @@ def apply_report(root: Path, report: Report) -> Report:
                 git(root, "worktree", "prune")
                 report.removed.append(item)
             elif item.kind == "run-state":
+                protected, inflight_reason = _run_state_item_protected(root, item.name)
+                if protected:
+                    report.protected.append(
+                        Item("run-state", item.name, "protected", inflight_reason)
+                    )
+                    report.errors.append(
+                        f"run-state {item.name}: skipped delete — {inflight_reason}"
+                    )
+                    continue
                 path = root / item.name
                 if path.is_dir():
                     for child in sorted(path.rglob("*"), reverse=True):

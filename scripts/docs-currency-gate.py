@@ -68,6 +68,11 @@ def main(argv: list[str] | None = None) -> int:
         pass
 
     expected = derive_index_status(state, merged_main)
+    slug = str(
+        (state.get("target") or {}).get("slug")
+        or plan.get("slug")
+        or ""
+    ).strip() or None
 
     def _index_status_from_file() -> str | None:
         index_path = root / "docs" / "prds" / "INDEX.md"
@@ -89,15 +94,27 @@ def main(argv: list[str] | None = None) -> int:
         return f"| {prd.lstrip('0')} |" in log_text or f"| {prd} |" in log_text
 
     banned = living_doc_write_banned(root)
+    slug = str((state.get("target") or {}).get("slug") or "")
+    file_row_status = _index_status_from_file()
     index_status = None
     if banned:
-        ev = read_index_status_evidence(root, prd)
+        ev = read_index_status_evidence(root, prd, slug=slug)
         if ev:
             index_status = str(ev.get("status") or "")
         else:
-            index_status = _index_status_from_file()
+            index_status = file_row_status
     else:
-        index_status = _index_status_from_file()
+        index_status = file_row_status
+
+    # When issue projection lags but tracked INDEX + deliver state say complete, reconcile (R4).
+    if (
+        banned
+        and all_green
+        and expected == "complete"
+        and index_status not in (None, expected)
+        and file_row_status == expected
+    ):
+        index_status = file_row_status
 
     drift = []
     if index_status is None:
@@ -131,19 +148,29 @@ def main(argv: list[str] | None = None) -> int:
             if st == "open" or (st == "scheduled" and sched_re.match(row.schedule.strip())):
                 drift.append({"kind": "gap-still-open", "prd": prd, "row": row.gap_id})
 
-    # GAP-BACKLOG index/table integrity (R54)
+    # GAP-BACKLOG index/table integrity (R54) — skip read-only separate-project shim (R4 / PRD 062)
     import subprocess
-    gb = subprocess.run(
-        [sys.executable, str(root / "scripts" / "gap_backlog.py"), "--root", str(root), "check"],
-        text=True,
-        capture_output=True,
+
+    try:
+        from planning_migrate_issue_store import gap_backlog_is_readonly
+    except ImportError:
+        gap_backlog_is_readonly = None  # type: ignore[assignment,misc]
+
+    gap_backlog_readonly = (
+        gap_backlog_is_readonly(root) if gap_backlog_is_readonly is not None else False
     )
-    if gb.returncode != 0:
-        try:
-            payload = json.loads(gb.stdout or gb.stderr)
-        except json.JSONDecodeError:
-            payload = {"error": gb.stderr or gb.stdout}
-        drift.append({"kind": "gap-backlog-integrity", "detail": payload})
+    if not gap_backlog_readonly:
+        gb = subprocess.run(
+            [sys.executable, str(root / "scripts" / "gap_backlog.py"), "--root", str(root), "check"],
+            text=True,
+            capture_output=True,
+        )
+        if gb.returncode != 0:
+            try:
+                payload = json.loads(gb.stdout or gb.stderr)
+            except json.JSONDecodeError:
+                payload = {"error": gb.stderr or gb.stdout}
+            drift.append({"kind": "gap-backlog-integrity", "detail": payload})
 
     if drift:
         print(json.dumps({"verdict": "fail", "action": "docs-currency-gate", "prd": prd, "drift": drift}))

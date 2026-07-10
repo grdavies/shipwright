@@ -164,7 +164,11 @@ def schedule_next(
     ledger.charge("scheduler-revalidate", critical=True)
 
     if not force_refresh:
-        entry = get_entry(root, project_key=project_key, ttl_seconds=resolve_ttl(root, provider))
+        entry = get_entry(
+            root,
+            project_key=project_key,
+            ttl_seconds=resolve_ttl(root, provider, critical=True),
+        )
         if entry and not revalidate_live_metadata(root, client, entry):
             invalidate_all(root)
 
