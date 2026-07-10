@@ -91,6 +91,12 @@ Phase-mode `run` / `plan` accept **one** of:
 `--unit-id` / `--issue` materialize through `planning_materialize` to the same local path `--task-list`
 would produce. Passing both `--task-list` and `--unit-id`/`--issue` fails closed.
 
+**Issue-store materialize (PRD 062 R1/R2):** under `issue-store`, `planning_materialize.cmd_provision` calls
+`ensure_run_entry_materialized` **before** `discover_private_spec_units` — frozen task lists are written to
+`.cursor/planning-materialized/docs/prds/<n>-prd-<slug>/` before any discover pass. `--issue <n>` resolves via
+`logical_task_list_candidates` with strict leading `tasks-`+NNN normalization (`planning_deliver_gate.py`); interior
+`tasks-` in slugs and already-normalized ids are stable; ambiguous candidates fail closed.
+
 Unified unit status (no `docs/prds/INDEX.md` read):
 
 ```bash
@@ -206,6 +212,7 @@ scheduled from stale cache entries. Refuses when derived INDEX is `index-incompl
 | `deliver.autonomy.mode` | `autonomous` | Runs to terminal gate without per-phase re-prompts; `supervised` adds acknowledgement halts |
 | `deliver.autonomy.maxRunMinutes` | unset | Run-level wall-clock ceiling → consolidated halt |
 | `deliver.autonomy.maxIterations` | 500 | In-turn loop hard stop |
+| `deliver.loop.drainMechanical` | `true` | Drain mechanical `deliver-loop` steps in-process until `awaitAgent`, `awaitInFlight`, or halt; `false` restores one step per invocation (PRD 062 R7) |
 | `worktree.parallelCeiling` | 4 | Max concurrent phase worktrees per wave batch |
 | Conductor contract | `skills/conductor/SKILL.md` | Single source for loop, halts, parallel dispatch — referenced, not duplicated |
 
@@ -310,6 +317,19 @@ applies this ladder only when a **legacy** frozen list omits the table (`wave_de
 
 Explicit author edges always win. New task lists must emit the table at freeze — never rely on step 2–3.
 
+## Merge policy (PRD 062 R17)
+
+Phase-mode deliver enforces **correctness + terminal before perf/ops** via frozen `## Phase Dependencies`:
+
+| Wave class | Phases | R-IDs | Merge gate |
+| --- | --- | --- | --- |
+| Correctness + terminal | 1–2 | R1–R5 | Must reach `green-merged` before dependent perf/ops phases ship |
+| Perf + ops + docs | 3–5 | R6–R19 | May run in parallel with each other once phases 1–2 are green; still subject to file-contention edges |
+
+Soft-priority scheduling may **provision** phases 1∥2 and 3∥4 concurrently when contention permits, but
+**merge-enqueue** for perf/ops phases (3–5) remains blocked until every phase-1/2 member in the batch publishes
+`merge-ready-green`. Exceptions require a durable logged override on deliver state (`mergePolicyOverride` with
+`reason` + `actor`) — never silent bypass of the dependency table.
 
 ## Guardrails
 

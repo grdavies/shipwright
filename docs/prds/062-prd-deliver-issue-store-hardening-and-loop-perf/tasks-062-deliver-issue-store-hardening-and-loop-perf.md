@@ -124,35 +124,35 @@ status: not-started
 
 ### 5. Docs, merge policy, metrics, release completeness (R17–R20, R19) — small
 
-- [ ] 5.1 Document R17 merge policy in deliver/conductor surfaces (R17)
+- [x] 5.1 Document R17 merge policy in deliver/conductor surfaces (R17)
   - **File:** `core/commands/sw-deliver.md`
   - **Expected:** Correctness+terminal (R1–R5) green before merging perf/ops unless exception logged
   - **R-IDs:** R17
-- [ ] 5.2 Record R18 success metrics in PRD completion / verify notes path (R18)
+- [x] 5.2 Record R18 success metrics in PRD completion / verify notes path (R18)
   - **File:** `core/skills/conductor/SKILL.md`
   - **Expected:** Four operator metrics listed as release acceptance checks
   - **R-IDs:** R18
-- [ ] 5.3 Update conductor skill for drain + elapsedMs (R19)
+- [x] 5.3 Update conductor skill for drain + elapsedMs (R19)
   - **File:** `core/skills/conductor/SKILL.md`
   - **Expected:** drainMechanical default true/false, termination conditions, max-steps/no-progress, elapsedMs
   - **R-IDs:** R19
-- [ ] 5.4 Update sw-deliver + sw-cleanup commands (R19)
+- [x] 5.4 Update sw-deliver + sw-cleanup commands (R19)
   - **File:** `core/commands/sw-cleanup.md`
   - **Expected:** Scoped inflight, terminal-class dry-run, allowlist auto-delete documented
   - **R-IDs:** R19
-- [ ] 5.5 Update sw-deliver for materialize/`--issue`/drain (R19)
+- [x] 5.5 Update sw-deliver for materialize/`--issue`/drain (R19)
   - **File:** `core/commands/sw-deliver.md`
   - **Expected:** R1/R2/R7 operator-facing behavior documented
   - **R-IDs:** R19
-- [ ] 5.6 Update config schema examples + layout for slim status, budget 750, drain (R19)
+- [x] 5.6 Update config schema examples + layout for slim status, budget 750, drain (R19)
   - **File:** `.sw/layout.md`
   - **Expected:** Slim manifest ownership, elapsedMs, scoped cleanup, query cache semantics documented
   - **R-IDs:** R19
-- [ ] 5.7 Update README + guides for status reference-map and new knobs (R19)
+- [x] 5.7 Update README + guides for status reference-map and new knobs (R19)
   - **File:** `docs/guides/configuration.md`
   - **Expected:** Four-state + unknown non-terminal; drain; maxCalls 750; cleanup autonomy
   - **R-IDs:** R19
-- [ ] 5.8 Release completeness checklist tying R1–R19 (R20)
+- [x] 5.8 Release completeness checklist tying R1–R19 (R20)
   - **File:** `scripts/unit_tests/`
   - **Expected:** Meta check or completion note that unit not complete until R1–R19 satisfied
   - **R-IDs:** R20
