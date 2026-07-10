@@ -307,6 +307,20 @@ def insert_granularity_section(content: str, payload: dict[str, Any]) -> str:
     return content.rstrip() + "\n\n" + section
 
 
+def split_at_level2_boundary(chunk: str) -> tuple[str, str]:
+    """Bound a phase chunk at the next level-2 heading.
+
+    The last phase's raw regex-split chunk otherwise runs to EOF, swallowing
+    trailing sections (Phase Dependencies, Traceability, Execute-tier
+    granularity) into subtask parsing/splitting. Returns (phase_text, trailing)
+    so callers can reattach the trailing sections verbatim, exactly once.
+    """
+    boundary = re.search(r"^##\s", chunk, flags=re.MULTILINE)
+    if not boundary:
+        return chunk, ""
+    return chunk[: boundary.start()], chunk[boundary.start() :]
+
+
 def transform_task_list_text(root: Path, text: str, task_list: Path) -> tuple[str, list[dict[str, Any]]]:
     fm, content = doc_format.split_frontmatter(text)
     thresholds = load_execute_config(root).get("thresholds") or {}
@@ -320,7 +334,8 @@ def transform_task_list_text(root: Path, text: str, task_list: Path) -> tuple[st
     for idx in range(1, len(sections), 4):
         phase_id = sections[idx + 1]
         title = sections[idx + 2]
-        chunk = sections[idx + 3] if idx + 3 < len(sections) else ""
+        raw_chunk = sections[idx + 3] if idx + 3 < len(sections) else ""
+        chunk, trailing = split_at_level2_boundary(raw_chunk)
         refs = parse_phase_subtasks(chunk)
         expanded: list[SubtaskRef] = []
         phase_splits: list[dict[str, Any]] = []
@@ -339,6 +354,8 @@ def transform_task_list_text(root: Path, text: str, task_list: Path) -> tuple[st
             plan["childRefs"] = [id_map.get(child, child) for child in plan["childRefs"]]
             ref_splits.append(plan)
         rebuilt.append(rewrite_phase_chunk(phase_id, title, expanded))
+        if trailing:
+            rebuilt.append(trailing)
 
     new_content = "".join(rebuilt)
     score = phase_sizing.score_task_list(root, task_list, phase_sizing.load_sizing_config(root))

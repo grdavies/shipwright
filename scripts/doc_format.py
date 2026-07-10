@@ -259,7 +259,12 @@ def phase_section_text(text: str, phase_id: str) -> str:
     sections = re.split(r"^###\s+(\d+)\.", body, flags=re.MULTILINE)
     for idx in range(1, len(sections), 2):
         if sections[idx] == phase_id:
-            return sections[idx + 1] if idx + 1 < len(sections) else ""
+            chunk = sections[idx + 1] if idx + 1 < len(sections) else ""
+            # The last phase's chunk otherwise runs to EOF, swallowing trailing
+            # level-2 sections (Phase Dependencies, Traceability, Execute-tier
+            # granularity) that a "### N." split alone does not bound.
+            boundary = re.search(r"^##\s", chunk, flags=re.MULTILINE)
+            return chunk[: boundary.start()] if boundary else chunk
     return ""
 
 
