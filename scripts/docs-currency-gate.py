@@ -68,6 +68,11 @@ def main(argv: list[str] | None = None) -> int:
         pass
 
     expected = derive_index_status(state, merged_main)
+    slug = str(
+        (state.get("target") or {}).get("slug")
+        or plan.get("slug")
+        or ""
+    ).strip() or None
 
     def _index_status_from_file() -> str | None:
         index_path = root / "docs" / "prds" / "INDEX.md"
@@ -91,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
     banned = living_doc_write_banned(root)
     index_status = None
     if banned:
-        ev = read_index_status_evidence(root, prd)
+        ev = read_index_status_evidence(root, prd, slug=slug)
         if ev:
             index_status = str(ev.get("status") or "")
         else:
@@ -131,19 +136,29 @@ def main(argv: list[str] | None = None) -> int:
             if st == "open" or (st == "scheduled" and sched_re.match(row.schedule.strip())):
                 drift.append({"kind": "gap-still-open", "prd": prd, "row": row.gap_id})
 
-    # GAP-BACKLOG index/table integrity (R54)
+    # GAP-BACKLOG index/table integrity (R54) — skip read-only separate-project shim (R4 / PRD 062)
     import subprocess
-    gb = subprocess.run(
-        [sys.executable, str(root / "scripts" / "gap_backlog.py"), "--root", str(root), "check"],
-        text=True,
-        capture_output=True,
+
+    try:
+        from planning_migrate_issue_store import gap_backlog_is_readonly
+    except ImportError:
+        gap_backlog_is_readonly = None  # type: ignore[assignment,misc]
+
+    gap_backlog_readonly = (
+        gap_backlog_is_readonly(root) if gap_backlog_is_readonly is not None else False
     )
-    if gb.returncode != 0:
-        try:
-            payload = json.loads(gb.stdout or gb.stderr)
-        except json.JSONDecodeError:
-            payload = {"error": gb.stderr or gb.stdout}
-        drift.append({"kind": "gap-backlog-integrity", "detail": payload})
+    if not gap_backlog_readonly:
+        gb = subprocess.run(
+            [sys.executable, str(root / "scripts" / "gap_backlog.py"), "--root", str(root), "check"],
+            text=True,
+            capture_output=True,
+        )
+        if gb.returncode != 0:
+            try:
+                payload = json.loads(gb.stdout or gb.stderr)
+            except json.JSONDecodeError:
+                payload = {"error": gb.stderr or gb.stdout}
+            drift.append({"kind": "gap-backlog-integrity", "detail": payload})
 
     if drift:
         print(json.dumps({"verdict": "fail", "action": "docs-currency-gate", "prd": prd, "drift": drift}))
