@@ -4200,6 +4200,171 @@ def _optional(args: list[str], flag: str) -> str | None:
     return args[idx + 1] if idx + 1 < len(args) else None
 
 
+
+PRD_061_DEPENDS_TARGET = "061-prd-planning-store-interface-architecture"
+GAP_PREREQ_NUMBERS = frozenset({"078", "079"})
+ABSORB_GAP_NUMBERS = frozenset({"077", "104", "109"})
+PRD_060_GAP_ABSORB_DENY = frozenset({"081", "096", "099", "100", "105", "112"})
+
+
+def _gap_number_from_unit_id(unit_id: str) -> str | None:
+    m = re.match(r"^gap-(\d{3})", unit_id, re.I)
+    return m.group(1) if m else None
+
+
+def _parse_depends_list(raw: str) -> list[str]:
+    return _parse_absorbs_targets(raw or "")
+
+
+def _depends_includes_061(depends: list[str]) -> bool:
+    for item in depends:
+        lowered = item.lower()
+        if lowered in {"061", PRD_061_DEPENDS_TARGET.lower()}:
+            return True
+        if lowered.startswith("061-") or lowered.startswith("prd-061"):
+            return True
+    return False
+
+
+def _merge_depends_frontmatter(content: str, target: str) -> tuple[str, bool]:
+    pmis = _migrate_issue_store()
+    fm = pmis.parse_frontmatter_fields(content)
+    body = content
+    if content.startswith("---"):
+        end = content.find("\n---", 3)
+        if end != -1:
+            body = content[end + 4 :].lstrip("\n")
+    depends = _parse_depends_list(fm.get("depends", ""))
+    if _depends_includes_061(depends):
+        return content, False
+    depends.append(target)
+    lines = ["---"]
+    for key, value in fm.items():
+        if key == "depends":
+            continue
+        lines.append(f"{key}: {value}")
+    lines.append("depends: [" + ", ".join(depends) + "]")
+    lines.append("---")
+    return "\n".join(lines) + "\n" + body.lstrip("\n"), True
+
+
+def gate_prd_060_r1_r7(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    from planning_canonical import ARTIFACT_TYPE_UNRESOLVED, infer_artifact_type
+
+    checks: list[dict[str, str]] = []
+    ok = True
+    if infer_artifact_type("issue:42") != ARTIFACT_TYPE_UNRESOLVED:
+        checks.append({"check": "infer-artifact-type-opaque", "status": "fail"})
+        ok = False
+    else:
+        checks.append({"check": "infer-artifact-type-opaque", "status": "ok"})
+    if not callable(close_delivery_units):
+        checks.append({"check": "close-delivery-units-present", "status": "fail"})
+        ok = False
+    else:
+        checks.append({"check": "close-delivery-units-present", "status": "ok"})
+    pmis = _migrate_issue_store()
+    if not pmis.issue_store_effective(root, cfg):
+        checks.append({"check": "issue-store-effective", "status": "skipped"})
+    return {"verdict": "pass" if ok else "fail", "action": "rollout-after-060-r1-r7", "checks": checks}
+
+
+def write_back_gap_prereqs_061(root: Path, cfg: dict[str, Any], *, dry_run: bool = False) -> dict[str, Any]:
+    pmis = _migrate_issue_store()
+    if not pmis.issue_store_effective(root, cfg):
+        return {"verdict": "skipped", "action": "write-back-gap-prereqs", "reason": "not-issue-store"}
+    gate = gate_prd_060_r1_r7(root, cfg)
+    if gate.get("verdict") != "pass":
+        return {
+            "verdict": "fail",
+            "action": "write-back-gap-prereqs",
+            "error": "prd-060-gate",
+            "gate": gate,
+        }
+    backend = get_backend(root, cfg, override="issue-store")
+    if not isinstance(backend, IssueStoreBackend):
+        return {"verdict": "fail", "action": "write-back-gap-prereqs", "error": "issue-store-backend-required"}
+    results: list[dict[str, Any]] = []
+    for record in pmis.list_gap_issue_records(root, cfg):
+        unit_id = str(getattr(record, "unit_id", "") or "")
+        num = _gap_number_from_unit_id(unit_id)
+        if num not in GAP_PREREQ_NUMBERS:
+            continue
+        body_path = _default_body_path(unit_id, "gap")
+        fetched = backend.get(unit_id, body_path)
+        if fetched.verdict != "ok" or not fetched.content:
+            results.append({"unitId": unit_id, "verdict": "fail", "error": "missing-content"})
+            continue
+        new_content, changed = _merge_depends_frontmatter(fetched.content, PRD_061_DEPENDS_TARGET)
+        if not changed:
+            results.append({"unitId": unit_id, "verdict": "ok", "skipped": True, "reason": "depends-present"})
+            continue
+        if dry_run:
+            results.append({"unitId": unit_id, "verdict": "dry-run", "wouldUpdate": True})
+            continue
+        put_result = backend.put(unit_id, body_path, new_content)
+        pmis.sync_gap_issue_labels(root, unit_id, new_content, cfg)
+        results.append({"unitId": unit_id, "verdict": put_result.verdict, "hash": put_result.hash})
+    if not results:
+        return {"verdict": "ok", "action": "write-back-gap-prereqs", "dryRun": dry_run, "results": [], "note": "no-gap-078-079"}
+    ok = all(r.get("verdict") in {"ok", "dry-run"} or r.get("skipped") for r in results)
+    return {"verdict": "ok" if ok else "partial", "action": "write-back-gap-prereqs", "dryRun": dry_run, "results": results}
+
+
+def resolve_absorbed_gaps_061(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    dry_run: bool = False,
+    force: bool = False,
+    unit_id: str | None = None,
+) -> dict[str, Any]:
+    pmis = _migrate_issue_store()
+    if not pmis.issue_store_effective(root, cfg):
+        return {"verdict": "skipped", "action": "resolve-absorbed-gaps-061", "reason": "not-issue-store"}
+    if unit_id:
+        num = _gap_number_from_unit_id(unit_id)
+        if num in PRD_060_GAP_ABSORB_DENY:
+            return {
+                "verdict": "fail",
+                "action": "resolve-absorbed-gaps-061",
+                "error": "prd-060-gap-denylist",
+                "unitId": unit_id,
+            }
+        targets = [unit_id]
+    else:
+        targets = []
+        for record in pmis.list_gap_issue_records(root, cfg):
+            uid = str(getattr(record, "unit_id", "") or "")
+            num = _gap_number_from_unit_id(uid)
+            if num in ABSORB_GAP_NUMBERS:
+                targets.append(uid)
+    gate = gate_prd_060_r1_r7(root, cfg)
+    if not force and gate.get("verdict") != "pass":
+        return {
+            "verdict": "fail",
+            "action": "resolve-absorbed-gaps-061",
+            "error": "prd-060-gate",
+            "gate": gate,
+        }
+    results: list[dict[str, Any]] = []
+    for uid in sorted(set(targets)):
+        num = _gap_number_from_unit_id(uid)
+        if num in PRD_060_GAP_ABSORB_DENY:
+            return {
+                "verdict": "fail",
+                "action": "resolve-absorbed-gaps-061",
+                "error": "prd-060-gap-denylist",
+                "unitId": uid,
+            }
+        if dry_run:
+            results.append({"unitId": uid, "verdict": "dry-run"})
+            continue
+        results.append(pmis.close_gap_issue(root, uid, cfg))
+    ok = all(r.get("verdict") in {"pass", "dry-run"} for r in results)
+    return {"verdict": "ok" if ok else "partial", "action": "resolve-absorbed-gaps-061", "dryRun": dry_run, "results": results}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Planning store interface (PRD 034 + PRD 043)")
     parser.add_argument("--root", default=".")
@@ -4235,6 +4400,8 @@ def main() -> None:
         "migrate-orphan-phase-issues",
         "projection-refresh",
         "probe-projection",
+        "write-back-gap-prereqs",
+        "resolve-absorbed-gaps-061",
     ):
         sub.add_parser(name)
     args, rest = parser.parse_known_args()
@@ -4389,6 +4556,16 @@ def main() -> None:
 
         result = projection_health(root, cfg)
         emit(result)
+    elif args.command == "write-back-gap-prereqs":
+        dry_run = "--dry-run" in rest
+        result = write_back_gap_prereqs_061(root, cfg, dry_run=dry_run)
+        emit(result, 0 if result.get("verdict") in {"ok", "skipped"} else 20)
+    elif args.command == "resolve-absorbed-gaps-061":
+        dry_run = "--dry-run" in rest
+        force = "--force" in rest
+        unit_id = _optional(rest, "--unit-id")
+        result = resolve_absorbed_gaps_061(root, cfg, dry_run=dry_run, force=force, unit_id=unit_id)
+        emit(result, 0 if result.get("verdict") in {"ok", "skipped"} else 20)
     elif args.command == "doctor":
         result = doctor(root, cfg)
         emit(result, 0 if result.get("verdict") == "pass" else 20)
