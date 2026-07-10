@@ -3556,6 +3556,214 @@ def doctor(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     return {"verdict": "pass", "action": "doctor", "checks": checks}
 
 
+
+_PROGRESS_FACADE_NOTICE_EMITTED = False
+ORPHAN_MIGRATED_LABEL = "sw:phase-orphan-migrated"
+
+
+def _emit_progress_update_notice(notice: str, message: str) -> None:
+    global _PROGRESS_FACADE_NOTICE_EMITTED
+    if _PROGRESS_FACADE_NOTICE_EMITTED:
+        return
+    _PROGRESS_FACADE_NOTICE_EMITTED = True
+    print(json.dumps({"verdict": "notice", "notice": notice, "message": message}), file=sys.stderr)
+
+
+def _replace_checkbox_block(body: str, checkbox_block: str) -> str:
+    marker = "## Phase checklist (body-encoded fallback)"
+    if marker in body:
+        start = body.index(marker)
+        end = body.find("\n```sw-edges", start)
+        if end == -1:
+            end = len(body)
+        else:
+            end = body.find("\n```", end + 1)
+            end = end + 4 if end != -1 else len(body)
+        return body[:start] + checkbox_block + body[end:]
+    return body + "\n\n" + checkbox_block
+
+
+def progress_update(
+    root: Path,
+    *,
+    parent_issue_id: str,
+    phase_id: str,
+    action: str = "phase-done",
+    provider: str | None = None,
+    project_key: str | None = None,
+    task_list: str | Path | None = None,
+    checked_phase_ids: list[str] | None = None,
+    task_ref: str | None = None,
+) -> dict[str, Any]:
+    """Facade progress_update — parent labels/checkboxes without phase peer mint (PRD 061 R6–R8)."""
+    from planning_hierarchy import build_checkbox_phase_block, parse_task_list_phases
+    from planning_progress import phase_done_label
+
+    cfg = load_workflow_config(root)
+    backend = resolve_effective_backend(root, cfg)
+    if backend.get("effective") != "issue-store":
+        return {"verdict": "ok", "skipped": True, "reason": "file-store"}
+
+    resolved_provider = provider
+    if not resolved_provider:
+        resolved_provider = str(resolve_issues_provider(cfg).get("provider") or "none")
+    resolved_project_key = project_key
+    if not resolved_project_key:
+        pk = validate_project_key(root, cfg)
+        if pk.get("verdict") != "ok":
+            return pk
+        resolved_project_key = str(pk["projectKey"])
+
+    client = IssuesClient(root, resolved_provider)
+    done_label = phase_done_label(str(phase_id))
+    try:
+        current = client.issue_get(str(parent_issue_id))
+    except Exception as exc:  # noqa: BLE001
+        _emit_progress_update_notice("progress-update-degraded", str(exc))
+        return {
+            "verdict": "ok",
+            "degraded": True,
+            "notice": "progress-update-degraded",
+            "error": str(exc),
+            "phaseId": phase_id,
+            "issueId": parent_issue_id,
+        }
+
+    labels = list(current.labels)
+    new_labels = labels
+    body = current.body
+    if action == "phase-done":
+        if done_label in labels:
+            return {
+                "verdict": "ok",
+                "idempotent": True,
+                "phaseId": phase_id,
+                "issueId": parent_issue_id,
+                "label": done_label,
+            }
+        new_labels = sorted(set(labels) | {done_label})
+        if task_list:
+            task_path = Path(task_list)
+            if not task_path.is_absolute():
+                task_path = (root / task_list).resolve()
+            if task_path.is_file():
+                phases = parse_task_list_phases(task_path)
+                checked = list(checked_phase_ids or [])
+                checkbox_block = build_checkbox_phase_block(phases, checked)
+                body = _replace_checkbox_block(body, checkbox_block)
+    elif action == "task-checkbox" and task_list:
+        task_path = Path(task_list)
+        if not task_path.is_absolute():
+            task_path = (root / task_list).resolve()
+        if task_path.is_file():
+            import doc_format
+
+            section = doc_format.phase_section_text(task_path.read_text(encoding="utf-8"), str(phase_id)).strip()
+            if section:
+                from planning_canonical import compose_issue_body
+
+                record_unit = str(getattr(current, "unit_id", "") or "")
+                if record_unit.endswith(f"-phase-{phase_id}"):
+                    body = compose_issue_body(resolved_project_key, "tasks", record_unit, section)
+                else:
+                    marker = f"### {phase_id}."
+                    if marker in body:
+                        start = body.index(marker)
+                        nxt = body.find("\n### ", start + 1)
+                        end = nxt if nxt != -1 else len(body)
+                        body = body[:start] + section + "\n" + body[end:]
+                    else:
+                        body = body.rstrip() + "\n\n" + section + "\n"
+
+    try:
+        if new_labels != labels:
+            client.issue_label(str(parent_issue_id), new_labels, if_match=current.etag)
+            current = client.issue_get(str(parent_issue_id))
+        if body != current.body:
+            client.issue_update(str(parent_issue_id), body=body, if_match=current.etag)
+        out: dict[str, Any] = {
+            "verdict": "ok",
+            "synced": True,
+            "phaseId": phase_id,
+            "issueId": parent_issue_id,
+            "action": action,
+        }
+        if action == "phase-done":
+            out["label"] = done_label
+        if task_ref:
+            out["taskRef"] = task_ref
+        return out
+    except Exception as exc:  # noqa: BLE001
+        _emit_progress_update_notice("progress-update-degraded", str(exc))
+        out = {
+            "verdict": "ok",
+            "degraded": True,
+            "notice": "progress-update-degraded",
+            "phaseId": phase_id,
+            "issueId": parent_issue_id,
+            "error": str(exc),
+        }
+        if task_ref:
+            out["taskRef"] = task_ref
+        return out
+
+
+def migrate_orphan_phase_issues(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+    *,
+    tasks_unit_id: str | None = None,
+    dry_run: bool = True,
+) -> dict[str, Any]:
+    """Close/relabel pre-061 minted phase peer issues; idempotent (PRD 061 R8a)."""
+    cfg = cfg or load_workflow_config(root)
+    if resolve_effective_backend(root, cfg).get("effective") != "issue-store":
+        return {"verdict": "ok", "skipped": True, "reason": "file-store"}
+    pk = validate_project_key(root, cfg)
+    if pk.get("verdict") != "ok":
+        return pk
+    project_key = str(pk["projectKey"])
+    provider = str(resolve_issues_provider(cfg).get("provider") or "none")
+    client = IssuesClient(root, provider)
+    search = getattr(client, "issue_search", None)
+    if not callable(search):
+        return {"verdict": "ok", "skipped": True, "reason": "issue-search-unavailable"}
+
+    migrated: list[dict[str, str]] = []
+    skipped: list[dict[str, str]] = []
+    prefix = f"{tasks_unit_id}-phase-" if tasks_unit_id else None
+    for record in search(project_key=project_key, artifact_type="tasks"):
+        unit_id = str(getattr(record, "unit_id", "") or "")
+        if prefix and not unit_id.startswith(prefix):
+            continue
+        if not prefix and "-phase-" not in unit_id:
+            continue
+        labels = list(getattr(record, "labels", []))
+        if ORPHAN_MIGRATED_LABEL in labels:
+            skipped.append({"unitId": unit_id, "reason": "already-migrated"})
+            continue
+        issue_id = str(getattr(record, "id", "") or "")
+        if dry_run:
+            migrated.append({"unitId": unit_id, "issueId": issue_id, "dryRun": True})
+            continue
+        new_labels = sorted(set(labels) | {ORPHAN_MIGRATED_LABEL})
+        try:
+            client.issue_label(issue_id, new_labels, if_match=getattr(record, "etag", None))
+            if getattr(record, "state", "open") == "open":
+                client.issue_update(issue_id, state="closed")
+            migrated.append({"unitId": unit_id, "issueId": issue_id})
+        except Exception as exc:  # noqa: BLE001
+            skipped.append({"unitId": unit_id, "reason": str(exc)})
+    return {
+        "verdict": "ok",
+        "action": "migrate-orphan-phase-issues",
+        "dryRun": dry_run,
+        "migrated": migrated,
+        "skipped": skipped,
+        "count": len(migrated),
+    }
+
+
 # PRD 061 R1/R2/R2a — planning-store facade contract + IssuesClient import allowlist.
 # Workflow scripts MUST route planning mutations through this module; only allowlisted
 # store/provider modules may import IssuesClient directly.
@@ -3572,7 +3780,7 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
     {"name": "doctor", "status": "shipped", "description": "Fail-closed hygiene for separate-project drift"},
     {"name": "cleanup", "status": "shipped", "description": "Idempotent legacy planning-body untrack under separate-project"},
     {"name": "derive_unit_status", "status": "shipped", "description": "Unified status from store evidence"},
-    {"name": "progress_update", "status": "planned", "description": "Semantic phase/task progress without ad hoc issue_create"},
+    {"name": "progress_update", "status": "shipped", "description": "Semantic phase/task progress without ad hoc issue_create"},
     {"name": "comment_sync", "status": "planned", "description": "Inbound/outbound provider comment sync"},
     {"name": "projection_refresh", "status": "planned", "description": "Rebuild operator projection (Projects v2, hierarchy)"},
 )
@@ -3590,8 +3798,6 @@ FACADE_WORKFLOW_SCAN_GLOB = "scripts/*.py"
 
 FACADE_BYPASS_BASELINE = frozenset({
     "scripts/planning_discover.py",
-    "scripts/planning_hierarchy.py",
-    "scripts/planning_progress.py",
     "scripts/planning_scheduler.py",
     "scripts/planning_unit_status.py",
 })
@@ -3756,6 +3962,8 @@ def main() -> None:
         "close-delivery-units",
         "doctor",
         "cleanup",
+        "progress-update",
+        "migrate-orphan-phase-issues",
     ):
         sub.add_parser(name)
     args, rest = parser.parse_known_args()
@@ -3902,6 +4110,34 @@ def main() -> None:
     elif args.command == "doctor":
         result = doctor(root, cfg)
         emit(result, 0 if result.get("verdict") == "pass" else 20)
+
+    elif args.command == "progress-update":
+        parent = _require(rest, "--parent-issue-id")
+        phase_id = _require(rest, "--phase-id")
+        action = _optional(rest, "--action") or "phase-done"
+        provider = _optional(rest, "--provider")
+        project_key = _optional(rest, "--project-key")
+        task_list = _optional(rest, "--task-list")
+        task_ref = _optional(rest, "--task-ref")
+        checked_raw = _optional(rest, "--checked-phase-ids")
+        checked = [x.strip() for x in checked_raw.split(",") if x.strip()] if checked_raw else None
+        result = progress_update(
+            root,
+            parent_issue_id=parent,
+            phase_id=phase_id,
+            action=action,
+            provider=provider,
+            project_key=project_key,
+            task_list=task_list,
+            checked_phase_ids=checked,
+            task_ref=task_ref,
+        )
+        emit(result, 0 if result.get("verdict") == "ok" else 20)
+    elif args.command == "migrate-orphan-phase-issues":
+        unit_id = _optional(rest, "--tasks-unit-id")
+        dry_run = "--apply" not in rest
+        result = migrate_orphan_phase_issues(root, cfg, tasks_unit_id=unit_id, dry_run=dry_run)
+        emit(result, 0 if result.get("verdict") == "ok" else 20)
     elif args.command == "cleanup":
         apply = "--apply" in rest
         result = cleanup_separate_project_local_writes(root, cfg, apply=apply)

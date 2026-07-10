@@ -106,6 +106,30 @@ def resolve_hierarchy_mode(provider: str) -> dict[str, Any]:
     }
 
 
+def hierarchy_epic_sub_issues_opt_in(cfg: dict[str, Any]) -> bool:
+    """Opt-in epic+per-phase sub-issue mint (PRD 061 R8). Default false."""
+    store = store_section(cfg)
+    hierarchy = store.get("hierarchy")
+    if isinstance(hierarchy, dict):
+        return hierarchy.get("epicSubIssues") is True
+    return False
+
+
+def resolve_progress_hierarchy_mode(provider: str, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Default parent-checkbox on capable providers; epic-sub-issue opt-in only (PRD 061 R6–R8)."""
+    cap = resolve_hierarchy_mode(provider)
+    if cap["mode"] == "checkbox":
+        return cap
+    if hierarchy_epic_sub_issues_opt_in(cfg):
+        return cap
+    return {
+        "verdict": "ok",
+        "mode": "parent-checkbox",
+        "provider": provider,
+        "notice": None,
+    }
+
+
 def build_checkbox_phase_block(
     phases: list[dict[str, str]],
     checked_ids: list[str] | None = None,
@@ -262,8 +286,9 @@ def project_task_list_hierarchy(
 ) -> dict[str, Any]:
     """Map frozen task list to epic + sub-issues or checkbox body block (R23)."""
     worktree = pp.git_root(root)
+    cfg = load_workflow_config(worktree)
     provider = _issues_provider(worktree)
-    mode_info = resolve_hierarchy_mode(provider)
+    mode_info = resolve_progress_hierarchy_mode(provider, cfg)
     phases = parse_task_list_phases(task_list)
     if not phases:
         return {"verdict": "fail", "error": "no-phases-in-task-list"}
@@ -282,41 +307,39 @@ def project_task_list_hierarchy(
     if mode_info.get("notice"):
         result["notice"] = mode_info["notice"]
 
+    checkbox_block = build_checkbox_phase_block(phases)
+    result["phases"] = phases
     if mode_info["mode"] == "checkbox":
-        result["checkboxBlock"] = build_checkbox_phase_block(phases)
+        result["checkboxBlock"] = checkbox_block
         result["projection"] = {"kind": "checkbox-body", "phases": phases}
         return result
 
-    plan = {
+    plan: dict[str, Any] = {
         "epic": {
             "title": f"[sw] tasks:{uid}",
             "artifactType": "tasks",
             "unitId": uid,
         },
-        "subIssues": [
+        "phases": phases,
+    }
+    if mode_info["mode"] == "epic-sub-issue":
+        plan["subIssues"] = [
             {
                 "phaseId": p["id"],
                 "title": f"[sw] phase:{uid}:{p['id']}",
                 "slug": p.get("slug", ""),
             }
             for p in phases
-        ],
-    }
+        ]
     result["plan"] = plan
+    result["checkboxBlock"] = checkbox_block
 
     if dry_run:
-        result["projection"] = {"kind": "epic-sub-issue", "plan": plan}
+        result["projection"] = {"kind": mode_info["mode"], "plan": plan}
         return result
-
-    cfg = load_workflow_config(worktree)
     issue_store = resolve_effective_backend(worktree, cfg).get("effective") == "issue-store"
     client = IssuesClient(worktree, provider)
-    epic_body = compose_issue_body(
-        project_key,
-        "tasks",
-        uid,
-        build_checkbox_phase_block(phases),
-    )
+    epic_body = compose_issue_body(project_key, "tasks", uid, checkbox_block)
     epic = client.issue_create(
         title=plan["epic"]["title"],
         body=epic_body,
@@ -330,40 +353,46 @@ def project_task_list_hierarchy(
         index[issue_index_key(project_key, uid)] = epic.id
         save_issue_unit_index(worktree, index)
     sub_refs: list[dict[str, Any]] = []
-    for sub in plan["subIssues"]:
-        phase_unit_id = f"{uid}-phase-{sub['phaseId']}"
-        phase_body = compose_issue_body(
-            project_key,
-            "tasks",
-            phase_unit_id,
-            f"Phase {sub['phaseId']}: {sub['title']}\n",
-            edges=[{"rel": "sub-issue-of", "target": uid}] if issue_store else None,
-        )
-        native_links: list[dict[str, Any]] | None = None
-        if issue_store:
-            index = load_issue_unit_index(worktree)
-            native_links = native_links_from_edges(
-                [{"rel": "sub-issue-of", "target": uid}],
-                index,
+    if mode_info["mode"] == "epic-sub-issue":
+        for sub in plan["subIssues"]:
+            phase_unit_id = f"{uid}-phase-{sub['phaseId']}"
+            phase_body = compose_issue_body(
+                project_key,
+                "tasks",
+                phase_unit_id,
+                f"Phase {sub['phaseId']}: {sub['title']}\n",
+                edges=[{"rel": "sub-issue-of", "target": uid}] if issue_store else None,
+            )
+            native_links: list[dict[str, Any]] | None = None
+            if issue_store:
+                index = load_issue_unit_index(worktree)
+                native_links = native_links_from_edges(
+                    [{"rel": "sub-issue-of", "target": uid}],
+                    index,
+                    project_key=project_key,
+                ) or None
+            child = client.issue_create(
+                title=sub["title"],
+                body=phase_body,
+                labels=sorted({project_label(project_key), type_label("tasks"), f"sw:phase:{sub['phaseId']}"}),
                 project_key=project_key,
-            ) or None
-        child = client.issue_create(
-            title=sub["title"],
-            body=phase_body,
-            labels=sorted({project_label(project_key), type_label("tasks"), f"sw:phase:{sub['phaseId']}"}),
-            project_key=project_key,
-            artifact_type="tasks",
-            unit_id=phase_unit_id,
-            native_links=native_links,
-        )
-        if issue_store:
-            index = load_issue_unit_index(worktree)
-            index[issue_index_key(project_key, phase_unit_id)] = child.id
-            save_issue_unit_index(worktree, index)
-        sub_refs.append({"phaseId": sub["phaseId"], "issueId": child.id, "number": child.number})
+                artifact_type="tasks",
+                unit_id=phase_unit_id,
+                native_links=native_links,
+            )
+            if issue_store:
+                index = load_issue_unit_index(worktree)
+                index[issue_index_key(project_key, phase_unit_id)] = child.id
+                save_issue_unit_index(worktree, index)
+            sub_refs.append({"phaseId": sub["phaseId"], "issueId": child.id, "number": child.number})
     result["epicIssueId"] = epic.id
     result["subIssues"] = sub_refs
-    result["projection"] = {"kind": "epic-sub-issue", "epicIssueId": epic.id, "subIssues": sub_refs}
+    result["projection"] = {
+        "kind": mode_info["mode"],
+        "epicIssueId": epic.id,
+        "subIssues": sub_refs,
+        "phases": phases,
+    }
     return result
 
 

@@ -1551,6 +1551,32 @@
       ]
     },
     {
+      "id": "planning-061-progress-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 60,
+      "pytestPath": "scripts/unit_tests/planning/test_planning_061_progress.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_hierarchy.py",
+        "scripts/planning_progress.py",
+        "scripts/planning_store.py",
+        "scripts/planning_discover.py",
+        "scripts/planning_index_gen.py",
+        "scripts/unit_tests/planning/harness_planning_061_progress.py"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "prd-061"
+      ]
+    },
+    {
       "id": "planning-doc-issue-store-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [

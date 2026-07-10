@@ -96,8 +96,6 @@ assert d.get('verdict')=='fail'
 paths = {v.get('path') for v in d.get('violations', [])}
 expected = {
     'scripts/planning_discover.py',
-    'scripts/planning_hierarchy.py',
-    'scripts/planning_progress.py',
     'scripts/planning_scheduler.py',
     'scripts/planning_unit_status.py',
 }

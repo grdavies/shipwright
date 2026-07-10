@@ -458,7 +458,7 @@ subprocess.run(["git", "config", "user.name", "T"], cwd=tmp, check=True)
 (tmp / "docs" / "prds" / "046-test").mkdir(parents=True)
 (tmp / ".cursor" / "workflow.config.json").write_text(json.dumps({
   "version": 1,
-  "planning": {"store": {"backend": "issue-store", "issuesProvider": "github-issues", "projectKey": "phase3046"}},
+  "planning": {"store": {"backend": "issue-store", "issuesProvider": "github-issues", "projectKey": "phase3046", "hierarchy": {"epicSubIssues": True}}},
   "host": {"provider": "github"},
 }), encoding="utf-8")
 (tmp / "docs/prds/046-test/tasks-046-test.md").write_text("---\nfrozen: true\n---\n### 1. Alpha\n", encoding="utf-8")

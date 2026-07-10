@@ -201,6 +201,9 @@ def _status_from_record(record: Any, content: str) -> str:
         return labeled or "complete"
     if artifact_type == "gap":
         return _gap_status_from_labels(list(record.labels))
+    if artifact_type == "tasks":
+        labeled = status_from_labels(list(record.labels))
+        return labeled or ("complete" if record.state == "closed" else "in-progress")
     labeled = status_from_labels(list(record.labels))
     if labeled:
         return labeled
