@@ -267,10 +267,21 @@ CUR_FIX=$(mktemp -d)
 mkdir -p "$CUR_FIX/.cursor"
 echo '{"prd_number":"047","phases":{"1":{"status":"green-merged"}},"completion":{"status":"completed-pending-merge"},"target":{"branch":"feat/jira-issue-store-adapter"}}' > "$CUR_FIX/.cursor/sw-deliver-state.json"
 echo '{"prd_number":"047"}' > "$CUR_FIX/.cursor/sw-deliver-plan.json"
-if python3 "$ROOT/scripts/docs-currency-gate.py" "$ROOT" "$CUR_FIX" "$CUR_FIX/.cursor/sw-deliver-state.json" "$CUR_FIX/.cursor/sw-deliver-plan.json" 2>/dev/null | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-assert d.get('verdict')=='pass', d
+if python3 -c "
+import json, subprocess, sys
+from pathlib import Path
+root = Path('''$ROOT''')
+cur = Path('''$CUR_FIX''')
+proc = subprocess.run(
+    [sys.executable, str(root / 'scripts/docs-currency-gate.py'), str(root), str(cur),
+     str(cur / '.cursor/sw-deliver-state.json'), str(cur / '.cursor/sw-deliver-plan.json')],
+    capture_output=True, text=True,
+)
+if proc.returncode != 0 or not proc.stdout.strip():
+    sys.stderr.write(proc.stderr or proc.stdout or 'empty docs-currency output')
+    raise SystemExit(1)
+d = json.loads(proc.stdout)
+assert d.get('verdict') == 'pass', d
 "; then
   ok terminal-docs-currency-gate-invocation-valid
 else
