@@ -981,8 +981,11 @@ def main(argv: list[str] | None = None) -> None:
             title=title,
             pr_number=flags.get("pr_number"),
             dry_run=bool(flags.get("dry_run")),
+            problem=flags.get("problem"),
+            context=flags.get("context"),
+            authoritative=bool(flags.get("authoritative")),
         )
-        emit({"verdict": "pass", "action": "gap-capture", **out})
+        emit({"verdict": "pass", **out})
 
     if command == "confirm":
         signal_id = flags.get("signal_id")
