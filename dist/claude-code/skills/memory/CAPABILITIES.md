@@ -18,8 +18,8 @@ declares its capability flags — change no command.
 | `list-recent` | project, days_back? | recent memories + tasks | Activity recap. |
 | `tasks` *(optional)* | create/update/complete/list, fields | task id / list | Cross-repo phase board. |
 | `link` *(optional)* | from-id, to-ids | confirmation | Knowledge-graph links. |
-| `export` *(optional)* | project, scope? | neutral JSONL | Portability snapshot. |
-| `import` *(optional)* | neutral JSONL | ids[] | Ingest portability snapshot. |
+| `export` *(optional)* | project, scope?, `format` (`jsonl` \| `okf`) | neutral JSONL or OKF bundle dir | Portability snapshot. |
+| `import` *(optional)* | neutral JSONL or OKF bundle, `format` | ids[] | Ingest portability snapshot. |
 
 ## Capability flags
 
@@ -33,7 +33,7 @@ Each adapter declares these so commands can degrade gracefully:
 | `recencyControl` | toggle recency on/off | accept provider default |
 | `rulesAtStartup` | load behavioral rules | rely on `agentsFile` only |
 | `tasks` | native task board | use local registry fallback for the phase board |
-| `export` / `import` | neutral interchange | provider swap requires manual re-distillation from raw transcripts |
+| `export` / `import` | neutral JSONL + OKF bundle interchange | provider swap requires manual re-distillation from raw transcripts |
 | `softDelete` | inactivate vs hard delete | treat modify-inactivate as best effort |
 | `semanticSearch` | vector / embedding search | use keyword + frontmatter filtering (`scripts/in-repo-memory-search.py` for in-repo) |
 
@@ -90,6 +90,28 @@ One JSON object per line:
 
 Raw chat transcripts are **not** part of this format and are never stored in a provider; they remain in
 the platform's `agent-transcripts/*.jsonl` and stay re-distillable.
+
+
+
+## OKF bundle interchange (`export` / `import --format okf`)
+
+OKF v0.1 bundles are directories of markdown concept files with YAML frontmatter. Shipwright maps
+canonical `category` → required OKF `type`, preserves unknown frontmatter keys, and lays out
+per-category subdirectories. Bundle root `index.md` declares `okf_version: "0.1"`.
+
+**In-repo adapter:**
+
+```bash
+python3 scripts/in-repo-memory-search.py export --store .cursor/sw-memory --format okf --out /tmp/bundle
+python3 scripts/in-repo-memory-search.py import --store .cursor/sw-memory --format okf --source /tmp/bundle
+```
+
+**Recallium adapter:** `/sw-memory-export` and `/sw-memory-import` synthesize the same OKF bundle by
+walking provider records (`search` + `expand`) into per-category markdown files. Export applies the
+`scripts/memory-redact.py` chokepoint before writing bundle files.
+
+**Migration:** bespoke JSONL export remains supported (`--format jsonl`). Round-trip
+`jsonl → okf → store → jsonl` preserves neutral fields.
 
 ## Relationship edges (first-class)
 

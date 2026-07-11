@@ -39,9 +39,10 @@ onto the Recallium MCP tools. Selected when `workflow.config.json` → `memory.p
 }
 ```
 
-`export`/`import` are `false`: Recallium exposes no neutral dump tool. Shipwright's `/sw-memory-export`
-synthesizes the neutral JSONL by paging `search_memories` and emitting one line per memory; `/sw-memory-import`
-replays via `store_memory`. Treat these as plugin-side, not native.
+`export`/`import` are `false` at the MCP layer. Shipwright's `/sw-memory-export` and `/sw-memory-import`
+synthesize neutral interchange by paging `search_memories` + `expand_memories` into JSONL or an OKF v0.1
+bundle (per-category markdown, `category` → `type`, redaction via `scripts/memory-redact.py`). Provider
+swaps become bundle round-trips. Treat these as plugin-side, not native MCP ops.
 
 ## Operation mapping
 
