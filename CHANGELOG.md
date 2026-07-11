@@ -430,6 +430,7 @@
 * merge phase resume-ci-self-wake-hang-takeover-r3-r5-r6-r8-r12-precedence-large into feat/deliver-autonomy-and-finalize-hygiene (265ed6d) <!-- sw-deliver:resume-ci-self-wake-hang-takeover-r3-r5-r6-r8-r12-precedence-large -->
 * merge phase resume-ci-self-wake-hang-takeover-r3-r5-r6-r8-r12-precedence-large into feat/deliver-autonomy-and-finalize-hygiene (7619ba1) <!-- sw-deliver:resume-ci-self-wake-hang-takeover-r3-r5-r6-r8-r12-precedence-large -->
 * merge phase pre-pr-targeted-pytest-smoke-r4-small into feat/deliver-autonomy-and-finalize-hygiene (0862727) <!-- sw-deliver:pre-pr-targeted-pytest-smoke-r4-small -->
+* merge phase finalize-hygiene-r11-r13-medium into feat/deliver-autonomy-and-finalize-hygiene (f4e553d) <!-- sw-deliver:finalize-hygiene-r11-r13-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
