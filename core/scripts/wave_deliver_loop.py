@@ -1889,6 +1889,9 @@ def _execute_mechanical_inner(
         plan_args = ["plan", "--task-list", str(task_list)]
         if has_flag(loop_args, "--skip-base-check"):
             plan_args.append("--skip-base-check")
+        branch_type = parse_kv(loop_args, "--type")
+        if branch_type:
+            plan_args.extend(["--type", branch_type])
         ec, data = run_wave(root, *plan_args)
         if ec != 0:
             fail_payload(data, "plan failed", ec)
@@ -2105,13 +2108,20 @@ def _execute_mechanical_inner(
             run_dir = root / ".cursor" / "sw-deliver-runs" / slug
             run_dir.mkdir(parents=True, exist_ok=True)
             status_path = run_dir / "status.json"
+            reemit_verdict = verdict
+            reemit_cause = None
+            if verdict == "merge-ready-green":
+                reemit_verdict = "blocked"
+                reemit_cause = "ship-chain:reverify-required"
             doc = build_status_document(
-                verdict=verdict,
+                verdict=reemit_verdict,
                 phase=slug,
                 head=branch_head,
                 pr=pr_number,
                 gate=gate,
-                cause=None if verdict == "merge-ready-green" else (gate or {}).get("reason"),
+                cause=reemit_cause or ((gate or {}).get("reason") if reemit_verdict == "blocked" else None),
+                ship_chain="incomplete",
+                provenance="live-evidence-recovery",
             )
             write_status_atomic(status_path, doc)
             attempts = state.setdefault("statusReemitAttempts", {})
@@ -2119,7 +2129,7 @@ def _execute_mechanical_inner(
             meta.pop("backgroundDispatchedAt", None)
             save_state(root, state)
             actor = os.environ.get("SW_RECOVERY_ACTOR") or os.environ.get("USER") or "driver"
-            state_append_log(
+            append_log(
                 root,
                 {
                     "event": "status-canonical-reemit",
@@ -2632,7 +2642,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
         result = execute_mechanical(root, state, plan, step, loop_args=args)
         steps_taken.append(result)
         resumed = True
-        state_append_log(
+        append_log(
             root,
             {
                 "event": "execute-mechanical",
