@@ -118,14 +118,32 @@ else
   bad "phase-resume-mid-chain: sync-ship-steps writes phaseShip to shipwright.json"
 fi
 
+
+# Complete ship chain before merge-ready-green (PRD 063 consumability)
+PYTHONPATH="$ROOT/scripts" python3 -c "
+import json, sys
+from pathlib import Path
+from kernel_classification import canonical_ship_chain
+repo = Path(sys.argv[2])
+run = Path(sys.argv[1])
+chain = canonical_ship_chain(repo)
+path = run / 'ship-steps.json'
+doc = json.loads(path.read_text())
+doc['lastCompletedStep'] = chain[-1]
+doc['currentStep'] = None
+path.write_text(json.dumps(doc))
+" "$SW_RUN_DIR" "$ROOT" >/dev/null
+
 # ship-phase-status embeds shipSteps when present
 SHIP_STATUS="$ROOT/scripts/ship-phase-status.sh"
 if OUT=$("$SHIP_STATUS" --verdict merge-ready-green --phase alpha --out "$SW_RUN_DIR/status.json" 2>/dev/null) && \
    echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
-assert d.get('shipSteps',{}).get('currentStep')=='sw-review'
+assert d.get('shipSteps',{}).get('lastCompletedStep')=='sw-tmp-clean'
 assert 'shipStepsPath' in d
+assert d.get('shipChain')=='complete'
+assert d.get('schemaVersion')==1
 "; then
   ok "phase-resume-mid-chain: status.json embeds shipSteps snapshot"
 else

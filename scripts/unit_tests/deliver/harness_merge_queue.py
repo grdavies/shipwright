@@ -86,17 +86,17 @@ python3 -c "
 import json, sys
 from pathlib import Path
 sys.path.insert(0, '$ROOT/scripts')
-from status_integrity import attach_provenance_marker
-doc = {
-    'verdict': 'merge-ready-green',
-    'phase': 'alpha',
-    'phaseMode': True,
-    'head': '$PHASE_HEAD',
-    'pr': None,
-    'gate': {'verdict': 'green', 'coderabbitLanded': True},
-}
+from status_integrity import build_status_document
+doc = build_status_document(
+    verdict='merge-ready-green',
+    phase='alpha',
+    head='$PHASE_HEAD',
+    pr=None,
+    gate={'verdict': 'green', 'coderabbitLanded': True},
+    ship_chain='complete',
+)
 Path('$PHASE_WT/.cursor/sw-deliver-runs/alpha/status.json').write_text(
-    json.dumps(attach_provenance_marker(doc), indent=2) + '\n'
+    json.dumps(doc, indent=2) + '\n'
 )
 "
 
@@ -139,15 +139,16 @@ python3 -c "
 import json, sys
 from pathlib import Path
 sys.path.insert(0, '$ROOT/scripts')
-from status_integrity import attach_provenance_marker
-doc = {
-    'verdict': 'merge-ready-green',
-    'phase': 'alpha',
-    'head': '$STALE_HEAD',
-    'gate': {'verdict': 'green'},
-}
+from status_integrity import build_status_document
+doc = build_status_document(
+    verdict='merge-ready-green',
+    phase='alpha',
+    head='$STALE_HEAD',
+    gate={'verdict': 'green'},
+    ship_chain='complete',
+)
 Path('$PHASE_WT/.cursor/sw-deliver-runs/alpha/status.json').write_text(
-    json.dumps(attach_provenance_marker(doc), indent=2) + '\n'
+    json.dumps(doc, indent=2) + '\n'
 )
 "
 set +e
@@ -165,15 +166,16 @@ python3 -c "
 import json, sys
 from pathlib import Path
 sys.path.insert(0, '$ROOT/scripts')
-from status_integrity import attach_provenance_marker
-doc = {
-    'verdict': 'merge-ready-green',
-    'phase': 'alpha',
-    'head': '$PHASE_HEAD',
-    'gate': {'verdict': 'green', 'coderabbitLanded': True},
-}
+from status_integrity import build_status_document
+doc = build_status_document(
+    verdict='merge-ready-green',
+    phase='alpha',
+    head='$PHASE_HEAD',
+    gate={'verdict': 'green', 'coderabbitLanded': True},
+    ship_chain='complete',
+)
 Path('$PHASE_WT/.cursor/sw-deliver-runs/alpha/status.json').write_text(
-    json.dumps(attach_provenance_marker(doc), indent=2) + '\n'
+    json.dumps(doc, indent=2) + '\n'
 )
 "
 sync_target_to_phase
@@ -204,16 +206,17 @@ python3 -c "
 import json, sys
 from pathlib import Path
 sys.path.insert(0, '$ROOT/scripts')
-from status_integrity import attach_provenance_marker
-doc = {
-    'verdict': 'merge-ready-green',
-    'phase': 'alpha',
-    'head': '$PHASE_HEAD',
-    'pr': 99,
-    'gate': {'verdict': 'green'},
-}
+from status_integrity import build_status_document
+doc = build_status_document(
+    verdict='merge-ready-green',
+    phase='alpha',
+    head='$PHASE_HEAD',
+    pr=99,
+    gate={'verdict': 'green'},
+    ship_chain='complete',
+)
 Path('$PHASE_WT/.cursor/sw-deliver-runs/alpha/status.json').write_text(
-    json.dumps(attach_provenance_marker(doc), indent=2) + '\n'
+    json.dumps(doc, indent=2) + '\n'
 )
 "
 echo '{"target":{"branch":"feat/demo"},"phases":{"1":{"slug":"alpha","branch":"feat/demo-phase-alpha"}},"phaseWorktrees":{"1":{"path":"'"$PHASE_WT"'"}},"mergeQueue":[{"phaseSlug":"alpha","head":"'"$PHASE_HEAD"'","pr":99}],"orchestratorWorktree":{"path":"'"$ORCH"'"}}' \
@@ -251,15 +254,16 @@ MERGE_FIX=$(mktemp -d)
 import json, sys
 from pathlib import Path
 sys.path.insert(0, '$ROOT/scripts')
-from status_integrity import attach_provenance_marker
-doc = {
-    'verdict': 'merge-ready-green',
-    'phase': 'alpha',
-    'head': '$PHASE_HEAD',
-    'gate': {'verdict': 'green'},
-}
+from status_integrity import build_status_document
+doc = build_status_document(
+    verdict='merge-ready-green',
+    phase='alpha',
+    head='$PHASE_HEAD',
+    gate={'verdict': 'green'},
+    ship_chain='complete',
+)
 Path('.cursor/sw-deliver-runs/alpha/status.json').write_text(
-    json.dumps(attach_provenance_marker(doc), indent=2) + '\n'
+    json.dumps(doc, indent=2) + '\n'
 )
 "
   echo '{"target":{"branch":"feat/demo"},"orchestratorWorktree":{"path":"'"$MERGE_FIX"'"},"phases":{"1":{"slug":"alpha","branch":"feat/demo-phase-alpha"}},"phaseWorktrees":{"1":{"path":"'"$MERGE_FIX"'"}},"mergeQueue":[]}' \
