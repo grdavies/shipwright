@@ -582,6 +582,77 @@ else
   ok conductor-mandatory-provisioning-contract
 fi
 
+
+# r15-g-duplicate-dispatch-refused (PRD 063)
+python3 - <<'PYG' "$ROOT"
+import json, sys
+from datetime import datetime, timezone
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from wave_deliver_loop import compute_next_action
+from wave_lock import lock_path_for
+root = Path(sys.argv[1])
+now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+integration = 'feat/demo'
+phase_branch = 'feat/demo-phase-alpha'
+lock_path = lock_path_for(root, integration, phase_branch)
+lock_path.parent.mkdir(parents=True, exist_ok=True)
+lock_path.write_text(json.dumps({
+    'kind': 'ship-lease',
+    'integrationBranch': integration,
+    'phaseBranch': phase_branch,
+    'pid': 99999,
+    'heartbeatAt': now,
+    'acquiredAt': now,
+}) + '\n')
+state = {
+    'verdict': 'running',
+    'target': {'branch': integration},
+    'driverHeartbeatAt': now,
+    'currentWave': 1,
+    'orchestratorWorktree': {'path': str(root)},
+    'phases': {
+        '1': {
+            'id': '1',
+            'slug': 'alpha',
+            'status': 'in-flight',
+            'branch': phase_branch,
+            'inlineDispatchedAt': now,
+        }
+    },
+    'phaseWorktrees': {'1': {'path': str(root), 'name': 'alpha-wt'}},
+}
+plan = {
+    'mode': 'phase',
+    'target': {'branch': integration},
+    'items': [{'id': '1', 'slug': 'alpha', 'branch': phase_branch}],
+    'waves': [['1']],
+}
+step = compute_next_action(root, state, plan)
+assert step.get('action') == 'await-in-flight', step
+assert '1' in (step.get('phaseIds') or []), step
+print('ok')
+PYG
+if [[ $? -eq 0 ]]; then ok r15-g-duplicate-dispatch-refused; else bad r15-g-duplicate-dispatch-refused; fi
+
+# r15-i-inline-not-background (PRD 063)
+if python3 "$ROOT/scripts/dispatch-check.py" \
+  --agent generalPurpose \
+  --command sw-deliver \
+  --parent-model gpt-4.1 \
+  --dispatch-action dispatch-ship \
+  --run-in-background 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d.get('verdict')=='fail', d
+assert d.get('cause')=='dispatch:inline-forbids-background', d
+"; then
+  ok r15-i-inline-not-background
+else
+  bad r15-i-inline-not-background
+fi
+
+
 if [[ "$FAIL" -eq 0 ]]; then
   echo "deliver-concurrency fixtures: all passed"
 else

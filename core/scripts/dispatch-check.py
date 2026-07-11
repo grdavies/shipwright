@@ -43,6 +43,27 @@ def requires_parent_tier(agent: str) -> bool:
     return is_reviewer_bound(agent) or is_native_panel_bound(agent)
 
 
+def evaluate_dispatch_posture(
+    *,
+    dispatch_action: str | None,
+    run_in_background: bool,
+    override: bool,
+) -> dict | None:
+    if dispatch_action == "dispatch-ship" and run_in_background and not override:
+        return {
+            "verdict": "fail",
+            "cause": "dispatch:inline-forbids-background",
+            "dispatchAction": dispatch_action,
+            "runInBackground": True,
+            "retryable": False,
+            "remediation": (
+                "dispatch-ship must run inline (run_in_background: false); "
+                "only dispatch-batch may use background Task spawns"
+            ),
+        }
+    return None
+
+
 def resolve_parent_tier(
     parent_model: str,
     tiers: dict,
@@ -300,6 +321,16 @@ def main(argv: list[str] | None = None) -> int:
         metavar="PATH",
         help="validate a constructed Task prompt via the shared intensity-directive helper (R15)",
     )
+    parser.add_argument(
+        "--dispatch-action",
+        default="",
+        help="conductor dispatch action (dispatch-ship|dispatch-batch)",
+    )
+    parser.add_argument(
+        "--run-in-background",
+        action="store_true",
+        help="Task spawn requested run_in_background=true",
+    )
     args = parser.parse_args(argv)
 
     script_dir = Path(__file__).resolve().parent
@@ -362,6 +393,15 @@ def main(argv: list[str] | None = None) -> int:
             "retryable": False,
             "remediation": "set communication.routing (command/skill/agent) or communication.defaultIntensity to normal|lite|full|ultra",
         }))
+        return 20
+
+    posture_fail = evaluate_dispatch_posture(
+        dispatch_action=(args.dispatch_action or None),
+        run_in_background=bool(args.run_in_background),
+        override=override,
+    )
+    if posture_fail:
+        print(json.dumps(posture_fail))
         return 20
 
     if args.prompt:

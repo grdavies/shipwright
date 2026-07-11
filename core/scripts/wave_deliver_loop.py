@@ -1128,6 +1128,78 @@ def mark_phases_in_flight(
         phases[pid] = meta
 
 
+def phase_lease_branches(
+    state: dict[str, Any], meta: dict[str, Any]
+) -> tuple[str, str] | None:
+    integration = (state.get("target") or {}).get("branch")
+    phase_branch = meta.get("branch")
+    if not integration or not phase_branch:
+        return None
+    return str(integration), str(phase_branch)
+
+
+def inline_dispatch_lease_held_live(
+    root: Path, state: dict[str, Any], meta: dict[str, Any]
+) -> bool:
+    branches = phase_lease_branches(state, meta)
+    if not branches:
+        return bool(meta.get("inlineDispatchedAt"))
+    integration, phase_branch = branches
+    ec, data = run_wave(
+        root,
+        "ship-lease",
+        "status",
+        "--integration",
+        integration,
+        "--phase-branch",
+        phase_branch,
+    )
+    if ec != 0:
+        return bool(meta.get("inlineDispatchedAt"))
+    if not data.get("held"):
+        return False
+    return bool(data.get("live"))
+
+
+def acquire_inline_dispatch_lease(
+    root: Path, state: dict[str, Any], phase_id: str, meta: dict[str, Any]
+) -> tuple[int, dict[str, Any]]:
+    branches = phase_lease_branches(state, meta)
+    if not branches:
+        return 0, {}
+    integration, phase_branch = branches
+    slug = str(meta.get("slug") or phase_id)
+    return run_wave(
+        root,
+        "ship-lease",
+        "acquire",
+        "--integration",
+        integration,
+        "--phase-branch",
+        phase_branch,
+        "--phase-slug",
+        slug,
+    )
+
+
+def release_inline_dispatch_lease(
+    root: Path, state: dict[str, Any], meta: dict[str, Any]
+) -> None:
+    branches = phase_lease_branches(state, meta)
+    if not branches:
+        return
+    integration, phase_branch = branches
+    run_wave(
+        root,
+        "ship-lease",
+        "release",
+        "--integration",
+        integration,
+        "--phase-branch",
+        phase_branch,
+    )
+
+
 def check_watchdog(root: Path, state: dict[str, Any]) -> str | None:
     hb = state.get("driverHeartbeatAt")
     if isinstance(hb, str):
@@ -1638,6 +1710,11 @@ def compute_next_action(
             if status.get("verdict") == "merge-ready-green":
                 continue
         if meta.get("backgroundDispatchedAt"):
+            awaiting.append(pid)
+            continue
+        if meta.get("inlineDispatchedAt") and inline_dispatch_lease_held_live(
+            root, state, meta
+        ):
             awaiting.append(pid)
             continue
         return dispatch_or_phase_plan_entry(
@@ -2163,9 +2240,19 @@ def _execute_mechanical_inner(
 
     if action == "collect-status":
         slug = str(step.get("phaseSlug", ""))
+        pid = str(step.get("phaseId") or "")
+        meta = (state.get("phases") or {}).get(pid, {})
         ec, data = run_wave(root, "status", "collect", "--phase-slug", slug)
         if ec != 0:
             fail_payload(data, "status collect failed", ec)
+        if not pid:
+            for candidate, candidate_meta in (state.get("phases") or {}).items():
+                if isinstance(candidate_meta, dict) and candidate_meta.get("slug") == slug:
+                    pid = str(candidate)
+                    meta = candidate_meta
+                    break
+        if isinstance(meta, dict):
+            release_inline_dispatch_lease(root, state, meta)
         state.update(load_state(root))
         persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
         return {"executed": "collect-status", "phaseSlug": slug, **data}
@@ -2590,6 +2677,17 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
                 )
             elif step["action"] == "dispatch-ship":
                 pid = str(step.get("phaseId", ""))
+                meta = (state.get("phases") or {}).get(pid)
+                if isinstance(meta, dict):
+                    lease_ec, lease_data = acquire_inline_dispatch_lease(
+                        root, state, pid, meta
+                    )
+                    if lease_ec != 0:
+                        fail_payload(
+                            lease_data,
+                            "dispatch-ship lease acquire failed",
+                            lease_ec,
+                        )
                 mark_phases_in_flight(state, [pid], background=False)
                 persist_cursor(root, state, "dispatch-ship")
             elif step["action"] == "halt-blocked":
