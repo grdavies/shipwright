@@ -1280,7 +1280,12 @@ def check_deliver_hang_desync(root: Path, state: dict[str, Any]) -> str | None:
     orch = (state.get("orchestratorWorktree") or {}).get("path")
     if isinstance(orch, str) and orch.strip():
         try:
-            if Path(orch).resolve() != root.resolve():
+            orch_path = Path(orch)
+            if (
+                ".sw-worktrees" in str(orch_path)
+                and orch_path.is_dir()
+                and orch_path.resolve() != root.resolve()
+            ):
                 return "deliver:orchestrator-cwd-skew"
         except OSError:
             return "deliver:orchestrator-path-invalid"
@@ -1294,7 +1299,7 @@ def check_deliver_hang_desync(root: Path, state: dict[str, Any]) -> str | None:
     for pid, meta in (state.get("phases") or {}).items():
         if not isinstance(meta, dict) or meta.get("status") != "in-flight":
             continue
-        dispatched = meta.get("inlineDispatchedAt") or meta.get("backgroundDispatchedAt")
+        dispatched = meta.get("inlineDispatchedAt")
         if not dispatched:
             continue
         slug = str(meta.get("slug") or pid)
@@ -1311,7 +1316,7 @@ def assert_driver_adopt_gate(
     state: dict[str, Any], loop_args: list[str], *, fresh_seconds: int = 120
 ) -> None:
     """Refuse double-drive when heartbeat is fresh unless --self-wake (PRD 063 R6)."""
-    if has_flag(loop_args, "--self-wake"):
+    if has_flag(loop_args, "--self-wake") or has_flag(loop_args, "--dry-run"):
         return
     if state.get("verdict") != "running" or not state.get("phases"):
         return
@@ -1660,6 +1665,15 @@ def compute_next_action(
                 "resume": True,
             }
 
+    bg_fail = check_background_task_failures(root, state, wave_ids)
+    if bg_fail:
+        return {
+            "action": "halt-blocked",
+            "cause": bg_fail,
+            "resume": True,
+            "watchdog": True,
+        }
+
     desync = check_deliver_hang_desync(root, state)
     if desync:
         return {
@@ -1674,15 +1688,6 @@ def compute_next_action(
         return {
             "action": "halt-blocked",
             "cause": watchdog,
-            "resume": True,
-            "watchdog": True,
-        }
-
-    bg_fail = check_background_task_failures(root, state, wave_ids)
-    if bg_fail:
-        return {
-            "action": "halt-blocked",
-            "cause": bg_fail,
             "resume": True,
             "watchdog": True,
         }

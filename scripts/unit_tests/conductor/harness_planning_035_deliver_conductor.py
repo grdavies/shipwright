@@ -337,7 +337,9 @@ from wave_deliver_loop import check_deliver_hang_desync
 root = Path(sys.argv[1])
 state = {"orchestratorWorktree": {"path": str(root)}, "phases": {}}
 assert check_deliver_hang_desync(root, state) is None
-cause = check_deliver_hang_desync(root, {"orchestratorWorktree": {"path": "/tmp"}, "phases": {}})
+fake_orch = root / ".sw-worktrees" / "fake-orchestrator"
+fake_orch.mkdir(parents=True, exist_ok=True)
+cause = check_deliver_hang_desync(root, {"orchestratorWorktree": {"path": str(fake_orch)}, "phases": {}})
 assert cause == "deliver:orchestrator-cwd-skew", cause
 print("ok")
 PYE
