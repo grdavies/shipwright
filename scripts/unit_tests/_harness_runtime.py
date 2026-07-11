@@ -18,6 +18,7 @@ def harness_subprocess_env(root: Path, base: dict[str, str] | None = None) -> di
         ):
             env.pop(key, None)
     env["ROOT"] = str(root)
+    env["SW_HARNESS"] = "1"
     env["PYTHONPATH"] = os.pathsep.join(
         p
         for p in (
