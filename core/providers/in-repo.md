@@ -53,6 +53,12 @@ links: []
 title: ""
 description: ""
 resource: ""
+confidence: 0.5
+usage_count: 0
+success_count: 0
+playbookStatus: draft
+auditTelemetryRef: ""
+skepticVerdict: pending
 createdAt: 2026-06-23T12:00:00Z
 ---
 Distilled memory body here.
@@ -101,6 +107,11 @@ frontmatter filters). `export`/`import` are native: walk the store and emit/cons
 | `import` | JSONL or OKF → files | `python3 scripts/in-repo-memory-search.py import --format jsonl|okf`; regenerates `index.md`/`log.md` |
 | `tasks.*` | — | not supported (`tasks: false`) |
 | `maintain-derived` | regenerate `index.md` + `log.md` | `python3 scripts/in-repo-memory-search.py maintain-derived --store <dir>` |
+| `playbook.match` | `memory_playbook.py match` | `python3 scripts/memory_playbook.py match --signals-json '<json>'` |
+| `playbook.primary-inject` | `memory_playbook.py primary-inject` | keyword + confidence primary context blocks for dispatch |
+| `playbook.record-usage` | `memory_playbook.py record-usage` | increment `usage_count` / optional `success_count`; reconcile confidence |
+| `playbook.reconcile-confidence` | `memory_playbook.py reconcile-confidence` | auto promote/demote confidence for learning/code-context/playbook |
+| `playbook.evaluate-promotion` | `memory_playbook.py evaluate-promotion` | gate `draft`→`active` on audit telemetry + skeptic pass |
 | `traverse` | `in-repo-memory-search.py traverse` | `python3 scripts/in-repo-memory-search.py traverse --store <dir> --from <id> [--edge] [--depth]` |
 | `link` | frontmatter `links[]` + inline md links | typed edges stored and traversed; dangling targets tolerated |
 
@@ -112,7 +123,8 @@ frontmatter filters). `export`/`import` are native: walk the store and emit/cons
 | `learning` | `memories/<id>.md` | |
 | `debug` | `memories/<id>.md` | `relatedFiles` required |
 | `design` | `memories/<id>.md` | |
-| `code-context` | `memories/<id>.md` | `relatedFiles` required |
+| `code-context` | `memories/<id>.md` | `relatedFiles` required; optional `confidence`/`usage_count`/`success_count` |
+| `playbook` | `memories/<id>.md` | structured playbook (`triggerKeywords`, steps, verification); promotion gated per R33 |
 | `research` | `memories/<id>.md` | |
 | `discussion` | `memories/<id>.md` | distilled only — never raw transcript |
 | `progress` | `memories/<id>.md` | sparingly |
@@ -150,6 +162,9 @@ Identical inputs → identical ranked output (deterministic).
 7. Never auto-store `rule`; never re-store rules just read from `rules-load`.
 
 ## Notes / gotchas
+
+- Playbook confidence (R27): `confidence` (0.0–1.0), `usage_count`, `success_count` on `learning`, `code-context`, and `playbook` records. Auto promote/demote by configured success-rate thresholds; confidence input is audited usage, not self-reported.
+- Playbook promotion (R33): `playbookStatus: active` requires `auditTelemetryRef` (R3/R4 claims-audit JSON with pass verdict) and `skepticVerdict: pass`.
 
 - Link traversal: `links[]` frontmatter plus inline markdown links form the edge map; `traverse` and `expand` (backlinks) use it. Unknown frontmatter keys (including `title`, `description`, `resource`) are preserved on read/write.
 - Optional `# Citations` body section lists external references (URLs or repo paths) separate from memory-to-memory `links[]`.

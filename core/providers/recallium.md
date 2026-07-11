@@ -70,6 +70,7 @@ swaps become bundle round-trips. Treat these as plugin-side, not native MCP ops.
 | `debug` | `debug` |
 | `design` | `design` |
 | `code-context` | `code-snippet` |
+| `playbook` | `working-notes` |
 | `research` | `research` |
 | `discussion` | `discussion` |
 | `progress` | `progress` |
@@ -166,3 +167,16 @@ stored as `memory_type: research` with `related_files` pointing at the brainstor
 tags `prd-<unit>`, `brainstorm-<unit>`. Bidirectional pointers are recorded on the issue comments
 (`sw-memory-pointer`); the brainstorm issue is closed, not deleted.
 
+## Playbook + confidence mapping (R27, R28)
+
+| Canonical field | Recallium mapping |
+| --- | --- |
+| `playbook` category | `memory_type: working-notes` with `tags` including `playbook` |
+| `confidence` | `importance_score` (0.0–1.0) |
+| `usage_count` / `success_count` | `tags` `usage:<n>` / `success:<n>` sidecar on modify |
+| `triggerKeywords` | `tags` prefixed `kw:<keyword>` |
+| `playbookStatus` | `tags` `playbook-status:<draft|active>` |
+| `auditTelemetryRef` | `tags` `audit-ref:<path>` pointer only |
+| `skepticVerdict` | `tags` `skeptic:<pass|fail|pending>` |
+
+Primary-injection and promotion gates mirror the in-repo adapter (`scripts/memory_playbook.py`).

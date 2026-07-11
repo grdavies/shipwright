@@ -275,3 +275,19 @@ Inline (no subagent) when ≤3 declared `file_paths` in `signal_context` and seq
 
 - Stage 1 spec-compliance → `build` tier (`resolve-model-tier.py --tier build`); must read union + task.
 - Stage 2 code-quality → `mid` tier when delegating; escalate to `build` on ambiguity.
+
+## Primary playbook injection (PRD 064 R28, R33)
+
+Before assembling delegated Task prompts (ahead of general memory recall blocks):
+
+```bash
+PLAYBOOK_BLOCKS=$(python3 scripts/memory_playbook.py primary-inject   --signals-json '<signal_context>' --root "$PWD")
+CONTEXT_BLOCKS=$(python3 -c "import json,sys; b=json.loads(sys.argv[1])['blocks']; print(json.dumps(b))" "$PLAYBOOK_BLOCKS")
+python3 scripts/dispatch_prompt.py build   --intensity "$INTENSITY" --intensity-source "$INTENSITY_SOURCE"   --body-file "${PROMPT_PATH}.body"   --primary-context-json "$CONTEXT_BLOCKS"   --context-json "${CONTEXT_BLOCKS_JSON:-[]}"   --out "$PROMPT_PATH"
+```
+
+- Inject **at most one** high-confidence `playbookStatus: active` playbook whose `triggerKeywords` match `signal_context`.
+- Eligibility is gated: `confidence` ≥ `memory.playbooks.injectMinConfidence`, `auditTelemetryRef` (R3/R4 claims-audit pass), and `skepticVerdict: pass` (R33).
+- Primary blocks are ordered **before** general memory recall / untrusted payloads in the assembled prompt.
+- When no eligible playbook matches, proceed with the standard dispatch-context recipe only.
+
