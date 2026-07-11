@@ -100,7 +100,9 @@
         "ui-ux": "mid",
         "type-design": "mid",
         "comment-accuracy": "mid",
-        "ai-native": "mid"
+        "ai-native": "mid",
+        "sw-rca-hypothesis-generator": "cheap",
+        "sw-rca-hypothesis-refuter": "cheap"
       },
       "skills": {
         "brainstorm": "deep",
@@ -345,7 +347,9 @@
         "ui-ux": "normal",
         "type-design": "normal",
         "comment-accuracy": "normal",
-        "ai-native": "normal"
+        "ai-native": "normal",
+        "sw-rca-hypothesis-generator": "ultra",
+        "sw-rca-hypothesis-refuter": "ultra"
       }
     }
   },

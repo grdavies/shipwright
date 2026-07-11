@@ -64,10 +64,15 @@ Invoke `skills/rca-core`:
 - **Production signals** (`sentry`, `deploy_log`, `user_report`) → **debug entry procedure**
 - **Dev-time signals** (`test_failure`, `build_failure`, `verify_failure`) → **dev-time entry procedure**
 
+**Fan-out entry (opt-in):** when `rca.fanout.enabled` is true, evaluate D5 gating via
+`python3 scripts/rca_fanout.py should-fanout --signal <normalized-signal.json>`. On `useFanout: true`, follow
+`skills/rca-core/references/fan-out.md` (partitioned generators → synthesize → per-survivor refuters). On
+`useFanout: false`, use single-context shared discipline below.
+
 Shared across entries:
 
 - Rank hypotheses with evidence
-- Causal-chain gate before fix proposal
+- Causal-chain gate before fix proposal (refuter panel when fan-out active)
 - Invalidate rejected hypotheses explicitly
 - Hard stops: max 5 iterations, no-progress, rule-of-three, human-decision (R29)
 - Production debug: attempt repro-from-context; local repro optional

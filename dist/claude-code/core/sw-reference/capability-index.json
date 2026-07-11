@@ -208,6 +208,48 @@
       }
     },
     {
+      "id": "persona.sw-rca-hypothesis-generator",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-rca-hypothesis-generator.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "rca",
+            "scope": "fan-out-generator"
+          }
+        ],
+        "metadata": {
+          "personaId": "rca-hypothesis-generator",
+          "selectionFamily": "rca",
+          "modelTierRef": "agents.sw-rca-hypothesis-generator"
+        }
+      }
+    },
+    {
+      "id": "persona.sw-rca-hypothesis-refuter",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-rca-hypothesis-refuter.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "rca",
+            "scope": "fan-out-refuter"
+          }
+        ],
+        "metadata": {
+          "personaId": "rca-hypothesis-refuter",
+          "selectionFamily": "rca",
+          "modelTierRef": "agents.sw-rca-hypothesis-refuter"
+        }
+      }
+    },
+    {
       "id": "persona.sw-scope-guardian-reviewer",
       "kind": "persona",
       "sourcePath": "core/agents/sw-scope-guardian-reviewer.md",

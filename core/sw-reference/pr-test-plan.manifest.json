@@ -1438,6 +1438,13 @@
       "args": [],
       "classification": "required",
       "ciJobName": "feat-test-plan-claims-audit-unit"
+    },
+    {
+      "id": "rca-fanout-unit",
+      "script": "scripts/test/rca-fanout-unit.test",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-rca-fanout-unit"
     }
   ]
 }

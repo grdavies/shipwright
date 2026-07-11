@@ -64,7 +64,9 @@
       "type-design": "mid",
       "comment-accuracy": "mid",
       "ai-native": "mid",
-      "sw-claims-auditor": "cheap"
+      "sw-claims-auditor": "cheap",
+      "sw-rca-hypothesis-generator": "cheap",
+      "sw-rca-hypothesis-refuter": "cheap"
     },
     "skills": {
       "brainstorm": "deep",
