@@ -258,6 +258,17 @@ python3 scripts/host.py checks --number "$PR"
 echo "DELIVER_WAKE_${RUN_ID} {\"phase\":\"terminal-ci\",\"prd\":\"009\"}"
 ```
 
+### Phase-mode dispatch-ship CI wait (PRD 063 R3)
+
+For phase-PR CI (not terminal), use a **phase-unique** sentinel so concurrent phases do not collide:
+
+```bash
+PHASE_SLUG="<phase-slug>"   # from SW_PHASE_SLUG / deliver state
+echo "DELIVER_WAKE_${RUN_ID}_${PHASE_SLUG} {\"phaseId\":\"<id>\",\"phaseSlug\":\"${PHASE_SLUG}\"}"
+```
+
+Arm with `notify_on_output` matching `^DELIVER_WAKE_${RUN_ID}_${PHASE_SLUG}`. Never reuse terminal-only `DELIVER_WAKE_${RUN_ID}` for in-wave phase CI.
+
 Arm as background shell with `notify_on_output` matching `^DELIVER_WAKE_${RUN_ID}`. Reuse
 `checks.watch.pollSeconds` / `checks.watch.maxWaitMinutes` from config — no new knob.
 
