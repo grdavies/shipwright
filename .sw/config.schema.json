@@ -654,6 +654,57 @@
               "description": "Deprecated \u2014 use requireRuleClass (inverted). When false, equivalent to requireRuleClass:true."
             }
           }
+        },
+        "playbooks": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Confidence-scored playbook primary injection (PRD 064 R27-R28, R33).",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "injectMinConfidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.75
+            },
+            "activeMinConfidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.6
+            },
+            "promoteMinSuccessRate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.8
+            },
+            "promoteMinUsage": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 5
+            },
+            "demoteMaxSuccessRate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.4
+            },
+            "demoteMinUsage": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 5
+            },
+            "confidenceStep": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.05
+            }
+          }
         }
       },
       "required": [

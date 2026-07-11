@@ -49,6 +49,7 @@ Adapters map these canonical categories to provider-native types.
 | `debug` | bug root-cause + fix | `relatedFiles` required |
 | `design` | architecture / performance rationale | |
 | `code-context` | file-linked implementation context | `relatedFiles` required |
+| `playbook` | repo skill / procedure playbooks with trigger keywords | structured steps + verification; see **Playbook contract** below |
 | `research` | external findings, audits, doc reads | |
 | `discussion` | **distilled** conversation / debate / session recap | never verbatim transcript |
 | `progress` | milestone / checkpoint | sparingly; prefer tasks |
@@ -133,3 +134,37 @@ edge-capable provider.
 ## Ingestion redaction (R41)
 
 All write paths run the shared redaction chokepoint before `store` (see `rules/memory-guardrails.mdc`).
+
+## Playbook contract (R26, R33)
+
+`playbook` memories are structured procedural playbooks stored under the in-repo adapter (`category: playbook`).
+Each playbook file uses YAML frontmatter plus a body with `# Prerequisites`, `# Steps`, and `# Verification`.
+
+| Field | Required | Purpose |
+| --- | --- | --- |
+| `triggerKeywords` | yes | Keyword list for dispatch-time primary injection matching |
+| `prerequisites` | optional | Preconditions (frontmatter list and/or `# Prerequisites` bullets) |
+| `playbookStatus` | yes | `draft` or `active` — only `active` may primary-inject |
+| `confidence` | yes | `0.0`–`1.0` usage-derived score (learning/code-context/playbook only) |
+| `usage_count` / `success_count` | yes | Audited usage telemetry inputs (D4) |
+| `auditTelemetryRef` | for promotion | Path to R3/R4 claims-audit JSON — not self-reported |
+| `skepticVerdict` | for promotion | `pass` \| `fail` \| `pending` adversarial verification (R7 pattern) |
+
+Each step in `# Steps` uses `## Step N: <title>` with bullets:
+
+- `command:` shell/command to run
+- `expected:` expected stdout/exit semantics
+- `fallback:` recovery when expected output is absent
+
+### Playbook operations
+
+```bash
+python3 scripts/memory_playbook.py match --signals-json '<signal_context>'
+python3 scripts/memory_playbook.py primary-inject --signals-json '<signal_context>'
+python3 scripts/memory_playbook.py record-usage --id <playbook-id> [--success]
+python3 scripts/memory_playbook.py reconcile-confidence
+python3 scripts/memory_playbook.py evaluate-promotion --id <playbook-id> [--promote]
+```
+
+**Promotion gate (R33):** `draft` → `active` and primary-injection eligibility require audited claims telemetry (`auditTelemetryRef` resolves to passing R3/R4 output) **and** `skepticVerdict: pass`. Confidence auto-promote/demote (R27) is scoped to `learning`, `code-context`, and `playbook` only — human `rule` promotion is unchanged.
+

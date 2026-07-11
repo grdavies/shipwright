@@ -149,6 +149,16 @@
     "guardrails": {
       "enforceBeforeSubmit": true,
       "requireRuleClass": false
+    },
+    "playbooks": {
+      "enabled": true,
+      "injectMinConfidence": 0.75,
+      "activeMinConfidence": 0.6,
+      "promoteMinSuccessRate": 0.8,
+      "promoteMinUsage": 5,
+      "demoteMaxSuccessRate": 0.4,
+      "demoteMinUsage": 5,
+      "confidenceStep": 0.05
     }
   },
   "planning": {

@@ -49,7 +49,7 @@ Follow `CAPABILITIES.md` **Read recipe**, scoped to the surface being touched:
    - **file-path** search on the paths the command will touch,
    - **semantic** search on the change type / PRD / feature / surface,
    - **category** narrowing when the adapter supports `categoryFilter`.
-3. Search these classes: `rule`, `decision`, `learning`, `code-context`, `design`.
+3. Search these classes: `rule`, `decision`, `learning`, `code-context`, `playbook`, `design`.
 4. `expand` only the handful of ids that look relevant before mutation.
 
 Per-command scope hints remain in the table under **Read mode (preflight)** below; the obligation and
@@ -75,7 +75,7 @@ Record the pre-work search breadcrumb before the first substantive mutation:
 python3 scripts/wave.py memory prework record \
   --surface sw-execute \
   --scope "core/skills/memory/SKILL.md" \
-  --classes rule,decision,learning,code-context,design \
+  --classes rule,decision,learning,code-context,playbook,design \
   [--hit-count N]
 ```
 

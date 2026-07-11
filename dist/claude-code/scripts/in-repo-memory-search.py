@@ -23,6 +23,7 @@ CANONICAL_CATEGORIES = (
     "debug",
     "design",
     "code-context",
+    "playbook",
     "research",
     "discussion",
     "progress",
