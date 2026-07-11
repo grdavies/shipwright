@@ -2247,6 +2247,34 @@ def _execute_mechanical_inner(
             branch_head = phase_branch_head_optional(root, state, slug, str(phase_branch))
             if not branch_head:
                 fail("canonical-reemit could not resolve branch head", exit_code=20)
+            wt_entry = (state.get("phaseWorktrees") or {}).get(pid, {})
+            wt_path = wt_entry.get("path") if isinstance(wt_entry, dict) else None
+            smoke_root = Path(str(wt_path)) if wt_path else root
+            from ship_pre_pr_smoke import run_pre_pr_smoke
+
+            smoke_ec, smoke_cause = run_pre_pr_smoke(smoke_root)
+            if smoke_ec != 0:
+                run_dir = root / ".cursor" / "sw-deliver-runs" / slug
+                run_dir.mkdir(parents=True, exist_ok=True)
+                status_path = run_dir / "status.json"
+                doc = build_status_document(
+                    verdict="blocked",
+                    phase=slug,
+                    head=branch_head,
+                    cause=smoke_cause or "pre-pr-smoke:failed",
+                    ship_chain="incomplete",
+                    provenance="canonical-reemit-smoke",
+                )
+                write_status_atomic(status_path, doc)
+                persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
+                return {
+                    "executed": "canonical-reemit",
+                    "phaseId": pid,
+                    "phaseSlug": slug,
+                    "verdict": "blocked",
+                    "cause": smoke_cause,
+                    "statusPath": str(status_path),
+                }
             pr_number = resolve_pr_number(root, state, slug, None, str(phase_branch))
             verdict, gate, pr_number = derive_terminal_verdict_from_live_evidence(
                 root,
