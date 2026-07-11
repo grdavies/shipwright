@@ -435,6 +435,7 @@
 * merge phase skill-identity-name-alignment-and-capability-relocation-workstream-b into feat/agentic-quality-patterns-and-standards-conformance (a07213a) <!-- sw-deliver:skill-identity-name-alignment-and-capability-relocation-workstream-b -->
 * merge phase progressive-disclosure-budgets-and-forward-standard-adr-workstream-b into feat/agentic-quality-patterns-and-standards-conformance (8533a33) <!-- sw-deliver:progressive-disclosure-budgets-and-forward-standard-adr-workstream-b -->
 * merge phase skills-spec-validation-gate-and-description-contract-workstream-b into feat/agentic-quality-patterns-and-standards-conformance (813cdad) <!-- sw-deliver:skills-spec-validation-gate-and-description-contract-workstream-b -->
+* merge phase okf-memory-export-import-and-deterministic-index-log-workstream-c into feat/agentic-quality-patterns-and-standards-conformance (69caa99) <!-- sw-deliver:okf-memory-export-import-and-deterministic-index-log-workstream-c -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
