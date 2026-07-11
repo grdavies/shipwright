@@ -3350,6 +3350,92 @@ def _close_issue_store_unit(
     }
 
 
+def close_parent_epic_if_complete(
+    root: Path,
+    cfg: dict[str, Any],
+    state: dict[str, Any] | None,
+    *,
+    dry_run: bool = False,
+    merged_to_main: bool = False,
+) -> dict[str, Any]:
+    """Close parent-checkbox epic after main merge when all phases terminal (PRD 063 R13)."""
+    from planning_progress import _parent_progress_mode
+    from wave_state import load_hierarchy_map
+
+    if not merged_to_main:
+        return {"verdict": "skipped", "reason": "pre-main-merge"}
+    if not state:
+        return {"verdict": "skipped", "reason": "missing-state"}
+    hmap = load_hierarchy_map(state)
+    if not hmap.get("applied") or not _parent_progress_mode(hmap):
+        return {"verdict": "skipped", "reason": "not-parent-checkbox-mode"}
+    epic_id = hmap.get("epicIssueId")
+    if not epic_id:
+        return {"verdict": "skipped", "reason": "missing-epic-issue-id"}
+
+    ledger_phases = ((state.get("taskLedger") or {}).get("phases") or {})
+    phases = state.get("phases") or {}
+    terminal = frozenset({"green-merged", "teardown-pending", "teardown-complete", "merge-ready-green"})
+    for pid, meta in (phases.items() if isinstance(phases, dict) else []):
+        phase_ledger = ledger_phases.get(str(pid)) if isinstance(ledger_phases, dict) else None
+        if isinstance(phase_ledger, dict) and phase_ledger.get("declaredPartial"):
+            return {
+                "verdict": "blocked",
+                "reason": "declared-partial-phase",
+                "phaseId": str(pid),
+            }
+        status = str((meta or {}).get("status") or "") if isinstance(meta, dict) else ""
+        if status and status not in terminal:
+            return {
+                "verdict": "not-ready",
+                "reason": "phase-not-terminal",
+                "phaseId": str(pid),
+                "status": status,
+            }
+
+    pmis = _migrate_issue_store()
+    if not pmis.issue_store_effective(root, cfg):
+        return {"verdict": "skipped", "reason": "issue-store-required"}
+    backend = get_backend(root, cfg, override="issue-store")
+    if not isinstance(backend, IssueStoreBackend):
+        return {"verdict": "fail", "error": "issue-store-backend-required"}
+    try:
+        record = backend._client.issue_get(str(epic_id))
+    except IssueNotFound:
+        return {"verdict": "fail", "error": "epic-issue-not-found", "issueId": str(epic_id)}
+    if record.state == "closed":
+        return {
+            "verdict": "ok",
+            "action": "noop",
+            "idempotent": True,
+            "issueId": str(epic_id),
+            "alreadyClosed": True,
+        }
+    if dry_run:
+        return {
+            "verdict": "dry-run",
+            "action": "would-close-epic",
+            "issueId": str(epic_id),
+        }
+    try:
+        updated = backend._client.issue_update(
+            record.id,
+            labels=list(record.labels),
+            state="closed",
+            if_match=record.etag,
+            allow_locked=True,
+        )
+    except IssueRevisionConflict as exc:
+        return {"verdict": "fail", "error": "epic-close-conflict", "detail": str(exc)}
+    return {
+        "verdict": "ok",
+        "action": "close-epic",
+        "issueId": str(updated.id),
+        "number": updated.number,
+    }
+
+
+
 def close_delivery_units(
     root: Path,
     cfg: dict[str, Any],
@@ -3403,6 +3489,23 @@ def close_delivery_units(
         if open_remaining
         else None
     )
+    merged_main = False
+    try:
+        from wave_living_docs import target_merge_detected
+
+        merged_main = bool(target_merge_detected(root, state))
+    except Exception:  # noqa: BLE001
+        merged_main = False
+    parent_epic = close_parent_epic_if_complete(
+        root, cfg, state, dry_run=dry_run, merged_to_main=merged_main
+    )
+    if parent_epic.get("verdict") == "blocked":
+        failures.append(parent_epic)
+    elif parent_epic.get("verdict") == "not-ready":
+        failures.append(parent_epic)
+    elif parent_epic.get("action") in {"close-epic", "would-close-epic", "noop"}:
+        closed.append(parent_epic)
+
     phase_ok = phase_closure.get("verdict") in {"ready", "dry-run", "ok"}
     verdict = "ready" if not failures and phase_ok else "not-ready"
     if dry_run:
@@ -3418,6 +3521,7 @@ def close_delivery_units(
         "skipped": skipped,
         "units": results,
         "phaseClosure": phase_closure,
+        "parentEpicClosure": parent_epic,
         "openRemaining": open_remaining,
         "cacheInvalidation": cache_status,
         "resumeCommand": resume,

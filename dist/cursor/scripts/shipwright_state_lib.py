@@ -1,6 +1,6 @@
 """Per-worktree Shipwright state helpers."""
 from __future__ import annotations
-import json, subprocess, sys
+import json, os, subprocess, sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -68,6 +68,9 @@ def cmd_override_add(start: Path, arg: str) -> int:
     current["overrides"] = overrides
     state.parent.mkdir(parents=True, exist_ok=True)
     state.write_text(json.dumps(current, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if os.environ.get("SW_HARNESS") == "1":
+        print(state)
+        return 0
     try:
         import planning_gap_capture as pgc
 

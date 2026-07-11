@@ -105,12 +105,36 @@ def ship_lease_owner_live(meta: dict[str, Any]) -> bool:
     return not ship_lease_is_stale(meta)
 
 
-def reclaim_stale_ship_lease(lock_path: Path) -> bool:
+def phase_status_consumable_terminal(root: Path, phase_slug: str | None) -> bool:
+    if not phase_slug:
+        return False
+    status_path = root / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json"
+    if not status_path.is_file():
+        return False
+    try:
+        from status_integrity import status_is_consumable_terminal
+
+        payload = json.loads(status_path.read_text(encoding="utf-8"))
+        return status_is_consumable_terminal(payload)
+    except (json.JSONDecodeError, OSError, TypeError, ValueError):
+        return False
+
+
+def reclaim_stale_ship_lease(
+    lock_path: Path,
+    *,
+    root: Path | None = None,
+    phase_slug: str | None = None,
+) -> bool:
     meta = read_lock_meta(lock_path)
     if not meta:
         lock_path.unlink(missing_ok=True)
         return True
     if ship_lease_owner_live(meta):
+        return False
+    if root is not None and phase_status_consumable_terminal(root, phase_slug):
+        return False
+    if not ship_lease_is_stale(meta):
         return False
     lock_path.unlink(missing_ok=True)
     return True
@@ -134,6 +158,7 @@ def resolve_branches(root: Path, args: list[str]) -> tuple[str, str]:
 
 def acquire_ship_lease(root: Path, args: list[str]) -> dict[str, Any]:
     integration, phase_branch = resolve_branches(root, args)
+    phase_slug = parse_kv(args, "--phase-slug")
     lock_path = lock_path_for(root, integration, phase_branch)
     if lock_path.is_file():
         existing = read_lock_meta(lock_path)
@@ -174,7 +199,10 @@ def acquire_ship_lease(root: Path, args: list[str]) -> dict[str, Any]:
 
     if not try_acquire():
         existing = read_lock_meta(lock_path)
-        if reclaim_stale_ship_lease(lock_path) and try_acquire():
+        if (
+            reclaim_stale_ship_lease(lock_path, root=root, phase_slug=phase_slug)
+            and try_acquire()
+        ):
             append_log(
                 root,
                 {

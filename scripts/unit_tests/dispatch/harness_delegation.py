@@ -420,8 +420,21 @@ JSON
   "waves": [["1", "2"]]
 }
 JSON
-  "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase a --head "$HEAD" --out .cursor/sw-deliver-runs/a/status.json >/dev/null
-  "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase b --head "$HEAD" --out .cursor/sw-deliver-runs/b/status.json >/dev/null
+  for slug in a b; do
+    run=".cursor/sw-deliver-runs/$slug"
+    mkdir -p "$run"
+    PYTHONPATH="$ROOT/scripts" python3 -c "
+import json, sys
+from pathlib import Path
+from kernel_classification import canonical_ship_chain
+repo = Path(sys.argv[1]); slug = sys.argv[2]; run = Path(sys.argv[3])
+chain = canonical_ship_chain(repo)
+(run / 'ship-steps.json').write_text(json.dumps({'phase': slug, 'chain': chain, 'lastCompletedStep': chain[-1], 'currentStep': None}))
+" "$ROOT" "$slug" "$run" >/dev/null
+    SW_RUN_DIR="$run" SW_PHASE_SLUG="$slug" \
+      "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase "$slug" --head "$HEAD" \
+      --out "$run/status.json" >/dev/null
+  done
   if OUT=$(python3 "$LOOP_PY" "$COLLECT_FIX" compute-next 2>/dev/null) && echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)

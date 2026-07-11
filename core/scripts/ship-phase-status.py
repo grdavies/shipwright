@@ -41,6 +41,16 @@ def main(argv: list[str] | None = None) -> int:
         head = resolve_write_head(root)
     if verdict == "merge-ready-green" and not head:
         print(json.dumps({"verdict":"fail","error":"could not resolve HEAD for merge-ready-green"}), file=sys.stderr); return 2
+    ship_chain_arg = None
+    if verdict == "merge-ready-green":
+        import ship_phase_steps as _sps
+        _run = os.environ.get("SW_RUN_DIR", "").strip()
+        _steps_path = (Path(_run) / "ship-steps.json") if _run else _sps.resolve_steps_path(root, phase, None)
+        _steps = _sps.load_steps(_steps_path)
+        if not _sps.ship_chain_is_complete(root, phase, _steps):
+            print(json.dumps({"verdict":"fail","error":"ship-chain:incomplete","halt":"ship-chain"}), file=sys.stderr)
+            return 2
+        ship_chain_arg = "complete"
     if verdict == "merge-ready-green":
         import importlib.util
         gap_gate = SCRIPT_DIR / "gap-check-gate.py"
@@ -59,6 +69,7 @@ def main(argv: list[str] | None = None) -> int:
     if pr: write_args += ["--pr", pr]
     if cause: write_args += ["--cause", cause]
     if gate_json and Path(gate_json).is_file(): write_args += ["--gate-json", gate_json]
+    if ship_chain_arg: write_args += ["--ship-chain", ship_chain_arg]
     ship_steps = os.environ.get("SHIP_STEPS_PATH","")
     if ship_steps and Path(ship_steps).is_file(): write_args += ["--ship-steps-path", ship_steps]
     import status_integrity

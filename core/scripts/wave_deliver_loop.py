@@ -1128,6 +1128,78 @@ def mark_phases_in_flight(
         phases[pid] = meta
 
 
+def phase_lease_branches(
+    state: dict[str, Any], meta: dict[str, Any]
+) -> tuple[str, str] | None:
+    integration = (state.get("target") or {}).get("branch")
+    phase_branch = meta.get("branch")
+    if not integration or not phase_branch:
+        return None
+    return str(integration), str(phase_branch)
+
+
+def inline_dispatch_lease_held_live(
+    root: Path, state: dict[str, Any], meta: dict[str, Any]
+) -> bool:
+    branches = phase_lease_branches(state, meta)
+    if not branches:
+        return bool(meta.get("inlineDispatchedAt"))
+    integration, phase_branch = branches
+    ec, data = run_wave(
+        root,
+        "ship-lease",
+        "status",
+        "--integration",
+        integration,
+        "--phase-branch",
+        phase_branch,
+    )
+    if ec != 0:
+        return bool(meta.get("inlineDispatchedAt"))
+    if not data.get("held"):
+        return False
+    return bool(data.get("live"))
+
+
+def acquire_inline_dispatch_lease(
+    root: Path, state: dict[str, Any], phase_id: str, meta: dict[str, Any]
+) -> tuple[int, dict[str, Any]]:
+    branches = phase_lease_branches(state, meta)
+    if not branches:
+        return 0, {}
+    integration, phase_branch = branches
+    slug = str(meta.get("slug") or phase_id)
+    return run_wave(
+        root,
+        "ship-lease",
+        "acquire",
+        "--integration",
+        integration,
+        "--phase-branch",
+        phase_branch,
+        "--phase-slug",
+        slug,
+    )
+
+
+def release_inline_dispatch_lease(
+    root: Path, state: dict[str, Any], meta: dict[str, Any]
+) -> None:
+    branches = phase_lease_branches(state, meta)
+    if not branches:
+        return
+    integration, phase_branch = branches
+    run_wave(
+        root,
+        "ship-lease",
+        "release",
+        "--integration",
+        integration,
+        "--phase-branch",
+        phase_branch,
+    )
+
+
 def check_watchdog(root: Path, state: dict[str, Any]) -> str | None:
     hb = state.get("driverHeartbeatAt")
     if isinstance(hb, str):
@@ -1199,6 +1271,68 @@ def canonical_task_list_path(root: Path, raw: str) -> str:
         return str(path.relative_to(root.resolve()))
     except ValueError:
         return str(path)
+
+
+
+
+def check_deliver_hang_desync(root: Path, state: dict[str, Any]) -> str | None:
+    """Fail-closed hang/desync causes before no-progress (PRD 063 R5)."""
+    orch = (state.get("orchestratorWorktree") or {}).get("path")
+    if isinstance(orch, str) and orch.strip():
+        try:
+            orch_path = Path(orch)
+            if (
+                ".sw-worktrees" in str(orch_path)
+                and orch_path.is_dir()
+                and orch_path.resolve() != root.resolve()
+            ):
+                return "deliver:orchestrator-cwd-skew"
+        except OSError:
+            return "deliver:orchestrator-path-invalid"
+    try:
+        sync_canonical_state_read(root, state_hint=state)
+    except SystemExit:
+        return "deliver:canonical-state-desync"
+    except Exception:
+        pass
+    timeout_s = DEFAULT_BACKGROUND_TASK_TIMEOUT_MIN * 60
+    for pid, meta in (state.get("phases") or {}).items():
+        if not isinstance(meta, dict) or meta.get("status") != "in-flight":
+            continue
+        dispatched = meta.get("inlineDispatchedAt")
+        if not dispatched:
+            continue
+        slug = str(meta.get("slug") or pid)
+        _, status = read_phase_status_optional(root, slug, state)
+        if status_is_consumable_terminal(status):
+            continue
+        age = age_seconds(str(dispatched))
+        if age is not None and age > timeout_s:
+            return f"deliver:dispatch-stale-no-terminal:{pid}"
+    return None
+
+
+def assert_driver_adopt_gate(
+    state: dict[str, Any], loop_args: list[str], *, fresh_seconds: int = 120
+) -> None:
+    """Refuse double-drive when heartbeat is fresh unless --self-wake (PRD 063 R6)."""
+    if has_flag(loop_args, "--self-wake") or has_flag(loop_args, "--dry-run"):
+        return
+    if state.get("verdict") != "running" or not state.get("phases"):
+        return
+    hb = state.get("driverHeartbeatAt")
+    if not isinstance(hb, str):
+        return
+    age = age_seconds(hb)
+    if age is not None and age < fresh_seconds:
+        fail(
+            "driver-heartbeat-fresh-double-adopt",
+            exit_code=20,
+            halt="double-drive",
+            remediation="wait for driver heartbeat to go stale or use self-wake continuation",
+            driverHeartbeatAt=hb,
+            ageSeconds=age,
+        )
 
 
 def assert_run_identity(
@@ -1531,20 +1665,29 @@ def compute_next_action(
                 "resume": True,
             }
 
-    watchdog = check_watchdog(root, state)
-    if watchdog:
-        return {
-            "action": "halt-blocked",
-            "cause": watchdog,
-            "resume": True,
-            "watchdog": True,
-        }
-
     bg_fail = check_background_task_failures(root, state, wave_ids)
     if bg_fail:
         return {
             "action": "halt-blocked",
             "cause": bg_fail,
+            "resume": True,
+            "watchdog": True,
+        }
+
+    desync = check_deliver_hang_desync(root, state)
+    if desync:
+        return {
+            "action": "halt-blocked",
+            "cause": desync,
+            "resume": True,
+            "desync": True,
+        }
+
+    watchdog = check_watchdog(root, state)
+    if watchdog:
+        return {
+            "action": "halt-blocked",
+            "cause": watchdog,
             "resume": True,
             "watchdog": True,
         }
@@ -1638,6 +1781,11 @@ def compute_next_action(
             if status.get("verdict") == "merge-ready-green":
                 continue
         if meta.get("backgroundDispatchedAt"):
+            awaiting.append(pid)
+            continue
+        if meta.get("inlineDispatchedAt") and inline_dispatch_lease_held_live(
+            root, state, meta
+        ):
             awaiting.append(pid)
             continue
         return dispatch_or_phase_plan_entry(
@@ -1889,6 +2037,9 @@ def _execute_mechanical_inner(
         plan_args = ["plan", "--task-list", str(task_list)]
         if has_flag(loop_args, "--skip-base-check"):
             plan_args.append("--skip-base-check")
+        branch_type = parse_kv(loop_args, "--type")
+        if branch_type:
+            plan_args.extend(["--type", branch_type])
         ec, data = run_wave(root, *plan_args)
         if ec != 0:
             fail_payload(data, "plan failed", ec)
@@ -2096,6 +2247,34 @@ def _execute_mechanical_inner(
             branch_head = phase_branch_head_optional(root, state, slug, str(phase_branch))
             if not branch_head:
                 fail("canonical-reemit could not resolve branch head", exit_code=20)
+            wt_entry = (state.get("phaseWorktrees") or {}).get(pid, {})
+            wt_path = wt_entry.get("path") if isinstance(wt_entry, dict) else None
+            smoke_root = Path(str(wt_path)) if wt_path else root
+            from ship_pre_pr_smoke import run_pre_pr_smoke
+
+            smoke_ec, smoke_cause = run_pre_pr_smoke(smoke_root)
+            if smoke_ec != 0:
+                run_dir = root / ".cursor" / "sw-deliver-runs" / slug
+                run_dir.mkdir(parents=True, exist_ok=True)
+                status_path = run_dir / "status.json"
+                doc = build_status_document(
+                    verdict="blocked",
+                    phase=slug,
+                    head=branch_head,
+                    cause=smoke_cause or "pre-pr-smoke:failed",
+                    ship_chain="incomplete",
+                    provenance="canonical-reemit-smoke",
+                )
+                write_status_atomic(status_path, doc)
+                persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
+                return {
+                    "executed": "canonical-reemit",
+                    "phaseId": pid,
+                    "phaseSlug": slug,
+                    "verdict": "blocked",
+                    "cause": smoke_cause,
+                    "statusPath": str(status_path),
+                }
             pr_number = resolve_pr_number(root, state, slug, None, str(phase_branch))
             verdict, gate, pr_number = derive_terminal_verdict_from_live_evidence(
                 root,
@@ -2105,13 +2284,20 @@ def _execute_mechanical_inner(
             run_dir = root / ".cursor" / "sw-deliver-runs" / slug
             run_dir.mkdir(parents=True, exist_ok=True)
             status_path = run_dir / "status.json"
+            reemit_verdict = verdict
+            reemit_cause = None
+            if verdict == "merge-ready-green":
+                reemit_verdict = "blocked"
+                reemit_cause = "ship-chain:reverify-required"
             doc = build_status_document(
-                verdict=verdict,
+                verdict=reemit_verdict,
                 phase=slug,
                 head=branch_head,
                 pr=pr_number,
                 gate=gate,
-                cause=None if verdict == "merge-ready-green" else (gate or {}).get("reason"),
+                cause=reemit_cause or ((gate or {}).get("reason") if reemit_verdict == "blocked" else None),
+                ship_chain="incomplete",
+                provenance="live-evidence-recovery",
             )
             write_status_atomic(status_path, doc)
             attempts = state.setdefault("statusReemitAttempts", {})
@@ -2119,7 +2305,7 @@ def _execute_mechanical_inner(
             meta.pop("backgroundDispatchedAt", None)
             save_state(root, state)
             actor = os.environ.get("SW_RECOVERY_ACTOR") or os.environ.get("USER") or "driver"
-            state_append_log(
+            append_log(
                 root,
                 {
                     "event": "status-canonical-reemit",
@@ -2153,9 +2339,19 @@ def _execute_mechanical_inner(
 
     if action == "collect-status":
         slug = str(step.get("phaseSlug", ""))
+        pid = str(step.get("phaseId") or "")
+        meta = (state.get("phases") or {}).get(pid, {})
         ec, data = run_wave(root, "status", "collect", "--phase-slug", slug)
         if ec != 0:
             fail_payload(data, "status collect failed", ec)
+        if not pid:
+            for candidate, candidate_meta in (state.get("phases") or {}).items():
+                if isinstance(candidate_meta, dict) and candidate_meta.get("slug") == slug:
+                    pid = str(candidate)
+                    meta = candidate_meta
+                    break
+        if isinstance(meta, dict):
+            release_inline_dispatch_lease(root, state, meta)
         state.update(load_state(root))
         persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
         return {"executed": "collect-status", "phaseSlug": slug, **data}
@@ -2247,10 +2443,35 @@ def _execute_mechanical_inner(
             )
         state.update(load_state(root))
         orch = orchestrator_worktree_path(root, state)
+        from wave_living_doc_lock import release, try_acquire
+
+        target = (state.get("target") or {}).get("branch")
         living_args = ["living-docs", "reconcile", "--commit"]
         if orch is not None:
             living_args.extend(["--orchestrator-worktree", str(orch)])
-        living_ec, living_data = run_wave(root, *living_args)
+        living_data: dict[str, Any] = {}
+        if not try_acquire(root, target=target, holder="living-docs-reconcile-finalize"):
+            deferral = manual_living_doc_reconcile_suggestion(root, state)
+            state["livingDocDeferral"] = {
+                **deferral,
+                "cause": "living-doc-lock-held",
+                "updatedAt": utc_now(),
+            }
+            save_state(root, state)
+            fail_payload(
+                {
+                    "verdict": "defer",
+                    "livingDocReconcile": deferral,
+                    "resumeCommand": deferral.get("command"),
+                },
+                "living-docs reconcile deferred — lock held",
+                20,
+                remediation=str(deferral.get("command") or ""),
+            )
+        try:
+            living_ec, living_data = run_wave(root, *living_args)
+        finally:
+            release(root)
         if living_ec != 0:
             fail_payload(
                 living_data,
@@ -2261,6 +2482,25 @@ def _execute_mechanical_inner(
                     "retry via /sw-deliver run after fixing INDEX currency"
                 ),
             )
+        from host_lib import load_workflow_config
+        from planning_store import close_delivery_units
+        import planning_index_issue as pii
+        from wave_living_docs import prd_number_from_state
+
+        cfg = load_workflow_config(root)
+        prd = prd_number_from_state(state, plan)
+        slug = str((state.get("target") or {}).get("slug") or plan.get("slug") or "")
+        prd_unit_id = pii.resolve_prd_unit_id(root, prd, slug=slug or None) if prd else None
+        closure: dict[str, Any] | None = None
+        if prd_unit_id:
+            closure = close_delivery_units(root, cfg, prd_unit_id, state=state)
+            if closure.get("verdict") == "not-ready":
+                fail_payload(
+                    closure,
+                    "close-delivery-units not ready",
+                    20,
+                    remediation=str(closure.get("resumeCommand") or ""),
+                )
         target = (state.get("target") or {}).get("branch")
         task_list = task_list_from(state, plan)
         clear_args = ["run-complete"]
@@ -2286,6 +2526,8 @@ def _execute_mechanical_inner(
             "cleanupSuggestion": data.get("cleanupSuggestion"),
             **data,
         }
+        if closure is not None:
+            result["closure"] = closure
         if cleanup_payload is not None:
             result["autonomousCleanup"] = cleanup_payload
         return result
@@ -2496,6 +2738,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     resumed = bool(state.get("verdict") == "running" and state.get("phases"))
 
     assert_run_identity(root, state, task_list, args)
+    assert_driver_adopt_gate(state, args)
 
     if task_list and not state.get("source_task_list"):
         state["source_task_list"] = task_list
@@ -2580,6 +2823,17 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
                 )
             elif step["action"] == "dispatch-ship":
                 pid = str(step.get("phaseId", ""))
+                meta = (state.get("phases") or {}).get(pid)
+                if isinstance(meta, dict):
+                    lease_ec, lease_data = acquire_inline_dispatch_lease(
+                        root, state, pid, meta
+                    )
+                    if lease_ec != 0:
+                        fail_payload(
+                            lease_data,
+                            "dispatch-ship lease acquire failed",
+                            lease_ec,
+                        )
                 mark_phases_in_flight(state, [pid], background=False)
                 persist_cursor(root, state, "dispatch-ship")
             elif step["action"] == "halt-blocked":
@@ -2632,7 +2886,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
         result = execute_mechanical(root, state, plan, step, loop_args=args)
         steps_taken.append(result)
         resumed = True
-        state_append_log(
+        append_log(
             root,
             {
                 "event": "execute-mechanical",

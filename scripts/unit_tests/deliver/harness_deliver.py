@@ -250,11 +250,33 @@ fi
 
 PDIR=$(mktemp -d)
 trap 'rm -rf "$PDIR" "$DRYDIR" 2>/dev/null' EXIT
-if OUT=$(python3 "$SHIP_STATUS" --verdict merge-ready-green --phase test-phase --out "$PDIR/status.json" 2>/dev/null) && \
-   echo "$OUT" | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
+(
+  cd "$PDIR"
+  git init -q
+  git config user.email test@test.com
+  git config user.name Test
+  git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" --allow-empty -q -m init
+  RUN_DIR="$PDIR/.cursor/sw-deliver-runs/test-phase"
+  mkdir -p "$RUN_DIR"
+  PYTHONPATH="$ROOT/scripts" python3 -c "
+import json, sys
+from pathlib import Path
+from kernel_classification import canonical_ship_chain
+repo = Path(sys.argv[1])
+slug = sys.argv[2]
+run = Path(sys.argv[3])
+chain = canonical_ship_chain(repo)
+(run / 'ship-steps.json').write_text(json.dumps({'phase': slug, 'chain': chain, 'lastCompletedStep': chain[-1], 'currentStep': None}))
+" "$ROOT" test-phase "$RUN_DIR" >/dev/null
+  SW_RUN_DIR="$RUN_DIR" SW_PHASE_SLUG=test-phase \
+    python3 "$SHIP_STATUS" --verdict merge-ready-green --phase test-phase --out "$RUN_DIR/status.json" >/dev/null
+)
+if [[ -f "$PDIR/.cursor/sw-deliver-runs/test-phase/status.json" ]] && python3 -c "
+import json
+from pathlib import Path
+d=json.loads(Path('$PDIR/.cursor/sw-deliver-runs/test-phase/status.json').read_text())
 assert d['verdict']=='merge-ready-green' and d['phaseMode'] is True and d['phase']=='test-phase'
+assert d.get('shipChain')=='complete' and d.get('schemaVersion')==1
 "; then
   echo "OK  deliver-phase-noninteractive: merge-ready-green status"
 else
@@ -610,16 +632,17 @@ mkdir -p "$STATUS_FIX/.cursor/sw-deliver-runs/alpha"
 import json, sys
 from pathlib import Path
 sys.path.insert(0, '$ROOT/scripts')
-from status_integrity import attach_provenance_marker
-doc = {
-    'verdict': 'merge-ready-green',
-    'phase': 'alpha',
-    'phaseMode': True,
-    'head': '$HEAD_SHA',
-    'pr': 99,
-}
+from status_integrity import build_status_document
+doc = build_status_document(
+    verdict='merge-ready-green',
+    phase='alpha',
+    head='$HEAD_SHA',
+    pr=99,
+    gate={'verdict': 'green'},
+    ship_chain='complete',
+)
 Path('.cursor/sw-deliver-runs/alpha/status.json').write_text(
-    json.dumps(attach_provenance_marker(doc), indent=2) + '\n'
+    json.dumps(doc, indent=2) + '\n'
 )
 "
 )

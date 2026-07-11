@@ -425,6 +425,13 @@
 * merge phase perf-base-capture-drain-slim-status-timing-r6-r9-medium into feat/deliver-issue-store-hardening-and-loop-perf (0db7e96) <!-- sw-deliver:perf-base-capture-drain-slim-status-timing-r6-r9-medium -->
 * merge phase ops-contract-cleanup-budget-isolation-status-vocab-facade-r10-r13-r16-medium into feat/deliver-issue-store-hardening-and-loop-perf (9f07f10) <!-- sw-deliver:ops-contract-cleanup-budget-isolation-status-vocab-facade-r10-r13-r16-medium -->
 * merge phase docs-merge-policy-metrics-release-completeness-r17-r20-r19-small into feat/deliver-issue-store-hardening-and-loop-perf (def9578) <!-- sw-deliver:docs-merge-policy-metrics-release-completeness-r17-r20-r19-small -->
+* merge phase consumability-and-cursor-r1-r2-r16-medium into feat/deliver-autonomy-and-finalize-hygiene (c972b0d) <!-- sw-deliver:consumability-and-cursor-r1-r2-r16-medium -->
+* merge phase dispatch-lease-and-inline-enforcement-r7-r9-medium into feat/deliver-autonomy-and-finalize-hygiene (f021301) <!-- sw-deliver:dispatch-lease-and-inline-enforcement-r7-r9-medium -->
+* merge phase resume-ci-self-wake-hang-takeover-r3-r5-r6-r8-r12-precedence-large into feat/deliver-autonomy-and-finalize-hygiene (265ed6d) <!-- sw-deliver:resume-ci-self-wake-hang-takeover-r3-r5-r6-r8-r12-precedence-large -->
+* merge phase resume-ci-self-wake-hang-takeover-r3-r5-r6-r8-r12-precedence-large into feat/deliver-autonomy-and-finalize-hygiene (7619ba1) <!-- sw-deliver:resume-ci-self-wake-hang-takeover-r3-r5-r6-r8-r12-precedence-large -->
+* merge phase pre-pr-targeted-pytest-smoke-r4-small into feat/deliver-autonomy-and-finalize-hygiene (0862727) <!-- sw-deliver:pre-pr-targeted-pytest-smoke-r4-small -->
+* merge phase finalize-hygiene-r11-r13-medium into feat/deliver-autonomy-and-finalize-hygiene (f4e553d) <!-- sw-deliver:finalize-hygiene-r11-r13-medium -->
+* merge phase harness-pollution-guard-docs-currency-r10-r17-medium into feat/deliver-autonomy-and-finalize-hygiene (d50daa9) <!-- sw-deliver:harness-pollution-guard-docs-currency-r10-r17-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

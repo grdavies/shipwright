@@ -94,6 +94,39 @@ def expected_next_step(chain: list[str], last_completed: str | None) -> str | No
     return chain[idx + 1]
 
 
+
+
+def ship_chain_is_complete(root: Path, phase: str, doc: dict[str, Any] | None, *, out: str | None = None) -> bool:
+    if not doc:
+        return False
+    chain, _, _ = authoritative_chain(root, phase, out)
+    if not chain:
+        return False
+    last = doc.get("lastCompletedStep")
+    if not last:
+        return False
+    norm = normalize_step(str(last))
+    if expected_next_step(chain, norm) is not None:
+        return False
+    return norm == normalize_step(chain[-1])
+
+
+def consumability_cause_for_status(root: Path, phase: str, status: dict[str, Any], *, out: str | None = None) -> str | None:
+    if status.get("verdict") != "merge-ready-green":
+        return None
+    if isinstance(status.get("shipSteps"), dict):
+        doc = status["shipSteps"]
+    else:
+        steps_path = status.get("shipStepsPath")
+        if steps_path and Path(steps_path).is_file():
+            doc = load_steps(Path(steps_path))
+        else:
+            doc = load_steps(resolve_steps_path(root, phase, out))
+    if ship_chain_is_complete(root, phase, doc, out=out):
+        return None
+    return "ship-chain:incomplete"
+
+
 def assert_advance_fidelity(root: Path, chain: list[str], step: str, doc: dict[str, Any]) -> None:
     norm = normalize_step(step)
     expected = expected_next_step(chain, doc.get("lastCompletedStep"))

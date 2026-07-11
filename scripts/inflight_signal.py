@@ -351,6 +351,22 @@ def is_run_live(root: Path, run_id: str) -> bool:
     return False
 
 
+SILENCE_TAKEOVER_DENY = re.compile(
+    r"silence|chat[._-]?idle|transcript|no[._-]?reply|user[._-]?quiet",
+    re.IGNORECASE,
+)
+
+
+def validate_takeover_reason(reason: str) -> None:
+    if SILENCE_TAKEOVER_DENY.search(reason.strip()):
+        fail(
+            "takeover refused: chat silence alone is not await-in-flight evidence",
+            exit_code=20,
+            halt="inflight-takeover-denied",
+            reason=reason,
+        )
+
+
 def cas_check(
     prior: InflightTuple | None,
     new: InflightTuple,
@@ -370,6 +386,8 @@ def cas_check(
         return
     if prior.run_id != new.run_id and is_run_live(root, prior.run_id):
         reason = takeover or override or handoff
+        if reason:
+            validate_takeover_reason(str(reason))
         if not reason:
             fail(
                 "live in-flight tuple held by different run-id",

@@ -455,6 +455,7 @@ def sync_canonical_state_read(
     state_hint: dict[str, Any] | None = None,
     task_list: str | None = None,
     target: str | None = None,
+    enforce_skew: bool = True,
 ) -> dict[str, Any]:
     """Load repo-root canonical deliver state; enforce skew + verdict precedence (PRD 049 R4)."""
     repo_root = canonical_repo_root(start)
@@ -484,6 +485,8 @@ def sync_canonical_state_read(
     if root_has and mirror_has:
         skew = _state_updated_skew_seconds(root_state, mirror_state)
         if skew is not None and skew > CANONICAL_STATE_SKEW_SECONDS:
+            if not enforce_skew:
+                return root_state
             fail(
                 "canonical deliver state skew exceeds threshold",
                 exit_code=20,

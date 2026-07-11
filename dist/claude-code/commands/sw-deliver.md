@@ -188,10 +188,31 @@ Hard stops: `deliver.autonomy.maxIterations` (default 500) and no-progress circu
 **Halts (R10–R12):** only legitimate conditions; emit `python3 scripts/wave.py report blockers` (mid-run) or
 `report terminal` (all phases merged) with `resumeCommand` (`/sw-deliver run …`) — never "continue deliver?".
 
+**Re-adopt gate (R6):** `/sw-deliver run` refuses a second driver while `driverHeartbeatAt` is fresh (unless the same-run self-wake carve-out). Stale heartbeat or explicit resume from halt is required.
+
 **Liveness (R37):** `python3 scripts/wave.py state heartbeat` during long agent steps;
 `python3 scripts/wave.py watchdog check` probes phase timeout / stale driver heartbeat.
 
 `run` is an alias for `deliver-loop --task-list <path>`.
+
+
+## Testing / Rollout (PRD 063 R17)
+
+Before gap closure or terminal deliver on PRD 063 workstreams, verify operator-facing surfaces:
+
+| Surface | Requirement |
+| --- | --- |
+| `core/commands/sw-deliver.md` | Re-adopt gate (R6), inline vs batch dispatch (R9), living-docs deferral (R12) |
+| `core/skills/conductor/SKILL.md` | Phase-unique self-wake (`DELIVER_WAKE_*`), hang/desync halts (R5) |
+| `core/rules/sw-conductor.mdc` | Legitimate halts override silent window (R12) |
+| `docs/guides/workflows.md` | `shipChain` consumability, pre-PR smoke, finalize closure |
+| `.sw/layout.md` | Harness roots manifest, dispatch lease, `shipChain` on status |
+
+Run `python3 scripts/wave.py docs-currency` and
+`python3 scripts/unit_tests/deliver/test_prd063_release_completeness.py` before closing absorbed gaps.
+Harness pollution: `python3 scripts/harness_isolation_lint.py --check` (includes planning-store
+`override-add` isolation per `core/sw-reference/harness-roots-manifest.json`).
+
 
 ## Issue-store scheduler (PRD 046 R25)
 
