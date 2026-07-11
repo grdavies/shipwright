@@ -208,7 +208,7 @@
   },
   "defaultBaseBranch": "main",
   "worktree": {
-    "parallelCeiling": 10,
+    "parallelCeiling": 16,
     "scaffold": {
       "portRangeStart": 9100,
       "portRangeEnd": 9199,
@@ -218,7 +218,7 @@
   },
   "configuredWith": {
     "shipwrightVersion": "1.8.0",
-    "schemaVersion": "79a07876aa95"
+    "schemaVersion": "48a382615073"
   },
   "compound": {
     "autonomy": "auto"
@@ -244,7 +244,7 @@
     "afterTasks": "confirm"
   },
   "delegation": {
-    "mode": "bind-only"
+    "mode": "heuristic"
   },
   "guardrails": {
     "enforceBeforeSubmit": true,
@@ -358,5 +358,9 @@
       "log": "compress",
       "prose": "compress"
     }
+  },
+  "intraPhase": {
+    "parallelBudget": 4,
+    "harnessLimit": 16
   }
 }
