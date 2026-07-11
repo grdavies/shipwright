@@ -245,5 +245,15 @@
         "traceabilityScenarios": 2
       }
     }
+  },
+  "tournament": {
+    "enabled": false,
+    "n": 3,
+    "cost_ceiling": 0
+  },
+  "gapCheck": {
+    "ruleVerifierSweep": {
+      "enabled": false
+    }
   }
 }

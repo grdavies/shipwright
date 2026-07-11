@@ -26,6 +26,22 @@ Full-tier requirements exploration. Produces a brainstorm doc for `/sw-prd`. Doe
 3. Explore alternatives; challenge assumptions; resolve product decisions here.
 4. Run synthesis checkpoint: restate scope, tier, key decisions; confirm with user before write.
 
+### Divergence tournament (PRD 064 R6, opt-in)
+
+When `tournament.enabled` is true and Phase 1 yields **≥2 viable divergence candidates** at the
+**divergence-selection** checkpoint (before the synthesis checkpoint), run the tournament primitive instead of
+picking an option inline:
+
+```bash
+python3 scripts/tournament.py should-run --divergence "$RUN_DIR/brainstorm-divergence.json"
+python3 scripts/tournament.py plan --divergence "$RUN_DIR/brainstorm-divergence.json" > "$RUN_DIR/tournament-plan.json"
+```
+
+Load `skills/tournament/SKILL.md` for attempt fan-out, deterministic bracketing, pairwise judges, and
+`persist` winner + rationale. Config keys: `tournament.{enabled,n,cost_ceiling}` — default `N=3`, **off** by
+default. Other call sites are out of scope (D3).
+
+
 
 ## Issue-store authoring (PRD 056 R11–R12)
 

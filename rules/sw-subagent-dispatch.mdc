@@ -240,6 +240,61 @@ python3 scripts/dispatch-check.py --agent sw-rca-hypothesis-refuter --command sw
 Refuters never receive generator transcripts. Route only after `rca_fanout.py evaluate` reports
 `routeReady: true` with causal-chain complete survivors.
 
+## Tournament dispatch (PRD 064 R5/R6)
+
+During `/sw-brainstorm` divergence selection when `tournament.enabled` and `should-run` passes:
+
+```bash
+python3 scripts/tournament.py should-run --divergence "$RUN_DIR/brainstorm-divergence.json" > "$RUN_DIR/tournament-gate.json"
+python3 scripts/tournament.py plan --divergence "$RUN_DIR/brainstorm-divergence.json" > "$RUN_DIR/tournament-plan.json"
+```
+
+**Attempts** — one `sw-tournament-attempt` Task per plan attempt (`readonly: true`, cheap tier):
+
+```bash
+python3 scripts/tournament.py attempt-brief --plan "$RUN_DIR/tournament-plan.json" --attempt-id attempt-1
+python3 scripts/dispatch-check.py --agent sw-tournament-attempt --command sw-brainstorm --skill tournament   --parent-model <concrete-parent-id> --prompt "$RUN_DIR/tournament-attempt-1-prompt.md"
+```
+
+**Bracket** — driver builds pairings via `tournament.py bracket`; **judges** — one `sw-tournament-judge` Task per pairing (`readonly: true`, cheap tier):
+
+```bash
+python3 scripts/tournament.py judge-brief --match /tmp/match.json --attempts "$RUN_DIR/tournament-attempts.json" --plan "$RUN_DIR/tournament-plan.json"
+python3 scripts/dispatch-check.py --agent sw-tournament-judge --command sw-brainstorm --skill tournament   --parent-model <concrete-parent-id> --prompt "$RUN_DIR/tournament-judge-prompt.md"
+```
+
+Persist winner + rationale via `tournament.py persist` to `$RUN_DIR/tournament-result.json`.
+
+
+
+## Rule adversarial verification dispatch (PRD 064 R7)
+
+Before rule-class promotion candidates reach the human gate (`skills/retro` / `skills/compound`):
+
+```bash
+python3 scripts/rule_verification.py verifier-brief --rule /tmp/rule.json --evidence /tmp/evidence.json
+python3 scripts/dispatch-check.py --agent sw-rule-verifier --command sw-retrospective --skill retro   --parent-model <concrete-parent-id> --prompt "$RUN_DIR/rule-verifier-prompt.md"
+python3 scripts/rule_verification.py skeptic-brief --rule /tmp/rule.json --verifier-result /tmp/verifier.json
+python3 scripts/dispatch-check.py --agent sw-rule-skeptic --command sw-retrospective --skill retro   --parent-model <concrete-parent-id> --prompt "$RUN_DIR/rule-skeptic-prompt.md"
+python3 scripts/rule_verification.py evaluate --verifier-result /tmp/verifier.json --skeptic-result /tmp/skeptic.json
+```
+
+Verifier and skeptic never share orchestrator transcripts. Human promotion gate unchanged.
+
+
+
+## Rule verifier sweep dispatch (PRD 064 R8)
+
+When `gapCheck.ruleVerifierSweep.enabled` during `/sw-ship` gap-check:
+
+```bash
+python3 scripts/rule_verifier_sweep.py plan --rules "$RUN_DIR/guardrail-rules.json" > "$RUN_DIR/rule-sweep-plan.json"
+```
+
+One `sw-rule-verifier` Task per job (`readonly: true`, cheap tier). Synthesize via `rule_verifier_sweep.py synthesize`; feed `halt` into `/sw-gaps` or `/sw-stabilize`.
+
+
+
 ## Execute-tier dispatch (PRD 053)
 
 Under `conductorMode: execute_fan_out` (stamped by `intra_phase_dispatch.py`):

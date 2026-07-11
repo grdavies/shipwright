@@ -1338,7 +1338,7 @@
     "rca": {
       "type": "object",
       "additionalProperties": false,
-      "description": "RCA fan-out settings (PRD 064 R1/R2). Default off — single-context loop unchanged.",
+      "description": "RCA fan-out settings (PRD 064 R1/R2). Default off \u2014 single-context loop unchanged.",
       "properties": {
         "fanout": {
           "type": "object",
@@ -1600,6 +1600,49 @@
                 "scheduled"
               ],
               "default": "manual"
+            }
+          }
+        }
+      }
+    },
+    "tournament": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Bounded tournament primitive (PRD 064 R5/R6). Default off.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, brainstorm divergence may run tournament selection."
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8,
+          "default": 3,
+          "description": "Isolated attempt count (default 3)."
+        },
+        "cost_ceiling": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0,
+          "description": "Advisory USD cap; 0 = unset."
+        }
+      }
+    },
+    "gapCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "gap-check extensions (PRD 064 R8).",
+      "properties": {
+        "ruleVerifierSweep": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Opt-in per-rule repeat-violation verifier sweep."
             }
           }
         }
