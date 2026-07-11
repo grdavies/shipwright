@@ -83,16 +83,17 @@ frontmatter filters). `export`/`import` are native: walk the store and emit/cons
 
 | Abstract op | Implementation | Call shape |
 | --- | --- | --- |
-| `load-context` | scan store mtime + `rules-load` | list recent files under `memories/`; load rules from `rules/` |
+| `load-context` | read `index.md` + `rules-load` | read store `index.md` first for orientation; load rules from `rules/` |
 | `rules-load` | read `rules/*.md` | filesystem read of committed rule files |
 | `search` | `in-repo-memory-search.py` | `python3 scripts/in-repo-memory-search.py --store <dir> --query <q> [--category] [--tag] [--file-glob]` |
 | `expand` | read file body | read `memories/<id>.md` or `rules/<id>.md` by id |
 | `store` | write file after redaction | pipe payload through `scripts/memory-redact.py`, then write one `.md` file |
 | `modify` | update frontmatter / body / `inactive:true` | rewrite the target file |
 | `list-recent` | mtime sort under `memories/` | `find` + sort by mtime, cap N |
-| `export` | walk store → JSONL | one JSON object per line (frontmatter + body) |
-| `import` | JSONL → files | write one file per line after redaction |
+| `export` | walk store → JSONL or OKF | `python3 scripts/in-repo-memory-search.py export --format jsonl|okf` |
+| `import` | JSONL or OKF → files | `python3 scripts/in-repo-memory-search.py import --format jsonl|okf`; regenerates `index.md`/`log.md` |
 | `tasks.*` | — | not supported (`tasks: false`) |
+| `maintain-derived` | regenerate `index.md` + `log.md` | `python3 scripts/in-repo-memory-search.py maintain-derived --store <dir>` |
 | `link` | frontmatter `links[]` only | store typed edges as-written; **not traversed** (edge-degraded, R13) |
 
 ## Canonical category → file location
