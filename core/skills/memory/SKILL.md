@@ -92,6 +92,13 @@ The shared recorder (`scripts/wave_memory_prework.py`) writes a redacted per-sur
 Offline is **probe-gated** — never agent-asserted. Enforcement at the first file-mutating tool call
 reuses the PRD 017 `preToolUse` deny path (Phase 3).
 
+## Load-context orientation (R20)
+
+For `load-context`, read the store's derived `index.md` **before** any search or expand. The index
+groups memories by canonical category with title/first-line plus id for cheap orientation. When
+`index.md` is absent, run `python3 scripts/in-repo-memory-search.py maintain-derived --store <dir>`
+once, then read the index.
+
 ## Read mode (preflight)
 
 Run before doing the command's real work. Follow the read recipe in `CAPABILITIES.md`:

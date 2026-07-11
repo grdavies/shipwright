@@ -255,6 +255,50 @@ else
   FAIL=1
 fi
 
+
+# --- OKF export/import + derived index/log (PRD 064 R19-R20) ---
+OKF_OUT=$(mktemp -d)
+JSONL_OUT=$(mktemp)
+python3 "$SEARCH" export --store "$STORE" --format okf --out "$OKF_OUT" >/dev/null
+python3 "$SEARCH" export --store "$STORE" --format jsonl --out "$JSONL_OUT" >/dev/null
+if [[ -f "$OKF_OUT/index.md" ]] && grep -q 'okf_version: "0.1"' "$OKF_OUT/index.md" && \
+   [[ -f "$OKF_OUT/decision/20260620-jwt-decision.md" ]] && grep -q 'type:.*decision' "$OKF_OUT/decision/20260620-jwt-decision.md"; then
+  echo "OK  OKF export bundle shape"
+else
+  echo "FAIL OKF export bundle"
+  FAIL=1
+fi
+python3 "$SEARCH" maintain-derived --store "$STORE" >/dev/null
+IDX1=$(md5 -q "$STORE/index.md" 2>/dev/null || md5sum "$STORE/index.md" | awk '{print $1}')
+python3 "$SEARCH" maintain-derived --store "$STORE" >/dev/null
+IDX2=$(md5 -q "$STORE/index.md" 2>/dev/null || md5sum "$STORE/index.md" | awk '{print $1}')
+if [[ "$IDX1" == "$IDX2" ]] && [[ -f "$STORE/log.md" ]]; then
+  echo "OK  index.md/log.md deterministic"
+else
+  echo "FAIL derived index/log determinism"
+  FAIL=1
+fi
+RT_STORE=$(mktemp -d)
+python3 "$SEARCH" import --store "$RT_STORE" --format okf --source "$OKF_OUT" >/dev/null
+RT_JSONL=$(mktemp)
+python3 "$SEARCH" export --store "$RT_STORE" --format jsonl --out "$RT_JSONL" >/dev/null
+if python3 - "$JSONL_OUT" "$RT_JSONL" <<'PY2'
+import json, pathlib, sys
+a=[json.loads(l) for l in pathlib.Path(sys.argv[1]).read_text().splitlines() if l.strip()]
+b=[json.loads(l) for l in pathlib.Path(sys.argv[2]).read_text().splitlines() if l.strip()]
+a=sorted(a,key=lambda x:x["id"])
+b=sorted(b,key=lambda x:x["id"])
+sys.exit(0 if len(a)==len(b) and all(x["id"]==y["id"] and x["content"]==y["content"] for x,y in zip(a,b)) else 1)
+PY2
+then
+  echo "OK  OKF round-trip preserves JSONL fields"
+else
+  echo "FAIL OKF round-trip"
+  FAIL=1
+fi
+rm -rf "$OKF_OUT" "$RT_STORE"
+rm -f "$JSONL_OUT" "$RT_JSONL"
+
 # --- U6: schema validation ---
 python3 - <<'PY' || { echo "FAIL U6 schema validation"; FAIL=1; }
 import json, pathlib, sys
