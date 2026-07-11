@@ -1,8 +1,7 @@
 ---
 name: living-status
-description: Derive PRD status from git and deliver state; reconcile planning INDEX derived region, COMPLETION-LOG, and legacy gap projections; hard-block on drift.
+description: Derive PRD status from git and deliver state; reconcile planning INDEX, COMPLETION-LOG, and gap projections. Use when auditing planning drift or updating living status during deliver. Hard-blocks on drift; does not author docs.
 ---
-
 # Living status (R47–R51)
 
 Status is **derived from git and durable deliver state**, never hand-set on frozen artifacts.

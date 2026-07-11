@@ -30,6 +30,24 @@
       "ciJobName": "feat-test-plan-git-push-secret-scan-chokepoint"
     },
     {
+      "id": "skills-spec-guard-fixtures",
+      "script": "scripts/test/skills-spec-guard.test",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-skills-spec-guard",
+      "pathTriggers": [
+        "scripts/skills-spec-guard.py",
+        "scripts/skills_spec_guard.py",
+        "core/skills/",
+        "dist/cursor/skills/",
+        "dist/claude-code/skills/",
+        "scripts/test/fixtures/skills-spec/",
+        "platforms/claude-code/emitter.py"
+      ]
+    },
+    {
       "id": "007-docs-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [

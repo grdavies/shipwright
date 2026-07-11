@@ -1,8 +1,7 @@
 ---
 name: simplify
-description: Behavior-preserving cleanup pass (reuse, quality, efficiency, AI-slop removal) after review. Re-verified via simplify-gate before commit.
+description: Behavior-preserving cleanup pass (reuse, quality, efficiency, AI-slop removal) after review. Use when /sw-ship runs post-review deslop before gap-check. Re-verified via simplify-gate; does not skip verify.
 ---
-
 # Simplification / deslop pass (IM7)
 
 Post-review, pre-commit cleanup on the uncommitted delta. **Behavior-preserving only** — no new features, no

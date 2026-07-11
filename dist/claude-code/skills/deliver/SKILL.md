@@ -1,8 +1,7 @@
 ---
 name: deliver
-description: Dependency-ordered deliver waves with dependent-branch stacking and integration branch lifecycle.
+description: Dependency-ordered deliver waves with dependent-branch stacking and integration branch lifecycle. Use when shipping frozen task-list phases or multi-feature integration waves. Does not merge to main or bypass the merge gate.
 ---
-
 # Deliver orchestration
 
 Layer above `/sw-ship` for **phase-mode** (frozen task-list phases stacking onto `<type>/<slug>`) and

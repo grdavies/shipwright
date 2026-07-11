@@ -1,6 +1,8 @@
 ---
+
 name: worktree
-description: USE WHEN following the Shipwright workflow — command ordering, worktree isolation, and per-worktree state. Provision per-work-item git worktrees with env scaffold (ports, DB strategy) and safe teardown. Enforces parallelism ceiling.---
+description: USE WHEN following the Shipwright workflow — command ordering, worktree isolation, and per-worktree state. Provision per-work-item git worktrees with env scaffold (ports, DB strategy) and safe teardown. Use when starting isolated implementation or docs work under the parallelism ceiling. Enforces ceiling; does not merge.
+---
 
 # Worktree provisioning
 

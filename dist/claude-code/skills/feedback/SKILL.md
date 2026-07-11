@@ -1,8 +1,7 @@
 ---
 name: feedback
-description: Unified inbound-signals intake and router. Normalizes and dispatches; does not analyze, author, or execute.
+description: Unified inbound-signals intake and router. Use when normalizing Sentry, user, or CI feedback for /sw-debug or gap capture. Normalizes and dispatches; does not analyze, author, or execute fixes.
 ---
-
 # Feedback workflow (unified intake + routing)
 
 Thin router (R25–R27). Accepts production, review, and retro signals; redacts; triages; dispatches to

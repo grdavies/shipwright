@@ -1,6 +1,6 @@
 ---
 name: triage
-description: Classify work into Quick, Standard, or Full tiers from deterministic signals. Does not run the doc pipeline or implementation phases.
+description: Classify work into Quick, Standard, or Full tiers from deterministic signals. Use when routing new work or re-scoring scope mid-flight. Does not run the doc pipeline or implementation phases.
 metadata:
   shipwright-capability:
     version: 1
@@ -13,7 +13,6 @@ metadata:
       skill: triage
       selectionFamily: workflow
 ---
-
 # Triage rubric (`/sw-triage`)
 
 Deterministic tier classifier. Auditable — same inputs → same tier. Not model judgment.

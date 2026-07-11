@@ -1,8 +1,7 @@
 ---
 name: worktree
-description: Provision per-work-item git worktrees with env scaffold (ports, DB strategy) and safe teardown. Enforces parallelism ceiling.
+description: Provision per-work-item git worktrees with env scaffold (ports, DB strategy) and safe teardown. Use when starting isolated implementation or docs work under the parallelism ceiling. Enforces ceiling; does not merge.
 ---
-
 # Worktree provisioning
 
 Every work item runs in its own worktree (R18). Bare `main` is not an implementation surface.

@@ -1,8 +1,7 @@
 ---
 name: compound
-description: Internal compound-write step for /sw-retrospective — distill retro/feedback into typed memories via memory-preflight; human-gated rule-class promotion (R8).
+description: Internal compound-write step for /sw-retrospective — distill retro and feedback into typed memories via memory-preflight. Use when compounding session learnings after retrospective. Human-gated rule promotion only; does not auto-promote rules.
 ---
-
 # Compounding (internal write step)
 
 Adapted from compound-engineering — writes through the memory seam only (not `docs/solutions/`).

@@ -1,6 +1,6 @@
 ---
 name: checks-gate
-description: "Evaluate the pass/fail/pending state of a PR's CI checks under the Shipwright all-checks policy. Use from /sw-watch-ci and /sw-stabilize to compute a single gate verdict (green/red/yellow/blocked) over every check, honoring the configured neutral allowlist and the review-provider per-head state."
+description: Evaluate CI check pass, fail, pending, and blocked state for a PR under Shipwright all-checks policy. Use when running /sw-watch-ci or /sw-stabilize to compute a single gate verdict. Honors neutral allowlist and review-provider state; does not merge.
 metadata:
   shipwright-capability:
     version: 1
@@ -13,7 +13,6 @@ metadata:
       skill: checks-gate
       selectionFamily: providers
 ---
-
 # checks-gate
 
 Shared predicate for PR CI readiness. `/sw-watch-ci` and `/sw-stabilize` both use it so the gate is

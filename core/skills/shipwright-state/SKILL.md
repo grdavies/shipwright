@@ -1,8 +1,7 @@
 ---
 name: shipwright-state
-description: Per-worktree Shipwright state read/write contract. Resolves state path in the worktree gitdir; aggregates a read-only repo index from all worktrees.
+description: Per-worktree Shipwright state read and write contract. Use when resuming /sw-ship phases or reading runDir and phase status across worktrees. Resolves gitdir state; does not merge branches.
 ---
-
 # Per-worktree Shipwright state
 
 Phase context lives in the **worktree gitdir**, not a shared repo-global file.

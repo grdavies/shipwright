@@ -1,8 +1,7 @@
 ---
 name: feedback-closure
-description: Consume GAP-BACKLOG into implementation loop and close routed signals after verification-gate confirms fix shipped. Human-gated.
+description: Consume GAP-BACKLOG into the implementation loop and close routed signals after verification. Use when confirming a fix shipped for a tracked feedback signal. Human-gated; does not merge PRs.
 ---
-
 # Feedback closure loop (IM8)
 
 Closes the loop from `/sw-feedback` trivial-gap routing → canonical gap issues (issue-store) or gap units

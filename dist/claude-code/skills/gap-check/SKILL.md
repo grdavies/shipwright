@@ -1,8 +1,7 @@
 ---
 name: gap-check
-description: Compare phase plan (spec union + task checklist) against git diff; bounded closers for in-scope gaps. Default-on in /sw-ship.
+description: Compare phase plan (spec union + task checklist) against git diff with bounded closers. Use when /sw-ship needs in-scope gap detection before commit. Default-on; does not author new scope.
 ---
-
 # gap-check
 
 Catches planned vs actual before commit.

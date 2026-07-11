@@ -1,8 +1,7 @@
 ---
 name: brainstorm
-description: Explore requirements through one-question-at-a-time dialogue, then write a requirements document with stable R-IDs. Use for Full-tier work before PRD drafting.
+description: Explore requirements through one-question-at-a-time dialogue, then write a requirements document with stable R-IDs. Use when scope is open or Full-tier work precedes PRD drafting. Does not freeze artifacts or generate tasks.
 ---
-
 # Brainstorm (`/sw-brainstorm`)
 
 Full-tier requirements exploration. Produces a brainstorm doc for `/sw-prd`. Does **not** draft a PRD.
