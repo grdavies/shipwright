@@ -188,6 +188,8 @@ Hard stops: `deliver.autonomy.maxIterations` (default 500) and no-progress circu
 **Halts (R10–R12):** only legitimate conditions; emit `python3 scripts/wave.py report blockers` (mid-run) or
 `report terminal` (all phases merged) with `resumeCommand` (`/sw-deliver run …`) — never "continue deliver?".
 
+**Re-adopt gate (R6):** `/sw-deliver run` refuses a second driver while `driverHeartbeatAt` is fresh (unless the same-run self-wake carve-out). Stale heartbeat or explicit resume from halt is required.
+
 **Liveness (R37):** `python3 scripts/wave.py state heartbeat` during long agent steps;
 `python3 scripts/wave.py watchdog check` probes phase timeout / stale driver heartbeat.
 

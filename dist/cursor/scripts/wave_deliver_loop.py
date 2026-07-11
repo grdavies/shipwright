@@ -1273,6 +1273,68 @@ def canonical_task_list_path(root: Path, raw: str) -> str:
         return str(path)
 
 
+
+
+def check_deliver_hang_desync(root: Path, state: dict[str, Any]) -> str | None:
+    """Fail-closed hang/desync causes before no-progress (PRD 063 R5)."""
+    orch = (state.get("orchestratorWorktree") or {}).get("path")
+    if isinstance(orch, str) and orch.strip():
+        try:
+            orch_path = Path(orch)
+            if (
+                ".sw-worktrees" in str(orch_path)
+                and orch_path.is_dir()
+                and orch_path.resolve() != root.resolve()
+            ):
+                return "deliver:orchestrator-cwd-skew"
+        except OSError:
+            return "deliver:orchestrator-path-invalid"
+    try:
+        sync_canonical_state_read(root, state_hint=state)
+    except SystemExit:
+        return "deliver:canonical-state-desync"
+    except Exception:
+        pass
+    timeout_s = DEFAULT_BACKGROUND_TASK_TIMEOUT_MIN * 60
+    for pid, meta in (state.get("phases") or {}).items():
+        if not isinstance(meta, dict) or meta.get("status") != "in-flight":
+            continue
+        dispatched = meta.get("inlineDispatchedAt")
+        if not dispatched:
+            continue
+        slug = str(meta.get("slug") or pid)
+        _, status = read_phase_status_optional(root, slug, state)
+        if status_is_consumable_terminal(status):
+            continue
+        age = age_seconds(str(dispatched))
+        if age is not None and age > timeout_s:
+            return f"deliver:dispatch-stale-no-terminal:{pid}"
+    return None
+
+
+def assert_driver_adopt_gate(
+    state: dict[str, Any], loop_args: list[str], *, fresh_seconds: int = 120
+) -> None:
+    """Refuse double-drive when heartbeat is fresh unless --self-wake (PRD 063 R6)."""
+    if has_flag(loop_args, "--self-wake") or has_flag(loop_args, "--dry-run"):
+        return
+    if state.get("verdict") != "running" or not state.get("phases"):
+        return
+    hb = state.get("driverHeartbeatAt")
+    if not isinstance(hb, str):
+        return
+    age = age_seconds(hb)
+    if age is not None and age < fresh_seconds:
+        fail(
+            "driver-heartbeat-fresh-double-adopt",
+            exit_code=20,
+            halt="double-drive",
+            remediation="wait for driver heartbeat to go stale or use self-wake continuation",
+            driverHeartbeatAt=hb,
+            ageSeconds=age,
+        )
+
+
 def assert_run_identity(
     root: Path, state: dict[str, Any], task_list: str | None, loop_args: list[str]
 ) -> None:
@@ -1603,20 +1665,29 @@ def compute_next_action(
                 "resume": True,
             }
 
-    watchdog = check_watchdog(root, state)
-    if watchdog:
-        return {
-            "action": "halt-blocked",
-            "cause": watchdog,
-            "resume": True,
-            "watchdog": True,
-        }
-
     bg_fail = check_background_task_failures(root, state, wave_ids)
     if bg_fail:
         return {
             "action": "halt-blocked",
             "cause": bg_fail,
+            "resume": True,
+            "watchdog": True,
+        }
+
+    desync = check_deliver_hang_desync(root, state)
+    if desync:
+        return {
+            "action": "halt-blocked",
+            "cause": desync,
+            "resume": True,
+            "desync": True,
+        }
+
+    watchdog = check_watchdog(root, state)
+    if watchdog:
+        return {
+            "action": "halt-blocked",
+            "cause": watchdog,
             "resume": True,
             "watchdog": True,
         }
@@ -2593,6 +2664,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     resumed = bool(state.get("verdict") == "running" and state.get("phases"))
 
     assert_run_identity(root, state, task_list, args)
+    assert_driver_adopt_gate(state, args)
 
     if task_list and not state.get("source_task_list"):
         state["source_task_list"] = task_list

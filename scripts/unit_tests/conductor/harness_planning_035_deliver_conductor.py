@@ -323,6 +323,46 @@ else
   bad "manifest-registration-035-a1"
 fi
 
+# --- PRD 063 R15(c)(e)(f)(h) ---
+if grep -q 'DELIVER_WAKE_${RUN_ID}_${PHASE_SLUG}' "$ROOT/core/skills/conductor/SKILL.md" 2>/dev/null; then
+  ok "r15-c-phase-unique-wake-pattern"
+else
+  bad "r15-c-phase-unique-wake-pattern"
+fi
+python3 - <<'PYE' "$ROOT"
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from wave_deliver_loop import check_deliver_hang_desync
+root = Path(sys.argv[1])
+state = {"orchestratorWorktree": {"path": str(root)}, "phases": {}}
+assert check_deliver_hang_desync(root, state) is None
+fake_orch = root / ".sw-worktrees" / "fake-orchestrator"
+fake_orch.mkdir(parents=True, exist_ok=True)
+cause = check_deliver_hang_desync(root, {"orchestratorWorktree": {"path": str(fake_orch)}, "phases": {}})
+assert cause == "deliver:orchestrator-cwd-skew", cause
+print("ok")
+PYE
+if [[ $? -eq 0 ]]; then ok "r15-e-hang-desync-halt"; else bad "r15-e-hang-desync-halt"; fi
+if grep -q "Re-adopt gate" "$ROOT/core/commands/sw-deliver.md" && grep -q "assert_driver_adopt_gate" "$ROOT/scripts/wave_deliver_loop.py"; then
+  ok "r15-f-heartbeat-resume-gate"
+else
+  bad "r15-f-heartbeat-resume-gate"
+fi
+python3 - <<'PYH' "$ROOT"
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from status_integrity import classify_deliver_stall_cause, is_differentiated_stall
+root = Path(sys.argv[1])
+state = {"phases": {"1": {"status": "in-flight", "backgroundDispatchedAt": "2026-01-01T00:00:00Z"}}, "mergeQueue": []}
+stall = classify_deliver_stall_cause(root, state, "await-in-flight")
+assert stall == "external-ci-wait" and is_differentiated_stall(stall)
+print("ok")
+PYH
+if [[ $? -eq 0 ]]; then ok "r15-h-false-stall-deferral"; else bad "r15-h-false-stall-deferral"; fi
+
+
 exit "$FAIL"
 
 """
