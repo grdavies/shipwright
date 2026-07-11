@@ -436,6 +436,7 @@
 * merge phase progressive-disclosure-budgets-and-forward-standard-adr-workstream-b into feat/agentic-quality-patterns-and-standards-conformance (8533a33) <!-- sw-deliver:progressive-disclosure-budgets-and-forward-standard-adr-workstream-b -->
 * merge phase skills-spec-validation-gate-and-description-contract-workstream-b into feat/agentic-quality-patterns-and-standards-conformance (813cdad) <!-- sw-deliver:skills-spec-validation-gate-and-description-contract-workstream-b -->
 * merge phase okf-memory-export-import-and-deterministic-index-log-workstream-c into feat/agentic-quality-patterns-and-standards-conformance (69caa99) <!-- sw-deliver:okf-memory-export-import-and-deterministic-index-log-workstream-c -->
+* merge phase memory-link-traversal-consumers-and-richer-frontmatter-workstream-c into feat/agentic-quality-patterns-and-standards-conformance (5e0433d) <!-- sw-deliver:memory-link-traversal-consumers-and-richer-frontmatter-workstream-c -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
