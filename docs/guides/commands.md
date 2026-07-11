@@ -202,3 +202,12 @@ See [Getting started](getting-started.md) for boundary modes and worktree rules.
 
 Fixtures: `python3 scripts/test/run_fanout_fixtures.py`; A2 binding: `python3 scripts/test/run_dispatch_foundation_fixtures.py`.
 
+## Deliver autonomy (PRD 063)
+
+`/sw-deliver` phase-mode uses **heartbeat-gated** resume: stale `driverHeartbeatAt` is required to
+re-adopt unless self-wake. Parallel waves wait for whole-batch terminal status before merge (R10).
+Phase PR CI uses bounded poll/self-wake — not terminal-only watch.
+
+Operator halts include `tasks-currency-divergence`, `gap-check-missing`, `batch-integration-head-moved`,
+and living-docs **deferral** (`livingDocDeferral` + `resumeCommand`) when the repo-wide lock is held.
+

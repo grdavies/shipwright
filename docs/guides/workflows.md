@@ -845,3 +845,17 @@ Map these semantic keys to Project custom fields (names are defaults; override v
 Living-doc operator cutover (local INDEX/COMPLETION-LOG authority) MUST NOT proceed until
 `projection-gate` reports `ready: true` (pair with `planning_cutover` committed gate).
 
+## Deliver autonomy (PRD 063)
+
+Phase-mode deliver enforces durable **shipChain** consumability on terminal status (R1): merge-ready
+without a complete canonical ship chain is non-consumable. **Dispatch lease** (R7) blocks duplicate
+`dispatch-ship` while a per-phase lease is live; **inline dispatch** is default for single-phase waves
+(R9) — only `dispatch-batch` may use background Tasks.
+
+**Re-adopt gate (R6):** `/sw-deliver run` refuses double-drive when `driverHeartbeatAt` is fresh;
+self-wake continuations are the carve-out. **Hang/desync** detection halts with `resumeCommand` before
+silent spin (R5). **Pre-PR smoke** runs targeted pytest via `test_scope` before `sw-pr` (R4).
+
+Finalize hygiene (R11–R13): non-mutating `build-chain-sync --check`, living-docs deferral on lock miss,
+and `close_delivery_units` with parent-checkbox epic close after main merge.
+

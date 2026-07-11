@@ -195,6 +195,25 @@ Hard stops: `deliver.autonomy.maxIterations` (default 500) and no-progress circu
 
 `run` is an alias for `deliver-loop --task-list <path>`.
 
+
+## Testing / Rollout (PRD 063 R17)
+
+Before gap closure or terminal deliver on PRD 063 workstreams, verify operator-facing surfaces:
+
+| Surface | Requirement |
+| --- | --- |
+| `core/commands/sw-deliver.md` | Re-adopt gate (R6), inline vs batch dispatch (R9), living-docs deferral (R12) |
+| `core/skills/conductor/SKILL.md` | Phase-unique self-wake (`DELIVER_WAKE_*`), hang/desync halts (R5) |
+| `core/rules/sw-conductor.mdc` | Legitimate halts override silent window (R12) |
+| `docs/guides/workflows.md` | `shipChain` consumability, pre-PR smoke, finalize closure |
+| `.sw/layout.md` | Harness roots manifest, dispatch lease, `shipChain` on status |
+
+Run `python3 scripts/wave.py docs-currency` and
+`python3 scripts/unit_tests/deliver/test_prd063_release_completeness.py` before closing absorbed gaps.
+Harness pollution: `python3 scripts/harness_isolation_lint.py --check` (includes planning-store
+`override-add` isolation per `core/sw-reference/harness-roots-manifest.json`).
+
+
 ## Issue-store scheduler (PRD 046 R25)
 
 When issue-store is active and cutover permits issue-derived discovery,

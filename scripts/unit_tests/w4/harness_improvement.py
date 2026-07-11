@@ -474,14 +474,17 @@ else
   FAIL=1
 fi
 
-# R6: shipwright-state override-add appends without clobber
+# R6: shipwright-state override-add appends without clobber (isolated gitdir — PRD 063 R10)
+OV_TMP=$(mktemp -d)
 if [[ -x "$SHIPWRIGHT_STATE" ]]; then
-  STATE_FILE=$(bash "$SHIPWRIGHT_STATE" path)
-  bash "$SHIPWRIGHT_STATE" init '{}' >/dev/null
-  bash "$SHIPWRIGHT_STATE" override-add '{"who":"a@test","when":"t1","verdictOverridden":"inconclusive","inconclusiveClass":"no-baseline","reason":"one"}' >/dev/null
-  bash "$SHIPWRIGHT_STATE" override-add '{"who":"b@test","when":"t2","verdictOverridden":"inconclusive","inconclusiveClass":"unattributed","reason":"two"}' >/dev/null
-  COUNT=$(bash "$SHIPWRIGHT_STATE" read | jq '.overrides | length')
-  rm -f "$STATE_FILE"
+  git init -q "$OV_TMP/wt"
+  git -C "$OV_TMP/wt" commit --allow-empty -m init -q
+  export SW_HARNESS=1
+  (cd "$OV_TMP/wt" && bash "$SHIPWRIGHT_STATE" init '{}' >/dev/null)
+  (cd "$OV_TMP/wt" && bash "$SHIPWRIGHT_STATE" override-add '{"who":"a@test","when":"t1","verdictOverridden":"inconclusive","inconclusiveClass":"no-baseline","reason":"one"}' >/dev/null)
+  (cd "$OV_TMP/wt" && bash "$SHIPWRIGHT_STATE" override-add '{"who":"b@test","when":"t2","verdictOverridden":"inconclusive","inconclusiveClass":"unattributed","reason":"two"}' >/dev/null)
+  COUNT=$(cd "$OV_TMP/wt" && bash "$SHIPWRIGHT_STATE" read | jq '.overrides | length')
+  rm -rf "$OV_TMP"
   if [[ "$COUNT" == "2" ]]; then
     echo "OK  shipwright-state: override-add appends two records"
   else

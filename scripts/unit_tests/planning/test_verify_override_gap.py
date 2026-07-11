@@ -66,3 +66,43 @@ def test_capture_verify_override_skips_missing_required(tmp_path: Path) -> None:
         {"inconclusiveClass": "missing-required", "reason": "blocked"},
     )
     assert out["action"] == "skipped"
+
+def test_unisolated_override_add_fails_lint(tmp_path: Path) -> None:
+    """R15(j): harness lint flags live override-add without isolation."""
+    import harness_isolation_lint as hil
+
+    harness = tmp_path / "scripts/unit_tests/bad_override.py"
+    harness.parent.mkdir(parents=True)
+    harness.write_text(
+        """
+bash shipwright-state.py override-add '{"inconclusiveClass":"no-baseline"}'
+""",
+        encoding="utf-8",
+    )
+    hit = hil.scan_file(tmp_path, harness)
+    assert hit is not None
+    assert hit.get("planningStoreWithoutIsolation")
+
+
+def test_isolated_override_add_passes_lint(tmp_path: Path) -> None:
+    """R15(j): isolated override-add with mktemp passes lint."""
+    import harness_isolation_lint as hil
+
+    harness = tmp_path / "scripts/unit_tests/ok_override.py"
+    harness.parent.mkdir(parents=True)
+    harness.write_text(
+        """
+OV_TMP=$(mktemp -d)
+(cd "$OV_TMP/wt" && bash shipwright-state.py override-add '{}')
+""",
+        encoding="utf-8",
+    )
+    assert hil.scan_file(tmp_path, harness) is None
+
+
+def test_harness_improvement_override_block_passes_lint(repo_root: Path) -> None:
+    """R15(j): harness_improvement R6 block is isolation-clean after PRD 063 fix."""
+    import harness_isolation_lint as hil
+
+    path = repo_root / "scripts/unit_tests/w4/harness_improvement.py"
+    assert hil.scan_file(repo_root, path) is None
