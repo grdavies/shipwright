@@ -208,6 +208,7 @@ def build_task_dispatch_prompt(
     intensity: str,
     intensity_source: str,
     body: str,
+    primary_context_blocks: list[ContextBlock] | None = None,
     context_blocks: list[ContextBlock] | None = None,
     config_path: str | None = None,
     root: Path | None = None,
@@ -221,6 +222,15 @@ def build_task_dispatch_prompt(
     retrieve_keys: list[str] = []
     tokens_before = estimate_tokens(directive) + estimate_tokens(body)
     compression_applied = False
+
+    for block in primary_context_blocks or []:
+        processed = process_context_block(block, config=config, root=repo)
+        if processed.text:
+            parts.append(processed.text)
+            tokens_before += estimate_tokens(processed.text)
+        retrieve_keys.extend(processed.retrieve_keys)
+        if processed.compressed:
+            compression_applied = True
 
     for block in context_blocks or []:
         processed = process_context_block(block, config=config, root=repo)
@@ -369,6 +379,7 @@ def main(argv: list[str] | None = None) -> int:
     build_p.add_argument("--intensity-source", required=True)
     build_p.add_argument("--body-file", help="Path to redacted task body text")
     build_p.add_argument("--body", help="Inline task body text")
+    build_p.add_argument("--primary-context-json", help="JSON array of primary playbook context blocks (R28)")
     build_p.add_argument("--context-json", help="JSON array of context blocks")
     build_p.add_argument("--config", dest="config_path", help="workflow.config.json override")
     build_p.add_argument("--root", help="Repository root")
@@ -401,6 +412,12 @@ def main(argv: list[str] | None = None) -> int:
     else:
         body = sys.stdin.read()
 
+    primary_blocks: list[ContextBlock] = []
+    if getattr(args, "primary_context_json", None):
+        primary_payload = json.loads(args.primary_context_json)
+        if isinstance(primary_payload, list):
+            primary_blocks = [_context_block_from_json(item) for item in primary_payload if isinstance(item, dict)]
+
     blocks: list[ContextBlock] = []
     if args.context_json:
         payload = json.loads(args.context_json)
@@ -412,6 +429,7 @@ def main(argv: list[str] | None = None) -> int:
         intensity=args.intensity,
         intensity_source=args.intensity_source,
         body=body,
+        primary_context_blocks=primary_blocks,
         context_blocks=blocks,
         config_path=args.config_path,
         root=root,
