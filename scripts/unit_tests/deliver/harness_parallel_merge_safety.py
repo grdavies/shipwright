@@ -49,11 +49,31 @@ FAIL=0
 ok()  { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
+
+seed_complete_ship_steps_for_status() {
+  local repo="$1" slug="$2" run="$3"
+  PYTHONPATH="$ROOT/scripts" python3 -c "
+import json, sys
+from pathlib import Path
+from kernel_classification import canonical_ship_chain
+repo = Path(sys.argv[1])
+slug = sys.argv[2]
+run = Path(sys.argv[3])
+chain = canonical_ship_chain(repo)
+path = run / 'ship-steps.json'
+doc = {'phase': slug, 'chain': chain, 'lastCompletedStep': chain[-1], 'currentStep': None}
+path.write_text(json.dumps(doc))
+" "$repo" "$slug" "$run" >/dev/null
+}
+
 write_valid_status() {
   local fix="$1" slug="$2" head="$3"
-  mkdir -p "$fix/.cursor/sw-deliver-runs/$slug"
-  "$SHIP_STATUS" --verdict merge-ready-green --phase "$slug" --head "$head" \
-    --out "$fix/.cursor/sw-deliver-runs/$slug/status.json" >/dev/null
+  local run="$fix/.cursor/sw-deliver-runs/$slug"
+  mkdir -p "$run"
+  seed_complete_ship_steps_for_status "$ROOT" "$slug" "$run"
+  SW_RUN_DIR="$run" SW_PHASE_SLUG="$slug" \
+    "$SHIP_STATUS" --verdict merge-ready-green --phase "$slug" --head "$head" \
+    --out "$run/status.json" >/dev/null
 }
 
 # --- whole-batch-no-early-merge (R10) ---
