@@ -95,7 +95,9 @@
       "type-design": "normal",
       "comment-accuracy": "normal",
       "ai-native": "normal",
-      "sw-claims-auditor": "ultra"
+      "sw-claims-auditor": "ultra",
+      "sw-rca-hypothesis-generator": "ultra",
+      "sw-rca-hypothesis-refuter": "ultra"
     }
   }
 }

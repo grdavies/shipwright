@@ -208,6 +208,38 @@ python3 scripts/dispatch-check.py --agent sw-claims-auditor --command sw-ship --
 - Persist agent JSON to `$RUN_DIR/claims-audit-agent.json`; evaluate via `claims_audit.py run`.
 - Any claim `fail` → verification-gate `inconclusive` / `missing-required` (fail closed).
 
+
+
+## RCA fan-out dispatch (PRD 064 R1/R2)
+
+During `/sw-debug` Phase 2 or stabilize RCA when `rca.fanout.enabled` and D5 gating pass:
+
+```bash
+python3 scripts/rca_fanout.py should-fanout --signal "$RUN_DIR/signal.json" > "$RUN_DIR/rca-fanout-gate.json"
+python3 scripts/rca_fanout.py plan --signal "$RUN_DIR/signal.json" > "$RUN_DIR/rca-fanout-plan.json"
+```
+
+**Generators** — up to four parallel `sw-rca-hypothesis-generator` Tasks (`readonly: true`, cheap tier):
+
+```bash
+python3 scripts/rca_fanout.py generator-brief --plan "$RUN_DIR/rca-fanout-plan.json" --generator-id gen-1
+python3 scripts/dispatch-check.py --agent sw-rca-hypothesis-generator --command sw-debug --skill rca-core   --parent-model <concrete-parent-id> --prompt "$RUN_DIR/rca-gen-1-prompt.md"
+```
+
+One fresh generator per partition; prompts contain only the partition brief — no orchestrator transcript.
+
+**Synthesize** — merge generator JSON via `rca_fanout.py synthesize`.
+
+**Refuters** — one `sw-rca-hypothesis-refuter` Task per synthesized survivor (`readonly: true`, cheap tier):
+
+```bash
+python3 scripts/rca_fanout.py refuter-brief --hypothesis /tmp/hyp.json --signal-summary "$RUN_DIR/signal-summary.json"
+python3 scripts/dispatch-check.py --agent sw-rca-hypothesis-refuter --command sw-debug --skill rca-core   --parent-model <concrete-parent-id> --prompt "$RUN_DIR/rca-refute-prompt.md"
+```
+
+Refuters never receive generator transcripts. Route only after `rca_fanout.py evaluate` reports
+`routeReady: true` with causal-chain complete survivors.
+
 ## Execute-tier dispatch (PRD 053)
 
 Under `conductorMode: execute_fan_out` (stamped by `intra_phase_dispatch.py`):

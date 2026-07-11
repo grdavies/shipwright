@@ -63,6 +63,23 @@
       ]
     },
     {
+      "id": "rca-fanout-unit",
+      "script": "scripts/test/rca-fanout-unit.test",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-rca-fanout-unit",
+      "pathTriggers": [
+        "scripts/rca_fanout.py",
+        "scripts/rca_fanout_lib.py",
+        "core/agents/sw-rca-hypothesis-generator.md",
+        "core/agents/sw-rca-hypothesis-refuter.md",
+        "core/skills/rca-core/SKILL.md",
+        "scripts/unit_tests/test_rca_fanout.py"
+      ]
+    },
+    {
       "id": "007-docs-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [

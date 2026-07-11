@@ -1284,6 +1284,42 @@
         }
       }
     },
+    "rca": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "RCA fan-out settings (PRD 064 R1/R2). Default off — single-context loop unchanged.",
+      "properties": {
+        "fanout": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, D5-gated multi-hypothesis fan-out may run; default false."
+            },
+            "min_hypotheses": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 3,
+              "description": "Fan-out when single-context pass yields fewer ranked hypotheses."
+            },
+            "ambiguity_trigger": {
+              "type": "boolean",
+              "default": true,
+              "description": "Fan-out when ambiguity markers fire (D5)."
+            },
+            "max_width": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4,
+              "default": 4,
+              "description": "Max parallel clean-context generators (hard cap 4)."
+            }
+          }
+        }
+      }
+    },
     "recurrence": {
       "type": "object",
       "additionalProperties": false,
