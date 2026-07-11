@@ -425,6 +425,7 @@
 * merge phase perf-base-capture-drain-slim-status-timing-r6-r9-medium into feat/deliver-issue-store-hardening-and-loop-perf (0db7e96) <!-- sw-deliver:perf-base-capture-drain-slim-status-timing-r6-r9-medium -->
 * merge phase ops-contract-cleanup-budget-isolation-status-vocab-facade-r10-r13-r16-medium into feat/deliver-issue-store-hardening-and-loop-perf (9f07f10) <!-- sw-deliver:ops-contract-cleanup-budget-isolation-status-vocab-facade-r10-r13-r16-medium -->
 * merge phase docs-merge-policy-metrics-release-completeness-r17-r20-r19-small into feat/deliver-issue-store-hardening-and-loop-perf (def9578) <!-- sw-deliver:docs-merge-policy-metrics-release-completeness-r17-r20-r19-small -->
+* merge phase consumability-and-cursor-r1-r2-r16-medium into feat/deliver-autonomy-and-finalize-hygiene (c972b0d) <!-- sw-deliver:consumability-and-cursor-r1-r2-r16-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
