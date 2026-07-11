@@ -1,16 +1,18 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: verify.provider
+        equals: stub
+    metadata:
+      providerFamily: verify
+      adapterId: stub
       selectionFamily: providers
-      key: verify.provider
-      equals: "stub"
-  metadata:
-    providerFamily: verify
-    adapterId: stub
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # verify adapter: `stub`

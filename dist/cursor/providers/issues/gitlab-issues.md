@@ -1,17 +1,19 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: planning.store.issuesProvider
+        equals: gitlab-issues
+    metadata:
+      providerFamily: issues
+      adapterId: gitlab-issues
       selectionFamily: providers
-      key: planning.store.issuesProvider
-      equals: "gitlab-issues"
-  metadata:
-    providerFamily: issues
-    adapterId: gitlab-issues
-    selectionFamily: providers
-    gateRef: check-gate.py
-    issueMilestoneVerb: issue-milestone
+      gateRef: check-gate.py
+      issueMilestoneVerb: issue-milestone
 ---
 
 # GitLab Issues adapter

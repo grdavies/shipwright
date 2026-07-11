@@ -1,15 +1,17 @@
 ---
 name: verification-gate
 description: Evidence-over-claims gate that emits a three-state verdict (verified / not-verified / inconclusive) from structured status files. Complementary to checks-gate; never overrides CI truth.
-capability:
-  version: 1
-  triggers:
-    - type: phase_default
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: phase_default
+        selectionFamily: verify
+        command: sw-verify
+    metadata:
+      skill: verification-gate
       selectionFamily: verify
-      command: sw-verify
-  metadata:
-    skill: verification-gate
-    selectionFamily: verify
 ---
 
 # verification-gate

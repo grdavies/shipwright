@@ -1,5 +1,5 @@
 ---
-name: sw-brainstorm
+name: brainstorm
 description: Explore requirements through one-question-at-a-time dialogue, then write a requirements document with stable R-IDs. Use for Full-tier work before PRD drafting.
 ---
 

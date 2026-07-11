@@ -1,5 +1,5 @@
 ---
-name: sw-debug
+name: debug
 description: Signal-driven production debugging via shared RCA core. Diagnoses and routes; does not implement or merge fixes.
 ---
 

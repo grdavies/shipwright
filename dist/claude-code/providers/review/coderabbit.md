@@ -1,16 +1,18 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: review.provider
+        equals: coderabbit
+    metadata:
+      providerFamily: review
+      adapterId: coderabbit
       selectionFamily: providers
-      key: review.provider
-      equals: "coderabbit"
-  metadata:
-    providerFamily: review
-    adapterId: coderabbit
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # CodeRabbit review adapter (agent-mediated)

@@ -1,14 +1,16 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: phase_default
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: phase_default
+        selectionFamily: providers
+        scope: review-contract
+    metadata:
+      providerFamily: review
       selectionFamily: providers
-      scope: review-contract
-  metadata:
-    providerFamily: review
-    selectionFamily: providers
-    notes: neutral capability contract doc
+      notes: neutral capability contract doc
 ---
 
 # Review provider capabilities (R36)

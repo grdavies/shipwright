@@ -1,15 +1,17 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: planning.store.backend
+        equals: in-repo-public
+    metadata:
+      providerFamily: planning-store
+      adapterId: in-repo-public
       selectionFamily: providers
-      key: planning.store.backend
-      equals: "in-repo-public"
-  metadata:
-    providerFamily: planning-store
-    adapterId: in-repo-public
-    selectionFamily: providers
 ---
 
 # Planning store adapter: in-repo public

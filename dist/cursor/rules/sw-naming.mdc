@@ -78,4 +78,8 @@ not an orchestrator. It may enqueue atomic handoffs (`/sw-prd`, `/sw-tasks`, `pl
 but **must not** invoke `/sw-deliver`, `/sw-doc`, `/sw-ship`, `/sw-debug`, `/sw-feedback`, `/sw-cleanup`, or
 `/sw-retrospective` from within its loop. An explicit halt applies between a reconcile batch and any downstream
 dispatch. Nested orchestrator dispatch is a naming/conductor boundary violation — use enqueue-handoff-only.
+## Skill identity (R13)
+
+- Core skill `name` in `SKILL.md` frontmatter MUST equal the unprefixed kebab-case directory name (`core/skills/<dir>/` → `name: <dir>`).
+- The `sw-` prefix is reserved for commands and agents, not skill identity.
 

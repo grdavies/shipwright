@@ -1,16 +1,18 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: memory.provider
+        equals: recallium
+    metadata:
+      providerFamily: memory
+      adapterId: recallium
       selectionFamily: providers
-      key: memory.provider
-      equals: "recallium"
-  metadata:
-    providerFamily: memory
-    adapterId: recallium
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # Provider adapter: Recallium

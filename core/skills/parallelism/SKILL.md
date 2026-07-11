@@ -1,5 +1,5 @@
 ---
-name: sw-parallelism
+name: parallelism
 description: Bounded parallel worktrees (~2-4 ceiling), cross-branch recombination, merge pre-flight, shared-migration refusal.
 ---
 

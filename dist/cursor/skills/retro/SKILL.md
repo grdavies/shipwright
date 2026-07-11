@@ -1,5 +1,5 @@
 ---
-name: sw-retro
+name: retro
 description: Post-ship retrospective — what went well/painful/change; learning candidates for compounding. Report-only by default.
 ---
 

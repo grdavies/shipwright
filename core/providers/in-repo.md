@@ -1,16 +1,18 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: memory.provider
+        equals: in-repo
+    metadata:
+      providerFamily: memory
+      adapterId: in-repo
       selectionFamily: providers
-      key: memory.provider
-      equals: "in-repo"
-  metadata:
-    providerFamily: memory
-    adapterId: in-repo
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # Provider adapter: in-repo

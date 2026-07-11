@@ -1,14 +1,16 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: phase_default
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: phase_default
+        selectionFamily: providers
+        scope: host-contract
+    metadata:
+      providerFamily: host
       selectionFamily: providers
-      scope: host-contract
-  metadata:
-    providerFamily: host
-    selectionFamily: providers
-    notes: neutral host/forge capability contract doc
+      notes: neutral host/forge capability contract doc
 ---
 
 # Host provider capabilities (PRD 026)

@@ -1,5 +1,5 @@
 ---
-name: sw-feedback
+name: feedback
 description: Unified inbound-signals intake and router. Normalizes and dispatches; does not analyze, author, or execute.
 ---
 

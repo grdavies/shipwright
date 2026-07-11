@@ -1,16 +1,18 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: review.local.provider
+        equals: native
+    metadata:
+      providerFamily: code-review
+      adapterId: contract
       selectionFamily: providers
-      key: review.local.provider
-      equals: "native"
-  metadata:
-    providerFamily: code-review
-    adapterId: contract
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # Local code-review provider capabilities

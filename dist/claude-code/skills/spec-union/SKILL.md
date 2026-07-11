@@ -1,5 +1,5 @@
 ---
-name: sw-spec-union
+name: spec-union
 description: Resolve a frozen PRD or decision record plus amendments into one effective spec — adds, supersedes, retracts in amendment order. Read-only on parent.
 ---
 

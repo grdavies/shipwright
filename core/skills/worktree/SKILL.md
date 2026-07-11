@@ -1,5 +1,5 @@
 ---
-name: sw-worktree
+name: worktree
 description: Provision per-work-item git worktrees with env scaffold (ports, DB strategy) and safe teardown. Enforces parallelism ceiling.
 ---
 
