@@ -433,6 +433,7 @@
 * merge phase finalize-hygiene-r11-r13-medium into feat/deliver-autonomy-and-finalize-hygiene (f4e553d) <!-- sw-deliver:finalize-hygiene-r11-r13-medium -->
 * merge phase harness-pollution-guard-docs-currency-r10-r17-medium into feat/deliver-autonomy-and-finalize-hygiene (d50daa9) <!-- sw-deliver:harness-pollution-guard-docs-currency-r10-r17-medium -->
 * merge phase skill-identity-name-alignment-and-capability-relocation-workstream-b into feat/agentic-quality-patterns-and-standards-conformance (a07213a) <!-- sw-deliver:skill-identity-name-alignment-and-capability-relocation-workstream-b -->
+* merge phase progressive-disclosure-budgets-and-forward-standard-adr-workstream-b into feat/agentic-quality-patterns-and-standards-conformance (8533a33) <!-- sw-deliver:progressive-disclosure-budgets-and-forward-standard-adr-workstream-b -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
