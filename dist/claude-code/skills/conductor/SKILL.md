@@ -143,7 +143,19 @@ The conductor never ends its turn while `nextAction` is runnable and no legitima
 | `next.action` | Agent work (then re-invoke `deliver-loop`) |
 | --- | --- |
 | `dispatch-batch` | Spawn **N background** `Task` sub-agents (`run_in_background: true`) — one per `phases[]` entry in the batch; each runs provision (if needed) + full `/sw-ship --phase-mode` in its phase worktree |
-| `dispatch-ship` | Full `/sw-ship --phase-mode` in the phase worktree (`SW_PHASE_MODE=1`, `SW_PHASE_SLUG`, `SW_RUN_DIR`) |
+| `dispatch-ship` | Full `/sw-ship --phase-mode` **inline** in the phase worktree (`SW_PHASE_MODE=1`, `SW_PHASE_SLUG`, `SW_RUN_DIR`); **never** `run_in_background: true` |
+
+### Inline dispatch lease (PRD 063 R7–R9)
+
+- **`dispatch-ship`** acquires a durable per-phase ship lease (`python3 scripts/wave.py ship-lease acquire`) before
+  stamping `inlineDispatchedAt`. A second `dispatch-ship` while the lease is live returns `await-in-flight` —
+  never spawn a duplicate inline Task.
+- **`dispatch-batch`** is the **only** conductor action that may use `run_in_background: true` on `Task` spawns.
+- `python3 scripts/dispatch-check.py --dispatch-action dispatch-ship --run-in-background` fails closed unless an
+  audited `--override` is recorded.
+- Stale lease reclaim (`wave_lock.py`) runs only when heartbeat is stale **and** the phase has no consumable
+  terminal `status.json`; crash-after-acquire without spawn is reclaimable; a live inline Task keeps the lease.
+- Release the lease on `collect-status` after terminal phase outcomes are collected.
 | `remediate` | `/sw-stabilize` (or scoped fix) for the blocked phase within remediation budget |
 | `retrospective` | `/sw-retrospective --pre-merge` on the orchestrator worktree after all phases merge (R9; single-sourced chain) |
 | `terminal-ship` | After `retrospective` when pre-merge done: terminal PR prepare/gate, CI watch + `/sw-ready`; may arm self-wake (below) |
