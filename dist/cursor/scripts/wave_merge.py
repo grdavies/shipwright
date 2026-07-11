@@ -39,6 +39,7 @@ from status_integrity import (
     check_status_sha,
     live_host_evidence_ok,
     resolve_pr_number,
+    status_is_consumable_terminal,
     validate_terminal_status_shape,
 )
 
@@ -695,6 +696,21 @@ def authorize_merge(
     return authorized, evidence, auth_path
 
 
+
+
+def reconcile_next_action_after_collect(root: Path, state: dict[str, Any]) -> str | None:
+    from wave_deliver_loop import compute_next_action, load_plan
+    plan = load_plan(root)
+    if not plan:
+        return None
+    next_step = compute_next_action(root, state, plan)
+    action = str(next_step.get("action") or "")
+    if action:
+        state["nextAction"] = action
+        save_state(root, state)
+    return action or None
+
+
 def cmd_status_collect(root: Path, args: list[str]) -> None:
     phase_slug = parse_kv(args, "--phase-slug") or parse_kv(args, "--phase")
     if not phase_slug:
@@ -746,6 +762,9 @@ def cmd_status_collect(root: Path, args: list[str]) -> None:
             progress_sync = sync_phase_done(root, run_state, collect_phase_id)
             if progress_sync.get("synced") or progress_sync.get("idempotent"):
                 save_state(root, run_state)
+        if status_is_consumable_terminal(status):
+            run_state = load_state(root)
+            reconcile_next_action_after_collect(root, run_state)
     if verdict == "blocked":
         state = load_state(root)
         phases = state.get("phases") or {}
@@ -782,6 +801,8 @@ def cmd_status_collect(root: Path, args: list[str]) -> None:
     }
     if progress_sync is not None:
         payload["progressSync"] = progress_sync
+    if verdict == "merge-ready-green" and status_is_consumable_terminal(status):
+        payload["nextActionReconciled"] = load_state(root).get("nextAction")
     emit(payload)
 
 
