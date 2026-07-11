@@ -23,6 +23,9 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 VALID_STATUS_VERDICTS = frozenset({"merge-ready-green", "blocked"})
+STATUS_SCHEMA_VERSION = 1
+SHIP_CHAIN_COMPLETE = "complete"
+SHIP_CHAIN_INCOMPLETE = "incomplete"
 SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 GATE_SUBSET_KEYS = ("verdict", "coderabbitLanded", "head")
 DEFAULT_REEMIT_MAX = 2
@@ -59,13 +62,18 @@ def ship_steps_checksum(ship_steps: Any) -> str | None:
 
 
 def canonical_provenance_payload(status: dict[str, Any]) -> dict[str, Any]:
-    return {
+    payload: dict[str, Any] = {
         "verdict": status.get("verdict"),
         "phase": status.get("phase"),
         "head": status.get("head"),
         "gate": gate_subset(status.get("gate")),
         "shipStepsChecksum": ship_steps_checksum(status.get("shipSteps")),
     }
+    if status.get("schemaVersion") is not None:
+        payload["schemaVersion"] = status.get("schemaVersion")
+    if status.get("shipChain") is not None:
+        payload["shipChain"] = status.get("shipChain")
+    return payload
 
 
 def compute_provenance_marker(status: dict[str, Any]) -> str:
@@ -147,6 +155,11 @@ def validate_terminal_status_shape(
     ok_gate, gate_cause = validate_gate_json(status.get("gate"), root)
     if not ok_gate:
         return False, gate_cause
+    if verdict == "merge-ready-green":
+        if status.get("schemaVersion") is None:
+            return False, "phase-status:missing-schemaVersion"
+        if status.get("shipChain") != SHIP_CHAIN_COMPLETE:
+            return False, "phase-status:ship-chain-incomplete"
     return True, None
 
 
@@ -516,6 +529,13 @@ def stall_progress_key(
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
+
+
+def legacy_ship_chain_notice(status: dict[str, Any]) -> str | None:
+    if status.get("shipChain") and status.get("schemaVersion") is not None:
+        return None
+    return "legacy-status:shipChain-migrated"
+
 def build_status_document(
     *,
     verdict: str,
@@ -527,6 +547,9 @@ def build_status_document(
     ship_steps: dict[str, Any] | None = None,
     ship_steps_path: str | None = None,
     written_at: str | None = None,
+    ship_chain: str | None = None,
+    provenance: str | None = None,
+    schema_version: int | None = STATUS_SCHEMA_VERSION,
 ) -> dict[str, Any]:
     doc: dict[str, Any] = {
         "verdict": verdict,
@@ -536,11 +559,18 @@ def build_status_document(
         "pr": pr,
         "gate": gate,
         "writtenAt": written_at or utc_now(),
+        "schemaVersion": schema_version,
     }
     if ship_steps is not None:
         doc["shipSteps"] = ship_steps
     if ship_steps_path:
         doc["shipStepsPath"] = ship_steps_path
+    if ship_chain is not None:
+        doc["shipChain"] = ship_chain
+    elif verdict == "merge-ready-green":
+        doc["shipChain"] = SHIP_CHAIN_INCOMPLETE
+    if provenance:
+        doc["provenance"] = provenance
     if verdict == "blocked" and cause:
         doc["cause"] = cause
     return attach_provenance_marker(doc)
@@ -587,6 +617,8 @@ def cmd_write(args: argparse.Namespace) -> int:
         cause=args.cause,
         ship_steps=ship_steps,
         ship_steps_path=ship_steps_path,
+        ship_chain=args.ship_chain,
+        provenance=args.provenance,
     )
     try:
         from execute_ship import attach_benefit_metric_to_status, load_execute_plan, resolve_run_dir
@@ -626,6 +658,8 @@ def main(argv: list[str] | None = None) -> int:
     write_p.add_argument("--gate-json")
     write_p.add_argument("--ship-steps-json")
     write_p.add_argument("--ship-steps-path")
+    write_p.add_argument("--ship-chain")
+    write_p.add_argument("--provenance")
     write_p.set_defaults(func=cmd_write)
 
     validate_p = sub.add_parser("validate", help="Validate terminal status shape + provenance")

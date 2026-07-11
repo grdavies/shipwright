@@ -41,6 +41,7 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LOOP_PY="$ROOT/scripts/wave_deliver_loop.py"
+MERGE_PY="$ROOT/scripts/wave_merge.py"
 WAVE="$ROOT/scripts/wave.sh"
 FAIL=0
 
@@ -49,6 +50,30 @@ bad()  { echo "FAIL $1"; FAIL=1; }
 
 FIX=$(mktemp -d)
 trap 'rm -rf "$FIX"' EXIT
+
+seed_complete_ship_steps() {
+  local phase="$1"
+  local run_dir="$2"
+  mkdir -p "$run_dir"
+  PYTHONPATH="$ROOT/scripts" python3 -c "
+import json, sys
+from pathlib import Path
+from kernel_classification import canonical_ship_chain
+repo = Path(sys.argv[3])
+phase = sys.argv[1]
+run = Path(sys.argv[2])
+run.mkdir(parents=True, exist_ok=True)
+chain = canonical_ship_chain(repo)
+path = run / 'ship-steps.json'
+doc = {'phase': phase, 'lastCompletedStep': chain[-1], 'chain': chain, 'currentStep': None}
+if path.is_file():
+    doc = json.loads(path.read_text())
+    doc['lastCompletedStep'] = chain[-1]
+path.write_text(json.dumps(doc))
+" "$phase" "$run_dir" "$ROOT" 2>/dev/null
+}
+
+
 
 cd "$FIX"
 git init -q
@@ -160,7 +185,8 @@ STATUS_DIR="$FIX/.cursor/sw-deliver-runs/alpha"
 mkdir -p "$STATUS_DIR"
 PHASE_HEAD=$(git -C "$FIX" rev-parse HEAD 2>/dev/null || echo abc)
 git -C "$FIX" branch feat/demo-phase-alpha "$PHASE_HEAD" 2>/dev/null || true
-"$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase alpha --head "$PHASE_HEAD" --out "$STATUS_DIR/status.json" >/dev/null
+seed_complete_ship_steps alpha "$STATUS_DIR"
+SW_RUN_DIR="$STATUS_DIR" SW_PHASE_SLUG=alpha "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase alpha --head "$PHASE_HEAD" --out "$STATUS_DIR/status.json" >/dev/null
 python3 -c "
 import json
 from pathlib import Path
@@ -603,8 +629,10 @@ JSON
   "waves": [["1", "2"]]
 }
 JSON
-  "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase a --head "$HEAD" --out .cursor/sw-deliver-runs/a/status.json >/dev/null
-  "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase b --head "$HEAD" --out .cursor/sw-deliver-runs/b/status.json >/dev/null
+  seed_complete_ship_steps a .cursor/sw-deliver-runs/a
+  seed_complete_ship_steps b .cursor/sw-deliver-runs/b
+  SW_RUN_DIR=.cursor/sw-deliver-runs/a SW_PHASE_SLUG=a "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase a --head "$HEAD" --out .cursor/sw-deliver-runs/a/status.json >/dev/null
+  SW_RUN_DIR=.cursor/sw-deliver-runs/b SW_PHASE_SLUG=b "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase b --head "$HEAD" --out .cursor/sw-deliver-runs/b/status.json >/dev/null
   if OUT=$(python3 "$LOOP_PY" "$COLLECT_FIX" compute-next 2>/dev/null) && echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
@@ -801,6 +829,62 @@ assert 'plan-rejection' in d['next'].get('cause','')
   fi
 ) && ok "plan-rejection-no-progress" || bad "plan-rejection-no-progress"
 rm -rf "$REJ_FIX"
+
+
+# --- R15(a) shipChain consumability (PRD 063) ---
+CONS_FIX=$(mktemp -d)
+(
+  cd "$CONS_FIX"
+  git init -q && git config user.email t@test.com && git config user.name T
+  git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" --allow-empty -q -m init && git branch -M main
+  HEAD=$(git rev-parse HEAD)
+  mkdir -p .cursor/sw-deliver-runs/alpha
+  BAD='{"verdict":"merge-ready-green","phase":"alpha","phaseMode":true,"head":"'"$HEAD"'","gate":{"verdict":"green"},"schemaVersion":1,"writtenAt":"2020-01-01T00:00:00Z"}'
+  echo "$BAD" >.cursor/sw-deliver-runs/alpha/status.json
+  if PYTHONPATH="$ROOT/scripts" python3 -c "import json; from pathlib import Path; from status_integrity import status_is_consumable_terminal; s=json.loads(Path('.cursor/sw-deliver-runs/alpha/status.json').read_text()); assert not status_is_consumable_terminal(s)"; then
+    :
+  else exit 1; fi
+) && ok "r15-a-shipchain-consumability" || bad "r15-a-shipchain-consumability"
+rm -rf "$CONS_FIX"
+
+# --- R15(b) cursor reconcile after collect (PRD 063) ---
+RECON_FIX=$(mktemp -d)
+(
+  cd "$RECON_FIX"
+  git init -q && git config user.email t@test.com && git config user.name T
+  git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" --allow-empty -q -m init
+  NOW_TS=$(python3 -c "from datetime import datetime,timezone; print(datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))")
+  HEAD=$(git rev-parse HEAD)
+  git branch feat/demo-phase-alpha "$HEAD" 2>/dev/null || true
+  mkdir -p .cursor .cursor/sw-deliver-runs/alpha
+  cat >.cursor/workflow.config.json <<'WCFG'
+{"review":{"provider":"none"},"checks":{"treatNeutralAsPass":true}}
+WCFG
+  cat >.cursor/sw-base-state.json <<'JSON'
+{"trunkBase": {"name": "main", "sha": "deadbeef00000000000000000000000000000000"}}
+JSON
+  cat >.cursor/sw-deliver-plan.json <<'JSON'
+{"mode":"phase","target":{"branch":"feat/demo"},"items":[{"id":"1","slug":"alpha","branch":"feat/demo-phase-alpha"}],"waves":[["1"]],"edges":[]}
+JSON
+  cat >.cursor/sw-deliver-state.json <<JSON
+{"verdict":"running","target":{"branch":"feat/demo"},"currentWave":1,"nextAction":"dispatch-ship","driverHeartbeatAt":"$NOW_TS","orchestratorWorktree":{"path":"/tmp/orch"},"specSeed":{"skipped":true},"baseCapture":{"skipped":true},"phases":{"1":{"id":"1","slug":"alpha","status":"in-flight","branch":"feat/demo-phase-alpha"}},"phaseWorktrees":{"1":{"path":"$RECON_FIX","name":"alpha-wt"}}}
+JSON
+  seed_complete_ship_steps alpha .cursor/sw-deliver-runs/alpha
+  SW_RUN_DIR=.cursor/sw-deliver-runs/alpha SW_PHASE_SLUG=alpha "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase alpha --head "$HEAD" --out .cursor/sw-deliver-runs/alpha/status.json >/dev/null
+  python3 "$MERGE_PY" "$RECON_FIX" status collect --phase-slug alpha >/dev/null
+  if python3 -c "import json; s=json.load(open('.cursor/sw-deliver-state.json')); assert s.get('nextAction')!='dispatch-ship', s.get('nextAction')"; then
+    :
+  else exit 1; fi
+) && ok "r15-b-cursor-reconcile-after-collect" || bad "r15-b-cursor-reconcile-after-collect"
+rm -rf "$RECON_FIX"
+
+# --- R15(n) file-store parity shape (PRD 063) ---
+if python3 -c "import sys; sys.path.insert(0,'$ROOT/scripts'); from status_integrity import STATUS_SCHEMA_VERSION, SHIP_CHAIN_COMPLETE; assert STATUS_SCHEMA_VERSION==1 and SHIP_CHAIN_COMPLETE=='complete'"; then
+  ok "r15-n-file-store-parity-shape"
+else
+  bad "r15-n-file-store-parity-shape"
+fi
+
 
 if [[ "$FAIL" -ne 0 ]]; then
   echo "deliver-loop fixtures: FAIL"

@@ -52,6 +52,30 @@ bad() { echo "FAIL $1"; FAIL=1; }
 # --- provenance-marker-roundtrip (R13) ---
 FIX=$(mktemp -d)
 trap 'rm -rf "$FIX"' EXIT
+
+seed_complete_ship_steps() {
+  local phase="$1"
+  local run_dir="$2"
+  mkdir -p "$run_dir"
+  PYTHONPATH="$ROOT/scripts" python3 -c "
+import json, sys
+from pathlib import Path
+from kernel_classification import canonical_ship_chain
+repo = Path(sys.argv[3])
+phase = sys.argv[1]
+run = Path(sys.argv[2])
+run.mkdir(parents=True, exist_ok=True)
+chain = canonical_ship_chain(repo)
+path = run / 'ship-steps.json'
+doc = {'phase': phase, 'lastCompletedStep': chain[-1], 'chain': chain, 'currentStep': None}
+if path.is_file():
+    doc = json.loads(path.read_text())
+    doc['lastCompletedStep'] = chain[-1]
+path.write_text(json.dumps(doc))
+" "$phase" "$run_dir" "$ROOT" 2>/dev/null
+}
+
+
 cd "$FIX"
 git init -q
 git config user.email test@test.com
@@ -66,7 +90,8 @@ WCFG
 cat >.cursor/sw-base-state.json <<'JSON'
 {"trunkBase":{"name":"main","sha":"0000000000000000000000000000000000000000"}}
 JSON
-if OUT=$("$SHIP_STATUS" --verdict merge-ready-green --phase alpha --head "$HEAD" --out .cursor/sw-deliver-runs/alpha/status.json 2>/dev/null) &&    echo "$OUT" | python3 -c "
+seed_complete_ship_steps alpha .cursor/sw-deliver-runs/alpha
+if OUT=$(SW_RUN_DIR=.cursor/sw-deliver-runs/alpha SW_PHASE_SLUG=alpha "$SHIP_STATUS" --verdict merge-ready-green --phase alpha --head "$HEAD" --out .cursor/sw-deliver-runs/alpha/status.json 2>/dev/null) &&    echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 assert d.get('provenanceMarker')
