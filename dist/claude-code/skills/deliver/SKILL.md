@@ -153,6 +153,20 @@ surfaces; expanded procedures are in the reference files linked above.
   run-state binds `source_task_list`.
 - **Terminal PR:** `resume reconcile` then `terminal pr prepare` before the human merge gate.
 
+- **Operator worktree contract:** primary checkout is **operator shell only** — no implementation
+  commits during deliver; `status.json` mirrors **phase → repo root** only.
+
+- **Materialization:** private specs land under `.cursor/planning-materialized/` at provision
+  (`lock-acquire` → `orchestrator-provision`); teardown clears orphans. Staged paths under the prefix are rejected by the **commit-boundary** barrier.
+- **INDEX `inFlight` region (PRD 032):** deliver run-start writes a committed tuple after
+  `lock-acquire` / before `orchestrator-provision`; cleared at run completion via
+  `inflight-signal-clear`. Lifecycle `in-progress` is **not** stored in the tuple — PRD 033 derives
+  it. Set `SW_INDEX_REGION_WRITER=deliver` on INDEX commits touching `inFlight`.
+
+- **Task-list hierarchy** and inFlight tracking issues (PRD 046): see
+  `references/issue-store-integration.md`.
+
+
 ## Concurrency invariants (PRD 036 — acceptance)
 
 Operator-facing guarantees enforced by CI fixtures (`run_dual_ship_fixtures.py`,
