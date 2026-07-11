@@ -439,6 +439,7 @@
 * merge phase memory-link-traversal-consumers-and-richer-frontmatter-workstream-c into feat/agentic-quality-patterns-and-standards-conformance (5e0433d) <!-- sw-deliver:memory-link-traversal-consumers-and-richer-frontmatter-workstream-c -->
 * merge phase adversarial-completion-claims-audit-workstream-a into feat/agentic-quality-patterns-and-standards-conformance (4786783) <!-- sw-deliver:adversarial-completion-claims-audit-workstream-a -->
 * merge phase multi-hypothesis-rca-fan-out-workstream-a into feat/agentic-quality-patterns-and-standards-conformance (11caf29) <!-- sw-deliver:multi-hypothesis-rca-fan-out-workstream-a -->
+* merge phase confidence-scored-primary-injected-playbooks-workstream-d into feat/agentic-quality-patterns-and-standards-conformance (16b9b3a) <!-- sw-deliver:confidence-scored-primary-injected-playbooks-workstream-d -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
