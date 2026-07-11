@@ -153,6 +153,7 @@ surfaces; expanded procedures are in the reference files linked above.
   run-state binds `source_task_list`.
 - **Terminal PR:** `resume reconcile` then `terminal pr prepare` before the human merge gate.
 
+- **Operator resume:** `/sw-deliver run <frozen-task-list>` (or `--issue N`); halt reports include `resumeCommand`.
 - **Retrospective handoff:** `/sw-retrospective` / `/sw-retrospective --pre-merge` on the orchestrator
   worktree after phases merge (`compound.autonomy`); do not inline retro/compound/memory.
 - **Living docs:** `living-docs reconcile --commit` after each green phase merge (INDEX / COMPLETION-LOG /

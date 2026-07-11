@@ -436,6 +436,9 @@ Resume after `planning-mutation-budget` halt: operator acknowledges and re-runs 
 lower scope — same legitimate-halt model as deliver conductor budgets.
 
 
+
+Workflow pushes use `scripts/git-push.py` only (secret-scan pre-push; phase sub-agents never raw `git push`).
+
 ## Config knobs
 
 Read from `.cursor/workflow.config.json`:
