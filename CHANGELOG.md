@@ -432,6 +432,7 @@
 * merge phase pre-pr-targeted-pytest-smoke-r4-small into feat/deliver-autonomy-and-finalize-hygiene (0862727) <!-- sw-deliver:pre-pr-targeted-pytest-smoke-r4-small -->
 * merge phase finalize-hygiene-r11-r13-medium into feat/deliver-autonomy-and-finalize-hygiene (f4e553d) <!-- sw-deliver:finalize-hygiene-r11-r13-medium -->
 * merge phase harness-pollution-guard-docs-currency-r10-r17-medium into feat/deliver-autonomy-and-finalize-hygiene (d50daa9) <!-- sw-deliver:harness-pollution-guard-docs-currency-r10-r17-medium -->
+* merge phase skill-identity-name-alignment-and-capability-relocation-workstream-b into feat/agentic-quality-patterns-and-standards-conformance (a07213a) <!-- sw-deliver:skill-identity-name-alignment-and-capability-relocation-workstream-b -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
