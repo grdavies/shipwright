@@ -744,6 +744,40 @@ def cmd_status_collect(root: Path, args: list[str]) -> None:
             cause=shape_cause or "phase-status:invalid",
             phase=phase_slug,
         )
+
+    if verdict == "merge-ready-green" and status.get("completionClaims"):
+        from phase_acceptance_gate import resolve_tasks_path
+        from claims_audit_lib import collect_audit_from_status, phase_id_for_slug
+
+        plan = None
+        try:
+            from wave_deliver_loop import load_plan
+            plan = load_plan(root)
+        except Exception:
+            plan = None
+        resolved = resolve_tasks_path(root, state, plan)
+        if resolved != (None, None):
+            _check_root, tasks_path = resolved
+            tasks_text = tasks_path.read_text(encoding="utf-8")
+            phase_id = phase_id_for_slug(tasks_text, phase_slug) or ""
+            if phase_id:
+                audit = collect_audit_from_status(
+                    root,
+                    status,
+                    tasks_path=tasks_path,
+                    phase_id=phase_id,
+                    phase_branch=phase_branch,
+                )
+                if audit.get("verdict") == "fail":
+                    fail(
+                        "completion claims audit failed at collect",
+                        exit_code=20,
+                        halt="blocked",
+                        cause="claims-audit:collect-fail",
+                        phase=phase_slug,
+                        audit=audit,
+                    )
+
     if phase_branch and verdict == "merge-ready-green":
         expected = phase_branch_head_optional(root, state, phase_slug, str(phase_branch))
         if expected:

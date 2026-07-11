@@ -145,6 +145,9 @@ surfaces; expanded procedures are in the reference files linked above.
 - **Scheduler:** `scripts/wave.py schedule` respects `parallelCeiling`; phase worktrees use
   `countsTowardCeiling`; dependents integrate via `forward-merge`.
 - **Sub-agent dispatch spike (R63):** nested background dispatch is unreliable — default inline two-stage review per `rules/sw-subagent-dispatch.mdc`.
+- **Claims audit (R4):** `status collect` re-runs `scripts/claims_audit.py collect` against durable
+  `status.json` `completionClaims` vs the phase branch diff at the recorded head — fail-closed on mismatch
+  (`cause: claims-audit:collect-fail`); never silently flip checkboxes at collect.
 - **Merge queue:** `status collect` → `merge run-next` on `merge-ready-green`; `report terminal` when
   all phases merge; `bookkeeping record` / `bookkeeping revert` on the orchestrator worktree.
 - **Failure routing:** `blast-radius apply` on blocked phases; `terminal deny` records rejected PRs.

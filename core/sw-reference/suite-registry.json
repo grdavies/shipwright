@@ -48,6 +48,21 @@
       ]
     },
     {
+      "id": "claims-audit-unit",
+      "script": "scripts/test/claims-audit-unit.test",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-claims-audit-unit",
+      "pathTriggers": [
+        "scripts/claims_audit.py",
+        "scripts/claims_audit_lib.py",
+        "core/agents/sw-claims-auditor.md",
+        "scripts/unit_tests/test_claims_audit.py"
+      ]
+    },
+    {
       "id": "007-docs-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [

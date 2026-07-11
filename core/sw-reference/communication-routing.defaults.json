@@ -94,7 +94,8 @@
       "ui-ux": "normal",
       "type-design": "normal",
       "comment-accuracy": "normal",
-      "ai-native": "normal"
+      "ai-native": "normal",
+      "sw-claims-auditor": "ultra"
     }
   }
 }

@@ -57,6 +57,9 @@ Canonical chain is single-sourced from `core/sw-reference/kernel-classification.
 - **sw-tmp** — at chain start: `python3 scripts/sw-tmp.py clean` then `python3 scripts/sw-tmp.py init` (records
   `runDir` in shipwright-state). At chain end: `python3 scripts/sw-tmp.py clean`. No `trap … EXIT` (markdown-orchestrated
   chain).
+- **claims-audit** (PRD 064 R3) — after `behavioral-anomaly-check`, before `verification-gate`:
+  `python3 scripts/claims_audit.py run --tasks <frozen-tasks> --phase-id <id> --agent-result $RUN_DIR/claims-audit-agent.json --out $RUN_DIR/claims-audit.status.json`.
+  Dispatch `sw-claims-auditor` (cheap, clean-context) per `rules/sw-subagent-dispatch.mdc`; any claim `fail` halts via verification-gate.
 - **behavioral-anomaly-check** (PRD 041 R28) — after `sw-verify`, before `verification-gate`:
   `python3 scripts/behavioral_anomaly_check.py --verify-status "$RUN_DIR/sw-verify.status.json"` `--ship-steps "$SW_RUN_DIR/ship-steps.json" --tasks <frozen-tasks> --out "$RUN_DIR/behavioral-anomaly.status.json"`. Advisory anomalies log + feed failure signatures; evidence-integrity mismatch blocks via verification-gate.
 - **verification-gate** — `Load skills/verification-gate/SKILL.md`; run `scripts/verify-evidence.py` on
