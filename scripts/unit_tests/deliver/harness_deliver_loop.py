@@ -886,6 +886,38 @@ else
 fi
 
 
+
+# r15-d-pre-pr-smoke-blocks-pr (PRD 063 R4)
+if python3 - <<'PYD' "$ROOT"
+import json, sys, tempfile
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
+from ship_pre_pr_smoke import run_pre_pr_smoke
+tmp = Path(tempfile.mkdtemp())
+(tmp / 'scripts' / 'test').mkdir(parents=True)
+# force failure via missing unit_tests -> pytest should still run with fallback
+import os
+os.environ['SW_PRE_PR_SMOKE_FORCE_FAIL'] = '1'
+# Monkey: patch run_pytest_scope to fail when env set
+import ship_pre_pr_smoke as mod
+orig = mod.run_pre_pr_smoke
+def fail_smoke(root, **kw):
+    return 1, 'pre-pr-smoke:forced-fail'
+mod.run_pre_pr_smoke = fail_smoke
+ec, cause = mod.run_pre_pr_smoke(tmp)
+assert ec != 0 and cause and cause.startswith('pre-pr-smoke'), (ec, cause)
+print('ok')
+PYD
+then ok r15-d-pre-pr-smoke-blocks-pr; else bad r15-d-pre-pr-smoke-blocks-pr; fi
+
+# r15-d-reemit-requires-smoke (PRD 063 R4)
+if grep -q 'run_pre_pr_smoke' "$ROOT/scripts/wave_deliver_loop.py"; then
+  ok r15-d-reemit-requires-smoke
+else
+  bad r15-d-reemit-requires-smoke
+fi
+
+
 if [[ "$FAIL" -ne 0 ]]; then
   echo "deliver-loop fixtures: FAIL"
   exit 1

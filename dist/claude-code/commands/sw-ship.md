@@ -46,6 +46,10 @@ sw-tmp init → sw-execute → sw-verify → verification-gate → sw-review →
 Canonical chain is single-sourced from `core/sw-reference/kernel-classification.json` (`canonicalPhaseChains.sw-ship`); `scripts/ship_phase_steps.py` derives `SHIP_CHAIN` from the same artifact.
 
 
+- **pre-pr smoke (R4)** — after `sw-commit`, before `sw-pr`, run scoped pytest:
+  `SW_TEST_SCOPE=phase python3 scripts/ship_pre_pr_smoke.py` (wraps `test_scope` + `run_pytest` via
+  `scripts/test/_runner.py`). Any non-zero exit (failure, collection, import error) **halts** the chain;
+  write `blocked` status with cause `pre-pr-smoke:*`. Reemit/reuse paths must run the same smoke (R4/R16).
 - **build-chain verify (R25)** — before `sw-commit` when the phase diff touches paths in
   `core/sw-reference/build-chain-paths.json`, run `python3 scripts/ship-build-chain-check.py` (hard block on drift).
   Sync with full `python3 scripts/build-chain-sync.py` when check fails (not `copy-to-core` alone).
