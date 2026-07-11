@@ -140,6 +140,17 @@ memory skill — not direct MCP calls from planning code.
 `private`/`memory` pointers return `{unitId}: [private]` to unauthorized callers — never raw excerpts.
 
 
+
+
+## Traverse / expand (R22)
+
+| Abstract op | Recallium mapping | Degradation |
+| --- | --- | --- |
+| `traverse` | `expand_memories` on `related_memory_ids` + `link_task_memories` graph | When native typed edges are absent, degrade to `search_memories` with `tags` matching target ids |
+| `expand` | `expand_memories` | Attach inbound `related_memory_ids` references as backlinks when the API exposes them; else tag-search for referring memories |
+
+`supersedes` reconciliation requests superseded nodes explicitly via traverse (`edge: supersedes`) before compounding.
+
 ## Notes / gotchas
 
 - Recallium runs locally with Ollama embeddings here — no external API cost or data egress.

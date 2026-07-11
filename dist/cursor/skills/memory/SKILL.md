@@ -177,6 +177,7 @@ Store distilled memories per the write contract in `CAPABILITIES.md`:
 - search before store; `modify` a near-duplicate instead of adding a second,
 - project scope by default; global only on explicit user direction,
 - store the distilled substance, never a raw transcript dump.
+- populate `title` and `description` frontmatter at store time from the distilled first line when omitted (`memory-preflight` write path).
 
 For **`decision`-class** writes, resolve the inverted pointer recipe first (R6):
 
@@ -216,7 +217,7 @@ python3 scripts/in-repo-memory-search.py \
   [--category decision] [--tag prd-1] [--file-glob src/auth.ts]
 ```
 
-Then `expand` by reading `memories/<id>.md` (or `rules/<id>.md` for rule category).
+Then `expand` via `python3 scripts/in-repo-memory-search.py expand --store <dir> --ids <id>` (full body + backlinks), or read `memories/<id>.md` directly.
 
 **Write:**
 

@@ -11,8 +11,9 @@ declares its capability flags — change no command.
 | --- | --- | --- | --- |
 | `load-context` | project, days_back? | rules + recent activity + open tasks | One-shot session warmup. |
 | `rules-load` | scope (project/global) | behavioral rules | Load guardrails (startup, project switch). |
-| `search` | query, {filePath?, category?, recentOnly?, scope?, mode?} | ranked memories (summary + id) | Targeted retrieval. |
-| `expand` | ids[] | full memory content | Fetch full text after a search. |
+| `search` | query, {filePath?, category?, recentOnly?, scope?, mode?} | ranked memories (summary + id) | Targeted retrieval; excludes `status: superseded`/`resolved`/tombstone by default. |
+| `traverse` | from-id, {edge?, depth?, direction?} | nodes + edges (+ dangling) | Walk `links[]` + inline markdown links; dangling targets tolerated. |
+| `expand` | ids[] | full memory content + backlinks | Fetch full text after a search; includes inbound edges. |
 | `store` | content, category, {relatedFiles?, tags?, importance?, scope?, links?, session?} | memory id | Write a distilled memory. |
 | `modify` | id, action(update/inactivate/reactivate), fields? | confirmation | Edit / soft-delete / restore. |
 | `list-recent` | project, days_back? | recent memories + tasks | Activity recap. |
@@ -63,6 +64,8 @@ repo docs, referenced by pointer, not copied into memory).
 - Set `importance` deliberately: `0.9` critical, `0.7` important, `0.5` normal, `0.3` minor.
 - Default `scope` = project. Global only when the user explicitly directs it.
 - Search before store (idempotency): if a near-duplicate exists, `modify` it instead of adding a second.
+- Optional frontmatter: `title`, `description`, `resource` (unknown keys preserved). Body may include a `# Citations` section for external references.
+- `memory-preflight` populates `title`/`description` at store time from the distilled first line when omitted.
 
 ## Read recipe (used by `memory-preflight`)
 
