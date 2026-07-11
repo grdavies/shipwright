@@ -1,5 +1,5 @@
 ---
-name: sw-gap-check
+name: gap-check
 description: Compare phase plan (spec union + task checklist) against git diff; bounded closers for in-scope gaps. Default-on in /sw-ship.
 ---
 

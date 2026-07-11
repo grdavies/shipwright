@@ -1,16 +1,18 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: host.provider
+        equals: github
+    metadata:
+      providerFamily: host
+      adapterId: github
       selectionFamily: providers
-      key: host.provider
-      equals: "github"
-  metadata:
-    providerFamily: host
-    adapterId: github
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # GitHub host adapter

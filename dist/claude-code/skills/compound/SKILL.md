@@ -1,5 +1,5 @@
 ---
-name: sw-compound
+name: compound
 description: Internal compound-write step for /sw-retrospective — distill retro/feedback into typed memories via memory-preflight; human-gated rule-class promotion (R8).
 ---
 

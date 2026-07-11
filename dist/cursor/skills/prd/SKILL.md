@@ -1,5 +1,5 @@
 ---
-name: sw-prd
+name: prd
 description: Generate a PRD or decision-record draft (Full/Standard). Does not freeze, run persona review, or generate tasks.
 ---
 

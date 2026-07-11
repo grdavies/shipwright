@@ -1,16 +1,18 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: quality.provider
+        equals: none
+    metadata:
+      providerFamily: quality
+      adapterId: none
       selectionFamily: providers
-      key: quality.provider
-      equals: "none"
-  metadata:
-    providerFamily: quality
-    adapterId: none
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # quality adapter: `none`

@@ -14,6 +14,15 @@ _SCALAR_RE = re.compile(
 )
 
 
+def _sequence_item_rest(content: str) -> str | None:
+    """Return remainder after list marker, or None when the line is not a sequence item."""
+    if content == "-":
+        return ""
+    if content.startswith("- "):
+        return content[2:].strip()
+    return None
+
+
 def safe_load(text: str) -> Any:
     lines = _normalize_lines(text)
     if not lines:
@@ -38,7 +47,7 @@ def _parse_value(lines: list[tuple[int, str]], index: int, indent: int) -> tuple
     line_indent, content = lines[index]
     if line_indent < indent:
         return {}, index
-    if content.startswith("- "):
+    if _sequence_item_rest(content) is not None:
         return _parse_sequence(lines, index, line_indent)
     return _parse_mapping(lines, index, line_indent)
 
@@ -52,7 +61,7 @@ def _parse_mapping(lines: list[tuple[int, str]], index: int, indent: int) -> tup
             break
         if line_indent > indent:
             break
-        if content.startswith("- "):
+        if _sequence_item_rest(content) is not None:
             break
         key, value = _split_key_value(content)
         if key is None:
@@ -63,9 +72,12 @@ def _parse_mapping(lines: list[tuple[int, str]], index: int, indent: int) -> tup
             continue
         i += 1
         if i < len(lines) and lines[i][0] > indent:
-            child, i = _parse_value(lines, i, lines[i][0])
+            if _sequence_item_rest(lines[i][1]) is not None:
+                child, i = _parse_sequence(lines, i, lines[i][0])
+            else:
+                child, i = _parse_value(lines, i, lines[i][0])
             mapping[key] = child
-        elif i < len(lines) and lines[i][0] == indent and lines[i][1].startswith("- "):
+        elif i < len(lines) and lines[i][0] == indent and _sequence_item_rest(lines[i][1]) is not None:
             child, i = _parse_sequence(lines, i, lines[i][0])
             mapping[key] = child
         else:
@@ -78,9 +90,9 @@ def _parse_sequence(lines: list[tuple[int, str]], index: int, indent: int) -> tu
     i = index
     while i < len(lines):
         line_indent, content = lines[i]
-        if line_indent != indent or not content.startswith("- "):
+        rest = _sequence_item_rest(content)
+        if line_indent != indent or rest is None:
             break
-        rest = content[2:].strip()
         i += 1
         if not rest:
             if i < len(lines) and lines[i][0] > indent:
@@ -98,7 +110,7 @@ def _parse_sequence(lines: list[tuple[int, str]], index: int, indent: int) -> tu
             if i < len(lines) and lines[i][0] > indent:
                 child, i = _parse_value(lines, i, lines[i][0])
                 item[key] = child
-            elif i < len(lines) and lines[i][0] == indent and lines[i][1].startswith("- "):
+            elif i < len(lines) and lines[i][0] == indent and _sequence_item_rest(lines[i][1]) is not None:
                 child, i = _parse_sequence(lines, i, lines[i][0])
                 item[key] = child
             items.append(item)
@@ -108,7 +120,7 @@ def _parse_sequence(lines: list[tuple[int, str]], index: int, indent: int) -> tu
             if lines[i][0] != child_indent:
                 break
             sub_indent, sub_content = lines[i]
-            if sub_content.startswith("- "):
+            if _sequence_item_rest(sub_content) is not None:
                 break
             sub_key, sub_value = _split_key_value(sub_content)
             if sub_key is None:
@@ -121,7 +133,7 @@ def _parse_sequence(lines: list[tuple[int, str]], index: int, indent: int) -> tu
             if i < len(lines) and lines[i][0] > sub_indent:
                 child, i = _parse_value(lines, i, lines[i][0])
                 item[sub_key] = child
-            elif i < len(lines) and lines[i][0] == sub_indent and lines[i][1].startswith("- "):
+            elif i < len(lines) and lines[i][0] == sub_indent and _sequence_item_rest(lines[i][1]) is not None:
                 child, i = _parse_sequence(lines, i, lines[i][0])
                 item[sub_key] = child
             else:

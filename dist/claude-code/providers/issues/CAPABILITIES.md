@@ -1,13 +1,15 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: phase_default
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: phase_default
+        selectionFamily: providers
+        scope: issues-contract
+    metadata:
+      providerFamily: issues
       selectionFamily: providers
-      scope: issues-contract
-  metadata:
-    providerFamily: issues
-    selectionFamily: providers
 ---
 
 # Issues provider capabilities (PRD 043)

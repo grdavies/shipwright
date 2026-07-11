@@ -1,16 +1,18 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: host.provider
+        equals: none
+    metadata:
+      providerFamily: host
+      adapterId: none
       selectionFamily: providers
-      key: host.provider
-      equals: "none"
-  metadata:
-    providerFamily: host
-    adapterId: none
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # Local / no-remote host adapter

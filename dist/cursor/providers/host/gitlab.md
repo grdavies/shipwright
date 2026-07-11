@@ -1,16 +1,18 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: host.provider
+        equals: gitlab
+    metadata:
+      providerFamily: host
+      adapterId: gitlab
       selectionFamily: providers
-      key: host.provider
-      equals: "gitlab"
-  metadata:
-    providerFamily: host
-    adapterId: gitlab
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # GitLab host adapter

@@ -1,5 +1,5 @@
 ---
-name: sw-deliver
+name: deliver
 description: Dependency-ordered deliver waves with dependent-branch stacking and integration branch lifecycle.
 ---
 

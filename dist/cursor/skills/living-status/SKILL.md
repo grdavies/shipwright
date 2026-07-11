@@ -1,5 +1,5 @@
 ---
-name: sw-living-status
+name: living-status
 description: Derive PRD status from git and deliver state; reconcile planning INDEX derived region, COMPLETION-LOG, and legacy gap projections; hard-block on drift.
 ---
 

@@ -1,20 +1,23 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: quality.provider
+        equals: auto
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: quality.provider
+        equals: builtin
+    metadata:
+      providerFamily: quality
+      adapterId: builtin
       selectionFamily: providers
-      key: quality.provider
-      equals: "auto"
-    - type: config_flag
-      selectionFamily: providers
-      key: quality.provider
-      equals: "builtin"
-  metadata:
-    providerFamily: quality
-    adapterId: builtin
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # quality adapter: `builtin`

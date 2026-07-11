@@ -1,0 +1,91 @@
+{
+  "counter": 4,
+  "issues": {
+    "3b586537-9a75-4dc2-b578-1fca6279af14": {
+      "id": "3b586537-9a75-4dc2-b578-1fca6279af14",
+      "number": 1,
+      "title": "epic",
+      "body": "<!-- sw-unit-id: epic-u -->",
+      "state": "open",
+      "labels": [
+        "sw:project:fixture-native"
+      ],
+      "comments": [],
+      "native_links": [],
+      "locked": false,
+      "updated_at": "1783762088",
+      "etag": "3a92031f2368472d37808a1eb2726e057dd73fddd5c0c34076c06cb432da4575",
+      "project_key": "fixture-native",
+      "artifact_type": "tasks",
+      "unit_id": "epic-u",
+      "tombstoned": false,
+      "transferred": false
+    },
+    "782f88b3-95c2-48b8-ac4c-0c28a0d6a021": {
+      "id": "782f88b3-95c2-48b8-ac4c-0c28a0d6a021",
+      "number": 2,
+      "title": "child",
+      "body": "<!-- sw-unit-id: child-u -->\n```sw-edges\n{\n  \"edges\": [],\n  \"native\": [\n    {\n      \"target\": \"epic-42\",\n      \"type\": \"sub-issue-of\"\n    }\n  ],\n  \"version\": 1\n}\n```",
+      "state": "open",
+      "labels": [
+        "sw:project:fixture-native"
+      ],
+      "comments": [],
+      "native_links": [
+        {
+          "type": "sub-issue-of",
+          "target": "epic-42"
+        }
+      ],
+      "locked": false,
+      "updated_at": "1783762088",
+      "etag": "1edddabc9aa8a70d88411263d67a0a4eb08dc4c982f785bb828e97106ae11ac7",
+      "project_key": "fixture-native",
+      "artifact_type": "tasks",
+      "unit_id": "child-u",
+      "tombstoned": false,
+      "transferred": false
+    },
+    "6b23e9bd-0b7a-4c5c-808f-787f997f96ed": {
+      "id": "6b23e9bd-0b7a-4c5c-808f-787f997f96ed",
+      "number": 3,
+      "title": "parent",
+      "body": "<!-- sw-unit-id: parent-u -->",
+      "state": "open",
+      "labels": [],
+      "comments": [],
+      "native_links": [],
+      "locked": false,
+      "updated_at": "1783762089",
+      "etag": "e457f21549aaa25f7066128c1b4f9aac118b213331015137238a88101e8b0f62",
+      "project_key": "fixture-native",
+      "artifact_type": "prd",
+      "unit_id": "parent-u",
+      "tombstoned": false,
+      "transferred": false
+    },
+    "b08290bf-8dab-48d3-b786-8b99a6bc97a7": {
+      "id": "b08290bf-8dab-48d3-b786-8b99a6bc97a7",
+      "number": 4,
+      "title": "child",
+      "body": "<!-- sw-unit-id: child-u -->",
+      "state": "open",
+      "labels": [],
+      "comments": [],
+      "native_links": [
+        {
+          "type": "depends-on",
+          "target": "6b23e9bd-0b7a-4c5c-808f-787f997f96ed"
+        }
+      ],
+      "locked": false,
+      "updated_at": "1783762089",
+      "etag": "f9689162597505e8067c65c5738ced2daa6b778d7877ded4fbe5ab9541cb9af7",
+      "project_key": "fixture-native",
+      "artifact_type": "prd",
+      "unit_id": "child-u",
+      "tombstoned": false,
+      "transferred": false
+    }
+  }
+}

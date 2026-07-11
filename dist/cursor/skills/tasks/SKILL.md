@@ -1,5 +1,5 @@
 ---
-name: sw-tasks
+name: tasks
 description: Generate a frozen task list from a frozen PRD using the spec union in a single pass without user-intervention gates.
 ---
 
