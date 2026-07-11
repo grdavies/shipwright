@@ -121,11 +121,16 @@
         "sw-execute": "full"
       },
       "skills": {
-        "doc-review": "normal"
+        "doc-review": "normal",
+        "tournament": "ultra"
       },
       "agents": {
         "sw-coherence-reviewer": "full",
-        "correctness": "full"
+        "correctness": "full",
+        "sw-tournament-attempt": "ultra",
+        "sw-tournament-judge": "ultra",
+        "sw-rule-verifier": "ultra",
+        "sw-rule-skeptic": "ultra"
       }
     }
   },
