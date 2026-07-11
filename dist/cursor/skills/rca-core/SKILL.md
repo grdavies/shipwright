@@ -1,8 +1,7 @@
 ---
 name: rca-core
-description: Shared hypothesis-driven root cause analysis core for stabilize, debug, and dev-time entry points.
+description: Shared hypothesis-driven root cause analysis core for stabilize, debug, and dev-time entry points. Use when forming or refuting RCA hypotheses before routing fixes. Does not patch code or merge.
 ---
-
 # RCA core (shared)
 
 Single analysis discipline with three entry points (R35). All use the same hypothesis ranking, causal-chain

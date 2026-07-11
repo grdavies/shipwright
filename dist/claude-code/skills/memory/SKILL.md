@@ -1,6 +1,6 @@
 ---
 name: memory
-description: Provider-agnostic durable-memory access for the Shipwright workflow. Use at the start of any phase command (execute, coderabbit, stabilize, watch-ci) to load relevant memories and rules, and at the end to store distilled memories. Routes through the configured memory provider adapter so no command names a provider directly.
+description: Provider-agnostic durable-memory access for the Shipwright workflow. Use when loading context at phase start or storing distilled memories at phase end via /sw-memory-sync. Routes through configured provider; never calls providers directly.
 metadata:
   shipwright-capability:
     version: 1
@@ -13,7 +13,6 @@ metadata:
       skill: memory
       selectionFamily: memory
 ---
-
 # memory-preflight
 
 The single entry point every Shipwright command uses to read and write durable memory. It hides the

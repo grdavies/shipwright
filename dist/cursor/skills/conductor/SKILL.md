@@ -1,6 +1,6 @@
 ---
 name: conductor
-description: Shared autonomous orchestration contract — self-continuation, legitimate halts, parallel phase dispatch, and durable-state resumption. Consumed by orchestrators; never re-authored inline.
+description: Shared autonomous orchestration contract for self-continuation, legitimate halts, parallel phase dispatch, and durable-state resumption. Use when running /sw-deliver, /sw-ship, /sw-doc, /sw-debug, or /sw-feedback orchestrators. Does not re-author loop logic inline.
 metadata:
   shipwright-capability:
     version: 1
@@ -13,7 +13,6 @@ metadata:
       skill: conductor
       selectionFamily: subagent-dispatch
 ---
-
 # Conductor contract
 
 Single referenced primitive for agent-native orchestration (PRD 009 R1). Orchestrators (`/sw-deliver` pilot;

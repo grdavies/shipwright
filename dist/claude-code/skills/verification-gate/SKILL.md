@@ -1,6 +1,6 @@
 ---
 name: verification-gate
-description: Evidence-over-claims gate that emits a three-state verdict (verified / not-verified / inconclusive) from structured status files. Complementary to checks-gate; never overrides CI truth.
+description: Evidence-over-claims gate emitting verified, not-verified, or inconclusive from structured status files. Use when /sw-ship needs local evidence before commit. Complementary to checks-gate; never overrides CI truth.
 metadata:
   shipwright-capability:
     version: 1
@@ -13,7 +13,6 @@ metadata:
       skill: verification-gate
       selectionFamily: verify
 ---
-
 # verification-gate
 
 Reusable local verification gate (IM1). Consumes **structured** evidence pointers — not raw `/tmp` logs.

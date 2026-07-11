@@ -28,6 +28,21 @@
       ]
     },
     {
+      "id": "skills-spec-guard-fixtures",
+      "script": "scripts/test/skills-spec-guard.test",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-skills-spec-guard",
+      "scenarios": [
+        "skills-spec-live-tree-pass",
+        "skills-spec-pass-valid-core",
+        "skills-spec-pass-valid-cursor",
+        "skills-spec-pass-valid-claude",
+        "skills-spec-fail-name-mismatch",
+        "skills-spec-fail-description-shape"
+      ]
+    },
+    {
       "id": "authoring-guard-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [

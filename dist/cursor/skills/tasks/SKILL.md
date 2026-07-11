@@ -1,8 +1,7 @@
 ---
 name: tasks
-description: Generate a frozen task list from a frozen PRD using the spec union in a single pass without user-intervention gates.
+description: Generate a frozen task list from a frozen PRD using the spec union in one pass. Use when PRD is frozen and implementation tasks are needed before /sw-freeze. No mid-pass user gates; does not implement.
 ---
-
 # Task list generation (`/sw-tasks`)
 
 Port of v1 `spec-tasks` under `sw-`. Reads U8 union so amended requirements are reflected.

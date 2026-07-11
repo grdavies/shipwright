@@ -1,8 +1,7 @@
 ---
 name: execute-discipline
-description: Per-task TDD gate, two-stage subagent review, and executable-plan self-review for /sw-execute. Consumes U6 traceability.
+description: Per-task TDD gate, two-stage subagent review, and executable-plan self-review for /sw-execute. Use when implementing frozen task phases with R-ID traceability. Does not ship or merge.
 ---
-
 # Execute discipline (IM5 + IM6)
 
 Bounded implementation loop inside `/sw-execute`. One **task ref** at a time (e.g. `1.2`); each task runs

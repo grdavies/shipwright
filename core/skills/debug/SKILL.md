@@ -1,8 +1,7 @@
 ---
 name: debug
-description: Signal-driven production debugging via shared RCA core. Diagnoses and routes; does not implement or merge fixes.
+description: Signal-driven production debugging via shared RCA core. Use when triaging production errors, crashes, or regressions before fixing. Diagnoses and routes; does not implement patches or merge.
 ---
-
 # Debug workflow
 
 Post-ship production signals **and** dev-time test/build failures (R22). Shares `skills/rca-core` with

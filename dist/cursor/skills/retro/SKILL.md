@@ -1,8 +1,7 @@
 ---
 name: retro
-description: Post-ship retrospective — what went well/painful/change; learning candidates for compounding. Report-only by default.
+description: Post-ship retrospective — what went well, painful, and should change; learning candidates for compounding. Use when running /sw-retrospective after phase or merge milestones. Report-only by default; does not auto-apply rules.
 ---
-
 # Retrospective
 
 Run after a human merge (or at end of `/sw-ship` merge gate when user merges).

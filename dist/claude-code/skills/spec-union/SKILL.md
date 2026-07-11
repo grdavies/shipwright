@@ -1,8 +1,7 @@
 ---
 name: spec-union
-description: Resolve a frozen PRD or decision record plus amendments into one effective spec — adds, supersedes, retracts in amendment order. Read-only on parent.
+description: Resolve a frozen PRD or decision record plus amendments into one effective spec. Use when executing or reviewing against the authoritative requirement set. Read-only on parent; does not author amendments.
 ---
-
 # Spec union resolver
 
 Single read-time view of frozen doc + amendments (R12). Parent is never mutated.
