@@ -2443,10 +2443,35 @@ def _execute_mechanical_inner(
             )
         state.update(load_state(root))
         orch = orchestrator_worktree_path(root, state)
+        from wave_living_doc_lock import release, try_acquire
+
+        target = (state.get("target") or {}).get("branch")
         living_args = ["living-docs", "reconcile", "--commit"]
         if orch is not None:
             living_args.extend(["--orchestrator-worktree", str(orch)])
-        living_ec, living_data = run_wave(root, *living_args)
+        living_data: dict[str, Any] = {}
+        if not try_acquire(root, target=target, holder="living-docs-reconcile-finalize"):
+            deferral = manual_living_doc_reconcile_suggestion(root, state)
+            state["livingDocDeferral"] = {
+                **deferral,
+                "cause": "living-doc-lock-held",
+                "updatedAt": utc_now(),
+            }
+            save_state(root, state)
+            fail_payload(
+                {
+                    "verdict": "defer",
+                    "livingDocReconcile": deferral,
+                    "resumeCommand": deferral.get("command"),
+                },
+                "living-docs reconcile deferred — lock held",
+                20,
+                remediation=str(deferral.get("command") or ""),
+            )
+        try:
+            living_ec, living_data = run_wave(root, *living_args)
+        finally:
+            release(root)
         if living_ec != 0:
             fail_payload(
                 living_data,
@@ -2457,6 +2482,25 @@ def _execute_mechanical_inner(
                     "retry via /sw-deliver run after fixing INDEX currency"
                 ),
             )
+        from host_lib import load_workflow_config
+        from planning_store import close_delivery_units
+        import planning_index_issue as pii
+        from wave_living_docs import prd_number_from_state
+
+        cfg = load_workflow_config(root)
+        prd = prd_number_from_state(state, plan)
+        slug = str((state.get("target") or {}).get("slug") or plan.get("slug") or "")
+        prd_unit_id = pii.resolve_prd_unit_id(root, prd, slug=slug or None) if prd else None
+        closure: dict[str, Any] | None = None
+        if prd_unit_id:
+            closure = close_delivery_units(root, cfg, prd_unit_id, state=state)
+            if closure.get("verdict") == "not-ready":
+                fail_payload(
+                    closure,
+                    "close-delivery-units not ready",
+                    20,
+                    remediation=str(closure.get("resumeCommand") or ""),
+                )
         target = (state.get("target") or {}).get("branch")
         task_list = task_list_from(state, plan)
         clear_args = ["run-complete"]
@@ -2482,6 +2526,8 @@ def _execute_mechanical_inner(
             "cleanupSuggestion": data.get("cleanupSuggestion"),
             **data,
         }
+        if closure is not None:
+            result["closure"] = closure
         if cleanup_payload is not None:
             result["autonomousCleanup"] = cleanup_payload
         return result
