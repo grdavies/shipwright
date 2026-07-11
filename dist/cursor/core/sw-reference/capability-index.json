@@ -250,6 +250,48 @@
       }
     },
     {
+      "id": "persona.sw-rule-skeptic",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-rule-skeptic.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "rule-verification",
+            "scope": "skeptic"
+          }
+        ],
+        "metadata": {
+          "personaId": "rule-skeptic",
+          "selectionFamily": "rule-verification",
+          "modelTierRef": "agents.sw-rule-skeptic"
+        }
+      }
+    },
+    {
+      "id": "persona.sw-rule-verifier",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-rule-verifier.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "rule-verification",
+            "scope": "verifier"
+          }
+        ],
+        "metadata": {
+          "personaId": "rule-verifier",
+          "selectionFamily": "rule-verification",
+          "modelTierRef": "agents.sw-rule-verifier"
+        }
+      }
+    },
+    {
       "id": "persona.sw-scope-guardian-reviewer",
       "kind": "persona",
       "sourcePath": "core/agents/sw-scope-guardian-reviewer.md",
@@ -313,6 +355,48 @@
           "selectionFamily": "doc-review",
           "gated": true,
           "modelTierRef": "agents.sw-security-reviewer"
+        }
+      }
+    },
+    {
+      "id": "persona.sw-tournament-attempt",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-tournament-attempt.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "tournament",
+            "scope": "attempt"
+          }
+        ],
+        "metadata": {
+          "personaId": "tournament-attempt",
+          "selectionFamily": "tournament",
+          "modelTierRef": "agents.sw-tournament-attempt"
+        }
+      }
+    },
+    {
+      "id": "persona.sw-tournament-judge",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-tournament-judge.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "tournament",
+            "scope": "judge"
+          }
+        ],
+        "metadata": {
+          "personaId": "tournament-judge",
+          "selectionFamily": "tournament",
+          "modelTierRef": "agents.sw-tournament-judge"
         }
       }
     },

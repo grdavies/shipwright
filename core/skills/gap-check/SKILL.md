@@ -85,6 +85,21 @@ via `scripts/gap-check-gate.py`:
 - **`--fast` is prohibited** for deliver merge decisions (`--deliver-merge --fast` fails closed with
   `deliver-gap-check-no-fast-skip`). Standalone `/sw-ship` may still use `--fast` per ship skill contract.
 
+
+## Rule verifier sweep (PRD 064 R8, opt-in)
+
+When `gapCheck.ruleVerifierSweep.enabled` is true, after the gap report and before closers, fan out one cheap
+`sw-rule-verifier` Task per active guardrail rule (repeat-violation check):
+
+```bash
+python3 scripts/rule_verifier_sweep.py plan --rules "$RUN_DIR/guardrail-rules.json" > "$RUN_DIR/rule-sweep-plan.json"
+python3 scripts/rule_verifier_sweep.py synthesize --results "$RUN_DIR/rule-sweep-results.json" --out "$RUN_DIR/rule-sweep.status.json"
+```
+
+Feed sweep `halt` verdicts into `/sw-gaps` remediation or `/sw-stabilize` when repeat violations are found.
+Default **off** — standalone `/sw-gaps` may opt in per run.
+
+
 ## Modes
 
 - **Default (`/sw-ship`):** after execute; `--fast` skips.
