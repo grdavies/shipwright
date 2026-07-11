@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic in-repo memory search, export/import, and derived index/log maintenance."""
+"""Deterministic in-repo memory search, export/import, traversal, and derived index/log maintenance."""
 from __future__ import annotations
 
 import argparse
@@ -29,6 +29,10 @@ CANONICAL_CATEGORIES = (
     "rule",
 )
 RESERVED_OKF_NAMES = frozenset({"index.md", "log.md"})
+INLINE_MD_LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
+MEMORY_PATH_RE = re.compile(r"^(?:memories|rules|global/memories)/([^/]+)\.md$")
+KNOWN_EDGES = frozenset({"supersedes", "relates-to", "file-linked"})
+EXCLUDED_STATUSES = frozenset({"superseded", "resolved", "tombstone"})
 
 
 def parse_scalar(raw: str) -> Any:
@@ -69,6 +73,8 @@ def format_scalar(value: Any) -> str:
     if isinstance(value, list):
         if not value:
             return "[]"
+        if value and all(isinstance(item, dict) for item in value):
+            return json.dumps(value)
         items = ", ".join(json.dumps(str(item)) for item in value)
         return f"[{items}]"
     if value is None:
@@ -142,6 +148,163 @@ def read_memory_record(path: Path) -> dict[str, Any]:
 def load_store_records(store: Path) -> list[dict[str, Any]]:
     return [read_memory_record(path) for path in iter_memory_files(store)]
 
+def is_excluded_record(fields: dict[str, Any]) -> bool:
+    if fields.get("inactive") is True:
+        return True
+    status = str(fields.get("status") or "").lower()
+    return status in EXCLUDED_STATUSES
+
+
+def normalize_link_target(raw: str) -> str | None:
+    target = raw.strip()
+    if not target or target.startswith(("http://", "https://", "mailto:")):
+        return None
+    path_match = MEMORY_PATH_RE.match(target)
+    if path_match:
+        return path_match.group(1)
+    if target.endswith(".md"):
+        return Path(target).stem
+    if "/" not in target and " " not in target:
+        return target
+    return None
+
+
+def parse_link_entry(entry: Any) -> tuple[str, str] | None:
+    if isinstance(entry, str):
+        tid = normalize_link_target(entry)
+        return (tid, "relates-to") if tid else None
+    if isinstance(entry, dict):
+        raw_target = entry.get("to") or entry.get("target") or entry.get("id")
+        if not raw_target:
+            return None
+        tid = normalize_link_target(str(raw_target))
+        if not tid:
+            return None
+        edge = str(entry.get("edge") or entry.get("type") or "relates-to")
+        return tid, edge
+    return None
+
+
+def extract_frontmatter_links(fields: dict[str, Any]) -> list[tuple[str, str]]:
+    links_raw = fields.get("links")
+    if not links_raw:
+        return []
+    entries = links_raw if isinstance(links_raw, list) else [links_raw]
+    out: list[tuple[str, str]] = []
+    for entry in entries:
+        parsed = parse_link_entry(entry)
+        if parsed:
+            out.append(parsed)
+    return out
+
+
+def extract_inline_links(body: str) -> list[tuple[str, str]]:
+    out: list[tuple[str, str]] = []
+    for _text, target in INLINE_MD_LINK_RE.findall(body):
+        tid = normalize_link_target(target)
+        if tid:
+            out.append((tid, "relates-to"))
+    return out
+
+
+def build_edge_map(
+    records: list[dict[str, Any]],
+) -> tuple[dict[str, list[dict[str, str]]], dict[str, list[dict[str, str]]]]:
+    forward: dict[str, list[dict[str, str]]] = {}
+    backlinks: dict[str, list[dict[str, str]]] = {}
+    known_ids = {record["id"] for record in records}
+
+    def add_edge(source: str, target: str, edge: str, *, kind: str) -> None:
+        edge_entry = {
+            "target": target,
+            "edge": edge,
+            "kind": kind,
+            "dangling": target not in known_ids,
+        }
+        forward.setdefault(source, []).append(edge_entry)
+        backlinks.setdefault(target, []).append({"source": source, "edge": edge, "kind": kind})
+
+    for record in records:
+        source = record["id"]
+        for target, edge in extract_frontmatter_links(record["fields"]):
+            add_edge(source, target, edge, kind="frontmatter")
+        for target, edge in extract_inline_links(record["body"]):
+            add_edge(source, target, edge, kind="inline")
+    return forward, backlinks
+
+
+def store_title_description(content: str, *, title: str = "", description: str = "") -> tuple[str, str]:
+    body = content.strip()
+    first = first_body_line(body)
+    resolved_title = title.strip() or (first[:120] if first else "untitled")
+    resolved_desc = description.strip() or (first[:240] if first else resolved_title)
+    return resolved_title, resolved_desc
+
+
+def reconcile_supersede_entries(
+    store: Path, entries: list[tuple[str, str, str]]
+) -> dict[str, Any]:
+    records = load_store_records(store)
+    if not records:
+        return {"reconciled": 0, "actions": []}
+
+    forward, _backlinks = build_edge_map(records)
+    actions: list[dict[str, str]] = []
+    reconciled = 0
+
+    for _date, old_path, new_path in entries:
+        old_path = old_path.strip()
+        new_path = new_path.strip()
+        if not old_path or not new_path:
+            continue
+
+        for record in records:
+            if is_excluded_record(record["fields"]):
+                continue
+            fields = dict(record["fields"])
+            related = fields.get("relatedFiles")
+            related_list = related if isinstance(related, list) else []
+            if not related_list:
+                continue
+            updated = False
+            new_related: list[Any] = []
+            for item in related_list:
+                item_str = str(item)
+                if item_str == old_path or item_str.endswith("/" + old_path.lstrip("/")):
+                    new_related.append(new_path)
+                    updated = True
+                    actions.append({
+                        "action": "repoint-relatedFiles",
+                        "id": record["id"],
+                        "from": old_path,
+                        "to": new_path,
+                    })
+                else:
+                    new_related.append(item)
+            if updated:
+                fields["relatedFiles"] = new_related
+                write_memory_record(store, {**record, "fields": fields})
+                reconciled += 1
+
+        for record in records:
+            if is_excluded_record(record["fields"]):
+                continue
+            for edge in forward.get(record["id"], []):
+                if edge.get("edge") != "supersedes":
+                    continue
+                target = str(edge.get("target") or "")
+                if target not in {Path(old_path).stem, old_path}:
+                    continue
+                fields = dict(record["fields"])
+                fields["status"] = "superseded"
+                write_memory_record(store, {**record, "fields": fields})
+                actions.append({"action": "mark-superseded", "id": record["id"], "target": target})
+                reconciled += 1
+
+    if reconciled:
+        maintain_derived(store)
+    return {"reconciled": reconciled, "actions": actions}
+
 
 def redact_text(text: str) -> str:
     try:
@@ -174,6 +337,15 @@ def jsonl_to_record(obj: dict[str, Any]) -> dict[str, Any]:
     fields["id"] = record_id
     if "createdAt" not in fields:
         fields["createdAt"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    title, description = store_title_description(
+        str(obj.get("content") or ""),
+        title=str(fields.get("title") or ""),
+        description=str(fields.get("description") or ""),
+    )
+    if "title" not in fields:
+        fields["title"] = title
+    if "description" not in fields:
+        fields["description"] = description
     return {
         "id": record_id,
         "category": category,
@@ -209,6 +381,15 @@ def write_memory_record(store: Path, record: dict[str, Any]) -> Path:
     fields = dict(record["fields"])
     fields["id"] = record["id"]
     fields["category"] = record["category"]
+    title, description = store_title_description(
+        redacted_body,
+        title=str(fields.get("title") or ""),
+        description=str(fields.get("description") or ""),
+    )
+    if not fields.get("title"):
+        fields["title"] = title
+    if not fields.get("description"):
+        fields["description"] = description
     path.write_text(render_memory_file(fields, redacted_body), encoding="utf-8")
     return path
 
@@ -308,6 +489,8 @@ def cmd_search(ns: argparse.Namespace) -> int:
     for path in iter_memory_files(store):
         text = path.read_text(encoding="utf-8", errors="replace")
         fm, body = parse_frontmatter(text)
+        if is_excluded_record(fm) and not ns.include_excluded:
+            continue
         if ns.file_glob:
             related = fm.get("relatedFiles")
             related_text = related if isinstance(related, str) else json.dumps(related or [])
@@ -412,6 +595,110 @@ def cmd_maintain_derived(ns: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_traverse(ns: argparse.Namespace) -> int:
+    store = Path(ns.store)
+    records = load_store_records(store)
+    forward, backlinks = build_edge_map(records)
+    record_by_id = {record["id"]: record for record in records}
+    start_ids = [part.strip() for part in ns.from_id.split(",") if part.strip()]
+    edge_filter = ns.edge or ""
+    max_depth = int(ns.depth)
+    direction = ns.direction
+
+    visited: set[str] = set()
+    queue: list[tuple[str, int]] = [(sid, 0) for sid in start_ids]
+    nodes: list[dict[str, Any]] = []
+    edges_out: list[dict[str, Any]] = []
+
+    while queue:
+        current, depth = queue.pop(0)
+        if current in visited or depth > max_depth:
+            continue
+        visited.add(current)
+        record = record_by_id.get(current)
+        nodes.append({
+            "id": current,
+            "found": record is not None,
+            "excluded": is_excluded_record(record["fields"]) if record else False,
+            "depth": depth,
+        })
+        if depth >= max_depth:
+            continue
+        if direction in {"out", "both"}:
+            for edge in forward.get(current, []):
+                if edge_filter and edge.get("edge") != edge_filter:
+                    continue
+                edges_out.append({"source": current, **edge})
+                target = str(edge.get("target") or "")
+                if target and target not in visited:
+                    queue.append((target, depth + 1))
+        if direction in {"in", "both"}:
+            for edge in backlinks.get(current, []):
+                if edge_filter and edge.get("edge") != edge_filter:
+                    continue
+                source = str(edge.get("source") or "")
+                edges_out.append({"target": current, **edge, "dangling": source not in record_by_id})
+                if source and source not in visited:
+                    queue.append((source, depth + 1))
+
+    dangling = sorted({e["target"] for e in edges_out if e.get("dangling")})
+    print(json.dumps({
+        "from": start_ids,
+        "direction": direction,
+        "edge": edge_filter or None,
+        "depth": max_depth,
+        "nodes": nodes,
+        "edges": edges_out,
+        "dangling": dangling,
+    }, indent=2))
+    return 0
+
+
+def cmd_expand(ns: argparse.Namespace) -> int:
+    store = Path(ns.store)
+    records = load_store_records(store)
+    record_by_id = {record["id"]: record for record in records}
+    _, backlinks = build_edge_map(records)
+    ids = [part.strip() for part in ns.ids.split(",") if part.strip()]
+    expanded: list[dict[str, Any]] = []
+
+    for mid in ids:
+        record = record_by_id.get(mid)
+        if not record:
+            expanded.append({"id": mid, "found": False, "backlinks": backlinks.get(mid, [])})
+            continue
+        expanded.append({
+            "id": mid,
+            "found": True,
+            "category": record["category"],
+            "fields": record["fields"],
+            "body": record["body"].strip(),
+            "backlinks": backlinks.get(mid, []),
+            "excluded": is_excluded_record(record["fields"]),
+        })
+    print(json.dumps({"expanded": expanded}, indent=2))
+    return 0
+
+
+def cmd_reconcile_supersede(ns: argparse.Namespace) -> int:
+    store = Path(ns.store)
+    log_path = Path(ns.log)
+    if not log_path.is_file():
+        print(json.dumps({"reconciled": 0, "actions": [], "entries": 0}))
+        return 0
+    entries: list[tuple[str, str, str]] = []
+    for line in log_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        parts = line.split("\t")
+        if len(parts) >= 3:
+            entries.append((parts[0], parts[1], parts[2]))
+    result = reconcile_supersede_entries(store, entries)
+    result["entries"] = len(entries)
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="In-repo memory search and interchange")
     sub = parser.add_subparsers(dest="command")
@@ -422,6 +709,22 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument("--category", default="")
     search.add_argument("--tag", default="")
     search.add_argument("--file-glob", default="")
+    search.add_argument("--include-excluded", action="store_true")
+
+    traverse = sub.add_parser("traverse", help="walk link graph from seed ids")
+    traverse.add_argument("--store", required=True)
+    traverse.add_argument("--from", dest="from_id", required=True)
+    traverse.add_argument("--edge", default="")
+    traverse.add_argument("--depth", default="8")
+    traverse.add_argument("--direction", choices=("out", "in", "both"), default="both")
+
+    expand = sub.add_parser("expand", help="expand ids with full body and backlinks")
+    expand.add_argument("--store", required=True)
+    expand.add_argument("--ids", required=True)
+
+    reconcile = sub.add_parser("reconcile-supersede", help="reconcile SUPERSEDED.log against store")
+    reconcile.add_argument("--store", required=True)
+    reconcile.add_argument("--log", required=True)
 
     export = sub.add_parser("export", help="export store to jsonl or okf bundle")
     export.add_argument("--store", required=True)
@@ -443,7 +746,11 @@ def main(argv: list[str] | None = None) -> int:
     raw_argv = list(sys.argv[1:] if argv is None else argv)
     parser = build_parser()
 
-    if raw_argv and raw_argv[0] not in {"search", "export", "import", "maintain-derived", "-h", "--help"}:
+    known = {
+        "search", "export", "import", "maintain-derived",
+        "traverse", "expand", "reconcile-supersede", "-h", "--help",
+    }
+    if raw_argv and raw_argv[0] not in known:
         if "--store" in raw_argv:
             legacy = parser.parse_args(["search", *raw_argv])
             return cmd_search(legacy)
@@ -455,6 +762,12 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_export(ns)
     if ns.command == "import":
         return cmd_import(ns)
+    if ns.command == "traverse":
+        return cmd_traverse(ns)
+    if ns.command == "expand":
+        return cmd_expand(ns)
+    if ns.command == "reconcile-supersede":
+        return cmd_reconcile_supersede(ns)
     if ns.command == "maintain-derived":
         return cmd_maintain_derived(ns)
     parser.print_help()

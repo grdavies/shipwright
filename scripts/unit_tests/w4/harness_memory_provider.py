@@ -342,6 +342,52 @@ else
   true
 fi
 
+
+# --- U8: traverse + expand (R21) ---
+LINK_FIX="$FIX/store"
+OUT_TR=$(python3 "$SEARCH" traverse --store "$LINK_FIX" --from 20260701-link-a --depth 2)
+if echo "$OUT_TR" | jq -e '.nodes | map(select(.id=="20260701-link-b")) | length == 1' >/dev/null; then
+  echo "OK  traverse finds linked node"
+else
+  echo "FAIL U8 traverse"
+  echo "$OUT_TR" | jq . 2>/dev/null || echo "$OUT_TR"
+  FAIL=1
+fi
+
+OUT_EX=$(python3 "$SEARCH" expand --store "$LINK_FIX" --ids 20260701-link-b)
+if echo "$OUT_EX" | jq -e '.expanded[0].backlinks | map(select(.source=="20260701-link-a")) | length >= 1' >/dev/null; then
+  echo "OK  expand surfaces backlinks"
+else
+  echo "FAIL U8 expand backlinks"
+  echo "$OUT_EX" | jq . 2>/dev/null || echo "$OUT_EX"
+  FAIL=1
+fi
+
+OUT_DAN=$(python3 "$SEARCH" traverse --store "$LINK_FIX" --from 20260701-link-a --from missing-id-dangle 2>/dev/null || true)
+# dangling tolerated via separate seed
+OUT_DAN2=$(python3 "$SEARCH" traverse --store "$LINK_FIX" --from does-not-exist --depth 1)
+if echo "$OUT_DAN2" | jq -e '.nodes[0].found == false' >/dev/null; then
+  echo "OK  traverse tolerates dangling seed"
+else
+  echo "FAIL U8 dangling"
+  FAIL=1
+fi
+
+if grep -q 'traverse' "$CAPS" && grep -q 'backlinks' "$CAPS"; then
+  echo "OK  CAPABILITIES declares traverse + backlinks expand"
+else
+  echo "FAIL U8 capabilities docs"
+  FAIL=1
+fi
+
+if grep -q 'title' "$IN_REPO_MD" && grep -q 'Citations' "$IN_REPO_MD"; then
+  echo "OK  in-repo provider documents title/description/Citations"
+else
+  echo "FAIL U8 richer frontmatter docs"
+  FAIL=1
+fi
+
+
 if [[ $FAIL -eq 0 ]]; then
   echo "ALL memory-provider fixtures passed"
 else

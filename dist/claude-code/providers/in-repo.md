@@ -50,9 +50,16 @@ relatedFiles: [server/auth.ts]
 importance: 0.7
 scope: project
 links: []
+title: ""
+description: ""
+resource: ""
 createdAt: 2026-06-23T12:00:00Z
 ---
 Distilled memory body here.
+
+# Citations
+
+- docs/decisions/064-example.md
 ```
 
 Filename: `<id>.md` where `<id>` is a stable slug (e.g. `20260623-auth-decision`). The filename stem is the
@@ -86,7 +93,7 @@ frontmatter filters). `export`/`import` are native: walk the store and emit/cons
 | `load-context` | read `index.md` + `rules-load` | read store `index.md` first for orientation; load rules from `rules/` |
 | `rules-load` | read `rules/*.md` | filesystem read of committed rule files |
 | `search` | `in-repo-memory-search.py` | `python3 scripts/in-repo-memory-search.py --store <dir> --query <q> [--category] [--tag] [--file-glob]` |
-| `expand` | read file body | read `memories/<id>.md` or `rules/<id>.md` by id |
+| `expand` | `in-repo-memory-search.py expand` | `python3 scripts/in-repo-memory-search.py expand --store <dir> --ids <id>[,...]` — full body + backlinks |
 | `store` | write file after redaction | pipe payload through `scripts/memory-redact.py`, then write one `.md` file |
 | `modify` | update frontmatter / body / `inactive:true` | rewrite the target file |
 | `list-recent` | mtime sort under `memories/` | `find` + sort by mtime, cap N |
@@ -94,7 +101,8 @@ frontmatter filters). `export`/`import` are native: walk the store and emit/cons
 | `import` | JSONL or OKF → files | `python3 scripts/in-repo-memory-search.py import --format jsonl|okf`; regenerates `index.md`/`log.md` |
 | `tasks.*` | — | not supported (`tasks: false`) |
 | `maintain-derived` | regenerate `index.md` + `log.md` | `python3 scripts/in-repo-memory-search.py maintain-derived --store <dir>` |
-| `link` | frontmatter `links[]` only | store typed edges as-written; **not traversed** (edge-degraded, R13) |
+| `traverse` | `in-repo-memory-search.py traverse` | `python3 scripts/in-repo-memory-search.py traverse --store <dir> --from <id> [--edge] [--depth]` |
+| `link` | frontmatter `links[]` + inline md links | typed edges stored and traversed; dangling targets tolerated |
 
 ## Canonical category → file location
 
@@ -143,7 +151,8 @@ Identical inputs → identical ranked output (deterministic).
 
 ## Notes / gotchas
 
-- Edge-degraded: `links[]` are stored in frontmatter but not traversed for graph queries.
+- Link traversal: `links[]` frontmatter plus inline markdown links form the edge map; `traverse` and `expand` (backlinks) use it. Unknown frontmatter keys (including `title`, `description`, `resource`) are preserved on read/write.
+- Optional `# Citations` body section lists external references (URLs or repo paths) separate from memory-to-memory `links[]`.
 - Offline-first: no network required for read, write, or guardrail rule injection.
 - Fresh-install marker: `.cursor/sw-memory.provider` containing `in-repo` opts the repo into fail-closed
   guardrails without hand-authored `workflow.config.json`.
