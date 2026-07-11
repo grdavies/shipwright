@@ -437,6 +437,7 @@
 * merge phase skills-spec-validation-gate-and-description-contract-workstream-b into feat/agentic-quality-patterns-and-standards-conformance (813cdad) <!-- sw-deliver:skills-spec-validation-gate-and-description-contract-workstream-b -->
 * merge phase okf-memory-export-import-and-deterministic-index-log-workstream-c into feat/agentic-quality-patterns-and-standards-conformance (69caa99) <!-- sw-deliver:okf-memory-export-import-and-deterministic-index-log-workstream-c -->
 * merge phase memory-link-traversal-consumers-and-richer-frontmatter-workstream-c into feat/agentic-quality-patterns-and-standards-conformance (5e0433d) <!-- sw-deliver:memory-link-traversal-consumers-and-richer-frontmatter-workstream-c -->
+* merge phase adversarial-completion-claims-audit-workstream-a into feat/agentic-quality-patterns-and-standards-conformance (4786783) <!-- sw-deliver:adversarial-completion-claims-audit-workstream-a -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
