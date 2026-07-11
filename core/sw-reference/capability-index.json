@@ -43,6 +43,27 @@
       }
     },
     {
+      "id": "persona.sw-claims-auditor",
+      "kind": "persona",
+      "sourcePath": "core/agents/sw-claims-auditor.md",
+      "executable": false,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "verify",
+            "scope": "claims-audit"
+          }
+        ],
+        "metadata": {
+          "personaId": "claims-auditor",
+          "selectionFamily": "verify",
+          "modelTierRef": "agents.sw-claims-auditor"
+        }
+      }
+    },
+    {
       "id": "persona.sw-coherence-reviewer",
       "kind": "persona",
       "sourcePath": "core/agents/sw-coherence-reviewer.md",

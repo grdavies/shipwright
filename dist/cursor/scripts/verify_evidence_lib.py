@@ -308,10 +308,40 @@ def load_behavioral_status(path: Path | None) -> dict[str, Any] | None:
         return None
     return data if isinstance(data, dict) else None
 
+
+
+def load_claims_status(path: Path | None) -> dict | None:
+    if path is None or not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def apply_claims_overlay(verdict: dict[str, Any], claims_status: dict[str, Any] | None) -> dict[str, Any]:
+    if not claims_status:
+        return verdict
+    try:
+        import claims_audit_lib as cal
+        return cal.apply_verification_overlay(verdict, claims_status)
+    except Exception:
+        if claims_status.get("verdict") == "fail":
+            return {
+                **verdict,
+                "verdict": "inconclusive",
+                "reason": "claims-audit: completion claim mismatch",
+                "inconclusiveClass": "missing-required",
+                "claimsAudit": claims_status,
+            }
+        return verdict
+
 def compute_and_record(
     root: Path,
     *,
     behavioral_status_path: Path | None = None,
+    claims_status_path: Path | None = None,
     **kwargs: Any,
 ) -> tuple[dict[str, Any], int]:
     verdict = compute_verdict(**kwargs)
@@ -322,6 +352,12 @@ def compute_and_record(
             candidate = run_dir.parent / "behavioral-anomaly.status.json"
             behavioral = load_behavioral_status(candidate)
     verdict = apply_behavioral_overlay(verdict, behavioral)
+    claims = load_claims_status(claims_status_path)
+    if claims is None:
+        verify_path = kwargs.get("verify_path")
+        if isinstance(verify_path, Path):
+            claims = load_claims_status(verify_path.parent / "claims-audit.status.json")
+    verdict = apply_claims_overlay(verdict, claims)
     try:
         import failure_signature_record_lib as fsr
 

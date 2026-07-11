@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "claims-audit status",
+  "type": "object",
+  "required": ["verdict", "checkedAt", "claims"],
+  "properties": {
+    "verdict": {"type": "string", "enum": ["pass", "fail"]},
+    "checkedAt": {"type": "string"},
+    "failureCount": {"type": "integer"},
+    "completionClaims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref"],
+        "properties": {
+          "ref": {"type": "string"},
+          "title": {"type": "string"},
+          "files": {"type": "array", "items": {"type": "string"}},
+          "expected": {"type": "string"}
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref", "verdict", "dimension"],
+        "properties": {
+          "ref": {"type": "string"},
+          "verdict": {"type": "string", "enum": ["pass", "fail"]},
+          "dimension": {"type": "string", "enum": ["mechanical", "agent"]},
+          "reason": {"type": "string"}
+        }
+      }
+    }
+  }
+}

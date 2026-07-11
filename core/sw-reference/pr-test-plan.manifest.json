@@ -1431,6 +1431,13 @@
       "classification": "required",
       "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "ciShard": 4
+    },
+    {
+      "id": "claims-audit-unit",
+      "script": "scripts/unit_tests/test_claims_audit.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-claims-audit-unit"
     }
   ]
 }

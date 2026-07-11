@@ -63,7 +63,8 @@
       "ui-ux": "mid",
       "type-design": "mid",
       "comment-accuracy": "mid",
-      "ai-native": "mid"
+      "ai-native": "mid",
+      "sw-claims-auditor": "cheap"
     },
     "skills": {
       "brainstorm": "deep",

@@ -193,6 +193,21 @@ Structural isolation (worktrees) is the dominant token lever (R31). This rule go
 sub-agents inside a worktree — not whether to provision another worktree.
 
 
+
+## Claims-audit dispatch (PRD 064 R3)
+
+During `/sw-ship` verification-gate (after behavioral-anomaly-check):
+
+```bash
+python3 scripts/claims_audit.py brief --tasks <frozen-tasks> --phase-id <phase-id> > "$RUN_DIR/claims-audit-brief.json"
+python3 scripts/dispatch-check.py --agent sw-claims-auditor --command sw-ship --skill verification-gate   --parent-model <concrete-parent-id> --prompt "$RUN_DIR/claims-audit-prompt.md"
+```
+
+- **One** fresh `sw-claims-auditor` Task per phase ship (`readonly: true`); cheap tier via `resolve-model-tier.py --agent sw-claims-auditor`.
+- Prompt contains only the redacted brief + diff summary — no orchestrator transcript (clean context).
+- Persist agent JSON to `$RUN_DIR/claims-audit-agent.json`; evaluate via `claims_audit.py run`.
+- Any claim `fail` → verification-gate `inconclusive` / `missing-required` (fail closed).
+
 ## Execute-tier dispatch (PRD 053)
 
 Under `conductorMode: execute_fan_out` (stamped by `intra_phase_dispatch.py`):

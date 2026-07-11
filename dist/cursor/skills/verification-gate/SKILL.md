@@ -104,6 +104,23 @@ files without `commands[]` fall back to `{exitCode, status}`. Gate dimension use
 Rejected baseline reads → `missing-required`, never silent downgrade.
 
 
+
+## Completion-claims audit (PRD 064 R3)
+
+After `/sw-verify` and `behavioral-anomaly-check`, before `scripts/verify-evidence.py`:
+
+1. Build a clean-context brief:
+   `python3 scripts/claims_audit.py brief --tasks <frozen-tasks> --phase-id <phase-id>`
+2. Dispatch **`sw-claims-auditor`** (cheap tier, `readonly: true`) per `rules/sw-subagent-dispatch.mdc` — one
+   fresh agent per phase ship; never resume prior task context.
+3. Evaluate and persist structured status:
+   `python3 scripts/claims_audit.py run --tasks <frozen-tasks> --phase-id <phase-id> --agent-result <path> --out $RUN_DIR/claims-audit.status.json`
+4. `verify-evidence.py` auto-reads `claims-audit.status.json` and **fails closed** (`inconclusive` /
+   `missing-required`) when any claim is `fail`.
+
+Schema: `references/claims-audit-schema.json`. Mechanical file-touch checks run even when the agent is skipped;
+agent verdict is required when a claim row has non-empty **Expected:** text.
+
 ## Behavioral-anomaly overlay (PRD 041 R28)
 
 After `/sw-verify`, the ship chain runs `python3 scripts/behavioral_anomaly_check.py` and writes
