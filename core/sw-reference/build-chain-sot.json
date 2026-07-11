@@ -71,6 +71,7 @@
     "guidelines/debug.pack.json",
     "guidelines/doc.pack.json",
     "guidelines/feedback.pack.json",
+    "harness-roots-manifest.json",
     "inflight-signal.schema.json",
     "kernel-classification.json",
     "kernel-classification.md",

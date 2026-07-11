@@ -478,6 +478,8 @@ fi
 OV_TMP=$(mktemp -d)
 if [[ -x "$SHIPWRIGHT_STATE" ]]; then
   git init -q "$OV_TMP/wt"
+  git -C "$OV_TMP/wt" config user.email "harness@test"
+  git -C "$OV_TMP/wt" config user.name "harness"
   git -C "$OV_TMP/wt" commit --allow-empty -m init -q
   export SW_HARNESS=1
   (cd "$OV_TMP/wt" && bash "$SHIPWRIGHT_STATE" init '{}' >/dev/null)

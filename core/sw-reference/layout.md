@@ -412,7 +412,8 @@ workflows must remediate via `.sw/` instead. Last-synced provenance lives at `.s
 ### Harness test hygiene (PRD 060 R10–R15)
 
 - Deprecated surfaces: `core/sw-reference/deprecated-surface-manifest.json` + `scripts/deprecated_surface_freshness.py --check`
-- Shared config + baseline I/O: `scripts/harness_isolation_lint.py --check`
+- Harness roots manifest: `core/sw-reference/harness-roots-manifest.json` (explicit scan roots)
+- Shared config + baseline I/O + planning-store pollution: `scripts/harness_isolation_lint.py --check`
 - Verify baselines: caller-owned per-phase/run paths (not shared `.shipwright/baseline.*`).
 
 ## Capability manifest + selector (PRD 021)
@@ -603,6 +604,16 @@ contents, secrets, or free-text blobs.
 identical `kernelVerdict`. Primary signal: `stepsSkippedWithoutRework` net-of-rework must be strictly
 positive per pair; wall-clock must not regress beyond ε at equal verdict; minimum N pairs per stratum.
 Insufficient N or non-positive benefit **fails closed** to `canonical`.
+### Deliver autonomy artifacts (PRD 063)
+
+| Artifact | Role |
+| --- | --- |
+| `shipChain` on phase `status.json` | Consumability gate — `complete` only post canonical ship chain (R1) |
+| Inline dispatch lease | Per-phase lease record; duplicate `dispatch-ship` refused while live (R7) |
+| `driverHeartbeatAt` on deliver state | Re-adopt gate for `/sw-deliver run` (R6) |
+| `livingDocDeferral` on deliver state | Lock-miss deferral payload + `resumeCommand` (R12) |
+| Pre-PR smoke | `scripts/ship_pre_pr_smoke.py` before `sw-pr` in phase mode (R4) |
+
 ### `dispatch-decisions.json` (R17)
 
 Append-only per-phase audit log written by `scripts/intra_phase_dispatch.py`.
