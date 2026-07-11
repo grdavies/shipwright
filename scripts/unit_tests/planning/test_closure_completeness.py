@@ -190,3 +190,121 @@ def test_close_delivery_units_report_shape_dry_run(
     assert "closed" in out
     assert "skipped" in out
     assert "resumeCommand" in out
+
+def test_build_chain_check_leaves_worktree_clean(repo_root: Path) -> None:
+    """R15(k): --check must not leave dist/ mutated."""
+    before = subprocess.run(
+        ["git", "-C", str(repo_root), "status", "--porcelain", "dist"],
+        capture_output=True,
+        text=True,
+    ).stdout
+    subprocess.run(
+        ["python3", "scripts/build-chain-sync.py", "--check"],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+    )
+    after = subprocess.run(
+        ["git", "-C", str(repo_root), "status", "--porcelain", "dist"],
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert before == after
+
+
+def test_finalize_living_doc_lock_defers_with_resume_command(
+    repo_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R15(l): living-doc lock miss defers finalize with resumeCommand."""
+    import wave_living_doc_lock
+    import wave_deliver_loop as wdl
+
+    saved: dict[str, object] = {}
+
+    def _save(root, state):
+        saved["state"] = dict(state)
+
+    monkeypatch.setattr(wave_living_doc_lock, "try_acquire", lambda *a, **k: False)
+    monkeypatch.setattr(wave_living_doc_lock, "release", lambda *a, **k: None)
+    monkeypatch.setattr(wdl, "run_wave", lambda *a, **k: (0, {"verdict": "pass"}))
+    monkeypatch.setattr(wdl, "save_state", _save)
+    monkeypatch.setattr(wdl, "load_state", lambda root: saved.get("state", {"target": {"branch": "feat/x"}}))
+    monkeypatch.setattr(wdl, "orchestrator_worktree_path", lambda root, state: None)
+
+    state = {"target": {"branch": "feat/x"}, "verdict": "running"}
+    with pytest.raises(SystemExit) as exc:
+        wdl.execute_mechanical(
+            repo_root,
+            state,
+            {},
+            {"action": "finalize-completion"},
+        )
+    assert exc.value.code == 20
+    assert "livingDocDeferral" in saved.get("state", {})
+
+
+def test_close_parent_epic_blocks_declared_partial(tmp_path: Path) -> None:
+    """R15(m): declared-partial phase blocks parent epic close."""
+    from planning_store import close_parent_epic_if_complete
+
+    state = {
+        "hierarchyMap": {
+            "applied": True,
+            "mode": "parent-checkbox",
+            "epicIssueId": "epic-1",
+            "phases": {"1": {"phaseId": "1"}},
+        },
+        "phases": {"1": {"status": "teardown-complete"}},
+        "taskLedger": {"phases": {"1": {"declaredPartial": True}}},
+    }
+    out = close_parent_epic_if_complete(
+        tmp_path,
+        _issue_store_cfg(),
+        state,
+        dry_run=False,
+        merged_to_main=True,
+    )
+    assert out["verdict"] == "blocked"
+    assert out["reason"] == "declared-partial-phase"
+
+
+def test_close_parent_epic_idempotent_when_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R15(m): parent epic close is idempotent when already closed."""
+    monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
+    from issues_lib import FixtureIssuesStore
+    from planning_store import close_parent_epic_if_complete
+
+    root = tmp_path
+    _init_repo(root)
+    cfg = _issue_store_cfg("closure-epic")
+    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    fixture_path = root / ".cursor/hooks/state/issue-store-fixture.json"
+    store = FixtureIssuesStore(fixture_path)
+    epic = store.create(
+        title="Epic",
+        body="body",
+        labels=[],
+        project_key="closure-epic",
+        artifact_type="epic",
+        unit_id="epic-unit",
+    )
+    epic.state = "closed"
+    store._issues[epic.id] = epic
+    store._persist()
+    state = {
+        "hierarchyMap": {
+            "applied": True,
+            "mode": "parent-checkbox",
+            "epicIssueId": epic.id,
+            "phases": {"1": {"phaseId": "1"}},
+        },
+        "phases": {"1": {"status": "teardown-complete"}},
+        "taskLedger": {"phases": {}},
+    }
+    out = close_parent_epic_if_complete(
+        root, cfg, state, dry_run=False, merged_to_main=True
+    )
+    assert out.get("idempotent") is True
+    assert out.get("action") == "noop"

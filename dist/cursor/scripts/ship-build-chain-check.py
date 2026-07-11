@@ -12,10 +12,13 @@ def main(argv=None):
         print(f"ship-build-chain-check: missing {manifest}", file=sys.stderr); return 2
     data = json.loads(manifest.read_text(encoding="utf-8"))
     prefixes = data.get("pathPrefixes") or []
-    proc = subprocess.run(["git","-C",str(root),"status","--porcelain"], capture_output=True, text=True)
-    changed = [line[3:] for line in proc.stdout.splitlines() if line.strip()]
-    if not any(any(p and path.startswith(p) for p in prefixes) for path in changed):
-        print("ship-build-chain-check: no build-chain paths in diff — skip"); return 0
+    args = list(sys.argv[1:] if argv is None else argv)
+    porcelain_only = "--porcelain-only" in args
+    if porcelain_only:
+        proc = subprocess.run(["git","-C",str(root),"status","--porcelain"], capture_output=True, text=True)
+        changed = [line[3:] for line in proc.stdout.splitlines() if line.strip()]
+        if not any(any(p and path.startswith(p) for p in prefixes) for path in changed):
+            print("ship-build-chain-check: no build-chain paths in diff — skip"); return 0
     if subprocess.run([sys.executable, str(root/"scripts/build-chain-sync.py"), "--check"], cwd=str(root)).returncode == 0:
         print("ship-build-chain-check: build-chain parity OK"); return 0
     print("ship-build-chain-check: FAIL — run python3 scripts/build-chain-sync.py", file=sys.stderr); return 20
