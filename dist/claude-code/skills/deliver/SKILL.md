@@ -153,6 +153,17 @@ surfaces; expanded procedures are in the reference files linked above.
   run-state binds `source_task_list`.
 - **Terminal PR:** `resume reconcile` then `terminal pr prepare` before the human merge gate.
 
+- **Retrospective handoff:** `/sw-retrospective` / `/sw-retrospective --pre-merge` on the orchestrator
+  worktree after phases merge (`compound.autonomy`); do not inline retro/compound/memory.
+- **Living docs:** `living-docs reconcile --commit` after each green phase merge (INDEX / COMPLETION-LOG /
+  GAP-BACKLOG on the feature branch).
+- **Issue annotations (PRD 045):** `sw:deliver-annotate` comments before the human merge gate;
+  `issue-batch-journal.json`; upsert-by-marker; linkage SoT is verify-only vs host introspection;
+  emission points `deliver-annotation` / `deliver-annotation-ingest`; partial failure →
+  `deliver-aborted-inconsistent`.
+- **Push chokepoint:** workflow pushes use `scripts/git-push.py` → `secret-scan` before `git push`.
+
+
 - **Operator worktree contract:** primary checkout is **operator shell only** — no implementation
   commits during deliver; `status.json` mirrors **phase → repo root** only.
 
