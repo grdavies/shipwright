@@ -96,6 +96,25 @@ Parent phase items may stay checklist-only; **sub-tasks** under active phase car
 | `TBD`, `TODO`, `...`, `placeholder` in executable block | error |
 | Very short Expected (&lt; 8 chars) | warn |
 
+
+## Same-stage escalation bookkeeping (R31)
+
+When `/sw-stabilize` or stabilize-loop escalates after repeated same-stage failures, persist on the run-scoped
+dispatch / execute record:
+
+```json
+{
+  "sameStageEscalation": {
+    "failureCount": 2,
+    "chosenTier": "mid",
+    "persona": null,
+    "reason": "tier-escalation"
+  }
+}
+```
+
+This field is advisory telemetry only — it does not alter hard-stop semantics or the no-progress signature.
+
 ## Guardrails
 
 - Do not rewrite tests to match broken behavior (pairs with U4 dev-time gate).

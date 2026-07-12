@@ -130,6 +130,33 @@
               "minimum": 1,
               "default": 240,
               "description": "In-flight phase exceeds this duration \u2192 consolidated blocker."
+            },
+            "stalenessClassifier": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Multi-signal phase staleness classifier (PRD 064 R32).",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "stuckThresholdMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 30
+                },
+                "workingThresholdMinutes": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "default": 5
+                },
+                "waitingOnHumanBoost": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.35
+                }
+              }
             }
           }
         },
@@ -1703,6 +1730,32 @@
               "type": "integer",
               "minimum": 1,
               "default": 32000
+            }
+          }
+        }
+      }
+    },
+    "stabilizeLoop": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opt-in stabilize-loop extensions (PRD 064 R31).",
+      "properties": {
+        "sameStageEscalation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "escalateAfterFailures": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 2
+            },
+            "personaFallback": {
+              "type": "string",
+              "default": "adversarial"
             }
           }
         }

@@ -380,6 +380,12 @@ Each report includes `resumeCommand` (e.g. `/sw-deliver run docs/prds/…/tasks-
 `blockers` with `recommendedCommand` (`/sw-stabilize` when applicable), and `cause`. Surface all three to
 the user in one message.
 
+
+## Multi-signal staleness classifier (R32)
+
+Classify background-phase liveness via `scripts/phase_staleness_lib.py` before watchdog timeout.
+Full contract: [references/staleness-classifier.md](references/staleness-classifier.md).
+
 ## Phase liveness watchdog (R37)
 
 Config: `deliver.watchdog.phaseTimeoutMinutes` (default **240**).
@@ -396,12 +402,9 @@ writes the consolidated blocker report.
 Driver heartbeat staleness (`driver-heartbeat-stale`) uses `SW_DRIVER_STALE_SECONDS` (default 4h) — refresh
 with `state heartbeat` during long in-turn agent work.
 
-
 ## Parallel wave dispatch protocol (R14–R20)
 
 Plan-time contention, schedule consumption, conductor Task dispatch, intra-phase rules, outcomes/blast radius, and safety invariants: `references/parallel-dispatch-protocol.md`.
-
-## Bounded planning full-conductor (PRD 035 R8–R9, R23)
 
 ## Bounded planning full-conductor (PRD 035 R8–R9, R23)
 

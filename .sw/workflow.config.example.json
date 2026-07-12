@@ -27,7 +27,13 @@
       "maxAttempts": 2
     },
     "watchdog": {
-      "phaseTimeoutMinutes": 240
+      "phaseTimeoutMinutes": 240,
+      "stalenessClassifier": {
+        "enabled": true,
+        "stuckThresholdMinutes": 30,
+        "workingThresholdMinutes": 5,
+        "waitingOnHumanBoost": 0.35
+      }
     }
   },
   "compound": {
@@ -259,6 +265,13 @@
   "gapCheck": {
     "ruleVerifierSweep": {
       "enabled": false
+    }
+  },
+  "stabilizeLoop": {
+    "sameStageEscalation": {
+      "enabled": true,
+      "escalateAfterFailures": 2,
+      "personaFallback": "adversarial"
     }
   }
 }
