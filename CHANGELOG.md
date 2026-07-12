@@ -448,6 +448,7 @@
 * merge phase gate-manifest-lineage-validator-and-gate-taxonomy-r5-r6-r20-r29 into feat/turn-independent-ship-loop-and-gate-evidence (eb27f8d) <!-- sw-deliver:gate-manifest-lineage-validator-and-gate-taxonomy-r5-r6-r20-r29 -->
 * merge phase run-entry-hardening-and-prd-064-depends-on-edge-r11-r12-r13-r18 into feat/turn-independent-ship-loop-and-gate-evidence (72e99ae) <!-- sw-deliver:run-entry-hardening-and-prd-064-depends-on-edge-r11-r12-r13-r18 -->
 * merge phase phase-sizing-blocking-freeze-gate-r16 into feat/turn-independent-ship-loop-and-gate-evidence (1c56573) <!-- sw-deliver:phase-sizing-blocking-freeze-gate-r16 -->
+* merge phase evidence-record-schema-resolver-and-binding-modes-r7-r21-r22 into feat/turn-independent-ship-loop-and-gate-evidence (a9a3727) <!-- sw-deliver:evidence-record-schema-resolver-and-binding-modes-r7-r21-r22 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
