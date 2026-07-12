@@ -48,6 +48,7 @@
     }
   },
   "coreAuthoredAllowlist": [
+    "README.md",
     "adoption-call-site-map.md",
     "anomaly-patterns.json",
     "build-chain-paths.json",

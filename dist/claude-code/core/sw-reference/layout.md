@@ -47,8 +47,21 @@ docs/decisions/
 │       ├── integrate-journal.json
 │       ├── execute-supervised-confirmed.json
 │       ├── gap-check.status.json
+│       ├── gate-evidence/              # per-gate binding-valid records (PRD 065 R7/R9)
+│       │   └── <gateId>.status.json
 │       └── dispatch-decisions.json
 ```
+
+### Gate manifest and evidence (PRD 065)
+
+| Artifact | Path | Role |
+| --- | --- | --- |
+| Declarative gate manifest | `core/sw-reference/gate-manifest.json` | Stable gate ids, class, binding mode, failure routing |
+| Evidence record schema | `core/sw-reference/gate-evidence.schema.json` | Required fields + atomic-write contract |
+| Per-phase evidence dir | `.cursor/sw-deliver-runs/<phaseSlug>/gate-evidence/` | Sole-writer path for mechanical gate records |
+| Terminal acceptance | `.cursor/sw-deliver-runs/terminal-acceptance.json` | Validated acceptance before `report terminal` |
+| Kernel lineage | `core/sw-reference/kernel-classification.json` | Manifest-to-lineage binding; kernel floor non-demotable |
+
 
 ### Deliver run-state ledger (PRD 059 R9–R11)
 

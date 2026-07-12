@@ -258,23 +258,23 @@ title: Tasks — PRD 065 Turn-independent ship loop and gate evidence
 
 ### 12. Documentation surfaces C, reference notes, and attestation boundary (R31, R32)
 
-- [ ] 12.1 Update the sw-dispatch-inline-execute rule (R31)
+- [x] 12.1 Update the sw-dispatch-inline-execute rule (R31)
   - **File:** `core/rules/sw-dispatch-inline-execute.mdc`
   - **Expected:** Inline `dispatch-ship` conductor-consumed handshake posture documented against the ship-loop driver
   - **R-IDs:** R31
-- [ ] 12.2 Update the workflows guide for the turn-independent ship loop (R31)
+- [x] 12.2 Update the workflows guide for the turn-independent ship loop (R31)
   - **File:** `docs/guides/workflows.md`
   - **Expected:** End-to-end zero-interaction deliver→terminal-PR flow documented
   - **R-IDs:** R31
-- [ ] 12.3 Update the configuration guide for gate classes, bypass, lease TTL, and sizing override (R31)
+- [x] 12.3 Update the configuration guide for gate classes, bypass, lease TTL, and sizing override (R31)
   - **File:** `docs/guides/configuration.md`
   - **Expected:** Config-resolvable classes + kernel floor, bypass constraints, `SW_SHIP_LEASE_STALE_SECONDS`, sizing-override attribution documented
   - **R-IDs:** R31
-- [ ] 12.4 Update the layout reference for the gate-evidence dir, acceptance record, and manifest (R31)
+- [x] 12.4 Update the layout reference for the gate-evidence dir, acceptance record, and manifest (R31)
   - **File:** `.sw/layout.md`
   - **Expected:** Canonical `.cursor/sw-deliver-runs/<phaseSlug>/gate-evidence/` path, acceptance record, and gate-manifest location documented
   - **R-IDs:** R31
-- [ ] 12.5 Reference notes for gate-manifest/kernel/guidelines and the agent-gate attestation boundary (R31, R32)
+- [x] 12.5 Reference notes for gate-manifest/kernel/guidelines and the agent-gate attestation boundary (R31, R32)
   - **File:** `core/sw-reference/README.md`
   - **Expected:** Manifest/lineage notes; documents that agent-authored-gate evidence attests execution/occurrence (not judgment quality) before any config promotes such a gate to mandatory
   - **R-IDs:** R31, R32

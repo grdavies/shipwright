@@ -845,6 +845,39 @@ Map these semantic keys to Project custom fields (names are defaults; override v
 Living-doc operator cutover (local INDEX/COMPLETION-LOG authority) MUST NOT proceed until
 `projection-gate` reports `ready: true` (pair with `planning_cutover` committed gate).
 
+## Turn-independent deliver ship loop (PRD 065)
+
+Phase-mode `/sw-deliver run` drives `/sw-ship` through the durable **ship-loop driver** — not ad-hoc
+command chains. The conductor re-invokes `deliver-loop` in-turn until a legitimate halt; operators
+should not see "continue deliver?" prompts when `deliver.autonomy.mode: autonomous`.
+
+```mermaid
+flowchart TB
+  RUN["/sw-deliver run"] --> LOOP["deliver-loop (mechanical)"]
+  LOOP --> PROV["phase provision"]
+  PROV --> DS["dispatch-ship (mechanical)"]
+  DS --> DRIVE["ship_loop.py drive"]
+  DRIVE -->|mechanical gates| DRIVE
+  DRIVE -->|awaitAgent| SHIP["/sw-ship --phase-mode (conductor, in-turn)"]
+  SHIP --> LOOP
+  DRIVE -->|ship complete| COLLECT["status collect"]
+  COLLECT --> MERGE["merge enqueue → run-next"]
+  MERGE --> LOOP
+  LOOP -->|all phases green-merged| TERM["terminal PR → main — PAUSE"]
+```
+
+**Zero-interaction bar:** from `/sw-deliver run` through terminal PR preparation, the only chat turns
+are driver-managed `awaitAgent` boundaries (execute, review, simplify, stabilize). Mechanical steps —
+gate handlers, commit, PR, CI watch, evidence writes — run without operator prompts. `dispatch-ship` and
+`dispatch-batch` are mechanical; the driver never spawns Tasks.
+
+**Evidence path:** each mandatory gate writes binding-valid records under
+`.cursor/sw-deliver-runs/<phaseSlug>/gate-evidence/<gateId>.status.json`. `merge-ready-green` refuses
+when evidence is missing, stale, or head-mismatched per the gate's declared binding mode.
+
+**Resume:** halt payloads emit `/sw-deliver run <frozen-task-list>` or `/sw-deliver run --issue <n>` —
+never bare `deliver-loop` as the operator command.
+
 ## Deliver autonomy (PRD 063)
 
 Phase-mode deliver enforces durable **shipChain** consumability on terminal status (R1): merge-ready
