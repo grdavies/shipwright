@@ -30,9 +30,14 @@ Task list from frozen PRD + amendment union.
 7. Add **`## Traceability`** table: every union R-ID → task ref → named test scenario → **ZOMBIES checklist** column (see `skills/spec-rigor/references/zombies.md`).
 8. Save; run spec-rigor + traceability gates; when `planning.visibilityProfile` is `all-private`, run
    `python3 scripts/planning_visibility.py check-freeze-visibility <task-list>` before `/sw-freeze`.
-9. `/sw-freeze` on task list.
-10. Update `docs/prds/INDEX.md` entry (status `not-started`).
-11. **Stop** — standalone runs end here without implementation. The human checkpoint between documentation
+9. **Blocking sizing freeze gate (PRD 065 R16)** — `spec-rigor-check.py` invokes
+   `phase_sizing.py evaluate_freeze_gate` before freeze. Any phase over configured thresholds blocks freeze
+   with split suggestions unless a **human-attributed** override exists at
+   `.cursor/sw-sizing-overrides/<task-list-key>.json` (`actor` + `reason` required). Autonomous dispatch paths
+   (`/sw-doc` → `/sw-tasks`) refuse agent-set overrides (`phase_sizing.py refuse_autonomous_override`).
+10. `/sw-freeze` on task list.
+11. Update `docs/prds/INDEX.md` entry (status `not-started`).
+12. **Stop** — standalone runs end here without implementation. The human checkpoint between documentation
    and implementation is `doc.afterTasks` on `/sw-doc` (or `--after-tasks` on `/sw-ship`), not a gate inside
    `/sw-tasks`.
 
