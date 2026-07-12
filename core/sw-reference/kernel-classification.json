@@ -656,5 +656,72 @@
       "gap-check-gate.py"
     ],
     "gapCheckStatusPath": ".cursor/sw-deliver-runs/{phaseSlug}/gap-check.status.json"
+  },
+  "proseOnlyGateLineage": {
+    "version": 1,
+    "r9GateIds": [
+      "behavioral-anomaly",
+      "build-chain",
+      "pre-pr-smoke",
+      "decision-log",
+      "verification-gate"
+    ],
+    "bindings": {
+      "behavioral-anomaly": {
+        "manifestGateId": "behavioral-anomaly",
+        "lineageLayer": "guideline",
+        "enforcedBy": [
+          "behavioral_anomaly_check.py"
+        ],
+        "ordering": {
+          "after": "sw-verify",
+          "before": "verification-gate"
+        }
+      },
+      "build-chain": {
+        "manifestGateId": "build-chain",
+        "lineageLayer": "guideline",
+        "enforcedBy": [
+          "ship-build-chain-check.py"
+        ],
+        "ordering": {
+          "before": "sw-commit"
+        }
+      },
+      "pre-pr-smoke": {
+        "manifestGateId": "pre-pr-smoke",
+        "lineageLayer": "guideline",
+        "enforcedBy": [
+          "ship_pre_pr_smoke.py"
+        ],
+        "ordering": {
+          "after": "sw-commit",
+          "before": "sw-pr"
+        }
+      },
+      "decision-log": {
+        "manifestGateId": "decision-log",
+        "lineageLayer": "guideline",
+        "enforcedBy": [
+          "decision_log.py"
+        ],
+        "ordering": {
+          "after": "sw-commit",
+          "before": "sw-pr"
+        }
+      },
+      "verification-gate": {
+        "manifestGateId": "verification-gate",
+        "lineageLayer": "kernel",
+        "kernelChokepointId": "verification-gate",
+        "enforcedBy": [
+          "verify-evidence.py"
+        ],
+        "ordering": {
+          "after": "sw-verify",
+          "before": "sw-commit"
+        }
+      }
+    }
   }
 }
