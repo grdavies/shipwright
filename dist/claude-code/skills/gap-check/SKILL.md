@@ -86,6 +86,26 @@ via `scripts/gap-check-gate.py`:
   `deliver-gap-check-no-fast-skip`). Standalone `/sw-ship` may still use `--fast` per ship skill contract.
 
 
+## Near-duplicate scan (PRD 064 R24/R25)
+
+After loading plan + diff and before closers, run the stdlib semantic near-duplicate scan for any
+**new or changed in-scope scope titles/summaries** surfaced by the gap report (never auto-suppress per KD5):
+
+```bash
+python3 scripts/gap_similarity.py corpus --out "$RUN_DIR/gap-similarity-corpus.json"
+python3 scripts/gap_similarity.py scan   --candidate "$CANDIDATE_TITLE_SUMMARY"   --corpus "$RUN_DIR/gap-similarity-corpus.json"   --out "$RUN_DIR/gap-similarity-scan.json"   --handoff-out "$RUN_DIR/gap-similarity-handoff.md"
+```
+
+Two tiers (config `gapCheck.nearDuplicate.{highThreshold,softThreshold}`):
+
+- **high-terminal** — similarity ≥ high threshold vs `resolved`/`superseded` units (likely already addressed).
+- **soft-open** — similarity ≥ soft threshold vs any open/scheduled unit (possible duplicate gap).
+
+When `verdict` is `flag-for-review`, surface `$RUN_DIR/gap-similarity-handoff.md` in the gap-check
+handoff summary for **human confirm** — never block merge, never auto-suppress capture, and never skip
+the binding gap-check verdict on similarity alone.
+
+
 ## Rule verifier sweep (PRD 064 R8, opt-in)
 
 When `gapCheck.ruleVerifierSweep.enabled` is true, after the gap report and before closers, fan out one cheap
