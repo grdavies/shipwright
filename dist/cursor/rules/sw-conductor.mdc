@@ -65,6 +65,14 @@ legitimate set in `skills/conductor/SKILL.md` and emit `scripts/wave.py report b
 `report terminal` — never a bare continuation prompt. Every halt must include `resumeCommand`
 (`/sw-deliver run <source_task_list>` when present).
 
+## Ship-loop driver boundary (PRD 065)
+
+- `ship_loop.py` and `wave_deliver_loop.py` are **drivers** — they never spawn Tasks.
+- Conductor performs agent ship steps on `awaitAgent: true` inline in the phase worktree, then re-invokes
+  `deliver-loop` in the same turn.
+- **R28 lease-liveness exception** — stale reclaim keys off `heartbeatAt` freshness alone; `ship_steps_in_progress`
+  no longer vetoes reclaim. Envelope semantics for halts, merge gates, and status provenance are otherwise unchanged.
+
 ## No status-pause / silent dispatch (R14–R16, R28)
 
 While `verdict: running`:

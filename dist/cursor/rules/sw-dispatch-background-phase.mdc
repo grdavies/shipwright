@@ -24,4 +24,15 @@ confidence; treat `genuinely-stuck` at high confidence as a legitimate halt cand
 dispatch remains disabled — classification does not introduce a new dispatch path.
 
 
+## Phase-scoped inline executor (PRD 065)
+
+Under `dispatch-batch`, each background Task is the **phase-scoped executor** for one worktree:
+
+1. Provision/adopt phase worktree if needed.
+2. Run `ship_loop.py drive` until `awaitAgent` — perform agent steps **inline** in that worktree (no nested
+   `Task` spawn).
+3. Publish terminal `status.json` (`merge-ready-green` or `blocked`).
+
+Intra-phase Task dispatch remains disabled (R45); the executor is not a nested conductor.
+
 Background phase sub-agents disable intra-phase Task dispatch — inline two-stage review only (R45).

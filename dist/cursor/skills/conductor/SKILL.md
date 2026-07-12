@@ -147,6 +147,20 @@ The conductor never ends its turn while `nextAction` is runnable and no legitima
 | `dispatch-batch` | Spawn **N background** `Task` sub-agents (`run_in_background: true`) — one per `phases[]` entry in the batch; each runs provision (if needed) + full `/sw-ship --phase-mode` in its phase worktree |
 | `dispatch-ship` | Full `/sw-ship --phase-mode` **inline** in the phase worktree (`SW_PHASE_MODE=1`, `SW_PHASE_SLUG`, `SW_RUN_DIR`); **never** `run_in_background: true` |
 
+### Ship-loop driver (PRD 065)
+
+`dispatch-ship` is mechanical in `wave_deliver_loop.py` — it runs `ship_loop.py <worktree> drive --phase
+<slug>` in-process until `awaitAgent` or completion:
+
+| Owner | Responsibility |
+| --- | --- |
+| **Driver** (`ship_loop.py`, `wave_deliver_loop.py`) | Drain mechanical steps; read durable head-bound artifacts; **never spawn Tasks** |
+| **Conductor** | On `awaitAgent: true`, perform the bounded agent ship step inline in the phase worktree, then re-invoke `deliver-loop` |
+| **Background batch** (`dispatch-batch`) | Sole conductor-level Task spawn — one phase-scoped executor per worktree; executor runs agent steps **inline** (no nested spawn) |
+
+Interactive `/sw-ship` uses the same driver with retained human merge pause; phase-mode suppresses pause and
+writes `merge-ready-green` to durable `status.json`.
+
 ### Inline dispatch lease (PRD 063 R7–R9)
 
 - **`dispatch-ship`** acquires a durable per-phase ship lease (`python3 scripts/wave.py ship-lease acquire`) before
