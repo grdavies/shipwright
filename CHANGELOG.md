@@ -451,6 +451,7 @@
 * merge phase evidence-record-schema-resolver-and-binding-modes-r7-r21-r22 into feat/turn-independent-ship-loop-and-gate-evidence (a9a3727) <!-- sw-deliver:evidence-record-schema-resolver-and-binding-modes-r7-r21-r22 -->
 * merge phase ship-loop-driver-core-step-classification-and-durable-resume-r1-r2-r23 into feat/turn-independent-ship-loop-and-gate-evidence (5f68ccc) <!-- sw-deliver:ship-loop-driver-core-step-classification-and-durable-resume-r1-r2-r23 -->
 * merge phase mechanical-gate-handlers-and-evidence-writers-r9 into feat/turn-independent-ship-loop-and-gate-evidence (9b47a30) <!-- sw-deliver:mechanical-gate-handlers-and-evidence-writers-r9 -->
+* merge phase terminal-enforcement-and-bypass-flag-constraint-r8-r10 into feat/turn-independent-ship-loop-and-gate-evidence (539c641) <!-- sw-deliver:terminal-enforcement-and-bypass-flag-constraint-r8-r10 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
