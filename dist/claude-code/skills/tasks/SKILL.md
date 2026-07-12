@@ -163,6 +163,19 @@ than emitting parallel refs.
 sanctioned fallback for in-flight deliver runs until the task list can be re-generated.
 
 
+## Blocking sizing freeze gate (PRD 065 R16)
+
+At `/sw-freeze`, `spec-rigor-check.py` runs the **blocking** sizing gate (`phase_sizing.py
+`evaluate_freeze_gate`):
+
+- Over-threshold phases **block freeze** with split suggestions (same scorer as `phase_sizing.py score`).
+- Advisory `## Sizing & Split Suggestions` blocks are stripped before freeze — they do not satisfy the gate.
+- **Human override only** — durable record at `.cursor/sw-sizing-overrides/<key>.json` with `actor`,
+  `reason`, and `overThresholdPhases`. Agents on autonomous `/sw-doc` → `/sw-tasks` dispatch cannot author
+  overrides (`refuse_autonomous_override`).
+- Deliver-time sizing report (`/sw-deliver --sizing-report`) is read-only visibility — it does not bypass
+  the freeze gate.
+
 ## Collision policy
 
 - **First run:** create the complete task file (parents, sub-tasks, phase dependencies, traceability) in one pass.

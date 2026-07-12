@@ -312,6 +312,31 @@ Unit-level graph primitives (in addition to phase-mode waves):
 
 
 
+## Ship-loop dispatch (PRD 065)
+
+Phase-mode deliver drives `/sw-ship` through the durable ship-loop driver — not ad-hoc command chains:
+
+| Action | Scope | Task spawn |
+| --- | --- | --- |
+| `dispatch-ship` | One phase worktree | **In-turn** — conductor runs agent steps on `awaitAgent`; driver never spawns Tasks |
+| `dispatch-batch` | Parallel wave batch | **Background** — one phase-scoped executor per worktree |
+
+Mechanical classification (`wave_deliver_loop.py` `MECHANICAL_ACTIONS`) lets `deliver-loop` drain
+`dispatch-ship` without a chat turn; deferred non-gate steps surface `awaitAgent` for the conductor ship chain.
+
+**Lease + watchdog** — `ship-lease acquire` before inline dispatch; liveness keyed on `heartbeatAt` within
+`SW_SHIP_LEASE_STALE_SECONDS` (`wave_lock.py`). Stale heartbeats reclaim via `canonical-reemit`; exhaustion
+→ phase `blocked`.
+
+**Terminal acceptance (R14/R24/R30)** — at all-phases-complete, `wave_merge.py report terminal` embeds a
+validated record from `wave_acceptance.py`:
+
+- Path: `.cursor/sw-deliver-runs/terminal-acceptance.json`
+- Captures per-phase `mergeState`, terminal PR + live `check-gate` evidence, mandatory-gate rollup, and
+  legitimate-halt `interactionCount`
+- **Halt-resume (R25)** — every legitimate driver halt emits a `haltResume` block (`resumeCommand`,
+  `haltCause`, `autonomyDirective`, `runId`, optional `phaseSlug`) via `halt_resume.py`
+
 ## Sizing report visibility (`--sizing-report`)
 
 Read-only operator visibility for PRD 040 phase sizing — **does not** feed scheduling,
