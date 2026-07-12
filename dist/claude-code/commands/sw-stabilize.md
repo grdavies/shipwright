@@ -161,7 +161,15 @@ or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve
 11. Store concise `memory-preflight` writes for durable learnings (recurring bot false positives, accepted
    review patterns, non-obvious CI fixes, file-specific debug context) with `relatedFiles`. No raw thread
    dumps, secrets, or routine pass/fail logs.
-12. Return the PR URL, the ledger summary (counts of still-unresolved threads **and** still-open
+12. **Execution telemetry (R29)** — before returning, record one stabilize pass:
+
+   ```bash
+   python3 scripts/execution_telemetry.py record --command sw-stabilize      --iteration-count "$STABILIZE_ITERATION"      --blocker-ledger-size "$BLOCKER_LEDGER_SIZE"      --time-to-green-ms "$TIME_TO_GREEN_MS"      --rca-triggered-count 1      [--green]
+   ```
+
+   Use `1` for `--rca-triggered-count` when the RCA pass (R35) ran; `0` when bypassed. Persist under
+   `$SW_RUN_DIR/execution-telemetry.json` in phase-mode dispatch.
+13. Return the PR URL, the ledger summary (counts of still-unresolved threads **and** still-open
     non-inline findings, and — when deferrals are allowed — `defer-inline` vs `defer-issue` with issue
     links), the gate verdict, and hand off to `/sw-watch-ci`.
 

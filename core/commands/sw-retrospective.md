@@ -74,7 +74,21 @@ Run state (pre-merge): `.cursor/sw-deliver-state.json` gains `compoundShip.preme
 
 ## Procedure
 
-When `loopHealth.enabled`, run `python3 scripts/loop_health.py --summary` during retro compounding and include the diagnostic downstream-cost summary (review effort, rework/defect, incidents, ranked meta-inbox) in the retrospective output. Loop-health never gates merge or ship.
+When `loopHealth.enabled`, run `python3 scripts/loop_health.py --summary`
+
+### Execution telemetry advisory (R30)
+
+During `/sw-retro`, include execution telemetry as quantitative input:
+
+```bash
+python3 scripts/execution_telemetry.py summary
+python3 scripts/execution_telemetry.py draft-suggestion
+```
+
+The drafted `phase-authoring-improvement` suggestion is **advisory only** — never auto-applied to frozen
+task lists or committed checkbox toggles. Human review is required before any task authoring change.
+
+ during retro compounding and include the diagnostic downstream-cost summary (review effort, rework/defect, incidents, ranked meta-inbox) in the retrospective output. Loop-health never gates merge or ship.
 
 
 ### Phase resolution
