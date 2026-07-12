@@ -43,6 +43,19 @@ default. Other call sites are out of scope (D3).
 
 
 
+### Candidate-idea near-duplicate intake (PRD 064 R25)
+
+Before persisting a new brainstorm candidate idea (divergence checkpoint or requirements write), scan
+against the live gap-unit corpus. Flag for review only — never auto-suppress or block synthesis (KD5):
+
+```bash
+python3 scripts/gap_similarity.py scan   --candidate "$CANDIDATE_IDEA_TEXT"   --out "$RUN_DIR/brainstorm-near-dup-scan.json"   --handoff-out "$RUN_DIR/brainstorm-near-dup-handoff.md"
+```
+
+When matches are returned, include `brainstorm-near-dup-handoff.md` in the synthesis checkpoint for
+human confirm before continuing to `/sw-prd`.
+
+
 ## Issue-store authoring (PRD 056 R11–R12)
 
 When `python3 scripts/planning_store.py resolve-backend` reports effective `issue-store`:
