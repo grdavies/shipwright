@@ -14,6 +14,13 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from kernel_classification import normalize_step
+from gate_evidence import (
+    build_evidence_record,
+    digest_bytes,
+    evidence_record_path,
+    write_evidence_atomic,
+)
+from gate_manifest import gates_by_id, is_bypass_allowed, load_manifest, resolve_gate_class
 from ship_gate_handlers import is_gate_handler_step, run_gate_handler
 from ship_phase_steps import (
     authoritative_chain,
@@ -53,6 +60,136 @@ AGENT_OUTCOME_ARTIFACTS: dict[str, str] = {
     "sw-simplify": "{runDir}/sw-simplify.status.json",
     "sw-stabilize": "{runDir}/sw-stabilize.status.json",
 }
+
+BYPASS_FLAG_TO_GATE: dict[str, str] = {
+    "--fast": "gap-check",
+    "--skip-local": "sw-review",
+    "--skip-simplify": "sw-simplify",
+}
+GATE_TO_STEP = {gate_id: normalize_step(gate_id) for gate_id in BYPASS_FLAG_TO_GATE.values()}
+
+
+def parse_bypass_flags(argv: list[str] | None = None) -> set[str]:
+    tokens = list(argv if argv is not None else sys.argv[1:])
+    return {flag for flag in BYPASS_FLAG_TO_GATE if flag in tokens}
+
+
+def bypass_flags_from_env() -> set[str]:
+    raw = os.environ.get("SW_SHIP_BYPASS_FLAGS", "").strip()
+    if not raw:
+        return set()
+    return {part.strip() for part in raw.split(",") if part.strip() in BYPASS_FLAG_TO_GATE}
+
+
+def active_bypass_flags(argv: list[str] | None = None) -> set[str]:
+    return parse_bypass_flags(argv) | bypass_flags_from_env()
+
+
+def gate_id_for_step(step: str) -> str | None:
+    norm = normalize_step(step)
+    for gate_id, mapped_step in GATE_TO_STEP.items():
+        if mapped_step == norm:
+            return gate_id
+    return None
+
+
+def bypass_flag_for_gate(gate_id: str, flags: set[str]) -> str | None:
+    for flag, mapped in BYPASS_FLAG_TO_GATE.items():
+        if mapped == gate_id and flag in flags:
+            return flag
+    return None
+
+
+def validate_bypass_flags(root: Path, flags: set[str]) -> None:
+    for flag in sorted(flags):
+        gate_id = BYPASS_FLAG_TO_GATE[flag]
+        if not is_bypass_allowed(gate_id, root=root):
+            fail(
+                "bypass flag targets mandatory gate",
+                halt="ship-loop:bypass-mandatory-denied",
+                flag=flag,
+                gateId=gate_id,
+            )
+
+
+def write_bypass_skip_record(
+    root: Path,
+    phase: str,
+    gate_id: str,
+    *,
+    flag: str,
+    actor: str,
+    reason: str,
+) -> Path:
+    root = repo_root(root)
+    gate = gates_by_id(load_manifest(root))[gate_id]
+    evidence = gate.get("evidence") or {}
+    reason_text = reason or f"bypass:{flag}"
+    execution = {
+        "argv": ["ship_loop.py", "bypass", flag, f"--actor={actor}", f"--reason={reason_text}"],
+        "exitCode": 0,
+        "stdoutDigest": digest_bytes(b""),
+        "stderrDigest": digest_bytes(reason_text.encode("utf-8")),
+        "duration": 0.0,
+    }
+    record = build_evidence_record(
+        gate_id=gate_id,
+        gate_class=resolve_gate_class(gate_id, root=root),
+        binding_mode=str(evidence.get("bindingMode") or "head-exact"),
+        evaluation_point=str(evidence.get("evaluationPoint") or "bypass"),
+        verdict="skip",
+        execution=execution,
+        root=root,
+    )
+    path = evidence_record_path(root, phase, gate_id)
+    write_evidence_atomic(path, record)
+    return path
+
+
+def drain_bypassed_steps(
+    root: Path,
+    phase: str,
+    *,
+    steps_path: Path | None = None,
+    flags: set[str] | None = None,
+) -> list[str]:
+    """Advance past bypass-flagged optional/advisory steps with skip evidence (R10)."""
+    flags = flags if flags is not None else active_bypass_flags()
+    if not flags:
+        return []
+    validate_bypass_flags(root, flags)
+    path = steps_path or resolve_steps_path(root, phase, None)
+    doc = ensure_initialized(root, phase, path)
+    skipped: list[str] = []
+    actor = os.environ.get("SW_SHIP_BYPASS_ACTOR", "ship-loop")
+    reason = os.environ.get("SW_SHIP_BYPASS_REASON", "operator bypass flag")
+    import ship_phase_steps as sps
+
+    orig_emit = sps.emit
+
+    def _noop_emit(*_args: Any, **_kwargs: Any) -> None:
+        return None
+
+    while True:
+        doc = load_steps(path)
+        if not doc:
+            break
+        chain, _, _ = authoritative_chain(root, phase, str(path))
+        current = normalize_step(str(doc.get("currentStep") or (chain[0] if chain else "")))
+        gate_id = gate_id_for_step(current)
+        if not gate_id or not bypass_flag_for_gate(gate_id, flags):
+            break
+        flag = bypass_flag_for_gate(gate_id, flags) or ""
+        write_bypass_skip_record(root, phase, gate_id, flag=flag, actor=actor, reason=reason)
+        sps.emit = _noop_emit
+        try:
+            cmd_advance(root, ["--phase", phase, "--step", current, "--out", str(path)])
+        finally:
+            sps.emit = orig_emit
+        skipped.append(current)
+        if ship_chain_is_complete(root, phase, load_steps(path), out=str(path)):
+            break
+    return skipped
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
@@ -243,7 +380,18 @@ def cmd_resume(args: argparse.Namespace) -> int:
 
 def cmd_run(args: argparse.Namespace) -> int:
     root = repo_root(args.root)
+    bypass_argv: list[str] = []
+    if getattr(args, "fast", False):
+        bypass_argv.append("--fast")
+    if getattr(args, "skip_local", False):
+        bypass_argv.append("--skip-local")
+    if getattr(args, "skip_simplify", False):
+        bypass_argv.append("--skip-simplify")
+    flags = active_bypass_flags(bypass_argv)
+    skipped = drain_bypassed_steps(root, args.phase, flags=flags)
     payload = step_dispatch(root, args.phase)
+    if skipped:
+        payload["bypassSkipped"] = skipped
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0
 
@@ -314,6 +462,9 @@ def main(argv: list[str] | None = None) -> int:
 
     run_p = sub.add_parser("run", help="Emit next step dispatch (awaitAgent for agent steps)")
     run_p.add_argument("--phase", default=os.environ.get("SW_PHASE_SLUG", ""))
+    run_p.add_argument("--fast", action="store_true")
+    run_p.add_argument("--skip-local", action="store_true")
+    run_p.add_argument("--skip-simplify", action="store_true")
     run_p.set_defaults(func=cmd_run)
 
     resume_p = sub.add_parser("resume", help="Resume state from durable ship-steps.json")

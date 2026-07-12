@@ -61,6 +61,23 @@ def main(argv: list[str] | None = None) -> int:
             if mod.gap_check_halt_blocks_merge_ready(root, phase):
                 print(json.dumps({"verdict":"fail","error":"gap-check-gate:halt-blocks-merge-ready"}), file=sys.stderr)
                 return 2
+        from merge_ready_enforcement import evaluate_mandatory_gate_evidence
+
+        evidence = evaluate_mandatory_gate_evidence(root, phase, head_sha=head)
+        if evidence.get("verdict") != "pass":
+            print(
+                json.dumps(
+                    {
+                        "verdict": "fail",
+                        "error": evidence.get("cause") or "merge-ready:mandatory-gate-evidence",
+                        "halt": evidence.get("halt") or "merge-ready:mandatory-gate-evidence",
+                        "gateId": evidence.get("gateId"),
+                        "failures": evidence.get("failures") or [],
+                    }
+                ),
+                file=sys.stderr,
+            )
+            return 2
     if not out:
         sw_run = os.environ.get("SW_RUN_DIR","")
         out = f"{sw_run.rstrip('/')}/status.json" if sw_run else str(root/f".cursor/sw-deliver-runs/{phase}/status.json")
