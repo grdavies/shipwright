@@ -27,6 +27,10 @@ def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
 
 def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
     extra.pop("error", None)
+    if extra.get("halt") or extra.get("cause"):
+        from halt_resume import enrich_fail_extra
+
+        enrich_fail_extra(git_toplevel(Path.cwd()), extra)
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 

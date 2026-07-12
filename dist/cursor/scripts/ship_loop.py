@@ -96,6 +96,23 @@ def resolve_mode_run_dir(root: Path, phase: str) -> Path:
     return interactive_run_dir(root, phase)
 
 
+def _attach_halt_resume(root: Path, payload: dict[str, Any], phase: str) -> dict[str, Any]:
+    halt_cause = str(payload.get("halt") or payload.get("cause") or "")
+    if not halt_cause:
+        return payload
+    from halt_resume import enrich_legitimate_halt, try_load_deliver_state
+
+    enrich_legitimate_halt(
+        payload,
+        root,
+        try_load_deliver_state(root),
+        halt_cause=halt_cause,
+        phase_slug=phase,
+        persist_halt_count=False,
+    )
+    return payload
+
+
 def agent_outcome_binding_valid(
     root: Path, artifact: Path, *, head_sha: str | None = None
 ) -> tuple[bool, str | None]:
@@ -188,7 +205,7 @@ def drive_tick(
             consumed = consume_agent_outcome(root, phase, steps_path=path)
             if consumed.get("verdict") != "pass":
                 if step_attempt_budget_exhausted(doc, current):
-                    return {
+                    blocked = {
                         "verdict": "blocked",
                         "action": "ship-loop-drive",
                         "halt": "ship-loop:agent-budget-exhausted",
@@ -196,16 +213,18 @@ def drive_tick(
                         "cause": consumed.get("cause"),
                         "awaitAgent": False,
                     }
+                    return _attach_halt_resume(root, blocked, phase)
                 return {**consumed, "awaitAgent": False}
             return drive_tick(root, phase, steps_path=path, flags=flags)
         if step_attempt_budget_exhausted(doc, current):
-            return {
+            blocked = {
                 "verdict": "blocked",
                 "action": "ship-loop-drive",
                 "halt": "ship-loop:agent-budget-exhausted",
                 "step": current,
                 "awaitAgent": False,
             }
+            return _attach_halt_resume(root, blocked, phase)
         record_step_attempt_silent(root, phase, current, out=str(path))
         run_dir = resolve_mode_run_dir(root, phase)
         return {
