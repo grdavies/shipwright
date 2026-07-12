@@ -159,17 +159,6 @@ python3 scripts/intra-phase-dispatch.py evaluate --context-json '<signal_context
 - Each decision is appended to per-phase `dispatch-decisions.json` (timestamp, signals, partition,
   chosen parallelism, degrade reason). Latest snapshot also on phase `intraPhaseFanOut` (see `.sw/layout.md`).
 
-## Driver vs conductor dispatch (PRD 065)
-
-| Path | Task spawn |
-| --- | --- |
-| `dispatch-ship` | **None** — conductor runs ship-loop agent steps inline on `awaitAgent` |
-| `dispatch-batch` | **One** background Task per phase worktree at conductor level only |
-| `ship_loop.py` / `wave_deliver_loop.py` | **Refused** — drivers never spawn Tasks |
-
-Mode-specific `awaitAgent` ownership: inline `dispatch-ship` → orchestrator conductor; background batch →
-phase-scoped executor (still no nested Task spawn).
-
 Pre-dispatch no-nesting (R16): when `conductor_mode: background_phase` (stamped to the per-phase run
 dir at phase entry via `wave.py phase dispatch-env --conductor-mode background_phase`), intra-phase Task
 dispatch is **refused before any spawn** and degrades to inline two-stage review:

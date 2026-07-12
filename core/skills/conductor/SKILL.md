@@ -75,7 +75,6 @@ conductor in-turn mechanical re-invocation only — never surface it as the oper
 Never infer progress from chat history or ephemeral sub-agent logs (R19). Phase outcomes come solely from
 `status.json`.
 
-
 ## Phase status discovery and disambiguation (PRD 059 R5–R6)
 
 Per-phase durable status and gap-check binding use the shared discovery chain
@@ -92,7 +91,6 @@ candidates.
 | --- | --- |
 | `terminal-branch-missing` | Recreate/reprovision target branch, then retry `terminal pr prepare` |
 | `terminal-branch-unresolvable` | Retry when host reachable; verify host auth/token via `scripts/host.py` |
-
 
 ## Two-tier plan lifecycle (PRD 022)
 
@@ -149,17 +147,9 @@ The conductor never ends its turn while `nextAction` is runnable and no legitima
 
 ### Ship-loop driver (PRD 065)
 
-`dispatch-ship` is mechanical in `wave_deliver_loop.py` — it runs `ship_loop.py <worktree> drive --phase
-<slug>` in-process until `awaitAgent` or completion:
-
-| Owner | Responsibility |
-| --- | --- |
-| **Driver** (`ship_loop.py`, `wave_deliver_loop.py`) | Drain mechanical steps; read durable head-bound artifacts; **never spawn Tasks** |
-| **Conductor** | On `awaitAgent: true`, perform the bounded agent ship step inline in the phase worktree, then re-invoke `deliver-loop` |
-| **Background batch** (`dispatch-batch`) | Sole conductor-level Task spawn — one phase-scoped executor per worktree; executor runs agent steps **inline** (no nested spawn) |
-
-Interactive `/sw-ship` uses the same driver with retained human merge pause; phase-mode suppresses pause and
-writes `merge-ready-green` to durable `status.json`.
+`dispatch-ship` runs `ship_loop.py drive` mechanically until `awaitAgent`; drivers never spawn Tasks — conductor
+performs agent steps inline, then re-invokes `deliver-loop`. `dispatch-batch` is the sole Task spawn (one
+phase-scoped inline executor per worktree). Details: `core/skills/deliver/SKILL.md` § Ship-loop integration.
 
 ### Inline dispatch lease (PRD 063 R7–R9)
 
@@ -223,7 +213,6 @@ context belongs in `run.log` / consolidated halt reports only.
 
 Subjective ambiguity is not an inline halt. Only driver-detected conditions qualify; other uncertainty
 routes through `report blockers` with a `cause`.
-
 
 ## Execute tier fan-out (PRD 053)
 
@@ -394,7 +383,6 @@ Each report includes `resumeCommand` (e.g. `/sw-deliver run docs/prds/…/tasks-
 `blockers` with `recommendedCommand` (`/sw-stabilize` when applicable), and `cause`. Surface all three to
 the user in one message.
 
-
 ## Multi-signal staleness classifier (R32)
 
 Classify background-phase liveness via `scripts/phase_staleness_lib.py` before watchdog timeout.
@@ -451,8 +439,6 @@ python3 scripts/planning_autonomy.py . check-dispatch --command "/sw-deliver run
 Resume after `planning-mutation-budget` halt: operator acknowledges and re-runs with explicit confirm or
 lower scope — same legitimate-halt model as deliver conductor budgets.
 
-
-
 Workflow pushes use `scripts/git-push.py` only (secret-scan pre-push; phase sub-agents never raw `git push`).
 
 ## Config knobs
@@ -489,11 +475,9 @@ Read from `.cursor/workflow.config.json`:
 `elapsedMs` (optional subprocess timings). Values are numeric only — no secret-bearing argv in logs. Gate
 semantics unchanged; timing is diagnostic/operator-observable only.
 
-
 ## PRD 062 release acceptance metrics (R18)
 
 Operator acceptance checks: `references/release-acceptance.md`.
-
 
 ## Orchestrator adoption
 
