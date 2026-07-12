@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gate-evidence.schema.json",
+  "title": "Per-gate ship-loop evidence record (PRD 065 R21)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "gateId",
+    "class",
+    "bindingMode",
+    "evaluationPoint",
+    "headSha",
+    "treeHash",
+    "verdict",
+    "execution",
+    "timestamp",
+    "artifactRefs",
+    "provenanceMarker"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "gateId": { "type": "string", "minLength": 1 },
+    "class": { "type": "string", "enum": ["mandatory", "optional", "advisory"] },
+    "bindingMode": { "type": "string", "enum": ["tree-stable", "head-exact"] },
+    "evaluationPoint": { "type": "string", "minLength": 1 },
+    "headSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "treeHash": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "verdict": { "type": "string", "enum": ["pass", "fail", "skip"] },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv", "exitCode", "stdoutDigest", "stderrDigest", "duration"],
+      "properties": {
+        "argv": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "exitCode": { "type": "integer" },
+        "stdoutDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "stderrDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "duration": { "type": "number", "minimum": 0 }
+      }
+    },
+    "timestamp": { "type": "string", "minLength": 1 },
+    "artifactRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "provenanceMarker": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "writtenAt": { "type": "string", "minLength": 1 }
+  }
+}
