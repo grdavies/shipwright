@@ -197,5 +197,18 @@ Operator-facing guarantees enforced by CI fixtures (`run_dual_ship_fixtures.py`,
    forged or stale `merge-ready-green` is rejected; recovery reuses `/sw-ship --phase-mode --from <step>`
    — never hand-edit `status.json`.
 
+## Ship-loop integration (PRD 065)
+
+- **Mechanical dispatch** — `dispatch-ship` and `dispatch-batch` are `MECHANICAL_ACTIONS`; the durable driver
+  drains them without a chat turn. Deferred non-gate steps surface `awaitAgent` to the conductor ship chain.
+- **Lease + watchdog** — per-head ship lease before inline dispatch; liveness keyed on `heartbeatAt` within
+  `SW_SHIP_LEASE_STALE_SECONDS` (`wave_lock.py`). `python3 scripts/wave.py watchdog check` probes stale driver
+  heartbeat and phase timeout.
+- **Terminal acceptance** — when all phases reach terminal completeness, `report terminal` embeds a validated
+  record from `wave_acceptance.py` at `.cursor/sw-deliver-runs/terminal-acceptance.json` (per-phase merge
+  state, terminal PR gate, mandatory-gate rollup, legitimate-halt `interactionCount`).
+- **Halt-resume** — legitimate halts emit a `haltResume` block (`halt_resume.py`) with
+  `/sw-deliver run <frozen-task-list-path>` resume command.
+
 Trust boundaries unchanged (R22): human merge to `main`, secret-scan push chokepoint, scoped deliver
 locks, and frozen-doc CI gates.
