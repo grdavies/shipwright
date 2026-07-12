@@ -97,6 +97,20 @@ Parent phase items may stay checklist-only; **sub-tasks** under active phase car
 | Very short Expected (&lt; 8 chars) | warn |
 
 
+
+## Execution telemetry (R29)
+
+At the end of each `/sw-execute` invocation (after the per-task loop, before handoff to `/sw-verify`),
+record one structured pass under the phase run dir (`.cursor/sw-deliver-runs/<phase>/` or `$SW_RUN_DIR`):
+
+```bash
+python3 scripts/execution_telemetry.py record --command sw-execute   --iteration-count <n>   --blocker-ledger-size <n>   --time-to-green-ms <ms>   --rca-triggered-count <n>   [--green]
+```
+
+Captured fields per pass: `iterationCount`, `blockerLedgerSize`, `timeToGreenMs`, `rcaTriggeredCount`.
+Missing signals are tolerated — list them in `missingSignals` on the persisted record. Telemetry is
+advisory run-state only; it does not alter TDD, refactor, or review gates.
+
 ## Same-stage escalation bookkeeping (R31)
 
 When `/sw-stabilize` or stabilize-loop escalates after repeated same-stage failures, persist on the run-scoped

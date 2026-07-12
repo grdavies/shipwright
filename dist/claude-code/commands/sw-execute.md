@@ -56,7 +56,14 @@ Monolithic mode (no `--task-ref`) implements the full phase checklist in one inv
 9. `memory-preflight` write for durable decisions only (redact via `scripts/memory-redact.py` first).
 10. Subagents per `rules/sw-subagent-dispatch.mdc` for independent parallel work **within** a task only when
    file sets are disjoint; never skip the per-task TDD + refactor + two-stage sequence.
-11. Leave uncommitted for `/sw-verify`, `/sw-review`, `/sw-commit`.
+11. **Execution telemetry (R29)** — after the phase checklist completes, persist one pass:
+
+   ```bash
+   python3 scripts/execution_telemetry.py record --command sw-execute      --iteration-count "$ITERATION_COUNT"      --blocker-ledger-size "$BLOCKER_LEDGER_SIZE"      --time-to-green-ms "$TIME_TO_GREEN_MS"      --rca-triggered-count "$RCA_TRIGGERED_COUNT"
+   ```
+
+   Write to `$SW_RUN_DIR/execution-telemetry.json` when phase-mode dispatch sets the run dir.
+12. Leave uncommitted for `/sw-verify`, `/sw-review`, `/sw-commit`.
 
 **Communication intensity:** full
 
