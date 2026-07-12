@@ -64,6 +64,7 @@
     "execute-dependency-rules.json",
     "execute-step-plan.schema.json",
     "failure-signature.schema.json",
+    "gate-manifest.json",
     "guidelines.json",
     "guidelines.md",
     "guidelines.schema.json",

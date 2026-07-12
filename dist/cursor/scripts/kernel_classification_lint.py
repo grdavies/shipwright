@@ -82,6 +82,18 @@ def main() -> None:
     if not ok_execute:
         failures.extend(execute_failures)
 
+    try:
+        from gate_manifest_validate import validate_manifest
+        import json as _json
+        manifest_path = root / "core/sw-reference/gate-manifest.json"
+        if manifest_path.is_file():
+            manifest = _json.loads(manifest_path.read_text(encoding="utf-8"))
+            gate_result = validate_manifest(manifest, root=root)
+            if gate_result.get("verdict") != "pass":
+                failures.extend(gate_result.get("reasons") or [gate_result.get("error", "gate manifest validation failed")])
+    except Exception as exc:  # noqa: BLE001
+        failures.append(f"gate manifest lint error: {exc}")
+
     if failures:
         emit({"verdict": "fail", "failures": failures}, 1)
     emit({"verdict": "pass", "chainLength": len(chain)})
