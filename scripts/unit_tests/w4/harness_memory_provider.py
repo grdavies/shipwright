@@ -255,6 +255,50 @@ else
   FAIL=1
 fi
 
+
+# --- OKF export/import + derived index/log (PRD 064 R19-R20) ---
+OKF_OUT=$(mktemp -d)
+JSONL_OUT=$(mktemp)
+python3 "$SEARCH" export --store "$STORE" --format okf --out "$OKF_OUT" >/dev/null
+python3 "$SEARCH" export --store "$STORE" --format jsonl --out "$JSONL_OUT" >/dev/null
+if [[ -f "$OKF_OUT/index.md" ]] && grep -q 'okf_version: "0.1"' "$OKF_OUT/index.md" && \
+   [[ -f "$OKF_OUT/decision/20260620-jwt-decision.md" ]] && grep -q 'type:.*decision' "$OKF_OUT/decision/20260620-jwt-decision.md"; then
+  echo "OK  OKF export bundle shape"
+else
+  echo "FAIL OKF export bundle"
+  FAIL=1
+fi
+python3 "$SEARCH" maintain-derived --store "$STORE" >/dev/null
+IDX1=$(md5 -q "$STORE/index.md" 2>/dev/null || md5sum "$STORE/index.md" | awk '{print $1}')
+python3 "$SEARCH" maintain-derived --store "$STORE" >/dev/null
+IDX2=$(md5 -q "$STORE/index.md" 2>/dev/null || md5sum "$STORE/index.md" | awk '{print $1}')
+if [[ "$IDX1" == "$IDX2" ]] && [[ -f "$STORE/log.md" ]]; then
+  echo "OK  index.md/log.md deterministic"
+else
+  echo "FAIL derived index/log determinism"
+  FAIL=1
+fi
+RT_STORE=$(mktemp -d)
+python3 "$SEARCH" import --store "$RT_STORE" --format okf --source "$OKF_OUT" >/dev/null
+RT_JSONL=$(mktemp)
+python3 "$SEARCH" export --store "$RT_STORE" --format jsonl --out "$RT_JSONL" >/dev/null
+if python3 - "$JSONL_OUT" "$RT_JSONL" <<'PY2'
+import json, pathlib, sys
+a=[json.loads(l) for l in pathlib.Path(sys.argv[1]).read_text().splitlines() if l.strip()]
+b=[json.loads(l) for l in pathlib.Path(sys.argv[2]).read_text().splitlines() if l.strip()]
+a=sorted(a,key=lambda x:x["id"])
+b=sorted(b,key=lambda x:x["id"])
+sys.exit(0 if len(a)==len(b) and all(x["id"]==y["id"] and x["content"]==y["content"] for x,y in zip(a,b)) else 1)
+PY2
+then
+  echo "OK  OKF round-trip preserves JSONL fields"
+else
+  echo "FAIL OKF round-trip"
+  FAIL=1
+fi
+rm -rf "$OKF_OUT" "$RT_STORE"
+rm -f "$JSONL_OUT" "$RT_JSONL"
+
 # --- U6: schema validation ---
 python3 - <<'PY' || { echo "FAIL U6 schema validation"; FAIL=1; }
 import json, pathlib, sys
@@ -297,6 +341,52 @@ else
   # Will register below — check after update
   true
 fi
+
+
+# --- U8: traverse + expand (R21) ---
+LINK_FIX="$FIX/store"
+OUT_TR=$(python3 "$SEARCH" traverse --store "$LINK_FIX" --from 20260701-link-a --depth 2)
+if echo "$OUT_TR" | jq -e '.nodes | map(select(.id=="20260701-link-b")) | length == 1' >/dev/null; then
+  echo "OK  traverse finds linked node"
+else
+  echo "FAIL U8 traverse"
+  echo "$OUT_TR" | jq . 2>/dev/null || echo "$OUT_TR"
+  FAIL=1
+fi
+
+OUT_EX=$(python3 "$SEARCH" expand --store "$LINK_FIX" --ids 20260701-link-b)
+if echo "$OUT_EX" | jq -e '.expanded[0].backlinks | map(select(.source=="20260701-link-a")) | length >= 1' >/dev/null; then
+  echo "OK  expand surfaces backlinks"
+else
+  echo "FAIL U8 expand backlinks"
+  echo "$OUT_EX" | jq . 2>/dev/null || echo "$OUT_EX"
+  FAIL=1
+fi
+
+OUT_DAN=$(python3 "$SEARCH" traverse --store "$LINK_FIX" --from 20260701-link-a --from missing-id-dangle 2>/dev/null || true)
+# dangling tolerated via separate seed
+OUT_DAN2=$(python3 "$SEARCH" traverse --store "$LINK_FIX" --from does-not-exist --depth 1)
+if echo "$OUT_DAN2" | jq -e '.nodes[0].found == false' >/dev/null; then
+  echo "OK  traverse tolerates dangling seed"
+else
+  echo "FAIL U8 dangling"
+  FAIL=1
+fi
+
+if grep -q 'traverse' "$CAPS" && grep -q 'backlinks' "$CAPS"; then
+  echo "OK  CAPABILITIES declares traverse + backlinks expand"
+else
+  echo "FAIL U8 capabilities docs"
+  FAIL=1
+fi
+
+if grep -q 'title' "$IN_REPO_MD" && grep -q 'Citations' "$IN_REPO_MD"; then
+  echo "OK  in-repo provider documents title/description/Citations"
+else
+  echo "FAIL U8 richer frontmatter docs"
+  FAIL=1
+fi
+
 
 if [[ $FAIL -eq 0 ]]; then
   echo "ALL memory-provider fixtures passed"

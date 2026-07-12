@@ -9,6 +9,9 @@ from pathlib import Path
 
 from _sw.cli import run_module_main
 from dispatch_intensity_check import validate_directive_anchor
+from dispatch_reader_lib import evaluate_reader_role, validate_reader_tool_log_file
+from dispatch_complexity_lib import probe_complexity
+from dispatch_budget_lib import resolve_token_budget
 
 TIER_ORDER = ["cheap", "build", "mid", "deep"]
 NATIVE_PANEL_AGENTS = frozenset({
@@ -331,6 +334,27 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Task spawn requested run_in_background=true",
     )
+    parser.add_argument(
+        "--role",
+        default="",
+        help="declared Task role (reader for untrusted-signal intake)",
+    )
+    parser.add_argument(
+        "--boundary",
+        default="",
+        help="dispatch boundary (feedback-intake|debug-sentry-expansion)",
+    )
+    parser.add_argument(
+        "--tool-log",
+        default="",
+        metavar="PATH",
+        help="reader Task tool-call log for post-spawn mutating-call validation",
+    )
+    parser.add_argument(
+        "--signal-context",
+        default="",
+        help="JSON signal_context for complexity probe inputs",
+    )
     args = parser.parse_args(argv)
 
     script_dir = Path(__file__).resolve().parent
@@ -454,6 +478,52 @@ def main(argv: list[str] | None = None) -> int:
         if isinstance(raw, str) and raw.strip():
             fallback_tier = raw.strip()
 
+    cfg_doc: dict = {}
+    if config_path.is_file():
+        try:
+            loaded = json.loads(config_path.read_text(encoding="utf-8"))
+            cfg_doc = loaded if isinstance(loaded, dict) else {}
+        except json.JSONDecodeError:
+            cfg_doc = {}
+
+    role = (args.role or "").strip() or None
+    boundary = (args.boundary or "").strip() or None
+    reader_fail = evaluate_reader_role(role=role, boundary=boundary, override=override)
+    if reader_fail:
+        print(json.dumps(reader_fail))
+        return 20
+    if role == "reader" and args.tool_log:
+        tool_fail = validate_reader_tool_log_file(Path(args.tool_log))
+        if tool_fail:
+            print(json.dumps(tool_fail))
+            return 20
+
+    signal_context = None
+    if args.signal_context:
+        try:
+            signal_context = json.loads(args.signal_context)
+        except json.JSONDecodeError:
+            print(json.dumps({
+                "verdict": "fail",
+                "cause": "binding:invalid-signal-context",
+                "retryable": False,
+                "remediation": "pass valid JSON to --signal-context",
+            }))
+            return 20
+
+    complexity = probe_complexity(
+        static_tier=model_tier,
+        signal_context=signal_context if isinstance(signal_context, dict) else None,
+        config=cfg_doc,
+    )
+    if complexity.get("enabled") and complexity.get("chosenTier"):
+        model_tier = str(complexity["chosenTier"])
+        tier_model = tiers.get(model_tier)
+        if isinstance(tier_model, str) and tier_model.strip():
+            model_id = tier_model.strip()
+
+    token_budget = resolve_token_budget(cfg_doc)
+
     result = evaluate_dispatch(
         agent=agent,
         parent_model=parent_model,
@@ -472,6 +542,12 @@ def main(argv: list[str] | None = None) -> int:
         result["intensitySource"] = intensity_source
         result["promptValidation"] = "pass"
         result["promptPath"] = str(Path(args.prompt))
+    if role:
+        result["role"] = role
+    if boundary:
+        result["boundary"] = boundary
+    result["tokenBudget"] = token_budget
+    result["complexityProbe"] = complexity
     print(json.dumps(result))
     if result.get("verdict") == "fail":
         return 20

@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from capability_index import build_index, collect_capability_files, derive_kind, parse_frontmatter
+from capability_index import build_index, collect_capability_files, derive_kind, extract_capability_block, parse_frontmatter
 from capability_manifest_validate import validate_capability_block
 from guidelines_validate import lint_guidelines
 from capability_precedence import effective_priority, effective_tier, has_precedence_resolution
@@ -190,7 +190,7 @@ def check_kernel_hook_manifests(repo_root: Path, core_root: Path) -> list[str]:
             continue
         text = path.read_text(encoding="utf-8")
         frontmatter = parse_frontmatter(text)
-        if isinstance(frontmatter.get("capability"), dict):
+        if extract_capability_block(frontmatter) is not None:
             errors.append(
                 "kernel hook manifest rejected: "
                 f"{source_path} is non-selectable (beforeSubmitPrompt guardrails / memory-redaction kernel)"
@@ -205,8 +205,8 @@ def check_manifest_schema(core_root: Path) -> list[str]:
         source_path = f"core/{rel.as_posix()}"
         text = path.read_text(encoding="utf-8")
         frontmatter = parse_frontmatter(text)
-        capability = frontmatter.get("capability")
-        if not isinstance(capability, dict):
+        capability = extract_capability_block(frontmatter)
+        if capability is None:
             continue
         errors.extend(validate_capability_block(capability, source=source_path))
         metadata = capability.get("metadata") or {}

@@ -27,7 +27,13 @@
       "maxAttempts": 2
     },
     "watchdog": {
-      "phaseTimeoutMinutes": 240
+      "phaseTimeoutMinutes": 240,
+      "stalenessClassifier": {
+        "enabled": true,
+        "stuckThresholdMinutes": 30,
+        "workingThresholdMinutes": 5,
+        "waitingOnHumanBoost": 0.35
+      }
     }
   },
   "compound": {
@@ -121,11 +127,16 @@
         "sw-execute": "full"
       },
       "skills": {
-        "doc-review": "normal"
+        "doc-review": "normal",
+        "tournament": "ultra"
       },
       "agents": {
         "sw-coherence-reviewer": "full",
-        "correctness": "full"
+        "correctness": "full",
+        "sw-tournament-attempt": "ultra",
+        "sw-tournament-judge": "ultra",
+        "sw-rule-verifier": "ultra",
+        "sw-rule-skeptic": "ultra"
       }
     }
   },
@@ -149,6 +160,16 @@
     "guardrails": {
       "enforceBeforeSubmit": true,
       "requireRuleClass": false
+    },
+    "playbooks": {
+      "enabled": true,
+      "injectMinConfidence": 0.75,
+      "activeMinConfidence": 0.6,
+      "promoteMinSuccessRate": 0.8,
+      "promoteMinUsage": 5,
+      "demoteMaxSuccessRate": 0.4,
+      "demoteMinUsage": 5,
+      "confidenceStep": 0.05
     }
   },
   "planning": {
@@ -234,6 +255,23 @@
         "distinctDirs": 2,
         "traceabilityScenarios": 2
       }
+    }
+  },
+  "tournament": {
+    "enabled": false,
+    "n": 3,
+    "cost_ceiling": 0
+  },
+  "gapCheck": {
+    "ruleVerifierSweep": {
+      "enabled": false
+    }
+  },
+  "stabilizeLoop": {
+    "sameStageEscalation": {
+      "enabled": true,
+      "escalateAfterFailures": 2,
+      "personaFallback": "adversarial"
     }
   }
 }

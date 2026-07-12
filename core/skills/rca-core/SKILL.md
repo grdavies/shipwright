@@ -1,8 +1,7 @@
 ---
 name: rca-core
-description: Shared hypothesis-driven root cause analysis core for stabilize, debug, and dev-time entry points.
+description: Shared hypothesis-driven root cause analysis core for stabilize, debug, and dev-time entry points. Use when forming or refuting RCA hypotheses before routing fixes. Does not patch code or merge.
 ---
-
 # RCA core (shared)
 
 Single analysis discipline with three entry points (R35). All use the same hypothesis ranking, causal-chain
@@ -37,6 +36,27 @@ downstream routing only.
      escalate to architecture review; maps to the R29 circuit breaker
    - **Human decision** — scope/architecture ambiguity blocks a minimal fix
 7. **Output shape** — see below; debug adds `routingHint` after fix-size classification.
+
+## Fan-out mode (PRD 064 R1/R2, opt-in)
+
+Default path remains the **single-context** shared discipline above. When `rca.fanout.enabled` is true and
+D5 gating fires (`scripts/rca_fanout.py should-fanout`), partition evidence across at most four clean-context
+generators (`logs`, `diff`, `data`, `config`) — see `references/fan-out.md`.
+
+1. **D5 gate** — `enabled` plus ambiguity trigger, below-`min_hypotheses`, or multi-evidence-class; otherwise
+   single-context.
+2. **Generator fan-out** — one fresh `sw-rca-hypothesis-generator` Task per partition (`readonly: true`, cheap
+   tier). Generators never share context or orchestrator transcript.
+3. **Synthesize** — `python3 scripts/rca_fanout.py synthesize` dedupes and ranks merged hypotheses.
+4. **Refuter panel** — each survivor routes to a separate `sw-rca-hypothesis-refuter` Task before route
+   decisions. Refuters never receive generator transcripts (generation and judging never share a context).
+5. **Causal-chain gate** — refuter must return `survives` with `causalChainComplete: true`; otherwise
+   hypothesis is refuted or inconclusive.
+6. **Fallback** — when fan-out is disabled or D5 not met, use the single-context loop unchanged.
+
+Dispatch recipes: `rules/sw-subagent-dispatch.mdc` **RCA fan-out dispatch**. Status schema:
+`references/fan-out-schema.json`.
+
 
 ## Stabilize entry procedure
 

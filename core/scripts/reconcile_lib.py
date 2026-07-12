@@ -330,10 +330,49 @@ def append_superseded(root: Path, *, path: str, replacement: str) -> dict[str, A
     return {"verdict": "pass", "action": "append-superseded", "path": path, "replacement": replacement}
 
 
+def _memory_store_dir(root: Path) -> Path | None:
+    store = root / ".cursor" / "sw-memory"
+    return store if store.is_dir() else None
+
+
 def supersede_reconcile(root: Path) -> dict[str, Any]:
-    """Reconcile superseded decision pointers from SUPERSEDED.log (R7)."""
+    """Reconcile superseded decision pointers from SUPERSEDED.log (R7/R22)."""
     log = superseded_log_path(root)
     if not log.is_file():
         return {"verdict": "pass", "action": "supersede-reconcile", "entries": 0, "reconciled": 0}
+    entries = [ln for ln in log.read_text(encoding="utf-8").splitlines() if ln.strip() and not ln.startswith("#")]
+    store = _memory_store_dir(root)
+    reconciled = 0
+    actions: list[dict[str, str]] = []
+    if store is not None:
+        import subprocess
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(root / "scripts" / "in-repo-memory-search.py"),
+                "reconcile-supersede",
+                "--store",
+                str(store),
+                "--log",
+                str(log),
+            ],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            try:
+                payload = json.loads(proc.stdout)
+                reconciled = int(payload.get("reconciled") or 0)
+                actions = payload.get("actions") or []
+            except json.JSONDecodeError:
+                pass
+    return {
+        "verdict": "pass",
+        "action": "supersede-reconcile",
+        "entries": len(entries),
+        "reconciled": reconciled,
+        "actions": actions,
+    }
     entries = [ln for ln in log.read_text(encoding="utf-8").splitlines() if ln.strip() and not ln.startswith("#")]
     return {"verdict": "pass", "action": "supersede-reconcile", "entries": len(entries), "reconciled": len(entries)}

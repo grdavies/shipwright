@@ -25,6 +25,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--require-gate", action="store_true")
     parser.add_argument("--pr-context", choices=["on", "off", "auto"], default="auto")
     parser.add_argument("--behavioral-status", default=None)
+    parser.add_argument("--claims-status", default=None)
     args = parser.parse_args(argv)
     root = Path(args.root).resolve()
     verdict, code = vel.compute_and_record(
@@ -37,6 +38,7 @@ def main(argv: list[str] | None = None) -> int:
         require_gate=args.require_gate,
         pr_context=args.pr_context,
         behavioral_status_path=Path(args.behavioral_status) if args.behavioral_status else None,
+        claims_status_path=Path(args.claims_status) if args.claims_status else None,
     )
     print(json.dumps(verdict, ensure_ascii=False, indent=2))
     return code

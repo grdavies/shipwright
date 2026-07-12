@@ -1,16 +1,18 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: memory.provider
+        equals: recallium
+    metadata:
+      providerFamily: memory
+      adapterId: recallium
       selectionFamily: providers
-      key: memory.provider
-      equals: "recallium"
-  metadata:
-    providerFamily: memory
-    adapterId: recallium
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # Provider adapter: Recallium
@@ -37,9 +39,10 @@ onto the Recallium MCP tools. Selected when `workflow.config.json` → `memory.p
 }
 ```
 
-`export`/`import` are `false`: Recallium exposes no neutral dump tool. Shipwright's `/sw-memory-export`
-synthesizes the neutral JSONL by paging `search_memories` and emitting one line per memory; `/sw-memory-import`
-replays via `store_memory`. Treat these as plugin-side, not native.
+`export`/`import` are `false` at the MCP layer. Shipwright's `/sw-memory-export` and `/sw-memory-import`
+synthesize neutral interchange by paging `search_memories` + `expand_memories` into JSONL or an OKF v0.1
+bundle (per-category markdown, `category` → `type`, redaction via `scripts/memory-redact.py`). Provider
+swaps become bundle round-trips. Treat these as plugin-side, not native MCP ops.
 
 ## Operation mapping
 
@@ -67,6 +70,7 @@ replays via `store_memory`. Treat these as plugin-side, not native.
 | `debug` | `debug` |
 | `design` | `design` |
 | `code-context` | `code-snippet` |
+| `playbook` | `working-notes` |
 | `research` | `research` |
 | `discussion` | `discussion` |
 | `progress` | `progress` |
@@ -137,6 +141,17 @@ memory skill — not direct MCP calls from planning code.
 `private`/`memory` pointers return `{unitId}: [private]` to unauthorized callers — never raw excerpts.
 
 
+
+
+## Traverse / expand (R22)
+
+| Abstract op | Recallium mapping | Degradation |
+| --- | --- | --- |
+| `traverse` | `expand_memories` on `related_memory_ids` + `link_task_memories` graph | When native typed edges are absent, degrade to `search_memories` with `tags` matching target ids |
+| `expand` | `expand_memories` | Attach inbound `related_memory_ids` references as backlinks when the API exposes them; else tag-search for referring memories |
+
+`supersedes` reconciliation requests superseded nodes explicitly via traverse (`edge: supersedes`) before compounding.
+
 ## Notes / gotchas
 
 - Recallium runs locally with Ollama embeddings here — no external API cost or data egress.
@@ -152,3 +167,16 @@ stored as `memory_type: research` with `related_files` pointing at the brainstor
 tags `prd-<unit>`, `brainstorm-<unit>`. Bidirectional pointers are recorded on the issue comments
 (`sw-memory-pointer`); the brainstorm issue is closed, not deleted.
 
+## Playbook + confidence mapping (R27, R28)
+
+| Canonical field | Recallium mapping |
+| --- | --- |
+| `playbook` category | `memory_type: working-notes` with `tags` including `playbook` |
+| `confidence` | `importance_score` (0.0–1.0) |
+| `usage_count` / `success_count` | `tags` `usage:<n>` / `success:<n>` sidecar on modify |
+| `triggerKeywords` | `tags` prefixed `kw:<keyword>` |
+| `playbookStatus` | `tags` `playbook-status:<draft|active>` |
+| `auditTelemetryRef` | `tags` `audit-ref:<path>` pointer only |
+| `skepticVerdict` | `tags` `skeptic:<pass|fail|pending>` |
+
+Primary-injection and promotion gates mirror the in-repo adapter (`scripts/memory_playbook.py`).

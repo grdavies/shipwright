@@ -130,6 +130,33 @@
               "minimum": 1,
               "default": 240,
               "description": "In-flight phase exceeds this duration \u2192 consolidated blocker."
+            },
+            "stalenessClassifier": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Multi-signal phase staleness classifier (PRD 064 R32).",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "stuckThresholdMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 30
+                },
+                "workingThresholdMinutes": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "default": 5
+                },
+                "waitingOnHumanBoost": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.35
+                }
+              }
             }
           }
         },
@@ -652,6 +679,57 @@
               "type": "boolean",
               "default": true,
               "description": "Deprecated \u2014 use requireRuleClass (inverted). When false, equivalent to requireRuleClass:true."
+            }
+          }
+        },
+        "playbooks": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Confidence-scored playbook primary injection (PRD 064 R27-R28, R33).",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "injectMinConfidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.75
+            },
+            "activeMinConfidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.6
+            },
+            "promoteMinSuccessRate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.8
+            },
+            "promoteMinUsage": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 5
+            },
+            "demoteMaxSuccessRate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.4
+            },
+            "demoteMinUsage": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 5
+            },
+            "confidenceStep": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.05
             }
           }
         }
@@ -1284,6 +1362,42 @@
         }
       }
     },
+    "rca": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "RCA fan-out settings (PRD 064 R1/R2). Default off \u2014 single-context loop unchanged.",
+      "properties": {
+        "fanout": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, D5-gated multi-hypothesis fan-out may run; default false."
+            },
+            "min_hypotheses": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 3,
+              "description": "Fan-out when single-context pass yields fewer ranked hypotheses."
+            },
+            "ambiguity_trigger": {
+              "type": "boolean",
+              "default": true,
+              "description": "Fan-out when ambiguity markers fire (D5)."
+            },
+            "max_width": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4,
+              "default": 4,
+              "description": "Max parallel clean-context generators (hard cap 4)."
+            }
+          }
+        }
+      }
+    },
     "recurrence": {
       "type": "object",
       "additionalProperties": false,
@@ -1513,6 +1627,135 @@
                 "scheduled"
               ],
               "default": "manual"
+            }
+          }
+        }
+      }
+    },
+    "tournament": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Bounded tournament primitive (PRD 064 R5/R6). Default off.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, brainstorm divergence may run tournament selection."
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8,
+          "default": 3,
+          "description": "Isolated attempt count (default 3)."
+        },
+        "cost_ceiling": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0,
+          "description": "Advisory USD cap; 0 = unset."
+        }
+      }
+    },
+    "gapCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "gap-check extensions (PRD 064 R8).",
+      "properties": {
+        "ruleVerifierSweep": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Opt-in per-rule repeat-violation verifier sweep."
+            }
+          }
+        }
+      }
+    },
+    "dispatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Dispatch binding extensions (PRD 064 R10\u2013R12).",
+      "properties": {
+        "unregisteredParentModelTier": {
+          "type": "string",
+          "enum": [
+            "cheap",
+            "build",
+            "mid",
+            "deep"
+          ],
+          "description": "Fallback parent tier when session model is unmapped."
+        },
+        "complexityProbe": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Optional within-band tier probe (R11). Default disabled.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "bandFloor": {
+              "type": "string",
+              "enum": [
+                "cheap",
+                "build",
+                "mid",
+                "deep"
+              ],
+              "default": "cheap"
+            },
+            "bandCeiling": {
+              "type": "string",
+              "enum": [
+                "cheap",
+                "build",
+                "mid",
+                "deep"
+              ],
+              "default": "deep"
+            }
+          }
+        },
+        "tokenBudget": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Advisory token budget on dispatch records (R12 / D2).",
+          "properties": {
+            "advisory": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 32000
+            }
+          }
+        }
+      }
+    },
+    "stabilizeLoop": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opt-in stabilize-loop extensions (PRD 064 R31).",
+      "properties": {
+        "sameStageEscalation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "escalateAfterFailures": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 2
+            },
+            "personaFallback": {
+              "type": "string",
+              "default": "adversarial"
             }
           }
         }

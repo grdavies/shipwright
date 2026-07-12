@@ -7,14 +7,15 @@ declarations are **inert** — they do not change runtime selection.
 
 ## Frontmatter placement
 
-Add a top-level YAML key **`capability`** to existing frontmatter on canonical source files under `core/`:
+Add capability under **`metadata.shipwright-capability`** in existing frontmatter (dual-read still accepts legacy top-level `capability` for one release) on canonical source files under `core/`:
 
 ```yaml
 ---
-name: sw-coherence-reviewer
+name: coherence-reviewer
 description: …
 model: inherit
-capability:
+metadata:
+  shipwright-capability:
   version: 1
   triggers:
     - type: always_on
@@ -29,7 +30,8 @@ Markdown without other frontmatter (e.g. provider adapters) may use a minimal fe
 
 ```yaml
 ---
-capability:
+metadata:
+  shipwright-capability:
   version: 1
   triggers:
     - type: config_flag
@@ -211,3 +213,35 @@ Identical inputs ⇒ byte-identical output (`scripts/capability-select.py`).
 | `signal-context.schema.json` | Versioned selector inputs (Phase 4) |
 | `scripts/capability-select.py` | Deterministic selector (Phase 4) |
 | `scripts/capability-manifest-lint.py` | Author-time lint (Phase 3) |
+
+## Skill identity (R13)
+
+Core skill `name` in frontmatter MUST equal the unprefixed kebab-case directory name under `core/skills/` (e.g. `triage`, not `sw-triage`).
+
+
+## Dispatch record token budget (R12 / D2)
+
+Every dispatch record (preflight nonce + `dispatch-check.py` output) carries an always-present
+`tokenBudget` field:
+
+```json
+{
+  "tokenBudget": {
+    "advisory": 32000,
+    "enforced": false,
+    "used": null
+  }
+}
+```
+
+- **Advisory only** — never an enforced stop (per D2).
+- Configure via `dispatch.tokenBudget.advisory` in `workflow.config.json`.
+- Sub-agent prompts include the structured partial-result handoff contract via
+  `scripts/dispatch_prompt.py build` (see `dispatch_budget_lib.format_partial_result_handoff`).
+
+### Partial-result handoff contract
+
+When a sub-agent approaches the advisory budget, it MUST return a structured handoff object
+(fenced `untrusted_payload`) with `partialResult`, `completedSteps`, `remainingSteps`, and
+`resumeHint` — never silent truncation.
+

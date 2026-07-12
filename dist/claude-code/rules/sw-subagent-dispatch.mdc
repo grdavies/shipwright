@@ -193,6 +193,108 @@ Structural isolation (worktrees) is the dominant token lever (R31). This rule go
 sub-agents inside a worktree — not whether to provision another worktree.
 
 
+
+## Claims-audit dispatch (PRD 064 R3)
+
+During `/sw-ship` verification-gate (after behavioral-anomaly-check):
+
+```bash
+python3 scripts/claims_audit.py brief --tasks <frozen-tasks> --phase-id <phase-id> > "$RUN_DIR/claims-audit-brief.json"
+python3 scripts/dispatch-check.py --agent sw-claims-auditor --command sw-ship --skill verification-gate   --parent-model <concrete-parent-id> --prompt "$RUN_DIR/claims-audit-prompt.md"
+```
+
+- **One** fresh `sw-claims-auditor` Task per phase ship (`readonly: true`); cheap tier via `resolve-model-tier.py --agent sw-claims-auditor`.
+- Prompt contains only the redacted brief + diff summary — no orchestrator transcript (clean context).
+- Persist agent JSON to `$RUN_DIR/claims-audit-agent.json`; evaluate via `claims_audit.py run`.
+- Any claim `fail` → verification-gate `inconclusive` / `missing-required` (fail closed).
+
+
+
+## RCA fan-out dispatch (PRD 064 R1/R2)
+
+During `/sw-debug` Phase 2 or stabilize RCA when `rca.fanout.enabled` and D5 gating pass:
+
+```bash
+python3 scripts/rca_fanout.py should-fanout --signal "$RUN_DIR/signal.json" > "$RUN_DIR/rca-fanout-gate.json"
+python3 scripts/rca_fanout.py plan --signal "$RUN_DIR/signal.json" > "$RUN_DIR/rca-fanout-plan.json"
+```
+
+**Generators** — up to four parallel `sw-rca-hypothesis-generator` Tasks (`readonly: true`, cheap tier):
+
+```bash
+python3 scripts/rca_fanout.py generator-brief --plan "$RUN_DIR/rca-fanout-plan.json" --generator-id gen-1
+python3 scripts/dispatch-check.py --agent sw-rca-hypothesis-generator --command sw-debug --skill rca-core   --parent-model <concrete-parent-id> --prompt "$RUN_DIR/rca-gen-1-prompt.md"
+```
+
+One fresh generator per partition; prompts contain only the partition brief — no orchestrator transcript.
+
+**Synthesize** — merge generator JSON via `rca_fanout.py synthesize`.
+
+**Refuters** — one `sw-rca-hypothesis-refuter` Task per synthesized survivor (`readonly: true`, cheap tier):
+
+```bash
+python3 scripts/rca_fanout.py refuter-brief --hypothesis /tmp/hyp.json --signal-summary "$RUN_DIR/signal-summary.json"
+python3 scripts/dispatch-check.py --agent sw-rca-hypothesis-refuter --command sw-debug --skill rca-core   --parent-model <concrete-parent-id> --prompt "$RUN_DIR/rca-refute-prompt.md"
+```
+
+Refuters never receive generator transcripts. Route only after `rca_fanout.py evaluate` reports
+`routeReady: true` with causal-chain complete survivors.
+
+## Tournament dispatch (PRD 064 R5/R6)
+
+During `/sw-brainstorm` divergence selection when `tournament.enabled` and `should-run` passes:
+
+```bash
+python3 scripts/tournament.py should-run --divergence "$RUN_DIR/brainstorm-divergence.json" > "$RUN_DIR/tournament-gate.json"
+python3 scripts/tournament.py plan --divergence "$RUN_DIR/brainstorm-divergence.json" > "$RUN_DIR/tournament-plan.json"
+```
+
+**Attempts** — one `sw-tournament-attempt` Task per plan attempt (`readonly: true`, cheap tier):
+
+```bash
+python3 scripts/tournament.py attempt-brief --plan "$RUN_DIR/tournament-plan.json" --attempt-id attempt-1
+python3 scripts/dispatch-check.py --agent sw-tournament-attempt --command sw-brainstorm --skill tournament   --parent-model <concrete-parent-id> --prompt "$RUN_DIR/tournament-attempt-1-prompt.md"
+```
+
+**Bracket** — driver builds pairings via `tournament.py bracket`; **judges** — one `sw-tournament-judge` Task per pairing (`readonly: true`, cheap tier):
+
+```bash
+python3 scripts/tournament.py judge-brief --match /tmp/match.json --attempts "$RUN_DIR/tournament-attempts.json" --plan "$RUN_DIR/tournament-plan.json"
+python3 scripts/dispatch-check.py --agent sw-tournament-judge --command sw-brainstorm --skill tournament   --parent-model <concrete-parent-id> --prompt "$RUN_DIR/tournament-judge-prompt.md"
+```
+
+Persist winner + rationale via `tournament.py persist` to `$RUN_DIR/tournament-result.json`.
+
+
+
+## Rule adversarial verification dispatch (PRD 064 R7)
+
+Before rule-class promotion candidates reach the human gate (`skills/retro` / `skills/compound`):
+
+```bash
+python3 scripts/rule_verification.py verifier-brief --rule /tmp/rule.json --evidence /tmp/evidence.json
+python3 scripts/dispatch-check.py --agent sw-rule-verifier --command sw-retrospective --skill retro   --parent-model <concrete-parent-id> --prompt "$RUN_DIR/rule-verifier-prompt.md"
+python3 scripts/rule_verification.py skeptic-brief --rule /tmp/rule.json --verifier-result /tmp/verifier.json
+python3 scripts/dispatch-check.py --agent sw-rule-skeptic --command sw-retrospective --skill retro   --parent-model <concrete-parent-id> --prompt "$RUN_DIR/rule-skeptic-prompt.md"
+python3 scripts/rule_verification.py evaluate --verifier-result /tmp/verifier.json --skeptic-result /tmp/skeptic.json
+```
+
+Verifier and skeptic never share orchestrator transcripts. Human promotion gate unchanged.
+
+
+
+## Rule verifier sweep dispatch (PRD 064 R8)
+
+When `gapCheck.ruleVerifierSweep.enabled` during `/sw-ship` gap-check:
+
+```bash
+python3 scripts/rule_verifier_sweep.py plan --rules "$RUN_DIR/guardrail-rules.json" > "$RUN_DIR/rule-sweep-plan.json"
+```
+
+One `sw-rule-verifier` Task per job (`readonly: true`, cheap tier). Synthesize via `rule_verifier_sweep.py synthesize`; feed `halt` into `/sw-gaps` or `/sw-stabilize`.
+
+
+
 ## Execute-tier dispatch (PRD 053)
 
 Under `conductorMode: execute_fan_out` (stamped by `intra_phase_dispatch.py`):
@@ -228,3 +330,38 @@ Inline (no subagent) when ≤3 declared `file_paths` in `signal_context` and seq
 
 - Stage 1 spec-compliance → `build` tier (`resolve-model-tier.py --tier build`); must read union + task.
 - Stage 2 code-quality → `mid` tier when delegating; escalate to `build` on ambiguity.
+
+## Primary playbook injection (PRD 064 R28, R33)
+
+Before assembling delegated Task prompts (ahead of general memory recall blocks):
+
+```bash
+PLAYBOOK_BLOCKS=$(python3 scripts/memory_playbook.py primary-inject   --signals-json '<signal_context>' --root "$PWD")
+CONTEXT_BLOCKS=$(python3 -c "import json,sys; b=json.loads(sys.argv[1])['blocks']; print(json.dumps(b))" "$PLAYBOOK_BLOCKS")
+python3 scripts/dispatch_prompt.py build   --intensity "$INTENSITY" --intensity-source "$INTENSITY_SOURCE"   --body-file "${PROMPT_PATH}.body"   --primary-context-json "$CONTEXT_BLOCKS"   --context-json "${CONTEXT_BLOCKS_JSON:-[]}"   --out "$PROMPT_PATH"
+```
+
+- Inject **at most one** high-confidence `playbookStatus: active` playbook whose `triggerKeywords` match `signal_context`.
+- Eligibility is gated: `confidence` ≥ `memory.playbooks.injectMinConfidence`, `auditTelemetryRef` (R3/R4 claims-audit pass), and `skepticVerdict: pass` (R33).
+- Primary blocks are ordered **before** general memory recall / untrusted payloads in the assembled prompt.
+- When no eligible playbook matches, proceed with the standard dispatch-context recipe only.
+
+
+
+## Complexity probe (PRD 064 R11)
+
+Optional within-tier routing reuses inline-execute signals (`file_paths` count from `signal_context`).
+Disabled (default) keeps static model binding as both floor and ceiling. When
+`dispatch.complexityProbe.enabled` is true, the configured `bandFloor` / `bandCeiling` become the
+active floor/ceiling; probe inputs and chosen tier are recorded on every dispatch record.
+
+```bash
+python3 scripts/dispatch-check.py --agent <id> --command <slug> --parent-model <concrete-id>   --signal-context '<signal_context json>'
+```
+
+- `fileCount <= 1` → `bandFloor`
+- `fileCount <= 3` → static binding tier (inline-execute threshold)
+- `fileCount > 3` → `bandCeiling`
+
+Record shape on preflight / dispatch-check output: `complexityProbe: { enabled, inputs, chosenTier, staticTier }`.
+

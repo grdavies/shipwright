@@ -100,7 +100,13 @@
         "ui-ux": "mid",
         "type-design": "mid",
         "comment-accuracy": "mid",
-        "ai-native": "mid"
+        "ai-native": "mid",
+        "sw-rca-hypothesis-generator": "cheap",
+        "sw-rca-hypothesis-refuter": "cheap",
+        "sw-tournament-attempt": "cheap",
+        "sw-tournament-judge": "cheap",
+        "sw-rule-verifier": "cheap",
+        "sw-rule-skeptic": "cheap"
       },
       "skills": {
         "brainstorm": "deep",
@@ -129,7 +135,8 @@
         "tasks": "deep",
         "triage": "mid",
         "verification-gate": "cheap",
-        "worktree": "cheap"
+        "worktree": "cheap",
+        "tournament": "cheap"
       }
     }
   },
@@ -321,7 +328,8 @@
         "tasks": "lite",
         "triage": "ultra",
         "verification-gate": "ultra",
-        "worktree": "ultra"
+        "worktree": "ultra",
+        "tournament": "ultra"
       },
       "agents": {
         "sw-coherence-reviewer": "full",
@@ -345,7 +353,13 @@
         "ui-ux": "normal",
         "type-design": "normal",
         "comment-accuracy": "normal",
-        "ai-native": "normal"
+        "ai-native": "normal",
+        "sw-rca-hypothesis-generator": "ultra",
+        "sw-rca-hypothesis-refuter": "ultra",
+        "sw-tournament-attempt": "cheap",
+        "sw-tournament-judge": "cheap",
+        "sw-rule-verifier": "cheap",
+        "sw-rule-skeptic": "cheap"
       }
     }
   },

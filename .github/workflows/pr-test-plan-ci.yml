@@ -42,6 +42,17 @@ jobs:
       - name: Run git-push-secret-scan-chokepoint
         run: python3 scripts/test/git-push-secret-scan-chokepoint.test
 
+  feat-test-plan-skills-spec-guard:
+    name: feat-test-plan-skills-spec-guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run skills-spec-guard-fixtures
+        run: python3 scripts/test/skills-spec-guard.test
+
   feat-test-plan-pytest-required-shard-1:
     name: feat-test-plan-pytest-required-shard-1
     runs-on: ubuntu-latest
@@ -97,4 +108,26 @@ jobs:
           python-version: "3.12"
       - name: Run planning-deliver-run-entry-fixtures, planning-store-fixtures, planning-unit-fixtures, planning-visibility-acceptance-fixtures, prd-050-ship-verification-fixtures, prd-051-ship-verification-fixtures, regression-remediation-fixtures, retrospective-fixtures, spec-rigor-brainstorm-profile-fixtures, status-integrity-fixtures, stdlib-coverage-fixtures, suite-registry-fixtures, terminal-state-read-fixtures, two-track-fixtures, visibility-fixtures, worktree-config-fixtures, planning-native-links-fixtures, planning-deliver-progress-fixtures, planning-061-progress-fixtures, planning-doc-issue-store-fixtures, planning-061-github-projects-fixtures, planning-061-inbound-native-fixtures, planning-061-amend-docs-gap-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/planning scripts/unit_tests/ship scripts/unit_tests/w4 scripts/unit_tests/git scripts/unit_tests/spec_rigor scripts/unit_tests/deliver scripts/unit_tests/coverage scripts/unit_tests/meta scripts/unit_tests/planning/test_planning_native_links.py scripts/unit_tests/planning/test_planning_deliver_progress.py scripts/unit_tests/planning/test_planning_061_progress.py scripts/unit_tests/planning/test_planning_doc_issue_store.py scripts/unit_tests/planning/test_planning_061_github_projects.py scripts/unit_tests/planning/test_planning_061_inbound_native.py scripts/unit_tests/planning/test_planning_061_amend_docs_gap.py -q
+
+  feat-test-plan-claims-audit-unit:
+    name: feat-test-plan-claims-audit-unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run claims-audit-unit
+        run: python3 scripts/test/claims-audit-unit.test
+
+  feat-test-plan-rca-fanout-unit:
+    name: feat-test-plan-rca-fanout-unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run rca-fanout-unit
+        run: python3 scripts/test/rca-fanout-unit.test
 

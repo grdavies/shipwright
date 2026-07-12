@@ -1,8 +1,7 @@
 ---
-name: sw-brainstorm
-description: Explore requirements through one-question-at-a-time dialogue, then write a requirements document with stable R-IDs. Use for Full-tier work before PRD drafting.
+name: brainstorm
+description: Explore requirements through one-question-at-a-time dialogue, then write a requirements document with stable R-IDs. Use when scope is open or Full-tier work precedes PRD drafting. Does not freeze artifacts or generate tasks.
 ---
-
 # Brainstorm (`/sw-brainstorm`)
 
 Full-tier requirements exploration. Produces a brainstorm doc for `/sw-prd`. Does **not** draft a PRD.
@@ -26,6 +25,35 @@ Full-tier requirements exploration. Produces a brainstorm doc for `/sw-prd`. Doe
 2. If input is vague, ask one clarifying question (blocking tool preferred).
 3. Explore alternatives; challenge assumptions; resolve product decisions here.
 4. Run synthesis checkpoint: restate scope, tier, key decisions; confirm with user before write.
+
+### Divergence tournament (PRD 064 R6, opt-in)
+
+When `tournament.enabled` is true and Phase 1 yields **≥2 viable divergence candidates** at the
+**divergence-selection** checkpoint (before the synthesis checkpoint), run the tournament primitive instead of
+picking an option inline:
+
+```bash
+python3 scripts/tournament.py should-run --divergence "$RUN_DIR/brainstorm-divergence.json"
+python3 scripts/tournament.py plan --divergence "$RUN_DIR/brainstorm-divergence.json" > "$RUN_DIR/tournament-plan.json"
+```
+
+Load `skills/tournament/SKILL.md` for attempt fan-out, deterministic bracketing, pairwise judges, and
+`persist` winner + rationale. Config keys: `tournament.{enabled,n,cost_ceiling}` — default `N=3`, **off** by
+default. Other call sites are out of scope (D3).
+
+
+
+### Candidate-idea near-duplicate intake (PRD 064 R25)
+
+Before persisting a new brainstorm candidate idea (divergence checkpoint or requirements write), scan
+against the live gap-unit corpus. Flag for review only — never auto-suppress or block synthesis (KD5):
+
+```bash
+python3 scripts/gap_similarity.py scan   --candidate "$CANDIDATE_IDEA_TEXT"   --out "$RUN_DIR/brainstorm-near-dup-scan.json"   --handoff-out "$RUN_DIR/brainstorm-near-dup-handoff.md"
+```
+
+When matches are returned, include `brainstorm-near-dup-handoff.md` in the synthesis checkpoint for
+human confirm before continuing to `/sw-prd`.
 
 
 ## Issue-store authoring (PRD 056 R11–R12)

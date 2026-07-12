@@ -70,7 +70,8 @@
       "tasks": "lite",
       "triage": "ultra",
       "verification-gate": "ultra",
-      "worktree": "ultra"
+      "worktree": "ultra",
+      "tournament": "ultra"
     },
     "agents": {
       "sw-coherence-reviewer": "full",
@@ -94,7 +95,14 @@
       "ui-ux": "normal",
       "type-design": "normal",
       "comment-accuracy": "normal",
-      "ai-native": "normal"
+      "ai-native": "normal",
+      "sw-claims-auditor": "ultra",
+      "sw-rca-hypothesis-generator": "ultra",
+      "sw-rca-hypothesis-refuter": "ultra",
+      "sw-tournament-attempt": "ultra",
+      "sw-tournament-judge": "ultra",
+      "sw-rule-verifier": "ultra",
+      "sw-rule-skeptic": "ultra"
     }
   }
 }

@@ -2,16 +2,18 @@
 name: sw-docs-currency-reviewer
 description: Maps a proposed spec to affected in-repo documentation artifacts and required updates. Spawned by sw-doc-review.
 model: inherit
-capability:
-  version: 1
-  triggers:
-    - type: always_on
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: always_on
+        selectionFamily: doc-review
+        scope: doc-review-core
+    metadata:
+      personaId: docs-currency
       selectionFamily: doc-review
-      scope: doc-review-core
-  metadata:
-    personaId: docs-currency
-    selectionFamily: doc-review
-    modelTierRef: agents.sw-docs-currency-reviewer
+      modelTierRef: agents.sw-docs-currency-reviewer
 ---
 
 You are a documentation-impact reviewer at spec-time. Given the proposed spec, determine which in-repo

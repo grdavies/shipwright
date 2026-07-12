@@ -1,13 +1,15 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: phase_default
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: phase_default
+        selectionFamily: providers
+        scope: planning-store-contract
+    metadata:
+      providerFamily: planning-store
       selectionFamily: providers
-      scope: planning-store-contract
-  metadata:
-    providerFamily: planning-store
-    selectionFamily: providers
 ---
 
 # Planning store capabilities (PRD 034)

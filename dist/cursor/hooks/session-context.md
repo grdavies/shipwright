@@ -1,13 +1,15 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: always_on
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: always_on
+        selectionFamily: workflow
+        scope: session-bootstrap
+    metadata:
       selectionFamily: workflow
-      scope: session-bootstrap
-  metadata:
-    selectionFamily: workflow
-    notes: non-kernel session context hook doc; kernel guardrails excluded from manifest selection
+      notes: non-kernel session context hook doc; kernel guardrails excluded from manifest selection
 ---
 
 # Shipwright session context

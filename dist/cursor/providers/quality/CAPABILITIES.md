@@ -1,14 +1,16 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: phase_default
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: phase_default
+        selectionFamily: providers
+        scope: quality-contract
+    metadata:
+      providerFamily: quality
       selectionFamily: providers
-      scope: quality-contract
-  metadata:
-    providerFamily: quality
-    selectionFamily: providers
-    notes: neutral capability contract doc
+      notes: neutral capability contract doc
 ---
 
 # Quality provider capabilities (PRD 039)

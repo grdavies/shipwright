@@ -432,6 +432,19 @@
 * merge phase pre-pr-targeted-pytest-smoke-r4-small into feat/deliver-autonomy-and-finalize-hygiene (0862727) <!-- sw-deliver:pre-pr-targeted-pytest-smoke-r4-small -->
 * merge phase finalize-hygiene-r11-r13-medium into feat/deliver-autonomy-and-finalize-hygiene (f4e553d) <!-- sw-deliver:finalize-hygiene-r11-r13-medium -->
 * merge phase harness-pollution-guard-docs-currency-r10-r17-medium into feat/deliver-autonomy-and-finalize-hygiene (d50daa9) <!-- sw-deliver:harness-pollution-guard-docs-currency-r10-r17-medium -->
+* merge phase skill-identity-name-alignment-and-capability-relocation-workstream-b into feat/agentic-quality-patterns-and-standards-conformance (a07213a) <!-- sw-deliver:skill-identity-name-alignment-and-capability-relocation-workstream-b -->
+* merge phase progressive-disclosure-budgets-and-forward-standard-adr-workstream-b into feat/agentic-quality-patterns-and-standards-conformance (8533a33) <!-- sw-deliver:progressive-disclosure-budgets-and-forward-standard-adr-workstream-b -->
+* merge phase skills-spec-validation-gate-and-description-contract-workstream-b into feat/agentic-quality-patterns-and-standards-conformance (813cdad) <!-- sw-deliver:skills-spec-validation-gate-and-description-contract-workstream-b -->
+* merge phase okf-memory-export-import-and-deterministic-index-log-workstream-c into feat/agentic-quality-patterns-and-standards-conformance (69caa99) <!-- sw-deliver:okf-memory-export-import-and-deterministic-index-log-workstream-c -->
+* merge phase memory-link-traversal-consumers-and-richer-frontmatter-workstream-c into feat/agentic-quality-patterns-and-standards-conformance (5e0433d) <!-- sw-deliver:memory-link-traversal-consumers-and-richer-frontmatter-workstream-c -->
+* merge phase adversarial-completion-claims-audit-workstream-a into feat/agentic-quality-patterns-and-standards-conformance (4786783) <!-- sw-deliver:adversarial-completion-claims-audit-workstream-a -->
+* merge phase multi-hypothesis-rca-fan-out-workstream-a into feat/agentic-quality-patterns-and-standards-conformance (11caf29) <!-- sw-deliver:multi-hypothesis-rca-fan-out-workstream-a -->
+* merge phase confidence-scored-primary-injected-playbooks-workstream-d into feat/agentic-quality-patterns-and-standards-conformance (16b9b3a) <!-- sw-deliver:confidence-scored-primary-injected-playbooks-workstream-d -->
+* merge phase tournament-primitive-and-adversarial-rule-mining-workstream-a into feat/agentic-quality-patterns-and-standards-conformance (94e1ef3) <!-- sw-deliver:tournament-primitive-and-adversarial-rule-mining-workstream-a -->
+* merge phase reader-actor-split-complexity-routing-and-token-budget-workstream-a into feat/agentic-quality-patterns-and-standards-conformance (dd90603) <!-- sw-deliver:reader-actor-split-complexity-routing-and-token-budget-workstream-a -->
+* merge phase semantic-near-duplicate-detection-workstream-d into feat/agentic-quality-patterns-and-standards-conformance (6a29092) <!-- sw-deliver:semantic-near-duplicate-detection-workstream-d -->
+* merge phase same-stage-escalation-and-staleness-classifier-workstream-d into feat/agentic-quality-patterns-and-standards-conformance (fd057d8) <!-- sw-deliver:same-stage-escalation-and-staleness-classifier-workstream-d -->
+* merge phase telemetry-driven-task-prompt-improvement-workstream-d into feat/agentic-quality-patterns-and-standards-conformance (c7cd542) <!-- sw-deliver:telemetry-driven-task-prompt-improvement-workstream-d -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

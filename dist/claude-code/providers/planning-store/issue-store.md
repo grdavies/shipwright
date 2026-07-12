@@ -1,15 +1,17 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: planning.store.backend
+        equals: issue-store
+    metadata:
+      providerFamily: planning-store
+      adapterId: issue-store
       selectionFamily: providers
-      key: planning.store.backend
-      equals: "issue-store"
-  metadata:
-    providerFamily: planning-store
-    adapterId: issue-store
-    selectionFamily: providers
 ---
 
 # Issue-store planning backend (PRD 043)

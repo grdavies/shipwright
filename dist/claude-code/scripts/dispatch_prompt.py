@@ -15,6 +15,7 @@ from _sw.cli import build_parser, run_module_main
 from check_gate_lib import load_workflow_config
 from context_compress import compress, detect_content_type, estimate_tokens, retrieve
 from dispatch_intensity_check import format_intensity_directive, validate_retrieve_key_guard
+from dispatch_budget_lib import format_partial_result_handoff, resolve_token_budget
 
 DEFAULT_THRESHOLD_TOKENS = 8000
 DEFAULT_CONTEXT_COMPRESSION_ENABLED = False
@@ -191,6 +192,7 @@ def build_deliver_phase_ship_prompt(
     context_blocks: list[ContextBlock] | None = None,
     config_path: str | None = None,
     root: Path | None = None,
+    include_partial_handoff: bool = True,
 ) -> DispatchPromptResult:
     """Assemble deliver phase-ship Task prompt with required intensity directive (gap-115, R3)."""
     return build_task_dispatch_prompt(
@@ -208,9 +210,11 @@ def build_task_dispatch_prompt(
     intensity: str,
     intensity_source: str,
     body: str,
+    primary_context_blocks: list[ContextBlock] | None = None,
     context_blocks: list[ContextBlock] | None = None,
     config_path: str | None = None,
     root: Path | None = None,
+    include_partial_handoff: bool = True,
 ) -> DispatchPromptResult:
     """Assemble a Task-dispatch prompt with directive, optional compression, and body."""
     repo = (root or Path.cwd()).resolve()
@@ -222,6 +226,15 @@ def build_task_dispatch_prompt(
     tokens_before = estimate_tokens(directive) + estimate_tokens(body)
     compression_applied = False
 
+    for block in primary_context_blocks or []:
+        processed = process_context_block(block, config=config, root=repo)
+        if processed.text:
+            parts.append(processed.text)
+            tokens_before += estimate_tokens(processed.text)
+        retrieve_keys.extend(processed.retrieve_keys)
+        if processed.compressed:
+            compression_applied = True
+
     for block in context_blocks or []:
         processed = process_context_block(block, config=config, root=repo)
         if processed.text:
@@ -231,6 +244,9 @@ def build_task_dispatch_prompt(
         if processed.compressed:
             compression_applied = True
 
+    if include_partial_handoff:
+        token_budget = resolve_token_budget(config)
+        parts.append(format_partial_result_handoff(token_budget))
     parts.append(body)
     prompt = "\n".join(part for part in parts if part)
 
@@ -369,6 +385,7 @@ def main(argv: list[str] | None = None) -> int:
     build_p.add_argument("--intensity-source", required=True)
     build_p.add_argument("--body-file", help="Path to redacted task body text")
     build_p.add_argument("--body", help="Inline task body text")
+    build_p.add_argument("--primary-context-json", help="JSON array of primary playbook context blocks (R28)")
     build_p.add_argument("--context-json", help="JSON array of context blocks")
     build_p.add_argument("--config", dest="config_path", help="workflow.config.json override")
     build_p.add_argument("--root", help="Repository root")
@@ -401,6 +418,12 @@ def main(argv: list[str] | None = None) -> int:
     else:
         body = sys.stdin.read()
 
+    primary_blocks: list[ContextBlock] = []
+    if getattr(args, "primary_context_json", None):
+        primary_payload = json.loads(args.primary_context_json)
+        if isinstance(primary_payload, list):
+            primary_blocks = [_context_block_from_json(item) for item in primary_payload if isinstance(item, dict)]
+
     blocks: list[ContextBlock] = []
     if args.context_json:
         payload = json.loads(args.context_json)
@@ -412,6 +435,7 @@ def main(argv: list[str] | None = None) -> int:
         intensity=args.intensity,
         intensity_source=args.intensity_source,
         body=body,
+        primary_context_blocks=primary_blocks,
         context_blocks=blocks,
         config_path=args.config_path,
         root=root,

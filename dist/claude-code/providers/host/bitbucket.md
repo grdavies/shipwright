@@ -1,16 +1,18 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: host.provider
+        equals: bitbucket
+    metadata:
+      providerFamily: host
+      adapterId: bitbucket
       selectionFamily: providers
-      key: host.provider
-      equals: "bitbucket"
-  metadata:
-    providerFamily: host
-    adapterId: bitbucket
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # Bitbucket host adapter

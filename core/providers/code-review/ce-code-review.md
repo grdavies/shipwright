@@ -1,16 +1,18 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: review.local.provider
+        equals: ce-code-review
+    metadata:
+      providerFamily: review.local
+      adapterId: ce-code-review
       selectionFamily: providers
-      key: review.local.provider
-      equals: "ce-code-review"
-  metadata:
-    providerFamily: review.local
-    adapterId: ce-code-review
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # ce-code-review local adapter (agent-mediated)

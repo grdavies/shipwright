@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+env = os.environ.copy()
+env["PYTHONPATH"] = str(ROOT / "scripts") + (":" + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+proc = subprocess.run(
+    [sys.executable, str(ROOT / "scripts" / "test" / "run_pytest.py"), "scripts/unit_tests/test_rca_fanout.py", "-q"],
+    cwd=str(ROOT),
+    env=env,
+    shell=False,
+)
+if proc.returncode != 0:
+    raise SystemExit(proc.returncode)
+print("OK  rca-fanout-unit")

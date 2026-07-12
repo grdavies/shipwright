@@ -1,19 +1,21 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: planning.store.issuesProvider
+        equals: github-issues
+    metadata:
+      providerFamily: issues
+      adapterId: github-issues
       selectionFamily: providers
-      key: planning.store.issuesProvider
-      equals: "github-issues"
-  metadata:
-    providerFamily: issues
-    adapterId: github-issues
-    selectionFamily: providers
-    gateRef: check-gate.py
-    linkedPrGraphqlScopes: ["read:project", "read:org"]
-    linkageSoT: sw:deliver-annotate
-    issueMilestoneVerb: issue-milestone
+      gateRef: check-gate.py
+      linkedPrGraphqlScopes: "[\"read:project\", \"read:org\"]"
+      linkageSoT: "sw:deliver-annotate"
+      issueMilestoneVerb: issue-milestone
 ---
 
 # GitHub Issues adapter

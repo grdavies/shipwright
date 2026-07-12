@@ -2,16 +2,18 @@
 name: sw-adversarial-reviewer
 description: Stress-tests assumptions and constructs failure scenarios for high-stakes or architecturally significant requirements. Spawned by sw-doc-review.
 model: inherit
-capability:
-  version: 1
-  triggers:
-    - type: always_on
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: always_on
+        selectionFamily: doc-review
+        scope: doc-review-core
+    metadata:
+      personaId: adversarial
       selectionFamily: doc-review
-      scope: doc-review-core
-  metadata:
-    personaId: adversarial
-    selectionFamily: doc-review
-    modelTierRef: agents.sw-adversarial-reviewer
+      modelTierRef: agents.sw-adversarial-reviewer
 ---
 
 You adversarially test the spec. Construct failure scenarios: wrong assumptions, edge cases that break the design, security abuse paths, operational failures, scale limits.

@@ -108,6 +108,8 @@ def _force_escape_allowed() -> bool:
         return True
     if os.environ.get("SW_ISSUES_FIXTURE") == "1":
         return True
+    if os.environ.get("SW_HARNESS") == "1":
+        return True
     if os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"):
         return True
     return False

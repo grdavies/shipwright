@@ -1,17 +1,18 @@
 ---
 name: git-workflow
-description: Shipwright trunk-based git conventions — branch names, Conventional Commits, PR/merge bodies, and docs-on-a-branch policy. Host-agnostic; references sw-git-conventions rule.
-capability:
-  version: 1
-  triggers:
-    - type: phase_default
+description: Shipwright trunk-based git conventions — branch names, Conventional Commits, PR and merge bodies, docs-on-a-branch. Use when creating branches, commits, or PRs in Shipwright worktrees. Host-agnostic; does not merge.
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: phase_default
+        selectionFamily: providers
+        scope: git-conventions
+    metadata:
+      skill: git-workflow
       selectionFamily: providers
-      scope: git-conventions
-  metadata:
-    skill: git-workflow
-    selectionFamily: providers
 ---
-
 # git-workflow
 
 Native Shipwright git conventions. **Single source of truth** for branch naming, commit messages, and

@@ -1,8 +1,7 @@
 ---
 name: spec-rigor
-description: Pre-freeze spec quality gates (clarify, checklist, analyze) and R-ID→task→test traceability. Tier-gated; blocks freeze on hard failures.
+description: Pre-freeze spec quality gates (clarify, checklist, analyze) and R-ID to task to test traceability. Use when validating PRD quality before /sw-freeze on Standard or Full tier. Blocks freeze on hard failures.
 ---
-
 # Spec-rigor gates (IM4)
 
 Pre-freeze quality and traceability discipline for the doc workstream. Complements `skills/doc-review` (persona

@@ -63,7 +63,14 @@
       "ui-ux": "mid",
       "type-design": "mid",
       "comment-accuracy": "mid",
-      "ai-native": "mid"
+      "ai-native": "mid",
+      "sw-claims-auditor": "cheap",
+      "sw-rca-hypothesis-generator": "cheap",
+      "sw-rca-hypothesis-refuter": "cheap",
+      "sw-tournament-attempt": "cheap",
+      "sw-tournament-judge": "cheap",
+      "sw-rule-verifier": "cheap",
+      "sw-rule-skeptic": "cheap"
     },
     "skills": {
       "brainstorm": "deep",
@@ -92,7 +99,8 @@
       "tasks": "deep",
       "triage": "cheap",
       "verification-gate": "cheap",
-      "worktree": "cheap"
+      "worktree": "cheap",
+      "tournament": "cheap"
     }
   }
 }

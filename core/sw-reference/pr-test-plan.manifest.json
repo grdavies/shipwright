@@ -28,6 +28,21 @@
       ]
     },
     {
+      "id": "skills-spec-guard-fixtures",
+      "script": "scripts/test/skills-spec-guard.test",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-skills-spec-guard",
+      "scenarios": [
+        "skills-spec-live-tree-pass",
+        "skills-spec-pass-valid-core",
+        "skills-spec-pass-valid-cursor",
+        "skills-spec-pass-valid-claude",
+        "skills-spec-fail-name-mismatch",
+        "skills-spec-fail-description-shape"
+      ]
+    },
+    {
       "id": "authoring-guard-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -1416,6 +1431,20 @@
       "classification": "required",
       "ciJobName": "feat-test-plan-pytest-required-shard-4",
       "ciShard": 4
+    },
+    {
+      "id": "claims-audit-unit",
+      "script": "scripts/test/claims-audit-unit.test",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-claims-audit-unit"
+    },
+    {
+      "id": "rca-fanout-unit",
+      "script": "scripts/test/rca-fanout-unit.test",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-rca-fanout-unit"
     }
   ]
 }

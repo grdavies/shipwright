@@ -1,17 +1,18 @@
 ---
 name: verification-gate
-description: Evidence-over-claims gate that emits a three-state verdict (verified / not-verified / inconclusive) from structured status files. Complementary to checks-gate; never overrides CI truth.
-capability:
-  version: 1
-  triggers:
-    - type: phase_default
+description: Evidence-over-claims gate emitting verified, not-verified, or inconclusive from structured status files. Use when /sw-ship needs local evidence before commit. Complementary to checks-gate; never overrides CI truth.
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: phase_default
+        selectionFamily: verify
+        command: sw-verify
+    metadata:
+      skill: verification-gate
       selectionFamily: verify
-      command: sw-verify
-  metadata:
-    skill: verification-gate
-    selectionFamily: verify
 ---
-
 # verification-gate
 
 Reusable local verification gate (IM1). Consumes **structured** evidence pointers — not raw `/tmp` logs.
@@ -102,6 +103,23 @@ Attribution compares per-command identity sets when `commands[]` is present (sor
 files without `commands[]` fall back to `{exitCode, status}`. Gate dimension uses `verdict` + `failingChecks`.
 Rejected baseline reads → `missing-required`, never silent downgrade.
 
+
+
+## Completion-claims audit (PRD 064 R3)
+
+After `/sw-verify` and `behavioral-anomaly-check`, before `scripts/verify-evidence.py`:
+
+1. Build a clean-context brief:
+   `python3 scripts/claims_audit.py brief --tasks <frozen-tasks> --phase-id <phase-id>`
+2. Dispatch **`sw-claims-auditor`** (cheap tier, `readonly: true`) per `rules/sw-subagent-dispatch.mdc` — one
+   fresh agent per phase ship; never resume prior task context.
+3. Evaluate and persist structured status:
+   `python3 scripts/claims_audit.py run --tasks <frozen-tasks> --phase-id <phase-id> --agent-result <path> --out $RUN_DIR/claims-audit.status.json`
+4. `verify-evidence.py` auto-reads `claims-audit.status.json` and **fails closed** (`inconclusive` /
+   `missing-required`) when any claim is `fail`.
+
+Schema: `references/claims-audit-schema.json`. Mechanical file-touch checks run even when the agent is skipped;
+agent verdict is required when a claim row has non-empty **Expected:** text.
 
 ## Behavioral-anomaly overlay (PRD 041 R28)
 

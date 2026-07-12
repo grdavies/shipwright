@@ -1,8 +1,7 @@
 ---
-name: sw-gap-check
-description: Compare phase plan (spec union + task checklist) against git diff; bounded closers for in-scope gaps. Default-on in /sw-ship.
+name: gap-check
+description: Compare phase plan (spec union + task checklist) against git diff with bounded closers. Use when /sw-ship needs in-scope gap detection before commit. Default-on; does not author new scope.
 ---
-
 # gap-check
 
 Catches planned vs actual before commit.
@@ -85,6 +84,41 @@ via `scripts/gap-check-gate.py`:
 - `ship-phase-status.py` refuses `merge-ready-green` when the durable verdict is `halt`.
 - **`--fast` is prohibited** for deliver merge decisions (`--deliver-merge --fast` fails closed with
   `deliver-gap-check-no-fast-skip`). Standalone `/sw-ship` may still use `--fast` per ship skill contract.
+
+
+## Near-duplicate scan (PRD 064 R24/R25)
+
+After loading plan + diff and before closers, run the stdlib semantic near-duplicate scan for any
+**new or changed in-scope scope titles/summaries** surfaced by the gap report (never auto-suppress per KD5):
+
+```bash
+python3 scripts/gap_similarity.py corpus --out "$RUN_DIR/gap-similarity-corpus.json"
+python3 scripts/gap_similarity.py scan   --candidate "$CANDIDATE_TITLE_SUMMARY"   --corpus "$RUN_DIR/gap-similarity-corpus.json"   --out "$RUN_DIR/gap-similarity-scan.json"   --handoff-out "$RUN_DIR/gap-similarity-handoff.md"
+```
+
+Two tiers (config `gapCheck.nearDuplicate.{highThreshold,softThreshold}`):
+
+- **high-terminal** — similarity ≥ high threshold vs `resolved`/`superseded` units (likely already addressed).
+- **soft-open** — similarity ≥ soft threshold vs any open/scheduled unit (possible duplicate gap).
+
+When `verdict` is `flag-for-review`, surface `$RUN_DIR/gap-similarity-handoff.md` in the gap-check
+handoff summary for **human confirm** — never block merge, never auto-suppress capture, and never skip
+the binding gap-check verdict on similarity alone.
+
+
+## Rule verifier sweep (PRD 064 R8, opt-in)
+
+When `gapCheck.ruleVerifierSweep.enabled` is true, after the gap report and before closers, fan out one cheap
+`sw-rule-verifier` Task per active guardrail rule (repeat-violation check):
+
+```bash
+python3 scripts/rule_verifier_sweep.py plan --rules "$RUN_DIR/guardrail-rules.json" > "$RUN_DIR/rule-sweep-plan.json"
+python3 scripts/rule_verifier_sweep.py synthesize --results "$RUN_DIR/rule-sweep-results.json" --out "$RUN_DIR/rule-sweep.status.json"
+```
+
+Feed sweep `halt` verdicts into `/sw-gaps` remediation or `/sw-stabilize` when repeat violations are found.
+Default **off** — standalone `/sw-gaps` may opt in per run.
+
 
 ## Modes
 

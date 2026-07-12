@@ -1,15 +1,17 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: planning.store.backend
+        equals: local-synced
+    metadata:
+      providerFamily: planning-store
+      adapterId: local-synced
       selectionFamily: providers
-      key: planning.store.backend
-      equals: "local-synced"
-  metadata:
-    providerFamily: planning-store
-    adapterId: local-synced
-    selectionFamily: providers
 ---
 
 # Planning store adapter: local/synced

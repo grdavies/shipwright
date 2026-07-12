@@ -1,14 +1,16 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: phase_default
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: phase_default
+        selectionFamily: providers
+        scope: verify-contract
+    metadata:
+      providerFamily: verify
       selectionFamily: providers
-      scope: verify-contract
-  metadata:
-    providerFamily: verify
-    selectionFamily: providers
-    notes: neutral capability contract doc
+      notes: neutral capability contract doc
 ---
 
 # Verify E2E / smoke adapter capabilities (IM9 / U10)

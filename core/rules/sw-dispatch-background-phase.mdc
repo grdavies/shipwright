@@ -15,4 +15,13 @@ capability:
 
 # Dispatch background-phase posture
 
+## Staleness classifier (R32)
+
+Before escalating a background phase as stuck, run the multi-signal staleness classifier
+(`scripts/phase_staleness_lib.py`) with last tool-call, last commit, last status write, and
+`pendingHumanReply`. Defer watchdog timeout when classification is `waiting-on-human` at high/medium
+confidence; treat `genuinely-stuck` at high confidence as a legitimate halt candidate. Intra-phase Task
+dispatch remains disabled — classification does not introduce a new dispatch path.
+
+
 Background phase sub-agents disable intra-phase Task dispatch — inline two-stage review only (R45).

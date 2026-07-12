@@ -1,16 +1,18 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: planning.store.issuesProvider
+        equals: none
+    metadata:
+      providerFamily: issues
+      adapterId: none
       selectionFamily: providers
-      key: planning.store.issuesProvider
-      equals: "none"
-  metadata:
-    providerFamily: issues
-    adapterId: none
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # Issues provider: none

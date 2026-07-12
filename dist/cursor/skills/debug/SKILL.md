@@ -1,8 +1,7 @@
 ---
-name: sw-debug
-description: Signal-driven production debugging via shared RCA core. Diagnoses and routes; does not implement or merge fixes.
+name: debug
+description: Signal-driven production debugging via shared RCA core. Use when triaging production errors, crashes, or regressions before fixing. Diagnoses and routes; does not implement patches or merge.
 ---
-
 # Debug workflow
 
 Post-ship production signals **and** dev-time test/build failures (R22). Shares `skills/rca-core` with
@@ -54,6 +53,17 @@ Otherwise → Phase 1.
 
 1. Normalize to `skills/rca-core/references/debug-inputs.md` shape.
 2. **Redact** all text: `python3 scripts/memory-redact.py`.
+
+### Sentry expansion reader (R9/R10)
+
+When expanding a bare Sentry ref via MCP (`skills/debug/references/sentry.md`), delegate a **reader**
+Task at boundary `debug-sentry-expansion` (`role: reader`, `readonly: true`). The reader fetches and
+redacts the Sentry body; the acting debug agent receives only the redacted enveloped excerpt.
+
+```bash
+python3 scripts/dispatch-check.py --agent generalPurpose --command sw-debug --skill debug   --parent-model <concrete-parent-id> --role reader --boundary debug-sentry-expansion   --dispatch-id <id> --prompt "$RUN_DIR/sentry-reader-prompt.md"
+```
+
 3. If `type == sentry` → `skills/debug/references/sentry.md` (MCP enrich or degrade).
 4. `memory-preflight` **search**: category `debug`, `relatedFiles`, tags for failing area.
 5. Attach `priorDebugMemoryIds` to the signal context.
@@ -65,10 +75,15 @@ Invoke `skills/rca-core`:
 - **Production signals** (`sentry`, `deploy_log`, `user_report`) → **debug entry procedure**
 - **Dev-time signals** (`test_failure`, `build_failure`, `verify_failure`) → **dev-time entry procedure**
 
+**Fan-out entry (opt-in):** when `rca.fanout.enabled` is true, evaluate D5 gating via
+`python3 scripts/rca_fanout.py should-fanout --signal <normalized-signal.json>`. On `useFanout: true`, follow
+`skills/rca-core/references/fan-out.md` (partitioned generators → synthesize → per-survivor refuters). On
+`useFanout: false`, use single-context shared discipline below.
+
 Shared across entries:
 
 - Rank hypotheses with evidence
-- Causal-chain gate before fix proposal
+- Causal-chain gate before fix proposal (refuter panel when fan-out active)
 - Invalidate rejected hypotheses explicitly
 - Hard stops: max 5 iterations, no-progress, rule-of-three, human-decision (R29)
 - Production debug: attempt repro-from-context; local repro optional

@@ -110,7 +110,7 @@ class ClaudeCodeEmitter(EmitterBase):
             )
         else:
             frontmatter = f"description: {use_when}\n{frontmatter}"
-        return f"---{frontmatter}---{body}"
+        return f"---\n{frontmatter}\n---\n{body}"
 
     def _apply_use_when_to_skills(self, core_root: Path, dest: Path) -> None:
         rules_dir = core_root / "rules"

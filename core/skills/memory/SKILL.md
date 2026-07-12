@@ -1,17 +1,18 @@
 ---
-name: memory-preflight
-description: Provider-agnostic durable-memory access for the Shipwright workflow. Use at the start of any phase command (execute, coderabbit, stabilize, watch-ci) to load relevant memories and rules, and at the end to store distilled memories. Routes through the configured memory provider adapter so no command names a provider directly.
-capability:
-  version: 1
-  triggers:
-    - type: phase_default
+name: memory
+description: Provider-agnostic durable-memory access for the Shipwright workflow. Use when loading context at phase start or storing distilled memories at phase end via /sw-memory-sync. Routes through configured provider; never calls providers directly.
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: phase_default
+        selectionFamily: memory
+        command: sw-memory-sync
+    metadata:
+      skill: memory
       selectionFamily: memory
-      command: sw-memory-sync
-  metadata:
-    skill: memory
-    selectionFamily: memory
 ---
-
 # memory-preflight
 
 The single entry point every Shipwright command uses to read and write durable memory. It hides the
@@ -48,7 +49,7 @@ Follow `CAPABILITIES.md` **Read recipe**, scoped to the surface being touched:
    - **file-path** search on the paths the command will touch,
    - **semantic** search on the change type / PRD / feature / surface,
    - **category** narrowing when the adapter supports `categoryFilter`.
-3. Search these classes: `rule`, `decision`, `learning`, `code-context`, `design`.
+3. Search these classes: `rule`, `decision`, `learning`, `code-context`, `playbook`, `design`.
 4. `expand` only the handful of ids that look relevant before mutation.
 
 Per-command scope hints remain in the table under **Read mode (preflight)** below; the obligation and
@@ -74,7 +75,7 @@ Record the pre-work search breadcrumb before the first substantive mutation:
 python3 scripts/wave.py memory prework record \
   --surface sw-execute \
   --scope "core/skills/memory/SKILL.md" \
-  --classes rule,decision,learning,code-context,design \
+  --classes rule,decision,learning,code-context,playbook,design \
   [--hit-count N]
 ```
 
@@ -90,6 +91,13 @@ The shared recorder (`scripts/wave_memory_prework.py`) writes a redacted per-sur
 
 Offline is **probe-gated** — never agent-asserted. Enforcement at the first file-mutating tool call
 reuses the PRD 017 `preToolUse` deny path (Phase 3).
+
+## Load-context orientation (R20)
+
+For `load-context`, read the store's derived `index.md` **before** any search or expand. The index
+groups memories by canonical category with title/first-line plus id for cheap orientation. When
+`index.md` is absent, run `python3 scripts/in-repo-memory-search.py maintain-derived --store <dir>`
+once, then read the index.
 
 ## Read mode (preflight)
 
@@ -169,6 +177,7 @@ Store distilled memories per the write contract in `CAPABILITIES.md`:
 - search before store; `modify` a near-duplicate instead of adding a second,
 - project scope by default; global only on explicit user direction,
 - store the distilled substance, never a raw transcript dump.
+- populate `title` and `description` frontmatter at store time from the distilled first line when omitted (`memory-preflight` write path).
 
 For **`decision`-class** writes, resolve the inverted pointer recipe first (R6):
 
@@ -208,7 +217,7 @@ python3 scripts/in-repo-memory-search.py \
   [--category decision] [--tag prd-1] [--file-glob src/auth.ts]
 ```
 
-Then `expand` by reading `memories/<id>.md` (or `rules/<id>.md` for rule category).
+Then `expand` via `python3 scripts/in-repo-memory-search.py expand --store <dir> --ids <id>` (full body + backlinks), or read `memories/<id>.md` directly.
 
 **Write:**
 

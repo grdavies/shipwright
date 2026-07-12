@@ -1,8 +1,7 @@
 ---
 name: execute-discipline
-description: Per-task TDD gate, two-stage subagent review, and executable-plan self-review for /sw-execute. Consumes U6 traceability.
+description: Per-task TDD gate, two-stage subagent review, and executable-plan self-review for /sw-execute. Use when implementing frozen task phases with R-ID traceability. Does not ship or merge.
 ---
-
 # Execute discipline (IM5 + IM6)
 
 Bounded implementation loop inside `/sw-execute`. One **task ref** at a time (e.g. `1.2`); each task runs
@@ -96,6 +95,39 @@ Parent phase items may stay checklist-only; **sub-tasks** under active phase car
 | Sub-task missing `**Expected:**` | error |
 | `TBD`, `TODO`, `...`, `placeholder` in executable block | error |
 | Very short Expected (&lt; 8 chars) | warn |
+
+
+
+## Execution telemetry (R29)
+
+At the end of each `/sw-execute` invocation (after the per-task loop, before handoff to `/sw-verify`),
+record one structured pass under the phase run dir (`.cursor/sw-deliver-runs/<phase>/` or `$SW_RUN_DIR`):
+
+```bash
+python3 scripts/execution_telemetry.py record --command sw-execute   --iteration-count <n>   --blocker-ledger-size <n>   --time-to-green-ms <ms>   --rca-triggered-count <n>   [--green]
+```
+
+Captured fields per pass: `iterationCount`, `blockerLedgerSize`, `timeToGreenMs`, `rcaTriggeredCount`.
+Missing signals are tolerated — list them in `missingSignals` on the persisted record. Telemetry is
+advisory run-state only; it does not alter TDD, refactor, or review gates.
+
+## Same-stage escalation bookkeeping (R31)
+
+When `/sw-stabilize` or stabilize-loop escalates after repeated same-stage failures, persist on the run-scoped
+dispatch / execute record:
+
+```json
+{
+  "sameStageEscalation": {
+    "failureCount": 2,
+    "chosenTier": "mid",
+    "persona": null,
+    "reason": "tier-escalation"
+  }
+}
+```
+
+This field is advisory telemetry only — it does not alter hard-stop semantics or the no-progress signature.
 
 ## Guardrails
 

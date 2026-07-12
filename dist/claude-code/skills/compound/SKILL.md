@@ -1,8 +1,7 @@
 ---
-name: sw-compound
-description: Internal compound-write step for /sw-retrospective — distill retro/feedback into typed memories via memory-preflight; human-gated rule-class promotion (R8).
+name: compound
+description: Internal compound-write step for /sw-retrospective — distill retro and feedback into typed memories via memory-preflight. Use when compounding session learnings after retrospective. Human-gated rule promotion only; does not auto-promote rules.
 ---
-
 # Compounding (internal write step)
 
 Adapted from compound-engineering — writes through the memory seam only (not `docs/solutions/`).
@@ -24,7 +23,7 @@ fail-closed (R7) and rule-class human gates (R8) apply under all settings.
 
 1. Inputs: `/sw-retro` candidates, `/sw-feedback` route records (`surface:feedback-route`), or explicit feedback items.
 2. **Redact** each payload: `python3 scripts/memory-redact.py`.
-3. `memory-preflight` **search** before store — `modify` near-duplicates.
+3. `memory-preflight` **search** before store — `modify` near-duplicates. Exclude `status: superseded`/`resolved`/tombstone nodes from compounding reads by default; request superseded subgraph explicitly via `traverse --edge supersedes` during supersede reconciliation only.
 4. Store with canonical category (`decision` / `learning` / `debug` / `design`), `relatedFiles`, tags
    (`prd-<n>`, `surface:compound`), relationship edges when supported.
 5. **Decision record boundary (R32 / provider-conditional SoT — R8):** resolve the write recipe first:

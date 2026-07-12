@@ -1,16 +1,18 @@
 ---
-capability:
-  version: 1
-  triggers:
-    - type: config_flag
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: config_flag
+        selectionFamily: providers
+        key: memory.provider
+        equals: in-repo
+    metadata:
+      providerFamily: memory
+      adapterId: in-repo
       selectionFamily: providers
-      key: memory.provider
-      equals: "in-repo"
-  metadata:
-    providerFamily: memory
-    adapterId: in-repo
-    selectionFamily: providers
-    gateRef: check-gate.py
+      gateRef: check-gate.py
 ---
 
 # Provider adapter: in-repo
@@ -48,9 +50,22 @@ relatedFiles: [server/auth.ts]
 importance: 0.7
 scope: project
 links: []
+title: ""
+description: ""
+resource: ""
+confidence: 0.5
+usage_count: 0
+success_count: 0
+playbookStatus: draft
+auditTelemetryRef: ""
+skepticVerdict: pending
 createdAt: 2026-06-23T12:00:00Z
 ---
 Distilled memory body here.
+
+# Citations
+
+- docs/decisions/064-example.md
 ```
 
 Filename: `<id>.md` where `<id>` is a stable slug (e.g. `20260623-auth-decision`). The filename stem is the
@@ -81,17 +96,24 @@ frontmatter filters). `export`/`import` are native: walk the store and emit/cons
 
 | Abstract op | Implementation | Call shape |
 | --- | --- | --- |
-| `load-context` | scan store mtime + `rules-load` | list recent files under `memories/`; load rules from `rules/` |
+| `load-context` | read `index.md` + `rules-load` | read store `index.md` first for orientation; load rules from `rules/` |
 | `rules-load` | read `rules/*.md` | filesystem read of committed rule files |
 | `search` | `in-repo-memory-search.py` | `python3 scripts/in-repo-memory-search.py --store <dir> --query <q> [--category] [--tag] [--file-glob]` |
-| `expand` | read file body | read `memories/<id>.md` or `rules/<id>.md` by id |
+| `expand` | `in-repo-memory-search.py expand` | `python3 scripts/in-repo-memory-search.py expand --store <dir> --ids <id>[,...]` — full body + backlinks |
 | `store` | write file after redaction | pipe payload through `scripts/memory-redact.py`, then write one `.md` file |
 | `modify` | update frontmatter / body / `inactive:true` | rewrite the target file |
 | `list-recent` | mtime sort under `memories/` | `find` + sort by mtime, cap N |
-| `export` | walk store → JSONL | one JSON object per line (frontmatter + body) |
-| `import` | JSONL → files | write one file per line after redaction |
+| `export` | walk store → JSONL or OKF | `python3 scripts/in-repo-memory-search.py export --format jsonl|okf` |
+| `import` | JSONL or OKF → files | `python3 scripts/in-repo-memory-search.py import --format jsonl|okf`; regenerates `index.md`/`log.md` |
 | `tasks.*` | — | not supported (`tasks: false`) |
-| `link` | frontmatter `links[]` only | store typed edges as-written; **not traversed** (edge-degraded, R13) |
+| `maintain-derived` | regenerate `index.md` + `log.md` | `python3 scripts/in-repo-memory-search.py maintain-derived --store <dir>` |
+| `playbook.match` | `memory_playbook.py match` | `python3 scripts/memory_playbook.py match --signals-json '<json>'` |
+| `playbook.primary-inject` | `memory_playbook.py primary-inject` | keyword + confidence primary context blocks for dispatch |
+| `playbook.record-usage` | `memory_playbook.py record-usage` | increment `usage_count` / optional `success_count`; reconcile confidence |
+| `playbook.reconcile-confidence` | `memory_playbook.py reconcile-confidence` | auto promote/demote confidence for learning/code-context/playbook |
+| `playbook.evaluate-promotion` | `memory_playbook.py evaluate-promotion` | gate `draft`→`active` on audit telemetry + skeptic pass |
+| `traverse` | `in-repo-memory-search.py traverse` | `python3 scripts/in-repo-memory-search.py traverse --store <dir> --from <id> [--edge] [--depth]` |
+| `link` | frontmatter `links[]` + inline md links | typed edges stored and traversed; dangling targets tolerated |
 
 ## Canonical category → file location
 
@@ -101,7 +123,8 @@ frontmatter filters). `export`/`import` are native: walk the store and emit/cons
 | `learning` | `memories/<id>.md` | |
 | `debug` | `memories/<id>.md` | `relatedFiles` required |
 | `design` | `memories/<id>.md` | |
-| `code-context` | `memories/<id>.md` | `relatedFiles` required |
+| `code-context` | `memories/<id>.md` | `relatedFiles` required; optional `confidence`/`usage_count`/`success_count` |
+| `playbook` | `memories/<id>.md` | structured playbook (`triggerKeywords`, steps, verification); promotion gated per R33 |
 | `research` | `memories/<id>.md` | |
 | `discussion` | `memories/<id>.md` | distilled only — never raw transcript |
 | `progress` | `memories/<id>.md` | sparingly |
@@ -140,7 +163,11 @@ Identical inputs → identical ranked output (deterministic).
 
 ## Notes / gotchas
 
-- Edge-degraded: `links[]` are stored in frontmatter but not traversed for graph queries.
+- Playbook confidence (R27): `confidence` (0.0–1.0), `usage_count`, `success_count` on `learning`, `code-context`, and `playbook` records. Auto promote/demote by configured success-rate thresholds; confidence input is audited usage, not self-reported.
+- Playbook promotion (R33): `playbookStatus: active` requires `auditTelemetryRef` (R3/R4 claims-audit JSON with pass verdict) and `skepticVerdict: pass`.
+
+- Link traversal: `links[]` frontmatter plus inline markdown links form the edge map; `traverse` and `expand` (backlinks) use it. Unknown frontmatter keys (including `title`, `description`, `resource`) are preserved on read/write.
+- Optional `# Citations` body section lists external references (URLs or repo paths) separate from memory-to-memory `links[]`.
 - Offline-first: no network required for read, write, or guardrail rule injection.
 - Fresh-install marker: `.cursor/sw-memory.provider` containing `in-repo` opts the repo into fail-closed
   guardrails without hand-authored `workflow.config.json`.

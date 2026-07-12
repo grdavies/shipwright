@@ -51,6 +51,17 @@ def parse_frontmatter(text: str) -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {}
 
 
+def extract_capability_block(frontmatter: dict[str, Any]) -> dict[str, Any] | None:
+    """Dual-read capability block — prefer metadata.shipwright-capability, fall back to top-level capability (R14)."""
+    metadata = frontmatter.get("metadata")
+    if isinstance(metadata, dict):
+        relocated = metadata.get("shipwright-capability")
+        if isinstance(relocated, dict):
+            return relocated
+    legacy = frontmatter.get("capability")
+    return legacy if isinstance(legacy, dict) else None
+
+
 def collect_capability_files(core_root: Path) -> list[Path]:
     files: list[Path] = []
     for dirname, _kind in CAPABILITY_ROOTS:
@@ -80,8 +91,8 @@ def build_entry(core_root: Path, path: Path) -> dict[str, Any] | None:
         return None
     text = path.read_text(encoding="utf-8")
     frontmatter = parse_frontmatter(text)
-    capability = frontmatter.get("capability")
-    if not isinstance(capability, dict):
+    capability = extract_capability_block(frontmatter)
+    if capability is None:
         return None
     kind = derive_kind(source_path)
     return {

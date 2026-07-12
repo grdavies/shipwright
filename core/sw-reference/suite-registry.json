@@ -30,6 +30,56 @@
       "ciJobName": "feat-test-plan-git-push-secret-scan-chokepoint"
     },
     {
+      "id": "skills-spec-guard-fixtures",
+      "script": "scripts/test/skills-spec-guard.test",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-skills-spec-guard",
+      "pathTriggers": [
+        "scripts/skills-spec-guard.py",
+        "scripts/skills_spec_guard.py",
+        "core/skills/",
+        "dist/cursor/skills/",
+        "dist/claude-code/skills/",
+        "scripts/test/fixtures/skills-spec/",
+        "platforms/claude-code/emitter.py"
+      ]
+    },
+    {
+      "id": "claims-audit-unit",
+      "script": "scripts/test/claims-audit-unit.test",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-claims-audit-unit",
+      "pathTriggers": [
+        "scripts/claims_audit.py",
+        "scripts/claims_audit_lib.py",
+        "core/agents/sw-claims-auditor.md",
+        "scripts/unit_tests/test_claims_audit.py"
+      ]
+    },
+    {
+      "id": "rca-fanout-unit",
+      "script": "scripts/test/rca-fanout-unit.test",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-rca-fanout-unit",
+      "pathTriggers": [
+        "scripts/rca_fanout.py",
+        "scripts/rca_fanout_lib.py",
+        "core/agents/sw-rca-hypothesis-generator.md",
+        "core/agents/sw-rca-hypothesis-refuter.md",
+        "core/skills/rca-core/SKILL.md",
+        "scripts/unit_tests/test_rca_fanout.py"
+      ]
+    },
+    {
       "id": "007-docs-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [

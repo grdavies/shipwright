@@ -1,8 +1,7 @@
 ---
-name: sw-prd
-description: Generate a PRD or decision-record draft (Full/Standard). Does not freeze, run persona review, or generate tasks.
+name: prd
+description: Generate a PRD or decision-record draft for Full or Standard tier. Use when requirements are brainstormed and a written spec is needed before persona review. Does not freeze, run doc-review, or generate tasks.
 ---
-
 # PRD / decision-record draft (`/sw-prd`)
 
 Port of v1 `spec-prd` under `sw-`. Freeze and task generation are separate steps. Generalized into a typed frozen-deliverable author via `--type`.
