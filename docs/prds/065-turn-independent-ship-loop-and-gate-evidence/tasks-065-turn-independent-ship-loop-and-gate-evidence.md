@@ -113,15 +113,15 @@ title: Tasks — PRD 065 Turn-independent ship loop and gate evidence
 
 ### 5. Terminal enforcement and bypass-flag constraint (R8, R10)
 
-- [ ] 5.1 Refuse `merge-ready-green` unless every mandatory gate has a binding-valid record per its mode (R8)
+- [x] 5.1 Refuse `merge-ready-green` unless every mandatory gate has a binding-valid record per its mode (R8)
   - **File:** `scripts/ship-phase-status.py`
   - **Expected:** Missing/stale/head-mismatched/tree-mismatched/integrity-failing evidence fails closed with a named cause; evaluated against each gate's declared binding mode
   - **R-IDs:** R8
-- [ ] 5.2 Constrain bypass flags to optional/advisory gates and record actor+reason skip records (R10)
+- [x] 5.2 Constrain bypass flags to optional/advisory gates and record actor+reason skip records (R10)
   - **File:** `scripts/ship_loop.py`
   - **Expected:** `--fast`/`--skip-local`/`--skip-simplify` skip only optional/advisory; each skip writes an explicit skip record; no flag combination suppresses a mandatory gate
   - **R-IDs:** R10
-- [ ] 5.3 Unit harness: refusal matrix (missing/stale/tree/head/forged/partial) + bypass constraint (R8, R10)
+- [x] 5.3 Unit harness: refusal matrix (missing/stale/tree/head/forged/partial) + bypass constraint (R8, R10)
   - **File:** `scripts/unit_tests/test_merge_ready_enforcement.py`
   - **Expected:** Fixtures cover each refusal cause and each bypass-flag boundary incl. mandatory-suppression denial
   - **R-IDs:** R8, R10
