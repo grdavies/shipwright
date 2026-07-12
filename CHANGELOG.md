@@ -446,6 +446,7 @@
 * merge phase same-stage-escalation-and-staleness-classifier-workstream-d into feat/agentic-quality-patterns-and-standards-conformance (fd057d8) <!-- sw-deliver:same-stage-escalation-and-staleness-classifier-workstream-d -->
 * merge phase telemetry-driven-task-prompt-improvement-workstream-d into feat/agentic-quality-patterns-and-standards-conformance (c7cd542) <!-- sw-deliver:telemetry-driven-task-prompt-improvement-workstream-d -->
 * merge phase gate-manifest-lineage-validator-and-gate-taxonomy-r5-r6-r20-r29 into feat/turn-independent-ship-loop-and-gate-evidence (eb27f8d) <!-- sw-deliver:gate-manifest-lineage-validator-and-gate-taxonomy-r5-r6-r20-r29 -->
+* merge phase run-entry-hardening-and-prd-064-depends-on-edge-r11-r12-r13-r18 into feat/turn-independent-ship-loop-and-gate-evidence (72e99ae) <!-- sw-deliver:run-entry-hardening-and-prd-064-depends-on-edge-r11-r12-r13-r18 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
