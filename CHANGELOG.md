@@ -444,6 +444,7 @@
 * merge phase reader-actor-split-complexity-routing-and-token-budget-workstream-a into feat/agentic-quality-patterns-and-standards-conformance (dd90603) <!-- sw-deliver:reader-actor-split-complexity-routing-and-token-budget-workstream-a -->
 * merge phase semantic-near-duplicate-detection-workstream-d into feat/agentic-quality-patterns-and-standards-conformance (6a29092) <!-- sw-deliver:semantic-near-duplicate-detection-workstream-d -->
 * merge phase same-stage-escalation-and-staleness-classifier-workstream-d into feat/agentic-quality-patterns-and-standards-conformance (fd057d8) <!-- sw-deliver:same-stage-escalation-and-staleness-classifier-workstream-d -->
+* merge phase telemetry-driven-task-prompt-improvement-workstream-d into feat/agentic-quality-patterns-and-standards-conformance (c7cd542) <!-- sw-deliver:telemetry-driven-task-prompt-improvement-workstream-d -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
