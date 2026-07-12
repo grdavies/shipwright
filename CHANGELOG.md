@@ -456,6 +456,7 @@
 * merge phase terminal-acceptance-record-validator-and-halt-resume-r14-r15-r24-r25-r30 into feat/turn-independent-ship-loop-and-gate-evidence (e448d95) <!-- sw-deliver:terminal-acceptance-record-validator-and-halt-resume-r14-r15-r24-r25-r30 -->
 * merge phase documentation-surfaces-a-commands-and-tasks-skill-r31 into feat/turn-independent-ship-loop-and-gate-evidence (63b7a41) <!-- sw-deliver:documentation-surfaces-a-commands-and-tasks-skill-r31 -->
 * merge phase documentation-surfaces-b-skills-and-dispatch-rules-r31 into feat/turn-independent-ship-loop-and-gate-evidence (0948ad6) <!-- sw-deliver:documentation-surfaces-b-skills-and-dispatch-rules-r31 -->
+* merge phase documentation-surfaces-c-reference-notes-and-attestation-boundary-r31-r32 into feat/turn-independent-ship-loop-and-gate-evidence (08ba761) <!-- sw-deliver:documentation-surfaces-c-reference-notes-and-attestation-boundary-r31-r32 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
