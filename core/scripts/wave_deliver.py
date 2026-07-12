@@ -56,6 +56,7 @@ def _load_valid_types() -> frozenset[str]:
 
 
 VALID_TYPES = _load_valid_types()
+DOC_KIND_TYPES = frozenset({"prd", "tasks", "brainstorm", "decision", "gap"})
 MIGRATION_DIRS = (
     "db/migrate/",
     "supabase/migrations/",
@@ -450,12 +451,33 @@ def build_waves(items: list[str], edges: list[dict[str, str]]) -> list[list[str]
     return assign_waves(items, edges)
 
 
-def resolve_type(args: list[str], frontmatter: dict[str, str]) -> str:
+def plan_target_type(root: Path, args: list[str]) -> str | None:
+    plan_rel = parse_kv(args, "--plan") or ".cursor/sw-deliver-plan.json"
+    plan_path = root / plan_rel
+    if not plan_path.is_file():
+        return None
+    try:
+        data = json.loads(plan_path.read_text(encoding="utf-8"))
+        raw = (data.get("target") or {}).get("type")
+        return str(raw) if raw else None
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def resolve_type(
+    args: list[str],
+    frontmatter: dict[str, str],
+    *,
+    plan_target_type: str | None = None,
+) -> str:
     explicit = parse_kv(args, "--type")
+    fm_type = frontmatter.get("type")
     if explicit:
         branch_type = explicit
-    elif frontmatter.get("type"):
-        branch_type = frontmatter["type"]
+    elif plan_target_type and plan_target_type not in DOC_KIND_TYPES:
+        branch_type = plan_target_type
+    elif fm_type and fm_type not in DOC_KIND_TYPES:
+        branch_type = fm_type
     else:
         branch_type = "feat"
     if branch_type not in VALID_TYPES:
@@ -884,7 +906,7 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
         fm = parse_frontmatter(content)
         run_unit_planning_gate(root, task_list, args)
         phase_entry_currency_check(root, task_list)
-        branch_type = resolve_type(args, fm)
+        branch_type = resolve_type(args, fm, plan_target_type=plan_target_type(root, args))
         slug = feature_slug(fm, task_path)
         branch = f"{branch_type}/{slug}"
         phases = parse_phases(content)
@@ -1018,7 +1040,7 @@ def cmd_plan(root: Path, args: list[str]) -> None:
         run_unit_planning_gate(root, task_list, args)
         phase_entry_currency_check(root, task_list)
 
-        branch_type = resolve_type(args, fm)
+        branch_type = resolve_type(args, fm, plan_target_type=plan_target_type(root, args))
         slug = feature_slug(fm, task_path)
         branch = f"{branch_type}/{slug}"
         prd_num = prd_number_from_path(task_path, fm)
