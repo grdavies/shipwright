@@ -98,15 +98,15 @@ title: Tasks — PRD 065 Turn-independent ship loop and gate evidence
 
 ### 4. Mechanical gate handlers and evidence writers (R9)
 
-- [ ] 4.1 Mechanical gate handlers wrapping existing scripts, capturing argv/exit/stdout+stderr digest/duration (R9)
+- [x] 4.1 Mechanical gate handlers wrapping existing scripts, capturing argv/exit/stdout+stderr digest/duration (R9)
   - **File:** `scripts/ship_gate_handlers.py`
   - **Expected:** behavioral-anomaly, build-chain, pre-PR smoke, decision-log, verification-gate invoked mechanically (no re-implementation); execution proof captured per invocation
   - **R-IDs:** R9
-- [ ] 4.2 Wire handlers into the driver step loop as the sole evidence-record writer on completion (R9)
+- [x] 4.2 Wire handlers into the driver step loop as the sole evidence-record writer on completion (R9)
   - **File:** `scripts/ship_loop.py`
   - **Expected:** Driver writes one evidence record per gate at the canonical repo-root path; agent-step Tasks never write evidence
   - **R-IDs:** R9
-- [ ] 4.3 Unit harness: each prose-only gate invoked mechanically and evidence written with captured proof (R9)
+- [x] 4.3 Unit harness: each prose-only gate invoked mechanically and evidence written with captured proof (R9)
   - **File:** `scripts/unit_tests/test_ship_gate_handlers.py`
   - **Expected:** Fixtures assert mechanical invocation + evidence-record proof fields for all five gates
   - **R-IDs:** R9

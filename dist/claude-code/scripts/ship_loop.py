@@ -14,6 +14,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from kernel_classification import normalize_step
+from ship_gate_handlers import is_gate_handler_step, run_gate_handler
 from ship_phase_steps import (
     authoritative_chain,
     cmd_advance,
@@ -178,7 +179,53 @@ def step_dispatch(root: Path, phase: str, *, steps_path: Path | None = None) -> 
         result["contract"] = build_agent_contract(root, phase, current, run_dir)
     else:
         result["awaitAgent"] = False
+        if is_gate_handler_step(current):
+            result["isGateHandler"] = True
+            result["executeMechanical"] = "gate-handler"
     return result
+
+
+def execute_mechanical_step(
+    root: Path,
+    phase: str,
+    *,
+    steps_path: Path | None = None,
+) -> dict[str, Any]:
+    """Run mechanical gate handler for current step and advance on pass (R9)."""
+    path = steps_path or resolve_steps_path(root, phase, None)
+    doc = ensure_initialized(root, phase, path)
+    current = normalize_step(str(doc.get("currentStep") or ""))
+    if not current:
+        fail("no current step", halt="ship-loop:no-current-step")
+    if not is_gate_handler_step(current):
+        return {
+            "verdict": "pass",
+            "action": "ship-loop-execute-mechanical",
+            "phase": phase,
+            "step": current,
+            "gateHandler": False,
+            "note": "step is not an R9 gate handler",
+        }
+    run_dir = resolve_run_dir(root, phase)
+    handler = run_gate_handler(root, phase, current, run_dir)
+    if handler.get("verdict") != "pass":
+        fail(
+            "gate handler failed",
+            exit_code=20,
+            halt="ship-loop:gate-handler-failed",
+            gateId=current,
+            handler=handler,
+        )
+    cmd_advance(root, ["--phase", phase, "--step", current, "--out", str(path)])
+    return {
+        "verdict": "pass",
+        "action": "ship-loop-execute-mechanical",
+        "phase": phase,
+        "step": current,
+        "gateHandler": True,
+        "evidencePath": handler.get("evidencePath"),
+        "exitCode": handler.get("exitCode"),
+    }
 
 
 def cmd_classify(args: argparse.Namespace) -> int:
@@ -199,6 +246,13 @@ def cmd_run(args: argparse.Namespace) -> int:
     payload = step_dispatch(root, args.phase)
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0
+
+
+def cmd_execute_mechanical(args: argparse.Namespace) -> int:
+    root = repo_root(args.root)
+    payload = execute_mechanical_step(root, args.phase)
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0 if payload.get("verdict") == "pass" else 20
 
 
 def cmd_advance_cli(args: argparse.Namespace) -> int:
@@ -247,6 +301,7 @@ def main(argv: list[str] | None = None) -> int:
             "classify": cmd_classify,
             "advance": cmd_advance_cli,
             "chain": cmd_chain,
+            "execute-mechanical": cmd_execute_mechanical,
         }
         handler = handlers.get(sub)
         if not handler:
@@ -279,6 +334,10 @@ def main(argv: list[str] | None = None) -> int:
     chain_p.add_argument("--phase", default=os.environ.get("SW_PHASE_SLUG", ""))
     chain_p.add_argument("--out", default="")
     chain_p.set_defaults(func=cmd_chain)
+
+    exec_p = sub.add_parser("execute-mechanical", help="Run R9 gate handler and advance")
+    exec_p.add_argument("--phase", default=os.environ.get("SW_PHASE_SLUG", ""))
+    exec_p.set_defaults(func=cmd_execute_mechanical)
 
     ns = parser.parse_args(argv)
     if not getattr(ns, "phase", "") and ns.command != "classify":
