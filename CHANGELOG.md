@@ -450,6 +450,7 @@
 * merge phase phase-sizing-blocking-freeze-gate-r16 into feat/turn-independent-ship-loop-and-gate-evidence (1c56573) <!-- sw-deliver:phase-sizing-blocking-freeze-gate-r16 -->
 * merge phase evidence-record-schema-resolver-and-binding-modes-r7-r21-r22 into feat/turn-independent-ship-loop-and-gate-evidence (a9a3727) <!-- sw-deliver:evidence-record-schema-resolver-and-binding-modes-r7-r21-r22 -->
 * merge phase ship-loop-driver-core-step-classification-and-durable-resume-r1-r2-r23 into feat/turn-independent-ship-loop-and-gate-evidence (5f68ccc) <!-- sw-deliver:ship-loop-driver-core-step-classification-and-durable-resume-r1-r2-r23 -->
+* merge phase mechanical-gate-handlers-and-evidence-writers-r9 into feat/turn-independent-ship-loop-and-gate-evidence (9b47a30) <!-- sw-deliver:mechanical-gate-handlers-and-evidence-writers-r9 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
