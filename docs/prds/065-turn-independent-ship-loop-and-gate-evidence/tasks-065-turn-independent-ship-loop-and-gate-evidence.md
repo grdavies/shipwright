@@ -128,23 +128,23 @@ title: Tasks — PRD 065 Turn-independent ship loop and gate evidence
 
 ### 6. Deliver integration — dispatch, interactive parity, watchdog, and lease liveness (R3, R4, R26, R27, R28)
 
-- [ ] 6.1 `dispatch-ship` invokes the driver inline and `dispatch-batch` runs it per phase worktree; classify the step mechanical (R4)
+- [x] 6.1 `dispatch-ship` invokes the driver inline and `dispatch-batch` runs it per phase worktree; classify the step mechanical (R4)
   - **File:** `scripts/wave_deliver_loop.py`
   - **Expected:** Ship-loop step classified `mechanical` so the deliver loop drives it without a chat turn; background Task is the phase-scoped executor (no nested spawn); driver never spawns Tasks
   - **R-IDs:** R4
-- [ ] 6.2 Interactive `/sw-ship` delegates to the same driver with shared evidence enforcement, retaining the human merge pause (R27)
+- [x] 6.2 Interactive `/sw-ship` delegates to the same driver with shared evidence enforcement, retaining the human merge pause (R27)
   - **File:** `scripts/wave.py`
   - **Expected:** No compatibility window; identical `merge-ready-green` refusal; interactive evidence to a run-scoped canonical location; interactive runs produce no terminal acceptance record
   - **R-IDs:** R27
-- [ ] 6.3 Consume agent-step outcomes only from durable head-bound artifacts; re-dispatch to `blocked` on budget exhaustion (R3)
+- [x] 6.3 Consume agent-step outcomes only from durable head-bound artifacts; re-dispatch to `blocked` on budget exhaustion (R3)
   - **File:** `scripts/ship_loop.py`
   - **Expected:** Outcomes read from durable artifacts bound to the phase head SHA (never chat); exhausted per-step attempt budget transitions phase to `blocked` with a consolidated report
   - **R-IDs:** R3
-- [ ] 6.4 Lease liveness by heartbeat freshness alone; watchdog re-emit within the attempt budget (R26, R28)
+- [x] 6.4 Lease liveness by heartbeat freshness alone; watchdog re-emit within the attempt budget (R26, R28)
   - **File:** `scripts/wave_lock.py`
   - **Expected:** `ship_lease_owner_live` keys off `heartbeatAt` within `SW_SHIP_LEASE_STALE_SECONDS`; `ship_steps_in_progress` no longer vetoes reclaim; stale agent-step lease re-emitted via `canonical-reemit`, exhaustion → `blocked`
   - **R-IDs:** R26, R28
-- [ ] 6.5 Unit harness: dispatch modes, interactive parity, re-dispatch/blocked, stale-heartbeat mid-step reclaim (R3, R4, R26, R27, R28)
+- [x] 6.5 Unit harness: dispatch modes, interactive parity, re-dispatch/blocked, stale-heartbeat mid-step reclaim (R3, R4, R26, R27, R28)
   - **File:** `scripts/unit_tests/test_ship_loop_dispatch.py`
   - **Expected:** Fixtures cover inline vs background, interactive parity, budget-exhaustion blocked, and kill-mid-step reclaim-within-TTL
   - **R-IDs:** R3, R4, R26, R27, R28

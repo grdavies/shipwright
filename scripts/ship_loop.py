@@ -69,6 +69,226 @@ BYPASS_FLAG_TO_GATE: dict[str, str] = {
 GATE_TO_STEP = {gate_id: normalize_step(gate_id) for gate_id in BYPASS_FLAG_TO_GATE.values()}
 
 
+
+from gate_evidence import resolve_head_sha
+from ship_phase_steps import advance_step_silent, record_step_attempt_silent
+
+INTERACTIVE_RUN_DIR_TEMPLATE = ".cursor/sw-ship-runs/{phase}"
+
+
+def outcome_artifact_path(step: str, run_dir: Path) -> Path:
+    norm = normalize_step(step)
+    template = AGENT_OUTCOME_ARTIFACTS.get(norm, "{runDir}/{step}.status.json")
+    return Path(template.format(runDir=str(run_dir), step=norm))
+
+
+def interactive_run_dir(root: Path, phase: str) -> Path:
+    return root / INTERACTIVE_RUN_DIR_TEMPLATE.format(phase=phase)
+
+
+def resolve_mode_run_dir(root: Path, phase: str) -> Path:
+    if os.environ.get("SW_PHASE_MODE", "").strip() in ("1", "true", "yes"):
+        return resolve_run_dir(root, phase)
+    explicit = os.environ.get("SW_RUN_DIR", "").strip()
+    if explicit:
+        p = Path(explicit)
+        return p if p.is_absolute() else root / p
+    return interactive_run_dir(root, phase)
+
+
+def agent_outcome_binding_valid(
+    root: Path, artifact: Path, *, head_sha: str | None = None
+) -> tuple[bool, str | None]:
+    if not artifact.is_file():
+        return False, "agent-outcome:missing"
+    try:
+        doc = json.loads(artifact.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return False, "agent-outcome:invalid"
+    if not isinstance(doc, dict):
+        return False, "agent-outcome:invalid"
+    head = head_sha or resolve_head_sha(root)
+    artifact_head = doc.get("head") or doc.get("headSha")
+    if artifact_head and str(artifact_head) != head:
+        return False, "agent-outcome:head-mismatch"
+    verdict = str(doc.get("verdict") or doc.get("status") or "").lower()
+    if verdict in ("fail", "blocked", "red", "halt"):
+        return False, f"agent-outcome:non-pass:{verdict or 'unknown'}"
+    return True, None
+
+
+def step_attempt_budget_exhausted(
+    doc: dict[str, Any], step: str, budget: int = DEFAULT_AGENT_BUDGET
+) -> bool:
+    attempts = doc.get("stepAttempts") or {}
+    if not isinstance(attempts, dict):
+        return False
+    return int(attempts.get(normalize_step(step), 0)) >= budget
+
+
+def consume_agent_outcome(
+    root: Path, phase: str, *, steps_path: Path | None = None
+) -> dict[str, Any]:
+    path = steps_path or resolve_steps_path(root, phase, None)
+    doc = load_steps(path)
+    if not doc:
+        fail("no ship-steps.json", halt="ship-loop:no-steps")
+    current = normalize_step(str(doc.get("currentStep") or ""))
+    if classify_step(current) != "agent":
+        return {
+            "verdict": "pass",
+            "action": "consume-outcome",
+            "skipped": True,
+            "reason": "not-agent-step",
+        }
+    run_dir = resolve_mode_run_dir(root, phase)
+    artifact = outcome_artifact_path(current, run_dir)
+    ok, cause = agent_outcome_binding_valid(root, artifact)
+    if not ok:
+        return {
+            "verdict": "fail",
+            "action": "consume-outcome",
+            "cause": cause,
+            "step": current,
+            "artifact": str(artifact),
+        }
+    advance_step_silent(root, phase, current, out=str(path))
+    return {
+        "verdict": "pass",
+        "action": "consume-outcome",
+        "step": current,
+        "artifact": str(artifact),
+    }
+
+
+def drive_tick(
+    root: Path,
+    phase: str,
+    *,
+    steps_path: Path | None = None,
+    flags: set[str] | None = None,
+) -> dict[str, Any]:
+    """One driver tick: mechanical execution, outcome consume, or awaitAgent."""
+    path = steps_path or resolve_steps_path(root, phase, None)
+    ensure_initialized(root, phase, path)
+    doc = load_steps(path)
+    if ship_chain_is_complete(root, phase, doc, out=str(path)):
+        return {
+            "verdict": "pass",
+            "action": "ship-loop-drive",
+            "complete": True,
+            "awaitAgent": False,
+            "phase": phase,
+        }
+    current = normalize_step(str(doc.get("currentStep") or (doc.get("chain") or ["sw-tmp-init"])[0]))
+    if classify_step(current) == "agent":
+        run_dir = resolve_mode_run_dir(root, phase)
+        artifact = outcome_artifact_path(current, run_dir)
+        if artifact.is_file():
+            consumed = consume_agent_outcome(root, phase, steps_path=path)
+            if consumed.get("verdict") != "pass":
+                if step_attempt_budget_exhausted(doc, current):
+                    return {
+                        "verdict": "blocked",
+                        "action": "ship-loop-drive",
+                        "halt": "ship-loop:agent-budget-exhausted",
+                        "step": current,
+                        "cause": consumed.get("cause"),
+                        "awaitAgent": False,
+                    }
+                return {**consumed, "awaitAgent": False}
+            return drive_tick(root, phase, steps_path=path, flags=flags)
+        if step_attempt_budget_exhausted(doc, current):
+            return {
+                "verdict": "blocked",
+                "action": "ship-loop-drive",
+                "halt": "ship-loop:agent-budget-exhausted",
+                "step": current,
+                "awaitAgent": False,
+            }
+        record_step_attempt_silent(root, phase, current, out=str(path))
+        run_dir = resolve_mode_run_dir(root, phase)
+        return {
+            "verdict": "pass",
+            "action": "ship-loop-drive",
+            "complete": False,
+            "awaitAgent": True,
+            "phase": phase,
+            "step": current,
+            "classification": "agent",
+            "contract": build_agent_contract(root, phase, current, run_dir),
+        }
+    if is_gate_handler_step(current):
+        handler = execute_mechanical_step(root, phase, steps_path=path)
+        if handler.get("verdict") != "pass":
+            return {
+                "verdict": "fail",
+                "action": "ship-loop-drive",
+                "step": current,
+                "awaitAgent": False,
+                "handler": handler,
+            }
+        return drive_tick(root, phase, steps_path=path, flags=flags)
+    return {
+        "verdict": "pass",
+        "action": "ship-loop-drive",
+        "complete": False,
+        "awaitAgent": False,
+        "phase": phase,
+        "step": current,
+        "classification": "mechanical",
+        "note": "non-gate mechanical step deferred to agent ship chain",
+    }
+
+
+def drive_until_await(
+    root: Path,
+    phase: str,
+    *,
+    max_ticks: int = 64,
+    steps_path: Path | None = None,
+    flags: set[str] | None = None,
+) -> dict[str, Any]:
+    last: dict[str, Any] = {}
+    for _ in range(max(1, max_ticks)):
+        last = drive_tick(root, phase, steps_path=steps_path, flags=flags)
+        if last.get("complete") or last.get("awaitAgent"):
+            return last
+        if last.get("verdict") in ("fail", "blocked"):
+            return last
+        if last.get("note"):
+            return last
+    return last or {"verdict": "fail", "error": "drive-tick-budget-exhausted"}
+
+
+def cmd_drive_tick(args: argparse.Namespace) -> int:
+    root = repo_root(args.root)
+    flags = active_bypass_flags()
+    payload = drive_tick(root, args.phase, flags=flags)
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0 if payload.get("verdict") in ("pass",) else 20
+
+
+def cmd_drive(args: argparse.Namespace) -> int:
+    root = repo_root(args.root)
+    flags = active_bypass_flags()
+    max_ticks = int(getattr(args, "max_ticks", 64) or 64)
+    payload = drive_until_await(root, args.phase, max_ticks=max_ticks, flags=flags)
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    if payload.get("verdict") == "blocked":
+        return 20
+    if payload.get("verdict") == "fail":
+        return 20
+    return 0
+
+
+def cmd_consume_outcome(args: argparse.Namespace) -> int:
+    root = repo_root(args.root)
+    payload = consume_agent_outcome(root, args.phase)
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0 if payload.get("verdict") == "pass" else 20
+
+
 def parse_bypass_flags(argv: list[str] | None = None) -> set[str]:
     tokens = list(argv if argv is not None else sys.argv[1:])
     return {flag for flag in BYPASS_FLAG_TO_GATE if flag in tokens}
@@ -183,7 +403,7 @@ def drain_bypassed_steps(
         write_bypass_skip_record(root, phase, gate_id, flag=flag, actor=actor, reason=reason)
         sps.emit = _noop_emit
         try:
-            cmd_advance(root, ["--phase", phase, "--step", current, "--out", str(path)])
+            advance_step_silent(root, phase, current, out=str(path))
         finally:
             sps.emit = orig_emit
         skipped.append(current)
@@ -450,6 +670,9 @@ def main(argv: list[str] | None = None) -> int:
             "advance": cmd_advance_cli,
             "chain": cmd_chain,
             "execute-mechanical": cmd_execute_mechanical,
+            "drive-tick": cmd_drive_tick,
+            "drive": cmd_drive,
+            "consume-outcome": cmd_consume_outcome,
         }
         handler = handlers.get(sub)
         if not handler:
@@ -489,6 +712,20 @@ def main(argv: list[str] | None = None) -> int:
     exec_p = sub.add_parser("execute-mechanical", help="Run R9 gate handler and advance")
     exec_p.add_argument("--phase", default=os.environ.get("SW_PHASE_SLUG", ""))
     exec_p.set_defaults(func=cmd_execute_mechanical)
+
+
+    drive_tick_p = sub.add_parser("drive-tick", help="Single ship-loop driver tick")
+    drive_tick_p.add_argument("--phase", default=os.environ.get("SW_PHASE_SLUG", ""))
+    drive_tick_p.set_defaults(func=cmd_drive_tick)
+
+    drive_p = sub.add_parser("drive", help="Drive until awaitAgent, blocked, or complete")
+    drive_p.add_argument("--phase", default=os.environ.get("SW_PHASE_SLUG", ""))
+    drive_p.add_argument("--max-ticks", type=int, default=64)
+    drive_p.set_defaults(func=cmd_drive)
+
+    consume_p = sub.add_parser("consume-outcome", help="Consume durable agent-step outcome")
+    consume_p.add_argument("--phase", default=os.environ.get("SW_PHASE_SLUG", ""))
+    consume_p.set_defaults(func=cmd_consume_outcome)
 
     ns = parser.parse_args(argv)
     if not getattr(ns, "phase", "") and ns.command != "classify":

@@ -100,8 +100,7 @@ def ship_lease_is_stale(meta: dict[str, Any]) -> bool:
 
 
 def ship_lease_owner_live(meta: dict[str, Any]) -> bool:
-    if ship_steps_in_progress(meta):
-        return True
+    """Lease liveness keyed on heartbeat freshness only (PRD 065 R28)."""
     return not ship_lease_is_stale(meta)
 
 

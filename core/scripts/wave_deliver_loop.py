@@ -107,8 +107,6 @@ MECHANICAL_ACTIONS = frozenset(
 )
 AGENT_ACTIONS = frozenset(
     {
-        "dispatch-ship",
-        "dispatch-batch",
         "remediate",
         "terminal-ship",
         "terminal-checkpoint",
@@ -1107,6 +1105,133 @@ def in_flight_merge_halt(
                 "resume": True,
             }
     return None
+
+
+
+
+def phase_worktree_path(state: dict[str, Any], phase_id: str) -> Path | None:
+    entry = (state.get("phaseWorktrees") or {}).get(phase_id, {})
+    if isinstance(entry, dict) and entry.get("path"):
+        return Path(str(entry["path"]))
+    return None
+
+
+def ship_loop_env_for_phase(state: dict[str, Any], phase_id: str, slug: str) -> dict[str, str]:
+    return {
+        "SW_PHASE_MODE": "1",
+        "SW_PHASE_SLUG": slug,
+        "SW_RUN_DIR": f".cursor/sw-deliver-runs/{slug}",
+        "SW_TASK_LIST": str(state.get("source_task_list") or ""),
+        "SW_PHASE_ID": str(phase_id),
+        "PYTHONPATH": "scripts",
+    }
+
+
+def run_ship_loop_drive(
+    worktree: Path,
+    phase_slug: str,
+    env: dict[str, str],
+    *,
+    max_ticks: int = 64,
+) -> tuple[int, dict[str, Any]]:
+    cmd = [
+        sys.executable,
+        str(worktree / "scripts" / "ship_loop.py"),
+        "drive",
+        "--phase",
+        phase_slug,
+        "--max-ticks",
+        str(max_ticks),
+    ]
+    proc = subprocess.run(
+        cmd,
+        cwd=str(worktree),
+        env={**os.environ, **env},
+        capture_output=True,
+        text=True,
+    )
+    raw = (proc.stdout or "").strip()
+    if not raw:
+        return proc.returncode or 2, {
+            "verdict": "fail",
+            "error": "ship-loop:empty-output",
+            "stderr": (proc.stderr or "")[-500:],
+        }
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return 2, {
+            "verdict": "fail",
+            "error": "ship-loop:invalid-json",
+            "stdout": raw[-500:],
+            "stderr": (proc.stderr or "")[-500:],
+        }
+    if proc.returncode != 0 and data.get("verdict") not in ("blocked",):
+        data.setdefault("verdict", "fail")
+    return proc.returncode, data
+
+
+def execute_dispatch_ship(
+    root: Path,
+    state: dict[str, Any],
+    step: dict[str, Any],
+) -> dict[str, Any]:
+    pid = str(step.get("phaseId", ""))
+    slug = str(step.get("phaseSlug") or pid)
+    meta = (state.get("phases") or {}).get(pid, {})
+    if not isinstance(meta, dict):
+        fail("dispatch-ship missing phase meta", exit_code=2)
+    lease_ec, lease_data = acquire_inline_dispatch_lease(root, state, pid, meta)
+    if lease_ec != 0:
+        fail_payload(lease_data, "dispatch-ship lease acquire failed", lease_ec)
+    mark_phases_in_flight(state, [pid], background=False)
+    wt = phase_worktree_path(state, pid)
+    if wt is None or not wt.is_dir():
+        fail("dispatch-ship missing phase worktree path", exit_code=20, phaseId=pid)
+    env = ship_loop_env_for_phase(state, pid, slug)
+    ec, drive = run_ship_loop_drive(wt, slug, env)
+    out: dict[str, Any] = {
+        "executed": "dispatch-ship",
+        "phaseId": pid,
+        "phaseSlug": slug,
+        "shipLoop": drive,
+    }
+    if drive.get("awaitAgent"):
+        out["awaitAgent"] = True
+        out["shipStep"] = drive.get("step")
+        out["shipContract"] = drive.get("contract")
+        state["shipLoopAwait"] = {
+            "phaseId": pid,
+            "phaseSlug": slug,
+            "step": drive.get("step"),
+            "contract": drive.get("contract"),
+        }
+        save_state(root, state)
+        return out
+    if drive.get("complete"):
+        out["shipComplete"] = True
+        return out
+    if drive.get("verdict") == "blocked":
+        fail_payload(drive, "ship-loop blocked", 20)
+    if ec != 0 or drive.get("verdict") == "fail":
+        fail_payload(drive, "ship-loop drive failed", ec or 20)
+    return out
+
+
+def execute_dispatch_batch(
+    root: Path,
+    state: dict[str, Any],
+    step: dict[str, Any],
+) -> dict[str, Any]:
+    phase_ids = [str(p) for p in step.get("phaseIds") or []]
+    mark_phases_in_flight(state, phase_ids, background=True)
+    save_state(root, state)
+    return {
+        "executed": "dispatch-batch",
+        "phaseIds": phase_ids,
+        "awaitAgent": True,
+        "note": "background batch — phase-scoped executor runs ship-loop driver",
+    }
 
 
 def mark_phases_in_flight(
@@ -2214,6 +2339,13 @@ def _execute_mechanical_inner(
         persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
         return {"executed": "phase-teardown-run", "phaseId": pid, **data}
 
+
+    if action == "dispatch-ship":
+        return execute_dispatch_ship(root, state, step)
+
+    if action == "dispatch-batch":
+        return execute_dispatch_batch(root, state, step)
+
     if action == "canonical-reemit":
         pid = str(step.get("phaseId", ""))
         slug = str(step.get("phaseSlug") or pid)
@@ -2818,8 +2950,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
                 persist_cursor(
                     root,
                     state,
-                    "dispatch-batch",
-                    batchPhaseIds=phase_ids,
+                                batchPhaseIds=phase_ids,
                 )
             elif step["action"] == "dispatch-ship":
                 pid = str(step.get("phaseId", ""))
@@ -2886,6 +3017,41 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
         result = execute_mechanical(root, state, plan, step, loop_args=args)
         steps_taken.append(result)
         resumed = True
+        if step["action"] == "dispatch-ship" and result.get("awaitAgent"):
+            ship_next = {
+                "action": "dispatch-ship",
+                "phaseId": result.get("phaseId") or step.get("phaseId"),
+                "phaseSlug": result.get("phaseSlug") or step.get("phaseSlug"),
+                "resume": True,
+                "note": "ship-loop awaitAgent — run agent step in phase worktree",
+                "shipStep": result.get("shipStep"),
+                "shipContract": result.get("shipContract"),
+            }
+            emit(
+                {
+                    "verdict": "pass",
+                    "action": "deliver-loop",
+                    "resumed": resumed,
+                    "awaitAgent": True,
+                    "next": ship_next,
+                    "stepsTaken": steps_taken,
+                }
+            )
+        if step["action"] == "dispatch-batch" and result.get("awaitAgent"):
+            emit(
+                {
+                    "verdict": "pass",
+                    "action": "deliver-loop",
+                    "resumed": resumed,
+                    "awaitAgent": True,
+                    "next": {
+                        "action": "dispatch-batch",
+                        "phaseIds": result.get("phaseIds") or step.get("phaseIds"),
+                        "resume": True,
+                    },
+                    "stepsTaken": steps_taken,
+                }
+            )
         append_log(
             root,
             {

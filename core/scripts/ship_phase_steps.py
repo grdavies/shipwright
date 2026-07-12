@@ -298,6 +298,69 @@ def cmd_advance(root: Path, args: list[str]) -> None:
     )
 
 
+
+
+def advance_step_silent(
+    root: Path, phase: str, step: str, *, out: str | None = None
+) -> dict[str, Any]:
+    """Advance without sys.exit (ship-loop drive)."""
+    norm = normalize_step(step)
+    path = resolve_steps_path(root, phase, out)
+    doc = load_steps(path)
+    if not doc:
+        fail("ship-steps missing; run init first", path=str(path))
+    chain, source, _ = authoritative_chain(root, phase, out)
+    _execute_verify_gate(root, phase, out, norm)
+    assert_advance_fidelity(root, chain, norm, doc)
+    doc["lastCompletedStep"] = norm
+    nxt = expected_next_step(chain, norm)
+    doc["currentStep"] = nxt
+    doc["chain"] = chain
+    doc["chainSource"] = source
+    save_steps(path, doc)
+    return {
+        "verdict": "pass",
+        "action": "ship-steps-advance",
+        "completed": norm,
+        "nextStep": nxt,
+    }
+
+
+def record_step_attempt_silent(
+    root: Path, phase: str, step: str, *, out: str | None = None
+) -> dict[str, Any]:
+    norm = normalize_step(step)
+    path = resolve_steps_path(root, phase, out)
+    doc = load_steps(path)
+    if not doc:
+        cmd_init(root, ["--phase", phase] + (["--out", str(path)] if out else []))
+        doc = load_steps(path)
+    chain, _, _ = authoritative_chain(root, phase, out)
+    plan_index(chain, norm)
+    _execute_verify_gate(root, phase, out, norm)
+    current = doc.get("currentStep")
+    if current and normalize_step(str(current)) != norm:
+        fail(
+            f"attempt on non-current step: current={current!r}, attempted={norm!r}",
+            exit_code=20,
+            halt="exec-fidelity-wrong-step",
+        )
+    attempts = doc.setdefault("stepAttempts", {})
+    if not isinstance(attempts, dict):
+        attempts = {}
+        doc["stepAttempts"] = attempts
+    attempts[norm] = int(attempts.get(norm, 0)) + 1
+    doc["currentStep"] = norm
+    doc["chain"] = chain
+    save_steps(path, doc)
+    return {
+        "verdict": "pass",
+        "action": "ship-steps-attempt",
+        "step": norm,
+        "attempts": attempts[norm],
+    }
+
+
 def cmd_resolve_resume(root: Path, args: list[str]) -> None:
     explicit_from = _parse_kv(args, "--from")
     phase = _parse_kv(args, "--phase") or os.environ.get("SW_PHASE_SLUG", "unknown")
