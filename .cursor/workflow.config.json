@@ -28,7 +28,7 @@
       "cheap": "composer-2.5",
       "build": "composer-2.5",
       "mid": "gpt-5.5-medium",
-      "deep": "claude-opus-4-8-thinking-high"
+      "deep": "grok-4.5-high"
     },
     "aliases": {
       "fast": "cheap"
@@ -178,7 +178,6 @@
         "tokenEnv": "GITHUB_TOKEN"
       }
     },
-    "visibilityProfile": "all-private",
     "privacyAck": {
       "required": true,
       "recordedAt": null,

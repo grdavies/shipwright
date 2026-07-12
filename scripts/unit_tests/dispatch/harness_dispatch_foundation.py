@@ -155,7 +155,8 @@ fi
 
 
 # --- dispatch-command-tier-inherits-routing (R39) ---
-if OUT=$(bash "$DISPATCH" --agent generalPurpose --command sw-prd --parent-model composer-2.5 --config "$CONFIG" 2>/dev/null) &&    echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('tier')=='deep' and d.get('modelId')=='claude-opus-4-8-thinking-high'"; then
+DEEP_MODEL=$(python3 -c "import json; print(json.load(open('$CONFIG'))['models']['tiers']['deep'])")
+if OUT=$(bash "$DISPATCH" --agent generalPurpose --command sw-prd --parent-model composer-2.5 --config "$CONFIG" 2>/dev/null) &&    echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); deep=sys.argv[1]; assert d.get('tier')=='deep' and d.get('modelId')==deep" "$DEEP_MODEL"; then
   ok "dispatch-command-tier-inherits-routing"
 else
   bad "dispatch-command-tier-inherits-routing"
