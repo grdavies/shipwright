@@ -441,6 +441,7 @@
 * merge phase multi-hypothesis-rca-fan-out-workstream-a into feat/agentic-quality-patterns-and-standards-conformance (11caf29) <!-- sw-deliver:multi-hypothesis-rca-fan-out-workstream-a -->
 * merge phase confidence-scored-primary-injected-playbooks-workstream-d into feat/agentic-quality-patterns-and-standards-conformance (16b9b3a) <!-- sw-deliver:confidence-scored-primary-injected-playbooks-workstream-d -->
 * merge phase tournament-primitive-and-adversarial-rule-mining-workstream-a into feat/agentic-quality-patterns-and-standards-conformance (94e1ef3) <!-- sw-deliver:tournament-primitive-and-adversarial-rule-mining-workstream-a -->
+* merge phase reader-actor-split-complexity-routing-and-token-budget-workstream-a into feat/agentic-quality-patterns-and-standards-conformance (dd90603) <!-- sw-deliver:reader-actor-split-complexity-routing-and-token-budget-workstream-a -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
