@@ -17,6 +17,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import doc_format
 import planning_artifact_handle as pah
+import wave_deliver as wd
 from phase_sizing import evaluate_freeze_gate, has_advisory_block
 from _sw.cli import run_module_main
 
@@ -182,18 +183,35 @@ def _run(
             add("analyze", "error", "missing ## Traceability section")
         if has_advisory_block(text):
             add("analyze", "error", "task list contains sizing advisory block — strip before freeze")
-        task_list_path = Path(body_path)
-        if not task_list_path.is_absolute():
-            task_list_path = (root / task_list_path).resolve()
-        freeze_gate = evaluate_freeze_gate(root, task_list_path)
-        if freeze_gate.get("verdict") == "block":
-            phases = ", ".join(str(p) for p in freeze_gate.get("overThresholdPhases") or [])
-            add(
-                "analyze",
-                "error",
-                f"sizing freeze gate blocked — over-threshold phase(s): {phases or 'unknown'}",
-                "R16",
-            )
+        if wd.parse_frontmatter(text).get("frozen", "").lower() == "true":
+            task_list_path = Path(body_path)
+            if not task_list_path.is_absolute():
+                task_list_path = (root / task_list_path).resolve()
+            if not task_list_path.is_file():
+                materialized = pah.materialize_artifact_file(
+                    root, body_path, unit_id=unit_id
+                )
+                if materialized is not None:
+                    task_list_path = materialized
+            if task_list_path.is_file():
+                freeze_gate = evaluate_freeze_gate(root, task_list_path)
+                if freeze_gate.get("verdict") == "block":
+                    phases = ", ".join(
+                        str(p) for p in freeze_gate.get("overThresholdPhases") or []
+                    )
+                    add(
+                        "analyze",
+                        "error",
+                        f"sizing freeze gate blocked — over-threshold phase(s): {phases or 'unknown'}",
+                        "R16",
+                    )
+            else:
+                add(
+                    "analyze",
+                    "error",
+                    "sizing freeze gate requires a resolvable task list path",
+                    "R16",
+                )
         phase_ids = sorted({p["id"] for p in doc_format.extract_phases(text)}, key=int)
         dep_rows_list = doc_format.extract_phase_dependencies(text)
         if dep_rows_list is None:
