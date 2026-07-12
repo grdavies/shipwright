@@ -53,6 +53,17 @@ Otherwise → Phase 1.
 
 1. Normalize to `skills/rca-core/references/debug-inputs.md` shape.
 2. **Redact** all text: `python3 scripts/memory-redact.py`.
+
+### Sentry expansion reader (R9/R10)
+
+When expanding a bare Sentry ref via MCP (`skills/debug/references/sentry.md`), delegate a **reader**
+Task at boundary `debug-sentry-expansion` (`role: reader`, `readonly: true`). The reader fetches and
+redacts the Sentry body; the acting debug agent receives only the redacted enveloped excerpt.
+
+```bash
+python3 scripts/dispatch-check.py --agent generalPurpose --command sw-debug --skill debug   --parent-model <concrete-parent-id> --role reader --boundary debug-sentry-expansion   --dispatch-id <id> --prompt "$RUN_DIR/sentry-reader-prompt.md"
+```
+
 3. If `type == sentry` → `skills/debug/references/sentry.md` (MCP enrich or degrade).
 4. `memory-preflight` **search**: category `debug`, `relatedFiles`, tags for failing area.
 5. Attach `priorDebugMemoryIds` to the signal context.

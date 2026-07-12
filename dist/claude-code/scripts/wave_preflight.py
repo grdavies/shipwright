@@ -17,6 +17,8 @@ DISPATCH_PREFLIGHT_LEGACY = Path(".cursor/hooks/state/task-dispatch-preflight.js
 
 sys.path.insert(0, str(SCRIPT_DIR))
 from capability_index import check_freshness  # noqa: E402
+from dispatch_budget_lib import resolve_token_budget  # noqa: E402
+from dispatch_complexity_lib import probe_complexity  # noqa: E402
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
@@ -338,6 +340,7 @@ def cmd_dispatch(root: Path, args: list[str]) -> None:
     model_id = str(model_payload.get("modelId") or "")
     tier = str(model_payload.get("tier") or "")
     intensity = str(intensity_payload.get("intensity") or "")
+    cfg = load_workflow_config(root)
     if not model_id or tier == "inherit":
         fail(
             "dispatch preflight missing concrete model",
@@ -355,6 +358,14 @@ def cmd_dispatch(root: Path, args: list[str]) -> None:
             agent=agent,
         )
 
+    complexity = probe_complexity(static_tier=tier, signal_context=None, config=cfg)
+    if complexity.get("enabled") and complexity.get("chosenTier"):
+        tier = str(complexity["chosenTier"])
+        tiers_map = (cfg.get("models") or {}).get("tiers") or {}
+        if isinstance(tiers_map, dict) and tiers_map.get(tier):
+            model_id = str(tiers_map[tier])
+    token_budget = resolve_token_budget(cfg)
+
     now = int(time.time())
     record = {
         "dispatchId": dispatch_id,
@@ -368,6 +379,8 @@ def cmd_dispatch(root: Path, args: list[str]) -> None:
         "createdAt": now,
         "expiresAt": now + ttl_seconds,
         "consumedAt": None,
+        "tokenBudget": token_budget,
+        "complexityProbe": complexity,
     }
     out_dir = root / DISPATCH_PREFLIGHT_DIR
     out_dir.mkdir(parents=True, exist_ok=True)

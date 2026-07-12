@@ -15,6 +15,7 @@ from _sw.cli import build_parser, run_module_main
 from check_gate_lib import load_workflow_config
 from context_compress import compress, detect_content_type, estimate_tokens, retrieve
 from dispatch_intensity_check import format_intensity_directive, validate_retrieve_key_guard
+from dispatch_budget_lib import format_partial_result_handoff, resolve_token_budget
 
 DEFAULT_THRESHOLD_TOKENS = 8000
 DEFAULT_CONTEXT_COMPRESSION_ENABLED = False
@@ -191,6 +192,7 @@ def build_deliver_phase_ship_prompt(
     context_blocks: list[ContextBlock] | None = None,
     config_path: str | None = None,
     root: Path | None = None,
+    include_partial_handoff: bool = True,
 ) -> DispatchPromptResult:
     """Assemble deliver phase-ship Task prompt with required intensity directive (gap-115, R3)."""
     return build_task_dispatch_prompt(
@@ -212,6 +214,7 @@ def build_task_dispatch_prompt(
     context_blocks: list[ContextBlock] | None = None,
     config_path: str | None = None,
     root: Path | None = None,
+    include_partial_handoff: bool = True,
 ) -> DispatchPromptResult:
     """Assemble a Task-dispatch prompt with directive, optional compression, and body."""
     repo = (root or Path.cwd()).resolve()
@@ -241,6 +244,9 @@ def build_task_dispatch_prompt(
         if processed.compressed:
             compression_applied = True
 
+    if include_partial_handoff:
+        token_budget = resolve_token_budget(config)
+        parts.append(format_partial_result_handoff(token_budget))
     parts.append(body)
     prompt = "\n".join(part for part in parts if part)
 

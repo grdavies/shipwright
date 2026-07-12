@@ -346,3 +346,22 @@ python3 scripts/dispatch_prompt.py build   --intensity "$INTENSITY" --intensity-
 - Primary blocks are ordered **before** general memory recall / untrusted payloads in the assembled prompt.
 - When no eligible playbook matches, proceed with the standard dispatch-context recipe only.
 
+
+
+## Complexity probe (PRD 064 R11)
+
+Optional within-tier routing reuses inline-execute signals (`file_paths` count from `signal_context`).
+Disabled (default) keeps static model binding as both floor and ceiling. When
+`dispatch.complexityProbe.enabled` is true, the configured `bandFloor` / `bandCeiling` become the
+active floor/ceiling; probe inputs and chosen tier are recorded on every dispatch record.
+
+```bash
+python3 scripts/dispatch-check.py --agent <id> --command <slug> --parent-model <concrete-id>   --signal-context '<signal_context json>'
+```
+
+- `fileCount <= 1` → `bandFloor`
+- `fileCount <= 3` → static binding tier (inline-execute threshold)
+- `fileCount > 3` → `bandCeiling`
+
+Record shape on preflight / dispatch-check output: `complexityProbe: { enabled, inputs, chosenTier, staticTier }`.
+

@@ -67,6 +67,14 @@ When routing to `meta-shipwright` (`gapClass: plugin-self`):
 
 Never materialize or dispatch without persisted human ack on the signal.
 
+
+### Reader/actor intake (R9/R10)
+
+Before normalize/redact on untrusted inbound content, delegate a **reader** Task (`role: reader`,
+`readonly: true`) at boundary `feedback-intake`. The reader returns redacted enveloped signal JSON;
+this command never sees the raw payload. `dispatch-check.py` fails closed when `role: reader` is
+missing at this boundary.
+
 1. **Normalize** per `skills/feedback/references/signal-schema.md` (`invocation: human` by default).
    For bare Sentry refs, expand per `skills/debug/references/sentry.md` (Sentry MCP) before building
    `untrusted_payload`; redact the fetched body before envelope wrap.
