@@ -452,6 +452,7 @@
 * merge phase ship-loop-driver-core-step-classification-and-durable-resume-r1-r2-r23 into feat/turn-independent-ship-loop-and-gate-evidence (5f68ccc) <!-- sw-deliver:ship-loop-driver-core-step-classification-and-durable-resume-r1-r2-r23 -->
 * merge phase mechanical-gate-handlers-and-evidence-writers-r9 into feat/turn-independent-ship-loop-and-gate-evidence (9b47a30) <!-- sw-deliver:mechanical-gate-handlers-and-evidence-writers-r9 -->
 * merge phase terminal-enforcement-and-bypass-flag-constraint-r8-r10 into feat/turn-independent-ship-loop-and-gate-evidence (539c641) <!-- sw-deliver:terminal-enforcement-and-bypass-flag-constraint-r8-r10 -->
+* merge phase deliver-integration-dispatch-interactive-parity-watchdog-and-lease-liveness-r3-r4-r26-r27-r28 into feat/turn-independent-ship-loop-and-gate-evidence (799a2ba) <!-- sw-deliver:deliver-integration-dispatch-interactive-parity-watchdog-and-lease-liveness-r3-r4-r26-r27-r28 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
