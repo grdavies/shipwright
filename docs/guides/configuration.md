@@ -741,6 +741,45 @@ python3 scripts/test/run_emitter_fixtures.py
 
 All registered in `verify.test` for Shipwright dev repos.
 
+## Gate classes, bypass flags, and ship lease (PRD 065)
+
+Gate classes are declared in `core/sw-reference/gate-manifest.json` and resolved by
+`scripts/gate_manifest.py`. Config MAY promote optional→mandatory or adjust advisory classification;
+the **kernel floor** (verification-gate, check-gate, gap-check, secret-scan) is never demotable or
+bypassable by config or flags.
+
+| Bypass flag | Permitted scope | Record |
+| --- | --- | --- |
+| `--fast` | Optional/advisory gates only | Durable skip record with actor+reason |
+| `--skip-local` | Optional/advisory gates only | Same |
+| `--skip-simplify` | `sw-simplify` (agent-classified optional) | Same |
+
+`merge-ready-green` (`scripts/ship-phase-status.py`) refuses when any **mandatory** gate lacks a
+binding-valid evidence record at `.cursor/sw-deliver-runs/<phaseSlug>/gate-evidence/<gateId>.status.json`.
+
+### Ship lease TTL
+
+Per-phase inline dispatch acquires a durable ship lease before `dispatch-ship` runs. Stale leases
+(reclaimable) use heartbeat freshness:
+
+| Env var | Default | Meaning |
+| --- | --- | --- |
+| `SW_SHIP_LEASE_STALE_SECONDS` | `300` | Lease considered stale when `heartbeatAt` exceeds this many seconds |
+
+Clear dead leases under `.cursor/sw-deliver-locks/` when PIDs are no longer live before resuming deliver.
+
+### Phase-sizing override attribution (R16)
+
+When `/sw-tasks` freeze scores a list as `large`, a blocking gate applies unless a durable human override
+is recorded:
+
+```bash
+python3 scripts/phase_sizing.py override --task-list <path> --actor <who> --reason "<why>"
+```
+
+Overrides land in `.cursor/sw-sizing-overrides/` with required `actor` + `reason` attribution.
+Autonomous `/sw-doc` → `/sw-tasks` dispatch paths refuse override without explicit operator ack.
+
 ## Task phase sizing (`tasks.sizing`)
 
 PRD 040 adds a deterministic phase-sizing heuristic for `/sw-tasks` and advisory split suggestions.
