@@ -90,6 +90,8 @@ MECHANICAL_ACTIONS = frozenset(
         "inflight-signal-clear",
         "orchestrator-provision",
         "provision-phase",
+        "dispatch-ship",
+        "dispatch-batch",
         "collect-all-ready",
         "collect-status",
         "canonical-reemit",
@@ -1137,11 +1139,10 @@ def run_ship_loop_drive(
     cmd = [
         sys.executable,
         str(worktree / "scripts" / "ship_loop.py"),
+        str(worktree),
         "drive",
         "--phase",
         phase_slug,
-        "--max-ticks",
-        str(max_ticks),
     ]
     proc = subprocess.run(
         cmd,
@@ -1196,7 +1197,10 @@ def execute_dispatch_ship(
         "phaseSlug": slug,
         "shipLoop": drive,
     }
-    if drive.get("awaitAgent"):
+    if drive.get("awaitAgent") or (
+        isinstance(drive.get("note"), str)
+        and "deferred to agent ship chain" in drive["note"]
+    ):
         out["awaitAgent"] = True
         out["shipStep"] = drive.get("step")
         out["shipContract"] = drive.get("contract")
@@ -2083,6 +2087,16 @@ def write_blocker_report(root: Path, state: dict[str, Any], cause: str) -> Path:
         "resumeCommand": report.get("resumeCommand"),
         "remediationAttempts": state.get("remediationAttempts") or {},
     }
+    from halt_resume import enrich_legitimate_halt
+
+    enrich_legitimate_halt(
+        out,
+        root,
+        state,
+        halt_cause=cause,
+        resume_command=str(report.get("resumeCommand") or ""),
+    )
+    save_state(root, state)
     path = root / BLOCKER_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
     write_json(path, out)

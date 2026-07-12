@@ -1499,6 +1499,17 @@ def cmd_report_terminal(root: Path, args: list[str]) -> None:
         report["handoff"] = handoff
         report["resumeCommand"] = handoff["resumeCommand"]
     attach_plan_surfacing_to_report(root, state, report, report_kind=REPORT_KIND_TERMINAL)
+    from wave_acceptance import embed_validated_acceptance
+
+    gate_for_acceptance = report.get("gate") if isinstance(report.get("gate"), dict) else None
+    gate_ec_for_acceptance = report.get("gateExitCode")
+    embed_validated_acceptance(
+        root,
+        state,
+        report,
+        terminal_gate=gate_for_acceptance,
+        gate_exit_code=gate_ec_for_acceptance,
+    )
     emit({"verdict": "pass", "action": "report-terminal", "report": report})
 
 
