@@ -445,6 +445,7 @@
 * merge phase semantic-near-duplicate-detection-workstream-d into feat/agentic-quality-patterns-and-standards-conformance (6a29092) <!-- sw-deliver:semantic-near-duplicate-detection-workstream-d -->
 * merge phase same-stage-escalation-and-staleness-classifier-workstream-d into feat/agentic-quality-patterns-and-standards-conformance (fd057d8) <!-- sw-deliver:same-stage-escalation-and-staleness-classifier-workstream-d -->
 * merge phase telemetry-driven-task-prompt-improvement-workstream-d into feat/agentic-quality-patterns-and-standards-conformance (c7cd542) <!-- sw-deliver:telemetry-driven-task-prompt-improvement-workstream-d -->
+* merge phase gate-manifest-lineage-validator-and-gate-taxonomy-r5-r6-r20-r29 into feat/turn-independent-ship-loop-and-gate-evidence (eb27f8d) <!-- sw-deliver:gate-manifest-lineage-validator-and-gate-taxonomy-r5-r6-r20-r29 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
