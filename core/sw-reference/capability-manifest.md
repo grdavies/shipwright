@@ -217,3 +217,31 @@ Identical inputs ⇒ byte-identical output (`scripts/capability-select.py`).
 ## Skill identity (R13)
 
 Core skill `name` in frontmatter MUST equal the unprefixed kebab-case directory name under `core/skills/` (e.g. `triage`, not `sw-triage`).
+
+
+## Dispatch record token budget (R12 / D2)
+
+Every dispatch record (preflight nonce + `dispatch-check.py` output) carries an always-present
+`tokenBudget` field:
+
+```json
+{
+  "tokenBudget": {
+    "advisory": 32000,
+    "enforced": false,
+    "used": null
+  }
+}
+```
+
+- **Advisory only** — never an enforced stop (per D2).
+- Configure via `dispatch.tokenBudget.advisory` in `workflow.config.json`.
+- Sub-agent prompts include the structured partial-result handoff contract via
+  `scripts/dispatch_prompt.py build` (see `dispatch_budget_lib.format_partial_result_handoff`).
+
+### Partial-result handoff contract
+
+When a sub-agent approaches the advisory budget, it MUST return a structured handoff object
+(fenced `untrusted_payload`) with `partialResult`, `completedSteps`, `remainingSteps`, and
+`resumeHint` — never silent truncation.
+

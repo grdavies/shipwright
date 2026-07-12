@@ -1647,6 +1647,66 @@
           }
         }
       }
+    },
+    "dispatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Dispatch binding extensions (PRD 064 R10\u2013R12).",
+      "properties": {
+        "unregisteredParentModelTier": {
+          "type": "string",
+          "enum": [
+            "cheap",
+            "build",
+            "mid",
+            "deep"
+          ],
+          "description": "Fallback parent tier when session model is unmapped."
+        },
+        "complexityProbe": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Optional within-band tier probe (R11). Default disabled.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "bandFloor": {
+              "type": "string",
+              "enum": [
+                "cheap",
+                "build",
+                "mid",
+                "deep"
+              ],
+              "default": "cheap"
+            },
+            "bandCeiling": {
+              "type": "string",
+              "enum": [
+                "cheap",
+                "build",
+                "mid",
+                "deep"
+              ],
+              "default": "deep"
+            }
+          }
+        },
+        "tokenBudget": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Advisory token budget on dispatch records (R12 / D2).",
+          "properties": {
+            "advisory": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 32000
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
