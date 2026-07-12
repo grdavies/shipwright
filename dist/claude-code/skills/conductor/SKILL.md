@@ -385,39 +385,8 @@ the user in one message.
 
 ## Multi-signal staleness classifier (R32)
 
-Before treating an in-flight background phase as watchdog-stale, classify liveness with
-`scripts/phase_staleness_lib.py` using four signals:
-
-| Signal | Source |
-| --- | --- |
-| `lastToolCallAt` | Agent tool-call heartbeat |
-| `lastCommitAt` | Phase worktree `git log -1` |
-| `lastStatusWriteAt` | `.cursor/sw-deliver-runs/<phase>/status.json` mtime |
-| `pendingHumanReply` | Legitimate-halt checkpoint awaiting operator input |
-
-```bash
-python3 -c "
-import json, sys
-sys.path.insert(0, 'scripts')
-from pathlib import Path
-import phase_staleness_lib as lib
-root = Path('.').resolve()
-signals = {
-  'lastToolCallAt': '2026-07-11T00:04:00Z',
-  'lastCommitAt': '2026-07-11T00:03:00Z',
-  'lastStatusWriteAt': '2026-07-11T00:05:00Z',
-  'pendingHumanReply': True,
-}
-print(json.dumps(lib.classify_staleness(signals, root=root), indent=2))
-"
-```
-
-Output tiers: `waiting-on-human`, `actively-working`, `genuinely-stuck`, `indeterminate` — each with
-`confidenceTier` (`high`/`medium`/`low`) and `confidenceScore`. When `waiting-on-human` at high/medium
-confidence, defer `phase-timeout` until the checkpoint clears; when `genuinely-stuck` at high confidence,
-route to consolidated halt. No new dispatch mechanism — classification informs existing watchdog polling only.
-
-See `rules/sw-dispatch-background-phase.mdc` for background-phase posture.
+Classify background-phase liveness via `scripts/phase_staleness_lib.py` before watchdog timeout.
+Full contract: [references/staleness-classifier.md](references/staleness-classifier.md).
 
 ## Phase liveness watchdog (R37)
 
@@ -435,12 +404,9 @@ writes the consolidated blocker report.
 Driver heartbeat staleness (`driver-heartbeat-stale`) uses `SW_DRIVER_STALE_SECONDS` (default 4h) — refresh
 with `state heartbeat` during long in-turn agent work.
 
-
 ## Parallel wave dispatch protocol (R14–R20)
 
 Plan-time contention, schedule consumption, conductor Task dispatch, intra-phase rules, outcomes/blast radius, and safety invariants: `references/parallel-dispatch-protocol.md`.
-
-## Bounded planning full-conductor (PRD 035 R8–R9, R23)
 
 ## Bounded planning full-conductor (PRD 035 R8–R9, R23)
 
