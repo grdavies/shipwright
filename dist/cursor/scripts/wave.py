@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -145,6 +146,16 @@ def dispatch(argv: list[str]) -> int:
         if rest and rest[0] == "benefit-report":
             return _python("wave_plan_benefit.py", root, ["benefit-report", *rest[1:]])
         return _python("wave_deliver.py", root, ["plan", *rest])
+    if cmd == "sw-ship":
+        if not os.environ.get("SW_RUN_DIR"):
+            phase = ""
+            if "--phase" in rest:
+                i = rest.index("--phase")
+                if i + 1 < len(rest):
+                    phase = rest[i + 1]
+            if phase:
+                os.environ.setdefault("SW_RUN_DIR", f".cursor/sw-ship-runs/{phase}")
+        return _python("ship_loop.py", root, ["drive", *rest])
     if cmd == "ship-loop":
         return _python("ship_loop.py", root, rest)
     if cmd == "execute":
