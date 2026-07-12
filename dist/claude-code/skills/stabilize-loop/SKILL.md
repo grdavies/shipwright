@@ -34,6 +34,34 @@ Stop with success when the `checks-gate` verdict (from `scripts/check-gate.py`) 
 When `coderabbit.noDefer` is true, "actionable" includes every valid bot finding — inline or non-inline —
 the loop is not done while reproducible findings remain unresolved.
 
+
+## Same-stage failure counter (R31)
+
+Track consecutive failures at the **same stabilize stage** (same head SHA + same failing-check/thread/finding
+set) independently of the no-progress SHA hard stop. The counter is **never** an input to the conductor
+no-progress state signature — only `(headSha, stage, failureSet)` without `failureCount`.
+
+After `stabilizeLoop.sameStageEscalation.escalateAfterFailures` (default **2**) at the same stage, escalate
+the next `/sw-stabilize` dispatch to a higher `models.tiers` band or a `models.routing.agents` persona
+(`personaFallback`, default `adversarial`). Hard stops (`maxIterations`, no-progress SHA breaker, human
+decision) are unchanged — escalation does not bypass them.
+
+```bash
+python3 -c "
+import json, sys
+sys.path.insert(0, 'scripts')
+from pathlib import Path
+import stabilize_same_stage_lib as lib
+root = Path('.').resolve()
+state = lib.record_same_stage_outcome({}, head_sha='abc', stage='stabilize', failure_set={'check:lint'}, progressed=False)
+esc = lib.resolve_escalation(root, failure_count=state['failureCount'], current_tier='build')
+print(json.dumps({'state': state, 'escalation': esc}, indent=2))
+"
+```
+
+Persist under `$SW_RUN_DIR/stabilize-same-stage.json` (or `.cursor/sw-deliver-runs/<phase>/`). Record
+escalation events on the execute-discipline dispatch record as `sameStageEscalation` (advisory bookkeeping).
+
 ## Hard stops (any one ends the loop)
 
 - `maxIterations` reached (default 5; configurable).
