@@ -76,7 +76,7 @@ def test_r11_missing_both_team_keys_fails_closed() -> None:
 def test_r11_team_probe_mismatch_fails(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """R11 — when both teamKey and teamId set, probe fails if they resolve differently."""
     cfg = _cfg(team_key="ENG", team_id="team_OTHER")
-    monkeypatch.setenv("ISSUES_LINEAR_TOKEN", "lin_test_token_not_real")
+    monkeypatch.setenv("ISSUES_LINEAR_TOKEN", "test-linear-api-key")
 
     def fake_graphql(*_a: Any, **_k: Any) -> dict[str, Any]:
         return {
@@ -88,7 +88,7 @@ def test_r11_team_probe_mismatch_fails(monkeypatch: pytest.MonkeyPatch, tmp_path
         }
 
     monkeypatch.setattr(plc, "graphql", fake_graphql)
-    result = plc.probe_team_scope(tmp_path, cfg, token="lin_test_token_not_real")
+    result = plc.probe_team_scope(tmp_path, cfg, token="test-linear-api-key")
     assert result["verdict"] == "fail"
     assert result["error"] == "team-scope-mismatch"
 
@@ -96,7 +96,7 @@ def test_r11_team_probe_mismatch_fails(monkeypatch: pytest.MonkeyPatch, tmp_path
 def test_r11_team_probe_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """R11 — matching teamKey/teamId probe succeeds; over-scoped key refused when detectable."""
     cfg = _cfg(team_key="ENG", team_id="team_ENG")
-    monkeypatch.setenv("ISSUES_LINEAR_TOKEN", "lin_test_token_not_real")
+    monkeypatch.setenv("ISSUES_LINEAR_TOKEN", "test-linear-api-key")
 
     def fake_graphql(*_a: Any, **_k: Any) -> dict[str, Any]:
         return {
@@ -109,7 +109,7 @@ def test_r11_team_probe_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Path)
         }
 
     monkeypatch.setattr(plc, "graphql", fake_graphql)
-    result = plc.probe_team_scope(tmp_path, cfg, token="lin_test_token_not_real")
+    result = plc.probe_team_scope(tmp_path, cfg, token="test-linear-api-key")
     assert result["verdict"] == "ok"
     assert result["teamId"] == "team_ENG"
     assert result["teamKey"] == "ENG"
@@ -153,7 +153,7 @@ def test_r13_dual_budget_tracks_count_and_complexity(tmp_git_repo: Path) -> None
 def test_r13_ratelimited_graphql_extension_handled(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """R13 — GraphQL extensions.code RATELIMITED raises typed rate-limit error (not only HTTP 429)."""
     cfg = _cfg()
-    monkeypatch.setenv("ISSUES_LINEAR_TOKEN", "lin_test_token_not_real")
+    monkeypatch.setenv("ISSUES_LINEAR_TOKEN", "test-linear-api-key")
 
     def fake_http(*_a: Any, **_k: Any) -> tuple[int, dict[str, str], str]:
         body = json.dumps(
@@ -172,7 +172,7 @@ def test_r13_ratelimited_graphql_extension_handled(tmp_path: Path, monkeypatch: 
     with pytest.raises(plc.LinearRateLimited) as exc:
         plc.graphql(tmp_path, cfg, query="{ viewer { id } }", variables=None)
     assert "RATELIMITED" in str(exc.value).upper() or exc.value.code == "RATELIMITED"
-    assert "lin_test_token_not_real" not in str(exc.value)
+    assert "test-linear-api-key" not in str(exc.value)
 
 
 def test_r13_complexity_aware_query_planner_splits() -> None:
@@ -207,8 +207,8 @@ def test_r23_oauth_auth_mode_header_only() -> None:
     assert api_headers["Authorization"] == "key_abc"
     assert not api_headers["Authorization"].startswith("Bearer ")
 
-    oauth_headers = plc.auth_headers("access_tok", auth_mode="oauth")
-    assert oauth_headers["Authorization"] == "Bearer access_tok"
+    oauth_headers = plc.auth_headers("oauth-access-fixture", auth_mode="oauth")
+    assert oauth_headers["Authorization"] == "Bearer " + "oauth-access-fixture"
 
     verbs_api = plc.adapter_verbs()
     verbs_oauth = plc.adapter_verbs(auth_mode="oauth")
