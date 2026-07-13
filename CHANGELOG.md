@@ -462,6 +462,7 @@
 * merge phase identity-ledger-drift-dirty-identity-ledger-typed-drift-dirty-resume-r2-r5-r27-r28 into feat/linear-planning-store-provider-and-operator-projection (2223b04) <!-- sw-deliver:identity-ledger-drift-dirty-identity-ledger-typed-drift-dirty-resume-r2-r5-r27-r28 -->
 * merge phase linear-client-auth-budget-thin-linear-graphql-client-team-auth-dual-budgets-r9-r11-r14-r23 into feat/linear-planning-store-provider-and-operator-projection (a49b38a) <!-- sw-deliver:linear-client-auth-budget-thin-linear-graphql-client-team-auth-dual-budgets-r9-r11-r14-r23 -->
 * merge phase projects-parity-github-projects-r18-parity-degradations-r18-r19 into feat/linear-planning-store-provider-and-operator-projection (62526df) <!-- sw-deliver:projects-parity-github-projects-r18-parity-degradations-r18-r19 -->
+* merge phase linear-lcd-verbs-lcd-fixtureissuesstore-verb-parity-lock-overflow-r10 into feat/linear-planning-store-provider-and-operator-projection (499b4b2) <!-- sw-deliver:linear-lcd-verbs-lcd-fixtureissuesstore-verb-parity-lock-overflow-r10 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
