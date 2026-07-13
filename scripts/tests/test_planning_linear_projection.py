@@ -1,10 +1,19 @@
-"""PRD 066 phase 9 — Projects R18 parity acceptance (task path alias).
+"""PRD 066 — Linear projection schema + Projects R18 parity (task path alias).
 
-Canonical suite: scripts/unit_tests/planning/test_prd066_projects_parity.py
+Canonical suites:
+- scripts/unit_tests/planning/test_prd066_linear_projection_schema.py (phase 5 / R6–R8, R29)
+- scripts/unit_tests/planning/test_prd066_projects_parity.py (phase 9 / R18–R19)
 """
 
 from __future__ import annotations
 
+from unit_tests.planning.test_prd066_linear_projection_schema import (  # noqa: F401
+    test_linear_projection_schema_contract_surface,
+    test_r29_endpoint_typed_edge_encoding,
+    test_r6_entity_mapping_prd_document_gap_milestone_issue,
+    test_r7_initiative_probe_and_substitute_views,
+    test_r8_cycles_orthogonal_to_milestones_and_share_notice,
+)
 from unit_tests.planning.test_prd066_projects_parity import (  # noqa: F401
     test_r18_assert_helper_fails_without_discriminator,
     test_r18_initiative_cycle_degradations_documented,

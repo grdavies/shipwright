@@ -50,6 +50,19 @@ from planning_projection_ledger import (
     resume_projection_from_checkpoint,
     set_projection_dirty,
 )
+from planning_linear_projection import (
+    apply_initiative_capability,
+    assert_cycle_orthogonal_to_milestone,
+    assign_issue_to_cycle,
+    cycle_sharing_notice,
+    encode_planning_edge,
+    linear_entity_mapping,
+    linear_projection_schema_contract,
+    map_artifact_to_linear_entity,
+    probe_initiative_availability,
+    project_graph_to_linear_layout,
+    r1_4_substitute_views,
+)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -4242,6 +4255,11 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
         "status": "shipped",
         "description": "Provider-agnostic operator-projection API + R1 browse capability matrix (PRD 066)",
     },
+    {
+        "name": "linear_projection_schema",
+        "status": "shipped",
+        "description": "Linear operator schema: entity map, Initiative/Cycles, typed edges (PRD 066 R6–R8/R29)",
+    },
 )
 
 ISSUES_CLIENT_ALLOWLIST = frozenset({
@@ -4957,6 +4975,7 @@ def main() -> None:
         "lint-facade-imports",
         "lint-projection-mutations",
         "operator-projection-contract",
+        "linear-projection-schema",
         "resolve-issues",
         "resolve-store-location",
         "probe-issues-token",
@@ -5002,6 +5021,8 @@ def main() -> None:
         emit(result, 0 if result.get("verdict") == "pass" else 20)
     elif args.command == "operator-projection-contract":
         emit(operator_projection_contract())
+    elif args.command == "linear-projection-schema":
+        emit(linear_projection_schema_contract())
     elif args.command == "resolve-backend":
 
         override = _optional(rest, "--backend")
