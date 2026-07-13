@@ -1,0 +1,14 @@
+{
+  "id": "gfm-table",
+  "provider": "linear",
+  "contract": "public-markdown",
+  "title": "[acme] prd:066-table",
+  "state": "open",
+  "labels": [
+    "sw:prd"
+  ],
+  "submitMarkdown": "| Col A | Col B |\n| --- | --- |\n| one | two |\n| three | four |\n",
+  "refetchedMarkdown": "| Col A | Col B |\n| --- | --- |\n| one | two |\n| three | four |\n",
+  "expectedCanonicalBody": "| Col A | Col B |\n| --- | --- |\n| one | two |\n| three | four |",
+  "expectedHash": "d83f76f7882dc2849dfd8b413d9e021186ba8bc0157d41b84328f51cffc98d6a"
+}

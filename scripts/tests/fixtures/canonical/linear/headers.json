@@ -1,0 +1,14 @@
+{
+  "id": "headers",
+  "provider": "linear",
+  "contract": "public-markdown",
+  "title": "[acme] prd:066-headers",
+  "state": "open",
+  "labels": [
+    "sw:prd"
+  ],
+  "submitMarkdown": "# Sample PRD\n\n## Overview\n\n### Detail\n\nBody text.\n",
+  "refetchedMarkdown": "# Sample PRD\n\n## Overview\n\n### Detail\n\nBody text.\n",
+  "expectedCanonicalBody": "# Sample PRD\n\n## Overview\n\n### Detail\n\nBody text.",
+  "expectedHash": "f58623be4dd74a1d9661b7ce0a9ebff82e92a568fb59011bf9f356c31a67bbed"
+}

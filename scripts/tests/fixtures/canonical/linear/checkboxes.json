@@ -1,0 +1,14 @@
+{
+  "id": "checkboxes",
+  "provider": "linear",
+  "contract": "public-markdown",
+  "title": "[acme] prd:066-checkboxes",
+  "state": "open",
+  "labels": [
+    "sw:prd"
+  ],
+  "submitMarkdown": "- [ ] open item\n- [x] done item\n- [ ] another\n",
+  "refetchedMarkdown": "- [ ] open item\n- [x] done item\n- [ ] another\n",
+  "expectedCanonicalBody": "- [ ] open item\n- [x] done item\n- [ ] another",
+  "expectedHash": "bf4ee7ec8eb90c0299f77bb1b267c516a3f4a6755e0815febd53cec87f27adc3"
+}
