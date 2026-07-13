@@ -182,6 +182,13 @@ def test_r10_issues_lib_routes_linear_live_backend(tmp_path: Path, monkeypatch: 
     import planning_linear_client as live_mod
 
     monkeypatch.setattr(live_mod, "LinearIssuesClient", _FakeLinear)
+    import planning_store as ps
+
+    monkeypatch.setattr(
+        ps,
+        "SHIPPED_ISSUES_PROVIDERS",
+        ps.SHIPPED_ISSUES_PROVIDERS | frozenset({"linear"}),
+    )
 
     client = issues_lib.IssuesClient(tmp_path, "linear")
     backend = client._live_backend()
