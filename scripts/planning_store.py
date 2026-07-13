@@ -4205,6 +4205,12 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
     {"name": "progress_update", "status": "shipped", "description": "Semantic phase/task progress without ad hoc issue_create"},
     {"name": "comment_sync", "status": "shipped", "description": "Inbound/outbound provider comment sync"},
     {"name": "projection_refresh", "status": "shipped", "description": "Rebuild operator projection (Projects v2, hierarchy)"},
+    {"name": "probe_projection", "status": "shipped", "description": "Probe operator-projection health / capability notices"},
+    {
+        "name": "operator_projection_contract",
+        "status": "shipped",
+        "description": "Provider-agnostic operator-projection API + R1 browse capability matrix (PRD 066)",
+    },
 )
 
 ISSUES_CLIENT_ALLOWLIST = frozenset({
@@ -4214,8 +4220,107 @@ ISSUES_CLIENT_ALLOWLIST = frozenset({
     "scripts/planning_gitlab_client.py",
     "scripts/planning_jira_client.py",
     "scripts/planning_github_projects_v2.py",
+    "scripts/planning_linear_client.py",
     "scripts/planning_migrate_issue_store.py",
 })
+
+# PRD 066 R4 — workflow scripts must not import Linear/Projects mutation helpers directly.
+PROJECTION_MUTATION_MODULES = frozenset({
+    "planning_linear_client",
+    "planning_github_projects_v2",
+})
+PROJECTION_MUTATION_NAMES = frozenset({
+    "refresh_projection",
+    "create_issue_batch",
+    "create_project",
+    "update_project",
+    "create_milestone",
+    "update_milestone",
+    "create_document",
+    "update_document",
+    "assign_cycle",
+    "mutate",
+})
+PROJECTION_MUTATION_ALLOWLIST = frozenset({
+    "scripts/planning_store.py",
+    "scripts/planning_github_projects_v2.py",
+    "scripts/planning_linear_client.py",
+})
+
+# PRD 066 R32 — exclusive semantic status taxonomy + provider alias allowlists.
+SEMANTIC_STATUSES = frozenset({"backlog", "in_flight", "done"})
+SEMANTIC_STATUS_ALIASES: dict[str, dict[str, frozenset[str]]] = {
+    "linear": {
+        "backlog": frozenset({"backlog", "todo", "triage", "unstarted", "planned"}),
+        "in_flight": frozenset({"in progress", "started", "in_progress", "active", "blocked"}),
+        "done": frozenset({"done", "completed", "canceled", "cancelled", "duplicate"}),
+    },
+    "github-projects": {
+        "backlog": frozenset({"backlog", "todo", "new", "ready"}),
+        "in_flight": frozenset({"in progress", "in review", "in_progress", "active"}),
+        "done": frozenset({"done", "complete", "completed", "closed"}),
+    },
+}
+
+# PRD 066 R31 — normative R1 browse contract (card/list-visible fields; body open = failure).
+R1_BROWSE_CONTRACT: dict[str, Any] = {
+    "bodyOpenIsFailure": True,
+    "questions": {
+        "1": {
+            "id": 1,
+            "prompt": "which gaps a PRD absorbs",
+            "cardVisibleFields": [
+                "projectMembership",
+                "gapLabelOrField",
+                "gapIssueIdentity",
+            ],
+        },
+        "2": {
+            "id": 2,
+            "prompt": "which brainstorm(s) feed a PRD",
+            "cardVisibleFields": [
+                "documentAttachmentOrMembership",
+                "brainstormIdentity",
+                "prdProjectLink",
+            ],
+        },
+        "3": {
+            "id": 3,
+            "prompt": "task/phase completion for an in-flight PRD",
+            "cardVisibleFields": [
+                "issueSemanticStatus",
+                "milestonePhaseMembership",
+                "milestoneProgress",
+            ],
+        },
+        "4": {
+            "id": 4,
+            "prompt": "backlog vs in_flight vs done at program level",
+            "cardVisibleFields": [
+                "initiativeOrProgramDiscriminator",
+                "programSemanticStatus",
+                "substituteViewsOrFilters",
+            ],
+            "notes": "Cycle is wave enrichment only — not phase source of truth",
+        },
+    },
+}
+
+OPERATOR_PROJECTION_MATRIX_ROWS: tuple[dict[str, Any], ...] = (
+    {"row": "prd", "linear": "project", "github-projects": "project-item", "r1": [1, 2, 3, 4]},
+    {"row": "brainstorm", "linear": "document", "github-projects": "draft-or-issue-field", "r1": [2]},
+    {"row": "gap", "linear": "issue+gap-label", "github-projects": "issue+gap-field", "r1": [1]},
+    {"row": "phase", "linear": "milestone", "github-projects": "phase-field", "r1": [3]},
+    {"row": "task", "linear": "issue/sub-issue", "github-projects": "issue-item", "r1": [3]},
+    {"row": "progress", "linear": "native-status", "github-projects": "status-field", "r1": [3, 4]},
+    {
+        "row": "program",
+        "linear": "initiative-or-substitute-views",
+        "github-projects": "program-discriminator",
+        "r1": [4],
+    },
+    {"row": "cycle-wave", "linear": "cycle", "github-projects": "degraded-optional", "r1": []},
+)
 
 FACADE_WORKFLOW_SCAN_GLOB = "scripts/*.py"
 
@@ -4385,6 +4490,228 @@ def lint_facade_imports(root: Path, *, scope: str | None = None) -> dict[str, An
         result["error"] = "issues-client-import-outside-allowlist"
         result["baselineMissing"] = sorted(FACADE_BYPASS_BASELINE - found)
         result["unexpected"] = sorted(found - FACADE_BYPASS_BASELINE - ISSUES_CLIENT_ALLOWLIST)
+    return result
+
+
+class SemanticStatusError(ValueError):
+    """PRD 066 R32 — unknown native status outside the alias allowlist."""
+
+    def __init__(self, message: str, *, code: str = "unknown-native-status", **extra: Any) -> None:
+        super().__init__(message)
+        self.code = code
+        self.extra = extra
+
+
+def normalize_semantic_status(provider: str, native_status: str) -> str:
+    """Map provider-native status onto backlog/in_flight/done; fail closed on unknown."""
+    aliases = SEMANTIC_STATUS_ALIASES.get(provider)
+    if aliases is None:
+        raise SemanticStatusError(
+            f"unsupported projection provider: {provider}",
+            code="unsupported-provider",
+            provider=provider,
+        )
+    key = (native_status or "").strip().lower()
+    if not key:
+        raise SemanticStatusError("empty native status", code="empty-native-status", provider=provider)
+    if key in SEMANTIC_STATUSES:
+        return key
+    for semantic, names in aliases.items():
+        if key in names:
+            return semantic
+    raise SemanticStatusError(
+        f"unknown native status for {provider}: {native_status}",
+        code="unknown-native-status",
+        provider=provider,
+        nativeStatus=native_status,
+    )
+
+
+def operator_projection_capability_matrix() -> dict[str, Any]:
+    """PRD 066 R1/R3 — shared operator-projection capability matrix skeleton."""
+    return {
+        "backends": ["github-issues", "github-projects", "jira", "linear"],
+        "contractBackends": ["github-projects", "linear"],
+        "rows": [dict(row) for row in OPERATOR_PROJECTION_MATRIX_ROWS],
+        "statusTaxonomy": sorted(SEMANTIC_STATUSES),
+        "statusAliases": {
+            provider: {semantic: sorted(names) for semantic, names in mapping.items()}
+            for provider, mapping in SEMANTIC_STATUS_ALIASES.items()
+        },
+        "r1BrowseContract": R1_BROWSE_CONTRACT,
+    }
+
+
+def operator_projection_adapter_complete_claim(matrix: dict[str, Any] | None = None) -> dict[str, Any]:
+    """R3 — adapter-complete requires both Linear and Projects backends in the matrix."""
+    payload = matrix or operator_projection_capability_matrix()
+    required = ["github-projects", "linear"]
+    backends = set(payload.get("backends") or [])
+    contract_backends = set(payload.get("contractBackends") or [])
+    present = [name for name in required if name in backends and name in contract_backends]
+    # Skeleton stage: both backends are declared; answerability lands in later phases.
+    answerable = {
+        "linear": bool(payload.get("linearAnswerable")),
+        "github-projects": bool(payload.get("projectsAnswerable")),
+    }
+    return {
+        "verdict": "ok",
+        "requiresBackends": required,
+        "presentBackends": present,
+        "answerable": answerable,
+        "adapterComplete": present == required and all(answerable.values()),
+    }
+
+
+def operator_projection_contract() -> dict[str, Any]:
+    """PRD 066 R1/R31 — provider-agnostic operator-projection API surface + browse contract."""
+    matrix = operator_projection_capability_matrix()
+    questions = [
+        {
+            "id": int(qid),
+            "prompt": entry["prompt"],
+            "cardVisibleFields": list(entry["cardVisibleFields"]),
+        }
+        for qid, entry in sorted(R1_BROWSE_CONTRACT["questions"].items(), key=lambda item: int(item[0]))
+    ]
+    ops = [
+        {"name": "projection_refresh", "status": "shipped"},
+        {"name": "probe_projection", "status": "shipped"},
+        {"name": "operator_projection_contract", "status": "shipped"},
+    ]
+    return {
+        "verdict": "ok",
+        "action": "operator-projection-contract",
+        "operations": ops,
+        "r1BrowseQuestions": questions,
+        "r1BrowseContract": R1_BROWSE_CONTRACT,
+        "capabilityMatrix": matrix,
+        "adapterCompleteClaim": operator_projection_adapter_complete_claim(matrix),
+        "semanticStatuses": sorted(SEMANTIC_STATUSES),
+    }
+
+
+def assert_r1_answerability_from_metadata(evidence: dict[str, Any]) -> dict[str, Any]:
+    """R31 harness helper — R1 answers must come from card/list metadata; body-open fails."""
+    missing: list[str] = []
+    for qid, entry in R1_BROWSE_CONTRACT["questions"].items():
+        row = evidence.get(qid) or evidence.get(int(qid))  # type: ignore[arg-type]
+        if not isinstance(row, dict):
+            missing.append(qid)
+            continue
+        if row.get("bodyOpened") is True:
+            return {
+                "verdict": "fail",
+                "error": "r1-body-open",
+                "question": qid,
+                "bodyOpenIsFailure": True,
+            }
+        fields = {str(f) for f in (row.get("fields") or [])}
+        required = {str(f) for f in entry["cardVisibleFields"]}
+        if not required.issubset(fields):
+            missing.append(qid)
+    if missing:
+        return {"verdict": "fail", "error": "r1-metadata-incomplete", "questions": missing}
+    return {"verdict": "pass", "action": "assert-r1-answerability", "bodyOpenIsFailure": True}
+
+
+def _imports_projection_mutations(path: Path) -> list[dict[str, Any]]:
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (OSError, SyntaxError):
+        return []
+    hits: list[dict[str, Any]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                root_name = alias.name.split(".")[0]
+                if root_name in PROJECTION_MUTATION_MODULES:
+                    hits.append(
+                        {
+                            "line": node.lineno,
+                            "module": root_name,
+                            "names": [alias.name],
+                        }
+                    )
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            root_name = node.module.split(".")[0]
+            imported = {alias.name for alias in node.names}
+            if root_name in PROJECTION_MUTATION_MODULES:
+                dangerous = sorted(imported & PROJECTION_MUTATION_NAMES) or sorted(imported)
+                hits.append(
+                    {
+                        "line": node.lineno,
+                        "module": root_name,
+                        "names": dangerous,
+                    }
+                )
+    return hits
+
+
+def scan_projection_mutation_violations(
+    root: Path, *, extra_paths: list[Path] | None = None
+) -> list[dict[str, Any]]:
+    violations: list[dict[str, Any]] = []
+    candidates: list[Path] = []
+    if extra_paths:
+        candidates.extend(extra_paths)
+    else:
+        candidates.extend(sorted(root.glob(FACADE_WORKFLOW_SCAN_GLOB)))
+    for script in candidates:
+        if not script.is_file() or script.suffix != ".py":
+            continue
+        rel = _rel_script_path(root, script)
+        if rel in PROJECTION_MUTATION_ALLOWLIST:
+            continue
+        hits = _imports_projection_mutations(script)
+        if hits:
+            violations.append({"path": rel, "imports": hits})
+    return sorted(violations, key=lambda row: row["path"])
+
+
+def lint_projection_mutations(root: Path, *, scope: str | None = None) -> dict[str, Any]:
+    """PRD 066 R4 — fail closed when workflow scripts mutate Linear/Projects directly."""
+    if scope:
+        target = Path(scope)
+        if not target.is_absolute():
+            target = root / target
+        violations = scan_projection_mutation_violations(root, extra_paths=[target])
+        rel = _rel_script_path(root, target)
+        allowed = rel in PROJECTION_MUTATION_ALLOWLIST
+        if allowed and not violations:
+            return {
+                "verdict": "pass",
+                "action": "lint-projection-mutations",
+                "path": rel,
+                "allowed": True,
+                "violations": [],
+            }
+        if violations:
+            return {
+                "verdict": "fail",
+                "action": "lint-projection-mutations",
+                "path": rel,
+                "allowed": allowed,
+                "error": "projection-mutation-outside-allowlist",
+                "violations": violations,
+            }
+        return {
+            "verdict": "pass",
+            "action": "lint-projection-mutations",
+            "path": rel,
+            "allowed": allowed,
+            "violations": [],
+        }
+
+    violations = scan_projection_mutation_violations(root)
+    result: dict[str, Any] = {
+        "verdict": "pass" if not violations else "fail",
+        "action": "lint-projection-mutations",
+        "allowlist": sorted(PROJECTION_MUTATION_ALLOWLIST),
+        "violations": violations,
+    }
+    if violations:
+        result["error"] = "projection-mutation-outside-allowlist"
     return result
 
 
@@ -4578,6 +4905,8 @@ def main() -> None:
         "list-backends",
         "list-facade",
         "lint-facade-imports",
+        "lint-projection-mutations",
+        "operator-projection-contract",
         "resolve-issues",
         "resolve-store-location",
         "probe-issues-token",
@@ -4617,6 +4946,12 @@ def main() -> None:
         scope = _optional(rest, "--path")
         result = lint_facade_imports(root, scope=scope)
         emit(result, 0 if result.get("verdict") == "pass" else 20)
+    elif args.command == "lint-projection-mutations":
+        scope = _optional(rest, "--path")
+        result = lint_projection_mutations(root, scope=scope)
+        emit(result, 0 if result.get("verdict") == "pass" else 20)
+    elif args.command == "operator-projection-contract":
+        emit(operator_projection_contract())
     elif args.command == "resolve-backend":
 
         override = _optional(rest, "--backend")
