@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, TypeVar
 
-from planning_canonical import CommentRecord, compute_etag
+from planning_canonical import CommentRecord, RelationRecord, compute_etag
 
 ISSUE_VERBS = frozenset({
     "issue-create",
@@ -118,6 +118,7 @@ class IssueRecord:
     state: str
     labels: list[str]
     comments: list[CommentRecord] = field(default_factory=list)
+    relations: list[RelationRecord] = field(default_factory=list)
     native_links: list[dict[str, Any]] = field(default_factory=list)
     locked: bool = False
     updated_at: str = ""
@@ -141,8 +142,26 @@ class IssueRecord:
             "state": self.state,
             "labels": list(self.labels),
             "comments": [
-                {"id": c.id, "body": c.body, "created_at": c.created_at, "markers": c.markers}
+                {
+                    "id": c.id,
+                    "body": c.body,
+                    "created_at": c.created_at,
+                    "markers": c.markers,
+                    "parent_id": c.parent_id,
+                    "resolved_at": c.resolved_at,
+                    "resolving_comment_id": c.resolving_comment_id,
+                }
                 for c in self.comments
+            ],
+            "relations": [
+                {
+                    "id": r.id,
+                    "relation_type": r.relation_type,
+                    "source_issue_id": r.source_issue_id,
+                    "target_issue_id": r.target_issue_id,
+                    "direction": r.direction,
+                }
+                for r in self.relations
             ],
             "native_links": list(self.native_links),
             "locked": self.locked,
@@ -167,6 +186,22 @@ class IssueRecord:
                     body=str(raw.get("body", "")),
                     created_at=str(raw.get("created_at", "")),
                     markers=list(raw.get("markers") or []),
+                    parent_id=str(raw.get("parent_id", "") or ""),
+                    resolved_at=str(raw.get("resolved_at", "") or ""),
+                    resolving_comment_id=str(raw.get("resolving_comment_id", "") or ""),
+                )
+            )
+        relations: list[RelationRecord] = []
+        for raw in data.get("relations") or []:
+            if not isinstance(raw, dict):
+                continue
+            relations.append(
+                RelationRecord(
+                    id=str(raw.get("id", "")),
+                    relation_type=str(raw.get("relation_type", "")),
+                    source_issue_id=str(raw.get("source_issue_id", "")),
+                    target_issue_id=str(raw.get("target_issue_id", "")),
+                    direction=str(raw.get("direction", "outbound")),
                 )
             )
         return cls(
@@ -177,6 +212,7 @@ class IssueRecord:
             state=str(data.get("state", "open")),
             labels=[str(x) for x in (data.get("labels") or [])],
             comments=comments,
+            relations=relations,
             native_links=list(data.get("native_links") or []),
             locked=bool(data.get("locked")),
             updated_at=str(data.get("updated_at", "")),
