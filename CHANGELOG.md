@@ -465,6 +465,7 @@
 * merge phase linear-lcd-verbs-lcd-fixtureissuesstore-verb-parity-lock-overflow-r10 into feat/linear-planning-store-provider-and-operator-projection (499b4b2) <!-- sw-deliver:linear-lcd-verbs-lcd-fixtureissuesstore-verb-parity-lock-overflow-r10 -->
 * merge phase linear-projection-schema-linear-operator-schema-initiative-cycles-typed-edges-r6-r8-r29 into feat/linear-planning-store-provider-and-operator-projection (92f3a69) <!-- sw-deliver:linear-projection-schema-linear-operator-schema-initiative-cycles-typed-edges-r6-r8-r29 -->
 * merge phase linear-canonical-markdown-public-markdown-fidelity-suite-r15 into feat/linear-planning-store-provider-and-operator-projection (a2d0a6f) <!-- sw-deliver:linear-canonical-markdown-public-markdown-fidelity-suite-r15 -->
+* merge phase dual-write-body-canonical-body-dual-write-vs-projection-r26 into feat/linear-planning-store-provider-and-operator-projection (6008539) <!-- sw-deliver:dual-write-body-canonical-body-dual-write-vs-projection-r26 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
