@@ -190,7 +190,8 @@
             "unitId": "Unit",
             "absorbs": "Absorbs",
             "brainstormFeed": "Brainstorms",
-            "phaseProgress": "Phases"
+            "phaseProgress": "Phases",
+            "program": "Program"
           },
           "budget": {
             "maxCalls": 40,
