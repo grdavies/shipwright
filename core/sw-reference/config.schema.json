@@ -1146,7 +1146,8 @@
                 "none",
                 "github-issues",
                 "gitlab-issues",
-                "jira"
+                "jira",
+                "linear"
               ],
               "description": "Issue-backed planning provider when backend is issue-store (PRD 043)."
             },
@@ -1184,6 +1185,23 @@
                 },
                 "rateLimit": {
                   "type": "object"
+                },
+                "teamKey": {
+                  "type": "string",
+                  "description": "Linear Team key/name (PRD 066 R11); preferred operator-facing Team id."
+                },
+                "teamId": {
+                  "type": "string",
+                  "description": "Linear GraphQL Team id (PRD 066 R11)."
+                },
+                "authMode": {
+                  "type": "string",
+                  "enum": ["api-key", "oauth"],
+                  "description": "Linear auth mode (PRD 066 R23); default api-key."
+                },
+                "oauthSharedCiException": {
+                  "type": "boolean",
+                  "description": "Explicit exception allowing authMode:oauth via shared CI secret (PRD 066 R23)."
                 }
               }
             },
