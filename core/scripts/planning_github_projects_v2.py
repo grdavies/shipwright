@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""GitHub Projects v2 operator projection client (PRD 061 R11, R11a, R11b, R29a)."""
+"""GitHub Projects v2 operator projection client (PRD 061 R11+; PRD 066 R18/R19).
+
+PRD 066 R18 — Projects implements the shared operator-projection contract with a
+required R1(4) program discriminator. Status (+ views) alone is NOT R1(4)-complete.
+Initiative/Cycle analogues are explicit degradations (no native entities).
+
+PRD 066 R19 — github-issues backends retain Issues as the LCD body/freeze store;
+Projects is operator browse projection only.
+"""
 from __future__ import annotations
 
 import json
@@ -11,6 +19,8 @@ from typing import Any
 import issues_http
 from host_lib import github_api_base, host_section, load_workflow_config
 from planning_store import (
+    R1_BROWSE_CONTRACT,
+    assert_r1_answerability_from_metadata,
     resolve_effective_backend,
     resolve_issues_provider,
     resolve_issues_token_env,
@@ -28,6 +38,94 @@ PO_BROWSE_QUESTIONS = (
     "which brainstorms feed a PRD",
     "task/phase completion for an in-flight PRD",
     "backlog vs in-flight vs done at program level",
+)
+
+# PRD 066 R18 — program discriminator semantic keys (fieldMap) and cycle analogues.
+PROGRAM_DISCRIMINATOR_KEYS = ("program", "initiative")
+CYCLE_ANALOGUE_KEYS = ("wave", "waveStart", "waveEnd", "cycle")
+
+# Explicit degradation table (PRD 066 OQ1 / D6 / R18). Status-only ≠ R1(4).
+PROJECTS_DEGRADATION_ROWS: tuple[dict[str, Any], ...] = (
+    {
+        "concept": "prd",
+        "linear": "project",
+        "analogue": "Projects v2 project + draft/issue items for the PRD unit",
+        "nativeSupported": True,
+        "degradationClass": "full",
+        "requiredForR1": True,
+    },
+    {
+        "concept": "brainstorm",
+        "linear": "document",
+        "analogue": "Draft/issue item linked via custom field to PRD item",
+        "nativeSupported": True,
+        "degradationClass": "full",
+        "requiredForR1": True,
+    },
+    {
+        "concept": "gap",
+        "linear": "issue+gap-label",
+        "analogue": "Issue item in Project with Gap label/field",
+        "nativeSupported": True,
+        "degradationClass": "full",
+        "requiredForR1": True,
+    },
+    {
+        "concept": "phase",
+        "linear": "milestone",
+        "analogue": "Milestone/phase field on items (field-based, not Linear Milestone UI)",
+        "nativeSupported": True,
+        "degradationClass": "full",
+        "requiredForR1": True,
+    },
+    {
+        "concept": "task",
+        "linear": "issue/sub-issue",
+        "analogue": "Issue/draft items with phase field value",
+        "nativeSupported": True,
+        "degradationClass": "full",
+        "requiredForR1": True,
+    },
+    {
+        "concept": "initiative",
+        "linear": "initiative",
+        "analogue": (
+            "Required program discriminator: Project-per-program or required "
+            "custom field program/initiative on PRD items; no native Initiative entity"
+        ),
+        "nativeSupported": False,
+        "degradationClass": "degraded-required-discriminator",
+        "requiredForR1": True,
+        "r1Questions": [4],
+    },
+    {
+        "concept": "cycle",
+        "linear": "cycle",
+        "analogue": (
+            "Optional waveStart/waveEnd date fields or single-select wave custom field; "
+            "no native Cycle entity"
+        ),
+        "nativeSupported": False,
+        "degradationClass": "degraded-optional",
+        "requiredForR1": False,
+        "r1Questions": [],
+    },
+    {
+        "concept": "progress",
+        "linear": "native-status",
+        "analogue": "Projects Status field + issue state",
+        "nativeSupported": True,
+        "degradationClass": "full",
+        "requiredForR1": True,
+    },
+    {
+        "concept": "comments-relations",
+        "linear": "threads+relations",
+        "analogue": "GitHub issue comments + Projects field links (Issues body store, R19)",
+        "nativeSupported": False,
+        "degradationClass": "partial",
+        "requiredForR1": False,
+    },
 )
 
 
@@ -95,7 +193,7 @@ def resolve_github_projects_config(cfg: dict[str, Any]) -> dict[str, Any]:
             "missing": missing,
             "degraded": True,
         }
-    return {
+    result = {
         "verdict": "ok",
         "enabled": True,
         "configured": True,
@@ -104,7 +202,9 @@ def resolve_github_projects_config(cfg: dict[str, Any]) -> dict[str, Any]:
         "projectId": project_id.strip() if isinstance(project_id, str) else project_id,
         "fieldMap": field_map,
         "budget": budget,
+        "programMode": section.get("programMode"),
     }
+    return result
 
 
 def _token_for_probe(root: Path, cfg: dict[str, Any]) -> tuple[str, str]:
@@ -390,12 +490,235 @@ def sample_projection_items(root: Path, cfg: dict[str, Any]) -> list[dict[str, A
     }]
 
 
+def resolve_program_discriminator(cfg: dict[str, Any]) -> dict[str, Any]:
+    """PRD 066 R18 — resolve R1(4) program discriminator; Status-only is never complete."""
+    section = projection_section(cfg)
+    field_map = section.get("fieldMap") if isinstance(section.get("fieldMap"), dict) else {}
+    program_mode = section.get("programMode")
+    if isinstance(program_mode, str) and program_mode.strip().lower() in {
+        "project-per-program",
+        "project_per_program",
+        "per-program",
+    }:
+        return {
+            "verdict": "ok",
+            "present": True,
+            "mode": "project-per-program",
+            "r14Supported": True,
+            "statusOnlyComplete": False,
+            "notice": None,
+        }
+    for key in PROGRAM_DISCRIMINATOR_KEYS:
+        mapped = field_map.get(key)
+        if isinstance(mapped, str) and mapped.strip():
+            return {
+                "verdict": "ok",
+                "present": True,
+                "mode": "field",
+                "semanticKey": key,
+                "fieldName": mapped.strip(),
+                "r14Supported": True,
+                "statusOnlyComplete": False,
+                "notice": None,
+            }
+    has_status = isinstance(field_map.get("status"), str) and bool(str(field_map.get("status")).strip())
+    return {
+        "verdict": "ok",
+        "present": False,
+        "mode": "none",
+        "r14Supported": False,
+        "statusOnlyComplete": False,
+        "hasStatusField": has_status,
+        "notice": (
+            "r1-4-unsupported-status-only"
+            if has_status
+            else "r1-4-program-discriminator-missing"
+        ),
+        "required": (
+            "Configure programMode=project-per-program or fieldMap.program|initiative; "
+            "Status (+ views) alone is not R1(4)-complete (PRD 066 R18 / D14)."
+        ),
+    }
+
+
+def projects_degradation_table() -> dict[str, Any]:
+    """PRD 066 R18 — documented Initiative/Cycle analogues and parity rows."""
+    return {
+        "verdict": "ok",
+        "action": "projects-degradation-table",
+        "backend": "github-projects",
+        "statusOnlyR14Complete": False,
+        "rows": [dict(row) for row in PROJECTS_DEGRADATION_ROWS],
+    }
+
+
+def projects_degradation_notices(*, cfg: dict[str, Any] | None = None) -> dict[str, Any]:
+    """G11 — capability notices for missing native Initiative/Cycle concepts."""
+    disc = resolve_program_discriminator(cfg or {})
+    field_map: dict[str, Any] = {}
+    if cfg:
+        section = projection_section(cfg)
+        raw = section.get("fieldMap")
+        if isinstance(raw, dict):
+            field_map = raw
+    cycle_fields = [k for k in CYCLE_ANALOGUE_KEYS if isinstance(field_map.get(k), str) and str(field_map[k]).strip()]
+    notices = [
+        {
+            "concept": "initiative",
+            "missingNative": "Linear Initiative (cross-PRD program grouping)",
+            "fallbackBrowsePath": (
+                "Project-per-program mapping or required program/initiative custom field "
+                "plus named Status/view vocabulary for backlog/in_flight/done"
+            ),
+            "optionalFieldsImprove": (
+                "Configure fieldMap.program or fieldMap.initiative, or programMode=project-per-program"
+            ),
+            "discriminatorPresent": bool(disc.get("present")),
+            "r14Supported": bool(disc.get("r14Supported")),
+        },
+        {
+            "concept": "cycle",
+            "missingNative": "Linear Cycle (deliver-wave time-box)",
+            "fallbackBrowsePath": (
+                "Optional waveStart/waveEnd or wave single-select on items; "
+                "phase completion remains Milestone/phase-field SoT"
+            ),
+            "optionalFieldsImprove": (
+                "Add fieldMap.wave / waveStart / waveEnd for wave-rich browse (optional for R1)"
+            ),
+            "cycleAnalogueConfigured": bool(cycle_fields),
+            "cycleFields": cycle_fields,
+        },
+    ]
+    return {
+        "verdict": "ok",
+        "action": "projects-degradation-notices",
+        "notices": notices,
+        "programDiscriminator": disc,
+    }
+
+
+def projects_body_store_contract() -> dict[str, Any]:
+    """PRD 066 R19 — Issues remain the body/freeze store under Projects projection."""
+    return {
+        "verdict": "ok",
+        "action": "projects-body-store-contract",
+        "bodyStore": "github-issues",
+        "projectionSurface": "github-projects",
+        "abandonIssueBodies": False,
+        "freezeAuthority": "lcd-issue-body",
+        "note": (
+            "Projects projection MUST NOT require abandoning issue bodies as the unit "
+            "content store for github-issues backends."
+        ),
+    }
+
+
+def _question_answerable_from_config(qid: str, cfg: dict[str, Any], disc: dict[str, Any]) -> bool:
+    section = projection_section(cfg)
+    field_map = section.get("fieldMap") if isinstance(section.get("fieldMap"), dict) else {}
+    if qid == "1":
+        return bool(field_map.get("absorbs")) or disc.get("mode") == "project-per-program"
+    if qid == "2":
+        return bool(field_map.get("brainstormFeed")) or disc.get("mode") == "project-per-program"
+    if qid == "3":
+        return bool(field_map.get("phaseProgress") or field_map.get("status"))
+    if qid == "4":
+        return bool(disc.get("r14Supported"))
+    return False
+
+
+def projects_r1_harness(
+    cfg: dict[str, Any],
+    *,
+    evidence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """PRD 066 R18 — R1(1)–(4) harness; fails closed without program discriminator."""
+    disc = resolve_program_discriminator(cfg)
+    questions: dict[str, Any] = {}
+    for qid, entry in R1_BROWSE_CONTRACT["questions"].items():
+        answerable = _question_answerable_from_config(qid, cfg, disc)
+        questions[qid] = {
+            "id": int(qid),
+            "prompt": entry["prompt"],
+            "answerable": answerable,
+            "cardVisibleFields": list(entry["cardVisibleFields"]),
+        }
+    meta = (
+        assert_r1_answerability_from_metadata(evidence)
+        if evidence is not None
+        else {"verdict": "pass", "skipped": True}
+    )
+    if not disc.get("r14Supported"):
+        return {
+            "verdict": "fail",
+            "action": "projects-r1-harness",
+            "error": "r1-4-program-discriminator-missing",
+            "statusOnlyComplete": False,
+            "programDiscriminator": disc,
+            "questions": questions,
+            "metadataCheck": meta,
+            "degradations": projects_degradation_notices(cfg=cfg),
+            "bodyStore": projects_body_store_contract(),
+        }
+    if evidence is not None and meta.get("verdict") != "pass":
+        return {
+            "verdict": "fail",
+            "action": "projects-r1-harness",
+            "error": meta.get("error", "r1-metadata-incomplete"),
+            "statusOnlyComplete": False,
+            "programDiscriminator": disc,
+            "questions": questions,
+            "metadataCheck": meta,
+        }
+    if not all(row["answerable"] for row in questions.values()):
+        missing = [qid for qid, row in questions.items() if not row["answerable"]]
+        return {
+            "verdict": "fail",
+            "action": "projects-r1-harness",
+            "error": "r1-config-incomplete",
+            "missingQuestions": missing,
+            "statusOnlyComplete": False,
+            "programDiscriminator": disc,
+            "questions": questions,
+            "metadataCheck": meta,
+        }
+    return {
+        "verdict": "pass",
+        "action": "projects-r1-harness",
+        "statusOnlyComplete": False,
+        "programDiscriminator": disc,
+        "questions": questions,
+        "metadataCheck": meta,
+        "degradations": projects_degradation_notices(cfg=cfg),
+        "bodyStore": projects_body_store_contract(),
+    }
+
+
+def assert_projects_r1_answerability(
+    cfg: dict[str, Any],
+    evidence: dict[str, Any],
+) -> dict[str, Any]:
+    """Acceptance helper — R1(4) fails without program discriminator even if metadata lists fields."""
+    return projects_r1_harness(cfg, evidence=evidence)
+
+
 def main() -> None:
     import argparse
-    parser = argparse.ArgumentParser(description="GitHub Projects v2 projection (PRD 061)")
+    parser = argparse.ArgumentParser(description="GitHub Projects v2 projection (PRD 061/066)")
     parser.add_argument("--root", default=".")
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("probe-scope", "health", "refresh", "cutover-gate", "po-browse-questions"):
+    for name in (
+        "probe-scope",
+        "health",
+        "refresh",
+        "cutover-gate",
+        "po-browse-questions",
+        "program-discriminator",
+        "degradation-table",
+        "r1-harness",
+        "body-store-contract",
+    ):
         sub.add_parser(name)
     args, rest = parser.parse_known_args()
     root = Path(args.root).resolve()
@@ -411,6 +734,14 @@ def main() -> None:
         print(json.dumps(projection_cutover_ready(root, cfg), ensure_ascii=False, indent=2))
     elif args.command == "po-browse-questions":
         print(json.dumps({"questions": list(PO_BROWSE_QUESTIONS)}, ensure_ascii=False, indent=2))
+    elif args.command == "program-discriminator":
+        print(json.dumps(resolve_program_discriminator(cfg), ensure_ascii=False, indent=2))
+    elif args.command == "degradation-table":
+        print(json.dumps(projects_degradation_table(), ensure_ascii=False, indent=2))
+    elif args.command == "r1-harness":
+        print(json.dumps(projects_r1_harness(cfg), ensure_ascii=False, indent=2))
+    elif args.command == "body-store-contract":
+        print(json.dumps(projects_body_store_contract(), ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

@@ -1146,7 +1146,8 @@
                 "none",
                 "github-issues",
                 "gitlab-issues",
-                "jira"
+                "jira",
+                "linear"
               ],
               "description": "Issue-backed planning provider when backend is issue-store (PRD 043)."
             },
@@ -1184,6 +1185,26 @@
                 },
                 "rateLimit": {
                   "type": "object"
+                },
+                "teamKey": {
+                  "type": "string",
+                  "description": "Linear Team key/name (PRD 066 R11); preferred operator-facing Team id."
+                },
+                "teamId": {
+                  "type": "string",
+                  "description": "Linear GraphQL Team id (PRD 066 R11)."
+                },
+                "authMode": {
+                  "type": "string",
+                  "enum": [
+                    "api-key",
+                    "oauth"
+                  ],
+                  "description": "Linear auth mode (PRD 066 R23); default api-key."
+                },
+                "oauthSharedCiException": {
+                  "type": "boolean",
+                  "description": "Explicit exception allowing authMode:oauth via shared CI secret (PRD 066 R23)."
                 }
               }
             },
@@ -1210,6 +1231,14 @@
                     "projectId": {
                       "type": "string"
                     },
+                    "programMode": {
+                      "type": "string",
+                      "enum": [
+                        "project-per-program",
+                        "field"
+                      ],
+                      "description": "PRD 066 R18 program discriminator mode. Status-only is not R1(4)-complete."
+                    },
                     "fieldMap": {
                       "type": "object"
                     },
@@ -1217,6 +1246,54 @@
                       "type": "object",
                       "properties": {
                         "maxCalls": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "maxPaginationDepth": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "cacheTtlSeconds": {
+                          "type": "integer",
+                          "minimum": 30
+                        }
+                      }
+                    }
+                  }
+                },
+                "linear": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Linear operator browse projection config (PRD 066 R16).",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": true,
+                      "description": "When false, Linear projection browse is skipped (R21 non-regression path)."
+                    },
+                    "initiativeSubstitute": {
+                      "type": "string",
+                      "enum": [
+                        "substitute-views",
+                        "skip"
+                      ],
+                      "default": "substitute-views",
+                      "description": "R7 degradation when Initiative workspace capability is absent."
+                    },
+                    "cycleSharingNotice": {
+                      "type": "boolean",
+                      "default": true,
+                      "description": "Emit loud notice when Cycle wave shares cadence with Milestones (R8)."
+                    },
+                    "budget": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "maxCalls": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "maxComplexityPoints": {
                           "type": "integer",
                           "minimum": 1
                         },

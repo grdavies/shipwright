@@ -35,6 +35,41 @@ from host_lib import (
 )
 from memory_sot import resolve_memory_provider
 import planning_visibility
+from planning_projection_ledger import (
+    assert_portable_graph_authority,
+    check_projection_drift,
+    clear_projection_dirty,
+    load_projection_ledger,
+    projection_is_dirty,
+    projection_ledger_checkpoint,
+    projection_ledger_discover_by_marker,
+    projection_ledger_lookup,
+    projection_ledger_reconcile_duplicates,
+    projection_ledger_upsert,
+    rebuild_projection_from_graph,
+    resume_projection_from_checkpoint,
+    set_projection_dirty,
+)
+from planning_linear_projection import (
+    apply_initiative_capability,
+    assert_cycle_orthogonal_to_milestone,
+    assert_projection_mirrors_not_freeze_authority,
+    assign_issue_to_cycle,
+    check_canonical_projection_split_brain,
+    cycle_sharing_notice,
+    dual_write_body_policy,
+    dual_write_projection_mirror,
+    encode_planning_edge,
+    freeze_from_canonical_body,
+    infer_canonical_body_source,
+    linear_entity_mapping,
+    linear_projection_schema_contract,
+    map_artifact_to_linear_entity,
+    probe_initiative_availability,
+    project_graph_to_linear_layout,
+    r1_4_substitute_views,
+    resolve_canonical_freeze_body,
+)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -43,11 +78,25 @@ SHIPPED_BACKENDS = frozenset({"in-repo-public", "local-synced", "memory", "issue
 DEFERRED_BACKENDS = frozenset({"private-repo", "encryption-at-rest"})
 ALL_BACKENDS = SHIPPED_BACKENDS | DEFERRED_BACKENDS
 
-ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues", "jira", "none"})
+def _linear_live_client_wired() -> bool:
+    """PRD 066 R9 — recognize Linear in ISSUES_PROVIDERS only when live client exists."""
+    try:
+        import planning_linear_client as _plc  # noqa: WPS433 — optional provider probe
+    except ImportError:
+        return False
+    return bool(getattr(_plc, "LIVE_CLIENT", False)) and callable(getattr(_plc, "graphql", None))
+
+
+_BASE_ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues", "jira", "none"})
+ISSUES_PROVIDERS = _BASE_ISSUES_PROVIDERS | (
+    frozenset({"linear"}) if _linear_live_client_wired() else frozenset()
+)
 # PRD 057 R7 / D1: gitlab-issues is a known-but-deferred provider — supported for
 # config validation yet absent from the shipped set until a live adapter ships in a
 # follow-up unit (originating gap-039). Selection therefore fails closed with the
 # issues-provider-not-shipped fallback reason instead of an advertised round-trip.
+# PRD 066 R9/R20: linear is recognized when the live client is wired, but not shipped
+# until conformance + OAuth docs gate pass.
 DEFERRED_ISSUES_PROVIDERS = frozenset({"gitlab-issues"})
 SHIPPED_ISSUES_PROVIDERS = frozenset({"github-issues", "jira"})
 
@@ -55,6 +104,7 @@ DEFAULT_ISSUES_TOKEN_ENV: dict[str, str] = {
     "github-issues": "ISSUES_GITHUB_TOKEN",
     "gitlab-issues": "ISSUES_GITLAB_TOKEN",
     "jira": "ISSUES_JIRA_TOKEN",
+    "linear": "ISSUES_LINEAR_TOKEN",
     "none": "",
 }
 
@@ -62,6 +112,7 @@ MIN_ISSUES_SCOPES: dict[str, list[str]] = {
     "github-issues": ["repo"],
     "gitlab-issues": ["api"],
     "jira": ["read:jira-work", "write:jira-work"],
+    "linear": ["read", "write"],
 }
 
 ISSUE_STORE_FALLBACK_NOTICE = (
@@ -180,6 +231,14 @@ from planning_canonical import (  # noqa: E402
     status_label,
     verify_unit_id,
     inbound_authoring_comments,
+    CommentRecord,
+    RelationRecord,
+    FLAT_COMMENT_PROVIDERS,
+    build_comment_threads,
+    comment_thread_status,
+    normalize_flat_provider_comments,
+    serialize_comment_facade,
+    serialize_relation_facade,
 )
 
 BANNED_MEMORY_CLASSES = frozenset({"discussion", "progress"})
@@ -430,6 +489,109 @@ def resolve_issues_provider(cfg: dict[str, Any]) -> dict[str, Any]:
         "supported": True,
         "shipped": shipped,
     }
+
+
+ISSUES_CAPABILITY_INDEX_IDS: dict[str, str] = {
+    "github-issues": "provider.providers.issues.github-issues",
+    "gitlab-issues": "provider.providers.issues.gitlab-issues",
+    "jira": "provider.providers.issues.jira",
+    "linear": "provider.providers.issues.linear",
+    "none": "provider.providers.issues.none",
+}
+
+ISSUES_MIGRATION_HOOKS: tuple[str, ...] = (
+    "scripts/planning_migrate_issue_store.py",
+    "scripts/planning_migrate.py",
+)
+
+
+def issues_provider_registration_footprint() -> dict[str, Any]:
+    """PRD 066 R16/R20 — registration touchpoints for issue-backed adapters."""
+    linear_wired = _linear_live_client_wired()
+    return {
+        "verdict": "ok",
+        "action": "issues-provider-registration",
+        "issuesProviders": sorted(ISSUES_PROVIDERS),
+        "shippedIssuesProviders": sorted(SHIPPED_ISSUES_PROVIDERS),
+        "deferredIssuesProviders": sorted(DEFERRED_ISSUES_PROVIDERS),
+        "rateLimitMap": dict(issues_http.ISSUES_PROVIDER_TO_RATELIMIT),
+        "capabilityIndexIds": dict(ISSUES_CAPABILITY_INDEX_IDS),
+        "migrationHooks": list(ISSUES_MIGRATION_HOOKS),
+        "linear": {
+            "recognized": "linear" in ISSUES_PROVIDERS,
+            "shipped": "linear" in SHIPPED_ISSUES_PROVIDERS,
+            "liveClientWired": linear_wired,
+            "promotionGatedBy": ["conformance", "oauth-docs-gate"],
+            "adapterModule": "scripts/planning_linear_client.py",
+            "doctorHooks": ["doctor-issues-provider-stub", "planning_linear_client.doctor-oauth"],
+        },
+        "recognitionVsShipped": {
+            provider: {
+                "recognized": provider in ISSUES_PROVIDERS,
+                "shipped": provider in SHIPPED_ISSUES_PROVIDERS,
+                "deferred": provider in DEFERRED_ISSUES_PROVIDERS,
+            }
+            for provider in sorted(_BASE_ISSUES_PROVIDERS | {"linear"})
+        },
+    }
+
+
+def doctor_issues_provider_stub(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """PRD 066 R16/R20 — refuse enum-only / stub providers; note recognized-but-unshipped."""
+    issues = resolve_issues_provider(cfg)
+    provider = str(issues.get("provider") or "none")
+    if provider in {"none", ""} or not issues.get("configured"):
+        return {"verdict": "pass", "action": "doctor-issues-provider-stub", "skipped": True, "reason": "no-issues-provider"}
+    if provider in DEFERRED_ISSUES_PROVIDERS:
+        return {
+            "verdict": "fail",
+            "action": "doctor-issues-provider-stub",
+            "error": "deferred-provider-stub-refused",
+            "provider": provider,
+            "message": (
+                f"issue provider {provider!r} is deferred — select a shipped provider "
+                "(github-issues or jira) or use file-store fallback"
+            ),
+        }
+    if provider == "linear" and provider not in ISSUES_PROVIDERS:
+        return {
+            "verdict": "fail",
+            "action": "doctor-issues-provider-stub",
+            "error": "linear-stub-refused",
+            "provider": provider,
+            "message": (
+                "linear is configured but no live client is wired — enum-only stub refused; "
+                "install planning_linear_client.py with LIVE_CLIENT before recognition"
+            ),
+        }
+    if provider == "linear" and provider not in SHIPPED_ISSUES_PROVIDERS:
+        oauth = {}
+        try:
+            from planning_linear_client import doctor_oauth_ci_secret_check
+
+            oauth = doctor_oauth_ci_secret_check(root)
+        except ImportError:
+            oauth = {"verdict": "fail", "error": "linear-client-missing"}
+        if oauth.get("verdict") == "fail" and oauth.get("error") == "oauth-shared-ci-secret-refused":
+            return {
+                "verdict": "fail",
+                "action": "doctor-issues-provider-stub",
+                "error": "linear-oauth-stub-refused",
+                "provider": provider,
+                "oauth": oauth,
+            }
+        return {
+            "verdict": "pass",
+            "action": "doctor-issues-provider-stub",
+            "provider": provider,
+            "notice": "linear-recognized-not-shipped",
+            "message": (
+                "linear is recognized (live client wired) but not yet in SHIPPED_ISSUES_PROVIDERS; "
+                "issue-store falls back to file-store until conformance + OAuth docs gate pass"
+            ),
+            "oauth": oauth,
+        }
+    return {"verdict": "pass", "action": "doctor-issues-provider-stub", "provider": provider}
 
 
 def resolve_issues_token_env(cfg: dict[str, Any], issues_provider: str) -> str:
@@ -1724,6 +1886,37 @@ class IssueStoreBackend(PlanningStoreBackend):
             )
         return operator_content
 
+    def _resolve_canonical_body_for_op(
+        self,
+        unit_id: str,
+        body_path: str,
+        record: Any,
+        *,
+        projection_mirrors: list[dict[str, Any]] | None = None,
+        prefer: str | None = None,
+    ) -> dict[str, Any]:
+        """R26 — get/freeze resolve LCD Issue or Document-backed body; never projection SoT."""
+        content = self._canonical_content_from_record(record, unit_id)
+        labels = list(getattr(record, "labels", []) or [])
+        resolved = resolve_canonical_freeze_body(
+            unit_id=unit_id,
+            body_path=body_path,
+            body=content,
+            labels=labels,
+            projection_mirrors=projection_mirrors,
+            prefer=prefer,
+        )
+        if resolved.get("verdict") != "pass":
+            fail(
+                str(resolved.get("error") or "canonical-body-unresolved"),
+                code=str(resolved.get("error") or "canonical-body-unresolved"),
+                unitId=unit_id,
+                bodyPath=body_path,
+                bodySource=resolved.get("bodySource"),
+                typedDrift=resolved.get("typedDrift"),
+            )
+        return resolved
+
     def _extract_content(self, record: Any) -> str:
         full_body = reassemble_body(record.body, record.comments)
         if not verify_project_scope(full_body, self.project_key):
@@ -2037,7 +2230,9 @@ class IssueStoreBackend(PlanningStoreBackend):
         except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
             handle_issue_client_error(exc)
         self._verify_frozen_integrity(record)
-        content = self._canonical_content_from_record(record, unit_id)
+        # R26 — facade get resolves canonical LCD/Document-backed body; never prefers projection.
+        resolved = self._resolve_canonical_body_for_op(unit_id, body_path, record)
+        content = str(resolved["body"])
         digest = canonical_hash(self._record_to_snapshot(record))
         log_operation("get", unit_id, body_path, content, self.backend_id)
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=digest)
@@ -2069,7 +2264,9 @@ class IssueStoreBackend(PlanningStoreBackend):
             fail("issue-not-found", code="not-found", unitId=unit_id)
         except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
             handle_issue_client_error(exc)
-        self._guard_write_visibility(unit_id, body_path, self._canonical_content_from_record(record, unit_id))
+        # R26 — freeze/hash SoT is LCD Issue or Document-backed body via facade resolution.
+        resolved = self._resolve_canonical_body_for_op(unit_id, body_path, record)
+        self._guard_write_visibility(unit_id, body_path, str(resolved["body"]))
         if FROZEN_LABEL in record.labels:
             fail("already-frozen", code="already-frozen", unitId=unit_id)
         try:
@@ -2113,6 +2310,8 @@ class IssueStoreBackend(PlanningStoreBackend):
             "locked": True,
             "labels": list(record.labels),
             "distillation": distillation,
+            "bodySource": resolved.get("bodySource"),
+            "freezeAuthority": resolved.get("freezeAuthority"),
         }
 
     def verify_frozen_hash(self, unit_id: str, body_path: str) -> dict[str, Any]:
@@ -3783,6 +3982,16 @@ def doctor(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     checks: list[str] = []
     skipped_reasons: list[str] = []
 
+    stub = doctor_issues_provider_stub(root, cfg)
+    if stub.get("verdict") == "fail":
+        return stub
+    if stub.get("skipped"):
+        skipped_reasons.append(str(stub.get("reason") or "issues-provider-stub-skipped"))
+    else:
+        checks.append(f"issues-provider-stub:{stub.get('provider', 'unknown')}")
+        if stub.get("notice"):
+            checks.append(str(stub["notice"]))
+
     sep = doctor_separate_project_local_writes(root, cfg)
     if sep.get("verdict") == "fail":
         return sep
@@ -4172,6 +4381,10 @@ def comment_sync(
             "body": comment.body,
             "createdAt": comment.created_at,
             "markers": list(comment.markers),
+            "parentId": comment.parent_id or None,
+            "resolvedAt": comment.resolved_at or None,
+            "resolvingCommentId": comment.resolving_comment_id or None,
+            "threadStatus": comment_thread_status(comment),
         }
         for comment in inbound
     ]
@@ -4205,6 +4418,22 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
     {"name": "progress_update", "status": "shipped", "description": "Semantic phase/task progress without ad hoc issue_create"},
     {"name": "comment_sync", "status": "shipped", "description": "Inbound/outbound provider comment sync"},
     {"name": "projection_refresh", "status": "shipped", "description": "Rebuild operator projection (Projects v2, hierarchy)"},
+    {"name": "probe_projection", "status": "shipped", "description": "Probe operator-projection health / capability notices"},
+    {
+        "name": "operator_projection_contract",
+        "status": "shipped",
+        "description": "Provider-agnostic operator-projection API + R1 browse capability matrix (PRD 066)",
+    },
+    {
+        "name": "linear_projection_schema",
+        "status": "shipped",
+        "description": "Linear operator schema: entity map, Initiative/Cycles, typed edges (PRD 066 R6–R8/R29)",
+    },
+    {
+        "name": "comments_relations_schema",
+        "status": "shipped",
+        "description": "Facade thread parentage, resolved metadata, typed relation edges (PRD 066 R17/R24)",
+    },
 )
 
 ISSUES_CLIENT_ALLOWLIST = frozenset({
@@ -4214,8 +4443,107 @@ ISSUES_CLIENT_ALLOWLIST = frozenset({
     "scripts/planning_gitlab_client.py",
     "scripts/planning_jira_client.py",
     "scripts/planning_github_projects_v2.py",
+    "scripts/planning_linear_client.py",
     "scripts/planning_migrate_issue_store.py",
 })
+
+# PRD 066 R4 — workflow scripts must not import Linear/Projects mutation helpers directly.
+PROJECTION_MUTATION_MODULES = frozenset({
+    "planning_linear_client",
+    "planning_github_projects_v2",
+})
+PROJECTION_MUTATION_NAMES = frozenset({
+    "refresh_projection",
+    "create_issue_batch",
+    "create_project",
+    "update_project",
+    "create_milestone",
+    "update_milestone",
+    "create_document",
+    "update_document",
+    "assign_cycle",
+    "mutate",
+})
+PROJECTION_MUTATION_ALLOWLIST = frozenset({
+    "scripts/planning_store.py",
+    "scripts/planning_github_projects_v2.py",
+    "scripts/planning_linear_client.py",
+})
+
+# PRD 066 R32 — exclusive semantic status taxonomy + provider alias allowlists.
+SEMANTIC_STATUSES = frozenset({"backlog", "in_flight", "done"})
+SEMANTIC_STATUS_ALIASES: dict[str, dict[str, frozenset[str]]] = {
+    "linear": {
+        "backlog": frozenset({"backlog", "todo", "triage", "unstarted", "planned"}),
+        "in_flight": frozenset({"in progress", "started", "in_progress", "active", "blocked"}),
+        "done": frozenset({"done", "completed", "canceled", "cancelled", "duplicate"}),
+    },
+    "github-projects": {
+        "backlog": frozenset({"backlog", "todo", "new", "ready"}),
+        "in_flight": frozenset({"in progress", "in review", "in_progress", "active"}),
+        "done": frozenset({"done", "complete", "completed", "closed"}),
+    },
+}
+
+# PRD 066 R31 — normative R1 browse contract (card/list-visible fields; body open = failure).
+R1_BROWSE_CONTRACT: dict[str, Any] = {
+    "bodyOpenIsFailure": True,
+    "questions": {
+        "1": {
+            "id": 1,
+            "prompt": "which gaps a PRD absorbs",
+            "cardVisibleFields": [
+                "projectMembership",
+                "gapLabelOrField",
+                "gapIssueIdentity",
+            ],
+        },
+        "2": {
+            "id": 2,
+            "prompt": "which brainstorm(s) feed a PRD",
+            "cardVisibleFields": [
+                "documentAttachmentOrMembership",
+                "brainstormIdentity",
+                "prdProjectLink",
+            ],
+        },
+        "3": {
+            "id": 3,
+            "prompt": "task/phase completion for an in-flight PRD",
+            "cardVisibleFields": [
+                "issueSemanticStatus",
+                "milestonePhaseMembership",
+                "milestoneProgress",
+            ],
+        },
+        "4": {
+            "id": 4,
+            "prompt": "backlog vs in_flight vs done at program level",
+            "cardVisibleFields": [
+                "initiativeOrProgramDiscriminator",
+                "programSemanticStatus",
+                "substituteViewsOrFilters",
+            ],
+            "notes": "Cycle is wave enrichment only — not phase source of truth",
+        },
+    },
+}
+
+OPERATOR_PROJECTION_MATRIX_ROWS: tuple[dict[str, Any], ...] = (
+    {"row": "prd", "linear": "project", "github-projects": "project-item", "r1": [1, 2, 3, 4]},
+    {"row": "brainstorm", "linear": "document", "github-projects": "draft-or-issue-field", "r1": [2]},
+    {"row": "gap", "linear": "issue+gap-label", "github-projects": "issue+gap-field", "r1": [1]},
+    {"row": "phase", "linear": "milestone", "github-projects": "phase-field", "r1": [3]},
+    {"row": "task", "linear": "issue/sub-issue", "github-projects": "issue-item", "r1": [3]},
+    {"row": "progress", "linear": "native-status", "github-projects": "status-field", "r1": [3, 4]},
+    {
+        "row": "program",
+        "linear": "initiative-or-substitute-views",
+        "github-projects": "program-discriminator",
+        "r1": [4],
+    },
+    {"row": "cycle-wave", "linear": "cycle", "github-projects": "degraded-optional", "r1": []},
+)
 
 FACADE_WORKFLOW_SCAN_GLOB = "scripts/*.py"
 
@@ -4388,6 +4716,350 @@ def lint_facade_imports(root: Path, *, scope: str | None = None) -> dict[str, An
     return result
 
 
+class SemanticStatusError(ValueError):
+    """PRD 066 R32 — unknown native status outside the alias allowlist."""
+
+    def __init__(self, message: str, *, code: str = "unknown-native-status", **extra: Any) -> None:
+        super().__init__(message)
+        self.code = code
+        self.extra = extra
+
+
+def normalize_semantic_status(provider: str, native_status: str) -> str:
+    """Map provider-native status onto backlog/in_flight/done; fail closed on unknown."""
+    aliases = SEMANTIC_STATUS_ALIASES.get(provider)
+    if aliases is None:
+        raise SemanticStatusError(
+            f"unsupported projection provider: {provider}",
+            code="unsupported-provider",
+            provider=provider,
+        )
+    key = (native_status or "").strip().lower()
+    if not key:
+        raise SemanticStatusError("empty native status", code="empty-native-status", provider=provider)
+    if key in SEMANTIC_STATUSES:
+        return key
+    for semantic, names in aliases.items():
+        if key in names:
+            return semantic
+    raise SemanticStatusError(
+        f"unknown native status for {provider}: {native_status}",
+        code="unknown-native-status",
+        provider=provider,
+        nativeStatus=native_status,
+    )
+
+
+
+
+# PRD 066 R24 — normative facade schemas for threaded comments + typed relations.
+COMMENT_FACADE_FIELDS: tuple[str, ...] = (
+    "id",
+    "body",
+    "createdAt",
+    "markers",
+    "parentId",
+    "resolvedAt",
+    "resolvingCommentId",
+    "threadStatus",
+)
+RELATION_FACADE_FIELDS: tuple[str, ...] = (
+    "id",
+    "type",
+    "sourceIssueId",
+    "targetIssueId",
+    "direction",
+)
+NATIVE_RELATION_TYPES: frozenset[str] = frozenset(
+    {"blocks", "blocked", "duplicate", "related", "similar"}
+)
+
+
+def comments_relations_schema_contract() -> dict[str, Any]:
+    """PRD 066 R24 — facade thread/relation schema contract surface."""
+    return {
+        "verdict": "ok",
+        "action": "comments-relations-schema-contract",
+        "commentFields": list(COMMENT_FACADE_FIELDS),
+        "relationFields": list(RELATION_FACADE_FIELDS),
+        "flatCommentProviders": sorted(FLAT_COMMENT_PROVIDERS),
+        "nativeRelationTypes": sorted(NATIVE_RELATION_TYPES),
+        "threadSemantics": {
+            "root": "top-level comment without parentId",
+            "reply": "comment with parentId and no resolvedAt",
+            "resolved": "thread root or reply with resolvedAt metadata",
+        },
+        "relationSemantics": {
+            "outbound": "relations[] from current issue to relatedIssue",
+            "inbound": "inverseRelations[] from issue to current issue",
+            "issueRelationOnly": True,
+        },
+        "gap077AuthoringAccepted": False,
+    }
+
+
+def serialize_comments_relations_facade(
+    comments: list[CommentRecord],
+    relations: list[RelationRecord],
+    *,
+    provider: str,
+) -> dict[str, Any]:
+    """Serialize comments + relations for facade consumers (R24)."""
+    normalized = (
+        normalize_flat_provider_comments(comments)
+        if provider in FLAT_COMMENT_PROVIDERS
+        else list(comments)
+    )
+    return {
+        "verdict": "ok",
+        "action": "serialize-comments-relations-facade",
+        "provider": provider,
+        "comments": [serialize_comment_facade(comment) for comment in normalized],
+        "threads": build_comment_threads(normalized),
+        "relations": [serialize_relation_facade(relation) for relation in relations],
+        "flatCommentPath": provider in FLAT_COMMENT_PROVIDERS,
+    }
+
+
+def issue_comments_relations_facade(record: Any, *, provider: str) -> dict[str, Any]:
+    """Facade read helper for issue comments + typed relations (R17/R24)."""
+    comments = list(getattr(record, "comments", []) or [])
+    relations = list(getattr(record, "relations", []) or [])
+    payload = serialize_comments_relations_facade(comments, relations, provider=provider)
+    payload["issueId"] = str(getattr(record, "id", "") or "")
+    payload["unitId"] = str(getattr(record, "unit_id", "") or "")
+    if provider == "linear":
+        payload["gap077AuthoringAccepted"] = False
+    return payload
+
+
+def assert_flat_comment_provider_non_regression(
+    provider: str,
+    comments: list[CommentRecord],
+) -> dict[str, Any]:
+    """R24 — GitHub/Jira must not claim threaded/resolved metadata."""
+    if provider not in FLAT_COMMENT_PROVIDERS:
+        return {"verdict": "pass", "action": "assert-flat-comment-provider", "provider": provider}
+    for comment in comments:
+        if comment.parent_id or comment.resolved_at or comment.resolving_comment_id:
+            return {
+                "verdict": "fail",
+                "error": "flat-provider-thread-metadata-claim",
+                "action": "assert-flat-comment-provider",
+                "provider": provider,
+                "commentId": comment.id,
+            }
+    return {"verdict": "pass", "action": "assert-flat-comment-provider", "provider": provider}
+
+
+def operator_projection_capability_matrix() -> dict[str, Any]:
+    """PRD 066 R1/R3 — shared operator-projection capability matrix skeleton."""
+    return {
+        "backends": ["github-issues", "github-projects", "jira", "linear"],
+        "contractBackends": ["github-projects", "linear"],
+        "rows": [dict(row) for row in OPERATOR_PROJECTION_MATRIX_ROWS],
+        "statusTaxonomy": sorted(SEMANTIC_STATUSES),
+        "statusAliases": {
+            provider: {semantic: sorted(names) for semantic, names in mapping.items()}
+            for provider, mapping in SEMANTIC_STATUS_ALIASES.items()
+        },
+        "r1BrowseContract": R1_BROWSE_CONTRACT,
+    }
+
+
+def operator_projection_adapter_complete_claim(matrix: dict[str, Any] | None = None) -> dict[str, Any]:
+    """R3 — adapter-complete requires both Linear and Projects backends in the matrix."""
+    payload = matrix or operator_projection_capability_matrix()
+    required = ["github-projects", "linear"]
+    backends = set(payload.get("backends") or [])
+    contract_backends = set(payload.get("contractBackends") or [])
+    present = [name for name in required if name in backends and name in contract_backends]
+    # Skeleton stage: both backends are declared; answerability lands in later phases.
+    answerable = {
+        "linear": bool(payload.get("linearAnswerable")),
+        "github-projects": bool(payload.get("projectsAnswerable")),
+    }
+    return {
+        "verdict": "ok",
+        "requiresBackends": required,
+        "presentBackends": present,
+        "answerable": answerable,
+        "adapterComplete": present == required and all(answerable.values()),
+    }
+
+
+def operator_projection_contract() -> dict[str, Any]:
+    """PRD 066 R1/R31 — provider-agnostic operator-projection API surface + browse contract."""
+    matrix = operator_projection_capability_matrix()
+    questions = [
+        {
+            "id": int(qid),
+            "prompt": entry["prompt"],
+            "cardVisibleFields": list(entry["cardVisibleFields"]),
+        }
+        for qid, entry in sorted(R1_BROWSE_CONTRACT["questions"].items(), key=lambda item: int(item[0]))
+    ]
+    ops = [
+        {"name": "projection_refresh", "status": "shipped"},
+        {"name": "probe_projection", "status": "shipped"},
+        {"name": "operator_projection_contract", "status": "shipped"},
+    ]
+    return {
+        "verdict": "ok",
+        "action": "operator-projection-contract",
+        "operations": ops,
+        "r1BrowseQuestions": questions,
+        "r1BrowseContract": R1_BROWSE_CONTRACT,
+        "capabilityMatrix": matrix,
+        "adapterCompleteClaim": operator_projection_adapter_complete_claim(matrix),
+        "semanticStatuses": sorted(SEMANTIC_STATUSES),
+        "commentsRelations": comments_relations_schema_contract(),
+    }
+
+
+def assert_r1_answerability_from_metadata(evidence: dict[str, Any]) -> dict[str, Any]:
+    """R31 harness helper — R1 answers must come from card/list metadata; body-open fails."""
+    missing: list[str] = []
+    for qid, entry in R1_BROWSE_CONTRACT["questions"].items():
+        row = evidence.get(qid) or evidence.get(int(qid))  # type: ignore[arg-type]
+        if not isinstance(row, dict):
+            missing.append(qid)
+            continue
+        if row.get("bodyOpened") is True:
+            return {
+                "verdict": "fail",
+                "error": "r1-body-open",
+                "question": qid,
+                "bodyOpenIsFailure": True,
+            }
+        fields = {str(f) for f in (row.get("fields") or [])}
+        required = {str(f) for f in entry["cardVisibleFields"]}
+        if not required.issubset(fields):
+            missing.append(qid)
+    if missing:
+        return {"verdict": "fail", "error": "r1-metadata-incomplete", "questions": missing}
+    return {"verdict": "pass", "action": "assert-r1-answerability", "bodyOpenIsFailure": True}
+
+
+def assert_r1_answerability_while_clean(
+    root: Path,
+    evidence: dict[str, Any],
+    *,
+    scope: str = "default",
+) -> dict[str, Any]:
+    """R28 — R1 harness fails closed while projection dirty."""
+    if projection_is_dirty(root, scope=scope):
+        ledger = load_projection_ledger(root, scope=scope)
+        return {
+            "verdict": "fail",
+            "error": "projection-dirty",
+            "action": "assert-r1-answerability",
+            "dirtyReason": ledger.get("dirtyReason"),
+            "checkpointGeneration": ledger.get("checkpointGeneration"),
+        }
+    return assert_r1_answerability_from_metadata(evidence)
+
+
+def _imports_projection_mutations(path: Path) -> list[dict[str, Any]]:
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (OSError, SyntaxError):
+        return []
+    hits: list[dict[str, Any]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                root_name = alias.name.split(".")[0]
+                if root_name in PROJECTION_MUTATION_MODULES:
+                    hits.append(
+                        {
+                            "line": node.lineno,
+                            "module": root_name,
+                            "names": [alias.name],
+                        }
+                    )
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            root_name = node.module.split(".")[0]
+            imported = {alias.name for alias in node.names}
+            if root_name in PROJECTION_MUTATION_MODULES:
+                dangerous = sorted(imported & PROJECTION_MUTATION_NAMES) or sorted(imported)
+                hits.append(
+                    {
+                        "line": node.lineno,
+                        "module": root_name,
+                        "names": dangerous,
+                    }
+                )
+    return hits
+
+
+def scan_projection_mutation_violations(
+    root: Path, *, extra_paths: list[Path] | None = None
+) -> list[dict[str, Any]]:
+    violations: list[dict[str, Any]] = []
+    candidates: list[Path] = []
+    if extra_paths:
+        candidates.extend(extra_paths)
+    else:
+        candidates.extend(sorted(root.glob(FACADE_WORKFLOW_SCAN_GLOB)))
+    for script in candidates:
+        if not script.is_file() or script.suffix != ".py":
+            continue
+        rel = _rel_script_path(root, script)
+        if rel in PROJECTION_MUTATION_ALLOWLIST:
+            continue
+        hits = _imports_projection_mutations(script)
+        if hits:
+            violations.append({"path": rel, "imports": hits})
+    return sorted(violations, key=lambda row: row["path"])
+
+
+def lint_projection_mutations(root: Path, *, scope: str | None = None) -> dict[str, Any]:
+    """PRD 066 R4 — fail closed when workflow scripts mutate Linear/Projects directly."""
+    if scope:
+        target = Path(scope)
+        if not target.is_absolute():
+            target = root / target
+        violations = scan_projection_mutation_violations(root, extra_paths=[target])
+        rel = _rel_script_path(root, target)
+        allowed = rel in PROJECTION_MUTATION_ALLOWLIST
+        if allowed and not violations:
+            return {
+                "verdict": "pass",
+                "action": "lint-projection-mutations",
+                "path": rel,
+                "allowed": True,
+                "violations": [],
+            }
+        if violations:
+            return {
+                "verdict": "fail",
+                "action": "lint-projection-mutations",
+                "path": rel,
+                "allowed": allowed,
+                "error": "projection-mutation-outside-allowlist",
+                "violations": violations,
+            }
+        return {
+            "verdict": "pass",
+            "action": "lint-projection-mutations",
+            "path": rel,
+            "allowed": allowed,
+            "violations": [],
+        }
+
+    violations = scan_projection_mutation_violations(root)
+    result: dict[str, Any] = {
+        "verdict": "pass" if not violations else "fail",
+        "action": "lint-projection-mutations",
+        "allowlist": sorted(PROJECTION_MUTATION_ALLOWLIST),
+        "violations": violations,
+    }
+    if violations:
+        result["error"] = "projection-mutation-outside-allowlist"
+    return result
+
+
 def _require(args: list[str], flag: str) -> str:
     if flag not in args:
         fail(f"missing required flag: {flag}")
@@ -4406,6 +5078,130 @@ def _optional(args: list[str], flag: str) -> str | None:
 
 
 PRD_061_DEPENDS_TARGET = "061-prd-planning-store-interface-architecture"
+
+# PRD 066 R22 — gap-079 absorb linkage verification
+PRD_066_ABSORB_UNIT_ID = "066-prd-linear-planning-store-provider-and-operator-projection"
+PRD_066_ABSORB_NUMBER = "066"
+GAP_079_ABSORB_UNIT_ID = "gap-079-add-linear-as-a-new-planning-store-issue-trackin"
+GAP_079_PLANNING_ISSUE_REF = "planning#267"
+
+
+def _gap_absorb_target_match(candidate: str, gap_unit_id: str) -> bool:
+    cand = candidate.strip()
+    if not cand:
+        return False
+    if cand == gap_unit_id:
+        return True
+    if gap_unit_id.startswith("gap-079") and (
+        cand == "gap-079" or cand.startswith("gap-079-")
+    ):
+        return True
+    if cand.startswith("gap-079") and gap_unit_id.startswith("gap-079"):
+        return True
+    return False
+
+
+def verify_absorb_linkage_066(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    prd_unit_id: str = PRD_066_ABSORB_UNIT_ID,
+    gap_unit_id: str = GAP_079_ABSORB_UNIT_ID,
+    planning_issue: str = GAP_079_PLANNING_ISSUE_REF,
+) -> dict[str, Any]:
+    """Verify gap-079 absorb linkage via store get evidence (PRD 066 R22)."""
+    from gap_backlog import schedule_label
+    from planning_migrate_issue_store import (
+        gap_unit_ids_scheduled_for_prd,
+        issue_store_effective,
+        parse_frontmatter_fields,
+    )
+
+    if not issue_store_effective(root, cfg):
+        return {
+            "verdict": "skipped",
+            "action": "verify-absorb-linkage-066",
+            "reason": "not-issue-store",
+        }
+
+    backend = get_backend(root, cfg, override="issue-store")
+    prd_body_path = _default_body_path(prd_unit_id, "prd")
+    gap_body_path = _default_body_path(gap_unit_id, "gap")
+    prd_fetch = backend.get(prd_unit_id, prd_body_path)
+    gap_fetch = backend.get(gap_unit_id, gap_body_path)
+    if prd_fetch.verdict != "ok" or not prd_fetch.content:
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-linkage-066",
+            "error": "prd-missing",
+            "prdUnitId": prd_unit_id,
+        }
+    if gap_fetch.verdict != "ok" or not gap_fetch.content:
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-linkage-066",
+            "error": "gap-missing",
+            "gapUnitId": gap_unit_id,
+        }
+
+    prd_fm = parse_frontmatter_fields(prd_fetch.content)
+    gap_fm = parse_frontmatter_fields(gap_fetch.content)
+    absorbs = _parse_absorbs_targets(prd_fm.get("absorbs", ""))
+    prd_absorbs_gap = any(_gap_absorb_target_match(item, gap_unit_id) for item in absorbs)
+    schedule = schedule_label(PRD_066_ABSORB_NUMBER)
+    gap_scheduled = str(gap_fm.get("status") or "").lower() == "scheduled"
+    gap_schedule = str(gap_fm.get("schedule") or "").strip() == schedule
+    absorbed_by = str(gap_fm.get("absorbed-by") or gap_fm.get("absorbed_by") or "").strip()
+    gap_absorbed_by_prd = absorbed_by == prd_unit_id
+    related = str(gap_fm.get("related") or "")
+    planning_ref_ok = planning_issue in related
+    scheduled_ids = gap_unit_ids_scheduled_for_prd(root, PRD_066_ABSORB_NUMBER, cfg)
+    label_schedule_ok = gap_unit_id in scheduled_ids
+
+    checks = {
+        "prdAbsorbsGap": prd_absorbs_gap,
+        "gapScheduled": gap_scheduled,
+        "gapScheduleLabel": gap_schedule,
+        "gapAbsorbedByPrd": gap_absorbed_by_prd,
+        "planningIssueRef": planning_ref_ok,
+        "issueStoreScheduleLabel": label_schedule_ok,
+    }
+    ok = all(checks.values())
+    return {
+        "verdict": "ok" if ok else "fail",
+        "action": "verify-absorb-linkage-066",
+        "prdUnitId": prd_unit_id,
+        "gapUnitId": gap_unit_id,
+        "planningIssue": planning_issue,
+        "checks": checks,
+    }
+
+
+def doctor_absorb_linkage_066(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Doctor hook for PRD 066 gap-079 absorb linkage (R22)."""
+    result = verify_absorb_linkage_066(root, cfg)
+    if result.get("verdict") == "skipped":
+        return {
+            "verdict": "pass",
+            "action": "doctor-absorb-linkage-066",
+            "skipped": True,
+            "reason": result.get("reason"),
+        }
+    if result.get("verdict") != "ok":
+        return {
+            "verdict": "fail",
+            "action": "doctor-absorb-linkage-066",
+            "error": "absorb-linkage-incomplete",
+            "evidence": result,
+        }
+    return {
+        "verdict": "pass",
+        "action": "doctor-absorb-linkage-066",
+        "checks": ["gap-079-absorbed-by-prd-066"],
+        "evidence": result,
+    }
+
+
 GAP_PREREQ_NUMBERS = frozenset({"078", "079"})
 ABSORB_GAP_NUMBERS = frozenset({"077", "104", "109"})
 PRD_060_GAP_ABSORB_DENY = frozenset({"081", "096", "099", "100", "105", "112"})
@@ -4578,6 +5374,11 @@ def main() -> None:
         "list-backends",
         "list-facade",
         "lint-facade-imports",
+        "lint-projection-mutations",
+        "operator-projection-contract",
+        "linear-projection-schema",
+        "comments-relations-schema",
+        "issues-provider-registration",
         "resolve-issues",
         "resolve-store-location",
         "probe-issues-token",
@@ -4606,6 +5407,7 @@ def main() -> None:
         "probe-projection",
         "write-back-gap-prereqs",
         "resolve-absorbed-gaps-061",
+        "verify-absorb-linkage-066",
     ):
         sub.add_parser(name)
     args, rest = parser.parse_known_args()
@@ -4617,6 +5419,18 @@ def main() -> None:
         scope = _optional(rest, "--path")
         result = lint_facade_imports(root, scope=scope)
         emit(result, 0 if result.get("verdict") == "pass" else 20)
+    elif args.command == "lint-projection-mutations":
+        scope = _optional(rest, "--path")
+        result = lint_projection_mutations(root, scope=scope)
+        emit(result, 0 if result.get("verdict") == "pass" else 20)
+    elif args.command == "operator-projection-contract":
+        emit(operator_projection_contract())
+    elif args.command == "linear-projection-schema":
+        emit(linear_projection_schema_contract())
+    elif args.command == "comments-relations-schema":
+        emit(comments_relations_schema_contract())
+    elif args.command == "issues-provider-registration":
+        emit(issues_provider_registration_footprint())
     elif args.command == "resolve-backend":
 
         override = _optional(rest, "--backend")
@@ -4769,6 +5583,18 @@ def main() -> None:
         force = "--force" in rest
         unit_id = _optional(rest, "--unit-id")
         result = resolve_absorbed_gaps_061(root, cfg, dry_run=dry_run, force=force, unit_id=unit_id)
+        emit(result, 0 if result.get("verdict") in {"ok", "skipped"} else 20)
+    elif args.command == "verify-absorb-linkage-066":
+        prd_unit = _optional(rest, "--prd-unit-id") or PRD_066_ABSORB_UNIT_ID
+        gap_unit = _optional(rest, "--gap-unit-id") or GAP_079_ABSORB_UNIT_ID
+        planning_issue = _optional(rest, "--planning-issue") or GAP_079_PLANNING_ISSUE_REF
+        result = verify_absorb_linkage_066(
+            root,
+            cfg,
+            prd_unit_id=prd_unit,
+            gap_unit_id=gap_unit,
+            planning_issue=planning_issue,
+        )
         emit(result, 0 if result.get("verdict") in {"ok", "skipped"} else 20)
     elif args.command == "doctor":
         result = doctor(root, cfg)

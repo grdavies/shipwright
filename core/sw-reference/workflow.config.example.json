@@ -190,14 +190,31 @@
             "unitId": "Unit",
             "absorbs": "Absorbs",
             "brainstormFeed": "Brainstorms",
-            "phaseProgress": "Phases"
+            "phaseProgress": "Phases",
+            "program": "Program"
           },
           "budget": {
             "maxCalls": 40,
             "maxPaginationDepth": 5,
             "cacheTtlSeconds": 300
           }
+        },
+        "linear": {
+          "enabled": false,
+          "initiativeSubstitute": "substitute-views",
+          "cycleSharingNotice": true,
+          "budget": {
+            "maxCalls": 40,
+            "maxComplexityPoints": 8000,
+            "cacheTtlSeconds": 300
+          }
         }
+      },
+      "issues": {
+        "tokenEnv": "ISSUES_LINEAR_TOKEN",
+        "teamKey": "ENG",
+        "teamId": "team_ENG",
+        "authMode": "api-key"
       }
     },
     "autonomy": "maintenance-only",

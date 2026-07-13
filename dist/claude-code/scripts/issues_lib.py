@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, TypeVar
 
-from planning_canonical import CommentRecord, compute_etag
+from planning_canonical import CommentRecord, RelationRecord, compute_etag
 
 ISSUE_VERBS = frozenset({
     "issue-create",
@@ -46,6 +46,14 @@ def deferred_provider_message(provider: str) -> str:
         "or use the file-store fallback. A follow-up unit will implement the live "
         "planning_gitlab_client.py adapter and re-add it to the shipped set "
         "(PRD 057 R7 / D1; gap-039)."
+    )
+
+
+def unshipped_provider_message(provider: str) -> str:
+    return (
+        f"issue provider {provider!r} is recognized but not shipped (fail-closed): "
+        "conformance + OAuth docs gate must pass before live selection. "
+        "Select github-issues or jira, or use the file-store fallback (PRD 066 R20)."
     )
 
 T = TypeVar("T")
@@ -118,6 +126,7 @@ class IssueRecord:
     state: str
     labels: list[str]
     comments: list[CommentRecord] = field(default_factory=list)
+    relations: list[RelationRecord] = field(default_factory=list)
     native_links: list[dict[str, Any]] = field(default_factory=list)
     locked: bool = False
     updated_at: str = ""
@@ -141,8 +150,26 @@ class IssueRecord:
             "state": self.state,
             "labels": list(self.labels),
             "comments": [
-                {"id": c.id, "body": c.body, "created_at": c.created_at, "markers": c.markers}
+                {
+                    "id": c.id,
+                    "body": c.body,
+                    "created_at": c.created_at,
+                    "markers": c.markers,
+                    "parent_id": c.parent_id,
+                    "resolved_at": c.resolved_at,
+                    "resolving_comment_id": c.resolving_comment_id,
+                }
                 for c in self.comments
+            ],
+            "relations": [
+                {
+                    "id": r.id,
+                    "relation_type": r.relation_type,
+                    "source_issue_id": r.source_issue_id,
+                    "target_issue_id": r.target_issue_id,
+                    "direction": r.direction,
+                }
+                for r in self.relations
             ],
             "native_links": list(self.native_links),
             "locked": self.locked,
@@ -167,6 +194,22 @@ class IssueRecord:
                     body=str(raw.get("body", "")),
                     created_at=str(raw.get("created_at", "")),
                     markers=list(raw.get("markers") or []),
+                    parent_id=str(raw.get("parent_id", "") or ""),
+                    resolved_at=str(raw.get("resolved_at", "") or ""),
+                    resolving_comment_id=str(raw.get("resolving_comment_id", "") or ""),
+                )
+            )
+        relations: list[RelationRecord] = []
+        for raw in data.get("relations") or []:
+            if not isinstance(raw, dict):
+                continue
+            relations.append(
+                RelationRecord(
+                    id=str(raw.get("id", "")),
+                    relation_type=str(raw.get("relation_type", "")),
+                    source_issue_id=str(raw.get("source_issue_id", "")),
+                    target_issue_id=str(raw.get("target_issue_id", "")),
+                    direction=str(raw.get("direction", "outbound")),
                 )
             )
         return cls(
@@ -177,6 +220,7 @@ class IssueRecord:
             state=str(data.get("state", "open")),
             labels=[str(x) for x in (data.get("labels") or [])],
             comments=comments,
+            relations=relations,
             native_links=list(data.get("native_links") or []),
             locked=bool(data.get("locked")),
             updated_at=str(data.get("updated_at", "")),
@@ -432,6 +476,7 @@ class IssuesClient:
         self._jira: Any = None
         self._github: Any = None
         self._gitlab: Any = None
+        self._linear: Any = None
         self._call_count = 0
         self._budget = resolve_call_budget()
 
@@ -450,6 +495,16 @@ class IssuesClient:
 
                 self._github = GitHubIssuesClient(self.root)
             return self._github
+        if self.provider == "linear":
+            from planning_store import SHIPPED_ISSUES_PROVIDERS
+
+            if self.provider not in SHIPPED_ISSUES_PROVIDERS:
+                raise IssueCapabilityError(unshipped_provider_message(self.provider))
+            if self._linear is None:
+                from planning_linear_client import LinearIssuesClient
+
+                self._linear = LinearIssuesClient(self.root)
+            return self._linear
         if self.provider in DEFERRED_ISSUES_PROVIDERS:
             # PRD 057 R7 / D1: fail closed for deferred providers (gitlab-issues)
             # rather than instantiating an unshipped adapter.

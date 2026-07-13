@@ -1045,6 +1045,29 @@
       }
     },
     {
+      "id": "provider.providers.issues.linear",
+      "kind": "provider",
+      "sourcePath": "core/providers/issues/linear.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "planning.store.issuesProvider",
+            "equals": "linear"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "issues",
+          "adapterId": "linear",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.py"
+        }
+      }
+    },
+    {
       "id": "provider.providers.issues.none",
       "kind": "provider",
       "sourcePath": "core/providers/issues/none.md",
