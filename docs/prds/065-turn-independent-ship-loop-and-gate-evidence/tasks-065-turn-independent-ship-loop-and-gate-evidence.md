@@ -37,114 +37,114 @@ title: Tasks — PRD 065 Turn-independent ship loop and gate evidence
 
 ### 1. Gate manifest, lineage validator, and gate taxonomy (R5, R6, R20, R29)
 
-- [ ] 1.1 Author the declarative gate manifest with stable ids, class, entrypoint, evidence contract, binding mode, failure routing, and the three-way taxonomy (R5, R29)
+- [x] 1.1 Author the declarative gate manifest with stable ids, class, entrypoint, evidence contract, binding mode, failure routing, and the three-way taxonomy (R5, R29)
   - **File:** `core/sw-reference/gate-manifest.json`
   - **Expected:** Single JSON artifact; each entry references kernel/guideline lineage by id; ship-chain / external-chokepoint / advisory taxonomy encoded; `sw-simplify` marked agent-classified optional with a durable outcome artifact
   - **R-IDs:** R5, R29
-- [ ] 1.2 Manifest loader with config-resolvable class resolution and a non-demotable kernel floor (R6)
+- [x] 1.2 Manifest loader with config-resolvable class resolution and a non-demotable kernel floor (R6)
   - **File:** `scripts/gate_manifest.py`
   - **Expected:** Config MAY promote optional→mandatory / adjust advisory; verification-gate, check-gate, gap-check, secret-scan chokepoint never demotable or bypassable by config or flags
   - **R-IDs:** R6
-- [ ] 1.3 Manifest validator fails closed on any class/id/ordering divergence and rejects any add/reclassify beyond the R9 set (R20)
+- [x] 1.3 Manifest validator fails closed on any class/id/ordering divergence and rejects any add/reclassify beyond the R9 set (R20)
   - **File:** `scripts/gate_manifest_validate.py`
   - **Expected:** Exit non-zero on manifest-vs-lineage drift; R9-only add boundary enforced; invoked in CI and by the driver at load
   - **R-IDs:** R20
-- [ ] 1.4 Bind ONLY the R9 prose-only gate ids into the kernel/guideline lineage references (no reclassification) (R5)
+- [x] 1.4 Bind ONLY the R9 prose-only gate ids into the kernel/guideline lineage references (no reclassification) (R5)
   - **File:** `core/sw-reference/kernel-classification.json`
   - **Expected:** behavioral-anomaly, build-chain, pre-PR smoke, decision-log, verification-gate referenced by id; no other kernel/guideline step added, removed, or reclassified
   - **R-IDs:** R5
-- [ ] 1.5 Unit harness: manifest-to-lineage consistency, R9-only boundary, floor non-demotable (R5, R20)
+- [x] 1.5 Unit harness: manifest-to-lineage consistency, R9-only boundary, floor non-demotable (R5, R20)
   - **File:** `scripts/unit_tests/test_gate_manifest.py`
   - **Expected:** Fixtures assert divergence fail-closed, R9-only add rejection, and kernel-floor demotion refusal
   - **R-IDs:** R5, R20
 
 ### 2. Evidence record schema, resolver, and binding modes (R7, R21, R22)
 
-- [ ] 2.1 Author the per-gate evidence record JSON schema with all required fields and the atomic-write contract (R21)
+- [x] 2.1 Author the per-gate evidence record JSON schema with all required fields and the atomic-write contract (R21)
   - **File:** `core/sw-reference/gate-evidence.schema.json`
   - **Expected:** Requires `gateId`, `class`, `bindingMode`, `evaluationPoint`, `headSha`, `treeHash`, `verdict`, `execution` (argv/exitCode/stdoutDigest/stderrDigest/duration), `timestamp`, `artifactRefs`, provenance marker; tmp-file-plus-rename mandated; partial/truncated fails closed
   - **R-IDs:** R21
-- [ ] 2.2 Evidence resolver: binding-mode resolution (tree-stable/head-exact), freshness, and supersede of stale/partial records (R22)
+- [x] 2.2 Evidence resolver: binding-mode resolution (tree-stable/head-exact), freshness, and supersede of stale/partial records (R22)
   - **File:** `scripts/gate_evidence.py`
   - **Expected:** `tree-stable` = `git write-tree` over tracked paths excluding run/evidence dirs; `head-exact` validates `headSha`; freshest binding-valid record authoritative; record for unknown gate id treated inert
   - **R-IDs:** R22
-- [ ] 2.3 Driver-sole-writer path validation and keyless PRD-036 provenance-marker reuse (R7)
+- [x] 2.3 Driver-sole-writer path validation and keyless PRD-036 provenance-marker reuse (R7)
   - **File:** `scripts/gate_evidence.py`
   - **Expected:** Canonical repo-root path `.cursor/sw-deliver-runs/<phaseSlug>/gate-evidence/<gateId>.status.json`; agent-step outcome paths validated non-overlapping with evidence dir; keyless marker attached; no HMAC/keyed marker
   - **R-IDs:** R7
-- [ ] 2.4 Unit harness: binding-mode/evaluation-point, atomic write, provenance integrity, sole-writer non-overlap (R7, R21, R22)
+- [x] 2.4 Unit harness: binding-mode/evaluation-point, atomic write, provenance integrity, sole-writer non-overlap (R7, R21, R22)
   - **File:** `scripts/unit_tests/test_gate_evidence.py`
   - **Expected:** Fixtures cover tree-stable vs head-exact, partial-file fail-closed, forged-marker fail-closed, evidence-dir overlap denial
   - **R-IDs:** R7, R21, R22
 
 ### 3. Ship-loop driver core — step classification and durable resume (R1, R2, R23)
 
-- [ ] 3.1 Classify each chain step mechanical/agent and emit an `awaitAgent` step contract for agent steps only (R2)
+- [x] 3.1 Classify each chain step mechanical/agent and emit an `awaitAgent` step contract for agent steps only (R2)
   - **File:** `scripts/ship_loop.py`
   - **Expected:** Mechanical = tmp init/clean, gate invocations, commit, PR, CI watch, status writes; agent = execute/review/sw-simplify/stabilize authoring; step contract carries inputs, expected outcome-artifact path, budget; driver never spawns Tasks
   - **R-IDs:** R2
-- [ ] 3.2 Durable resume from `ship-steps.json` with no chat context, reusing kernel-ordering enforcement (R1)
+- [x] 3.2 Durable resume from `ship-steps.json` with no chat context, reusing kernel-ordering enforcement (R1)
   - **File:** `scripts/ship_loop.py`
   - **Expected:** A fresh process resumes from durable state alone; `advance` honors `ship_phase_steps.py` kernel-ordering; no ordering bypass
   - **R-IDs:** R1
-- [ ] 3.3 `wave.py ship-loop` entrypoint invoked per phase in the phase worktree with plan authority + canonical fallback (R23)
+- [x] 3.3 `wave.py ship-loop` entrypoint invoked per phase in the phase worktree with plan authority + canonical fallback (R23)
   - **File:** `scripts/wave.py`
   - **Expected:** Reads `phase-step-plan.json`, falls back to `canonicalPhaseChains.sw-ship`; cwd-isolated per phase; not folded into `wave_deliver_loop.py` process
   - **R-IDs:** R23
-- [ ] 3.4 Unit harness: classification, resume-from-durable, kernel-ordering on advance (R1, R2, R23)
+- [x] 3.4 Unit harness: classification, resume-from-durable, kernel-ordering on advance (R1, R2, R23)
   - **File:** `scripts/unit_tests/test_ship_loop_core.py`
   - **Expected:** Fixtures cover mechanical/agent split, no-chat-context resume, ordering enforcement
   - **R-IDs:** R1, R2, R23
 
 ### 4. Mechanical gate handlers and evidence writers (R9)
 
-- [x] 4.1 Mechanical gate handlers wrapping existing scripts, capturing argv/exit/stdout+stderr digest/duration (R9)
+- [ ] 4.1 Mechanical gate handlers wrapping existing scripts, capturing argv/exit/stdout+stderr digest/duration (R9)
   - **File:** `scripts/ship_gate_handlers.py`
   - **Expected:** behavioral-anomaly, build-chain, pre-PR smoke, decision-log, verification-gate invoked mechanically (no re-implementation); execution proof captured per invocation
   - **R-IDs:** R9
-- [x] 4.2 Wire handlers into the driver step loop as the sole evidence-record writer on completion (R9)
+- [ ] 4.2 Wire handlers into the driver step loop as the sole evidence-record writer on completion (R9)
   - **File:** `scripts/ship_loop.py`
   - **Expected:** Driver writes one evidence record per gate at the canonical repo-root path; agent-step Tasks never write evidence
   - **R-IDs:** R9
-- [x] 4.3 Unit harness: each prose-only gate invoked mechanically and evidence written with captured proof (R9)
+- [ ] 4.3 Unit harness: each prose-only gate invoked mechanically and evidence written with captured proof (R9)
   - **File:** `scripts/unit_tests/test_ship_gate_handlers.py`
   - **Expected:** Fixtures assert mechanical invocation + evidence-record proof fields for all five gates
   - **R-IDs:** R9
 
 ### 5. Terminal enforcement and bypass-flag constraint (R8, R10)
 
-- [x] 5.1 Refuse `merge-ready-green` unless every mandatory gate has a binding-valid record per its mode (R8)
+- [ ] 5.1 Refuse `merge-ready-green` unless every mandatory gate has a binding-valid record per its mode (R8)
   - **File:** `scripts/ship-phase-status.py`
   - **Expected:** Missing/stale/head-mismatched/tree-mismatched/integrity-failing evidence fails closed with a named cause; evaluated against each gate's declared binding mode
   - **R-IDs:** R8
-- [x] 5.2 Constrain bypass flags to optional/advisory gates and record actor+reason skip records (R10)
+- [ ] 5.2 Constrain bypass flags to optional/advisory gates and record actor+reason skip records (R10)
   - **File:** `scripts/ship_loop.py`
   - **Expected:** `--fast`/`--skip-local`/`--skip-simplify` skip only optional/advisory; each skip writes an explicit skip record; no flag combination suppresses a mandatory gate
   - **R-IDs:** R10
-- [x] 5.3 Unit harness: refusal matrix (missing/stale/tree/head/forged/partial) + bypass constraint (R8, R10)
+- [ ] 5.3 Unit harness: refusal matrix (missing/stale/tree/head/forged/partial) + bypass constraint (R8, R10)
   - **File:** `scripts/unit_tests/test_merge_ready_enforcement.py`
   - **Expected:** Fixtures cover each refusal cause and each bypass-flag boundary incl. mandatory-suppression denial
   - **R-IDs:** R8, R10
 
 ### 6. Deliver integration — dispatch, interactive parity, watchdog, and lease liveness (R3, R4, R26, R27, R28)
 
-- [x] 6.1 `dispatch-ship` invokes the driver inline and `dispatch-batch` runs it per phase worktree; classify the step mechanical (R4)
+- [ ] 6.1 `dispatch-ship` invokes the driver inline and `dispatch-batch` runs it per phase worktree; classify the step mechanical (R4)
   - **File:** `scripts/wave_deliver_loop.py`
   - **Expected:** Ship-loop step classified `mechanical` so the deliver loop drives it without a chat turn; background Task is the phase-scoped executor (no nested spawn); driver never spawns Tasks
   - **R-IDs:** R4
-- [x] 6.2 Interactive `/sw-ship` delegates to the same driver with shared evidence enforcement, retaining the human merge pause (R27)
+- [ ] 6.2 Interactive `/sw-ship` delegates to the same driver with shared evidence enforcement, retaining the human merge pause (R27)
   - **File:** `scripts/wave.py`
   - **Expected:** No compatibility window; identical `merge-ready-green` refusal; interactive evidence to a run-scoped canonical location; interactive runs produce no terminal acceptance record
   - **R-IDs:** R27
-- [x] 6.3 Consume agent-step outcomes only from durable head-bound artifacts; re-dispatch to `blocked` on budget exhaustion (R3)
+- [ ] 6.3 Consume agent-step outcomes only from durable head-bound artifacts; re-dispatch to `blocked` on budget exhaustion (R3)
   - **File:** `scripts/ship_loop.py`
   - **Expected:** Outcomes read from durable artifacts bound to the phase head SHA (never chat); exhausted per-step attempt budget transitions phase to `blocked` with a consolidated report
   - **R-IDs:** R3
-- [x] 6.4 Lease liveness by heartbeat freshness alone; watchdog re-emit within the attempt budget (R26, R28)
+- [ ] 6.4 Lease liveness by heartbeat freshness alone; watchdog re-emit within the attempt budget (R26, R28)
   - **File:** `scripts/wave_lock.py`
   - **Expected:** `ship_lease_owner_live` keys off `heartbeatAt` within `SW_SHIP_LEASE_STALE_SECONDS`; `ship_steps_in_progress` no longer vetoes reclaim; stale agent-step lease re-emitted via `canonical-reemit`, exhaustion → `blocked`
   - **R-IDs:** R26, R28
-- [x] 6.5 Unit harness: dispatch modes, interactive parity, re-dispatch/blocked, stale-heartbeat mid-step reclaim (R3, R4, R26, R27, R28)
+- [ ] 6.5 Unit harness: dispatch modes, interactive parity, re-dispatch/blocked, stale-heartbeat mid-step reclaim (R3, R4, R26, R27, R28)
   - **File:** `scripts/unit_tests/test_ship_loop_dispatch.py`
   - **Expected:** Fixtures cover inline vs background, interactive parity, budget-exhaustion blocked, and kill-mid-step reclaim-within-TTL
   - **R-IDs:** R3, R4, R26, R27, R28
@@ -197,19 +197,19 @@ title: Tasks — PRD 065 Turn-independent ship loop and gate evidence
 
 ### 9. Phase-sizing blocking freeze gate (R16)
 
-- [ ] 9.1 Promote `phase_sizing.py` to a blocking freeze gate that blocks on over-threshold phases with split suggestions (R16)
+- [x] 9.1 Promote `phase_sizing.py` to a blocking freeze gate that blocks on over-threshold phases with split suggestions (R16)
   - **File:** `scripts/phase_sizing.py`
   - **Expected:** A phase exceeding configured thresholds blocks task-list freeze with split suggestions emitted
   - **R-IDs:** R16
-- [ ] 9.2 Wire the blocking sizing gate into the `/sw-tasks` pre-freeze path (R16)
+- [x] 9.2 Wire the blocking sizing gate into the `/sw-tasks` pre-freeze path (R16)
   - **File:** `scripts/spec-rigor-check.py`
   - **Expected:** Pre-freeze tasks path invokes the sizing block; freeze refused while a phase is over-threshold without an override
   - **R-IDs:** R16
-- [ ] 9.3 Human-attributed durable override (actor+reason), not agent-settable on autonomous dispatch paths (R16)
+- [x] 9.3 Human-attributed durable override (actor+reason), not agent-settable on autonomous dispatch paths (R16)
   - **File:** `scripts/phase_sizing.py`
   - **Expected:** Override records actor + reason durably; refused on autonomous `/sw-doc → /sw-tasks` dispatch paths
   - **R-IDs:** R16
-- [ ] 9.4 Unit harness: block-on-oversize, override attribution required, agent-path refusal (R16)
+- [x] 9.4 Unit harness: block-on-oversize, override attribution required, agent-path refusal (R16)
   - **File:** `scripts/unit_tests/test_sizing_freeze_gate.py`
   - **Expected:** Fixtures cover oversize block, missing-attribution refusal, and agent-dispatch override denial
   - **R-IDs:** R16
@@ -258,23 +258,23 @@ title: Tasks — PRD 065 Turn-independent ship loop and gate evidence
 
 ### 12. Documentation surfaces C, reference notes, and attestation boundary (R31, R32)
 
-- [x] 12.1 Update the sw-dispatch-inline-execute rule (R31)
+- [ ] 12.1 Update the sw-dispatch-inline-execute rule (R31)
   - **File:** `core/rules/sw-dispatch-inline-execute.mdc`
   - **Expected:** Inline `dispatch-ship` conductor-consumed handshake posture documented against the ship-loop driver
   - **R-IDs:** R31
-- [x] 12.2 Update the workflows guide for the turn-independent ship loop (R31)
+- [ ] 12.2 Update the workflows guide for the turn-independent ship loop (R31)
   - **File:** `docs/guides/workflows.md`
   - **Expected:** End-to-end zero-interaction deliver→terminal-PR flow documented
   - **R-IDs:** R31
-- [x] 12.3 Update the configuration guide for gate classes, bypass, lease TTL, and sizing override (R31)
+- [ ] 12.3 Update the configuration guide for gate classes, bypass, lease TTL, and sizing override (R31)
   - **File:** `docs/guides/configuration.md`
   - **Expected:** Config-resolvable classes + kernel floor, bypass constraints, `SW_SHIP_LEASE_STALE_SECONDS`, sizing-override attribution documented
   - **R-IDs:** R31
-- [x] 12.4 Update the layout reference for the gate-evidence dir, acceptance record, and manifest (R31)
+- [ ] 12.4 Update the layout reference for the gate-evidence dir, acceptance record, and manifest (R31)
   - **File:** `.sw/layout.md`
   - **Expected:** Canonical `.cursor/sw-deliver-runs/<phaseSlug>/gate-evidence/` path, acceptance record, and gate-manifest location documented
   - **R-IDs:** R31
-- [x] 12.5 Reference notes for gate-manifest/kernel/guidelines and the agent-gate attestation boundary (R31, R32)
+- [ ] 12.5 Reference notes for gate-manifest/kernel/guidelines and the agent-gate attestation boundary (R31, R32)
   - **File:** `core/sw-reference/README.md`
   - **Expected:** Manifest/lineage notes; documents that agent-authored-gate evidence attests execution/occurrence (not judgment quality) before any config promotes such a gate to mandatory
   - **R-IDs:** R31, R32
