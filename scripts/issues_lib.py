@@ -48,6 +48,14 @@ def deferred_provider_message(provider: str) -> str:
         "(PRD 057 R7 / D1; gap-039)."
     )
 
+
+def unshipped_provider_message(provider: str) -> str:
+    return (
+        f"issue provider {provider!r} is recognized but not shipped (fail-closed): "
+        "conformance + OAuth docs gate must pass before live selection. "
+        "Select github-issues or jira, or use the file-store fallback (PRD 066 R20)."
+    )
+
 T = TypeVar("T")
 
 
@@ -488,6 +496,10 @@ class IssuesClient:
                 self._github = GitHubIssuesClient(self.root)
             return self._github
         if self.provider == "linear":
+            from planning_store import SHIPPED_ISSUES_PROVIDERS
+
+            if self.provider not in SHIPPED_ISSUES_PROVIDERS:
+                raise IssueCapabilityError(unshipped_provider_message(self.provider))
             if self._linear is None:
                 from planning_linear_client import LinearIssuesClient
 

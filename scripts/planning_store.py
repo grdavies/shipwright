@@ -491,6 +491,109 @@ def resolve_issues_provider(cfg: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+ISSUES_CAPABILITY_INDEX_IDS: dict[str, str] = {
+    "github-issues": "provider.providers.issues.github-issues",
+    "gitlab-issues": "provider.providers.issues.gitlab-issues",
+    "jira": "provider.providers.issues.jira",
+    "linear": "provider.providers.issues.linear",
+    "none": "provider.providers.issues.none",
+}
+
+ISSUES_MIGRATION_HOOKS: tuple[str, ...] = (
+    "scripts/planning_migrate_issue_store.py",
+    "scripts/planning_migrate.py",
+)
+
+
+def issues_provider_registration_footprint() -> dict[str, Any]:
+    """PRD 066 R16/R20 — registration touchpoints for issue-backed adapters."""
+    linear_wired = _linear_live_client_wired()
+    return {
+        "verdict": "ok",
+        "action": "issues-provider-registration",
+        "issuesProviders": sorted(ISSUES_PROVIDERS),
+        "shippedIssuesProviders": sorted(SHIPPED_ISSUES_PROVIDERS),
+        "deferredIssuesProviders": sorted(DEFERRED_ISSUES_PROVIDERS),
+        "rateLimitMap": dict(issues_http.ISSUES_PROVIDER_TO_RATELIMIT),
+        "capabilityIndexIds": dict(ISSUES_CAPABILITY_INDEX_IDS),
+        "migrationHooks": list(ISSUES_MIGRATION_HOOKS),
+        "linear": {
+            "recognized": "linear" in ISSUES_PROVIDERS,
+            "shipped": "linear" in SHIPPED_ISSUES_PROVIDERS,
+            "liveClientWired": linear_wired,
+            "promotionGatedBy": ["conformance", "oauth-docs-gate"],
+            "adapterModule": "scripts/planning_linear_client.py",
+            "doctorHooks": ["doctor-issues-provider-stub", "planning_linear_client.doctor-oauth"],
+        },
+        "recognitionVsShipped": {
+            provider: {
+                "recognized": provider in ISSUES_PROVIDERS,
+                "shipped": provider in SHIPPED_ISSUES_PROVIDERS,
+                "deferred": provider in DEFERRED_ISSUES_PROVIDERS,
+            }
+            for provider in sorted(_BASE_ISSUES_PROVIDERS | {"linear"})
+        },
+    }
+
+
+def doctor_issues_provider_stub(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """PRD 066 R16/R20 — refuse enum-only / stub providers; note recognized-but-unshipped."""
+    issues = resolve_issues_provider(cfg)
+    provider = str(issues.get("provider") or "none")
+    if provider in {"none", ""} or not issues.get("configured"):
+        return {"verdict": "pass", "action": "doctor-issues-provider-stub", "skipped": True, "reason": "no-issues-provider"}
+    if provider in DEFERRED_ISSUES_PROVIDERS:
+        return {
+            "verdict": "fail",
+            "action": "doctor-issues-provider-stub",
+            "error": "deferred-provider-stub-refused",
+            "provider": provider,
+            "message": (
+                f"issue provider {provider!r} is deferred — select a shipped provider "
+                "(github-issues or jira) or use file-store fallback"
+            ),
+        }
+    if provider == "linear" and provider not in ISSUES_PROVIDERS:
+        return {
+            "verdict": "fail",
+            "action": "doctor-issues-provider-stub",
+            "error": "linear-stub-refused",
+            "provider": provider,
+            "message": (
+                "linear is configured but no live client is wired — enum-only stub refused; "
+                "install planning_linear_client.py with LIVE_CLIENT before recognition"
+            ),
+        }
+    if provider == "linear" and provider not in SHIPPED_ISSUES_PROVIDERS:
+        oauth = {}
+        try:
+            from planning_linear_client import doctor_oauth_ci_secret_check
+
+            oauth = doctor_oauth_ci_secret_check(root)
+        except ImportError:
+            oauth = {"verdict": "fail", "error": "linear-client-missing"}
+        if oauth.get("verdict") == "fail" and oauth.get("error") == "oauth-shared-ci-secret-refused":
+            return {
+                "verdict": "fail",
+                "action": "doctor-issues-provider-stub",
+                "error": "linear-oauth-stub-refused",
+                "provider": provider,
+                "oauth": oauth,
+            }
+        return {
+            "verdict": "pass",
+            "action": "doctor-issues-provider-stub",
+            "provider": provider,
+            "notice": "linear-recognized-not-shipped",
+            "message": (
+                "linear is recognized (live client wired) but not yet in SHIPPED_ISSUES_PROVIDERS; "
+                "issue-store falls back to file-store until conformance + OAuth docs gate pass"
+            ),
+            "oauth": oauth,
+        }
+    return {"verdict": "pass", "action": "doctor-issues-provider-stub", "provider": provider}
+
+
 def resolve_issues_token_env(cfg: dict[str, Any], issues_provider: str) -> str:
     issues = issues_section(cfg)
     token_env = issues.get("tokenEnv")
@@ -3879,6 +3982,16 @@ def doctor(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     checks: list[str] = []
     skipped_reasons: list[str] = []
 
+    stub = doctor_issues_provider_stub(root, cfg)
+    if stub.get("verdict") == "fail":
+        return stub
+    if stub.get("skipped"):
+        skipped_reasons.append(str(stub.get("reason") or "issues-provider-stub-skipped"))
+    else:
+        checks.append(f"issues-provider-stub:{stub.get('provider', 'unknown')}")
+        if stub.get("notice"):
+            checks.append(str(stub["notice"]))
+
     sep = doctor_separate_project_local_writes(root, cfg)
     if sep.get("verdict") == "fail":
         return sep
@@ -5141,6 +5254,7 @@ def main() -> None:
         "operator-projection-contract",
         "linear-projection-schema",
         "comments-relations-schema",
+        "issues-provider-registration",
         "resolve-issues",
         "resolve-store-location",
         "probe-issues-token",
@@ -5190,6 +5304,8 @@ def main() -> None:
         emit(linear_projection_schema_contract())
     elif args.command == "comments-relations-schema":
         emit(comments_relations_schema_contract())
+    elif args.command == "issues-provider-registration":
+        emit(issues_provider_registration_footprint())
     elif args.command == "resolve-backend":
 
         override = _optional(rest, "--backend")
