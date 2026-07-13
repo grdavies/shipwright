@@ -231,6 +231,14 @@ from planning_canonical import (  # noqa: E402
     status_label,
     verify_unit_id,
     inbound_authoring_comments,
+    CommentRecord,
+    RelationRecord,
+    FLAT_COMMENT_PROVIDERS,
+    build_comment_threads,
+    comment_thread_status,
+    normalize_flat_provider_comments,
+    serialize_comment_facade,
+    serialize_relation_facade,
 )
 
 BANNED_MEMORY_CLASSES = frozenset({"discussion", "progress"})
@@ -4260,6 +4268,10 @@ def comment_sync(
             "body": comment.body,
             "createdAt": comment.created_at,
             "markers": list(comment.markers),
+            "parentId": comment.parent_id or None,
+            "resolvedAt": comment.resolved_at or None,
+            "resolvingCommentId": comment.resolving_comment_id or None,
+            "threadStatus": comment_thread_status(comment),
         }
         for comment in inbound
     ]
@@ -4303,6 +4315,11 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
         "name": "linear_projection_schema",
         "status": "shipped",
         "description": "Linear operator schema: entity map, Initiative/Cycles, typed edges (PRD 066 R6–R8/R29)",
+    },
+    {
+        "name": "comments_relations_schema",
+        "status": "shipped",
+        "description": "Facade thread parentage, resolved metadata, typed relation edges (PRD 066 R17/R24)",
     },
 )
 
@@ -4620,6 +4637,108 @@ def normalize_semantic_status(provider: str, native_status: str) -> str:
     )
 
 
+
+
+# PRD 066 R24 — normative facade schemas for threaded comments + typed relations.
+COMMENT_FACADE_FIELDS: tuple[str, ...] = (
+    "id",
+    "body",
+    "createdAt",
+    "markers",
+    "parentId",
+    "resolvedAt",
+    "resolvingCommentId",
+    "threadStatus",
+)
+RELATION_FACADE_FIELDS: tuple[str, ...] = (
+    "id",
+    "type",
+    "sourceIssueId",
+    "targetIssueId",
+    "direction",
+)
+NATIVE_RELATION_TYPES: frozenset[str] = frozenset(
+    {"blocks", "blocked", "duplicate", "related", "similar"}
+)
+
+
+def comments_relations_schema_contract() -> dict[str, Any]:
+    """PRD 066 R24 — facade thread/relation schema contract surface."""
+    return {
+        "verdict": "ok",
+        "action": "comments-relations-schema-contract",
+        "commentFields": list(COMMENT_FACADE_FIELDS),
+        "relationFields": list(RELATION_FACADE_FIELDS),
+        "flatCommentProviders": sorted(FLAT_COMMENT_PROVIDERS),
+        "nativeRelationTypes": sorted(NATIVE_RELATION_TYPES),
+        "threadSemantics": {
+            "root": "top-level comment without parentId",
+            "reply": "comment with parentId and no resolvedAt",
+            "resolved": "thread root or reply with resolvedAt metadata",
+        },
+        "relationSemantics": {
+            "outbound": "relations[] from current issue to relatedIssue",
+            "inbound": "inverseRelations[] from issue to current issue",
+            "issueRelationOnly": True,
+        },
+        "gap077AuthoringAccepted": False,
+    }
+
+
+def serialize_comments_relations_facade(
+    comments: list[CommentRecord],
+    relations: list[RelationRecord],
+    *,
+    provider: str,
+) -> dict[str, Any]:
+    """Serialize comments + relations for facade consumers (R24)."""
+    normalized = (
+        normalize_flat_provider_comments(comments)
+        if provider in FLAT_COMMENT_PROVIDERS
+        else list(comments)
+    )
+    return {
+        "verdict": "ok",
+        "action": "serialize-comments-relations-facade",
+        "provider": provider,
+        "comments": [serialize_comment_facade(comment) for comment in normalized],
+        "threads": build_comment_threads(normalized),
+        "relations": [serialize_relation_facade(relation) for relation in relations],
+        "flatCommentPath": provider in FLAT_COMMENT_PROVIDERS,
+    }
+
+
+def issue_comments_relations_facade(record: Any, *, provider: str) -> dict[str, Any]:
+    """Facade read helper for issue comments + typed relations (R17/R24)."""
+    comments = list(getattr(record, "comments", []) or [])
+    relations = list(getattr(record, "relations", []) or [])
+    payload = serialize_comments_relations_facade(comments, relations, provider=provider)
+    payload["issueId"] = str(getattr(record, "id", "") or "")
+    payload["unitId"] = str(getattr(record, "unit_id", "") or "")
+    if provider == "linear":
+        payload["gap077AuthoringAccepted"] = False
+    return payload
+
+
+def assert_flat_comment_provider_non_regression(
+    provider: str,
+    comments: list[CommentRecord],
+) -> dict[str, Any]:
+    """R24 — GitHub/Jira must not claim threaded/resolved metadata."""
+    if provider not in FLAT_COMMENT_PROVIDERS:
+        return {"verdict": "pass", "action": "assert-flat-comment-provider", "provider": provider}
+    for comment in comments:
+        if comment.parent_id or comment.resolved_at or comment.resolving_comment_id:
+            return {
+                "verdict": "fail",
+                "error": "flat-provider-thread-metadata-claim",
+                "action": "assert-flat-comment-provider",
+                "provider": provider,
+                "commentId": comment.id,
+            }
+    return {"verdict": "pass", "action": "assert-flat-comment-provider", "provider": provider}
+
+
 def operator_projection_capability_matrix() -> dict[str, Any]:
     """PRD 066 R1/R3 — shared operator-projection capability matrix skeleton."""
     return {
@@ -4681,6 +4800,7 @@ def operator_projection_contract() -> dict[str, Any]:
         "capabilityMatrix": matrix,
         "adapterCompleteClaim": operator_projection_adapter_complete_claim(matrix),
         "semanticStatuses": sorted(SEMANTIC_STATUSES),
+        "commentsRelations": comments_relations_schema_contract(),
     }
 
 
@@ -5020,6 +5140,7 @@ def main() -> None:
         "lint-projection-mutations",
         "operator-projection-contract",
         "linear-projection-schema",
+        "comments-relations-schema",
         "resolve-issues",
         "resolve-store-location",
         "probe-issues-token",
@@ -5067,6 +5188,8 @@ def main() -> None:
         emit(operator_projection_contract())
     elif args.command == "linear-projection-schema":
         emit(linear_projection_schema_contract())
+    elif args.command == "comments-relations-schema":
+        emit(comments_relations_schema_contract())
     elif args.command == "resolve-backend":
 
         override = _optional(rest, "--backend")

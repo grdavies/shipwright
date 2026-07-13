@@ -96,12 +96,97 @@ class CommentRecord:
     body: str
     created_at: str = ""
     markers: list[str] = field(default_factory=list)
+    # PRD 066 R24 — thread parentage + resolved metadata (optional; flat providers omit).
+    parent_id: str = ""
+    resolved_at: str = ""
+    resolving_comment_id: str = ""
 
     def excluded_from_canonical(self) -> bool:
         return any(m in EXCLUDED_COMMENT_MARKERS for m in self.markers) or any(
             f"<!-- {m} -->" in self.body or f"<!--{m}-->" in self.body
             for m in EXCLUDED_COMMENT_MARKERS
         )
+
+
+@dataclass
+class RelationRecord:
+    """PRD 066 R24 — typed native issue relation edge (issue↔issue only)."""
+
+    id: str
+    relation_type: str
+    source_issue_id: str
+    target_issue_id: str
+    direction: str = "outbound"
+
+
+FLAT_COMMENT_PROVIDERS = frozenset({"github-issues", "jira", "gitlab-issues"})
+
+
+def comment_thread_status(comment: CommentRecord) -> str:
+    """resolved | reply | root — facade thread state for operator browse."""
+    if comment.resolved_at:
+        return "resolved"
+    if comment.parent_id:
+        return "reply"
+    return "root"
+
+
+def serialize_comment_facade(comment: CommentRecord) -> dict[str, Any]:
+    """Normative facade projection for a single comment (R24)."""
+    return {
+        "id": comment.id,
+        "body": comment.body,
+        "createdAt": comment.created_at,
+        "markers": list(comment.markers),
+        "parentId": comment.parent_id or None,
+        "resolvedAt": comment.resolved_at or None,
+        "resolvingCommentId": comment.resolving_comment_id or None,
+        "threadStatus": comment_thread_status(comment),
+    }
+
+
+def serialize_relation_facade(relation: RelationRecord) -> dict[str, Any]:
+    """Normative facade projection for a typed relation edge (R24)."""
+    return {
+        "id": relation.id,
+        "type": relation.relation_type,
+        "sourceIssueId": relation.source_issue_id,
+        "targetIssueId": relation.target_issue_id,
+        "direction": relation.direction,
+    }
+
+
+def normalize_flat_provider_comments(comments: list[CommentRecord]) -> list[CommentRecord]:
+    """R24 — GitHub/Jira flat paths: never invent parentage/resolved metadata."""
+    return [
+        CommentRecord(
+            id=comment.id,
+            body=comment.body,
+            created_at=comment.created_at,
+            markers=list(comment.markers),
+            parent_id="",
+            resolved_at="",
+            resolving_comment_id="",
+        )
+        for comment in comments
+    ]
+
+
+def build_comment_threads(comments: list[CommentRecord]) -> dict[str, Any]:
+    """Group threaded comments into roots/replies + resolved/unresolved thread roots."""
+    roots = [comment for comment in comments if not comment.parent_id]
+    replies: dict[str, list[str]] = {}
+    for comment in comments:
+        if comment.parent_id:
+            replies.setdefault(comment.parent_id, []).append(comment.id)
+    resolved_roots = [comment.id for comment in roots if comment.resolved_at]
+    unresolved_roots = [comment.id for comment in roots if not comment.resolved_at]
+    return {
+        "roots": [comment.id for comment in roots],
+        "replies": replies,
+        "resolvedThreadRoots": resolved_roots,
+        "unresolvedThreadRoots": unresolved_roots,
+    }
 
 
 @dataclass
