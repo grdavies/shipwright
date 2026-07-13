@@ -19,6 +19,7 @@ ISSUES_PROVIDER_TO_RATELIMIT = {
     "github-issues": "github",
     "gitlab-issues": "gitlab",
     "jira": "jira",
+    "linear": "linear",
 }
 
 

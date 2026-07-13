@@ -474,6 +474,33 @@ def doctor(root: Path, *, sweep: bool) -> dict:
             warnings.append("probe-failed")
             verdict = "fail"
 
+    # PRD 066 R23 — refuse oauth via shared CI secret without exception.
+    try:
+        from planning_linear_client import doctor_oauth_ci_secret_check
+
+        oauth_finding = doctor_oauth_ci_secret_check(root)
+        if oauth_finding.get("verdict") == "fail":
+            checks.append(
+                {
+                    "check": "linear-oauth-ci-secret",
+                    "status": "fail",
+                    "error": oauth_finding.get("error"),
+                    "remediation": oauth_finding.get("remediation"),
+                }
+            )
+            warnings.append("oauth-shared-ci-secret-refused")
+            verdict = "fail"
+        elif not oauth_finding.get("skipped"):
+            checks.append(
+                {
+                    "check": "linear-oauth-ci-secret",
+                    "status": "ok",
+                    "exceptionPath": bool(oauth_finding.get("exceptionPath")),
+                }
+            )
+    except ImportError:
+        pass
+
     cfg_path = root / ".cursor/workflow.config.json"
     if cfg_path.is_file():
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))

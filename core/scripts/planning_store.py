@@ -58,11 +58,25 @@ SHIPPED_BACKENDS = frozenset({"in-repo-public", "local-synced", "memory", "issue
 DEFERRED_BACKENDS = frozenset({"private-repo", "encryption-at-rest"})
 ALL_BACKENDS = SHIPPED_BACKENDS | DEFERRED_BACKENDS
 
-ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues", "jira", "none"})
+def _linear_live_client_wired() -> bool:
+    """PRD 066 R9 — recognize Linear in ISSUES_PROVIDERS only when live client exists."""
+    try:
+        import planning_linear_client as _plc  # noqa: WPS433 — optional provider probe
+    except ImportError:
+        return False
+    return bool(getattr(_plc, "LIVE_CLIENT", False)) and callable(getattr(_plc, "graphql", None))
+
+
+_BASE_ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues", "jira", "none"})
+ISSUES_PROVIDERS = _BASE_ISSUES_PROVIDERS | (
+    frozenset({"linear"}) if _linear_live_client_wired() else frozenset()
+)
 # PRD 057 R7 / D1: gitlab-issues is a known-but-deferred provider — supported for
 # config validation yet absent from the shipped set until a live adapter ships in a
 # follow-up unit (originating gap-039). Selection therefore fails closed with the
 # issues-provider-not-shipped fallback reason instead of an advertised round-trip.
+# PRD 066 R9/R20: linear is recognized when the live client is wired, but not shipped
+# until conformance + OAuth docs gate pass.
 DEFERRED_ISSUES_PROVIDERS = frozenset({"gitlab-issues"})
 SHIPPED_ISSUES_PROVIDERS = frozenset({"github-issues", "jira"})
 
@@ -70,6 +84,7 @@ DEFAULT_ISSUES_TOKEN_ENV: dict[str, str] = {
     "github-issues": "ISSUES_GITHUB_TOKEN",
     "gitlab-issues": "ISSUES_GITLAB_TOKEN",
     "jira": "ISSUES_JIRA_TOKEN",
+    "linear": "ISSUES_LINEAR_TOKEN",
     "none": "",
 }
 
@@ -77,6 +92,7 @@ MIN_ISSUES_SCOPES: dict[str, list[str]] = {
     "github-issues": ["repo"],
     "gitlab-issues": ["api"],
     "jira": ["read:jira-work", "write:jira-work"],
+    "linear": ["read", "write"],
 }
 
 ISSUE_STORE_FALLBACK_NOTICE = (
