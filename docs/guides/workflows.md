@@ -716,6 +716,35 @@ unrunnable units plus the unpark remediation — never a silent empty result. `p
 the same condition as an `over-parked-frontier` drift finding.
 
 
+## Linear adapter documentation currency (PRD 066 R30)
+
+Adapter-complete for PRD 066 and gap-079 close requires the documentation inventory below to be
+current. Verify before terminal merge:
+
+```bash
+python3 scripts/planning_linear_client.py . docs-currency-gate
+```
+
+| Surface | Path | Covers |
+| --- | --- | --- |
+| Linear provider spec | `core/providers/issues/linear.md` | Config keys, LCD verbs, R25 stage-1 dogfood checklist, R23 OAuth secondary mode, lock/overflow (R10) |
+| Issues capability index inputs | `core/providers/issues/CAPABILITIES.md` | Verb contract, linear registration vs shipped, rate-limit map, doctor hooks (R16/R20) |
+| Config schema + example | `core/sw-reference/config.schema.json`, `core/sw-reference/workflow.config.example.json` | `teamKey`/`teamId`, `authMode`, `operatorProjection.linear` flags (R16) |
+| Operator guides | `docs/guides/workflows.md` (this section), `docs/guides/configuration.md` | R1 browse + dogfood acceptance (R25), issue-store routing |
+| Command / surface refs | `docs/guides/commands.md` | Living-doc currency, deliver gates mentioning issues providers |
+| Planning-store invariants | `core/providers/planning-store/issue-store.md`, `scripts/planning_store.py` facade | Facade-only projection mutation (R4), dual-write canonical body (R26), drift halt (R27), dirty resume (R28) |
+| GitHub Projects projection notes | `scripts/planning_github_projects_v2.py` module doc + `CAPABILITIES.md` degradation table | R18 parity + Initiative/Cycle degradations (R19) |
+| Conformance harness | `scripts/unit_tests/planning/test_prd066_*.py` | Stage gates, registration, projection schema |
+
+Stage promotion gates (M7/A) inside PRD 066:
+
+| Stage | Gate | Auth |
+| --- | --- | --- |
+| 1 | R25 dogfood checklist + R1 rebuild | `api-key` |
+| 2 | GitHub Projects R18 parity | unchanged |
+| 3 | Comments/relations surface (R17/R24) | unchanged |
+| 4 | R15 canonical fidelity + R23 OAuth docs | oauth documented before advertising |
+
 ## Issue-store on Bitbucket hosts (PRD 047 D25)
 
 Bitbucket Cloud repos use this host adapter for PR/CI only — **not** native Bitbucket issues for planning.
