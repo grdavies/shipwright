@@ -131,3 +131,105 @@ Complexity-aware query planner splits work under the ~10k points/query cap.
 
 `issueBatchCreate` inputs MUST use `{ "issues": [ ... ] }`. A bare issues array silently
 creates zero issues and is rejected by `validate_batch_create_input`.
+
+## Stage-1 dogfood acceptance (R25)
+
+Normative operator-surface acceptance before the stage-1 ship increment. The stage-1 gate asserts
+this checklist via `python3 scripts/planning_linear_client.py <root> stage1-dogfood-gate`.
+
+### Volume floors
+
+On a dedicated dogfood Team (recommended; shared Teams allowed with coexistence rules below):
+
+| Floor | Requirement |
+| --- | --- |
+| PRDs | ≥3 PRD Projects |
+| Brainstorms | Each PRD Project has ≥1 attached Brainstorm Document |
+| Gaps | Each PRD Project has ≥1 absorbed Gap Issue (Gap label + Project membership) |
+| Tasks | ≥20 task Issues across ≥2 phase Milestones |
+
+### R1 saved views
+
+Ship (or document as required operator setup) saved views/filters that answer R1(1)–(4) from
+list/board metadata **without opening markdown bodies** (R31 browse contract):
+
+| R1 question | Minimum browse metadata |
+| --- | --- |
+| (1) Gaps a PRD absorbs | Gap Issues linked to the PRD Project + Gap label/field |
+| (2) Brainstorms feeding a PRD | Document attachment/membership on the PRD Project |
+| (3) Task/phase completion | Issue status + Milestone (phase) membership |
+| (4) Program backlog/in-flight/done | Initiative membership **or** documented Team/Project substitute view + program discriminator; Cycle is wave enrichment only |
+
+When Initiative is unavailable, the substitute view contract in the capability matrix is required —
+silent skip is prohibited (R7).
+
+### Naming and archival
+
+| Convention | Rule |
+| --- | --- |
+| Project prefix | `[<projectKey>]` or `sw:project:<key>` marker in Project name |
+| Issue title prefix | `[<projectKey>]` on LCD Issues (PRD 043 convention) |
+| Type labels | `sw:prd`, `sw:brainstorm`, `sw:gap`, `sw:task`, `sw:frozen` flat labels |
+| Superseded projections | Close or archive Projects/Issues when a unit is superseded/absorbed; rebuild must not leave unbounded duplicate Projects for the same `unit-id` |
+| Tombstone hooks | Use `mark_tombstone` / `mark_archived_project` lifecycle hooks on fixture/live paths when retiring projections |
+
+### Coexistence (shared Teams)
+
+When dogfooding on a Team that already has human Linear Projects/Cycles:
+
+- Shipwright projection Projects **must** be distinguishable via the naming prefix/marker above.
+- **Cycles (R8 / M13/B):** assign Shipwright-owned issues into the Team's existing Cycle; do **not**
+  rename or reschedule Cycle definition (dates/name). Probe/doctor emits a loud shared-cadence notice
+  when the Team already has an active human Cycle cadence.
+- Milestone phase membership remains authoritative for phase completion (R1(3)); Cycle is wave
+  time-box only and does not replace Milestone membership.
+
+**MVP dogfood auth:** stage-1 dogfood uses `authMode: api-key` (Team-restricted personal API key) —
+OAuth is not required for stage-1 promotion (R23).
+
+## OAuth secondary auth mode (R23)
+
+OAuth 2.0 is a **documented secondary** auth mode on the same adapter surface. Default remains
+`authMode: api-key` (R11). OAuth changes token acquisition and `Authorization` header shape only —
+verb set, Team scope probe, dual budgets, and canonicalization are unchanged.
+
+### MVP dogfood vs stage-4 gate
+
+| Stage | Auth posture |
+| --- | --- |
+| Stage-1 dogfood (R25) | `api-key` only — Team-restricted personal API key |
+| Stage-4 promotion | OAuth docs gate must pass **before** advertising `authMode: oauth` or promoting Linear to `SHIPPED_ISSUES_PROVIDERS` with oauth enabled |
+
+Linear MUST NOT enter `SHIPPED_ISSUES_PROVIDERS` until conformance **and** the OAuth docs gate
+(`python3 scripts/planning_linear_client.py <root> oauth-docs-gate`) pass (D7a / M1).
+
+### OAuth scopes
+
+Minimum Linear OAuth scopes for the adapter surface (read/write Team-scoped work):
+
+| Scope | Purpose |
+| --- | --- |
+| `read` | Team/project/issue browse, probe, R1 views |
+| `write` | Issue/comment/label mutations, projection upsert |
+| `issues:create` | LCD `issue-create` / task Issue creation |
+| `comments:create` | LCD `issue-comment` / chunk overflow comments |
+
+Init/probe fails closed when the token cannot read/write the configured Team (R11). Over-scoped
+workspace-admin tokens should be rotated to Team-restricted credentials when detectable (G8).
+
+### Token storage and refresh (operator-local)
+
+| Rule | Detail |
+| --- | --- |
+| Storage | Access **and** refresh tokens are **operator-local only** (OS keychain or local secret store) |
+| Planning repo | Tokens MUST NOT be committed to the planning repo or checked into `workflow.config.json` |
+| Refresh | Operators are responsible for refresh before expiry; the thin client reads the current access token from `tokenEnv` — no automatic refresh loop ships in MVP |
+| CI / shared secrets | Doctor refuses `authMode: oauth` wired through a shared CI secret unless `oauthSharedCiException: true` is set for an explicit documented exception path |
+| Header shape | `Authorization: Bearer <ACCESS_TOKEN>` (contrast: api-key has no Bearer prefix) |
+
+Probe OAuth docs gate:
+
+```bash
+python3 scripts/planning_linear_client.py . oauth-docs-gate
+python3 scripts/planning_linear_client.py . doctor-oauth
+```
