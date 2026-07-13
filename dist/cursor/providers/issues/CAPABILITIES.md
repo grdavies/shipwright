@@ -81,6 +81,7 @@ Issue-store credentials use `planning.store.issues.tokenEnv` — **distinct** fr
 | `github-issues` | `ISSUES_GITHUB_TOKEN` | `repo` or `public_repo` |
 | `gitlab-issues` | `ISSUES_GITLAB_TOKEN` | `api` |
 | `jira` | `ISSUES_JIRA_TOKEN` | `read:jira-work`, `write:jira-work` (PRD 047) |
+| `linear` | `ISSUES_LINEAR_TOKEN` | Team-restricted API key (`read`/`write`) |
 | `none` | — | skipped (file-store fallback) |
 
 Probe at init via `python3 scripts/planning_store.py probe-issues-token` — fail-closed on
@@ -90,23 +91,23 @@ missing/insufficient scope; token values never appear in output or logs.
 
 Selector requires the verb capability; absent capability → fail-closed halt.
 
-| Verb / feature | github-issues | gitlab-issues | jira | none |
+| Verb / feature | github-issues | gitlab-issues | jira | linear | none |
 | --- | --- | --- | --- | --- |
-| `issue-create` | REST | REST | REST (`/rest/api/3/issue` Cloud; `/rest/api/2/issue` DC) | — (fallback) |
-| `issue-get` | REST | REST | REST (`GET /rest/api/3/issue/{key}`) | — |
-| `issue-update` | REST + ETag | REST + ETag | REST (`PUT /rest/api/3/issue/{key}`) | — |
-| `issue-comment` | REST | REST | REST (`POST .../comment`) | — |
-| `issue-label` | REST | REST | REST (`update.labels`) | — |
-| `issue-lock` | REST (lock conversation) | REST (issue lock) | **degraded** (hash-authoritative; R104) | — |
-| `issue-search` | REST | REST | REST (JQL `POST /rest/api/3/search`) | — |
-| `issue-close` | REST (`PATCH` state=closed) | REST | REST (transition idempotent close) | — |
-| `linked-pr-introspection` | gated `graphql.linked-pr` + REST fallback | REST (notes) | — | — |
-| `issue-milestone` | REST (milestone field) | REST (iteration) | — (047 TBD) | — (skip+notice) |
-| `projects-projection` | gated `graphql.projects-v2` | — | — | — |
-| `issue-lock` GraphQL fallback | gated `graphql.issue-lock` | — | — | — |
-| `issue-search` GraphQL fallback | gated `graphql.issue-search` | — | — | — |
-| Native confidential/private issues | not portable guarantee | bonus only | **unsupported** (project-level; R105) | — |
-| Flat labels | yes | yes | labels → components → custom field (R109) | — |
+| `issue-create` | REST | REST | REST (`/rest/api/3/issue` Cloud; `/rest/api/2/issue` DC) | GraphQL | — (fallback) |
+| `issue-get` | REST | REST | REST (`GET /rest/api/3/issue/{key}`) | GraphQL | — |
+| `issue-update` | REST + ETag | REST + ETag | REST (`PUT /rest/api/3/issue/{key}`) | GraphQL + etag | — |
+| `issue-comment` | REST | REST | REST (`POST .../comment`) | GraphQL | — |
+| `issue-label` | REST | REST | REST (`update.labels`) | GraphQL labels | — |
+| `issue-lock` | REST (lock conversation) | REST (issue lock) | **degraded** (hash-authoritative; R104) | **degraded** (hash-authoritative; R10) | — |
+| `issue-search` | REST | REST | REST (JQL `POST /rest/api/3/search`) | GraphQL filter | — |
+| `issue-close` | REST (`PATCH` state=closed) | REST | REST (transition idempotent close) | GraphQL state | — |
+| `linked-pr-introspection` | gated `graphql.linked-pr` + REST fallback | REST (notes) | — | — | — |
+| `issue-milestone` | REST (milestone field) | REST (iteration) | — (047 TBD) | — (skip+notice) | — (skip+notice) |
+| `projects-projection` | gated `graphql.projects-v2` | — | — | — | — |
+| `issue-lock` GraphQL fallback | gated `graphql.issue-lock` | — | — | n/a (degraded) | — |
+| `issue-search` GraphQL fallback | gated `graphql.issue-search` | — | — | primary GraphQL | — |
+| Native confidential/private issues | not portable guarantee | bonus only | **unsupported** (project-level; R105) | team-scoped | — |
+| Flat labels | yes | yes | labels → components → custom field (R109) | yes (Label name) | — |
 
 `none` always routes to `in-repo-public` file-store fallback (R3) with a documented notice — never blocks work.
 
@@ -126,7 +127,7 @@ present; otherwise deliver degrades to a checkbox/body-encoded phase list embedd
 
 GraphQL is permitted only behind an explicit per-verb capability flag when REST lacks parity (R50).
 
-| Verb / feature | github-issues | gitlab-issues | jira | none |
+| Verb / feature | github-issues | gitlab-issues | jira | linear | none |
 | --- | --- | --- | --- | --- |
 | `issue-epic-create` | REST | REST | pending (047) | — (checkbox fallback) |
 | `issue-sub-issue-create` | REST | REST | pending (047) | — |
