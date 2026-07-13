@@ -52,6 +52,75 @@ canonicalization are unchanged (R23).
 - Doctor refuses `authMode: oauth` wired through a shared CI secret unless
   `oauthSharedCiException: true` is set for an explicit documented exception path.
 
+## Capability flags (R10)
+
+```json
+{
+  "verbs": {
+    "issue-create": true,
+    "issue-get": true,
+    "issue-update": true,
+    "issue-comment": true,
+    "issue-label": true,
+    "issue-lock": "degraded",
+    "issue-search": true,
+    "issue-close": true
+  },
+  "graphql": {
+    "issue-create": true,
+    "issue-get": true,
+    "issue-update": true,
+    "issue-comment": true,
+    "issue-label": true,
+    "issue-lock": false,
+    "issue-search": true
+  },
+  "lcd": ["title", "body", "comments", "state", "labels"],
+  "lock": {
+    "capability": "degraded",
+    "native": false,
+    "mechanism": "hash-authoritative"
+  },
+  "overflow": {
+    "bodySizeLimitBytes": 60000,
+    "chunkMarker": "sw-chunk-overflow"
+  }
+}
+```
+
+`issue-lock` is **degraded** (R10): Linear has no native conversation lock. Freeze immutability is
+hash-authoritative via `sw:frozen` + `sw-freeze-record`; tamper detection uses on-read verification —
+not a provider lock verb. A degraded hash-authoritative lock is conformance-complete when native
+lock is absent.
+
+## LCD verb mapping (R10)
+
+| Verb | Linear surface |
+| --- | --- |
+| `issue-create` | `issueCreate` GraphQL |
+| `issue-get` | `issue(id:)` GraphQL |
+| `issue-update` | `issueUpdate` GraphQL |
+| `issue-comment` | `commentCreate` GraphQL |
+| `issue-label` | `issueUpdate` / `issueLabelCreate` (flat name → Label id) |
+| `issue-lock` | **degraded** — `sw:frozen` label only (no native lock mutation) |
+| `issue-search` | `issues(filter:)` GraphQL (project label scoped) |
+
+Duck-type surface in `scripts/planning_linear_client.py` (`LinearIssuesClient`) matches
+`FixtureIssuesStore` verbs: `create` / `get` / `update` / `add_comment` / `set_labels` / `lock` /
+`search`, plus lifecycle hooks (`mark_tombstone`, …). Hermetic CI uses `SW_ISSUES_FIXTURE=1` or an
+injected fixture store.
+
+## Body overflow / chunking (R10)
+
+Linear descriptions use the generic UTF-8 body limit (`BODY_SIZE_LIMIT` = 60_000 bytes) via
+`planning_canonical.chunk_body_if_needed(provider="linear")`. Oversized bodies are split into:
+
+1. Head description with `<!-- sw-chunk-manifest: … -->`
+2. Ordered overflow comments marked `<!-- sw-chunk-overflow -->`
+
+There is no ADF-style tighter cap (unlike Jira Cloud). Reassembly uses immutable comment IDs in the
+manifest (positional fallback only when ids are synthetic placeholders).
+
 ## Dual budgets (R13)
 
 Request-count and GraphQL complexity points are tracked in `planning_request_budget`.

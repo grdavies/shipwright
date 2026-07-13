@@ -432,6 +432,7 @@ class IssuesClient:
         self._jira: Any = None
         self._github: Any = None
         self._gitlab: Any = None
+        self._linear: Any = None
         self._call_count = 0
         self._budget = resolve_call_budget()
 
@@ -450,6 +451,12 @@ class IssuesClient:
 
                 self._github = GitHubIssuesClient(self.root)
             return self._github
+        if self.provider == "linear":
+            if self._linear is None:
+                from planning_linear_client import LinearIssuesClient
+
+                self._linear = LinearIssuesClient(self.root)
+            return self._linear
         if self.provider in DEFERRED_ISSUES_PROVIDERS:
             # PRD 057 R7 / D1: fail closed for deferred providers (gitlab-issues)
             # rather than instantiating an unshipped adapter.
