@@ -35,6 +35,21 @@ from host_lib import (
 )
 from memory_sot import resolve_memory_provider
 import planning_visibility
+from planning_projection_ledger import (
+    assert_portable_graph_authority,
+    check_projection_drift,
+    clear_projection_dirty,
+    load_projection_ledger,
+    projection_is_dirty,
+    projection_ledger_checkpoint,
+    projection_ledger_discover_by_marker,
+    projection_ledger_lookup,
+    projection_ledger_reconcile_duplicates,
+    projection_ledger_upsert,
+    rebuild_projection_from_graph,
+    resume_projection_from_checkpoint,
+    set_projection_dirty,
+)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -4613,6 +4628,25 @@ def assert_r1_answerability_from_metadata(evidence: dict[str, Any]) -> dict[str,
     if missing:
         return {"verdict": "fail", "error": "r1-metadata-incomplete", "questions": missing}
     return {"verdict": "pass", "action": "assert-r1-answerability", "bodyOpenIsFailure": True}
+
+
+def assert_r1_answerability_while_clean(
+    root: Path,
+    evidence: dict[str, Any],
+    *,
+    scope: str = "default",
+) -> dict[str, Any]:
+    """R28 — R1 harness fails closed while projection dirty."""
+    if projection_is_dirty(root, scope=scope):
+        ledger = load_projection_ledger(root, scope=scope)
+        return {
+            "verdict": "fail",
+            "error": "projection-dirty",
+            "action": "assert-r1-answerability",
+            "dirtyReason": ledger.get("dirtyReason"),
+            "checkpointGeneration": ledger.get("checkpointGeneration"),
+        }
+    return assert_r1_answerability_from_metadata(evidence)
 
 
 def _imports_projection_mutations(path: Path) -> list[dict[str, Any]]:
