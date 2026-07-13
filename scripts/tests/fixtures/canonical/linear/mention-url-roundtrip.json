@@ -1,0 +1,15 @@
+{
+  "id": "mention-url-roundtrip",
+  "provider": "linear",
+  "contract": "public-markdown",
+  "title": "[acme] prd:066-mention",
+  "state": "open",
+  "labels": [
+    "sw:prd",
+    "sw:project:acme"
+  ],
+  "submitMarkdown": "Please review with https://linear.app/acme/profiles/alice and [@bob](https://linear.app/acme/profiles/bob) on https://linear.app/acme/issue/ACM-42/sample-issue.\n",
+  "refetchedMarkdown": "Please review with https://linear.app/acme/profiles/alice and https://linear.app/acme/profiles/bob on https://linear.app/acme/issue/ACM-42/sample-issue.\n",
+  "expectedCanonicalBody": "Please review with https://linear.app/acme/profiles/alice and https://linear.app/acme/profiles/bob on https://linear.app/acme/issue/ACM-42/sample-issue.",
+  "expectedHash": "3e1bb85b62ba4ce8a84dddb6541596c6215387b268fc900563b723c292dee503"
+}

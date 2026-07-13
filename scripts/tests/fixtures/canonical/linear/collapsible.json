@@ -1,0 +1,14 @@
+{
+  "id": "collapsible",
+  "provider": "linear",
+  "contract": "public-markdown",
+  "title": "[acme] prd:066-collapsible",
+  "state": "open",
+  "labels": [
+    "sw:prd"
+  ],
+  "submitMarkdown": "+++ Notes\n\nHidden details here.\n\n+++\n\nVisible after.\n",
+  "refetchedMarkdown": "+++ Notes\n\nHidden details here.\n\n+++\n\nVisible after.\n",
+  "expectedCanonicalBody": "+++ Notes\n\nHidden details here.\n\n+++\nVisible after.",
+  "expectedHash": "04f05f9722df22409b1f4cef0eafa54564eaa0fefa4f40eead282b3ba0c578c6"
+}

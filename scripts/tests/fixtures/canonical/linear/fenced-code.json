@@ -1,0 +1,14 @@
+{
+  "id": "fenced-code",
+  "provider": "linear",
+  "contract": "public-markdown",
+  "title": "[acme] prd:066-fenced",
+  "state": "open",
+  "labels": [
+    "sw:prd"
+  ],
+  "submitMarkdown": "Example:\n\n```python\ndef hello():\n    return 1\n```\n\n```sw-edges\n{\"version\":1,\"edges\":[]}\n```\n",
+  "refetchedMarkdown": "Example:\n\n```python\ndef hello():\n    return 1\n```\n\n```sw-edges\n{\"version\":1,\"edges\":[]}\n```\n",
+  "expectedCanonicalBody": "Example:\n\n```python\ndef hello():\n    return 1\n```\n\n```sw-edges\n{\"version\":1,\"edges\":[]}\n```",
+  "expectedHash": "7a226b6f6f52bc35087188a50d12e18557165e87f7242941a407a718d7b5ca01"
+}
