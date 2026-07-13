@@ -27,6 +27,10 @@ def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
 
 def fail(error: str, exit_code: int = 2, **extra: Any) -> None:
     extra.pop("error", None)
+    if extra.get("halt") or extra.get("cause"):
+        from halt_resume import enrich_fail_extra
+
+        enrich_fail_extra(git_toplevel(Path.cwd()), extra)
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 
@@ -148,7 +152,7 @@ def slug_from_target(target_branch: str) -> str:
     return target_branch.split("/", 1)[1]
 
 
-def cmd_assert_entry(root: Path, _args: list[str]) -> None:
+def cmd_assert_entry(root: Path, args: list[str]) -> None:
     script = root / "scripts" / "sw-assert-worktree.py"
     if not script.is_file():
         fail("sw-assert-worktree.py missing", exit_code=2)
@@ -156,10 +160,32 @@ def cmd_assert_entry(root: Path, _args: list[str]) -> None:
     if proc.returncode == 0:
         emit({"verdict": "pass", "action": "assert-entry", "allowed": True})
     if proc.returncode == 1:
-        fail(
-            proc.stderr.strip() or "implementation entry blocked on bare default branch",
-            exit_code=1,
-            halt="bare-main",
+        provision_args: list[str] = []
+        target = parse_kv(args, "--target")
+        plan_rel = parse_kv(args, "--plan")
+        if target:
+            provision_args.extend(["--target", target])
+        elif plan_rel:
+            provision_args.extend(["--plan", plan_rel])
+        else:
+            default_plan = root / ".cursor" / "sw-deliver-plan.json"
+            if default_plan.is_file():
+                provision_args.extend(["--plan", ".cursor/sw-deliver-plan.json"])
+        if not provision_args:
+            fail(
+                proc.stderr.strip() or "implementation entry blocked on bare default branch",
+                exit_code=1,
+                halt="bare-main",
+                remediation="provide --plan or --target for auto-provision",
+            )
+        cmd_orchestrator_provision(root, provision_args)
+        emit(
+            {
+                "verdict": "pass",
+                "action": "assert-entry",
+                "allowed": True,
+                "autoProvisioned": True,
+            }
         )
     fail(proc.stderr.strip() or "worktree guard configuration error", exit_code=2)
 
@@ -229,6 +255,57 @@ def assert_primary_off_target(start: Path, target: str) -> None:
         )
 
 
+
+def orchestrator_worktree_branch(path: Path) -> str:
+    return git_run(["branch", "--show-current"], cwd=path, check=False).stdout.strip()
+
+
+def orchestrator_worktree_dirty(path: Path) -> bool:
+    status = git_run(["status", "--porcelain"], cwd=path, check=False).stdout
+    return bool(status.strip())
+
+
+def adopt_orchestrator_worktree(
+    root: Path,
+    *,
+    top: Path,
+    path: Path,
+    name: str,
+    target: str,
+    tip: str,
+) -> None:
+    from wave_state import load_deliver_state, resolve_state_path, save_deliver_state
+
+    write_shipwright_state(
+        path,
+        {
+            "worktreeName": name,
+            "worktreePath": str(path),
+            "worktreeRole": ORCHESTRATOR_ROLE,
+            "countsTowardCeiling": False,
+            "parentBranch": target,
+            "currentBranch": target,
+            "targetBranch": target,
+            "detachedHead": False,
+            "head": tip,
+            "startedAt": utc_now(),
+        },
+    )
+    state_path = resolve_state_path(top, target=target)
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state = load_deliver_state(top, target=target)
+    state["orchestratorWorktree"] = {
+        "name": name,
+        "path": str(path),
+        "branch": target,
+        "countsTowardCeiling": False,
+        "detachedHead": False,
+        "head": tip,
+    }
+    save_deliver_state(top, state, target=target)
+
+
+
 def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
     target = parse_kv(args, "--target")
     if not target:
@@ -244,7 +321,42 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
     wt_root.mkdir(parents=True, exist_ok=True)
     path = wt_root / name
     if path.exists():
-        fail(f"orchestrator worktree already exists: {path}", exit_code=20)
+        if not path.is_dir() or not (path / ".git").exists():
+            fail(
+                f"orchestrator worktree path exists but is not a worktree: {path}",
+                exit_code=20,
+                halt="orchestrator-path-conflict",
+                remediation=f"remove or relocate {path} before provisioning",
+            )
+        current = orchestrator_worktree_branch(path)
+        if current != target:
+            fail(
+                f"orchestrator worktree on {current!r}, expected {target!r}",
+                exit_code=20,
+                halt="orchestrator-branch-mismatch",
+                remediation=f"git -C {path} checkout {target}",
+            )
+        if orchestrator_worktree_dirty(path):
+            fail(
+                f"orchestrator worktree is dirty: {path}",
+                exit_code=20,
+                halt="dirty-orchestrator",
+                remediation=f"commit or stash changes in {path} before adopt",
+            )
+        tip = git_run(["rev-parse", "HEAD"], cwd=path).stdout.strip()
+        adopt_orchestrator_worktree(
+            root, top=top, path=path, name=name, target=target, tip=tip
+        )
+        emit(
+            {
+                "verdict": "pass",
+                "action": "orchestrator-provision",
+                "path": str(path),
+                "branch": target,
+                "countsTowardCeiling": False,
+                "adopted": True,
+            }
+        )
 
     git_run(["fetch", "origin", target], cwd=top, check=False)
     ref = target
@@ -264,37 +376,9 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
     git_run(["worktree", "add", "-B", target, str(path), ref], cwd=top)
     checked_out_branch = target
 
-    write_shipwright_state(
-        path,
-        {
-            "worktreeName": name,
-            "worktreePath": str(path),
-            "worktreeRole": ORCHESTRATOR_ROLE,
-            "countsTowardCeiling": False,
-            "parentBranch": target,
-            "currentBranch": checked_out_branch,
-            "targetBranch": target,
-            "detachedHead": False,
-            "head": tip,
-            "startedAt": utc_now(),
-        },
+    adopt_orchestrator_worktree(
+        root, top=top, path=path, name=name, target=target, tip=tip
     )
-
-    from wave_state import load_deliver_state, resolve_state_path, save_deliver_state
-
-    top = git_toplevel(root)
-    state_path = resolve_state_path(top, target=target)
-    state_path.parent.mkdir(parents=True, exist_ok=True)
-    state = load_deliver_state(top, target=target)
-    state["orchestratorWorktree"] = {
-        "name": name,
-        "path": str(path),
-        "branch": target,
-        "countsTowardCeiling": False,
-        "detachedHead": False,
-        "head": tip,
-    }
-    save_deliver_state(top, state, target=target)
 
     emit(
         {

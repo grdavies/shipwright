@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
-import subprocess
+import os
 import re
+import subprocess
 import sys
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +20,7 @@ import wave_deliver as wd
 
 DEFAULTS_REL = Path("scripts/test/fixtures/phase-sizing/sizing-defaults.json")
 ADVISORY_HEADING = "## Sizing & Split Suggestions"
+OVERRIDE_DIR_REL = Path(".cursor/sw-sizing-overrides")
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -1045,6 +1049,194 @@ def cmd_persist(root: Path, args: argparse.Namespace) -> int:
         }
     )
 
+
+
+def override_storage_key(root: Path, task_list: Path) -> str:
+    rel = rel_task_list(task_list, root)
+    text = task_list.read_text(encoding="utf-8")
+    fm = wd.parse_frontmatter(text)
+    unit_id = str(fm.get("unit-id") or fm.get("id") or "").strip()
+    if unit_id:
+        safe = re.sub(r"[^a-zA-Z0-9._-]+", "-", unit_id).strip("-")
+        if safe:
+            return safe
+    digest = hashlib.sha256(rel.encode("utf-8")).hexdigest()[:16]
+    return f"task-list-{digest}"
+
+
+def override_path(root: Path, task_list: Path) -> Path:
+    return root / OVERRIDE_DIR_REL / f"{override_storage_key(root, task_list)}.json"
+
+
+def load_sizing_override(root: Path, task_list: Path) -> dict[str, Any] | None:
+    path = override_path(root, task_list)
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def is_agent_dispatch_path() -> bool:
+    """Refuse human-only overrides on autonomous /sw-doc -> /sw-tasks dispatch (PRD 065 R16)."""
+    parent = os.environ.get("SW_DISPATCH_PARENT_COMMAND", "").strip().lower()
+    if parent in {"sw-doc"}:
+        return True
+    if os.environ.get("SW_DOC_ORCHESTRATOR", "").strip().lower() in {"1", "true", "yes"}:
+        return True
+    if os.environ.get("SW_AUTONOMOUS_DISPATCH", "").strip().lower() in {"1", "true", "yes"}:
+        return True
+    chain = os.environ.get("SW_DISPATCH_CHAIN", "").lower()
+    return "sw-doc" in chain and "sw-tasks" in chain
+
+
+def over_threshold_phases(score: dict[str, Any]) -> list[dict[str, Any]]:
+    return [phase for phase in score.get("phases", []) if phase.get("overThreshold")]
+
+
+def split_suggestions_for_phases(phases: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    suggestions: list[dict[str, Any]] = []
+    for phase in phases:
+        split = phase.get("splitSuggestion")
+        if not isinstance(split, dict):
+            continue
+        suggestions.append(
+            {
+                "phase": phase.get("phase"),
+                "title": phase.get("title"),
+                "size": phase.get("size"),
+                "splitSuggestion": split,
+            }
+        )
+    return suggestions
+
+
+def override_is_valid(override: dict[str, Any], *, over_phases: list[dict[str, Any]], task_list_rel: str) -> bool:
+    actor = str(override.get("actor") or "").strip()
+    reason = str(override.get("reason") or "").strip()
+    if not actor or not reason:
+        return False
+    if str(override.get("taskList") or "") not in ("", task_list_rel):
+        return False
+    recorded = override.get("overThresholdPhases")
+    if isinstance(recorded, list) and recorded:
+        current = sorted(str(phase.get("phase")) for phase in over_phases)
+        if sorted(str(item) for item in recorded) != current:
+            return False
+    return True
+
+
+def evaluate_freeze_gate(root: Path, task_list: Path) -> dict[str, Any]:
+    sizing = load_sizing_config(root)
+    score = score_task_list(root, task_list, sizing)
+    over_phases = over_threshold_phases(score)
+    rel = rel_task_list(task_list, root)
+    if not over_phases:
+        return {
+            "verdict": "pass",
+            "action": "phase-sizing-freeze-gate",
+            "taskList": rel,
+            "overThresholdPhases": [],
+        }
+    override = load_sizing_override(root, task_list)
+    if override and override_is_valid(override, over_phases=over_phases, task_list_rel=rel):
+        return {
+            "verdict": "pass",
+            "action": "phase-sizing-freeze-gate",
+            "taskList": rel,
+            "overThresholdPhases": [phase.get("phase") for phase in over_phases],
+            "overrideApplied": {
+                "actor": override.get("actor"),
+                "reason": override.get("reason"),
+                "recordedAt": override.get("recordedAt"),
+            },
+        }
+    return {
+        "verdict": "block",
+        "action": "phase-sizing-freeze-gate",
+        "taskList": rel,
+        "overThresholdPhases": [phase.get("phase") for phase in over_phases],
+        "splitSuggestions": split_suggestions_for_phases(over_phases),
+        "error": (
+            "one or more phases exceed sizing thresholds — split or record a human-attributed override "
+            "via `python3 scripts/phase_sizing.py record-override`"
+        ),
+    }
+
+
+def cmd_freeze_gate(root: Path, args: argparse.Namespace) -> int:
+    task_list = resolve_task_list(root, args.task_list)
+    if not task_list.is_file():
+        emit({"verdict": "fail", "error": f"task list not found: {task_list}"}, 2)
+    result = evaluate_freeze_gate(root, task_list)
+    emit(result, 0 if result.get("verdict") == "pass" else 20)
+
+
+def cmd_record_override(root: Path, args: argparse.Namespace) -> int:
+    if is_agent_dispatch_path():
+        emit(
+            {
+                "verdict": "fail",
+                "action": "phase-sizing-record-override",
+                "error": "sizing override refused on autonomous /sw-doc -> /sw-tasks dispatch paths",
+                "cause": "agent-dispatch-override-denied",
+            },
+            20,
+        )
+    task_list = resolve_task_list(root, args.task_list)
+    if not task_list.is_file():
+        emit({"verdict": "fail", "error": f"task list not found: {task_list}"}, 2)
+    actor = str(getattr(args, "actor", "") or "").strip()
+    reason = str(getattr(args, "reason", "") or "").strip()
+    if not actor or not reason:
+        emit(
+            {
+                "verdict": "fail",
+                "action": "phase-sizing-record-override",
+                "error": "actor and reason are required for sizing override attribution",
+                "cause": "missing-attribution",
+            },
+            20,
+        )
+    score = score_task_list(root, task_list, load_sizing_config(root))
+    over_phases = over_threshold_phases(score)
+    if not over_phases:
+        emit(
+            {
+                "verdict": "fail",
+                "action": "phase-sizing-record-override",
+                "error": "no over-threshold phases — override not applicable",
+            },
+            2,
+        )
+    rel = rel_task_list(task_list, root)
+    payload = {
+        "taskList": rel,
+        "actor": actor,
+        "reason": reason,
+        "recordedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "overThresholdPhases": [phase.get("phase") for phase in over_phases],
+        "splitSuggestions": split_suggestions_for_phases(over_phases),
+    }
+    out_path = override_path(root, task_list)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    try:
+        rel_out = str(out_path.relative_to(root)).replace("\\", "/")
+    except ValueError:
+        rel_out = str(out_path)
+    emit(
+        {
+            "verdict": "pass",
+            "action": "phase-sizing-record-override",
+            "taskList": rel,
+            "path": rel_out,
+            "overThresholdPhases": payload["overThresholdPhases"],
+        }
+    )
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="phase_sizing.py")
     parser.add_argument("--root", default=".", help="Repository root")
@@ -1065,6 +1257,15 @@ def build_parser() -> argparse.ArgumentParser:
     persist = sub.add_parser("persist", help="Write redacted sizing JSON summary to path (R31)")
     persist.add_argument("task_list", help="Path to task-list markdown")
     persist.add_argument("--out", required=True, help="Output path for sizing JSON summary")
+    freeze_gate = sub.add_parser("freeze-gate", help="Blocking pre-freeze sizing gate (R16)")
+    freeze_gate.add_argument("task_list", help="Path to task-list markdown")
+    record_override = sub.add_parser(
+        "record-override",
+        help="Record human-attributed durable sizing override (R16)",
+    )
+    record_override.add_argument("task_list", help="Path to task-list markdown")
+    record_override.add_argument("--actor", required=True, help="Human actor attribution")
+    record_override.add_argument("--reason", required=True, help="Override rationale")
     return parser
 
 
@@ -1083,6 +1284,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_strip_advisory(root, args)
     if args.command == "persist":
         return cmd_persist(root, args)
+    if args.command == "freeze-gate":
+        return cmd_freeze_gate(root, args)
+    if args.command == "record-override":
+        return cmd_record_override(root, args)
     emit({"verdict": "fail", "error": f"unknown command {args.command!r}"}, 2)
     return 2
 

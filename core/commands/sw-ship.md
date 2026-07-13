@@ -264,6 +264,27 @@ Before PR create/update, capture a schema-valid `## Decision log` JSON block on 
 - All **merge-gate** truth from `check-gate.py` — verification-gate is pre-CI local evidence only.
 - `inconclusive` with `no-baseline` / `unattributed` logs and continues; `missing-required` halts the ship chain.
 
+## Ship-loop driver (PRD 065)
+
+Interactive `/sw-ship` and phase-mode `/sw-deliver` dispatch share `scripts/ship_loop.py` — one driver, one
+evidence contract:
+
+| Mode | Entry | Evidence root | Merge pause |
+| --- | --- | --- | --- |
+| Interactive | `/sw-ship` (no `--phase-mode`) | `.cursor/sw-ship-runs/<phase>/` | Retained — "ready to merge — your call" |
+| Phase-mode | `/sw-deliver` `dispatch-ship` / `dispatch-batch` | `.cursor/sw-deliver-runs/<phase>/gate-evidence/` | Suppressed — `merge-ready-green` only |
+
+- **Driver delegation** — `wave.py` interactive ship and deliver `dispatch-ship` both invoke
+  `ship_loop.py <worktree> drive --phase <slug>`; mechanical steps drain in-process, agent steps surface
+  `awaitAgent` to the conductor.
+- **Evidence enforcement** — `merge-ready-green` is refused unless every mandatory gate has a
+  binding-valid record per its mode (`merge_ready_enforcement.py` / `gate_evidence.py`). Missing, stale,
+  head-mismatched, or forged evidence fails closed with a named cause.
+- **Interactive parity** — no compatibility window: identical `merge-ready-green` refusal semantics in both
+  modes; interactive runs do **not** emit a deliver terminal acceptance record.
+- **Bypass flags** — `--fast` / `--skip-local` / `--skip-simplify` skip only optional/advisory gates; each
+  skip writes an explicit record; no combination suppresses a mandatory gate.
+
 ## Phase-mode contract (`--phase-mode` / `SW_PHASE_MODE`)
 
 When `/sw-deliver` dispatches `/sw-ship` for a phase, it MUST invoke with `--phase-mode` or set `SW_PHASE_MODE=1`.

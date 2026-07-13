@@ -19,3 +19,20 @@ capability:
 # Dispatch inline execute posture
 
 Inline (no subagent) when ≤3 declared `file_paths` and not `background_phase` (execute discipline).
+
+## Phase-mode `dispatch-ship` handshake (PRD 065)
+
+`dispatch-ship` is a **mechanical** deliver-loop action — not a delegated Task. The durable driver
+invokes `ship_loop.py drive` in the phase worktree and only surfaces `awaitAgent: true` when the
+ship-loop driver reaches an agent-classified chain step.
+
+| Layer | Responsibility |
+| --- | --- |
+| `wave_deliver_loop.py` | Classifies `dispatch-ship` / `dispatch-batch` as `MECHANICAL_ACTIONS`; drains inline until `awaitAgent`, `awaitInFlight`, or halt |
+| `ship_loop.py` | Mechanical gate handlers, commit/PR/CI steps; emits `awaitAgent` + step contract for agent steps only |
+| Conductor | Consumes `awaitAgent` by running `/sw-ship --phase-mode` **in-turn** in the phase worktree (`SW_PHASE_MODE=1`, `SW_PHASE_SLUG`, `SW_RUN_DIR`); re-invokes `deliver-loop` after each agent step |
+
+**Never** dispatch `dispatch-ship` as a background Task — `dispatch-check.py` fails closed unless the
+action is `dispatch-batch`. The inline posture here applies to conductor-consumed agent steps after the
+mechanical driver hands off; it does not reclassify `dispatch-ship` itself as an agent action.
+

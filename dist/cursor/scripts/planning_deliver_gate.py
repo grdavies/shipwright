@@ -19,6 +19,38 @@ import planning_graph as pg
 import planning_park as park
 import planning_paths as pp
 
+PRD_064_UNIT_ID = "064-prd-agentic-quality-patterns-and-standards-conformance"
+HARD_DELIVER_PREREQUISITES: dict[str, tuple[str, ...]] = {
+    "065-prd-turn-independent-ship-loop-and-gate-evidence": (
+        PRD_064_UNIT_ID,
+    ),
+}
+
+
+def hard_prerequisite_units(unit_id: str) -> tuple[str, ...]:
+    return HARD_DELIVER_PREREQUISITES.get(unit_id, ())
+
+
+def unmet_hard_prerequisites(
+    root: Path,
+    unit_id: str,
+    by_id: dict[str, pg.GraphUnit],
+) -> list[str]:
+    from planning_reconcile import resolve_git_complete_unit_ids
+
+    blocking: list[str] = []
+    git_complete = resolve_git_complete_unit_ids(root, list(by_id.values()))
+    for prereq in hard_prerequisite_units(unit_id):
+        if prereq in git_complete:
+            continue
+        dep = by_id.get(prereq)
+        if dep and dep.status in pg.SATISFIED_STATUSES:
+            continue
+        blocking.append(prereq)
+    return blocking
+
+
+
 RUN_START_INELIGIBLE = frozenset({"superseded", "cancelled"})
 SOFT_ENFORCE_EXIT = 30
 GATE_FAIL_EXIT = 20
@@ -281,7 +313,11 @@ def dependency_gate(root: Path, task_path: Path, *, override: bool = False, over
     if unit is None:
         return handle_unit_not_in_graph(root, task_path, action="dependency-gate")
     _, by_id = units_with_derived_status(root)
-    blocking = pg.unmet_dependencies(unit, by_id)
+    blocking = list(pg.unmet_dependencies(unit, by_id))
+    hard = unmet_hard_prerequisites(root, unit.id, by_id)
+    for prereq in hard:
+        if prereq not in blocking:
+            blocking.append(prereq)
     if not blocking:
         return {"verdict": "pass", "action": "dependency-gate", "unitId": unit.id}
     if override:
