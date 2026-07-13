@@ -547,6 +547,132 @@ def overflow_chunk_policy() -> dict[str, Any]:
     }
 
 
+
+LINEAR_PROVIDER_DOC_REL = Path("core/providers/issues/linear.md")
+WORKFLOWS_DOC_REL = Path("docs/guides/workflows.md")
+
+STAGE1_DOGFOOD_DOC_MARKERS: tuple[str, ...] = (
+    "## Stage-1 dogfood acceptance (R25)",
+    "### Volume floors",
+    "### R1 saved views",
+    "### Naming and archival",
+    "### Coexistence (shared Teams)",
+    "MVP dogfood auth",
+    "api-key",
+)
+
+OAUTH_DOCS_MARKERS: tuple[str, ...] = (
+    "## OAuth secondary auth mode (R23)",
+    "### MVP dogfood vs stage-4 gate",
+    "### OAuth scopes",
+    "### Token storage and refresh (operator-local)",
+    "issues:create",
+    "comments:create",
+    "operator-local",
+    "refresh",
+    "stage-4",
+)
+
+DOCS_CURRENCY_INVENTORY: tuple[tuple[str, str], ...] = (
+    ("core/providers/issues/linear.md", "linear-provider-spec"),
+    ("core/providers/issues/CAPABILITIES.md", "issues-capabilities"),
+    ("core/sw-reference/config.schema.json", "config-schema"),
+    ("core/sw-reference/workflow.config.example.json", "workflow-config-example-core"),
+    (".sw/workflow.config.example.json", "workflow-config-example-sw"),
+    ("docs/guides/workflows.md", "workflows-guide"),
+    ("docs/guides/configuration.md", "configuration-guide"),
+    ("docs/guides/commands.md", "commands-guide"),
+    ("core/providers/planning-store/issue-store.md", "issue-store-invariants"),
+    ("scripts/planning_github_projects_v2.py", "projects-projection-notes"),
+)
+
+WORKFLOWS_R30_MARKERS: tuple[str, ...] = (
+    "## Linear adapter documentation currency (PRD 066 R30)",
+    "docs-currency-gate",
+    "Stage promotion gates (M7/A)",
+)
+
+
+def resolve_linear_provider_doc(root: Path) -> Path:
+    """Resolve core/providers/issues/linear.md from repo root."""
+    candidate = (root / LINEAR_PROVIDER_DOC_REL).resolve()
+    if candidate.is_file():
+        return candidate
+    raise FileNotFoundError(f"missing linear provider doc: {LINEAR_PROVIDER_DOC_REL}")
+
+
+def linear_provider_doc_text(root: Path) -> str:
+    return resolve_linear_provider_doc(root).read_text(encoding="utf-8")
+
+
+def _doc_marker_gate(
+    doc: str,
+    markers: tuple[str, ...],
+    *,
+    gate: str,
+) -> dict[str, Any]:
+    missing = [marker for marker in markers if marker not in doc]
+    if missing:
+        return {
+            "verdict": "fail",
+            "gate": gate,
+            "error": "missing-doc-markers",
+            "missing": missing,
+        }
+    return {"verdict": "ok", "gate": gate, "markerCount": len(markers)}
+
+
+def stage1_dogfood_checklist_gate(root: Path) -> dict[str, Any]:
+    """R25 — stage-1 dogfood checklist documented in linear.md."""
+    doc = linear_provider_doc_text(root)
+    result = _doc_marker_gate(doc, STAGE1_DOGFOOD_DOC_MARKERS, gate="stage1-dogfood-gate")
+    if result["verdict"] == "ok":
+        result["checklist"] = {
+            "volumeFloors": True,
+            "r1SavedViews": True,
+            "namingArchival": True,
+            "coexistence": True,
+            "mvpAuthMode": "api-key",
+        }
+    return result
+
+
+def oauth_docs_gate(root: Path) -> dict[str, Any]:
+    """R23 — OAuth secondary mode fully documented before oauth advertising / stage-4."""
+    doc = linear_provider_doc_text(root)
+    result = _doc_marker_gate(doc, OAUTH_DOCS_MARKERS, gate="oauth-docs-gate")
+    if result["verdict"] == "ok":
+        result["mvpDogfoodAuth"] = "api-key"
+        result["storage"] = oauth_token_storage_guidance()
+    return result
+
+
+def docs_currency_gate(root: Path) -> dict[str, Any]:
+    """R30 — documentation currency inventory paths exist + workflows checklist present."""
+    missing_paths: list[str] = []
+    for rel, _label in DOCS_CURRENCY_INVENTORY:
+        if not (root / rel).is_file():
+            missing_paths.append(rel)
+    workflows_path = root / WORKFLOWS_DOC_REL
+    workflows_text = workflows_path.read_text(encoding="utf-8") if workflows_path.is_file() else ""
+    missing_markers = [m for m in WORKFLOWS_R30_MARKERS if m not in workflows_text]
+    if missing_paths or missing_markers:
+        return {
+            "verdict": "fail",
+            "gate": "docs-currency-gate",
+            "error": "docs-currency-incomplete",
+            "missingPaths": missing_paths,
+            "missingWorkflowMarkers": missing_markers,
+            "inventory": [rel for rel, _ in DOCS_CURRENCY_INVENTORY],
+        }
+    return {
+        "verdict": "ok",
+        "gate": "docs-currency-gate",
+        "inventory": [rel for rel, _ in DOCS_CURRENCY_INVENTORY],
+        "stageGates": ["stage1-dogfood-gate", "oauth-docs-gate"],
+    }
+
+
 def lcd_verb_names() -> tuple[str, ...]:
     return ADAPTER_VERBS
 
@@ -1266,7 +1392,7 @@ class LinearIssuesClient:
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     if len(args) < 2:
-        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|comments-relations-surface>"}))
+        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|stage1-dogfood-gate|oauth-docs-gate|docs-currency-gate|comments-relations-surface>"}))
         raise SystemExit(2)
     root = Path(args[0]).resolve()
     cfg = load_workflow_config(root)
@@ -1279,6 +1405,12 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(lock_capability(), indent=2))
     elif cmd == "overflow-policy":
         print(json.dumps(overflow_chunk_policy(), indent=2))
+    elif cmd == "stage1-dogfood-gate":
+        print(json.dumps(stage1_dogfood_checklist_gate(root), indent=2))
+    elif cmd == "oauth-docs-gate":
+        print(json.dumps(oauth_docs_gate(root), indent=2))
+    elif cmd == "docs-currency-gate":
+        print(json.dumps(docs_currency_gate(root), indent=2))
     elif cmd == "comments-relations-surface":
         issue_id = args[2] if len(args) > 2 else ""
         if not issue_id:
