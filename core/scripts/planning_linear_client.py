@@ -19,11 +19,15 @@ from planning_canonical import (
     MARKER_UNIT_ID,
     SOURCE_REMOVED_LABEL,
     CommentRecord,
+    RelationRecord,
     artifact_type_from_labels,
+    build_comment_threads,
     chunk_body_if_needed,
     compute_etag,
     parse_body_marker,
     project_label,
+    serialize_comment_facade,
+    serialize_relation_facade,
     type_label,
     unit_id_from_labels,
 )
@@ -64,7 +68,9 @@ updatedAt
 priority
 state { id name type }
 labels { nodes { id name } }
-comments { nodes { id body createdAt } }
+comments { nodes { id body createdAt parent { id } resolvedAt resolvingComment { id } } }
+relations { nodes { id type relatedIssue { id identifier } } }
+inverseRelations { nodes { id type issue { id identifier } } }
 """.strip()
 
 ISSUE_CREATE_MUTATION = f"""
@@ -572,6 +578,22 @@ def _label_names_from_issue(payload: dict[str, Any]) -> list[str]:
     return out
 
 
+def _comment_parent_id(raw: dict[str, Any]) -> str:
+    parent = raw.get("parent")
+    if isinstance(parent, dict) and parent.get("id"):
+        return str(parent["id"])
+    parent_id = raw.get("parentId")
+    return str(parent_id) if parent_id else ""
+
+
+def _comment_resolving_id(raw: dict[str, Any]) -> str:
+    resolving = raw.get("resolvingComment")
+    if isinstance(resolving, dict) and resolving.get("id"):
+        return str(resolving["id"])
+    resolving_id = raw.get("resolvingCommentId")
+    return str(resolving_id) if resolving_id else ""
+
+
 def _parse_comment(raw: dict[str, Any]) -> CommentRecord:
     body = str(raw.get("body") or "")
     markers: list[str] = []
@@ -588,6 +610,9 @@ def _parse_comment(raw: dict[str, Any]) -> CommentRecord:
         body=body,
         created_at=str(raw.get("createdAt") or raw.get("created_at") or ""),
         markers=markers,
+        parent_id=_comment_parent_id(raw),
+        resolved_at=str(raw.get("resolvedAt") or raw.get("resolved_at") or ""),
+        resolving_comment_id=_comment_resolving_id(raw),
     )
 
 
@@ -600,6 +625,78 @@ def _comments_from_issue(payload: dict[str, Any]) -> list[CommentRecord]:
     else:
         nodes = []
     return [_parse_comment(item) for item in nodes if isinstance(item, dict)]
+
+
+def _relation_nodes(block: Any) -> list[dict[str, Any]]:
+    if isinstance(block, dict):
+        nodes = block.get("nodes") or []
+    elif isinstance(block, list):
+        nodes = block
+    else:
+        nodes = []
+    return [item for item in nodes if isinstance(item, dict)]
+
+
+def _relations_from_issue(payload: dict[str, Any]) -> list[RelationRecord]:
+    """R17 — outbound + inverse (bidirectional) native IssueRelation edges."""
+    issue_id = str(payload.get("id") or "")
+    relations: list[RelationRecord] = []
+    for raw in _relation_nodes(payload.get("relations")):
+        related = raw.get("relatedIssue") if isinstance(raw.get("relatedIssue"), dict) else {}
+        target_id = str(related.get("id") or "")
+        if not target_id:
+            continue
+        relations.append(
+            RelationRecord(
+                id=str(raw.get("id", "")),
+                relation_type=str(raw.get("type") or "").lower(),
+                source_issue_id=issue_id,
+                target_issue_id=target_id,
+                direction="outbound",
+            )
+        )
+    for raw in _relation_nodes(payload.get("inverseRelations")):
+        source = raw.get("issue") if isinstance(raw.get("issue"), dict) else {}
+        source_id = str(source.get("id") or "")
+        if not source_id:
+            continue
+        relations.append(
+            RelationRecord(
+                id=str(raw.get("id", "")),
+                relation_type=str(raw.get("type") or "").lower(),
+                source_issue_id=source_id,
+                target_issue_id=issue_id,
+                direction="inbound",
+            )
+        )
+    return relations
+
+
+def linear_comments_relations_surface(
+    payload: dict[str, Any],
+    *,
+    project_key: str = "",
+) -> dict[str, Any]:
+    """R17 — resolved/unresolved threads + bidirectional relations for facade reads.
+
+    Does not claim gap-077 inbound authoring acceptance — comment_sync remains
+  separate and flat-provider scoped until a later gap closes authoring parity.
+    """
+    record = _record_from_issue(payload, project_key=project_key)
+    comments = list(record.comments)
+    relations = list(record.relations)
+    threads = build_comment_threads(comments)
+    return {
+        "verdict": "ok",
+        "action": "linear-comments-relations-surface",
+        "provider": "linear",
+        "issueId": record.id,
+        "comments": [serialize_comment_facade(comment) for comment in comments],
+        "threads": threads,
+        "relations": [serialize_relation_facade(relation) for relation in relations],
+        "gap077AuthoringAccepted": False,
+        "authoringNote": "gap-077 comment authoring sync not claimed in PRD 066 phase 8",
+    }
 
 
 def _native_links_from_comments(comments: list[CommentRecord]) -> list[dict[str, Any]]:
@@ -664,6 +761,7 @@ def _record_from_issue(
         state=_state_to_lcd(payload),
         labels=sorted(set(labels)),
         comments=comments,
+        relations=_relations_from_issue(payload),
         native_links=resolved_links,
         locked=locked,
         updated_at=updated,
@@ -1051,6 +1149,59 @@ class LinearIssuesClient:
         out.sort(key=lambda r: r.number)
         return out
 
+    def comments_relations_surface(self, issue_id: str) -> dict[str, Any]:
+        """R17 — facade read surface for threaded comments + relations."""
+        if self._fixture is not None:
+            record = self._fixture.get(issue_id)
+            payload = {
+                "id": record.id,
+                "identifier": f"LIN-{record.number}" if record.number else record.id,
+                "description": record.body,
+                "labels": {"nodes": [{"name": label} for label in record.labels]},
+                "comments": {
+                    "nodes": [
+                        {
+                            "id": comment.id,
+                            "body": comment.body,
+                            "createdAt": comment.created_at,
+                            "parent": {"id": comment.parent_id} if comment.parent_id else None,
+                            "resolvedAt": comment.resolved_at or None,
+                            "resolvingComment": (
+                                {"id": comment.resolving_comment_id}
+                                if comment.resolving_comment_id
+                                else None
+                            ),
+                        }
+                        for comment in record.comments
+                    ]
+                },
+                "relations": {
+                    "nodes": [
+                        {
+                            "id": relation.id,
+                            "type": relation.relation_type,
+                            "relatedIssue": {"id": relation.target_issue_id},
+                        }
+                        for relation in record.relations
+                        if relation.direction == "outbound"
+                    ]
+                },
+                "inverseRelations": {
+                    "nodes": [
+                        {
+                            "id": relation.id,
+                            "type": relation.relation_type,
+                            "issue": {"id": relation.source_issue_id},
+                        }
+                        for relation in record.relations
+                        if relation.direction == "inbound"
+                    ]
+                },
+            }
+            return linear_comments_relations_surface(payload, project_key=self.project_key)
+        payload = self._issue_payload(issue_id)
+        return linear_comments_relations_surface(payload, project_key=self.project_key)
+
     def mark_tombstone(self, issue_id: str) -> None:
         if self._fixture is not None:
             self._fixture.mark_tombstone(issue_id)
@@ -1115,7 +1266,7 @@ class LinearIssuesClient:
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     if len(args) < 2:
-        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy>"}))
+        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|comments-relations-surface>"}))
         raise SystemExit(2)
     root = Path(args[0]).resolve()
     cfg = load_workflow_config(root)
@@ -1128,6 +1279,13 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(lock_capability(), indent=2))
     elif cmd == "overflow-policy":
         print(json.dumps(overflow_chunk_policy(), indent=2))
+    elif cmd == "comments-relations-surface":
+        issue_id = args[2] if len(args) > 2 else ""
+        if not issue_id:
+            print(json.dumps({"verdict": "fail", "error": "missing issue id"}))
+            raise SystemExit(2)
+        client = LinearIssuesClient(root, cfg=cfg)
+        print(json.dumps(client.comments_relations_surface(issue_id), indent=2))
     else:
         print(json.dumps({"verdict": "fail", "error": f"unknown command: {cmd}"}))
         raise SystemExit(2)
