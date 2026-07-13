@@ -898,6 +898,205 @@ def materialize_gap_draft(
     }
 
 
+
+# PRD 066 R22 — gap-079 / planning#267 absorb linkage
+PRD_066_UNIT_ID = "066-prd-linear-planning-store-provider-and-operator-projection"
+PRD_066_NUMBER = "066"
+GAP_079_UNIT_ID = "gap-079-add-linear-as-a-new-planning-store-issue-trackin"
+GAP_079_PLANNING_ISSUE_REF = "planning#267"
+
+
+def _gap_matches_absorb_target(candidate: str, gap_unit_id: str) -> bool:
+    cand = candidate.strip()
+    if not cand:
+        return False
+    if cand == gap_unit_id:
+        return True
+    if gap_unit_id.startswith("gap-079") and (
+        cand == "gap-079" or cand.startswith("gap-079-")
+    ):
+        return True
+    if cand.startswith("gap-079") and gap_unit_id.startswith("gap-079"):
+        return True
+    return False
+
+
+def _parse_absorbs_frontmatter(raw: str) -> list[str]:
+    return ps._parse_absorbs_targets(raw or "")
+
+
+def _merge_prd_absorbs_frontmatter(content: str, gap_unit_id: str) -> tuple[str, bool]:
+    from gap_backlog import update_frontmatter_field
+    from planning_migrate_issue_store import parse_frontmatter_fields
+
+    fm = parse_frontmatter_fields(content)
+    absorbs = _parse_absorbs_frontmatter(fm.get("absorbs", ""))
+    if any(_gap_matches_absorb_target(item, gap_unit_id) for item in absorbs):
+        return content, False
+    absorbs.append(gap_unit_id)
+    new_content = update_frontmatter_field(
+        content, "absorbs", "[" + ", ".join(absorbs) + "]"
+    )
+    return new_content, True
+
+
+def _merge_gap_absorb_schedule(
+    content: str,
+    *,
+    prd_unit_id: str,
+    prd_number: str,
+    planning_issue: str,
+) -> tuple[str, bool]:
+    from gap_backlog import schedule_label, update_frontmatter_field
+    from planning_migrate_issue_store import parse_frontmatter_fields
+
+    schedule = schedule_label(prd_number)
+    fm = parse_frontmatter_fields(content)
+    changed = False
+    new_content = content
+    status = str(fm.get("status") or "open").strip().lower()
+    if status == "open":
+        new_content = update_frontmatter_field(new_content, "status", "scheduled")
+        changed = True
+    if str(fm.get("schedule") or "").strip() != schedule:
+        new_content = update_frontmatter_field(new_content, "schedule", schedule)
+        changed = True
+    if str(fm.get("absorbed-by") or fm.get("absorbed_by") or "").strip() != prd_unit_id:
+        new_content = update_frontmatter_field(new_content, "absorbed-by", prd_unit_id)
+        changed = True
+    related = str(fm.get("related") or "").strip()
+    if planning_issue and planning_issue not in related:
+        new_content = update_frontmatter_field(new_content, "related", planning_issue)
+        changed = True
+    return new_content, changed
+
+
+def _resolve_frozen_prd_path(root: Path, prd_path: Path | None) -> Path:
+    if prd_path is not None:
+        return prd_path
+    materialized = (
+        root
+        / ".cursor/planning-materialized/docs/prds/066-linear-planning-store-provider-and-operator-projection/066-prd-linear-planning-store-provider-and-operator-projection.md"
+    )
+    if materialized.is_file():
+        return materialized
+    return pp.git_root(root) / ps._default_body_path(PRD_066_UNIT_ID, "prd")
+
+
+def record_absorb_linkage_066(
+    root: Path,
+    *,
+    prd_path: Path | None = None,
+    tasks_path: Path | None = None,
+    gap_unit_id: str = GAP_079_UNIT_ID,
+    planning_issue: str = GAP_079_PLANNING_ISSUE_REF,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Record PRD 066 → gap-079 absorb linkage with schedule flip + store write-through (R22)."""
+    _ = tasks_path
+    cfg = ps.load_workflow_config(root)
+    prd_body_path = ps._default_body_path(PRD_066_UNIT_ID, "prd")
+    gap_body_path = ps._default_body_path(gap_unit_id, "gap")
+    resolved_prd = _resolve_frozen_prd_path(root, prd_path)
+
+    try:
+        from planning_migrate_issue_store import (
+            issue_store_effective,
+            refresh_gap_backlog_projection,
+            sync_gap_issue_labels,
+        )
+    except ImportError as exc:
+        return {
+            "verdict": "fail",
+            "action": "record-absorb-linkage-066",
+            "error": f"migration-engine-unavailable: {exc}",
+        }
+
+    if not issue_store_effective(root, cfg):
+        return {
+            "verdict": "skipped",
+            "action": "record-absorb-linkage-066",
+            "reason": "not-issue-store",
+        }
+
+    backend = ps.get_backend(root, cfg, override="issue-store")
+    prd_fetch = backend.get(PRD_066_UNIT_ID, prd_body_path)
+    prd_content = prd_fetch.content if prd_fetch.verdict == "ok" and prd_fetch.content else None
+    if prd_content is None and resolved_prd.is_file():
+        prd_content = resolved_prd.read_text(encoding="utf-8")
+    if not prd_content:
+        return {
+            "verdict": "fail",
+            "action": "record-absorb-linkage-066",
+            "error": "frozen-prd-missing",
+            "prdUnitId": PRD_066_UNIT_ID,
+        }
+
+    gap_fetch = backend.get(gap_unit_id, gap_body_path)
+    gap_content = gap_fetch.content if gap_fetch.verdict == "ok" and gap_fetch.content else None
+    if not gap_content:
+        return {
+            "verdict": "fail",
+            "action": "record-absorb-linkage-066",
+            "error": "gap-unit-missing",
+            "gapUnitId": gap_unit_id,
+        }
+
+    prd_updated, prd_changed = _merge_prd_absorbs_frontmatter(prd_content, gap_unit_id)
+    gap_updated, gap_changed = _merge_gap_absorb_schedule(
+        gap_content,
+        prd_unit_id=PRD_066_UNIT_ID,
+        prd_number=PRD_066_NUMBER,
+        planning_issue=planning_issue,
+    )
+
+    if dry_run:
+        return {
+            "verdict": "ok",
+            "action": "record-absorb-linkage-066",
+            "dryRun": True,
+            "prdUnitId": PRD_066_UNIT_ID,
+            "gapUnitId": gap_unit_id,
+            "planningIssue": planning_issue,
+            "wouldUpdate": {"prd": prd_changed, "gap": gap_changed},
+        }
+
+    results: dict[str, Any] = {
+        "prdUnitId": PRD_066_UNIT_ID,
+        "gapUnitId": gap_unit_id,
+        "planningIssue": planning_issue,
+        "updates": {},
+    }
+    if prd_changed:
+        put_prd = backend.put(PRD_066_UNIT_ID, prd_body_path, prd_updated)
+        if put_prd.verdict not in ("ok", "deferred"):
+            return {
+                "verdict": "fail",
+                "action": "record-absorb-linkage-066",
+                "error": "prd-put-failed",
+                "reason": put_prd.reason,
+            }
+        results["updates"]["prd"] = {"changed": True, "hash": put_prd.hash}
+    else:
+        results["updates"]["prd"] = {"changed": False}
+
+    if gap_changed:
+        put_gap = backend.put(gap_unit_id, gap_body_path, gap_updated)
+        if put_gap.verdict not in ("ok", "deferred"):
+            return {
+                "verdict": "fail",
+                "action": "record-absorb-linkage-066",
+                "error": "gap-put-failed",
+                "reason": put_gap.reason,
+            }
+        results["updates"]["gap"] = {"changed": True, "hash": put_gap.hash}
+    else:
+        results["updates"]["gap"] = {"changed": False}
+    sync_gap_issue_labels(root, gap_unit_id, gap_updated, cfg)
+    refresh_gap_backlog_projection(root, cfg, apply=True)
+    return {"verdict": "ok", "action": "record-absorb-linkage-066", **results}
+
+
 def parse_flags(rest: list[str]) -> dict[str, Any]:
     out: dict[str, Any] = {"dry_run": False}
     i = 0
@@ -945,6 +1144,18 @@ def parse_flags(rest: list[str]) -> dict[str, Any]:
         elif tok == "--stale-days" and i + 1 < len(rest):
             out["stale_days"] = int(rest[i + 1])
             i += 2
+        elif tok == "--prd-path" and i + 1 < len(rest):
+            out["prd_path"] = rest[i + 1]
+            i += 2
+        elif tok == "--tasks-path" and i + 1 < len(rest):
+            out["tasks_path"] = rest[i + 1]
+            i += 2
+        elif tok == "--gap-unit-id" and i + 1 < len(rest):
+            out["gap_unit_id"] = rest[i + 1]
+            i += 2
+        elif tok == "--planning-issue" and i + 1 < len(rest):
+            out["planning_issue"] = rest[i + 1]
+            i += 2
         else:
             i += 1
     return out
@@ -955,7 +1166,7 @@ def main(argv: list[str] | None = None) -> None:
     if len(args) < 2:
         fail(
             "usage: planning_gap_capture.py <repo-root> "
-            "<capture|confirm|materialize|materialize-draft|draft-inbox-list|validate-enrichment|capture-verify-override> [options]"
+"<capture|confirm|materialize|materialize-draft|draft-inbox-list|validate-enrichment|capture-verify-override|record-absorb-linkage> [options]"
         )
     root = Path(args[0]).resolve()
     command = args[1]
@@ -1068,6 +1279,19 @@ def main(argv: list[str] | None = None) -> None:
         projection = refresh_gap_backlog_projection(root, apply=not bool(flags.get("dry_run")))
         sunset = try_sunset_gap_backlog_projection(root, apply=not bool(flags.get("dry_run")))
         emit({"verdict": "pass", "action": "refresh-projection", "projection": projection, "sunset": sunset})
+
+    if command == "record-absorb-linkage":
+        prd_path = Path(flags["prd_path"]).resolve() if flags.get("prd_path") else None
+        tasks_path = Path(flags["tasks_path"]).resolve() if flags.get("tasks_path") else None
+        out = record_absorb_linkage_066(
+            root,
+            prd_path=prd_path,
+            tasks_path=tasks_path,
+            gap_unit_id=str(flags.get("gap_unit_id") or GAP_079_UNIT_ID),
+            planning_issue=str(flags.get("planning_issue") or GAP_079_PLANNING_ISSUE_REF),
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit(out, 0 if out.get("verdict") in {"ok", "skipped"} else 20)
 
     fail(f"unknown command: {command}")
 

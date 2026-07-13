@@ -5078,6 +5078,130 @@ def _optional(args: list[str], flag: str) -> str | None:
 
 
 PRD_061_DEPENDS_TARGET = "061-prd-planning-store-interface-architecture"
+
+# PRD 066 R22 — gap-079 absorb linkage verification
+PRD_066_ABSORB_UNIT_ID = "066-prd-linear-planning-store-provider-and-operator-projection"
+PRD_066_ABSORB_NUMBER = "066"
+GAP_079_ABSORB_UNIT_ID = "gap-079-add-linear-as-a-new-planning-store-issue-trackin"
+GAP_079_PLANNING_ISSUE_REF = "planning#267"
+
+
+def _gap_absorb_target_match(candidate: str, gap_unit_id: str) -> bool:
+    cand = candidate.strip()
+    if not cand:
+        return False
+    if cand == gap_unit_id:
+        return True
+    if gap_unit_id.startswith("gap-079") and (
+        cand == "gap-079" or cand.startswith("gap-079-")
+    ):
+        return True
+    if cand.startswith("gap-079") and gap_unit_id.startswith("gap-079"):
+        return True
+    return False
+
+
+def verify_absorb_linkage_066(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    prd_unit_id: str = PRD_066_ABSORB_UNIT_ID,
+    gap_unit_id: str = GAP_079_ABSORB_UNIT_ID,
+    planning_issue: str = GAP_079_PLANNING_ISSUE_REF,
+) -> dict[str, Any]:
+    """Verify gap-079 absorb linkage via store get evidence (PRD 066 R22)."""
+    from gap_backlog import schedule_label
+    from planning_migrate_issue_store import (
+        gap_unit_ids_scheduled_for_prd,
+        issue_store_effective,
+        parse_frontmatter_fields,
+    )
+
+    if not issue_store_effective(root, cfg):
+        return {
+            "verdict": "skipped",
+            "action": "verify-absorb-linkage-066",
+            "reason": "not-issue-store",
+        }
+
+    backend = get_backend(root, cfg, override="issue-store")
+    prd_body_path = _default_body_path(prd_unit_id, "prd")
+    gap_body_path = _default_body_path(gap_unit_id, "gap")
+    prd_fetch = backend.get(prd_unit_id, prd_body_path)
+    gap_fetch = backend.get(gap_unit_id, gap_body_path)
+    if prd_fetch.verdict != "ok" or not prd_fetch.content:
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-linkage-066",
+            "error": "prd-missing",
+            "prdUnitId": prd_unit_id,
+        }
+    if gap_fetch.verdict != "ok" or not gap_fetch.content:
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-linkage-066",
+            "error": "gap-missing",
+            "gapUnitId": gap_unit_id,
+        }
+
+    prd_fm = parse_frontmatter_fields(prd_fetch.content)
+    gap_fm = parse_frontmatter_fields(gap_fetch.content)
+    absorbs = _parse_absorbs_targets(prd_fm.get("absorbs", ""))
+    prd_absorbs_gap = any(_gap_absorb_target_match(item, gap_unit_id) for item in absorbs)
+    schedule = schedule_label(PRD_066_ABSORB_NUMBER)
+    gap_scheduled = str(gap_fm.get("status") or "").lower() == "scheduled"
+    gap_schedule = str(gap_fm.get("schedule") or "").strip() == schedule
+    absorbed_by = str(gap_fm.get("absorbed-by") or gap_fm.get("absorbed_by") or "").strip()
+    gap_absorbed_by_prd = absorbed_by == prd_unit_id
+    related = str(gap_fm.get("related") or "")
+    planning_ref_ok = planning_issue in related
+    scheduled_ids = gap_unit_ids_scheduled_for_prd(root, PRD_066_ABSORB_NUMBER, cfg)
+    label_schedule_ok = gap_unit_id in scheduled_ids
+
+    checks = {
+        "prdAbsorbsGap": prd_absorbs_gap,
+        "gapScheduled": gap_scheduled,
+        "gapScheduleLabel": gap_schedule,
+        "gapAbsorbedByPrd": gap_absorbed_by_prd,
+        "planningIssueRef": planning_ref_ok,
+        "issueStoreScheduleLabel": label_schedule_ok,
+    }
+    ok = all(checks.values())
+    return {
+        "verdict": "ok" if ok else "fail",
+        "action": "verify-absorb-linkage-066",
+        "prdUnitId": prd_unit_id,
+        "gapUnitId": gap_unit_id,
+        "planningIssue": planning_issue,
+        "checks": checks,
+    }
+
+
+def doctor_absorb_linkage_066(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Doctor hook for PRD 066 gap-079 absorb linkage (R22)."""
+    result = verify_absorb_linkage_066(root, cfg)
+    if result.get("verdict") == "skipped":
+        return {
+            "verdict": "pass",
+            "action": "doctor-absorb-linkage-066",
+            "skipped": True,
+            "reason": result.get("reason"),
+        }
+    if result.get("verdict") != "ok":
+        return {
+            "verdict": "fail",
+            "action": "doctor-absorb-linkage-066",
+            "error": "absorb-linkage-incomplete",
+            "evidence": result,
+        }
+    return {
+        "verdict": "pass",
+        "action": "doctor-absorb-linkage-066",
+        "checks": ["gap-079-absorbed-by-prd-066"],
+        "evidence": result,
+    }
+
+
 GAP_PREREQ_NUMBERS = frozenset({"078", "079"})
 ABSORB_GAP_NUMBERS = frozenset({"077", "104", "109"})
 PRD_060_GAP_ABSORB_DENY = frozenset({"081", "096", "099", "100", "105", "112"})
@@ -5283,6 +5407,7 @@ def main() -> None:
         "probe-projection",
         "write-back-gap-prereqs",
         "resolve-absorbed-gaps-061",
+        "verify-absorb-linkage-066",
     ):
         sub.add_parser(name)
     args, rest = parser.parse_known_args()
@@ -5458,6 +5583,18 @@ def main() -> None:
         force = "--force" in rest
         unit_id = _optional(rest, "--unit-id")
         result = resolve_absorbed_gaps_061(root, cfg, dry_run=dry_run, force=force, unit_id=unit_id)
+        emit(result, 0 if result.get("verdict") in {"ok", "skipped"} else 20)
+    elif args.command == "verify-absorb-linkage-066":
+        prd_unit = _optional(rest, "--prd-unit-id") or PRD_066_ABSORB_UNIT_ID
+        gap_unit = _optional(rest, "--gap-unit-id") or GAP_079_ABSORB_UNIT_ID
+        planning_issue = _optional(rest, "--planning-issue") or GAP_079_PLANNING_ISSUE_REF
+        result = verify_absorb_linkage_066(
+            root,
+            cfg,
+            prd_unit_id=prd_unit,
+            gap_unit_id=gap_unit,
+            planning_issue=planning_issue,
+        )
         emit(result, 0 if result.get("verdict") in {"ok", "skipped"} else 20)
     elif args.command == "doctor":
         result = doctor(root, cfg)
