@@ -464,6 +464,7 @@
 * merge phase projects-parity-github-projects-r18-parity-degradations-r18-r19 into feat/linear-planning-store-provider-and-operator-projection (62526df) <!-- sw-deliver:projects-parity-github-projects-r18-parity-degradations-r18-r19 -->
 * merge phase linear-lcd-verbs-lcd-fixtureissuesstore-verb-parity-lock-overflow-r10 into feat/linear-planning-store-provider-and-operator-projection (499b4b2) <!-- sw-deliver:linear-lcd-verbs-lcd-fixtureissuesstore-verb-parity-lock-overflow-r10 -->
 * merge phase linear-projection-schema-linear-operator-schema-initiative-cycles-typed-edges-r6-r8-r29 into feat/linear-planning-store-provider-and-operator-projection (92f3a69) <!-- sw-deliver:linear-projection-schema-linear-operator-schema-initiative-cycles-typed-edges-r6-r8-r29 -->
+* merge phase linear-canonical-markdown-public-markdown-fidelity-suite-r15 into feat/linear-planning-store-provider-and-operator-projection (a2d0a6f) <!-- sw-deliver:linear-canonical-markdown-public-markdown-fidelity-suite-r15 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
