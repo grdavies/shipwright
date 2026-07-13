@@ -1,12 +1,21 @@
-"""PRD 066 — Linear projection schema + Projects R18 parity (task path alias).
+"""PRD 066 — Linear projection suites (task path alias).
 
 Canonical suites:
 - scripts/unit_tests/planning/test_prd066_linear_projection_schema.py (phase 5 / R6–R8, R29)
+- scripts/unit_tests/planning/test_prd066_dual_write_body.py (phase 6 / R26)
 - scripts/unit_tests/planning/test_prd066_projects_parity.py (phase 9 / R18–R19)
 """
 
 from __future__ import annotations
 
+from unit_tests.planning.test_prd066_dual_write_body import (  # noqa: F401
+    test_r26_document_backed_body_is_freeze_hash_sot,
+    test_r26_facade_exports_and_schema_policy_surface,
+    test_r26_fail_closed_projection_prefer_split_brain,
+    test_r26_fail_closed_unresolved_canonical_body,
+    test_r26_lcd_issue_body_is_freeze_hash_sot,
+    test_r26_typed_drift_when_projection_body_diverges,
+)
 from unit_tests.planning.test_prd066_linear_projection_schema import (  # noqa: F401
     test_linear_projection_schema_contract_surface,
     test_r29_endpoint_typed_edge_encoding,
