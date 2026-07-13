@@ -457,6 +457,7 @@
 * merge phase documentation-surfaces-a-commands-and-tasks-skill-r31 into feat/turn-independent-ship-loop-and-gate-evidence (63b7a41) <!-- sw-deliver:documentation-surfaces-a-commands-and-tasks-skill-r31 -->
 * merge phase documentation-surfaces-b-skills-and-dispatch-rules-r31 into feat/turn-independent-ship-loop-and-gate-evidence (0948ad6) <!-- sw-deliver:documentation-surfaces-b-skills-and-dispatch-rules-r31 -->
 * merge phase documentation-surfaces-c-reference-notes-and-attestation-boundary-r31-r32 into feat/turn-independent-ship-loop-and-gate-evidence (08ba761) <!-- sw-deliver:documentation-surfaces-c-reference-notes-and-attestation-boundary-r31-r32 -->
+* merge phase zero-interaction-fixture-staged-rollout-and-regression-r17-r19 into feat/turn-independent-ship-loop-and-gate-evidence (cad7c21) <!-- sw-deliver:zero-interaction-fixture-staged-rollout-and-regression-r17-r19 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
