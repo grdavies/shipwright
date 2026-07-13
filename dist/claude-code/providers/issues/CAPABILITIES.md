@@ -177,3 +177,77 @@ Adapter spec: `core/providers/issues/jira.md`.
 | 3 | custom field | `planning.store.issues.labelCustomField` |
 
 PRD 043 R42 body marker is authoritative for isolation on shared Jira projects regardless of label surface.
+
+## Provider registration footprint (PRD 066 R16, R20)
+
+Issue-backed adapters register through a **recognition vs shipped** split — never enum-only stubs.
+
+| Touchpoint | Purpose |
+| --- | --- |
+| `planning_store.ISSUES_PROVIDERS` | Known providers for config validation + selector resolution |
+| `planning_store.SHIPPED_ISSUES_PROVIDERS` | Live round-trip allowed; probe + deliver use this set |
+| `planning_store.DEFERRED_ISSUES_PROVIDERS` | Known but fail-closed (`gitlab-issues`) |
+| `issues_http.ISSUES_PROVIDER_TO_RATELIMIT` | Per-provider rate-limit profile key |
+| `core/sw-reference/capability-index.json` | Executable capability manifest entries per adapter |
+| `scripts/planning_migrate_issue_store.py` | Issue-store migration / doctor / rollback hooks |
+
+Probe registration state:
+
+```bash
+python3 scripts/planning_store.py issues-provider-registration
+```
+
+### Linear recognition vs shipped (R9, R20)
+
+| State | `linear` in `ISSUES_PROVIDERS` | `linear` in `SHIPPED_ISSUES_PROVIDERS` | Behavior |
+| --- | --- | --- | --- |
+| Stub (no live client) | no | no | Config may name `linear`; doctor **refuses** enum-only stub |
+| Recognized (live client wired) | yes | no | Config validates; issue-store **falls back** to file-store |
+| Shipped (post-conformance) | yes | yes | Full live round-trip after conformance + OAuth docs gate |
+
+`linear` promotion to `SHIPPED_ISSUES_PROVIDERS` requires LCD conformance harness green **and**
+OAuth operator-local storage documented (`core/providers/issues/linear.md` R23).
+
+### Rate-limit map (R16)
+
+| `issuesProvider` | `issues_http` profile key |
+| --- | --- |
+| `github-issues` | `github` |
+| `gitlab-issues` | `gitlab` |
+| `jira` | `jira` |
+| `linear` | `linear` |
+
+Override per-provider budgets via `planning.store.requestBudget.<provider>` (request count +
+complexity for Linear).
+
+### Capability index entries (R16)
+
+| Provider | Index id | Source |
+| --- | --- | --- |
+| `github-issues` | `provider.providers.issues.github-issues` | `core/providers/issues/github-issues.md` |
+| `gitlab-issues` | `provider.providers.issues.gitlab-issues` | `core/providers/issues/gitlab-issues.md` |
+| `jira` | `provider.providers.issues.jira` | `core/providers/issues/jira.md` |
+| `linear` | `provider.providers.issues.linear` | `core/providers/issues/linear.md` |
+| `none` | `provider.providers.issues.none` | `core/providers/issues/none.md` |
+
+### Doctor refuses stubs (R20)
+
+`planning_store.doctor` runs `doctor-issues-provider-stub` before separate-project checks:
+
+- **Deferred** (`gitlab-issues`) → fail with `deferred-provider-stub-refused`
+- **Linear stub** (configured but not in `ISSUES_PROVIDERS`) → fail with `linear-stub-refused`
+- **Linear recognized-but-unshipped** → pass with `linear-recognized-not-shipped` notice; effective
+  backend remains file-store until promotion
+- **Linear oauth via shared CI secret** without `oauthSharedCiException` → fail via
+  `planning_linear_client.doctor-oauth`
+
+### Migration hooks (R16)
+
+| Script | Role |
+| --- | --- |
+| `scripts/planning_migrate_issue_store.py` | Directional migrate, doctor, rollback, label backfill |
+| `scripts/planning_migrate.py` | Run-state scan + quiesce helpers composed by migrate |
+
+Linear-specific team scope is probed at init via `planning_linear_client.py probe-team` (not a migrate
+verb — config validation only).
+
