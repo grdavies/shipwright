@@ -460,6 +460,7 @@
 * merge phase zero-interaction-fixture-staged-rollout-and-regression-r17-r19 into feat/turn-independent-ship-loop-and-gate-evidence (cad7c21) <!-- sw-deliver:zero-interaction-fixture-staged-rollout-and-regression-r17-r19 -->
 * merge phase op-contract-browse-status-shared-operator-contract-r1-browse-status-taxonomy-r1-r3-r4-r31-r32 into feat/linear-planning-store-provider-and-operator-projection (aafc879) <!-- sw-deliver:op-contract-browse-status-shared-operator-contract-r1-browse-status-taxonomy-r1-r3-r4-r31-r32 -->
 * merge phase identity-ledger-drift-dirty-identity-ledger-typed-drift-dirty-resume-r2-r5-r27-r28 into feat/linear-planning-store-provider-and-operator-projection (2223b04) <!-- sw-deliver:identity-ledger-drift-dirty-identity-ledger-typed-drift-dirty-resume-r2-r5-r27-r28 -->
+* merge phase linear-client-auth-budget-thin-linear-graphql-client-team-auth-dual-budgets-r9-r11-r14-r23 into feat/linear-planning-store-provider-and-operator-projection (a49b38a) <!-- sw-deliver:linear-client-auth-budget-thin-linear-graphql-client-team-auth-dual-budgets-r9-r11-r14-r23 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
