@@ -1,13 +1,15 @@
-"""PRD 066 phase 2 — linear projection ledger tests (task path alias).
+"""PRD 066 phase 9 — Projects R18 parity acceptance (task path alias).
 
-Canonical suite: scripts/unit_tests/planning/test_prd066_identity_ledger_drift_dirty.py
+Canonical suite: scripts/unit_tests/planning/test_prd066_projects_parity.py
 """
 
 from __future__ import annotations
 
-from unit_tests.planning.test_prd066_identity_ledger_drift_dirty import (  # noqa: F401
-    test_r2_portable_graph_remains_sot_on_rebuild,
-    test_r5_identity_ledger_upsert_marker_and_duplicates,
-    test_r27_typed_drift_halts_unless_overwrite_audited,
-    test_r28_dirty_blocks_r1_and_resume_clears,
+from unit_tests.planning.test_prd066_projects_parity import (  # noqa: F401
+    test_r18_assert_helper_fails_without_discriminator,
+    test_r18_initiative_cycle_degradations_documented,
+    test_r18_program_field_discriminator_makes_r1_green,
+    test_r18_project_per_program_discriminator,
+    test_r18_status_only_is_not_r1_4_complete,
+    test_r19_issues_remain_body_store,
 )

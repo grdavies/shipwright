@@ -833,7 +833,8 @@ Map these semantic keys to Project custom fields (names are defaults; override v
 | `Absorbs` (multi) | Which gaps a PRD absorbs |
 | `Brainstorms` (relation) | Which brainstorms feed a PRD |
 | `Phases` (text/checkbox) | Task/phase completion for an in-flight PRD |
-| `Status` (single select) | Backlog vs in-flight vs done at program level |
+| `Status` (single select) | Item semantic status (backlog / in_flight / done) — **not** R1(4)-complete alone |
+| `Program` / `Initiative` (required discriminator) **or** Project-per-program | R1(4) program backlog vs in-flight vs done (PRD 066 R18) |
 
 ### Dogfood / fixture walkthrough
 

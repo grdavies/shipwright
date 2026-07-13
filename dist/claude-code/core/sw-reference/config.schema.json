@@ -1228,6 +1228,11 @@
                     "projectId": {
                       "type": "string"
                     },
+                    "programMode": {
+                      "type": "string",
+                      "enum": ["project-per-program", "field"],
+                      "description": "PRD 066 R18 program discriminator mode. Status-only is not R1(4)-complete."
+                    },
                     "fieldMap": {
                       "type": "object"
                     },
