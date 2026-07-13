@@ -1,12 +1,39 @@
-"""PRD 066 phase 5 — Linear operator projection schema (R6, R7, R8, R29).
+"""PRD 066 — Linear operator projection schema (R6, R7, R8, R29) + dual-write body (R26).
 
 Maps the portable semantic planning graph onto Linear-native entities for the
 operator projection. Projection entities remain rebuildable; portable graph is SoT.
+
+R26: when Linear is both LCD issue-store and operator projection, freeze/hash
+authority lives on the LCD Issue (or explicit Document-backed) body path —
+never on Project/Document/Milestone/Initiative/Cycle projection mirrors.
 """
 
 from __future__ import annotations
 
+import hashlib
 from typing import Any
+
+# R26 — freeze/hash SoT body sources (facade get/freeze resolution).
+CANONICAL_BODY_SOURCES = frozenset({"lcd-issue", "document-backed"})
+
+# R26 — rebuildable projection mirrors; never freeze/hash authority.
+PROJECTION_MIRROR_KINDS = frozenset(
+    {
+        "Project",
+        "Document",
+        "Milestone",
+        "Initiative",
+        "Cycle",
+        "project",
+        "document",
+        "milestone",
+        "initiative",
+        "cycle",
+    }
+)
+
+DOCUMENT_BACKED_LABEL = "sw:document-backed"
+DOCUMENT_BACKED_MARKER = "<!-- sw-document-backed -->"
 
 # R6 — normative semantic unit → Linear entity mapping.
 LINEAR_ENTITY_MAP: dict[str, dict[str, Any]] = {
@@ -491,7 +518,7 @@ def encode_planning_edge(edge: dict[str, Any]) -> dict[str, Any]:
 
 
 def linear_projection_schema_contract() -> dict[str, Any]:
-    """Facade summary for R6–R8/R29 Linear operator schema."""
+    """Facade summary for R6–R8/R29 Linear operator schema + R26 dual-write policy."""
     return {
         "verdict": "ok",
         "action": "linear-projection-schema-contract",
@@ -503,4 +530,351 @@ def linear_projection_schema_contract() -> dict[str, Any]:
             "mutatesCycleDefinition": False,
             "sharePath": "issue-assignment",
         },
+        "dualWriteBody": dual_write_body_policy(),
+    }
+
+
+def _body_digest(body: str) -> str:
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def normalize_body_source(raw: str | None) -> str:
+    """Normalize caller bodySource to lcd-issue | document-backed | projection-*."""
+    if not raw:
+        return "lcd-issue"
+    value = str(raw).strip().lower().replace("_", "-")
+    aliases = {
+        "issue": "lcd-issue",
+        "lcd": "lcd-issue",
+        "lcd-issue": "lcd-issue",
+        "document-backed": "document-backed",
+        "document_backed": "document-backed",
+        "doc-backed": "document-backed",
+        "projection": "projection-mirror",
+        "projection-mirror": "projection-mirror",
+        "prefer-projection": "projection-prefer",
+        "projection-prefer": "projection-prefer",
+    }
+    if value in aliases:
+        return aliases[value]
+    if value in {k.lower() for k in PROJECTION_MIRROR_KINDS}:
+        return f"projection-{value}"
+    return value
+
+
+def is_projection_mirror_kind(kind: str | None) -> bool:
+    if not kind:
+        return False
+    return str(kind).strip() in PROJECTION_MIRROR_KINDS
+
+
+def dual_write_body_policy() -> dict[str, Any]:
+    """R26 — normative dual-write / freeze SoT policy surface."""
+    return {
+        "canonicalBodySources": sorted(CANONICAL_BODY_SOURCES),
+        "projectionMirrorKinds": sorted(
+            {k for k in PROJECTION_MIRROR_KINDS if k[:1].isupper()}
+        ),
+        "freezeAuthority": "lcd-issue-or-document-backed",
+        "projectionMayMirrorBrowsableContent": True,
+        "projectionIsFreezeAuthority": False,
+        "unresolvedCanonicalBody": "fail-closed",
+        "projectionPreferSplitBrain": "fail-closed",
+        "projectionBodyDivergence": "typed-drift",
+        "documentBackedLabel": DOCUMENT_BACKED_LABEL,
+        "documentBackedMarker": DOCUMENT_BACKED_MARKER,
+    }
+
+
+def infer_canonical_body_source(
+    *,
+    body_source: str | None = None,
+    labels: list[str] | None = None,
+    body: str | None = None,
+    document_backed: bool | None = None,
+) -> str:
+    """Infer lcd-issue vs document-backed from explicit flags, labels, or markers."""
+    if document_backed is True:
+        return "document-backed"
+    if body_source:
+        return normalize_body_source(body_source)
+    label_set = {str(x) for x in (labels or [])}
+    if DOCUMENT_BACKED_LABEL in label_set:
+        return "document-backed"
+    if body and DOCUMENT_BACKED_MARKER in body:
+        return "document-backed"
+    return "lcd-issue"
+
+
+def assert_projection_mirrors_not_freeze_authority(
+    projection_mirrors: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """R26 — Project/Document/Milestone/Initiative/Cycle never become freeze SoT."""
+    mirrors = list(projection_mirrors or [])
+    for mirror in mirrors:
+        if not isinstance(mirror, dict):
+            continue
+        if mirror.get("isFreezeAuthority") is True or mirror.get("isSourceOfTruth") is True:
+            return {
+                "verdict": "fail",
+                "error": "projection-claimed-freeze-authority",
+                "action": "assert-projection-mirrors-not-freeze-authority",
+                "entityKind": mirror.get("entityKind") or mirror.get("kind"),
+                "entityId": mirror.get("entityId") or mirror.get("id"),
+            }
+        kind = str(mirror.get("entityKind") or mirror.get("kind") or "")
+        if is_projection_mirror_kind(kind) and mirror.get("freezeAuthority") not in (
+            None,
+            False,
+            "derived",
+            "portable-graph",
+        ):
+            return {
+                "verdict": "fail",
+                "error": "projection-claimed-freeze-authority",
+                "action": "assert-projection-mirrors-not-freeze-authority",
+                "entityKind": kind,
+                "entityId": mirror.get("entityId") or mirror.get("id"),
+            }
+    return {
+        "verdict": "pass",
+        "action": "assert-projection-mirrors-not-freeze-authority",
+        "mirrorCount": len(mirrors),
+        "freezeAuthority": "lcd-issue-or-document-backed",
+    }
+
+
+def check_canonical_projection_split_brain(
+    *,
+    canonical_body: str,
+    projection_mirrors: list[dict[str, Any]] | None = None,
+    prefer: str | None = None,
+) -> dict[str, Any]:
+    """R26 — fail closed on projection-prefer; typed drift when mirror body diverges."""
+    prefer_norm = normalize_body_source(prefer) if prefer else None
+    if prefer_norm in {"projection-prefer", "projection-mirror"} or (
+        prefer_norm and prefer_norm.startswith("projection-")
+    ):
+        return {
+            "verdict": "fail",
+            "error": "projection-prefer-split-brain",
+            "action": "check-canonical-projection-split-brain",
+            "prefer": prefer,
+        }
+
+    authority = assert_projection_mirrors_not_freeze_authority(projection_mirrors)
+    if authority["verdict"] != "pass":
+        return {**authority, "action": "check-canonical-projection-split-brain"}
+
+    canonical_digest = _body_digest(canonical_body)
+    drifted: list[dict[str, Any]] = []
+    for mirror in projection_mirrors or []:
+        if not isinstance(mirror, dict):
+            continue
+        mirror_body = mirror.get("body")
+        if mirror_body is None:
+            continue
+        if not isinstance(mirror_body, str):
+            drifted.append(
+                {
+                    "entityKind": mirror.get("entityKind") or mirror.get("kind"),
+                    "entityId": mirror.get("entityId") or mirror.get("id"),
+                    "error": "projection-body-type-invalid",
+                }
+            )
+            continue
+        # Dual-write may store a derived browsable summary; only exact body
+        # mirrors that claim parity (or omit derived=True) are drift-checked.
+        if mirror.get("derived") is True and mirror.get("bodyParityRequired") is not True:
+            continue
+        if _body_digest(mirror_body) != canonical_digest:
+            drifted.append(
+                {
+                    "entityKind": mirror.get("entityKind") or mirror.get("kind"),
+                    "entityId": mirror.get("entityId") or mirror.get("id"),
+                    "error": "canonical-projection-body-drift",
+                    "canonicalDigest": canonical_digest,
+                    "projectionDigest": _body_digest(mirror_body),
+                }
+            )
+    if drifted:
+        return {
+            "verdict": "fail",
+            "error": "canonical-projection-body-drift",
+            "action": "check-canonical-projection-split-brain",
+            "drift": drifted,
+            "typedDrift": True,
+        }
+    return {
+        "verdict": "pass",
+        "action": "check-canonical-projection-split-brain",
+        "canonicalDigest": canonical_digest,
+        "typedDrift": False,
+    }
+
+
+def resolve_canonical_freeze_body(
+    *,
+    unit_id: str,
+    body_path: str | None = None,
+    body: str | None = None,
+    body_source: str | None = None,
+    labels: list[str] | None = None,
+    document_backed: bool | None = None,
+    projection_mirrors: list[dict[str, Any]] | None = None,
+    prefer: str | None = None,
+) -> dict[str, Any]:
+    """R26 — resolve freeze/hash SoT body; projection mirrors never win."""
+    action = "resolve-canonical-freeze-body"
+    if not unit_id:
+        return {
+            "verdict": "fail",
+            "error": "canonical-body-unresolved",
+            "action": action,
+            "reason": "missing-unit-id",
+        }
+
+    source = infer_canonical_body_source(
+        body_source=body_source,
+        labels=labels,
+        body=body,
+        document_backed=document_backed,
+    )
+    prefer_norm = normalize_body_source(prefer) if prefer else None
+    if prefer_norm in {"projection-prefer", "projection-mirror"} or (
+        prefer_norm and prefer_norm.startswith("projection-")
+    ):
+        return {
+            "verdict": "fail",
+            "error": "projection-prefer-split-brain",
+            "action": action,
+            "prefer": prefer,
+            "bodySource": source,
+        }
+
+    if source not in CANONICAL_BODY_SOURCES:
+        return {
+            "verdict": "fail",
+            "error": "projection-claimed-freeze-authority",
+            "action": action,
+            "bodySource": source,
+        }
+
+    if body is None or (isinstance(body, str) and body.strip() == ""):
+        return {
+            "verdict": "fail",
+            "error": "canonical-body-unresolved",
+            "action": action,
+            "bodySource": source,
+            "unitId": unit_id,
+            "bodyPath": body_path,
+        }
+
+    split = check_canonical_projection_split_brain(
+        canonical_body=body,
+        projection_mirrors=projection_mirrors,
+        prefer=prefer,
+    )
+    if split["verdict"] != "pass":
+        return {**split, "action": action, "bodySource": source, "unitId": unit_id}
+
+    digest = _body_digest(body)
+    return {
+        "verdict": "pass",
+        "action": action,
+        "unitId": unit_id,
+        "bodyPath": body_path,
+        "bodySource": source,
+        "body": body,
+        "hash": digest,
+        "freezeAuthority": source,
+        "projectionRebuildable": True,
+    }
+
+
+def freeze_from_canonical_body(
+    *,
+    unit_id: str,
+    body_path: str | None = None,
+    body: str | None = None,
+    body_source: str | None = None,
+    labels: list[str] | None = None,
+    document_backed: bool | None = None,
+    projection_mirrors: list[dict[str, Any]] | None = None,
+    prefer: str | None = None,
+) -> dict[str, Any]:
+    """R26 — freeze/hash only after canonical body resolves; fail closed otherwise."""
+    resolved = resolve_canonical_freeze_body(
+        unit_id=unit_id,
+        body_path=body_path,
+        body=body,
+        body_source=body_source,
+        labels=labels,
+        document_backed=document_backed,
+        projection_mirrors=projection_mirrors,
+        prefer=prefer,
+    )
+    if resolved.get("verdict") != "pass":
+        return {
+            **resolved,
+            "action": "freeze-from-canonical-body",
+            "frozen": False,
+        }
+    return {
+        "verdict": "pass",
+        "action": "freeze-from-canonical-body",
+        "unitId": unit_id,
+        "bodyPath": body_path,
+        "bodySource": resolved["bodySource"],
+        "hash": resolved["hash"],
+        "frozen": True,
+        "freezeAuthority": resolved["freezeAuthority"],
+        "locked": True,
+    }
+
+
+def dual_write_projection_mirror(
+    *,
+    canonical_body: str,
+    entity_kind: str,
+    entity_id: str,
+    mirror_body: str | None = None,
+    derived_summary: str | None = None,
+) -> dict[str, Any]:
+    """R26 — allow browsable projection mirrors derived from canonical body only."""
+    if not is_projection_mirror_kind(entity_kind):
+        return {
+            "verdict": "fail",
+            "error": "unsupported-projection-mirror-kind",
+            "entityKind": entity_kind,
+        }
+    if mirror_body is not None and _body_digest(mirror_body) != _body_digest(canonical_body):
+        if derived_summary is None:
+            return {
+                "verdict": "fail",
+                "error": "canonical-projection-body-drift",
+                "typedDrift": True,
+                "entityKind": entity_kind,
+                "entityId": entity_id,
+            }
+    mirror: dict[str, Any] = {
+        "entityKind": entity_kind,
+        "entityId": entity_id,
+        "isFreezeAuthority": False,
+        "isSourceOfTruth": False,
+        "freezeAuthority": "derived",
+        "derived": True,
+        "canonicalDigest": _body_digest(canonical_body),
+    }
+    if mirror_body is not None and _body_digest(mirror_body) == _body_digest(canonical_body):
+        mirror["body"] = mirror_body
+        mirror["bodyParityRequired"] = True
+        mirror["derived"] = False
+    if derived_summary is not None:
+        mirror["summary"] = derived_summary
+        mirror["derived"] = True
+    return {
+        "verdict": "pass",
+        "action": "dual-write-projection-mirror",
+        "mirror": mirror,
     }

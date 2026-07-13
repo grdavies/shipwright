@@ -53,15 +53,22 @@ from planning_projection_ledger import (
 from planning_linear_projection import (
     apply_initiative_capability,
     assert_cycle_orthogonal_to_milestone,
+    assert_projection_mirrors_not_freeze_authority,
     assign_issue_to_cycle,
+    check_canonical_projection_split_brain,
     cycle_sharing_notice,
+    dual_write_body_policy,
+    dual_write_projection_mirror,
     encode_planning_edge,
+    freeze_from_canonical_body,
+    infer_canonical_body_source,
     linear_entity_mapping,
     linear_projection_schema_contract,
     map_artifact_to_linear_entity,
     probe_initiative_availability,
     project_graph_to_linear_layout,
     r1_4_substitute_views,
+    resolve_canonical_freeze_body,
 )
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -1768,6 +1775,37 @@ class IssueStoreBackend(PlanningStoreBackend):
             )
         return operator_content
 
+    def _resolve_canonical_body_for_op(
+        self,
+        unit_id: str,
+        body_path: str,
+        record: Any,
+        *,
+        projection_mirrors: list[dict[str, Any]] | None = None,
+        prefer: str | None = None,
+    ) -> dict[str, Any]:
+        """R26 — get/freeze resolve LCD Issue or Document-backed body; never projection SoT."""
+        content = self._canonical_content_from_record(record, unit_id)
+        labels = list(getattr(record, "labels", []) or [])
+        resolved = resolve_canonical_freeze_body(
+            unit_id=unit_id,
+            body_path=body_path,
+            body=content,
+            labels=labels,
+            projection_mirrors=projection_mirrors,
+            prefer=prefer,
+        )
+        if resolved.get("verdict") != "pass":
+            fail(
+                str(resolved.get("error") or "canonical-body-unresolved"),
+                code=str(resolved.get("error") or "canonical-body-unresolved"),
+                unitId=unit_id,
+                bodyPath=body_path,
+                bodySource=resolved.get("bodySource"),
+                typedDrift=resolved.get("typedDrift"),
+            )
+        return resolved
+
     def _extract_content(self, record: Any) -> str:
         full_body = reassemble_body(record.body, record.comments)
         if not verify_project_scope(full_body, self.project_key):
@@ -2081,7 +2119,9 @@ class IssueStoreBackend(PlanningStoreBackend):
         except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
             handle_issue_client_error(exc)
         self._verify_frozen_integrity(record)
-        content = self._canonical_content_from_record(record, unit_id)
+        # R26 — facade get resolves canonical LCD/Document-backed body; never prefers projection.
+        resolved = self._resolve_canonical_body_for_op(unit_id, body_path, record)
+        content = str(resolved["body"])
         digest = canonical_hash(self._record_to_snapshot(record))
         log_operation("get", unit_id, body_path, content, self.backend_id)
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=digest)
@@ -2113,7 +2153,9 @@ class IssueStoreBackend(PlanningStoreBackend):
             fail("issue-not-found", code="not-found", unitId=unit_id)
         except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
             handle_issue_client_error(exc)
-        self._guard_write_visibility(unit_id, body_path, self._canonical_content_from_record(record, unit_id))
+        # R26 — freeze/hash SoT is LCD Issue or Document-backed body via facade resolution.
+        resolved = self._resolve_canonical_body_for_op(unit_id, body_path, record)
+        self._guard_write_visibility(unit_id, body_path, str(resolved["body"]))
         if FROZEN_LABEL in record.labels:
             fail("already-frozen", code="already-frozen", unitId=unit_id)
         try:
@@ -2157,6 +2199,8 @@ class IssueStoreBackend(PlanningStoreBackend):
             "locked": True,
             "labels": list(record.labels),
             "distillation": distillation,
+            "bodySource": resolved.get("bodySource"),
+            "freezeAuthority": resolved.get("freezeAuthority"),
         }
 
     def verify_frozen_hash(self, unit_id: str, body_path: str) -> dict[str, Any]:
