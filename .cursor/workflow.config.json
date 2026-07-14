@@ -224,7 +224,7 @@
   },
   "configuredWith": {
     "shipwrightVersion": "1.8.0",
-    "schemaVersion": "48a382615073"
+    "schemaVersion": "b43fa506b888"
   },
   "compound": {
     "autonomy": "auto"
@@ -363,7 +363,7 @@
     }
   },
   "contextCompression": {
-    "enabled": false,
+    "enabled": true,
     "thresholdTokens": 8000,
     "strategies": {
       "json": "compress",
