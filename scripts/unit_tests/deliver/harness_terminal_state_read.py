@@ -89,7 +89,7 @@ else
   bad "terminal-reads-repo-root-state-from-orchestrator-cwd (verdict=$VERDICT)"
 fi
 
-write_states "2026-06-01T12:00:00Z" "2026-06-01T12:05:00Z" running running
+write_states "2026-06-01T12:00:00Z" "2026-06-01T12:00:00Z" running running
 if (cd "$ORCH" && python3 -c "
 import sys
 from pathlib import Path
@@ -103,7 +103,7 @@ else
   bad "terminal-state-skew-boundary-equal-passes"
 fi
 
-write_states "2026-06-01T12:00:00Z" "2026-06-01T12:05:01Z" running running
+write_states "2026-06-01T12:00:00Z" "2026-06-01T12:10:01Z" running running
 if (cd "$ORCH" && python3 -c "
 import sys
 from pathlib import Path
