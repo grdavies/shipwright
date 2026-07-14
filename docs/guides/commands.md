@@ -27,6 +27,7 @@ Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** c
 - **Mode auto-detect:** `--task-list` → phase-mode; `--items`/`--edges` → multi-feature; both → halt.
 - **Single terminal merge gate:** per-phase PRs auto-merge into `<type>/<slug>` on green; one
  human-gated `<type>/<slug> → main` PR at the end.
+- **Orchestrator auto-adopt:** on resume, reuse `.sw-worktrees/<slug>-orchestrator` when branch/slug match and the tree is clean; otherwise provision halts with a typed cause. Resume with `/sw-deliver run` — consumable state skips nested preflight.
 - **Resumption:** re-run `run` after interrupt; durable `deliver-loop` cursor in
  `.cursor/sw-deliver-state.<slug>.json` at repo root; `plan --from <phase>` when resuming mid-wave.
 - **Pre-merge compounding:** full `/sw-compound-ship --pre-merge` before the terminal human merge gate;

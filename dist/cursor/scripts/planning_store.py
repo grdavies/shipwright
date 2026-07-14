@@ -1667,7 +1667,33 @@ class PlanningStoreBackend(ABC):
         self.root = root
         self.cfg = cfg
 
-    @abstractmethod
+    def _guard_duplicate_open_tasks_mint(self, unit_id: str) -> None:
+        """Refuse minting a second open tasks issue for the same PRD slug (PRD 068 R8)."""
+        if not unit_id.startswith("tasks"):
+            return
+        my_tail = _tasks_tail_from_unit_id(unit_id)
+        search = getattr(self._client, "issue_search", None)
+        if not callable(search):
+            return
+        for record in search(project_key=self.project_key, artifact_type="tasks"):
+            other_id = str(getattr(record, "unit_id", "") or "").strip()
+            if not other_id or other_id == unit_id:
+                continue
+            if not _tasks_slug_family_compatible(my_tail, _tasks_tail_from_unit_id(other_id)):
+                continue
+            labels = list(getattr(record, "labels", []) or [])
+            if (
+                str(getattr(record, "state", "")) == "open"
+                and FROZEN_LABEL not in labels
+                and status_from_labels(labels) != "complete"
+            ):
+                fail(
+                    "duplicate-open-tasks-refused",
+                    code="duplicate-open-tasks",
+                    unitId=unit_id,
+                    existingUnitId=other_id,
+                )
+
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
         raise NotImplementedError
 
@@ -2116,6 +2142,8 @@ class IssueStoreBackend(PlanningStoreBackend):
         artifact_type = self._resolve_artifact_type(
             body_path, record=existing, content=content, unit_id=unit_id
         )
+        if existing is None and artifact_type == "tasks":
+            self._guard_duplicate_open_tasks_mint(unit_id)
         title = self._issue_title(artifact_type, unit_id, content)
         labels = self._labels_for(artifact_type, unit_id, content)
         store_content = operator_body_from_canonical(content) if has_raw_yaml_frontmatter(content) else content
@@ -2301,6 +2329,23 @@ class IssueStoreBackend(PlanningStoreBackend):
                         pass
                     fail("freeze-incomplete", code="freeze-incomplete", reason=str(exc))
 
+        absorb_linkage: dict[str, Any] | None = None
+        if artifact_type == "prd":
+            absorb_linkage = self._ensure_absorb_linkage_at_freeze(unit_id, freeze_content)
+            if absorb_linkage.get("verdict") == "fail":
+                labels = sorted(set(record.labels) | {FREEZE_INCOMPLETE_LABEL})
+                try:
+                    record = self._client.issue_label(record.id, labels, if_match=record.etag)
+                except Exception:
+                    pass
+                fail(
+                    "freeze-incomplete",
+                    code="freeze-incomplete",
+                    unitId=unit_id,
+                    reason="absorb-linkage-failed",
+                    absorbLinkage=absorb_linkage,
+                )
+
         log_operation("freeze", unit_id, body_path, None, self.backend_id)
         return {
             "verdict": "ok",
@@ -2312,7 +2357,27 @@ class IssueStoreBackend(PlanningStoreBackend):
             "distillation": distillation,
             "bodySource": resolved.get("bodySource"),
             "freezeAuthority": resolved.get("freezeAuthority"),
+            "absorbLinkage": absorb_linkage,
         }
+
+    def _ensure_absorb_linkage_at_freeze(self, unit_id: str, content: str) -> dict[str, Any]:
+        from planning_gap_capture import record_absorb_linkage
+
+        fm = _migrate_issue_store().parse_frontmatter_fields(content)
+        prd_num = _prd_number_from_unit_id(unit_id)
+        absorbs = _parse_absorbs_targets(fm.get("absorbs", ""))
+        gap_targets = [g for g in absorbs if "gap" in g or g.startswith("gap-")]
+        planning_issues = parse_planning_issues_refs(fm.get("planningIssues", ""))
+        if not gap_targets and not planning_issues:
+            return {"verdict": "skipped", "reason": "no-absorb-targets"}
+        return record_absorb_linkage(
+            self.root,
+            prd_unit_id=unit_id,
+            prd_number=prd_num,
+            gap_unit_ids=gap_targets or None,
+            planning_issues=planning_issues or None,
+            dry_run=False,
+        )
 
     def verify_frozen_hash(self, unit_id: str, body_path: str) -> dict[str, Any]:
         try:
@@ -3041,6 +3106,32 @@ def _gap_closure_evidence(
     return delivery_grade, skipped
 
 
+def _discover_planning_issues_gaps(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    prd_unit_id: str,
+    fm: dict[str, str],
+    edges: dict[str, Any] | None,
+    prd_num: str | None,
+    delivery_grade: set[str],
+    skipped: list[dict[str, str]],
+) -> tuple[set[str], list[dict[str, str]]]:
+    """Augment expected gap set from provenance-bound planningIssues refs (R7)."""
+    out = set(delivery_grade)
+    skip = list(skipped)
+    for ref in parse_planning_issues_refs(fm.get("planningIssues", "")):
+        gap_id = resolve_planning_issue_ref_to_gap(root, cfg, ref)
+        if not gap_id:
+            skip.append({"ref": ref, "reason": "planning-issue-unresolved"})
+            continue
+        if gap_has_absorb_provenance(root, cfg, gap_id, prd_unit_id, fm, prd_num=prd_num, edges=edges):
+            out.add(gap_id)
+        else:
+            skip.append({"ref": ref, "unitId": gap_id, "reason": "planning-issue-no-provenance"})
+    return out, skip
+
+
 def _prd_number_from_unit_id(unit_id: str) -> str | None:
     m = re.match(r"^prd-(\d{3})-", unit_id)
     if m:
@@ -3086,6 +3177,31 @@ def _tasks_unit_id_candidates(prd_unit: str, prd_num: str | None) -> list[str]:
     return out
 
 
+def _tasks_tail_from_unit_id(unit_id: str) -> str:
+    if unit_id.startswith("tasks-debug-"):
+        return unit_id[len("tasks-debug-") :]
+    if unit_id.startswith("tasks-"):
+        return unit_id[len("tasks-") :]
+    return unit_id
+
+
+def _normalize_tasks_slug(tail: str) -> str:
+    tail = tail.strip()
+    m = re.match(r"^(\d{3})-prd-(.+)$", tail)
+    if m:
+        return m.group(2)
+    m = re.match(r"^(\d{3})-(.+)$", tail)
+    if m:
+        return m.group(2)
+    if tail.startswith("prd-"):
+        return tail[4:]
+    return tail
+
+
+def _tasks_slug_family_compatible(left: str, right: str) -> bool:
+    return _normalize_tasks_slug(left) == _normalize_tasks_slug(right)
+
+
 def _record_artifact_type(record: Any) -> str:
     labels = list(getattr(record, "labels", []) or [])
     from_labels = artifact_type_from_labels(labels)
@@ -3106,10 +3222,168 @@ def _parse_absorbs_targets(raw: str) -> list[str]:
         try:
             parsed = json.loads(value.replace("'", '"'))
         except json.JSONDecodeError:
-            parsed = [part.strip().strip("'\"") for part in value.strip("[]").split(",") if part.strip()]
+            parsed = [part.strip().strip(chr(39) + chr(34)) for part in value.strip('[]').split(',') if part.strip()]
         if isinstance(parsed, list):
             return [str(item).strip() for item in parsed if str(item).strip()]
     return [part.strip() for part in value.split(",") if part.strip()]
+
+
+def parse_planning_issues_refs(raw: str) -> list[str]:
+    """Parse hybrid ``planningIssues`` frontmatter refs (PRD 068 R7)."""
+    value = (raw or "").strip()
+    if not value:
+        return []
+    if value.startswith("["):
+        try:
+            parsed = json.loads(value.replace("'", '"'))
+        except json.JSONDecodeError:
+            parsed = [part.strip().strip("'\"") for part in value.strip("[]").split(",") if part.strip()]
+        if isinstance(parsed, list):
+            return [_normalize_planning_issue_ref(str(item)) for item in parsed if str(item).strip()]
+    return [_normalize_planning_issue_ref(part) for part in re.split(r"[\s,]+", value) if part.strip()]
+
+
+def _normalize_planning_issue_ref(ref: str) -> str:
+    ref = ref.strip().strip(chr(39) + chr(34))
+    if ref.startswith("#"):
+        ref = ref[1:]
+    return ref
+
+
+def resolve_planning_issue_ref_to_gap(
+    root: Path,
+    cfg: dict[str, Any],
+    ref: str,
+    *,
+    backend: "IssueStoreBackend | None" = None,
+) -> str | None:
+    """Map a planning issue ref to a gap unit id via issue-store search (R7)."""
+    pmis = _migrate_issue_store()
+    if not pmis.issue_store_effective(root, cfg):
+        return None
+    if backend is None:
+        backend = get_backend(root, cfg, override="issue-store")
+    if not isinstance(backend, IssueStoreBackend):
+        return None
+    key_result = pmis.validate_project_key(root, cfg)
+    if key_result.get("verdict") != "ok":
+        return None
+    project_key = str(key_result["projectKey"])
+    normalized = _normalize_planning_issue_ref(ref)
+    issue_num = None
+    m = re.search(r"(?:planning#|#)?(\d+)$", normalized, re.I)
+    if m:
+        issue_num = int(m.group(1))
+    client = backend._client
+    search = getattr(client, "issue_search", None)
+    if not callable(search):
+        return None
+    for record in search(project_key=project_key, artifact_type="gap"):
+        unit_id = str(getattr(record, "unit_id", "") or "").strip()
+        if not unit_id:
+            continue
+        if issue_num is not None and int(getattr(record, "number", 0) or 0) == issue_num:
+            return unit_id
+        body = reassemble_body(record.body, record.comments)
+        gap_fm = pmis.parse_frontmatter_fields(strip_markers_and_edges(body))
+        related = str(gap_fm.get("related") or "")
+        needles = {normalized, f"planning#{issue_num}" if issue_num else "", f"#{issue_num}" if issue_num else ""}
+        if any(n and n in related for n in needles):
+            return unit_id
+    return None
+
+
+def gap_has_absorb_provenance(
+    root: Path,
+    cfg: dict[str, Any],
+    gap_unit_id: str,
+    prd_unit_id: str,
+    prd_fm: dict[str, str],
+    *,
+    prd_num: str | None = None,
+    edges: dict[str, Any] | None = None,
+) -> bool:
+    """True when ``gap_unit_id`` is provenance-bound to ``prd_unit_id`` for closure (R7)."""
+    from planning_gap_capture import gap_absorb_target_match
+
+    absorbs = _parse_absorbs_targets(prd_fm.get("absorbs", ""))
+    if any(gap_absorb_target_match(item, gap_unit_id) for item in absorbs):
+        return True
+    prd_num = prd_num or _prd_number_from_unit_id(prd_unit_id)
+    if prd_num:
+        scheduled = _migrate_issue_store().gap_unit_ids_scheduled_for_prd(root, prd_num, cfg)
+        if gap_unit_id in scheduled:
+            return True
+    for edge in (edges or {}).get("edges") or []:
+        if not isinstance(edge, dict):
+            continue
+        target = str(edge.get("target", "")).strip()
+        rel = str(edge.get("rel") or edge.get("relationship") or "").strip().lower()
+        if rel == "absorbs" and gap_absorb_target_match(target, gap_unit_id):
+            return True
+    backend = get_backend(root, cfg, override="issue-store")
+    if isinstance(backend, IssueStoreBackend):
+        gap_path = _default_body_path(gap_unit_id, "gap")
+        gap_fetch = backend.get(gap_unit_id, gap_path)
+        if gap_fetch.verdict == "ok" and gap_fetch.content:
+            gap_fm = _migrate_issue_store().parse_frontmatter_fields(gap_fetch.content)
+            absorbed_by = str(gap_fm.get("absorbed-by") or gap_fm.get("absorbed_by") or "").strip()
+            if absorbed_by == prd_unit_id:
+                return True
+    return False
+
+
+def _tasks_unit_selection_rank(record: Any) -> tuple[int, int, int, int]:
+    labels = list(getattr(record, "labels", []) or [])
+    frozen = FROZEN_LABEL in labels
+    complete = status_from_labels(labels) == "complete" or str(getattr(record, "state", "")) == "closed"
+    open_state = str(getattr(record, "state", "")) == "open" and not complete
+    return (
+        1 if frozen and complete else 0,
+        1 if frozen else 0,
+        1 if complete else 0,
+        -1 if open_state else 0,
+    )
+
+
+def _select_tasks_unit_candidate(
+    matched_tasks: list[tuple[str, Any]],
+) -> dict[str, Any]:
+    """Rank tasks aliases: prefer frozen+complete; open-dup → not-ready (PRD 068 R8)."""
+    if not matched_tasks:
+        return {"verdict": "missing"}
+    if len(matched_tasks) == 1:
+        uid, rec = matched_tasks[0]
+        return {"verdict": "ok", "unitId": uid, "record": rec}
+    ranked = sorted(matched_tasks, key=lambda item: _tasks_unit_selection_rank(item[1]), reverse=True)
+    best_rank = _tasks_unit_selection_rank(ranked[0][1])
+    top = [item for item in ranked if _tasks_unit_selection_rank(item[1]) == best_rank]
+    frozen_complete = [item for item in matched_tasks if _tasks_unit_selection_rank(item[1])[0]]
+    if len(frozen_complete) == 1:
+        uid, rec = frozen_complete[0]
+        return {"verdict": "ok", "unitId": uid, "record": rec, "resolution": "frozen-complete"}
+    if len(top) == 1:
+        uid, rec = top[0]
+        return {"verdict": "ok", "unitId": uid, "record": rec, "resolution": "ranked"}
+    open_dups = [
+        uid
+        for uid, rec in matched_tasks
+        if str(getattr(rec, "state", "")) == "open" and FROZEN_LABEL not in list(getattr(rec, "labels", []) or [])
+    ]
+    if open_dups:
+        return {
+            "verdict": "not-ready",
+            "error": "open-duplicate-tasks",
+            "candidates": [uid for uid, _ in matched_tasks],
+            "openDuplicates": open_dups,
+            "failSoftGaps": True,
+        }
+    return {
+        "verdict": "not-ready",
+        "error": "ambiguous-tasks-unit",
+        "candidates": [uid for uid, _ in matched_tasks],
+        "failSoftGaps": True,
+    }
 
 
 def _record_prior_state(record: Any, artifact_type: str) -> str:
@@ -3207,6 +3481,7 @@ def resolve_delivery_linked_units(
     edges = parse_edges_block(full_body) or {}
 
     units: dict[str, dict[str, str]] = {}
+    tasks_resolution: dict[str, Any] | None = None
     units[prd_unit] = {
         "unitId": prd_unit,
         "artifactType": "prd",
@@ -3226,20 +3501,22 @@ def resolve_delivery_linked_units(
             resolved_id = str(getattr(record, "unit_id", "") or tasks_id).strip() or tasks_id
             if not any(existing == resolved_id for existing, _ in matched_tasks):
                 matched_tasks.append((resolved_id, record))
-        if len(matched_tasks) > 1:
-            return {
-                "verdict": "fail",
-                "error": "ambiguous-tasks-unit",
-                "candidates": [uid for uid, _ in matched_tasks],
-                "prdUnitId": prd_unit,
-            }
-        if len(matched_tasks) == 1:
-            resolved_id, _record = matched_tasks[0]
-            units[resolved_id] = {
-                "unitId": resolved_id,
-                "artifactType": "tasks",
-                "bodyPath": _default_body_path(resolved_id, "tasks"),
-            }
+        if matched_tasks:
+            tasks_resolution = _select_tasks_unit_candidate(matched_tasks)
+            if tasks_resolution.get("verdict") == "ok":
+                resolved_id = str(tasks_resolution["unitId"])
+                units[resolved_id] = {
+                    "unitId": resolved_id,
+                    "artifactType": "tasks",
+                    "bodyPath": _default_body_path(resolved_id, "tasks"),
+                }
+            elif not tasks_resolution.get("failSoftGaps"):
+                return {
+                    "verdict": "fail",
+                    "error": tasks_resolution.get("error", "ambiguous-tasks-unit"),
+                    "candidates": tasks_resolution.get("candidates", []),
+                    "prdUnitId": prd_unit,
+                }
 
     brainstorm_ref = (fm.get("brainstorm") or "").strip()
     brainstorm_unit = ""
@@ -3258,6 +3535,16 @@ def resolve_delivery_linked_units(
         }
 
     gap_ids, gap_skipped = _gap_closure_evidence(fm, edges, prd_num, root, cfg)
+    gap_ids, gap_skipped = _discover_planning_issues_gaps(
+        root,
+        cfg,
+        prd_unit_id=prd_unit,
+        fm=fm,
+        edges=edges,
+        prd_num=prd_num,
+        delivery_grade=gap_ids,
+        skipped=gap_skipped,
+    )
     for gap_id in sorted(gap_ids):
         if gap_id in units:
             continue
@@ -3272,13 +3559,21 @@ def resolve_delivery_linked_units(
             item["unitId"],
         ),
     )
-    return {
+    payload: dict[str, Any] = {
         "verdict": "ok",
         "prdUnitId": prd_unit,
         "snapshot": ordered,
         "count": len(ordered),
         "skipped": gap_skipped,
+        "planningIssues": parse_planning_issues_refs(fm.get("planningIssues", "")),
     }
+    if tasks_resolution is not None and tasks_resolution.get("verdict") == "not-ready":
+        payload["tasksResolution"] = tasks_resolution
+        if not tasks_resolution.get("failSoftGaps"):
+            payload["verdict"] = "not-ready"
+            payload["error"] = tasks_resolution.get("error")
+            payload["candidates"] = tasks_resolution.get("candidates", [])
+    return payload
 
 
 def _phase_done_from_state(state: dict[str, Any] | None, phase_id: str) -> bool:
@@ -3567,6 +3862,114 @@ def _close_issue_store_unit(
     }
 
 
+def audit_closure_completeness(
+    root: Path,
+    cfg: dict[str, Any],
+    prd_unit_id: str,
+    *,
+    closure_result: dict[str, Any] | None = None,
+    state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Expected-set closure audit for finalize/retrospective (PRD 068 R9)."""
+    snap = resolve_delivery_linked_units(root, cfg, prd_unit_id)
+    tasks_note = snap.get("tasksResolution") if isinstance(snap.get("tasksResolution"), dict) else None
+    if snap.get("verdict") == "fail" and not (tasks_note and tasks_note.get("failSoftGaps")):
+        return {
+            "verdict": "not-ready",
+            "action": "audit-closure-completeness",
+            "error": snap.get("error"),
+            "prdUnitId": prd_unit_id,
+            "resumeCommand": f"python3 scripts/planning_store.py audit-closure-completeness --prd-unit {prd_unit_id}",
+        }
+
+    expected_gaps = {
+        item["unitId"]
+        for item in (snap.get("snapshot") or [])
+        if item.get("artifactType") == "gap"
+    }
+    considered = list(snap.get("snapshot") or [])
+    closed_ids: set[str] = set()
+    skipped = list(snap.get("skipped") or [])
+    if closure_result:
+        for item in closure_result.get("closed") or []:
+            uid = str(item.get("unitId") or "")
+            if uid:
+                closed_ids.add(uid)
+        skipped.extend(list(closure_result.get("skipped") or []))
+
+    pmis = _migrate_issue_store()
+    if pmis.issue_store_effective(root, cfg):
+        backend = get_backend(root, cfg, override="issue-store")
+        if isinstance(backend, IssueStoreBackend):
+            for gap_id in sorted(expected_gaps):
+                body_path = _default_body_path(gap_id, "gap")
+                record = _lookup_issue_record(backend, gap_id, body_path)
+                if record is None:
+                    continue
+                if _record_is_closed(record, "gap"):
+                    closed_ids.add(gap_id)
+
+    open_remaining = sorted(g for g in expected_gaps if g not in closed_ids)
+    if tasks_note and tasks_note.get("verdict") == "not-ready":
+        open_remaining = sorted(set(open_remaining) | set(tasks_note.get("openDuplicates") or []))
+
+    verdict = "ready" if not open_remaining else "not-ready"
+    resume = (
+        f"python3 scripts/planning_store.py audit-closure-completeness --prd-unit {snap.get('prdUnitId', prd_unit_id)}"
+        if open_remaining
+        else None
+    )
+    return {
+        "verdict": verdict,
+        "action": "audit-closure-completeness",
+        "prdUnitId": snap.get("prdUnitId", prd_unit_id),
+        "considered": considered,
+        "closed": sorted(closed_ids),
+        "skipped": skipped,
+        "openRemaining": open_remaining,
+        "planningIssues": snap.get("planningIssues") or [],
+        "tasksResolution": tasks_note,
+        "resumeCommand": resume,
+    }
+
+
+def doctor_absorb_pollution(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Flag complete PRDs with open absorbed gaps (PRD 068 R9 doctor)."""
+    pmis = _migrate_issue_store()
+    if not pmis.issue_store_effective(root, cfg):
+        return {"verdict": "pass", "action": "doctor-absorb-pollution", "skipped": True}
+    backend = get_backend(root, cfg, override="issue-store")
+    if not isinstance(backend, IssueStoreBackend):
+        return {"verdict": "pass", "action": "doctor-absorb-pollution", "skipped": True}
+    key_result = pmis.validate_project_key(root, cfg)
+    if key_result.get("verdict") != "ok":
+        return {"verdict": "fail", "action": "doctor-absorb-pollution", "error": key_result.get("error")}
+    project_key = str(key_result["projectKey"])
+    pollution: list[dict[str, str]] = []
+    client = backend._client
+    search = getattr(client, "issue_search", None)
+    if not callable(search):
+        return {"verdict": "pass", "action": "doctor-absorb-pollution", "skipped": True, "reason": "no-search"}
+    for record in search(project_key=project_key, artifact_type="prd"):
+        labels = list(getattr(record, "labels", []) or [])
+        if status_from_labels(labels) != "complete" and str(getattr(record, "state", "")) != "closed":
+            continue
+        unit_id = str(getattr(record, "unit_id", "") or "")
+        if not unit_id:
+            continue
+        audit = audit_closure_completeness(root, cfg, unit_id)
+        if audit.get("openRemaining"):
+            pollution.append({"prdUnitId": unit_id, "openRemaining": ",".join(audit["openRemaining"])})
+    if pollution:
+        return {
+            "verdict": "fail",
+            "action": "doctor-absorb-pollution",
+            "error": "absorb-pollution",
+            "pollution": pollution,
+        }
+    return {"verdict": "pass", "action": "doctor-absorb-pollution", "checks": ["no-pollution"]}
+
+
 def close_parent_epic_if_complete(
     root: Path,
     cfg: dict[str, Any],
@@ -3727,7 +4130,7 @@ def close_delivery_units(
     verdict = "ready" if not failures and phase_ok else "not-ready"
     if dry_run:
         verdict = "dry-run"
-    return {
+    closure_payload = {
         "verdict": verdict,
         "action": "close-delivery-units",
         "prdUnitId": snapshot["prdUnitId"],
@@ -3743,6 +4146,20 @@ def close_delivery_units(
         "cacheInvalidation": cache_status,
         "resumeCommand": resume,
     }
+    audit = audit_closure_completeness(
+        root,
+        cfg,
+        snapshot["prdUnitId"],
+        closure_result=closure_payload,
+        state=state,
+    )
+    closure_payload["closureAudit"] = audit
+    if audit.get("verdict") == "not-ready" and not dry_run:
+        closure_payload["verdict"] = "not-ready"
+        audit_open = list(audit.get("openRemaining") or [])
+        closure_payload["openRemaining"] = sorted(set(open_remaining) | set(audit_open))
+        closure_payload["resumeCommand"] = audit.get("resumeCommand") or resume
+    return closure_payload
 
 
 def validate_local_synced_path(path: Path, *, allowlist: list[str] | None = None) -> dict[str, Any]:
@@ -4035,6 +4452,12 @@ def doctor(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         checks.append(f"projection-state:{projection.get('state', 'unknown')}")
         if projection.get("state") == "projection-unavailable":
             checks.append("projection-unavailable")
+
+    pollution = doctor_absorb_pollution(root, cfg)
+    if pollution.get("verdict") == "fail":
+        return pollution
+    if pollution.get("checks"):
+        checks.extend(pollution.get("checks", []))
 
     if not checks and skipped_reasons:
         return {
@@ -5672,6 +6095,11 @@ def main() -> None:
         unit_id = _optional(rest, "--unit-id")
         result = resolve_absorbed_gaps_061(root, cfg, dry_run=dry_run, force=force, unit_id=unit_id)
         emit(result, 0 if result.get("verdict") in {"ok", "skipped"} else 20)
+    elif args.command == "audit-closure-completeness":
+        prd_unit = _require(rest, "--prd-unit")
+        result = audit_closure_completeness(root, cfg, prd_unit)
+        emit(result, 0 if result.get("verdict") == "ready" else 20)
+
     elif args.command == "verify-absorb-linkage-066":
         prd_unit = _optional(rest, "--prd-unit-id") or PRD_066_ABSORB_UNIT_ID
         gap_unit = _optional(rest, "--gap-unit-id") or GAP_079_ABSORB_UNIT_ID

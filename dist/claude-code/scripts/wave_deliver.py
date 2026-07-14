@@ -505,6 +505,218 @@ def feature_slug(frontmatter: dict[str, str], task_path: Path) -> str:
     return slugify(task_path.stem)
 
 
+RESUME_TERMINAL_VERDICTS = frozenset({"complete", "blocked", "rejected"})
+
+
+def canonical_task_list_rel(root: Path, raw: str) -> str:
+    path = Path(raw)
+    if not path.is_absolute():
+        path = (root / path).resolve()
+    else:
+        path = path.resolve()
+    try:
+        return str(path.relative_to(root.resolve()))
+    except ValueError:
+        return str(path)
+
+
+def target_branch_from_state(state: dict[str, Any]) -> str | None:
+    target = state.get("target")
+    if isinstance(target, str) and "/" in target:
+        return target
+    if isinstance(target, dict):
+        branch = target.get("branch")
+        if isinstance(branch, str) and branch:
+            return branch
+    return None
+
+
+def unit_id_matches_target(
+    unit_id: str, target_branch: str | None, task_list: str | None
+) -> bool:
+    if not unit_id or not target_branch:
+        return True
+    slug = target_branch.split("/", 1)[1] if "/" in target_branch else target_branch
+    uid = unit_id.strip().lower()
+    slug_l = slug.lower()
+    if uid in (slug_l, f"tasks-{slug_l}"):
+        return True
+    m = re.match(r"tasks-\d+-(.+)$", uid)
+    if m and m.group(1) == slug_l:
+        return True
+    if task_list:
+        import planning_materialize as pm
+
+        expected = pm.unit_id_from_task_list_rel(task_list).lower()
+        if uid == expected:
+            return True
+        m2 = re.match(r"tasks-\d+-(.+)$", expected)
+        if m2 and (uid == m2.group(1) or uid == expected):
+            return True
+    return False
+
+
+def derive_target_branch_light(
+    root: Path, task_list: str, args: list[str] | None = None
+) -> str:
+    """Derive integration target branch without base-branch preflight (PRD 068 R1)."""
+    loop_args = args or []
+    task_path = resolve_task_list_path(root, task_list)
+    content = task_path.read_text(encoding="utf-8")
+    fm = parse_frontmatter(content)
+    branch_type = resolve_type(loop_args, fm, plan_target_type=plan_target_type(root, loop_args))
+    slug = feature_slug(fm, task_path)
+    return f"{branch_type}/{slug}"
+
+
+def deliver_state_consumable(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    task_list: str | None,
+    unit_id: str | None = None,
+) -> dict[str, Any]:
+    """Consumable-state predicate for resume short-circuit (PRD 068 R1)."""
+    if not isinstance(state, dict) or not state:
+        return {"consumable": False, "reason": "state-empty"}
+    verdict = state.get("verdict")
+    if verdict in RESUME_TERMINAL_VERDICTS:
+        return {
+            "consumable": False,
+            "reason": "terminal-verdict",
+            "verdict": verdict,
+            "reenterPreflight": True,
+        }
+    if verdict != "running" or not state.get("phases"):
+        return {"consumable": False, "reason": "not-resumable"}
+    target = target_branch_from_state(state)
+    if not target:
+        return {"consumable": False, "reason": "missing-target"}
+    existing_tl = state.get("source_task_list")
+    if task_list and existing_tl:
+        if canonical_task_list_rel(root, str(existing_tl)) != canonical_task_list_rel(
+            root, task_list
+        ):
+            return {
+                "consumable": False,
+                "halt": True,
+                "cause": "resume:foreign-state",
+                "remediation": (
+                    "remove scoped deliver state or resume with matching --task-list / --unit-id"
+                ),
+            }
+    if unit_id and not unit_id_matches_target(unit_id, target, task_list):
+        return {
+            "consumable": False,
+            "halt": True,
+            "cause": "resume:wrong-slug",
+            "expectedBranch": target,
+            "unitId": unit_id,
+        }
+    return {
+        "consumable": True,
+        "target": target,
+        "reason": "resume:consumable",
+        "verdict": verdict,
+    }
+
+
+def load_scoped_state_for_task_list(
+    root: Path, task_list: str, args: list[str] | None = None
+) -> tuple[dict[str, Any], Path | None, str | None]:
+    """Load scoped deliver state without nested full preflight (PRD 068 R1)."""
+    from wave_json_io import StateCorruptError
+    from wave_state import load_state_file, scoped_paths
+
+    try:
+        target = derive_target_branch_light(root, task_list, args)
+    except SystemExit:
+        return {}, None, None
+    path = scoped_paths(root, target)["state"]
+    if not path.is_file():
+        return {}, path, target
+    try:
+        from wave_json_io import read_json
+
+        return read_json(path), path, target
+    except StateCorruptError as exc:
+        fail(
+            f"corrupt durable state: {exc}",
+            exit_code=20,
+            halt="resume:state-corrupt",
+            cause="resume:state-corrupt",
+            path=str(path),
+        )
+        return {}, path, target
+
+
+def evaluate_resume_short_circuit(root: Path, args: list[str]) -> dict[str, Any]:
+    """Resume consumable check for preflight/run short-circuit (PRD 068 R1)."""
+    task_list = resolve_task_list_arg(root, args)
+    unit_id = parse_kv(args, "--unit-id")
+    if not task_list:
+        return {"consumable": False, "reason": "no-task-list"}
+    state, state_path, target_branch = load_scoped_state_for_task_list(root, task_list, args)
+    if not state_path or not state_path.is_file():
+        return {"consumable": False, "reason": "state-missing", "taskList": task_list}
+    check = deliver_state_consumable(
+        root, state, task_list=task_list, unit_id=unit_id
+    )
+    check["taskList"] = task_list
+    if target_branch:
+        check["targetBranch"] = target_branch
+    if state_path:
+        check["statePath"] = str(state_path)
+    if check.get("consumable"):
+        check["state"] = state
+    return check
+
+
+def resume_preflight_payload(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    task_list: str,
+    target_branch: str,
+) -> dict[str, Any]:
+    """Lightweight preflight fields when durable state is consumable (PRD 068 R1)."""
+    task_path = resolve_task_list_path(root, task_list)
+    content = task_path.read_text(encoding="utf-8")
+    fm = parse_frontmatter(content)
+    phases = parse_phases(content)
+    dep_rows = parse_phase_dependencies(content)
+    phase_files = parse_phase_files(content)
+    edges, notices = deps_to_edges(phases, dep_rows, phase_files, root)
+    contention = planning_paths.contention_default(root)
+    waves, edges, injected, contention_notices, phase_files = apply_contention(
+        content, phases, edges, contention, root
+    )
+    notices.extend(contention_notices)
+    slug = feature_slug(fm, task_path)
+    branch_type = target_branch.split("/", 1)[0] if "/" in target_branch else "feat"
+    return {
+        "verdict": "pass",
+        "mode": "phase",
+        "resumeShortCircuit": True,
+        "target": {"type": branch_type, "slug": slug, "branch": target_branch},
+        "waves": waves,
+        "phaseCount": len(phases),
+        "notices": notices,
+        "contention": {
+            **contention,
+            "injectedEdges": injected,
+            "phaseFiles": phase_files,
+        },
+        "basePreflight": {"skipped": True, "reason": "resume-consumable"},
+        "capabilityIndexPreflight": {"skipped": True, "reason": "resume-consumable"},
+        "deliverState": {
+            "verdict": state.get("verdict"),
+            "currentWave": state.get("currentWave"),
+            "nextAction": state.get("nextAction"),
+        },
+    }
+
+
 def load_run_state(root: Path) -> dict[str, Any]:
     from wave_state import resolve_state_path
 
@@ -945,6 +1157,29 @@ def cmd_run(root: Path, args: list[str]) -> None:
     task_list = resolve_task_list_arg(root, args)
     if not task_list:
         fail("provide --task-list, --unit-id, or --issue", exit_code=2, halt="disambiguation")
+    resume = evaluate_resume_short_circuit(root, args)
+    if resume.get("halt"):
+        fail(
+            f"resume blocked: {resume.get('cause')}",
+            exit_code=20,
+            halt=resume.get("cause", "resume-blocked"),
+            cause=resume.get("cause"),
+            **{k: v for k, v in resume.items() if k not in ("halt", "consumable", "state")},
+        )
+    if resume.get("consumable"):
+        emit(
+            {
+                "verdict": "pass",
+                "action": "deliver-run-entry",
+                "taskList": task_list,
+                "resumeShortCircuit": True,
+                "target": resume.get("target") or resume.get("targetBranch"),
+                "deliverState": {
+                    "verdict": (resume.get("state") or {}).get("verdict"),
+                    "nextAction": (resume.get("state") or {}).get("nextAction"),
+                },
+            }
+        )
     result = pm.ensure_run_entry_materialized(root, task_list)
     emit(
         {
@@ -963,6 +1198,30 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
     if mode == "phase":
         task_list = resolve_task_list_arg(root, args)
         assert task_list
+        resume = evaluate_resume_short_circuit(root, args)
+        if resume.get("halt"):
+            fail(
+                f"resume blocked: {resume.get('cause')}",
+                exit_code=20,
+                halt=resume.get("cause", "resume-blocked"),
+                cause=resume.get("cause"),
+                **{k: v for k, v in resume.items() if k not in ("halt", "consumable", "state")},
+            )
+        if resume.get("consumable"):
+            state = resume["state"]
+            target_branch = str(resume.get("targetBranch") or resume.get("target") or "")
+            payload = resume_preflight_payload(
+                root,
+                state,
+                task_list=task_list,
+                target_branch=target_branch,
+            )
+            result.update(payload)
+            print(
+                f"mode=phase target={target_branch} waves={len(payload.get('waves') or [])} resume=short-circuit",
+                file=sys.stderr,
+            )
+            emit(result, 0)
         task_path = resolve_task_list_path(root, task_list)
         content = task_path.read_text(encoding="utf-8")
         fm = parse_frontmatter(content)
@@ -1131,7 +1390,10 @@ def cmd_plan(root: Path, args: list[str]) -> None:
         )
         notices.extend(contention_notices)
 
-        if has_flag(args, "--skip-base-check"):
+        resume = evaluate_resume_short_circuit(root, args)
+        if resume.get("consumable"):
+            pass
+        elif has_flag(args, "--skip-base-check"):
             # R6: reuse cached probe when present; otherwise skip without re-probing
             cached_base_preflight(root, branch)
         else:

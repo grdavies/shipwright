@@ -167,6 +167,30 @@ re-invokes `python3 scripts/wave.py deliver-loop` within the same turn until a l
 `skills/conductor/SKILL.md` **In-turn self-continuation loop**). A fresh agent resumes from
 `.cursor/sw-deliver-state.json` + plan + run log alone (R4).
 
+
+## Orchestrator worktree auto-adopt (R2)
+
+When durable deliver state records an orchestrator worktree and `/sw-deliver run` resumes, the driver
+reuses the recorded path instead of inventing a new one:
+
+| Precondition | Requirement |
+| --- | --- |
+| Path | Exists under managed `.sw-worktrees/` roots (absolute path in state) |
+| Identity | Recorded `branch` matches deliver `target.branch`; slug/name matches the active run |
+| Worktree | Valid git worktree with `.git` metadata — not a bare directory |
+| Checkout | Orchestrator worktree is on `target.branch` (not detached on the wrong ref) |
+| Tree | Clean `git status --porcelain` — dirty trees halt with `dirty-orchestrator` |
+
+**Adopt path:** `scripts/wave.py orchestrator provision` calls `adopt_orchestrator_worktree` when
+`.sw-worktrees/<slug>-orchestrator` already exists and passes the checks above (`wave_lifecycle.py`).
+Basename-only paths or mismatched slug/branch fail closed with typed halts — never silent invent.
+
+**Resume:** after any legitimate halt, re-run `/sw-deliver run` (or `/sw-deliver run --unit-id <id>` under
+issue-store). Consumable durable state with matching `source_task_list` skips nested full preflight on
+resume; wrong slug, truncated JSON, terminal verdict, or foreign task-list re-enters preflight or hard-halts.
+See `docs/guides/commands.md` for the operator summary.
+
+
 ## Conductor in-turn loop (`run` / `deliver-loop`)
 
 After every `deliver-loop` JSON response:
