@@ -288,17 +288,20 @@ cat >.cursor/sw-deliver-state.json <<'JSON'
   "phases": {"1": {"id": "1", "slug": "alpha", "status": "pending"}}
 }
 JSON
-export SW_DRIVER_STALE_SECONDS=60
-if OUT=$(python3 "$LOOP_PY" "$FIX" compute-next 2>/dev/null) && echo "$OUT" | python3 -c "
+# Subshell so SW_DRIVER_STALE_SECONDS=60 cannot leak into later fixtures (PRD 065
+# merge-ready seeding can exceed 60s; default DRIVER_STALE is 7200). Also clear any
+# ambient override inherited from the parent process.
+(
+  export SW_DRIVER_STALE_SECONDS=60
+  OUT=$(python3 "$LOOP_PY" "$FIX" compute-next 2>/dev/null) && echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 assert d['next']['action']=='halt-blocked'
 assert 'stale' in d['next'].get('cause','')
-"; then
-  ok "driver-heartbeat-timeout-halt: stale heartbeat → halt-blocked"
-else
-  bad "driver-heartbeat-timeout-halt"
-fi
+"
+) && ok "driver-heartbeat-timeout-halt: stale heartbeat → halt-blocked" \
+  || bad "driver-heartbeat-timeout-halt"
+unset SW_DRIVER_STALE_SECONDS
 
 # wave.sh routes deliver-loop
 if bash "$WAVE" deliver-loop --dry-run 2>/dev/null | python3 -c "
@@ -579,6 +582,8 @@ else
 fi
 
 # --- PRD 017 Phase 2: parallel-collect-all-ready (R27) stub ---
+# Belt-and-suspenders: clear ambient stale overrides before PRD 065 seeding.
+unset SW_DRIVER_STALE_SECONDS
 COLLECT_FIX=$(mktemp -d)
 (
   cd "$COLLECT_FIX"

@@ -784,7 +784,7 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-pytest-required-shard-2",
-      "pytestPath": "scripts/unit_tests/phase_sizing",
+      "pytestPath": "scripts/unit_tests/phase_sizing_suite",
       "ciShard": 2
     },
     {
@@ -795,7 +795,7 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-pytest-required-shard-2",
-      "pytestPath": "scripts/unit_tests/phase_sizing",
+      "pytestPath": "scripts/unit_tests/phase_sizing_suite",
       "ciShard": 2
     },
     {

@@ -71,14 +71,14 @@
         {
           "id": "phase-sizing-corpus-fixtures",
           "legacy": "scripts/test/run_phase_sizing_corpus_fixtures.py",
-          "pytestPath": "scripts/unit_tests/phase_sizing",
+          "pytestPath": "scripts/unit_tests/phase_sizing_suite",
           "kind": "python",
           "legacyBasename": "run_phase_sizing_corpus_fixtures.py"
         },
         {
           "id": "phase-sizing-fixtures",
           "legacy": "scripts/test/run_phase_sizing_fixtures.py",
-          "pytestPath": "scripts/unit_tests/phase_sizing",
+          "pytestPath": "scripts/unit_tests/phase_sizing_suite",
           "kind": "python",
           "legacyBasename": "run_phase_sizing_fixtures.py"
         },

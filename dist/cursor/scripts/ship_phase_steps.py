@@ -169,26 +169,44 @@ def save_steps(path: Path, doc: dict[str, Any]) -> None:
     os.chmod(path, 0o600)
 
 
-def cmd_init(root: Path, args: list[str]) -> None:
-    phase = _parse_kv(args, "--phase")
-    if not phase:
-        fail("--phase required")
-    out = _parse_kv(args, "--out")
+def init_silent(
+    root: Path,
+    phase: str,
+    *,
+    out: str | None = None,
+    head: str | None = None,
+) -> dict[str, Any]:
+    """Initialize ship-steps.json without sys.exit (ship-loop drive)."""
     path = resolve_steps_path(root, phase, out)
-    head = _parse_kv(args, "--head") or _git_head(root)
+    head_sha = head or _git_head(root)
     chain, source, plan = authoritative_chain(root, phase, out)
     doc = {
         "phase": phase,
         "currentStep": chain[0],
         "lastCompletedStep": None,
         "stepAttempts": {},
-        "headAtStart": head,
+        "headAtStart": head_sha,
         "chain": chain,
         "chainSource": source,
         "phasePlanPath": str(resolve_plan_file(root, phase, out)) if plan else None,
     }
     save_steps(path, doc)
-    emit({"verdict": "pass", "action": "ship-steps-init", "path": str(path), "state": doc})
+    return {
+        "verdict": "pass",
+        "action": "ship-steps-init",
+        "path": str(path),
+        "state": doc,
+    }
+
+
+def cmd_init(root: Path, args: list[str]) -> None:
+    phase = _parse_kv(args, "--phase")
+    if not phase:
+        fail("--phase required")
+    out = _parse_kv(args, "--out")
+    head = _parse_kv(args, "--head")
+    payload = init_silent(root, phase, out=out, head=head)
+    emit(payload)
 
 
 def cmd_get(root: Path, args: list[str]) -> None:
@@ -220,7 +238,7 @@ def cmd_attempt(root: Path, args: list[str]) -> None:
     path = resolve_steps_path(root, phase, out)
     doc = load_steps(path)
     if not doc:
-        cmd_init(root, ["--phase", phase] + (["--out", str(path)] if out else []))
+        init_silent(root, phase, out=str(path) if out else None)
         doc = load_steps(path)
     chain, _, _ = authoritative_chain(root, phase, out)
     plan_index(chain, norm)
@@ -333,7 +351,7 @@ def record_step_attempt_silent(
     path = resolve_steps_path(root, phase, out)
     doc = load_steps(path)
     if not doc:
-        cmd_init(root, ["--phase", phase] + (["--out", str(path)] if out else []))
+        init_silent(root, phase, out=out or str(path))
         doc = load_steps(path)
     chain, _, _ = authoritative_chain(root, phase, out)
     plan_index(chain, norm)

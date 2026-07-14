@@ -107,8 +107,18 @@ if [[ -f "$ROOT/scripts/sw-assert-worktree.py" ]]; then
   bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-positive-linked.sh" || FAIL=1
   bash "$ROOT/scripts/test/fixtures/onboarding-ux/worktree-guard-positive-hotfix.sh" || FAIL=1
   CURRENT_BRANCH=$(git -C "$ROOT" branch --show-current 2>/dev/null || true)
+  DEFAULT_BRANCH=$(python3 -c "import json; from pathlib import Path; import os; root=Path(os.environ.get('ROOT') or '.'); cands=[root/'.cursor/workflow.config.json', root/'workflow.config.json']; val='main'
+for c in cands:
+  if c.is_file():
+    try:
+      val=str(json.loads(c.read_text(encoding='utf-8')).get('defaultBaseBranch','main')); break
+    except Exception:
+      break
+print(val)")
   if [[ -z "$CURRENT_BRANCH" ]]; then
     echo "OK  worktree-guard: skipped active check (detached HEAD)"
+  elif [[ "$CURRENT_BRANCH" == "$DEFAULT_BRANCH" ]]; then
+    echo "OK  worktree-guard: skipped active check (bare default branch; covered by positive fixtures)"
   elif python3 "$ROOT/scripts/sw-assert-worktree.py" >/dev/null 2>&1; then
     echo "OK  worktree-guard: active worktree checkout passes"
   else
