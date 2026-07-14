@@ -334,3 +334,292 @@ def test_close_parent_epic_idempotent_when_closed(
     )
     assert out.get("idempotent") is True
     assert out.get("action") == "noop"
+
+# --- PRD 068 R6–R9 absorb / closure audit ---
+
+
+def _fixture_closure_repo(tmp_path: Path, monkeypatch) -> tuple[Path, dict, FixtureIssuesStore, str]:
+    from issues_lib import FixtureIssuesStore
+    from planning_canonical import compose_issue_body, FROZEN_LABEL, status_label
+
+    monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
+    root = tmp_path
+    _init_repo(root)
+    project_key = "closure-068"
+    cfg = _issue_store_cfg(project_key)
+    (root / ".cursor/workflow.config.json").write_text(__import__("json").dumps(cfg), encoding="utf-8")
+    store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
+    prd_unit = "068-prd-post-067-dogfood-hardening"
+    gap_unit = "gap-153-absorb-discovery"
+    prd_body = compose_issue_body(
+        project_key,
+        "prd",
+        prd_unit,
+        (
+            f"---\nid: {prd_unit}\ntype: prd\nstatus: complete\n"
+            f"planningIssues: planning#153\nvisibility: public\n---\n# PRD 068\n"
+        ),
+    )
+    gap_body = compose_issue_body(
+        project_key,
+        "gap",
+        gap_unit,
+        (
+            f"---\nid: {gap_unit}\ntype: gap\nstatus: scheduled\n"
+            f"schedule: PRD 068\nabsorbed-by: {prd_unit}\nrelated: planning#153\n"
+            f"visibility: public\n---\n# Gap 153\n"
+        ),
+    )
+    prd_rec = store.create(
+        title="PRD 068",
+        body=prd_body,
+        labels=["sw:prd", status_label("complete"), f"sw:unit:{prd_unit}"],
+        project_key=project_key,
+        artifact_type="prd",
+        unit_id=prd_unit,
+    )
+    gap_rec = store.create(
+        title="Gap 153",
+        body=gap_body,
+        labels=["sw:gap", "sw:gap-scheduled", f"sw:unit:{gap_unit}"],
+        project_key=project_key,
+        artifact_type="gap",
+        unit_id=gap_unit,
+    )
+    gap_rec.number = 153
+    store._issues[gap_rec.id] = gap_rec
+    store._persist()
+    index = {
+        "version": 1,
+        "units": {
+            f"{project_key}:{prd_unit}": prd_rec.id,
+            f"{project_key}:{gap_unit}": gap_rec.id,
+        },
+    }
+    (root / ".cursor/hooks/state/issue-store-unit-index.json").write_text(
+        __import__("json").dumps(index), encoding="utf-8"
+    )
+    return root, cfg, store, prd_unit
+
+
+def test_planning_issues_discovery_hybrid(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """R7 — planningIssues ref discovers gap when absorbs empty."""
+    from planning_store import resolve_delivery_linked_units
+
+    root, cfg, _store, prd_unit = _fixture_closure_repo(tmp_path, monkeypatch)
+    snap = resolve_delivery_linked_units(root, cfg, prd_unit)
+    assert snap["verdict"] == "ok", snap
+    gap_ids = [item["unitId"] for item in snap["snapshot"] if item["artifactType"] == "gap"]
+    assert "gap-153-absorb-discovery" in gap_ids
+
+
+def test_foreign_planning_issue_rejected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """R7 — bare foreign planningIssues without provenance are skipped."""
+    from issues_lib import FixtureIssuesStore
+    from planning_canonical import compose_issue_body
+    from planning_store import resolve_delivery_linked_units
+
+    root, cfg, store, prd_unit = _fixture_closure_repo(tmp_path, monkeypatch)
+    prd_rec = store.find_by_unit("closure-068", prd_unit)
+    assert prd_rec is not None
+    foreign = compose_issue_body(
+        "closure-068",
+        "gap",
+        "gap-999-foreign",
+        "---\nid: gap-999-foreign\ntype: gap\nstatus: open\n---\n# foreign\n",
+    )
+    foreign_rec = store.create(
+        title="foreign",
+        body=foreign,
+        labels=["sw:gap", "sw:gap-open", "sw:unit:gap-999-foreign"],
+        project_key="closure-068",
+        artifact_type="gap",
+        unit_id="gap-999-foreign",
+    )
+    foreign_rec.number = 999
+    store._issues[foreign_rec.id] = foreign_rec
+    store._persist()
+    body = prd_rec.body.replace("planning#153", "planning#153, planning#999")
+    store.update(prd_rec.id, body=body)
+    snap = resolve_delivery_linked_units(root, cfg, prd_unit)
+    assert snap["verdict"] == "ok", snap
+    gap_ids = [item["unitId"] for item in snap["snapshot"] if item["artifactType"] == "gap"]
+    assert "gap-999-foreign" not in gap_ids
+    assert any(item.get("reason") == "planning-issue-no-provenance" for item in snap.get("skipped", []))
+
+
+def test_record_absorb_linkage_generic_writes_absorbs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """R6 — generic absorb-linkage writes absorbs + schedule + absorbed-by."""
+    import planning_gap_capture as pgc
+    from planning_migrate_issue_store import parse_frontmatter_fields
+
+    root, cfg, store, prd_unit = _fixture_closure_repo(tmp_path, monkeypatch)
+    # reset linkage fields
+    gap_unit = "gap-153-absorb-discovery"
+    gap_rec = store.find_by_unit("closure-068", gap_unit)
+    prd_rec = store.find_by_unit("closure-068", prd_unit)
+    assert gap_rec and prd_rec
+    gap_body = gap_rec.body.replace("absorbed-by: 068-prd-post-067-dogfood-hardening", "absorbed-by:")
+    gap_body = gap_body.replace("status: scheduled", "status: open")
+    store.update(gap_rec.id, body=gap_body, labels=["sw:gap", "sw:gap-open", f"sw:unit:{gap_unit}"])
+    prd_body = prd_rec.body
+    out = pgc.record_absorb_linkage(
+        root,
+        prd_unit_id=prd_unit,
+        prd_number="068",
+        gap_unit_ids=[gap_unit],
+        planning_issue="planning#153",
+        dry_run=False,
+    )
+    assert out["verdict"] == "ok", out
+    import planning_store
+    from planning_store import get_backend
+    backend = get_backend(root, cfg, override="issue-store")
+    prd_get = backend.get(prd_unit, planning_store._default_body_path(prd_unit, "prd"))
+    gap_get = backend.get(gap_unit, planning_store._default_body_path(gap_unit, "gap"))
+    assert prd_get.verdict == "ok" and gap_get.verdict == "ok"
+    prd_fm = parse_frontmatter_fields(prd_get.content or "")
+    gap_fm = parse_frontmatter_fields(gap_get.content or "")
+    from planning_store import _parse_absorbs_targets
+    absorbs = _parse_absorbs_targets(prd_fm.get("absorbs", ""))
+    assert any("gap-153" in item for item in absorbs)
+    assert gap_fm.get("absorbed-by") == prd_unit
+
+
+def test_open_duplicate_tasks_fail_soft_gaps(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """R8 — open duplicate tasks aliases do not block gap discovery."""
+    from issues_lib import FixtureIssuesStore
+    from planning_canonical import compose_issue_body, FROZEN_LABEL, status_label
+    from planning_store import IssueStoreBackend, resolve_delivery_linked_units
+
+    monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
+    root = tmp_path
+    _init_repo(root)
+    project_key = "closure-068-dup"
+    cfg = _issue_store_cfg(project_key)
+    (root / ".cursor/workflow.config.json").write_text(__import__("json").dumps(cfg), encoding="utf-8")
+    store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
+    prd_unit = "068-prd-post-067-dogfood-hardening"
+    tasks_a = "tasks-068-post-067-dogfood-hardening"
+    tasks_b = "tasks-debug-post-067-dogfood-hardening"
+    index_units = {}
+    for uid in (tasks_a, tasks_b):
+        body = compose_issue_body(
+            project_key,
+            "tasks",
+            uid,
+            f"---\nid: {uid}\ntype: tasks\nfrozen: true\n---\n### 1. One\n",
+        )
+        rec = store.create(
+            title=uid,
+            body=body,
+            labels=["sw:tasks", f"sw:unit:{uid}"],
+            project_key=project_key,
+            artifact_type="tasks",
+            unit_id=uid,
+        )
+        index_units[f"{project_key}:{uid}"] = rec.id
+    prd_body = compose_issue_body(
+        project_key,
+        "prd",
+        prd_unit,
+        f"---\nid: {prd_unit}\ntype: prd\nabsorbs: [gap-153-absorb-discovery]\n---\n# PRD\n",
+    )
+    store.create(
+        title="prd",
+        body=prd_body,
+        labels=["sw:prd", f"sw:unit:{prd_unit}"],
+        project_key=project_key,
+        artifact_type="prd",
+        unit_id=prd_unit,
+    )
+    gap_body = compose_issue_body(
+        project_key,
+        "gap",
+        "gap-153-absorb-discovery",
+        "---\nid: gap-153-absorb-discovery\ntype: gap\nstatus: open\n---\n# gap\n",
+    )
+    gap_rec = store.create(
+        title="gap",
+        body=gap_body,
+        labels=["sw:gap", "sw:gap-open", "sw:unit:gap-153-absorb-discovery"],
+        project_key=project_key,
+        artifact_type="gap",
+        unit_id="gap-153-absorb-discovery",
+    )
+    prd_rec = store.find_by_unit(project_key, prd_unit)
+    index = {
+        "version": 1,
+        "units": {
+            **index_units,
+            f"{project_key}:{prd_unit}": prd_rec.id if prd_rec else "",
+            f"{project_key}:gap-153-absorb-discovery": gap_rec.id,
+        },
+    }
+    (root / ".cursor/hooks/state/issue-store-unit-index.json").write_text(
+        __import__("json").dumps(index), encoding="utf-8"
+    )
+    snap = resolve_delivery_linked_units(root, cfg, prd_unit)
+    assert snap.get("tasksResolution", {}).get("verdict") == "not-ready"
+    assert snap["verdict"] == "ok"
+    assert any(item["artifactType"] == "gap" for item in snap["snapshot"])
+
+
+def test_audit_closure_open_remaining_false_green(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """R9 — undiscovered open gaps yield not-ready audit with resumeCommand."""
+    from planning_store import audit_closure_completeness
+
+    root, cfg, _store, prd_unit = _fixture_closure_repo(tmp_path, monkeypatch)
+    audit = audit_closure_completeness(root, cfg, prd_unit)
+    assert audit["verdict"] == "not-ready", audit
+    assert audit["openRemaining"]
+    assert audit.get("resumeCommand")
+
+
+def test_duplicate_open_tasks_mint_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """R8 — refuse second open tasks mint for same slug."""
+    from issues_lib import FixtureIssuesStore
+    from planning_canonical import compose_issue_body
+    from planning_store import IssueStoreBackend
+
+    monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
+    root = tmp_path
+    _init_repo(root)
+    project_key = "closure-068-mint"
+    cfg = _issue_store_cfg(project_key)
+    (root / ".cursor/workflow.config.json").write_text(__import__("json").dumps(cfg), encoding="utf-8")
+    store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
+    uid = "tasks-068-post-067-dogfood-hardening"
+    body = compose_issue_body(
+        project_key,
+        "tasks",
+        uid,
+        f"---\nid: {uid}\ntype: tasks\n---\n### 1. One\n",
+    )
+    rec = store.create(
+        title=uid,
+        body=body,
+        labels=["sw:tasks", f"sw:unit:{uid}"],
+        project_key=project_key,
+        artifact_type="tasks",
+        unit_id=uid,
+    )
+    (root / ".cursor/hooks/state/issue-store-unit-index.json").write_text(
+        __import__("json").dumps({"version": 1, "units": {f"{project_key}:{uid}": rec.id}}),
+        encoding="utf-8",
+    )
+    backend = IssueStoreBackend(root, cfg)
+    dup_uid = "tasks-debug-post-067-dogfood-hardening"
+    dup_body = compose_issue_body(
+        project_key,
+        "tasks",
+        dup_uid,
+        f"---\nid: {dup_uid}\ntype: tasks\n---\n### 1. Dup\n",
+    )
+    try:
+        backend.put(dup_uid, f"docs/prds/068-post-067-dogfood-hardening/{dup_uid}.md", dup_body)
+        raised = False
+    except SystemExit:
+        raised = True
+    assert raised
+
