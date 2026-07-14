@@ -2,7 +2,7 @@
 
 Thank you for contributing to [Shipwright](https://github.com/grdavies/shipwright).
 
-**Using the plugin?** See [documentation/](documentation/) for adopters. This file is for plugin development
+**Using the plugin?** See [docs/guides/](docs/guides/getting-started.md) for adopters ([getting started](docs/guides/getting-started.md)). This file is for plugin development
 only. Internal planning artifacts (brainstorms, PRDs) live in gitignored `docs/`; they are not user
 documentation.
 

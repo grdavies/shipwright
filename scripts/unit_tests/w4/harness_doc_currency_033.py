@@ -68,7 +68,7 @@ check "sw-status-gap-echo" "$STATUS" "planning/INDEX"
 check "sw-status-override-drift" "$STATUS" "override drift"
 
 # doc-currency-033-sections (guides)
-check "workflows-lifecycle" "$WF" "Planning lifecycle (PRD 033)"
+check "workflows-lifecycle" "$WF" "Planning lifecycle"
 check "workflows-deliver-next" "$WF" "/sw-deliver next"
 check "workflows-reconciler" "$WF" "planning-graph reconcile"
 check "workflows-legacy-projection" "$WF" "read-only projection"

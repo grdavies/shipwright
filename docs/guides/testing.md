@@ -1,4 +1,4 @@
-# Testing guide (PRD 054)
+# Testing guide
 
 Shipwright uses **pytest** as the sole test runner. Tests live under `scripts/unit_tests/`; discovery is
 configured in `pytest.ini` at the repo root.
@@ -55,45 +55,45 @@ Prefer matrices over copy-pasted cases:
 
 ```python
 @pytest.mark.parametrize(
-    ("scope", "expected"),
-    [("fast", 0), ("phase", 0), ("full", 0)],
+ ("scope", "expected"),
+ [("fast", 0), ("phase", 0), ("full", 0)],
 )
 def test_scope_dispatch(scope, expected, repo_root):
-    ...
+ ...
 ```
 
 ### Negative outcomes
 
-Add one explicit test per public error path (PRD 054 R16):
+Add one explicit test per public error path:
 
 ```python
 def test_dependency_gate_rejects_unfrozen(tmp_path):
-    with pytest.raises(SystemExit) as exc:
-        run_gate(tmp_path / "tasks.md", frozen=False)
-    assert exc.value.code == 2
+ with pytest.raises(SystemExit) as exc:
+ run_gate(tmp_path / "tasks.md", frozen=False)
+ assert exc.value.code == 2
 ```
 
 ### Temporary state
 
 Use `tmp_path` or `tmp_git_repo` — never mutate the developer checkout.
 
-## CI shards (PRD 054 TR13)
+## CI shards ( TR13)
 
 PR jobs run `.github/workflows/pr-test-plan-ci.yml`, generated from
 `core/sw-reference/pr-test-plan.manifest.json`:
 
 - **Standalone jobs** — guard scripts that are not pytest packages (`docs-link-check`, bash guards).
 - **Pytest shards** — `feat-test-plan-pytest-required-shard-{1..4}` and
-  `feat-test-plan-pytest-advisory-shard-1` batch registry `pytestPath` targets per shard.
+ `feat-test-plan-pytest-advisory-shard-1` batch registry `pytestPath` targets per shard.
 - **Classification** — `required` shards block merge; `advisory` shards use `continue-on-error` (checks-gate
-  semantics unchanged).
+ semantics unchanged).
 
 Regenerate after manifest edits:
 
 ```bash
 python3 scripts/generate-pr-test-plan-ci-workflow.py \
-  core/sw-reference/pr-test-plan.manifest.json \
-  .github/workflows/pr-test-plan-ci.yml .
+ core/sw-reference/pr-test-plan.manifest.json \
+ .github/workflows/pr-test-plan-ci.yml .
 ```
 
 **Consolidated full verify** — `.github/workflows/ci.yml` `verify-full` on `main` push and nightly schedule runs
@@ -112,7 +112,7 @@ PYTHONPATH=scripts python3 scripts/test/_runner.py run-pytest --scope phase
 See [pytest documentation](https://docs.pytest.org/en/stable/example/index.html) for fixtures, parametrization,
 and `tmp_path` usage.
 
-## Build-chain freshness (PRD 060)
+## Build-chain freshness
 
 After editing `scripts/`, emittable roots, or `core/`:
 
@@ -133,7 +133,7 @@ remediate in `.sw/` then re-sync.
 
 Regression: `scripts/unit_tests/git/test_build_chain_hygiene.py`
 
-## Harness isolation + deprecated surfaces (PRD 060 R10–R15)
+## Harness isolation + deprecated surfaces ( –)
 
 - `python3 scripts/deprecated_surface_freshness.py --check`
 - `python3 scripts/harness_isolation_lint.py --check`
@@ -145,7 +145,7 @@ Regression: `scripts/unit_tests/git/test_build_chain_hygiene.py`
 
 The `scripts/unit_tests/`, `scripts/tests/`, and `scripts/test/` trees are **repo-only** harness sources. They are excluded from `core/scripts/` and from emitted `dist/*/scripts/` per `core/sw-reference/build-chain-sot.json` — never ship them in plugin install trees.
 
-## Parity compare tier gate (PRD 055)
+## Parity compare tier gate
 
 `scripts/test/parity_compare.py` compares `dist/cursor` against `scripts/test/fixtures/parity/cursor-golden.manifest`
 using pure Python (`hashlib` + tree walk). The **841-file** golden compare runs only when:
@@ -160,16 +160,16 @@ using pure Python (`hashlib` + tree walk). The **841-file** golden compare runs 
 Widen globs are defined in `scripts/test_scope.py` (`WIDEN_GLOBS`). Post-merge verify defaults to **phase**
 scope when the merge-base diff does not match the widen list.
 
-## Verify watchdog (PRD 055)
+## Verify watchdog
 
 `verify.watchdog.maxMinutes` in `.cursor/workflow.config.json` bounds wall-clock time for the pr-test-plan
 manifest loop during full verify. When exceeded, `_runner.py` emits a consolidated halt JSON with
 `lastSuiteId` and `resumeCommand`. Per-suite elapsed seconds are logged during manifest execution.
 
 
-### PRD 067 Wave A regressions
+### Wave A regressions
 
 Focused suite: `scripts/unit_tests/deliver/test_prd067_wave_a_reliability.py` covers ship-lease reclaim, preflight timeout default, materialized currency path, `tasks-debug-*` unit ids, and terminal `SW_PHASE_*` clearing.
 
-Also: `test_finalize_does_not_outer_acquire_living_doc_lock` in `scripts/unit_tests/planning/test_closure_completeness.py` (R1 nested-acquire).
+Also: `test_finalize_does_not_outer_acquire_living_doc_lock` in `scripts/unit_tests/planning/test_closure_completeness.py` ( nested-acquire).
 

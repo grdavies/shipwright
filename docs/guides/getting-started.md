@@ -3,10 +3,45 @@
 Shipwright is a Cursor and Claude Code plugin that structures agentic development: traceable specs,
 a gated ship loop, and compounding memory.
 
-**Start here:** [README](../../README.md) for prerequisites, installation (Cursor and Claude Code),
-configuration via `/sw-init`, and the lifecycle overview.
+**Start here:** [README](../../README.md) for prerequisites, installation, `/sw-init`, and the lifecycle
+overview. Style and structure conventions live in the [style guide](style-guide.md). Coined terms are in
+the [glossary](glossary.md). Unsure which command to run? Use the [decision tree](decision-tree.md).
 
-This guide covers three persona paths after setup, plus the key invariants that govern all workflows.
+## Positioning
+
+| Need | Shipwright | Ad-hoc agent chat |
+|------|------------|-------------------|
+| Spec → tasks → merge gate | Frozen task lists and `/sw-deliver` | Easy to lose the thread |
+| Isolation | Linked worktrees; no bare-`main` implementation | Easy to commit on the wrong branch |
+| CI truth | Deterministic check-gate before “ready” | Easy to declare green early |
+| Memory | Provider-routed, redacted writes | Easy to paste secrets into chat history |
+
+Shipwright optimizes for **repeatable delivery**, not for skipping human merge judgment.
+
+## Adoption arc
+
+### First session
+
+1. Install the plugin (`python3 scripts/install.py` from the Shipwright clone; reload the editor).
+2. In your **project** repo, run `/sw-init` and accept defaults unless you already know your providers.
+3. Run a small loop: `/sw-doc` on a tiny idea **or** open an existing frozen task list with
+   `/sw-deliver run <path-or-unit>`.
+4. Stop at the merge gate—do not force-merge to the default branch from the agent.
+
+### Week two
+
+1. Prefer `/sw-deliver run` for multi-phase work instead of manually chaining `/sw-ship`.
+2. Tune only what hurts: `deliver.autonomy`, `review.provider`, memory provider—see
+   [configuration](configuration.md).
+3. After merges, let `/sw-cleanup` dry-run, then confirm removals.
+4. Skim [workflows](workflows.md) for the doc → deliver → ship path you actually use.
+
+### After a month
+
+1. Use issue-store or file-store planning deliberately (configuration guide).
+2. Rely on `/sw-status` and living planning indexes instead of tribal chat summary.
+3. Route production signals through `/sw-feedback` / `/sw-debug` rather than patching on `main`.
+4. Keep user docs free of internal planning IDs ([style guide](style-guide.md)).
 
 ## Two places, two jobs
 
@@ -16,8 +51,7 @@ This guide covers three persona paths after setup, plus the key invariants that 
 | **Each project repo** | Run `/sw-init` so commands know your providers, verify commands, memory store, and guardrails |
 
 The plugin lives globally; configuration and artifacts live in the **target repository** you build in.
-Running `install.py` inside a git repo prints an opt-in reminder to run `/sw-init` for that repo only —
-the installer never configures projects for you.
+The installer never configures projects for you.
 
 ## Doc → implementation boundary (`doc.afterTasks`)
 
@@ -25,143 +59,69 @@ After `/sw-tasks` freezes the task list, `doc.afterTasks` controls what happens 
 
 | Mode | Behavior |
 |------|----------|
-| `stop` | Halt after the frozen task list (print-only); print the docs-only seed command onto `<type>/<slug>` and `/sw-deliver run <frozen-tasks>`. |
-| `confirm` | Show the full task list, then a dedicated **Implementation checkpoint** block (heading + direct question + paused-state line); require `proceed` or `yes`; seed frozen spec onto `<type>/<slug>`; dispatch `/sw-deliver run <frozen-tasks>`. Unrelated messages while pending re-emit the checkpoint — nothing dispatches until you ack. |
-| `auto` | Seed frozen spec onto `<type>/<slug>` and dispatch `/sw-deliver run <frozen-tasks>` without a second prompt. |
+| `stop` | Halt after the frozen task list; print the docs-only seed command and `/sw-deliver run …`. |
+| `confirm` | Show the task list and an **Implementation checkpoint**; require `proceed` or `yes`; then seed and deliver. |
+| `auto` | Seed and dispatch `/sw-deliver run …` without a second prompt. |
 
-Override per run: `/sw-doc --after-tasks=<mode>` or `/sw-deliver run` at the frozen-task-list boundary.
+Override per run: `/sw-doc --after-tasks=<mode>`.
 
 ## Agent-driven `/sw-cleanup`
 
 After merge, `/sw-cleanup` enumerates merged branches and stale worktrees in **dry-run** mode. The agent
-presents the `wouldRemove` set and asks you to confirm before applying removals; on explicit ack it runs
-`python3 scripts/cleanup.py --confirm --yes` for you. Declined or ambiguous replies leave the dry-run report
-as-is — use the manual escape hatch if you prefer to apply yourself.
+presents the `wouldRemove` set and asks you to confirm before applying removals. Declined or ambiguous
+replies leave the dry-run report as-is.
 
 ## Worktree invariant
 
-**No implementation files are written on bare `main`.** `/sw-deliver` provisions worktrees
-automatically. For manual paths, use a linked worktree and phase branch (`/sw-worktree`, `/sw-start`).
-`scripts/sw-assert-worktree.py` enforces this at implementation entry.
+**No implementation files are written on bare `main`.** `/sw-deliver` provisions worktrees automatically.
+For manual paths, use `/sw-worktree` and `/sw-start`. `scripts/sw-assert-worktree.py` enforces this at
+implementation entry.
 
-## Issue-store adopters (PRD 043/045)
+## Issue-store adopters
 
 Opt-in via `planning.store.backend: issue-store` in `.cursor/workflow.config.json` (default unchanged).
-Under issue-store, `/sw-doc-review` posts persona findings as integrity-checked issue comments on the PRD
-artifact issue; file-store users keep the in-IDE review panel. Release grouping (`planning.releaseGrouping`)
-maps PRDs to provider milestones where supported. See [configuration](configuration.md#issue-store-prd-043-opt-in)
-and [workflow guide](workflows.md#issue-native-doc-review-and-release-grouping-prd-045-phase-3).
+Under issue-store, planning units and progress live in the issue provider; file-store users keep on-disk
+planning trees. See [configuration](configuration.md) and [workflows](workflows.md).
 
 ## Single-pass `/sw-tasks`
 
-`/sw-tasks` generates the **complete** frozen task list in one pass (parent phases, executable
-sub-tasks, and `## Traceability`) — there is no "Go" gate or mid-generation pause. Run standalone,
-it outputs the list and stops without prompting for implementation.
+`/sw-tasks` generates the **complete** frozen task list in one pass (phases, executable sub-tasks, and
+traceability). Standalone, it outputs the list and stops without prompting for implementation.
 
-## Review gating (default off)
+## Review gating (canonical opt-out)
 
-The schema default for `review.provider` is **`none`** (review gating off). CodeRabbit is **opt-in**
-— set `review.provider: "coderabbit"` explicitly to enable external review on PRs. The **canonical way to disable** external AI review is `review.provider: "none"`.
+The schema default for `review.provider` is **`none`** (review gating off). CodeRabbit is **opt-in** —
+set `review.provider: "coderabbit"` explicitly. The **canonical way to disable** external AI review is
+`review.provider: "none"`.
 
-`/sw-init` writes these defaults; `/sw-ready` and `/sw-status` echo `review: off` from the CI gate
-when reporting merge readiness.
-
-## Deliver autonomy and living docs (PRD 009)
+## Deliver autonomy and living docs
 
 - **`deliver.autonomy`** — default `autonomous`; runs `/sw-deliver` to the terminal gate without routine
   re-prompts. Set `supervised` for extra acknowledgement halts.
-- **Legitimate halt** (`legitimate.halt`) — only terminal `main` merge, exhausted remediation, destructive git, configured
-  checkpoints, phase timeout, external-wait exhaustion, or run-level budget.
+- **`legitimate.halt`** — only terminal default-branch merge, exhausted remediation, destructive git,
+  configured checkpoints, phase timeout, external-wait exhaustion, or run-level budget.
 - **Living-doc currency** — generated planning INDEX (`docs/planning/INDEX.md` derived region), legacy
   projections (`docs/prds/INDEX.md`, `GAP-BACKLOG.md`), and `COMPLETION-LOG.md` stay accurate via the
   maintenance reconciler on the feature branch; terminal merge is blocked on drift.
-- **Frontmatter traceability** — Full-tier PRDs carry `brainstorm:`; `/sw-prd` and `/sw-freeze` enforce
+- **Frontmatter traceability** — Full-tier planning docs carry `brainstorm:`; `/sw-prd` and `/sw-freeze` enforce
   resolvable `brainstorm:` / `prd:` links.
 
-## Orchestration plan policy (PRD 022 — default canonical)
+## Plan policy (advanced)
 
-`/sw-init` seeds `orchestration.planPolicy: canonical`. With this default, deliver and ship behavior is
-**byte-identical** to pre-022 — no plan proposals, no observable change. Opt-in `proposed` on the
-`/sw-deliver` pilot (TR0 gate + per-run acknowledgement + safe target branch) lets agents propose step plans
-and wave batching within validated guidelines; rejections fall back to the canonical chain automatically. See [workflows](workflows.md#orchestration-plan-policy-prd-022) and
-[configuration](configuration.md#orchestration-plan-policy-orchestrationplanpolicy).
+`orchestration.planPolicy` defaults to `canonical`. The `proposed` path is pilot-only and refuses silent
+opt-in toward shared `main`. See [configuration](configuration.md) and [workflows](workflows.md).
 
-## Path 1: New feature (Standard or Full tier)
+## Persona paths (after setup)
 
-Use when scope spans multiple files or needs a written spec.
+| Persona | Start with |
+|---------|------------|
+| Feature delivery | `/sw-doc` → freeze → `/sw-deliver run` |
+| Quick fix on an existing branch | `/sw-ship` (still halts at merge) |
+| Incident / production signal | `/sw-feedback` or `/sw-debug` |
 
-1. Install the plugin (see [README](../../README.md#install)).
-2. Open your **target repo** and run `/sw-init`.
-3. Run `/sw-doc` — triage classifies tier; Full tier includes brainstorm before PRD.
-4. Respond to the **Implementation checkpoint** after frozen tasks — reply `proceed` or `yes` (or use
-   `auto` mode to skip the prompt). `/sw-doc` dispatches **`/sw-deliver run <frozen-task-list-path>`**
-   on ack; you do not need to type the command yourself when using `confirm`/`auto`.
-5. When using `stop` mode, run **`/sw-deliver run docs/prds/<n>-<slug>/tasks-<n>-<slug>.md`** yourself —
-   orchestrates all phases to one terminal merge gate.
-6. Merge the terminal PR when `/sw-ready` reports merge-ready.
+## Next reading
 
-**Manual alternative:** `/sw-worktree provision` → `/sw-start` → `/sw-ship` per phase.
-
-## Path 2: Quick fix (Quick tier)
-
-Use for bounded, low-risk changes that skip the doc pipeline. **No frozen task list** — `/sw-deliver`
-does not apply; use the manual `/sw-ship` atomics directly.
-
-1. Install the plugin and ensure target repo has `/sw-init` or zero-config memory.
-2. Run `/sw-triage` — expect **Quick** for 0–1 file scope without risk keywords.
-3. Run `/sw-worktree provision` → `/sw-start` with prefix `fix/`.
-4. Run `/sw-execute` for the slice, then `/sw-ship` (or atomic commit → pr → stabilize).
-
-**Done when:** small PR is green; merge manually.
-
-Quick tier **does not** enter `/sw-doc` — no brainstorm, PRD, or task freeze.
-
-## Path 3: Production incident
-
-Use when a production signal (Sentry, deploy log, user report) needs diagnosis.
-
-1. In the target repo, run `/sw-feedback` with the signal (or `/sw-debug` directly).
-2. `/sw-feedback` normalizes and routes — confirm the suggested route before dispatch.
-3. `/sw-debug` runs RCA and routes: small fix → worktree + `/sw-ship`; large fix → `/sw-amend` or
-   `/sw-brainstorm`.
-
-**Done when:** fix is shipped and `/sw-feedback-close` closes the signal (if tracked).
-
-## Post-merge
-
-After you merge, run `/sw-compound-ship` in the target repo to capture retro learnings and sync
-memory. When `/sw-deliver` detects the feature branch has merged, it suggests `/sw-cleanup` to prune
-merged branches and stale worktrees. **`/sw-cleanup` is dry-run by default** — the agent presents the
-`wouldRemove` set and asks you to confirm; on explicit ack it runs the apply step for you (or you can
-use the manual `python3 scripts/cleanup.py --confirm --yes` escape hatch).
-
-## Migration notes
-
-### Duplicate plugins
-
-Remove other workflow plugin directories under `~/.cursor/plugins/local/` before installing
-Shipwright. Duplicate installs can surface two commands with the same `sw-` name.
-
-### From compound-engineering (`ce-`)
-
-Shipwright uses the `sw-` prefix exclusively. Remove co-installed workflow plugins that register
-overlapping commands. Shipwright orchestrators (`/sw-doc`, `/sw-deliver`, `/sw-ship`, `/sw-debug`,
-`/sw-feedback`) replace ad-hoc chains; see [commands](commands.md) for the full taxonomy.
-
-## Next steps
-
-- [Workflow guide](workflows.md) — tiers, per-workstream flows, all diagrams, sample prompts
-- [Command reference](commands.md) — full taxonomy
-- [Configuration](configuration.md) — `/sw-init` walkthrough and every config key
-- [CONTRIBUTING.md](../../CONTRIBUTING.md) — developing Shipwright itself
-
-
-## Debug Path 3 — small-fix to deliver
-
-When `/sw-debug` classifies a **small** fix after RCA:
-
-1. Materialize a thin one-phase pack (`tasks-debug-<slug>`) — no full `/sw-doc`.
-2. Print `/sw-deliver run --unit-id tasks-debug-<slug>`.
-3. Confirm → same-turn deliver; decline → end debug.
-4. Deliver owns execute/ship/CI/merge gates after handoff. Substantial fixes still go to brainstorm/amend.
-
+- [Commands](commands.md) — orchestrators vs atomics
+- [Workflows](workflows.md) — end-to-end paths
+- [Configuration](configuration.md) — knobs including `delegation.mode`
+- [Testing](testing.md) — verify and gate expectations

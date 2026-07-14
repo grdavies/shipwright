@@ -26,14 +26,14 @@ Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** c
 
 - **Mode auto-detect:** `--task-list` → phase-mode; `--items`/`--edges` → multi-feature; both → halt.
 - **Single terminal merge gate:** per-phase PRs auto-merge into `<type>/<slug>` on green; one
-  human-gated `<type>/<slug> → main` PR at the end.
+ human-gated `<type>/<slug> → main` PR at the end.
 - **Resumption:** re-run `run` after interrupt; durable `deliver-loop` cursor in
-  `.cursor/sw-deliver-state.<slug>.json` at repo root; `plan --from <phase>` when resuming mid-wave.
+ `.cursor/sw-deliver-state.<slug>.json` at repo root; `plan --from <phase>` when resuming mid-wave.
 - **Pre-merge compounding:** full `/sw-compound-ship --pre-merge` before the terminal human merge gate;
-  completion stays `completed-pending-merge` until merge is detected.
+ completion stays `completed-pending-merge` until merge is detected.
 - **Dry-run:** `scripts/wave.py plan --task-list <path> --dry-run` — plan JSON only, no artifact write.
 
-**Autonomy (PRD 009):** default `deliver.autonomy.mode: autonomous` — conductor in-turn loop to terminal
+**Autonomy:** default `deliver.autonomy.mode: autonomous` — conductor in-turn loop to terminal
 gate. **Legitimate halt** (`legitimate.halt`) only (see [`configuration.md`](configuration.md)). Parallel phases when the
 plan allows; outcomes from durable `status.json` only.
 
@@ -48,7 +48,7 @@ terminal merge on drift.
 See [`core/commands/sw-deliver.md`](../../core/commands/sw-deliver.md) and
 [`core/skills/deliver/SKILL.md`](../../core/skills/deliver/SKILL.md).
 
-**Plan validation (PRD 022):** mechanical gate for agent-proposed phase/wave plans — not hand-authored in
+**Plan validation:** mechanical gate for agent-proposed phase/wave plans — not hand-authored in
 chat. Default `orchestration.planPolicy: canonical` preserves today's behavior; `proposed` is opt-in on
 the `/sw-deliver` pilot (TR0 gate, per-run acknowledgement, non-`main` target).
 
@@ -66,7 +66,7 @@ Call-site map: [`call-site-map.md`](../../scripts/test/fixtures/planning-post-mi
 **Push safety:** workflow pushes route through `scripts/git-push.py` → `scripts/secret-scan.py`
 before `git push` (including `sw-pr` and stabilize re-pushes).
 
-### Planning surface (PRD 035)
+### Planning surface
 
 Extends `/sw-doc` — no `/sw-plan` command.
 
@@ -85,7 +85,7 @@ See [`core/commands/sw-doc.md`](../../core/commands/sw-doc.md) **Planning comman
 
 
 
-### Issue-store migration (PRD 044)
+### Issue-store migration
 
 | Command | Role |
 | --- | --- |
@@ -97,7 +97,7 @@ Quiesce deliver and reconciler before `--apply`. During transition `GAP-BACKLOG.
 projection — use `planning_gap_capture.py` for new gaps (see [`feedback` skill](../../core/skills/feedback/SKILL.md)).
 
 
-### Issue-store probes (PRD 043 / PRD 047)
+### Issue-store probes
 
 | Probe | Command |
 | --- | --- |
@@ -108,8 +108,8 @@ projection — use `planning_gap_capture.py` for new gaps (see [`feedback` skill
 
 Jira Cloud is the default Jira flavor; DC/Server expands on validated demand. Bitbucket code repos default
 to a **separate** GitHub/GitLab planning project — Jira is opt-in. See
-[`configuration.md`](configuration.md#issue-store-prd-043-opt-in) and
-[`workflows.md`](workflows.md#issue-store-on-bitbucket-hosts-prd-047-d25).
+[`configuration.md`](configuration.md#issue-store-opt-in) and
+[`workflows.md`](workflows.md#issue-store-on-bitbucket-hosts).
 
 
 ## Entry points
@@ -137,7 +137,7 @@ to a **separate** GitHub/GitLab planning project — Jira is opt-in. See
 
 ## Ship loop atomics
 
-These compose the **single-phase** ship loop. In normal use, invoke **`/sw-deliver run`** instead —
+These compose the **single-phase** ship loop. In normal use, invoke **`/sw-deliver run`** instead
 it dispatches this chain per phase automatically. Use the atomics directly for Quick-tier hotfixes,
 debugging one phase, or when you deliberately skip the orchestrator.
 
@@ -191,21 +191,21 @@ See [Getting started](getting-started.md) for boundary modes and worktree rules.
 
 **Review opt-out:** the canonical way to disable external review is `review.provider: "none"` (schema default). CodeRabbit is opt-in only.
 
-### PRD 024 orchestrator plan-policy (fan-out)
+### orchestrator plan-policy (fan-out)
 
 | Command | Adoption | Notes |
 | --- | --- | --- |
 | `/sw-deliver` | `full` pilot | Durable run-state; `deliver-loop` driver |
-| `/sw-debug` | `full` episodic | Proposed entry + R21 surfacing under `.cursor/sw-debug-runs/` |
+| `/sw-debug` | `full` episodic | Proposed entry + surfacing under `.cursor/sw-debug-runs/` |
 | `/sw-doc` | **`consistency-only` default** | Canonical path + doc-review halts; proposed pack deferred unless probe shows latitude |
 | `/sw-feedback` | `full` episodic | Untrusted-signal halts; `.cursor/sw-feedback-runs/` scratch |
 
 Fixtures: `python3 scripts/test/run_fanout_fixtures.py`; A2 binding: `python3 scripts/test/run_dispatch_foundation_fixtures.py`.
 
-## Deliver autonomy (PRD 063)
+## Deliver autonomy
 
 `/sw-deliver` phase-mode uses **heartbeat-gated** resume: stale `driverHeartbeatAt` is required to
-re-adopt unless self-wake. Parallel waves wait for whole-batch terminal status before merge (R10).
+re-adopt unless self-wake. Parallel waves wait for whole-batch terminal status before merge .
 Phase PR CI uses bounded poll/self-wake — not terminal-only watch.
 
 Operator halts include `tasks-currency-divergence`, `gap-check-missing`, `batch-integration-head-moved`,

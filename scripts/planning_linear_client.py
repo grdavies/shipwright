@@ -587,7 +587,7 @@ DOCS_CURRENCY_INVENTORY: tuple[tuple[str, str], ...] = (
 )
 
 WORKFLOWS_R30_MARKERS: tuple[str, ...] = (
-    "## Linear adapter documentation currency (PRD 066 R30)",
+    "## Linear adapter documentation currency",
     "docs-currency-gate",
     "Stage promotion gates (M7/A)",
 )
