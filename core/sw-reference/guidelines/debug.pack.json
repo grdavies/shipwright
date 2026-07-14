@@ -40,18 +40,14 @@
     "enrich"
   ],
   "forbiddenDeliverOnlySteps": [
-    "git-push",
-    "lock-acquire",
-    "main-merge",
     "merge-enqueue",
     "merge-run-next",
-    "phase-merge",
-    "sw-commit",
-    "sw-execute",
-    "sw-pr",
-    "sw-ship",
-    "sw-watch-ci",
     "terminal-ship",
+    "git-push",
+    "main-merge",
+    "sw-execute",
+    "lock-acquire",
+    "phase-merge",
     "wave-plan-validate"
   ],
   "allowedReorderings": [],
@@ -119,15 +115,19 @@
         "record"
       ],
       "forbiddenSteps": [
-        "sw-execute",
-        "sw-ship",
-        "sw-commit",
-        "sw-pr",
-        "sw-watch-ci",
+        "git-push",
+        "lock-acquire",
+        "main-merge",
         "merge-enqueue",
         "merge-run-next",
+        "phase-merge",
+        "sw-commit",
+        "sw-execute",
+        "sw-pr",
+        "sw-ship",
+        "sw-watch-ci",
         "terminal-ship",
-        "main-merge"
+        "wave-plan-validate"
       ]
     },
     "implementHandoff": {

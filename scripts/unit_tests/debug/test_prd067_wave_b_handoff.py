@@ -46,6 +46,7 @@ def test_debug_pack_forbids_execute_before_confirm() -> None:
     pack = json.loads(
         Path("core/sw-reference/guidelines/debug.pack.json").read_text(encoding="utf-8")
     )
+    # Parity with orchestrator-step-plan.forbiddenSteps (lint-enforced)
     assert "sw-execute" in pack.get("forbiddenDeliverOnlySteps", [])
     assert "segments" in pack
-    assert "diagnosis" in pack["segments"]
+    assert "sw-ship" in pack["segments"]["diagnosis"]["forbiddenSteps"]
