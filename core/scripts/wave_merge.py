@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import subprocess
 
 from _sw import interpreter
@@ -45,6 +46,9 @@ from status_integrity import (
 
 PLAN_PATH = Path(".cursor/sw-deliver-plan.json")
 FORWARD_MERGE_REBASE_RETRIES = 1
+DEFAULT_MERGE_RUN_NEXT_TIMEOUT_SECONDS = int(
+    os.environ.get("SW_MERGE_RUN_NEXT_TIMEOUT_SECONDS", "600")
+)
 
 MERGED_TERMINAL_STATUSES = frozenset(
     {"green-merged", "teardown-pending", "teardown-complete"}
@@ -557,6 +561,195 @@ def git_run(
     )
 
 
+
+
+def merge_run_next_timeout_seconds(root: Path) -> int:
+    """deliver.watchdog.mergeRunNextTimeoutSeconds — default 600 (PRD 068 R5)."""
+    cfg = load_workflow_config(root)
+    deliver = cfg.get("deliver") if isinstance(cfg.get("deliver"), dict) else {}
+    watchdog = deliver.get("watchdog") if isinstance(deliver.get("watchdog"), dict) else {}
+    raw = watchdog.get("mergeRunNextTimeoutSeconds", DEFAULT_MERGE_RUN_NEXT_TIMEOUT_SECONDS)
+    try:
+        return max(1, int(raw))
+    except (TypeError, ValueError):
+        return DEFAULT_MERGE_RUN_NEXT_TIMEOUT_SECONDS
+
+
+def _terminate_process_group(proc: subprocess.Popen[str]) -> None:
+    """Kill the merge subprocess group on timeout (R5)."""
+    if proc.poll() is not None:
+        return
+    try:
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+    except (ProcessLookupError, OSError):
+        pass
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except (ProcessLookupError, OSError):
+            pass
+        proc.kill()
+
+
+def run_subprocess_with_timeout(
+    cmd: list[str],
+    *,
+    cwd: Path | str,
+    timeout: int,
+) -> subprocess.CompletedProcess[str]:
+    """Run a child with a hard timeout and process-group terminate (R5)."""
+    proc = subprocess.Popen(
+        cmd,
+        cwd=str(cwd),
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        start_new_session=True,
+    )
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout)
+        return subprocess.CompletedProcess(cmd, proc.returncode or 0, stdout, stderr)
+    except subprocess.TimeoutExpired as exc:
+        _terminate_process_group(proc)
+        raise subprocess.TimeoutExpired(cmd, timeout, output=exc.stdout, stderr=exc.stderr) from exc
+
+
+def preserve_merge_queue_from_journal(state: dict[str, Any]) -> None:
+    """Re-enqueue journal phase at queue head and clear journal (R5/R22)."""
+    journal = state.get("mergeJournal")
+    if not isinstance(journal, dict):
+        return
+    phase_slug = str(journal.get("phase") or "")
+    queue = list(state.get("mergeQueue") or [])
+    if phase_slug:
+        existing = next(
+            (entry for entry in queue if entry.get("phaseSlug") == phase_slug),
+            None,
+        )
+        if existing is None:
+            queue.insert(
+                0,
+                {
+                    "phaseSlug": phase_slug,
+                    "head": journal.get("head"),
+                    "recoveredFromJournal": True,
+                },
+            )
+        elif existing.get("head") is None and journal.get("head"):
+            existing["head"] = journal.get("head")
+    state["mergeQueue"] = queue
+    state["mergeJournal"] = None
+
+
+def merge_timeout_recovery_command(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    phase_slug: str,
+    phase_branch: str,
+    target: str,
+    merge_landed: bool,
+) -> str:
+    """Operator recovery hint after merge-run-next timeout (R5)."""
+    from wave_failure import resume_deliver_command
+
+    if merge_landed:
+        return resume_deliver_command(root, state)
+    orch = (state.get("orchestratorWorktree") or {}).get("path") or str(root)
+    return (
+        f"python3 scripts/wave.py merge exec --phase-slug {phase_slug} "
+        f"--phase-branch {phase_branch} --target {target} "
+        f"--orchestrator-worktree {orch}"
+    )
+
+
+def handle_merge_run_next_timeout(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    phase_slug: str,
+    phase_branch: str,
+    target: str,
+    orch_wt: Path,
+    timeout_seconds: int,
+) -> None:
+    """Fail-closed timeout disposition with journal + queue recovery (R5)."""
+    merge_landed = phase_already_merged(orch_wt, str(phase_branch), str(target))
+    if merge_landed:
+        state.update(clear_open_journal_if_merged(root, state))
+        journal_disposition = "cleared-merged"
+    else:
+        preserve_merge_queue_from_journal(state)
+        journal_disposition = "cleared-for-recovery"
+    save_state(root, state)
+    from wave_failure import resume_deliver_command
+
+    fail(
+        f"merge run-next timed out after {timeout_seconds}s",
+        exit_code=20,
+        halt="blocked",
+        cause="merge-run-next:timeout",
+        phase=phase_slug,
+        mergeLanded=merge_landed,
+        journalDisposition=journal_disposition,
+        timeoutSeconds=timeout_seconds,
+        resumeCommand=resume_deliver_command(root, state),
+        recoveryCommand=merge_timeout_recovery_command(
+            root,
+            state,
+            phase_slug=phase_slug,
+            phase_branch=str(phase_branch),
+            target=str(target),
+            merge_landed=merge_landed,
+        ),
+    )
+
+
+def merge_exec_journal_safety(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    phase_slug: str,
+    phase_branch: str,
+    target: str,
+    wt: Path,
+) -> dict[str, Any] | None:
+    """Ancestry-aware journal gate for merge exec (R5). Returns early-exit payload or None."""
+    journal = state.get("mergeJournal")
+    if not isinstance(journal, dict):
+        return None
+    journal_phase = str(journal.get("phase") or "")
+    if journal_phase and journal_phase != phase_slug:
+        fail(
+            "merge journal open for a different phase",
+            exit_code=20,
+            halt="blocked",
+            cause="merge-exec:journal-phase-mismatch",
+            journal=journal,
+            phase=phase_slug,
+        )
+    if phase_already_merged(wt, str(phase_branch), str(target)):
+        state["mergeJournal"] = None
+        save_state(root, state)
+        head = git_run(["rev-parse", "HEAD"], cwd=wt).stdout.strip()
+        return {
+            "verdict": "pass",
+            "action": "merge-exec",
+            "phase": phase_slug,
+            "mergeCommit": head,
+            "method": "merge",
+            "target": target,
+            "note": "already-merged; journal cleared after ancestry check",
+            "journalRecovered": True,
+        }
+    if journal_phase == phase_slug:
+        preserve_merge_queue_from_journal(state)
+        save_state(root, state)
+    return None
+
+
 def run_check_gate(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
     script = root / "scripts" / "check-gate.py"
     probe = interpreter.probe()
@@ -1013,6 +1206,17 @@ def cmd_merge_exec(root: Path, args: list[str]) -> None:
     if not phase_slug or not phase_branch or not target:
         fail("--phase-slug, --phase-branch, and --target required")
     wt = resolve_orchestrator_worktree(root, args)
+    state = load_state(root)
+    early = merge_exec_journal_safety(
+        root,
+        state,
+        phase_slug=phase_slug,
+        phase_branch=str(phase_branch),
+        target=str(target),
+        wt=wt,
+    )
+    if early is not None:
+        emit(early)
     host_remote = remote_name(load_workflow_config(root))
     git_run(["fetch", host_remote, phase_branch, target], cwd=wt, check=False)
     merge_ref = phase_branch
@@ -1030,7 +1234,6 @@ def cmd_merge_exec(root: Path, args: list[str]) -> None:
             fail(f"phase branch not found: {phase_branch}")
 
     msg = parse_kv(args, "--message") or f"merge({target.split('/')[-1]}): phase {phase_slug}"
-    state = load_state(root)
     merge_result = merge_branch_into(wt, merge_ref, message=msg, abort_on_conflict=False)
     if merge_result.get("verdict") != "pass":
         conflict_paths = list(merge_result.get("conflicts") or [])
@@ -1197,13 +1400,25 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
     if orch:
         merge_args.extend(["--orchestrator-worktree", orch])
 
+    timeout_seconds = merge_run_next_timeout_seconds(root)
     try:
-        proc = subprocess.run(
-            [sys.executable, str(SCRIPT_DIR / "wave_merge.py"), str(root), "merge", "exec", *merge_args],
-            cwd=str(root),
-            text=True,
-            capture_output=True,
-        )
+        try:
+            proc = run_subprocess_with_timeout(
+                [sys.executable, str(SCRIPT_DIR / "wave_merge.py"), str(root), "merge", "exec", *merge_args],
+                cwd=root,
+                timeout=timeout_seconds,
+            )
+        except subprocess.TimeoutExpired:
+            state = load_state(root)
+            handle_merge_run_next_timeout(
+                root,
+                state,
+                phase_slug=str(phase_slug),
+                phase_branch=str(phase_branch),
+                target=str(target),
+                orch_wt=orch_wt,
+                timeout_seconds=timeout_seconds,
+            )
         if proc.returncode != 0:
             state = load_state(root)
             state["mergeJournal"] = None
