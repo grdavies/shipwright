@@ -88,19 +88,23 @@ planning trees. See [configuration](configuration.md) and [workflows](workflows.
 `/sw-tasks` generates the **complete** frozen task list in one pass (phases, executable sub-tasks, and
 traceability). Standalone, it outputs the list and stops without prompting for implementation.
 
-## Review gating (default off)
+## Review gating (canonical opt-out)
 
-The schema default for `review.provider` is **`none`**. CodeRabbit (and similar) are **opt-in**.
-`/sw-ready` and `/sw-status` echo review off when the CI gate reports merge readiness.
+The schema default for `review.provider` is **`none`** (review gating off). CodeRabbit is **opt-in** —
+set `review.provider: "coderabbit"` explicitly. The **canonical way to disable** external AI review is
+`review.provider: "none"`.
 
 ## Deliver autonomy and living docs
 
 - **`deliver.autonomy`** — default `autonomous`; runs `/sw-deliver` to the terminal gate without routine
   re-prompts. Set `supervised` for extra acknowledgement halts.
-- **Legitimate halt** — terminal default-branch merge, exhausted remediation, destructive git, configured
-  checkpoints, phase timeout, external-wait exhaustion, or run-level budget.
-- **Living-doc currency** — planning indexes and completion logs stay accurate via the maintenance
-  reconciler; terminal merge is blocked on drift.
+- **`legitimate.halt`** — only terminal default-branch merge, exhausted remediation, destructive git,
+  configured checkpoints, phase timeout, external-wait exhaustion, or run-level budget.
+- **Living-doc currency** — generated planning INDEX (`docs/planning/INDEX.md` derived region), legacy
+  projections (`docs/prds/INDEX.md`, `GAP-BACKLOG.md`), and `COMPLETION-LOG.md` stay accurate via the
+  maintenance reconciler on the feature branch; terminal merge is blocked on drift.
+- **Frontmatter traceability** — Full-tier planning docs carry `brainstorm:`; `/sw-prd` and `/sw-freeze` enforce
+  resolvable `brainstorm:` / `prd:` links.
 
 ## Plan policy (advanced)
 
