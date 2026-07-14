@@ -25,28 +25,28 @@ or Standard→Full.
 
 ```mermaid
 flowchart TD
-  IN[Describe work + file count] --> OVR{--tier override?}
-  OVR -->|yes| TIER[Use override tier]
-  OVR -->|no| RISK{Risk keyword?}
-  RISK -->|yes| FLOOR[Floor = Standard]
-  RISK -->|no| FC[Base tier from file count]
-  FC --> Q0{0-1 files}
-  FC --> Q1{2-5 files}
-  FC --> Q2{6+ files}
-  Q0 --> BQ[Quick]
-  Q1 --> BS[Standard]
-  Q2 --> BF[Full]
-  FLOOR --> AMB{Ambiguity markers?}
-  BQ --> AMB
-  BS --> AMB
-  BF --> AMB
-  AMB -->|bump| UP[Promote one tier]
-  AMB -->|none| MAX[max base floor]
-  UP --> TIER
-  MAX --> TIER
-  TIER --> QK{Quick?}
-  QK -->|yes| IMPL[Manual /sw-ship]
-  QK -->|no| DOC[Enter /sw-doc → /sw-deliver run]
+ IN[Describe work + file count] --> OVR{--tier override?}
+ OVR -->|yes| TIER[Use override tier]
+ OVR -->|no| RISK{Risk keyword?}
+ RISK -->|yes| FLOOR[Floor = Standard]
+ RISK -->|no| FC[Base tier from file count]
+ FC --> Q0{0-1 files}
+ FC --> Q1{2-5 files}
+ FC --> Q2{6+ files}
+ Q0 --> BQ[Quick]
+ Q1 --> BS[Standard]
+ Q2 --> BF[Full]
+ FLOOR --> AMB{Ambiguity markers?}
+ BQ --> AMB
+ BS --> AMB
+ BF --> AMB
+ AMB -->|bump| UP[Promote one tier]
+ AMB -->|none| MAX[max base floor]
+ UP --> TIER
+ MAX --> TIER
+ TIER --> QK{Quick?}
+ QK -->|yes| IMPL[Manual /sw-ship]
+ QK -->|no| DOC[Enter /sw-doc → /sw-deliver run]
 ```
 
 ### Quick tier workflow
@@ -56,17 +56,17 @@ manual `/sw-ship` atomics.
 
 ```mermaid
 flowchart LR
-  T["/sw-triage"] --> Q[Quick]
-  Q --> WT["/sw-worktree provision"]
-  WT --> ST["/sw-start"]
-  ST --> EX["/sw-execute"]
-  EX --> SH["/sw-ship"]
-  SH --> V["verify → review → commit"]
-  V --> PR["/sw-pr → /sw-watch-ci"]
-  PR --> STB["/sw-stabilize"]
-  STB --> RD["/sw-ready — PAUSE"]
-  RD --> MERGE[You merge]
-  MERGE --> CM["/sw-compound-ship"]
+ T["/sw-triage"] --> Q[Quick]
+ Q --> WT["/sw-worktree provision"]
+ WT --> ST["/sw-start"]
+ ST --> EX["/sw-execute"]
+ EX --> SH["/sw-ship"]
+ SH --> V["verify → review → commit"]
+ V --> PR["/sw-pr → /sw-watch-ci"]
+ PR --> STB["/sw-stabilize"]
+ STB --> RD["/sw-ready — PAUSE"]
+ RD --> MERGE[You merge]
+ MERGE --> CM["/sw-compound-ship"]
 ```
 
 ```text
@@ -80,20 +80,20 @@ PRD and frozen tasks before code. No brainstorm phase.
 
 ```mermaid
 flowchart TB
-  T["/sw-triage"] --> S[Standard]
-  S --> DOC["/sw-doc"]
-  DOC --> PRD["/sw-prd"]
-  PRD --> REV["/sw-doc-review"]
-  REV --> SR1[spec-rigor]
-  SR1 --> FZ1["/sw-freeze PRD"]
-  FZ1 --> TS["/sw-tasks"]
-  TS --> BT{doc.afterTasks}
-  BT --> SR2[traceability + spec-rigor]
-  SR2 --> FZ2["/sw-freeze tasks"]
-  FZ2 --> DEL["/sw-deliver run"]
-  DEL --> TM[Terminal PR → main]
-  TM --> MERGE[You merge]
-  MERGE --> CM["/sw-compound-ship"]
+ T["/sw-triage"] --> S[Standard]
+ S --> DOC["/sw-doc"]
+ DOC --> PRD["/sw-prd"]
+ PRD --> REV["/sw-doc-review"]
+ REV --> SR1[spec-rigor]
+ SR1 --> FZ1["/sw-freeze PRD"]
+ FZ1 --> TS["/sw-tasks"]
+ TS --> BT{doc.afterTasks}
+ BT --> SR2[traceability + spec-rigor]
+ SR2 --> FZ2["/sw-freeze tasks"]
+ FZ2 --> DEL["/sw-deliver run"]
+ DEL --> TM[Terminal PR → main]
+ TM --> MERGE[You merge]
+ MERGE --> CM["/sw-compound-ship"]
 ```
 
 ```text
@@ -108,22 +108,22 @@ Explores requirements before the PRD. Use when scope or product decisions are st
 
 ```mermaid
 flowchart TB
-  T["/sw-triage"] --> F[Full]
-  F --> DOC["/sw-doc"]
-  DOC --> BR["/sw-brainstorm"]
-  BR --> SYN{User confirms synthesis}
-  SYN --> PRD["/sw-prd"]
-  PRD --> REV["/sw-doc-review"]
-  REV --> SR1[spec-rigor]
-  SR1 --> FZ1["/sw-freeze brainstorm + PRD"]
-  FZ1 --> TS["/sw-tasks"]
-  TS --> BT{doc.afterTasks}
-  BT --> SR2[traceability + spec-rigor]
-  SR2 --> FZ2["/sw-freeze tasks"]
-  FZ2 --> DEL["/sw-deliver run"]
-  DEL --> TM[Terminal PR → main]
-  TM --> MERGE[You merge]
-  MERGE --> CM["/sw-compound-ship"]
+ T["/sw-triage"] --> F[Full]
+ F --> DOC["/sw-doc"]
+ DOC --> BR["/sw-brainstorm"]
+ BR --> SYN{User confirms synthesis}
+ SYN --> PRD["/sw-prd"]
+ PRD --> REV["/sw-doc-review"]
+ REV --> SR1[spec-rigor]
+ SR1 --> FZ1["/sw-freeze brainstorm + PRD"]
+ FZ1 --> TS["/sw-tasks"]
+ TS --> BT{doc.afterTasks}
+ BT --> SR2[traceability + spec-rigor]
+ SR2 --> FZ2["/sw-freeze tasks"]
+ FZ2 --> DEL["/sw-deliver run"]
+ DEL --> TM[Terminal PR → main]
+ TM --> MERGE[You merge]
+ MERGE --> CM["/sw-compound-ship"]
 ```
 
 ```text
@@ -145,27 +145,27 @@ Use when tier is **Standard** or **Full** and you need a reviewed plan before im
 
 ```mermaid
 flowchart LR
-  TR["/sw-triage"] --> PRD["/sw-prd"]
-  PRD --> DR["/sw-doc-review"]
-  DR --> RIG[spec-rigor]
-  RIG --> FZ["/sw-freeze"]
-  FZ --> TK["/sw-tasks"]
-  TK --> BT{doc.afterTasks}
-  BT --> FZT["/sw-freeze tasks"]
+ TR["/sw-triage"] --> PRD["/sw-prd"]
+ PRD --> DR["/sw-doc-review"]
+ DR --> RIG[spec-rigor]
+ RIG --> FZ["/sw-freeze"]
+ FZ --> TK["/sw-tasks"]
+ TK --> BT{doc.afterTasks}
+ BT --> FZT["/sw-freeze tasks"]
 ```
 
 **Full doc pipeline** (brainstorm first):
 
 ```mermaid
 flowchart LR
-  TR["/sw-triage"] --> BR["/sw-brainstorm"]
-  BR --> PRD["/sw-prd"]
-  PRD --> DR["/sw-doc-review"]
-  DR --> RIG[spec-rigor]
-  RIG --> FZ["/sw-freeze"]
-  FZ --> TK["/sw-tasks"]
-  TK --> BT{doc.afterTasks}
-  BT --> FZT["/sw-freeze tasks"]
+ TR["/sw-triage"] --> BR["/sw-brainstorm"]
+ BR --> PRD["/sw-prd"]
+ PRD --> DR["/sw-doc-review"]
+ DR --> RIG[spec-rigor]
+ RIG --> FZ["/sw-freeze"]
+ FZ --> TK["/sw-tasks"]
+ TK --> BT{doc.afterTasks}
+ BT --> FZT["/sw-freeze tasks"]
 ```
 
 Or run `/sw-doc` to orchestrate either chain end-to-end.
@@ -175,10 +175,10 @@ Or run `/sw-doc` to orchestrate either chain end-to-end.
 1. `/sw-triage` — classify tier (or pass `--tier` to `/sw-doc`)
 2. `/sw-doc` — runs the tier-appropriate doc chain
 3. Human **`doc.afterTasks`** checkpoint after single-pass task freeze (default `confirm`) — a dedicated
-   **Implementation checkpoint** block (not buried in closing prose); only `proceed`/`yes` continues;
-   unrelated messages re-emit the checkpoint until acked
+ **Implementation checkpoint** block (not buried in closing prose); only `proceed`/`yes` continues;
+ unrelated messages re-emit the checkpoint until acked
 4. Frozen PRD + tasks become the spec for **`/sw-deliver run <frozen-task-list-path>`** (primary post-freeze
-   command; `/sw-doc` dispatches it on `confirm`/`auto`) or manual `/sw-ship` per phase
+ command; `/sw-doc` dispatches it on `confirm`/`auto`) or manual `/sw-ship` per phase
 
 **Sample prompts**
 
@@ -218,15 +218,15 @@ reruns.
 
 ```mermaid
 flowchart TB
-  RUN["/sw-deliver run"] --> PF[preflight + plan]
-  PF --> WAVES[Dependency-ordered waves]
-  WAVES --> PHASE[Per-phase worktree]
-  PHASE --> SHIP["/sw-ship chain"]
-  SHIP --> AM[Auto-merge into type/slug]
-  AM --> MORE{More phases?}
-  MORE -->|yes| WAVES
-  MORE -->|all green-merged| TERM[Terminal PR → main]
-  TERM --> PAUSE[You merge — only human gate]
+ RUN["/sw-deliver run"] --> PF[preflight + plan]
+ PF --> WAVES[Dependency-ordered waves]
+ WAVES --> PHASE[Per-phase worktree]
+ PHASE --> SHIP["/sw-ship chain"]
+ SHIP --> AM[Auto-merge into type/slug]
+ AM --> MORE{More phases?}
+ MORE -->|yes| WAVES
+ MORE -->|all green-merged| TERM[Terminal PR → main]
+ TERM --> PAUSE[You merge — only human gate]
 ```
 
 ### `/sw-deliver run` — phase-mode play button (default)
@@ -246,11 +246,11 @@ default implementation orchestrator. Mode auto-detect from input:
 ```
 
 1. `preflight` + `plan` — validates frozen tasks, CI/review base-branch preflight, writes
-   `.cursor/sw-deliver-plan.json`.
+ `.cursor/sw-deliver-plan.json`.
 2. Provisions orchestrator + per-phase worktrees; dispatches full `/sw-ship` per phase.
 3. Auto-merges each green phase into `<type>/<slug>`; siblings continue on blast-radius block.
 4. Opens a **single terminal** `<type>/<slug> → main` PR when all phases are `green-merged` — the
-   only human merge gate for the feature.
+ only human merge gate for the feature.
 
 **Resumption:** re-run the same `run` command after interrupt; `resume reconcile` skips
 `green-merged` phases. Use `plan --from <phase>` when upstream phases are already merged.
@@ -258,23 +258,23 @@ default implementation orchestrator. Mode auto-detect from input:
 **Dry-run:** `scripts/wave.py plan --task-list <path> --dry-run` emits the plan JSON without writing
 `.cursor/sw-deliver-plan.json`.
 
-**Durable autonomy (PRD 007):** the driver is `scripts/wave.py deliver-loop` (also invoked by
+**Durable autonomy:** the driver is `scripts/wave.py deliver-loop` (also invoked by
 `/sw-deliver run`). It persists cursor state in **scoped** `.cursor/sw-deliver-state.<slug>.json` at the
-repo root (canonical — R28), resumes after crash without restarting from plan, and never emits manual
+repo root (canonical — ), resumes after crash without restarting from plan, and never emits manual
 “next steps” prose while work remains. Phase advancement keys off durable `status.json` in each
 **phase-worktree** (`status collect` — not chat). Per-phase `/sw-ship` persists step-level state
 (`ship-steps.json`) for mid-chain resume.
 
-**Concurrent deliver (PRD 013):** orthogonal features may run `/sw-deliver run` in parallel — each
+**Concurrent deliver:** orthogonal features may run `/sw-deliver run` in parallel — each
 target branch owns scoped state/lock files. `/sw-status` lists every in-flight run via
 `.cursor/sw-deliver-runs/index.json`. Living docs (`INDEX.md`, `CHANGELOG.md`) stay serialized via
 `.cursor/sw-living-docs.lock`.
 
-**Freeze-time commit (PRD 013):** `/sw-freeze` commits frozen artifacts onto `<type>/<slug>` immediately
+**Freeze-time commit:** `/sw-freeze` commits frozen artifacts onto `<type>/<slug>` immediately
 (closing the working-tree data-loss window) via the same spec-seed helper as `/sw-doc` afterTasks — never
 `main`.
 
-**Autonomous conductor (PRD 009):** `/sw-deliver` loads `skills/conductor/SKILL.md` and runs an
+**Autonomous conductor:** `/sw-deliver` loads `skills/conductor/SKILL.md` and runs an
 **in-turn self-continuation loop** — after each `deliver-loop` step the conductor re-invokes the driver
 until a **legitimate halt** (terminal merge gate, exhausted remediation, ambiguous/destructive action,
 configured checkpoint, phase timeout, external-wait exhaustion, or run-level budget). Routine steps
@@ -285,7 +285,7 @@ disjoint worktrees, bounded by `worktree.parallelCeiling` (default 4). Peak conc
 plan has parallelizable waves. Outcomes are read only from durable `status.json` — never chat logs.
 Merge is single-flight (conductor-serialized queue + lock).
 
-**PRD 036 deliver invariants:** whole-batch merge gating (no lone merge-enqueue while siblings lack
+** deliver invariants:** whole-batch merge gating (no lone merge-enqueue while siblings lack
 validated terminal status), deterministic-conflict auto-regen on the bounded path set, terminal
 status.json provenance + blessed /sw-ship --phase-mode recovery (never hand-edit status), and
 bounded verify:failed → /sw-stabilize remediation. CI-required fixtures:
@@ -293,7 +293,7 @@ feat-test-plan-dual-ship-fixtures, feat-test-plan-regression-remediation-fixture
 feat-test-plan-parallel-merge-safety-fixtures, feat-test-plan-status-integrity-fixtures,
 feat-test-plan-mechanical-sourcing-fixtures, feat-test-plan-deliver-invariant-fixtures.
 
-**Pervasive delegation (PRD 017):** all five orchestrators (`/sw-doc`, `/sw-ship`, `/sw-deliver`,
+**Pervasive delegation:** all five orchestrators (`/sw-doc`, `/sw-ship`, `/sw-deliver`,
 `/sw-debug`, `/sw-feedback`) default to **delegate-by-default** for substantive steps. Only closed
 inline allowlists (bookkeeping, driver invocations, human gates) run in-turn. Every delegated `Task`
 must carry an explicit resolved `model:` and caveman intensity — enforced by `dispatch-check.py` and
@@ -327,7 +327,7 @@ merge if checkboxes diverge from the durable ledger.
 **Living-doc currency:** INDEX status, COMPLETION-LOG, and GAP-BACKLOG reconcile in-loop on the
 feature branch; `docs-currency` hard-blocks the terminal gate on drift for the current PRD.
 
-**Planning lifecycle (PRD 033):** units under `docs/planning/` carry typed lifecycles and `depends:`/`absorbs:`/
+**Planning lifecycle:** units under `docs/planning/` carry typed lifecycles and `depends:`/`absorbs:`/
 `supersedes:` edges. The maintenance reconciler (`planning-graph reconcile`) regenerates the INDEX `derived`
 region and archive view; deliver writes `inFlight` only. `/sw-deliver next` and the unit-level dependency gate
 fail closed on unmet prerequisites (`planning.autonomy` soft-enforces priority on explicit `--task-list`).
@@ -350,18 +350,18 @@ you run `/sw-deliver`, this chain executes **inside** each phase.
 
 ```mermaid
 flowchart LR
-  TMP[sw-tmp init] --> EX["/sw-execute"]
-  EX --> VF["/sw-verify"]
-  VF --> VG{verification-gate}
-  VG --> RV["/sw-review"]
-  RV --> SM["/sw-simplify"]
-  SM --> GP[gap-check]
-  GP --> CM["/sw-commit"]
-  CM --> PR["/sw-pr"]
-  PR --> WC["/sw-watch-ci"]
-  WC --> ST["/sw-stabilize"]
-  ST --> RD["/sw-ready — PAUSE"]
-  RD --> CLN[sw-tmp clean]
+ TMP[sw-tmp init] --> EX["/sw-execute"]
+ EX --> VF["/sw-verify"]
+ VF --> VG{verification-gate}
+ VG --> RV["/sw-review"]
+ RV --> SM["/sw-simplify"]
+ SM --> GP[gap-check]
+ GP --> CM["/sw-commit"]
+ CM --> PR["/sw-pr"]
+ PR --> WC["/sw-watch-ci"]
+ WC --> ST["/sw-stabilize"]
+ ST --> RD["/sw-ready — PAUSE"]
+ RD --> CLN[sw-tmp clean]
 ```
 
 Halts on verification failure, review blockers, or red CI. **Never auto-merges.**
@@ -378,7 +378,7 @@ Halts on verification failure, review blockers, or red CI. **Never auto-merges.*
 
 ```text
 /sw-worktree provision
-Work item: user-profile-settings (from PRD 003 tasks)
+Work item: user-profile-settings (from tasks)
 ```
 
 ```text
@@ -390,9 +390,9 @@ Context: Phase 1 tasks 1.1–1.3 complete. Parent branch main. Run full loop thr
 
 ```mermaid
 flowchart LR
-  RT["/sw-retro"] --> CP["/sw-compound"]
-  CP --> MS["/sw-memory-sync"]
-  MS --> ST["/sw-status"]
+ RT["/sw-retro"] --> CP["/sw-compound"]
+ CP --> MS["/sw-memory-sync"]
+ MS --> ST["/sw-status"]
 ```
 
 **Key commands**
@@ -414,37 +414,37 @@ flowchart LR
 | `/sw-compound-ship` | Post-merge retro → compound → memory sync |
 ---
 
-## Issue-store migration lifecycle preservation (PRD 044 Phase 2)
+## Issue-store migration lifecycle preservation ( Phase 2)
 
 When migrating between in-repo markdown artifacts and the configured `issue-store`, lifecycle metadata
 survives in **both directions** (`files-to-issues` and `issues-to-files`). Bodies are content-hash verified
-(PRD 043 R35) before any source is removed; lifecycle fields are checked as part of verification.
+ before any source is removed; lifecycle fields are checked as part of verification.
 
 ### Open / frozen status
 
 - **Files → issues:** `frozen: true` (and optional `frozen_at`) in frontmatter becomes the `sw:frozen` label
-  on the issue, issue lock, and a freeze-record comment when applicable. Open vs closed issue state follows
-  artifact `status` (gaps with `status: resolved` close the issue).
+ on the issue, issue lock, and a freeze-record comment when applicable. Open vs closed issue state follows
+ artifact `status` (gaps with `status: resolved` close the issue).
 - **Issues → files:** `sw:frozen` and `sw:frozen-at:*` labels restore `frozen: true` and `frozen_at` in
-  frontmatter. Issue `open`/`closed` state maps back to artifact lifecycle fields.
+ frontmatter. Issue `open`/`closed` state maps back to artifact lifecycle fields.
 
 ### `sw-edges` and native links
 
 - **Files → issues:** The canonical `sw-edges` fenced block (and any frontmatter edge keys) is composed
-  into the issue body; provider-native link projections are stored alongside canonical edges.
+ into the issue body; provider-native link projections are stored alongside canonical edges.
 - **Issues → files:** Edges and native projections round-trip into the `sw-edges` block (and frontmatter
-  edge keys when present). Divergence beyond tolerance fails verification.
+ edge keys when present). Divergence beyond tolerance fails verification.
 
 ### Gap status
 
 - **Files → issues:** Gap units carry `status` (`open`, `planned`/`scheduled`, `resolved`) as issue labels
-  (`open`, `gap-scheduled`, `resolved`) plus optional `sw:gap-schedule:*` labels.
+ (`open`, `gap-scheduled`, `resolved`) plus optional `sw:gap-schedule:*` labels.
 - **Issues → files:** Labels restore `status` and `schedule` frontmatter on gap artifacts under
-  `docs/planning/gap/`.
+ `docs/planning/gap/`.
 
 ### Visibility gate (per create)
 
-Every migration **create** resolves visibility via PRD 043 R43 before any API write. A private or
+Every migration **create** resolves visibility via before any API write. A private or
 `memory`-class artifact targeting a public/shared issue store is **refused** for that item only: it is
 reported in the migration plan (`refusedCount`, action `refused`, reason `visibility`), its source file
 remains untouched, and the rest of the batch continues.
@@ -463,36 +463,36 @@ Operator entry: `/sw-migrate` and `python3 scripts/planning_migrate.py <repo> st
 (dry-run default; `--apply` to mutate). Journal:
 `.cursor/hooks/state/issue-store-migration-journal.json`.
 
-## Issue-native doc-review and release grouping (PRD 045 Phase 3)
+## Issue-native doc-review and release grouping ( Phase 3)
 
 Inert when `planning.store.backend != issue-store`.
 
-### Doc-review via issue comments (R24, R69)
+### Doc-review via issue comments (, )
 
 Under issue-store, `/sw-doc-review` posts persona findings as marker-delimited `sw:doc-review` comments on the
 PRD artifact issue. Synthesis opens a **review-round manifest** pinning ordered comment IDs + revisions at
-checkpoint; any add/edit/delete before synthesis **fails closed**. Persona comments are excluded from PRD 043
-R35 canonicalization. When `backend != issue-store`, the in-IDE parallel sub-agent panel + JSON synthesis is
+checkpoint; any add/edit/delete before synthesis **fails closed**. Persona comments are excluded from
+ canonicalization. When `backend != issue-store`, the in-IDE parallel sub-agent panel + JSON synthesis is
 unchanged (no regression).
 
 Human review notes use a separate comment channel (no `sw:doc-review` marker).
 
-### Release grouping (R26, R71)
+### Release grouping (, )
 
 `planning.releaseGrouping.mode` maps `sw:prd` units to provider milestones (`github-issues`) or iterations
 (`gitlab-issues`) via the capability-gated `issue-milestone` verb. Absent capability → skip with operator
 notice; deliver continues with flat-label fallback (`planning.releaseGrouping.labelPrefix`). Scheduler wiring
-is PRD 046 — 045 is grouping/annotation only.
+is — 045 is grouping/annotation only.
 
 See `core/commands/sw-doc-review.md`, `core/skills/doc-review/SKILL.md`, and
 `docs/guides/configuration.md` **Release grouping**.
 
 
-## Issue-derived graph, hierarchy, and cross-project recall (PRD 046 Phase 3)
+## Issue-derived graph, hierarchy, and cross-project recall ( Phase 3)
 
 Inert when `planning.store.backend != issue-store`.
 
-### Task-list hierarchy (R23, R91, R94)
+### Task-list hierarchy (, , )
 
 Frozen task lists project to provider epic/sub-issue hierarchy where supported; providers lacking
 hierarchy verbs degrade to checkbox/body-encoded phase lists with operator notice — deliver continues.
@@ -506,7 +506,7 @@ python3 scripts/planning_hierarchy.py <repo> aggregate-status --payload-json '<p
 Parent epic status aggregates from children on read; contradictions fail closed. Body `sw-edges` blocks are
 authoritative over native sub-issue links on conflict.
 
-### Cross-project recall (R90)
+### Cross-project recall
 
 Rationale pointers may be recalled across `projectKey` boundaries when authorized; dereference is redacted
 via `memory-redact` so project B cannot read project A private rationale.
@@ -517,7 +517,7 @@ python3 scripts/planning_cross_project_recall.py recall --payload-json '{"source
 
 See `core/skills/memory/SKILL.md` **Cross-project recall**.
 
-### inFlight tracking-issue safety (R89)
+### inFlight tracking-issue safety
 
 Optional tracking issues for committed `inFlight` tuples route through `planning_tracking_issue.py` and
 `redact_inflight_tuple`; private/`memory` units are refused on public origin stores.
@@ -525,11 +525,11 @@ Optional tracking issues for committed `inFlight` tuples route through `planning
 See `core/skills/deliver/SKILL.md` **Task-list hierarchy and inFlight tracking issues**.
 
 
-## Issue-store deliver progress and native links (PRD 056)
+## Issue-store deliver progress and native links
 
-Inert when `resolve_effective_backend` ≠ `issue-store` (file-store paths unchanged — R9).
+Inert when `resolve_effective_backend` ≠ `issue-store` (file-store paths unchanged — ).
 
-### Native provider links (R1–R4, gap-037)
+### Native provider links (–, )
 
 Issues adapters implement `native_links` on create/update/read — no discard on write. `sw-edges` in the
 issue body stays authoritative; native links are projections for provider UI readability.
@@ -540,15 +540,15 @@ issue body stays authoritative; native links are projections for provider UI rea
 | GitLab | `planning_gitlab_client.py` | Issue link API where available |
 | Jira | `planning_jira_client.py` | Issue links via REST; link type from createmeta / `planning.store.issues.linkDefaults` |
 
-`planning_canonical.native_links_from_edges()` resolves `sw-edges` unit targets to issue ids via the issue
+`planning_canonical.native_links_from_edges` resolves `sw-edges` unit targets to issue ids via the issue
 unit index. Emission paths: migration create, `planning_gap_capture`, `planning_hierarchy` sub-issue create,
 and edge reconciliation.
 
 `python3 scripts/planning_store.py probe-issues-token` includes `nativeLinksCapable: true|false`. When the
 provider lacks link scope or the API returns 403/404, adapters emit one per-run stderr notice
-`native-links-degraded` and deliver continues — body edges remain authoritative (R3).
+`native-links-degraded` and deliver continues — body edges remain authoritative .
 
-### Deliver hierarchy and progress sync (R5–R7, gap-033)
+### Deliver hierarchy and progress sync (–, )
 
 | Hook | Module | Action |
 | --- | --- | --- |
@@ -561,9 +561,9 @@ Providers without hierarchy verbs degrade to checkbox/body-encoded phase lists w
 continues. Label/body sync failures emit `progress-label-degraded` or `progress-body-degraded` once per run.
 
 Run-entry materialize (`planning_materialize.py`) still verifies frozen task-list hash before `plan`/`preflight`
-when the logical `body-path` is issue-backed only (PRD 056 Phase 0).
+when the logical `body-path` is issue-backed only ( Phase 0).
 
-### Living-docs issue projection (R8)
+### Living-docs issue projection
 
 When `planning_cutover` marks the `derived` region `issue`, `wave_living_docs.py reconcile` calls
 `planning_index_issue.project_index_status` instead of file `set-index-status` — INDEX PRD status is written
@@ -583,24 +583,24 @@ Use when something is broken in production or you need RCA before fixing.
 
 ```mermaid
 flowchart TD
-  SIG[Signal in] --> TR[Phase 0 triage]
-  TR --> RD[Redact + normalize]
-  RD --> SE{Sentry?}
-  SE -->|yes| EN[Sentry enrich]
-  SE -->|no| RCA[RCA core]
-  EN --> RCA
-  RCA --> SZ{Fix size}
-  SZ -->|small| WT["/sw-worktree + /sw-start"]
-  WT --> SH["/sw-ship"]
-  SZ -->|substantial| AM["/sw-amend or /sw-brainstorm"]
+ SIG[Signal in] --> TR[Phase 0 triage]
+ TR --> RD[Redact + normalize]
+ RD --> SE{Sentry?}
+ SE -->|yes| EN[Sentry enrich]
+ SE -->|no| RCA[RCA core]
+ EN --> RCA
+ RCA --> SZ{Fix size}
+ SZ -->|small| WT["/sw-worktree + /sw-start"]
+ WT --> SH["/sw-ship"]
+ SZ -->|substantial| AM["/sw-amend or /sw-brainstorm"]
 ```
 
 **Typical flow**
 
 1. `/sw-debug` with signal (Sentry issue, stack trace, deploy log excerpt)
 2. RCA core diagnoses; routes by fix size:
-   - **Small** → `/sw-worktree` + `/sw-ship`
-   - **Large** → `/sw-brainstorm` or `/sw-amend`
+ - **Small** → `/sw-worktree` + `/sw-ship`
+ - **Large** → `/sw-brainstorm` or `/sw-amend`
 
 **Sample prompts**
 
@@ -631,18 +631,18 @@ Use to capture signals without immediately analyzing them.
 
 ```mermaid
 flowchart TD
-  IN[Signal in] --> NM[Normalize]
-  NM --> RD[Redact]
-  RD --> DD{Dedup?}
-  DD -->|duplicate| DROP[Drop — already handled]
-  DD -->|new| RT{Route}
-  RT -->|prod fault| DB["/sw-debug"]
-  RT -->|extends PR| GAP[gap unit capture]
-  RT -->|new scope| BR["/sw-brainstorm"]
-  DB --> CONF{Human confirms}
-  GAP --> CONF
-  BR --> CONF
-  CONF -->|yes| DISP[Dispatch]
+ IN[Signal in] --> NM[Normalize]
+ NM --> RD[Redact]
+ RD --> DD{Dedup?}
+ DD -->|duplicate| DROP[Drop — already handled]
+ DD -->|new| RT{Route}
+ RT -->|prod fault| DB["/sw-debug"]
+ RT -->|extends PR| GAP[gap unit capture]
+ RT -->|new scope| BR["/sw-brainstorm"]
+ DB --> CONF{Human confirms}
+ GAP --> CONF
+ BR --> CONF
+ CONF -->|yes| DISP[Dispatch]
 ```
 
 **Sample prompt**
@@ -656,26 +656,26 @@ Source: review comment
 `/sw-feedback` redacts, classifies, and proposes a route. **Confirm** before dispatch.
 
 
-## Planning autonomy and two-track edits (PRD 035)
+## Planning autonomy and two-track edits
 
-035-owned sections complement PRD 033 lifecycle/reconciler docs (033-owned).
+035-owned sections complement lifecycle/reconciler docs (033-owned).
 
-### Backlog pull-in (R1–R3)
+### Backlog pull-in (–)
 
 At PRD creation (`/sw-prd`) and task generation (`/sw-tasks`), `scripts/planning-related.py` scans the graph
 and emits a **confirm-list** — never auto-absorbs. Stale/already-resolved candidates are flagged; human confirms
-via `planning-related.py confirm`. Private units contribute metadata only (PRD 034 visibility resolver).
+via `planning-related.py confirm`. Private units contribute metadata only ( visibility resolver).
 
-### Autonomy posture (R6–R9)
+### Autonomy posture (–)
 
 | Mode | Behavior |
 | --- | --- |
 | `maintenance-only` (default) | Mechanical INDEX `derived` / reconciler bookkeeping runs without prompts; content decisions stay human-gated |
 | `full-conductor` (opt-in) | Gap/absorption-class auto-decision under conductor legitimate-halt + mutation budget; never private/memory units; handoff-only (no nested orchestrators) |
 
-Config: `planning.autonomy` + `planning.fullConductor.*` — see [configuration](configuration.md#planning-autonomy-prd-035).
+Config: `planning.autonomy` + `planning.fullConductor.*` — see [configuration](configuration.md#planning-autonomy).
 
-### Two-track doc-edit driver (R10–R14)
+### Two-track doc-edit driver (–)
 
 | Track | Allowlist | Route |
 | --- | --- | --- |
@@ -685,18 +685,18 @@ Config: `planning.autonomy` + `planning.fullConductor.*` — see [configuration]
 `inFlight` is never mechanical. Branch protection probe fails closed to PR path.
 
 
-## Scheduler frontier skip + park governance (PRD 057 R16, R28)
+## Scheduler frontier skip + park governance
 
 `planning-graph.py next` (file path, via `wave_deliver.py` → `planning_deliver_gate.cmd_next`) and the
 issue-store scheduler (`planning_scheduler.py`) **skip** units that cannot run — instead of failing the
 whole frontier — and report why:
 
 - A unit with no frozen task list is skipped as `no-frozen-task-list`; the scheduler advances to the next
-  runnable unit and lists the skips under `skipped` in its JSON payload (R16).
+ runnable unit and lists the skips under `skipped` in its JSON payload .
 - The issue-store frontier additionally drops units carrying the `sw:parked` label, so legacy migrated
-  units (e.g. `003-prd-pr-agent-review-provider`) no longer stall scheduling (R16, D4).
+ units (e.g. `003-prd-pr-agent-review-provider`) no longer stall scheduling (, D4).
 
-**Park governance (R28).** Parking is deliberately gated so a unit cannot be silently removed:
+**Park governance .** Parking is deliberately gated so a unit cannot be silently removed:
 
 ```bash
 # allowlisted actor + reason required; refused fail-closed otherwise
@@ -705,10 +705,10 @@ python3 scripts/planning-graph.py unpark <unit-id> [--actor <actor>]
 ```
 
 - The acting operator must be listed in `planning.scheduler.parkAllowlist` (see
-  [configuration](configuration.md)); an empty allowlist authorizes no one, and a park with no reason is
-  refused.
+ [configuration](configuration.md)); an empty allowlist authorizes no one, and a park with no reason is
+ refused.
 - Parked units are recorded in the local, backend-neutral registry `.cursor/planning-parked.json`
-  (`unit-id → {reason, actor, at}`); the file-store path is unchanged when nothing is parked (R23).
+ (`unit-id → {reason, actor, at}`); the file-store path is unchanged when nothing is parked .
 
 **Scheduler-exhausted halt.** When the eligible frontier is non-empty but every candidate is parked or
 unrunnable, the scheduler emits an explicit `scheduler-exhausted` halt (exit 40) naming the parked and
@@ -716,9 +716,9 @@ unrunnable units plus the unpark remediation — never a silent empty result. `p
 the same condition as an `over-parked-frontier` drift finding.
 
 
-## Linear adapter documentation currency (PRD 066 R30)
+## Linear adapter documentation currency
 
-Adapter-complete for PRD 066 and gap-079 close requires the documentation inventory below to be
+Adapter-complete for and close requires the documentation inventory below to be
 current. Verify before terminal merge:
 
 ```bash
@@ -727,25 +727,25 @@ python3 scripts/planning_linear_client.py . docs-currency-gate
 
 | Surface | Path | Covers |
 | --- | --- | --- |
-| Linear provider spec | `core/providers/issues/linear.md` | Config keys, LCD verbs, R25 stage-1 dogfood checklist, R23 OAuth secondary mode, lock/overflow (R10) |
-| Issues capability index inputs | `core/providers/issues/CAPABILITIES.md` | Verb contract, linear registration vs shipped, rate-limit map, doctor hooks (R16/R20) |
-| Config schema + example | `core/sw-reference/config.schema.json`, `core/sw-reference/workflow.config.example.json` | `teamKey`/`teamId`, `authMode`, `operatorProjection.linear` flags (R16) |
-| Operator guides | `docs/guides/workflows.md` (this section), `docs/guides/configuration.md` | R1 browse + dogfood acceptance (R25), issue-store routing |
+| Linear provider spec | `core/providers/issues/linear.md` | Config keys, LCD verbs, stage-1 dogfood checklist, OAuth secondary mode, lock/overflow |
+| Issues capability index inputs | `core/providers/issues/CAPABILITIES.md` | Verb contract, linear registration vs shipped, rate-limit map, doctor hooks (/) |
+| Config schema + example | `core/sw-reference/config.schema.json`, `core/sw-reference/workflow.config.example.json` | `teamKey`/`teamId`, `authMode`, `operatorProjection.linear` flags |
+| Operator guides | `docs/guides/workflows.md` (this section), `docs/guides/configuration.md` | browse + dogfood acceptance , issue-store routing |
 | Command / surface refs | `docs/guides/commands.md` | Living-doc currency, deliver gates mentioning issues providers |
-| Planning-store invariants | `core/providers/planning-store/issue-store.md`, `scripts/planning_store.py` facade | Facade-only projection mutation (R4), dual-write canonical body (R26), drift halt (R27), dirty resume (R28) |
-| GitHub Projects projection notes | `scripts/planning_github_projects_v2.py` module doc + `CAPABILITIES.md` degradation table | R18 parity + Initiative/Cycle degradations (R19) |
+| Planning-store invariants | `core/providers/planning-store/issue-store.md`, `scripts/planning_store.py` facade | Facade-only projection mutation , dual-write canonical body , drift halt , dirty resume |
+| GitHub Projects projection notes | `scripts/planning_github_projects_v2.py` module doc + `CAPABILITIES.md` degradation table | parity + Initiative/Cycle degradations |
 | Conformance harness | `scripts/unit_tests/planning/test_prd066_*.py` | Stage gates, registration, projection schema |
 
-Stage promotion gates (M7/A) inside PRD 066:
+Stage promotion gates (M7/A) inside :
 
 | Stage | Gate | Auth |
 | --- | --- | --- |
-| 1 | R25 dogfood checklist + R1 rebuild | `api-key` |
-| 2 | GitHub Projects R18 parity | unchanged |
-| 3 | Comments/relations surface (R17/R24) | unchanged |
-| 4 | R15 canonical fidelity + R23 OAuth docs | oauth documented before advertising |
+| 1 | dogfood checklist + rebuild | `api-key` |
+| 2 | GitHub Projects parity | unchanged |
+| 3 | Comments/relations surface (/) | unchanged |
+| 4 | canonical fidelity + OAuth docs | oauth documented before advertising |
 
-## Issue-store on Bitbucket hosts (PRD 047 D25)
+## Issue-store on Bitbucket hosts ()
 
 Bitbucket Cloud repos use this host adapter for PR/CI only — **not** native Bitbucket issues for planning.
 
@@ -761,7 +761,7 @@ enabling issue-store. Init probes for Jira: `python3 scripts/planning_store.py p
 Fixture suites: `scripts/test/run-planning-047-doc-impact-fixtures.sh`,
 `scripts/test/run-planning-047-conformance.sh`, `scripts/test/run-planning-047-phase3-fixtures.sh`.
 
-## Build-chain maintenance (PRD 038)
+## Build-chain maintenance
 
 When a change touches repo-root `scripts/` or other harness/emittable paths, propagate through the
 build chain before opening a PR:
@@ -779,38 +779,38 @@ This runs, in order:
 The SoT map lives in `.sw/layout.md` and `core/sw-reference/build-chain-sot.json`. CI enforces
 `scripts/`↔`core/scripts/` parity (`run_core_scripts_parity_fixtures.py`) and dist↔golden parity.
 
-## Pre-work memory search (PRD 019)
+## Pre-work memory search
 
 Before substantive work, every **work-performing** command runs a scoped `memory-preflight` **search**
 (not optional guidance). The obligation applies to `/sw-execute`, `/sw-debug`, `/sw-prd`, `/sw-brainstorm`,
 `/sw-amend`, `/sw-review`, and `/sw-stabilize`.
 
 1. **Search** — scoped file-path + semantic queries across classes `rule`, `decision`, `learning`,
-   `code-context`, `design` via `providers/<memory.provider>.md` (see `skills/memory/SKILL.md`).
+ `code-context`, `design` via `providers/<memory.provider>.md` (see `skills/memory/SKILL.md`).
 2. **Surface + reconcile** — applicable rules and contradicting decisions are reconciled before mutation.
 3. **Record** — `python3 scripts/wave.py memory prework record --surface <cmd> …` writes a redacted breadcrumb
-   to `.cursor/hooks/state/memory-prework-search.json` and `run.log`.
+ to `.cursor/hooks/state/memory-prework-search.json` and `run.log`.
 4. **Enforce** — the `preToolUse` hook denies the first file mutation without a fresh record; `memory:offline`
-   (probe-gated provider outage) satisfies the gate.
+ (probe-gated provider outage) satisfies the gate.
 
 Delegated sub-agents inherit the obligation (`rules/sw-subagent-dispatch.mdc`): perform the search or receive
 a fresh redacted result fenced as `untrusted_payload`. Pure read-only exploration dispatch is exempt.
 
 
-## Deliver plan-policy pilot (PRD 023)
+## Deliver plan-policy pilot
 
 `/sw-deliver` exercises both proposal tiers live when `orchestration.planPolicy: proposed` and pilot guards pass:
 
 - **Wave entry** — conductor proposes batching → `wave.py plan validate --tier wave` → `waveBatchingPlan` on shared run-state.
 - **Phase entry** — executor proposes step plan → `plan validate --tier phase` → `phase-step-plan.json` in the phase run dir.
 - **Intra-phase fan-out** — guideline-bounded parallelism with disjoint partition validation, global cap
-  `waveSlots + activeIntraPhase ≤ min(parallelCeiling, harnessLimit)`, and `dispatch-decisions.json` audit.
+ `waveSlots + activeIntraPhase ≤ min(parallelCeiling, harnessLimit)`, and `dispatch-decisions.json` audit.
 - **Driver budgets** — `wave_deliver_loop.py` enforces `runStartedAt`, `driverIterationCount`, `noProgressStreak`; clean halt preserves merge-queue integrity.
-- **Benefit metric (R31)** — paired `canonical` vs `proposed` runs; `wave.py plan benefit-report` applies the fail-closed decision rule.
+- **Benefit metric ** — paired `canonical` vs `proposed` runs; `wave.py plan benefit-report` applies the fail-closed decision rule.
 
 Default remains `canonical`. PRD-024 fans the proved pattern to `/sw-doc`, `/sw-debug`, and `/sw-feedback`.
 
-## Orchestration plan policy (PRD 022)
+## Orchestration plan policy
 
 Shipwright splits orchestration into a **deterministic safety kernel** (non-skippable chokepoints) and an
 **agent-decidable plan-policy** surface (optional steps, reorderings within guidelines, wave batching).
@@ -829,24 +829,24 @@ Two-tier persistence: wave batching → shared deliver run-state (conductor-only
 run dir. See [configuration](configuration.md#orchestration-plan-policy-orchestrationplanpolicy) and
 [call-site map](../../scripts/test/fixtures/planning-post-migration/022-kernel-classification-and-plan-validation/call-site-map.md).
 
-## Orchestrator plan-policy fan-out (PRD 024)
+## Orchestrator plan-policy fan-out
 
 All four orchestrators (`/sw-deliver`, `/sw-debug`, `/sw-doc`, `/sw-feedback`) consume
 `orchestration.planPolicy`. Default `canonical` is byte-identical to pre-024 behavior.
 
 - **Durable path:** `/sw-deliver` and `/sw-doc` → `/sw-deliver run` handoff use deliver-scoped durable state.
 - **Episodic path:** `/sw-debug` and `/sw-feedback` use per-invocation scratch under `.cursor/sw-debug-runs/`
-  and `.cursor/sw-feedback-runs/` (abandoned on terminal halt; no crash-resume).
+ and `.cursor/sw-feedback-runs/` (abandoned on terminal halt; no crash-resume).
 - **Consistency-only:** `/sw-doc` defers proposed guideline packs when `canonical ≡ proposed` (variance probe).
 
-See `docs/guides/configuration.md` (R35–R36) and `core/sw-reference/layout.md` (scratch + preflight paths).
+See `docs/guides/configuration.md` (–) and `core/sw-reference/layout.md` (scratch + preflight paths).
 
 
 ## Execute loop
 
 Per-task discipline: **red → green → tdd-gate → refactor → stage-1 review → stage-2 review** (refactor re-runs verify; `quality:none` skips structural signal). Ship adds **decision-log provenance** on the PR.
 
-## GitHub Projects v2 operator browse (PRD 061 R11b, R29a)
+## GitHub Projects v2 operator browse ( R11b, R29a)
 
 When `planning.store.backend` is `issue-store` with `issuesProvider: github-issues`,
 Shipwright projects the semantic planning graph into a GitHub Project for product-owner
@@ -862,20 +862,20 @@ Map these semantic keys to Project custom fields (names are defaults; override v
 | `Absorbs` (multi) | Which gaps a PRD absorbs |
 | `Brainstorms` (relation) | Which brainstorms feed a PRD |
 | `Phases` (text/checkbox) | Task/phase completion for an in-flight PRD |
-| `Status` (single select) | Item semantic status (backlog / in_flight / done) — **not** R1(4)-complete alone |
-| `Program` / `Initiative` (required discriminator) **or** Project-per-program | R1(4) program backlog vs in-flight vs done (PRD 066 R18) |
+| `Status` (single select) | Item semantic status (backlog / in_flight / done) — **not** (4)-complete alone |
+| `Program` / `Initiative` (required discriminator) **or** Project-per-program | (4) program backlog vs in-flight vs done |
 
 ### Dogfood / fixture walkthrough
 
 1. `python3 scripts/planning_store.py probe-projection` — expect `available` with scoped token or `projection-unavailable` with loud notice (R11a).
 2. `SW_ISSUES_FIXTURE=1 python3 scripts/planning_store.py projection-refresh` — idempotent upsert in fixture mode.
-3. Open the configured GitHub Project and verify the four R11 questions without opening issue YAML bodies.
+3. Open the configured GitHub Project and verify the four questions without opening issue YAML bodies.
 4. `python3 scripts/planning_cutover.py projection-gate` — R29a living-doc cutover stays blocked until projection is `ready`.
 
 Living-doc operator cutover (local INDEX/COMPLETION-LOG authority) MUST NOT proceed until
 `projection-gate` reports `ready: true` (pair with `planning_cutover` committed gate).
 
-## Turn-independent deliver ship loop (PRD 065)
+## Turn-independent deliver ship loop
 
 Phase-mode `/sw-deliver run` drives `/sw-ship` through the durable **ship-loop driver** — not ad-hoc
 command chains. The conductor re-invokes `deliver-loop` in-turn until a legitimate halt; operators
@@ -883,21 +883,21 @@ should not see "continue deliver?" prompts when `deliver.autonomy.mode: autonomo
 
 ```mermaid
 flowchart TB
-  RUN["/sw-deliver run"] --> LOOP["deliver-loop (mechanical)"]
-  LOOP --> PROV["phase provision"]
-  PROV --> DS["dispatch-ship (mechanical)"]
-  DS --> DRIVE["ship_loop.py drive"]
-  DRIVE -->|mechanical gates| DRIVE
-  DRIVE -->|awaitAgent| SHIP["/sw-ship --phase-mode (conductor, in-turn)"]
-  SHIP --> LOOP
-  DRIVE -->|ship complete| COLLECT["status collect"]
-  COLLECT --> MERGE["merge enqueue → run-next"]
-  MERGE --> LOOP
-  LOOP -->|all phases green-merged| TERM["terminal PR → main — PAUSE"]
+ RUN["/sw-deliver run"] --> LOOP["deliver-loop (mechanical)"]
+ LOOP --> PROV["phase provision"]
+ PROV --> DS["dispatch-ship (mechanical)"]
+ DS --> DRIVE["ship_loop.py drive"]
+ DRIVE -->|mechanical gates| DRIVE
+ DRIVE -->|awaitAgent| SHIP["/sw-ship --phase-mode (conductor, in-turn)"]
+ SHIP --> LOOP
+ DRIVE -->|ship complete| COLLECT["status collect"]
+ COLLECT --> MERGE["merge enqueue → run-next"]
+ MERGE --> LOOP
+ LOOP -->|all phases green-merged| TERM["terminal PR → main — PAUSE"]
 ```
 
 **Zero-interaction bar:** from `/sw-deliver run` through terminal PR preparation, the only chat turns
-are driver-managed `awaitAgent` boundaries (execute, review, simplify, stabilize). Mechanical steps —
+are driver-managed `awaitAgent` boundaries (execute, review, simplify, stabilize). Mechanical steps
 gate handlers, commit, PR, CI watch, evidence writes — run without operator prompts. `dispatch-ship` and
 `dispatch-batch` are mechanical; the driver never spawns Tasks.
 
@@ -905,39 +905,39 @@ gate handlers, commit, PR, CI watch, evidence writes — run without operator pr
 `.cursor/sw-deliver-runs/<phaseSlug>/gate-evidence/<gateId>.status.json`. `merge-ready-green` refuses
 when evidence is missing, stale, or head-mismatched per the gate's declared binding mode.
 
-**Resume:** halt payloads emit `/sw-deliver run <frozen-task-list>` or `/sw-deliver run --issue <n>` —
+**Resume:** halt payloads emit `/sw-deliver run <frozen-task-list>` or `/sw-deliver run --issue <n>`
 never bare `deliver-loop` as the operator command.
 
-## Deliver autonomy (PRD 063)
+## Deliver autonomy
 
-Phase-mode deliver enforces durable **shipChain** consumability on terminal status (R1): merge-ready
-without a complete canonical ship chain is non-consumable. **Dispatch lease** (R7) blocks duplicate
+Phase-mode deliver enforces durable **shipChain** consumability on terminal status : merge-ready
+without a complete canonical ship chain is non-consumable. **Dispatch lease** blocks duplicate
 `dispatch-ship` while a per-phase lease is live; **inline dispatch** is default for single-phase waves
-(R9) — only `dispatch-batch` may use background Tasks.
+ — only `dispatch-batch` may use background Tasks.
 
-**Re-adopt gate (R6):** `/sw-deliver run` refuses double-drive when `driverHeartbeatAt` is fresh;
+**Re-adopt gate :** `/sw-deliver run` refuses double-drive when `driverHeartbeatAt` is fresh;
 self-wake continuations are the carve-out. **Hang/desync** detection halts with `resumeCommand` before
-silent spin (R5). **Pre-PR smoke** runs targeted pytest via `test_scope` before `sw-pr` (R4).
+silent spin . **Pre-PR smoke** runs targeted pytest via `test_scope` before `sw-pr` .
 
-Finalize hygiene (R11–R13): non-mutating `build-chain-sync --check`, living-docs deferral on lock miss,
+Finalize hygiene (–): non-mutating `build-chain-sync --check`, living-docs deferral on lock miss,
 and `close_delivery_units` with parent-checkbox epic close after main merge.
 
 
-## Deliver loop reliability (PRD 067 Wave A)
+## Deliver loop reliability ( Wave A)
 
-Phase-mode `/sw-deliver` reliability contracts (R1–R9):
+Phase-mode `/sw-deliver` reliability contracts (–):
 
 | Contract | Behavior |
 | --- | --- |
-| Living-doc finalize (R1) | `finalize-completion` does **not** outer-acquire `.cursor/sw-living-docs.lock`; `living-docs reconcile` owns the lock via `living_doc_write_lock`. |
-| Tasks currency path (R2) | Under issue-store, currency/`ledger check` prefers `.cursor/planning-materialized/<logical-path>` when the docs/ path is absent. |
-| Checkbox sync (R3) | `merge-ready-green` syncs phase checkboxes through `planning_progress` → store `progress_update` with etag retry; revision conflicts fail closed (no silent degrade). |
-| Terminal corroboration (R4) | Terminal tasks-currency requires independent CI/gate or completion-claim corroboration — checkbox↔ledger alone is insufficient. |
-| Preflight timeout (R5) | `deliver.preflight.timeoutSeconds` (default **90**) bounds base-check probes; timeout emits fail-closed resume JSON. |
-| Skip-base-check cache (R6) | `--skip-base-check` reuses `.cursor/sw-deliver-preflight-cache.json` when present; otherwise skips re-probe without failing. |
-| Ship-lease reclaim (R7) | Reclaim only when **same host** + **stale heartbeat** + **dead PID** (optional start-token match). |
-| Terminal env (R8) | Terminal PR/ship clears `SW_PHASE_*` so trunk base is used — never phase integration base. |
-| Closure unit ids (R9) | `close-delivery-units` resolves `tasks-<n>-<slug>`, legacy, and `tasks-debug-*` forms; ambiguity fails closed. |
+| Living-doc finalize | `finalize-completion` does **not** outer-acquire `.cursor/sw-living-docs.lock`; `living-docs reconcile` owns the lock via `living_doc_write_lock`. |
+| Tasks currency path | Under issue-store, currency/`ledger check` prefers `.cursor/planning-materialized/<logical-path>` when the docs/ path is absent. |
+| Checkbox sync | `merge-ready-green` syncs phase checkboxes through `planning_progress` → store `progress_update` with etag retry; revision conflicts fail closed (no silent degrade). |
+| Terminal corroboration | Terminal tasks-currency requires independent CI/gate or completion-claim corroboration — checkbox↔ledger alone is insufficient. |
+| Preflight timeout | `deliver.preflight.timeoutSeconds` (default **90**) bounds base-check probes; timeout emits fail-closed resume JSON. |
+| Skip-base-check cache | `--skip-base-check` reuses `.cursor/sw-deliver-preflight-cache.json` when present; otherwise skips re-probe without failing. |
+| Ship-lease reclaim | Reclaim only when **same host** + **stale heartbeat** + **dead PID** (optional start-token match). |
+| Terminal env | Terminal PR/ship clears `SW_PHASE_*` so trunk base is used — never phase integration base. |
+| Closure unit ids | `close-delivery-units` resolves `tasks-<n>-<slug>`, legacy, and `tasks-debug-*` forms; ambiguity fails closed. |
 
 Resume after halt: `/sw-deliver run` from the orchestrator worktree (or `/sw-deliver run --issue <n>` under issue-store).
 

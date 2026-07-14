@@ -265,23 +265,64 @@ check_guide_aligned getting-started "$ROOT/docs/guides/getting-started.md"
 check_guide_aligned configuration "$ROOT/docs/guides/configuration.md"
 check_guide_aligned workflows "$ROOT/docs/guides/workflows.md"
 
-# Optional documentation/ mirror when present
-if [[ -f "$ROOT/documentation/getting-started.md" ]]; then
-  check_guide_aligned documentation-getting-started "$ROOT/documentation/getting-started.md"
+# documentation/ must be absent (single adopter docs tree under docs/guides/)
+if [[ -d "$ROOT/documentation" ]]; then
+  bad "ux-polish-docs-tree: documentation/ must be removed; use docs/guides/"
+else
+  ok "ux-polish-docs-tree: documentation/ absent"
 fi
-if [[ -f "$ROOT/documentation/commands.md" ]]; then
-  local_body="$(cat "$ROOT/documentation/commands.md")"
-  if echo "$local_body" | grep -q '/sw-deliver run' && \
-     echo "$local_body" | grep -qi 'Implementation checkpoint\|confirm checkpoint\|doc\.afterTasks'; then
-    ok "ux-polish-guides-aligned: documentation/commands.md documents deliver + confirm"
+
+# Required Wave C guide artifacts
+for req in style-guide.md glossary.md decision-tree.md; do
+  if [[ -f "$ROOT/docs/guides/$req" ]]; then
+    ok "ux-polish-docs-tree: docs/guides/$req present"
   else
-    bad "ux-polish-guides-aligned: documentation/commands.md missing UX polish topics"
+    bad "ux-polish-docs-tree: missing docs/guides/$req"
   fi
-  if echo "$local_body" | grep -qiE 'agent.*confirm|agent-driven|/sw-cleanup.*confirm'; then
-    ok "ux-polish-guides-aligned: documentation/commands.md documents agent cleanup confirm"
-  else
-    bad "ux-polish-guides-aligned: documentation/commands.md missing agent cleanup confirm"
+done
+
+# User guides must not cite PRD / R-ID / GAP tokens
+prd_hits=0
+while IFS= read -r f; do
+  if grep -nE '\bPRD[[:space:]]*[0-9]+|\bR[0-9]+\b|\bGAP-[0-9]+' "$f" >/dev/null 2>&1; then
+    echo "FAIL user-guide-provenance: $f still cites PRD/R-ID/GAP"
+    prd_hits=1
   fi
+done < <(find "$ROOT/docs/guides" -maxdepth 1 -type f -name '*.md' | sort)
+if grep -nE '\bPRD[[:space:]]*[0-9]+|\bR[0-9]+\b|\bGAP-[0-9]+' "$ROOT/README.md" >/dev/null 2>&1; then
+  echo "FAIL user-guide-provenance: README.md still cites PRD/R-ID/GAP"
+  prd_hits=1
+fi
+if [[ "$prd_hits" -eq 0 ]]; then
+  ok "user-guide-provenance: README + docs/guides free of PRD/R-ID/GAP tokens"
+else
+  bad "user-guide-provenance: PRD/R-ID/GAP tokens remain in adopter docs"
+fi
+
+# Style guide must state slug-vs-title + Conventional Commits
+if grep -qi 'slug' "$ROOT/docs/guides/style-guide.md" && \
+   grep -qi 'Conventional Commits' "$ROOT/docs/guides/style-guide.md" && \
+   grep -qi 'Diátaxis\|Diataxis' "$ROOT/docs/guides/style-guide.md"; then
+  ok "ux-polish-style-guide: slug/title + Conventional Commits + Diátaxis"
+else
+  bad "ux-polish-style-guide: style-guide.md missing required conventions"
+fi
+
+# Configuration documents delegation.mode
+if grep -qF 'delegation.mode' "$ROOT/docs/guides/configuration.md" && \
+   grep -qF 'bind-only' "$ROOT/docs/guides/configuration.md" && \
+   grep -qF 'heuristic' "$ROOT/docs/guides/configuration.md"; then
+  ok "ux-polish-delegation-mode: configuration.md documents delegation.mode options"
+else
+  bad "ux-polish-delegation-mode: configuration.md missing delegation.mode options"
+fi
+
+# Agent "reads as integrated" signal for /sw-doc-review (mechanical presence)
+SW_DOC_REVIEW="$(content_path commands/sw-doc-review.md)"
+if grep -qiE 'reads as integrated|integration review signal|doc-impact' "$SW_DOC_REVIEW"; then
+  ok "ux-polish-doc-review-signal: sw-doc-review mentions integration review signal"
+else
+  bad "ux-polish-doc-review-signal: sw-doc-review missing reads-as-integrated / doc-impact signal"
 fi
 
 # --- verify.test registration ---

@@ -81,3 +81,12 @@ differs. Human review notes use a separate comment channel (not persona markers)
 - `--personas` / `--all` overrides are logged in the activation record.
 - Findings failing schema validation are dropped.
 - Synthesis loop hard-stops at max rounds / no-progress.
+
+## Doc-impact integration review signal
+
+When reviewing documentation or guide-affecting changes, include an explicit agent judgment that the
+docs **read as integrated** with the product surface (not keyword presence alone): style-guide
+alignment, glossary links for coined terms, no PRD/R-ID tokens in adopter prose, and decision-tree
+routing where command choice is non-obvious. Fail closed on mechanical lint from
+`scripts/unit_tests/git/harness_ux_polish.py` (user-guide provenance, `documentation/` absent).
+

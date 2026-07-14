@@ -10,23 +10,23 @@ Orchestrators advance on green and **halt at human gates** (freeze, merge, feedb
 Shipwright **never auto-merges**.
 
 **Plan policy:** `orchestration.planPolicy` defaults to `canonical` (byte-identical to pre-022). Live `proposed`
-on `/sw-deliver` is opt-in only — see [configuration](docs/guides/configuration.md#deliver-plan-policy-pilot-prd-023).
+on `/sw-deliver` is opt-in only — see [configuration](docs/guides/configuration.md#deliver-plan-policy-pilot).
 
 - **Traceable specs** — frozen PRDs, tasks, and amendments live in your repo (optional `issue-store` backend stores them as provider issues — opt-in, default unchanged)
-- **issue-native dev-tracking** — under `issue-store`: gap issues, commit/PR linkage with safe close-on-merge, doc-review via integrity-checked issue comments, and milestone grouping (PRD 045; inert for file-store users)
-- **issue-derived planning graph** — under `issue-store`: read-only INDEX/living-status from issue labels, epic/sub-issue phase hierarchy with checkbox fallback, redacted cross-project recall, and inFlight tracking-issue safety (PRD 046; inert for file-store users)
-- **Deliver entry (PRD 059)** — `/sw-deliver run` accepts a frozen task-list path, `--unit-id`, or `--issue` (issue-store); `/sw-status` and `planning-graph.py status` report unified unit status (`backlog` | `planned` | `in-progress` | `complete`)
-- **Retrospective closure (PRD 059)** — `/sw-retrospective --post-merge` closes linked planning-store units via `planning_store.py close-delivery-units`; gap resolved status transitions only through that loop
+- **issue-native dev-tracking** — under `issue-store`: gap issues, commit/PR linkage with safe close-on-merge, doc-review via integrity-checked issue comments, and milestone grouping (; inert for file-store users)
+- **issue-derived planning graph** — under `issue-store`: read-only INDEX/living-status from issue labels, epic/sub-issue phase hierarchy with checkbox fallback, redacted cross-project recall, and inFlight tracking-issue safety (; inert for file-store users)
+- **Deliver entry** — `/sw-deliver run` accepts a frozen task-list path, `--unit-id`, or `--issue` (issue-store); `/sw-status` and `planning-graph.py status` report unified unit status (`backlog` | `planned` | `in-progress` | `complete`)
+- **Retrospective closure** — `/sw-retrospective --post-merge` closes linked planning-store units via `planning_store.py close-delivery-units`; gap resolved status transitions only through that loop
 - **Gated ship loop** — verify, review, CI truth, stabilize; *you* merge
 - **Compounding memory** — post-ship retro and durable project learnings
 
 ```mermaid
 flowchart LR
-  DOC["1 · Document<br/>/sw-doc"] --> SHIP["2 · Implement<br/>/sw-deliver"]
-  SHIP --> MERGE([You merge — only human gate])
-  MERGE --> COMPOUND["3 · Compound<br/>/sw-compound-ship"]
-  OPS["Debug & feedback<br/>/sw-debug · /sw-feedback"] -.-> DOC
-  COMPOUND -.->|learnings| DOC
+ DOC["1 · Document<br/>/sw-doc"] --> SHIP["2 · Implement<br/>/sw-deliver"]
+ SHIP --> MERGE([You merge — only human gate])
+ MERGE --> COMPOUND["3 · Compound<br/>/sw-compound-ship"]
+ OPS["Debug & feedback<br/>/sw-debug · /sw-feedback"] -.-> DOC
+ COMPOUND -.->|learnings| DOC
 ```
 
 > New here? Read **[Getting started](docs/guides/getting-started.md)** for guided persona paths, or
@@ -54,7 +54,7 @@ Shipwright installs **once per machine**; you configure it **per project repo**.
 ```bash
 git clone https://github.com/grdavies/shipwright
 cd shipwright
-python3 scripts/install.py          # copies dist/cursor/ → ~/.cursor/plugins/local/shipwright
+python3 scripts/install.py # copies dist/cursor/ → ~/.cursor/plugins/local/shipwright
 ```
 
 Run **Developer: Reload Window** in Cursor. Override the destination:
@@ -82,10 +82,10 @@ Open your **target project repo** and run **`/sw-init`**. It walks through proje
 `.cursor/workflow.config.json`:
 
 1. **Memory provider** — `in-repo` (default, committed markdown store) or `recallium` (external
-   REST store). For in-repo, choose `committed` (PR-reviewable) or `local` (gitignored).
+ REST store). For in-repo, choose `committed` (PR-reviewable) or `local` (gitignored).
 2. **Review provider** — `none` (default) or `coderabbit` (opt-in AI review on PRs).
 3. **Project type + verify** — detects manifests at repo root and proposes real `verify.*` commands
-   from fixed presets (never vacuous placeholders).
+ from fixed presets (never vacuous placeholders).
 4. **Doc→implementation boundary** (`doc.afterTasks`) — `confirm` (default) · `stop` · `auto`.
 5. **Guardrails** — `enforceBeforeSubmit` (default on) and `requireRuleClass` (default off).
 6. **Model tier defaults** — four-tier `models` block plus per-command routing from bundled defaults.
@@ -103,7 +103,7 @@ external AI review is `review.provider: "none"`.
 Configure `verify.lint` / `verify.typecheck` / `verify.test` so `/sw-verify` runs real checks.
 Full walkthrough and schema: **[configuration](docs/guides/configuration.md)**.
 
-### Deliver autonomy (PRD 009)
+### Deliver autonomy
 
 `/sw-deliver` runs an **autonomous conductor** by default (`deliver.autonomy.mode: autonomous`): it
 self-continues through phase dispatch, merge, and bookkeeping without per-step re-prompts. The **legitimate halt** set is minimal — terminal merge to `main`, exhausted remediation, destructive/ambiguous git,
@@ -165,6 +165,32 @@ local and remote branches, stale worktrees, and completed deliver run-state. Dry
 
 **Risk floor:** `auth`, `payment`, `migration`, `webhook` force at least Standard. **Ambiguity bump:**
 `maybe`, `explore`, `TBD` push a tier up. Details in the [workflow guide](docs/guides/workflows.md).
+
+
+## Documentation layout
+
+Adopter docs live under [`docs/guides/`](docs/guides/getting-started.md). The legacy `documentation/` tree was removed;
+use the guides below.
+
+| Guide | Purpose |
+|-------|---------|
+| [Getting started](docs/guides/getting-started.md) | Adoption arc and first paths |
+| [Commands](docs/guides/commands.md) | Orchestrators vs atomics |
+| [Workflows](docs/guides/workflows.md) | End-to-end flows |
+| [Configuration](docs/guides/configuration.md) | `/sw-init` knobs |
+| [Style guide](docs/guides/style-guide.md) | Writing conventions |
+| [Glossary](docs/guides/glossary.md) | Coined terms |
+| [Decision tree](docs/guides/decision-tree.md) | Command routing |
+
+### Closed reference inventory (pre-removal)
+
+| Former reference | Replacement |
+|------------------|-------------|
+| `documentation/getting-started.md` | `docs/guides/getting-started.md` |
+| `documentation/commands.md` | `docs/guides/commands.md` |
+| CONTRIBUTING “see documentation/” | CONTRIBUTING → `docs/guides/` |
+| Onboarding UX fixture paths | `docs/guides/*` |
+| Harness optional `documentation/` mirror checks | Removed; guides under `docs/guides/` are authoritative |
 
 ## Learn more
 

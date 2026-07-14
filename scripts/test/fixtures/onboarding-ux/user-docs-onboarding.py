@@ -70,8 +70,8 @@ check_file() {
 }
 
 check_file README "$ROOT/README.md"
-check_file getting-started "$ROOT/documentation/getting-started.md"
-check_file commands "$ROOT/documentation/commands.md"
+check_file getting-started "$ROOT/docs/guides/getting-started.md"
+check_file commands "$ROOT/docs/guides/commands.md"
 
 # Cross-doc: CodeRabbit opt-in (not default) mentioned somewhere user-facing
 if grep -rlE 'opt-in|default.*`none`|default is `none`' "$ROOT/README.md" "$ROOT/documentation" >/dev/null 2>&1; then
