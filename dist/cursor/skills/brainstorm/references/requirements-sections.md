@@ -18,6 +18,9 @@ Add `frozen: true` and `frozen_at: YYYY-MM-DD` only via `/sw-freeze` — not dur
 1. **Summary** — what we're building and why (2–4 sentences).
 2. **Problem Frame** — context, pain, constraints.
 3. **Key Decisions** — decisions with rationale (bullets with sub-bullets for alternatives considered).
+   Include the divergence-phase outcome: chosen stance plus every rejected alternative with its one-line
+   rejection reason (and `delegated: true` + rationale when the operator explicitly deferred instead of
+   picking).
 4. **Requirements** — stable R-IDs (`R1`, `R2`, …); each requirement is one testable statement.
 5. **Success Criteria** — how we know it worked.
 6. **Scope Boundaries** — explicit non-goals and deferred items.

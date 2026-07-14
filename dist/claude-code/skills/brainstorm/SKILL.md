@@ -22,9 +22,48 @@ Full-tier requirements exploration. Produces a brainstorm doc for `/sw-prd`. Doe
 ### Phase 1: Assess and explore
 
 1. Read `.sw/layout.md` for output path.
-2. If input is vague, ask one clarifying question (blocking tool preferred).
-3. Explore alternatives; challenge assumptions; resolve product decisions here.
-4. Run synthesis checkpoint: restate scope, tier, key decisions; confirm with user before write.
+2. When `.cursor/sw-context/project-intent.md` exists (optional `/sw-init` capture), read it opportunistically
+   for project intent and working-style context — never required, never blocking when absent.
+3. If input is vague, ask one clarifying question (blocking tool preferred).
+4. Explore alternatives; challenge assumptions; resolve product decisions here.
+5. Run the **divergence phase** below before the synthesis checkpoint.
+6. Run synthesis checkpoint: restate scope, tier, key decisions; confirm with user before write.
+
+### Divergence phase (mandatory, before synthesis checkpoint)
+
+Precedes requirements convergence — this is the default manual path; the opt-in tournament below is a
+selection mechanism layered on top of it, not a replacement.
+
+1. **Name the core tension** in one sentence (the real trade-off this feature forces).
+2. **Generate 3–5 deliberate-stance options.** Each stance is a genuine different way to resolve the tension —
+   not cosmetic variants — with trade-offs and an effort estimate. At least one stance MUST be an
+   **unexpected cross-domain borrow** (a pattern lifted from an unrelated domain, clearly labeled as such).
+3. **Present structured selection** — a table: stance | trade-offs | effort | recommended.
+4. **Recommend one with conviction** — state which stance you'd pick and why in one or two direct sentences;
+   do not hedge across all options equally.
+5. **Persist chosen + rejected** — once the operator picks (or accepts the recommendation), record the chosen
+   stance and every rejected alternative (with its one-line rejection reason) in the requirements doc's **Key
+   Decisions** section before moving to synthesis.
+
+#### Unsure routing (not blind re-asking)
+
+When the operator's response to the divergence selection is "unsure" or equivalent, classify *why* before
+picking a next step — never just repeat the same question verbatim:
+
+| Unsure type | Signal | Route |
+| --- | --- | --- |
+| Ambiguous preference between ~2 viable stances | Operator likes two options roughly equally | `calibration-loop` skill — present one concrete either/or instance, converge on a principle |
+| Options too broad/abstract to judge | Operator can't picture the stances concretely | Regenerate a **narrower** stance set (tighter framing, same tension) — do not repeat the wide set |
+| No strong opinion, defer to judgment | Operator explicitly defers | **Explicit delegation** — proceed with the recommended stance, record `delegated: true` + rationale in Key Decisions so it is auditable, not silent |
+
+Load `skills/calibration-loop/SKILL.md` for the ambiguous-preference route.
+
+#### Optional persona enrichment (non-blocking)
+
+Before generating stance options, the divergence brief MAY be enriched by dispatching a subset of the
+`doc-review` personas (`core/agents/sw-*-reviewer.md`) as read-only advisors on the framed tension — additional
+angles only, never a gate. Skip silently on timeout, unavailability, or when the tension is already
+well-scoped; never block divergence on persona availability (R31 — optional, never required).
 
 ### Divergence tournament (PRD 064 R6, opt-in)
 

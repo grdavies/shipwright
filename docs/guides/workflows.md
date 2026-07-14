@@ -948,3 +948,22 @@ Resume after halt: `/sw-deliver run` from the orchestrator worktree (or `/sw-del
 `/sw-deliver run --unit-id …`, and may same-turn confirm into deliver. Execute/ship before confirm is
 forbidden (`debug.pack.json` / `pre-confirm-guard`). Post-handoff halts belong to `/sw-deliver`.
 
+## Craft-parity operator surfaces
+
+Guided setup, state-aware entry, requirements divergence, and lightweight consult/capture surfaces that fit
+the existing `sw-` command surface without adding a second pipeline:
+
+| Surface | Behavior |
+| --- | --- |
+| `/sw-init` guided interview | Scan → present findings → confirm/correct → ask only unresolved choices, each with a recommended default; doctor/repair modes unchanged. |
+| `/sw` bare entry | Reads worktree state + planning store, proposes the single next action with confirm — not a static menu. |
+| `/sw-brainstorm` divergence | Names the core tension, generates 3–5 deliberate stances (including one cross-domain borrow) with trade-offs and effort, recommends one with conviction, persists chosen + rejected. Unsure responses route by type — calibration loop, narrower regenerate, or explicit delegation — instead of re-asking the same question. |
+| Calibration loop | Reusable convergence primitive: one concrete either/or instance per turn, a fixed verdict set, restated principle, and stop-on-stability. Wired into brainstorm unsure-routing, doc-review disposition disputes, and feedback ambiguous-scope calls. |
+| `/sw-ask` | Read-only consult routed to the best-fit existing persona; no pipeline side effects. |
+| `/sw-become` | Crystallizes a new persona into one fixed local destination, confirm-before-write, never overwrites. |
+| `/sw-note` | One-line idea/task/note capture under a local notebook outside the planning store; confirm-first graduation to a gap or brainstorm with two-way provenance. |
+| `/sw-guide` | Read-only explanation of workflow behavior plus config/state/planning-backend diagnosis; never mutates. |
+
+See [commands](commands.md#consult-and-capture) for the full command list and
+[configuration](configuration.md#notebook-session-index) for the notebook session-index opt-in.
+

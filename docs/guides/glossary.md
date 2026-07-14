@@ -15,5 +15,8 @@ Shipwright coined terms. For command routing, see the [decision tree](decision-t
 | **Worktree** | Linked git worktree isolating phase or orchestrator work so bare `main` stays clean. |
 | **Ship loop** | The `/sw-ship` chain: execute → verify → review → commit → PR → watch CI → stabilize → ready (merge gate). |
 | **Legitimate halt** | An allowed stop (terminal merge gate, exhausted remediation, destructive git, configured checkpoint, timeout, or budget)—not a casual “continue?” prompt. |
+| **Persona** | A named consult stance (`/sw-ask` routes questions to one; `/sw-become` crystallizes a new one) grounded in a specific domain—distinct from the doc-review reviewer panel it can reuse. |
+| **Notebook** | The local, planning-store-external capture surface behind `/sw-note`—ideas, tasks, and notes that graduate into a gap or brainstorm only after explicit confirm. |
+| **Calibration loop** | A convergence primitive that resolves genuine either/or ambiguity (brainstorm divergence, doc-review disposition disputes, feedback scope calls) through concrete instances instead of repeating the same abstract question. |
 
 See also: [getting started](getting-started.md), [workflows](workflows.md), [configuration](configuration.md).
