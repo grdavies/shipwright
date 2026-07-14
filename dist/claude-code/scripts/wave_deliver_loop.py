@@ -335,6 +335,178 @@ def orchestrator_worktree_path(root: Path, state: dict[str, Any]) -> Path | None
         path = (root / path).resolve()
     return path if path.is_dir() else None
 
+def _is_basename_only_path(raw: str) -> bool:
+    cleaned = raw.strip()
+    return bool(cleaned) and '/' not in cleaned and chr(92) not in cleaned and not cleaned.startswith('.')
+
+
+def _path_under_managed_roots(path: Path, repo_root: Path) -> bool:
+    from worktree_lib import list_all_worktree_roots
+
+    resolved = path.resolve()
+    for root in list_all_worktree_roots(repo_root):
+        root_resolved = root.resolve()
+        if resolved == root_resolved:
+            return True
+        try:
+            resolved.relative_to(root_resolved)
+            return True
+        except ValueError:
+            continue
+    return False
+
+
+def _orchestrator_lock_reclaimable(root: Path, target: str) -> bool:
+    from wave_state import lock_owner_live, read_lock_meta, scoped_paths
+
+    lock_path = scoped_paths(root, target)["lock"]
+    if not lock_path.is_file():
+        return True
+    meta = read_lock_meta(lock_path)
+    return not lock_owner_live(meta)
+
+
+def try_adopt_recorded_orchestrator_worktree(
+    root: Path, state: dict[str, Any], plan: dict[str, Any]
+) -> dict[str, Any]:
+    """Auto-adopt durable orchestratorWorktree on resume (PRD 068 R2)."""
+    orch = state.get("orchestratorWorktree") or {}
+    raw_path = orch.get("path")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        return {"adopted": False, "reason": "no-recorded-path"}
+    if _is_basename_only_path(raw_path):
+        fail(
+            "orchestrator worktree path is basename-only; refusing invent",
+            exit_code=20,
+            halt="orchestrator-adopt",
+            cause="resume:orchestrator-basename-only",
+            path=raw_path,
+        )
+    from wave_state import canonical_repo_root, slug_from_target, target_branch_from_state
+
+    repo_root = canonical_repo_root(root)
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = (repo_root / path).resolve()
+    else:
+        path = path.resolve()
+    if not _path_under_managed_roots(path, repo_root):
+        fail(
+            "orchestrator worktree path is outside managed roots",
+            exit_code=20,
+            halt="orchestrator-adopt",
+            cause="resume:orchestrator-unmanaged-path",
+            path=str(path),
+        )
+    if not path.is_dir():
+        fail(
+            "recorded orchestrator worktree path is missing",
+            exit_code=20,
+            halt="orchestrator-adopt",
+            cause="resume:orchestrator-path-missing",
+            path=str(path),
+        )
+    target = target_branch_from_state(state) or (plan.get("target") or {}).get("branch")
+    if not isinstance(target, str) or not target:
+        fail(
+            "cannot resolve target branch for orchestrator adopt",
+            exit_code=20,
+            halt="orchestrator-adopt",
+            cause="resume:orchestrator-missing-target",
+        )
+    recorded_branch = orch.get("branch")
+    if isinstance(recorded_branch, str) and recorded_branch and recorded_branch != target:
+        fail(
+            f"orchestrator worktree branch mismatch: {recorded_branch!r} vs {target!r}",
+            exit_code=20,
+            halt="orchestrator-adopt",
+            cause="resume:orchestrator-branch-mismatch",
+            recorded=recorded_branch,
+            expected=target,
+        )
+    expected_name = f"{slug_from_target(target)}-orchestrator"
+    recorded_name = str(orch.get("name") or "")
+    if recorded_name and recorded_name != expected_name and path.name != expected_name:
+        fail(
+            "orchestrator worktree slug/name mismatch",
+            exit_code=20,
+            halt="orchestrator-adopt",
+            cause="resume:orchestrator-slug-mismatch",
+            expectedName=expected_name,
+            recordedName=recorded_name,
+            pathName=path.name,
+        )
+    from wave_lifecycle import (
+        adopt_orchestrator_worktree,
+        git_toplevel,
+        orchestrator_worktree_branch,
+        orchestrator_worktree_dirty,
+    )
+
+    current = orchestrator_worktree_branch(path)
+    if current != target:
+        fail(
+            f"orchestrator worktree on {current!r}, expected {target!r}",
+            exit_code=20,
+            halt="orchestrator-adopt",
+            cause="resume:orchestrator-branch-mismatch",
+            actual=current,
+            expected=target,
+        )
+    if orchestrator_worktree_dirty(path):
+        fail(
+            f"orchestrator worktree is dirty: {path}",
+            exit_code=20,
+            halt="dirty-orchestrator",
+            cause="resume:orchestrator-dirty",
+            path=str(path),
+        )
+    if not _orchestrator_lock_reclaimable(repo_root, target):
+        fail(
+            "orchestrator lock held and not reclaimable",
+            exit_code=20,
+            halt="orchestrator-lock-held",
+            cause="resume:orchestrator-lock-held",
+            target=target,
+        )
+    if root.resolve() == path.resolve():
+        return {"adopted": False, "reason": "already-in-orchestrator-cwd", "path": str(path)}
+    proc = subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "HEAD"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    tip = proc.stdout.strip() if proc.returncode == 0 else ""
+    adopt_orchestrator_worktree(
+        root,
+        top=git_toplevel(repo_root),
+        path=path,
+        name=path.name,
+        target=target,
+        tip=tip,
+    )
+    return {"adopted": True, "path": str(path), "branch": target, "name": path.name}
+
+
+def apply_resume_entry(root: Path, state: dict[str, Any], plan: dict[str, Any], args: list[str]) -> dict[str, Any]:
+    """Resume short-circuit + orchestrator adopt on deliver-loop entry (PRD 068 R1/R2)."""
+    from wave_deliver import evaluate_resume_short_circuit
+
+    resume = evaluate_resume_short_circuit(root, args)
+    if resume.get("halt"):
+        fail(
+            f"resume blocked: {resume.get('cause')}",
+            exit_code=20,
+            halt=resume.get("cause", "resume-blocked"),
+            cause=resume.get("cause"),
+            **{k: v for k, v in resume.items() if k not in ("halt", "consumable", "state")},
+        )
+    adopt: dict[str, Any] = {"adopted": False}
+    if resume.get("consumable") and state.get("orchestratorWorktree"):
+        adopt = try_adopt_recorded_orchestrator_worktree(root, state, plan)
+    return {"resume": resume, "orchestratorAdopt": adopt}
+
 def fixture_tree_clean_or_halt(root: Path, state: dict[str, Any]) -> None:
     """PRD 050 R52 — fail closed when orchestrator fixture tree is dirty before merge-run-next."""
     orch = orchestrator_worktree_path(root, state)
@@ -2877,6 +3049,12 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     state = load_state(root, task_list)
     plan = load_plan(root)
     resumed = bool(state.get("verdict") == "running" and state.get("phases"))
+    if task_list and resumed:
+        entry = apply_resume_entry(root, state, plan, args)
+        if entry.get("orchestratorAdopt", {}).get("adopted"):
+            state = load_state(root, task_list)
+            plan = load_plan(root)
+            resumed = bool(state.get("verdict") == "running" and state.get("phases"))
 
     assert_run_identity(root, state, task_list, args)
     assert_driver_adopt_gate(state, args)
