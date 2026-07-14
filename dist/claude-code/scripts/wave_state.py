@@ -452,7 +452,9 @@ def normalize_worktree_path(
     path = Path(text)
     if ".." in path.parts:
         raise WorktreePathError(f"{field}: path traversal rejected: {raw}")
-    candidate = path if path.is_absolute() else anchor / path
+    if path.is_absolute():
+        return str(path.resolve())
+    candidate = anchor / path
     resolved = candidate.resolve()
     anchor_resolved = anchor.resolve()
     try:
