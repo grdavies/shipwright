@@ -673,7 +673,10 @@ def plan_combined(
     waves = assign_waves(all_ids, edges)
     notices.extend(contention_notices)
 
-    if not has_flag(args, "--skip-base-check"):
+    if has_flag(args, "--skip-base-check"):
+        # R6: reuse cached probe when present; otherwise skip without re-probing
+        cached_base_preflight(root, branch)
+    else:
         run_base_preflight(root, branch)
 
     items_out: list[dict[str, Any]] = []
@@ -824,20 +827,75 @@ def resolve_task_list_path(root: Path, task_list: str) -> Path:
     return path
 
 
+
+def preflight_timeout_seconds(root: Path) -> int:
+    """deliver.preflight.timeoutSeconds — default 90 (PRD 067 R5)."""
+    cfg = load_workflow_config(root)
+    deliver = cfg.get("deliver") if isinstance(cfg.get("deliver"), dict) else {}
+    preflight = deliver.get("preflight") if isinstance(deliver.get("preflight"), dict) else {}
+    raw = preflight.get("timeoutSeconds", 90)
+    try:
+        return max(1, int(raw))
+    except (TypeError, ValueError):
+        return 90
+
+
+def preflight_cache_path(root: Path) -> Path:
+    return root / ".cursor" / "sw-deliver-preflight-cache.json"
+
+
+def load_preflight_cache(root: Path) -> dict:
+    path = preflight_cache_path(root)
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_preflight_cache(root: Path, cache: dict) -> None:
+    path = preflight_cache_path(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(cache, indent=2) + "\n", encoding="utf-8")
+
+
+def cached_base_preflight(root: Path, target_branch: str) -> dict | None:
+    """Return cached base-check probe when --skip-base-check (PRD 067 R6)."""
+    cache = load_preflight_cache(root)
+    entry = cache.get(target_branch)
+    if not isinstance(entry, dict):
+        return None
+    return entry.get("basePreflight") if isinstance(entry.get("basePreflight"), dict) else None
+
+
 def run_base_preflight(root: Path, target_branch: str) -> dict[str, Any]:
-    proc = subprocess.run(
-        [
-            sys.executable,
-            str(SCRIPT_DIR / "wave_preflight.py"),
-            str(root),
-            "base-check",
-            "--target",
-            target_branch,
-        ],
-        cwd=str(root),
-        text=True,
-        capture_output=True,
-    )
+    timeout = preflight_timeout_seconds(root)
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT_DIR / "wave_preflight.py"),
+                str(root),
+                "base-check",
+                "--target",
+                target_branch,
+            ],
+            cwd=str(root),
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        fail(
+            f"base-branch preflight timed out after {timeout}s",
+            exit_code=20,
+            halt="preflight-timeout",
+            resumeCommand="/sw-deliver run",
+            timeoutSeconds=timeout,
+            target=target_branch,
+        )
     try:
         payload = json.loads(proc.stdout)
     except json.JSONDecodeError:
@@ -846,8 +904,12 @@ def run_base_preflight(root: Path, target_branch: str) -> dict[str, Any]:
         fail(
             payload.get("error", "base-branch preflight failed"),
             exit_code=proc.returncode,
+            resumeCommand="/sw-deliver run",
             **{k: v for k, v in payload.items() if k != "error"},
         )
+    cache = load_preflight_cache(root)
+    cache[target_branch] = {"basePreflight": payload, "cachedAt": utc_now_iso()}
+    save_preflight_cache(root, cache)
     return payload
 
 
@@ -939,7 +1001,13 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
         )
         for n in notices:
             print(f"notice: {n}", file=sys.stderr)
-        if not has_flag(args, "--skip-base-check"):
+        if has_flag(args, "--skip-base-check"):
+            cached = cached_base_preflight(root, branch)
+            if cached is not None:
+                result["basePreflight"] = {**cached, "fromCache": True}
+            else:
+                result["basePreflight"] = {"skipped": True, "reason": "skip-base-check-no-cache"}
+        else:
             base_pf = run_base_preflight(root, branch)
             result["basePreflight"] = base_pf
         cap_pf = run_capability_index_preflight(root)
@@ -965,7 +1033,13 @@ def cmd_preflight(root: Path, args: list[str]) -> None:
             f"mode=combined target={out['target']['branch']} waves={len(out['waves'])} items={len(out['items'])}",
             file=sys.stderr,
         )
-        if not has_flag(args, "--skip-base-check"):
+        if has_flag(args, "--skip-base-check"):
+            cached = cached_base_preflight(root, out["target"]["branch"])
+            if cached is not None:
+                result["basePreflight"] = {**cached, "fromCache": True}
+            else:
+                result["basePreflight"] = {"skipped": True, "reason": "skip-base-check-no-cache"}
+        else:
             base_pf = run_base_preflight(root, out["target"]["branch"])
             result["basePreflight"] = base_pf
         cap_pf = run_capability_index_preflight(root)
@@ -1057,7 +1131,10 @@ def cmd_plan(root: Path, args: list[str]) -> None:
         )
         notices.extend(contention_notices)
 
-        if not has_flag(args, "--skip-base-check"):
+        if has_flag(args, "--skip-base-check"):
+            # R6: reuse cached probe when present; otherwise skip without re-probing
+            cached_base_preflight(root, branch)
+        else:
             run_base_preflight(root, branch)
 
         if from_phase:

@@ -367,11 +367,28 @@ def fixture_tree_clean_or_halt(root: Path, state: dict[str, Any]) -> None:
 def resolve_currency_check(
     root: Path, state: dict[str, Any], plan: dict[str, Any]
 ) -> tuple[Path, str] | tuple[None, None]:
-    """Resolve ledger check root + tasks path (R7 — integration worktree when list lives there)."""
+    """Resolve ledger check root + tasks path (R7 — integration worktree when list lives there).
+
+    R2: under issue-store prefer the materialized path when the logical docs/ path is absent.
+    """
     raw = task_list_from(state, plan)
     if not raw:
         return None, None
     rel = str(raw)
+    try:
+        import planning_materialize as pm
+        import planning_path_redirect
+
+        pm.ensure_run_entry_materialized(root, rel)
+        _resolved, readable = planning_path_redirect.resolve_readable_path(root, rel)
+        if readable is not None and readable.is_file():
+            try:
+                rel_for_check = str(readable.relative_to(root.resolve()))
+            except ValueError:
+                rel_for_check = str(readable)
+            return root, rel_for_check
+    except Exception:
+        pass
     candidates: list[Path] = [root]
     orch = orchestrator_worktree_path(root, state)
     if orch is not None:
@@ -2589,35 +2606,13 @@ def _execute_mechanical_inner(
             )
         state.update(load_state(root))
         orch = orchestrator_worktree_path(root, state)
-        from wave_living_doc_lock import release, try_acquire
-
+        # R1: reconcile owns the living-doc lock via living_doc_write_lock — do not
+        # outer-acquire here (nested acquire deadlocks against the reconcile subprocess).
         target = (state.get("target") or {}).get("branch")
         living_args = ["living-docs", "reconcile", "--commit"]
         if orch is not None:
             living_args.extend(["--orchestrator-worktree", str(orch)])
-        living_data: dict[str, Any] = {}
-        if not try_acquire(root, target=target, holder="living-docs-reconcile-finalize"):
-            deferral = manual_living_doc_reconcile_suggestion(root, state)
-            state["livingDocDeferral"] = {
-                **deferral,
-                "cause": "living-doc-lock-held",
-                "updatedAt": utc_now(),
-            }
-            save_state(root, state)
-            fail_payload(
-                {
-                    "verdict": "defer",
-                    "livingDocReconcile": deferral,
-                    "resumeCommand": deferral.get("command"),
-                },
-                "living-docs reconcile deferred — lock held",
-                20,
-                remediation=str(deferral.get("command") or ""),
-            )
-        try:
-            living_ec, living_data = run_wave(root, *living_args)
-        finally:
-            release(root)
+        living_ec, living_data = run_wave(root, *living_args)
         if living_ec != 0:
             fail_payload(
                 living_data,

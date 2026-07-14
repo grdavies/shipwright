@@ -922,3 +922,22 @@ silent spin (R5). **Pre-PR smoke** runs targeted pytest via `test_scope` before 
 Finalize hygiene (R11–R13): non-mutating `build-chain-sync --check`, living-docs deferral on lock miss,
 and `close_delivery_units` with parent-checkbox epic close after main merge.
 
+
+## Deliver loop reliability (PRD 067 Wave A)
+
+Phase-mode `/sw-deliver` reliability contracts (R1–R9):
+
+| Contract | Behavior |
+| --- | --- |
+| Living-doc finalize (R1) | `finalize-completion` does **not** outer-acquire `.cursor/sw-living-docs.lock`; `living-docs reconcile` owns the lock via `living_doc_write_lock`. |
+| Tasks currency path (R2) | Under issue-store, currency/`ledger check` prefers `.cursor/planning-materialized/<logical-path>` when the docs/ path is absent. |
+| Checkbox sync (R3) | `merge-ready-green` syncs phase checkboxes through `planning_progress` → store `progress_update` with etag retry; revision conflicts fail closed (no silent degrade). |
+| Terminal corroboration (R4) | Terminal tasks-currency requires independent CI/gate or completion-claim corroboration — checkbox↔ledger alone is insufficient. |
+| Preflight timeout (R5) | `deliver.preflight.timeoutSeconds` (default **90**) bounds base-check probes; timeout emits fail-closed resume JSON. |
+| Skip-base-check cache (R6) | `--skip-base-check` reuses `.cursor/sw-deliver-preflight-cache.json` when present; otherwise skips re-probe without failing. |
+| Ship-lease reclaim (R7) | Reclaim only when **same host** + **stale heartbeat** + **dead PID** (optional start-token match). |
+| Terminal env (R8) | Terminal PR/ship clears `SW_PHASE_*` so trunk base is used — never phase integration base. |
+| Closure unit ids (R9) | `close-delivery-units` resolves `tasks-<n>-<slug>`, legacy, and `tasks-debug-*` forms; ambiguity fails closed. |
+
+Resume after halt: `/sw-deliver run` from the orchestrator worktree (or `/sw-deliver run --issue <n>` under issue-store).
+

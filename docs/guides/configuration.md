@@ -863,3 +863,12 @@ Bounded draft-only driver (`scripts/loop_autonomy.py`). Default **disabled**.
 | `loop.autoPropose.scheduler` | `manual` | `scheduled` runs are maintenance-only only |
 
 Fixture suite: `python3 scripts/test/run_loop_autonomy_invariant_fixtures.py`.
+
+
+### deliver.preflight.timeoutSeconds
+
+Hard timeout (seconds) for deliver base-branch preflight probes. Default **90** (PRD 067 R5).
+On timeout the driver fails closed with `halt: preflight-timeout` and a resume command.
+
+`--skip-base-check` does not re-probe: it reads `.cursor/sw-deliver-preflight-cache.json` written by the last successful probe when present (R6); otherwise skips without failing.
+

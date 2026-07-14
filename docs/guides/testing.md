@@ -166,3 +166,10 @@ scope when the merge-base diff does not match the widen list.
 manifest loop during full verify. When exceeded, `_runner.py` emits a consolidated halt JSON with
 `lastSuiteId` and `resumeCommand`. Per-suite elapsed seconds are logged during manifest execution.
 
+
+### PRD 067 Wave A regressions
+
+Focused suite: `scripts/unit_tests/deliver/test_prd067_wave_a_reliability.py` covers ship-lease reclaim, preflight timeout default, materialized currency path, `tasks-debug-*` unit ids, and terminal `SW_PHASE_*` clearing.
+
+Also: `test_finalize_does_not_outer_acquire_living_doc_lock` in `scripts/unit_tests/planning/test_closure_completeness.py` (R1 nested-acquire).
+
