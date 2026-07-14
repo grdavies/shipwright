@@ -428,6 +428,21 @@ def canonical_repo_root(start: Path | None = None) -> Path:
     return common.parent.resolve()
 
 
+def _path_normalize_anchor(start: Path) -> Path:
+    """Repo root for relative path containment; fixture-safe when git is absent."""
+    proc = subprocess.run(
+        ["git", "-C", str(start), "rev-parse", "--git-common-dir"],
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return start.resolve()
+    common = Path(proc.stdout.strip())
+    if not common.is_absolute():
+        common = (start / common).resolve()
+    return common.parent.resolve()
+
+
 def _parse_state_ts(ts: str) -> datetime | None:
     try:
         return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
@@ -526,7 +541,7 @@ def persist_deliver_state_paths_absolute(
 
 def _deliver_write_roots(root: Path) -> tuple[Path, Path | None]:
     """Return canonical primary repo root and optional orchestrator mirror root."""
-    repo_root = canonical_repo_root(root)
+    repo_root = _path_normalize_anchor(root)
     mirror = root.resolve() if root.resolve() != repo_root.resolve() else None
     return repo_root, mirror
 
@@ -747,7 +762,7 @@ def load_deliver_state(
                 return {}
         else:
             return {}
-    anchor = canonical_repo_root(root)
+    anchor = _path_normalize_anchor(root)
     try:
         return normalize_deliver_state_paths(data, anchor=anchor)
     except WorktreePathError as exc:
