@@ -472,6 +472,7 @@
 * merge phase gap-close-absorb-close-gap-079-absorb-linkage-r22 into feat/linear-planning-store-provider-and-operator-projection (a54ce6d) <!-- sw-deliver:gap-close-absorb-close-gap-079-absorb-linkage-r22 -->
 * merge phase wave-a-deliver-reliability-deliver-loop-reliability-r1-r9 into feat/operator-surface-reliability-craft-ux (c34da5b) <!-- sw-deliver:wave-a-deliver-reliability-deliver-loop-reliability-r1-r9 -->
 * merge phase wave-a-deliver-reliability-deliver-loop-reliability-r1-r9 into feat/operator-surface-reliability-craft-ux (39a1fd7) <!-- sw-deliver:wave-a-deliver-reliability-deliver-loop-reliability-r1-r9 -->
+* merge phase wave-a-resume-cwd-resume-short-circuit-and-orchestrator-adopt-r1-r2-medium into feat/post-067-dogfood-hardening (a6f991e) <!-- sw-deliver:wave-a-resume-cwd-resume-short-circuit-and-orchestrator-adopt-r1-r2-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
