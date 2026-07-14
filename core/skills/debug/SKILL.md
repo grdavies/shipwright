@@ -163,3 +163,18 @@ Feeds `/sw-compound` and future debug preflight.
 - Bounded RCA loop (R29) — same hard stops as stabilize, including rule-of-three escalation.
 - No auto-merge, no silent in-place patches on default branch.
 - Sentry MCP read-only; degrade when unavailable.
+
+
+## Small-fix → deliver handoff (PRD 067 R10–R14)
+
+When route classification is **small**:
+
+1. Materialize a thin one-phase frozen pack via `scripts/debug_deliver_handoff.py materialize`
+   (`tasks-debug-<slug>`; virtual body under `docs/prds/debug-<slug>/`).
+2. Print `/sw-deliver run --unit-id tasks-debug-<slug>` and optionally confirm same-turn handoff.
+3. Confirm → invoke `/sw-deliver run` inline in-turn; decline → end debug. **Never** Task-spawn deliver.
+4. Pre-confirm: `debug_deliver_handoff.py pre-confirm-guard --step <step>` fails closed on execute/ship (R12).
+5. Post-handoff legitimate halts are the deliver/ship set only (R13).
+
+**Substantial** routes still go to `/sw-brainstorm` or `/sw-amend` and **bypass** the thin debug pack (R14).
+Debug never auto-merges to `main`.

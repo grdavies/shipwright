@@ -154,3 +154,14 @@ overlapping commands. Shipwright orchestrators (`/sw-doc`, `/sw-deliver`, `/sw-s
 - [Command reference](commands.md) — full taxonomy
 - [Configuration](configuration.md) — `/sw-init` walkthrough and every config key
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) — developing Shipwright itself
+
+
+## Debug Path 3 — small-fix to deliver
+
+When `/sw-debug` classifies a **small** fix after RCA:
+
+1. Materialize a thin one-phase pack (`tasks-debug-<slug>`) — no full `/sw-doc`.
+2. Print `/sw-deliver run --unit-id tasks-debug-<slug>`.
+3. Confirm → same-turn deliver; decline → end debug.
+4. Deliver owns execute/ship/CI/merge gates after handoff. Substantial fixes still go to brainstorm/amend.
+
