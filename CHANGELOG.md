@@ -473,6 +473,7 @@
 * merge phase wave-a-deliver-reliability-deliver-loop-reliability-r1-r9 into feat/operator-surface-reliability-craft-ux (c34da5b) <!-- sw-deliver:wave-a-deliver-reliability-deliver-loop-reliability-r1-r9 -->
 * merge phase wave-a-deliver-reliability-deliver-loop-reliability-r1-r9 into feat/operator-surface-reliability-craft-ux (39a1fd7) <!-- sw-deliver:wave-a-deliver-reliability-deliver-loop-reliability-r1-r9 -->
 * merge phase wave-a-resume-cwd-resume-short-circuit-and-orchestrator-adopt-r1-r2-medium into feat/post-067-dogfood-hardening (a6f991e) <!-- sw-deliver:wave-a-resume-cwd-resume-short-circuit-and-orchestrator-adopt-r1-r2-medium -->
+* merge phase wave-a-paths-state-absolute-paths-and-primary-first-heartbeat-r3-r4-medium into feat/post-067-dogfood-hardening (2bbee86) <!-- sw-deliver:wave-a-paths-state-absolute-paths-and-primary-first-heartbeat-r3-r4-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
