@@ -2830,7 +2830,27 @@ def _execute_mechanical_inner(
         prd_unit_id = pii.resolve_prd_unit_id(root, prd, slug=slug or None) if prd else None
         closure: dict[str, Any] | None = None
         if prd_unit_id:
+            from planning_store import audit_closure_completeness, doctor_absorb_pollution
+
+            doctor = doctor_absorb_pollution(root, cfg)
+            if doctor.get("verdict") == "fail":
+                fail_payload(
+                    doctor,
+                    "absorb pollution doctor failed",
+                    20,
+                    remediation=str(doctor.get("resumeCommand") or "python3 scripts/planning_store.py doctor"),
+                )
             closure = close_delivery_units(root, cfg, prd_unit_id, state=state)
+            audit = closure.get("closureAudit") or audit_closure_completeness(
+                root, cfg, prd_unit_id, closure_result=closure, state=state
+            )
+            if audit.get("verdict") == "not-ready":
+                fail_payload(
+                    audit,
+                    "closure audit not ready",
+                    20,
+                    remediation=str(audit.get("resumeCommand") or ""),
+                )
             if closure.get("verdict") == "not-ready":
                 fail_payload(
                     closure,
