@@ -476,6 +476,7 @@
 * merge phase wave-a-paths-state-absolute-paths-and-primary-first-heartbeat-r3-r4-medium into feat/post-067-dogfood-hardening (2bbee86) <!-- sw-deliver:wave-a-paths-state-absolute-paths-and-primary-first-heartbeat-r3-r4-medium -->
 * merge phase wave-c-docs-craft-badge-token-strip-operator-docs-r10-r12-small into feat/post-067-dogfood-hardening (4377e4a) <!-- sw-deliver:wave-c-docs-craft-badge-token-strip-operator-docs-r10-r12-small -->
 * merge phase wave-a-merge-timeout-merge-run-next-timeout-and-recovery-r5-medium into feat/post-067-dogfood-hardening (d07a2c1) <!-- sw-deliver:wave-a-merge-timeout-merge-run-next-timeout-and-recovery-r5-medium -->
+* merge phase wave-b-absorb-closure-absorb-linkage-close-audit-r6-r9-large into feat/post-067-dogfood-hardening (eabeb03) <!-- sw-deliver:wave-b-absorb-closure-absorb-linkage-close-audit-r6-r9-large -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
