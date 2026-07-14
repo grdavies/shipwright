@@ -435,6 +435,173 @@ def _parse_state_ts(ts: str) -> datetime | None:
         return None
 
 
+class WorktreePathError(ValueError):
+    """Worktree path failed containment normalization (PRD 068 R3)."""
+
+
+def normalize_worktree_path(
+    raw: str | Path,
+    *,
+    anchor: Path,
+    field: str = "path",
+) -> str:
+    """Resolve a worktree path to absolute under anchor; rejects .. and symlink escape."""
+    text = str(raw).strip()
+    if not text:
+        raise WorktreePathError(f"{field}: empty path")
+    path = Path(text)
+    if ".." in path.parts:
+        raise WorktreePathError(f"{field}: path traversal rejected: {raw}")
+    candidate = path if path.is_absolute() else anchor / path
+    resolved = candidate.resolve()
+    anchor_resolved = anchor.resolve()
+    try:
+        resolved.relative_to(anchor_resolved)
+    except ValueError as exc:
+        raise WorktreePathError(
+            f"{field}: resolved path escapes anchor: {raw} -> {resolved}"
+        ) from exc
+    return str(resolved)
+
+
+def normalize_deliver_state_paths(
+    state: dict[str, Any],
+    *,
+    anchor: Path,
+) -> dict[str, Any]:
+    """Normalize orchestrator/phase worktree paths on load with containment (R3)."""
+    out = dict(state)
+    orch = out.get("orchestratorWorktree")
+    if isinstance(orch, dict) and orch.get("path"):
+        orch_copy = dict(orch)
+        orch_copy["path"] = normalize_worktree_path(
+            str(orch["path"]),
+            anchor=anchor,
+            field="orchestratorWorktree.path",
+        )
+        out["orchestratorWorktree"] = orch_copy
+    worktrees = out.get("phaseWorktrees")
+    if isinstance(worktrees, dict):
+        normalized: dict[str, Any] = {}
+        for phase_id, entry in worktrees.items():
+            if isinstance(entry, dict) and entry.get("path"):
+                entry_copy = dict(entry)
+                entry_copy["path"] = normalize_worktree_path(
+                    str(entry["path"]),
+                    anchor=anchor,
+                    field=f"phaseWorktrees.{phase_id}.path",
+                )
+                normalized[str(phase_id)] = entry_copy
+            else:
+                normalized[str(phase_id)] = entry
+        out["phaseWorktrees"] = normalized
+    return out
+
+
+def persist_deliver_state_paths_absolute(
+    state: dict[str, Any],
+    *,
+    anchor: Path,
+) -> None:
+    """Persist absolute worktree paths on deliver state writers (R3)."""
+    orch = state.get("orchestratorWorktree")
+    if isinstance(orch, dict) and orch.get("path"):
+        orch["path"] = normalize_worktree_path(
+            str(orch["path"]),
+            anchor=anchor,
+            field="orchestratorWorktree.path",
+        )
+    worktrees = state.get("phaseWorktrees")
+    if isinstance(worktrees, dict):
+        for phase_id, entry in worktrees.items():
+            if isinstance(entry, dict) and entry.get("path"):
+                entry["path"] = normalize_worktree_path(
+                    str(entry["path"]),
+                    anchor=anchor,
+                    field=f"phaseWorktrees.{phase_id}.path",
+                )
+
+
+def _deliver_write_roots(root: Path) -> tuple[Path, Path | None]:
+    """Return canonical primary repo root and optional orchestrator mirror root."""
+    repo_root = canonical_repo_root(root)
+    mirror = root.resolve() if root.resolve() != repo_root.resolve() else None
+    return repo_root, mirror
+
+
+def _resolve_feature_branch(root: Path, state: dict[str, Any], target: str | None) -> str:
+    branch = target or target_branch_from_state(state)
+    if not is_feature_target(branch):
+        branch = _current_feature_branch(root)
+    if not is_feature_target(branch):
+        fail("cannot persist deliver state without feature target branch")
+    assert branch is not None
+    return branch
+
+
+def persist_deliver_state_primary_first(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    target: str | None = None,
+) -> Path:
+    """Write repo-root primary first, then mirror; shared updatedAt (PRD 068 R4)."""
+    branch = _resolve_feature_branch(root, state, target)
+    if not target_branch_from_state(state):
+        state["target"] = {"branch": branch}
+    repo_root, mirror_root = _deliver_write_roots(root)
+    persist_deliver_state_paths_absolute(state, anchor=repo_root)
+    primary_path = scoped_paths(repo_root, branch)["state"]
+    prior: dict[str, Any] | None = _read_state_optional(primary_path)
+    if not prior and mirror_root is not None:
+        prior = _read_state_optional(scoped_paths(mirror_root, branch)["state"])
+    _assert_completion_finalize_allowed(repo_root, state, prior or None)
+    now = utc_now()
+    state["updatedAt"] = now
+    primary_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(primary_path, state)
+    _write_legacy_breadcrumb(repo_root, target=branch, scoped_state=primary_path)
+    if mirror_root is not None:
+        mirror_path = scoped_paths(mirror_root, branch)["state"]
+        mirror_path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(mirror_path, state)
+    return primary_path
+
+
+def repair_mirror_from_primary(
+    start: Path,
+    *,
+    target: str | None = None,
+    task_list: str | None = None,
+    state_hint: dict[str, Any] | None = None,
+) -> Path:
+    """Overwrite orchestrator mirror from repo-root primary when mirror skewed fresher (R4)."""
+    repo_root = canonical_repo_root(start)
+    primary = sync_canonical_state_read(
+        start,
+        target=target,
+        task_list=task_list,
+        state_hint=state_hint,
+        enforce_skew=False,
+    )
+    if not primary:
+        fail("no canonical primary deliver state to repair from")
+    branch = target or target_branch_from_state(primary)
+    if not is_feature_target(branch):
+        fail("cannot repair mirror without feature target branch")
+    assert branch is not None
+    orch_raw = (primary.get("orchestratorWorktree") or {}).get("path")
+    if not isinstance(orch_raw, str) or not orch_raw.strip():
+        fail("orchestratorWorktree.path missing; nothing to mirror")
+    mirror_root = Path(orch_raw).resolve()
+    if mirror_root.resolve() == repo_root.resolve():
+        return scoped_paths(repo_root, branch)["state"]
+    mirror_path = scoped_paths(mirror_root, branch)["state"]
+    mirror_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(mirror_path, primary)
+    return mirror_path
+
+
 def _state_updated_skew_seconds(left: dict[str, Any], right: dict[str, Any]) -> float | None:
     left_at = _parse_state_ts(str(left.get("updatedAt") or ""))
     right_at = _parse_state_ts(str(right.get("updatedAt") or ""))
@@ -444,9 +611,31 @@ def _state_updated_skew_seconds(left: dict[str, Any], right: dict[str, Any]) -> 
 
 
 def _mirror_state_at_root(repo_root: Path, state: dict[str, Any], branch: str) -> None:
+    """Deprecated shim — use persist_deliver_state_primary_first (R4)."""
     root_path = scoped_paths(repo_root, branch)["state"]
     root_path.parent.mkdir(parents=True, exist_ok=True)
     write_json(root_path, state)
+
+
+def _load_state_normalized(
+    path: Path,
+    *,
+    anchor: Path,
+) -> dict[str, Any]:
+    data = _read_state_optional(path)
+    if not data:
+        return {}
+    try:
+        return normalize_deliver_state_paths(data, anchor=anchor)
+    except WorktreePathError as exc:
+        fail(
+            str(exc),
+            exit_code=20,
+            halt="blocked",
+            cause="state:path-escape",
+            path=str(path),
+        )
+        return {}
 
 
 def sync_canonical_state_read(
@@ -457,7 +646,7 @@ def sync_canonical_state_read(
     target: str | None = None,
     enforce_skew: bool = True,
 ) -> dict[str, Any]:
-    """Load repo-root canonical deliver state; enforce skew + verdict precedence (PRD 049 R4)."""
+    """Load repo-root canonical deliver state; enforce skew + verdict precedence (PRD 049/068 R4)."""
     repo_root = canonical_repo_root(start)
     path = resolve_state_path(
         repo_root,
@@ -465,7 +654,7 @@ def sync_canonical_state_read(
         task_list=task_list,
         state_hint=state_hint,
     )
-    root_state = _read_state_optional(path)
+    root_state = _load_state_normalized(path, anchor=repo_root)
 
     mirror_state: dict[str, Any] = {}
     orch_raw = (root_state.get("orchestratorWorktree") or state_hint or {}).get("path")
@@ -478,11 +667,27 @@ def sync_canonical_state_read(
                 task_list=task_list,
                 state_hint=root_state or state_hint,
             )
-            mirror_state = _read_state_optional(mirror_path)
+            mirror_state = _load_state_normalized(mirror_path, anchor=repo_root)
 
     root_has = bool(root_state)
     mirror_has = bool(mirror_state)
     if root_has and mirror_has:
+        root_at = _parse_state_ts(str(root_state.get("updatedAt") or ""))
+        mirror_at = _parse_state_ts(str(mirror_state.get("updatedAt") or ""))
+        if root_at and mirror_at and mirror_at > root_at:
+            if enforce_skew:
+                fail(
+                    "orchestrator mirror fresher than repo-root primary",
+                    exit_code=20,
+                    remediation=(
+                        "repair mirror from primary: "
+                        f"python3 scripts/wave_state.py {start} state repair-mirror"
+                        f"{f' --target {target}' if target else ''}"
+                    ),
+                    repoRoot=str(repo_root),
+                    primaryUpdatedAt=root_state.get("updatedAt"),
+                    mirrorUpdatedAt=mirror_state.get("updatedAt"),
+                )
         skew = _state_updated_skew_seconds(root_state, mirror_state)
         if skew is not None and skew > CANONICAL_STATE_SKEW_SECONDS:
             if not enforce_skew:
@@ -497,10 +702,6 @@ def sync_canonical_state_read(
                 repoRoot=str(repo_root),
                 skewSeconds=skew,
             )
-        root_verdict = root_state.get("verdict")
-        mirror_verdict = mirror_state.get("verdict")
-        if root_verdict != mirror_verdict:
-            return root_state
 
     if root_has:
         return root_state
@@ -523,11 +724,23 @@ def load_deliver_state(
         scoped = _scoped_path_from_breadcrumb(root, data)
         if scoped is not None:
             try:
-                return read_json(scoped)
+                data = read_json(scoped)
             except StateCorruptError:
                 return {}
+        else:
+            return {}
+    anchor = canonical_repo_root(root)
+    try:
+        return normalize_deliver_state_paths(data, anchor=anchor)
+    except WorktreePathError as exc:
+        fail(
+            str(exc),
+            exit_code=20,
+            halt="blocked",
+            cause="state:path-escape",
+            path=str(path),
+        )
         return {}
-    return data
 
 
 def save_deliver_state(
@@ -543,31 +756,7 @@ def save_deliver_state(
             callerRole=caller_role(),
             requiredRole="conductor",
         )
-    branch = target or target_branch_from_state(state)
-    if not is_feature_target(branch):
-        branch = _current_feature_branch(root)
-    if not is_feature_target(branch):
-        fail("cannot save deliver state without feature target branch")
-    assert branch is not None
-    if not target_branch_from_state(state):
-        state["target"] = {"branch": branch}
-    path = scoped_paths(root, branch)["state"]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    prior: dict[str, Any] | None = None
-    if path.is_file():
-        try:
-            prior = read_json(path)
-        except StateCorruptError:
-            prior = None
-    _assert_completion_finalize_allowed(root, state, prior)
-    state["updatedAt"] = utc_now()
-    write_json(path, state)
-    _write_legacy_breadcrumb(root, target=branch, scoped_state=path)
-    if state.get("orchestratorWorktree"):
-        repo_root = canonical_repo_root(root)
-        if repo_root.resolve() != root.resolve():
-            _mirror_state_at_root(repo_root, state, branch)
-    return path
+    return persist_deliver_state_primary_first(root, state, target=target)
 
 
 def cmd_resolve_state_path(root: Path, args: list[str]) -> None:
@@ -786,8 +975,7 @@ def cmd_state_phase(root: Path, args: list[str]) -> None:
     old_status = meta.get("status")
     state["phases"][pid]["status"] = status
     state["phases"][pid]["updatedAt"] = utc_now()
-    state["updatedAt"] = utc_now()
-    write_json(state_path, state)
+    persist_deliver_state_primary_first(root, state, target=parse_kv(args, "--target"))
     append_log(
         root,
         {
@@ -809,8 +997,7 @@ def cmd_state_heartbeat(root: Path, args: list[str]) -> None:
         fail("run state missing; run state init first", exit_code=2)
     now = utc_now()
     state["driverHeartbeatAt"] = now
-    state["updatedAt"] = now
-    write_json(state_path, state)
+    persist_deliver_state_primary_first(root, state, target=parse_kv(args, "--target"))
     emit({"verdict": "pass", "action": "state-heartbeat", "driverHeartbeatAt": now})
 
 
@@ -831,11 +1018,10 @@ def cmd_state_terminal(root: Path, args: list[str]) -> None:
     if not state:
         fail("run state missing")
     state["verdict"] = verdict
-    state["updatedAt"] = utc_now()
     cause = parse_kv(args, "--cause")
     if cause:
         state["cause"] = cause
-    write_json(state_path, state)
+    persist_deliver_state_primary_first(root, state, target=parse_kv(args, "--target"))
     append_log(root, {"event": "run-terminal", "verdict": verdict, "cause": cause})
     emit({"verdict": "pass", "action": "state-terminal", "runVerdict": verdict})
 
@@ -982,8 +1168,7 @@ def cmd_journal_begin(root: Path, args: list[str]) -> None:
         "key": merge_key,
     }
     state["mergeJournal"] = journal
-    state["updatedAt"] = utc_now()
-    write_json(state_path, state)
+    persist_deliver_state_primary_first(root, state, target=parse_kv(args, "--target"))
     append_log(root, {"event": "merge-begin", "phase": slug, "head": head})
     emit({"verdict": "pass", "action": "journal-begin", "journal": journal})
 
@@ -1022,8 +1207,7 @@ def cmd_journal_complete(root: Path, args: list[str]) -> None:
         )
     state["mergeJournal"] = None
     state["completedMerges"] = done
-    state["updatedAt"] = utc_now()
-    write_json(state_path, state)
+    persist_deliver_state_primary_first(root, state, target=parse_kv(args, "--target"))
     append_log(root, {"event": "merge-complete", "phase": journal.get("phase")})
     emit({"verdict": "pass", "action": "journal-complete", "journal": completed})
 
@@ -1126,8 +1310,7 @@ def cmd_ledger_record(root: Path, args: list[str]) -> None:
                     refs.append(task_ref)
                 phase_entry["updatedAt"] = utc_now()
     state["taskLedger"] = ledger
-    state["updatedAt"] = utc_now()
-    write_json(state_path, state)
+    persist_deliver_state_primary_first(root, state, target=parse_kv(args, "--target"))
     append_log(root, {"event": "ledger-record", "task": task_ref, "done": done, "phase": phase_slug})
     emit({"verdict": "pass", "action": "ledger-record", "task": task_ref, "done": done})
 
@@ -1238,7 +1421,7 @@ def main() -> None:
         cmd_runs_index(root, args[1:])
     elif domain == "state":
         if not args:
-            fail("state subcommand required: init|get|phase|terminal|heartbeat")
+            fail("state subcommand required: init|get|phase|terminal|heartbeat|repair-mirror")
         sub = args[0]
         rest = args[1:]
         if sub == "init":
@@ -1251,6 +1434,14 @@ def main() -> None:
             cmd_state_terminal(root, rest)
         elif sub == "heartbeat":
             cmd_state_heartbeat(root, rest)
+        elif sub == "repair-mirror":
+            target = parse_kv(rest, "--target")
+            path = repair_mirror_from_primary(
+                root,
+                target=target,
+                task_list=parse_kv(rest, "--task-list"),
+            )
+            emit({"verdict": "pass", "action": "state-repair-mirror", "path": str(path)})
         else:
             fail(f"unknown state subcommand: {sub}")
     elif domain == "lock":
