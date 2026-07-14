@@ -2744,6 +2744,30 @@ def _execute_mechanical_inner(
                 "recommendedCommand": "/sw-stabilize",
                 **data,
             }
+        if ec == 20 and data.get("cause") == "merge-run-next:timeout":
+            from wave_failure import resume_deliver_command
+
+            state.update(load_state(root))
+            preserve_merge_queue_on_halt(state)
+            state["verdict"] = "blocked"
+            state["cause"] = "merge-run-next:timeout"
+            save_state(root, state)
+            path = write_blocker_report(root, state, "merge-run-next:timeout")
+            persist_cursor(
+                root,
+                state,
+                "halt-blocked",
+                blockerReport=str(path),
+                budgetHalt=False,
+            )
+            fail_payload(
+                data,
+                "merge run-next timed out",
+                ec,
+                halt="blocked",
+                resumeCommand=data.get("resumeCommand") or resume_deliver_command(root, state),
+                blockerReport=str(path),
+            )
         if ec not in (0, 10):
             fail_payload(data, "merge run-next failed", ec)
         state.update(load_state(root))
