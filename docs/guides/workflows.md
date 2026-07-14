@@ -941,3 +941,10 @@ Phase-mode `/sw-deliver` reliability contracts (R1–R9):
 
 Resume after halt: `/sw-deliver run` from the orchestrator worktree (or `/sw-deliver run --issue <n>` under issue-store).
 
+
+## Debug small-fix handoff
+
+`/sw-debug` small route materializes `tasks-debug-<slug>` via `scripts/debug_deliver_handoff.py`, prints
+`/sw-deliver run --unit-id …`, and may same-turn confirm into deliver. Execute/ship before confirm is
+forbidden (`debug.pack.json` / `pre-confirm-guard`). Post-handoff halts belong to `/sw-deliver`.
+
