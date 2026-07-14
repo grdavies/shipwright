@@ -570,6 +570,22 @@ def persist_deliver_state_primary_first(
     return primary_path
 
 
+def _persist_ops_deliver_state(
+    root: Path,
+    state: dict[str, Any],
+    args: list[str],
+) -> Path:
+    """CLI state mutations: primary-first for feature targets, else legacy single-path write."""
+    target = parse_kv(args, "--target")
+    branch = target or target_branch_from_state(state)
+    if is_feature_target(branch):
+        return persist_deliver_state_primary_first(root, state, target=target)
+    state_path = _ops_state_path(root, args)
+    state["updatedAt"] = utc_now()
+    write_json(state_path, state)
+    return state_path
+
+
 def repair_mirror_from_primary(
     start: Path,
     *,
@@ -977,7 +993,7 @@ def cmd_state_phase(root: Path, args: list[str]) -> None:
     old_status = meta.get("status")
     state["phases"][pid]["status"] = status
     state["phases"][pid]["updatedAt"] = utc_now()
-    persist_deliver_state_primary_first(root, state, target=parse_kv(args, "--target"))
+    _persist_ops_deliver_state(root, state, args)
     append_log(
         root,
         {
@@ -999,7 +1015,7 @@ def cmd_state_heartbeat(root: Path, args: list[str]) -> None:
         fail("run state missing; run state init first", exit_code=2)
     now = utc_now()
     state["driverHeartbeatAt"] = now
-    persist_deliver_state_primary_first(root, state, target=parse_kv(args, "--target"))
+    _persist_ops_deliver_state(root, state, args)
     emit({"verdict": "pass", "action": "state-heartbeat", "driverHeartbeatAt": now})
 
 
@@ -1023,7 +1039,7 @@ def cmd_state_terminal(root: Path, args: list[str]) -> None:
     cause = parse_kv(args, "--cause")
     if cause:
         state["cause"] = cause
-    persist_deliver_state_primary_first(root, state, target=parse_kv(args, "--target"))
+    _persist_ops_deliver_state(root, state, args)
     append_log(root, {"event": "run-terminal", "verdict": verdict, "cause": cause})
     emit({"verdict": "pass", "action": "state-terminal", "runVerdict": verdict})
 
@@ -1170,7 +1186,7 @@ def cmd_journal_begin(root: Path, args: list[str]) -> None:
         "key": merge_key,
     }
     state["mergeJournal"] = journal
-    persist_deliver_state_primary_first(root, state, target=parse_kv(args, "--target"))
+    _persist_ops_deliver_state(root, state, args)
     append_log(root, {"event": "merge-begin", "phase": slug, "head": head})
     emit({"verdict": "pass", "action": "journal-begin", "journal": journal})
 
@@ -1209,7 +1225,7 @@ def cmd_journal_complete(root: Path, args: list[str]) -> None:
         )
     state["mergeJournal"] = None
     state["completedMerges"] = done
-    persist_deliver_state_primary_first(root, state, target=parse_kv(args, "--target"))
+    _persist_ops_deliver_state(root, state, args)
     append_log(root, {"event": "merge-complete", "phase": journal.get("phase")})
     emit({"verdict": "pass", "action": "journal-complete", "journal": completed})
 
@@ -1312,7 +1328,7 @@ def cmd_ledger_record(root: Path, args: list[str]) -> None:
                     refs.append(task_ref)
                 phase_entry["updatedAt"] = utc_now()
     state["taskLedger"] = ledger
-    persist_deliver_state_primary_first(root, state, target=parse_kv(args, "--target"))
+    _persist_ops_deliver_state(root, state, args)
     append_log(root, {"event": "ledger-record", "task": task_ref, "done": done, "phase": phase_slug})
     emit({"verdict": "pass", "action": "ledger-record", "task": task_ref, "done": done})
 
