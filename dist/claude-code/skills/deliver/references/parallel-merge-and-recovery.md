@@ -135,6 +135,32 @@ For each leaf in dependency order:
 
 Living `docs/prds/INDEX.md`, `docs/decisions/INDEX.md`, and doc-numbering counters are shared mutable state — serialize doc-creation across a wave or late-bind numbering at integration.
 
+
+## Merge-exec recovery (R5)
+
+`merge run-next` writes a durable `mergeJournal` before invoking `merge exec`. Recovery is journal-aware —
+never delete the journal manually unless ancestry proves the merge did not land.
+
+| Situation | Recovery |
+| --- | --- |
+| Crash after journal, merge already on target | `clear_open_journal_if_merged` clears the journal idempotently on the next `merge run-next` |
+| Halt with open journal, queue preserved | `preserve_merge_queue_on_halt` re-enqueues the phase at the head of `mergeQueue` and clears the journal |
+| Stuck journal, merge not on target | Run ancestry check, then either resume `merge run-next` or invoke `merge exec` explicitly |
+
+```bash
+# Prove phase tip is already contained in <type>/<slug> before clearing a stale journal:
+python3 scripts/wave.py merge ancestry-check --phase-branch <phase-branch> --target <type>/<slug>
+
+# Idempotent re-exec when journal was cleared but merge still pending (orchestrator worktree required):
+python3 scripts/wave.py merge exec   --phase-slug <phase-slug>   --phase-branch <phase-branch>   --target <type>/<slug>   --orchestrator-worktree .sw-worktrees/<slug>-orchestrator
+```
+
+After recovery, re-run `/sw-deliver run` from the orchestrator worktree — the consolidated blocker report
+includes `resumeCommand`; do not hand-edit `mergeJournal` while `merge run-next` is in flight.
+
+See also [`workflows.md`](../../../../docs/guides/workflows.md) — merge queue halts surface `resumeCommand` only.
+
+
 ## Phase `/sw-ship` dispatch (R48/R18)
 
 Each phase runs the full `/sw-ship` chain inside an isolated worktree. The orchestrator MUST dispatch with the

@@ -123,6 +123,30 @@ python3 scripts/planning_store.py close-delivery-units --prd-unit <prd-unit-id> 
 
 Use printed `resumeCommand` on partial apply.
 
+
+### Closure-audit resume (R9)
+
+Post-merge and finalize paths run `close-delivery-units` over the expected planning-store set. When discovery
+or closure is incomplete, the JSON report is **`verdict: not-ready`** with `openRemaining` — never treat
+partial discovery as green.
+
+| Field | Meaning |
+| --- | --- |
+| `openRemaining` | Unit ids still open after the audit loop |
+| `resumeCommand` | Exact retry — typically `python3 scripts/planning_store.py close-delivery-units --prd-unit <id>` |
+| `considered` / `skipped` | Per-unit disposition with `reason` |
+
+**Operator rule:** retry **only** via the printed `resumeCommand`. Bare `reconcile-status.py reconcile` or
+manual INDEX edits do not satisfy closure-audit evidence. Under `/sw-deliver` finalize, `wave_deliver_loop`
+fails closed when `close-delivery-units` returns `not-ready` and surfaces the same `resumeCommand`.
+
+Preview without mutation:
+
+```bash
+python3 scripts/planning_store.py close-delivery-units --prd-unit <prd-unit-id> --dry-run
+```
+
+
 ### Deliver completion semantics (PRD 060 R16–R17)
 
 - Phase PRs may merge independently when green (`merge-ready-green` + phase acceptance + gap-check pass).

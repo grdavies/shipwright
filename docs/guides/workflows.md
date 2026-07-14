@@ -304,6 +304,11 @@ mechanical `dispatch preflight` + `preToolUse` deny. Tune gate aggressiveness wi
 **Legitimate halts (summary):** final merge to `main`; remediation budget exhausted; merge conflict /
 destructive git; `deliver.autonomy.mode: supervised` or `doc.afterTasks: confirm`; phase liveness
 timeout; CI/external wait exhausted; run-level `deliver.autonomy.maxRunMinutes` / `maxIterations`.
+**Merge-exec recovery:** when `merge run-next` halts with an open `mergeJournal`, resume via the
+printed `resumeCommand` — journal auto-clear runs when ancestry shows the phase already merged; otherwise use
+`python3 scripts/wave.py merge ancestry-check` then `merge exec` or `/sw-deliver run`. See
+[`parallel-merge-and-recovery.md`](../../core/skills/deliver/references/parallel-merge-and-recovery.md).
+
 Every halt emits one consolidated report with an exact `resumeCommand` — not “continue?”.
 
 See `configuration.md` for `deliver.autonomy` defaults and `skills/conductor/SKILL.md` for the full
