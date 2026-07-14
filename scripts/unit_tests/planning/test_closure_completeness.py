@@ -212,35 +212,61 @@ def test_build_chain_check_leaves_worktree_clean(repo_root: Path) -> None:
     assert before == after
 
 
-def test_finalize_living_doc_lock_defers_with_resume_command(
+def test_finalize_does_not_outer_acquire_living_doc_lock(
     repo_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R15(l): living-doc lock miss defers finalize with resumeCommand."""
+    """PRD 067 R1: finalize must not outer-acquire; reconcile owns the lock."""
     import wave_living_doc_lock
     import wave_deliver_loop as wdl
 
-    saved: dict[str, object] = {}
+    acquires: list[str] = []
 
-    def _save(root, state):
-        saved["state"] = dict(state)
+    def _try_acquire(*a, **k):
+        acquires.append(str(k.get("holder") or "unknown"))
+        return True
 
-    monkeypatch.setattr(wave_living_doc_lock, "try_acquire", lambda *a, **k: False)
+    monkeypatch.setattr(wave_living_doc_lock, "try_acquire", _try_acquire)
     monkeypatch.setattr(wave_living_doc_lock, "release", lambda *a, **k: None)
-    monkeypatch.setattr(wdl, "run_wave", lambda *a, **k: (0, {"verdict": "pass"}))
-    monkeypatch.setattr(wdl, "save_state", _save)
-    monkeypatch.setattr(wdl, "load_state", lambda root: saved.get("state", {"target": {"branch": "feat/x"}}))
-    monkeypatch.setattr(wdl, "orchestrator_worktree_path", lambda root, state: None)
+    monkeypatch.setattr(
+        wdl,
+        "run_wave",
+        lambda *a, **k: (
+            (0, {"verdict": "pass"})
+            if a and a[0] == "completion"
+            else (0, {"verdict": "pass"})
+        ),
+    )
+    # run_wave is called as run_wave(root, *living_args) — first positional after root is cmd
+    calls: list[tuple] = []
 
-    state = {"target": {"branch": "feat/x"}, "verdict": "running"}
-    with pytest.raises(SystemExit) as exc:
+    def _run_wave(root, *args):
+        calls.append(args)
+        return 0, {"verdict": "pass"}
+
+    monkeypatch.setattr(wdl, "run_wave", _run_wave)
+    monkeypatch.setattr(wdl, "save_state", lambda root, state: None)
+    monkeypatch.setattr(wdl, "load_state", lambda root: {"target": {"branch": "feat/x"}})
+    monkeypatch.setattr(wdl, "orchestrator_worktree_path", lambda root, state: None)
+    monkeypatch.setattr(wdl, "run_inflight_signal", lambda *a, **k: (0, {"verdict": "pass"}))
+    # Avoid close_delivery_units / living doc follow-on failures
+    import planning_store as ps
+
+    monkeypatch.setattr(ps, "close_delivery_units", lambda *a, **k: {"verdict": "ok", "skipped": True})
+    monkeypatch.setattr(wdl, "persist_cursor", lambda *a, **k: None)
+
+    state = {"target": {"branch": "feat/x", "slug": "x"}, "verdict": "running"}
+    # May SystemExit on later finalize steps; assert no outer acquire regardless
+    try:
         wdl.execute_mechanical(
             repo_root,
             state,
             {},
             {"action": "finalize-completion"},
         )
-    assert exc.value.code == 20
-    assert "livingDocDeferral" in saved.get("state", {})
+    except SystemExit:
+        pass
+    assert "living-docs-reconcile-finalize" not in acquires
+    assert any(args and args[0] == "living-docs" for args in calls)
 
 
 def test_close_parent_epic_blocks_declared_partial(tmp_path: Path) -> None:

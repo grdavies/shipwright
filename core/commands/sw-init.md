@@ -1,21 +1,23 @@
 ---
-description: Initialize and validate repo-local Shipwright config — providers, verify, guardrails, and environment doctor. Does not scaffold CI or migrate existing memories.
+description: Initialize and validate repo-local Shipwright config through a guided interview — scan, confirm, ask only unresolved choices — plus doctor/repair. Does not scaffold CI or migrate existing memories.
 alwaysApply: false
 ---
 
 # `/sw-init`
 
-Take a repo from **installed** to **configured and working**. Re-runs as a **doctor** against an existing
-config — validate, report, and offer targeted repair without a full rescaffold.
+Take a repo from **installed** to **configured and working** via a guided interview, not a wall of
+prompts. Re-runs as a **doctor** against an existing config — validate, report, and offer targeted repair
+without a full rescaffold.
 
 All configuration logic runs through **`scripts/sw-configure.py`** (single configurator — R29). The command
 orchestrates interactive choices; the script holds detection, drift checks, and draft assembly.
 
 ## Scope
 
-**Does:** memory-provider selection, review-provider selection, project-type detection + verify configuration,
-guardrail knobs, store init/validate, portability self-check, version-drift notice, write schema-valid
-`.cursor/workflow.config.json`.
+**Does:** guided scan → confirm → unresolved-choices-only interview; memory-provider selection,
+review-provider selection, project-type detection + verify configuration, guardrail knobs, store
+init/validate, portability self-check, version-drift notice, write schema-valid
+`.cursor/workflow.config.json`; retains doctor and repair modes on re-run.
 
 **Does NOT:** scaffold CI workflows, migrate Recallium memories into in-repo, auto-seed rule files, or write
 global (user-level) config — repo-local only.
@@ -28,6 +30,35 @@ global (user-level) config — repo-local only.
   `verify.*` from fixed presets.
 
 ## Procedure
+
+### 0. Guided interview (scan → confirm → unresolved only)
+
+Before any per-key prompting, run the interview shape that keeps `/sw-init` fast on a well-detected repo and
+verbose only where the operator's input actually changes the outcome:
+
+1. **Scan** — run a read-only reconnaissance pass over the repo (language/framework signals, existing
+   `.cursor/workflow.config.json`, `AGENTS.md`, CI files, remote visibility) via
+   `python3 scripts/detect-project-type.py --propose` and `python3 scripts/sw-configure.py detect --propose`.
+   A subagent MAY perform the scan when the repo is large; the scan is always read-only (no writes).
+2. **Present findings** — summarize detected project type(s), proposed verify commands, memory/review
+   provider defaults, and any existing config drift as one consolidated findings report — not a sequence of
+   yes/no prompts.
+3. **Confirm/correct** — the operator confirms the findings wholesale or corrects individual fields; corrected
+   fields are recorded and never re-asked in the same run.
+4. **Ask only unresolved choices** — every field the scan resolved with a documented default and no drift
+   signal is **not** re-prompted; only genuinely unresolved choices (ambiguous project-type, no detected
+   memory/review preference, first-run repo) surface as an explicit question, each with a **recommended
+   default** stated up front so the operator can accept with one word.
+5. **Optional project-intent and working-style capture** — after the resolved-choice interview, offer (never
+   force) one short optional capture: a one-paragraph project intent (what this repo is for, who it serves)
+   and a working-style note (e.g. preferred ceremony level, review posture). Skip silently on decline.
+   When provided, redact via `python3 scripts/memory-redact.py` and persist to
+   `.cursor/sw-context/project-intent.md` (repo-local, not the planning store) for later `/sw-brainstorm` and
+   `/sw-prd` consumption — those skills read this file opportunistically when present; its absence changes
+   nothing.
+6. **Doctor/repair retained** — steps 1–6 below (memory, review, doc boundary, guardrails, verify, drift
+   repair) are unchanged; the guided interview only changes *how* they are surfaced (findings-first,
+   unresolved-only) — never what they configure.
 
 ### 1. Detect mode
 

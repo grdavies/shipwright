@@ -79,10 +79,18 @@ guideline pack — plans omitting or reordering them are rejected fail-closed. D
    - test/build/verify failures → **dev-time entry** (repro-first + failing-regression-test gates)
 6. **Route** — classify fix size via triage rubric; present handoff and **halt for one human route confirmation**.
 7. On confirmed route, **in-turn** (DBG-A1):
-   - **Small** → `/sw-worktree provision` + dispatch `/sw-start` with RCA brief (no second turn-yield)
-   - **Substantial** → dispatch `/sw-brainstorm` or `/sw-amend` per doc workstream
+   - **Small** → thin debug pack → deliver handoff (PRD 067 R10–R13):
+     1. `python3 scripts/debug_deliver_handoff.py . materialize --slug <slug> --files … --acceptance … --rca-summary '<redacted>'`
+        writes `tasks-debug-<slug>` (virtual body `docs/prds/debug-<slug>/…`) without `/sw-doc`.
+     2. Print `/sw-deliver run --unit-id tasks-debug-<slug>` (or `--issue` when issue-store minted).
+     3. Optional confirm: **confirm** → same-turn `/sw-deliver run <ref>` (inline; **never** Task-spawn
+        deliver / nest deliver inside the debug loop). **Decline** → end the debug run.
+     4. After handoff, execute/ship/halts are owned exclusively by `/sw-deliver` (R13) — do not prompt
+        “run verify next” from debug.
+   - **Substantial** → dispatch `/sw-brainstorm` or `/sw-amend` per doc workstream (R14). Never auto-merge
+     to `main`. Substantial routes **bypass** the thin debug pack.
 8. **Record** route + originating signal via `memory-preflight` write (redacted) for compounding.
-9. Return structured handoff summary (root cause, proposed fix, route, next command).
+9. Return structured handoff summary (root cause, proposed fix, route, next command / `resumeCommand`).
 
 ## Delegated atomics
 
@@ -90,7 +98,7 @@ guideline pack — plans omitting or reordering them are rejected fail-closed. D
 | --- | --- | --- |
 | Sentry enrich | Task when MCP-heavy | `--command sw-debug --skill debug` |
 | RCA deep dive | Task | `--command sw-debug --skill rca-core` |
-| `/sw-start` (small-fix route) | Task after confirmation | `--command sw-start` |
+| Thin debug pack + `/sw-deliver run` (small-fix) | Inline after confirmation (no Task-spawn deliver) | `scripts/debug_deliver_handoff.py` + `--command sw-deliver --skill conductor` |
 | `/sw-brainstorm` / `/sw-amend` (substantial) | Task after confirmation | `--command sw-brainstorm` or `--command sw-amend` |
 
 ## Delegated Task binding contract
@@ -115,6 +123,8 @@ recurrence threshold; test-tampering recognition defers to PRD A R9 flags only.
 ## What this command does not do
 
 - Does not run `/sw-ship`, merge PRs, or patch on bare `main`
+- Does not Task-spawn `/sw-deliver` or nest deliver inside the debug loop (R11)
+- Does not own post-handoff ship/CI/merge gates — those belong to `/sw-deliver` (R13)
 - Does not mutate Sentry (read-only MCP)
 - Does not replace `/sw-stabilize` (in-loop CI/review failures)
 

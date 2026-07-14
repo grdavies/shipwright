@@ -39,7 +39,12 @@
       "sw-verify": "cheap",
       "sw-watch-ci": "cheap",
       "sw-worktree": "cheap",
-      "sw-migrate": "cheap"
+      "sw-migrate": "cheap",
+      "sw": "cheap",
+      "sw-ask": "cheap",
+      "sw-become": "cheap",
+      "sw-note": "cheap",
+      "sw-guide": "cheap"
     },
     "agents": {
       "sw-coherence-reviewer": "build",
@@ -100,7 +105,8 @@
       "triage": "cheap",
       "verification-gate": "cheap",
       "worktree": "cheap",
-      "tournament": "cheap"
+      "tournament": "cheap",
+      "calibration-loop": "cheap"
     }
   }
 }

@@ -244,6 +244,12 @@ When reviewing `docs/prds/<n>-<slug>/amendments/A<k>-*.md` drafts:
 - Flag undeclared contradictions with parent requirements; declared directives are the sanctioned path.
 - Never edit the parent file — fixes apply only to the amendment draft.
 
+## Disposition disputes
+
+Persona-vs-persona or operator-vs-synthesizer disagreement on a finding's `autofix_class` routes through
+`skills/calibration-loop/SKILL.md` rather than a silent pick or a repeated abstract prompt — see
+`references/synthesis.md` **Disposition disputes**.
+
 ## Handoff
 
 → `/sw-freeze` when no blocking manual trade-offs remain.

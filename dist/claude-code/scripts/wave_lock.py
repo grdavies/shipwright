@@ -99,9 +99,28 @@ def ship_lease_is_stale(meta: dict[str, Any]) -> bool:
         return True
 
 
+def ship_lease_pid_alive(meta: dict[str, Any]) -> bool:
+    """True when lease PID is still alive on this host."""
+    pid = meta.get("pid")
+    if not isinstance(pid, int) or pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except (OSError, ProcessLookupError, PermissionError):
+        return False
+
+
 def ship_lease_owner_live(meta: dict[str, Any]) -> bool:
-    """Lease liveness keyed on heartbeat freshness only (PRD 065 R28)."""
-    return not ship_lease_is_stale(meta)
+    """Lease is live when heartbeat is fresh OR (same-host and PID still alive).
+
+    Reclaim requires stale heartbeat AND dead PID on the same host (PRD 067 R7).
+    """
+    if not ship_lease_is_stale(meta):
+        return True
+    if meta.get("host") == lock_host() and ship_lease_pid_alive(meta):
+        return True
+    return False
 
 
 def phase_status_consumable_terminal(root: Path, phase_slug: str | None) -> bool:
@@ -124,16 +143,24 @@ def reclaim_stale_ship_lease(
     *,
     root: Path | None = None,
     phase_slug: str | None = None,
+    start_token: str | None = None,
 ) -> bool:
+    """Reclaim only for same-host leases with stale heartbeat AND dead PID (PRD 067 R7)."""
     meta = read_lock_meta(lock_path)
     if not meta:
         lock_path.unlink(missing_ok=True)
         return True
+    if meta.get("host") and meta.get("host") != lock_host():
+        return False
+    if start_token and meta.get("startToken") and meta.get("startToken") != start_token:
+        return False
     if ship_lease_owner_live(meta):
         return False
     if root is not None and phase_status_consumable_terminal(root, phase_slug):
         return False
     if not ship_lease_is_stale(meta):
+        return False
+    if ship_lease_pid_alive(meta):
         return False
     lock_path.unlink(missing_ok=True)
     return True
@@ -175,6 +202,7 @@ def acquire_ship_lease(root: Path, args: list[str]) -> dict[str, Any]:
                 "lockPath": str(lock_path),
             }
     now = utc_now()
+    start_token = parse_kv(args, "--start-token") or os.environ.get("SW_SHIP_START_TOKEN") or ""
     meta: dict[str, Any] = {
         "kind": "ship-lease",
         "integrationBranch": integration,
@@ -182,6 +210,7 @@ def acquire_ship_lease(root: Path, args: list[str]) -> dict[str, Any]:
         "pid": os.getpid(),
         "threadId": threading.get_ident(),
         "host": lock_host(),
+        "startToken": start_token or f"{os.getpid()}-{now}",
         "acquiredAt": now,
         "heartbeatAt": now,
     }
@@ -199,7 +228,9 @@ def acquire_ship_lease(root: Path, args: list[str]) -> dict[str, Any]:
     if not try_acquire():
         existing = read_lock_meta(lock_path)
         if (
-            reclaim_stale_ship_lease(lock_path, root=root, phase_slug=phase_slug)
+            reclaim_stale_ship_lease(
+                lock_path, root=root, phase_slug=phase_slug, start_token=start_token or None
+            )
             and try_acquire()
         ):
             append_log(

@@ -3062,13 +3062,19 @@ def _slug_from_prd_unit(unit_id: str, prd_num: str) -> str:
 
 
 def _tasks_unit_id_candidates(prd_unit: str, prd_num: str | None) -> list[str]:
-    """Ordered tasks unit-id aliases for retrospective closure (PRD 060 R4)."""
+    """Ordered tasks unit-id aliases for retrospective closure (PRD 060 R4 / PRD 067 R9).
+
+    Includes first-class ``tasks-debug-<slug>`` forms used by thin debug→deliver packs.
+    Ambiguous matches must fail closed at the caller (resolve_delivery_linked_units).
+    """
     if not prd_num:
-        return [f"tasks-{prd_unit}"]
+        return [f"tasks-{prd_unit}", f"tasks-debug-{prd_unit}"]
     slug = _slug_from_prd_unit(prd_unit, prd_num)
     candidates = [
         f"tasks-{prd_num}-{slug}",
         f"tasks-{prd_unit}",
+        f"tasks-debug-{slug}",
+        f"tasks-debug-{prd_num}-{slug}",
     ]
     legacy = f"{prd_num}-{slug}"
     if legacy != prd_unit:
@@ -3208,6 +3214,8 @@ def resolve_delivery_linked_units(
     }
 
     if prd_num:
+        # R9: collect all matching tasks unit ids; ambiguity fails closed
+        matched_tasks: list[tuple[str, Any]] = []
         for tasks_id in _tasks_unit_id_candidates(prd_unit, prd_num):
             body_path = _default_body_path(tasks_id, "tasks")
             record = _lookup_issue_record(backend, tasks_id, body_path)
@@ -3216,12 +3224,22 @@ def resolve_delivery_linked_units(
             if _record_artifact_type(record) != "tasks":
                 continue
             resolved_id = str(getattr(record, "unit_id", "") or tasks_id).strip() or tasks_id
+            if not any(existing == resolved_id for existing, _ in matched_tasks):
+                matched_tasks.append((resolved_id, record))
+        if len(matched_tasks) > 1:
+            return {
+                "verdict": "fail",
+                "error": "ambiguous-tasks-unit",
+                "candidates": [uid for uid, _ in matched_tasks],
+                "prdUnitId": prd_unit,
+            }
+        if len(matched_tasks) == 1:
+            resolved_id, _record = matched_tasks[0]
             units[resolved_id] = {
                 "unitId": resolved_id,
                 "artifactType": "tasks",
                 "bodyPath": _default_body_path(resolved_id, "tasks"),
             }
-            break
 
     brainstorm_ref = (fm.get("brainstorm") or "").strip()
     brainstorm_unit = ""
@@ -4105,15 +4123,32 @@ def progress_update(
     try:
         current = client.issue_get(str(parent_issue_id))
     except Exception as exc:  # noqa: BLE001
-        _emit_progress_update_notice("progress-update-degraded", str(exc))
+        # R3: fail closed — never silently degrade on store read
+        _emit_progress_update_notice("progress-update-failed", str(exc))
         return {
-            "verdict": "ok",
-            "degraded": True,
-            "notice": "progress-update-degraded",
+            "verdict": "fail",
+            "degraded": False,
+            "notice": "progress-update-failed",
             "error": str(exc),
             "phaseId": phase_id,
             "issueId": parent_issue_id,
         }
+
+    # R3: prefer materialized task-list path under issue-store
+    resolved_task_list = task_list
+    if task_list:
+        try:
+            from planning_progress import _resolve_task_list_path
+
+            rel = str(task_list)
+            if Path(rel).is_absolute():
+                try:
+                    rel = str(Path(rel).resolve().relative_to(root.resolve()))
+                except ValueError:
+                    rel = str(task_list)
+            resolved_task_list = _resolve_task_list_path(root, rel)
+        except Exception:
+            resolved_task_list = task_list
 
     labels = list(current.labels)
     new_labels = labels
@@ -4128,19 +4163,19 @@ def progress_update(
                 "label": done_label,
             }
         new_labels = sorted(set(labels) | {done_label})
-        if task_list:
-            task_path = Path(task_list)
+        if resolved_task_list:
+            task_path = Path(resolved_task_list)
             if not task_path.is_absolute():
-                task_path = (root / task_list).resolve()
+                task_path = (root / resolved_task_list).resolve()
             if task_path.is_file():
                 phases = parse_task_list_phases(task_path)
                 checked = list(checked_phase_ids or [])
                 checkbox_block = build_checkbox_phase_block(phases, checked)
                 body = _replace_checkbox_block(body, checkbox_block)
-    elif action == "task-checkbox" and task_list:
-        task_path = Path(task_list)
+    elif action == "task-checkbox" and resolved_task_list:
+        task_path = Path(resolved_task_list)
         if not task_path.is_absolute():
-            task_path = (root / task_list).resolve()
+            task_path = (root / resolved_task_list).resolve()
         if task_path.is_file():
             import doc_format
 
@@ -4161,37 +4196,90 @@ def progress_update(
                     else:
                         body = body.rstrip() + "\n\n" + section + "\n"
 
-    try:
-        if new_labels != labels:
-            client.issue_label(str(parent_issue_id), new_labels, if_match=current.etag)
+    last_exc: Exception | None = None
+    for attempt in range(3):
+        try:
+            if new_labels != labels:
+                client.issue_label(str(parent_issue_id), new_labels, if_match=current.etag)
+                current = client.issue_get(str(parent_issue_id))
+            if body != current.body:
+                client.issue_update(str(parent_issue_id), body=body, if_match=current.etag)
+            out: dict[str, Any] = {
+                "verdict": "ok",
+                "synced": True,
+                "storePath": True,
+                "phaseId": phase_id,
+                "issueId": parent_issue_id,
+                "action": action,
+            }
+            if action == "phase-done":
+                out["label"] = done_label
+            if task_ref:
+                out["taskRef"] = task_ref
+            return out
+        except IssueRevisionConflict as exc:
+            last_exc = exc
+            if attempt >= 2:
+                break
+            # R3: re-read and rebuild against fresh etag (revision-safe store path)
             current = client.issue_get(str(parent_issue_id))
-        if body != current.body:
-            client.issue_update(str(parent_issue_id), body=body, if_match=current.etag)
-        out: dict[str, Any] = {
-            "verdict": "ok",
-            "synced": True,
-            "phaseId": phase_id,
-            "issueId": parent_issue_id,
-            "action": action,
-        }
-        if action == "phase-done":
-            out["label"] = done_label
-        if task_ref:
-            out["taskRef"] = task_ref
-        return out
-    except Exception as exc:  # noqa: BLE001
-        _emit_progress_update_notice("progress-update-degraded", str(exc))
-        out = {
-            "verdict": "ok",
-            "degraded": True,
-            "notice": "progress-update-degraded",
-            "phaseId": phase_id,
-            "issueId": parent_issue_id,
-            "error": str(exc),
-        }
-        if task_ref:
-            out["taskRef"] = task_ref
-        return out
+            labels = list(current.labels)
+            new_labels = labels
+            body = current.body
+            if action == "phase-done":
+                new_labels = sorted(set(labels) | {done_label})
+                if resolved_task_list:
+                    task_path = Path(resolved_task_list)
+                    if not task_path.is_absolute():
+                        task_path = (root / resolved_task_list).resolve()
+                    if task_path.is_file():
+                        phases = parse_task_list_phases(task_path)
+                        checked = list(checked_phase_ids or [])
+                        checkbox_block = build_checkbox_phase_block(phases, checked)
+                        body = _replace_checkbox_block(body, checkbox_block)
+            elif action == "task-checkbox" and resolved_task_list:
+                task_path = Path(resolved_task_list)
+                if not task_path.is_absolute():
+                    task_path = (root / resolved_task_list).resolve()
+                if task_path.is_file():
+                    import doc_format
+
+                    section = doc_format.phase_section_text(
+                        task_path.read_text(encoding="utf-8"), str(phase_id)
+                    ).strip()
+                    if section:
+                        from planning_canonical import compose_issue_body
+
+                        record_unit = str(getattr(current, "unit_id", "") or "")
+                        if record_unit.endswith(f"-phase-{phase_id}"):
+                            body = compose_issue_body(
+                                resolved_project_key, "tasks", record_unit, section
+                            )
+                        else:
+                            marker = f"### {phase_id}."
+                            if marker in body:
+                                start_i = body.index(marker)
+                                nxt = body.find("\n### ", start_i + 1)
+                                end_i = nxt if nxt != -1 else len(body)
+                                body = body[:start_i] + section + "\n" + body[end_i:]
+                            else:
+                                body = body.rstrip() + "\n\n" + section + "\n"
+            continue
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            break
+    _emit_progress_update_notice("progress-update-failed", str(last_exc))
+    out = {
+        "verdict": "fail",
+        "degraded": False,
+        "notice": "progress-update-failed",
+        "phaseId": phase_id,
+        "issueId": parent_issue_id,
+        "error": str(last_exc),
+    }
+    if task_ref:
+        out["taskRef"] = task_ref
+    return out
 
 
 def migrate_orphan_phase_issues(

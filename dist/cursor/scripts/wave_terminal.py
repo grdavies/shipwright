@@ -644,6 +644,14 @@ def cmd_terminal_retro_run(root: Path, args: list[str]) -> None:
 def cmd_terminal_ship_run(root: Path, args: list[str]) -> None:
     """Autonomous terminal PR → push → gate watch → stabilize budget (R22/R23)."""
     dry_run = has_flag(args, "--dry-run")
+    phase_env = clear_phase_env()
+    try:
+        _cmd_terminal_ship_run_body(root, args, dry_run=dry_run)
+    finally:
+        restore_phase_env(phase_env)
+
+
+def _cmd_terminal_ship_run_body(root: Path, args: list[str], *, dry_run: bool) -> None:
     state = load_state(root)
     mode = terminal_autonomy_mode(root)
     if mode == "supervised" and not has_flag(args, "--force"):
@@ -820,6 +828,20 @@ def terminal_local_gate_payload(root: Path, gate_ec: int, gate: dict[str, Any], 
     else:
         payload["reason"] = gate.get("reason") or "gate not green"
     return payload
+
+
+def clear_phase_env() -> dict[str, str]:
+    """Clear SW_PHASE_* so terminal PR uses trunk base, not phase integration (PRD 067 R8)."""
+    saved: dict[str, str] = {}
+    for key in list(os.environ):
+        if key.startswith("SW_PHASE_"):
+            saved[key] = os.environ.pop(key)
+    return saved
+
+
+def restore_phase_env(saved: dict[str, str]) -> None:
+    for key, value in saved.items():
+        os.environ[key] = value
 
 def default_base_branch(root: Path) -> str:
     cfg = load_workflow_config(root)
@@ -1015,7 +1037,11 @@ def run_terminal_prepare_living_docs_gates(
 
 
 def run_tasks_currency_gate(root: Path, state: dict[str, Any]) -> None:
-    """Hard-block terminal gate when task-list currency diverges (R7)."""
+    """Hard-block terminal gate when task-list currency diverges (R7 / PRD 067 R4).
+
+    Requires independent corroboration (CI/gate or completion claims) — never
+    treat checkbox↔ledger alone as sufficient evidence (no circular proof).
+    """
     from wave_deliver_loop import load_plan, tasks_currency_ok
 
     plan: dict[str, Any] = {}
@@ -1032,6 +1058,49 @@ def run_tasks_currency_gate(root: Path, state: dict[str, Any]) -> None:
             exit_code=1,
             halt="blocked",
             cause=cause or "tasks-currency-divergence",
+        )
+    # R4: independent status/gate corroboration
+    phases = state.get("phases") or {}
+    if not phases:
+        return
+    corroborated = False
+    for meta in phases.values():
+        if not isinstance(meta, dict):
+            continue
+        if meta.get("status") not in ("green-merged", "merge-ready-green"):
+            continue
+        if meta.get("gateVerdict") in ("green", "pass") or meta.get("ciVerdict") in ("green", "pass"):
+            corroborated = True
+            break
+        slug = meta.get("slug")
+        if slug:
+            status_path = root / ".cursor" / "sw-deliver-runs" / str(slug) / "status.json"
+            if status_path.is_file():
+                try:
+                    payload = json.loads(status_path.read_text(encoding="utf-8"))
+                except (json.JSONDecodeError, OSError):
+                    payload = {}
+                if payload.get("verdict") in ("merge-ready-green", "green-merged"):
+                    gate = (payload.get("gate") or payload.get("checkGate") or {})
+                    if isinstance(gate, dict) and gate.get("verdict") in ("green", "pass"):
+                        corroborated = True
+                        break
+                    claims = payload.get("completionClaims") or payload.get("claims")
+                    if claims:
+                        corroborated = True
+                        break
+    terminal_ship = state.get("terminalShip") or {}
+    if terminal_ship.get("status") in ("gate-green", "local-evidence"):
+        corroborated = True
+    completed = state.get("completedMerges") or []
+    if completed:
+        corroborated = True
+    if not corroborated:
+        fail(
+            "terminal currency lacks independent gate/CI corroboration",
+            exit_code=1,
+            halt="blocked",
+            cause="ledger-corroboration-missing",
         )
 
 
@@ -1443,6 +1512,14 @@ def halt_terminal_branch_outcome(outcome: str, *, target: str) -> None:
 
 def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run") or os.environ.get("SW_DELIVER_DRY_RUN") == "1"
+    phase_env = clear_phase_env()
+    try:
+        _cmd_terminal_pr_prepare_body(root, args, dry_run=dry_run)
+    finally:
+        restore_phase_env(phase_env)
+
+
+def _cmd_terminal_pr_prepare_body(root: Path, args: list[str], *, dry_run: bool) -> None:
     state = load_state(root)
     target = (state.get("target") or {}).get("branch", "")
     slug = (state.get("target") or {}).get("slug", target.split("/")[-1] if target else "feature")

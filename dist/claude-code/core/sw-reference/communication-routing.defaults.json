@@ -41,7 +41,12 @@
       "sw-verify": "ultra",
       "sw-watch-ci": "ultra",
       "sw-worktree": "ultra",
-      "sw-migrate": "inherit"
+      "sw-migrate": "inherit",
+      "sw": "ultra",
+      "sw-ask": "normal",
+      "sw-become": "normal",
+      "sw-note": "lite",
+      "sw-guide": "normal"
     },
     "skills": {
       "brainstorm": "lite",
@@ -71,7 +76,8 @@
       "triage": "ultra",
       "verification-gate": "ultra",
       "worktree": "ultra",
-      "tournament": "ultra"
+      "tournament": "ultra",
+      "calibration-loop": "lite"
     },
     "agents": {
       "sw-coherence-reviewer": "full",

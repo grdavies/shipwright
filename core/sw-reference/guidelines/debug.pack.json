@@ -3,7 +3,7 @@
   "guidelineVersion": "1.0.0",
   "orchestratorType": "debug",
   "packId": "debug",
-  "description": "Debug orchestrator guideline pack \u2014 canonical triage\u2192RCA\u2192route chain with driver-asserted halts (PRD 024 TR2).",
+  "description": "Debug orchestrator guideline pack \u2014 diagnosis vs implement segments (PRD 024 TR2 / PRD 067 R12). Ship/execute forbidden before route confirm.",
   "canonicalFallbackChain": [
     "memory-prework",
     "triage",
@@ -67,6 +67,16 @@
       "reason": "route must follow route-confirm-halt",
       "reorderBefore": "route",
       "reorderAfter": "route-confirm-halt"
+    },
+    {
+      "id": "execute-before-route-confirm",
+      "reason": "execute/ship forbidden before route confirm (PRD 067 R12)",
+      "omitStep": null,
+      "forbiddenBefore": "route-confirm-halt",
+      "forbiddenSteps": [
+        "sw-execute",
+        "sw-ship"
+      ]
     }
   ],
   "signalConditionalFloors": [
@@ -90,5 +100,49 @@
     "security-sensitive-paths",
     "kernel-scripts-providers",
     "hooks-manifest"
-  ]
+  ],
+  "segments": {
+    "diagnosis": {
+      "steps": [
+        "memory-prework",
+        "triage",
+        "normalize",
+        "enrich",
+        "rca",
+        "route-confirm-halt",
+        "route",
+        "rca-human-decision-halt",
+        "record"
+      ],
+      "forbiddenSteps": [
+        "git-push",
+        "lock-acquire",
+        "main-merge",
+        "merge-enqueue",
+        "merge-run-next",
+        "phase-merge",
+        "sw-commit",
+        "sw-execute",
+        "sw-pr",
+        "sw-ship",
+        "sw-watch-ci",
+        "terminal-ship",
+        "wave-plan-validate"
+      ]
+    },
+    "implementHandoff": {
+      "steps": [
+        "materialize-debug-pack",
+        "print-deliver-run",
+        "confirm-handoff"
+      ],
+      "allowedAfterConfirm": [
+        "sw-deliver-run"
+      ],
+      "forbidden": [
+        "task-spawn-deliver",
+        "nested-deliver-loop"
+      ]
+    }
+  }
 }

@@ -127,6 +127,13 @@ Do **not** hand-append to `docs/prds/GAP-BACKLOG.md` — under **issue-store** i
 
 **Bias:** ambiguous → **substantial** (amendment), never silent task edit.
 
+**Genuinely ambiguous scope (calibration-loop):** when the substantial-vs-trivial call (or the upstream
+gap-capture-vs-brainstorm call) stays ambiguous after the conservative-default table above, load
+`skills/calibration-loop/SKILL.md` instead of re-asking the same "substantial or trivial?" question — frame
+the tension as an A/B pair, present concrete instances from the signal, and converge on a principle. Record
+the converged principle in the route record (`references/route-record.md`) alongside the final route; the
+conservative bias above remains the fallback if calibration cannot converge before the cap.
+
 ### Substantial handoff — consumer-status probe (PRD 048 R5)
 
 Before naming `/sw-amend` in the handoff summary, resolve the candidate unit's consumer status with a

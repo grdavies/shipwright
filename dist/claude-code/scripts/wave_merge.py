@@ -784,7 +784,7 @@ def cmd_status_collect(root: Path, args: list[str]) -> None:
             validate_status_sha(status, expected, phase_slug)
     progress_sync = None
     if verdict == "merge-ready-green":
-        from planning_progress import sync_phase_done
+        from planning_progress import sync_phase_done, sync_task_checkbox
 
         run_state = load_state(root)
         collect_phase_id = None
@@ -794,6 +794,35 @@ def cmd_status_collect(root: Path, args: list[str]) -> None:
                 break
         if collect_phase_id:
             progress_sync = sync_phase_done(root, run_state, collect_phase_id)
+            if progress_sync.get("verdict") == "fail":
+                fail(
+                    "merge-ready phase-done store sync failed",
+                    exit_code=20,
+                    halt="blocked",
+                    cause="progress-phase-done-sync-failed",
+                    phase=phase_slug,
+                    sync=progress_sync,
+                )
+            # R3: revision-safe checkbox sync through planning_progress store path
+            task_rel = run_state.get("source_task_list")
+            if isinstance(task_rel, str) and task_rel.strip():
+                checkbox_sync = sync_task_checkbox(
+                    root,
+                    run_state,
+                    phase_id=collect_phase_id,
+                    task_list=task_rel,
+                )
+                if isinstance(progress_sync, dict):
+                    progress_sync["checkboxSync"] = checkbox_sync
+                if checkbox_sync.get("verdict") == "fail":
+                    fail(
+                        "merge-ready checkbox store sync failed",
+                        exit_code=20,
+                        halt="blocked",
+                        cause="progress-checkbox-sync-failed",
+                        phase=phase_slug,
+                        sync=checkbox_sync,
+                    )
             if progress_sync.get("synced") or progress_sync.get("idempotent"):
                 save_state(root, run_state)
         if status_is_consumable_terminal(status):
