@@ -12,8 +12,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 _SCRIPTS_ROOT = SCRIPT_DIR.parents[1]
 _TEST_DIR = _SCRIPTS_ROOT / "test"
 for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
- if _entry not in sys.path:
- sys.path.insert(0, _entry)
+    if _entry not in sys.path:
+        sys.path.insert(0, _entry)
 
 from _sw.vendor_paths import repo_root
 from unit_tests._harness_runtime import harness_subprocess_env as _harness_env
@@ -21,27 +21,27 @@ from unit_tests._harness_runtime import patch_source as _patch_source
 
 
 def main() -> int:
- root = repo_root(__file__)
- env = _harness_env(root)
- src = _patch_source(_SOURCE, root)
- completed = subprocess.run(
- ["bash", "-c", src],
- cwd=str(root),
- env=env,
- shell=False,
- )
- return completed.returncode
+    root = repo_root(__file__)
+    env = _harness_env(root)
+    src = _patch_source(_SOURCE, root)
+    completed = subprocess.run(
+        ["bash", "-c", src],
+        cwd=str(root),
+        env=env,
+        shell=False,
+    )
+    return completed.returncode
 
 
 _SOURCE = r"""
 #!/usr/bin/env bash
-# phase 7 — operator doc acceptance fixtures (R25).
+# PRD 033 phase 7 — operator doc acceptance fixtures (R25).
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=scripts/test/fixture-lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/fixture-lib.sh"
 FAIL=0
-ok() { echo "OK $1"; }
+ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
 LIVING="$(content_path skills/living-status/SKILL.md)"
@@ -51,8 +51,8 @@ WF="$ROOT/docs/guides/workflows.md"
 GS="$ROOT/docs/guides/getting-started.md"
 
 check() {
- local name="$1" file="$2" pattern="$3"
- if grep -q "$pattern" "$file" 2>/dev/null; then ok "$name"; else bad "$name"; fi
+  local name="$1" file="$2" pattern="$3"
+  if grep -q "$pattern" "$file" 2>/dev/null; then ok "$name"; else bad "$name"; fi
 }
 
 # doc-currency-033-sections (living-status + commands)
@@ -88,4 +88,4 @@ exit "$FAIL"
 """
 
 if __name__ == "__main__":
- raise SystemExit(main())
+    raise SystemExit(main())
