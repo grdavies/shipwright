@@ -25,8 +25,8 @@ from ship_gate_handlers import is_gate_handler_step, run_gate_handler
 from ship_phase_steps import (
     authoritative_chain,
     cmd_advance,
-    cmd_init,
     expected_next_step,
+    init_silent,
     load_steps,
     resolve_steps_path,
     ship_chain_is_complete,
@@ -494,7 +494,7 @@ def ensure_initialized(root: Path, phase: str, steps_path: Path) -> dict[str, An
     doc = load_steps(steps_path)
     if doc:
         return doc
-    cmd_init(root, ["--phase", phase, "--out", str(steps_path)])
+    init_silent(root, phase, out=str(steps_path))
     doc = load_steps(steps_path)
     if not doc:
         fail("failed to initialize ship-steps.json", halt="ship-loop:init-failed")

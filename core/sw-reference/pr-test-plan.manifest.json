@@ -523,7 +523,7 @@
       "id": "phase-sizing-corpus-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
-        "scripts/unit_tests/phase_sizing",
+        "scripts/unit_tests/phase_sizing_suite",
         "-q"
       ],
       "classification": "required",
@@ -537,7 +537,7 @@
       "id": "phase-sizing-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
-        "scripts/unit_tests/phase_sizing",
+        "scripts/unit_tests/phase_sizing_suite",
         "-q"
       ],
       "classification": "required",

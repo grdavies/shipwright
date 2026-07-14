@@ -370,6 +370,9 @@ else
 fi
 
 # --- parallel-collect-all-ready (R27) ---
+# Clear ambient SW_DRIVER_STALE_SECONDS overrides (e.g. agent shell after timeout-halt
+# fixtures elsewhere). PRD 065 merge-ready seeding can exceed a 60s override.
+unset SW_DRIVER_STALE_SECONDS
 COLLECT_FIX=$(mktemp -d)
 (
   cd "$COLLECT_FIX"

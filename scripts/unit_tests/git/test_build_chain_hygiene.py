@@ -43,6 +43,7 @@ def test_force_escape_fixture_only(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     monkeypatch.delenv("SW_BUILD_CHAIN_FORCE", raising=False)
     monkeypatch.delenv("SW_ISSUES_FIXTURE", raising=False)
+    monkeypatch.delenv("SW_HARNESS", raising=False)
     assert copy_to_core._force_escape_allowed() is False
     monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
     assert copy_to_core._force_escape_allowed() is True
