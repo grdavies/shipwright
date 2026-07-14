@@ -44,6 +44,21 @@ stateDiagram-v2
 
 ## Operator reminders
 
+- Not sure which command? Run bare `/sw` — it reads worktree/planning state and proposes the one next action
+  with confirm, rather than making you walk this chart by hand.
 - Prefer `/sw-deliver run` for a frozen task list—do not hand-roll phase worktrees while the driver can advance.
 - `/sw-ship` never merges to the default branch; humans own that gate.
 - After merge, `/sw-cleanup` dry-runs removals until you confirm.
+
+## Consult and capture (outside the pipeline)
+
+`/sw-ask`, `/sw-become`, `/sw-note`, and `/sw-guide` never join the flowchart above — they are read-only or
+local-capture surfaces you can reach for at any point without affecting pipeline state. `/sw-ask` and
+`/sw-guide` never write; `/sw-note` writes only to your local notebook until you explicitly graduate an item;
+`/sw-become` writes only a new persona file after you confirm the draft.
+
+## Deprecated aliases
+
+`/sw-setup` and `/sw-compound`/`/sw-compound-ship` remain as one-release delegating aliases to `/sw-init` and
+`/sw-retrospective` respectively — see [commands](commands.md#deprecated-command-aliases-closed-rename-table)
+for the closed rename table. Retire call sites onto the replacement name before the alias window closes.

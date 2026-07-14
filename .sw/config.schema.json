@@ -1812,6 +1812,18 @@
         }
       }
     },
+    "notebook": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Local /sw-note capture under .cursor/sw-notebook/, outside the planning store (PRD 067 R33/R34).",
+      "properties": {
+        "sessionIndex": {
+          "type": "boolean",
+          "default": false,
+          "description": "Opt-in session-start injection of a distilled, redacted index of open notebook items. On redact failure, injection is skipped entirely (never raw)."
+        }
+      }
+    },
     "stabilizeLoop": {
       "type": "object",
       "additionalProperties": false,

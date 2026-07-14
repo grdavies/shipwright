@@ -30,6 +30,16 @@ Manifest shape mirrors PRD 043 R9 freeze-record pinning (ordered IDs + revisions
    Never silent auto-edit of docs or the parent file; never a hard freeze/ship block.
 6. **Report** — list applied fixes, gated items, manual trade-offs, residual risks.
 
+## Disposition disputes (calibration-loop)
+
+When two personas assign different `autofix_class` to the same deduped finding, or the operator pushes back
+on a `gated_auto`/`manual` disposition the synthesizer assigned, do not silently pick one side and do not
+re-ask the same abstract "which disposition?" question. Load `skills/calibration-loop/SKILL.md`: frame the
+dispute as an A/B tension (e.g. "auto-apply mechanical rewording" vs "always gate wording changes near
+requirements text"), present concrete finding instances, and converge on a principle. Record the converged
+principle in the synthesis report alongside the disputed finding's final disposition; it also informs
+disposition for any later same-class finding in the same review round.
+
 ## Bounded loop (R29)
 
 - Max **2** synthesis rounds.

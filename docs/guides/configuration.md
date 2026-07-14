@@ -538,6 +538,7 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `orchestration.planPolicy` | `canonical` (default) \| `proposed` — agent plan proposals vs hardcoded chains; kill-switch |
 | `intraPhase.parallelBudget` | Max concurrent intra-phase Task workers per phase (default **2**) |
 | `intraPhase.harnessLimit` | Harness-wide cap combined with `worktree.parallelCeiling` (default **8**) |
+| `notebook.sessionIndex` | Opt-in session-start injection of a distilled, redacted `/sw-note` index — default **`false`** |
 
 See `core/sw-reference/config.schema.json` for the full schema.
 
@@ -871,6 +872,19 @@ Hard timeout (seconds) for deliver base-branch preflight probes. Default **90**.
 On timeout the driver fails closed with `halt: preflight-timeout` and a resume command.
 
 `--skip-base-check` does not re-probe: it reads `.cursor/sw-deliver-preflight-cache.json` written by the last successful probe when present ; otherwise skips without failing.
+
+## Notebook session index
+
+`/sw-note` always writes to your local `.cursor/sw-notebook/` regardless of this setting. `notebook.sessionIndex`
+only controls whether a distilled summary of your **open** notebook items is injected at session start.
+
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `notebook.sessionIndex` | `false` | Opt-in session-start injection of a distilled, redacted index of open notebook items. |
+
+The distilled index always passes through the same redaction chokepoint as every other persisted or
+re-injected content. If redaction fails for any reason, injection is skipped entirely for that session —
+the raw index is never injected as a fallback.
 
 ## Delegation mode
 

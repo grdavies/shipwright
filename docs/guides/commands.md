@@ -116,10 +116,36 @@ to a **separate** GitHub/GitLab planning project — Jira is opt-in. See
 
 | Command | When to use | Does not |
 |---------|-------------|----------|
+| [`/sw`](../../core/commands/sw.md) | Bare state-aware entry — reads worktree/planning state and proposes the one next action, with confirm | Implement, ship, or merge on its own; it hands off to the command it proposes |
 | [`/sw-triage`](../../core/commands/sw-triage.md) | Classify Quick / Standard / Full before doc or impl | Draft docs or implement |
-| [`/sw-setup`](../../core/commands/sw-setup.md) | First run in a target repo — providers, `doc.afterTasks`, memory store, doctor | Scaffold CI or migrate memories |
+| [`/sw-init`](../../core/commands/sw-init.md) | First run in a target repo — guided scan → confirm → unresolved-only interview, providers, `doc.afterTasks`, memory store, doctor | Scaffold CI or migrate memories |
 | [`/sw-worktree`](../../core/commands/sw-worktree.md) | Isolate work in a per-item worktree (required before impl on bare `main`) | Run phase loop or merge |
 | [`/sw-start`](../../core/commands/sw-start.md) | Open a phase branch inside the active worktree; worktree guard runs before writes | Push or open PR |
+
+## Consult and capture
+
+Lightweight surfaces that sit alongside the pipeline without joining it — none of these freeze artifacts,
+implement, or merge.
+
+| Command | Role | Does not |
+|---------|------|----------|
+| [`/sw-ask`](../../core/commands/sw-ask.md) | Route a free-form question to the best-fit existing persona for a read-only answer | Write, review, freeze, or dispatch another command |
+| [`/sw-become`](../../core/commands/sw-become.md) | Research and crystallize a new persona for later `/sw-ask` consults, confirm-before-write | Overwrite an existing persona; run the doc-review panel |
+| [`/sw-note`](../../core/commands/sw-note.md) | One-line idea/task/note capture outside the planning store, with confirm-first graduation to a gap or brainstorm | Write to the planning store directly, or replace feedback gap-capture |
+| [`/sw-guide`](../../core/commands/sw-guide.md) | Read-only explanation of workflow behavior plus config/state/planning-backend diagnosis | Mutate config, git, or the planning store |
+
+## Deprecated command aliases (closed rename table)
+
+These renames are the only ones in scope; each deprecated name delegates to its replacement with identical
+behavior for one release before removal.
+
+| Deprecated | Use instead | Alias window |
+|------------|-------------|--------------|
+| `/sw-setup` | `/sw-init` | One release |
+| `/sw-compound` | `/sw-retrospective` | One release |
+| `/sw-compound-ship` | `/sw-retrospective` | One release |
+
+See [decision tree](decision-tree.md) for retirement timing and routing.
 
 ## Doc pipeline atomics
 
@@ -168,7 +194,8 @@ branch.
 
 | Command | One-line use case |
 |---------|-------------------|
-| `/sw-setup` | First run or doctor in a target repo |
+| `/sw` | Not sure what's next? Read state and propose it |
+| `/sw-init` | First run or doctor in a target repo |
 | `/sw-triage` | How much ceremony does this work need? |
 | `/sw-doc` | Full documentation pipeline |
 | `/sw-deliver run` | **Primary** — implement frozen tasks to one terminal merge gate |
@@ -184,7 +211,7 @@ branch.
 | `/sw-compound` | Turn retro into memories |
 | `/sw-retro` | Post-ship retrospective report |
 
-> 34 commands exist today. This table lists orchestrators and common atomics only. Grep
+> 40+ commands exist today. This table lists orchestrators and common atomics only. Grep
 > `core/commands/sw-*.md` for the complete set.
 
 See [Getting started](getting-started.md) for boundary modes and worktree rules.
