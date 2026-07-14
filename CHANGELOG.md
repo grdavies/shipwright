@@ -470,6 +470,7 @@
 * merge phase registration-nonregression-adapter-footprint-registration-non-regression-r16-r20-r21 into feat/linear-planning-store-provider-and-operator-projection (ac4c5c4) <!-- sw-deliver:registration-nonregression-adapter-footprint-registration-non-regression-r16-r20-r21 -->
 * merge phase dogfood-docs-oauth-dogfood-acceptance-docs-currency-oauth-docs-gate-r25-r30-r23 into feat/linear-planning-store-provider-and-operator-projection (6bd4f92) <!-- sw-deliver:dogfood-docs-oauth-dogfood-acceptance-docs-currency-oauth-docs-gate-r25-r30-r23 -->
 * merge phase gap-close-absorb-close-gap-079-absorb-linkage-r22 into feat/linear-planning-store-provider-and-operator-projection (a54ce6d) <!-- sw-deliver:gap-close-absorb-close-gap-079-absorb-linkage-r22 -->
+* merge phase wave-a-deliver-reliability-deliver-loop-reliability-r1-r9 into feat/operator-surface-reliability-craft-ux (c34da5b) <!-- sw-deliver:wave-a-deliver-reliability-deliver-loop-reliability-r1-r9 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
