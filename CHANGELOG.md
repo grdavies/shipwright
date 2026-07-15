@@ -523,6 +523,7 @@
 * merge phase wave-b-remove-docs-prds-drop-public-docs-prds-materialize-fail-closed-r5-medium into feat/post-068-surface-hygiene-deliver-ergonomics (a792e58) <!-- sw-deliver:wave-b-remove-docs-prds-drop-public-docs-prds-materialize-fail-closed-r5-medium -->
 * merge phase wave-b-publish-surface-audit-verified-closed-publish-surface-checklist-r6-medium into feat/post-068-surface-hygiene-deliver-ergonomics (153d9f5) <!-- sw-deliver:wave-b-publish-surface-audit-verified-closed-publish-surface-checklist-r6-medium -->
 * merge phase wave-c-init-defaults-docs-init-posture-seeds-r12-docs-r10-r12-medium into feat/post-068-surface-hygiene-deliver-ergonomics (6a62137) <!-- sw-deliver:wave-c-init-defaults-docs-init-posture-seeds-r12-docs-r10-r12-medium -->
+* merge phase anchored-discovery-fail-closed-audit-small into feat/automated-delivery-closeout (8e5d1c8) <!-- sw-deliver:anchored-discovery-fail-closed-audit-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
