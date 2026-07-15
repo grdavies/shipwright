@@ -87,38 +87,19 @@ def test_scoped_doctor_index_hit_skips_project_wide_search(
     assert not any(call.get("artifact_type") == "prd" and "unit_id" not in call for call in search_calls)
 
 
-def test_scoped_doctor_index_miss_uses_unit_scoped_search(
+def test_scoped_doctor_unscoped_still_allows_project_wide(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Aggregate doctor without prd_unit_id may still scan project-wide PRDs."""
     monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
     root = tmp_path
     _init_repo(root)
-    cfg = _issue_store_cfg("absorb-069-miss")
+    cfg = _issue_store_cfg("absorb-069-wide")
     (root / ".cursor/workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
-    project_key = cfg["planning"]["store"]["projectKey"]
-    prd_unit = "069-prd-miss-index"
-    fixture = root / ".cursor/hooks/state/issue-store-fixture.json"
-    store = FixtureIssuesStore(fixture)
-    prd_body = compose_issue_body(
-        project_key,
-        "prd",
-        prd_unit,
-        f"---\ntype: prd\nid: {prd_unit}\nstatus: complete\n---\n# PRD 069\n",
-    )
-    store.create(
-        title="PRD 069",
-        body=prd_body,
-        labels=["sw:prd", f"sw:unit:{prd_unit}", status_label("complete")],
-        project_key=project_key,
-        artifact_type="prd",
-        unit_id=prd_unit,
-    )
-    (root / ".cursor/hooks/state/issue-store-unit-index.json").write_text(
-        json.dumps({"version": 1, "units": {}}),
-        encoding="utf-8",
-    )
-    backend = IssueStoreBackend(root, cfg)
+    prd_unit = "069-prd-wide-scan"
+    _fixture_prd(root, cfg, prd_unit=prd_unit, complete=True)
     search_calls: list[dict[str, Any]] = []
+    backend = IssueStoreBackend(root, cfg)
     original_search = backend._client.issue_search
 
     def _tracking_search(**kwargs: Any) -> list[Any]:
@@ -129,16 +110,11 @@ def test_scoped_doctor_index_miss_uses_unit_scoped_search(
         return backend
 
     with patch("planning_store.get_backend", side_effect=_fake_get_backend):
-        with patch("planning_store._lookup_issue_record", return_value=None):
-            with patch.object(backend._client, "issue_search", side_effect=_tracking_search):
-                result = doctor_absorb_pollution(root, cfg, prd_unit_id=prd_unit)
+        with patch.object(backend._client, "issue_search", side_effect=_tracking_search):
+            result = doctor_absorb_pollution(root, cfg)
 
     assert result["verdict"] == "pass", result
     assert any(
-        call.get("unit_id") == prd_unit and call.get("artifact_type") == "prd"
-        for call in search_calls
-    )
-    assert not any(
         call.get("artifact_type") == "prd" and "unit_id" not in call
         for call in search_calls
     )
