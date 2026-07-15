@@ -559,8 +559,10 @@ def cmd_provision(root: Path, args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_validate_pin(root: Path, _args: argparse.Namespace) -> int:
-    result = validate_store_pin(root)
+def cmd_validate_pin(root: Path, args: argparse.Namespace) -> int:
+    target = getattr(args, "target", None)
+    state = load_deliver_state(root, target=target) if target else None
+    result = validate_store_pin(root, state=state)
     emit(result, 0 if result.get("verdict") == "ok" else 20)
     return 0
 
@@ -635,7 +637,8 @@ def main() -> None:
     p_provision.add_argument("--task-list", required=True)
     p_provision.add_argument("--target")
 
-    sub.add_parser("validate-pin")
+    p_validate_pin = sub.add_parser("validate-pin")
+    p_validate_pin.add_argument("--target")
 
     p_teardown = sub.add_parser("teardown")
     p_teardown.add_argument("--worktree", required=True)
