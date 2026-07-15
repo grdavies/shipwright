@@ -1,9 +1,0 @@
-{
-  "trunkBase": {
-    "name": "feat/planning-store-hardening",
-    "sha": "40207429ca305dc8b0e41b45afa6f31c3bc21834",
-    "ref": "feat/planning-store-hardening",
-    "source": "explicit-base",
-    "capturedAt": "2026-07-07T15:23:14Z"
-  }
-}

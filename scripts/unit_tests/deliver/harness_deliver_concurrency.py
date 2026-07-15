@@ -610,6 +610,9 @@ state = {
     'target': {'branch': integration},
     'driverHeartbeatAt': now,
     'currentWave': 1,
+    # Pin baseCapture so this case does not depend on a live .cursor/sw-base-state.json
+    # (local-only / gitignored after PRD 069 R4 — absent on fresh CI checkouts).
+    'baseCapture': True,
     'orchestratorWorktree': {'path': str(root)},
     'phases': {
         '1': {
