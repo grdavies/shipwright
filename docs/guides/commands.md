@@ -135,6 +135,37 @@ implement, or merge.
 | [`/sw-note`](../../core/commands/sw-note.md) | One-line idea/task/note capture outside the planning store, with confirm-first graduation to a gap or brainstorm | Write to the planning store directly, or replace feedback gap-capture |
 | [`/sw-guide`](../../core/commands/sw-guide.md) | Read-only explanation of workflow behavior plus config/state/planning-backend diagnosis | Mutate config, git, or the planning store |
 
+### `/sw-note` — local notebook capture
+
+Low-ceremony scratch that lives under `.cursor/sw-notebook/notebook.jsonl` — deliberately **outside**
+`docs/planning/`, the issue-store, and `GAP-BACKLOG.md`, so jotting never touches freeze or currency
+machinery.
+
+| Shape | Meaning | Lifecycle |
+| --- | --- | --- |
+| `idea` | Rough idea not yet worth a brainstorm | Open until graduated or dismissed |
+| `task` | Small actionable reminder | `open` → `done` via `/sw-note done <id>` |
+| `note` | Plain fact/observation worth remembering | Open indefinitely; no done state |
+
+**Input:** `/sw-note <text>` (auto-classified), or explicit `/sw-note task|idea|note <text>` with optional
+`#tag` tokens. Text passes through `python3 scripts/memory-redact.py` before append. The notebook directory
+is operator-local scratch — never committed; first write adds `.cursor/sw-notebook/` to `.gitignore` when
+needed.
+
+**Graduate (confirm-first):** `/sw-note graduate <id> --to gap|brainstorm` shows the item and target;
+requires explicit `proceed` before any planning-store write. On confirm:
+
+- `--to gap` → `python3 scripts/planning_gap_capture.py <repo> capture --signal-id notebook:<id> --title "<text>"`
+- `--to brainstorm` → hand off to `/sw-brainstorm` with the note text as seed (brainstorm doc owned by `/sw-brainstorm`)
+
+Bidirectional provenance: notebook item records `graduatedTo` / `graduatedAt`; target artifact carries a
+back-pointer (`notebookRef` in gap body or brainstorm Key Decisions). Graduated and done items are retained —
+never deleted.
+
+**Session index (opt-in):** `notebook.sessionIndex: true` injects a distilled, redacted index of **open**
+items at session start; redaction failure skips injection entirely (never injects raw text). See
+[configuration — Notebook session index](configuration.md#notebook-session-index).
+
 ## Deprecated command aliases (closed rename table)
 
 These renames are the only ones in scope; each deprecated name delegates to its replacement with identical
@@ -215,6 +246,7 @@ branch.
 | `/sw-status` | Reconcile PRD status from git facts |
 | `/sw-memory-sync` | Distill session into durable memory |
 | `/sw-memory-audit` | Audit memory hygiene (read-only) |
+| `/sw-note` | Capture idea/task/note outside the planning store; graduate to gap or brainstorm on confirm |
 | `/sw-compound` | Turn retro into memories |
 | `/sw-retro` | Post-ship retrospective report |
 

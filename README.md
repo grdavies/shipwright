@@ -175,9 +175,9 @@ use the guides below.
 | Guide | Purpose |
 |-------|---------|
 | [Getting started](docs/guides/getting-started.md) | Adoption arc and first paths |
-| [Commands](docs/guides/commands.md) | Orchestrators vs atomics |
+| [Commands](docs/guides/commands.md) | Orchestrators vs atomics (includes `/sw-note` local notebook capture) |
 | [Workflows](docs/guides/workflows.md) | End-to-end flows |
-| [Configuration](docs/guides/configuration.md) | `/sw-init` knobs |
+| [Configuration](docs/guides/configuration.md) | `/sw-init` knobs (issue-store providers include Linear) |
 | [Style guide](docs/guides/style-guide.md) | Writing conventions |
 | [Glossary](docs/guides/glossary.md) | Coined terms |
 | [Decision tree](docs/guides/decision-tree.md) | Command routing |

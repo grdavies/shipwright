@@ -233,7 +233,7 @@ is byte-identical to today .
 | Key | Values | Meaning |
 | --- | --- | --- |
 | `planning.store.backend` | `issue-store` | Enable issue-backed planning store |
-| `planning.store.issuesProvider` | `github-issues` \| `gitlab-issues` \| `jira` \| `none` | Issues adapter (**independent** of `host.provider`) |
+| `planning.store.issuesProvider` | `github-issues` \| `gitlab-issues` \| `jira` \| `linear` \| `none` | Issues adapter (**independent** of `host.provider`) |
 | `planning.store.projectKey` | string | Project scoping key (`^[a-z][a-z0-9-]*$`) |
 | `planning.store.storeLocation.mode` | `same-repo` \| `separate-project` | Code repo vs shared planning project |
 | `planning.store.storeLocation.owner` / `.repo` | strings | Required for `separate-project` |
@@ -309,6 +309,59 @@ Example (Jira Cloud + separate planning project — typical for Bitbucket code r
 Init probes (fail-closed): `python3 scripts/planning_store.py probe-jira-init` — auth, privacy, createmeta, label-write.
 
 See `core/providers/issues/jira.md` for LCD mapping, canonical hash, freeze-decoupling, budget, and lifecycle semantics.
+
+### Linear issue-store
+
+When `planning.store.issuesProvider` is `linear`, configure the Linear adapter keys under
+`planning.store.issues` and optional operator browse projection under `planning.store.operatorProjection.linear`:
+
+| Key | Values | Meaning |
+| --- | --- | --- |
+| `planning.store.issues.teamKey` | string | Human Team key/name (e.g. `ENG`) — preferred operator-facing id |
+| `planning.store.issues.teamId` | string | Linear GraphQL Team id (alternative to `teamKey`) |
+| `planning.store.issues.tokenEnv` | string | Dedicated token env (default `ISSUES_LINEAR_TOKEN`; **not** `host.tokenEnv`) |
+| `planning.store.issues.authMode` | `api-key` (default) \| `oauth` | `api-key` sends `Authorization: <API_KEY>`; `oauth` sends `Authorization: Bearer <ACCESS_TOKEN>` |
+| `planning.store.issues.oauthSharedCiException` | boolean | Explicit exception allowing `authMode: oauth` via shared CI secret |
+| `planning.store.operatorProjection.linear.enabled` | boolean (default `true`) | When `false`, Linear projection browse is skipped |
+| `planning.store.operatorProjection.linear.initiativeSubstitute` | `substitute-views` \| `skip` | Degradation when Initiative workspace capability is absent |
+| `planning.store.operatorProjection.linear.cycleSharingNotice` | boolean (default `true`) | Loud notice when Cycle wave shares cadence with human Milestones |
+| `planning.store.operatorProjection.linear.budget` | object | GraphQL request/complexity budget (`maxCalls`, `maxComplexityPoints`, `maxPaginationDepth`, `cacheTtlSeconds`) |
+
+At least one of `teamKey` or `teamId` is required. Init/probe fails closed on Team mismatch or missing scope.
+Prefer a Team-restricted personal API key for dogfood; OAuth is a documented secondary mode — tokens stay
+operator-local and must not be committed.
+
+Example (Linear + same-repo planning):
+
+```json
+{
+ "planning": {
+ "store": {
+ "backend": "issue-store",
+ "issuesProvider": "linear",
+ "projectKey": "my-project",
+ "storeLocation": { "mode": "same-repo" },
+ "issues": {
+ "teamKey": "ENG",
+ "tokenEnv": "ISSUES_LINEAR_TOKEN",
+ "authMode": "api-key"
+ },
+ "operatorProjection": {
+ "linear": {
+ "enabled": true,
+ "initiativeSubstitute": "substitute-views",
+ "cycleSharingNotice": true
+ }
+ }
+ }
+ }
+}
+```
+
+Init probes (fail-closed): `python3 scripts/planning_linear_client.py . probe-team` — Team scope and auth;
+`python3 scripts/planning_linear_client.py . docs-currency-gate` — operator-guide inventory before terminal merge.
+
+See `core/providers/issues/linear.md` for LCD verbs, stage-1 dogfood checklist, lock/overflow, and OAuth posture.
 
 See `core/providers/planning-store/issue-store.md` and `core/providers/issues/CAPABILITIES.md`.
 
