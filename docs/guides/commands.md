@@ -179,6 +179,12 @@ debugging one phase, or when you deliberately skip the orchestrator.
 | [`/sw-stabilize`](../../core/commands/sw-stabilize.md) | Clear CI + review blockers |
 | [`/sw-ready`](../../core/commands/sw-ready.md) | Terminal readiness report; echoes `review: off` or `review: not configured` from gate JSON |
 
+**Gap-check write (required):** before `merge-ready-green`, the ship chain must persist a binding
+`gap-check.status.json` via `python3 scripts/gap-check-gate.py write pass --phase-slug <slug>`.
+`/sw-ship` phase-mode and `ship-phase-status.py` refuse `merge-ready-green` when gap-check is
+missing or `halt`. Status writes route through `status_integrity.write_status_atomic` (provenance
+stamped, forgery fail-closed).
+
 **Worktree invariant:** never write implementation files on bare `main` — use a worktree + phase
 branch.
 

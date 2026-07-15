@@ -536,6 +536,62 @@ def legacy_ship_chain_notice(status: dict[str, Any]) -> str | None:
         return None
     return "legacy-status:shipChain-migrated"
 
+
+STATUS_CAUSE_REMEDIATION: dict[str, str] = {
+    "phase-status:missing-provenance": (
+        "rewrite status via: python3 scripts/status_integrity.py write "
+        "--verdict <merge-ready-green|blocked> --phase <slug> --out <runDir>/status.json"
+    ),
+    "phase-status:forged-provenance": (
+        "forged provenance refused (fail-closed); regenerate via "
+        "python3 scripts/gap-check-gate.py write pass --phase-slug <slug> or "
+        "python3 scripts/ship-phase-status.py --verdict <verdict> --phase <slug>"
+    ),
+    "phase-status:invalid-verdict": (
+        "set verdict to merge-ready-green or blocked via status_integrity.py write"
+    ),
+    "phase-status:abbreviated-head": (
+        "resolve full 40-char HEAD: git rev-parse HEAD, then rewrite status with --head"
+    ),
+    "phase-status:missing-head": (
+        "resolve HEAD via git rev-parse HEAD and rewrite status with --head"
+    ),
+    "phase-status:stale": (
+        "status head does not match branch; rewrite after fresh gate evidence"
+    ),
+    "phase-status:invalid-gate": (
+        "embed valid gate JSON via --gate-json or re-run check-gate before status write"
+    ),
+    "phase-status:missing-schemaVersion": (
+        "merge-ready-green requires schemaVersion; use status_integrity.py write (default v1)"
+    ),
+    "phase-status:ship-chain-incomplete": (
+        "complete ship chain (including gap-check write) before merge-ready-green"
+    ),
+    "gap-check-missing": (
+        "run gap-check write before merge-ready-green: "
+        "python3 scripts/gap-check-gate.py write pass --phase-slug <slug>"
+    ),
+    "gap-check-not-pass": (
+        "gap-check must be binding pass; rewrite via gap-check-gate.py write pass"
+    ),
+}
+
+
+def remediation_for_status_cause(cause: str | None) -> str | None:
+    if not cause:
+        return None
+    return STATUS_CAUSE_REMEDIATION.get(cause)
+
+
+def validate_status_with_remediation(
+    status: dict[str, Any], root: Path | None = None
+) -> tuple[bool, str | None, str | None]:
+    ok, cause = validate_terminal_status_shape(status, root)
+    if ok:
+        return True, None, None
+    return False, cause, remediation_for_status_cause(cause)
+
 def build_status_document(
     *,
     verdict: str,
@@ -638,8 +694,10 @@ def cmd_validate(args: argparse.Namespace) -> int:
     status_path = Path(args.path)
     status = json.loads(status_path.read_text(encoding="utf-8"))
     root = repo_root_for_path(status_path)
-    ok, cause = validate_terminal_status_shape(status, root)
-    payload = {"verdict": "pass" if ok else "fail", "cause": cause}
+    ok, cause, remediation = validate_status_with_remediation(status, root)
+    payload: dict[str, Any] = {"verdict": "pass" if ok else "fail", "cause": cause}
+    if remediation:
+        payload["remediation"] = remediation
     print(json.dumps(payload, indent=2))
     return 0 if ok else 2
 
