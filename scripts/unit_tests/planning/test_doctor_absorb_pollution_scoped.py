@@ -129,8 +129,9 @@ def test_scoped_doctor_index_miss_uses_unit_scoped_search(
         return backend
 
     with patch("planning_store.get_backend", side_effect=_fake_get_backend):
-        with patch.object(backend._client, "issue_search", side_effect=_tracking_search):
-            result = doctor_absorb_pollution(root, cfg, prd_unit_id=prd_unit)
+        with patch("planning_store._lookup_issue_record", return_value=None):
+            with patch.object(backend._client, "issue_search", side_effect=_tracking_search):
+                result = doctor_absorb_pollution(root, cfg, prd_unit_id=prd_unit)
 
     assert result["verdict"] == "pass", result
     assert any(
