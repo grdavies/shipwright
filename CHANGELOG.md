@@ -1,5 +1,42 @@
 # Changelog
 
+## [1.8.0](https://github.com/grdavies/shipwright/compare/v1.7.0...v1.8.0) (2026-07-15)
+
+
+### Features
+
+* **planning-store:** planning store hardening (PRD 057) ([#401](https://github.com/grdavies/shipwright/issues/401)) ([764c35a](https://github.com/grdavies/shipwright/commit/764c35a5c29da13808cc4cae96bafc0c54d67246))
+* **prd-56:** deliver wave ([#382](https://github.com/grdavies/shipwright/issues/382)) ([460f2f6](https://github.com/grdavies/shipwright/commit/460f2f63ab9fb2f42d91e7afe92bffe2b8297b10))
+* **prd-58:** dispatch loop hardening ([#416](https://github.com/grdavies/shipwright/issues/416)) ([f1fff69](https://github.com/grdavies/shipwright/commit/f1fff697ddfe91cfaffcd54b789bd454b05b599b))
+* **prd-59:** deliver loop planning store closure hardening ([#424](https://github.com/grdavies/shipwright/issues/424)) ([3848a01](https://github.com/grdavies/shipwright/commit/3848a01194431ef67390a35d2cdb5dcd0ea937b2))
+* **prd-60:** planning store build verify hygiene ([#431](https://github.com/grdavies/shipwright/issues/431)) ([0e8cf7b](https://github.com/grdavies/shipwright/commit/0e8cf7b9b651f7f075b4b2121544b3e6ed5eb3a1))
+* **prd-61:** planning store interface architecture ([#439](https://github.com/grdavies/shipwright/issues/439)) ([dca359f](https://github.com/grdavies/shipwright/commit/dca359f174d6161f2b4337327639ad7d63019cef))
+* **prd-62:** deliver issue store hardening and loop perf ([#445](https://github.com/grdavies/shipwright/issues/445)) ([dbbe69b](https://github.com/grdavies/shipwright/commit/dbbe69b8880afda0cf7ff5f4e3561616dcf6e2a9))
+* **prd-63:** deliver autonomy and finalize hygiene ([#453](https://github.com/grdavies/shipwright/issues/453)) ([0a0cb69](https://github.com/grdavies/shipwright/commit/0a0cb69ed93d8754ece9b9a16cdcfd29350721bd))
+* **prd-64:** agentic quality patterns and standards conformance ([#468](https://github.com/grdavies/shipwright/issues/468)) ([83e2ada](https://github.com/grdavies/shipwright/commit/83e2adadb9a193ddfb1a6049815644ec041d8e58))
+* **prd-65:** turn independent ship loop and gate evidence ([#483](https://github.com/grdavies/shipwright/issues/483)) ([c3ce86d](https://github.com/grdavies/shipwright/commit/c3ce86ddc86ee59e6e6e8703a930c5e08cedf611))
+* **prd-66:** linear planning store provider and operator projection ([#496](https://github.com/grdavies/shipwright/issues/496)) ([5332cb6](https://github.com/grdavies/shipwright/commit/5332cb623fb174d1dfbc61e1919a3609272e9baf))
+* **prd-67:** operator surface reliability craft ux ([#503](https://github.com/grdavies/shipwright/issues/503)) ([c8fb0d7](https://github.com/grdavies/shipwright/commit/c8fb0d74e9fdbee274ba5b04773c1b3979a885cc))
+* **prd-68:** post 067 dogfood hardening ([#510](https://github.com/grdavies/shipwright/issues/510)) ([1513ad7](https://github.com/grdavies/shipwright/commit/1513ad746b7bc604fd28ed22bda29dc96089e86c))
+* **prd-69:** post 068 surface hygiene deliver ergonomics ([#520](https://github.com/grdavies/shipwright/issues/520)) ([5233119](https://github.com/grdavies/shipwright/commit/5233119f6db6088e79b88d0792253d85db97b5b8))
+
+
+### Bug Fixes
+
+* **ci:** stop main verify-full reds from ship_loop init and test shadows ([#497](https://github.com/grdavies/shipwright/issues/497)) ([#498](https://github.com/grdavies/shipwright/issues/498)) ([aa1c87a](https://github.com/grdavies/shipwright/commit/aa1c87abe600870f66ed72841089f497107cddeb))
+* **dispatch:** harden issue-store labels, dispatch-check fallback tier, and model-tier precedence ([#403](https://github.com/grdavies/shipwright/issues/403)) ([b254148](https://github.com/grdavies/shipwright/commit/b2541485d80e4dd3eb9275a0a642ed3955d8958b))
+* **planning-store:** resolve tasks unit id for NNN-prd-slug closure ([#446](https://github.com/grdavies/shipwright/issues/446)) ([5bdb1d5](https://github.com/grdavies/shipwright/commit/5bdb1d5ed22864eb99e50be4560ce01a727af2b4))
+* **planning:** accept issue-store frozen hash in deliver plan gate ([#417](https://github.com/grdavies/shipwright/issues/417)) ([0c3b5ef](https://github.com/grdavies/shipwright/commit/0c3b5ef4675bd22e4e758a925502b739563e04ab))
+* **planning:** call issue_get when resolving --issue references ([#432](https://github.com/grdavies/shipwright/issues/432)) ([f41d684](https://github.com/grdavies/shipwright/commit/f41d684087ecd2d1f322cb3bf07c6e0e893479ce))
+* **planning:** issue-store cutover phase fixes and test corpus ([#380](https://github.com/grdavies/shipwright/issues/380)) ([a55ff95](https://github.com/grdavies/shipwright/commit/a55ff9518af9468c938ff89783fa375fe61bfcbb))
+* **planning:** post-057 deliver runtime fixes for issue-store and worktrees ([#402](https://github.com/grdavies/shipwright/issues/402)) ([130ce83](https://github.com/grdavies/shipwright/commit/130ce837e20f38e67637c8024e14b70b64d676c8))
+* **tasks-generate:** bound last-phase chunk extraction at trailing level-2 headings ([#440](https://github.com/grdavies/shipwright/issues/440)) ([fb6a0e0](https://github.com/grdavies/shipwright/commit/fb6a0e0602fecb947fc6aaaf0e56edee3e039611))
+
+
+### Documentation
+
+* **prd-059:** append post-merge COMPLETION-LOG entry ([#425](https://github.com/grdavies/shipwright/issues/425)) ([3c13ddb](https://github.com/grdavies/shipwright/commit/3c13ddbe113cd2dcaec06ba95279d512578e5985))
+
 ## [1.7.0](https://github.com/grdavies/shipwright/compare/v1.6.0...v1.7.0) (2026-07-05)
 
 
