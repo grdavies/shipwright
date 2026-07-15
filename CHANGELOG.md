@@ -484,6 +484,7 @@
 * merge phase wave-b-local-only-docs-stop-publishing-learnings-decision-bodies-r4-small into feat/post-068-surface-hygiene-deliver-ergonomics (0949663) <!-- sw-deliver:wave-b-local-only-docs-stop-publishing-learnings-decision-bodies-r4-small -->
 * merge phase wave-c-linear-sw-note-docs-document-linear-and-sw-note-r8-r9-small into feat/post-068-surface-hygiene-deliver-ergonomics (15718d1) <!-- sw-deliver:wave-c-linear-sw-note-docs-document-linear-and-sw-note-r8-r9-small -->
 * merge phase wave-b-remove-docs-prds-drop-public-docs-prds-materialize-fail-closed-r5-medium into feat/post-068-surface-hygiene-deliver-ergonomics (a792e58) <!-- sw-deliver:wave-b-remove-docs-prds-drop-public-docs-prds-materialize-fail-closed-r5-medium -->
+* merge phase wave-b-publish-surface-audit-verified-closed-publish-surface-checklist-r6-medium into feat/post-068-surface-hygiene-deliver-ergonomics (153d9f5) <!-- sw-deliver:wave-b-publish-surface-audit-verified-closed-publish-surface-checklist-r6-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
