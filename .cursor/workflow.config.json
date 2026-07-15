@@ -175,7 +175,18 @@
         "repo": "planning"
       },
       "issues": {
-        "tokenEnv": "GITHUB_TOKEN"
+        "tokenEnv": "SW_PLANNING_ISSUES_TOKEN",
+        "credentialContract": {
+          "envVar": "SW_PLANNING_ISSUES_TOKEN",
+          "scope": "issues:write on grdavies/planning only",
+          "leastPrivilege": "Planning-project issue mutations only; host.tokenEnv (GITHUB_TOKEN) is not used for cross-repo close-out or issue-store writes.",
+          "rotationPolicy": {
+            "cadenceDays": 90,
+            "expiryDays": 365,
+            "owner": "platform-ops",
+            "procedure": "Issue a fine-grained PAT or org secret scoped to grdavies/planning issues write; rotate on cadence; revoke the prior token; update the SW_PLANNING_ISSUES_TOKEN GitHub Actions secret and operator local env."
+          }
+        }
       }
     },
     "privacyAck": {
@@ -224,7 +235,7 @@
   },
   "configuredWith": {
     "shipwrightVersion": "1.8.0",
-    "schemaVersion": "b43fa506b888"
+    "schemaVersion": "bec765ad6ba0"
   },
   "compound": {
     "autonomy": "auto"
