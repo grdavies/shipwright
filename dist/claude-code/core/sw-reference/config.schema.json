@@ -64,8 +64,8 @@
             "heuristic",
             "default"
           ],
-          "default": "bind-only",
-          "description": "bind-only enforces model/intensity binding with delegate-by-default policy. default remains gated until Phase 2 live acceptance (DL-9)."
+          "default": "heuristic",
+          "description": "heuristic allows documented inline heuristics for small/mechanical steps while binding non-trivial Task spawns. bind-only is stricter; default mode remains gated until Phase 2 live acceptance (DL-9)."
         }
       }
     },
@@ -80,8 +80,8 @@
             "canonical",
             "proposed"
           ],
-          "default": "canonical",
-          "description": "canonical = validated proposals must match canonical chain/waves; proposed = guideline latitude (kernel envelope unchanged). Recorded mode on persisted plans is honored on resume over live config."
+          "default": "proposed",
+          "description": "proposed = guideline latitude on /sw-deliver (kernel envelope unchanged); canonical = validated proposals must match canonical chain/waves. Recorded mode on persisted plans is honored on resume over live config."
         }
       }
     },
@@ -996,8 +996,8 @@
             "maintenance-only",
             "full-conductor"
           ],
-          "default": "maintenance-only",
-          "description": "Planning autonomy posture (PRD 035 R19): maintenance-only default runs mechanical bookkeeping autonomously and gates content decisions; full-conductor opt-in elevates gap/absorption-class decisions under bounded conductor limits. PRD 033 soft-enforces scheduler priority on explicit --task-list."
+          "default": "full-conductor",
+          "description": "Planning autonomy posture (PRD 035 R19): full-conductor elevates gap/absorption-class decisions under bounded conductor limits; maintenance-only runs mechanical bookkeeping autonomously and gates content decisions. PRD 033 soft-enforces scheduler priority on explicit --task-list."
         },
         "visibilityProfile": {
           "type": "string",
@@ -1496,11 +1496,11 @@
     "inefficiency": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Process inefficiency scanner (PRD 041 R25/R26). Default disabled.",
+      "description": "Process inefficiency scanner (PRD 041 R25/R26). Default enabled on greenfield init (PRD 069 R10).",
       "properties": {
         "enabled": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "When true, inefficiency scanner runs on deliver/retro surfaces."
         },
         "thresholds": {

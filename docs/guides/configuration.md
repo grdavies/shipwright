@@ -41,7 +41,7 @@ Canonical opt-out: `review.provider: "none"`. Do not use `review.enabled: false`
 | auto | `auto` | Seed frozen spec onto `<type>/<slug>` and dispatch `/sw-deliver run <frozen-tasks>` without a second prompt |
 
 
-### Greenfield init posture (PRD 069 R10)
+### Greenfield init posture ( )
 
 `/sw-init` and `python3 scripts/sw-configure.py write-draft` seed **seven** recommended keys for
 hands-off deliver on greenfield repos. Schema defaults and write-draft stay aligned; doctor surfaces
@@ -102,7 +102,7 @@ stamp the resolved concrete `model:` on the Task (do not rely on `model: inherit
 | `deliver.loop.drainMechanical` | `true` | When true, `wave_deliver_loop` drains mechanical actions in-process until `awaitAgent`, `awaitInFlight`, or halt; `false` restores one step per invocation |
 
 Log events (`run.log`) include `elapsedMs` on `driver-transition` and `execute-mechanical` for operator timing
- — numeric only, no secret argv.
+— numeric only, no secret argv.
 
 ### Cleanup autonomy (`cleanup.autonomy`) — /
 
@@ -262,15 +262,15 @@ Example (opt-in):
 
 ```json
 {
- "planning": {
- "store": {
- "backend": "issue-store",
- "issuesProvider": "github-issues",
- "projectKey": "my-project",
- "storeLocation": { "mode": "same-repo" },
- "issues": { "tokenEnv": "ISSUES_GITHUB_TOKEN" }
- }
- }
+"planning": {
+"store": {
+"backend": "issue-store",
+"issuesProvider": "github-issues",
+"projectKey": "my-project",
+"storeLocation": { "mode": "same-repo" },
+"issues": { "tokenEnv": "ISSUES_GITHUB_TOKEN" }
+}
+}
 }
 ```
 
@@ -308,20 +308,20 @@ Example (Jira Cloud + separate planning project — typical for Bitbucket code r
 
 ```json
 {
- "planning": {
- "store": {
- "backend": "issue-store",
- "issuesProvider": "jira",
- "projectKey": "my-project",
- "storeLocation": { "mode": "separate-project" },
- "issues": {
- "endpoint": "https://my-org.atlassian.net",
- "flavor": "cloud",
- "tokenEnv": "ISSUES_JIRA_TOKEN",
- "freezeRecordField": "customfield_10042"
- }
- }
- }
+"planning": {
+"store": {
+"backend": "issue-store",
+"issuesProvider": "jira",
+"projectKey": "my-project",
+"storeLocation": { "mode": "separate-project" },
+"issues": {
+"endpoint": "https://my-org.atlassian.net",
+"flavor": "cloud",
+"tokenEnv": "ISSUES_JIRA_TOKEN",
+"freezeRecordField": "customfield_10042"
+}
+}
+}
 }
 ```
 
@@ -354,26 +354,26 @@ Example (Linear + same-repo planning):
 
 ```json
 {
- "planning": {
- "store": {
- "backend": "issue-store",
- "issuesProvider": "linear",
- "projectKey": "my-project",
- "storeLocation": { "mode": "same-repo" },
- "issues": {
- "teamKey": "ENG",
- "tokenEnv": "ISSUES_LINEAR_TOKEN",
- "authMode": "api-key"
- },
- "operatorProjection": {
- "linear": {
- "enabled": true,
- "initiativeSubstitute": "substitute-views",
- "cycleSharingNotice": true
- }
- }
- }
- }
+"planning": {
+"store": {
+"backend": "issue-store",
+"issuesProvider": "linear",
+"projectKey": "my-project",
+"storeLocation": { "mode": "same-repo" },
+"issues": {
+"teamKey": "ENG",
+"tokenEnv": "ISSUES_LINEAR_TOKEN",
+"authMode": "api-key"
+},
+"operatorProjection": {
+"linear": {
+"enabled": true,
+"initiativeSubstitute": "substitute-views",
+"cycleSharingNotice": true
+}
+}
+}
+}
 }
 ```
 
@@ -399,10 +399,10 @@ Example (GitHub milestones):
 
 ```json
 {
- "planning": {
- "store": { "backend": "issue-store", "issuesProvider": "github-issues", "projectKey": "my-project" },
- "releaseGrouping": { "mode": "milestone" }
- }
+"planning": {
+"store": { "backend": "issue-store", "issuesProvider": "github-issues", "projectKey": "my-project" },
+"releaseGrouping": { "mode": "milestone" }
+}
 }
 ```
 
@@ -436,21 +436,21 @@ Example:
 
 ```json
 {
- "planning": {
- "store": {
- "backend": "issue-store",
- "issuesProvider": "github-issues",
- "projectKey": "my-project",
- "requestBudget": {
- "github-issues": {
- "maxCalls": 750,
- "maxPaginationDepth": 10,
- "alertThreshold": 0.8,
- "cacheTtlSeconds": 300
- }
- }
- }
- }
+"planning": {
+"store": {
+"backend": "issue-store",
+"issuesProvider": "github-issues",
+"projectKey": "my-project",
+"requestBudget": {
+"github-issues": {
+"maxCalls": 750,
+"maxPaginationDepth": 10,
+"alertThreshold": 0.8,
+"cacheTtlSeconds": 300
+}
+}
+}
+}
 }
 ```
 
@@ -466,10 +466,10 @@ the **cutover gate** — is derived by `scripts/planning_cutover.py`'s `load_cut
 computed entirely from **committed state**, not from a tracked file:
 
 - **Effective backend** — `planning.store.backend` in `.cursor/workflow.config.json`, resolved via
- `planning_store.resolve_effective_backend` (provider support + host reachability).
+`planning_store.resolve_effective_backend` (provider support + host reachability).
 - **Structural marker** — whether the local file-store planning tree (`docs/planning/<type>/<unit-id>/`)
- still holds tracked unit bodies on disk. If bodies are still present, the gate stays on `file` even when
- the committed backend says `issue-store`, so a mid-flight migration never silently drops units.
+still holds tracked unit bodies on disk. If bodies are still present, the gate stays on `file` even when
+the committed backend says `issue-store`, so a mid-flight migration never silently drops units.
 
 When the effective backend is `issue-store` and no tracked file-store bodies remain, `discoverSource` and
 `structural` both resolve to `issue`. Otherwise they resolve to `file`. No new tracked file is introduced
@@ -508,14 +508,14 @@ Fixture suite: `python3 scripts/test/run_planning_035_doc_impact_fixtures.py` (`
 | `canonical` | no | Byte-identical to pre-022 behavior; hardcoded chains and plan-time waves only |
 
 - **Kill-switch:** per-repo instant revert to canonical behavior; composes orthogonally with
- `deliver.autonomy.mode` and `deliver.phaseAckCadence`.
+`deliver.autonomy.mode` and `deliver.phaseAckCadence`.
 - **Seeding:** `/sw-init` writes `orchestration.planPolicy: proposed` on greenfield; doctor surfaces current vs schema default and never overwrites explicit values without confirm.
 - **Resume:** runs honor the **recorded** `planPolicy` on persisted plans over live config; re-validated against
- the current kernel envelope on resume (fail-closed).
+the current kernel envelope on resume (fail-closed).
 - **Default canonical:** nothing observable changes until you set `proposed` **and** pass the PRD-023
- pilot guards (TR0 gate, per-run acknowledgement, safe target branch). `/sw-deliver` is the live pilot;
- PRD-024 fans out to other orchestrators. Call-site map:
- `scripts/test/fixtures/planning-post-migration/022-kernel-classification-and-plan-validation/call-site-map.md`.
+pilot guards (TR0 gate, per-run acknowledgement, safe target branch). `/sw-deliver` is the live pilot;
+PRD-024 fans out to other orchestrators. Call-site map:
+`scripts/test/fixtures/planning-post-migration/022-kernel-classification-and-plan-validation/call-site-map.md`.
 
 ** fan-out (all four orchestrators):** `/sw-deliver`, `/sw-debug`, `/sw-doc`, and `/sw-feedback`
 read `orchestration.planPolicy` (default `canonical`). Enabling `proposed` on non-deliver orchestrators
@@ -758,9 +758,9 @@ surfaces are **projections** of registry lanes — not independent hand lists:
 
 ```bash
 python3 scripts/generate-pr-test-plan-ci-workflow.py \
- core/sw-reference/pr-test-plan.manifest.json \
- .github/workflows/pr-test-plan-ci.yml \
- .
+core/sw-reference/pr-test-plan.manifest.json \
+.github/workflows/pr-test-plan-ci.yml \
+.
 ```
 
 Local `verify.test` runs the PR manifest set via `scripts/test/run_pr_test_plan_manifest.py`; CI runs the
@@ -854,7 +854,7 @@ Autonomous `/sw-doc` → `/sw-tasks` dispatch paths refuse override without expl
 
 ## Task phase sizing (`tasks.sizing`)
 
- adds a deterministic phase-sizing heuristic for `/sw-tasks` and advisory split suggestions.
+adds a deterministic phase-sizing heuristic for `/sw-tasks` and advisory split suggestions.
 Defaults are **calibrated from the frozen task-list corpus** (SC6) — not author-tuned.
 
 Re-run calibration (read-only):
@@ -971,7 +971,7 @@ intensity (via dispatch preflight). It sits alongside other `/sw-init` knobs in 
 Relationship to inline work:
 
 - Conductor-owned mechanical steps (deliver-loop state, merge bookkeeping, halt reports) stay inline per the
-  command allowlist—`delegation.mode` does not force those onto Tasks.
+command allowlist—`delegation.mode` does not force those onto Tasks.
 - Agent implementation/review work still goes through dispatch binding when a Task is spawned.
 - Intensity directives remain prompt-literal; model tiers resolve through `models.tiers` / resolve-model-tier.
 
