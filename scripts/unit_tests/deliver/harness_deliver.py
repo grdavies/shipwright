@@ -1102,10 +1102,10 @@ else
 fi
 rm -rf "$PF_FAIL"
 
-if grep -q '!docs/prds/\*\*' "$ROOT/.gitignore" && git -C "$ROOT" ls-files scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md >/dev/null; then
-  echo "OK  deliver-phase-spec-tracked"
+if ! git -C "$ROOT" ls-files docs/prds/ 2>/dev/null | grep -q . && grep -q 'docs/prds/' "$ROOT/.gitignore"; then
+  echo "OK  deliver-phase-spec-materialized"
 else
-  echo "FAIL deliver-phase-spec-tracked"
+  echo "FAIL deliver-phase-spec-materialized"
   FAIL=1
 fi
 

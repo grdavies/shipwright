@@ -32,11 +32,9 @@ __pycache__/
 scripts/test/fixtures/emitter-fixture/out/
 
 # Internal planning artifacts stay local-only: brainstorms, plans, decisions, learnings.
-# PRDs + task lists ARE tracked so they ride into phase worktrees (git worktree
-# only checks out tracked files) and appear in PR review diffs.
+# PRDs materialize to .cursor/planning-materialized/ at deliver entry (PRD 069 R5).
 docs/*
-!docs/prds/
-!docs/prds/**
+docs/prds/
 !docs/guides/
 !docs/guides/**
 # Decision index only — bodies stay local-only (PRD 069 R4).
