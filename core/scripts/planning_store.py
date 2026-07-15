@@ -3933,7 +3933,49 @@ def audit_closure_completeness(
     }
 
 
-def doctor_absorb_pollution(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+def _doctor_absorb_pollution_check_prd(
+    root: Path,
+    cfg: dict[str, Any],
+    record: Any,
+    unit_id: str,
+    pollution: list[dict[str, str]],
+) -> None:
+    labels = list(getattr(record, "labels", []) or [])
+    if status_from_labels(labels) != "complete" and str(getattr(record, "state", "")) != "closed":
+        return
+    audit = audit_closure_completeness(root, cfg, unit_id)
+    if audit.get("openRemaining"):
+        pollution.append({"prdUnitId": unit_id, "openRemaining": ",".join(audit["openRemaining"])})
+
+
+def _doctor_absorb_pollution_scoped_record(
+    backend: IssueStoreBackend,
+    project_key: str,
+    prd_unit_id: str,
+) -> Any | None:
+    """Resolve one PRD issue via unit index + issue_get; unit-scoped search on index miss (PRD 069 R2)."""
+    body_path = _default_body_path(prd_unit_id, "prd")
+    record = _lookup_issue_record(backend, prd_unit_id, body_path)
+    if record is not None:
+        return record
+    client = backend._client
+    search = getattr(client, "issue_search", None)
+    if not callable(search):
+        return None
+    matches = client.issue_search(
+        project_key=project_key,
+        unit_id=prd_unit_id,
+        artifact_type="prd",
+    )
+    return matches[0] if matches else None
+
+
+def doctor_absorb_pollution(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    prd_unit_id: str | None = None,
+) -> dict[str, Any]:
     """Flag complete PRDs with open absorbed gaps (PRD 068 R9 doctor)."""
     pmis = _migrate_issue_store()
     if not pmis.issue_store_effective(root, cfg):
@@ -3950,24 +3992,42 @@ def doctor_absorb_pollution(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     search = getattr(client, "issue_search", None)
     if not callable(search):
         return {"verdict": "pass", "action": "doctor-absorb-pollution", "skipped": True, "reason": "no-search"}
-    for record in search(project_key=project_key, artifact_type="prd"):
-        labels = list(getattr(record, "labels", []) or [])
-        if status_from_labels(labels) != "complete" and str(getattr(record, "state", "")) != "closed":
-            continue
-        unit_id = str(getattr(record, "unit_id", "") or "")
-        if not unit_id:
-            continue
-        audit = audit_closure_completeness(root, cfg, unit_id)
-        if audit.get("openRemaining"):
-            pollution.append({"prdUnitId": unit_id, "openRemaining": ",".join(audit["openRemaining"])})
+
+    if prd_unit_id:
+        record = _doctor_absorb_pollution_scoped_record(backend, project_key, prd_unit_id)
+        if record is None:
+            return {
+                "verdict": "pass",
+                "action": "doctor-absorb-pollution",
+                "checks": ["no-prd-record"],
+                "prdUnitId": prd_unit_id,
+            }
+        unit_id = str(getattr(record, "unit_id", "") or prd_unit_id)
+        _doctor_absorb_pollution_check_prd(root, cfg, record, unit_id, pollution)
+    else:
+        for record in search(project_key=project_key, artifact_type="prd"):
+            unit_id = str(getattr(record, "unit_id", "") or "")
+            if not unit_id:
+                continue
+            _doctor_absorb_pollution_check_prd(root, cfg, record, unit_id, pollution)
+
     if pollution:
+        resume = (
+            f"python3 scripts/planning_store.py audit-closure-completeness --prd-unit {pollution[0]['prdUnitId']}"
+            if pollution
+            else None
+        )
         return {
             "verdict": "fail",
             "action": "doctor-absorb-pollution",
             "error": "absorb-pollution",
             "pollution": pollution,
+            "resumeCommand": resume,
         }
-    return {"verdict": "pass", "action": "doctor-absorb-pollution", "checks": ["no-pollution"]}
+    payload: dict[str, Any] = {"verdict": "pass", "action": "doctor-absorb-pollution", "checks": ["no-pollution"]}
+    if prd_unit_id:
+        payload["prdUnitId"] = prd_unit_id
+    return payload
 
 
 def close_parent_epic_if_complete(
