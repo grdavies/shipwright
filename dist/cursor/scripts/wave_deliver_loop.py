@@ -72,6 +72,7 @@ from wave_state import (
     save_deliver_state,
     scoped_paths,
     target_branch_from_state,
+    ensure_canonical_state_synced,
     sync_canonical_state_read,
 )
 
@@ -913,8 +914,8 @@ def save_state(root: Path, state: dict[str, Any]) -> None:
 
 
 def sync_terminal_state(root: Path, state: dict[str, Any]) -> dict[str, Any]:
-    """Canonical repo-root state read before terminal deliver actions (PRD 049 R4)."""
-    synced = sync_canonical_state_read(root, state_hint=state)
+    """Canonical repo-root state read before terminal deliver actions (PRD 049 R4, 069 R3)."""
+    synced = ensure_canonical_state_synced(root, state_hint=state)
     if synced:
         state.clear()
         state.update(synced)
