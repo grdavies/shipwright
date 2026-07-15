@@ -217,6 +217,7 @@ from planning_canonical import (  # noqa: E402
     rewrite_chunk_manifest_ids,
     strip_markers_and_edges,
     canonical_content_from_operator,
+    frontmatter_from_labels,
     has_raw_yaml_frontmatter,
     is_hybrid_operator_body,
     operator_body_from_canonical,
@@ -3079,14 +3080,53 @@ def _prd_unit_id_alias_candidates(prd_unit_id: str) -> list[str]:
     return out
 
 
-def _gap_closure_evidence(
+def _fm_field_as_str(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return ",".join(str(item).strip() for item in value if str(item).strip())
+    return str(value).strip()
+
+
+def _resolve_prd_absorption_context(
+    prd_record: Any,
+    prd_unit: str,
+    full_body: str,
+) -> tuple[dict[str, str], dict[str, Any]]:
+    """Resolve PRD frontmatter + edges for anchored absorption discovery (PRD 070 R1)."""
+    edges = parse_edges_block(full_body) or {}
+    pmis = _migrate_issue_store()
+    if has_raw_yaml_frontmatter(full_body):
+        raw_content = strip_markers_and_edges(full_body)
+        return pmis.parse_frontmatter_fields(raw_content), edges
+    if is_hybrid_operator_body(full_body):
+        hybrid = frontmatter_from_labels(
+            list(getattr(prd_record, "labels", []) or []),
+            unit_id=prd_unit,
+            operator_body=full_body,
+        )
+        fm = {key: _fm_field_as_str(hybrid.get(key)) for key in hybrid}
+        stripped = strip_markers_and_edges(full_body)
+        if stripped.startswith("---"):
+            yaml_fm = pmis.parse_frontmatter_fields(stripped)
+            for key, value in yaml_fm.items():
+                if value:
+                    fm[key] = value
+        return fm, edges
+    raw_content = strip_markers_and_edges(full_body)
+    return pmis.parse_frontmatter_fields(raw_content), edges
+
+
+def discover_absorbed_units_anchored(
     fm: dict[str, str],
     edges: dict[str, Any] | None,
-    prd_num: str | None,
-    root: Path,
-    cfg: dict[str, Any],
 ) -> tuple[set[str], list[dict[str, str]]]:
-    """Classify gap units for closure: delivery-grade vs related-only skip (PRD 060 R6)."""
+    """Discover absorbed gap units from anchored markers only (PRD 070 R1).
+
+    Uses ``absorbs`` and hybrid ``sw-edges`` absorbs relationships from YAML
+    frontmatter or hybrid-operator bodies. Free-text prose mentions and schedule
+    labels are never treated as absorbed.
+    """
     delivery_grade: set[str] = set()
     skipped: list[dict[str, str]] = []
 
@@ -3107,15 +3147,22 @@ def _gap_closure_evidence(
         else:
             related_only.add(target)
 
-    if prd_num:
-        for gap_id in _migrate_issue_store().gap_unit_ids_scheduled_for_prd(root, prd_num, cfg):
-            if gap_id:
-                delivery_grade.add(gap_id)
-
     for gap_id in sorted(related_only - delivery_grade):
         skipped.append({"unitId": gap_id, "reason": "related-only-not-delivery-grade"})
 
     return delivery_grade, skipped
+
+
+def _gap_closure_evidence(
+    fm: dict[str, str],
+    edges: dict[str, Any] | None,
+    prd_num: str | None,
+    root: Path,
+    cfg: dict[str, Any],
+) -> tuple[set[str], list[dict[str, str]]]:
+    """Classify gap units for closure: delivery-grade vs related-only skip (PRD 060 R6)."""
+    _ = prd_num, root, cfg  # anchored discovery no longer uses schedule-label heuristics (PRD 070 R1)
+    return discover_absorbed_units_anchored(fm, edges)
 
 
 def _discover_planning_issues_gaps(
@@ -3321,11 +3368,7 @@ def gap_has_absorb_provenance(
     absorbs = _parse_absorbs_targets(prd_fm.get("absorbs", ""))
     if any(gap_absorb_target_match(item, gap_unit_id) for item in absorbs):
         return True
-    prd_num = prd_num or _prd_number_from_unit_id(prd_unit_id)
-    if prd_num:
-        scheduled = _migrate_issue_store().gap_unit_ids_scheduled_for_prd(root, prd_num, cfg)
-        if gap_unit_id in scheduled:
-            return True
+    _ = prd_num  # schedule labels are not anchored absorption markers (PRD 070 R1)
     for edge in (edges or {}).get("edges") or []:
         if not isinstance(edge, dict):
             continue
@@ -3488,9 +3531,7 @@ def resolve_delivery_linked_units(
         return {"verdict": "fail", "error": "prd-unit-not-found", "prdUnitId": prd_unit_id}
 
     full_body = reassemble_body(prd_record.body, prd_record.comments)
-    raw_content = strip_markers_and_edges(full_body)
-    fm = _migrate_issue_store().parse_frontmatter_fields(raw_content)
-    edges = parse_edges_block(full_body) or {}
+    fm, edges = _resolve_prd_absorption_context(prd_record, prd_unit, full_body)
 
     units: dict[str, dict[str, str]] = {}
     tasks_resolution: dict[str, Any] | None = None
@@ -3926,6 +3967,8 @@ def audit_closure_completeness(
         open_remaining = sorted(set(open_remaining) | set(tasks_note.get("openDuplicates") or []))
 
     verdict = "ready" if not open_remaining else "not-ready"
+    if open_remaining:
+        verdict = "not-ready"
     resume = (
         f"python3 scripts/planning_store.py audit-closure-completeness --prd-unit {snap.get('prdUnitId', prd_unit_id)}"
         if open_remaining
@@ -3937,8 +3980,9 @@ def audit_closure_completeness(
         "prdUnitId": snap.get("prdUnitId", prd_unit_id),
         "considered": considered,
         "closed": sorted(closed_ids),
-        "skipped": skipped,
+        "skipped": skipped + list(snap.get("skipped") or []),
         "openRemaining": open_remaining,
+        "absorbedUnits": sorted(expected_gaps),
         "planningIssues": snap.get("planningIssues") or [],
         "tasksResolution": tasks_note,
         "resumeCommand": resume,
