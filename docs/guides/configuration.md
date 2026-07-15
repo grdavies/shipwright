@@ -40,6 +40,25 @@ Canonical opt-out: `review.provider: "none"`. Do not use `review.enabled: false`
 | stop | `stop` | Halt after frozen tasks (print-only); print docs-only seed command onto `<type>/<slug>` and `/sw-deliver run <frozen-tasks>` |
 | auto | `auto` | Seed frozen spec onto `<type>/<slug>` and dispatch `/sw-deliver run <frozen-tasks>` without a second prompt |
 
+
+### Greenfield init posture (PRD 069 R10)
+
+`/sw-init` and `python3 scripts/sw-configure.py write-draft` seed **seven** recommended keys for
+hands-off deliver on greenfield repos. Schema defaults and write-draft stay aligned; doctor surfaces
+drift on re-run and **never silently overwrites** explicit operator values without consent.
+
+| Key | Greenfield default | Role |
+|-----|-------------------|------|
+| `orchestration.planPolicy` | `proposed` | Agent may propose phase step plans on `/sw-deliver` within kernel envelope |
+| `delegation.mode` | `heuristic` | Documented inline heuristics for small steps; non-trivial Tasks stay bound |
+| `planning.autonomy` | `full-conductor` | Bounded auto-absorb for gap/absorption-class planning decisions |
+| `deliver.autonomy.mode` | `autonomous` | Minimal legitimate-halt set through terminal merge gate |
+| `deliver.loop.drainMechanical` | `true` | Deliver-loop drains mechanical actions in-process |
+| `inefficiency.enabled` | `true` | Process inefficiency scanner on deliver/retro surfaces |
+| `execute.enabled` | `true` | Execute-tier sub-task fan-out inside `/sw-ship --phase-mode` |
+
+Tighten to `bind-only`, `canonical`, or `maintenance-only` when you need stricter ceremony.
+
 ### Step 4 — Guardrails
 
 | Setting | Default | Meaning |
@@ -469,7 +488,7 @@ scheduler confirm when a lower-priority unit is selected under `maintenance-only
 
 | Key | Values | Meaning |
 |-----|--------|---------|
-| `planning.autonomy` | `maintenance-only` (default) \| `full-conductor` | Mechanical reconciler/INDEX `derived` runs without prompts; pull-in, amendments, priority changes are proposed and human-confirmed by default |
+| `planning.autonomy` | `full-conductor` (greenfield default) \| `maintenance-only` | `full-conductor` elevates gap/absorption-class decisions under bounded limits; `maintenance-only` gates content decisions |
 | `planning.fullConductor.confidenceThreshold` | number (default `0.85`) | Minimum edge confidence before auto-absorb under `full-conductor` |
 | `planning.fullConductor.mutationBudget` | integer (default `10`) | Per-session autonomous mutation cap → legitimate halt `planning-mutation-budget` |
 | `planning.fullConductor.undoWindowSeconds` | integer (default `3600`) | Reversible undo window before reconciler materializes absorption |
@@ -485,13 +504,12 @@ Fixture suite: `python3 scripts/test/run_planning_035_doc_impact_fixtures.py` (`
 
 | Value | Default | Meaning |
 |-------|---------|---------|
-| `canonical` | **yes** | Byte-identical to pre-022 behavior; hardcoded chains and plan-time waves only |
-| `proposed` | no | Agent may propose phase step plans and wave batching within guideline latitude; validated by `wave.py plan validate` |
+| `proposed` | **yes (greenfield)** | Agent may propose phase step plans and wave batching within guideline latitude; validated by `wave.py plan validate` |
+| `canonical` | no | Byte-identical to pre-022 behavior; hardcoded chains and plan-time waves only |
 
 - **Kill-switch:** per-repo instant revert to canonical behavior; composes orthogonally with
  `deliver.autonomy.mode` and `deliver.phaseAckCadence`.
-- **Seeding:** `/sw-init` writes `orchestration.planPolicy: canonical`; doctor surfaces current vs default
- and never overwrites an explicit `proposed` without confirm.
+- **Seeding:** `/sw-init` writes `orchestration.planPolicy: proposed` on greenfield; doctor surfaces current vs schema default and never overwrites explicit values without confirm.
 - **Resume:** runs honor the **recorded** `planPolicy` on persisted plans over live config; re-validated against
  the current kernel envelope on resume (fail-closed).
 - **Default canonical:** nothing observable changes until you set `proposed` **and** pass the PRD-023
@@ -586,7 +604,7 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `checks.neutralAllowlist` | Check names that stay blocking even if neutral |
 | `guardrails.enforceBeforeSubmit` | Memory guardrails run before prompts submit |
 | `guardrails.requireRuleClass` | Require allowlisted rules before prompts proceed |
-| `planning.autonomy` | `maintenance-only` (default) \| `full-conductor` — planning posture |
+| `planning.autonomy` | `full-conductor` (greenfield default) \| `maintenance-only` — planning posture |
 | `planning.fullConductor.*` | confidence/mutation/undo knobs under `full-conductor` opt-in |
 | `orchestration.planPolicy` | `canonical` (default) \| `proposed` — agent plan proposals vs hardcoded chains; kill-switch |
 | `intraPhase.parallelBudget` | Max concurrent intra-phase Task workers per phase (default **2**) |
@@ -873,11 +891,11 @@ backward-compatible defaults from the latest corpus audit.
 
 ## Self-improving loop — inefficiency scanner
 
-Opt-in process inefficiency detection. Default **disabled** (`inefficiency.enabled: false`).
+Process inefficiency detection. Greenfield default **enabled** (`inefficiency.enabled: true`); opt out by setting `false`.
 
 | Key | Default | Meaning |
 |-----|---------|---------|
-| `inefficiency.enabled` | `false` | Run scanner on deliver/retro surfaces |
+| `inefficiency.enabled` | `true` (greenfield) | Run scanner on deliver/retro surfaces |
 | `inefficiency.thresholds.slowTestSeconds` | `30` | Flag slow per-test durations (JUnit XML when present) |
 | `inefficiency.thresholds.slowCiJobSeconds` | `300` | Flag slow CI jobs (`.cursor/sw-ci-timing.json` or gate `checkDurations`) |
 | `inefficiency.allowlist.manualSteps` | `[]` | Manual commands excluded from repeated-step detection |
@@ -957,6 +975,5 @@ Relationship to inline work:
 - Agent implementation/review work still goes through dispatch binding when a Task is spawned.
 - Intensity directives remain prompt-literal; model tiers resolve through `models.tiers` / resolve-model-tier.
 
-If unsure, keep the `/sw-init` default and tighten to `bind-only` only when you need fail-closed binding for
-every spawn.
+Greenfield `/sw-init` seeds `heuristic`. Tighten to `bind-only` when you need fail-closed binding for every spawn.
 

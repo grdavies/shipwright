@@ -348,6 +348,23 @@ may gain `prd:` forward links. `/sw-freeze` verifies resolvable linkage before f
 **Secret safety:** `scripts/secret-scan.py` runs at every workflow push chokepoint (`git-push.py`);
 range-scoped redaction is required (`scripts/redaction-guard.py` refuses bare-branch history rewrite).
 
+
+### Terminal ship-run chain (`ship run`)
+
+After all phase PRs merge into the integration branch, the supervised terminal checkpoint runs
+`python3 scripts/wave_terminal.py ship run` (prepare → push → bounded **`watch-ci`** → stabilize) without
+exiting inside prepare/retro helpers (PRD 069 R1). Bounded polling honors `checks.watch.maxWaitMinutes`;
+single-shot `check-gate` is dry-run/test only.
+
+Phase-mode `/sw-ship` uses the same durable `ship_loop.py` driver: mechanical steps advance in-process;
+`sw-watch-ci` polls check-gate with backoff (PRD 026 R12).
+
+### gap-check write before merge-ready-green
+
+Before publishing `merge-ready-green` status, run gap-check and **write** durable status through
+`python3 scripts/gap-check-gate.py write` (or `status_integrity.py write`). Skipping the write leaves
+terminal status fail-closed (PRD 069 R3/R12).
+
 ### `/sw-ship` — single-phase loop (manual / Quick tier)
 
 Used directly for **Quick-tier** work (no frozen task list) or when debugging a single phase. When
