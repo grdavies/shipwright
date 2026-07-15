@@ -62,7 +62,7 @@ import json, sys
 for path in sys.argv[1:]:
     schema = json.load(open(path))
     mode = schema["properties"]["delegation"]["properties"]["mode"]
-    assert mode["default"] == "bind-only"
+    assert mode["default"] == "heuristic"
     assert set(mode["enum"]) == {"bind-only", "heuristic", "default"}
 PY
 then

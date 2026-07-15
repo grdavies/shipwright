@@ -103,13 +103,13 @@ root = Path(sys.argv[1])
 for rel in (".sw/config.schema.json", "core/sw-reference/config.schema.json"):
     s = json.loads((root / rel).read_text())
     pa = s["properties"]["planning"]["properties"]["autonomy"]
-    assert pa["default"] == "maintenance-only"
+    assert pa["default"] == "full-conductor"
     assert set(pa["enum"]) == {"maintenance-only", "full-conductor"}
     fc = s["properties"]["planning"]["properties"]["fullConductor"]["properties"]
     assert "mutationBudget" in fc
 for rel in (".sw/workflow.config.example.json", "core/sw-reference/workflow.config.example.json"):
     wf = json.loads((root / rel).read_text())
-    assert wf["planning"]["autonomy"] == "maintenance-only"
+    assert wf["planning"]["autonomy"] == "full-conductor"
     assert "fullConductor" in wf["planning"]
 PY
 
