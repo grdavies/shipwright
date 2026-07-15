@@ -2,6 +2,7 @@
 """Terminal PR gate, idempotent resume, and phase ack cadence for /sw-deliver (R22–R24, R29–R30, R43, R56)."""
 from __future__ import annotations
 
+import contextvars
 import json
 import os
 import re
@@ -9,6 +10,8 @@ import subprocess
 
 from _sw import interpreter
 import sys
+from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -32,7 +35,40 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+@dataclass(frozen=True)
+class TerminalOutcome:
+    """Library result for terminal helpers — no process exit (PRD 069 R1)."""
+
+    payload: dict[str, Any]
+    exit_code: int = 0
+
+
+class TerminalExit(Exception):
+    """Raised from emit/fail when terminal_library_mode is active."""
+
+    def __init__(self, outcome: TerminalOutcome) -> None:
+        self.outcome = outcome
+        super().__init__(outcome.payload.get("error") or outcome.payload.get("verdict"))
+
+
+_terminal_library_mode: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "_terminal_library_mode", default=False
+)
+
+
+@contextmanager
+def terminal_library_mode():
+    """Route emit/fail to TerminalOutcome instead of sys.exit."""
+    token = _terminal_library_mode.set(True)
+    try:
+        yield
+    finally:
+        _terminal_library_mode.reset(token)
+
+
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
+    if _terminal_library_mode.get():
+        raise TerminalExit(TerminalOutcome(obj, exit_code))
     print(json.dumps(obj, ensure_ascii=False, indent=2))
     sys.exit(exit_code)
 
@@ -40,6 +76,10 @@ def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
 def fail(error: Any, exit_code: int = 2, **extra: Any) -> None:
     extra.pop("error", None)
     emit({"verdict": "fail", "error": str(error), **extra}, exit_code)
+
+
+def emit_outcome(outcome: TerminalOutcome) -> None:
+    emit(outcome.payload, outcome.exit_code)
 
 
 _H1_HEADING_RE = re.compile(r"^#\s+(.+?)\s*$")
@@ -506,10 +546,14 @@ def cmd_terminal_checkpoint(root: Path, args: list[str]) -> None:
                 }
             )
         if needs_retro:
-            cmd_terminal_retro_run(root, ["--force"])
+            retro = run_terminal_retro(root, ["--force"])
+            if retro.exit_code != 0:
+                emit_outcome(retro)
             state = load_state(root)
         if needs_ship:
-            cmd_terminal_ship_run(root, ["--force"])
+            ship = run_terminal_ship_run(root, ["--force"])
+            if ship.exit_code != 0:
+                emit_outcome(ship)
         state = load_state(root)
         state["terminalCheckpointCompleted"] = True
         save_state(root, state)
@@ -555,6 +599,11 @@ def cmd_terminal_autonomy(root: Path, _args: list[str]) -> None:
 
 
 def cmd_terminal_retro_run(root: Path, args: list[str]) -> None:
+    """CLI wrapper — emit+exit after library helper (PRD 069 R1)."""
+    emit_outcome(run_terminal_retro(root, args))
+
+
+def _cmd_terminal_retro_run_body(root: Path, args: list[str]) -> None:
     """Pre-merge retrospective chain before terminal PR (PRD 013 A1 R20/R21)."""
     dry_run = has_flag(args, "--dry-run")
     state = load_state(root)
@@ -642,13 +691,8 @@ def cmd_terminal_retro_run(root: Path, args: list[str]) -> None:
 
 
 def cmd_terminal_ship_run(root: Path, args: list[str]) -> None:
-    """Autonomous terminal PR → push → gate watch → stabilize budget (R22/R23)."""
-    dry_run = has_flag(args, "--dry-run")
-    phase_env = clear_phase_env()
-    try:
-        _cmd_terminal_ship_run_body(root, args, dry_run=dry_run)
-    finally:
-        restore_phase_env(phase_env)
+    """CLI wrapper — emit+exit after library helper (PRD 069 R1)."""
+    emit_outcome(run_terminal_ship_run(root, args))
 
 
 def _cmd_terminal_ship_run_body(root: Path, args: list[str], *, dry_run: bool) -> None:
@@ -669,7 +713,9 @@ def _cmd_terminal_ship_run_body(root: Path, args: list[str], *, dry_run: bool) -
         fail("terminal-ship requires all phases green-merged", exit_code=20)
     compound = state.get("compoundShip") or {}
     if not compound.get("premergeDone"):
-        cmd_terminal_retro_run(root, ["--force"])
+        retro = run_terminal_retro(root, ["--force"])
+        if retro.exit_code != 0:
+            emit_outcome(retro)
         state = load_state(root)
     target = (state.get("target") or {}).get("branch")
     if not target:
@@ -685,7 +731,9 @@ def _cmd_terminal_ship_run_body(root: Path, args: list[str], *, dry_run: bool) -
             }
         )
     if is_local_host_mode(root):
-        cmd_terminal_pr_prepare(root, [])
+        prep = run_terminal_pr_prepare(root, [], dry_run=False)
+        if prep.exit_code != 0:
+            emit_outcome(prep)
         gate_ec, gate = run_check_gate(root, None)
         state = load_state(root)
         state["terminalShip"] = {
@@ -699,7 +747,9 @@ def _cmd_terminal_ship_run_body(root: Path, args: list[str], *, dry_run: bool) -
         if payload["verdict"] == "pass":
             terminal_gap_capture_best_effort(root, verdict="pass")
         emit(payload, 0 if payload["verdict"] == "pass" else 10)
-    cmd_terminal_pr_prepare(root, [])
+    prep = run_terminal_pr_prepare(root, [], dry_run=False)
+    if prep.exit_code != 0:
+        emit_outcome(prep)
     state = load_state(root)
     top = git_top(root)
     host_remote = remote_name(load_workflow_config(root))
@@ -718,7 +768,7 @@ def _cmd_terminal_ship_run_body(root: Path, args: list[str], *, dry_run: bool) -
     pr_str = str(pr)
     max_attempts = remediation_max_attempts(root)
     terminal_attempts = int((state.get("remediationAttempts") or {}).get("terminal", 0))
-    gate_ec, gate = run_check_gate(root, pr_str)
+    gate_ec, gate = run_terminal_gate_watch(root, pr_str)
     ready = gate_ec == 0 and gate.get("verdict") == "green"
     state["terminalShip"] = {
         "status": "gate-green" if ready else "watching",
@@ -1203,6 +1253,55 @@ def run_check_gate(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
     return proc.returncode, gate
 
 
+def run_terminal_gate_watch(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
+    """Bounded watch-ci for terminal ship-run gate (PRD 069 R1)."""
+    from watch_ci_lib import watch_ci
+
+    watched = watch_ci(root, pr)
+    gate = watched.get("gate") if isinstance(watched.get("gate"), dict) else {}
+    ec = int(watched.get("gateExitCode", 30))
+    verdict = watched.get("verdict")
+    if verdict and gate.get("verdict") != verdict:
+        gate = {**gate, "verdict": verdict}
+    gate = {
+        **gate,
+        "watchMode": watched.get("mode"),
+        "ciWatch": watched.get("ciWatch"),
+        "timedOut": watched.get("timedOut"),
+    }
+    return ec, gate
+
+
+def _terminal_library_call(fn, *args, **kwargs) -> TerminalOutcome:
+    with terminal_library_mode():
+        try:
+            fn(*args, **kwargs)
+        except TerminalExit as exc:
+            return exc.outcome
+    return TerminalOutcome({"verdict": "fail", "error": "terminal helper returned without outcome"}, 2)
+
+
+def run_terminal_retro(root: Path, args: list[str]) -> TerminalOutcome:
+    return _terminal_library_call(_cmd_terminal_retro_run_body, root, args)
+
+
+def run_terminal_pr_prepare(
+    root: Path, args: list[str], *, dry_run: bool | None = None
+) -> TerminalOutcome:
+    if dry_run is None:
+        dry_run = has_flag(args, "--dry-run") or os.environ.get("SW_DELIVER_DRY_RUN") == "1"
+    return _terminal_library_call(_cmd_terminal_pr_prepare_body, root, args, dry_run=dry_run)
+
+
+def run_terminal_ship_run(root: Path, args: list[str]) -> TerminalOutcome:
+    dry_run = has_flag(args, "--dry-run")
+    phase_env = clear_phase_env()
+    try:
+        return _terminal_library_call(_cmd_terminal_ship_run_body, root, args, dry_run=dry_run)
+    finally:
+        restore_phase_env(phase_env)
+
+
 def append_log(root: Path, entry: dict[str, Any]) -> None:
     log_path = root / ".cursor" / "sw-deliver-runs" / "run.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1514,9 +1613,10 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run") or os.environ.get("SW_DELIVER_DRY_RUN") == "1"
     phase_env = clear_phase_env()
     try:
-        _cmd_terminal_pr_prepare_body(root, args, dry_run=dry_run)
+        outcome = run_terminal_pr_prepare(root, args, dry_run=dry_run)
     finally:
         restore_phase_env(phase_env)
+    emit_outcome(outcome)
 
 
 def _cmd_terminal_pr_prepare_body(root: Path, args: list[str], *, dry_run: bool) -> None:
