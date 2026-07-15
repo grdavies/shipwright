@@ -57,10 +57,10 @@ __pycache__/
 # Emitter test fixture output (generated locally)
 scripts/test/fixtures/emitter-fixture/out/
 
-# Internal planning artifacts: PRDs + guides tracked; bodies resolved per visibility below.
+# Internal planning artifacts: PRDs materialize to .cursor/planning-materialized/ at deliver entry (PRD 069 R5).
+# Guides remain tracked; other bodies resolved per visibility below.
 docs/*
-!docs/prds/
-!docs/prds/**
+docs/prds/
 !docs/guides/
 !docs/guides/**
 !docs/decisions/
