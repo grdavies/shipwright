@@ -40,6 +40,25 @@ Canonical opt-out: `review.provider: "none"`. Do not use `review.enabled: false`
 | stop | `stop` | Halt after frozen tasks (print-only); print docs-only seed command onto `<type>/<slug>` and `/sw-deliver run <frozen-tasks>` |
 | auto | `auto` | Seed frozen spec onto `<type>/<slug>` and dispatch `/sw-deliver run <frozen-tasks>` without a second prompt |
 
+
+### Greenfield init posture
+
+`/sw-init` and `python3 scripts/sw-configure.py write-draft` seed **seven** recommended keys for
+hands-off deliver on greenfield repos. Schema defaults and write-draft stay aligned; doctor surfaces
+drift on re-run and **never silently overwrites** explicit operator values without consent.
+
+| Key | Greenfield default | Role |
+|-----|-------------------|------|
+| `orchestration.planPolicy` | `proposed` | Agent may propose phase step plans on `/sw-deliver` within kernel envelope |
+| `delegation.mode` | `heuristic` | Documented inline heuristics for small steps; non-trivial Tasks stay bound |
+| `planning.autonomy` | `full-conductor` | Bounded auto-absorb for gap/absorption-class planning decisions |
+| `deliver.autonomy.mode` | `autonomous` | Minimal legitimate-halt set through terminal merge gate |
+| `deliver.loop.drainMechanical` | `true` | Deliver-loop drains mechanical actions in-process |
+| `inefficiency.enabled` | `true` | Process inefficiency scanner on deliver/retro surfaces |
+| `execute.enabled` | `true` | Execute-tier sub-task fan-out inside `/sw-ship --phase-mode` |
+
+Tighten to `bind-only`, `canonical`, or `maintenance-only` when you need stricter ceremony.
+
 ### Step 4 — Guardrails
 
 | Setting | Default | Meaning |
@@ -83,7 +102,7 @@ stamp the resolved concrete `model:` on the Task (do not rely on `model: inherit
 | `deliver.loop.drainMechanical` | `true` | When true, `wave_deliver_loop` drains mechanical actions in-process until `awaitAgent`, `awaitInFlight`, or halt; `false` restores one step per invocation |
 
 Log events (`run.log`) include `elapsedMs` on `driver-transition` and `execute-mechanical` for operator timing
- — numeric only, no secret argv.
+— numeric only, no secret argv.
 
 ### Cleanup autonomy (`cleanup.autonomy`) — /
 
@@ -233,7 +252,7 @@ is byte-identical to today .
 | Key | Values | Meaning |
 | --- | --- | --- |
 | `planning.store.backend` | `issue-store` | Enable issue-backed planning store |
-| `planning.store.issuesProvider` | `github-issues` \| `gitlab-issues` \| `jira` \| `none` | Issues adapter (**independent** of `host.provider`) |
+| `planning.store.issuesProvider` | `github-issues` \| `gitlab-issues` \| `jira` \| `linear` \| `none` | Issues adapter (**independent** of `host.provider`) |
 | `planning.store.projectKey` | string | Project scoping key (`^[a-z][a-z0-9-]*$`) |
 | `planning.store.storeLocation.mode` | `same-repo` \| `separate-project` | Code repo vs shared planning project |
 | `planning.store.storeLocation.owner` / `.repo` | strings | Required for `separate-project` |
@@ -243,15 +262,15 @@ Example (opt-in):
 
 ```json
 {
- "planning": {
- "store": {
- "backend": "issue-store",
- "issuesProvider": "github-issues",
- "projectKey": "my-project",
- "storeLocation": { "mode": "same-repo" },
- "issues": { "tokenEnv": "ISSUES_GITHUB_TOKEN" }
- }
- }
+"planning": {
+"store": {
+"backend": "issue-store",
+"issuesProvider": "github-issues",
+"projectKey": "my-project",
+"storeLocation": { "mode": "same-repo" },
+"issues": { "tokenEnv": "ISSUES_GITHUB_TOKEN" }
+}
+}
 }
 ```
 
@@ -289,26 +308,79 @@ Example (Jira Cloud + separate planning project — typical for Bitbucket code r
 
 ```json
 {
- "planning": {
- "store": {
- "backend": "issue-store",
- "issuesProvider": "jira",
- "projectKey": "my-project",
- "storeLocation": { "mode": "separate-project" },
- "issues": {
- "endpoint": "https://my-org.atlassian.net",
- "flavor": "cloud",
- "tokenEnv": "ISSUES_JIRA_TOKEN",
- "freezeRecordField": "customfield_10042"
- }
- }
- }
+"planning": {
+"store": {
+"backend": "issue-store",
+"issuesProvider": "jira",
+"projectKey": "my-project",
+"storeLocation": { "mode": "separate-project" },
+"issues": {
+"endpoint": "https://my-org.atlassian.net",
+"flavor": "cloud",
+"tokenEnv": "ISSUES_JIRA_TOKEN",
+"freezeRecordField": "customfield_10042"
+}
+}
+}
 }
 ```
 
 Init probes (fail-closed): `python3 scripts/planning_store.py probe-jira-init` — auth, privacy, createmeta, label-write.
 
 See `core/providers/issues/jira.md` for LCD mapping, canonical hash, freeze-decoupling, budget, and lifecycle semantics.
+
+### Linear issue-store
+
+When `planning.store.issuesProvider` is `linear`, configure the Linear adapter keys under
+`planning.store.issues` and optional operator browse projection under `planning.store.operatorProjection.linear`:
+
+| Key | Values | Meaning |
+| --- | --- | --- |
+| `planning.store.issues.teamKey` | string | Human Team key/name (e.g. `ENG`) — preferred operator-facing id |
+| `planning.store.issues.teamId` | string | Linear GraphQL Team id (alternative to `teamKey`) |
+| `planning.store.issues.tokenEnv` | string | Dedicated token env (default `ISSUES_LINEAR_TOKEN`; **not** `host.tokenEnv`) |
+| `planning.store.issues.authMode` | `api-key` (default) \| `oauth` | `api-key` sends `Authorization: <API_KEY>`; `oauth` sends `Authorization: Bearer <ACCESS_TOKEN>` |
+| `planning.store.issues.oauthSharedCiException` | boolean | Explicit exception allowing `authMode: oauth` via shared CI secret |
+| `planning.store.operatorProjection.linear.enabled` | boolean (default `true`) | When `false`, Linear projection browse is skipped |
+| `planning.store.operatorProjection.linear.initiativeSubstitute` | `substitute-views` \| `skip` | Degradation when Initiative workspace capability is absent |
+| `planning.store.operatorProjection.linear.cycleSharingNotice` | boolean (default `true`) | Loud notice when Cycle wave shares cadence with human Milestones |
+| `planning.store.operatorProjection.linear.budget` | object | GraphQL request/complexity budget (`maxCalls`, `maxComplexityPoints`, `maxPaginationDepth`, `cacheTtlSeconds`) |
+
+At least one of `teamKey` or `teamId` is required. Init/probe fails closed on Team mismatch or missing scope.
+Prefer a Team-restricted personal API key for dogfood; OAuth is a documented secondary mode — tokens stay
+operator-local and must not be committed.
+
+Example (Linear + same-repo planning):
+
+```json
+{
+"planning": {
+"store": {
+"backend": "issue-store",
+"issuesProvider": "linear",
+"projectKey": "my-project",
+"storeLocation": { "mode": "same-repo" },
+"issues": {
+"teamKey": "ENG",
+"tokenEnv": "ISSUES_LINEAR_TOKEN",
+"authMode": "api-key"
+},
+"operatorProjection": {
+"linear": {
+"enabled": true,
+"initiativeSubstitute": "substitute-views",
+"cycleSharingNotice": true
+}
+}
+}
+}
+}
+```
+
+Init probes (fail-closed): `python3 scripts/planning_linear_client.py . probe-team` — Team scope and auth;
+`python3 scripts/planning_linear_client.py . docs-currency-gate` — operator-guide inventory before terminal merge.
+
+See `core/providers/issues/linear.md` for LCD verbs, stage-1 dogfood checklist, lock/overflow, and OAuth posture.
 
 See `core/providers/planning-store/issue-store.md` and `core/providers/issues/CAPABILITIES.md`.
 
@@ -327,10 +399,10 @@ Example (GitHub milestones):
 
 ```json
 {
- "planning": {
- "store": { "backend": "issue-store", "issuesProvider": "github-issues", "projectKey": "my-project" },
- "releaseGrouping": { "mode": "milestone" }
- }
+"planning": {
+"store": { "backend": "issue-store", "issuesProvider": "github-issues", "projectKey": "my-project" },
+"releaseGrouping": { "mode": "milestone" }
+}
 }
 ```
 
@@ -364,21 +436,21 @@ Example:
 
 ```json
 {
- "planning": {
- "store": {
- "backend": "issue-store",
- "issuesProvider": "github-issues",
- "projectKey": "my-project",
- "requestBudget": {
- "github-issues": {
- "maxCalls": 750,
- "maxPaginationDepth": 10,
- "alertThreshold": 0.8,
- "cacheTtlSeconds": 300
- }
- }
- }
- }
+"planning": {
+"store": {
+"backend": "issue-store",
+"issuesProvider": "github-issues",
+"projectKey": "my-project",
+"requestBudget": {
+"github-issues": {
+"maxCalls": 750,
+"maxPaginationDepth": 10,
+"alertThreshold": 0.8,
+"cacheTtlSeconds": 300
+}
+}
+}
+}
 }
 ```
 
@@ -394,10 +466,10 @@ the **cutover gate** — is derived by `scripts/planning_cutover.py`'s `load_cut
 computed entirely from **committed state**, not from a tracked file:
 
 - **Effective backend** — `planning.store.backend` in `.cursor/workflow.config.json`, resolved via
- `planning_store.resolve_effective_backend` (provider support + host reachability).
+`planning_store.resolve_effective_backend` (provider support + host reachability).
 - **Structural marker** — whether the local file-store planning tree (`docs/planning/<type>/<unit-id>/`)
- still holds tracked unit bodies on disk. If bodies are still present, the gate stays on `file` even when
- the committed backend says `issue-store`, so a mid-flight migration never silently drops units.
+still holds tracked unit bodies on disk. If bodies are still present, the gate stays on `file` even when
+the committed backend says `issue-store`, so a mid-flight migration never silently drops units.
 
 When the effective backend is `issue-store` and no tracked file-store bodies remain, `discoverSource` and
 `structural` both resolve to `issue`. Otherwise they resolve to `file`. No new tracked file is introduced
@@ -416,7 +488,7 @@ scheduler confirm when a lower-priority unit is selected under `maintenance-only
 
 | Key | Values | Meaning |
 |-----|--------|---------|
-| `planning.autonomy` | `maintenance-only` (default) \| `full-conductor` | Mechanical reconciler/INDEX `derived` runs without prompts; pull-in, amendments, priority changes are proposed and human-confirmed by default |
+| `planning.autonomy` | `full-conductor` (greenfield default) \| `maintenance-only` | `full-conductor` elevates gap/absorption-class decisions under bounded limits; `maintenance-only` gates content decisions |
 | `planning.fullConductor.confidenceThreshold` | number (default `0.85`) | Minimum edge confidence before auto-absorb under `full-conductor` |
 | `planning.fullConductor.mutationBudget` | integer (default `10`) | Per-session autonomous mutation cap → legitimate halt `planning-mutation-budget` |
 | `planning.fullConductor.undoWindowSeconds` | integer (default `3600`) | Reversible undo window before reconciler materializes absorption |
@@ -432,19 +504,18 @@ Fixture suite: `python3 scripts/test/run_planning_035_doc_impact_fixtures.py` (`
 
 | Value | Default | Meaning |
 |-------|---------|---------|
-| `canonical` | **yes** | Byte-identical to pre-022 behavior; hardcoded chains and plan-time waves only |
-| `proposed` | no | Agent may propose phase step plans and wave batching within guideline latitude; validated by `wave.py plan validate` |
+| `proposed` | **yes (greenfield)** | Agent may propose phase step plans and wave batching within guideline latitude; validated by `wave.py plan validate` |
+| `canonical` | no | Byte-identical to pre-022 behavior; hardcoded chains and plan-time waves only |
 
 - **Kill-switch:** per-repo instant revert to canonical behavior; composes orthogonally with
- `deliver.autonomy.mode` and `deliver.phaseAckCadence`.
-- **Seeding:** `/sw-init` writes `orchestration.planPolicy: canonical`; doctor surfaces current vs default
- and never overwrites an explicit `proposed` without confirm.
+`deliver.autonomy.mode` and `deliver.phaseAckCadence`.
+- **Seeding:** `/sw-init` writes `orchestration.planPolicy: proposed` on greenfield; doctor surfaces current vs schema default and never overwrites explicit values without confirm.
 - **Resume:** runs honor the **recorded** `planPolicy` on persisted plans over live config; re-validated against
- the current kernel envelope on resume (fail-closed).
+the current kernel envelope on resume (fail-closed).
 - **Default canonical:** nothing observable changes until you set `proposed` **and** pass the PRD-023
- pilot guards (TR0 gate, per-run acknowledgement, safe target branch). `/sw-deliver` is the live pilot;
- PRD-024 fans out to other orchestrators. Call-site map:
- `scripts/test/fixtures/planning-post-migration/022-kernel-classification-and-plan-validation/call-site-map.md`.
+pilot guards (TR0 gate, per-run acknowledgement, safe target branch). `/sw-deliver` is the live pilot;
+PRD-024 fans out to other orchestrators. Call-site map:
+`scripts/test/fixtures/planning-post-migration/022-kernel-classification-and-plan-validation/call-site-map.md`.
 
 ** fan-out (all four orchestrators):** `/sw-deliver`, `/sw-debug`, `/sw-doc`, and `/sw-feedback`
 read `orchestration.planPolicy` (default `canonical`). Enabling `proposed` on non-deliver orchestrators
@@ -533,7 +604,7 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `checks.neutralAllowlist` | Check names that stay blocking even if neutral |
 | `guardrails.enforceBeforeSubmit` | Memory guardrails run before prompts submit |
 | `guardrails.requireRuleClass` | Require allowlisted rules before prompts proceed |
-| `planning.autonomy` | `maintenance-only` (default) \| `full-conductor` — planning posture |
+| `planning.autonomy` | `full-conductor` (greenfield default) \| `maintenance-only` — planning posture |
 | `planning.fullConductor.*` | confidence/mutation/undo knobs under `full-conductor` opt-in |
 | `orchestration.planPolicy` | `canonical` (default) \| `proposed` — agent plan proposals vs hardcoded chains; kill-switch |
 | `intraPhase.parallelBudget` | Max concurrent intra-phase Task workers per phase (default **2**) |
@@ -687,9 +758,9 @@ surfaces are **projections** of registry lanes — not independent hand lists:
 
 ```bash
 python3 scripts/generate-pr-test-plan-ci-workflow.py \
- core/sw-reference/pr-test-plan.manifest.json \
- .github/workflows/pr-test-plan-ci.yml \
- .
+core/sw-reference/pr-test-plan.manifest.json \
+.github/workflows/pr-test-plan-ci.yml \
+.
 ```
 
 Local `verify.test` runs the PR manifest set via `scripts/test/run_pr_test_plan_manifest.py`; CI runs the
@@ -783,7 +854,7 @@ Autonomous `/sw-doc` → `/sw-tasks` dispatch paths refuse override without expl
 
 ## Task phase sizing (`tasks.sizing`)
 
- adds a deterministic phase-sizing heuristic for `/sw-tasks` and advisory split suggestions.
+adds a deterministic phase-sizing heuristic for `/sw-tasks` and advisory split suggestions.
 Defaults are **calibrated from the frozen task-list corpus** (SC6) — not author-tuned.
 
 Re-run calibration (read-only):
@@ -820,11 +891,11 @@ backward-compatible defaults from the latest corpus audit.
 
 ## Self-improving loop — inefficiency scanner
 
-Opt-in process inefficiency detection. Default **disabled** (`inefficiency.enabled: false`).
+Process inefficiency detection. Greenfield default **enabled** (`inefficiency.enabled: true`); opt out by setting `false`.
 
 | Key | Default | Meaning |
 |-----|---------|---------|
-| `inefficiency.enabled` | `false` | Run scanner on deliver/retro surfaces |
+| `inefficiency.enabled` | `true` (greenfield) | Run scanner on deliver/retro surfaces |
 | `inefficiency.thresholds.slowTestSeconds` | `30` | Flag slow per-test durations (JUnit XML when present) |
 | `inefficiency.thresholds.slowCiJobSeconds` | `300` | Flag slow CI jobs (`.cursor/sw-ci-timing.json` or gate `checkDurations`) |
 | `inefficiency.allowlist.manualSteps` | `[]` | Manual commands excluded from repeated-step detection |
@@ -900,10 +971,9 @@ intensity (via dispatch preflight). It sits alongside other `/sw-init` knobs in 
 Relationship to inline work:
 
 - Conductor-owned mechanical steps (deliver-loop state, merge bookkeeping, halt reports) stay inline per the
-  command allowlist—`delegation.mode` does not force those onto Tasks.
+command allowlist—`delegation.mode` does not force those onto Tasks.
 - Agent implementation/review work still goes through dispatch binding when a Task is spawned.
 - Intensity directives remain prompt-literal; model tiers resolve through `models.tiers` / resolve-model-tier.
 
-If unsure, keep the `/sw-init` default and tighten to `bind-only` only when you need fail-closed binding for
-every spawn.
+Greenfield `/sw-init` seeds `heuristic`. Tighten to `bind-only` when you need fail-closed binding for every spawn.
 

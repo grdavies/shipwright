@@ -72,6 +72,7 @@ from wave_state import (
     save_deliver_state,
     scoped_paths,
     target_branch_from_state,
+    ensure_canonical_state_synced,
     sync_canonical_state_read,
 )
 
@@ -913,8 +914,8 @@ def save_state(root: Path, state: dict[str, Any]) -> None:
 
 
 def sync_terminal_state(root: Path, state: dict[str, Any]) -> dict[str, Any]:
-    """Canonical repo-root state read before terminal deliver actions (PRD 049 R4)."""
-    synced = sync_canonical_state_read(root, state_hint=state)
+    """Canonical repo-root state read before terminal deliver actions (PRD 049 R4, 069 R3)."""
+    synced = ensure_canonical_state_synced(root, state_hint=state)
     if synced:
         state.clear()
         state.update(synced)
@@ -2819,6 +2820,16 @@ def _execute_mechanical_inner(
                     "retry via /sw-deliver run after fixing INDEX currency"
                 ),
             )
+        from publish_surface_audit import emit_publish_surface_audit
+
+        publish_audit = emit_publish_surface_audit(root, write=True)
+        if publish_audit.get("verdict") == "not-ready":
+            fail_payload(
+                publish_audit,
+                "publish-surface audit not ready",
+                20,
+                remediation=str(publish_audit.get("resumeCommand") or ""),
+            )
         from host_lib import load_workflow_config
         from planning_store import close_delivery_units
         import planning_index_issue as pii
@@ -2832,7 +2843,7 @@ def _execute_mechanical_inner(
         if prd_unit_id:
             from planning_store import audit_closure_completeness, doctor_absorb_pollution
 
-            doctor = doctor_absorb_pollution(root, cfg)
+            doctor = doctor_absorb_pollution(root, cfg, prd_unit_id=prd_unit_id)
             if doctor.get("verdict") == "fail":
                 fail_payload(
                     doctor,
@@ -2881,6 +2892,7 @@ def _execute_mechanical_inner(
         result: dict[str, Any] = {
             "executed": "finalize-completion",
             "cleanupSuggestion": data.get("cleanupSuggestion"),
+            "publishSurfaceAudit": publish_audit,
             **data,
         }
         if closure is not None:

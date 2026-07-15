@@ -477,6 +477,15 @@
 * merge phase wave-c-docs-craft-badge-token-strip-operator-docs-r10-r12-small into feat/post-067-dogfood-hardening (4377e4a) <!-- sw-deliver:wave-c-docs-craft-badge-token-strip-operator-docs-r10-r12-small -->
 * merge phase wave-a-merge-timeout-merge-run-next-timeout-and-recovery-r5-medium into feat/post-067-dogfood-hardening (d07a2c1) <!-- sw-deliver:wave-a-merge-timeout-merge-run-next-timeout-and-recovery-r5-medium -->
 * merge phase wave-b-absorb-closure-absorb-linkage-close-audit-r6-r9-large into feat/post-067-dogfood-hardening (eabeb03) <!-- sw-deliver:wave-b-absorb-closure-absorb-linkage-close-audit-r6-r9-large -->
+* merge phase wave-a-ship-run-chain-terminal-ship-run-non-exiting-prepare-watch-ci-r1-medium into feat/post-068-surface-hygiene-deliver-ergonomics (2358dc8) <!-- sw-deliver:wave-a-ship-run-chain-terminal-ship-run-non-exiting-prepare-watch-ci-r1-medium -->
+* merge phase wave-c-github-release-badge-shields-io-github-release-badge-sot-r7-small into feat/post-068-surface-hygiene-deliver-ergonomics (cd0ed24) <!-- sw-deliver:wave-c-github-release-badge-shields-io-github-release-badge-sot-r7-small -->
+* merge phase wave-a-absorb-doctor-scope-scope-absorb-pollution-doctor-r2-small into feat/post-068-surface-hygiene-deliver-ergonomics (5af3622) <!-- sw-deliver:wave-a-absorb-doctor-scope-scope-absorb-pollution-doctor-r2-small -->
+* merge phase wave-a-gate-ergonomics-status-writes-and-orch-primary-skew-repair-r3-medium into feat/post-068-surface-hygiene-deliver-ergonomics (729b09e) <!-- sw-deliver:wave-a-gate-ergonomics-status-writes-and-orch-primary-skew-repair-r3-medium -->
+* merge phase wave-b-local-only-docs-stop-publishing-learnings-decision-bodies-r4-small into feat/post-068-surface-hygiene-deliver-ergonomics (0949663) <!-- sw-deliver:wave-b-local-only-docs-stop-publishing-learnings-decision-bodies-r4-small -->
+* merge phase wave-c-linear-sw-note-docs-document-linear-and-sw-note-r8-r9-small into feat/post-068-surface-hygiene-deliver-ergonomics (15718d1) <!-- sw-deliver:wave-c-linear-sw-note-docs-document-linear-and-sw-note-r8-r9-small -->
+* merge phase wave-b-remove-docs-prds-drop-public-docs-prds-materialize-fail-closed-r5-medium into feat/post-068-surface-hygiene-deliver-ergonomics (a792e58) <!-- sw-deliver:wave-b-remove-docs-prds-drop-public-docs-prds-materialize-fail-closed-r5-medium -->
+* merge phase wave-b-publish-surface-audit-verified-closed-publish-surface-checklist-r6-medium into feat/post-068-surface-hygiene-deliver-ergonomics (153d9f5) <!-- sw-deliver:wave-b-publish-surface-audit-verified-closed-publish-surface-checklist-r6-medium -->
+* merge phase wave-c-init-defaults-docs-init-posture-seeds-r12-docs-r10-r12-medium into feat/post-068-surface-hygiene-deliver-ergonomics (6a62137) <!-- sw-deliver:wave-c-init-defaults-docs-init-posture-seeds-r12-docs-r10-r12-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

@@ -131,7 +131,7 @@ else
   echo "$OUT" >&2
   bad "materialize-provision-backend-pinned:provision"
 fi
-if OUT=$(python3 "$PY" --root "$ROOT" validate-pin 2>&1); then
+if OUT=$(python3 "$PY" --root "$ROOT" validate-pin --target "$TARGET_BRANCH" 2>&1); then
   if echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin).get('verdict')=='ok'"; then
     ok "materialize-provision-backend-pinned:validate-pin"
   else
@@ -153,7 +153,7 @@ store["backend"] = "memory"
 p.parent.mkdir(parents=True, exist_ok=True)
 p.write_text(json.dumps(cfg, indent=2) + "\n")
 PY
-if OUT=$(python3 "$PY" --root "$ROOT" validate-pin 2>&1); then
+if OUT=$(python3 "$PY" --root "$ROOT" validate-pin --target "$TARGET_BRANCH" 2>&1); then
   if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('verdict')=='fail' and d.get('halt')=='backend-swap'"; then
     ok "materialize-provision-backend-pinned:backend-swap-halt"
   else

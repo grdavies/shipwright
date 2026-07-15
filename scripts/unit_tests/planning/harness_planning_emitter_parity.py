@@ -67,8 +67,9 @@ from pathlib import Path
 for p in (Path('$ROOT/.sw/config.schema.json'), Path('$ROOT/core/sw-reference/config.schema.json')):
     s=json.loads(p.read_text())
     pa=s['properties']['planning']['properties']['autonomy']
-    assert pa['default']=='maintenance-only'
+    assert pa['default']=='full-conductor'
     assert 'full-conductor' in pa['enum']
+    assert 'maintenance-only' in pa['enum']
 " && ok "emitter-parity-planning-autonomy: schema stub" || bad "emitter-parity-planning-autonomy: schema stub"
 
 $GEN generate --all >/dev/null 2>&1 || bad "emitter-parity-planning-autonomy: generate failed"

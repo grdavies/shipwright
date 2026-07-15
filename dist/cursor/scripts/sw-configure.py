@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from _sw.cli import run_module_main
+from init_posture_defaults import greenfield_posture_patch
 
 
 def _plugin_root() -> Path:
@@ -89,19 +90,16 @@ def cmd_write_draft(root: Path, *, accept: bool, write_verify: bool, config: str
     )
     draft: dict = {
         "doc": {"afterTasks": "confirm"},
-        "delegation": {"mode": "bind-only"},
-        "orchestration": {"planPolicy": "canonical"},
-        "deliver": {"autonomy": {"mode": "autonomous", "maxRunMinutes": 1440, "maxIterations": 500}},
         "compound": {"autonomy": "supervised"},
         "guardrails": {"enforceBeforeSubmit": True, "requireRuleClass": False},
         "review": {"provider": "none"},
         "memory": {"provider": "in-repo", "sourceOfTruth": "auto"},
-        "planning": {"store": {"backend": "in-repo-public"}},
         "configuredWith": {
             "shipwrightVersion": shipwright_version(root),
             "schemaVersion": schema_version(root),
         },
     }
+    draft.update(greenfield_posture_patch())
     comm_defaults_path = root / "core/sw-reference/communication-routing.defaults.json"
     if comm_defaults_path.is_file():
         try:

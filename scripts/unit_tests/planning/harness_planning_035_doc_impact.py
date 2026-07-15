@@ -99,8 +99,8 @@ check "doc-currency-035:conductor-mutation-budget" "$CONDUCTOR" "planning-mutati
 check "doc-currency-035:conductor-no-nested" "$CONDUCTOR" "No nested dispatch"
 
 check_doc "config-schema" "$SCHEMA" 'planning\.autonomy' 'fullConductor' 'maintenance-only'
-check_doc "workflow-example-sw" "$WF_SW" '"autonomy"' 'maintenance-only' 'fullConductor'
-check_doc "workflow-example-core" "$WF_CORE" '"autonomy"' 'maintenance-only' 'fullConductor'
+check_doc "workflow-example-sw" "$WF_SW" '"autonomy"' 'full-conductor' 'fullConductor'
+check_doc "workflow-example-core" "$WF_CORE" '"autonomy"' 'full-conductor' 'fullConductor'
 check_doc "configuration-guide" "$CONFIG_GUIDE" 'Planning autonomy' 'planning\.autonomy' 'full-conductor'
 check_doc "workflows-guide" "$WORKFLOWS" 'Planning autonomy and two-track edits' 'confirm-list' 'docs-edit-route'
 check_doc "commands-guide" "$COMMANDS" 'Planning surface' 'planning-related[.]py' 'planning_gap_capture'

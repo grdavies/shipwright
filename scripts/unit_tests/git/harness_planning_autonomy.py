@@ -75,7 +75,7 @@ except ImportError:
 schema = json.loads(Path(sys.argv[1]).read_text())
 planning = schema["properties"]["planning"]["properties"]
 autonomy = planning["autonomy"]
-assert autonomy["default"] == "maintenance-only"
+assert autonomy["default"] == "full-conductor"
 assert set(autonomy["enum"]) == {"maintenance-only", "full-conductor"}
 fc = planning["fullConductor"]["properties"]
 assert fc["mutationBudget"]["default"] == 5
@@ -97,7 +97,11 @@ then ok "planning-autonomy-config-enum"; else bad "planning-autonomy-config-enum
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-mk_repo "$TMP/maint"
+MAINT_CFG=$(mktemp)
+cat > "$MAINT_CFG" <<'JSON'
+{"planning":{"autonomy":"maintenance-only"}}
+JSON
+mk_repo "$TMP/maint" "$MAINT_CFG"
 if OUT=$(cd "$TMP/maint" && python3 "$PY" . evaluate --decision-type graph-bookkeeping) && echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin)['evaluation']; assert d['verdict']=='autonomous' and d['requiresConfirm'] is False"; then
   ok "maintenance-only-default-no-prompts"
 else bad "maintenance-only-default-no-prompts"; fi

@@ -18,7 +18,7 @@ from phase_status_discovery import (
     halt_dominant_tiebreak,
     resolve_phase_worktree,
 )
-from status_integrity import resolve_write_head
+from status_integrity import remediation_for_status_cause, resolve_write_head, write_status_atomic
 
 STATUS_NAME = "gap-check.status.json"
 FAST_SKIP_ERROR = "deliver-gap-check-no-fast-skip"
@@ -81,7 +81,7 @@ def write_status(
     cause: str | None = None,
     head: str | None = None,
 ) -> dict[str, Any]:
-  # HEAD stamp mirrors ship-phase-status.py status.json writes (PRD 059 R6).
+    # HEAD stamp mirrors ship-phase-status.py status.json writes (PRD 059 R6).
     if not head:
         head = resolve_write_head(path.parent if path.parent.is_dir() else Path.cwd())
     doc: dict[str, Any] = {
@@ -93,9 +93,7 @@ def write_status(
         doc["head"] = head
     if cause:
         doc["cause"] = cause
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
-    return doc
+    return write_status_atomic(path, doc)
 
 
 def deliver_gap_check_ok(root: Path, phase_slug: str, *, require_status: bool = True) -> tuple[bool, str | None]:
@@ -160,7 +158,11 @@ def main(argv: list[str] | None = None) -> int:
     if ok:
         print(json.dumps({"verdict": "pass", "action": "gap-check-gate"}))
         return 0
-    print(json.dumps({"verdict": "fail", "error": cause}))
+    payload: dict[str, Any] = {"verdict": "fail", "error": cause}
+    remediation = remediation_for_status_cause(cause)
+    if remediation:
+        payload["remediation"] = remediation
+    print(json.dumps(payload))
     return 1
 
 

@@ -741,6 +741,64 @@ def sync_canonical_state_read(
     return mirror_state
 
 
+def ensure_canonical_state_synced(
+    start: Path,
+    *,
+    state_hint: dict[str, Any] | None = None,
+    task_list: str | None = None,
+    target: str | None = None,
+) -> dict[str, Any]:
+    """Auto-repair orch↔primary skew before terminal/agent steps (PRD 069 R3)."""
+    repo_root = canonical_repo_root(start)
+    path = resolve_state_path(
+        repo_root,
+        target=target,
+        task_list=task_list,
+        state_hint=state_hint,
+    )
+    root_state = _load_state_normalized(path, anchor=repo_root)
+    mirror_state: dict[str, Any] = {}
+    orch_raw = (root_state.get("orchestratorWorktree") or state_hint or {}).get("path")
+    if isinstance(orch_raw, str) and orch_raw.strip():
+        orch_root = Path(orch_raw).resolve()
+        if orch_root != repo_root.resolve():
+            mirror_path = resolve_state_path(
+                orch_root,
+                target=target or target_branch_from_state(root_state),
+                task_list=task_list,
+                state_hint=root_state or state_hint,
+            )
+            mirror_state = _load_state_normalized(mirror_path, anchor=repo_root)
+
+    if root_state and mirror_state:
+        root_at = _parse_state_ts(str(root_state.get("updatedAt") or ""))
+        mirror_at = _parse_state_ts(str(mirror_state.get("updatedAt") or ""))
+        branch = target or target_branch_from_state(root_state)
+        if root_at and mirror_at and mirror_at > root_at:
+            repair_mirror_from_primary(
+                start,
+                target=branch,
+                task_list=task_list,
+                state_hint=root_state or state_hint,
+            )
+        else:
+            skew = _state_updated_skew_seconds(root_state, mirror_state)
+            if skew is not None and skew > CANONICAL_STATE_SKEW_SECONDS and is_feature_target(branch):
+                persist_deliver_state_primary_first(
+                    repo_root,
+                    dict(root_state),
+                    target=branch,
+                )
+
+    return sync_canonical_state_read(
+        start,
+        state_hint=state_hint,
+        task_list=task_list,
+        target=target,
+        enforce_skew=True,
+    )
+
+
 def load_deliver_state(
     root: Path,
     *,

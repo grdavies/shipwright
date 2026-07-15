@@ -13,6 +13,11 @@
 .cursor/**
 !.cursor/workflow.config.json
 
+# Runtime state — never publish (PRD 069 R4)
+.cursor/sw-base-state.json
+.cursor/tmp-*.sh
+$ROOT/
+
 # Generated deliver-phase fixture temps (superseded by deliver-phase-mode/tasks/)
 scripts/test/fixtures/deliver-phase/
 
@@ -26,17 +31,17 @@ __pycache__/
 # Emitter test fixture output (generated locally)
 scripts/test/fixtures/emitter-fixture/out/
 
-# Internal planning artifacts stay local-only: brainstorms, plans, decisions.
-# PRDs + task lists ARE tracked so they ride into phase worktrees (git worktree
-# only checks out tracked files) and appear in PR review diffs.
+# Internal planning artifacts stay local-only: brainstorms, plans, decisions, learnings.
+# PRDs materialize to .cursor/planning-materialized/ at deliver entry (PRD 069 R5).
 docs/*
-!docs/prds/
-!docs/prds/**
+docs/prds/
 !docs/guides/
 !docs/guides/**
-!docs/decisions/
+# Decision index only — bodies stay local-only (PRD 069 R4).
+docs/decisions/*
 !docs/decisions/INDEX.md
 !docs/decisions/SUPERSEDED.log
+docs/learnings/
 
 .cursor/planning-migration-reverse-map.json
 
