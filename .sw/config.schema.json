@@ -1205,6 +1205,66 @@
                 "oauthSharedCiException": {
                   "type": "boolean",
                   "description": "Explicit exception allowing authMode:oauth via shared CI secret (PRD 066 R23)."
+                },
+                "credentialContract": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Cross-repo issue-store credential contract (PRD 070 R16/R27). Required when storeLocation.mode is separate-project; envVar must match tokenEnv and must not alias host.tokenEnv.",
+                  "properties": {
+                    "envVar": {
+                      "type": "string",
+                      "const": "SW_PLANNING_ISSUES_TOKEN",
+                      "description": "Canonical env var for planning-project issue mutations in a separate repo; consumed by close-out and issue-store adapters."
+                    },
+                    "scope": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Human-readable least-privilege scope summary (issues write on the planning project only)."
+                    },
+                    "leastPrivilege": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Operator note: cross-repo token is distinct from host.tokenEnv and must not rely on the default repo GITHUB_TOKEN."
+                    },
+                    "rotationPolicy": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "cadenceDays",
+                        "expiryDays",
+                        "owner",
+                        "procedure"
+                      ],
+                      "properties": {
+                        "cadenceDays": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "Recommended rotation cadence in days."
+                        },
+                        "expiryDays": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "Maximum token lifetime in days before mandatory rotation."
+                        },
+                        "owner": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Named owner for credential rotation and incident response."
+                        },
+                        "procedure": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Rotation and expiry procedure for operators and CI secret stores."
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "envVar",
+                    "scope",
+                    "leastPrivilege",
+                    "rotationPolicy"
+                  ]
                 }
               }
             },
@@ -1870,5 +1930,87 @@
         }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "planning": {
+            "type": "object",
+            "properties": {
+              "store": {
+                "type": "object",
+                "properties": {
+                  "backend": {
+                    "const": "issue-store"
+                  },
+                  "storeLocation": {
+                    "type": "object",
+                    "properties": {
+                      "mode": {
+                        "const": "separate-project"
+                      }
+                    },
+                    "required": [
+                      "mode"
+                    ]
+                  }
+                },
+                "required": [
+                  "backend",
+                  "storeLocation"
+                ]
+              }
+            },
+            "required": [
+              "store"
+            ]
+          }
+        },
+        "required": [
+          "planning"
+        ]
+      },
+      "then": {
+        "properties": {
+          "planning": {
+            "type": "object",
+            "properties": {
+              "store": {
+                "type": "object",
+                "properties": {
+                  "issues": {
+                    "type": "object",
+                    "required": [
+                      "tokenEnv",
+                      "credentialContract"
+                    ],
+                    "properties": {
+                      "tokenEnv": {
+                        "const": "SW_PLANNING_ISSUES_TOKEN"
+                      },
+                      "credentialContract": {
+                        "type": "object",
+                        "properties": {
+                          "envVar": {
+                            "const": "SW_PLANNING_ISSUES_TOKEN"
+                          }
+                        },
+                        "required": [
+                          "envVar"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "issues"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }
