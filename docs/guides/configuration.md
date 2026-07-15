@@ -41,7 +41,7 @@ Canonical opt-out: `review.provider: "none"`. Do not use `review.enabled: false`
 | auto | `auto` | Seed frozen spec onto `<type>/<slug>` and dispatch `/sw-deliver run <frozen-tasks>` without a second prompt |
 
 
-### Greenfield init posture ( )
+### Greenfield init posture
 
 `/sw-init` and `python3 scripts/sw-configure.py write-draft` seed **seven** recommended keys for
 hands-off deliver on greenfield repos. Schema defaults and write-draft stay aligned; doctor surfaces

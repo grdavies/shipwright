@@ -353,11 +353,11 @@ range-scoped redaction is required (`scripts/redaction-guard.py` refuses bare-br
 
 After all phase PRs merge into the integration branch, the supervised terminal checkpoint runs
 `python3 scripts/wave_terminal.py ship run` (prepare → push → bounded **`watch-ci`** → stabilize) without
-exiting inside prepare/retro helpers ( ). Bounded polling honors `checks.watch.maxWaitMinutes`;
+exiting inside prepare/retro helpers. Bounded polling honors `checks.watch.maxWaitMinutes`;
 single-shot `check-gate` is dry-run/test only.
 
 Phase-mode `/sw-ship` uses the same durable `ship_loop.py` driver: mechanical steps advance in-process;
-`sw-watch-ci` polls check-gate with backoff ( ).
+`sw-watch-ci` polls check-gate with backoff.
 
 ### gap-check write before merge-ready-green
 
@@ -767,7 +767,7 @@ Stage promotion gates (M7/A) inside :
 | 3 | Comments/relations surface (/) | unchanged |
 | 4 | canonical fidelity + OAuth docs | oauth documented before advertising |
 
-## Issue-store on Bitbucket hosts ()
+## Issue-store on Bitbucket hosts
 
 Bitbucket Cloud repos use this host adapter for PR/CI only — **not** native Bitbucket issues for planning.
 
