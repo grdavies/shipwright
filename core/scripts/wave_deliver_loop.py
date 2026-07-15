@@ -2820,6 +2820,16 @@ def _execute_mechanical_inner(
                     "retry via /sw-deliver run after fixing INDEX currency"
                 ),
             )
+        from publish_surface_audit import emit_publish_surface_audit
+
+        publish_audit = emit_publish_surface_audit(root, write=True)
+        if publish_audit.get("verdict") == "not-ready":
+            fail_payload(
+                publish_audit,
+                "publish-surface audit not ready",
+                20,
+                remediation=str(publish_audit.get("resumeCommand") or ""),
+            )
         from host_lib import load_workflow_config
         from planning_store import close_delivery_units
         import planning_index_issue as pii
@@ -2882,6 +2892,7 @@ def _execute_mechanical_inner(
         result: dict[str, Any] = {
             "executed": "finalize-completion",
             "cleanupSuggestion": data.get("cleanupSuggestion"),
+            "publishSurfaceAudit": publish_audit,
             **data,
         }
         if closure is not None:
