@@ -483,6 +483,7 @@
 * merge phase wave-a-gate-ergonomics-status-writes-and-orch-primary-skew-repair-r3-medium into feat/post-068-surface-hygiene-deliver-ergonomics (729b09e) <!-- sw-deliver:wave-a-gate-ergonomics-status-writes-and-orch-primary-skew-repair-r3-medium -->
 * merge phase wave-b-local-only-docs-stop-publishing-learnings-decision-bodies-r4-small into feat/post-068-surface-hygiene-deliver-ergonomics (0949663) <!-- sw-deliver:wave-b-local-only-docs-stop-publishing-learnings-decision-bodies-r4-small -->
 * merge phase wave-c-linear-sw-note-docs-document-linear-and-sw-note-r8-r9-small into feat/post-068-surface-hygiene-deliver-ergonomics (15718d1) <!-- sw-deliver:wave-c-linear-sw-note-docs-document-linear-and-sw-note-r8-r9-small -->
+* merge phase wave-b-remove-docs-prds-drop-public-docs-prds-materialize-fail-closed-r5-medium into feat/post-068-surface-hygiene-deliver-ergonomics (a792e58) <!-- sw-deliver:wave-b-remove-docs-prds-drop-public-docs-prds-materialize-fail-closed-r5-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
