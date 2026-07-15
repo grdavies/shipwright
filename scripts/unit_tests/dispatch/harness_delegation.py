@@ -99,7 +99,7 @@ for path in sys.argv[1:]:
     schema = json.load(open(path))
     mode = schema["properties"]["delegation"]["properties"]["mode"]
     assert set(mode["enum"]) == {"bind-only", "heuristic", "default"}
-    assert mode["default"] in {"bind-only", "default"}
+    assert mode["default"] == "heuristic"
 PY
 then
   ok "delegation-mode-knob"

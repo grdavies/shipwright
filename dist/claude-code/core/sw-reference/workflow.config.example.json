@@ -11,10 +11,10 @@
     "afterTasks": "confirm"
   },
   "delegation": {
-    "mode": "bind-only"
+    "mode": "heuristic"
   },
   "orchestration": {
-    "planPolicy": "canonical"
+    "planPolicy": "proposed"
   },
   "deliver": {
     "phaseAckCadence": 0,
@@ -34,6 +34,9 @@
         "workingThresholdMinutes": 5,
         "waitingOnHumanBoost": 0.35
       }
+    },
+    "loop": {
+      "drainMechanical": true
     }
   },
   "compound": {
@@ -217,7 +220,7 @@
         "authMode": "api-key"
       }
     },
-    "autonomy": "maintenance-only",
+    "autonomy": "full-conductor",
     "fullConductor": {
       "confidenceThreshold": 0.85,
       "mutationBudget": 10,
@@ -290,5 +293,8 @@
       "escalateAfterFailures": 2,
       "personaFallback": "adversarial"
     }
+  },
+  "inefficiency": {
+    "enabled": true
   }
 }
