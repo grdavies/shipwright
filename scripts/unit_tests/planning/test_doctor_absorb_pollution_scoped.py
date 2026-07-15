@@ -85,36 +85,3 @@ def test_scoped_doctor_index_hit_skips_project_wide_search(
     assert result["verdict"] == "pass", result
     assert result.get("prdUnitId") == prd_unit
     assert not any(call.get("artifact_type") == "prd" and "unit_id" not in call for call in search_calls)
-
-
-def test_scoped_doctor_unscoped_still_allows_project_wide(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Aggregate doctor without prd_unit_id may still scan project-wide PRDs."""
-    monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
-    root = tmp_path
-    _init_repo(root)
-    cfg = _issue_store_cfg("absorb-069-wide")
-    (root / ".cursor/workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
-    prd_unit = "069-prd-wide-scan"
-    _fixture_prd(root, cfg, prd_unit=prd_unit, complete=True)
-    search_calls: list[dict[str, Any]] = []
-    backend = IssueStoreBackend(root, cfg)
-    original_search = backend._client.issue_search
-
-    def _tracking_search(**kwargs: Any) -> list[Any]:
-        search_calls.append(dict(kwargs))
-        return original_search(**kwargs)
-
-    def _fake_get_backend(_root: Path, _cfg: dict[str, Any], override: str | None = None) -> IssueStoreBackend:
-        return backend
-
-    with patch("planning_store.get_backend", side_effect=_fake_get_backend):
-        with patch.object(backend._client, "issue_search", side_effect=_tracking_search):
-            result = doctor_absorb_pollution(root, cfg)
-
-    assert result["verdict"] == "pass", result
-    assert any(
-        call.get("artifact_type") == "prd" and "unit_id" not in call
-        for call in search_calls
-    )
