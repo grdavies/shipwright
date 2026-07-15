@@ -39,13 +39,18 @@ def main(argv: list[str] | None = None) -> int:
     if not head:
         from status_integrity import resolve_write_head
         head = resolve_write_head(root)
-    try:
-        from wave_state import ensure_canonical_state_synced
-        ensure_canonical_state_synced(root)
-    except SystemExit:
-        raise
-    except Exception:
-        pass
+    # Harness fixtures call this script against SCRIPT_DIR.parent (live plugin tree) while cwd is a
+    # disposable repo. Skip live orch↔primary skew sync + canonical status mirror so suite runs do
+    # not fail closed on unrelated deliver-state skew (post-merge verify pollution).
+    harness = os.environ.get("SW_HARNESS") == "1"
+    if not harness:
+        try:
+            from wave_state import ensure_canonical_state_synced
+            ensure_canonical_state_synced(root)
+        except SystemExit:
+            raise
+        except Exception:
+            pass
     if verdict == "merge-ready-green" and not head:
         print(json.dumps({"verdict":"fail","error":"could not resolve HEAD for merge-ready-green"}), file=sys.stderr); return 2
     ship_chain_arg = None
@@ -70,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
                 return 2
         from merge_ready_enforcement import evaluate_mandatory_gate_evidence, seed_mandatory_pass_records
 
-        if os.environ.get("SW_HARNESS") == "1":
+        if harness:
             seed_mandatory_pass_records(root, phase, head_sha=head)
         evidence = evaluate_mandatory_gate_evidence(root, phase, head_sha=head)
         if evidence.get("verdict") != "pass":
@@ -102,19 +107,20 @@ def main(argv: list[str] | None = None) -> int:
     old_argv = sys.argv; sys.argv = ["status_integrity.py", *write_args]
     try: status_integrity.main()
     finally: sys.argv = old_argv
-    canonical = os.environ.get("SW_REPO_ROOT","")
-    if not canonical or not Path(canonical).is_dir():
-        p = subprocess.run(["git","-C",str(root),"rev-parse","--git-common-dir"], capture_output=True, text=True)
-        common = p.stdout.strip() if p.returncode==0 else ""
-        if common and common != ".git":
-            common_p = Path(common)
-            if not common_p.is_absolute(): common_p = (root/common_p).resolve()
-            canonical = str(common_p.parent)
-        else: canonical = str(root)
-    if canonical and Path(canonical).is_dir():
-        cout = Path(canonical)/f".cursor/sw-deliver-runs/{phase}/status.json"
-        cout.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(out, cout); os.chmod(cout, 0o600)
+    if not harness:
+        canonical = os.environ.get("SW_REPO_ROOT","")
+        if not canonical or not Path(canonical).is_dir():
+            p = subprocess.run(["git","-C",str(root),"rev-parse","--git-common-dir"], capture_output=True, text=True)
+            common = p.stdout.strip() if p.returncode==0 else ""
+            if common and common != ".git":
+                common_p = Path(common)
+                if not common_p.is_absolute(): common_p = (root/common_p).resolve()
+                canonical = str(common_p.parent)
+            else: canonical = str(root)
+        if canonical and Path(canonical).is_dir():
+            cout = Path(canonical)/f".cursor/sw-deliver-runs/{phase}/status.json"
+            cout.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(out, cout); os.chmod(cout, 0o600)
     if verdict == "blocked":
         subprocess.run(
             [
