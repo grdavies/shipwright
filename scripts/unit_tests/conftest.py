@@ -90,6 +90,34 @@ def _restore_dist_after_test(
     _restore_dist_platforms(repo_root, _dist_session_snapshot)
 
 
+DOCS_PRDS_PROJECTION_FIXTURE = "scripts/test/fixtures/docs-prds-projection"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _seed_docs_prds_projection_fixtures(repo_root: Path) -> None:
+    """PRD 069 R5 — seed legacy projection files for harnesses (not git publish surface)."""
+    fixture = repo_root / DOCS_PRDS_PROJECTION_FIXTURE
+    dest = repo_root / "docs/prds"
+    if (dest / "GAP-BACKLOG.md").is_file():
+        return
+    if not fixture.is_dir():
+        return
+    dest.mkdir(parents=True, exist_ok=True)
+    for item in fixture.iterdir():
+        if item.is_file():
+            shutil.copy2(item, dest / item.name)
+    manifest_src = (
+        repo_root
+        / "scripts/test/fixtures/planning-post-migration/031-planning-unit-model-and-migration/tokenizer-exception-manifest.json"
+    )
+    manifest_dest = (
+        dest / "031-planning-unit-model-and-migration/tokenizer-exception-manifest.json"
+    )
+    if manifest_src.is_file() and not manifest_dest.is_file():
+        manifest_dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(manifest_src, manifest_dest)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _bootstrap_vendored_deps() -> None:
     bootstrap_vendor_paths()
