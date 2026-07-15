@@ -1,6 +1,6 @@
 # Shipwright
 
-[![version](https://img.shields.io/badge/version-1.8.0-blue)](version.txt)
+[![GitHub release](https://img.shields.io/github/v/release/grdavies/shipwright)](https://github.com/grdavies/shipwright/releases)
 [![license](https://img.shields.io/badge/license-MIT-green)](#license)
 [![editors](https://img.shields.io/badge/Cursor-%26%20Claude%20Code-black)](#install)
 

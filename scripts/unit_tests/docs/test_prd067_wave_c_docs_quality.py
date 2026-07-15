@@ -58,16 +58,6 @@ def test_getting_started_has_adoption_arc() -> None:
     assert "Week two" in text
     assert "After a month" in text or "after a month" in text.lower()
 
-def test_readme_version_badge_matches_version_txt() -> None:
-    proc = subprocess.run(
-        [sys.executable, str(SCRIPTS / "readme_version_badge.py"), "--root", str(ROOT), "check"],
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-    )
-    assert proc.returncode == 0, proc.stderr or proc.stdout
-
-
 def test_guide_token_strip_preserves_blank_lines() -> None:
     from docs_guide_token_strip import strip_guide_text
 
