@@ -17,8 +17,14 @@ def _load_wave_terminal(repo_root: Path):
     spec = importlib.util.spec_from_file_location("wave_terminal", path)
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
+    # Register before exec so @dataclass can resolve cls.__module__ (PEP 487 / 3.10+).
+    sys.modules[spec.name] = mod
     sys.path.insert(0, str(repo_root / "scripts"))
-    spec.loader.exec_module(mod)
+    try:
+        spec.loader.exec_module(mod)
+    finally:
+        # Leave registered for subsequent patches in the same test; cleanup optional.
+        pass
     return mod
 
 
@@ -27,6 +33,7 @@ def _load_wave_failure(repo_root: Path):
     spec = importlib.util.spec_from_file_location("wave_failure", path)
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
     sys.path.insert(0, str(repo_root / "scripts"))
     spec.loader.exec_module(mod)
     return mod
