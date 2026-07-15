@@ -1635,6 +1635,31 @@ class StoreResult:
         return out
 
 
+MATERIALIZE_MISSING_FROZEN_BODY = "materialize:missing-frozen-body"
+
+
+def materialize_missing_result(unit_id: str, body_path: str, backend_id: str) -> StoreResult:
+    """Typed fail-closed cause when a frozen body cannot be materialized (PRD 069 R5)."""
+    return StoreResult("missing", unit_id, body_path, backend_id, reason=MATERIALIZE_MISSING_FROZEN_BODY)
+
+
+def finalize_materialize_from_get(
+    got: StoreResult,
+    unit_id: str,
+    body_path: str,
+    backend_id: str,
+    dest_path: Path,
+) -> StoreResult:
+    """Write materialized body to dest or return typed missing-frozen-body (PRD 069 R5)."""
+    content = got.content
+    if got.verdict != "ok" or content is None or (isinstance(content, str) and not content.strip()):
+        return materialize_missing_result(unit_id, body_path, backend_id)
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    dest_path.write_text(content, encoding="utf-8")
+    log_operation("materialize", unit_id, body_path, content, backend_id)
+    return StoreResult("ok", unit_id, body_path, backend_id, content=content, hash=got.hash or content_hash(content))
+
+
 
 
 def _native_status_from_content(content: str, *, artifact_type: str, state: str = "open", labels: list[str] | None = None) -> str:
@@ -1752,14 +1777,8 @@ class InRepoPublicBackend(PlanningStoreBackend):
         return StoreResult("ok" if present else "missing", unit_id, body_path, self.backend_id, reason=None if present else "not-found")
 
     def materialize(self, unit_id: str, body_path: str, dest_path: Path) -> StoreResult:
-        src = self._resolve_path(body_path)
-        if not src.is_file():
-            return StoreResult("missing", unit_id, body_path, self.backend_id, reason="not-found")
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest_path)
-        content = dest_path.read_text(encoding="utf-8")
-        log_operation("materialize", unit_id, body_path, content, self.backend_id)
-        return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=content_hash(content))
+        got = self.get(unit_id, body_path)
+        return finalize_materialize_from_get(got, unit_id, body_path, self.backend_id, dest_path)
 
 
 
@@ -2278,12 +2297,7 @@ class IssueStoreBackend(PlanningStoreBackend):
 
     def materialize(self, unit_id: str, body_path: str, dest_path: Path) -> StoreResult:
         got = self.get(unit_id, body_path)
-        if got.verdict != "ok" or got.content is None:
-            return StoreResult(got.verdict, unit_id, body_path, self.backend_id, reason=got.reason)
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        dest_path.write_text(got.content, encoding="utf-8")
-        log_operation("materialize", unit_id, body_path, got.content, self.backend_id)
-        return StoreResult("ok", unit_id, body_path, self.backend_id, content=got.content, hash=got.hash)
+        return finalize_materialize_from_get(got, unit_id, body_path, self.backend_id, dest_path)
 
     def freeze(self, unit_id: str, body_path: str, *, distill: bool = True) -> dict[str, Any]:
         try:
@@ -2477,14 +2491,8 @@ class LocalSyncedBackend(PlanningStoreBackend):
         return StoreResult("ok" if present else "missing", unit_id, body_path, self.backend_id, reason=None if present else "not-found")
 
     def materialize(self, unit_id: str, body_path: str, dest_path: Path) -> StoreResult:
-        src = self._unit_path(unit_id)
-        if not src.is_file():
-            return StoreResult("missing", unit_id, body_path, self.backend_id, reason="not-found")
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest_path)
-        content = dest_path.read_text(encoding="utf-8")
-        log_operation("materialize", unit_id, body_path, content, self.backend_id)
-        return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=content_hash(content))
+        got = self.get(unit_id, body_path)
+        return finalize_materialize_from_get(got, unit_id, body_path, self.backend_id, dest_path)
 
 
 class MemoryLocalCacheBackend(PlanningStoreBackend):
@@ -2658,12 +2666,7 @@ class MemoryLocalCacheBackend(PlanningStoreBackend):
 
     def materialize(self, unit_id: str, body_path: str, dest_path: Path) -> StoreResult:
         got = self.get(unit_id, body_path)
-        if got.verdict != "ok" or got.content is None:
-            return StoreResult(got.verdict, unit_id, body_path, self.backend_id, reason=got.reason)
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        dest_path.write_text(got.content, encoding="utf-8")
-        log_operation("materialize", unit_id, body_path, got.content, self.backend_id)
-        return StoreResult("ok", unit_id, body_path, self.backend_id, content=got.content, hash=got.hash)
+        return finalize_materialize_from_get(got, unit_id, body_path, self.backend_id, dest_path)
 
 
 class DeferredBackend(PlanningStoreBackend):
@@ -2925,8 +2928,17 @@ def materialize_from_store(
             ok = False
             continue
         fetched = issue_backend.get(unit_id, body_path)
-        if fetched.verdict != "ok" or fetched.content is None:
-            results.append({"unitId": unit_id, "bodyPath": body_path, "verdict": fetched.verdict, "reason": fetched.reason})
+        if fetched.verdict != "ok" or fetched.content is None or (
+            isinstance(fetched.content, str) and not fetched.content.strip()
+        ):
+            results.append(
+                {
+                    "unitId": unit_id,
+                    "bodyPath": body_path,
+                    "verdict": "missing",
+                    "reason": MATERIALIZE_MISSING_FROZEN_BODY,
+                }
+            )
             ok = False
             continue
         written = local_backend.put(unit_id, body_path, fetched.content)
