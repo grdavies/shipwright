@@ -479,6 +479,7 @@
 * merge phase wave-b-absorb-closure-absorb-linkage-close-audit-r6-r9-large into feat/post-067-dogfood-hardening (eabeb03) <!-- sw-deliver:wave-b-absorb-closure-absorb-linkage-close-audit-r6-r9-large -->
 * merge phase wave-a-ship-run-chain-terminal-ship-run-non-exiting-prepare-watch-ci-r1-medium into feat/post-068-surface-hygiene-deliver-ergonomics (2358dc8) <!-- sw-deliver:wave-a-ship-run-chain-terminal-ship-run-non-exiting-prepare-watch-ci-r1-medium -->
 * merge phase wave-c-github-release-badge-shields-io-github-release-badge-sot-r7-small into feat/post-068-surface-hygiene-deliver-ergonomics (cd0ed24) <!-- sw-deliver:wave-c-github-release-badge-shields-io-github-release-badge-sot-r7-small -->
+* merge phase wave-a-absorb-doctor-scope-scope-absorb-pollution-doctor-r2-small into feat/post-068-surface-hygiene-deliver-ergonomics (5af3622) <!-- sw-deliver:wave-a-absorb-doctor-scope-scope-absorb-pollution-doctor-r2-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
