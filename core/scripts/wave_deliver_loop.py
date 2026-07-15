@@ -2832,7 +2832,7 @@ def _execute_mechanical_inner(
         if prd_unit_id:
             from planning_store import audit_closure_completeness, doctor_absorb_pollution
 
-            doctor = doctor_absorb_pollution(root, cfg)
+            doctor = doctor_absorb_pollution(root, cfg, prd_unit_id=prd_unit_id)
             if doctor.get("verdict") == "fail":
                 fail_payload(
                     doctor,
