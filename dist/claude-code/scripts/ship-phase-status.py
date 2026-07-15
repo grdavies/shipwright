@@ -39,6 +39,13 @@ def main(argv: list[str] | None = None) -> int:
     if not head:
         from status_integrity import resolve_write_head
         head = resolve_write_head(root)
+    try:
+        from wave_state import ensure_canonical_state_synced
+        ensure_canonical_state_synced(root)
+    except SystemExit:
+        raise
+    except Exception:
+        pass
     if verdict == "merge-ready-green" and not head:
         print(json.dumps({"verdict":"fail","error":"could not resolve HEAD for merge-ready-green"}), file=sys.stderr); return 2
     ship_chain_arg = None

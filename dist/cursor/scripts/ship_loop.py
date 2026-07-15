@@ -54,6 +54,23 @@ MECHANICAL_STEPS = frozenset(
 AGENT_STEPS = frozenset({"sw-execute", "sw-review", "sw-simplify", "sw-stabilize"})
 DEFAULT_AGENT_BUDGET = 2
 
+
+TERMINAL_SHIP_STEPS = frozenset({"sw-ready", "check-gate", "gap-check"})
+
+
+def ensure_state_synced_before_step(root: Path) -> None:
+    """Repair orch↔primary skew before agent/terminal ship steps (PRD 069 R3)."""
+    if os.environ.get("SW_SKIP_CANONICAL_SYNC") in ("1", "true", "yes"):
+        return
+    try:
+        from wave_state import ensure_canonical_state_synced
+
+        ensure_canonical_state_synced(root)
+    except SystemExit:
+        raise
+    except Exception:
+        return
+
 AGENT_OUTCOME_ARTIFACTS: dict[str, str] = {
     "sw-execute": "{runDir}/execute-integrate.status.json",
     "sw-review": "{runDir}/sw-local-review-run-report.json",
@@ -189,6 +206,9 @@ def drive_tick(
     path = steps_path or resolve_steps_path(root, phase, None)
     ensure_initialized(root, phase, path)
     doc = load_steps(path)
+    current_preview = normalize_step(str(doc.get("currentStep") or (doc.get("chain") or ["sw-tmp-init"])[0]))
+    if classify_step(current_preview) == "agent" or current_preview in TERMINAL_SHIP_STEPS:
+        ensure_state_synced_before_step(root)
     if ship_chain_is_complete(root, phase, doc, out=str(path)):
         return {
             "verdict": "pass",
