@@ -480,6 +480,7 @@
 * merge phase wave-a-ship-run-chain-terminal-ship-run-non-exiting-prepare-watch-ci-r1-medium into feat/post-068-surface-hygiene-deliver-ergonomics (2358dc8) <!-- sw-deliver:wave-a-ship-run-chain-terminal-ship-run-non-exiting-prepare-watch-ci-r1-medium -->
 * merge phase wave-c-github-release-badge-shields-io-github-release-badge-sot-r7-small into feat/post-068-surface-hygiene-deliver-ergonomics (cd0ed24) <!-- sw-deliver:wave-c-github-release-badge-shields-io-github-release-badge-sot-r7-small -->
 * merge phase wave-a-absorb-doctor-scope-scope-absorb-pollution-doctor-r2-small into feat/post-068-surface-hygiene-deliver-ergonomics (5af3622) <!-- sw-deliver:wave-a-absorb-doctor-scope-scope-absorb-pollution-doctor-r2-small -->
+* merge phase wave-a-gate-ergonomics-status-writes-and-orch-primary-skew-repair-r3-medium into feat/post-068-surface-hygiene-deliver-ergonomics (729b09e) <!-- sw-deliver:wave-a-gate-ergonomics-status-writes-and-orch-primary-skew-repair-r3-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
