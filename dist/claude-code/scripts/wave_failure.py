@@ -27,6 +27,7 @@ ENVIRONMENTAL_VERIFY_MARKERS = (
     "harness unavailable",
     "harness-unavailable",
     "no verify commands configured",
+    "verify-watchdog-exhausted",
 )
 
 

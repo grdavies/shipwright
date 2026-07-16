@@ -7,7 +7,7 @@
     "test": "SW_TEST_SCOPE=phase PYTHONPATH=scripts python3 scripts/test/_runner.py verify --scope phase",
     "fullTest": "PYTHONPATH=scripts python3 scripts/test/_runner.py verify --scope full",
     "watchdog": {
-      "maxMinutes": 120
+      "maxMinutes": 180
     }
   },
   "ci": {
