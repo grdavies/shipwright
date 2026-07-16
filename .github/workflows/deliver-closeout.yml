@@ -1,0 +1,39 @@
+# PRD 070 — merge-event close-out with observe-only rollout gate (R15, R23).
+name: deliver-closeout
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  closeout:
+    name: deliver-closeout
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630cea329d5f451d96b12cfd4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Python
+        uses: actions/setup-python@0b93645e6137957a345dbc2360f3117f73bdb772
+        with:
+          python-version: "3.12"
+
+      - name: Observe close-out intent (no mutations)
+        env:
+          SW_CLOSEOUT_CI_GATE: observe
+          SW_CLOSEOUT_TRIGGER: ci-observe
+        run: python3 scripts/closeout_ci.py run --mode observe
+
+      - name: Run close-out mutations
+        if: vars.DELIVER_CLOSEOUT_CI_GATE == 'mutate'
+        env:
+          SW_CLOSEOUT_CI_GATE: mutate
+          SW_CLOSEOUT_TRIGGER: ci-mutate
+          SW_PLANNING_ISSUES_TOKEN: ${{ secrets.SW_PLANNING_ISSUES_TOKEN }}
+        run: python3 scripts/closeout_ci.py run --mode mutate
