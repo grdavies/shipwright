@@ -334,7 +334,20 @@ def build_closure_manifest(*, prd_unit_id, merge_sha, delivery_set, closure_resu
     for item in delivery_set:
         if not isinstance(item, dict):
             continue
-        units.append({"unitId": item.get("unitId"), "artifactType": item.get("artifactType"), "priorState": item.get("priorState"), "resultingState": item.get("resultingState"), "closureProvenance": {"action": item.get("action"), "verdict": item.get("verdict")}})
+        units.append(
+            {
+                "unitId": item.get("unitId"),
+                "artifactType": item.get("artifactType"),
+                "priorState": item.get("priorState"),
+                "resultingState": item.get("resultingState"),
+                "closureProvenance": {
+                    "action": item.get("action"),
+                    "verdict": item.get("verdict"),
+                    "mergeSha": str(merge_sha).lower(),
+                    "prdUnitId": prd_unit_id,
+                },
+            }
+        )
     manifest = {"version": 1, "prdUnitId": prd_unit_id, "mergeSha": merge_sha.lower(), "deliverySet": units, "unitCount": len(units), "writtenAt": utc_now(), "provenance": provenance or {}}
     if pr_number is not None:
         manifest["prNumber"] = int(pr_number)
@@ -361,6 +374,473 @@ def load_closure_manifest(root: Path, prd_unit_id: str):
     return data if data else None
 
 
+REVERT_TAXONOMY: dict[str, Any] = {
+    "patterns": [
+        {"id": "git-revert-merge-pr", "description": 'Revert "Merge pull request #N …" commit messages'},
+        {"id": "git-revert-squash-pr", "description": 'Revert "… (#N)" squash-merge subject lines'},
+        {"id": "git-revert-prefix", "description": 'Any commit message beginning with Revert "'},
+        {"id": "structural-merge-absent", "description": "Recorded merge SHA no longer ancestor of default HEAD"},
+    ],
+    "limits": [
+        "Only git-revert-style messages and structural merge-absence are recognized.",
+        "Force-pushed history rewrites without a revert commit are out of scope.",
+        "Reopen is provenance-scoped to the closure manifest delivery set for the reverted merge.",
+    ],
+}
+
+_REVERT_MERGE_PR_RE = re.compile(r'^Revert "Merge pull request #(\d+)', re.I)
+_REVERT_SQUASH_PR_RE = re.compile(r'^Revert ".+\(#(\d+)\)"', re.I)
+_REVERT_PREFIX_RE = re.compile(r'^Revert "', re.I)
+
+
+def revert_taxonomy() -> dict[str, Any]:
+    return dict(REVERT_TAXONOMY)
+
+
+def extract_revert_pr_numbers(message: str) -> list[int]:
+    found: set[int] = set()
+    for pattern in (_REVERT_MERGE_PR_RE, _REVERT_SQUASH_PR_RE):
+        match = pattern.match(message.strip())
+        if match:
+            found.add(int(match.group(1)))
+    return sorted(found)
+
+
+def detect_revert_from_event(event: dict[str, Any]) -> dict[str, Any]:
+    """Recognizable-revert taxonomy (PRD 070 R12/R18)."""
+    if not event:
+        return {"verdict": "none", "action": "detect-revert", "recognized": False}
+    head = event.get("head_commit") or {}
+    message = str(head.get("message") or "")
+    pr_numbers = extract_revert_pr_numbers(message)
+    recognized = bool(pr_numbers) or bool(_REVERT_PREFIX_RE.match(message.strip()))
+    taxonomy_ids: list[str] = []
+    if pr_numbers:
+        taxonomy_ids.append("git-revert-merge-pr" if _REVERT_MERGE_PR_RE.match(message.strip()) else "git-revert-squash-pr")
+    elif _REVERT_PREFIX_RE.match(message.strip()):
+        taxonomy_ids.append("git-revert-prefix")
+    return {
+        "verdict": "revert" if recognized else "none",
+        "action": "detect-revert",
+        "recognized": recognized,
+        "prNumbers": pr_numbers,
+        "taxonomyIds": taxonomy_ids,
+        "message": message[:200],
+        "limits": REVERT_TAXONOMY["limits"],
+    }
+
+
+def _default_branch_name(cfg: dict[str, Any]) -> str:
+    branch = str(cfg.get("defaultBaseBranch") or "main").strip()
+    return branch or "main"
+
+
+def merge_sha_on_default(root: Path, merge_sha: str, *, cfg: dict[str, Any] | None = None) -> bool:
+    cfg = cfg or load_workflow_config(root)
+    default = _default_branch_name(cfg)
+    proc = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", f"refs/heads/{default}"],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", default],
+            capture_output=True,
+            text=True,
+        )
+    default_sha = proc.stdout.strip().lower() if proc.returncode == 0 else ""
+    merge_sha = str(merge_sha or "").lower()
+    if not default_sha or not merge_sha:
+        return False
+    anc = subprocess.run(
+        ["git", "-C", str(root), "merge-base", "--is-ancestor", merge_sha, default_sha],
+        capture_output=True,
+    )
+    return anc.returncode == 0
+
+
+def list_closure_manifests(root: Path) -> list[dict[str, Any]]:
+    manifests_dir = closeout_root(root) / MANIFEST_DIR
+    if not manifests_dir.is_dir():
+        return []
+    out: list[dict[str, Any]] = []
+    for manifest_file in sorted(manifests_dir.glob("*.json")):
+        data = read_json(manifest_file)
+        if data:
+            data = dict(data)
+            data["_path"] = str(manifest_file)
+            out.append(data)
+    return out
+
+
+def clear_close_marker(root: Path, prd_unit_id: str, *, merge_sha: str | None = None) -> dict[str, Any]:
+    path = close_marker_path(root, prd_unit_id)
+    marker = load_close_marker(root, prd_unit_id)
+    if not marker:
+        return {"verdict": "pass", "action": "clear-close-marker", "noop": True}
+    if merge_sha and str(marker.get("mergeSha") or "").lower() != str(merge_sha).lower():
+        return {"verdict": "pass", "action": "clear-close-marker", "noop": True, "reason": "merge-sha-mismatch"}
+    if path.is_file():
+        path.unlink()
+    return {"verdict": "pass", "action": "clear-close-marker", "prdUnitId": prd_unit_id, "cleared": True}
+
+
+def unit_carries_delivery_provenance(unit_entry: dict[str, Any], manifest: dict[str, Any]) -> bool:
+    provenance = unit_entry.get("closureProvenance") or {}
+    manifest_sha = str(manifest.get("mergeSha") or "").lower()
+    manifest_unit = str(manifest.get("prdUnitId") or "")
+    if provenance.get("mergeSha") and str(provenance.get("mergeSha")).lower() != manifest_sha:
+        return False
+    if provenance.get("prdUnitId") and str(provenance.get("prdUnitId")) != manifest_unit:
+        return False
+    return True
+
+
+def _superseded_by_active_delivery(root: Path, unit_id: str, manifest: dict[str, Any], *, cfg: dict[str, Any]) -> bool:
+    reverting_sha = str(manifest.get("mergeSha") or "").lower()
+    reverting_at = str(manifest.get("writtenAt") or "")
+    for other in list_closure_manifests(root):
+        other_sha = str(other.get("mergeSha") or "").lower()
+        if not other_sha or other_sha == reverting_sha:
+            continue
+        if not merge_sha_on_default(root, other_sha, cfg=cfg):
+            continue
+        other_units = {str(item.get("unitId") or "") for item in (other.get("deliverySet") or [])}
+        if unit_id not in other_units:
+            continue
+        if str(other.get("writtenAt") or "") >= reverting_at:
+            return True
+    return False
+
+
+def _reopen_labels_for_unit(unit_entry: dict[str, Any], record: Any) -> tuple[list[str], str]:
+    from planning_canonical import (
+        GAP_LABEL_OPEN,
+        GAP_LABEL_RESOLVED,
+        GAP_LABEL_SCHEDULED,
+        gap_status_label,
+        status_from_labels,
+        status_label,
+    )
+
+    artifact_type = str(unit_entry.get("artifactType") or "")
+    prior = str(unit_entry.get("priorState") or "open")
+    labels = [label for label in list(getattr(record, "labels", []) or []) if not label.startswith("sw:status:")]
+    labels = [label for label in labels if label not in {GAP_LABEL_RESOLVED, GAP_LABEL_SCHEDULED}]
+    if artifact_type == "gap":
+        gap_label = gap_status_label(prior if prior in {"open", "planned", "scheduled", "resolved"} else "open")
+        if gap_label:
+            labels.append(gap_label)
+        if GAP_LABEL_OPEN not in labels:
+            labels.append(GAP_LABEL_OPEN)
+        return sorted(set(labels)), "open"
+    target_status = prior if prior not in ("closed", "complete", "unknown") else "open"
+    if status_from_labels(list(getattr(record, "labels", []) or [])) == "complete":
+        labels = [label for label in labels if not label.startswith("sw:status:")]
+    labels.append(status_label(target_status))
+    return sorted(set(labels)), "open"
+
+
+def reopen_delivery_units(
+    root: Path,
+    manifest: dict[str, Any],
+    *,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    from planning_store import IssueStoreBackend, get_backend, _lookup_issue_record
+
+    cfg = load_workflow_config(root)
+    prd_unit_id = str(manifest.get("prdUnitId") or "")
+    merge_sha = str(manifest.get("mergeSha") or "").lower()
+    backend = get_backend(root, cfg, override="issue-store")
+    if not isinstance(backend, IssueStoreBackend):
+        return {"verdict": "fail", "action": "reopen-delivery-units", "error": "issue-store-backend-required"}
+
+    reopened: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    for unit_entry in manifest.get("deliverySet") or []:
+        if not isinstance(unit_entry, dict):
+            continue
+        unit_id = str(unit_entry.get("unitId") or "")
+        if not unit_id:
+            continue
+        if not unit_carries_delivery_provenance(unit_entry, manifest):
+            skipped.append({"unitId": unit_id, "reason": "provenance-mismatch"})
+            continue
+        if _superseded_by_active_delivery(root, unit_id, manifest, cfg=cfg):
+            skipped.append({"unitId": unit_id, "reason": "superseded-by-active-delivery"})
+            continue
+        artifact_type = str(unit_entry.get("artifactType") or "")
+        body_path = unit_entry.get("bodyPath") or ""
+        record = _lookup_issue_record(backend, unit_id, str(body_path))
+        if record is None:
+            skipped.append({"unitId": unit_id, "reason": "unit-not-found"})
+            continue
+        if str(getattr(record, "state", "") or "") != "closed":
+            skipped.append({"unitId": unit_id, "reason": "already-open"})
+            continue
+        target_labels, target_state = _reopen_labels_for_unit(unit_entry, record)
+        if dry_run:
+            reopened.append(
+                {
+                    "unitId": unit_id,
+                    "artifactType": artifact_type,
+                    "action": "would-reopen",
+                    "priorState": unit_entry.get("priorState"),
+                }
+            )
+            continue
+        try:
+            updated = backend._client.issue_update(
+                record.id,
+                labels=target_labels,
+                state=target_state,
+                if_match=record.etag,
+                allow_locked=True,
+            )
+        except Exception as exc:  # noqa: BLE001
+            skipped.append({"unitId": unit_id, "reason": "reopen-failed", "error": str(exc)})
+            continue
+        reopened.append(
+            {
+                "unitId": unit_id,
+                "artifactType": artifact_type,
+                "action": "reopen",
+                "issueId": updated.id,
+                "state": updated.state,
+            }
+        )
+
+    marker_clear = {"noop": True}
+    if reopened and not dry_run:
+        marker_clear = clear_close_marker(root, prd_unit_id, merge_sha=merge_sha)
+
+    return {
+        "verdict": "ready" if reopened else "noop",
+        "action": "reopen-delivery-units",
+        "prdUnitId": prd_unit_id,
+        "mergeSha": merge_sha,
+        "dryRun": dry_run,
+        "reopened": reopened,
+        "skipped": skipped,
+        "markerClear": marker_clear,
+        "resumeCommand": (
+            f"python3 scripts/deliver_closeout.py reconcile-safety --prd-unit {prd_unit_id}"
+            if skipped and reopened
+            else None
+        ),
+    }
+
+
+def handle_delivery_revert(
+    root: Path,
+    *,
+    manifest: dict[str, Any],
+    dry_run: bool = False,
+    source: str = "revert-detect",
+) -> dict[str, Any]:
+    merge_sha = str(manifest.get("mergeSha") or "").lower()
+    cfg = load_workflow_config(root)
+    if merge_sha_on_default(root, merge_sha, cfg=cfg):
+        return {
+            "verdict": "noop",
+            "action": "handle-delivery-revert",
+            "reason": "merge-still-on-default",
+            "mergeSha": merge_sha,
+            "source": source,
+        }
+    reopen = reopen_delivery_units(root, manifest, dry_run=dry_run)
+    return {
+        "verdict": reopen.get("verdict"),
+        "action": "handle-delivery-revert",
+        "source": source,
+        "mergeSha": merge_sha,
+        "prdUnitId": manifest.get("prdUnitId"),
+        "reopen": reopen,
+        "taxonomy": revert_taxonomy(),
+    }
+
+
+def reconcile_missed_reverts(
+    root: Path,
+    *,
+    dry_run: bool = False,
+    event: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    cfg = load_workflow_config(root)
+    handled: list[dict[str, Any]] = []
+    revert_detect = detect_revert_from_event(event or {})
+    if revert_detect.get("recognized") and revert_detect.get("prNumbers"):
+        for pr_number in revert_detect["prNumbers"]:
+            resolution = resolve_delivery_for_pr(root, pr_number)
+            if resolution.get("verdict") != "pass":
+                continue
+            prd_unit_id = str(resolution.get("prdUnitId") or "")
+            manifest = load_closure_manifest(root, prd_unit_id)
+            if not manifest:
+                continue
+            handled.append(
+                handle_delivery_revert(
+                    root,
+                    manifest=manifest,
+                    dry_run=dry_run,
+                    source="ci-revert-event",
+                )
+            )
+
+    for manifest in list_closure_manifests(root):
+        merge_sha = str(manifest.get("mergeSha") or "").lower()
+        prd_unit_id = str(manifest.get("prdUnitId") or "")
+        if not merge_sha or not prd_unit_id:
+            continue
+        marker = load_close_marker(root, prd_unit_id)
+        if not marker:
+            continue
+        if str(marker.get("mergeSha") or "").lower() != merge_sha:
+            continue
+        if merge_sha_on_default(root, merge_sha, cfg=cfg):
+            continue
+        if any(
+            item.get("prdUnitId") == prd_unit_id and item.get("source") == "structural-missed-revert"
+            for item in handled
+        ):
+            continue
+        handled.append(
+            handle_delivery_revert(
+                root,
+                manifest=manifest,
+                dry_run=dry_run,
+                source="structural-missed-revert",
+            )
+        )
+
+    if not handled:
+        return {"verdict": "noop", "action": "reconcile-missed-reverts", "handled": [], "revertDetect": revert_detect}
+    verdicts = {str(item.get("verdict") or "noop") for item in handled}
+    verdict = "ready" if "ready" in verdicts else "noop"
+    return {
+        "verdict": verdict,
+        "action": "reconcile-missed-reverts",
+        "handled": handled,
+        "revertDetect": revert_detect,
+        "resumeCommand": next(
+            (item.get("reopen", {}).get("resumeCommand") for item in handled if item.get("reopen", {}).get("resumeCommand")),
+            None,
+        ),
+    }
+
+
+def _load_github_event_from_env() -> dict[str, Any]:
+    path = os.environ.get("GITHUB_EVENT_PATH", "").strip()
+    if not path:
+        return {}
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _terminal_pr_abandoned(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    pr_probe: Callable[[Path, int], dict[str, Any]] | None = None,
+) -> dict[str, Any] | None:
+    completion = state.get("completion") or {}
+    if completion.get("status") != "completed-pending-merge":
+        return None
+    terminal = state.get("terminalPr") or {}
+    pr_number = terminal.get("number")
+    if pr_number is None:
+        return None
+
+    def default_probe(r: Path, number: int) -> dict[str, Any]:
+        from host_lib import host_verb
+
+        viewed = host_verb(r, "pr-view", number=str(number))
+        if viewed.get("verdict") != "ok":
+            return {"verdict": "unknown", "state": None}
+        payload = viewed.get("data") or {}
+        return {"verdict": "ok", "state": str(payload.get("state") or "").upper()}
+
+    probe = pr_probe or default_probe
+    info = probe(root, int(pr_number))
+    pr_state = str(info.get("state") or "").upper()
+    if pr_state == "MERGED":
+        return None
+    if pr_state == "CLOSED":
+        slug = str((state.get("target") or {}).get("slug") or "")
+        return {
+            "verdict": "surface",
+            "action": "abandoned-terminal-pr",
+            "prNumber": int(pr_number),
+            "prState": pr_state,
+            "deliverySlug": slug,
+            "completionStatus": completion.get("status"),
+            "resumeCommand": (
+                f"Review terminal PR #{pr_number} for delivery {slug}: closed without merge while "
+                "completed-pending-merge — operator decision required (no auto-remediation)."
+            ),
+        }
+    return None
+
+
+def reconcile_abandoned_deliveries(
+    root: Path,
+    *,
+    pr_probe: Callable[[Path, int], dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    from wave_state import enumerate_scoped_runs
+
+    surfaced: list[dict[str, Any]] = []
+    for run in enumerate_scoped_runs(root):
+        state_path = root / str(run["statePath"])
+        if not state_path.is_file():
+            continue
+        state = read_json(state_path)
+        finding = _terminal_pr_abandoned(root, state, pr_probe=pr_probe)
+        if finding:
+            finding["runSlug"] = str(run.get("slug") or "")
+            finding["statePath"] = str(run["statePath"])
+            surfaced.append(finding)
+    if not surfaced:
+        return {"verdict": "noop", "action": "reconcile-abandoned-deliveries", "surfaced": []}
+    return {
+        "verdict": "surface",
+        "action": "reconcile-abandoned-deliveries",
+        "surfaced": surfaced,
+        "resumeCommand": surfaced[0].get("resumeCommand"),
+        "operatorDecisionRequired": True,
+    }
+
+
+def reconcile_closeout_safety_at_entry(
+    root: Path,
+    *,
+    event: dict[str, Any] | None = None,
+    dry_run: bool = False,
+    pr_probe: Callable[[Path, int], dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """On-demand safety reconciliation at CI/workflow entry (PRD 070 R12/R18/R30)."""
+    event = event if event is not None else _load_github_event_from_env()
+    missed = reconcile_missed_reverts(root, dry_run=dry_run, event=event)
+    abandoned = reconcile_abandoned_deliveries(root, pr_probe=pr_probe)
+    verdict = "ready" if missed.get("verdict") == "ready" else abandoned.get("verdict", "noop")
+    if missed.get("verdict") == "noop" and abandoned.get("verdict") == "noop":
+        verdict = "noop"
+    return {
+        "verdict": verdict,
+        "action": "reconcile-closeout-safety",
+        "missedReverts": missed,
+        "abandonedDeliveries": abandoned,
+        "revertTaxonomy": revert_taxonomy(),
+        "resumeCommand": abandoned.get("resumeCommand") or missed.get("resumeCommand"),
+    }
+
+
+
+
 def _prior_state_from_record(record, artifact_type: str) -> str:
     if record is None:
         return "unknown"
@@ -372,6 +852,9 @@ def _prior_state_from_record(record, artifact_type: str) -> str:
 
 
 def run_closeout(root: Path, *, prd_unit_id, merge_sha, pr_number=None, dry_run=False, state=None):
+    if os.environ.get("SW_CLOSEOUT_TRIGGER", "").startswith("ci") and not os.environ.get("SW_CLOSEOUT_SAFETY_DONE"):
+        os.environ["SW_CLOSEOUT_SAFETY_DONE"] = "1"
+        reconcile_closeout_safety_at_entry(root, dry_run=dry_run)
     meta = validate_metadata_payload({"prdUnitId": prd_unit_id, "mergeSha": merge_sha, **({"prNumber": str(pr_number)} if pr_number is not None else {})}, fields=["prdUnitId", "mergeSha"] + (["prNumber"] if pr_number is not None else []))
     if meta.get("verdict") != "pass":
         return {**meta, "action": "run-closeout"}
@@ -575,6 +1058,11 @@ def main():
         else:
             result = self_wake_poll_once(root, run_id)
         emit(result, 0 if result.get("verdict") in ("ready", "wait", "wait-exhausted") else 20)
+    elif cmd in ("reconcile-safety", "reconcile"):
+        event_path = _parse_kv(rest, "--event-path")
+        event = json.loads(Path(event_path).read_text(encoding="utf-8")) if event_path else None
+        result = reconcile_closeout_safety_at_entry(root, event=event, dry_run="--dry-run" in rest)
+        emit(result, 0 if result.get("verdict") in ("ready", "noop", "surface") else 20)
     elif cmd == "validate-metadata":
         raw = _parse_kv(rest, "--json")
         if not raw:
