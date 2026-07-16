@@ -6,10 +6,12 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -23,7 +25,10 @@ from wave_state import load_deliver_state
 CLOSEOUT_ROOT_REL = ".sw/deliver-closeout"
 PR_MAP_DIR = "pr-delivery-map"
 MANIFEST_DIR = "closure-manifests"
+CLOSE_MARKER_DIR = "close-markers"
 INDEX_REL = f"{CLOSEOUT_ROOT_REL}/index.json"
+DEFAULT_POLL_SECONDS = 45
+DEFAULT_MAX_WAIT_MINUTES = 20
 
 _METADATA_PATTERNS = {
     "prNumber": re.compile(r"^\d{1,10}$"),
@@ -65,6 +70,135 @@ def pr_map_path(root: Path, pr_number) -> Path:
 def manifest_path(root: Path, prd_unit_id: str) -> Path:
     safe = re.sub(r"[^a-zA-Z0-9._-]", "-", prd_unit_id)
     return closeout_root(root) / MANIFEST_DIR / f"{safe}.json"
+
+
+def close_marker_path(root: Path, prd_unit_id: str) -> Path:
+    safe = re.sub(r"[^a-zA-Z0-9._-]", "-", prd_unit_id)
+    return closeout_root(root) / CLOSE_MARKER_DIR / f"{safe}.json"
+
+
+def slug_from_target_branch(branch: str) -> str:
+    if "/" not in branch:
+        return branch
+    return branch.split("/", 1)[1]
+
+
+def deliver_run_id_from_state(state: dict[str, Any]) -> str | None:
+    prd = state.get("prd_number")
+    if prd is None:
+        return None
+    prd_str = str(prd).zfill(3)
+    target = state.get("target") or {}
+    slug = target.get("slug") or slug_from_target_branch(str(target.get("branch") or ""))
+    if not slug:
+        return None
+    return f"sw-deliver-{prd_str}-{slug}"
+
+
+def deliver_wake_sentinel(run_id: str) -> str:
+    return f"DELIVER_WAKE_{run_id}"
+
+
+def watch_config(cfg: dict[str, Any]) -> dict[str, int]:
+    watch = (cfg.get("checks") or {}).get("watch") or {}
+    return {
+        "pollSeconds": int(watch.get("pollSeconds") or DEFAULT_POLL_SECONDS),
+        "maxWaitMinutes": int(watch.get("maxWaitMinutes") or DEFAULT_MAX_WAIT_MINUTES),
+    }
+
+
+def is_pending_merge_completion(state: dict[str, Any]) -> bool:
+    completion = state.get("completion") or {}
+    return completion.get("status") == "completed-pending-merge"
+
+
+def resolve_state_by_run_id(root: Path, run_id: str) -> tuple[dict[str, Any] | None, Path | None, str | None]:
+    from wave_state import enumerate_scoped_runs
+
+    for run in enumerate_scoped_runs(root):
+        state_path = root / str(run["statePath"])
+        state = read_json(state_path) if state_path.is_file() else {}
+        if deliver_run_id_from_state(state) == run_id:
+            return state, state_path, str(run.get("slug") or "")
+    match = re.fullmatch(r"sw-deliver-(\d{3})-(.+)", run_id)
+    if match:
+        slug = match.group(2)
+        state_path = root / ".cursor" / f"sw-deliver-state.{slug}.json"
+        if state_path.is_file():
+            state = read_json(state_path)
+            if deliver_run_id_from_state(state) == run_id:
+                return state, state_path, slug
+    return None, None, None
+
+
+def load_close_marker(root: Path, prd_unit_id: str) -> dict[str, Any] | None:
+    data = read_json(close_marker_path(root, prd_unit_id))
+    return data if data else None
+
+
+def write_close_marker(root: Path, prd_unit_id: str, merge_sha: str, *, audit: dict[str, Any]) -> dict[str, Any]:
+    marker = {
+        "version": 1,
+        "prdUnitId": prd_unit_id,
+        "mergeSha": merge_sha.lower(),
+        "writtenAt": utc_now(),
+        "auditVerdict": audit.get("verdict"),
+    }
+    write_json(close_marker_path(root, prd_unit_id), marker)
+    return marker
+
+
+def short_circuit_closeout(
+    root: Path,
+    cfg: dict[str, Any],
+    prd_unit_id: str,
+    merge_sha: str,
+    *,
+    state: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    marker = load_close_marker(root, prd_unit_id)
+    if not marker:
+        return None
+    if str(marker.get("mergeSha") or "").lower() != str(merge_sha).lower():
+        return None
+    from planning_store import audit_closure_completeness
+
+    audit = audit_closure_completeness(root, cfg, prd_unit_id, state=state)
+    if audit.get("verdict") != "ready":
+        return None
+    return {
+        "verdict": "ready",
+        "action": "closeout-short-circuit",
+        "noop": True,
+        "prdUnitId": prd_unit_id,
+        "mergeSha": merge_sha.lower(),
+        "marker": marker,
+        "closureAudit": audit,
+    }
+
+
+def extract_merge_sha(root: Path, merge_info: dict[str, Any]) -> str:
+    merge_commit = merge_info.get("mergeCommit")
+    if merge_commit:
+        return str(merge_commit).lower()
+    default_ref = merge_info.get("defaultRef") or merge_info.get("default")
+    if not default_ref:
+        return ""
+    proc = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", str(default_ref)],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode == 0 and proc.stdout.strip():
+        return proc.stdout.strip().lower()
+    return ""
+
+
+def emit_self_wake_sentinel(run_id: str, payload: dict[str, Any] | None = None) -> str:
+    sentinel = deliver_wake_sentinel(run_id)
+    body = payload or {"phase": "terminal-merge-closeout", "runId": run_id}
+    print(f"{sentinel} {json.dumps(body, ensure_ascii=False)}", file=sys.stderr)
+    return sentinel
 
 
 def index_path(root: Path) -> Path:
@@ -261,6 +395,119 @@ def run_closeout(root: Path, *, prd_unit_id, merge_sha, pr_number=None, dry_run=
     return {"verdict": verdict, "action": "run-closeout", "prdUnitId": prd_unit_id, "mergeSha": merge_sha.lower(), "dryRun": dry_run, "closure": closure, "manifest": manifest, "manifestPersist": persisted, "resumeCommand": closure.get("resumeCommand")}
 
 
+def run_closeout_idempotent(
+    root: Path,
+    *,
+    prd_unit_id: str,
+    merge_sha: str,
+    pr_number=None,
+    dry_run: bool = False,
+    state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    cfg = load_workflow_config(root)
+    short = short_circuit_closeout(root, cfg, prd_unit_id, merge_sha, state=state)
+    if short:
+        return short
+    result = run_closeout(
+        root,
+        prd_unit_id=prd_unit_id,
+        merge_sha=merge_sha,
+        pr_number=pr_number,
+        dry_run=dry_run,
+        state=state,
+    )
+    if result.get("verdict") == "ready" and not dry_run:
+        closure = result.get("closure") or {}
+        audit = closure.get("closureAudit") or {}
+        if audit.get("verdict") == "ready":
+            write_close_marker(root, prd_unit_id, merge_sha, audit=audit)
+    return result
+
+
+def self_wake_poll_once(
+    root: Path,
+    run_id: str,
+    *,
+    state: dict[str, Any] | None = None,
+    merge_probe: Callable[[Path, dict[str, Any]], dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    from wave_compound import target_merge_detected
+
+    if state is None:
+        state, _state_path, _slug = resolve_state_by_run_id(root, run_id)
+    if not state:
+        return {"verdict": "fail", "action": "self-wake-poll", "error": "run-id-not-found", "runId": run_id}
+    emit_self_wake_sentinel(run_id)
+    probe = merge_probe or target_merge_detected
+    merge_info = probe(root, state)
+    if not is_pending_merge_completion(state):
+        return {
+            "verdict": "wait",
+            "action": "self-wake-poll",
+            "runId": run_id,
+            "mergeDetected": bool(merge_info.get("merged")),
+            "completionGate": "not-pending-merge",
+        }
+    if not merge_info.get("merged"):
+        return {
+            "verdict": "wait",
+            "action": "self-wake-poll",
+            "runId": run_id,
+            "mergeDetected": False,
+            "completionGate": "completed-pending-merge",
+        }
+    prd_unit_id = prd_unit_id_from_state(state)
+    if not prd_unit_id:
+        return {"verdict": "fail", "action": "self-wake-poll", "error": "prd-unit-unresolved", "runId": run_id}
+    merge_sha = extract_merge_sha(root, merge_info)
+    if not merge_sha:
+        return {"verdict": "fail", "action": "self-wake-poll", "error": "merge-sha-unresolved", "runId": run_id}
+    pr_number = merge_info.get("prNumber") or (state.get("terminalPr") or {}).get("number")
+    closeout = run_closeout_idempotent(
+        root,
+        prd_unit_id=prd_unit_id,
+        merge_sha=merge_sha,
+        pr_number=int(pr_number) if pr_number is not None else None,
+        state=state,
+    )
+    return {
+        "verdict": closeout.get("verdict"),
+        "action": "self-wake-closeout",
+        "runId": run_id,
+        "mergeDetected": True,
+        "prdUnitId": prd_unit_id,
+        "mergeSha": merge_sha,
+        "closeout": closeout,
+        "noop": bool(closeout.get("noop")),
+    }
+
+
+def self_wake_poll_loop(
+    root: Path,
+    run_id: str,
+    *,
+    sleep_fn: Callable[[float], None] | None = None,
+    merge_probe: Callable[[Path, dict[str, Any]], dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    cfg = load_workflow_config(root)
+    watch = watch_config(cfg)
+    poll_seconds = watch["pollSeconds"]
+    deadline = time.monotonic() + (watch["maxWaitMinutes"] * 60)
+    attempts = 0
+    sleeper = sleep_fn or time.sleep
+    last: dict[str, Any] = {"verdict": "wait", "action": "self-wake-poll", "runId": run_id}
+    while time.monotonic() < deadline:
+        last = self_wake_poll_once(root, run_id, merge_probe=merge_probe)
+        attempts += 1
+        if last.get("verdict") in ("ready", "fail", "not-ready"):
+            last["attempts"] = attempts
+            return last
+        sleeper(poll_seconds)
+    last["verdict"] = "wait-exhausted"
+    last["attempts"] = attempts
+    return last
+
+
 def mapping_from_deliver_state(state, pr_info):
     pr_number = pr_info.get("number")
     if pr_number is None:
@@ -319,6 +566,15 @@ def main():
         state = load_deliver_state(root)
         result = run_closeout(root, prd_unit_id=prd_unit, merge_sha=merge_sha, pr_number=pr_number, dry_run="--dry-run" in rest, state=state)
         emit(result, 0 if result.get("verdict") in ("ready", "dry-run") else 20)
+    elif cmd in ("self-wake-poll", "self-wake"):
+        run_id = _parse_kv(rest, "--run-id")
+        if not run_id:
+            fail("--run-id required")
+        if "--loop" in rest:
+            result = self_wake_poll_loop(root, run_id)
+        else:
+            result = self_wake_poll_once(root, run_id)
+        emit(result, 0 if result.get("verdict") in ("ready", "wait", "wait-exhausted") else 20)
     elif cmd == "validate-metadata":
         raw = _parse_kv(rest, "--json")
         if not raw:
