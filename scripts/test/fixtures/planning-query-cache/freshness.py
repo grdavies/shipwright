@@ -73,14 +73,32 @@ class _FixtureEnv:
     (hermetic, no network)."""
 
     _VARS = {"SW_ISSUES_FIXTURE": "1", "SW_DISCOVER_SOURCE": "issue"}
+    # Deliver/phase bindings redirect RequestBudgetLedger onto the live run dir
+    # (see planning_request_budget.ledger_path). Clear them so fixture ops stay
+    # sandboxed under the tempfile root.
+    _CLEAR = (
+        "SW_RUN_DIR",
+        "SW_PHASE_SLUG",
+        "SW_PHASE_ID",
+        "SW_PHASE_MODE",
+        "SW_TASK_LIST",
+    )
 
     def __enter__(self) -> "_FixtureEnv":
         self._prev = {name: os.environ.get(name) for name in self._VARS}
+        self._prev_clear = {name: os.environ.get(name) for name in self._CLEAR}
         os.environ.update(self._VARS)
+        for name in self._CLEAR:
+            os.environ.pop(name, None)
         return self
 
     def __exit__(self, *exc: object) -> None:
         for name, value in self._prev.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+        for name, value in self._prev_clear.items():
             if value is None:
                 os.environ.pop(name, None)
             else:

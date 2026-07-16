@@ -259,6 +259,17 @@ def run_verify_suite(
         all_ok = True
         for cmd in commands:
             env = {**os.environ, "SW_DELIVER_VERIFY": "1"}
+            # Scrub phase/run deliver bindings so hermetic fixture ledgers and
+            # caches cannot leak into the orchestrator deliver-run directory
+            # (planning-request-budget.json via SW_RUN_DIR / SW_PHASE_SLUG).
+            for polluted in (
+                "SW_RUN_DIR",
+                "SW_PHASE_SLUG",
+                "SW_PHASE_ID",
+                "SW_PHASE_MODE",
+                "SW_TASK_LIST",
+            ):
+                env.pop(polluted, None)
             env.setdefault("SW_TEST_SCOPE", scope)
             if budget_minutes is not None:
                 env.setdefault("SW_VERIFY_WATCHDOG_MINUTES", str(budget_minutes))
