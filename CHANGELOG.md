@@ -526,6 +526,7 @@
 * merge phase anchored-discovery-fail-closed-audit-small into feat/automated-delivery-closeout (8e5d1c8) <!-- sw-deliver:anchored-discovery-fail-closed-audit-small -->
 * merge phase merge-to-delivery-correlation-closure-manifest-small into feat/automated-delivery-closeout (a15b898) <!-- sw-deliver:merge-to-delivery-correlation-closure-manifest-small -->
 * merge phase cross-repo-credential-contract-small into feat/automated-delivery-closeout (b6fee3e) <!-- sw-deliver:cross-repo-credential-contract-small -->
+* merge phase closure-correctness-hardening-regression-suite-small into feat/automated-delivery-closeout (ea4c5bb) <!-- sw-deliver:closure-correctness-hardening-regression-suite-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
