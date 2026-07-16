@@ -2729,6 +2729,107 @@ def _resync_backup_path(dest_path: Path) -> Path:
     return dest_path.parent / f"{dest_path.name}.pre-resync.bak"
 
 
+_TASK_REF_RE = re.compile(r"^(\d+)\.(\d+)$")
+
+
+def normalize_task_ref(raw: str) -> str:
+    """Canonical dotted task ref (PRD 070 R3)."""
+    text = str(raw or "").strip()
+    m = _TASK_REF_RE.match(text)
+    if not m:
+        raise ValueError(f"invalid task ref: {raw!r}")
+    return f"{int(m.group(1))}.{int(m.group(2))}"
+
+
+def resolve_task_ref_aliases(
+    raw_refs: list[str] | set[str],
+    *,
+    known_refs: set[str] | None = None,
+) -> dict[str, Any]:
+    """Resolve ambiguous or duplicate task refs to canonical form (PRD 070 R3)."""
+    canonical_map: dict[str, list[str]] = {}
+    blockers: list[dict[str, str]] = []
+    for raw in raw_refs:
+        text = str(raw or "").strip()
+        if not text:
+            continue
+        for part in (p.strip() for p in text.split(",") if p.strip()):
+            try:
+                canon = normalize_task_ref(part)
+            except ValueError:
+                blockers.append({"ref": part, "reason": "invalid-format"})
+                continue
+            aliases = canonical_map.setdefault(canon, [])
+            if part not in aliases:
+                aliases.append(part)
+    if blockers:
+        return {
+            "verdict": "fail",
+            "error": "unresolvable-task-refs",
+            "blockers": blockers,
+        }
+    canonical_refs = sorted(canonical_map.keys())
+    if known_refs is not None:
+        unknown = [ref for ref in canonical_refs if ref not in known_refs]
+        if unknown:
+            return {
+                "verdict": "fail",
+                "error": "unknown-task-refs",
+                "refs": unknown,
+                "known": sorted(known_refs),
+            }
+    return {
+        "verdict": "ok",
+        "canonical": canonical_refs,
+        "aliases": canonical_map,
+        "duplicates": {k: v for k, v in canonical_map.items() if len(v) > 1},
+    }
+
+
+def reconcile_ledger_task_refs(
+    ledger_tasks: dict[str, Any],
+    checkbox_refs: dict[str, bool],
+) -> dict[str, Any]:
+    """Merge ledger entries under canonical task refs; fail-closed on conflict (PRD 070 R3)."""
+    if not isinstance(ledger_tasks, dict):
+        ledger_tasks = {}
+    all_keys = set(ledger_tasks.keys()) | set(checkbox_refs.keys())
+    if not all_keys:
+        return {"verdict": "ok", "tasks": {}}
+    resolution = resolve_task_ref_aliases(all_keys)
+    if resolution.get("verdict") != "ok":
+        return resolution
+    resolved: dict[str, Any] = {}
+    conflicts: list[dict[str, Any]] = []
+    for canon in resolution.get("canonical") or []:
+        aliases = resolution.get("aliases", {}).get(canon, [canon])
+        entries: list[dict[str, Any]] = []
+        for alias in aliases:
+            entry = ledger_tasks.get(alias)
+            if isinstance(entry, dict):
+                entries.append(entry)
+        if not entries:
+            continue
+        done_vals = {bool(entry.get("done")) for entry in entries}
+        if len(done_vals) > 1:
+            conflicts.append(
+                {
+                    "ref": canon,
+                    "aliases": aliases,
+                    "reason": "conflicting-done-state",
+                }
+            )
+            continue
+        resolved[canon] = entries[-1]
+    if conflicts:
+        return {
+            "verdict": "fail",
+            "error": "ambiguous-task-refs",
+            "conflicts": conflicts,
+        }
+    return {"verdict": "ok", "tasks": resolved, "aliases": resolution.get("aliases") or {}}
+
+
 def _apply_ledger_checks(body: str, ledger_tasks: dict[str, Any]) -> tuple[str, int, int]:
     """Re-apply ledger-recorded checks onto a freshly materialized body (PRD 059 R9)."""
     from checkbox_diff import parse_task_checkboxes, toggle_checkbox
@@ -2736,6 +2837,11 @@ def _apply_ledger_checks(body: str, ledger_tasks: dict[str, Any]) -> tuple[str, 
     applied = 0
     already_matching = 0
     checkboxes = parse_task_checkboxes(body)
+    reconciled = reconcile_ledger_task_refs(ledger_tasks, checkboxes)
+    if reconciled.get("verdict") != "ok":
+        return body, applied, already_matching
+    ledger_tasks = reconciled.get("tasks") or {}
+    alias_map = reconciled.get("aliases") or {}
     updated = body
     for ref, entry in sorted(ledger_tasks.items()):
         if not isinstance(entry, dict) or not entry.get("done"):
@@ -2743,8 +2849,13 @@ def _apply_ledger_checks(body: str, ledger_tasks: dict[str, Any]) -> tuple[str, 
         if checkboxes.get(ref, False):
             already_matching += 1
             continue
+        toggle_ref = ref
+        for alias in alias_map.get(ref, [ref]):
+            if alias in checkboxes:
+                toggle_ref = alias
+                break
         try:
-            updated = toggle_checkbox(updated, ref, done=True)
+            updated = toggle_checkbox(updated, toggle_ref, done=True)
             applied += 1
             checkboxes[ref] = True
         except ValueError:
@@ -2771,35 +2882,53 @@ def _ledger_check_divergences(body: str, ledger_tasks: dict[str, Any]) -> list[d
     from checkbox_diff import parse_task_checkboxes
 
     checkboxes = parse_task_checkboxes(body)
+    reconciled = reconcile_ledger_task_refs(ledger_tasks if isinstance(ledger_tasks, dict) else {}, checkboxes)
+    if reconciled.get("verdict") != "ok":
+        return [
+            {
+                "ref": "",
+                "kind": "blocker",
+                "reason": reconciled.get("error") or "ambiguous-task-refs",
+                "detail": reconciled,
+            }
+        ]
+    ledger_tasks = reconciled.get("tasks") or {}
     divergences: list[dict[str, Any]] = []
     for ref, checked in checkboxes.items():
-        entry = ledger_tasks.get(ref) if isinstance(ledger_tasks, dict) else None
+        try:
+            canon = normalize_task_ref(ref)
+        except ValueError:
+            if checked:
+                divergences.append(
+                    {"ref": ref, "kind": "blocker", "reason": "invalid-checkbox-ref"}
+                )
+            continue
+        entry = ledger_tasks.get(canon)
         if not entry:
             if checked:
                 divergences.append(
-                    {"ref": ref, "kind": "stale", "reason": "checkbox-checked-missing-ledger"}
+                    {"ref": canon, "kind": "stale", "reason": "checkbox-checked-missing-ledger"}
                 )
             continue
         ledger_done = bool(entry.get("done"))
         if ledger_done != checked:
             divergences.append(
                 {
-                    "ref": ref,
+                    "ref": canon,
                     "kind": "divergence",
                     "reason": "checkbox-ledger-mismatch",
                     "checkbox": checked,
                     "ledger": ledger_done,
                 }
             )
-    if isinstance(ledger_tasks, dict):
-        for ref, entry in ledger_tasks.items():
-            if not isinstance(entry, dict) or not entry.get("done"):
-                continue
-            if not checkboxes.get(ref, False):
-                if not any(d.get("ref") == ref for d in divergences):
-                    divergences.append(
-                        {"ref": ref, "kind": "stale", "reason": "ledger-done-checkbox-open"}
-                    )
+    for ref, entry in ledger_tasks.items():
+        if not isinstance(entry, dict) or not entry.get("done"):
+            continue
+        if not checkboxes.get(ref, False):
+            if not any(d.get("ref") == ref for d in divergences):
+                divergences.append(
+                    {"ref": ref, "kind": "stale", "reason": "ledger-done-checkbox-open"}
+                )
     return divergences
 
 
