@@ -530,6 +530,7 @@
 * merge phase in-session-self-wake-fast-path-small into feat/automated-delivery-closeout (04836c6) <!-- sw-deliver:in-session-self-wake-fast-path-small -->
 * merge phase merge-event-ci-workflow-observe-only-gate-small into feat/automated-delivery-closeout (4056e89) <!-- sw-deliver:merge-event-ci-workflow-observe-only-gate-small -->
 * merge phase ci-close-out-driver-no-op-n-per-wave-surfacing-slo-small into feat/automated-delivery-closeout (52e2f2d) <!-- sw-deliver:ci-close-out-driver-no-op-n-per-wave-surfacing-slo-small -->
+* merge phase revert-safety-reconciliation-small into feat/automated-delivery-closeout (4af9ba5) <!-- sw-deliver:revert-safety-reconciliation-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
