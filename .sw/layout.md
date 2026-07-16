@@ -422,6 +422,22 @@ workflows must remediate via `.sw/` instead. Last-synced provenance lives at `.s
 - Apply: omit `--dry-run`; JSON includes `considered`, `closed`, `skipped`, `resumeCommand` when incomplete.
 - Verify override (`no-baseline`/`unattributed`): `override-add` auto-files gap via `capture_verify_override`; identical signature → `action: reused`, else `action: created`.
 
+### Merge-boundary close-out durable state (PRD 070 R10, R19, R29)
+
+Machine-readable close-out artifacts live under `.sw/deliver-closeout/` at the repo root (gitignored operator
+runtime — not feature implementation). Written by `scripts/deliver_closeout.py` and read by
+`scripts/closeout_ci.py` / `scripts/wave_terminal.py`.
+
+| Artifact | Path | Writer | Role |
+| --- | --- | --- | --- |
+| Close-out index | `.sw/deliver-closeout/index.json` | `deliver_closeout.py` | `byPr` / `byPrdUnit` lookup into mapping files |
+| PR-to-delivery map | `.sw/deliver-closeout/pr-delivery-map/pr-<n>.json` | `wave_terminal.py` at terminal-PR create | Immutable mapping from merged PR number to delivery identity (squash/rebase/MQ safe) |
+| Closure manifest | `.sw/deliver-closeout/closure-manifests/<prd-unit-id>.json` | `deliver_closeout.py` after audit-pass | Full delivery set, merge SHA, prior state, closure provenance — units linked, never deleted |
+| Close marker | `.sw/deliver-closeout/close-markers/<prd-unit-id>.json` | `deliver_closeout.py` post-audit (optional) | Short-circuit idempotency; re-verified before trust; crash between audit-pass and marker leaves units re-closable |
+
+Filenames sanitize `prd-unit-id` (`/` → `_`). Revert reopen clears markers provenance-scoped via the manifest
+delivery set (`deliver_closeout.py reconcile-safety`).
+
 ### Harness test hygiene (PRD 060 R10–R15)
 
 - Deprecated surfaces: `core/sw-reference/deprecated-surface-manifest.json` + `scripts/deprecated_surface_freshness.py --check`
