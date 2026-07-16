@@ -270,6 +270,10 @@ def run_verify_suite(
                 "SW_TASK_LIST",
             ):
                 env.pop(polluted, None)
+            # Fail hung fixture git fetches quickly (network stalls under verify).
+            env.setdefault("GIT_HTTP_LOW_SPEED_LIMIT", "1000")
+            env.setdefault("GIT_HTTP_LOW_SPEED_TIME", "20")
+            env.setdefault("GIT_TERMINAL_PROMPT", "0")
             env.setdefault("SW_TEST_SCOPE", scope)
             if budget_minutes is not None:
                 env.setdefault("SW_VERIFY_WATCHDOG_MINUTES", str(budget_minutes))
