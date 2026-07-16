@@ -528,6 +528,7 @@
 * merge phase cross-repo-credential-contract-small into feat/automated-delivery-closeout (b6fee3e) <!-- sw-deliver:cross-repo-credential-contract-small -->
 * merge phase closure-correctness-hardening-regression-suite-small into feat/automated-delivery-closeout (ea4c5bb) <!-- sw-deliver:closure-correctness-hardening-regression-suite-small -->
 * merge phase in-session-self-wake-fast-path-small into feat/automated-delivery-closeout (04836c6) <!-- sw-deliver:in-session-self-wake-fast-path-small -->
+* merge phase merge-event-ci-workflow-observe-only-gate-small into feat/automated-delivery-closeout (4056e89) <!-- sw-deliver:merge-event-ci-workflow-observe-only-gate-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
