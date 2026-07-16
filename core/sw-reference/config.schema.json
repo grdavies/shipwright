@@ -1178,10 +1178,11 @@
             "issues": {
               "type": "object",
               "additionalProperties": false,
+              "description": "Issue-store credential contract. Under storeLocation.mode separate-project, operators MUST supply SW_PLANNING_ISSUES_TOKEN locally and as a GitHub Actions secret for merge-boundary close-out (scripts/closeout_ci.py, scripts/deliver_closeout.py). The default repo GITHUB_TOKEN is not used for cross-repo planning-project mutations.",
               "properties": {
                 "tokenEnv": {
                   "type": "string",
-                  "description": "Env var for issue-store token (distinct from host token)."
+                  "description": "Canonical env var name for planning-project issue mutations (default and required value: SW_PLANNING_ISSUES_TOKEN). Consumed by closeout_ci.py and issue-store adapters; distinct from host.tokenEnv (GITHUB_TOKEN)."
                 },
                 "rateLimit": {
                   "type": "object"
@@ -1209,12 +1210,12 @@
                 "credentialContract": {
                   "type": "object",
                   "additionalProperties": false,
-                  "description": "Cross-repo issue-store credential contract (PRD 070 R16/R27). Required when storeLocation.mode is separate-project; envVar must match tokenEnv and must not alias host.tokenEnv.",
+                  "description": "Operator-facing cross-repo credential contract (PRD 070 R16/R27/R29). Required when storeLocation.mode is separate-project. Set SW_PLANNING_ISSUES_TOKEN in operator shell and in the deliver-closeout workflow secret; rotate per rotationPolicy; misnamed or missing env fails config lint and close-out auth surfaces a resumeCommand.",
                   "properties": {
                     "envVar": {
                       "type": "string",
                       "const": "SW_PLANNING_ISSUES_TOKEN",
-                      "description": "Canonical env var for planning-project issue mutations in a separate repo; consumed by close-out and issue-store adapters."
+                      "description": "Fixed env var for planning-project issue write in grdavies/planning (or configured owner/repo). Used by .github/workflows/deliver-closeout.yml mutate step and scripts/closeout_ci.py — never substitute GITHUB_TOKEN."
                     },
                     "scope": {
                       "type": "string",

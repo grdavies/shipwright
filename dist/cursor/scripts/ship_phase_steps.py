@@ -298,8 +298,8 @@ def cmd_advance(root: Path, args: list[str]) -> None:
     if not doc:
         fail("ship-steps missing; run init first", path=str(path))
     chain, source, _ = authoritative_chain(root, phase, out)
-    _execute_verify_gate(root, phase, out, norm)
     assert_advance_fidelity(root, chain, norm, doc)
+    _execute_verify_gate(root, phase, out, norm)
     doc["lastCompletedStep"] = norm
     nxt = expected_next_step(chain, norm)
     doc["currentStep"] = nxt
@@ -328,8 +328,8 @@ def advance_step_silent(
     if not doc:
         fail("ship-steps missing; run init first", path=str(path))
     chain, source, _ = authoritative_chain(root, phase, out)
-    _execute_verify_gate(root, phase, out, norm)
     assert_advance_fidelity(root, chain, norm, doc)
+    _execute_verify_gate(root, phase, out, norm)
     doc["lastCompletedStep"] = norm
     nxt = expected_next_step(chain, norm)
     doc["currentStep"] = nxt

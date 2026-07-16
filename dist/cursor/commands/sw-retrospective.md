@@ -200,6 +200,35 @@ python3 scripts/planning_store.py close-delivery-units --prd-unit <prd-unit-id> 
   merge detected.
 - **Post-merge:** stack next phase via workflow sequencing.
 
+## Automated merge-boundary close-out (PRD 070 R29)
+
+After a terminal delivery PR merges to the default branch, planning units in the delivery set (PRD, task
+list, brainstorm, absorbed gaps) close automatically at the merge boundary. Close-out correctness derives
+from the completeness audit in `scripts/planning_store.py` — partial closure is never green.
+
+### Triggers
+
+| Layer | When | Entrypoint |
+| --- | --- | --- |
+| **In-session self-wake** | Conductor terminal gate while deliver state is `completed-pending-merge` and merge is detected within the watch window | `python3 scripts/deliver_closeout.py self-wake-poll --run-id <sw-deliver-<prd>-<slug>>` (armed via `DELIVER_WAKE_<run-id>` sentinel) |
+| **CI fallback** | Push to `main` after the operator merges the terminal PR (post-session) | `.github/workflows/deliver-closeout.yml` → `python3 scripts/closeout_ci.py run` |
+| **Manual / post-merge retrospective** | Operator runs `/sw-retrospective --post-merge` or retries a partial apply | `python3 scripts/planning_store.py close-delivery-units --prd-unit <id>` |
+
+The in-session fast-path and CI driver both resolve the delivery via the immutable PR-to-delivery mapping
+recorded at terminal-PR creation (`.sw/deliver-closeout/pr-delivery-map/`) — never slug or branch heuristics.
+A non-delivery merge to `main` cleanly no-ops (`skipped: no-delivery-mapping`).
+
+### Operator surfaces
+
+- Preview without mutation: `python3 scripts/planning_store.py close-delivery-units --prd-unit <id> --dry-run`
+- On `verdict: not-ready`, retry **only** via the printed `resumeCommand` (same rule as **Closure-audit resume**
+  above).
+- Closure manifests and optional post-audit markers persist under `.sw/deliver-closeout/` (see `.sw/layout.md`).
+
+CI observe-only rollout: the workflow runs `closeout_ci.py --mode observe` until the repository variable
+`DELIVER_CLOSEOUT_CI_GATE` flips to `mutate`. Mutating steps require `SW_PLANNING_ISSUES_TOKEN` (see config
+schema `planning.store.issues.credentialContract`).
+
 ## Post-merge INDEX safety (A1)
 
 Post-merge compounding uses `completion finalize-if-merged` only. On failure, resume with the printed `resumeCommand` — do **not** fall back to bare `reconcile-status.py reconcile` on `main`. Single-unit bookkeeping belongs on a docs branch.
