@@ -1178,10 +1178,11 @@
             "issues": {
               "type": "object",
               "additionalProperties": false,
+              "description": "Issue-store credential contract. Under storeLocation.mode separate-project, operators MUST supply SW_PLANNING_ISSUES_TOKEN locally and as a GitHub Actions secret for merge-boundary close-out (scripts/closeout_ci.py, scripts/deliver_closeout.py). The default repo GITHUB_TOKEN is not used for cross-repo planning-project mutations.",
               "properties": {
                 "tokenEnv": {
                   "type": "string",
-                  "description": "Env var for issue-store token (distinct from host token)."
+                  "description": "Canonical env var name for planning-project issue mutations (default and required value: SW_PLANNING_ISSUES_TOKEN). Consumed by closeout_ci.py and issue-store adapters; distinct from host.tokenEnv (GITHUB_TOKEN)."
                 },
                 "rateLimit": {
                   "type": "object"
@@ -1205,6 +1206,66 @@
                 "oauthSharedCiException": {
                   "type": "boolean",
                   "description": "Explicit exception allowing authMode:oauth via shared CI secret (PRD 066 R23)."
+                },
+                "credentialContract": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Operator-facing cross-repo credential contract (PRD 070 R16/R27/R29). Required when storeLocation.mode is separate-project. Set SW_PLANNING_ISSUES_TOKEN in operator shell and in the deliver-closeout workflow secret; rotate per rotationPolicy; misnamed or missing env fails config lint and close-out auth surfaces a resumeCommand.",
+                  "properties": {
+                    "envVar": {
+                      "type": "string",
+                      "const": "SW_PLANNING_ISSUES_TOKEN",
+                      "description": "Fixed env var for planning-project issue write in grdavies/planning (or configured owner/repo). Used by .github/workflows/deliver-closeout.yml mutate step and scripts/closeout_ci.py — never substitute GITHUB_TOKEN."
+                    },
+                    "scope": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Human-readable least-privilege scope summary (issues write on the planning project only)."
+                    },
+                    "leastPrivilege": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Operator note: cross-repo token is distinct from host.tokenEnv and must not rely on the default repo GITHUB_TOKEN."
+                    },
+                    "rotationPolicy": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "cadenceDays",
+                        "expiryDays",
+                        "owner",
+                        "procedure"
+                      ],
+                      "properties": {
+                        "cadenceDays": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "Recommended rotation cadence in days."
+                        },
+                        "expiryDays": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "Maximum token lifetime in days before mandatory rotation."
+                        },
+                        "owner": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Named owner for credential rotation and incident response."
+                        },
+                        "procedure": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Rotation and expiry procedure for operators and CI secret stores."
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "envVar",
+                    "scope",
+                    "leastPrivilege",
+                    "rotationPolicy"
+                  ]
                 }
               }
             },
@@ -1870,5 +1931,87 @@
         }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "planning": {
+            "type": "object",
+            "properties": {
+              "store": {
+                "type": "object",
+                "properties": {
+                  "backend": {
+                    "const": "issue-store"
+                  },
+                  "storeLocation": {
+                    "type": "object",
+                    "properties": {
+                      "mode": {
+                        "const": "separate-project"
+                      }
+                    },
+                    "required": [
+                      "mode"
+                    ]
+                  }
+                },
+                "required": [
+                  "backend",
+                  "storeLocation"
+                ]
+              }
+            },
+            "required": [
+              "store"
+            ]
+          }
+        },
+        "required": [
+          "planning"
+        ]
+      },
+      "then": {
+        "properties": {
+          "planning": {
+            "type": "object",
+            "properties": {
+              "store": {
+                "type": "object",
+                "properties": {
+                  "issues": {
+                    "type": "object",
+                    "required": [
+                      "tokenEnv",
+                      "credentialContract"
+                    ],
+                    "properties": {
+                      "tokenEnv": {
+                        "const": "SW_PLANNING_ISSUES_TOKEN"
+                      },
+                      "credentialContract": {
+                        "type": "object",
+                        "properties": {
+                          "envVar": {
+                            "const": "SW_PLANNING_ISSUES_TOKEN"
+                          }
+                        },
+                        "required": [
+                          "envVar"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "issues"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

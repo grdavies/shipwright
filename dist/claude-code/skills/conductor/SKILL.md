@@ -275,8 +275,7 @@ echo "DELIVER_WAKE_${RUN_ID}_${PHASE_SLUG} {\"phaseId\":\"<id>\",\"phaseSlug\":\
 
 Arm with `notify_on_output` matching `^DELIVER_WAKE_${RUN_ID}_${PHASE_SLUG}`. Never reuse terminal-only `DELIVER_WAKE_${RUN_ID}` for in-wave phase CI.
 
-Arm as background shell with `notify_on_output` matching `^DELIVER_WAKE_${RUN_ID}`. Reuse
-`checks.watch.pollSeconds` / `checks.watch.maxWaitMinutes` from config — no new knob.
+Arm terminal `DELIVER_WAKE_${RUN_ID}` with `notify_on_output`; reuse `checks.watch` poll/max knobs. Close-out fast-path (PRD 070): [references/closeout-self-wake.md](references/closeout-self-wake.md).
 
 ### Teardown (R9)
 

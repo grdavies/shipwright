@@ -523,6 +523,14 @@
 * merge phase wave-b-remove-docs-prds-drop-public-docs-prds-materialize-fail-closed-r5-medium into feat/post-068-surface-hygiene-deliver-ergonomics (a792e58) <!-- sw-deliver:wave-b-remove-docs-prds-drop-public-docs-prds-materialize-fail-closed-r5-medium -->
 * merge phase wave-b-publish-surface-audit-verified-closed-publish-surface-checklist-r6-medium into feat/post-068-surface-hygiene-deliver-ergonomics (153d9f5) <!-- sw-deliver:wave-b-publish-surface-audit-verified-closed-publish-surface-checklist-r6-medium -->
 * merge phase wave-c-init-defaults-docs-init-posture-seeds-r12-docs-r10-r12-medium into feat/post-068-surface-hygiene-deliver-ergonomics (6a62137) <!-- sw-deliver:wave-c-init-defaults-docs-init-posture-seeds-r12-docs-r10-r12-medium -->
+* merge phase anchored-discovery-fail-closed-audit-small into feat/automated-delivery-closeout (8e5d1c8) <!-- sw-deliver:anchored-discovery-fail-closed-audit-small -->
+* merge phase merge-to-delivery-correlation-closure-manifest-small into feat/automated-delivery-closeout (a15b898) <!-- sw-deliver:merge-to-delivery-correlation-closure-manifest-small -->
+* merge phase cross-repo-credential-contract-small into feat/automated-delivery-closeout (b6fee3e) <!-- sw-deliver:cross-repo-credential-contract-small -->
+* merge phase closure-correctness-hardening-regression-suite-small into feat/automated-delivery-closeout (ea4c5bb) <!-- sw-deliver:closure-correctness-hardening-regression-suite-small -->
+* merge phase in-session-self-wake-fast-path-small into feat/automated-delivery-closeout (04836c6) <!-- sw-deliver:in-session-self-wake-fast-path-small -->
+* merge phase merge-event-ci-workflow-observe-only-gate-small into feat/automated-delivery-closeout (4056e89) <!-- sw-deliver:merge-event-ci-workflow-observe-only-gate-small -->
+* merge phase ci-close-out-driver-no-op-n-per-wave-surfacing-slo-small into feat/automated-delivery-closeout (52e2f2d) <!-- sw-deliver:ci-close-out-driver-no-op-n-per-wave-surfacing-slo-small -->
+* merge phase revert-safety-reconciliation-small into feat/automated-delivery-closeout (4af9ba5) <!-- sw-deliver:revert-safety-reconciliation-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

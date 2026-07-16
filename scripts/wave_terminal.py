@@ -1728,6 +1728,20 @@ def _cmd_terminal_pr_prepare_body(root: Path, args: list[str], *, dry_run: bool)
     }
     save_state(root, state)
     append_log(root, {"event": "terminal-pr-prepare", "pr": pr_info.get("number"), "url": pr_info.get("url")})
+    from deliver_closeout import mapping_from_deliver_state, record_pr_delivery_mapping
+
+    mapping_payload = mapping_from_deliver_state(state, pr_info)
+    map_result: dict[str, Any] | None = None
+    if mapping_payload.get("verdict") != "fail" and pr_info.get("number"):
+        map_result = record_pr_delivery_mapping(root, mapping_payload)
+        if map_result.get("verdict") != "pass":
+            fail(
+                map_result.get("error", "pr-delivery-mapping-failed"),
+                exit_code=20,
+                halt="blocked",
+                cause="terminal-pr:mapping-failed",
+                detail=map_result,
+            )
     prepare_payload: dict[str, Any] = {
         "verdict": "pass",
         "action": "terminal-pr-prepare",
@@ -1741,6 +1755,8 @@ def _cmd_terminal_pr_prepare_body(root: Path, args: list[str], *, dry_run: bool)
         prepare_payload["note"] = (
             "Prepare degraded — gate path continues; not unqualified green (R5)"
         )
+    if map_result is not None:
+        prepare_payload["prDeliveryMapping"] = map_result
     emit(prepare_payload)
 
 
