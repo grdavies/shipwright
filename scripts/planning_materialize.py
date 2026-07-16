@@ -559,10 +559,42 @@ def cmd_provision(root: Path, args: argparse.Namespace) -> int:
     return 0
 
 
+def _scoped_deliver_state_paths(root: Path) -> list[Path]:
+    return sorted((root / ".cursor").glob("sw-deliver-state.*.json"))
+
+
+def _target_from_scoped_state(path: Path) -> str | None:
+    from wave_state import read_json, target_branch_from_state
+
+    try:
+        data = read_json(path)
+    except Exception:
+        return None
+    return target_branch_from_state(data)
+
+
 def cmd_validate_pin(root: Path, args: argparse.Namespace) -> int:
     target = getattr(args, "target", None)
+    scoped = _scoped_deliver_state_paths(root)
+    if len(scoped) > 1 and not target:
+        emit(
+            {
+                "verdict": "fail",
+                "error": "validate-pin-target-required",
+                "halt": "concurrent-deliver-state",
+                "scopedCount": len(scoped),
+                "statePaths": [str(p.relative_to(root)) for p in scoped],
+                "remediation": "pass --target <feature-branch> for the active deliver run",
+            },
+            20,
+        )
+        return 20
+    if not target and len(scoped) == 1:
+        target = _target_from_scoped_state(scoped[0])
     state = load_deliver_state(root, target=target) if target else None
     result = validate_store_pin(root, state=state)
+    if target:
+        result["target"] = target
     emit(result, 0 if result.get("verdict") == "ok" else 20)
     return 0
 
