@@ -16,7 +16,12 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from deliver_closeout import resolve_delivery_for_merge, resolve_delivery_for_pr, run_closeout
+from deliver_closeout import (
+    reconcile_closeout_safety_at_entry,
+    resolve_delivery_for_merge,
+    resolve_delivery_for_pr,
+    run_closeout,
+)
 from host_lib import load_workflow_config, parse_owner_repo, remote_name, git_remote_url
 
 _MERGE_PR_RE = re.compile(r"(?:Merge pull request #|#)(\d+)\b")
@@ -331,6 +336,7 @@ def run_ci_closeout(
 ) -> dict[str, Any]:
     clock = monotonic or time.monotonic
     started_at = clock()
+    safety = reconcile_closeout_safety_at_entry(root, dry_run=(mode == "observe"))
     cfg = load_workflow_config(root)
     gate = resolve_ci_gate(mode_arg=mode, cfg=cfg)
     slo = closeout_slo_config(cfg)
@@ -391,6 +397,7 @@ def run_ci_closeout(
             closeout_previews=previews,
         )
         report["slo"] = build_slo_report(started_at=started_at, finished_at=finished_at, slo=slo, verdict="observe")
+        report["safetyReconcile"] = safety
         return report
 
     token_env = resolve_planning_token_env(cfg)
@@ -434,6 +441,7 @@ def run_ci_closeout(
         "deliveryCount": len(deliveries),
         "deliveries": deliveries,
         "closeoutResults": results,
+        "safetyReconcile": safety,
     }
     slo_report = build_slo_report(started_at=started_at, finished_at=finished_at, slo=slo, verdict=verdict)
     payload["slo"] = slo_report
