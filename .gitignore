@@ -308,3 +308,6 @@ issue:98
 issue:99
 # END visibility-generated
 .sw/build-chain-last-synced.json
+
+# /sw-note local scratch (never commit)
+.cursor/sw-notebook/
