@@ -551,6 +551,7 @@
 * merge phase conductor-skill-headroom-soft-advisory-small into feat/post-070-deliver-hygiene (482817a) <!-- sw-deliver:conductor-skill-headroom-soft-advisory-small -->
 * merge phase absorb-close-out-packaging-parity-small into feat/post-070-deliver-hygiene (623f767) <!-- sw-deliver:absorb-close-out-packaging-parity-small -->
 * merge phase catalog-source-artifact-small into feat/pluggable-memory-adapter-framework (cf6a0ea) <!-- sw-deliver:catalog-source-artifact-small -->
+* merge phase cancel-prd-010-planning-lifecycle-small into feat/pluggable-memory-adapter-framework (1276a97) <!-- sw-deliver:cancel-prd-010-planning-lifecycle-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
