@@ -31,6 +31,7 @@ ALLOWED_TOP_LEVEL = frozenset(
 NAME_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
 MAX_NAME_LEN = 64
 MAX_DESCRIPTION_LEN = 1024
+ADVISORY_SKILL_LINES = 450
 MAX_SKILL_LINES = 500
 MAX_COMPATIBILITY_LEN = 500
 
@@ -48,9 +49,13 @@ class Finding:
     code: str
     path: str
     message: str
+    severity: str = "fail"
 
     def as_dict(self) -> dict[str, str]:
-        return {"code": self.code, "path": self.path, "message": self.message}
+        payload = {"code": self.code, "path": self.path, "message": self.message}
+        if self.severity != "fail":
+            payload["severity"] = self.severity
+        return payload
 
 
 def _load_frontmatter_keys(text: str) -> tuple[dict[str, Any], list[str]]:
@@ -158,12 +163,25 @@ def _scan_skill_md(repo_root: Path, skill_md: Path, tree_prefix: str) -> list[Fi
 
     if skill_md.name == "SKILL.md":
         lines = text.splitlines()
-        if len(lines) > MAX_SKILL_LINES:
+        line_count = len(lines)
+        if line_count > MAX_SKILL_LINES:
             findings.append(
                 Finding(
                     "skill-line-budget",
                     rel,
-                    f"SKILL.md has {len(lines)} lines (max {MAX_SKILL_LINES})",
+                    f"SKILL.md has {line_count} lines (max {MAX_SKILL_LINES})",
+                )
+            )
+        elif line_count >= ADVISORY_SKILL_LINES:
+            findings.append(
+                Finding(
+                    "skill-line-budget-advisory",
+                    rel,
+                    (
+                        f"SKILL.md has {line_count} lines "
+                        f"(advisory at >={ADVISORY_SKILL_LINES}; hard fail above {MAX_SKILL_LINES})"
+                    ),
+                    severity="advisory",
                 )
             )
 
@@ -330,6 +348,12 @@ def advisory_skills_ref(repo_root: Path, tree_prefix: str) -> list[Finding]:
     return [Finding("skills-ref-advisory", tree_prefix, detail[:500])]
 
 
+def partition_findings(findings: list[Finding]) -> tuple[list[Finding], list[Finding]]:
+    hard = [finding for finding in findings if finding.severity != "advisory"]
+    advisory = [finding for finding in findings if finding.severity == "advisory"]
+    return hard, advisory
+
+
 def check_repo(
     repo_root: Path,
     *,
@@ -341,11 +365,14 @@ def check_repo(
     if include_skills_ref:
         for prefix in tree_prefixes or SKILL_TREE_PREFIXES:
             findings.extend(advisory_skills_ref(repo_root, prefix))
+    hard_findings, advisory_findings = partition_findings(findings)
     payload: dict[str, Any] = {
-        "verdict": "pass" if not findings else "fail",
-        "findingCount": len(findings),
-        "findings": [f.as_dict() for f in findings],
+        "verdict": "pass" if not hard_findings else "fail",
+        "findingCount": len(hard_findings),
+        "findings": [f.as_dict() for f in hard_findings],
+        "advisoryCount": len(advisory_findings),
+        "advisories": [f.as_dict() for f in advisory_findings],
     }
-    if findings:
+    if hard_findings:
         payload["halt"] = "skills-spec-guard"
     return payload
