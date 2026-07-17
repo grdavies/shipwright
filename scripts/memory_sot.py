@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -13,6 +14,14 @@ _KNOWN_PROVIDERS = frozenset({"recallium", "in-repo"})
 _EXTERNAL_PROVIDERS = frozenset({"recallium"})
 _SOT_KNOB_VALUES = frozenset({"repo", "memory", "auto"})
 _DECISION_CLASS = "decision"
+_DECISION_VIRTUAL_PREFIX = "docs/decisions/"
+DECISION_STUB_ALLOWLIST = frozenset(
+    {
+        "docs/decisions/INDEX.md",
+        "docs/decisions/SUPERSEDED.log",
+    }
+)
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
 
 
 def emit(obj: dict, exit_code: int = 0) -> None:
@@ -85,6 +94,72 @@ def resolve_effective_sot(knob: str, provider: str | None, doc_class: str) -> st
     return "repo"
 
 
+def slugify(text: str) -> str:
+    lowered = text.lower().strip()
+    slug = _SLUG_RE.sub("-", lowered).strip("-")
+    return slug or "unit"
+
+
+def is_decision_body_path(rel_path: str) -> bool:
+    norm = rel_path.replace("\\", "/")
+    if not norm.startswith(_DECISION_VIRTUAL_PREFIX):
+        return False
+    if norm in DECISION_STUB_ALLOWLIST:
+        return False
+    return norm.endswith(".md")
+
+
+def planning_store_effective(root: Path, config: dict | None = None) -> bool:
+    if config is None:
+        config = load_config(root)
+    from planning_store import resolve_effective_backend
+
+    return resolve_effective_backend(root, config).get("effective") == "issue-store"
+
+
+def decision_unit_id_from_path(rel_path: str, content: str | None = None) -> str:
+    if content and content.startswith("---"):
+        end = content.find("\n---", 3)
+        if end != -1:
+            for line in content[4:end].splitlines():
+                if line.startswith("id:"):
+                    unit = line.partition(":")[2].strip()
+                    if unit:
+                        return unit
+    stem = Path(rel_path).stem
+    return f"decision-{slugify(stem)[:48]}"
+
+
+def resolve_decision_home(root: Path, config: dict | None = None) -> dict:
+    """Authoritative decision body home (PRD 072 R6)."""
+    if config is None:
+        config = load_config(root)
+    if planning_store_effective(root, config):
+        from planning_store import resolve_store_location
+
+        loc = resolve_store_location(root, config)
+        owner = loc.get("owner")
+        repo = loc.get("repo")
+        store_ref = f"{owner}/{repo}" if owner and repo else None
+        return {
+            "home": "planning-store",
+            "virtualPathPrefix": _DECISION_VIRTUAL_PREFIX,
+            "storeRef": store_ref,
+            "storeLocation": loc,
+            "codeRepoBodies": False,
+            "stubsOnly": sorted(DECISION_STUB_ALLOWLIST),
+            "alwaysCommittedTarget": "planning-store",
+        }
+    return {
+        "home": "repo",
+        "virtualPathPrefix": _DECISION_VIRTUAL_PREFIX,
+        "storeRef": None,
+        "codeRepoBodies": True,
+        "stubsOnly": [],
+        "alwaysCommittedTarget": "repo",
+    }
+
+
 def git_root(start: Path) -> Path:
     import subprocess
 
@@ -115,7 +190,9 @@ def cmd_resolve(root: Path, doc_class: str, as_json: bool) -> None:
             "effective": effective,
             "scoped": scoped,
         }
-        if not scoped:
+        if scoped:
+            payload["decisionHome"] = resolve_decision_home(root, config)
+        else:
             payload["note"] = "SoT applies to decision class only; other classes are distillation-only"
         emit(payload)
 
@@ -126,6 +203,8 @@ def build_pointer_recipe(
     effective: str,
     decision_path: str | None,
     memory_id: str | None,
+    *,
+    decision_home: dict | None = None,
 ) -> dict:
     if effective not in ("repo", "memory"):
         fail(f"pointer-recipe requires decision effective SoT repo|memory, got {effective!r}")
@@ -134,8 +213,11 @@ def build_pointer_recipe(
     if norm_path and not norm_path.startswith("docs/decisions/"):
         fail("decision path must be under docs/decisions/")
 
+    home = decision_home or {}
+    planning_store_home = home.get("home") == "planning-store"
+
     if effective == "repo":
-        return {
+        recipe = {
             "verdict": "pass",
             "action": "pointer-recipe",
             "effective": "repo",
@@ -153,8 +235,23 @@ def build_pointer_recipe(
                 "relatedFiles": [norm_path] if norm_path else [],
             },
         }
+        if planning_store_home:
+            recipe["authoritative"] = "planning-store"
+            recipe["nonAuthoritative"] = "git"
+            recipe["git"] = {
+                "role": "pointer",
+                "snapshotRole": "stub-only",
+                "path": norm_path,
+                "stubsOnly": home.get("stubsOnly", []),
+            }
+            recipe["planningStore"] = {
+                "role": "authoritative",
+                "virtualPath": norm_path,
+                "storeRef": home.get("storeRef"),
+            }
+        return recipe
 
-    return {
+    recipe = {
         "verdict": "pass",
         "action": "pointer-recipe",
         "effective": "memory",
@@ -173,6 +270,15 @@ def build_pointer_recipe(
             "memoryId": memory_id,
         },
     }
+    if planning_store_home:
+        recipe["planningStore"] = {
+            "role": "authoritative-body",
+            "virtualPath": norm_path,
+            "storeRef": home.get("storeRef"),
+        }
+        recipe["git"]["snapshotRole"] = "stub-only"
+        recipe["git"]["stubsOnly"] = home.get("stubsOnly", [])
+    return recipe
 
 
 def cmd_pointer_recipe(
@@ -185,11 +291,18 @@ def cmd_pointer_recipe(
     knob = read_source_of_truth_knob(config)
     provider = resolve_memory_provider(root, config)
     effective = resolve_effective_sot(knob, provider, _DECISION_CLASS)
-    recipe = build_pointer_recipe(effective, decision_path or "", memory_id)
+    decision_home = resolve_decision_home(root, config)
+    recipe = build_pointer_recipe(
+        effective,
+        decision_path or "",
+        memory_id,
+        decision_home=decision_home,
+    )
 
     if as_json:
         recipe["sourceOfTruth"] = knob
         recipe["provider"] = provider
+        recipe["decisionHome"] = decision_home
         emit(recipe)
 
     side = recipe["authoritative"]
