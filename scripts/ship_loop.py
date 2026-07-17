@@ -60,12 +60,9 @@ TERMINAL_SHIP_STEPS = frozenset({"sw-ready", "check-gate", "gap-check"})
 
 def ensure_state_synced_before_step(root: Path) -> None:
     """Repair orch↔primary skew before agent/terminal ship steps (PRD 069 R3)."""
-    if os.environ.get("SW_SKIP_CANONICAL_SYNC") in ("1", "true", "yes"):
-        return
-    # Unit/harness and post-merge verify suites must not fail closed on live deliver skew.
-    if os.environ.get("SW_HARNESS") == "1":
-        return
-    if os.environ.get("SW_DELIVER_VERIFY") in ("1", "true", "yes"):
+    from harness_skew_lib import skip_live_canonical_sync
+
+    if skip_live_canonical_sync():
         return
     try:
         from wave_state import ensure_canonical_state_synced
