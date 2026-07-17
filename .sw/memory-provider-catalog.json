@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "description": "Authoritative memory provider capability catalog (PRD 071 R2). Emitted to core/sw-reference via build-chain.",
+  "providers": {
+    "recallium": {
+      "adapterDoc": "core/providers/recallium.md",
+      "rulesScript": "providers/recallium-rules.py",
+      "capabilities": {
+        "typedMemories": true,
+        "filePathSearch": true,
+        "categoryFilter": true,
+        "recencyControl": true,
+        "rulesAtStartup": true,
+        "tasks": true,
+        "export": false,
+        "import": false,
+        "softDelete": true,
+        "semanticSearch": true
+      },
+      "hookTransport": {
+        "agentSession": "mcp",
+        "ruleFetch": "out-of-band-script",
+        "notes": "Agent-session ops via Recallium MCP tools; guardrail hooks invoke providers/recallium-rules.py (non-MCP, budgeted rule-fetch)."
+      },
+      "interchange": {
+        "jsonl": "synthesized",
+        "okf": "synthesized"
+      },
+      "sourceOfTruthClass": "memory-authoritative",
+      "credentials": {
+        "location": "env-only",
+        "notes": "REST/MCP credentials from environment or secret store only — never catalog, config bodies, or memory content."
+      }
+    },
+    "in-repo": {
+      "adapterDoc": "core/providers/in-repo.md",
+      "rulesScript": "providers/in-repo-rules.py",
+      "capabilities": {
+        "typedMemories": true,
+        "filePathSearch": true,
+        "categoryFilter": true,
+        "recencyControl": true,
+        "rulesAtStartup": true,
+        "tasks": false,
+        "export": true,
+        "import": true,
+        "softDelete": true,
+        "semanticSearch": false
+      },
+      "hookTransport": {
+        "agentSession": "filesystem",
+        "ruleFetch": "out-of-band-script",
+        "notes": "Agent-session ops via committed markdown store and in-repo-memory-search.py; guardrail hooks read providers/in-repo-rules.py against .cursor/sw-memory/rules/."
+      },
+      "interchange": {
+        "jsonl": "native",
+        "okf": "native"
+      },
+      "sourceOfTruthClass": "repo-authoritative",
+      "credentials": {
+        "location": "none",
+        "notes": "Offline-first provider — no remote credentials."
+      }
+    }
+  }
+}
