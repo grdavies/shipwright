@@ -96,33 +96,7 @@ candidates.
 
 ## Two-tier plan lifecycle (PRD 022)
 
-Proposals route through `python3 scripts/wave.py plan validate` — **never** hand-author plan JSON in prose.
-Kernel invariants live in `core/sw-reference/kernel-classification.md` (single home — do not duplicate the
-enumeration here).
-
-| Tier | Proposer | Validated plan | Durable owner | Driver |
-| --- | --- | --- | --- | --- |
-| Wave | Conductor at wave entry | Wave-batching plan | `waveBatchingPlan` on shared run-state | `wave_deliver_loop` |
-| Phase | Phase executor at phase entry | Phase step plan | `.cursor/sw-deliver-runs/<phase-slug>/phase-step-plan.json` | `ship_phase_steps.py` |
-
-**Lifecycle** (`twoTierLifecycle` on shared run-state): `wave-validated` → `phase-plan-pending` →
-`phase-plan-validated`. Crash with a validated wave but missing/pending phase plan re-runs phase
-proposal+validate only — never partial execution.
-
-**Reject fallbacks:** phase reject → canonical chain from `kernel-classification.json`; wave contention or
-dependency violation → canonical waves re-derived from the frozen plan; over-ceiling → `wave.py schedule`.
-
-**Proposed pilot wiring (PRD 023 phase 1):** `/sw-deliver` reads `orchestration.planPolicy` at wave entry and
-phase entry. Under `proposed` (after TR0 gate), the conductor proposes → `wave.py plan validate`
-(`--record-rejection` on shared state) → persist; `wave_deliver_loop` sets `wave-validated` after wave persist
-and routes phase entry through validate-before-persist. Default `canonical` is unchanged.
-
-**`orchestration.planPolicy`:** read at proposal time (default `canonical` — byte-identical to today);
-recorded `planPolicy` + `kernelVersion` + `guidelineVersion` stamped on each persisted plan and honored on
-resume over live config. Live `proposed` runs on `/sw-deliver` when TR0 passes and pilot opt-in guards are
-met; default stays `canonical`. PRD-024 fans the pattern to other orchestrators — see
-`docs/prds/022-kernel-classification-and-plan-validation/call-site-map.md`.
-
+Wave + phase plan validation, lifecycle states, reject fallbacks, and `orchestration.planPolicy` pilot wiring: [references/two-tier-plan-lifecycle.md](references/two-tier-plan-lifecycle.md).
 ## Default autonomy (R13)
 
 With default configuration (`deliver.autonomy.mode: autonomous`, `phaseAckCadence: 0`, `doc.afterTasks` not
@@ -247,43 +221,7 @@ On circuit breaker: `python3 scripts/wave.py report terminal` (or `report blocke
 
 ## Self-wake sentinel (R8, R9)
 
-For time-gated external waits (terminal-PR CI, long `checks.watch` polls), arm a **uniquely named**
-background shell with `notify_on_output` so the conductor resumes without a user message.
-
-**Run id** (stable per deliver run): `sw-deliver-<prd_number>-<target.slug>` from the scoped
-`.cursor/sw-deliver-state.<slug>.json` (e.g. `sw-deliver-009-autonomous-orchestration-conductor`).
-
-### Terminal-PR CI wait
-
-After `/sw-pr` on the feature branch:
-
-```bash
-RUN_ID="sw-deliver-009-autonomous-orchestration-conductor"   # from state
-PR=$(python3 scripts/host.py resolve-pr-for-branch)
-python3 scripts/host.py checks --number "$PR"
-echo "DELIVER_WAKE_${RUN_ID} {\"phase\":\"terminal-ci\",\"prd\":\"009\"}"
-```
-
-### Phase-mode dispatch-ship CI wait (PRD 063 R3)
-
-For phase-PR CI (not terminal), use a **phase-unique** sentinel so concurrent phases do not collide:
-
-```bash
-PHASE_SLUG="<phase-slug>"   # from SW_PHASE_SLUG / deliver state
-echo "DELIVER_WAKE_${RUN_ID}_${PHASE_SLUG} {\"phaseId\":\"<id>\",\"phaseSlug\":\"${PHASE_SLUG}\"}"
-```
-
-Arm with `notify_on_output` matching `^DELIVER_WAKE_${RUN_ID}_${PHASE_SLUG}`. Never reuse terminal-only `DELIVER_WAKE_${RUN_ID}` for in-wave phase CI.
-
-Arm terminal `DELIVER_WAKE_${RUN_ID}` with `notify_on_output`; reuse `checks.watch` poll/max knobs. Close-out fast-path (PRD 070): [references/closeout-self-wake.md](references/closeout-self-wake.md).
-
-### Teardown (R9)
-
-On any terminal halt (`verdict: complete|blocked|rejected`) or human stop:
-
-- Cancel/kill background shells tagged with `DELIVER_WAKE_<run-id>` and any deliver heartbeats for that run id.
-- Never leave orphaned watchers holding tokens after the run ends.
-
+Terminal-PR CI, phase-mode dispatch-ship CI, teardown, and external-wait exhaustion: [references/self-wake-sentinel.md](references/self-wake-sentinel.md).
 ## External-wait exhaustion (R40)
 
 When a self-wake or CI watch reaches `checks.watch.maxWaitMinutes` without a terminal signal:
@@ -330,30 +268,7 @@ default to poll-then-halt rather than indefinite yield.
 
 ## Legitimate-halt set (R10)
 
-Halt for human input **only** when one of these applies:
-
-| # | Condition | Detection |
-| --- | --- | --- |
-| 1 | Final merge to `main` | Terminal gate (`report terminal`); never auto-merged |
-| 2 | Remediation budget exhausted | `remediationAttempts[phaseId] >= deliver.remediation.maxAttempts` |
-| 3 | Ambiguous merge / destructive action | Merge conflict, explicit revert, or irreversible git op |
-| 4 | Configured checkpoint | `doc.afterTasks: confirm`, `deliver.phaseAckCadence: K>0`, `deliver.autonomy.mode: supervised` |
-| 5 | Phase liveness timeout (R37) | `phase-timeout:<id>` — in-flight phase exceeds `deliver.watchdog.phaseTimeoutMinutes` without terminal `status.json` |
-| 6 | External wait exhausted (R40) | CI/self-wake hits `checks.watch.maxWaitMinutes` without signal |
-| 7 | Run-level autonomy budget (R42) | `deliver.autonomy.maxRunMinutes` or `maxIterations` exceeded |
-| 8 | No-progress circuit breaker (R38) | 3× identical `nextAction` + unchanged state signature |
-| 9 | Driver-enforced budget trip (PRD 023 TR3) | `runStartedAt` / `driverIterationCount` / `noProgressStreak` exceeded; `planRejectionLog` feeds no-progress |
-
-Anything not in this table is **not** a legitimate halt.
-
-### Driver-enforced budgets (PRD 023 TR3)
-
-`wave_deliver_loop.py` maintains durable `runStartedAt`, `driverIterationCount`, and `noProgressStreak` on
-shared run-state. Proposal and `plan validate` overhead count separately from execution iterations; persistent
-`planRejectionLog` rejections increment no-progress. Budget trip emits `halt-blocked` with merge-queue journal
-replayability and scoped lock release (R22). Terminal runs roll up `benefitMetric` and surface chosen plans /
-rejections / capability sets via `deliver_plan_surfacing` (R21).
-
+Human-input halt conditions and driver-enforced budget trips: [references/legitimate-halt-set.md](references/legitimate-halt-set.md).
 ## No routine halts (R11)
 
 The conductor **must not** pause or ask the user to continue for:
@@ -411,37 +326,7 @@ Plan-time contention, schedule consumption, conductor Task dispatch, intra-phase
 
 ## Bounded planning full-conductor (PRD 035 R8–R9, R23)
 
-`planning.autonomy` defaults to `maintenance-only`: mechanical/living graph bookkeeping runs autonomously
-with **no prompts**; content-authoring decisions (pull-in, amendments, priority changes, cancel/supersede)
-are auto-**proposed** and human-confirmed. The opt-in `full-conductor` posture elevates only
-**gap/absorption-class** decisions to in-loop auto-decision via `scripts/planning_autonomy.py`.
-
-| Constraint | Enforcement |
-| --- | --- |
-| Scope | Gap/absorption class only — never private/memory units |
-| Confidence | `planning.fullConductor.confidenceThreshold` before auto-decide |
-| Undo | `planning.fullConductor.undoWindowSeconds` before reconciler materializes |
-| Mutation budget | `planning.fullConductor.mutationBudget` per session → legitimate halt `planning-mutation-budget` |
-| No nested dispatch | Driver **enqueues handoffs only** — never `/sw-deliver`, `/sw-doc`, or any orchestrator from its loop |
-| Reconcile boundary | Explicit halt between reconcile batch completion and downstream dispatch |
-| Merge gate | Never weakens merge-to-`main`; branch protection never bypassed |
-| Durable audit | Opt-in, `--override`, `--accept-frozen-impact`, direct-to-trunk logged (who/when/why) |
-
-Entrypoints:
-
-```bash
-python3 scripts/planning_autonomy.py . posture
-python3 scripts/planning_autonomy.py . evaluate --decision-type gap-absorb --visibility public
-python3 scripts/planning_autonomy.py . step --proposals-file proposals.json
-python3 scripts/planning_autonomy.py . enqueue-handoff --command "/sw-tasks confirm …"
-python3 scripts/planning_autonomy.py . check-dispatch --command "/sw-deliver run …"
-```
-
-Resume after `planning-mutation-budget` halt: operator acknowledges and re-runs with explicit confirm or
-lower scope — same legitimate-halt model as deliver conductor budgets.
-
-Workflow pushes use `scripts/git-push.py` only (secret-scan pre-push; phase sub-agents never raw `git push`).
-
+Opt-in `full-conductor` posture, constraints, and `planning_autonomy.py` entrypoints: [references/planning-full-conductor.md](references/planning-full-conductor.md).
 ## Config knobs
 
 Read from `.cursor/workflow.config.json`:
@@ -458,40 +343,14 @@ Read from `.cursor/workflow.config.json`:
 
 ## Deliver-loop mechanical drain + timing (PRD 062 R7, R9, R19)
 
-`wave_deliver_loop.py` reads `deliver.loop.drainMechanical` (default **`true`**):
-
-| `drainMechanical` | Behavior |
-| --- | --- |
-| `true` (default) | `deliver-loop` executes mechanical actions in-process until `awaitAgent`, `awaitInFlight`, or a legitimate halt — reduces driver re-invocation churn |
-| `false` | One mechanical step per `deliver-loop` invocation (legacy one-step posture) |
-
-**Termination / halt surfaces:**
-
-- **`--max-steps` budget** (default 12 per invocation) — when still mechanical after the budget,
-  `conductor:drain-step-budget-exceeded` halts fail-closed (not an unqualified pass).
-- **No-progress circuit breaker** — identical `nextAction` + state signature 3× → `conductor:no-progress`.
-- **Identical mechanical signature N×** without state advance → stall halt (not pass).
-
-**`elapsedMs` (R9):** `driver-transition` log events and `execute-mechanical` results include wall-clock
-`elapsedMs` (optional subprocess timings). Values are numeric only — no secret-bearing argv in logs. Gate
-semantics unchanged; timing is diagnostic/operator-observable only.
-
+`deliver.loop.drainMechanical`, step budgets, stall halts, and `elapsedMs` diagnostics: [references/deliver-loop-drain.md](references/deliver-loop-drain.md).
 ## PRD 062 release acceptance metrics (R18)
 
 Operator acceptance checks: `references/release-acceptance.md`.
 
 ## Orchestrator adoption
 
-| Orchestrator | Run durability | Adoption mode (PRD 024) | Status |
-| --- | --- | --- | --- |
-| `/sw-deliver` | **Durable** (PRD 007/013 run-state + crash-resume) | `full` when `planPolicy: proposed` | Pilot consumer (R34) — `deliver-loop` / `run` |
-| `/sw-ship` | Phase-scoped (in-loop) | N/A (atomic chain) | Adopted (PRD 017) — SHIP-A1..A4 |
-| `/sw-debug` | **Episodic** (session scratch; no crash-resume) | `full` | Adopted (PRD 017 + 024) — DBG-A1..A2 |
-| `/sw-doc` | **Durable** (docs worktree → `/sw-deliver` handoff) | **`consistency-only` default** (R36c); `full` when variance probe shows latitude | Adopted (PRD 017 + 024) — DOC-A1..A2 |
-| `/sw-feedback` | **Episodic** (session scratch; no crash-resume) | `full` | Adopted (PRD 017 + 024) — FB-A1..A2 |
+Durability and adoption-mode matrix per orchestrator: [references/orchestrator-adoption.md](references/orchestrator-adoption.md).
 
-**Durability (R37):** `durable` orchestrators may persist deliver/doc handoff run-state; `episodic`
-debug/feedback validate at entry, surface R21 into `.cursor/sw-*-runs/<id>/episodic-run-summary.json`, and
-abandon scratch on terminal halt — never deliver-scoped crash-resume.
-
+Reference this skill from orchestrator commands; do not duplicate loop prose.
 Reference this skill from orchestrator commands; do not duplicate loop prose.
