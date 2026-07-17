@@ -14,17 +14,13 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from memory_sot import DECISION_STUB_ALLOWLIST, is_decision_body_path, resolve_decision_home
 from wave_json_io import write_json
 
 AUDIT_REL = Path(".cursor/sw-deliver-runs/publish-surface-audit.json")
 SEVERITIES_EXPECTED = ("critical", "warning")
 
-DECISION_INDEX_ALLOW = frozenset(
-    {
-        "docs/decisions/INDEX.md",
-        "docs/decisions/SUPERSEDED.log",
-    }
-)
+DECISION_INDEX_ALLOW = DECISION_STUB_ALLOWLIST
 
 GITIGNORE_REQUIRED_SNIPPETS = (
     "docs/prds/",
@@ -63,7 +59,7 @@ def leaked_publish_paths(tracked: list[str]) -> list[str]:
     for path in tracked:
         if path.startswith("docs/learnings/"):
             leaks.append(path)
-        elif path.startswith("docs/decisions/") and path not in DECISION_INDEX_ALLOW:
+        elif is_decision_body_path(path):
             leaks.append(path)
         elif path == ".cursor/sw-base-state.json":
             leaks.append(path)
@@ -80,6 +76,32 @@ def leaked_publish_paths(tracked: list[str]) -> list[str]:
 
 def docs_prds_tracked(tracked: list[str]) -> list[str]:
     return sorted(p for p in tracked if p == "docs/prds" or p.startswith("docs/prds/"))
+
+
+def decision_body_leaks(tracked: list[str]) -> list[str]:
+    return sorted(p for p in tracked if is_decision_body_path(p))
+
+
+def _check_decision_home_migration(root: Path, tracked: list[str] | None, discovery_error: str | None) -> dict[str, Any]:
+    del tracked, discovery_error
+    home = resolve_decision_home(root)
+    planning_store = home.get("home") == "planning-store"
+    detail: dict[str, Any] = {"decisionHome": home}
+    if not planning_store:
+        return {
+            "id": "decision-home-migration",
+            "severity": "warning",
+            "status": "skipped",
+            "considered": False,
+            "detail": detail,
+        }
+    return {
+        "id": "decision-home-migration",
+        "severity": "warning",
+        "status": "passed",
+        "considered": True,
+        "detail": detail,
+    }
 
 
 def _check_denylist_leaked(root: Path, tracked: list[str] | None, discovery_error: str | None) -> dict[str, Any]:
@@ -149,6 +171,7 @@ CheckFn = Callable[[Path, list[str] | None, str | None], dict[str, Any]]
 CHECKS: tuple[CheckFn, ...] = (
     _check_denylist_leaked,
     _check_docs_prds_absent,
+    _check_decision_home_migration,
     _check_gitignore_hygiene,
 )
 
