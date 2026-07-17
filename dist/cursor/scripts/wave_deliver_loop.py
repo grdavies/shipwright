@@ -98,6 +98,7 @@ MECHANICAL_ACTIONS = frozenset(
         "canonical-reemit",
         "merge-enqueue",
         "merge-run-next",
+        "post-merge-verify-remediate",
         "phase-teardown-run",
         "advance-wave",
         "wave-plan-persist",
@@ -717,6 +718,77 @@ def sync_plan_rejection_no_progress(state: dict[str, Any]) -> None:
     threshold = DEFAULT_NO_PROGRESS_THRESHOLD
     state["noProgressStreak"] = max(int(state.get("noProgressStreak", 0)), threshold)
 
+
+
+def merge_queue_drain_preferred(state: dict[str, Any]) -> bool:
+    """True when merge queue can drain without an open journal (PRD 072 R5)."""
+    return bool(state.get("mergeQueue")) and not state.get("mergeJournal")
+
+
+def _merge_queue_liveness_targets(state: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
+    merge_slugs = {
+        str(entry.get("phaseSlug"))
+        for entry in (state.get("mergeQueue") or [])
+        if isinstance(entry, dict) and entry.get("phaseSlug")
+    }
+    targets: list[tuple[str, dict[str, Any]]] = []
+    for pid, meta in (state.get("phases") or {}).items():
+        if not isinstance(meta, dict):
+            continue
+        slug = str(meta.get("slug") or "")
+        if meta.get("status") == "in-flight" or slug in merge_slugs:
+            targets.append((str(pid), meta))
+    return targets
+
+
+def refresh_merge_queue_liveness_cas(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    max_attempts: int = 3,
+) -> bool:
+    """Refresh livenessAt/updatedAt for queued in-flight phases; never rewrite startedAt (R5)."""
+    expected_at = str(state.get("updatedAt") or "")
+    for _ in range(max_attempts):
+        fresh = load_state(root)
+        if expected_at and str(fresh.get("updatedAt") or "") != expected_at:
+            state.update(fresh)
+            expected_at = str(fresh.get("updatedAt") or "")
+            continue
+        now = utc_now()
+        changed = False
+        for _pid, meta in _merge_queue_liveness_targets(fresh):
+            started = meta.get("startedAt")
+            if meta.get("livenessAt") != now or meta.get("updatedAt") != now:
+                meta["livenessAt"] = now
+                meta["updatedAt"] = now
+                if started is not None:
+                    meta["startedAt"] = started
+                changed = True
+        if not changed:
+            state.update(fresh)
+            return True
+        fresh["updatedAt"] = now
+        save_state(root, fresh)
+        state.update(fresh)
+        return True
+    return False
+
+
+def phase_watchdog_stale(meta: dict[str, Any], timeout_seconds: float) -> bool:
+    """Phase timeout uses startedAt; recent livenessAt suppresses false stuck (R5)."""
+    liveness = meta.get("livenessAt")
+    if isinstance(liveness, str):
+        liveness_age = age_seconds(liveness)
+        if liveness_age is not None and liveness_age <= timeout_seconds:
+            return False
+    started = meta.get("startedAt")
+    if not isinstance(started, str):
+        started = meta.get("updatedAt")
+    if not isinstance(started, str):
+        return False
+    age = age_seconds(started)
+    return age is not None and age > timeout_seconds
 
 
 def remediate_pending_for_state(root: Path, state: dict[str, Any]) -> bool:
@@ -1526,16 +1598,14 @@ def check_watchdog(root: Path, state: dict[str, Any]) -> str | None:
         if age is not None and age > DRIVER_STALE_SECONDS:
             return "driver-heartbeat-stale"
     timeout_min = phase_timeout_minutes(root)
+    timeout_seconds = timeout_min * 60
     for pid, meta in (state.get("phases") or {}).items():
         if not isinstance(meta, dict):
             continue
         if meta.get("status") != "in-flight":
             continue
-        started = meta.get("startedAt") or meta.get("updatedAt")
-        if isinstance(started, str):
-            age = age_seconds(started)
-            if age is not None and age > timeout_min * 60:
-                return f"phase-timeout:{pid}"
+        if phase_watchdog_stale(meta, timeout_seconds):
+            return f"phase-timeout:{pid}"
     return None
 
 
@@ -1963,6 +2033,23 @@ def compute_next_action(
             count = int(attempts.get(str(pid), 0))
             max_attempts = remediation_max(root)
             if count < max_attempts:
+                cause_class = (
+                    "environmental"
+                    if cause.startswith("verify:environmental")
+                    else "regression"
+                )
+                if cause_class == "environmental" and merge_queue_drain_preferred(state):
+                    continue
+                if cause_class == "environmental":
+                    return {
+                        "action": "post-merge-verify-remediate",
+                        "phaseId": pid,
+                        "phaseSlug": meta.get("slug"),
+                        "attempt": count + 1,
+                        "maxAttempts": max_attempts,
+                        "resume": True,
+                        "causeClass": cause_class,
+                    }
                 return {
                     "action": "remediate",
                     "phaseId": pid,
@@ -1970,11 +2057,7 @@ def compute_next_action(
                     "attempt": count + 1,
                     "maxAttempts": max_attempts,
                     "resume": True,
-                    "causeClass": (
-                        "environmental"
-                        if cause.startswith("verify:environmental")
-                        else "regression"
-                    ),
+                    "causeClass": cause_class,
                 }
             return {
                 "action": "halt-blocked",
@@ -2001,6 +2084,12 @@ def compute_next_action(
             "resume": True,
             "desync": True,
         }
+
+    if merge_queue_drain_preferred(state) or any(
+        isinstance(meta, dict) and meta.get("postMergeVerifyPending")
+        for meta in (state.get("phases") or {}).values()
+    ):
+        refresh_merge_queue_liveness_cas(root, state)
 
     watchdog = check_watchdog(root, state)
     if watchdog:
@@ -2692,6 +2781,62 @@ def _execute_mechanical_inner(
         persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
         return {"executed": "collect-status", "phaseSlug": slug, **data}
 
+    if action == "post-merge-verify-remediate":
+        slug = str(step.get("phaseSlug", ""))
+        pid = str(step.get("phaseId", ""))
+        ec, data = run_wave(root, "verify", "run-after-merge", "--phase-slug", slug)
+        refresh_merge_queue_liveness_cas(root, state)
+        if ec == 0:
+            state.update(load_state(root))
+            meta = (state.get("phases") or {}).get(pid)
+            if isinstance(meta, dict):
+                meta.pop("postMergeVerifyPending", None)
+                meta.pop("verifyEnvironmental", None)
+                meta.pop("cause", None)
+                meta["status"] = "green-merged"
+                meta["updatedAt"] = utc_now()
+                save_state(root, state)
+            persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
+            return {"executed": "post-merge-verify-remediate", "phaseSlug": slug, **data}
+        if ec == 10 and data.get("cause") == "verify:environmental":
+            state.update(load_state(root))
+            attempts = state.setdefault("verifyRemediationAttempts", {})
+            attempts[pid] = int(step.get("attempt") or attempts.get(pid, 0))
+            meta = (state.get("phases") or {}).get(pid)
+            if isinstance(meta, dict):
+                _record_remediation_cause(meta, "verify:environmental")
+                meta["lastRemediationAt"] = utc_now()
+                meta["postMergeVerifyPending"] = True
+                save_state(root, state)
+            next_action = (
+                "merge-run-next"
+                if merge_queue_drain_preferred(state)
+                else "post-merge-verify-remediate"
+            )
+            persist_cursor(root, state, next_action)
+            return {
+                "executed": "post-merge-verify-remediate",
+                "phaseSlug": slug,
+                "causeClass": "environmental",
+                "nextAction": next_action,
+                **data,
+            }
+        if ec == 20 and data.get("cause") == "verify:failed":
+            state.update(load_state(root))
+            meta = (state.get("phases") or {}).get(pid)
+            if isinstance(meta, dict):
+                _record_remediation_cause(meta, "verify:failed")
+                meta["lastRemediationAt"] = utc_now()
+                save_state(root, state)
+            persist_cursor(root, state, "remediate")
+            return {
+                "executed": "post-merge-verify-remediate",
+                "verifyFailed": True,
+                "causeClass": "regression",
+                **data,
+            }
+        fail_payload(data, "post-merge verify remediation failed", ec)
+
     if action == "merge-enqueue":
         slug = str(step.get("phaseSlug", ""))
         ec, data = run_wave(root, "merge", "enqueue", "--phase-slug", slug)
@@ -2712,6 +2857,10 @@ def _execute_mechanical_inner(
             )
         ec, data = run_wave(root, "merge", "run-next")
         if ec == 10 and data.get("cause") == "verify:environmental":
+            # Reload disk state first — merge-run-next already dequeued + recorded
+            # completedMerges; saving the pre-call in-memory snapshot would wipe that (R9).
+            state.update(load_state(root))
+            refresh_merge_queue_liveness_cas(root, state)
             slug = str(data.get("phase") or "")
             for pid, meta in (state.get("phases") or {}).items():
                 if isinstance(meta, dict) and meta.get("slug") == slug:
@@ -2719,13 +2868,20 @@ def _execute_mechanical_inner(
                     attempts[str(pid)] = int(attempts.get(str(pid), 0)) + 1
                     _record_remediation_cause(meta, "verify:environmental")
                     meta["lastRemediationAt"] = utc_now()
+                    meta["postMergeVerifyPending"] = True
                     save_state(root, state)
                     break
-            persist_cursor(root, state, "remediate")
+            next_action = (
+                "merge-run-next"
+                if merge_queue_drain_preferred(state)
+                else "post-merge-verify-remediate"
+            )
+            persist_cursor(root, state, next_action)
             return {
                 "executed": "merge-run-next",
                 "verifyEnvironmental": True,
                 "causeClass": "environmental",
+                "nextAction": next_action,
                 **data,
             }
         if ec == 20 and data.get("cause") == "verify:failed":

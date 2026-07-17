@@ -55,6 +55,29 @@ MERGED_TERMINAL_STATUSES = frozenset(
 )
 
 
+def should_defer_post_merge_verify(state: dict[str, Any]) -> bool:
+    """Defer verify while merge queue has drainable siblings (PRD 072 R5)."""
+    return bool(state.get("mergeQueue")) and not state.get("mergeJournal")
+
+
+def mark_post_merge_verify_pending(
+    state: dict[str, Any],
+    *,
+    phase_id: str | None,
+    cause: str = "verify:environmental",
+) -> None:
+    if not phase_id:
+        return
+    phases = state.get("phases") or {}
+    meta = phases.get(phase_id)
+    if not isinstance(meta, dict):
+        return
+    meta["postMergeVerifyPending"] = True
+    meta["verifyEnvironmental"] = True
+    meta["cause"] = cause
+    meta["updatedAt"] = utc_now()
+
+
 def load_deliver_plan(root: Path) -> dict[str, Any]:
     path = root / PLAN_PATH
     if not path.is_file():
@@ -1532,6 +1555,25 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
                 **{k: v for k, v in err.items() if k != "error"},
             )
 
+        if should_defer_post_merge_verify(state):
+            mark_post_merge_verify_pending(state, phase_id=phase_id)
+            save_state(root, state)
+            emit(
+                {
+                    "verdict": "wait",
+                    "action": "merge-run-next",
+                    "phase": phase_slug,
+                    "cause": "verify:environmental",
+                    "causeClass": "environmental",
+                    "forwardMergedDependencies": forward_merged,
+                    "mergeRetained": True,
+                    "verifyDeferred": True,
+                    "remaining": len(state.get("mergeQueue") or []),
+                    "note": "Post-merge verify deferred — merge queue drain continues (R5)",
+                },
+                exit_code=10,
+            )
+
         verify_args = [
             sys.executable,
             str(SCRIPT_DIR / "wave_failure.py"),
@@ -1543,7 +1585,32 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
         ]
         if orch:
             verify_args.extend(["--orchestrator-worktree", orch])
-        verify_proc = subprocess.run(verify_args, cwd=str(root), text=True, capture_output=True)
+        verify_timeout = merge_run_next_timeout_seconds(root)
+        try:
+            verify_proc = run_subprocess_with_timeout(
+                verify_args,
+                cwd=root,
+                timeout=verify_timeout,
+            )
+        except subprocess.TimeoutExpired:
+            state = load_state(root)
+            mark_post_merge_verify_pending(state, phase_id=phase_id)
+            save_state(root, state)
+            emit(
+                {
+                    "verdict": "wait",
+                    "action": "merge-run-next",
+                    "phase": phase_slug,
+                    "cause": "verify:environmental",
+                    "causeClass": "environmental",
+                    "forwardMergedDependencies": forward_merged,
+                    "mergeRetained": True,
+                    "verifyWatchdogExhausted": True,
+                    "remaining": len(state.get("mergeQueue") or []),
+                    "note": "Post-merge verify timed out — merge retained; queue drain continues (R5)",
+                },
+                exit_code=10,
+            )
         if verify_proc.returncode != 0:
             try:
                 err = json.loads(verify_proc.stdout)
@@ -1556,11 +1623,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
             cause_class = classify_verify_failure(verify_outcome)
             if cause == "verify:environmental" or cause_class == "environmental":
                 state = load_state(root)
-                if phase_id and phase_id in state.get("phases", {}):
-                    phase_meta = state["phases"][phase_id]
-                    phase_meta["verifyEnvironmental"] = True
-                    phase_meta["cause"] = "verify:environmental"
-                    phase_meta["updatedAt"] = utc_now()
+                mark_post_merge_verify_pending(state, phase_id=phase_id)
                 save_state(root, state)
                 emit(
                     {
