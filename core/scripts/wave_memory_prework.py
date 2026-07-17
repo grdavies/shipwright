@@ -13,6 +13,12 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+HOOKS_DIR = SCRIPT_DIR.parent / "core" / "hooks"
+if str(HOOKS_DIR) not in sys.path:
+    sys.path.insert(0, str(HOOKS_DIR))
+
+from memory_prework_gate import DEFAULT_SURFACE_MUTATION_BUDGET  # noqa: E402
+
 RECORD_PATH = Path(".cursor/hooks/state/memory-prework-search.json")
 DEFAULT_CLASSES = ("rule", "decision", "learning", "code-context", "design")
 DEFAULT_TTL_SECONDS = 3600
@@ -199,6 +205,8 @@ def cmd_record(root: Path, args: list[str]) -> None:
         "createdAt": now,
         "expiresAt": now + ttl_seconds,
         "consumedAt": None,
+        "mutationBudget": DEFAULT_SURFACE_MUTATION_BUDGET,
+        "mutationsUsed": 0,
     }
 
     redacted = redact_payload(json.dumps(record, ensure_ascii=False))
