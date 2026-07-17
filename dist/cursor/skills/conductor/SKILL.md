@@ -219,14 +219,7 @@ On circuit breaker: `python3 scripts/wave.py report terminal` (or `report blocke
 
 ## Self-wake sentinel (R8, R9)
 
-Terminal-PR CI, phase-mode dispatch-ship CI, teardown, and external-wait exhaustion: [references/self-wake-sentinel.md](references/self-wake-sentinel.md).
-## External-wait exhaustion (R40)
-
-When a self-wake or CI watch reaches `checks.watch.maxWaitMinutes` without a terminal signal:
-
-1. Emit consolidated halt via `scripts/wave.py report terminal` (`cause: external-wait:exhausted`).
-2. Do not trust stale log output — re-derive next action from durable state on the next wake or resume.
-3. Treat as a legitimate halt (user may merge manually or resume watch).
+Terminal-PR CI, phase-mode dispatch-ship CI (`DELIVER_WAKE_${RUN_ID}_${PHASE_SLUG}`), teardown, and external-wait exhaustion: [references/self-wake-sentinel.md](references/self-wake-sentinel.md).
 
 ## Parallel-wave completion wait (R44)
 
@@ -267,6 +260,7 @@ default to poll-then-halt rather than indefinite yield.
 ## Legitimate-halt set (R10)
 
 Human-input halt conditions and driver-enforced budget trips: [references/legitimate-halt-set.md](references/legitimate-halt-set.md).
+
 ## No routine halts (R11)
 
 The conductor **must not** pause or ask the user to continue for:
@@ -324,7 +318,8 @@ Plan-time contention, schedule consumption, conductor Task dispatch, intra-phase
 
 ## Bounded planning full-conductor (PRD 035 R8–R9, R23)
 
-Opt-in `full-conductor` posture, constraints, and `planning_autonomy.py` entrypoints: [references/planning-full-conductor.md](references/planning-full-conductor.md).
+Opt-in `full-conductor` posture with `planning-mutation-budget` halts and **No nested dispatch** constraints; pushes use `scripts/git-push.py` only. Detail: [references/planning-full-conductor.md](references/planning-full-conductor.md).
+
 ## Config knobs
 
 Read from `.cursor/workflow.config.json`:
@@ -342,6 +337,7 @@ Read from `.cursor/workflow.config.json`:
 ## Deliver-loop mechanical drain + timing (PRD 062 R7, R9, R19)
 
 `deliver.loop.drainMechanical`, step budgets, stall halts, and `elapsedMs` diagnostics: [references/deliver-loop-drain.md](references/deliver-loop-drain.md).
+
 ## PRD 062 release acceptance metrics (R18)
 
 Operator acceptance checks: `references/release-acceptance.md`.
@@ -350,5 +346,4 @@ Operator acceptance checks: `references/release-acceptance.md`.
 
 Durability and adoption-mode matrix per orchestrator: [references/orchestrator-adoption.md](references/orchestrator-adoption.md).
 
-Reference this skill from orchestrator commands; do not duplicate loop prose.
 Reference this skill from orchestrator commands; do not duplicate loop prose.
