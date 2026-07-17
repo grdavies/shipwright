@@ -531,6 +531,17 @@
 * merge phase merge-event-ci-workflow-observe-only-gate-small into feat/automated-delivery-closeout (4056e89) <!-- sw-deliver:merge-event-ci-workflow-observe-only-gate-small -->
 * merge phase ci-close-out-driver-no-op-n-per-wave-surfacing-slo-small into feat/automated-delivery-closeout (52e2f2d) <!-- sw-deliver:ci-close-out-driver-no-op-n-per-wave-surfacing-slo-small -->
 * merge phase revert-safety-reconciliation-small into feat/automated-delivery-closeout (4af9ba5) <!-- sw-deliver:revert-safety-reconciliation-small -->
+* merge phase narrow-widen-globs-small into feat/post-070-deliver-hygiene (067e1aa) <!-- sw-deliver:narrow-widen-globs-small -->
+* merge phase narrow-widen-globs-small into feat/post-070-deliver-hygiene (ebe3576) <!-- sw-deliver:narrow-widen-globs-small -->
+* merge phase watchdog-classification-solely-semantics-small into feat/post-070-deliver-hygiene (4a172a4) <!-- sw-deliver:watchdog-classification-solely-semantics-small -->
+* merge phase shared-harness-skew-skip-small into feat/post-070-deliver-hygiene (3c67f3a) <!-- sw-deliver:shared-harness-skew-skip-small -->
+* merge phase version-txt-follows-release-please-manifest-small into feat/post-070-deliver-hygiene (4a7933d) <!-- sw-deliver:version-txt-follows-release-please-manifest-small -->
+* merge phase migrate-docs-decisions-to-planning-store-home-medium into feat/post-070-deliver-hygiene (0fe1315) <!-- sw-deliver:migrate-docs-decisions-to-planning-store-home-medium -->
+* merge phase standing-guidance-sweep-thin-agents-md-medium into feat/post-070-deliver-hygiene (f659bfc) <!-- sw-deliver:standing-guidance-sweep-thin-agents-md-medium -->
+* merge phase merge-queue-liveness-drain-decoupling-medium into feat/post-070-deliver-hygiene (013d23d) <!-- sw-deliver:merge-queue-liveness-drain-decoupling-medium -->
+* merge phase trusted-mutation-wrapper-medium into feat/post-070-deliver-hygiene (3b95f13) <!-- sw-deliver:trusted-mutation-wrapper-medium -->
+* merge phase conductor-skill-headroom-soft-advisory-small into feat/post-070-deliver-hygiene (482817a) <!-- sw-deliver:conductor-skill-headroom-soft-advisory-small -->
+* merge phase absorb-close-out-packaging-parity-small into feat/post-070-deliver-hygiene (623f767) <!-- sw-deliver:absorb-close-out-packaging-parity-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

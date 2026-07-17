@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Write/refresh a redacted committed decision snapshot with SoT frontmatter (PRD 015 R4–R6)."""
+"""Write/refresh a redacted decision snapshot with SoT frontmatter (PRD 015 R4–R6)."""
 from __future__ import annotations
 
 import argparse
 import json
-import re
 import subprocess
 import sys
 from datetime import date
@@ -12,6 +11,17 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PLUGIN_ROOT = SCRIPT_DIR.parent
+
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from memory_sot import (  # noqa: E402
+    DECISION_STUB_ALLOWLIST,
+    decision_unit_id_from_path,
+    is_decision_body_path,
+    planning_store_effective,
+    resolve_decision_home,
+)
 
 
 def plugin_scripts(root: Path) -> Path:
@@ -123,27 +133,86 @@ def append_audit_breadcrumb(root: Path, path: Path, effective: str, provider_ok:
         fh.write(line)
 
 
-def cmd_write(root: Path, rel_path: str, memory_pointer: str | None, dry_run: bool) -> None:
+def validate_decision_path(rel_path: str) -> None:
+    if not is_decision_body_path(rel_path):
+        fail("path must be a decision record under docs/decisions/ (not INDEX or SUPERSEDED.log)")
+
+
+def read_decision_content(root: Path, rel_path: str) -> str:
+    import planning_path_redirect as ppr
+
+    _resolved_rel, readable = ppr.resolve_readable_path(root, rel_path)
+    if readable is not None and readable.is_file():
+        return readable.read_text(encoding="utf-8")
+
+    if not planning_store_effective(root):
+        fail(f"decision record not found: {rel_path}")
+
+    from host_lib import load_workflow_config
+    from planning_store import get_backend
+
+    cfg = load_workflow_config(root)
+    backend = get_backend(root, cfg)
+    unit_id = decision_unit_id_from_path(rel_path)
+    got = backend.get(unit_id, rel_path)
+    if got.verdict != "ok" or not got.content:
+        fail(
+            f"decision record not found in planning store: {rel_path}",
+            unitId=unit_id,
+            reason=got.reason,
+        )
+    return str(got.content)
+
+
+def write_decision_content(root: Path, rel_path: str, output: str, *, dry_run: bool) -> str:
+    decision_home = resolve_decision_home(root)
+    if decision_home.get("home") == "planning-store":
+        if dry_run:
+            return "planning-store"
+        from host_lib import load_workflow_config
+        from planning_store import get_backend
+
+        cfg = load_workflow_config(root)
+        backend = get_backend(root, cfg)
+        unit_id = decision_unit_id_from_path(rel_path, output)
+        result = backend.put(unit_id, rel_path, output, content_class="decision")
+        if result.verdict != "ok":
+            fail(
+                "planning-store put failed",
+                unitId=unit_id,
+                path=rel_path,
+                reason=result.reason,
+            )
+        return "planning-store"
+
     target = (root / rel_path).resolve()
     try:
         target.relative_to(root)
     except ValueError:
         fail("path escapes repository root")
-    if not target.is_file():
-        fail(f"decision record not found: {rel_path}")
-    if not rel_path.startswith("docs/decisions/") or rel_path.endswith("INDEX.md"):
-        fail("path must be a decision record under docs/decisions/")
+    if dry_run:
+        return "repo"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(output, encoding="utf-8")
+    return "repo"
+
+
+def cmd_write(root: Path, rel_path: str, memory_pointer: str | None, dry_run: bool) -> None:
+    validate_decision_path(rel_path)
 
     sot = resolve_sot(root)
     effective = str(sot.get("effective", "repo"))
     if effective not in ("repo", "memory"):
         fail(f"unexpected effective SoT for decision: {effective!r}")
 
-    raw = target.read_text(encoding="utf-8")
+    decision_home = sot.get("decisionHome") or resolve_decision_home(root)
+    planning_store_home = decision_home.get("home") == "planning-store"
+
+    raw = read_decision_content(root, rel_path)
     meta, body = split_frontmatter(raw)
     unit_visibility = str(meta.get("visibility", "")).strip().lower()
-    # PRD 034 R12: decision snapshots are always committed regardless of unit visibility.
-    always_committed = True
+    always_committed_target = str(decision_home.get("alwaysCommittedTarget", "repo"))
+    always_committed = always_committed_target == "repo" and not planning_store_home
     redacted_body = redact_text(root, body)
     stamped = stamp_snapshot(meta, effective, memory_pointer)
     output = render_frontmatter(stamped) + redacted_body.lstrip("\n")
@@ -158,17 +227,24 @@ def cmd_write(root: Path, rel_path: str, memory_pointer: str | None, dry_run: bo
                 "authoritative": effective,
                 "snapshotRole": stamped.get("snapshotRole"),
                 "alwaysCommitted": always_committed,
+                "alwaysCommittedTarget": always_committed_target,
+                "planningStoreHome": planning_store_home,
                 "unitVisibility": unit_visibility or None,
+                "stubsOnly": sorted(DECISION_STUB_ALLOWLIST) if planning_store_home else None,
             }
         )
 
-    target.write_text(output, encoding="utf-8")
+    write_target = write_decision_content(root, rel_path, output, dry_run=False)
     append_audit_breadcrumb(
         root,
         Path(rel_path),
         effective,
         provider_ok=False,
-        note="provider write best-effort deferred to memory-preflight (offline-safe freeze)",
+        note=(
+            "provider write best-effort deferred to memory-preflight (offline-safe freeze)"
+            if write_target == "repo"
+            else "planning-store snapshot write (no code-repo body)"
+        ),
     )
     emit(
         {
@@ -179,7 +255,11 @@ def cmd_write(root: Path, rel_path: str, memory_pointer: str | None, dry_run: bo
             "snapshotRole": stamped.get("snapshotRole"),
             "providerWrite": "deferred-best-effort",
             "alwaysCommitted": always_committed,
+            "alwaysCommittedTarget": always_committed_target,
+            "planningStoreHome": planning_store_home,
+            "writeTarget": write_target,
             "unitVisibility": unit_visibility or None,
+            "stubsOnly": sorted(DECISION_STUB_ALLOWLIST) if planning_store_home else None,
         }
     )
 

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 MARKER_PREFIX = "sw-deliver:"
+MANIFEST_FILENAME = ".release-please-manifest.json"
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
@@ -98,6 +99,47 @@ def released_version_from_changelog(content: str) -> tuple[int, int, int] | None
     if not versions:
         return None
     return max(versions)
+
+
+def manifest_path(worktree: Path) -> Path:
+    return worktree / MANIFEST_FILENAME
+
+
+def read_manifest_version(worktree: Path) -> str | None:
+    path = manifest_path(worktree)
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    version = data.get(".")
+    if version is None:
+        return None
+    text = str(version).strip()
+    return text or None
+
+
+def maybe_sync_version_txt(
+    worktree: Path,
+    version_path: Path,
+    *,
+    manifest_version_before: str | None,
+) -> dict[str, Any]:
+    """Align version.txt to manifest only when manifest version changed (R4/KD8)."""
+    manifest_version_after = read_manifest_version(worktree)
+    if manifest_version_after is None:
+        return {"versionTxtTouched": False, "reason": "no-manifest"}
+    if manifest_version_before == manifest_version_after:
+        return {"versionTxtTouched": False, "reason": "manifest-unchanged"}
+    version_path.write_text(manifest_version_after + "\n", encoding="utf-8")
+    return {
+        "versionTxtTouched": True,
+        "manifestVersion": manifest_version_after,
+        "reason": "manifest-changed",
+    }
 
 
 def resolve_base_version(changelog_path: Path, version_path: Path) -> tuple[int, int, int]:
@@ -195,13 +237,22 @@ def resolve_worktree(root: Path, args: list[str]) -> Path:
     return root.resolve()
 
 
-def git_commit_bookkeeping(worktree: Path, phase_slug: str, dry_run: bool) -> str | None:
+def git_commit_bookkeeping(
+    worktree: Path,
+    phase_slug: str,
+    dry_run: bool,
+    *,
+    version_txt_touched: bool = False,
+) -> str | None:
     if dry_run:
         return None
     git_run = lambda cmd: subprocess.run(
         ["git"] + cmd, cwd=str(worktree), text=True, capture_output=True, check=False
     )
-    git_run(["add", "CHANGELOG.md", "version.txt"])
+    paths = ["CHANGELOG.md"]
+    if version_txt_touched:
+        paths.append("version.txt")
+    git_run(["add", *paths])
     msg = f"chore: deliver bookkeeping for phase {phase_slug}"
     proc = git_run(["commit", "-m", msg])
     if proc.returncode != 0:
@@ -268,14 +319,24 @@ def cmd_record(root: Path, args: list[str]) -> None:
     from wave_living_doc_lock import living_doc_write_lock
 
     target_branch = (state.get("target") or {}).get("branch")
+    manifest_version_before = read_manifest_version(worktree)
     bookkeeping_sha = None
     with living_doc_write_lock(root, target=target_branch, holder=f"bookkeeping-record:{phase_slug}"):
         changelog_path.write_text(new_changelog, encoding="utf-8")
-        version_path.write_text(new_version + "\n", encoding="utf-8")
+        version_sync = maybe_sync_version_txt(
+            worktree,
+            version_path,
+            manifest_version_before=manifest_version_before,
+        )
 
         bookkeeping_sha = None
         if do_commit:
-            bookkeeping_sha = git_commit_bookkeeping(worktree, phase_slug, dry_run=False)
+            bookkeeping_sha = git_commit_bookkeeping(
+                worktree,
+                phase_slug,
+                dry_run=False,
+                version_txt_touched=bool(version_sync.get("versionTxtTouched")),
+            )
 
         if state_path.is_file():
             state = read_json(state_path)
@@ -297,6 +358,7 @@ def cmd_record(root: Path, args: list[str]) -> None:
             "section": section,
             "projectedVersion": new_version,
             "bookkeepingCommit": bookkeeping_sha,
+            "versionSync": version_sync,
         }
     )
 
@@ -345,14 +407,22 @@ def cmd_revert(root: Path, args: list[str]) -> None:
     from wave_living_doc_lock import living_doc_write_lock
 
     target_branch = (state.get("target") or {}).get("branch")
+    manifest_version_before = read_manifest_version(worktree)
     bookkeeping_sha = None
     with living_doc_write_lock(root, target=target_branch, holder=f"bookkeeping-revert:{phase_slug}"):
         changelog_path.write_text(new_changelog, encoding="utf-8")
-        version_path.write_text(new_version + "\n", encoding="utf-8")
+        version_sync = maybe_sync_version_txt(
+            worktree,
+            version_path,
+            manifest_version_before=manifest_version_before,
+        )
 
         if do_commit:
             bookkeeping_sha = git_commit_bookkeeping(
-                worktree, f"revert-{phase_slug}", dry_run=False
+                worktree,
+                f"revert-{phase_slug}",
+                dry_run=False,
+                version_txt_touched=bool(version_sync.get("versionTxtTouched")),
             )
 
         if state_path.is_file():
@@ -373,6 +443,7 @@ def cmd_revert(root: Path, args: list[str]) -> None:
             "phase": phase_slug,
             "projectedVersion": new_version,
             "bookkeepingCommit": bookkeeping_sha,
+            "versionSync": version_sync,
         }
     )
 

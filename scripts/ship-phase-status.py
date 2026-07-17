@@ -42,7 +42,9 @@ def main(argv: list[str] | None = None) -> int:
     # Harness fixtures call this script against SCRIPT_DIR.parent (live plugin tree) while cwd is a
     # disposable repo. Skip live orch↔primary skew sync + canonical status mirror so suite runs do
     # not fail closed on unrelated deliver-state skew (post-merge verify pollution).
-    harness = os.environ.get("SW_HARNESS") == "1"
+    from harness_skew_lib import skip_live_canonical_sync
+
+    harness = skip_live_canonical_sync()
     if not harness:
         try:
             from wave_state import ensure_canonical_state_synced

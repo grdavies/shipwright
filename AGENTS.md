@@ -1,14 +1,16 @@
 # Agent guidance (Shipwright)
 
-## Mock realism (PRD 039 R10)
+Standing agent guidance is **rule-class memory** — not duplicated in this file (PRD 072 R7). Hooks load
+allowlisted rules at session start; promote or edit rules only through `/sw-memory-audit` (human-gated).
 
-- Prefer testing against real collaborators when cost is low; reserve mocks for boundaries (I/O, clock, network).
-- Avoid mocking the unit under test; patch at the dependency edge only.
-- When mocks dominate a test file, expect an **advisory** `over_mock_scan` flag — refactor toward slimmer fakes.
-- Keep mock setups readable: one behavior per test, explicit return values, no incidental `MagicMock` fan-out.
+## Retrieval
 
-Run advisory scan:
+- **In-repo provider:** `.cursor/sw-memory/rules/` with allowlist `.cursor/sw-memory-rule-allowlist.json`
+- **Recallium / other providers:** run memory-preflight, then adapter rules-load for category rule
+- Dual-home standing guidance (policy copied here and in memory) is rejected — pointers only.
 
-```bash
-python3 scripts/over_mock_scan.py --root .
-```
+## Rule pointers
+
+| Topic | Rule id | Path |
+| --- | --- | --- |
+| Mock realism (PRD 039 R10) | `mock-realism` | `.cursor/sw-memory/rules/mock-realism.md` |

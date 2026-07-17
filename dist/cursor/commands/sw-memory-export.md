@@ -8,7 +8,7 @@ trigger: "/sw-memory-export" or "export memories to jsonl"
 
 Dump the active provider's memories for a project into the provider-neutral JSONL interchange format
 (defined in `skills/memory/CAPABILITIES.md`). This is the portability + backup primitive and the first
-half of a provider swap. It is also the committed snapshot that gates AGENTS.md Mode-B thinning.
+half of a provider swap. Exports include `category: rule` rows from the provider store.
 
 ## Inputs
 
@@ -41,6 +41,9 @@ half of a provider swap. It is also the committed snapshot that gates AGENTS.md 
 - Never export raw transcripts (they are not memories and not part of this format).
 - Redact nothing silently: if a memory appears to contain a secret, flag it in the report rather than
   exporting blindly; let the user decide.
-- This export is the artifact a Mode-B AGENTS.md thinning depends on — commit it (or store its hash)
-  before any thinning so the migration is reversible.
+- **Standing guidance contract (PRD 072 R7):** `AGENTS.md` is pointer-only; rule-class bodies are
+  authoritative in the provider store. Export captures rule rows for portability — commit snapshots (or
+  store hashes) before bulk rule edits so migration stays reversible.
+- After export, confirm `python3 scripts/agents_md_thin.py` still passes — never duplicate rule bodies into
+  `agentsFile`.
 - Paginate to true exhaustion; a partial export must be reported as partial, never presented as complete.
