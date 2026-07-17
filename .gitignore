@@ -12,6 +12,9 @@
 # .cursor/sw-feedback-runs/
 .cursor/**
 !.cursor/workflow.config.json
+!.cursor/sw-memory/rules/
+!.cursor/sw-memory/rules/**
+!.cursor/sw-memory-rule-allowlist.json
 
 # Runtime state — never publish (PRD 069 R4)
 .cursor/sw-base-state.json
