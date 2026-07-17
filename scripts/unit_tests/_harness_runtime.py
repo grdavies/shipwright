@@ -428,3 +428,202 @@ class FixtureContext:
     def exit_code(self) -> int:
         return 1 if self.failures else 0
 
+HARNESS_SKEW_SKIP_MARKERS: tuple[tuple[str, str], ...] = (
+    ("SW_HARNESS", "1"),
+    ("SW_DELIVER_VERIFY", "1"),
+    ("SW_SKIP_CANONICAL_SYNC", "1"),
+)
+
+
+def harness_env_for_skew_marker(
+    root: Path,
+    marker: str,
+    *,
+    base: dict[str, str] | None = None,
+) -> dict[str, str]:
+    """Hermetic env with exactly one harness skew-skip marker (PRD 072 R3)."""
+    env = dict(base if base is not None else os.environ)
+    for key in list(env):
+        if key.startswith("SW_PHASE") or key in (
+            "SW_RUN_DIR",
+            "SW_REPO_ROOT",
+            "SW_INTEGRATION_BRANCH",
+            "PYTHONHOME",
+            "SW_HARNESS",
+            "SW_DELIVER_VERIFY",
+            "SW_SKIP_CANONICAL_SYNC",
+        ):
+            env.pop(key, None)
+    env["ROOT"] = str(root)
+    env["PYTHONPATH"] = os.pathsep.join(
+        p
+        for p in (
+            str(root / "scripts" / "test"),
+            str(root / "scripts"),
+            env.get("PYTHONPATH", ""),
+        )
+        if p
+    )
+    for name, value in HARNESS_SKEW_SKIP_MARKERS:
+        if name == marker:
+            env[name] = value
+            break
+    else:
+        raise ValueError(f"unknown harness skew marker: {marker}")
+    return env
+
+
+def _setup_intentional_skew(tmp: Path) -> tuple[Path, Path]:
+    """Create primary + orchestrator worktree with fresher-mirror skew."""
+    import subprocess
+
+    orch = tmp / "orch"
+    subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
+    subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp, check=True)
+    subprocess.run(["git", "config", "user.name", "fixture"], cwd=tmp, check=True)
+    subprocess.run(["git", "commit", "--allow-empty", "-q", "-m", "init"], cwd=tmp, check=True)
+    subprocess.run(["git", "branch", "-M", "main"], cwd=tmp, check=True)
+    (tmp / ".cursor").mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        ["git", "worktree", "add", "-q", "-b", "feat/demo-skew", str(orch)],
+        cwd=tmp,
+        check=True,
+    )
+    (orch / ".cursor").mkdir(parents=True, exist_ok=True)
+    root_state = tmp / ".cursor/sw-deliver-state.feat-demo-skew.json"
+    orch_state = orch / ".cursor/sw-deliver-state.feat-demo-skew.json"
+    skew_primary = (
+        '{"verdict":"running","updatedAt":"2026-07-14T09:00:00Z",'
+        '"target":{"branch":"feat/demo-skew"},"orchestratorWorktree":{"path":"'
+        + str(orch)
+        + '"}}'
+    )
+    skew_mirror = (
+        '{"verdict":"running","updatedAt":"2026-07-14T10:30:00Z",'
+        '"target":{"branch":"feat/demo-skew"},"orchestratorWorktree":{"path":"'
+        + str(orch)
+        + '"}}'
+    )
+    root_state.write_text(skew_primary, encoding="utf-8")
+    orch_state.write_text(skew_mirror, encoding="utf-8")
+    return orch, root_state
+
+
+def run_harness_skew_skip_fixtures(root: Path) -> int:
+    """Per-marker skew fixtures — skip live fail-closed under harness markers (PRD 072 R3, R12)."""
+    import shutil
+    import subprocess
+    import sys
+    import tempfile
+
+    failures = 0
+
+    def ok(name: str) -> None:
+        print(f"OK  {name}")
+
+    def bad(name: str) -> None:
+        nonlocal failures
+        print(f"FAIL {name}")
+        failures += 1
+
+    tmp = Path(tempfile.mkdtemp(prefix="sw-harness-skew-"))
+    try:
+        orch, _ = _setup_intentional_skew(tmp)
+        scripts = str(root / "scripts")
+        py = sys.executable
+
+        # Baseline: without marker, skew sync fails closed.
+        proc = subprocess.run(
+            [
+                py,
+                "-c",
+                f"import sys; sys.path.insert(0, {scripts!r}); "
+                "from pathlib import Path; "
+                "from ship_loop import ensure_state_synced_before_step; "
+                "ensure_state_synced_before_step(Path('.')); "
+                "raise SystemExit(1)",
+            ],
+            cwd=str(orch),
+            env={"PYTHONPATH": scripts},
+            capture_output=True,
+            text=True,
+        )
+        if proc.returncode == 0:
+            bad("skew-fail-closed-without-marker")
+        else:
+            ok("skew-fail-closed-without-marker")
+
+        for marker, _ in HARNESS_SKEW_SKIP_MARKERS:
+            env = harness_env_for_skew_marker(root, marker)
+            proc = subprocess.run(
+                [
+                    py,
+                    "-c",
+                    f"import sys; sys.path.insert(0, {scripts!r}); "
+                    "from pathlib import Path; "
+                    "from ship_loop import ensure_state_synced_before_step; "
+                    "ensure_state_synced_before_step(Path('.'))",
+                ],
+                cwd=str(orch),
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            if proc.returncode == 0:
+                ok(f"ship-loop-skew-skip-{marker}")
+            else:
+                bad(f"ship-loop-skew-skip-{marker}")
+
+            proc = subprocess.run(
+                [
+                    py,
+                    "-c",
+                    f"import sys; sys.path.insert(0, {scripts!r}); "
+                    "from pathlib import Path; "
+                    "from harness_skew_lib import skip_live_canonical_sync; "
+                    "import os; "
+                    "assert skip_live_canonical_sync()",
+                ],
+                cwd=str(orch),
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            if proc.returncode == 0:
+                ok(f"predicate-active-{marker}")
+            else:
+                bad(f"predicate-active-{marker}")
+
+            # drive-tick must not re-dispatch/fail on skew before agent steps.
+            run_dir = tmp / f"run-{marker}"
+            run_dir.mkdir(parents=True)
+            steps_path = run_dir / "ship-steps.json"
+            steps_path.write_text(
+                '{"phase":"skew-fixture","currentStep":"sw-execute",'
+                '"lastCompletedStep":"sw-tmp-init","stepAttempts":{},'
+                '"chain":["sw-tmp-init","sw-execute","sw-verify"],'
+                '"chainSource":"test-fixture"}',
+                encoding="utf-8",
+            )
+            drive_env = dict(env)
+            drive_env["SW_RUN_DIR"] = str(run_dir)
+            drive_env["SW_PHASE_SLUG"] = "skew-fixture"
+            proc = subprocess.run(
+                [py, str(root / "scripts" / "ship_loop.py"), str(root), "drive-tick", "--phase", "skew-fixture"],
+                cwd=str(orch),
+                env=drive_env,
+                capture_output=True,
+                text=True,
+            )
+            if proc.returncode == 0:
+                ok(f"drive-tick-no-skew-redispatch-{marker}")
+            else:
+                bad(f"drive-tick-no-skew-redispatch-{marker}")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    if failures == 0:
+        print("harness-skew-skip fixtures: all passed")
+        return 0
+    print(f"harness-skew-skip fixtures: {failures} failure(s)")
+    return 1
