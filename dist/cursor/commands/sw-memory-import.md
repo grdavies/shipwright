@@ -1,5 +1,5 @@
 ---
-description: Import durable memories into the active provider — from neutral JSONL (provider swap) or from repo knowledge (AGENTS.md learned sections + .project_docs pointers). Idempotent.
+description: Import durable memories into the active provider — from neutral JSONL (provider swap) or from repo knowledge (AGENTS.md learned sections + .project_docs pointers). Standing policy is rule-class SoT; AGENTS.md is pointer-only. Idempotent.
 alwaysApply: false
 trigger: "/sw-memory-import" or "import memories"
 ---
@@ -33,12 +33,17 @@ batch is identifiable and re-runnable.
 
 ## `--source repo`
 
-- From `agentsFile` (default `AGENTS.md`): split the learned sections (e.g. *Learned User Preferences*,
+- **Standing guidance (PRD 072 R7):** substantive policy lives in provider `rule`-class memory
+  (`.cursor/sw-memory/rules/` for in-repo; adapter `rules-load` for others). `agentsFile` is a thin
+  pointer/retrieval file only — never import standing policy bullets from it; dual-home fail-open is
+  rejected. Validate with `python3 scripts/agents_md_thin.py --root <repo>`.
+- From `agentsFile` (default `AGENTS.md`): import **learned** sections only (e.g. *Learned User Preferences*,
   *Learned Workspace Facts*) into discrete memories. Choose the canonical category per item (most are
   `learning` or `decision`); set `relatedFiles` from paths named in the bullet; tag `prd-<n>` when present.
 - From `prdsDir`/`tasksDir` and other `.project_docs/**`: create **pointer** memories only — the file
   path plus a one-line gist. Never copy full document bodies into memory.
-- Do **not** import `Standing Instructions` as memories — those stay in `agentsFile`.
+- Do **not** import standing-guidance rule bodies from `agentsFile` — edit committed rule files (in-repo)
+  or promote via `/sw-memory-audit` instead.
 
 **Communication intensity:** ultra
 
@@ -50,6 +55,8 @@ batch is identifiable and re-runnable.
 - Pointers, not mirrors, for `.project_docs/**` — keep the canonical doc as the source of truth.
 - Never import secrets/credentials. Never create `rule` memories unless the user explicitly directs it.
 - Default scope project; global only on explicit direction.
-- `--source repo` is the *write* half of migration. It does **not** thin `AGENTS.md` — thinning is a
-  separate, gated step (Phase 1c) behind the regression gate + committed export snapshot.
+- `--source repo` is the *write* half of migration for **learned** sections only. Standing guidance
+  thinning is complete when `agents_md_thin.py` passes — do not re-home policy into `agentsFile`.
+- Never create `rule` memories from `agentsFile` import; rule-class edits require explicit user direction
+  and `/sw-memory-audit` allowlist updates.
 - Route all writes through the adapter; never call a provider tool directly.
