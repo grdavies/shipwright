@@ -532,6 +532,7 @@
 * merge phase ci-close-out-driver-no-op-n-per-wave-surfacing-slo-small into feat/automated-delivery-closeout (52e2f2d) <!-- sw-deliver:ci-close-out-driver-no-op-n-per-wave-surfacing-slo-small -->
 * merge phase revert-safety-reconciliation-small into feat/automated-delivery-closeout (4af9ba5) <!-- sw-deliver:revert-safety-reconciliation-small -->
 * merge phase narrow-widen-globs-small into feat/post-070-deliver-hygiene (067e1aa) <!-- sw-deliver:narrow-widen-globs-small -->
+* merge phase narrow-widen-globs-small into feat/post-070-deliver-hygiene (ebe3576) <!-- sw-deliver:narrow-widen-globs-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
