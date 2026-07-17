@@ -535,6 +535,7 @@
 * merge phase narrow-widen-globs-small into feat/post-070-deliver-hygiene (ebe3576) <!-- sw-deliver:narrow-widen-globs-small -->
 * merge phase watchdog-classification-solely-semantics-small into feat/post-070-deliver-hygiene (4a172a4) <!-- sw-deliver:watchdog-classification-solely-semantics-small -->
 * merge phase shared-harness-skew-skip-small into feat/post-070-deliver-hygiene (3c67f3a) <!-- sw-deliver:shared-harness-skew-skip-small -->
+* merge phase version-txt-follows-release-please-manifest-small into feat/post-070-deliver-hygiene (4a7933d) <!-- sw-deliver:version-txt-follows-release-please-manifest-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
