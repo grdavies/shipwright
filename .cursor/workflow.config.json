@@ -5,9 +5,9 @@
   },
   "verify": {
     "test": "SW_TEST_SCOPE=phase PYTHONPATH=scripts python3 scripts/test/_runner.py verify --scope phase",
-    "fullTest": "SW_TEST_SCOPE=phase PYTHONPATH=scripts python3 scripts/test/_runner.py verify --scope phase",
+    "fullTest": "PYTHONPATH=scripts python3 scripts/test/_runner.py verify --scope full",
     "watchdog": {
-      "maxMinutes": 60
+      "maxMinutes": 120
     }
   },
   "ci": {
@@ -27,8 +27,8 @@
     "tiers": {
       "cheap": "composer-2.5",
       "build": "composer-2.5",
-      "mid": "gpt-5.5-medium",
-      "deep": "grok-4.5-high"
+      "mid": "gpt-5.6-terra-medium",
+      "deep": "claude-opus-4-8-thinking-high"
     },
     "aliases": {
       "fast": "cheap"

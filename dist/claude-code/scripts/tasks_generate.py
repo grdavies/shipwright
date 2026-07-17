@@ -253,7 +253,7 @@ def renumber_phase_refs(phase_id: str, refs: list[SubtaskRef]) -> tuple[list[Sub
 
 def rewrite_phase_chunk(phase_id: str, title_line: str, refs: list[SubtaskRef]) -> str:
     body = "\n".join(render_subtask(ref) for ref in refs)
-    return f"### {phase_id}.{title_line}\n\n{body}\n"
+    return f"### {phase_id}. {title_line}\n\n{body}\n"
 
 
 def build_granularity_payload(
@@ -363,8 +363,9 @@ def transform_task_list_text(root: Path, text: str, task_list: Path) -> tuple[st
     rel = rel_task_list(task_list, root)
     payload = build_granularity_payload(ref_splits, score=score, task_list=rel)
     final_content = insert_granularity_section(stripped, payload)
-    if fm:
-        final_content = f"{fm}{final_content}"
+    if fm is not None:
+        # split_frontmatter returns the inner YAML only — restore fences (R20 hygiene).
+        final_content = f"---\n{fm}\n---\n\n{final_content}"
     return final_content, ref_splits
 
 
