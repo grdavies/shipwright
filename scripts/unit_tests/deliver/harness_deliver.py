@@ -760,7 +760,8 @@ BK_FIX=$(mktemp -d)
 ## [1.2.2] - 2025-01-01
 EOF
   echo "1.2.2" > version.txt
-  git add CHANGELOG.md version.txt && git commit -q -m init
+  echo '{"." : "1.2.2"}' > .release-please-manifest.json
+  git add CHANGELOG.md version.txt .release-please-manifest.json && git commit -q -m init
   mkdir -p .cursor
   echo '{"target":{"branch":"feat/demo"},"mergedPhases":[],"orchestratorWorktree":{"path":"'"$BK_FIX"'"}}' \
     >.cursor/sw-deliver-state.json
@@ -770,8 +771,9 @@ import json,sys
 d=json.load(sys.stdin)
 assert d['projectedVersion']=='1.3.0'
 assert d['section']=='Features'
+assert d['versionSync']['versionTxtTouched'] is False
 " && grep -q '## \[Unreleased\]' CHANGELOG.md && grep -q 'sw-deliver:alpha' CHANGELOG.md && \
-     [[ "$(cat version.txt)" == "1.3.0" ]]; then
+     [[ "$(cat version.txt)" == "1.2.2" ]]; then
     echo "OK  deliver-phase-changelog-record"
   else
     echo "FAIL deliver-phase-changelog-record"
