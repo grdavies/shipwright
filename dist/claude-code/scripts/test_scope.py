@@ -17,8 +17,6 @@ WIDEN_GLOBS: tuple[str, ...] = (
     "core/sw-reference/suite-registry.json",
     "core/sw-reference/suite-registry.schema.json",
     "core/sw-reference/pr-test-plan.manifest.json",
-    ".cursor/workflow.config.json",
-    "workflow.config.json",
     "scripts/test/_runner.py",
     "scripts/test_scope.py",
     "scripts/suite_registry.py",
