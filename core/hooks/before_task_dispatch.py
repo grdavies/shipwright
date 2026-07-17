@@ -26,10 +26,11 @@ from typing import Any
 
 from sw_hook_util import workspace_root
 
-from memory_prework_gate import consume_record, validate_fresh_record, load_record
+from memory_prework_gate import consume_mutation, validate_fresh_record, load_record
 
 _REVIEWER_AGENT = re.compile(r"^sw-[a-z0-9-]+-reviewer$")
 _TASK_TOOL_NAMES = frozenset({"Task", "task"})
+_SHELL_TOOL_NAMES = frozenset({"Shell", "shell"})
 _MUTATING_TOOL_NAMES = frozenset(
     {"Write", "StrReplace", "Delete", "ApplyPatch", "EditNotebook"}
 )
@@ -502,8 +503,31 @@ def validate_memory_prework(root: Path) -> DispatchResult:
     return DispatchResult(verdict="pass")
 
 
+def _shell_tracked_mutation_cause(command: str, root: Path) -> str | None:
+    _ensure_scripts_on_path(root)
+    from sw_mutate import shell_tracked_mutation_cause
+
+    return shell_tracked_mutation_cause(command, root)
+
+
 def evaluate_pre_tool_use(payload: dict[str, Any], root: Path) -> DispatchResult:
     tool_name = str(payload.get("tool_name") or "")
+
+    if tool_name in _SHELL_TOOL_NAMES:
+        tool_input = payload.get("tool_input")
+        command = tool_input.get("command") if isinstance(tool_input, dict) else None
+        if isinstance(command, str) and command.strip():
+            cause = _shell_tracked_mutation_cause(command, root)
+            if cause:
+                return DispatchResult(
+                    verdict="fail",
+                    cause=cause,
+                    remediation=(
+                        "tracked-file mutations must use python3 scripts/sw_mutate.py "
+                        "(write | str-replace | delete) after memory prework"
+                    ),
+                )
+        return DispatchResult(verdict="skip")
 
     if tool_name in _MUTATING_TOOL_NAMES:
         prework = validate_memory_prework(root)
@@ -514,7 +538,7 @@ def evaluate_pre_tool_use(payload: dict[str, Any], root: Path) -> DispatchResult
                 remediation=prework.remediation,
             )
             return prework
-        consume_record(root)
+        consume_mutation(root)
         return DispatchResult(verdict="skip")
 
     if tool_name not in _TASK_TOOL_NAMES:
