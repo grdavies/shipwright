@@ -538,6 +538,7 @@
 * merge phase version-txt-follows-release-please-manifest-small into feat/post-070-deliver-hygiene (4a7933d) <!-- sw-deliver:version-txt-follows-release-please-manifest-small -->
 * merge phase migrate-docs-decisions-to-planning-store-home-medium into feat/post-070-deliver-hygiene (0fe1315) <!-- sw-deliver:migrate-docs-decisions-to-planning-store-home-medium -->
 * merge phase standing-guidance-sweep-thin-agents-md-medium into feat/post-070-deliver-hygiene (f659bfc) <!-- sw-deliver:standing-guidance-sweep-thin-agents-md-medium -->
+* merge phase merge-queue-liveness-drain-decoupling-medium into feat/post-070-deliver-hygiene (013d23d) <!-- sw-deliver:merge-queue-liveness-drain-decoupling-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
