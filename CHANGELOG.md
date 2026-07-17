@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.0](https://github.com/grdavies/shipwright/compare/v1.8.0...v1.9.0) (2026-07-17)
+
+
+### Features
+
+* **prd-70:** automated delivery closeout ([#530](https://github.com/grdavies/shipwright/issues/530)) ([962f2bb](https://github.com/grdavies/shipwright/commit/962f2bb0ac0de284f0265d35dc3611285c65468b))
+* **prd-72:** post 070 deliver hygiene ([#543](https://github.com/grdavies/shipwright/issues/543)) ([99b7c5d](https://github.com/grdavies/shipwright/commit/99b7c5dcf385aa5b79a681d59e80e100ab1dd6c0))
+
 ## [1.8.0](https://github.com/grdavies/shipwright/compare/v1.7.0...v1.8.0) (2026-07-15)
 
 
