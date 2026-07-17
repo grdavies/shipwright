@@ -30,19 +30,107 @@ ENVIRONMENTAL_VERIFY_MARKERS = (
     "verify-watchdog-exhausted",
 )
 
+PRODUCT_ASSERTION_MARKERS = (
+    "assertionerror",
+    "assert ",
+    "failed tests",
+    "failures=",
+    "short test summary info",
+    "pytest failed",
+    "= fail",
+    "errors=",
+)
+
+
+def _result_blob(result: dict[str, Any]) -> str:
+    return " ".join(
+        str(result.get(k) or "") for k in ("command", "stdoutTail", "stderrTail")
+    ).lower()
+
+
+def _parse_structured_tail(result: dict[str, Any]) -> dict[str, Any] | None:
+    for key in ("stdoutTail", "stderrTail"):
+        tail = str(result.get(key) or "").strip()
+        if not tail:
+            continue
+        start = tail.find("{")
+        if start < 0:
+            continue
+        try:
+            parsed = json.loads(tail[start:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+    return None
+
+
+def enrich_verify_result(result: dict[str, Any]) -> dict[str, Any]:
+    """Attach structured watchdog/product signals from JSON verify output when present (PRD 072 R2)."""
+    structured = _parse_structured_tail(result)
+    if structured:
+        if structured.get("halt") == "verify-watchdog-exhausted" or structured.get(
+            "watchdogExhausted"
+        ):
+            result["watchdogExhausted"] = True
+        if structured.get("productAssertion"):
+            result["productAssertion"] = True
+    blob = _result_blob(result)
+    if "verify-watchdog-exhausted" in blob:
+        result["watchdogExhausted"] = True
+    return result
+
+
+def result_has_watchdog_exhausted(result: dict[str, Any]) -> bool:
+    if result.get("watchdogExhausted"):
+        return True
+    return "verify-watchdog-exhausted" in _result_blob(result)
+
+
+def result_has_product_assertion(result: dict[str, Any]) -> bool:
+    if result.get("productAssertion"):
+        return True
+    return any(marker in _result_blob(result) for marker in PRODUCT_ASSERTION_MARKERS)
+
+
+def result_is_environmental_failure(result: dict[str, Any]) -> bool:
+    if int(result.get("exitCode") or 0) == 0:
+        return False
+    if result.get("environmental"):
+        return True
+    if result_has_watchdog_exhausted(result):
+        return True
+    return any(marker in _result_blob(result) for marker in ENVIRONMENTAL_VERIFY_MARKERS)
+
+
+def failing_verify_results(outcome: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        result
+        for result in outcome.get("results") or []
+        if int(result.get("exitCode") or 0) != 0
+    ]
+
 
 def classify_verify_failure(outcome: dict[str, Any]) -> str:
-    """Return cause class: environmental | regression (R9)."""
+    """Return cause class: environmental | regression (R9, PRD 072 R2)."""
     note = str(outcome.get("note") or "").lower()
     if "no verify commands configured" in note:
         return "environmental"
-    for result in outcome.get("results") or []:
-        blob = " ".join(
-            str(result.get(k) or "") for k in ("command", "stdoutTail", "stderrTail")
-        ).lower()
-        if any(marker in blob for marker in ENVIRONMENTAL_VERIFY_MARKERS):
+    failing = failing_verify_results(outcome)
+    if not failing:
+        if outcome.get("watchdogExhausted"):
             return "environmental"
+        return "regression"
+    if any(result_has_product_assertion(result) for result in failing):
+        return "regression"
+    if all(result_is_environmental_failure(result) for result in failing):
+        return "environmental"
     return "regression"
+
+
+def verify_blast_radius_applies(outcome: dict[str, Any]) -> bool:
+    """Product verify failures blast-radius; pure watchdog exhaustion does not (PRD 072 R2)."""
+    return classify_verify_failure(outcome) == "regression"
 
 
 def verify_failure_cause(outcome: dict[str, Any]) -> str:
@@ -287,12 +375,14 @@ def run_verify_suite(
                 env=env,
             )
             last_results.append(
-                {
-                    "command": cmd,
-                    "exitCode": proc.returncode,
-                    "stdoutTail": (proc.stdout or "")[-500:],
-                    "stderrTail": (proc.stderr or "")[-500:],
-                }
+                enrich_verify_result(
+                    {
+                        "command": cmd,
+                        "exitCode": proc.returncode,
+                        "stdoutTail": (proc.stdout or "")[-500:],
+                        "stderrTail": (proc.stderr or "")[-500:],
+                    }
+                )
             )
             if proc.returncode != 0:
                 all_ok = False
@@ -424,13 +514,14 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
     history.append(cause)
     phase_meta["lastRemediationCause"] = cause
     save_state(root, state)
-    blast_args = ["blast-radius", "apply", "--phase-slug", phase_slug]
-    subprocess.run(
-        [sys.executable, str(SCRIPT_DIR / "wave_failure.py"), str(root), *blast_args],
-        cwd=str(root),
-        text=True,
-        capture_output=True,
-    )
+    if verify_blast_radius_applies(outcome):
+        blast_args = ["blast-radius", "apply", "--phase-slug", phase_slug]
+        subprocess.run(
+            [sys.executable, str(SCRIPT_DIR / "wave_failure.py"), str(root), *blast_args],
+            cwd=str(root),
+            text=True,
+            capture_output=True,
+        )
     try:
         import failure_signature_record_lib as fsr
 
