@@ -2712,6 +2712,9 @@ def _execute_mechanical_inner(
             )
         ec, data = run_wave(root, "merge", "run-next")
         if ec == 10 and data.get("cause") == "verify:environmental":
+            # Reload disk state first — merge-run-next already dequeued + recorded
+            # completedMerges; saving the pre-call in-memory snapshot would wipe that (R9).
+            state.update(load_state(root))
             slug = str(data.get("phase") or "")
             for pid, meta in (state.get("phases") or {}).items():
                 if isinstance(meta, dict) and meta.get("slug") == slug:
