@@ -2337,6 +2337,13 @@ def run_wave(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
     return proc.returncode, data
 
 
+def apply_merge_enqueue_result(state: dict[str, Any], data: dict[str, Any]) -> None:
+    """Apply merge enqueue subprocess queue before cursor persist (PRD 073 R8/R9)."""
+    queue = data.get("mergeQueue")
+    if isinstance(queue, list):
+        state["mergeQueue"] = queue
+
+
 def persist_cursor(root: Path, state: dict[str, Any], action: str, **extra: Any) -> None:
     state["nextAction"] = action
     state["driverHeartbeatAt"] = utc_now()
@@ -2611,8 +2618,8 @@ def _execute_mechanical_inner(
             ec, data = run_wave(root, "merge", "enqueue", "--phase-slug", slug)
             if ec != 0:
                 fail_payload(data, "merge enqueue failed", ec)
+            apply_merge_enqueue_result(state, data)
             enqueued.append(slug)
-        state.update(load_state(root))
         persist_cursor(root, state, "merge-run-next", batchIntegrationHead=state.get("batchIntegrationHead"))
         return {"executed": "collect-all-ready", "enqueued": enqueued, "batchIntegrationHead": state.get("batchIntegrationHead")}
 
@@ -2842,6 +2849,7 @@ def _execute_mechanical_inner(
         ec, data = run_wave(root, "merge", "enqueue", "--phase-slug", slug)
         if ec != 0:
             fail_payload(data, "merge enqueue failed", ec)
+        apply_merge_enqueue_result(state, data)
         persist_cursor(root, state, "merge-run-next")
         return {"executed": "merge-enqueue", "phaseSlug": slug}
 
