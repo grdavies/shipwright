@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 
 from _sw.cli import build_parser, run_module_main
+from task_model_allowlist_lib import enforce_task_model_allowlist
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -87,7 +88,18 @@ def main(argv: list[str] | None = None) -> int:
             sys.exit(0)
         if name not in tiers:
             fail(f"tier {name!r} not in models.tiers")
-        print(json.dumps({"tier": name, "modelId": tiers[name], "source": source}))
+        model_id = tiers[name]
+        allow = enforce_task_model_allowlist(str(model_id), root=root)
+        if allow.get("verdict") == "fail":
+            fail(
+                str(allow.get("remediation") or "model not allowlisted for Task dispatch"),
+                cause=str(allow.get("cause") or "binding:model-not-allowlisted"),
+                modelId=model_id,
+            )
+        payload = {"tier": name, "modelId": allow["modelId"], "source": source}
+        if allow.get("aliasFrom"):
+            payload["aliasFrom"] = allow["aliasFrom"]
+        print(json.dumps(payload))
         sys.exit(0)
 
 

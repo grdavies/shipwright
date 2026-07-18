@@ -80,7 +80,7 @@ if tier != want_t or mid != want_m:
 resolve_pair "sw-prd" deep claude-opus-4-8-thinking-high --command sw-prd
 resolve_pair "sw-triage" cheap composer-2.5-fast --command sw-triage
 resolve_pair "sw-execute" build composer-2.5 --command sw-execute
-resolve_pair "sw-gaps" mid gpt-5.5-medium --command sw-gaps
+resolve_pair "sw-gaps" mid gpt-5.6-terra-medium --command sw-gaps
 resolve_pair "sw-doc delegate sw-prd" deep claude-opus-4-8-thinking-high --command sw-doc --delegate sw-prd
 
 # --- inherit sentinel ---

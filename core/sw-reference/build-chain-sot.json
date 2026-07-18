@@ -84,6 +84,7 @@
     "migration-waves.json",
     "model-routing.defaults.json",
     "model-tier-hook-feasibility.md",
+    "task-model-allowlist.json",
     "orchestrator-step-plan.json",
     "planning-deliver-parity-matrix.md",
     "planning-privacy-notice.md",
