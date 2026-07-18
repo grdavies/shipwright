@@ -410,6 +410,18 @@ Runs `python3 -m sw generate --all` → golden re-snapshot when `dist/` changes 
 `copy-to-core --force` is **fixture/CI-only** (set `SW_BUILD_CHAIN_FORCE=1` or run under CI); operator
 workflows must remediate via `.sw/` instead. Last-synced provenance lives at `.sw/build-chain-last-synced.json`.
 
+### `.sw/` sw-reference artifact inventory (PRD 071 R2, R13)
+
+Operator-edited artifacts under `.sw/` mirror into `core/sw-reference/` via `copy-to-core` (not
+`coreAuthoredAllowlist`). Edit the `.sw/` source; never hand-edit the core mirror.
+
+| Artifact | Source authority | Emit path | Sync |
+| --- | --- | --- | --- |
+| `memory-provider-catalog.json` | `.sw/memory-provider-catalog.json` | `core/sw-reference/memory-provider-catalog.json` | `copy-to-core` |
+
+Golden parity fixture: `scripts/test/fixtures/memory-provider-catalog/golden.json` (sha256 + byte
+identity; refuses core-only orphans).
+
 ### Refuse + `--check` (PRD 060 R11–R13)
 
 - `copy-to-core` refuses when `core/sw-reference/` drifted without matching `.sw/` edits — remediate in `.sw/`, then re-run sync (not `--force`).

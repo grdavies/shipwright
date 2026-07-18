@@ -35,6 +35,22 @@ Set `memory.guardrails.enforceBeforeSubmit: false` to disable the hook entirely 
 
 `sessionStart` injection is best-effort (fail-open).
 
+## Catalog resolve + validator (PRD 071 R4)
+
+Before hook rule-fetch or adapter load, Shipwright validates `memory.provider` through the catalog +
+`scripts/memory_provider_register.py` (charset, catalog row, adapter integrity, rules script). **Catalog
+membership alone does not grant hook trust** — `capability_trust.py` execution gates remain authoritative.
+
+| State | Hook `beforeSubmitPrompt` | Rule-fetch |
+| --- | --- | --- |
+| Unknown / invalid id | Fail closed — provider not resolved | No script; no cross-provider fallback |
+| Registered but unreachable | **Block** (cannot confirm guardrail state) | No rules injected |
+| Reachable, zero rule-class memories | **Pass** (confirmed empty) | Empty rules list — non-blocking |
+| Reachable with rules | Pass after allowlist filter | Provider's registered rules script only |
+
+Authors register providers in `.sw/memory-provider-catalog.json`; operators only select registered ids in
+config or `.cursor/sw-memory.provider`.
+
 ## Planning store memory backend (PRD 034 R11/R25)
 
 The `planning.store` memory backend routes exclusively through the provider-agnostic memory adapter and

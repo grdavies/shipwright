@@ -47,8 +47,9 @@ bad() { echo "FAIL $1"; FAIL=1; }
 FIX_DIR="$(mktemp -d "${TMPDIR:-/tmp}/sw-memory-prework.XXXXXX")"
 trap 'rm -rf "$FIX_DIR"' EXIT
 
-mkdir -p "$FIX_DIR/.cursor"
+mkdir -p "$FIX_DIR/.cursor" "$FIX_DIR/.sw"
 cp "$ROOT/.cursor/workflow.config.json" "$FIX_DIR/.cursor/" 2>/dev/null || true
+cp "$ROOT/.sw/memory-provider-catalog.json" "$FIX_DIR/.sw/" 2>/dev/null || true
 
 pushd "$FIX_DIR" >/dev/null
 git init -q

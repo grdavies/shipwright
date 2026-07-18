@@ -10,14 +10,30 @@ import uuid
 from pathlib import Path
 from typing import Any
 from urllib.error import URLError
-from urllib.request import Request, urlopen
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 HOOKS_DIR = SCRIPT_DIR.parent / "core" / "hooks"
 if str(HOOKS_DIR) not in sys.path:
-    sys.path.insert(0, str(HOOKS_DIR))
+    sys.path.append(str(HOOKS_DIR))
+
+import importlib.util
+
+_SPEC = importlib.util.spec_from_file_location(
+    "sw_recallium_url_scripts",
+    SCRIPT_DIR / "sw_recallium_url.py",
+)
+assert _SPEC and _SPEC.loader
+_sw_recallium_url = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_sw_recallium_url)
+RestFetchPolicyError = _sw_recallium_url.RestFetchPolicyError
+guarded_urlopen = _sw_recallium_url.guarded_urlopen
+rest_fetch_policy_from_catalog_entry = _sw_recallium_url.rest_fetch_policy_from_catalog_entry
 
 from memory_prework_gate import DEFAULT_SURFACE_MUTATION_BUDGET  # noqa: E402
+from memory_provider_catalog import CatalogError, get_provider, load_catalog  # noqa: E402
+from memory_provider_register import RegistrationError, validate_registration  # noqa: E402
 
 RECORD_PATH = Path(".cursor/hooks/state/memory-prework-search.json")
 DEFAULT_CLASSES = ("rule", "decision", "learning", "code-context", "design")
@@ -62,26 +78,54 @@ def provider_from_config(root: Path, config: dict[str, Any]) -> str:
     return "recallium"
 
 
-def probe_provider_reachable(root: Path, provider: str, config: dict[str, Any]) -> bool:
-    if provider == "in-repo":
-        store = root / ".cursor" / "sw-memory"
-        return store.is_dir() or (root / ".cursor" / "sw-memory.provider").is_file()
-    memory = config.get("memory") or {}
-    connection = memory.get("connection") or {}
-    base_url = str(connection.get("restBaseUrl") or "").strip().rstrip("/")
+def _probe_rest_reachable(base_url: str, policy: dict[str, Any] | None = None) -> bool:
     if not base_url:
         return False
     try:
-        req = Request(f"{base_url}/health", method="GET")
-        with urlopen(req, timeout=3) as resp:  # noqa: S310 — local adapter probe
+        with guarded_urlopen(f"{base_url.rstrip('/')}/health", policy, timeout=3) as resp:
             return 200 <= resp.status < 500
+    except RestFetchPolicyError:
+        return False
     except (URLError, OSError, ValueError):
         try:
-            req = Request(base_url, method="GET")
-            with urlopen(req, timeout=3) as resp:  # noqa: S310
+            with guarded_urlopen(base_url, policy, timeout=3) as resp:
                 return 200 <= resp.status < 500
-        except (URLError, OSError, ValueError):
+        except (RestFetchPolicyError, URLError, OSError, ValueError):
             return False
+
+
+def _probe_filesystem_reachable(root: Path) -> bool:
+    store = root / ".cursor" / "sw-memory"
+    return store.is_dir() or (root / ".cursor" / "sw-memory.provider").is_file()
+
+
+def probe_provider_reachable(root: Path, provider: str, config: dict[str, Any]) -> bool:
+    try:
+        catalog = load_catalog(root)
+        entry = get_provider(catalog, provider)
+    except CatalogError:
+        return False
+
+    transport = entry.get("hookTransport")
+    if not isinstance(transport, dict):
+        return False
+    agent_session = str(transport.get("agentSession") or "").strip().lower()
+
+    if agent_session == "filesystem":
+        return _probe_filesystem_reachable(root)
+    if agent_session == "mcp":
+        try:
+            validate_registration(root, provider, catalog=catalog)
+            return True
+        except RegistrationError:
+            return False
+    if agent_session == "rest":
+        memory = config.get("memory") or {}
+        connection = memory.get("connection") or {}
+        base_url = str(connection.get("restBaseUrl") or "").strip().rstrip("/")
+        policy = rest_fetch_policy_from_catalog_entry(entry)
+        return _probe_rest_reachable(base_url, policy)
+    return False
 
 
 def redact_payload(raw: str) -> str:

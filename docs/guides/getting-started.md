@@ -31,8 +31,8 @@ Shipwright optimizes for **repeatable delivery**, not for skipping human merge j
 ### Week two
 
 1. Prefer `/sw-deliver run` for multi-phase work instead of manually chaining `/sw-ship`.
-2. Tune only what hurts: `deliver.autonomy`, `review.provider`, memory provider—see
-   [configuration](configuration.md).
+2. Tune only what hurts: `deliver.autonomy`, `review.provider`, `memory.provider` (catalog-registered id —
+   see [configuration](configuration.md#step-1-memory-provider)).
 3. After merges, let `/sw-cleanup` dry-run, then confirm removals.
 4. Skim [workflows](workflows.md) for the doc → deliver → ship path you actually use.
 
