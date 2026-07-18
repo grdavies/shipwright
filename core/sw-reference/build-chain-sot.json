@@ -79,6 +79,7 @@
     "kernel-classification.json",
     "kernel-classification.md",
     "loop-health.schema.json",
+    "memory-provider-recallium-conformance.md",
     "meta-inbox-draft.schema.json",
     "migration-waves.json",
     "model-routing.defaults.json",

@@ -21,6 +21,18 @@ Maps the Shipwright memory capability spec ([`skills/memory/CAPABILITIES.md`](..
 onto committed markdown files with YAML frontmatter. Selected when `workflow.config.json` → `memory.provider`
 is `in-repo`, or when `.cursor/sw-memory.provider` marks the repo (zero-config fresh install).
 
+**Catalog authority (PRD 071):** this adapter is registered in `.sw/memory-provider-catalog.json` (emit:
+`core/sw-reference/memory-provider-catalog.json`). Capability flags, hook transport, interchange modes, and
+`sourceOfTruthClass` in the catalog row are authoritative — the JSON block below must stay in sync.
+Recallium conformance notes (for cross-provider comparison): [`sw-reference/memory-provider-recallium-conformance.md`](../sw-reference/memory-provider-recallium-conformance.md).
+
+| Catalog field | Value |
+| --- | --- |
+| `sourceOfTruthClass` | `repo-authoritative` — committed store is SoT; provider holds distilled pointers only when paired |
+| `interchange.jsonl` | `native` — `in-repo-memory-search.py export/import --format jsonl` |
+| `interchange.okf` | `native` — `in-repo-memory-search.py export/import --format okf` |
+| `credentials.location` | `none` — offline-first; no remote credentials |
+
 `<project>` below is `memory.project` from config, or the workspace directory basename when unset.
 Global scope uses a dedicated `global/` subfolder under the store (rare; explicit user direction only).
 

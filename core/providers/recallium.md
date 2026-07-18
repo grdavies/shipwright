@@ -20,6 +20,18 @@ metadata:
 Maps the Shipwright memory capability spec ([`skills/memory/CAPABILITIES.md`](../skills/memory/CAPABILITIES.md))
 onto the Recallium MCP tools. Selected when `workflow.config.json` → `memory.provider` is `recallium`.
 
+**Catalog authority (PRD 071):** this adapter is registered in `.sw/memory-provider-catalog.json` (emit:
+`core/sw-reference/memory-provider-catalog.json`). Capability flags, hook transport, interchange modes, and
+`sourceOfTruthClass` in the catalog row are authoritative — the JSON block below must stay in sync.
+Conformance review: [`sw-reference/memory-provider-recallium-conformance.md`](../sw-reference/memory-provider-recallium-conformance.md).
+
+| Catalog field | Value |
+| --- | --- |
+| `sourceOfTruthClass` | `memory-authoritative` — distilled memories are provider-SoT; repo decision records stay pointers only |
+| `interchange.jsonl` | `synthesized` — `/sw-memory-export` / `/sw-memory-import` synthesize neutral JSONL via search+expand |
+| `interchange.okf` | `synthesized` — same synthesis path into OKF v0.1 bundles (redaction before write) |
+| `credentials.location` | `env-only` — REST/MCP secrets from environment or secret store only |
+
 `<project>` below is `memory.project` from the config. Global scope uses the literal `__global__`.
 
 ## Capability flags
