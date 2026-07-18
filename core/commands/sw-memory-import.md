@@ -1,5 +1,5 @@
 ---
-description: Import durable memories into the active provider — from neutral JSONL (provider swap) or from repo knowledge (AGENTS.md learned sections + .project_docs pointers). Standing policy is rule-class SoT; AGENTS.md is pointer-only. Idempotent.
+description: Import durable memories into the active provider — from neutral JSONL/OKF (provider swap) or from repo knowledge (AGENTS.md learned sections + .project_docs pointers). Standing policy is rule-class SoT; AGENTS.md is pointer-only. Idempotent.
 alwaysApply: false
 trigger: "/sw-memory-import" or "import memories"
 ---
@@ -9,6 +9,7 @@ trigger: "/sw-memory-import" or "import memories"
 Ingest memories into the active provider. Two source modes:
 
 - `--source jsonl <path>` — replay a provider-neutral JSONL export (second half of a provider swap).
+- `--source okf <path>` — replay a provider-neutral OKF bundle directory export.
 - `--source repo` — mine the consumer repo's knowledge into typed memories (the migration step used by
   Phase 1c): AGENTS.md learned sections → typed memories; `.project_docs/**` → **pointer** memories.
 
@@ -24,12 +25,21 @@ batch is identifiable and re-runnable.
    an existing near-duplicate instead of adding a second. Tag every item `session: migration-bootstrap`.
 4. Report: created / updated / skipped counts, and any items deferred for manual review.
 
-## `--source jsonl`
+## `--source jsonl` / `--source okf`
 
-- Parse each line as the neutral object from `skills/memory/CAPABILITIES.md`.
+- Resolve catalog `interchange.<format>` for the active provider. When the format is `unsupported`,
+  **skip import** and surface the no-migration acknowledgement path — do not write partial records.
+- **Dry-run first (required):** `python3 scripts/memory_switch.py migrate-import --dry-run ...` previews
+  the batch (count, paths, near-duplicates). **Confirm** only after operator approval:
+  `python3 scripts/memory_switch.py migrate-import --confirm ...`.
+- **`jsonl`:** parse each line as the neutral object from `skills/memory/CAPABILITIES.md`.
+- **`okf`:** walk the bundle directory; map OKF `type` → canonical `category`; preserve unknown
+  frontmatter keys.
 - Map canonical `category` → the adapter's native type; preserve `tags`, `relatedFiles`, `importance`,
   `scope`, `links`.
-- Validate before writing; a malformed line is reported and skipped, never silently dropped.
+- Validate before writing; a malformed record is reported and skipped, never silently dropped.
+- On partial failure, preserve the source export snapshot (`memory_switch.py` state) until fidelity is
+  reconciled or the operator acknowledges loss.
 
 ## `--source repo`
 
