@@ -18,14 +18,22 @@ HOOKS_DIR = SCRIPT_DIR.parent / "core" / "hooks"
 if str(HOOKS_DIR) not in sys.path:
     sys.path.append(str(HOOKS_DIR))
 
+import importlib.util
+
+_SPEC = importlib.util.spec_from_file_location(
+    "sw_recallium_url_scripts",
+    SCRIPT_DIR / "sw_recallium_url.py",
+)
+assert _SPEC and _SPEC.loader
+_sw_recallium_url = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_sw_recallium_url)
+RestFetchPolicyError = _sw_recallium_url.RestFetchPolicyError
+guarded_urlopen = _sw_recallium_url.guarded_urlopen
+rest_fetch_policy_from_catalog_entry = _sw_recallium_url.rest_fetch_policy_from_catalog_entry
+
 from memory_prework_gate import DEFAULT_SURFACE_MUTATION_BUDGET  # noqa: E402
 from memory_provider_catalog import CatalogError, get_provider, load_catalog  # noqa: E402
 from memory_provider_register import RegistrationError, validate_registration  # noqa: E402
-from sw_recallium_url import (  # noqa: E402
-    RestFetchPolicyError,
-    guarded_urlopen,
-    rest_fetch_policy_from_catalog_entry,
-)
 
 RECORD_PATH = Path(".cursor/hooks/state/memory-prework-search.json")
 DEFAULT_CLASSES = ("rule", "decision", "learning", "code-context", "design")
