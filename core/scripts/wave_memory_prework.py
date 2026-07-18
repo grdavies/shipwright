@@ -12,13 +12,20 @@ from typing import Any
 from urllib.error import URLError
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 HOOKS_DIR = SCRIPT_DIR.parent / "core" / "hooks"
 if str(HOOKS_DIR) not in sys.path:
-    sys.path.insert(0, str(HOOKS_DIR))
+    sys.path.append(str(HOOKS_DIR))
 
 from memory_prework_gate import DEFAULT_SURFACE_MUTATION_BUDGET  # noqa: E402
 from memory_provider_catalog import CatalogError, get_provider, load_catalog  # noqa: E402
 from memory_provider_register import RegistrationError, validate_registration  # noqa: E402
+from sw_recallium_url import (  # noqa: E402
+    RestFetchPolicyError,
+    guarded_urlopen,
+    rest_fetch_policy_from_catalog_entry,
+)
 
 RECORD_PATH = Path(".cursor/hooks/state/memory-prework-search.json")
 DEFAULT_CLASSES = ("rule", "decision", "learning", "code-context", "design")
@@ -66,8 +73,6 @@ def provider_from_config(root: Path, config: dict[str, Any]) -> str:
 def _probe_rest_reachable(base_url: str, policy: dict[str, Any] | None = None) -> bool:
     if not base_url:
         return False
-    from sw_recallium_url import RestFetchPolicyError, guarded_urlopen
-
     try:
         with guarded_urlopen(f"{base_url.rstrip('/')}/health", policy, timeout=3) as resp:
             return 200 <= resp.status < 500
@@ -110,8 +115,6 @@ def probe_provider_reachable(root: Path, provider: str, config: dict[str, Any]) 
         memory = config.get("memory") or {}
         connection = memory.get("connection") or {}
         base_url = str(connection.get("restBaseUrl") or "").strip().rstrip("/")
-        from sw_recallium_url import rest_fetch_policy_from_catalog_entry
-
         policy = rest_fetch_policy_from_catalog_entry(entry)
         return _probe_rest_reachable(base_url, policy)
     return False
