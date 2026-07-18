@@ -559,6 +559,7 @@
 * merge phase migrate-hard-coded-provider-consumers-small into feat/pluggable-memory-adapter-framework (4ec6ef9) <!-- sw-deliver:migrate-hard-coded-provider-consumers-small -->
 * merge phase adapter-checklist-ssrf-credentials-small into feat/pluggable-memory-adapter-framework (3881c92) <!-- sw-deliver:adapter-checklist-ssrf-credentials-small -->
 * merge phase provider-switch-operator-flow-small into feat/pluggable-memory-adapter-framework (b12f557) <!-- sw-deliver:provider-switch-operator-flow-small -->
+* merge phase recallium-conformance-review-artifact-small into feat/pluggable-memory-adapter-framework (7315157) <!-- sw-deliver:recallium-conformance-review-artifact-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
