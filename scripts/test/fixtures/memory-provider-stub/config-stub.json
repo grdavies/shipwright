@@ -1,0 +1,11 @@
+{
+  "memory": {
+    "provider": "memory-stub",
+    "project": "stub-fixture",
+    "sourceOfTruth": "auto",
+    "guardrails": {
+      "enforceBeforeSubmit": true,
+      "requireRuleClass": false
+    }
+  }
+}

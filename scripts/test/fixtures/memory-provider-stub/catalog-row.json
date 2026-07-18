@@ -1,0 +1,30 @@
+{
+  "adapterDoc": "scripts/test/fixtures/memory-provider-stub/adapter.md",
+  "rulesScript": "scripts/test/fixtures/memory-provider-stub/stub-rules.py",
+  "capabilities": {
+    "typedMemories": true,
+    "filePathSearch": true,
+    "categoryFilter": true,
+    "recencyControl": true,
+    "rulesAtStartup": true,
+    "tasks": false,
+    "export": false,
+    "import": false,
+    "softDelete": true,
+    "semanticSearch": false
+  },
+  "hookTransport": {
+    "agentSession": "mcp",
+    "ruleFetch": "out-of-band-script",
+    "notes": "Hermetic stub — registration-gated reachability; no live MCP session in tests."
+  },
+  "interchange": {
+    "jsonl": "unsupported",
+    "okf": "unsupported"
+  },
+  "sourceOfTruthClass": "memory-authoritative",
+  "credentials": {
+    "location": "none",
+    "notes": "Hermetic fixture — no remote credentials."
+  }
+}
