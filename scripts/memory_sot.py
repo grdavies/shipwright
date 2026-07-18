@@ -315,7 +315,7 @@ def cmd_pointer_recipe(
     config = load_config(root)
     knob = read_source_of_truth_knob(config)
     provider = resolve_memory_provider(root, config)
-    effective = resolve_effective_sot(knob, provider, _DECISION_CLASS)
+    effective = resolve_effective_sot(knob, provider, _DECISION_CLASS, root=root)
     decision_home = resolve_decision_home(root, config)
     recipe = build_pointer_recipe(
         effective,
