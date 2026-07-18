@@ -1196,7 +1196,16 @@ def cmd_merge_enqueue(root: Path, args: list[str]) -> None:
         )
     queue = list(state.get("mergeQueue") or [])
     if any(item.get("phaseSlug") == phase_slug for item in queue):
-        emit({"verdict": "pass", "action": "merge-enqueue", "note": "already queued", "phase": phase_slug})
+        emit(
+            {
+                "verdict": "pass",
+                "action": "merge-enqueue",
+                "note": "already queued",
+                "phase": phase_slug,
+                "mergeQueue": queue,
+                "queueLength": len(queue),
+            }
+        )
     entry = {
         "phaseSlug": phase_slug,
         "head": status.get("head"),
@@ -1207,7 +1216,15 @@ def cmd_merge_enqueue(root: Path, args: list[str]) -> None:
     state["mergeQueue"] = queue
     reorder_merge_queue(state, root)
     save_state(root, state)
-    emit({"verdict": "pass", "action": "merge-enqueue", "entry": entry, "queueLength": len(state["mergeQueue"])})
+    emit(
+        {
+            "verdict": "pass",
+            "action": "merge-enqueue",
+            "entry": entry,
+            "mergeQueue": state["mergeQueue"],
+            "queueLength": len(state["mergeQueue"]),
+        }
+    )
 
 
 def resolve_orchestrator_worktree(root: Path, args: list[str]) -> Path:
