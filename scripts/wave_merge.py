@@ -21,6 +21,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from sw_scripts_resolve import resolve_script
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
@@ -774,7 +776,7 @@ def merge_exec_journal_safety(
 
 
 def run_check_gate(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
-    script = root / "scripts" / "check-gate.py"
+    script = resolve_script(root, "check-gate.py")
     probe = interpreter.probe()
     cmd = [*probe.executable, str(script)]
     if pr:

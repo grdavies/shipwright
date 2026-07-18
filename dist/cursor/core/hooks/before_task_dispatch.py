@@ -26,6 +26,8 @@ from typing import Any
 
 from sw_hook_util import workspace_root
 
+from sw_scripts_resolve import ScriptsResolveError, ensure_scripts_on_path, resolve_script
+
 from memory_prework_gate import consume_mutation, validate_fresh_record, load_record
 
 _REVIEWER_AGENT = re.compile(r"^sw-[a-z0-9-]+-reviewer$")
@@ -126,9 +128,15 @@ def is_bound_agent(agent_id: str) -> bool:
 
 
 def _ensure_scripts_on_path(root: Path) -> None:
-    scripts = root / "scripts"
-    if scripts.is_dir() and str(scripts) not in sys.path:
-        sys.path.insert(0, str(scripts))
+    core_scripts = Path(__file__).resolve().parent.parent / "scripts"
+    if core_scripts.is_dir() and str(core_scripts) not in sys.path:
+        sys.path.insert(0, str(core_scripts))
+    try:
+        ensure_scripts_on_path(root)
+    except ScriptsResolveError:
+        scripts = root / "scripts"
+        if scripts.is_dir() and str(scripts) not in sys.path:
+            sys.path.insert(0, str(scripts))
 
 
 def _has_command_or_skill(tool_input: dict[str, Any]) -> bool:
@@ -290,13 +298,17 @@ def resolve_dispatch_model(
     skill: str | None = None,
 ) -> DispatchResult:
     """Resolve model tier using R39b precedence via resolve-model-tier.py."""
-    script = root / "scripts" / "resolve-model-tier.py"
-    if not script.is_file():
+    core_scripts = Path(__file__).resolve().parent.parent / "scripts"
+    if core_scripts.is_dir() and str(core_scripts) not in sys.path:
+        sys.path.insert(0, str(core_scripts))
+    try:
+        script = resolve_script(root, "resolve-model-tier.py")
+    except ScriptsResolveError as exc:
         return DispatchResult(
             verdict="fail",
             agent=agent_id,
             cause="no-model-resolved",
-            remediation="scripts/resolve-model-tier.py missing",
+            remediation=str(exc),
         )
     argv = [sys.executable, str(script), "--agent", agent_id]
     if command:

@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from sw_scripts_resolve import resolve_script
+
 from wave_json_io import StateCorruptError, read_json, write_json
 
 from plan_persist import (
@@ -1634,7 +1636,7 @@ def trunk_base_persisted(root: Path) -> bool:
 
 
 def run_resolve_capture(root: Path) -> tuple[int, dict[str, Any]]:
-    script = root / "scripts" / "resolve-base-branch.py"
+    script = resolve_script(root, "resolve-base-branch.py")
     if not script.is_file():
         return 2, {"verdict": "fail", "error": "resolve-base-branch.py missing"}
     proc = subprocess.run(
@@ -2293,7 +2295,7 @@ def compute_next_action(
 
 
 def run_inflight_signal(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
-    script = root / "scripts" / "inflight-signal.py"
+    script = resolve_script(root, "inflight-signal.py")
     if not script.is_file():
         return 2, {"verdict": "fail", "error": "inflight-signal.py missing"}
     proc = subprocess.run(
@@ -2318,7 +2320,7 @@ def run_inflight_signal(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
 
 def run_wave(root: Path, *args: str) -> tuple[int, dict[str, Any]]:
     proc = subprocess.run(
-        [*interpreter.probe().executable, str(root / "scripts/wave.py"), *args],
+        [*interpreter.probe().executable, str(resolve_script(root, "wave.py")), *args],
         cwd=str(root),
         capture_output=True,
         text=True,
