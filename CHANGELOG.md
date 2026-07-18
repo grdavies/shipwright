@@ -566,6 +566,7 @@
 * merge phase fix-phase-provision-stdout-json-parse-small into feat/plugin-consumability-and-deliver-hygiene (e2363c4) <!-- sw-deliver:fix-phase-provision-stdout-json-parse-small -->
 * merge phase forward-manifest-entry-args-in-local-verify-medium into feat/plugin-consumability-and-deliver-hygiene (657deb3) <!-- sw-deliver:forward-manifest-entry-args-in-local-verify-medium -->
 * merge phase task-model-allowlist-enforcement-medium into feat/plugin-consumability-and-deliver-hygiene (0c218cc) <!-- sw-deliver:task-model-allowlist-enforcement-medium -->
+* merge phase shared-script-path-resolver-medium into feat/plugin-consumability-and-deliver-hygiene (ae12c17) <!-- sw-deliver:shared-script-path-resolver-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
