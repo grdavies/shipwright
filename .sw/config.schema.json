@@ -580,12 +580,8 @@
       "properties": {
         "provider": {
           "type": "string",
-          "enum": [
-            "recallium",
-            "in-repo"
-          ],
           "default": "in-repo",
-          "description": "Active memory adapter id (must match providers/<name>.md and providers/<name>-rules.py)."
+          "description": "Active memory adapter id. Membership and adapter integrity are validated against memory-provider-catalog.json and providers/<id>.md + providers/<id>-rules.py (registration validator at config write, startup, and guardrail preflight) \u2014 not schema-closed."
         },
         "sourceOfTruth": {
           "type": "string",
