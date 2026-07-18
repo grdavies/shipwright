@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from sw_scripts_resolve import resolve_script
+
 ORCHESTRATOR_ROLE = "orchestrator"
 PHASE_ROLE = "phase"
 
@@ -153,7 +155,7 @@ def slug_from_target(target_branch: str) -> str:
 
 
 def cmd_assert_entry(root: Path, args: list[str]) -> None:
-    script = root / "scripts" / "sw-assert-worktree.py"
+    script = resolve_script(root, "sw-assert-worktree.py")
     if not script.is_file():
         fail("sw-assert-worktree.py missing", exit_code=2)
     proc = subprocess.run([sys.executable, str(script)], cwd=str(root), capture_output=True, text=True)
@@ -223,7 +225,7 @@ def assert_primary_off_target(start: Path, target: str) -> None:
         default_branch = default_ref.removeprefix("refs/remotes/origin/")
     else:
         default_branch = "main"
-    trunk_script = repo_root / "scripts" / "resolve_base_branch.py"
+    trunk_script = resolve_script(repo_root, "resolve_base_branch.py")
     if trunk_script.is_file():
         proc = subprocess.run(
             [sys.executable, str(trunk_script), "trunk-name"],
@@ -479,7 +481,7 @@ def cmd_phase_teardown(root: Path, args: list[str]) -> None:
     if not Path(target).is_dir():
         fail(f"worktree not found: {target}")
 
-    mat_script = top / "scripts" / "planning_materialize.py"
+    mat_script = resolve_script(top, "planning_materialize.py")
     if mat_script.is_file():
         subprocess.run(
             [
@@ -795,7 +797,7 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
         emit(adopted)
         return
 
-    script = top / "scripts" / "worktree.py"
+    script = resolve_script(top, "worktree.py")
     proc = subprocess.run(
         [
             sys.executable,
@@ -853,7 +855,7 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
         mat_proc = subprocess.run(
             [
                 sys.executable,
-                str(top / "scripts" / "planning_materialize.py"),
+                str(resolve_script(top, "planning_materialize.py")),
                 "--root",
                 str(top),
                 "provision",
@@ -893,7 +895,7 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
 def cmd_execute_provision_sub_branch(root: Path, args: list[str]) -> None:
     import subprocess
 
-    script = root / "scripts" / "execute_plan.py"
+    script = resolve_script(root, "execute_plan.py")
     proc = subprocess.run(
         [sys.executable, str(script), str(root), "provision-sub-branch", *args],
         cwd=str(root),
@@ -909,7 +911,7 @@ def cmd_execute_provision_sub_branch(root: Path, args: list[str]) -> None:
 def cmd_execute_teardown_sub_branch(root: Path, args: list[str]) -> None:
     import subprocess
 
-    script = root / "scripts" / "execute_plan.py"
+    script = resolve_script(root, "execute_plan.py")
     proc = subprocess.run(
         [sys.executable, str(script), str(root), "teardown-sub-branch", *args],
         cwd=str(root),

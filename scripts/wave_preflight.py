@@ -11,6 +11,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from sw_scripts_resolve import resolve_script
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 DISPATCH_PREFLIGHT_DIR = Path(".cursor/hooks/state/task-dispatch-preflight")
 DISPATCH_PREFLIGHT_LEGACY = Path(".cursor/hooks/state/task-dispatch-preflight.json")
@@ -323,8 +325,8 @@ def cmd_dispatch(root: Path, args: list[str]) -> None:
     if ttl_seconds < 30:
         ttl_seconds = 30
 
-    model_cmd = [sys.executable, str(SCRIPT_DIR / "resolve-model-tier.py"), "--agent", agent]
-    intensity_cmd = [sys.executable, str(SCRIPT_DIR / "resolve-intensity.py"), "--agent", agent]
+    model_cmd = [sys.executable, str(resolve_script(root, "resolve-model-tier.py")), "--agent", agent]
+    intensity_cmd = [sys.executable, str(resolve_script(root, "resolve-intensity.py")), "--agent", agent]
     if command:
         model_cmd.extend(["--command", command])
         intensity_cmd.extend(["--command", command])
