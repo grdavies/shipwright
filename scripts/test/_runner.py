@@ -165,6 +165,7 @@ def run_suite_module(
     root: Path | None = None,
     coverage: bool = False,
     coverdir: Path | None = None,
+    suite_args: list[str] | None = None,
 ) -> int:
     root = root or repo_root(path)
     use_coverage = coverage_enabled(flag=coverage)
@@ -186,11 +187,14 @@ def run_suite_module(
         sys.modules[path.stem] = mod
         spec.loader.exec_module(mod)
         if hasattr(mod, "main"):
-            return invoke_suite_main(mod)
+            return invoke_suite_main(mod, suite_args)
         print(f"FAIL suite {path} missing main()", file=sys.stderr)
         return 1
     env = _suite_env(root)
-    completed = subprocess.run(["/bin/bash", str(path)], cwd=str(root), env=env, shell=False)
+    cmd = ["/bin/bash", str(path)]
+    if suite_args:
+        cmd.extend(suite_args)
+    completed = subprocess.run(cmd, cwd=str(root), env=env, shell=False)
     return completed.returncode
 
 
@@ -293,7 +297,15 @@ def run_manifest(root: Path, *, coverage: bool = False, coverdir: Path | None = 
             continue
         print(f"==> pr-test-plan/{suite_id}: {path.relative_to(root)}")
         suite_started = time.monotonic()
-        ec = run_suite_module(path, root=root, coverage=use_coverage, coverdir=active_coverdir)
+        entry_args = entry.get("args")
+        suite_args = list(entry_args) if isinstance(entry_args, list) else []
+        ec = run_suite_module(
+            path,
+            root=root,
+            coverage=use_coverage,
+            coverdir=active_coverdir,
+            suite_args=suite_args,
+        )
         suite_elapsed = time.monotonic() - suite_started
         print(f"    suite {suite_id} elapsed {suite_elapsed:.1f}s")
         if ec != 0:
