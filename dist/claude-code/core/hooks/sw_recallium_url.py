@@ -2,30 +2,33 @@
 
 from __future__ import annotations
 
-import ipaddress
-import urllib.parse
+import sys
+from pathlib import Path
 
-_ALLOWED_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+_SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
 
+from sw_recallium_url import (  # noqa: E402
+    RestFetchPolicyError,
+    fetch_json,
+    guarded_urlopen,
+    is_allowed_recallium_base,
+    is_rest_url_allowed,
+    load_catalog_rest_policy,
+    rest_fetch_policy_from_catalog_entry,
+    rest_fetch_policy_from_transport,
+    validate_rest_url,
+)
 
-def is_allowed_recallium_base(url: str) -> bool:
-    if not url or not isinstance(url, str):
-        return False
-    try:
-        parsed = urllib.parse.urlparse(url.strip())
-    except ValueError:
-        return False
-    if parsed.scheme not in ("http", "https"):
-        return False
-    if parsed.username or parsed.password:
-        return False
-    host = parsed.hostname
-    if not host:
-        return False
-    if host in _ALLOWED_HOSTS:
-        return True
-    try:
-        addr = ipaddress.ip_address(host)
-        return addr.is_loopback
-    except ValueError:
-        return False
+__all__ = [
+    "RestFetchPolicyError",
+    "fetch_json",
+    "guarded_urlopen",
+    "is_allowed_recallium_base",
+    "is_rest_url_allowed",
+    "load_catalog_rest_policy",
+    "rest_fetch_policy_from_catalog_entry",
+    "rest_fetch_policy_from_transport",
+    "validate_rest_url",
+]

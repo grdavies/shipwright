@@ -20,7 +20,14 @@
       "hookTransport": {
         "agentSession": "mcp",
         "ruleFetch": "out-of-band-script",
-        "notes": "Agent-session ops via Recallium MCP tools; guardrail hooks invoke providers/recallium-rules.py (non-MCP, budgeted rule-fetch)."
+        "notes": "Agent-session ops via Recallium MCP tools; guardrail hooks invoke providers/recallium-rules.py (non-MCP, budgeted rule-fetch).",
+        "restFetchPolicy": {
+          "allowedHosts": ["localhost", "127.0.0.1", "::1"],
+          "allowLoopback": true,
+          "allowPrivate": false,
+          "allowLinkLocal": false,
+          "allowMetadata": false
+        }
       },
       "interchange": {
         "jsonl": "synthesized",

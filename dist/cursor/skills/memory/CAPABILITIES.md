@@ -168,3 +168,32 @@ python3 scripts/memory_playbook.py evaluate-promotion --id <playbook-id> [--prom
 
 **Promotion gate (R33):** `draft` → `active` and primary-injection eligibility require audited claims telemetry (`auditTelemetryRef` resolves to passing R3/R4 output) **and** `skepticVerdict: pass`. Confidence auto-promote/demote (R27) is scoped to `learning`, `code-context`, and `playbook` only — human `rule` promotion is unchanged.
 
+## Adapter registration checklist (PRD 071 R5)
+
+Authors register providers in `.sw/memory-provider-catalog.json` and ship matching adapter docs +
+rules scripts. `scripts/memory_provider_register.py` validates charset, catalog membership, adapter
+integrity, and rules script reachability before config writes, startup/preflight, or hook trust.
+
+| Checklist item | Catalog / adapter contract |
+| --- | --- |
+| **Dual-transport** | `hookTransport.agentSession` (`mcp` \| `filesystem` \| `rest`) plus `ruleFetch` (`out-of-band-script` \| `inline-filesystem` \| `none`). `hookTransport.notes` and optional `restFetchPolicy` are policy inputs — not advisory-only. |
+| **Category map** | Adapter maps canonical categories in the table above; banned catch-alls remain rejected at store time. |
+| **R41 redaction** | Every ingestion edge invokes `scripts/memory-redact.py` before `store` (see **Redaction chokepoint**). |
+| **Degrade-open** | Capability flags declare what commands may skip or soften; `false` never blocks unrelated surfaces. |
+| **Interchange** | `interchange.jsonl` / `interchange.okf` declare `native` \| `synthesized` \| `unsupported` for export/import flows. |
+| **Credentials (secret-store-only)** | `credentials.location` is `none`, `env-only`, or `secret-store`. Secrets live only in environment/secret-store — never catalog rows, config bodies, memory content, or hook stdout. `credentials.notes` documents the secret-store-only binding. |
+
+### REST fetch SSRF policy
+
+Shared REST probes and out-of-band rule-fetch scripts route through `scripts/sw_recallium_url.py`.
+Policy is derived from catalog `hookTransport.restFetchPolicy` (with transport-aware defaults):
+
+- **Allowlist first** — explicit `allowedHosts` win.
+- **Block by class** — loopback, link-local, private, and cloud-metadata hosts are rejected unless
+  the catalog policy opts in (`allowLoopback`, `allowLinkLocal`, `allowPrivate`, `allowMetadata`).
+- **Recallium** — localhost-only REST for guardrail rule-fetch; MCP remains the agent-session transport.
+- **REST providers** — fail closed until `restFetchPolicy` documents reachable hosts.
+
+Conformance: `scripts/unit_tests/memory/test_adapter_checklist.py` asserts seeded catalog rows satisfy
+this checklist (including the credentials clause).
+

@@ -76,9 +76,26 @@ def _install_third_provider(
             "agentSession": agent_session,
             "ruleFetch": "out-of-band-script",
             "notes": "Hermetic third-provider fixture for consumer conformance tests.",
+            **(
+                {
+                    "restFetchPolicy": {
+                        "allowedHosts": ["127.0.0.1", "localhost"],
+                        "allowLoopback": True,
+                        "allowPrivate": False,
+                        "allowLinkLocal": False,
+                        "allowMetadata": False,
+                    }
+                }
+                if agent_session == "rest"
+                else {}
+            ),
         },
         "interchange": {"jsonl": "unsupported", "okf": "unsupported"},
         "sourceOfTruthClass": source_class,
+        "credentials": {
+            "location": "env-only",
+            "notes": "Fixture provider — credentials from environment/secret-store only.",
+        },
     }
 
     catalog_path = workspace / ".sw" / "memory-provider-catalog.json"

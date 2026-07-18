@@ -99,6 +99,23 @@ def validate_provider_entry(provider_id: str, entry: Any) -> dict[str, Any]:
     if notes is not None:
         _require_str(notes, f"{label}.hookTransport.notes")
 
+    rest_policy = hook_transport.get("restFetchPolicy")
+    if rest_policy is not None:
+        policy = _require_mapping(rest_policy, f"{label}.hookTransport.restFetchPolicy")
+        allowed = policy.get("allowedHosts")
+        if allowed is not None:
+            if not isinstance(allowed, list) or not all(isinstance(item, str) for item in allowed):
+                raise CatalogError(
+                    f"{label}.hookTransport.restFetchPolicy.allowedHosts must be a string list",
+                    cause="partial",
+                )
+        for key in ("allowLoopback", "allowPrivate", "allowLinkLocal", "allowMetadata"):
+            if key in policy and not isinstance(policy.get(key), bool):
+                raise CatalogError(
+                    f"{label}.hookTransport.restFetchPolicy.{key} must be a boolean",
+                    cause="partial",
+                )
+
     interchange = _require_mapping(row.get("interchange"), f"{label}.interchange")
     for fmt in INTERCHANGE_FORMATS:
         mode = _require_str(interchange.get(fmt), f"{label}.interchange.{fmt}")
@@ -115,10 +132,14 @@ def validate_provider_entry(provider_id: str, entry: Any) -> dict[str, Any]:
     _require_str(row.get("adapterDoc"), f"{label}.adapterDoc")
     _require_str(row.get("rulesScript"), f"{label}.rulesScript")
 
-    credentials = row.get("credentials")
-    if credentials is not None:
-        cred = _require_mapping(credentials, f"{label}.credentials")
-        _require_str(cred.get("location"), f"{label}.credentials.location")
+    credentials = _require_mapping(row.get("credentials"), f"{label}.credentials")
+    location = _require_str(credentials.get("location"), f"{label}.credentials.location")
+    if location not in {"none", "env-only", "secret-store"}:
+        raise CatalogError(
+            f"{label}.credentials.location invalid: {location!r}",
+            cause="partial",
+        )
+    _require_str(credentials.get("notes"), f"{label}.credentials.notes")
 
     return row
 

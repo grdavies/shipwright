@@ -10,7 +10,6 @@ import uuid
 from pathlib import Path
 from typing import Any
 from urllib.error import URLError
-from urllib.request import Request, urlopen
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 HOOKS_DIR = SCRIPT_DIR.parent / "core" / "hooks"
@@ -64,19 +63,21 @@ def provider_from_config(root: Path, config: dict[str, Any]) -> str:
     return "recallium"
 
 
-def _probe_rest_reachable(base_url: str) -> bool:
+def _probe_rest_reachable(base_url: str, policy: dict[str, Any] | None = None) -> bool:
     if not base_url:
         return False
+    from sw_recallium_url import RestFetchPolicyError, guarded_urlopen
+
     try:
-        req = Request(f"{base_url}/health", method="GET")
-        with urlopen(req, timeout=3) as resp:  # noqa: S310 — local adapter probe
+        with guarded_urlopen(f"{base_url.rstrip('/')}/health", policy, timeout=3) as resp:
             return 200 <= resp.status < 500
+    except RestFetchPolicyError:
+        return False
     except (URLError, OSError, ValueError):
         try:
-            req = Request(base_url, method="GET")
-            with urlopen(req, timeout=3) as resp:  # noqa: S310
+            with guarded_urlopen(base_url, policy, timeout=3) as resp:
                 return 200 <= resp.status < 500
-        except (URLError, OSError, ValueError):
+        except (RestFetchPolicyError, URLError, OSError, ValueError):
             return False
 
 
@@ -109,7 +110,10 @@ def probe_provider_reachable(root: Path, provider: str, config: dict[str, Any]) 
         memory = config.get("memory") or {}
         connection = memory.get("connection") or {}
         base_url = str(connection.get("restBaseUrl") or "").strip().rstrip("/")
-        return _probe_rest_reachable(base_url)
+        from sw_recallium_url import rest_fetch_policy_from_catalog_entry
+
+        policy = rest_fetch_policy_from_catalog_entry(entry)
+        return _probe_rest_reachable(base_url, policy)
     return False
 
 
