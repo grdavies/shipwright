@@ -18,6 +18,8 @@ if str(HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(HOOKS_DIR))
 
 from memory_prework_gate import DEFAULT_SURFACE_MUTATION_BUDGET  # noqa: E402
+from memory_provider_catalog import CatalogError, get_provider, load_catalog  # noqa: E402
+from memory_provider_register import RegistrationError, validate_registration  # noqa: E402
 
 RECORD_PATH = Path(".cursor/hooks/state/memory-prework-search.json")
 DEFAULT_CLASSES = ("rule", "decision", "learning", "code-context", "design")
@@ -62,13 +64,7 @@ def provider_from_config(root: Path, config: dict[str, Any]) -> str:
     return "recallium"
 
 
-def probe_provider_reachable(root: Path, provider: str, config: dict[str, Any]) -> bool:
-    if provider == "in-repo":
-        store = root / ".cursor" / "sw-memory"
-        return store.is_dir() or (root / ".cursor" / "sw-memory.provider").is_file()
-    memory = config.get("memory") or {}
-    connection = memory.get("connection") or {}
-    base_url = str(connection.get("restBaseUrl") or "").strip().rstrip("/")
+def _probe_rest_reachable(base_url: str) -> bool:
     if not base_url:
         return False
     try:
@@ -82,6 +78,39 @@ def probe_provider_reachable(root: Path, provider: str, config: dict[str, Any]) 
                 return 200 <= resp.status < 500
         except (URLError, OSError, ValueError):
             return False
+
+
+def _probe_filesystem_reachable(root: Path) -> bool:
+    store = root / ".cursor" / "sw-memory"
+    return store.is_dir() or (root / ".cursor" / "sw-memory.provider").is_file()
+
+
+def probe_provider_reachable(root: Path, provider: str, config: dict[str, Any]) -> bool:
+    try:
+        catalog = load_catalog(root)
+        entry = get_provider(catalog, provider)
+    except CatalogError:
+        return False
+
+    transport = entry.get("hookTransport")
+    if not isinstance(transport, dict):
+        return False
+    agent_session = str(transport.get("agentSession") or "").strip().lower()
+
+    if agent_session == "filesystem":
+        return _probe_filesystem_reachable(root)
+    if agent_session == "mcp":
+        try:
+            validate_registration(root, provider, catalog=catalog)
+            return True
+        except RegistrationError:
+            return False
+    if agent_session == "rest":
+        memory = config.get("memory") or {}
+        connection = memory.get("connection") or {}
+        base_url = str(connection.get("restBaseUrl") or "").strip().rstrip("/")
+        return _probe_rest_reachable(base_url)
+    return False
 
 
 def redact_payload(raw: str) -> str:

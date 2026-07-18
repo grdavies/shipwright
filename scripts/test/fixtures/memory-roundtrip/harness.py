@@ -115,8 +115,18 @@ class UnreachableTransport:
         raise URLError("connection refused (fixture)")
 
 
+def _seed_provider_catalog(tmp_root: Path) -> None:
+    catalog_src = ROOT / ".sw" / "memory-provider-catalog.json"
+    if not catalog_src.is_file():
+        return
+    dest = tmp_root / ".sw" / "memory-provider-catalog.json"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(catalog_src.read_text(encoding="utf-8"), encoding="utf-8")
+
+
 def _new_backend(tmp_root: Path, cfg: dict) -> "ps.MemoryLocalCacheBackend":
     (tmp_root / ".cursor").mkdir(parents=True, exist_ok=True)
+    _seed_provider_catalog(tmp_root)
     return ps.MemoryLocalCacheBackend(tmp_root, cfg)
 
 

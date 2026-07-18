@@ -8,10 +8,11 @@ import re
 import sys
 from pathlib import Path
 
+from memory_provider_catalog import CatalogError, get_provider, load_catalog
+from memory_provider_register import validate_registration
+
 _CONFIG_PATHS = (".cursor/workflow.config.json", "workflow.config.json")
 _MARKER_PATHS = (".cursor/sw-memory.provider", "sw-memory.provider")
-_KNOWN_PROVIDERS = frozenset({"recallium", "in-repo"})
-_EXTERNAL_PROVIDERS = frozenset({"recallium"})
 _SOT_KNOB_VALUES = frozenset({"repo", "memory", "auto"})
 _DECISION_CLASS = "decision"
 _DECISION_VIRTUAL_PREFIX = "docs/decisions/"
@@ -45,6 +46,18 @@ def load_config(root: Path) -> dict:
     return {}
 
 
+def _validated_provider(root: Path, provider_id: str) -> str | None:
+    value = str(provider_id or "").strip()
+    if not value:
+        return None
+    try:
+        catalog = load_catalog(root)
+        get_provider(catalog, value)
+        return value
+    except CatalogError:
+        return None
+
+
 def read_memory_provider_marker(root: Path) -> str | None:
     for rel in _MARKER_PATHS:
         path = root / rel
@@ -54,9 +67,7 @@ def read_memory_provider_marker(root: Path) -> str | None:
             value = path.read_text(encoding="utf-8").strip()
         except OSError:
             return None
-        if value in _KNOWN_PROVIDERS:
-            return value
-        return None
+        return _validated_provider(root, value)
     return None
 
 
@@ -65,10 +76,7 @@ def resolve_memory_provider(root: Path, config: dict | None = None) -> str | Non
         config = load_config(root)
     memory = config.get("memory", {}) if isinstance(config, dict) else {}
     if isinstance(memory, dict) and memory.get("provider"):
-        provider = str(memory["provider"])
-        if provider in _KNOWN_PROVIDERS:
-            return provider
-        return None
+        return _validated_provider(root, str(memory["provider"]))
     return read_memory_provider_marker(root)
 
 
@@ -82,14 +90,32 @@ def read_source_of_truth_knob(config: dict) -> str:
     return "auto"
 
 
-def resolve_effective_sot(knob: str, provider: str | None, doc_class: str) -> str:
+def provider_source_of_truth_class(root: Path, provider: str | None) -> str | None:
+    if not provider:
+        return None
+    try:
+        catalog = load_catalog(root)
+        entry = get_provider(catalog, provider)
+    except CatalogError:
+        return None
+    source_class = entry.get("sourceOfTruthClass")
+    return str(source_class).strip() if isinstance(source_class, str) and source_class.strip() else None
+
+
+def resolve_effective_sot(
+    knob: str,
+    provider: str | None,
+    doc_class: str,
+    *,
+    root: Path,
+) -> str:
     if doc_class != _DECISION_CLASS:
         return "distillation"
     if knob == "repo":
         return "repo"
     if knob == "memory":
         return "memory"
-    if provider in _EXTERNAL_PROVIDERS:
+    if provider_source_of_truth_class(root, provider) == "memory-authoritative":
         return "memory"
     return "repo"
 
@@ -177,7 +203,7 @@ def cmd_resolve(root: Path, doc_class: str, as_json: bool) -> None:
     config = load_config(root)
     knob = read_source_of_truth_knob(config)
     provider = resolve_memory_provider(root, config)
-    effective = resolve_effective_sot(knob, provider, doc_class)
+    effective = resolve_effective_sot(knob, provider, doc_class, root=root)
     scoped = doc_class == _DECISION_CLASS
 
     if as_json:
@@ -290,7 +316,7 @@ def cmd_pointer_recipe(
     config = load_config(root)
     knob = read_source_of_truth_knob(config)
     provider = resolve_memory_provider(root, config)
-    effective = resolve_effective_sot(knob, provider, _DECISION_CLASS)
+    effective = resolve_effective_sot(knob, provider, _DECISION_CLASS, root=root)
     decision_home = resolve_decision_home(root, config)
     recipe = build_pointer_recipe(
         effective,
