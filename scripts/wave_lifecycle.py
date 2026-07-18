@@ -41,6 +41,69 @@ def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | No
     return default
 
 
+def parse_last_json_object(text: str) -> dict[str, Any]:
+    """Return the last top-level JSON object from mixed subprocess stdout."""
+    raw = (text or "").strip()
+    if not raw:
+        raise ValueError("empty stdout")
+    decoder = json.JSONDecoder()
+    last_obj: dict[str, Any] | None = None
+    idx = 0
+    while idx < len(raw):
+        try:
+            obj, end = decoder.raw_decode(raw, idx)
+        except json.JSONDecodeError:
+            idx += 1
+            continue
+        if isinstance(obj, dict):
+            last_obj = obj
+        idx = max(end, idx + 1)
+    if last_obj is None:
+        raise ValueError("no JSON object found")
+    return last_obj
+
+
+def provision_payload_from_stdout(text: str, *, worktree_name: str) -> dict[str, Any]:
+    """Parse worktree provision stdout and validate required path/name fields."""
+    captured = (text or "").strip()
+    try:
+        payload = parse_last_json_object(captured)
+    except ValueError as exc:
+        fail(
+            "phase provision stdout missing JSON payload",
+            exit_code=20,
+            halt="blocked",
+            cause="phase-provision:invalid-stdout",
+            stdout=captured[-2000:],
+            detail=str(exc),
+        )
+    path = payload.get("path") or payload.get("worktreePath")
+    name = payload.get("name") or payload.get("worktreeName") or worktree_name
+    if not path or not str(path).strip():
+        fail(
+            "phase provision payload missing path",
+            exit_code=20,
+            halt="blocked",
+            cause="phase-provision:invalid-payload",
+            stdout=captured[-2000:],
+            payload=payload,
+        )
+    if not name or not str(name).strip():
+        fail(
+            "phase provision payload missing name",
+            exit_code=20,
+            halt="blocked",
+            cause="phase-provision:invalid-payload",
+            stdout=captured[-2000:],
+            payload=payload,
+        )
+    payload.setdefault("path", path)
+    payload.setdefault("worktreePath", path)
+    payload.setdefault("name", name)
+    payload.setdefault("worktreeName", name)
+    return payload
+
+
 def git_toplevel(start: Path) -> Path:
     """Canonical shared repo root, not the calling worktree's own toplevel.
 
@@ -880,10 +943,7 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
                 exit_code=mat_proc.returncode,
             )
 
-    try:
-        payload = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        payload = {"raw": proc.stdout.strip()}
+    payload = provision_payload_from_stdout(proc.stdout, worktree_name=name)
     payload["countsTowardCeiling"] = True
     payload["worktreeRole"] = PHASE_ROLE
     emit({"verdict": "pass", "action": "phase-provision", **payload})
