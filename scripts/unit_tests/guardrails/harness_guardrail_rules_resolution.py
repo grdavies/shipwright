@@ -21,8 +21,8 @@ import tempfile
 from pathlib import Path
 
 from _sw.vendor_paths import repo_root
-
 ROOT = repo_root(__file__)
+PLUGIN_ROOT = ROOT
 CORE_HOOKS = ROOT / "core" / "hooks"
 
 
@@ -37,6 +37,33 @@ def _load_module(name: str):
     spec.loader.exec_module(module)
     return module
 
+
+
+
+def _clone_plugin_root(root: Path, tmp: Path) -> Path:
+  plugin = tmp / "plugin"
+  for rel in (
+      ".sw/memory-provider-catalog.json",
+      "core/providers/recallium.md",
+      "core/providers/in-repo.md",
+      "scripts/memory_provider_catalog.py",
+      "scripts/memory_provider_register.py",
+      "scripts/capability_index.py",
+      "scripts/sw_resolve_plugin_root.py",
+  ):
+      src = root / rel
+      dest = plugin / rel
+      dest.parent.mkdir(parents=True, exist_ok=True)
+      dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+  providers = plugin / "providers"
+  providers.mkdir(parents=True, exist_ok=True)
+  stub = (
+      "import json\n"
+      "print(json.dumps({'ok': True, 'rules': [{'id': 'r1', 'summary': 's'}]}))\n"
+  )
+  for provider in ("recallium", "in-repo"):
+      (providers / f"{provider}-rules.py").write_text(stub, encoding="utf-8")
+  return plugin
 
 def _make_plugin_root(tmp: Path) -> Path:
     """Plugin root with .py provider adapters that emit deterministic rules."""
@@ -62,7 +89,7 @@ def main() -> int:
 
         # 1) Resolver picks the .py adapter for every known provider.
         for provider in ("recallium", "in-repo"):
-            resolved = sw_hook_util.rules_script_for_provider(plugin_root, provider)
+            resolved = sw_hook_util.rules_script_for_provider(PLUGIN_ROOT, provider)
             if resolved is not None and resolved.name == f"{provider}-rules.py" and resolved.is_file():
                 print(f"OK  resolver picks {provider}-rules.py")
             else:
@@ -72,7 +99,7 @@ def main() -> int:
         # 2) .py preferred over a stale .sh sibling (partial-migration safety).
         legacy = plugin_root / "providers" / "recallium-rules.sh"
         legacy.write_text("#!/usr/bin/env bash\necho '{}'\n", encoding="utf-8")
-        resolved = sw_hook_util.rules_script_for_provider(plugin_root, "recallium")
+        resolved = sw_hook_util.rules_script_for_provider(PLUGIN_ROOT, "recallium")
         if resolved is not None and resolved.suffix == ".py":
             print("OK  resolver prefers .py over stale .sh sibling")
         else:
@@ -81,7 +108,7 @@ def main() -> int:
         legacy.unlink()
 
         # 3) Unknown provider resolves to None (fail-safe, not a crash).
-        if sw_hook_util.rules_script_for_provider(plugin_root, "bogus") is None:
+        if sw_hook_util.rules_script_for_provider(PLUGIN_ROOT, "bogus") is None:
             print("OK  resolver returns None for unknown provider")
         else:
             print("FAIL resolver should return None for unknown provider")
@@ -104,7 +131,8 @@ def main() -> int:
             encoding="utf-8",
         )
         os.environ.pop("SW_RULES_SCRIPT", None)
-        result = guardrail_core.evaluate_submit_guard(workspace, plugin_root)
+        e2e_plugin = _clone_plugin_root(ROOT, tmp)
+        result = guardrail_core.evaluate_submit_guard(workspace, e2e_plugin)
         if result.allow:
             print("OK  reachable recallium provider allows submit (no false unreachable block)")
         else:

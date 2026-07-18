@@ -51,7 +51,7 @@ def _rules_script(root: Path, plugin_root: Path, config: dict) -> Path | None:
     override = os.environ.get("SW_RULES_SCRIPT", "").strip()
     if override:
         return Path(override)
-    provider = resolve_memory_provider(root, config)
+    provider = resolve_memory_provider(root, config, plugin_root=plugin_root)
     if not provider:
         return None
     return rules_script_for_provider(plugin_root, provider)
@@ -117,10 +117,10 @@ def provider_unreachable_message(provider: str | None) -> str:
     )
 
 
-def resolve_submit_config(root: Path) -> dict | None:
+def resolve_submit_config(root: Path, *, plugin_root: Path) -> dict | None:
     config_path = workflow_config_path(root)
     if config_path is None:
-        return synthetic_config_from_marker(root)
+        return synthetic_config_from_marker(root, plugin_root=plugin_root)
     return load_config(root)
 
 
@@ -128,14 +128,14 @@ def evaluate_submit_guard(root: Path, plugin_root: Path) -> SubmitGuardResult:
     if os.environ.get("SW_TEST_SUBMIT_RAISE", "").strip() == "1":
         raise RuntimeError("injected test failure")
 
-    config = resolve_submit_config(root)
+    config = resolve_submit_config(root, plugin_root=plugin_root)
     if config is None:
         return SubmitGuardResult(allow=True)
 
     if not guardrails_enforce_before_submit(config):
         return SubmitGuardResult(allow=True)
 
-    provider = resolve_memory_provider(root, config)
+    provider = resolve_memory_provider(root, config, plugin_root=plugin_root)
     ok, rules = fetch_rules(root, plugin_root, config)
     if not ok:
         return SubmitGuardResult(allow=False, message=provider_unreachable_message(provider))
@@ -166,12 +166,12 @@ def evaluate_submit_guard(root: Path, plugin_root: Path) -> SubmitGuardResult:
     return SubmitGuardResult(allow=True)
 
 
-def memory_binding(config: dict, root: Path) -> dict:
+def memory_binding(config: dict, root: Path, *, plugin_root: Path) -> dict:
     memory = config.get("memory", {}) if isinstance(config, dict) else {}
     if not isinstance(memory, dict):
         memory = {}
     resolved = dict(memory)
-    provider = resolve_memory_provider(root, config)
+    provider = resolve_memory_provider(root, config, plugin_root=plugin_root)
     if provider:
         resolved["provider"] = provider
     if not resolved.get("project"):
@@ -211,13 +211,11 @@ def fetch_rule_summaries(root: Path, plugin_root: Path, config: dict) -> list[st
     if override:
         script: Path | None = Path(override)
     else:
-        provider = resolve_memory_provider(root, config)
+        provider = resolve_memory_provider(root, config, plugin_root=plugin_root)
         script = None
         if provider:
             script = rules_script_for_provider(plugin_root, provider)
-        if script is None:
-            script = plugin_root / "providers" / "recallium-rules.py"
-    if not script.is_file():
+    if script is None or not script.is_file():
         return []
     ok, rules = fetch_rules(root, plugin_root, config, rules_script=script)
     if not ok:
@@ -383,7 +381,7 @@ def build_session_context(root: Path, plugin_root: Path, context_template: Path)
             + caveman_core
         )
 
-    memory = memory_binding(config, root)
+    memory = memory_binding(config, root, plugin_root=plugin_root)
     parts.append("\n## Resolved memory binding\n\n" + _memory_line(memory))
 
     hint = _setup_hint(root)
