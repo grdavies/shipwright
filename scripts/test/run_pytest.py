@@ -27,6 +27,7 @@ def run_pytest(argv: list[str] | None = None, *, root: Path | None = None) -> in
     import pytest
 
     args = list(argv or [])
+    # Manifest-scoped shards pass explicit path args; do not fan out to full unit_tests.
     if not args:
         args = ["scripts/unit_tests"]
     prev = Path.cwd()
