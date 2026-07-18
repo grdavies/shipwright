@@ -81,8 +81,10 @@ Install the plugin **once per machine**; configure it **per project repo** with 
 Open your **target project repo** and run **`/sw-init`**. It walks through project setup and writes
 `.cursor/workflow.config.json`:
 
-1. **Memory provider** — `in-repo` (default, committed markdown store) or `recallium` (external
- REST store). For in-repo, choose `committed` (PR-reviewable) or `local` (gitignored).
+1. **Memory provider** — `in-repo` (default, committed markdown store) or another **catalog-registered** id
+   (seeded: `recallium`). Operators select; authors register new providers in the catalog. Unknown ids fail
+   closed at config write and hook resolve. For in-repo, choose `committed` (PR-reviewable) or `local`
+   (gitignored).
 2. **Review provider** — `none` (default) or `coderabbit` (opt-in AI review on PRs).
 3. **Project type + verify** — detects manifests at repo root and proposes real `verify.*` commands
  from fixed presets (never vacuous placeholders).
