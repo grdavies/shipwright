@@ -12,6 +12,16 @@ SCRIPTS = Path(__file__).resolve().parents[2]
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
+import importlib.util
+
+_SPEC = importlib.util.spec_from_file_location(
+    "sw_recallium_url_scripts",
+    SCRIPTS / "sw_recallium_url.py",
+)
+assert _SPEC and _SPEC.loader
+sw_recallium_url = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(sw_recallium_url)
+
 from memory_adapter_checklist import (
     ChecklistError,
     capabilities_doc_contains_checklist,
@@ -19,13 +29,12 @@ from memory_adapter_checklist import (
     validate_seeded_catalog_checklist,
 )
 from memory_provider_catalog import get_provider, load_catalog
-from sw_recallium_url import (
-    RestFetchPolicyError,
-    is_allowed_recallium_base,
-    is_rest_url_allowed,
-    rest_fetch_policy_from_catalog_entry,
-    validate_rest_url,
-)
+
+RestFetchPolicyError = sw_recallium_url.RestFetchPolicyError
+is_allowed_recallium_base = sw_recallium_url.is_allowed_recallium_base
+is_rest_url_allowed = sw_recallium_url.is_rest_url_allowed
+rest_fetch_policy_from_catalog_entry = sw_recallium_url.rest_fetch_policy_from_catalog_entry
+validate_rest_url = sw_recallium_url.validate_rest_url
 
 CAPABILITIES_PATH = (
     Path(__file__).resolve().parents[3] / "core" / "skills" / "memory" / "CAPABILITIES.md"
