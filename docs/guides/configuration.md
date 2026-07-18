@@ -12,10 +12,36 @@ the installed plugin, and offers consent-gated refresh without overwriting user-
 
 ### Step 1 — Memory provider
 
-| Choice | `memory.provider` | Notes |
-|--------|-------------------|-------|
-| **in-repo** (default) | `in-repo` | Committed markdown store; zero external dependency |
-| recallium | `recallium` | External REST store; requires a reachable `memory.connection.restBaseUrl` |
+`memory.provider` is an **open string** — not a closed enum. Operators select a **catalog-registered**
+provider id (`^[a-z0-9-]+$`). Shipwright validates the id against `.sw/memory-provider-catalog.json`
+(emit: `core/sw-reference/memory-provider-catalog.json`) via `scripts/memory_provider_register.py` on
+config write, startup/preflight, and hook trust. **Unknown or invalid ids fail closed** — there is no
+legacy two-provider fallback.
+
+| Seeded id | Notes |
+|-----------|-------|
+| **`in-repo`** (default) | Committed markdown store; zero external dependency; `sourceOfTruthClass: repo-authoritative` |
+| `recallium` | External REST/MCP store; requires reachable `memory.connection.restBaseUrl`; `sourceOfTruthClass: memory-authoritative` |
+
+**Authors register; operators select.** Plugin authors add a catalog row + adapter doc + rules script
+(checklist: `core/skills/memory/CAPABILITIES.md` **Adapter registration checklist**). Operators only set
+`memory.provider` to a registered id in `.cursor/workflow.config.json` or the zero-config marker
+`.cursor/sw-memory.provider` — they do not edit the catalog.
+
+Example operator config:
+
+```json
+{
+  "memory": {
+    "provider": "in-repo",
+    "project": "my-app",
+    "inRepo": { "commitMode": "committed" }
+  }
+}
+```
+
+Reject examples (config write / hook resolve): `unknown-vendor`, `../traversal`, empty string, or a
+catalog row missing adapter integrity or rules script.
 
 For **in-repo**, choose commit mode:
 - `committed` (default) — store lives in `.cursor/sw-memory/`; PR-reviewable
@@ -586,7 +612,7 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `models.routing.skills` | Per skill directory model tier |
 | `models.routing.agents` | Per reviewer/persona/native-panel agent id → semantic tier |
 | `deliver.remediation.maxAttempts` | Auto-remediation budget per blocked phase before clean halt (default **2**) |
-| `memory.provider` | `in-repo` (default) or `recallium` |
+| `memory.provider` | Catalog-registered provider id (default `in-repo`; seeded: `recallium`). Validated by `memory_provider_register.py` — unknown ids rejected |
 | `memory.sourceOfTruth` | `auto` (default), `repo`, or `memory` — authority for **decision** records only (`auto`: external provider → memory, in-repo → repo) |
 | `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
 | `review.provider` | AI review adapter — default **`none`**; `coderabbit` opt-in |
@@ -736,7 +762,7 @@ Neutral shipped example omits scaffold; dogfood repos may set scaffold explicitl
 | Integration | Config | When to enable |
 |-------------|--------|----------------|
 | **CodeRabbit** | `review.provider: "coderabbit"` | AI review on PRs |
-| **Recallium** | `memory.provider: "recallium"` | External memory store instead of in-repo markdown |
+| **Recallium** | `memory.provider: "recallium"` | Seeded external memory store (catalog-registered) instead of in-repo markdown |
 | **Sentry** | Production signals via `/sw-feedback` or `/sw-debug` | Route production errors into the debug workstream |
 
 Provider **credentials** come from the environment or your secret store — never commit secrets.

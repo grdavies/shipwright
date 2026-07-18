@@ -28,10 +28,18 @@ config change, never a command edit.
    When no config exists, check `.cursor/sw-memory.provider` (per-repo marker) — if present, provider is
    `in-repo` with project = workspace basename. Fall back to documented defaults (`provider: in-repo` when
    marker present, else `recallium`, `defaultScope: project`).
-2. Load the adapter at `providers/<memory.provider>.md` from the plugin. It defines the concrete tool
-   calls and declares capability flags.
-3. If the provider is unreachable, degrade: continue using `agentsFile` + repo docs, and tell the user
-   memory is offline. Never block the workflow on a memory outage.
+2. **Catalog + validator (before adapter or rule-fetch):** resolve the provider id through
+   `scripts/memory_provider_register.py` against `.sw/memory-provider-catalog.json` (emit:
+   `core/sw-reference/memory-provider-catalog.json`). This runs on config write, startup/preflight, and hook
+   trust — **unknown, malformed, or unregistered ids fail closed** (no cross-provider fallback).
+3. Load the adapter at `providers/<memory.provider>.md` from the plugin **only after** registration passes.
+   It defines the concrete tool calls and declares capability flags.
+4. **Hook / rule-fetch trust:** catalog membership alone does **not** grant hook trust — `capability_trust.py`
+   gates and `validate_registration` must pass before `rules_script_for_provider` resolves the out-of-band
+   rules script. There is no silent swap to another provider's rule-fetcher.
+5. **Reachability vs empty:** provider **unreachable** (cannot confirm guardrail state) → degrade per surface
+   contract; hook `beforeSubmitPrompt` **blocks** when opted in. Provider **reachable with zero rule-class
+   memories** → **pass** (confirmed empty is normal for greenfield repos).
 
 ## Pre-work search (mandatory)
 
