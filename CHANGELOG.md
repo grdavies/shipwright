@@ -554,6 +554,7 @@
 * merge phase cancel-prd-010-planning-lifecycle-small into feat/pluggable-memory-adapter-framework (1276a97) <!-- sw-deliver:cancel-prd-010-planning-lifecycle-small -->
 * merge phase catalog-emit-layout-inventory-small into feat/pluggable-memory-adapter-framework (2fa8cd1) <!-- sw-deliver:catalog-emit-layout-inventory-small -->
 * merge phase open-memory-provider-schema-small into feat/pluggable-memory-adapter-framework (935cc4f) <!-- sw-deliver:open-memory-provider-schema-small -->
+* merge phase registration-validator-small into feat/pluggable-memory-adapter-framework (1eb93aa) <!-- sw-deliver:registration-validator-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
