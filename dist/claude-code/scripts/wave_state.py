@@ -296,26 +296,35 @@ def resolve_state_path(
 ) -> Path:
     """Canonical scoped state file path with legacy migration."""
     if not target and task_list:
-        proc = subprocess.run(
-            [
-                sys.executable,
-                str(Path(__file__).resolve().parent / "wave_deliver.py"),
-                str(root),
-                "preflight",
-                "--task-list",
-                task_list,
-                "--skip-base-check",
-            ],
-            cwd=str(root),
-            capture_output=True,
-            text=True,
-        )
-        if proc.returncode == 0:
-            try:
-                data = json.loads(proc.stdout)
-                target = (data.get("target") or {}).get("branch")
-            except json.JSONDecodeError:
-                pass
+        # Prefer light derive (PRD 068 R1) — nested full preflight starves issue-store
+        # delivers when every load_state rematerializes + issue_search.
+        try:
+            from wave_deliver import derive_target_branch_light
+
+            target = derive_target_branch_light(root, task_list)
+        except SystemExit:
+            target = None
+        if not target:
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).resolve().parent / "wave_deliver.py"),
+                    str(root),
+                    "preflight",
+                    "--task-list",
+                    task_list,
+                    "--skip-base-check",
+                ],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+            )
+            if proc.returncode == 0:
+                try:
+                    data = json.loads(proc.stdout)
+                    target = (data.get("target") or {}).get("branch")
+                except json.JSONDecodeError:
+                    pass
     if not target and state_hint:
         target = target_branch_from_state(state_hint)
     if is_feature_target(target):
