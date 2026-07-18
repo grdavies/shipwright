@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 from memory_provider_catalog import CatalogError, get_provider, load_catalog
-from memory_provider_register import RegistrationError, validate_registration
+from memory_provider_register import validate_registration
 
 _CONFIG_PATHS = (".cursor/workflow.config.json", "workflow.config.json")
 _MARKER_PATHS = (".cursor/sw-memory.provider", "sw-memory.provider")
@@ -51,9 +51,10 @@ def _validated_provider(root: Path, provider_id: str) -> str | None:
     if not value:
         return None
     try:
-        validate_registration(root, value)
+        catalog = load_catalog(root)
+        get_provider(catalog, value)
         return value
-    except RegistrationError:
+    except CatalogError:
         return None
 
 
