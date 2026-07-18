@@ -556,6 +556,7 @@
 * merge phase open-memory-provider-schema-small into feat/pluggable-memory-adapter-framework (935cc4f) <!-- sw-deliver:open-memory-provider-schema-small -->
 * merge phase registration-validator-small into feat/pluggable-memory-adapter-framework (1eb93aa) <!-- sw-deliver:registration-validator-small -->
 * merge phase fail-closed-hook-trust-wiring-small into feat/pluggable-memory-adapter-framework (3385165) <!-- sw-deliver:fail-closed-hook-trust-wiring-small -->
+* merge phase migrate-hard-coded-provider-consumers-small into feat/pluggable-memory-adapter-framework (4ec6ef9) <!-- sw-deliver:migrate-hard-coded-provider-consumers-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
