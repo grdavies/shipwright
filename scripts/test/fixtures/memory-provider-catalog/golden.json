@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "description": "Build-chain golden: memory-provider-catalog.json emits from .sw/ via copy-to-core (PRD 071 R2).",
+  "artifacts": [
+    {
+      "rel": "memory-provider-catalog.json",
+      "source": ".sw/memory-provider-catalog.json",
+      "emit": "core/sw-reference/memory-provider-catalog.json",
+      "sync": "copy-to-core",
+      "sha256": "458feddaf343365826ac9592d30ef2aeab76f017f6dc2ef0bf2a9f2e3b144b4d"
+    }
+  ]
+}
