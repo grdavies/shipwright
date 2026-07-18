@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 _ALLOWLIST_REL = (".cursor/sw-memory-rule-allowlist.json", "sw-memory-rule-allowlist.json")
@@ -62,7 +63,29 @@ def workspace_root(payload: dict) -> Path:
 _CONFIG_PATHS = (".cursor/workflow.config.json", "workflow.config.json")
 _MARKER_PATHS = (".cursor/sw-memory.provider", "sw-memory.provider")
 _DEFAULT_IN_REPO_STORE = ".cursor/sw-memory"
-_KNOWN_MEMORY_PROVIDERS = frozenset({"recallium", "in-repo"})
+
+
+def _ensure_scripts_importable(plugin_root: Path) -> None:
+    scripts = plugin_root / "scripts"
+    if scripts.is_dir():
+        entry = str(scripts)
+        if entry not in sys.path:
+            sys.path.insert(0, entry)
+
+
+def validate_hook_provider(plugin_root: Path, provider_id: str) -> bool:
+    """Catalog + adapter integrity validation for hook trust (PRD 071 R3)."""
+    value = str(provider_id or "").strip()
+    if not value:
+        return False
+    _ensure_scripts_importable(plugin_root)
+    from memory_provider_register import RegistrationError, validate_registration
+
+    try:
+        validate_registration(plugin_root, value)
+        return True
+    except RegistrationError:
+        return False
 
 
 def memory_provider_marker_path(root: Path) -> Path | None:
@@ -73,30 +96,35 @@ def memory_provider_marker_path(root: Path) -> Path | None:
     return None
 
 
-def read_memory_provider_marker(root: Path) -> str | None:
-    path = memory_provider_marker_path(root)
+def read_memory_provider_marker(workspace: Path, *, plugin_root: Path) -> str | None:
+    path = memory_provider_marker_path(workspace)
     if path is None:
         return None
     try:
         value = path.read_text(encoding="utf-8").strip()
     except OSError:
         return None
-    if value not in _KNOWN_MEMORY_PROVIDERS:
+    if not validate_hook_provider(plugin_root, value):
         return None
     return value
 
 
-def resolve_memory_provider(root: Path, config: dict | None = None) -> str | None:
+def resolve_memory_provider(
+    workspace: Path,
+    config: dict | None = None,
+    *,
+    plugin_root: Path,
+) -> str | None:
     """Config wins; else per-repo marker; else None."""
     if config is None:
-        config = load_config(root)
+        config = load_config(workspace)
     memory = config.get("memory", {}) if isinstance(config, dict) else {}
     if isinstance(memory, dict) and memory.get("provider"):
-        provider = str(memory["provider"])
-        if provider in _KNOWN_MEMORY_PROVIDERS:
+        provider = str(memory["provider"]).strip()
+        if validate_hook_provider(plugin_root, provider):
             return provider
         return None
-    return read_memory_provider_marker(root)
+    return read_memory_provider_marker(workspace, plugin_root=plugin_root)
 
 
 def in_repo_store_dir(config: dict, root: Path) -> Path:
@@ -116,14 +144,14 @@ def in_repo_commit_mode(config: dict) -> str:
     return "committed"
 
 
-def synthetic_config_from_marker(root: Path) -> dict | None:
-    provider = read_memory_provider_marker(root)
+def synthetic_config_from_marker(workspace: Path, *, plugin_root: Path) -> dict | None:
+    provider = read_memory_provider_marker(workspace, plugin_root=plugin_root)
     if not provider:
         return None
     return {
         "memory": {
             "provider": provider,
-            "project": root.name,
+            "project": workspace.name,
             "guardrails": {
                 "enforceBeforeSubmit": True,
                 "requireRuleClass": False,
@@ -132,16 +160,41 @@ def synthetic_config_from_marker(root: Path) -> dict | None:
     }
 
 
-def rules_script_for_provider(plugin_root: Path, provider: str) -> Path | None:
-    if provider not in _KNOWN_MEMORY_PROVIDERS:
-        return None
-    # Python-first (R31): the rule-fetcher adapters are authored as .py. Keep a
-    # .sh fallback so a partially-migrated install still resolves a runnable script.
-    for suffix in (".py", ".sh"):
-        script = plugin_root / "providers" / f"{provider}-rules{suffix}"
-        if script.is_file():
-            return script
+def _prefer_py_script(path: Path) -> Path | None:
+    if path.suffix == ".py" and path.is_file():
+        return path
+    py_path = path.with_suffix(".py")
+    if py_path.is_file():
+        return py_path
+    if path.suffix == ".sh" and path.is_file():
+        return path
     return None
+
+
+def rules_script_for_provider(plugin_root: Path, provider: str) -> Path | None:
+    """Resolve catalog-registered rules script after validator gate (PRD 071 R3/R4)."""
+    if not validate_hook_provider(plugin_root, provider):
+        return None
+    _ensure_scripts_importable(plugin_root)
+    from memory_provider_catalog import get_provider, load_catalog
+    from memory_provider_register import resolve_rules_script
+
+    try:
+        catalog = load_catalog(plugin_root)
+        row = get_provider(catalog, provider)
+        rules_rel = str(row.get("rulesScript") or "").strip()
+        if not rules_rel:
+            return None
+        scripts_root = plugin_root / "scripts"
+        resolved_plugin = plugin_root
+        if scripts_root.is_dir():
+            from sw_resolve_plugin_root import resolve_plugin_root
+
+            resolved_plugin = resolve_plugin_root(scripts_root)
+        path = resolve_rules_script(plugin_root, resolved_plugin, rules_rel)
+    except Exception:
+        return None
+    return _prefer_py_script(path)
 
 
 def workflow_config_path(root: Path) -> Path | None:
