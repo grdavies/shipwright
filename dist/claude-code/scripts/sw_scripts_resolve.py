@@ -87,10 +87,20 @@ def consumer_fallback_scripts(workspace: Path) -> Path | None:
     return None
 
 
+def executor_scripts_dir(executor: Path | None) -> Path | None:
+    if executor is None:
+        return None
+    scripts = executor.resolve().parent
+    if scripts_dir_is_trusted(scripts):
+        return scripts
+    return None
+
+
 def resolve_scripts_dir(
     workspace: Path,
     *,
     env: Mapping[str, str] | None = None,
+    executor: Path | None = None,
 ) -> ScriptsResolveResult:
     """Resolve trusted scripts directory for a workspace root."""
     root = workspace.resolve()
@@ -117,6 +127,10 @@ def resolve_scripts_dir(
     if consumer is not None:
         return ScriptsResolveResult(consumer, "consumer")
 
+    invoked = executor_scripts_dir(executor)
+    if invoked is not None:
+        return ScriptsResolveResult(invoked, "executor")
+
     return ScriptsResolveResult(None, None, "no trusted scripts root found")
 
 
@@ -125,8 +139,17 @@ def resolve_script(
     name: str,
     *,
     env: Mapping[str, str] | None = None,
+    executor: Path | None = None,
 ) -> Path:
-    result = resolve_scripts_dir(workspace, env=env)
+    if executor is None:
+        import inspect
+
+        frame = inspect.currentframe()
+        if frame and frame.f_back:
+            caller = frame.f_back.f_globals.get("__file__")
+            if isinstance(caller, str) and caller:
+                executor = Path(caller)
+    result = resolve_scripts_dir(workspace, env=env, executor=executor)
     if result.error:
         raise ScriptsResolveError(result.error)
     if result.path is None:
@@ -137,9 +160,14 @@ def resolve_script(
     return script
 
 
-def ensure_scripts_on_path(workspace: Path, *, env: Mapping[str, str] | None = None) -> Path:
+def ensure_scripts_on_path(
+    workspace: Path,
+    *,
+    env: Mapping[str, str] | None = None,
+    executor: Path | None = None,
+) -> Path:
     """Insert resolved scripts dir on sys.path; return the directory used."""
-    result = resolve_scripts_dir(workspace, env=env)
+    result = resolve_scripts_dir(workspace, env=env, executor=executor)
     if result.error:
         raise ScriptsResolveError(result.error)
     if result.path is None:

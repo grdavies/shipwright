@@ -126,3 +126,15 @@ def test_plugin_install_helper_uses_constant(tmp_path: Path, monkeypatch: pytest
     _seed_trusted_scripts(plugin_scripts)
     monkeypatch.setattr("sw_scripts_resolve.PLUGIN_SCRIPTS", plugin_scripts)
     assert plugin_install_scripts() == plugin_scripts.resolve()
+
+
+def test_executor_fallback_for_external_workspace(tmp_path: Path, repo_root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    consumer = tmp_path / "consumer"
+    consumer.mkdir()
+    monkeypatch.delenv("SHIPWRIGHT_SCRIPTS", raising=False)
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_SCRIPTS", tmp_path / "missing-plugin")
+    executor = repo_root / "scripts" / "wave_lifecycle.py"
+    result = resolve_scripts_dir(consumer, executor=executor)
+    assert result.error is None
+    assert result.source == "executor"
+    assert result.path == (repo_root / "scripts").resolve()
