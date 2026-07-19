@@ -167,7 +167,7 @@ manifest loop during full verify. When exceeded, `_runner.py` emits a consolidat
 `lastSuiteId` and `resumeCommand`. Per-suite elapsed seconds are logged during manifest execution.
 
 
-### PR-test-plan manifest `args` forwarding (PRD 073 R4/R5)
+### PR-test-plan manifest `args` forwarding
 
 `scripts/test/_runner.py` `run_manifest` reads `core/sw-reference/pr-test-plan.manifest.json` and
 forwards each entry's `args` array into the invoked suite `main()` (via `invoke_suite_main` in

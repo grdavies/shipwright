@@ -960,9 +960,9 @@ Phase-mode `/sw-deliver` reliability contracts (–):
 | Ship-lease reclaim | Reclaim only when **same host** + **stale heartbeat** + **dead PID** (optional start-token match). |
 | Terminal env | Terminal PR/ship clears `SW_PHASE_*` so trunk base is used — never phase integration base. |
 | Closure unit ids | `close-delivery-units` resolves `tasks-<n>-<slug>`, legacy, and `tasks-debug-*` forms; ambiguity fails closed. |
-| Merge enqueue queue | `merge-enqueue` applies returned `mergeQueue` via `apply_merge_enqueue_result` before `persist_cursor` — stale in-memory state cannot wipe the queue empty (R8/R9). Regression: `scripts/unit_tests/deliver/test_merge_enqueue_persist_reload.py`. |
-| Phase provision stdout | `wave_lifecycle.provision_payload_from_stdout` parses the **last** JSON object from mixed stdout and validates non-empty `path`/`name`; invalid payloads fail closed with captured stdout (no silent `{raw:…}` success) (R10/R11). Regression: `scripts/unit_tests/deliver/test_phase_provision_stdout_json.py`. |
-| Absorb close-out (PRD 073) | Gaps #481–#485 discoverable via PRD `absorbs` / `sw-edges` or `planningIssues` + gap `absorbed-by` provenance; verify with `python3 scripts/planning_gap_capture.py <root> verify-absorb-closeout-073`. |
+| Merge enqueue queue | `merge-enqueue` applies returned `mergeQueue` via `apply_merge_enqueue_result` before `persist_cursor` — stale in-memory state cannot wipe the queue empty. Regression: `scripts/unit_tests/deliver/test_merge_enqueue_persist_reload.py`. |
+| Phase provision stdout | `wave_lifecycle.provision_payload_from_stdout` parses the **last** JSON object from mixed stdout and validates non-empty `path`/`name`; invalid payloads fail closed with captured stdout (no silent `{raw:…}` success). Regression: `scripts/unit_tests/deliver/test_phase_provision_stdout_json.py`. |
+| Absorb close-out | Plugin consumability delivery gaps discoverable via PRD `absorbs` / `sw-edges` or `planningIssues` + gap `absorbed-by` provenance; verify with `python3 scripts/planning_gap_capture.py <root> verify-absorb-closeout-073`. |
 
 Resume after halt: `/sw-deliver run` from the orchestrator worktree (or `/sw-deliver run --issue <n>` under issue-store).
 
