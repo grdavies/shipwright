@@ -440,13 +440,24 @@ def ensure_run_entry_materialized(
         return {"verdict": "skipped", "reason": "file-store-byte-identical"}
     if logical.is_file():
         return {"verdict": "skipped", "reason": "logical-path-present", "bodyPath": task_list_rel}
+    unit_id = unit_id_from_task_list_rel(task_list_rel)
+    dest = materialized_dest(worktree, task_list_rel)
+    # Reuse non-empty materialized dest — avoid rematerialize→issue_get on every
+    # load_state/preflight. Fresh provision still rematerializes when dest absent.
+    if dest.is_file() and dest.stat().st_size > 0:
+        rel_dest = str(dest.relative_to(worktree)).replace("\\", "/")
+        return {
+            "verdict": "skipped",
+            "reason": "materialized-dest-present",
+            "bodyPath": task_list_rel,
+            "dest": rel_dest,
+            "unitId": unit_id,
+        }
     pin_check = validate_store_pin(root)
     if pin_check.get("verdict") == "fail":
         return pin_check
-    unit_id = unit_id_from_task_list_rel(task_list_rel)
     verify_frozen_issue_store(root, unit_id, task_list_rel)
     backend = get_backend(root, cfg)
-    dest = materialized_dest(worktree, task_list_rel)
     result = backend.materialize(unit_id, task_list_rel, dest)
     if result.verdict != "ok":
         fail(

@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from sw_scripts_resolve import resolve_script
+
 ORCHESTRATOR_ROLE = "orchestrator"
 PHASE_ROLE = "phase"
 
@@ -39,6 +41,69 @@ def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | No
         i = args.index(flag)
         return args[i + 1] if i + 1 < len(args) else default
     return default
+
+
+def parse_last_json_object(text: str) -> dict[str, Any]:
+    """Return the last top-level JSON object from mixed subprocess stdout."""
+    raw = (text or "").strip()
+    if not raw:
+        raise ValueError("empty stdout")
+    decoder = json.JSONDecoder()
+    last_obj: dict[str, Any] | None = None
+    idx = 0
+    while idx < len(raw):
+        try:
+            obj, end = decoder.raw_decode(raw, idx)
+        except json.JSONDecodeError:
+            idx += 1
+            continue
+        if isinstance(obj, dict):
+            last_obj = obj
+        idx = max(end, idx + 1)
+    if last_obj is None:
+        raise ValueError("no JSON object found")
+    return last_obj
+
+
+def provision_payload_from_stdout(text: str, *, worktree_name: str) -> dict[str, Any]:
+    """Parse worktree provision stdout and validate required path/name fields."""
+    captured = (text or "").strip()
+    try:
+        payload = parse_last_json_object(captured)
+    except ValueError as exc:
+        fail(
+            "phase provision stdout missing JSON payload",
+            exit_code=20,
+            halt="blocked",
+            cause="phase-provision:invalid-stdout",
+            stdout=captured[-2000:],
+            detail=str(exc),
+        )
+    path = payload.get("path") or payload.get("worktreePath")
+    name = payload.get("name") or payload.get("worktreeName") or worktree_name
+    if not path or not str(path).strip():
+        fail(
+            "phase provision payload missing path",
+            exit_code=20,
+            halt="blocked",
+            cause="phase-provision:invalid-payload",
+            stdout=captured[-2000:],
+            payload=payload,
+        )
+    if not name or not str(name).strip():
+        fail(
+            "phase provision payload missing name",
+            exit_code=20,
+            halt="blocked",
+            cause="phase-provision:invalid-payload",
+            stdout=captured[-2000:],
+            payload=payload,
+        )
+    payload.setdefault("path", path)
+    payload.setdefault("worktreePath", path)
+    payload.setdefault("name", name)
+    payload.setdefault("worktreeName", name)
+    return payload
 
 
 def git_toplevel(start: Path) -> Path:
@@ -153,7 +218,7 @@ def slug_from_target(target_branch: str) -> str:
 
 
 def cmd_assert_entry(root: Path, args: list[str]) -> None:
-    script = root / "scripts" / "sw-assert-worktree.py"
+    script = resolve_script(root, "sw-assert-worktree.py")
     if not script.is_file():
         fail("sw-assert-worktree.py missing", exit_code=2)
     proc = subprocess.run([sys.executable, str(script)], cwd=str(root), capture_output=True, text=True)
@@ -223,7 +288,7 @@ def assert_primary_off_target(start: Path, target: str) -> None:
         default_branch = default_ref.removeprefix("refs/remotes/origin/")
     else:
         default_branch = "main"
-    trunk_script = repo_root / "scripts" / "resolve_base_branch.py"
+    trunk_script = resolve_script(repo_root, "resolve_base_branch.py")
     if trunk_script.is_file():
         proc = subprocess.run(
             [sys.executable, str(trunk_script), "trunk-name"],
@@ -479,7 +544,7 @@ def cmd_phase_teardown(root: Path, args: list[str]) -> None:
     if not Path(target).is_dir():
         fail(f"worktree not found: {target}")
 
-    mat_script = top / "scripts" / "planning_materialize.py"
+    mat_script = resolve_script(top, "planning_materialize.py")
     if mat_script.is_file():
         subprocess.run(
             [
@@ -795,7 +860,7 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
         emit(adopted)
         return
 
-    script = top / "scripts" / "worktree.py"
+    script = resolve_script(top, "worktree.py")
     proc = subprocess.run(
         [
             sys.executable,
@@ -853,7 +918,7 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
         mat_proc = subprocess.run(
             [
                 sys.executable,
-                str(top / "scripts" / "planning_materialize.py"),
+                str(resolve_script(top, "planning_materialize.py")),
                 "--root",
                 str(top),
                 "provision",
@@ -880,10 +945,7 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
                 exit_code=mat_proc.returncode,
             )
 
-    try:
-        payload = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        payload = {"raw": proc.stdout.strip()}
+    payload = provision_payload_from_stdout(proc.stdout, worktree_name=name)
     payload["countsTowardCeiling"] = True
     payload["worktreeRole"] = PHASE_ROLE
     emit({"verdict": "pass", "action": "phase-provision", **payload})
@@ -893,7 +955,7 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
 def cmd_execute_provision_sub_branch(root: Path, args: list[str]) -> None:
     import subprocess
 
-    script = root / "scripts" / "execute_plan.py"
+    script = resolve_script(root, "execute_plan.py")
     proc = subprocess.run(
         [sys.executable, str(script), str(root), "provision-sub-branch", *args],
         cwd=str(root),
@@ -909,7 +971,7 @@ def cmd_execute_provision_sub_branch(root: Path, args: list[str]) -> None:
 def cmd_execute_teardown_sub_branch(root: Path, args: list[str]) -> None:
     import subprocess
 
-    script = root / "scripts" / "execute_plan.py"
+    script = resolve_script(root, "execute_plan.py")
     proc = subprocess.run(
         [sys.executable, str(script), str(root), "teardown-sub-branch", *args],
         cwd=str(root),

@@ -25,7 +25,7 @@ def run_dispatch(root: Path, cfg: dict, agent: str, parent: str) -> tuple[int, d
             str(root),
             agent,
             parent,
-            'child-model',
+            'composer-2.5',
             'build',
             '0',
             'dispatch-1',
@@ -48,7 +48,12 @@ def main() -> int:
         root = Path(tmp)
         cfg = {
             'models': {
-                'tiers': {'cheap': 'cheap-m', 'build': 'build-m', 'mid': 'mid-m', 'deep': 'deep-m'},
+                'tiers': {
+                    'cheap': 'composer-2.5-fast',
+                    'build': 'composer-2.5',
+                    'mid': 'gpt-5.6-terra-medium',
+                    'deep': 'claude-opus-4-8-thinking-high',
+                },
                 'roles': {'builder': 'build'},
             }
         }

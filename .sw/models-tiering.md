@@ -113,7 +113,18 @@ Do **not** put `cheap`/`build`/`mid`/`deep` or vendor aliases like `sonnet` in s
 | `scripts/resolve-model-tier.py` | Runtime tier → concrete ID; `inherit` → `modelId: null` exit 0 |
 | `scripts/resolve-intensity.py` | Runtime intensity resolution with command → skill → agent → default precedence |
 | `/sw-doc-review`, `sw-subagent-dispatch` | **Runtime R9:** parent model tier ≥ builder when dispatching `inherit` reviewers |
-| `scripts/dispatch-check.py` | Fail-closed binding check (`binding:no-model`, `binding:no-intensity`, `harness:capacity`) before Task spawn |
+| `scripts/dispatch-check.py` | Fail-closed binding check (`binding:no-model`, `binding:no-intensity`, `binding:model-not-allowlisted`, `harness:capacity`) before Task spawn |
+
+### Task model allowlist (PRD 073 R6/R7)
+
+Concrete Task spawn IDs are single-sourced from `core/sw-reference/task-model-allowlist.json`.
+`resolve-model-tier.py` and `dispatch-check.py` emit or accept only allowlisted IDs (or mapped
+aliases); unknown models fail closed with `binding:model-not-allowlisted`.
+
+**Maintenance cadence:** refresh the allowlist when Cursor ships new subagent model slugs (check the
+Task tool model list in release notes or agent docs). Add the slug to `allowed`, keep deprecated IDs
+in `aliases` for one release, and run `python3 scripts/test/run_model_binding_fixtures.py` plus
+`python3 -m pytest scripts/unit_tests/dispatch/test_task_model_allowlist.py -q` before merging.
 
 ### Optional Task hook (R5 — deferred)
 

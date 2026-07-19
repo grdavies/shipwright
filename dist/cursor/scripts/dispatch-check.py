@@ -12,6 +12,9 @@ from dispatch_intensity_check import validate_directive_anchor
 from dispatch_reader_lib import evaluate_reader_role, validate_reader_tool_log_file
 from dispatch_complexity_lib import probe_complexity
 from dispatch_budget_lib import resolve_token_budget
+from task_model_allowlist_lib import enforce_task_model_allowlist
+
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 TIER_ORDER = ["cheap", "build", "mid", "deep"]
 NATIVE_PANEL_AGENTS = frozenset({
@@ -44,6 +47,29 @@ def is_native_panel_bound(agent: str) -> bool:
 
 def requires_parent_tier(agent: str) -> bool:
     return is_reviewer_bound(agent) or is_native_panel_bound(agent)
+
+
+def _apply_spawn_model_allowlist(
+    model_id: str,
+    *,
+    root: Path,
+    agent: str,
+    command_name: str | None,
+    skill_name: str | None,
+) -> tuple[str | None, dict | None]:
+    allow = enforce_task_model_allowlist(model_id, root=root)
+    if allow.get("verdict") == "fail":
+        return None, {
+            "verdict": "fail",
+            "cause": allow.get("cause"),
+            "agent": agent,
+            "command": command_name,
+            "skill": skill_name,
+            "modelId": model_id,
+            "retryable": False,
+            "remediation": allow.get("remediation"),
+        }
+    return str(allow["modelId"]), None
 
 
 def evaluate_dispatch_posture(
@@ -169,7 +195,7 @@ def evaluate_dispatch(
 
 def _run_json_cmd(cmd: list[str]) -> dict:
     proc = subprocess.run(cmd, capture_output=True, text=True)
-    if proc.returncode != 0 or not proc.stdout.strip():
+    if not proc.stdout.strip():
         return {}
     try:
         payload = json.loads(proc.stdout)
@@ -283,6 +309,17 @@ def _main_legacy_positional(argv: list[str]) -> int:
         if isinstance(raw, str) and raw.strip():
             fallback_tier = raw.strip()
 
+    model_id, allow_fail = _apply_spawn_model_allowlist(
+        model_id,
+        root=SCRIPT_DIR.parent,
+        agent=agent,
+        command_name=command_name or None,
+        skill_name=skill_name or None,
+    )
+    if allow_fail:
+        print(json.dumps(allow_fail))
+        return 20
+
     result = evaluate_dispatch(
         agent=agent,
         parent_model=parent_model,
@@ -357,7 +394,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    script_dir = Path(__file__).resolve().parent
+    script_dir = SCRIPT_DIR
     root = script_dir.parent
     agent = args.agent
     command_name = args.command or None
@@ -396,6 +433,18 @@ def main(argv: list[str] | None = None) -> int:
     intensity_source = str(intensity_payload.get("source") or "")
 
     if not model_id or model_tier == "inherit":
+        if model_payload.get("cause") == "binding:model-not-allowlisted":
+            print(json.dumps({
+                "verdict": "fail",
+                "cause": model_payload.get("cause"),
+                "agent": agent,
+                "command": command_name,
+                "skill": skill_name,
+                "modelId": model_payload.get("modelId"),
+                "retryable": False,
+                "remediation": model_payload.get("error") or model_payload.get("remediation"),
+            }))
+            return 20
         print(json.dumps({
             "verdict": "fail",
             "cause": "binding:no-model",
@@ -521,6 +570,17 @@ def main(argv: list[str] | None = None) -> int:
         tier_model = tiers.get(model_tier)
         if isinstance(tier_model, str) and tier_model.strip():
             model_id = tier_model.strip()
+
+    model_id, allow_fail = _apply_spawn_model_allowlist(
+        model_id,
+        root=root,
+        agent=agent,
+        command_name=command_name,
+        skill_name=skill_name,
+    )
+    if allow_fail:
+        print(json.dumps(allow_fail))
+        return 20
 
     token_budget = resolve_token_budget(cfg_doc)
 

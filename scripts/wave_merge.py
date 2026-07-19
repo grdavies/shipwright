@@ -21,6 +21,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from sw_scripts_resolve import resolve_script
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
@@ -774,7 +776,7 @@ def merge_exec_journal_safety(
 
 
 def run_check_gate(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
-    script = root / "scripts" / "check-gate.py"
+    script = resolve_script(root, "check-gate.py")
     probe = interpreter.probe()
     cmd = [*probe.executable, str(script)]
     if pr:
@@ -1196,7 +1198,16 @@ def cmd_merge_enqueue(root: Path, args: list[str]) -> None:
         )
     queue = list(state.get("mergeQueue") or [])
     if any(item.get("phaseSlug") == phase_slug for item in queue):
-        emit({"verdict": "pass", "action": "merge-enqueue", "note": "already queued", "phase": phase_slug})
+        emit(
+            {
+                "verdict": "pass",
+                "action": "merge-enqueue",
+                "note": "already queued",
+                "phase": phase_slug,
+                "mergeQueue": queue,
+                "queueLength": len(queue),
+            }
+        )
     entry = {
         "phaseSlug": phase_slug,
         "head": status.get("head"),
@@ -1207,7 +1218,15 @@ def cmd_merge_enqueue(root: Path, args: list[str]) -> None:
     state["mergeQueue"] = queue
     reorder_merge_queue(state, root)
     save_state(root, state)
-    emit({"verdict": "pass", "action": "merge-enqueue", "entry": entry, "queueLength": len(state["mergeQueue"])})
+    emit(
+        {
+            "verdict": "pass",
+            "action": "merge-enqueue",
+            "entry": entry,
+            "mergeQueue": state["mergeQueue"],
+            "queueLength": len(state["mergeQueue"]),
+        }
+    )
 
 
 def resolve_orchestrator_worktree(root: Path, args: list[str]) -> Path:

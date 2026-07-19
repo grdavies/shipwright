@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 
 
-def invoke_suite_main(module: object) -> int:
+def invoke_suite_main(module: object, argv: list[str] | None = None) -> int:
     """Run a fixture module's main() without inheriting parent sys.argv."""
     main_fn = getattr(module, "main", None)
     if not callable(main_fn):
@@ -17,7 +17,7 @@ def invoke_suite_main(module: object) -> int:
     params = list(inspect.signature(main_fn).parameters)
     if not params:
         return int(main_fn())
-    return int(main_fn([]))
+    return int(main_fn(list(argv or [])))
 
 
 def deliver_verify_active() -> bool:
