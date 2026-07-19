@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import Any
 
 CATALOG_REL = Path(".sw/memory-provider-catalog.json")
+# Plugin install layout (dist → ~/.cursor/plugins/local/shipwright) has no .sw/;
+# hooks validate against plugin_root and must fall back to the copy-to-core emit.
+CATALOG_EMIT_REL = Path("core/sw-reference/memory-provider-catalog.json")
 CAPABILITY_FLAGS = frozenset(
     {
         "typedMemories",
@@ -38,7 +41,14 @@ class CatalogError(Exception):
 
 
 def resolve_catalog_path(root: Path) -> Path:
-    return (root / CATALOG_REL).resolve()
+    """Prefer workspace `.sw/` authority; fall back to plugin emit mirror (PRD 071 install)."""
+    primary = (root / CATALOG_REL).resolve()
+    if primary.is_file():
+        return primary
+    emit = (root / CATALOG_EMIT_REL).resolve()
+    if emit.is_file():
+        return emit
+    return primary
 
 
 def load_catalog_text(path: Path) -> str:

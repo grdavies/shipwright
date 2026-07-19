@@ -131,6 +131,30 @@ def test_empty_reachable_rules_allow_submit(
     assert result.allow is True
 
 
+def test_plugin_layout_emit_catalog_allows_submit(
+    repo_root: Path, guardrail_core, sw_hook_util, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Installed plugin has emit under core/sw-reference but no .sw/ catalog."""
+    workspace = tmp_path / "ws"
+    plugin = _clone_plugin_root(repo_root, tmp_path)
+    sw_catalog = plugin / ".sw" / "memory-provider-catalog.json"
+    emit = plugin / "core" / "sw-reference" / "memory-provider-catalog.json"
+    emit.parent.mkdir(parents=True, exist_ok=True)
+    emit.write_text(sw_catalog.read_text(encoding="utf-8"), encoding="utf-8")
+    sw_catalog.unlink()
+    (plugin / ".sw").rmdir()
+    _write_config(workspace, "in-repo")
+    empty_rules = plugin / "providers" / "in-repo-rules.py"
+    empty_rules.write_text(
+        "import json\nprint(json.dumps({'ok': True, 'rules': []}))\n",
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("SW_RULES_SCRIPT", raising=False)
+    assert sw_hook_util.validate_hook_provider(plugin, "in-repo") is True
+    result = guardrail_core.evaluate_submit_guard(workspace, plugin)
+    assert result.allow is True
+
+
 def test_no_cross_provider_rule_fetcher_swap(
     repo_root: Path, guardrail_core, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -422,6 +422,11 @@ Operator-edited artifacts under `.sw/` mirror into `core/sw-reference/` via `cop
 Golden parity fixture: `scripts/test/fixtures/memory-provider-catalog/golden.json` (sha256 + byte
 identity; refuses core-only orphans).
 
+**Plugin installs:** `sw generate` includes the catalog in the closed `SW_REFERENCE_CLOSED_EMIT` set
+so `dist/*/core/sw-reference/memory-provider-catalog.json` ships with the plugin. Hook trust loads
+`.sw/memory-provider-catalog.json` when present, else falls back to that emit path; `scripts/install.py`
+also seeds `.sw/` from the emit after mirror so `beforeSubmitPrompt` validates registered providers.
+
 ### Refuse + `--check` (PRD 060 R11–R13)
 
 - `copy-to-core` refuses when `core/sw-reference/` drifted without matching `.sw/` edits — remediate in `.sw/`, then re-run sync (not `--force`).
