@@ -8,11 +8,16 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import sys
 from pathlib import Path
 
 from _sw import hook_launcher, logging_setup, mirror
 from _sw.cli import build_parser, run_module_main
+
+# Keep in sync with memory_provider_catalog.CATALOG_* (hook trust after install).
+_CATALOG_EMIT_REL = Path("core/sw-reference/memory-provider-catalog.json")
+_CATALOG_SW_REL = Path(".sw/memory-provider-catalog.json")
 
 
 def repo_root() -> Path:
@@ -21,6 +26,21 @@ def repo_root() -> Path:
 
 def default_dest() -> Path:
     return Path.home() / ".cursor" / "plugins" / "local" / "shipwright"
+
+
+def seed_memory_provider_catalog(dest: Path) -> bool:
+    """Ensure plugin installs expose the catalog under `.sw/` for hook validation.
+
+    Dist mirrors ``core/sw-reference/``; hooks historically resolve
+    ``.sw/memory-provider-catalog.json``. Seed that path from the emit mirror when present.
+    """
+    emit = dest / _CATALOG_EMIT_REL
+    if not emit.is_file():
+        return False
+    target = dest / _CATALOG_SW_REL
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(emit, target)
+    return True
 
 
 def install(dest: Path, *, src: Path | None = None, install_hooks: bool = True) -> int:
@@ -49,6 +69,14 @@ def install(dest: Path, *, src: Path | None = None, install_hooks: bool = True) 
         excludes=[".git", "node_modules"],
         delete=True,
     )
+
+    if seed_memory_provider_catalog(dest):
+        logging_setup.info("Seeded .sw/memory-provider-catalog.json from core/sw-reference emit.")
+    else:
+        logging_setup.warning(
+            "memory-provider-catalog.json missing from dist emit; "
+            "hook trust may fail until generate includes core/sw-reference/memory-provider-catalog.json"
+        )
 
     if install_hooks:
         git_hooks = dest / ".git" / "hooks"

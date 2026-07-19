@@ -43,6 +43,8 @@ SW_REFERENCE_CLOSED_EMIT = (
     "guidelines.schema.json",
     "guidelines.json",
     "guidelines.md",
+    # Hook trust + adapter registration (PRD 071) — required in plugin installs
+    "memory-provider-catalog.json",
 )
 EXCLUDE_SUFFIXES = (".pyc",)
 

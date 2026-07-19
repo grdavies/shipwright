@@ -60,13 +60,32 @@ def _resolve_under_root(root: Path, rel: str, *, label: str) -> Path:
 
 
 def resolve_adapter_doc(root: Path, adapter_doc_rel: str) -> Path:
-    return _resolve_under_root(root, adapter_doc_rel, label="adapterDoc")
+    """Resolve adapter markdown; accept plugin dist layout (providers/ vs core/providers/)."""
+    primary = _resolve_under_root(root, adapter_doc_rel, label="adapterDoc")
+    if primary.is_file():
+        return primary
+    rel = Path(str(adapter_doc_rel).strip())
+    # Dist emitters copy core/providers → providers/ at the plugin root.
+    if len(rel.parts) >= 2 and rel.parts[0] == "core":
+        alt_rel = Path(*rel.parts[1:]).as_posix()
+        alt = _resolve_under_root(root, alt_rel, label="adapterDoc")
+        if alt.is_file():
+            return alt
+    return primary
 
 
 def resolve_rules_script(root: Path, plugin_root: Path, rules_script_rel: str) -> Path:
     rel = rules_script_rel.strip()
     if rel.startswith("core/"):
-        return _resolve_under_root(root, rel, label="rulesScript")
+        path = _resolve_under_root(root, rel, label="rulesScript")
+        if path.is_file():
+            return path
+        # Same core/ → top-level remap used for adapter docs in plugin installs.
+        alt_rel = Path(*Path(rel).parts[1:]).as_posix()
+        alt = _resolve_under_root(plugin_root, alt_rel, label="rulesScript")
+        if alt.is_file():
+            return alt
+        return path
     return _resolve_under_root(plugin_root, rel, label="rulesScript")
 
 

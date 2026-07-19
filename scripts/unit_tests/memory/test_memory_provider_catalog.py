@@ -91,6 +91,25 @@ def test_no_legacy_allowlist_fallback_on_missing(tmp_path: Path) -> None:
     assert not resolve_catalog_path(tmp_path).is_file()
 
 
+def test_resolve_catalog_path_falls_back_to_emit_when_sw_missing(
+    repo_root: Path, tmp_path: Path
+) -> None:
+    """Plugin install layout: no .sw/, but core/sw-reference emit is present."""
+    from memory_provider_catalog import CATALOG_EMIT_REL, CATALOG_REL
+
+    plugin = tmp_path / "plugin"
+    emit = plugin / CATALOG_EMIT_REL
+    emit.parent.mkdir(parents=True)
+    emit.write_text(
+        (repo_root / CATALOG_REL).read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    assert not (plugin / CATALOG_REL).is_file()
+    assert resolve_catalog_path(plugin) == emit.resolve()
+    catalog = load_catalog(plugin)
+    assert provider_ids(catalog) == SEEDED_PROVIDER_IDS
+
+
 def test_validate_rejects_unknown_interchange_mode(repo_root: Path) -> None:
     catalog = load_catalog(repo_root)
     drifted = json.loads(json.dumps(catalog))
