@@ -77,6 +77,14 @@ def main(argv: list[str] | None = None) -> int:
             encoding="utf-8",
         )
 
+    facade_payload: dict = {"verdict": "skip", "action": "emit-facade", "reason": "not-run"}
+    try:
+        from init_scripts_facade import emit_facade
+
+        facade_payload = emit_facade(root)
+    except Exception as exc:  # degrade-open: planning seed succeeded; facade is repairable
+        facade_payload = {"verdict": "fail", "action": "emit-facade", "error": str(exc)}
+
     print(
         json.dumps(
             {
@@ -86,6 +94,7 @@ def main(argv: list[str] | None = None) -> int:
                 "privacyAck": profile.get("privacyAck"),
                 "storeBackend": store.get("backend", "in-repo-public"),
                 "privacyNotice": ".cursor/hooks/state/planning-privacy-notice.md",
+                "scriptsFacade": facade_payload,
             },
             indent=2,
         )

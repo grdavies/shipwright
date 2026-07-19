@@ -278,6 +278,28 @@ fresh, gitignored checkout never causes a false "file mode" default.
 memory backend has no provider (actionable remediation, no hard-fail), sweeps orphaned materialized trees,
 and references env-var names only — never token values (R27).
 
+
+### 6c. Scripts façade (consumer repos — PRD 073 R1/R3/R16)
+
+After config + planning seed, emit the repo-local deliver scripts façade. **Skip** when the target is the
+Shipwright plugin source repo itself (full `scripts/` tree already present).
+
+```bash
+python3 scripts/init_scripts_facade.py "$ROOT" emit
+python3 scripts/init_scripts_facade.py "$ROOT" probe   # optional doctor: deliver entrypoints resolvable
+```
+
+**Ownership:** `/sw-init` is the sole writer of `scripts/sw`, `.cursor/sw-scripts-facade.json`, and the
+documented deliver forwarders under `scripts/` (`wave.py`, `wave_deliver.py`, … plus trust markers
+`check-gate.py`, `resolve-model-tier.py`). Forwarders are **real files** (never symlinks) that delegate to
+the plugin install path recorded in the manifest — durable without `SHIPWRIGHT_SCRIPTS` or other transient env.
+
+**Precedence:** resolver order remains self-repo working-tree → validated `SHIPWRIGHT_SCRIPTS` → plugin install
+→ consumer `scripts/` façade (`sw_scripts_resolve.py`). Re-run `/sw-init` to refresh after plugin upgrades.
+
+**Agent guardrail:** do **not** hand-author or patch forwarders mid-deliver; halt and re-run `/sw-init` emit
+(or `init_scripts_facade.py emit`) when entrypoints are missing.
+
 ### 7. Report
 
 Print summary: providers, verify status, portability self-check, drift notice, config path.
