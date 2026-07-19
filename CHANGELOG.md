@@ -568,6 +568,7 @@
 * merge phase task-model-allowlist-enforcement-medium into feat/plugin-consumability-and-deliver-hygiene (0c218cc) <!-- sw-deliver:task-model-allowlist-enforcement-medium -->
 * merge phase shared-script-path-resolver-medium into feat/plugin-consumability-and-deliver-hygiene (ae12c17) <!-- sw-deliver:shared-script-path-resolver-medium -->
 * merge phase init-owned-fa-ade-forwarders-medium into feat/plugin-consumability-and-deliver-hygiene (7e2fbe0) <!-- sw-deliver:init-owned-fa-ade-forwarders-medium -->
+* merge phase docs-currency-absorb-close-out-small into feat/plugin-consumability-and-deliver-hygiene (3108e88) <!-- sw-deliver:docs-currency-absorb-close-out-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
