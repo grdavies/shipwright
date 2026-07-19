@@ -167,6 +167,29 @@ manifest loop during full verify. When exceeded, `_runner.py` emits a consolidat
 `lastSuiteId` and `resumeCommand`. Per-suite elapsed seconds are logged during manifest execution.
 
 
+### PR-test-plan manifest `args` forwarding (PRD 073 R4/R5)
+
+`scripts/test/_runner.py` `run_manifest` reads `core/sw-reference/pr-test-plan.manifest.json` and
+forwards each entry's `args` array into the invoked suite `main()` (via `invoke_suite_main` in
+`scripts/test/_runner_lib.py`). Scoped path args on `run_pytest.py` entries collect only the declared
+paths — when `args` is present, `run_pytest.py` does **not** default to the full `scripts/unit_tests`
+tree.
+
+| Surface | Behavior |
+| --- | --- |
+| Manifest entry with `args` | argv tokens passed to suite `main(argv)` |
+| Zero-arg `main()` suites | Unchanged — `main()` with no parameters still works |
+| `verify --scope full` | One pytest collection pass, then manifest fanout honors per-entry `args` |
+
+Regression: `scripts/unit_tests/test/test_runner_manifest_args.py`.
+
+```bash
+PYTHONPATH=scripts python3 scripts/test/_runner.py verify --scope full
+```
+
+CI shard YAML that already passes pytest path args is unaffected — this contract is for local manifest
+execution and deliver verify only.
+
 ### Wave A regressions
 
 Focused suite: `scripts/unit_tests/deliver/test_prd067_wave_a_reliability.py` covers ship-lease reclaim, preflight timeout default, materialized currency path, `tasks-debug-*` unit ids, and terminal `SW_PHASE_*` clearing.

@@ -113,6 +113,13 @@ unless confirmed. See `.sw/models-tiering.md` for platform catalogs, `models.rou
 `python3 scripts/reviewer-dispatch-check.py --agent <id> --parent-model <parent-concrete-id>`;
 stamp the resolved concrete `model:` on the Task (do not rely on `model: inherit` from the parent session).
 
+**Task model allowlist (PRD 073 R6/R7):** concrete Task spawn IDs are single-sourced from
+`core/sw-reference/task-model-allowlist.json`. `resolve-model-tier.py` and `dispatch-check.py` emit or
+accept only allowlisted IDs (or mapped aliases); unknown models fail closed with
+`binding:model-not-allowlisted` before spawn. Maintenance cadence and validation commands:
+`core/sw-reference/models-tiering.md` (Task model allowlist section). Regression:
+`scripts/unit_tests/dispatch/test_task_model_allowlist.py`.
+
 ### Deliver autonomy (`deliver.autonomy`)
 
 | Key | Default | Meaning |
