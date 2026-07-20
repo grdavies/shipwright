@@ -614,6 +614,57 @@
             }
           }
         },
+        "mempalace": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "MemPalace provider settings (when memory.provider is mempalace). Local-only palace in v1.",
+          "properties": {
+            "palacePath": {
+              "type": "string",
+              "description": "Local filesystem path to the MemPalace palace directory. Remote URLs are rejected in v1."
+            },
+            "rulesRoom": {
+              "type": "string",
+              "default": "rules",
+              "description": "Room reserved for hook rule-fetch only; excluded from ordinary memory search."
+            },
+            "searchExcludeRooms": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [
+                "transcripts"
+              ],
+              "description": "Rooms excluded from default search / memory-preflight (retrieval control only)."
+            },
+            "ruleCacheTtlSec": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 300,
+              "description": "TTL for atomic rule-fetch cache under .cursor/ state."
+            },
+            "failClosed": {
+              "type": "boolean",
+              "default": true,
+              "description": "When true, rule-fetch / palace unreachable fails closed for submit enforcement."
+            },
+            "redactOnWrite": {
+              "type": "boolean",
+              "default": true,
+              "description": "Apply redaction before palace writes (required for transcripts room)."
+            },
+            "ruleFetchCommand": {
+              "type": "string",
+              "description": "Optional exact-executable override for rule-fetch after allowlist + fixed-argv validation."
+            },
+            "supportedPackage": {
+              "type": "string",
+              "default": "mempalace>=3.6.0,<4.0.0",
+              "description": "Supported MemPalace package range for install docs and preflight probes (no auto-install)."
+            }
+          }
+        },
         "project": {
           "type": "string",
           "description": "Memory project scope key (e.g. repo name)."
@@ -1211,7 +1262,7 @@
                     "envVar": {
                       "type": "string",
                       "const": "SW_PLANNING_ISSUES_TOKEN",
-                      "description": "Fixed env var for planning-project issue write in grdavies/planning (or configured owner/repo). Used by .github/workflows/deliver-closeout.yml mutate step and scripts/closeout_ci.py — never substitute GITHUB_TOKEN."
+                      "description": "Fixed env var for planning-project issue write in grdavies/planning (or configured owner/repo). Used by .github/workflows/deliver-closeout.yml mutate step and scripts/closeout_ci.py \u2014 never substitute GITHUB_TOKEN."
                     },
                     "scope": {
                       "type": "string",
