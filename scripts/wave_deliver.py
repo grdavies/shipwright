@@ -561,7 +561,6 @@ def _task_list_path_for_light_derive(root: Path, task_list: str) -> Path:
     _rel, path = planning_path_redirect.resolve_readable_path(root, task_list)
     if path is not None and path.is_file():
         return path
-    # Filename/parent heuristics when the body is not local yet (issue-store).
     return Path(planning_path_redirect.resolve_path(root, task_list))
 
 
@@ -574,6 +573,15 @@ def derive_target_branch_light(
     fm: dict[str, str] = {}
     if task_path.is_file():
         fm = parse_frontmatter(task_path.read_text(encoding="utf-8"))
+    else:
+        # Issue-store may not have a local body yet — only the tasks-NNN-slug form
+        # is safe to derive without reading content. Bare names (e.g. tasks.md)
+        # must fail closed so callers fall back to legacy state / full preflight.
+        stem = Path(task_list).name
+        match = re.search(r"^tasks-\d+-(.+)\.md$", stem)
+        if not match:
+            fail(f"task list not found for light derive: {task_list}", exit_code=2)
+        return f"feat/{match.group(1)}"
     branch_type = resolve_type(loop_args, fm, plan_target_type=plan_target_type(root, loop_args))
     slug = feature_slug(fm, task_path)
     return f"{branch_type}/{slug}"
