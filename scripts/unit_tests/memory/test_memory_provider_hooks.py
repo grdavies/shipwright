@@ -58,9 +58,11 @@ def _clone_plugin_root(repo_root: Path, tmp_path: Path) -> Path:
         ".sw/memory-provider-catalog.json",
         "core/providers/recallium.md",
         "core/providers/in-repo.md",
+        "core/providers/mempalace.md",
         "scripts/memory_provider_catalog.py",
         "scripts/memory_provider_register.py",
         "scripts/capability_index.py",
+        "scripts/capability_trust.py",
         "scripts/sw_resolve_plugin_root.py",
     ):
         src = repo_root / rel
@@ -73,10 +75,15 @@ def _clone_plugin_root(repo_root: Path, tmp_path: Path) -> Path:
         src = repo_root / "providers" / name
         if src.is_file():
             (providers / name).write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+    mempalace_src = repo_root / "core" / "providers" / "mempalace-rules.py"
+    if mempalace_src.is_file():
+        (providers / "mempalace-rules.py").write_text(
+            mempalace_src.read_text(encoding="utf-8"), encoding="utf-8"
+        )
     return plugin
 
 
-@pytest.mark.parametrize("provider_id", ["recallium", "in-repo"])
+@pytest.mark.parametrize("provider_id", ["recallium", "in-repo", "mempalace"])
 def test_rules_script_resolves_catalog_path(
     repo_root: Path, plugin_root: Path, sw_hook_util, provider_id: str
 ) -> None:
@@ -173,3 +180,15 @@ def test_no_cross_provider_rule_fetcher_swap(
     monkeypatch.delenv("SW_RULES_SCRIPT", raising=False)
     summaries = guardrail_core.fetch_rule_summaries(workspace, plugin, guardrail_core.load_config(workspace))
     assert summaries == []
+
+
+def test_mempalace_rules_script_requires_capability_gate(
+    repo_root: Path, sw_hook_util, tmp_path: Path
+) -> None:
+    plugin = _clone_plugin_root(repo_root, tmp_path)
+    catalog = json.loads((plugin / ".sw/memory-provider-catalog.json").read_text(encoding="utf-8"))
+    catalog["providers"]["mempalace"]["rulesScript"] = "providers/recallium-rules.py"
+    (plugin / ".sw/memory-provider-catalog.json").write_text(
+        json.dumps(catalog), encoding="utf-8"
+    )
+    assert sw_hook_util.rules_script_for_provider(plugin, "mempalace") is None

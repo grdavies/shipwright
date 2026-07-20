@@ -569,6 +569,18 @@
 * merge phase shared-script-path-resolver-medium into feat/plugin-consumability-and-deliver-hygiene (ae12c17) <!-- sw-deliver:shared-script-path-resolver-medium -->
 * merge phase init-owned-fa-ade-forwarders-medium into feat/plugin-consumability-and-deliver-hygiene (7e2fbe0) <!-- sw-deliver:init-owned-fa-ade-forwarders-medium -->
 * merge phase docs-currency-absorb-close-out-small into feat/plugin-consumability-and-deliver-hygiene (3108e88) <!-- sw-deliver:docs-currency-absorb-close-out-small -->
+* merge phase catalog-row-capability-flags into feat/mempalace-memory-provider (c19c09f) <!-- sw-deliver:catalog-row-capability-flags -->
+* merge phase config-schema-provider-string into feat/mempalace-memory-provider (3829848) <!-- sw-deliver:config-schema-provider-string -->
+* merge phase adapter-op-map-taxonomy into feat/mempalace-memory-provider (7d1cb01) <!-- sw-deliver:adapter-op-map-taxonomy -->
+* merge phase edges-acceptance-register into feat/mempalace-memory-provider (3d024fb) <!-- sw-deliver:edges-acceptance-register -->
+* merge phase rules-script-transport into feat/mempalace-memory-provider (5b665d7) <!-- sw-deliver:rules-script-transport -->
+* merge phase interchange-memory-switch into feat/mempalace-memory-provider (05d4314) <!-- sw-deliver:interchange-memory-switch -->
+* merge phase cache-integrity-hook-trust into feat/mempalace-memory-provider (d75ec5a) <!-- sw-deliver:cache-integrity-hook-trust -->
+* merge phase operator-docs-sw-init into feat/mempalace-memory-provider (275bd9c) <!-- sw-deliver:operator-docs-sw-init -->
+* merge phase search-exclusions-load-search into feat/mempalace-memory-provider (fc074e3) <!-- sw-deliver:search-exclusions-load-search -->
+* merge phase emit-dist-lineage into feat/mempalace-memory-provider (dfe386a) <!-- sw-deliver:emit-dist-lineage -->
+* merge phase store-expand-inactivate-purge into feat/mempalace-memory-provider (a2f32d3) <!-- sw-deliver:store-expand-inactivate-purge -->
+* merge phase hermetic-fixtures-compatibility into feat/mempalace-memory-provider (5ee9bbc) <!-- sw-deliver:hermetic-fixtures-compatibility -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

@@ -1,0 +1,19 @@
+{
+  "canonicalCategories": [
+    "decision",
+    "learning",
+    "debug",
+    "design",
+    "code-context",
+    "playbook",
+    "research",
+    "discussion",
+    "progress",
+    "rule"
+  ],
+  "reservedRooms": {
+    "rulesRoom": "rules",
+    "transcriptsRoom": "transcripts"
+  },
+  "bannedCatchAlls": ["feature", "general", "project-*"]
+}

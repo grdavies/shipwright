@@ -26,6 +26,14 @@ PROVIDER_GATES = frozenset({"check-gate.py", "review-local-resolve.py"})
 MEMORY_GATES = frozenset({"check-gate.py", "memory-preflight"})
 HOOK_GATE_PREFIX = "hooks.json:"
 
+# Named gates for out-of-band memory rules scripts (PRD 071 R4, PRD 074 R4).
+# Catalog membership alone does not authorize hook injection.
+MEMORY_RULES_SCRIPT_GATES: dict[str, frozenset[str]] = {
+    "recallium": frozenset({"recallium-rules.py"}),
+    "in-repo": frozenset({"in-repo-rules.py"}),
+    "mempalace": frozenset({"mempalace-rules.py"}),
+}
+
 PROVIDER_FAMILY_KEYS: dict[str, str] = {
     "review": "review.provider",
     "review.local": "review.local.provider",
@@ -139,6 +147,65 @@ def adapter_matches(provider_family: str | None, adapter_id: str | None, config_
             "ce-code-review",
         }
     return str(config_value).strip().lower() == str(adapter_id).strip().lower()
+
+
+def authorize_memory_rules_script(
+    provider_id: str,
+    script_path: Path | str,
+    ctx: dict[str, Any],
+    *,
+    resolve_config_value: Callable[[dict[str, Any], str], Any],
+    is_configured: Callable[[Any], bool],
+) -> dict[str, Any]:
+    """Authorize a catalog rules script for hook injection (PRD 074 R4)."""
+    normalized = str(provider_id or "").strip()
+    allowed = MEMORY_RULES_SCRIPT_GATES.get(normalized)
+    if not allowed:
+        return {
+            "authorized": False,
+            "refusalReason": "unknown_provider",
+            "providerId": normalized,
+            "script": Path(str(script_path)).name,
+        }
+
+    configured, config_key = provider_configured(
+        "memory",
+        ctx,
+        resolve_config_value=resolve_config_value,
+        is_configured=is_configured,
+    )
+    if not configured:
+        return {
+            "authorized": False,
+            "refusalReason": "unconfigured_provider",
+            "providerId": normalized,
+            "script": Path(str(script_path)).name,
+        }
+
+    config_value = resolve_config_value(ctx.get("config") or {}, config_key or "")
+    if not adapter_matches("memory", normalized, config_value):
+        return {
+            "authorized": False,
+            "refusalReason": "config_override_untrusted",
+            "providerId": normalized,
+            "script": Path(str(script_path)).name,
+        }
+
+    basename = Path(str(script_path)).name
+    if basename not in allowed:
+        return {
+            "authorized": False,
+            "refusalReason": "unknown_rules_script",
+            "providerId": normalized,
+            "script": basename,
+        }
+
+    return {
+        "authorized": True,
+        "refusalReason": None,
+        "providerId": normalized,
+        "script": basename,
+    }
 
 
 def authorize_executable(

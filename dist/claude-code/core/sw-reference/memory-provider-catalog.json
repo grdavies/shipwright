@@ -22,7 +22,11 @@
         "ruleFetch": "out-of-band-script",
         "notes": "Agent-session ops via Recallium MCP tools; guardrail hooks invoke providers/recallium-rules.py (non-MCP, budgeted rule-fetch).",
         "restFetchPolicy": {
-          "allowedHosts": ["localhost", "127.0.0.1", "::1"],
+          "allowedHosts": [
+            "localhost",
+            "127.0.0.1",
+            "::1"
+          ],
           "allowLoopback": true,
           "allowPrivate": false,
           "allowLinkLocal": false,
@@ -36,7 +40,7 @@
       "sourceOfTruthClass": "memory-authoritative",
       "credentials": {
         "location": "env-only",
-        "notes": "REST/MCP credentials from environment or secret store only — never catalog, config bodies, or memory content."
+        "notes": "REST/MCP credentials from environment or secret store only \u2014 never catalog, config bodies, or memory content."
       }
     },
     "in-repo": {
@@ -66,7 +70,37 @@
       "sourceOfTruthClass": "repo-authoritative",
       "credentials": {
         "location": "none",
-        "notes": "Offline-first provider — no remote credentials."
+        "notes": "Offline-first provider \u2014 no remote credentials."
+      }
+    },
+    "mempalace": {
+      "adapterDoc": "core/providers/mempalace.md",
+      "rulesScript": "providers/mempalace-rules.py",
+      "capabilities": {
+        "typedMemories": true,
+        "filePathSearch": false,
+        "categoryFilter": true,
+        "recencyControl": true,
+        "rulesAtStartup": true,
+        "tasks": false,
+        "export": true,
+        "import": true,
+        "softDelete": false,
+        "semanticSearch": true
+      },
+      "hookTransport": {
+        "agentSession": "mcp",
+        "ruleFetch": "out-of-band-script",
+        "notes": "Agent-session ops via MemPalace MCP tools; guardrail hooks invoke providers/mempalace-rules.py (fixed-argv local palacePath, non-MCP)."
+      },
+      "interchange": {
+        "jsonl": "synthesized",
+        "okf": "synthesized"
+      },
+      "sourceOfTruthClass": "memory-authoritative",
+      "credentials": {
+        "location": "none",
+        "notes": "Local-only palacePath \u2014 no remote credentials; never store palace contents in catalog or config secrets."
       }
     }
   }

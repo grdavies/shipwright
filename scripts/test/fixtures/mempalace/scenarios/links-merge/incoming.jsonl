@@ -1,0 +1,2 @@
+{"id":"mp-merge-a","category":"decision","content":"Incoming merge payload with conflicting id but different body.","scope":"project","links":[{"to":"mp-merge-b","edge":"relates-to"}]}
+{"id":"mp-merge-c","category":"learning","content":"Fresh learning drawer from interchange import.","scope":"project","links":[]}

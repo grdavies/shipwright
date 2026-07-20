@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "provider": "mempalace",
+  "palacePath": "/fixture/palace",
+  "checksum": "8f14e45fceea167a5a36dedd4bea2543",
+  "writtenAt": 1750000000.0,
+  "rules": [
+    {
+      "id": "rule-guard-no-secrets",
+      "content": "tampered rule payload"
+    }
+  ]
+}

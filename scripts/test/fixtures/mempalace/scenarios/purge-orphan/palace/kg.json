@@ -1,0 +1,9 @@
+{
+  "links": [
+    {
+      "edge": "relates-to",
+      "source": "mp-survivor",
+      "target": "mp-purged-target"
+    }
+  ]
+}

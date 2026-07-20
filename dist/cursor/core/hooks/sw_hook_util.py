@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 _ALLOWLIST_REL = (".cursor/sw-memory-rule-allowlist.json", "sw-memory-rule-allowlist.json")
 
@@ -171,11 +172,34 @@ def _prefer_py_script(path: Path) -> Path | None:
     return None
 
 
-def rules_script_for_provider(plugin_root: Path, provider: str) -> Path | None:
+def _resolve_config_value(config: dict[str, Any], dotted_key: str) -> Any:
+    current: Any = config
+    for part in dotted_key.split("."):
+        if not isinstance(current, dict) or part not in current:
+            return None
+        current = current[part]
+    return current
+
+
+def _is_configured(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return value.strip().lower() not in {"", "none", "off", "unconfigured", "null"}
+    return True
+
+
+def rules_script_for_provider(
+    plugin_root: Path,
+    provider: str,
+    *,
+    config: dict | None = None,
+) -> Path | None:
     """Resolve catalog-registered rules script after validator gate (PRD 071 R3/R4)."""
     if not validate_hook_provider(plugin_root, provider):
         return None
     _ensure_scripts_importable(plugin_root)
+    from capability_trust import authorize_memory_rules_script
     from memory_provider_catalog import get_provider, load_catalog
     from memory_provider_register import resolve_rules_script
 
@@ -194,7 +218,23 @@ def rules_script_for_provider(plugin_root: Path, provider: str) -> Path | None:
         path = resolve_rules_script(plugin_root, resolved_plugin, rules_rel)
     except Exception:
         return None
-    return _prefer_py_script(path)
+    resolved = _prefer_py_script(path)
+    if resolved is None:
+        return None
+
+    memory_config = config if isinstance(config, dict) else {}
+    if not memory_config.get("memory"):
+        memory_config = {"memory": {"provider": provider}}
+    auth = authorize_memory_rules_script(
+        provider,
+        resolved,
+        {"config": memory_config},
+        resolve_config_value=_resolve_config_value,
+        is_configured=_is_configured,
+    )
+    if not auth.get("authorized"):
+        return None
+    return resolved
 
 
 def workflow_config_path(root: Path) -> Path | None:

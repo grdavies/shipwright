@@ -19,8 +19,8 @@ review-provider selection, project-type detection + verify configuration, guardr
 init/validate, portability self-check, version-drift notice, write schema-valid
 `.cursor/workflow.config.json`; retains doctor and repair modes on re-run.
 
-**Does NOT:** scaffold CI workflows, migrate Recallium memories into in-repo, auto-seed rule files, or write
-global (user-level) config — repo-local only.
+**Does NOT:** scaffold CI workflows, migrate Recallium memories into in-repo, auto-install MemPalace (or any
+memory provider package), auto-seed rule files, or write global (user-level) config — repo-local only.
 
 ## Flags
 
@@ -84,6 +84,7 @@ Offer:
 | --- | --- | --- |
 | **in-repo** (default) | `in-repo` | Zero-dependency; committed markdown store |
 | recallium | `recallium` | Requires local Recallium at `memory.connection.restBaseUrl` |
+| mempalace | `mempalace` | Local palace directory + MemPalace MCP; see `docs/guides/configuration.md` **MemPalace memory provider** |
 
 For **in-repo**:
 
@@ -98,6 +99,20 @@ For **in-repo**:
 
 For **recallium**: verify reachability (`host HTTP transport -fsS --max-time 3 <restBaseUrl>/health` or equivalent); warn if
 unreachable but still allow save.
+
+For **mempalace**:
+
+- **Catalog-detect only** — offer when `mempalace` is registered in `.sw/memory-provider-catalog.json`; **never
+  auto-install** the package (`uv tool install 'mempalace>=3.6.0,<4.0.0'` is documented in
+  `docs/guides/configuration.md`; operator runs it manually).
+- Collect `memory.mempalace.palacePath` (local filesystem path; reject remote URLs) and `memory.project` (wing name).
+- Seed schema defaults: `rulesRoom: "rules"`, `searchExcludeRooms: ["transcripts"]`, `failClosed: true`,
+  `redactOnWrite: true`, `supportedPackage: "mempalace>=3.6.0,<4.0.0"`.
+- **Doctor / validate when configured:** probe `python -c "import mempalace"` (warn with install recipe on failure);
+  verify `palacePath` exists and is a directory; optional hook smoke:
+  `python3 providers/mempalace-rules.py` with `SW_WORKSPACE_ROOT` set — warn on failure, do not block scaffold
+  unless the operator opts into hard-fail. Link remediation to `docs/guides/configuration.md` **MemPalace memory
+  provider** (hook recipes, break-glass, live-smoke checklist).
 
 ### 3. Review provider
 
@@ -205,6 +220,9 @@ Detect and recommend (never hard-fail scaffold):
   `none`; set `review.provider` explicitly if review gating is desired).
 - `review.enabled: false` in existing config → warn deprecated; suggest `review.provider: "none"`.
 - Recallium reachable when `memory.provider` is `recallium`.
+- MemPalace package import + `memory.mempalace.palacePath` directory probe when `memory.provider` is `mempalace`
+  (install recipe + live-smoke checklist: `docs/guides/configuration.md` **MemPalace memory provider**; no
+  auto-install).
 - **`orchestration.planPolicy`:** surface current value vs default (`canonical`); warn when set to
   `proposed` (fixture/adoption path — kernel envelope unchanged).
 - **`verify-unconfigured`** via `python3 scripts/verify-unconfigured.py` — CTA: run `/sw-init`.

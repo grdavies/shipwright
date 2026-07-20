@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "provider": "mempalace",
+  "palacePath": "/fixture/palace",
+  "checksum": "3a89c59e15b727fad277a9717d2e1349807c911439dc1062095cd749b15660c7",
+  "writtenAt": 1750000000.0,
+  "rules": [
+    {
+      "id": "rule-guard-no-secrets",
+      "content": "Never store raw secrets in memory drawers."
+    }
+  ]
+}

@@ -1,0 +1,265 @@
+{
+  "metadata": {
+    "supportedPackage": "mempalace>=3.6.0,<4.0.0",
+    "adapterDoc": "core/providers/mempalace.md",
+    "purpose": "Hermetic offline compatibility pin for PRD 074 R28 — no live MemPalace daemon or MCP session required.",
+    "schemaVersion": 1
+  },
+  "opMapTools": [
+    "mempalace_status",
+    "mempalace_get_taxonomy",
+    "mempalace_search",
+    "mempalace_get_drawer",
+    "mempalace_check_duplicate",
+    "mempalace_add_drawer",
+    "mempalace_update_drawer",
+    "mempalace_delete_drawer",
+    "mempalace_kg_add",
+    "mempalace_kg_query",
+    "mempalace_traverse",
+    "mempalace_list_drawers"
+  ],
+  "tools": {
+    "mempalace_status": {
+      "abstractOps": ["load-context"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    "mempalace_get_taxonomy": {
+      "abstractOps": ["load-context"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    "mempalace_search": {
+      "abstractOps": ["search", "list-recent", "load-context"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Short search query ONLY — keywords or a question. Max 250 chars.",
+            "maxLength": 250
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max results (default 5)",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "wing": {
+            "type": "string",
+            "description": "Filter by wing (optional)"
+          },
+          "room": {
+            "type": "string",
+            "description": "Filter by room (optional)"
+          },
+          "max_distance": {
+            "type": "number",
+            "description": "Max cosine distance threshold (0=identical, 2=opposite)."
+          },
+          "context": {
+            "type": "string",
+            "description": "Background context for the search (optional)."
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    "mempalace_get_drawer": {
+      "abstractOps": ["expand"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "drawer_id": {
+            "type": "string",
+            "description": "ID of the drawer to fetch"
+          }
+        },
+        "required": ["drawer_id"]
+      }
+    },
+    "mempalace_check_duplicate": {
+      "abstractOps": ["store"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Content to check"
+          },
+          "threshold": {
+            "type": "number",
+            "description": "Similarity threshold 0-1 (default 0.9)"
+          }
+        },
+        "required": ["content"]
+      }
+    },
+    "mempalace_add_drawer": {
+      "abstractOps": ["store"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wing": {
+            "type": "string",
+            "description": "Wing (project name)"
+          },
+          "room": {
+            "type": "string",
+            "description": "Room (aspect: backend, decisions, meetings...)"
+          },
+          "content": {
+            "type": "string",
+            "description": "Verbatim content to store — exact words, never summarized"
+          },
+          "source_file": {
+            "type": "string",
+            "description": "Where this came from (optional)"
+          },
+          "added_by": {
+            "type": "string",
+            "description": "Who is filing this (default: mcp)"
+          }
+        },
+        "required": ["wing", "room", "content"]
+      }
+    },
+    "mempalace_update_drawer": {
+      "abstractOps": ["modify"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "drawer_id": {
+            "type": "string",
+            "description": "ID of the drawer to update"
+          },
+          "content": {
+            "type": "string",
+            "description": "New content (optional — omit to keep existing)"
+          },
+          "wing": {
+            "type": "string",
+            "description": "New wing (optional — omit to keep existing)"
+          },
+          "room": {
+            "type": "string",
+            "description": "New room (optional — omit to keep existing)"
+          }
+        },
+        "required": ["drawer_id"]
+      }
+    },
+    "mempalace_delete_drawer": {
+      "abstractOps": ["modify"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "drawer_id": {
+            "type": "string",
+            "description": "ID of the drawer to delete"
+          }
+        },
+        "required": ["drawer_id"]
+      }
+    },
+    "mempalace_kg_add": {
+      "abstractOps": ["link"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "The entity doing/being something"
+          },
+          "predicate": {
+            "type": "string",
+            "description": "The relationship type"
+          },
+          "object": {
+            "type": "string",
+            "description": "The entity being connected to"
+          },
+          "valid_from": {
+            "type": "string",
+            "description": "When this became true (YYYY-MM-DD, optional)"
+          },
+          "source_closet": {
+            "type": "string",
+            "description": "Closet ID where this fact appears (optional)"
+          }
+        },
+        "required": ["subject", "predicate", "object"]
+      }
+    },
+    "mempalace_kg_query": {
+      "abstractOps": ["traverse"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "Entity to query"
+          },
+          "as_of": {
+            "type": "string",
+            "description": "Date filter — only facts valid at this date (YYYY-MM-DD, optional)"
+          },
+          "direction": {
+            "type": "string",
+            "description": "outgoing, incoming, or both (default: both)"
+          }
+        },
+        "required": ["entity"]
+      }
+    },
+    "mempalace_traverse": {
+      "abstractOps": ["traverse"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start_room": {
+            "type": "string",
+            "description": "Room to start from"
+          },
+          "max_hops": {
+            "type": "integer",
+            "description": "How many connections to follow (default: 2)"
+          }
+        },
+        "required": ["start_room"]
+      }
+    },
+    "mempalace_list_drawers": {
+      "abstractOps": ["rules-load"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wing": {
+            "type": "string",
+            "description": "Filter by wing (optional)"
+          },
+          "room": {
+            "type": "string",
+            "description": "Filter by room (optional)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max results per page (default 20, max 100)",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Offset for pagination (default 0)",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}
