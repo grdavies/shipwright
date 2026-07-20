@@ -58,6 +58,24 @@ def test_copy_to_core_preserves_catalog_emit(repo_root: Path) -> None:
     assert emit.read_bytes() == before
 
 
+def test_mempalace_catalog_lineage_supersedes_010_not_071(repo_root: Path) -> None:
+    """PRD 074 phase 12 — mempalace in emitted catalog; re-auth supersedes cancelled 010, not 071."""
+    import planning_lifecycle as plc
+
+    catalog = json.loads((repo_root / ".sw/memory-provider-catalog.json").read_text(encoding="utf-8"))
+    assert "mempalace" in catalog.get("providers", {})
+    target = plc.mempalace_reauth_supersedes_target()
+    assert target == plc.PRD_010_PRD_UNIT_ID
+    assert target != plc.PRD_071_UNIT_ID
+    for rel in (
+        "core/sw-reference/memory-provider-catalog.json",
+        "dist/cursor/core/sw-reference/memory-provider-catalog.json",
+        "dist/claude-code/core/sw-reference/memory-provider-catalog.json",
+    ):
+        emit = json.loads((repo_root / rel).read_text(encoding="utf-8"))
+        assert "mempalace" in emit.get("providers", {}), f"missing mempalace in {rel}"
+
+
 def test_core_only_catalog_orphan_refused(repo_root: Path, tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     (tmp_path / "core" / "sw-reference").mkdir(parents=True)
