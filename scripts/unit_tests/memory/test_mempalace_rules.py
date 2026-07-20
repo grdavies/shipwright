@@ -318,3 +318,45 @@ def test_opt_in_excluded_room_warnings_for_transcripts(mempalace_rules) -> None:
         explicit_room="transcripts",
     )
     assert any("verbatim" in warning for warning in warnings)
+
+
+def test_guard_rules_room_write_rejects_ordinary_store(mempalace_rules) -> None:
+    with pytest.raises(ValueError, match="rulesRoom"):
+        mempalace_rules.guard_rules_room_write("rules", rules_room="rules")
+
+
+def test_guard_rules_room_write_allows_promotion_path(mempalace_rules) -> None:
+    mempalace_rules.guard_rules_room_write(
+        "rules",
+        rules_room="rules",
+        promotion_path=True,
+    )
+
+
+def test_resolve_list_recent_exclude_rooms_matches_search(mempalace_rules) -> None:
+    mem_cfg = {"rulesRoom": "guardrails", "searchExcludeRooms": ["scratch"]}
+    assert mempalace_rules.resolve_list_recent_exclude_rooms(
+        mem_cfg
+    ) == mempalace_rules.resolve_search_exclude_rooms(mem_cfg)
+
+
+def test_filter_drawers_for_list_recent_drops_excluded_rooms(mempalace_rules) -> None:
+    drawers = [
+        {"drawer_id": "r1", "room": "rules", "content": "secret rule"},
+        {"drawer_id": "d1", "room": "decision", "content": "ok"},
+        {"drawer_id": "t1", "room": "transcripts", "content": "verbatim"},
+    ]
+    filtered = mempalace_rules.filter_drawers_for_list_recent(
+        drawers,
+        exclude_rooms=frozenset({"rules", "transcripts"}),
+    )
+    assert [row["drawer_id"] for row in filtered] == ["d1"]
+
+
+def test_guard_hard_purge_requires_confirmation(mempalace_rules) -> None:
+    with pytest.raises(ValueError, match="hard purge"):
+        mempalace_rules.guard_hard_purge(confirmed=False)
+
+
+def test_guard_hard_purge_allows_confirmed(mempalace_rules) -> None:
+    mempalace_rules.guard_hard_purge(confirmed=True)
