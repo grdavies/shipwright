@@ -22,6 +22,7 @@ legacy two-provider fallback.
 |-----------|-------|
 | **`in-repo`** (default) | Committed markdown store; zero external dependency; `sourceOfTruthClass: repo-authoritative` |
 | `recallium` | External REST/MCP store; requires reachable `memory.connection.restBaseUrl`; `sourceOfTruthClass: memory-authoritative` |
+| `mempalace` | Local palace directory + MemPalace MCP (agent session); hook rule-fetch via `providers/mempalace-rules.py`; `sourceOfTruthClass: memory-authoritative` |
 
 **Authors register; operators select.** Plugin authors add a catalog row + adapter doc + rules script
 (checklist: `core/skills/memory/CAPABILITIES.md` **Adapter registration checklist**). Operators only set
@@ -48,6 +49,112 @@ For **in-repo**, choose commit mode:
 - `local` — gitignored at `.cursor/sw-memory-local/`
 
 For **recallium**: setup warns if the health check fails but still allows save.
+
+For **mempalace**: `/sw-init` catalog-detects the provider but **does not auto-install** the package.
+Validate `memory.mempalace.palacePath` and the supported package range when configured; see
+**MemPalace memory provider** below.
+
+#### MemPalace memory provider
+
+MemPalace stores distilled drawers in a **local palace directory** on disk. Agent-session memory ops use
+MemPalace MCP; guardrail hooks use the fixed-argv out-of-band script `providers/mempalace-rules.py` (never
+MCP from hooks). Adapter contract: `core/providers/mempalace.md`.
+
+**Install (operator — no auto-install):** Shipwright documents the supported range only; install the tool
+yourself before live use:
+
+```bash
+uv tool install 'mempalace>=3.6.0,<4.0.0'
+```
+
+Pin is also recorded as `memory.mempalace.supportedPackage` (default matches the line above).
+
+**Schema-valid example** (local palace + project wing):
+
+```json
+{
+  "memory": {
+    "provider": "mempalace",
+    "project": "my-app",
+    "sourceOfTruth": "auto",
+    "mempalace": {
+      "palacePath": "/home/you/.mempalace/my-app",
+      "rulesRoom": "rules",
+      "searchExcludeRooms": ["transcripts"],
+      "ruleCacheTtlSec": 300,
+      "failClosed": true,
+      "redactOnWrite": true,
+      "supportedPackage": "mempalace>=3.6.0,<4.0.0"
+    }
+  }
+}
+```
+
+`memory.mempalace` rejects unknown keys (`additionalProperties: false`). `palacePath` must be a **local**
+filesystem path — remote URLs are rejected in v1.
+
+**Hook rule-fetch recipes**
+
+| Posture | Recipe |
+| --- | --- |
+| **Local (default)** | Hooks invoke `providers/mempalace-rules.py` with a fixed argv template (`python -c <list_drawers snippet>`). Palace path and `rulesRoom` are passed only via config + `MEMPALACE_*` env vars set by the script — no free-form caller args. |
+| **Docker bind-mount** | Mount the host palace read-only and the repo workspace; point `memory.mempalace.palacePath` at the in-container mount (e.g. `/palace`). Same fixed argv; optional `ruleFetchCommand` override must match the exact allowlisted template (no shell / eval). |
+
+Example Docker sketch (adjust image paths to your plugin install):
+
+```bash
+docker run --rm \
+  -v /host/palace:/palace:ro \
+  -v /host/repo:/workspace:ro \
+  -e SW_WORKSPACE_ROOT=/workspace \
+  python:3.12 python /plugin/providers/mempalace-rules.py
+```
+
+Rule cache: atomic TTL cache under `.cursor/` state, bound to `provider` + `palacePath` with checksum
+integrity — tamper → cache miss; see `core/providers/mempalace-rules.py`.
+
+**Break-glass / palace-unreachable**
+
+When `memory.mempalace.failClosed` is `true` (default), unreachable palace, missing package, or rule-fetch
+failure **fails closed** for `guardrails.enforceBeforeSubmit` — prompts do not proceed without rules.
+Break-glass (emergency only): set `failClosed: false` to degrade-open on hook rule-fetch failure. This
+weakens submit enforcement; restore `true` after the palace is healthy. `/sw-init` doctor surfaces palace
+path and package probe failures when `memory.provider` is `mempalace`.
+
+**Transcripts + `rulesRoom`**
+
+| Control | Behavior |
+| --- | --- |
+| `searchExcludeRooms` | Default `["transcripts"]` — verbatim / non-summarized material is excluded from default `search` and `memory-preflight`. |
+| Opt-in transcripts | Removing `transcripts` from exclusions or explicit transcripts retrieval MUST emit an operator warning that excluded/verbatim material is requested. |
+| `rulesRoom` (default `rules`) | Always excluded from ordinary search/preflight — hook `rules-load` only. Never inject `rulesRoom` drawers into agent preflight search. |
+| Redaction on write | `redactOnWrite: true` (default) pipes every store through `scripts/memory-redact.py` before palace writes. Transcripts-room writes: redaction is **non-bypassable** in v1. |
+| Ordinary writes to `rulesRoom` | Refused — rule-class drawers only via `/sw-memory-audit` / human-gated promotion. |
+
+**Purge vs inactivate; capability degrades**
+
+MemPalace has `softDelete: false` in the catalog — no native soft-delete.
+
+| Verb | Behavior |
+| --- | --- |
+| **Inactivate (default)** | Non-destructive: superseding drawer + KG edge invalidate (or equivalent degrade). Prefer over hard delete. |
+| **Hard purge** | Distinct confirmed destructive path → `mempalace_delete_drawer`; orphan-invalidate inbound KG edges; never cascade unrelated drawers. |
+
+`tasks: false` — MemPalace has no native task board; `tasks.*` ops **degrade-open** to the local phase-board
+registry without failing unrelated memory surfaces.
+
+**Live-smoke checklist** (operator, not CI)
+
+Run after install + config write when you want confidence before relying on MemPalace in production flows:
+
+1. `uv tool install 'mempalace>=3.6.0,<4.0.0'` (or equivalent venv) and confirm `python -c "import mempalace"` succeeds.
+2. Palace directory exists and is readable at `memory.mempalace.palacePath`.
+3. `python3 providers/mempalace-rules.py` (from repo root with `SW_WORKSPACE_ROOT=.`) returns `"ok": true` and a `rules` array (may be empty).
+4. Agent MCP: `mempalace_status` + `mempalace_get_taxonomy` for wing `memory.project`; `mempalace_search` returns without `rulesRoom` / `transcripts` unless opt-in.
+5. Store path: redacted `store` to a canonical room (not `rulesRoom`); `expand` round-trips the drawer id.
+6. Optional edge smoke: `mempalace_kg_add` + `mempalace_traverse` with a typed relationship; dangling target degrades without failing the whole read path.
+
+Hermetic regression lives under `scripts/test/fixtures/mempalace/` (offline — no live daemon required for CI).
 
 ### Step 2 — Review provider
 
@@ -586,6 +693,7 @@ Writable brainstorms may carry forward `prd:` references.
 
 - CodeRabbit CLI on `PATH` when `review.provider` is `coderabbit`
 - Recallium reachable when `memory.provider` is `recallium`
+- MemPalace palace path + package probe when `memory.provider` is `mempalace` (see **MemPalace memory provider** above; no auto-install)
 - Placeholder `verify.*` commands → recommends configuring real lint/typecheck/test commands
 - Missing memory dirs → offers `mkdir -p` repair
 
@@ -619,7 +727,7 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `models.routing.skills` | Per skill directory model tier |
 | `models.routing.agents` | Per reviewer/persona/native-panel agent id → semantic tier |
 | `deliver.remediation.maxAttempts` | Auto-remediation budget per blocked phase before clean halt (default **2**) |
-| `memory.provider` | Catalog-registered provider id (default `in-repo`; seeded: `recallium`). Validated by `memory_provider_register.py` — unknown ids rejected |
+| `memory.provider` | Catalog-registered provider id (default `in-repo`; seeded: `recallium`, `mempalace`). Validated by `memory_provider_register.py` — unknown ids rejected |
 | `memory.sourceOfTruth` | `auto` (default), `repo`, or `memory` — authority for **decision** records only (`auto`: external provider → memory, in-repo → repo) |
 | `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
 | `review.provider` | AI review adapter — default **`none`**; `coderabbit` opt-in |
@@ -770,6 +878,7 @@ Neutral shipped example omits scaffold; dogfood repos may set scaffold explicitl
 |-------------|--------|----------------|
 | **CodeRabbit** | `review.provider: "coderabbit"` | AI review on PRs |
 | **Recallium** | `memory.provider: "recallium"` | Seeded external memory store (catalog-registered) instead of in-repo markdown |
+| **MemPalace** | `memory.provider: "mempalace"` | Local palace + MCP; install `mempalace>=3.6.0,<4.0.0` yourself — see **MemPalace memory provider** |
 | **Sentry** | Production signals via `/sw-feedback` or `/sw-debug` | Route production errors into the debug workstream |
 
 Provider **credentials** come from the environment or your secret store — never commit secrets.
