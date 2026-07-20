@@ -573,6 +573,7 @@
 * merge phase config-schema-provider-string into feat/mempalace-memory-provider (3829848) <!-- sw-deliver:config-schema-provider-string -->
 * merge phase adapter-op-map-taxonomy into feat/mempalace-memory-provider (7d1cb01) <!-- sw-deliver:adapter-op-map-taxonomy -->
 * merge phase edges-acceptance-register into feat/mempalace-memory-provider (3d024fb) <!-- sw-deliver:edges-acceptance-register -->
+* merge phase rules-script-transport into feat/mempalace-memory-provider (5b665d7) <!-- sw-deliver:rules-script-transport -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
