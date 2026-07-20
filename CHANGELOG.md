@@ -574,6 +574,7 @@
 * merge phase adapter-op-map-taxonomy into feat/mempalace-memory-provider (7d1cb01) <!-- sw-deliver:adapter-op-map-taxonomy -->
 * merge phase edges-acceptance-register into feat/mempalace-memory-provider (3d024fb) <!-- sw-deliver:edges-acceptance-register -->
 * merge phase rules-script-transport into feat/mempalace-memory-provider (5b665d7) <!-- sw-deliver:rules-script-transport -->
+* merge phase interchange-memory-switch into feat/mempalace-memory-provider (05d4314) <!-- sw-deliver:interchange-memory-switch -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
