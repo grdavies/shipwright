@@ -2870,6 +2870,8 @@ def _execute_mechanical_inner(
             # Reload disk state first — merge-run-next already dequeued + recorded
             # completedMerges; saving the pre-call in-memory snapshot would wipe that (R9).
             state.update(load_state(root))
+            # Merge advanced integration HEAD; refresh freeze before draining siblings (R10/R34).
+            refresh_batch_integration_head(root, state)
             refresh_merge_queue_liveness_cas(root, state)
             slug = str(data.get("phase") or "")
             for pid, meta in (state.get("phases") or {}).items():
@@ -2881,6 +2883,8 @@ def _execute_mechanical_inner(
                     meta["postMergeVerifyPending"] = True
                     save_state(root, state)
                     break
+            else:
+                save_state(root, state)
             next_action = (
                 "merge-run-next"
                 if merge_queue_drain_preferred(state)
