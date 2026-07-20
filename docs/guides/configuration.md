@@ -54,7 +54,7 @@ For **mempalace**: `/sw-init` catalog-detects the provider but **does not auto-i
 Validate `memory.mempalace.palacePath` and the supported package range when configured; see
 **MemPalace memory provider** below.
 
-#### MemPalace memory provider (PRD 074)
+#### MemPalace memory provider
 
 MemPalace stores distilled drawers in a **local palace directory** on disk. Agent-session memory ops use
 MemPalace MCP; guardrail hooks use the fixed-argv out-of-band script `providers/mempalace-rules.py` (never
@@ -121,14 +121,14 @@ Break-glass (emergency only): set `failClosed: false` to degrade-open on hook ru
 weakens submit enforcement; restore `true` after the palace is healthy. `/sw-init` doctor surfaces palace
 path and package probe failures when `memory.provider` is `mempalace`.
 
-**Transcripts + `rulesRoom` (R10, R11, R41)**
+**Transcripts + `rulesRoom`**
 
 | Control | Behavior |
 | --- | --- |
 | `searchExcludeRooms` | Default `["transcripts"]` — verbatim / non-summarized material is excluded from default `search` and `memory-preflight`. |
 | Opt-in transcripts | Removing `transcripts` from exclusions or explicit transcripts retrieval MUST emit an operator warning that excluded/verbatim material is requested. |
 | `rulesRoom` (default `rules`) | Always excluded from ordinary search/preflight — hook `rules-load` only. Never inject `rulesRoom` drawers into agent preflight search. |
-| R41 on write | `redactOnWrite: true` (default) pipes every store through `scripts/memory-redact.py` before palace writes. Transcripts-room writes: redaction is **non-bypassable** in v1. |
+| Redaction on write | `redactOnWrite: true` (default) pipes every store through `scripts/memory-redact.py` before palace writes. Transcripts-room writes: redaction is **non-bypassable** in v1. |
 | Ordinary writes to `rulesRoom` | Refused — rule-class drawers only via `/sw-memory-audit` / human-gated promotion. |
 
 **Purge vs inactivate; capability degrades**
