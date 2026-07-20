@@ -105,7 +105,9 @@ types rather than being dropped.
 orphan after purge), return the edge with a dangling marker and continue — do not fail the whole
 read path. After hard purge, inbound edges MUST orphan-invalidate (R16).
 
-### Modify / purge (`softDelete: false`)
+### Modify / purge / list-recent (`softDelete: false`)
+
+See **list-recent + inactivate/purge contracts** below for enforcement detail. Summary:
 
 - **Update:** prefer `mempalace_update_drawer` when available; otherwise add a superseding drawer and
   invalidate/replace KG edges.
@@ -113,6 +115,8 @@ read path. After hard purge, inbound edges MUST orphan-invalidate (R16).
   equivalent non-destructive degrade).
 - **Hard purge:** distinct confirmed destructive path → `mempalace_delete_drawer`; orphan-invalidate
   inbound KG edges; never cascade-delete unrelated drawers.
+- **list-recent:** recency-scoped `mempalace_search` with the same room exclusion union as ordinary
+  `search` (R17).
 
 ## Wing / room taxonomy
 
@@ -168,8 +172,10 @@ catch-alls (`feature`, `general`, `project-*` mirrors) remain banned — never c
 | Ordinary writes to `rulesRoom` | Refused — rule-class drawers only via `/sw-memory-audit` / human-gated promotion. |
 
 Enforcement helpers live in `providers/mempalace-rules.py` (`resolve_search_exclude_rooms`,
-`filter_drawers_for_ordinary_search`, `guard_ordinary_search_room`). The hook script is **rules-load
-transport only** — it never serves ordinary search or memory-preflight results.
+`filter_drawers_for_ordinary_search`, `guard_ordinary_search_room`, `resolve_list_recent_exclude_rooms`,
+`filter_drawers_for_list_recent`, `guard_rules_room_write`, `guard_hard_purge`). The hook script is
+**rules-load transport only** — it never serves ordinary search, memory-preflight, store, or list-recent
+results.
 
 ### `load-context` contract
 
@@ -187,6 +193,7 @@ transport only** — it never serves ordinary search or memory-preflight results
   especially).
 - `guard_ordinary_search_room` rejects `room=<rulesRoom>` for search/preflight call sites.
 
+### `memory-preflight` contract
 
 1. Recency OFF by default unless the task is explicitly recent (`recencyControl`).
 2. Prefer wing-scoped `mempalace_search`; narrow by room when `categoryFilter` applies.
@@ -194,15 +201,73 @@ transport only** — it never serves ordinary search or memory-preflight results
 4. `expand` only selected drawer ids via `mempalace_get_drawer`.
 5. Opt-in transcripts retrieval must warn that excluded/verbatim material is requested.
 
-## Write recipe specifics
+## Store / expand contracts
 
-1. **R41 redaction:** pipe every store payload through `scripts/memory-redact.py` when `redactOnWrite: true`
-   (default). Unredacted content MUST NOT reach `mempalace_check_duplicate` / `mempalace_add_drawer`.
-   Transcripts-room writes: redaction is non-bypassable in v1.
-2. Dedup → add: `mempalace_check_duplicate` on the redacted payload, then `mempalace_add_drawer`.
-3. Refuse ordinary writes to `rulesRoom`; rule-class drawers only via `/sw-memory-audit` / allowlisted promotion.
-4. Search before store; on near-duplicate prefer `modify` / supersede over a second drawer.
-5. Never auto-store `rule`; never re-store rules just read from `rules-load`.
+### Stable memory id (R12)
+
+Drawer id returned by `mempalace_add_drawer` is the **stable memory id** for all downstream
+`expand`, `modify`, and `link` endpoints. Callers MUST persist and pass that id — never synthesize
+aliases or re-key drawers on read. `mempalace_get_drawer` is the sole expand transport.
+
+### `store` contract (R15, R41)
+
+| Step | Requirement |
+| --- | --- |
+| 1. Redact | When `redactOnWrite: true` (default), pipe every store payload through `scripts/memory-redact.py` **before** any palace write. Unredacted content MUST NOT reach dedup or add. Transcripts-room writes: redaction is **non-bypassable** in v1. |
+| 2. Dedup | `mempalace_check_duplicate` on the redacted payload (wing + room + semantic fingerprint). |
+| 3. Add | `mempalace_add_drawer` only after dedup passes; returned drawer id becomes the stable memory id. |
+| 4. rulesRoom | Ordinary writes to `rulesRoom` are **refused** — rule-class drawers only via `/sw-memory-audit` / human-gated promotion (`guard_rules_room_write`). |
+| 5. Near-duplicate | Search before store; on near-duplicate prefer `modify` / supersede over a second drawer. |
+| 6. Rule category | Never auto-store `rule`; never re-store rules just read from `rules-load`. |
+
+Enforcement helpers live in `providers/mempalace-rules.py` (`guard_rules_room_write`). Agent-session
+call sites MUST run the redact → dedup → add sequence in order; hook transport does not perform stores.
+
+### `expand` contract
+
+- Input: stable drawer id from a prior store, search hit, or link subject/object reference.
+- Transport: `mempalace_get_drawer` only — no room-scoped list expansion as a substitute.
+- Dangling ids (post-purge orphan): degrade with a dangling marker; do not fail the whole read path.
+
+## list-recent + inactivate/purge contracts
+
+### `list-recent` contract (R17)
+
+`list-recent` is recency-scoped activity recap — it MUST apply the **same room exclusion union** as
+ordinary `search`:
+
+| Control | Behavior |
+| --- | --- |
+| `searchExcludeRooms` | Default `["transcripts"]` — skipped unless explicit opt-in with operator warning. |
+| `rulesRoom` | **Always** skipped — same as search/preflight; never surface guardrail drawers in recency recap. |
+| Post-filter | `filter_drawers_for_list_recent` reuses the ordinary-search exclusion filter. |
+
+`resolve_list_recent_exclude_rooms` delegates to `resolve_search_exclude_rooms` so config drift
+cannot desync search vs list-recent behavior.
+
+### Inactivate (default non-destructive path)
+
+When `softDelete: false` (catalog default), **inactivate** is the default removal verb:
+
+1. MUST NOT silently hard-delete or call `mempalace_delete_drawer`.
+2. Prefer `mempalace_update_drawer` with inactive/superseded metadata when available.
+3. Otherwise add a **superseding drawer** and invalidate/replace KG edges on the prior id.
+4. Inbound `traverse` / `expand` on the inactivated id degrade with a dangling/superseded marker.
+
+### Hard purge (distinct destructive path)
+
+Hard purge is a **separate, confirmed** operator action — never the default for `modify` or
+inactivate:
+
+| Step | Requirement |
+| --- | --- |
+| Confirm | Explicit destructive confirmation required (`guard_hard_purge`); inactivate is not purge. |
+| Delete | `mempalace_delete_drawer` on the target id only. |
+| KG cleanup | Orphan-invalidate **inbound** edges pointing at the deleted id. |
+| No cascade | MUST NOT cascade-delete unrelated drawers or wing/room contents. |
+
+After hard purge, `traverse` / `expand` on the deleted id return dangling markers (see edge-capable
+section above).
 
 ## Interchange + credentials
 
