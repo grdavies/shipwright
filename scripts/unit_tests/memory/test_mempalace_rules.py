@@ -279,3 +279,42 @@ def test_cache_ttl_expiry_is_miss(tmp_path: Path, mempalace_rules) -> None:
         )
         is None
     )
+
+
+def test_resolve_search_exclude_rooms_always_includes_rules_and_transcripts(
+    mempalace_rules,
+) -> None:
+    excluded = mempalace_rules.resolve_search_exclude_rooms(
+        {"rulesRoom": "guardrails", "searchExcludeRooms": ["scratch"]}
+    )
+    assert excluded == frozenset({"scratch", "transcripts", "guardrails"})
+
+
+def test_filter_drawers_for_ordinary_search_drops_rules_room(mempalace_rules) -> None:
+    drawers = [
+        {"drawer_id": "r1", "room": "rules", "content": "secret rule"},
+        {"drawer_id": "d1", "room": "decision", "content": "ok"},
+        {"drawer_id": "t1", "room": "transcripts", "content": "verbatim"},
+    ]
+    filtered = mempalace_rules.filter_drawers_for_ordinary_search(
+        drawers,
+        exclude_rooms=frozenset({"rules", "transcripts"}),
+    )
+    assert [row["drawer_id"] for row in filtered] == ["d1"]
+
+
+def test_guard_ordinary_search_room_rejects_rules_room(mempalace_rules) -> None:
+    with pytest.raises(ValueError, match="rulesRoom"):
+        mempalace_rules.guard_ordinary_search_room(
+            "rules",
+            rules_room="rules",
+            exclude_rooms=frozenset({"rules", "transcripts"}),
+        )
+
+
+def test_opt_in_excluded_room_warnings_for_transcripts(mempalace_rules) -> None:
+    warnings = mempalace_rules.opt_in_excluded_room_warnings(
+        exclude_rooms=frozenset({"transcripts", "rules"}),
+        explicit_room="transcripts",
+    )
+    assert any("verbatim" in warning for warning in warnings)
