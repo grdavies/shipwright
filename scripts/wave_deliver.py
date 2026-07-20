@@ -556,14 +556,24 @@ def unit_id_matches_target(
     return False
 
 
+def _task_list_path_for_light_derive(root: Path, task_list: str) -> Path:
+    """Resolve a readable task list without run-entry materialize (avoids recursion)."""
+    _rel, path = planning_path_redirect.resolve_readable_path(root, task_list)
+    if path is not None and path.is_file():
+        return path
+    # Filename/parent heuristics when the body is not local yet (issue-store).
+    return Path(planning_path_redirect.resolve_path(root, task_list))
+
+
 def derive_target_branch_light(
     root: Path, task_list: str, args: list[str] | None = None
 ) -> str:
     """Derive integration target branch without base-branch preflight (PRD 068 R1)."""
     loop_args = args or []
-    task_path = resolve_task_list_path(root, task_list)
-    content = task_path.read_text(encoding="utf-8")
-    fm = parse_frontmatter(content)
+    task_path = _task_list_path_for_light_derive(root, task_list)
+    fm: dict[str, str] = {}
+    if task_path.is_file():
+        fm = parse_frontmatter(task_path.read_text(encoding="utf-8"))
     branch_type = resolve_type(loop_args, fm, plan_target_type=plan_target_type(root, loop_args))
     slug = feature_slug(fm, task_path)
     return f"{branch_type}/{slug}"
