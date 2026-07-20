@@ -1,0 +1,9 @@
+{
+  "drawers": [
+    {
+      "drawer_id": "mp-rules-001",
+      "room": "rules",
+      "content": "Standing guardrail rule — hook transport only."
+    }
+  ]
+}

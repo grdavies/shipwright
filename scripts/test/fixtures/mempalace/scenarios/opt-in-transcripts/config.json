@@ -1,0 +1,8 @@
+{
+  "memory": {
+    "provider": "mempalace",
+    "project": "fixture-repo",
+    "rulesRoom": "rules",
+    "searchExcludeRooms": ["transcripts"]
+  }
+}

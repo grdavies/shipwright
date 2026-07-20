@@ -1,0 +1,11 @@
+{
+  "deletedDrawerId": "mp-purged-target",
+  "survivingDrawerId": "mp-survivor",
+  "orphanEdge": {
+    "source": "mp-survivor",
+    "target": "mp-purged-target",
+    "edge": "relates-to"
+  },
+  "expandResult": null,
+  "danglingMarkerExpected": true
+}

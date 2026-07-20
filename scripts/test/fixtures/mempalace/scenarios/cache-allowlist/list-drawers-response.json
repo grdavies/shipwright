@@ -1,0 +1,14 @@
+{
+  "drawers": [
+    {
+      "drawer_id": "rule-guard-no-secrets",
+      "room": "rules",
+      "content": "Never store raw secrets in memory drawers."
+    },
+    {
+      "drawer_id": "rule-skip-decision",
+      "room": "decision",
+      "content": "Ordinary decision drawer — must not become a hook rule."
+    }
+  ]
+}

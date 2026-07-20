@@ -1,0 +1,28 @@
+{
+  "drawers": [
+    {
+      "drawer_id": "mp-decision-001",
+      "wing": "fixture-repo",
+      "room": "decision",
+      "content": "Use trunk-based development for Shipwright."
+    },
+    {
+      "drawer_id": "mp-learning-001",
+      "wing": "fixture-repo",
+      "room": "learning",
+      "content": "MemPalace search is semantic-only — no file path filter."
+    },
+    {
+      "drawer_id": "mp-rules-001",
+      "wing": "fixture-repo",
+      "room": "rules",
+      "content": "Route memory ops through memory-preflight."
+    },
+    {
+      "drawer_id": "mp-transcripts-001",
+      "wing": "fixture-repo",
+      "room": "transcripts",
+      "content": "verbatim session excerpt — excluded by default"
+    }
+  ]
+}
