@@ -577,6 +577,7 @@
 * merge phase interchange-memory-switch into feat/mempalace-memory-provider (05d4314) <!-- sw-deliver:interchange-memory-switch -->
 * merge phase cache-integrity-hook-trust into feat/mempalace-memory-provider (d75ec5a) <!-- sw-deliver:cache-integrity-hook-trust -->
 * merge phase operator-docs-sw-init into feat/mempalace-memory-provider (275bd9c) <!-- sw-deliver:operator-docs-sw-init -->
+* merge phase search-exclusions-load-search into feat/mempalace-memory-provider (fc074e3) <!-- sw-deliver:search-exclusions-load-search -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
