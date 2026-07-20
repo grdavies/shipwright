@@ -570,6 +570,7 @@
 * merge phase init-owned-fa-ade-forwarders-medium into feat/plugin-consumability-and-deliver-hygiene (7e2fbe0) <!-- sw-deliver:init-owned-fa-ade-forwarders-medium -->
 * merge phase docs-currency-absorb-close-out-small into feat/plugin-consumability-and-deliver-hygiene (3108e88) <!-- sw-deliver:docs-currency-absorb-close-out-small -->
 * merge phase catalog-row-capability-flags into feat/mempalace-memory-provider (c19c09f) <!-- sw-deliver:catalog-row-capability-flags -->
+* merge phase config-schema-provider-string into feat/mempalace-memory-provider (3829848) <!-- sw-deliver:config-schema-provider-string -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
