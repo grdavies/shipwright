@@ -128,8 +128,26 @@ Neutral JSONL `links[]` entries use typed edges:
 | `file-linked` | ties memory to repo paths |
 
 Recallium is **edge-degraded**: native `link_task_memories` is untyped. Live ops store flat memories +
-a typed `relationships` sidecar in export/import. Full typed-edge round-trip validated against a stub
-edge-capable provider.
+a typed `relationships` sidecar in export/import.
+
+**MemPalace** is the first production **edge-capable** provider: `link` / `traverse` use native KG
+tools (`mempalace_kg_add`, `mempalace_kg_query`, `mempalace_traverse`), and synthesized JSONL/OKF
+interchange round-trips `links[]` (see `core/providers/mempalace.md`).
+
+### Edge-first operator acceptance (MemPalace — PRD 074 R33)
+
+**Scenario — recover the decision that superseded an earlier auth approach**
+
+1. During `/sw-ship` stabilize, `memory-preflight` `search`es for `auth` under the project wing and
+   returns drawer `d-auth-jwt` (category `decision`).
+2. The workflow invokes `traverse` from `d-auth-jwt` with edge `supersedes` (depth 1). MemPalace
+   returns the typed edge `d-auth-session-cookies --supersedes--> d-auth-jwt` (or the inverse per
+   stored direction) plus the older drawer summary.
+3. **Context-recovery improvement:** the agent cites *why the JWT approach replaced cookies* instead
+   of re-proposing the superseded design — the typed edge is the signal, not keyword overlap alone.
+4. **Missing-target degrade:** if the older drawer was hard-purged, `traverse` still returns the edge
+   with a dangling/orphan marker and does not fail `load-context` / preflight; the operator sees that
+   the supersession link exists but the prior body is unavailable (re-distill or accept the gap).
 
 ## Ingestion redaction (R41)
 

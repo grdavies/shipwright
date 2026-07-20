@@ -81,10 +81,29 @@ Hooks MUST NOT spawn an MCP handshake. Rule cache + argv trust are documented un
 | `store` | `mempalace_check_duplicate` → `mempalace_add_drawer` | R41 redact first when `redactOnWrite: true` (default); refuse `rulesRoom` writes (R15) |
 | `modify` | `mempalace_update_drawer` / supersede + KG; purge → `mempalace_delete_drawer` | Prefer update when available; see soft-delete policy (R16) |
 | `list-recent` | `mempalace_search` / taxonomy + recency | Skip excluded rooms by default; transcripts opt-in per R10 (R17) |
-| `link` | `mempalace_kg_add` (+ tunnels as needed) | Edge-capable — typed KG triples (R7; detail in edges phase) |
-| `traverse` | `mempalace_kg_query`, `mempalace_traverse` | Walk KG; dangling targets tolerated |
-| `export` / `import` | synthesized via search+expand (+ KG) | Neutral JSONL / OKF; round-trip `links[]` when interchange exercised |
+| `link` | `mempalace_kg_add` (+ tunnel tools as needed) | **Edge-capable** — typed KG triples (R7) |
+| `traverse` | `mempalace_kg_query`, `mempalace_traverse` | Walk KG; dangling / missing targets degrade (see below) |
+| `export` / `import` | synthesized via search+expand (+ KG) | Neutral JSONL / OKF; **MUST round-trip `links[]`** when interchange is exercised |
 | `tasks.*` | — | **Degrade** to local registry (`tasks: false`); do not call MCP (R18) |
+
+### Edge-capable link / traverse (R7)
+
+MemPalace is the first production **edge-capable** memory provider. Prefer native KG tools over
+export-sidecar synthesis for live `link` / `traverse`:
+
+| Abstract | Tool | Shape |
+| --- | --- | --- |
+| `link` | `mempalace_kg_add` | Subject drawer id → typed predicate → object drawer id (and optional value/metadata). Tunnel helpers may bridge wings when upstream exposes them. |
+| `traverse` | `mempalace_kg_query`, `mempalace_traverse` | From-id + optional edge filter / depth / direction → nodes + edges. |
+| Interchange | search + expand + KG walk | `/sw-memory-export` / `/sw-memory-import` synthesize neutral `links[]` from KG triples so JSONL/OKF round-trips preserve typed relationships. |
+
+**Typed relationships** align with CAPABILITIES edges (`supersedes`, `relates-to`, `file-linked`) plus
+provider-native predicates when they map cleanly; unknown predicates survive interchange as opaque
+types rather than being dropped.
+
+**Missing-target degrade:** if `traverse` / `expand` lands on a dangling object id (deleted drawer or
+orphan after purge), return the edge with a dangling marker and continue — do not fail the whole
+read path. After hard purge, inbound edges MUST orphan-invalidate (R16).
 
 ### Modify / purge (`softDelete: false`)
 
@@ -164,7 +183,8 @@ catch-alls (`feature`, `general`, `project-*` mirrors) remain banned — never c
 ## Notes / gotchas
 
 - Drawer id is the stable memory id for `expand` / `modify` / `link` endpoints.
-- Edge-capable provider: prefer KG tools for `link`/`traverse`; detail and operator acceptance live with
-  the edges/register phases (R7, R33).
+- Edge-capable provider: prefer KG tools for `link`/`traverse`; CAPABILITIES documents the R33
+  edge-first acceptance scenario.
 - Tasks always degrade-open to the local registry — MemPalace has no native task board (R18).
 - Live MCP tool schemas for the supported package range are pinned in hermetic fixtures (compatibility phase).
+- Hook rule-fetch: `providers/mempalace-rules.py` (core mirror); full R19–R23 fetch lands in rules-script phases.
