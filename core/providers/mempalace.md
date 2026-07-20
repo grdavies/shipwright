@@ -155,7 +155,38 @@ catch-alls (`feature`, `general`, `project-*` mirrors) remain banned — never c
 - Default `search` / `memory-preflight` rooms: all canonical rooms **minus** `searchExcludeRooms` **minus**
   `rulesRoom`.
 
-## Read recipe specifics
+## Search exclusions + load/search contracts
+
+### Transcripts + `rulesRoom` exclusions
+
+| Control | Behavior |
+| --- | --- |
+| `searchExcludeRooms` | Default `["transcripts"]` — verbatim / non-summarized material is excluded from default `search` and `memory-preflight`. |
+| Opt-in transcripts | Removing `transcripts` from exclusions or explicit transcripts retrieval MUST emit an operator warning that excluded/verbatim material is requested. |
+| `rulesRoom` (default `rules`) | **Always** excluded from ordinary search/preflight — hook `rules-load` only. Never inject `rulesRoom` drawers into agent preflight search. |
+| Redaction on write | `redactOnWrite: true` (default) pipes every store through `scripts/memory-redact.py` before palace writes. Transcripts-room writes: redaction is **non-bypassable** in v1. |
+| Ordinary writes to `rulesRoom` | Refused — rule-class drawers only via `/sw-memory-audit` / human-gated promotion. |
+
+Enforcement helpers live in `providers/mempalace-rules.py` (`resolve_search_exclude_rooms`,
+`filter_drawers_for_ordinary_search`, `guard_ordinary_search_room`). The hook script is **rules-load
+transport only** — it never serves ordinary search or memory-preflight results.
+
+### `load-context` contract
+
+1. `mempalace_status` for the project wing (`memory.project`).
+2. `mempalace_get_taxonomy` for wing/room orientation.
+3. Recent activity via `mempalace_search` scoped to the project wing, **skipping** `searchExcludeRooms`
+   and **always** skipping `rulesRoom`.
+4. Rules arrive separately via hook `rules-load` (`providers/mempalace-rules.py`) — not mixed into step 3.
+
+### `search` contract
+
+- Honor `searchExcludeRooms` from config (default `["transcripts"]`).
+- **Always** exclude `rulesRoom` even when callers omit room filters or pass a broad wing scope.
+- Explicit room filters targeting an excluded room require opt-in handling and operator warning (transcripts
+  especially).
+- `guard_ordinary_search_room` rejects `room=<rulesRoom>` for search/preflight call sites.
+
 
 1. Recency OFF by default unless the task is explicitly recent (`recencyControl`).
 2. Prefer wing-scoped `mempalace_search`; narrow by room when `categoryFilter` applies.

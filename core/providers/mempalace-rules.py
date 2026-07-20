@@ -46,6 +46,7 @@ MAX_RULE_CHARS = 2000
 MAX_RULES = 25
 MAX_OUTPUT_BYTES = 64_000
 DEFAULT_RULES_ROOM = "rules"
+DEFAULT_SEARCH_EXCLUDE_ROOMS = ("transcripts",)
 DEFAULT_CACHE_TTL_SEC = 300
 DEFAULT_FAIL_CLOSED = True
 FETCH_TIMEOUT_SEC = 8
@@ -116,6 +117,86 @@ def load_memory_config(root: Path) -> dict[str, Any]:
 
 def strip_control_chars(text: str) -> str:
     return _CONTROL_CHAR_RE.sub("", text)
+
+
+def resolve_rules_room(mem_cfg: dict[str, Any]) -> str:
+    return str(mem_cfg.get("rulesRoom") or DEFAULT_RULES_ROOM).strip() or DEFAULT_RULES_ROOM
+
+
+def resolve_search_exclude_rooms(mem_cfg: dict[str, Any]) -> frozenset[str]:
+    """Rooms excluded from ordinary search / memory-preflight (always includes rulesRoom)."""
+    rules_room = resolve_rules_room(mem_cfg)
+    raw = mem_cfg.get("searchExcludeRooms", list(DEFAULT_SEARCH_EXCLUDE_ROOMS))
+    if not isinstance(raw, list):
+        raw = list(DEFAULT_SEARCH_EXCLUDE_ROOMS)
+    excluded = {str(room).strip() for room in raw if str(room).strip()}
+    excluded.update(DEFAULT_SEARCH_EXCLUDE_ROOMS)
+    excluded.add(rules_room)
+    return frozenset(excluded)
+
+
+def drawer_room(row: dict[str, Any]) -> str:
+    return str(row.get("room") or row.get("metadata", {}).get("room") or "").strip()
+
+
+def filter_drawers_for_ordinary_search(
+    drawers: list[dict[str, Any]],
+    *,
+    exclude_rooms: frozenset[str],
+) -> list[dict[str, Any]]:
+    """Drop drawers in excluded rooms — ordinary search/preflight must never surface rulesRoom."""
+    if not exclude_rooms:
+        return list(drawers)
+    return [row for row in drawers if drawer_room(row) not in exclude_rooms]
+
+
+def opt_in_excluded_room_warnings(
+    *,
+    exclude_rooms: frozenset[str],
+    requested_rooms: frozenset[str] | None = None,
+    explicit_room: str | None = None,
+) -> list[str]:
+    """Operator warnings when excluded rooms (especially transcripts) are explicitly requested."""
+    warnings: list[str] = []
+    targets: set[str] = set()
+    if requested_rooms:
+        targets.update(requested_rooms)
+    if explicit_room and explicit_room.strip():
+        targets.add(explicit_room.strip())
+    for room in sorted(targets):
+        if room not in exclude_rooms:
+            continue
+        if room == "transcripts":
+            warnings.append(
+                "opt-in transcripts retrieval: excluded/verbatim material was explicitly requested"
+            )
+        else:
+            warnings.append(
+                f"opt-in excluded room {room!r}: retrieval targets a room excluded from default search"
+            )
+    return warnings
+
+
+def guard_ordinary_search_room(
+    room: str | None,
+    *,
+    rules_room: str,
+    exclude_rooms: frozenset[str],
+) -> None:
+    """Fail closed when ordinary search/preflight would target rulesRoom or other excluded rooms."""
+    if not room or not room.strip():
+        return
+    normalized = room.strip()
+    if normalized == rules_room:
+        raise ValueError(
+            f"ordinary search/preflight must not target rulesRoom ({rules_room!r}); "
+            "use rules-load hook transport only"
+        )
+    if normalized in exclude_rooms:
+        raise ValueError(
+            f"ordinary search/preflight must not target excluded room {normalized!r} "
+            "without explicit opt-in handling"
+        )
 
 
 def is_remote_palace_path(value: str) -> bool:
@@ -425,7 +506,7 @@ def drawers_to_rules(drawers_payload: dict[str, Any], *, rules_room: str) -> lis
     for row in rows:
         if not isinstance(row, dict):
             continue
-        room = str(row.get("room") or row.get("metadata", {}).get("room") or "").strip()
+        room = drawer_room(row)
         if room and room != rules_room:
             continue
         drawer_id = str(row.get("drawer_id") or row.get("id") or "").strip()
@@ -458,7 +539,7 @@ def main() -> int:
     mem_cfg = memory.get("mempalace")
     if not isinstance(mem_cfg, dict):
         mem_cfg = {}
-    rules_room = str(mem_cfg.get("rulesRoom") or DEFAULT_RULES_ROOM).strip() or DEFAULT_RULES_ROOM
+    rules_room = resolve_rules_room(mem_cfg)
     project = str(memory.get("project") or root.name).strip()
     fail_closed = fail_closed_default(mem_cfg)
     cache_ttl = cache_ttl_seconds(mem_cfg)
