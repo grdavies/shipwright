@@ -19,15 +19,25 @@ Docker bind-mount recipe (same argv; palace read-only on the host path):
 Ensure ``memory.mempalace.palacePath`` points at the in-container mount (e.g.
 ``/palace``). ``ruleFetchCommand`` overrides require exact-executable allowlist +
 fixed-argv template match (no shell / eval).
+
+R23 TTL cache lives under ``.cursor/hooks/state/mempalace-rules-cache.json``, bound to
+``provider`` + canonical ``palacePath`` with a checksum over the rule payload.
+Tampered, foreign, or unbound entries are cache misses and re-fetched. When
+``memory.mempalace.failClosed`` is true (default), palace / rule-fetch failures
+block hook injection. Break-glass: set ``failClosed: false`` or switch
+``memory.provider`` temporarily when the local palace is stopped.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import shlex
 import subprocess
 import sys
+import tempfile
+import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -36,7 +46,12 @@ MAX_RULE_CHARS = 2000
 MAX_RULES = 25
 MAX_OUTPUT_BYTES = 64_000
 DEFAULT_RULES_ROOM = "rules"
+DEFAULT_CACHE_TTL_SEC = 300
+DEFAULT_FAIL_CLOSED = True
 FETCH_TIMEOUT_SEC = 8
+CACHE_VERSION = 1
+CACHE_REL = Path(".cursor") / "hooks" / "state" / "mempalace-rules-cache.json"
+PROVIDER_ID = "mempalace"
 
 # Fixed MemPalace module invocation — argv is constant; palace/room/wing via env only.
 _FETCH_SNIPPET = (
@@ -243,6 +258,163 @@ def fetch_drawers_raw(
     return payload
 
 
+def fail_closed_default(mem_cfg: dict[str, Any]) -> bool:
+    """Break-glass: operators may set memory.mempalace.failClosed to false (R23)."""
+    value = mem_cfg.get("failClosed", DEFAULT_FAIL_CLOSED)
+    return bool(value) if value is not None else DEFAULT_FAIL_CLOSED
+
+
+def cache_ttl_seconds(mem_cfg: dict[str, Any]) -> int:
+    raw = mem_cfg.get("ruleCacheTtlSec", DEFAULT_CACHE_TTL_SEC)
+    try:
+        ttl = int(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_CACHE_TTL_SEC
+    return max(0, ttl)
+
+
+def cache_path(workspace: Path) -> Path:
+    return workspace / CACHE_REL
+
+
+def rules_payload_checksum(rules: list[dict[str, str]]) -> str:
+    canonical = json.dumps(rules, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _binding_matches(entry: dict[str, Any], *, provider: str, palace_path: Path) -> bool:
+    bound_provider = str(entry.get("provider") or "").strip()
+    bound_palace = str(entry.get("palacePath") or "").strip()
+    if bound_provider != provider:
+        return False
+    if not bound_palace:
+        return False
+    try:
+        return Path(bound_palace).resolve() == palace_path.resolve()
+    except OSError:
+        return bound_palace == str(palace_path)
+
+
+def validate_cache_entry(
+    entry: dict[str, Any],
+    *,
+    provider: str,
+    palace_path: Path,
+    ttl_seconds: int,
+) -> bool:
+    if int(entry.get("version", 0)) != CACHE_VERSION:
+        return False
+    if not _binding_matches(entry, provider=provider, palace_path=palace_path):
+        return False
+    rules = entry.get("rules")
+    if not isinstance(rules, list):
+        return False
+    checksum = str(entry.get("checksum") or "")
+    if not checksum or checksum != rules_payload_checksum(rules):
+        return False
+    if ttl_seconds <= 0:
+        return False
+    try:
+        written = float(entry.get("writtenAt", 0))
+    except (TypeError, ValueError):
+        return False
+    if not written or time.time() - written > ttl_seconds:
+        return False
+    return True
+
+
+def read_rules_cache(
+    workspace: Path,
+    *,
+    provider: str,
+    palace_path: Path,
+    ttl_seconds: int,
+) -> list[dict[str, str]] | None:
+    path = cache_path(workspace)
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    if not validate_cache_entry(
+        payload,
+        provider=provider,
+        palace_path=palace_path,
+        ttl_seconds=ttl_seconds,
+    ):
+        return None
+    rules = payload.get("rules")
+    if not isinstance(rules, list):
+        return None
+    return [dict(rule) for rule in rules if isinstance(rule, dict)]
+
+
+def write_rules_cache_atomic(
+    workspace: Path,
+    *,
+    provider: str,
+    palace_path: Path,
+    rules: list[dict[str, str]],
+) -> None:
+    path = cache_path(workspace)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    doc = {
+        "version": CACHE_VERSION,
+        "provider": provider,
+        "palacePath": str(palace_path.resolve()),
+        "checksum": rules_payload_checksum(rules),
+        "writtenAt": time.time(),
+        "rules": rules,
+    }
+    text = json.dumps(doc, ensure_ascii=False, indent=2) + "\n"
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".mempalace-rules-cache-", suffix=".json.tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def _fetch_failure_payload(
+    error: str,
+    *,
+    fail_closed: bool,
+) -> tuple[dict[str, Any], int]:
+    if fail_closed:
+        return (
+            {
+                "ok": False,
+                "applicable": True,
+                "provider": PROVIDER_ID,
+                "rules": [],
+                "error": error,
+            },
+            1,
+        )
+    return (
+        {
+            "ok": True,
+            "applicable": True,
+            "provider": PROVIDER_ID,
+            "rules": [],
+            "degraded": True,
+            "warning": (
+                f"{error} (break-glass: memory.mempalace.failClosed is false — "
+                "submit guardrails proceed without injected rules)"
+            ),
+        },
+        0,
+    )
+
+
 def drawers_to_rules(drawers_payload: dict[str, Any], *, rules_room: str) -> list[dict[str, str]]:
     if drawers_payload.get("error"):
         return []
@@ -288,32 +460,38 @@ def main() -> int:
         mem_cfg = {}
     rules_room = str(mem_cfg.get("rulesRoom") or DEFAULT_RULES_ROOM).strip() or DEFAULT_RULES_ROOM
     project = str(memory.get("project") or root.name).strip()
+    fail_closed = fail_closed_default(mem_cfg)
+    cache_ttl = cache_ttl_seconds(mem_cfg)
 
     try:
         palace_raw = str(mem_cfg.get("palacePath") or "").strip()
         palace_path = canonicalize_palace_path(palace_raw, root)
     except ValueError as exc:
-        return _emit(
-            {
-                "ok": False,
-                "applicable": True,
-                "provider": "mempalace",
-                "rules": [],
-                "error": str(exc),
-            },
-            exit_code=1,
-        )
+        payload, exit_code = _fetch_failure_payload(str(exc), fail_closed=fail_closed)
+        return _emit(payload, exit_code=exit_code)
 
     if not palace_path.is_dir():
+        payload, exit_code = _fetch_failure_payload(
+            f"palace path not found or not a directory: {palace_path}",
+            fail_closed=fail_closed,
+        )
+        return _emit(payload, exit_code=exit_code)
+
+    cached_rules = read_rules_cache(
+        root,
+        provider=PROVIDER_ID,
+        palace_path=palace_path,
+        ttl_seconds=cache_ttl,
+    )
+    if cached_rules is not None:
         return _emit(
             {
-                "ok": False,
+                "ok": True,
                 "applicable": True,
-                "provider": "mempalace",
-                "rules": [],
-                "error": f"palace path not found or not a directory: {palace_path}",
-            },
-            exit_code=1,
+                "provider": PROVIDER_ID,
+                "rules": cached_rules,
+                "cache": "hit",
+            }
         )
 
     python = resolve_mempalace_python()
@@ -328,19 +506,14 @@ def main() -> int:
     except (OSError, subprocess.TimeoutExpired):
         probe = None
     if probe is None or probe.returncode != 0:
-        return _emit(
-            {
-                "ok": False,
-                "applicable": True,
-                "provider": "mempalace",
-                "rules": [],
-                "error": (
-                    "mempalace package not installed or incompatible; "
-                    "install with: uv tool install 'mempalace>=3.6.0,<4.0.0'"
-                ),
-            },
-            exit_code=1,
+        payload, exit_code = _fetch_failure_payload(
+            (
+                "mempalace package not installed or incompatible; "
+                "install with: uv tool install 'mempalace>=3.6.0,<4.0.0'"
+            ),
+            fail_closed=fail_closed,
         )
+        return _emit(payload, exit_code=exit_code)
 
     override = str(mem_cfg.get("ruleFetchCommand") or "").strip()
     try:
@@ -352,16 +525,11 @@ def main() -> int:
         else:
             argv = default_fetch_argv(python)
     except (ValueError, json.JSONDecodeError) as exc:
-        return _emit(
-            {
-                "ok": False,
-                "applicable": True,
-                "provider": "mempalace",
-                "rules": [],
-                "error": f"invalid ruleFetchCommand: {exc}",
-            },
-            exit_code=1,
+        payload, exit_code = _fetch_failure_payload(
+            f"invalid ruleFetchCommand: {exc}",
+            fail_closed=fail_closed,
         )
+        return _emit(payload, exit_code=exit_code)
 
     drawers_payload = fetch_drawers_raw(
         argv,
@@ -370,24 +538,30 @@ def main() -> int:
         wing=project,
     )
     if drawers_payload.get("error"):
-        return _emit(
-            {
-                "ok": False,
-                "applicable": True,
-                "provider": "mempalace",
-                "rules": [],
-                "error": str(drawers_payload["error"]),
-            },
-            exit_code=1,
+        payload, exit_code = _fetch_failure_payload(
+            str(drawers_payload["error"]),
+            fail_closed=fail_closed,
         )
+        return _emit(payload, exit_code=exit_code)
 
     rules = drawers_to_rules(drawers_payload, rules_room=rules_room)
+    if cache_ttl > 0:
+        try:
+            write_rules_cache_atomic(
+                root,
+                provider=PROVIDER_ID,
+                palace_path=palace_path,
+                rules=rules,
+            )
+        except OSError:
+            pass
     return _emit(
         {
             "ok": True,
             "applicable": True,
-            "provider": "mempalace",
+            "provider": PROVIDER_ID,
             "rules": rules,
+            "cache": "miss",
         }
     )
 
