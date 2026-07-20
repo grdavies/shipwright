@@ -201,6 +201,36 @@ def _in_repo_store_dir(root: Path, config: dict[str, Any]) -> Path:
     return (root / str(in_repo.get("storeDir") or ".cursor/sw-memory")).resolve()
 
 
+def _memory_project(config: dict[str, Any]) -> str:
+    memory = config.get("memory", {}) if isinstance(config, dict) else {}
+    project = memory.get("project") if isinstance(memory, dict) else None
+    return str(project).strip() if isinstance(project, str) and project.strip() else "default"
+
+
+def _mempalace_palace_path(root: Path, config: dict[str, Any], override: Path | None = None) -> Path:
+    if override is not None:
+        return override.expanduser().resolve()
+    memory = config.get("memory", {}) if isinstance(config, dict) else {}
+    mempalace = memory.get("mempalace", {}) if isinstance(memory, dict) else {}
+    raw = mempalace.get("palacePath") if isinstance(mempalace, dict) else None
+    if not isinstance(raw, str) or not raw.strip():
+        raise SwitchError("memory.mempalace.palacePath required for mempalace interchange", cause="missing")
+    path = Path(raw.strip())
+    if not path.is_absolute():
+        path = (root / path).resolve()
+    return path.expanduser().resolve()
+
+
+def _load_mempalace_interchange():
+    path = Path(__file__).resolve().parent / "mempalace_interchange.py"
+    spec = importlib.util.spec_from_file_location("mempalace_interchange", path)
+    if spec is None or spec.loader is None:
+        raise SwitchError("mempalace_interchange.py not found", cause="missing")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def write_config_provider(root: Path, provider_id: str, *, dry_run: bool) -> dict[str, Any]:
     for rel in CONFIG_PATHS:
         path = root / rel
@@ -238,19 +268,79 @@ def import_in_repo_store(store: Path, fmt: str, source: Path, *, dry_run: bool) 
     return {"verdict": "pass", "dryRun": False, "format": fmt, "imported": meta["count"], "source": str(source), "store": str(store)}
 
 
+def export_mempalace_palace(palace_path: Path, fmt: str, out: Path, *, wing: str) -> dict[str, Any]:
+    adapter = _load_mempalace_interchange()
+    export_meta = adapter.export_palace(palace_path, fmt, out, wing=wing)
+    return {**export_meta, **hash_interchange(out, fmt)}
+
+
+def import_mempalace_palace(palace_path: Path, fmt: str, source: Path, *, dry_run: bool, wing: str) -> dict[str, Any]:
+    adapter = _load_mempalace_interchange()
+    return adapter.import_palace(palace_path, fmt, source, dry_run=dry_run, wing=wing)
+
+
+def export_by_source(
+    root: Path,
+    *,
+    source_id: str,
+    fmt: str,
+    export_path: Path,
+    store_path: Path | None,
+    config: dict[str, Any],
+) -> dict[str, Any]:
+    if source_id == "in-repo":
+        store = store_path or _in_repo_store_dir(root, config)
+        if not store.is_dir():
+            raise SwitchError(f"in-repo store missing: {store}", cause="missing")
+        return export_in_repo_store(store, fmt, export_path)
+    if source_id == "mempalace":
+        palace = _mempalace_palace_path(root, config, store_path)
+        if not palace.is_dir():
+            raise SwitchError(f"mempalace palace missing: {palace}", cause="missing")
+        return export_mempalace_palace(palace, fmt, export_path, wing=_memory_project(config))
+    if not export_path.exists():
+        raise SwitchError(f"export artifact required for synthesized source {source_id}: {export_path}", cause="missing")
+    return {"provider": source_id, "format": fmt, "out": str(export_path), **hash_interchange(export_path, fmt)}
+
+
+def import_by_target(
+    root: Path,
+    *,
+    target_id: str,
+    fmt: str,
+    source_path: Path,
+    store_path: Path,
+    dry_run: bool,
+    config: dict[str, Any],
+) -> dict[str, Any]:
+    if target_id == "in-repo":
+        return import_in_repo_store(store_path, fmt, source_path, dry_run=dry_run)
+    if target_id == "mempalace":
+        palace = _mempalace_palace_path(root, config, store_path)
+        return import_mempalace_palace(palace, fmt, source_path, dry_run=dry_run, wing=_memory_project(config))
+    raise SwitchError(f"target provider import unsupported: {target_id}", cause="unsupported")
+
+
+def resolve_switch_target(state: dict[str, Any]) -> str:
+    target = state.get("switchedTo") or state.get("target")
+    if not isinstance(target, str) or not target.strip():
+        raise SwitchError("switch state missing target provider", cause="missing")
+    return target.strip()
+
+
 def migrate_export_step(root: Path, *, source_id: str, target_id: str, fmt: str, export_path: Path, store_path: Path | None = None) -> dict[str, Any]:
     plan = plan_switch(load_catalog(root), source_id, target_id, fmt=fmt)
     if plan["path"] != "migrate":
         fail(f"migration blocked for format {fmt}", cause="capability-mismatch", plan=plan)
-    if source_id == "in-repo":
-        store = store_path or _in_repo_store_dir(root, load_config(root))
-        if not store.is_dir():
-            raise SwitchError(f"in-repo store missing: {store}", cause="missing")
-        export_meta = export_in_repo_store(store, fmt, export_path)
-    else:
-        if not export_path.exists():
-            raise SwitchError(f"export artifact required for synthesized source {source_id}: {export_path}", cause="missing")
-        export_meta = {"provider": source_id, "format": fmt, "out": str(export_path), **hash_interchange(export_path, fmt)}
+    config = load_config(root)
+    export_meta = export_by_source(
+        root,
+        source_id=source_id,
+        fmt=fmt,
+        export_path=export_path,
+        store_path=store_path,
+        config=config,
+    )
     write_switch_state(root, {
         "phase": "export", "source": source_id, "target": target_id, "format": fmt,
         "exportPath": str(export_path), "exportHash": export_meta["sha256"], "exportCount": export_meta["count"],
@@ -275,15 +365,33 @@ def migrate_import_step(root: Path, *, fmt: str, source_path: Path, store_path: 
     state = read_switch_state(root)
     if state is None or not state.get("snapshotPreserved"):
         fail("no preserved export snapshot", cause="missing")
+    target_id = resolve_switch_target(state)
+    config = load_config(root)
     if dry_run:
-        preview = import_in_repo_store(store_path, fmt, source_path, dry_run=True)
+        preview = import_by_target(
+            root,
+            target_id=target_id,
+            fmt=fmt,
+            source_path=source_path,
+            store_path=store_path,
+            dry_run=True,
+            config=config,
+        )
         state["phase"] = "import-dry-run"
         write_switch_state(root, state)
-        return {"verdict": "pass", "step": "import-dry-run", "preview": preview}
+        return {"verdict": "pass", "step": "import-dry-run", "preview": preview, "target": target_id}
     if not confirm:
         fail("import requires --confirm after dry-run", cause="confirm-required")
     try:
-        result = import_in_repo_store(store_path, fmt, source_path, dry_run=False)
+        result = import_by_target(
+            root,
+            target_id=target_id,
+            fmt=fmt,
+            source_path=source_path,
+            store_path=store_path,
+            dry_run=False,
+            config=config,
+        )
     except SwitchError:
         state["phase"] = "partial-fail"
         write_switch_state(root, state)
