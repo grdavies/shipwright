@@ -572,6 +572,7 @@
 * merge phase catalog-row-capability-flags into feat/mempalace-memory-provider (c19c09f) <!-- sw-deliver:catalog-row-capability-flags -->
 * merge phase config-schema-provider-string into feat/mempalace-memory-provider (3829848) <!-- sw-deliver:config-schema-provider-string -->
 * merge phase adapter-op-map-taxonomy into feat/mempalace-memory-provider (7d1cb01) <!-- sw-deliver:adapter-op-map-taxonomy -->
+* merge phase edges-acceptance-register into feat/mempalace-memory-provider (3d024fb) <!-- sw-deliver:edges-acceptance-register -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
