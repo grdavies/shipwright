@@ -111,6 +111,13 @@ def provider_unreachable_message(provider: str | None) -> str:
             "Shipwright: in-repo rules adapter failed to load rule-class guardrails from disk. "
             "Check .cursor/sw-memory/rules/ and run /sw-setup to validate the store."
         )
+    if provider == "mempalace":
+        return (
+            "Shipwright: cannot reach the local MemPalace palace to load rule-class guardrails. "
+            "Verify memory.mempalace.palacePath, ensure the palace is running, and retry. "
+            "Break-glass: set memory.mempalace.failClosed to false or switch memory.provider "
+            "temporarily if a stopped palace must not block all submits."
+        )
     return (
         f"Shipwright: cannot load rule-class guardrails for provider '{name}'. "
         "Fix memory provider configuration or run /sw-setup, then retry."
