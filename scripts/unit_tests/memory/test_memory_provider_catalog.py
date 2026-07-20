@@ -20,7 +20,26 @@ from memory_provider_catalog import (
 def test_seeded_catalog_loads(repo_root: Path) -> None:
     catalog = load_catalog(repo_root)
     assert catalog["version"] == 1
-    assert provider_ids(catalog) == SEEDED_PROVIDER_IDS
+    ids = provider_ids(catalog)
+    assert SEEDED_PROVIDER_IDS <= ids
+    assert "mempalace" in ids
+
+
+def test_mempalace_entry_matches_prd074_flags(repo_root: Path) -> None:
+    catalog = load_catalog(repo_root)
+    mempalace = get_provider(catalog, "mempalace")
+    caps = mempalace["capabilities"]
+    assert caps["filePathSearch"] is False
+    assert caps["tasks"] is False
+    assert caps["softDelete"] is False
+    assert caps["semanticSearch"] is True
+    assert mempalace["interchange"]["jsonl"] == "synthesized"
+    assert mempalace["interchange"]["okf"] == "synthesized"
+    assert mempalace["sourceOfTruthClass"] == "memory-authoritative"
+    assert mempalace["hookTransport"]["agentSession"] == "mcp"
+    assert mempalace["hookTransport"]["ruleFetch"] == "out-of-band-script"
+    assert mempalace["adapterDoc"] == "core/providers/mempalace.md"
+    assert mempalace["rulesScript"] == "providers/mempalace-rules.py"
 
 
 def test_recallium_entry_matches_adapter_flags(repo_root: Path) -> None:
@@ -107,7 +126,9 @@ def test_resolve_catalog_path_falls_back_to_emit_when_sw_missing(
     assert not (plugin / CATALOG_REL).is_file()
     assert resolve_catalog_path(plugin) == emit.resolve()
     catalog = load_catalog(plugin)
-    assert provider_ids(catalog) == SEEDED_PROVIDER_IDS
+    ids = provider_ids(catalog)
+    assert SEEDED_PROVIDER_IDS <= ids
+    assert "mempalace" in ids
 
 
 def test_validate_rejects_unknown_interchange_mode(repo_root: Path) -> None:
