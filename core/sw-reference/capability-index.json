@@ -1091,6 +1091,29 @@
       }
     },
     {
+      "id": "provider.providers.mempalace",
+      "kind": "provider",
+      "sourcePath": "core/providers/mempalace.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "memory.provider",
+            "equals": "mempalace"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "memory",
+          "adapterId": "mempalace",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.py"
+        }
+      }
+    },
+    {
       "id": "provider.providers.planning-store.CAPABILITIES",
       "kind": "provider",
       "sourcePath": "core/providers/planning-store/CAPABILITIES.md",
