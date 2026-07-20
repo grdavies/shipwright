@@ -975,10 +975,12 @@ def phase_entry_currency_check(
     from wave_state import load_deliver_state, resolve_state_path
 
     if state is None:
-        state_path = resolve_state_path(root)
+        # Scope by task list so a legacy breadcrumb / other-run state cannot
+        # trigger currency rematerialize + frozen-hash verify for the wrong unit.
+        state_path = resolve_state_path(root, task_list=task_list)
         if not state_path.is_file():
             return None
-        state = load_deliver_state(root)
+        state = load_deliver_state(root, task_list=task_list)
     plan_path = root / ".cursor" / PLAN_PATH_NAME
     plan: dict[str, Any] = {}
     if plan_path.is_file():

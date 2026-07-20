@@ -453,7 +453,15 @@ def ensure_run_entry_materialized(
             "dest": rel_dest,
             "unitId": unit_id,
         }
-    pin_check = validate_store_pin(root)
+    if not target:
+        try:
+            from wave_deliver import derive_target_branch_light
+
+            target = derive_target_branch_light(root, task_list_rel)
+        except SystemExit:
+            target = None
+    pin_state = load_deliver_state(root, target=target) if target else load_deliver_state(root)
+    pin_check = validate_store_pin(root, state=pin_state)
     if pin_check.get("verdict") == "fail":
         return pin_check
     verify_frozen_issue_store(root, unit_id, task_list_rel)
