@@ -579,6 +579,7 @@
 * merge phase operator-docs-sw-init into feat/mempalace-memory-provider (275bd9c) <!-- sw-deliver:operator-docs-sw-init -->
 * merge phase search-exclusions-load-search into feat/mempalace-memory-provider (fc074e3) <!-- sw-deliver:search-exclusions-load-search -->
 * merge phase emit-dist-lineage into feat/mempalace-memory-provider (dfe386a) <!-- sw-deliver:emit-dist-lineage -->
+* merge phase store-expand-inactivate-purge into feat/mempalace-memory-provider (a2f32d3) <!-- sw-deliver:store-expand-inactivate-purge -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
