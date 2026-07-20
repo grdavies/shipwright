@@ -1,0 +1,16 @@
+{
+  "wing": "fixture-repo",
+  "rooms": {
+    "decision": 2,
+    "learning": 1,
+    "debug": 0,
+    "design": 0,
+    "code-context": 0,
+    "playbook": 0,
+    "research": 0,
+    "discussion": 0,
+    "progress": 0,
+    "rules": 1,
+    "transcripts": 1
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "memory": {
+    "provider": "mempalace",
+    "project": "fixture-repo",
+    "rulesRoom": "rules"
+  },
+  "ordinaryStoreAttempt": {
+    "room": "rules",
+    "content": "attempted ordinary store into rulesRoom"
+  },
+  "promotionPath": {
+    "room": "rules",
+    "content": "human-gated promotion into rulesRoom",
+    "promotionPath": true
+  }
+}

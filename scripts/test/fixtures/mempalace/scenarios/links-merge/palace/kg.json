@@ -1,0 +1,9 @@
+{
+  "links": [
+    {
+      "edge": "relates-to",
+      "source": "mp-merge-a",
+      "target": "mp-merge-b"
+    }
+  ]
+}

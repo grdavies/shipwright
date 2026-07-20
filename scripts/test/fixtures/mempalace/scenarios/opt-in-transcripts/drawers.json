@@ -1,0 +1,15 @@
+{
+  "drawers": [
+    {
+      "drawer_id": "mp-decision-001",
+      "room": "decision",
+      "content": "Visible in default search."
+    },
+    {
+      "drawer_id": "mp-transcripts-001",
+      "room": "transcripts",
+      "content": "Verbatim transcript excerpt — excluded unless opted in."
+    }
+  ],
+  "explicitRoom": "transcripts"
+}

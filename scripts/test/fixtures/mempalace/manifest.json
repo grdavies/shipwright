@@ -1,0 +1,13 @@
+{
+  "provider": "mempalace",
+  "supportedPackage": "mempalace>=3.6.0,<4.0.0",
+  "scenarios": [
+    "cache-allowlist",
+    "rooms-taxonomy",
+    "opt-in-transcripts",
+    "rulesroom-refuse",
+    "links-merge",
+    "purge-orphan"
+  ],
+  "compatToolSchemas": "compat-tool-schemas.json"
+}
