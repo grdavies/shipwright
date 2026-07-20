@@ -199,6 +199,48 @@ def guard_ordinary_search_room(
         )
 
 
+def resolve_list_recent_exclude_rooms(mem_cfg: dict[str, Any]) -> frozenset[str]:
+    """Rooms skipped by list-recent — same exclusion union as ordinary search (R17)."""
+    return resolve_search_exclude_rooms(mem_cfg)
+
+
+def filter_drawers_for_list_recent(
+    drawers: list[dict[str, Any]],
+    *,
+    exclude_rooms: frozenset[str],
+) -> list[dict[str, Any]]:
+    """Drop drawers in excluded rooms — list-recent must never surface rulesRoom or transcripts."""
+    return filter_drawers_for_ordinary_search(drawers, exclude_rooms=exclude_rooms)
+
+
+def guard_rules_room_write(
+    room: str | None,
+    *,
+    rules_room: str,
+    promotion_path: bool = False,
+) -> None:
+    """Fail closed when ordinary store/modify would target rulesRoom (R15)."""
+    if promotion_path:
+        return
+    if not room or not room.strip():
+        return
+    normalized = room.strip()
+    if normalized == rules_room:
+        raise ValueError(
+            f"ordinary store/modify must not target rulesRoom ({rules_room!r}); "
+            "rule-class drawers only via /sw-memory-audit / human-gated promotion"
+        )
+
+
+def guard_hard_purge(*, confirmed: bool) -> None:
+    """Fail closed when destructive purge lacks explicit operator confirmation (R16)."""
+    if not confirmed:
+        raise ValueError(
+            "hard purge requires explicit confirmed destructive verb; "
+            "use inactivate (supersede + KG-invalidate) for non-destructive removal"
+        )
+
+
 def is_remote_palace_path(value: str) -> bool:
     stripped = value.strip()
     if not stripped:
