@@ -665,6 +665,87 @@
             }
           }
         },
+        "basicMemory": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Basic Memory provider settings (when memory.provider is basic-memory). Dual-mode local|cloud \u2014 mode is required for non-default use; no silent cross-mode fallback.",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "local",
+                "cloud"
+              ],
+              "default": "local",
+              "description": "Explicit transport mode. local = loopback/local MCP + on-disk project; cloud = allowlisted cloud.basicmemory.com + env token. Runtime must not auto-promote or degrade across modes."
+            },
+            "projectPath": {
+              "type": "string",
+              "description": "Local mode: filesystem path to the basic-memory project directory."
+            },
+            "mcpLaunch": {
+              "type": "string",
+              "description": "Local mode: optional MCP launch command/stdio settings for the basic-memory server."
+            },
+            "apiBase": {
+              "type": "string",
+              "default": "https://cloud.basicmemory.com",
+              "description": "Cloud mode: MCP/API base URL. Must remain on the allowlisted Basic Memory Cloud host."
+            },
+            "tokenEnv": {
+              "type": "string",
+              "default": "BASIC_MEMORY_API_KEY",
+              "description": "Cloud mode: environment variable name for the bearer token (bmc_\u2026). Never embed tokens in config bodies."
+            },
+            "workspace": {
+              "type": "string",
+              "description": "Optional cloud workspace identifier."
+            },
+            "project": {
+              "type": "string",
+              "description": "Optional project name/slug for basic-memory scoping."
+            },
+            "projectId": {
+              "type": "string",
+              "description": "Optional cloud project id when distinct from project name."
+            },
+            "memoriesDirectory": {
+              "type": "string",
+              "default": "memories",
+              "description": "Directory name for memory notes within the project."
+            },
+            "rulesDirectory": {
+              "type": "string",
+              "default": "rules",
+              "description": "Directory reserved for hook rule-fetch content."
+            },
+            "ruleCacheTtlSec": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 300,
+              "description": "TTL for atomic mode-partitioned rule-fetch cache under .cursor/ state."
+            },
+            "failClosed": {
+              "type": "boolean",
+              "default": true,
+              "description": "When true, rule-fetch / unreachable configured mode fails closed for submit enforcement."
+            },
+            "redactOnWrite": {
+              "type": "boolean",
+              "default": true,
+              "description": "Apply redaction before basic-memory writes."
+            },
+            "ruleFetchCommand": {
+              "type": "string",
+              "description": "Optional exact-executable override for rule-fetch after allowlist + fixed-argv validation."
+            },
+            "supportedPackage": {
+              "type": "string",
+              "default": "basic-memory>=0.22.0,<1.0.0",
+              "description": "Supported basic-memory package range for install docs and preflight probes (no auto-install)."
+            }
+          }
+        },
         "project": {
           "type": "string",
           "description": "Memory project scope key (e.g. repo name)."

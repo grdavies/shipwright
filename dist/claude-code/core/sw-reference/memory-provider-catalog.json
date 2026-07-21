@@ -102,6 +102,48 @@
         "location": "none",
         "notes": "Local-only palacePath \u2014 no remote credentials; never store palace contents in catalog or config secrets."
       }
+    },
+    "basic-memory": {
+      "adapterDoc": "core/providers/basic-memory.md",
+      "rulesScript": "providers/basic-memory-rules.py",
+      "capabilities": {
+        "typedMemories": true,
+        "filePathSearch": false,
+        "categoryFilter": true,
+        "recencyControl": true,
+        "rulesAtStartup": true,
+        "tasks": false,
+        "export": true,
+        "import": true,
+        "softDelete": false,
+        "semanticSearch": true
+      },
+      "hookTransport": {
+        "agentSession": "mcp",
+        "ruleFetch": "out-of-band-script",
+        "notes": "Dual-mode provider (memory.basicMemory.mode: local|cloud). Agent-session via basic-memory MCP; hooks via providers/basic-memory-rules.py (non-MCP). Mode is operator-selected \u2014 no silent local\u2194cloud fallback. Local: loopback MCP/HTTP only. Cloud: bearer token from env/secret-store (BASIC_MEMORY_API_KEY) against allowlisted cloud.basicmemory.com only. Rule-cache keys are mode-partitioned.",
+        "restFetchPolicy": {
+          "allowedHosts": [
+            "localhost",
+            "127.0.0.1",
+            "::1",
+            "cloud.basicmemory.com"
+          ],
+          "allowLoopback": true,
+          "allowPrivate": false,
+          "allowLinkLocal": false,
+          "allowMetadata": false
+        }
+      },
+      "interchange": {
+        "jsonl": "synthesized",
+        "okf": "synthesized"
+      },
+      "sourceOfTruthClass": "memory-authoritative",
+      "credentials": {
+        "location": "env-only",
+        "notes": "Cloud mode: BASIC_MEMORY_API_KEY (bmc_\u2026) from environment or secret store only \u2014 never catalog, config bodies, or memory content. Local mode needs no remote token."
+      }
     }
   }
 }

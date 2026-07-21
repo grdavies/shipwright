@@ -23,6 +23,7 @@ legacy two-provider fallback.
 | **`in-repo`** (default) | Committed markdown store; zero external dependency; `sourceOfTruthClass: repo-authoritative` |
 | `recallium` | External REST/MCP store; requires reachable `memory.connection.restBaseUrl`; `sourceOfTruthClass: memory-authoritative` |
 | `mempalace` | Local palace directory + MemPalace MCP (agent session); hook rule-fetch via `providers/mempalace-rules.py`; `sourceOfTruthClass: memory-authoritative` |
+| `basic-memory` | Dual-mode Markdown knowledge graph (local loopback MCP or Basic Memory Cloud); hook rule-fetch via `providers/basic-memory-rules.py`; `sourceOfTruthClass: memory-authoritative` |
 
 **Authors register; operators select.** Plugin authors add a catalog row + adapter doc + rules script
 (checklist: `core/skills/memory/CAPABILITIES.md` **Adapter registration checklist**). Operators only set
@@ -155,6 +156,64 @@ Run after install + config write when you want confidence before relying on MemP
 6. Optional edge smoke: `mempalace_kg_add` + `mempalace_traverse` with a typed relationship; dangling target degrades without failing the whole read path.
 
 Hermetic regression lives under `scripts/test/fixtures/mempalace/` (offline — no live daemon required for CI).
+
+For **basic-memory**: `/sw-init` catalog-detects the provider but **does not auto-install** the package
+or provision a cloud workspace. Set `memory.basicMemory.mode` explicitly (`local` | `cloud`); there is
+no silent cross-mode fallback. See **Basic Memory provider** below.
+
+#### Basic Memory provider
+
+`memory.provider: "basic-memory"` selects the dual-mode Markdown knowledge-graph adapter. Agent sessions
+use the basic-memory MCP; guardrail hooks use `providers/basic-memory-rules.py` (never MCP from hooks).
+Adapter contract: `core/providers/basic-memory.md` (authored in a later phase).
+
+**Install (operator — no auto-install / no cloud auto-provision):** Shipwright documents the supported
+range only:
+
+```bash
+uv tool install 'basic-memory>=0.22.0,<1.0.0'
+```
+
+Pin is also recorded as `memory.basicMemory.supportedPackage` (default matches the line above).
+
+```json
+{
+  "memory": {
+    "provider": "basic-memory",
+    "project": "my-app",
+    "basicMemory": {
+      "mode": "local",
+      "projectPath": "/home/you/basic-memory/my-app",
+      "memoriesDirectory": "memories",
+      "rulesDirectory": "rules",
+      "ruleCacheTtlSec": 300,
+      "failClosed": true,
+      "redactOnWrite": true,
+      "supportedPackage": "basic-memory>=0.22.0,<1.0.0"
+    }
+  }
+}
+```
+
+Cloud mode example (token from env only — never embed in config):
+
+```json
+{
+  "memory": {
+    "provider": "basic-memory",
+    "basicMemory": {
+      "mode": "cloud",
+      "apiBase": "https://cloud.basicmemory.com",
+      "tokenEnv": "BASIC_MEMORY_API_KEY",
+      "failClosed": true
+    }
+  }
+}
+```
+
+`memory.basicMemory` rejects unknown keys (`additionalProperties: false`). `mode` is required for
+dual-mode correctness; cloud credentials come from `BASIC_MEMORY_API_KEY` (or `tokenEnv`) only.
+
 
 ### Step 2 — Review provider
 
