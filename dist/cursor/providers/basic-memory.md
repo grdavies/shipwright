@@ -27,9 +27,9 @@ onto Basic Memory MCP tools (agent session) and `providers/basic-memory-rules.py
 
 **Dual-mode:** operator sets `memory.basicMemory.mode` to `local` or `cloud`. There is **no silent
 local↔cloud fallback** (R9). Local uses loopback MCP / on-disk project; cloud uses allowlisted
-`cloud.basicmemory.com` with `BASIC_MEMORY_API_KEY` (env/secret-store only). Transport/SSRF contracts are
-expanded in later phases; this doc pins the abstract→MCP op map and category/project mapping (R11, R14,
-R15, R21).
+`cloud.basicmemory.com` with `BASIC_MEMORY_API_KEY` (**secret-store-only** / env — never catalog or
+config bodies). This doc owns dual-mode transport (R7–R10), the abstract→MCP op map including graph
+ops (R13, R16–R20), and the category map / project mapping (R11, R14, R15, R21).
 
 Supported package range: `basic-memory>=0.22.0,<1.0.0` (see `memory.basicMemory.supportedPackage`). Tool
 names below are pinned against the Basic Memory MCP Tools Reference at PRD 075 authoring; drift outside the
@@ -40,7 +40,7 @@ range requires a PRD amendment before catalog release.
 | `sourceOfTruthClass` | `memory-authoritative` — distilled notes are provider-SoT; repo decision records stay pointers only |
 | `interchange.jsonl` | `synthesized` — `/sw-memory-export` / `/sw-memory-import` synthesize neutral JSONL |
 | `interchange.okf` | `synthesized` — same synthesis path into OKF v0.1 bundles (redaction before write) |
-| `credentials.location` | `env-only` — cloud bearer from env/secret store; local needs no remote token |
+| `credentials.location` | `env-only` — cloud bearer from environment / secret-store-only; local needs no remote token |
 
 `<project>` below is `memory.project` / `memory.basicMemory.project` (or resolved `project_id`). Global
 scope uses the literal `__global__` (explicit user direction only).
@@ -96,41 +96,57 @@ Cloud hook/CLI auth: `Authorization: Bearer $BASIC_MEMORY_API_KEY` against allow
 | `export` / `import` | synthesized via search+expand (+ context) | Neutral JSONL / OKF; round-trip `links[]` when interchange is exercised |
 | `tasks.*` | — | **Degrade** to local registry (`tasks: false`); do not call MCP (R21) |
 
-### `load-context` contract
+### `load-context` contract (R16)
 
-1. `list_memory_projects` (and `cloud_info` when `mode: cloud`) for orientation.
-2. `recent_activity` scoped to the active project, **skipping** the rules directory / rule `note_type`.
+1. `list_memory_projects` (and optional `cloud_info` when `mode: cloud`) for orientation.
+2. `recent_activity` and/or scoped `search_notes` for the active project, **skipping** the rules
+   directory / rule `note_type`.
 3. Rules arrive separately via hook `rules-load` — not mixed into step 2.
 
-### `search` / `memory-preflight` contract
+### `search` / `memory-preflight` contract (R17)
 
-- Scope to `memory.project` / resolved `project_id` (R15).
+- Use `search_notes` with hybrid/semantic when enabled.
+- Scope to `memory.project` / resolved `project_id` (R15). **Never** set `search_all_projects: true`
+  by default.
 - **Always** exclude the configured rules directory (default `rules/`) and rule-class `note_type` from
   ordinary search and memory-preflight.
 - File-path intent: include the path string in the semantic query (`filePathSearch: false` degrade).
 - Recency OFF by default unless the task is explicitly recent (`recencyControl`).
 
-### `store` / `modify` contract
+### `expand` / `list-recent` contract (R20)
 
-- Redact via `scripts/memory-redact.py` when `redactOnWrite: true` (default).
+- `expand` → `read_note` (include frontmatter when metadata / permalink identity is required).
+- `list-recent` → `recent_activity` or recency-filtered `search_notes`, with the same rules-folder
+  exclusions as ordinary search.
+
+### `store` / `modify` contract (R18, R19)
+
+- Redact via `scripts/memory-redact.py` when `redactOnWrite: true` (default) — R41 before any write.
 - Map canonical category → `note_type` + folder under `memoriesDirectory` (default `memories/`).
-- Prefer stable permalink / note id as the memory identity.
-- Refuse ordinary writes into the rules directory — rule-class notes only via `/sw-memory-audit` /
-  human-gated promotion.
-- Inactivate (default): non-destructive edit / supersede. Hard purge: confirmed `delete_note` only.
+- Prefer stable permalink / note id as the memory identity; document overwrite semantics on
+  `write_note` when the upstream tool replaces by permalink.
+- Ordinary `store`/`modify` MUST refuse writes into the rules folder — rule-class notes only via
+  `/sw-memory-audit` / human-gated promotion.
+- `modify` update prefers `edit_note` / `write_note` with overwrite.
+- While `softDelete: false`, abstract **inactivate** MUST NOT map to silent `delete_note` — use a
+  non-destructive degrade (status metadata / superseding note). Hard **purge** is a distinct
+  confirmed path that calls `delete_note` and documents irreversibility.
 
-### `link` / `traverse`
+### `link` / `traverse` (R13)
 
-- Prefer native relation/wikilink writes when available; otherwise degrade `link` with a documented
-  operator-visible notice and rely on interchange synthesis for `links[]`.
-- `traverse` uses `build_context`; missing / deleted targets return a dangling marker and continue.
+- `traverse` MUST map to `build_context` (memory:// URL + depth). Missing / deleted targets return a
+  dangling marker and continue.
+- `link` documents wikilink / relation creation via note-body relations or upstream relation tools
+  when available. When create-edge is not a first-class MCP verb, `link` degrades with an
+  operator-visible notice and best-effort `links[]` on interchange synthesis.
 
 ### `tasks.*` degrade (R21)
 
-`tasks: false` — all `tasks.*` abstract ops degrade to the local Shipwright phase-board registry.
-Do not invent MCP task calls; do not fail unrelated memory surfaces when the task board is empty.
+`tasks: false` — all `tasks.*` abstract ops **degrade-open** to the local Shipwright phase-board
+registry. Do not invent MCP task calls; do not fail unrelated memory surfaces when the task board is
+empty.
 
-## Category → note_type / folder mapping (R14)
+## Category map → note_type / folder (R14)
 
 Canonical CAPABILITIES categories map onto Basic Memory **`note_type`** values and folders under
 `memory.basicMemory.memoriesDirectory` (default `memories/`). Banned catch-alls (`feature`, `general`,
@@ -170,18 +186,40 @@ banned catch-alls.
 Default agent and preflight ops use the active project mapping. Cloud mode may pass `workspace` +
 `project_id` together when the upstream API requires both.
 
-## Mode overview (pointer)
+## Dual-mode transport contracts (R7–R10)
 
-| Mode | Agent transport | Hook credentials | Host policy |
+| Mode | Agent transport | Hook / CLI credentials | SSRF / host policy |
 | --- | --- | --- | --- |
-| `local` | Local MCP (stdio / loopback HTTP) | None | Loopback only |
-| `cloud` | Cloud MCP / API at allowlisted base | `BASIC_MEMORY_API_KEY` | `cloud.basicmemory.com` allowlist |
+| `local` | Local MCP only — stdio or documented local HTTP | None (no remote bearer) | Loopback only (`localhost` / `127.0.0.1` / `::1`). Reject private, metadata, and link-local hosts unless an explicitly justified + tested exception exists (R7) |
+| `cloud` | Cloud MCP / API at allowlisted base | `BASIC_MEMORY_API_KEY` (`bmc_…` bearer) from environment or secret store only — **never** catalog/config bodies (R8) | Default base `https://cloud.basicmemory.com`. Fail closed on host allowlist mismatch |
 
-Full SSRF, unreachable-mode surface, and rules-script argv contracts are authored in subsequent phases;
-consumers MUST fail closed on mode/host/token mismatch rather than silently switching modes.
+### Mode selection — no silent fallback (R9)
+
+Switching `local` ↔ `cloud` is an **explicit** `memory.basicMemory.mode` config change. Runtime MUST
+NOT auto-promote local to cloud, degrade cloud to local, or otherwise rewrite mode when the
+configured endpoint fails.
+
+### Unreachable configured mode (R10)
+
+When the configured mode is unreachable:
+
+| Surface | Contract |
+| --- | --- |
+| Guardrail hooks | Fail closed when `enforceBeforeSubmit` / `memory.basicMemory.failClosed` apply (default true) |
+| Agent session | Report provider unreachable; do not mutate unrelated workflow surfaces |
+| Cross-mode | Never silently switch modes to recover |
+
+Catalog `hookTransport.restFetchPolicy` mirrors the same local loopback vs cloud allowlist split.
+
+### Hook transport pointer
+
+`providers/basic-memory-rules.py` (core: `core/providers/basic-memory-rules.py`) is the fixed-argv,
+non-MCP rule-fetch path. Mode-aware host gating, rules-folder filter, and mode-partitioned cache are
+implemented by that script; this adapter doc owns the contracts above.
 
 ## Break-glass / fail-closed
 
 When `memory.basicMemory.failClosed` is true (default) and rule-fetch is unreachable or tampered,
 guardrail enforcement before submit MUST block. Operator break-glass follows the shared Shipwright
-memory guardrail path — not a silent degrade to another provider.
+memory guardrail path — set `failClosed: false` or change `memory.provider` explicitly — not a
+silent degrade to another provider or mode.
