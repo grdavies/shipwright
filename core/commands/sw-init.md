@@ -85,6 +85,7 @@ Offer:
 | **in-repo** (default) | `in-repo` | Zero-dependency; committed markdown store |
 | recallium | `recallium` | Requires local Recallium at `memory.connection.restBaseUrl` |
 | mempalace | `mempalace` | Local palace directory + MemPalace MCP; see `docs/guides/configuration.md` **MemPalace memory provider** |
+| basic-memory | `basic-memory` | Dual-mode local MCP or Basic Memory Cloud; see `docs/guides/configuration.md` **Basic Memory provider** |
 
 For **in-repo**:
 
@@ -113,6 +114,27 @@ For **mempalace**:
   `python3 providers/mempalace-rules.py` with `SW_WORKSPACE_ROOT` set — warn on failure, do not block scaffold
   unless the operator opts into hard-fail. Link remediation to `docs/guides/configuration.md` **MemPalace memory
   provider** (hook recipes, break-glass, live-smoke checklist).
+
+For **basic-memory**:
+
+- **Catalog-detect only** — offer when `basic-memory` is registered in `.sw/memory-provider-catalog.json`; **never
+  auto-install** the package and **never create** a Basic Memory Cloud account or workspace (`uv tool install
+  'basic-memory>=0.22.0,<1.0.0'` and cloud signup are documented in `docs/guides/configuration.md`; operator
+  runs them manually).
+- Require explicit `memory.basicMemory.mode` (`local` | `cloud`) — no silent cross-mode defaulting beyond the
+  schema default of `local` when the operator confirms local.
+- **Local:** collect `memory.basicMemory.projectPath` (local filesystem path; reject remote URLs) and
+  `memory.project`. Seed defaults: `memoriesDirectory: "memories"`, `rulesDirectory: "rules"`,
+  `failClosed: true`, `redactOnWrite: true`, `supportedPackage: "basic-memory>=0.22.0,<1.0.0"`.
+- **Cloud:** collect optional `apiBase` (default `https://cloud.basicmemory.com`), `tokenEnv` (default
+  `BASIC_MEMORY_API_KEY`), and optional `workspace` / `projectId`. Confirm the token is present in the
+  environment or secret store — never write the token into config.
+- **Doctor / validate when configured:** for local, probe package import (warn with install recipe on failure)
+  and verify `projectPath` is a directory; for cloud, verify `tokenEnv` is set (never print the value) and
+  `apiBase` host is allowlisted. Optional hook smoke: `python3 providers/basic-memory-rules.py` with
+  `SW_WORKSPACE_ROOT` set — warn on failure, do not block scaffold unless the operator opts into hard-fail.
+  Link remediation to `docs/guides/configuration.md` **Basic Memory provider** (mode selection, SSRF,
+  break-glass, live-smoke checklist).
 
 ### 3. Review provider
 
@@ -223,6 +245,9 @@ Detect and recommend (never hard-fail scaffold):
 - MemPalace package import + `memory.mempalace.palacePath` directory probe when `memory.provider` is `mempalace`
   (install recipe + live-smoke checklist: `docs/guides/configuration.md` **MemPalace memory provider**; no
   auto-install).
+- Basic Memory mode + local package/`projectPath` or cloud `tokenEnv` presence (+ allowlisted `apiBase`) when
+  `memory.provider` is `basic-memory` (install recipe + live-smoke checklist: `docs/guides/configuration.md`
+  **Basic Memory provider**; no auto-install / no cloud account create).
 - **`orchestration.planPolicy`:** surface current value vs default (`canonical`); warn when set to
   `proposed` (fixture/adoption path — kernel envelope unchanged).
 - **`verify-unconfigured`** via `python3 scripts/verify-unconfigured.py` — CTA: run `/sw-init`.
