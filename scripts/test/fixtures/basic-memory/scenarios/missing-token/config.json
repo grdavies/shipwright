@@ -1,0 +1,12 @@
+{
+  "memory": {
+    "provider": "basic-memory",
+    "project": "fixture-cloud",
+    "basicMemory": {
+      "mode": "cloud",
+      "failClosed": true,
+      "tokenEnv": "BASIC_MEMORY_API_KEY"
+    }
+  },
+  "expectedErrorSubstring": "BASIC_MEMORY_API_KEY"
+}

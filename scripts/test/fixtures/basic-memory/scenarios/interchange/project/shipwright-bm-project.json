@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "adapter": "shipwright-basic-memory-interchange",
+  "memoriesDirectory": "memories",
+  "rulesDirectory": "rules"
+}

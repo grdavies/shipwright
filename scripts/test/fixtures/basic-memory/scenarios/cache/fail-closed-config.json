@@ -1,0 +1,9 @@
+{
+  "defaultFailClosed": true,
+  "explicitOpen": {
+    "failClosed": false
+  },
+  "explicitClosed": {
+    "failClosed": true
+  }
+}
