@@ -158,17 +158,18 @@ Run after install + config write when you want confidence before relying on MemP
 Hermetic regression lives under `scripts/test/fixtures/mempalace/` (offline — no live daemon required for CI).
 
 For **basic-memory**: `/sw-init` catalog-detects the provider but **does not auto-install** the package
-or provision a cloud workspace. Set `memory.basicMemory.mode` explicitly (`local` | `cloud`); there is
-no silent cross-mode fallback. See **Basic Memory provider** below.
+or provision a cloud account/workspace. Set `memory.basicMemory.mode` explicitly (`local` | `cloud`);
+there is no silent cross-mode fallback. See **Basic Memory provider** below.
 
 #### Basic Memory provider
 
 `memory.provider: "basic-memory"` selects the dual-mode Markdown knowledge-graph adapter. Agent sessions
 use the basic-memory MCP; guardrail hooks use `providers/basic-memory-rules.py` (never MCP from hooks).
-Adapter contract: `core/providers/basic-memory.md` (authored in a later phase).
+Adapter contract: `core/providers/basic-memory.md`.
 
 **Install (operator — no auto-install / no cloud auto-provision):** Shipwright documents the supported
-range only:
+range only; install the tool yourself before local live use. Cloud mode still requires you to create the
+Basic Memory Cloud account and API key outside Shipwright:
 
 ```bash
 uv tool install 'basic-memory>=0.22.0,<1.0.0'
@@ -176,11 +177,24 @@ uv tool install 'basic-memory>=0.22.0,<1.0.0'
 
 Pin is also recorded as `memory.basicMemory.supportedPackage` (default matches the line above).
 
+**Mode selection (required — no silent fallback)**
+
+| Mode | Transport | Credentials | Host policy |
+| --- | --- | --- | --- |
+| **`local`** (default) | Local MCP (stdio / loopback) + on-disk `projectPath` | None | Loopback only (`localhost` / `127.0.0.1` / `::1`) |
+| **`cloud`** | Allowlisted Basic Memory Cloud MCP/API | `BASIC_MEMORY_API_KEY` (or `tokenEnv`) from env / secret store — never config bodies | Default `https://cloud.basicmemory.com`; fail closed on host allowlist mismatch |
+
+Switching `local` ↔ `cloud` is an explicit `memory.basicMemory.mode` edit. Runtime MUST NOT auto-promote
+local to cloud, degrade cloud to local, or rewrite mode when the configured endpoint fails.
+
+**Schema-valid local example:**
+
 ```json
 {
   "memory": {
     "provider": "basic-memory",
     "project": "my-app",
+    "sourceOfTruth": "auto",
     "basicMemory": {
       "mode": "local",
       "projectPath": "/home/you/basic-memory/my-app",
@@ -195,25 +209,88 @@ Pin is also recorded as `memory.basicMemory.supportedPackage` (default matches t
 }
 ```
 
-Cloud mode example (token from env only — never embed in config):
+**Cloud mode example** (token from env only — never embed in config):
 
 ```json
 {
   "memory": {
     "provider": "basic-memory",
+    "project": "my-app",
     "basicMemory": {
       "mode": "cloud",
       "apiBase": "https://cloud.basicmemory.com",
       "tokenEnv": "BASIC_MEMORY_API_KEY",
-      "failClosed": true
+      "failClosed": true,
+      "redactOnWrite": true,
+      "supportedPackage": "basic-memory>=0.22.0,<1.0.0"
     }
   }
 }
 ```
 
-`memory.basicMemory` rejects unknown keys (`additionalProperties: false`). `mode` is required for
-dual-mode correctness; cloud credentials come from `BASIC_MEMORY_API_KEY` (or `tokenEnv`) only.
+```bash
+export BASIC_MEMORY_API_KEY="bmc_…"   # secret store / shell env — never commit
+```
 
+`memory.basicMemory` rejects unknown keys (`additionalProperties: false`). `mode` is required for
+dual-mode correctness. Local `projectPath` must be a **local** filesystem path — remote URLs are rejected.
+
+**SSRF / host policy**
+
+| Mode | Allowed |
+| --- | --- |
+| `local` | Loopback hosts only. Reject private, metadata, and link-local targets unless an explicitly justified + tested exception exists. Local mode MUST NOT open cloud hosts. |
+| `cloud` | Allowlisted `cloud.basicmemory.com` (or configured `apiBase` that stays on that allowlist). Bearer from `tokenEnv` only. |
+
+**Hook rule-fetch**
+
+Hooks invoke `providers/basic-memory-rules.py` (fixed argv; never MCP). Local mode reads the configured
+`rulesDirectory` under `projectPath` on disk. Cloud mode uses the allowlisted API base + bearer. Optional
+`ruleFetchCommand` overrides must match the exact allowlisted template (no shell / eval). Rule cache is
+mode-partitioned (`provider` + `mode` + project).
+
+**Break-glass / unreachable mode**
+
+When `memory.basicMemory.failClosed` is `true` (default), unreachable configured mode, missing package
+(local), missing cloud token, or rule-fetch failure **fails closed** for `guardrails.enforceBeforeSubmit`.
+Break-glass (emergency only): set `failClosed: false` to degrade-open on hook rule-fetch failure, or change
+`memory.provider` explicitly — never a silent switch to another provider or mode. Restore `failClosed: true`
+after recovery. `/sw-init` doctor surfaces mode, path/token, and package probe failures when
+`memory.provider` is `basic-memory`.
+
+**Rules directory + redaction**
+
+| Control | Behavior |
+| --- | --- |
+| `rulesDirectory` (default `rules`) | Hook `rules-load` only — always excluded from ordinary search / memory-preflight |
+| `memoriesDirectory` (default `memories`) | Ordinary typed notes by category folder |
+| Opt-in rules in search | Explicit rules-folder retrieval MUST warn that excluded material is requested |
+| Redaction on write | `redactOnWrite: true` (default) pipes every store through `scripts/memory-redact.py` |
+| Ordinary writes to rules dir | Refused — rule-class notes only via `/sw-memory-audit` / human-gated promotion |
+
+**Capability degrades**
+
+| Verb / flag | Behavior |
+| --- | --- |
+| `tasks: false` | `tasks.*` ops **degrade-open** to the local phase-board registry — do not fail unrelated memory surfaces |
+| `filePathSearch: false` | Embed the path string in the semantic `search_notes` query (no ILIKE file filter) |
+| `softDelete: false` | Prefer non-destructive edit / supersede; hard `delete_note` only on confirmed purge |
+| `link` without create-edge | Degrade with operator-visible notice; preserve best-effort `links[]` on interchange synthesis |
+| Unreachable mode (agent) | Report provider unreachable; do not mutate unrelated workflow surfaces or silently cross modes |
+
+**Live-smoke checklist** (operator, not CI)
+
+Run after install + config write when you want confidence before relying on Basic Memory in production flows:
+
+1. Set `memory.basicMemory.mode` explicitly (`local` or `cloud`) — confirm there is no silent fallback path.
+2. **Local:** `uv tool install 'basic-memory>=0.22.0,<1.0.0'` (or equivalent) and `python -c "import basic_memory"` (or package probe your install uses) succeeds; `projectPath` exists and is readable.
+3. **Cloud:** `BASIC_MEMORY_API_KEY` is set in the environment / secret store (never in config); `apiBase` stays on the allowlisted host.
+4. `python3 providers/basic-memory-rules.py` (from repo root with `SW_WORKSPACE_ROOT=.`) returns `"ok": true` and a `rules` array (may be empty) for the configured mode.
+5. Agent MCP: `list_memory_projects` (+ `cloud_info` in cloud); `search_notes` returns without the rules directory unless opt-in.
+6. Store path: redacted `store` → `write_note` under `memoriesDirectory` (not `rulesDirectory`); `read_note` / `expand` round-trips the permalink.
+7. Optional graph smoke: `build_context` traverse; dangling target degrades without failing the whole read path.
+
+Hermetic regression lives under `scripts/test/fixtures/basic-memory/` (offline — no live cloud required for CI).
 
 ### Step 2 — Review provider
 
@@ -753,6 +830,8 @@ Writable brainstorms may carry forward `prd:` references.
 - CodeRabbit CLI on `PATH` when `review.provider` is `coderabbit`
 - Recallium reachable when `memory.provider` is `recallium`
 - MemPalace palace path + package probe when `memory.provider` is `mempalace` (see **MemPalace memory provider** above; no auto-install)
+- Basic Memory mode + local package/`projectPath` or cloud token-env probe when `memory.provider` is
+  `basic-memory` (see **Basic Memory provider** above; no auto-install / no cloud account create)
 - Placeholder `verify.*` commands → recommends configuring real lint/typecheck/test commands
 - Missing memory dirs → offers `mkdir -p` repair
 
@@ -786,7 +865,7 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `models.routing.skills` | Per skill directory model tier |
 | `models.routing.agents` | Per reviewer/persona/native-panel agent id → semantic tier |
 | `deliver.remediation.maxAttempts` | Auto-remediation budget per blocked phase before clean halt (default **2**) |
-| `memory.provider` | Catalog-registered provider id (default `in-repo`; seeded: `recallium`, `mempalace`). Validated by `memory_provider_register.py` — unknown ids rejected |
+| `memory.provider` | Catalog-registered provider id (default `in-repo`; seeded: `recallium`, `mempalace`, `basic-memory`). Validated by `memory_provider_register.py` — unknown ids rejected |
 | `memory.sourceOfTruth` | `auto` (default), `repo`, or `memory` — authority for **decision** records only (`auto`: external provider → memory, in-repo → repo) |
 | `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
 | `review.provider` | AI review adapter — default **`none`**; `coderabbit` opt-in |
@@ -938,6 +1017,7 @@ Neutral shipped example omits scaffold; dogfood repos may set scaffold explicitl
 | **CodeRabbit** | `review.provider: "coderabbit"` | AI review on PRs |
 | **Recallium** | `memory.provider: "recallium"` | Seeded external memory store (catalog-registered) instead of in-repo markdown |
 | **MemPalace** | `memory.provider: "mempalace"` | Local palace + MCP; install `mempalace>=3.6.0,<4.0.0` yourself — see **MemPalace memory provider** |
+| **Basic Memory** | `memory.provider: "basic-memory"` | Dual-mode local MCP or cloud; set `memory.basicMemory.mode` explicitly — see **Basic Memory provider** |
 | **Sentry** | Production signals via `/sw-feedback` or `/sw-debug` | Route production errors into the debug workstream |
 
 Provider **credentials** come from the environment or your secret store — never commit secrets.
