@@ -211,11 +211,14 @@ When the configured mode is unreachable:
 
 Catalog `hookTransport.restFetchPolicy` mirrors the same local loopback vs cloud allowlist split.
 
-### Hook transport pointer
+### Hook transport
 
 `providers/basic-memory-rules.py` (core: `core/providers/basic-memory-rules.py`) is the fixed-argv,
-non-MCP rule-fetch path. Mode-aware host gating, rules-folder filter, and mode-partitioned cache are
-implemented by that script; this adapter doc owns the contracts above.
+non-MCP rule-fetch path. Local mode reads the configured rules folder from `projectPath` on disk
+only (never opens cloud hosts). Cloud mode enforces the allowlisted API base + bearer credentials
+(`BASIC_MEMORY_API_KEY`). Optional `ruleFetchCommand` overrides must match the allowlisted executable
+and exact fixed-argv template (no shell / eval). Mode-partitioned TTL cache (R26) is a separate
+phase.
 
 ## Break-glass / fail-closed
 
