@@ -221,11 +221,45 @@ def _mempalace_palace_path(root: Path, config: dict[str, Any], override: Path | 
     return path.expanduser().resolve()
 
 
+def _basic_memory_project_path(root: Path, config: dict[str, Any], override: Path | None = None) -> Path:
+    if override is not None:
+        return override.expanduser().resolve()
+    memory = config.get("memory", {}) if isinstance(config, dict) else {}
+    basic = memory.get("basicMemory", {}) if isinstance(memory, dict) else {}
+    raw = basic.get("projectPath") if isinstance(basic, dict) else None
+    if not isinstance(raw, str) or not raw.strip():
+        raise SwitchError("memory.basicMemory.projectPath required for basic-memory interchange", cause="missing")
+    path = Path(raw.strip())
+    if not path.is_absolute():
+        path = (root / path).resolve()
+    return path.expanduser().resolve()
+
+
+def _basic_memory_dirs(config: dict[str, Any]) -> tuple[str, str]:
+    memory = config.get("memory", {}) if isinstance(config, dict) else {}
+    basic = memory.get("basicMemory", {}) if isinstance(memory, dict) else {}
+    if not isinstance(basic, dict):
+        return "memories", "rules"
+    memories = str(basic.get("memoriesDirectory") or "memories").strip() or "memories"
+    rules = str(basic.get("rulesDirectory") or "rules").strip() or "rules"
+    return memories, rules
+
+
 def _load_mempalace_interchange():
     path = Path(__file__).resolve().parent / "mempalace_interchange.py"
     spec = importlib.util.spec_from_file_location("mempalace_interchange", path)
     if spec is None or spec.loader is None:
         raise SwitchError("mempalace_interchange.py not found", cause="missing")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_basic_memory_interchange():
+    path = Path(__file__).resolve().parent / "basic_memory_interchange.py"
+    spec = importlib.util.spec_from_file_location("basic_memory_interchange", path)
+    if spec is None or spec.loader is None:
+        raise SwitchError("basic_memory_interchange.py not found", cause="missing")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -279,6 +313,49 @@ def import_mempalace_palace(palace_path: Path, fmt: str, source: Path, *, dry_ru
     return adapter.import_palace(palace_path, fmt, source, dry_run=dry_run, wing=wing)
 
 
+def export_basic_memory_project(
+    project_path: Path,
+    fmt: str,
+    out: Path,
+    *,
+    memories_directory: str,
+    rules_directory: str,
+) -> dict[str, Any]:
+    adapter = _load_basic_memory_interchange()
+    export_meta = adapter.export_project(
+        project_path,
+        fmt,
+        out,
+        include_rules=False,
+        memories_directory=memories_directory,
+        rules_directory=rules_directory,
+    )
+    return {**export_meta, **hash_interchange(out, fmt)}
+
+
+def import_basic_memory_project(
+    project_path: Path,
+    fmt: str,
+    source: Path,
+    *,
+    dry_run: bool,
+    memories_directory: str,
+    rules_directory: str,
+) -> dict[str, Any]:
+    adapter = _load_basic_memory_interchange()
+    # Import accepts rule-class rows into rules/ so migrate fidelity matches the export
+    # snapshot; ordinary export still excludes rules/ unless explicitly requested.
+    return adapter.import_project(
+        project_path,
+        fmt,
+        source,
+        dry_run=dry_run,
+        include_rules=True,
+        memories_directory=memories_directory,
+        rules_directory=rules_directory,
+    )
+
+
 def export_by_source(
     root: Path,
     *,
@@ -298,6 +375,18 @@ def export_by_source(
         if not palace.is_dir():
             raise SwitchError(f"mempalace palace missing: {palace}", cause="missing")
         return export_mempalace_palace(palace, fmt, export_path, wing=_memory_project(config))
+    if source_id == "basic-memory":
+        project = _basic_memory_project_path(root, config, store_path)
+        if not project.is_dir():
+            raise SwitchError(f"basic-memory project missing: {project}", cause="missing")
+        memories_dir, rules_dir = _basic_memory_dirs(config)
+        return export_basic_memory_project(
+            project,
+            fmt,
+            export_path,
+            memories_directory=memories_dir,
+            rules_directory=rules_dir,
+        )
     if not export_path.exists():
         raise SwitchError(f"export artifact required for synthesized source {source_id}: {export_path}", cause="missing")
     return {"provider": source_id, "format": fmt, "out": str(export_path), **hash_interchange(export_path, fmt)}
@@ -318,6 +407,17 @@ def import_by_target(
     if target_id == "mempalace":
         palace = _mempalace_palace_path(root, config, store_path)
         return import_mempalace_palace(palace, fmt, source_path, dry_run=dry_run, wing=_memory_project(config))
+    if target_id == "basic-memory":
+        project = _basic_memory_project_path(root, config, store_path)
+        memories_dir, rules_dir = _basic_memory_dirs(config)
+        return import_basic_memory_project(
+            project,
+            fmt,
+            source_path,
+            dry_run=dry_run,
+            memories_directory=memories_dir,
+            rules_directory=rules_dir,
+        )
     raise SwitchError(f"target provider import unsupported: {target_id}", cause="unsupported")
 
 

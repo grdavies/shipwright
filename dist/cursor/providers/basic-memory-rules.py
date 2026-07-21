@@ -69,7 +69,7 @@ _CLOUD_FETCH_SNIPPET = (
     "rules_dir=os.environ.get('BASIC_MEMORY_RULES_DIR','rules').strip() or 'rules';"
     "path=f'{base}/api/v1/projects/{proj}/directories/{rules_dir}/notes' if proj else "
     "f'{base}/api/v1/directories/{rules_dir}/notes';"
-    "req=urllib.request.Request(path,headers={'Authorization':f'Bearer {token}',"
+    "req=urllib.request.Request(path,headers={'Authorization':f'Bearer {api_key}',"
     "'Accept':'application/json'});"
     "print(urllib.request.urlopen(req,timeout=8).read().decode())"
 )
@@ -267,12 +267,12 @@ def resolve_api_base(bm_cfg: dict[str, Any]) -> str:
     return f"{parsed.scheme}://{parsed.netloc}"
 
 
-def resolve_token(bm_cfg: dict[str, Any]) -> str:
+def resolve_api_key(bm_cfg: dict[str, Any]) -> str:
     env_name = str(bm_cfg.get("tokenEnv") or DEFAULT_TOKEN_ENV).strip() or DEFAULT_TOKEN_ENV
-    token = os.environ.get(env_name, "").strip()
-    if not token:
+    api_key = os.environ.get(env_name, "").strip()
+    if not api_key:
         raise ValueError(f"cloud mode requires bearer token in ${env_name}")
-    return token
+    return api_key
 
 
 def default_cloud_fetch_argv(python: str) -> list[str]:
@@ -339,7 +339,7 @@ def _cloud_notes_url(api_base: str, bm_cfg: dict[str, Any], rules_dir: str) -> s
 
 def fetch_cloud_rules_http(bm_cfg: dict[str, Any]) -> list[dict[str, str]]:
     api_base = resolve_api_base(bm_cfg)
-    token = resolve_token(bm_cfg)
+    api_key = resolve_api_key(bm_cfg)
     rules_dir = resolve_rules_directory(bm_cfg)
     url = _cloud_notes_url(api_base, bm_cfg, rules_dir)
     host = (urlparse(url).hostname or "").lower()
@@ -348,7 +348,7 @@ def fetch_cloud_rules_http(bm_cfg: dict[str, Any]) -> list[dict[str, str]]:
     req = urllib.request.Request(
         url,
         headers={
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {api_key}",
             "Accept": "application/json",
         },
         method="GET",
@@ -371,11 +371,11 @@ def fetch_cloud_rules_subprocess(
     argv: list[str],
 ) -> list[dict[str, str]]:
     api_base = resolve_api_base(bm_cfg)
-    token = resolve_token(bm_cfg)
+    api_key = resolve_api_key(bm_cfg)
     rules_dir = resolve_rules_directory(bm_cfg)
     env = os.environ.copy()
     env["BASIC_MEMORY_API_BASE"] = api_base
-    env["BASIC_MEMORY_API_KEY"] = token
+    env["BASIC_MEMORY_API_KEY"] = api_key
     env["BASIC_MEMORY_RULES_DIR"] = rules_dir
     project = str(bm_cfg.get("projectId") or bm_cfg.get("project") or "").strip()
     if project:
