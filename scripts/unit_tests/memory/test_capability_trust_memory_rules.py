@@ -38,6 +38,11 @@ def test_mempalace_rules_script_gate_registered() -> None:
     assert "mempalace-rules.py" in MEMORY_RULES_SCRIPT_GATES["mempalace"]
 
 
+def test_basic_memory_rules_script_gate_registered() -> None:
+    assert "basic-memory" in MEMORY_RULES_SCRIPT_GATES
+    assert "basic-memory-rules.py" in MEMORY_RULES_SCRIPT_GATES["basic-memory"]
+
+
 def test_authorize_mempalace_rules_script_when_configured() -> None:
     auth = authorize_memory_rules_script(
         "mempalace",
@@ -50,11 +55,35 @@ def test_authorize_mempalace_rules_script_when_configured() -> None:
     assert auth["script"] == "mempalace-rules.py"
 
 
+def test_authorize_basic_memory_rules_script_when_configured() -> None:
+    auth = authorize_memory_rules_script(
+        "basic-memory",
+        "providers/basic-memory-rules.py",
+        {"config": {"memory": {"provider": "basic-memory"}}},
+        resolve_config_value=_resolve_config_value,
+        is_configured=_is_configured,
+    )
+    assert auth["authorized"] is True
+    assert auth["script"] == "basic-memory-rules.py"
+
+
 def test_catalog_membership_alone_does_not_authorize_wrong_script() -> None:
     auth = authorize_memory_rules_script(
         "mempalace",
         "providers/recallium-rules.py",
         {"config": {"memory": {"provider": "mempalace"}}},
+        resolve_config_value=_resolve_config_value,
+        is_configured=_is_configured,
+    )
+    assert auth["authorized"] is False
+    assert auth["refusalReason"] == "unknown_rules_script"
+
+
+def test_basic_memory_catalog_alone_does_not_authorize_wrong_script() -> None:
+    auth = authorize_memory_rules_script(
+        "basic-memory",
+        "providers/mempalace-rules.py",
+        {"config": {"memory": {"provider": "basic-memory"}}},
         resolve_config_value=_resolve_config_value,
         is_configured=_is_configured,
     )
@@ -74,7 +103,19 @@ def test_config_override_untrusted_blocks_rules_script() -> None:
     assert auth["refusalReason"] == "config_override_untrusted"
 
 
-@pytest.mark.parametrize("provider_id", ["recallium", "in-repo", "mempalace"])
+def test_basic_memory_config_override_untrusted_blocks_rules_script() -> None:
+    auth = authorize_memory_rules_script(
+        "basic-memory",
+        "providers/basic-memory-rules.py",
+        {"config": {"memory": {"provider": "recallium"}}},
+        resolve_config_value=_resolve_config_value,
+        is_configured=_is_configured,
+    )
+    assert auth["authorized"] is False
+    assert auth["refusalReason"] == "config_override_untrusted"
+
+
+@pytest.mark.parametrize("provider_id", ["recallium", "in-repo", "mempalace", "basic-memory"])
 def test_known_providers_have_named_script_gates(provider_id: str) -> None:
     gates = MEMORY_RULES_SCRIPT_GATES[provider_id]
     assert f"{provider_id}-rules.py" in gates

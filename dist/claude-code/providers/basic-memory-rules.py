@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Basic Memory out-of-band rule-fetcher for hooks (PRD 075 R22–R25).
+"""Basic Memory out-of-band rule-fetcher for hooks (PRD 075 R22–R26).
 
 Emits JSON rules to stdout for guardrail injection. Agent-session ops use Basic Memory
 MCP; this script is the hook transport only (catalog ``hookTransport.ruleFetch:
@@ -14,17 +14,23 @@ Dual-mode:
 Fixed-argv contract: no free-form caller args; optional ``ruleFetchCommand`` override
 must match the allowlisted executable + exact argv template (no shell / eval).
 
-Mode-partitioned TTL cache (R26) is owned by the following phase; this script always
-re-fetches under the transport contracts above.
+R26 TTL cache lives under ``.cursor/hooks/state/basic-memory-rules-cache.json``, bound to
+``provider`` + ``mode`` + project identity with a checksum over the rule payload.
+Tampered, foreign, or mode-mismatched entries are cache misses and re-fetched. When
+``memory.basicMemory.failClosed`` is true (default), rule-fetch failures block hook
+injection.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import shlex
 import subprocess
 import sys
+import tempfile
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -37,11 +43,14 @@ MAX_RULES = 25
 MAX_OUTPUT_BYTES = 64_000
 DEFAULT_RULES_DIR = "rules"
 DEFAULT_FAIL_CLOSED = True
+DEFAULT_CACHE_TTL_SEC = 300
 DEFAULT_MODE = "local"
 DEFAULT_API_BASE = "https://cloud.basicmemory.com"
 DEFAULT_TOKEN_ENV = "BASIC_MEMORY_API_KEY"
 DEFAULT_CLOUD_HOSTS = frozenset({"cloud.basicmemory.com"})
 FETCH_TIMEOUT_SEC = 8
+CACHE_VERSION = 1
+CACHE_REL = Path(".cursor") / "hooks" / "state" / "basic-memory-rules-cache.json"
 
 _CONTROL_CHAR_RE = re.compile(r"[\000-\010\013\014\016-\037]")
 _SHELL_METACHAR_RE = re.compile(r"[;|&$`<>(){}[\]*?!]")
@@ -116,11 +125,160 @@ def fail_closed_default(bm_cfg: dict[str, Any]) -> bool:
     return bool(value) if value is not None else DEFAULT_FAIL_CLOSED
 
 
+def cache_ttl_seconds(bm_cfg: dict[str, Any]) -> int:
+    raw = bm_cfg.get("ruleCacheTtlSec", DEFAULT_CACHE_TTL_SEC)
+    try:
+        ttl = int(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_CACHE_TTL_SEC
+    return max(0, ttl)
+
+
+def cache_path(workspace: Path) -> Path:
+    return workspace / CACHE_REL
+
+
+def rules_payload_checksum(rules: list[dict[str, str]]) -> str:
+    canonical = json.dumps(rules, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
 def resolve_mode(bm_cfg: dict[str, Any]) -> str:
     mode = str(bm_cfg.get("mode") or DEFAULT_MODE).strip().lower()
     if mode not in {"local", "cloud"}:
         raise ValueError(f"memory.basicMemory.mode must be local|cloud, got {mode!r}")
     return mode
+
+
+def resolve_project_identity(bm_cfg: dict[str, Any], workspace: Path, *, mode: str) -> str:
+    """Stable project binding for mode-partitioned cache keys (R26)."""
+    if mode == "local":
+        return str(canonicalize_project_path(str(bm_cfg.get("projectPath") or ""), workspace))
+    api_base = resolve_api_base(bm_cfg)
+    project = str(bm_cfg.get("projectId") or bm_cfg.get("project") or "").strip()
+    return f"{api_base}|{project}" if project else api_base
+
+
+def _binding_matches(
+    entry: dict[str, Any],
+    *,
+    provider: str,
+    mode: str,
+    project_identity: str,
+) -> bool:
+    if str(entry.get("provider") or "").strip() != provider:
+        return False
+    if str(entry.get("mode") or "").strip() != mode:
+        return False
+    bound = str(entry.get("projectIdentity") or "").strip()
+    if not bound:
+        return False
+    if mode == "local":
+        try:
+            return Path(bound).resolve() == Path(project_identity).resolve()
+        except OSError:
+            return bound == project_identity
+    return bound == project_identity
+
+
+def validate_cache_entry(
+    entry: dict[str, Any],
+    *,
+    provider: str,
+    mode: str,
+    project_identity: str,
+    ttl_seconds: int,
+) -> bool:
+    if int(entry.get("version", 0)) != CACHE_VERSION:
+        return False
+    if not _binding_matches(
+        entry,
+        provider=provider,
+        mode=mode,
+        project_identity=project_identity,
+    ):
+        return False
+    rules = entry.get("rules")
+    if not isinstance(rules, list):
+        return False
+    checksum = str(entry.get("checksum") or "")
+    if not checksum or checksum != rules_payload_checksum(rules):
+        return False
+    if ttl_seconds <= 0:
+        return False
+    try:
+        written = float(entry.get("writtenAt", 0))
+    except (TypeError, ValueError):
+        return False
+    if not written or time.time() - written > ttl_seconds:
+        return False
+    return True
+
+
+def read_rules_cache(
+    workspace: Path,
+    *,
+    provider: str,
+    mode: str,
+    project_identity: str,
+    ttl_seconds: int,
+) -> list[dict[str, str]] | None:
+    path = cache_path(workspace)
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    if not validate_cache_entry(
+        payload,
+        provider=provider,
+        mode=mode,
+        project_identity=project_identity,
+        ttl_seconds=ttl_seconds,
+    ):
+        return None
+    rules = payload.get("rules")
+    if not isinstance(rules, list):
+        return None
+    return [dict(rule) for rule in rules if isinstance(rule, dict)]
+
+
+def write_rules_cache_atomic(
+    workspace: Path,
+    *,
+    provider: str,
+    mode: str,
+    project_identity: str,
+    rules: list[dict[str, str]],
+) -> None:
+    path = cache_path(workspace)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    doc = {
+        "version": CACHE_VERSION,
+        "provider": provider,
+        "mode": mode,
+        "projectIdentity": project_identity,
+        "checksum": rules_payload_checksum(rules),
+        "writtenAt": time.time(),
+        "rules": rules,
+    }
+    text = json.dumps(doc, ensure_ascii=False, indent=2) + "\n"
+    fd, tmp = tempfile.mkstemp(
+        dir=path.parent, prefix=".basic-memory-rules-cache-", suffix=".json.tmp"
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def resolve_rules_directory(bm_cfg: dict[str, Any]) -> str:
@@ -434,9 +592,45 @@ def main(argv: list[str] | None = None) -> int:
     bm_cfg = memory.get("basicMemory")
     bm_cfg = bm_cfg if isinstance(bm_cfg, dict) else {}
     fail_closed = fail_closed_default(bm_cfg)
+    cache_ttl = cache_ttl_seconds(bm_cfg)
 
     try:
         mode = resolve_mode(bm_cfg)
+        project_identity = resolve_project_identity(bm_cfg, workspace, mode=mode)
+    except ValueError as exc:
+        return _emit(
+            {
+                "ok": False,
+                "applicable": True,
+                "provider": PROVIDER_ID,
+                "rules": [],
+                "failClosed": fail_closed,
+                "error": str(exc),
+            },
+            exit_code=1 if fail_closed else 0,
+        )
+
+    cached_rules = read_rules_cache(
+        workspace,
+        provider=PROVIDER_ID,
+        mode=mode,
+        project_identity=project_identity,
+        ttl_seconds=cache_ttl,
+    )
+    if cached_rules is not None:
+        return _emit(
+            {
+                "ok": True,
+                "applicable": True,
+                "provider": PROVIDER_ID,
+                "mode": mode,
+                "rules": cached_rules,
+                "failClosed": fail_closed,
+                "cache": "hit",
+            }
+        )
+
+    try:
         if mode == "local":
             rules = fetch_local_rules(bm_cfg, workspace)
         else:
@@ -454,6 +648,18 @@ def main(argv: list[str] | None = None) -> int:
             exit_code=1 if fail_closed else 0,
         )
 
+    if cache_ttl > 0:
+        try:
+            write_rules_cache_atomic(
+                workspace,
+                provider=PROVIDER_ID,
+                mode=mode,
+                project_identity=project_identity,
+                rules=rules,
+            )
+        except OSError:
+            pass
+
     return _emit(
         {
             "ok": True,
@@ -462,6 +668,7 @@ def main(argv: list[str] | None = None) -> int:
             "mode": mode,
             "rules": rules,
             "failClosed": fail_closed,
+            "cache": "miss",
         }
     )
 
