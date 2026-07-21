@@ -1,0 +1,266 @@
+{
+  "metadata": {
+    "supportedPackage": "basic-memory>=0.22.0,<1.0.0",
+    "adapterDoc": "core/providers/basic-memory.md",
+    "purpose": "Hermetic offline compatibility pin for PRD 075 R32 — no live Basic Memory Cloud or MCP session required.",
+    "schemaVersion": 1,
+    "source": "https://docs.basicmemory.com/reference/mcp-tools-reference"
+  },
+  "opMapTools": [
+    "list_memory_projects",
+    "recent_activity",
+    "cloud_info",
+    "search_notes",
+    "read_note",
+    "write_note",
+    "edit_note",
+    "delete_note",
+    "build_context"
+  ],
+  "tools": {
+    "list_memory_projects": {
+      "abstractOps": ["load-context"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "output_format": {
+            "type": "string",
+            "enum": ["text", "json"],
+            "description": "Use json when agents need exact project_id values"
+          }
+        }
+      }
+    },
+    "recent_activity": {
+      "abstractOps": ["load-context", "list-recent"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "description": "Filter by result type: entity, relation, observation",
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          },
+          "depth": {
+            "type": "integer",
+            "description": "Relation traversal depth for context"
+          },
+          "timeframe": {
+            "type": "string",
+            "description": "Time window (e.g. 7d, 30d, 1 week)"
+          },
+          "page": { "type": "integer", "minimum": 1 },
+          "page_size": { "type": "integer", "minimum": 1 },
+          "project": { "type": "string" },
+          "project_id": { "type": "string" },
+          "output_format": {
+            "type": "string",
+            "enum": ["text", "json"]
+          }
+        }
+      }
+    },
+    "cloud_info": {
+      "abstractOps": ["load-context"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "description": "Cloud-mode discovery overview; no parameters"
+      }
+    },
+    "search_notes": {
+      "abstractOps": ["search", "list-recent", "load-context", "rules-load"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query; optional for metadata-only searches"
+          },
+          "page": { "type": "integer", "minimum": 1 },
+          "page_size": { "type": "integer", "minimum": 1 },
+          "search_type": {
+            "type": "string",
+            "enum": ["text", "title", "permalink", "vector", "semantic", "hybrid"]
+          },
+          "note_types": {
+            "description": "Frontmatter type filter",
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          },
+          "entity_types": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          },
+          "categories": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          },
+          "after_date": { "type": "string" },
+          "metadata_filters": {
+            "oneOf": [{ "type": "object" }, { "type": "string" }]
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "status": { "type": "string" },
+          "min_similarity": { "type": "number" },
+          "search_all_projects": {
+            "type": "boolean",
+            "description": "Default false — keep ordinary search project-scoped"
+          },
+          "project": { "type": "string" },
+          "project_id": { "type": "string" },
+          "output_format": {
+            "type": "string",
+            "enum": ["text", "json"]
+          }
+        }
+      }
+    },
+    "read_note": {
+      "abstractOps": ["expand"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Title, permalink, or memory:// URL"
+          },
+          "page": { "type": "integer", "minimum": 1 },
+          "page_size": { "type": "integer", "minimum": 1 },
+          "include_frontmatter": { "type": "boolean" },
+          "project": { "type": "string" },
+          "project_id": { "type": "string" },
+          "output_format": {
+            "type": "string",
+            "enum": ["text", "json"]
+          }
+        },
+        "required": ["identifier"]
+      }
+    },
+    "write_note": {
+      "abstractOps": ["store", "modify"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "directory": {
+            "type": "string",
+            "description": "Relative folder path (aliases: folder, dir, path)"
+          },
+          "tags": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          },
+          "note_type": { "type": "string" },
+          "metadata": {
+            "oneOf": [{ "type": "object" }, { "type": "string" }]
+          },
+          "overwrite": { "type": "boolean" },
+          "workspace": {
+            "type": "string",
+            "description": "Cloud workspace name or tenant id"
+          },
+          "project": { "type": "string" },
+          "project_id": { "type": "string" },
+          "output_format": {
+            "type": "string",
+            "enum": ["text", "json"]
+          }
+        },
+        "required": ["title", "content", "directory"]
+      }
+    },
+    "edit_note": {
+      "abstractOps": ["modify"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "identifier": { "type": "string" },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "append",
+              "prepend",
+              "find_replace",
+              "replace_section",
+              "insert_before_section",
+              "insert_after_section"
+            ]
+          },
+          "content": { "type": "string" },
+          "section": { "type": "string" },
+          "find_text": { "type": "string" },
+          "expected_replacements": { "type": "integer", "minimum": 1 },
+          "workspace": { "type": "string" },
+          "project": { "type": "string" },
+          "project_id": { "type": "string" },
+          "output_format": {
+            "type": "string",
+            "enum": ["text", "json"]
+          }
+        },
+        "required": ["identifier", "operation", "content"]
+      }
+    },
+    "delete_note": {
+      "abstractOps": ["modify"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "identifier": { "type": "string" },
+          "is_directory": { "type": "boolean" },
+          "project": { "type": "string" },
+          "project_id": { "type": "string" },
+          "output_format": {
+            "type": "string",
+            "enum": ["text", "json"]
+          }
+        },
+        "required": ["identifier"]
+      }
+    },
+    "build_context": {
+      "abstractOps": ["traverse"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "memory:// URL or path"
+          },
+          "depth": {
+            "oneOf": [{ "type": "string" }, { "type": "integer" }],
+            "description": "Traversal depth (default 1)"
+          },
+          "timeframe": { "type": "string" },
+          "page": { "type": "integer", "minimum": 1 },
+          "page_size": { "type": "integer", "minimum": 1 },
+          "max_related": { "type": "integer", "minimum": 1 },
+          "project": { "type": "string" },
+          "project_id": { "type": "string" },
+          "workspace": { "type": "string" },
+          "output_format": {
+            "type": "string",
+            "enum": ["text", "json"]
+          }
+        },
+        "required": ["url"]
+      }
+    }
+  }
+}

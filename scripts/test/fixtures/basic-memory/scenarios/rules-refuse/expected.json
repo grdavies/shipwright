@@ -1,0 +1,5 @@
+{
+  "ordinaryImportIds": ["bm-learning-001"],
+  "promotionImportIds": ["bm-learning-001", "bm-rule-secret"],
+  "ordinaryExportExcludesRule": true
+}
