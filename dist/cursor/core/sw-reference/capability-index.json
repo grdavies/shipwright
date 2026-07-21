@@ -401,6 +401,29 @@
       }
     },
     {
+      "id": "provider.providers.basic-memory",
+      "kind": "provider",
+      "sourcePath": "core/providers/basic-memory.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "memory.provider",
+            "equals": "basic-memory"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "memory",
+          "adapterId": "basic-memory",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.py"
+        }
+      }
+    },
+    {
       "id": "provider.providers.code-review.CAPABILITIES",
       "kind": "provider",
       "sourcePath": "core/providers/code-review/CAPABILITIES.md",
