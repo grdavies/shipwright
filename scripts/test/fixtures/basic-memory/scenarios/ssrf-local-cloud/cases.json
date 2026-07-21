@@ -1,0 +1,43 @@
+{
+  "localWithCloudApiBase": {
+    "memory": {
+      "provider": "basic-memory",
+      "basicMemory": {
+        "mode": "local",
+        "projectPath": "/fixture/bm-project",
+        "apiBase": "https://cloud.basicmemory.com"
+      }
+    },
+    "expectedErrorSubstring": "must not open cloud"
+  },
+  "localRemoteProjectPath": {
+    "memory": {
+      "provider": "basic-memory",
+      "basicMemory": {
+        "mode": "local",
+        "projectPath": "https://evil.example/project"
+      }
+    },
+    "expectedErrorSubstring": "filesystem"
+  },
+  "cloudEvilHost": {
+    "memory": {
+      "provider": "basic-memory",
+      "basicMemory": {
+        "mode": "cloud",
+        "apiBase": "https://evil.example"
+      }
+    },
+    "expectedErrorSubstring": "allowlisted"
+  },
+  "cloudAllowlistedHost": {
+    "memory": {
+      "provider": "basic-memory",
+      "basicMemory": {
+        "mode": "cloud",
+        "apiBase": "https://cloud.basicmemory.com"
+      }
+    },
+    "expectedApiBase": "https://cloud.basicmemory.com"
+  }
+}

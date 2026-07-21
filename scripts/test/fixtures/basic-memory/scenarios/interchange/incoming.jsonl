@@ -1,0 +1,2 @@
+{"id":"bm-merge-a","category":"decision","content":"Incoming merge payload with conflicting id but different body.","title":"Merge A Incoming","links":[{"to":"bm-merge-b","edge":"relates-to"}]}
+{"id":"bm-merge-c","category":"learning","content":"Fresh learning note from interchange import.","title":"Merge C","links":[]}

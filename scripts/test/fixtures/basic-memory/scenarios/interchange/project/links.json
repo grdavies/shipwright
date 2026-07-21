@@ -1,0 +1,9 @@
+{
+  "links": [
+    {
+      "source": "bm-merge-a",
+      "target": "bm-merge-b",
+      "edge": "relates-to"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "provider": "basic-memory",
+  "supportedPackage": "basic-memory>=0.22.0,<1.0.0",
+  "scenarios": [
+    "ssrf-local-cloud",
+    "missing-token",
+    "cache",
+    "rules-refuse",
+    "interchange"
+  ],
+  "compatToolSchemas": "compat-tool-schemas.json",
+  "notes": "Hermetic offline suite — no live Basic Memory Cloud or MCP session required."
+}

@@ -1,0 +1,13 @@
+{
+  "memory": {
+    "provider": "basic-memory",
+    "basicMemory": {
+      "mode": "local",
+      "projectPath": "/fixture/bm-project",
+      "rulesDirectory": "rules",
+      "memoriesDirectory": "memories"
+    }
+  },
+  "ordinaryImportSkipsRules": true,
+  "promotionImportIncludesRules": true
+}
