@@ -47,9 +47,13 @@ def test_capabilities_doc_documents_registration_checklist() -> None:
 
 
 def test_seeded_catalog_entries_satisfy_checklist(repo_root: Path) -> None:
-    """O — recallium and in-repo satisfy the registration checklist including credentials."""
+    """O — every seeded catalog provider satisfies the registration checklist including credentials."""
+    catalog = load_catalog(repo_root)
+    expected = sorted(str(k) for k in (catalog.get("providers") or {}))
     provider_ids = validate_seeded_catalog_checklist(repo_root)
-    assert provider_ids == ["in-repo", "recallium"]
+    assert provider_ids == expected
+    # PRD 075 / 074 seeded rows must remain present alongside in-repo + recallium.
+    assert {"basic-memory", "in-repo", "mempalace", "recallium"}.issubset(provider_ids)
 
 
 def test_missing_credentials_clause_fails_checklist(repo_root: Path, tmp_path: Path) -> None:
