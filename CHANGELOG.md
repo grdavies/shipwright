@@ -582,6 +582,7 @@
 * merge phase store-expand-inactivate-purge into feat/mempalace-memory-provider (a2f32d3) <!-- sw-deliver:store-expand-inactivate-purge -->
 * merge phase hermetic-fixtures-compatibility into feat/mempalace-memory-provider (5ee9bbc) <!-- sw-deliver:hermetic-fixtures-compatibility -->
 * merge phase catalog-row-dual-mode-hooktransport into feat/basic-memory-provider (5ee3fee) <!-- sw-deliver:catalog-row-dual-mode-hooktransport -->
+* merge phase config-schema-open-provider-string into feat/basic-memory-provider (f1f1ec0) <!-- sw-deliver:config-schema-open-provider-string -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
