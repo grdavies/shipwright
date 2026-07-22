@@ -585,6 +585,7 @@
 * merge phase config-schema-open-provider-string into feat/basic-memory-provider (f1f1ec0) <!-- sw-deliver:config-schema-open-provider-string -->
 * merge phase config-schema-open-provider-string into feat/basic-memory-provider (a6869e2) <!-- sw-deliver:config-schema-open-provider-string -->
 * merge phase catalog-row-loopback-hooktransport into feat/obsidian-memory-provider (27a507b) <!-- sw-deliver:catalog-row-loopback-hooktransport -->
+* merge phase config-schema-open-provider-string into feat/obsidian-memory-provider (051987c) <!-- sw-deliver:config-schema-open-provider-string -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
