@@ -20,7 +20,8 @@ init/validate, portability self-check, version-drift notice, write schema-valid
 `.cursor/workflow.config.json`; retains doctor and repair modes on re-run.
 
 **Does NOT:** scaffold CI workflows, migrate Recallium memories into in-repo, auto-install MemPalace (or any
-memory provider package), auto-seed rule files, or write global (user-level) config — repo-local only.
+memory provider package), auto-install Obsidian or the Local REST API community plugin, auto-seed rule files,
+or write global (user-level) config — repo-local only.
 
 ## Flags
 
@@ -86,6 +87,7 @@ Offer:
 | recallium | `recallium` | Requires local Recallium at `memory.connection.restBaseUrl` |
 | mempalace | `mempalace` | Local palace directory + MemPalace MCP; see `docs/guides/configuration.md` **MemPalace memory provider** |
 | basic-memory | `basic-memory` | Dual-mode local MCP or Basic Memory Cloud; see `docs/guides/configuration.md` **Basic Memory provider** |
+| obsidian | `obsidian` | Obsidian vault + Local REST API on loopback; see `docs/guides/configuration.md` **Obsidian memory provider** |
 
 For **in-repo**:
 
@@ -135,6 +137,23 @@ For **basic-memory**:
   `SW_WORKSPACE_ROOT` set — warn on failure, do not block scaffold unless the operator opts into hard-fail.
   Link remediation to `docs/guides/configuration.md` **Basic Memory provider** (mode selection, SSRF,
   break-glass, live-smoke checklist).
+
+For **obsidian**:
+
+- **Catalog-detect only** — offer when `obsidian` is registered in `.sw/memory-provider-catalog.json`; **never
+  auto-install** Obsidian, the Local REST API community plugin, or an API key (enablement + `OBSIDIAN_API_KEY`
+  are documented in `docs/guides/configuration.md`; operator completes them manually).
+- Collect `memory.obsidian.vaultPath` (absolute local filesystem path; reject remote URLs) and `memory.project`
+  (folder name under `memoriesDirectory`).
+- Seed schema defaults: `mcpBaseUrl: "http://127.0.0.1:27123"`, `tokenEnv: "OBSIDIAN_API_KEY"`,
+  `memoriesDirectory: "memories"`, `rulesDirectory: "rules"`, `failClosed: true`, `redactOnWrite: true`.
+- **Doctor / validate when configured:** verify `vaultPath` exists and is a directory; confirm `tokenEnv` is set
+  in the environment or secret store (never print the value); optional loopback reachability probe against
+  `memory.obsidian.mcpBaseUrl` (HTTP on loopback by default — warn when Obsidian is closed or the plugin is
+  disabled); optional hook smoke: `python3 providers/obsidian-rules.py` with `SW_WORKSPACE_ROOT` set — warn on
+  failure, do not block scaffold unless the operator opts into hard-fail. Link remediation to
+  `docs/guides/configuration.md` **Obsidian memory provider** (HTTP vs HTTPS, unreachable degrade, rules folder,
+  live-smoke checklist).
 
 ### 3. Review provider
 
@@ -248,6 +267,9 @@ Detect and recommend (never hard-fail scaffold):
 - Basic Memory mode + local package/`projectPath` or cloud `tokenEnv` presence (+ allowlisted `apiBase`) when
   `memory.provider` is `basic-memory` (install recipe + live-smoke checklist: `docs/guides/configuration.md`
   **Basic Memory provider**; no auto-install / no cloud account create).
+- Obsidian vault path + `tokenEnv` presence + loopback reachability when `memory.provider` is `obsidian`
+  (install/enable recipe + live-smoke checklist: `docs/guides/configuration.md` **Obsidian memory provider**;
+  no auto-install of Obsidian or the Local REST API plugin).
 - **`orchestration.planPolicy`:** surface current value vs default (`canonical`); warn when set to
   `proposed` (fixture/adoption path — kernel envelope unchanged).
 - **`verify-unconfigured`** via `python3 scripts/verify-unconfigured.py` — CTA: run `/sw-init`.

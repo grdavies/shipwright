@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "provider": "obsidian",
+  "projectIdentity": "/fixture/vault",
+  "checksum": "0000000000000000000000000000000000000000000000000000000000000000",
+  "writtenAt": 1750000000.0,
+  "rules": [
+    {
+      "id": "rule-guard-no-secrets",
+      "summary": "Never store raw secrets in memory notes."
+    }
+  ]
+}

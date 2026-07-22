@@ -144,6 +144,60 @@
         "location": "env-only",
         "notes": "Cloud mode: BASIC_MEMORY_API_KEY (bmc_\u2026) from environment or secret store only \u2014 never catalog, config bodies, or memory content. Local mode needs no remote token."
       }
+    },
+    "obsidian": {
+      "adapterDoc": "core/providers/obsidian.md",
+      "rulesScript": "providers/obsidian-rules.py",
+      "capabilities": {
+        "typedMemories": true,
+        "filePathSearch": true,
+        "categoryFilter": true,
+        "recencyControl": true,
+        "rulesAtStartup": true,
+        "tasks": false,
+        "export": true,
+        "import": true,
+        "softDelete": false,
+        "semanticSearch": false
+      },
+      "hookTransport": {
+        "agentSession": "mcp",
+        "ruleFetch": "out-of-band-script",
+        "notes": "Agent-session via Obsidian Local REST API built-in MCP on loopback (default http://127.0.0.1:27123). Hooks use providers/obsidian-rules.py (vaultPath filesystem and/or loopback REST, non-MCP). Obsidian + Local REST API plugin must be running for agent ops. Bearer token from env/secret-store (OBSIDIAN_API_KEY). No silent fallback to another provider.",
+        "restFetchPolicy": {
+          "allowedHosts": [
+            "localhost",
+            "127.0.0.1",
+            "::1"
+          ],
+          "allowLoopback": true,
+          "allowPrivate": false,
+          "allowLinkLocal": false,
+          "allowMetadata": false
+        }
+      },
+      "interchange": {
+        "jsonl": "synthesized",
+        "okf": "synthesized"
+      },
+      "sourceOfTruthClass": "memory-authoritative",
+      "credentials": {
+        "location": "env-only",
+        "notes": "OBSIDIAN_API_KEY (Local REST API bearer) from environment or secret store only \u2014 never catalog, config bodies, or memory content."
+      },
+      "planningLineage": {
+        "prd": "076-prd-obsidian-memory-provider",
+        "dependsOn": [
+          "071-prd-pluggable-memory-adapter-framework"
+        ],
+        "doesNotSupersede": [
+          "074-prd-mempalace-memory-provider",
+          "075-prd-basic-memory-provider",
+          "010"
+        ],
+        "portfolioItem": "C",
+        "portfolioDecision": "planning#491"
+      }
     }
   }
 }

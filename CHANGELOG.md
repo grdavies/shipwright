@@ -584,6 +584,16 @@
 * merge phase catalog-row-dual-mode-hooktransport into feat/basic-memory-provider (5ee3fee) <!-- sw-deliver:catalog-row-dual-mode-hooktransport -->
 * merge phase config-schema-open-provider-string into feat/basic-memory-provider (f1f1ec0) <!-- sw-deliver:config-schema-open-provider-string -->
 * merge phase config-schema-open-provider-string into feat/basic-memory-provider (a6869e2) <!-- sw-deliver:config-schema-open-provider-string -->
+* merge phase catalog-row-loopback-hooktransport into feat/obsidian-memory-provider (27a507b) <!-- sw-deliver:catalog-row-loopback-hooktransport -->
+* merge phase config-schema-open-provider-string into feat/obsidian-memory-provider (051987c) <!-- sw-deliver:config-schema-open-provider-string -->
+* merge phase adapter-op-map-category-project-mapping into feat/obsidian-memory-provider (66368e5) <!-- sw-deliver:adapter-op-map-category-project-mapping -->
+* merge phase loopback-transport-agent-ops-checklist into feat/obsidian-memory-provider (4c1d3ae) <!-- sw-deliver:loopback-transport-agent-ops-checklist -->
+* merge phase rules-script-transport into feat/obsidian-memory-provider (bd60e44) <!-- sw-deliver:rules-script-transport -->
+* merge phase interchange-memory-switch into feat/obsidian-memory-provider (9e3a75b) <!-- sw-deliver:interchange-memory-switch -->
+* merge phase cache-hook-trust into feat/obsidian-memory-provider (e58a65a) <!-- sw-deliver:cache-hook-trust -->
+* merge phase operator-docs-sw-init into feat/obsidian-memory-provider (f291124) <!-- sw-deliver:operator-docs-sw-init -->
+* merge phase hermetic-fixtures-compatibility into feat/obsidian-memory-provider (2ffe2e4) <!-- sw-deliver:hermetic-fixtures-compatibility -->
+* merge phase emit-dist-lineage into feat/obsidian-memory-provider (186edb6) <!-- sw-deliver:emit-dist-lineage -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
