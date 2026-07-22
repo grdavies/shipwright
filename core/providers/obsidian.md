@@ -209,6 +209,13 @@ loopback REST with the same host + credential policy. Optional `ruleFetchCommand
 match the allowlisted executable after fixed-argv validation. Catalog membership alone does not
 grant hook trust — `capability_trust` authorizes the rules script.
 
+## Break-glass / fail-closed
+
+When `memory.obsidian.failClosed` is true (default) and rule-fetch is unreachable, mistyped, or
+tampered, guardrail enforcement before submit MUST block. Operator break-glass follows the shared
+Shipwright memory guardrail path — set `failClosed: false` or change `memory.provider` explicitly —
+not a silent degrade to another provider.
+
 ## Install / operator notes (no auto-install)
 
 Adapters and `/sw-init` **document** Obsidian + Local REST API plugin enablement; they never
