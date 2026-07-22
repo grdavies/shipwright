@@ -104,7 +104,6 @@ class CallSite:
             "file": self.file,
             "line": self.line,
             "column": self.column,
-            "literal": self.literal,
             "script": self.script,
             "classification": classification,
         }
@@ -151,8 +150,12 @@ def iter_scan_files(root: Path, tree_rel: str) -> Iterable[Path]:
     if not tree.is_dir():
         return
     for path in sorted(tree.rglob("*")):
-        if path.is_file() and path.suffix in SCAN_SUFFIXES:
-            yield path
+        if not path.is_file() or path.suffix not in SCAN_SUFFIXES:
+            continue
+        rel = path.relative_to(root).as_posix()
+        if rel == INVENTORY_REL.as_posix():
+            continue
+        yield path
 
 
 def scan_tree(root: Path, tree_rel: str) -> list[CallSite]:
