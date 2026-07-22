@@ -24,6 +24,7 @@ legacy two-provider fallback.
 | `recallium` | External REST/MCP store; requires reachable `memory.connection.restBaseUrl`; `sourceOfTruthClass: memory-authoritative` |
 | `mempalace` | Local palace directory + MemPalace MCP (agent session); hook rule-fetch via `providers/mempalace-rules.py`; `sourceOfTruthClass: memory-authoritative` |
 | `basic-memory` | Dual-mode Markdown knowledge graph (local loopback MCP or Basic Memory Cloud); hook rule-fetch via `providers/basic-memory-rules.py`; `sourceOfTruthClass: memory-authoritative` |
+| `obsidian` | Obsidian vault + Local REST API MCP on loopback; hook rule-fetch via `providers/obsidian-rules.py`; `sourceOfTruthClass: memory-authoritative` |
 
 **Authors register; operators select.** Plugin authors add a catalog row + adapter doc + rules script
 (checklist: `core/skills/memory/CAPABILITIES.md` **Adapter registration checklist**). Operators only set
@@ -291,6 +292,123 @@ Run after install + config write when you want confidence before relying on Basi
 7. Optional graph smoke: `build_context` traverse; dangling target degrades without failing the whole read path.
 
 Hermetic regression lives under `scripts/test/fixtures/basic-memory/` (offline — no live cloud required for CI).
+
+For **obsidian**: `/sw-init` catalog-detects the provider but **does not auto-install** Obsidian, the
+Local REST API community plugin, or an API key. Point `memory.obsidian.vaultPath` at an existing vault
+and enable the plugin yourself; see **Obsidian memory provider** below.
+
+#### Obsidian memory provider
+
+`memory.provider: "obsidian"` selects the Obsidian vault adapter. Agent sessions use the **Local REST API**
+plugin's MCP/HTTP surface on loopback; guardrail hooks use `providers/obsidian-rules.py` (never MCP from
+hooks). Adapter contract: `core/providers/obsidian.md`.
+
+**Install (operator — no auto-install):** Shipwright documents enablement only; you install and configure
+Obsidian yourself before live use:
+
+1. Install [Obsidian](https://obsidian.md/) and open (or create) a vault at `memory.obsidian.vaultPath`.
+2. Settings → Community plugins → enable **Local REST API** (supported plugin range is pinned in
+   `scripts/test/fixtures/obsidian/compat-tool-schemas.json` at implement time).
+3. Copy the API key from the plugin settings into your environment — never commit it:
+
+```bash
+export OBSIDIAN_API_KEY="…"   # secret store / shell env — never commit
+```
+
+Shipwright **never** auto-installs Obsidian, the plugin, or provisions the vault.
+
+**HTTP vs HTTPS (loopback only)**
+
+| Setting | Default | Notes |
+| --- | --- | --- |
+| `memory.obsidian.mcpBaseUrl` | `http://127.0.0.1:27123` | **HTTP** on loopback — Local REST API's default local binding |
+| Host policy | Loopback only | `localhost` / `127.0.0.1` / `::1` — reject private, metadata, and link-local hosts |
+| HTTPS | Operator-local only | If your plugin serves HTTPS on loopback, set `mcpBaseUrl` explicitly (e.g. `https://127.0.0.1:27124`) — still loopback-only; never point at remote cloud hosts |
+
+Bearer auth uses `memory.obsidian.tokenEnv` (default `OBSIDIAN_API_KEY`) from env / secret store only —
+never embed tokens in config bodies.
+
+**Schema-valid example** (vault + project folder):
+
+```json
+{
+  "memory": {
+    "provider": "obsidian",
+    "project": "my-app",
+    "sourceOfTruth": "auto",
+    "obsidian": {
+      "vaultPath": "/home/you/vaults/my-app",
+      "mcpBaseUrl": "http://127.0.0.1:27123",
+      "tokenEnv": "OBSIDIAN_API_KEY",
+      "memoriesDirectory": "memories",
+      "rulesDirectory": "rules",
+      "ruleCacheTtlSec": 300,
+      "failClosed": true,
+      "redactOnWrite": true
+    }
+  }
+}
+```
+
+`memory.obsidian` rejects unknown keys (`additionalProperties: false`). `vaultPath` must be an **absolute**
+local filesystem path — runtime resolves **realpath** and confines all note ids under the vault root;
+traversal (`..`), symlink escapes, and paths outside the vault are rejected fail-closed.
+
+**Hook rule-fetch**
+
+Hooks invoke `providers/obsidian-rules.py` (fixed argv; never MCP). Primary path reads the configured
+`rulesDirectory` under `vaultPath` on disk; loopback REST fallback uses the same host + credential policy
+as agent ops. Optional `ruleFetchCommand` overrides must match the exact allowlisted template (no shell /
+eval). Rule cache is partitioned (`provider` + `vaultPath` + project).
+
+**Unreachable Obsidian / closed app (no silent fallback)**
+
+When Obsidian is not running, the vault is missing, the Local REST API plugin is disabled, or the loopback
+endpoint is unreachable:
+
+| Surface | Contract |
+| --- | --- |
+| Agent session | Report provider unreachable — **do not** silently switch `memory.provider` or mutate unrelated workflow surfaces |
+| Guardrail hooks | When `memory.obsidian.failClosed` is `true` (default), rule-fetch failure **fails closed** for `guardrails.enforceBeforeSubmit` |
+| Break-glass (emergency only) | Set `failClosed: false` to degrade-open on hook rule-fetch failure, or change `memory.provider` explicitly — restore `true` after Obsidian is healthy |
+
+`/sw-init` doctor surfaces vault path, `tokenEnv` presence (never prints the value), and loopback reachability
+when `memory.provider` is `obsidian`.
+
+**Rules directory + redaction**
+
+| Control | Behavior |
+| --- | --- |
+| `rulesDirectory` (default `rules`) | Hook `rules-load` only — always excluded from ordinary search / memory-preflight |
+| `memoriesDirectory` (default `memories`) | Ordinary typed notes under `memories/<memory.project>/` by category folder |
+| Opt-in rules in search | Explicit rules-folder retrieval MUST warn that excluded material is requested |
+| Redaction on write | `redactOnWrite: true` (default) pipes every store through `scripts/memory-redact.py` |
+| Ordinary writes to rules dir | Refused — rule-class notes only via `/sw-memory-audit` / human-gated promotion |
+
+**Capability degrades**
+
+| Verb / flag | Behavior |
+| --- | --- |
+| `tasks: false` | `tasks.*` ops **degrade-open** to the local phase-board registry — do not fail unrelated memory surfaces |
+| `semanticSearch: false` | Keyword/path search only — do not claim embedding search |
+| `filePathSearch: true` | Prefer vault-relative path filters when the caller supplies a path |
+| `softDelete: false` | Prefer non-destructive edit / supersede; hard delete only on confirmed purge |
+| Unreachable vault (agent) | Report provider unreachable; never silently cross providers |
+
+**Live-smoke checklist** (operator, not CI)
+
+Run after vault + plugin enablement + config write when you want confidence before relying on Obsidian in
+production flows:
+
+1. Obsidian is running with the configured vault open at `memory.obsidian.vaultPath`.
+2. Local REST API community plugin is enabled; `OBSIDIAN_API_KEY` is set in the environment (never in config).
+3. Loopback probe succeeds, e.g. `curl -fsS -H "Authorization: Bearer $OBSIDIAN_API_KEY" http://127.0.0.1:27123/` (adjust host/port to `mcpBaseUrl`).
+4. `python3 providers/obsidian-rules.py` (from repo root with `SW_WORKSPACE_ROOT=.`) returns `"ok": true` and a `rules` array (may be empty).
+5. Agent MCP: Local REST API list/search under `memories/<memory.project>/` — results exclude `rulesDirectory` unless opt-in.
+6. Store path: redacted `store` under `memoriesDirectory` (not `rulesDirectory`); `expand` round-trips the vault-relative path id.
+7. Optional link smoke: wikilink / frontmatter relation; dangling target degrades without failing the whole read path.
+
+Hermetic regression lives under `scripts/test/fixtures/obsidian/` (offline — no live Obsidian required for CI).
 
 ### Step 2 — Review provider
 
@@ -832,6 +950,8 @@ Writable brainstorms may carry forward `prd:` references.
 - MemPalace palace path + package probe when `memory.provider` is `mempalace` (see **MemPalace memory provider** above; no auto-install)
 - Basic Memory mode + local package/`projectPath` or cloud token-env probe when `memory.provider` is
   `basic-memory` (see **Basic Memory provider** above; no auto-install / no cloud account create)
+- Obsidian vault path + `OBSIDIAN_API_KEY` / loopback reachability when `memory.provider` is `obsidian`
+  (see **Obsidian memory provider** above; no auto-install of Obsidian or the Local REST API plugin)
 - Placeholder `verify.*` commands → recommends configuring real lint/typecheck/test commands
 - Missing memory dirs → offers `mkdir -p` repair
 
@@ -865,7 +985,7 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `models.routing.skills` | Per skill directory model tier |
 | `models.routing.agents` | Per reviewer/persona/native-panel agent id → semantic tier |
 | `deliver.remediation.maxAttempts` | Auto-remediation budget per blocked phase before clean halt (default **2**) |
-| `memory.provider` | Catalog-registered provider id (default `in-repo`; seeded: `recallium`, `mempalace`, `basic-memory`). Validated by `memory_provider_register.py` — unknown ids rejected |
+| `memory.provider` | Catalog-registered provider id (default `in-repo`; seeded: `recallium`, `mempalace`, `basic-memory`, `obsidian`). Validated by `memory_provider_register.py` — unknown ids rejected |
 | `memory.sourceOfTruth` | `auto` (default), `repo`, or `memory` — authority for **decision** records only (`auto`: external provider → memory, in-repo → repo) |
 | `memory.autoSync` | Stop-hook thresholds for `/sw-memory-sync` scheduling |
 | `review.provider` | AI review adapter — default **`none`**; `coderabbit` opt-in |
@@ -1018,6 +1138,7 @@ Neutral shipped example omits scaffold; dogfood repos may set scaffold explicitl
 | **Recallium** | `memory.provider: "recallium"` | Seeded external memory store (catalog-registered) instead of in-repo markdown |
 | **MemPalace** | `memory.provider: "mempalace"` | Local palace + MCP; install `mempalace>=3.6.0,<4.0.0` yourself — see **MemPalace memory provider** |
 | **Basic Memory** | `memory.provider: "basic-memory"` | Dual-mode local MCP or cloud; set `memory.basicMemory.mode` explicitly — see **Basic Memory provider** |
+| **Obsidian** | `memory.provider: "obsidian"` | Vault + Local REST API on loopback; enable plugin + `OBSIDIAN_API_KEY` yourself — see **Obsidian memory provider** |
 | **Sentry** | Production signals via `/sw-feedback` or `/sw-debug` | Route production errors into the debug workstream |
 
 Provider **credentials** come from the environment or your secret store — never commit secrets.
