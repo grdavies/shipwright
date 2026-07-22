@@ -746,6 +746,57 @@
             }
           }
         },
+        "obsidian": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Obsidian provider settings (when memory.provider is obsidian). Local REST API MCP on loopback only. vaultPath is realpath-confined: resolved absolute paths must stay under the configured vault root; traversal and symlink escapes are rejected. Install recipes document Obsidian + Local REST API plugin enablement — adapters never auto-install either.",
+          "properties": {
+            "vaultPath": {
+              "type": "string",
+              "description": "Absolute filesystem path to the Obsidian vault root. Must be an absolute path; runtime resolves realpath and confines all note/path ids under this root."
+            },
+            "mcpBaseUrl": {
+              "type": "string",
+              "default": "http://127.0.0.1:27123",
+              "description": "Local REST API MCP/HTTP base URL. Loopback only (127.0.0.1 / ::1 / localhost); non-loopback hosts are rejected."
+            },
+            "tokenEnv": {
+              "type": "string",
+              "default": "OBSIDIAN_API_KEY",
+              "description": "Environment variable name for the Local REST API bearer token. Never embed tokens in config bodies."
+            },
+            "memoriesDirectory": {
+              "type": "string",
+              "default": "memories",
+              "description": "Vault-relative directory for ordinary memory notes (project folders live beneath)."
+            },
+            "rulesDirectory": {
+              "type": "string",
+              "default": "rules",
+              "description": "Vault-relative directory reserved for hook rule-fetch; excluded from ordinary memory search."
+            },
+            "ruleCacheTtlSec": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 300,
+              "description": "TTL for atomic rule-fetch cache under .cursor/ state."
+            },
+            "failClosed": {
+              "type": "boolean",
+              "default": true,
+              "description": "When true, rule-fetch / Obsidian-or-Local-REST-API unreachable fails closed for submit enforcement."
+            },
+            "redactOnWrite": {
+              "type": "boolean",
+              "default": true,
+              "description": "Apply redaction before Obsidian note writes."
+            },
+            "ruleFetchCommand": {
+              "type": "string",
+              "description": "Optional exact-executable override for rule-fetch after allowlist + fixed-argv validation."
+            }
+          }
+        },
         "project": {
           "type": "string",
           "description": "Memory project scope key (e.g. repo name)."
