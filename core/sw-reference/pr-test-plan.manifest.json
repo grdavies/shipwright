@@ -1,6 +1,13 @@
 {
   "fixtures": [
     {
+      "id": "scripts-inventory-guard",
+      "script": "scripts/check_scripts_inventory.py",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-scripts-inventory-guard"
+    },
+    {
       "id": "docs-link-check",
       "script": "scripts/docs-link-check.py",
       "args": [],
@@ -18,6 +25,13 @@
       ]
     },
     {
+      "id": "claims-audit-unit",
+      "script": "scripts/test/claims-audit-unit.test",
+      "args": [],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-claims-audit-unit"
+    },
+    {
       "id": "git-push-secret-scan-chokepoint",
       "script": "scripts/test/git-push-secret-scan-chokepoint.test",
       "args": [],
@@ -28,19 +42,11 @@
       ]
     },
     {
-      "id": "skills-spec-guard-fixtures",
-      "script": "scripts/test/skills-spec-guard.test",
+      "id": "rca-fanout-unit",
+      "script": "scripts/test/rca-fanout-unit.test",
       "args": [],
       "classification": "required",
-      "ciJobName": "feat-test-plan-skills-spec-guard",
-      "scenarios": [
-        "skills-spec-live-tree-pass",
-        "skills-spec-pass-valid-core",
-        "skills-spec-pass-valid-cursor",
-        "skills-spec-pass-valid-claude",
-        "skills-spec-fail-name-mismatch",
-        "skills-spec-fail-description-shape"
-      ]
+      "ciJobName": "feat-test-plan-rca-fanout-unit"
     },
     {
       "id": "authoring-guard-fixtures",
@@ -1433,18 +1439,19 @@
       "ciShard": 4
     },
     {
-      "id": "claims-audit-unit",
-      "script": "scripts/test/claims-audit-unit.test",
+      "id": "skills-spec-guard-fixtures",
+      "script": "scripts/test/skills-spec-guard.test",
       "args": [],
       "classification": "required",
-      "ciJobName": "feat-test-plan-claims-audit-unit"
-    },
-    {
-      "id": "rca-fanout-unit",
-      "script": "scripts/test/rca-fanout-unit.test",
-      "args": [],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-rca-fanout-unit"
+      "ciJobName": "feat-test-plan-skills-spec-guard",
+      "scenarios": [
+        "skills-spec-live-tree-pass",
+        "skills-spec-pass-valid-core",
+        "skills-spec-pass-valid-cursor",
+        "skills-spec-pass-valid-claude",
+        "skills-spec-fail-name-mismatch",
+        "skills-spec-fail-description-shape"
+      ]
     }
   ]
 }
