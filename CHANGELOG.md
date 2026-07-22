@@ -593,6 +593,7 @@
 * merge phase cache-hook-trust into feat/obsidian-memory-provider (e58a65a) <!-- sw-deliver:cache-hook-trust -->
 * merge phase operator-docs-sw-init into feat/obsidian-memory-provider (f291124) <!-- sw-deliver:operator-docs-sw-init -->
 * merge phase hermetic-fixtures-compatibility into feat/obsidian-memory-provider (2ffe2e4) <!-- sw-deliver:hermetic-fixtures-compatibility -->
+* merge phase emit-dist-lineage into feat/obsidian-memory-provider (186edb6) <!-- sw-deliver:emit-dist-lineage -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
