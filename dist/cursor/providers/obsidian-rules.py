@@ -13,15 +13,21 @@ read is unavailable or yields no rules.
 Fixed-argv contract: no free-form caller args; optional ``ruleFetchCommand`` override
 must match the allowlisted executable + exact argv template (no shell / eval).
 
-Hooks MUST NOT open an MCP handshake. When ``memory.obsidian.failClosed`` is true
-(default), rule-fetch failures block hook injection.
+R26 TTL cache lives under ``.cursor/hooks/state/obsidian-rules-cache.json``, bound to
+``provider`` + canonical ``vaultPath`` with a checksum over the rule payload.
+Tampered, foreign, or unbound entries are cache misses and re-fetched. When
+``memory.obsidian.failClosed`` is true (default), rule-fetch failures block hook
+injection.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import sys
+import tempfile
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -34,9 +40,12 @@ MAX_RULES = 25
 MAX_OUTPUT_BYTES = 64_000
 DEFAULT_RULES_DIR = "rules"
 DEFAULT_FAIL_CLOSED = True
+DEFAULT_CACHE_TTL_SEC = 300
 DEFAULT_MCP_BASE = "http://127.0.0.1:27123"
 DEFAULT_TOKEN_ENV = "OBSIDIAN_API_KEY"
 FETCH_TIMEOUT_SEC = 8
+CACHE_VERSION = 1
+CACHE_REL = Path(".cursor") / "hooks" / "state" / "obsidian-rules-cache.json"
 LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 _CONTROL_CHAR_RE = re.compile(r"[\000-\010\013\014\016-\037]")
@@ -86,6 +95,140 @@ def obsidian_config(memory: dict[str, Any]) -> dict[str, Any]:
 def fail_closed_default(obs_cfg: dict[str, Any]) -> bool:
     value = obs_cfg.get("failClosed", DEFAULT_FAIL_CLOSED)
     return bool(value) if value is not None else DEFAULT_FAIL_CLOSED
+
+
+def cache_ttl_seconds(obs_cfg: dict[str, Any]) -> int:
+    raw = obs_cfg.get("ruleCacheTtlSec", DEFAULT_CACHE_TTL_SEC)
+    try:
+        ttl = int(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_CACHE_TTL_SEC
+    return max(0, ttl)
+
+
+def cache_path(workspace: Path) -> Path:
+    return workspace / CACHE_REL
+
+
+def rules_payload_checksum(rules: list[dict[str, str]]) -> str:
+    canonical = json.dumps(rules, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def resolve_project_identity(obs_cfg: dict[str, Any]) -> str:
+    """Stable vault binding for cache keys (R26)."""
+    return str(resolve_vault_path(obs_cfg))
+
+
+def _binding_matches(
+    entry: dict[str, Any],
+    *,
+    provider: str,
+    project_identity: str,
+) -> bool:
+    if str(entry.get("provider") or "").strip() != provider:
+        return False
+    bound = str(entry.get("projectIdentity") or "").strip()
+    if not bound:
+        return False
+    try:
+        return Path(bound).resolve() == Path(project_identity).resolve()
+    except OSError:
+        return bound == project_identity
+
+
+def validate_cache_entry(
+    entry: dict[str, Any],
+    *,
+    provider: str,
+    project_identity: str,
+    ttl_seconds: int,
+) -> bool:
+    if int(entry.get("version", 0)) != CACHE_VERSION:
+        return False
+    if not _binding_matches(
+        entry,
+        provider=provider,
+        project_identity=project_identity,
+    ):
+        return False
+    rules = entry.get("rules")
+    if not isinstance(rules, list):
+        return False
+    checksum = str(entry.get("checksum") or "")
+    if not checksum or checksum != rules_payload_checksum(rules):
+        return False
+    if ttl_seconds <= 0:
+        return False
+    try:
+        written = float(entry.get("writtenAt", 0))
+    except (TypeError, ValueError):
+        return False
+    if not written or time.time() - written > ttl_seconds:
+        return False
+    return True
+
+
+def read_rules_cache(
+    workspace: Path,
+    *,
+    provider: str,
+    project_identity: str,
+    ttl_seconds: int,
+) -> list[dict[str, str]] | None:
+    path = cache_path(workspace)
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    if not validate_cache_entry(
+        payload,
+        provider=provider,
+        project_identity=project_identity,
+        ttl_seconds=ttl_seconds,
+    ):
+        return None
+    rules = payload.get("rules")
+    if not isinstance(rules, list):
+        return None
+    return [dict(rule) for rule in rules if isinstance(rule, dict)]
+
+
+def write_rules_cache_atomic(
+    workspace: Path,
+    *,
+    provider: str,
+    project_identity: str,
+    rules: list[dict[str, str]],
+) -> None:
+    path = cache_path(workspace)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    doc = {
+        "version": CACHE_VERSION,
+        "provider": provider,
+        "projectIdentity": project_identity,
+        "checksum": rules_payload_checksum(rules),
+        "writtenAt": time.time(),
+        "rules": rules,
+    }
+    text = json.dumps(doc, ensure_ascii=False, indent=2) + "\n"
+    fd, tmp = tempfile.mkstemp(
+        dir=path.parent, prefix=".obsidian-rules-cache-", suffix=".json.tmp"
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def parse_frontmatter_category(text: str) -> str | None:
@@ -349,6 +492,40 @@ def main(argv: list[str] | None = None) -> int:
 
     obs_cfg = obsidian_config(memory)
     fail_closed = fail_closed_default(obs_cfg)
+    cache_ttl = cache_ttl_seconds(obs_cfg)
+
+    try:
+        project_identity = resolve_project_identity(obs_cfg)
+    except ValueError as exc:
+        return _emit(
+            {
+                "ok": False,
+                "applicable": True,
+                "provider": PROVIDER_ID,
+                "rules": [],
+                "failClosed": fail_closed,
+                "error": str(exc),
+            },
+            exit_code=1 if fail_closed else 0,
+        )
+
+    cached_rules = read_rules_cache(
+        workspace,
+        provider=PROVIDER_ID,
+        project_identity=project_identity,
+        ttl_seconds=cache_ttl,
+    )
+    if cached_rules is not None:
+        return _emit(
+            {
+                "ok": True,
+                "applicable": True,
+                "provider": PROVIDER_ID,
+                "rules": cached_rules,
+                "failClosed": fail_closed,
+                "cache": "hit",
+            }
+        )
 
     try:
         rules, transport = fetch_rules(obs_cfg)
@@ -365,6 +542,17 @@ def main(argv: list[str] | None = None) -> int:
             exit_code=1 if fail_closed else 0,
         )
 
+    if cache_ttl > 0:
+        try:
+            write_rules_cache_atomic(
+                workspace,
+                provider=PROVIDER_ID,
+                project_identity=project_identity,
+                rules=rules,
+            )
+        except OSError:
+            pass
+
     return _emit(
         {
             "ok": True,
@@ -373,6 +561,7 @@ def main(argv: list[str] | None = None) -> int:
             "rules": rules,
             "failClosed": fail_closed,
             "transport": transport,
+            "cache": "miss",
         }
     )
 
