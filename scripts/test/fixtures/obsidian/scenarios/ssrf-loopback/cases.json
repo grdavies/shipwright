@@ -1,0 +1,29 @@
+{
+  "loopbackHttp": {
+    "mcpBaseUrl": "http://127.0.0.1:27123",
+    "ok": true
+  },
+  "loopbackLocalhost": {
+    "mcpBaseUrl": "http://localhost:27123",
+    "ok": true
+  },
+  "loopbackIpv6": {
+    "mcpBaseUrl": "http://[::1]:27123",
+    "ok": true
+  },
+  "publicHost": {
+    "mcpBaseUrl": "http://example.com:27123",
+    "ok": false,
+    "errorSubstring": "loopback"
+  },
+  "privateLan": {
+    "mcpBaseUrl": "http://192.168.1.10:27123",
+    "ok": false,
+    "errorSubstring": "loopback"
+  },
+  "metadataHost": {
+    "mcpBaseUrl": "http://169.254.169.254/",
+    "ok": false,
+    "errorSubstring": "loopback"
+  }
+}

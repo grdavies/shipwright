@@ -1,0 +1,12 @@
+{
+  "memory": {
+    "provider": "obsidian",
+    "project": "fixture",
+    "obsidian": {
+      "vaultPath": "/tmp/does-not-need-to-exist-for-bearer",
+      "tokenEnv": "OBSIDIAN_API_KEY",
+      "mcpBaseUrl": "http://127.0.0.1:27123"
+    }
+  },
+  "expectedErrorSubstring": "OBSIDIAN_API_KEY"
+}

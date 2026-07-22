@@ -1,0 +1,10 @@
+{
+  "ordinaryImportIds": [
+    "memories/fixture/learning/obs-learning-001.md"
+  ],
+  "promotionImportIds": [
+    "memories/fixture/learning/obs-learning-001.md",
+    "rules/obs-rule-secret.md"
+  ],
+  "project": "fixture"
+}

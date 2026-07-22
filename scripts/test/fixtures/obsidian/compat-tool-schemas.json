@@ -1,0 +1,145 @@
+{
+  "metadata": {
+    "supportedPlugin": "obsidian-local-rest-api>=3.2.0,<4.0.0",
+    "adapterDoc": "core/providers/obsidian.md",
+    "purpose": "Hermetic offline compatibility pin for PRD 076 R29 \u2014 no live Obsidian GUI or Local REST API MCP session required.",
+    "schemaVersion": 1,
+    "source": "https://github.com/coddingtonbear/obsidian-local-rest-api"
+  },
+  "opMapTools": [
+    "list_files_in_vault",
+    "list_files_in_dir",
+    "get_file_contents",
+    "search",
+    "append_content",
+    "patch_content",
+    "delete_file"
+  ],
+  "tools": {
+    "list_files_in_vault": {
+      "abstractOps": [
+        "load-context",
+        "list-recent"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    "list_files_in_dir": {
+      "abstractOps": [
+        "load-context",
+        "list-recent",
+        "search"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dirpath": {
+            "type": "string",
+            "description": "Vault-relative directory"
+          }
+        },
+        "required": [
+          "dirpath"
+        ]
+      }
+    },
+    "get_file_contents": {
+      "abstractOps": [
+        "expand",
+        "rules-load"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filepath": {
+            "type": "string",
+            "description": "Vault-relative path id"
+          }
+        },
+        "required": [
+          "filepath"
+        ]
+      }
+    },
+    "search": {
+      "abstractOps": [
+        "search",
+        "list-recent",
+        "load-context"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "context_length": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    "append_content": {
+      "abstractOps": [
+        "store",
+        "modify"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filepath": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "filepath",
+          "content"
+        ]
+      }
+    },
+    "patch_content": {
+      "abstractOps": [
+        "modify"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filepath": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "filepath",
+          "content"
+        ]
+      }
+    },
+    "delete_file": {
+      "abstractOps": [
+        "modify"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filepath": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "filepath"
+        ]
+      }
+    }
+  }
+}

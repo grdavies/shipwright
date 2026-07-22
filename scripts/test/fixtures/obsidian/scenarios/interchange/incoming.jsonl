@@ -1,0 +1,3 @@
+{"id": "obs-merge-a", "category": "decision", "content": "Incoming conflict body.", "title": "Merge A Incoming", "links": [{"to": "obs-merge-b", "edge": "relates-to"}]}
+{"id": "obs-merge-b", "category": "learning", "content": "Link target.", "title": "Merge B", "links": []}
+{"id": "obs-merge-c", "category": "learning", "content": "Fresh note.", "title": "Merge C", "links": []}
