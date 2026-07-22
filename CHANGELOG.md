@@ -587,6 +587,7 @@
 * merge phase catalog-row-loopback-hooktransport into feat/obsidian-memory-provider (27a507b) <!-- sw-deliver:catalog-row-loopback-hooktransport -->
 * merge phase config-schema-open-provider-string into feat/obsidian-memory-provider (051987c) <!-- sw-deliver:config-schema-open-provider-string -->
 * merge phase adapter-op-map-category-project-mapping into feat/obsidian-memory-provider (66368e5) <!-- sw-deliver:adapter-op-map-category-project-mapping -->
+* merge phase loopback-transport-agent-ops-checklist into feat/obsidian-memory-provider (4c1d3ae) <!-- sw-deliver:loopback-transport-agent-ops-checklist -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
