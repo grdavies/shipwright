@@ -26,13 +26,14 @@ PROVIDER_GATES = frozenset({"check-gate.py", "review-local-resolve.py"})
 MEMORY_GATES = frozenset({"check-gate.py", "memory-preflight"})
 HOOK_GATE_PREFIX = "hooks.json:"
 
-# Named gates for out-of-band memory rules scripts (PRD 071 R4, PRD 074 R4, PRD 075 R4).
+# Named gates for out-of-band memory rules scripts (PRD 071 R4, PRD 074 R4, PRD 075 R4, PRD 076 R4).
 # Catalog membership alone does not authorize hook injection.
 MEMORY_RULES_SCRIPT_GATES: dict[str, frozenset[str]] = {
     "recallium": frozenset({"recallium-rules.py"}),
     "in-repo": frozenset({"in-repo-rules.py"}),
     "mempalace": frozenset({"mempalace-rules.py"}),
     "basic-memory": frozenset({"basic-memory-rules.py"}),
+    "obsidian": frozenset({"obsidian-rules.py"}),
 }
 
 PROVIDER_FAMILY_KEYS: dict[str, str] = {
