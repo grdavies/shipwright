@@ -161,12 +161,12 @@ def resolve_mcp_base(obs_cfg: dict[str, Any]) -> str:
     return mcp_base.rstrip("/")
 
 
-def resolve_api_key(obs_cfg: dict[str, Any]) -> str:
+def resolve_bearer(obs_cfg: dict[str, Any]) -> str:
     token_env = str(obs_cfg.get("tokenEnv") or DEFAULT_TOKEN_ENV).strip() or DEFAULT_TOKEN_ENV
-    api_key = os.environ.get(token_env, "").strip()
-    if not api_key:
+    bearer = os.environ.get(token_env, "").strip()
+    if not bearer:
         raise ValueError(f"REST fallback requires bearer token in ${token_env}")
-    return api_key
+    return bearer
 
 
 def rules_from_markdown_text(text: str, *, rule_id: str) -> dict[str, str] | None:
@@ -209,11 +209,11 @@ def fetch_rules_from_disk(vault: Path, rules_dir_name: str) -> list[dict[str, st
     return rules_from_markdown_files(vault / rules_dir_name, vault=vault)
 
 
-def _rest_request(url: str, *, api_key: str) -> bytes:
+def _rest_request(url: str, *, bearer: str) -> bytes:
     req = urllib.request.Request(
         url,
         headers={
-            "Authorization": f"Bearer {api_key}",
+            "Authorization": f"Bearer {bearer}",
             "Accept": "application/json",
         },
         method="GET",
@@ -233,9 +233,9 @@ def _vault_rest_url(mcp_base: str, vault_relative: str) -> str:
     return f"{mcp_base}/vault/{'/'.join(segments)}/"
 
 
-def _list_vault_entries(mcp_base: str, api_key: str, vault_relative: str) -> list[str]:
+def _list_vault_entries(mcp_base: str, bearer: str, vault_relative: str) -> list[str]:
     url = _vault_rest_url(mcp_base, vault_relative)
-    raw = _rest_request(url, api_key=api_key)
+    raw = _rest_request(url, bearer=bearer)
     try:
         payload = json.loads(raw.decode("utf-8", errors="replace"))
     except json.JSONDecodeError as exc:
@@ -246,23 +246,23 @@ def _list_vault_entries(mcp_base: str, api_key: str, vault_relative: str) -> lis
     return [str(item) for item in files if str(item).strip()]
 
 
-def _read_vault_note(mcp_base: str, api_key: str, vault_relative: str) -> str:
+def _read_vault_note(mcp_base: str, bearer: str, vault_relative: str) -> str:
     normalized = vault_relative.strip("/")
     segments = [quote(part, safe="") for part in normalized.split("/")]
     url = f"{mcp_base}/vault/{'/'.join(segments)}"
-    raw = _rest_request(url, api_key=api_key)
+    raw = _rest_request(url, bearer=bearer)
     return raw.decode("utf-8", errors="replace")
 
 
 def _collect_rest_markdown_paths(
     mcp_base: str,
-    api_key: str,
+    bearer: str,
     rules_dir: str,
     *,
     prefix: str = "",
 ) -> list[str]:
     rel_dir = f"{rules_dir}/{prefix}".strip("/") if prefix else rules_dir.strip("/")
-    entries = _list_vault_entries(mcp_base, api_key, rel_dir)
+    entries = _list_vault_entries(mcp_base, bearer, rel_dir)
     paths: list[str] = []
     for entry in sorted(entries):
         child = f"{prefix}{entry}" if prefix else entry
@@ -271,7 +271,7 @@ def _collect_rest_markdown_paths(
             paths.extend(
                 _collect_rest_markdown_paths(
                     mcp_base,
-                    api_key,
+                    bearer,
                     rules_dir,
                     prefix=sub_prefix,
                 )
@@ -284,12 +284,12 @@ def _collect_rest_markdown_paths(
     return paths[:MAX_RULES]
 
 
-def fetch_rules_from_rest(mcp_base: str, api_key: str, rules_dir: str) -> list[dict[str, str]]:
-    markdown_paths = _collect_rest_markdown_paths(mcp_base, api_key, rules_dir)
+def fetch_rules_from_rest(mcp_base: str, bearer: str, rules_dir: str) -> list[dict[str, str]]:
+    markdown_paths = _collect_rest_markdown_paths(mcp_base, bearer, rules_dir)
     rules: list[dict[str, str]] = []
     for rel_path in markdown_paths:
         try:
-            text = _read_vault_note(mcp_base, api_key, rel_path)
+            text = _read_vault_note(mcp_base, bearer, rel_path)
         except ValueError:
             continue
         row = rules_from_markdown_text(text, rule_id=rel_path)
@@ -317,13 +317,13 @@ def fetch_rules(obs_cfg: dict[str, Any]) -> tuple[list[dict[str, str]], str]:
 
     mcp_base = resolve_mcp_base(obs_cfg)
     try:
-        api_key = resolve_api_key(obs_cfg)
+        bearer = resolve_bearer(obs_cfg)
     except ValueError:
         if disk_error:
             raise ValueError(f"disk rule-fetch failed: {disk_error}") from None
         return [], "disk"
 
-    rest_rules = fetch_rules_from_rest(mcp_base, api_key, rules_dir)
+    rest_rules = fetch_rules_from_rest(mcp_base, bearer, rules_dir)
     if rest_rules:
         return rest_rules, "rest"
     if disk_error:
