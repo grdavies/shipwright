@@ -591,6 +591,7 @@
 * merge phase rules-script-transport into feat/obsidian-memory-provider (bd60e44) <!-- sw-deliver:rules-script-transport -->
 * merge phase interchange-memory-switch into feat/obsidian-memory-provider (9e3a75b) <!-- sw-deliver:interchange-memory-switch -->
 * merge phase cache-hook-trust into feat/obsidian-memory-provider (e58a65a) <!-- sw-deliver:cache-hook-trust -->
+* merge phase operator-docs-sw-init into feat/obsidian-memory-provider (f291124) <!-- sw-deliver:operator-docs-sw-init -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
