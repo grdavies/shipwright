@@ -21,6 +21,8 @@ from memory_provider_catalog import (
 
 STATE_REL = Path(".cursor/shipwright/provider-switch-state.json")
 CONFIG_PATHS = (Path(".cursor/workflow.config.json"), Path("workflow.config.json"))
+# PRD 077 R19 — first-class only on in-repo; other providers cannot represent these fields.
+IN_REPO_FIRST_CLASS_FIELDS = ("compiledTruth", "timeline")
 
 
 class SwitchError(Exception):
@@ -60,13 +62,26 @@ def interchange_mode(entry: dict[str, Any], fmt: str) -> str:
     return str(mode).strip() if isinstance(mode, str) and mode.strip() else "unsupported"
 
 
-def assess_format_migration(source_entry: dict[str, Any], target_entry: dict[str, Any], fmt: str) -> str:
+def assess_format_migration(
+    source_entry: dict[str, Any],
+    target_entry: dict[str, Any],
+    fmt: str,
+    *,
+    source_id: str = "",
+    target_id: str = "",
+) -> str:
     if fmt not in INTERCHANGE_FORMATS:
         return "blocked"
     source_mode = interchange_mode(source_entry, fmt)
     target_mode = interchange_mode(target_entry, fmt)
     if source_mode == "unsupported" or target_mode == "unsupported":
         return "blocked"
+    # Truth + timeline are first-class only for in-repo (PRD 077 R19).
+    # Lossless only when both sides are in-repo; otherwise fields drop at the other provider.
+    if source_id == "in-repo" and target_id == "in-repo":
+        return "supported"
+    if source_id == "in-repo" or target_id == "in-repo":
+        return "lossy"
     if source_mode == "synthesized" or target_mode == "synthesized":
         return "lossy"
     return "supported"
@@ -80,13 +95,24 @@ def display_capabilities(catalog: dict[str, Any], source_id: str, target_id: str
         formats[fmt] = {
             "source": interchange_mode(source, fmt),
             "target": interchange_mode(target, fmt),
-            "migration": assess_format_migration(source, target, fmt),
+            "migration": assess_format_migration(
+                source,
+                target,
+                fmt,
+                source_id=source_id,
+                target_id=target_id,
+            ),
         }
     return {
         "verdict": "pass",
         "source": {"id": source_id, "interchange": {f: interchange_mode(source, f) for f in INTERCHANGE_FORMATS}},
         "target": {"id": target_id, "interchange": {f: interchange_mode(target, f) for f in INTERCHANGE_FORMATS}},
         "formats": formats,
+        "firstClassFields": {
+            "fields": list(IN_REPO_FIRST_CLASS_FIELDS),
+            "provider": "in-repo",
+            "losslessWhen": "source and target are both in-repo",
+        },
     }
 
 

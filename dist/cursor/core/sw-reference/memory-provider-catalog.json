@@ -61,7 +61,7 @@
       "hookTransport": {
         "agentSession": "filesystem",
         "ruleFetch": "out-of-band-script",
-        "notes": "Agent-session ops via committed markdown store and in-repo-memory-search.py; guardrail hooks read providers/in-repo-rules.py against .cursor/sw-memory/rules/."
+        "notes": "Agent-session ops via committed markdown store and in-repo-memory-search.py (compiled truth + append-only timeline, atomic update-truth); guardrail hooks read providers/in-repo-rules.py against .cursor/sw-memory/rules/. Not a Brain.md provider — no brain/ SoT directory."
       },
       "interchange": {
         "jsonl": "native",
