@@ -548,10 +548,21 @@ def persist_deliver_state_paths_absolute(
                 )
 
 
-def _deliver_write_roots(root: Path) -> tuple[Path, Path | None]:
+def _deliver_write_roots(
+    root: Path,
+    state: dict[str, Any] | None = None,
+) -> tuple[Path, Path | None]:
     """Return canonical primary repo root and optional orchestrator mirror root."""
     repo_root = _path_normalize_anchor(root)
-    mirror = root.resolve() if root.resolve() != repo_root.resolve() else None
+    mirror: Path | None = root.resolve() if root.resolve() != repo_root.resolve() else None
+    # When saving from the primary checkout, still mirror into the orchestrator
+    # worktree recorded on state (adopt writes orchestratorWorktree with root=primary).
+    if mirror is None and isinstance(state, dict):
+        orch_raw = (state.get("orchestratorWorktree") or {}).get("path")
+        if isinstance(orch_raw, str) and orch_raw.strip():
+            orch_path = Path(orch_raw).expanduser().resolve()
+            if orch_path != repo_root.resolve():
+                mirror = orch_path
     return repo_root, mirror
 
 
@@ -575,7 +586,7 @@ def persist_deliver_state_primary_first(
     branch = _resolve_feature_branch(root, state, target)
     if not target_branch_from_state(state):
         state["target"] = {"branch": branch}
-    repo_root, mirror_root = _deliver_write_roots(root)
+    repo_root, mirror_root = _deliver_write_roots(root, state)
     persist_deliver_state_paths_absolute(state, anchor=repo_root)
     primary_path = scoped_paths(repo_root, branch)["state"]
     prior: dict[str, Any] | None = _read_state_optional(primary_path)
