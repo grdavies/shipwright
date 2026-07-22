@@ -183,7 +183,20 @@
       "sourceOfTruthClass": "memory-authoritative",
       "credentials": {
         "location": "env-only",
-        "notes": "OBSIDIAN_API_KEY (Local REST API bearer) from environment or secret store only — never catalog, config bodies, or memory content."
+        "notes": "OBSIDIAN_API_KEY (Local REST API bearer) from environment or secret store only \u2014 never catalog, config bodies, or memory content."
+      },
+      "planningLineage": {
+        "prd": "076-prd-obsidian-memory-provider",
+        "dependsOn": [
+          "071-prd-pluggable-memory-adapter-framework"
+        ],
+        "doesNotSupersede": [
+          "074-prd-mempalace-memory-provider",
+          "075-prd-basic-memory-provider",
+          "010"
+        ],
+        "portfolioItem": "C",
+        "portfolioDecision": "planning#491"
       }
     }
   }
