@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -34,12 +35,224 @@ INLINE_MD_LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 MEMORY_PATH_RE = re.compile(r"^(?:memories|rules|global/memories)/([^/]+)\.md$")
 KNOWN_EDGES = frozenset({"supersedes", "relates-to", "file-linked"})
 EXCLUDED_STATUSES = frozenset({"superseded", "resolved", "tombstone"})
+COMPILED_TRUTH_HEADING = "## Compiled truth"
+TIMELINE_HEADING = "## Timeline"
+TIMELINE_ENTRY_RE = re.compile(
+    r"^- `([a-z0-9-]+)` @ (\S+) — (.+)$",
+    re.IGNORECASE,
+)
+TIMELINE_KINDS = frozenset({
+    "created",
+    "truth-updated",
+    "inactivated",
+    "reactivated",
+    "imported",
+    "modified",
+})
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def is_rule_record(record: dict[str, Any]) -> bool:
+    return str(record.get("category") or record.get("fields", {}).get("category") or "") == "rule"
+
+
+def parse_timeline_entries(block: str) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    for line in block.splitlines():
+        match = TIMELINE_ENTRY_RE.match(line.strip())
+        if not match:
+            continue
+        entries.append({
+            "kind": match.group(1).lower(),
+            "at": match.group(2),
+            "summary": match.group(3).strip(),
+        })
+    return entries
+
+
+def render_timeline_entries(entries: list[dict[str, str]]) -> str:
+    lines: list[str] = []
+    for entry in entries:
+        kind = str(entry.get("kind") or "modified")
+        at = str(entry.get("at") or utc_now_iso())
+        summary = str(entry.get("summary") or "").replace("\n", " ").strip() or "(no summary)"
+        lines.append(f"- `{kind}` @ {at} — {summary}")
+    return "\n".join(lines)
+
+
+def parse_body_sections(body: str) -> dict[str, Any]:
+    """Split a memory body into compiled truth, timeline, and remaining sections.
+
+    Legacy bodies without headings treat the full body as compiled truth.
+    """
+    text = body or ""
+    truth_idx = text.find(COMPILED_TRUTH_HEADING)
+    timeline_idx = text.find(TIMELINE_HEADING)
+    if truth_idx < 0 and timeline_idx < 0:
+        return {
+            "compiled_truth": text.strip(),
+            "timeline": [],
+            "rest": "",
+            "legacy": True,
+        }
+
+    truth = ""
+    timeline: list[dict[str, str]] = []
+    rest_parts: list[str] = []
+
+    if truth_idx >= 0:
+        after_truth = text[truth_idx + len(COMPILED_TRUTH_HEADING):]
+        next_heading = after_truth.find("\n## ")
+        if next_heading >= 0:
+            truth = after_truth[:next_heading].strip()
+            remainder = after_truth[next_heading + 1:]
+        else:
+            truth = after_truth.strip()
+            remainder = ""
+    else:
+        remainder = text
+        # No compiled-truth heading: body before timeline is truth.
+        if timeline_idx >= 0:
+            truth = text[:timeline_idx].strip()
+            remainder = text[timeline_idx:]
+
+    if TIMELINE_HEADING in remainder or remainder.startswith("## Timeline"):
+        if not remainder.startswith("## Timeline"):
+            tpos = remainder.find(TIMELINE_HEADING)
+            if tpos > 0:
+                rest_parts.append(remainder[:tpos].strip())
+            remainder = remainder[tpos:] if tpos >= 0 else remainder
+        after_tl = remainder[len(TIMELINE_HEADING):] if remainder.startswith(TIMELINE_HEADING) else remainder
+        # Strip leading newline
+        if after_tl.startswith("\n"):
+            after_tl = after_tl[1:]
+        next_heading = after_tl.find("\n## ")
+        citations = after_tl.find("\n# ")
+        cut = -1
+        for candidate in (next_heading, citations):
+            if candidate >= 0 and (cut < 0 or candidate < cut):
+                cut = candidate
+        if cut >= 0:
+            timeline_block = after_tl[:cut]
+            rest_parts.append(after_tl[cut + 1:].strip())
+        else:
+            timeline_block = after_tl
+        timeline = parse_timeline_entries(timeline_block)
+    elif remainder.strip():
+        rest_parts.append(remainder.strip())
+
+    return {
+        "compiled_truth": truth,
+        "timeline": timeline,
+        "rest": "\n\n".join(part for part in rest_parts if part),
+        "legacy": False,
+    }
+
+
+def render_body_sections(
+    compiled_truth: str,
+    timeline: list[dict[str, str]],
+    rest: str = "",
+) -> str:
+    parts = [
+        COMPILED_TRUTH_HEADING,
+        "",
+        compiled_truth.strip() or "(empty)",
+        "",
+        TIMELINE_HEADING,
+        "",
+        render_timeline_entries(timeline) or "- `created` @ " + utc_now_iso() + " — (empty timeline)",
+    ]
+    rest = (rest or "").strip()
+    if rest:
+        parts.extend(["", rest])
+    return "\n".join(parts).rstrip() + "\n"
+
+
+def compiled_truth_of(record: dict[str, Any]) -> str:
+    sections = parse_body_sections(str(record.get("body") or ""))
+    truth = str(sections.get("compiled_truth") or "").strip()
+    if truth:
+        return truth
+    return str(record.get("body") or "").strip()
+
+
+def timeline_of(record: dict[str, Any]) -> list[dict[str, str]]:
+    sections = parse_body_sections(str(record.get("body") or ""))
+    return list(sections.get("timeline") or [])
+
+
+def ensure_truth_timeline_body(
+    body: str,
+    *,
+    category: str,
+    initial_kind: str = "created",
+    initial_summary: str = "Initial memory created",
+) -> str:
+    """Ensure non-rule bodies carry compiled truth + timeline sections."""
+    if category == "rule":
+        return body
+    sections = parse_body_sections(body)
+    truth = str(sections.get("compiled_truth") or body).strip()
+    timeline = list(sections.get("timeline") or [])
+    if not timeline:
+        timeline = [{
+            "kind": initial_kind,
+            "at": utc_now_iso(),
+            "summary": initial_summary,
+        }]
+    return render_body_sections(truth, timeline, str(sections.get("rest") or ""))
+
+
+def append_timeline_entry(
+    body: str,
+    *,
+    kind: str,
+    summary: str,
+    at: str | None = None,
+    category: str = "learning",
+) -> str:
+    if category == "rule":
+        return body
+    sections = parse_body_sections(body)
+    truth = str(sections.get("compiled_truth") or body).strip()
+    timeline = list(sections.get("timeline") or [])
+    timeline.append({
+        "kind": kind if kind in TIMELINE_KINDS else "modified",
+        "at": at or utc_now_iso(),
+        "summary": summary,
+    })
+    return render_body_sections(truth, timeline, str(sections.get("rest") or ""))
+
+
+def atomic_write_text(path: Path, content: str) -> None:
+    """Write via temp file + os.replace so readers never see partial files."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        tmp.write_text(content, encoding="utf-8")
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
 
 
 def parse_scalar(raw: str) -> Any:
     raw = raw.strip()
     if not raw:
         return ""
+    if raw in {"true", "True"}:
+        return True
+    if raw in {"false", "False"}:
+        return False
+    if raw in {"null", "Null", "None"}:
+        return None
     if raw.startswith("[") and raw.endswith("]"):
         inner = raw[1:-1].strip()
         if not inner:
@@ -111,7 +324,9 @@ def display_title(fields: dict[str, Any], body: str) -> str:
     title = fields.get("title")
     if isinstance(title, str) and title.strip():
         return title.strip()
-    line = first_body_line(body)
+    sections = parse_body_sections(body)
+    truth = str(sections.get("compiled_truth") or "").strip()
+    line = first_body_line(truth if truth else body)
     if line:
         return line[:120]
     mid = fields.get("id")
@@ -318,10 +533,13 @@ def redact_text(text: str) -> str:
 def record_to_jsonl(record: dict[str, Any]) -> dict[str, Any]:
     fields = dict(record["fields"])
     fields.pop("id", None)
+    sections = parse_body_sections(str(record.get("body") or ""))
     payload = {
         "id": record["id"],
         "content": record["body"].strip(),
         "category": record["category"],
+        "compiledTruth": sections.get("compiled_truth") or "",
+        "timeline": sections.get("timeline") or [],
     }
     for key, value in fields.items():
         if key == "category":
@@ -333,13 +551,46 @@ def record_to_jsonl(record: dict[str, Any]) -> dict[str, Any]:
 def jsonl_to_record(obj: dict[str, Any]) -> dict[str, Any]:
     category = str(obj.get("category") or "learning")
     record_id = str(obj.get("id") or "imported-memory")
-    fields = {k: v for k, v in obj.items() if k not in {"content", "category", "id"}}
+    fields = {
+        k: v
+        for k, v in obj.items()
+        if k not in {"content", "category", "id", "compiledTruth", "timeline"}
+    }
     fields["category"] = category
     fields["id"] = record_id
     if "createdAt" not in fields:
-        fields["createdAt"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        fields["createdAt"] = utc_now_iso()
+    body = str(obj.get("content") or "")
+    compiled = obj.get("compiledTruth")
+    timeline = obj.get("timeline")
+    if category != "rule":
+        if isinstance(compiled, str) and compiled.strip():
+            entries = timeline if isinstance(timeline, list) else []
+            norm_entries: list[dict[str, str]] = []
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                norm_entries.append({
+                    "kind": str(entry.get("kind") or "imported"),
+                    "at": str(entry.get("at") or utc_now_iso()),
+                    "summary": str(entry.get("summary") or "imported"),
+                })
+            if not norm_entries:
+                norm_entries = [{
+                    "kind": "imported",
+                    "at": utc_now_iso(),
+                    "summary": "Imported from legacy interchange",
+                }]
+            body = render_body_sections(compiled, norm_entries)
+        else:
+            body = ensure_truth_timeline_body(
+                body,
+                category=category,
+                initial_kind="imported",
+                initial_summary="Imported from legacy interchange",
+            )
     title, description = store_title_description(
-        str(obj.get("content") or ""),
+        compiled_truth_of({"body": body, "fields": fields}),
         title=str(fields.get("title") or ""),
         description=str(fields.get("description") or ""),
     )
@@ -351,7 +602,7 @@ def jsonl_to_record(obj: dict[str, Any]) -> dict[str, Any]:
         "id": record_id,
         "category": category,
         "fields": fields,
-        "body": str(obj.get("content") or ""),
+        "body": body,
     }
 
 
@@ -378,12 +629,18 @@ def relative_memory_path(record: dict[str, Any]) -> str:
 def write_memory_record(store: Path, record: dict[str, Any]) -> Path:
     path = target_path_for_record(store, record)
     path.parent.mkdir(parents=True, exist_ok=True)
-    redacted_body = redact_text(record["body"])
+    category = str(record.get("category") or record.get("fields", {}).get("category") or "learning")
+    body = ensure_truth_timeline_body(str(record.get("body") or ""), category=category)
+    redacted_body = redact_text(body)
+    # Timeline must not be silently stripped by redaction; preserve structure after redact.
+    if category != "rule":
+        redacted_body = ensure_truth_timeline_body(redacted_body, category=category)
     fields = dict(record["fields"])
     fields["id"] = record["id"]
     fields["category"] = record["category"]
+    truth = compiled_truth_of({"body": redacted_body, "fields": fields})
     title, description = store_title_description(
-        redacted_body,
+        truth,
         title=str(fields.get("title") or ""),
         description=str(fields.get("description") or ""),
     )
@@ -391,7 +648,8 @@ def write_memory_record(store: Path, record: dict[str, Any]) -> Path:
         fields["title"] = title
     if not fields.get("description"):
         fields["description"] = description
-    path.write_text(render_memory_file(fields, redacted_body), encoding="utf-8")
+    content = render_memory_file(fields, redacted_body)
+    atomic_write_text(path, content)
     return path
 
 
@@ -507,7 +765,8 @@ def cmd_search(ns: argparse.Namespace) -> int:
         if query and query.lower() not in text.lower():
             continue
         mid = str(fm.get("id") or memory_id_from_path(path))
-        summary = first_body_line(body)[:200]
+        truth = compiled_truth_of({"body": body, "fields": fm})
+        summary = first_body_line(truth if truth else body)[:200]
         results.append({"id": mid, "summary": summary})
     print(json.dumps({"results": results}, indent=2))
     return 0
@@ -578,7 +837,18 @@ def cmd_import(ns: argparse.Namespace) -> int:
             fm, body = parse_frontmatter(text)
             if not fm.get("type"):
                 continue
-            imported.append(okf_fields_to_record(fm, body))
+            record = okf_fields_to_record(fm, body)
+            # Legacy OKF bodies (no truth/timeline headings) upgrade with kind: imported.
+            if record["category"] != "rule":
+                sections = parse_body_sections(str(record.get("body") or ""))
+                if sections.get("legacy") or not sections.get("timeline"):
+                    record["body"] = ensure_truth_timeline_body(
+                        str(record.get("body") or ""),
+                        category=record["category"],
+                        initial_kind="imported",
+                        initial_summary="Imported from legacy interchange",
+                    )
+            imported.append(record)
     else:
         print(json.dumps({"error": f"unsupported import format: {fmt}"}), file=sys.stderr)
         return 1
@@ -668,16 +938,183 @@ def cmd_expand(ns: argparse.Namespace) -> int:
         if not record:
             expanded.append({"id": mid, "found": False, "backlinks": backlinks.get(mid, [])})
             continue
+        sections = parse_body_sections(record["body"])
         expanded.append({
             "id": mid,
             "found": True,
             "category": record["category"],
             "fields": record["fields"],
             "body": record["body"].strip(),
+            "compiledTruth": sections.get("compiled_truth") or "",
+            "timeline": sections.get("timeline") or [],
+            "rest": sections.get("rest") or "",
             "backlinks": backlinks.get(mid, []),
             "excluded": is_excluded_record(record["fields"]),
         })
     print(json.dumps({"expanded": expanded}, indent=2))
+    return 0
+
+
+def _find_record(store: Path, memory_id: str) -> dict[str, Any] | None:
+    for record in load_store_records(store):
+        if record["id"] == memory_id:
+            return record
+    return None
+
+
+def cmd_store(ns: argparse.Namespace) -> int:
+    store = Path(ns.store)
+    memory_id = ns.id.strip()
+    category = (ns.category or "learning").strip()
+    content = ns.content
+    if content == "-":
+        content = sys.stdin.read()
+    body = ensure_truth_timeline_body(
+        content,
+        category=category,
+        initial_kind="created",
+        initial_summary=ns.summary or "Initial memory created",
+    )
+    fields: dict[str, Any] = {
+        "category": category,
+        "id": memory_id,
+        "createdAt": utc_now_iso(),
+        "scope": ns.scope or "project",
+    }
+    if ns.tags:
+        fields["tags"] = [t.strip() for t in ns.tags.split(",") if t.strip()]
+    record = {
+        "id": memory_id,
+        "category": category,
+        "fields": fields,
+        "body": body,
+    }
+    path = write_memory_record(store, record)
+    maintain_derived(store)
+    written = read_memory_record(path)
+    print(json.dumps({
+        "verdict": "ok",
+        "action": "store",
+        "id": memory_id,
+        "path": str(path),
+        "compiledTruth": compiled_truth_of(written),
+        "timeline": timeline_of(written),
+    }, indent=2))
+    return 0
+
+
+def cmd_update_truth(ns: argparse.Namespace) -> int:
+    store = Path(ns.store)
+    memory_id = ns.id.strip()
+    record = _find_record(store, memory_id)
+    if record is None:
+        print(json.dumps({"verdict": "fail", "error": "not-found", "id": memory_id}), file=sys.stderr)
+        return 20
+    if record["category"] == "rule":
+        print(json.dumps({
+            "verdict": "fail",
+            "error": "rules-do-not-use-timeline",
+            "id": memory_id,
+        }), file=sys.stderr)
+        return 20
+
+    new_truth = ns.truth
+    if new_truth == "-":
+        new_truth = sys.stdin.read()
+    new_truth = redact_text(new_truth).strip()
+    summary = (ns.summary or "Truth updated").strip()
+    sections = parse_body_sections(record["body"])
+    prior_timeline = list(sections.get("timeline") or [])
+    # Append-only: refuse if caller tried to pass a shorter timeline via body rewrite.
+    prior_timeline.append({
+        "kind": "truth-updated",
+        "at": utc_now_iso(),
+        "summary": summary,
+    })
+    body = render_body_sections(new_truth, prior_timeline, str(sections.get("rest") or ""))
+    updated = {**record, "body": body}
+    path = write_memory_record(store, updated)
+    written = read_memory_record(path)
+    written_timeline = timeline_of(written)
+    if len(written_timeline) < len(prior_timeline):
+        print(json.dumps({
+            "verdict": "fail",
+            "error": "timeline-append-failed",
+            "id": memory_id,
+        }), file=sys.stderr)
+        return 20
+    maintain_derived(store)
+    print(json.dumps({
+        "verdict": "ok",
+        "action": "update-truth",
+        "id": memory_id,
+        "path": str(path),
+        "compiledTruth": compiled_truth_of(written),
+        "timeline": written_timeline,
+    }, indent=2))
+    return 0
+
+
+def cmd_modify(ns: argparse.Namespace) -> int:
+    store = Path(ns.store)
+    memory_id = ns.id.strip()
+    record = _find_record(store, memory_id)
+    if record is None:
+        print(json.dumps({"verdict": "fail", "error": "not-found", "id": memory_id}), file=sys.stderr)
+        return 20
+
+    fields = dict(record["fields"])
+    body = str(record["body"] or "")
+    category = record["category"]
+    summary = (ns.summary or "").strip()
+
+    if ns.inactive is not None:
+        inactive = ns.inactive.lower() in {"1", "true", "yes"}
+        was_inactive = fields.get("inactive") is True
+        fields["inactive"] = inactive
+        kind = "inactivated" if inactive else "reactivated"
+        if category != "rule":
+            body = append_timeline_entry(
+                body,
+                kind=kind,
+                summary=summary or ("Inactivated" if inactive else "Reactivated"),
+                category=category,
+            )
+        elif was_inactive == inactive and not ns.content:
+            pass
+
+    if ns.content is not None:
+        content = ns.content
+        if content == "-":
+            content = sys.stdin.read()
+        content = redact_text(content)
+        if category == "rule":
+            body = content
+        else:
+            # Truth-bearing modify must leave timeline evidence (R10).
+            sections = parse_body_sections(body)
+            timeline = list(sections.get("timeline") or [])
+            timeline.append({
+                "kind": "modified",
+                "at": utc_now_iso(),
+                "summary": summary or "Body modified",
+            })
+            # Treat content as new compiled truth (not a freehand full-body overwrite).
+            body = render_body_sections(content.strip(), timeline, str(sections.get("rest") or ""))
+
+    updated = {**record, "fields": fields, "body": body}
+    path = write_memory_record(store, updated)
+    written = read_memory_record(path)
+    maintain_derived(store)
+    print(json.dumps({
+        "verdict": "ok",
+        "action": "modify",
+        "id": memory_id,
+        "path": str(path),
+        "compiledTruth": compiled_truth_of(written),
+        "timeline": timeline_of(written),
+        "inactive": written["fields"].get("inactive") is True,
+    }, indent=2))
     return 0
 
 
@@ -740,6 +1177,35 @@ def build_parser() -> argparse.ArgumentParser:
     maintain = sub.add_parser("maintain-derived", help="regenerate index.md and log.md")
     maintain.add_argument("--store", required=True)
 
+    store_cmd = sub.add_parser("store", help="create a memory with compiled truth + timeline")
+    store_cmd.add_argument("--store", required=True)
+    store_cmd.add_argument("--id", required=True)
+    store_cmd.add_argument("--category", default="learning")
+    store_cmd.add_argument("--content", required=True, help="distilled body, or '-' for stdin")
+    store_cmd.add_argument("--summary", default="")
+    store_cmd.add_argument("--tags", default="")
+    store_cmd.add_argument("--scope", default="project")
+
+    update_truth = sub.add_parser(
+        "update-truth",
+        help="atomically rewrite compiled truth and append one timeline entry",
+    )
+    update_truth.add_argument("--store", required=True)
+    update_truth.add_argument("--id", required=True)
+    update_truth.add_argument("--truth", required=True, help="new compiled truth, or '-' for stdin")
+    update_truth.add_argument("--summary", default="Truth updated")
+
+    modify = sub.add_parser("modify", help="modify a memory, leaving timeline evidence")
+    modify.add_argument("--store", required=True)
+    modify.add_argument("--id", required=True)
+    modify.add_argument("--content", default=None, help="new compiled truth, or '-' for stdin")
+    modify.add_argument("--summary", default="")
+    modify.add_argument(
+        "--inactive",
+        default=None,
+        help="true/false to inactivate or reactivate (appends timeline evidence)",
+    )
+
     return parser
 
 
@@ -749,7 +1215,9 @@ def main(argv: list[str] | None = None) -> int:
 
     known = {
         "search", "export", "import", "maintain-derived",
-        "traverse", "expand", "reconcile-supersede", "-h", "--help",
+        "traverse", "expand", "reconcile-supersede",
+        "store", "update-truth", "modify",
+        "-h", "--help",
     }
     if raw_argv and raw_argv[0] not in known:
         if "--store" in raw_argv:
@@ -771,6 +1239,12 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_reconcile_supersede(ns)
     if ns.command == "maintain-derived":
         return cmd_maintain_derived(ns)
+    if ns.command == "store":
+        return cmd_store(ns)
+    if ns.command == "update-truth":
+        return cmd_update_truth(ns)
+    if ns.command == "modify":
+        return cmd_modify(ns)
     parser.print_help()
     return 2
 

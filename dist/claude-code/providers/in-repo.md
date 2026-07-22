@@ -104,21 +104,52 @@ memory id returned by `search` / used by `expand` / `modify`.
 frontmatter filters). `export`/`import` are native: walk the store and emit/consume neutral JSONL per
 `CAPABILITIES.md`.
 
+## Compiled truth and timeline (PRD 077)
+
+Non-rule memories use Brain.md-inspired **truth-with-evidence** sections inside the existing store
+(default `.cursor/sw-memory/`). This is **not** a second provider and does **not** introduce a `brain/`
+directory or Node Brain.md CLI.
+
+```markdown
+## Compiled truth
+
+Current best understanding of this memory.
+
+## Timeline
+
+- `created` @ 2026-07-22T12:00:00Z — Initial memory created
+- `truth-updated` @ 2026-07-22T13:00:00Z — Why understanding changed
+
+# Citations
+
+- docs/decisions/example.md
+```
+
+- **Compiled truth** is rewritable (current understanding).
+- **Timeline** is append-only evidence (`kind`, `at`, `summary`). Ordinary `modify` / `update-truth`
+  never edit or delete prior entries.
+- **Atomic `update-truth`** rewrites compiled truth and appends exactly one timeline entry in one
+  write (temp-file + rename).
+- **Legacy** body-only files remain readable: the full body is treated as compiled truth until the
+  first `update-truth` / truth-bearing `modify` upgrades the layout (lazy, no bulk migration).
+- **Rules** under `rules/` do not require timeline sections.
+
 ## Operation mapping
 
 | Abstract op | Implementation | Call shape |
 | --- | --- | --- |
 | `load-context` | read `index.md` + `rules-load` | read store `index.md` first for orientation; load rules from `rules/` |
 | `rules-load` | read `rules/*.md` | filesystem read of committed rule files |
-| `search` | `in-repo-memory-search.py` | `python3 scripts/in-repo-memory-search.py --store <dir> --query <q> [--category] [--tag] [--file-glob]` |
-| `expand` | `in-repo-memory-search.py expand` | `python3 scripts/in-repo-memory-search.py expand --store <dir> --ids <id>[,...]` — full body + backlinks |
-| `store` | write file after redaction | pipe payload through `scripts/memory-redact.py`, then write one `.md` file |
-| `modify` | update frontmatter / body / `inactive:true` | rewrite the target file |
+| `search` | `in-repo-memory-search.py` | `python3 scripts/in-repo-memory-search.py --store <dir> --query <q> [--category] [--tag] [--file-glob]` — summaries prefer compiled truth |
+| `expand` | `in-repo-memory-search.py expand` | `python3 scripts/in-repo-memory-search.py expand --store <dir> --ids <id>[,...]` — body + `compiledTruth` + `timeline` + backlinks |
+| `store` | write file after redaction | `python3 scripts/in-repo-memory-search.py store --store <dir> --id <id> --category <cat> --content <text\|->` — initializes truth + `kind: created` timeline entry |
+| `update-truth` | atomic truth rewrite | `python3 scripts/in-repo-memory-search.py update-truth --store <dir> --id <id> --truth <text\|-> --summary <why>` |
+| `modify` | update frontmatter / body / `inactive:true` | `python3 scripts/in-repo-memory-search.py modify --store <dir> --id <id> [--content <text\|->] [--inactive true\|false] [--summary <why>]` — truth-bearing changes append timeline evidence |
 | `list-recent` | mtime sort under `memories/` | `find` + sort by mtime, cap N |
-| `export` | walk store → JSONL or OKF | `python3 scripts/in-repo-memory-search.py export --format jsonl|okf` |
-| `import` | JSONL or OKF → files | `python3 scripts/in-repo-memory-search.py import --format jsonl|okf`; regenerates `index.md`/`log.md` |
+| `export` | walk store → JSONL or OKF | `python3 scripts/in-repo-memory-search.py export --format jsonl\|okf` — JSONL includes `compiledTruth` + `timeline` |
+| `import` | JSONL or OKF → files | `python3 scripts/in-repo-memory-search.py import --format jsonl\|okf`; legacy records get `kind: imported` timeline; regenerates `index.md`/`log.md` |
 | `tasks.*` | — | not supported (`tasks: false`) |
-| `maintain-derived` | regenerate `index.md` + `log.md` | `python3 scripts/in-repo-memory-search.py maintain-derived --store <dir>` |
+| `maintain-derived` | regenerate `index.md` + `log.md` | `python3 scripts/in-repo-memory-search.py maintain-derived --store <dir>` — orientation lines prefer compiled truth; store `log.md` does not replace per-memory timelines |
 | `playbook.match` | `memory_playbook.py match` | `python3 scripts/memory_playbook.py match --signals-json '<json>'` |
 | `playbook.primary-inject` | `memory_playbook.py primary-inject` | keyword + confidence primary context blocks for dispatch |
 | `playbook.record-usage` | `memory_playbook.py record-usage` | increment `usage_count` / optional `success_count`; reconcile confidence |
@@ -153,8 +184,10 @@ frontmatter filters). `export`/`import` are native: walk the store and emit/cons
 When `semanticSearch:false` (this provider):
 
 1. Run `scripts/in-repo-memory-search.py` with the query and optional filters.
-2. Results are ranked `{id, summary}` JSON — summary is the first line of the body (trimmed).
-3. `expand` reads the full file for selected ids.
+2. Results are ranked `{id, summary}` JSON — summary prefers the first line of **compiled truth**
+   (falls back to the full body for legacy files).
+3. `expand` returns frontmatter, `compiledTruth`, `timeline`, remaining body sections (e.g. `# Citations`),
+   and backlinks.
 4. File-path search: pass `--file-glob` with a path fragment; matches `relatedFiles` frontmatter entries.
 5. Category narrowing: pass `--category <canonical>`.
 6. Recency: sort by `createdAt` frontmatter or file mtime when `recencyControl` is needed.
@@ -164,14 +197,17 @@ Identical inputs → identical ranked output (deterministic).
 ## Write recipe specifics
 
 1. **Lazy store create:** `mkdir -p` the store dirs on first write — no `/sw-setup` required.
-2. **Redaction (R41):** pipe every payload through `scripts/memory-redact.py` before writing.
-3. **Commit mode:** `memory.inRepo.commitMode: committed` (default) writes under `.cursor/sw-memory/memories/`.
+2. **Redaction (R41):** pipe every payload through `scripts/memory-redact.py` before writing
+   (`store`, `update-truth`, and `modify` all redact).
+3. **Truth writes:** prefer `update-truth` for understanding changes; ordinary `modify` still appends
+   timeline evidence and must not silently overwrite history.
+4. **Commit mode:** `memory.inRepo.commitMode: committed` (default) writes under `.cursor/sw-memory/memories/`.
    `local` writes non-rule memories under `.cursor/sw-memory-local/memories/` (gitignored).
-4. **Rules always committed:** `category: rule` always writes to `.cursor/sw-memory/rules/` regardless of
+5. **Rules always committed:** `category: rule` always writes to `.cursor/sw-memory/rules/` regardless of
    commit mode.
-5. **No auto-seed:** store starts empty; never create starter rule files.
-6. Search before store; on near-duplicate, `modify` instead of a second file.
-7. Never auto-store `rule`; never re-store rules just read from `rules-load`.
+6. **No auto-seed:** store starts empty; never create starter rule files.
+7. Search before store; on near-duplicate, `modify` / `update-truth` instead of a second file.
+8. Never auto-store `rule`; never re-store rules just read from `rules-load`.
 
 ## Notes / gotchas
 
@@ -184,3 +220,11 @@ Identical inputs → identical ranked output (deterministic).
 - Fresh-install marker: `.cursor/sw-memory.provider` containing `in-repo` opts the repo into fail-closed
   guardrails without hand-authored `workflow.config.json`.
 - Rule trust: committed rule files are untrusted until allowlisted + schema-validated (R42).
+
+## Non-goals (PRD 077)
+
+- **No second memory provider.** Catalog id remains `in-repo` only — no `brain` / `brain-md` provider row.
+- **No `brain/` SoT directory** and no Node Brain.md CLI dependency.
+- **No MindMux / external `brain/` interop** in v1 (no bidirectional import/export with external Brain.md trees).
+- Does **not** implement MemPalace, basic-memory, Obsidian, Recallium, or `AGENTS.md` provider work
+  (portfolio item D is in-repo enhancement only; depends on PRD 071).

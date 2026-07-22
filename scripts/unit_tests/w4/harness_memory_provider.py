@@ -284,11 +284,24 @@ RT_JSONL=$(mktemp)
 python3 "$SEARCH" export --store "$RT_STORE" --format jsonl --out "$RT_JSONL" >/dev/null
 if python3 - "$JSONL_OUT" "$RT_JSONL" <<'PY2'
 import json, pathlib, sys
-a=[json.loads(l) for l in pathlib.Path(sys.argv[1]).read_text().splitlines() if l.strip()]
-b=[json.loads(l) for l in pathlib.Path(sys.argv[2]).read_text().splitlines() if l.strip()]
-a=sorted(a,key=lambda x:x["id"])
-b=sorted(b,key=lambda x:x["id"])
-sys.exit(0 if len(a)==len(b) and all(x["id"]==y["id"] and x["content"]==y["content"] for x,y in zip(a,b)) else 1)
+
+def truth_of(obj: dict) -> str:
+    # PRD 077: legacy bodies may upgrade to truth+timeline on import; compare understanding, not raw encoding.
+    compiled = str(obj.get("compiledTruth") or "").strip()
+    if compiled:
+        return compiled
+    return str(obj.get("content") or "").strip()
+
+a = [json.loads(l) for l in pathlib.Path(sys.argv[1]).read_text().splitlines() if l.strip()]
+b = [json.loads(l) for l in pathlib.Path(sys.argv[2]).read_text().splitlines() if l.strip()]
+a = sorted(a, key=lambda x: x["id"])
+b = sorted(b, key=lambda x: x["id"])
+sys.exit(
+    0
+    if len(a) == len(b)
+    and all(x["id"] == y["id"] and truth_of(x) == truth_of(y) for x, y in zip(a, b))
+    else 1
+)
 PY2
 then
   echo "OK  OKF round-trip preserves JSONL fields"
