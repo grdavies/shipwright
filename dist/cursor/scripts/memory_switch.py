@@ -265,6 +265,40 @@ def _load_basic_memory_interchange():
     return module
 
 
+def _obsidian_vault_path(root: Path, config: dict[str, Any], override: Path | None = None) -> Path:
+    if override is not None:
+        return override.expanduser().resolve()
+    memory = config.get("memory", {}) if isinstance(config, dict) else {}
+    obsidian = memory.get("obsidian", {}) if isinstance(memory, dict) else {}
+    raw = obsidian.get("vaultPath") if isinstance(obsidian, dict) else None
+    if not isinstance(raw, str) or not raw.strip():
+        raise SwitchError("memory.obsidian.vaultPath required for obsidian interchange", cause="missing")
+    path = Path(raw.strip())
+    if not path.is_absolute():
+        path = (root / path).resolve()
+    return path.expanduser().resolve()
+
+
+def _obsidian_dirs(config: dict[str, Any]) -> tuple[str, str]:
+    memory = config.get("memory", {}) if isinstance(config, dict) else {}
+    obsidian = memory.get("obsidian", {}) if isinstance(memory, dict) else {}
+    if not isinstance(obsidian, dict):
+        return "memories", "rules"
+    memories = str(obsidian.get("memoriesDirectory") or "memories").strip() or "memories"
+    rules = str(obsidian.get("rulesDirectory") or "rules").strip() or "rules"
+    return memories, rules
+
+
+def _load_obsidian_interchange():
+    path = Path(__file__).resolve().parent / "obsidian_interchange.py"
+    spec = importlib.util.spec_from_file_location("obsidian_interchange", path)
+    if spec is None or spec.loader is None:
+        raise SwitchError("obsidian_interchange.py not found", cause="missing")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def write_config_provider(root: Path, provider_id: str, *, dry_run: bool) -> dict[str, Any]:
     for rel in CONFIG_PATHS:
         path = root / rel
@@ -356,6 +390,51 @@ def import_basic_memory_project(
     )
 
 
+def export_obsidian_vault(
+    vault_path: Path,
+    fmt: str,
+    out: Path,
+    *,
+    project: str,
+    memories_directory: str,
+    rules_directory: str,
+) -> dict[str, Any]:
+    adapter = _load_obsidian_interchange()
+    export_meta = adapter.export_vault(
+        vault_path,
+        fmt,
+        out,
+        project=project,
+        include_rules=False,
+        memories_directory=memories_directory,
+        rules_directory=rules_directory,
+    )
+    return {**export_meta, **hash_interchange(out, fmt)}
+
+
+def import_obsidian_vault(
+    vault_path: Path,
+    fmt: str,
+    source: Path,
+    *,
+    project: str,
+    dry_run: bool,
+    memories_directory: str,
+    rules_directory: str,
+) -> dict[str, Any]:
+    adapter = _load_obsidian_interchange()
+    return adapter.import_vault(
+        vault_path,
+        fmt,
+        source,
+        project=project,
+        dry_run=dry_run,
+        include_rules=True,
+        memories_directory=memories_directory,
+        rules_directory=rules_directory,
+    )
+
+
 def export_by_source(
     root: Path,
     *,
@@ -387,6 +466,19 @@ def export_by_source(
             memories_directory=memories_dir,
             rules_directory=rules_dir,
         )
+    if source_id == "obsidian":
+        vault = _obsidian_vault_path(root, config, store_path)
+        if not vault.is_dir():
+            raise SwitchError(f"obsidian vault missing: {vault}", cause="missing")
+        memories_dir, rules_dir = _obsidian_dirs(config)
+        return export_obsidian_vault(
+            vault,
+            fmt,
+            export_path,
+            project=_memory_project(config),
+            memories_directory=memories_dir,
+            rules_directory=rules_dir,
+        )
     if not export_path.exists():
         raise SwitchError(f"export artifact required for synthesized source {source_id}: {export_path}", cause="missing")
     return {"provider": source_id, "format": fmt, "out": str(export_path), **hash_interchange(export_path, fmt)}
@@ -414,6 +506,18 @@ def import_by_target(
             project,
             fmt,
             source_path,
+            dry_run=dry_run,
+            memories_directory=memories_dir,
+            rules_directory=rules_dir,
+        )
+    if target_id == "obsidian":
+        vault = _obsidian_vault_path(root, config, store_path)
+        memories_dir, rules_dir = _obsidian_dirs(config)
+        return import_obsidian_vault(
+            vault,
+            fmt,
+            source_path,
+            project=_memory_project(config),
             dry_run=dry_run,
             memories_directory=memories_dir,
             rules_directory=rules_dir,
