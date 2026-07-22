@@ -1,0 +1,21 @@
+{
+  "escapeRulesDir": {
+    "rulesDirectory": "../etc",
+    "errorSubstring": "vault-relative"
+  },
+  "absoluteRulesDir": {
+    "rulesDirectory": "/tmp/rules",
+    "errorSubstring": "vault-relative"
+  },
+  "okRulesDir": {
+    "rulesDirectory": "rules"
+  },
+  "escapeCandidate": {
+    "candidate": "../outside.md",
+    "confined": false
+  },
+  "okCandidate": {
+    "candidate": "rules/guard.md",
+    "confined": true
+  }
+}

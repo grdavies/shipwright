@@ -1,0 +1,14 @@
+{
+  "provider": "obsidian",
+  "supportedPlugin": "obsidian-local-rest-api>=3.2.0,<4.0.0",
+  "scenarios": [
+    "ssrf-loopback",
+    "path-confinement",
+    "missing-token",
+    "cache",
+    "rules-refuse",
+    "interchange"
+  ],
+  "compatToolSchemas": "compat-tool-schemas.json",
+  "notes": "Hermetic offline suite \u2014 no live Obsidian GUI or Local REST API session required."
+}
