@@ -11,7 +11,7 @@ Load `skills/retro/SKILL.md`. Produce learning candidates for `/sw-retrospective
 
 **Communication intensity:** lite
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --command sw-retro`.
+**Model tier:** mid — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-retro`.
 
 ## Guardrails
 

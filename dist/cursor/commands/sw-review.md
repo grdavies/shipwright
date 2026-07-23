@@ -113,7 +113,7 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
     Write gate config from `review.local.gate`. Surface-only default (`haltOn: []`) logs P0–P3 and
     continues. Halting mode (`haltOn: ["P0","P1"]`) records halt signal for `/sw-ship` (validated
     P0/P1 only). Persist gate result to `/tmp/sw-local-review-gate-result.json`.
-12. **Run report (R69/R50):** resolve `runDir` via `python3 scripts/sw-tmp.py resolve` (or `shipwright-state`
+12. **Run report (R69/R50):** resolve `runDir` via `python3 scripts/sw_bootstrap.py sw-tmp.py -- resolve` (or `shipwright-state`
     `runDir` when set). Write `$runDir/sw-local-review-run-report.json` per the contract in `native.md`:
 
     - announced roster + per-specialist selection reasons (from activation record)
@@ -131,7 +131,7 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
     (R29/R30):
 
     ```bash
-    python3 scripts/memory-redact.py "$runDir/sw-local-review-run-report.json" \
+    python3 scripts/sw_bootstrap.py memory-redact.py -- "$runDir/sw-local-review-run-report.json" \
       > "$runDir/sw-local-review-run-report.scrubbed.json"
     mv "$runDir/sw-local-review-run-report.scrubbed.json" "$runDir/sw-local-review-run-report.json"
     ```
@@ -162,7 +162,7 @@ runs **independently** of phase-2 opt-out — including when `review.provider: "
 
       ```bash
       while IFS= read -r finding; do
-        REDACTED="$(printf '%s' "$finding" | python3 scripts/memory-redact.py)"
+        REDACTED="$(printf '%s' "$finding" | python3 scripts/sw_bootstrap.py memory-redact.py -- "
         # memory-preflight write distilled learning from $REDACTED
       done < <(Python json -c '.findings[]' /tmp/sw-local-review-normalized.json 2>/dev/null || echo '[]')
       ```
@@ -184,7 +184,7 @@ Unchanged from prior single-phase flow:
 5. Run provider local review (CodeRabbit):
 
    ```bash
-   RUN_DIR=$(python3 scripts/sw-tmp.py resolve)
+   RUN_DIR=$(python3 scripts/sw_bootstrap.py sw-tmp.py -- resolve)
    if [[ -z "$RUN_DIR" ]]; then
      RUN_DIR=/tmp
    fi
@@ -219,7 +219,7 @@ Unchanged from prior single-phase flow:
 
 **Communication intensity:** full
 
-**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --command sw-review`.
+**Model tier:** build — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-review`.
 
 ## Guardrails
 

@@ -19,7 +19,7 @@ Hand off: in-scope closed → `/sw-verify`; out-of-scope → user / feedback int
 
 **Communication intensity:** full
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --command sw-gaps`.
+**Model tier:** mid — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-gaps`.
 
 ## Guardrails
 

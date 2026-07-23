@@ -40,7 +40,7 @@ verify evidence passes. **Requires explicit human confirmation** before mutating
 
 **Communication intensity:** ultra
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --command sw-feedback-close`.
+**Model tier:** mid — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-feedback-close`.
 
 ## Guardrails
 

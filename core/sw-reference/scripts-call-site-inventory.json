@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-23T02:35:19Z",
+  "generatedAt": "2026-07-23T04:36:46Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -217,12 +217,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-amend.md:39:reconcile-status.py",
+      "id": "core/commands/sw-amend.md:39:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-amend.md",
       "line": 39,
       "column": 48,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -253,48 +253,48 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-amend.md:63:resolve-model-tier.py",
+      "id": "core/commands/sw-amend.md:63:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-amend.md",
       "line": 63,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-ask.md:51:resolve-model-tier.py",
+      "id": "core/commands/sw-ask.md:51:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ask.md",
       "line": 51,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-ask.md:55:resolve-model-tier.py",
+      "id": "core/commands/sw-ask.md:55:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ask.md",
       "line": 55,
       "column": 22,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-become.md:55:resolve-model-tier.py",
+      "id": "core/commands/sw-become.md:55:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-become.md",
       "line": 55,
       "column": 12,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-become.md:62:resolve-model-tier.py",
+      "id": "core/commands/sw-become.md:62:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-become.md",
       "line": 62,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -307,12 +307,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-brainstorm.md:35:resolve-model-tier.py",
+      "id": "core/commands/sw-brainstorm.md:35:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-brainstorm.md",
       "line": 35,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -325,12 +325,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-caveman.md:29:resolve-model-tier.py",
+      "id": "core/commands/sw-caveman.md:29:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-caveman.md",
       "line": 29,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -370,30 +370,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-cleanup.md:76:host.py",
+      "id": "core/commands/sw-cleanup.md:76:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-cleanup.md",
       "line": 76,
       "column": 11,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-cleanup.md:81:resolve-model-tier.py",
+      "id": "core/commands/sw-cleanup.md:81:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-cleanup.md",
       "line": 81,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-commit.md:24:memory-redact.py",
+      "id": "core/commands/sw-commit.md:24:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-commit.md",
       "line": 24,
       "column": 58,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -415,12 +415,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-commit.md:56:resolve-model-tier.py",
+      "id": "core/commands/sw-commit.md:56:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-commit.md",
       "line": 56,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -433,21 +433,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-compound-ship.md:25:resolve-model-tier.py",
+      "id": "core/commands/sw-compound-ship.md:25:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-compound-ship.md",
       "line": 25,
       "column": 47,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-compound.md:25:resolve-model-tier.py",
+      "id": "core/commands/sw-compound.md:25:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-compound.md",
       "line": 25,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -505,12 +505,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-debug.md:112:resolve-model-tier.py",
+      "id": "core/commands/sw-debug.md:112:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-debug.md",
       "line": 112,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -523,30 +523,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-debug.md:133:resolve-model-tier.py",
+      "id": "core/commands/sw-debug.md:133:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-debug.md",
       "line": 133,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-debug.md:148:memory-redact.py",
+      "id": "core/commands/sw-debug.md:148:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-debug.md",
       "line": 148,
       "column": 28,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-debug.md:152:memory-redact.py",
+      "id": "core/commands/sw-debug.md:152:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-debug.md",
       "line": 152,
       "column": 40,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -685,12 +685,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-deliver.md:276:resolve-model-tier.py",
+      "id": "core/commands/sw-deliver.md:276:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-deliver.md",
       "line": 276,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -712,12 +712,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-deliver.md:286:resolve-model-tier.py",
+      "id": "core/commands/sw-deliver.md:286:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-deliver.md",
       "line": 286,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -730,12 +730,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-deliver.md:302:memory-redact.py",
+      "id": "core/commands/sw-deliver.md:302:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-deliver.md",
       "line": 302,
       "column": 63,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -811,12 +811,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-doc-review.md:72:resolve-model-tier.py",
+      "id": "core/commands/sw-doc-review.md:72:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-doc-review.md",
       "line": 72,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1009,12 +1009,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-doc.md:260:resolve-model-tier.py",
+      "id": "core/commands/sw-doc.md:260:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-doc.md",
       "line": 260,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1036,12 +1036,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-doc.md:284:resolve-model-tier.py",
+      "id": "core/commands/sw-doc.md:284:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-doc.md",
       "line": 284,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1054,12 +1054,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-doc.md:300:memory-redact.py",
+      "id": "core/commands/sw-doc.md:300:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-doc.md",
       "line": 300,
       "column": 73,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1126,12 +1126,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-execute.md:70:resolve-model-tier.py",
+      "id": "core/commands/sw-execute.md:70:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-execute.md",
       "line": 70,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1153,12 +1153,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-feedback-close.md:43:resolve-model-tier.py",
+      "id": "core/commands/sw-feedback-close.md:43:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-feedback-close.md",
       "line": 43,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1189,57 +1189,57 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-feedback.md:53:memory-redact.py",
+      "id": "core/commands/sw-feedback.md:53:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-feedback.md",
       "line": 53,
       "column": 66,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-feedback.md:63:planning_gap_capture.py",
+      "id": "core/commands/sw-feedback.md:63:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-feedback.md",
       "line": 63,
       "column": 12,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-feedback.md:65:planning_gap_capture.py",
+      "id": "core/commands/sw-feedback.md:65:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-feedback.md",
       "line": 65,
       "column": 29,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-feedback.md:66:planning_gap_capture.py",
+      "id": "core/commands/sw-feedback.md:66:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-feedback.md",
       "line": 66,
       "column": 35,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-feedback.md:81:memory-redact.py",
+      "id": "core/commands/sw-feedback.md:81:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-feedback.md",
       "line": 81,
       "column": 27,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-feedback.md:88:planning_gap_capture.py",
+      "id": "core/commands/sw-feedback.md:88:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-feedback.md",
       "line": 88,
       "column": 12,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1261,21 +1261,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-feedback.md:102:memory-redact.py",
+      "id": "core/commands/sw-feedback.md:102:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-feedback.md",
       "line": 102,
       "column": 12,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-feedback.md:125:resolve-model-tier.py",
+      "id": "core/commands/sw-feedback.md:125:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-feedback.md",
       "line": 125,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1297,12 +1297,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-feedback.md:135:resolve-model-tier.py",
+      "id": "core/commands/sw-feedback.md:135:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-feedback.md",
       "line": 135,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1315,12 +1315,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-feedback.md:151:memory-redact.py",
+      "id": "core/commands/sw-feedback.md:151:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-feedback.md",
       "line": 151,
       "column": 38,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1459,21 +1459,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:121:resolve-model-tier.py",
+      "id": "core/commands/sw-freeze.md:121:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
       "line": 121,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-gaps.md:22:resolve-model-tier.py",
+      "id": "core/commands/sw-gaps.md:22:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-gaps.md",
       "line": 22,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1522,12 +1522,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-guide.md:61:resolve-model-tier.py",
+      "id": "core/commands/sw-guide.md:61:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-guide.md",
       "line": 61,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1549,12 +1549,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-init.md:56:memory-redact.py",
+      "id": "core/commands/sw-init.md:56:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
       "line": 56,
       "column": 38,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1684,12 +1684,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-init.md:316:planning-init-seed.py",
+      "id": "core/commands/sw-init.md:316:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
       "line": 316,
       "column": 8,
-      "script": "planning-init-seed.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1729,39 +1729,39 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:372:init_scripts_facade.py",
+      "id": "core/commands/sw-init.md:372:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
       "line": 372,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:381:init_scripts_facade.py",
+      "id": "core/commands/sw-init.md:381:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
       "line": 381,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:382:init_scripts_facade.py",
+      "id": "core/commands/sw-init.md:382:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
       "line": 382,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:396:resolve-model-tier.py",
+      "id": "core/commands/sw-init.md:396:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
       "line": 396,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1783,12 +1783,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-memory-audit.md:52:resolve-model-tier.py",
+      "id": "core/commands/sw-memory-audit.md:52:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-memory-audit.md",
       "line": 52,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1819,12 +1819,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-memory-export.md:46:resolve-model-tier.py",
+      "id": "core/commands/sw-memory-export.md:46:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-memory-export.md",
       "line": 46,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1864,21 +1864,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-memory-import.md:60:resolve-model-tier.py",
+      "id": "core/commands/sw-memory-import.md:60:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-memory-import.md",
       "line": 60,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-memory-sync.md:33:memory-redact.py",
+      "id": "core/commands/sw-memory-sync.md:33:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-memory-sync.md",
       "line": 33,
       "column": 78,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1891,12 +1891,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-memory-sync.md:51:resolve-model-tier.py",
+      "id": "core/commands/sw-memory-sync.md:51:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-memory-sync.md",
       "line": 51,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -1963,84 +1963,84 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-migrate.md:52:resolve-model-tier.py",
+      "id": "core/commands/sw-migrate.md:52:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-migrate.md",
       "line": 52,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-note.md:55:memory-redact.py",
+      "id": "core/commands/sw-note.md:55:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-note.md",
       "line": 55,
       "column": 47,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-note.md:72:planning_gap_capture.py",
+      "id": "core/commands/sw-note.md:72:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-note.md",
       "line": 72,
       "column": 27,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-note.md:89:memory-redact.py",
+      "id": "core/commands/sw-note.md:89:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-note.md",
       "line": 89,
       "column": 45,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-note.md:96:resolve-model-tier.py",
+      "id": "core/commands/sw-note.md:96:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-note.md",
       "line": 96,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-pr.md:12:host.py",
+      "id": "core/commands/sw-pr.md:12:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-pr.md",
       "line": 12,
       "column": 12,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-pr.md:20:git-push.py",
+      "id": "core/commands/sw-pr.md:20:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-pr.md",
       "line": 20,
       "column": 12,
-      "script": "git-push.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-pr.md:20:git-push.py",
+      "id": "core/commands/sw-pr.md:20:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-pr.md",
       "line": 20,
-      "column": 68,
-      "script": "git-push.py",
+      "column": 87,
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-pr.md:32:resolve-model-tier.py",
+      "id": "core/commands/sw-pr.md:32:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-pr.md",
       "line": 32,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2116,12 +2116,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-prd.md:65:resolve-model-tier.py",
+      "id": "core/commands/sw-prd.md:65:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-prd.md",
       "line": 65,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2134,12 +2134,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ready.md:12:host.py",
+      "id": "core/commands/sw-ready.md:12:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ready.md",
       "line": 12,
       "column": 12,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2161,21 +2161,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ready.md:40:resolve-model-tier.py",
+      "id": "core/commands/sw-ready.md:40:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ready.md",
       "line": 40,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-retro.md:14:resolve-model-tier.py",
+      "id": "core/commands/sw-retro.md:14:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retro.md",
       "line": 14,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2251,12 +2251,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:107:reconcile-status.py",
+      "id": "core/commands/sw-retrospective.md:107:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
       "line": 107,
       "column": 31,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2305,12 +2305,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:184:resolve-model-tier.py",
+      "id": "core/commands/sw-retrospective.md:184:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
       "line": 184,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2350,57 +2350,57 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-review.md:116:sw-tmp.py",
+      "id": "core/commands/sw-review.md:116:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-review.md",
       "line": 116,
       "column": 60,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-review.md:134:memory-redact.py",
+      "id": "core/commands/sw-review.md:134:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-review.md",
       "line": 134,
       "column": 12,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-review.md:165:memory-redact.py",
+      "id": "core/commands/sw-review.md:165:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-review.md",
       "line": 165,
       "column": 53,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-review.md:187:sw-tmp.py",
+      "id": "core/commands/sw-review.md:187:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-review.md",
       "line": 187,
       "column": 21,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-review.md:222:resolve-model-tier.py",
+      "id": "core/commands/sw-review.md:222:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-review.md",
       "line": 222,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-setup.md:20:resolve-model-tier.py",
+      "id": "core/commands/sw-setup.md:20:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-setup.md",
       "line": 20,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2449,30 +2449,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:57:sw-tmp.py",
+      "id": "core/commands/sw-ship.md:57:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
       "line": 57,
       "column": 40,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-ship.md:57:sw-tmp.py",
+      "id": "core/commands/sw-ship.md:57:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
       "line": 57,
-      "column": 79,
-      "script": "sw-tmp.py",
+      "column": 98,
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-ship.md:58:sw-tmp.py",
+      "id": "core/commands/sw-ship.md:58:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
       "line": 58,
       "column": 56,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2548,21 +2548,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:192:resolve-model-tier.py",
+      "id": "core/commands/sw-ship.md:192:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
       "line": 192,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-ship.md:205:resolve-model-tier.py",
+      "id": "core/commands/sw-ship.md:205:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
       "line": 205,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2620,12 +2620,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:251:memory-redact.py",
+      "id": "core/commands/sw-ship.md:251:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
       "line": 251,
       "column": 36,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2683,21 +2683,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-simplify.md:41:resolve-model-tier.py",
+      "id": "core/commands/sw-simplify.md:41:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-simplify.md",
       "line": 41,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-stabilize.md:29:host.py",
+      "id": "core/commands/sw-stabilize.md:29:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-stabilize.md",
       "line": 29,
       "column": 18,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2719,48 +2719,48 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-stabilize.md:58:git-push.py",
+      "id": "core/commands/sw-stabilize.md:58:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-stabilize.md",
       "line": 58,
       "column": 79,
-      "script": "git-push.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-stabilize.md:65:host.py",
+      "id": "core/commands/sw-stabilize.md:65:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-stabilize.md",
       "line": 65,
       "column": 44,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-stabilize.md:74:host.py",
+      "id": "core/commands/sw-stabilize.md:74:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-stabilize.md",
       "line": 74,
       "column": 24,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-stabilize.md:153:host.py",
+      "id": "core/commands/sw-stabilize.md:153:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-stabilize.md",
       "line": 153,
       "column": 12,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-stabilize.md:159:git-push.py",
+      "id": "core/commands/sw-stabilize.md:159:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-stabilize.md",
       "line": 159,
       "column": 85,
-      "script": "git-push.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2773,12 +2773,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-stabilize.md:178:resolve-model-tier.py",
+      "id": "core/commands/sw-stabilize.md:178:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-stabilize.md",
       "line": 178,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2818,12 +2818,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-start.md:41:resolve-model-tier.py",
+      "id": "core/commands/sw-start.md:41:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-start.md",
       "line": 41,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2845,12 +2845,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:23:reconcile-status.py",
+      "id": "core/commands/sw-status.md:23:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
       "line": 23,
       "column": 12,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2872,12 +2872,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:34:reconcile-status.py",
+      "id": "core/commands/sw-status.md:34:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
       "line": 34,
       "column": 37,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2890,12 +2890,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:45:resolve-model-tier.py",
+      "id": "core/commands/sw-status.md:45:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
       "line": 45,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2953,12 +2953,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-tasks.md:46:resolve-model-tier.py",
+      "id": "core/commands/sw-tasks.md:46:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
       "line": 46,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2971,12 +2971,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-triage.md:26:resolve-model-tier.py",
+      "id": "core/commands/sw-triage.md:26:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-triage.md",
       "line": 26,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -2989,12 +2989,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-verify.md:31:sw-tmp.py",
+      "id": "core/commands/sw-verify.md:31:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-verify.md",
       "line": 31,
       "column": 21,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -3007,12 +3007,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-verify.md:58:resolve-model-tier.py",
+      "id": "core/commands/sw-verify.md:58:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-verify.md",
       "line": 58,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -3025,30 +3025,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-watch-ci.md:42:host.py",
+      "id": "core/commands/sw-watch-ci.md:42:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-watch-ci.md",
       "line": 42,
       "column": 18,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-watch-ci.md:80:host.py",
+      "id": "core/commands/sw-watch-ci.md:80:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-watch-ci.md",
       "line": 80,
       "column": 13,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-watch-ci.md:110:resolve-model-tier.py",
+      "id": "core/commands/sw-watch-ci.md:110:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-watch-ci.md",
       "line": 110,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -3106,12 +3106,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-worktree.md:39:resolve-model-tier.py",
+      "id": "core/commands/sw-worktree.md:39:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-worktree.md",
       "line": 39,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -3142,12 +3142,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw.md:64:resolve-model-tier.py",
+      "id": "core/commands/sw.md:64:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw.md",
       "line": 64,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -6454,12 +6454,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-amend.md:39:reconcile-status.py",
+      "id": "dist/claude-code/commands/sw-amend.md:39:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-amend.md",
       "line": 39,
       "column": 48,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -6490,48 +6490,48 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-amend.md:63:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-amend.md:63:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-amend.md",
       "line": 63,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-ask.md:51:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-ask.md:51:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ask.md",
       "line": 51,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-ask.md:55:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-ask.md:55:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ask.md",
       "line": 55,
       "column": 22,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-become.md:55:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-become.md:55:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-become.md",
       "line": 55,
       "column": 12,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-become.md:62:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-become.md:62:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-become.md",
       "line": 62,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -6544,12 +6544,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-brainstorm.md:35:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-brainstorm.md:35:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-brainstorm.md",
       "line": 35,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -6562,12 +6562,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-caveman.md:29:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-caveman.md:29:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-caveman.md",
       "line": 29,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -6607,30 +6607,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-cleanup.md:76:host.py",
+      "id": "dist/claude-code/commands/sw-cleanup.md:76:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-cleanup.md",
       "line": 76,
       "column": 11,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-cleanup.md:81:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-cleanup.md:81:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-cleanup.md",
       "line": 81,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-commit.md:24:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-commit.md:24:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-commit.md",
       "line": 24,
       "column": 58,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -6652,12 +6652,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-commit.md:56:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-commit.md:56:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-commit.md",
       "line": 56,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -6670,21 +6670,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-compound-ship.md:25:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-compound-ship.md:25:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-compound-ship.md",
       "line": 25,
       "column": 47,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-compound.md:25:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-compound.md:25:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-compound.md",
       "line": 25,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -6742,12 +6742,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-debug.md:112:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-debug.md:112:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-debug.md",
       "line": 112,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -6760,30 +6760,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-debug.md:133:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-debug.md:133:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-debug.md",
       "line": 133,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-debug.md:148:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-debug.md:148:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-debug.md",
       "line": 148,
       "column": 28,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-debug.md:152:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-debug.md:152:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-debug.md",
       "line": 152,
       "column": 40,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -6922,12 +6922,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:276:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:276:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
       "line": 276,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -6949,12 +6949,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:286:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:286:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
       "line": 286,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -6967,12 +6967,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:302:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:302:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
       "line": 302,
       "column": 63,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7048,12 +7048,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-doc-review.md:72:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-doc-review.md:72:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-doc-review.md",
       "line": 72,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7246,12 +7246,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-doc.md:260:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-doc.md:260:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-doc.md",
       "line": 260,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7273,12 +7273,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-doc.md:284:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-doc.md:284:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-doc.md",
       "line": 284,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7291,12 +7291,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-doc.md:300:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-doc.md:300:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-doc.md",
       "line": 300,
       "column": 73,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7363,12 +7363,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-execute.md:70:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-execute.md:70:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-execute.md",
       "line": 70,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7390,12 +7390,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-feedback-close.md:43:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-feedback-close.md:43:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-feedback-close.md",
       "line": 43,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7426,57 +7426,57 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-feedback.md:53:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-feedback.md:53:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-feedback.md",
       "line": 53,
       "column": 66,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-feedback.md:63:planning_gap_capture.py",
+      "id": "dist/claude-code/commands/sw-feedback.md:63:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-feedback.md",
       "line": 63,
       "column": 12,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-feedback.md:65:planning_gap_capture.py",
+      "id": "dist/claude-code/commands/sw-feedback.md:65:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-feedback.md",
       "line": 65,
       "column": 29,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-feedback.md:66:planning_gap_capture.py",
+      "id": "dist/claude-code/commands/sw-feedback.md:66:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-feedback.md",
       "line": 66,
       "column": 35,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-feedback.md:81:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-feedback.md:81:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-feedback.md",
       "line": 81,
       "column": 27,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-feedback.md:88:planning_gap_capture.py",
+      "id": "dist/claude-code/commands/sw-feedback.md:88:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-feedback.md",
       "line": 88,
       "column": 12,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7498,21 +7498,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-feedback.md:102:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-feedback.md:102:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-feedback.md",
       "line": 102,
       "column": 12,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-feedback.md:125:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-feedback.md:125:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-feedback.md",
       "line": 125,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7534,12 +7534,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-feedback.md:135:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-feedback.md:135:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-feedback.md",
       "line": 135,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7552,12 +7552,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-feedback.md:151:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-feedback.md:151:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-feedback.md",
       "line": 151,
       "column": 38,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7696,21 +7696,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:121:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:121:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
       "line": 121,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-gaps.md:22:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-gaps.md:22:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-gaps.md",
       "line": 22,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7759,12 +7759,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-guide.md:61:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-guide.md:61:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-guide.md",
       "line": 61,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7786,12 +7786,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:56:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-init.md:56:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
       "line": 56,
       "column": 38,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7921,12 +7921,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:316:planning-init-seed.py",
+      "id": "dist/claude-code/commands/sw-init.md:316:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
       "line": 316,
       "column": 8,
-      "script": "planning-init-seed.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -7966,39 +7966,39 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:372:init_scripts_facade.py",
+      "id": "dist/claude-code/commands/sw-init.md:372:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
       "line": 372,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:381:init_scripts_facade.py",
+      "id": "dist/claude-code/commands/sw-init.md:381:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
       "line": 381,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:382:init_scripts_facade.py",
+      "id": "dist/claude-code/commands/sw-init.md:382:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
       "line": 382,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:396:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-init.md:396:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
       "line": 396,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8020,12 +8020,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-memory-audit.md:52:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-memory-audit.md:52:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-memory-audit.md",
       "line": 52,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8056,12 +8056,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-memory-export.md:46:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-memory-export.md:46:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-memory-export.md",
       "line": 46,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8101,21 +8101,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-memory-import.md:60:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-memory-import.md:60:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-memory-import.md",
       "line": 60,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-memory-sync.md:33:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-memory-sync.md:33:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-memory-sync.md",
       "line": 33,
       "column": 78,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8128,12 +8128,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-memory-sync.md:51:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-memory-sync.md:51:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-memory-sync.md",
       "line": 51,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8200,84 +8200,84 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-migrate.md:52:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-migrate.md:52:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-migrate.md",
       "line": 52,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-note.md:55:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-note.md:55:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-note.md",
       "line": 55,
       "column": 47,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-note.md:72:planning_gap_capture.py",
+      "id": "dist/claude-code/commands/sw-note.md:72:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-note.md",
       "line": 72,
       "column": 27,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-note.md:89:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-note.md:89:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-note.md",
       "line": 89,
       "column": 45,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-note.md:96:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-note.md:96:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-note.md",
       "line": 96,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-pr.md:12:host.py",
+      "id": "dist/claude-code/commands/sw-pr.md:12:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-pr.md",
       "line": 12,
       "column": 12,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-pr.md:20:git-push.py",
+      "id": "dist/claude-code/commands/sw-pr.md:20:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-pr.md",
       "line": 20,
       "column": 12,
-      "script": "git-push.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-pr.md:20:git-push.py",
+      "id": "dist/claude-code/commands/sw-pr.md:20:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-pr.md",
       "line": 20,
-      "column": 68,
-      "script": "git-push.py",
+      "column": 87,
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-pr.md:32:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-pr.md:32:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-pr.md",
       "line": 32,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8353,12 +8353,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-prd.md:65:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-prd.md:65:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-prd.md",
       "line": 65,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8371,12 +8371,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ready.md:12:host.py",
+      "id": "dist/claude-code/commands/sw-ready.md:12:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ready.md",
       "line": 12,
       "column": 12,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8398,21 +8398,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ready.md:40:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-ready.md:40:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ready.md",
       "line": 40,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-retro.md:14:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-retro.md:14:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retro.md",
       "line": 14,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8488,12 +8488,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:107:reconcile-status.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:107:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
       "line": 107,
       "column": 31,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8542,12 +8542,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:184:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:184:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
       "line": 184,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8587,57 +8587,57 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-review.md:116:sw-tmp.py",
+      "id": "dist/claude-code/commands/sw-review.md:116:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-review.md",
       "line": 116,
       "column": 60,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-review.md:134:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-review.md:134:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-review.md",
       "line": 134,
       "column": 12,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-review.md:165:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-review.md:165:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-review.md",
       "line": 165,
       "column": 53,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-review.md:187:sw-tmp.py",
+      "id": "dist/claude-code/commands/sw-review.md:187:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-review.md",
       "line": 187,
       "column": 21,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-review.md:222:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-review.md:222:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-review.md",
       "line": 222,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-setup.md:20:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-setup.md:20:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-setup.md",
       "line": 20,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8686,30 +8686,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:57:sw-tmp.py",
+      "id": "dist/claude-code/commands/sw-ship.md:57:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
       "line": 57,
       "column": 40,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:57:sw-tmp.py",
+      "id": "dist/claude-code/commands/sw-ship.md:57:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
       "line": 57,
-      "column": 79,
-      "script": "sw-tmp.py",
+      "column": 98,
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:58:sw-tmp.py",
+      "id": "dist/claude-code/commands/sw-ship.md:58:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
       "line": 58,
       "column": 56,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8785,21 +8785,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:192:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-ship.md:192:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
       "line": 192,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:205:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-ship.md:205:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
       "line": 205,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8857,12 +8857,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:251:memory-redact.py",
+      "id": "dist/claude-code/commands/sw-ship.md:251:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
       "line": 251,
       "column": 36,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8920,21 +8920,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-simplify.md:41:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-simplify.md:41:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-simplify.md",
       "line": 41,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-stabilize.md:29:host.py",
+      "id": "dist/claude-code/commands/sw-stabilize.md:29:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-stabilize.md",
       "line": 29,
       "column": 18,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -8956,48 +8956,48 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-stabilize.md:58:git-push.py",
+      "id": "dist/claude-code/commands/sw-stabilize.md:58:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-stabilize.md",
       "line": 58,
       "column": 79,
-      "script": "git-push.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-stabilize.md:65:host.py",
+      "id": "dist/claude-code/commands/sw-stabilize.md:65:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-stabilize.md",
       "line": 65,
       "column": 44,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-stabilize.md:74:host.py",
+      "id": "dist/claude-code/commands/sw-stabilize.md:74:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-stabilize.md",
       "line": 74,
       "column": 24,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-stabilize.md:153:host.py",
+      "id": "dist/claude-code/commands/sw-stabilize.md:153:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-stabilize.md",
       "line": 153,
       "column": 12,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-stabilize.md:159:git-push.py",
+      "id": "dist/claude-code/commands/sw-stabilize.md:159:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-stabilize.md",
       "line": 159,
       "column": 85,
-      "script": "git-push.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9010,12 +9010,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-stabilize.md:178:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-stabilize.md:178:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-stabilize.md",
       "line": 178,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9055,12 +9055,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-start.md:41:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-start.md:41:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-start.md",
       "line": 41,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9082,12 +9082,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:23:reconcile-status.py",
+      "id": "dist/claude-code/commands/sw-status.md:23:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
       "line": 23,
       "column": 12,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9109,12 +9109,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:34:reconcile-status.py",
+      "id": "dist/claude-code/commands/sw-status.md:34:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
       "line": 34,
       "column": 37,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9127,12 +9127,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:45:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-status.md:45:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
       "line": 45,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9190,12 +9190,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:46:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:46:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
       "line": 46,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9208,12 +9208,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-triage.md:26:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-triage.md:26:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-triage.md",
       "line": 26,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9226,12 +9226,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-verify.md:31:sw-tmp.py",
+      "id": "dist/claude-code/commands/sw-verify.md:31:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-verify.md",
       "line": 31,
       "column": 21,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9244,12 +9244,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-verify.md:58:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-verify.md:58:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-verify.md",
       "line": 58,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9262,30 +9262,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-watch-ci.md:42:host.py",
+      "id": "dist/claude-code/commands/sw-watch-ci.md:42:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-watch-ci.md",
       "line": 42,
       "column": 18,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-watch-ci.md:80:host.py",
+      "id": "dist/claude-code/commands/sw-watch-ci.md:80:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-watch-ci.md",
       "line": 80,
       "column": 13,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-watch-ci.md:110:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-watch-ci.md:110:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-watch-ci.md",
       "line": 110,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9343,12 +9343,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-worktree.md:39:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-worktree.md:39:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-worktree.md",
       "line": 39,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9379,12 +9379,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw.md:64:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw.md:64:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw.md",
       "line": 64,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11638,12 +11638,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-amend.md:39:reconcile-status.py",
+      "id": "dist/cursor/commands/sw-amend.md:39:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-amend.md",
       "line": 39,
       "column": 48,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11674,48 +11674,48 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-amend.md:63:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-amend.md:63:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-amend.md",
       "line": 63,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-ask.md:51:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-ask.md:51:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ask.md",
       "line": 51,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-ask.md:55:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-ask.md:55:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ask.md",
       "line": 55,
       "column": 22,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-become.md:55:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-become.md:55:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-become.md",
       "line": 55,
       "column": 12,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-become.md:62:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-become.md:62:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-become.md",
       "line": 62,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11728,12 +11728,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-brainstorm.md:35:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-brainstorm.md:35:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-brainstorm.md",
       "line": 35,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11746,12 +11746,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-caveman.md:29:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-caveman.md:29:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-caveman.md",
       "line": 29,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11791,30 +11791,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-cleanup.md:76:host.py",
+      "id": "dist/cursor/commands/sw-cleanup.md:76:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-cleanup.md",
       "line": 76,
       "column": 11,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-cleanup.md:81:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-cleanup.md:81:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-cleanup.md",
       "line": 81,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-commit.md:24:memory-redact.py",
+      "id": "dist/cursor/commands/sw-commit.md:24:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-commit.md",
       "line": 24,
       "column": 58,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11836,12 +11836,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-commit.md:56:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-commit.md:56:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-commit.md",
       "line": 56,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11854,21 +11854,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-compound-ship.md:25:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-compound-ship.md:25:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-compound-ship.md",
       "line": 25,
       "column": 47,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-compound.md:25:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-compound.md:25:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-compound.md",
       "line": 25,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11926,12 +11926,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-debug.md:112:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-debug.md:112:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-debug.md",
       "line": 112,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11944,30 +11944,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-debug.md:133:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-debug.md:133:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-debug.md",
       "line": 133,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-debug.md:148:memory-redact.py",
+      "id": "dist/cursor/commands/sw-debug.md:148:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-debug.md",
       "line": 148,
       "column": 28,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-debug.md:152:memory-redact.py",
+      "id": "dist/cursor/commands/sw-debug.md:152:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-debug.md",
       "line": 152,
       "column": 40,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12106,12 +12106,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:276:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-deliver.md:276:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
       "line": 276,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12133,12 +12133,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:286:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-deliver.md:286:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
       "line": 286,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12151,12 +12151,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:302:memory-redact.py",
+      "id": "dist/cursor/commands/sw-deliver.md:302:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
       "line": 302,
       "column": 63,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12232,12 +12232,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-doc-review.md:72:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-doc-review.md:72:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-doc-review.md",
       "line": 72,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12430,12 +12430,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-doc.md:260:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-doc.md:260:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-doc.md",
       "line": 260,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12457,12 +12457,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-doc.md:284:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-doc.md:284:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-doc.md",
       "line": 284,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12475,12 +12475,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-doc.md:300:memory-redact.py",
+      "id": "dist/cursor/commands/sw-doc.md:300:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-doc.md",
       "line": 300,
       "column": 73,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12547,12 +12547,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-execute.md:70:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-execute.md:70:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-execute.md",
       "line": 70,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12574,12 +12574,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-feedback-close.md:43:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-feedback-close.md:43:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-feedback-close.md",
       "line": 43,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12610,57 +12610,57 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-feedback.md:53:memory-redact.py",
+      "id": "dist/cursor/commands/sw-feedback.md:53:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-feedback.md",
       "line": 53,
       "column": 66,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-feedback.md:63:planning_gap_capture.py",
+      "id": "dist/cursor/commands/sw-feedback.md:63:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-feedback.md",
       "line": 63,
       "column": 12,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-feedback.md:65:planning_gap_capture.py",
+      "id": "dist/cursor/commands/sw-feedback.md:65:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-feedback.md",
       "line": 65,
       "column": 29,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-feedback.md:66:planning_gap_capture.py",
+      "id": "dist/cursor/commands/sw-feedback.md:66:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-feedback.md",
       "line": 66,
       "column": 35,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-feedback.md:81:memory-redact.py",
+      "id": "dist/cursor/commands/sw-feedback.md:81:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-feedback.md",
       "line": 81,
       "column": 27,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-feedback.md:88:planning_gap_capture.py",
+      "id": "dist/cursor/commands/sw-feedback.md:88:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-feedback.md",
       "line": 88,
       "column": 12,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12682,21 +12682,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-feedback.md:102:memory-redact.py",
+      "id": "dist/cursor/commands/sw-feedback.md:102:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-feedback.md",
       "line": 102,
       "column": 12,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-feedback.md:125:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-feedback.md:125:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-feedback.md",
       "line": 125,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12718,12 +12718,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-feedback.md:135:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-feedback.md:135:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-feedback.md",
       "line": 135,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12736,12 +12736,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-feedback.md:151:memory-redact.py",
+      "id": "dist/cursor/commands/sw-feedback.md:151:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-feedback.md",
       "line": 151,
       "column": 38,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12880,21 +12880,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:121:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-freeze.md:121:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
       "line": 121,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-gaps.md:22:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-gaps.md:22:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-gaps.md",
       "line": 22,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12943,12 +12943,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-guide.md:61:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-guide.md:61:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-guide.md",
       "line": 61,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -12970,12 +12970,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:56:memory-redact.py",
+      "id": "dist/cursor/commands/sw-init.md:56:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
       "line": 56,
       "column": 38,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13105,12 +13105,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:316:planning-init-seed.py",
+      "id": "dist/cursor/commands/sw-init.md:316:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
       "line": 316,
       "column": 8,
-      "script": "planning-init-seed.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13150,39 +13150,39 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:372:init_scripts_facade.py",
+      "id": "dist/cursor/commands/sw-init.md:372:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
       "line": 372,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:381:init_scripts_facade.py",
+      "id": "dist/cursor/commands/sw-init.md:381:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
       "line": 381,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:382:init_scripts_facade.py",
+      "id": "dist/cursor/commands/sw-init.md:382:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
       "line": 382,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:396:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-init.md:396:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
       "line": 396,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13204,12 +13204,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-memory-audit.md:52:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-memory-audit.md:52:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-memory-audit.md",
       "line": 52,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13240,12 +13240,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-memory-export.md:46:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-memory-export.md:46:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-memory-export.md",
       "line": 46,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13285,21 +13285,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-memory-import.md:60:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-memory-import.md:60:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-memory-import.md",
       "line": 60,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-memory-sync.md:33:memory-redact.py",
+      "id": "dist/cursor/commands/sw-memory-sync.md:33:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-memory-sync.md",
       "line": 33,
       "column": 78,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13312,12 +13312,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-memory-sync.md:51:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-memory-sync.md:51:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-memory-sync.md",
       "line": 51,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13384,84 +13384,84 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-migrate.md:52:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-migrate.md:52:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-migrate.md",
       "line": 52,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-note.md:55:memory-redact.py",
+      "id": "dist/cursor/commands/sw-note.md:55:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-note.md",
       "line": 55,
       "column": 47,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-note.md:72:planning_gap_capture.py",
+      "id": "dist/cursor/commands/sw-note.md:72:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-note.md",
       "line": 72,
       "column": 27,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-note.md:89:memory-redact.py",
+      "id": "dist/cursor/commands/sw-note.md:89:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-note.md",
       "line": 89,
       "column": 45,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-note.md:96:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-note.md:96:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-note.md",
       "line": 96,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-pr.md:12:host.py",
+      "id": "dist/cursor/commands/sw-pr.md:12:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-pr.md",
       "line": 12,
       "column": 12,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-pr.md:20:git-push.py",
+      "id": "dist/cursor/commands/sw-pr.md:20:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-pr.md",
       "line": 20,
       "column": 12,
-      "script": "git-push.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-pr.md:20:git-push.py",
+      "id": "dist/cursor/commands/sw-pr.md:20:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-pr.md",
       "line": 20,
-      "column": 68,
-      "script": "git-push.py",
+      "column": 87,
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-pr.md:32:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-pr.md:32:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-pr.md",
       "line": 32,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13537,12 +13537,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-prd.md:65:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-prd.md:65:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-prd.md",
       "line": 65,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13555,12 +13555,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ready.md:12:host.py",
+      "id": "dist/cursor/commands/sw-ready.md:12:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ready.md",
       "line": 12,
       "column": 12,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13582,21 +13582,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ready.md:40:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-ready.md:40:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ready.md",
       "line": 40,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-retro.md:14:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-retro.md:14:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retro.md",
       "line": 14,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13672,12 +13672,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:107:reconcile-status.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:107:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
       "line": 107,
       "column": 31,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13726,12 +13726,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:184:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:184:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
       "line": 184,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13771,57 +13771,57 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-review.md:116:sw-tmp.py",
+      "id": "dist/cursor/commands/sw-review.md:116:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-review.md",
       "line": 116,
       "column": 60,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-review.md:134:memory-redact.py",
+      "id": "dist/cursor/commands/sw-review.md:134:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-review.md",
       "line": 134,
       "column": 12,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-review.md:165:memory-redact.py",
+      "id": "dist/cursor/commands/sw-review.md:165:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-review.md",
       "line": 165,
       "column": 53,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-review.md:187:sw-tmp.py",
+      "id": "dist/cursor/commands/sw-review.md:187:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-review.md",
       "line": 187,
       "column": 21,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-review.md:222:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-review.md:222:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-review.md",
       "line": 222,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-setup.md:20:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-setup.md:20:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-setup.md",
       "line": 20,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13870,30 +13870,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:57:sw-tmp.py",
+      "id": "dist/cursor/commands/sw-ship.md:57:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
       "line": 57,
       "column": 40,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:57:sw-tmp.py",
+      "id": "dist/cursor/commands/sw-ship.md:57:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
       "line": 57,
-      "column": 79,
-      "script": "sw-tmp.py",
+      "column": 98,
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:58:sw-tmp.py",
+      "id": "dist/cursor/commands/sw-ship.md:58:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
       "line": 58,
       "column": 56,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13969,21 +13969,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:192:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-ship.md:192:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
       "line": 192,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:205:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-ship.md:205:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
       "line": 205,
       "column": 24,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14041,12 +14041,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:251:memory-redact.py",
+      "id": "dist/cursor/commands/sw-ship.md:251:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
       "line": 251,
       "column": 36,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14104,21 +14104,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-simplify.md:41:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-simplify.md:41:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-simplify.md",
       "line": 41,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-stabilize.md:29:host.py",
+      "id": "dist/cursor/commands/sw-stabilize.md:29:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-stabilize.md",
       "line": 29,
       "column": 18,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14140,48 +14140,48 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-stabilize.md:58:git-push.py",
+      "id": "dist/cursor/commands/sw-stabilize.md:58:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-stabilize.md",
       "line": 58,
       "column": 79,
-      "script": "git-push.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-stabilize.md:65:host.py",
+      "id": "dist/cursor/commands/sw-stabilize.md:65:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-stabilize.md",
       "line": 65,
       "column": 44,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-stabilize.md:74:host.py",
+      "id": "dist/cursor/commands/sw-stabilize.md:74:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-stabilize.md",
       "line": 74,
       "column": 24,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-stabilize.md:153:host.py",
+      "id": "dist/cursor/commands/sw-stabilize.md:153:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-stabilize.md",
       "line": 153,
       "column": 12,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-stabilize.md:159:git-push.py",
+      "id": "dist/cursor/commands/sw-stabilize.md:159:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-stabilize.md",
       "line": 159,
       "column": 85,
-      "script": "git-push.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14194,12 +14194,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-stabilize.md:178:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-stabilize.md:178:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-stabilize.md",
       "line": 178,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14239,12 +14239,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-start.md:41:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-start.md:41:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-start.md",
       "line": 41,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14266,12 +14266,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:23:reconcile-status.py",
+      "id": "dist/cursor/commands/sw-status.md:23:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
       "line": 23,
       "column": 12,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14293,12 +14293,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:34:reconcile-status.py",
+      "id": "dist/cursor/commands/sw-status.md:34:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
       "line": 34,
       "column": 37,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14311,12 +14311,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:45:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-status.md:45:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
       "line": 45,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14374,12 +14374,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:46:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-tasks.md:46:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
       "line": 46,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14392,12 +14392,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-triage.md:26:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-triage.md:26:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-triage.md",
       "line": 26,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14410,12 +14410,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-verify.md:31:sw-tmp.py",
+      "id": "dist/cursor/commands/sw-verify.md:31:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-verify.md",
       "line": 31,
       "column": 21,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14428,12 +14428,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-verify.md:58:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-verify.md:58:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-verify.md",
       "line": 58,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14446,30 +14446,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-watch-ci.md:42:host.py",
+      "id": "dist/cursor/commands/sw-watch-ci.md:42:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-watch-ci.md",
       "line": 42,
       "column": 18,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-watch-ci.md:80:host.py",
+      "id": "dist/cursor/commands/sw-watch-ci.md:80:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-watch-ci.md",
       "line": 80,
       "column": 13,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-watch-ci.md:110:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-watch-ci.md:110:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-watch-ci.md",
       "line": 110,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14527,12 +14527,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-worktree.md:39:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-worktree.md:39:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-worktree.md",
       "line": 39,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14563,12 +14563,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw.md:64:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw.md:64:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw.md",
       "line": 64,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {

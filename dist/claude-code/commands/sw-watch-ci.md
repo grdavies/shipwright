@@ -39,7 +39,7 @@ and reports `ciWatch: false`. Do not busy-poll a missing host API.
 2. Resolve the active PR:
 
 ```bash
-PR_JSON=$(python3 scripts/host.py pr-view --number "$PR")
+PR_JSON=$(python3 scripts/sw_bootstrap.py host.py -- pr-view --number "$PR" )
 PR_NUMBER=$(Python json -r .number <<<"$PR_JSON")
 HEAD_SHA=$(Python json -r .headRefOid <<<"$PR_JSON")
 printf '%s\n' "$PR_JSON"
@@ -77,7 +77,7 @@ cat /tmp/sw-watch-ci-gate.json
      orchestrator owns the bounded loop and re-enters here.)
 
 ```bash
-Use `python3 scripts/host.py checks --number "$PR"` in a poll loop (bounded intervals per host rate-limit policy).
+Use `python3 scripts/sw_bootstrap.py host.py -- checks --number "$PR"` in a poll loop (bounded intervals per host rate-limit policy).
 echo 'WATCH_CI_TICK {"phase":"recheck"}'
 ```
 
@@ -107,7 +107,7 @@ Per the `checks-gate` skill:
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-watch-ci`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-watch-ci`.
 
 ## Guardrails
 

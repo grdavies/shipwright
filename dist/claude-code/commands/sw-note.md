@@ -52,7 +52,7 @@ scratch, not a planning artifact).
 1. **Classify** — explicit shape keyword wins; otherwise infer from phrasing (imperative → `task`,
    speculative/"what if" → `idea`, declarative fact → `note`). Ambiguous inference defaults to `note` (the
    most inert shape) and says so.
-2. **Redact** — pipe the text through `python3 scripts/memory-redact.py` before writing (same chokepoint as
+2. **Redact** — pipe the text through `python3 scripts/sw_bootstrap.py memory-redact.py` before writing (same chokepoint as
    every other Shipwright persist path).
 3. **Append** — write the JSON line; report the assigned id.
 4. **Task-done lifecycle** — `/sw-note done <id>` sets `status: done`, `doneAt: <now>`. Done tasks remain in
@@ -69,7 +69,7 @@ scratch, not a planning artifact).
 1. **Confirm-first** — always show the item and the target artifact type; require explicit `proceed` before
    any planning-store or brainstorm-doc write. Never auto-graduate.
 2. On confirm:
-   - `--to gap` → `python3 scripts/planning_gap_capture.py <repo> capture --signal-id notebook:<id> --title "<text>"`
+   - `--to gap` → `python3 scripts/sw_bootstrap.py planning_gap_capture.py -- <repo> capture --signal-id notebook:<id> --title "<text>"`
    - `--to brainstorm` → hand off to `/sw-brainstorm` with the note text as the seed input (does not write the
      brainstorm doc itself — `/sw-brainstorm` owns that).
 3. **Bidirectional provenance** — on successful graduation:
@@ -86,14 +86,14 @@ notebook items (not `done`/graduated) into a short index and injects it:
 
 1. Build the distilled index (id, shape, one-line text, tags — no full bodies beyond the one line already
    stored).
-2. Pipe the distilled index through `python3 scripts/memory-redact.py`.
+2. Pipe the distilled index through `python3 scripts/sw_bootstrap.py memory-redact.py`.
 3. **On redact success** — inject the redacted index.
 4. **On redact failure (any non-zero exit)** — skip injection entirely for this session. Never inject the
    raw, unredacted index as a fallback.
 
 **Communication intensity:** lite
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-note`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-note`.
 
 ## Guardrails
 
