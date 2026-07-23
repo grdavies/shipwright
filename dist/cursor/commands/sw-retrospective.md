@@ -104,7 +104,7 @@ task lists or committed checkbox toggles. Human review is required before any ta
 3. **Compound write** — load `skills/compound/SKILL.md`; route writes through `memory-preflight` +
    `scripts/memory-redact.py` (internal step — not `/sw-compound`).
 4. **`/sw-memory-sync`** — unless `--skip-memory-sync`; provider unreachable → **fail-closed** (R7).
-5. **`/sw-status`** — `python3 scripts/reconcile-status.py reconcile --require-merge` (INDEX `complete` only
+5. **`/sw-status`** — `python3 scripts/sw_bootstrap.py reconcile-status.py -- reconcile --require-merge` (INDEX `complete` only
    after merge detection, R11); `append-log` for COMPLETION-LOG.
 6. **Commit file outputs only** on the feature branch: COMPLETION-LOG, INDEX, CHANGELOG/version,
    learnings notes. **Never commit** memory/provider artifacts (R7).
@@ -181,7 +181,7 @@ python3 scripts/planning_store.py close-delivery-units --prd-unit <prd-unit-id> 
 
 **Communication intensity:** full
 
-**Model tier:** inherit — resolve delegated atomics via `python3 scripts/resolve-model-tier.py --command <child-slug>`; do not dispatch on bare `--command sw-retrospective`.
+**Model tier:** inherit — resolve delegated atomics via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command <child-slug>`; do not dispatch on bare `--command sw-retrospective`.
 
 ## Guardrails
 

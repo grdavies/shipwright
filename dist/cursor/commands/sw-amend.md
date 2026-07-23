@@ -36,7 +36,7 @@ Post-freeze correction path. Parent stays byte-stable.
 7. Freeze amendment via `/sw-freeze`.
 8. **File-store only:** update `docs/prds/INDEX.md` or `docs/decisions/INDEX.md` amendment links. Under
    issue-store (below), INDEX rows are issue-derived — never hand-edit living projections in the code repo.
-9. On decision record-level supersede: `python3 scripts/reconcile-status.py append-superseded --path <parent-record> --replacement <replacement-record>`.
+9. On decision record-level supersede: `python3 scripts/sw_bootstrap.py reconcile-status.py -- append-superseded --path <parent-record> --replacement <replacement-record>`.
 
 ## Issue-store mode (PRD 061 R23)
 
@@ -60,7 +60,7 @@ When `planning.store.backend` is `issue-store` (effective):
 
 **Communication intensity:** lite
 
-**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.py --command sw-amend`.
+**Model tier:** deep — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-amend`.
 
 ## Guardrails
 

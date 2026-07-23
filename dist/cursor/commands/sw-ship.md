@@ -54,8 +54,8 @@ Canonical chain is single-sourced from `core/sw-reference/kernel-classification.
   `core/sw-reference/build-chain-paths.json`, run `python3 scripts/ship-build-chain-check.py` (hard block on drift).
   Sync with full `python3 scripts/build-chain-sync.py` when check fails (not `copy-to-core` alone).
   `--force` is never an operator escape.
-- **sw-tmp** — at chain start: `python3 scripts/sw-tmp.py clean` then `python3 scripts/sw-tmp.py init` (records
-  `runDir` in shipwright-state). At chain end: `python3 scripts/sw-tmp.py clean`. No `trap … EXIT` (markdown-orchestrated
+- **sw-tmp** — at chain start: `python3 scripts/sw_bootstrap.py sw-tmp.py -- clean` then `python3 scripts/sw_bootstrap.py sw-tmp.py -- init` (records
+  `runDir` in shipwright-state). At chain end: `python3 scripts/sw_bootstrap.py sw-tmp.py -- clean`. No `trap … EXIT` (markdown-orchestrated
   chain).
 - **claims-audit** (PRD 064 R3) — after `behavioral-anomaly-check`, before `verification-gate`:
   `python3 scripts/claims_audit.py run --tasks <frozen-tasks> --phase-id <id> --agent-result $RUN_DIR/claims-audit-agent.json --out $RUN_DIR/claims-audit.status.json`.
@@ -189,7 +189,7 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/sw-ready` and stop.
 
 **Communication intensity:** inherit
 
-**Model tier:** inherit — resolve delegated atomics via `python3 scripts/resolve-model-tier.py --command <child-slug>`; do not dispatch on bare `--command sw-ship`.
+**Model tier:** inherit — resolve delegated atomics via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command <child-slug>`; do not dispatch on bare `--command sw-ship`.
 
 ## Delegated atomics
 
@@ -202,7 +202,7 @@ Substantive chain steps delegate with bound model + intensity per child slug:
 | `sw-simplify` | Task when heuristics fire | `--command sw-simplify` |
 | `sw-stabilize` | Task or in-turn chain | `--command sw-stabilize --skill stabilize` |
 
-Resolve model: `python3 scripts/resolve-model-tier.py --command <child-slug>` (or `--agent` for panel agents).
+Resolve model: `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command <child-slug>` (or `--agent` for panel agents).
 Resolve intensity: `python3 scripts/resolve-intensity.py --command <child-slug>` (or `--agent|--skill`).
 
 ## Delegated Task binding contract
@@ -248,7 +248,7 @@ Implementation/review authoring outside these bookkeeping paths delegates.
 ## Dispatch context redaction contract
 
 Before dispatching any Task, redact non-config payloads (diff excerpts, CI/review output, feedback snippets,
-memory-preflight data) via `python3 scripts/memory-redact.py`, then include only redacted/fenced
+memory-preflight data) via `python3 scripts/sw_bootstrap.py memory-redact.py`, then include only redacted/fenced
 `untrusted_payload` content.
 
 

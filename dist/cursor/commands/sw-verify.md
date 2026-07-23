@@ -28,7 +28,7 @@ Run the smallest reliable verification for the current phase.
 6. After all commands complete, resolve the run dir and write the aggregate status file:
 
    ```bash
-   RUN_DIR=$(python3 scripts/sw-tmp.py resolve)
+   RUN_DIR=$(python3 scripts/sw_bootstrap.py sw-tmp.py -- resolve)
    if [[ -z "$RUN_DIR" ]]; then
      RUN_DIR=/tmp
    fi
@@ -55,7 +55,7 @@ must use isolated temp paths (`harness_isolation_lint.py` enforces).
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-verify`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-verify`.
 
 ## Guardrails
 

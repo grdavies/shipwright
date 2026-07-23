@@ -38,7 +38,7 @@ behavior**. Default-on in `/sw-ship` after `/sw-review`.
 
 **Communication intensity:** full
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --command sw-simplify`.
+**Model tier:** mid — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-simplify`.
 
 ## Guardrails
 

@@ -43,7 +43,7 @@ Task list from frozen PRD + amendment union.
 
 **Communication intensity:** lite
 
-**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.py --command sw-tasks`.
+**Model tier:** deep — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-tasks`.
 
 ## Guardrails
 

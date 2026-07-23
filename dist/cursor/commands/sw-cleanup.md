@@ -73,12 +73,12 @@ Branches are classified via, in order:
 - `merge-base --is-ancestor` (regular merge / ff)
 - empty `default..branch` log
 - `git cherry` minus-only lines (squash-aware)
-- `python3 scripts/host.py pr-list --state closed` when host token is available
+- `python3 scripts/sw_bootstrap.py host.py -- pr-list --state closed` when host token is available
 - otherwise **indeterminate** → protected (no delete)
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-cleanup`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-cleanup`.
 
 ## Guardrails
 

@@ -22,4 +22,4 @@ replacedBy: sw-retrospective
 
 **Communication intensity:** full
 
-**Model tier:** inherit — resolve via `python3 scripts/resolve-model-tier.py --command sw-retrospective`.
+**Model tier:** inherit — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-retrospective`.

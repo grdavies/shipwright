@@ -20,7 +20,7 @@ Load `skills/living-status/SKILL.md`.
    ```
    Returns one of `backlog`, `planned`, `in-progress`, `complete`, or `unauthorized` — the same value
    `/sw-status` reports for planning-unit queries regardless of backend.
-2. `python3 scripts/reconcile-status.py derive` — show per-PRD status + task/PR linkage.
+2. `python3 scripts/sw_bootstrap.py reconcile-status.py -- derive` — show per-PRD status + task/PR linkage.
 2. On user request or post-merge: `reconcile` to update INDEX Status column.
 3. After shipped phase: `append-log` for completion log entry.
 4. Include gap-unit index echo from `docs/planning/INDEX.md` (derived region) and legacy GAP-BACKLOG projection summary (read-only).
@@ -31,7 +31,7 @@ Load `skills/living-status/SKILL.md`.
    - `coderabbitState: off` → `review: off`
    - `coderabbitState: unconfigured` → `review: not configured`
    - otherwise → `review: <coderabbitState>` (per `skills/living-status/SKILL.md`).
-8. **Deliver runs (R10)** — `python3 scripts/reconcile-status.py deliver-runs` lists every live scoped deliver
+8. **Deliver runs (R10)** — `python3 scripts/sw_bootstrap.py reconcile-status.py -- deliver-runs` lists every live scoped deliver
    run (slug, target branch, verdict, lock holder). `derive --json` embeds the same `deliverRuns` array and
    refreshes `.cursor/sw-deliver-runs/index.json`.
 8a. **Dependency-gate override drift (PRD 033 R28)** — echo recent `dependency-gate` overrides from deliver state / shipwright.json (who/when/why/blocking units).
@@ -42,7 +42,7 @@ Load `skills/living-status/SKILL.md`.
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-status`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-status`.
 
 ## Guardrails
 

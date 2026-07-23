@@ -53,7 +53,7 @@ verbose only where the operator's input actually changes the outcome:
 5. **Optional project-intent and working-style capture** — after the resolved-choice interview, offer (never
    force) one short optional capture: a one-paragraph project intent (what this repo is for, who it serves)
    and a working-style note (e.g. preferred ceremony level, review posture). Skip silently on decline.
-   When provided, redact via `python3 scripts/memory-redact.py` and persist to
+   When provided, redact via `python3 scripts/sw_bootstrap.py memory-redact.py` and persist to
    `.cursor/sw-context/project-intent.md` (repo-local, not the planning store) for later `/sw-brainstorm` and
    `/sw-prd` consumption — those skills read this file opportunistically when present; its absence changes
    nothing.
@@ -313,7 +313,7 @@ After the config file exists, seed the public-repo-aware visibility profile, def
 first-run privacy notice:
 
 ```bash
-python3 scripts/planning-init-seed.py --config "$CONFIG"
+python3 scripts/sw_bootstrap.py planning-init-seed.py -- --config "$CONFIG"
 ```
 
 This:
@@ -369,7 +369,7 @@ Doctor detects residual façade files and offers confirm-gated removal — never
 Detect residual façade files (read-only; legacy manifests are migration metadata only):
 
 ```bash
-python3 scripts/init_scripts_facade.py . detect
+python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . detect
 ```
 
 Review `facadeFiles`, `refused`, and `clobber` in the JSON output. Clobber entries report modified
@@ -378,8 +378,8 @@ templates or git-history overwrite signals — **no restore is offered**.
 Remove identity-verified façade files only after explicit operator confirm:
 
 ```bash
-python3 scripts/init_scripts_facade.py . remove          # dry-run: wouldRemove
-python3 scripts/init_scripts_facade.py . remove --confirm
+python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . remove # dry-run: wouldRemove
+python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . remove --confirm
 ```
 
 Doctor re-runs surface the same `detect` payload; interactive `/sw-init` offers the confirm step when
@@ -393,7 +393,7 @@ Print summary: providers, verify status, portability self-check, drift notice, c
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-init`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-init`.
 
 ## Guardrails
 

@@ -52,14 +52,14 @@ source: sw-become
 5. **Model-tier binding** — on confirmed write, also add
    `models.routing.agents.<slug>: "<tier>"` to `.cursor/workflow.config.json` (default `build`; ask if the
    operator wants `cheap`/`mid`/`deep` instead). This makes the persona's dispatch tier resolvable via
-   `python3 scripts/resolve-model-tier.py --agent <slug>` the same way doc-review personas resolve — never
+   `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --agent <slug>` the same way doc-review personas resolve — never
    left as a bare unresolvable `inherit`.
 6. **Report** — persona path, model tier bound, and the exact `/sw-ask --persona <slug> "<question>"` command
    to consult it.
 
 **Communication intensity:** normal
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-become`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-become`.
 
 ## Guardrails
 

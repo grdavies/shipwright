@@ -62,7 +62,7 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
 
 **Communication intensity:** lite
 
-**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.py --command sw-prd`.
+**Model tier:** deep — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-prd`.
 
 ## Guardrails
 

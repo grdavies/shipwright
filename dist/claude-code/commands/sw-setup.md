@@ -17,4 +17,4 @@ configuration logic lives in `scripts/sw-configure.py` — this file does not du
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-init`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-init`.

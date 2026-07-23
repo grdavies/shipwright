@@ -9,7 +9,7 @@ Push after `/sw-commit`; create/update PR against the real parent branch.
 
 ## Parent resolution
 
-1. `python3 scripts/host.py resolve-pr-for-branch` then `pr-view` for current branch metadata.
+1. `python3 scripts/sw_bootstrap.py host.py -- resolve-pr-for-branch` then `pr-view` for current branch metadata.
 2. If no PR → `scripts/shipwright-state.py read` → `parentBranch`.
 3. Never guess from `main` or merge-base.
 
@@ -17,7 +17,7 @@ Push after `/sw-commit`; create/update PR against the real parent branch.
 
 1. `memory-preflight` read (light) for reviewer context.
 2. Clean worktree (`git status --short`).
-3. `python3 scripts/git-push.py -u origin HEAD` (first) or `python3 scripts/git-push.py` — never raw
+3. `python3 scripts/sw_bootstrap.py git-push.py -- -u origin HEAD` (first) or `python3 scripts/sw_bootstrap.py git-push.py` — never raw
    `git push` in workflow; the wrapper runs `secret-scan.py` pre-push (R41/R50).
 4. Create/update PR with Summary, Issues (`issueNumbers`), Verification, Next (`/sw-watch-ci`).
 5. PR body may include `prd:<slug>` for living-status linkage (R14).
@@ -29,7 +29,7 @@ Push after `/sw-commit`; create/update PR against the real parent branch.
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-pr`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-pr`.
 
 
 ## Decision log (required)

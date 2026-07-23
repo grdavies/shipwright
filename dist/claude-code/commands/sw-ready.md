@@ -9,7 +9,7 @@ Confirm merge-readiness via `scripts/check-gate.py` — terminal report only.
 
 ## Procedure
 
-1. `python3 scripts/host.py pr-view` for number, url, draft/base/head; combine with `scripts/check-gate.py` for checks.
+1. `python3 scripts/sw_bootstrap.py host.py -- pr-view` for number, url, draft/base/head; combine with `scripts/check-gate.py` for checks.
 2. No PR → hand off `/sw-pr`.
 3. Confirm PR base matches `parentBranch` from per-worktree state.
 4. Clean branch; local verify already passed.
@@ -37,7 +37,7 @@ Confirm merge-readiness via `scripts/check-gate.py` — terminal report only.
 
 **Communication intensity:** normal
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-ready`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-ready`.
 
 ## Guardrails
 

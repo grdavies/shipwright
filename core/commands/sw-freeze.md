@@ -118,7 +118,7 @@ Bootstrap local hook: `python3 scripts/install-hooks.py`.
 
 **Communication intensity:** normal
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-freeze`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-freeze`.
 
 ## Guardrails
 
