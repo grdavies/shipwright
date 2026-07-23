@@ -27,6 +27,7 @@ from sw_scripts_resolve import (
     is_shipwright_self_repo,
     plugin_install_scripts,
     resolve_script,
+    resolve_scripts_dir,
     scripts_dir_is_trusted,
 )
 
@@ -476,51 +477,74 @@ def remove_legacy_facade(root: Path, *, confirm: bool = False) -> dict[str, Any]
     }
 
 
-def probe_deliver_entrypoints(root: Path) -> dict[str, Any]:
-    """Preflight probe: consumer scripts façade resolves documented deliver entrypoints."""
+def _resolution_uses_consumer_scripts(root: Path, resolved: Path) -> bool:
+    consumer_scripts = (root / "scripts").resolve()
+    if not consumer_scripts.is_dir():
+        return False
+    try:
+        resolved.relative_to(consumer_scripts)
+    except ValueError:
+        return False
+    return True
+
+
+def probe_deliver_entrypoints(
+    root: Path,
+    *,
+    env: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Zero-footprint probe: no façade files; deliver entrypoints resolve via plugin/bootstrap."""
     root = root.resolve()
-    manifest = load_manifest(root)
-    scripts_dir = root / "scripts"
-    missing: list[str] = []
-    not_file: list[str] = []
-    symlinked: list[str] = []
+    if is_shipwright_self_repo(root):
+        return {
+            "verdict": "skip",
+            "action": "probe-deliver-entrypoints",
+            "reason": "shipwright-self-repo",
+        }
 
-    dispatcher = scripts_dir / "sw"
-    if not dispatcher.is_file():
-        missing.append("scripts/sw")
-    elif dispatcher.is_symlink():
-        symlinked.append("scripts/sw")
-
-    for name in DELIVER_ENTRYPOINTS:
-        rel = f"scripts/{name}"
-        path = scripts_dir / name
-        if not path.is_file():
-            missing.append(rel)
-        elif path.is_symlink():
-            symlinked.append(rel)
-
-    for marker in TRUST_MARKERS:
-        path = scripts_dir / marker
-        if not path.is_file():
-            missing.append(f"scripts/{marker}")
+    detection = detect_legacy_facade(root)
+    facade_files = list(detection.get("facadeFiles") or [])
+    refused = list(detection.get("refused") or [])
+    errors: list[str] = []
+    if facade_files:
+        errors.append("residual-facade-files")
+    if refused:
+        errors.append("hand-forwarder-pollution")
 
     resolve_errors: list[str] = []
-    if not missing and scripts_dir_is_trusted(scripts_dir):
+    resolved_sources: dict[str, str] = {}
+    dir_result = resolve_scripts_dir(root, env=env, executor=Path(__file__))
+    scripts_root_source = dir_result.source
+
+    if dir_result.error:
+        resolve_errors.append(f"scripts-root: {dir_result.error}")
+    elif dir_result.path is None:
+        resolve_errors.append("scripts-root: no trusted scripts root found")
+    elif dir_result.source == "consumer":
+        errors.append("resolution-needs-consumer-files")
+    else:
         for name in DELIVER_ENTRYPOINTS:
             try:
-                resolve_script(root, name)
+                resolved = resolve_script(root, name, env=env, executor=Path(__file__))
             except Exception as exc:  # noqa: BLE001 — aggregate probe failures
                 resolve_errors.append(f"{name}: {exc}")
+                continue
+            if _resolution_uses_consumer_scripts(root, resolved):
+                errors.append(f"resolution-needs-consumer-files:{name}")
+            else:
+                resolved_sources[name] = scripts_root_source or "unknown"
 
-    ok = not missing and not symlinked and not resolve_errors
+    ok = not errors and not resolve_errors
     return {
         "verdict": "pass" if ok else "fail",
         "action": "probe-deliver-entrypoints",
-        "manifestPresent": bool(manifest),
-        "pluginScripts": manifest.get("pluginScripts"),
-        "missing": missing,
-        "symlinked": symlinked,
+        "mode": "zero-footprint",
+        "facadeFiles": facade_files,
+        "refused": refused,
+        "errors": errors,
         "resolveErrors": resolve_errors,
+        "resolvedSources": resolved_sources,
+        "scriptsRootSource": scripts_root_source,
     }
 
 
