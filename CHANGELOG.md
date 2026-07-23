@@ -595,6 +595,7 @@
 * merge phase hermetic-fixtures-compatibility into feat/obsidian-memory-provider (2ffe2e4) <!-- sw-deliver:hermetic-fixtures-compatibility -->
 * merge phase emit-dist-lineage into feat/obsidian-memory-provider (186edb6) <!-- sw-deliver:emit-dist-lineage -->
 * merge phase call-site-inventory-unclassified-literal-guard-medium into feat/consumer-scripts-facade-placement (d935915) <!-- sw-deliver:call-site-inventory-unclassified-literal-guard-medium -->
+* merge phase multi-root-plugin-probe-consumer-fail-closed-medium into feat/consumer-scripts-facade-placement (35f0303) <!-- sw-deliver:multi-root-plugin-probe-consumer-fail-closed-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
