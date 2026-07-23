@@ -601,6 +601,7 @@
 * merge phase legacy-fa-ade-removal-clobber-detection-medium into feat/consumer-scripts-facade-placement (ad59caf) <!-- sw-deliver:legacy-fa-ade-removal-clobber-detection-medium -->
 * merge phase zero-footprint-probe-replacing-fa-ade-present-small into feat/consumer-scripts-facade-placement (630c28b) <!-- sw-deliver:zero-footprint-probe-replacing-fa-ade-present-small -->
 * merge phase migrate-commands-to-bootstrap-form-medium into feat/consumer-scripts-facade-placement (4dfa615) <!-- sw-deliver:migrate-commands-to-bootstrap-form-medium -->
+* merge phase migrate-skills-references-hooks-ci-templates-medium into feat/consumer-scripts-facade-placement (86b061a) <!-- sw-deliver:migrate-skills-references-hooks-ci-templates-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
