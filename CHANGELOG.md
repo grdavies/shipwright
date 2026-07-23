@@ -597,6 +597,7 @@
 * merge phase call-site-inventory-unclassified-literal-guard-medium into feat/consumer-scripts-facade-placement (d935915) <!-- sw-deliver:call-site-inventory-unclassified-literal-guard-medium -->
 * merge phase multi-root-plugin-probe-consumer-fail-closed-medium into feat/consumer-scripts-facade-placement (35f0303) <!-- sw-deliver:multi-root-plugin-probe-consumer-fail-closed-medium -->
 * merge phase canonical-bootstrap-cli-medium into feat/consumer-scripts-facade-placement (9cb9618) <!-- sw-deliver:canonical-bootstrap-cli-medium -->
+* merge phase retire-consumer-fa-ade-emit-medium into feat/consumer-scripts-facade-placement (ac0b76c) <!-- sw-deliver:retire-consumer-fa-ade-emit-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
