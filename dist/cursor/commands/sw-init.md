@@ -366,6 +366,25 @@ entrypoint.
 **Legacy façades:** repos that previously ran `/sw-init` emit may still have forwarders under `scripts/`.
 Doctor detects residual façade files and offers confirm-gated removal — never auto-deletes unmarked scripts.
 
+Detect residual façade files (read-only; legacy manifests are migration metadata only):
+
+```bash
+python3 scripts/init_scripts_facade.py . detect
+```
+
+Review `facadeFiles`, `refused`, and `clobber` in the JSON output. Clobber entries report modified
+templates or git-history overwrite signals — **no restore is offered**.
+
+Remove identity-verified façade files only after explicit operator confirm:
+
+```bash
+python3 scripts/init_scripts_facade.py . remove          # dry-run: wouldRemove
+python3 scripts/init_scripts_facade.py . remove --confirm
+```
+
+Doctor re-runs surface the same `detect` payload; interactive `/sw-init` offers the confirm step when
+`verdict` is `found`.
+
 **Agent guardrail:** do **not** hand-author forwarders mid-deliver; use bootstrap argv for deliver entrypoints.
 
 ### 7. Report
