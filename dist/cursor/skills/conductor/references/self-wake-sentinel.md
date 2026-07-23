@@ -12,8 +12,8 @@ After `/sw-pr` on the feature branch:
 
 ```bash
 RUN_ID="sw-deliver-009-autonomous-orchestration-conductor"   # from state
-PR=$(python3 scripts/host.py resolve-pr-for-branch)
-python3 scripts/host.py checks --number "$PR"
+PR=$(python3 scripts/sw_bootstrap.py host.py -- resolve-pr-for-branch)
+python3 scripts/sw_bootstrap.py host.py -- checks --number "$PR"
 echo "DELIVER_WAKE_${RUN_ID} {\"phase\":\"terminal-ci\",\"prd\":\"009\"}"
 ```
 

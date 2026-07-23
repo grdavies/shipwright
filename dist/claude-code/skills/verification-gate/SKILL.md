@@ -20,7 +20,7 @@ Complementary to `skills/checks-gate` (CI truth via `scripts/check-gate.py`); ne
 gate verdict.
 
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill verification-gate`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill verification-gate`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Three-state contract
 
@@ -165,7 +165,7 @@ new signature → `action: created`.
   `core/sw-reference/deprecated-surface-manifest.json` (explicit manifest only).
 - Fixtures sharing `workflow.config.json` with baseline I/O must isolate paths;
   `scripts/harness_isolation_lint.py --check` fails closed otherwise.
-- Inspect override gaps: `python3 scripts/planning_gap_capture.py <repo> capture-verify-override --override '<json>'`
+- Inspect override gaps: `python3 scripts/sw_bootstrap.py planning_gap_capture.py -- <repo> capture-verify-override --override '<json>'`
 
 ## Reuse points
 

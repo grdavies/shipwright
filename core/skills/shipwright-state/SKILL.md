@@ -7,7 +7,7 @@ description: Per-worktree Shipwright state read and write contract. Use when res
 Phase context lives in the **worktree gitdir**, not a shared repo-global file.
 
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill shipwright-state`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill shipwright-state`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Location
 

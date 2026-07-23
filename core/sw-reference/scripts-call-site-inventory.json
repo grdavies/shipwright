@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-23T04:36:46Z",
+  "generatedAt": "2026-07-23T15:13:29Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -3151,12 +3151,12 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/hooks/before_task_dispatch.py:328:resolve-model-tier.py",
+      "id": "core/hooks/before_task_dispatch.py:328:sw_bootstrap.py",
       "tree": "core/hooks",
       "file": "core/hooks/before_task_dispatch.py",
       "line": 328,
       "column": 34,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -3898,12 +3898,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/brainstorm/SKILL.md:10:resolve-model-tier.py",
+      "id": "core/skills/brainstorm/SKILL.md:10:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/brainstorm/SKILL.md",
       "line": 10,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -3970,21 +3970,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/calibration-loop/SKILL.md:10:resolve-model-tier.py",
+      "id": "core/skills/calibration-loop/SKILL.md:10:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/calibration-loop/SKILL.md",
       "line": 10,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/checks-gate/SKILL.md:22:resolve-model-tier.py",
+      "id": "core/skills/checks-gate/SKILL.md:22:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/checks-gate/SKILL.md",
       "line": 22,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4006,21 +4006,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/compound/SKILL.md:20:resolve-model-tier.py",
+      "id": "core/skills/compound/SKILL.md:20:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/compound/SKILL.md",
       "line": 20,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/compound/SKILL.md:25:memory-redact.py",
+      "id": "core/skills/compound/SKILL.md:25:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/compound/SKILL.md",
       "line": 25,
       "column": 37,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4033,12 +4033,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:22:resolve-model-tier.py",
+      "id": "core/skills/conductor/SKILL.md:22:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
       "line": 22,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4222,21 +4222,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/references/self-wake-sentinel.md:15:host.py",
+      "id": "core/skills/conductor/references/self-wake-sentinel.md:15:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/references/self-wake-sentinel.md",
       "line": 15,
       "column": 13,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/conductor/references/self-wake-sentinel.md:16:host.py",
+      "id": "core/skills/conductor/references/self-wake-sentinel.md:16:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/references/self-wake-sentinel.md",
       "line": 16,
       "column": 8,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4249,30 +4249,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/debug/SKILL.md:12:resolve-model-tier.py",
+      "id": "core/skills/debug/SKILL.md:12:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/debug/SKILL.md",
       "line": 12,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/debug/SKILL.md:21:memory-redact.py",
+      "id": "core/skills/debug/SKILL.md:21:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/debug/SKILL.md",
       "line": 21,
       "column": 62,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/debug/SKILL.md:55:memory-redact.py",
+      "id": "core/skills/debug/SKILL.md:55:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/debug/SKILL.md",
       "line": 55,
       "column": 33,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4294,21 +4294,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/debug/references/sentry.md:49:memory-redact.py",
+      "id": "core/skills/debug/references/sentry.md:49:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/debug/references/sentry.md",
       "line": 49,
       "column": 63,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/deliver/SKILL.md:16:resolve-model-tier.py",
+      "id": "core/skills/deliver/SKILL.md:16:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/deliver/SKILL.md",
       "line": 16,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4474,30 +4474,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/deliver/references/terminal-lifecycle.md:91:reconcile-status.py",
+      "id": "core/skills/deliver/references/terminal-lifecycle.md:91:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/deliver/references/terminal-lifecycle.md",
       "line": 91,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/deliver/references/terminal-lifecycle.md:92:reconcile-status.py",
+      "id": "core/skills/deliver/references/terminal-lifecycle.md:92:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/deliver/references/terminal-lifecycle.md",
       "line": 92,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/deliver/references/terminal-lifecycle.md:93:reconcile-status.py",
+      "id": "core/skills/deliver/references/terminal-lifecycle.md:93:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/deliver/references/terminal-lifecycle.md",
       "line": 93,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4537,12 +4537,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/doc-review/SKILL.md:158:resolve-model-tier.py",
+      "id": "core/skills/doc-review/SKILL.md:158:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/doc-review/SKILL.md",
       "line": 158,
       "column": 19,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4591,12 +4591,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/execute-discipline/SKILL.md:11:resolve-model-tier.py",
+      "id": "core/skills/execute-discipline/SKILL.md:11:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/execute-discipline/SKILL.md",
       "line": 11,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4717,12 +4717,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/feedback-closure/SKILL.md:16:resolve-model-tier.py",
+      "id": "core/skills/feedback-closure/SKILL.md:16:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/feedback-closure/SKILL.md",
       "line": 16,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4735,12 +4735,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/feedback-closure/SKILL.md:42:planning_gap_capture.py",
+      "id": "core/skills/feedback-closure/SKILL.md:42:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/feedback-closure/SKILL.md",
       "line": 42,
       "column": 38,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4762,30 +4762,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/feedback/SKILL.md:14:resolve-model-tier.py",
+      "id": "core/skills/feedback/SKILL.md:14:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/feedback/SKILL.md",
       "line": 14,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/feedback/SKILL.md:24:memory-redact.py",
+      "id": "core/skills/feedback/SKILL.md:24:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/feedback/SKILL.md",
       "line": 24,
       "column": 68,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/feedback/SKILL.md:43:memory-redact.py",
+      "id": "core/skills/feedback/SKILL.md:43:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/feedback/SKILL.md",
       "line": 43,
       "column": 24,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4816,39 +4816,39 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/feedback/SKILL.md:68:memory-redact.py",
+      "id": "core/skills/feedback/SKILL.md:68:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/feedback/SKILL.md",
       "line": 68,
       "column": 50,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/feedback/SKILL.md:112:planning_gap_capture.py",
+      "id": "core/skills/feedback/SKILL.md:112:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/feedback/SKILL.md",
       "line": 112,
       "column": 32,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/feedback/SKILL.md:115:memory-redact.py",
+      "id": "core/skills/feedback/SKILL.md:115:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/feedback/SKILL.md",
       "line": 115,
       "column": 13,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/feedback/SKILL.md:124:planning_gap_capture.py",
+      "id": "core/skills/feedback/SKILL.md:124:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/feedback/SKILL.md",
       "line": 124,
       "column": 78,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4861,30 +4861,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/feedback/SKILL.md:157:planning_gap_capture.py",
+      "id": "core/skills/feedback/SKILL.md:157:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/feedback/SKILL.md",
       "line": 157,
       "column": 8,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/feedback/references/signal-schema.md:3:memory-redact.py",
+      "id": "core/skills/feedback/references/signal-schema.md:3:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/feedback/references/signal-schema.md",
       "line": 3,
       "column": 35,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/gap-check/SKILL.md:10:resolve-model-tier.py",
+      "id": "core/skills/gap-check/SKILL.md:10:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/gap-check/SKILL.md",
       "line": 10,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4897,12 +4897,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/gap-check/SKILL.md:17:sw-tmp.py",
+      "id": "core/skills/gap-check/SKILL.md:17:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/gap-check/SKILL.md",
       "line": 17,
       "column": 11,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -4987,12 +4987,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/git-workflow/SKILL.md:24:resolve-model-tier.py",
+      "id": "core/skills/git-workflow/SKILL.md:24:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/git-workflow/SKILL.md",
       "line": 24,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5095,57 +5095,57 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/living-status/SKILL.md:9:resolve-model-tier.py",
+      "id": "core/skills/living-status/SKILL.md:9:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/living-status/SKILL.md",
       "line": 9,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/living-status/SKILL.md:33:reconcile-status.py",
+      "id": "core/skills/living-status/SKILL.md:33:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/living-status/SKILL.md",
       "line": 33,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/living-status/SKILL.md:34:reconcile-status.py",
+      "id": "core/skills/living-status/SKILL.md:34:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/living-status/SKILL.md",
       "line": 34,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/living-status/SKILL.md:35:reconcile-status.py",
+      "id": "core/skills/living-status/SKILL.md:35:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/living-status/SKILL.md",
       "line": 35,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/living-status/SKILL.md:36:reconcile-status.py",
+      "id": "core/skills/living-status/SKILL.md:36:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/living-status/SKILL.md",
       "line": 36,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/living-status/SKILL.md:37:reconcile-status.py",
+      "id": "core/skills/living-status/SKILL.md:37:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/living-status/SKILL.md",
       "line": 37,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5257,12 +5257,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/SKILL.md:23:resolve-model-tier.py",
+      "id": "core/skills/memory/SKILL.md:23:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
       "line": 23,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5302,21 +5302,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/SKILL.md:164:memory-redact.py",
+      "id": "core/skills/memory/SKILL.md:164:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
       "line": 164,
       "column": 8,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/memory/SKILL.md:169:memory-redact.py",
+      "id": "core/skills/memory/SKILL.md:169:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
       "line": 169,
       "column": 13,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5356,21 +5356,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/SKILL.md:294:reconcile-status.py",
+      "id": "core/skills/memory/SKILL.md:294:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
       "line": 294,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/memory/SKILL.md:297:reconcile-status.py",
+      "id": "core/skills/memory/SKILL.md:297:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
       "line": 297,
       "column": 32,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5383,12 +5383,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/parallelism/SKILL.md:8:resolve-model-tier.py",
+      "id": "core/skills/parallelism/SKILL.md:8:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/parallelism/SKILL.md",
       "line": 8,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5455,12 +5455,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/prd/SKILL.md:10:resolve-model-tier.py",
+      "id": "core/skills/prd/SKILL.md:10:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/prd/SKILL.md",
       "line": 10,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5491,12 +5491,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/rca-core/SKILL.md:18:resolve-model-tier.py",
+      "id": "core/skills/rca-core/SKILL.md:18:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/rca-core/SKILL.md",
       "line": 18,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5509,30 +5509,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/rca-core/SKILL.md:89:memory-redact.py",
+      "id": "core/skills/rca-core/SKILL.md:89:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/rca-core/SKILL.md",
       "line": 89,
       "column": 47,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/rca-core/SKILL.md:117:memory-redact.py",
+      "id": "core/skills/rca-core/SKILL.md:117:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/rca-core/SKILL.md",
       "line": 117,
       "column": 44,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/rca-core/references/debug-inputs.md:4:memory-redact.py",
+      "id": "core/skills/rca-core/references/debug-inputs.md:4:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/rca-core/references/debug-inputs.md",
       "line": 4,
       "column": 9,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5599,12 +5599,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/retro/SKILL.md:10:resolve-model-tier.py",
+      "id": "core/skills/retro/SKILL.md:10:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/retro/SKILL.md",
       "line": 10,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5689,12 +5689,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/shipwright-state/SKILL.md:10:resolve-model-tier.py",
+      "id": "core/skills/shipwright-state/SKILL.md:10:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/shipwright-state/SKILL.md",
       "line": 10,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5743,12 +5743,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/simplify/SKILL.md:12:resolve-model-tier.py",
+      "id": "core/skills/simplify/SKILL.md:12:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/simplify/SKILL.md",
       "line": 12,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5761,21 +5761,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/simplify/SKILL.md:59:memory-redact.py",
+      "id": "core/skills/simplify/SKILL.md:59:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/simplify/SKILL.md",
       "line": 59,
       "column": 39,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/spec-rigor/SKILL.md:11:resolve-model-tier.py",
+      "id": "core/skills/spec-rigor/SKILL.md:11:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/spec-rigor/SKILL.md",
       "line": 11,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5833,12 +5833,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/spec-rigor/SKILL.md:125:memory-redact.py",
+      "id": "core/skills/spec-rigor/SKILL.md:125:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/spec-rigor/SKILL.md",
       "line": 125,
       "column": 53,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5860,12 +5860,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/spec-union/SKILL.md:10:resolve-model-tier.py",
+      "id": "core/skills/spec-union/SKILL.md:10:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/spec-union/SKILL.md",
       "line": 10,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5896,39 +5896,39 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/stabilize-loop/SKILL.md:13:resolve-model-tier.py",
+      "id": "core/skills/stabilize-loop/SKILL.md:13:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/stabilize-loop/SKILL.md",
       "line": 13,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/stabilize-loop/SKILL.md:98:host.py",
+      "id": "core/skills/stabilize-loop/SKILL.md:98:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/stabilize-loop/SKILL.md",
       "line": 98,
       "column": 13,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/stabilize-loop/SKILL.md:99:host.py",
+      "id": "core/skills/stabilize-loop/SKILL.md:99:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/stabilize-loop/SKILL.md",
       "line": 99,
       "column": 8,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/tasks/SKILL.md:10:resolve-model-tier.py",
+      "id": "core/skills/tasks/SKILL.md:10:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/tasks/SKILL.md",
       "line": 10,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -5986,12 +5986,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/tournament/SKILL.md:10:resolve-model-tier.py",
+      "id": "core/skills/tournament/SKILL.md:10:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/tournament/SKILL.md",
       "line": 10,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -6013,21 +6013,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/triage/SKILL.md:21:resolve-model-tier.py",
+      "id": "core/skills/triage/SKILL.md:21:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/triage/SKILL.md",
       "line": 21,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/verification-gate/SKILL.md:23:resolve-model-tier.py",
+      "id": "core/skills/verification-gate/SKILL.md:23:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/verification-gate/SKILL.md",
       "line": 23,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -6076,21 +6076,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/verification-gate/SKILL.md:168:planning_gap_capture.py",
+      "id": "core/skills/verification-gate/SKILL.md:168:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/verification-gate/SKILL.md",
       "line": 168,
       "column": 34,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/worktree/SKILL.md:10:resolve-model-tier.py",
+      "id": "core/skills/worktree/SKILL.md:10:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/worktree/SKILL.md",
       "line": 10,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9388,12 +9388,12 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/brainstorm/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/brainstorm/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/brainstorm/SKILL.md",
       "line": 10,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9460,21 +9460,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/calibration-loop/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/calibration-loop/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/calibration-loop/SKILL.md",
       "line": 10,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/checks-gate/SKILL.md:22:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/checks-gate/SKILL.md:22:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/checks-gate/SKILL.md",
       "line": 22,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9496,21 +9496,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/compound/SKILL.md:20:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/compound/SKILL.md:20:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/compound/SKILL.md",
       "line": 20,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/compound/SKILL.md:25:memory-redact.py",
+      "id": "dist/claude-code/skills/compound/SKILL.md:25:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/compound/SKILL.md",
       "line": 25,
       "column": 37,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9523,12 +9523,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:24:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:24:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
       "line": 24,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9712,21 +9712,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/references/self-wake-sentinel.md:15:host.py",
+      "id": "dist/claude-code/skills/conductor/references/self-wake-sentinel.md:15:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/references/self-wake-sentinel.md",
       "line": 15,
       "column": 13,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/conductor/references/self-wake-sentinel.md:16:host.py",
+      "id": "dist/claude-code/skills/conductor/references/self-wake-sentinel.md:16:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/references/self-wake-sentinel.md",
       "line": 16,
       "column": 8,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9739,30 +9739,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/debug/SKILL.md:12:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/debug/SKILL.md:12:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/debug/SKILL.md",
       "line": 12,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/debug/SKILL.md:21:memory-redact.py",
+      "id": "dist/claude-code/skills/debug/SKILL.md:21:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/debug/SKILL.md",
       "line": 21,
       "column": 62,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/debug/SKILL.md:55:memory-redact.py",
+      "id": "dist/claude-code/skills/debug/SKILL.md:55:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/debug/SKILL.md",
       "line": 55,
       "column": 33,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9784,21 +9784,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/debug/references/sentry.md:49:memory-redact.py",
+      "id": "dist/claude-code/skills/debug/references/sentry.md:49:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/debug/references/sentry.md",
       "line": 49,
       "column": 63,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/deliver/SKILL.md:16:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/deliver/SKILL.md:16:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/deliver/SKILL.md",
       "line": 16,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -9964,30 +9964,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md:91:reconcile-status.py",
+      "id": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md:91:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md",
       "line": 91,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md:92:reconcile-status.py",
+      "id": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md:92:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md",
       "line": 92,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md:93:reconcile-status.py",
+      "id": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md:93:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md",
       "line": 93,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10027,12 +10027,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:158:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:158:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
       "line": 158,
       "column": 19,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10081,12 +10081,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/execute-discipline/SKILL.md:11:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/execute-discipline/SKILL.md:11:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/execute-discipline/SKILL.md",
       "line": 11,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10207,12 +10207,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/feedback-closure/SKILL.md:16:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/feedback-closure/SKILL.md:16:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/feedback-closure/SKILL.md",
       "line": 16,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10225,12 +10225,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/feedback-closure/SKILL.md:42:planning_gap_capture.py",
+      "id": "dist/claude-code/skills/feedback-closure/SKILL.md:42:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/feedback-closure/SKILL.md",
       "line": 42,
       "column": 38,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10252,30 +10252,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/feedback/SKILL.md:14:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/feedback/SKILL.md:14:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/feedback/SKILL.md",
       "line": 14,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/feedback/SKILL.md:24:memory-redact.py",
+      "id": "dist/claude-code/skills/feedback/SKILL.md:24:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/feedback/SKILL.md",
       "line": 24,
       "column": 68,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/feedback/SKILL.md:43:memory-redact.py",
+      "id": "dist/claude-code/skills/feedback/SKILL.md:43:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/feedback/SKILL.md",
       "line": 43,
       "column": 24,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10306,39 +10306,39 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/feedback/SKILL.md:68:memory-redact.py",
+      "id": "dist/claude-code/skills/feedback/SKILL.md:68:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/feedback/SKILL.md",
       "line": 68,
       "column": 50,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/feedback/SKILL.md:112:planning_gap_capture.py",
+      "id": "dist/claude-code/skills/feedback/SKILL.md:112:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/feedback/SKILL.md",
       "line": 112,
       "column": 32,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/feedback/SKILL.md:115:memory-redact.py",
+      "id": "dist/claude-code/skills/feedback/SKILL.md:115:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/feedback/SKILL.md",
       "line": 115,
       "column": 13,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/feedback/SKILL.md:124:planning_gap_capture.py",
+      "id": "dist/claude-code/skills/feedback/SKILL.md:124:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/feedback/SKILL.md",
       "line": 124,
       "column": 78,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10351,30 +10351,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/feedback/SKILL.md:157:planning_gap_capture.py",
+      "id": "dist/claude-code/skills/feedback/SKILL.md:157:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/feedback/SKILL.md",
       "line": 157,
       "column": 8,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/feedback/references/signal-schema.md:3:memory-redact.py",
+      "id": "dist/claude-code/skills/feedback/references/signal-schema.md:3:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/feedback/references/signal-schema.md",
       "line": 3,
       "column": 35,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/gap-check/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/gap-check/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/gap-check/SKILL.md",
       "line": 10,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10387,12 +10387,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/gap-check/SKILL.md:17:sw-tmp.py",
+      "id": "dist/claude-code/skills/gap-check/SKILL.md:17:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/gap-check/SKILL.md",
       "line": 17,
       "column": 11,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10477,12 +10477,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/git-workflow/SKILL.md:24:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/git-workflow/SKILL.md:24:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/git-workflow/SKILL.md",
       "line": 24,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10585,57 +10585,57 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/living-status/SKILL.md:9:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/living-status/SKILL.md:9:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/living-status/SKILL.md",
       "line": 9,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/living-status/SKILL.md:33:reconcile-status.py",
+      "id": "dist/claude-code/skills/living-status/SKILL.md:33:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/living-status/SKILL.md",
       "line": 33,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/living-status/SKILL.md:34:reconcile-status.py",
+      "id": "dist/claude-code/skills/living-status/SKILL.md:34:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/living-status/SKILL.md",
       "line": 34,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/living-status/SKILL.md:35:reconcile-status.py",
+      "id": "dist/claude-code/skills/living-status/SKILL.md:35:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/living-status/SKILL.md",
       "line": 35,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/living-status/SKILL.md:36:reconcile-status.py",
+      "id": "dist/claude-code/skills/living-status/SKILL.md:36:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/living-status/SKILL.md",
       "line": 36,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/living-status/SKILL.md:37:reconcile-status.py",
+      "id": "dist/claude-code/skills/living-status/SKILL.md:37:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/living-status/SKILL.md",
       "line": 37,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10747,12 +10747,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:23:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:23:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
       "line": 23,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10792,21 +10792,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:164:memory-redact.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:164:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
       "line": 164,
       "column": 8,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:169:memory-redact.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:169:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
       "line": 169,
       "column": 13,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10846,21 +10846,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:294:reconcile-status.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:294:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
       "line": 294,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:297:reconcile-status.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:297:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
       "line": 297,
       "column": 32,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10873,12 +10873,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/parallelism/SKILL.md:8:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/parallelism/SKILL.md:8:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/parallelism/SKILL.md",
       "line": 8,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10945,12 +10945,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/prd/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/prd/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/prd/SKILL.md",
       "line": 10,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10981,12 +10981,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/rca-core/SKILL.md:18:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/rca-core/SKILL.md:18:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/rca-core/SKILL.md",
       "line": 18,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -10999,30 +10999,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/rca-core/SKILL.md:89:memory-redact.py",
+      "id": "dist/claude-code/skills/rca-core/SKILL.md:89:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/rca-core/SKILL.md",
       "line": 89,
       "column": 47,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/rca-core/SKILL.md:117:memory-redact.py",
+      "id": "dist/claude-code/skills/rca-core/SKILL.md:117:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/rca-core/SKILL.md",
       "line": 117,
       "column": 44,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/rca-core/references/debug-inputs.md:4:memory-redact.py",
+      "id": "dist/claude-code/skills/rca-core/references/debug-inputs.md:4:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/rca-core/references/debug-inputs.md",
       "line": 4,
       "column": 9,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11089,12 +11089,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/retro/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/retro/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/retro/SKILL.md",
       "line": 10,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11179,12 +11179,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/shipwright-state/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/shipwright-state/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/shipwright-state/SKILL.md",
       "line": 10,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11233,12 +11233,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/simplify/SKILL.md:12:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/simplify/SKILL.md:12:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/simplify/SKILL.md",
       "line": 12,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11251,21 +11251,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/simplify/SKILL.md:59:memory-redact.py",
+      "id": "dist/claude-code/skills/simplify/SKILL.md:59:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/simplify/SKILL.md",
       "line": 59,
       "column": 39,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:11:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:11:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
       "line": 11,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11323,12 +11323,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:125:memory-redact.py",
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:125:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
       "line": 125,
       "column": 53,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11350,12 +11350,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/spec-union/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/spec-union/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-union/SKILL.md",
       "line": 10,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11386,39 +11386,39 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/stabilize-loop/SKILL.md:15:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/stabilize-loop/SKILL.md:15:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/stabilize-loop/SKILL.md",
       "line": 15,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/stabilize-loop/SKILL.md:100:host.py",
+      "id": "dist/claude-code/skills/stabilize-loop/SKILL.md:100:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/stabilize-loop/SKILL.md",
       "line": 100,
       "column": 13,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/stabilize-loop/SKILL.md:101:host.py",
+      "id": "dist/claude-code/skills/stabilize-loop/SKILL.md:101:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/stabilize-loop/SKILL.md",
       "line": 101,
       "column": 8,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/tasks/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/tasks/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/tasks/SKILL.md",
       "line": 10,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11476,12 +11476,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/tournament/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/tournament/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/tournament/SKILL.md",
       "line": 10,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11503,21 +11503,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/triage/SKILL.md:21:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/triage/SKILL.md:21:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/triage/SKILL.md",
       "line": 21,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/verification-gate/SKILL.md:23:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/verification-gate/SKILL.md:23:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/verification-gate/SKILL.md",
       "line": 23,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -11566,21 +11566,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/verification-gate/SKILL.md:168:planning_gap_capture.py",
+      "id": "dist/claude-code/skills/verification-gate/SKILL.md:168:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/verification-gate/SKILL.md",
       "line": 168,
       "column": 34,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/worktree/SKILL.md:12:resolve-model-tier.py",
+      "id": "dist/claude-code/skills/worktree/SKILL.md:12:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/worktree/SKILL.md",
       "line": 12,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14572,12 +14572,12 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/brainstorm/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/cursor/skills/brainstorm/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/brainstorm/SKILL.md",
       "line": 10,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14644,21 +14644,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/calibration-loop/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/cursor/skills/calibration-loop/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/calibration-loop/SKILL.md",
       "line": 10,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/checks-gate/SKILL.md:22:resolve-model-tier.py",
+      "id": "dist/cursor/skills/checks-gate/SKILL.md:22:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/checks-gate/SKILL.md",
       "line": 22,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14680,21 +14680,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/compound/SKILL.md:20:resolve-model-tier.py",
+      "id": "dist/cursor/skills/compound/SKILL.md:20:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/compound/SKILL.md",
       "line": 20,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/compound/SKILL.md:25:memory-redact.py",
+      "id": "dist/cursor/skills/compound/SKILL.md:25:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/compound/SKILL.md",
       "line": 25,
       "column": 37,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14707,12 +14707,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:22:resolve-model-tier.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:22:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
       "line": 22,
       "column": 65,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14896,21 +14896,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/references/self-wake-sentinel.md:15:host.py",
+      "id": "dist/cursor/skills/conductor/references/self-wake-sentinel.md:15:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/references/self-wake-sentinel.md",
       "line": 15,
       "column": 13,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/conductor/references/self-wake-sentinel.md:16:host.py",
+      "id": "dist/cursor/skills/conductor/references/self-wake-sentinel.md:16:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/references/self-wake-sentinel.md",
       "line": 16,
       "column": 8,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14923,30 +14923,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/debug/SKILL.md:12:resolve-model-tier.py",
+      "id": "dist/cursor/skills/debug/SKILL.md:12:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/debug/SKILL.md",
       "line": 12,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/debug/SKILL.md:21:memory-redact.py",
+      "id": "dist/cursor/skills/debug/SKILL.md:21:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/debug/SKILL.md",
       "line": 21,
       "column": 62,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/debug/SKILL.md:55:memory-redact.py",
+      "id": "dist/cursor/skills/debug/SKILL.md:55:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/debug/SKILL.md",
       "line": 55,
       "column": 33,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -14968,21 +14968,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/debug/references/sentry.md:49:memory-redact.py",
+      "id": "dist/cursor/skills/debug/references/sentry.md:49:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/debug/references/sentry.md",
       "line": 49,
       "column": 63,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/deliver/SKILL.md:16:resolve-model-tier.py",
+      "id": "dist/cursor/skills/deliver/SKILL.md:16:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/deliver/SKILL.md",
       "line": 16,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -15148,30 +15148,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/deliver/references/terminal-lifecycle.md:91:reconcile-status.py",
+      "id": "dist/cursor/skills/deliver/references/terminal-lifecycle.md:91:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/deliver/references/terminal-lifecycle.md",
       "line": 91,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/deliver/references/terminal-lifecycle.md:92:reconcile-status.py",
+      "id": "dist/cursor/skills/deliver/references/terminal-lifecycle.md:92:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/deliver/references/terminal-lifecycle.md",
       "line": 92,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/deliver/references/terminal-lifecycle.md:93:reconcile-status.py",
+      "id": "dist/cursor/skills/deliver/references/terminal-lifecycle.md:93:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/deliver/references/terminal-lifecycle.md",
       "line": 93,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -15211,12 +15211,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:158:resolve-model-tier.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:158:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
       "line": 158,
       "column": 19,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -15265,12 +15265,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/execute-discipline/SKILL.md:11:resolve-model-tier.py",
+      "id": "dist/cursor/skills/execute-discipline/SKILL.md:11:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/execute-discipline/SKILL.md",
       "line": 11,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -15391,12 +15391,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/feedback-closure/SKILL.md:16:resolve-model-tier.py",
+      "id": "dist/cursor/skills/feedback-closure/SKILL.md:16:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/feedback-closure/SKILL.md",
       "line": 16,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -15409,12 +15409,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/feedback-closure/SKILL.md:42:planning_gap_capture.py",
+      "id": "dist/cursor/skills/feedback-closure/SKILL.md:42:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/feedback-closure/SKILL.md",
       "line": 42,
       "column": 38,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -15436,30 +15436,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/feedback/SKILL.md:14:resolve-model-tier.py",
+      "id": "dist/cursor/skills/feedback/SKILL.md:14:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/feedback/SKILL.md",
       "line": 14,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/feedback/SKILL.md:24:memory-redact.py",
+      "id": "dist/cursor/skills/feedback/SKILL.md:24:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/feedback/SKILL.md",
       "line": 24,
       "column": 68,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/feedback/SKILL.md:43:memory-redact.py",
+      "id": "dist/cursor/skills/feedback/SKILL.md:43:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/feedback/SKILL.md",
       "line": 43,
       "column": 24,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -15490,39 +15490,39 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/feedback/SKILL.md:68:memory-redact.py",
+      "id": "dist/cursor/skills/feedback/SKILL.md:68:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/feedback/SKILL.md",
       "line": 68,
       "column": 50,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/feedback/SKILL.md:112:planning_gap_capture.py",
+      "id": "dist/cursor/skills/feedback/SKILL.md:112:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/feedback/SKILL.md",
       "line": 112,
       "column": 32,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/feedback/SKILL.md:115:memory-redact.py",
+      "id": "dist/cursor/skills/feedback/SKILL.md:115:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/feedback/SKILL.md",
       "line": 115,
       "column": 13,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/feedback/SKILL.md:124:planning_gap_capture.py",
+      "id": "dist/cursor/skills/feedback/SKILL.md:124:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/feedback/SKILL.md",
       "line": 124,
       "column": 78,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -15535,30 +15535,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/feedback/SKILL.md:157:planning_gap_capture.py",
+      "id": "dist/cursor/skills/feedback/SKILL.md:157:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/feedback/SKILL.md",
       "line": 157,
       "column": 8,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/feedback/references/signal-schema.md:3:memory-redact.py",
+      "id": "dist/cursor/skills/feedback/references/signal-schema.md:3:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/feedback/references/signal-schema.md",
       "line": 3,
       "column": 35,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/gap-check/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/cursor/skills/gap-check/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/gap-check/SKILL.md",
       "line": 10,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -15571,12 +15571,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/gap-check/SKILL.md:17:sw-tmp.py",
+      "id": "dist/cursor/skills/gap-check/SKILL.md:17:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/gap-check/SKILL.md",
       "line": 17,
       "column": 11,
-      "script": "sw-tmp.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -15661,12 +15661,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/git-workflow/SKILL.md:24:resolve-model-tier.py",
+      "id": "dist/cursor/skills/git-workflow/SKILL.md:24:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/git-workflow/SKILL.md",
       "line": 24,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -15769,57 +15769,57 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/living-status/SKILL.md:9:resolve-model-tier.py",
+      "id": "dist/cursor/skills/living-status/SKILL.md:9:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/living-status/SKILL.md",
       "line": 9,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/living-status/SKILL.md:33:reconcile-status.py",
+      "id": "dist/cursor/skills/living-status/SKILL.md:33:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/living-status/SKILL.md",
       "line": 33,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/living-status/SKILL.md:34:reconcile-status.py",
+      "id": "dist/cursor/skills/living-status/SKILL.md:34:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/living-status/SKILL.md",
       "line": 34,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/living-status/SKILL.md:35:reconcile-status.py",
+      "id": "dist/cursor/skills/living-status/SKILL.md:35:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/living-status/SKILL.md",
       "line": 35,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/living-status/SKILL.md:36:reconcile-status.py",
+      "id": "dist/cursor/skills/living-status/SKILL.md:36:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/living-status/SKILL.md",
       "line": 36,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/living-status/SKILL.md:37:reconcile-status.py",
+      "id": "dist/cursor/skills/living-status/SKILL.md:37:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/living-status/SKILL.md",
       "line": 37,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -15931,12 +15931,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:23:resolve-model-tier.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:23:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
       "line": 23,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -15976,21 +15976,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:164:memory-redact.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:164:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
       "line": 164,
       "column": 8,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:169:memory-redact.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:169:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
       "line": 169,
       "column": 13,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16030,21 +16030,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:294:reconcile-status.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:294:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
       "line": 294,
       "column": 8,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:297:reconcile-status.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:297:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
       "line": 297,
       "column": 32,
-      "script": "reconcile-status.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16057,12 +16057,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/parallelism/SKILL.md:8:resolve-model-tier.py",
+      "id": "dist/cursor/skills/parallelism/SKILL.md:8:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/parallelism/SKILL.md",
       "line": 8,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16129,12 +16129,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/prd/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/cursor/skills/prd/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/prd/SKILL.md",
       "line": 10,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16165,12 +16165,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/rca-core/SKILL.md:18:resolve-model-tier.py",
+      "id": "dist/cursor/skills/rca-core/SKILL.md:18:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/rca-core/SKILL.md",
       "line": 18,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16183,30 +16183,30 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/rca-core/SKILL.md:89:memory-redact.py",
+      "id": "dist/cursor/skills/rca-core/SKILL.md:89:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/rca-core/SKILL.md",
       "line": 89,
       "column": 47,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/rca-core/SKILL.md:117:memory-redact.py",
+      "id": "dist/cursor/skills/rca-core/SKILL.md:117:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/rca-core/SKILL.md",
       "line": 117,
       "column": 44,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/rca-core/references/debug-inputs.md:4:memory-redact.py",
+      "id": "dist/cursor/skills/rca-core/references/debug-inputs.md:4:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/rca-core/references/debug-inputs.md",
       "line": 4,
       "column": 9,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16273,12 +16273,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/retro/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/cursor/skills/retro/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/retro/SKILL.md",
       "line": 10,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16363,12 +16363,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/shipwright-state/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/cursor/skills/shipwright-state/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/shipwright-state/SKILL.md",
       "line": 10,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16417,12 +16417,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/simplify/SKILL.md:12:resolve-model-tier.py",
+      "id": "dist/cursor/skills/simplify/SKILL.md:12:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/simplify/SKILL.md",
       "line": 12,
       "column": 43,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16435,21 +16435,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/simplify/SKILL.md:59:memory-redact.py",
+      "id": "dist/cursor/skills/simplify/SKILL.md:59:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/simplify/SKILL.md",
       "line": 59,
       "column": 39,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:11:resolve-model-tier.py",
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:11:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-rigor/SKILL.md",
       "line": 11,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16507,12 +16507,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:125:memory-redact.py",
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:125:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-rigor/SKILL.md",
       "line": 125,
       "column": 53,
-      "script": "memory-redact.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16534,12 +16534,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/spec-union/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/cursor/skills/spec-union/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-union/SKILL.md",
       "line": 10,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16570,39 +16570,39 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/stabilize-loop/SKILL.md:13:resolve-model-tier.py",
+      "id": "dist/cursor/skills/stabilize-loop/SKILL.md:13:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/stabilize-loop/SKILL.md",
       "line": 13,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/stabilize-loop/SKILL.md:98:host.py",
+      "id": "dist/cursor/skills/stabilize-loop/SKILL.md:98:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/stabilize-loop/SKILL.md",
       "line": 98,
       "column": 13,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/stabilize-loop/SKILL.md:99:host.py",
+      "id": "dist/cursor/skills/stabilize-loop/SKILL.md:99:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/stabilize-loop/SKILL.md",
       "line": 99,
       "column": 8,
-      "script": "host.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/tasks/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/cursor/skills/tasks/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/tasks/SKILL.md",
       "line": 10,
       "column": 44,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16660,12 +16660,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/tournament/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/cursor/skills/tournament/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/tournament/SKILL.md",
       "line": 10,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16687,21 +16687,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/triage/SKILL.md:21:resolve-model-tier.py",
+      "id": "dist/cursor/skills/triage/SKILL.md:21:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/triage/SKILL.md",
       "line": 21,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/verification-gate/SKILL.md:23:resolve-model-tier.py",
+      "id": "dist/cursor/skills/verification-gate/SKILL.md:23:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/verification-gate/SKILL.md",
       "line": 23,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -16750,21 +16750,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/verification-gate/SKILL.md:168:planning_gap_capture.py",
+      "id": "dist/cursor/skills/verification-gate/SKILL.md:168:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/verification-gate/SKILL.md",
       "line": 168,
       "column": 34,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/worktree/SKILL.md:10:resolve-model-tier.py",
+      "id": "dist/cursor/skills/worktree/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/worktree/SKILL.md",
       "line": 10,
       "column": 45,
-      "script": "resolve-model-tier.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {

@@ -46,7 +46,7 @@ If no tool matches, degrade gracefully (see below).
 }
 ```
 
-4. **Redact** the entire normalized JSON (stringify → `python3 scripts/memory-redact.py` → parse) before:
+4. **Redact** the entire normalized JSON (stringify → `python3 scripts/sw_bootstrap.py memory-redact.py` → parse) before:
    - RCA prompts
    - `memory-preflight` writes
    - Any distilled memory

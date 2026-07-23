@@ -7,7 +7,7 @@ description: Resolve a frozen PRD or decision record plus amendments into one ef
 Single read-time view of frozen doc + amendments (R12). Parent is never mutated.
 
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill spec-union`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill spec-union`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 
 ## Structural tokenizer (PRD 031)

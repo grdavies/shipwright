@@ -7,7 +7,7 @@ description: Converge on an ambiguous preference through concrete either/or inst
 A reusable convergence primitive for genuine either/or ambiguity — not a general Q&A loop. Presents one
 concrete instance per turn, restates the inferred principle, and stops on stability.
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill calibration-loop`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill calibration-loop`.
 
 ## When to use
 

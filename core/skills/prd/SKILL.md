@@ -7,7 +7,7 @@ description: Generate a PRD or decision-record draft for Full or Standard tier. 
 Port of v1 `spec-prd` under `sw-`. Freeze and task generation are separate steps. Generalized into a typed frozen-deliverable author via `--type`.
 
 
-**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.py --skill prd`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** deep — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill prd`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Deliverable types
 

@@ -18,7 +18,7 @@ metadata:
 Deterministic tier classifier. Auditable — same inputs → same tier. Not model judgment.
 
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill triage`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill triage`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Inputs
 

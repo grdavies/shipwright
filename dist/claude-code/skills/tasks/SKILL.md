@@ -7,7 +7,7 @@ description: Generate a frozen task list from a frozen PRD using the spec union 
 Port of v1 `spec-tasks` under `sw-`. Reads U8 union so amended requirements are reflected.
 
 
-**Model tier:** deep — resolve via `python3 scripts/resolve-model-tier.py --skill tasks`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** deep — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill tasks`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 
 ## Issue-store authoring (PRD 056 R11–R12)

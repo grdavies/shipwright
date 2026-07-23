@@ -12,7 +12,7 @@ This wrapper never changes stabilize's discipline (reply-before-resolve, verify-
 mass-resolve); it just repeats it under hard stops.
 
 
-**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --skill stabilize-loop`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** build — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill stabilize-loop`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Success predicate
 
@@ -97,8 +97,8 @@ escalation events on the execute-discipline dispatch record as `sameStageEscalat
 After pushing a pass, block on CI settling rather than busy-polling:
 
 ```bash
-PR=$(python3 scripts/host.py resolve-pr-for-branch)
-python3 scripts/host.py checks --number "$PR"
+PR=$(python3 scripts/sw_bootstrap.py host.py -- resolve-pr-for-branch)
+python3 scripts/sw_bootstrap.py host.py -- checks --number "$PR"
 echo 'STABILIZE_LOOP_TICK {"phase":"recheck"}'
 ```
 

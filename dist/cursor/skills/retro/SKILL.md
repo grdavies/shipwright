@@ -7,7 +7,7 @@ description: Post-ship retrospective — what went well, painful, and should cha
 Run after a human merge (or at end of `/sw-ship` merge gate when user merges).
 
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --skill retro`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** mid — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill retro`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Procedure
 

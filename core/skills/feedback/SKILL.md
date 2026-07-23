@@ -11,7 +11,7 @@ Human-invoked by default (`invocation: human`). Automated capture (hook/monitor)
 later but must never auto-dispatch a route without human confirmation.
 
 
-**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --skill feedback`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** build — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill feedback`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 
 
@@ -21,7 +21,7 @@ Single-tier orchestrator-step plan proposal, validation, and capability selectio
 `core/commands/sw-feedback.md` + `skills/conductor/SKILL.md` — this skill maps phases to step IDs
 (`normalize`, `redact`, `dedup`, `route`, `hook-trigger-halt`, `human-confirm-halt`, `handoff`, `record`).
 
-Under `proposed`, inbound signal JSON MUST be redacted via `python3 scripts/memory-redact.py` before any persist,
+Under `proposed`, inbound signal JSON MUST be redacted via `python3 scripts/sw_bootstrap.py memory-redact.py` before any persist,
 route record, or handoff.  Fail-closed on redaction error.
 
 Under `proposed`, R21 surfacing writes `chosenPlan`, `capabilitySet`, and `planRejections` to
@@ -40,7 +40,7 @@ Untrusted inbound content (production logs, pasted review text, retro excerpts) 
 Spawn the reader with `role: reader` in Task metadata and `readonly: true`. The reader:
 
 1. Ingests the raw untrusted payload (only the reader sees it).
-2. Redacts via `python3 scripts/memory-redact.py`.
+2. Redacts via `python3 scripts/sw_bootstrap.py memory-redact.py`.
 3. Returns **only** redacted, enveloped signal JSON (`untrusted_payload` sentinels preserved).
 
 The acting agent (`core/commands/sw-feedback.md`) receives the reader output only — **never** the raw
@@ -65,7 +65,7 @@ python3 scripts/dispatch-check.py --agent generalPurpose --command sw-feedback -
 1. Classify input into `sourceClass`: `production` | `review` | `retro`.
 2. Build normalized signal per `references/signal-schema.md`.
 3. Wrap body text in `untrusted_payload` sentinels (review + retro mandatory; production logs too).
-4. **Redact** entire signal JSON string: `python3 scripts/memory-redact.py`.
+4. **Redact** entire signal JSON string: `python3 scripts/sw_bootstrap.py memory-redact.py`.
 5. Compute `dedupKey`; search memory/route records — **drop** duplicates (in-loop stabilize already handled).
 
 ### Input mapping
@@ -109,10 +109,10 @@ Classify **destination** (not `002` ceremony tier):
 | debug | `/sw-debug` | production signal ref or excerpt |
 | brainstorm | `/sw-brainstorm` | redacted summary + `untrusted_payload` envelope |
 | gap-amend | `/sw-amend` | PRD ref + redacted delta summary |
-| gap-task | capture | `python3 scripts/planning_gap_capture.py` → `planning_store.put()` (R21: native `sw:gap` issues when `backend: issue-store`; labels `open`/`gap-scheduled`/`resolved`; schedule refs use `sw:gap-schedule:` — disjoint from PRD 046 deliver-scheduler labels) |
+| gap-task | capture | `python3 scripts/sw_bootstrap.py planning_gap_capture.py` → `planning_store.put()` (R21: native `sw:gap` issues when `backend: issue-store`; labels `open`/`gap-scheduled`/`resolved`; schedule refs use `sw:gap-schedule:` — disjoint from PRD 046 deliver-scheduler labels) |
 
 Record route per `references/route-record.md` via `memory-preflight` write. Serialize the route record,
-run `python3 scripts/memory-redact.py` on the JSON, then write — never persist raw `untrusted_payload`.
+run `python3 scripts/sw_bootstrap.py memory-redact.py` on the JSON, then write — never persist raw `untrusted_payload`.
 
 ## Phase 3 — Gap-capture split (U3)
 
@@ -121,7 +121,7 @@ When destination is **gap-capture**, decide on the **freeze axis** (not ceremony
 | Outcome | When | Handoff |
 |---------|------|---------|
 | **Substantial** | Adds/edits/retracts R-ID, changes documented behavior, touches frozen PRD scope, or material shipped behavior with no PRD | `/sw-amend` when consumer status allows; else complete-unit route (below) |
-| **Trivial in-scope** | Small gap, no requirement/behavior change | `python3 scripts/planning_gap_capture.py` → `planning_store.put()`; under **issue-store** creates native `sw:gap` issues (status via issue state + labels) and refreshes the `GAP-BACKLOG.md` write-through projection — never a hand-append. Under issue-store **`separate-project`** (PRD 057 R1), the write-through skips the local `GAP-BACKLOG.md` write entirely (store-only capture) unless `--projection` retains the legacy row; **`same-repo`** keeps the projection write unchanged |
+| **Trivial in-scope** | Small gap, no requirement/behavior change | `python3 scripts/sw_bootstrap.py planning_gap_capture.py` → `planning_store.put()`; under **issue-store** creates native `sw:gap` issues (status via issue state + labels) and refreshes the `GAP-BACKLOG.md` write-through projection — never a hand-append. Under issue-store **`separate-project`** (PRD 057 R1), the write-through skips the local `GAP-BACKLOG.md` write entirely (store-only capture) unless `--projection` retains the legacy row; **`same-repo`** keeps the projection write unchanged |
 
 Do **not** hand-append to `docs/prds/GAP-BACKLOG.md` — under **issue-store** it is an issue-derived write-through projection only (PRD 045 R72; marker `issue-store-migration-gap-shim`); during file-backend cutover it is a read-only legacy projection (PRD 044 R38 / PRD 055 R22/R27). Under issue-store **`separate-project`** the store is the sole authority for gap capture: `refresh_gap_backlog_projection` (`scripts/planning_migrate_issue_store.py`) skips the local write by default, and once no open gap issues remain `try_sunset_gap_backlog_projection` reduces the file to a documented sunset stub (marker `issue-store-gap-backlog-sunset`) rather than deleting it outright — a path readers may still have bookmarked resolves to an explanation instead of a 404 (PRD 057 R1).
 
@@ -154,7 +154,7 @@ The route record MUST capture which branch fired (`gap-amend` vs `gap-amend-bloc
 ### Trivial gap capture (canonical)
 
 ```bash
-python3 scripts/planning_gap_capture.py <repo-root> capture \
+python3 scripts/sw_bootstrap.py planning_gap_capture.py -- <repo-root> capture \
   --signal-id <signalId> --title "<redacted one-line gap>" [--pr <n>]
 ```
 
