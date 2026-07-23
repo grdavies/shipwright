@@ -96,6 +96,7 @@
     "schemas/orchestrator-guideline-pack.schema.json",
     "schemas/orchestrator-step-plan.schema.json",
     "script-port-ledger.json",
+    "scripts-call-site-inventory.json",
     "signal-context.schema.json",
     "suite-registry.json",
     "suite-registry.schema.json",

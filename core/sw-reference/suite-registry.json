@@ -12,6 +12,21 @@
       "ciJobName": "feat-test-plan-docs-link-check"
     },
     {
+      "id": "scripts-inventory-guard",
+      "script": "scripts/check_scripts_inventory.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-scripts-inventory-guard",
+      "pathTriggers": [
+        "scripts/check_scripts_inventory.py",
+        "scripts/sw_scripts_inventory.py",
+        "core/sw-reference/scripts-call-site-inventory.json",
+        "scripts/unit_tests/scripts/test_sw_scripts_inventory.py"
+      ]
+    },
+    {
       "id": "bash-py-invocation-guard",
       "script": "scripts/test/bash-py-invocation-guard.test",
       "lanes": [
