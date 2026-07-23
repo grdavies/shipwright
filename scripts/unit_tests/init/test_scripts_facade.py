@@ -16,7 +16,12 @@ from init_scripts_facade import (
     probe_deliver_entrypoints,
     should_emit_facade,
 )
-from sw_scripts_resolve import resolve_script, resolve_scripts_dir, scripts_dir_is_trusted
+from sw_scripts_resolve import (
+    CONSUMER_NO_PLUGIN_ERROR,
+    resolve_script,
+    resolve_scripts_dir,
+    scripts_dir_is_trusted,
+)
 
 
 def _seed_plugin_scripts(path: Path) -> None:
@@ -65,7 +70,7 @@ def test_emit_writes_dispatcher_and_forwarders(tmp_path: Path) -> None:
     assert manifest["deliverEntrypoints"] == list(DELIVER_ENTRYPOINTS)
 
 
-def test_greenfield_probe_finds_deliver_entrypoints(
+def test_greenfield_probe_fails_closed_without_plugin(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -78,21 +83,18 @@ def test_greenfield_probe_finds_deliver_entrypoints(
     scripts = consumer / "scripts"
     assert scripts_dir_is_trusted(scripts)
     monkeypatch.delenv("SHIPWRIGHT_SCRIPTS", raising=False)
-    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_SCRIPTS", tmp_path / "missing-plugin")
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_LOCAL_SCRIPTS", tmp_path / "missing-plugin")
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_CACHE_ROOT", tmp_path / "missing-cache")
     result = resolve_scripts_dir(consumer)
-    assert result.error is None
-    assert result.source == "consumer"
-    assert result.path == scripts.resolve()
+    assert result.path is None
+    assert result.error == CONSUMER_NO_PLUGIN_ERROR
 
-    for name in DELIVER_ENTRYPOINTS:
-        resolved = resolve_script(consumer, name)
-        assert resolved == (scripts / name).resolve()
+    with pytest.raises(Exception, match="plugin not installed"):
+        resolve_script(consumer, DELIVER_ENTRYPOINTS[0])
 
     probe = probe_deliver_entrypoints(consumer)
-    assert probe["verdict"] == "pass"
-    assert probe["missing"] == []
-    assert probe["symlinked"] == []
-    assert probe["resolveErrors"] == []
+    assert probe["verdict"] == "fail"
+    assert probe["resolveErrors"]
 
 
 def test_cli_probe_subcommand(tmp_path: Path) -> None:
