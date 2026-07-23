@@ -34,6 +34,7 @@ MEMORY_RULES_SCRIPT_GATES: dict[str, frozenset[str]] = {
     "mempalace": frozenset({"mempalace-rules.py"}),
     "basic-memory": frozenset({"basic-memory-rules.py"}),
     "obsidian": frozenset({"obsidian-rules.py"}),
+    "memory-stub": frozenset({"stub-rules.py"}),
 }
 
 PROVIDER_FAMILY_KEYS: dict[str, str] = {
