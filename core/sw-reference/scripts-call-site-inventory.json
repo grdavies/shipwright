@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-22T22:21:45Z",
+  "generatedAt": "2026-07-23T01:39:08Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -1711,28 +1711,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-init.md:353:init_scripts_facade.py",
+      "id": "core/commands/sw-init.md:358:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 353,
+      "line": 358,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:354:init_scripts_facade.py",
+      "id": "core/commands/sw-init.md:359:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 354,
+      "line": 359,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:374:resolve-model-tier.py",
+      "id": "core/commands/sw-init.md:377:resolve-model-tier.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 374,
+      "line": 377,
       "column": 45,
       "script": "resolve-model-tier.py",
       "classification": "consumer-capable"
@@ -7921,28 +7921,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:353:init_scripts_facade.py",
+      "id": "dist/claude-code/commands/sw-init.md:358:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 353,
+      "line": 358,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:354:init_scripts_facade.py",
+      "id": "dist/claude-code/commands/sw-init.md:359:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 354,
+      "line": 359,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:374:resolve-model-tier.py",
+      "id": "dist/claude-code/commands/sw-init.md:377:resolve-model-tier.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 374,
+      "line": 377,
       "column": 45,
       "script": "resolve-model-tier.py",
       "classification": "consumer-capable"
@@ -13078,28 +13078,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:353:init_scripts_facade.py",
+      "id": "dist/cursor/commands/sw-init.md:358:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 353,
+      "line": 358,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:354:init_scripts_facade.py",
+      "id": "dist/cursor/commands/sw-init.md:359:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 354,
+      "line": 359,
       "column": 8,
-      "script": "init_scripts_facade.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:374:resolve-model-tier.py",
+      "id": "dist/cursor/commands/sw-init.md:377:resolve-model-tier.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 374,
+      "line": 377,
       "column": 45,
       "script": "resolve-model-tier.py",
       "classification": "consumer-capable"

@@ -73,6 +73,7 @@ CONSUMER_CAPABLE_SCRIPTS = frozenset(
         "resolve-model-tier.py",
         "sw_scripts_resolve.py",
         "sw-tmp.py",
+        "sw_bootstrap.py",
     }
 )
 
