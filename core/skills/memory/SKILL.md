@@ -20,7 +20,7 @@ provider behind the capability spec in [`CAPABILITIES.md`](CAPABILITIES.md), so 
 config change, never a command edit.
 
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill memory`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill memory`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Resolve the provider (first step, always)
 
@@ -161,12 +161,12 @@ Before **any** `store`, transcript distillation (`/sw-memory-sync`), or compound
 through the executable filter:
 
 ```bash
-python3 scripts/memory-redact.py <<'EOF'
+python3 scripts/sw_bootstrap.py memory-redact.py<<'EOF'
 <payload>
 EOF
 ```
 
-Or: `python3 scripts/memory-redact.py path/to/file`. The filter is deterministic (same input → same output),
+Or: `python3 scripts/sw_bootstrap.py memory-redact.py -- path/to/file`. The filter is deterministic (same input → same output),
 runs offline, and scrubs the named corpus in `rules/memory-guardrails.mdc` (AWS keys, GitHub PATs, JWTs,
 `Bearer` tokens, PEM private keys, emails). Never persist or re-inject unredacted content.
 
@@ -291,10 +291,10 @@ forward pointer (`memoryPointer` in frontmatter — see `scripts/memory-decision
 On record-level supersede, append the superseded path via:
 
 ```bash
-python3 scripts/reconcile-status.py append-superseded --path docs/decisions/<old>.md --replacement docs/decisions/<new>.md
+python3 scripts/sw_bootstrap.py reconcile-status.py -- append-superseded --path docs/decisions/<old>.md --replacement docs/decisions/<new>.md
 ```
 
-`/sw-memory-sync` runs `python3 scripts/reconcile-status.py supersede-reconcile --json` after distillation and
+`/sw-memory-sync` runs `python3 scripts/sw_bootstrap.py reconcile-status.py -- supersede-reconcile --json` after distillation and
 best-effort re-points the **non-authoritative** side per the active SoT (provider `relatedFiles` under
 repo-SoT; git snapshot pointer under memory-SoT). Pointer freshness is **auditable, not transactional**
 (provider out of CI reach).

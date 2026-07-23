@@ -6,7 +6,7 @@ description: Derive PRD status from git and deliver state; reconcile planning IN
 
 Status is **derived from git and durable deliver state**, never hand-set on frozen artifacts.
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill living-status`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill living-status`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## INDEX status enum (R47 — single source)
 
@@ -30,11 +30,11 @@ The enum is enforced by `reconcile-status.py set-index-status` and `wave_living_
 ## Commands
 
 ```bash
-python3 scripts/reconcile-status.py derive [--json]
-python3 scripts/reconcile-status.py reconcile [--dry-run] [--require-merge]
-python3 scripts/reconcile-status.py set-index-status --prd <NNN> --status <not-started|in-progress|complete>
-python3 scripts/reconcile-status.py append-log-idempotent --prd <NNN> --phase <name> [--pr N] [--sha SHA] [--notes text]
-python3 scripts/reconcile-status.py gap-resolve --absorbing-prd <NNN> [--pr N]
+python3 scripts/sw_bootstrap.py reconcile-status.py -- derive [--json]
+python3 scripts/sw_bootstrap.py reconcile-status.py -- reconcile [--dry-run] [--require-merge]
+python3 scripts/sw_bootstrap.py reconcile-status.py -- set-index-status --prd <NNN> --status <not-started|in-progress|complete>
+python3 scripts/sw_bootstrap.py reconcile-status.py -- append-log-idempotent --prd <NNN> --phase <name> [--pr N] [--sha SHA] [--notes text]
+python3 scripts/sw_bootstrap.py reconcile-status.py -- gap-resolve --absorbing-prd <NNN> [--pr N]
 scripts/wave.py living-docs reconcile [--commit]
 scripts/wave.py living-docs append-terminal [--commit]
 scripts/wave.py docs-currency

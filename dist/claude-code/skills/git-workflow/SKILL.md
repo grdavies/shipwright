@@ -21,7 +21,7 @@ PR/merge bodies — reference this skill and `rules/sw-git-conventions.mdc`; do 
 Informed by and crediting [netresearch/git-workflow-skill](https://github.com/netresearch/git-workflow-skill)
 (CC-BY-SA-4.0 / MIT). Adapted for Shipwright's trunk-based-with-worktrees model and sw-namespaced tooling.
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill git-workflow`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill git-workflow`.
 
 ## Trunk model
 

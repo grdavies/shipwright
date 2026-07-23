@@ -7,14 +7,14 @@ description: Compare phase plan (spec union + task checklist) against git diff w
 Catches planned vs actual before commit.
 
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --skill gap-check`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** mid — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill gap-check`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Inputs
 
 - **Plan:** task checklist for `phaseSlug` in `tasksDir` + spec union (`scripts/spec-union.py <prd>`).
 - **Backlog:** open rows from `python3 scripts/feedback-backlog.py list --open-only` (`skills/feedback-closure/SKILL.md`) — map against diff when PR-linked.
 - **Native panel advisory (R75):** when present, read `$runDir/sw-local-review-run-report.json` (resolved via
-  `python3 scripts/sw-tmp.py resolve` or `shipwright-state` `runDir`) and consume `scope_fidelity_advisory` **advisory
+  `python3 scripts/sw_bootstrap.py sw-tmp.py -- resolve` or `shipwright-state` `runDir`) and consume `scope_fidelity_advisory` **advisory
   only** — defer / stub / omission hints from phase-1 `scope-fidelity`. This input MUST NOT alter gap-check's
   binding verdict; gap-check remains the sole requirements-completeness authority (R12/R50).
 - **Actual:** diff against per-worktree `parentBranch`:

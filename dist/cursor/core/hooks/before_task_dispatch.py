@@ -325,7 +325,7 @@ def resolve_dispatch_model(
             verdict="fail",
             agent=agent_id,
             cause="no-model-resolved",
-            remediation=f"python3 scripts/resolve-model-tier.py --agent {agent_id}",
+            remediation=f"python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --agent {agent_id}",
         )
     return DispatchResult(verdict="pass", agent=agent_id, model_id=str(model_id), tier=str(tier))
 

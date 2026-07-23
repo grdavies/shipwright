@@ -9,7 +9,7 @@ scope expansion, no weakened tests. Complements `/sw-review` (findings) and `gap
 not replace either.
 
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --skill simplify`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** mid — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill simplify`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## When it runs
 
@@ -56,7 +56,7 @@ truth (`check-gate.py` remains authoritative at merge).
 - No commits, push, PR, or merge from this step.
 - Never auto-delete tests or loosen assertions to green.
 - Security-sensitive surfaces (auth, secrets, CI config) — surface for human review; do not bulk-simplify.
-- Persisted summaries through `python3 scripts/memory-redact.py` (R41).
+- Persisted summaries through `python3 scripts/sw_bootstrap.py memory-redact.py` (R41).
 - Slots alongside future local code-review (`providers/code-review/`) — does not duplicate persona review.
 
 
