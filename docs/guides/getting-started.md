@@ -53,6 +53,24 @@ Shipwright optimizes for **repeatable delivery**, not for skipping human merge j
 The plugin lives globally; configuration and artifacts live in the **target repository** you build in.
 The installer never configures projects for you.
 
+## Scripts access (consumer repos)
+
+Consumer project repos stay **zero-footprint** — `/sw-init` never writes repo-local Shipwright script
+façades (`scripts/sw`, deliver forwarders, or `.cursor/sw-scripts-facade.json`). Helpers resolve through
+the installed plugin via the **bootstrap CLI** — the primary copy-paste entrypoint in guides and commands:
+
+```bash
+python3 scripts/sw_bootstrap.py --print wave_deliver.py
+python3 scripts/sw_bootstrap.py wave_deliver.py -- --help
+```
+
+**Precedence:** self-repo working-tree `scripts/` (Shipwright source only) → validated `SHIPWRIGHT_SCRIPTS` →
+plugin install (`sw_scripts_resolve.py`). Re-run `/sw-init` as doctor to detect and remove legacy forwarders
+(confirm-gated — see [configuration — Scripts resolution](configuration.md#scripts-resolution-consumer-repos)).
+
+Absolute install paths (for example `~/.cursor/plugins/local/shipwright/scripts`) are **troubleshooting-only**
+— prefer bootstrap argv in everyday docs and runbooks.
+
 ## Doc → implementation boundary (`doc.afterTasks`)
 
 After `/sw-tasks` freezes the task list, `doc.afterTasks` controls what happens next (default **`confirm`**):
