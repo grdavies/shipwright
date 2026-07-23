@@ -22,12 +22,8 @@ if str(SCRIPT_DIR) not in sys.path:
 from _sw.cli import run_module_main
 from sw_scripts_inventory import (
     CLASS_CONSUMER_CAPABLE,
-    CLASS_SELF_REPO_ONLY,
-    CONSUMER_CAPABLE_SCRIPTS,
     SCAN_SUFFIXES,
     classify_script,
-    inventory_index,
-    load_inventory,
     normalize_script_name,
     repo_root,
 )
