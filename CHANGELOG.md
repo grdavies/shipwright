@@ -599,6 +599,7 @@
 * merge phase canonical-bootstrap-cli-medium into feat/consumer-scripts-facade-placement (9cb9618) <!-- sw-deliver:canonical-bootstrap-cli-medium -->
 * merge phase retire-consumer-fa-ade-emit-medium into feat/consumer-scripts-facade-placement (ac0b76c) <!-- sw-deliver:retire-consumer-fa-ade-emit-medium -->
 * merge phase legacy-fa-ade-removal-clobber-detection-medium into feat/consumer-scripts-facade-placement (ad59caf) <!-- sw-deliver:legacy-fa-ade-removal-clobber-detection-medium -->
+* merge phase zero-footprint-probe-replacing-fa-ade-present-small into feat/consumer-scripts-facade-placement (630c28b) <!-- sw-deliver:zero-footprint-probe-replacing-fa-ade-present-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
