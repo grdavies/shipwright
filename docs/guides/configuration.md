@@ -3,6 +3,39 @@
 Shipwright configures **per target repo** — open your project and run `/sw-init` (`/sw-setup` is a
 deprecated alias with identical behavior).
 
+## Scripts resolution (consumer repos)
+
+Consumer repos receive **no** repo-local Shipwright scripts tree. `/sw-init` configures
+`.cursor/workflow.config.json` only — it does **not** emit façade forwarders under `scripts/`. Runtime
+helpers resolve from the installed plugin through the canonical bootstrap CLI:
+
+```bash
+python3 scripts/sw_bootstrap.py --print check-gate.py
+python3 scripts/sw_bootstrap.py check-gate.py
+python3 scripts/sw_bootstrap.py host.py -- pr-view --number 42
+```
+
+| Precedence | Source | When |
+| --- | --- | --- |
+| 1 | Self-repo `scripts/` | Shipwright plugin source / harness checkout only |
+| 2 | `SHIPWRIGHT_SCRIPTS` | Trusted absolute override (must contain trust markers) |
+| 3 | Plugin install | `~/.cursor/plugins/local/shipwright/scripts` or marketplace/cache roots |
+
+**Operator default:** copy-paste bootstrap argv from guides and command procedures — not absolute plugin
+paths and not repo-root façade emit instructions.
+
+**Legacy façades:** repos that previously received forwarders can detect and remove them via `/sw-init` doctor
+(`core/commands/sw-init.md` §6c) or:
+
+```bash
+python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . detect
+python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . remove --confirm
+```
+
+**Troubleshooting-only:** when bootstrap resolution fails, verify the plugin install path exists and contains
+`check-gate.py` (for example `~/.cursor/plugins/local/shipwright/scripts`). Reinstall from the Shipwright
+source repo with `python3 scripts/install.py` when the tree is missing.
+
 ## `/sw-init`
 
 Run `/sw-init` in your **target project repo**. It walks through setup and writes
@@ -470,7 +503,7 @@ Scaffold writes the full block from `scripts/seed-model-config.py` and
 unless confirmed. See `.sw/models-tiering.md` for platform catalogs, `models.routing.agents`, and resolver usage.
 
 **Dispatch binding:** before spawning reviewer/persona Tasks, resolve
-`python3 scripts/resolve-model-tier.py --agent <id>` and run
+`python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --agent <id>` and run
 `python3 scripts/reviewer-dispatch-check.py --agent <id> --parent-model <parent-concrete-id>`;
 stamp the resolved concrete `model:` on the Task (do not rely on `model: inherit` from the parent session).
 
@@ -1037,8 +1070,8 @@ Wenyan variants are not supported in Shipwright — attach the external user ski
 `**Model tier:**` prose; resolve at runtime:
 
 ```bash
-python3 scripts/resolve-model-tier.py --command sw-prd
-python3 scripts/resolve-model-tier.py --command sw-doc --delegate sw-prd
+python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-prd
+python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-doc --delegate sw-prd
 ```
 
 Orchestrators (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-retrospective`) route at `inherit` — always resolve the

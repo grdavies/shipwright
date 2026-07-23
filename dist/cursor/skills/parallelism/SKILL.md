@@ -5,7 +5,7 @@ description: Bounded parallel worktrees (~2–4 ceiling), cross-branch recombina
 # Bounded parallelism
 
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill parallelism`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill parallelism`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Ceiling
 

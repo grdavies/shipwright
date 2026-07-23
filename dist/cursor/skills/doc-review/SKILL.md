@@ -155,7 +155,7 @@ PARENT_MODEL="<concrete platform model id of the dispatching agent session>"
 AGENT="sw-coherence-reviewer"   # example persona id
 PROMPT_PATH=".cursor/sw-doc-review-runs/${DISPATCH_ID}-prompt.md"
 
-RESOLVED=$(python3 scripts/resolve-model-tier.py --agent "$AGENT")
+RESOLVED=$(python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --agent "$AGENT" )
 MODEL_ID=$(echo "$RESOLVED" | python3 -c "import json,sys; print(json.load(sys.stdin)['modelId'])")
 python3 scripts/wave.py dispatch preflight --dispatch-id "$DISPATCH_ID" --agent "$AGENT" --command sw-doc-review --skill doc-review
 

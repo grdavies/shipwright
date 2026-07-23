@@ -8,7 +8,7 @@ Pre-freeze quality and traceability discipline for the doc workstream. Complemen
 panel) — structural gates run **after** panel synthesis and **before** `/sw-freeze`.
 
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill spec-rigor`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill spec-rigor`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Tier policy
 
@@ -122,4 +122,4 @@ Task items cite R-IDs inline: `- [ ] 1.2 Implement gate (R1)`.
 
 - Gates are **additive** — they do not replace doc-review or freeze CI (`check-frozen.py`).
 - No auto-fix of PRD/task content — surface findings; human or synthesizer fixes.
-- Redact any persisted gate summary through `python3 scripts/memory-redact.py` (R41).
+- Redact any persisted gate summary through `python3 scripts/sw_bootstrap.py memory-redact.py` (R41).

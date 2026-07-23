@@ -43,7 +43,7 @@ half of a provider swap. Exports include `category: rule` rows from the provider
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-memory-export`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-memory-export`.
 
 ## Guardrails
 

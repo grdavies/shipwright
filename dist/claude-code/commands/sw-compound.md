@@ -22,7 +22,7 @@ internal: true
 
 **Communication intensity:** full
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --command sw-compound`.
+**Model tier:** mid — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-compound`.
 
 ## Guardrails
 

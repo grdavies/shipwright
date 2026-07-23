@@ -1,4 +1,4 @@
-"""Resolver precedence + trust fixtures (PRD 073 phase 5 / R2, R14, R15, R13)."""
+"""Resolver precedence + trust fixtures (PRD 073 phase 5 / PRD 078 phase 2)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,9 +6,11 @@ from pathlib import Path
 import pytest
 
 from sw_scripts_resolve import (
+    CONSUMER_NO_PLUGIN_ERROR,
     ScriptsResolveError,
     consumer_fallback_scripts,
     is_shipwright_self_repo,
+    iter_plugin_script_candidates,
     plugin_install_scripts,
     resolve_script,
     resolve_scripts_dir,
@@ -39,7 +41,7 @@ def test_self_repo_wins_over_env_and_plugin(tmp_path: Path, monkeypatch: pytest.
 
     plugin_root = tmp_path / "plugin-scripts"
     _seed_trusted_scripts(plugin_root)
-    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_SCRIPTS", plugin_root)
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_LOCAL_SCRIPTS", plugin_root)
     monkeypatch.setenv("SHIPWRIGHT_SCRIPTS", str(env_root))
 
     result = resolve_scripts_dir(self_root)
@@ -52,7 +54,8 @@ def test_env_validation_fail_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     consumer = tmp_path / "consumer"
     consumer.mkdir()
     monkeypatch.delenv("SHIPWRIGHT_SCRIPTS", raising=False)
-    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_SCRIPTS", tmp_path / "missing-plugin")
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_LOCAL_SCRIPTS", tmp_path / "missing-plugin")
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_CACHE_ROOT", tmp_path / "missing-cache")
 
     path, err = validate_env_scripts_root("relative/scripts")
     assert path is None
@@ -75,24 +78,77 @@ def test_env_validation_fail_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     assert "trusted" in result.error
 
 
-def test_plugin_before_consumer_fallback(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_local_plugin_root_happy_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     consumer = tmp_path / "consumer"
     consumer.mkdir()
-    consumer_scripts = consumer / "scripts"
-    _seed_trusted_scripts(consumer_scripts)
-    (consumer_scripts / "wave_deliver.py").write_text("# forwarder\n", encoding="utf-8")
 
-    plugin_scripts = tmp_path / "plugin"
+    plugin_scripts = tmp_path / "local" / "shipwright" / "scripts"
     _seed_trusted_scripts(plugin_scripts)
     (plugin_scripts / "wave_deliver.py").write_text("# plugin\n", encoding="utf-8")
 
     monkeypatch.delenv("SHIPWRIGHT_SCRIPTS", raising=False)
-    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_SCRIPTS", plugin_scripts)
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_LOCAL_SCRIPTS", plugin_scripts)
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_CACHE_ROOT", tmp_path / "cache")
 
     result = resolve_scripts_dir(consumer)
     assert result.error is None
-    assert result.source == "plugin"
+    assert result.source == "plugin-local"
     assert result.path == plugin_scripts.resolve()
+
+
+def test_marketplace_cache_plugin_root_happy_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    consumer = tmp_path / "consumer"
+    consumer.mkdir()
+
+    cache_scripts = tmp_path / "cache" / "cursor-public" / "shipwright" / "rev1" / "scripts"
+    _seed_trusted_scripts(cache_scripts)
+    (cache_scripts / "wave_deliver.py").write_text("# cache plugin\n", encoding="utf-8")
+
+    monkeypatch.delenv("SHIPWRIGHT_SCRIPTS", raising=False)
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_LOCAL_SCRIPTS", tmp_path / "missing-local")
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_CACHE_ROOT", tmp_path / "cache")
+
+    result = resolve_scripts_dir(consumer)
+    assert result.error is None
+    assert result.source == "plugin-cache"
+    assert result.path == cache_scripts.resolve()
+
+
+def test_local_plugin_wins_over_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    consumer = tmp_path / "consumer"
+    consumer.mkdir()
+
+    local_scripts = tmp_path / "local" / "shipwright" / "scripts"
+    cache_scripts = tmp_path / "cache" / "cursor-public" / "shipwright" / "rev1" / "scripts"
+    _seed_trusted_scripts(local_scripts)
+    _seed_trusted_scripts(cache_scripts)
+
+    monkeypatch.delenv("SHIPWRIGHT_SCRIPTS", raising=False)
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_LOCAL_SCRIPTS", local_scripts)
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_CACHE_ROOT", tmp_path / "cache")
+
+    result = resolve_scripts_dir(consumer)
+    assert result.error is None
+    assert result.source == "plugin-local"
+    assert result.path == local_scripts.resolve()
+
+
+def test_consumer_missing_plugin_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    consumer = tmp_path / "consumer"
+    consumer.mkdir()
+    _seed_trusted_scripts(consumer / "scripts")
+
+    monkeypatch.delenv("SHIPWRIGHT_SCRIPTS", raising=False)
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_LOCAL_SCRIPTS", tmp_path / "missing-local")
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_CACHE_ROOT", tmp_path / "missing-cache")
+
+    result = resolve_scripts_dir(consumer)
+    assert result.path is None
+    assert result.error == CONSUMER_NO_PLUGIN_ERROR
+    assert result.source is None
+
+    with pytest.raises(ScriptsResolveError, match="plugin not installed"):
+        resolve_script(consumer, "wave_deliver.py")
 
 
 def test_resolve_script_missing_raises(repo_root: Path) -> None:
@@ -113,7 +169,7 @@ def test_valid_env_scripts_root(tmp_path: Path) -> None:
     assert path == trusted.resolve()
 
 
-def test_consumer_fallback_only_when_trusted(tmp_path: Path) -> None:
+def test_consumer_fallback_helper_reports_trusted_dir(tmp_path: Path) -> None:
     consumer = tmp_path / "consumer"
     consumer.mkdir()
     assert consumer_fallback_scripts(consumer) is None
@@ -121,20 +177,23 @@ def test_consumer_fallback_only_when_trusted(tmp_path: Path) -> None:
     assert consumer_fallback_scripts(consumer) == (consumer / "scripts").resolve()
 
 
-def test_plugin_install_helper_uses_constant(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_plugin_install_helper_uses_local_constant(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     plugin_scripts = tmp_path / "plugin"
     _seed_trusted_scripts(plugin_scripts)
-    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_SCRIPTS", plugin_scripts)
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_LOCAL_SCRIPTS", plugin_scripts)
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_CACHE_ROOT", tmp_path / "cache")
     assert plugin_install_scripts() == plugin_scripts.resolve()
 
 
-def test_executor_fallback_for_external_workspace(tmp_path: Path, repo_root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    consumer = tmp_path / "consumer"
-    consumer.mkdir()
-    monkeypatch.delenv("SHIPWRIGHT_SCRIPTS", raising=False)
-    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_SCRIPTS", tmp_path / "missing-plugin")
-    executor = repo_root / "scripts" / "wave_lifecycle.py"
-    result = resolve_scripts_dir(consumer, executor=executor)
-    assert result.error is None
-    assert result.source == "executor"
-    assert result.path == (repo_root / "scripts").resolve()
+def test_iter_plugin_script_candidates_includes_local_and_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    local_scripts = tmp_path / "local" / "shipwright" / "scripts"
+    cache_scripts = tmp_path / "cache" / "publisher" / "shipwright" / "hash" / "scripts"
+    local_scripts.mkdir(parents=True)
+    cache_scripts.mkdir(parents=True)
+
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_LOCAL_SCRIPTS", local_scripts)
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_CACHE_ROOT", tmp_path / "cache")
+
+    candidates = list(iter_plugin_script_candidates())
+    assert candidates[0] == local_scripts
+    assert cache_scripts in candidates

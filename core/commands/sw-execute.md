@@ -67,7 +67,7 @@ Monolithic mode (no `--task-ref`) implements the full phase checklist in one inv
 
 **Communication intensity:** full
 
-**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --command sw-execute`.
+**Model tier:** build — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-execute`.
 
 ## Guardrails
 

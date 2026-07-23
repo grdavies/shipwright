@@ -49,7 +49,7 @@ Restart-safe resume uses idempotency keys; sources are removed only after hash v
 
 **Communication intensity:** inherit
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-migrate`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-migrate`.
 
 
 ## Quiesce (PRD 044 Phase 3)

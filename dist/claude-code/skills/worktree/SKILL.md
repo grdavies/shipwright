@@ -9,7 +9,7 @@ description: USE WHEN following the Shipwright workflow — command ordering, wo
 Every work item runs in its own worktree (R18). Bare `main` is not an implementation surface.
 
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill worktree`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill worktree`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Provision
 

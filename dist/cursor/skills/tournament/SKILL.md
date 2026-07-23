@@ -7,7 +7,7 @@ description: Run a bounded N-attempt tournament with deterministic bracketing an
 Bounded option selection via isolated attempts, a driver-held deterministic bracket, and pairwise judge agents scoring an explicit rubric (PRD 064 R5).
 
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --skill tournament`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill tournament`.
 
 ## Config (`tournament`)
 

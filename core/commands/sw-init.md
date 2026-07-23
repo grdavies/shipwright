@@ -53,7 +53,7 @@ verbose only where the operator's input actually changes the outcome:
 5. **Optional project-intent and working-style capture** — after the resolved-choice interview, offer (never
    force) one short optional capture: a one-paragraph project intent (what this repo is for, who it serves)
    and a working-style note (e.g. preferred ceremony level, review posture). Skip silently on decline.
-   When provided, redact via `python3 scripts/memory-redact.py` and persist to
+   When provided, redact via `python3 scripts/sw_bootstrap.py memory-redact.py` and persist to
    `.cursor/sw-context/project-intent.md` (repo-local, not the planning store) for later `/sw-brainstorm` and
    `/sw-prd` consumption — those skills read this file opportunistically when present; its absence changes
    nothing.
@@ -313,7 +313,7 @@ After the config file exists, seed the public-repo-aware visibility profile, def
 first-run privacy notice:
 
 ```bash
-python3 scripts/planning-init-seed.py --config "$CONFIG"
+python3 scripts/sw_bootstrap.py planning-init-seed.py -- --config "$CONFIG"
 ```
 
 This:
@@ -344,26 +344,48 @@ memory backend has no provider (actionable remediation, no hard-fail), sweeps or
 and references env-var names only — never token values (R27).
 
 
-### 6c. Scripts façade (consumer repos — PRD 073 R1/R3/R16)
+### 6c. Scripts resolution (zero-footprint — PRD 078 R1/R2)
 
-After config + planning seed, emit the repo-local deliver scripts façade. **Skip** when the target is the
-Shipwright plugin source repo itself (full `scripts/` tree already present).
+After config + planning seed, **do not** write repo-local Shipwright scripts in consumer repos.
+`/sw-init` never creates `scripts/sw`, `.cursor/sw-scripts-facade.json`, or deliver forwarders under
+`scripts/`. **Skip** when the target is the Shipwright plugin source repo itself (full `scripts/` tree
+already present).
+
+**Resolution:** deliver helpers resolve via the installed Shipwright plugin using the canonical bootstrap
+CLI — no consumer-resident façade files required:
 
 ```bash
-python3 scripts/init_scripts_facade.py "$ROOT" emit
-python3 scripts/init_scripts_facade.py "$ROOT" probe   # optional doctor: deliver entrypoints resolvable
+python3 scripts/sw_bootstrap.py --print wave_deliver.py
+python3 scripts/sw_bootstrap.py wave_deliver.py -- --help
 ```
 
-**Ownership:** `/sw-init` is the sole writer of `scripts/sw`, `.cursor/sw-scripts-facade.json`, and the
-documented deliver forwarders under `scripts/` (`wave.py`, `wave_deliver.py`, … plus trust markers
-`check-gate.py`, `resolve-model-tier.py`). Forwarders are **real files** (never symlinks) that delegate to
-the plugin install path recorded in the manifest — durable without `SHIPWRIGHT_SCRIPTS` or other transient env.
+**Precedence:** self-repo working-tree → validated `SHIPWRIGHT_SCRIPTS` → plugin install
+(`sw_scripts_resolve.py`). Consumer repos stay zero-footprint; bootstrap argv is the documented copy-paste
+entrypoint.
 
-**Precedence:** resolver order remains self-repo working-tree → validated `SHIPWRIGHT_SCRIPTS` → plugin install
-→ consumer `scripts/` façade (`sw_scripts_resolve.py`). Re-run `/sw-init` to refresh after plugin upgrades.
+**Legacy façades:** repos that previously ran `/sw-init` emit may still have forwarders under `scripts/`.
+Doctor detects residual façade files and offers confirm-gated removal — never auto-deletes unmarked scripts.
 
-**Agent guardrail:** do **not** hand-author or patch forwarders mid-deliver; halt and re-run `/sw-init` emit
-(or `init_scripts_facade.py emit`) when entrypoints are missing.
+Detect residual façade files (read-only; legacy manifests are migration metadata only):
+
+```bash
+python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . detect
+```
+
+Review `facadeFiles`, `refused`, and `clobber` in the JSON output. Clobber entries report modified
+templates or git-history overwrite signals — **no restore is offered**.
+
+Remove identity-verified façade files only after explicit operator confirm:
+
+```bash
+python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . remove # dry-run: wouldRemove
+python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . remove --confirm
+```
+
+Doctor re-runs surface the same `detect` payload; interactive `/sw-init` offers the confirm step when
+`verdict` is `found`.
+
+**Agent guardrail:** do **not** hand-author forwarders mid-deliver; use bootstrap argv for deliver entrypoints.
 
 ### 7. Report
 
@@ -371,7 +393,7 @@ Print summary: providers, verify status, portability self-check, drift notice, c
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-init`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-init`.
 
 ## Guardrails
 

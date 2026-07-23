@@ -30,7 +30,7 @@ source. `/sw-memory-sync` only writes the *distilled* sink into the memory provi
    bug root-causes, design choices, notable review/CI patterns, distilled session recaps.
 4. Filter aggressively. Skip routine, recoverable, or already-stored content. Search-before-store: if a
    near-duplicate memory exists, `modify` it (or skip) rather than adding another.
-5. **Redact** each payload before store: pipe distilled text through `python3 scripts/memory-redact.py`
+5. **Redact** each payload before store: pipe distilled text through `python3 scripts/sw_bootstrap.py memory-redact.py`
    (R41 chokepoint — same filter as `/sw-compound`).
 6. Store each kept item via the adapter `store` op with the right canonical category, `relatedFiles`,
    stable tags (`surface:sync`, plus `prd-<n>`/`task-<n>` when inferable), and a deliberate importance.
@@ -48,7 +48,7 @@ source. `/sw-memory-sync` only writes the *distilled* sink into the memory provi
 
 **Communication intensity:** ultra
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --command sw-memory-sync`.
+**Model tier:** mid — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-memory-sync`.
 
 ## Guardrails
 

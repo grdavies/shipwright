@@ -8,7 +8,7 @@ Bounded implementation loop inside `/sw-execute`. One **task ref** at a time (e.
 plan self-review → TDD red → implement → TDD green → two-stage review before the next task.
 
 
-**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --skill execute-discipline`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** build — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill execute-discipline`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 
 ## Ref-scoped dispatch (PRD 053)

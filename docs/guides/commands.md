@@ -4,6 +4,28 @@ Shipwright exposes `sw-` commands in Cursor and Claude Code. **Orchestrators** c
 **atomics** do one bounded step. For full procedure text, open the linked command file under
 `core/commands/`.
 
+## Helper scripts (bootstrap argv)
+
+Command procedures that shell out to Shipwright helpers use the **bootstrap CLI** so they work in consumer
+repos without repo-local façade files:
+
+```bash
+python3 scripts/sw_bootstrap.py <helper.py> [-- ARGS...]
+python3 scripts/sw_bootstrap.py --print <helper.py>   # resolved absolute path only
+```
+
+Examples:
+
+```bash
+python3 scripts/sw_bootstrap.py memory-redact.py dispatch
+python3 scripts/sw_bootstrap.py git-push.py -- -u origin HEAD
+python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-watch-ci
+```
+
+Shipwright harness development still invokes `python3 scripts/<helper>.py` directly from the repo-root
+`scripts/` tree. Consumer operators copy bootstrap argv from this guide and from
+[configuration — Scripts resolution](configuration.md#scripts-resolution-consumer-repos).
+
 ## Orchestrators
 
 | Command | Scope | Does not |
@@ -148,14 +170,14 @@ machinery.
 | `note` | Plain fact/observation worth remembering | Open indefinitely; no done state |
 
 **Input:** `/sw-note <text>` (auto-classified), or explicit `/sw-note task|idea|note <text>` with optional
-`#tag` tokens. Text passes through `python3 scripts/memory-redact.py` before append. The notebook directory
+`#tag` tokens. Text passes through `python3 scripts/sw_bootstrap.py memory-redact.py` before append. The notebook directory
 is operator-local scratch — never committed; first write adds `.cursor/sw-notebook/` to `.gitignore` when
 needed.
 
 **Graduate (confirm-first):** `/sw-note graduate <id> --to gap|brainstorm` shows the item and target;
 requires explicit `proceed` before any planning-store write. On confirm:
 
-- `--to gap` → `python3 scripts/planning_gap_capture.py <repo> capture --signal-id notebook:<id> --title "<text>"`
+- `--to gap` → `python3 scripts/sw_bootstrap.py planning_gap_capture.py -- <repo> capture --signal-id notebook:<id> --title "<text>"`
 - `--to brainstorm` → hand off to `/sw-brainstorm` with the note text as seed (brainstorm doc owned by `/sw-brainstorm`)
 
 Bidirectional provenance: notebook item records `graduatedTo` / `graduatedAt`; target artifact carries a

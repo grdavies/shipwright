@@ -21,7 +21,7 @@ Single referenced primitive for agent-native orchestration (PRD 009 R1). Orchest
 `/sw-doc`, `/sw-ship`, `/sw-debug`, `/sw-feedback` in follow-on PRDs) **load this skill** and delegate loop
 behavior here — they do not re-implement state transitions, merge logic, or halt policy in prose (R3).
 
-**Model tier:** inherit — resolve delegated atomics via `python3 scripts/resolve-model-tier.py --command <child-slug>`.
+**Model tier:** inherit — resolve delegated atomics via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command <child-slug>`.
 
 ## Mechanical source of truth
 

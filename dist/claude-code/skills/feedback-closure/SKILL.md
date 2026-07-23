@@ -13,7 +13,7 @@ refreshed by `planning_gap_capture.py` / `planning_migrate_issue_store.refresh_g
 never authoritative input. `planning-graph doctor` fails closed on issue-vs-projection divergence (PRD 045 R72).
 
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --skill feedback-closure`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** mid — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill feedback-closure`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Backlog entry format
 
@@ -39,7 +39,7 @@ Closed:
 python3 scripts/feedback-backlog.py list --open-only --backlog docs/prds/GAP-BACKLOG.md
 ```
 
-Issue-store adopters: prefer `python3 scripts/planning_gap_capture.py refresh-projection <repo-root>` when the
+Issue-store adopters: prefer `python3 scripts/sw_bootstrap.py planning_gap_capture.py -- refresh-projection <repo-root>` when the
 projection drifts; closure still keys on `signal-id` via the projected backlog row or linked gap issue.
 
 

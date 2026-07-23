@@ -88,9 +88,9 @@ R50/R3; parity with task-currency R15).
 scripts/wave.py living-docs reconcile --commit
 scripts/wave.py living-docs append-terminal --commit
 scripts/wave.py docs-currency
-python3 scripts/reconcile-status.py set-index-status --prd <NNN> --status in-progress
-python3 scripts/reconcile-status.py set-index-status --prd <NNN> --status complete   # auto-flips absorbed gaps
-python3 scripts/reconcile-status.py append-log-idempotent --prd <NNN> --phase all --pr <N> --sha <sha>
+python3 scripts/sw_bootstrap.py reconcile-status.py -- set-index-status --prd <NNN> --status in-progress
+python3 scripts/sw_bootstrap.py reconcile-status.py -- set-index-status --prd <NNN> --status complete # auto-flips absorbed gaps
+python3 scripts/sw_bootstrap.py reconcile-status.py -- append-log-idempotent --prd <NNN> --phase all --pr <N> --sha <sha>
 python3 scripts/living-status-gap-resolve.py --absorbing-prd <NNN> [--scope-note <text>]  # manual retry only
 ```
 

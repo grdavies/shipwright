@@ -61,7 +61,7 @@ surface as **notices alongside** the resolved action — never as a competing ac
 
 **Communication intensity:** ultra
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw`.
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw`.
 
 ## Guardrails
 

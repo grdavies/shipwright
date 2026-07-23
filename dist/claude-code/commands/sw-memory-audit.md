@@ -49,7 +49,7 @@ Present legacy reconcile steps before applying a mode switch; never auto-mutate 
 
 **Communication intensity:** ultra
 
-**Model tier:** mid — resolve via `python3 scripts/resolve-model-tier.py --command sw-memory-audit`.
+**Model tier:** mid — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-memory-audit`.
 
 ## Guardrails
 

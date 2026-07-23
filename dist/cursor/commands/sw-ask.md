@@ -48,11 +48,11 @@ invents a new persona inline — that is `/sw-become`'s job.
 
 **Communication intensity:** normal
 
-**Model tier:** cheap — resolve via `python3 scripts/resolve-model-tier.py --command sw-ask`. The consulted
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-ask`. The consulted
 persona's own voice does not change its dispatch model tier; `/sw-ask` answers inline rather than spawning a
 Task, so no separate persona-tier resolution is required for the common case. When the question is complex
 enough to warrant a dedicated sub-agent consult, dispatch the persona as a `readonly: true` Task and resolve
-its tier via `python3 scripts/resolve-model-tier.py --agent <persona-id>` first.
+its tier via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --agent <persona-id>` first.
 
 ## Guardrails
 

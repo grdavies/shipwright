@@ -69,7 +69,7 @@ differs. Human review notes use a separate comment channel (not persona markers)
 
 **Communication intensity:** normal
 
-**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --command sw-doc-review`.
+**Model tier:** build — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-doc-review`.
 
 ## Guardrails
 

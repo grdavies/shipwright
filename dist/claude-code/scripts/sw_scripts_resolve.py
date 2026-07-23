@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Shared Shipwright scripts-root resolver (PRD 073 R2, R14, R15).
+"""Shared Shipwright scripts-root resolver (PRD 073 R2, R14, R15; PRD 078 R4, R5, R10).
 
 Precedence:
   1. self-repo working-tree scripts/
   2. validated SHIPWRIGHT_SCRIPTS
-  3. plugin install (~/.cursor/plugins/local/shipwright/scripts)
-  4. consumer fallback (workspace scripts/ with trusted markers)
+  3. plugin install (local, then marketplace/cache roots)
+  4. consumer context without plugin — fail closed (no workspace scripts/)
 
 Untrusted SHIPWRIGHT_SCRIPTS values fail closed — no silent fallback.
 """
@@ -16,11 +16,18 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
+from typing import Iterable, Mapping
 
 TRUST_MARKERS = ("check-gate.py", "resolve-model-tier.py")
 ENV_VAR = "SHIPWRIGHT_SCRIPTS"
-PLUGIN_SCRIPTS = Path.home() / ".cursor" / "plugins" / "local" / "shipwright" / "scripts"
+PLUGIN_LOCAL_SCRIPTS = Path.home() / ".cursor" / "plugins" / "local" / "shipwright" / "scripts"
+PLUGIN_SCRIPTS = PLUGIN_LOCAL_SCRIPTS
+PLUGIN_CACHE_ROOT = Path.home() / ".cursor" / "plugins" / "cache"
+CONSUMER_NO_PLUGIN_ERROR = (
+    "Shipwright plugin not installed; install the plugin locally "
+    "(python3 scripts/install.py from the Shipwright source repo) "
+    "or set SHIPWRIGHT_SCRIPTS to a trusted absolute scripts root"
+)
 
 
 class ScriptsResolveError(RuntimeError):
@@ -74,9 +81,20 @@ def validate_env_scripts_root(raw: str) -> tuple[Path | None, str | None]:
     return resolved, None
 
 
+def iter_plugin_script_candidates() -> Iterable[Path]:
+    """Probe local install first, then marketplace/cache plugin roots."""
+    yield PLUGIN_LOCAL_SCRIPTS
+    if not PLUGIN_CACHE_ROOT.is_dir():
+        return
+    for scripts in sorted(PLUGIN_CACHE_ROOT.glob("*/*/*/scripts")):
+        if scripts.parent.parent.name == "shipwright":
+            yield scripts
+
+
 def plugin_install_scripts() -> Path | None:
-    if scripts_dir_is_trusted(PLUGIN_SCRIPTS):
-        return PLUGIN_SCRIPTS.resolve()
+    for candidate in iter_plugin_script_candidates():
+        if scripts_dir_is_trusted(candidate):
+            return candidate.resolve()
     return None
 
 
@@ -121,7 +139,11 @@ def resolve_scripts_dir(
 
     plugin = plugin_install_scripts()
     if plugin is not None:
-        return ScriptsResolveResult(plugin, "plugin")
+        source = "plugin-local" if plugin == PLUGIN_LOCAL_SCRIPTS.resolve() else "plugin-cache"
+        return ScriptsResolveResult(plugin, source)
+
+    if not is_shipwright_self_repo(root):
+        return ScriptsResolveResult(None, None, CONSUMER_NO_PLUGIN_ERROR)
 
     consumer = consumer_fallback_scripts(root)
     if consumer is not None:

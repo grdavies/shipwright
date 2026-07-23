@@ -13,7 +13,7 @@ legitimate halts, parallel dispatch, resumption). `/sw-deliver` is the pilot con
 `rules/sw-conductor.mdc`. Do not re-author loop logic in this skill (R1, R3).
 
 
-**Model tier:** build — resolve via `python3 scripts/resolve-model-tier.py --skill deliver`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+**Model tier:** build — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --skill deliver`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
 ## Deliver plan representation
 
