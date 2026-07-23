@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Emit repo-local scripts/sw dispatcher and deliver forwarders (PRD 073 R1, R3, R16).
+"""Consumer scripts façade helpers — emit retired (PRD 078 R1/R2).
 
-/sw-init owns the consumer scripts façade. Forwarders delegate to the plugin install
-path recorded in ``.cursor/sw-scripts-facade.json`` — durable without transient env.
-
-Agents must not hand-author forwarders mid-deliver; re-run ``/sw-init`` (or
-``python3 scripts/init_scripts_facade.py <root> emit``) to refresh.
+Consumer repos use zero-footprint resolution via ``sw_bootstrap.py`` and the plugin
+install. Legacy façade detection, probe, and confirm-gated removal helpers remain for
+migration; ``emit`` is a no-op that never writes repo-local Shipwright scripts.
 """
 from __future__ import annotations
 
@@ -147,7 +145,9 @@ def load_manifest(root: Path) -> dict[str, Any]:
 
 
 def should_emit_facade(root: Path) -> bool:
-    return not is_shipwright_self_repo(root)
+    """Consumer façade emit is retired; always False (PRD 078 R1/R2)."""
+    _ = root
+    return False
 
 
 def _write_executable(path: Path, content: str, *, executable: bool) -> None:
@@ -166,61 +166,23 @@ def emit_facade(
     plugin_scripts: Path | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Write scripts/sw, forwarders, and facade manifest under *root*."""
+    """Retired emit path — never writes consumer façade files (PRD 078 R1/R2)."""
+    _ = plugin_scripts, dry_run
     root = root.resolve()
-    if not should_emit_facade(root):
+    if is_shipwright_self_repo(root):
         return {
             "verdict": "skip",
             "action": "emit-facade",
             "reason": "shipwright-self-repo",
         }
-    plugin_root = resolve_emit_plugin_scripts(root, plugin_scripts)
-    missing = [name for name in FORWARDER_SCRIPTS if not (plugin_root / name).is_file()]
-    if missing:
-        return {
-            "verdict": "fail",
-            "action": "emit-facade",
-            "error": "plugin scripts missing forwarder targets",
-            "missing": missing,
-            "pluginScripts": str(plugin_root),
-        }
-
-    manifest = {
-        "version": 1,
-        "generatedBy": "init_scripts_facade",
-        "pluginScripts": str(plugin_root),
-        "shipwrightVersion": shipwright_version(root),
-        "deliverEntrypoints": list(DELIVER_ENTRYPOINTS),
-        "trustMarkers": list(TRUST_MARKERS),
-        "forwarders": list(FORWARDER_SCRIPTS),
-    }
-    scripts_dir = root / "scripts"
-    planned = {
-        "manifest": str(manifest_path(root)),
-        "dispatcher": str(scripts_dir / "sw"),
-        "forwarders": [str(scripts_dir / name) for name in FORWARDER_SCRIPTS],
-    }
-    if dry_run:
-        return {
-            "verdict": "pass",
-            "action": "emit-facade",
-            "dryRun": True,
-            **planned,
-            "pluginScripts": str(plugin_root),
-        }
-
-    manifest_path(root).parent.mkdir(parents=True, exist_ok=True)
-    manifest_path(root).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    _write_executable(scripts_dir / "sw", SW_DISPATCHER, executable=True)
-    for name in FORWARDER_SCRIPTS:
-        _write_executable(scripts_dir / name, FORWARDER_BODY, executable=False)
-
     return {
-        "verdict": "pass",
+        "verdict": "skip",
         "action": "emit-facade",
-        "pluginScripts": str(plugin_root),
-        "forwarders": list(FORWARDER_SCRIPTS),
-        **planned,
+        "reason": "emit-retired",
+        "message": (
+            "consumer façade emit retired; resolve helpers via sw_bootstrap.py "
+            "or the installed Shipwright plugin"
+        ),
     }
 
 
