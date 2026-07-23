@@ -782,6 +782,22 @@ strip-advisory --inplace <path>`). Frozen artifacts reject the block via `phase_
 Harness scripts live under `scripts/*.py` and execute via `python3 scripts/<name>.py`.
 The build chain is `python3 scripts/copy-to-core.py` → `python3 -m sw generate --all` with golden parity under `scripts/test/fixtures/parity/`.
 
+### Consumer scripts resolution (PRD 078 R11, KD12)
+
+| Context | `scripts/` tree | Consumer façade |
+| --- | --- | --- |
+| **Shipwright harness** (this repo) | Repo-root `scripts/` — harness SoT; edit here | N/A — full tree present |
+| **Consumer project repo** | **None** — zero-footprint; no `scripts/sw` emit | Retired — `/sw-init` never creates forwarders |
+| **Runtime entry (consumer)** | Resolved via plugin/bootstrap only | `python3 scripts/sw_bootstrap.py <helper> [-- ARGS]` |
+
+**Precedence** (`sw_scripts_resolve.py`): self-repo working-tree → validated `SHIPWRIGHT_SCRIPTS` → plugin
+install (local, then marketplace/cache). Operator docs and guides present bootstrap argv as the primary
+copy-paste path; absolute plugin paths are troubleshooting-only.
+
+Harness `scripts/` under this repo is **not** copied into consumer repos — it mirrors to `core/scripts/` and
+ships in plugin installs under `dist/*/scripts/`. Consumers invoke helpers through bootstrap, not a repo-root
+façade tree.
+
 ## Self-improving loop stores (PRD 041)
 
 | Store | Path | Writer | Semantics |

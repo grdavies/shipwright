@@ -62,6 +62,21 @@ Run **Developer: Reload Window** in Cursor. Override the destination:
 </details>
 
 <details>
+<summary><b>Scripts access in consumer repos</b></summary>
+
+After install, **consumer project repos** stay zero-footprint — `/sw-init` does not emit repo-local script
+façades. Helpers resolve from the installed plugin via the bootstrap CLI (primary copy-paste entrypoint):
+
+```bash
+python3 scripts/sw_bootstrap.py --print wave_deliver.py
+python3 scripts/sw_bootstrap.py wave_deliver.py -- --help
+```
+
+See [Getting started — Scripts access](docs/guides/getting-started.md#scripts-access-consumer-repos) and
+[configuration — Scripts resolution](docs/guides/configuration.md#scripts-resolution-consumer-repos).
+</details>
+
+<details>
 <summary><b>Claude Code</b></summary>
 
 ```bash
@@ -79,7 +94,9 @@ Install the plugin **once per machine**; configure it **per project repo** with 
 (`/sw-setup` is a deprecated alias with identical behavior).
 
 Open your **target project repo** and run **`/sw-init`**. It walks through project setup and writes
-`.cursor/workflow.config.json`:
+`.cursor/workflow.config.json` — **without** writing repo-local Shipwright script façades. Consumer helpers
+resolve through the installed plugin via bootstrap argv (`python3 scripts/sw_bootstrap.py <helper> [-- ARGS]`).
+See [Scripts resolution](docs/guides/configuration.md#scripts-resolution-consumer-repos).
 
 1. **Memory provider** — `in-repo` (default, committed markdown store) or another **catalog-registered** id
    (seeded: `recallium`). Operators select; authors register new providers in the catalog. Unknown ids fail
