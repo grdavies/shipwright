@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.10.0](https://github.com/grdavies/shipwright/compare/v1.9.0...v1.10.0) (2026-07-23)
+
+
+### Features
+
+* **prd-71:** pluggable memory adapter framework ([#556](https://github.com/grdavies/shipwright/issues/556)) ([759ff25](https://github.com/grdavies/shipwright/commit/759ff25abd4991e07760887948ba33af01ed0a2b))
+* **prd-73:** plugin consumability and deliver hygiene ([#565](https://github.com/grdavies/shipwright/issues/565)) ([dd926a3](https://github.com/grdavies/shipwright/commit/dd926a399f5954aa281cbf2a65879d689f01a014))
+* **prd-74:** mempalace memory provider ([#580](https://github.com/grdavies/shipwright/issues/580)) ([8d09776](https://github.com/grdavies/shipwright/commit/8d09776d8af9a62f0ca6570b008a9b6e379d17e3))
+* **prd-75:** basic memory provider ([#590](https://github.com/grdavies/shipwright/issues/590)) ([7b558fe](https://github.com/grdavies/shipwright/commit/7b558fe137bad8955a90322959c1b6313ac57caa))
+* **prd-76:** obsidian memory provider ([#601](https://github.com/grdavies/shipwright/issues/601)) ([1712851](https://github.com/grdavies/shipwright/commit/17128511fed4680ddf82abd8d9ca3f6863b89481))
+* **prd-77:** add compiled truth and timeline to in-repo memory ([#602](https://github.com/grdavies/shipwright/issues/602)) ([a6c116c](https://github.com/grdavies/shipwright/commit/a6c116c72d9c7934c97ed39290100064dfcfa28f))
+* **prd-78:** consumer scripts facade placement ([#614](https://github.com/grdavies/shipwright/issues/614)) ([4fcdbf1](https://github.com/grdavies/shipwright/commit/4fcdbf1d7f8fbbdbd98f88bafb801f8641810297))
+
+
+### Bug Fixes
+
+* **deliver:** mirror orchestratorWorktree when saving from primary ([#603](https://github.com/grdavies/shipwright/issues/603)) ([b41df4f](https://github.com/grdavies/shipwright/commit/b41df4fb969cd82ff283cd77e0d2fedf7895b4fc))
+* **memory:** restore hook trust after plugin install for PRD 071 catalog ([#566](https://github.com/grdavies/shipwright/issues/566)) ([edac5c4](https://github.com/grdavies/shipwright/commit/edac5c410c382526b9dacf6dcf510a4af5f71a4c))
+
 ## [1.9.0](https://github.com/grdavies/shipwright/compare/v1.8.0...v1.9.0) (2026-07-17)
 
 
