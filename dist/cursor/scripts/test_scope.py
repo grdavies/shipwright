@@ -127,6 +127,12 @@ def fallback_pytest_paths(changed_paths: list[str]) -> list[str]:
     paths: list[str] = []
     for raw in changed_paths:
         norm = normalize_repo_path(raw)
+        if norm.startswith("core/scripts/test/") and norm.endswith(".py"):
+            paths.append(norm)
+            continue
+        if norm.startswith("core/scripts/_sw/host/"):
+            paths.append("core/scripts/test")
+            continue
         if not norm.startswith("scripts/") or not norm.endswith(".py"):
             continue
         if "/test/" in f"/{norm}/" and not norm.startswith("scripts/unit_tests/"):
