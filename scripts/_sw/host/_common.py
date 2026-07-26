@@ -248,6 +248,33 @@ def classify_transport(
     return "inconclusive"
 
 
+def classified_transport_guard(
+    *,
+    verb: str,
+    provider: str,
+    transport: dict[str, Any],
+) -> tuple[dict[str, Any], int] | None:
+    """Classify transport and return verb fail payload when not ok (PRD 079 R5)."""
+    transport_class = classify_transport(transport, provider=provider)
+    if transport_class == "ok":
+        return None
+    reason_by_class: dict[TransportClass, str] = {
+        "auth-denied": "auth-denied",
+        "not-found": "not-found",
+        "rate-limited": "rate-limited",
+        "inconclusive": "transport-failed",
+    }
+    payload = fail_json(verb, provider, reason_by_class[transport_class])
+    payload["transportClass"] = transport_class
+    status_code = transport_status_code(transport)
+    if status_code is not None:
+        payload["statusCode"] = status_code
+    if transport_class == "rate-limited":
+        payload["retryable"] = True
+        return payload, 37
+    return payload, 30
+
+
 def remote_ref_exists_from_transport(
     *,
     verb: str,

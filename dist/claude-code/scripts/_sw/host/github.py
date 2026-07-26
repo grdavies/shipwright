@@ -16,6 +16,20 @@ from _sw.host._shape import github_pr_to_list_entry, github_pr_to_view  # noqa: 
 
 PROVIDER = "github"
 
+# PRD 079 R5 — reproducible selector: handlers containing legacy `"body" not in transport` guard.
+# Baseline count recorded in Decision Log at implement time (sorted for stable enumeration).
+GITHUB_LEGACY_BODY_GUARD_VERBS: tuple[str, ...] = (
+    "checks",
+    "merge",
+    "pr-close",
+    "pr-create",
+    "pr-list",
+    "pr-view",
+    "repo-meta",
+    "review-threads",
+)
+GITHUB_LEGACY_BODY_GUARD_BASELINE_COUNT = len(GITHUB_LEGACY_BODY_GUARD_VERBS)
+
 
 def dispatch(root: Path, verb: str, args: list[str]) -> tuple[dict[str, Any], int]:
     """Run a host verb; return (payload, exit_code)."""
@@ -52,8 +66,9 @@ def _repo_meta(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[dict[s
         return common.fail_json("repo-meta", PROVIDER, "missing-repo"), 30
     url = f"{ctx['apiBase']}/repos/{owner}/{repo}"
     transport = common.http_request(root=root, provider=PROVIDER, method="GET", url=url, token_env=ctx["tokenEnv"])
-    if transport.get("verdict") not in ("ok",) and "body" not in transport:
-        return common.fail_json("repo-meta", PROVIDER, "transport-failed"), 30
+    denied = common.classified_transport_guard(verb="repo-meta", provider=PROVIDER, transport=transport)
+    if denied is not None:
+        return denied
     body = json.loads(common.parse_transport_body(transport))
     data = {
         "nameWithOwner": body.get("full_name") or body.get("name"),
@@ -89,8 +104,9 @@ def _pr_list(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[dict[str
     if base:
         url += f"&base={base}"
     transport = common.http_request(root=root, provider=PROVIDER, method="GET", url=url, token_env=ctx["tokenEnv"])
-    if "body" not in transport and transport.get("verdict") != "ok":
-        return common.fail_json("pr-list", PROVIDER, "transport-failed"), 30
+    denied = common.classified_transport_guard(verb="pr-list", provider=PROVIDER, transport=transport)
+    if denied is not None:
+        return denied
     items = json.loads(common.parse_transport_body(transport))
     if not isinstance(items, list):
         items = []
@@ -113,8 +129,9 @@ def _pr_view(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[dict[str
         return common.fail_json("pr-view", PROVIDER, "missing-pr-number"), 30
     url = f"{ctx['apiBase']}/repos/{owner}/{repo}/pulls/{number}"
     transport = common.http_request(root=root, provider=PROVIDER, method="GET", url=url, token_env=ctx["tokenEnv"])
-    if "body" not in transport and transport.get("verdict") != "ok":
-        return common.fail_json("pr-view", PROVIDER, "transport-failed"), 30
+    denied = common.classified_transport_guard(verb="pr-view", provider=PROVIDER, transport=transport)
+    if denied is not None:
+        return denied
     view = github_pr_to_view(json.loads(common.parse_transport_body(transport)))
     return common.emit_verb_ok("pr-view", PROVIDER, view), 0
 
@@ -155,8 +172,9 @@ def _pr_create(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[dict[s
     transport = common.http_request(
         root=root, provider=PROVIDER, method="POST", url=url, token_env=ctx["tokenEnv"], body=payload.encode()
     )
-    if "body" not in transport and transport.get("verdict") != "ok":
-        return common.fail_json("pr-create", PROVIDER, "transport-failed"), 30
+    denied = common.classified_transport_guard(verb="pr-create", provider=PROVIDER, transport=transport)
+    if denied is not None:
+        return denied
     view = github_pr_to_view(json.loads(common.parse_transport_body(transport)))
     return common.emit_verb_ok("pr-create", PROVIDER, view), 0
 
@@ -208,8 +226,9 @@ def _review_threads(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[d
         transport = common.http_request(
             root=root, provider=PROVIDER, method="POST", url=url, token_env=ctx["tokenEnv"], body=gql.encode()
         )
-        if "body" not in transport:
-            return common.fail_json("review-threads", PROVIDER, "transport-failed"), 30
+        denied = common.classified_transport_guard(verb="review-threads", provider=PROVIDER, transport=transport)
+        if denied is not None:
+            return denied
         page_data = json.loads(common.parse_transport_body(transport))
         rt = (
             ((page_data.get("data") or {}).get("repository") or {}).get("pullRequest") or {}
@@ -244,8 +263,9 @@ def _pr_close(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[dict[st
         token_env=ctx["tokenEnv"],
         body=b'{"state":"closed"}',
     )
-    if "body" not in transport and transport.get("verdict") != "ok":
-        return common.fail_json("pr-close", PROVIDER, "transport-failed"), 30
+    denied = common.classified_transport_guard(verb="pr-close", provider=PROVIDER, transport=transport)
+    if denied is not None:
+        return denied
     view = github_pr_to_view(json.loads(common.parse_transport_body(transport)))
     return common.emit_verb_ok("pr-close", PROVIDER, view), 0
 
@@ -268,8 +288,9 @@ def _merge(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[dict[str, 
         token_env=ctx["tokenEnv"],
         body=json.dumps({"merge_method": method}).encode(),
     )
-    if "body" not in transport and transport.get("verdict") != "ok":
-        return common.fail_json("merge", PROVIDER, "transport-failed"), 30
+    denied = common.classified_transport_guard(verb="merge", provider=PROVIDER, transport=transport)
+    if denied is not None:
+        return denied
     data = json.loads(common.parse_transport_body(transport))
     return common.emit_verb_ok("merge", PROVIDER, data), 0
 
