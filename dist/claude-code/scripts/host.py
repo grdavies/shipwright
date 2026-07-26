@@ -17,7 +17,7 @@ _SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from _sw import jsonio  # noqa: E402
+from _sw.host import _common as host_common  # noqa: E402
 from _sw.host import bitbucket, github, gitlab, local  # noqa: E402
 from host_lib import resolve_provider  # noqa: E402
 from host_invoke import host_verb  # noqa: E402
@@ -112,7 +112,7 @@ def main(argv: list[str] | None = None) -> int:
     root = args.root.resolve()
     verb_args = [item for item in args.rest if item != "--"]
     payload, code = dispatch(root, args.verb, verb_args)
-    jsonio.emit(payload, indent=2)
+    host_common.emit(payload)
     return code
 
 

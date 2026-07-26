@@ -376,8 +376,18 @@ def checks_from_transport_fallback(
     return fail_json("checks", provider, "transport-failed"), 30
 
 
+from _sw.host._emit_redact import (  # noqa: E402
+    EMIT_HEADER_ALLOWLIST,
+    filter_emit_headers,
+    redact_emit_payload,
+    redact_emit_text,
+    redact_emit_value,
+    redact_transport_payload,
+)
+
+
 def emit(payload: dict[str, Any]) -> None:
-    jsonio.emit(payload, indent=2)
+    jsonio.emit(redact_emit_payload(payload), indent=2)
 
 
 def emit_verb_ok(verb: str, provider: str, data: Any) -> dict[str, Any]:
