@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, build_opener, HTTPSHandler, HTTPRedirectHandler
 
 from _sw import jsonio, logging_setup
+from _sw.host._emit_redact import redact_emit_payload
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent.parent
 if str(_SCRIPTS_DIR) not in sys.path:
@@ -145,12 +146,12 @@ def urllib_request(
             "message": str(exc),
             "retryable": False,
         }
-        print(jsonio.dumps(payload, indent=2))
+        print(jsonio.dumps(redact_emit_payload(payload), indent=2))
         return payload
 
     if token_env and not _read_token(token_env):
         payload = {"verdict": "degraded", "reason": "missing-token", "retryable": False}
-        print(jsonio.dumps(payload, indent=2))
+        print(jsonio.dumps(redact_emit_payload(payload), indent=2))
         return payload
 
     cfg = resolve_rate_limit(host_section(load_workflow_config(root)))
@@ -187,7 +188,7 @@ def urllib_request(
         payload["body"] = outcome.result.body
         payload["bodyBytes"] = len(outcome.result.body or "")
         payload["headers"] = outcome.result.headers
-    print(jsonio.dumps(payload, indent=2))
+    print(jsonio.dumps(redact_emit_payload(payload), indent=2))
     return payload
 
 
