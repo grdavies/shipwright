@@ -29,10 +29,22 @@ def host_verb(root: Path, verb: str, **kwargs: Any) -> dict[str, Any]:
 
 
 def host_data(root: Path, verb: str, **kwargs: Any) -> Any:
+    """Return host verb data on success only.
+
+    For the ``checks`` verb use :func:`host_checks_evidence` so non-ok outcomes are
+  not erased by ``or []`` at call sites (PRD 079 R21).
+    """
     out = host_verb(root, verb, **kwargs)
     if out.get("verdict") not in ("ok",):
         return None
     return out.get("data")
+
+
+def host_checks_evidence(root: Path, verb: str, **kwargs: Any) -> dict[str, Any]:
+    """Typed checks evidence envelope — preserves invalid transport outcomes (PRD 079 R6, R21)."""
+    from check_gate_lib import checks_evidence_from_host_verb
+
+    return checks_evidence_from_host_verb(host_verb(root, verb, **kwargs))
 
 
 def host_ok(root: Path, verb: str, **kwargs: Any) -> bool:
