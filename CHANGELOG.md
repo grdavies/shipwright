@@ -632,6 +632,7 @@
 * merge phase validity-matrix-and-host-auth-required-short-circuit into feat/host-check-evidence-validity (4b9bc7c) <!-- sw-deliver:validity-matrix-and-host-auth-required-short-circuit -->
 * merge phase capability-probe into feat/host-check-evidence-validity (2e2fe58) <!-- sw-deliver:capability-probe -->
 * merge phase no-secondary-evidence-fallback-on-denied-checks into feat/host-check-evidence-validity (4849d87) <!-- sw-deliver:no-secondary-evidence-fallback-on-denied-checks -->
+* merge phase remediation-fragment-and-consumer-halt into feat/host-check-evidence-validity (dbe766a) <!-- sw-deliver:remediation-fragment-and-consumer-halt -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
