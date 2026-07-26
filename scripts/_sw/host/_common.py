@@ -11,7 +11,7 @@ import sys
 import tempfile
 from contextlib import redirect_stdout
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import quote
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent.parent.parent
@@ -20,6 +20,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
 
 from _sw import jsonio  # noqa: E402
 from _sw.host_transport import urllib_request  # noqa: E402
+from host_ratelimit import is_throttled, normalize_headers  # noqa: E402
 from host_lib import (  # noqa: E402
     bitbucket_api_base,
     github_api_base,
@@ -163,6 +164,46 @@ def transport_ok(transport: dict[str, Any]) -> bool:
     if verdict in ("ok", "degraded") and status is not None and status < 400:
         return True
     return verdict == "ok" and "body" in transport
+
+
+TransportClass = Literal["ok", "auth-denied", "not-found", "rate-limited", "inconclusive"]
+
+
+def classify_transport(
+    transport: dict[str, Any],
+    *,
+    provider: str,
+) -> TransportClass:
+    """Classify a host HTTP transport payload (PRD 079 R2, R4).
+
+    Rate-limit signals take precedence over auth-denied (403 throttle ≠ auth remediation).
+    """
+    if transport.get("verdict") == "rate-limited":
+        return "rate-limited"
+
+    status = transport_status_code(transport)
+    headers_raw = transport.get("headers")
+    headers = normalize_headers(headers_raw if isinstance(headers_raw, dict) else None)
+    body = parse_transport_body(transport)
+
+    if status is None:
+        if transport.get("verdict") == "ok" and "body" in transport:
+            return "ok"
+        return "inconclusive"
+
+    if status == 429:
+        return "rate-limited"
+    if status == 404:
+        return "not-found"
+    if status == 402:
+        return "inconclusive"
+    if status == 403 and is_throttled(status, headers, provider, body=body):
+        return "rate-limited"
+    if status in (401, 403):
+        return "auth-denied"
+    if 200 <= status < 300:
+        return "ok"
+    return "inconclusive"
 
 
 def remote_ref_exists_from_transport(
