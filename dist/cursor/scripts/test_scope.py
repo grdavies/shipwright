@@ -226,8 +226,7 @@ def build_plan(
 
     if not suite_ids and normalized:
         paths = fallback_pytest_paths(normalized)
-        if paths:
-            advisories.append("no-registry-match: using touched scripts/**/*.py fallback")
+        advisories.append("no-registry-match: using touched scripts/**/*.py fallback")
 
     pytest_args: list[str] = []
     if markers:
