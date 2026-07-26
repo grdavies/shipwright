@@ -337,9 +337,27 @@ def dependency_gate(root: Path, task_path: Path, *, override: bool = False, over
     fail("unmet depends prerequisites", halt="dependency-gate", blockingUnits=blocking, unitId=unit.id)
 
 
+def _skip_ci_status_deliver_gate() -> bool:
+    """Hermetic harness and fixture runs must not fail on missing host tokens."""
+    if os.environ.get("SW_HARNESS") == "1":
+        return True
+    if str(os.environ.get("SW_SKIP_CI_STATUS_DELIVER_GATE", "")).strip().lower() in ("1", "true", "yes"):
+        return True
+    return False
+
+
 def enforce_ci_status_capability_deliver(root: Path) -> dict[str, Any]:
     """Fail-closed deliver-entry probe when CI-status capability is denied (PRD 079 R12)."""
-    from host_doctor_lib import probe_ci_status_capability
+    from host_doctor_lib import CI_STATUS_PROBE_CACHE_TTL_SECONDS, probe_ci_status_capability
+
+    if _skip_ci_status_deliver_gate():
+        return {
+            "capability": "capable",
+            "provider": "harness",
+            "reasonCode": "harness-skip",
+            "cached": False,
+            "cacheAdvisoryTtlSeconds": CI_STATUS_PROBE_CACHE_TTL_SECONDS,
+        }
 
     ci_status = probe_ci_status_capability(root)
     if ci_status.get("capability") == "denied":
