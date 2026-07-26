@@ -174,6 +174,8 @@ REASON_HOST_AUTH_REQUIRED = "host-auth-required"
 REASON_CHECKS_NOT_FOUND = "checks-not-found"
 REASON_CHECKS_RATE_LIMITED = "checks-rate-limited"
 REASON_CHECKS_UNAVAILABLE = "checks-unavailable"
+REASON_EMPTY_CHECK_SET = "empty-check-set"
+REASON_CHECKS_MALFORMED = "checks-malformed"
 
 _REASON_CODE_BY_TRANSPORT: dict[str, str] = {
     "auth-denied": REASON_HOST_AUTH_REQUIRED,
@@ -182,21 +184,93 @@ _REASON_CODE_BY_TRANSPORT: dict[str, str] = {
     "inconclusive": REASON_CHECKS_UNAVAILABLE,
 }
 
+_RETRYABLE_REASON_CODES = frozenset({REASON_CHECKS_RATE_LIMITED, REASON_CHECKS_UNAVAILABLE})
+
+_DEFAULT_CHECKS_REMEDIATION: dict[str, str] = {
+    "github": (
+        "Host token cannot read CI check status. Grant a fine-grained PAT with Checks "
+        "repository permission (read access)."
+    ),
+    "gitlab": (
+        "Host token cannot read commit statuses or pipelines. Grant an access token with "
+        "API read access."
+    ),
+    "bitbucket": (
+        "Host token cannot read commit build statuses. Grant an access token with "
+        "repository read access."
+    ),
+    "default": (
+        "Host token cannot read CI/check status. Configure a host token with check-status "
+        "read capability."
+    ),
+}
+
 
 def reason_code_for_transport_class(transport_class: str) -> str:
     return _REASON_CODE_BY_TRANSPORT.get(transport_class, REASON_CHECKS_UNAVAILABLE)
 
 
+def reason_code_is_retryable(reason_code: str) -> bool:
+    return reason_code in _RETRYABLE_REASON_CODES
+
+
+def load_checks_remediation(plugin_root: Path, provider: str) -> str:
+    """Load provider-section remediation from the canonical fragment (PRD 079 R9, R13–R14)."""
+    path = plugin_root / "providers" / "host" / "remediation-checks.md"
+    provider_key = str(provider or "default").strip().lower() or "default"
+    if path.is_file():
+        section: str | None = None
+        current: str | None = None
+        lines: list[str] = []
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            if raw.startswith("## "):
+                if current == provider_key and lines:
+                    section = " ".join(part.strip() for part in lines if part.strip())
+                    break
+                current = raw[3:].strip().lower()
+                lines = []
+                continue
+            if current == provider_key:
+                lines.append(raw)
+        if current == provider_key and lines:
+            section = " ".join(part.strip() for part in lines if part.strip())
+        if section:
+            return section
+    return _DEFAULT_CHECKS_REMEDIATION.get(provider_key, _DEFAULT_CHECKS_REMEDIATION["default"])
+
+
+def human_reason_for_invalid_checks_evidence(
+    reason_code: str,
+    *,
+    plugin_root: Path,
+    provider: str,
+) -> str:
+    """Agent-facing remediation copy from the local fragment only — never host bodies (R9)."""
+    if reason_code in (REASON_HOST_AUTH_REQUIRED, REASON_CHECKS_NOT_FOUND):
+        return load_checks_remediation(plugin_root, provider)
+    if reason_code == REASON_CHECKS_RATE_LIMITED:
+        return "checks rate limited; retry after host rate-limit window"
+    if reason_code == REASON_CHECKS_MALFORMED:
+        return "checks evidence malformed; cannot evaluate check count"
+    return "checks evidence unavailable; retry or verify host connectivity"
+
+
 def checks_evidence_from_host_verb(payload: dict[str, Any]) -> ChecksEvidenceEnvelope:
-    """Build a typed checks evidence envelope from a host verb payload (PRD 079 R6, R21)."""
+    """Build a typed checks evidence envelope from a host verb payload (PRD 079 R6, R20, R21)."""
     if payload.get("verdict") == "ok":
         data = payload.get("data")
-        checks = data if isinstance(data, list) else []
+        if not isinstance(data, list):
+            return {
+                "evidenceValidity": EVIDENCE_INVALID,
+                "transportClass": "ok",
+                "reasonCode": REASON_CHECKS_MALFORMED,
+                "checks": [],
+            }
         return {
             "evidenceValidity": EVIDENCE_VALID,
             "transportClass": "ok",
             "reasonCode": REASON_CHECKS_OK,
-            "checks": checks,
+            "checks": data,
         }
     transport_class = str(payload.get("transportClass") or "inconclusive")
     return {
@@ -211,26 +285,46 @@ def host_checks_evidence(root: Path, *args: str) -> ChecksEvidenceEnvelope:
     return checks_evidence_from_host_verb(host_verb(root, *args))
 
 
+def blocked_reason_code_for_verdict(
+    verdict: str,
+    *,
+    check_count: int,
+    blocking: list[str],
+    actionable: int,
+) -> str | None:
+    if verdict != "blocked":
+        return None
+    if actionable > 0:
+        return None
+    if blocking:
+        return None
+    if check_count == 0:
+        return REASON_EMPTY_CHECK_SET
+    return None
+
+
 def gate_blocked_for_invalid_checks_evidence(
     envelope: ChecksEvidenceEnvelope,
     *,
+    plugin_root: Path | None = None,
+    provider: str = "",
     head_sha: str = "",
     pr: int | None = None,
     source: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
-    """Short-circuit gate when checks evidence is invalid — never erase via ``or []`` (R21)."""
+    """Short-circuit gate when checks evidence is invalid — never erase via ``or []`` (R7, R20)."""
     reason_code = str(envelope.get("reasonCode") or REASON_CHECKS_UNAVAILABLE)
     transport_class = str(envelope.get("transportClass") or "inconclusive")
-    retryable = reason_code == REASON_CHECKS_RATE_LIMITED
-    reason_by_code = {
-        REASON_HOST_AUTH_REQUIRED: "host auth required",
-        REASON_CHECKS_NOT_FOUND: "checks evidence not found",
-        REASON_CHECKS_RATE_LIMITED: "checks rate limited",
-        REASON_CHECKS_UNAVAILABLE: "checks evidence unavailable",
-    }
+    retryable = reason_code_is_retryable(reason_code)
+    root = plugin_root or resolve_plugin_root(SCRIPT_DIR)
+    reason = human_reason_for_invalid_checks_evidence(
+        reason_code,
+        plugin_root=root,
+        provider=provider,
+    )
     payload: dict[str, Any] = {
         "verdict": "blocked",
-        "reason": reason_by_code.get(reason_code, "checks evidence invalid"),
+        "reason": reason,
         "reasonCode": reason_code,
         "evidenceValidity": EVIDENCE_INVALID,
         "transportClass": transport_class,
@@ -407,7 +501,10 @@ def build_reason(
     cr_state: str,
     head_sha: str,
     review_provider: str,
+    check_count: int = 0,
+    blocking: list[str] | None = None,
 ) -> str:
+    blocking = blocking or []
     if verdict == "yellow":
         if not cr_landed:
             short = head_sha[:8] if head_sha else ""
@@ -421,7 +518,11 @@ def build_reason(
     if verdict == "blocked":
         if actionable > 0:
             return f"{actionable} unresolved actionable review thread(s)"
-        return "blocking/neutral or empty check set"
+        if blocking:
+            return f"blocking/neutral checks: {','.join(blocking)}"
+        if check_count == 0:
+            return "empty check set"
+        return "blocking check outcome"
     if advisory_failing:
         return (
             f"required checks pass; advisory failing (non-blocking): "
@@ -608,6 +709,7 @@ def build_gate_payload(
     pr: int | None = None,
     branch: str | None = None,
     source: str | None = None,
+    reason_code: str | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "verdict": verdict,
@@ -634,6 +736,8 @@ def build_gate_payload(
         "blockingNeutral": blocking,
         "checkCount": check_count,
     }
+    if reason_code:
+        payload["reasonCode"] = reason_code
     if quality_advisory is not None:
         payload["qualityAdvisory"] = quality_advisory
     if pr is not None:
@@ -863,6 +967,8 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
     if checks_envelope.get("evidenceValidity") != EVIDENCE_VALID:
         return gate_blocked_for_invalid_checks_evidence(
             checks_envelope,
+            plugin_root=resolve_plugin_root(SCRIPT_DIR),
+            provider=str(cfg_value(cfg, "host", "provider", default="") or ""),
             head_sha=head_sha,
             source="local-evidence",
         )
@@ -892,7 +998,7 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
     elif verdict == "red":
         reason = f"failing checks: {','.join(required_failing)}"
     elif verdict == "blocked":
-        reason = "blocking/neutral or empty check set"
+        reason = "empty check set" if len(classified) == 0 else "blocking check outcome"
     elif verdict == "green":
         reason = (
             "local-evidence: all local checks pass; review gating off; "
@@ -927,6 +1033,12 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
         branch=branch,
         source="local-evidence",
         pr=None,
+        reason_code=blocked_reason_code_for_verdict(
+            verdict,
+            check_count=len(classified),
+            blocking=blocking,
+            actionable=0,
+        ),
     )
     return finalize_gate_payload(
         root,
@@ -1007,6 +1119,8 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     if checks_envelope.get("evidenceValidity") != EVIDENCE_VALID:
         return gate_blocked_for_invalid_checks_evidence(
             checks_envelope,
+            plugin_root=plugin_root,
+            provider=host_provider,
             head_sha=head_sha,
             pr=int(pr),
         )
@@ -1073,6 +1187,8 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
         cr_state=str(review_result["cr_state"]),
         head_sha=head_sha,
         review_provider=str(review_result["review_provider"]),
+        check_count=len(classified),
+        blocking=blocking,
     )
     if verdict == "green" and pr and head_sha:
         reason = scripts_touch_advisory(root, pr_view, head_sha, reason)
@@ -1103,6 +1219,12 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
         check_count=len(classified),
         deprecations=deprecations,
         pr=int(pr),
+        reason_code=blocked_reason_code_for_verdict(
+            verdict,
+            check_count=len(classified),
+            blocking=blocking,
+            actionable=actionable,
+        ),
     )
     return finalize_gate_payload(
         root,
