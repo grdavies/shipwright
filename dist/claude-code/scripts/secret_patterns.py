@@ -16,6 +16,7 @@ def _patterns() -> list[DenyPattern]:
     specs: list[tuple[str, str, str]] = [
         ("AWS_KEY", r"AKIA[0-9A-Z]{16}", "[REDACTED:AWS_KEY]"),
         ("GITHUB_PAT", r"ghp_[A-Za-z0-9]{36,}", "[REDACTED:GITHUB_PAT]"),
+        ("GITHUB_PAT_FINE", r"github_pat_[A-Za-z0-9_]{22,}", "[REDACTED:GITHUB_PAT_FINE]"),
         ("GITHUB_OAUTH", r"gho_[A-Za-z0-9]{36,}", "[REDACTED:GITHUB_OAUTH]"),
         ("GITHUB_USER", r"ghu_[A-Za-z0-9]{36,}", "[REDACTED:GITHUB_USER]"),
         ("GITHUB_SERVER", r"ghs_[A-Za-z0-9]{36,}", "[REDACTED:GITHUB_SERVER]"),
