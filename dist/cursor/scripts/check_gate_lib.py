@@ -10,7 +10,7 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 from _sw import jsonio, logging_setup, proc
 
@@ -157,6 +157,93 @@ def host_data(root: Path, *args: str) -> Any:
     if payload.get("verdict") == "ok":
         return payload.get("data")
     return None
+
+
+class ChecksEvidenceEnvelope(TypedDict, total=False):
+    evidenceValidity: str
+    transportClass: str
+    reasonCode: str
+    checks: list[dict[str, Any]]
+
+
+EVIDENCE_VALID = "valid"
+EVIDENCE_INVALID = "invalid"
+
+REASON_CHECKS_OK = "checks-ok"
+REASON_HOST_AUTH_REQUIRED = "host-auth-required"
+REASON_CHECKS_NOT_FOUND = "checks-not-found"
+REASON_CHECKS_RATE_LIMITED = "checks-rate-limited"
+REASON_CHECKS_UNAVAILABLE = "checks-unavailable"
+
+_REASON_CODE_BY_TRANSPORT: dict[str, str] = {
+    "auth-denied": REASON_HOST_AUTH_REQUIRED,
+    "not-found": REASON_CHECKS_NOT_FOUND,
+    "rate-limited": REASON_CHECKS_RATE_LIMITED,
+    "inconclusive": REASON_CHECKS_UNAVAILABLE,
+}
+
+
+def reason_code_for_transport_class(transport_class: str) -> str:
+    return _REASON_CODE_BY_TRANSPORT.get(transport_class, REASON_CHECKS_UNAVAILABLE)
+
+
+def checks_evidence_from_host_verb(payload: dict[str, Any]) -> ChecksEvidenceEnvelope:
+    """Build a typed checks evidence envelope from a host verb payload (PRD 079 R6, R21)."""
+    if payload.get("verdict") == "ok":
+        data = payload.get("data")
+        checks = data if isinstance(data, list) else []
+        return {
+            "evidenceValidity": EVIDENCE_VALID,
+            "transportClass": "ok",
+            "reasonCode": REASON_CHECKS_OK,
+            "checks": checks,
+        }
+    transport_class = str(payload.get("transportClass") or "inconclusive")
+    return {
+        "evidenceValidity": EVIDENCE_INVALID,
+        "transportClass": transport_class,
+        "reasonCode": reason_code_for_transport_class(transport_class),
+        "checks": [],
+    }
+
+
+def host_checks_evidence(root: Path, *args: str) -> ChecksEvidenceEnvelope:
+    return checks_evidence_from_host_verb(host_verb(root, *args))
+
+
+def gate_blocked_for_invalid_checks_evidence(
+    envelope: ChecksEvidenceEnvelope,
+    *,
+    head_sha: str = "",
+    pr: int | None = None,
+    source: str | None = None,
+) -> tuple[int, dict[str, Any]]:
+    """Short-circuit gate when checks evidence is invalid — never erase via ``or []`` (R21)."""
+    reason_code = str(envelope.get("reasonCode") or REASON_CHECKS_UNAVAILABLE)
+    transport_class = str(envelope.get("transportClass") or "inconclusive")
+    retryable = reason_code == REASON_CHECKS_RATE_LIMITED
+    reason_by_code = {
+        REASON_HOST_AUTH_REQUIRED: "host auth required",
+        REASON_CHECKS_NOT_FOUND: "checks evidence not found",
+        REASON_CHECKS_RATE_LIMITED: "checks rate limited",
+        REASON_CHECKS_UNAVAILABLE: "checks evidence unavailable",
+    }
+    payload: dict[str, Any] = {
+        "verdict": "blocked",
+        "reason": reason_by_code.get(reason_code, "checks evidence invalid"),
+        "reasonCode": reason_code,
+        "evidenceValidity": EVIDENCE_INVALID,
+        "transportClass": transport_class,
+        "retryable": retryable,
+    }
+    if head_sha:
+        payload["head"] = head_sha
+    if pr is not None:
+        payload["pr"] = pr
+    if source is not None:
+        payload["source"] = source
+    jsonio.emit(payload)
+    return (37 if retryable else 30), payload
 
 
 def load_pr_test_plan(root: Path, cfg: dict[str, Any]) -> tuple[Any, list[str], list[str]]:
@@ -772,9 +859,14 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
 
     repo_meta = host_data(root, "repo-meta") or {}
     owner_repo = str(repo_meta.get("nameWithOwner") or "local/repo")
-    checks_raw = host_data(root, "checks", "--sha", head_sha) or []
-    if not isinstance(checks_raw, list):
-        checks_raw = []
+    checks_envelope = host_checks_evidence(root, "checks", "--sha", head_sha)
+    if checks_envelope.get("evidenceValidity") != EVIDENCE_VALID:
+        return gate_blocked_for_invalid_checks_evidence(
+            checks_envelope,
+            head_sha=head_sha,
+            source="local-evidence",
+        )
+    checks_raw = checks_envelope.get("checks") or []
     ttl = stale_in_progress_ttl_seconds(cfg)
     checks_raw, _stale_settled = reconcile_stale_in_progress_checks(
         checks_raw,
@@ -911,9 +1003,14 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     owner = owner_repo.split("/", 1)[0] if "/" in owner_repo else owner_repo
     repo = owner_repo.split("/", 1)[1] if "/" in owner_repo else owner_repo
 
-    checks_raw = host_data(root, "checks", "--number", pr, "--sha", head_sha) or []
-    if not isinstance(checks_raw, list):
-        checks_raw = []
+    checks_envelope = host_checks_evidence(root, "checks", "--number", pr, "--sha", head_sha)
+    if checks_envelope.get("evidenceValidity") != EVIDENCE_VALID:
+        return gate_blocked_for_invalid_checks_evidence(
+            checks_envelope,
+            head_sha=head_sha,
+            pr=int(pr),
+        )
+    checks_raw = checks_envelope.get("checks") or []
     ttl = stale_in_progress_ttl_seconds(cfg)
     checks_raw, stale_settled = reconcile_stale_in_progress_checks(
         checks_raw,
