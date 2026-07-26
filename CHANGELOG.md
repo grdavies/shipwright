@@ -623,6 +623,7 @@
 * merge phase migrate-skills-references-hooks-ci-templates-medium into feat/consumer-scripts-facade-placement (86b061a) <!-- sw-deliver:migrate-skills-references-hooks-ci-templates-medium -->
 * merge phase operator-docs-layout-boundaries-small into feat/consumer-scripts-facade-placement (399a05b) <!-- sw-deliver:operator-docs-layout-boundaries-small -->
 * merge phase integration-smokes-suite-green-medium into feat/consumer-scripts-facade-placement (be8d09e) <!-- sw-deliver:integration-smokes-suite-green-medium -->
+* merge phase statuscode-normalizer into feat/host-check-evidence-validity (6af0107) <!-- sw-deliver:statuscode-normalizer -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
