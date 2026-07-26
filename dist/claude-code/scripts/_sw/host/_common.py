@@ -56,6 +56,48 @@ def fixture_dir(root: Path) -> Path:
     return root / "scripts" / "test" / "fixtures" / "host"
 
 
+class HostFixtureError(RuntimeError):
+    """Raised when SW_HOST_FIXTURE is set but no matching fixture exists (PRD 079 R16)."""
+
+
+def tag_simulated(payload: dict[str, Any]) -> dict[str, Any]:
+    """Mark fixture-sourced evidence so merge paths can reject it outside tests (R16)."""
+    out = dict(payload)
+    out["simulated"] = True
+    return out
+
+
+def is_simulated_evidence(payload: dict[str, Any]) -> bool:
+    return bool(payload.get("simulated"))
+
+
+def reject_simulated_for_merge(payload: dict[str, Any]) -> None:
+    """Fail closed when simulated fixture evidence would authorize merge (PRD 079 R16)."""
+    if not is_simulated_evidence(payload):
+        return
+    if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("SW_HOST_FIXTURE"):
+        return
+    raise HostFixtureError("simulated evidence cannot authorize merge outside tests")
+
+
+def _transport_envelope_from_fixture(entry: Any) -> dict[str, Any]:
+    """Normalize a transport fixture map entry to a production-shaped transport payload."""
+    if isinstance(entry, dict) and (
+        "statusCode" in entry or "status" in entry or "verdict" in entry or "body" in entry
+    ):
+        envelope = dict(entry)
+        if "statusCode" not in envelope and "status" in envelope:
+            envelope["statusCode"] = envelope["status"]
+        if "verdict" not in envelope:
+            envelope["verdict"] = "ok"
+        body = envelope.get("body")
+        if body is not None and not isinstance(body, str):
+            envelope["body"] = json.dumps(body)
+        return envelope
+    body_text = entry if isinstance(entry, str) else json.dumps(entry)
+    return {"verdict": "ok", "statusCode": 200, "body": body_text}
+
+
 def mock_fixture(root: Path, name: str) -> dict[str, Any] | None:
     """Load a canned verb response when SW_HOST_FIXTURE is set."""
     fix = fixture_name()
@@ -78,8 +120,6 @@ def mock_fixture(root: Path, name: str) -> dict[str, Any] | None:
     elif name.startswith("pr-close-"):
         candidates.append(fdir / f"pr-close-{fix}.json")
         candidates.append(fdir / "pr-close-green.json")
-    elif name.startswith("checks-"):
-        candidates.append(fdir / "checks-green.json")
     elif name.startswith("review-threads-"):
         candidates.append(fdir / f"review-threads-{fix}.json")
         if "blocked" in fix:
@@ -88,8 +128,8 @@ def mock_fixture(root: Path, name: str) -> dict[str, Any] | None:
         candidates.append(fdir / f"merge-{fix}.json")
     for path in candidates:
         if path.is_file():
-            return json.loads(path.read_text(encoding="utf-8"))
-    return None
+            return tag_simulated(json.loads(path.read_text(encoding="utf-8")))
+    raise HostFixtureError(f"unresolved host fixture: {name} (SW_HOST_FIXTURE={fix})")
 
 
 def mock_transport(root: Path, url: str) -> dict[str, Any] | None:
@@ -99,13 +139,14 @@ def mock_transport(root: Path, url: str) -> dict[str, Any] | None:
         return None
     map_file = fixture_dir(root) / f"transport-{fix}.json"
     if not map_file.is_file():
-        return None
+        raise HostFixtureError(f"unresolved transport fixture: transport-{fix}.json")
     mapping = json.loads(map_file.read_text(encoding="utf-8"))
     for pattern, body in mapping.items():
+        if pattern.startswith("_"):
+            continue
         if pattern in url or url.endswith(pattern):
-            body_text = body if isinstance(body, str) else json.dumps(body)
-            return {"verdict": "ok", "status": 200, "body": body_text}
-    return None
+            return tag_simulated(_transport_envelope_from_fixture(body))
+    raise HostFixtureError(f"no transport mapping for url in transport-{fix}.json: {url}")
 
 
 def http_request(
