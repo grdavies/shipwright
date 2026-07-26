@@ -177,10 +177,11 @@ def _checks(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[dict[str,
         return common.fail_json("checks", PROVIDER, "missing-repo"), 30
     url = f"{ctx['apiBase']}/repos/{owner}/{repo}/commits/{sha}/check-runs?per_page=100"
     transport = common.http_request(root=root, provider=PROVIDER, method="GET", url=url, token_env=ctx["tokenEnv"])
-    if "body" not in transport and transport.get("verdict") != "ok":
-        return common.fail_json("checks", PROVIDER, "transport-failed"), 30
-    checks = common.map_github_checks(common.parse_transport_body(transport))
-    return common.emit_verb_ok("checks", PROVIDER, checks), 0
+    return common.checks_from_transport(
+        provider=PROVIDER,
+        transport=transport,
+        map_checks=common.map_github_checks,
+    )
 
 
 def _review_threads(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[dict[str, Any], int]:

@@ -11,6 +11,7 @@ import sys
 import tempfile
 from contextlib import redirect_stdout
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any, Literal
 from urllib.parse import quote
 
@@ -280,6 +281,72 @@ def remote_ref_exists_from_transport(
     if status in (401, 402, 403):
         return fail_json(verb, provider, "probe-inconclusive", message="host auth required"), 30
     return fail_json(verb, provider, "probe-inconclusive"), 30
+
+
+def checks_fail_payload(
+    provider: str,
+    transport_class: TransportClass,
+    transport: dict[str, Any],
+) -> tuple[dict[str, Any], int]:
+    """Map a non-ok transport class to a classified checks verb failure (PRD 079 R1, R2)."""
+    payload: dict[str, Any] = {
+        "verdict": "fail",
+        "verb": "checks",
+        "provider": provider,
+        "transportClass": transport_class,
+    }
+    status_code = transport_status_code(transport)
+    if status_code is not None:
+        payload["statusCode"] = status_code
+    if transport_class == "rate-limited":
+        payload["reason"] = "rate-limited"
+        payload["retryable"] = True
+        return payload, 37
+    if transport_class in ("auth-denied", "not-found"):
+        payload["reason"] = "auth-denied"
+        payload["retryable"] = False
+        return payload, 30
+    payload["reason"] = "inconclusive"
+    payload["retryable"] = True
+    return payload, 30
+
+
+def checks_from_transport(
+    *,
+    provider: str,
+    transport: dict[str, Any],
+    map_checks: Callable[[str], list[dict[str, Any]]],
+) -> tuple[dict[str, Any], int]:
+    """Classify transport before mapping checks; never pass error bodies to mappers (PRD 079 R1)."""
+    transport_class = classify_transport(transport, provider=provider)
+    if transport_class != "ok":
+        return checks_fail_payload(provider, transport_class, transport)
+    checks = map_checks(parse_transport_body(transport))
+    return emit_verb_ok("checks", provider, checks), 0
+
+
+def checks_from_transport_fallback(
+    *,
+    provider: str,
+    transports: list[dict[str, Any]],
+    map_checks: Callable[[str], list[dict[str, Any]]],
+) -> tuple[dict[str, Any], int]:
+    """Try transports in order; abort on definitive non-ok classes (GitLab statuses→pipelines)."""
+    last_inconclusive: tuple[dict[str, Any], int] | None = None
+    for transport in transports:
+        transport_class = classify_transport(transport, provider=provider)
+        if transport_class == "ok":
+            return checks_from_transport(
+                provider=provider,
+                transport=transport,
+                map_checks=map_checks,
+            )
+        if transport_class in ("auth-denied", "not-found", "rate-limited"):
+            return checks_fail_payload(provider, transport_class, transport)
+        last_inconclusive = checks_fail_payload(provider, transport_class, transport)
+    if last_inconclusive is not None:
+        return last_inconclusive
+    return fail_json("checks", provider, "transport-failed"), 30
 
 
 def emit(payload: dict[str, Any]) -> None:

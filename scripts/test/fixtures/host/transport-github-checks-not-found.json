@@ -1,0 +1,7 @@
+{
+  "/commits/abc123/check-runs": {
+    "verdict": "ok",
+    "statusCode": 404,
+    "body": "{\"message\":\"Not Found\"}"
+  }
+}
