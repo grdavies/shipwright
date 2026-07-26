@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Unit-level dependency gate, scheduler next, and run-start revalidation (PRD 033 R7-R9, R20, R28)."""
+"""Unit-level dependency gate, scheduler next, and run-start revalidation (PRD 033 R7-R9, R20, R28).
+
+Deliver-entry CI-status capability probe owner (PRD 079 R12): ``enforce_ci_status_capability_deliver``.
+"""
 from __future__ import annotations
 
 import json
@@ -54,6 +57,7 @@ def unmet_hard_prerequisites(
 RUN_START_INELIGIBLE = frozenset({"superseded", "cancelled"})
 SOFT_ENFORCE_EXIT = 30
 GATE_FAIL_EXIT = 20
+CI_STATUS_DENIED_EXIT = 30
 CANONICAL_PRDS_TASK_LIST = re.compile(r"^docs/prds/\d+-[^/]+/tasks-[^/]+\.md$")
 
 HARNESS_FIXTURE_TASK_LIST = re.compile(r"^scripts/test/fixtures/.+/tasks-[^/]+\.md$")
@@ -333,7 +337,41 @@ def dependency_gate(root: Path, task_path: Path, *, override: bool = False, over
     fail("unmet depends prerequisites", halt="dependency-gate", blockingUnits=blocking, unitId=unit.id)
 
 
+def _skip_ci_status_deliver_gate() -> bool:
+    """Hermetic harness and fixture runs must not fail on missing host tokens."""
+    if os.environ.get("SW_HARNESS") == "1":
+        return True
+    if str(os.environ.get("SW_SKIP_CI_STATUS_DELIVER_GATE", "")).strip().lower() in ("1", "true", "yes"):
+        return True
+    return False
+
+
+def enforce_ci_status_capability_deliver(root: Path) -> dict[str, Any]:
+    """Fail-closed deliver-entry probe when CI-status capability is denied (PRD 079 R12)."""
+    from host_doctor_lib import CI_STATUS_PROBE_CACHE_TTL_SECONDS, probe_ci_status_capability
+
+    if _skip_ci_status_deliver_gate():
+        return {
+            "capability": "capable",
+            "provider": "harness",
+            "reasonCode": "harness-skip",
+            "cached": False,
+            "cacheAdvisoryTtlSeconds": CI_STATUS_PROBE_CACHE_TTL_SECONDS,
+        }
+
+    ci_status = probe_ci_status_capability(root)
+    if ci_status.get("capability") == "denied":
+        fail(
+            "ci-status capability denied at deliver entry",
+            exit_code=CI_STATUS_DENIED_EXIT,
+            halt="ci-status-denied",
+            ciStatus=ci_status,
+        )
+    return ci_status
+
+
 def run_start_revalidate(root: Path, task_path: Path) -> dict[str, Any]:
+    enforce_ci_status_capability_deliver(root)
     unit = resolve_unit(root, task_path)
     if unit is None:
         return handle_unit_not_in_graph(root, task_path, action="run-start-revalidate")

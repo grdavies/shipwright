@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-23T17:42:30Z",
+  "generatedAt": "2026-07-26T09:04:25Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -766,19 +766,19 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-deliver.md:370:wave.py",
+      "id": "core/commands/sw-deliver.md:372:wave.py",
       "tree": "core/commands",
       "file": "core/commands/sw-deliver.md",
-      "line": 370,
+      "line": 372,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-deliver.md:373:phase_sizing.py",
+      "id": "core/commands/sw-deliver.md:375:phase_sizing.py",
       "tree": "core/commands",
       "file": "core/commands/sw-deliver.md",
-      "line": 373,
+      "line": 375,
       "column": 32,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
@@ -7012,19 +7012,19 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:370:wave.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:372:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 370,
+      "line": 372,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:373:phase_sizing.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:375:phase_sizing.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 373,
+      "line": 375,
       "column": 32,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
@@ -12196,19 +12196,19 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:370:wave.py",
+      "id": "dist/cursor/commands/sw-deliver.md:372:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 370,
+      "line": 372,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:373:phase_sizing.py",
+      "id": "dist/cursor/commands/sw-deliver.md:375:phase_sizing.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 373,
+      "line": 375,
       "column": 32,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"

@@ -330,6 +330,8 @@ Unit-level graph primitives (in addition to phase-mode waves):
 | Run-start revalidation | `python3 scripts/planning_deliver_gate.py <repo> dependency-gate run-start --task-list <path>` |
 | Override (logged) | add `--override --override-reason "<why>"` to dependency-gate |
 
+**CI-status capability probe (PRD 079 R12):** deliver entry (`next`, `dependency-gate preflight`, `dependency-gate run-start`) invokes `planning_deliver_gate.enforce_ci_status_capability_deliver` once per run via `host_doctor_lib.probe_ci_status_capability`. **Fail-closed halt** when `ciStatus.capability` is `denied` (exit 30, `halt=ci-status-denied`); `inconclusive` does not authorize merge. `/sw-init` runs the same probe via `host-doctor.py` with warn-only posture.
+
 **Soft-enforce:** when `planning.autonomy` is `maintenance-only` (default) and an explicit `--task-list` targets a lower-priority eligible unit than `next` would pick, preflight returns a confirm prompt — pass `--confirmed` after operator ack.
 
 **Run-start:** both `next` and explicit `--task-list` re-validate eligibility and depends at run-start (refuses `superseded`/`cancelled` races).

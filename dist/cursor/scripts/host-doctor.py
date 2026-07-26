@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host provider doctor — validate provider, token, remote (PRD 026 R33, R34)."""
+"""Host provider doctor — validate provider, token, remote (PRD 026 R33, R34; PRD 079 R11)."""
 from __future__ import annotations
 
 import argparse
@@ -13,6 +13,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from _sw.cli import run_module_main
+from host_doctor_lib import probe_ci_status_capability  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -46,12 +47,29 @@ def main(argv: list[str] | None = None) -> int:
         checks.append({"check": "token", "status": "skipped", "reason": "local-mode"})
     rate = resolved.get("rateLimit") or {}
     checks.append({"check": "rateLimit", "status": "ok", "config": rate})
+
+    ci_status = probe_ci_status_capability(root)
+    checks.append(
+        {
+            "check": "ciStatus",
+            "status": "ok" if ci_status.get("capability") == "capable" else "warn",
+            "capability": ci_status.get("capability"),
+            "reasonCode": ci_status.get("reasonCode"),
+            "provider": ci_status.get("provider"),
+        }
+    )
+    if ci_status.get("capability") == "denied":
+        warnings.append("ci-status-denied")
+    elif ci_status.get("capability") == "inconclusive":
+        warnings.append("ci-status-inconclusive")
+
     verdict = "fail" if any(c.get("status") == "fail" for c in checks) else ("degraded" if warnings else "ok")
     print(json.dumps({
         "verdict": verdict,
         "provider": provider,
         "warnings": warnings,
         "checks": checks,
+        "ciStatus": ci_status,
         "migration": {"githubTokenOnly": provider == "github" and token.get("present") and not resolved.get("configured")},
     }, indent=2))
     return 0
