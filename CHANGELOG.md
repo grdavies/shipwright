@@ -624,6 +624,7 @@
 * merge phase operator-docs-layout-boundaries-small into feat/consumer-scripts-facade-placement (399a05b) <!-- sw-deliver:operator-docs-layout-boundaries-small -->
 * merge phase integration-smokes-suite-green-medium into feat/consumer-scripts-facade-placement (be8d09e) <!-- sw-deliver:integration-smokes-suite-green-medium -->
 * merge phase statuscode-normalizer into feat/host-check-evidence-validity (6af0107) <!-- sw-deliver:statuscode-normalizer -->
+* merge phase shared-transport-classifier into feat/host-check-evidence-validity (0dc12e0) <!-- sw-deliver:shared-transport-classifier -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
