@@ -130,7 +130,9 @@ def fallback_pytest_paths(changed_paths: list[str]) -> list[str]:
         if norm.startswith("core/scripts/test/") and norm.endswith(".py"):
             paths.append(norm)
             continue
-        if norm.startswith("core/scripts/_sw/host/"):
+        if norm.startswith("core/scripts/_sw/host/") or norm.startswith(
+            "scripts/_sw/host/"
+        ):
             paths.append("core/scripts/test")
             continue
         if not norm.startswith("scripts/") or not norm.endswith(".py"):
@@ -150,7 +152,9 @@ def fallback_pytest_paths(changed_paths: list[str]) -> list[str]:
         # with core/scripts mirrors). Prefer paired core test module when present.
         stem = Path(norm).stem
         paired = f"core/scripts/test/test_{stem}.py"
-        paths.append(paired)
+        # Skip phantom pairs (e.g. `_common.py` → `test__common.py`).
+        if Path(paired).is_file() or (Path.cwd() / paired).is_file():
+            paths.append(paired)
     return sorted(set(paths))
 
 

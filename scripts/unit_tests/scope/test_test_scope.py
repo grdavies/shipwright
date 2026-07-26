@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -116,7 +117,10 @@ def test_tag_closure_disabled(sample_registry: dict) -> None:
     assert plan["suites"] == ["doc-fixtures"]
 
 
-def test_missing_tag_advisory_fallback(sample_registry: dict) -> None:
+def test_missing_tag_advisory_fallback(
+    sample_registry: dict, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
     plan = ts.build_plan(
         ["scripts/new_pure_logic.py"],
         registry=sample_registry,
@@ -124,7 +128,18 @@ def test_missing_tag_advisory_fallback(sample_registry: dict) -> None:
     )
     assert plan["suites"] == []
     assert any("no-registry-match" in a for a in plan["advisories"])
-    assert "core/scripts/test/test_new_pure_logic.py" in plan["paths"]
+    # Phantom paired modules are omitted when the file does not exist.
+    assert "core/scripts/test/test_new_pure_logic.py" not in plan["paths"]
+
+    paired = tmp_path / "core/scripts/test/test_new_pure_logic.py"
+    paired.parent.mkdir(parents=True)
+    paired.write_text("# paired\n")
+    plan2 = ts.build_plan(
+        ["scripts/new_pure_logic.py"],
+        registry=sample_registry,
+        scope="phase",
+    )
+    assert "core/scripts/test/test_new_pure_logic.py" in plan2["paths"]
 
 
 @pytest.mark.parametrize(
