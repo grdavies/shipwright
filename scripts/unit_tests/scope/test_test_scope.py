@@ -124,7 +124,7 @@ def test_missing_tag_advisory_fallback(sample_registry: dict) -> None:
     )
     assert plan["suites"] == []
     assert any("no-registry-match" in a for a in plan["advisories"])
-    assert "scripts/new_pure_logic.py" in plan["paths"]
+    assert "core/scripts/test/test_new_pure_logic.py" in plan["paths"]
 
 
 @pytest.mark.parametrize(
